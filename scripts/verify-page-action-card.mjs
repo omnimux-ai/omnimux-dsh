@@ -103,7 +103,8 @@ const evidenceData = {
   issue: 1778,
   feature: 'browser-page-action-card-visual-polish',
   checks,
-  status: 'VERIFIED_PASS',
+  status: 'SIMULATED_CHECKS_PASS',
+  evidenceScope: 'jsdom fixture and CSS string checks only; not browser acceptance',
 }
 
 // 写入证据目录
@@ -116,20 +117,17 @@ writeFileSync(
   'utf8'
 )
 
-const mdReport = `# 页面操作卡片视觉规范实机预演验证报告
+const mdReport = `# 页面操作卡片模拟结构检查报告
 
-- **验证时间**：${evidenceData.timestamp}
+- **检查时间**：${evidenceData.timestamp}
 - **任务编号**：Issue #1778
-- **验证结论**：✅ 全部 ${checks.length} 项视觉与结构契约检查 100% 通过
+- **结果**：${checks.length} 项模拟样本和 CSS 字符串检查通过。
 
-## 详细检查项
+## 证据范围
+本脚本使用手写 jsdom 样本，未运行生产 React 组件，未测量真实布局、主题切换、可见性或对比度。此结果不构成真实浏览器验收，不得据此判定视觉合格。
+
+## 检查项
 ${checks.map(c => `- [x] ${c.name}：通过`).join('\n')}
-
-## 验证结论
-1. 暗色模式下彻底消除了原本浅灰发白的大块（rgba(255,255,255,0.7)）与亮蓝边框、亮紫竖线；
-2. 新版卡片 100% 消费 CSS 变量系统，暗黑/明亮无缝自动适配；
-3. 步骤轨迹自动转为清晰微步骤微标（.tool-step-tag 与 .tool-step-arrow）；
-4. 完成态展示柔和绿意徽标（.tool-done-badge），符合现代极简审美。
 `
 
 writeFileSync(
@@ -138,4 +136,4 @@ writeFileSync(
   'utf8'
 )
 
-console.log('✅ 实机预演验证全部通过，证据已保存！')
+console.log('模拟结构检查通过；不构成真实浏览器验收。')

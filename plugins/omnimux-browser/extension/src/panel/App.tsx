@@ -607,6 +607,7 @@ interface HistoryPage {
 export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
   const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
+    .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
 
   return (
     <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
@@ -622,7 +623,7 @@ export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row
               </Fragment>
             ))
           ) : (
-            row.text
+            <span className="tool-step-text">{steps[0] ?? row.text}</span>
           )}
         </span>
       </span>
