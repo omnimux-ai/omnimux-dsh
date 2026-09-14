@@ -212,8 +212,9 @@ export function SuiteDetailModal(opts) {
   const apiFn = resolveApi(safe);
 
   const [installedLocal, setInstalledLocal] = stateFn(Boolean(item && (item.installed === true || item.preinstalled === true)));
-  const [confirmOpen, setConfirmOpen] = stateFn(false);
-  const [confirmUninstallOpen, setConfirmUninstallOpen] = stateFn(false);
+  const initialAction = item && item.initialAction;
+  const [confirmOpen, setConfirmOpen] = stateFn(initialAction === 'install');
+  const [confirmUninstallOpen, setConfirmUninstallOpen] = stateFn(initialAction === 'uninstall');
   const [ruleTarget, setRuleTarget] = stateFn('project');
   const [installing, setInstalling] = stateFn(false);
   const [uninstalling, setUninstalling] = stateFn(false);

@@ -47,10 +47,17 @@ export function renderRegularCard(item, ...args) {
   const { tr, onOpen, onToggle, h: customH } = normalizeCardArgs(...args);
   const h = customH || getH();
   const { title, desc } = resolveCardMeta(item, tr);
-  const isChecked = Boolean(item.installed && item.enabled !== false);
+  const isInstalledOrPre = Boolean(item.installed || item.preinstalled);
+  const isChecked = Boolean(isInstalledOrPre && item.enabled !== false);
   const isSuite = item.kind === 'suite';
   const onCardClick = () => { if (onOpen) onOpen(item); };
-  const onSwitchChange = () => { if (onToggle) onToggle(item); };
+  const onSwitchChange = () => {
+    if (isSuite) {
+      if (onOpen) onOpen({ ...item, initialAction: isInstalledOrPre ? 'uninstall' : 'install' });
+      return;
+    }
+    if (onToggle) onToggle(item);
+  };
 
   return h('div', { key: item.slug || item.id, className: 'regular-card', onClick: onCardClick },
     h('div', { className: 'regular-card-info' },
@@ -61,8 +68,7 @@ export function renderRegularCard(item, ...args) {
       isSuite ? h('div', { className: 'regular-card-composition' }, suiteCompositionText(item, tr)) : null,
       h('div', { className: 'regular-card-desc' }, desc),
     ),
-    // 套件从详情页安装，卡片右侧不挂技能开关（避免用技能安装链路处理套件）。
-    isSuite ? null : h(WorkshopSwitch, { checked: isChecked, onChange: onSwitchChange }),
+    h(WorkshopSwitch, { checked: isChecked, onChange: onSwitchChange }),
   );
 }
 
