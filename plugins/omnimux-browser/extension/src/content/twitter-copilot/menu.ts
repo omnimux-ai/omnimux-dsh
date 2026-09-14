@@ -232,7 +232,7 @@ async function handleExecuteItem(
     const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale)
 
     // 真正调用大模型补全
-    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale)
+    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale, scene)
 
     if (generatedText) {
       await injectTweetText(generatedText, anchorButton, locale)
@@ -258,6 +258,7 @@ async function requestLlmGeneration(
   ctx: TwitterContext,
   itemId: string,
   locale: 'zh' | 'en',
+  scene: TwitterCopilotScene,
 ): Promise<string | null> {
   // 100% 委托给拥有特权网络通信能力的 extension background 代理处理，避免网页 CSP 拦截并保护凭据安全
   try {

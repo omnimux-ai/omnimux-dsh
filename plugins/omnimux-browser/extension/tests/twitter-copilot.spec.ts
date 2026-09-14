@@ -600,4 +600,16 @@ AIGC 现在的残酷真相是：模型能力每`
     // 隐藏状态下向上偏移，入场时向下滑出
     expect(toastBlock).toContain('translateY(-20px)')
   })
+
+  it('T23: 代码完整性 - menu.ts 源码中 scene 参数在 requestLlmGeneration 与 handleExecuteItem 完整闭环无未声明变量', () => {
+    const menuSourcePath = resolve(__dirname, '../src/content/twitter-copilot/menu.ts')
+    const source = readFileSync(menuSourcePath, 'utf8')
+
+    // 确保 requestLlmGeneration 签名包含 scene
+    expect(source).toMatch(/async function requestLlmGeneration\([^)]*scene:\s*TwitterCopilotScene/)
+    // 确保 handleExecuteItem 调用处透传了 scene
+    expect(source).toMatch(/await requestLlmGeneration\([^)]*scene\)/)
+    // 确保构建产物不含自由 scene 标识符导致的 TS18004 隐患
+    expect(source).toContain('context: {')
+  })
 })

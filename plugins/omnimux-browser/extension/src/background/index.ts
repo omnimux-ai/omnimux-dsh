@@ -2075,6 +2075,13 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     void (async () => {
       // 1. 优先调用本地 OmniMux 宿主服务的标准文案补全接口
       const candidateBases: string[] = []
+      try {
+        const savedPort = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
+        const p = savedPort ? parseInt(savedPort, 10) : undefined
+        if (p && !isNaN(p) && p > 0) {
+          candidateBases.push(`http://127.0.0.1:${p}`)
+        }
+      } catch {}
       if (bridge?.url) {
         const bridgeHttp = httpBaseFromBridgeUrl(bridge.url)
         if (bridgeHttp) candidateBases.push(bridgeHttp)
