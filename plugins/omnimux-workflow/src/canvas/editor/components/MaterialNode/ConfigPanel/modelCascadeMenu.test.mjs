@@ -94,3 +94,16 @@ test('brand column removes redundant section title', () => {
   assert.doesNotMatch(cascadeSrc, /wf-loomi-section-title/, 'wf-loomi-section-title must be completely removed');
   assert.doesNotMatch(cascadeSrc, /<div[^>]*>\s*选择模型\s*<\/div>/, 'Redundant title "选择模型" must be removed from popover');
 });
+
+test('cascade menu columns have uniform fixed height (480px) to prevent hover jitter', () => {
+  assert.match(cascadeSrc, /POPOVER_HEIGHT\s*=\s*480/, 'ModelCascadeMenu must define POPOVER_HEIGHT constant 480px');
+  assert.match(cascadeSrc, /POPOVER_HEIGHT\s*-\s*12/, 'ModelCascadeMenu place() must guard top overflow with POPOVER_HEIGHT');
+
+  const cssPath = new URL('../../../../theme/components.css', import.meta.url);
+  const cssSrc = readFileSync(cssPath, 'utf8');
+
+  // 验证品牌列、型号列与渠道策略列高度统一为 480px，彻底消除高度跳变
+  assert.match(cssSrc, /\.wf-loomi-col--brand\s*\{[^}]*height:\s*480px;/s, 'Brand column must have height: 480px');
+  assert.match(cssSrc, /\.wf-loomi-col--model\s*\{[^}]*height:\s*480px;/s, 'Model column must have height: 480px');
+  assert.match(cssSrc, /\.wf-loomi-col--channel\s*\{[^}]*height:\s*480px;/s, 'Channel column must have height: 480px');
+});
