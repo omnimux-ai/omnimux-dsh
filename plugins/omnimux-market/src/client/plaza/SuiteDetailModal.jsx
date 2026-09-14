@@ -63,15 +63,35 @@ export function resolveSuiteSourceLabel(item) {
 
 export const SUITE_BLOCKS = Object.freeze([
   { key: 'skills', list: 'skills', titleKey: 'suite.section.skills', hintKey: 'suite.section.skillsHint', fallbackTitle: '技能', fallbackHint: '技能会与对话相关时由智能体自动调用。' },
-  { key: 'rules', list: 'rules', titleKey: 'suite.section.rules', hintKey: 'suite.section.rulesHint', fallbackTitle: '规则', fallbackHint: '规则定义了智能体的行为约束，安装后写入 AGENTS.md。' },
+  { key: 'rules', list: 'rules', variant: 'source', titleKey: 'suite.section.rules', hintKey: 'suite.section.rulesHint', fallbackTitle: '规则', fallbackHint: '规则定义了智能体的行为约束，安装后写入 AGENTS.md。以下为规则原文。' },
   { key: 'agents', list: 'agents', titleKey: 'suite.section.agents', hintKey: 'suite.section.agentsHint', fallbackTitle: 'Agent', fallbackHint: 'Agent 是预设的专业角色，安装后可在专家馆召唤。' },
 ]);
 
-function renderBlock(h, tr, block, rows) {
-  if (!Array.isArray(rows) || rows.length === 0) return null;
+function blockShell(h, tr, block, body) {
   return h('section', { key: block.key, className: 'ws-suite-block' },
     h('h4', { className: 'ws-suite-block-title' }, t(tr, block.titleKey, block.fallbackTitle)),
     h('p', { className: 'ws-suite-block-hint' }, t(tr, block.hintKey, block.fallbackHint)),
+    body,
+  );
+}
+
+/**
+ * 规则直接展示源文本：规则的价值就是它写入 AGENTS.md 的原文，
+ * 压成「标题 + 一句摘要」的卡片会让用户看不出实际约束。
+ */
+function renderSourceBlock(h, tr, block, rows) {
+  return blockShell(h, tr, block,
+    h('div', { className: 'ws-suite-rules' },
+      rows.map((row, idx) => h('article', { key: block.key + '-' + idx, className: 'ws-suite-rule' },
+        h('div', { className: 'ws-suite-rule-title' }, String((row && (row.title || row.name)) || '')),
+        h('pre', { className: 'ws-suite-rule-body' }, String((row && (row.content || row.desc)) || '')),
+      )),
+    ),
+  );
+}
+
+function renderGridBlock(h, tr, block, rows) {
+  return blockShell(h, tr, block,
     h('div', { className: 'ws-suite-grid' },
       rows.map((row, idx) => h('div', { key: block.key + '-' + idx, className: 'ws-suite-item' },
         h('div', { className: 'ws-suite-item-title' }, String((row && (row.title || row.name)) || '')),
@@ -79,6 +99,13 @@ function renderBlock(h, tr, block, rows) {
       )),
     ),
   );
+}
+
+function renderBlock(h, tr, block, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return block.variant === 'source'
+    ? renderSourceBlock(h, tr, block, rows)
+    : renderGridBlock(h, tr, block, rows);
 }
 
 function renderCloseButton(h, tr, onClose) {

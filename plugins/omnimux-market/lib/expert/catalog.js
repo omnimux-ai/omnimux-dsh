@@ -203,7 +203,13 @@ function parseSuiteManifest(raw, id) {
       const name = String(item.name || '').trim()
       if (!name) throw new Error(`catalog: item ${id} suite ${label} entry missing name`)
       const title = String(item.title || '').trim()
-      return { name, title: title || name, desc: String(item.desc || '').trim() }
+      // content 是规则类条目的完整源文本，也就是安装后写进 AGENTS.md 的内容，详情页直接展示它。
+      return {
+        name,
+        title: title || name,
+        desc: String(item.desc || '').trim(),
+        content: String(item.content || '').trim(),
+      }
     })
   }
   return {

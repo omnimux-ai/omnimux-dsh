@@ -32,6 +32,8 @@ test('shelf exposes the six suites with structured manifests', () => {
       assert.ok(entry.name, `${suite.id} entry without name`)
       assert.ok(entry.title, `${suite.id} entry ${entry.name} without title`)
       assert.equal(typeof entry.desc, 'string')
+      // content 是条目的完整源文本；规则有正文，技能与 Agent 缺省空串。
+      assert.equal(typeof entry.content, 'string')
     }
   }
 
@@ -103,7 +105,39 @@ test('empty or absent manifest groups parse as empty arrays', () => {
   const doc = parseCatalog(docOf([{ ...baseSuite, suite: { rules: [{ name: 'r', title: 'R' }] } }]))
   assert.deepEqual(doc.items[0].suite, {
     skills: [],
-    rules: [{ name: 'r', title: 'R', desc: '' }],
+    rules: [{ name: 'r', title: 'R', desc: '', content: '' }],
     agents: [],
   })
+})
+
+test('rule entries keep the raw source text and default to an empty string', () => {
+  const body = '# 契约标题\n\n1. 第一条约束。\n2. 第二条约束。'
+  const doc = parseCatalog(docOf([{
+    ...baseSuite,
+    suite: {
+      rules: [
+        { name: 'with-content', title: '有正文', desc: '一句摘要', content: body },
+        { name: 'without-content', title: '无正文', desc: '一句摘要' },
+      ],
+    },
+  }]))
+  const [withContent, withoutContent] = doc.items[0].suite.rules
+  // 详情页直接展示 content，所以解析必须原样保留正文（含换行），不得压缩或截断。
+  assert.equal(withContent.content, body)
+  assert.notEqual(withContent.content, withContent.desc)
+  assert.equal(withoutContent.content, '')
+})
+
+test('packaged suites expose rule content identical to the packaged source text', () => {
+  invalidateCatalogMemos()
+  const doc = loadCatalog()
+  const suite = doc.items.find((row) => row.id === 'suite-social-content-team')
+  assert.equal(suite.suite.rules.length, 5)
+  for (const rule of suite.suite.rules) {
+    assert.ok(rule.content.length > 0, `rule ${rule.name} must carry its source text`)
+    assert.ok(rule.content.includes('\n'), `rule ${rule.name} must keep its line breaks`)
+    // 页面所见即安装后写进 AGENTS.md 的原文，因此不携带 YAML frontmatter。
+    assert.equal(rule.content.startsWith('---'), false, `rule ${rule.name} must not carry frontmatter`)
+    assert.notEqual(rule.content, rule.desc)
+  }
 })

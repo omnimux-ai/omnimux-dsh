@@ -190,21 +190,72 @@ test('A3 详情：标题 / 来源 / 描述 / 三块，空块整块省略', () =>
   assert.equal(withClass(tree, 'ws-detail-desc')[0].children[0], SOCIAL_CONTENT.summary)
   // skills 为空 → 「技能」块连标题一起不渲染
   assert.deepEqual(withClass(tree, 'ws-suite-block-title').map((node) => node.children[0]), ['规则', 'Agent'])
-  assert.equal(withClass(tree, 'ws-suite-item').length, 5 + 7)
+  // 规则块改为源文本容器（5 条 .ws-suite-rule）；Agent 块仍是 7 张卡片网格。
+  assert.equal(withClass(tree, 'ws-suite-rules').length, 1)
+  assert.equal(withClass(tree, 'ws-suite-rule').length, 5)
+  assert.equal(withClass(tree, 'ws-suite-item').length, 7)
 
   const distribution = renderSuite(DISTRIBUTION).render()
   assert.deepEqual(withClass(distribution, 'ws-suite-block-title').map((node) => node.children[0]), ['技能', 'Agent'])
+  // 无规则的套件：规则块整块省略，不得出现空的源文本容器；技能 + Agent 仍是 11 张卡片。
+  assert.equal(withClass(distribution, 'ws-suite-rules').length, 0)
+  assert.equal(withClass(distribution, 'ws-suite-rule').length, 0)
+  assert.equal(withClass(distribution, 'ws-suite-item').length, 6 + 5)
 })
 
-test('A3 详情：每块按真实条目渲染标题与说明', () => {
+test('A3 详情：规则块渲染标题与完整源文本，Agent 块仍渲染标题与说明', () => {
   const tree = renderSuite(SOCIAL_CONTENT).render()
+
+  // 规则：标题 + 完整正文，正文节点是 <pre>（保留换行的源文本形态）。
+  const ruleNodes = withClass(tree, 'ws-suite-rule')
+  assert.deepEqual(
+    ruleNodes.map((node) => withClass(node, 'ws-suite-rule-title')[0].children[0]),
+    SOCIAL_CONTENT.suite.rules.map((rule) => rule.title),
+  )
+  const ruleBodies = ruleNodes.map((node) => withClass(node, 'ws-suite-rule-body')[0])
+  assert.deepEqual(ruleBodies.map((node) => node.type), new Array(5).fill('pre'))
+  assert.deepEqual(
+    ruleBodies.map((node) => node.children[0]),
+    SOCIAL_CONTENT.suite.rules.map((rule) => rule.content),
+  )
+  for (const [idx, body] of ruleBodies.map((node) => node.children[0]).entries()) {
+    const rule = SOCIAL_CONTENT.suite.rules[idx]
+    assert.ok(body.length > 0, `rule ${rule.name} must render its full text`)
+    // 所见即安装后写进 AGENTS.md 的原文：保留换行、不含 YAML frontmatter、不是一句摘要。
+    assert.ok(body.includes('\n'), `rule ${rule.name} must keep its line breaks`)
+    assert.equal(body.startsWith('---'), false, `rule ${rule.name} must not carry frontmatter`)
+    assert.notEqual(body, rule.desc, `rule ${rule.name} must not fall back to its summary`)
+  }
+  // 规则不再走卡片网格：说明节点只由 Agent 块产生。
+  const ruleGridItems = ruleNodes.flatMap((node) => withClass(node, 'ws-suite-item'))
+  assert.deepEqual(ruleGridItems, [])
+
+  // Agent：仍是卡片网格的标题 + 说明。
   const titles = withClass(tree, 'ws-suite-item-title').map((node) => node.children[0])
-  for (const rule of SOCIAL_CONTENT.suite.rules) assert.ok(titles.includes(rule.title), `rule ${rule.name}`)
   for (const agent of SOCIAL_CONTENT.suite.agents) assert.ok(titles.includes(agent.title), `agent ${agent.name}`)
   const descs = withClass(tree, 'ws-suite-item-desc').map((node) => node.children[0])
-  assert.ok(descs.includes(SOCIAL_CONTENT.suite.rules[0].desc))
+  assert.deepEqual(descs, SOCIAL_CONTENT.suite.agents.map((agent) => agent.desc))
   // 空 desc 不渲染说明节点
   assert.equal(descs.includes(''), false)
+})
+
+test('A3 详情：规则正文缺失时退回摘要，不渲染空白块', () => {
+  const item = {
+    ...SOCIAL_CONTENT,
+    id: 'suite-degraded-fixture',
+    suite: {
+      skills: [],
+      rules: [
+        { name: 'no-content', title: '缺正文的规则', desc: '这是一句摘要。', content: '' },
+        { name: 'has-content', title: '有正文的规则', desc: '一句摘要', content: '# 原文\n\n1. 第一条。' },
+      ],
+      agents: [],
+    },
+  }
+  const tree = renderSuite(item).render()
+  const bodies = withClass(tree, 'ws-suite-rule-body').map((node) => node.children[0])
+  assert.deepEqual(bodies, ['这是一句摘要。', '# 原文\n\n1. 第一条。'])
+  assert.equal(bodies.includes(''), false, '正文缺失时必须退回摘要，不得出现空白块')
 })
 
 test('A4 安装弹窗：列出三类数量，落点默认「当前项目」，可切「个人全局」', () => {
