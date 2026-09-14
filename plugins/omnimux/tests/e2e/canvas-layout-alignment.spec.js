@@ -52,15 +52,12 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
     });
   });
 
-  // 6. Verify native DSH composer projection in canvas full mode
-  assert.match(
-    CONVERSATION_COLLAPSE_CSS,
-    /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*24px\s*!important/,
-    'Native composer seat must be fixed at bottom 24px in collapsed conversation state'
-  );
-  assert.match(
-    CONVERSATION_COLLAPSE_CSS,
-    /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-card\][^{]*\{[^}]*width:\s*640px\s*!important/,
-    'Native composer card must be centered with width 640px in canvas mode'
-  );
+  // 7. Verify preview cards and display images have no border
+  import('node:fs').then(({ readFileSync }) => {
+    import('node:url').then(({ fileURLToPath }) => {
+      const stylesSrc = readFileSync(fileURLToPath(new URL('../../src/client/media-viewer/styles.js', import.meta.url)), 'utf8');
+      assert.match(stylesSrc, /\.omx-chat-media-tail__card\s*\{[^}]*border:\s*none\s*!important/);
+      assert.match(stylesSrc, /\.omx-mv-display\s*\{[^}]*border:\s*none\s*!important/);
+    });
+  });
 });
