@@ -1,7 +1,7 @@
 /**
  * Issue #466 (W1): contract-driven compat kernel tests.
  *
- * Covers: fingerprint, contract view (v1.1 + legacy synthesis + aliases),
+ * Covers: fingerprint, contract view (v1.1 + legacy rejection + aliases),
  * slot matcher (role / capacity / MIME / size /
  * duration / determinism), accepts vs ready, per-model verdicts, catalog
  * evaluation, fail-closed paths and the locked auto-adaptation ordering.
@@ -72,7 +72,7 @@ test('contract view：catalog 缺失 / 空 models → unavailable（fail closed�
   assert.equal(shell.available, false);
 });
 
-test('contract view：无 models[] 时从旧桶行 inputCapability 合成（数据驱动）', () => {
+test('contract view：无 models[] 时不以旧桶行 inputCapability 合成上架能力', () => {
   const legacy = {
     source: 'static-stub',
     text: [],
@@ -90,13 +90,9 @@ test('contract view：无 models[] 时从旧桶行 inputCapability 合成（数�
     audio: [],
   };
   const view = buildContractView(legacy);
-  assert.equal(view.available, true);
-  const model = resolveModelView(view, 'legacy-img');
-  assert.equal(model?.synthesized, true);
-  assert.equal(model?.operations[0].listed, true);
-  assert.equal(model?.operations[0].output.type, 'image');
-  const slot = model?.operations[0].inputs.find((s) => s.type === 'image');
-  assert.equal(slot?.max, 3);
+  assert.equal(view.available, false);
+  assert.equal(resolveModelView(view, 'legacy-img'), undefined);
+  assert.deepEqual(view.models, []);
 });
 
 // ============================================================================

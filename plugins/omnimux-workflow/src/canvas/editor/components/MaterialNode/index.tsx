@@ -156,11 +156,17 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     ? Math.max(126, nodeData.nodeHeight ?? defaultCalculatedHeight)
     : mediaAspectHeight ?? nodeData.nodeHeight ?? defaultCalculatedHeight;
 
+  const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const updateNodeData = useCallback(
     (updates: Partial<MaterialNodeData>) => {
+      if (updates.params && (updates.params.model !== nodeData.params?.model
+        || updates.params.operation !== nodeData.params?.operation)) {
+        applyCanvasInputMutation({ nodePatches: [{ nodeId: id, data: updates }] });
+        return;
+      }
       setNodes((nodes) => patchNodeData(nodes, id, updates));
     },
-    [id, setNodes],
+    [id, setNodes, nodeData.params, applyCanvasInputMutation],
   );
 
   // 媒体素材宽高自适应计算
@@ -207,7 +213,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   }, [id, materialType, nodeData, updateNodeData]);
 
   const t = useT();
-  const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const resourcePicker = useResourcePicker(id, typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : null);
   const kind = resolveNodeKind(nodeData);
 

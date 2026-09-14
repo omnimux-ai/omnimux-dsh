@@ -2,7 +2,7 @@
  * useModelParameterSchema — 动态模型参数 Schema 与多级缓存钩子。
  *
  * 1. 从 CapabilityCatalog 中提取指定模型的 parameterSchema；
- * 2. 具备 SWR / 本地持久化缓存与安全回退缺省值，无网络延迟；
+ * 2. 保留 SWR / 本地持久化缓存，仅展示合法选中型号的实际参数；
  * 3. 驱动 ConfigPanel 自适应画幅、时长、分辨率等动态参数胶囊。
  */
 
@@ -16,73 +16,6 @@ export type { ShouldReplaceCatalogCacheInput } from './catalogCache';
 
 const CATALOG_CACHE_KEY = 'wf_capabilities_catalog_v4';
 const CATALOG_TTL_MS = 60 * 60 * 1000;
-
-/** 针对未包含在 Catalog 中的未知模型提供的安全通用兜底 Schema */
-const DEFAULT_FALLBACK_SCHEMA: Record<MaterialType, ModelParameterSchema> = {
-  image: {
-    aspectRatio: {
-      options: [
-        { value: 'auto', label: '自适应' },
-        { value: '1:1', label: '1:1' },
-        { value: '4:3', label: '4:3' },
-        { value: '3:4', label: '3:4' },
-        { value: '16:9', label: '16:9' },
-        { value: '9:16', label: '9:16' },
-        { value: '21:9', label: '21:9' },
-      ],
-      defaultValue: '16:9',
-    },
-    resolution: {
-      options: [{ value: '2K', label: '2K' }, { value: '1K', label: '1K' }],
-      defaultValue: '2K',
-    },
-  },
-  video: {
-    aspectRatio: {
-      options: [
-        { value: '16:9', label: '16:9' },
-        { value: '9:16', label: '9:16' },
-        { value: '1:1', label: '1:1' },
-      ],
-      defaultValue: '16:9',
-    },
-    duration: {
-      options: [
-        { value: 5, label: '5s' },
-        { value: 10, label: '10s' },
-      ],
-      defaultValue: 5,
-      unit: 's',
-    },
-    resolution: {
-      options: [{ value: '1080P', label: '1080P' }],
-      defaultValue: '1080P',
-    },
-  },
-  audio: {
-    duration: {
-      options: [
-        { value: 30, label: '30s' },
-        { value: 60, label: '60s' },
-        { value: 120, label: '120s' },
-      ],
-      defaultValue: 60,
-      unit: 's',
-    },
-    voice: {
-      options: [
-        { value: 'alloy', label: 'Alloy' },
-        { value: 'echo', label: 'Echo' },
-        { value: 'fable', label: 'Fable' },
-        { value: 'onyx', label: 'Onyx' },
-        { value: 'nova', label: 'Nova' },
-        { value: 'shimmer', label: 'Shimmer' },
-      ],
-      defaultValue: 'alloy',
-    },
-  },
-  text: {},
-};
 
 interface CatalogCacheEnvelope {
   catalog: CapabilityCatalog;
@@ -199,19 +132,17 @@ export function useModelParameterSchema(
 ): UseModelParameterSchemaResult {
   return useMemo(() => {
     const activeCatalog = catalog ?? getCachedCatalog();
-    const modelList: CapabilityModelItem[] = activeCatalog && (activeCatalog as Record<string, any>)[materialType]
-      ? (activeCatalog as Record<string, any>)[materialType]
-      : [];
-    const modelItem = modelList.find((m: CapabilityModelItem) => m.id === modelId) ?? modelList[0];
-
-    const fallback = DEFAULT_FALLBACK_SCHEMA[materialType] ?? {};
-    const schema: ModelParameterSchema = modelItem?.parameters ?? fallback;
+    const isMaterialType = materialType === 'text' || materialType === 'image'
+      || materialType === 'video' || materialType === 'audio';
+    const modelList = isMaterialType ? activeCatalog?.[materialType] ?? [] : [];
+    const hasListedOutput = isMaterialType && Boolean(modelId) && activeCatalog?.models?.some((model) =>
+      model.id === modelId && model.operations?.some((operation) =>
+        operation.listed === true && operation.output?.type === materialType));
+    const modelItem = hasListedOutput ? modelList.find((model) => model.id === modelId) : undefined;
+    const schema: ModelParameterSchema = modelItem?.parameters ?? {};
 
     // 画幅
-    const aspectRatioOptions =
-      schema.aspectRatio?.options && schema.aspectRatio.options.length > 0
-        ? schema.aspectRatio.options
-        : (fallback.aspectRatio?.options ?? [{ value: '16:9', label: '16:9' }]);
+    const aspectRatioOptions = schema.aspectRatio?.options ?? [];
     const defaultAspectRatio = schema.aspectRatio?.defaultValue ?? aspectRatioOptions[0]?.value ?? '16:9';
 
     const isAspectRatioValid = (ratio: string | undefined) => {
@@ -220,7 +151,7 @@ export function useModelParameterSchema(
     };
 
     // 时长
-    const durationOptions = schema.duration?.options ?? fallback.duration?.options ?? [];
+    const durationOptions = schema.duration?.options ?? [];
     const defaultDuration = schema.duration?.defaultValue ?? durationOptions[0]?.value ?? 5;
 
     const isDurationValid = (duration: number | undefined) => {
