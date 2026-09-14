@@ -142,7 +142,7 @@ try {
     url: redact(result.url),
     bytes,
     dest,
-    modelId: process.env.OMNIMUX_IMAGE_MODEL ?? 'gpt-image-2',
+    modelId: process.env.OMNIMUX_IMAGE_MODEL ?? 'gpt-image-2.5',
     elapsedMs: Date.now() - started,
   })}\n`)
   if (result.mode !== 'live' || !result.url || bytes <= 0) {

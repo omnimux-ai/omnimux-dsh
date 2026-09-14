@@ -1401,6 +1401,28 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   gap: 8px;
 }
 
+.wf-config-panel__prompt-header { flex-wrap: wrap; }
+.wf-config-panel__prompt-header > .wf-slot-wells { flex-wrap: wrap; max-width: 100%; }
+.wf-effective-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  max-width: 180px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-secondary);
+  color: var(--dsw-alias-label-primary);
+  box-sizing: border-box;
+}
+.wf-effective-text > svg { flex-shrink: 0; }
+.wf-effective-text > span { display: grid; min-width: 0; gap: 2px; }
+.wf-effective-text strong { font-size: 11px; font-weight: 500; color: var(--dsw-alias-label-secondary); }
+.wf-effective-text span > span, .wf-effective-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-effective-text span > span { font-size: 12px; }
+.wf-slot-hover-preview audio { width: 100%; }
+
 .wf-slot-well {
   box-sizing: border-box;
   width: 44px;
@@ -1968,7 +1990,7 @@ button.wf-slot-well.wf-slot-well--append:hover {
   display: none;
 }
 
-/* 圆形发送按钮：32px × 32px 正圆形规格，圆角 999px，内居中纯白粗向上箭头 ↑ */
+/* 圆形发送按钮沿用画布主题的表面与正文对比色。 */
 .wf-generate-btn__send {
   width: 32px;
   height: 32px;
@@ -1976,9 +1998,9 @@ button.wf-slot-well.wf-slot-well--append:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  border: 1px solid var(--wb-border-strong);
+  background: var(--wb-surface-raised);
+  color: var(--wb-text-primary);
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
@@ -1986,9 +2008,9 @@ button.wf-slot-well.wf-slot-well--append:hover {
 }
 
 .wf-generate-btn__send:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.32);
-  color: #ffffff;
+  background: var(--wb-pill-hover);
+  border-color: var(--wb-border-strong);
+  color: var(--wb-text-primary);
   transform: scale(1.02);
 }
 

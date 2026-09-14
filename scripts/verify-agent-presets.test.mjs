@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import { ok, equal, deepEqual } from 'node:assert/strict'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { build } from 'esbuild'
 import { spawnSync } from 'node:child_process'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -60,6 +62,7 @@ print(json.dumps({
     'prefixIsString': isinstance(cfg.get('prefix'), str),
     'prefixLength': len(cfg['prefix']) if isinstance(cfg.get('prefix'), str) else 0,
     'prefixPresent': prefix_present,
+    'prefix': cfg.get('prefix'),
 }))
 `
   const res = spawnSync('python3', ['-c', script, join(root, rel)], { encoding: 'utf8' })
@@ -217,15 +220,25 @@ test('every shipped preset persona row uses the persona plugin key `prefix`, nev
   }
 })
 
-test('preset generators emit the persona `prefix` key, never `text`', () => {
-  const generators = [
-    'scripts/build-agent-presets.mjs',
-    'plugins/omnimux-market/src/expert-market.ts',
-    'plugins/omnimux-market/lib/expert-market.js',
-  ]
-  for (const rel of generators) {
-    const text = read(rel)
-    ok(text.includes('prefix: |'), `${rel} must emit the persona prefix key`)
-    ok(!/^\s*text: \|/m.test(text), `${rel} must not emit the retired persona text key`)
-  }
+test('preset generators emit the persona `prefix` key, never `text`', async (t) => {
+  const text = read('scripts/build-agent-presets.mjs')
+  ok(text.includes('prefix: |'), 'shipped preset generator must emit the persona prefix key')
+  ok(!/^\s*text: \|/m.test(text), 'shipped preset generator must not emit the retired persona text key')
+
+  const home = mkdtempSync(join(tmpdir(), 'market-persona-contract-'))
+  t.after(() => rmSync(home, { recursive: true, force: true }))
+  const result = await build({
+    entryPoints: [join(root, 'plugins/omnimux-market/src/expert-market.ts')],
+    bundle: true, platform: 'node', format: 'esm', write: false,
+  })
+  const { installMarketExpertPreset } = await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`)
+  const expert = { id: 'contract-expert', name: '契约专家', description: '第一行\n第二行', order: 1 }
+  installMarketExpertPreset(home, expert)
+  const rel = relative(root, join(home, '.agent-presets', expert.id, 'agent.cordis.yml'))
+  const cfg = personaConfig(rel)
+  ok(cfg.prefixPresent, 'market preset must set prefix')
+  ok(!cfg.keys.includes('text'), 'market preset must not set the retired text key')
+  ok(cfg.prefixIsString, 'market preset prefix must be a string')
+  ok(cfg.prefixLength > 0, 'market preset prefix must not be empty')
+  equal(cfg.prefix, '你是「契约专家」AI Agent专家。第一行\n第二行，工作目录 {{cwd}}。\n', 'market preset must preserve the complete multiline persona')
 })

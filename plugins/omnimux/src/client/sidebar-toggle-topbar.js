@@ -62,6 +62,7 @@ export function triggerClick(el) {
   }
   try {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
+    return
   } catch {
     // fall through
   }
@@ -330,7 +331,7 @@ let lastGoodLeftRailW = 0
  * @returns {number | null} rounded px, or null when the shell exposes none.
  */
 export function readShellRailWidthPx(doc) {
-  const frame = doc?.querySelector?.('.dshDesktopFrame') || doc?.querySelector?.('[class*="frame"]')
+  const frame = doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])') || doc?.querySelector?.('.dshDesktopFrame') || doc?.querySelector?.('[class*="frame"]')
   if (!frame) return null
   const inlineFirst = String(frame.style?.gridTemplateColumns || '').trim().split(/\s+/)[0] || ''
   const fromInline = /^(\d+(?:\.\d+)?)px$/.exec(inlineFirst)
@@ -378,15 +379,11 @@ export function computeChromeLayout(doc) {
         measured = 0
       }
     }
-    // While the middle column is collapsed, `conversation-box.js` pins the
-    // frame's first grid track to `var(--omnimux-sidebar-width)` — the value
-    // written here. Measuring that element then reads back our own write, so a
-    // single transient reading shrinks the rail every frame until the workbench
-    // covers it (measured live: 156→115px, then 1px, ~7px/s). In that state the
-    // shell's own inline track is the only trustworthy source; the live
-    // measurement is used whenever the override is inactive, so a dragged rail
-    // still tracks. `LEFT_RAIL_MIN_PX` keeps the same guard as a backstop.
-    const railWidthForced = doc?.documentElement?.hasAttribute?.(CONVERSATION_COLLAPSED_MARKER) === true
+    // Conversation-hidden and rightbar-closed CSS both consume our rail variable.
+    // Use the shell's inline track under either override to avoid reading our own
+    // width back; otherwise retain live measurements for divider dragging.
+    const railWidthForced = doc?.documentElement?.hasAttribute?.(CONVERSATION_COLLAPSED_MARKER) === true ||
+      Boolean(doc?.querySelector?.('.dshDesktopFrame[data-rightbar-collapsed="true"], [class*="frame"][data-rightbar-collapsed="true"]'))
     leftRailW = !railWidthForced && measured >= LEFT_RAIL_MIN_PX
       ? measured
       : (readShellRailWidthPx(doc) ?? (lastGoodLeftRailW || 0))
@@ -509,7 +506,10 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
   root.style.setProperty('--omnimux-topbar-toggle-top', `${top}px`)
   root.style.setProperty('--omnimux-topbar-toggle-end', `${end}px`)
   root.style.setProperty('--omnimux-tabbar-pad-left', `${Math.max(0, Math.round(tabPad))}px`)
-  const sidebarWidth = layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280)
+  const nativeFrame = doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])')
+  const sidebarWidth = nativeFrame
+    ? (readShellRailWidthPx(doc) ?? (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280)))
+    : (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280))
   root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
   syncTopbarTabClearance(doc)
   if (typeof newSessionLeft === 'number') {
@@ -709,6 +709,21 @@ button[data-sidebar-right-expand] {
   align-items: center !important;
 }
 
+/* 原生分栏与全屏共享右锚点，避免切换定位方式后从视口左缘回弹。 */
+.dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+  position: fixed !important;
+  left: auto !important;
+  right: 0 !important;
+  box-sizing: border-box !important;
+  transition: width var(--ds-transition-duration-slow) var(--ds-ease-in-out),
+              transform var(--ds-transition-duration-slow) var(--ds-ease-in-out) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+    transition: none !important;
+  }
+}
+
 /* 6. 右侧侧边栏全屏业务逻辑重构：工作区级铺满，与左侧侧边栏解耦联动 */
 /* 5.1 默认全屏态（左侧侧边栏展开时）：只铺满右侧主区域，完整保留左侧侧边栏 */
 [data-sidebar-right-panel="fullscreen"],
@@ -730,8 +745,8 @@ html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"],
 html[data-omnimux-left-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"],
 .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"],
 .dshDesktopFrame[data-sidebar-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"] {
-  left: 0 !important;
-  width: 100vw !important;
+  left: auto !important;
+  width: calc(100vw - var(--omnimux-sidebar-width, 0px)) !important;
   border-left: none !important;
 }
 
@@ -760,10 +775,8 @@ function ensureRightbarChromeStyles(doc) {
 }
 
 /**
- * Native right sidebar controls orchestrator:
- * 1. Remove duplicate/injected custom right buttons to prevent icon collision.
- * 2. Reorder controls so Fullscreen precedes Split: [Fullscreen | Split | Sidebar].
- * 3. Keep the native rightbar toggle button accessible when rightbar is collapsed.
+ * Removes plugin-owned duplicate buttons and applies shared chrome styles.
+ * Native control placement and actions remain owned by SidebarRight.
  * @param {Document | null | undefined} doc
  */
 export function syncNativeRightbarControls(doc) {
@@ -778,184 +791,10 @@ export function syncNativeRightbarControls(doc) {
   // 2. 注入全局样式补丁（修复 Tab 标题文字遮挡）
   ensureRightbarChromeStyles(doc)
 
-  // 3. 全屏按钮迁移到左侧，顺序变为：全屏 ｜ 分栏 ｜ 侧边栏（兼容全屏与退出全屏两种状态）
-  const splitBtn = doc.querySelector('button[data-dockkit-split-button], button[aria-label="分栏"]')
-  const fsBtn = doc.querySelector('button[data-sidebar-right-mode], button[aria-label="全屏"], button[aria-label="退出全屏"]')
-  if (splitBtn && fsBtn && splitBtn.parentElement) {
-    const NodeClass = doc.defaultView?.Node || (typeof Node !== 'undefined' ? Node : null)
-    const following = NodeClass?.DOCUMENT_POSITION_FOLLOWING ?? 4
-    if (splitBtn.compareDocumentPosition(fsBtn) & following) {
-      try {
-        splitBtn.before(fsBtn)
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  // 3.1 监听全屏与分栏按钮点击，打通会话栏显隐与分栏/全屏联动，彻底杜绝空白死区占位
-  if (fsBtn && typeof fsBtn.addEventListener === 'function' && !fsBtn.__omnimuxModeBound) {
-    fsBtn.__omnimuxModeBound = true
-    fsBtn.addEventListener('click', () => {
-      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-      const api = win?.__omnimuxWorkbench
-      if (!api) return
-      const isCurrentlyFullscreen = Boolean(
-        doc.querySelector('[data-sidebar-right-panel="fullscreen"]') ||
-        api.getConversationCollapsed?.() ||
-        /退出全屏/.test(fsBtn.getAttribute('aria-label') || '') ||
-        fsBtn.getAttribute('data-sidebar-right-mode') === 'push'
-      )
-      if (isCurrentlyFullscreen) {
-        api.setFocus?.('split')
-      } else {
-        api.setFocus?.('gui')
-      }
-    }, true)
-  }
-  if (splitBtn && typeof splitBtn.addEventListener === 'function' && !splitBtn.__omnimuxSplitBound) {
-    splitBtn.__omnimuxSplitBound = true
-    splitBtn.addEventListener('click', () => {
-      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-      const api = win?.__omnimuxWorkbench
-      api?.setFocus?.('split')
-    }, true)
-  }
-
-  // 3.2 监听收起右侧栏按钮点击：一旦用户收起右侧辅助栏，必须立刻切换到会话聚焦（全屏展示会话，杜绝黑屏死区）
-  const toggleBtns = doc.querySelectorAll('button[data-sidebar-right-toggle]')
-  toggleBtns.forEach((btn) => {
-    if (btn && typeof btn.addEventListener === 'function' && !btn.__omnimuxToggleBound) {
-      btn.__omnimuxToggleBound = true
-      btn.addEventListener('click', () => {
-        const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-        const api = win?.__omnimuxWorkbench
-        if (!api) return
-        api.setFocus?.('chat')
-      }, true)
-    }
-  })
-
-  // 4. 原生右侧栏按钮：收起时提供一个右上角可见入口，但**只保留一份**。
-  //    界面（React）每次重画都会生成新的原生节点；被搬走的旧拷贝若不回收，就会与新的并存，
-  //    表现为同一个按钮出现两份，并随每次收起/展开越攒越多（实测一轮后 body 上残留 toggle+expand 两份）。
-  //    这里以 data-original-parent 标记本插件搬出的拷贝，每轮只保留一个控件并回收其余拷贝。
-  const isRightCollapsed = Boolean(
-    doc.querySelector('[data-rightbar-collapsed="true"]') ||
-    doc.querySelector('.dshDesktopFrame[data-rightbar-collapsed="true"]')
-  )
-  if (isRightCollapsed) {
-    const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-    const api = win?.__omnimuxWorkbench
-    if (api && api.getFocus?.() === 'gui') {
-      api.setFocus?.('chat')
-    }
-  }
-  const RIGHTBAR_CONTROL_SELECTOR = 'button[data-sidebar-right-toggle], button[data-sidebar-right-expand]'
-  const controls = Array.from(doc.querySelectorAll(RIGHTBAR_CONTROL_SELECTOR))
-  const movedCopies = controls.filter((el) => el.hasAttribute('data-original-parent'))
-  const nativeControl = controls.find((el) => !el.hasAttribute('data-original-parent')) || null
-  const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"], [class*="stripChrome"]')
-  /** 本模块写在元素上的内联放置属性；按钮离开落点时整组清掉，交还框架原生样式。 */
-  const PLACEMENT_PROPS = [
-    'position', 'right', 'top', 'z-index', 'display', 'visibility',
-    'flex', 'margin', 'align-items', 'justify-content', 'cursor', 'pointer-events',
-  ]
-  const clearPlacement = (el) => {
-    for (const prop of PLACEMENT_PROPS) el.style.removeProperty(prop)
-  }
-  /**
-   * 收起态首选落点：框架标题行最右的空槽位（`data-conversation-header-corner`），
-   * 缺失时退回标题行 utilities 组末尾。两者都是普通流式容器，间距由框架自带的
-   * gap / margin 提供——所以不需要任何坐标测量，也不可能压住相邻控件。
-   * 历史写法是搬进 body 后 `position:fixed; right:8px`，而窗口最右侧并非空闲区域
-   * （桌面端标题行右端是「打开工作目录」按钮组），必然重叠（工单 #1664）。
-   */
-  const headerSeat = () => (
-    doc.querySelector('[data-conversation-header-corner], [class*="headerCorner"]') ||
-    doc.querySelector('[class*="headerUtilities"]')
-  )
-  const seatInHeaderRow = (el, seat) => {
-    if (el.parentElement !== seat) {
-      el.dataset.originalParent = 'headerRow'
-      seat.appendChild(el)
-    }
-    el.style.setProperty('position', 'static', 'important')
-    el.style.setProperty('right', 'auto', 'important')
-    el.style.setProperty('top', 'auto', 'important')
-    el.style.setProperty('z-index', 'auto', 'important')
-    el.style.setProperty('flex', '0 0 auto', 'important')
-    el.style.setProperty('margin', '0', 'important')
-    el.style.setProperty('display', 'flex', 'important')
-    el.style.setProperty('align-items', 'center', 'important')
-    el.style.setProperty('justify-content', 'center', 'important')
-    el.style.setProperty('visibility', 'visible', 'important')
-    el.style.setProperty('cursor', 'pointer', 'important')
-    el.style.setProperty('pointer-events', 'auto', 'important')
-  }
-  /** 兜底：没有任何会话标题行（独立全屏页等）时，仍然固定到右上角。 */
-  const pinToTopRight = (el) => {
-    el.style.setProperty('position', 'fixed', 'important')
-    el.style.setProperty('right', '8px', 'important')
-    el.style.setProperty('top', '5px', 'important')
-    el.style.setProperty('z-index', '9999', 'important')
-    el.style.setProperty('display', 'flex', 'important')
-    el.style.setProperty('visibility', 'visible', 'important')
-    el.style.setProperty('cursor', 'pointer', 'important')
-    el.style.setProperty('pointer-events', 'auto', 'important')
-  }
-  const bindExpandClick = (el) => {
-    if (el.__omnimuxClickBound) return
-    el.__omnimuxClickBound = true
-    el.addEventListener('click', () => {
-      const frame = doc.querySelector('.dshDesktopFrame')
-      if (frame?.hasAttribute('data-rightbar-collapsed')) {
-        try {
-          const propKey = Object.keys(el).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
-          if (propKey && typeof el[propKey]?.onClick === 'function') {
-            el[propKey].onClick({ preventDefault: () => {}, stopPropagation: () => {} })
-            return
-          }
-        } catch { /* ignore */ }
-        const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-        win?.__omnimuxWorkbench?.open?.()
-      }
-    })
-  }
-
-  if (isRightCollapsed) {
-    // 收起态：原生节点可能已被搬到 body，也可能已被重画成新节点；优先用原生节点，
-    // 没有原生节点时沿用已有拷贝。无论哪种，最后**只保留一份**。
-    const kept = nativeControl || movedCopies[0] || null
-    for (const dup of movedCopies) {
-      if (dup !== kept) dup.remove()
-    }
-    if (kept) {
-      const seat = headerSeat()
-      if (seat) {
-        seatInHeaderRow(kept, seat)
-      } else {
-        if (kept.parentElement !== doc.body) {
-          kept.dataset.originalParent = '_stripChrome'
-          doc.body.appendChild(kept)
-        }
-        pinToTopRight(kept)
-      }
-      bindExpandClick(kept)
-    }
-  } else if (nativeControl) {
-    // 展开态且原生节点在位：本插件搬出的拷贝全部回收，避免与原生按钮重复。
-    for (const dup of movedCopies) dup.remove()
-    clearPlacement(nativeControl)
-  } else if (movedCopies[0]) {
-    // 展开态但原生节点缺失：把唯一那份拷贝还回原生容器，保证仍可收起右侧栏。
-    const only = movedCopies[0]
-    for (const dup of movedCopies) {
-      if (dup !== only) dup.remove()
-    }
-    if (chrome && only.parentElement !== chrome) chrome.appendChild(only)
-    clearPlacement(only)
-  }
+  // SidebarRight owns expansion and mode, including its header-corner expand
+  // seat. Keep React-managed controls in their native tree and let each click
+  // reach the owner's handler exactly once. Conversation visibility is derived
+  // from the committed panel state by split-compact-layout.
 }
 
 /**

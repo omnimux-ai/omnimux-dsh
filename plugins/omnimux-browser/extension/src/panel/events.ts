@@ -14,6 +14,7 @@ import { PANEL_COPY } from './strings.ts'
 /** One rendered conversation row. */
 export interface Row {
   seq: number
+  sourceSeq?: number
   kind: 'user' | 'assistant' | 'tool' | 'info'
   text: string
   images?: ImageAttachmentRef[]
@@ -163,7 +164,7 @@ export function rowFromEvent(event: SessionEventView): Row | null {
       const images = imageRefsFromBlocks(blocks)
       return text.trim() === '' && images.length === 0
         ? null
-        : { seq: 0, kind: 'assistant', text, ...(images.length === 0 ? {} : { images }) }
+        : { seq: 0, kind: 'assistant', text, status: 'complete', sourceSeq: event.seq, ...(images.length === 0 ? {} : { images }) }
     }
     default:
       return null
@@ -191,6 +192,7 @@ export function appendLiveRow(
   text: string,
   seq: number,
   images?: ImageAttachmentRef[],
+  provenance?: Pick<Row, 'status' | 'sourceSeq'>,
 ): Row[] {
   if (kind === 'tool') {
     const last = rows[rows.length - 1]
@@ -199,7 +201,7 @@ export function appendLiveRow(
     }
     return [...rows, { seq, kind, text, status: 'running' }]
   }
-  return [...rows, { seq, kind, text, ...(images === undefined || images.length === 0 ? {} : { images }) }]
+  return [...rows, { seq, kind, text, ...(provenance === undefined ? {} : { status: provenance.status, sourceSeq: provenance.sourceSeq }), ...(images === undefined || images.length === 0 ? {} : { images }) }]
 }
 
 /** 标记最后一行工具调用已完成（并入，不新增行）。 */
@@ -245,4 +247,21 @@ export function mergeHistoryRows(
   }
   flushTool()
   return rows
+}
+
+/**
+ * 提取 turn/end 中的异常原因描述，若无异常或正常结束则返回 null。
+ */
+export function errorFromTurnEnd(event: SessionEventView, locale: 'zh' | 'en' = 'zh'): string | null {
+  if (event.type !== 'turn/end') return null
+  const reason = (event.data as Record<string, unknown> | undefined)?.reason
+  if (!reason || typeof reason !== 'object' || (reason as { kind?: unknown }).kind !== 'error') return null
+  const err = (reason as { error?: unknown }).error
+  const rawMsg = typeof err === 'object' && err !== null && 'message' in err
+    ? String((err as { message?: unknown }).message)
+    : (typeof err === 'string' ? err : '')
+  if (rawMsg) {
+    return locale === 'zh' ? `模型响应异常: ${rawMsg}` : `Model error: ${rawMsg}`
+  }
+  return locale === 'zh' ? '模型响应异常，请检查模型配置' : 'Model execution failed'
 }

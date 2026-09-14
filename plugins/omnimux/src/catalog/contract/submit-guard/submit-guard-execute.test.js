@@ -119,11 +119,11 @@ describe('SubmitGuard execute integration', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  it('gpt-image-2 text_to_image passes guard', async () => {
+  it('gpt-image-2.5 text_to_image passes guard', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'sg-img-'))
     const dest = join(dir, 'o.png')
     const result = await executeOmnimuxImage({
-      prompt: 'a lamp', dest, model: 'gpt-image-2', operation: 'text_to_image', env: { OMNIMUX_API_KEY: 'sk-test' },
+      prompt: 'a lamp', dest, model: 'gpt-image-2.5', operation: 'text_to_image', env: { OMNIMUX_API_KEY: 'sk-test' },
       runtime: { async execute() { return { taskId: 'i1', outputs: [{ type: 'image', url: 'https://cdn.example/i.png' }] } } },
       fetcher: async () => ({ ok: true, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('png') }),
     })

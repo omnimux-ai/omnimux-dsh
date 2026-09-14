@@ -12,7 +12,7 @@ import {
 } from './conversation-collapse.js'
 import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
 
-test('Issue 1749: 收起右侧边栏按钮点击时解除会话栏折叠并切回 chat 模式', () => {
+test('Issue 1761: native toggle without an owner does not synthesize legacy focus', () => {
   resetConversationCollapseForTests()
   const dom = new JSDOM(`<!doctype html>
 <html>
@@ -67,13 +67,14 @@ test('Issue 1749: 收起右侧边栏按钮点击时解除会话栏折叠并切�
   // 点击收起右侧边栏
   toggleBtn.click()
 
-  // 验证：焦点切回 chat，会话栏折叠彻底解除
-  assert.equal(focusMode, 'chat')
-  assert.equal(getConversationCollapsed({ doc }), false)
-  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), false)
+  // No native owner is mounted in this DOM-only test: sync must not fabricate an action.
+  assert.equal(focusMode, null)
+  assert.equal(getConversationCollapsed({ doc }), true)
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true)
+  dom.window.close()
 })
 
-test('Issue 1749: DOM 确证右侧栏收起 (data-rightbar-collapsed) 时自动兜底解除折叠', () => {
+test('Issue 1761: chrome synchronization leaves closed-state cleanup to layout observer', () => {
   resetConversationCollapseForTests()
   const dom = new JSDOM(`<!doctype html>
 <html>
@@ -112,10 +113,11 @@ test('Issue 1749: DOM 确证右侧栏收起 (data-rightbar-collapsed) 时自动�
   // 执行同步检测
   syncNativeRightbarControls(doc)
 
-  // 确证已自动自愈恢复 chat
-  assert.equal(focusMode, 'chat')
-  assert.equal(getConversationCollapsed({ doc }), false)
-  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), false)
+  // Chrome styling is passive; compact-layout owns observed close cleanup.
+  assert.equal(focusMode, 'gui')
+  assert.equal(getConversationCollapsed({ doc }), true)
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true)
+  dom.window.close()
 })
 
 test('Issue 1749: CSS 防御规则必须排除右侧栏收起态，确保会话栏占满视口绝无黑屏', () => {

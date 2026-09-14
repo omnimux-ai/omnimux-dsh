@@ -6,7 +6,7 @@ import { buildUpstreamFingerprint, planAutoAdaptation } from './validation/compa
 
 test('real Hub catalog exposes the four curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  assert.deepEqual(catalog.text.map((row) => row.id), ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash-vision-exp', 'gpt-5.5']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5']);
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
     fingerprint: buildUpstreamFingerprint({ prompt: 'analyze', assets }) });

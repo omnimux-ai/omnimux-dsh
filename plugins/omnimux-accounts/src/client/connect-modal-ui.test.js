@@ -18,11 +18,12 @@ describe('ConnectModal UI & Geometry Contract', () => {
     assert.doesNotMatch(modalJsx, /PlatformChip/, 'PlatformChip should be replaced by official brand icon')
   })
 
-  it('renders dual-column platform grid and row-oriented cards in styles.js', () => {
-    assert.match(STYLES, /\.omnimux-accounts-platform-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/)
+  it('renders platform grid, coming channels strip and row-oriented cards in styles.js', () => {
+    assert.match(STYLES, /\.omnimux-accounts-platform-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/)
     assert.match(STYLES, /\.omnimux-accounts-platform-btn\s*\{[^}]*flex-direction:\s*row;/)
     assert.match(STYLES, /\.omnimux-accounts-brand-icon\s*\{[^}]*width:\s*42px;/)
     assert.match(STYLES, /\.omnimux-accounts-brand-icon\s*\{[^}]*height:\s*42px;/)
+    assert.match(STYLES, /\.omnimux-accounts-coming-strip\s*\{/)
     assert.match(STYLES, /\.omnimux-accounts-modal-security\s*\{/)
   })
 
@@ -31,6 +32,8 @@ describe('ConnectModal UI & Geometry Contract', () => {
     assert.ok(en['connect.subtitle'])
     assert.ok(zh['connect.securityTip'])
     assert.ok(en['connect.securityTip'])
+    assert.ok(zh['connect.comingChannels'])
+    assert.ok(en['connect.comingChannels'])
 
     const platforms = ['tiktok', 'instagram', 'youtube', 'x', 'facebook']
     for (const p of platforms) {

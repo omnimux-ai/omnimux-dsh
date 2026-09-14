@@ -24,7 +24,7 @@
     "dev": "node scripts/dev.mjs",
     "harness": "node scripts/canvas-harness.mjs",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.canvas.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.host.json --noEmit",
-    "test": "node --test \"src/**/*.test.mjs\" \"src/**/*.test.js\"",
+    "test": "node --test \"src/**/*.test.mjs\" \"src/**/*.test.js\" \"tests/*.test.mjs\"",
     "verify:m5": "node scripts/m5-self-verify.mjs",
     "perf:baseline": "node scripts/perf-baseline.mjs",
     "deploy": "node scripts/deploy.mjs",

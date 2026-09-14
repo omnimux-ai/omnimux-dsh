@@ -33,7 +33,7 @@ const MOCK_CATALOG: CapabilityCatalog = {
   // A–Z by label (Issue #314); no Claude-first override.
   text: [
     { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-    { id: 'deepseek-v4-flash-vision-exp', label: 'DeepSeek V4 Flash' },
+    { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
     { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
     { id: 'gpt-5.5', label: 'GPT 5.5' },

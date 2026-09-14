@@ -32,11 +32,11 @@ describe('media route', () => {
   ]) {
     it(`normalizes image request, env and config model ${model} to Grok Image 2`, () => {
       const media = parseMediaConfig(undefined)
-      assert.equal(toMediaWireModelId(` ${model} `), 'grok-imagine-image-2')
-      assert.equal(resolveMediaRoute('image', { model }, media, {}).modelId, 'grok-imagine-image-2')
-      assert.equal(resolveMediaRoute('image', {}, media, { OMNIMUX_IMAGE_MODEL: model }).modelId, 'grok-imagine-image-2')
+      assert.equal(toMediaWireModelId(` ${model} `), 'grok-imagine-image-2-0')
+      assert.equal(resolveMediaRoute('image', { model }, media, {}).modelId, 'grok-imagine-image-2-0')
+      assert.equal(resolveMediaRoute('image', {}, media, { OMNIMUX_IMAGE_MODEL: model }).modelId, 'grok-imagine-image-2-0')
       media.providers.omnimux.models.image = model
-      assert.equal(resolveMediaRoute('image', {}, media, {}).modelId, 'grok-imagine-image-2')
+      assert.equal(resolveMediaRoute('image', {}, media, {}).modelId, 'grok-imagine-image-2-0')
     })
   }
 

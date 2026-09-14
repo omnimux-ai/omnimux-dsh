@@ -112,27 +112,24 @@ test('图片模型：catalog 全量 A-Z，不在中枢的模型自然不存在',
       { id: 'dall-e-3', label: 'DALL-E 3' },
       { id: 'nanobanana-2', label: 'NanoBanana 2' },
       { id: 'seedream-5.0-pro', label: 'Seedream 5.0 Pro' },
-      { id: 'midjourney-8.1', label: 'Midjourney 8.1' },
-      { id: 'midjourney-7', label: 'Midjourney 7' },
-      { id: 'gpt-image-2', label: 'GPT Image 2' },
+      { id: 'mj-v8-1', label: 'Midjourney 8.1' },
+      { id: 'mj-v7', label: 'Midjourney 7' },
+      { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
       { id: 'stable-diffusion-xl', label: 'SDXL' },
-      { id: 'seedream-4.5', label: 'Seedream 4.5' },
     ],
   };
 
   const options = deriveModelOptions(catalog, 'image');
-  // Sorted by label A–Z: DALL-E 3, GPT Image 2, Midjourney 7/8.1, NanoBanana 2,
-  // SDXL, Seedream 4.5/5.0 Pro
+  // Sorted by label A–Z: DALL-E 3, GPT Image 2.5, Midjourney 7/8.1, NanoBanana 2, SDXL, Seedream 5.0 Pro
   assert.deepEqual(
     options.map((o) => o.label),
     [
       'DALL-E 3',
-      'GPT Image 2',
+      'GPT Image 2.5',
       'Midjourney 7',
       'Midjourney 8.1',
       'NanoBanana 2',
       'SDXL',
-      'Seedream 4.5',
       'Seedream 5.0 Pro',
     ],
   );
@@ -165,7 +162,7 @@ test('存量已保存模型（params.model）不在 catalog bucket 时保留为 
 test('video / audio：全量保留目录模型', () => {
   const catalog = {
     video: [
-      { id: 'kling-o1', label: 'Kling O1' },
+      { id: 'kling-o3', label: 'Kling O3' },
       { id: 'veo-3', label: 'Veo 3' },
       { id: 'wan-2.1', label: 'Wan 2.1' },
       { id: 'custom-video', label: 'Custom Video' },
@@ -179,7 +176,7 @@ test('video / audio：全量保留目录模型', () => {
   const videoOptions = deriveModelOptions(catalog, 'video');
   assert.deepEqual(
     videoOptions.map((o) => o.value),
-    ['custom-video', 'kling-o1', 'veo-3', 'wan-2.1'],
+    ['custom-video', 'kling-o3', 'veo-3', 'wan-2.1'],
   );
 
   const audioOptions = deriveModelOptions(catalog, 'audio');
@@ -197,13 +194,13 @@ test('modelValue 默认值优先级解析（优先已选 > catalog defaults > �
       { id: 'gpt-5.5', label: 'GPT 5.5' },
     ],
     image: [
-      { id: 'midjourney-8.1', label: 'Midjourney 8.1' },
+      { id: 'mj-v8-1', label: 'Midjourney 8.1' },
       { id: 'nanobanana-2', label: 'NanoBanana 2' },
       { id: 'seedream-5.0-pro', label: 'Seedream 5.0 Pro' },
     ],
     video: [
       { id: 'wan-2.1', label: 'Wan 2.1' },
-      { id: 'kling-o1', label: 'Kling O1' },
+      { id: 'kling-o3', label: 'Kling O3' },
     ],
   };
 
@@ -236,11 +233,11 @@ test('modelValue 默认值优先级解析（优先已选 > catalog defaults > �
   );
   assert.equal(
     deriveModelValue(catalog, 'image', {}, imageOptions),
-    'midjourney-8.1',
+    'mj-v8-1',
   );
   assert.equal(
     deriveModelValue(catalog, 'video', {}, videoOptions),
-    'kling-o1',
+    'kling-o3',
   );
 });
 
@@ -253,13 +250,13 @@ test('ConfigPanel 源码契约：只消费 buildFilteredModelOptions，禁止 MA
   assert.doesNotMatch(src, /productAllowlist/);
   assert.doesNotMatch(src, /orderTextModels/);
   assert.doesNotMatch(src, /nanobanana-2/);
-  assert.doesNotMatch(src, /kling-o1/);
+  assert.doesNotMatch(src, /kling-o3/);
   assert.doesNotMatch(src, /defaults\?\.\[materialType\]/);
   assert.doesNotMatch(src, /evaluateModelCompatibility/);
   assert.doesNotMatch(src, /level === 'disabled'/);
 });
 
-test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，且与 kernel 一致', () => {
+test('parity：候选等于 compatible 与类型 bucket 的交集，不补入缺失的 alias-img', () => {
   const catalog = createCompatTestCatalog();
   // 旧 image whitelist 与 fixture 模型 id 零交集（fixture 用 img-* / alias-*）
   const legacyImageWhitelist = [
@@ -292,7 +289,12 @@ test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，
 
   const kernelIds = evaluation.compatible.map((v) => v.modelId).sort();
   const pickerIds = filtered.options.map((o) => o.id).sort();
-  assert.deepEqual(pickerIds, kernelIds, 'ConfigPanel options must parity gateway kernel set');
+  const bucketIds = new Set(catalog.image.map((row) => row.id));
+  assert.ok(kernelIds.includes('alias-img'), 'alias-img 的已上架操作实际兼容输入');
+  assert.equal(bucketIds.has('alias-img'), false, '保留原 fixture 缺少 alias-img 行的边界');
+  assert.deepEqual(pickerIds, kernelIds.filter((id) => bucketIds.has(id)));
+  assert.deepEqual(pickerIds, ['img-hd', 'img-ref']);
+  assert.equal(pickerIds.includes('alias-img'), false, '兼容不代表可以绕过类型目录');
 
   for (const id of pickerIds) {
     assert.ok(
@@ -302,6 +304,36 @@ test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，
   }
   // 至少 img-ref / img-hd / alias-img 这类 listed+compatible 出现
   assert.ok(pickerIds.includes('img-ref') || pickerIds.includes('img-hd') || pickerIds.includes('alias-img'));
+});
+
+test('parity：完整现代 typed buckets 保留合法 alias-img，并拒绝错类型和未上架行', () => {
+  const catalog = createCompatTestCatalog();
+  for (const type of ['text', 'image', 'video', 'audio']) {
+    catalog[type] = catalog.models
+      .filter((model) => model.operations.some((operation) => operation.listed === true && operation.output.type === type))
+      .map(({ id, label }) => ({ id, label }));
+  }
+  const fingerprint = buildUiUpstreamFingerprint({
+    prompt: 'hello',
+    upstreams: [{ nodeId: 's1', materialType: 'image', mimeType: 'image/png', sizeBytes: 1024 }],
+  });
+  const evaluation = evaluateCatalogCompat(catalog, fingerprint, { outputType: 'image' });
+  const result = buildFilteredModelOptions({ catalog, fingerprint, outputType: 'image' });
+  assert.deepEqual(result.options.map((option) => option.id).sort(), ['alias-img', 'img-hd', 'img-ref']);
+  assert.deepEqual(result.options.map((option) => option.id).sort(), evaluation.compatible.map((verdict) => verdict.modelId).sort());
+  for (const { verdict } of result.options) {
+    assert.equal(verdict.chosenOperationId, 'image_to_image');
+    assert.equal(verdict.readyToSubmit, true);
+  }
+
+  // 污染 bucket 不得成为绕过 operation.output/listed 的第二能力真源。
+  catalog.image.push({ id: 'vid-frames', label: 'Wrong output' }, { id: 'unlisted-model', label: 'Unlisted' });
+  const promptOnly = buildUiUpstreamFingerprint({ prompt: 'hello', upstreams: [] });
+  const dirtyResult = buildFilteredModelOptions({ catalog, fingerprint: promptOnly, outputType: 'image' });
+  assert.deepEqual(dirtyResult.options.map((option) => option.id).sort(), ['alias-img', 'img-hd', 'img-prompt-only', 'img-ref', 'img-solo']);
+  // 缺少必填参考图是待补输入，不是错类型；可选不等于可提交。
+  assert.equal(dirtyResult.options.find((option) => option.id === 'alias-img').verdict.readyToSubmit, false);
+  assert.equal(dirtyResult.zeroCandidates, false);
 });
 
 test('harness mock catalog 文本模型按 label A–Z', () => {

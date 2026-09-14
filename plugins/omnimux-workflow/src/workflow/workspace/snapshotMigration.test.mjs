@@ -47,7 +47,7 @@ describe('snapshotMigration (schemaVersion 2 -> 3)', () => {
             selectedTool: 'import',
             realPath: '/Users/test/photo.jpg',
             prompt: 'An astronaut riding a horse',
-            params: { model: 'midjourney-8.1' },
+            params: { model: 'mj-v8-1' },
           },
         },
       ],

@@ -31,6 +31,7 @@ import type { WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import { BridgeServer } from './server.ts'
 import { BrowserContextInjector } from './browser-context.ts'
+import { DRAFT_FORMAT_INSTRUCTIONS } from './draft.ts'
 import { registerBrowserTools } from './tools.ts'
 import {
   BRIDGE_CONFIG_PATH,
@@ -343,7 +344,8 @@ function mountBridge(
       order: 107,
       text: 'A browser bridge may be connected. To read or operate the user\'s active browser page, call browser_snapshot '
         + '(text-only; numbered items are the click/type targets), unless the current turn already includes a plugin-provided '
-        + 'followed-page browser_snapshot. Reuse that injected snapshot and its indices directly. Never assume page content you have not snapshotted.',
+        + 'followed-page browser_snapshot. Reuse that injected snapshot and its indices directly. Never assume page content you have not snapshotted.'
+        + DRAFT_FORMAT_INSTRUCTIONS,
     }), 'bridge-browser: system prompt section')
   }
 

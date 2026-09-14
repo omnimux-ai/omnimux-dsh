@@ -173,7 +173,7 @@ export const ModelSelector = memo(function ModelSelector({
   hostDefaultModel?: string
   hostDefaultEffort?: string
   dynamicModels?: Array<{ id: string; name?: string }>
-  onSelectModel?: (modelId: string, effort?: string) => void
+  onSelectModel?: (modelId: string, effort?: string, provider?: string) => void
   onSelectEffort?: (effort: string) => void
 }) {
   const isEn = locale === 'en'
@@ -183,9 +183,17 @@ export const ModelSelector = memo(function ModelSelector({
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
-      if (savedForPort) return savedForPort
+      if (savedForPort) {
+        if (!hostDefaultModel || savedForPort !== 'gpt-6-astra' || hostDefaultModel === 'gpt-6-astra') {
+          return savedForPort
+        }
+      }
       const savedGlobal = localStorage.getItem('omnimux_default_model')
-      if (savedGlobal) return savedGlobal
+      if (savedGlobal) {
+        if (!hostDefaultModel || savedGlobal !== 'gpt-6-astra' || hostDefaultModel === 'gpt-6-astra') {
+          return savedGlobal
+        }
+      }
     } catch {
       // Ignore
     }
@@ -233,11 +241,13 @@ export const ModelSelector = memo(function ModelSelector({
     try {
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
       if (savedForPort) {
-        setSelectedModel(savedForPort)
-        const savedEffort = localStorage.getItem(`omnimux_default_effort_${activePort}`) || hostDefaultEffort || 'medium'
-        setSelectedEffort(savedEffort)
-        onSelectModel?.(savedForPort, savedEffort)
-        return
+        if (!hostDefaultModel || savedForPort !== 'gpt-6-astra' || hostDefaultModel === 'gpt-6-astra') {
+          setSelectedModel(savedForPort)
+          const savedEffort = localStorage.getItem(`omnimux_default_effort_${activePort}`) || hostDefaultEffort || 'medium'
+          setSelectedEffort(savedEffort)
+          onSelectModel?.(savedForPort, savedEffort)
+          return
+        }
       }
     } catch {
       // Ignore
@@ -298,7 +308,16 @@ export const ModelSelector = memo(function ModelSelector({
     } catch {
       // Ignore
     }
-    onSelectModel?.(val, newEffort)
+
+    let matchedProvider: string | undefined
+    for (const g of modelGroups) {
+      if (g.models.some((m) => m.id === val)) {
+        matchedProvider = (g as unknown as { provider?: string }).provider
+          || (g.group === 'ChatGPT (Codex)' ? 'chatgpt' : g.group === 'Grok (Subscription)' ? 'grok' : undefined)
+        break
+      }
+    }
+    onSelectModel?.(val, newEffort, matchedProvider)
   }
 
   const handleEffortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

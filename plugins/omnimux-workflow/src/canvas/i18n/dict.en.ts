@@ -131,7 +131,7 @@ const en: Record<DictKey, string> = {
   'panel.reason.input_waiting': 'Waiting for content or media from “{source}”; remove the reference to continue without it',
   'panel.reason.input_unavailable': 'Media from “{source}” is unavailable; retry, replace it, or remove the reference',
   'panel.reason.text_role_required': 'This audio task cannot separate upstream text from local directions. Keep one text source and use voice or speed controls for delivery',
-  'panel.supplementOptional': 'Describe what you want to generate',
+  'panel.supplementOptional': 'Additional instructions (optional)',
   'panel.reason.prompt_required': 'Enter content or connect upstream text',
   'panel.reason.catalog_unavailable': 'Loading models, please wait',
   'panel.reason.model_unselected': 'Choose a model',
