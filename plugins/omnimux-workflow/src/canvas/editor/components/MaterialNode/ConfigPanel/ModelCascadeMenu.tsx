@@ -106,7 +106,86 @@ const FALLBACK_MODELS_BY_BRAND: Readonly<Record<string, readonly PickerRow[]>> =
     { id: 'seedance-2-0-mini', name: 'Seedance 2.0 Mini', description: '轻量视频模型，支持文生与首帧' },
     { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '快速版，极速出片，支持多参考图' },
   ],
+  deepseek: [
+    { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash', description: '全能旗舰模型，高性价比' },
+  ],
+  google: [
+    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', description: '极速旗舰模型，多模态全能' },
+  ],
+  openai: [
+    { id: 'gpt-5.5', name: 'GPT-5.5', description: 'OpenAI 新一代旗舰大模型' },
+  ],
+  anthropic: [
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: 'Claude 顶尖推理旗舰' },
+  ],
 };
+
+/**
+ * 每个二级菜单（各品牌在不同模态下）配置的默认模型 ID。
+ * 当用户在一级菜单点击切换品牌时，立即切换为该二级菜单配置的默认模型。
+ */
+const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL: Record<string, Partial<Record<string, string>>> = {
+  text: {
+    openai: 'gpt-5.5',
+    anthropic: 'claude-opus-4-6',
+    google: 'gemini-3.8-flash',
+    deepseek: 'deepseek-v4-flash-vision-exp',
+    minimax: 'minimax-h3',
+  },
+  image: {
+    openai: 'gpt-image-2.5',
+    google: 'nano-banana-2',
+    bytedance: 'seedance-2-0-fast',
+    kling: 'kling',
+    midjourney: 'midjourney',
+    xai: 'grok-imagine-image-2',
+  },
+  video: {
+    bytedance: 'seedance-2-0-fast',
+    openai: 'gpt-5.5',
+    minimax: 'minimax-h3',
+    kling: 'kling',
+    alibaba: 'wan-3.0',
+    happyhorse: 'wan-3.0',
+    google: 'gemini-3.8-flash',
+    xai: 'grok-imagine-video-1-5',
+  },
+};
+
+const DEFAULT_MODEL_BY_BRAND: Record<string, string> = {
+  openai: 'gpt-5.5',
+  anthropic: 'claude-opus-4-6',
+  deepseek: 'deepseek-v4-flash-vision-exp',
+  google: 'gemini-3.8-flash',
+  bytedance: 'seedance-2-0-fast',
+  minimax: 'minimax-h3',
+  kling: 'kling',
+  alibaba: 'wan-3.0',
+  happyhorse: 'wan-3.0',
+  midjourney: 'midjourney',
+  xai: 'grok-imagine-video-1-5',
+};
+
+/**
+ * 解析品牌在当前模态下的默认模型。
+ * 优先级：配置的默认模型（若在可用列表中） > 可用列表首项 > 通用配置 > 品牌图标兜底
+ */
+function defaultModelForBrand(
+  brandId: string,
+  materialType: string,
+  availableRows: readonly PickerRow[],
+): string {
+  const configured = DEFAULT_MODEL_BY_BRAND_AND_MATERIAL[materialType]?.[brandId]
+    ?? DEFAULT_MODEL_BY_BRAND[brandId];
+  if (configured && availableRows.some((row) => row.id === configured)) {
+    return configured;
+  }
+  if (availableRows.length > 0 && availableRows[0]?.id) {
+    return availableRows[0].id;
+  }
+  const brandDef = ALL_BRANDS.find((b) => b.id === brandId);
+  return configured ?? brandDef?.iconModelId ?? 'gemini-3.8-flash';
+}
 
 /** Brand column contents for a modality. */
 function allowedBrandsFor(materialType: string): readonly string[] {
@@ -298,12 +377,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const shownBrandId = hoverBrandId ?? activeBrandId;
   const shownModels = useMemo(() => {
     const rows = modelsForBrand(shownBrandId);
-    // 已提交的型号即使不在目录里也要显示，避免出现「已选中但列表里没有」。
-    const needsActive = shownBrandId === activeBrandId
+    // 根治跨品牌模型串台：已提交型号即使不在 catalog 里也要回退显示，
+    // 但必须真正属于当前展示的品牌，严禁跨品牌模型注入。
+    const belongsToBrand = brandForModel(activeModelId, allowedBrands) === shownBrandId;
+    const needsActive = belongsToBrand
       && activeModelId
       && !rows.some((row) => row.id === activeModelId);
     return needsActive ? [{ id: activeModelId, name: activeModelId }, ...rows] : rows;
-  }, [modelsForBrand, shownBrandId, activeBrandId, activeModelId]);
+  }, [modelsForBrand, shownBrandId, activeModelId, allowedBrands]);
 
   // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
   // 渠道策略列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；
@@ -359,11 +440,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
   }, []);
 
-  const handleBrandClick = useCallback((brandId: string) => {
-    setActiveBrandId(brandId);
-    setHoverBrandId(brandId);
-  }, []);
-
   const handleSelectModel = useCallback((modelId: string) => {
     setActiveModelId(modelId);
     setActiveBrandId(brandForModel(modelId, allowedBrands));
@@ -373,6 +449,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
     emit(modelId, activeStrategy, groupIds);
   }, [activeStrategy, allowedBrands, emit]);
+
+  /** 点击一级品牌菜单：立即解析并切换选中该品牌下的默认模型，更新状态并写入节点 */
+  const handleBrandClick = useCallback((brandId: string) => {
+    const rows = modelsForBrand(brandId);
+    const targetModelId = defaultModelForBrand(brandId, materialType, rows);
+    handleSelectModel(targetModelId);
+  }, [handleSelectModel, materialType, modelsForBrand]);
 
   const handleStrategyChange = useCallback((strategy: RouteStrategy) => {
     setActiveStrategy(strategy);

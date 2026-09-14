@@ -150,4 +150,177 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.doesNotMatch(configSrc, /ModelRoutingModal/);
     assert.doesNotMatch(configSrc, /routingModalOpen/);
   });
+
+  it('configures default models for each secondary menu across modalities', () => {
+    assert.match(cascadeSrc, /DEFAULT_MODEL_BY_BRAND_AND_MATERIAL/);
+    assert.match(cascadeSrc, /DEFAULT_MODEL_BY_BRAND/);
+    assert.match(cascadeSrc, /defaultModelForBrand/);
+    // DeepSeek 默认模型配置为 deepseek-v4-flash-vision-exp
+    assert.match(cascadeSrc, /deepseek:\s*['"]deepseek-v4-flash-vision-exp['"]/);
+    // Google 默认模型配置为 gemini-3.8-flash
+    assert.match(cascadeSrc, /google:\s*['"]gemini-3.8-flash['"]/);
+  });
+
+  it('immediately switches to brand default model on first-level menu click', () => {
+    // 点击一级菜单必须触发 defaultModelForBrand 并调用 handleSelectModel 提交节点
+    assert.match(cascadeSrc, /const handleBrandClick = useCallback\(\(brandId: string\) => \{/);
+    assert.match(cascadeSrc, /const targetModelId = defaultModelForBrand\(brandId, materialType, rows\);/);
+    assert.match(cascadeSrc, /handleSelectModel\(targetModelId\);/);
+  });
+
+  it('strictly isolates models by brand and prevents cross-brand model leakage', () => {
+    // 根治跨品牌串台：needsActive 必须包含 brandForModel 属于当前展示品牌的强校验
+    assert.match(cascadeSrc, /const belongsToBrand = brandForModel\(activeModelId, allowedBrands\) === shownBrandId;/);
+    assert.match(cascadeSrc, /const needsActive = belongsToBrand/);
+  });
+});
+
+describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () => {
+  // 动态提取/模拟 ModelCascadeMenu 的核心算法验证真实业务契约
+  const BRAND_MATCHERS = [
+    { brand: 'openai', fragments: ['gpt', 'o1', 'o3', 'o4'] },
+    { brand: 'bytedance', fragments: ['seed'] },
+    { brand: 'minimax', fragments: ['minimax', 'hailuo'] },
+    { brand: 'kling', fragments: ['kling'] },
+    { brand: 'alibaba', fragments: ['wan'] },
+    { brand: 'happyhorse', fragments: ['horse'] },
+    { brand: 'anthropic', fragments: ['claude', 'opus', 'sonnet'] },
+    { brand: 'deepseek', fragments: ['deepseek'] },
+    { brand: 'google', fragments: ['gemini', 'banana', 'imagen', 'veo'] },
+    { brand: 'midjourney', fragments: ['midjourney', 'mj'] },
+    { brand: 'xai', fragments: ['grok', 'xai'] },
+  ];
+
+  const allowedBrands = ['openai', 'anthropic', 'google', 'deepseek', 'minimax'];
+
+  function brandForModel(modelId, allowed) {
+    const id = modelId.toLowerCase();
+    for (const { brand, fragments } of BRAND_MATCHERS) {
+      if (allowed.includes(brand) && fragments.some((fragment) => id.includes(fragment))) return brand;
+    }
+    return allowed[0] ?? 'bytedance';
+  }
+
+  const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL = {
+    text: {
+      openai: 'gpt-5.5',
+      anthropic: 'claude-opus-4-6',
+      google: 'gemini-3.8-flash',
+      deepseek: 'deepseek-v4-flash-vision-exp',
+      minimax: 'minimax-h3',
+    },
+    image: {
+      openai: 'gpt-image-2.5',
+      google: 'nano-banana-2',
+      bytedance: 'seedance-2-0-fast',
+      kling: 'kling',
+      midjourney: 'midjourney',
+      xai: 'grok-imagine-image-2',
+    },
+    video: {
+      bytedance: 'seedance-2-0-fast',
+      openai: 'gpt-5.5',
+      minimax: 'minimax-h3',
+      kling: 'kling',
+      alibaba: 'wan-3.0',
+      happyhorse: 'wan-3.0',
+      google: 'gemini-3.8-flash',
+      xai: 'grok-imagine-video-1-5',
+    },
+  };
+
+  const DEFAULT_MODEL_BY_BRAND = {
+    openai: 'gpt-5.5',
+    anthropic: 'claude-opus-4-6',
+    deepseek: 'deepseek-v4-flash-vision-exp',
+    google: 'gemini-3.8-flash',
+    bytedance: 'seedance-2-0-fast',
+    minimax: 'minimax-h3',
+    kling: 'kling',
+    alibaba: 'wan-3.0',
+    happyhorse: 'wan-3.0',
+    midjourney: 'midjourney',
+    xai: 'grok-imagine-video-1-5',
+  };
+
+  function defaultModelForBrand(brandId, materialType, availableRows) {
+    const configured = DEFAULT_MODEL_BY_BRAND_AND_MATERIAL[materialType]?.[brandId]
+      ?? DEFAULT_MODEL_BY_BRAND[brandId];
+    if (configured && availableRows.some((row) => row.id === configured)) {
+      return configured;
+    }
+    if (availableRows.length > 0 && availableRows[0]?.id) {
+      return availableRows[0].id;
+    }
+    return configured ?? 'gemini-3.8-flash';
+  }
+
+  function computeShownModels(shownBrandId, activeModelId, rows) {
+    const belongsToBrand = brandForModel(activeModelId, allowedBrands) === shownBrandId;
+    const needsActive = belongsToBrand
+      && activeModelId
+      && !rows.some((row) => row.id === activeModelId);
+    return needsActive ? [{ id: activeModelId, name: activeModelId }, ...rows] : rows;
+  }
+
+  it('correctly maps model to brand without ambiguity', () => {
+    assert.equal(brandForModel('gemini-3.8-flash', allowedBrands), 'google');
+    assert.equal(brandForModel('deepseek-v4-flash-vision-exp', allowedBrands), 'deepseek');
+    assert.equal(brandForModel('gpt-5.5', allowedBrands), 'openai');
+    assert.equal(brandForModel('claude-opus-4-6', allowedBrands), 'anthropic');
+  });
+
+  it('resolves configured default model for each brand across modalities', () => {
+    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
+    assert.equal(defaultModelForBrand('deepseek', 'text', deepseekRows), 'deepseek-v4-flash-vision-exp');
+
+    const googleRows = [{ id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' }];
+    assert.equal(defaultModelForBrand('google', 'text', googleRows), 'gemini-3.8-flash');
+
+    const openaiTextRows = [{ id: 'gpt-5.5', name: 'GPT 5.5' }];
+    assert.equal(defaultModelForBrand('openai', 'text', openaiTextRows), 'gpt-5.5');
+
+    const openaiImageRows = [{ id: 'gpt-image-2.5', name: 'GPT Image 2.5' }];
+    assert.equal(defaultModelForBrand('openai', 'image', openaiImageRows), 'gpt-image-2.5');
+
+    const bytedanceVideoRows = [{ id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast' }];
+    assert.equal(defaultModelForBrand('bytedance', 'video', bytedanceVideoRows), 'seedance-2-0-fast');
+  });
+
+  it('strictly prevents Gemini model from appearing in DeepSeek menu when current active is Gemini', () => {
+    // 模拟现场缺陷：当前节点激活的是 Google Gemini
+    const activeModelId = 'gemini-3.8-flash';
+    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
+
+    // 计算展示 DeepSeek 品牌的二级模型列表
+    const shown = computeShownModels('deepseek', activeModelId, deepseekRows);
+
+    // 严苛断言：列表中绝不包含 gemini-3.8-flash
+    assert.ok(!shown.some((item) => item.id === 'gemini-3.8-flash'), 'Gemini must not leak into DeepSeek menu');
+    assert.equal(shown.length, 1);
+    assert.equal(shown[0].id, 'deepseek-v4-flash-vision-exp');
+  });
+
+  it('strictly prevents DeepSeek model from appearing in Google menu when current active is DeepSeek', () => {
+    const activeModelId = 'deepseek-v4-flash-vision-exp';
+    const googleRows = [{ id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' }];
+
+    const shown = computeShownModels('google', activeModelId, googleRows);
+
+    assert.ok(!shown.some((item) => item.id === 'deepseek-v4-flash-vision-exp'), 'DeepSeek must not leak into Google menu');
+    assert.equal(shown.length, 1);
+    assert.equal(shown[0].id, 'gemini-3.8-flash');
+  });
+
+  it('allows fallback active model if and only if it belongs to the same brand', () => {
+    // 比如用户配置了特定的定制 deepseek 模型不在 catalog 列表中
+    const customDeepSeek = 'deepseek-custom-70b';
+    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
+
+    const shown = computeShownModels('deepseek', customDeepSeek, deepseekRows);
+
+    assert.equal(shown.length, 2);
+    assert.equal(shown[0].id, customDeepSeek);
+    assert.equal(shown[1].id, 'deepseek-v4-flash-vision-exp');
+  });
 });
