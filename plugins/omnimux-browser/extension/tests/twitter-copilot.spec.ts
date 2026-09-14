@@ -784,4 +784,42 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(parentReceivedMouseDown).toBe(false)
     expect(parentReceivedPointerDown).toBe(false)
   })
+
+  it('T27: 输入定位回溯 - 首页常驻发帖区（非弹窗/非 form/非 article）小幽灵图标能沿祖先成功定位输入框', async () => {
+    // 模拟推特首页常驻发帖框 DOM 结构：输入框与发帖工具栏在同一个大容器内，跨越数层 div
+    const homeComposerContainer = document.createElement('div')
+    homeComposerContainer.className = 'home-composer-outer'
+    homeComposerContainer.innerHTML = `
+      <div class="composer-top-row">
+        <div class="avatar-cell"></div>
+        <div class="input-cell">
+          <div data-testid="tweetTextarea_0_label">
+            <div data-testid="tweetTextarea_0RichTextInputContainer">
+              <div data-testid="tweetTextarea_0" role="textbox" contenteditable="true"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="composer-bottom-row">
+        <div data-testid="toolBar" class="toolbar-inner">
+          <div class="toolbar-icons">
+            <button type="button" class="omnimux-copilot-anchor-btn" id="home-ghost-btn">G</button>
+          </div>
+          <div class="toolbar-submit">
+            <button data-testid="tweetButtonInline" disabled>发帖</button>
+          </div>
+        </div>
+      </div>
+    `
+    document.body.appendChild(homeComposerContainer)
+
+    const ghostBtn = homeComposerContainer.querySelector('#home-ghost-btn') as HTMLElement
+    expect(ghostBtn).not.toBeNull()
+
+    const success = await injectTweetText('测试首页常驻发帖框注入！', ghostBtn, 'zh')
+    expect(success).toBe(true)
+
+    const textarea = homeComposerContainer.querySelector('div[data-testid="tweetTextarea_0"]') as HTMLElement
+    expect(textarea.textContent).toContain('测试首页常驻发帖框注入！')
+  })
 })
