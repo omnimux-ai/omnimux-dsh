@@ -64,11 +64,13 @@ html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-card]{
 }
 /* 收起后网格第三列会吃掉全部剩余宽度，而外壳的右栏面板是固定宽度 + 右对齐
    （left = 容器宽 − 面板宽）。不补这一条，面板左侧就会留下等宽黑空（实测 670px
-   的「中间空白占位」）。必须让面板左端紧贴左侧导航栏右端，不可穿透覆盖左侧栏。 */
+   的「中间空白占位」）。面板的定位祖先是右栏容器本身——左栏可见时它已经在 x=280，
+   因此这里只能用容器相对坐标 left:0（换算成视口坐标正好是左栏右端）：既铺满容器，
+   也不会穿透覆盖左侧栏；写成视口偏移会把左侧导航宽度算两遍，面板右移一个侧栏宽。 */
 html[${CONVERSATION_COLLAPSED_ATTR}]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
-  left:var(--omnimux-sidebar-width, 280px)!important;
+  left:0!important;
   right:0!important;
-  width:calc(100vw - var(--omnimux-sidebar-width, 280px))!important;
+  width:auto!important;
   max-width:none!important;
 }
 html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
