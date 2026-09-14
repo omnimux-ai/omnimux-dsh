@@ -51,4 +51,16 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
       assert.doesNotMatch(src, /调整大小/);
     });
   });
+
+  // 6. Verify native DSH composer projection in canvas full mode
+  assert.match(
+    CONVERSATION_COLLAPSE_CSS,
+    /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*24px\s*!important/,
+    'Native composer seat must be fixed at bottom 24px in collapsed conversation state'
+  );
+  assert.match(
+    CONVERSATION_COLLAPSE_CSS,
+    /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-card\][^{]*\{[^}]*width:\s*640px\s*!important/,
+    'Native composer card must be centered with width 640px in canvas mode'
+  );
 });
