@@ -400,7 +400,7 @@ function modelCards() {
         </div>
         <div class="grid grid-model">
           ${rows.map((model) => `
-          <article class="card item" data-cat="models" data-search="${esc(haystack(model.id, model.label, model.brand, model.family, model.aliases, model.operations.map((op) => op.label)))}">
+          <article class="card item" data-cat="models" data-status="${model.listed ? 'listed' : 'draft'}" data-search="${esc(haystack(model.id, model.label, model.brand, model.family, model.aliases, model.operations.map((op) => op.label)))}">
             <div class="card-head">
               <span class="card-kicker">${esc(model.brand)}</span>
               <span class="chip${model.listed ? ' chip-status-ok' : ''}">${model.listed ? '已就绪' : '已登记'}</span>
@@ -497,6 +497,8 @@ const payload = {
     channels: publishStats
   },
   filters: {
+    listed: modelStats.listed,
+    draft: modelStats.draft,
     models: models.length,
     tools: toolStats.total,
     platforms: accountPlatforms.length,
@@ -583,6 +585,10 @@ ${darkTokens}
   .stat-note { font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-tertiary); margin-top: 4px; }
 
   /* ── 工具栏（单行流） ─────────────────────────────────── */
+  .chip-sep {
+    width: 1px; height: 20px; flex-shrink: 0;
+    background: var(--dsw-alias-border);
+  }
   .toolbar {
     display: flex; flex-wrap: nowrap; align-items: center; gap: 10px;
     background: var(--dsw-alias-card); border: 1px solid var(--dsw-alias-card-border);
@@ -747,6 +753,10 @@ ${darkTokens}
       <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">${payload.filters.tools}</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">${payload.filters.platforms}</span></button>
       <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">${payload.filters.channels}</span></button>
+      <span class="chip-sep" aria-hidden="true"></span>
+      <button type="button" class="chip is-active" data-status-filter="all">全部状态</button>
+      <button type="button" class="chip" data-status-filter="listed">已就绪 <span class="n">${payload.filters.listed}</span></button>
+      <button type="button" class="chip" data-status-filter="draft">已登记 <span class="n">${payload.filters.draft}</span></button>
     </div>
   </div>
   <p class="result-line" id="resultLine" role="status"></p>
@@ -905,20 +915,26 @@ ${darkTokens}
   var resultLine = document.getElementById('resultLine');
   var blocks = Array.prototype.slice.call(document.querySelectorAll('.block'));
   var filterButtons = Array.prototype.slice.call(document.querySelectorAll('.chip[data-filter]'));
-  var state = { query: '', filter: 'all' };
+    var statusButtons = Array.prototype.slice.call(document.querySelectorAll('.chip[data-status-filter]'));
+  var state = { query: '', filter: 'all', status: 'all' };
 
   function apply() {
     var query = state.query.trim().toLowerCase();
     var visibleTotal = 0;
 
     blocks.forEach(function (block) {
-      var categoryMatches = state.filter === 'all' || block.dataset.cat === state.filter;
+      // 状态筛选只针对模型卡；启用时视图自动聚焦「模型能力」区块
+      var statusScoped = state.status !== 'all';
+      var categoryMatches = statusScoped
+        ? block.dataset.cat === 'models'
+        : (state.filter === 'all' || block.dataset.cat === state.filter);
       var items = Array.prototype.slice.call(block.querySelectorAll('.item'));
       var visibleInBlock = 0;
 
       items.forEach(function (item) {
         var matches = query === '' || (item.dataset.search || '').indexOf(query) !== -1;
-        var shown = categoryMatches && matches;
+        var statusMatches = !statusScoped || item.dataset.status === state.status;
+        var shown = categoryMatches && matches && statusMatches;
         item.classList.toggle('is-hidden', !shown);
         if (shown) visibleInBlock += 1;
       });
@@ -939,7 +955,11 @@ ${darkTokens}
       visibleTotal += visibleInBlock;
     });
 
-    resultLine.textContent = '当前显示 ' + visibleTotal + ' 条接口记录' + (state.filter === 'all' ? '' : '（分类过滤已启用）') + (query === '' ? '' : '（关键词：' + state.query.trim() + '）');
+    var notes = [];
+    if (state.status !== 'all') notes.push('状态：' + (state.status === 'listed' ? '已就绪' : '已登记'));
+    else if (state.filter !== 'all') notes.push('分类过滤已启用');
+    if (query !== '') notes.push('关键词：' + state.query.trim());
+    resultLine.textContent = '当前显示 ' + visibleTotal + ' 条接口记录' + (notes.length === 0 ? '' : '（' + notes.join(' · ') + '）');
   }
 
   search.addEventListener('input', function (event) {
@@ -951,6 +971,18 @@ ${darkTokens}
     button.addEventListener('click', function () {
       state.filter = button.dataset.filter;
       filterButtons.forEach(function (other) { other.classList.toggle('is-active', other === button); });
+      apply();
+    });
+  });
+
+  statusButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      state.status = button.dataset.statusFilter;
+      statusButtons.forEach(function (other) { other.classList.toggle('is-active', other === button); });
+      if (state.status !== 'all') {
+        state.filter = 'models';
+        filterButtons.forEach(function (other) { other.classList.toggle('is-active', other.dataset.filter === 'models'); });
+      }
       apply();
     });
   });

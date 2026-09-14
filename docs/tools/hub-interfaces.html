@@ -155,6 +155,10 @@
   .stat-note { font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-tertiary); margin-top: 4px; }
 
   /* ── 工具栏（单行流） ─────────────────────────────────── */
+  .chip-sep {
+    width: 1px; height: 20px; flex-shrink: 0;
+    background: var(--dsw-alias-border);
+  }
   .toolbar {
     display: flex; flex-wrap: nowrap; align-items: center; gap: 10px;
     background: var(--dsw-alias-card); border: 1px solid var(--dsw-alias-card-border);
@@ -294,7 +298,7 @@
         <span id="themeLabel">深色</span>
       </button>
       <dl class="meta-list">
-        <div><dt>生成时间</dt><dd>2026/9/14 16:13:34</dd></div>
+        <div><dt>生成时间</dt><dd>2026/9/14 16:22:19</dd></div>
         <div><dt>契约指纹</dt><dd>a29c47355e</dd></div>
       </dl>
     </div>
@@ -334,6 +338,10 @@
       <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">116</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">8</span></button>
       <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">13</span></button>
+      <span class="chip-sep" aria-hidden="true"></span>
+      <button type="button" class="chip is-active" data-status-filter="all">全部状态</button>
+      <button type="button" class="chip" data-status-filter="listed">已就绪 <span class="n">26</span></button>
+      <button type="button" class="chip" data-status-filter="draft">已登记 <span class="n">24</span></button>
     </div>
   </div>
   <p class="result-line" id="resultLine" role="status"></p>
@@ -355,7 +363,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-search="claude-opus-4-6 claude opus 4.6 anthropic anthropic 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="claude-opus-4-6 claude opus 4.6 anthropic anthropic 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">Anthropic</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -368,7 +376,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="claude-opus-5 claude opus 5 anthropic anthropic 文本对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="claude-opus-5 claude opus 5 anthropic anthropic 文本对话">
             <div class="card-head">
               <span class="card-kicker">Anthropic</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -381,7 +389,7 @@
             </ul>
             <p class="card-foot mono">1/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="deepseek-v4-flash-vision-exp deepseek v4 flash deepseek deepseek 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="deepseek-v4-flash-vision-exp deepseek v4 flash deepseek deepseek 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">DeepSeek</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -394,7 +402,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="deepseek-v4-pro deepseek v4 pro deepseek deepseek 文本对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="deepseek-v4-pro deepseek v4 pro deepseek deepseek 文本对话">
             <div class="card-head">
               <span class="card-kicker">DeepSeek</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -407,7 +415,7 @@
             </ul>
             <p class="card-foot mono">1/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gemini-3.1-pro-preview gemini 3.1 pro preview google google 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gemini-3.1-pro-preview gemini 3.1 pro preview google google 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">Google</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -420,7 +428,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gemini-3.7-flash gemini 3.7 flash google google 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gemini-3.7-flash gemini 3.7 flash google google 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">Google</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -433,7 +441,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gemini-3.8-flash gemini 3.8 flash google google 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gemini-3.8-flash gemini 3.8 flash google google 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">Google</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -446,7 +454,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="glm-5.3 glm 5.3 智谱 ai (zhipu/glm) zhipu 文本对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="glm-5.3 glm 5.3 智谱 ai (zhipu/glm) zhipu 文本对话">
             <div class="card-head">
               <span class="card-kicker">智谱 AI (Zhipu/GLM)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -459,7 +467,7 @@
             </ul>
             <p class="card-foot mono">1/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gpt-5.5 gpt 5.5 openai openai 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gpt-5.5 gpt 5.5 openai openai 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -472,7 +480,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gpt-5.6-sol gpt 5.6 sol openai openai 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gpt-5.6-sol gpt 5.6 sol openai openai 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -485,7 +493,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="grok-4.6 grok 4.6 xai (grok) xai 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="grok-4.6 grok 4.6 xai (grok) xai 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">xAI (Grok)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -498,7 +506,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kimi-k3 kimi k3 月之暗面 (moonshot/kimi) moonshot 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="kimi-k3 kimi k3 月之暗面 (moonshot/kimi) moonshot 文本对话 图文对话">
             <div class="card-head">
               <span class="card-kicker">月之暗面 (Moonshot/Kimi)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -520,7 +528,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-search="gpt-image-2 gpt image 2 openai openai 文生图 垫图参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gpt-image-2 gpt image 2 openai openai 文生图 垫图参考">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -533,7 +541,7 @@
             </ul>
             <p class="card-foot mono">1/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gpt-image-2.5 gpt image 2.5 openai openai gpt-image-2-5 文生图 垫图参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gpt-image-2.5 gpt image 2.5 openai openai gpt-image-2-5 文生图 垫图参考">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -546,7 +554,7 @@
             </ul>
             <p class="card-foot mono">1/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gpt-image-2.5-hd gpt image 2.5 hd openai openai gpt-image-2-hd gpt-image2-hd 文生图 垫图参考">
+          <article class="card item" data-cat="models" data-status="draft" data-search="gpt-image-2.5-hd gpt image 2.5 hd openai openai gpt-image-2-hd gpt-image2-hd 文生图 垫图参考">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip">已登记</span>
@@ -559,7 +567,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="grok-imagine-image-2 grok imagine image 2 xai (grok) grok grok-imagine-image grok-imagine-image-2-0 grok-imagine-image-2.0 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="listed" data-search="grok-imagine-image-2 grok imagine image 2 xai (grok) grok grok-imagine-image grok-imagine-image-2-0 grok-imagine-image-2.0 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">xAI (Grok)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -572,7 +580,7 @@
             </ul>
             <p class="card-foot mono">1/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="grok-imagine-image-quality grok imagine image quality xai (grok) grok 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="grok-imagine-image-quality grok imagine image quality xai (grok) grok 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">xAI (Grok)</span>
               <span class="chip">已登记</span>
@@ -585,7 +593,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="midjourney midjourney midjourney midjourney 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="midjourney midjourney midjourney midjourney 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Midjourney</span>
               <span class="chip">已登记</span>
@@ -598,7 +606,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="midjourney-7 midjourney 7 midjourney midjourney 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="midjourney-7 midjourney 7 midjourney midjourney 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Midjourney</span>
               <span class="chip">已登记</span>
@@ -611,7 +619,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="midjourney-8.1 midjourney 8.1 midjourney midjourney 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="midjourney-8.1 midjourney 8.1 midjourney midjourney 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Midjourney</span>
               <span class="chip">已登记</span>
@@ -624,7 +632,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="midjourney-niji-7 midjourney niji 7 midjourney midjourney 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="midjourney-niji-7 midjourney niji 7 midjourney midjourney 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Midjourney</span>
               <span class="chip">已登记</span>
@@ -637,7 +645,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="nano_banana_2 nano banana 2 google (nanobanana) nanobanana nanobanana-2 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="nano_banana_2 nano banana 2 google (nanobanana) nanobanana nanobanana-2 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Google (NanoBanana)</span>
               <span class="chip">已登记</span>
@@ -650,7 +658,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="nano_banana_pro nano banana pro google (nanobanana) nanobanana nanobanana-pro 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="nano_banana_pro nano banana pro google (nanobanana) nanobanana nanobanana-pro 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">Google (NanoBanana)</span>
               <span class="chip">已登记</span>
@@ -663,7 +671,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedream-4.5 seedream 4.5 字节跳动 (doubao/seed) seedream 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="seedream-4.5 seedream 4.5 字节跳动 (doubao/seed) seedream 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip">已登记</span>
@@ -676,7 +684,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedream-5-0-pro seedream 5.0 pro 字节跳动 (doubao/seed) seedream seedream-5.0-pro 文生图 多图垫图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="seedream-5-0-pro seedream 5.0 pro 字节跳动 (doubao/seed) seedream seedream-5.0-pro 文生图 多图垫图">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip">已登记</span>
@@ -698,7 +706,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-search="grok-imagine-video-1-5 grok imagine video 1.5 xai (grok) grok grok-imagine-video-1.5 文生视频 参考图">
+          <article class="card item" data-cat="models" data-status="listed" data-search="grok-imagine-video-1-5 grok imagine video 1.5 xai (grok) grok grok-imagine-video-1.5 文生视频 参考图">
             <div class="card-head">
               <span class="card-kicker">xAI (Grok)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -711,7 +719,7 @@
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-avatar kling avatar (数字人) 快手 (kling) kling 数字人口播">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-avatar kling avatar (数字人) 快手 (kling) kling 数字人口播">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -724,7 +732,7 @@
             </ul>
             <p class="card-foot mono">0/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-o1 kling o1 快手 (kling) kling 文生视频 首尾帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-o1 kling o1 快手 (kling) kling 文生视频 首尾帧">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -737,7 +745,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-o3 kling o3 快手 (kling) kling 文生视频 首尾帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-o3 kling o3 快手 (kling) kling 文生视频 首尾帧">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -750,7 +758,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-v2-6 kling v2.6 快手 (kling) kling 文生视频 首帧 首尾帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-v2-6 kling v2.6 快手 (kling) kling 文生视频 首帧 首尾帧">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -763,7 +771,7 @@
             </ul>
             <p class="card-foot mono">0/3 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-v3 kling v3 快手 (kling) kling 文生视频 首帧 首尾帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-v3 kling v3 快手 (kling) kling 文生视频 首帧 首尾帧">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -776,7 +784,7 @@
             </ul>
             <p class="card-foot mono">0/3 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="kling-v3-motion-control kling v3 运镜控制 快手 (kling) kling 文生视频 首尾帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="kling-v3-motion-control kling v3 运镜控制 快手 (kling) kling 文生视频 首尾帧">
             <div class="card-head">
               <span class="card-kicker">快手 (Kling)</span>
               <span class="chip">已登记</span>
@@ -789,7 +797,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="minimax-h3 minimax h3 minimax minimax minimax-h3 文生视频 首帧 尾帧 首尾帧 全能参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="minimax-h3 minimax h3 minimax minimax minimax-h3 文生视频 首帧 尾帧 首尾帧 全能参考">
             <div class="card-head">
               <span class="card-kicker">MiniMax</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -802,7 +810,7 @@
             </ul>
             <p class="card-foot mono">5/5 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="minimax-h3-max minimax h3 max minimax minimax minimax/h3-max h3-max 文生视频 首帧 尾帧 首尾帧 全能参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="minimax-h3-max minimax h3 max minimax minimax minimax/h3-max h3-max 文生视频 首帧 尾帧 首尾帧 全能参考">
             <div class="card-head">
               <span class="card-kicker">MiniMax</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -815,7 +823,7 @@
             </ul>
             <p class="card-foot mono">5/5 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="minimax-h3-max-turbo minimax h3 max turbo minimax minimax minimax/h3-max-turbo h3-max-turbo 文生视频 首帧 尾帧 首尾帧">
+          <article class="card item" data-cat="models" data-status="listed" data-search="minimax-h3-max-turbo minimax h3 max turbo minimax minimax minimax/h3-max-turbo h3-max-turbo 文生视频 首帧 尾帧 首尾帧">
             <div class="card-head">
               <span class="card-kicker">MiniMax</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -828,7 +836,7 @@
             </ul>
             <p class="card-foot mono">4/4 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="omni_flash omni flash video google (omni flash) veo 文生视频 参考图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="omni_flash omni flash video google (omni flash) veo 文生视频 参考图">
             <div class="card-head">
               <span class="card-kicker">Google (Omni Flash)</span>
               <span class="chip">已登记</span>
@@ -841,7 +849,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedance-2-0 seedance 2.0 字节跳动 (doubao/seed) bytedance seedance-2.0 文生视频 首帧 首尾帧 全能参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="seedance-2-0 seedance 2.0 字节跳动 (doubao/seed) bytedance seedance-2.0 文生视频 首帧 首尾帧 全能参考">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -854,7 +862,7 @@
             </ul>
             <p class="card-foot mono">4/4 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedance-2-0-fast seedance 2.0 fast 字节跳动 (doubao/seed) bytedance seedance-2.0-fast 文生视频 首帧 首尾帧 全能参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="seedance-2-0-fast seedance 2.0 fast 字节跳动 (doubao/seed) bytedance seedance-2.0-fast 文生视频 首帧 首尾帧 全能参考">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -867,7 +875,7 @@
             </ul>
             <p class="card-foot mono">4/4 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedance-2-0-mini seedance 2.0 mini 字节跳动 (doubao/seed) bytedance seedance-2.0-mini 文生视频 首帧 首尾帧 全能参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="seedance-2-0-mini seedance 2.0 mini 字节跳动 (doubao/seed) bytedance seedance-2.0-mini 文生视频 首帧 首尾帧 全能参考">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -880,7 +888,7 @@
             </ul>
             <p class="card-foot mono">4/4 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedance-2-5 seedance 2.5 字节跳动 (doubao/seed) bytedance seedance-2.5 文生视频 首帧 首尾帧 全能参考 视频编辑 视频延长">
+          <article class="card item" data-cat="models" data-status="listed" data-search="seedance-2-5 seedance 2.5 字节跳动 (doubao/seed) bytedance seedance-2.5 文生视频 首帧 首尾帧 全能参考 视频编辑 视频延长">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -893,7 +901,7 @@
             </ul>
             <p class="card-foot mono">6/6 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seedance2.5-stable-max-720p seedance 2.5 stable max 字节跳动 (doubao/seed) bytedance 文生视频 首帧">
+          <article class="card item" data-cat="models" data-status="draft" data-search="seedance2.5-stable-max-720p seedance 2.5 stable max 字节跳动 (doubao/seed) bytedance 文生视频 首帧">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip">已登记</span>
@@ -906,7 +914,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="veo-3.1 veo 3.1 google (veo) veo 文生视频 参考图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="veo-3.1 veo 3.1 google (veo) veo 文生视频 参考图">
             <div class="card-head">
               <span class="card-kicker">Google (Veo)</span>
               <span class="chip">已登记</span>
@@ -919,7 +927,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="veo-3.1-fast veo 3.1 fast google (veo) veo 文生视频 参考图">
+          <article class="card item" data-cat="models" data-status="draft" data-search="veo-3.1-fast veo 3.1 fast google (veo) veo 文生视频 参考图">
             <div class="card-head">
               <span class="card-kicker">Google (Veo)</span>
               <span class="chip">已登记</span>
@@ -932,7 +940,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="wan-3.0 wan 3.0 阿里通义 (wan 万相) wan wan3.0-video wan-3.0-prime wan-3.0-ref wan-3.0-prime-ref 文生视频 首帧 首尾帧 全能参考 文档参考 网页参考">
+          <article class="card item" data-cat="models" data-status="listed" data-search="wan-3.0 wan 3.0 阿里通义 (wan 万相) wan wan3.0-video wan-3.0-prime wan-3.0-ref wan-3.0-prime-ref 文生视频 首帧 首尾帧 全能参考 文档参考 网页参考">
             <div class="card-head">
               <span class="card-kicker">阿里通义 (Wan 万相)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -954,7 +962,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-search="doubao-asr-bigmodel 豆包语音识别大模型 (doubao-asr) 字节跳动 (doubao/seed) bytedance seedasr-auc 语音转文字">
+          <article class="card item" data-cat="models" data-status="listed" data-search="doubao-asr-bigmodel 豆包语音识别大模型 (doubao-asr) 字节跳动 (doubao/seed) bytedance seedasr-auc 语音转文字">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -967,7 +975,7 @@
             </ul>
             <p class="card-foot mono">1/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="gpt-4o-mini-tts gpt 4o mini tts openai openai 文本转语音">
+          <article class="card item" data-cat="models" data-status="draft" data-search="gpt-4o-mini-tts gpt 4o mini tts openai openai 文本转语音">
             <div class="card-head">
               <span class="card-kicker">OpenAI</span>
               <span class="chip">已登记</span>
@@ -980,7 +988,7 @@
             </ul>
             <p class="card-foot mono">0/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="seed-audio-1.0 seed audio 1.0 字节跳动 (doubao/seed) bytedance doubao-seed-audio-1.0 seed-audio 文本转语音">
+          <article class="card item" data-cat="models" data-status="listed" data-search="seed-audio-1.0 seed audio 1.0 字节跳动 (doubao/seed) bytedance doubao-seed-audio-1.0 seed-audio 文本转语音">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -993,7 +1001,7 @@
             </ul>
             <p class="card-foot mono">1/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="suno suno music suno suno ai 音乐生成">
+          <article class="card item" data-cat="models" data-status="draft" data-search="suno suno music suno suno ai 音乐生成">
             <div class="card-head">
               <span class="card-kicker">Suno</span>
               <span class="chip">已登记</span>
@@ -1006,7 +1014,7 @@
             </ul>
             <p class="card-foot mono">0/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-search="whisper-1 whisper 1 openai (whisper) openai 语音识别">
+          <article class="card item" data-cat="models" data-status="draft" data-search="whisper-1 whisper 1 openai (whisper) openai 语音识别">
             <div class="card-head">
               <span class="card-kicker">OpenAI (Whisper)</span>
               <span class="chip">已登记</span>
@@ -1028,7 +1036,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-search="jina-reader-v1 jina reader 网页读取 jina ai jina 网页读取">
+          <article class="card item" data-cat="models" data-status="draft" data-search="jina-reader-v1 jina reader 网页读取 jina ai jina 网页读取">
             <div class="card-head">
               <span class="card-kicker">Jina AI</span>
               <span class="chip">已登记</span>
@@ -1473,11 +1481,11 @@
         <div class="source-path">plugins/omnimux-publish/src/config.js · plugins/omnimux-publish/src/account-policy.js · plugins/omnimux-publish/src/submit-media.js + src/hubtools.js · plugins/omnimux/src/official/provider.js</div>
       </div>
     </div>
-    <p class="footer-note">生成时间 2026/9/14 16:13:34 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 a29c47355e · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
+    <p class="footer-note">生成时间 2026/9/14 16:22:19 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 a29c47355e · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
   </footer>
 </div>
 
-<script id="hub-data" type="application/json">{"generatedAt":"2026/9/14 16:13:34","fingerprint":"a29c47355e","stats":{"models":{"total":50,"listed":26,"draft":24,"dispositions":76},"tools":{"total":116,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":7},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"models":50,"tools":116,"platforms":8,"channels":13}}</script>
+<script id="hub-data" type="application/json">{"generatedAt":"2026/9/14 16:22:19","fingerprint":"a29c47355e","stats":{"models":{"total":50,"listed":26,"draft":24,"dispositions":76},"tools":{"total":116,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":7},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"listed":26,"draft":24,"models":50,"tools":116,"platforms":8,"channels":13}}</script>
 <script>
 (function () {
   var root = document.documentElement;
@@ -1512,20 +1520,26 @@
   var resultLine = document.getElementById('resultLine');
   var blocks = Array.prototype.slice.call(document.querySelectorAll('.block'));
   var filterButtons = Array.prototype.slice.call(document.querySelectorAll('.chip[data-filter]'));
-  var state = { query: '', filter: 'all' };
+    var statusButtons = Array.prototype.slice.call(document.querySelectorAll('.chip[data-status-filter]'));
+  var state = { query: '', filter: 'all', status: 'all' };
 
   function apply() {
     var query = state.query.trim().toLowerCase();
     var visibleTotal = 0;
 
     blocks.forEach(function (block) {
-      var categoryMatches = state.filter === 'all' || block.dataset.cat === state.filter;
+      // 状态筛选只针对模型卡；启用时视图自动聚焦「模型能力」区块
+      var statusScoped = state.status !== 'all';
+      var categoryMatches = statusScoped
+        ? block.dataset.cat === 'models'
+        : (state.filter === 'all' || block.dataset.cat === state.filter);
       var items = Array.prototype.slice.call(block.querySelectorAll('.item'));
       var visibleInBlock = 0;
 
       items.forEach(function (item) {
         var matches = query === '' || (item.dataset.search || '').indexOf(query) !== -1;
-        var shown = categoryMatches && matches;
+        var statusMatches = !statusScoped || item.dataset.status === state.status;
+        var shown = categoryMatches && matches && statusMatches;
         item.classList.toggle('is-hidden', !shown);
         if (shown) visibleInBlock += 1;
       });
@@ -1546,7 +1560,11 @@
       visibleTotal += visibleInBlock;
     });
 
-    resultLine.textContent = '当前显示 ' + visibleTotal + ' 条接口记录' + (state.filter === 'all' ? '' : '（分类过滤已启用）') + (query === '' ? '' : '（关键词：' + state.query.trim() + '）');
+    var notes = [];
+    if (state.status !== 'all') notes.push('状态：' + (state.status === 'listed' ? '已就绪' : '已登记'));
+    else if (state.filter !== 'all') notes.push('分类过滤已启用');
+    if (query !== '') notes.push('关键词：' + state.query.trim());
+    resultLine.textContent = '当前显示 ' + visibleTotal + ' 条接口记录' + (notes.length === 0 ? '' : '（' + notes.join(' · ') + '）');
   }
 
   search.addEventListener('input', function (event) {
@@ -1558,6 +1576,18 @@
     button.addEventListener('click', function () {
       state.filter = button.dataset.filter;
       filterButtons.forEach(function (other) { other.classList.toggle('is-active', other === button); });
+      apply();
+    });
+  });
+
+  statusButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      state.status = button.dataset.statusFilter;
+      statusButtons.forEach(function (other) { other.classList.toggle('is-active', other === button); });
+      if (state.status !== 'all') {
+        state.filter = 'models';
+        filterButtons.forEach(function (other) { other.classList.toggle('is-active', other.dataset.filter === 'models'); });
+      }
       apply();
     });
   });
