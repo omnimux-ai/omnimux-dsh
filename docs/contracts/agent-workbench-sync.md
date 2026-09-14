@@ -224,5 +224,5 @@ WebSocket healthy → **do not** run the 5s interval. WebSocket unhealthy → re
 ## 8. Verification
 
 - Unit: envelope truncate, guard state machine, bus replay, lrev idempotency, poll-off still refreshes on event.
-- Live: `pnpm verify:live assets` on Dev App **45120**. Client/Stage changes without live probe are not done.
-- Daily materialize `~/.omnimux-dev` only. No `--prod` unless a human release order.
+- Live: agent-side acceptance is real-browser web verification inside this task's isolated worktree (ego-browser or the worktree-isolated web QA runner, dynamic ports, self-cleaning); Client/Stage changes without that web verification evidence are not done. Dev App **45120** real-device acceptance is HUMAN-owned and never an agent gate.
+- Dev `~/.omnimux-dev` materialization is optional (on demand for human inspection). No `--prod` unless a human release order.

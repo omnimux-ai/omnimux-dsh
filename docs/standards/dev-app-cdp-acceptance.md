@@ -16,10 +16,12 @@ related:
 
 > 本文保留 Electron CDP 方法与历史案例，不定义通用验收政策，也不证明当前 App 已通过验收。适用层以 [plugin-qa.md](../contracts/plugin-qa.md) 为准，环境以 [dev-pipeline.md](../contracts/dev-pipeline.md) 为准；本文不替代这两份合同。
 
+> **政策变更（2026-09-14）**：Dev App 真机验收（45120 / Electron renderer）是**人工职责**，Agent 不再被要求物化并在 Dev App 上做真机验收，不等待、不阻塞、不将其作为交付卡点，也不声称取得该证据。Agent 侧验收基线是**自身隔离 worktree 内的真实浏览器 Web 验证**（ego-browser 或 worktree 隔离 Web QA 运行器，动态端口、自清理，保留截图/结构化报告）。本文以下内容**保留为人工侧程序**，供人工执行 Dev App 真机与 Electron CDP 验收时使用。
+
 ## TL;DR
 
-- 合并前在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 required CI / Merge Queue；没有独立 App/Host 测试环境。普通 Web/Stage 改动合并后从 `main` 物化 Dev `~/.omnimux-dev`，在 45120 使用 ego-browser + 共享 `verify:live`，默认不要求 Electron。
-- Dev/Prod 不得 link 或接收未合并工作树。纯文档、流程、脚本无需 App 物化；CI `qa:pass` 仅证明合入前静态与测试，不证明 Dev 验收。
+- 合并前在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 required CI / Merge Queue；没有独立 App/Host 测试环境。Agent 侧验收在自身隔离 worktree 内完成真实浏览器 Web 验证（ego-browser 或 worktree 隔离 Web QA 运行器，动态端口、自清理），默认不要求 Electron。Dev App 真机验收归人工，不作为 Agent 交付卡点。
+- Dev/Prod 不得 link 或接收未合并工作树。纯文档、流程、脚本无需 App 物化；CI `qa:pass` 仅证明合入前静态与测试，不证明 Dev 真机验收。
 - 只有涉及 **壳层样式 / `data-dsh-desktop-*` / 平台门控** 等 Electron 专属行为时，才追加 **CDP 直连 Electron renderer** 证据；45120 网页不能代替该层，CDP 也不能代替所需 Web 证据。
 - 下文记录 desktop-fork #33 的 Dev CDP 端口方案（默认 `9229`）及 `pnpm verify:cdp` 用法。实际构建、目标窗口和运行身份须在每次验收时核对。
 
@@ -44,7 +46,7 @@ Dev App 是 **Electron 应用**。`http://127.0.0.1:45120` 是其 **host 端口*
 2. macOS / Windows 平台门控的布局、窗口、滚动、panel 表现；
 3. 用户在 Electron 窗口上报、Web 侧无法复现，且需要核实壳层/平台差异的行为。
 
-纯插件 Web/Stage 逻辑（不涉壳层/平台门控）按 `plugin-qa` 的 Web 证据完成适用验收，不追加 Electron 要求；curl 或页面可达性不能替代共享浏览器探针。
+纯插件 Web/Stage 逻辑（不涉壳层/平台门控）的 Agent 侧验收按 `plugin-qa` 在隔离 worktree 内完成，不追加 Electron 要求；Electron renderer 的 Dev 真机验收归人工，不作为 Agent 交付卡点。curl 或页面可达性不能替代共享浏览器探针。
 
 ## 三、验收通道：CDP 直连（desktop-fork #33）
 
@@ -85,14 +87,14 @@ OMNIMUX_CDP_PORT=9333 pnpm verify:cdp
 
 ## 四、合同落点
 
-- [dev-pipeline.md](../contracts/dev-pipeline.md)：定义隔离 worktree 检查、合并后 Dev 与生产环境边界；只有壳层/平台门控改动额外要求 Electron。
+- [dev-pipeline.md](../contracts/dev-pipeline.md)：定义隔离 worktree 检查、合并后 Dev 与生产环境边界；只有壳层/平台门控改动额外要求 Electron，且 Dev App 真机验收归人工，不作为 Agent 交付卡点。
 - [plugin-qa.md](../contracts/plugin-qa.md)：定义适用矩阵、Web 共享探针与 Electron 追加证据。需要 Electron 而 CDP 不可用时为 BLOCKED，不以网页或截图猜测代替。
 
 现有 CDP 脚本只提供 selector/computed style 的定向测量；其报告未记录完整代码 SHA、dirty、profile 和 Host 身份，不能单独构成当前任务的完整放行证据。验收者须按合同补核身份和适用项。
 
-## 五、判别法则（给 Agent 的检查清单）
+## 五、判别法则（Dev App CDP 验收检查清单，人工执行）
 
-按 `plugin-qa` 判定需要 Electron 追加证据后，检查：
+按 `plugin-qa` 判定需要 Electron 追加证据后（由人工在 Dev App 上执行），检查：
 
 - [ ] 目标行为是否依赖 `data-dsh-desktop-*` 或壳层规则？普通 Web/Stage 不追加该层。
 - [ ] 测量是否来自目标 Electron 窗口，且运行身份已核对？45120 网页不能证明 Electron 专属行为。

@@ -30,8 +30,8 @@ tags: ["portal", "index", "docs-root", "navigation"]
 |---|---|
 | [plugin-git-pr](contracts/plugin-git-pr.md) | 风险、授权、push/merge、Merge Queue 与发布政策真源 |
 | [agent-issue-lifecycle](contracts/agent-issue-lifecycle.md) | Issue metadata、阶段状态、职责分配与恢复信息 |
-| [plugin-qa](contracts/plugin-qa.md) | 合入前相关自动化/静态与独立评审；合入后按需 Dev 45120 浏览器/Electron 证据 |
-| [dev-pipeline](contracts/dev-pipeline.md) | Worktree 检查 → required CI/MQ → main → 按需 Dev 物化验收；Prod 边界 |
+| [plugin-qa](contracts/plugin-qa.md) | 合入前相关自动化/静态与独立评审；Agent 侧隔离 worktree 真实浏览器 Web 验收；Dev 真机验收归人工 |
+| [dev-pipeline](contracts/dev-pipeline.md) | Worktree 检查 → required CI/MQ → main → 按需 Dev 物化（供人工查看）；Prod 边界 |
 | [ops-entry](contracts/ops-entry.md) | 对外同步、诊断、重启入口；不提供合入前独立运行环境 |
 | [docs-governance-standard](contracts/docs-governance-standard.md) | 文档层级、metadata、生命周期与工具真实能力 |
 

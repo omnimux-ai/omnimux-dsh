@@ -56,10 +56,10 @@ export function handoffToAgent(root, issueId, evidence, options, fromPhase = 'pr
     mergeProhibited: merged || Boolean(options.noMerge),
     materializeProhibited: options.materialize === false,
     nextAction: merged
-      ? `${options.materialize === false ? 'Do not materialize (--no-materialize); retain pending Dev acceptance.' : 'Review Dev applicability against the actual diff (record a not-applicable reason for pure scripts/metadata), verify Dev ownership and current task scope, then materialize the merged main revision through the official sync entry and complete applicable Dev 45120 acceptance.'} Preserve evidence and worktree; do not claim succeeded or clean up before applicable Dev acceptance passes.`
+      ? `${options.materialize === false ? 'Do not materialize (--no-materialize).' : 'Materialization is optional: run it only when the human wants to inspect the shared Dev app.'} The agent-side delivery gate is this task's isolated-worktree real-browser web verification evidence (screenshots or structured report); Dev 45120 real-device acceptance is HUMAN-owned and must not block, be waited on, or be claimed by the agent. Preserve evidence and worktree, then finish applicable cleanup.`
       : options.noMerge
         ? 'Complete PR acceptance and report within --no-merge scope; do not merge or materialize.'
-        : `Recheck current user scope and revocation, PR head, required static/test checks and independent review; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' then applicable Dev delivery'}, requesting only missing boundary authorization.`,
+        : `Recheck current user scope and revocation, PR head, required static/test checks and independent review; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' then optional materialization for human inspection'}, requesting only missing boundary authorization.`,
   }
   return saveState(root, issueId, fromPhase, 'ready-for-agent', { ...evidence, handoff })
 }

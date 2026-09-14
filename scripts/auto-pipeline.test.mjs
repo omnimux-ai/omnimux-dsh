@@ -227,14 +227,20 @@ allow-skips: false
       rmSync(tmpEvidence, { recursive: true, force: true })
     }
   })
-  it('evaluateVerdict only certifies pre-merge static/tests and leaves UI acceptance pending', () => {
+  it('evaluateVerdict only certifies pre-merge static/tests and leaves worktree browser acceptance pending without a Dev gate', () => {
     const passQa = { pass: true, summary: 'L0 PASS', changedFiles: ['docs/guide.md'] }
     assert.equal(evaluateVerdict(passQa).pass, true)
     assert.equal(evaluateVerdict({ ...passQa, pass: false }).pass, false)
     const ui = evaluateVerdict({ ...passQa, changedFiles: ['plugins/a/client/index.js'] })
     assert.equal(ui.pass, true)
+    assert.equal(ui.dimensions.browser.required, true)
     assert.equal(ui.dimensions.browser.status, 'pending')
     assert.equal(ui.dimensions.browser.pass, null)
+    assert.equal(ui.dimensions.browser.target, 'worktree')
+    assert.equal(ui.dimensions.dev.required, false)
+    assert.equal(ui.dimensions.dev.status, 'not-applicable')
+    assert.equal(ui.dimensions.dev.pass, null)
+    assert.equal(ui.dimensions.dev.target, 'human')
     assert.equal(evaluateVerdict({ pass: true }).pass, false)
   })
   it('准入后真实状态迁移剥除 ready，运行时复验通过且撤销/升级熔断', () => {
@@ -319,7 +325,7 @@ allow-skips: false
       }
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
-  it('post-merge UI/runtime delivery retains the worktree and pending Dev without materialization or success', () => {
+  it('post-merge delivery treats Dev as human-owned and never opens an agent Dev gate', () => {
     const root = mkdtempSync(join(tmpdir(), 'pipeline-dev-handoff-'))
     try {
       for (const files of [['plugins/a/client/View.js'], ['plugins/a/src/server.js']]) {
@@ -328,26 +334,57 @@ allow-skips: false
           const reports = postMergeAcceptance(deriveImpactMatrix(files))
           const evidence = { issueId: '866', plugin: 'a', topic: 'task', reports, risk: { tier: 'R2' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }
           const calls = []
+          const cleanups = []
           const result = finishMergedDelivery(root, { wtDir: '/task' }, evidence, {
             materialize, execCommand: (command, args) => { calls.push([command, args]); return { status: 0 } },
-          }, () => { throw new Error('must not materialize or clean before Dev acceptance') })
-          assert.equal(result.state, 'ready-for-agent')
-          assert.equal(result.handoff.fromPhase, 'merged-confirmed')
-          assert.equal(result.handoff.phase, 'post-merge-dev')
-          assert.equal(result.handoff.materializeProhibited, !materialize)
+          }, (wt, plugin, topic, issueId, pr, options) => { cleanups.push({ issueId, pr, options }) })
+          // Dev acceptance is human-owned, so it is not-applicable for the agent rather than pending:
+          // merged delivery finishes without waiting on it and never materializes on the agent's behalf.
+          assert.equal(reports.dev.required, false)
+          assert.equal(reports.dev.status, 'not-applicable')
+          assert.equal(reports.dev.pass, null)
+          assert.equal(result.state, 'succeeded')
           assert.equal(result.materialized, false)
-          assert.equal(result.reports.dev.status, 'pending')
-          assert.equal(result.reports.dev.pass, null)
+          assert.equal('handoff' in result, false)
+          assert.equal(cleanups.length, 1)
+          assert.equal(cleanups[0].options.materialize, false)
+          assert.equal(cleanups[0].issueId, '866')
+          assert.equal(cleanups[0].pr.number, 867)
           assert.equal(result.worktree, '/task')
           assert.equal(result.merged.mergeCommit.oid, 'merge')
-          assert.match(result.handoff.nextAction, /do not claim succeeded or clean up/)
-          if (!materialize) assert.match(result.handoff.nextAction, /Do not materialize/)
           assert.equal(calls.length, 1)
-          assert.ok(calls[0][1].includes('status:qa-review'))
+          assert.ok(calls[0][1].includes('status:auto-merged'))
         }
       }
       writeState(root, '866', { state: 'merged-confirmed' })
       assert.throws(() => handoffToAgent(root, '866', { merged: { state: 'OPEN' } }, {}, 'merged-confirmed'), /confirmed MERGED/)
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('merged handoff preserves the worktree and defers the agent gate to isolated-worktree browser evidence', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-merged-handoff-'))
+    try {
+      for (const materialize of [true, false]) {
+        writeState(root, '866', { state: 'merged-confirmed', runKey: 'run', worktree: '/task' })
+        const result = handoffToAgent(root, '866', {
+          issueId: '866', risk: { tier: 'R2' }, pr: { number: 867 },
+          merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } },
+        }, { materialize, execCommand: () => ({ status: 0 }) }, 'merged-confirmed')
+        assert.equal(result.state, 'ready-for-agent')
+        assert.equal(result.handoff.fromPhase, 'merged-confirmed')
+        assert.equal(result.handoff.phase, 'post-merge-dev')
+        assert.equal(result.handoff.mergeProhibited, true)
+        assert.equal(result.handoff.materializeProhibited, !materialize)
+        assert.equal(result.worktree, '/task')
+        // The agent-side delivery gate is this task's own worktree browser evidence; Dev acceptance is
+        // human-owned and must never be blocked on, waited for, or claimed as the agent's own result.
+        assert.match(result.handoff.nextAction, /isolated-worktree real-browser web verification/)
+        assert.match(result.handoff.nextAction, /Dev 45120 real-device acceptance is HUMAN-owned/)
+        assert.match(result.handoff.nextAction, /must not block, be waited on, or be claimed/)
+        assert.match(result.handoff.nextAction, /Preserve evidence and worktree/)
+        assert.doesNotMatch(result.handoff.nextAction, /awaiting Dev|pending Dev|materialize the merged main revision/)
+        if (materialize) assert.match(result.handoff.nextAction, /Materialization is optional/)
+        else assert.match(result.handoff.nextAction, /Do not materialize/)
+      }
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
   it('docs-only merged delivery can finish without claiming Dev materialization', () => {
