@@ -31,5 +31,13 @@
 5. 隔离真实浏览器操作验证生产组件/执行路径，保存PNG和原始结果；基于实测补正式E2E。若门禁与先失败单测冲突，记录阻挡不伪造Verify证据、不绕过。
 6. 独立规格符合与质量审查、完整相关测试、真实演示，再推进授权交付。
 
+## 文件级契约与接入计划
+- 插件src/draft.ts为纯协议真源，extension/src/shared/draft.ts重导出；保留围栏omnimux-draft，根{version:1,title,variants:[{id,label,fields:[{id,label,value}]}]}。每条消息最多一块，严格校验与大小限制，无效保留普通文本。index.ts既有systemPrompt按场景附加同源格式指令，不触碰独立快捷生成纯文案通道。
+- panel/components/FormDraftCard.tsx及CSS负责受控编辑、独立方案、字数、复制/填写反馈；父App保留前后说明顺序，仅durable message启用草稿，按会话与源事件身份稳定key，切换会话不串内容。
+- panel/events.ts保留sourceSeq与complete身份，live append须透传；assistant-stream明确running，流式即使围栏完整也不启用填写。
+- content/form-draft.ts与shared/form-draft.ts提供结构only snapshot和精确映射执行，复用ElementIds与输入setter，不走旧文本猜目标链。index/fab消息路由及panel transport由父协调，严格source/origin/requestId和固定target。
+- 原型多字段select支持仍在范围；复杂富文本、跨源frame、checkbox/file未验证则明确拒绝，不伪造通用支持。站点input事件可能自动保存，仅保证本功能不主动点击提交/发布。
+- 独立单测先失败；既有tests全局setup需要DOM环境，可用--environment jsdom运行。UI正式E2E等待真实预演，测试门禁阻挡不得伪造证据。
+
 ## 浏览器验收
 使用任务隔离环境、ego-browser、动态端口；不改共享Dev、不部署未合入代码。先观察实际DOM再选择控件，执行真实指针和键盘事件，不以脚本click代替。验证说明无动作、单稿修改后填写值精确一致、多稿编辑隔离、四字段映射、已有值保护、目标移除拒绝、无提交动作。分别披露模拟生成传输、实际组件和真实扩展覆盖边界；不得把局部浏览器夹具说成生产全链路。所有空间与服务退出有回执。
