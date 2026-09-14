@@ -49,6 +49,7 @@ function citeOf(product) {
  */
 export function ProductsStage({ t, stage, store, visible = true }) {
   useEffect(() => { injectProductsStyles() }, [])
+  const everOpened = true
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -285,6 +286,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       className="omnimux-products-stage"
       data-visible={visible ? 'true' : 'false'}
       data-form-dirty={formDirty ? 'true' : 'false'}
+      style={visible ? undefined : { display: 'none' }}
     >
       <div
         className="omnimux-products-list-view"
