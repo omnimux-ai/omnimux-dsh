@@ -129,6 +129,91 @@ export function importedStrategyOf(data) {
   }
 }
 
+/**
+ * The media rows an import carried. Only absolute-path rows with a usable shape
+ * survive; anything else is dropped rather than rendered as a broken row.
+ *
+ * @param {Record<string, unknown> | null | undefined} data
+ * @returns {Array<{ id?: string, real_path: string, original_name: string }>}
+ */
+export function importedMediaOf(data) {
+  if (!data || typeof data !== 'object') return []
+  const list = data.media
+  if (!Array.isArray(list)) return []
+  const out = []
+  for (const row of list) {
+    if (!row || typeof row !== 'object') continue
+    const realPath = typeof row.real_path === 'string' ? row.real_path.trim() : ''
+    if (!realPath) continue
+    const id = typeof row.id === 'string' && row.id ? row.id : null
+    const name = typeof row.original_name === 'string' && row.original_name
+      ? row.original_name
+      : (realPath.split('/').pop() || realPath)
+    out.push(id ? { id, real_path: realPath, original_name: name } : { real_path: realPath, original_name: name })
+  }
+  return out
+}
+
+/**
+ * The media id an import nominated as the cover, or null.
+ *
+ * @param {Record<string, unknown> | null | undefined} data
+ * @returns {string | null}
+ */
+export function importedCoverIdOf(data) {
+  if (!data || typeof data !== 'object') return null
+  const id = data.cover_media_id
+  return typeof id === 'string' && id ? id : null
+}
+
+/**
+ * Append imported media to the list the user already has, de-duplicated by id
+ * first and by path second. Files the user dragged in are never dropped, and an
+ * import never reorders them.
+ *
+ * @param {Array<object> | null | undefined} current
+ * @param {Array<object> | null | undefined} incoming
+ * @returns {Array<object>}
+ */
+export function mergeImportedMedia(current, incoming) {
+  const list = Array.isArray(current) ? current : []
+  const extra = Array.isArray(incoming) ? incoming : []
+  if (extra.length === 0) return list
+  const ids = new Set(list.map((file) => file?.id).filter(Boolean))
+  const paths = new Set(list.map((file) => file?.real_path).filter(Boolean))
+  const appended = []
+  for (const file of extra) {
+    if (!file || !file.real_path) continue
+    if (file.id && ids.has(file.id)) continue
+    if (paths.has(file.real_path)) continue
+    if (file.id) ids.add(file.id)
+    paths.add(file.real_path)
+    appended.push(file)
+  }
+  return appended.length === 0 ? list : [...list, ...appended]
+}
+
+/**
+ * Apply the media half of an import: merge, then take the cover only when it is
+ * still free and actually reachable in the merged list.
+ *
+ * @param {{ media?: Array<object>, coverId?: string | null, setMedia?: Function, setCoverId?: Function }} mediaState
+ * @param {Record<string, unknown> | null | undefined} data
+ */
+function applyImportedMedia(mediaState, data) {
+  const incoming = importedMediaOf(data)
+  if (incoming.length === 0) return
+  const merged = mergeImportedMedia(mediaState.media, incoming)
+  if (typeof mediaState.setMedia === 'function') mediaState.setMedia(merged)
+  const wanted = importedCoverIdOf(data)
+  if (!wanted) return
+  // "Take it if free": a cover the user picked by hand always wins.
+  if (mediaState.coverId) return
+  // Reachability guard — same rule the library applies when it writes a cover.
+  if (!merged.some((file) => file.id === wanted)) return
+  if (typeof mediaState.setCoverId === 'function') mediaState.setCoverId(wanted)
+}
+
 export function buildPayload(params) {
   const { name, kind, link, categories, media, coverId, physical, digital } = params
   const body = {
@@ -337,6 +422,9 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
        * digital answer always switches the kind and unfolds the six
        * brand-strategy modules, so the panel — filled when the analysis
        * answered, empty when it did not — is visible on arrival.
+       *
+       * Imported screenshots append to the media list, and the desktop shot
+       * becomes the cover only when the user has not picked one already.
        */
       applyImportedData: (data) => {
         const patch = importedPatchOf(data)
@@ -355,6 +443,7 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
             current,
           ))
         }
+        applyImportedMedia(mediaState, data)
         const strategy = importedStrategyOf(data)
         if (importedKindOf(data) === 'digital' || strategy) {
           base.setters.setKind('digital')

@@ -1,9 +1,16 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { describe, it } from 'node:test'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, it } from 'node:test'
+import { createLibraryStore } from './library.js'
+import { resolveProductsPaths } from './paths.js'
+import { SCREENSHOT_REASON, SCREENSHOT_STATUS, outcomeOf, reportOf } from './screenshot-contract.js'
 import {
   IMPORT_DRAFT_EXTRA_KEYS,
   IMPORT_FIELD_KEYS,
+  IMPORT_SCREENSHOT_KEYS,
   LinkImportError,
   buildProductFields,
   cleanTitle,
@@ -778,5 +785,250 @@ describe('link importer · hub model analysis', () => {
       () => importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub }),
       (error) => error.code === 'link-import-empty',
     )
+  })
+})
+
+/* ------------------------------------------------------------------ *
+ * Website screenshots: the three extra keys of a digital draft (spec §2.3)
+ * ------------------------------------------------------------------ */
+
+const SHOT_PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex')
+
+const scratchDirs = []
+function shotsHome() {
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-shots-import-'))
+  scratchDirs.push(dir)
+  return dir
+}
+
+afterEach(() => {
+  while (scratchDirs.length > 0) {
+    const dir = scratchDirs.pop()
+    try {
+      rmSync(dir, { recursive: true, force: true })
+    } catch {
+      // Best effort in teardown.
+    }
+  }
+})
+
+/** A capture seam that answers both viewports, or fails on request. */
+function stubCapture(over = {}) {
+  const calls = []
+  const capture = async (request) => {
+    calls.push(request)
+    if (over.throws) throw new Error('the screenshot chain exploded')
+    if (over.failAll) {
+      return {
+        outcomes: [
+          outcomeOf('desktop', false, {}, 0, SCREENSHOT_REASON.NAV_TIMEOUT),
+          outcomeOf('mobile', false, {}, 0, SCREENSHOT_REASON.NAV_TIMEOUT),
+        ],
+        report: reportOf([
+          outcomeOf('desktop', false, {}, 0, SCREENSHOT_REASON.NAV_TIMEOUT),
+          outcomeOf('mobile', false, {}, 0, SCREENSHOT_REASON.NAV_TIMEOUT),
+        ], null),
+      }
+    }
+    if (over.desktopOnly) {
+      const outcomes = [outcomeOf('desktop', true, { width: 1440, height: 900 }, SHOT_PNG.length, null, SHOT_PNG)]
+      return { outcomes, report: reportOf(outcomes, null) }
+    }
+    const outcomes = [
+      outcomeOf('desktop', true, { width: 1440, height: 900 }, SHOT_PNG.length, null, SHOT_PNG),
+      outcomeOf('mobile', true, { width: 390, height: 844 }, SHOT_PNG.length, null, SHOT_PNG),
+    ]
+    return { outcomes, report: reportOf(outcomes, null) }
+  }
+  return { capture, calls }
+}
+
+describe('link importer · website screenshots', () => {
+  it('returns both screenshots, desktop first, and makes it the cover', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const home = shotsHome()
+    const paths = resolveProductsPaths({ homeDir: home })
+    const { capture, calls } = stubCapture()
+
+    const draft = await importProductFromUrl({
+      url: DIGITAL_PAGE_URL,
+      fetcher,
+      hub,
+      paths,
+      captureScreenshots: capture,
+    })
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].kind, 'digital')
+    assert.equal(draft.screenshots.status, SCREENSHOT_STATUS.CAPTURED)
+    assert.equal(draft.screenshots.reason, null)
+    assert.deepEqual(draft.screenshots.viewports.map((row) => [row.kind, row.ok]), [['desktop', true], ['mobile', true]])
+
+    assert.equal(draft.media.length, 2)
+    assert.deepEqual(draft.media.map((row) => row.original_name.includes('-desktop-')), [true, false])
+    assert.equal(draft.cover_media_id, draft.media[0].id)
+  })
+
+  it('writes real files under the products media directory, 0o700 / 0o600', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture()
+
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture })
+
+    assert.equal(statSync(paths.mediaDir).mode & 0o777, 0o700)
+    for (const row of draft.media) {
+      assert.equal(row.real_path.startsWith(join(paths.mediaDir, 'site-')), true)
+      assert.equal(statSync(row.real_path).mode & 0o777, 0o600)
+      assert.equal(readFileSync(row.real_path).length, SHOT_PNG.length)
+      assert.match(row.id, /^med_[0-9a-f]{8}$/)
+    }
+  })
+
+  it('hands the library media ids it keeps, so the cover still resolves after a write', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture()
+
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture })
+    const library = createLibraryStore({ paths })
+    const saved = library.add({
+      name: draft.name,
+      kind: 'digital',
+      link: draft.link,
+      media: draft.media,
+      cover_media_id: draft.cover_media_id,
+    })
+
+    assert.equal(saved.media.length, 2)
+    assert.deepEqual(saved.media.map((row) => row.id), draft.media.map((row) => row.id))
+    assert.equal(saved.cover_media_id, draft.cover_media_id)
+    assert.equal(saved.cover.id, draft.media[0].id)
+  })
+
+  it('degrades to the one viewport that landed and makes it the cover', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture({ desktopOnly: true })
+
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture })
+    assert.equal(draft.media.length, 1)
+    assert.equal(draft.media[0].original_name.includes('-desktop-'), true)
+    assert.equal(draft.cover_media_id, draft.media[0].id)
+    assert.equal(draft.screenshots.status, SCREENSHOT_STATUS.CAPTURED)
+  })
+
+  it('answers a complete draft with empty media when both viewports fail', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture({ failAll: true })
+
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture })
+    assert.deepEqual(draft.media, [])
+    assert.equal(draft.cover_media_id, null)
+    assert.equal(draft.screenshots.status, SCREENSHOT_STATUS.FAILED)
+    assert.equal(draft.screenshots.reason, SCREENSHOT_REASON.NAV_TIMEOUT)
+    // The text and the strategy are untouched by a screenshot failure.
+    assert.equal(draft.name, 'MiniMax 开放平台')
+    assert.equal(draft.brand_strategy.identity_and_product.core_identity, '一站式多模态模型服务')
+    assert.equal(draft.analysis.mode, 'model')
+  })
+
+  it('answers a complete draft when the capture seam itself throws', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture({ throws: true })
+
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture })
+    assert.deepEqual(draft.media, [])
+    assert.equal(draft.cover_media_id, null)
+    assert.equal(draft.screenshots.status, SCREENSHOT_STATUS.FAILED)
+    assert.equal(draft.name, 'MiniMax 开放平台')
+  })
+
+  it('degrades to skipped/no-browser when no capture seam is wired at all', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub } = stubHub()
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub })
+
+    assert.deepEqual(draft.media, [])
+    assert.equal(draft.cover_media_id, null)
+    assert.equal(draft.screenshots.status, SCREENSHOT_STATUS.SKIPPED)
+    assert.equal(draft.screenshots.reason, SCREENSHOT_REASON.NO_BROWSER)
+  })
+
+  it('leaves a physical draft in exactly its old shape and never starts a capture', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const { capture, calls } = stubCapture()
+    const draft = await importProductFromUrl({
+      url: PAGE_URL,
+      fetcher,
+      captureScreenshots: capture,
+    })
+
+    assert.equal(draft.kind, 'physical')
+    for (const key of IMPORT_SCREENSHOT_KEYS) {
+      assert.equal(key in draft, false, `${key} must not exist for a physical product`)
+    }
+    assert.deepEqual(calls, [])
+  })
+
+  it('starts the capture alongside the model call, not after it', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    let releaseModel = () => {}
+    const gate = new Promise((resolve) => { releaseModel = resolve })
+    let captureStarted = false
+
+    const hub = {
+      async pageFetch(url) {
+        return { mode: 'live', url, title: 'MiniMax 开放平台', pageContent: '# MiniMax 开放平台\n\n一站式多模态模型服务' }
+      },
+      async textComplete(request) {
+        await gate
+        return { text: BRAND_REPORT, model: request.model }
+      },
+    }
+
+    const pending = importProductFromUrl({
+      url: DIGITAL_PAGE_URL,
+      fetcher,
+      hub,
+      captureScreenshots: () => {
+        captureStarted = true
+        return Promise.resolve({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.NO_BROWSER) })
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(captureStarted, true, 'the browser work must overlap the seconds the model spends thinking')
+    releaseModel()
+    const draft = await pending
+    assert.equal(draft.name, 'MiniMax 开放平台')
+  })
+
+  it('never writes a screenshot when the draft turns out unusable', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: '<head><title>MiniMax</title></head><body></body>' } })
+    const { hub } = stubHub({ textCompleteThrows: true, pageFetchThrows: true })
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture } = stubCapture()
+
+    await assert.rejects(
+      () => importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub, paths, captureScreenshots: capture }),
+      (error) => error.code === 'link-import-empty',
+    )
+    const { existsSync } = await import('node:fs')
+    assert.equal(existsSync(paths.mediaDir), false, 'a rejected import must leave no orphan PNG behind')
+  })
+
+  it('documents the three screenshot keys in the draft contract', () => {
+    for (const key of IMPORT_SCREENSHOT_KEYS) {
+      assert.equal(IMPORT_DRAFT_EXTRA_KEYS.includes(key), true, key)
+    }
   })
 })

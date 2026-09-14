@@ -318,6 +318,25 @@ export const PRODUCTS_CSS = `
   color: var(--dsw-alias-label-secondary);
   align-items: center;
 }
+/* The row currently serving as the cover: a left rule plus a surface tint. */
+.omnimux-products-filelist-row {
+  padding: 2px 4px;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+}
+.omnimux-products-filelist-row.is-cover {
+  background: var(--dsw-alias-bg-module-platform);
+  border-left-color: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-products-cover-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
 .omnimux-products-filelist-name {
   flex: 1;
   min-width: 0;
