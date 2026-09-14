@@ -65,9 +65,9 @@ related:
 8. **H1 诚实上架（历史阶段）**
    以下仅记录 H1（#464）shadow 阶段政策，不覆盖当前 §4 准入：现有实文件 specs **不得**对任何 operation 做 listed claim（normalize 后 `listedOperations = []`）。`verified`/`live` 正例仅用于 **fixtures** 验证判定逻辑。逐 op 补证上架与 runtime constraints 对账属 **H2**。
 
-## 2. 全模态标准 operation（21）
+## 2. 全模态标准 operation（22）
 
-> 人读表。机器枚举以 `operation-registry.json` 为准（当前 **21** 个标准 operation，含 `promptPolicy`）；扩展先改 registry + 本表，再录入 YAML。
+> 人读表。机器枚举以 `operation-registry.json` 为准（当前 **22** 个标准 operation，含 `promptPolicy`）；扩展先改 registry + 本表，再录入 YAML。
 > **Workflow 不得复制本表为 TypeScript 穷尽联合真源**；DTO 使用 `string` + 中枢下发的 metadata。
 
 | 模态族 | operation ID | 中文名 | 典型输入 | **output.type（必须显式）** | promptPolicy（机器表为准） |
@@ -93,8 +93,9 @@ related:
 | 音频 | `voice_clone` | 声音克隆 | voice_sample 音频 | `audio` | required |
 | 音频 | `text_to_music` | 音乐创作 | 文本 ± 参考音频 | `audio` | required |
 | 音频 | `speech_to_text` | 语音转文字 | source **音频** | **`text`（非 audio）** | **none** |
+| 文本 | `webpage_read` | 网页读取 | URL（http/https 链接） | `text` | **none**（不得强制 prompt） |
 
-以上是现有标准 operation 表（**21** 个，与 `operation-registry.json` 的 operation 数一致），不是渠道完整模式清单。首尾帧及全能参考须按渠道文档核对；registry 现以 `video_multi_ref` 承载「全能参考 / 多素材参考」模式（中文名与上表一致），按渠道文档核对时**仍须逐渠道确认素材类型与角色组合，不得据名称推定**。
+以上是现有标准 operation 表（**22** 个，与 `operation-registry.json` 的 operation 数一致），不是渠道完整模式清单。首尾帧及全能参考须按渠道文档核对；registry 现以 `video_multi_ref` 承载「全能参考 / 多素材参考」模式（中文名与上表一致），按渠道文档核对时**仍须逐渠道确认素材类型与角色组合，不得据名称推定**。
 
 参数（aspectRatio、duration、seed…）**不是** operation，挂在 model/operation 的 `parameters` 上。
 
@@ -167,7 +168,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 
 ### 3.3 文件分组 vs Catalog 投影
 
-- YAML 可按管理分组拆分文件（text/image/video/audio-models.yaml），**分组不是 output 真源**。
+- YAML 可按管理分组拆分文件（text/image/video/audio/reader-models.yaml），**分组不是 output 真源**。
 - Catalog v1.1 权威集合为 **`models[]`**。
 - 对外四列表（text/image/video/audio）仅为 **按 `output.type` 的兼容投影**（H2 起；H1 shadow 不改 runtime 列表实现）。
 - 投影与画布过滤必须以 **listed operation** 为准。
