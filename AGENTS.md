@@ -52,6 +52,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 | Path | Owns / read when | Does not own |
 | --- | --- | --- |
 | [CONTEXT.md](CONTEXT.md), [docs/README.md](docs/README.md) | Product map and document discovery | Live deployment status or new authority |
+| [docs/tools/model-catalog.html](docs/tools/model-catalog.html) | 执行中枢模型全景面板；`pnpm catalog:html` 实时映射契约规格与处置规则 | 独立部署服务 |
 | `plugins/omnimux/` | Hub implementation | Domain-private storage |
 | `plugins/omnimux-*/` | Each business domain | Hub chrome, keys, provider routing |
 | `.agents/skills/` | Repo development skills; inspect symlink vs in-tree ownership before editing; only in-repo files may be changed here | External shared skill sources |
@@ -69,7 +70,7 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Workflow contracts / gate scripts | `pnpm test:gates` plus tests for the changed script |
 | Plugin behavior | `pnpm --filter <package> test`; add relevant boundary/registry checks from [package.json](package.json) |
 | Plugin Agent Tools / Schema | `pnpm test:agent-tools` (all 4 layers: Schema Lint, isolated sandbox execution, intent eval & security gates passed) |
-| Model contracts | `pnpm verify:model-contracts` (offline, strict dispositions + auto-serving + cross-plugin alignment); no `verify:models` or `verify:image-live` probing |
+| Model contracts | `pnpm verify:model-contracts`（契约门禁严格校验）；`pnpm catalog:html` 实时生成/更新模型全景面板 HTML（`docs/tools/model-catalog.html`）供直观核验 |
 | Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 
 Task specs live in the task's **own** worktree repo (`specs/<feature>.spec.md`, uncommitted or ahead of `origin/main`) — the Spec gate resolves it against the repo that owns the edited file. **Never mirror or copy a spec draft into the primary checkout**: mirrored drafts neither satisfy the gate nor belong there; the primary checkout stays a read-only mirror. Materialization's cleanliness gate ignores untracked drafts under `specs/ docs/ tmp/ .workbuddy/ .agent-backups/ .worktrees/ .agent-reports/`, but still refuses any tracked-file change and any untracked file outside those paths.
