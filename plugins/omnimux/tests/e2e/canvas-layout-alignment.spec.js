@@ -10,11 +10,25 @@ import {
 import { getGlobalMediaViewerStore } from '../../src/client/media-viewer/media-viewer-store.js';
 
 test('e2e: full canvas mode layout alignment and conversation collapse contracts', () => {
-  // 1. Verify CSS rules enforce left: 280px when left sidebar is expanded (not collapsed)
+  // 1. Verify the rightbar panel fills its own container when the left rail is visible:
+  //    container-relative left:0 equals the left rail's right edge in viewport coordinates,
+  //    while a viewport-relative offset shifts the panel by one sidebar width (#1718).
   assert.match(
     CONVERSATION_COLLAPSE_CSS,
-    /html\[data-omnimux-conversation-collapsed\]:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{[^}]*left:\s*var\(--omnimux-sidebar-width,\s*280px\)\s*!important/,
-    'Rightbar panel must dock precisely to left sidebar right edge (280px) and never overlap'
+    /html\[data-omnimux-conversation-collapsed\]:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{[^}]*left:\s*0\s*!important/,
+    'Rightbar panel must fill its container instead of double-counting the left rail width'
+  );
+  assert.doesNotMatch(
+    CONVERSATION_COLLAPSE_CSS,
+    /:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{[^}]*left:\s*var\(--omnimux-sidebar-width/,
+    'Viewport-relative left offset must not come back: it left a sidebar-wide blank strip'
+  );
+  // 1b. The fullscreen panel is position:fixed (viewport coordinates, owned by
+  //     sidebar-toggle-topbar); the container-relative fill must not reach it (#1718 review).
+  assert.match(
+    CONVERSATION_COLLAPSE_CSS,
+    /:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*:not\(\[data-sidebar-right-panel="fullscreen"\]\)[^{]*\{/,
+    'Container-relative fill must exclude the fixed-position fullscreen panel'
   );
 
   // 2. Verify CSS rules enforce left: 0 when left sidebar is collapsed
