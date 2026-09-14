@@ -6,9 +6,9 @@ import React from 'react';
  *
  * @param {{ statusText?: string, className?: string }} props
  */
-export function GeneratingStateCard({ statusText = 'AI 正在渲染中…', className = '' }) {
+export function GeneratingStateCard({ statusText = '等待生成工具启动', className = '', status = 'pending' }) {
   return (
-    <div className={`omx-generating-box ${className}`}>
+    <div className={`omx-generating-box ${className}`} data-generation-phase={status}>
       <div className="omx-dot-matrix" aria-hidden="true" />
       <div className="omx-shimmer-overlay" aria-hidden="true">
         <div className="omx-shimmer-canvas">

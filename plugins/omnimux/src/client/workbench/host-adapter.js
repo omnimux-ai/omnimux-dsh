@@ -6,9 +6,10 @@
  * Tab 列表）与服务等待/会话判定也归这里，纯计算归 geometry/focus-state。
  */
 
-/** @type {{ betterSidebar?: object | null, layout?: object | null, sessions?: object | null }} */
+/** @type {{ betterSidebar?: object | null, sidebarRight?: object | null, layout?: object | null, sessions?: object | null }} */
 const deps = {
   betterSidebar: null,
+  sidebarRight: null,
   layout: null,
   sessions: null,
 }
@@ -22,12 +23,17 @@ const SIDEBAR_LAYOUT_STORAGE_PREFIX = 'dsh-sidebar:v1:'
 
 export function bindWorkbenchDeps(next = {}) {
   if (next.betterSidebar !== undefined) deps.betterSidebar = next.betterSidebar || null
+  if (next.sidebarRight !== undefined) deps.sidebarRight = next.sidebarRight || null
   if (next.layout !== undefined) deps.layout = next.layout || null
   if (next.sessions !== undefined) deps.sessions = next.sessions || null
 }
 
 export function getWorkbenchService() {
   return deps.betterSidebar || null
+}
+
+export function getWorkbenchSidebarRight() {
+  return deps.sidebarRight || null
 }
 
 export function getWorkbenchLayout() {
@@ -48,6 +54,7 @@ export function setAttachedStore(store) {
 
 export function resetWorkbenchHostAdapter() {
   deps.betterSidebar = null
+  deps.sidebarRight = null
   deps.layout = null
   deps.sessions = null
   attachedStore = null
