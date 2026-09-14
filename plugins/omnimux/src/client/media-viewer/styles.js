@@ -27,7 +27,7 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-chat-media-tail__card {
   flex: 1;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
@@ -43,6 +43,44 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 8px 24px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 消息卡片悬浮微投影 */
 }
 
+.omx-chat-media-tail__canvas-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  height: 26px;
+  padding: 0 11px 0 9px;
+  border-radius: 9999px;
+  background: rgba(20, 20, 24, 0.85); /* exempt-ui03: 磨砂深黑胶囊底色 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14); /* exempt-ui03: 胶囊高光描边 */
+  color: #ffffff; /* exempt-ui03: 胶囊按钮纯白字体 */
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); /* exempt-ui03: 悬浮按钮投影 */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px) scale(0.96);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s;
+}
+
+.omx-chat-media-tail__card:hover .omx-chat-media-tail__canvas-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.omx-chat-media-tail__canvas-btn:hover {
+  background: rgba(36, 36, 42, 0.95); /* exempt-ui03: 悬浮加亮底色 */
+  border-color: rgba(255, 255, 255, 0.28); /* exempt-ui03: 胶囊悬浮高亮描边 */
+  transform: translateY(0) scale(1.02);
+}
+
 .omx-chat-media-tail__img {
   width: 100%;
   height: 180px;
@@ -52,35 +90,6 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-chat-media-tail__grid .omx-chat-media-tail__img {
   height: 140px;
-}
-
-.omx-chat-media-tail__actions {
-  height: 34px;
-  padding: 0 8px;
-  background: var(--dsw-alias-bg-layer-1);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-}
-
-.omx-chat-media-tail__btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.omx-chat-media-tail__btn:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
 }
 
 /* ========================================================

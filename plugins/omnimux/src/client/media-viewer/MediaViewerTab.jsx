@@ -69,23 +69,23 @@ export function MediaViewerTab({ scope }) {
               aria-label="大图浏览模式"
               onClick={() => store.setSubViewMode('single')}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect width="18" height="18" x="3" y="3" rx="2" />
-                <line x1="9" x2="9" y1="3" y2="21" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect width="18" height="13" x="3" y="7" rx="2" />
+                <line x1="8" y1="3" x2="16" y2="3" />
               </svg>
             </button>
             <button // exempt-ui01: 视图切换时间线模式按钮
               type="button"
               className={`omx-mv-capsule__btn ${subViewMode === 'grid' ? 'active' : ''}`}
-              title="时间线模式"
-              aria-label="时间线模式"
+              title="四宫格时间线模式"
+              aria-label="四宫格时间线模式"
               onClick={() => store.setSubViewMode('grid')}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect width="7" height="7" x="3" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="14" rx="1" />
-                <rect width="7" height="7" x="3" y="14" rx="1" />
+                <rect width="6" height="6" x="4" y="4" rx="1.5" />
+                <rect width="6" height="6" x="14" y="4" rx="1.5" />
+                <rect width="6" height="6" x="14" y="14" rx="1.5" />
+                <rect width="6" height="6" x="4" y="14" rx="1.5" />
               </svg>
             </button>
           </div>

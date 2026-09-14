@@ -246,6 +246,17 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     });
     store.setActiveId(media.id);
     store.setSubViewMode('single');
+    // Enter full canvas mode (2-column layout with middle conversation collapsed)
+    store.setLayoutMode('2col');
+
+    try {
+      const docRoot = doc.documentElement;
+      if (docRoot) {
+        docRoot.setAttribute('data-omnimux-conversation-collapsed', 'true');
+      }
+    } catch {
+      // ignore
+    }
 
     try {
       const win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
@@ -257,11 +268,10 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     }
   };
 
-  if (items.length === 1) {
-    const item = items[0];
+  const buildCardElement = (item: DetectedMedia): HTMLElement => {
     const card = doc.createElement('div');
     card.className = 'omx-chat-media-tail__card';
-    card.title = '点击在右侧查看大图';
+    card.title = '点击进入画布模式';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
 
@@ -271,62 +281,45 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     img.className = 'omx-chat-media-tail__img';
     card.appendChild(img);
 
+    // Pill canvas button in top-right corner (reveals on hover, matching Image 2)
+    const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
+    canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
+    canvasBtn.title = '进入画布模式';
+    canvasBtn.setAttribute('aria-label', '进入画布模式');
+    canvasBtn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+      </svg>
+      <span>画布</span>
+    `;
+
+    canvasBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openInSidebar(item);
+    });
+
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       openInSidebar(item);
     });
 
-    const actionBar = doc.createElement('div');
-    actionBar.className = 'omx-chat-media-tail__actions';
+    card.appendChild(canvasBtn);
+    return card;
+  };
 
-    const copyBtn = doc.createElement('button'); // exempt-ui01: 消息尾部快捷操作按钮
-    copyBtn.className = 'omx-chat-media-tail__btn';
-    copyBtn.title = '复制图片链接';
-    copyBtn.setAttribute('aria-label', '复制图片链接');
-    copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      navigator.clipboard?.writeText?.(item.url);
-    });
-
-    const openBtn = doc.createElement('button'); // exempt-ui01: 消息尾部展开侧边栏按钮
-    openBtn.className = 'omx-chat-media-tail__btn';
-    openBtn.title = '在右侧侧边栏打开大图';
-    openBtn.setAttribute('aria-label', '在右侧侧边栏打开大图');
-    openBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
-    openBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openInSidebar(item);
-    });
-
-    actionBar.appendChild(copyBtn);
-    actionBar.appendChild(openBtn);
-    card.appendChild(actionBar);
-    container.appendChild(card);
+  if (items.length === 1) {
+    container.appendChild(buildCardElement(items[0]));
   } else {
     // Multi-card horizontal grid
     const grid = doc.createElement('div');
     grid.className = 'omx-chat-media-tail__grid';
 
     for (const item of items) {
-      const card = doc.createElement('div');
-      card.className = 'omx-chat-media-tail__card';
-      card.title = '点击在右侧查看大图';
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-
-      const img = doc.createElement('img');
-      img.src = item.url;
-      img.alt = item.title || '预览';
-      img.className = 'omx-chat-media-tail__img';
-      card.appendChild(img);
-
-      card.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openInSidebar(item);
-      });
-
-      grid.appendChild(card);
+      grid.appendChild(buildCardElement(item));
     }
     container.appendChild(grid);
   }
