@@ -7,7 +7,6 @@ modality: "audio"
 
 models:
   - id: "doubao-asr-bigmodel"
-    aliases: ["seedasr-auc"]
     label: "豆包语音识别大模型 (Doubao-ASR)"
     family: "bytedance"
     badge: "语音识别"

@@ -147,13 +147,13 @@ test('image operations derive strip preset and have addButton enabled', () => {
 test('image node slotLayout defaults to strip with reference_image slot even when operation is unlisted or has no inputs', () => {
   const imgCatalog = {
     models: [{
-      id: 'gpt-image-2',
+      id: 'gpt-image-2.5',
       operations: [
         { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
       ],
     }],
   };
-  const l1 = deriveSlotLayout(imgCatalog, 'gpt-image-2', 'text_to_image', 'image');
+  const l1 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', 'text_to_image', 'image');
   assert.equal(l1.preset, 'strip');
   assert.equal(l1.addButton, true);
   assert.equal(l1.slots.length, 1);
@@ -163,13 +163,13 @@ test('image node slotLayout defaults to strip with reference_image slot even whe
   assert.equal(l1.slots[0].min, 0);
   assert.equal(l1.slots[0].max, 10);
 
-  const l2 = deriveSlotLayout(imgCatalog, 'gpt-image-2', 'absent_op', 'image');
+  const l2 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', 'absent_op', 'image');
   assert.equal(l2.preset, 'strip');
   assert.equal(l2.addButton, true);
   assert.equal(l2.slots.length, 1);
   assert.equal(l2.slots[0].slot, 'reference_image');
 
-  const l3 = deriveSlotLayout(imgCatalog, 'gpt-image-2', undefined, 'image');
+  const l3 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', undefined, 'image');
   assert.equal(l3.preset, 'strip');
   assert.equal(l3.addButton, true);
   assert.equal(l3.slots.length, 1);

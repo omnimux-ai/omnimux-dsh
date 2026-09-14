@@ -18,7 +18,7 @@ describe('text whitelist', () => {
     assert.equal(parsed.maxTokens, 4096)
     assert.deepEqual(parsed.models.map((row) => row.id), [...CHAT_MODEL_IDS])
     assert.equal(enabledTextModels(parsed).length, 12)
-    assert.equal(parsed.models.find((row) => row.id === 'deepseek-v4-flash-vision-exp')?.role, 'classic')
+    assert.equal(parsed.models.find((row) => row.id === 'deepseek-v4-flash')?.role, 'classic')
     assert.equal(parsed.models.find((row) => row.id === 'grok-4.6')?.brand, 'xai')
     assert.equal(parsed.models.find((row) => row.id === 'gpt-5.5')?.brand, 'openai')
     assert.equal(parsed.models.find((row) => row.id === 'claude-opus-4-6')?.brand, 'anthropic')

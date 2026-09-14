@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { GUARD_CODES, guardSubmit } from '../catalog/contract/submit-guard/index.js'
 import { executeOmnimuxSpeechToText, transcribeSpeechToTextRequest } from './stt.js'
 
 const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
@@ -70,20 +71,18 @@ test('STT posts exact audio bytes and defaults to JSON after real model admissio
   assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: '你好世界' })
 })
 
-for (const id of [model, 'seedasr-auc']) {
-  test(`STT ${id} passes SRT through the guard and preserves raw subtitle bytes`, async () => {
-    const captured = {}
-    const result = await executeOmnimuxSpeechToText({
-      ...request, model: id, response_format: 'srt', language: 'zh', fetcher: sttFetcher(captured, SRT),
-    })
-    assert.equal(captured.init.body.get('model'), 'whisper-1')
-    assert.equal(captured.init.body.get('language'), 'zh')
-    assert.equal(captured.init.body.get('response_format'), 'srt')
-    assert.equal(captured.init.body.has('url'), false)
-    assert.equal(captured.init.body.has('audio_url'), false)
-    assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: SRT })
+test(`STT ${model} passes SRT through the guard and preserves raw subtitle bytes`, async () => {
+  const captured = {}
+  const result = await executeOmnimuxSpeechToText({
+    ...request, model, response_format: 'srt', language: 'zh', fetcher: sttFetcher(captured, SRT),
   })
-}
+  assert.equal(captured.init.body.get('model'), 'whisper-1')
+  assert.equal(captured.init.body.get('language'), 'zh')
+  assert.equal(captured.init.body.get('response_format'), 'srt')
+  assert.equal(captured.init.body.has('url'), false)
+  assert.equal(captured.init.body.has('audio_url'), false)
+  assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: SRT })
+})
 
 for (const [response_format, body, text] of [
   ['json', { text: 'JSON text' }, 'JSON text'],
@@ -110,7 +109,7 @@ test('STT accepts plain text even when JSON was requested', async () => {
 test('STT respects explicit model and environment routing without changing the default', async () => {
   const captured = {}
   await executeOmnimuxSpeechToText({
-    audio: dataAudio, env: { OMNIMUX_STT_MODEL: 'seedasr-auc', OMNIMUX_API_KEY: 'sk-fixture', OMNIMUX_BASE_URL: 'https://fixture.example/v1' },
+    audio: dataAudio, env: { OMNIMUX_STT_MODEL: model, OMNIMUX_API_KEY: 'sk-fixture', OMNIMUX_BASE_URL: 'https://fixture.example/v1' },
     fetcher: sttFetcher(captured),
   })
   assert.equal(captured.url, 'https://fixture.example/v1/audio/transcriptions')
@@ -128,29 +127,67 @@ test('STT rejects invalid formats before credentials, audio loading or HTTP', as
   assert.equal(calls, 0)
 })
 
-for (const id of [model, 'seedasr-auc']) {
-  test(`STT ${id} forwards public URL fields without downloading audio`, async () => {
-    const captured = {}
-    const signal = new AbortController().signal
-    const audio = 'https://cdn.example.com/voice/note.m4a?signature=abc'
-    let calls = 0
-    const result = await executeOmnimuxSpeechToText({
-      ...request, model: id, audio: ` ${audio} `, signal, response_format: 'srt',
-      fetcher: async (url, init) => {
-        calls++
-        assert.equal(init.method, 'POST')
-        assert.equal(init.signal, signal)
-        return sttFetcher(captured, SRT)(url, init)
-      },
-    })
-    assert.equal(calls, 1)
-    assert.equal(captured.init.body.get('url'), audio)
-    assert.equal(captured.init.body.get('audio_url'), audio)
-    assert.equal(captured.init.body.get('model'), model)
-    assert.equal(captured.init.body.has('file'), false)
-    assert.deepEqual(result, { mode: 'live', model, text: SRT })
+test(`STT ${model} forwards public URL fields without downloading audio`, async () => {
+  const captured = {}
+  const signal = new AbortController().signal
+  const audio = 'https://cdn.example.com/voice/note.m4a?signature=abc'
+  let calls = 0
+  const result = await executeOmnimuxSpeechToText({
+    ...request, model, audio: ` ${audio} `, signal, response_format: 'srt',
+    fetcher: async (url, init) => {
+      calls++
+      assert.equal(init.method, 'POST')
+      assert.equal(init.signal, signal)
+      return sttFetcher(captured, SRT)(url, init)
+    },
   })
-}
+  assert.equal(calls, 1)
+  assert.equal(captured.init.body.get('url'), audio)
+  assert.equal(captured.init.body.get('audio_url'), audio)
+  assert.equal(captured.init.body.get('model'), model)
+  assert.equal(captured.init.body.has('file'), false)
+  assert.deepEqual(result, { mode: 'live', model, text: SRT })
+})
+
+test('seedasr-auc left the contract while the STT runtime keeps it URL-first', async () => {
+  const rejection = guardSubmit(
+    { model: 'seedasr-auc', operation: 'speech_to_text', audio: dataAudio, response_format: 'json', seam: 'speechToText', capability: 'stt' },
+    { seam: 'speechToText', capability: 'stt', outputType: 'text' },
+  )
+  assert.equal(rejection.ok, false)
+  assert.equal(rejection.code, GUARD_CODES.UNKNOWN_MODEL)
+  await assert.rejects(
+    () => executeOmnimuxSpeechToText({ ...request, model: 'seedasr-auc' }),
+    (error) => {
+      assert.equal(error.code, 'omnimux-invalid-request')
+      assert.equal(error.details?.guardCode, GUARD_CODES.UNKNOWN_MODEL)
+      return true
+    },
+  )
+
+  // URL_FIRST_MODELS is a runtime capability list, not a contract model row:
+  // the wire primitive still treats the id as URL-first and never downloads.
+  const captured = {}
+  const audio = 'https://cdn.example.com/voice/note.m4a'
+  let calls = 0
+  const result = await transcribeSpeechToTextRequest({
+    route: { baseUrl: 'https://api.omnimux.ai/v1', modelId: 'seedasr-auc' },
+    apiKey: 'sk-stt-fixture',
+    audio,
+    response_format: 'srt',
+    fetcher: async (url, init) => {
+      calls++
+      assert.equal(init.method, 'POST')
+      return sttFetcher(captured, SRT)(url, init)
+    },
+  })
+  assert.equal(calls, 1)
+  assert.equal(captured.init.body.get('url'), audio)
+  assert.equal(captured.init.body.get('audio_url'), audio)
+  assert.equal(captured.init.body.get('model'), 'seedasr-auc')
+  assert.equal(captured.init.body.has('file'), false)
+  assert.deepEqual(result, { mode: 'live', model: 'seedasr-auc', text: SRT })
+})
 
 test('Whisper wire requests retain multipart bytes and forward public URL fields', async () => {
   const captured = {}
