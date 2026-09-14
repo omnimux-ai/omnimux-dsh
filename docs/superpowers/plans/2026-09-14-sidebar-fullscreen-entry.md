@@ -1,0 +1,18 @@
+# #1765 分步实现计划
+
+每步以 2–5 分钟工作块组织，调查不确定项可重复细分，不跳过真实验证。
+
+1. 阅读既有两份证据、设计合同和工单范围；用 scripts/worktree.sh 创建本任务树。完成标准：主仓未改、树路径发给父代理。
+2. 写 docs/superpowers/specs/2026-09-14-sidebar-fullscreen-entry-design.md 和 specs/sidebar-fullscreen-entry.spec.md，检查六区/链接/边界，git diff --check 后仅提交规格与计划。
+3. 只读调查 scripts/worktree-web-qa.mjs 以及 fork 的 AdvancedFrame/DesktopLayoutState/SidebarRight/CSS；独立子代理报告 assembly-review.md，确定实际源装配方式。拒绝 CSS empty loader 和手写 qa-pane。
+4. 在 .agent-reports/sidebar-fullscreen-entry/ 建只用于演示的源装配入口和动态端口服务器。保留真实布局服务、原生按钮/面板、插件生产安装器/聚焦桥接。构建记录实际源路径和哈希。
+5. ego-browser 打开任务隔离服务，先 snapshot 观察 DOM，验证正几何和唯一按钮；记录初始 PNG 及原生动画参数，不预写正式 E2E。
+6. 实际点击进入/退出，记录每帧 rect/属性/store/活动动画和突变事件，形成 red JSON。根因仍不明确则继续逐步隔离，不改业务码。
+7. 据已观察失败编写最小失败回归（优先现有 sidebar-toggle-topbar.test.js）；实际跑失败并记录。根据根因修改 sidebar-toggle-topbar.js 或 split-layout.js 的最少必要代码，单步不超过 5 文件。
+8. 重跑回归，真实页面复测同一批检查。轨迹仍失败则返回定位，不用 timeout 掩盖。
+9. 实际验证左右栏两态、恢复分栏、运动中反向、减少动态效果、内容 DOM 保留/无重载/唯一按钮。每场景保存 PNG 和逐帧 JSON。
+10. 加载 e2e-testing-patterns；将真实已验证 DOM 定位固化为自动回归，再运行相关单测、插件套件、构建及 verify:stages。完整输出落报告目录。
+11. 更新 implementation.md 五区及源版本、命令、证据、不覆盖项。请求独立评审核对实际 diff 与逐帧证据，不自称评审通过。
+12. 同次最终浏览器脚本尾部 finish 并确认空间关闭；关闭自有动态服务，保留证据和工作树；可本地提交，不 push/合入/物化。向父代理发送准确路径、状态、未决项。
+
+并行：装配调查与规格可以独立并行；复现→失败测试→生产修正→真浏览器→正式回归严格串行。#1761 同文件冲突只记录，不访问其写入路径。
