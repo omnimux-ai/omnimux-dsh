@@ -169,8 +169,9 @@ describe('ModelCascadeMenu source contracts', () => {
   });
 
   it('strictly isolates models by brand and prevents cross-brand model leakage', () => {
-    // 根治跨品牌串台：needsActive 必须包含 brandForModel 属于当前展示品牌的强校验
-    assert.match(cascadeSrc, /const belongsToBrand = brandForModel\(activeModelId, allowedBrands\) === shownBrandId;/);
+    // 根治跨品牌串台：needsActive 必须包含 modelBelongsToBrand 严格特征词强校验（零兜底假阳性）
+    assert.match(cascadeSrc, /function modelBelongsToBrand\(modelId: string, brandId: string\): boolean/);
+    assert.match(cascadeSrc, /const belongsToBrand = modelBelongsToBrand\(activeModelId, shownBrandId\);/);
     assert.match(cascadeSrc, /const needsActive = belongsToBrand/);
   });
 });
@@ -255,8 +256,15 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
     return configured ?? 'gemini-3.8-flash';
   }
 
+  function modelBelongsToBrand(modelId, brandId) {
+    if (!modelId || !brandId) return false;
+    const id = modelId.toLowerCase();
+    const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
+    return fragments.some((fragment) => id.includes(fragment));
+  }
+
   function computeShownModels(shownBrandId, activeModelId, rows) {
-    const belongsToBrand = brandForModel(activeModelId, allowedBrands) === shownBrandId;
+    const belongsToBrand = modelBelongsToBrand(activeModelId, shownBrandId);
     const needsActive = belongsToBrand
       && activeModelId
       && !rows.some((row) => row.id === activeModelId);

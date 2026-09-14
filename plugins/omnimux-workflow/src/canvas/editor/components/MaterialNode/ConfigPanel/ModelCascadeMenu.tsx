@@ -213,6 +213,16 @@ function toPickerRows(list: readonly CapabilityModelItem[] | undefined): PickerR
   });
 }
 
+/**
+ * 严格判断模型是否真正属于指定品牌（无兜底假阳性）。
+ */
+function modelBelongsToBrand(modelId: string, brandId: string): boolean {
+  if (!modelId || !brandId) return false;
+  const id = modelId.toLowerCase();
+  const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
+  return fragments.some((fragment) => id.includes(fragment));
+}
+
 /** 推导模型所属品牌；用于初值与外部同步。 */
 function brandForModel(modelId: string, allowed: readonly string[]): string {
   const id = modelId.toLowerCase();
@@ -378,13 +388,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const shownModels = useMemo(() => {
     const rows = modelsForBrand(shownBrandId);
     // 根治跨品牌模型串台：已提交型号即使不在 catalog 里也要回退显示，
-    // 但必须真正属于当前展示的品牌，严禁跨品牌模型注入。
-    const belongsToBrand = brandForModel(activeModelId, allowedBrands) === shownBrandId;
+    // 但必须真正属于当前展示的品牌（严格特征词判定，无兜底假阳性），严禁跨品牌模型注入。
+    const belongsToBrand = modelBelongsToBrand(activeModelId, shownBrandId);
     const needsActive = belongsToBrand
       && activeModelId
       && !rows.some((row) => row.id === activeModelId);
     return needsActive ? [{ id: activeModelId, name: activeModelId }, ...rows] : rows;
-  }, [modelsForBrand, shownBrandId, activeModelId, allowedBrands]);
+  }, [modelsForBrand, shownBrandId, activeModelId]);
 
   // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
   // 渠道策略列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；

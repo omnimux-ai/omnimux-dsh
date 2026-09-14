@@ -49,11 +49,10 @@ export function taskChangeSet(root) {
 
   // 必须带 -uall：否则未跟踪目录会被折叠成 "plugins/" 单条，导致文件级判定失效
   for (const line of git(root, ['status', '--porcelain', '-uall']).split('\n')) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-    const status = trimmed.slice(0, 2)
+    if (!line || line.length < 4) continue
+    const status = line.slice(0, 2)
     if (status.includes('D')) continue
-    const raw = trimmed.slice(3).trim()
+    const raw = line.slice(3).trim()
     if (!raw) continue
     const target = raw.includes(' -> ') ? raw.split(' -> ').pop().trim() : raw
     files.add(target.replace(/^"|"$/g, ''))
