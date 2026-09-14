@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { GenerationTasks } from './GenerationTasks.jsx';
 import { currentSessionId } from '../workbench/host-adapter.js';
 import { injectMediaViewerStyles } from './styles.js';
+import { syncImageCanvasStage } from './image-canvas-stage.js';
 import { registerContextContributor } from '../workbench/context.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
@@ -34,10 +35,35 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const timelineGroups = store.getTimelineGroups();
 
   const imageRef = useRef(null);
+  const viewerRootRef = useRef(null);
   const [draftText, setDraftText] = useState('');
 
   const annotations = store.getAnnotations(activeItem?.id);
   const savedAnnotations = annotations.filter((a) => a.status === 'saved');
+
+  // 画布身份投影：单图浏览 = 图像画布。hub 侧的原生输入框投射规则以该标识为键，
+  // 只有画布 + 右侧栏全屏才把输入框悬浮到画布底端（Issue #1821）。
+  useLayoutEffect(() => {
+    const root = viewerRootRef.current;
+    if (!root) return undefined;
+    let alive = true;
+    const sync = () => {
+      if (alive) syncImageCanvasStage(root, { subViewMode, hasActiveMedia: Boolean(activeItem?.id) });
+    };
+    sync();
+    // 标签页前后切换会改变舞台可见性：同步前台标识，避免后台标签仍声明画布在前台。
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(sync);
+      observer.observe(root);
+      return () => {
+        alive = false;
+        observer.disconnect();
+      };
+    }
+    return () => {
+      alive = false;
+    };
+  }, [subViewMode, activeItem?.id]);
 
   // Register workbench Agent UI context for canvas and active annotations
   useEffect(() => {
@@ -86,16 +112,6 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const handleToggleSplit = () => {
     const nextMode = layoutMode === '3col' ? '2col' : '3col';
     store.setLayoutMode(nextMode);
-    try {
-      const root = document.documentElement;
-      if (nextMode === '2col') {
-        root.setAttribute('data-omnimux-conversation-collapsed', 'true');
-      } else {
-        root.removeAttribute('data-omnimux-conversation-collapsed');
-      }
-    } catch {
-      // ignore
-    }
   };
 
   const handleImageClick = (e) => {
@@ -114,7 +130,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   };
 
   return (
-    <div className="omx-media-viewer" data-layout-mode={layoutMode}>
+    <div className="omx-media-viewer" ref={viewerRootRef} data-layout-mode={layoutMode}>
       {/* 顶部工具栏 */}
       <div className="omx-mv-toolbar">
         <div className="omx-mv-toolbar__left">
