@@ -19,6 +19,23 @@ import {
 
 const catalog = createCompatTestCatalog();
 
+it('missing explicit defaults never display an arbitrary first quality or duration', () => {
+  const result = resolveEffectiveVideoParams({params:{},schema:{resolution:{options:[{value:'4k'}]},aspectRatio:{options:[{value:'16:9'}]},duration:{options:[{value:10}]}},modelItem:undefined,catalog:null});
+  assert.equal(result.resolution,undefined); assert.equal(result.aspectRatio,''); assert.equal(result.duration,'');
+});
+
+it('advanced enums without defaults remain unset rather than displaying the first option', () => {
+  const schema = Object.fromEntries(['outputFormat', 'referenceTaskType', 'generationType'].map(field => [field, {
+    options: [{ value: 'only', label: '唯一' }],
+  }]));
+  const result = resolveEffectiveVideoParams({ params: {}, schema, catalog: null });
+  for (const field of Object.keys(schema)) assert.equal(result[field], undefined, field);
+  const explicit = resolveEffectiveVideoParams({ params: { outputFormat: 'only' }, schema, catalog: null });
+  assert.equal(explicit.outputFormat, 'only');
+  schema.generationType.defaultValue = 'only';
+  assert.equal(resolveEffectiveVideoParams({ params: {}, schema, catalog: null }).generationType, 'only');
+});
+
 const klingSchema = {
   aspectRatio: {
     options: [
@@ -113,7 +130,7 @@ describe('videoParamAdapter - resolveEffectiveVideoParams (W2)', () => {
     assert.equal(result.resolution, '8K');
   });
 
-  it('首帧模式下原有 9:16 画幅自动自适应并消除校验阻断报错 (#1779)', () => {
+  it('saved ratio is displayed unchanged and rejected until an editing transition corrects it', () => {
     const adaptiveSchema = {
       ...klingSchema,
       aspectRatio: {
@@ -129,13 +146,13 @@ describe('videoParamAdapter - resolveEffectiveVideoParams (W2)', () => {
       catalog,
       upstreams: [{ materialType: 'image', hasMedia: true, nodeId: 'up-1' }],
     });
-    assert.equal(effective.aspectRatio, 'adaptive');
+    assert.equal(effective.aspectRatio, '9:16');
 
     const errors = validateVideoParamsForUi({
       params: effective,
       rawParams: { model: 'minimax-h3', operation: 'first_frame', aspectRatio: '9:16', duration: 5 },
     });
-    assert.deepEqual(errors, []);
+    assert.ok(errors.some(error => error.includes('aspectRatio')));
   });
 
   it('no catalog → still returns shape; operation may be empty; block via showModeUi false', () => {

@@ -24,7 +24,7 @@
 - 独立审查；动态端口真实浏览器先观察再固化E2E，验证A-B-A、双节点、保存恢复、带图旧节点、请求捕获；截图演示。
 
 ## 命令与测试策略
-在任务工作树执行：`node --test plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/videoParams/*.test.mjs`；`pnpm --filter omnimux-workflow test`；构建与类型检查按插件package.json现有脚本。`git diff --check`。单元红绿先于生产代码，E2E在真实观察后编写。全量失败必须根因隔离，不删除断言。真实浏览器仅本任务动态端口，禁止共享Dev代签与收费模型调用。
+在任务工作树执行：`node --test plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/videoParams/*.test.mjs`；`pnpm --filter omnimux-workflow test`（插件脚本实际为 `node --test "src/**/*.test.mjs" "src/**/*.test.js" "tests/*.test.mjs"`，须包含 tests 目录）；插件目录构建执行 `node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs`，类型执行 `node node_modules/typescript/bin/tsc -p tsconfig.canvas.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.host.json --noEmit`。`git diff --check`。单元红绿先于生产代码，E2E在真实观察后编写。全量失败必须根因隔离，不删除断言。真实浏览器仅本任务动态端口，禁止共享Dev代签与收费模型调用。
 
 ## 风格与边界
 沿用TypeScript具名导出、小型纯函数与精确类型；历史以不可变结构更新。示例约定：`const nextParams: Record<string, unknown> = { ...defaults, ...validSelection };`；不能直接合并未经验证的历史。

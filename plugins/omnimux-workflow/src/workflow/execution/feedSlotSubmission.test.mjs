@@ -115,7 +115,7 @@ test('none layout ignores ten waiting audio supplies in readiness and dispatch',
   });
   assert.equal(gw.requests[0].references, undefined); assert.equal(gw.requests[0].audioTrack, undefined);
 });
-test('prepareExecutionSlotGraph: 首帧模式下原有 9:16 画幅自动规范化为 adaptive (#1779)', () => {
+test('prepareExecutionSlotGraph preserves invalid fixed ratio for adaptive-only mode until UI corrects it (#1785)', async () => {
   const ffOp = {
     ...operation('first_frame', 'video', [slot('image', 'first_frame', 1, 1, 'first_frame')]),
     parameters: {
@@ -139,6 +139,54 @@ test('prepareExecutionSlotGraph: 首帧模式下原有 9:16 画幅自动规范�
   const edges = [edge('img-1')];
   const prepared = prepareExecutionSlotGraph(nodes, edges, customCatalog);
   const preparedTarget = prepared.nodes.find((item) => item.id === 'target');
-  assert.equal(preparedTarget.data.params.aspectRatio, 'adaptive');
-  assert.equal(findExecutionReadinessFailure([preparedTarget], customCatalog, prepared), null);
+  assert.equal(preparedTarget.data.params.aspectRatio, '9:16');
+  assert.equal(target.data.params.aspectRatio, '9:16');
+  assert.equal(findExecutionReadinessFailure([preparedTarget], customCatalog, prepared).reasonCode, 'parameter_unsupported');
+  const gw = gateway(customCatalog);
+  registerExecutor(createMaterialGatewayExecutor({ gateway: gw }));
+  await assert.rejects(createDispatchingNodeExecutor({ gateway: gw, edges: prepared.edges, mediaRoot: '/tmp', executionId: 'invalid-adaptive', abortController: new AbortController() }).executor(preparedTarget, {
+    getNodeOutput: () => media('img-1'), reportProgress() {}, addMediaAsset() {},
+  }), { message: '参数“aspectRatio”不支持值 "9:16"' });
+  assert.equal(gw.requests.length, 0);
+});
+
+for (const defaultValue of ['16:9', undefined]) {
+  test(`prepareExecutionSlotGraph never replaces unsupported fixed ratio with ${defaultValue ?? 'first option'} (#1785)`, async () => {
+    const customCatalog = catalogFor('video', 'frames', [{
+      ...operation('text_to_video', 'video', []),
+      parameters: { aspectRatio: { options: [{ value: '16:9' }, { value: '9:16' }], ...(defaultValue ? { defaultValue } : {}) } },
+    }]);
+    const target = node({}, 'text_to_video');
+    target.data.params.aspectRatio = '4:3';
+    const prepared = prepareExecutionSlotGraph([target], [], customCatalog);
+    const preparedTarget = prepared.nodes[0];
+    assert.equal(preparedTarget.data.params.aspectRatio, '4:3');
+    assert.equal(target.data.params.aspectRatio, '4:3');
+    assert.equal(findExecutionReadinessFailure([preparedTarget], customCatalog, prepared).reasonCode, 'parameter_unsupported');
+    const gw = gateway(customCatalog);
+    registerExecutor(createMaterialGatewayExecutor({ gateway: gw }));
+    await assert.rejects(createDispatchingNodeExecutor({ gateway: gw, edges: prepared.edges, mediaRoot: '/tmp', executionId: 'invalid-fixed', abortController: new AbortController() }).executor(preparedTarget, {
+      getNodeOutput() {}, reportProgress() {}, addMediaAsset() {},
+    }), { message: '参数“aspectRatio”不支持值 "4:3"' });
+    assert.equal(gw.requests.length, 0);
+  });
+}
+
+test('prepareExecutionSlotGraph preserves valid fixed ratio through submission (#1785)', async () => {
+  const customCatalog = catalogFor('video', 'frames', [{
+    ...operation('text_to_video', 'video', []),
+    parameters: { aspectRatio: { options: [{ value: '16:9' }, { value: '9:16' }], defaultValue: '16:9' } },
+  }]);
+  const target = node({}, 'text_to_video');
+  target.data.params.aspectRatio = '9:16';
+  const prepared = prepareExecutionSlotGraph([target], [], customCatalog);
+  assert.equal(prepared.nodes[0].data.params.aspectRatio, '9:16');
+  assert.equal(findExecutionReadinessFailure(prepared.nodes, customCatalog, prepared), null);
+  const gw = gateway(customCatalog);
+  registerExecutor(createMaterialGatewayExecutor({ gateway: gw }));
+  await createDispatchingNodeExecutor({ gateway: gw, edges: prepared.edges, mediaRoot: '/tmp', executionId: 'valid-fixed', abortController: new AbortController() }).executor(prepared.nodes[0], {
+    getNodeOutput() {}, reportProgress() {}, addMediaAsset() {},
+  });
+  assert.equal(gw.requests.length, 1);
+  assert.equal(gw.requests[0].aspectRatio, '9:16');
 });

@@ -165,19 +165,16 @@ export function resolveEffectiveVideoParams(
   const rawRatio = typeof params?.aspectRatio === 'string' && params.aspectRatio.trim()
     ? params.aspectRatio
     : undefined;
-  const onlyAdaptive = ratioOptions.length === 1 && (ratioOptions[0]!.value === 'adaptive' || ratioOptions[0]!.value === 'auto');
-  const aspectRatio = onlyAdaptive && rawRatio && rawRatio !== ratioOptions[0]!.value
-    ? (schema.aspectRatio?.defaultValue ?? ratioOptions[0]!.value)
-    : (rawRatio ?? schema.aspectRatio?.defaultValue ?? ratioOptions[0]?.value ?? DEFAULT_ASPECT_RATIO);
+  const aspectRatio = rawRatio ?? schema.aspectRatio?.defaultValue ?? '';
 
   const resolutionOptions = schema.resolution?.options ?? [];
   const resolution = typeof params?.resolution === 'string' && params.resolution.trim()
     ? params.resolution
-    : (schema.resolution?.defaultValue ?? resolutionOptions[0]?.value);
+    : schema.resolution?.defaultValue;
 
   const duration = params?.duration !== undefined
     ? params.duration
-    : schema.duration?.defaultValue ?? DEFAULT_DURATION;
+    : schema.duration?.defaultValue ?? '';
 
   const sound = typeof params?.sound === 'boolean'
     ? params.sound
@@ -213,7 +210,7 @@ export function resolveEffectiveVideoParams(
       const value = params?.[field];
       result[field] = typeof value === 'string' && value.trim()
         ? value
-        : definition.defaultValue ?? definition.options[0]!.value;
+        : definition.defaultValue;
     }
   }
   if (typeof params?.fileUrl === 'string') result.fileUrl = params.fileUrl;

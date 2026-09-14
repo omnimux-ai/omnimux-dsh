@@ -32,7 +32,7 @@ export interface VideoSummaryFormatResult {
  * 格式化画幅比例文案（将 adaptive / auto 映射为「自适应」）
  */
 function normalizeRatio(ratio: string | undefined): string {
-  if (!ratio) return '16:9';
+  if (!ratio) return '未设置';
   const trimmed = ratio.trim();
   if (trimmed === 'adaptive' || trimmed === 'auto') {
     return '自适应';
@@ -60,11 +60,11 @@ function normalizeResolution(resolution: string | undefined): string | null {
 function normalizeDuration(duration: number | string | undefined): string {
   if (duration === -1) return '自动';
   if (duration === undefined || duration === null) {
-    return '5s';
+    return '未设置';
   }
   const str = String(duration).trim();
   if (!str) {
-    return '5s';
+    return '未设置';
   }
   if (str.endsWith('s') || str.endsWith('S')) {
     return `${str.slice(0, -1)}s`;

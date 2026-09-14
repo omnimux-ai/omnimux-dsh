@@ -34,17 +34,6 @@ export function prepareExecutionSlotGraph<
     params.model ??= model?.id;
     params.operation ??= resolveSlotOperation(catalog, model?.id, params.operation, kind,
       buildCanvasUpstreamFingerprint(node.id, nodes as unknown as CanvasNode[], nextEdges as unknown as Edge[]));
-    if (kind === 'video' && model?.id && params.operation) {
-      const modelItem = catalog?.models?.find((m) => m.id === model.id || m.aliases?.includes(model.id));
-      const operationItem = modelItem?.operations?.find((op) => op.id === params.operation);
-      const opAspect = operationItem?.parameters?.aspectRatio as { options?: Array<{ value: string }>; defaultValue?: string } | undefined;
-      if (opAspect?.options && opAspect.options.length > 0) {
-        const allowed = opAspect.options.map((opt) => opt.value);
-        if (typeof params.aspectRatio === 'string' && !allowed.includes(params.aspectRatio)) {
-          params.aspectRatio = opAspect.defaultValue ?? opAspect.options[0]?.value ?? 'adaptive';
-        }
-      }
-    }
     data.params = params;
     if (kind === 'audio' && params.operation === 'text_to_speech') {
       data.slotBindings = {};
