@@ -83,6 +83,21 @@ test('e2e: canvas image annotations, consecutive numbering, and dual-channel mod
   );
   assert.match(
     MEDIA_VIEWER_CSS,
+    /\.omx-mv-annotation-popover\s*\{[^}]*border:\s*none\s*!important/,
+    'Input popover must have no border line'
+  );
+  assert.match(
+    MEDIA_VIEWER_CSS,
+    /\.omx-mv-annotation-popover__input\s*\{[^}]*border:\s*none\s*!important/,
+    'Inner input must have no border line'
+  );
+  assert.match(
+    MEDIA_VIEWER_CSS,
+    /\.omx-mv-annotation-popover__badge\s*\{[^}]*background:\s*#2563eb\s*!important/,
+    'Annotation badge must have explicit blue background for high contrast'
+  );
+  assert.match(
+    MEDIA_VIEWER_CSS,
     /\.omx-mv-composer-attachment/,
     'Native composer attachment badge must be styled'
   );
