@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-09"
-updated: "2026-09-09"
+updated: "2026-09-14"
 authors: ["architecture-group"]
 subsystem: "global"
 tags: ["agent-architecture", "canvas-workflow", "multimodal", "prompt-compiler", "state-machine"]
@@ -116,6 +116,21 @@ Agent 不预先记忆全网模型的使用说明，而是在运行时通过中�
 1. Agent 请求生成能力清单：`caps = await list_capabilities({ modality: "video" })`；
 2. 返回的数据中包含该模型专属的知识卡片相对路径：`knowledge_card: "knowledge/vendors/model-a.md"`；
 3. **知识门禁（Knowledge Gate）**：仅在真正选定该模型时，Agent 才会临时单次读取这篇 50 行的卡片，将其中的编译规则（如景别要求、运镜指令）编译进 Prompt，**执行完毕立即丢弃，绝不污染全局对话上下文**。
+
+### 3.2 指针可达性前置条件（Pointer Reachability Precondition）
+
+§3.1 的指针驱动只有在**消费方确实具备解引用通道**时才成立。给出索引却无法拉取，等于让模型绑定一个它拿不到的东西——这类配置得到的不是「更省的上下文」，而是失效的上下文。
+
+**前置条件**：任何以「索引 / 清单 / 相对路径」形式披露知识的位置，必须先确认当前运行形态具备对应的读取能力，确认通过才可降级为指针式披露。
+
+| 运行形态 | 解引用通道 | 披露形态 |
+|---|---|---|
+| 具备文件或工具读取能力的 Agent 运行时 | 具备 | 指针 / 索引 + 按需拉取 |
+| 无工具、纯文本流、包体冻结或无法确认的消费方 | 不具备或未知 | 必须内联全量 |
+
+**Fail condition**：无法确认消费方具备拉取能力时，一律按「不具备」处理并内联全量；禁止以「大概率能拉到」为由只给指针。
+
+**边界**：本条只约束披露形态的选择，不放松 §3.1 的知识门禁——通道具备时仍须在执行完毕立即丢弃卡片内容，不得转存为对话上下文。
 
 ---
 

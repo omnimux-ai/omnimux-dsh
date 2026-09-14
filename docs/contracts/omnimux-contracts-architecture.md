@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-11"
-updated: "2026-09-11"
+updated: "2026-09-14"
 authors: ["architecture-group"]
 subsystem: "global"
 tags: ["agent-contracts", "always-on", "anti-loop", "semantic-judgment", "timeline-discipline", "batch-grouping"]
@@ -82,3 +82,5 @@ related:
 
 - **篇幅红线**：每个常驻微契约严格控制在 100 行以内，严禁将具体模型参数或平台算法长篇塞入微契约。
 - **静态与动态测试**：新增或修改契约必须通过 `contracts-loader.test.js` 与 `loop-guard.test.js` 自动化测试。
+- **契约单一真源**：同一条规则只允许一处权威表述。需要被多处消费时，其余位置只保留指针或引用，禁止手抄第二份镜像——镜像与真源必然漂移，且单侧测试看不见漂移（测试只覆盖它自己那一侧）。模型域已有专门条款（[model-capabilities-matrix](model-capabilities-matrix.md) §1），货架文案域已有专门条款（[skill-bilingual](skill-bilingual.md) §1）；本条是该模式在契约层的通用要求，不重复其表述。
+- **新增契约前先查既有归属**：新建规范文件前必须先在 `docs/contracts/` 检索同一主题。若已有权威归属，就地补充而非新建平行文档——新建平行规范本身就是上一条禁止的镜像。

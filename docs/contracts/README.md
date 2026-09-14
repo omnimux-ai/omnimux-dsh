@@ -21,7 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
-| `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-11 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合。 |
+| `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-14 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合；含契约单一真源与「新增契约前先查既有归属」治理条款。 |
 | `living` | [omnimux-baseline-contract.md](omnimux-baseline-contract.md) | OmniMux 通用底线与交互契约 (Baseline Contract) | `global` | 2026-09-11 | 资产物理路径不可变性、最多 3 次异参重试熔断与 `working_language` 级联裁决协议栈。 |
 | `living` | [omnimux-anti-loop-contract.md](omnimux-anti-loop-contract.md) | OmniMux 防死循环自检与 LoopGuard 契约 (Anti-Loop Contract) | `global` | 2026-09-11 | 调用前自查清单、典型死循环替代策略表与 Hub 底层 `LoopGuard` 5 步 3 击硬门禁熔断。 |
 | `living` | [omnimux-semantic-judgment-contract.md](omnimux-semantic-judgment-contract.md) | OmniMux 多模态语义分配与 Prompt 编译契约 (Semantic Judgment) | `global` | 2026-09-11 | 意图四级优先级、素材 5 维输入角色、五维决策（take/adapt/ignore/block/ask）与 Prompt 纯净度铁律。 |
