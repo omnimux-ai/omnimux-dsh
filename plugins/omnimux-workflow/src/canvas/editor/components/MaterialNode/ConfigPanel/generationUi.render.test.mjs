@@ -14,7 +14,7 @@ const output = resolve(tmp, 'render.cjs');
 const stubs = {
   'useUpstreamMedia': `export const useUpstreamMedia = () => globalThis.__generationTestUpstreams ?? []; export const toUpstreamSnapshots = items => items;`,
   'useModelParameterSchema': `export const getCachedCatalog = () => null; export const useModelParameterSchema = (kind, id, catalog) => ({ schema: {}, modelItem: catalog?.[kind]?.find(m => m.id === id), aspectRatioOptions: [], defaultAspectRatio: '16:9', isAspectRatioValid: () => true, defaultDuration: 5, isDurationValid: () => true });`,
-  'canvasStore': `export const useCanvasStore = { getState: () => ({edges: []}) };`,
+  'canvasStore': `const state = () => ({edges: (globalThis.__generationTestUpstreams ?? []).filter(item => item.edgeId).map(item => ({id:item.edgeId,source:item.nodeId,target:'target',targetHandle:'in'}))}); export const useCanvasStore = Object.assign(selector => selector(state()), { getState: state, subscribe: () => () => {} });`,
   'generationPreferencesStore': `export const rememberGenerationModel = async () => {};`,
   'i18n': `import zh from ${JSON.stringify(resolve(root, 'src/canvas/i18n/dict.zh.ts'))}; export const useT = () => key => zh[key] ?? key;`,
   'ui': `import React from 'react'; export const CustomSelect = ({options=[]}) => React.createElement('div', {'data-model-options': options.length}, options.map(o => React.createElement('span', {key:o.value}, o.label))); export const CustomSlider = () => null; export const toast = {error: () => {}};`,
@@ -64,14 +64,33 @@ test('upstream text enables generation without adding a local prompt', () => {
 test('audio modes come from the selected model, with no fixed speech/music tabs', () => {
   const single = render(node('audio', {selectedTool:'text-to-music',prompt:'Music'}),fixture('audio',false));
   assert.doesNotMatch(single, /wf-config-panel__audio-tabs|wf-operation-mode-inline|音频生成|音乐生成/);
-  // Issue #763：时长由文本长度决定，摘要条 / 参数浮层移除；素材卡槽常驻（reference_audio 兜底）
+  // 无媒体输入的操作不合成音频槽；底栏仍保持精简。
   assert.doesNotMatch(single, /wf-cfg-summary-bar|data-show-mode/);
-  assert.match(single, /data-testid="wf-slot-wells"/);
-  assert.match(single, /data-slot="reference_audio"/);
+  assert.doesNotMatch(single, /data-testid="wf-slot-wells"|data-slot="reference_audio"/);
   const multi = render(node('audio', {prompt:'Music'}),fixture('audio'));
-  // 多 op：底栏无内联 Segment、无孤立齿轮与内联抽屉、无参数浮层，卡槽仍常驻
+  // 其他操作有图片槽，也不能借给当前 plain 操作。
   assert.doesNotMatch(multi, /wf-operation-mode-inline|advanced-drawer|wf-cfg-summary-bar/);
-  assert.match(multi, /data-testid="wf-slot-wells"/);
+  assert.doesNotMatch(multi, /data-testid="wf-slot-wells"/);
+  const musicCatalog = fixture('audio', false);
+  musicCatalog.models[0].operations.push({id:'text_to_music',listed:true,output:{type:'audio'},inputs:[{slot:'reference_audio',type:'audio',role:'reference',source:'upstream_edge',min:0,max:1}]});
+  const music = render(node('audio', {prompt:'Music',params:{model:'test-model',operation:'text_to_music'}}), musicCatalog);
+  assert.match(music, /data-testid="wf-slot-wells"/);
+  assert.match(music, /data-slot="reference_audio"/);
+});
+
+test('text sources occupy the input header without creating media slots or copying the editor value', () => {
+  const empty = render(node('text'), fixture('text'));
+  assert.match(empty, /wf-config-panel__prompt-header--empty-slots/);
+  const supplied = render(node('text'), fixture('text'), [{nodeId:'source',edgeId:'text-edge',label:'正文来源',materialType:'text',textContent:'1dog',hasMedia:true,availability:'ready'}]);
+  assert.match(supplied, /1dog/);
+  assert.doesNotMatch(supplied, /wf-config-panel__prompt-header--empty-slots|data-testid="wf-slot-wells"/);
+  assert.match(supplied, /<textarea[^>]*><\/textarea>/);
+});
+
+test('image panel does not synthesize slots for a prompt-only listed operation', () => {
+  const html = render(node('image', {prompt:'Draw'}), fixture('image'));
+  assert.doesNotMatch(html, /data-testid="wf-slot-wells"|data-slot="reference_image"/);
+  assert.doesNotMatch(html, /aria-disabled="true"/);
 });
 
 test('automatic model adaptation is a status message, not an error', () => {

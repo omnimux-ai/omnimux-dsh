@@ -115,3 +115,30 @@ test('none layout ignores ten waiting audio supplies in readiness and dispatch',
   });
   assert.equal(gw.requests[0].references, undefined); assert.equal(gw.requests[0].audioTrack, undefined);
 });
+test('prepareExecutionSlotGraph: 首帧模式下原有 9:16 画幅自动规范化为 adaptive (#1779)', () => {
+  const ffOp = {
+    ...operation('first_frame', 'video', [slot('image', 'first_frame', 1, 1, 'first_frame')]),
+    parameters: {
+      aspectRatio: {
+        options: [{ value: 'adaptive', label: '自适应' }],
+        defaultValue: 'adaptive',
+      },
+    },
+  };
+  const customCatalog = catalogFor('video', 'frames', [ffOp, op, operation('text_to_video', 'video', [])]);
+  const target = {
+    id: 'target',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      prompt: 'go',
+      params: { model: 'frames', operation: 'first_frame', aspectRatio: '9:16' },
+    },
+  };
+  const nodes = [graphNode('img-1', 'image'), target];
+  const edges = [edge('img-1')];
+  const prepared = prepareExecutionSlotGraph(nodes, edges, customCatalog);
+  const preparedTarget = prepared.nodes.find((item) => item.id === 'target');
+  assert.equal(preparedTarget.data.params.aspectRatio, 'adaptive');
+  assert.equal(findExecutionReadinessFailure([preparedTarget], customCatalog, prepared), null);
+});

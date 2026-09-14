@@ -7,12 +7,13 @@
  *  - 音频底栏只保留：模型下拉 + wf-voice-trigger 音色胶囊 + 生成按钮；
  *  - SLOT_LAYOUT_TABLE 新增 text_to_speech strip 策略，SLOT_NAME_ALIASES
  *    新增 reference_audio 别名；
- *  - ConfigPanel 为音频（非 ASR）提供 reference_audio 常驻卡槽兜底（同 image）；
+ *  - 音频槽严格来自所选 listed 操作，speech 无槽，music 保留准确容量；
  *  - audioParamAdapter 不再导出 formatAudioSummary / assertAudioParamWriteKey；
  *  - ASR（isAsrTool）不挂卡槽兜底，字数闸门保留。
  */
 
 import assert from 'node:assert/strict';
+import { deriveSlotLayout, autoFillSlots } from '../../../../../../shared/graph/feedSlot/index.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -58,11 +59,23 @@ test('Issue #763：text_to_speech 进入 SLOT_LAYOUT_TABLE，reference_audio 别
   assert.match(tableSrc, /reference_audio: \['reference', 'references', 'input_audio', 'audio_track', 'audio'\]/);
 });
 
-test('Issue #763：ConfigPanel 为音频（非 ASR）提供 reference_audio 常驻卡槽兜底', () => {
-  assert.match(configSrc, /materialType === 'audio' && !isAsrTool && \(slotLayout\.preset === 'none' \|\| slotLayout\.slots\.length === 0\)/);
-  assert.match(configSrc, /opsState\.selectedOperationId \|\| 'text_to_speech'/);
-  assert.match(configSrc, /slot: 'reference_audio'/);
-  assert.match(configSrc, /labelKey: 'panel\.slot\.reference_audio'/);
+test('Issue #763/#1760：speech 不消费音频，music 严格保留所选操作的槽与容量', () => {
+  const catalog = {models:[{id:'audio-model',operations:[
+    {id:'text_to_speech',listed:true,output:{type:'audio'},inputs:[]},
+    {id:'text_to_music',listed:true,output:{type:'audio'},inputs:[{slot:'reference_audio',type:'audio',role:'reference',source:'upstream_edge',min:0,max:1}]},
+  ]}]};
+  const feed = [0,1].map(i => ({edgeId:`audio-${i}`,sourceNodeId:`audio-${i}`,type:'audio',ordinal:i,availability:'ready'}));
+  const speech = deriveSlotLayout(catalog, 'audio-model', 'text_to_speech', 'audio');
+  assert.equal(speech.preset, 'none');
+  assert.deepEqual(speech.slots, []);
+  assert.deepEqual(autoFillSlots(feed, speech).bindings, {});
+  const music = deriveSlotLayout(catalog, 'audio-model', 'text_to_music', 'audio');
+  assert.deepEqual(music.slots.map(({slot,type,min,max}) => ({slot,type,min,max})), [{slot:'reference_audio',type:'audio',min:0,max:1}]);
+  assert.equal(autoFillSlots(feed, music).bindings.reference_audio.length, 1);
+  catalog.models[0].operations[1].inputs[0].max = null;
+  assert.equal(deriveSlotLayout(catalog, 'audio-model', 'text_to_music', 'audio').slots[0].max, null);
+  delete catalog.models[0].operations[1].inputs[0].max;
+  assert.equal(deriveSlotLayout(catalog, 'audio-model', 'text_to_music', 'audio').slots[0].max, 0, '不完整DTO保持fail-closed，不合成正容量');
 });
 
 test('audioParamAdapter：摘要格式化与浮层写白名单随浮层下线，字数闸门保留', () => {

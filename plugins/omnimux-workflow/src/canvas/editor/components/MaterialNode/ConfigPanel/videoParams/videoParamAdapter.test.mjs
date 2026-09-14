@@ -113,6 +113,31 @@ describe('videoParamAdapter - resolveEffectiveVideoParams (W2)', () => {
     assert.equal(result.resolution, '8K');
   });
 
+  it('首帧模式下原有 9:16 画幅自动自适应并消除校验阻断报错 (#1779)', () => {
+    const adaptiveSchema = {
+      ...klingSchema,
+      aspectRatio: {
+        options: [{ value: 'adaptive', label: '自适应' }],
+        defaultValue: 'adaptive',
+      },
+    };
+    const adaptiveItem = { id: 'minimax-h3', label: 'MiniMax H3', parameters: adaptiveSchema };
+    const effective = resolveEffectiveVideoParams({
+      params: { model: 'minimax-h3', operation: 'first_frame', aspectRatio: '9:16', duration: 5 },
+      schema: adaptiveSchema,
+      modelItem: adaptiveItem,
+      catalog,
+      upstreams: [{ materialType: 'image', hasMedia: true, nodeId: 'up-1' }],
+    });
+    assert.equal(effective.aspectRatio, 'adaptive');
+
+    const errors = validateVideoParamsForUi({
+      params: effective,
+      rawParams: { model: 'minimax-h3', operation: 'first_frame', aspectRatio: '9:16', duration: 5 },
+    });
+    assert.deepEqual(errors, []);
+  });
+
   it('no catalog → still returns shape; operation may be empty; block via showModeUi false', () => {
     const result = resolveEffectiveVideoParams({
       params: { model: 'x', aspectRatio: '16:9', duration: 5 },
