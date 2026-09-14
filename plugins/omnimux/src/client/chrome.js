@@ -9,6 +9,7 @@ import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
+import { installCollapsedPanelFill } from './rightbar-collapsed-fill.js'
 import { NS, en, zh } from './locales.js'
 import { bindWorkbenchDeps } from './workbench/host-adapter.js'
 // x.ai 全壳 overrideTokens 已临时关闭：发送钮在暗色下变成白底白箭头。
@@ -60,6 +61,7 @@ export function installHubChrome(ctx) {
     const unsubSplitMin = installSplitConversationMin()
     const unsubCompact = installComposerCompactObserver()
     const unsubSidebarTopbar = installSidebarToggleTopbar()
+    const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     return () => {
       unsubToggle?.()
@@ -67,6 +69,7 @@ export function installHubChrome(ctx) {
       unsubSplitMin?.()
       unsubCompact?.()
       unsubSidebarTopbar?.()
+      unsubCollapsedFill?.()
       unsubPresetAvatars?.()
     }
   }, 'omnimux: product-stage chrome, chat toggle, topbar sidebar toggle & workbench left-rail sync')
