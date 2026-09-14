@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { ChatIcon, PlusIcon } from './icons.jsx'
+import { CreateProductMenu } from './CreateProductMenu.jsx'
+import { ChatIcon } from './icons.jsx'
 import { ProductFormPage } from './ProductFormPage.jsx'
 import { ProductGrid } from './ProductGrid.jsx'
 import { injectProductsStyles } from './styles.js'
@@ -34,9 +35,19 @@ function citeOf(product) {
 }
 
 /**
+ * 归一化形态：只认 `digital`，其余一律实物。菜单的选择、列表行的形态、取回的完整
+ * 记录共用同一口径，二级页拿到的永远是这两种之一。
+ */
+function normalizedKind(value) {
+  return value === 'digital' ? 'digital' : 'physical'
+}
+
+/**
  * Product library workbench tab component in dsh-better-sidebar.
  *
- * 视图状态机：`view = { name: 'list' } | { name: 'form', mode, product }`。
+ * 视图状态机：`view = { name: 'list' } | { name: 'form', mode, kind, product }`。
+ * `kind` 在进入二级页的那一刻就被锚定（新建来自悬停菜单的选择，编辑来自产品的
+ * 持久化形态），因此二级页内部不再有形态切换，也不会渲染另一半的字段。
  * 列表视图常驻挂载（切到表单不卸载），因此返回时滚动位置与筛选条件完好；
  * 表单是覆盖在列表之上的同 Tab 子屏，不是弹窗。
  *
@@ -115,11 +126,11 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
-  const handleCreate = () => {
+  const handleCreate = (kind) => {
     editRequest.current += 1
     setFormError('')
     setFormDirty(false)
-    setView({ name: 'form', mode: 'create', product: null })
+    setView({ name: 'form', mode: 'create', kind: normalizedKind(kind), product: null })
   }
 
   const handleOpenProduct = async (product) => {
@@ -130,13 +141,21 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     try {
       const result = await getProductForEdit(product.id)
       if (request !== editRequest.current) return
-      if (!result.ok || !result.body?.product) {
+      const fresh = result.body?.product
+      if (!result.ok || !fresh) {
         // 取数失败留在列表视图 + 错误条，绝不进入空白二级页。
         setError(messageOf(result, t))
         return
       }
       setFormDirty(false)
-      setView({ name: 'form', mode: 'edit', product: result.body.product })
+      // 形态以取回的完整记录为准，列表行只做兜底：卡片点开的落点必须与产品自身
+      // 的持久化形态一致，而不是跟当前筛选页签走。
+      setView({
+        name: 'form',
+        mode: 'edit',
+        kind: normalizedKind(fresh.kind || product.kind),
+        product: fresh,
+      })
     } catch (caught) {
       if (request === editRequest.current) setError(errText(caught))
     } finally {
@@ -306,13 +325,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         />
 
         <div className="omnimux-products-action-row">
-          <Button
-            variant="primary"
-            leadingIcon={<PlusIcon />}
-            onClick={handleCreate}
-          >
-            {t('add.button')}
-          </Button>
+          <CreateProductMenu t={t} onSelect={handleCreate} />
           <Button
             variant="secondary"
             leadingIcon={<ChatIcon />}
@@ -379,6 +392,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
             products={visibleProducts}
             emptyLabel={t(query.trim() ? 'empty.noMatch' : 'empty.all')}
             emptyActionLabel={t('add.button')}
+            emptyAction={query.trim() === '' ? <CreateProductMenu t={t} onSelect={handleCreate} /> : null}
             showEmptyAction={query.trim() === ''}
             selectedIds={selectedIds}
             copiedId={copiedId}
@@ -394,8 +408,9 @@ export function ProductsStage({ t, stage, store, visible = true }) {
 
       {formOpen && (
         <ProductFormPage
-          key={view.mode === 'edit' ? String(view.product?.id ?? '') : 'create'}
+          key={`${view.mode === 'edit' ? String(view.product?.id ?? '') : 'create'}:${view.kind}`}
           t={t}
+          kind={view.kind}
           mode={view.mode}
           initial={view.mode === 'edit' ? view.product : null}
           serverError={formError}

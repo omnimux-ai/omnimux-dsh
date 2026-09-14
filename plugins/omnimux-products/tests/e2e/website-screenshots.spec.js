@@ -250,10 +250,11 @@ describe('e2e · website screenshots · degraded paths', () => {
     assert.equal(response.body.data.screenshots.reason, SCREENSHOT_REASON.BUDGET_EXCEEDED)
   })
 
-  it('case 10: a physical listing keeps its old shape and never starts a capture', async () => {
+  it('case 10: a physical listing never starts a capture, and carries its images as media instead', async () => {
     const { capture, calls } = stubCapture()
     const physical = `<!doctype html><html><head><title>Aurora Mug 350ml</title>
-      <meta property="product:price:amount" content="29.90"></head>
+      <meta property="product:price:amount" content="29.90">
+      <meta property="og:image" content="https://cdn.example.com/aurora-1.jpg"></head>
       <body><h1>Aurora Mug 350ml</h1><p>6 小时长效保温，防滑硅胶底座。</p></body></html>`
     const { dispatcher } = vertical({ capture, html: physical })
 
@@ -262,10 +263,13 @@ describe('e2e · website screenshots · degraded paths', () => {
       kind: 'physical',
     }))
     assert.equal(body.data.kind, 'physical')
-    for (const key of ['media', 'cover_media_id', 'screenshots']) {
-      assert.equal(key in body.data, false, key)
-    }
+    // 形态由请求参数定死：整屏截图是数字产品的产物，实物这条腿一次都不碰浏览器。
+    assert.equal('screenshots' in body.data, false)
     assert.deepEqual(calls, [])
+    // 商品图以 media 的形式回来（此处没有落盘 seam，所以是空画廊而不是缺键）。
+    assert.deepEqual(body.data.media, [])
+    assert.equal(body.data.cover_media_id, null)
+    assert.deepEqual(body.data.images, ['https://cdn.example.com/aurora-1.jpg'])
   })
 
   it('case 13: a private network link is refused by the guard, not by the browser', async () => {

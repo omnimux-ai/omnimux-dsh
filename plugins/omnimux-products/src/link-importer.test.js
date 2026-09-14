@@ -11,6 +11,7 @@ import {
   IMPORT_DRAFT_EXTRA_KEYS,
   IMPORT_FIELD_KEYS,
   IMPORT_SCREENSHOT_KEYS,
+  IMPORT_SCREENSHOT_REPORT_KEYS,
   LinkImportError,
   buildProductFields,
   cleanTitle,
@@ -963,20 +964,73 @@ describe('link importer · website screenshots', () => {
     assert.equal(draft.screenshots.reason, SCREENSHOT_REASON.NO_BROWSER)
   })
 
-  it('leaves a physical draft in exactly its old shape and never starts a capture', async () => {
+  it('never touches the browser for an explicit physical request', async () => {
     const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
     const { capture, calls } = stubCapture()
     const draft = await importProductFromUrl({
       url: PAGE_URL,
+      kind: 'physical',
       fetcher,
       captureScreenshots: capture,
     })
 
     assert.equal(draft.kind, 'physical')
-    for (const key of IMPORT_SCREENSHOT_KEYS) {
-      assert.equal(key in draft, false, `${key} must not exist for a physical product`)
+    assert.deepEqual(calls, [], 'a physical request must never start the browser chain')
+    for (const key of IMPORT_SCREENSHOT_REPORT_KEYS) {
+      assert.equal(key in draft, false, `${key} is a digital-only key`)
     }
+    // 实物没有落盘 seam 时媒体是空数组，而不是缺键：客户端只需一套读法。
+    assert.deepEqual(draft.media, [])
+    assert.equal(draft.cover_media_id, null)
+  })
+
+  it('puts the product images a physical listing carried into the media list, first one as cover', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const paths = resolveProductsPaths({ homeDir: shotsHome() })
+    const { capture, calls } = stubCapture()
+    const written = []
+    const persistProductImages = async (args) => {
+      written.push(args)
+      return [
+        { id: 'med_img1', real_path: join(args.paths.mediaDir, 'product-1.jpg'), original_name: 'product-1.jpg' },
+        { id: 'med_img2', real_path: join(args.paths.mediaDir, 'product-2.jpg'), original_name: 'product-2.jpg' },
+      ]
+    }
+
+    const draft = await importProductFromUrl({
+      url: PAGE_URL,
+      kind: 'physical',
+      fetcher,
+      paths,
+      captureScreenshots: capture,
+      persistProductImages,
+    })
+
     assert.deepEqual(calls, [])
+    assert.equal(written.length, 1)
+    assert.deepEqual(written[0].images, draft.images)
+    assert.equal(written[0].paths, paths)
+    assert.equal(written[0].fetcher, fetcher)
+    assert.equal(draft.media.length, 2)
+    assert.equal(draft.cover_media_id, 'med_img1', 'the first product image is the cover')
+    assert.equal('screenshots' in draft, false)
+  })
+
+  it('answers an empty gallery when the image seam is missing or fails', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const missing = await importProductFromUrl({ url: PAGE_URL, kind: 'physical', fetcher })
+    assert.deepEqual(missing.media, [])
+    assert.equal(missing.cover_media_id, null)
+
+    const throwing = await importProductFromUrl({
+      url: PAGE_URL,
+      kind: 'physical',
+      fetcher,
+      paths: resolveProductsPaths({ homeDir: shotsHome() }),
+      persistProductImages: () => { throw new Error('disk on fire') },
+    })
+    assert.deepEqual(throwing.media, [])
+    assert.equal(throwing.name, missing.name, 'a broken image seam never costs the text fields')
   })
 
   it('starts the capture alongside the model call, not after it', async () => {

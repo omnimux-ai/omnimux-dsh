@@ -27,6 +27,7 @@
  * and does the call ([hub contract](../../../../docs/contracts/hub.md)).
  */
 import { ANALYSIS_MODES, analyzeLandingPage, isDigitalLandingPage, normalizeHub } from './ai-analysis.js'
+import { persistProductImages } from './product-images.js'
 import { persistSiteScreenshots } from './site-shots-store.js'
 import {
   SCREENSHOT_BUDGET_MS,
@@ -51,16 +52,20 @@ export const IMPORT_FIELD_KEYS = Object.freeze([
 ])
 
 /**
- * The three keys that exist **only** for a digital draft. A physical listing is
- * returned in exactly the shape it always had (spec §2.3 invariant 12).
+ * The three keys that carry local media. `media` and `cover_media_id` are the
+ * draft's gallery and its lead image for **both** kinds — for a physical listing
+ * they hold the product images the page carried, for a digital one the two
+ * first screens. `screenshots` is the digital-only capture report.
  */
 export const IMPORT_SCREENSHOT_KEYS = Object.freeze(['media', 'cover_media_id', 'screenshots'])
+
+/** The capture report exists only for a digital draft; the media pair is universal. */
+export const IMPORT_SCREENSHOT_REPORT_KEYS = Object.freeze(['screenshots'])
 
 /**
  * Keys `importProductFromUrl` adds on top of the canonical field set: the kind
  * the page turned out to be, the six-module strategy an all-model digital import
- * produced, how the draft was read, and — digital only — the local first-screen
- * screenshots with the media id that leads them.
+ * produced, how the draft was read, and the local media the draft leads with.
  */
 export const IMPORT_DRAFT_EXTRA_KEYS = Object.freeze([
   'kind',
@@ -1637,15 +1642,24 @@ export function mergeAnalysisDraft(fields, analysis, input) {
 /**
  * Start the screenshot chain without ever letting it reach the caller.
  *
+ * A physical request never starts the chain at all — not "started and refused
+ * later", but never touches `capture`. The caller already said which form it is
+ * filling in, and the two first screens are a digital-only artifact; skipping
+ * them is what turns a physical import from tens of seconds into a page read
+ * plus a handful of image downloads.
+ *
  * A missing seam is not an error: it answers the same in-band report a browser-less
  * host does, so existing callers and tests keep the degraded path with no stubbing.
  * An injected seam that throws is swallowed the same way.
  *
  * @param {Function | null | undefined} capture
- * @param {{ url: string, kind: string }} input
+ * @param {{ url: string, kind: string, requestedKind?: 'physical' | 'digital' }} input
  * @returns {Promise<{ outcomes: object[], report: object }>}
  */
 function startScreenshotCapture(capture, input) {
+  if (input.requestedKind === 'physical') {
+    return Promise.resolve({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.NOT_DIGITAL) })
+  }
   if (input.kind !== 'digital' || typeof capture !== 'function') {
     return Promise.resolve({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.NO_BROWSER) })
   }
@@ -1700,12 +1714,48 @@ async function assembleScreenshotDraft(capture, input) {
 }
 
 /**
+ * Turn the product images a listing carried into the draft's media pair.
+ *
+ * Same discipline as the screenshot chain: nothing is written before the draft
+ * has passed `isUsableImport`, so a rejected import never leaves an orphan file
+ * behind. The seam is optional — without it (or when it fails) the draft still
+ * answers, just with an empty gallery.
+ *
+ * @param {string[]} images
+ * @param {{ url: string, paths?: object, fetcher?: Function | null, persist?: Function, host?: string }} input
+ * @returns {Promise<{ media: object[], cover_media_id: string | null }>}
+ */
+export async function assembleProductImageDraft(images, input) {
+  const urls = Array.isArray(images) ? images : []
+  const persist = input.persist ?? persistProductImages
+  /** @type {object[]} */
+  let media = []
+  if (urls.length > 0 && typeof persist === 'function') {
+    try {
+      const written = await persist({
+        images: urls,
+        url: input.url,
+        host: input.host,
+        paths: input.paths,
+        fetcher: input.fetcher,
+      })
+      media = Array.isArray(written) ? written : []
+    } catch {
+      media = []
+    }
+  }
+  return { media, cover_media_id: media.length > 0 ? media[0].id : null }
+}
+
+/**
  * Import a product draft from one landing-page link.
  *
- * Two slow steps run together: the model reads the page, and — for a digital
- * offer — the browser captures the two first screens. The model call is the
- * slower of the pair, so the capture cost is absorbed rather than added, and
- * the whole chain still answers inside the original budget (spec §3).
+ * Two routes, chosen by the requested kind:
+ * - a **physical** listing reads the page and downloads the product images it
+ *   carried — no browser is started at all;
+ * - a **digital** offer additionally has the browser capture both first screens,
+ *   overlapping with the model call so the capture cost is absorbed rather than
+ *   added.
  *
  * @param {{
  *   url: unknown,
@@ -1717,6 +1767,7 @@ async function assembleScreenshotDraft(capture, input) {
  *   timeoutMs?: number,
  *   captureScreenshots?: Function,
  *   persistScreenshots?: Function,
+ *   persistProductImages?: Function,
  *   paths?: { mediaDir?: string, libraryFile?: string },
  * }} args
  * @returns {Promise<ImportedProduct & { kind: string, brand_strategy: object | null, analysis: object }>}
@@ -1725,6 +1776,11 @@ async function assembleScreenshotDraft(capture, input) {
 export async function importProductFromUrl(args) {
   const url = normalizeImportUrl(args?.url)
   const requestedKind = args?.kind === 'digital' ? 'digital' : 'physical'
+  // What the caller actually asked for, or `null` when it left the question open
+  // (the Agent tools and the older single-form callers do). Only an explicit
+  // `physical` switches the browser off; an open question is still answered by
+  // the page itself.
+  const explicitKind = args?.kind === 'digital' || args?.kind === 'physical' ? requestedKind : null
   const fetcher = args?.fetcher ?? (typeof fetch === 'function' ? fetch : null)
   const timeoutMs = Number.isFinite(args?.timeoutMs) ? Number(args.timeoutMs) : DEFAULT_TIMEOUT_MS
   const hub = normalizeHub(args?.hub)
@@ -1739,7 +1795,12 @@ export async function importProductFromUrl(args) {
 
   // Started here — after the page read named the kind, and alongside the model
   // call — so the browser work overlaps the seconds the model spends thinking.
-  const shots = startScreenshotCapture(args?.captureScreenshots, { url, kind })
+  // A physical request never reaches `capture` (see `startScreenshotCapture`).
+  const shots = startScreenshotCapture(args?.captureScreenshots, {
+    url,
+    kind,
+    requestedKind: explicitKind,
+  })
 
   const [analysis, capture] = await Promise.all([
     analyzeLandingPage({
@@ -1759,12 +1820,22 @@ export async function importProductFromUrl(args) {
   if (!isUsableImport(draft)) {
     throw new LinkImportError('link-import-empty', 'no product information was found on the page')
   }
-  if (kind !== 'digital') return draft
 
-  const screenshots = await assembleScreenshotDraft(capture, {
+  if (kind === 'digital') {
+    const screenshots = await assembleScreenshotDraft(capture, {
+      url,
+      paths,
+      persist: args?.persistScreenshots,
+    })
+    return { ...draft, ...screenshots }
+  }
+
+  // 实物：页面里的商品图就是这次导入的媒体。第一张即封面。
+  const gallery = await assembleProductImageDraft(draft.images, {
     url,
     paths,
-    persist: args?.persistScreenshots,
+    fetcher,
+    persist: args?.persistProductImages,
   })
-  return { ...draft, ...screenshots }
+  return { ...draft, ...gallery }
 }

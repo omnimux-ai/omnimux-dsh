@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { emptyBrandStrategy, isDigitalProduct, isPlainStrategy, normalizeBrandStrategy } from '../brand-strategy.js'
+import { emptyBrandStrategy, isDigitalProduct, normalizeBrandStrategy } from '../brand-strategy.js'
 
 /* ------------------------------------------------------------------ 指纹常量 */
 
@@ -85,11 +85,19 @@ export function extractProductSnapshot(product) {
 /**
  * 空白表单快照（新建态基线）。字段域与 `extractProductSnapshot` 完全一致，
  * 因此两者可以用同一个指纹函数折叠成可比对的字符串。
+ *
+ * `kind` 决定基线属于哪一半字段域：数字基线自带展开的战略与 `strategyTouched`，
+ * 与 `extractProductSnapshot` 对数字产品的起手态一致，因此「新建数字产品页一打开
+ * 就是脏的」不会发生。
+ *
+ * @param {'physical' | 'digital'} [kind]
  */
-export function emptyProductSnapshot() {
+export function emptyProductSnapshot(kind = 'physical') {
+  const target = kind === 'digital' ? 'digital' : 'physical'
+  const asDigital = target === 'digital'
   return {
     name: '',
-    kind: 'physical',
+    kind: target,
     selling: '',
     audience: '',
     brand: '',
@@ -101,18 +109,19 @@ export function emptyProductSnapshot() {
     categories: [],
     media: [],
     coverId: null,
-    asDigital: false,
+    asDigital,
     strategy: emptyBrandStrategy(),
-    strategyTouched: false,
+    strategyTouched: asDigital,
   }
 }
 
 /**
  * 任何产品（含 `null` 的新建态）都能得到一个可指纹化的快照。
  * @param {object | null | undefined} product
+ * @param {'physical' | 'digital'} [kind] 新建态使用；编辑态以产品自身形态为准
  */
-export function formSnapshotOf(product) {
-  return extractProductSnapshot(product) ?? emptyProductSnapshot()
+export function formSnapshotOf(product, kind = 'physical') {
+  return extractProductSnapshot(product) ?? emptyProductSnapshot(kind)
 }
 
 /* ------------------------------------------------------------------ 指纹（纯函数） */
@@ -373,7 +382,9 @@ function applyImportedMedia(mediaState, data) {
   if (incoming.length === 0) return
   const merged = mergeImportedMedia(mediaState.media, incoming)
   if (typeof mediaState.setMedia === 'function') mediaState.setMedia(merged)
-  const wanted = importedCoverIdOf(data)
+  // 实物导入的商品图没有单独的封面字段：第一张入库图就是封面。数字导入带
+  // `cover_media_id`（桌面首屏），优先用它。
+  const wanted = importedCoverIdOf(data) ?? (incoming.find((file) => file.id)?.id ?? null)
   if (!wanted) return
   // "Take it if free": a cover the user picked by hand always wins.
   if (mediaState.coverId) return
@@ -469,8 +480,15 @@ export function useMediaAndTags(initial) {
   }
 }
 
-export function useStrategyState(initial) {
-  const digitalAtOpen = isDigitalProduct(initial)
+/**
+ * 战略面板的状态。`pinnedKind` 是二级页锚定的形态：数字新建页一打开就该是展开
+ * 且可写的（否则已存战略会在基线里丢一半，打开表单立刻显示为脏）。
+ *
+ * @param {object | null} initial
+ * @param {'physical' | 'digital' | undefined} [pinnedKind]
+ */
+export function useStrategyState(initial, pinnedKind) {
+  const digitalAtOpen = pinnedKind ? pinnedKind === 'digital' : isDigitalProduct(initial)
   const [strategyOpen, setStrategyOpen] = useState(digitalAtOpen)
   const [strategyTouched, setStrategyTouched] = useState(digitalAtOpen)
   const [strategy, setStrategy] = useState(() => draftFrom(initial))
@@ -487,16 +505,6 @@ export function useStrategyState(initial) {
       return next
     })
   }
-  const handleSelectPhysical = (setKind) => {
-    setKind('physical')
-    setStrategyOpen(false)
-  }
-  const handleSelectDigital = (setKind) => {
-    setKind('digital')
-    const persisted = isPlainStrategy(initial ? initial.brand_strategy : null)
-    setStrategyOpen(persisted)
-    if (persisted) setStrategyTouched(true)
-  }
 
   return {
     strategyOpen,
@@ -507,14 +515,19 @@ export function useStrategyState(initial) {
     setStrategy,
     openStrategy,
     patchStrategy,
-    handleSelectPhysical,
-    handleSelectDigital,
   }
 }
 
-export function useProductBaseFields(initial) {
+/**
+ * 基础字段。`pinnedKind` 存在时形态只读：二级页在进入的那一刻就定好了形态，
+ * 表单内部（包括导入回填）不得再改写它 —— 这是防止两类字段混写的最后一道闸。
+ *
+ * @param {object | null} initial
+ * @param {'physical' | 'digital' | undefined} [pinnedKind]
+ */
+export function useProductBaseFields(initial, pinnedKind) {
   const [name, setName] = useState(initial ? str(initial.name) : '')
-  const [kind, setKind] = useState(getInitialKind(initial))
+  const [kind, setKindState] = useState(() => pinnedKind ?? getInitialKind(initial))
   const [selling, setSelling] = useState(initial ? str(initial.selling_points) : '')
   const [audience, setAudience] = useState(initial ? str(initial.target_audience) : '')
   const [brand, setBrand] = useState(initial ? str(initial.brand) : '')
@@ -524,9 +537,14 @@ export function useProductBaseFields(initial) {
   const [promotion, setPromotion] = useState(initial ? str(initial.promotion) : '')
   const [link, setLink] = useState(initial ? str(initial.link) : '')
 
+  const setKind = (value) => {
+    if (pinnedKind) return
+    setKindState(value)
+  }
+
   const resetBaseFields = (s) => {
     setName(s.name)
-    setKind(s.kind)
+    setKindState(pinnedKind ?? s.kind)
     setSelling(s.selling)
     setAudience(s.audience)
     setBrand(s.brand)
@@ -587,12 +605,14 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
     actions: {
       /**
        * Fill every parsed field at once; tags merge into the existing list. A
-       * digital answer always switches the kind and unfolds the six
-       * brand-strategy modules, so the panel — filled when the analysis
-       * answered, empty when it did not — is visible on arrival.
+       * digital answer unfolds the six brand-strategy modules, so the panel —
+       * filled when the analysis answered, empty when it did not — is visible
+       * on arrival.
        *
-       * Imported screenshots append to the media list, and the desktop shot
-       * becomes the cover only when the user has not picked one already.
+       * Imported media append to the media list, and the first imported row
+       * becomes the cover only when the user has not picked one already:
+       * product images for a physical listing, the desktop first screen for a
+       * digital one.
        */
       applyImportedData: (data) => {
         const patch = importedPatchOf(data)
@@ -622,8 +642,6 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
       },
       openStrategy: strategyState.openStrategy,
       patchStrategy: strategyState.patchStrategy,
-      handleSelectPhysical: () => strategyState.handleSelectPhysical(base.setters.setKind),
-      handleSelectDigital: () => strategyState.handleSelectDigital(base.setters.setKind),
       handleAddTag: mediaState.handleAddTag,
       handleRemoveTag: mediaState.handleRemoveTag,
       handleAddPaths: mediaState.handleAddPaths,
@@ -645,15 +663,17 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
  *
  * @param {object | null} initial 编辑态产品；新建态传 null
  * @param {boolean} busy 保存中
+ * @param {'physical' | 'digital'} [kind] 二级页锚定的形态；缺省时按产品自身形态推断
  */
-export function useProductFormState(initial, busy) {
-  const base = useProductBaseFields(initial)
+export function useProductFormState(initial, busy, kind) {
+  const pinnedKind = kind === 'digital' || kind === 'physical' ? kind : undefined
+  const base = useProductBaseFields(initial, pinnedKind)
   const mediaState = useMediaAndTags(initial)
-  const strategyState = useStrategyState(initial)
+  const strategyState = useStrategyState(initial, pinnedKind)
 
   const baselineKey = `${String(initial?.id ?? 'new')}:${String(initial?.updated_at ?? '')}`
   const [baselinePrint, setBaselinePrint] = useState(
-    () => computeProductFingerprint(formSnapshotOf(initial)),
+    () => computeProductFingerprint(formSnapshotOf(initial, pinnedKind)),
   )
 
   /**
@@ -662,7 +682,7 @@ export function useProductFormState(initial, busy) {
    * @param {object | null | undefined} data
    */
   const applySnapshot = useCallback((data) => {
-    const snapshot = formSnapshotOf(data)
+    const snapshot = formSnapshotOf(data, pinnedKind)
     base.resetBaseFields(snapshot)
     mediaState.setCategories(snapshot.categories)
     mediaState.setMedia(snapshot.media)
