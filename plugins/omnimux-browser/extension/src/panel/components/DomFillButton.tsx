@@ -36,10 +36,10 @@ export const DomFillButton = memo(function DomFillButton({
           const res = e.data.payload
           if (res?.success) {
             setStatus('success')
-            setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填入'))
+            setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填写'))
           } else {
             setStatus('fallback')
-            setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制剪贴板'))
+            setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制'))
           }
           setTimeout(() => setStatus('idle'), 2500)
         }
@@ -70,10 +70,10 @@ export const DomFillButton = memo(function DomFillButton({
         })
         if (res?.success) {
           setStatus('success')
-          setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填入输入框'))
+          setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填写'))
         } else {
           setStatus('fallback')
-          setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制剪贴板'))
+          setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制'))
         }
       } catch {
         setStatus('fallback')
@@ -97,10 +97,10 @@ export const DomFillButton = memo(function DomFillButton({
   }
 
   const getLabel = () => {
-    if (status === 'filling') return isEn ? 'Filling…' : '填入中…'
-    if (status === 'success') return feedbackMsg || (isEn ? 'Filled!' : '已填入')
+    if (status === 'filling') return isEn ? 'Filling…' : '填写中…'
+    if (status === 'success') return feedbackMsg || (isEn ? 'Filled!' : '已填写')
     if (status === 'fallback') return feedbackMsg || (isEn ? 'Copied!' : '已复制')
-    return isEn ? 'Fill Input' : '填入输入框'
+    return isEn ? 'Fill Form' : '一键填写'
   }
 
   return (
