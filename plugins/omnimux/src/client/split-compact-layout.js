@@ -241,6 +241,7 @@ let listeners = new Set()
 /** 同时缓存两路实测值：分栏紧凑态与「DOM 确证右栏已折叠」（后者用于修正内存残留的 panelOpen）。 */
 let snapshot = { splitCompact: false, rightbarCollapsed: false }
 let measured = false
+let nativePresentation = null
 let trackedTargets = new Set()
 let layoutResizeObserver = null
 /** 待执行的帧回调句柄（rAF id；退化为微任务时用 0 作哨兵，null 表示没有排队）。 */
@@ -275,11 +276,24 @@ function syncRootAttribute(doc, value) {
 function measure(doc, notify) {
   const signals = readSplitCompactSignals(doc)
   const next = { splitCompact: signals.splitCompact, rightbarCollapsed: signals.sidebarCollapsed }
-  if (signals.sidebarCollapsed && typeof doc?.defaultView?.__omnimuxWorkbench?.getConversationCollapsed === 'function') {
-    if (doc.defaultView.__omnimuxWorkbench.getConversationCollapsed()) {
-      doc.defaultView.__omnimuxWorkbench.setConversationCollapsed(false)
-      doc.defaultView.__omnimuxWorkbench.setFocus?.('chat')
-    }
+  const workbench = doc?.defaultView?.__omnimuxWorkbench
+  const panel = doc?.querySelector?.('[data-sidebar-right-panel]')
+  const sessionId = workbench?.getSnapshot?.()?.sessionId
+  const presentation = panel ? {
+    panel, sessionId,
+    mode: panel.getAttribute('data-sidebar-right-panel'),
+    open: panel.hasAttribute('data-sidebar-right-open'),
+  } : null
+  // A steady push panel can still carry an intentional legacy chat hide.
+  // Only a same-session native fullscreen exit releases that intent.
+  const exitedFullscreen = presentation?.open && nativePresentation?.open
+    && presentation.panel === nativePresentation.panel
+    && presentation.sessionId === nativePresentation.sessionId
+    && nativePresentation.mode === 'fullscreen' && presentation.mode === 'push'
+  const closed = presentation ? !presentation.open : signals.sidebarCollapsed
+  nativePresentation = presentation
+  if ((closed || exitedFullscreen) && workbench?.getConversationCollapsed?.()) {
+    workbench.setConversationCollapsed(false)
   }
   const changed = !measured
     || next.splitCompact !== snapshot.splitCompact
@@ -385,6 +399,13 @@ function installWatchers(doc) {
     disposers.push(() => rootObserver.disconnect())
   }
 
+  if (ObserverClass && doc.body) {
+    const nativeObserver = new ObserverClass(refresh)
+    nativeObserver.observe(doc.body, { subtree: true, childList: true, attributes: true,
+      attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open'] })
+    disposers.push(() => nativeObserver.disconnect())
+  }
+
   const frame = findFrameHost(doc)
   if (ObserverClass && frame) {
     const frameObserver = new ObserverClass(() => {
@@ -440,6 +461,7 @@ function disposeInstall() {
     try { teardown() } catch { /* ignore */ }
   }
   teardown = null
+  nativePresentation = null
   activeDoc = null
   measured = false
   // 没有订阅者时镜像属性必须撤掉，别留下一条无主的 CSS 兜底规则。
