@@ -14,15 +14,19 @@
 ## 2. 核心架构与修复方案
 
 ### 2.1 视口栅格与定位隔离修复
-- 在左侧栏未折叠状态（正常工作态）：
+- 在左侧栏未折叠状态（正常工作态）的推送式右栏面板（`position:absolute`，定位祖先是右栏容器）：
   ```css
-  html[data-omnimux-conversation-collapsed]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]) {
-    left: var(--omnimux-sidebar-width, 280px) !important;
+  html[data-omnimux-conversation-collapsed]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]):not([data-sidebar-right-panel="fullscreen"]) {
+    left: 0 !important;
     right: 0 !important;
-    width: calc(100vw - var(--omnimux-sidebar-width, 280px)) !important;
+    width: auto !important;
     max-width: none !important;
   }
   ```
+  容器本身已在 x=280，故容器相对坐标 `left:0` 换算成视口坐标正好是左栏右端；写成视口偏移会把左栏宽度算两遍（面板右移一个侧栏宽、右端溢出屏幕）。
+- 全屏态面板（`[data-sidebar-right-panel="fullscreen"]`，`position:fixed`，定位祖先是视口）保持视口坐标，由
+  `sidebar-toggle-topbar.js` 的 fullscreen 规则负责（`left: var(--omnimux-sidebar-width, 280px)` / `width: calc(100vw - 280px)`），
+  上述铺满规则必须显式排除它，否则面板左移一个侧栏宽、压住左侧导航。
 - 在左侧栏折叠状态：
   ```css
   html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]) {
@@ -32,7 +36,7 @@
     max-width: none !important;
   }
   ```
-确保面板左侧永远贴合在左侧导航栏的右边界（280px），杜绝任何内容穿透重叠，右侧占满剩余视口。
+  此时帧网格第三列起点为 x=0，面板占满视口宽度。
 
 ### 2.2 视图默认单图大画布与底部悬浮输入框
 1. `media-viewer-store.js` 默认 `subViewMode` 设为 `'single'`，默认即为图 4 样式的大图居中画布；

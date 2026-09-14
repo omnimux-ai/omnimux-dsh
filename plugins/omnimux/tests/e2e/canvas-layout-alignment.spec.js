@@ -23,6 +23,13 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
     /:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{[^}]*left:\s*var\(--omnimux-sidebar-width/,
     'Viewport-relative left offset must not come back: it left a sidebar-wide blank strip'
   );
+  // 1b. The fullscreen panel is position:fixed (viewport coordinates, owned by
+  //     sidebar-toggle-topbar); the container-relative fill must not reach it (#1718 review).
+  assert.match(
+    CONVERSATION_COLLAPSE_CSS,
+    /:not\(\[data-omnimux-left-collapsed\]\)\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*:not\(\[data-sidebar-right-panel="fullscreen"\]\)[^{]*\{/,
+    'Container-relative fill must exclude the fixed-position fullscreen panel'
+  );
 
   // 2. Verify CSS rules enforce left: 0 when left sidebar is collapsed
   assert.match(

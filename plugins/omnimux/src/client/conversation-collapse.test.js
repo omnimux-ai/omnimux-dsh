@@ -84,6 +84,12 @@ test('setConversationCollapsed writes html attr and injects CSS', () => {
     '不得再按视口偏移左侧导航宽度（面板定位祖先是右栏容器）'
   )
   assert.match(panelFillRule[1], /width:\s*auto\s*!important/, '面板宽度必须由容器两侧撑满')
+  // 全屏态面板是 position:fixed（视口坐标），必须排除在本规则外，否则会左移一个侧栏宽压住左侧导航。
+  assert.match(
+    panelFillRule[0].slice(0, panelFillRule[0].indexOf('{')),
+    /:not\(\[data-sidebar-right-panel="fullscreen"\]\)/,
+    '铺满规则必须排除全屏态面板（fixed 定位，视口坐标由 sidebar-toggle-topbar 负责）'
+  )
   const railCollapsedRule = CONVERSATION_COLLAPSE_CSS.match(
     /html\[data-omnimux-conversation-collapsed\]\[data-omnimux-left-collapsed\]\s+\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{([^}]*)\}/
   )
