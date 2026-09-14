@@ -221,7 +221,7 @@ export function ProductFormPage(props) {
         ) : undefined}
       />
 
-      <Divider />
+      <Divider className="omnimux-products-form-divider" />
 
       <div className="omnimux-products-form-scroll">
         {formKind === 'digital'

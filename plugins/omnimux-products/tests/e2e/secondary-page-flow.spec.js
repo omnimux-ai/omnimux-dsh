@@ -219,6 +219,6 @@ describe('e2e · secondary page · AC-101 页头与表单间分割线', () => {
   it('ProductFormPage mounts Divider between PageHeader and form-scroll', () => {
     const pageSource = readFileSync(new URL('../../src/client/ProductFormPage.jsx', import.meta.url), 'utf8')
     assert.match(pageSource, /import \{[^}]*Divider[^}]*\} from 'dsh-ui-kit'/)
-    assert.match(pageSource, /<PageHeader[\s\S]*?\/>\s*<Divider \/>\s*<div className="omnimux-products-form-scroll">/)
+    assert.match(pageSource, /<PageHeader[\s\S]*?\/>\s*<Divider className="omnimux-products-form-divider" \/>\s*<div className="omnimux-products-form-scroll">/)
   })
 })
