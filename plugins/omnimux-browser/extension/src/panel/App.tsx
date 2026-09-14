@@ -7,7 +7,7 @@
  * @module
  */
 
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { BRIDGE_SESSION_PURGE_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
@@ -512,17 +512,37 @@ interface HistoryPage {
   }
 }
 
-const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
+export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
+  const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
+
   return (
     <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
       <span className="tool-icon"><ToolIcon /></span>
       <span className="tool-copy">
         <span className="tool-label">{running ? copy.tool.running : copy.tool.complete}</span>
-        <span className="tool-summary">{row.text}</span>
+        <span className="tool-summary">
+          {steps.length > 1 ? (
+            steps.map((step, idx) => (
+              <Fragment key={idx}>
+                {idx > 0 && <span className="tool-step-arrow" aria-hidden="true">→</span>}
+                <span className={idx < steps.length - 1 ? 'tool-step-tag' : 'tool-step-text'}>{step}</span>
+              </Fragment>
+            ))
+          ) : (
+            row.text
+          )}
+        </span>
       </span>
       <span className="tool-state" aria-label={running ? copy.tool.inProgress : copy.tool.completed}>
-        {running ? <span className="spinner" /> : copy.tool.done}
+        {running ? (
+          <span className="spinner" />
+        ) : (
+          <span className="tool-done-badge">
+            <span className="badge-dot" aria-hidden="true" />
+            <span>{copy.tool.done}</span>
+          </span>
+        )}
       </span>
     </div>
   )
