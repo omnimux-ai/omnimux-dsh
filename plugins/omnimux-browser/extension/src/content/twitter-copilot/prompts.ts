@@ -5,6 +5,24 @@
 
 import type { CopilotMenuItem, TwitterContext } from './types.ts'
 
+/** 抓不到作者时整行省略，绝不伪造身份 */
+function authorLine(handle?: string): string {
+  const h = (handle || '').trim()
+  return h ? `作者：@${h}\n` : ''
+}
+
+/** 英文口径的署名行，同样在缺失时整行省略 */
+function byline(prefix: string, handle?: string): string {
+  const h = (handle || '').trim()
+  return h ? `${prefix}@${h}:\n` : ''
+}
+
+/** 空上下文时整段省略，避免给模型留下空标签 */
+function optionalBlock(label: string, value?: string): string {
+  const text = (value || '').trim()
+  return text ? `\n\n${label}${text}` : ''
+}
+
 const STRICT_ZH_RULES = `
 ⚠️ 严格输出红线（违者作废）：
 1. 必须且只能输出【纯中文】，严禁夹杂英文单词、分析前言或英文翻译；
@@ -37,13 +55,13 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
         return {
           systemPrompt: `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic.
 Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_RULES}`,
-          userMessage: `Draft / Idea:\n${ctx.draftText || 'AI agents and software evolution trends'}`,
+          userMessage: `Draft / Idea:\n${ctx.draftText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。
 要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${STRICT_ZH_RULES}`,
-        userMessage: `我的发帖主题或想法：\n${ctx.draftText || '分享关于效率工具与现代技术创新的思考'}`,
+        userMessage: `我的发帖主题或想法：\n${ctx.draftText ?? ""}`,
       }
     },
   },
@@ -59,12 +77,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Write the opening tweet (hook) for a viral Twitter thread (with "🧵 1/n").${STRICT_EN_RULES}`,
-          userMessage: `Thread topic:\n${ctx.draftText || 'Hard lessons learned in software development'}`,
+          userMessage: `Thread topic:\n${ctx.draftText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你擅长撰写高收藏率的推特连载推文串（Threads）。本次生成该系列的核心开篇帖（带 🧵 1/n 标识），点明痛点与核心价值框架。${STRICT_ZH_RULES}`,
-        userMessage: `长文素材或主题：\n${ctx.draftText || '深度教程与核心经验复盘'}`,
+        userMessage: `长文素材或主题：\n${ctx.draftText ?? ""}`,
       }
     },
   },
@@ -80,12 +98,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Distill the user's idea into one memorable, contrarian, quotable one-liner.${STRICT_EN_RULES}`,
-          userMessage: `Idea:\n${ctx.draftText || 'Product simplicity always beats feature bloat'}`,
+          userMessage: `Idea:\n${ctx.draftText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你是一位擅长提炼反常识金句的推特深度创作者。将输入想法提炼成一句锋利、穿透本质、让人忍不住转发的独立金句。${STRICT_ZH_RULES}`,
-        userMessage: `我的想法：\n${ctx.draftText || '很多时候越做加法产品越难用，极简才是硬功夫'}`,
+        userMessage: `我的想法：\n${ctx.draftText ?? ""}`,
       }
     },
   },
@@ -101,12 +119,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Tie the user's niche to a hot industry discussion with a sharp perspective.${STRICT_EN_RULES}`,
-          userMessage: `Core idea:\n${ctx.draftText || 'Practical developer insights'}`,
+          userMessage: `Core idea:\n${ctx.draftText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你擅长将个人见解与当下热点无缝结合。将主题与推特最新讨论风向挂钩，有观点、有态度。${STRICT_ZH_RULES}`,
-        userMessage: `发帖主题：\n${ctx.draftText || '探讨当前技术工具的快速演进'}`,
+        userMessage: `发帖主题：\n${ctx.draftText ?? ""}`,
       }
     },
   },
@@ -120,7 +138,7 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
     scenes: ['POST_NEW'],
     generatePrompt: (ctx) => ({
       systemPrompt: `You are a native English tech builder on Twitter. Write a compelling, natural tweet from the topic.${STRICT_EN_RULES}`,
-      userMessage: `Topic / Draft:\n${ctx.draftText || 'Building useful developer tools and shipping fast'}`,
+      userMessage: `Topic / Draft:\n${ctx.draftText ?? ""}`,
     }),
   },
 
@@ -139,12 +157,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Quote retweet with high-value complementary insights, not hollow summaries.${STRICT_EN_RULES}`,
-          userMessage: `Quoted tweet by @${ctx.quotedAuthor || 'author'}:\n${ctx.quotedTweetText || ctx.targetTweetText}\n\nMy take: ${ctx.draftText || 'Add distinct practical value'}`,
+          userMessage: `${byline('Quoted tweet by ', ctx.quotedAuthor ?? "")}${ctx.quotedTweetText ?? ""}${optionalBlock('My take: ', ctx.draftText)}`,
         }
       }
       return {
         systemPrompt: `你在引用转发他人推文。你的目标是提供比原推更有深度的【信息增量】或【实践案例补充】，而不是简单复述。${STRICT_ZH_RULES}`,
-        userMessage: `被引用的原推内容：\n作者：@${ctx.quotedAuthor || '博主'}\n正文：${ctx.quotedTweetText || ctx.targetTweetText}\n\n我的补充思路：${ctx.draftText || '无特别指定，请给出高价值专业延伸'}`,
+        userMessage: `被引用的原推内容：\n${authorLine(ctx.quotedAuthor ?? "")}正文：${ctx.quotedTweetText ?? ""}${optionalBlock('我的补充思路：', ctx.draftText)}`,
       }
     },
   },
@@ -160,12 +178,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Summarize the quoted tweet in 2 crisp takeaway bullets for your followers.${STRICT_EN_RULES}`,
-          userMessage: `Quoted tweet:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+          userMessage: `Quoted tweet:\n${ctx.quotedTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你负责将引用的推文快速凝练成 2 条核心见解，帮你的读者用 10 秒钟看透关键信息。${STRICT_ZH_RULES}`,
-        userMessage: `被引用推文：\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+        userMessage: `被引用推文：\n${ctx.quotedTweetText ?? ""}`,
       }
     },
   },
@@ -181,12 +199,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Respectfully point out a subtle flaw or counter-argument in the quoted tweet.${STRICT_EN_RULES}`,
-          userMessage: `Quoted tweet:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+          userMessage: `Quoted tweet:\n${ctx.quotedTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你针对原推的论点，礼貌指出其在特定工程或业务边界条件下的局限性，给出另一种合理的解法，引发读者探讨。${STRICT_ZH_RULES}`,
-        userMessage: `原推内容：\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+        userMessage: `原推内容：\n${ctx.quotedTweetText ?? ""}`,
       }
     },
   },
@@ -202,12 +220,12 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
       if (locale === 'en') {
         return {
           systemPrompt: `Write a sincere, authentic endorsement of the creator and their work.${STRICT_EN_RULES}`,
-          userMessage: `Quoted tweet by @${ctx.quotedAuthor || 'creator'}:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+          userMessage: `${byline('Quoted tweet by ', ctx.quotedAuthor ?? "")}${ctx.quotedTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `真诚认可并强力推荐原作者的优质分享或新产品，语气诚恳克制、言之有物，不浮夸。${STRICT_ZH_RULES}`,
-        userMessage: `原推内容：\n作者：@${ctx.quotedAuthor || '博主'}\n正文：${ctx.quotedTweetText || ctx.targetTweetText}`,
+        userMessage: `原推内容：\n${authorLine(ctx.quotedAuthor ?? "")}正文：${ctx.quotedTweetText ?? ""}`,
       }
     },
   },
@@ -229,14 +247,14 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
           systemPrompt: `You are a Twitter power-user famous for crafting top-tier, high-upvote replies.
 The Golden Formula: Comment Value = Information Delta × Emotional Resonance × Clarity.
 Share a sharp data point, counter-intuitive insight, or witty observation.${STRICT_EN_RULES}`,
-          userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText || 'Tech trends'}\n\n${ctx.draftText ? `My angle: ${ctx.draftText}` : ''}`,
+          userMessage: `${byline('Original tweet by ', ctx.targetAuthor ?? "")}${ctx.targetTweetText ?? ""}\n\n${ctx.draftText ? `My angle: ${ctx.draftText ?? ""}` : ''}`,
         }
       }
       return {
         systemPrompt: `你是推特评论区的“神评制造机”。你的唯一目标是在头部推文下写出一条高赞神评。
 核心公式：评论价值 = 信息增量 × 情绪共鸣 × 表达清晰度。
 要求：给出意料之外但情理之中的补充洞见、幽默类比或大实话，一针见血，让人忍不住点赞。${STRICT_ZH_RULES}`,
-        userMessage: `楼主推文内容：\n作者：@${ctx.targetAuthor || '博主'}\n正文：${ctx.targetTweetText || '行业最新动态'}\n\n${ctx.draftText ? `我的补充想法：${ctx.draftText}` : ''}`,
+        userMessage: `楼主推文内容：\n${authorLine(ctx.targetAuthor ?? "")}正文：${ctx.targetTweetText ?? ""}\n\n${ctx.draftText ? `我的补充想法：${ctx.draftText ?? ""}` : ''}`,
       }
     },
   },
@@ -252,12 +270,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Join the Twitter technical discussion with thoughtful, grounded engineering insights.${STRICT_EN_RULES}`,
-          userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText}`,
+          userMessage: `${byline('Original tweet by ', ctx.targetAuthor ?? "")}${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你是一位严谨资深的技术专家。在回复原推时，从系统架构、落地成本或长期演进维度补充专业见解，塑造专家人设。${STRICT_ZH_RULES}`,
-        userMessage: `原推内容：\n作者：@${ctx.targetAuthor || '博主'}\n正文：${ctx.targetTweetText}`,
+        userMessage: `原推内容：\n${authorLine(ctx.targetAuthor ?? "")}正文：${ctx.targetTweetText ?? ""}`,
       }
     },
   },
@@ -273,12 +291,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Connect authentically with a fellow creator in your niche: reference a detail, share a quick shared experience, warm natural tone.${STRICT_EN_RULES}`,
-          userMessage: `Tweet by @${ctx.targetAuthor || 'peer'}:\n${ctx.targetTweetText}`,
+          userMessage: `${byline('Tweet by ', ctx.targetAuthor ?? "")}${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你的目标是与同行博主建立真诚联系促成互关。针对原推具体细节展开讨论，分享一句相似体会，礼貌自然。${STRICT_ZH_RULES}`,
-        userMessage: `原推内容：\n作者：@${ctx.targetAuthor || '同行'}\n正文：${ctx.targetTweetText}`,
+        userMessage: `原推内容：\n${authorLine(ctx.targetAuthor ?? "")}正文：${ctx.targetTweetText ?? ""}`,
       }
     },
   },
@@ -294,12 +312,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Craft a clever, hilarious, and disarming comeback to a bad take or troll. No vulgarity, pure irony.${STRICT_EN_RULES}`,
-          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `你是一位幽默但有分寸感的脱口秀演员。面对偏见或荒谬推文，用高级幽默与逻辑反差机智回怼，让围观者会心一笑。${STRICT_ZH_RULES}`,
-        userMessage: `要回应的推文：\n${ctx.targetTweetText}`,
+        userMessage: `要回应的推文：\n${ctx.targetTweetText ?? ""}`,
       }
     },
   },
@@ -313,7 +331,7 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
     scenes: ['REPLY_DETAIL'],
     generatePrompt: (ctx) => ({
       systemPrompt: `Write a sharp, natural, and engaging comment in native casual English.${STRICT_EN_RULES}`,
-      userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText}`,
+      userMessage: `${byline('Original tweet by ', ctx.targetAuthor ?? "")}${ctx.targetTweetText ?? ""}`,
     }),
   },
 
@@ -332,12 +350,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Write an ultra-short, friendly one-liner reply like a casual friend.${STRICT_EN_RULES}`,
-          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `写一条极其短小亲切、一句话（20~40字）的日常推特回复，像真实好友随手互动。${STRICT_ZH_RULES}`,
-        userMessage: `推文正文：\n${ctx.targetTweetText}`,
+        userMessage: `推文正文：\n${ctx.targetTweetText ?? ""}`,
       }
     },
   },
@@ -353,12 +371,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Express strong genuine resonance with the tweet in 1-2 sentences.${STRICT_EN_RULES}`,
-          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `对原推表达深切共鸣与支持，说明自己完全感同身受的一两点原因，真挚温暖。${STRICT_ZH_RULES}`,
-        userMessage: `推文内容：\n${ctx.targetTweetText}`,
+        userMessage: `推文内容：\n${ctx.targetTweetText ?? ""}`,
       }
     },
   },
@@ -374,12 +392,12 @@ Share a sharp data point, counter-intuitive insight, or witty observation.${STRI
       if (locale === 'en') {
         return {
           systemPrompt: `Ask an insightful follow-up question based on the tweet to encourage the author to reply.${STRICT_EN_RULES}`,
-          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText ?? ""}`,
         }
       }
       return {
         systemPrompt: `顺着原推的思路，提出一个具有思考价值、容易引发作者二次回复的高质量小问题。${STRICT_ZH_RULES}`,
-        userMessage: `原推内容：\n${ctx.targetTweetText}`,
+        userMessage: `原推内容：\n${ctx.targetTweetText ?? ""}`,
       }
     },
   },

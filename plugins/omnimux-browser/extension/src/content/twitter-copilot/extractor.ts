@@ -83,9 +83,15 @@ export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotSce
 }
 
 export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterCopilotScene): TwitterContext {
+  // 所有字段一律初始化为空串：抓不到就是空，绝不让 undefined 流进提示词
   const context: TwitterContext = {
     scene,
     draftText: '',
+    targetTweetText: '',
+    targetAuthor: '',
+    quotedTweetText: '',
+    quotedAuthor: '',
+    tweetUrl: '',
   }
 
   // 1. Extract draft text from current textarea
