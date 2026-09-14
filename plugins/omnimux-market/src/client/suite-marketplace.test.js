@@ -165,9 +165,9 @@ test('A2 套件卡：复用 .regular-card 骨架并显示三项真实计数（0 
   const composition = withClass(card, 'regular-card-composition')
   assert.equal(composition.length, 1)
   assert.equal(composition[0].children[0], '技能 0 · 规则 5 · Agent 7')
-  // 套件卡不挂技能安装开关：安装入口在详情页
-  assert.equal(card.children.length, 1)
-  assert.equal(card.children.some((node) => node && node.type && node.type.name === 'WorkshopSwitch'), false)
+  // 套件卡右侧统一挂载开关，与普通技能卡片保持一致
+  assert.equal(card.children.length, 2)
+  assert.equal(card.children.some((node) => node && node.type && node.type.name === 'WorkshopSwitch'), true)
 
   const distribution = renderRegularCard(suiteCard(DISTRIBUTION), { tr, h, onOpen: () => {} })
   assert.equal(withClass(distribution, 'regular-card-composition')[0].children[0], '技能 6 · 规则 0 · Agent 5')

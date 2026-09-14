@@ -197,8 +197,9 @@ export function checkContextReady(scene: TwitterCopilotScene, ctx: TwitterContex
   const has = (v?: string) => Boolean((v || '').trim())
   const t = (zh: string, en: string) => (locale === 'en' ? en : zh)
 
-  if (scene === 'POST_NEW' && !has(ctx.draftText)) {
-    return t('请先在发帖框写下你的主题或想法，再使用该功能。', 'Write your topic or idea in the composer first, then run this again.')
+  // 原创发新帖双轨支持：有草稿走改写扩写；无草稿时若有首页热点推文则走全新原创
+  if (scene === 'POST_NEW' && !has(ctx.draftText) && (!ctx.feedHotTweets || ctx.feedHotTweets.length === 0)) {
+    return t('请先在发帖框写下主题，或等待首页推文加载后再试。', 'Write your topic first, or wait for feed tweets to load.')
   }
   if (scene === 'POST_QUOTE' && !has(ctx.quotedTweetText)) {
     return t('没有读到被引用的推文，请刷新页面后重试。', "Couldn't read the quoted tweet — refresh the page and try again.")
@@ -223,8 +224,11 @@ async function handleExecuteItem(
   }
 
   anchorButton.classList.add('omnimux-copilot-anchor-btn--loading')
+  const isFreshInspiration = scene === 'POST_NEW' && !Boolean((ctx.draftText || '').trim())
   showCopilotToast(
-    locale === 'en' ? `AI is crafting: ${item.nameEn}...` : `AI 正在深度思考生成：${item.name}...`,
+    isFreshInspiration
+      ? (locale === 'en' ? `AI is crafting from trending topics: ${item.nameEn}...` : `AI 正在分析首页热点并全新创作：${item.name}...`)
+      : (locale === 'en' ? `AI is crafting: ${item.nameEn}...` : `AI 正在深度思考生成：${item.name}...`),
     'info',
   )
 

@@ -122,6 +122,39 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
     context.draftText = (textarea.textContent || '').trim()
   }
 
+  // 1.1 若草稿为空且处于发帖场景，自动抓取信息流中当前可见的热门推文（前 3 条）作为灵感参考
+  if (scene === 'POST_NEW' && !context.draftText) {
+    const feedArticles = document.querySelectorAll('article[data-testid="tweet"]')
+    const hotList: Array<{ author: string; text: string; stat?: string }> = []
+    for (const article of Array.from(feedArticles)) {
+      // 排除广告与推广 (Promoted)
+      if (
+        article.textContent?.includes('Ad') ||
+        article.textContent?.includes('Promoted') ||
+        article.querySelector('[data-testid="placementTracking"]')
+      ) {
+        continue
+      }
+      const textEl = article.querySelector('[data-testid="tweetText"]')
+      const text = (textEl?.textContent || '').replace(/\s+/g, ' ').trim()
+      if (!text || text.length < 15) continue
+
+      const userEl = article.querySelector('[data-testid="User-Name"]')
+      const authorLink = userEl?.querySelector('a[role="link"][href^="/"]')
+      const href = authorLink?.getAttribute('href') || ''
+      const author = href.replace(/^\//, '').split('/')[0] || ''
+
+      const group = article.querySelector('div[aria-label][role="group"]')
+      const stat = group?.getAttribute('aria-label') || ''
+
+      hotList.push({ author, text, stat })
+      if (hotList.length >= 3) break
+    }
+    if (hotList.length > 0) {
+      context.feedHotTweets = hotList
+    }
+  }
+
   // 2. If it is a quote modal, extract quoted tweet
   if (scene === 'POST_QUOTE') {
     const dialog = anchorButton.closest('[role="dialog"]')
