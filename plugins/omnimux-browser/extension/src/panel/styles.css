@@ -4652,6 +4652,29 @@ textarea:focus-visible {
   transform: scale(1.02);
 }
 
+/* Draft Box Container (Card Packaging) */
+.draft-box-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+.draft-box-wrapper .draft-content blockquote {
+  margin: 0;
+  padding: 0;
+  border-left: none;
+  background: transparent;
+}
+.draft-note-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  color: var(--ink-muted);
+  font-size: 0.95em;
+}
+
 /* DOM Fill Button (Clean Ink Style) */
 .dom-fill-actions {
   display: flex;
