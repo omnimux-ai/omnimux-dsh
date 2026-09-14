@@ -30,15 +30,15 @@ export const MEDIA_VIEWER_CSS = `
   border-radius: 14px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: none !important;
+  outline: none !important;
   box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 消息卡片微投影 */
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
   position: relative;
 }
 
 .omx-chat-media-tail__card:hover {
-  border-color: var(--dsw-alias-border-l3);
   transform: translateY(-1.5px);
   box-shadow: 0 8px 24px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 消息卡片悬浮微投影 */
 }
@@ -322,12 +322,12 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 4px 20px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 时间线卡片投影 */
   cursor: pointer;
   position: relative;
-  border: 1px solid var(--dsw-alias-border-l2);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  border: none !important;
+  outline: none !important;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .omx-mv-timeline__card-multi:hover {
-  border-color: var(--dsw-alias-border-l3);
   transform: translateY(-2px);
 }
 
@@ -355,6 +355,8 @@ export const MEDIA_VIEWER_CSS = `
 .omx-mv-display {
   border-radius: 12px;
   overflow: hidden;
+  border: none !important;
+  outline: none !important;
   box-shadow: 0 16px 56px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 大图视口深色投影 */
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   max-width: 90%;
@@ -370,6 +372,8 @@ export const MEDIA_VIEWER_CSS = `
   max-height: calc(100vh - 170px);
   object-fit: contain;
   display: block;
+  border: none !important;
+  outline: none !important;
 }
 
 /* ========================================================
