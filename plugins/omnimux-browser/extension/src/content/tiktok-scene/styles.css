@@ -70,7 +70,7 @@
 }
 
 .omx-trigger:focus-visible {
-  outline: 2px solid rgba(184, 183, 255, 0.9);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: 2px;
 }
 
@@ -141,7 +141,7 @@
 }
 
 .omx-item:focus-visible {
-  outline: 2px solid rgba(184, 183, 255, 0.9);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: -2px;
 }
 

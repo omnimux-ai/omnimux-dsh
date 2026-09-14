@@ -66,8 +66,8 @@ export function initFabCompanion(): void {
         height: 56px;
         border-radius: 16px;
         background: #111115;
-        border: 1.5px solid rgba(184, 183, 255, 0.45);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(184, 183, 255, 0.25);
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
         cursor: grab;
         display: flex;
         align-items: center;
@@ -85,8 +85,8 @@ export function initFabCompanion(): void {
 
       .omnimux-fab:hover {
         transform: scale(1.08);
-        border-color: #b8b7ff;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 24px rgba(184, 183, 255, 0.45);
+        border-color: #ffffff;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
       }
 
       .omnimux-fab:active {
@@ -122,7 +122,7 @@ export function initFabCompanion(): void {
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 32px rgba(121, 97, 242, 0.12);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -138,7 +138,7 @@ export function initFabCompanion(): void {
         .omnimux-workstation-container {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 24px rgba(121, 97, 242, 0.06);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
         }
       }
 

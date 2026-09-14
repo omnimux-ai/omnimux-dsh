@@ -35,10 +35,11 @@
 }
 
 .omnimux-velocity-badge--viral {
-  background-color: #250b44;
-  border-color: #a855f7;
-  color: #f3e8ff;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.35);
+  /* 爆款档用黑白高对比区分（design.md 禁紫；飙升档保留橙色语义） */
+  background-color: #18181b;
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
 }
 
 .omnimux-velocity-badge--surging {
@@ -63,7 +64,7 @@
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 20px rgba(121, 97, 242, 0.15);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
   padding: 14px;
   z-index: 2147483640;
   display: flex;
@@ -131,8 +132,8 @@
 }
 
 .omnimux-velocity-panel__exposure-box {
-  background: rgba(121, 97, 242, 0.12);
-  border: 1px solid rgba(147, 112, 219, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   padding: 8px 10px;
   display: flex;
@@ -148,7 +149,7 @@
 .omnimux-velocity-panel__exposure-val {
   font-size: 14px;
   font-weight: 700;
-  color: #a78bfa;
+  color: #ffffff;
 }
 
 .omnimux-velocity-panel__actions {
