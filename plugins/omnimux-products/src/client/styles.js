@@ -68,6 +68,75 @@ export const PRODUCTS_CSS = `
   gap: 10px;
   padding: 8px 20px 12px;
 }
+
+/* 新建分流菜单：触发器与浮层同属一个容器，指针从按钮挪进浮层不会触发收起。
+   浮层的抬升只靠描边与层级底色表达，不引入任何自造阴影或颜色。 */
+.omnimux-products-create-menu {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.omnimux-products-menu-card {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 320px;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  animation: omnimux-products-fade-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-products-menu-item {
+  width: 100%;
+  height: auto;
+  padding: 8px 10px;
+  justify-content: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  text-align: left;
+  white-space: normal;
+}
+.omnimux-products-menu-item > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.omnimux-products-menu-item-icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-products-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.omnimux-products-menu-item-title {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-products-menu-item-desc {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: normal;
+}
 .omnimux-products-stage-toolbar {
   flex: none;
   padding: 0 20px 12px;
@@ -408,18 +477,6 @@ export const PRODUCTS_CSS = `
 .omnimux-products-name-row { display: flex; align-items: center; gap: 8px; }
 .omnimux-products-at { color: var(--dsw-alias-label-tertiary); font-size: 18px; }
 .omnimux-products-name-field { flex: 1; min-width: 0; }
-.omnimux-products-kind-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.omnimux-products-kind-label {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
-}
-.omnimux-products-kind-chip[aria-pressed="true"] {
-  background: var(--dsw-alias-bg-module-platform);
-}
 .omnimux-products-grid-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;

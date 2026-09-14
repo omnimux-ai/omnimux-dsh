@@ -2,6 +2,7 @@ import { createProductsDispatcher, registerProductsRoutes } from './http-routes.
 import { importProductFromUrl } from './link-importer.js'
 import { createLibraryStore, listViewOf, ProductsError } from './library.js'
 import { resolveProductsPaths } from './paths.js'
+import { persistProductImages } from './product-images.js'
 import { captureSiteScreenshots } from './site-shots.js'
 
 export const name = 'omnimux-products'
@@ -99,19 +100,19 @@ export function apply(ctx) {
   // The host context rides along so the link importer can reach the hub seams
   // (`textComplete`, `omnimux_page_fetch`) lazily, at request time.
   //
-  // The screenshot chain is wired here, at the composition root, and only here:
-  // the importer keeps its seam optional, so no browser code runs until a host
-  // actually mounts this plugin, and every importer unit test stays on the
-  // degraded path without a single stub.
+  // 两条媒体链路都只在这里接线：数字产品捕获双端首屏，实物产品下载商品图。
+  // 导入器把两个 seam 都留成可选，因此没有宿主挂载时不会跑任何浏览器代码，
+  // 导入单测也无需任何桩就能走降级路径。
   const dispatcher = createProductsDispatcher({
     library,
     ctx,
-    // 草稿媒体登记表要落在这个媒体目录内才算合法（创建态截图只读预览）。
+    // 草稿媒体登记表要落在这个媒体目录内才算合法（创建态图片只读预览）。
     paths,
     importFromUrl: (args) => importProductFromUrl({
       ...args,
       paths,
       captureScreenshots: captureSiteScreenshots,
+      persistProductImages,
     }),
   })
 

@@ -13,6 +13,9 @@ const stageJsx = read('ProductsStage.jsx')
 const stylesJs = read('styles.js')
 const mediaJsx = read('ProductMediaSection.jsx')
 const fieldsJsx = read('ProductFormFields.jsx')
+const physicalJsx = read('PhysicalProductForm.jsx')
+const digitalJsx = read('DigitalProductForm.jsx')
+const menuJsx = read('CreateProductMenu.jsx')
 
 /** 二级页的样式契约：类名必须真的在样式表里有定义，不只是写在 JSX 里。 */
 const REQUIRED_SUBSCREEN_CLASSES = [
@@ -121,7 +124,7 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
   it('the list view stays mounted underneath so scroll and filters survive', () => {
     assert.match(stageJsx, /className="omnimux-products-list-view"/)
     assert.match(stageJsx, /const formOpen = view\.name === 'form'/)
-    assert.match(stageJsx, /key=\{view\.mode === 'edit' \? String\(view\.product\?\.id \?\? ''\) : 'create'\}/)
+    assert.match(stageJsx, /key=\{`\$\{view\.mode === 'edit' \? String\(view\.product\?\.id \?\? ''\) : 'create'\}:\$\{view\.kind\}`\}/)
     assert.match(stageJsx, /initial=\{view\.mode === 'edit' \? view\.product : null\}/)
     // 列表不是 display:none —— 那会重置滚动位置，等于把保活做成了摆设。
     assert.doesNotMatch(stageJsx, /data-hidden/)
@@ -144,12 +147,63 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
 
   it('renders every section exactly once — no duplicated editor in the two-column body', () => {
     // 分类标签与素材区曾经同时出现在两个分区里，同一个编辑器会被渲染两遍。
-    assert.equal([...fieldsJsx.matchAll(/<CategoriesEditor/g)].length, 1)
+    // 共享构件留在 ProductFormFields，形态各自的取舍写在两个表单文件里。
+    const both = `${physicalJsx}\n${digitalJsx}`
+    for (const tag of ['<MediaSection', '<UrlImportBar', '<CategoriesEditor', '<ProductNameRow']) {
+      const total = [...both.matchAll(new RegExp(tag, 'g'))].length
+      assert.equal(total, 2, `${tag} must appear once per form, got ${total}`)
+    }
+    // 拖拽入口与素材列表只在共享的 MediaSection 里出现一次。
     assert.equal([...fieldsJsx.matchAll(/<CoverDropzone/g)].length, 1)
     assert.equal([...fieldsJsx.matchAll(/<MediaList/g)].length, 1)
-    assert.equal([...fieldsJsx.matchAll(/<UrlImportBar/g)].length, 1)
-    assert.equal([...fieldsJsx.matchAll(/<ShotsSection/g)].length, 1)
-    assert.equal([...fieldsJsx.matchAll(/<FormSection\b/g)].length, 6)
+    assert.equal([...both.matchAll(/<ShotsSection/g)].length, 1, 'shots are digital-only')
+    assert.equal([...digitalJsx.matchAll(/<ShotsSection/g)].length, 1)
+    assert.equal([...both.matchAll(/<DigitalStrategyPanel/g)].length, 1, 'the strategy panel is digital-only')
+    assert.equal([...physicalJsx.matchAll(/<FormSection\b/g)].length, 5)
+    assert.equal([...digitalJsx.matchAll(/<FormSection\b/g)].length, 5)
+    // 共享构件自己不再渲染任何分区，也不再按 kind 分支挑字段。
+    assert.equal([...fieldsJsx.matchAll(/<FormSection\b/g)].length, 0)
+  })
+
+  it('keeps physical and digital fields strictly apart in the two forms', () => {
+    // 数字：六维战略 + 官网链接；实物：价格 / SKU / 促销 / 商品链接。
+    assert.match(digitalJsx, /<DigitalStrategyPanel/)
+    assert.match(digitalJsx, /add\.digitalLinkPlaceholder/)
+    assert.doesNotMatch(digitalJsx, /ProductCommerceFields/)
+    assert.doesNotMatch(digitalJsx, /add\.pricePlaceholder/)
+
+    assert.match(physicalJsx, /<ProductCommerceFields/)
+    assert.doesNotMatch(physicalJsx, /DigitalStrategyPanel/)
+    assert.doesNotMatch(physicalJsx, /ShotsSection/)
+    assert.doesNotMatch(physicalJsx, /ScreenshotPreview/)
+
+    // 两个表单都不再有形态切换入口。
+    for (const source of [physicalJsx, digitalJsx, fieldsJsx, pageJsx]) {
+      assert.doesNotMatch(source, /KindSwitcher/)
+      assert.doesNotMatch(source, /kind-chip/)
+      assert.doesNotMatch(source, /handleSelect(Physical|Digital)/)
+    }
+    assert.doesNotMatch(stylesJs, /omnimux-products-kind-(row|label|chip)/)
+  })
+
+  it('routes every product card by its persisted kind', () => {
+    assert.match(stageJsx, /kind: normalizedKind\(kind\), product: null/)
+    assert.match(stageJsx, /kind: normalizedKind\(fresh\.kind \|\| product\.kind\)/)
+    assert.match(stageJsx, /<ProductFormPage[\s\S]*?kind=\{view\.kind\}/)
+  })
+
+  it('uses the hover split menu for both create entry points and never a character glyph', () => {
+    assert.match(stageJsx, /<CreateProductMenu t=\{t\} onSelect=\{handleCreate\} \/>/)
+    assert.equal([...stageJsx.matchAll(/<CreateProductMenu\b/g)].length, 2, 'action row + empty state')
+    assert.match(menuJsx, /leadingIcon=\{<PlusIcon \/>\}/)
+    assert.match(menuJsx, /trailingIcon=\{<ChevronDownIcon size=\{12\} \/>\}/)
+    assert.match(menuJsx, /onMouseEnter=\{openSoon\}/)
+    assert.match(menuJsx, /onMouseLeave=\{closeSoon\}/)
+    assert.match(menuJsx, /\}, OPEN_DELAY_MS\)/)
+    assert.match(menuJsx, /\}, CLOSE_DELAY_MS\)/)
+    assert.match(stylesJs, /\.omnimux-products-create-menu\b/)
+    assert.match(stylesJs, /\.omnimux-products-menu-card\b/)
+    assert.doesNotMatch(menuJsx, /[\u00d7\u2715\u25be\u25bc]/)
   })
 
   it('uses vector icons instead of character glyphs for every remove control', () => {

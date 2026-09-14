@@ -349,14 +349,27 @@ describe('products client · applyImportedData', () => {
 })
 
 describe('products client · link bar wiring', () => {
-  it('renders the bar above the product name field', () => {
+  it('sits above the name row in both forms, each with its own kind', () => {
     const source = read('ProductFormFields.jsx')
-    const barIndex = source.indexOf('<UrlImportBar')
-    const nameIndex = source.indexOf('<FormHeaderSection')
-    assert.ok(barIndex > 0, 'UrlImportBar is not rendered')
-    assert.ok(nameIndex > barIndex, 'the link bar must sit above the name row')
-    assert.match(source, /onImported=\{actions\.applyImportedData\}/)
     assert.match(source, /import \{ importFromLink, isHttpUrl \} from '\.\/api\.js'/)
+
+    for (const [file, kind] of [['PhysicalProductForm.jsx', 'physical'], ['DigitalProductForm.jsx', 'digital']]) {
+      const form = read(file)
+      const barIndex = form.indexOf('<UrlImportBar')
+      const nameIndex = form.indexOf('<ProductNameRow')
+      assert.ok(barIndex > 0, `${file} does not render the link bar`)
+      assert.ok(nameIndex > barIndex, `${file}: the link bar must sit above the name row`)
+      assert.match(form, /onImported=\{actions\.applyImportedData\}/)
+      assert.match(form, new RegExp(`kind="${kind}"`))
+    }
+  })
+
+  it('prompts for the page the current form actually wants', () => {
+    const source = read('ProductFormFields.jsx')
+    assert.match(source, /t\(kind === 'digital' \? 'add\.urlImport\.placeholderDigital' : 'add\.urlImport\.placeholderPhysical'\)/)
+    const zh = read('locales.js')
+    assert.match(zh, /'add\.urlImport\.placeholderPhysical'/)
+    assert.match(zh, /'add\.urlImport\.placeholderDigital'/)
   })
 
   it('submits on Enter, shows a loading button and answers inline', () => {
@@ -392,7 +405,7 @@ describe('products client · link bar wiring', () => {
   it('delegates the field frame and the button to the shared kit', () => {
     const view = read('ProductFormFields.jsx')
     const start = view.indexOf('export function UrlImportBar')
-    const end = view.indexOf('export function ProductFormBody')
+    const end = view.indexOf('export function assembleFormHandlers')
     assert.ok(start >= 0 && end > start, 'UrlImportBar body is locatable')
     const bar = view.slice(start, end)
 

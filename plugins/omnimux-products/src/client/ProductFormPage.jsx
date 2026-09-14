@@ -1,10 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconButton, PageHeader } from 'dsh-ui-kit'
+import { DigitalProductForm } from './DigitalProductForm.jsx'
+import { PhysicalProductForm } from './PhysicalProductForm.jsx'
 import { mediaPreviewUrl } from './api.js'
 import { BackIcon } from './icons.jsx'
-import { ProductFormBody } from './ProductFormFields.jsx'
 import { UnsavedChangesDialog } from './UnsavedChangesDialog.jsx'
 import { useProductFormState } from './useProductFormState.js'
+
+/** 形态 → 文案键前缀。`kind` 在进入本页时就已经定死，不再有第二种可能。 */
+const COPY = Object.freeze({
+  physical: Object.freeze({
+    titleCreate: 'add.titlePhysical',
+    titleEdit: 'detail.titlePhysical',
+    crumbCreate: 'page.crumbCreatePhysical',
+    crumbEdit: 'page.crumbEditPhysical',
+    subtitleCreate: 'page.subtitleCreatePhysical',
+    subtitleEdit: 'page.subtitleEditPhysical',
+  }),
+  digital: Object.freeze({
+    titleCreate: 'add.titleDigital',
+    titleEdit: 'detail.titleDigital',
+    crumbCreate: 'page.crumbCreateDigital',
+    crumbEdit: 'page.crumbEditDigital',
+    subtitleCreate: 'page.subtitleCreateDigital',
+    subtitleEdit: 'page.subtitleEditDigital',
+  }),
+})
 
 /**
  * 二级全屏表单页（同 Tab 内子视图）。
@@ -13,11 +34,16 @@ import { useProductFormState } from './useProductFormState.js'
  * 关闭叉号；顶部是常驻返回栏（面包屑 + 未保存圆点），底部是常驻动作条，中间是双栏
  * 内容区。
  *
+ * `kind` 决定挂载哪一个专属表单：实物走 `PhysicalProductForm`，数字走
+ * `DigitalProductForm`。形态在这里锚定后，表单内部既不渲染形态切换，也不会出现
+ * 另一半的字段 —— 这是「实物 / 数字分治」的落点。
+ *
  * 未保存保护只有一条守卫（`requestLeave`）：返回、面包屑、取消、Esc 四条路径全部
  * 经过它。干净时直接离开；脏时弹三选一（继续编辑 / 放弃修改 / 保存并返回）。
  *
  * @param {{
  *   t: (key: string) => string,
+ *   kind: 'physical' | 'digital',
  *   mode: 'create' | 'edit',
  *   initial?: object | null,
  *   serverError?: string,
@@ -31,6 +57,7 @@ import { useProductFormState } from './useProductFormState.js'
 export function ProductFormPage(props) {
   const {
     t,
+    kind,
     mode,
     initial = null,
     serverError = '',
@@ -41,7 +68,10 @@ export function ProductFormPage(props) {
     onPick,
   } = props
 
-  const form = useProductFormState(initial, saving)
+  const formKind = kind === 'digital' ? 'digital' : 'physical'
+  const copy = COPY[formKind]
+
+  const form = useProductFormState(initial, saving, formKind)
   const { state, setters, actions, canSubmit, payload, isDirty } = form
 
   const [pendingLeave, setPendingLeave] = useState(false)
@@ -126,11 +156,11 @@ export function ProductFormPage(props) {
     : (mode === 'edit' ? t('page.untitled') : t('page.newProduct'))
 
   const crumbText = mode === 'edit'
-    ? t('page.crumbEdit').replace('{name}', displayName)
-    : t('page.crumbCreate')
+    ? t(copy.crumbEdit).replace('{name}', displayName)
+    : t(copy.crumbCreate)
 
-  const title = mode === 'edit' ? t('detail.title') : t('add.title')
-  const subtitle = mode === 'edit' ? t('page.subtitleEdit') : t('page.subtitleCreate')
+  const title = mode === 'edit' ? t(copy.titleEdit) : t(copy.titleCreate)
+  const subtitle = mode === 'edit' ? t(copy.subtitleEdit) : t(copy.subtitleCreate)
   const submitText = mode === 'edit' ? t('detail.save') : t('add.submit')
 
   const handleSaveAndLeave = () => {
@@ -139,6 +169,18 @@ export function ProductFormPage(props) {
       setPendingLeave(false)
       if (ok) onLeave()
     })
+  }
+
+  const formProps = {
+    t,
+    state,
+    setters,
+    actions,
+    busy: saving,
+    error: serverError,
+    onPick,
+    previewOf,
+    nameRef,
   }
 
   return (
@@ -180,17 +222,9 @@ export function ProductFormPage(props) {
       />
 
       <div className="omnimux-products-form-scroll">
-        <ProductFormBody
-          t={t}
-          state={state}
-          setters={setters}
-          actions={actions}
-          busy={saving}
-          error={serverError}
-          onPick={onPick}
-          previewOf={previewOf}
-          nameRef={nameRef}
-        />
+        {formKind === 'digital'
+          ? <DigitalProductForm {...formProps} />
+          : <PhysicalProductForm {...formProps} />}
       </div>
 
       <div className="omnimux-products-form-footer">

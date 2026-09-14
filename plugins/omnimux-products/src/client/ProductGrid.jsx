@@ -9,6 +9,7 @@ import { CheckIcon } from './icons.jsx'
  *   products: any[],
  *   emptyLabel?: string,
  *   emptyActionLabel?: string,
+ *   emptyAction?: import('react').ReactNode,
  *   showEmptyAction?: boolean,
  *   onEmptyAction?: () => void,
  *   onOpen?: (product: any) => void,
@@ -19,18 +20,21 @@ import { CheckIcon } from './icons.jsx'
  *   onToggleSelect?: (product: any) => void,
  * }} props
  */
-export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, copiedId, selectedIds, onToggleSelect }) {
+export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAction, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, copiedId, selectedIds, onToggleSelect }) {
   const safeEmptyLabel = emptyLabel || (typeof t === 'function' ? t('empty.all') : '')
   const safeEmptyActionLabel = emptyActionLabel ?? (typeof t === 'function' ? t('add.button') : '')
   if (products.length === 0) {
+    // 空状态的创建入口与动作行同源：宿主给一个现成的节点就用它（形态分流菜单），
+    // 没给才退回单按钮的老形态。
+    const action = emptyAction ?? (safeEmptyActionLabel && onEmptyAction ? (
+      <Button variant="primary" size="sm" onClick={onEmptyAction}>
+        {safeEmptyActionLabel}
+      </Button>
+    ) : null)
     return (
       <div className="omnimux-products-empty">
         <p>{safeEmptyLabel}</p>
-        {safeEmptyActionLabel && onEmptyAction && showEmptyAction ? (
-          <Button variant="primary" size="sm" onClick={onEmptyAction}>
-            {safeEmptyActionLabel}
-          </Button>
-        ) : null}
+        {showEmptyAction ? action : null}
       </div>
     )
   }

@@ -118,6 +118,17 @@ async function withStore(run) {
 
 const component = name => node => node.type?.name === name
 
+/**
+ * 列表页的创建入口是一个悬停分流菜单：它自己不开表单，只把选中的形态交给宿主。
+ * 测试沿同一条路径驱动 —— 找到菜单元素，调用它的 `onSelect`。
+ */
+function openCreate(mounted, kind = 'physical') {
+  const menu = find(mounted.render(), component('CreateProductMenu'))
+  assert.ok(menu, 'the create split menu is rendered')
+  menu.props.onSelect(kind)
+  return mounted.render()
+}
+
 test('stage loads actual state response, opens complete media details and saves without losing references', async () => {
   await withStore(async ({ library, dispatcher, realPath }) => {
     const product = library.add({ name: '原商品', media: [{ real_path: realPath }], price: '99' })
@@ -155,9 +166,11 @@ test('the list view stays mounted behind the sub-screen so filters survive the r
     const filteredCount = find(mounted.render(), component('ProductGrid')).props.products.length
     assert.equal(filteredCount, 1)
 
-    find(mounted.render(), node => node.type === 'Button' && node.props.children === 'add.button').props.onClick()
+    openCreate(mounted, 'physical')
     const opened = mounted.render()
-    assert.equal(find(opened, component('ProductFormPage')).props.mode, 'create')
+    const page = find(opened, component('ProductFormPage'))
+    assert.equal(page.props.mode, 'create')
+    assert.equal(page.props.kind, 'physical', 'the physical entry opens the physical form')
     // 列表子树没有被替换掉：它仍在树里，只是被覆盖层盖住。
     assert.ok(find(opened, component('ProductGrid')), 'the list view must stay mounted behind the sub-screen')
     assert.equal(
@@ -200,11 +213,36 @@ test('empty response clears cards and exposes the grid create action', async () 
     assert.equal(grid.props.products.length, 0)
     const empty = grid.type(grid.props)
     assert.equal(find(empty, node => node.type === 'p').props.children, 'empty.all')
-    find(empty, node => node.type === 'Button').props.onClick()
-    assert.equal(find(mounted.render(), component('ProductFormPage')).props.mode, 'create')
+    // AC-104：空状态的创建入口与动作行同源，都走同一个分流菜单。
+    const menu = find(empty, component('CreateProductMenu'))
+    assert.ok(menu, 'the empty state reuses the split menu')
+    menu.props.onSelect('digital')
+    const page = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(page.props.mode, 'create')
+    assert.equal(page.props.kind, 'digital')
   })
 })
 
+
+// AC-401 / AC-402：卡片点击按产品自身的持久化形态路由，而不是跟当前筛选页签走。
+for (const kind of ['physical', 'digital']) {
+  test(`opening a ${kind} product card routes to the ${kind} form`, async () => {
+    await withStore(async ({ library, dispatcher }) => {
+      const product = library.add({ name: `${kind} 商品`, kind })
+      const mounted = mount(dispatcher)
+      await mounted.flush()
+      const grid = find(mounted.render(), component('ProductGrid'))
+      const row = grid.props.products.find((item) => item.id === product.id)
+      await grid.props.onOpen(row)
+      await mounted.flush()
+      const page = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(page.props.mode, 'edit')
+      assert.equal(page.props.kind, kind)
+      assert.equal(page.props.initial.id, product.id)
+      assert.equal(page.props.initial.kind, kind)
+    })
+  })
+}
 
 test('editing preserves a missing source reference and refuses a name-only save until the file is restored', async () => {
   await withStore(async ({ library, dispatcher, realPath }) => {
@@ -305,11 +343,12 @@ test('closing an editor invalidates an older pending detail request', async () =
 test('creating a product invalidates pending edit responses', async () => {
   await withDeferredEdits(async ({ mounted, pending, open, a }) => {
     await open(a)
-    find(mounted.render(), node => node.type === 'Button' && node.props.children === 'add.button').props.onClick()
+    openCreate(mounted, 'digital')
     pending[0].resolve()
     await mounted.flush()
     const dialog = find(mounted.render(), component('ProductFormPage'))
     assert.equal(dialog.props.mode, 'create')
+    assert.equal(dialog.props.kind, 'digital')
     assert.equal(dialog.props.saving, false)
   })
 })
