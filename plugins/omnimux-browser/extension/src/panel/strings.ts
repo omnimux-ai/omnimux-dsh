@@ -206,11 +206,16 @@ export interface PanelCopy {
     removeImage: (name: string) => string
     image: string
     imageLoading: string
-    imageLoadFailed: string
+    mediaLoadFailed: string
+    imageRetry: string
     openImage: string
     openNamedImage: (name: string) => string
-    imagePreview: string
+    viewLargeImage: string
+    mediaPreview: string
     closeImage: string
+    previousImage: string
+    nextImage: string
+    stageCount: (index: number, total: number) => string
     imageUnsupported: (name: string) => string
     imageTooMany: (max: number) => string
     imageTooLarge: (name: string, max: string) => string
@@ -456,11 +461,16 @@ const EN: PanelCopy = {
     removeImage: (name) => `Remove ${name}`,
     image: 'Image',
     imageLoading: 'Loading…',
-    imageLoadFailed: 'Could not load · Retry',
+    mediaLoadFailed: 'Media failed to load',
+    imageRetry: 'Retry',
     openImage: 'Open original image',
     openNamedImage: (name) => `Open ${name}`,
-    imagePreview: 'Image preview',
-    closeImage: 'Close image preview',
+    viewLargeImage: 'View larger',
+    mediaPreview: 'Media preview',
+    closeImage: 'Close preview',
+    previousImage: 'Previous media',
+    nextImage: 'Next media',
+    stageCount: (index, total) => `${index} / ${total}`,
     imageUnsupported: (name) => `${name} is not an image format supported by this dsh host.`,
     imageTooMany: (max) => `You can attach up to ${max} images to one message.`,
     imageTooLarge: (name, max) => `${name} is larger than the per-image limit of ${max}.`,
@@ -706,11 +716,16 @@ const ZH: PanelCopy = {
     removeImage: (name) => `移除 ${name}`,
     image: '图片',
     imageLoading: '加载中…',
-    imageLoadFailed: '加载失败 · 重试',
+    mediaLoadFailed: '媒体加载失败',
+    imageRetry: '重试',
     openImage: '查看原图',
     openNamedImage: (name) => `查看 ${name}`,
-    imagePreview: '图片预览',
-    closeImage: '关闭图片预览',
+    viewLargeImage: '查看大图',
+    mediaPreview: '媒体预览',
+    closeImage: '关闭预览',
+    previousImage: '上一张',
+    nextImage: '下一张',
+    stageCount: (index, total) => `${index} / ${total}`,
     imageUnsupported: (name) => `${name} 不是当前 dsh 宿主支持的图片格式。`,
     imageTooMany: (max) => `每条消息最多可添加 ${max} 张图片。`,
     imageTooLarge: (name, max) => `${name} 超过单张图片 ${max} 的限制。`,

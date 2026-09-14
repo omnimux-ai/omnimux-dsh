@@ -12,6 +12,7 @@
     "dev": "node scripts/build.mjs --watch",
     "dev:firefox": "node scripts/build.mjs --firefox --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:harness": "vite build --config vite.harness.config.ts",
     "test": "vitest run"
   },
   "dependencies": {
