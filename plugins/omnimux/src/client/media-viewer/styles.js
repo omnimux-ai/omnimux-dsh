@@ -743,43 +743,65 @@ export const MEDIA_VIEWER_CSS = `
   transform: scale(1.08);
 }
 
-/* 底部原生输入框挂件 (Composer Attachment) 对标图5/6 */
-.omx-mv-composer-attachment-dock {
-  position: fixed;
-  bottom: 88px;
-  left: var(--omnimux-sidebar-width, 280px);
-  right: 0;
+/* 底部原生输入框内嵌挂件 (Composer Attachment Bar) 对标图5/6与红框精准位置 */
+.omx-composer-comment-bar {
+  order: -1 !important;
+  width: 100%;
+  padding: 10px 14px 2px 14px;
   display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 102;
-}
-
-html[data-omnimux-left-collapsed] .omx-mv-composer-attachment-dock {
-  left: 0;
-}
-
-.omx-mv-composer-attachment-dock .omx-mv-composer-attachment {
-  pointer-events: auto;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* exempt-ui03: 挂件投影 */
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .omx-mv-composer-attachment {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: 26px;
   padding: 0 10px;
   border-radius: 9999px;
-  background: rgba(30, 30, 34, 0.95); /* exempt-ui03: 磨砂深黑底 */
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(37, 99, 235, 0.5) !important; /* exempt-ui03: 亮蓝微光圈 */
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid rgba(37, 99, 235, 0.4) !important; /* exempt-ui03: 亮蓝微光圈 */
   color: #60a5fa !important; /* exempt-ui03: 亮蓝文字 */
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.omx-mv-composer-attachment:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: #2563eb !important; /* exempt-ui03: 亮蓝边框 */
+}
+
+.omx-mv-composer-attachment__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #60a5fa !important; /* exempt-ui03: 蓝色加号 */
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.omx-mv-composer-attachment__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: var(--dsw-alias-label-tertiary);
+  margin-left: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.omx-mv-composer-attachment__close:hover {
+  color: var(--dsw-alias-label-primary);
 }
 
 .omx-mv-composer-attachment:hover {
