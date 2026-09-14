@@ -1,5 +1,5 @@
 /**
- * The two page-surface switches the side panel owns and the content scripts obey.
+ * The page-surface switches the side panel owns and the content scripts obey.
  *
  * The value has to cross two isolated worlds: the panel renders on the extension
  * origin and writes the switch, while the FAB companion and the hover capsule run
@@ -23,6 +23,8 @@ export const FEATURE_FLAG = {
   fab: 'omnimux_fab_enabled',
   /** The capsule toolbar that appears while the pointer rests on page media. */
   mediaHover: 'omnimux_media_hover_enabled',
+  /** The velocity badge mounted on X (Twitter) timeline tweets. */
+  velocity: 'omnimux_velocity_badge_enabled',
 } as const
 
 /** One of the switch keys above. */
@@ -40,7 +42,7 @@ export interface FeatureFlagUpdate {
   enabled: boolean
 }
 
-const FEATURE_FLAG_KEYS: readonly string[] = [FEATURE_FLAG.fab, FEATURE_FLAG.mediaHover]
+const FEATURE_FLAG_KEYS: readonly string[] = [FEATURE_FLAG.fab, FEATURE_FLAG.mediaHover, FEATURE_FLAG.velocity]
 
 /** Whether `value` names one of the switches this module owns. */
 export function isFeatureFlagKey(value: unknown): value is FeatureFlagKey {
