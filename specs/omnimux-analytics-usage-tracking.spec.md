@@ -80,5 +80,5 @@ pnpm test:gates
 
 1. `pnpm --filter omnimux-analytics test` → 全绿（A2/A3/A4/A5/A6）。
 2. `node scripts/contract-probe.mjs` → `CONTRACT OK`（A1/A7）。
-3. 隔离工作树内真实浏览器验证：页面加载无报错、渲染层实际发出的请求到达 `POST /omnimux/analytics/event`（A3–A5 的运行时形态）。
+3. 隔离工作树内真实浏览器验证：页面加载无报错、渲染层实际发出的请求到达 `POST /omnimux-analytics/event`（A3–A5 的运行时形态）。
 4. `pnpm test:gates` → 0 违规。

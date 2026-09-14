@@ -69,9 +69,6 @@ export function installStageTracker(options = {}) {
   if (!target || typeof target.addEventListener !== 'function') return () => {}
   const send = typeof options.send === 'function' ? options.send : defaultSend
   const now = typeof options.now === 'function' ? options.now : () => Date.now()
-  const isHidden = typeof options.isHidden === 'function'
-    ? options.isHidden
-    : () => typeof document !== 'undefined' && document.visibilityState === 'hidden'
 
   /** @type {string} */
   let current = ''
@@ -101,18 +98,20 @@ export function installStageTracker(options = {}) {
   }
 
   // A page still open when the document goes away would never report its dwell
-  // time. Both handlers are idempotent with `emitClose`.
+  // time, so leaving closes it. Closing is idempotent with the stage-change
+  // path: exactly one `stage-close` is reported per opened page.
+  //
+  // Backgrounding deliberately does NOT close the page: hiding means "the user
+  // looked away", not "the page went away", and nothing re-claims a stage on
+  // return — closing on hide would silently drop every later visit.
   const onLeave = () => { emitClose() }
-  const onVisibility = () => { if (isHidden()) emitClose() }
 
   target.addEventListener(PRODUCT_STAGE_EVENT, onStage)
   target.addEventListener('pagehide', onLeave)
-  target.addEventListener('visibilitychange', onVisibility)
   return () => {
     try {
       target.removeEventListener(PRODUCT_STAGE_EVENT, onStage)
       target.removeEventListener('pagehide', onLeave)
-      target.removeEventListener('visibilitychange', onVisibility)
     } catch {
       // Detached targets cannot be unsubscribed; nothing else to release.
     }

@@ -4,22 +4,19 @@ import { INGEST_PATH, PRODUCT_STAGE_EVENT, installStageTracker } from './stage-t
 import { MAX_DWELL_MS } from '../stage-events.js'
 
 /**
- * @param {{ now?: () => number, hidden?: boolean }} [options]
+ * @param {{ now?: () => number }} [options]
  */
 function harness(options = {}) {
   /** @type {Array<{ name: string, stage: string, dwellMs?: number }>} */
   const sent = []
   const target = new EventTarget()
-  const state = { hidden: options.hidden === true }
   const dispose = installStageTracker({
     target,
     send: (payload) => sent.push(payload),
     now: options.now,
-    isHidden: () => state.hidden,
   })
   return {
     sent,
-    state,
     dispose,
     stage: (id) => target.dispatchEvent(new CustomEvent(PRODUCT_STAGE_EVENT, { detail: { id } })),
     pagehide: () => target.dispatchEvent(new Event('pagehide')),
@@ -107,19 +104,32 @@ test('leaving the document reports the dwell time of the open page', () => {
   ])
 })
 
-test('a hidden document closes the page while a visible one does not', () => {
+test('backgrounding the document keeps the page open and counting', () => {
   let clock = 1000
   const h = harness({ now: () => clock })
   h.stage('omnimux-workflow')
 
-  h.visibility() // still visible: nothing to report
-  assert.equal(h.sent.length, 1)
-
-  clock = 2500
-  h.state.hidden = true
+  // Hidden/visible transitions are not page changes: the page stays open, and
+  // the time spent away is still counted into the same visit.
+  clock = 6000
   h.visibility()
-  assert.deepEqual(h.sent[1], { name: 'stage-close', stage: 'omnimux-workflow', dwellMs: 1500 })
+  clock = 60000
+  h.visibility()
+  assert.equal(h.sent.length, 1, 'backgrounding must not close the page')
+
+  clock = 70000
+  h.stage('')
+  assert.deepEqual(h.sent[1], { name: 'stage-close', stage: 'omnimux-workflow', dwellMs: 69000 })
   h.dispose()
+})
+
+test('dispose stops reporting page events', () => {
+  const h = harness()
+  h.stage('omnimux-assets')
+  h.dispose()
+  h.stage('omnimux-clip')
+  h.pagehide()
+  assert.deepEqual(h.sent, [{ name: 'stage-open', stage: 'omnimux-assets' }])
 })
 
 test('dwell time is clamped to the accepted range instead of dropping the close event', () => {
