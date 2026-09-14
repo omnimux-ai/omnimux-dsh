@@ -73,12 +73,16 @@ test('clean main, linked branch and detached fetched-main pass; primary dirty is
   f.check(f.run(), true)
 })
 
-for (const kind of ['unstaged', 'staged', 'untracked']) {
+for (const [kind, diagnostic] of [
+  ['unstaged', /已跟踪文件的未提交改动/],
+  ['staged', /已跟踪文件的未提交改动/],
+  ['untracked', /会进入物化产物的未跟踪文件/],
+]) {
   test(`${kind} local source fails before downstream`, t => {
     const f = fixture(t)
     writeFileSync(join(f.linked, kind === 'untracked' ? 'new-file' : 'tracked'), 'dirty\n')
     if (kind === 'staged') f.git(f.linked, 'add', 'tracked')
-    f.check(f.run(), false, /未提交改动/)
+    f.check(f.run(), false, diagnostic)
   })
 }
 

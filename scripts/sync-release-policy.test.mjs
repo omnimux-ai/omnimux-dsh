@@ -233,7 +233,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const runner = join(fixtureRoot, 'alias-runner')
     mkdirSync(join(runner, 'scripts'), { recursive: true })
     mkdirSync(join(runner, 'plugins/omnimux/src'), { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs']) {
       copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
     }
     cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
@@ -307,15 +307,17 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
   })
 
   for (const [state, diagnostic] of [
-    ['dirty', /未提交改动/],
+    ['dirty', /已跟踪文件的未提交改动/],
     ['feature', /当前分支是 \[feature\/fixture\]/],
-    ['ahead', /HEAD 未对齐 origin\/main/],
+    ['ahead', /不等于最新 origin\/main/],
   ]) {
     it(`rejects a real ${state} repository before Dev or Prod writes`, () => {
       const runner = join(fixtureRoot, `rejected-${state}`)
       const home = join(fixtureRoot, `rejected-home-${state}`)
       copySyncScripts(runner)
       cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
+      // dirty 必须是「已跟踪文件被改动」：先把它提交进基线，再在门禁前改回脏内容。
+      if (state === 'dirty') writeFileSync(join(runner, 'uncommitted.txt'), 'committed baseline\n')
       initRunner(runner)
       if (state === 'dirty') writeFileSync(join(runner, 'uncommitted.txt'), 'dirty\n')
       if (state === 'feature') fixtureGit(runner, 'checkout', '-b', 'feature/fixture')
