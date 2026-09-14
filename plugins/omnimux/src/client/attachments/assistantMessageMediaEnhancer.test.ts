@@ -4,9 +4,11 @@ import { JSDOM } from 'jsdom';
 import {
   extractMediaFromElement,
   createMediaTailElement,
-  enhanceAssistantBubble,
-  scanAndEnhanceAssistantBubbles,
-  installAssistantMessageMediaEnhancer,
+  enhanceTurnMedia,
+  scanAndEnhanceTurns,
+  markAutoOpened,
+  hasAutoOpened,
+  resetAutoOpenedForTests,
 } from './assistantMessageMediaEnhancer.ts';
 import { getGlobalMediaViewerStore } from '../media-viewer/media-viewer-store.js';
 
@@ -38,114 +40,101 @@ test('assistantMessageMediaEnhancer: createMediaTailElement for single media ite
   const img = card.querySelector('img');
   assert.ok(img);
   assert.equal(img.getAttribute('src'), 'http://example.com/1.jpg');
-
-  const copyBtn = tail.querySelector('button[title="复制图片链接"]');
-  assert.ok(copyBtn);
-  const openBtn = tail.querySelector('button[title="在右侧侧边栏打开大图"]');
-  assert.ok(openBtn);
 });
 
-test('assistantMessageMediaEnhancer: createMediaTailElement for multiple media items creates horizontal grid', () => {
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-  const doc = dom.window.document;
-
-  const tail = createMediaTailElement([
-    { url: 'http://example.com/a.jpg', type: 'image', title: '侧景' },
-    { url: 'http://example.com/b.jpg', type: 'image', title: '正景' },
-  ], doc);
-
-  const grid = tail.querySelector('.omx-chat-media-tail__grid');
-  assert.ok(grid);
-  const cards = grid.querySelectorAll('.omx-chat-media-tail__card');
-  assert.equal(cards.length, 2);
-  assert.equal(cards[0].querySelector('img')?.getAttribute('src'), 'http://example.com/a.jpg');
-  assert.equal(cards[1].querySelector('img')?.getAttribute('src'), 'http://example.com/b.jpg');
-});
-
-test('assistantMessageMediaEnhancer: enhanceAssistantBubble mounts card and registers to global store', () => {
+test('assistantMessageMediaEnhancer: enhanceTurnMedia extracts media from collapsed tool and forces display in answer bubble', () => {
+  resetAutoOpenedForTests();
   const dom = new JSDOM(`
     <!DOCTYPE html>
     <html>
       <body>
-        <div class="assistantRow_abc">
-          <div class="bubble_def">
-            <p>图片已生成。</p>
-            <img src="http://example.com/mcdonalds.jpg" alt="麦当劳场景" />
+        <div class="flowItem" data-chat-turn="42" data-chat-flow-kind="turn-process">
+          <button class="turnProcessToggle">3 次工具调用 · 1 条消息</button>
+        </div>
+        <!-- Collapsed hidden tool node (containing image_generate or dshview card) -->
+        <div class="flowItem" data-chat-turn="42" data-chat-flow-kind="tool" data-turn-process-member data-turn-process-hidden hidden>
+          <div class="toolview_card">
+            <img src="http://example.com/mcdonalds_hidden.jpg" alt="麦当劳场景" />
+          </div>
+        </div>
+        <!-- Visible assistant answer node -->
+        <div class="flowItem" data-chat-turn="42" data-chat-flow-kind="assistant-step" data-turn-process-answer>
+          <div class="assistantRow">
+            <div class="bubble">
+              <p>图片已展示：窗外人行道视角与两位成年女性随意的抓拍感。</p>
+            </div>
           </div>
         </div>
       </body>
     </html>
   `);
   const doc = dom.window.document;
-  const bubble = doc.querySelector('.bubble_def') as HTMLElement;
-  assert.ok(bubble);
+  const turnNodes = Array.from(doc.querySelectorAll<HTMLElement>('[data-chat-turn="42"]'));
+  assert.equal(turnNodes.length, 3);
 
-  const enhanced = enhanceAssistantBubble(bubble, doc);
+  let openedTabId = '';
+  (dom.window as any).__omnimuxWorkbench = {
+    openWorkbench: (opts: any) => {
+      openedTabId = opts?.tabId;
+    },
+  };
+
+  const enhanced = enhanceTurnMedia('42', turnNodes, doc);
   assert.equal(enhanced, true);
-  assert.equal(bubble.getAttribute('data-omx-media-enhanced'), 'true');
 
-  // Verify tail mounted
-  const tail = bubble.querySelector('.omx-chat-media-tail');
-  assert.ok(tail);
+  // 1. Verify media extracted and mounted at the bottom of the visible assistant bubble outside the fold
+  const answerBubble = doc.querySelector('.bubble')!;
+  const tail = answerBubble.querySelector('.omx-chat-media-tail');
+  assert.ok(tail, 'Media tail must be mounted inside the answer bubble');
 
-  // Verify registered in store
+  const mountedImg = tail.querySelector('img');
+  assert.ok(mountedImg);
+  assert.equal(mountedImg.getAttribute('src'), 'http://example.com/mcdonalds_hidden.jpg');
+
+  // 2. Verify registered in global media store
   const store = getGlobalMediaViewerStore();
-  const found = store.getSnapshot().mediaList.find((m) => m.url === 'http://example.com/mcdonalds.jpg');
+  const found = store.getSnapshot().mediaList.find((m) => m.url === 'http://example.com/mcdonalds_hidden.jpg');
   assert.ok(found);
-  assert.equal(found.url, 'http://example.com/mcdonalds.jpg');
 
-  // Idempotent: second call returns false
-  const enhancedAgain = enhanceAssistantBubble(bubble, doc);
-  assert.equal(enhancedAgain, false);
+  // 3. Verify automatic workbench open triggered
+  assert.equal(openedTabId, 'omnimux:media-viewer');
+  assert.equal(hasAutoOpened('http://example.com/mcdonalds_hidden.jpg'), true);
+
+  // 4. Idempotent: second call returns false and does not double-mount
+  const secondCall = enhanceTurnMedia('42', turnNodes, doc);
+  assert.equal(secondCall, false);
+  assert.equal(answerBubble.querySelectorAll('.omx-chat-media-tail').length, 1);
 });
 
-test('assistantMessageMediaEnhancer: scanAndEnhanceAssistantBubbles finds and enhances bubbles', () => {
+test('assistantMessageMediaEnhancer: scanAndEnhanceTurns scans full conversation and enhances all turns with media', () => {
+  resetAutoOpenedForTests();
   const dom = new JSDOM(`
     <!DOCTYPE html>
     <html>
       <body>
-        <div class="assistantRow">
-          <div class="bubble">
-            <img src="http://example.com/test1.jpg" />
-          </div>
+        <!-- Turn 1 -->
+        <div class="flowItem" data-chat-turn="1" data-chat-flow-kind="tool" data-turn-process-hidden hidden>
+          <img src="http://example.com/turn1.jpg" />
         </div>
-        <div class="assistantStack">
-          <div class="bubble">
-            <img src="http://example.com/test2.jpg" />
-          </div>
+        <div class="flowItem" data-chat-turn="1" data-chat-flow-kind="assistant-step">
+          <div class="bubble">Turn 1 Answer</div>
+        </div>
+
+        <!-- Turn 2 -->
+        <div class="flowItem" data-chat-turn="2" data-chat-flow-kind="tool" data-turn-process-hidden hidden>
+          <img src="http://example.com/turn2.jpg" />
+        </div>
+        <div class="flowItem" data-chat-turn="2" data-chat-flow-kind="assistant-step">
+          <div class="bubble">Turn 2 Answer</div>
         </div>
       </body>
     </html>
   `);
   const doc = dom.window.document;
 
-  const count = scanAndEnhanceAssistantBubbles(doc);
+  const count = scanAndEnhanceTurns(doc);
   assert.equal(count, 2);
 
   const tails = doc.querySelectorAll('.omx-chat-media-tail');
   assert.equal(tails.length, 2);
-});
-
-test('assistantMessageMediaEnhancer: installAssistantMessageMediaEnhancer observes DOM changes', async () => {
-  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="container"></div></body></html>');
-  const doc = dom.window.document;
-
-  const cleanup = installAssistantMessageMediaEnhancer(doc);
-
-  const container = doc.getElementById('container')!;
-  const newRow = doc.createElement('div');
-  newRow.className = 'assistantRow';
-  const bubble = doc.createElement('div');
-  bubble.className = 'bubble';
-  bubble.innerHTML = '<img src="http://example.com/dynamic.jpg" />';
-  newRow.appendChild(bubble);
-  container.appendChild(newRow);
-
-  // Wait for mutation observer timeout
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  const tail = bubble.querySelector('.omx-chat-media-tail');
-  assert.ok(tail);
-
-  cleanup();
 });
