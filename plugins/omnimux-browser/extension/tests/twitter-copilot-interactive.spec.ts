@@ -229,4 +229,43 @@ describe('Twitter Copilot Interactive Suite', () => {
       }
     })
   })
+
+  describe('parseDraftSections preamble & reflection separation contract', () => {
+    // 导入或复现真实切分逻辑进行断言
+    const mixedSample = `> 说个大实话：
+> 用 Seedance 2.5 抽卡抽到破产的，大概率还没搞懂工作流。
+> 下面这个片子，生成只花了我 0.38 美元。
+> 自己看成片：
+
+💡 操盘手复盘笔记
+• 为什么去掉原推的英文口号式说教：改写为“抽卡抽到肉痛/给昂贵算力交学费”更贴近中文 X 圈内人的真实体感。
+• 转化承接建议：发推时原样附带原片 9:16 视频。`
+
+    it('extracts pure tweet draft without blockquote prefix and separates notes', () => {
+      const splitRegex = /(?:\n+|^)(?:💡\s*(?:操盘手)?复盘(?:笔记)?|【复盘笔记】|##?\s*(?:操盘手)?复盘)/i
+      const match = splitRegex.exec(mixedSample)
+      expect(match).not.toBeNull()
+
+      const draftPart = mixedSample.substring(0, match!.index).trim()
+      const notePart = mixedSample.substring(match!.index).trim()
+
+      const cleanDraft = draftPart
+        .split('\n')
+        .map(l => l.replace(/^>\s?/, ''))
+        .join('\n')
+        .trim()
+
+      // 断言文案提取正确
+      expect(cleanDraft).toContain('说个大实话：')
+      expect(cleanDraft).toContain('下面这个片子，生成只花了我 0.38 美元。')
+      expect(cleanDraft).toContain('自己看成片：')
+      // 绝不能包含复盘笔记
+      expect(cleanDraft).not.toContain('操盘手复盘笔记')
+      expect(cleanDraft).not.toContain('转化承接建议')
+
+      // 断言复盘笔记提取正确
+      expect(notePart).toContain('💡 操盘手复盘笔记')
+      expect(notePart).toContain('转化承接建议')
+    })
+  })
 })

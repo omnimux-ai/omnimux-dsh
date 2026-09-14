@@ -452,6 +452,85 @@ function isFillableContent(text: string): boolean {
   return true
 }
 
+export interface ParsedDraftResult {
+  hasDraft: boolean
+  draftHtml: string
+  draftText: string
+  noteHtml: string
+}
+
+export function parseDraftSections(rawText: string): ParsedDraftResult {
+  if (!rawText || rawText.trim() === '') {
+    return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+  }
+  const trimmed = rawText.trim()
+
+  // 1. 过滤开场白、问候语与自我介绍
+  if (
+    /(你好|您好)[!！\s].*我是/i.test(trimmed) ||
+    /欢迎使用/i.test(trimmed) ||
+    /我们可以一起进行[:：]/i.test(trimmed) ||
+    /随时把你的需求.*发给我/i.test(trimmed) ||
+    /今天有什么想推进的/i.test(trimmed)
+  ) {
+    return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+  }
+
+  // 2. 检查是否有复盘笔记/思考说明（例如：💡 操盘手复盘笔记）
+  const splitRegex = /(?:\n+|^)(?:💡\s*(?:操盘手)?复盘(?:笔记)?|【复盘笔记】|##?\s*(?:操盘手)?复盘)/i
+  const match = splitRegex.exec(trimmed)
+
+  if (match) {
+    const draftPart = trimmed.substring(0, match.index).trim()
+    const notePart = trimmed.substring(match.index).trim()
+
+    const cleanDraftText = draftPart
+      .split('\n')
+      .map(line => line.replace(/^>\s?/, ''))
+      .join('\n')
+      .trim()
+
+    return {
+      hasDraft: cleanDraftText.length > 0,
+      draftHtml: renderMarkdown(draftPart),
+      draftText: cleanDraftText,
+      noteHtml: renderMarkdown(notePart),
+    }
+  }
+
+  // 3. 检查是否有独立的 blockquote 块作为文案交付物
+  const quoteMatch = /(?:^|\n)(>[\s\S]+?)(?=\n\s*[^>]|$)/.exec(trimmed)
+  if (quoteMatch) {
+    const rawQuote = quoteMatch[1].trim()
+    const cleanQuote = rawQuote
+      .split('\n')
+      .map(line => line.replace(/^>\s?/, ''))
+      .join('\n')
+      .trim()
+    if (cleanQuote.length >= 20) {
+      const rest = trimmed.replace(rawQuote, '').trim()
+      return {
+        hasDraft: true,
+        draftHtml: renderMarkdown(rawQuote),
+        draftText: cleanQuote,
+        noteHtml: renderMarkdown(rest),
+      }
+    }
+  }
+
+  // 4. 普通文案：整条都属于文案
+  if (isFillableContent(trimmed)) {
+    return {
+      hasDraft: true,
+      draftHtml: renderMarkdown(trimmed),
+      draftText: trimmed,
+      noteHtml: '',
+    }
+  }
+
+  return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+}
+
 /**
  * One conversation row body. Memoized: rows are immutable (append/merge copy
  * the array but reuse row objects), so markdown is re-parsed only when a
@@ -490,12 +569,25 @@ const MessageBody = memo(function MessageBody({
             label={copy.app.selectionAttached}
           />
         )}
-        {text.trim() !== '' && <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />}
-        {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && isFillableContent(text) && (
-          <div className="dom-fill-actions">
-            <DomFillButton textToFill={text} locale={locale} />
-          </div>
-        )}
+        {(() => {
+          const parsed = row.kind === 'assistant' && row.status !== 'running' ? parseDraftSections(text) : null
+          if (parsed && parsed.hasDraft) {
+            return (
+              <>
+                <div className="draft-box-wrapper">
+                  <div className="md draft-content" dangerouslySetInnerHTML={{ __html: parsed.draftHtml }} />
+                  <div className="dom-fill-actions">
+                    <DomFillButton textToFill={parsed.draftText} locale={locale} />
+                  </div>
+                </div>
+                {parsed.noteHtml !== '' && (
+                  <div className="md draft-note-section" dangerouslySetInnerHTML={{ __html: parsed.noteHtml }} />
+                )}
+              </>
+            )
+          }
+          return text.trim() !== '' ? <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} /> : null
+        })()}
       </div>
     )
   }
