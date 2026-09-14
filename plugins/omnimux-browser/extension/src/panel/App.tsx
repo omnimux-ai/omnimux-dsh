@@ -2232,7 +2232,7 @@ export function App(): React.JSX.Element {
       : { ...current, trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin) })
   }
 
-  const sessionMenuTitle = sessionTitle ?? (locale === 'en' ? 'New Project' : '新建项目')
+  const sessionMenuTitle = sessionTitle ?? (locale === 'en' ? 'New Chat' : '新会话')
   const filteredSessions = useMemo(() => {
     if (!sessionSearchQuery.trim()) return sessionList
     const q = sessionSearchQuery.toLowerCase().trim()
@@ -2618,7 +2618,7 @@ export function App(): React.JSX.Element {
           <button className="session-menu-trigger"
             aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
             onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
-            <BinocularsIcon size={17} className="session-trigger-binoculars" />
+            <MessageSquareIcon size={15} className="session-trigger-chat-icon" />
             <span className="session-trigger-title">{sessionMenuTitle}</span>
             <ChevronDownIcon size={12} />
           </button>
