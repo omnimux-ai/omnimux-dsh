@@ -135,8 +135,16 @@ describe('扩展主题硬门禁：源码不得出现紫色', () => {
     expect(domFill).toContain("element.style.outline = '2.5px solid #ffffff'")
     expect(domFill).toContain("element.style.boxShadow = '0 0 0 3px rgba(0, 0, 0, 0.55)'")
 
-    // 推特小面板：爆款档黑白高对比、曝光数值白色
-    expect(velocityCss).toContain('border-color: #ffffff')
+    // 推特小面板：曝光数值白色
     expect(velocityCss).toMatch(/\.omnimux-velocity-panel__exposure-val\s*\{[^}]*color: #ffffff/)
+
+    // 三档热度深色分层：半透明底 + 暖→冷色系 + 不出现纯白描边
+    expect(velocityCss).toContain('linear-gradient(180deg, rgba(92, 28, 16, 0.6), rgba(46, 14, 9, 0.52))')
+    expect(velocityCss).toContain('linear-gradient(180deg, rgba(72, 46, 8, 0.54), rgba(38, 24, 5, 0.48))')
+    expect(velocityCss).toContain('background-color: rgba(22, 28, 38, 0.46)')
+    expect(velocityCss).toContain('border-color: rgba(255, 122, 74, 0.34)')
+    expect(velocityCss).toContain('border-color: rgba(150, 166, 186, 0.22)')
+    expect(velocityCss).not.toContain('border-color: #ffffff')
+    expect(velocityCss).toContain('backdrop-filter: blur(10px) saturate(115%)')
   })
 })
