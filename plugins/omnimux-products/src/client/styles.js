@@ -362,7 +362,6 @@ export const PRODUCTS_CSS = `
   align-items: center;
   gap: 8px;
 }
-.omnimux-products-angle-row,
 .omnimux-products-seg-row {
   display: grid;
   grid-template-columns: 1fr 96px 28px;
@@ -377,6 +376,84 @@ export const PRODUCTS_CSS = `
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
   margin: 0;
+}
+
+/* Strategy fields: one persistent label per control.
+   The metrics mirror the kit InputField label (12px / 16px / 500 /
+   label-secondary) so a kit field and a plugin textarea read identically. */
+.omnimux-products-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.omnimux-products-field-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.omnimux-products-field-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-products-field-label-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* The inline "one per line" hint, e.g. 产品供给 · 每行一项. The separator is
+   decoration, so it stays out of the text a screen reader announces. */
+.omnimux-products-field-tag {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-field-tag::before {
+  content: '·';
+  margin-right: 4px;
+  color: var(--dsw-alias-label-dimmed);
+}
+
+/* One angle, one card: a bounded surface with its own header, so the angle
+   boundaries stay readable at a glance. */
+.omnimux-products-angle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.omnimux-products-angle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+.omnimux-products-angle-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omnimux-products-angle-index {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-products-angle-priority {
+  flex: none;
+}
+.omnimux-products-angle-remove {
+  margin-left: auto;
 }
 
 /* Self-drawn product form modal (outside-corner close, kit controls only) */

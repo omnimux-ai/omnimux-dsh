@@ -1,4 +1,6 @@
+import { useId } from 'react'
 import { Button, DropdownSelect, IconButton, InputField } from 'dsh-ui-kit'
+import { CloseIcon } from './icons.jsx'
 
 /**
  * @param {unknown} list
@@ -36,46 +38,96 @@ function setPath(obj, path, value) {
   cur[parts[parts.length - 1]] = value
 }
 
+/**
+ * The six strategy modules. Every field carries a `labelKey` for its persistent
+ * label; `subLabelKey` adds the inline "one per line" hint beside the name, and
+ * `placeholderKey` survives only where it states a *format* the label cannot.
+ * There is no hint-only field variant: every entry owns a `path` and a control.
+ */
 export const STRATEGY_SECTIONS = [
   {
     titleKey: 'strategy.basic',
     grid: true,
     fields: [
-      { path: 'brand_basic_info.company.name', placeholderKey: 'strategy.companyName', type: 'input' },
-      { path: 'brand_basic_info.company.website', placeholderKey: 'strategy.companyWebsite', type: 'input' },
-      { path: 'brand_basic_info.company.locale', placeholderKey: 'strategy.companyLocale', type: 'input' },
-      { path: 'brand_basic_info.product.name', placeholderKey: 'strategy.productName', type: 'input' },
-      { path: 'brand_basic_info.product.category', placeholderKey: 'strategy.productCategory', type: 'input', span: 2 },
+      { path: 'brand_basic_info.company.name', labelKey: 'strategy.companyName', type: 'input' },
+      {
+        path: 'brand_basic_info.company.website',
+        labelKey: 'strategy.companyWebsite',
+        type: 'input',
+        placeholderKey: 'strategy.websitePlaceholder',
+      },
+      {
+        path: 'brand_basic_info.company.locale',
+        labelKey: 'strategy.companyLocale',
+        type: 'input',
+        placeholderKey: 'strategy.localePlaceholder',
+      },
+      { path: 'brand_basic_info.product.name', labelKey: 'strategy.productName', type: 'input' },
+      { path: 'brand_basic_info.product.category', labelKey: 'strategy.productCategory', type: 'input', span: 2 },
     ],
   },
   {
     titleKey: 'strategy.tone',
-    hintKey: 'strategy.listHint',
     fields: [
-      { path: 'tone_and_voice.dos', placeholderKey: 'strategy.dos', type: 'list', rows: 3 },
-      { path: 'tone_and_voice.donts', placeholderKey: 'strategy.donts', type: 'list', rows: 3 },
+      {
+        path: 'tone_and_voice.dos',
+        labelKey: 'strategy.dos',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 3,
+      },
+      {
+        path: 'tone_and_voice.donts',
+        labelKey: 'strategy.donts',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 3,
+      },
     ],
   },
   {
     titleKey: 'strategy.identity',
     fields: [
-      { path: 'identity_and_product.core_identity', placeholderKey: 'strategy.coreIdentity', type: 'textarea', rows: 2 },
-      { type: 'hint', hintKey: 'strategy.listHint' },
-      { path: 'identity_and_product.product_offering', placeholderKey: 'strategy.offering', type: 'list', rows: 2 },
-      { path: 'identity_and_product.unique_advantage', placeholderKey: 'strategy.advantage', type: 'list', rows: 2 },
-      { path: 'identity_and_product.problems_solved', placeholderKey: 'strategy.problems', type: 'list', rows: 2 },
-      { path: 'identity_and_product.solutions', placeholderKey: 'strategy.solutions', type: 'list', rows: 2 },
+      { path: 'identity_and_product.core_identity', labelKey: 'strategy.coreIdentity', type: 'textarea', rows: 2 },
+      {
+        path: 'identity_and_product.product_offering',
+        labelKey: 'strategy.offering',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 2,
+      },
+      {
+        path: 'identity_and_product.unique_advantage',
+        labelKey: 'strategy.advantage',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 2,
+      },
+      {
+        path: 'identity_and_product.solutions',
+        labelKey: 'strategy.solutions',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 2,
+      },
     ],
   },
   {
     titleKey: 'strategy.mission',
     fields: [
-      { path: 'mission_and_positioning.mission', placeholderKey: 'strategy.missionText', type: 'textarea', rows: 2 },
-      { type: 'hint', hintKey: 'strategy.listHint' },
-      { path: 'mission_and_positioning.differentiation', placeholderKey: 'strategy.diff', type: 'list', rows: 2 },
-      { path: 'mission_and_positioning.ownable_space.statement', placeholderKey: 'strategy.ownableStatement', type: 'input' },
-      { path: 'mission_and_positioning.ownable_space.category', placeholderKey: 'strategy.ownableCategory', type: 'input' },
-      { path: 'mission_and_positioning.ownable_space.is_not', placeholderKey: 'strategy.ownableNot', type: 'list', rows: 2 },
+      { path: 'mission_and_positioning.mission', labelKey: 'strategy.missionText', type: 'textarea', rows: 2 },
+      {
+        path: 'mission_and_positioning.differentiation',
+        labelKey: 'strategy.diff',
+        subLabelKey: 'strategy.listHint',
+        type: 'list',
+        rows: 2,
+      },
+      {
+        path: 'mission_and_positioning.ownable_space.statement',
+        labelKey: 'strategy.ownableStatement',
+        type: 'input',
+      },
     ],
   },
 ]
@@ -88,13 +140,70 @@ const PRIORITY_OPTIONS = [
   { value: '5', label: '5' },
 ]
 
+/** `角度 01` — zero-padded from the current position, so a removal reshuffles it. */
+function angleIndexText(t, index) {
+  return `${t('strategy.angleIndex')} ${String(index + 1).padStart(2, '0')}`
+}
+
+/**
+ * The persistent label every strategy control wears: a 12px name plus an
+ * optional inline sub-label (`产品供给 · 每行一项`). Metrics mirror the kit's
+ * own field label, so both control families read identically.
+ *
+ * @param {{ label: string, subLabel?: string }} props
+ */
+export function StrategyFieldLabel(props) {
+  const { label, subLabel } = props
+  return (
+    <span className="omnimux-products-field-label" data-testid="strategy-field-label">
+      <span className="omnimux-products-field-label-text">{label}</span>
+      {subLabel
+        ? <span className="omnimux-products-field-tag" data-testid="strategy-field-sublabel">{subLabel}</span>
+        : null}
+    </span>
+  )
+}
+
+/**
+ * The kit ships no textarea, so the plugin draws one and binds it to a real
+ * `<label htmlFor>` — a `<div>` label would not focus the control.
+ *
+ * @param {{
+ *   label: string,
+ *   subLabel?: string,
+ *   rows: number,
+ *   value: string,
+ *   placeholder?: string,
+ *   onChange: (event: any) => void,
+ * }} props
+ */
+export function LabeledTextarea(props) {
+  const { label, subLabel, rows, value, placeholder, onChange } = props
+  const controlId = useId()
+
+  return (
+    <div className="omnimux-products-field-control">
+      <label htmlFor={controlId}>
+        <StrategyFieldLabel label={label} subLabel={subLabel} />
+      </label>
+      <textarea
+        id={controlId}
+        className="omnimux-products-textarea"
+        rows={rows}
+        value={value}
+        placeholder={placeholder}
+        onChange={onChange}
+      />
+    </div>
+  )
+}
+
 export function StrategyField(props) {
   const { t, field, strategy, patchStrategy } = props
-  if (field.type === 'hint') {
-    return <p className="omnimux-products-label">{t(field.hintKey)}</p>
-  }
   const value = getPath(strategy, field.path)
-  const placeholder = t(field.placeholderKey)
+  const label = t(field.labelKey)
+  const subLabel = field.subLabelKey ? t(field.subLabelKey) : undefined
+  const placeholder = field.placeholderKey ? t(field.placeholderKey) : undefined
   const onTextChange = (event) => {
     patchStrategy((next) => { setPath(next, field.path, event.target.value) })
   }
@@ -102,46 +211,42 @@ export function StrategyField(props) {
     patchStrategy((next) => { setPath(next, field.path, listOf(event.target.value)) })
   }
 
-  if (field.type === 'list') {
-    return (
-      <textarea
-        className="omnimux-products-textarea"
-        rows={field.rows || 2}
-        value={linesOf(value)}
-        placeholder={placeholder}
-        onChange={onListChange}
-      />
-    )
-  }
-
-  if (field.type === 'textarea') {
-    return (
-      <textarea
-        className="omnimux-products-textarea"
-        rows={field.rows || 2}
+  const control = field.type === 'input'
+    ? (
+      <InputField
+        label={<StrategyFieldLabel label={label} subLabel={subLabel} />}
         value={value}
         placeholder={placeholder}
         onChange={onTextChange}
       />
     )
-  }
+    : (
+      <LabeledTextarea
+        label={label}
+        subLabel={subLabel}
+        rows={field.rows || 2}
+        value={field.type === 'list' ? linesOf(value) : value}
+        placeholder={placeholder}
+        onChange={field.type === 'list' ? onListChange : onTextChange}
+      />
+    )
 
   return (
-    <InputField
-      className={field.span === 2 ? 'omnimux-products-span2' : undefined}
-      value={value}
-      placeholder={placeholder}
-      onChange={onTextChange}
-    />
+    <div
+      className={field.span === 2 ? 'omnimux-products-field omnimux-products-span2' : 'omnimux-products-field'}
+      data-testid="strategy-field"
+      data-field-path={field.path}
+    >
+      {control}
+    </div>
   )
 }
 
 export function StrategySection(props) {
   const { t, section, strategy, patchStrategy } = props
-  const hintNode = section.hintKey ? <p className="omnimux-products-label">{t(section.hintKey)}</p> : null
-  const fieldList = section.fields.map((field, idx) => (
+  const fieldList = section.fields.map((field) => (
     <StrategyField
-      key={field.path || ('field-' + idx)}
+      key={field.path}
       t={t}
       field={field}
       strategy={strategy}
@@ -149,17 +254,10 @@ export function StrategySection(props) {
     />
   ))
 
-  const body = (
-    <>
-      {hintNode}
-      {fieldList}
-    </>
-  )
-
   return (
     <section className="omnimux-products-section">
       <div className="omnimux-products-section-title">{t(section.titleKey)}</div>
-      {section.grid ? <div className="omnimux-products-grid-fields">{body}</div> : body}
+      {section.grid ? <div className="omnimux-products-grid-fields">{fieldList}</div> : fieldList}
     </section>
   )
 }
@@ -183,38 +281,47 @@ export function AngleRow(props) {
   }
 
   return (
-    <div className="omnimux-products-section">
-      <div className="omnimux-products-angle-row">
-        <InputField
-          value={angle.title}
-          placeholder={t('strategy.angleTitle')}
-          onChange={onTitleChange}
-        />
+    <div
+      className="omnimux-products-angle-card"
+      data-testid="strategy-angle-card"
+      data-angle-index={index}
+    >
+      <div className="omnimux-products-angle-head">
+        <span className="omnimux-products-angle-index" data-testid="strategy-angle-index">
+          {angleIndexText(t, index)}
+        </span>
         <DropdownSelect
+          className="omnimux-products-angle-priority"
           value={String(angle.priority || 3)}
           options={PRIORITY_OPTIONS}
-          aria-label={t('strategy.angleTitle')}
+          aria-label={t('strategy.anglePriority')}
           onChange={onPriorityChange}
         />
         <IconButton
+          className="omnimux-products-angle-remove"
           variant="ghost"
           size="xs"
-          aria-label={t('remove.confirm')}
+          aria-label={t('strategy.removeAngle')}
+          data-testid="strategy-angle-remove"
           onClick={onRemove}
         >
-          × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+          <CloseIcon size={14} />
         </IconButton>
       </div>
-      <textarea
-        className="omnimux-products-textarea"
+      <InputField
+        label={<StrategyFieldLabel label={t('strategy.angleTitle')} />}
+        value={angle.title}
+        onChange={onTitleChange}
+      />
+      <LabeledTextarea
+        label={t('strategy.angleDesc')}
         rows={2}
         value={angle.description}
-        placeholder={t('strategy.angleDesc')}
         onChange={onDescChange}
       />
       <InputField
+        label={<StrategyFieldLabel label={t('strategy.angleAudience')} />}
         value={angle.target_audience}
-        placeholder={t('strategy.angleAudience')}
         onChange={onAudienceChange}
       />
     </div>
@@ -238,15 +345,17 @@ export function AnglesSection(props) {
           {t('strategy.addAngle')}
         </Button>
       </div>
-      {angles.map((angle, index) => (
-        <AngleRow
-          key={angle.id || ('new-' + index)}
-          t={t}
-          angle={angle}
-          index={index}
-          patchStrategy={patchStrategy}
-        />
-      ))}
+      <div className="omnimux-products-angle-list">
+        {angles.map((angle, index) => (
+          <AngleRow
+            key={angle.id || ('new-' + index)}
+            t={t}
+            angle={angle}
+            index={index}
+            patchStrategy={patchStrategy}
+          />
+        ))}
+      </div>
     </section>
   )
 }
@@ -283,7 +392,7 @@ export function SegmentRow(props) {
         aria-label={t('remove.confirm')}
         onClick={onRemove}
       >
-        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+        <CloseIcon size={14} />
       </IconButton>
     </div>
   )
@@ -319,7 +428,7 @@ export function CompetitorRow(props) {
         aria-label={t('remove.confirm')}
         onClick={onRemove}
       >
-        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+        <CloseIcon size={14} />
       </IconButton>
     </div>
   )
