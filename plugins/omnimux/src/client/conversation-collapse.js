@@ -25,13 +25,24 @@ html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface{
   opacity:1!important;
   pointer-events:none!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"]{
-  visibility:visible!important;
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface,
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface > *,
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"],
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"] > *,
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-phase="active"],
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-conversation-scroll]{
+  overflow:visible!important;
   pointer-events:none!important;
+  visibility:visible!important;
+  opacity:1!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-conversation-scroll],
+/* Hide only the message transcript stream and header bar, keep composerSeat mounted and visible */
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.session"],
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.session.header"],
 html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.header"],
-html[${CONVERSATION_COLLAPSED_ATTR}] header[class*="header"]{
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.view"],
+html[${CONVERSATION_COLLAPSED_ATTR}] header[class*="header"],
+html[${CONVERSATION_COLLAPSED_ATTR}] [class*="widthHandle"]{
   display:none!important;
 }
 /* Native DSH Composer floating dock at the bottom of the canvas */
@@ -48,6 +59,7 @@ html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-seat]{
   pointer-events:auto!important;
   visibility:visible!important;
   opacity:1!important;
+  background:transparent!important;
 }
 html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] [data-composer-seat]{
   left:0!important;
