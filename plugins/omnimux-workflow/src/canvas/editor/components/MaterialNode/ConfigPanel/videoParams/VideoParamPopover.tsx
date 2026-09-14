@@ -83,12 +83,13 @@ export function VideoParamPopover({
   }, [schema.duration?.range, durationOptions]);
 
   const isAutoDuration = params.duration === -1 || (typeof params.duration === 'string' && (params.duration === 'auto' || params.duration === '-1'));
-  const validCustomDuration = typeof params.duration === 'number' && params.duration > 0
+  const numericDuration = typeof params.duration === 'number'
     ? params.duration
-    : (typeof schema.duration?.defaultValue === 'number' && schema.duration.defaultValue > 0
-        ? schema.duration.defaultValue
-        : durationRange.min);
-  const durationDisplayValue = isAutoDuration ? '自动' : `${validCustomDuration}s`;
+    : params.duration.trim() ? Number(params.duration) : undefined;
+  const validCustomDuration = numericDuration !== undefined && Number.isFinite(numericDuration) && numericDuration > 0
+    ? numericDuration
+    : undefined;
+  const durationDisplayValue = isAutoDuration ? '自动' : validCustomDuration === undefined ? '未设置' : `${validCustomDuration}s`;
   const showModeUi = Boolean(params.showModeUi) && (params.effectiveOperations?.length ?? 0) >= 2;
   const activeOperation = params.effectiveOperations.find((operation) => operation.id === params.operation);
 
@@ -203,12 +204,12 @@ export function VideoParamPopover({
                     { value: 'custom', label: '自定义' },
                     { value: 'auto', label: '自动' },
                   ]}
-                  value={isAutoDuration ? 'auto' : 'custom'}
+                  value={isAutoDuration ? 'auto' : validCustomDuration === undefined ? '' : 'custom'}
                   onChange={(mode) => {
                     if (mode === 'auto') {
                       onParamChange('duration', -1);
                     } else {
-                      onParamChange('duration', validCustomDuration);
+                      onParamChange('duration', validCustomDuration ?? durationRange.min);
                     }
                   }}
                   ariaLabel="时长模式"
@@ -217,7 +218,17 @@ export function VideoParamPopover({
               </div>
             ) : null}
 
-            {!isAutoDuration ? (
+            {!isAutoDuration && validCustomDuration === undefined && schema.duration?.range ? (
+              <button
+                type="button"
+                className="wf-cfg-duration-pill"
+                onClick={() => onParamChange('duration', durationRange.min)}
+              >
+                设为 {durationRange.min}s
+              </button>
+            ) : null}
+
+            {!isAutoDuration && validCustomDuration !== undefined && schema.duration?.range ? (
               <div className="wf-video-param-popover__duration-slider-container">
                 <div className="wf-video-param-popover__range-row">
                   <CustomSlider
@@ -236,9 +247,9 @@ export function VideoParamPopover({
               </div>
             ) : null}
 
-            {durationOptions.length > 0 && !schema.duration?.range && !hasAutoDurationSupport ? (
+            {durationOptions.length > 0 && !schema.duration?.range ? (
               <DurationGrid
-                value={typeof params.duration === 'number' ? params.duration : Number(params.duration) || 5}
+                value={isAutoDuration ? -1 : validCustomDuration ?? Number.NaN}
                 options={durationOptions}
                 onChange={(v) => onParamChange('duration', v)}
               />
@@ -271,7 +282,7 @@ export function VideoParamPopover({
                   className="wf-video-param-popover__select"
                   value={value ?? definition.defaultValue}
                   options={definition.options}
-                  disabled={definition.options.length === 1}
+                  placeholder="未设置"
                   onChange={(next) => onParamChange(field, String(next))}
                 />
               </div>

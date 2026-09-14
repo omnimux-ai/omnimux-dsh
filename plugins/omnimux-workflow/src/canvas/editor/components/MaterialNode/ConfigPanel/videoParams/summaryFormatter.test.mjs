@@ -10,6 +10,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { formatVideoSummary } from './summaryFormatter.ts';
 
+it('unset controls are labeled unselected, not a fabricated active default', () => {
+  const result = formatVideoSummary(base({aspectRatio:'',duration:''}));
+  assert.equal(result.ratioText,'未设置'); assert.equal(result.durationText,'未设置');
+});
+
 function base(overrides = {}) {
   return {
     model: 'm',

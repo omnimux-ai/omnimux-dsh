@@ -123,7 +123,7 @@ export function ResolutionSegment({
   options,
   onChange,
 }: ResolutionSegmentProps): ReactElement {
-  const singleReadOnly = options.length <= 1;
+  const singleReadOnly = options.length <= 1 && value !== undefined;
   const segOptions: Array<CfgSegmentOption<string>> = options.map((opt) => ({
     value: opt.value,
     label: opt.label,

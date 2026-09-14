@@ -1,0 +1,32 @@
+# 视频节点模型参数独立记忆（#1785）
+
+## 目标与授权
+用户在架构审查后明确“立即实施”。采用已批准方案：节点内按规范模型与生成模式独立保存设置，首次默认、返回恢复；保留创作内容。先演示再确认合入，不部署未合并分支。文档影响限本规格与任务证据，无模型能力合同变更。
+
+## 行为与验收
+1. 首次A→B时采用B当前模式的契约默认，而非A参数；B→A恢复A离开时的合法设置。
+2. 同模型模式往返各自恢复；目标模型记住最后显式有效模式；未知模式不伪造支持。
+3. 不同节点互不影响；历史随项目保存/重开、复制与撤销重做，嵌套对象不可共享可变引用。
+4. 老节点仅能迁移当前模型/模式状态；当前无效480p按有效契约默认修正并可见提示，不假造其他模型历史。合法现有设置保留；未知模型/加载未完成不写假默认。
+5. 历史恢复需按最新契约校验，保留有效字段，失效字段回明确默认并提示；无明确合法默认且必填则阻断，不按排序擅选高价档。可选且无默认字段可省略。
+6. 切换的模型、模式、参数、渠道、历史一次节点更新；禁止第二次旧params写回。底栏/弹窗/保存/实际请求值一致。执行侧严格校验，不任意偷偷改固定比例。
+7. 文本、图片、连线、槽位不由参数历史复制或删除。缺少必需素材仍阻断生成。历史位于node.data的编辑状态，不进入params或模型请求。
+8. 只覆盖视频节点参数隔离；非视频既有行为不扩展。全局最后模型偏好保留，不增加跨节点参数偏好。
+
+## 数据与结构
+优先复用videoParamAdapter及节点保存机制。新增小型纯转换模块放ConfigPanel/videoParams内（若共享执行需求证实再下沉shared），node.data参数历史按canonical modelId/operation分支，schema版本1，params仍为当前执行唯一真源。控制字段投影来自有效schema，排除model/operation/routing/prompt/slots/media/runtime。保存分支快照明确代表该节点已访问状态，不宣称区分旧数据显式/默认来源。
+核心文件：videoParams/videoParamAdapter.ts、ConfigPanel/index.tsx、相关节点类型声明、shared/graph/feedSlot/prepareExecutionSlotGraph.ts。复用现有类型及默认解析，不新增依赖。
+
+## 实现计划
+- 先增纯转换单测复现首次默认/返回恢复/模式隔离/旧480p，再最小实现历史转换。
+- 接入参数编辑和模型选择单次写回，先测试真实回调覆盖问题再修复；处理老节点加载与明确提示，避免渲染副作用循环。
+- 核对显示与执行归一化，移除过宽提交改参，保持实际请求一致。
+- 独立审查；动态端口真实浏览器先观察再固化E2E，验证A-B-A、双节点、保存恢复、带图旧节点、请求捕获；截图演示。
+
+## 命令与测试策略
+在任务工作树执行：`node --test plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/videoParams/*.test.mjs`；`pnpm --filter omnimux-workflow test`（插件脚本实际为 `node --test "src/**/*.test.mjs" "src/**/*.test.js" "tests/*.test.mjs"`，须包含 tests 目录）；插件目录构建执行 `node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs`，类型执行 `node node_modules/typescript/bin/tsc -p tsconfig.canvas.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.host.json --noEmit`。`git diff --check`。单元红绿先于生产代码，E2E在真实观察后编写。全量失败必须根因隔离，不删除断言。真实浏览器仅本任务动态端口，禁止共享Dev代签与收费模型调用。
+
+## 风格与边界
+沿用TypeScript具名导出、小型纯函数与精确类型；历史以不可变结构更新。示例约定：`const nextParams: Record<string, unknown> = { ...defaults, ...validSelection };`；不能直接合并未经验证的历史。
+总是：范围内失败回归、独立评审、真实证据。先问：新跨节点偏好、模型能力变更或付费操作。绝不：改官方底座、覆盖其他工作树、静默换高价参数、伪造验收。
+并行#1783正在菜单与schema修改，报告核对只读，不复制其未提交代码；集成时保留其严格准入边界。

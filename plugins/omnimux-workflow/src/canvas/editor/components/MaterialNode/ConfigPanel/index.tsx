@@ -46,6 +46,7 @@ import GenerateButton from './GenerateButton';
 import SlotWells from './SlotWells/SlotWells';
 import type { SlotPickRequest } from './SlotWells/types.ts';
 import { VideoTriggerBar } from './videoParams/VideoTriggerBar';
+import { buildVideoParameterSelection, type VideoParameterSelections, type VideoParameterSelectionResult } from './videoParams/videoParameterSelection.ts';
 import { VideoParamPopover } from './videoParams/VideoParamPopover';
 import { feedFromFingerprint, effectiveSlotFingerprint } from '../../../../../shared/graph/feedSlot/effectiveFingerprint.ts';
 import { resolveSlotOperation } from '../../../../../shared/graph/feedSlot/resolveSlotOperation.ts';
@@ -59,9 +60,9 @@ import { resolveEffectiveAudioParams, resolveAudioPromptGate, AUDIO_PROMPT_MAX_C
 import { resolveVoiceLabel } from './audioParams/voicePickerModel.ts';
 import { VoicePickerDialog } from './audioParams/VoicePickerDialog';
 import {
-  buildVideoParamTransition,
   resolveEffectiveVideoParams,
   validateVideoParamsForUi,
+  buildVideoParamTransition,
 } from './videoParams/videoParamAdapter';
 import {
   hydrateSlotBindings,
@@ -263,22 +264,41 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     modelItem,
   } = useModelParameterSchema(materialType, modelValue, catalog);
 
+  const parameterSelections = nodeData.parameterSelections as VideoParameterSelections | undefined;
+  const commitVideoSelection = useCallback((transition: VideoParameterSelectionResult) => {
+    onUpdateNodeData({ params: transition.params, parameterSelections: transition.parameterSelections });
+    for (const message of transition.notices) toast.info(message);
+  }, [onUpdateNodeData]);
+  const videoSelection = useMemo(() => materialType === 'video' ? buildVideoParameterSelection({
+    params, parameterSelections, currentModelItem: modelItem, targetModelItem: modelItem,
+    catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
+  }) : null, [materialType, params, parameterSelections, modelItem, activeCatalog, upstreamSnapshots, localPrompt]);
+  const migrationCatalogRef = useRef(new Map<string, CapabilityCatalog>());
+  const migrationKey = `${String(nodeData.__workspaceId ?? '')}:${nodeId}`;
+  useEffect(() => {
+    if (!videoSelection?.parameterSelections || !activeCatalog || migrationCatalogRef.current.get(migrationKey) === activeCatalog) return;
+    const liveState = useCanvasStore.getState();
+    // Undo is authoritative, including after this panel unmounts and remounts.
+    if (liveState.future.length > 0) return;
+    const liveNode = liveState.nodes.find(node => node.id === nodeId);
+    if (liveNode && liveNode.data.params !== params) return;
+    migrationCatalogRef.current.set(migrationKey, activeCatalog);
+    if (JSON.stringify(videoSelection.params) === JSON.stringify(params)
+      && JSON.stringify(videoSelection.parameterSelections) === JSON.stringify(parameterSelections)) return;
+    commitVideoSelection(videoSelection);
+  }, [videoSelection, params, parameterSelections, commitVideoSelection, activeCatalog, nodeId, migrationKey]);
+
   const updateParam = useCallback(
     (key: string, value: unknown) => {
       if (key === 'operation') {
         const nextOpId = typeof value === 'string' ? value : undefined;
         if (materialType === 'video' && modelItem) {
-          const transition = buildVideoParamTransition(
-            params as Record<string, unknown>,
-            modelItem,
-            {
-              catalog: activeCatalog,
-              upstreams: upstreamSnapshots,
-              prompt: localPrompt,
-              nextOperationId: nextOpId,
-            },
-          );
-          onUpdateNodeData({ params: transition.params });
+          const transition = buildVideoParameterSelection({
+            params, parameterSelections, currentModelItem: modelItem, targetModelItem: modelItem,
+            catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
+            nextOperationId: nextOpId,
+          });
+          commitVideoSelection(transition);
           return;
         }
         const next = setParamsOperation(
@@ -293,9 +313,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         ? filterWrite({ [key]: value }, typeof params.operation === 'string' ? params.operation : undefined)
         : { [key]: value };
       if (Object.keys(patch).length === 0) return;
-      onUpdateNodeData({ params: { ...params, ...patch } });
+      if (materialType === 'video') {
+        commitVideoSelection(buildVideoParameterSelection({
+          params: { ...params, ...patch }, parameterSelections, currentModelItem: modelItem, targetModelItem: modelItem,
+          catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
+        }));
+      } else onUpdateNodeData({ params: { ...params, ...patch } });
     },
-    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots],
+    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots, parameterSelections, commitVideoSelection],
   );
 
   const handleSelectVoice = useCallback(
@@ -397,17 +422,28 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     (newModelId: string, channelSelection?: { strategy: string; allowedGroups?: string[] }) => {
       if (!filteredModels.options.some((row) => row.id === newModelId)) return;
       let nextParams: Record<string, unknown>;
+      const scopedSelections = typeof parameterSelections !== 'undefined' ? parameterSelections : undefined;
+      const scopedModelItem = typeof modelItem !== 'undefined' ? modelItem : undefined;
+      let nextSelections = scopedSelections;
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
       const newModelItem = modelList.find((m) => m.id === newModelId);
       if (channelSelection && newModelId === params.model) {
         nextParams = { ...params };
       } else if (materialType === 'video' && newModelItem) {
-        const transition = buildVideoParamTransition(params as Record<string, unknown>, newModelItem, {
-          catalog: activeCatalog,
-          upstreams: upstreamSnapshots,
-          prompt: localPrompt,
-        });
+        const nextRouting = channelSelection?.allowedGroups?.length
+          ? { strategy: channelSelection.strategy, allowedGroups: channelSelection.allowedGroups }
+          : (channelSelection ? null : undefined);
+        const transition = typeof buildVideoParameterSelection !== 'undefined'
+          ? buildVideoParameterSelection({
+              params, parameterSelections: scopedSelections, currentModelItem: scopedModelItem, targetModelItem: newModelItem,
+              catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt, routing: nextRouting, explicitModelSelection: true,
+            })
+          : (buildVideoParamTransition as any)(params, newModelItem, {
+              catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
+            });
         nextParams = transition.params;
+        if (transition.parameterSelections) nextSelections = transition.parameterSelections;
+        if (transition.notices) for (const message of transition.notices) toast.info(message);
       } else {
         const nextOps = buildEffectiveOpsUiState({
           catalog: activeCatalog,
@@ -424,12 +460,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         if (allowedGroups?.length) nextParams.routing = { strategy, allowedGroups };
         else delete nextParams.routing;
       }
-      onUpdateNodeData({ params: nextParams });
+      onUpdateNodeData({ params: nextParams, ...(materialType === 'video' && nextSelections ? { parameterSelections: nextSelections } : {}) });
       void rememberGenerationModel(materialType, newModelId).catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
       });
     },
-    [filteredModels.options, activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
+    [filteredModels.options, activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t, parameterSelections, modelItem],
   );
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
@@ -556,14 +592,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const videoValidationErrors = useMemo(
     () => materialType === 'video' && videoEffectiveParams
-      ? validateVideoParamsForUi({
+      ? [...(videoSelection?.errors ?? []), ...validateVideoParamsForUi({
           prompt: consumedFingerprint.prompt,
           rawParams: params as Record<string, unknown>,
           params: { ...videoEffectiveParams, effectiveOperations: opsState.effectiveOps },
           upstreams: consumedUpstreams.filter((source) => ['image', 'video', 'audio'].includes(source.materialType)),
-        })
+        })]
       : [],
-    [materialType, consumedFingerprint.prompt, params, consumedUpstreams, videoEffectiveParams, opsState.effectiveOps],
+    [materialType, consumedFingerprint.prompt, params, consumedUpstreams, videoEffectiveParams, opsState.effectiveOps, videoSelection],
   );
 
   // Generate gate: blocked when zero effective ops / zero candidates / configuration_error /
