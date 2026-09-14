@@ -901,7 +901,7 @@ export const STYLES = `
 }
 .omnimux-accounts-platform-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .omnimux-accounts-platform-btn {
@@ -909,11 +909,11 @@ export const STYLES = `
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
   box-sizing: border-box;
   min-height: 68px;
-  padding: 12px 14px;
+  padding: 12px 12px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
   border-radius: 12px;
   background: var(--dsw-alias-bg-secondary, rgba(255,255,255,0.04));
@@ -923,6 +923,7 @@ export const STYLES = `
   white-space: normal;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   justify-content: flex-start;
+  font: inherit;
 }
 .omnimux-accounts-platform-btn:not(:disabled):hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12));
@@ -943,6 +944,49 @@ export const STYLES = `
   transform: none;
   background: var(--dsw-alias-bg-secondary, rgba(255,255,255,0.04));
   border-color: var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
+}
+.omnimux-accounts-coming-section {
+  margin-top: 14px;
+}
+.omnimux-accounts-coming-strip {
+  background: var(--dsw-alias-bg-secondary, rgba(255,255,255,0.03));
+  border: 1px dashed var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-sizing: border-box;
+}
+.omnimux-accounts-coming-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.omnimux-accounts-coming-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.omnimux-accounts-mini-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.omnimux-accounts-coming-text {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary, rgba(255,255,255,0.72));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .omnimux-accounts-brand-icon {
   width: 42px;
