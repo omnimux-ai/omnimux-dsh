@@ -9,6 +9,7 @@ import { createAvatarDispatcher, registerAvatarRoutes } from '../avatar/routes.j
 import { injectBrandBoot } from '../brand/inject-index.js'
 import { registerCatalogRoutes } from '../catalog/http.js'
 import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes } from './composer-attachments-http.js'
+import { registerTextCompleteRoutes } from '../text/http.js'
 
 /**
  * Mount Host HTTP faces. Match order is auth → plugins → apps → official → inspiration → avatar.
@@ -102,6 +103,12 @@ export function mountHubHttp(httpCtx, deps) {
         getSessionQuery: () => deps.sessionQuery ?? null,
       }),
     )
+    const stopTextComplete = registerTextCompleteRoutes(webServer, {
+      getTextComplete: deps.getTextComplete || (() => httpCtx.get?.('textComplete')),
+      credentials: deps.credentials || httpCtx.get?.('credentials'),
+      settings: deps.settings || httpCtx.get?.('settings'),
+      env: process.env,
+    })
     return () => {
       stopAuth()
       stopCatalog()
@@ -112,6 +119,7 @@ export function mountHubHttp(httpCtx, deps) {
       stopAvatar()
       stopComposerAttachments()
       stopFormAttachments()
+      stopTextComplete()
     }
   }
   if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux: http routes')
