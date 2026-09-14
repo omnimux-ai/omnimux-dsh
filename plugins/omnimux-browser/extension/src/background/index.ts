@@ -1503,13 +1503,19 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
       sendResponse({ ok: false, error: { code: 'invalid-media', message: 'media payload is malformed' } })
       return
     }
-    void appendMediaInspiration(payload).then(
-      (result) => {
-        // A rejected store resolves with `ok: false` rather than throwing, so the
-        // receipt has to be read from the result: wrapping every resolution in
-        // `{ ok: true }` is what told the capsule a lost write had succeeded.
-        if (result.ok) {
-          sendResponse({ ok: true, result })
+    void Promise.allSettled([
+      saveMediaToHostInspiration(payload),
+      appendMediaInspiration(payload),
+    ]).then(
+      ([hostRes, localRes]) => {
+        const localResult = localRes.status === 'fulfilled' ? localRes.value : null
+        const hostSaved = hostRes.status === 'fulfilled' && hostRes.value
+        if (hostSaved || (localResult && localResult.ok)) {
+          sendResponse({
+            ok: true,
+            result: localResult ?? { ok: true, total: 1, duplicate: false, evicted: 0, savedAt: Date.now() },
+            hostSaved,
+          })
           return
         }
         sendResponse({ ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } })
@@ -1544,11 +1550,13 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 
   if (type === 'DSH_MEDIA_ATTACH_REQUEST') {
     // A freshly opened side panel asks for the media that sent it here.
-    const wanted = (message as { payload?: unknown }).payload
+    const msgObj = message as { payload?: unknown; windowId?: unknown }
+    const wanted = msgObj?.payload
     const requestedId = typeof wanted === 'object' && wanted !== null
       ? (wanted as { id?: unknown }).id
       : undefined
-    const payload = takePendingMedia(sender.tab.windowId, typeof requestedId === 'string' ? requestedId : undefined)
+    const winId = typeof msgObj?.windowId === 'number' ? msgObj.windowId : sender.tab?.windowId
+    const payload = takePendingMedia(winId, typeof requestedId === 'string' ? requestedId : undefined)
     sendResponse({ ok: true, result: payload === null ? { pending: false } : { pending: true, media: payload } })
     return
   }
@@ -1559,6 +1567,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 
 /** Pending page media per window, waiting for a side panel to collect it. */
 const pendingMediaByWindow = new Map<number, HoveredMedia>()
+let latestPendingMedia: HoveredMedia | null = null
 
 function readHoveredMedia(message: unknown): HoveredMedia | null {
   const payload = (message as { payload?: unknown }).payload
@@ -1569,17 +1578,73 @@ function readHoveredMedia(message: unknown): HoveredMedia | null {
   return media as HoveredMedia
 }
 
-function stashPendingMedia(windowId: number, payload: HoveredMedia): void {
-  pendingMediaByWindow.set(windowId, payload)
+function stashPendingMedia(windowId: number | undefined, payload: HoveredMedia): void {
+  latestPendingMedia = payload
+  if (typeof windowId === 'number') {
+    pendingMediaByWindow.set(windowId, payload)
+  }
 }
 
 /** Takes the stashed payload, optionally filtered by media id. */
-function takePendingMedia(windowId: number, mediaId?: string): HoveredMedia | null {
-  const pending = pendingMediaByWindow.get(windowId)
-  if (pending === undefined) return null
-  if (mediaId !== undefined && pending.id !== mediaId) return null
-  pendingMediaByWindow.delete(windowId)
-  return pending
+function takePendingMedia(windowId?: number, mediaId?: string): HoveredMedia | null {
+  if (typeof windowId === 'number' && pendingMediaByWindow.has(windowId)) {
+    const pending = pendingMediaByWindow.get(windowId)!
+    if (mediaId === undefined || pending.id === mediaId) {
+      pendingMediaByWindow.delete(windowId)
+      if (latestPendingMedia?.id === pending.id) latestPendingMedia = null
+      return pending
+    }
+  }
+  if (latestPendingMedia !== null && (mediaId === undefined || latestPendingMedia.id === mediaId)) {
+    const pending = latestPendingMedia
+    latestPendingMedia = null
+    return pending
+  }
+  return null
+}
+
+async function saveMediaToHostInspiration(payload: HoveredMedia): Promise<boolean> {
+  const candidatePorts = [45120, 45128, 43120, 43128, 3080]
+  try {
+    const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
+    const p = saved ? parseInt(saved, 10) : undefined
+    if (p && !isNaN(p) && !candidatePorts.includes(p)) {
+      candidatePorts.unshift(p)
+    }
+  } catch {
+    // Ignore storage failure
+  }
+
+  const title = (payload.alt || payload.pageTitle || '网页灵感素材').trim().slice(0, 120)
+  const itemBody = {
+    title: title || '未命名素材',
+    type: payload.type === 'video' ? 'video' : 'image',
+    source_platform: payload.pageUrl.includes('x.com') || payload.pageUrl.includes('twitter.com')
+      ? 'twitter'
+      : (payload.pageUrl.includes('tiktok.com') ? 'tiktok' : 'web'),
+    source_url: payload.pageUrl,
+    cover_url: payload.previewSrc || payload.src,
+    media_urls: [payload.src],
+    content: (payload.alt || payload.pageTitle || '').trim().slice(0, 500),
+    tags: ['网页采集', payload.type === 'video' ? '视频' : '图片'],
+  }
+
+  for (const port of candidatePorts) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/local`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemBody),
+        signal: AbortSignal.timeout(2000),
+      })
+      if (res.ok || res.status === 201 || res.status === 200) {
+        return true
+      }
+    } catch {
+      // try next port
+    }
+  }
+  return false
 }
 
 // ---- Panel ports ----

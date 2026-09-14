@@ -861,6 +861,17 @@ export function App(): React.JSX.Element {
    */
   async function attachHoveredMedia(payload: HoveredMedia): Promise<void> {
     const item = mediaItemFromHover(payload)
+    if (sessionRef.current === null && state === 'connected' && !sessionChanging) {
+      try {
+        const created = await api.rpc<{ sessionId: string }>('session.create', {})
+        if (created?.sessionId) {
+          sessionRef.current = created.sessionId
+          setCurrentSessionId(created.sessionId)
+        }
+      } catch {
+        // Continue and attempt intake
+      }
+    }
     try {
       await attachMediaAsImage(item)
     } catch (cause) {
@@ -947,16 +958,37 @@ export function App(): React.JSX.Element {
       // A capsule press opens this side panel only after the floating workstation
       // proved unavailable; its media waits in the worker until this request.
       const collectPendingMedia = async () => {
-        if (chrome.tabs?.query === undefined || chrome.tabs.sendMessage === undefined) return
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [])
-        const tabId = tabs?.[0]?.id
-        if (tabId === undefined) return
-        const response = await chrome.tabs
-          .sendMessage(tabId, { type: 'DSH_MEDIA_ATTACH_REQUEST' })
-          .catch(() => null) as { ok?: boolean; result?: { pending?: boolean; media?: unknown } } | null
-        if (response?.result?.pending !== true) return
-        const payload = readHoveredMedia(response.result.media)
-        if (payload !== null) void attachHoveredMedia(payload)
+        let mediaPayload: HoveredMedia | null = null
+        // 优先向 background 取回暂存的媒体（悬浮条「加入对话」在后台暂存的）
+        try {
+          const bgRes = await chrome.runtime?.sendMessage?.({ type: 'DSH_MEDIA_ATTACH_REQUEST' }).catch(() => null) as {
+            ok?: boolean
+            result?: { pending?: boolean; media?: unknown }
+          } | null
+          if (bgRes?.result?.pending && bgRes.result.media) {
+            mediaPayload = readHoveredMedia(bgRes.result.media)
+          }
+        } catch {
+          // ignore
+        }
+
+        // 兜底向 active tab 查询
+        if (!mediaPayload && chrome.tabs?.query && chrome.tabs.sendMessage) {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [])
+          const tabId = tabs?.[0]?.id
+          if (tabId !== undefined) {
+            const response = await chrome.tabs
+              .sendMessage(tabId, { type: 'DSH_MEDIA_ATTACH_REQUEST' })
+              .catch(() => null) as { ok?: boolean; result?: { pending?: boolean; media?: unknown } } | null
+            if (response?.result?.pending && response.result.media) {
+              mediaPayload = readHoveredMedia(response.result.media)
+            }
+          }
+        }
+
+        if (mediaPayload !== null) {
+          void attachHoveredMedia(mediaPayload)
+        }
       }
       updateContextFromTab()
       void collectPendingMedia().catch(() => {})
@@ -1019,32 +1051,60 @@ export function App(): React.JSX.Element {
     const targetUrl = mediaItem?.src || pageScene?.url || ''
     if (!targetUrl || saveInspirationStatus === 'saving') return
     setSaveInspirationStatus('saving')
-    const targetBase = `http://127.0.0.1:${targetPort}`
-    try {
-      const res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl, background: true }),
-        signal: AbortSignal.timeout(6000),
-      }).catch(() => null)
-      if (res && (res.ok || res.status === 200 || res.status === 202)) {
-        setSaveInspirationStatus('saved')
-        setToastMessage(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
-        setTimeout(() => {
-          setSaveInspirationStatus('idle')
-          setToastMessage(null)
-        }, 3000)
-      } else {
-        setSaveInspirationStatus('failed')
-        setToastMessage(locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态')
-        setTimeout(() => {
-          setSaveInspirationStatus('idle')
-          setToastMessage(null)
-        }, 3000)
+    const candidatePorts = [targetPort, 45120, 43120, 3080].filter((p, i, arr) => arr.indexOf(p) === i)
+    let saved = false
+
+    for (const port of candidatePorts) {
+      const targetBase = `http://127.0.0.1:${port}`
+      try {
+        // 1. 优先尝试 import-url 全量社媒抓取
+        let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: targetUrl, background: true }),
+          signal: AbortSignal.timeout(3500),
+        }).catch(() => null)
+
+        // 2. 如果 import-url 异常（如反爬、502、解析空），采用前台已嗅探的多模态图文数据直存灵感库
+        if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
+          const mediaSrc = mediaItem?.src || detectedMedia[0]?.src || pageScene?.media?.[0]?.src || ''
+          const fallbackBody = {
+            title: (pageScene?.title || (pageScene?.author ? `@${pageScene.author}` : targetUrl)).slice(0, 120),
+            type: (mediaItem?.type === 'video' || detectedMedia[0]?.type === 'video') ? 'video' : 'image',
+            source_platform: pageScene?.platform || 'twitter',
+            source_url: targetUrl,
+            cover_url: mediaSrc,
+            media_urls: mediaSrc ? [mediaSrc] : [],
+            content: pageScene?.title || '',
+            tags: [pageScene?.platform ? `${pageScene.platform}` : '社交媒体', '灵感采集'],
+          }
+          res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fallbackBody),
+            signal: AbortSignal.timeout(3000),
+          }).catch(() => null)
+        }
+
+        if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
+          saved = true
+          break
+        }
+      } catch {
+        // try next port
       }
-    } catch {
+    }
+
+    if (saved) {
+      setSaveInspirationStatus('saved')
+      setToastMessage(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
+      setTimeout(() => {
+        setSaveInspirationStatus('idle')
+        setToastMessage(null)
+      }, 3000)
+    } else {
       setSaveInspirationStatus('failed')
-      setToastMessage(locale === 'en' ? 'Failed to save' : '保存失败，请稍后重试')
+      setToastMessage(locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态')
       setTimeout(() => {
         setSaveInspirationStatus('idle')
         setToastMessage(null)
