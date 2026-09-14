@@ -57,5 +57,8 @@ describe('composer visual e2e integration (issue #1707)', () => {
 
     // 4. Verify native triggerIcon children are suppressed
     assert.match(allStyles, /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="triggerIcon"\] \*\{[^}]*display:none!important/)
+
+    // 5. Verify --omnimux-model-icon is declared at [data-composer-card] root scope to prevent unmasked white box
+    assert.match(allStyles, /\[data-composer-card\]\{[^}]*--omnimux-model-icon:url\(/)
   })
 })

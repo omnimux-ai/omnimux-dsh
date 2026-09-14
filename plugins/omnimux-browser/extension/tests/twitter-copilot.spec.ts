@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { detectTwitterScene, extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
@@ -585,5 +587,17 @@ AIGC 现在的残酷真相是：模型能力每`
 
     const ctx = extractTwitterContext(qbtn, 'POST_QUOTE')
     expect(ctx.quotedAuthor).toBe('real_author_handle')
+  })
+
+  it('T22: 气泡提示消息（Toast）置顶 - top: 24px，不再贴在页面底部', () => {
+    const cssPath = resolve(__dirname, '../src/content/twitter-copilot/styles.css')
+    const css = readFileSync(cssPath, 'utf8')
+
+    // 匹配 .omnimux-copilot-toast 选择器块
+    const toastBlock = css.match(/\.omnimux-copilot-toast\s*\{([^}]+)\}/)?.[1] || ''
+    expect(toastBlock).toContain('top: 24px;')
+    expect(toastBlock).not.toContain('bottom: 24px;')
+    // 隐藏状态下向上偏移，入场时向下滑出
+    expect(toastBlock).toContain('translateY(-20px)')
   })
 })
