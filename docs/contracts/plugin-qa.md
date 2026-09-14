@@ -54,6 +54,8 @@ Agent 遇到密钥弹窗，先核对运行模式与本任务入口；普通界�
 
 登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动不自动证明任务插件已装载；插件须通过正式安装机制装入任务私有 profile，并验证实际加载产物身份。
 
+应用级验收入口：在任务工作树根目录执行 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），一条命令即完成起完整应用、同源登录、真实浏览器验收、截图与结构化报告、自清理；root 由脚本自身位置推导，只接受 `<repo>/.worktrees/<task>` 直接子级，其余路径以可读原因拒绝。证据落 `<root>/.workbuddy/evidence/app-qa/<runId>/`（PNG + 明细报告）与 `<root>/docs/evidence/worktree-app-qa-report.json`。它与 Stage 夹具运行器分工不同：本入口评完整应用本体，两者证据不得互相冒充。
+
 `pnpm test:worktree-web` 的现有 Stage 分支是模拟宿主夹具，其中包含占位内容与补入口逻辑；它只可提供其明确覆盖的局部证据，不得作为完整应用、首启或任务插件装配的验收通过。完整应用启动失败不得自动退回该夹具并报告成功。
 
 ## 浏览器与共享探针
