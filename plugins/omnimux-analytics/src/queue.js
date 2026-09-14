@@ -6,9 +6,15 @@
  * concurrency. Failures are dropped silently (analytics must never affect the
  * tool pipeline); sampling drops events before they enter the queue.
  *
- * Payload shape follows the Umami sending-stats contract:
- * `{ type: 'event', payload: { websiteId, hostname, language, referrer,
+ * Payload shape follows the deployed Umami collection contract, which is
+ * discriminated by exactly one of `website` / `link` / `pixel`:
+ * `{ type: 'event', payload: { website, hostname, language, referrer,
  * screen, title, url, name, data } }`.
+ *
+ * The wire field is `website`; operator-facing config keeps the dashboard's
+ * `data-website-id` naming. Sending that attribute name on the wire is
+ * rejected with `400 bad-request`, so the instance's own `/script.js` is the
+ * authority here — `scripts/contract-probe.mjs` re-checks it live.
  */
 
 /**
@@ -63,7 +69,7 @@ export function createEventQueue(options) {
       payload: {
         type: 'event',
         payload: {
-          websiteId,
+          website: websiteId,
           hostname,
           language: 'en-US',
           referrer: '',
