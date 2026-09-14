@@ -143,31 +143,6 @@ function brandForModel(modelId: string, allowed: readonly string[]): string {
   return allowed[0] ?? 'bytedance';
 }
 
-/** 24h 稳定率点阵指示器（总点数固定，点亮比例跟随稳定率）。 */
-const StabilityDotBar: React.FC<{ rate: number }> = ({ rate }) => {
-  const totalDots = 20;
-  const activeDots = Math.round((Math.max(0, Math.min(100, rate)) / 100) * totalDots);
-
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }} aria-hidden="true">
-      {Array.from({ length: totalDots }).map((_, idx) => (
-        <span
-          key={idx}
-          style={{
-            width: 3.5,
-            height: 3.5,
-            borderRadius: '50%',
-            background: idx < activeDots
-              ? 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))'
-              : 'var(--dsw-alias-border-subtle)',
-            display: 'inline-block',
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
 const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> = ({ tone = 'muted', children }) => (
   <span
     style={{
@@ -232,9 +207,6 @@ const ChannelRow: React.FC<{
     ? group.pricing.priceRatio > 1
     : typeof group.pricing?.discountRate === 'number' && group.pricing.discountRate > 1;
   const billing = formatBillingLabel(group.pricing?.billingMode);
-  // 网关不公布 SLA 的分组照实显示「暂无数据」，不用默认 100% 冒充。
-  const stability = group.sla?.stability24h;
-  const waitSec = group.sla?.avgWaitTimeSec;
 
   return (
     <div
@@ -252,27 +224,14 @@ const ChannelRow: React.FC<{
       }}
       className={`wf-cascade-row wf-cascade-channel-row ${checked && !disabled ? 'is-checked' : ''} ${disabled ? 'is-disabled' : ''}`}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
-          <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-            {formatPriceLabel(group.pricing)}
-          </span>
-          {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
-          {group.badge ? <Chip>{group.badge}</Chip> : null}
-          {billing ? <Chip>{billing}</Chip> : null}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--dsw-alias-label-secondary)' }}>
-          {typeof stability === 'number' ? (
-            <>
-              <StabilityDotBar rate={stability} />
-              <span>24h 稳定率 {stability}%</span>
-            </>
-          ) : (
-            <span>稳定性暂无数据</span>
-          )}
-          {typeof waitSec === 'number' && waitSec > 0 ? <span>约{Math.round(waitSec / 60)}min</span> : null}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
+        <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+          {formatPriceLabel(group.pricing)}
+        </span>
+        {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
+        {group.badge ? <Chip>{group.badge}</Chip> : null}
+        {billing ? <Chip>{billing}</Chip> : null}
       </div>
       <div style={{ paddingLeft: 10 }}>
         {checked && !disabled ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}

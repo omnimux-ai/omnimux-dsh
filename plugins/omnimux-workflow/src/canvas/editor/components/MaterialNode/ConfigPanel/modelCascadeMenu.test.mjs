@@ -28,8 +28,9 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.doesNotMatch(code, /--omx-/, 'ModelCascadeMenu must not contain banned tokens');
   });
 
-  it('declares the trigger capsule, three panels and the stability dot bar', () => {
-    assert.match(cascadeSrc, /StabilityDotBar/);
+  it('declares the trigger capsule and three panels without the stability dot bar', () => {
+    assert.doesNotMatch(cascadeSrc, /StabilityDotBar/, 'Stability dot bar should be removed');
+    assert.doesNotMatch(cascadeSrc, /24h 稳定率/, 'Stability rate text should be removed');
     assert.match(cascadeSrc, /wf-model-cascade-capsule/);
     assert.match(cascadeSrc, /wf-model-cascade-popover/);
     assert.match(cascadeSrc, /稳定性优先/);
@@ -41,9 +42,7 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(cascadeSrc, /formatPriceChip/);
     assert.match(cascadeSrc, /formatBillingLabel/);
     assert.match(cascadeSrc, /formatPriceLabel/);
-    // 无 SLA 的分组显示「暂无数据」，不用默认 100% 冒充。
-    assert.match(cascadeSrc, /稳定性暂无数据/);
-    assert.doesNotMatch(cascadeSrc, /group\.sla\?\.stability24h \?\? 100/);
+    assert.doesNotMatch(cascadeSrc, /稳定性暂无数据/);
     assert.match(configSrc, /ModelCascadeMenu/);
   });
 
