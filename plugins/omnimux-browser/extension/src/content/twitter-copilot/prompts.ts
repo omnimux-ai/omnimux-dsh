@@ -5,36 +5,87 @@
 
 import type { CopilotMenuItem, TwitterContext } from './types.ts'
 
+const STRICT_ZH_RULES = `
+⚠️ 严格输出红线（违者作废）：
+1. 必须且只能输出【纯中文】，严禁夹杂英文单词、分析前言或英文翻译；
+2. 绝对禁止输出任何思考分析过程（严禁出现 Analyzing the request、Thinking、Here is 等字眼）；
+3. 只输出【一条】最终文案本身，严禁输出备选方案、候选项序号（如方案一、备选A）；
+4. 严禁使用加粗星号（**）或外层引号；
+5. 字数铁律：严格控制在 45~85 个汉字以内，以有力量的短句为主，确保在推特时间线上 100% 完整显示，绝不超出 280 字符红线，严禁半句截断！`
+
+const STRICT_EN_RULES = `
+⚠️ STRICT OUTPUT RULES:
+1. Output PURELY the final single tweet/reply copy in natural, punchy English.
+2. ZERO preamble, thinking process, or filler (NEVER start with "Analyzing the request...", "Here is...", etc.).
+3. Single option only: no bulleted options, no alternative A/B, no markdown bolding (**).
+4. Strictly under 220 characters to guarantee full visibility on Twitter timeline without truncation.`
+
 export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
-  // ==================== 发新帖 / 转发场景 ====================
+  // =========================================================================
+  // 场景一：【原创发新帖】(POST_NEW: 首页顶部新鲜事发帖框、独立发帖弹窗)
+  // =========================================================================
   {
     id: 'ai-hot-tweets',
     name: '爆款推文复刻',
     nameEn: 'Rewrite Viral Tweet',
-    desc: '提炼底层逻辑与吸睛钩子，一键二创高传播原创帖',
+    desc: '提炼底层逻辑与吸睛钩子，创作高传播原创推文',
     descEn: 'Extract hooks and recreate high-engagement viral tweets',
     category: 'create',
-    scenes: ['POST_NEW', 'POST_QUOTE'],
+    scenes: ['POST_NEW'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `You are an elite Twitter/X ghostwriter and virality growth strategist. Your goal is to recreate a high-converting, viral tweet based on the user's reference idea or draft.
-Guidelines:
-1. Killer Hook: The first 2 lines must provoke curiosity, counter-intuitive insight, or raw resonance.
-2. Formatted for high scan-ability: Use short sentences, clean bullet points, and double line breaks.
-3. Engaging CTA: End with an open question, vote, or debate prompt.
-4. Output purely the tweet copy in authentic, native English without robotic AI filler words.`,
-          userMessage: `Draft / Reference material:\n${ctx.draftText || ctx.quotedTweetText || ctx.targetTweetText || 'Key trends in AI agent automation and modern product engineering'}`,
+          systemPrompt: `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic.
+Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_RULES}`,
+          userMessage: `Draft / Idea:\n${ctx.draftText || 'AI agents and software evolution trends'}`,
         }
       }
       return {
-        systemPrompt: `你是一位顶级 Twitter/X 增长专家。你的任务是根据用户提供的草稿或参考内容，复刻并创作出具备病毒式传播潜力的推特爆款帖。
-写作准则：
-1. 黄金前 3 行：设置强冲突悬念、逆向认知或情绪钩子，吸引停顿；
-2. 中段结构清晰：多用空行、列表短句或对比排版，保证阅读呼吸感；
-3. 结尾设置强互动 CTA（提问、投票或引发争议站队）；
-4. 语言精炼自然，杜绝假大空官话，适合社交平台快节奏传播。`,
-        userMessage: `请根据以下素材创作一条爆款推文：\n${ctx.draftText || ctx.quotedTweetText || ctx.targetTweetText || '请就当前 AI 或商业最新趋势写一条爆款推文'}`,
+        systemPrompt: `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。
+要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${STRICT_ZH_RULES}`,
+        userMessage: `我的发帖主题或想法：\n${ctx.draftText || '分享关于效率工具与现代技术创新的思考'}`,
+      }
+    },
+  },
+  {
+    id: 'ai-tweet-threads',
+    name: '行业长推串 (Threads)',
+    nameEn: 'Thread Breakdown',
+    desc: '将长篇经验或复杂见解拆解为序号连贯的推文连载总览',
+    descEn: 'Break down complex knowledge into an engaging, structured thread',
+    category: 'create',
+    scenes: ['POST_NEW'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Write the opening tweet (hook) for a viral Twitter thread (with "🧵 1/n").${STRICT_EN_RULES}`,
+          userMessage: `Thread topic:\n${ctx.draftText || 'Hard lessons learned in software development'}`,
+        }
+      }
+      return {
+        systemPrompt: `你擅长撰写高收藏率的推特连载推文串（Threads）。本次生成该系列的核心开篇帖（带 🧵 1/n 标识），点明痛点与核心价值框架。${STRICT_ZH_RULES}`,
+        userMessage: `长文素材或主题：\n${ctx.draftText || '深度教程与核心经验复盘'}`,
+      }
+    },
+  },
+  {
+    id: 'ai-tweet-insight',
+    name: '金句观点提炼',
+    nameEn: 'Sharp Insights',
+    desc: '将冗长思路提炼成短小精悍、发人深省的独立金句',
+    descEn: 'Distill raw ideas into quotable, high-resonance one-liners',
+    category: 'create',
+    scenes: ['POST_NEW'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Distill the user's idea into one memorable, contrarian, quotable one-liner.${STRICT_EN_RULES}`,
+          userMessage: `Idea:\n${ctx.draftText || 'Product simplicity always beats feature bloat'}`,
+        }
+      }
+      return {
+        systemPrompt: `你是一位擅长提炼反常识金句的推特深度创作者。将输入想法提炼成一句锋利、穿透本质、让人忍不住转发的独立金句。${STRICT_ZH_RULES}`,
+        userMessage: `我的想法：\n${ctx.draftText || '很多时候越做加法产品越难用，极简才是硬功夫'}`,
       }
     },
   },
@@ -49,84 +100,121 @@ Guidelines:
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `You are a savvy social media creator skilled at trend-jacking. Tie the user's core theme or niche to the latest industry discussion.
-Guidelines:
-1. Punchy and opinionated point of view.
-2. Deliver 1-2 quotable takeaways.
-3. Keep length strictly between 140 and 240 characters in native English.`,
-          userMessage: `Core idea or draft:\n${ctx.draftText || 'Practical developer insights on agent workflows'}`,
+          systemPrompt: `Tie the user's niche to a hot industry discussion with a sharp perspective.${STRICT_EN_RULES}`,
+          userMessage: `Core idea:\n${ctx.draftText || 'Practical developer insights'}`,
         }
       }
       return {
-        systemPrompt: `你是一位擅长借势营销的社交媒体操盘手。你的任务是将用户提供的核心主题或草稿，巧妙与当前行业热门趋势挂钩，吸引公域推荐。
-准则：
-1. 语言犀利有态度，切忌平铺直叙；
-2. 提炼 1~2 个关键金句便于读者转发背书；
-3. 篇幅克制在 140~240 字内。`,
-        userMessage: `我的发帖主题或草稿：\n${ctx.draftText || '分享最新的高效工作与科技工具实践'}`,
+        systemPrompt: `你擅长将个人见解与当下热点无缝结合。将主题与推特最新讨论风向挂钩，有观点、有态度。${STRICT_ZH_RULES}`,
+        userMessage: `发帖主题：\n${ctx.draftText || '探讨当前技术工具的快速演进'}`,
       }
     },
   },
+  {
+    id: 'twitter-post-en',
+    name: '地道英文原创',
+    nameEn: 'Global English Tweet',
+    desc: '采用海外本土日常俚语与极简表达，创作原生英文推文',
+    descEn: 'Authentic casual English tweet tailored for global tech Twitter',
+    category: 'create',
+    scenes: ['POST_NEW'],
+    generatePrompt: (ctx) => ({
+      systemPrompt: `You are a native English tech builder on Twitter. Write a compelling, natural tweet from the topic.${STRICT_EN_RULES}`,
+      userMessage: `Topic / Draft:\n${ctx.draftText || 'Building useful developer tools and shipping fast'}`,
+    }),
+  },
+
+  // =========================================================================
+  // 场景二：【引用转发二创】(POST_QUOTE: 转发并内嵌原推卡片)
+  // =========================================================================
   {
     id: 'ai-retweet',
-    name: '观点引用转推',
-    nameEn: 'Quote Tweet Insights',
-    desc: '提取被引用推文核心论点，生成补充论点或反差视角的转发词',
+    name: '增量视角补充',
+    nameEn: 'Value-Add Retweet',
+    desc: '对被引用的推文补充一线实战数据、案例或延伸论点',
     descEn: 'Add unique perspectives, complementary data, or contrast to quote retweets',
     category: 'create',
-    scenes: ['POST_QUOTE', 'POST_NEW'],
+    scenes: ['POST_QUOTE'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `You are a respected industry voice on Twitter. When quote-retweeting, your goal is to provide net-new information, constructive contrast, or practical extensions—never hollow praise or lazy summaries.
-Rules:
-1. Point out the core essence or hidden angle of the original tweet.
-2. Add your own distinct 1-2 sentence takeaway.
-3. Keep it punchy (around 50-80 words in native English).`,
-          userMessage: `Quoted tweet:\nAuthor: @${ctx.quotedAuthor || ctx.targetAuthor || 'author'}\nContent: ${ctx.quotedTweetText || ctx.targetTweetText || ctx.draftText}\n\nMy additional thought: ${ctx.draftText || 'Provide a sharp, high-value extension'}`,
+          systemPrompt: `Quote retweet with high-value complementary insights, not hollow summaries.${STRICT_EN_RULES}`,
+          userMessage: `Quoted tweet by @${ctx.quotedAuthor || 'author'}:\n${ctx.quotedTweetText || ctx.targetTweetText}\n\nMy take: ${ctx.draftText || 'Add distinct practical value'}`,
         }
       }
       return {
-        systemPrompt: `你是一位具备深度行业洞察的知名 Twitter 意见领袖（KOL）。当引用转发他人推文时，你的目标是提供【增量信息】或【独特视角】，而不是简单的赞美或复述。
-准则：
-1. 简要指出原作者的核心价值点或盲区；
-2. 给出你自己的核心延伸洞察（1~2 点）；
-3. 字数控制在 100 字左右，干脆利落。`,
-        userMessage: `被引用的推文内容：\n作者：${ctx.quotedAuthor || ctx.targetAuthor || '未知'}\n原文：${ctx.quotedTweetText || ctx.targetTweetText || ctx.draftText}\n\n我的转发补充想法：${ctx.draftText || '无特别要求，请给出高价值点评'}`,
+        systemPrompt: `你在引用转发他人推文。你的目标是提供比原推更有深度的【信息增量】或【实践案例补充】，而不是简单复述。${STRICT_ZH_RULES}`,
+        userMessage: `被引用的原推内容：\n作者：@${ctx.quotedAuthor || '博主'}\n正文：${ctx.quotedTweetText || ctx.targetTweetText}\n\n我的补充思路：${ctx.draftText || '无特别指定，请给出高价值专业延伸'}`,
       }
     },
   },
   {
-    id: 'ai-tweet-threads',
-    name: '长文串拆解 (Threads)',
-    nameEn: 'Thread Breakdown',
-    desc: '将长篇经验或复杂逻辑拆解为序号连贯的多条推文连载',
-    descEn: 'Break down complex knowledge into an engaging, structured thread',
+    id: 'ai-quote-summary',
+    name: '核心要点提炼',
+    nameEn: 'Executive Summary',
+    desc: '提炼被引用推文的 2~3 个精髓结论，帮粉丝快速消化',
+    descEn: 'Summarize key takeaways from the quoted tweet for quick scanning',
     category: 'create',
-    scenes: ['POST_NEW', 'POST_QUOTE'],
+    scenes: ['POST_QUOTE'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `You are an expert at writing viral Twitter threads with high bookmark rates.
-Rules:
-1. Tweet 1 is the hook (problem + bold thesis + "🧵 a thread").
-2. Subsequent numbered tweets (1/n, 2/n) each explain one actionable takeaway.
-3. Write in clean, punchy English with crisp bullet points.`,
-          userMessage: `Article or raw notes:\n${ctx.draftText || ctx.quotedTweetText || ctx.targetTweetText || 'Lessons learned building full-loop AI agents'}`,
+          systemPrompt: `Summarize the quoted tweet in 2 crisp takeaway bullets for your followers.${STRICT_EN_RULES}`,
+          userMessage: `Quoted tweet:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
         }
       }
       return {
-        systemPrompt: `你擅长在 Twitter 上撰写高收藏率的连载推文串（Threads）。
-准则：
-1. 第 1 贴为总览钩子（痛点 + 解决方案概括 + "🧵 往下看"）；
-2. 后续每贴独立阐述一个要点，序号清晰（1/n、2/n）；
-3. 最后一贴做行动总结或互动引导。本次输出重点给出开篇第 1 贴与后续提纲。`,
-        userMessage: `长文内容素材：\n${ctx.draftText || ctx.quotedTweetText || ctx.targetTweetText || '深度复盘与教程'}`,
+        systemPrompt: `你负责将引用的推文快速凝练成 2 条核心见解，帮你的读者用 10 秒钟看透关键信息。${STRICT_ZH_RULES}`,
+        userMessage: `被引用推文：\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+      }
+    },
+  },
+  {
+    id: 'ai-quote-debate',
+    name: '批判碰撞探讨',
+    nameEn: 'Constructive Contrast',
+    desc: '礼貌提出不同视角或反直觉前提，激发受众深度讨论',
+    descEn: 'Respectfully present a counter-intuitive trade-off to spark healthy debate',
+    category: 'create',
+    scenes: ['POST_QUOTE'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Respectfully point out a subtle flaw or counter-argument in the quoted tweet.${STRICT_EN_RULES}`,
+          userMessage: `Quoted tweet:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+        }
+      }
+      return {
+        systemPrompt: `你针对原推的论点，礼貌指出其在特定工程或业务边界条件下的局限性，给出另一种合理的解法，引发读者探讨。${STRICT_ZH_RULES}`,
+        userMessage: `原推内容：\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+      }
+    },
+  },
+  {
+    id: 'ai-quote-endorse',
+    name: '真诚背书推荐',
+    nameEn: 'Endorse & Amplify',
+    desc: '诚恳推崇原作者的优质发现或产品，沉淀人脉社交资产',
+    descEn: 'Genuinely endorse and amplify the original creator or product release',
+    category: 'create',
+    scenes: ['POST_QUOTE'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Write a sincere, authentic endorsement of the creator and their work.${STRICT_EN_RULES}`,
+          userMessage: `Quoted tweet by @${ctx.quotedAuthor || 'creator'}:\n${ctx.quotedTweetText || ctx.targetTweetText}`,
+        }
+      }
+      return {
+        systemPrompt: `真诚认可并强力推荐原作者的优质分享或新产品，语气诚恳克制、言之有物，不浮夸。${STRICT_ZH_RULES}`,
+        userMessage: `原推内容：\n作者：@${ctx.quotedAuthor || '博主'}\n正文：${ctx.quotedTweetText || ctx.targetTweetText}`,
       }
     },
   },
 
-  // ==================== 回帖 / 互动场景 ====================
+  // =========================================================================
+  // 场景三：【推文回帖抢热评】(REPLY_DETAIL: 详情页主推文下方评论区)
+  // =========================================================================
   {
     id: 'ai-tweet-reply-high',
     name: '高赞神评生成',
@@ -134,26 +222,20 @@ Rules:
     desc: '提供增量信息与强烈共鸣，抢占热门推文评论前排吸粉',
     descEn: 'Deliver information delta and emotional resonance to win top comment spots',
     category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED'],
+    scenes: ['REPLY_DETAIL'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
           systemPrompt: `You are a Twitter power-user famous for crafting top-tier, high-upvote replies.
 The Golden Formula: Comment Value = Information Delta × Emotional Resonance × Clarity.
-Rules:
-1. Never post hollow praise like "Great post!" or "So true!".
-2. Share a sharp data point, counter-intuitive insight, or authentic personal observation.
-3. 2-3 short sentences, clean line breaks, pure casual native English.`,
-          userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText || 'Tech and product trends'}\n\n${ctx.draftText ? `My angle: ${ctx.draftText}` : ''}`,
+Share a sharp data point, counter-intuitive insight, or witty observation.${STRICT_EN_RULES}`,
+          userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText || 'Tech trends'}\n\n${ctx.draftText ? `My angle: ${ctx.draftText}` : ''}`,
         }
       }
       return {
-        systemPrompt: `你是推特评论区的“神评制造机”。你的目标是在头部推文下写出一条高赞评论。
-评论核心公式：评论价值 = 信息增量 × 情绪共鸣 × 表达清晰度。
-准则：
-1. 坚决不写“太赞了”、“受教了”等无效客套；
-2. 给出“意料之外但情理之中”的补充洞见、反直觉常识或精彩类比；
-3. 一针见血，字数在 50~120 字内，让人忍不住点赞转发。`,
+        systemPrompt: `你是推特评论区的“神评制造机”。你的唯一目标是在头部推文下写出一条高赞神评。
+核心公式：评论价值 = 信息增量 × 情绪共鸣 × 表达清晰度。
+要求：给出意料之外但情理之中的补充洞见、幽默类比或大实话，一针见血，让人忍不住点赞。${STRICT_ZH_RULES}`,
         userMessage: `楼主推文内容：\n作者：@${ctx.targetAuthor || '博主'}\n正文：${ctx.targetTweetText || '行业最新动态'}\n\n${ctx.draftText ? `我的补充想法：${ctx.draftText}` : ''}`,
       }
     },
@@ -165,25 +247,17 @@ Rules:
     desc: '输出结构化干货与技术见解，塑造专家人设',
     descEn: 'Provide structured domain knowledge and rigorous technical analysis',
     category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED'],
+    scenes: ['REPLY_DETAIL'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `You are a senior system architect and engineer. Join the Twitter technical discussion with thoughtful, grounded insights.
-Rules:
-1. Acknowledge the core premise of the original tweet.
-2. Add engineering boundary conditions, architectural trade-offs, or production experience.
-3. Professional yet approachable English.`,
-          userMessage: `Original tweet:\n${ctx.targetTweetText}\n\nDraft thoughts: ${ctx.draftText || 'None'}`,
+          systemPrompt: `Join the Twitter technical discussion with thoughtful, grounded engineering insights.${STRICT_EN_RULES}`,
+          userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText}`,
         }
       }
       return {
-        systemPrompt: `你是一位资深技术专家与产品架构师。在回复推文时，以严谨、理性、专业的角度展开高质量学术或技术探讨。
-准则：
-1. 肯定原推逻辑中的闪光点；
-2. 从工程落地、边界条件或长远演进角度补充实质观点；
-3. 语气谦虚但论证有力。`,
-        userMessage: `原推内容：\n${ctx.targetTweetText}\n\n用户草稿偏好：${ctx.draftText || '无'}`,
+        systemPrompt: `你是一位严谨资深的技术专家。在回复原推时，从系统架构、落地成本或长期演进维度补充专业见解，塑造专家人设。${STRICT_ZH_RULES}`,
+        userMessage: `原推内容：\n作者：@${ctx.targetAuthor || '博主'}\n正文：${ctx.targetTweetText}`,
       }
     },
   },
@@ -194,25 +268,38 @@ Rules:
     desc: '真诚得体的同行破冰互动，拉近距离促进互相关注',
     descEn: 'Authentic peer connection and friendly dialogue to foster mutual follow',
     category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED'],
+    scenes: ['REPLY_DETAIL'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `Your goal is to connect authentically with a fellow creator in your niche.
-Rules:
-1. Reference a specific detail from their post to show you genuinely read it.
-2. Share a quick relatable experience of your own.
-3. Warm, collegial, natural tone.`,
+          systemPrompt: `Connect authentically with a fellow creator in your niche: reference a detail, share a quick shared experience, warm natural tone.${STRICT_EN_RULES}`,
           userMessage: `Tweet by @${ctx.targetAuthor || 'peer'}:\n${ctx.targetTweetText}`,
         }
       }
       return {
-        systemPrompt: `你的目标是与推特上的同行博主建立良好联系并促成互相关注。
-准则：
-1. 针对原推中的某个具体细节展开真诚讨论，表现出认真阅读的态度；
-2. 分享一句自己在这个领域的相似体会；
-3. 礼貌客气，自然互动。`,
+        systemPrompt: `你的目标是与同行博主建立真诚联系促成互关。针对原推具体细节展开讨论，分享一句相似体会，礼貌自然。${STRICT_ZH_RULES}`,
         userMessage: `原推内容：\n作者：@${ctx.targetAuthor || '同行'}\n正文：${ctx.targetTweetText}`,
+      }
+    },
+  },
+  {
+    id: 'cmqolx85u000x1fbggacvllkj',
+    name: '机智幽默回怼',
+    nameEn: 'Witty Comeback',
+    desc: '面对争议性推文或抬杠评论，用高级幽默机智反击化解尴尬',
+    descEn: 'Smart, comedic and clever counter-arguments to disarm bad takes with humor',
+    category: 'reply',
+    scenes: ['REPLY_DETAIL'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Craft a clever, hilarious, and disarming comeback to a bad take or troll. No vulgarity, pure irony.${STRICT_EN_RULES}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+        }
+      }
+      return {
+        systemPrompt: `你是一位幽默但有分寸感的脱口秀演员。面对偏见或荒谬推文，用高级幽默与逻辑反差机智回怼，让围观者会心一笑。${STRICT_ZH_RULES}`,
+        userMessage: `要回应的推文：\n${ctx.targetTweetText}`,
       }
     },
   },
@@ -223,45 +310,16 @@ Rules:
     desc: '采用海外本土日常俚语与自然表达，拒绝生硬机翻',
     descEn: 'Casual, idiomatic native English response tailored for Twitter community',
     category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED', 'POST_NEW', 'POST_QUOTE'],
+    scenes: ['REPLY_DETAIL'],
     generatePrompt: (ctx) => ({
-      systemPrompt: `You are a native English speaker and active Twitter power-user. Write a sharp, natural, and engaging tweet or reply in native casual/professional English.
-Rules:
-1. Use real idioms and natural phrasing, avoid robotic or overly academic AI tone.
-2. Keep it punchy (1-3 sentences).
-3. Directly hit the key point of the original tweet.`,
-      userMessage: `Original tweet or topic:\n${ctx.targetTweetText || ctx.quotedTweetText || ctx.draftText || 'AI tech trends'}`,
+      systemPrompt: `Write a sharp, natural, and engaging comment in native casual English.${STRICT_EN_RULES}`,
+      userMessage: `Original tweet by @${ctx.targetAuthor || 'author'}:\n${ctx.targetTweetText}`,
     }),
   },
-  {
-    id: 'cmqolx85u000x1fbggacvllkj',
-    name: '机智幽默回怼',
-    nameEn: 'Witty Comeback',
-    desc: '面对争议性推文或抬杠评论，用高级幽默机智反击化解尴尬',
-    descEn: 'Smart, comedic and clever counter-arguments to disarm bad takes with humor',
-    category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED'],
-    generatePrompt: (ctx, locale = 'zh') => {
-      if (locale === 'en') {
-        return {
-          systemPrompt: `You are a witty stand-up comedian on Twitter. Craft a clever, hilarious, and disarming comeback to a troll or absurd take.
-Rules:
-1. Zero vulgarity or slurs.
-2. Use logical irony, self-deprecation, or punchy satire.
-3. Short, sharp, makes onlookers smile.`,
-          userMessage: `Tweet to roast:\n${ctx.targetTweetText}`,
-        }
-      }
-      return {
-        systemPrompt: `你是一位幽默毒舌但极具分寸感的脱口秀演员。你的任务是针对抬杠、偏见或荒谬推文进行幽默回怼。
-准则：
-1. 不使用粗俗辱骂字眼；
-2. 用荒诞类比、逻辑反讽或降维打击化解攻击；
-3. 简短有趣，让围观群众会心一笑。`,
-        userMessage: `要回应的推文：\n${ctx.targetTweetText}`,
-      }
-    },
-  },
+
+  // =========================================================================
+  // 场景四：【信息流快速互动】(REPLY_FEED: 刷信息流时点击回复气泡就地展开)
+  // =========================================================================
   {
     id: 'ai-tweet-reply',
     name: '日常快速破冰',
@@ -269,22 +327,59 @@ Rules:
     desc: '短平快的亲切回复，维系日常账号活跃度',
     descEn: 'Short, friendly, natural reply to keep daily interactions flowing',
     category: 'reply',
-    scenes: ['REPLY_DETAIL', 'REPLY_FEED'],
+    scenes: ['REPLY_FEED'],
     generatePrompt: (ctx, locale = 'zh') => {
       if (locale === 'en') {
         return {
-          systemPrompt: `Write a super short, friendly, and casual one-liner reply like a close friend responding on Twitter feed.
-Rules: 1 sentence, 5-15 words, natural everyday English.`,
+          systemPrompt: `Write an ultra-short, friendly one-liner reply like a casual friend.${STRICT_EN_RULES}`,
           userMessage: `Tweet:\n${ctx.targetTweetText}`,
         }
       }
       return {
-        systemPrompt: `写一条极其短小亲切、充满生活气息的推特日常互动回复。
-准则：
-1. 一句话搞定（15~30 字）；
-2. 表达真诚支持、调侃或共鸣；
-3. 像真实朋友在时间线随手打出的回复。`,
+        systemPrompt: `写一条极其短小亲切、一句话（20~40字）的日常推特回复，像真实好友随手互动。${STRICT_ZH_RULES}`,
         userMessage: `推文正文：\n${ctx.targetTweetText}`,
+      }
+    },
+  },
+  {
+    id: 'ai-feed-resonate',
+    name: '共鸣同感认可',
+    nameEn: 'Resonate & Agree',
+    desc: '表达强烈同感与情绪支持，传递温暖真诚的社区氛围',
+    descEn: 'Express strong resonance and genuine agreement with the creator',
+    category: 'reply',
+    scenes: ['REPLY_FEED'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Express strong genuine resonance with the tweet in 1-2 sentences.${STRICT_EN_RULES}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+        }
+      }
+      return {
+        systemPrompt: `对原推表达深切共鸣与支持，说明自己完全感同身受的一两点原因，真挚温暖。${STRICT_ZH_RULES}`,
+        userMessage: `推文内容：\n${ctx.targetTweetText}`,
+      }
+    },
+  },
+  {
+    id: 'ai-feed-question',
+    name: '提问追问互动',
+    nameEn: 'Curious Question',
+    desc: '针对原推提出高质量的好奇提问，促使博主二次回复',
+    descEn: 'Ask an insightful follow-up question to spark ongoing conversation',
+    category: 'reply',
+    scenes: ['REPLY_FEED'],
+    generatePrompt: (ctx, locale = 'zh') => {
+      if (locale === 'en') {
+        return {
+          systemPrompt: `Ask an insightful follow-up question based on the tweet to encourage the author to reply.${STRICT_EN_RULES}`,
+          userMessage: `Tweet:\n${ctx.targetTweetText}`,
+        }
+      }
+      return {
+        systemPrompt: `顺着原推的思路，提出一个具有思考价值、容易引发作者二次回复的高质量小问题。${STRICT_ZH_RULES}`,
+        userMessage: `原推内容：\n${ctx.targetTweetText}`,
       }
     },
   },

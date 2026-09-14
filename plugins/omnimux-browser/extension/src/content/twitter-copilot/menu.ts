@@ -118,12 +118,16 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
         ? 'Tweet Composer Copilot'
         : scene === 'POST_QUOTE'
           ? 'Quote Retweet Copilot'
-          : 'Tweet Reply Copilot'
+          : scene === 'REPLY_FEED'
+            ? 'Quick Interaction Copilot'
+            : 'Tweet Reply Copilot'
       : scene === 'POST_NEW'
-        ? '发新帖助手'
+        ? '推特创作助手'
         : scene === 'POST_QUOTE'
           ? '引用转发助手'
-          : '推文回帖助手'
+          : scene === 'REPLY_FEED'
+            ? '快捷互动助手'
+            : '推文回帖助手'
 
   dropdown.innerHTML = `
     <div class="omnimux-copilot-dropdown__header">
@@ -205,7 +209,7 @@ async function handleExecuteItem(
     const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale)
 
     if (generatedText) {
-      await injectTweetText(generatedText, anchorButton)
+      await injectTweetText(generatedText, anchorButton, locale)
     } else {
       showCopilotToast(
         locale === 'en'

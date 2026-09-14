@@ -5,6 +5,17 @@
 
 import type { TwitterContext, TwitterCopilotScene } from './types.ts'
 
+function findComposerContainer(el: HTMLElement): HTMLElement | null {
+  let cur: HTMLElement | null = el
+  for (let i = 0; i < 14 && cur; i++) {
+    if (cur.querySelector('div[data-testid="tweetTextarea_0"]')) {
+      return cur
+    }
+    cur = cur.parentElement
+  }
+  return null
+}
+
 export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotScene {
   // 1. Is this inside a tweet compose modal? (e.g. url includes /compose/post or inside modal role="dialog")
   const dialog = anchorButton.closest('[role="dialog"]')
@@ -12,23 +23,46 @@ export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotSce
     // Check if there is an embedded quoted tweet inside this modal
     const hasQuote = !!(
       dialog.querySelector('[data-testid="quoteTweet"]') ||
-      dialog.querySelector('[data-testid="tweet"]') ||
-      dialog.querySelector('div[aria-labelledby*="quote" i]')
+      dialog.querySelector('div[aria-labelledby*="quote" i]') ||
+      dialog.querySelector('div[data-testid*="quote" i]') ||
+      dialog.querySelector('article[data-testid="tweet"]')
     )
     return hasQuote ? 'POST_QUOTE' : 'POST_NEW'
   }
 
-  // 2. Is this inline in tweet detail page?
-  const pathname = window.location.pathname
-  const isStatusPage = /\/[^/]+\/status\/\d+/.test(pathname)
-  if (isStatusPage) {
-    return 'REPLY_DETAIL'
+  // 2. Find the owning composer container that wraps both textarea and toolbar
+  const composer = findComposerContainer(anchorButton)
+  const containerText = (composer?.textContent || '').toLowerCase()
+
+  const isPostNewPlaceholder =
+    containerText.includes('有什么新鲜事') ||
+    containerText.includes('happening') ||
+    containerText.includes('what is happening')
+
+  // Check the button's own text or targetBtn text
+  const targetBtn =
+    anchorButton.parentElement?.querySelector('[data-testid="tweetButton"], [data-testid="tweetButtonInline"]') ||
+    anchorButton
+  const btnText = (targetBtn.textContent || '').trim().toLowerCase()
+  const isPostBtn = btnText.includes('发帖') || btnText.includes('post')
+  const isReplyBtn = btnText.includes('回复') || btnText.includes('reply')
+
+  // 3. Is this inside an existing tweet article card (inline reply in feed)?
+  const parentTweet = anchorButton.closest('article[data-testid="tweet"]')
+  if (parentTweet) {
+    return 'REPLY_FEED'
   }
 
-  // 3. Fallback: check if anchor is near tweetButton vs tweetButtonInline
-  const testId = anchorButton.getAttribute('data-testid') || ''
-  if (testId === 'tweetButtonInline') {
-    return 'REPLY_FEED'
+  // 4. Explicit new post signals (home feed top composer)
+  if (isPostNewPlaceholder || (isPostBtn && !isReplyBtn)) {
+    return 'POST_NEW'
+  }
+
+  // 5. Is this inline in tweet detail page (/username/status/123)?
+  const pathname = window.location.pathname
+  const isStatusPage = /\/[^/]+\/status\/\d+/.test(pathname)
+  if (isStatusPage || isReplyBtn) {
+    return 'REPLY_DETAIL'
   }
 
   return 'POST_NEW'
