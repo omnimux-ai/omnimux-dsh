@@ -74,6 +74,23 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
       // 8. Verify right thumbnails rail for multi-image switching
       assert.match(stylesSrc, /\.omx-mv-thumbnails-rail\s*\{[^}]*position:\s*absolute/);
       assert.match(stylesSrc, /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border-color:\s*var\(--dsw-alias-brand-primary\)/);
+
+      // 9. Verify native composer projection preserves [data-conversation-scroll] and hides [data-slot="conversation.session"]
+      assert.doesNotMatch(
+        CONVERSATION_COLLAPSE_CSS,
+        /\[data-conversation-scroll\][^{]*\{[^}]*display:\s*none/,
+        '[data-conversation-scroll] must not be display:none because composerSeat is inside it'
+      );
+      assert.match(
+        CONVERSATION_COLLAPSE_CSS,
+        /\[data-slot="conversation\.session"\][^{]*\{[^}]*display:\s*none\s*!important/,
+        '[data-slot="conversation.session"] message transcript must be display:none'
+      );
+      assert.match(
+        CONVERSATION_COLLAPSE_CSS,
+        /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*24px\s*!important/,
+        'Native composer seat must be fixed at bottom 24px in collapsed conversation state'
+      );
     });
   });
 });
