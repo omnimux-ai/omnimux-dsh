@@ -15,6 +15,7 @@ export { WORKBENCH_FOCUS }
 
 /** Human-readable Tab titles when registerTab title is unavailable (#345). */
 export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
+  'omnimux:media-viewer': '图片浏览',
   'omnimux-workflow:canvas': '创作画布',
   'omnimux-clip:studio': '视频剪辑',
   'omnimux-assets:library': '资产库',
@@ -49,11 +50,12 @@ export function resolveWorkbenchTabTitle(tabId, optsTitle, getTab) {
 export function isWorkbenchTab(tabId) {
   if (!tabId || typeof tabId !== 'string') return false
   if (WORKBENCH_OCCUPANTS.includes(tabId)) return true
+  if (tabId === 'omnimux:media-viewer') return true
   return tabId.startsWith('omnimux-') && (tabId.includes(':') || tabId.endsWith('-stage') || tabId.endsWith(':library') || tabId.endsWith(':studio') || tabId.endsWith(':plaza'))
 }
 
 export function resolveDefaultFocus(tabId) {
-  if (tabId && isWorkbenchTab(tabId) && tabId !== 'omnimux-workflow:canvas') {
+  if (tabId && isWorkbenchTab(tabId) && tabId !== 'omnimux-workflow:canvas' && tabId !== 'omnimux:media-viewer') {
     return WORKBENCH_FOCUS.gui
   }
   return WORKBENCH_FOCUS.split

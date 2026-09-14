@@ -237,6 +237,32 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
   container.className = 'omx-chat-media-tail';
   container.setAttribute('data-omx-media-tail', 'true');
 
+  const triggerOpenWorkbench = async (tabId: string = MEDIA_VIEWER_TAB_ID, shouldCollapseConversation: boolean = false): Promise<boolean> => {
+    try {
+      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
+      const wb = (win as any)?.__omnimuxWorkbench;
+      if (!wb) return false;
+      const openFn = wb.openWorkbench || wb.open;
+      if (typeof openFn !== 'function') return false;
+
+      const res = await openFn.call(wb, { tabId });
+      if (res !== false && shouldCollapseConversation) {
+        // Expand right sidebar to full width and collapse conversation column
+        wb.setConversationCollapsed?.(true);
+        wb.setFocus?.('gui');
+        try {
+          doc.documentElement?.setAttribute('data-omnimux-conversation-collapsed', 'true');
+        } catch {
+          // ignore
+        }
+      }
+      return res !== false;
+    } catch (err) {
+      console.warn('[MediaEnhancer] openWorkbench failed:', err);
+      return false;
+    }
+  };
+
   const openInSidebar = (item: DetectedMedia) => {
     const store = getGlobalMediaViewerStore();
     const media = store.addMedia({
@@ -249,23 +275,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     // Enter full canvas mode (2-column layout with middle conversation collapsed)
     store.setLayoutMode('2col');
 
-    try {
-      const docRoot = doc.documentElement;
-      if (docRoot) {
-        docRoot.setAttribute('data-omnimux-conversation-collapsed', 'true');
-      }
-    } catch {
-      // ignore
-    }
-
-    try {
-      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
-      if (win && (win as any).__omnimuxWorkbench?.openWorkbench) {
-        (win as any).__omnimuxWorkbench.openWorkbench({ tabId: MEDIA_VIEWER_TAB_ID });
-      }
-    } catch {
-      // ignore
-    }
+    void triggerOpenWorkbench(MEDIA_VIEWER_TAB_ID, true);
   };
 
   const buildCardElement = (item: DetectedMedia): HTMLElement => {
@@ -411,8 +421,10 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
   if (shouldAutoOpen) {
     try {
       const win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
-      if (win && (win as any).__omnimuxWorkbench?.openWorkbench) {
-        (win as any).__omnimuxWorkbench.openWorkbench({ tabId: MEDIA_VIEWER_TAB_ID });
+      const wb = (win as any)?.__omnimuxWorkbench;
+      const openFn = wb?.openWorkbench || wb?.open;
+      if (typeof openFn === 'function') {
+        openFn.call(wb, { tabId: MEDIA_VIEWER_TAB_ID });
       }
     } catch (err) {
       console.warn('[MediaEnhancer] Auto-open workbench failed:', err);

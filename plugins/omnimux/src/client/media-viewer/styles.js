@@ -45,8 +45,8 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-chat-media-tail__canvas-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  bottom: 10px;
+  right: 10px;
   z-index: 3;
   height: 26px;
   padding: 0 11px 0 9px;
@@ -65,7 +65,7 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); /* exempt-ui03: 悬浮按钮投影 */
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-2px) scale(0.96);
+  transform: translateY(2px) scale(0.96);
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s;
 }
 

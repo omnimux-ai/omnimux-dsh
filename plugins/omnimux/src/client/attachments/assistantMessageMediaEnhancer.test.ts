@@ -117,7 +117,7 @@ test('assistantMessageMediaEnhancer: createMediaTailElement for single media ite
   assert.equal(img.getAttribute('src'), 'http://example.com/1.jpg');
 });
 
-test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generate + display_file in same turn to 1 tail card', () => {
+test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generate + display_file in same turn to 1 tail card', async () => {
   resetAutoOpenedForTests();
   const filename = 'image-2026-09-14T03-25-33-991Z-mtogp3-0.jpg';
   const persistentUrl = `/plugins/omnimux-viewer/serve?path=%2FUsers%2Fx%2F.omnimux-dev%2Fplugins%2Fsubscriptions%2Fimages%2F${filename}`;
@@ -163,8 +163,13 @@ test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generat
 
   let openedTabId = '';
   (dom.window as any).__omnimuxWorkbench = {
-    openWorkbench: (opts: any) => {
+    openWorkbench: async (opts: any) => {
       openedTabId = opts?.tabId;
+      return true;
+    },
+    open: async (opts: any) => {
+      openedTabId = opts?.tabId;
+      return true;
     },
   };
 
@@ -186,12 +191,13 @@ test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generat
   // 3. Verify old action bar removed, and new canvas pill button present
   assert.equal(cards[0].querySelector('.omx-chat-media-tail__actions'), null, 'Old bottom actions bar must be removed');
   const canvasBtn = cards[0].querySelector('.omx-chat-media-tail__canvas-btn');
-  assert.ok(canvasBtn, 'Pill canvas button must exist in top-right of card');
+  assert.ok(canvasBtn, 'Pill canvas button must exist on card');
   assert.match(canvasBtn.textContent || '', /画布/, 'Canvas button must display "画布"');
 
   // 4. Verify clicking the canvas button switches to 2col canvas mode and collapses conversation
   const store = getGlobalMediaViewerStore();
   (canvasBtn as HTMLElement).click();
+  await new Promise((r) => setTimeout(r, 10));
   assert.equal(store.getSnapshot().layoutMode, '2col', 'Must enter 2col canvas layout mode');
   assert.equal(doc.documentElement.getAttribute('data-omnimux-conversation-collapsed'), 'true', 'Must collapse middle conversation column');
 
