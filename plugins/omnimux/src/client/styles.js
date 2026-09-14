@@ -1260,6 +1260,20 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   display: none !important;
 }
 
+/* ── Defensive hiding of official ContextMeter (token usage progress ring) in composer ── */
+.JdJrwG_root,
+[class*="ContextMeter_root"],
+[data-composer-card] [class*="trailing"] > span:has(button[aria-label*="上下文已用"]),
+[data-composer-card] [class*="trailing"] > span:has(button[aria-label*="context used"]),
+[data-composer-card] [class*="trailing"] > span:has(svg circle[class*="fill"]),
+[data-composer-card] [class*="trailing"] button[aria-label*="上下文已用"],
+[data-composer-card] [class*="trailing"] button[aria-label*="context used"],
+[class*="trailing"] > span:has(button[aria-haspopup="dialog"]:has(circle)),
+button[aria-label*="上下文已用"],
+button[aria-label*="context used"] {
+  display: none !important;
+}
+
 /* ── Hide permission preset selector in composer input bar ── */
 [data-composer-card] button[aria-label*="访问模式"],
 [data-composer-card] button[aria-label*="Access mode"],

@@ -182,6 +182,16 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(modelIconBefore, /mask-image/)
   assert.match(modelIconBefore, /background-color:currentColor/)
   assert.match(modelIconBefore, /width:14px/)
+  // Model select button has transparent background by default
+  assert.match(
+    style.textContent,
+    /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]\{[^}]*background:transparent!important/,
+  )
+  // Overlays official triggerIcon (IconDataOutline16) with 3D model icon
+  assert.match(
+    style.textContent,
+    /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="triggerIcon"\]\{[^}]*mask-image:var\(--omnimux-model-icon\)!important/,
+  )
   // Prevents duplicate icons when the button already carries a native triggerIcon
   assert.match(
     style.textContent,

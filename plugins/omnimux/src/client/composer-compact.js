@@ -166,6 +166,15 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="trigger
  * (dialog) and left-side Permission/Plan chips stay untouched.
  * title/aria-label remain on the button for hover + a11y.
  */
+/* 模型选择按钮默认无背景底块，hover 时提供柔和反馈 */
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']{
+  background:transparent!important;
+  border:none!important;
+  box-shadow:none!important;
+}
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:hover:not(:disabled){
+  background:var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08))!important;
+}
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu']{
   width:28px;
   height:28px;
@@ -197,6 +206,25 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   mask-repeat:no-repeat;
   -webkit-mask-position:center;
   mask-position:center;
+}
+/* 官方 triggerIcon (IconDataOutline16) 遮蔽其原有子路径并重载为 3D 立体模型层图标 */
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerIcon"]{
+  display:block!important;
+  width:14px!important;
+  height:14px!important;
+  flex:0 0 14px!important;
+  background-color:currentColor!important;
+  -webkit-mask-image:var(--omnimux-model-icon)!important;
+  mask-image:var(--omnimux-model-icon)!important;
+  -webkit-mask-size:contain!important;
+  mask-size:contain!important;
+  -webkit-mask-repeat:no-repeat!important;
+  mask-repeat:no-repeat!important;
+  -webkit-mask-position:center!important;
+  mask-position:center!important;
+}
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerIcon"] *{
+  display:none!important;
 }
 /* 当模型选择按钮自身已有原生 triggerIcon 或模型图标时，禁止 ::before 伪元素生成图标，杜绝双图标并存 */
 [data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerIcon"])::before,
