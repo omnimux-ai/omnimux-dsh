@@ -86,13 +86,13 @@ html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-card]{
    写成视口偏移会把左侧导航宽度算两遍，面板右移一个侧栏宽。
    必须排除全屏态面板：它是 position:fixed（视口坐标由 sidebar-toggle-topbar 的
    fullscreen 规则负责），误套容器坐标会让它左移一个侧栏宽、压住左侧导航。 */
-html[${CONVERSATION_COLLAPSED_ATTR}]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]):not([data-sidebar-right-panel="fullscreen"]){
+html[${CONVERSATION_COLLAPSED_ATTR}]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([data-sidebar-right-panel]):not([class*="bottom"]):not([class*="Hidden"]):not([data-sidebar-right-panel="fullscreen"]){
   left:0!important;
   right:0!important;
   width:auto!important;
   max-width:none!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
+html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] .dshDesktopRightbarSurface [class*="_panel"]:not([data-sidebar-right-panel]):not([class*="bottom"]):not([class*="Hidden"]){
   left:0!important;
   right:0!important;
   width:100vw!important;

@@ -709,6 +709,21 @@ button[data-sidebar-right-expand] {
   align-items: center !important;
 }
 
+/* 原生分栏与全屏共享右锚点，避免切换定位方式后从视口左缘回弹。 */
+.dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+  position: fixed !important;
+  left: auto !important;
+  right: 0 !important;
+  box-sizing: border-box !important;
+  transition: width var(--ds-transition-duration-slow) var(--ds-ease-in-out),
+              transform var(--ds-transition-duration-slow) var(--ds-ease-in-out) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+    transition: none !important;
+  }
+}
+
 /* 6. 右侧侧边栏全屏业务逻辑重构：工作区级铺满，与左侧侧边栏解耦联动 */
 /* 5.1 默认全屏态（左侧侧边栏展开时）：只铺满右侧主区域，完整保留左侧侧边栏 */
 [data-sidebar-right-panel="fullscreen"],
@@ -730,7 +745,7 @@ html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"],
 html[data-omnimux-left-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"],
 .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"],
 .dshDesktopFrame[data-sidebar-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"] {
-  left: var(--omnimux-sidebar-width, 0px) !important;
+  left: auto !important;
   width: calc(100vw - var(--omnimux-sidebar-width, 0px)) !important;
   border-left: none !important;
 }
