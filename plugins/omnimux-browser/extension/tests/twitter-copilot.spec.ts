@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { detectTwitterScene, extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
-import { mountCopilotToTwitterButtons } from '../src/content/twitter-copilot/anchor.ts'
+import { mountCopilotToTwitterButtons, isCollapsedInlineReply, cleanupStaleCopilotButtons } from '../src/content/twitter-copilot/anchor.ts'
 import { injectTweetText, INJECTOR_COPY, COPILOT_TOAST_BG, COPILOT_TOAST_TEXT_COLOR } from '../src/content/twitter-copilot/injector.ts'
 import { detectCopilotLocale, checkContextReady } from '../src/content/twitter-copilot/menu.ts'
 import { sanitizeTweetText } from '../src/content/twitter-copilot/sanitizer.ts'
@@ -645,5 +645,143 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(source).toMatch(/await requestLlmGeneration\([^)]*scene\)/)
     // 确保构建产物不含自由 scene 标识符导致的 TS18004 隐患
     expect(source).toContain('context: {')
+  })
+
+  it('T25: 收起态过滤 - 推特评论区处于未激活紧凑占位栏（无激活编辑框/无底部工具栏）时，绝不挂载 OmniMux 图标', () => {
+    const collapsedBar = document.createElement('div')
+    collapsedBar.innerHTML = `
+      <div class="avatar"></div>
+      <div class="placeholder">发布你的回复</div>
+      <div class="button-container" style="display: flex;">
+        <button data-testid="tweetButtonInline" disabled>回复</button>
+      </div>
+    `
+    document.body.appendChild(collapsedBar)
+    const replyBtn = collapsedBar.querySelector('button') as HTMLElement
+    // 模拟正向尺寸
+    vi.spyOn(replyBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 32,
+      top: 100,
+      left: 500,
+      right: 560,
+      bottom: 132,
+      x: 500,
+      y: 100,
+      toJSON: () => {},
+    })
+
+    expect(isCollapsedInlineReply(replyBtn)).toBe(true)
+
+    mountCopilotToTwitterButtons()
+
+    // 绝不挂载到收起态占位条上
+    const mounted = document.querySelectorAll('.omnimux-copilot-anchor-btn')
+    expect(mounted.length).toBe(0)
+  })
+
+  it('T26: 展开态精准挂载 - 用户激活展开回复框后，仅在底部工具栏回复按钮旁单一挂载', () => {
+    const expandedComposer = document.createElement('div')
+    expandedComposer.innerHTML = `
+      <div class="reply-context">回复 @ScarletKc</div>
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true">已有草稿</div>
+      </div>
+      <div data-testid="toolBar" style="display: flex;">
+        <div class="media-tools" style="display: flex;">
+          <button aria-label="媒体"></button>
+          <button aria-label="Emoji"></button>
+        </div>
+        <div class="actions" style="display: flex;">
+          <button data-testid="tweetButtonInline">回复</button>
+        </div>
+      </div>
+    `
+    document.body.appendChild(expandedComposer)
+    const replyBtn = expandedComposer.querySelector('button[data-testid="tweetButtonInline"]') as HTMLElement
+    vi.spyOn(replyBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 32,
+      top: 200,
+      left: 500,
+      right: 560,
+      bottom: 232,
+      x: 500,
+      y: 200,
+      toJSON: () => {},
+    })
+
+    expect(isCollapsedInlineReply(replyBtn)).toBe(false)
+
+    mountCopilotToTwitterButtons()
+
+    const mounted = document.querySelectorAll('.omnimux-copilot-anchor-btn')
+    expect(mounted.length).toBe(1)
+    // 验证挂载在包含回复按钮的同级 flex 容器中
+    expect(mounted[0].parentElement).toBe(replyBtn.parentElement)
+  })
+
+  it('T27: 孤立僵尸图标自动清理 - DOM 状态切换时旧位置残留图标被立即清除，绝不残留双图标', () => {
+    // 1. 模拟遗留了一个旧的孤立 copilot 按钮（脱钩节点）
+    const orphanContainer = document.createElement('div')
+    orphanContainer.style.display = 'flex'
+    const orphanCopilot = document.createElement('button')
+    orphanCopilot.className = 'omnimux-copilot-anchor-btn'
+    orphanCopilot.setAttribute('data-omnimux-copilot', 'true')
+    orphanContainer.appendChild(orphanCopilot)
+    document.body.appendChild(orphanContainer)
+
+    expect(document.querySelectorAll('.omnimux-copilot-anchor-btn').length).toBe(1)
+
+    // 2. 执行孤立图标主动清理，触发清除
+    cleanupStaleCopilotButtons()
+
+    // 3. 孤立图标被清除
+    expect(document.querySelectorAll('.omnimux-copilot-anchor-btn').length).toBe(0)
+
+    // 4. 执行挂载扫描，验证二次幂等清理
+    mountCopilotToTwitterButtons()
+    expect(document.querySelectorAll('.omnimux-copilot-anchor-btn').length).toBe(0)
+  })
+
+  it('T28: 交互事件冒泡隔离 - 图标交互阻止 mousedown/pointerdown 穿透到推特外层容器', () => {
+    const composer = document.createElement('div')
+    composer.innerHTML = `
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true"></div>
+      </div>
+      <div data-testid="toolBar" style="display: flex;">
+        <button data-testid="tweetButtonInline">回复</button>
+      </div>
+    `
+    document.body.appendChild(composer)
+    const replyBtn = composer.querySelector('button') as HTMLElement
+    vi.spyOn(replyBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 32,
+      top: 200,
+      left: 500,
+      right: 560,
+      bottom: 232,
+      x: 500,
+      y: 200,
+      toJSON: () => {},
+    })
+
+    mountCopilotToTwitterButtons()
+
+    const copilotBtn = document.querySelector('.omnimux-copilot-anchor-btn') as HTMLElement
+    expect(copilotBtn).toBeDefined()
+
+    let parentReceivedMouseDown = false
+    let parentReceivedPointerDown = false
+    composer.addEventListener('mousedown', () => { parentReceivedMouseDown = true })
+    composer.addEventListener('pointerdown', () => { parentReceivedPointerDown = true })
+
+    copilotBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    copilotBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+
+    expect(parentReceivedMouseDown).toBe(false)
+    expect(parentReceivedPointerDown).toBe(false)
   })
 })
