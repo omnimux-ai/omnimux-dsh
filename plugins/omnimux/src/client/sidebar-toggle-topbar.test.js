@@ -847,3 +847,78 @@ describe('hard constraints', () => {
     assert.match(workbenchGeometrySource, /collapsedLeftRailFallbackPx|data-omnimux-sidebar-toggle-topbar/)
   })
 })
+
+describe('rightbar toggle dedupe (issue #1622)', () => {
+  /**
+   * 造一个最小外壳结构：原生容器 + 可选的「被本插件搬走的旧拷贝」。
+   * @param {{ collapsed?: boolean, nativeInChrome?: boolean, staleCopies?: Array<'toggle'|'expand'> }} [opts]
+   */
+  function makeDoc(opts = {}) {
+    const { collapsed = false, nativeInChrome = true, staleCopies = [] } = opts
+    const doc = setup(`<!doctype html><html><body>
+      <div class="dshDesktopFrame"${collapsed ? ' data-rightbar-collapsed="true"' : ''}>
+        <div data-dockkit-strip-chrome="true"></div>
+      </div>
+    </body></html>`)
+    if (nativeInChrome) {
+      const native = doc.createElement('button')
+      native.setAttribute('data-sidebar-right-toggle', '')
+      native.setAttribute('aria-label', '收起右侧边栏')
+      doc.querySelector('[data-dockkit-strip-chrome="true"]').appendChild(native)
+    }
+    for (const kind of staleCopies) {
+      const copy = doc.createElement('button')
+      copy.setAttribute(kind === 'expand' ? 'data-sidebar-right-expand' : 'data-sidebar-right-toggle', '')
+      copy.setAttribute('data-original-parent', '_stripChrome')
+      doc.body.appendChild(copy)
+    }
+    return doc
+  }
+
+  const copies = (doc) => Array.from(doc.querySelectorAll('button[data-original-parent]'))
+  const controlCount = (doc) => doc.querySelectorAll('button[data-sidebar-right-toggle], button[data-sidebar-right-expand]').length
+
+  it('keeps exactly one pinned control while the right bar is collapsed', () => {
+    const doc = makeDoc({ collapsed: true, staleCopies: ['toggle', 'expand'] })
+    syncNativeRightbarControls(doc)
+
+    assert.equal(copies(doc).length, 1, '收起态只应保留一份拷贝')
+    assert.equal(controlCount(doc), 1, '同一动作的可见控件只能有一份')
+    const kept = copies(doc)[0]
+    assert.equal(kept.parentElement, doc.body)
+    assert.match(kept.getAttribute('style') || '', /position:\s*fixed/)
+    assert.match(kept.getAttribute('style') || '', /right:\s*8px/)
+  })
+
+  it('recycles our copies once the native control is rendered again', () => {
+    const doc = makeDoc({ collapsed: false, staleCopies: ['toggle', 'expand'] })
+    syncNativeRightbarControls(doc)
+
+    assert.equal(copies(doc).length, 0, '展开态且原生节点在位时，拷贝必须全部回收')
+    assert.equal(controlCount(doc), 1, '只应剩下原生那一份')
+    assert.ok(doc.querySelector('[data-dockkit-strip-chrome="true"] button[data-sidebar-right-toggle]'))
+  })
+
+  it('does not accumulate controls across repeated collapse/expand cycles', () => {
+    const doc = makeDoc({ collapsed: true })
+    const frame = doc.querySelector('.dshDesktopFrame')
+
+    for (let round = 1; round <= 3; round += 1) {
+      syncNativeRightbarControls(doc)
+
+      // 界面重画：原生容器里生成一个新的原生按钮（旧拷贝仍在 body 上）
+      const fresh = doc.createElement('button')
+      fresh.setAttribute('data-sidebar-right-toggle', '')
+      doc.querySelector('[data-dockkit-strip-chrome="true"]').appendChild(fresh)
+
+      frame.removeAttribute('data-rightbar-collapsed')
+      syncNativeRightbarControls(doc)
+
+      assert.equal(copies(doc).length, 0, `第 ${round} 轮展开后不应残留拷贝`)
+      assert.ok(controlCount(doc) <= 1, `第 ${round} 轮控件总数不应增长（实际 ${controlCount(doc)}）`)
+
+      frame.setAttribute('data-rightbar-collapsed', 'true')
+    }
+  })
+})
+
