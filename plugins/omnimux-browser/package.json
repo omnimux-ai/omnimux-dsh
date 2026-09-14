@@ -51,9 +51,9 @@
   },
   "scripts": {
     "build:server": "tsc -b --pretty false && tsdown && node -e \"require('node:fs').copyFileSync('src/client.js', 'lib/client.js')\"",
-    "build:extension": "cd extension && pnpm run build",
-    "build": "pnpm run build:server && pnpm run build:extension",
-    "prepare": "pnpm run build:server"
+    "build:extension": "cd extension && npm run build",
+    "build": "npm run build:server && npm run build:extension",
+    "prepare": "npm run build:server"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.2",
