@@ -169,6 +169,9 @@ function handleServiceStateChange(service) {
   } catch {
     state = undefined
   }
+  if (!state || state.panelOpen === false) {
+    setConversationCollapsed(false)
+  }
   notifyWorkbenchChange()
   syncSplitMaxCssVar(state)
   if (state?.panelOpen && typeof state.width === 'number') {

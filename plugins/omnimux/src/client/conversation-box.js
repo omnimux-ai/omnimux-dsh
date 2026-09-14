@@ -214,16 +214,26 @@ html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed
   grid-template-columns: 0px minmax(0px, 1fr) auto !important;
 }
 /* 当中间会话栏收起时（右侧全屏铺满状态）：
-   必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！ */
-html[data-omnimux-conversation-collapsed] .dshDesktopFrame,
-html[data-omnimux-conversation-collapsed] [class*="frame"] {
+   必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！
+   右侧栏确证收起时（[data-rightbar-collapsed="true"]）严禁应用此规则（Issue 1749）。 */
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame:not([data-rightbar-collapsed="true"]),
+html[data-omnimux-conversation-collapsed] [class*="frame"]:not([data-rightbar-collapsed="true"]) {
   grid-template-columns: var(--omnimux-sidebar-width, 280px) 0px minmax(0px, 1fr) !important;
 }
-html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] .dshDesktopFrame,
-html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] [class*="frame"],
-html[data-omnimux-conversation-collapsed] .dshDesktopFrame[data-sidebar-collapsed],
-html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapsed] {
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] .dshDesktopFrame:not([data-rightbar-collapsed="true"]),
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] [class*="frame"]:not([data-rightbar-collapsed="true"]),
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame[data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]),
+html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]) {
   grid-template-columns: 0px 0px 100vw !important;
+}
+/* 右侧边栏收起时无论任何情况，会话列必须占满剩余宽度，绝不黑屏死区（Issue 1749） */
+.dshDesktopFrame[data-rightbar-collapsed="true"],
+[class*="frame"][data-rightbar-collapsed="true"] {
+  grid-template-columns: var(--omnimux-sidebar-width, 280px) minmax(0px, 1fr) 0px !important;
+}
+html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"],
+html[data-omnimux-left-collapsed] [class*="frame"][data-rightbar-collapsed="true"] {
+  grid-template-columns: 0px 100vw 0px !important;
 }
 /* Tab labels dock by overlap: pad = max(0, toggleEnd − panel.left), written
    to --omnimux-tabbar-pad-left. Do NOT key this off left-collapsed: collapsed

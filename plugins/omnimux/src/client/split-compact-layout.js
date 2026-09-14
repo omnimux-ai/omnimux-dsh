@@ -275,6 +275,12 @@ function syncRootAttribute(doc, value) {
 function measure(doc, notify) {
   const signals = readSplitCompactSignals(doc)
   const next = { splitCompact: signals.splitCompact, rightbarCollapsed: signals.sidebarCollapsed }
+  if (signals.sidebarCollapsed && typeof doc?.defaultView?.__omnimuxWorkbench?.getConversationCollapsed === 'function') {
+    if (doc.defaultView.__omnimuxWorkbench.getConversationCollapsed()) {
+      doc.defaultView.__omnimuxWorkbench.setConversationCollapsed(false)
+      doc.defaultView.__omnimuxWorkbench.setFocus?.('chat')
+    }
+  }
   const changed = !measured
     || next.splitCompact !== snapshot.splitCompact
     || next.rightbarCollapsed !== snapshot.rightbarCollapsed

@@ -14,9 +14,12 @@ export const CONVERSATION_COLLAPSE_STYLE_ID = 'omnimux-conversation-collapse-chr
 export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collapsed:v1:'
 
 export const CONVERSATION_COLLAPSE_CSS = `
-/* Middle conversation column — collapse layout width while projecting native composer fixed to canvas bottom */
-html[${CONVERSATION_COLLAPSED_ATTR}] [class*="centerCol"],
-html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface{
+/* Middle conversation column — collapse layout width while projecting native composer fixed to canvas bottom.
+   Excludes rightbar collapsed state so conversation remains fully visible when auxiliary panel is closed. */
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopFrame:not([data-rightbar-collapsed="true"]) [class*="centerCol"],
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface,
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [class*="centerCol"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) .dshDesktopConversationSurface{
   flex:0 0 0!important;
   width:0!important;
   min-width:0!important;
@@ -25,24 +28,26 @@ html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface{
   opacity:1!important;
   pointer-events:none!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface,
-html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface > *,
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"] > *,
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-phase="active"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-conversation-scroll]{
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface,
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface > *,
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) .dshDesktopConversationSurface,
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) .dshDesktopConversationSurface > *,
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation"] > *,
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-phase="active"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-conversation-scroll]{
   overflow:visible!important;
   pointer-events:none!important;
   visibility:visible!important;
   opacity:1!important;
 }
-/* Hide only the message transcript stream and header bar, keep composerSeat mounted and visible */
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.session"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.session.header"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.header"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.view"],
-html[${CONVERSATION_COLLAPSED_ATTR}] header[class*="header"],
-html[${CONVERSATION_COLLAPSED_ATTR}] [class*="widthHandle"]{
+/* Hide only the message transcript stream and header bar while rightbar is open, keep composerSeat mounted and visible */
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation.session"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation.session.header"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation.header"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation.view"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) header[class*="header"],
+html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [class*="widthHandle"]{
   display:none!important;
 }
 /* Native DSH Composer floating dock at the bottom of the canvas - 紧凑靠底停靠 */
