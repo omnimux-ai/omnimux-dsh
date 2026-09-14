@@ -46,6 +46,11 @@ export {
 } from './schemas/textSchema.js';
 
 export {
+  PARAMETER_ERROR_CODES,
+  validateParameterDomain,
+} from './schemas/parameterSchema.js';
+
+export {
   AUDIO_OUTPUT_FORMATS,
   validateAudioOutputParams,
 } from './schemas/audioSchema.js';

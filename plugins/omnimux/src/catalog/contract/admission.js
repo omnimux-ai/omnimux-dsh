@@ -25,6 +25,14 @@ const ADMISSION_ERROR_CODES = new Set([
   'prompt_forbidden_injected',
   'parameter_concrete_pixels_forbidden',
   'parameter_dispatch_closure_missing',
+  'parameter_definition_invalid',
+  'parameter_length_bound_invalid',
+  'parameter_options_invalid',
+  'parameter_default_unmatched',
+  'parameter_range_invalid',
+  'parameter_step_invalid',
+  'parameter_flag_invalid',
+  'parameter_unit_invalid',
 ]);
 
 /**

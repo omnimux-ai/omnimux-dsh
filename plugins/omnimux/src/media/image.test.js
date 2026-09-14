@@ -18,10 +18,10 @@ describe('omnimux image helpers', () => {
 
   it('overlays OMNIMUX_IMAGE_MODEL', () => {
     const route = resolveMediaRoute('image', {}, parseMediaConfig(undefined), {
-      OMNIMUX_IMAGE_MODEL: 'gpt-image2-hd',
+      OMNIMUX_IMAGE_MODEL: 'gpt-image-2.5-hd',
       OMNIMUX_API_KEY: 'sk-a',
     })
-    assert.equal(route.modelId, 'gpt-image2-hd')
+    assert.equal(route.modelId, 'gpt-image-2.5-hd')
     assert.equal(route.capability, 'image')
   })
 

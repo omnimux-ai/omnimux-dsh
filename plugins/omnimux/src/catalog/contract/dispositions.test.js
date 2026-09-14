@@ -1,5 +1,5 @@
 /**
- * Dispositions registry tests (H2 + phase-one video): 67-row lock, shape validation, D1-D7
+ * Dispositions registry tests (H2 + phase-one video): 71-row lock, shape validation, D1-D7
  * consistency, forbidden-listed discipline, catalog defaults, cordis cross-refs.
  */
 import { test } from 'node:test';
@@ -37,25 +37,25 @@ function runtimeIdsOf(index) {
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
-test('dispositions.json: exactly 69 rows, unique ids, all kinds valid, reasons present', () => {
+test('dispositions.json: exactly 71 rows, unique ids, all kinds valid, reasons present', () => {
   resetDispositionsCache();
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 69, `expected 69 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 71, `expected 71 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
-  assert.equal(ids.size, 69);
+  assert.equal(ids.size, 71);
   for (const row of rows) {
     assert.ok(DISPOSITION_KINDS.includes(row.disposition), row.id);
     assert.ok(typeof row.reason === 'string' && row.reason.trim(), row.id);
   }
 });
 
-test('69 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
+test('71 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 69);
+  assert.equal(runtimeIds.length, 71);
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });
@@ -79,6 +79,16 @@ test('locked dispositions: draft-probeable / quarantine / alias / Batch A canoni
       ['alias', 'nano_banana_pro'],
     ],
   );
+  // 2026-09-14：gpt-image 高清型号更名收敛 —— 旧两条写法降级为 gpt-image-2.5-hd 的别名。
+  // gpt-image-2 → gpt-image-2.5 的改名**未**收敛（网关 goeasy 适配器仍接受旧 ID），保持 canonical。
+  assert.deepEqual(
+    [resolveDisposition(doc, 'gpt-image-2-hd'), resolveDisposition(doc, 'gpt-image2-hd')].map((r) => [r?.disposition, r?.target]),
+    [
+      ['alias', 'gpt-image-2.5-hd'],
+      ['alias', 'gpt-image-2.5-hd'],
+    ],
+  );
+  assert.equal(resolveDisposition(doc, 'gpt-image-2.5-hd')?.disposition, 'canonical');
   for (const id of ['seedance-2-0-fast', 'gpt-image-2', 'grok-imagine-image-2']) {
     const row = resolveDisposition(doc, id);
     assert.equal(row?.disposition, 'canonical', id);

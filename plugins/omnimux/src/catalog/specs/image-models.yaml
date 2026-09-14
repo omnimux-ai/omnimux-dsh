@@ -1,5 +1,10 @@
 # 图像模型能力契约 (Image Models Capability Contract)
-# H2: 17 个 runtime image ID 全处置 = 12 契约行 + 5 alias（nanobanana 与 Grok Image 2）。
+# H2: runtime image ID 全处置 = 契约行 + alias（nanobanana / Grok Image 2 / gpt-image HD 更名族）。
+# 2026-09-14：公开文档 2026-09-10 公告 gpt-image-2-hd 更名至 gpt-image-2.5-hd → 契约行改名并登记
+#   两个旧写法（gpt-image-2-hd / gpt-image2-hd）为别名。
+#   同批公告的 gpt-image-2 → gpt-image-2.5 改名**未**在本行收敛：网关 relay/channel/task/goeasy/adaptor.go
+#   仍接受 gpt-image-2 并映射到 gpt-image-2.5-async，与文档「旧 ID 不再提供」冲突，待网关侧裁定
+#   （冲突已登记在 dispositions.json 的 gpt-image-2 行）。
 # Batch A：gpt-image-2 / grok-imagine-image-2 仅 text_to_image 保留仓内 dated live 证据
 # （docs/evidence/2026-08-16-omnimux-image.md）→ verified+live；multi_reference 保持 draft。
 # 其余 10 行 draft（证据不足不上架）。parameters 自旧 runtime SPECS 迁入。
@@ -114,10 +119,13 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
-  - id: "gpt-image2-hd"
-    label: "GPT Image 2 HD"
+  - id: "gpt-image-2.5-hd"
+    label: "GPT Image 2.5 HD"
     family: "openai"
     subtitle: "高清 4K"
+    aliases:
+      - "gpt-image-2-hd"
+      - "gpt-image2-hd"
     operations:
       - id: "text_to_image"
         label: "文生图"

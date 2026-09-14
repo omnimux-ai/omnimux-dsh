@@ -15,6 +15,7 @@ import {
 } from './commonSchema.js';
 import { validateSlotSizes, hasSizeLimitFields } from './imageSchema.js';
 import { validateSlotDurations, hasVideoDurationFields } from './videoSchema.js';
+import { validateParameterDomain } from './parameterSchema.js';
 import { validatePromptPolicy, validateInputGroups } from './textSchema.js';
 import { validateResearch, validateExecution, validateImplementation } from './statusSchema.js';
 
@@ -243,6 +244,7 @@ export function validateOperation(op, opIndex, ctxOrModelId, ...rest) {
   }
 
   out.push(...validateAliasesArray(o.aliases, `${base}.aliases`, modelId, file));
+  out.push(...validateParameterDomain(o.parameters, `${base}.parameters`, modelId, file));
   out.push(...validateOperationStatusBlocks(o, base, opId, context));
 
   return out;
