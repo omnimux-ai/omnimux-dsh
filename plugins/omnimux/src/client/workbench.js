@@ -210,6 +210,7 @@ function resolveWorkbenchSnapshot() {
 function createApi() {
   return {
     open: openWorkbench,
+    openWorkbench,
     closeTab: closeWorkbenchTab,
     closePanel: closeWorkbenchPanel,
     isOpen: isWorkbenchOpen,
