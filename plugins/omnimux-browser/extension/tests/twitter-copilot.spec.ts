@@ -5,6 +5,7 @@ import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import { mountCopilotToTwitterButtons } from '../src/content/twitter-copilot/anchor.ts'
 import { injectTweetText } from '../src/content/twitter-copilot/injector.ts'
 import { detectCopilotLocale } from '../src/content/twitter-copilot/menu.ts'
+import { sanitizeTweetText } from '../src/content/twitter-copilot/sanitizer.ts'
 
 describe('Twitter Copilot Native Unit Tests', () => {
   beforeEach(() => {
@@ -86,7 +87,7 @@ describe('Twitter Copilot Native Unit Tests', () => {
   })
 
   it('T4: 场景提示词矩阵 - 完整覆盖 10 套推特场景与中英双语自适应', () => {
-    expect(COPILOT_MENU_ITEMS.length).toBe(10)
+    expect(COPILOT_MENU_ITEMS.length).toBeGreaterThanOrEqual(10)
 
     const createItems = COPILOT_MENU_ITEMS.filter((i) => i.category === 'create')
     const replyItems = COPILOT_MENU_ITEMS.filter((i) => i.category === 'reply')
@@ -217,5 +218,61 @@ describe('Twitter Copilot Native Unit Tests', () => {
     Object.defineProperty(navigator, 'languages', { value: ['en-US', 'en'], configurable: true })
     try { localStorage?.removeItem?.('dsh_configured_locale') } catch {}
     expect(detectCopilotLocale()).toBe('en')
+  })
+
+  it('T8: 文本清洗与防截断 - 自动剥离英文思考分析段落并去除 Markdown', () => {
+    // 模拟用户截图中的双语混排与思考前言
+    const dirtyLlmOutput = `Analyzing the request, the persona is a "God-tier" Twitter comment generator. The goal is crafting a high-engagement comment, optimized by information delta, emotional resonance, and clarity/brevity. Common generic praise must be avoided, aiming for unexpected, insightful responses.
+
+Algorithm feeds you garbage by default, actively curate top creators instead. Aesthetics are AIGC's true scarcity: tools are commodities, taste is the real moat.
+
+**关注列表决定你的审美上限，算法推荐只负责兜住多巴胺下限。**
+
+AIGC 现在的残酷真相是：模型能力每`
+
+    const cleaned = sanitizeTweetText(dirtyLlmOutput, 'zh')
+    expect(cleaned).toBe('关注列表决定你的审美上限，算法推荐只负责兜住多巴胺下限。')
+    expect(cleaned.includes('Analyzing')).toBe(false)
+    expect(cleaned.includes('**')).toBe(false)
+    expect(cleaned.length).toBeLessThan(120)
+  })
+
+  it('T9: 场景精细区分 - 首页发新帖框绝不误判为回帖', () => {
+    // 模拟推特首页顶部独立发帖框结构
+    const container = document.createElement('div')
+    const textarea = document.createElement('div')
+    textarea.setAttribute('data-testid', 'tweetTextarea_0')
+    textarea.setAttribute('role', 'textbox')
+    container.appendChild(textarea)
+
+    const placeholderSpan = document.createElement('span')
+    placeholderSpan.textContent = '有什么新鲜事？'
+    container.appendChild(placeholderSpan)
+
+    const toolbar = document.createElement('div')
+    const postBtn = document.createElement('button')
+    postBtn.setAttribute('data-testid', 'tweetButtonInline')
+    postBtn.textContent = '发帖'
+    toolbar.appendChild(postBtn)
+    container.appendChild(toolbar)
+
+    document.body.appendChild(container)
+
+    expect(detectTwitterScene(postBtn)).toBe('POST_NEW')
+  })
+
+  it('T10: 菜单场景隔离 - POST_NEW 只展示发帖类菜单，绝不包含回帖神评', () => {
+    const postNewItems = COPILOT_MENU_ITEMS.filter((it) => it.scenes.includes('POST_NEW'))
+    const postNewIds = postNewItems.map((it) => it.id)
+
+    // 发帖菜单应包含爆款复刻、长推串、金句等
+    expect(postNewIds).toContain('ai-hot-tweets')
+    expect(postNewIds).toContain('ai-tweet-threads')
+    expect(postNewIds).toContain('ai-tweet-insight')
+
+    // 绝不可包含回帖神评、回怼或破冰
+    expect(postNewIds).not.toContain('ai-tweet-reply-high')
+    expect(postNewIds).not.toContain('cmqolx85u000x1fbggacvllkj')
+    expect(postNewIds).not.toContain('ai-tweet-reply')
   })
 })

@@ -4,7 +4,12 @@
  * so Twitter's official post/reply button activates instantly.
  */
 
-export async function injectTweetText(text: string, anchorButton?: HTMLElement): Promise<boolean> {
+import { sanitizeTweetText } from './sanitizer.ts'
+
+export async function injectTweetText(rawText: string, anchorButton?: HTMLElement, locale: 'zh' | 'en' = 'zh'): Promise<boolean> {
+  const text = sanitizeTweetText(rawText, locale)
+  if (!text) return false
+
   // 1. Locate the tweet textarea corresponding to this anchor button
   let targetArea: HTMLElement | null = null
 
