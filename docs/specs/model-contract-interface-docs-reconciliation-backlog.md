@@ -31,6 +31,14 @@ related:
   - `CT` = `/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/plugins/omnimux/src/catalog`
 - 契约层 21 个 operation id 真源：`CT/contract/operation-registry.json`（21 条：chat / vision_chat / document_analyze / text_to_image / image_to_image / multi_reference / inpaint_outpaint / text_to_video / first_frame / first_last_frame / end_frame / video_multi_ref / digital_human / video_edit / video_extend / document_to_video / webpage_to_video / text_to_speech / voice_clone / text_to_music / speech_to_text）
 
+## 开放裁定项（需产品 / 网关 owner 裁决后才可继续）
+
+| # | 事项 | 现状证据 | 需要谁裁决 | 裁决前不得做的事 |
+| --- | --- | --- | --- | --- |
+| D-1 | `gpt-image-2` 是否降级为 `gpt-image-2.5` 的别名 | 公开文档（`OmniMux-docs/.../gpt-image/generate.mdx`）称 2026-09-10 起旧 ID 不再接受；网关 `relay/channel/task/goeasy/adaptor.go:219-220` 仍把 `gpt-image-2` 映射到 `gpt-image-2.5-async`；网关侧另有决议 `OmniMux/docs/ops/image25-public-rename-2026-09-10.md:7` 声明旧 ID「不作为别名保留」（面向公开价目表） | 网关/产品 owner | 不得删除 `gpt-image-2` 契约行、不得把它降级为别名——它是 canonical、有 dated live 证据、其 `text_to_image` 在 `listedOperations` 内，并被自动上架清单与画布白名单引用；降级等于用户可见地少一个模型 |
+| D-2 | 公开文档模型页与契约层的对齐门禁由谁承载 | 44 个模型页中 42 个为通用模板；文档仓无 CI 对齐门禁；`OmniMux-docs/scripts/sync-openapi.py` 的同步源 `relay.json` 不含模型 ID | 文档 owner（另一工作区） | 不得在未获授权时修改 `OmniMux-docs` |
+| D-3 | `minimax-h3-{t2v,flf,endframe,fl2va}` 四个文档 id 的性质 | `dispositions.json` 明文「不保留 minimax-h3-endframe 伪型号」；网关 `apimart/video_contract.go` wire 只认 `minimax-h3`；但 `apply-prod-rename.js:230-249` 又把四者写入 gxgenai 渠道 models | 网关 owner | 不得为四者新建契约行；`fl2va` 语义未定前不得映射 `first_frame` |
+
 ## 0. 优先级口径（本单统一使用）
 
 | 级别 | 判定标准 |

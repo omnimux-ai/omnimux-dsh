@@ -57,7 +57,7 @@ issue: 1650
 | # | 步骤 | 期望 |
 | --- | --- | --- |
 | V1 | worktree 内 `node scripts/verify-model-contracts.mjs --strict` | exit 0；`admission errors=0 warnings=0`；`coverage extra=0` |
-| V2 | `git grep -n "gpt-image-2" -- plugins/omnimux/src/catalog/specs` | 仅出现在 `aliases[]`，不作为 `- id:` |
+| V2 | `git grep -n "gpt-image-2-hd" -- plugins/omnimux/src/catalog/specs` | 旧写法只出现在 `gpt-image-2.5-hd` 的 `aliases[]`，不作为 `- id:`；`gpt-image-2` 仍为独立 `- id:`（R1.2） |
 | V3 | `pnpm --filter omnimux test`（或等价 node --test 全量） | 全绿（与基线一致的既有失败除外，需在 PR 说明） |
 | V4 | 新增参数校验单测 | 正反例全部通过 |
 | V5 | 逐条比对 R2 验收项与 `model-capabilities-matrix.md` | 5 项全部满足 |
@@ -68,9 +68,9 @@ issue: 1650
 - 不逐模型补齐 19 个缺失契约（R4 仅出整改单）。
 - 不修改 `OmniMux-docs`（另一工作区，需单独授权）。
 - 不发真实模型请求、不探测接口。
-- 不为 `gpt-image-2` 的“文档称停用 vs 网关 goeasy 适配器仍接受”冲突单方面裁定；以证据登记 + 待裁定项形式记录。
+- 不为 `gpt-image-2` 的“文档称停用 vs 网关 goeasy 适配器仍接受”冲突单方面裁定；以证据登记 + 待裁定项形式记录（待裁定项见整改单 `docs/specs/model-contract-interface-docs-reconciliation-backlog.md` 的「开放裁定项」）。
 
 ## 5. 风险与回滚
 
-- R1 会改变目录投影（少一个 `gpt-image-2` 模型行、多一个 `gpt-image-2.5-hd` 行）。回滚 = revert 单个提交。
+- R1 只改变未上架行：`gpt-image2-hd`（draft）改名为 `gpt-image-2.5-hd`，目录投影多一个未上架行、少一个未上架行；`gpt-image-2` 及其 listed operation 不变。回滚 = revert 单个提交。
 - R3 新增红了之后若发现既有 spec 误报，按“先修数据、再修门禁”的顺序，或将该规则降级为 warning 并记录理由。
