@@ -370,6 +370,58 @@ describe('use-inspiration-feed pure helpers', () => {
 })
 
 describe('useInspirationFeed lifecycle', () => {
+  it('defaults local to newest and preserves independent manual sorting until remount', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const previous = {
+      window: globalThis.window,
+      document: globalThis.document,
+      fetch: globalThis.fetch,
+      IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    }
+    Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
+    const requests = []
+    let feed
+    invalidateInspirationCache()
+    globalThis.fetch = async (input) => {
+      const url = new URL(String(input), dom.window.location.href)
+      requests.push({ path: url.pathname, sort: url.searchParams.get('sort') })
+      return jsonResponse(200, { data: { items: [], total: 0 } })
+    }
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return null
+    }
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => root.render(React.createElement(Harness)))
+      assert.equal(feed.sort, 'hot')
+      await act(async () => feed.setTab('local'))
+      assert.equal(feed.sort, 'new', 'local must default to saved-time newest')
+      assert.deepEqual(requests.at(-1), { path: '/omnimux/inspiration/local', sort: 'new' })
+      await act(async () => feed.setSort('hot'))
+      assert.equal(feed.sort, 'hot')
+      await act(async () => feed.setSort('fav'))
+      assert.equal(feed.sort, 'fav')
+      assert.equal(requests.at(-1).sort, 'fav')
+      await act(async () => feed.setTab('public'))
+      assert.equal(feed.sort, 'hot', 'local choice must not leak into public')
+      await act(async () => feed.setSort('new'))
+      await act(async () => feed.setTab('all'))
+      assert.equal(feed.sort, 'new', 'non-local tabs keep their existing shared choice')
+      await act(async () => feed.setTab('local'))
+      assert.equal(feed.sort, 'fav', 'non-local choice must not replace local choice')
+      await act(async () => root.render(React.createElement(Harness, { key: 'fresh' })))
+      assert.equal(feed.sort, 'hot')
+      await act(async () => feed.setTab('local'))
+      assert.equal(feed.sort, 'new', 'a fresh instance restores local default')
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      Object.assign(globalThis, previous)
+    }
+  })
+
   it('keeps appended pages, stops at the end, and resets filters to page one', async () => {
     const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
     const originalWindow = globalThis.window
