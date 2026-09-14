@@ -794,22 +794,26 @@ export function syncNativeRightbarControls(doc) {
   }
 
   // 3.1 监听全屏与分栏按钮点击，打通会话栏显隐与分栏/全屏联动，彻底杜绝空白死区占位
-  if (fsBtn instanceof HTMLElement && !fsBtn.__omnimuxModeBound) {
+  if (fsBtn && typeof fsBtn.addEventListener === 'function' && !fsBtn.__omnimuxModeBound) {
     fsBtn.__omnimuxModeBound = true
     fsBtn.addEventListener('click', () => {
       const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
       const api = win?.__omnimuxWorkbench
       if (!api) return
-      const isPush = fsBtn.getAttribute('data-sidebar-right-mode') === 'push'
-        || /退出全屏/.test(fsBtn.getAttribute('aria-label') || '')
-      if (isPush) {
+      const isCurrentlyFullscreen = Boolean(
+        doc.querySelector('[data-sidebar-right-panel="fullscreen"]') ||
+        api.getConversationCollapsed?.() ||
+        /退出全屏/.test(fsBtn.getAttribute('aria-label') || '') ||
+        fsBtn.getAttribute('data-sidebar-right-mode') === 'push'
+      )
+      if (isCurrentlyFullscreen) {
         api.setFocus?.('split')
       } else {
         api.setFocus?.('gui')
       }
     }, true)
   }
-  if (splitBtn instanceof HTMLElement && !splitBtn.__omnimuxSplitBound) {
+  if (splitBtn && typeof splitBtn.addEventListener === 'function' && !splitBtn.__omnimuxSplitBound) {
     splitBtn.__omnimuxSplitBound = true
     splitBtn.addEventListener('click', () => {
       const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
@@ -817,6 +821,20 @@ export function syncNativeRightbarControls(doc) {
       api?.setFocus?.('split')
     }, true)
   }
+
+  // 3.2 监听收起右侧栏按钮点击：一旦用户收起右侧辅助栏，必须立刻切换到会话聚焦（全屏展示会话，杜绝黑屏死区）
+  const toggleBtns = doc.querySelectorAll('button[data-sidebar-right-toggle]')
+  toggleBtns.forEach((btn) => {
+    if (btn && typeof btn.addEventListener === 'function' && !btn.__omnimuxToggleBound) {
+      btn.__omnimuxToggleBound = true
+      btn.addEventListener('click', () => {
+        const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+        const api = win?.__omnimuxWorkbench
+        if (!api) return
+        api.setFocus?.('chat')
+      }, true)
+    }
+  })
 
   // 4. 原生右侧栏按钮：收起时提供一个右上角可见入口，但**只保留一份**。
   //    界面（React）每次重画都会生成新的原生节点；被搬走的旧拷贝若不回收，就会与新的并存，
@@ -826,6 +844,13 @@ export function syncNativeRightbarControls(doc) {
     doc.querySelector('[data-rightbar-collapsed="true"]') ||
     doc.querySelector('.dshDesktopFrame[data-rightbar-collapsed="true"]')
   )
+  if (isRightCollapsed) {
+    const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+    const api = win?.__omnimuxWorkbench
+    if (api && api.getFocus?.() === 'gui') {
+      api.setFocus?.('chat')
+    }
+  }
   const RIGHTBAR_CONTROL_SELECTOR = 'button[data-sidebar-right-toggle], button[data-sidebar-right-expand]'
   const controls = Array.from(doc.querySelectorAll(RIGHTBAR_CONTROL_SELECTOR))
   const movedCopies = controls.filter((el) => el.hasAttribute('data-original-parent'))
