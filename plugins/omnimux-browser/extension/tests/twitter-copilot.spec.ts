@@ -477,14 +477,15 @@ AIGC 现在的残酷真相是：模型能力每`
 
   it('T17: 上下文闸门 - 四场景缺上下文时阻止生成并给双语提示', () => {
     const empty = { scene: 'POST_NEW' as const, draftText: '', targetTweetText: '', quotedTweetText: '' }
-    expect(checkContextReady('POST_NEW', empty, 'zh')).toContain('请先在发帖框写下你的主题')
+    expect(checkContextReady('POST_NEW', empty, 'zh')).toContain('请先在发帖框写下主题')
     expect(checkContextReady('POST_NEW', empty, 'en')).toContain('Write your topic')
     expect(checkContextReady('POST_QUOTE', empty, 'zh')).toContain('没有读到被引用的推文')
     expect(checkContextReady('REPLY_DETAIL', empty, 'zh')).toContain('没有读到原推内容')
     expect(checkContextReady('REPLY_FEED', empty, 'en')).toContain("Couldn't read the target tweet")
 
-    // 上下文就绪时放行
+    // 上下文就绪时放行：POST_NEW 有草稿放行，无草稿但有信息流热帖同样放行（双轨全新写）
     expect(checkContextReady('POST_NEW', { ...empty, draftText: '量子计算' }, 'zh')).toBeNull()
+    expect(checkContextReady('POST_NEW', { ...empty, feedHotTweets: [{ author: 'elon', text: 'Mars mission update' }] }, 'zh')).toBeNull()
     expect(checkContextReady('POST_QUOTE', { ...empty, quotedTweetText: '被引正文' }, 'zh')).toBeNull()
     expect(checkContextReady('REPLY_DETAIL', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
     expect(checkContextReady('REPLY_FEED', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
@@ -599,5 +600,38 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(toastBlock).not.toContain('bottom: 24px;')
     // 隐藏状态下向上偏移，入场时向下滑出
     expect(toastBlock).toContain('translateY(-20px)')
+  })
+
+  it('T23: 发新帖 5 大模块双轨自适应 - 有草稿改写，无草稿从信息流热帖全新原创', () => {
+    const postNewItems = COPILOT_MENU_ITEMS.filter((item) => item.scenes.includes('POST_NEW'))
+    expect(postNewItems.length).toBe(5)
+
+    const sampleFeedTweets = [
+      { author: 'tech_insider', text: 'OpenAI 发布了全新的推理强度控制参数，实测效果惊人。', stat: '500 喜欢, 120 转发' },
+      { author: 'dev_guru', text: '极简代码架构为何总是打败过度设计的复杂系统？', stat: '800 喜欢, 340 转发' },
+    ]
+
+    for (const item of postNewItems) {
+      // 1. 轨迹一：有草稿走改写/扩写
+      const rewriteZh = item.generatePrompt({ scene: 'POST_NEW', draftText: '我的初始想法' }, 'zh')
+      expect(rewriteZh.userMessage).toContain('我的初始想法')
+
+      // 2. 轨迹二：无草稿走全新写（注入热帖参考，杜绝 undefined 与写死死板主题）
+      const freshZh = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: sampleFeedTweets }, 'zh')
+      if (item.id === 'twitter-post-en') {
+        expect(freshZh.userMessage).toContain('Trending discussions on Twitter feed right now')
+      } else {
+        expect(freshZh.userMessage).toContain('当前推特首页正在热议的推文参考')
+      }
+      expect(freshZh.userMessage).toContain('tech_insider')
+      expect(freshZh.userMessage).toContain('OpenAI 发布了全新的推理强度控制参数')
+      expect(freshZh.userMessage).not.toContain('undefined')
+      expect(freshZh.userMessage).not.toContain('分享关于效率工具与现代技术创新的思考')
+
+      const freshEn = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: sampleFeedTweets }, 'en')
+      expect(freshEn.userMessage).toContain('Trending discussions on Twitter feed right now')
+      expect(freshEn.userMessage).not.toContain('undefined')
+      expect(freshEn.userMessage).not.toContain('AI agents and software evolution trends')
+    }
   })
 })

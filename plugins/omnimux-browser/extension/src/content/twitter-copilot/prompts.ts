@@ -23,6 +23,19 @@ function optionalBlock(label: string, value?: string): string {
   return text ? `\n\n${label}${text}` : ''
 }
 
+/** 格式化首页采集到的热门讨论推文，作为“全新写（无草稿）”场景下的事实灵感输入 */
+function formatFeedHotTweets(tweets?: Array<{ author: string; text: string; stat?: string }>, locale: 'zh' | 'en' = 'zh'): string {
+  if (!tweets || tweets.length === 0) return ''
+  const header = locale === 'en' ? 'Trending discussions on Twitter feed right now:\n' : '当前推特首页正在热议的推文参考：\n'
+  const body = tweets
+    .map(
+      (t, i) =>
+        `[${locale === 'en' ? 'Hot Tweet' : '热门推文'} ${i + 1}] @${t.author || 'creator'}: ${t.text}${t.stat ? ` (${t.stat})` : ''}`,
+    )
+    .join('\n\n')
+  return `${header}${body}`
+}
+
 const STRICT_ZH_RULES = `
 ⚠️ 严格输出红线（违者作废）：
 1. 必须且只能输出【纯中文】，严禁夹杂英文单词、分析前言或英文翻译；
@@ -51,17 +64,24 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
     category: 'create',
     scenes: ['POST_NEW'],
     generatePrompt: (ctx, locale = 'zh') => {
+      const hasDraft = Boolean((ctx.draftText || '').trim())
       if (locale === 'en') {
         return {
-          systemPrompt: `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic.
-Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_RULES}`,
-          userMessage: `Draft / Idea:\n${ctx.draftText ?? ""}`,
+          systemPrompt: hasDraft
+            ? `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic. Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_RULES}`
+            : `You are an elite Twitter creator. Based on the trending discussions provided, craft 1 brand new viral tweet from a real user's perspective with high curiosity and strong hook. Do NOT summarize or quote the source tweets.${STRICT_EN_RULES}`,
+          userMessage: hasDraft
+            ? `Draft / Idea:\n${ctx.draftText}`
+            : `${formatFeedHotTweets(ctx.feedHotTweets, 'en')}\n\nTask: Find the most viral hook from the trending discussions above, and write 1 brand new viral tweet from a real user's perspective. Do NOT summarize or repeat the original tweets.`,
         }
       }
       return {
-        systemPrompt: `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。
-要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${STRICT_ZH_RULES}`,
-        userMessage: `我的发帖主题或想法：\n${ctx.draftText ?? ""}`,
+        systemPrompt: hasDraft
+          ? `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${STRICT_ZH_RULES}`
+          : `你是一个长期活跃在 Twitter 的高网感真人博主。请根据参考推文中当下最具传播潜力的热点讨论，创作 1 条全新的推特原创帖。必须有情绪、有观点，短句为主，末尾适当引导互动。不要总结、复述或引用参考内容。${STRICT_ZH_RULES}`,
+        userMessage: hasDraft
+          ? `我的发帖主题或想法：\n${ctx.draftText}`
+          : `${formatFeedHotTweets(ctx.feedHotTweets, 'zh')}\n\n任务：从上方正在热议的推文中提取最有争议或传播潜力的焦点，直接全新写出 1 条爆款原创推文。不要总结或复述原帖。`,
       }
     },
   },
@@ -74,15 +94,20 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
     category: 'create',
     scenes: ['POST_NEW'],
     generatePrompt: (ctx, locale = 'zh') => {
+      const hasDraft = Boolean((ctx.draftText || '').trim())
       if (locale === 'en') {
         return {
           systemPrompt: `Write the opening tweet (hook) for a viral Twitter thread (with "🧵 1/n").${STRICT_EN_RULES}`,
-          userMessage: `Thread topic:\n${ctx.draftText ?? ""}`,
+          userMessage: hasDraft
+            ? `Thread topic:\n${ctx.draftText}`
+            : `${formatFeedHotTweets(ctx.feedHotTweets, 'en')}\n\nTask: Turn the most insightful trending topic above into the opening hook and structure for a viral Twitter thread (🧵 1/n).`,
         }
       }
       return {
         systemPrompt: `你擅长撰写高收藏率的推特连载推文串（Threads）。本次生成该系列的核心开篇帖（带 🧵 1/n 标识），点明痛点与核心价值框架。${STRICT_ZH_RULES}`,
-        userMessage: `长文素材或主题：\n${ctx.draftText ?? ""}`,
+        userMessage: hasDraft
+          ? `长文素材或主题：\n${ctx.draftText}`
+          : `${formatFeedHotTweets(ctx.feedHotTweets, 'zh')}\n\n任务：针对上方讨论中最有深度的热门话题，拆解设计一套序号连贯的长推文串架构与吸睛主推文（带 🧵 1/n）。`,
       }
     },
   },
@@ -95,15 +120,20 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
     category: 'create',
     scenes: ['POST_NEW'],
     generatePrompt: (ctx, locale = 'zh') => {
+      const hasDraft = Boolean((ctx.draftText || '').trim())
       if (locale === 'en') {
         return {
-          systemPrompt: `Distill the user's idea into one memorable, contrarian, quotable one-liner.${STRICT_EN_RULES}`,
-          userMessage: `Idea:\n${ctx.draftText ?? ""}`,
+          systemPrompt: `Distill the idea or trending topic into one memorable, contrarian, quotable one-liner.${STRICT_EN_RULES}`,
+          userMessage: hasDraft
+            ? `Idea:\n${ctx.draftText}`
+            : `${formatFeedHotTweets(ctx.feedHotTweets, 'en')}\n\nTask: Distill the controversy or counter-intuitive angle in the trending discussion into one memorable, contrarian one-liner.`,
         }
       }
       return {
-        systemPrompt: `你是一位擅长提炼反常识金句的推特深度创作者。将输入想法提炼成一句锋利、穿透本质、让人忍不住转发的独立金句。${STRICT_ZH_RULES}`,
-        userMessage: `我的想法：\n${ctx.draftText ?? ""}`,
+        systemPrompt: `你是一位擅长提炼反常识金句的推特深度创作者。提炼成一句锋利、穿透本质、让人忍不住转发的独立金句。${STRICT_ZH_RULES}`,
+        userMessage: hasDraft
+          ? `我的想法：\n${ctx.draftText}`
+          : `${formatFeedHotTweets(ctx.feedHotTweets, 'zh')}\n\n任务：针对上方热门讨论中的争议焦点，提炼成一句发人深省、短小精悍的反常识独立金句。`,
       }
     },
   },
@@ -116,15 +146,20 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
     category: 'create',
     scenes: ['POST_NEW'],
     generatePrompt: (ctx, locale = 'zh') => {
+      const hasDraft = Boolean((ctx.draftText || '').trim())
       if (locale === 'en') {
         return {
-          systemPrompt: `Tie the user's niche to a hot industry discussion with a sharp perspective.${STRICT_EN_RULES}`,
-          userMessage: `Core idea:\n${ctx.draftText ?? ""}`,
+          systemPrompt: `Tie into a hot industry discussion with a sharp perspective.${STRICT_EN_RULES}`,
+          userMessage: hasDraft
+            ? `Core idea:\n${ctx.draftText}`
+            : `${formatFeedHotTweets(ctx.feedHotTweets, 'en')}\n\nTask: Tie into the trending industry discussion above with a sharp, distinct personal viewpoint.`,
         }
       }
       return {
         systemPrompt: `你擅长将个人见解与当下热点无缝结合。将主题与推特最新讨论风向挂钩，有观点、有态度。${STRICT_ZH_RULES}`,
-        userMessage: `发帖主题：\n${ctx.draftText ?? ""}`,
+        userMessage: hasDraft
+          ? `发帖主题：\n${ctx.draftText}`
+          : `${formatFeedHotTweets(ctx.feedHotTweets, 'zh')}\n\n任务：紧跟上方正在热议的行业趋势，以鲜明犀利的个人立场创作一条借势原创推文。`,
       }
     },
   },
@@ -136,10 +171,15 @@ Hook on line 1, clean spacing, high curiosity, natural casual tone.${STRICT_EN_R
     descEn: 'Authentic casual English tweet tailored for global tech Twitter',
     category: 'create',
     scenes: ['POST_NEW'],
-    generatePrompt: (ctx) => ({
-      systemPrompt: `You are a native English tech builder on Twitter. Write a compelling, natural tweet from the topic.${STRICT_EN_RULES}`,
-      userMessage: `Topic / Draft:\n${ctx.draftText ?? ""}`,
-    }),
+    generatePrompt: (ctx) => {
+      const hasDraft = Boolean((ctx.draftText || '').trim())
+      return {
+        systemPrompt: `You are a native English tech builder on Twitter. Write a compelling, natural tweet.${STRICT_EN_RULES}`,
+        userMessage: hasDraft
+          ? `Topic / Draft:\n${ctx.draftText}`
+          : `${formatFeedHotTweets(ctx.feedHotTweets, 'en')}\n\nTask: Write an authentic, natural English tweet tailored for global tech Twitter based on the trending topics above. Do NOT summarize.`,
+      }
+    },
   },
 
   // =========================================================================
