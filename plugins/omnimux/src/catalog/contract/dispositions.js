@@ -9,6 +9,7 @@
  *   D3 alias ⇒ no YAML model.id; target canonical + aliases[] disposition_alias_inconsistent
  *   D4 unavailable/quarantine/deprecated ⇒ no listed op       disposition_listed_forbidden
  *   D5 disposition row id must be a known runtime id          disposition_unknown_id
+ *      (exempt: tombstones — unavailable/deprecated rows lose their YAML row by design)
  *   D6 YAML model.id not runtime / not alias-covered          coverage_extra (strict error)
  *   D7 catalog-defaults byOperation ∈ canonical + op exists   defaults_unknown
  * Shape errors for defaults (defaults_invalid) fail in every mode, like disposition_invalid.
@@ -44,6 +45,14 @@ export const FORBIDDEN_LISTED_DISPOSITIONS = new Set(['unavailable', 'quarantine
 
 /** Dispositions that legitimately lack a YAML model.id row. */
 const MISSING_YAML_OK = new Set(['alias', 'unavailable', 'quarantine', 'deprecated']);
+
+/**
+ * Tombstone dispositions: a withdrawn model keeps a registry row as its audit trail
+ * while its YAML contract row is deleted, so its id is deliberately absent from the
+ * runtime universe (the same absence MISSING_YAML_OK already permits). D5 exists to
+ * catch invented/typo ids, so it skips tombstones instead of flagging them.
+ */
+const TOMBSTONE_DISPOSITIONS = new Set(['unavailable', 'deprecated']);
 
 /** @type {{ path: string, doc: object } | null} */
 let dispositionsCache = null;
@@ -273,7 +282,8 @@ export function validateDispositions(doc, ctx) {
     const disp = row.disposition;
 
     // D5: no ghost disposition rows (id unknown to runtime universe).
-    if (!runtimeSet.has(id)) {
+    // Tombstones are exempt: an unavailable/deprecated id has no YAML row by design.
+    if (!runtimeSet.has(id) && !TOMBSTONE_DISPOSITIONS.has(disp)) {
       out.push(
         issue('disposition_unknown_id', `disposition row "${id}" is not a known runtime id`, {
           level,

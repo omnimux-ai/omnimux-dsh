@@ -7,13 +7,13 @@ import { AUDIO_MODEL_SPECS, IMAGE_MODEL_SPECS, VIDEO_MODEL_SPECS, findMediaModel
 
 describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
-    assert.equal(IMAGE_MODEL_SPECS.length, 13)
-    assert.equal(VIDEO_MODEL_SPECS.length, 19)
+    assert.equal(IMAGE_MODEL_SPECS.length, 9)
+    assert.equal(VIDEO_MODEL_SPECS.length, 11)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 
-  it('GPT Image 2 lists all 8 aspect ratios + auto', () => {
-    const gpt = IMAGE_MODEL_SPECS.find((m) => m.id === 'gpt-image-2')
+  it('GPT Image 2.5 lists all 8 aspect ratios + auto', () => {
+    const gpt = IMAGE_MODEL_SPECS.find((m) => m.id === 'gpt-image-2.5')
     assert.ok(gpt)
     const ratioValues = gpt.parameters.aspectRatio?.options.map((o) => o.value)
     assert.deepEqual(ratioValues, ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'])
@@ -29,13 +29,27 @@ describe('hub media catalog facade (contract-derived)', () => {
     assert.ok(ratioValues?.includes('16:9'))
   })
 
-  it('nanobanana: underscore canonical only; hyphen resolves via alias (no double row)', () => {
-    assert.equal(IMAGE_MODEL_SPECS.some((row) => row.id === 'nanobanana-2'), false)
-    assert.equal(IMAGE_MODEL_SPECS.some((row) => row.id === 'nanobanana-pro'), false)
-    assert.ok(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano_banana_2'))
-    assert.ok(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano_banana_pro'))
-    assert.equal(findMediaModel('image', 'nanobanana-2')?.id, 'nano_banana_2')
-    assert.equal(findMediaModel('image', 'nanobanana-pro')?.id, 'nano_banana_pro')
+  it('nanobanana: hyphen canonical only; underscore resolves via alias (no double row)', () => {
+    assert.equal(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano_banana_2'), false)
+    assert.equal(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano_banana_pro'), false)
+    assert.ok(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano-banana-2'))
+    assert.ok(IMAGE_MODEL_SPECS.some((row) => row.id === 'nano-banana-pro'))
+    for (const [spelling, canonical] of [
+      ['nano_banana_2', 'nano-banana-2'],
+      ['nano_banana_pro', 'nano-banana-pro'],
+      ['nanobanana-2', 'nano-banana-2'],
+      ['nanobanana-pro', 'nano-banana-pro'],
+    ]) {
+      assert.equal(findMediaModel('image', spelling)?.id, canonical, `${spelling} must resolve to ${canonical}`)
+    }
+    // The alias spellings must not add a second row for the same model.
+    for (const canonical of ['nano-banana-2', 'nano-banana-pro']) {
+      assert.equal(
+        IMAGE_MODEL_SPECS.filter((row) => findMediaModel('image', row.id)?.id === canonical).length,
+        1,
+        `${canonical} must own exactly one table row`,
+      )
+    }
   })
 
   it('Kling O3 supports 5/10/15s and 4K', () => {
@@ -48,10 +62,10 @@ describe('hub media catalog facade (contract-derived)', () => {
     assert.equal(klingO3.parameters.sound?.supported, true)
   })
 
-  it('Veo 3.1 defaults to 8s', () => {
-    const veo = VIDEO_MODEL_SPECS.find((m) => m.id === 'veo-3.1')
-    assert.ok(veo)
-    assert.equal(veo.parameters.duration?.defaultValue, 8)
+  it('Minimax H3 defaults to 5s', () => {
+    const minimax = VIDEO_MODEL_SPECS.find((m) => m.id === 'minimax-h3')
+    assert.ok(minimax)
+    assert.equal(minimax.parameters.duration?.defaultValue, 5)
   })
 
   it('Grok Imagine Video 1.5 is the only grok video catalog row', () => {

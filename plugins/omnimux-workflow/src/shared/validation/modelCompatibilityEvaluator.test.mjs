@@ -22,7 +22,7 @@ test('单图模型(max1) + 2张图 → disabled', () => {
     { type: 'image' },
     { type: 'image' },
   ];
-  const result = evaluateModelCompatibility('gpt-image-2', modelCap, upstreams);
+  const result = evaluateModelCompatibility('gpt-image-2.5', modelCap, upstreams);
 
   assert.equal(result.level, 'disabled');
   assert.equal(result.reasons.length, 1);
@@ -135,7 +135,7 @@ test('音频参考容量校验：超出 max -> disabled', () => {
     { type: 'audio' },
     { type: 'audio' },
   ];
-  const result = evaluateModelCompatibility('kling-avatar', modelCap, upstreams);
+  const result = evaluateModelCompatibility('minimax-h3', modelCap, upstreams);
 
   assert.equal(result.level, 'disabled');
   assert.match(result.reasons[0], /超出模型最大参考音频数量/);
@@ -171,7 +171,8 @@ test('resolveModelInputCapability：Catalog v1.1 models[] 派生（含 alias 归
 
 test('resolveModelInputCapability：未知模型 / 无目录 → undefined（无 BUILTIN 兜底）', () => {
   const catalog = createCompatTestCatalog();
-  // 历史上的 BUILTIN 键（gpt-image-2 / nanobanana-2）现在也必须由目录供给。
+  // 目录不供给的 id 一律 undefined（无 BUILTIN 兜底）；历史上的 BUILTIN 键
+  // gpt-image-2 已从契约下架，同样不得有兜底能力。
   assert.equal(resolveModelInputCapability('gpt-image-2', catalog), undefined);
   assert.equal(resolveModelInputCapability('nanobanana-2', catalog), undefined);
   assert.equal(resolveModelInputCapability('seedance-2.0-fast', catalog), undefined);

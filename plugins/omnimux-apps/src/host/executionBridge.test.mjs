@@ -48,7 +48,7 @@ function createMockManifest() {
               label: '视频生成引擎',
               materialType: 'video',
               params: {
-                model: 'minimax-h3-max',
+                model: 'minimax-h3',
                 aspectRatio: '16:9',
               },
             },
@@ -161,7 +161,7 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     const genNode = injected.nodes.find((n) => n.id === 'node_generator');
     assert.ok(genNode);
     assert.equal(genNode.data.params.aspectRatio, '9:16');
-    assert.equal(genNode.data.params.model, 'minimax-h3-max');
+    assert.equal(genNode.data.params.model, 'minimax-h3');
 
     // 4. Slot FeedAsset injection check
     assert.ok(genNode.data.feedAssets, 'Must construct feedAssets');

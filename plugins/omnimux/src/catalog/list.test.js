@@ -42,25 +42,38 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 50)
+    assert.equal(catalog.models.length, 38)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
-    assert.equal(catalog.models.find((m) => m.id === 'kling-avatar')?.disposition, 'draft')
-    assert.equal(catalog.models.find((m) => m.id === 'omni_flash')?.disposition, 'quarantine')
-    assert.equal(catalog.models.find((m) => m.id === 'nano_banana_2')?.aliases?.includes('nanobanana-2'), true)
+    assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
+    assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
+    assert.equal(catalog.models.find((m) => m.id === 'nano-banana-2')?.aliases?.includes('nanobanana-2'), true)
+    // #1751: the 12 withdrawn (disposition=unavailable) models have no YAML row and
+    // therefore never reach the authoritative models[] at all.
+    for (const gone of [
+      'gpt-image-2', 'minimax-h3-max', 'minimax-h3-max-turbo', 'midjourney', 'midjourney-niji-7',
+      'seedream-4.5', 'kling-o1', 'seedance2.5-stable-max-720p', 'omni_flash', 'kling-avatar',
+      'veo-3.1', 'veo-3.1-fast',
+    ]) {
+      assert.equal(catalog.models.some((m) => m.id === gone), false, gone)
+    }
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2', 'gpt-image-2.5', 'grok-imagine-image-2'])
-    const grokImage = catalog.image.find((row) => row.id === 'grok-imagine-image-2')
-    assert.equal(grokImage.label, 'Grok Imagine Image 2')
-    assert.equal(grokImage.subtitle, 'xAI Grok 2')
-    assert.deepEqual(catalog.models.find((row) => row.id === grokImage.id).aliases, [
-      'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0',
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
+    const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
+    assert.equal(imageRow.label, 'GPT Image 2.5')
+    assert.equal(imageRow.subtitle, '1k-4k')
+    // 2026-09-14 评审次要-2：上游明写不支持 `gpt-image-2-5` 拼写，该别名已撤销 —— 默认图片型号
+    // 现在没有任何别名，YAML 里也不再声明 `aliases:`。
+    assert.equal(catalog.models.find((row) => row.id === 'gpt-image-2.5').aliases, undefined)
+    // #1751: grok image keeps its contract row (canonical) but declares no listed op,
+    // so it leaves the image bucket while all four spellings stay aliases of the product ID.
+    assert.deepEqual(catalog.models.find((row) => row.id === 'grok-imagine-image-2-0').aliases, [
+      'grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2.0',
     ])
+    assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     assert.deepEqual(catalog.video.map((row) => row.id), [
       'grok-imagine-video-1-5',
       'minimax-h3',
-      'minimax-h3-max',
-      'minimax-h3-max-turbo',
       'seedance-2-0',
       'seedance-2-0-fast',
       'seedance-2-0-mini',
@@ -72,7 +85,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.deepEqual(catalog.text.map((row) => row.id), [
       'claude-opus-4-6',
       'claude-opus-5',
-      'deepseek-v4-flash-vision-exp',
+      'deepseek-v4-flash',
       'deepseek-v4-pro',
       'gemini-3.1-pro-preview',
       'gemini-3.7-flash',
@@ -84,14 +97,21 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'kimi-k3',
     ])
 
-    // draft-unlisted (#538 probeable) / quarantine never appear in any bucket
+    // draft / canonical-without-listed-ops models never appear in any bucket
     for (const kind of ['text', 'image', 'video', 'audio']) {
-      for (const forbidden of ['whisper-1', 'kling-avatar', 'omni_flash', 'kling-o1', 'kling-o3', 'kling-v3-motion-control']) {
+      for (const forbidden of [
+        'whisper-1', 'grok-imagine-image-quality', 'grok-imagine-image-2-0', 'gpt-4o-mini-tts', 'suno',
+        'jina-reader-v1', 'kling-o3', 'kling-v2-6', 'kling-v3', 'kling-v3-motion-control',
+      ]) {
         assert.equal(catalog[kind].some((row) => row.id === forbidden), false, `${kind}:${forbidden}`)
       }
     }
-    // nanobanana: underscore canonical only, hyphen alias never double listed
-    assert.equal(catalog.image.some((row) => row.id === 'nanobanana-2'), false)
+    // nanobanana: hyphen canonical only; the underscore and legacy spellings stay aliases
+    // and never become separate models[] rows
+    const nano = catalog.models.find((row) => row.id === 'nano-banana-2')
+    assert.ok(nano, 'nano-banana-2 stays authoritative')
+    assert.deepEqual(nano.aliases, ['nano_banana_2', 'nanobanana-2'])
+    assert.equal(catalog.models.some((row) => row.id === 'nanobanana-2'), false)
 
     // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
@@ -120,12 +140,19 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({
       text: h.text,
       media: h.media,
-      env: { OMNIMUX_VIDEO_MODEL: 'kling-o1', OMNIMUX_TEXT_DEFAULT_MODEL: 'gpt-5.5' },
+      env: { OMNIMUX_VIDEO_MODEL: 'kling-o3', OMNIMUX_TEXT_DEFAULT_MODEL: 'gpt-5.5' },
     })
-    // kling-o1 is quarantine → not listed → env overlay refused
+    // kling-o3 is canonical but declares no listed op → env overlay refused
     assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
     // #530 PR-A: gpt-5.5#chat is listed → env overlay accepted
     assert.equal(catalog.defaults.text, 'gpt-5.5')
+    // #1751: a withdrawn id is refused for the same reason
+    const withdrawn = buildModelCatalog({
+      text: h.text,
+      media: h.media,
+      env: { OMNIMUX_VIDEO_MODEL: 'kling-o1' },
+    })
+    assert.equal(withdrawn.defaults.video, 'seedance-2-0-fast')
   })
 
   it('ignores env / settings ids that are not in the list', () => {
@@ -147,15 +174,23 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       text: h.text,
       media: h.media,
       env: {},
-      settingsDefaults: { defaultImageModel: 'grok-imagine-image', defaultAudioModel: 'gpt-4o-mini-tts' },
+      settingsDefaults: {
+        defaultTextModel: 'gpt-5.5',
+        defaultImageModel: 'grok-imagine-image',
+        defaultAudioModel: 'gpt-4o-mini-tts',
+      },
     })
-    assert.equal(catalog.defaults.image, 'grok-imagine-image-2')
-    // Draft TTS setting is refused; the listed Seed Audio default survives.
+    // settings beats the config text default while env is absent
+    assert.equal(catalog.defaults.text, 'gpt-5.5')
+    // grok-imagine-image normalizes to grok-imagine-image-2-0, which declares no listed
+    // op → the image overlay is refused and the listed config default survives.
+    assert.equal(catalog.defaults.image, 'gpt-image-2.5')
+    // The TTS setting names no listed op either; the listed Seed Audio default survives.
     assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
   })
 
   for (const model of ['grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']) {
-    it(`preserves image defaults from env, settings and config for ${model}`, () => {
+    it(`refuses an image default named by ${model} and keeps the listed default`, () => {
       for (const source of ['env', 'settings', 'config']) {
         const h = hub()
         if (source === 'config') h.media.providers.omnimux.models.image = model
@@ -165,7 +200,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
           env: source === 'env' ? { OMNIMUX_IMAGE_MODEL: model } : {},
           settingsDefaults: source === 'settings' ? { defaultImageModel: model } : {},
         }
-        assert.equal(buildModelCatalog(opts).defaults.image, 'grok-imagine-image-2', source)
+        // Every spelling normalizes to grok-imagine-image-2-0, which declares no
+        // listed op, so no source may move the image default off gpt-image-2.5.
+        assert.equal(buildModelCatalog(opts).defaults.image, 'gpt-image-2.5', source)
         assert.equal(buildModelCatalog({ ...opts, gate: { media: { image: false } } }).defaults.image, '', source)
       }
     })
@@ -230,8 +267,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
-    assert.equal(IMAGE_MODEL_SPECS.length, 13)
-    assert.equal(VIDEO_MODEL_SPECS.length, 19)
+    assert.equal(IMAGE_MODEL_SPECS.length, 9)
+    assert.equal(VIDEO_MODEL_SPECS.length, 11)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 })

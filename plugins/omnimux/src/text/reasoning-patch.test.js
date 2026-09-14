@@ -4,8 +4,10 @@ import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { CHAT_MODEL_IDS } from './catalog.js'
+import { getContractIndex, resolveModelId } from '../catalog/contract/index.js'
 
 const patchPath = join(dirname(fileURLToPath(import.meta.url)), '../../cordis.patch.yml')
+const contractIndex = getContractIndex()
 
 /**
  * Split the llm-pi-ai model list into per-id blocks so a missing
@@ -29,15 +31,23 @@ function modelBlocks(text) {
 describe('omnimux patch reasoning offer', () => {
   const text = readFileSync(patchPath, 'utf8')
   const blocks = modelBlocks(text)
+  // A patch row may carry a declared alias of its contract model (wire 归一);
+  // key by the resolved canonical id so an aliased row still counts once.
+  const byCanonicalId = new Map()
+  for (const row of blocks) {
+    const canonical = resolveModelId(contractIndex, row.id)
+    assert.ok(canonical, `cordis.patch.yml model ${row.id} is neither a contract model nor a declared alias`)
+    assert.equal(byCanonicalId.has(canonical), false, `cordis.patch.yml declares ${canonical} twice`)
+    byCanonicalId.set(canonical, row.body)
+  }
 
   it('sets the omnimux route default to max', () => {
     assert.match(text, /\n        reasoning: max\n/)
   })
 
   it('declares reasoningEfforts.max on every chat-directory model', () => {
-    const byId = new Map(blocks.map((row) => [row.id, row.body]))
     for (const id of CHAT_MODEL_IDS) {
-      const body = byId.get(id)
+      const body = byCanonicalId.get(id)
       assert.ok(body, `patch is missing chat-directory model ${id}`)
       assert.match(body, /reasoningEfforts:\n/, `${id} has no reasoningEfforts`)
       assert.match(body, /^\s+max: (max|xhigh)$/m, `${id} does not offer max`)
@@ -45,15 +55,13 @@ describe('omnimux patch reasoning offer', () => {
   })
 
   it('maps gpt-5.5 UI max to wire xhigh because literal max 400s', () => {
-    const byId = new Map(blocks.map((row) => [row.id, row.body]))
-    assert.match(byId.get('gpt-5.5') ?? '', /^\s+max: xhigh$/m)
+    assert.match(byCanonicalId.get('gpt-5.5') ?? '', /^\s+max: xhigh$/m)
   })
 
   it('maps Off to wire none only on the models that can disable thinking', () => {
-    const byId = new Map(blocks.map((row) => [row.id, row.body]))
-    assert.match(byId.get('gpt-5.6-sol') ?? '', /'off': 'none'/)
-    assert.match(byId.get('deepseek-v4-pro') ?? '', /'off': 'none'/)
-    assert.match(byId.get('deepseek-v4-flash-vision-exp') ?? '', /'off': 'none'/)
+    assert.match(byCanonicalId.get('gpt-5.6-sol') ?? '', /'off': 'none'/)
+    assert.match(byCanonicalId.get('deepseek-v4-pro') ?? '', /'off': 'none'/)
+    assert.match(byCanonicalId.get('deepseek-v4-flash') ?? '', /'off': 'none'/)
     for (const id of [
       'claude-opus-5',
       'claude-opus-4-6',
@@ -64,7 +72,7 @@ describe('omnimux patch reasoning offer', () => {
       'gemini-3.1-pro-preview',
       'glm-5.3',
     ]) {
-      assert.doesNotMatch(byId.get(id) ?? '', /'off':/, `${id} must not offer Off`)
+      assert.doesNotMatch(byCanonicalId.get(id) ?? '', /'off':/, `${id} must not offer Off`)
     }
   })
 })

@@ -14,7 +14,7 @@ test('e2e: model cascade menu switches to default model on first-level menu clic
   assert.match(cascadeSrc, /defaultModelForBrand/, 'Must declare defaultModelForBrand helper');
 
   // 2. 验证 DeepSeek 与 Google 默认模型配置符合契约
-  assert.match(cascadeSrc, /deepseek:\s*['"]deepseek-v4-flash-vision-exp['"]/, 'DeepSeek default must be deepseek-v4-flash-vision-exp');
+  assert.match(cascadeSrc, /deepseek:\s*['"]deepseek-v4-flash['"]/, 'DeepSeek default must be deepseek-v4-flash');
   assert.match(cascadeSrc, /google:\s*['"]gemini-3.8-flash['"]/, 'Google default must be gemini-3.8-flash');
 
   // 3. 验证点击一级品牌菜单时立即调用 defaultModelForBrand 并切换选中该模型

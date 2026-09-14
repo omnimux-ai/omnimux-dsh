@@ -112,27 +112,24 @@ test('图片模型：catalog 全量 A-Z，不在中枢的模型自然不存在',
       { id: 'dall-e-3', label: 'DALL-E 3' },
       { id: 'nanobanana-2', label: 'NanoBanana 2' },
       { id: 'seedream-5.0-pro', label: 'Seedream 5.0 Pro' },
-      { id: 'midjourney-8.1', label: 'Midjourney 8.1' },
-      { id: 'midjourney-7', label: 'Midjourney 7' },
-      { id: 'gpt-image-2', label: 'GPT Image 2' },
+      { id: 'mj-v8-1', label: 'Midjourney 8.1' },
+      { id: 'mj-v7', label: 'Midjourney 7' },
+      { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
       { id: 'stable-diffusion-xl', label: 'SDXL' },
-      { id: 'seedream-4.5', label: 'Seedream 4.5' },
     ],
   };
 
   const options = deriveModelOptions(catalog, 'image');
-  // Sorted by label A–Z: DALL-E 3, GPT Image 2, Midjourney 7/8.1, NanoBanana 2,
-  // SDXL, Seedream 4.5/5.0 Pro
+  // Sorted by label A–Z: DALL-E 3, GPT Image 2.5, Midjourney 7/8.1, NanoBanana 2, SDXL, Seedream 5.0 Pro
   assert.deepEqual(
     options.map((o) => o.label),
     [
       'DALL-E 3',
-      'GPT Image 2',
+      'GPT Image 2.5',
       'Midjourney 7',
       'Midjourney 8.1',
       'NanoBanana 2',
       'SDXL',
-      'Seedream 4.5',
       'Seedream 5.0 Pro',
     ],
   );
@@ -165,7 +162,7 @@ test('存量已保存模型（params.model）不在 catalog bucket 时保留为 
 test('video / audio：全量保留目录模型', () => {
   const catalog = {
     video: [
-      { id: 'kling-o1', label: 'Kling O1' },
+      { id: 'kling-o3', label: 'Kling O3' },
       { id: 'veo-3', label: 'Veo 3' },
       { id: 'wan-2.1', label: 'Wan 2.1' },
       { id: 'custom-video', label: 'Custom Video' },
@@ -179,7 +176,7 @@ test('video / audio：全量保留目录模型', () => {
   const videoOptions = deriveModelOptions(catalog, 'video');
   assert.deepEqual(
     videoOptions.map((o) => o.value),
-    ['custom-video', 'kling-o1', 'veo-3', 'wan-2.1'],
+    ['custom-video', 'kling-o3', 'veo-3', 'wan-2.1'],
   );
 
   const audioOptions = deriveModelOptions(catalog, 'audio');
@@ -197,13 +194,13 @@ test('modelValue 默认值优先级解析（优先已选 > catalog defaults > �
       { id: 'gpt-5.5', label: 'GPT 5.5' },
     ],
     image: [
-      { id: 'midjourney-8.1', label: 'Midjourney 8.1' },
+      { id: 'mj-v8-1', label: 'Midjourney 8.1' },
       { id: 'nanobanana-2', label: 'NanoBanana 2' },
       { id: 'seedream-5.0-pro', label: 'Seedream 5.0 Pro' },
     ],
     video: [
       { id: 'wan-2.1', label: 'Wan 2.1' },
-      { id: 'kling-o1', label: 'Kling O1' },
+      { id: 'kling-o3', label: 'Kling O3' },
     ],
   };
 
@@ -236,11 +233,11 @@ test('modelValue 默认值优先级解析（优先已选 > catalog defaults > �
   );
   assert.equal(
     deriveModelValue(catalog, 'image', {}, imageOptions),
-    'midjourney-8.1',
+    'mj-v8-1',
   );
   assert.equal(
     deriveModelValue(catalog, 'video', {}, videoOptions),
-    'kling-o1',
+    'kling-o3',
   );
 });
 
@@ -253,7 +250,7 @@ test('ConfigPanel 源码契约：只消费 buildFilteredModelOptions，禁止 MA
   assert.doesNotMatch(src, /productAllowlist/);
   assert.doesNotMatch(src, /orderTextModels/);
   assert.doesNotMatch(src, /nanobanana-2/);
-  assert.doesNotMatch(src, /kling-o1/);
+  assert.doesNotMatch(src, /kling-o3/);
   assert.doesNotMatch(src, /defaults\?\.\[materialType\]/);
   assert.doesNotMatch(src, /evaluateModelCompatibility/);
   assert.doesNotMatch(src, /level === 'disabled'/);

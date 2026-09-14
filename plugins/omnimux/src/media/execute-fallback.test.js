@@ -6,9 +6,12 @@ import { test } from 'node:test'
 import { executeOmnimuxMedia } from './execute.js'
 import { OmnimuxError } from './errors.js'
 import { SAFE_CHANNEL_MESSAGE } from '../errors/channel-classifier.js'
+import { gatewayCandidates } from '../catalog/serving/id-universe.js'
 
-const productId = 'grok-imagine-image-2'
-const channelMessage = '分组 auto 下模型 grok-imagine-image-2 无可用渠道 (distributor) (request id: hidden-id)'
+const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
+
+const productId = 'gpt-image-2.5'
+const channelMessage = '分组 auto 下模型 gpt-image-2.5 无可用渠道 (distributor) (request id: hidden-id)'
 const channelError = () => Object.assign(new Error('Adapter openai-compatible failed'), {
   code: 'ADAPTER_FAILED', cause: Object.assign(new Error(channelMessage), { status: 503 }),
 })
@@ -28,7 +31,9 @@ function inputFor(t, extra = {}) {
   return { prompt: 'a lamp', dest: join(dir, 'out.png'), model: productId, env: { OMNIMUX_API_KEY: 'fixture-key' }, ...extra }
 }
 
-test('real protocol retries one alias, preserves payload and leaves the product selection unchanged', async (t) => {
+// 2026-09-14 #1751（评审次要-2）：gpt-image-2.5 无上游承认的别名 —— `gpt-image-2-5` 拼写被上游
+// 明写否决（与 gpt-image-2-hd / gpt-image2-hd 同源同口径），故它只剩单一网关候选、不会重试。
+test('gpt-image-2.5 declares no upstream-recognised alias, so the real protocol sends one request', async (t) => {
   const bodies = []
   const signal = new AbortController().signal
   const input = inputFor(t, { signal, aspectRatio: '16:9', resolution: '2K',
@@ -36,15 +41,17 @@ test('real protocol retries one alias, preserves payload and leaves the product 
       assert.match(String(url), /images\/generations$/)
       assert.equal(init.method, 'POST')
       bodies.push(JSON.parse(init.body))
-      return bodies.length === 1 ? json({ error: { message: channelMessage, code: 'get_channel_failed' } }, 503)
-        : json({ data: [{ b64_json: 'cG5n' }] })
+      return json({ data: [{ b64_json: 'cG5n' }] })
     },
   })
   const result = await executeOmnimuxMedia('image', input)
   assert.equal(result.mode, 'live')
   assert.equal(input.model, productId)
-  assert.deepEqual(bodies.map((body) => body.model), [productId, 'grok-imagine-image'])
-  assert.deepEqual({ ...bodies[0], model: bodies[1].model }, bodies[1])
+  // 单次请求锁死 payload：vendor 字段映射完毕，model 由协议持有，不存在第二次别名改写。
+  assert.deepEqual(bodies, [
+    { prompt: 'a lamp', size: '1792x1024', quality: 'standard', n: 1, model: productId },
+  ])
+  assert.deepEqual(gatewayCandidates(productId), [productId])
   assert.equal(readFileSync(input.dest, 'utf8'), 'png')
 })
 
@@ -52,13 +59,15 @@ test('structured code-only HTTP failures survive runtime-kit message extraction'
   const models = []
   const input = inputFor(t, { fetcher: async (_url, init) => {
     models.push(JSON.parse(init.body).model)
-    return models.length === 1 ? json({ error: { code: 'get_channel_failed', message: 'temporarily unavailable' } }, 503)
-      : json({ data: [{ b64_json: 'cG5n' }] })
+    return json({ error: { code: 'get_channel_failed', message: 'temporarily unavailable' } }, 503)
   } })
-  assert.equal((await executeOmnimuxMedia('image', input)).mode, 'live')
-  assert.deepEqual(models, [productId, 'grok-imagine-image'])
+  // 分类仍然成立（code → CHANNEL_UNAVAILABLE，且上游文案不泄漏）；无别名可退，故只发一次请求。
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
+  assert.deepEqual(models, [productId])
 })
 
+// 2026-09-14 #1751：图片侧默认型号 gpt-image-2.5 已无别名，别名重试的覆盖由 video 路径承担
+// （seedance-2-0-fast → 上游承认的 seedance-2.0-fast）。
 test('video fallback uses the documented gateway alias without switching provider or input', async (t) => {
   const bodies = []
   const input = inputFor(t, { model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false, fetcher: async (url, init) => {
@@ -79,18 +88,26 @@ test('successful primary sends one request only', async (t) => {
   assert.equal(calls, 1)
 })
 
-test('two channel failures stop after one retry even with three aliases', async (t) => {
+test('two channel failures exhaust the gateway alias list', async (t) => {
   const models = []
-  const input = inputFor(t, { runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.deepEqual(models, [productId, 'grok-imagine-image'])
+  const input = inputFor(t, {
+    model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false,
+    runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } },
+  })
+  await assert.rejects(() => executeOmnimuxMedia('video', input), assertChannel)
+  assert.deepEqual(models, ['seedance-2-0-fast', 'seedance-2.0-fast'])
   assert.equal(existsSync(input.dest), false)
 })
 
-test('a model without an alias is not retried', async (t) => {
+test('a model with a single gateway candidate is not retried', async (t) => {
+  assert.deepEqual(gatewayCandidates('doubao-asr-bigmodel'), ['doubao-asr-bigmodel'])
   let calls = 0
-  const input = inputFor(t, { model: 'gpt-image-2', runtime: { execute: async () => { calls++; throw channelError() } } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
+  const input = inputFor(t, {
+    model: 'doubao-asr-bigmodel',
+    audio: `data:audio/mpeg;base64,${AUDIO_BYTES.toString('base64')}`,
+    runtime: { execute: async () => { calls++; throw channelError() } },
+  })
+  await assert.rejects(() => executeOmnimuxMedia('stt', input), assertChannel)
   assert.equal(calls, 1)
 })
 
@@ -120,13 +137,18 @@ for (const [status, code] of [[401, 'needs-omnimux'], [402, 'quota-exceeded']]) 
   })
 }
 
+// 别名路径仍存在（video seedance-2-0-fast → seedance-2.0-fast）：第二次尝试上的另一种错误必须保留
+// 它自己的分类并立刻停止，不得被当作渠道不可用继续退避。
 test('a different error on the alias retains its classification and stops', async (t) => {
   let calls = 0
-  const input = inputFor(t, { runtime: { execute: async () => {
-    if (++calls === 1) throw channelError()
-    throw new Error('quota exceeded')
-  } } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error.code === 'quota-exceeded')
+  const input = inputFor(t, {
+    model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false,
+    runtime: { execute: async () => {
+      if (++calls === 1) throw channelError()
+      throw new Error('quota exceeded')
+    } },
+  })
+  await assert.rejects(() => executeOmnimuxMedia('video', input), (error) => error.code === 'quota-exceeded')
   assert.equal(calls, 2)
 })
 
@@ -196,13 +218,14 @@ test('taskId resume sanitizes poll failure without submitting', async (t) => {
   assert.equal(posts, 0)
 })
 
-test('wait=false can return the task submitted by the fallback', async (t) => {
+// gpt-image-2.5 无别名可退：wait=false 直接返回单一网关候选提交的任务，且只发一次请求。
+test('wait=false returns the task submitted by the single gateway candidate', async (t) => {
   const models = []
   const input = inputFor(t, { wait: false, fetcher: async (_url, init) => {
     models.push(JSON.parse(init.body).model)
-    return models.length === 1 ? json({ error: { message: channelMessage } }, 503) : json({ task_id: 'alias-task' })
+    return json({ task_id: 'single-candidate-task' })
   } })
-  assert.deepEqual(await executeOmnimuxMedia('image', input), { mode: 'submitted', taskId: 'alias-task', url: null })
-  assert.deepEqual(models, [productId, 'grok-imagine-image'])
+  assert.deepEqual(await executeOmnimuxMedia('image', input), { mode: 'submitted', taskId: 'single-candidate-task', url: null })
+  assert.deepEqual(models, [productId])
   assert.equal(existsSync(input.dest), false)
 })

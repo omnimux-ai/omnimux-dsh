@@ -41,7 +41,9 @@ describe('model display-label contract (#321)', () => {
 
   it('required Issue #321 renames are present', () => {
     assert.equal(TEXT_MODEL_LABELS['claude-opus-4-6'], 'Claude Opus 4.6')
-    assert.equal(TEXT_MODEL_LABELS['deepseek-v4-flash-vision-exp'], 'DeepSeek V4 Flash')
+    // #1751：canonical 更名为 deepseek-v4-flash，标签随之迁移；旧写法仅剩别名身份。
+    assert.equal(TEXT_MODEL_LABELS['deepseek-v4-flash'], 'DeepSeek V4 Flash')
+    assert.equal(TEXT_MODEL_LABELS['deepseek-v4-flash-vision-exp'], undefined)
     assert.equal(TEXT_MODEL_LABELS['gpt-5.5'], 'GPT 5.5')
   })
 })

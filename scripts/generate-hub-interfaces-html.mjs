@@ -75,12 +75,11 @@ for (const m of index.all()) {
   else if (brandKey === 'kling' || m.id.startsWith('kling-')) brand = '快手 (Kling)';
   else if (brandKey === 'veo' || m.id.startsWith('veo-')) brand = 'Google (Veo)';
   else if (m.id.startsWith('wan')) brand = '阿里通义 (Wan 万相)';
-  else if (m.id.startsWith('nanobanana') || m.id.startsWith('nano_banana')) brand = 'Google (NanoBanana)';
+  else if (m.id.startsWith('nanobanana') || m.id.startsWith('nano-banana') || m.id.startsWith('nano_banana')) brand = 'Google (NanoBanana)';
   else if (m.id.startsWith('seedance') || m.id.startsWith('seedream') || m.id.startsWith('seed-') || m.id.startsWith('doubao')) brand = '字节跳动 (Doubao/Seed)';
   else if (m.id.startsWith('minimax') || m.id.startsWith('h3-')) brand = 'MiniMax';
   else if (m.id === 'glm-5.3') brand = '智谱 AI (Zhipu/GLM)';
   else if (m.id === 'kimi-k3') brand = '月之暗面 (Moonshot/Kimi)';
-  else if (m.id === 'omni_flash') brand = 'Google (Omni Flash)';
   else if (m.id === 'jina-reader-v1') brand = 'Jina AI';
   else if (m.id === 'whisper-1') brand = 'OpenAI (Whisper)';
 

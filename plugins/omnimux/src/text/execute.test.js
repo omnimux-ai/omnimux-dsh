@@ -531,7 +531,7 @@ describe('omnimux_text_complete tool', () => {
     const requests = []
     const result = await executeOmnimuxText({
       prompt: 'describe',
-      model: 'deepseek-v4-flash-vision-exp',
+      model: 'deepseek-v4-flash-vision-exp', // documented alias of deepseek-v4-flash
       allowedGroups: ['deepseek-official'],
       image: `data:image/png;base64,${Buffer.from(PNG).toString('base64')}`,
       attachments: { saveImage: async () => ({ id: 'unused' }) },
@@ -550,7 +550,7 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(streamCalls, 0)
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].body.model, 'deepseek-v4-flash-vision-exp@deepseek-official')
+    assert.equal(requests[0].body.model, 'deepseek-v4-flash@deepseek-official')
     const parts = requests[0].body.messages.at(-1).content
     assert.equal(parts[0].type, 'text')
     const imagePart = parts.find((part) => part.type === 'image_url')

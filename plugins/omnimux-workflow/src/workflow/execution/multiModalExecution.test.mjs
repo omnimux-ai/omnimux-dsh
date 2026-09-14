@@ -293,7 +293,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
 
     const client = createOmnimuxSeamClient({
       getSeam: (name) => name === 'imageGenerate' ? mockImageSeam : name === 'modelCatalog'
-        ? { list: () => catalogFor('image', 'gpt-image-2', [operation('image_to_image', 'image', [slot('image'), slot('audio', 'audio_track')])]) } : undefined,
+        ? { list: () => catalogFor('image', 'gpt-image-2.5', [operation('image_to_image', 'image', [slot('image'), slot('audio', 'audio_track')])]) } : undefined,
     });
 
     const submitRes = await client.submit({

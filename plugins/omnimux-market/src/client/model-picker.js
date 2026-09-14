@@ -95,13 +95,6 @@
         pro: true,
         icon: "nanobanana",
       },
-      "gpt-image-2": {
-        name: "GPT Image 2",
-        capsuleName: "GPT Image 2",
-        subtitle: "精准文本渲染，更强的推理能力",
-        pro: false,
-        icon: "openai",
-      },
       "nanobanana": {
         name: "Nano Banana",
         capsuleName: "Nano Banana",
@@ -130,7 +123,7 @@
         pro: true,
         icon: "openai",
       },
-      "grok-imagine-image-2": {
+      "grok-imagine-image-2-0": {
         name: "Grok Imagine Image 2",
         capsuleName: "Grok Image 2",
         subtitle: "极致写实摄影感与敏捷生图",
@@ -204,12 +197,12 @@
           icon: "nanobanana",
         },
         {
-          id: "gpt-image-2",
-          name: "GPT Image 2",
-          capsuleName: "GPT Image 2",
+          id: "gpt-image-2.5",
+          name: "GPT Image 2.5",
+          capsuleName: "GPT Image 2.5",
           type: "image",
-          subtitle: "精准文本渲染，更强的推理能力",
-          pro: false,
+          subtitle: "高精细节渲染与指令遵循",
+          pro: true,
           badge: null,
           icon: "openai",
         },

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { gatewayCandidates, toProductId } from './id-universe.js'
 
-const grokIds = ['grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']
+const grokProductId = 'grok-imagine-image-2-0'
+const grokIds = ['grok-imagine-image-2-0', 'grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2.0']
 
 for (const id of grokIds) {
   test(`Grok gateway candidates keep product ID first for ${id}`, () => {
-    assert.equal(toProductId(` ${id} `), grokIds[0])
+    assert.equal(toProductId(` ${id} `), grokProductId)
     assert.deepEqual(gatewayCandidates(id), grokIds)
   })
 }
@@ -35,8 +36,11 @@ test('IDs without registrations or aliases never guess another model', () => {
 })
 
 test('documented aliases outside the auto manifest remain normalized', () => {
-  assert.deepEqual(gatewayCandidates('nanobanana-2'), ['nano_banana_2', 'nanobanana-2', 'nano-banana-2'])
-  assert.deepEqual(gatewayCandidates('nano-banana-2'), ['nano_banana_2', 'nanobanana-2', 'nano-banana-2'])
+  // #1751：canonical 收敛为上游在册的连字符形，下划线写法退回别名行。
+  assert.equal(toProductId('nanobanana-2'), 'nano-banana-2')
+  assert.equal(toProductId('nano_banana_2'), 'nano-banana-2')
+  assert.deepEqual(gatewayCandidates('nanobanana-2'), ['nano-banana-2', 'nano_banana_2', 'nanobanana-2'])
+  assert.deepEqual(gatewayCandidates('nano-banana-2'), ['nano-banana-2', 'nano_banana_2', 'nanobanana-2'])
 })
 
 test('callers cannot mutate the candidate registry', () => {
