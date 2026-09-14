@@ -55,6 +55,24 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.ok(ids.includes('cheap'))
     })
 
+    it('returns defined channel groups for seedance-2-5 including task-based pro and cheap', () => {
+      const groups = getModelChannelGroups('seedance-2-5')
+      assert.ok(Array.isArray(groups))
+      assert.equal(groups.length, 3)
+      const ids = groups.map((g) => g.id)
+      assert.ok(ids.includes('pro'))
+      assert.ok(ids.includes('standard'))
+      assert.ok(ids.includes('cheap'))
+
+      const proGroup = groups.find((g) => g.id === 'pro')
+      assert.equal(proGroup.wireGroup, 'seedance-2-5-task-pro')
+      assert.equal(proGroup.pricing?.billingMode, 'per_task')
+
+      const cheapGroup = groups.find((g) => g.id === 'cheap')
+      assert.equal(cheapGroup.wireGroup, 'seedance-cheap')
+      assert.equal(cheapGroup.pricing?.billingMode, 'per_task')
+    })
+
     it('returns empty array for models without defined groups', () => {
       assert.deepEqual(getModelChannelGroups('unregistered-custom-model'), [])
     })
@@ -72,6 +90,17 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       const candidates = resolveChannelCandidates('claude-opus-4-6@default')
       assert.equal(candidates[0], 'claude-opus-4-6@default')
       assert.ok(candidates.every((id) => id.includes('@')), candidates.join(','))
+    })
+
+    it('resolves explicit pro and cheap groups for seedance-2-5', () => {
+      const proCandidates = resolveChannelCandidates('seedance-2-5', { group: 'pro' })
+      assert.equal(proCandidates[0], 'seedance-2-5@seedance-2-5-task-pro')
+
+      const cheapCandidates = resolveChannelCandidates('seedance-2-5', { group: 'cheap' })
+      assert.equal(cheapCandidates[0], 'seedance-2-5@seedance-cheap')
+
+      const costCandidates = resolveChannelCandidates('seedance-2-5', { strategy: 'cost_first' })
+      assert.equal(costCandidates[0], 'seedance-2-5@seedance-cheap')
     })
 
     it('sorts by cost_first (lowest points estimate first)', () => {

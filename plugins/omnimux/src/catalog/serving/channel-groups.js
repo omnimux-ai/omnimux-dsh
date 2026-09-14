@@ -131,6 +131,22 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
   ],
   "seedance-2-5": [
     {
+      "id": "pro",
+      "label": "进阶版",
+      "badge": "按次高价专线 · 满血出片",
+      "pricing": {
+        "pointsEstimate": 4500,
+        "discountRate": 3.333,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 45
+      },
+      "wireGroup": "seedance-2-5-task-pro",
+      "enabled": true
+    },
+    {
       "id": "standard",
       "label": "标准版",
       "badge": "全新 2.5 旗舰 · 官方原生专线",
@@ -149,7 +165,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
     {
       "id": "cheap",
       "label": "特惠版",
-      "badge": "特惠走量 · 按条计费",
+      "badge": "限时特惠 · 30秒按次专线",
       "pricing": {
         "pointsEstimate": 900,
         "discountRate": 0.5,
@@ -159,7 +175,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 90,
         "avgWaitTimeSec": 120
       },
-      "wireGroup": "cheap",
+      "wireGroup": "seedance-cheap",
       "enabled": true
     }
   ],
