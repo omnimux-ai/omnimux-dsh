@@ -63,8 +63,12 @@ import {
 } from './selection.ts'
 import { approvalReadyForSession, approvalSessionToFocus } from './approvals.ts'
 import {
+  attachFailureLine,
   browserTimeZone,
+  downloadPageMedia,
   draftImageDataUrl,
+  MediaDownloadError,
+  MEDIA_DOWNLOAD_TIMEOUT_MS,
   parseImageAttachmentLimits,
   prepareImageFiles,
   promptContent,
@@ -1054,6 +1058,19 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * Makes sure there is a session for page media to land in.
+   *
+   * `initializeSession` owns session creation because it is also what loads the
+   * history carrying `imageLimits`. Creating one here instead would leave the
+   * intake without a projection, and the media would be refused with the "host
+   * does not advertise image input" message on a host that does.
+   */
+  async function ensureDraftSession(): Promise<void> {
+    if (sessionRef.current !== null || state !== 'connected' || sessionChanging) return
+    await initializeSession()
+  }
+
+  /**
    * Mounts a page element the user sent from the hover capsule.
    *
    * The media becomes a normal draft attachment: it appears above the input as a
@@ -1061,25 +1078,14 @@ export function App(): React.JSX.Element {
    */
   async function attachHoveredMedia(payload: HoveredMedia): Promise<void> {
     const item = mediaItemFromHover(payload)
-    if (sessionRef.current === null && state === 'connected' && !sessionChanging) {
-      try {
-        const created = await api.rpc<{ sessionId: string }>('session.create', {})
-        if (created?.sessionId) {
-          sessionRef.current = created.sessionId
-          setCurrentSessionId(created.sessionId)
-        }
-      } catch {
-        // Continue and attempt intake
-      }
-    }
-    try {
-      await attachMediaAsImage(item)
-    } catch (cause) {
+    await ensureDraftSession()
+    const landed = await attachMediaItems([item])
+    if (!landed) {
       // A cross-origin media URL is the expected failure: the page can display the
       // image while the extension cannot download it. Report it instead of showing
       // the capsule a success it did not get, and leave the draft — and its light
       // and check marks — untouched.
-      reportMediaAttachResult(payload, false, cause instanceof Error ? cause.message : undefined)
+      reportMediaAttachResult(payload, false)
       return
     }
     setAttachedMediaIds((current) => new Set(current).add(item.id))
@@ -1398,28 +1404,84 @@ export function App(): React.JSX.Element {
   }, [manualLocale])
 
   /**
-   * Downloads one page media and mounts it in the draft.
+   * Waits out the gap between "this panel has a session" and "the host's image
+   * projection has arrived".
    *
-   * Rejects whenever the media did not land: a cross-origin address the page can
-   * display but the extension cannot download, a response whose body is not a
-   * usable image, and a draft intake that refused the file all mean the same
-   * thing to the caller — there is nothing in the conversation to confirm.
-   *
-   * @throws {Error} When the download or the draft intake did not complete.
+   * History carries `imageLimits` and the intake admits nothing without it, so a
+   * chip lit in that window would be refused with the "this dsh host does not
+   * advertise image input" message — both wrong and unrecoverable from the user's
+   * side. The wait ends the moment the projection for the live session lands, so a
+   * host that really does not advertise image input is answered without delay.
    */
-  async function attachMediaAsImage(item: SniffedMediaItem): Promise<void> {
-    let file: File
-    try {
-      const res = await fetch(item.src)
-      const blob = await res.blob()
-      if (blob.size === 0) throw new Error(`empty media response for ${item.src}`)
-      const ext = item.type === 'video' ? 'jpg' : (blob.type.split('/')[1] || 'jpg')
-      file = new File([blob], `page-media-${item.id}.${ext}`, { type: blob.type || 'image/jpeg' })
-    } catch (cause) {
-      throw cause instanceof Error ? cause : new Error(String(cause))
+  async function waitForImageLimits(deadlineMs = 3000): Promise<ImageAttachmentLimits | null> {
+    const until = Date.now() + deadlineMs
+    while (Date.now() < until) {
+      if (imageLimitsRef.current !== null) return imageLimitsRef.current
+      const sessionId = sessionRef.current
+      // The projection for this session has already arrived without image input:
+      // waiting longer cannot change the answer.
+      if (sessionId !== null && imageProjectionRef.current.sessionId === sessionId) return null
+      await new Promise((resolve) => setTimeout(resolve, 50))
     }
-    const landed = await addImageFiles([file])
-    if (!landed) throw new Error(`media was not mounted in the draft: ${item.src}`)
+    return imageLimitsRef.current
+  }
+
+  /**
+   * Downloads lit page media into the draft, one item at a time.
+   *
+   * The attachment channel is images only, so a video item is skipped here: it
+   * rides the message body as a URL through the lit-media context instead.
+   * Anything else is fetched and then admitted by the same
+   * `prepareImageFiles` the picker and the drop path use, so a page image is
+   * measured by exactly the same limits and reports the same error codes.
+   *
+   * Items are independent: one failing download or refusal never cancels the rest,
+   * and the batch writes a single error line at the end rather than one per item.
+   *
+   * @returns Whether every item that needs the attachment channel reached the draft.
+   */
+  async function attachMediaItems(items: readonly SniffedMediaItem[]): Promise<boolean> {
+    const failures: string[] = []
+    if (items.some((item) => item.type === 'image')) await waitForImageLimits()
+    for (const item of items) {
+      if (item.type !== 'image') continue
+      const name = item.alt || item.src
+      let file: File
+      try {
+        file = await downloadPageMedia(item.src, item.id)
+      } catch (cause) {
+        failures.push(cause instanceof MediaDownloadError && cause.reason === 'timeout'
+          ? copy.app.attachMediaTimeout(name, Math.round(MEDIA_DOWNLOAD_TIMEOUT_MS / 1000))
+          : copy.app.attachMediaDownloadFailed(name))
+        continue
+      }
+      const { landed, message } = await intakeImageFiles([file])
+      // A silent refusal (session moved, composer busy) is the same silence the
+      // paste path keeps: there is no honest sentence to show for it.
+      if (!landed && message !== null) failures.push(message)
+    }
+    setError(attachFailureLine(failures, items.length, copy.app.attachMediaSummary))
+    return failures.length === 0
+  }
+
+  /**
+   * Attaches a chip the user just lit, then paints its confirmed state.
+   *
+   * The check mark is earned by the intake, not by the click: media that did not
+   * land has to stay unmarked. A video never reaches the draft, so it is carried
+   * through the lit-media line in the message body instead.
+   */
+  function attachLitMedia(item: SniffedMediaItem): void {
+    void ensureDraftSession()
+      .then(() => attachMediaItems([item]))
+      .then((landed) => {
+        if (!landed) return
+        setAttachedMediaIds((current) => new Set(current).add(item.id))
+        if (item.type !== 'image') {
+          setActiveMediaItems((current) => current.some((it) => it.id === item.id) ? current : [item, ...current])
+        }
+        focusComposer()
+      })
   }
 
   const nextSeq = (): number => { seqRef.current += 1; return seqRef.current }
@@ -2134,6 +2196,50 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * Validates files against the host projection and mounts them in the draft.
+   *
+   * The refusal reason is returned rather than written to the error line, so a
+   * batch of page media can report every failure once instead of letting the last
+   * refusal overwrite the ones before it. `settled` separates the two silent
+   * outcomes: a refused guard leaves the previous message alone, while an intake
+   * that ran clears it.
+   */
+  async function intakeImageFiles(
+    files: readonly File[],
+  ): Promise<{ landed: boolean; message: string | null; settled: boolean }> {
+    // Read through the ref: hovered page media reaches this function from a
+    // listener that subscribed before the projection existed.
+    const limits = imageLimitsRef.current
+    const sessionId = sessionRef.current
+    if (files.length === 0 || limits === null || sessionId === null
+      || !canAcceptImageSelection(addingImagesRef.current, sendingRef.current)) {
+      return {
+        landed: false,
+        settled: false,
+        message: sessionId !== null && limits === null ? copy.app.imageUnavailable : null,
+      }
+    }
+    addingImagesRef.current = true
+    setAddingImages(true)
+    const existing = draftImages
+    try {
+      const prepared = await prepareImageFiles(files, existing, limits)
+      if (sessionRef.current !== sessionId) return { landed: false, settled: true, message: null }
+      setDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
+      return { landed: prepared.length > 0, settled: true, message: null }
+    } catch (cause) {
+      return {
+        landed: false,
+        settled: true,
+        message: sessionRef.current === sessionId ? imageErrorMessage(cause, copy, limits) : null,
+      }
+    } finally {
+      addingImagesRef.current = false
+      setAddingImages(false)
+    }
+  }
+
+  /**
    * Mounts files in the draft and reports whether they really landed.
    *
    * A `false` return is not a cosmetic distinction: the caller paints the
@@ -2141,31 +2247,10 @@ export function App(): React.JSX.Element {
    * distinguishable from one that did.
    */
   async function addImageFiles(files: readonly File[]): Promise<boolean> {
-    // Read through the ref: hovered page media reaches this function from a
-    // listener that subscribed before the projection existed.
-    const limits = imageLimitsRef.current
-    const sessionId = sessionRef.current
-    if (files.length === 0 || limits === null || sessionId === null
-      || !canAcceptImageSelection(addingImagesRef.current, sendingRef.current)) {
-      if (sessionId !== null && limits === null) setError(copy.app.imageUnavailable)
-      return false
-    }
-    addingImagesRef.current = true
-    setAddingImages(true)
-    setError(null)
-    const existing = draftImages
-    try {
-      const prepared = await prepareImageFiles(files, existing, limits)
-      if (sessionRef.current !== sessionId) return false
-      setDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
-      return prepared.length > 0
-    } catch (cause) {
-      if (sessionRef.current === sessionId) setError(imageErrorMessage(cause, copy, limits))
-      return false
-    } finally {
-      addingImagesRef.current = false
-      setAddingImages(false)
-    }
+    const { landed, message, settled } = await intakeImageFiles(files)
+    if (message !== null) setError(message)
+    else if (settled) setError(null)
+    return landed
   }
 
   const handleFillDraft = async (fields: DraftField[]): Promise<{ ok: boolean; message?: string }> => {
@@ -2250,8 +2335,12 @@ export function App(): React.JSX.Element {
         }
       }
       const clientTimeZone = browserTimeZone()
-      const mediaContext = activeMediaItems.length > 0
-        ? `\n\n已点亮挂载的页面媒体素材：\n` + activeMediaItems.map((it, idx) => `[媒体 ${idx + 1}] (${it.type.toUpperCase()}): ${it.src}`).join('\n')
+      // Only video still travels as a URL: an image that the attachment channel
+      // accepted is already in `submittedImages`, so repeating its address in the
+      // body would ask the model to go fetch what it was just handed.
+      const linkedMedia = activeMediaItems.filter((it) => it.type !== 'image')
+      const mediaContext = linkedMedia.length > 0
+        ? `\n\n已点亮挂载的页面媒体素材：\n` + linkedMedia.map((it, idx) => `[媒体 ${idx + 1}] (${it.type.toUpperCase()}): ${it.src}`).join('\n')
         : ''
       const promptWithMedia = text + mediaContext
       await api.rpc('session.prompt', {
@@ -3313,6 +3402,7 @@ export function App(): React.JSX.Element {
         onActiveChange={setActiveMediaItems}
         onSaveToInspiration={handleSaveToInspiration}
         attachedIds={attachedMediaIds}
+        onAttachMedia={attachLitMedia}
       />
       <footer className="composer">
         {detectedMedia.length > 0 && !isFloatMode && (
@@ -3321,17 +3411,7 @@ export function App(): React.JSX.Element {
               items={detectedMedia}
               locale={locale}
               attachedIds={attachedMediaIds}
-              onAttachMedia={(item) => {
-                // The check mark is earned by the draft intake, not by the click:
-                // media the panel could not download must stay unmarked.
-                void attachMediaAsImage(item).then(
-                  () => {
-                    setAttachedMediaIds((current) => new Set(current).add(item.id))
-                    focusComposer()
-                  },
-                  () => {},
-                )
-              }}
+              onAttachMedia={attachLitMedia}
             />
           </div>
         )}

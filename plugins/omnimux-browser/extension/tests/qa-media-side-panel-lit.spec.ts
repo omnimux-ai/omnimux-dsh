@@ -45,8 +45,11 @@ function pageMedia(id: string, src: string): HoveredMediaMessage {
   return { id, type: 'image', src, previewSrc: src, alt: `素材 ${id}` }
 }
 
+function videoMedia(id: string, src: string, previewSrc: string): HoveredMediaMessage {
+  return { id, type: 'video', src, previewSrc, alt: `视频 ${id}` }
+}
+
 const FIRST = pageMedia('image:https://cdn.example.com/hero.png', 'https://cdn.example.com/hero.png')
-const SECOND = pageMedia('image:https://cdn.example.com/cover.png', 'https://cdn.example.com/cover.png')
 
 describe('QA gate: media delivered to an open side panel', () => {
   let root: Root
@@ -195,34 +198,44 @@ describe('QA gate: media delivered to an open side panel', () => {
     await typedText('照着这个素材做一版')
     await submit()
 
-    // Half two: the model carries the media, both as the real attachment and as
-    // the lit-media context line.
-    expect(promptText()).toContain(FIRST.src)
-    expect(promptText()).toContain('已点亮挂载的页面媒体素材')
+    // Half two: the model carries the media as a real attachment. The address no
+    // longer rides the body — an image the attachment channel accepted must not
+    // also be handed over as a URL for the model to go fetch
+    // (specs/browser-attach-media.spec.md §3.2, AC-2/AC-3).
+    expect(promptText()).not.toContain(FIRST.src)
+    expect(promptText()).toContain('照着这个素材做一版')
     const imageParts = (promptCalls.at(-1)?.content ?? []).filter((part) => part.type === 'image')
     expect(imageParts).toHaveLength(1)
     expect((imageParts[0] as { name?: string }).name).toContain(FIRST.id)
   })
 
   it.fails('documents defect: a click on a lit chip drops the carried media while every chip stays lit', async () => {
-    await startPanel()
-    await deliver(FIRST)
-    await deliver(SECOND)
-    // Both deliveries are on screen and lit, with no click from the user.
-    expect(chipFor(FIRST).classList.contains('active')).toBe(true)
-    expect(chipFor(SECOND).classList.contains('active')).toBe(true)
+    // Video is the carrier this defect still lives on. An image now rides the
+    // attachment channel as a draft image, and a click on its chip cannot drop
+    // something that is already in the draft (specs/browser-attach-media.spec.md
+    // §3.2/§3.3); a video still travels as the lit-media line in the body, which
+    // is exactly what the click below empties.
+    const firstClip = videoMedia('video:https://cdn.example.com/one.mp4', 'https://cdn.example.com/one.mp4', 'https://cdn.example.com/one.jpg')
+    const secondClip = videoMedia('video:https://cdn.example.com/two.mp4', 'https://cdn.example.com/two.mp4', 'https://cdn.example.com/two.jpg')
 
-    await act(async () => { chipFor(SECOND).dispatchEvent(new MouseEvent('click', { bubbles: true })) })
+    await startPanel()
+    await deliver(firstClip)
+    await deliver(secondClip)
+    // Both deliveries are on screen and lit, with no click from the user.
+    expect(chipFor(firstClip).classList.contains('active')).toBe(true)
+    expect(chipFor(secondClip).classList.contains('active')).toBe(true)
+
+    await act(async () => { chipFor(secondClip).dispatchEvent(new MouseEvent('click', { bubbles: true })) })
     await typedText('两个素材都要')
     await submit()
 
     // Every chip is still lit on screen, so every one of them must still be
     // carried. Today the click reports an empty list, and the send then carries no
     // lit-media context at all while the cards keep claiming to be active.
-    expect(chipFor(FIRST).classList.contains('active')).toBe(true)
-    expect(chipFor(SECOND).classList.contains('active')).toBe(true)
+    expect(chipFor(firstClip).classList.contains('active')).toBe(true)
+    expect(chipFor(secondClip).classList.contains('active')).toBe(true)
     expect(promptText()).toContain('已点亮挂载的页面媒体素材')
-    expect(promptText()).toContain(FIRST.src)
-    expect(promptText()).toContain(SECOND.src)
+    expect(promptText()).toContain(firstClip.src)
+    expect(promptText()).toContain(secondClip.src)
   })
 })

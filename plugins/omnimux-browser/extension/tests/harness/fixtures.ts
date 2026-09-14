@@ -48,25 +48,31 @@ function make(id: string, [file, mediaType, width, height, bytes, name]: Spec, f
 export const CASES: readonly HarnessCase[] = [
   {
     id: 'single',
-    title: '单素材（助手回复，不渲染小图条）',
+    title: '助手回复 · 单素材（只有画廊舞台，无小图条、无计数）',
     align: 'start',
     images: [make('single-land', LAND)],
   },
   {
+    id: 'assistant-quad',
+    title: '助手回复 · 4 张素材（画廊：大图 + 小图条 + 计数）',
+    align: 'start',
+    images: [make('aq-1', LAND), make('aq-2', PORT), make('aq-3', SQUARE), make('aq-4', WIDE)],
+  },
+  {
     id: 'quad',
-    title: '4 张图片素材',
+    title: '用户消息 · 4 张素材（48px 小缩略图，无舞台/小图条/计数）',
     align: 'end',
     images: [make('quad-1', LAND), make('quad-2', PORT), make('quad-3', SQUARE), make('quad-4', WIDE)],
   },
   {
     id: 'mixed',
-    title: '含 1 个视频素材（MP4）',
+    title: '用户消息 · 含 1 个视频素材（小缩略图 + 播放图标）',
     align: 'end',
     images: [make('mixed-1', CLIP), make('mixed-2', LAND), make('mixed-3', PORT), make('mixed-4', SQUARE)],
   },
   {
     id: 'oct',
-    title: '8 张素材（小图条横向溢出）',
+    title: '用户消息 · 8 张素材（小缩略图换行铺满窄栏）',
     align: 'end',
     images: [
       make('oct-1', LAND), make('oct-2', PORT), make('oct-3', SQUARE), make('oct-4', WIDE),
@@ -75,8 +81,8 @@ export const CASES: readonly HarnessCase[] = [
   },
   {
     id: 'flaky',
-    title: '失败态：点「重试」后第二次请求成功',
-    align: 'end',
+    title: '助手回复 · 失败态：点「重试」后第二次请求成功',
+    align: 'start',
     images: [make('flaky-1', LAND, true)],
   },
 ]

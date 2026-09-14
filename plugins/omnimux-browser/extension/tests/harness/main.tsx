@@ -1,9 +1,15 @@
 /**
- * Harness entry: renders the REAL panel gallery component against fixed
- * fixtures, inside a container of a chosen width and theme.
+ * Harness entry.
  *
- * The frame is what `index.html` embeds; it is also usable on its own:
- *   frame.html?theme=dark&width=440&delay=350
+ * Two pages, one bundle:
+ *
+ * - default — renders the REAL `MessageImages` against fixed fixtures, inside a
+ *   container of a chosen width and theme:
+ *   `frame.html?theme=dark&width=440&delay=350`
+ * - `?mode=float` — mounts the REAL `<App />` in floating-workbench mode against
+ *   a scripted dsh host (`panelHost.ts`), so the lit-media → download → draft →
+ *   `session.prompt` path runs in a browser:
+ *   `frame.html?mode=float&width=400`
  */
 
 import { createElement } from 'react'
@@ -19,6 +25,7 @@ const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
 const width = Number.parseInt(params.get('width') ?? '440', 10)
 const delay = Number.parseInt(params.get('delay') ?? '350', 10)
 const locale = params.get('locale') === 'en' ? 'en' : 'zh'
+const panelMode = params.get('mode') === 'float'
 
 document.documentElement.dataset.theme = theme
 document.documentElement.lang = locale === 'en' ? 'en' : 'zh-CN'
@@ -83,4 +90,21 @@ function Transcript(): React.JSX.Element {
   )
 }
 
-createRoot(host).render(createElement(Transcript))
+if (panelMode) {
+  // The host has to be in place before the panel renders: `<App />` opens its
+  // port while mounting, and its storage reads happen in the first effects.
+  void import('./panelHost.ts').then(({ installHarnessHost, harnessHost }) => {
+    installHarnessHost()
+    void import('../../src/panel/App.tsx').then(({ App }) => {
+      createRoot(host).render(createElement(App))
+      const push = (frame: unknown): void => { harnessHost().push(frame) }
+      // Subscriptions live in effects, so the first host frames go out a task later.
+      setTimeout(() => {
+        push({ type: 'status', state: 'connected', caps: null })
+        push({ type: 'session.resume-hint', sessionId: null })
+      }, 0)
+    })
+  })
+} else {
+  createRoot(host).render(createElement(Transcript))
+}

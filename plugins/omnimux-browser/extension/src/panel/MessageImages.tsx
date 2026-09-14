@@ -105,113 +105,79 @@ export const MessageImages = memo(function MessageImages({
     '--media-ratio': `${active.width} / ${active.height}`,
   }
 
+  /**
+   * Two shapes over one data path.
+   *
+   * The media a user sent is a receipt — "this much went out" — so it renders as
+   * 48px chips that open the viewer on click. Media the assistant produced is the
+   * deliverable and keeps the browseable stage-and-rail gallery. Both read the
+   * same `sources` map and open the same lightbox; only the resting layout differs.
+   */
+  const compact = align === 'end'
+
   return (
     <div className={`message-images ${align}`}>
-      <div className={`gallery${multi ? '' : ' single'}`}>
-        {activeSource.status === 'failed'
-          ? (
-            <div className="stage-box stage-fail" style={stageStyle}>
-              <span>{copy.app.mediaLoadFailed}</span>
-              <button type="button" className="stage-retry" onClick={retry}>{copy.app.imageRetry}</button>
-            </div>
-          )
-          : (
-            <button
-              type="button"
-              className="stage-box"
-              style={stageStyle}
-              disabled={activeSource.status !== 'ready'}
-              title={copy.app.openImage}
-              aria-label={copy.app.viewLargeImage}
-              onClick={() => setOpen(true)}
-            >
-              {activeSource.status === 'ready'
-                ? <StageMedia attachment={active} src={activeSource.src} label={activeLabel} />
-                : <span className="stage-skeleton" aria-hidden="true" />}
-              <span className="stage-kind">{mediaFormatTag(active.mediaType)}</span>
-              {multi && (
-                <span className="stage-count">{copy.app.stageCount(index + 1, images.length)}</span>
-              )}
-            </button>
-          )}
+      {compact && (
+        <div className="media-chips" aria-label={copy.app.mediaPreview}>
+          {images.map((attachment, position) => {
+            const source = sources[attachment.attachmentId] ?? LOADING
+            const label = labelOf(attachment)
+            return (
+              <button
+                key={`${attachment.attachmentId}:${position}`}
+                type="button"
+                className="media-chip"
+                aria-label={copy.app.openNamedImage(label)}
+                onClick={() => { setSelected(position); setOpen(true) }}
+              >
+                {source.status === 'ready'
+                  ? <ThumbMedia attachment={attachment} src={source.src} label={label} />
+                  : <span className="media-chip-skeleton" aria-hidden="true" />}
+                {isVideoMediaType(attachment.mediaType) && (
+                  <span className="thumb-play"><PlayIcon /></span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-        {multi && (
-          <div
-            ref={railRef}
-            className={`rail${overflow ? ' scrollable' : ''}`}
-            role="tablist"
-            aria-label={copy.app.mediaPreview}
-          >
-            {images.map((attachment, position) => {
-              const source = sources[attachment.attachmentId] ?? LOADING
-              const label = labelOf(attachment)
-              return (
-                <button
-                  key={`${attachment.attachmentId}:${position}`}
-                  type="button"
-                  className="thumb"
-                  role="tab"
-                  aria-selected={position === index}
-                  aria-label={copy.app.openNamedImage(label)}
-                  onClick={() => select(position)}
-                >
-                  {source.status === 'ready' ? <ThumbMedia attachment={attachment} src={source.src} label={label} /> : null}
-                  <span className="thumb-kind">{mediaFormatTag(attachment.mediaType)}</span>
-                  {isVideoMediaType(attachment.mediaType) && (
-                    <span className="thumb-play"><PlayIcon /></span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {open && (
-          <div
-            className="image-lightbox"
-            role="dialog"
-            aria-modal="true"
-            aria-label={copy.app.mediaPreview}
-            onClick={(event) => { if (event.target === event.currentTarget) setOpen(false) }}
-          >
-            <div className="image-lightbox-bar">
-              <span className="image-lightbox-title">{activeLabel}</span>
-              <span className="image-lightbox-count">{copy.app.stageCount(index + 1, images.length)}</span>
+      {!compact && (
+        <div className={`gallery${multi ? '' : ' single'}`}>
+          {activeSource.status === 'failed'
+            ? (
+              <div className="stage-box stage-fail" style={stageStyle}>
+                <span>{copy.app.mediaLoadFailed}</span>
+                <button type="button" className="stage-retry" onClick={retry}>{copy.app.imageRetry}</button>
+              </div>
+            )
+            : (
               <button
                 type="button"
-                className="image-lightbox-close"
-                aria-label={copy.app.closeImage}
-                onClick={() => setOpen(false)}
+                className="stage-box"
+                style={stageStyle}
+                disabled={activeSource.status !== 'ready'}
+                title={copy.app.openImage}
+                aria-label={copy.app.viewLargeImage}
+                onClick={() => setOpen(true)}
               >
-                <CloseIcon />
-              </button>
-            </div>
-            <div className="image-lightbox-stage">
-              <button
-                type="button"
-                className="image-lightbox-nav"
-                aria-label={copy.app.previousImage}
-                disabled={!multi}
-                onClick={() => step(-1)}
-              >
-                <PreviousIcon />
-              </button>
-              <div className="image-lightbox-media" onClick={(event) => event.stopPropagation()}>
                 {activeSource.status === 'ready'
                   ? <StageMedia attachment={active} src={activeSource.src} label={activeLabel} />
-                  : null}
-              </div>
-              <button
-                type="button"
-                className="image-lightbox-nav"
-                aria-label={copy.app.nextImage}
-                disabled={!multi}
-                onClick={() => step(1)}
-              >
-                <NextIcon />
+                  : <span className="stage-skeleton" aria-hidden="true" />}
+                <span className="stage-kind">{mediaFormatTag(active.mediaType)}</span>
+                {multi && (
+                  <span className="stage-count">{copy.app.stageCount(index + 1, images.length)}</span>
+                )}
               </button>
-            </div>
-            <div className="image-lightbox-strip" role="tablist" aria-label={copy.app.mediaPreview}>
+            )}
+
+          {multi && (
+            <div
+              ref={railRef}
+              className={`rail${overflow ? ' scrollable' : ''}`}
+              role="tablist"
+              aria-label={copy.app.mediaPreview}
+            >
               {images.map((attachment, position) => {
                 const source = sources[attachment.attachmentId] ?? LOADING
                 const label = labelOf(attachment)
@@ -223,9 +189,10 @@ export const MessageImages = memo(function MessageImages({
                     role="tab"
                     aria-selected={position === index}
                     aria-label={copy.app.openNamedImage(label)}
-                    onClick={() => setSelected(position)}
+                    onClick={() => select(position)}
                   >
                     {source.status === 'ready' ? <ThumbMedia attachment={attachment} src={source.src} label={label} /> : null}
+                    <span className="thumb-kind">{mediaFormatTag(attachment.mediaType)}</span>
                     {isVideoMediaType(attachment.mediaType) && (
                       <span className="thumb-play"><PlayIcon /></span>
                     )}
@@ -233,9 +200,79 @@ export const MessageImages = memo(function MessageImages({
                 )
               })}
             </div>
+          )}
+        </div>
+      )}
+
+      {open && (
+        <div
+          className="image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={copy.app.mediaPreview}
+          onClick={(event) => { if (event.target === event.currentTarget) setOpen(false) }}
+        >
+          <div className="image-lightbox-bar">
+            <span className="image-lightbox-title">{activeLabel}</span>
+            <span className="image-lightbox-count">{copy.app.stageCount(index + 1, images.length)}</span>
+            <button
+              type="button"
+              className="image-lightbox-close"
+              aria-label={copy.app.closeImage}
+              onClick={() => setOpen(false)}
+            >
+              <CloseIcon />
+            </button>
           </div>
-        )}
-      </div>
+          <div className="image-lightbox-stage">
+            <button
+              type="button"
+              className="image-lightbox-nav"
+              aria-label={copy.app.previousImage}
+              disabled={!multi}
+              onClick={() => step(-1)}
+            >
+              <PreviousIcon />
+            </button>
+            <div className="image-lightbox-media" onClick={(event) => event.stopPropagation()}>
+              {activeSource.status === 'ready'
+                ? <StageMedia attachment={active} src={activeSource.src} label={activeLabel} />
+                : null}
+            </div>
+            <button
+              type="button"
+              className="image-lightbox-nav"
+              aria-label={copy.app.nextImage}
+              disabled={!multi}
+              onClick={() => step(1)}
+            >
+              <NextIcon />
+            </button>
+          </div>
+          <div className="image-lightbox-strip" role="tablist" aria-label={copy.app.mediaPreview}>
+            {images.map((attachment, position) => {
+              const source = sources[attachment.attachmentId] ?? LOADING
+              const label = labelOf(attachment)
+              return (
+                <button
+                  key={`${attachment.attachmentId}:${position}`}
+                  type="button"
+                  className="thumb"
+                  role="tab"
+                  aria-selected={position === index}
+                  aria-label={copy.app.openNamedImage(label)}
+                  onClick={() => setSelected(position)}
+                >
+                  {source.status === 'ready' ? <ThumbMedia attachment={attachment} src={source.src} label={label} /> : null}
+                  {isVideoMediaType(attachment.mediaType) && (
+                    <span className="thumb-play"><PlayIcon /></span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 })

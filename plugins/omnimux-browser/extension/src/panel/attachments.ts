@@ -251,6 +251,98 @@ export async function prepareImageFiles(
   return prepared
 }
 
+/** How long the panel waits for one lit page media before giving up on it. */
+export const MEDIA_DOWNLOAD_TIMEOUT_MS = 9_000
+
+export type MediaDownloadFailure = 'timeout' | 'download-failed'
+
+export class MediaDownloadError extends Error {
+  constructor(readonly reason: MediaDownloadFailure) {
+    super(reason)
+    this.name = 'MediaDownloadError'
+  }
+}
+
+/** `image/jpg` is a widespread server alias; the host contract only admits `image/jpeg`. */
+const MEDIA_TYPE_ALIASES: Record<string, string> = { 'image/jpg': 'image/jpeg' }
+
+/** Types named by the extension a URL advertises, for servers that send no content type. */
+const EXTENSION_MEDIA_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+}
+
+/**
+ * The media type to hand the intake for a downloaded response.
+ *
+ * The response header is the first choice, then the extension the page
+ * advertised. What is left untyped stays empty rather than guessed at, so
+ * {@link prepareImageFiles} turns it away with the same `unsupported-type` code
+ * the picker produces — a download never widens what the host accepts.
+ */
+function downloadedMediaType(declared: string, src: string): string {
+  const normalized = declared.split(';')[0].trim().toLowerCase()
+  if (normalized !== '') return MEDIA_TYPE_ALIASES[normalized] ?? normalized
+  const path = src.split(/[?#]/)[0]
+  const dot = path.lastIndexOf('.')
+  if (dot < 0) return ''
+  return EXTENSION_MEDIA_TYPES[path.slice(dot + 1).toLowerCase()] ?? ''
+}
+
+/**
+ * Download one lit page media into the same `File` the paste path produces.
+ *
+ * Only transport lives here. Every admission rule — supported type, byte,
+ * pixel, and dimension limits — stays in {@link prepareImageFiles}, so media the
+ * user lit on the page is measured by exactly the rules the picker and the drop
+ * path use, and reports the same error codes when it is refused.
+ *
+ * @throws {MediaDownloadError} When the response never arrives in time, is not
+ *   ok, or carries no bytes.
+ */
+export async function downloadPageMedia(
+  src: string,
+  mediaId: string,
+  options: { fetchImpl?: typeof fetch; timeoutMs?: number } = {},
+): Promise<File> {
+  const fetchImpl = options.fetchImpl ?? fetch
+  const timeoutMs = options.timeoutMs ?? MEDIA_DOWNLOAD_TIMEOUT_MS
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetchImpl(src, { signal: controller.signal })
+    if (!response.ok) throw new Error(`media response ${response.status}`)
+    const blob = await response.blob()
+    if (blob.size === 0) throw new Error('empty media response')
+    const mediaType = downloadedMediaType(blob.type, src)
+    const extension = mediaType === '' ? 'bin' : mediaType.slice(mediaType.indexOf('/') + 1)
+    return new File([blob], `page-media-${mediaId}.${extension}`, { type: mediaType })
+  } catch {
+    throw new MediaDownloadError(controller.signal.aborted ? 'timeout' : 'download-failed')
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * One error line for a batch of page media.
+ *
+ * A single failure speaks for itself; several would otherwise stack one line per
+ * item, so they collapse into the batch summary instead.
+ */
+export function attachFailureLine(
+  failures: readonly string[],
+  total: number,
+  summary: (failed: number, total: number, first: string) => string,
+): string | null {
+  if (failures.length === 0) return null
+  if (failures.length === 1) return failures[0]
+  return summary(failures.length, total, failures[0])
+}
+
 export function draftImageDataUrl(image: DraftImage): string {
   return `data:${image.mediaType};base64,${image.data}`
 }
