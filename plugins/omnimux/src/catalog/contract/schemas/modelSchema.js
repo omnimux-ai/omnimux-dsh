@@ -11,6 +11,7 @@ import {
   validateAliasesArray,
 } from './commonSchema.js';
 import { validateOperation } from './operationSchema.js';
+import { validateParameterDomain } from './parameterSchema.js';
 import { validateResearch, validateExecution, validateImplementation } from './statusSchema.js';
 
 /**
@@ -135,6 +136,7 @@ export function validateModel(model, opts = {}) {
   }
 
   validateModelStatusBlocks(m, { modelId, file, profiles }, out);
+  out.push(...validateParameterDomain(m.parameters, 'parameters', modelId, file));
   out.push(...validateAliasesArray(m.aliases, 'aliases', modelId, file));
   validateRouting(m.routing, modelId, file, out);
   return out;
