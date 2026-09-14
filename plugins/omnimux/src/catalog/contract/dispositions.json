@@ -422,7 +422,7 @@
       "id": "seedream-5.0-pro",
       "disposition": "alias",
       "target": "seedream-5-0-pro",
-      "reason": "点号形为历史写法；登记为别名以打通别名归一（此前无别名行，toProductId 命不中）"
+      "reason": "点号形为已弃用的历史写法（网关命名检查 naming-lint 报 R08 ALIAS_RETIRED_STILL_PRESENT 与 R03 MEDIA_DOT_VERSION 两条 error，suggest 连字符形）；登记为别名以打通别名归一：此前该行是 draft 而非 alias，别名桥未建立，导致仓内产品面在用的连字符形在不存在的模型上被拒（unknown_model），点号形则只命中当时自己的 draft 行"
     },
     {
       "id": "seedream-4.5",
