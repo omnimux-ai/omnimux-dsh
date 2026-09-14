@@ -182,6 +182,11 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(modelIconBefore, /mask-image/)
   assert.match(modelIconBefore, /background-color:currentColor/)
   assert.match(modelIconBefore, /width:14px/)
+  // Model seat icon defined at root card scope so all child elements inherit it
+  assert.match(
+    style.textContent,
+    /\[data-composer-card\]\{[^}]*--omnimux-model-icon:url\(/,
+  )
   // Model select button has transparent background by default
   assert.match(
     style.textContent,
