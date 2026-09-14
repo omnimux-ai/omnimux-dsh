@@ -131,9 +131,9 @@ const CANVAS_UTILITY_HANDLERS: Record<string, CanvasUtilityHandler> = {
   'copy-path': (item) => handleCopy(item, 'path'),
   'copy-file': (item) => handleCopy(item, 'file'),
   'toggle-tree-view': (_item, setMode, mode) => handleToggleView(setMode, mode),
-  'duplicate': () => toast.info('请在画布上复制节点'),
-  'rename': () => toast.info('请在画布上重命名节点'),
-  'delete': () => toast.info('请在画布上删除节点'),
+  'duplicate': () => toast.info('请在创作画布上复制节点'),
+  'rename': () => toast.info('请在创作画布上重命名节点'),
+  'delete': () => toast.info('请在创作画布上删除节点'),
 };
 
 export function dispatchCanvasUtilityAction(
@@ -230,7 +230,7 @@ export async function executeAssetMenuAction(
   const { guard, ticket, onInsertAsset, insertToConversation, projectAssets } = options;
   if (action === 'add-to-canvas') {
     onInsertAsset?.(item);
-    toast.success(`已添加到画布：${item.name}`);
+    toast.success(`已添加到创作画布：${item.name}`);
     return;
   }
   if (CONVERSATION_ACTIONS.has(action)) {

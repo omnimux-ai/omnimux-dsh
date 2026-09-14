@@ -58,7 +58,7 @@ test('Project Assets Types and Popover Options Data Integrity', async (t) => {
     const menuSrc = readFileSync(join(here, 'menus/CanvasItemContextMenu.tsx'), 'utf8');
     const drawerSrc = readFileSync(join(here, '../AssetsDrawer.tsx'), 'utf8');
     const outlineSrc = readFileSync(join(here, 'views/CanvasOutlineView.tsx'), 'utf8');
-    assert.match(menuSrc, /在画布中定位/);
+    assert.match(menuSrc, /在创作画布中定位/);
     assert.equal(/添加到画布/.test(menuSrc), false);
     assert.match(outlineSrc, /omnimux-canvas-node/);
     const canvasAction = drawerSrc.slice(
@@ -87,7 +87,7 @@ test('Project Assets Types and Popover Options Data Integrity', async (t) => {
     assert.match(addToSubjects, /real_path: item.real_path/);
     assert.equal(/prompt: sub.tags/.test(subjectSrc), false);
     assert.match(subjectSrc, /real_path: firstFile\?\.real_path/);
-    assert.match(subjectSrc, /无本地文件，无法入画布/);
+    assert.match(subjectSrc, /无本地文件，无法入创作画布/);
   });
 
   await t.test('HoverInspector positions preview card fixed to the outer left of the sidebar', () => {

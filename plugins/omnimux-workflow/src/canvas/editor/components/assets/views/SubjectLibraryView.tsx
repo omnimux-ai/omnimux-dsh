@@ -140,7 +140,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
                 key={sub.id}
                 className="wf-subject-card-compact"
                 draggable
-                title={sub.files?.some((file) => file.real_path) ? sub.name : '无本地文件，无法入画布'}
+                title={sub.files?.some((file) => file.real_path) ? sub.name : '无本地文件，无法入创作画布'}
                 onDragStart={(e) => {
                   const firstFile = (sub.files || []).find((file) => file.real_path);
                   e.dataTransfer.setData(

@@ -61,7 +61,7 @@ export type {
 } from './agentToolShared.ts';
 export { DEFAULT_RUN_WAIT_TIMEOUT_MS } from './agentToolShared.ts';
 
-const WORKFLOW_PROMPT = `This workspace may mount the OmniMux workflow canvas (omnimux-workflow): an infinite canvas where the user builds node DAGs (text/image/video/audio material nodes) and executes them through the OmniMux generation gateway.
+const WORKFLOW_PROMPT = `This workspace may mount the OmniMux workflow canvas (omnimux-workflow): a creative canvas where the user builds node DAGs (text/image/video/audio material nodes) and executes them through the OmniMux generation gateway.
 
 Workspace targeting (CRITICAL):
 1. If the latest user message <ui_context> includes view: canvas and workspace: <id>, that id IS the current canvas. Pass it as workspace_id, or omit workspace_id and the tool will use the same default.

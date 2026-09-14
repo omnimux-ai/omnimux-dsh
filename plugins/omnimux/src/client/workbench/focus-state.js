@@ -15,7 +15,7 @@ export { WORKBENCH_FOCUS }
 
 /** Human-readable Tab titles when registerTab title is unavailable (#345). */
 export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
-  'omnimux:media-viewer': '图片浏览',
+  'omnimux:media-viewer': '图像生成',
   'omnimux-workflow:canvas': '创作画布',
   'omnimux-clip:studio': '视频剪辑',
   'omnimux-assets:library': '资产库',

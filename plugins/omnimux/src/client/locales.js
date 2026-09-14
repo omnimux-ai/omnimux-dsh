@@ -32,7 +32,7 @@ export const zh = {
   'auth.gate.headline': 'OmniMux 全面接入商业 Agent 矩阵',
   'auth.gate.subdeck': '最强多模态创作引擎 + 顶尖社媒运营专家团队',
   'auth.gate.feature1': '理解、拆解并全自动执行多平台商业内容生产',
-  'auth.gate.feature2': '专业工作流画布与 Skill，释放十倍出片生产力',
+  'auth.gate.feature2': '专业创作画布与 Skill，释放十倍出片生产力',
   'auth.gate.feature3': '从一个创意灵感开始，OmniMux 陪你全链路出海落地',
   'auth.gate.cta': '立即登录',
   'auth.gate.waitingDeviceCode': '已在新窗口打开授权页，请输入设备码：',
@@ -107,8 +107,8 @@ export const zh = {
   'update.status.retry': '重试更新',
   'update.status.ready': '立即更新',
   'update.tooltip.newVersion': '新版本: v{version}',
-  'models.title': '画布默认模型',
-  'models.description': '配置工作流画布新建节点时的默认模型。已保存的节点不会被覆盖。',
+  'models.title': '创作画布默认模型',
+  'models.description': '配置创作画布新建节点时的默认模型。已保存的节点不会被覆盖。',
   'models.defaultText': '文本默认模型',
   'models.defaultTextHint': '文本生成节点未指定模型时使用',
   'models.defaultImage': '图片默认模型',
@@ -160,7 +160,7 @@ export const zh = {
   'composerAdd.toast.failed': '{n} 项添加失败',
   'workbench.chatShow': '显示会话栏',
   'workbench.chatHide': '全屏铺满右侧栏',
-  'mediaViewer.tabTitle': '图片浏览',
+  'mediaViewer.tabTitle': '图像生成',
 }
 
 export const en = {
@@ -197,7 +197,7 @@ export const en = {
   'auth.gate.headline': 'OmniMux is fully connected to a commercial Agent matrix',
   'auth.gate.subdeck': 'The strongest multimodal creation engine plus a top social-media operations team',
   'auth.gate.feature1': 'Understand, break down, and fully automate multi-platform commercial content production',
-  'auth.gate.feature2': 'Professional workflow canvas and Skills that 10x your publishing throughput',
+  'auth.gate.feature2': 'Professional creative canvas and Skills that 10x your publishing throughput',
   'auth.gate.feature3': 'From a single creative spark, OmniMux walks you through the full go-global pipeline',
   'auth.gate.cta': 'Sign in now',
   'auth.gate.waitingDeviceCode': 'Authorization opened in a new window. Enter the device code:',
@@ -272,8 +272,8 @@ export const en = {
   'update.status.retry': 'Retry Update',
   'update.status.ready': 'Update Now',
   'update.tooltip.newVersion': 'New version: v{version}',
-  'models.title': 'Canvas default models',
-  'models.description': 'Defaults for new workflow canvas nodes. Existing nodes keep their saved model.',
+  'models.title': 'Creative canvas default models',
+  'models.description': 'Defaults for new creative canvas nodes. Existing nodes keep their saved model.',
   'models.defaultText': 'Default text model',
   'models.defaultTextHint': 'Used when a text node does not specify a model',
   'models.defaultImage': 'Default image model',
@@ -325,7 +325,7 @@ export const en = {
   'composerAdd.toast.failed': '{n} failed to add',
   'workbench.chatShow': 'Show conversation',
   'workbench.chatHide': 'Expand to full width',
-  'mediaViewer.tabTitle': 'Media Viewer',
+  'mediaViewer.tabTitle': 'Image Generation',
 }
 
 

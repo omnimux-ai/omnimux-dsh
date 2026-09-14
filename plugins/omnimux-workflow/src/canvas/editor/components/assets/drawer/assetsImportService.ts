@@ -79,7 +79,7 @@ export async function executeCanvasImport(options: CanvasImportOptions): Promise
       real_path: filePath,
     });
   }
-  toast.success(`已导入 ${String(interpretation.paths.length)} 个文件到画布`);
+  toast.success(`已导入 ${String(interpretation.paths.length)} 个文件到创作画布`);
 }
 
 export interface AssetsImportOptions {

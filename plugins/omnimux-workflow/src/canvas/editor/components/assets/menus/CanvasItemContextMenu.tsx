@@ -90,7 +90,7 @@ export const CanvasItemContextMenu: React.FC<CanvasItemContextMenuProps> = ({
     >
       <div className="wf-context-menu-item" onClick={() => handleItemClick('add-to-canvas')}>
         <Crosshair size={14} className="wf-context-menu-icon" />
-        <span className="wf-context-menu-label">在画布中定位</span>
+        <span className="wf-context-menu-label">在创作画布中定位</span>
         <span className="wf-context-menu-shortcut">⌘⇧A</span>
       </div>
 
@@ -114,7 +114,7 @@ export const CanvasItemContextMenu: React.FC<CanvasItemContextMenuProps> = ({
 
       <div className="wf-context-menu-item" onClick={() => handleItemClick('focus-in-canvas')}>
         <Crosshair size={14} className="wf-context-menu-icon" />
-        <span className="wf-context-menu-label">在画布中定位</span>
+        <span className="wf-context-menu-label">在创作画布中定位</span>
       </div>
 
       <div className="wf-context-menu-item" onClick={() => handleItemClick('open-preview')}>

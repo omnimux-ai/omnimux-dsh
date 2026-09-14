@@ -281,7 +281,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
   const buildCardElement = (item: DetectedMedia): HTMLElement => {
     const card = doc.createElement('div');
     card.className = 'omx-chat-media-tail__card';
-    card.title = '点击进入画布模式';
+    card.title = '点击进入图像生成';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
 
@@ -294,8 +294,8 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     // Pill canvas button in top-right corner (reveals on hover, matching Image 2)
     const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
     canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
-    canvasBtn.title = '进入画布模式';
-    canvasBtn.setAttribute('aria-label', '进入画布模式');
+    canvasBtn.title = '进入图像生成';
+    canvasBtn.setAttribute('aria-label', '进入图像生成');
     canvasBtn.innerHTML = `
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
@@ -304,7 +304,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
         <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
       </svg>
-      <span>画布</span>
+      <span>图像生成</span>
     `;
 
     canvasBtn.addEventListener('click', (e) => {

@@ -77,7 +77,7 @@ export const AssetItemContextMenu: React.FC<AssetItemContextMenuProps> = ({
     >
       <div className="wf-context-menu-item" onClick={() => handleItemClick('add-to-canvas')}>
         <Image size={14} className="wf-context-menu-icon" />
-        <span className="wf-context-menu-label">添加到画布</span>
+        <span className="wf-context-menu-label">添加到创作画布</span>
       </div>
 
       <div className="wf-context-menu-item" onClick={() => handleItemClick('add-to-conversation')}>

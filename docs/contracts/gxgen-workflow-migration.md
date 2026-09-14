@@ -70,7 +70,7 @@ dsh 宿主是 `sidebar | conversation | details` 三栏（`deepseek-harness/pack
 |---|---|---|---|
 | **dsh 工作区文件夹** | 官方会话所选 cwd / `workspaces.items[].path` | 对新建项目：**等于**该项目文件夹 | 不是「许多项目共用的父沙盒」 |
 | **OmniMux 项目** | `<videos>/OmniMux/Projects/<可读名>/` | 作品包；侧栏「项目」条目；绑定 1 个工作区 + 1 个会话 | 不是画布 `WorkspaceStore`；不是旧的 `cwd/.omnimux/projects/<id>` |
-| **画布工作区** | `WorkspaceStore` / `workspaces/<id>/canvas.json` | 一张无限画布文档（nodes/edges/…） | 历史命名易混；文档里写「画布工作区」，UI 文案尽量说「画布」 |
+| **画布工作区** | `WorkspaceStore` / `workspaces/<id>/canvas.json` | 一张创作画布文档（nodes/edges/…） | 历史命名易混；文档里写「画布工作区」，UI 文案统一说「创作画布」 |
 | **Gxgen Project** | `projects/:projectId` | Gxgen 产品壳命名空间 | 对齐时只学交互/职责，不照搬云 API |
 
 **代理硬规则**：写代码前先说清自己在改哪一层。禁止把「新建项目」做成 `createWorkspace('我的工作流')` 的换皮。禁止用 `connectWorkspace`（复用空白会话会把画布换成 Files）。禁止 `sessions.create({ cwd })`。新建顺序是文件夹 → 账本 → 会话。

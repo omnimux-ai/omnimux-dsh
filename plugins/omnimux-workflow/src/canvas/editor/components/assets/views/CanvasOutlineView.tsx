@@ -201,7 +201,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
           <button
             type="button"
             className="wf-view-mode-btn-compact"
-            title="刷新画布素材"
+            title="刷新创作画布素材"
             onClick={onRefresh}
           >
             <RefreshCw size={13} />
@@ -267,13 +267,13 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
         {nodes.length === 0 ? (
           <div className="wf-assets-empty-state-compact">
             <Layers size={24} className="wf-assets-empty-icon" />
-            <div className="wf-assets-empty-title">画布暂无素材</div>
+            <div className="wf-assets-empty-title">创作画布暂无素材</div>
             <div className="wf-assets-empty-subtitle">请导入文件或添加节点并生成</div>
           </div>
         ) : filteredNodes.length === 0 ? (
           <div className="wf-assets-empty-state-compact">
             <Layers size={24} className="wf-assets-empty-icon" />
-            <div className="wf-assets-empty-title">当前画布暂无匹配素材</div>
+            <div className="wf-assets-empty-title">当前创作画布暂无匹配素材</div>
           </div>
         ) : viewMode === 'tree' ? (
           <div className="wf-tree-list-container-compact">
@@ -317,7 +317,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
 
                   <div
                     className="wf-item-locate-icon-compact"
-                    title="在画布定位"
+                    title="在创作画布定位"
                     onClick={(e) => {
                       e.stopPropagation();
                       onFocusNode(node.id);

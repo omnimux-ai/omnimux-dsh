@@ -220,7 +220,7 @@ export const VirtualDataGrid: React.FC = () => {
             nodeData.coverUrl ||
             nodeData.mediaUrl ||
             '';
-          const name = nodeData.label || nodeData.title || nodeData.name || '画布资源';
+          const name = nodeData.label || nodeData.title || nodeData.name || '创作画布资源';
           return {
             assetId: node.id,
             name: String(name),

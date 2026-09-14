@@ -23,7 +23,7 @@ const LOCKED_ZH = {
   'auth.gate.headline': 'OmniMux 全面接入商业 Agent 矩阵',
   'auth.gate.subdeck': '最强多模态创作引擎 + 顶尖社媒运营专家团队',
   'auth.gate.feature1': '理解、拆解并全自动执行多平台商业内容生产',
-  'auth.gate.feature2': '专业工作流画布与 Skill，释放十倍出片生产力',
+  'auth.gate.feature2': '专业创作画布与 Skill，释放十倍出片生产力',
   'auth.gate.feature3': '从一个创意灵感开始，OmniMux 陪你全链路出海落地',
   'auth.gate.cta': '立即登录',
   'auth.gate.waitingDeviceCode': '已在新窗口打开授权页，请输入设备码：',

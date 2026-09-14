@@ -287,7 +287,7 @@ export function AppTab(props) {
         <div className="omx-apptab-empty-title">
           暂无已加载的 AI 应用
         </div>
-        <div>请先在画布中点击「发布为 AI 应用」，或通过应用中心打开。</div>
+        <div>请先在创作画布中点击「发布为 AI 应用」，或通过应用中心打开。</div>
       </div>
     )
   }
