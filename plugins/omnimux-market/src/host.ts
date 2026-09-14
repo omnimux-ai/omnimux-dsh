@@ -312,7 +312,7 @@ export function apply(ctx: Context, config: Config): void {
             reason: `当前会话已手动选择图像模型【${chosen.name}】，视频生成工具已被禁用。`,
           }
         }
-        if (chosen.id === 'gpt-image-2') {
+        if (chosen.id === 'gpt-image-2.5') {
           if (toolName === 'omnimux_image_submit' && exec.arguments && typeof exec.arguments === 'object') {
             if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
               exec.arguments.model = chosen.id
@@ -348,7 +348,7 @@ export function apply(ctx: Context, config: Config): void {
         deniedTools.push('image_generate', 'omnimux_image_submit', 'video_generate')
       } else if (chosen.type === 'image') {
         deniedTools.push('video_generate', 'omnimux_video_submit')
-        if (chosen.id !== 'gpt-image-2') {
+        if (chosen.id !== 'gpt-image-2.5') {
           deniedTools.push('image_generate')
         }
       }

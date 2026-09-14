@@ -162,9 +162,13 @@ export function resolveEffectiveVideoParams(
   const schema = mergeVideoParameterSchema(args.schema, operationOption?.parameters);
 
   const ratioOptions = schema.aspectRatio?.options ?? [];
-  const aspectRatio = typeof params?.aspectRatio === 'string' && params.aspectRatio.trim()
+  const rawRatio = typeof params?.aspectRatio === 'string' && params.aspectRatio.trim()
     ? params.aspectRatio
-    : schema.aspectRatio?.defaultValue ?? ratioOptions[0]?.value ?? DEFAULT_ASPECT_RATIO;
+    : undefined;
+  const onlyAdaptive = ratioOptions.length === 1 && (ratioOptions[0]!.value === 'adaptive' || ratioOptions[0]!.value === 'auto');
+  const aspectRatio = onlyAdaptive && rawRatio && rawRatio !== ratioOptions[0]!.value
+    ? (schema.aspectRatio?.defaultValue ?? ratioOptions[0]!.value)
+    : (rawRatio ?? schema.aspectRatio?.defaultValue ?? ratioOptions[0]?.value ?? DEFAULT_ASPECT_RATIO);
 
   const resolutionOptions = schema.resolution?.options ?? [];
   const resolution = typeof params?.resolution === 'string' && params.resolution.trim()
@@ -385,8 +389,12 @@ export function validateVideoParamsForUi(input: {
 }): string[] {
   const { params } = input;
   const errors: string[] = [];
+  const effectiveValues = {
+    ...((input.rawParams ?? params) as Record<string, unknown>),
+    aspectRatio: params.aspectRatio,
+  };
   const declaredFailure = findDeclaredParameterFailure(
-    (input.rawParams ?? params) as Record<string, unknown>,
+    effectiveValues,
     params.schema as Record<string, unknown>,
     undefined,
   );

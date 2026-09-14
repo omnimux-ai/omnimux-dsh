@@ -257,6 +257,8 @@ const EN: PanelCopy = {
     completed: 'Completed',
     done: 'Done',
     labels: {
+      skill: 'Load skill',
+      read: 'Read file',
       browser_snapshot: 'Read page',
       browser_click: 'Click element',
       browser_type: 'Enter text',
@@ -505,6 +507,8 @@ const ZH: PanelCopy = {
     completed: '已完成',
     done: '完成',
     labels: {
+      skill: '加载技能',
+      read: '读取文件',
       browser_snapshot: '读取页面',
       browser_click: '点击元素',
       browser_type: '填写内容',

@@ -48,7 +48,7 @@
     "lib/types/**/*.d.ts",
     "cordis.patch.yml",
     "screenshots.json",
-    "assets/**",
+    "assets",
     "README.md",
     "README.zh.md"
   ],

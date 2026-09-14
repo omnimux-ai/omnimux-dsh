@@ -62,6 +62,8 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 
 ## Verification
 
+For full-app worktree tests, use the shared [test environment bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备); default to synthetic `ui` mode, require task-specific credential authorization for `live`, and never solve onboarding by copying shared profiles or filling real keys into test pages.
+
 Choose checks by changed behavior, then satisfy required CI checks. Do not add tests that only restate a reversible, low-impact edit; rerun or expand checks only after a relevant change, failure, or unresolved doubt.
 
 | Change | Required local evidence |

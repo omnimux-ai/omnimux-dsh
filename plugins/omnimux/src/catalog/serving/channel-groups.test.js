@@ -133,14 +133,19 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
 
     it('keeps a model without a channel pool on its base candidates and reports the intent', () => {
       const plan = resolveChannelPlan('grok-imagine-image-2', { allowedGroups: ['standard'] })
-      // The alias keeps the pre-routing candidate list intact.
+      // #1751：别名先归一到 grok-imagine-image-2-0，再取网关注册候选（产品 ID 恒在首位）。
       assert.deepEqual(plan.candidates, [
+        'grok-imagine-image-2-0',
         'grok-imagine-image-2',
         'grok-imagine-image',
-        'grok-imagine-image-2-0',
         'grok-imagine-image-2.0',
       ])
       assert.deepEqual(plan.unresolvedGroups, ['standard'])
+      // 同一产品 ID 的四种写法落到同一份候选表，顺序完全一致。
+      assert.deepEqual(
+        resolveChannelPlan('grok-imagine-image-2-0', { allowedGroups: ['standard'] }),
+        plan,
+      )
     })
 
     it('falls back to gatewayCandidates for unregistered models', () => {

@@ -10,17 +10,18 @@ export interface GenerationPolicy {
 
 export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationPolicy>> = {
   text: {
-    allowedModelIds: ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash-vision-exp', 'gpt-5.5'],
+    allowedModelIds: ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5'],
     defaultModelId: 'gemini-3.8-flash',
     modeSelection: 'automatic',
   },
   image: {
-    allowedModelIds: ['gpt-image-2.5', 'grok-imagine-image-2', 'gpt-image-2'],
+    // grok-imagine-image-2-0 只剩「已登记」（无 listed 操作），按 curated 白名单口径不得进入画布。
+    allowedModelIds: ['gpt-image-2.5'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
   video: {
-    allowedModelIds: ['seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'seedance-2-5', 'wan-3.0', 'minimax-h3', 'grok-imagine-video-1-5', 'minimax-h3-max', 'minimax-h3-max-turbo'],
+    allowedModelIds: ['seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'seedance-2-5', 'wan-3.0', 'minimax-h3', 'grok-imagine-video-1-5'],
     defaultModelId: 'seedance-2-0-fast',
     modeSelection: 'model',
   },
@@ -46,8 +47,8 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
     lists[kind] = policy[kind].allowedModelIds.flatMap((id) => {
       const row = rows.find((candidate) => candidate.id === id);
       if (!row) return [];
-      // Legacy catalogs have no operation rows. Current catalogs must prove a listed output.
-      if (catalog.models && !catalog.models.some((model) => model.id === id
+      // Every candidate must prove a real listed output in the authoritative catalog.
+      if (!catalog.models?.some((model) => model.id === id
         && model.operations?.some((op) => op.listed === true && op.output?.type === kind))) return [];
       return [row];
     });

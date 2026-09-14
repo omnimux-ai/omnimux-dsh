@@ -18,7 +18,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom';
 import { Check, ShieldCheck, Percent, ChevronDown } from 'lucide-react';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
-import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
+import { groupPickerCandidates, isPickerCandidate, type PickerCandidate } from './modelPickerCandidates';
 import {
   formatBillingLabel,
   formatPriceChip,
@@ -44,192 +44,9 @@ export interface ModelCascadeMenuProps {
     strategy?: RouteStrategy;
     allowedGroups?: string[];
   };
-  catalog?: CapabilityCatalog | null;
-  materialType?: string;
+  options: readonly PickerCandidate[];
   execBusy?: boolean;
   onSelect: (value: ModelCascadeSelectValue) => void;
-}
-
-interface BrandDef {
-  id: string;
-  name: string;
-  iconModelId: string;
-}
-
-/** Catalog rows are projected to the two fields the picker renders. */
-interface PickerRow {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-/** 品牌列：只写产品真名，不做「全能模型 X」这类聚合命名。 */
-const ALL_BRANDS: BrandDef[] = [
-  { id: 'openai', name: 'OpenAI', iconModelId: 'gpt-5.5' },
-  { id: 'bytedance', name: 'Seedance', iconModelId: 'seedance-2-0' },
-  { id: 'minimax', name: 'MiniMax', iconModelId: 'minimax-h3' },
-  { id: 'kling', name: 'Kling', iconModelId: 'kling' },
-  { id: 'alibaba', name: 'Wan', iconModelId: 'wan-3.0' },
-  { id: 'happyhorse', name: 'HappyHorse', iconModelId: 'wan-3.0' },
-  { id: 'anthropic', name: 'Claude', iconModelId: 'claude-opus-4-6' },
-  { id: 'deepseek', name: 'DeepSeek', iconModelId: 'deepseek-v4-flash-vision-exp' },
-  { id: 'google', name: 'Google', iconModelId: 'gemini-3.8-flash' },
-  { id: 'midjourney', name: 'Midjourney', iconModelId: 'midjourney' },
-  { id: 'xai', name: 'xAI', iconModelId: 'grok-imagine-video-1-5' },
-];
-
-const BRAND_MATCHERS: ReadonlyArray<{ brand: string; fragments: readonly string[] }> = [
-  { brand: 'openai', fragments: ['gpt', 'o1', 'o3', 'o4'] },
-  { brand: 'bytedance', fragments: ['seed'] },
-  { brand: 'minimax', fragments: ['minimax', 'hailuo'] },
-  { brand: 'kling', fragments: ['kling'] },
-  { brand: 'alibaba', fragments: ['wan'] },
-  { brand: 'happyhorse', fragments: ['horse'] },
-  { brand: 'anthropic', fragments: ['claude', 'opus', 'sonnet'] },
-  { brand: 'deepseek', fragments: ['deepseek'] },
-  { brand: 'google', fragments: ['gemini', 'banana', 'imagen', 'veo'] },
-  { brand: 'midjourney', fragments: ['midjourney', 'mj'] },
-  { brand: 'xai', fragments: ['grok', 'xai'] },
-];
-
-const BRANDS_BY_MATERIAL = {
-  text: ['openai', 'anthropic', 'google', 'deepseek', 'minimax'],
-  image: ['openai', 'google', 'bytedance', 'kling', 'midjourney'],
-  video: ['bytedance', 'openai', 'minimax', 'kling', 'alibaba', 'happyhorse', 'google', 'xai'],
-} as const;
-
-/** 目录不可用（尚未加载）时的兜底，避免品牌列整列空白。 */
-const FALLBACK_MODELS_BY_BRAND: Readonly<Record<string, readonly PickerRow[]>> = {
-  bytedance: [
-    { id: 'seedance-2-5', name: 'Seedance 2.5', description: '全新 2.5 旗舰视频大模型' },
-    { id: 'seedance-2-0', name: 'Seedance 2.0', description: '支持文生、首帧、首尾帧、多参考图' },
-    { id: 'seedance-2-0-mini', name: 'Seedance 2.0 Mini', description: '轻量视频模型，支持文生与首帧' },
-    { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '快速版，极速出片，支持多参考图' },
-  ],
-  deepseek: [
-    { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash', description: '全能旗舰模型，高性价比' },
-  ],
-  google: [
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', description: '极速旗舰模型，多模态全能' },
-  ],
-  openai: [
-    { id: 'gpt-5.5', name: 'GPT-5.5', description: 'OpenAI 新一代旗舰大模型' },
-  ],
-  anthropic: [
-    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: 'Claude 顶尖推理旗舰' },
-  ],
-};
-
-/**
- * 每个二级菜单（各品牌在不同模态下）配置的默认模型 ID。
- * 当用户在一级菜单点击切换品牌时，立即切换为该二级菜单配置的默认模型。
- */
-const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL: Record<string, Partial<Record<string, string>>> = {
-  text: {
-    openai: 'gpt-5.5',
-    anthropic: 'claude-opus-4-6',
-    google: 'gemini-3.8-flash',
-    deepseek: 'deepseek-v4-flash-vision-exp',
-    minimax: 'minimax-h3',
-  },
-  image: {
-    openai: 'gpt-image-2.5',
-    google: 'nano-banana-2',
-    bytedance: 'seedance-2-0-fast',
-    kling: 'kling',
-    midjourney: 'midjourney',
-    xai: 'grok-imagine-image-2',
-  },
-  video: {
-    bytedance: 'seedance-2-0-fast',
-    openai: 'gpt-5.5',
-    minimax: 'minimax-h3',
-    kling: 'kling',
-    alibaba: 'wan-3.0',
-    happyhorse: 'wan-3.0',
-    google: 'gemini-3.8-flash',
-    xai: 'grok-imagine-video-1-5',
-  },
-};
-
-const DEFAULT_MODEL_BY_BRAND: Record<string, string> = {
-  openai: 'gpt-5.5',
-  anthropic: 'claude-opus-4-6',
-  deepseek: 'deepseek-v4-flash-vision-exp',
-  google: 'gemini-3.8-flash',
-  bytedance: 'seedance-2-0-fast',
-  minimax: 'minimax-h3',
-  kling: 'kling',
-  alibaba: 'wan-3.0',
-  happyhorse: 'wan-3.0',
-  midjourney: 'midjourney',
-  xai: 'grok-imagine-video-1-5',
-};
-
-/**
- * 解析品牌在当前模态下的默认模型。
- * 优先级：配置的默认模型（若在可用列表中） > 可用列表首项 > 通用配置 > 品牌图标兜底
- */
-function defaultModelForBrand(
-  brandId: string,
-  materialType: string,
-  availableRows: readonly PickerRow[],
-): string {
-  const configured = DEFAULT_MODEL_BY_BRAND_AND_MATERIAL[materialType]?.[brandId]
-    ?? DEFAULT_MODEL_BY_BRAND[brandId];
-  if (configured && availableRows.some((row) => row.id === configured)) {
-    return configured;
-  }
-  if (availableRows.length > 0 && availableRows[0]?.id) {
-    return availableRows[0].id;
-  }
-  const brandDef = ALL_BRANDS.find((b) => b.id === brandId);
-  return configured ?? brandDef?.iconModelId ?? 'gemini-3.8-flash';
-}
-
-/** Brand column contents for a modality. */
-function allowedBrandsFor(materialType: string): readonly string[] {
-  if (materialType === 'text') return BRANDS_BY_MATERIAL.text;
-  if (materialType === 'image') return BRANDS_BY_MATERIAL.image;
-  return BRANDS_BY_MATERIAL.video;
-}
-
-/** Model shown before the user picks one. */
-function defaultModelFor(materialType: string): string {
-  if (materialType === 'image') return 'gpt-image-2.5';
-  if (materialType === 'text') return 'claude-opus-4-6';
-  return 'seedance-2-0-fast';
-}
-
-/** 目录行的显示契约是 `label` / `subtitle`；缺失时退回 id，避免出现空白行。 */
-function toPickerRows(list: readonly CapabilityModelItem[] | undefined): PickerRow[] {
-  return (list ?? []).map((item) => {
-    const row = item as unknown as Record<string, unknown>;
-    return {
-      id: item.id,
-      name: typeof row.label === 'string' && row.label ? row.label : item.id,
-      ...(typeof row.subtitle === 'string' && row.subtitle ? { description: row.subtitle } : {}),
-    };
-  });
-}
-
-/**
- * 严格判断模型是否真正属于指定品牌（无兜底假阳性）。
- */
-function modelBelongsToBrand(modelId: string, brandId: string): boolean {
-  if (!modelId || !brandId) return false;
-  const id = modelId.toLowerCase();
-  const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
-  return fragments.some((fragment) => id.includes(fragment));
-}
-
-/** 推导模型所属品牌；用于初值与外部同步。 */
-function brandForModel(modelId: string, allowed: readonly string[]): string {
-  const id = modelId.toLowerCase();
-  for (const { brand, fragments } of BRAND_MATCHERS) {
-    if (allowed.includes(brand) && fragments.some((fragment) => id.includes(fragment))) return brand;
-  }
-  return allowed[0] ?? 'bytedance';
 }
 
 const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> = ({ tone = 'muted', children }) => (
@@ -332,8 +149,7 @@ const ChannelRow: React.FC<{
 export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   modelValue,
   routing,
-  catalog,
-  materialType = 'video',
+  options,
   execBusy,
   onSelect,
 }) => {
@@ -341,81 +157,43 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  const allowedBrands = allowedBrandsFor(materialType);
+  const brandList = useMemo(() => groupPickerCandidates(options), [options]);
   const { modelId: canonicalModel } = parseModelAndGroup(modelValue);
-  const currentModelId = canonicalModel || defaultModelFor(materialType);
-
-  const [activeBrandId, setActiveBrandId] = useState<string>(() => brandForModel(currentModelId, allowedBrands));
-  const [activeModelId, setActiveModelId] = useState<string>(currentModelId);
+  const currentModelId = isPickerCandidate(options, canonicalModel) ? canonicalModel : '';
+  const activeModelId = currentModelId;
+  const activeBrandId = brandList.find((brand) => brand.rows.some((row) => row.id === activeModelId))?.id ?? '';
   const [activeStrategy, setActiveStrategy] = useState<RouteStrategy>(routing?.strategy ?? 'stability_first');
   const [hoverBrandId, setHoverBrandId] = useState<string | null>(null);
   const [hoverModelId, setHoverModelId] = useState<string | null>(null);
 
-  const catalogRows = useMemo<PickerRow[]>(() => {
-    const rawList = materialType === 'video'
-      ? catalog?.video
-      : materialType === 'image'
-        ? catalog?.image
-        : materialType === 'text'
-          ? catalog?.text
-          : catalog?.models;
-    return toPickerRows(rawList);
-  }, [catalog, materialType]);
-
-  const modelsForBrand = useCallback((brandId: string): PickerRow[] => {
-    const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
-    const rows = catalogRows.filter((row) => fragments.some((fragment) => row.id.toLowerCase().includes(fragment)));
-    if (rows.length > 0) return rows;
-    const fallback = FALLBACK_MODELS_BY_BRAND[brandId];
-    return fallback ? [...fallback] : [];
-  }, [catalogRows]);
-
-  // 品牌列由目录推导：只列真有型号的品牌，避免点进去没有型号的死项。
-  const brandList = useMemo(() => {
-    const ordered = ALL_BRANDS.filter((brand) => allowedBrands.includes(brand.id));
-    const withModels = ordered.filter((brand) => modelsForBrand(brand.id).length > 0);
-    const usable = withModels.length > 0
-      ? withModels
-      : ordered.filter((brand) => FALLBACK_MODELS_BY_BRAND[brand.id]);
-    // 当前选中型号所属品牌必须可见，否则当前选择会被藏起来。
-    const activeBrand = brandForModel(currentModelId, allowedBrands);
-    const activeDef = ordered.find((brand) => brand.id === activeBrand);
-    if (activeDef && !usable.some((brand) => brand.id === activeBrand)) return [activeDef, ...usable];
-    return usable;
-  }, [allowedBrands, modelsForBrand, currentModelId]);
-
-  const shownBrandId = hoverBrandId ?? activeBrandId;
-  const shownModels = useMemo(() => {
-    const rows = modelsForBrand(shownBrandId);
-    // 根治跨品牌模型串台：已提交型号即使不在 catalog 里也要回退显示，
-    // 但必须真正属于当前展示的品牌（严格特征词判定，无兜底假阳性），严禁跨品牌模型注入。
-    const belongsToBrand = modelBelongsToBrand(activeModelId, shownBrandId);
-    const needsActive = belongsToBrand
-      && activeModelId
-      && !rows.some((row) => row.id === activeModelId);
-    return needsActive ? [{ id: activeModelId, name: activeModelId }, ...rows] : rows;
-  }, [modelsForBrand, shownBrandId, activeModelId]);
+  const activeFamily = options.find((row) => row.id === activeModelId)?.family;
+  const modelsForBrand = useCallback((brandId: string) => (
+    brandList.find((brand) => brand.id === brandId)?.rows ?? []
+  ), [brandList]);
+  const shownBrandId = hoverBrandId ?? (activeBrandId || brandList[0]?.id || '');
+  const shownModels = modelsForBrand(shownBrandId);
 
   // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
   // 渠道策略列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；
   // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
   const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
   const channelModelId = hoverModelId ?? activeModelId;
-  const channelGroups = useMemo(() => getModelChannelGroups(channelModelId), [channelModelId]);
-  const activeChannelGroups = useMemo(() => getModelChannelGroups(activeModelId), [activeModelId]);
+  const channelGroups = useMemo(() => isPickerCandidate(options, channelModelId) ? getModelChannelGroups(channelModelId) : [], [options, channelModelId]);
+  const activeChannelGroups = useMemo(() => isPickerCandidate(options, activeModelId) ? getModelChannelGroups(activeModelId) : [], [options, activeModelId]);
   const hasMultipleChannels = channelGroups.length > 1;
   const showChannelColumn = hasMultipleChannels && (hoveringOtherBrand ? hoverModelId !== null : true);
   const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId;
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
-    () => (routing?.allowedGroups?.length ? routing.allowedGroups : getModelChannelGroups(currentModelId).map((group) => group.id)),
+    () => (routing?.allowedGroups ?? activeChannelGroups.map((group) => group.id))
+      .filter((id) => activeChannelGroups.some((group) => group.id === id)),
   );
 
-  // 外部数据变化（撤销/重做、快照重载、切换节点）后重新对齐品牌与勾选。
+  // 外部候选或选择变化后丢弃预览，选中态直接由合法持久值派生。
   useEffect(() => {
-    setActiveModelId(currentModelId);
-    setActiveBrandId(brandForModel(currentModelId, allowedBrands));
-  }, [currentModelId, allowedBrands]);
+    setHoverBrandId(null);
+    setHoverModelId(null);
+  }, [currentModelId, options]);
 
   useEffect(() => {
     if (routing?.strategy) setActiveStrategy(routing.strategy);
@@ -423,17 +201,20 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const persistedGroups = routing?.allowedGroups;
   useEffect(() => {
-    const groups = getModelChannelGroups(currentModelId);
-    setSelectedGroupIds(persistedGroups?.length ? persistedGroups : groups.map((group) => group.id));
-  }, [currentModelId, persistedGroups]);
+    setSelectedGroupIds((persistedGroups ?? activeChannelGroups.map((group) => group.id))
+      .filter((id) => activeChannelGroups.some((group) => group.id === id)));
+  }, [activeChannelGroups, persistedGroups]);
 
   const emit = useCallback((modelId: string, strategy: RouteStrategy, groupIds: string[]) => {
+    if (!isPickerCandidate(options, modelId)) return;
+    const groups = getModelChannelGroups(modelId);
+    if (groupIds.some((id) => !groups.some((group) => group.id === id))) return;
     onSelect({
       modelId,
       strategy,
       ...(groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
     });
-  }, [onSelect]);
+  }, [onSelect, options]);
 
   /** 悬停只切换预览；写入节点只发生在点击与渠道勾选。 */
   const handleBrandHover = useCallback((brandId: string) => {
@@ -451,46 +232,41 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, []);
 
   const handleSelectModel = useCallback((modelId: string) => {
-    setActiveModelId(modelId);
-    setActiveBrandId(brandForModel(modelId, allowedBrands));
+    if (!isPickerCandidate(options, modelId)) return;
     const groupIds = getModelChannelGroups(modelId).map((group) => group.id);
     setSelectedGroupIds(groupIds);
     setHoverBrandId(null);
     setHoverModelId(null);
     emit(modelId, activeStrategy, groupIds);
-  }, [activeStrategy, allowedBrands, emit]);
+  }, [activeStrategy, options, emit]);
 
-  /** 点击一级品牌菜单：立即解析并切换选中该品牌下的默认模型，更新状态并写入节点 */
+  /** 点击品牌只选择该分组的真实候选首项。 */
   const handleBrandClick = useCallback((brandId: string) => {
-    const rows = modelsForBrand(brandId);
-    const targetModelId = defaultModelForBrand(brandId, materialType, rows);
-    handleSelectModel(targetModelId);
-  }, [handleSelectModel, materialType, modelsForBrand]);
+    const targetModelId = modelsForBrand(brandId)[0]?.id;
+    if (targetModelId) handleSelectModel(targetModelId);
+  }, [handleSelectModel, modelsForBrand]);
 
   const handleStrategyChange = useCallback((strategy: RouteStrategy) => {
+    if (!isPickerCandidate(options, activeModelId)) return;
     setActiveStrategy(strategy);
     emit(activeModelId, strategy, selectedGroupIds);
-  }, [activeModelId, selectedGroupIds, emit]);
+  }, [options, activeModelId, selectedGroupIds, emit]);
 
   const toggleGroupSelection = useCallback((groupId: string) => {
-    setSelectedGroupIds((prev) => {
-      // 至少保留一个渠道：清空会让中枢只能 fail-closed。
-      if (prev.includes(groupId)) {
-        if (prev.length <= 1) return prev;
-        const next = prev.filter((id) => id !== groupId);
-        emit(activeModelId, activeStrategy, next);
-        return next;
-      }
-      const next = [...prev, groupId];
-      emit(activeModelId, activeStrategy, next);
-      return next;
-    });
-  }, [activeModelId, activeStrategy, emit]);
+    if (!isPickerCandidate(options, activeModelId) || !activeChannelGroups.some((group) => group.id === groupId)) return;
+    const prev = selectedGroupIds.filter((id) => activeChannelGroups.some((group) => group.id === id));
+    // 至少保留一个渠道；副作用不放进 React 状态更新函数。
+    if (prev.includes(groupId) && prev.length <= 1) return;
+    const next = prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId];
+    setSelectedGroupIds(next);
+    emit(activeModelId, activeStrategy, next);
+  }, [options, selectedGroupIds, activeChannelGroups, activeModelId, activeStrategy, emit]);
 
   const applyGroupSelection = useCallback((groupIds: string[]) => {
+    if (!isPickerCandidate(options, activeModelId) || groupIds.some((id) => !activeChannelGroups.some((group) => group.id === id))) return;
     setSelectedGroupIds(groupIds);
     emit(activeModelId, activeStrategy, groupIds);
-  }, [activeModelId, activeStrategy, emit]);
+  }, [options, activeChannelGroups, activeModelId, activeStrategy, emit]);
 
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
   const [popoverSurface, setPopoverSurface] = useState<string>('var(--dsw-alias-bg-elevated)');
@@ -542,7 +318,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
   }, [isOpen]);
 
-  const shortName = resolveShortModelName(activeModelId);
+  const shortName = activeModelId ? resolveShortModelName(activeModelId, activeFamily) : '待重新选择';
   const selectedCount = selectedGroupIds.length;
   const strategyLabel = activeStrategy === 'cost_first' ? '低价优先' : '稳定性优先';
 
@@ -667,13 +443,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                       <span className="wf-cascade-model-item__title">
-                        {item.name || item.id}
+                        {(item.label || item.id) || item.id}
                       </span>
                       {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
                     </div>
-                    {item.description ? (
+                    {item.subtitle ? (
                       <div className="wf-cascade-model-item__desc">
-                        {item.description}
+                        {item.subtitle}
                       </div>
                     ) : null}
                   </button>

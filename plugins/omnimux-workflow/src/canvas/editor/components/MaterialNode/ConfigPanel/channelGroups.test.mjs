@@ -48,7 +48,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     // Inventing channels and prices here would promise routing the hub cannot do.
     assert.deepEqual(getModelChannelGroups('unknown-custom-model'), []);
     // 网关定价表未收录该模型 → 没有可依据的分组，画布不得凭空给渠道。
-    assert.deepEqual(getModelChannelGroups('grok-imagine-image-2'), []);
+    assert.deepEqual(getModelChannelGroups('grok-imagine-image-2-0'), []);
   });
 
   it('mirrors the hub routing table exactly (model keys, ids and every routing field)', () => {
@@ -129,7 +129,30 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.equal(resolveShortModelName('seedance-2-0-fast'), '2.0 Fast');
     assert.equal(resolveShortModelName('seedance-2-0'), 'Seedance 2.0');
     assert.equal(resolveShortModelName('claude-opus-4-6'), 'Opus 4.6');
-    assert.equal(resolveShortModelName('deepseek-v4-flash-vision-exp'), 'Flash Vision');
+    assert.equal(resolveShortModelName('deepseek-v4-flash'), 'Flash Vision');
     assert.equal(resolveShortModelName(''), '选择模型');
+  });
+
+  it('keeps the capsule label across the midjourney/nano-banana canonical rename (#1751)', () => {
+    // 家族优先：契约 family 不随 canonical 改名变化，这是防「下次改名再断一次」的主路径。
+    assert.equal(resolveShortModelName('mj-v8-1', 'midjourney'), 'Midjourney');
+    assert.equal(resolveShortModelName('mj-v7', 'midjourney'), 'Midjourney');
+    assert.equal(resolveShortModelName('nano-banana-2', 'nanobanana'), 'NanoBanana');
+    assert.equal(resolveShortModelName('nano-banana-pro', 'nanobanana'), 'NanoBanana');
+    assert.equal(resolveShortModelName('seedream-5-0-pro', 'seedream'), 'Seedream');
+    // family 大小写 / 空白不敏感
+    assert.equal(resolveShortModelName('mj-v8-1', '  MidJourney '), 'Midjourney');
+    // 目录未提供 family 时的显式 id 条目兜底（含动作变体与渠道后缀）
+    assert.equal(resolveShortModelName('mj-v8-1'), 'Midjourney');
+    assert.equal(resolveShortModelName('mj-v7'), 'Midjourney');
+    assert.equal(resolveShortModelName('mj-v7-upscale'), 'Midjourney');
+    assert.equal(resolveShortModelName('mj-v8-1@standard'), 'Midjourney');
+    assert.equal(resolveShortModelName('nano-banana-2'), 'NanoBanana');
+    assert.equal(resolveShortModelName('nano-banana-pro@standard'), 'NanoBanana');
+    // 旧写法仍是契约别名，短名不得因此丢失
+    assert.equal(resolveShortModelName('midjourney-8.1'), 'Midjourney');
+    assert.equal(resolveShortModelName('midjourney-8.1', 'midjourney'), 'Midjourney');
+    // 未被 family 命中的 id 不得被家族表误吞
+    assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'GPT-5.5');
   });
 });

@@ -27,7 +27,7 @@ function harness(t) {
   const file = join(root, 'generation-preferences.json');
   const preferences = createGenerationPreferencesStore(file);
   const workspaces = createWorkspaceStore({ workspacesDir: join(root, 'workspaces') });
-  const catalog = { source: 'omnimux', text: [{ id: 'claude-opus-4-6' }, { id: 'gpt-5.5' }], image: [{ id: 'gpt-image-2' }], video: [], audio: [] };
+  const catalog = { source: 'omnimux', text: [{ id: 'claude-opus-4-6' }, { id: 'gpt-5.5' }], image: [{ id: 'gpt-image-2.5' }], video: [], audio: [] };
   const dispatcher = createWorkflowDispatcher({
     store: workspaces,
     generationPreferences: preferences,
@@ -46,9 +46,9 @@ test('manual choices survive restart across workspaces without changing existing
   const second = h.workspaces.create('Project B');
   assert.deepEqual((await h.call()).body, { lastModelByType: {} });
   assert.equal((await h.call('PATCH', { kind: 'text', modelId: 'claude-opus-4-6' })).status, 200);
-  assert.equal((await h.call('PATCH', { kind: 'image', modelId: 'gpt-image-2' })).status, 200);
+  assert.equal((await h.call('PATCH', { kind: 'image', modelId: 'gpt-image-2.5' })).status, 200);
   const restored = createGenerationPreferencesStore(h.file);
-  assert.deepEqual(restored.get(), { lastModelByType: { text: 'claude-opus-4-6', image: 'gpt-image-2' } });
+  assert.deepEqual(restored.get(), { lastModelByType: { text: 'claude-opus-4-6', image: 'gpt-image-2.5' } });
   assert.deepEqual(h.workspaces.get(first.id), first);
   assert.deepEqual(h.workspaces.get(second.id), second);
   const isolated = createGenerationPreferencesStore(join(h.root, 'other-profile', 'generation-preferences.json'));
@@ -87,9 +87,9 @@ test('independent store instances merge distinct kinds and newest choice persist
   const h = harness(t);
   const second = createGenerationPreferencesStore(h.file);
   h.preferences.set('text', 'claude-opus-4-6');
-  second.set('image', 'gpt-image-2');
+  second.set('image', 'gpt-image-2.5');
   h.preferences.set('text', 'gpt-5.5');
-  assert.deepEqual(second.get().lastModelByType, { text: 'gpt-5.5', image: 'gpt-image-2' });
+  assert.deepEqual(second.get().lastModelByType, { text: 'gpt-5.5', image: 'gpt-image-2.5' });
   const copy = second.get();
   copy.lastModelByType.text = 'mutated';
   assert.equal(second.get().lastModelByType.text, 'gpt-5.5');

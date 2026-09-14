@@ -9,18 +9,93 @@ function text(value) {
   return typeof value === 'string' ? value : ''
 }
 
+/** Split only unescaped pipes outside matched inline code spans. */
+function tableCells(line) {
+  const cells = []
+  let cell = ''
+  let codeTicks = 0
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i]
+    if (char === '\\' && i + 1 < line.length) {
+      cell += line.slice(i, i + 2)
+      i += 1
+    } else if (char === '`') {
+      const run = line.slice(i).match(/^`+/)[0]
+      if (codeTicks === run.length) codeTicks = 0
+      else if (!codeTicks && new RegExp(`(^|[^\x60])\x60{${run.length}}(?!\x60)`).test(line.slice(i + run.length))) codeTicks = run.length
+      cell += run
+      i += run.length - 1
+    } else if (char === '|' && !codeTicks) {
+      cells.push(cell.trim())
+      cell = ''
+    } else cell += char
+  }
+  if (!cells.length) return null
+  cells.push(cell.trim())
+  if (line.startsWith('|')) cells.shift()
+  if (line.endsWith('|') && cells.at(-1) === '') cells.pop()
+  return cells
+}
+
 /**
  * Parse markdown analysis text into structured Level-2 items and Level-3 descriptions.
  * Separates section headers, key-value labels and bullet descriptions.
  */
 export function parseDocAnalysis(rawValue) {
   if (!rawValue || typeof rawValue !== 'string') return []
-  const lines = rawValue.split('\n').map((l) => l.trim()).filter(Boolean)
+  const lines = rawValue.split('\n')
   const groups = []
   let currentGroup = null
+  const appendEntry = (entry) => {
+    if (!currentGroup) {
+      currentGroup = { title: '', entries: [] }
+      groups.push(currentGroup)
+    }
+    currentGroup.entries.push(entry)
+  }
 
-  for (const rawLine of lines) {
-    if (/^\|?\s*[-:]+[-| :]+\|?$/.test(rawLine)) continue
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i].trim()
+    if (!rawLine) continue
+    const fence = rawLine.match(/^(`{3,}|~{3,})/)
+    if (fence) {
+      const start = i
+      const close = new RegExp(`^${fence[1][0]}{${fence[1].length},}\\s*$`)
+      while (i + 1 < lines.length) {
+        i += 1
+        if (close.test(lines[i].trim())) break
+      }
+      appendEntry({ type: 'desc', text: lines.slice(start, i + 1).join('\n') })
+      continue
+    }
+    const headers = tableCells(rawLine)
+    const separator = tableCells((lines[i + 1] || '').trim())
+    if (headers?.length && separator && headers.length === separator.length && separator.every((cell) => /^:?-{3,}:?$/.test(cell))) {
+      i += 1
+      let rowCount = 0
+      const entries = []
+      while (i + 1 < lines.length) {
+        const row = tableCells(lines[i + 1].trim())
+        if (!row) break
+        i += 1
+        if (row.length > headers.length) {
+          entries.push({ type: 'desc', text: lines[i].trim() })
+        } else {
+          rowCount += 1
+          entries.push({ type: 'record', fields: headers.map((label, index) => ({
+            label: label.replace(/\\\|/g, '|'),
+            desc: (row[index] || '').replace(/\\\|/g, '|'),
+          })) })
+        }
+      }
+      if (!rowCount) appendEntry({ type: 'record', fields: headers.map((label) => ({ label, desc: '' })) })
+      entries.forEach(appendEntry)
+      continue
+    }
+    if (headers || /^[-:]+$/.test(rawLine)) {
+      appendEntry({ type: 'desc', text: rawLine })
+      continue
+    }
 
     const headerMatch = rawLine.match(/^#{2,4}\s+(.+)$/)
     if (headerMatch) {

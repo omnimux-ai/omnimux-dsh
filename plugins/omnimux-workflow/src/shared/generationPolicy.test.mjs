@@ -7,7 +7,7 @@ import { reconcileCanvasForCatalog } from './graph/catalogReconcile.ts';
 
 const CLAUDE = 'claude-opus-4-6';
 const GEMINI = 'gemini-3.8-flash';
-const DEEPSEEK = 'deepseek-v4-flash-vision-exp';
+const DEEPSEEK = 'deepseek-v4-flash';
 const GPT = 'gpt-5.5';
 // Synthetic contracts exercise policy, not provider support claims.
 function textModel(id, modalities = [], listed = true) {

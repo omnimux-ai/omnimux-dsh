@@ -16,7 +16,6 @@ import { applyLocalMediaProbe, collectRealPaths } from '../../shared/localMedia.
 import type { CapabilityCatalog } from '../../shared/api';
 import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes';
 import {
-  getCachedCatalog,
   getCachedFingerprint,
   invalidateCachedCatalog,
   setCachedCatalog,
@@ -24,6 +23,11 @@ import {
 } from '../editor/hooks/useModelParameterSchema';
 import { sortCatalogRows } from '../../shared/sortCatalog';
 import { tableDocumentCache } from '../store/tableDocumentCache';
+
+// Explicit empty catalog prevents consumers' nullish cache fallback while unavailable.
+const UNAVAILABLE_CATALOG: CapabilityCatalog = {
+  source: 'omnimux', models: [], text: [], image: [], video: [], audio: [],
+};
 
 export type BootState =
   | { phase: 'loading' }
@@ -43,7 +47,7 @@ export interface UseCanvasBootOptions {
 export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
   const targetWorkspaceId = opts.workspaceId;
   const [boot, setBoot] = useState<BootState>({ phase: 'loading' });
-  const [catalog, setCatalog] = useState<CapabilityCatalog | null>(() => getCachedCatalog());
+  const [catalog, setCatalog] = useState<CapabilityCatalog | null>(UNAVAILABLE_CATALOG);
   const hydrateGraph = useCanvasStore((state) => state.hydrateGraph);
   const resetStore = useCanvasStore((state) => state.resetStore);
   const nodeCount = useCanvasStore((state) => state.nodes.length);
@@ -65,33 +69,32 @@ export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
       };
     }
 
+    let catalogRequest = 0;
     async function refreshCatalog(force = false): Promise<void> {
-      if (!force) {
-        const cached = getCachedCatalog();
-        if (cached) {
-          setCatalog(cached);
-          useCanvasStore.getState().setCatalogRuntime(cached);
+      const request = ++catalogRequest;
+      setCatalog(UNAVAILABLE_CATALOG);
+      useCanvasStore.getState().setCatalogRuntime(UNAVAILABLE_CATALOG);
+      try {
+        const result = await fetchCapabilities();
+        if (cancelled || request !== catalogRequest) return;
+        if (!result.ok) {
+          invalidateCachedCatalog();
+          return;
         }
-      }
-      const result = await fetchCapabilities();
-      if (cancelled || !result.ok) return;
-      const next = normalizeCatalog(result.body);
-      if (
-        !shouldReplaceCatalogCache({
+        const next = normalizeCatalog(result.body);
+        if (shouldReplaceCatalogCache({
           cachedFingerprint: getCachedFingerprint(),
           nextFingerprint: next.fingerprint,
           force,
-        })
-      ) {
-        // Same fingerprint and cache already in memory: skip localStorage write.
-        // Still hydrate boot catalog state with fresh server response.
+        })) {
+          setCachedCatalog(next);
+        }
         setCatalog(next);
         useCanvasStore.getState().setCatalogRuntime(next);
-        return;
+      } catch {
+        if (cancelled || request !== catalogRequest) return;
+        invalidateCachedCatalog();
       }
-      setCatalog(next);
-      setCachedCatalog(next);
-      useCanvasStore.getState().setCatalogRuntime(next);
     }
 
     async function probeAndPatchImportedMedia(): Promise<void> {

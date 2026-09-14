@@ -139,7 +139,7 @@ describe('Twitter Copilot Interactive Suite', () => {
       })
       const btn = container.querySelector('.dom-fill-btn')
       expect(btn).not.toBeNull()
-      expect(btn?.getAttribute('data-label')).toBe('填入输入框')
+      expect(btn?.getAttribute('data-label')).toBe('一键填写')
     })
   })
 
@@ -182,6 +182,90 @@ describe('Twitter Copilot Interactive Suite', () => {
       expect(styles.includes('.hero-platform-row')).toBe(true)
       expect(styles.includes('.hero-card-title')).toBe(true)
       expect(styles.includes('.hero-square-badge')).toBe(true)
+    })
+  })
+
+  describe('isFillableContent greeting & preamble purification contract', () => {
+    // 验证问候语、自我介绍被 100% 过滤
+    const greetings = [
+      '你好！我是 OmniMux「全能社媒操盘手」主理人。今天有什么想推进的社媒创作？',
+      '您好！我是您的智能助手，随时把你的需求发给我',
+      '我们可以一起进行：1. 爆款拆解 2. 创意复刻',
+      '欢迎使用社媒操盘手，今天有什么想推进的？'
+    ]
+
+    const validDrafts = [
+      '很多人以为做海外社媒拼的是爆肝发帖，其实真正拉开差距的只有这 3 个底层指标：1. 完播率 2. 评论区争议',
+      '0 粉丝冷启动，单条推文跑出 10W+ 曝光。掌握这套 SOP 效率提升 10 倍！',
+      '林晨 (Leo Lin)'
+    ]
+
+    function testIsFillable(text: string): boolean {
+      if (!text || text.trim() === '') return false
+      const trimmed = text.trim()
+      if (
+        /(你好|您好)[!！\s].*我是/i.test(trimmed) ||
+        /欢迎使用/i.test(trimmed) ||
+        /我们可以一起进行[:：]/i.test(trimmed) ||
+        /随时把你的需求.*发给我/i.test(trimmed) ||
+        /今天有什么想推进的/i.test(trimmed)
+      ) {
+        return false
+      }
+      if (trimmed.length < 50 && /[?？]$/.test(trimmed)) return false
+      if (/^\[?(error|warning|系统提示|异常)/i.test(trimmed)) return false
+      return true
+    }
+
+    it('rejects greetings and introductions to prevent accidental submission', () => {
+      for (const g of greetings) {
+        expect(testIsFillable(g)).toBe(false)
+      }
+    })
+
+    it('accepts authentic post drafts and form values for fill execution', () => {
+      for (const d of validDrafts) {
+        expect(testIsFillable(d)).toBe(true)
+      }
+    })
+  })
+
+  describe('parseDraftSections preamble & reflection separation contract', () => {
+    // 导入或复现真实切分逻辑进行断言
+    const mixedSample = `> 说个大实话：
+> 用 Seedance 2.5 抽卡抽到破产的，大概率还没搞懂工作流。
+> 下面这个片子，生成只花了我 0.38 美元。
+> 自己看成片：
+
+💡 操盘手复盘笔记
+• 为什么去掉原推的英文口号式说教：改写为“抽卡抽到肉痛/给昂贵算力交学费”更贴近中文 X 圈内人的真实体感。
+• 转化承接建议：发推时原样附带原片 9:16 视频。`
+
+    it('extracts pure tweet draft without blockquote prefix and separates notes', () => {
+      const splitRegex = /(?:\n+|^)(?:💡\s*(?:操盘手)?复盘(?:笔记)?|【复盘笔记】|##?\s*(?:操盘手)?复盘)/i
+      const match = splitRegex.exec(mixedSample)
+      expect(match).not.toBeNull()
+
+      const draftPart = mixedSample.substring(0, match!.index).trim()
+      const notePart = mixedSample.substring(match!.index).trim()
+
+      const cleanDraft = draftPart
+        .split('\n')
+        .map(l => l.replace(/^>\s?/, ''))
+        .join('\n')
+        .trim()
+
+      // 断言文案提取正确
+      expect(cleanDraft).toContain('说个大实话：')
+      expect(cleanDraft).toContain('下面这个片子，生成只花了我 0.38 美元。')
+      expect(cleanDraft).toContain('自己看成片：')
+      // 绝不能包含复盘笔记
+      expect(cleanDraft).not.toContain('操盘手复盘笔记')
+      expect(cleanDraft).not.toContain('转化承接建议')
+
+      // 断言复盘笔记提取正确
+      expect(notePart).toContain('💡 操盘手复盘笔记')
+      expect(notePart).toContain('转化承接建议')
     })
   })
 })

@@ -8,7 +8,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const cascadePath = join(here, '../../src/canvas/editor/components/MaterialNode/ConfigPanel/ModelCascadeMenu.tsx');
 const cascadeSrc = readFileSync(cascadePath, 'utf8');
 
-test('e2e: model cascade menu channel card removes stability data bar completely', () => {
+// Legacy filename retained; this is a static source check, NOT browser E2E evidence.
+test('static: model cascade menu channel card removes stability data bar completely', () => {
   // 1. 确认 StabilityDotBar 组件及引用已彻底清除
   assert.doesNotMatch(cascadeSrc, /StabilityDotBar/, 'StabilityDotBar component must be completely removed');
 

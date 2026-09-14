@@ -7,7 +7,7 @@
  * @module
  */
 
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { BRIDGE_SESSION_PURGE_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
@@ -19,7 +19,9 @@ import whaleUrl from '../../assets/icons/deepseek-256.png'
 import type { PageSceneInfo } from './components/SceneBadge.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { PresetChips } from './components/PresetChips.tsx'
-import { DomFillButton } from './components/DomFillButton.tsx'
+import { FormDraftCard } from './components/FormDraftCard.tsx'
+import { parseDraftMessage } from '../shared/draft.ts'
+import type { DraftField } from '../shared/draft.ts'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
@@ -92,6 +94,7 @@ import {
 import {
   appendLiveRow,
   completeLastTool,
+  errorFromTurnEnd,
   mergeHistoryRows,
   pendingQuestionFromFrame,
   resolvedQuestionFromFrame,
@@ -423,6 +426,113 @@ function SelectionQuote({
   )
 }
 
+function isFillableContent(text: string): boolean {
+  if (!text || text.trim() === '') return false
+  const trimmed = text.trim()
+
+  // 1. 过滤开场白、问候语与自我介绍
+  if (
+    /(你好|您好)[!！\s].*我是/i.test(trimmed) ||
+    /欢迎使用/i.test(trimmed) ||
+    /我们可以一起进行[:：]/i.test(trimmed) ||
+    /随时把你的需求.*发给我/i.test(trimmed) ||
+    /今天有什么想推进的/i.test(trimmed)
+  ) {
+    return false
+  }
+
+  // 2. 过滤极短的纯疑问/追问
+  if (trimmed.length < 50 && /[?？]$/.test(trimmed)) {
+    return false
+  }
+
+  // 3. 过滤纯报错与系统提示
+  if (/^\[?(error|warning|系统提示|异常)/i.test(trimmed)) {
+    return false
+  }
+
+  return true
+}
+
+export interface ParsedDraftResult {
+  hasDraft: boolean
+  draftHtml: string
+  draftText: string
+  noteHtml: string
+}
+
+export function parseDraftSections(rawText: string): ParsedDraftResult {
+  if (!rawText || rawText.trim() === '') {
+    return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+  }
+  const trimmed = rawText.trim()
+
+  // 1. 过滤开场白、问候语与自我介绍
+  if (
+    /(你好|您好)[!！\s].*我是/i.test(trimmed) ||
+    /欢迎使用/i.test(trimmed) ||
+    /我们可以一起进行[:：]/i.test(trimmed) ||
+    /随时把你的需求.*发给我/i.test(trimmed) ||
+    /今天有什么想推进的/i.test(trimmed)
+  ) {
+    return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+  }
+
+  // 2. 检查是否有复盘笔记/思考说明（例如：💡 操盘手复盘笔记）
+  const splitRegex = /(?:\n+|^)(?:💡\s*(?:操盘手)?复盘(?:笔记)?|【复盘笔记】|##?\s*(?:操盘手)?复盘)/i
+  const match = splitRegex.exec(trimmed)
+
+  if (match) {
+    const draftPart = trimmed.substring(0, match.index).trim()
+    const notePart = trimmed.substring(match.index).trim()
+
+    const cleanDraftText = draftPart
+      .split('\n')
+      .map(line => line.replace(/^>\s?/, ''))
+      .join('\n')
+      .trim()
+
+    return {
+      hasDraft: cleanDraftText.length > 0,
+      draftHtml: renderMarkdown(draftPart),
+      draftText: cleanDraftText,
+      noteHtml: renderMarkdown(notePart),
+    }
+  }
+
+  // 3. 检查是否有独立的 blockquote 块作为文案交付物
+  const quoteMatch = /(?:^|\n)(>[\s\S]+?)(?=\n\s*[^>]|$)/.exec(trimmed)
+  if (quoteMatch) {
+    const rawQuote = quoteMatch[1].trim()
+    const cleanQuote = rawQuote
+      .split('\n')
+      .map(line => line.replace(/^>\s?/, ''))
+      .join('\n')
+      .trim()
+    if (cleanQuote.length >= 20) {
+      const rest = trimmed.replace(rawQuote, '').trim()
+      return {
+        hasDraft: true,
+        draftHtml: renderMarkdown(rawQuote),
+        draftText: cleanQuote,
+        noteHtml: renderMarkdown(rest),
+      }
+    }
+  }
+
+  // 4. 普通文案：整条都属于文案
+  if (isFillableContent(trimmed)) {
+    return {
+      hasDraft: true,
+      draftHtml: renderMarkdown(trimmed),
+      draftText: trimmed,
+      noteHtml: '',
+    }
+  }
+
+  return { hasDraft: false, draftHtml: '', draftText: '', noteHtml: '' }
+}
+
 /**
  * One conversation row body. Memoized: rows are immutable (append/merge copy
  * the array but reuse row objects), so markdown is re-parsed only when a
@@ -434,12 +544,14 @@ const MessageBody = memo(function MessageBody({
   api,
   copy,
   locale = 'zh',
+  onFillDraft,
 }: {
   row: Row
   sessionId: string
   api: PanelApi
   copy: PanelCopy
   locale?: UiLocale
+  onFillDraft?: (fields: DraftField[]) => Promise<{ ok: boolean; message?: string }>
 }): React.JSX.Element {
   if (row.kind === 'user' || row.kind === 'assistant') {
     // A user message may carry a page quote; show the quote, not its fence.
@@ -461,12 +573,27 @@ const MessageBody = memo(function MessageBody({
             label={copy.app.selectionAttached}
           />
         )}
-        {text.trim() !== '' && <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />}
-        {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && (
-          <div className="dom-fill-actions">
-            <DomFillButton textToFill={text} locale={locale} />
-          </div>
-        )}
+        {(() => {
+          const parsed = row.kind === 'assistant' && row.status !== 'running' ? parseDraftMessage(text) : null
+          if (parsed && parsed.draft) {
+            return (
+              <>
+                {parsed.before.trim() !== '' && (
+                  <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.before) }} />
+                )}
+                <FormDraftCard
+                  draft={parsed.draft}
+                  onFill={onFillDraft || (async () => ({ ok: false, message: '未配置填写通道' }))}
+                  locale={locale}
+                />
+                {parsed.after.trim() !== '' && (
+                  <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.after) }} />
+                )}
+              </>
+            )
+          }
+          return text.trim() !== '' ? <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} /> : null
+        })()}
       </div>
     )
   }
@@ -483,17 +610,38 @@ interface HistoryPage {
   }
 }
 
-const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
+export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
+  const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
+    .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
+
   return (
     <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
       <span className="tool-icon"><ToolIcon /></span>
       <span className="tool-copy">
         <span className="tool-label">{running ? copy.tool.running : copy.tool.complete}</span>
-        <span className="tool-summary">{row.text}</span>
+        <span className="tool-summary">
+          {steps.length > 1 ? (
+            steps.map((step, idx) => (
+              <Fragment key={idx}>
+                {idx > 0 && <span className="tool-step-arrow" aria-hidden="true">→</span>}
+                <span className={idx < steps.length - 1 ? 'tool-step-tag' : 'tool-step-text'}>{step}</span>
+              </Fragment>
+            ))
+          ) : (
+            <span className="tool-step-text">{steps[0] ?? row.text}</span>
+          )}
+        </span>
       </span>
       <span className="tool-state" aria-label={running ? copy.tool.inProgress : copy.tool.completed}>
-        {running ? <span className="spinner" /> : copy.tool.done}
+        {running ? (
+          <span className="spinner" />
+        ) : (
+          <span className="tool-done-badge">
+            <span className="badge-dot" aria-hidden="true" />
+            <span>{copy.tool.done}</span>
+          </span>
+        )}
       </span>
     </div>
   )
@@ -612,16 +760,22 @@ export function App(): React.JSX.Element {
   const [hostDefaultEffort, setHostDefaultEffort] = useState<string>('')
   const [dynamicModels, setDynamicModels] = useState<Array<{ id: string; name?: string }>>([])
   const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>(() => {
-    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gpt-6-astra'
+    const saved = safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model')
+    if (saved === 'gpt-6-astra') return ''
+    return saved || ''
   })
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>(() => {
     return safeGetStorage(`omnimux_default_effort_${targetPort}`) || safeGetStorage('omnimux_default_effort') || 'medium'
   })
+  const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<string>('')
 
-  const handleSelectModel = (modelId: string, effort?: string) => {
+  const handleSelectModel = (modelId: string, effort?: string, provider?: string) => {
     setSelectedDefaultModel(modelId)
     safeSetStorage(`omnimux_default_model_${targetPort}`, modelId)
     safeSetStorage('omnimux_default_model', modelId)
+    if (provider) {
+      setSelectedDefaultProvider(provider)
+    }
 
     const eff = effort || selectedReasoningEffort
     if (eff) {
@@ -634,6 +788,9 @@ export function App(): React.JSX.Element {
     const ops: Array<{ op: string; path: string[]; value?: unknown }> = [
       { op: 'set', path: ['model'], value: modelId },
     ]
+    if (provider) {
+      ops.push({ op: 'set', path: ['provider'], value: provider })
+    }
     if (eff && eff !== 'none') {
       ops.push({ op: 'set', path: ['reasoningEffort'], value: eff })
     }
@@ -648,6 +805,7 @@ export function App(): React.JSX.Element {
       void api.rpc('session.selectModel', {
         sessionId: sessionRef.current,
         model: modelId,
+        ...(provider ? { provider } : {}),
         ...(eff && eff !== 'none' ? { reasoningEffort: eff } : {}),
       }).catch(() => {})
     }
@@ -1334,6 +1492,31 @@ export function App(): React.JSX.Element {
       setCaps(nextCaps)
       const previous = lastStateRef.current
       lastStateRef.current = next
+      if (next === 'connected') {
+        void api.rpc<{
+          namespaces?: Array<{ ns: string; value?: Record<string, unknown> }>
+        }>('settings.describe', {}).then((described) => {
+          const defaults = (described.namespaces?.find((c) => c.ns === 'agent-default-model')
+            ?.value ?? {}) as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
+          if (typeof defaults.model === 'string' && defaults.model.trim() !== '') {
+            const m = defaults.model.trim()
+            setHostDefaultModel(m)
+            setSelectedDefaultModel((current) => {
+              if (!current || current === 'gpt-6-astra') {
+                safeSetStorage(`omnimux_default_model_${targetPort}`, m)
+                return m
+              }
+              return current
+            })
+          }
+          if (typeof defaults.reasoningEffort === 'string' && defaults.reasoningEffort.trim() !== '') {
+            setHostDefaultEffort(defaults.reasoningEffort.trim())
+          }
+          if (typeof defaults.provider === 'string' && defaults.provider.trim() !== '') {
+            setSelectedDefaultProvider((current) => current || String(defaults.provider).trim())
+          }
+        }).catch(() => {})
+      }
       if (previous !== null && next !== previous && next === 'stopped') {
         sessionTransitionRef.current += 1
         sessionInitializationRef.current = false
@@ -1527,6 +1710,10 @@ export function App(): React.JSX.Element {
       setStopping(false)
       setWorking(false)
       clearQuestions()
+      const turnError = errorFromTurnEnd(payload.event, locale)
+      if (turnError) {
+        setError(turnError)
+      }
       await refreshHistory(payload.sessionId)
       return
     }
@@ -1674,10 +1861,11 @@ export function App(): React.JSX.Element {
     if (sessionTransitionRef.current !== transition) return
     sessionRef.current = created.sessionId
     await api.setActiveSession(created.sessionId, true)
-    if (selectedDefaultModel) {
+    if (selectedDefaultModel && selectedDefaultModel !== hostDefaultModel) {
       void api.rpc('session.selectModel', {
         sessionId: created.sessionId,
         model: selectedDefaultModel,
+        ...(selectedDefaultProvider ? { provider: selectedDefaultProvider } : {}),
       }).catch(() => {})
     }
     setSessionTitle(null)
@@ -1938,6 +2126,49 @@ export function App(): React.JSX.Element {
     }
   }
 
+  const handleFillDraft = async (fields: DraftField[]): Promise<{ ok: boolean; message?: string }> => {
+    if (window.parent && window.parent !== window) {
+      return new Promise((resolve) => {
+        const onMessage = (e: MessageEvent) => {
+          if (e.data?.type === 'FILL_STRUCTURED_DRAFT_RESULT') {
+            window.removeEventListener('message', onMessage)
+            const res = e.data.payload
+            resolve(res || { ok: false, message: '未收到有效响应' })
+          } else if (e.data?.type === 'FILL_HOST_DOM_RESULT') {
+            window.removeEventListener('message', onMessage)
+            const res = e.data.payload
+            resolve({ ok: Boolean(res?.success), message: res?.message })
+          }
+        }
+        window.addEventListener('message', onMessage)
+        window.parent.postMessage({
+          type: 'FILL_STRUCTURED_DRAFT',
+          fields,
+        }, '*')
+        setTimeout(() => {
+          window.removeEventListener('message', onMessage)
+          resolve({ ok: false, message: '填写超时' })
+        }, 5000)
+      })
+    }
+
+    const targetTabId = tabAffinity?.active?.tabId ?? tabAffinity?.controlled?.tabId
+    if (targetTabId) {
+      try {
+        const res = await chrome.tabs.sendMessage(targetTabId, {
+          action: 'FILL_STRUCTURED_DRAFT',
+          payload: { fields },
+        })
+        if (res) return res
+        return { ok: false, message: '未收到有效响应' }
+      } catch (err) {
+        return { ok: false, message: err instanceof Error ? err.message : '与页面通信失败' }
+      }
+    }
+
+    return { ok: false, message: '未连接到宿主网页' }
+  }
+
   async function send(textOverride?: string): Promise<void> {
     const text = (textOverride ?? input).trim()
     const submittedImages = textOverride === undefined ? draftImages : []
@@ -1968,10 +2199,11 @@ export function App(): React.JSX.Element {
         sessionRef.current = created.sessionId
         id = created.sessionId
         await api.setActiveSession(created.sessionId, true).catch(() => {})
-        if (selectedDefaultModel) {
+        if (selectedDefaultModel && selectedDefaultModel !== hostDefaultModel) {
           void api.rpc('session.selectModel', {
             sessionId: created.sessionId,
             model: selectedDefaultModel,
+            ...(selectedDefaultProvider ? { provider: selectedDefaultProvider } : {}),
           }).catch(() => {})
         }
       }
@@ -3005,13 +3237,13 @@ export function App(): React.JSX.Element {
             {row.kind === 'assistant' && <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>}
             {row.kind === 'tool'
               ? <ToolActivity row={row} copy={copy} />
-              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />}
+              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />}
           </div>
         ))}
         {streamRow !== null && (
           <div className="row assistant" aria-live="polite">
             <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>
-            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />
+            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />
           </div>
         )}
         {working && streamRow === null && question === null && rows[rows.length - 1]?.status !== 'running' && (

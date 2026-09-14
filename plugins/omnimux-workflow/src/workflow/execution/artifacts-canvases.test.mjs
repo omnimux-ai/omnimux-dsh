@@ -141,7 +141,7 @@ test('PNG 二进制即使临时文件叫 .svg 也按真实扩展名落盘', asyn
       resolveProjectRoot: (id) => (id === workspaceId ? { path: projectRoot } : null),
       registerGenerated: (id, payload) => assetsStore.registerGenerated(id, payload),
       prompt: '一张图',
-      modelId: 'gpt-image-2',
+      modelId: 'gpt-image-2.5',
     });
     assert.match(persisted.relativePath, /^artifacts\/\d+_n2\.png$/);
     assert.equal(existsSync(join(projectRoot, persisted.relativePath)), true);
