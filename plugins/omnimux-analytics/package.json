@@ -12,6 +12,7 @@
     "src",
     "lib/client.js",
     "scripts/build-client.mjs",
+    "scripts/contract-probe.mjs",
     "cordis.patch.yml",
     "README.md",
     "package.json"

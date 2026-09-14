@@ -2,13 +2,15 @@
  * omnimux-analytics — OmniMux plugin usage analytics & business data center.
  *
  * 1. Observes tool execution pipeline and reports usage.
- * 2. Exposes standardized Agent tools: analytics_query_metrics, analytics_get_summary.
+ * 2. Accepts renderer-reported first-level page events on a Host route.
+ * 3. Exposes standardized Agent tools: analytics_query_metrics, analytics_get_summary.
  */
 
 import { createRequire } from 'node:module'
 import { parseAnalyticsConfig, Config } from './config.js'
 import { resolvePlugin } from './mapper.js'
 import { createEventQueue } from './queue.js'
+import { createAnalyticsIngestDispatcher, registerAnalyticsRoutes } from './http-routes.js'
 
 const require = createRequire(import.meta.url)
 /** @type {{ version: string }} */
@@ -58,9 +60,12 @@ const START_MARKER_CAP = 10000
 export function apply(ctx, config) {
   const cfg = parseAnalyticsConfig(config ?? {})
 
+  /** @type {ReturnType<typeof createEventQueue> | undefined} */
+  let queue
+
   // 1. Hook pipeline usage tracking (if enabled)
   if (cfg.enabled && typeof ctx.on === 'function') {
-    const queue = createEventQueue({
+    queue = createEventQueue({
       umamiUrl: cfg.umamiUrl,
       websiteId: cfg.websiteId,
       hostname: cfg.hostname,
@@ -113,7 +118,26 @@ export function apply(ctx, config) {
     ctx.effect?.(() => queue.dispose(), 'omnimux-analytics: dispose event queue')
   }
 
-  // 2. Register Agent tools for analytics querying
+  // 2. Renderer-reported first-level page events on a Host route.
+  //    Registered even when collection is disabled, so an unconfigured
+  //    profile still answers the renderer instead of failing its fetch.
+  const ingest = (event) => {
+    if (!queue) return false
+    queue.push(event)
+    return true
+  }
+  const mountIngest = (httpCtx) => {
+    const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
+    if (!webServer || typeof webServer.register !== 'function') return
+    const dispatcher = createAnalyticsIngestDispatcher({ ingest, log: console })
+    const mount = () => registerAnalyticsRoutes(webServer, dispatcher)
+    if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux-analytics: ingest route')
+    else mount()
+  }
+  if (typeof ctx.inject === 'function') ctx.inject(['webServer'], mountIngest)
+  else mountIngest(ctx)
+
+  // 3. Register Agent tools for analytics querying
   if (ctx.tools && typeof ctx.tools.register === 'function') {
     ctx.tools.register({
       name: 'analytics_query_metrics',

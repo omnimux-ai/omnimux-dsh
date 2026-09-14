@@ -10,9 +10,14 @@ OmniMux 产品插件用量埋点。**一个 host 端 hook 插件**，观察 DSH 
 - `tools/result` — 观察不可变最终结果（只读观察点，失败被管线隔离），上报：
   `plugin` / `tool` / `isError` / `durationMs` / `agent` / `errorName` / `errorCode`；
 - `agent/session-start` — 上报会话启动：`agent` / `source`；
-- 插件加载时上报一次 `plugin-load`（含插件版本）。
+- 插件加载时上报一次 `plugin-load`（含插件版本）；
+- `POST /omnimux-analytics/event` — 渲染层上报**首层页面使用**：渲染半边订阅枢纽以官方跨插件缝隙暴露的
+  `window.__omnimuxStage`（事件名 `dsh-product-stage`），页面打开/关闭时上报 `stage-open` / `stage-close`
+  （含页面标识与停留时长 `dwellMs`）。队列由宿主持有，渲染层不接触站点编号。
 
-**隐私红线**：只发工具名、结果、耗时、错误名/错误码，**永不发送 arguments、提示词、输出内容或错误 message**（错误 message 可能回显调用输入）。
+路由用**本插件自有路径**（`/omnimux-analytics/event`），不占用枢纽已在用的 `/omnimux/analytics`（社媒数据看板前缀）。
+
+**隐私红线**：只发工具名、结果、耗时、错误名/错误码，以及经白名单校验的页面标识与停留时长；**永不发送 arguments、提示词、输出内容或错误 message**（错误 message 可能回显调用输入）。渲染层上报走**封闭白名单**：只接受 `stage-open` / `stage-close` 两个事件名与 `stage` / `dwellMs` 两个字段，其余一律 400 拒收。
 
 ## 配置
 
@@ -55,13 +60,13 @@ OmniMux 产品插件用量埋点。**一个 host 端 hook 插件**，观察 DSH 
 
 ## 上报协议
 
-每个事件一条 `POST ${umamiUrl}/api/send`（Umami collection API，[Sending stats](https://docs.umami.is/docs/api/sending-stats)）：
+每个事件一条 `POST ${umamiUrl}/api/send`（Umami collection API）：
 
 ```json
 {
   "type": "event",
   "payload": {
-    "websiteId": "...",
+    "website": "...",
     "hostname": "omnimux-plugins",
     "url": "omnimux://plugins",
     "name": "tool-call",
@@ -69,6 +74,15 @@ OmniMux 产品插件用量埋点。**一个 host 端 hook 插件**，观察 DSH 
   }
 }
 ```
+
+**线上契约以实例自己的 `/script.js` 为准**：`payload` 必须且只能提供 `website` / `link` / `pixel` 之一。
+曾经的实现把后台属性名 `websiteId` 当成线上字段发送，结果是**每一条事件都被 `400 bad-request` 拒收**，而队列对非 2xx 静默丢弃 —— 采集静默死亡且无任何可见报错。任何凭据名与线上字段名的混淆都会重现这个故障，因此：
+
+```sh
+node scripts/contract-probe.mjs            # 手动执行，需联网；CI 不联网
+```
+
+探针用**不存在的站点编号**发送队列真实生成的报文：结构通过则实例回 `Website not found.`（`CONTRACT OK`），并附带一次反向校验确认旧字段仍被拒收。不会向任何真实站点写入数据。
 
 并发上限 4、单请求 8s 超时、失败静默丢弃并计数——**埋点永不影响工具管线**。
 
@@ -78,6 +92,7 @@ OmniMux 产品插件用量埋点。**一个 host 端 hook 插件**，观察 DSH 
 
 ```sh
 pnpm --filter omnimux-analytics test
+node plugins/omnimux-analytics/scripts/contract-probe.mjs   # 手动，联网
 ```
 
 PR 通过 required CI/MQ 合入 `main` 后，按[开发环境合同](../../docs/contracts/dev-pipeline.md)从正式 fork 入口 `yarn omnimux:sync omnimux-analytics` 物化 Dev。需要重新加载 Host 时核对目标和占用情况，再按授权重启 Dev；浏览器验收在 45120 使用 ego-browser 与共享 `verify:live`。没有合入前独立运行环境，Dev/Prod 不接收未合并 worktree，生产发布仍需独立授权。
@@ -90,6 +105,7 @@ Umami 后台（`https://analytics.omnimux.ai`）→ 选择为该插件建的 Sit
 
 - `tool-call`：各插件的工具调用量、失败率（`data.isError`）、耗时（`data.durationMs`）、agent 分布；
 - `session-start`：会话启动量（哪些 agent 在用什么）；
-- `plugin-load`：插件装载次数 / 版本分布（可发现旧版本仍在跑）。
+- `plugin-load`：插件装载次数 / 版本分布（可发现旧版本仍在跑）；
+- `stage-open` / `stage-close`：首层页面使用（`data.stage` 是页面标识，`stage-close` 另带 `data.dwellMs` 停留时长）。
 
-按 `data.plugin` 过滤即可对比 8 个插件的使用情况。
+按 `data.plugin` 过滤即可对比各插件的使用情况；按 `data.stage` 过滤即可看各功能页面的打开次数与停留时长。

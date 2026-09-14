@@ -28,7 +28,10 @@ test('flush POSTs one event per request to /api/send with the Umami contract sha
   assert.equal(request.url, 'https://analytics.omnimux.ai/api/send')
   assert.equal(request.payload.type, 'event')
   const payload = /** @type {Record<string, unknown>} */ (request.payload.payload)
-  assert.equal(payload.websiteId, 'w-1')
+  // The deployed instance discriminates on `website`; the dashboard's
+  // `data-website-id` attribute name is NOT the wire field.
+  assert.equal(payload.website, 'w-1')
+  assert.equal('websiteId' in payload, false)
   assert.equal(payload.hostname, 'omnimux-plugins')
   assert.equal(payload.name, 'tool-call')
   assert.deepEqual(payload.data, { plugin: 'omnimux-workflow', tool: 'workflow_run' })

@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
+import { installStageTracker } from './stage-tracker.js'
 import { AnalyticsStage } from './AnalyticsStage.jsx'
 
 export const name = 'omnimux-analytics'
@@ -39,6 +40,11 @@ export function apply(ctx) {
   const t = ctx.locale.bind(NS)
 
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-analytics: sidebar entry')
+
+  ctx.effect(
+    () => installStageTracker({ target: window }),
+    'omnimux-analytics: first-level page tracker',
+  )
 
   const registerAnalyticsTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
