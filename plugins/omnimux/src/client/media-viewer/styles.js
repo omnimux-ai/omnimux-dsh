@@ -566,6 +566,230 @@ export const MEDIA_VIEWER_CSS = `
   transform: translate3d(-69.697%, -69.697%, 0);
   animation: omx-shimmer-sweep 4000ms linear infinite alternate;
 }
+
+/* ========================================================
+   7. 图片局部打点评论标注 (Image Annotations & Popover)
+   ======================================================== */
+.omx-mv-btn--comment {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.omx-mv-btn--comment:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.omx-mv-btn--comment.active {
+  background: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-brand-primary);
+  color: #ffffff; /* exempt-ui03: 激活态纯白高亮字 */
+  box-shadow: 0 2px 10px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 激活投影 */
+}
+
+/* 顶栏评论状态胶囊 */
+.omx-mv-toolbar-comments-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  padding: 3px 6px 3px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.omx-mv-toolbar-comments-bar__btn-send {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.omx-mv-toolbar-comments-bar__btn-close {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+/* 画布大图打点图层 */
+.omx-mv-display.is-annotating {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M14 2C7.37 2 2 7.15 2 13.5c0 3.1 1.28 5.92 3.39 7.97L4 26l5.22-1.38C10.74 25.07 12.33 25.5 14 25.5c6.63 0 12-5.15 12-11.5S20.63 2 14 2z' fill='%232563eb' stroke='%23ffffff' stroke-width='2'/%3E%3Cpath d='M14 9v10M9 14h10' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 14 14, crosshair !important; /* exempt-ui03: 自定义气泡指针数据源 */
+}
+
+.omx-mv-annotation-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+/* 蓝色圆角气泡标记 (Pin) 对标图2/3/4 */
+.omx-mv-annotation-pin {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 4px; /* 气泡下尖角 */
+  background: var(--dsw-alias-brand-primary);
+  color: #ffffff; /* exempt-ui03: 图钉纯白数字 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid #ffffff; /* exempt-ui03: 白色高亮外边框 */
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 阴影 */
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omx-mv-annotation-pin:hover {
+  transform: translate(-50%, -100%) scale(1.1);
+}
+
+/* 弹出输入框 (Popover) 对标图3/4 */
+.omx-mv-annotation-popover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-14px, -100%);
+  display: flex;
+  align-items: center;
+  background: var(--dsw-alias-bg-layer-3);
+  padding: 3px 6px 3px 4px;
+  border-radius: 9999px;
+  box-shadow: 0 8px 28px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 弹窗投影 */
+  border: 1px solid var(--dsw-alias-border-l2);
+  z-index: 20;
+  gap: 8px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.omx-mv-annotation-popover__badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 4px;
+  background: var(--dsw-alias-brand-primary);
+  color: #ffffff; /* exempt-ui03: 徽标白字 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.omx-mv-annotation-popover__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 4px 0;
+}
+
+.omx-mv-annotation-popover__submit {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff; /* exempt-ui03: 提交按钮白底 */
+  color: #000000; /* exempt-ui03: 黑色箭头 */
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+
+.omx-mv-annotation-popover__submit:hover {
+  transform: scale(1.08);
+}
+
+/* 底部原生输入框挂件 (Composer Attachment) 对标图5/6 */
+.omx-mv-composer-attachment-dock {
+  position: fixed;
+  bottom: 88px;
+  left: var(--omnimux-sidebar-width, 280px);
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 102;
+}
+
+html[data-omnimux-left-collapsed] .omx-mv-composer-attachment-dock {
+  left: 0;
+}
+
+.omx-mv-composer-attachment-dock .omx-mv-composer-attachment {
+  pointer-events: auto;
+  box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 挂件投影 */
+}
+
+.omx-mv-composer-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.omx-mv-composer-attachment:hover {
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.omx-mv-composer-attachment__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: var(--dsw-alias-label-tertiary);
+  margin-left: 2px;
+}
 `;
 
 export function injectMediaViewerStyles(doc = typeof document !== 'undefined' ? document : undefined) {

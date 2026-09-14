@@ -42,11 +42,10 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
   assert.equal(doc.documentElement.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false);
   assert.equal(getConversationCollapsed({ sessionId: 'e2e-session', doc }), false);
 
-  // 5. Verify unimplemented buttons are purged from source
+  // 5. Verify unimplemented placeholder buttons are purged from source
   import('node:fs').then(({ readFileSync }) => {
     import('node:url').then(({ fileURLToPath }) => {
       const src = readFileSync(fileURLToPath(new URL('../../src/client/media-viewer/MediaViewerTab.jsx', import.meta.url)), 'utf8');
-      assert.doesNotMatch(src, /添加评论/);
       assert.doesNotMatch(src, /移除背景/);
       assert.doesNotMatch(src, /调整大小/);
     });

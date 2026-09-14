@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { injectMediaViewerStyles } from './styles.js';
+import { registerContextContributor } from '../workbench/context.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
 
@@ -11,8 +12,8 @@ export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
  * Supports:
  * - 3-column & 2-column layout switching
  * - Timeline feed with multi-image horizontal grouping
- * - Single image/video detail view with left filmstrip
- * - Clean top toolbar (temporary editing buttons removed)
+ * - Single image/video detail view with right vertical thumbnails rail
+ * - Image annotation comments with popovers, consecutive numbering and model prompt integration
  */
 export function MediaViewerTab({ scope }) {
   useEffect(() => {
@@ -22,10 +23,52 @@ export function MediaViewerTab({ scope }) {
   const store = getGlobalMediaViewerStore();
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
-  const { mediaList, activeId, subViewMode, layoutMode, zoom, isGenerating } = state;
+  const { mediaList, activeId, subViewMode, layoutMode, zoom, isGenerating, isAnnotating } = state;
 
   const activeItem = mediaList.find((m) => m.id === activeId) || mediaList[0];
   const timelineGroups = store.getTimelineGroups();
+
+  const imageRef = useRef(null);
+  const [draftText, setDraftText] = useState('');
+
+  const annotations = store.getAnnotations(activeItem?.id);
+  const savedAnnotations = annotations.filter((a) => a.status === 'saved');
+
+  // Register workbench Agent UI context for canvas and active annotations
+  useEffect(() => {
+    return registerContextContributor(MEDIA_VIEWER_TAB_ID, () => {
+      const currentAnnotations = store.getAnnotations(activeItem?.id);
+      const saved = currentAnnotations.filter((a) => a.status === 'saved');
+      return {
+        view: {
+          kind: 'canvas',
+          activeMediaId: activeItem?.id,
+          activeMediaUrl: activeItem?.url,
+          annotationsCount: saved.length,
+          annotationsPrompt: store.formatAnnotationsPrompt(activeItem?.id),
+        },
+        selection: saved.map((a) => ({
+          id: `ann_${a.index}`,
+          name: `标记 ${a.index}: ${a.text}`,
+        })),
+      };
+    });
+  }, [activeItem?.id]);
+
+  // ESC key to exit annotating mode or cancel draft
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isAnnotating) {
+          store.cancelDraftAnnotation(activeItem?.id);
+          store.setAnnotating(false);
+          setDraftText('');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAnnotating, activeItem?.id]);
 
   const handleSelectMedia = (item) => {
     store.setActiveId(item.id);
@@ -49,6 +92,37 @@ export function MediaViewerTab({ scope }) {
         root.setAttribute('data-omnimux-conversation-collapsed', 'true');
       } else {
         root.removeAttribute('data-omnimux-conversation-collapsed');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleImageClick = (e) => {
+    if (!isAnnotating || !activeItem?.id) return;
+    if (e.target.closest('.omx-mv-annotation-popover') || e.target.closest('.omx-mv-annotation-pin')) {
+      return;
+    }
+    const img = imageRef.current;
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    if (x < 0 || x > 100 || y < 0 || y > 100) return;
+    store.addDraftAnnotation(activeItem.id, { xPercent: x, yPercent: y });
+    setDraftText('');
+  };
+
+  const handleSendAnnotations = () => {
+    const prompt = store.formatAnnotationsPrompt(activeItem?.id);
+    if (!prompt) return;
+    try {
+      const textarea = document.querySelector('[data-composer-card] textarea');
+      if (textarea) {
+        const cur = textarea.value || '';
+        textarea.value = cur ? `${cur}\n\n${prompt}` : prompt;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.focus();
       }
     } catch {
       // ignore
@@ -99,7 +173,46 @@ export function MediaViewerTab({ scope }) {
             >
               多选
             </button>
-          ) : null}
+          ) : (
+            savedAnnotations.length > 0 ? (
+              <div className="omx-mv-toolbar-comments-bar">
+                <span>{savedAnnotations.length} 条评论</span>
+                <button // exempt-ui01: 评论发送按钮
+                  type="button"
+                  className="omx-mv-toolbar-comments-bar__btn-send"
+                  title="将评论随当前会话发送给模型"
+                  onClick={handleSendAnnotations}
+                >
+                  发送
+                </button>
+                <button // exempt-ui01: 评论清空按钮
+                  type="button"
+                  className="omx-mv-toolbar-comments-bar__btn-close"
+                  title="清空当前所有评论"
+                  onClick={() => store.clearAnnotations(activeItem?.id)}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button // exempt-ui01: 添加评论按钮
+                type="button"
+                className={`omx-mv-btn--comment ${isAnnotating ? 'active' : ''}`}
+                title={isAnnotating ? '点击画面标记评论（按 Esc 退出）' : '点击在画面上添加评论标记'}
+                onClick={() => store.setAnnotating(!isAnnotating)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                <span>添加评论</span>
+              </button>
+            )
+          )}
         </div>
 
         <div className="omx-mv-toolbar__right">
@@ -156,9 +269,6 @@ export function MediaViewerTab({ scope }) {
 
       {/* 主舞台区 */}
       <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
-
-
-
         {/* 视口展示区 */}
         <div className="omx-mv-viewport">
           {subViewMode === 'grid' ? (
@@ -204,12 +314,86 @@ export function MediaViewerTab({ scope }) {
           ) : (
             /* 单图大画布展示区与右侧多图纵向候选栏 (完全对标截图) */
             <div className="omx-mv-single-stage">
-              <div className="omx-mv-display">
+              <div
+                className={`omx-mv-display ${isAnnotating ? 'is-annotating' : ''}`}
+                onClick={handleImageClick}
+              >
                 {activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls autoPlay playsInline />
                 ) : (
-                  <img src={activeItem?.url} alt={activeItem?.title || '预览'} />
+                  <img
+                    ref={imageRef}
+                    src={activeItem?.url}
+                    alt={activeItem?.title || '预览'}
+                  />
                 )}
+
+                {/* 局部打点与气泡输入框层 */}
+                {annotations.map((item) => {
+                  if (item.status === 'draft') {
+                    const isNearRight = item.xPercent > 65;
+                    return (
+                      <div
+                        key={item.id}
+                        className="omx-mv-annotation-popover"
+                        style={{
+                          left: `${item.xPercent}%`,
+                          top: `${item.yPercent}%`,
+                          transform: isNearRight ? 'translate(-85%, -115%)' : 'translate(-15%, -115%)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="omx-mv-annotation-popover__badge">{item.index}</div>
+                        <input
+                          className="omx-mv-annotation-popover__input"
+                          autoFocus
+                          placeholder="添加评论..."
+                          value={draftText}
+                          onChange={(e) => setDraftText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              store.commitAnnotation(activeItem?.id, item.id, draftText);
+                              setDraftText('');
+                            } else if (e.key === 'Escape') {
+                              store.cancelDraftAnnotation(activeItem?.id, item.id);
+                              setDraftText('');
+                            }
+                          }}
+                        />
+                        {draftText.trim() ? (
+                          <button // exempt-ui01: 评论提交按钮
+                            type="button"
+                            className="omx-mv-annotation-popover__submit"
+                            title="提交评论 (Enter)"
+                            onClick={() => {
+                              store.commitAnnotation(activeItem?.id, item.id, draftText);
+                              setDraftText('');
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="12" y1="19" x2="12" y2="5" />
+                              <polyline points="5 12 12 5 19 12" />
+                            </svg>
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="omx-mv-annotation-pin"
+                      style={{ left: `${item.xPercent}%`, top: `${item.yPercent}%` }}
+                      title={`标记 ${item.index}: ${item.text}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      {item.index}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* 右侧候选多图纵向滚动切换栏 (当生成多图时收敛浮现) */}
@@ -248,6 +432,35 @@ export function MediaViewerTab({ scope }) {
           )}
         </div>
       </div>
+
+      {/* 底部原生输入框悬浮挂件: ⊕ X 个评论 (对标截图5/6) */}
+      {savedAnnotations.length > 0 ? (
+        <div className="omx-mv-composer-attachment-dock">
+          <div
+            className="omx-mv-composer-attachment"
+            title="点击切换打点评论模式"
+            onClick={() => store.setAnnotating(true)}
+            role="button"
+            tabIndex={0}
+          >
+            <span>⊕ {savedAnnotations.length} 个评论</span>
+            <button // exempt-ui01: 移除所有评论挂件按钮
+              type="button"
+              className="omx-mv-composer-attachment__close"
+              title="清空所有评论"
+              onClick={(e) => {
+                e.stopPropagation();
+                store.clearAnnotations(activeItem?.id);
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

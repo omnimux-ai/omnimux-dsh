@@ -42,6 +42,8 @@ export function createMediaViewerStore(initialState = {}) {
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),
     generatingTask: initialState.generatingTask || null,
+    isAnnotating: Boolean(initialState.isAnnotating),  // 是否处于打点评论状态
+    annotationsByMediaId: initialState.annotationsByMediaId || {}, // mediaId -> AnnotationItem[]
   };
 
   const listeners = new Set();
@@ -137,6 +139,141 @@ export function createMediaViewerStore(initialState = {}) {
         generatingTask,
       };
       notify();
+    },
+
+    setAnnotating(enabled) {
+      const isAnnotating = Boolean(enabled);
+      if (state.isAnnotating === isAnnotating) return;
+      state = { ...state, isAnnotating };
+      notify();
+    },
+
+    getAnnotations(mediaId) {
+      if (!mediaId) return [];
+      return state.annotationsByMediaId[mediaId] || [];
+    },
+
+    addDraftAnnotation(mediaId, { xPercent, yPercent }) {
+      if (!mediaId) return null;
+      const currentList = state.annotationsByMediaId[mediaId] || [];
+      // Clean up any uncommitted drafts first
+      const cleanedList = currentList.filter((a) => a.status === 'saved');
+      const nextIndex = cleanedList.length + 1;
+      const draftItem = {
+        id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        index: nextIndex,
+        xPercent: Math.max(0, Math.min(100, xPercent)),
+        yPercent: Math.max(0, Math.min(100, yPercent)),
+        text: '',
+        status: 'draft',
+        createdAt: Date.now(),
+      };
+      state = {
+        ...state,
+        annotationsByMediaId: {
+          ...state.annotationsByMediaId,
+          [mediaId]: [...cleanedList, draftItem],
+        },
+      };
+      notify();
+      return draftItem;
+    },
+
+    commitAnnotation(mediaId, annotationId, text) {
+      if (!mediaId || !annotationId) return;
+      const trimmed = (text || '').trim();
+      const currentList = state.annotationsByMediaId[mediaId] || [];
+      if (!trimmed) {
+        // Empty text: cancel draft
+        const filtered = currentList.filter((a) => a.id !== annotationId);
+        state = {
+          ...state,
+          annotationsByMediaId: {
+            ...state.annotationsByMediaId,
+            [mediaId]: filtered,
+          },
+        };
+        notify();
+        return;
+      }
+
+      const nextList = currentList.map((a) => {
+        if (a.id === annotationId) {
+          return { ...a, text: trimmed, status: 'saved' };
+        }
+        return a;
+      });
+
+      state = {
+        ...state,
+        annotationsByMediaId: {
+          ...state.annotationsByMediaId,
+          [mediaId]: nextList,
+        },
+      };
+      notify();
+    },
+
+    cancelDraftAnnotation(mediaId, annotationId) {
+      if (!mediaId) return;
+      const currentList = state.annotationsByMediaId[mediaId] || [];
+      const filtered = annotationId
+        ? currentList.filter((a) => a.id !== annotationId || a.status === 'saved')
+        : currentList.filter((a) => a.status === 'saved');
+      state = {
+        ...state,
+        annotationsByMediaId: {
+          ...state.annotationsByMediaId,
+          [mediaId]: filtered,
+        },
+      };
+      notify();
+    },
+
+    removeAnnotation(mediaId, annotationId) {
+      if (!mediaId || !annotationId) return;
+      const currentList = state.annotationsByMediaId[mediaId] || [];
+      const remaining = currentList.filter((a) => a.id !== annotationId);
+      // Re-index remaining annotations sequentially (1, 2, 3...)
+      const reindexed = remaining.map((a, idx) => ({ ...a, index: idx + 1 }));
+      state = {
+        ...state,
+        annotationsByMediaId: {
+          ...state.annotationsByMediaId,
+          [mediaId]: reindexed,
+        },
+      };
+      notify();
+    },
+
+    clearAnnotations(mediaId) {
+      if (!mediaId) return;
+      state = {
+        ...state,
+        annotationsByMediaId: {
+          ...state.annotationsByMediaId,
+          [mediaId]: [],
+        },
+      };
+      notify();
+    },
+
+    /**
+     * Generate structured model instruction prompt from saved annotations
+     */
+    formatAnnotationsPrompt(mediaId) {
+      if (!mediaId) return '';
+      const list = (state.annotationsByMediaId[mediaId] || []).filter((a) => a.status === 'saved');
+      if (list.length === 0) return '';
+      const lines = [
+        `【图片局部修改指示（共 ${list.length} 处标注）】`,
+        `请参考原图并在以下各编号标记所在局部区域执行修改：`,
+      ];
+      for (const item of list) {
+        lines.push(`- 标记 ❶ (编号 ${item.index}) [位置: 相对原图水平 ${item.xPercent.toFixed(1)}%, 垂直 ${item.yPercent.toFixed(1)}%]：用户的修改意见是「${item.text}」`);
+      }
+      lines.push(`请严格锁定上述标记位置的局部范围进行微调重绘，其他非标记区域与背景保持完全一致。`);
+      return lines.join('\n');
     },
 
     /**
