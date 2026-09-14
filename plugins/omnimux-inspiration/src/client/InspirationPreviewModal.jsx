@@ -62,6 +62,18 @@ function renderDocAnalysis(analysis) {
           ) : null}
           <div className={group.title ? 'omnimux-inspiration-doc-desc-block' : undefined}>
             {group.entries.map((entry, eIdx) => {
+              if (entry.type === 'record') {
+                return (
+                  <div key={eIdx} className="omnimux-inspiration-doc-record">
+                    {entry.fields.map((field, fIdx) => (
+                      <div key={fIdx} className="omnimux-inspiration-doc-labeled-row">
+                        <span className="omnimux-inspiration-doc-label">{field.label}:</span>
+                        <span className="omnimux-inspiration-doc-desc">{field.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
               if (entry.type === 'labeled') {
                 return (
                   <div key={eIdx} className="omnimux-inspiration-doc-labeled-row">
