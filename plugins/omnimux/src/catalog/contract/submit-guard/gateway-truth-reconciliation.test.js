@@ -31,11 +31,11 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       }
     })
 
-    it('gpt-image-2 submits across all 8 ratios + auto and maps extras.n to vendor.n', () => {
+    it('gpt-image-2.5 submits across all 8 ratios + auto and maps extras.n to vendor.n', () => {
       const ratios = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9']
       for (const aspectRatio of ratios) {
         const plan = assertGuardSubmit({
-          model: 'gpt-image-2',
+          model: 'gpt-image-2.5',
           operation: 'text_to_image',
           prompt: 'a majestic mountain sunrise',
           aspectRatio,
@@ -62,7 +62,7 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       const mapped = mapValidatedPlanToVendor({
         operation: op,
         profile: imageProfile,
-        modelId: 'gpt-image-2',
+        modelId: 'gpt-image-2.5',
         family: 'openai',
         prompt: 'make it snowy',
         bindings: [
@@ -82,7 +82,7 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       const mapped = mapValidatedPlanToVendor({
         operation: op,
         profile: imageProfile,
-        modelId: 'grok-imagine-image-2',
+        modelId: 'grok-imagine-image-2-0',
         family: 'grok',
         prompt: 'blend images',
         bindings: [
@@ -165,14 +165,19 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       assert.equal(plan.logicalPayload.duration, -1)
     })
 
-    it('MiniMax H3 Max and Turbo admit end_frame and first_last_frame', () => {
-      for (const modelId of ['minimax-h3-max', 'minimax-h3-max-turbo']) {
-        const contract = index.get(modelId)
-        assert.ok(contract, `model ${modelId}`)
-        const opIds = contract.operations.map((o) => o.id)
-        assert.ok(opIds.includes('first_last_frame'), `${modelId} has first_last_frame`)
-        assert.ok(opIds.includes('end_frame'), `${modelId} has end_frame`)
-      }
+    it('MiniMax H3 admits end_frame and first_last_frame', () => {
+      const contract = index.get('minimax-h3')
+      assert.ok(contract, 'model minimax-h3')
+      const opIds = contract.operations.map((o) => o.id)
+      assert.ok(opIds.includes('first_last_frame'), 'minimax-h3 has first_last_frame')
+      assert.ok(opIds.includes('end_frame'), 'minimax-h3 has end_frame')
+      assert.deepEqual(contract.listedOperations, [
+        'minimax-h3#end_frame',
+        'minimax-h3#first_frame',
+        'minimax-h3#first_last_frame',
+        'minimax-h3#text_to_video',
+        'minimax-h3#video_multi_ref',
+      ])
     })
   })
 

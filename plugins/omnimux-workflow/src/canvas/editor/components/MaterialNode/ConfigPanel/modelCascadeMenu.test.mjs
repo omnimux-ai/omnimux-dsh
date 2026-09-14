@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const cascadeSrc = readFileSync(join(here, 'ModelCascadeMenu.tsx'), 'utf8');
 const configSrc = readFileSync(join(here, 'index.tsx'), 'utf8');
+const visualsSrc = readFileSync(join(here, 'modelVisuals.tsx'), 'utf8');
 
 describe('ModelCascadeMenu source contracts', () => {
   it('binds hover and selected CSS classes without inline transparent backgrounds', () => {
@@ -155,8 +156,8 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(cascadeSrc, /DEFAULT_MODEL_BY_BRAND_AND_MATERIAL/);
     assert.match(cascadeSrc, /DEFAULT_MODEL_BY_BRAND/);
     assert.match(cascadeSrc, /defaultModelForBrand/);
-    // DeepSeek 默认模型配置为 deepseek-v4-flash-vision-exp
-    assert.match(cascadeSrc, /deepseek:\s*['"]deepseek-v4-flash-vision-exp['"]/);
+    // DeepSeek 默认模型配置为 deepseek-v4-flash
+    assert.match(cascadeSrc, /deepseek:\s*['"]deepseek-v4-flash['"]/);
     // Google 默认模型配置为 gemini-3.8-flash
     assert.match(cascadeSrc, /google:\s*['"]gemini-3.8-flash['"]/);
   });
@@ -207,7 +208,7 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
       openai: 'gpt-5.5',
       anthropic: 'claude-opus-4-6',
       google: 'gemini-3.8-flash',
-      deepseek: 'deepseek-v4-flash-vision-exp',
+      deepseek: 'deepseek-v4-flash',
       minimax: 'minimax-h3',
     },
     image: {
@@ -215,8 +216,8 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
       google: 'nano-banana-2',
       bytedance: 'seedance-2-0-fast',
       kling: 'kling',
-      midjourney: 'midjourney',
-      xai: 'grok-imagine-image-2',
+      midjourney: 'mj-v8-1',
+      xai: 'grok-imagine-image-2-0',
     },
     video: {
       bytedance: 'seedance-2-0-fast',
@@ -233,14 +234,14 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
   const DEFAULT_MODEL_BY_BRAND = {
     openai: 'gpt-5.5',
     anthropic: 'claude-opus-4-6',
-    deepseek: 'deepseek-v4-flash-vision-exp',
+    deepseek: 'deepseek-v4-flash',
     google: 'gemini-3.8-flash',
     bytedance: 'seedance-2-0-fast',
     minimax: 'minimax-h3',
     kling: 'kling',
     alibaba: 'wan-3.0',
     happyhorse: 'wan-3.0',
-    midjourney: 'midjourney',
+    midjourney: 'mj-v8-1',
     xai: 'grok-imagine-video-1-5',
   };
 
@@ -273,14 +274,14 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
 
   it('correctly maps model to brand without ambiguity', () => {
     assert.equal(brandForModel('gemini-3.8-flash', allowedBrands), 'google');
-    assert.equal(brandForModel('deepseek-v4-flash-vision-exp', allowedBrands), 'deepseek');
+    assert.equal(brandForModel('deepseek-v4-flash', allowedBrands), 'deepseek');
     assert.equal(brandForModel('gpt-5.5', allowedBrands), 'openai');
     assert.equal(brandForModel('claude-opus-4-6', allowedBrands), 'anthropic');
   });
 
   it('resolves configured default model for each brand across modalities', () => {
-    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
-    assert.equal(defaultModelForBrand('deepseek', 'text', deepseekRows), 'deepseek-v4-flash-vision-exp');
+    const deepseekRows = [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash' }];
+    assert.equal(defaultModelForBrand('deepseek', 'text', deepseekRows), 'deepseek-v4-flash');
 
     const googleRows = [{ id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' }];
     assert.equal(defaultModelForBrand('google', 'text', googleRows), 'gemini-3.8-flash');
@@ -298,7 +299,7 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
   it('strictly prevents Gemini model from appearing in DeepSeek menu when current active is Gemini', () => {
     // 模拟现场缺陷：当前节点激活的是 Google Gemini
     const activeModelId = 'gemini-3.8-flash';
-    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
+    const deepseekRows = [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash' }];
 
     // 计算展示 DeepSeek 品牌的二级模型列表
     const shown = computeShownModels('deepseek', activeModelId, deepseekRows);
@@ -306,16 +307,16 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
     // 严苛断言：列表中绝不包含 gemini-3.8-flash
     assert.ok(!shown.some((item) => item.id === 'gemini-3.8-flash'), 'Gemini must not leak into DeepSeek menu');
     assert.equal(shown.length, 1);
-    assert.equal(shown[0].id, 'deepseek-v4-flash-vision-exp');
+    assert.equal(shown[0].id, 'deepseek-v4-flash');
   });
 
   it('strictly prevents DeepSeek model from appearing in Google menu when current active is DeepSeek', () => {
-    const activeModelId = 'deepseek-v4-flash-vision-exp';
+    const activeModelId = 'deepseek-v4-flash';
     const googleRows = [{ id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' }];
 
     const shown = computeShownModels('google', activeModelId, googleRows);
 
-    assert.ok(!shown.some((item) => item.id === 'deepseek-v4-flash-vision-exp'), 'DeepSeek must not leak into Google menu');
+    assert.ok(!shown.some((item) => item.id === 'deepseek-v4-flash'), 'DeepSeek must not leak into Google menu');
     assert.equal(shown.length, 1);
     assert.equal(shown[0].id, 'gemini-3.8-flash');
   });
@@ -323,12 +324,31 @@ describe('ModelCascadeMenu runtime behavior & cross-brand isolation logic', () =
   it('allows fallback active model if and only if it belongs to the same brand', () => {
     // 比如用户配置了特定的定制 deepseek 模型不在 catalog 列表中
     const customDeepSeek = 'deepseek-custom-70b';
-    const deepseekRows = [{ id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash' }];
+    const deepseekRows = [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash' }];
 
     const shown = computeShownModels('deepseek', customDeepSeek, deepseekRows);
 
     assert.equal(shown.length, 2);
     assert.equal(shown[0].id, customDeepSeek);
-    assert.equal(shown[1].id, 'deepseek-v4-flash-vision-exp');
+    assert.equal(shown[1].id, 'deepseek-v4-flash');
+  });
+
+  it('resolves picker badges/subtitles from the contract family, not from id prefixes (#1751)', () => {
+    // 徽标/副标题以契约 family 为主判据，改名（midjourney-8.1 → mj-v8-1）不再静默丢展示。
+    assert.match(visualsSrc, /const FAMILY_RULES/);
+    assert.match(visualsSrc, /'midjourney',\s*\{[\s\S]{0,60}?kind: 'image'/);
+    assert.match(visualsSrc, /const family = typeof context\.family === 'string'/);
+    // 前缀表只保留为「无 family 的 legacy 目录」兜底，不得是唯一路径。
+    assert.match(visualsSrc, /const LEGACY_ID_RULES/);
+    assert.match(visualsSrc, /id\.startsWith\('midjourney'\) \|\| id\.startsWith\('mj-'\)/);
+    assert.match(visualsSrc, /id\.startsWith\('nanobanana'\) \|\| id\.startsWith\('nano-banana'\)/);
+    // 跨模态家族（openai）必须带 kind 守卫，否则文本模型会继承图片徽标。
+    assert.match(visualsSrc, /\['openai', \{ kind: 'image'/);
+    // 调用点必须把 family 与输出类型透传下去，否则 family 规则永不生效。
+    assert.match(configSrc, /getModelVisuals\(row\.id, \{ family: row\.family, kind: outputTypeForCompat \}\)/);
+    // 胶囊短名同样以 family 为主判据；目录行必须携带 family。
+    assert.match(cascadeSrc, /resolveShortModelName\(activeModelId, activeFamily\)/);
+    assert.match(cascadeSrc, /const activeFamily = useMemo\(/);
+    assert.match(cascadeSrc, /typeof row\.family === 'string' && row\.family \? \{ family: row\.family \}/);
   });
 });

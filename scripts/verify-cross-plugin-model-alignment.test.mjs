@@ -6,6 +6,8 @@ import {
 } from './verify-cross-plugin-model-alignment.mjs';
 import {
   loadCatalogDefaults,
+  getContractIndex,
+  resolveModelId,
 } from '../plugins/omnimux/src/catalog/contract/index.js';
 import { DEFAULT_MEDIA } from '../plugins/omnimux/src/media/route.js';
 import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
@@ -16,7 +18,7 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.ok, true, JSON.stringify(report.issues));
   assert.equal(report.exitCode, 0);
   assert.equal(report.issues.length, 0);
-  assert.equal(report.alignment.whitelistModelsChecked, 18);
+  assert.equal(report.alignment.whitelistModelsChecked, 14);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
 });
@@ -51,8 +53,14 @@ test('fails when a canvas whitelist model is unlisted without manifest exemption
 
 test('fails when a canvas model is not canonical (alias or unknown)', () => {
   const policy = structuredClone(CANVAS_GENERATION_POLICY);
-  // Use wire alias gpt-image-2-5 instead of canonical gpt-image-2.5
-  policy.image.allowedModelIds = ['gpt-image-2-5', 'grok-imagine-image-2', 'gpt-image-2'];
+  // 两个负例口径不同、都必须被拒：gpt-image-2-5 现在连别名都不是（2026-09-14 评审次要-2 撤销该
+  // 拼写），而 grok-imagine-image-2 仍是改名后保留的线内别名。
+  policy.image.allowedModelIds = ['gpt-image-2-5', 'grok-imagine-image-2'];
+
+  const index = getContractIndex();
+  assert.equal(index.get('gpt-image-2-5'), undefined);
+  assert.equal(resolveModelId(index, 'gpt-image-2-5'), undefined);
+  assert.equal(resolveModelId(index, 'grok-imagine-image-2'), 'grok-imagine-image-2-0');
 
   const report = verifyCrossPluginModelAlignment({ policy });
   assert.equal(report.ok, false);
@@ -60,11 +68,15 @@ test('fails when a canvas model is not canonical (alias or unknown)', () => {
     report.issues.some((i) => i.code === 'cross_plugin_whitelist_not_canonical' && i.modelId === 'gpt-image-2-5'),
     JSON.stringify(report.issues),
   );
+  assert.ok(
+    report.issues.some((i) => i.code === 'cross_plugin_whitelist_not_canonical' && i.modelId === 'grok-imagine-image-2'),
+    JSON.stringify(report.issues),
+  );
 });
 
 test('fails when catalog-defaults and canvas generationPolicy default models diverge', () => {
   const catalogDefaults = structuredClone(loadCatalogDefaults());
-  catalogDefaults.byOperation.text_to_image = 'grok-imagine-image-2';
+  catalogDefaults.byOperation.text_to_image = 'grok-imagine-image-2-0';
 
   const report = verifyCrossPluginModelAlignment({ catalogDefaults });
   assert.equal(report.ok, false);
@@ -76,7 +88,7 @@ test('fails when catalog-defaults and canvas generationPolicy default models div
 
 test('fails when media route and catalog-defaults diverge', () => {
   const mediaConfig = structuredClone(DEFAULT_MEDIA);
-  mediaConfig.providers.omnimux.models.image = 'grok-imagine-image-2';
+  mediaConfig.providers.omnimux.models.image = 'grok-imagine-image-2-0';
 
   const report = verifyCrossPluginModelAlignment({ mediaConfig });
   assert.equal(report.ok, false);

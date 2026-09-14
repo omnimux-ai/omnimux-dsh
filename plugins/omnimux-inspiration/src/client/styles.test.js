@@ -396,6 +396,19 @@ describe('preview modal doc style and glass removal', () => {
     assert.match(decl(descBlockCss, 'padding-left'), /12px|14px/)
   })
 
+  it('stacks long labels over full-width descriptions with safe text wrapping', () => {
+    const row = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-labeled-row')
+    assert.equal(decl(row, 'flex-direction'), 'column')
+    assert.equal(decl(row, 'align-items'), 'stretch')
+    assert.equal(decl(row, 'text-align'), 'left')
+    const label = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-label')
+    assert.equal(decl(label, 'white-space'), 'normal')
+    assert.equal(decl(label, 'overflow-wrap'), 'anywhere')
+    const desc = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc')
+    assert.equal(decl(desc, 'overflow-wrap'), 'anywhere')
+    assert.equal(decl(desc, 'white-space'), 'pre-wrap')
+  })
+
   it('removes raw markdown button from deconstruction panel', () => {
     const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
     assert.doesNotMatch(preview, /modal\.deconstruction\.showRaw/)

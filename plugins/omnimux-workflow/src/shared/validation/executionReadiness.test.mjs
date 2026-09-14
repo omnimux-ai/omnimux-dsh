@@ -149,49 +149,47 @@ test('multiple effective video operations require a persisted selection', () => 
 
 
 // ============================================================================
-// MiniMax H3 Max & Turbo Canvas Readiness & Submission Tests
+// MiniMax H3 Canvas Readiness & Submission Tests
 // ============================================================================
 const realHubCatalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
 
-test('MiniMax H3 Max & Turbo: text_to_video with valid parameters passes execution readiness (returns null)', () => {
-  for (const modelId of ['minimax-h3-max', 'minimax-h3-max-turbo', 'h3-max', 'minimax/h3-max-turbo']) {
-    const node = {
-      id: `video-t2v-${modelId}`,
-      type: 'material',
-      data: {
-        materialType: 'video',
-        selectedTool: 'video-generation',
-        prompt: 'A cinematic drone shot of majestic mountains',
-        params: {
-          model: modelId,
-          operation: 'text_to_video',
-          aspectRatio: '16:9',
-          duration: 5,
-          resolution: '768p',
-        },
+test('MiniMax H3: text_to_video with valid parameters passes execution readiness (returns null)', () => {
+  const node = {
+    id: 'video-t2v-minimax-h3',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      selectedTool: 'video-generation',
+      prompt: 'A cinematic drone shot of majestic mountains',
+      params: {
+        model: 'minimax-h3',
+        operation: 'text_to_video',
+        aspectRatio: '16:9',
+        duration: 5,
+        resolution: '768P',
       },
-    };
-    const failure = findExecutionReadinessFailure([node], realHubCatalog);
-    assert.equal(failure, null, `Expected null failure for ${modelId} text_to_video`);
+    },
+  };
+  const failure = findExecutionReadinessFailure([node], realHubCatalog);
+  assert.equal(failure, null, 'Expected null failure for minimax-h3 text_to_video');
 
-    // Case-insensitive checks for resolution and aspectRatio
-    const caseNode = {
-      ...node,
-      data: {
-        ...node.data,
-        params: {
-          ...node.data.params,
-          aspectRatio: '16:9',
-          duration: 10,
-          resolution: '1080P',
-        },
+  // Boundary values of the published duration range and the second resolution option.
+  const rangeNode = {
+    ...node,
+    data: {
+      ...node.data,
+      params: {
+        ...node.data.params,
+        aspectRatio: '21:9',
+        duration: 15,
+        resolution: '2K',
       },
-    };
-    assert.equal(findExecutionReadinessFailure([caseNode], realHubCatalog), null);
-  }
+    },
+  };
+  assert.equal(findExecutionReadinessFailure([rangeNode], realHubCatalog), null);
 });
 
-test('MiniMax H3 Max & Turbo: first_frame with valid image upstream passes execution readiness', () => {
+test('MiniMax H3: first_frame with valid image upstream passes execution readiness', () => {
   const imgNode = {
     id: 'img-first-frame',
     type: 'material',
@@ -204,41 +202,39 @@ test('MiniMax H3 Max & Turbo: first_frame with valid image upstream passes execu
     },
   };
 
-  for (const modelId of ['minimax-h3-max', 'minimax-h3-max-turbo']) {
-    const videoNode = {
-      id: `video-ff-${modelId}`,
-      type: 'material',
-      data: {
-        materialType: 'video',
-        selectedTool: 'video-generation',
-        prompt: 'Animate this character walking forward',
-        params: {
-          model: modelId,
-          operation: 'first_frame',
-          aspectRatio: 'adaptive',
-          duration: 5,
-          resolution: '768p',
-        },
+  const videoNode = {
+    id: 'video-ff-minimax-h3',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      selectedTool: 'video-generation',
+      prompt: 'Animate this character walking forward',
+      params: {
+        model: 'minimax-h3',
+        operation: 'first_frame',
+        aspectRatio: 'adaptive',
+        duration: 5,
+        resolution: '768P',
       },
-    };
-    const graph = {
-      nodes: [imgNode, videoNode],
-      edges: [{
-        id: `e-ff-${modelId}`,
-        source: 'img-first-frame',
-        target: videoNode.id,
-        data: {
-          role: 'first_frame',
-          targetSlot: 'first_frame',
-        },
-      }],
-    };
-    const failure = findExecutionReadinessFailure([videoNode], realHubCatalog, graph);
-    assert.equal(failure, null, `Expected null failure for ${modelId} first_frame`);
-  }
+    },
+  };
+  const graph = {
+    nodes: [imgNode, videoNode],
+    edges: [{
+      id: 'e-ff-minimax-h3',
+      source: 'img-first-frame',
+      target: videoNode.id,
+      data: {
+        role: 'first_frame',
+        targetSlot: 'first_frame',
+      },
+    }],
+  };
+  const failure = findExecutionReadinessFailure([videoNode], realHubCatalog, graph);
+  assert.equal(failure, null, 'Expected null failure for minimax-h3 first_frame');
 });
 
-test('MiniMax H3 Max: video_multi_ref with reference image upstream passes execution readiness (Max only)', () => {
+test('MiniMax H3: video_multi_ref with reference image upstream passes execution readiness', () => {
   const refImgNode = {
     id: 'img-ref-1',
     type: 'material',
@@ -250,67 +246,68 @@ test('MiniMax H3 Max: video_multi_ref with reference image upstream passes execu
       sizeBytes: 1024 * 1024,
     },
   };
-  const maxNode = {
-    id: 'video-mr-max',
+  const refNode = {
+    id: 'video-mr-ref',
     type: 'material',
     data: {
       materialType: 'video',
       selectedTool: 'video-generation',
       prompt: 'A cyberpunk cityscape matching this art style',
       params: {
-        model: 'minimax-h3-max',
+        model: 'minimax-h3',
         operation: 'video_multi_ref',
         aspectRatio: 'adaptive',
         duration: 10,
-        resolution: '1080p',
+        resolution: '2K',
       },
     },
   };
   const graph = {
-    nodes: [refImgNode, maxNode],
+    nodes: [refImgNode, refNode],
     edges: [{
       id: 'e-mr-1',
       source: 'img-ref-1',
-      target: 'video-mr-max',
+      target: 'video-mr-ref',
       data: {
         role: 'reference',
         targetSlot: 'reference_images',
       },
     }],
   };
-  const failure = findExecutionReadinessFailure([maxNode], realHubCatalog, graph);
-  assert.equal(failure, null, 'Expected null failure for minimax-h3-max video_multi_ref');
+  const failure = findExecutionReadinessFailure([refNode], realHubCatalog, graph);
+  assert.equal(failure, null, 'Expected null failure for minimax-h3 video_multi_ref');
 
-  // Turbo does not support video_multi_ref
-  const turboNode = {
-    ...maxNode,
-    id: 'video-mr-turbo',
+  // The single-image mode has no reference_images slot, so the same edge must be rejected
+  // as a role conflict instead of being silently absorbed.
+  const singleModeNode = {
+    ...refNode,
+    id: 'video-mr-single',
     data: {
-      ...maxNode.data,
+      ...refNode.data,
       params: {
-        ...maxNode.data.params,
-        model: 'minimax-h3-max-turbo',
+        ...refNode.data.params,
+        operation: 'first_frame',
       },
     },
   };
-  const turboGraph = {
-    nodes: [refImgNode, turboNode],
+  const singleModeGraph = {
+    nodes: [refImgNode, singleModeNode],
     edges: [{
-      id: 'e-mr-turbo',
+      id: 'e-mr-single',
       source: 'img-ref-1',
-      target: 'video-mr-turbo',
+      target: 'video-mr-single',
       data: {
         role: 'reference',
         targetSlot: 'reference_images',
       },
     }],
   };
-  const turboFailure = findExecutionReadinessFailure([turboNode], realHubCatalog, turboGraph);
-  assert.ok(turboFailure !== null);
-  assert.equal(turboFailure.reasonCode, 'role_conflict');
+  const singleModeFailure = findExecutionReadinessFailure([singleModeNode], realHubCatalog, singleModeGraph);
+  assert.ok(singleModeFailure !== null);
+  assert.equal(singleModeFailure.reasonCode, 'role_conflict');
 });
 
-test('MiniMax H3 Max & Turbo: invalid parameters strictly intercepted with parameter_unsupported', () => {
+test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsupported', () => {
   const baseNode = {
     id: 'video-bad-param',
     type: 'material',
@@ -319,17 +316,17 @@ test('MiniMax H3 Max & Turbo: invalid parameters strictly intercepted with param
       selectedTool: 'video-generation',
       prompt: 'Testing invalid parameters',
       params: {
-        model: 'minimax-h3-max',
+        model: 'minimax-h3',
         operation: 'text_to_video',
         aspectRatio: '16:9',
         duration: 5,
-        resolution: '720p',
+        resolution: '768P',
       },
     },
   };
 
-  // 1. Duration out of allowed discrete options (must be 5 or 10)
-  for (const badDuration of [3, 7, 15, 0, -1]) {
+  // 1. Duration outside the published 4–15s range
+  for (const badDuration of [3, 16, 0, -1]) {
     const node = {
       ...baseNode,
       data: {
@@ -341,7 +338,7 @@ test('MiniMax H3 Max & Turbo: invalid parameters strictly intercepted with param
     assert.deepEqual(failure, {
       nodeId: 'video-bad-param',
       reasonCode: 'parameter_unsupported',
-      message: `参数“duration”不支持值 ${badDuration}`,
+      message: '参数“duration”超出合同允许范围',
     });
   }
 
@@ -380,27 +377,27 @@ test('MiniMax H3 Max & Turbo: invalid parameters strictly intercepted with param
   }
 });
 
-test('MiniMax H3 Max & Turbo: resolveCanvasSubmission and resolveExecutorSubmission produce canonical model and parameters', () => {
-  // Test T2V submission with alias
+test('MiniMax H3: resolveCanvasSubmission and resolveExecutorSubmission produce canonical model and parameters', () => {
+  // Declared alias resolves onto the canonical model id.
   const t2vSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'minimax/h3-max',
+    model: 'MiniMax-H3',
     operation: 'text_to_video',
     prompt: 'A sunny beach',
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '720p',
+    resolution: '768P',
   }, realHubCatalog);
-  assert.equal(t2vSubmission.model, 'minimax-h3-max');
+  assert.equal(t2vSubmission.model, 'minimax-h3');
   assert.equal(t2vSubmission.operation, 'text_to_video');
   assert.equal(t2vSubmission.aspectRatio, '16:9');
   assert.equal(t2vSubmission.duration, 5);
-  assert.equal(t2vSubmission.resolution, '720p');
+  assert.equal(t2vSubmission.resolution, '768P');
 
-  // Test first_frame submission with turbo alias
+  // Canonical id with first_frame references
   const ffSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'h3-max-turbo',
+    model: 'minimax-h3',
     operation: 'first_frame',
     prompt: 'Dance animation',
     references: [{
@@ -413,20 +410,20 @@ test('MiniMax H3 Max & Turbo: resolveCanvasSubmission and resolveExecutorSubmiss
     }],
     aspectRatio: 'adaptive',
     duration: 10,
-    resolution: '1080p',
+    resolution: '2K',
   }, realHubCatalog);
-  assert.equal(ffSubmission.model, 'minimax-h3-max-turbo');
+  assert.equal(ffSubmission.model, 'minimax-h3');
   assert.equal(ffSubmission.operation, 'first_frame');
   assert.equal(ffSubmission.references.length, 1);
   assert.equal(ffSubmission.references[0].role, 'first_frame');
   assert.equal(ffSubmission.references[0].targetSlot, 'first_frame');
   assert.equal(ffSubmission.duration, 10);
-  assert.equal(ffSubmission.resolution, '1080p');
+  assert.equal(ffSubmission.resolution, '2K');
 
-  // Test video_multi_ref submission (Max only)
+  // video_multi_ref submission with a reference image
   const mrSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'h3-max',
+    model: 'minimax-h3',
     operation: 'video_multi_ref',
     prompt: 'Style replication',
     references: [{
@@ -439,24 +436,24 @@ test('MiniMax H3 Max & Turbo: resolveCanvasSubmission and resolveExecutorSubmiss
     }],
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '720p',
+    resolution: '768P',
   }, realHubCatalog);
-  assert.equal(mrSubmission.model, 'minimax-h3-max');
+  assert.equal(mrSubmission.model, 'minimax-h3');
   assert.equal(mrSubmission.operation, 'video_multi_ref');
   assert.equal(mrSubmission.references.length, 1);
   assert.equal(mrSubmission.references[0].role, 'reference');
   assert.equal(mrSubmission.references[0].targetSlot, 'reference_images');
 
-  // Test resolveExecutorSubmission with explicit operation and alias
+  // Test resolveExecutorSubmission with explicit operation and declared alias
   const execSubmission = resolveExecutorSubmission({
     capability: 'video',
-    model: 'minimax/h3-max-turbo',
+    model: 'MiniMax-H3',
     operation: 'text_to_video',
     prompt: 'Quick cinematic cut',
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '720p',
+    resolution: '768P',
   }, realHubCatalog);
-  assert.equal(execSubmission.model, 'minimax-h3-max-turbo');
+  assert.equal(execSubmission.model, 'minimax-h3');
   assert.equal(execSubmission.operation, 'text_to_video');
 });

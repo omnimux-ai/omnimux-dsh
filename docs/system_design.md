@@ -147,6 +147,11 @@ related:
 
 ### 3.1 图像模型（共 12 款）四维对账矩阵
 
+> ⚠️ **本表为 2026-08 的设计快照**，其中的 disposition / listed 口径已被后续治理推翻；
+> **现行状态一律以 [`plugins/omnimux/src/catalog/contract/dispositions.json`](plugins/omnimux/src/catalog/contract/dispositions.json) 与 [`plugins/omnimux/src/catalog/specs/*.yaml`](plugins/omnimux/src/catalog/specs) 为准**。
+> 例：`gpt-image-2` / `midjourney` / `omni_flash` / `kling-o1` 等已由 Issue #1751 置为 `unavailable` 并从契约删除，
+> `grok-imagine-image-2` 已改名为 `grok-imagine-image-2-0` 并撤销在售声明。本表保留原样作为历史记录，不随契约同步更新。
+
 | 模型 ID | Family | 网关真实支持 Operation | 当前契约状态 (image-models.yaml) | 网关真实参数项 vs 当前契约漏配项 | 发包层 (map.js) 映射现状与修正策略 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **gpt-image-2** | openai | `text_to_image`<br>`multi_reference`<br>`image_to_image` | Ops: `text_to_image` (live)<br>`multi_reference` (stub)<br>impl.seam: `imageGenerate` | **网关真实**：只认 `size`（`1024x1024`, `1024x1792`, `1792x1024`），`quality`（standard, hd），`n`（1~128）。<br>**契约漏配**：画幅只配了 4 档，**漏配 `4:3`, `3:4`, `3:2`, `2:3`, `21:9`**；**漏配 `n` 生成张数参数**。 | **现状**：已有 `mapOpenAiImageSize` 聚类转换，但契约缺画幅选项导致用户无法输入；未映射 `n`。<br>**修正**：契约补齐 8 档画幅与 `n`，发包层映射 `n`，图生图指向 `/v1/images/edits`。 |
@@ -185,7 +190,7 @@ related:
 | **kling-o1** | kling | `text_to_video`<br>`first_last_frame` | Ops 未配置 live (None) | **网关真实**：推理视频模型，支持首尾帧，画幅 16:9, 9:16, 1:1。<br>**契约漏配**：未绑定 live。 | **修正**：解决 Kling 降级 1:1 Bug，契约 live 化。 |
 | **kling-o3** | kling | `text_to_video`<br>`first_last_frame` | Ops 未配置 live (None) | **网关真实**：支持 15s 长视频与 4K 超清，支持音效。<br>**契约漏配**：未绑定 live。 | **修正**：同上。 |
 | **kling-v3-motion-control** | kling | `text_to_video`<br>`first_last_frame` | Ops 未配置 live (None) | **网关真实**：运镜控制模型，接收相机控制参数。<br>**契约漏配**：未绑定 live。 | **修正**：同上。 |
-| **omni_flash** | veo | `text_to_video`<br>`video_multi_ref` | Ops 为 None，disposition 为 `quarantine` | **网关真实**：实验性隔离模型。<br>**契约状态**：隔离封存。 | **现状**：SubmitGuard 禁止发包。<br>**修正**：维持 quarantine 状态，契约保持不可用。 |
+| **omni_flash** | veo | `text_to_video`<br>`video_multi_ref` | Ops 为 None，disposition 为 `quarantine` | **网关真实**：实验性隔离模型。<br>**契约状态**：隔离封存。 | **现状**：SubmitGuard 禁止发包。<br>**修正（已被 #1751 推翻，见上注）**：当年登记为维持 `quarantine`；**现行状态**为该模型 disposition=`unavailable`、契约行已删除，不再有 quarantine 行。 |
 | **minimax-h3** | minimax | `text_to_video`<br>`first_frame`<br>`end_frame`<br>`first_last_frame`<br>`video_multi_ref` | 契约列出了 5 个 Ops，但 exec 与 impl 全是 None！ | **网关真实**：APIMart 渠道 MiniMax H3，字段叫 **`aspect_ratio`**，清晰度 `2K, 768P`，时长 4~15s，支持水印去除 `watermark: false`。<br>**契约漏配**：未绑定 live。 | **现状**：发包层已有对应映射。<br>**修正**：契约全量 operation 绑定 live。 |
 
 ---

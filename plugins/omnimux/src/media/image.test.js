@@ -179,7 +179,7 @@ describe('omnimux image helpers', () => {
     )
   })
 
-  it('wait false still writes dest when the provider returns a url (sync gpt-image-2)', async () => {
+  it('wait false still writes dest when the provider returns a url (sync gpt-image-2.5)', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'omnimux-img-sync-'))
     const dest = join(dir, 'out.png')
     const result = await executeOmnimuxImage({

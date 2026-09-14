@@ -8,7 +8,7 @@
  *    - 连入素材后展示缩略图卡片并保留尾部 + 添加按钮；
  *    - panel.slot.reference_image 双语词条（中/英）完整性。
  * 2. 生图模型可用性与兜底放行：
- *    - 上游连入带图素材时，即使模型目录仅声明 text_to_image，buildFilteredModelOptions 仍正确返回可用生图模型（NanoBanana 2, GPT Image 2, Midjourney 等）；
+ *    - 上游连入带图素材时，即使模型目录仅声明 text_to_image，buildFilteredModelOptions 仍正确返回可用生图模型（NanoBanana 2, GPT Image 2.5, Nano Banana Pro 等）；
  *    - 验证 zeroCandidates: false，绝不再误报“暂无兼容模型”。
  */
 
@@ -40,8 +40,8 @@ const prodCatalog = {
   defaults: { image: 'nanobanana-2' },
   image: [
     { id: 'nanobanana-2', label: 'NanoBanana 2', family: 'nanobanana' },
-    { id: 'gpt-image-2', label: 'GPT Image 2', family: 'openai' },
-    { id: 'midjourney', label: 'Midjourney', family: 'midjourney' },
+    { id: 'gpt-image-2.5', label: 'GPT Image 2.5', family: 'openai' },
+    { id: 'nano-banana-pro', label: 'Nano Banana Pro', family: 'google' },
   ],
   models: [
     {
@@ -53,17 +53,17 @@ const prodCatalog = {
       ],
     },
     {
-      id: 'gpt-image-2',
-      label: 'GPT Image 2',
+      id: 'gpt-image-2.5',
+      label: 'GPT Image 2.5',
       family: 'openai',
       operations: [
         { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
       ],
     },
     {
-      id: 'midjourney',
-      label: 'Midjourney',
-      family: 'midjourney',
+      id: 'nano-banana-pro',
+      label: 'Nano Banana Pro',
+      family: 'google',
       operations: [
         { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
       ],
@@ -181,8 +181,8 @@ describe('Issue #739 Acceptance: 生图模型可用性与兜底放行', () => {
 
     const modelIds = res.options.map((o) => o.id);
     assert.ok(modelIds.includes('nanobanana-2'), '必须包含 NanoBanana 2');
-    assert.ok(modelIds.includes('gpt-image-2'), '必须包含 GPT Image 2');
-    assert.ok(modelIds.includes('midjourney'), '必须包含 Midjourney');
+    assert.ok(modelIds.includes('gpt-image-2.5'), '必须包含 GPT Image 2.5');
+    assert.ok(modelIds.includes('nano-banana-pro'), '必须包含 Nano Banana Pro');
 
     for (const opt of res.options) {
       assert.equal(opt.verdict.acceptsCurrentInputs, true, `${opt.id} acceptsCurrentInputs 应为 true`);

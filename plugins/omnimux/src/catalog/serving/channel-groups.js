@@ -192,7 +192,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "enabled": true
     }
   ],
-  "deepseek-v4-flash-vision-exp": [
+  "deepseek-v4-flash": [
     {
       "id": "deepseek-official",
       "label": "官方直连版",

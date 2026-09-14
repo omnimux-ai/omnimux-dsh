@@ -17,10 +17,10 @@ const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 66 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 55 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
-    assert.equal(report.listedOperations.length, 66)
+    assert.equal(report.listedOperations.length, 55)
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')
@@ -122,12 +122,6 @@ describe('SubmitGuard admission', () => {
         hit.code === GUARD_CODES.EXECUTION_UNAVAILABLE ||
         hit.code === GUARD_CODES.NOT_LISTED,
     )
-  })
-
-  it('rejects kling-avatar digital_human as not listed', () => {
-    const model = index.get('kling-avatar')
-    const hit = admitOperation(model, 'digital_human', profiles)
-    assert.equal(hit.ok, false)
   })
 
   it('rejects unlisted first_last_frame even if profile supports the op id', () => {
