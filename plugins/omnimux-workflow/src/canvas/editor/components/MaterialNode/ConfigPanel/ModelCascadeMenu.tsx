@@ -336,40 +336,12 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         aria-expanded={isOpen}
         title={channelGroups.length > 0 ? `渠道策略：${strategyLabel}` : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          height: 32,
-          padding: '0 10px',
-          borderRadius: 8,
-          background: isOpen ? 'var(--dsw-alias-control-bg-hover)' : 'var(--dsw-alias-control-bg)',
-          border: isOpen ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
-          color: 'var(--dsw-alias-text-primary)',
-          cursor: 'pointer',
-          fontSize: 12,
-          fontWeight: 500,
-          transition: 'all 0.15s ease',
-          userSelect: 'none',
-          flexShrink: 0,
-        }}
       >
         <ModelBrandIcon modelId={activeModelId} size={15} />
-        <span style={{ fontWeight: 600 }}>{shortName}</span>
+        <span className="wf-model-cascade-capsule__name">{shortName}</span>
 
         {activeChannelGroups.length > 1 ? (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 3,
-              padding: '1px 5px',
-              borderRadius: 4,
-              background: 'var(--dsw-alias-badge-bg)',
-              color: 'var(--dsw-alias-brand-primary)',
-              fontSize: 11,
-            }}
-          >
+          <span className="wf-model-cascade-capsule__badge">
             {activeStrategy === 'cost_first'
               ? <Percent size={11} strokeWidth={2.4} />
               : <ShieldCheck size={11} strokeWidth={2.4} />}
@@ -377,14 +349,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
           </span>
         ) : null}
 
-        <ChevronDown
-          size={12}
-          style={{
-            opacity: 0.6,
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.15s ease',
-          }}
-        />
+        <ChevronDown className="wf-model-cascade-capsule__chevron" size={14} strokeWidth={1.75} />
       </button>
 
       {isOpen && typeof document !== 'undefined'

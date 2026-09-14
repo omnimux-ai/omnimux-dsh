@@ -207,7 +207,9 @@ test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32p
   const triggerRule = extractRuleBlock('.wf-video-trigger-bar');
   assert.doesNotMatch(triggerRule, /28px|260px/);
   // 触发条 open 态 brand 描边 + focus-visible 焦点环 + 按压 scale
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar--open \{[\s\S]*?brand-primary/);
+  // open 选择器带 :not(:disabled) 以取得与 hover 同特异性：点开后指针仍停在触发器上时，
+  // 品牌描边不能被 hover 描边覆盖（底栏触发器共享规格）。
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar\.wf-video-trigger-bar--open:not\(:disabled\) \{[\s\S]*?brand-primary/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar:focus-visible \{[\s\S]*?state-business-tertiary/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar:active \{[\s\S]*?scale\(0\.96\)/);
   // 段间 CSS 竖线分隔（废除 __dot 与「·」字符）
