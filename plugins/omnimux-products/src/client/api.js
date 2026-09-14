@@ -105,3 +105,22 @@ export function previewUrl(productId, mediaId) {
   const query = new URLSearchParams({ preview: mediaId })
   return `/omnimux/products/${encodeURIComponent(productId)}?${query}`
 }
+
+/**
+ * 草稿媒体只读预览：创建态下媒体已经写盘并带 id，但产品记录还不存在，
+ * 走不了 `previewUrl`。这里只传 id，服务端按登记表解析绝对路径并做归属校验。
+ * @param {string} mediaId
+ */
+export function draftPreviewUrl(mediaId) {
+  return `/omnimux/products/draft-media/${encodeURIComponent(mediaId)}`
+}
+
+/**
+ * 一个媒体行在两种形态下各自的预览地址。
+ * @param {{ productId?: string | null, mediaId?: string | null }} params
+ * @returns {string}
+ */
+export function mediaPreviewUrl({ productId, mediaId }) {
+  if (!mediaId) return ''
+  return productId ? previewUrl(productId, mediaId) : draftPreviewUrl(mediaId)
+}

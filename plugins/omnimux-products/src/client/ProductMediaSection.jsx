@@ -1,5 +1,5 @@
 import { Button, IconButton, InputField } from 'dsh-ui-kit'
-import { FileIcon } from './icons.jsx'
+import { CloseIcon, FileIcon } from './icons.jsx'
 
 export function CoverDropzone(props) {
   const { t, onAddPaths, onPick } = props
@@ -35,23 +35,39 @@ export function CoverDropzone(props) {
   )
 }
 
+/** 可预览的媒体行：有预览地址时给出缩略图，没有时退回文件图标。 */
+function MediaThumb(props) {
+  const { src, label } = props
+  if (!src) return <FileIcon size={14} />
+  return (
+    <img
+      className="omnimux-products-media-thumb"
+      src={src}
+      alt={label}
+      loading="lazy"
+    />
+  )
+}
+
 /**
  * One media row. The row currently serving as the cover carries a visible
  * selected state — a badge and a left rule — so "which one is the cover" is
  * readable at a glance rather than inferred from a button label.
  */
 export function MediaItem(props) {
-  const { t, file, index, actions } = props
+  const { t, file, index, actions, previewOf } = props
   const coverId = props.coverId || null
   const isCover = Boolean(coverId) && coverId === file.id
   const onSetCover = () => actions.onSetCover(file, index)
   const onRemove = () => actions.onRemove(file, index)
+  const label = file.original_name || file.real_path
+  const src = typeof previewOf === 'function' ? previewOf(file) : ''
 
   return (
     <li className={isCover ? 'omnimux-products-filelist-row is-cover' : 'omnimux-products-filelist-row'}>
-      <FileIcon size={14} />
+      <MediaThumb src={src} label={label} />
       <span className="omnimux-products-filelist-name">
-        {file.original_name || file.real_path}
+        {label}
       </span>
       {isCover ? (
         <span className="omnimux-products-cover-badge">{t('detail.coverBadge')}</span>
@@ -67,17 +83,18 @@ export function MediaItem(props) {
       <IconButton
         variant="ghost"
         size="xs"
-        aria-label={t('remove.confirm')}
+        aria-label={t('detail.removeMedia')}
+        title={t('detail.removeMedia')}
         onClick={onRemove}
       >
-        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+        <CloseIcon size={12} />
       </IconButton>
     </li>
   )
 }
 
 export function MediaList(props) {
-  const { t, media, coverId, actions } = props
+  const { t, media, coverId, previewOf, actions } = props
   return (
     <ul className="omnimux-products-filelist">
       {media.map((file, index) => (
@@ -87,6 +104,7 @@ export function MediaList(props) {
           file={file}
           index={index}
           coverId={coverId}
+          previewOf={previewOf}
           actions={actions}
         />
       ))}
@@ -95,7 +113,7 @@ export function MediaList(props) {
 }
 
 export function CategoriesEditor(props) {
-  const { t, categories, tagDraft, actions } = props
+  const { t, categories, tagDraft, disabled = false, actions } = props
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault()
@@ -104,19 +122,22 @@ export function CategoriesEditor(props) {
   }
 
   return (
-    <div>
+    <div className="omnimux-products-categories">
       <div className="omnimux-products-label">{t('add.categories')}</div>
       <div className="omnimux-products-tags">
         {categories.map((tag) => (
           <span key={tag} className="omnimux-products-tag">
             {tag}
             <IconButton
+              className="omnimux-products-tag-remove"
               variant="ghost"
               size="xs"
-              aria-label={t('remove.confirm')}
+              aria-label={t('detail.removeTag').replace('{name}', tag)}
+              title={t('detail.removeTag').replace('{name}', tag)}
+              disabled={disabled}
               onClick={() => actions.onRemoveTag(tag)}
             >
-              × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+              <CloseIcon size={10} />
             </IconButton>
           </span>
         ))}
@@ -124,6 +145,8 @@ export function CategoriesEditor(props) {
       <InputField
         value={tagDraft}
         placeholder={t('add.categoriesPlaceholder')}
+        aria-label={t('add.categoriesPlaceholder')}
+        disabled={disabled}
         onChange={actions.onDraftChange}
         onKeyDown={handleKeyDown}
       />

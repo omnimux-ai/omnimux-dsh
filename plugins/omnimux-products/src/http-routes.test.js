@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { createHubSeams, createProductsDispatcher, sendJson } from './http-routes.js'
+import { createDraftMediaRegistry } from './draft-media.js'
 import { createLibraryStore } from './library.js'
 
 let root
@@ -30,6 +31,8 @@ function makeDispatcher(opts = {}) {
   if (opts.chatComplete) deps.chatComplete = opts.chatComplete
   if (opts.channelTimeoutMs) deps.channelTimeoutMs = opts.channelTimeoutMs
   if (Object.prototype.hasOwnProperty.call(opts, 'hub')) deps.hub = opts.hub
+  if (opts.paths) deps.paths = opts.paths
+  if (opts.draftMedia) deps.draftMedia = opts.draftMedia
   return { dispatcher: createProductsDispatcher(deps), library }
 }
 
@@ -623,5 +626,77 @@ describe('products responses · secret guard', () => {
       assert.equal(res.out.status, 500)
       assert.match(res.out.body, /refused to emit a secret/)
     }
+  })
+})
+
+describe('products routes · draft media read-only preview', () => {
+  const makeMediaDir = () => {
+    const mediaDir = join(root, 'store', 'media')
+    mkdirSync(mediaDir, { recursive: true })
+    const shot = join(mediaDir, 'site-aurora-desktop-20260914T000000Z-abcd.png')
+    writeFileSync(shot, 'png')
+    return { mediaDir, shot }
+  }
+
+  it('imports register their media so the unsaved draft can show a screenshot', async () => {
+    const { mediaDir, shot } = makeMediaDir()
+    const imported = {
+      name: 'Aurora',
+      kind: 'digital',
+      media: [{ id: 'med_draft_1', real_path: shot, original_name: 'site-aurora-desktop.png' }],
+      cover_media_id: 'med_draft_1',
+    }
+    const { dispatcher } = makeDispatcher({
+      paths: { libraryFile: join(root, 'store', 'library.json'), mediaDir },
+      importFromUrl: async () => imported,
+    })
+    const posted = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://a.example.com' }))
+    assert.equal(posted.status, 200)
+    assert.equal(posted.body.data.media[0].id, 'med_draft_1')
+
+    const stream = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/products/draft-media/med_draft_1' })
+    assert.equal(stream.status, 200)
+    assert.equal(stream.stream.absolutePath, shot)
+    assert.equal(stream.stream.mime, 'image/png')
+  })
+
+  it('answers 404 for an id nobody registered, and never streams on a bad path', async () => {
+    const { mediaDir } = makeMediaDir()
+    const { dispatcher } = makeDispatcher({
+      paths: { libraryFile: join(root, 'store', 'library.json'), mediaDir },
+    })
+    const missing = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/products/draft-media/med_nope' })
+    assert.equal(missing.status, 404)
+    assert.equal(missing.body.error, 'draft-media-not-found')
+
+    // 越界路径：登记表只接受目录内的文件，注册了也不放行。
+    const outside = join(root, 'outside.png')
+    writeFileSync(outside, 'png')
+    const registry = createDraftMediaRegistry({ mediaDir })
+    registry.register([{ id: 'med_out', real_path: outside }])
+    const scoped = makeDispatcher({
+      paths: { libraryFile: join(root, 'store', 'library.json'), mediaDir },
+      draftMedia: registry,
+    })
+    const blocked = await scoped.dispatcher.dispatch({ method: 'GET', url: '/omnimux/products/draft-media/med_out' })
+    assert.equal(blocked.status, 404)
+    assert.equal(blocked.body.error, 'draft-media-not-found')
+  })
+
+  it('a product preview route still requires the record to exist', async () => {
+    const { mediaDir, shot } = makeMediaDir()
+    const { dispatcher } = makeDispatcher({
+      paths: { libraryFile: join(root, 'store', 'library.json'), mediaDir },
+    })
+    const product = (await dispatcher.dispatch(post('/omnimux/products', {
+      name: 'Aurora',
+      media: [{ real_path: shot, original_name: 'site-aurora-desktop.png' }],
+    }))).body.product
+    const preview = await dispatcher.dispatch({
+      method: 'GET',
+      url: `/omnimux/products/${product.id}?preview=${product.media[0].id}`,
+    })
+    assert.equal(preview.status, 200)
+    assert.ok(preview.stream)
   })
 })

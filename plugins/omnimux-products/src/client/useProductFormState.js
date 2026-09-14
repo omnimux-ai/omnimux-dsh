@@ -1,5 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { emptyBrandStrategy, isDigitalProduct, isPlainStrategy, normalizeBrandStrategy } from '../brand-strategy.js'
+
+/* ------------------------------------------------------------------ 指纹常量 */
+
+/** 字段之间的分隔符：不可打印，绝不出现在用户输入里。 */
+const FINGERPRINT_FIELD_SEP = '\u0001'
+/** 字段组之间的分隔符。 */
+const FINGERPRINT_PART_SEP = '\u0002'
+
+/**
+ * 显式排除在指纹之外的键。它们是纯 UI 暂存状态，不落库，因此不构成「未保存修改」：
+ * - `tagDraft`：分类输入框里还没回车提交的草稿；
+ * - `strategyOpen`：战略面板的展开态，展开/收起不改变将要写入的数据；
+ * - `strategyTouched`：一点「展开」就置真的交互标记，纳入会造成「看一眼就变脏」；
+ * - `asDigital` / `busy`：派生值与请求态，与业务数据无关。
+ */
+export const FINGERPRINT_EXCLUDED_KEYS = Object.freeze([
+  'tagDraft',
+  'strategyOpen',
+  'strategyTouched',
+  'asDigital',
+  'busy',
+])
+
+/* ------------------------------------------------------------------ 基础工具 */
 
 export function draftFrom(product) {
   try {
@@ -52,8 +76,152 @@ export function extractProductSnapshot(product) {
     coverId: product.cover_media_id || null,
     asDigital: isDigital,
     strategy: draftFrom(product),
+    // 与 `useStrategyState` 的起手态一致：数字产品一打开就是「可写」的，
+    // 否则已存战略会在基线里丢一半，打开表单立刻显示为脏。
+    strategyTouched: isDigital,
   }
 }
+
+/**
+ * 空白表单快照（新建态基线）。字段域与 `extractProductSnapshot` 完全一致，
+ * 因此两者可以用同一个指纹函数折叠成可比对的字符串。
+ */
+export function emptyProductSnapshot() {
+  return {
+    name: '',
+    kind: 'physical',
+    selling: '',
+    audience: '',
+    brand: '',
+    features: '',
+    price: '',
+    sku: '',
+    promotion: '',
+    link: '',
+    categories: [],
+    media: [],
+    coverId: null,
+    asDigital: false,
+    strategy: emptyBrandStrategy(),
+    strategyTouched: false,
+  }
+}
+
+/**
+ * 任何产品（含 `null` 的新建态）都能得到一个可指纹化的快照。
+ * @param {object | null | undefined} product
+ */
+export function formSnapshotOf(product) {
+  return extractProductSnapshot(product) ?? emptyProductSnapshot()
+}
+
+/* ------------------------------------------------------------------ 指纹（纯函数） */
+
+/**
+ * 稳定序列化：递归、键名排序、数组保序、`undefined` 丢弃。
+ * 相同语义的对象永远得到同一个字符串，与键的书写顺序无关。
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function stableStringify(value) {
+  if (value === null) return 'null'
+  if (typeof value !== 'object') return JSON.stringify(value ?? null)
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`
+  }
+  const record = /** @type {Record<string, unknown>} */ (value)
+  const keys = Object.keys(record).filter((key) => record[key] !== undefined).sort()
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`
+}
+
+/**
+ * 战略归一化失败时退化为 `null`，与 `buildPayload` 的容错口径一致：
+ * 非法战略不会被误判成一次真实改动。
+ * @param {unknown} strategy
+ */
+function safeStrategy(strategy) {
+  try {
+    return normalizeBrandStrategy(strategy)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 单条媒体的 canonical 片段：id 优先，路径与文件名兜底。
+ * @param {{ id?: string, real_path?: string, original_name?: string } | null | undefined} row
+ */
+function mediaPrintOf(row) {
+  if (!row || typeof row !== 'object') return ''
+  return `${str(row.id)}|${str(row.real_path)}|${str(row.original_name)}`
+}
+
+/**
+ * 表单指纹：把「会被写入产品的字段」折叠成一个稳定字符串。
+ *
+ * 输入源既可以是编辑态初始快照（`extractProductSnapshot` 的输出），也可以是
+ * 表单实时 state —— 两者字段域相同，因此同一函数可同时产出基线与当前值。
+ *
+ * 字段域的取舍与 `buildPayload` 严格对齐：
+ * - 10 个文本字段中，`price` / `sku` / `promotion` 只在实体商品下参与（数字产品的
+ *   payload 不写这三个键，纳入会造成假脏）；
+ * - 战略只在数字产品下参与，且只按「归一化后的值」参与：未触碰时与空战略同形，
+ *   所以「点开战略面板看一眼再收起」不是改动（`strategyOpen` 不参与，`strategyTouched`
+ *   只在值非空时改变结果）；
+ * - 分类、媒体、封面落库且数组保序（切换封面会重排媒体，属真实改动）。
+ *
+ * @param {Record<string, unknown> | null | undefined} source
+ * @returns {string}
+ */
+export function computeProductFingerprint(source) {
+  const s = source && typeof source === 'object' ? source : {}
+  const kind = s.kind === 'digital' ? 'digital' : 'physical'
+  const categories = Array.isArray(s.categories) ? s.categories : []
+  const media = Array.isArray(s.media) ? s.media : []
+
+  const parts = [
+    `name=${str(s.name).trim()}`,
+    `kind=${kind}`,
+    `link=${str(s.link)}`,
+    `selling=${str(s.selling)}`,
+    `audience=${str(s.audience)}`,
+    `brand=${str(s.brand)}`,
+    `features=${str(s.features)}`,
+    `categories=${categories.join(FINGERPRINT_FIELD_SEP)}`,
+    `media=${media.map(mediaPrintOf).join(FINGERPRINT_FIELD_SEP)}`,
+    `cover=${str(s.coverId)}`,
+  ]
+
+  if (kind === 'physical') {
+    parts.push(`price=${str(s.price)}`, `sku=${str(s.sku)}`, `promotion=${str(s.promotion)}`)
+  } else {
+    // 未触碰的战略按「空」参与折叠：空战略归一为 null，与 untouched 打印相同，
+    // 于是「展开面板」不产生假脏，而真正改到战略值时立刻变脏。
+    const touched = s.strategyTouched === true
+    parts.push(`strategy=${stableStringify(touched ? safeStrategy(s.strategy) : null)}`)
+  }
+
+  return parts.join(FINGERPRINT_PART_SEP)
+}
+
+/** 语义化别名：从表单 state 取指纹。 */
+export function getFormFingerprint(state) {
+  return computeProductFingerprint(state)
+}
+
+/** 旧名别名，便于调用方按任一名字引用同一实现。 */
+export const formFingerprint = computeProductFingerprint
+
+/**
+ * 脏判定：当前指纹与基线指纹不一致即为脏。
+ * @param {string} currentPrint
+ * @param {string} baselinePrint
+ */
+export function isFingerprintDirty(currentPrint, baselinePrint) {
+  return currentPrint !== baselinePrint
+}
+
+/* ------------------------------------------------------------------ 合并与装配 */
 
 export function mergeMediaPaths(current, paths) {
   const seen = new Set(current.map((file) => file.real_path))
@@ -116,7 +284,7 @@ export function importedKindOf(data) {
 
 /**
  * The six-module strategy an import carried, normalized for the form. An absent
- * or unusable payload answers null so the dialog keeps what the user typed.
+ * or unusable payload answers null so the form keeps what the user typed.
  * @param {Record<string, unknown> | null | undefined} data
  * @returns {ReturnType<typeof normalizeBrandStrategy>}
  */
@@ -467,27 +635,61 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
   }
 }
 
+/**
+ * 表单状态 hook：在既有字段域之上补一层「脏数据指纹」。
+ *
+ * 基线与当前值由同一个纯函数产生，因此：
+ * 1. 打开表单不会立刻变脏（复位后的 state 必然折叠回基线指纹）；
+ * 2. 改回原值会恢复为「未修改」；
+ * 3. 列表轮询只写产品列表、不写表单，不会抹掉用户输入。
+ *
+ * @param {object | null} initial 编辑态产品；新建态传 null
+ * @param {boolean} busy 保存中
+ */
 export function useProductFormState(initial, busy) {
   const base = useProductBaseFields(initial)
   const mediaState = useMediaAndTags(initial)
   const strategyState = useStrategyState(initial)
 
-  const initialId = initial ? initial.id : null
-  const initialUpdatedAt = initial ? initial.updated_at : null
+  const baselineKey = `${String(initial?.id ?? 'new')}:${String(initial?.updated_at ?? '')}`
+  const [baselinePrint, setBaselinePrint] = useState(
+    () => computeProductFingerprint(formSnapshotOf(initial)),
+  )
+
+  /**
+   * 按快照复位表单并把基线重锚到该快照。三条路径共用：首次挂载、
+   * 切换到另一个产品、以及调用方主动 `resetInitial`。
+   * @param {object | null | undefined} data
+   */
+  const applySnapshot = useCallback((data) => {
+    const snapshot = formSnapshotOf(data)
+    base.resetBaseFields(snapshot)
+    mediaState.setCategories(snapshot.categories)
+    mediaState.setMedia(snapshot.media)
+    mediaState.setCoverId(snapshot.coverId)
+    strategyState.setStrategyOpen(snapshot.asDigital)
+    strategyState.setStrategyTouched(snapshot.asDigital)
+    strategyState.setStrategy(snapshot.strategy)
+    setBaselinePrint(computeProductFingerprint(snapshot))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters 与 resetBaseFields 跨渲染稳定
+  }, [])
 
   useEffect(() => {
-    if (!initial) return
-    const s = extractProductSnapshot(initial)
-    if (!s) return
-    base.resetBaseFields(s)
-    mediaState.setCategories(s.categories)
-    mediaState.setMedia(s.media)
-    mediaState.setCoverId(s.coverId)
-    strategyState.setStrategyOpen(s.asDigital)
-    strategyState.setStrategyTouched(s.asDigital)
-    strategyState.setStrategy(s.strategy)
+    applySnapshot(initial)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed reset
-  }, [initialId, initialUpdatedAt])
+  }, [baselineKey, applySnapshot])
 
-  return bundleFormReturn(base, mediaState, strategyState, busy)
+  const bundle = bundleFormReturn(base, mediaState, strategyState, busy)
+  const currentFingerprint = computeProductFingerprint(bundle.state)
+
+  return {
+    ...bundle,
+    /** 当前表单指纹（渲染期快照）。 */
+    fingerprint: () => currentFingerprint,
+    currentFingerprint,
+    baselineFingerprint: baselinePrint,
+    isDirty: isFingerprintDirty(currentFingerprint, baselinePrint),
+    /** 用新数据复位表单并重锚基线。 */
+    resetInitial: applySnapshot,
+  }
 }

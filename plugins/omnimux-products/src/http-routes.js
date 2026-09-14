@@ -5,8 +5,10 @@
  * gated POST — do not copy that shortcut.
  */
 import { createReadStream } from 'node:fs'
+import { createDraftMediaRegistry } from './draft-media.js'
 import { LinkImportError, importProductFromUrl } from './link-importer.js'
 import { PRODUCT_KINDS, listViewOf, ProductsError } from './library.js'
+import { mediaDirOf } from './paths.js'
 import { PickerError, pickNativePath } from './picker.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
@@ -34,6 +36,7 @@ const STATUS_BY_CODE = {
   'picker-unsupported': 501,
   'picker-failed': 500,
   'product-not-found': 404,
+  'draft-media-not-found': 404,
   'name-conflict': 409,
   'not-local': 403,
 }
@@ -367,6 +370,8 @@ function parseProductPath(pathname) {
   if (pathname === `${PREFIX}/import-from-link`) return { kind: 'import-from-link' }
   if (!pathname.startsWith(`${PREFIX}/`)) return { kind: 'unknown' }
   const rest = pathname.slice(`${PREFIX}/`.length)
+  const draft = rest.match(/^draft-media\/(.+)$/)
+  if (draft) return { kind: 'draft-media', id: decodeURIComponent(draft[1]) }
   const media = rest.match(/^([^/]+)\/media$/)
   if (media) return { kind: 'media', id: decodeURIComponent(media[1]) }
   if (!rest.includes('/')) return { kind: 'item', id: decodeURIComponent(rest) }
@@ -388,6 +393,10 @@ export function createProductsDispatcher(deps) {
   const { library } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
   const importFromUrl = deps.importFromUrl ?? importProductFromUrl
+  // 草稿媒体只读通路：导入写盘后登记 id → 路径，创建态就能看截图。
+  const drafts = deps.draftMedia ?? createDraftMediaRegistry({
+    mediaDir: deps.mediaDir ?? mediaDirOf(deps.paths),
+  })
   // Hub seams are optional: without a hub the importer still answers from its own
   // page read and the heuristics, and reports the degradation in-band.
   const hub = deps.hub ?? createHubSeams(deps.ctx, {
@@ -484,6 +493,8 @@ export function createProductsDispatcher(deps) {
           language: typeof body.language === 'string' ? body.language : undefined,
           hub,
         })
+        // 登记本次携带 id 的媒体行，让创建态在保存前也能取自截图。
+        drafts.register(data?.media)
         return { status: 200, body: { success: true, data } }
       }
 
@@ -510,6 +521,17 @@ export function createProductsDispatcher(deps) {
         const product = library.getView(parsed.id)
         if (!product) throw new ProductsError('product-not-found', 'product not found')
         return { status: 200, body: { product, media: product.media } }
+      }
+
+      /**
+       * GET /omnimux/products/draft-media/{mediaId}
+       * 只读，无副作用。创建态下产品记录还不存在，走不了 `?preview=`；
+       * 这里按登记表解析路径，并且只放行本插件媒体目录内的文件。
+       */
+      if (method === 'GET' && parsed.kind === 'draft-media') {
+        const stream = drafts.resolvePreview(parsed.id)
+        if (!stream) throw new ProductsError('draft-media-not-found', 'draft media not found')
+        return { status: 200, stream }
       }
 
       if (method === 'GET' && parsed.kind === 'item') {
