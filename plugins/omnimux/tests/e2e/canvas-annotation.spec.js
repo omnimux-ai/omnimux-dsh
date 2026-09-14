@@ -98,6 +98,11 @@ test('e2e: canvas image annotations, consecutive numbering, and dual-channel mod
   );
   assert.match(
     MEDIA_VIEWER_CSS,
+    /\.omx-composer-comment-bar\s*\{[^}]*order:\s*-1\s*!important/,
+    'Composer comment bar must have order: -1 to dock inside the top of composer card'
+  );
+  assert.match(
+    MEDIA_VIEWER_CSS,
     /\.omx-mv-composer-attachment/,
     'Native composer attachment badge must be styled'
   );

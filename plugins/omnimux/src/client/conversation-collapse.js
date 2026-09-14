@@ -45,10 +45,10 @@ html[${CONVERSATION_COLLAPSED_ATTR}] header[class*="header"],
 html[${CONVERSATION_COLLAPSED_ATTR}] [class*="widthHandle"]{
   display:none!important;
 }
-/* Native DSH Composer floating dock at the bottom of the canvas */
+/* Native DSH Composer floating dock at the bottom of the canvas - 紧凑靠底停靠 */
 html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-seat]{
   position:fixed!important;
-  bottom:24px!important;
+  bottom:10px!important;
   left:var(--omnimux-sidebar-width, 280px)!important;
   right:0!important;
   width:auto!important;

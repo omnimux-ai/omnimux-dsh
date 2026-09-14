@@ -88,8 +88,8 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
       );
       assert.match(
         CONVERSATION_COLLAPSE_CSS,
-        /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*24px\s*!important/,
-        'Native composer seat must be fixed at bottom 24px in collapsed conversation state'
+        /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*10px\s*!important/,
+        'Native composer seat must be fixed at bottom 10px in collapsed conversation state'
       );
     });
   });

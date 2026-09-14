@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { injectMediaViewerStyles } from './styles.js';
@@ -30,6 +31,19 @@ export function MediaViewerTab({ scope }) {
 
   const imageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
+  const [composerCard, setComposerCard] = useState(null);
+
+  useEffect(() => {
+    const locate = () => {
+      const card = typeof document !== 'undefined' ? document.querySelector('[data-composer-card]') : null;
+      if (card && card !== composerCard) {
+        setComposerCard(card);
+      }
+    };
+    locate();
+    const timer = setInterval(locate, 300);
+    return () => clearInterval(timer);
+  }, [composerCard]);
 
   const annotations = store.getAnnotations(activeItem?.id);
   const savedAnnotations = annotations.filter((a) => a.status === 'saved');
@@ -433,9 +447,9 @@ export function MediaViewerTab({ scope }) {
         </div>
       </div>
 
-      {/* 底部原生输入框悬浮挂件: ⊕ X 个评论 (对标截图5/6) */}
-      {savedAnnotations.length > 0 ? (
-        <div className="omx-mv-composer-attachment-dock">
+      {/* 底部原生输入框内嵌挂件: 精准挂载在 [data-composer-card] 内部第一行 (对标用户红框) */}
+      {composerCard && savedAnnotations.length > 0 ? createPortal(
+        <div className="omx-composer-comment-bar">
           <div
             className="omx-mv-composer-attachment"
             title="点击切换打点评论模式"
@@ -443,7 +457,8 @@ export function MediaViewerTab({ scope }) {
             role="button"
             tabIndex={0}
           >
-            <span>⊕ {savedAnnotations.length} 个评论</span>
+            <span className="omx-mv-composer-attachment__badge">⊕</span>
+            <span>{savedAnnotations.length} 个评论</span>
             <button // exempt-ui01: 移除所有评论挂件按钮
               type="button"
               className="omx-mv-composer-attachment__close"
@@ -459,7 +474,8 @@ export function MediaViewerTab({ scope }) {
               </svg>
             </button>
           </div>
-        </div>
+        </div>,
+        composerCard
       ) : null}
     </div>
   );
