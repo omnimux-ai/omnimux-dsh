@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createEventQueue } from './queue.js'
+import { createEventQueue, DEFAULT_USER_AGENT } from './queue.js'
 
 const BASE = {
   umamiUrl: 'https://analytics.omnimux.ai',
@@ -27,6 +27,10 @@ test('flush POSTs one event per request to /api/send with the Umami contract sha
   const request = seen[0]
   assert.equal(request.url, 'https://analytics.omnimux.ai/api/send')
   assert.equal(request.payload.type, 'event')
+  assert.equal(request.headers['content-type'], 'application/json')
+  assert.equal(request.headers['user-agent'], DEFAULT_USER_AGENT)
+  assert.equal(request.headers['x-umami-website-id'], 'w-1')
+  assert.equal(request.headers['x-umami-hostname'], 'omnimux-plugins')
   const payload = /** @type {Record<string, unknown>} */ (request.payload.payload)
   // The deployed instance discriminates on `website`; the dashboard's
   // `data-website-id` attribute name is NOT the wire field.
@@ -127,5 +131,19 @@ test('concurrent sends stay bounded and count separately', async () => {
   await tick(120)
   assert.equal(queue.stats.sent, 8)
   assert.ok(maxInFlight <= 4, `expected concurrency <= 4, got ${maxInFlight}`)
+  queue.dispose()
+})
+
+test('custom userAgent is honored in request headers', async () => {
+  /** @type {Array<{ url: string, payload: Record<string, unknown>, headers?: Record<string, string> }>} */
+  const seen = []
+  const queue = createEventQueue({
+    ...BASE,
+    userAgent: 'CustomBot/1.0',
+    send: async (request) => { seen.push(request) },
+  })
+  queue.push({ name: 'tool-call', data: {} })
+  await queue.flush()
+  assert.equal(seen[0].headers['user-agent'], 'CustomBot/1.0')
   queue.dispose()
 })

@@ -56,14 +56,14 @@ async function buildRequest(options) {
 }
 
 /**
- * @param {Record<string, unknown>} payload
+ * @param {{ url: string, payload: Record<string, unknown>, headers?: Record<string, string> }} request
  * @returns {Promise<{ status: number, message: string, raw: string }>}
  */
-async function post(payload) {
-  const response = await fetch(`${umamiUrl}/api/send`, {
+async function post(request) {
+  const response = await fetch(request.url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
+    headers: request.headers ?? { 'content-type': 'application/json' },
+    body: JSON.stringify(request.payload),
     signal: AbortSignal.timeout(15000),
   })
   const raw = await response.text()
@@ -92,7 +92,7 @@ async function main() {
   console.log(`contract probe → ${umamiUrl}/api/send`)
 
   const current = await buildRequest({ websiteId: PROBE_WEBSITE_ID })
-  const probe = await post(current.payload)
+  const probe = await post(current)
   const accepted = probe.status === 400 && probe.raw.includes(NOT_FOUND)
   report('current payload', accepted, `HTTP ${probe.status}: ${probe.message}`)
 
@@ -100,7 +100,7 @@ async function main() {
   // regression back to it cannot pass this probe.
   const legacyPayload = { type: 'event', payload: { ...current.payload.payload, websiteId: PROBE_WEBSITE_ID } }
   delete legacyPayload.payload.website
-  const legacy = await post(legacyPayload)
+  const legacy = await post({ url: current.url, headers: current.headers, payload: legacyPayload })
   const legacyRejected = legacy.status === 400 && legacy.raw.includes(MISSING_DISCRIMINATOR)
   report('legacy payload rejected', legacyRejected, `HTTP ${legacy.status}: ${legacy.message}`)
 

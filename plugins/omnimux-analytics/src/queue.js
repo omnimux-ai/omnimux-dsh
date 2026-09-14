@@ -18,6 +18,15 @@
  */
 
 /**
+ * Standard desktop browser User-Agent.
+ * Umami silently drops incoming requests that lack a recognized browser User-Agent
+ * (answering 200 {"beep":"boop"} without recording), so Node-side callers must
+ * provide one.
+ */
+export const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+
+/**
  * @typedef {{ name: string, data: Record<string, unknown> }} AnalyticsEvent
  */
 
@@ -26,10 +35,11 @@
  *   umamiUrl: string,
  *   websiteId: string,
  *   hostname: string,
+ *   userAgent?: string,
  *   flushIntervalMs: number,
  *   maxQueue: number,
  *   sampleRate: number,
- *   send?: (request: { url: string, payload: Record<string, unknown> }) => Promise<unknown>,
+ *   send?: (request: { url: string, payload: Record<string, unknown>, headers?: Record<string, string> }) => Promise<unknown>,
  *   random?: () => number,
  *   log?: { debug?: (...args: unknown[]) => void },
  * }} options
@@ -46,6 +56,7 @@ export function createEventQueue(options) {
     umamiUrl,
     websiteId,
     hostname,
+    userAgent = DEFAULT_USER_AGENT,
     flushIntervalMs,
     maxQueue,
     sampleRate,
@@ -54,7 +65,7 @@ export function createEventQueue(options) {
     log = console,
   } = options
 
-  /** @type {Array<{ url: string, payload: Record<string, unknown> }>} */
+  /** @type {Array<{ url: string, payload: Record<string, unknown>, headers?: Record<string, string> }>} */
   const queue = []
   const stats = { sent: 0, dropped: 0, failed: 0 }
   let timer = null
@@ -66,6 +77,12 @@ export function createEventQueue(options) {
   function buildRequest(event) {
     return {
       url: `${umamiUrl}/api/send`,
+      headers: {
+        'content-type': 'application/json',
+        'user-agent': userAgent,
+        'x-umami-website-id': websiteId,
+        'x-umami-hostname': hostname,
+      },
       payload: {
         type: 'event',
         payload: {
@@ -151,7 +168,7 @@ export function createEventQueue(options) {
 }
 
 /**
- * @param {{ url: string, payload: Record<string, unknown> }} request
+ * @param {{ url: string, payload: Record<string, unknown>, headers?: Record<string, string> }} request
  * @returns {Promise<unknown>}
  */
 async function defaultSend(request) {
@@ -160,7 +177,11 @@ async function defaultSend(request) {
     : undefined
   const response = await fetch(request.url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': DEFAULT_USER_AGENT,
+      ...(request.headers ?? {}),
+    },
     body: JSON.stringify(request.payload),
     signal,
   })

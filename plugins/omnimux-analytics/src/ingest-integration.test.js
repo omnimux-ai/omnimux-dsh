@@ -11,6 +11,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { apply } from './index.js'
 import { ANALYTICS_INGEST_PATH } from './http-routes.js'
+import { DEFAULT_USER_AGENT } from './queue.js'
 
 const realFetch = globalThis.fetch
 
@@ -22,7 +23,7 @@ beforeEach(() => {
   outbound = []
   restoreFetch = globalThis.fetch
   globalThis.fetch = async (url, init) => {
-    outbound.push({ url: String(url), ...JSON.parse(init.body) })
+    outbound.push({ url: String(url), headers: init?.headers, ...JSON.parse(init.body) })
     return { ok: true }
   }
 })
@@ -102,6 +103,9 @@ test('a page event reaches the collection request with the site id and dwell tim
   const stageEvents = outbound.filter((request) => String(request.payload.name).startsWith('stage-'))
   assert.equal(stageEvents.length, 2)
   assert.equal(stageEvents[0].url, 'https://analytics.omnimux.ai/api/send')
+  assert.equal(stageEvents[0].headers['user-agent'], DEFAULT_USER_AGENT)
+  assert.equal(stageEvents[0].headers['x-umami-website-id'], 'w-1')
+  assert.equal(stageEvents[0].headers['x-umami-hostname'], 'omnimux-plugins')
   assert.deepEqual(stageEvents[0].payload, {
     website: 'w-1',
     hostname: 'omnimux-plugins',
