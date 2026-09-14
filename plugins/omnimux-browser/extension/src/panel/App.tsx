@@ -547,6 +547,35 @@ function readHoveredMedia(raw: unknown): HoveredMedia | null {
   }
 }
 
+/** What the settings view is currently telling the user about their last save. */
+type SettingsSaveState =
+  | { kind: 'idle' }
+  | { kind: 'saving' }
+  | { kind: 'saved' }
+  | { kind: 'error'; message: string }
+
+/** How long the success note stays up before the settings view closes itself. */
+const SETTINGS_SAVED_CLOSE_MS = 700
+
+/**
+ * Editable form state for the settings view, seeded from the active instance.
+ *
+ * The form owns these values from the first render: a storage read that fails or
+ * never answers must leave a usable form behind, not one whose inputs and save
+ * button silently ignore every interaction.
+ */
+function defaultPanelSettings(targetPort: number): PanelSettings {
+  return {
+    bridgeUrl: `ws://127.0.0.1:${targetPort}/ext/bridge`,
+    token: '',
+    sharePageContent: 'auto',
+    unrestrictedBrowserAccess: true,
+    trustedActionOrigins: [],
+    approvalNotifications: true,
+    autoResumeSession: true,
+  }
+}
+
 export function App(): React.JSX.Element {
   const [themeSetting, setThemeSetting] = useState<'auto' | 'light' | 'dark'>(() => {
     const saved = safeGetStorage('omnimux_theme_mode')
@@ -655,8 +684,8 @@ export function App(): React.JSX.Element {
     setTargetPort(inst.port)
     safeSetStorage('omnimux_target_port', String(inst.port))
     const nextUrl = `ws://127.0.0.1:${inst.port}/ext/bridge`
-    const nextToken = settings?.token ?? ''
-    setSettings((current) => current === null ? current : { ...current, bridgeUrl: nextUrl, token: nextToken })
+    const nextToken = settings.token
+    setSettings((current) => ({ ...current, bridgeUrl: nextUrl, token: nextToken }))
     try {
       chrome.runtime?.sendMessage?.({
         type: 'SWITCH_DSH_PORT',
@@ -673,7 +702,8 @@ export function App(): React.JSX.Element {
   const [api] = useState<PanelApi>(() => connectPanel())
   const [state, setState] = useState<BridgeState>('stopped')
   const [caps, setCaps] = useState<BridgeCaps | null>(null)
-  const [settings, setSettings] = useState<PanelSettings | null>(null)
+  const [settings, setSettings] = useState<PanelSettings>(() => defaultPanelSettings(targetPort))
+  const [settingsSave, setSettingsSave] = useState<SettingsSaveState>({ kind: 'idle' })
   const [rows, setRows] = useState<Row[]>([])
   const [streamRow, setStreamRow] = useState<Row | null>(null)
   const [draft, setDraft] = useState<ComposerDraft<DraftImage>>(() => emptyComposerDraft())
@@ -734,6 +764,7 @@ export function App(): React.JSX.Element {
   const questionsRef = useRef<PendingQuestion[]>([])
   const questionSubmissionsRef = useRef<ResolvedQuestion[]>([])
   const stoppingRef = useRef(false)
+  const settingsCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addingImagesRef = useRef(false)
   const sendingRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -1201,23 +1232,35 @@ export function App(): React.JSX.Element {
     saveUiScale(next)
   }
 
-  // Settings: seed from storage, then let the panel own the form.
+  // Settings: storage refines the form the user already has. A read that fails
+  // or never answers leaves the defaults in place, so the form stays editable
+  // instead of turning into an inert copy of itself.
   useEffect(() => {
-    void chrome.storage.local.get('dshSettings').then((stored) => {
-      const raw = stored.dshSettings as Partial<PanelSettings> | undefined
-      const savedPort = safeGetStorage('omnimux_target_port')
-      const p = savedPort ? parseInt(savedPort, 10) : targetPort
-      setSettings({
-        bridgeUrl: raw?.bridgeUrl || `ws://127.0.0.1:${p}/ext/bridge`,
-        token: raw?.token ?? '',
-        sharePageContent: raw?.sharePageContent ?? 'auto',
-        unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? true,
-        trustedActionOrigins: raw?.trustedActionOrigins ?? [],
-        approvalNotifications: raw?.approvalNotifications ?? true,
-        autoResumeSession: raw?.autoResumeSession ?? true,
+    let cancelled = false
+    void Promise.resolve()
+      .then(() => chrome.storage.local.get('dshSettings'))
+      .then((stored) => {
+        if (cancelled) return
+        const raw = stored.dshSettings as Partial<PanelSettings> | undefined
+        const savedPort = safeGetStorage('omnimux_target_port')
+        const p = savedPort ? parseInt(savedPort, 10) : targetPort
+        setSettings({
+          bridgeUrl: raw?.bridgeUrl || `ws://127.0.0.1:${p}/ext/bridge`,
+          token: raw?.token ?? '',
+          sharePageContent: raw?.sharePageContent ?? 'auto',
+          unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? true,
+          trustedActionOrigins: raw?.trustedActionOrigins ?? [],
+          approvalNotifications: raw?.approvalNotifications ?? true,
+          autoResumeSession: raw?.autoResumeSession ?? true,
+        })
       })
-    })
+      .catch(() => { /* defaults already loaded; the form stays usable */ })
+    return () => { cancelled = true }
   }, [])
+
+  // A success note that outlived the panel must not close a view the user has
+  // since reopened.
+  useEffect(() => () => { cancelSettingsClose() }, [])
 
   // 每次连接重启（连接配置变更/断线重连）都新建会话。状态消息逐条监听：
   // React 会把 stopped/connecting 等瞬时状态合并进同一帧渲染，依赖渲染
@@ -1288,7 +1331,7 @@ export function App(): React.JSX.Element {
   }, [api])
 
   useEffect(() => {
-    if (state === 'connected' && settings !== null && resumeHint.ready && sessionRef.current === null) {
+    if (state === 'connected' && resumeHint.ready && sessionRef.current === null) {
       void initializeSession()
     }
   }, [state, sessionEpoch, settings, resumeHint])
@@ -1609,7 +1652,7 @@ export function App(): React.JSX.Element {
     sessionInitializationRef.current = true
     const transition = beginSessionTransition()
     try {
-      const hinted = settings?.autoResumeSession === true ? resumeHint.sessionId : null
+      const hinted = settings.autoResumeSession ? resumeHint.sessionId : null
       if (hinted !== null && hinted.trim() !== '') {
         try {
           const { items, archived } = await loadSessionCatalog()
@@ -1929,11 +1972,22 @@ export function App(): React.JSX.Element {
     }
   }
 
+  /**
+   * Persist the settings form and say what happened.
+   *
+   * Every outcome is visible in the settings view: the button holds a saving
+   * state, a failure keeps the view open with its reason next to the buttons,
+   * and a success is confirmed before the view closes itself.
+   */
   async function saveSettings(): Promise<void> {
-    if (settings === null) return
+    if (settingsSave.kind === 'saving') return
+    setSettingsSave({ kind: 'saving' })
     try {
-      const relaySaved = await saveRelayProfiles()
-      if (!relaySaved) return
+      const relayProblem = await saveRelayProfiles()
+      if (relayProblem !== null) {
+        setSettingsSave({ kind: 'error', message: relayProblem })
+        return
+      }
       await api.updateSettings(settings)
       try {
         chrome.runtime?.sendMessage?.({
@@ -1941,10 +1995,30 @@ export function App(): React.JSX.Element {
           payload: { bridgeUrl: settings.bridgeUrl, token: settings.token }
         })
       } catch {}
-      setShowSettings(false)
+      setSettingsSave({ kind: 'saved' })
+      cancelSettingsClose()
+      settingsCloseTimerRef.current = setTimeout(() => {
+        settingsCloseTimerRef.current = null
+        setShowSettings(false)
+      }, SETTINGS_SAVED_CLOSE_MS)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
+      setSettingsSave({ kind: 'error', message: cause instanceof Error ? cause.message : String(cause) })
     }
+  }
+
+  /** Drop a pending success-close so it cannot shut a view the user reopened. */
+  function cancelSettingsClose(): void {
+    const timer = settingsCloseTimerRef.current
+    if (timer === null) return
+    clearTimeout(timer)
+    settingsCloseTimerRef.current = null
+  }
+
+  /** Leave the settings view: drop any pending close and clear the last result. */
+  function leaveSettings(): void {
+    cancelSettingsClose()
+    setSettingsSave({ kind: 'idle' })
+    setShowSettings(false)
   }
 
   /** Load relay profiles from the llm-pi-ai settings namespace once per settings visit. */
@@ -2127,13 +2201,14 @@ export function App(): React.JSX.Element {
   /**
    * Persist every relay draft: token to the credential store, route to the
    * llm-pi-ai namespace, optional default to agent-default-model.
-   * @returns false when validation failed and the outer save must abort.
+   * @returns null when every draft was saved, otherwise the reason the outer
+   * save must abort with — the caller shows it, so it cannot be dropped here.
    */
-  async function saveRelayProfiles(): Promise<boolean> {
+  async function saveRelayProfiles(): Promise<string | null> {
     for (const profile of relayProfiles) {
       if (profile.name.trim() === '') {
         setRelayNotice(copy.settings.relayInvalidName)
-        return false
+        return copy.settings.relayInvalidName
       }
     }
     try {
@@ -2187,10 +2262,11 @@ export function App(): React.JSX.Element {
         }
       }
       if (relayProfiles.length > 0) setRelayNotice(copy.settings.relaySavedOk)
-      return true
+      return null
     } catch (cause) {
-      setRelayNotice(copy.settings.relaySaveFailed(cause instanceof Error ? cause.message : String(cause)))
-      return false
+      const failure = copy.settings.relaySaveFailed(cause instanceof Error ? cause.message : String(cause))
+      setRelayNotice(failure)
+      return failure
     }
   }
 
@@ -2200,7 +2276,7 @@ export function App(): React.JSX.Element {
     try {
       await api.respondToApproval(request.id, decision)
       if (decision === 'always-allow-reads') {
-        setSettings((current) => current === null ? current : { ...current, sharePageContent: 'auto' })
+        setSettings((current) => ({ ...current, sharePageContent: 'auto' }))
       }
       updateApprovalQueue((current) => current.filter((entry) => entry.id !== request.id))
     } catch (cause) {
@@ -2220,16 +2296,18 @@ export function App(): React.JSX.Element {
   function addTrustedOrigin(): void {
     const origin = normalizeWebOrigin(trustedOriginInput)
     if (origin === null) return
-    setSettings((current) => current === null
-      ? current
-      : { ...current, trustedActionOrigins: [...new Set([...current.trustedActionOrigins, origin])].sort() })
+    setSettings((current) => ({
+      ...current,
+      trustedActionOrigins: [...new Set([...current.trustedActionOrigins, origin])].sort(),
+    }))
     setTrustedOriginInput('')
   }
 
   function removeTrustedOrigin(origin: string): void {
-    setSettings((current) => current === null
-      ? current
-      : { ...current, trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin) })
+    setSettings((current) => ({
+      ...current,
+      trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin),
+    }))
   }
 
   const sessionMenuTitle = sessionTitle ?? (locale === 'en' ? 'New Chat' : '新会话')
@@ -2249,7 +2327,7 @@ export function App(): React.JSX.Element {
     return (
       <><div className="settings">
         <div className="settings-heading">
-          <button className="icon-button" onClick={() => setShowSettings(false)} aria-label={copy.settings.back}><BackIcon /></button>
+          <button className="icon-button" onClick={leaveSettings} aria-label={copy.settings.back}><BackIcon /></button>
           <h1 className="settings-header-title">{copy.settings.title}</h1>
         </div>
         <div className="settings-panel">
@@ -2304,8 +2382,8 @@ export function App(): React.JSX.Element {
             <span>{copy.settings.bridgeAddress}</span>
             <small>{copy.settings.bridgeHelp}</small>
             <input
-              value={settings?.bridgeUrl ?? `ws://127.0.0.1:${targetPort}/ext/bridge`}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, bridgeUrl: e.target.value })}
+              value={settings.bridgeUrl}
+              onChange={(e) => setSettings((prev) => ({ ...prev, bridgeUrl: e.target.value }))}
               placeholder={copy.settings.bridgePlaceholder}
             />
           </label>
@@ -2314,8 +2392,8 @@ export function App(): React.JSX.Element {
             <small>{locale === 'en' ? 'Leave empty for local loopback; enter token only for protected remotes' : '本机回环免密连接请留空；仅受保护远程实例需要填写'}</small>
             <input
               type="password"
-              value={settings?.token ?? ''}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
+              value={settings.token}
+              onChange={(e) => setSettings((prev) => ({ ...prev, token: e.target.value }))}
               placeholder={locale === 'en' ? 'Optional token (leave empty for loopback)' : '可选 Token（本机回环留空即可免密连接）'}
             />
           </label>
@@ -2323,9 +2401,9 @@ export function App(): React.JSX.Element {
             <span>{copy.settings.pageSharing}</span>
             <small>{copy.settings.pageSharingHelp}</small>
             <select
-              value={settings?.sharePageContent ?? 'auto'}
-              disabled={settings?.unrestrictedBrowserAccess ?? false}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, sharePageContent: e.target.value as PanelSettings['sharePageContent'] })}
+              value={settings.sharePageContent}
+              disabled={settings.unrestrictedBrowserAccess}
+              onChange={(e) => setSettings((prev) => ({ ...prev, sharePageContent: e.target.value as PanelSettings['sharePageContent'] }))}
             >
               <option value="auto">{copy.settings.sharingAuto}</option>
               <option value="ask">{copy.settings.sharingAsk}</option>
@@ -2439,10 +2517,10 @@ export function App(): React.JSX.Element {
             <input
               className="setting-toggle-input"
               type="checkbox"
-              checked={settings?.unrestrictedBrowserAccess ?? true}
-              onChange={(event) => setSettings((current) => current === null
-                ? current
-                : { ...current, unrestrictedBrowserAccess: event.target.checked })}
+              checked={settings.unrestrictedBrowserAccess}
+              onChange={(event) => setSettings((current) => ({
+                ...current, unrestrictedBrowserAccess: event.target.checked,
+              }))}
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
           </label>
@@ -2454,10 +2532,10 @@ export function App(): React.JSX.Element {
             <input
               className="setting-toggle-input"
               type="checkbox"
-              checked={settings?.approvalNotifications ?? true}
-              onChange={(event) => setSettings((current) => current === null
-                ? current
-                : { ...current, approvalNotifications: event.target.checked })}
+              checked={settings.approvalNotifications}
+              onChange={(event) => setSettings((current) => ({
+                ...current, approvalNotifications: event.target.checked,
+              }))}
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
           </label>
@@ -2469,10 +2547,10 @@ export function App(): React.JSX.Element {
             <input
               className="setting-toggle-input"
               type="checkbox"
-              checked={settings?.autoResumeSession ?? true}
-              onChange={(event) => setSettings((current) => current === null
-                ? current
-                : { ...current, autoResumeSession: event.target.checked })}
+              checked={settings.autoResumeSession}
+              onChange={(event) => setSettings((current) => ({
+                ...current, autoResumeSession: event.target.checked,
+              }))}
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
           </label>
@@ -2591,8 +2669,8 @@ export function App(): React.JSX.Element {
           {trustedOriginInput.trim() !== '' && normalizeWebOrigin(trustedOriginInput) === null && (
             <p className="origin-error">{copy.settings.invalidOrigin}</p>
           )}
-          {settings?.trustedActionOrigins.length === 0 && <p>{copy.settings.noTrustedOrigins}</p>}
-          {settings?.trustedActionOrigins.map((origin) => (
+          {settings.trustedActionOrigins.length === 0 && <p>{copy.settings.noTrustedOrigins}</p>}
+          {settings.trustedActionOrigins.map((origin) => (
             <div className="trusted-origin" key={origin}>
               <code>{origin}</code>
               <button onClick={() => removeTrustedOrigin(origin)} aria-label={copy.settings.removeOrigin(origin)}>{copy.settings.remove}</button>
@@ -2600,8 +2678,25 @@ export function App(): React.JSX.Element {
           ))}
         </section>
         <div className="settings-actions">
-          <button className="primary" onClick={saveSettings}>{copy.settings.save}</button>
-          <button className="secondary" onClick={() => setShowSettings(false)}>{copy.settings.cancel}</button>
+          {settingsSave.kind === 'error' && (
+            <p className="settings-feedback error" role="alert">
+              {copy.settings.saveFailed(settingsSave.message)}
+            </p>
+          )}
+          {settingsSave.kind === 'saved' && (
+            <p className="settings-feedback saved" role="status">{copy.settings.saveOk}</p>
+          )}
+          <button
+            className="primary"
+            disabled={settingsSave.kind === 'saving'}
+            onClick={() => { void saveSettings() }}
+          >
+            {settingsSave.kind === 'saving' && <span className="button-spinner" aria-hidden="true" />}
+            {settingsSave.kind === 'saving'
+              ? copy.settings.saving
+              : settingsSave.kind === 'error' ? copy.settings.retrySave : copy.settings.save}
+          </button>
+          <button className="secondary" onClick={leaveSettings}>{copy.settings.cancel}</button>
         </div>
       </div>{approvalDialog}</>
     )
@@ -2629,7 +2724,7 @@ export function App(): React.JSX.Element {
             aria-label={copy.app.newSession} title={copy.app.newSession}>
             <PlusSvgIcon size={14} />
           </button>
-          <button className="icon-button settings-trigger" onClick={() => setShowSettings(true)}
+          <button className="icon-button settings-trigger" onClick={() => { setSettingsSave({ kind: 'idle' }); setShowSettings(true) }}
             aria-label={copy.app.openSettings} title={copy.app.settings}>
             <MoreHorizontalIcon size={16} />
           </button>

@@ -17,6 +17,13 @@ import { getUiLocale } from '../i18n.ts'
 /** Panel-side subset of the extension settings. */
 export type PanelSettings = Settings
 
+/**
+ * Deadline for one settings write. The background replies only after the write
+ * is persisted, so this bounds how long the settings view can wait before it
+ * reports the save as failed instead of waiting forever.
+ */
+const SETTINGS_SAVE_TIMEOUT_MS = 10_000
+
 interface RpcFailurePayload {
   code?: unknown
   message?: unknown
@@ -190,6 +197,7 @@ export function connectPanel(): PanelApi {
   const pendingSettings = new Map<string, {
     resolve: () => void
     reject: (error: Error) => void
+    timer: ReturnType<typeof setTimeout>
   }>()
   const pendingRebinds = new Map<string, {
     resolve: () => void
@@ -241,6 +249,7 @@ export function connectPanel(): PanelApi {
         const entry = pendingSettings.get(msg.id)
         if (entry === undefined) return
         pendingSettings.delete(msg.id)
+        clearTimeout(entry.timer)
         if (msg.ok) entry.resolve()
         else entry.reject(new Error(typeof msg.error?.message === 'string'
           ? msg.error.message
@@ -314,6 +323,7 @@ export function connectPanel(): PanelApi {
     }
     for (const [id, entry] of pendingSettings) {
       if (preserve?.kind === 'settings' && preserve.id === id) continue
+      clearTimeout(entry.timer)
       entry.reject(error)
       pendingSettings.delete(id)
     }
@@ -496,7 +506,21 @@ export function connectPanel(): PanelApi {
     updateSettings(next) {
       const id = crypto.randomUUID()
       return new Promise<void>((resolve, reject) => {
-        const entry = { resolve, reject }
+        // The background answers only after it has persisted the write. A lost
+        // or never-sent answer would otherwise leave the caller's promise
+        // pending forever, which the settings view can only render as a click
+        // that did nothing; the deadline turns that into a retryable failure.
+        const entry = {
+          resolve,
+          reject,
+          timer: setTimeout(() => {
+            if (pendingSettings.get(id) !== entry) return
+            pendingSettings.delete(id)
+            reject(new Error(getUiLocale() === 'zh'
+              ? '未收到本地服务的回执，设置可能未保存，请稍后重试。'
+              : 'No reply from the local service; the settings may not be saved. Please retry.'))
+          }, SETTINGS_SAVE_TIMEOUT_MS),
+        }
         pendingSettings.set(id, entry)
         void send(
           { type: 'settings', id, settings: next },
@@ -504,6 +528,7 @@ export function connectPanel(): PanelApi {
         ).catch((cause: unknown) => {
           if (pendingSettings.get(id) !== entry) return
           pendingSettings.delete(id)
+          clearTimeout(entry.timer)
           reject(connectionError(cause))
         })
       })

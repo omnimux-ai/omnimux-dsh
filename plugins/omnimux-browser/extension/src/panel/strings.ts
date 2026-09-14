@@ -132,6 +132,10 @@ export interface PanelCopy {
     relaySaveFailed: (reason: string) => string
     relayEmpty: string
     relayInvalidName: string
+    saving: string
+    retrySave: string
+    saveOk: string
+    saveFailed: (reason: string) => string
   }
   update: {
     eyebrow: string
@@ -373,6 +377,10 @@ const EN: PanelCopy = {
     relaySaveFailed: (reason) => `Saving failed: ${reason}`,
     relayEmpty: 'No relay profiles yet.',
     relayInvalidName: 'Enter a profile name.',
+    saving: 'Saving…',
+    retrySave: 'Retry save',
+    saveOk: 'Settings saved; reconnected with the new configuration.',
+    saveFailed: (reason) => `Save failed: ${reason}`,
   },
   update: {
     eyebrow: 'Release channel',
@@ -614,6 +622,10 @@ const ZH: PanelCopy = {
     relaySaveFailed: (reason) => `保存失败：${reason}`,
     relayEmpty: '还没有中转档案。',
     relayInvalidName: '请填写档案名称。',
+    saving: '保存中…',
+    retrySave: '重试保存',
+    saveOk: '设置已保存，已按新的连接配置重新连接。',
+    saveFailed: (reason) => `保存失败：${reason}`,
   },
   update: {
     eyebrow: '发布通道',
