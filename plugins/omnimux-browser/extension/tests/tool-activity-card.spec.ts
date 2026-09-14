@@ -85,6 +85,49 @@ describe('页面操作卡片 ToolActivity 视觉与结构规范', () => {
     expect(container.querySelector('.tool-done-badge')).toBeNull()
   })
 
+  it.each(['zh', 'en'] as const)('已知工具按 %s 文案映射，未知名称保持原样', async (locale) => {
+    const copy = PANEL_COPY[locale]
+    const expected = locale === 'zh' ? ['加载技能', '读取文件'] : ['Load skill', 'Read file']
+    await act(async () => {
+      root.render(createElement(ToolActivity, {
+        row: { seq: 4, kind: 'tool', text: 'skill -> read -> unknown_tool', status: 'complete' }, copy,
+      }))
+    })
+    expect(Array.from(container.querySelectorAll('.tool-step-tag'), (tag) => tag.textContent)).toEqual(expected)
+    expect(container.querySelector('.tool-step-text')?.textContent).toBe('unknown_tool')
+    await act(async () => {
+      root.render(createElement(ToolActivity, {
+        row: { seq: 5, kind: 'tool', text: 'read', status: 'running' }, copy,
+      }))
+    })
+    expect(container.querySelector('.tool-summary')?.textContent).toBe(expected[1])
+  })
+
+  const css = readFileSync(resolve(__dirname, '../src/panel/styles.css'), 'utf8')
+  const rule = (selector: string) => css.slice(css.indexOf(`${selector} {`)).split('}')[0]
+
+  it('标题与完成文字复用可读文字 token，绿点不继承文字颜色', () => {
+    expect(rule('.tool-label')).toMatch(/color: var\(--(?:ink|muted)\)/)
+    expect(rule('.tool-done-badge')).toMatch(/color: var\(--(?:ink|muted)\)/)
+    expect(rule('.tool-done-badge .badge-dot')).toContain('background: var(--success)')
+  })
+
+  it('窄屏保留状态，不用隐藏状态换取宽度', () => {
+    expect(css).not.toMatch(/\.tool-state\s*\{[^}]*display:\s*none/)
+    expect(rule('.tool-state')).toContain('flex: 0 0 auto')
+  })
+
+  it('步骤允许自然换行和连续字符串折行，不裁切摘要', () => {
+    const summary = rule('.tool-summary')
+    expect(summary).toContain('flex-wrap: wrap')
+    expect(summary).toContain('overflow-wrap: anywhere')
+    expect(summary).not.toMatch(/overflow:\s*hidden|white-space:\s*nowrap|text-overflow:\s*ellipsis/)
+    for (const selector of ['.tool-step-tag', '.tool-step-text']) {
+      expect(rule(selector)).toContain('min-width: 0')
+      expect(rule(selector)).toContain('max-width: 100%')
+    }
+  })
+
   it('styles.css 中杜绝工具卡片写死浅蓝边框与刺眼亮紫竖线，全面消费主题变量', () => {
     const cssPath = resolve(__dirname, '../src/panel/styles.css')
     const css = readFileSync(cssPath, 'utf8')
