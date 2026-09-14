@@ -2067,82 +2067,43 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     })
     return true
   } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
-    // Twitter In-Page Copilot Live LLM generation handler
+    // Twitter In-Page Copilot Live LLM generation via local DSH/OmniMux host
     const payload = m as { systemPrompt?: string; userMessage?: string }
     const systemPrompt = payload.systemPrompt || ''
     const userMessage = payload.userMessage || ''
 
     void (async () => {
-      // 动态读取用户的 API 密钥配置（优先使用用户本地设置，绝不硬编码明文敏感凭据）
-      const localKeys = await chrome.storage.local.get(['copilot_ds_key', 'copilot_apikeyfun_key', 'dshSettings'])
-      const dsKey = localKeys.copilot_ds_key || atob('c2stYzJiYWQ0NDA4ZTI1NDQ1MWIzM2IzOGE1NTZiN2RhMzQ=')
-      const akfKey = localKeys.copilot_apikeyfun_key || atob('c2stYmU3NzkzMjliMjMxY2IwYzkyOWNmNzM4M2MyYjE1Y2Q2ZDY4ODc5M2UwYzQ1NmEzMGIwMTkyNjFhMTQwMTU5Yg==')
-
-      // 1. 第一优先通道：DeepSeek 官方大模型（推理深度高、社媒流行梗理解透彻）
-      if (dsKey) {
-        try {
-          const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${dsKey}`,
-            },
-            body: JSON.stringify({
-              model: 'deepseek-flash',
-              messages: [
-                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-                { role: 'user', content: userMessage },
-              ],
-              max_tokens: 1200,
-            }),
-          })
-
-          if (resDs.ok) {
-            const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
-            const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
-            if (textDs) {
-              sendResponse({ ok: true, text: textDs })
-              return
-            }
-          }
-        } catch (errDs) {
-          console.warn('[Copilot Live LLM] Primary DeepSeek provider error:', errDs)
-        }
+      // 1. 优先调用本地 OmniMux 宿主服务的标准文案补全接口
+      const candidateBases: string[] = []
+      if (bridge?.url) {
+        const bridgeHttp = httpBaseFromBridgeUrl(bridge.url)
+        if (bridgeHttp) candidateBases.push(bridgeHttp)
       }
+      candidateBases.push('http://127.0.0.1:45120', 'http://127.0.0.1:43120', 'http://127.0.0.1:3080')
+      const uniqueBases = Array.from(new Set(candidateBases))
 
-      // 2. 第二备用通道：apikey.fun (kimi-k2.6)
-      if (akfKey) {
+      for (const base of uniqueBases) {
         try {
-          const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
+          const res = await fetch(`${base}/omnimux/text/complete`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${akfKey}`,
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'kimi-k2.6',
-              messages: [
-                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-                { role: 'user', content: userMessage },
-              ],
-              max_tokens: 500,
+              system: systemPrompt,
+              prompt: userMessage,
+              maxTokens: 1000,
             }),
           })
-
           if (res.ok) {
-            const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
-            const text = data?.choices?.[0]?.message?.content?.trim()
-            if (text && !text.includes('不帮')) {
-              sendResponse({ ok: true, text })
+            const data = (await res.json()) as { ok?: boolean; text?: string; error?: string }
+            if (data?.ok && typeof data.text === 'string' && data.text.trim()) {
+              sendResponse({ ok: true, text: data.text.trim() })
               return
             }
           }
-        } catch (err) {
-          console.warn('[Copilot Live LLM] Secondary provider error:', err)
-        }
+        } catch {}
       }
 
-      // 3. 兜底通道：本地 Bridge RPC
+      // 2. 备选通道：已建立连接的 Bridge RPC 会话
       if (bridge?.connected && gatewayRpc) {
         try {
           const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
@@ -2161,7 +2122,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         } catch {}
       }
 
-      sendResponse({ ok: false, message: '大模型生成未能返回内容，请检查网络或服务配置' })
+      sendResponse({ ok: false, message: '本地 OmniMux 服务未就绪或未配置大模型通道' })
     })()
     return true
   }
