@@ -25,34 +25,39 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   border: 1px solid transparent;
-  background-color: #000000;
+  background-color: transparent;
+  /* 半透明 + 毛玻璃：卡片底色透出，角标不抢正文注意力 */
+  backdrop-filter: blur(10px) saturate(115%);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
   opacity: 1;
 }
 
 .omnimux-velocity-badge:hover {
   transform: translateY(-1px);
-  filter: brightness(1.15);
+  filter: brightness(1.14);
 }
 
+/* 三档热度用「暖 → 冷」的深浅分层区分：橙红（最热）→ 琥珀（升温）→ 冷灰（常态）。
+   底色一律半透明压暗，描边与发光克制，紫色禁用（tests/no-purple-theme.spec.ts 守护）。 */
 .omnimux-velocity-badge--viral {
-  /* 爆款档用黑白高对比区分（design.md 禁紫；飙升档保留橙色语义） */
-  background-color: #18181b;
-  border-color: #ffffff;
-  color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+  background-image: linear-gradient(180deg, rgba(92, 28, 16, 0.6), rgba(46, 14, 9, 0.52));
+  border-color: rgba(255, 122, 74, 0.34);
+  color: rgba(255, 197, 173, 0.95);
+  box-shadow: 0 0 14px rgba(255, 88, 42, 0.16), inset 0 1px 0 rgba(255, 190, 160, 0.1);
 }
 
 .omnimux-velocity-badge--surging {
-  background-color: #3b1404;
-  border-color: #f97316;
-  color: #ffedd5;
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+  background-image: linear-gradient(180deg, rgba(72, 46, 8, 0.54), rgba(38, 24, 5, 0.48));
+  border-color: rgba(240, 172, 74, 0.29);
+  color: rgba(249, 220, 170, 0.9);
+  box-shadow: 0 0 12px rgba(228, 150, 44, 0.11), inset 0 1px 0 rgba(255, 226, 180, 0.08);
 }
 
 .omnimux-velocity-badge--normal {
-  background-color: #000000;
-  border-color: #334155;
-  color: #cbd5e1;
+  background-color: rgba(22, 28, 38, 0.46);
+  border-color: rgba(150, 166, 186, 0.22);
+  color: rgba(198, 210, 225, 0.76);
+  box-shadow: none;
 }
 
 /* Panel Popover */

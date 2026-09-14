@@ -40,7 +40,7 @@ export function showVelocityPanel(badgeEl: HTMLElement, data: TweetVelocityData,
   }
 
   const tierLabel = data.tier === 'viral' ? '爆款' : data.tier === 'surging' ? '飙升' : '正常'
-  const tagColor = data.tier === 'viral' ? '#ffffff' : data.tier === 'surging' ? '#fb923c' : '#94a3b8'
+  const tagColor = data.tier === 'viral' ? '#ffb193' : data.tier === 'surging' ? '#fbd38d' : '#a9b6c8'
   const paceStr = `${formatMetricNumber(data.pace)}/h`
   const viewsStr = formatMetricNumber(data.views)
   const hoursStr = data.hoursAlive >= 24
