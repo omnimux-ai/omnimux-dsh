@@ -136,6 +136,25 @@ test('isDeliveryCommand recognises commit / push / PR commands', () => {
   assert.equal(isDeliveryCommand('node --test scripts/x.test.mjs'), false)
 })
 
+/**
+ * 现行标准开树入口是 worktree.sh（把树建在 <repo>/.worktrees/<task>，见 omnimux-repo-workflow skill）。
+ * 门禁此前只认已废弃的 git-wt.sh finish，导致 Agent 按现行标准收尾时绕过完整性门禁。
+ */
+test('CONVERGENCE: current worktree.sh delivery commands are recognised', () => {
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh ship test-env-flow-smooth --pr 12'), true)
+  assert.equal(isDeliveryCommand('scripts/worktree.sh ship topic 12'), true)
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh finish topic --pr 12'), true)
+  assert.equal(isDeliveryCommand('./scripts/worktree.sh ship x --pr 1'), true)
+  // 查询类子命令不是交付，绝不能因统一识别而误伤
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh list'), false)
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh remove topic'), false)
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh prune'), false)
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh new feat-topic origin/main'), false)
+  assert.equal(isDeliveryCommand('bash scripts/worktree.sh help'), false)
+  // 弃用入口的 start 同样不是交付
+  assert.equal(isDeliveryCommand('bash scripts/git-wt.sh start common topic'), false)
+})
+
 /* ------------------------------------------- 门禁一：任务级规格（核心回归） */
 
 test('REGRESSION: historical specs in the repo must NOT satisfy the gate', () => {
