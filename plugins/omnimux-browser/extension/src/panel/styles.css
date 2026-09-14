@@ -873,6 +873,28 @@ textarea:focus-visible {
   animation: media-shimmer 1.5s linear infinite;
 }
 
+/* 取数失败：给一个可辨识的破图标记（点一下重试），不把失败渲染成「还在加载」 */
+.media-chip.failed {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.media-chip-failed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.image-lightbox-failed {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: calc(12.5px * var(--ui-scale));
+}
+
 /* 对话媒体画廊。
    竖屏窄栏固定「上下」排布：舞台在上占满整栏宽度，小图条在下横排（宽度稀缺、高度可滚动）。
    舞台高度完全交给 CSS —— --media-ratio 是素材宽高比，配合 max/min-height 定档，

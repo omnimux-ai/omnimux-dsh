@@ -14,21 +14,11 @@ import { describe, expect, it } from 'vitest'
 
 const EXTENSION_ROOT = join(import.meta.dirname, '..')
 
-/**
- * Hosts the extension page is allowed to reach.
- *
- * `https:` was added by the approved design in `specs/browser-attach-media.spec.md`
- * §3.1: lighting a page image downloads it, so the model receives real bytes
- * instead of a URL it may not be able to reach. The extension already declares
- * `host_permissions` for every http and https page and injects them all, so this
- * matches its existing authority — and it stays a scheme, never a vendor
- * endpoint. The rest of this suite still holds that line.
- */
+/** Hosts the extension page is allowed to reach: loopback plus the existing source. */
 const ALLOWED_CONNECT_HOSTS = new Set([
   'ws://127.0.0.1:*',
   'http://127.0.0.1:*',
   'https://raw.githubusercontent.com',
-  'https:',
 ])
 
 /** Model vendor endpoints that must never appear in shipped extension source. */

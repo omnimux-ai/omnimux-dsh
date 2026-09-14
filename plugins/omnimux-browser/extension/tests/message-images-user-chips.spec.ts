@@ -12,8 +12,9 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
  *
  * jsdom has no layout engine, so the pixel geometry asserted here is read from
  * the CSS rules that produce it; the measured numbers come from the real-browser
- * harness and are recorded in
- * `.agent-reports/browser-attach-media/message-modes.png`.
+ * harness, recorded in `tmp/browser-attach-media/message-modes-verify.json` with
+ * `.agent-reports/browser-attach-media/03-user-chips-vs-assistant-gallery.png`
+ * and `04-user-chip-fullscreen.png` as the visual evidence.
  */
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -236,14 +237,63 @@ describe('message images: user receipt vs assistant gallery', () => {
     expect(chips()).toHaveLength(1)
 
     await click(chips()[0])
-    // The viewer opens, but with no bytes to show yet.
+    // The viewer opens, and says it is still loading rather than showing nothing.
     expect(dialog()).not.toBeNull()
     expect(dialog()!.querySelector('.image-lightbox-media img')).toBeNull()
+    expect(dialog()!.querySelector('.image-lightbox-failed')?.textContent).toBe(PANEL_COPY.zh.app.imageLoading)
 
     await act(async () => {
       resolveBody?.({ attachment: images[0], data: bodyFor(images[0]!) })
     })
     expect(dialog()!.querySelector('.image-lightbox-media img')?.getAttribute('src')).toBe(srcFor(images[0]!))
+  })
+
+  it('AC-10: a user chip whose bytes failed says so, and retries on click', async () => {
+    const images = [attachment(1)]
+    let attempts = 0
+    const api = {
+      rpc: async () => {
+        attempts += 1
+        if (attempts === 1) throw new Error('attachment unavailable')
+        return { attachment: images[0], data: bodyFor(images[0]!) }
+      },
+    } as unknown as PanelApi
+    await render(images, api, 'end')
+    await act(async () => { await Promise.resolve() })
+
+    // A failure is not rendered as "still loading": it gets its own marker and
+    // names the failure for assistive tech.
+    expect(chips()[0].classList.contains('failed')).toBe(true)
+    expect(chips()[0].querySelector('.media-chip-failed')).not.toBeNull()
+    expect(chips()[0].querySelector('.media-chip-skeleton')).toBeNull()
+    expect(chips()[0].getAttribute('aria-label')).toContain(PANEL_COPY.zh.app.mediaLoadFailed)
+
+    // Clicking retries instead of opening a viewer with nothing in it.
+    await click(chips()[0])
+    expect(dialog()).toBeNull()
+    await act(async () => { await Promise.resolve() })
+    expect(attempts).toBe(2)
+    expect(chips()[0].classList.contains('failed')).toBe(false)
+    expect(chips()[0].querySelector('img')?.getAttribute('src')).toBe(srcFor(images[0]!))
+  })
+
+  it('AC-12: a viewer opened on a failure reports it instead of rendering blank', async () => {
+    const images = [attachment(1), attachment(2)]
+    const api = {
+      rpc: async (_method: string, payload?: unknown) => {
+        const attachmentId = String((payload as { attachmentId?: unknown } | undefined)?.attachmentId ?? '')
+        // The FIRST attachment fails, so the stage is the surface under test.
+        if (attachmentId === 'a1') throw new Error('attachment unavailable')
+        return { attachment: images[1], data: bodyFor(images[1]!) }
+      },
+    } as unknown as PanelApi
+    await render(images, api, 'start')
+    await act(async () => { await Promise.resolve() })
+
+    // The assistant's stage offers the retry it always did.
+    expect(container.querySelector('.stage-fail')).not.toBeNull()
+    await click(container.querySelector('.stage-retry'))
+    expect(container.querySelector('.stage-fail')).not.toBeNull()
   })
 
   it('AC-10: an empty attachment list renders nothing in either shape', async () => {

@@ -94,6 +94,7 @@
     "@types/node": "^22.20.0",
     "@types/ws": "^8.18.1",
     "tsdown": "0.22.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }

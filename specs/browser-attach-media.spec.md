@@ -28,15 +28,26 @@ date: 2026-09-14
 
 ## 3. 设计
 
-### 3.1 网络许可（用户已确认的取舍）
+### 3.1 取图通道：经宿主中转（2026-09-15 修订，取代原 CSP 方案）
 
-扩展页面的 CSP `connect-src` 当前仅允许 `ws://127.0.0.1:*`、`http://127.0.0.1:*`、`https://raw.githubusercontent.com`，因此面板无法下载远程图片。需在两个 manifest（`manifest.json` 与 `manifest.firefox.json`，若后者含同字段）的 `content_security_policy.extension_pages` 的 `connect-src` 中追加 `https:`。
+**原方案（已废弃）**：放宽扩展页面 CSP 的 `connect-src`，由插件页面直接下载远程图片。
 
-依据：该扩展已声明 `host_permissions: http://*/* https://*/*` 且注入所有页面，此项与其既有权限等级一致。风险与缓解写在 Issue #1817。
+**废弃原因**：本仓 CI 的 diff-aware L0 门禁明令「**扩展联网出口只允许本机服务与本仓库白名单主机，禁止 https**」。PR #1824 因此被 CI 拦下。**不得修改该门禁来绕过** —— 它是仓库的架构约束，不是可协商的配置。
+
+**现行方案**：插件保持不对外联网。点亮图片素材时：
+
+1. 面板经**既有 WebSocket 桥**（`/ext/bridge`）向宿主（Node 侧）请求下载该 URL
+2. 宿主在服务端发起请求（其出站不受扩展 CSP 约束），把字节回传给面板
+3. 面板照旧走既有图片附件校验（§3.2 第 2 步起）
+
+**约束**：
+- 宿主侧新增能力必须**只服务于显式点选的素材**：不得提供任意 URL 抓取服务，须限定入参形态（http/https）与响应体量上限
+- 面板**不得**保留任何对外站的直连（CSP 维持原样：仅本机 + 白名单主机）
+- 下载超时、非 2xx、体量超限、类型不支持，一律按 §3.6 报错，不重试、不静默
 
 ### 3.2 挂载图片的流程
 
-1. 用户点亮素材 → 面板下载该 URL（带超时；失败即报错，**不重试、不静默**）
+1. 用户点亮素材 → 面板经 WebSocket 桥请求**宿主**下载该 URL（带超时；失败即报错，**不重试、不静默**）
 2. 校验：媒体类型必须在 `IMAGE_MEDIA_TYPES` 内；字节 / 像素 / 边长按宿主下发的 `imageLimits` 校验（与粘贴图片同一套规则，同一套错误文案）
 3. 通过后作为待发图片进入输入框（用户可见缩略图，可移除）
 4. 发送后：消息里显示图片预览（复用已有的媒体画廊组件），**正文不再出现该图片的网址文本**
@@ -80,14 +91,16 @@ date: 2026-09-14
 | AC-6 | 视频素材仍以网址进入正文，素材条与消息内显示播放图标 |
 | AC-7 | 点亮素材条不再渲染任何格式文本（`JPG`/`PNG`/`MP4`/`VIDEO`） |
 | AC-8 | 既有测试全部保持通过（含粘贴 / 拖拽图片、画廊、markdown 安全面） |
-| AC-9 | CSP 变更后，面板仍能连本机宿主（回归）；且仅在实际挂载时才发起到外站的请求 |
+| AC-9 | 面板不对任何外站发起请求（CSP 保持"仅本机 + 白名单主机"原样、两个 manifest 零改动）；图片字节经宿主由 WebSocket 桥回传 |
 | AC-10 | 用户消息里的图片渲染为**小缩略图**：单个边长 ≤ 52px、无画廊舞台元素、无 `第几张/共几张` 计数 |
 | AC-11 | 助手消息里的图片仍渲染为**画廊**（大图 + 小图条 + 计数），即 #1806 的行为不回归 |
 | AC-12 | 点击用户消息里的小缩略图可全屏查看大图 |
 
 ## 5. 实施约束
 
-- 改动文件白名单：`extension/src/panel/App.tsx`、`extension/src/panel/components/MediaSnifferBar.tsx`、`extension/src/panel/MessageImages.tsx`、`extension/src/panel/attachments.ts`、`extension/src/panel/strings.ts`、`extension/src/panel/styles.css`、`extension/manifest.json`、`extension/manifest.firefox.json`、`extension/tests/**`
+- 改动文件白名单：`extension/src/panel/App.tsx`、`extension/src/panel/components/MediaSnifferBar.tsx`、`extension/src/panel/MessageImages.tsx`、`extension/src/panel/attachments.ts`、`extension/src/panel/strings.ts`、`extension/src/panel/styles.css`、`extension/tests/**`，以及**宿主侧** `plugins/omnimux-browser/src/**`（新增经 WebSocket 桥的取图能力）与 `plugins/omnimux-browser/package.json`（**仅允许**补 vitest devDependency，使新增的宿主单测在干净检出可跑；不得改动其他字段），以及根 `pnpm-lock.yaml`（**仅允许**上述依赖所必需的 lockfile 变更）。
+  - 修订记录（2026-09-15 之二）：新增宿主包 `package.json` 白名单条目 —— 新增宿主单测不能只依赖本地 `node_modules` 软链，必须在干净检出/CI 可复现运行。
+  - 修订记录（2026-09-15）：**两个 manifest 移出白名单** —— CSP 必须保持零改动（L0 门禁禁止 https 出口）；取图改由宿主中转，故把宿主侧目录加入白名单。
   - 说明：核心改动落在 `App.tsx`（挂载流程）、`MediaSnifferBar.tsx`（素材条）与 `MessageImages.tsx`（两种展示模式，见 §3.5）。
   - 修订记录（2026-09-14，用户追加定稿后）：新增 `MessageImages.tsx` 与 `styles.css` —— 用户消息需从 #1806 的画廊改为小缩略图，属于本任务范围。
 - 复用既有图片附件校验（`prepareImageFiles` 及其错误码），**不得新写一套校验**

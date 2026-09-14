@@ -8,7 +8,7 @@
  */
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
-import { BRIDGE_SESSION_PURGE_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
+import { BRIDGE_FETCH_MEDIA_METHOD, BRIDGE_SESSION_PURGE_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeState } from '../background/bridge.ts'
@@ -67,8 +67,8 @@ import {
   browserTimeZone,
   downloadPageMedia,
   draftImageDataUrl,
+  ImageInputError,
   MediaDownloadError,
-  MEDIA_DOWNLOAD_TIMEOUT_MS,
   parseImageAttachmentLimits,
   prepareImageFiles,
   promptContent,
@@ -914,6 +914,25 @@ export function App(): React.JSX.Element {
   const [draft, setDraft] = useState<ComposerDraft<DraftImage>>(() => emptyComposerDraft())
   const input = draft.text
   const draftImages = draft.images
+  /**
+   * The draft as a ref, and the only way it is written.
+   *
+   * `intakeImageFiles` is asynchronous — a download, then a decode — so two lit
+   * media can be in flight at once. The host's aggregate limits
+   * (`maxImagesPerMessage`, `maxMessageImageBytes`) are checked against what is
+   * ALREADY in the draft, and a render closure would hand that check a snapshot
+   * from before the other download landed: two concurrent lights would each pass
+   * a check the pair fails, and the draft would silently exceed the limit. Every
+   * write goes through here so the count a check reads is the count that will be
+   * there, and {@link intakeChainRef} keeps check-and-add atomic.
+   */
+  const draftRef = useRef<ComposerDraft<DraftImage>>(draft)
+  const intakeChainRef = useRef<Promise<unknown>>(Promise.resolve())
+  function updateDraft(update: (current: ComposerDraft<DraftImage>) => ComposerDraft<DraftImage>): void {
+    const next = update(draftRef.current)
+    draftRef.current = next
+    setDraft(next)
+  }
   const [selection, setSelection] = useState<PageSelection | null>(null)
   const [imageLimits, setImageLimits] = useState<ImageAttachmentLimits | null>(null)
   const [addingImages, setAddingImages] = useState(false)
@@ -1448,17 +1467,29 @@ export function App(): React.JSX.Element {
       const name = item.alt || item.src
       let file: File
       try {
-        file = await downloadPageMedia(item.src, item.id)
+        file = await downloadPageMedia(item.src, item.id, (url) => api.rpc(BRIDGE_FETCH_MEDIA_METHOD, { url }))
       } catch (cause) {
         failures.push(cause instanceof MediaDownloadError && cause.reason === 'timeout'
-          ? copy.app.attachMediaTimeout(name, Math.round(MEDIA_DOWNLOAD_TIMEOUT_MS / 1000))
+          ? copy.app.attachMediaTimeout(name, Math.round((cause.timeoutMs ?? 0) / 1000))
           : copy.app.attachMediaDownloadFailed(name))
         continue
       }
-      const { landed, message } = await intakeImageFiles([file])
+      const { landed, message, refusal } = await intakeImageFiles([file])
       // A silent refusal (session moved, composer busy) is the same silence the
       // paste path keeps: there is no honest sentence to show for it.
-      if (!landed && message !== null) failures.push(message)
+      if (!landed && message !== null) {
+        // The intake names files by their internal `page-media-<地址>` name, which
+        // a refusal would then quote back to the user. Re-mapping the same error
+        // through the name the user sees keeps the copy identical — same codes,
+        // same limits — without printing a URL at them.
+        failures.push(refusal === null
+          ? message
+          : imageErrorMessage(
+            new ImageInputError(refusal.code, name, refusal.limit),
+            copy,
+            imageLimitsRef.current ?? undefined,
+          ))
+      }
     }
     setError(attachFailureLine(failures, items.length, copy.app.attachMediaSummary))
     return failures.length === 0
@@ -1634,7 +1665,7 @@ export function App(): React.JSX.Element {
         streamRefreshRef.current.clear()
         setStreamRow(null)
         setRows([])
-        setDraft((current) => ({ ...current, images: [] }))
+        updateDraft((current) => ({ ...current, images: [] }))
         setImageLimits(null)
         imageLimitsRef.current = null
         imageProjectionRef.current = { sessionId: null, seq: Number.NEGATIVE_INFINITY, limits: null }
@@ -2176,7 +2207,7 @@ export function App(): React.JSX.Element {
   ): void {
     setRows([])
     setStreamRow(null)
-    setDraft(emptyComposerDraft())
+    updateDraft(() => emptyComposerDraft())
     if (!preserveSelection) {
       setSelection(null)
       // An explicit conversation switch abandons whatever attachment is
@@ -2203,12 +2234,30 @@ export function App(): React.JSX.Element {
    * refusal overwrite the ones before it. `settled` separates the two silent
    * outcomes: a refused guard leaves the previous message alone, while an intake
    * that ran clears it.
+   *
+   * Intakes are chained rather than run concurrently. `prepareImageFiles` checks
+   * the host's aggregate limits (`maxImagesPerMessage`, `maxMessageImageBytes`)
+   * against the draft and only ever adds, so two overlapping intakes must not both
+   * measure the same "before" count: paired with {@link draftRef}, one intake's
+   * check sees every image its predecessor added.
    */
   async function intakeImageFiles(
     files: readonly File[],
-  ): Promise<{ landed: boolean; message: string | null; settled: boolean }> {
-    // Read through the ref: hovered page media reaches this function from a
-    // listener that subscribed before the projection existed.
+  ): Promise<{ landed: boolean; message: string | null; settled: boolean; refusal: ImageInputError | null }> {
+    const run = intakeChainRef.current.then(
+      () => runImageIntake(files),
+      () => runImageIntake(files),
+    )
+    intakeChainRef.current = run.then(() => undefined, () => undefined)
+    return run
+  }
+
+  async function runImageIntake(
+    files: readonly File[],
+  ): Promise<{ landed: boolean; message: string | null; settled: boolean; refusal: ImageInputError | null }> {
+    // Read through the refs: hovered page media reaches this function from a
+    // listener that subscribed before the projection existed, and the draft may
+    // have grown while an earlier download was still in flight.
     const limits = imageLimitsRef.current
     const sessionId = sessionRef.current
     if (files.length === 0 || limits === null || sessionId === null
@@ -2216,21 +2265,23 @@ export function App(): React.JSX.Element {
       return {
         landed: false,
         settled: false,
+        refusal: null,
         message: sessionId !== null && limits === null ? copy.app.imageUnavailable : null,
       }
     }
     addingImagesRef.current = true
     setAddingImages(true)
-    const existing = draftImages
+    const existing = draftRef.current.images
     try {
       const prepared = await prepareImageFiles(files, existing, limits)
-      if (sessionRef.current !== sessionId) return { landed: false, settled: true, message: null }
-      setDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
-      return { landed: prepared.length > 0, settled: true, message: null }
+      if (sessionRef.current !== sessionId) return { landed: false, settled: true, message: null, refusal: null }
+      updateDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
+      return { landed: prepared.length > 0, settled: true, message: null, refusal: null }
     } catch (cause) {
       return {
         landed: false,
         settled: true,
+        refusal: cause instanceof ImageInputError ? cause : null,
         message: sessionRef.current === sessionId ? imageErrorMessage(cause, copy, limits) : null,
       }
     } finally {
@@ -2308,7 +2359,7 @@ export function App(): React.JSX.Element {
     sendingRef.current = true
     const submittedDraft: ComposerDraft<DraftImage> = { text, images: submittedImages }
     if (textOverride === undefined) {
-      setDraft(emptyComposerDraft())
+      updateDraft(() => emptyComposerDraft())
     }
     setBusy(true)
     setWorking(true)
@@ -2365,7 +2416,7 @@ export function App(): React.JSX.Element {
         setError(imageErrorMessage(cause, copy, imageLimits ?? undefined))
         setWorking(false)
         if (textOverride === undefined) {
-          setDraft((current) => restoreSubmittedDraft(current, submittedDraft))
+          updateDraft((current) => restoreSubmittedDraft(current, submittedDraft))
         }
       }
     } finally {
@@ -3437,7 +3488,7 @@ export function App(): React.JSX.Element {
                       disabled={busy || addingImages}
                       aria-label={copy.app.removeImage(name)}
                       title={copy.app.removeImage(name)}
-                      onClick={() => setDraft((current) => ({
+                      onClick={() => updateDraft((current) => ({
                         ...current,
                         images: current.images.filter((item) => item.id !== image.id),
                       }))}
@@ -3451,7 +3502,7 @@ export function App(): React.JSX.Element {
             ref={composerRef}
             value={input}
             onChange={(e) => {
-              if (!sendingRef.current) setDraft((current) => ({ ...current, text: e.target.value }))
+              if (!sendingRef.current) updateDraft((current) => ({ ...current, text: e.target.value }))
             }}
             onKeyDown={(e) => {
               // isComposing：输入法组词中的回车是确认选字，不是发送。

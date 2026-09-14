@@ -4,10 +4,17 @@
  * The real `<App />` is mounted untouched: it opens its own `chrome.runtime.connect`
  * port, sends `{ type: 'rpc', id, method, payload }` frames and renders whatever
  * comes back. This module answers those frames in the shape `src/panel/api.ts`
- * parses, so the panel's genuine download → intake → `session.prompt` path runs in
+ * parses, so the panel's genuine relay → intake → `session.prompt` path runs in
  * a browser instead of a jsdom stub. No extension, no dsh instance, no network
  * beyond the harness origin.
+ *
+ * `bridge.fetchMedia` is answered here because that is now the ONLY way the panel
+ * can obtain image bytes: the production host performs the request in Node, and
+ * this stand-in performs it in the page using the pristine `fetch`, which keeps
+ * the panel's own outbound traffic separately observable.
  */
+
+import { BRIDGE_FETCH_MEDIA_METHOD } from 'omnimux-browser/src/protocol.ts'
 
 /** The host's image projection, as `session.history` carries it. */
 export const HARNESS_IMAGE_LIMITS = {
@@ -30,8 +37,10 @@ export interface HarnessHostState {
   readonly prompts: CapturedPrompt[]
   /** Every `session.create` call, so a test can prove the session came up. */
   creates: number
-  /** Media URLs the panel actually fetched. Anything not in here was never requested. */
+  /** Media URLs the panel tried to reach on its own — must stay empty (AC-9). */
   readonly fetches: string[]
+  /** Media URLs the panel asked the host to relay through `bridge.fetchMedia`. */
+  readonly relays: string[]
 }
 
 interface PortLike {
@@ -48,8 +57,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Install the fake browser + host on `window`; returns the observable state. */
 export function installHarnessHost(): HarnessHostState {
-  const state: HarnessHostState = { prompts: [], creates: 0, fetches: [] }
+  const state: HarnessHostState = { prompts: [], creates: 0, fetches: [], relays: [] }
   const replies = new Set<(message: unknown) => void>()
+  // Captured before the recording wrapper goes in: the stand-in host downloads
+  // through THIS handle, so anything the wrapper sees came from the product code.
+  const hostFetch = globalThis.fetch.bind(globalThis)
+
+  /**
+   * The host half of `bridge.fetchMedia`.
+   *
+   * Real hosts run it in Node; here it runs in the page, which is what makes the
+   * harness useful — the relay uses the pristine `fetch`, so the panel's own
+   * outbound calls stay separable from the host's.
+   */
+  const relayMedia = async (url: unknown): Promise<unknown> => {
+    if (typeof url !== 'string' || !/^https?:/.test(url)) {
+      return { status: 'bad-request', message: 'only http(s) media addresses are fetched' }
+    }
+    state.relays.push(url)
+    try {
+      const response = await hostFetch(url)
+      if (!response.ok) return { status: 'http-error', statusCode: response.status }
+      const buffer = new Uint8Array(await response.arrayBuffer())
+      let binary = ''
+      for (let at = 0; at < buffer.length; at += 0x8000) {
+        binary += String.fromCharCode(...buffer.subarray(at, at + 0x8000))
+      }
+      return {
+        status: 'ok',
+        contentType: response.headers.get('content-type') ?? '',
+        byteLength: buffer.byteLength,
+        data: btoa(binary),
+      }
+    } catch (cause) {
+      return { status: 'failed', message: cause instanceof Error ? cause.message : String(cause) }
+    }
+  }
 
   const rpcValue = (method: string, payload: unknown): unknown => {
     switch (method) {
@@ -64,6 +107,8 @@ export function installHarnessHost(): HarnessHostState {
       case 'session.prompt':
         state.prompts.push(payload as CapturedPrompt)
         return {}
+      case BRIDGE_FETCH_MEDIA_METHOD:
+        return relayMedia(isRecord(payload) ? payload.url : undefined)
       case 'session.selectModel':
       case 'session.cancel':
         return {}
@@ -76,18 +121,22 @@ export function installHarnessHost(): HarnessHostState {
     if (!isRecord(message) || message.type !== 'rpc') return
     const id = message.id
     const method = String(message.method ?? '')
-    let frame: unknown
-    try {
-      frame = { type: 'rpc.result', id, ok: true, result: { result: { ok: true, value: rpcValue(method, message.payload) } } }
-    } catch (cause) {
-      frame = {
-        type: 'rpc.result',
-        id,
-        ok: true,
-        result: { result: { ok: false, error: { message: cause instanceof Error ? cause.message : String(cause) } } },
-      }
+    const deliver = (frame: unknown): void => {
+      for (const listener of replies) listener(frame)
     }
-    for (const listener of replies) listener(frame)
+    // Awaited: `bridge.fetchMedia` is asynchronous, and a frame carrying a pending
+    // Promise as its value would reach the panel as an unreadable payload.
+    void Promise.resolve()
+      .then(() => rpcValue(method, message.payload))
+      .then(
+        (value) => deliver({ type: 'rpc.result', id, ok: true, result: { result: { ok: true, value } } }),
+        (cause: unknown) => deliver({
+          type: 'rpc.result',
+          id,
+          ok: true,
+          result: { result: { ok: false, error: { message: cause instanceof Error ? cause.message : String(cause) } } },
+        }),
+      )
   }
 
   /** Push a host-initiated frame (status, resume hint, media.attach) at the panel. */

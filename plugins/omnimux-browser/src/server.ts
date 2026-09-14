@@ -24,6 +24,7 @@ import type { Duplex } from 'node:stream'
 import { WebSocket, WebSocketServer } from 'ws'
 import type { BrowserHostApi } from './host-api.ts'
 import {
+  BRIDGE_FETCH_MEDIA_METHOD,
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
   HELLO_TIMEOUT_MS,
@@ -32,8 +33,10 @@ import {
   type BridgeFrame,
   type BridgeCaps,
   type ClientFrame,
+  type MediaFetchOutcome,
   type ToolErrorCode,
 } from './protocol.ts'
+import { fetchMediaBytes } from './media-fetch.ts'
 import { SessionPurgeError } from './session-purge.ts'
 import { verifyToken } from './token.ts'
 
@@ -96,6 +99,12 @@ export interface BridgeServerDeps {
    * session through the gateway first; this only removes files.
    */
   purgeSession: (sessionId: string) => Promise<void>
+  /**
+   * Download one page media the user explicitly lit, for
+   * {@link BRIDGE_FETCH_MEDIA_METHOD}. Defaults to {@link fetchMediaBytes};
+   * the seam exists so the routing can be exercised without a live network.
+   */
+  fetchMedia?: (url: unknown) => Promise<MediaFetchOutcome>
   /**
    * Test seam: force the remote address seen by the privilege gate. The
    * sandbox cannot bind arbitrary loopback literals, so the non-loopback
@@ -461,6 +470,16 @@ export class BridgeServer {
       }
       return
     }
+    if (frame.method === BRIDGE_FETCH_MEDIA_METHOD) {
+      // The outcome travels as a SUCCESSFUL frame on purpose: a 404 or a timeout
+      // on a third-party server is an expected answer to "fetch this", and the
+      // extension port rewrites carrier-level errors into a single code, which
+      // would erase the distinction the panel's message depends on.
+      const fetchMedia = this.deps.fetchMedia ?? fetchMediaBytes
+      const outcome = await fetchMedia(mediaFetchUrl(frame.payload))
+      sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: outcome })
+      return
+    }
     try {
       const result = await this.deps.api.call({
         rpcId: frame.id,
@@ -532,6 +551,19 @@ function purgeSessionPayload(payload: unknown): string | undefined {
   const { sessionId } = payload as Record<string, unknown>
   if (typeof sessionId !== 'string' || sessionId.trim() === '') return undefined
   return sessionId
+}
+
+/**
+ * The media address out of a {@link BRIDGE_FETCH_MEDIA_METHOD} payload.
+ *
+ * Absent or unreadable input is passed through as `undefined`, which
+ * {@link fetchMediaBytes} answers with `bad-request` — the host refuses to dial
+ * anything it was not handed as a plain string, so the decision to fetch and the
+ * decision to trust the address can never disagree.
+ */
+function mediaFetchUrl(payload: unknown): unknown {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  return (payload as Record<string, unknown>).url
 }
 
 function orderedSessionId(frame: Extract<ClientFrame, { t: 'rpc' }>): string | undefined {

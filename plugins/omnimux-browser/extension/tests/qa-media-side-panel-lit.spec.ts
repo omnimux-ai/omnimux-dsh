@@ -16,6 +16,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BridgeState } from '../src/background/bridge.ts'
 import type { PanelApi, HoveredMediaMessage } from '../src/panel/api.ts'
+import { BRIDGE_FETCH_MEDIA_METHOD } from 'omnimux-browser/src/protocol.ts'
 
 let panelApi: PanelApi
 let onMediaAttach: ((media: HoveredMediaMessage) => void) | undefined
@@ -82,6 +83,32 @@ describe('QA gate: media delivered to an open side panel', () => {
         if (method === 'session.prompt') {
           promptCalls.push(payload as { content?: Array<{ type?: string; text?: string }> })
           return {} as T
+        }
+        // The bytes come over the bridge now, relayed by the stand-in host through
+        // the `fetch` this spec installs in `startPanel`.
+        if (method === BRIDGE_FETCH_MEDIA_METHOD) {
+          const url = String((payload as { url?: unknown } | undefined)?.url ?? '')
+          try {
+            const response = await fetch(url)
+            if (!response.ok) return { status: 'http-error', statusCode: response.status } as T
+            const blob = await response.blob()
+            const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer))
+              reader.onerror = () => reject(reader.error ?? new Error('blob read failed'))
+              reader.readAsArrayBuffer(blob)
+            })
+            let binary = ''
+            for (const byte of bytes) binary += String.fromCharCode(byte)
+            return {
+              status: 'ok',
+              contentType: blob.type || 'image/png',
+              byteLength: bytes.byteLength,
+              data: btoa(binary),
+            } as T
+          } catch (cause) {
+            return { status: 'failed', message: cause instanceof Error ? cause.message : String(cause) } as T
+          }
         }
         throw new Error(`unexpected RPC: ${method}`)
       },

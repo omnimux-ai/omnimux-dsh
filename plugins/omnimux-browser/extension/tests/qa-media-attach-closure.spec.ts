@@ -11,8 +11,40 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { BRIDGE_FETCH_MEDIA_METHOD, type MediaFetchOutcome } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeState } from '../src/background/bridge.ts'
 import type { PanelApi } from '../src/panel/api.ts'
+
+/**
+ * The host half of `bridge.fetchMedia`, backed by the case's own `fetch` stub.
+ *
+ * The panel no longer downloads anything itself, so the success/failure this
+ * spec is about is decided by what the stand-in host gets back.
+ */
+async function relayThroughFetch(payload: unknown): Promise<MediaFetchOutcome> {
+  const url = String((payload as { url?: unknown } | undefined)?.url ?? '')
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return { status: 'http-error', statusCode: response.status }
+    const blob = await response.blob()
+    const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer))
+      reader.onerror = () => reject(reader.error ?? new Error('blob read failed'))
+      reader.readAsArrayBuffer(blob)
+    })
+    let binary = ''
+    for (const byte of bytes) binary += String.fromCharCode(byte)
+    return {
+      status: 'ok',
+      contentType: blob.type || 'image/png',
+      byteLength: bytes.byteLength,
+      data: btoa(binary),
+    }
+  } catch (cause) {
+    return { status: 'failed', message: cause instanceof Error ? cause.message : String(cause) }
+  }
+}
 
 let panelApi: PanelApi
 
@@ -87,7 +119,7 @@ describe('QA: the hover capsule pushes media into the conversation', () => {
 
     const unsubscribe = (): void => {}
     panelApi = {
-      rpc: async <T = unknown>(method: string): Promise<T> => {
+      rpc: async <T = unknown>(method: string, payload?: unknown): Promise<T> => {
         if (method === 'session.create') return { sessionId: 'session-current' } as T
         // The host ships its image projection with the session history; the
         // panel can only mount an attachment once it has seen it.
@@ -95,6 +127,7 @@ describe('QA: the hover capsule pushes media into the conversation', () => {
           return { events: [], projections: { asOfSeq: -1, values: { imageLimits: IMAGE_LIMITS } } } as T
         }
         if (method === 'session.prompt') return {} as T
+        if (method === BRIDGE_FETCH_MEDIA_METHOD) return await relayThroughFetch(payload) as T
         throw new Error(`unexpected RPC: ${method}`)
       },
       respond: vi.fn(async () => undefined),

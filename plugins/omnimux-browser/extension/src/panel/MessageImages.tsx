@@ -122,18 +122,32 @@ export const MessageImages = memo(function MessageImages({
           {images.map((attachment, position) => {
             const source = sources[attachment.attachmentId] ?? LOADING
             const label = labelOf(attachment)
+            const failed = source.status === 'failed'
             return (
               <button
                 key={`${attachment.attachmentId}:${position}`}
                 type="button"
-                className="media-chip"
-                aria-label={copy.app.openNamedImage(label)}
-                onClick={() => { setSelected(position); setOpen(true) }}
+                className={`media-chip${failed ? ' failed' : ''}`}
+                // A failed chip retries instead of opening a viewer with nothing
+                // in it, so the compact shape answers a failure the same way the
+                // assistant's stage does.
+                aria-label={failed ? `${label} · ${copy.app.mediaLoadFailed}` : copy.app.openNamedImage(label)}
+                title={failed ? copy.app.mediaLoadFailed : undefined}
+                onClick={() => {
+                  if (failed) {
+                    retry()
+                    return
+                  }
+                  setSelected(position)
+                  setOpen(true)
+                }}
               >
                 {source.status === 'ready'
                   ? <ThumbMedia attachment={attachment} src={source.src} label={label} />
-                  : <span className="media-chip-skeleton" aria-hidden="true" />}
-                {isVideoMediaType(attachment.mediaType) && (
+                  : failed
+                    ? <span className="media-chip-failed" aria-hidden="true"><BrokenMediaIcon /></span>
+                    : <span className="media-chip-skeleton" aria-hidden="true" />}
+                {isVideoMediaType(attachment.mediaType) && !failed && (
                   <span className="thumb-play"><PlayIcon /></span>
                 )}
               </button>
@@ -237,7 +251,10 @@ export const MessageImages = memo(function MessageImages({
             <div className="image-lightbox-media" onClick={(event) => event.stopPropagation()}>
               {activeSource.status === 'ready'
                 ? <StageMedia attachment={active} src={activeSource.src} label={activeLabel} />
-                : null}
+                // Never blank: a viewer opened on a failure has to say so.
+                : <span className="image-lightbox-failed">
+                  {activeSource.status === 'failed' ? copy.app.mediaLoadFailed : copy.app.imageLoading}
+                </span>}
             </div>
             <button
               type="button"
@@ -358,6 +375,17 @@ function PlayIcon(): React.JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
       <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+/** Marks a thumb whose bytes could not be fetched; the chip retries on click. */
+function BrokenMediaIcon(): React.JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="m6 17 4.5-5 3 3 2-2 2.5 4" />
+      <path d="M4 4l16 16" />
     </svg>
   )
 }
