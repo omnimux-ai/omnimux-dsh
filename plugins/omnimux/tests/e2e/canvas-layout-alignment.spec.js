@@ -58,6 +58,9 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
       const stylesSrc = readFileSync(fileURLToPath(new URL('../../src/client/media-viewer/styles.js', import.meta.url)), 'utf8');
       assert.match(stylesSrc, /\.omx-chat-media-tail__card\s*\{[^}]*border:\s*none\s*!important/);
       assert.match(stylesSrc, /\.omx-mv-display\s*\{[^}]*border:\s*none\s*!important/);
+      // 8. Verify right thumbnails rail for multi-image switching
+      assert.match(stylesSrc, /\.omx-mv-thumbnails-rail\s*\{[^}]*position:\s*absolute/);
+      assert.match(stylesSrc, /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border-color:\s*var\(--dsw-alias-brand-primary\)/);
     });
   });
 });

@@ -185,71 +185,76 @@ export const MEDIA_VIEWER_CSS = `
   position: relative;
 }
 
-/* 时间线模式：强制隐藏左侧小图栏！ */
-.omx-mv-stage-wrapper[data-subview="grid"] .omx-mv-filmstrip {
-  display: none !important;
-}
-
-/* 大图单图模式：展开左侧小图胶卷 */
-.omx-mv-stage-wrapper[data-subview="single"] .omx-mv-filmstrip {
-  display: flex !important;
-}
-
 /* ========================================================
-   3. 左侧纵向小图胶卷栏 (Filmstrip, 仅在大图模式显示)
+   3. 单图大画布与右侧多图候选滚动栏 (Single Stage & Thumbnails Rail)
    ======================================================== */
-.omx-mv-filmstrip {
-  width: 70px;
-  background: var(--dsw-alias-bg-base);
-  border-right: 1px solid var(--dsw-alias-border-l2);
+.omx-mv-single-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.omx-mv-thumbnails-rail {
+  position: absolute;
+  top: 24px;
+  right: 28px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 14px 0;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 12px;
+  max-height: calc(100vh - 220px);
   overflow-y: auto;
-  z-index: 5;
+  overflow-x: hidden;
+  padding: 4px;
+  z-index: 10;
+  scrollbar-width: thin;
 }
 
-.omx-mv-filmstrip__item {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
+.omx-mv-thumbnails-rail__item {
+  width: 108px;
+  height: 72px;
+  border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  position: relative;
   border: 2px solid transparent;
   background: var(--dsw-alias-bg-layer-2);
-  transition: all 0.15s;
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 缩略图卡片微投影 */
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
+  position: relative;
 }
 
-.omx-mv-filmstrip__item:hover {
-  border-color: var(--dsw-alias-border-l3);
-}
-
-.omx-mv-filmstrip__item.active {
+.omx-mv-thumbnails-rail__item:hover {
+  transform: scale(1.02);
   border-color: var(--dsw-alias-brand-primary);
 }
 
-.omx-mv-filmstrip__img {
+.omx-mv-thumbnails-rail__item.active {
+  border-color: var(--dsw-alias-brand-primary) !important; /* 对标截图高亮蓝框 */
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary), 0 6px 20px var(--dsw-alias-bg-layer-1) !important; /* exempt-ui03: 选中态光晕 */
+  transform: scale(1.02);
+}
+
+.omx-mv-thumbnails-rail__img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.omx-mv-filmstrip__badge {
+.omx-mv-thumbnails-rail__badge {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
+  bottom: 3px;
+  right: 3px;
   background: var(--dsw-alias-bg-base);
-  border-radius: 3px;
-  padding: 1px 3px;
-  font-size: 9px;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 10px;
   color: var(--dsw-alias-label-primary);
-  line-height: 1;
+  line-height: 1.2;
   font-weight: 500;
 }
 

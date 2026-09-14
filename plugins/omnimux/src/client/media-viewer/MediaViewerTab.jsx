@@ -156,28 +156,8 @@ export function MediaViewerTab({ scope }) {
 
       {/* 主舞台区 */}
       <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
-        {/* 左侧胶卷栏：时间线模式下被 CSS 规则完全隐藏，大图模式下展开 */}
-        <div className="omx-mv-filmstrip">
-          {mediaList.map((item) => (
-            <div
-              key={item.id}
-              className={`omx-mv-filmstrip__item ${item.id === activeItem?.id ? 'active' : ''}`}
-              onClick={() => handleSelectMedia(item)}
-              role="button"
-              tabIndex={0}
-            >
-              <img src={item.url} alt={item.title || '缩略图'} className="omx-mv-filmstrip__img" />
-              {item.type === 'video' && item.duration ? (
-                <div className="omx-mv-filmstrip__badge">{item.duration}</div>
-              ) : null}
-            </div>
-          ))}
-          {isGenerating ? (
-            <div className="omx-mv-filmstrip__item">
-              <GeneratingStateCard />
-            </div>
-          ) : null}
-        </div>
+
+
 
         {/* 视口展示区 */}
         <div className="omx-mv-viewport">
@@ -222,13 +202,48 @@ export function MediaViewerTab({ scope }) {
               ) : null}
             </div>
           ) : (
-            /* 单图/大图居中视口 */
-            <div className="omx-mv-display">
-              {activeItem?.type === 'video' ? (
-                <video src={activeItem.url} controls autoPlay playsInline />
-              ) : (
-                <img src={activeItem?.url} alt={activeItem?.title || '预览'} />
-              )}
+            /* 单图大画布展示区与右侧多图纵向候选栏 (完全对标截图) */
+            <div className="omx-mv-single-stage">
+              <div className="omx-mv-display">
+                {activeItem?.type === 'video' ? (
+                  <video src={activeItem.url} controls autoPlay playsInline />
+                ) : (
+                  <img src={activeItem?.url} alt={activeItem?.title || '预览'} />
+                )}
+              </div>
+
+              {/* 右侧候选多图纵向滚动切换栏 (当生成多图时收敛浮现) */}
+              {mediaList.length > 1 ? (
+                <div className="omx-mv-thumbnails-rail" title="上下滚动切换浏览">
+                  {mediaList.map((item) => {
+                    const isSelected = item.id === activeItem?.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`omx-mv-thumbnails-rail__item ${isSelected ? 'active' : ''}`}
+                        onClick={() => handleSelectMedia(item)}
+                        role="button"
+                        tabIndex={0}
+                        title={item.title || '切换图片'}
+                      >
+                        <img
+                          src={item.url}
+                          alt={item.title || '缩略图'}
+                          className="omx-mv-thumbnails-rail__img"
+                        />
+                        {item.type === 'video' && item.duration ? (
+                          <div className="omx-mv-thumbnails-rail__badge">{item.duration}</div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {isGenerating ? (
+                    <div className="omx-mv-thumbnails-rail__item">
+                      <GeneratingStateCard />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
