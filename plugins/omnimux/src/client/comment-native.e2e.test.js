@@ -67,8 +67,8 @@ try {
  await p.click('text="Ungrouped"');
  // Fresh profile contains only the seed history under Ungrouped.
  await p.click('loc=css:[role=treeitem] >> nth=1');
- await p.waitForFunction(()=>document.querySelector('[title="点击进入画布模式"]'),undefined,{timeout:10000});
- await p.click('loc=css:[title="点击进入画布模式"]');
+ await p.waitForFunction(()=>document.querySelector('[title="点击进入图像生成"]'),undefined,{timeout:10000});
+ await p.click('loc=css:[title="点击进入图像生成"]');
  await p.click('text="添加评论"');
  // Canvas has no accessible identifier in the frozen implementation: observed selector.
  await p.click('loc=css:.omx-mv-display');

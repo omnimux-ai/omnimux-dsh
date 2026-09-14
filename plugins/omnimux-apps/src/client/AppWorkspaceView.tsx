@@ -490,7 +490,7 @@ export const AppWorkspaceView: React.FC<AppWorkspaceViewProps> = memo(({
               </div>
               <div className="omx-apps-empty-title">请选择或发布 AI 应用</div>
               <div className="omx-apps-empty-desc">
-                从上方选择已发布的应用，或在工作流画布中点击顶栏「发布为 AI 应用」。
+                从上方选择已发布的应用，或在创作画布中点击顶栏「发布为 AI 应用」。
               </div>
             </div>
           </div>

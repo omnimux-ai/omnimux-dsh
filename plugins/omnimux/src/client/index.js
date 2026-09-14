@@ -253,7 +253,7 @@ export function apply(ctx) {
           })
           const registerMediaViewer = () => sidebar.registerTab({
             id: MEDIA_VIEWER_TAB_ID,
-            title: () => t('mediaViewer.tabTitle') || '图片浏览',
+            title: () => t('mediaViewer.tabTitle') || '图像生成',
             order: 7,
             hidden: false,
             single: true,

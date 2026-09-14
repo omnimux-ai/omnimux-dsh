@@ -486,7 +486,7 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     }
   }
 
-  const title = typeof ctx.t === 'function' ? ctx.t('details.canvasTab') : '画布'
+  const title = typeof ctx.t === 'function' ? ctx.t('details.canvasTab') : '创作画布'
   service.openTab({
     type: CANVAS_TAB_ID,
     id: CANVAS_TAB_ID,

@@ -192,7 +192,7 @@ test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generat
   assert.equal(cards[0].querySelector('.omx-chat-media-tail__actions'), null, 'Old bottom actions bar must be removed');
   const canvasBtn = cards[0].querySelector('.omx-chat-media-tail__canvas-btn');
   assert.ok(canvasBtn, 'Pill canvas button must exist on card');
-  assert.match(canvasBtn.textContent || '', /画布/, 'Canvas button must display "画布"');
+  assert.match(canvasBtn.textContent || '', /图像生成/, 'Canvas button must display "图像生成"');
 
   // 4. Verify clicking the canvas button switches to 2col canvas mode and collapses conversation
   const store = getGlobalMediaViewerStore();

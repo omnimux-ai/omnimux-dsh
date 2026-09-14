@@ -98,7 +98,7 @@ export function useCanvasIngestion(session: CanvasSession | null | undefined) {
       // Ensure a project exists
       const projectStore = useProjectStore.getState();
       if (!projectStore.hasOpenProject) {
-        projectStore.createNewProject(nodeTitle || "画布视频合成");
+        projectStore.createNewProject(nodeTitle || "创作画布视频合成");
       }
 
       if (!upstreamInputs) return;

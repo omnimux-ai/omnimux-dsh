@@ -51,7 +51,7 @@ export function mountWorkbenchTools(ctx, deps) {
   ctx.tools?.register({
     name: 'workbench_get_active_view',
     description:
-      '获取当前右侧工作台（better-sidebar）激活的选项卡、子视图与用户选中的实体列表，感知用户界面视口。画布页返回 view.extra.workspaceId 时可直接作为 workflow_* 的 workspace_id。',
+      '获取当前右侧工作台（better-sidebar）激活的选项卡、子视图与用户选中的实体列表，感知用户界面视口。创作画布页返回 view.extra.workspaceId 时可直接作为 workflow_* 的 workspace_id。',
     parameters: {
       type: 'object',
       properties: {},
