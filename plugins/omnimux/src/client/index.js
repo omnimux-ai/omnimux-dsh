@@ -201,6 +201,7 @@ export function apply(ctx) {
     id: 'omnimux-attachment-tray',
     priority: -10,
     locale: NS,
+    inject: () => ({ getSessions: () => guideSessions }),
   }, AttachmentTray))
 
   ctx.effect(() => {

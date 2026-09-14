@@ -4,6 +4,7 @@ import { createWorkbenchMailbox } from '../workbench/mailbox.js'
 import { registerWorkbenchHttpRoutes } from '../workbench/http-routes.js'
 import { mountWorkbenchTools } from '../workbench/tools.js'
 import { mountWorkbenchContextInjector } from '../workbench/context-injector.js'
+import { mountCommentInjector } from '../workbench/comment-injector.js'
 import { mountContractsPrompt } from '../agents/contracts-loader.js'
 import { executeOmnimuxAudio } from '../media/audio.js'
 import { executeOmnimuxImage } from '../media/image.js'
@@ -199,6 +200,7 @@ export function apply(ctx, config = {}) {
   })
   mountPresetsTools(ctx)
   mountWorkbenchContextInjector(ctx, { mailbox })
+  if (typeof ctx.on === 'function') mountCommentInjector(ctx)
   mountContractsPrompt(ctx)
   if (typeof ctx.provide === 'function') {
     ctx.provide('modelCatalog', { list: listCatalog })
