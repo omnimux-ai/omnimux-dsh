@@ -5357,36 +5357,49 @@ textarea:focus-visible {
   margin-top: 4px;
 }
 
-.clean-add-btn {
+.composer-actions button.clean-add-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
+  width: 34px !important;
+  height: 34px !important;
   border-radius: 50% !important;
   border: none !important;
   background: transparent !important;
   color: var(--muted) !important;
   cursor: pointer !important;
   box-shadow: none !important;
+  padding: 0 !important;
+  flex: 0 0 34px !important;
   transition: background-color 0.18s ease, color 0.18s ease, transform 0.15s ease !important;
 }
 
-:root[data-theme="dark"] .clean-add-btn {
+:root[data-theme="dark"] .composer-actions button.clean-add-btn {
   background: transparent !important;
   border: none !important;
   color: #71767b !important;
 }
 
-.clean-add-btn:hover:not(:disabled) {
+.composer-actions button.clean-add-btn:hover:not(:disabled) {
   color: var(--ink-strong) !important;
   background: rgba(255, 255, 255, 0.08) !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-.clean-add-btn:active:not(:disabled) {
+.composer-actions button.clean-add-btn:active:not(:disabled) {
   transform: scale(0.94) !important;
+}
+
+/* 解决附件图标发糊：强制设定高清矢量尺寸与独立线宽，隔离全局样式污染 */
+.composer-actions button.clean-add-btn svg {
+  width: 19px !important;
+  height: 19px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
 }
 
 .mode-capsule-btn {
@@ -5415,44 +5428,62 @@ textarea:focus-visible {
   opacity: 0.6;
 }
 
-/* design.md 圆形发送钮规范 (Dark 纯白圆底黑箭头 / Light 纯黑圆底白箭头 零紫色光晕) */
+/* 解决发送按钮变方：高特异性复合选择器强力锁定纯白正圆形 (50%)，彻底根除 8px 压制 */
+.composer-actions button.clean-send-btn,
 .clean-send-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: none;
-  background: #e2e8f0;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  padding: 0 !important;
+  flex: 0 0 36px !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+:root[data-theme="dark"] .composer-actions button.clean-send-btn,
 :root[data-theme="dark"] .clean-send-btn {
-  background: #24252c;
-  color: #71717a;
+  background: #24252c !important;
+  color: #71717a !important;
 }
 
+.composer-actions button.clean-send-btn.active:not(:disabled),
 .clean-send-btn.active:not(:disabled) {
-  background: var(--ink-strong);
-  color: var(--canvas);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: var(--ink-strong) !important;
+  color: var(--canvas) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
+:root[data-theme="dark"] .composer-actions button.clean-send-btn.active:not(:disabled),
 :root[data-theme="dark"] .clean-send-btn.active:not(:disabled) {
-  background: #ffffff;
-  color: #09090b;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  background: #ffffff !important;
+  color: #09090b !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
 }
 
+.composer-actions button.clean-send-btn.active:not(:disabled):hover,
 .clean-send-btn.active:not(:disabled):hover {
-  transform: scale(1.05);
+  transform: scale(1.06) !important;
+  background: #f4f4f5 !important;
 }
 
+.composer-actions button.clean-send-btn.active:not(:disabled):active,
 .clean-send-btn.active:not(:disabled):active {
-  transform: scale(0.95);
+  transform: scale(0.94) !important;
+}
+
+.composer-actions button.clean-send-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  stroke: currentColor !important;
+  stroke-width: 2.4 !important;
+  fill: none !important;
 }
 
 /* Settings Scale Bar */
