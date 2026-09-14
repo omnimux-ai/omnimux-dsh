@@ -11,6 +11,7 @@
 
 import { getFullContext, detectPlatform } from './page-sensor.ts'
 import { fillHostInput } from './dom-fill.ts'
+import { fillFormFields } from './form-draft.ts'
 import { sniffViewportMedia } from './media-sniffer.ts'
 import { BRIDGE_MESSAGE, CONTENT_MESSAGE_SOURCE, TIMING } from './media-hover/messages.ts'
 import { BRAND_GHOST_PATH } from './media-hover/overlay-icons.ts'
@@ -490,6 +491,17 @@ export function initFabCompanion(): void {
       return
     }
 
+    if (type === 'FILL_STRUCTURED_DRAFT') {
+      const fields = e.data.fields || []
+      const result = await fillFormFields(document, fields)
+      iframe.contentWindow?.postMessage({
+        source: 'omnimux-content-script',
+        type: 'FILL_STRUCTURED_DRAFT_RESULT',
+        payload: result,
+      }, '*')
+      return
+    }
+
     if (type === 'FILL_HOST_DOM') {
       const platform = detectPlatform()
       const result = await fillHostInput(text || '', platform)
@@ -562,6 +574,11 @@ export function initFabCompanion(): void {
 
   // Also respond to runtime messages from native side panel
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+    if (request.action === 'FILL_STRUCTURED_DRAFT') {
+      const fields = request.payload?.fields || []
+      void fillFormFields(document, fields).then((res) => sendResponse(res))
+      return true
+    }
     if (request.action === 'FILL_HOST_DOM') {
       const textToFill = (request.payload && request.payload.text) || request.text || ''
       const platform = detectPlatform()

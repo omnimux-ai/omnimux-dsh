@@ -14,6 +14,7 @@ import { PANEL_COPY } from './strings.ts'
 /** One rendered conversation row. */
 export interface Row {
   seq: number
+  sourceSeq?: number
   kind: 'user' | 'assistant' | 'tool' | 'info'
   text: string
   images?: ImageAttachmentRef[]
@@ -163,7 +164,7 @@ export function rowFromEvent(event: SessionEventView): Row | null {
       const images = imageRefsFromBlocks(blocks)
       return text.trim() === '' && images.length === 0
         ? null
-        : { seq: 0, kind: 'assistant', text, ...(images.length === 0 ? {} : { images }) }
+        : { seq: 0, kind: 'assistant', text, status: 'complete', sourceSeq: event.seq, ...(images.length === 0 ? {} : { images }) }
     }
     default:
       return null
@@ -191,6 +192,7 @@ export function appendLiveRow(
   text: string,
   seq: number,
   images?: ImageAttachmentRef[],
+  provenance?: Pick<Row, 'status' | 'sourceSeq'>,
 ): Row[] {
   if (kind === 'tool') {
     const last = rows[rows.length - 1]
@@ -199,7 +201,7 @@ export function appendLiveRow(
     }
     return [...rows, { seq, kind, text, status: 'running' }]
   }
-  return [...rows, { seq, kind, text, ...(images === undefined || images.length === 0 ? {} : { images }) }]
+  return [...rows, { seq, kind, text, ...(provenance === undefined ? {} : { status: provenance.status, sourceSeq: provenance.sourceSeq }), ...(images === undefined || images.length === 0 ? {} : { images }) }]
 }
 
 /** 标记最后一行工具调用已完成（并入，不新增行）。 */
