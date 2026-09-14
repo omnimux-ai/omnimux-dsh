@@ -20,6 +20,48 @@ import {
   subscribeSplitCompactLayout,
 } from './split-compact-layout.js'
 
+test('native presentation releases only closed or same-session fullscreen exits', async () => {
+  dom = new JSDOM('<html><body><div class="dshDesktopFrame" data-rightbar-collapsed="true"><div data-sidebar-right-panel="push" data-sidebar-right-open></div></div></body></html>')
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  let hidden = true
+  let sessionId = 'one'
+  const writes = []
+  dom.window.__omnimuxWorkbench = {
+    getSnapshot: () => ({ sessionId }),
+    getConversationCollapsed: () => hidden,
+    setConversationCollapsed: value => { hidden = value; writes.push(value) },
+    setFocus: () => assert.fail('observer must not command sidebar focus'),
+  }
+  const off = subscribeSplitCompactLayout(() => {})
+  const panel = dom.window.document.querySelector('[data-sidebar-right-panel]')
+  const settle = () => new Promise(resolve => setImmediate(resolve))
+  await settle()
+  assert.equal(hidden, true, 'open push retains explicit hide despite stale collapsed frame')
+  panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
+  await settle()
+  assert.equal(hidden, true)
+  panel.setAttribute('data-sidebar-right-panel', 'push')
+  await settle()
+  assert.equal(hidden, false, 'native mode attribute alone triggers restore')
+  hidden = true
+  panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
+  await settle()
+  sessionId = 'two'
+  panel.setAttribute('data-sidebar-right-panel', 'push')
+  await settle()
+  assert.equal(hidden, true, 'session switch is not a fullscreen exit')
+  panel.removeAttribute('data-sidebar-right-open')
+  await settle()
+  assert.equal(hidden, false)
+  assert.deepEqual(writes, [false, false])
+  off()
+  hidden = true
+  panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
+  await settle()
+  assert.equal(hidden, true, 'disposed observer cannot change intent')
+})
+
 const previous = {
   window: globalThis.window,
   document: globalThis.document,

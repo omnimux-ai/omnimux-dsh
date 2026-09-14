@@ -723,8 +723,8 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
 
     // 3. Fullscreen mode expands to true full viewport when left sidebar is collapsed
     assert.match(css, /html\[data-omnimux-left-collapsed\]\s+\[data-sidebar-right-panel="fullscreen"\]/)
-    assert.match(css, /left:\s*0\s*!important/)
-    assert.match(css, /width:\s*100vw\s*!important/)
+    assert.match(css, /left:\s*var\(--omnimux-sidebar-width,\s*0px\)\s*!important/)
+    assert.match(css, /width:\s*calc\(100vw\s*-\s*var\(--omnimux-sidebar-width,\s*0px\)\)\s*!important/)
 
     // 4. Sidebar surface remains raised above fullscreen panel
     assert.match(css, /\.dshDesktopSidebarSurface/)
@@ -734,7 +734,7 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
     assert.match(css, /padding-left:\s*84px\s*!important/)
   })
 
-  it('syncNativeRightbarControls orders fullscreen before split in both fullscreen and push mode', () => {
+  it('syncNativeRightbarControls preserves native mode and split control order', () => {
     const doc = setup(`<!doctype html><html><body>
       <div data-dockkit-strip-chrome="true">
         <button data-dockkit-split-button="true" aria-label="分栏">Split</button>
@@ -744,8 +744,8 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
     syncNativeRightbarControls(doc)
     const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"]')
     const buttons = Array.from(chrome.querySelectorAll('button'))
-    assert.equal(buttons[0].getAttribute('data-sidebar-right-mode'), 'push')
-    assert.equal(buttons[1].getAttribute('data-dockkit-split-button'), 'true')
+    assert.equal(buttons[0].getAttribute('data-dockkit-split-button'), 'true')
+    assert.equal(buttons[1].getAttribute('data-sidebar-right-mode'), 'push')
   })
 })
 
@@ -811,8 +811,39 @@ describe('left rail width poisoning (issue #1618)', () => {
     assert.equal(computeChromeLayout(doc).leftRailW, 0)
   })
 
+  it('preserves the native folded rail while legacy collapsed layouts remain zero', () => {
+    const { doc } = setupRailFrame({ inlineTrack: '56px', railWidth: 56 })
+    const frame = doc.querySelector('.dshDesktopFrame')
+    frame.setAttribute('data-sidebar-collapsed', '')
+    const panel = doc.createElement('aside')
+    panel.setAttribute('data-sidebar-right-panel', 'push')
+    frame.append(panel)
+    for (const frameClass of ['dshDesktopFrame', 'frame_standard']) {
+      frame.className = frameClass
+      for (const closed of ['true', 'false']) {
+        frame.setAttribute('data-rightbar-collapsed', closed)
+        applyTopbarToggleCssVars(doc)
+        assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '56px')
+      }
+    }
+    panel.remove()
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
+  })
+
   it('defers ResizeObserver writes out of the delivery cycle', () => {
     assert.match(moduleSource, /new ResizeObserverClass\(scheduleSync\)/)
+  })
+
+  it('keeps the shell rail width when rightbar closure forces the grid without hiding conversation', () => {
+    const { doc, col } = setupRailFrame({ inlineTrack: '280px', railWidth: 239 })
+    doc.querySelector('.dshDesktopFrame').setAttribute('data-rightbar-collapsed', 'true')
+    assert.equal(doc.documentElement.hasAttribute(COLLAPSED_MARKER), false)
+    for (let i = 0; i < 20; i++) {
+      Object.defineProperty(col, 'offsetWidth', { value: 239 - i * 3, configurable: true })
+      applyTopbarToggleCssVars(doc)
+      assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '280px')
+    }
   })
 
   it('holds the rail steady across 20 feedback iterations (loop closed)', () => {
@@ -878,24 +909,22 @@ describe('rightbar toggle dedupe (issue #1622)', () => {
   const copies = (doc) => Array.from(doc.querySelectorAll('button[data-original-parent]'))
   const controlCount = (doc) => doc.querySelectorAll('button[data-sidebar-right-toggle], button[data-sidebar-right-expand]').length
 
-  it('keeps exactly one pinned control while the right bar is collapsed', () => {
+  it('does not relocate native controls when the right bar is collapsed', () => {
     const doc = makeDoc({ collapsed: true, staleCopies: ['toggle', 'expand'] })
     syncNativeRightbarControls(doc)
 
-    assert.equal(copies(doc).length, 1, '收起态只应保留一份拷贝')
-    assert.equal(controlCount(doc), 1, '同一动作的可见控件只能有一份')
-    const kept = copies(doc)[0]
-    assert.equal(kept.parentElement, doc.body)
-    assert.match(kept.getAttribute('style') || '', /position:\s*fixed/)
-    assert.match(kept.getAttribute('style') || '', /right:\s*8px/)
+    assert.equal(copies(doc).length, 2, 'synchronization must not remove React-owned nodes')
+    assert.equal(controlCount(doc), 3)
+    assert.ok(doc.querySelector('[data-dockkit-strip-chrome] button[data-sidebar-right-toggle]'))
+    assert.equal(copies(doc)[0].getAttribute('style'), null)
   })
 
-  it('recycles our copies once the native control is rendered again', () => {
+  it('preserves framework-owned nodes until reload', () => {
     const doc = makeDoc({ collapsed: false, staleCopies: ['toggle', 'expand'] })
     syncNativeRightbarControls(doc)
 
-    assert.equal(copies(doc).length, 0, '展开态且原生节点在位时，拷贝必须全部回收')
-    assert.equal(controlCount(doc), 1, '只应剩下原生那一份')
+    assert.equal(copies(doc).length, 2, 'legacy moved nodes require reload, not React tree mutation')
+    assert.equal(controlCount(doc), 3)
     assert.ok(doc.querySelector('[data-dockkit-strip-chrome="true"] button[data-sidebar-right-toggle]'))
   })
 
@@ -906,7 +935,8 @@ describe('rightbar toggle dedupe (issue #1622)', () => {
     for (let round = 1; round <= 3; round += 1) {
       syncNativeRightbarControls(doc)
 
-      // 界面重画：原生容器里生成一个新的原生按钮（旧拷贝仍在 body 上）
+      // React replaces its own native control; sync must not retain a moved copy.
+      doc.querySelector('[data-dockkit-strip-chrome="true"]').replaceChildren()
       const fresh = doc.createElement('button')
       fresh.setAttribute('data-sidebar-right-toggle', '')
       doc.querySelector('[data-dockkit-strip-chrome="true"]').appendChild(fresh)
@@ -951,44 +981,32 @@ describe('rightbar toggle seating in the header row (issue #1664)', () => {
 
   const seatedControl = (doc) => doc.querySelector('button[data-sidebar-right-toggle][data-original-parent], button[data-sidebar-right-expand][data-original-parent]')
 
-  it('seats the collapsed control in the corner slot as the row right-most item', () => {
+  it('leaves the corner seat to its native expand component', () => {
     const doc = makeShellDoc()
     syncNativeRightbarControls(doc)
 
     const corner = doc.querySelector('[data-conversation-header-corner]')
     const kept = seatedControl(doc)
-    assert.ok(kept, '收起态应把控件放进标题行')
-    assert.equal(kept.parentElement, corner, '首选落点是标题行最右槽位')
-    assert.equal(corner.lastElementChild, kept, '行内最右：必须是槽位的最后一个子节点')
-
-    const utilities = doc.querySelector('[class*="headerUtilities"]')
-    assert.ok(utilities.compareDocumentPosition(kept) & 4, 'utilities 组必须在它左边')
-
-    const style = kept.getAttribute('style') || ''
-    assert.match(style, /position:\s*static/)
-    assert.match(style, /right:\s*auto/)
-    assert.match(style, /top:\s*auto/)
-    assert.match(style, /z-index:\s*auto/)
-    assert.doesNotMatch(style, /position:\s*fixed/, '不得再用固定定位压住相邻控件')
-    assert.doesNotMatch(style, /right:\s*8px/, '不得再写死最右偏移')
+    assert.equal(kept, null, 'native toggle must not be moved into the expand seat')
+    assert.equal(corner.querySelector('button'), null)
+    assert.ok(doc.querySelector('[data-dockkit-strip-chrome] [data-sidebar-right-toggle]'))
   })
 
-  it('falls back to the utilities row when the corner slot is absent', () => {
+  it('does not insert controls into unrelated utilities when corner is absent', () => {
     const doc = makeShellDoc({ corner: false })
     syncNativeRightbarControls(doc)
 
     const utilities = doc.querySelector('[class*="headerUtilities"]')
     const kept = seatedControl(doc)
-    assert.ok(kept, '没有 corner 时仍要进入标题行')
-    assert.equal(kept.parentElement, utilities)
-    assert.equal(utilities.lastElementChild, kept, '退回 utilities 时同样落在最右')
-    assert.doesNotMatch(kept.getAttribute('style') || '', /position:\s*fixed/)
+    assert.equal(kept, null)
+    assert.equal(utilities.children.length, 1, 'Finder utility remains untouched')
+    assert.ok(doc.querySelector('[data-dockkit-strip-chrome] [data-sidebar-right-toggle]'))
   })
 
-  it('recycles the seated control when the right bar expands again', () => {
+  it('keeps native placement unchanged across expansion', () => {
     const doc = makeShellDoc()
     syncNativeRightbarControls(doc)
-    assert.ok(seatedControl(doc), '前置条件：收起态已入座')
+    assert.equal(seatedControl(doc), null, 'native controls remain in their owning tree')
 
     doc.querySelector('.dshDesktopFrame').removeAttribute('data-rightbar-collapsed')
     syncNativeRightbarControls(doc)
