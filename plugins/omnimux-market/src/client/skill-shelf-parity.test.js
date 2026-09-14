@@ -4,13 +4,18 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import {
+  PICKER_TABS,
   PLAZA_HIDDEN_TABS,
   PLAZA_TABS,
   SKILL_SHELF_TAGS,
   SKILL_SHELF_TAXONOMY,
+  SUITE_SHELF_TAG,
   filterPickerItems,
   filterPlazaShelf,
+  isLocalOnlyShelfTag,
+  matchesDomainTag,
 } from './skill-picker-logic.js'
+import { WORKSHOP_DOMAIN_ORDER } from './plaza/plazaUtils.js'
 
 /**
  * 单一真源守卫（Issue #504）：UI 片段经 concat 拼为单 factory，
@@ -82,12 +87,40 @@ describe('skill shelf single source of truth', () => {
     ]
     for (const tag of ['电商', ...SKILL_SHELF_TAGS, '未知分类', '']) {
       const viaPlaza = filterPlazaShelf(fixture, tag)
+      // 本地目录专属分类（套件）只在货架存在：选择器数据源是远端结果，没有对应页签，
+      // 未知页签会回落「全部」，双向对拍在这一项上不成立。只断言货架侧的过滤语义。
+      if (isLocalOnlyShelfTag(tag)) {
+        assert.deepEqual(viaPlaza.map((it) => it.slug), [], `tag=${tag}`)
+        assert.equal(PICKER_TABS.some((row) => row.id === tag), false, `${tag} must not become a picker tab`)
+        continue
+      }
       const viaPicker = tag && SKILL_SHELF_TAGS.includes(tag)
         ? filterPickerItems(fixture, tag)
         : filterPickerItems(fixture, 'all').filter((it) => !tag || filterPlazaShelf([it], tag).length)
       assert.deepEqual(viaPlaza.map((it) => it.slug), viaPicker.map((it) => it.slug), `tag=${tag}`)
     }
     assert.ok(SKILL_SHELF_TAXONOMY.length > 0)
+  })
+
+  it('suite tag stays local-only and never leaks into skill domains', () => {
+    assert.ok(SKILL_SHELF_TAGS.includes(SUITE_SHELF_TAG))
+    assert.equal(isLocalOnlyShelfTag(SUITE_SHELF_TAG), true)
+    const suite = { slug: 'suite-a', kind: 'suite', tags: ['社媒创作'] }
+    const skill = { slug: 'skill-anim', kind: 'skill', tags: ['动画'] }
+    assert.equal(matchesDomainTag(suite, SUITE_SHELF_TAG), true)
+    assert.equal(matchesDomainTag(suite, '动画'), false)
+    assert.equal(matchesDomainTag(skill, SUITE_SHELF_TAG), false)
+    assert.deepEqual(filterPlazaShelf([skill, suite], SUITE_SHELF_TAG).map((it) => it.slug), ['suite-a'])
+    assert.deepEqual(filterPlazaShelf([skill, suite], '动画').map((it) => it.slug), ['skill-anim'])
+    assert.deepEqual(filterPickerItems([skill, suite], '动画').map((it) => it.slug), ['skill-anim'])
+  })
+
+  it('plaza domain contract comment matches both classification sources', () => {
+    const match = plazaSrc.match(/\/\/ 领域契约：(.+)/)
+    assert.ok(match, 'skill-plaza.js must declare the domain contract line')
+    const declared = match[1].split(',').map((id) => id.trim()).filter(Boolean)
+    assert.deepEqual(declared, [...WORKSHOP_DOMAIN_ORDER])
+    assert.deepEqual([...declared].sort(), SKILL_SHELF_TAXONOMY.map((row) => row.id).sort())
   })
 })
 

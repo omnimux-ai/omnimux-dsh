@@ -5,6 +5,7 @@ import {
   WorkshopSwitch,
   resolveItemDesc,
   resolveItemTitle,
+  suiteCompositionText,
   WORKSHOP_DOMAIN_ORDER,
 } from './plazaUtils.js';
 
@@ -47,6 +48,7 @@ export function renderRegularCard(item, ...args) {
   const h = customH || getH();
   const { title, desc } = resolveCardMeta(item, tr);
   const isChecked = Boolean(item.installed && item.enabled !== false);
+  const isSuite = item.kind === 'suite';
   const onCardClick = () => { if (onOpen) onOpen(item); };
   const onSwitchChange = () => { if (onToggle) onToggle(item); };
 
@@ -56,9 +58,11 @@ export function renderRegularCard(item, ...args) {
         h('div', { className: 'regular-card-title', title }, title),
         item.downloads ? h('span', { className: 'regular-card-dl' }, getFmt(item.downloads, tr)) : null,
       ),
+      isSuite ? h('div', { className: 'regular-card-composition' }, suiteCompositionText(item, tr)) : null,
       h('div', { className: 'regular-card-desc' }, desc),
     ),
-    h(WorkshopSwitch, { checked: isChecked, onChange: onSwitchChange }),
+    // 套件从详情页安装，卡片右侧不挂技能开关（避免用技能安装链路处理套件）。
+    isSuite ? null : h(WorkshopSwitch, { checked: isChecked, onChange: onSwitchChange }),
   );
 }
 

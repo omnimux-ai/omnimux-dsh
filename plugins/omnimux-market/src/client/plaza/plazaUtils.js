@@ -125,7 +125,9 @@ export function WorkshopSwitch(props) {
   }, h('div', { className: 'switch-bg' + (checked ? ' on' : '') }, h('div', { className: 'switch-knob' })));
 }
 
+/** 套件域置首位：分类栏紧跟「全部」之后展示，「我的」下拉亦紧随「全部分类」。 */
 export const WORKSHOP_DOMAIN_ORDER = [
+  '套件',
   '短剧漫剧',
   '专业影视',
   '动画',
@@ -136,6 +138,24 @@ export const WORKSHOP_DOMAIN_ORDER = [
   '音频音乐',
   '平台工具',
 ];
+
+/** 套件构成计数：三个清单缺省即 0，不做隐藏、不伪造。 */
+export function resolveSuiteCounts(item) {
+  const suite = (item && item.suite) || {};
+  const count = (list) => (Array.isArray(list) ? list.length : 0);
+  return { skills: count(suite.skills), rules: count(suite.rules), agents: count(suite.agents) };
+}
+
+/** 套件卡构成行文案：「技能 N · 规则 N · Agent N」。 */
+export function suiteCompositionText(item, tr) {
+  const { skills, rules, agents } = resolveSuiteCounts(item);
+  const label = (key, fallback) => (typeof tr === 'function' ? (tr(key) || fallback) : fallback);
+  return [
+    label('suite.count.skills', '技能') + ' ' + skills,
+    label('suite.count.rules', '规则') + ' ' + rules,
+    label('suite.count.agents', 'Agent') + ' ' + agents,
+  ].join(' · ');
+}
 
 export const DEFAULT_MARKET_EXPERTS = [
   { id: 'shopee-ops-expert', name: 'Shopee运营专家', nameEn: 'Shopee Ops Expert', description: '负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。', descriptionEn: 'Shopee operation specialist for market, product, shop, brand and keyword analysis.', avatar: 'catalog/covers/expert-shopee-ops.png', status: 'enabled' },
@@ -225,6 +245,37 @@ export function resolveIntroTexts(state, tr, isEn, isExpertTab) {
 export function extractItemSourceKey(it) {
   const primary = it.source || it.origin;
   return primary || it.channel || 'OmniMux';
+}
+
+/** 空值安全的绝对路径规整：非字符串或空白一律回落空串。 */
+function normalizeDirPath(value) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text ? text.replace(/[/\\]+$/, '') : '';
+}
+
+/**
+ * 当前项目绝对路径（套件安装写规则用）：会话 cwd 优先，回落当前 / 最近工作区目录。
+ * 解析不到时返回空串 —— 调用方必须显式提示，不得把空路径当项目根发给服务端。
+ */
+export function resolveProjectDir(sessions, workspaces) {
+  try {
+    const sessionSnap = sessions && sessions.list && typeof sessions.list.getSnapshot === 'function'
+      ? sessions.list.getSnapshot()
+      : null;
+    const currentId = sessionSnap ? sessionSnap.current : '';
+    const currentSession = sessionSnap && sessionSnap.byId && currentId ? sessionSnap.byId[currentId] : null;
+    const cwd = normalizeDirPath(currentSession && currentSession.cwd);
+    if (cwd) return cwd;
+    const wsSnap = workspaces && workspaces.list && typeof workspaces.list.getSnapshot === 'function'
+      ? workspaces.list.getSnapshot()
+      : null;
+    const items = wsSnap && Array.isArray(wsSnap.items) ? wsSnap.items : [];
+    const byId = (id) => (id ? items.find((ws) => ws && String(ws.workspaceId || '') === String(id)) : null);
+    const owner = byId(currentSession && currentSession.workspaceId) || byId(wsSnap && wsSnap.recentWorkspaceId) || items[0];
+    return normalizeDirPath(owner && owner.path);
+  } catch {
+    return '';
+  }
 }
 
 export function handleMoveToTop(targetId, featuredItems, state, apiFn) {

@@ -312,7 +312,8 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
     const featured = isPresetCategory && presetFeatured.length > 0 ? presetFeatured : unique([...presetFeatured, ...baseFeatured]);
     const featuredKeys = new Set(featured.map(key));
     const catalogFeatured = new Set(entries.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.skill));
-    const localCards = hasQuery ? [] : entries.filter(item => item.kind === 'skill').map(item => ({
+    // 本地目录卡片：技能与套件同为货架条目；套件只落「套件」分类（见 matchesDomainTag）。
+    const localCards = hasQuery ? [] : entries.filter(item => item.kind === 'skill' || item.kind === 'suite').map(item => ({
         ...item, catalogId: item.id, slug: item.skill, name: item.title, description: item.summary,
         installBackend: 'catalog', installed: installed.has(item.skill),
     }));
@@ -349,11 +350,20 @@ export const PICKER_SEARCH_LIMIT = 20;
 export const PICKER_DEBOUNCE_MS = 200;
 export const PICKER_CACHE_TTL_MS = 90_000;
 /**
+ * 套件：本地目录独有的条目形态（多技能 / 附带规则 / 附带预设 Agent 的打包单元）。
+ * 远端渠道没有对应物，故该分类跳过远端检索，只渲染本地目录卡片。
+ */
+export const SUITE_SHELF_TAG = '套件';
+export function isLocalOnlyShelfTag(tag) {
+    return String(tag || '').trim() === SUITE_SHELF_TAG;
+}
+/**
  * Skill 货架分类法（Taxonomy）唯一语义真源。顺序即展示顺序。
  * UI 片段（skill-picker.js / skill-plaza.js / plaza-shell.js）运行时经 boot.js
  * 注入的 SkillShelf 命名空间消费本模块，禁止再维护内联副本（parity 测试守卫）。
  * keywords 为 L2/L3 兜底匹配词表；仅电商扩充为五词，其余收敛为 [id]；
  * 短英文词（ad、music）不得入词表，扩充需评估误命中。
+ * 套件行只作 id / labelKey / 词表真源：套件的成员判定走 kind === 'suite'，不靠词表。
  */
 export const SKILL_SHELF_TAXONOMY = Object.freeze([
     { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商', '独立站', '跨境', 'shopify', '选品']) },
@@ -365,13 +375,16 @@ export const SKILL_SHELF_TAXONOMY = Object.freeze([
     { id: '创意实验', labelKey: 'picker.tab.lab', keywords: Object.freeze(['创意实验']) },
     { id: '音频音乐', labelKey: 'picker.tab.audio', keywords: Object.freeze(['音频音乐']) },
     { id: '平台工具', labelKey: 'picker.tab.platform', keywords: Object.freeze(['平台工具']) },
+    { id: SUITE_SHELF_TAG, labelKey: 'picker.tab.suite', keywords: Object.freeze([SUITE_SHELF_TAG]) },
 ]);
 export const SKILL_SHELF_TAGS = Object.freeze(SKILL_SHELF_TAXONOMY.map((row) => row.id));
 export const PICKER_TABS = Object.freeze([
     { id: 'all', kind: 'all', labelKey: 'picker.tab.all' },
     { id: 'mine', kind: 'mine', labelKey: 'picker.tab.mine' },
     { id: 'featured', kind: 'featured', labelKey: 'picker.tab.featured' },
-    ...SKILL_SHELF_TAXONOMY.map((row) => ({ id: row.id, kind: 'tag', labelKey: row.labelKey })),
+    // 本地目录专属分类不进选择器：其数据源是远端结果，放进来只会得到一个恒空的页签。
+    ...SKILL_SHELF_TAXONOMY.filter((row) => !isLocalOnlyShelfTag(row.id))
+        .map((row) => ({ id: row.id, kind: 'tag', labelKey: row.labelKey })),
 ]);
 export function skillToken(item) {
     const raw = String((item && (item.skill || item.slug)) || '').trim();
@@ -414,6 +427,11 @@ export function keywordsForTag(tag) {
 export function matchesDomainTag(item, tag) {
     if (!item || !tag)
         return true;
+    // 套件是独立条目形态：只落「套件」分类，且绝不混入任何技能领域分类。
+    if (isLocalOnlyShelfTag(tag))
+        return item.kind === 'suite';
+    if (item.kind === 'suite')
+        return false;
     const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
     if (tags.includes(tag))
         return true;

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { packageRoot, mcpRowId, mcpRowPattern, skillDir } from './paths.js'
 
 const TABS = new Set(['experts', 'skills', 'connectors'])
-const KINDS = new Set(['expert', 'team', 'skill', 'connector'])
+const KINDS = new Set(['expert', 'team', 'skill', 'connector', 'suite'])
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 /** @type {Map<string, { mtimeMs: number, size: number, doc: ReturnType<typeof parseCatalog> }>} */
@@ -162,7 +162,7 @@ function parseItem(raw) {
     ? row.serverName
     : undefined
   const source = parseSource(row.source, id)
-  if ((kind === 'expert' || kind === 'team' || kind === 'skill') && !skill) {
+  if ((kind === 'expert' || kind === 'team' || kind === 'skill' || kind === 'suite') && !skill) {
     throw new Error(`catalog: item ${id} missing skill`)
   }
   if (kind === 'connector' && !serverName) {
@@ -170,6 +170,7 @@ function parseItem(raw) {
   }
   const hub = parseHub(row.hub)
   const item = { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub }
+  if (kind === 'suite') item.suite = parseSuiteManifest(row.suite, id)
   // Skill-only metadata; expert/team fields and top-level featured retain their contract.
   if (kind === 'skill' && tab === 'skills') {
     return {
@@ -185,6 +186,31 @@ function parseItem(raw) {
     }
   }
   return item
+}
+
+/**
+ * 套件三块清单（技能 / 规则 / Agent）。条目名必填，标题缺省回落到条目名；
+ * 说明允许为空——规则与部分包内文件本身没有描述字段，货架不伪造文案。
+ * @param {unknown} raw
+ * @param {string} id
+ */
+function parseSuiteManifest(raw, id) {
+  const row = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {}
+  const group = (value, label) => {
+    if (!Array.isArray(value)) return []
+    return value.map((entry) => {
+      const item = entry && typeof entry === 'object' ? /** @type {Record<string, unknown>} */ (entry) : {}
+      const name = String(item.name || '').trim()
+      if (!name) throw new Error(`catalog: item ${id} suite ${label} entry missing name`)
+      const title = String(item.title || '').trim()
+      return { name, title: title || name, desc: String(item.desc || '').trim() }
+    })
+  }
+  return {
+    skills: group(row.skills, 'skills'),
+    rules: group(row.rules, 'rules'),
+    agents: group(row.agents, 'agents'),
+  }
 }
 
 /** Only controlled relative raster asset references; no URL proxy or inline SVG. */

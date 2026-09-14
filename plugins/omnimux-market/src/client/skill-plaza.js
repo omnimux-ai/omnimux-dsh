@@ -1,12 +1,14 @@
     // 规则真源：SkillShelf（boot.js 注入 skill-picker-logic.js），禁止内联副本。
     // 货架真源：SkillShelf.SKILL_SHELF_TAXONOMY 与 SkillShelf.buildPlazaSearchPayload 统一消费。
-    // 结构契约：function InstallModal, drop-zone, req-section, btn-modal-install, function ConfirmInstallModal
+    // 结构契约：function InstallModal, drop-zone, req-section, btn-modal-install, function ConfirmInstallModal,
+    //          function SuiteDetailModal, ws-suite-block, ws-suite-install-dialog, ws-suite-target-option
     // 样式契约：featured-cover-wrap, coverSrc ?, featured-hover-actions, hover-btn-detail, hover-btn-try, expert-market-grid, expert-card, expert-pill-btn, expertMarket.disabled
-    // 领域契约：短剧漫剧, 专业影视, 动画, 商业广告, 电商, 教育, 创意实验, 音频音乐, 平台工具
+    // 领域契约：套件, 短剧漫剧, 专业影视, 动画, 商业广告, 电商, 教育, 创意实验, 音频音乐, 平台工具
 
     const plazaUtils = require("./plaza/plazaUtils.js");
     const { InstallModal: PlazaInstallModal } = require("./plaza/InstallModal.jsx");
     const { ConfirmInstallModal: PlazaConfirmInstallModal } = require("./plaza/ConfirmInstallModal.jsx");
+    const { SuiteDetailModal: PlazaSuiteDetailModal } = require("./plaza/SuiteDetailModal.jsx");
     const { renderExpertCard, ExpertCard } = require("./plaza/ExpertCard.jsx");
     const { renderFeaturedCard, FeaturedCard } = require("./plaza/FeaturedCard.jsx");
     const { renderRegularCard, renderMineCard, MineToolbar, renderMineToolbar: plazaRenderMineToolbar, PlazaCardGrid } = require("./plaza/PlazaCardGrid.jsx");
@@ -31,6 +33,7 @@
       EXPERT_STATUS_CONFIG,
       resolveIntroTexts,
       extractItemSourceKey,
+      resolveProjectDir,
       executeToggleExpert,
       updatePlazaItemInstalled,
       handleSwitchToggle,
@@ -60,6 +63,14 @@
       const overlayComp = typeof Overlay !== "undefined" ? Overlay : undefined;
       const buttonComp = typeof Button !== "undefined" ? Button : undefined;
       return PlazaConfirmInstallModal({ ...props, h, Overlay: overlayComp, Button: buttonComp });
+    }
+
+    function SuiteDetailModal(props) {
+      const stateHook = typeof useState === "function" ? useState : null;
+      const overlayComp = typeof Overlay !== "undefined" ? Overlay : undefined;
+      const buttonComp = typeof Button !== "undefined" ? Button : undefined;
+      const apiFn = typeof api === "function" ? api : undefined;
+      return PlazaSuiteDetailModal({ ...props, h, Overlay: overlayComp, Button: buttonComp, api: apiFn, hooks: { useState: stateHook } });
     }
 
     function renderWorkshopIntro(opts) {
@@ -308,8 +319,17 @@
     }
 
     function renderPlazaModals(opts) {
-      const { state, mark, loadInstalled, onCloseModal, onConfirm } = opts;
-      const drawerNode = state.open ? h(Drawer, { item: state.open, onClose: () => state.setOpen(null), onInstalled: (it) => mark(it, true), onUninstalled: (it) => mark(it, false) }) : null;
+      const { state, mark, loadInstalled, onCloseModal, onConfirm, tr, projectDir } = opts;
+      const openItem = state.open;
+      const onDrawerClose = () => state.setOpen(null);
+      const onDrawerInstalled = (it) => mark(it, true);
+      const onDrawerUninstalled = (it) => mark(it, false);
+      // 套件走独立详情模态；技能 / 专家沿用既有 Drawer。
+      const drawerNode = openItem
+        ? (openItem.kind === "suite"
+          ? h(SuiteDetailModal, { item: openItem, tr, projectDir, onClose: onDrawerClose, onInstalled: onDrawerInstalled })
+          : h(Drawer, { item: openItem, onClose: onDrawerClose, onInstalled: onDrawerInstalled, onUninstalled: onDrawerUninstalled }))
+        : null;
       const installNode = h(InstallModal, { open: state.openInstallModal, onClose: () => state.setOpenInstallModal(false), onInstalled: (it) => { mark(it, true); loadInstalled(); } });
       const confirmNode = h(ConfirmInstallModal, { item: state.confirmInstallItem, onConfirm, error: state.confirmInstallError, installing: state.confirmInstalling, onClose: onCloseModal });
       return [drawerNode, installNode, confirmNode];
@@ -331,7 +351,9 @@
       const onConfirm = () => handleConfirmInstall(state.confirmInstallItem, state, mark, apiFn);
       const sections = resolvePlazaSectionsData({ state, tr, onToggleSwitch, onToggleExp, apiFn });
       const onCloseModal = () => { if (!state.confirmInstalling) { state.setConfirmInstallItem(null); state.setConfirmInstallError(""); } };
-      const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm });
+      const workspaces = typeof plazaWorkspaces !== "undefined" ? plazaWorkspaces : null;
+      const projectDir = resolveProjectDir(typeof plazaSessions !== "undefined" ? plazaSessions : null, workspaces);
+      const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm, tr, projectDir });
 
       return h("div", { className: "sh-mkt" },
         renderWorkshopIntro(sections.introOpts),

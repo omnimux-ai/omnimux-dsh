@@ -10,6 +10,11 @@ function getSkillShelf() {
   return LocalSkillShelf;
 }
 
+/** 套件分类只在本地目录存在：跳过远端检索，列表完全由本地卡片渲染。 */
+function isLocalOnlyCategory(category) {
+  return LocalSkillShelf.isLocalOnlyShelfTag(category);
+}
+
 export function updateInstalledItemsList(cur, item, installed) {
   if (!installed) return cur.filter((it) => it.slug !== item.slug && it.id !== item.id);
   const match = (it) => it.slug === item.slug || it.id === item.id;
@@ -104,7 +109,10 @@ export function buildWorkshopCategories(presetBinding, tr) {
   }
   const featLabel = tr ? (tr('workshop.catFeatured') || '精选') : '精选';
   const domainCategories = WORKSHOP_DOMAIN_ORDER.map((id) => mapDomainTaxonomy(id, tr));
-  return [{ id: '', label: allLabel }, { id: 'featured', label: featLabel }, ...domainCategories];
+  // 套件紧跟「全部」之后，先于「精选」与各技能领域展示。
+  const suiteCategories = domainCategories.filter((c) => isLocalOnlyCategory(c.id));
+  const skillCategories = domainCategories.filter((c) => !isLocalOnlyCategory(c.id));
+  return [{ id: '', label: allLabel }, ...suiteCategories, { id: 'featured', label: featLabel }, ...skillCategories];
 }
 
 function updateItemsWithRatings(cur, ratings) {
@@ -224,6 +232,16 @@ export function usePlazaSearchEffect(state, deps) {
 
   effectFn(() => {
     const liveRef = { live: true };
+    // 套件是本地目录概念：不发远端检索（分类名不得当搜索词发往渠道），只渲染本地卡片。
+    if (isLocalOnlyCategory(category)) {
+      state.setItems([]);
+      state.setTotal(0);
+      state.setHasMore(false);
+      state.setFallback(false);
+      state.setErr('');
+      state.setStatus('ready');
+      return () => { liveRef.live = false; };
+    }
     const queryCat = category === 'featured' ? '' : category;
     const shelf = getSkillShelf();
     const payload = shelf

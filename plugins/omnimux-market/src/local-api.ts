@@ -12,6 +12,12 @@ import { decorateCatalog, loadCatalog } from './expert/catalog.js'
 import { findItem, installItem, removeMcpRow, withConnectorPatchLock } from './expert/install.js'
 import { packageRoot, profileDir } from './expert/paths.js'
 import { summonItem } from './expert/summon.js'
+import {
+  installSuite,
+  uninstallSuite,
+  type SuiteItem,
+  type SuiteRuleTarget,
+} from './suite-install.js'
 import { writeSessionExpert } from './session-attach.js'
 import { fetchBytes } from './http.js'
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js'
@@ -101,6 +107,8 @@ export const MUTATING_METHODS = new Set([
   'catalogInstall',
   'catalogSummon',
   'catalogUninstall',
+  'suiteInstall',
+  'suiteUninstall',
   'expertMarketInstall',
   'expertMarketDisable',
   'setModelSelection',
@@ -474,6 +482,65 @@ async function handleCatalogUninstall(ctx: ApiContext): Promise<void> {
   return sendJson(res, 200, { ok: true, id, installed: false, kind: 'connector' })
 }
 
+/**
+ * 套件一键安装：技能摊平进技能库、规则写进所选 AGENTS.md、Agent 落成 preset。
+ * 单环节失败不抛错——`ok: true` 上带 `partial: true` 与 `failed[]`，客户端按回执
+ * 标注未完成项；只有整包装不下来（找不到套件、包未落盘）才走 500。
+ */
+async function handleSuiteInstall(ctx: ApiContext): Promise<void> {
+  const { req, res, body, url } = ctx
+  if (!trustedRestartRequest(req)) return sendJson(res, 403, { ok: false, error: 'suiteInstall is limited to same-origin requests' })
+  const id = String(body.id || url.searchParams.get('id') || '').trim()
+  if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
+  const catalog = loadCatalog()
+  const item = findItem(catalog, id) as unknown as SuiteItem | undefined
+  if (!item) return sendJson(res, 400, { ok: false, error: `unknown item ${id}` })
+  if (item.kind !== 'suite') return sendJson(res, 400, { ok: false, error: `item ${id} is not a suite` })
+  const ruleTarget: SuiteRuleTarget = String(body.ruleTarget || url.searchParams.get('ruleTarget') || '').trim() === 'global' ? 'global' : 'project'
+  const projectDir = String(body.projectDir || url.searchParams.get('projectDir') || '').trim()
+  try {
+    const result = await withConnectorPatchLock(() =>
+      Promise.resolve(installSuite({
+        catalog: catalog as unknown as { items: SuiteItem[] },
+        item,
+        ...expertRoots(),
+        ruleTarget,
+        projectDir: projectDir || undefined,
+      })),
+    )
+    return sendJson(res, 200, { ok: true, ...result })
+  } catch (err) {
+    return sendJson(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
+/** 套件卸载：摘托管段、删 preset、技能按既有卸载语义删除；三者都幂等。 */
+async function handleSuiteUninstall(ctx: ApiContext): Promise<void> {
+  const { req, res, body, url } = ctx
+  if (!trustedRestartRequest(req)) return sendJson(res, 403, { ok: false, error: 'suiteUninstall is limited to same-origin requests' })
+  const id = String(body.id || url.searchParams.get('id') || '').trim()
+  if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
+  const item = findItem(loadCatalog(), id) as unknown as SuiteItem | undefined
+  if (!item) return sendJson(res, 400, { ok: false, error: `unknown item ${id}` })
+  if (item.kind !== 'suite') return sendJson(res, 400, { ok: false, error: `item ${id} is not a suite` })
+  const rawTarget = String(body.ruleTarget || url.searchParams.get('ruleTarget') || '').trim()
+  const ruleTarget = rawTarget === 'global' || rawTarget === 'project' ? (rawTarget as SuiteRuleTarget) : undefined
+  const projectDir = String(body.projectDir || url.searchParams.get('projectDir') || '').trim()
+  try {
+    const result = await withConnectorPatchLock(() =>
+      uninstallSuite({
+        item,
+        home: expertRoots().home,
+        ruleTarget,
+        projectDir: projectDir || undefined,
+      }),
+    )
+    return sendJson(res, 200, { ok: true, ...result })
+  } catch (err) {
+    return sendJson(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
 export interface SessionModelChoice {
   auto: boolean
   selectedModel: {
@@ -558,6 +625,8 @@ const API_ROUTE_TABLE: Record<string, ApiMethodHandler> = {
   catalogInstall: handleCatalogInstall,
   catalogSummon: handleCatalogSummon,
   catalogUninstall: handleCatalogUninstall,
+  suiteInstall: handleSuiteInstall,
+  suiteUninstall: handleSuiteUninstall,
   getModelCatalog: handleGetModelCatalog,
   getModelSelection: handleGetModelSelection,
   setModelSelection: handleSetModelSelection,
