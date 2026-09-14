@@ -487,4 +487,103 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(checkContextReady('REPLY_DETAIL', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
     expect(checkContextReady('REPLY_FEED', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
   })
+
+  it('T18: 多输入框物理隔离 - 严格只读写图标所属的局部容器', async () => {
+    // 页面模拟两个输入框：1号为发帖框，2号为回复框
+    const box1 = document.createElement('div')
+    box1.innerHTML = `
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true">发帖框原内容</div>
+      </div>
+      <button class="omnimux-copilot-anchor-btn" id="btn1">1</button>
+    `
+    const box2 = document.createElement('div')
+    box2.innerHTML = `
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true">回复框2号原草稿</div>
+      </div>
+      <button class="omnimux-copilot-anchor-btn" id="btn2">2</button>
+    `
+    document.body.appendChild(box1)
+    document.body.appendChild(box2)
+
+    const btn2 = box2.querySelector('#btn2') as HTMLElement
+    const ta1 = box1.querySelector('[role="textbox"]') as HTMLElement
+    const ta2 = box2.querySelector('[role="textbox"]') as HTMLElement
+
+    // 1. 读取草稿：点击 2 号图标，只读 2 号框
+    const ctx = extractTwitterContext(btn2, 'POST_NEW')
+    expect(ctx.draftText).toBe('回复框2号原草稿')
+
+    // 2. 注入文本：传入 2 号图标，只能填入 2 号框，1 号框绝不能被修改
+    await injectTweetText('生成好的神评内容', btn2, 'zh')
+    expect(ta2.textContent).toContain('生成好的神评内容')
+    expect(ta1.textContent).toBe('发帖框原内容')
+  })
+
+  it('T19: 孤立图标注入拒绝全局退化查找，安全降级到剪贴板', async () => {
+    // 页面存在一个输入框，但图标不在该输入框容器内
+    const box = document.createElement('div')
+    box.innerHTML = `
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true">原内容不变</div>
+      </div>
+    `
+    document.body.appendChild(box)
+
+    const orphanBtn = document.createElement('button')
+    orphanBtn.className = 'omnimux-copilot-anchor-btn'
+    document.body.appendChild(orphanBtn)
+
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextSpy,
+      },
+    })
+
+    // 执行注入：由于 orphanBtn 无法向上寻找到合法容器，绝不乱填到 box 内，而是降级剪贴板
+    const res = await injectTweetText('孤立文本', orphanBtn, 'zh')
+    expect(res).toBe(true)
+    const ta = box.querySelector('[role="textbox"]') as HTMLElement
+    expect(ta.textContent).toBe('原内容不变')
+    expect(writeTextSpy).toHaveBeenCalledWith('孤立文本')
+  })
+
+  it('T20: 回帖推文目标未命中时不向整页第一条推文退化', () => {
+    setPathname('/home')
+    // 页面存在一条主推文，但它不是当前按钮的目标
+    const pageTweet = document.createElement('article')
+    pageTweet.setAttribute('data-testid', 'tweet')
+    pageTweet.innerHTML = '<div data-testid="tweetText">首页第一条推文</div>'
+    document.body.appendChild(pageTweet)
+
+    const isolatedReplyBtn = document.createElement('button')
+    isolatedReplyBtn.setAttribute('data-testid', 'tweetButtonInline')
+    document.body.appendChild(isolatedReplyBtn)
+
+    const ctx = extractTwitterContext(isolatedReplyBtn, 'REPLY_DETAIL')
+    // 绝不拿首页第一条推文充数
+    expect(ctx.targetTweetText).toBe('')
+  })
+
+  it('T21: 引用卡片作者提取优先取 User-Name 内部链接', () => {
+    setPathname('/compose/post')
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.innerHTML = `
+      <div data-testid="quoteTweet">
+        <div data-testid="tweetText">包含外链的推文 <a href="/status/999">第三方链接</a></div>
+        <div data-testid="User-Name">
+          <a role="link" href="/real_author_handle">真实博主</a>
+        </div>
+      </div>
+      <button class="omnimux-copilot-anchor-btn" id="qbtn">Q</button>
+    `
+    document.body.appendChild(dialog)
+    const qbtn = dialog.querySelector('#qbtn') as HTMLElement
+
+    const ctx = extractTwitterContext(qbtn, 'POST_QUOTE')
+    expect(ctx.quotedAuthor).toBe('real_author_handle')
+  })
 })

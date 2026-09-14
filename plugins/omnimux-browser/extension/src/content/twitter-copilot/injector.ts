@@ -41,25 +41,39 @@ export async function injectTweetText(rawText: string, anchorButton?: HTMLElemen
   if (!text) return false
 
   // 1. Locate the tweet textarea corresponding to this anchor button
+  // 严格物理锚定：传入图标时，必须基于图标所在局部容器查找，绝不退化到全局 document，防止误注入
   let targetArea: HTMLElement | null = null
 
+  const isTooBroad = (el: Element | null | undefined): boolean =>
+    !el || el === document.body || el === document.documentElement || el.tagName === 'BODY' || el.tagName === 'HTML'
+
   if (anchorButton) {
+    const parentContainer =
+      anchorButton.parentElement && !isTooBroad(anchorButton.parentElement) &&
+      anchorButton.parentElement.querySelector('div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]')
+        ? anchorButton.parentElement
+        : null
+
     const container =
       anchorButton.closest('[data-testid="tweetTextarea_0_label"]')?.parentElement ||
       anchorButton.closest('[role="dialog"]') ||
       anchorButton.closest('form') ||
       anchorButton.closest('article') ||
-      document
+      parentContainer
 
-    targetArea = container.querySelector(
+    targetArea = container?.querySelector(
       'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]',
     ) as HTMLElement | null
-  }
-
-  if (!targetArea) {
-    targetArea = document.querySelector(
-      'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"], [contenteditable="true"][data-testid^="tweetTextarea"]',
-    ) as HTMLElement | null
+  } else {
+    // 未指定锚点图标时（如无界面的直接调用），优先使用当前获得焦点的输入框，其次才按选择器查找
+    const activeEl = document.activeElement
+    if (activeEl instanceof HTMLElement && (activeEl.isContentEditable || activeEl.getAttribute('role') === 'textbox')) {
+      targetArea = activeEl
+    } else {
+      targetArea = document.querySelector(
+        'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"], [contenteditable="true"][data-testid^="tweetTextarea"]',
+      ) as HTMLElement | null
+    }
   }
 
   if (!targetArea) {

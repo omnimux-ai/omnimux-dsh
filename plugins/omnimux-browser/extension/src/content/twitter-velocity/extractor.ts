@@ -81,8 +81,21 @@ export function extractCreatedAtMs(tweet: HTMLElement): number {
 }
 
 export function extractTweetIdAndUrl(tweet: HTMLElement): { id: string; url: string } {
+  // 1. 优先取推文自身发布时间戳关联的 status 链接（避免误取推文内嵌引用卡片里的 /status/ 链接）
+  const timeLink = tweet.querySelector('time')?.closest('a[href*="/status/"]')
+  if (timeLink) {
+    const href = timeLink.getAttribute('href') || ''
+    const match = href.match(/\/status\/(\d+)/)
+    if (match) {
+      const fullUrl = href.startsWith('http') ? href : `https://x.com${href}`
+      return { id: match[1], url: fullUrl }
+    }
+  }
+
+  // 2. 备用提取：扫描 status 链接，但严格排除引用转帖卡片内的链接
   const links = tweet.querySelectorAll('a[href*="/status/"]')
   for (const link of Array.from(links)) {
+    if (link.closest('[data-testid="attachments"], [data-testid="quoteTweet"]')) continue
     const href = link.getAttribute('href') || ''
     const match = href.match(/\/status\/(\d+)/)
     if (match) {
