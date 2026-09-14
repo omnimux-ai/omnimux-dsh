@@ -27,7 +27,7 @@ export interface FillFormResult {
   results?: Array<{ id: string; ok: boolean; message?: string }>
 }
 
-const SENSITIVE_PATTERNS = /(?:password|pwd|secret|token|api[_-]?key|otp|auth[_-]?code|cvv|cvc|credit|card)/i
+const SENSITIVE_PATTERNS = /(?:password|pwd|secret|token|api[_-]?key|otp|auth[_-]?code|cvv|cvc|credit|card|密码|验证码|安全码|one-time-code)/i
 
 function isSensitive(el: HTMLElement): boolean {
   if (el instanceof HTMLInputElement && el.type.toLowerCase() === 'password') return true
@@ -121,6 +121,9 @@ export function snapshotFormFields(doc: Document = document): FormSnapshot {
     if (!fieldType) continue
 
     const id = el.id || el.getAttribute('name') || `field-${autoIndex++}`
+    if (!el.id && !el.getAttribute('name')) {
+      el.setAttribute('data-draft-field-id', id)
+    }
     const label = getSafeLabel(el, doc)
 
     let hasValue = false
@@ -150,7 +153,21 @@ export function snapshotFormFields(doc: Document = document): FormSnapshot {
 function setElementValue(el: HTMLElement, value: string): void {
   el.focus()
 
-  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+  if (el instanceof HTMLSelectElement) {
+    const option = Array.from(el.options).find(
+      (opt) => opt.value === value || opt.text.trim() === value.trim(),
+    )
+    if (option) {
+      el.value = option.value
+    } else {
+      el.value = value
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+    return
+  }
+
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
     const proto = Object.getPrototypeOf(el)
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set
     if (setter) {
@@ -208,6 +225,9 @@ export async function fillFormFields(
       if (!targetEl) {
         targetEl = doc.querySelector(`[name="${CSS.escape(field.id)}"]`)
       }
+      if (!targetEl) {
+        targetEl = doc.querySelector(`[data-draft-field-id="${CSS.escape(field.id)}"]`)
+      }
     }
 
     if (!targetEl) {
@@ -218,9 +238,9 @@ export async function fillFormFields(
       return { ok: false, message: `字段 ${field.id} 为敏感项，拒绝填写` }
     }
 
-    // Protection: Refuse overwrite if target already has existing content
+    // Protection: Refuse overwrite if target already has existing content (select with default option excluded)
     let existingValue = ''
-    if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement || targetEl instanceof HTMLSelectElement) {
+    if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement) {
       existingValue = targetEl.value.trim()
     } else if (targetEl.isContentEditable) {
       existingValue = (targetEl.textContent || '').trim()

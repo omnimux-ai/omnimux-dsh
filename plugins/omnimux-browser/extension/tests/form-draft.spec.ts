@@ -97,4 +97,47 @@ describe('safe form draft snapshot and filling', () => {
     const textarea = document.querySelector('textarea') as HTMLTextAreaElement
     expect(textarea.value).toBe('今天天气真好 #生活分享')
   })
+
+  it('filters Chinese sensitive fields (密码, 验证码)', () => {
+    document.body.innerHTML = `
+      <form>
+        <input id="pwd-cn" placeholder="请输入密码" />
+        <input id="sms-code" placeholder="输入短信验证码" />
+        <input id="normal-cn" placeholder="输入昵称" />
+      </form>
+    `
+    const snapshot = snapshotFormFields(document)
+    expect(snapshot.fields.length).toBe(1)
+    expect(snapshot.fields[0]?.id).toBe('normal-cn')
+  })
+
+  it('correctly associates unnamed inputs via data-draft-field-id and fills them', async () => {
+    document.body.innerHTML = `
+      <div>
+        <input type="text" placeholder="无ID与Name的输入框" />
+      </div>
+    `
+    const snapshot = snapshotFormFields(document)
+    expect(snapshot.fields.length).toBe(1)
+    const fieldId = snapshot.fields[0]!.id
+    expect(fieldId).toMatch(/^field-\d+$/)
+
+    const res = await fillFormFields(document, [{ id: fieldId, value: '成功回填无属性框' }])
+    expect(res.ok).toBe(true)
+    const input = document.querySelector('input') as HTMLInputElement
+    expect(input.value).toBe('成功回填无属性框')
+  })
+
+  it('supports filling select dropdowns without being blocked by initial selection', async () => {
+    document.body.innerHTML = `
+      <select id="country">
+        <option value="CN">中国</option>
+        <option value="US">美国</option>
+      </select>
+    `
+    const res = await fillFormFields(document, [{ id: 'country', value: 'US' }])
+    expect(res.ok).toBe(true)
+    const select = document.getElementById('country') as HTMLSelectElement
+    expect(select.value).toBe('US')
+  })
 })

@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import type { DraftDocument, DraftField } from '../../shared/draft.ts'
 import { EditIcon, CopyIcon, CheckIcon } from './icons.tsx'
 import './FormDraftCard.css'
@@ -21,6 +21,16 @@ export const FormDraftCard = memo(function FormDraftCard({
   const isEn = locale === 'en'
   const variants = draft.variants || []
   const [activeVariantId, setActiveVariantId] = useState<string>(variants[0]?.id || '')
+
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      if (fillTimerRef.current) clearTimeout(fillTimerRef.current)
+    }
+  }, [])
 
   // Independent edit state keyed by variant ID
   const [editedValues, setEditedValues] = useState<Record<string, Record<string, string>>>(() => {
@@ -69,10 +79,10 @@ export const FormDraftCard = memo(function FormDraftCard({
     try {
       await navigator.clipboard.writeText(textToCopy)
       setCopyStatus('copied')
-      setTimeout(() => setCopyStatus('idle'), 2000)
+      copyTimerRef.current = setTimeout(() => setCopyStatus('idle'), 2000)
     } catch {
       setCopyStatus('error')
-      setTimeout(() => setCopyStatus('idle'), 2000)
+      copyTimerRef.current = setTimeout(() => setCopyStatus('idle'), 2000)
     }
   }
 
@@ -92,7 +102,7 @@ export const FormDraftCard = memo(function FormDraftCard({
       setFillStatus('error')
       setFillMsg(err instanceof Error ? err.message : (isEn ? 'Failed' : '填写失败'))
     }
-    setTimeout(() => setFillStatus('idle'), 2500)
+    fillTimerRef.current = setTimeout(() => setFillStatus('idle'), 2500)
   }
 
   const getFillButtonLabel = () => {
