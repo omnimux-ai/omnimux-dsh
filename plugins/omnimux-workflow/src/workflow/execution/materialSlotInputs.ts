@@ -45,8 +45,9 @@ export function collectMaterialSlotInputs(data: Record<string, unknown>, ctx: Ex
   if (model && !operationId) throw new SeamGatewayError('operation-required', '请选择生成方式');
   layout = deriveSlotLayout(catalog, model?.id, operationId);
   const hydrated = saved === undefined ? hydrateSlotBindings(feed, layout) : undefined;
-  const bindings = saved ?? hydrated!.bindings;
-  const conflicts = [...(data.slotConflicts ?? hydrated?.conflicts ?? []) as SlotConflict[], ...slotBindingConflicts(layout, bindings, feed)];
+  const plainSpeech = kind === 'audio' && operationId === 'text_to_speech';
+  const bindings = plainSpeech ? {} : saved ?? hydrated!.bindings;
+  const conflicts = plainSpeech ? [] : [...(data.slotConflicts ?? hydrated?.conflicts ?? []) as SlotConflict[], ...slotBindingConflicts(layout, bindings, feed)];
   if (conflicts.length) throw new SeamGatewayError('role_conflict', '已指定素材的卡槽或用途不再合法，请重新绑定');
   const selected = selectSlotOccupants(layout, bindings, feed, conflicts);
   for (const { occupant } of selected) {

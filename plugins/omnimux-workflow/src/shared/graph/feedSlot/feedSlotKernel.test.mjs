@@ -137,14 +137,15 @@ test('image operations derive strip preset and have addButton enabled', () => {
       ],
     }],
   };
-  for (const opId of ['text_to_image', 'image_to_image', 'multi_reference']) {
+  assert.equal(deriveSlotLayout(imgCatalog, 'nanobanana-2', 'text_to_image', 'image').preset, 'none');
+  for (const opId of ['image_to_image', 'multi_reference']) {
     const l = deriveSlotLayout(imgCatalog, 'nanobanana-2', opId, 'image');
     assert.equal(l.preset, 'strip');
     assert.equal(l.addButton, true);
     assert.ok(l.slots.length > 0);
   }
 });
-test('image node slotLayout defaults to strip with reference_image slot even when operation is unlisted or has no inputs', () => {
+test('image slots remain empty for text-only, missing and unspecified operations', () => {
   const imgCatalog = {
     models: [{
       id: 'gpt-image-2.5',
@@ -153,27 +154,13 @@ test('image node slotLayout defaults to strip with reference_image slot even whe
       ],
     }],
   };
-  const l1 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', 'text_to_image', 'image');
-  assert.equal(l1.preset, 'strip');
-  assert.equal(l1.addButton, true);
-  assert.equal(l1.slots.length, 1);
-  assert.equal(l1.slots[0].slot, 'reference_image');
-  assert.equal(l1.slots[0].role, 'reference');
-  assert.equal(l1.slots[0].type, 'image');
-  assert.equal(l1.slots[0].min, 0);
-  assert.equal(l1.slots[0].max, 10);
-
-  const l2 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', 'absent_op', 'image');
-  assert.equal(l2.preset, 'strip');
-  assert.equal(l2.addButton, true);
-  assert.equal(l2.slots.length, 1);
-  assert.equal(l2.slots[0].slot, 'reference_image');
-
-  const l3 = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', undefined, 'image');
-  assert.equal(l3.preset, 'strip');
-  assert.equal(l3.addButton, true);
-  assert.equal(l3.slots.length, 1);
-  assert.equal(l3.slots[0].slot, 'reference_image');
+  for (const operation of ['text_to_image', 'absent_op', undefined]) {
+    const derived = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', operation, 'image');
+    assert.equal(derived.preset, 'none');
+    assert.equal(derived.addButton, false);
+    assert.deepEqual(derived.slots, []);
+    assert.deepEqual(derived.implementationGaps, operation === 'text_to_image' ? [] : ['operation_unlisted']);
+  }
 });
 test('image slot name aliases match reference, references, input_image and input_images', () => {
   const customCatalog = {
@@ -189,7 +176,7 @@ test('image slot name aliases match reference, references, input_image and input
   assert.equal(l.slots.length, 1);
   assert.equal(l.slots[0].slot, 'input_images');
 });
-test('Issue #763: text_to_speech derives strip preset with reference_audio slot and addButton', () => {
+test('plain speech exposes no reference audio slots or add button', () => {
   const ttsCatalog = {
     models: [{
       id: 'seed-audio-1.0',
@@ -199,16 +186,11 @@ test('Issue #763: text_to_speech derives strip preset with reference_audio slot 
     }],
   };
   const l = deriveSlotLayout(ttsCatalog, 'seed-audio-1.0', 'text_to_speech', 'audio');
-  assert.equal(l.preset, 'strip');
-  assert.equal(l.addButton, true);
-  assert.equal(l.slots.length, 1);
-  assert.equal(l.slots[0].slot, 'reference_audio');
-  assert.equal(l.slots[0].type, 'audio');
-  assert.equal(l.slots[0].min, 0);
-  assert.equal(l.slots[0].max, 5);
-  assert.equal(l.slots[0].labelKey, 'panel.slot.reference_audio');
+  assert.equal(l.preset, 'none');
+  assert.equal(l.addButton, false);
+  assert.deepEqual(l.slots, []);
 });
-test('Issue #763: reference_audio aliases match reference, references, input_audio, audio_track and audio', () => {
+test('plain speech ignores all legacy optional audio slot aliases', () => {
   for (const slotName of ['reference', 'references', 'input_audio', 'audio_track', 'audio']) {
     const customCatalog = {
       models: [{
@@ -219,13 +201,12 @@ test('Issue #763: reference_audio aliases match reference, references, input_aud
       }],
     };
     const l = deriveSlotLayout(customCatalog, 'tts-model', 'text_to_speech', 'audio');
-    assert.equal(l.preset, 'strip', `${slotName} 应派生 strip 预设`);
-    assert.equal(l.slots.length, 1, `${slotName} 应命中卡槽`);
-    assert.equal(l.slots[0].slot, slotName);
+    assert.equal(l.preset, 'none');
+    assert.deepEqual(l.slots, [], `${slotName} is not consumed by plain speech`);
   }
 });
 
-test('text multimodal model derives strip preset with reference_images and reference_videos even when op is chat', () => {
+test('chat does not borrow vision_chat media slots from the same model', () => {
   const textMultimodalCatalog = {
     models: [{
       id: 'gemini-3.8-flash',
@@ -246,17 +227,9 @@ test('text multimodal model derives strip preset with reference_images and refer
   };
   // 当当前操作为默认 chat 时
   const chatLayout = deriveSlotLayout(textMultimodalCatalog, 'gemini-3.8-flash', 'chat', 'text');
-  assert.equal(chatLayout.preset, 'strip');
-  assert.equal(chatLayout.addButton, true);
-  assert.equal(chatLayout.slots.length, 2);
-  assert.equal(chatLayout.slots[0].slot, 'reference_images');
-  assert.equal(chatLayout.slots[0].type, 'image');
-  assert.equal(chatLayout.slots[0].max, 10);
-  assert.equal(chatLayout.slots[0].labelKey, 'panel.slot.reference_images');
-  assert.equal(chatLayout.slots[1].slot, 'reference_videos');
-  assert.equal(chatLayout.slots[1].type, 'video');
-  assert.equal(chatLayout.slots[1].max, 3);
-  assert.equal(chatLayout.slots[1].labelKey, 'panel.slot.reference_videos');
+  assert.equal(chatLayout.preset, 'none');
+  assert.equal(chatLayout.addButton, false);
+  assert.deepEqual(chatLayout.slots, []);
 
   // 当当前操作为 vision_chat 时
   const visionLayout = deriveSlotLayout(textMultimodalCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');

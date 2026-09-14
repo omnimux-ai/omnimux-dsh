@@ -1,6 +1,6 @@
 /** Canvas picker presentation derived from the shared compatibility kernel. */
 
-import { resolveGenerationPrompt } from '../graph/generationPrompt.ts';
+import { resolveGenerationPrompt, selectGenerationTextSources } from '../graph/generationPrompt.ts';
 import type {
   CapabilityCatalog,
   CapabilityModelItem,
@@ -195,9 +195,7 @@ export function buildUiUpstreamFingerprint(input: {
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(
       input,
-      (input.upstreams ?? [])
-        .filter((item) => item.materialType === 'text' || item.materialType === 'table' || (Boolean(item.textContent) && !item.url))
-        .map((item) => item.textContent),
+      selectGenerationTextSources(assets).map((item) => item.textContent),
     ),
     nodeFields: input.nodeFields,
     localText: resolveGenerationPrompt(input),

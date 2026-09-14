@@ -46,6 +46,10 @@ export function prepareExecutionSlotGraph<
       }
     }
     data.params = params;
+    if (kind === 'audio' && params.operation === 'text_to_speech') {
+      data.slotBindings = {};
+      data.slotConflicts = [];
+    }
     if (data.slotBindings === undefined) {
       const incoming = nextEdges.filter((edge) => edge.target === node.id);
       const feed: FeedAsset[] = incoming.flatMap((edge, ordinal) => {

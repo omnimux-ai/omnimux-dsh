@@ -1,6 +1,6 @@
 import type { Edge } from '@xyflow/react';
 import type { CanvasNode } from './canvasInputMutationGateway.ts';
-import { resolveGenerationPrompt } from './generationPrompt.ts';
+import { resolveGenerationPrompt, selectGenerationTextSources } from './generationPrompt.ts';
 import { readNodeInputSource } from './nodeInputSource.ts';
 import { buildUpstreamFingerprint, readExplicitTargetSlot, type UpstreamAssetFingerprint } from '../validation/compatKernel.ts';
 
@@ -33,7 +33,7 @@ export function buildCanvasUpstreamFingerprint(
     }];
   });
   return buildUpstreamFingerprint({
-    prompt: resolveGenerationPrompt(target?.data ?? {}, assets.filter((asset) => asset.type === 'text').map((asset) => asset.textContent)),
+    prompt: resolveGenerationPrompt(target?.data ?? {}, selectGenerationTextSources(assets).map((asset) => asset.textContent)),
     localText: resolveGenerationPrompt(target?.data ?? {}), nodeFields: target ? readCanvasParams(target) : {}, assets,
   });
 }
