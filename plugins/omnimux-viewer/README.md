@@ -118,6 +118,22 @@ Two tsconfigs are required, not fastidiousness: both halves augment the same `@d
 
 `tests/asset-route.test.ts` mounts the handler on a real `node:http` server and issues real requests — range correctness cannot be proven by unit-testing the parser. `tests/convert.test.ts` builds a DOCX with LibreOffice, converts it back, and asserts the artifact starts with `%PDF-`.
 
+## Office conversion and installation details
+
+Documents always convert to PDF using headless LibreOffice (`soffice` / `libreoffice` on PATH, or the macOS app). Each call uses a private `-env:UserInstallation=file://…` profile so an already running desktop LibreOffice does not consume the request without producing output. Conversion is serialized and cached; the key includes the LibreOffice version and source path/mtime/size. Artifacts are written to a temporary directory and renamed into `$DSH_HOME/.dsh-viewer-cache/` atomically. The original upstream verification measured a cold conversion at 2.6–3.6 seconds; this is historical evidence, not a performance guarantee for this checkout.
+
+`tools.restrict()` runs on each agent context, not the global context. Unknown tools must not make `agent/created` throw. `tools/change` handles late asynchronous registration; retries are idempotent and waiting agents use weak references. Changing this host bundle requires a profile restart. A visible legacy `read_image` card is labelled separately from a display card.
+
+HTML is deliberately not redirected by the media correction: reading its source is a valid text operation. Settings can also be pinned in `cordis.patch.yml`, but that patch replaces the entire `config` row, so every intended key must be repeated.
+
+On the historical `dsh-client-modules@0.1.1-rc.2` loader, patch entries must use a resolvable package name rather than an absolute `lib/index.js` path: otherwise only the host half loads. The package must resolve through the profile's dependencies. Host routing uses nested `ctx.inject(['webServer'], …)` rather than a mandatory top-level injection, so headless compositions still register tools without minting HTTP asset URLs.
+
+### Historical upstream acceptance coverage
+
+The Chinese document records an upstream run on dsh `0.1.1-rc.2`, Node `26.7.0`, a `claude-sonnet-5` route and headless Chrome. It is not current OmniMux acceptance. That run covered all seven card variants (including generic files), image lightbox/Escape, playable and seekable video/audio, default-expanded cards, accurate model-context badges and replay after reload. DOCX/XLSX/PPTX iframe responses were PDF bytes with an embedded Chrome viewer. A hidden `read_image` avoided duplicate image context; one display call yielded one image block, and the model identified a visually labelled test image without filename hints.
+
+The same record covers successful `read` redirection without an error row, nested `run_code` envelope recovery, sandboxed HTML, unsigned or tampered URLs returning 404, non-GET returning 405, and byte ranges returning exact 206 content or 416 for out-of-range requests. Conversion tests also verify cache reuse without rewriting output. Re-run the relevant tests and browser journey before relying on these observations for a new revision.
+
 ## Harness compatibility
 
 Built and tested against the newest **coherent** harness train, `next` = `0.1.1-rc.2`, and the peer ranges carry an explicit prerelease branch so every `0.1.x` prerelease resolves — a naive broad range silently excludes them all.

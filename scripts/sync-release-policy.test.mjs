@@ -24,7 +24,7 @@ import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 let syncStable
 let gitPath
-const allPlugins = [
+const allPlugins = [...new Set([
   'omnimux',
   'omnimux-accounts',
   'omnimux-assets',
@@ -36,7 +36,8 @@ const allPlugins = [
   'omnimux-video',
   'omnimux-analytics',
   'omnimux-publish',
-]
+  ...alphaPluginIds,
+])]
 
 describe('Alpha release materialization policy', { concurrency: false }, () => {
   let fixtureRoot
