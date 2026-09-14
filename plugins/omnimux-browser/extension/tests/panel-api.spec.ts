@@ -138,7 +138,7 @@ describe('panel protocol', () => {
       onMessage: { addListener: vi.fn((listener: (message: unknown) => void) => { receive = listener }) },
       onDisconnect: { addListener: vi.fn() },
     }
-    vi.stubGlobal('chrome', { runtime: { connect: vi.fn(() => port) } })
+    vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'zh-CN' }, runtime: { connect: vi.fn(() => port) } })
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('12345678-1234-4234-8234-123456789abe')
     const api = connectPanel()
 
@@ -394,5 +394,53 @@ describe('panel protocol', () => {
     })
 
     await expect(pending).rejects.toThrow('Storage is unavailable')
+  })
+
+  it('fails a settings save that never gets an answer instead of waiting forever', async () => {
+    vi.useFakeTimers()
+    const port = {
+      postMessage: vi.fn(),
+      onMessage: { addListener: vi.fn() },
+      onDisconnect: { addListener: vi.fn() },
+    }
+    // Chinese UI so the deadline message is asserted as the user reads it.
+    vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'zh-CN' }, runtime: { connect: vi.fn(() => port) } })
+    const api = connectPanel()
+
+    // Handled from the start: the deadline is the promise's only exit here.
+    let outcome: Error | null | undefined
+    void api.updateSettings({ bridgeUrl: 'ws://127.0.0.1:45120/ext/bridge' })
+      .then(() => { outcome = null }, (error: Error) => { outcome = error })
+
+    // The background is still allowed to answer well past a slow write.
+    await vi.advanceTimersByTimeAsync(9_000)
+    expect(outcome).toBeUndefined()
+
+    await vi.advanceTimersByTimeAsync(1_500)
+    expect(outcome?.message).toContain('未收到本地服务的回执')
+  })
+
+  it('drops a settings result that arrives after the save already timed out', async () => {
+    vi.useFakeTimers()
+    let receive: ((message: unknown) => void) | undefined
+    const port = {
+      postMessage: vi.fn(),
+      onMessage: { addListener: vi.fn((listener: (message: unknown) => void) => { receive = listener }) },
+      onDisconnect: { addListener: vi.fn() },
+    }
+    vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'zh-CN' }, runtime: { connect: vi.fn(() => port) } })
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('12345678-1234-4234-8234-123456789abe')
+    const api = connectPanel()
+
+    let outcome: Error | null | undefined
+    void api.updateSettings({ bridgeUrl: '' })
+      .then(() => { outcome = null }, (error: Error) => { outcome = error })
+    await vi.advanceTimersByTimeAsync(11_000)
+    expect(outcome?.message).toContain('未收到本地服务的回执')
+
+    // The abandoned entry is gone, so a late answer has nothing to settle.
+    expect(() => {
+      receive?.({ type: 'settings.result', id: '12345678-1234-4234-8234-123456789abe', ok: true })
+    }).not.toThrow()
   })
 })
