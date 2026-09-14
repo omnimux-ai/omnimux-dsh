@@ -587,7 +587,7 @@ ${darkTokens}
   /* ── 工具栏（单行流） ─────────────────────────────────── */
   .chip-sep {
     width: 1px; height: 20px; flex-shrink: 0;
-    background: var(--dsw-alias-border);
+    background: var(--dsw-alias-border-l2);
   }
   .toolbar {
     display: flex; flex-wrap: nowrap; align-items: center; gap: 10px;
@@ -604,7 +604,7 @@ ${darkTokens}
   }
   .search-input::placeholder { color: var(--dsw-alias-label-tertiary); }
   .search-input:focus { border-color: var(--dsw-alias-label-primary); box-shadow: 0 0 0 2px var(--dsw-alias-active); }
-  .filters { display: flex; flex-wrap: nowrap; gap: 6px; flex-shrink: 0; overflow-x: auto; }
+  .filters { display: flex; flex-wrap: nowrap; gap: 6px; flex-shrink: 1; min-width: 0; overflow-x: auto; }
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
     height: 32px; box-sizing: border-box; padding: 0 10px;
@@ -708,6 +708,10 @@ ${darkTokens}
   .source-title { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--dsw-alias-label-secondary); }
   .source-path { font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); word-break: break-all; }
   .footer-note { margin-top: 16px; font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+
+  @media (max-width: 1180px) {
+    .toolbar { flex-wrap: wrap; }
+  }
 
   @media (max-width: 720px) {
     .toolbar { flex-wrap: wrap; }
@@ -969,6 +973,11 @@ ${darkTokens}
 
   filterButtons.forEach(function (button) {
     button.addEventListener('click', function () {
+      // 分类切换优先于状态筛选：若状态筛选仍在生效，一并复位，避免高亮与内容不一致
+      if (state.status !== 'all') {
+        state.status = 'all';
+        statusButtons.forEach(function (other) { other.classList.toggle('is-active', other.dataset.statusFilter === 'all'); });
+      }
       state.filter = button.dataset.filter;
       filterButtons.forEach(function (other) { other.classList.toggle('is-active', other === button); });
       apply();
