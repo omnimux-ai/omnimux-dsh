@@ -1,6 +1,6 @@
 # 底栏剩余控件收敛（分段器 / ASR 模型触发器 / 空态提示 / 段间分隔符）
 
-- 任务：`.worktrees/workflow-bar-converge-remainder`（分支 `feat/workflow-bar-converge-remainder`）
+- 任务：`.worktrees/workflow-bar-converge-remainder`（分支 `agent/omnimux-workflow-bar-converge-issue-1812`，基线 `origin/main` @ `33f1153b3`）
 - 日期：2026-09-14
 - 上游：Issue #1805 / PR #1807 已完成素材节点（图片 / 视频）底栏三个触发器的收敛；本任务承接其遗留的未收敛项，用户于 2026-09-14 明确「统一收敛」。
 

@@ -83,54 +83,68 @@ const sharedRule = RULES.find(
   (r) => selectorList(r).includes('.wf-model-cascade-capsule') && /height: 32px/.test(r.body),
 );
 
-test('e2e: ASR 模型触发器与共享组几何逐项一致（异构控件不得漂移）', () => {
+test('e2e: ASR 模型触发器并入共享组（同一份声明，不是复制）', () => {
   assert.ok(sharedRule, '必须存在底栏触发器共享几何规则');
-  const asr = ruleWithSelector('.wf-custom-select-trigger.wf-param-bar__select--model');
-  assert.ok(asr, '必须存在 ASR 触发器的底栏作用域规则');
+  const asrMember = '.wf-custom-select-trigger.wf-param-bar__select--model';
+  assert.ok(selectorList(sharedRule).includes(asrMember), 'ASR 成员必须直接列在共享组选择器列表中');
 
-  // 几何五件套逐项与共享组同值
-  for (const decl of [
-    'height: 32px',
-    'border-radius: 999px',
-    'padding: 0 8px 0 10px',
-    'font-size: 12px',
-    'font-weight: 500',
-  ]) {
-    assert.match(asr.body, new RegExp(decl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `ASR 触发器缺少 ${decl}`);
+  // 几何五件套由这一份声明提供
+  for (const decl of ['height: 32px', 'border-radius: 999px', 'padding: 0 8px 0 10px', 'font-size: 12px', 'font-weight: 500']) {
     assert.match(sharedRule.body, new RegExp(decl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `共享组缺少 ${decl}`);
   }
-  // 底色与描边使用同一组令牌
   for (const token of ['--dsw-alias-bg-layer-1', '--dsw-alias-border-l2']) {
-    assert.ok(asr.body.includes(token), `ASR 触发器必须使用共享令牌 ${token}`);
     assert.ok(sharedRule.body.includes(token), `共享组必须使用共享令牌 ${token}`);
+  }
+
+  // 五态同样列在共享组的对应规则里
+  const stateMembers = [
+    `${asrMember}:hover:not(:disabled)`,
+    `${asrMember}.wf-custom-select-trigger--open:not(:disabled)`,
+    `${asrMember}:active:not(:disabled)`,
+    `${asrMember}:focus-visible:not(:disabled)`,
+    `${asrMember}:disabled`,
+  ];
+  for (const member of stateMembers) {
+    assert.ok(
+      RULES.some((r) => selectorList(r).includes(member)),
+      `共享组五态必须包含 ASR 成员：${member}`,
+    );
+  }
+
+  // ASR 专属规则只允许声明它真正独有的差异，不得重复几何或配色（防回归到"复制一份"）
+  const exclusive = RULES.filter((r) => selectorList(r).length === 1 && selectorList(r)[0].startsWith(asrMember));
+  assert.ok(exclusive.length > 0, '必须保留 ASR 的宽度差异规则');
+  for (const rule of exclusive) {
+    assert.doesNotMatch(
+      rule.body,
+      /height:|border-radius:|padding:|background:|font-size:|font-weight:/,
+      `ASR 专属规则不得重复共享组声明：${selectorList(rule)[0]}`,
+    );
   }
 });
 
-test('e2e: ASR 模型触发器五态齐备（hover / open / active / focus-visible / disabled）', () => {
-  const prefixes = ['.wf-custom-select-trigger.wf-param-bar__select--model'];
-  const find = (suffix) => RULES.find((r) => selectorList(r).some((s) => s === `${prefixes[0]}${suffix}`));
+test('e2e: 展开态不得压掉键盘焦点环（层叠回归）', () => {
+  // open 组不得声明 box-shadow：它会以更高特异性压掉后声明的焦点环
+  const openRule = RULES.find((r) =>
+    selectorList(r).includes(".wf-model-cascade-capsule[aria-expanded='true']:not(:disabled)"),
+  );
+  assert.ok(openRule, '必须存在 open 规则');
+  assert.doesNotMatch(openRule.body, /box-shadow/, 'open 组不得声明 box-shadow（会压掉焦点环）');
 
-  const hover = find(':hover:not(:disabled)');
-  assert.ok(hover, 'ASR 触发器必须有 hover 规则');
-  assert.match(hover.body, /interactive-bg-hover/);
-  assert.match(hover.body, /border-l3/);
+  const specificity = (selector) =>
+    (selector.match(/\.[A-Za-z0-9_-]+/g) || []).length +
+    (selector.match(/\[[^\]]*\]/g) || []).length +
+    (selector.match(/:(?!not\b)[a-z-]+(\([^)]*\))?/g) || []).length;
 
-  const open = find('.wf-custom-select-trigger--open:not(:disabled)');
-  assert.ok(open, 'ASR 触发器必须有 open 规则');
-  assert.match(open.body, /border-color: var\(--dsw-alias-brand-primary\)/);
-
-  const active = find(':active:not(:disabled)');
-  assert.ok(active, 'ASR 触发器必须有按压规则');
-  assert.match(active.body, /transform: scale\(0\.96\)/);
-
-  const focus = find(':focus-visible');
-  assert.ok(focus, 'ASR 触发器必须有键盘焦点规则');
-  assert.match(focus.body, /box-shadow: 0 0 0 2px/);
-
-  const disabled = find(':disabled');
-  assert.ok(disabled, 'ASR 触发器必须有禁用规则');
-  assert.match(disabled.body, /opacity: 0\.35/);
-  assert.match(disabled.body, /cursor: not-allowed/);
+  const focusMember = '.wf-custom-select-trigger.wf-param-bar__select--model:focus-visible:not(:disabled)';
+  const haloMember = '.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--open';
+  const haloRule = RULES.find((r) => selectorList(r).includes(haloMember));
+  assert.ok(haloRule, '必须存在 ASR 的 halo 消除规则');
+  assert.match(haloRule.body, /box-shadow: none/);
+  assert.ok(
+    specificity(focusMember) > specificity(haloMember),
+    `焦点成员特异性 ${specificity(focusMember)} 必须高于 halo 消除规则 ${specificity(haloMember)}，展开态焦点环才可见`,
+  );
 });
 
 test('e2e: 分段控件容器与内块统一为胶囊（底栏与浮层同一份声明）', () => {
@@ -157,17 +171,22 @@ test('e2e: 分段控件容器与内块统一为胶囊（底栏与浮层同一份
 });
 
 test('e2e: 零候选空态与触发器同几何，且不再使用内联业务样式', () => {
-  const empty = ruleWithSelector('.wf-param-pill--empty-models');
-  assert.ok(empty, '必须存在零候选空态的样式规则');
+  // 双类选择器：基类 .wf-param-pill 位于源码更后，同特异性会按顺序压掉本规则的 color
+  const empty = ruleWithSelector('.wf-param-pill.wf-param-pill--empty-models');
+  assert.ok(empty, '空态规则必须用双类提高特异性（否则 color 会被基类按顺序覆盖）');
   assert.match(empty.body, /height: 32px/);
   assert.match(empty.body, /border-radius: 999px/);
   assert.match(empty.body, /var\(--dsw-alias-bg-layer-1, var\(--wb-surface-raised\)\)/);
+  assert.match(empty.body, /var\(--dsw-alias-label-secondary, var\(--wb-text-secondary\)\)/);
 
-  // 源码侧：空态元素不再带内联业务样式
-  const block = configPanelSrc.slice(
-    configPanelSrc.indexOf('data-testid="wf-model-empty"'),
-    configPanelSrc.indexOf('panel.reason.catalog_unavailable'),
-  );
+  // 源码绑定：组件必须仍在输出该类名，否则上面的 CSS 会静默变成死规则
+  assert.match(configPanelSrc, /wf-param-pill--empty-models/, '空态类名必须仍由组件输出');
+
+  // 源码侧：空态元素不再带内联业务样式（锚点必须存在，否则断言会空过）
+  const start = configPanelSrc.indexOf('data-testid="wf-model-empty"');
+  const end = configPanelSrc.indexOf('panel.reason.catalog_unavailable');
+  assert.ok(start !== -1 && end > start, '空态代码块锚点必须存在且顺序正确');
+  const block = configPanelSrc.slice(start, end);
   assert.doesNotMatch(block, /style=\{\{/, '空态提示不得再使用内联业务样式');
 
   const doc = loadBarDocument();
@@ -177,12 +196,14 @@ test('e2e: 零候选空态与触发器同几何，且不再使用内联业务样
 test('e2e: 段间分隔改为语义化竖线，底栏不再出现字符分隔节点', () => {
   const divider = ruleWithSelector('.wf-param-pill__divider');
   assert.ok(divider, '必须存在分隔符规则');
+  assert.match(divider.body, /display: block/, '竖线必须显式块化，不依赖父级 flex 上下文');
   assert.match(divider.body, /width: 1px/);
   assert.match(divider.body, /height: 12px/);
   assert.match(divider.body, /background: var\(--dsw-alias-border-l2/);
   assert.doesNotMatch(divider.body, /font-size/, '分隔符不得再依赖字号撑开（那是字符节点的做法）');
 
-  // 源码侧：分隔节点不再携带字符内容
+  // 源码绑定 + 分隔节点不再携带字符内容
+  assert.match(configPanelSrc, /wf-param-pill__divider/, '分隔符类名必须仍由组件输出');
   assert.doesNotMatch(configPanelSrc, /wf-param-pill__divider"\s*>/, '分隔节点不得再包含字符内容');
   assert.match(configPanelSrc, /wf-param-pill__divider" aria-hidden="true"/, '分隔节点必须为装饰性空节点');
 

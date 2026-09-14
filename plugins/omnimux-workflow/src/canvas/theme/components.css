@@ -1803,6 +1803,7 @@ button.wf-slot-well.wf-slot-well--append:hover {
 
 /* 段间分隔：语义化 CSS 竖线（与摘要条一致），废除行内字符节点 */
 .wf-param-pill__divider {
+  display: block;
   width: 1px;
   height: 12px;
   margin: 0 2px;
@@ -1810,8 +1811,10 @@ button.wf-slot-well.wf-slot-well--append:hover {
   flex-shrink: 0;
 }
 
-/* 零候选空态提示：与底栏触发器同几何（胶囊 / 32px / 同一底色与描边），仅文字降权 */
-.wf-param-pill--empty-models {
+/* 零候选空态提示：与底栏触发器同几何（胶囊 / 32px / 同一底色与描边），仅文字降权。
+   选择器用双类提高特异性：基类 .wf-param-pill 在源码中位于本规则之后，同特异性会按顺序胜出，
+   本规则的 color 将不生效。 */
+.wf-param-pill.wf-param-pill--empty-models {
   display: inline-flex;
   align-items: center;
   height: 32px;
@@ -1855,24 +1858,12 @@ button.wf-slot-well.wf-slot-well--append:hover {
   margin: 0 1px;
 }
 
-.wf-param-bar__select--ghost.ant-select {
-  border: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  min-height: 18px;
-  font-size: 12px;
-  box-shadow: none !important;
-}
+/* 说明：antd 时代为底栏模型下拉写的 `.wf-param-bar__select*.ant-select` 与
+   `.wf-param-bar__select--model` 系列规则已全部失效 —— 底栏模型选择器早已替换为自研
+   CustomSelect，`wf-param-bar__select` 现仅出现在 ConfigPanel/index.tsx 一处，不再有
+   `.ant-select` 结构。为免留下"看似生效"的死规则，已随本次收敛一并删除。 */
 
-.wf-param-bar__select--ghost .ant-select-content {
-  padding: 0 !important;
-  font-size: 12px;
-  color: var(--wb-text-secondary);
-}
-
-/* ParamBar 胶囊行（来源 Gxgen ConfigPanel/ParamBar.tsx 模型选择器行）。
-   antd 6 Select 无 .ant-select-selector：背景/边框在根 .ant-select 上，
-   文案在 .ant-select-content（覆盖目标按此结构）。 */
+/* ParamBar 胶囊行（来源 Gxgen ConfigPanel/ParamBar.tsx 模型选择器行）。 */
 .wf-param-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1880,38 +1871,8 @@ button.wf-slot-well.wf-slot-well--append:hover {
   gap: 6px;
 }
 
-.wf-param-bar__select.ant-select {
-  border-radius: 999px !important;
-  background: var(--wb-surface-raised) !important;
-  border-color: var(--wb-border) !important;
-  font-size: var(--wb-fs-caption);
-  min-height: 28px;
-  box-shadow: none !important;
-}
-
-.wf-param-bar__select .ant-select-content {
-  font-size: var(--wb-fs-caption);
-  color: var(--wb-text-primary);
-}
-
-.wf-param-bar__select .ant-select-content::placeholder {
-  color: var(--wb-text-muted);
-}
-
-.wf-param-bar__select .ant-select-suffix {
-  color: var(--wb-text-muted);
-}
-
-.wf-param-bar__select--model {
-  max-width: 140px;
-  min-width: 80px;
-}
-
-.wf-param-bar__select--model .ant-select-content {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* 说明：原 `.wf-param-bar__select.ant-select` / `.wf-param-bar__select--model` 系列规则
+   已随自定义选择器替换而全部失效，已删除（见上方说明）。 */
 
 /* 模型选项：provider 图标无数据源 → 首字母圆片（T2.4） */
 .wf-model-option {
@@ -4949,54 +4910,9 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   min-width: 88px;
 }
 
-/* ASR 转写节点的模型触发器：CustomSelect 是通用组件（pill / ghost / standard 三变体），
-   其门面 className 与 wf-custom-select-trigger* 挂在同一个 button 上（同一元素，非后代），
-   底栏作用域选择器必须与它并列书写；几何与五态对齐「底栏触发器共享规格」：
-   32px 高 / 胶囊圆角 / 内边距 0 8px 0 10px / 同一底色描边。 */
-.wf-custom-select-trigger.wf-param-bar__select--model {
-  min-width: 96px;
-  max-width: 170px;
-  height: 32px;
-  padding: 0 8px 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
-  font-size: 12px;
-  font-weight: 500;
-  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-
-.wf-custom-select-trigger.wf-param-bar__select--model:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover, var(--wb-pill-hover));
-  border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
-}
-
-.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--open:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-active, var(--wb-pill-hover));
-  border-color: var(--dsw-alias-brand-primary);
-  box-shadow: none;
-}
-
-.wf-custom-select-trigger.wf-param-bar__select--model:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.wf-custom-select-trigger.wf-param-bar__select--model:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary, color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent));
-}
-
-.wf-custom-select-trigger.wf-param-bar__select--model:disabled,
-.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.wf-param-bar__select--ghost .wf-custom-select-trigger {
-  min-width: 36px;
-  max-width: 90px;
-  padding: 2px 4px;
-}
+/* ASR 转写节点的模型触发器：几何与五态由「底栏触发器共享规格」提供 —— 该选择器组已包含
+   并列成员 `.wf-custom-select-trigger.wf-param-bar__select--model`（门面类与组件类名挂在
+   同一个 button 上，故必须并列书写）。此处不再重复声明任何几何或状态。 */
 
 .wf-custom-select-label {
   flex: 1 1 auto;
@@ -7531,15 +7447,19 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 /* ============ 全模态参数配置面板（cfg 底座；视频参数配置面板 (Video Param Popover / TriggerBar) 双选择器别名） ============ */
 
-/* ---- 底栏触发器共享规格（模型选择 / 音色 / 参数摘要三处同源） ----
+/* ---- 底栏触发器共享规格（模型选择 / 音色 / 参数摘要 / 转写模型选择 四处同源） ----
    几何铁律：高 32px / 圆角 999px 胶囊 / 内边距 0 8px 0 10px / 字号 12px。
-   三个触发器加入同一组选择器：几何与五态（hover / open / active / focus-visible /
+   四个触发器加入同一组选择器：几何与五态（hover / open / active / focus-visible /
    disabled）契约只有这一份实现，任一触发器不再各自手写外观；新增底栏触发器时
-   加类名即可，禁止复制本段。 */
+   加类名即可，禁止复制本段。
+   转写节点的门面类与 CustomSelect 组件类名挂在**同一个 button** 上，因此该成员必须
+   并列书写（`.wf-custom-select-trigger.wf-param-bar__select--model`）；选择器列表各成员
+   独立计算特异性，它按 (0,2,0) 参与层叠，足以压过组件基类与各变体。 */
 .wf-model-cascade-capsule,
 .wf-voice-trigger,
 .wf-cfg-summary-bar,
-.wf-video-trigger-bar {
+.wf-video-trigger-bar,
+.wf-custom-select-trigger.wf-param-bar__select--model {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -7563,17 +7483,20 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-model-cascade-capsule:hover:not(:disabled),
 .wf-voice-trigger:hover:not(:disabled),
 .wf-cfg-summary-bar:hover:not(:disabled),
-.wf-video-trigger-bar:hover:not(:disabled) {
+.wf-video-trigger-bar:hover:not(:disabled),
+.wf-custom-select-trigger.wf-param-bar__select--model:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover, var(--wb-pill-hover));
   border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
 }
 
-/* open 态：模型触发器由 aria-expanded 派生，摘要条由 --open 类派生。
-   选择器必须与 hover 规则同特异性（同为 (0,3,0)）：点开后指针仍停在触发器上，
-   hover 会持续命中；特异性不足时品牌描边会被 hover 描边盖掉，展开态看不出激活。 */
+/* open 态：模型触发器由 aria-expanded 派生，摘要条由 --open 类派生，转写节点由 --open 类派生。
+   选择器必须与 hover 规则同特异性（同为 (0,3,0)，转写成员为 (0,4,0)）：点开后指针仍停在
+   触发器上，hover 会持续命中；特异性不足时品牌描边会被 hover 描边盖掉。本组只声明底色与
+   描边 —— 不声明 box-shadow，否则会以更高特异性压掉后面的键盘焦点环。 */
 .wf-model-cascade-capsule[aria-expanded='true']:not(:disabled),
 .wf-cfg-summary-bar.wf-cfg-summary-bar--open:not(:disabled),
-.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled) {
+.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled),
+.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--open:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-active, var(--wb-pill-hover));
   border-color: var(--dsw-alias-brand-primary);
 }
@@ -7581,14 +7504,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-model-cascade-capsule:active:not(:disabled),
 .wf-voice-trigger:active:not(:disabled),
 .wf-cfg-summary-bar:active,
-.wf-video-trigger-bar:active {
+.wf-video-trigger-bar:active,
+.wf-custom-select-trigger.wf-param-bar__select--model:active:not(:disabled) {
   transform: scale(0.96);
 }
 
+/* 焦点环：转写成员带 :not(:disabled) 提升到 (0,4,0)，与 open 组同特异性且声明在后，
+   保证「展开 + 键盘焦点」并存时焦点环仍然可见（与其余三个触发器行为一致）。 */
 .wf-model-cascade-capsule:focus-visible,
 .wf-voice-trigger:focus-visible,
 .wf-cfg-summary-bar:focus-visible,
-.wf-video-trigger-bar:focus-visible {
+.wf-video-trigger-bar:focus-visible,
+.wf-custom-select-trigger.wf-param-bar__select--model:focus-visible:not(:disabled) {
   outline: none;
   /* 宿主 token 缺失时回退到品牌色 45% 混合，保证焦点环在任何环境下可见（不写裸色字面量） */
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary, color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent));
@@ -7600,9 +7527,22 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-cfg-summary-bar:disabled,
 .wf-cfg-summary-bar[aria-disabled='true'],
 .wf-video-trigger-bar:disabled,
-.wf-video-trigger-bar[aria-disabled='true'] {
+.wf-video-trigger-bar[aria-disabled='true'],
+.wf-custom-select-trigger.wf-param-bar__select--model:disabled,
+.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* 转写节点模型触发器的专属差异：几何与五态由上面的共享组提供，此处只声明它特有的宽度约束，
+   以及消除组件基类在 open 态的白色 halo。必须声明在共享组之后 —— 两者同特异性靠顺序取胜。 */
+.wf-custom-select-trigger.wf-param-bar__select--model {
+  min-width: 96px;
+  max-width: 170px;
+}
+
+.wf-custom-select-trigger.wf-param-bar__select--model.wf-custom-select-trigger--open {
+  box-shadow: none;
 }
 
 /* 模型触发器专属：不参与压缩（品牌名不被挤断），文字不可拖选 */
