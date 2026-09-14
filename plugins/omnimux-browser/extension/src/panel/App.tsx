@@ -610,30 +610,50 @@ interface HistoryPage {
   }
 }
 
+/**
+ * 进展期间可见的具名步骤上限。
+ *
+ * 卡片在进展中只保留最近几步，更早的折叠为计数：步骤链逐步增长时卡片几何必须完全不变，
+ * 否则每来一个进展就换一次行、增一次高，用户看到的就是抖动。折叠让文本长度不再影响布局。
+ */
+const TOOL_STEPS_VISIBLE = 3
+
 export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
   const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
     .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
+  // 极长的单步名称仍可能撑破单行：窗口内的单个步骤再截断，完整链条保留在无障碍名称里。
+  const shown = steps.slice(-TOOL_STEPS_VISIBLE).map((step) => (step.length > 80 ? `${step.slice(0, 80)}…` : step))
+  const folded = steps.length - shown.length
 
   return (
-    <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
+    <div
+      className={`tool-activity ${running ? 'running' : 'complete'}`}
+      role="status"
+      aria-label={`${running ? copy.tool.running : copy.tool.complete}：${steps.join(' → ')}`}
+    >
       <span className="tool-icon"><ToolIcon /></span>
       <span className="tool-copy">
         <span className="tool-label">{running ? copy.tool.running : copy.tool.complete}</span>
-        <span className="tool-summary">
-          {steps.length > 1 ? (
-            steps.map((step, idx) => (
-              <Fragment key={idx}>
-                {idx > 0 && <span className="tool-step-arrow" aria-hidden="true">→</span>}
-                <span className={idx < steps.length - 1 ? 'tool-step-tag' : 'tool-step-text'}>{step}</span>
+        <span className="tool-summary" data-lines="1">
+          {folded > 0 && <span className="tool-step-more">+{folded}</span>}
+          {shown.length > 0 ? (
+            shown.map((step, idx) => (
+              <Fragment key={steps.length - shown.length + idx}>
+                {(idx > 0 || folded > 0) && <span className="tool-step-arrow" aria-hidden="true">→</span>}
+                <span className={idx < shown.length - 1 ? 'tool-step-tag' : 'tool-step-text'}>{step}</span>
               </Fragment>
             ))
           ) : (
-            <span className="tool-step-text">{steps[0] ?? row.text}</span>
+            <span className="tool-step-text">{row.text}</span>
           )}
         </span>
       </span>
-      <span className="tool-state" aria-label={running ? copy.tool.inProgress : copy.tool.completed}>
+      <span
+        className="tool-state"
+        data-width="fixed"
+        aria-label={running ? copy.tool.inProgress : copy.tool.completed}
+      >
         {running ? (
           <span className="spinner" />
         ) : (
