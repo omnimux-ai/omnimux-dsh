@@ -1452,13 +1452,15 @@ textarea:focus-visible {
 }
 
 .composer {
+  position: relative;
+  z-index: 20;
   flex: 0 0 auto;
   padding: 8px 12px 12px;
   background: var(--canvas);
 }
 
 .composer-box {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--line-strong);
   border-radius: 17px;
   background: var(--surface);
@@ -1492,7 +1494,7 @@ textarea:focus-visible {
   overflow: hidden;
   margin: 0;
   padding: 1px 0 1px 9px;
-  border-left: 3px solid #b8c5ff;
+  border-left: 3px solid var(--ink);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   text-overflow: ellipsis;
@@ -1503,24 +1505,42 @@ textarea:focus-visible {
   white-space: pre-wrap;
 }
 
+:root[data-theme="dark"] .page-selection-quote,
+:root[data-theme="dark"] .row .body.md blockquote.page-selection-quote {
+  border-left-color: rgba(255, 255, 255, 0.7);
+  color: var(--muted);
+}
+
 .composer-box > .page-selection .page-selection-quote {
   position: absolute;
-  bottom: calc(100% + 6px);
-  left: 12px;
+  bottom: calc(100% + 8px);
+  left: 10px;
   width: max-content;
-  max-width: min(360px, calc(100vw - 48px));
+  max-width: min(340px, calc(100vw - 36px));
   margin: 0;
   padding: 8px 12px 8px 10px;
   border: 1px solid var(--line-strong);
-  border-left: 3px solid #b8c5ff;
+  border-left: 3px solid var(--ink);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: var(--shadow);
+  color: var(--ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
   opacity: 0;
   pointer-events: none;
   transform: translateY(4px);
   transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 30;
+  z-index: 50;
+  -webkit-line-clamp: 4;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+:root[data-theme="dark"] .composer-box > .page-selection .page-selection-quote {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-left: 3px solid rgba(255, 255, 255, 0.85);
+  color: #f3f4f6;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .composer-box > .page-selection:hover .page-selection-quote,
@@ -1546,39 +1566,70 @@ textarea:focus-visible {
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  padding: 2px 4px 2px 7px;
-  border: 1px solid #d7dfff;
+  padding: 2px 7px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 999px;
   background: var(--blue-wash);
-  color: var(--blue-ink);
+  color: var(--ink);
   font-size: calc(10px * var(--ui-scale));
   line-height: 1.6;
+  cursor: default;
+  transition: padding 0.15s ease, background-color 0.15s ease;
+}
+
+:root[data-theme="dark"] .page-selection-chip {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f3f4f6;
 }
 
 .page-selection-chip svg {
   width: 12px;
   height: 12px;
   fill: currentColor;
+  flex-shrink: 0;
 }
 
 .page-selection-chip > button {
   display: grid;
-  width: 15px;
+  width: 0;
   height: 15px;
-  padding: 0 0 1px;
+  padding: 0;
+  margin-left: -4px;
   place-items: center;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--blue-ink);
+  color: inherit;
   cursor: pointer;
   font: inherit;
   font-size: calc(12px * var(--ui-scale));
   line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: width 0.15s ease, opacity 0.15s ease, margin-left 0.15s ease, background 0.15s ease;
+}
+
+.page-selection:hover .page-selection-chip > button,
+.page-selection-chip:focus-within > button {
+  width: 15px;
+  margin-left: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.page-selection:hover .page-selection-chip,
+.page-selection-chip:focus-within {
+  padding-right: 4px;
 }
 
 .page-selection-chip > button:hover {
-  background: #dfe6ff;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="dark"] .page-selection-chip > button:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .page-selection-source {
@@ -5274,6 +5325,7 @@ textarea:focus-visible {
 
 /* Clean Composer Box (图 1 极简黑白墨水风格 零多余彩色) */
 .composer-box.clean-chat-box {
+  overflow: visible;
   border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--line-strong);
