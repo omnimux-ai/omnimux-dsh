@@ -48,22 +48,18 @@ export async function injectTweetText(rawText: string, anchorButton?: HTMLElemen
     !el || el === document.body || el === document.documentElement || el.tagName === 'BODY' || el.tagName === 'HTML'
 
   if (anchorButton) {
-    const parentContainer =
-      anchorButton.parentElement && !isTooBroad(anchorButton.parentElement) &&
-      anchorButton.parentElement.querySelector('div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]')
-        ? anchorButton.parentElement
-        : null
-
-    const container =
-      anchorButton.closest('[data-testid="tweetTextarea_0_label"]')?.parentElement ||
-      anchorButton.closest('[role="dialog"]') ||
-      anchorButton.closest('form') ||
-      anchorButton.closest('article') ||
-      parentContainer
-
-    targetArea = container?.querySelector(
-      'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]',
-    ) as HTMLElement | null
+    // 优先沿 DOM 树向上逐级回溯最近包含推特输入框的祖先容器（严格物理隔离：彻底覆盖推特首页常驻发帖区、弹窗发帖区、推文详情回帖区等全场景，但绝不向全局退化）
+    let cur: HTMLElement | null = anchorButton.parentElement
+    while (cur && !isTooBroad(cur)) {
+      const found = cur.querySelector(
+        'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]',
+      ) as HTMLElement | null
+      if (found) {
+        targetArea = found
+        break
+      }
+      cur = cur.parentElement
+    }
   } else {
     // 未指定锚点图标时（如无界面的直接调用），优先使用当前获得焦点的输入框，其次才按选择器查找
     const activeEl = document.activeElement
