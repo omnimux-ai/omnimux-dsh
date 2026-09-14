@@ -219,6 +219,24 @@ export function ProductFormPage(props) {
             title={t('page.unsavedBadge')}
           />
         ) : undefined}
+        actions={(
+          <div className="omnimux-products-form-actions">
+            <Button
+              variant="ghost"
+              onClick={requestLeave}
+            >
+              {t('add.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!canSubmit}
+              loading={saving}
+              onClick={() => { void handleSave() }}
+            >
+              {submitText}
+            </Button>
+          </div>
+        )}
       />
 
       <Divider className="omnimux-products-form-divider" />
@@ -227,28 +245,6 @@ export function ProductFormPage(props) {
         {formKind === 'digital'
           ? <DigitalProductForm {...formProps} />
           : <PhysicalProductForm {...formProps} />}
-      </div>
-
-      <div className="omnimux-products-form-footer">
-        <span className="omnimux-products-form-footer-hint">
-          {isDirty ? t('page.unsavedHint') : ''}
-        </span>
-        <div className="omnimux-products-form-actions">
-          <Button
-            variant="ghost"
-            onClick={requestLeave}
-          >
-            {t('add.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            disabled={!canSubmit}
-            loading={saving}
-            onClick={() => { void handleSave() }}
-          >
-            {submitText}
-          </Button>
-        </div>
       </div>
 
       <UnsavedChangesDialog
