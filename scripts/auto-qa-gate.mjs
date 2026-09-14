@@ -8,9 +8,12 @@
  * missing evidence fails there, while CI never claims browser acceptance.
  *
  * Usage:
- *   node scripts/auto-qa-gate.mjs [target] [--plugin <name>] [--diff]
+ *   node scripts/auto-qa-gate.mjs [target] [--plugin <name>] [--diff|--all]
  *     [--base <ref>] [--require-browser] [--evidence-dir <dir>]
  *     [--output <file>] [--json]
+ *
+ * --all 为全仓模式：不受 git diff 限制，扫描目标目录下的全部源码与扩展清单
+ * （plugins/<name>/extension/manifest*.json）；与 --diff 同时给出时以 --all 为准。
  */
 
 import { spawnSync } from 'node:child_process'
@@ -22,7 +25,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { extname, join, resolve, sep } from 'node:path'
-import { maskNonCode, normalizedRelative, staticScan } from './auto-qa-scan.mjs'
+import { isExtensionManifestPath, maskNonCode, normalizedRelative, staticScan } from './auto-qa-scan.mjs'
 import { isForbiddenWorkflowArtifact } from './check-tracked-artifacts.mjs'
 import { validateLiveQaReport } from './live-qa-validation.mjs'
 
@@ -37,6 +40,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
     pluginName: '',
     outputJson: false,
     diff: false,
+    all: false,
     base: 'origin/main',
     requireBrowser: false,
     evidenceDir: '',
@@ -54,6 +58,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
     else if (arg === '--browser-root' && argv[i + 1]) options.browserRoot = resolve(argv[++i])
     else if (arg === '--json') options.outputJson = true
     else if (arg === '--diff') options.diff = true
+    else if (arg === '--all') options.all = true
     else if (arg === '--require-browser') options.requireBrowser = true
     else if (!arg.startsWith('-')) options.targetDir = resolve(arg)
     else throw new Error(`未知或缺值参数: ${arg}`)
@@ -76,7 +81,9 @@ function isInside(parent, candidate) {
   return path === root || path.startsWith(`${root}${sep}`)
 }
 
-export function findFiles(dir, extensions = SOURCE_EXTENSIONS) {
+// extraMatcher 用于把少量非源码扩展名的文件（扩展清单）并入同一次遍历，
+// 避免为它们单开一轮目录扫描；不传时行为与既有调用完全一致。
+export function findFiles(dir, extensions = SOURCE_EXTENSIONS, extraMatcher = null) {
   const results = []
   if (!existsSync(dir)) return results
   function walk(current) {
@@ -90,7 +97,7 @@ export function findFiles(dir, extensions = SOURCE_EXTENSIONS) {
       const fullPath = join(current, entry.name)
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name)) walk(fullPath)
-      } else if (entry.isFile() && extensions.has(extname(entry.name))) {
+      } else if (entry.isFile() && (extensions.has(extname(entry.name)) || extraMatcher?.(fullPath))) {
         results.push(fullPath)
       }
     }
@@ -129,6 +136,17 @@ export function isScannableSourceFile(root, file) {
   return SOURCE_EXTENSIONS.has(extname(file))
 }
 
+// 扩展清单不是源码扩展名，但承载 content_security_policy.connect-src 与主机声明，
+// 安全维度必须扫描（旧事故里它是唯一可静态发现的信号）。
+export function isExtensionManifestFile(root, file) {
+  if (!existsSync(file)) return false
+  return isExtensionManifestPath(normalizedRelative(root, file))
+}
+
+function isScannableFile(root, file) {
+  return isScannableSourceFile(root, file) || isExtensionManifestFile(root, file)
+}
+
 export function changedFilesFromGit(root, base = 'origin/main', { strict = false } = {}) {
   const changed = new Set()
   const diff = spawnSync('git', ['-C', root, 'diff', '--name-only', '-z', `${base}...HEAD`], {
@@ -161,7 +179,7 @@ export function createReport(options) {
     timestamp: new Date().toISOString(),
     targetDir: options.targetDir,
     pluginName: options.pluginName,
-    diffMode: options.diff,
+    diffMode: options.diff && !options.all,
     base: options.base,
     changedFiles: [],
     scannedFiles: [],
@@ -215,12 +233,12 @@ export function runGate(options) {
   const report = createReport(options)
   const root = gitRoot(options.targetDir) || options.targetDir
   let files
-  if (options.diff) {
+  if (options.diff && !options.all) {
     const changed = changedFilesFromGit(root, options.base)
     report.changedFiles = changed.map(file => normalizedRelative(root, file))
-    files = changed.filter(file => isInside(options.targetDir, file) && isScannableSourceFile(root, file))
+    files = changed.filter(file => isInside(options.targetDir, file) && isScannableFile(root, file))
   } else {
-    files = findFiles(options.targetDir)
+    files = findFiles(options.targetDir, SOURCE_EXTENSIONS, file => isExtensionManifestFile(root, file))
     report.changedFiles = files.map(file => normalizedRelative(root, file))
   }
 
@@ -236,8 +254,9 @@ export function runGate(options) {
 
   report.pass = Object.values(report.dimensions).every(dimension => dimension.pass) && (!options.requireBrowser || report.browser.pass)
   const errorCount = Object.values(report.dimensions).reduce((sum, dimension) => sum + dimension.errors.length, 0) + report.browser.errors.length
+  const scopeLabel = report.diffMode ? 'L0 diff-aware 静态门禁' : 'L0 全仓静态门禁'
   report.summary = report.pass
-    ? `PASS: L0 diff-aware 静态门禁通过（扫描 ${files.length} 个文件）${options.requireBrowser ? '；合并后 Dev ego-browser 证据通过' : '；未执行浏览器验收'}`
+    ? `PASS: ${scopeLabel}通过（扫描 ${files.length} 个文件）${options.requireBrowser ? '；合并后 Dev ego-browser 证据通过' : '；未执行浏览器验收'}`
     : `FAIL: L0 静态/Dev 浏览器证据检查发现 ${errorCount} 项阻断`
   return report
 }
