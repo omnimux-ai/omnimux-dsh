@@ -755,15 +755,6 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               data-testid="wf-model-empty"
               role="status"
               aria-live="polite"
-              style={{
-                height: 32,
-                borderRadius: 8,
-                padding: '0 12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                fontSize: 12,
-                color: 'var(--dsw-alias-label-secondary)',
-              }}
             >
               {t(reasonCode === 'catalog_unavailable' ? 'panel.reason.catalog_unavailable' : isAsrTool ? 'panel.noTranscriptionModel' : 'panel.noCompatibleModel')}
             </div>
@@ -807,7 +798,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           {/* 文本 / ASR 保持内联生成方式入口；图像的生成方式进自身浮层（Issue #763：音频时长由文本长度决定，无参数浮层）。 */}
           {showModeUi && (materialType === 'text' || isAsrTool) ? (
             <>
-              <span className="wf-param-pill__divider">|</span>
+              <span className="wf-param-pill__divider" aria-hidden="true" />
               <div data-testid="wf-operation-mode-inline">
                 <OperationSegment
                   value={opsState.selectedOperationId || ''}
