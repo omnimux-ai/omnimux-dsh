@@ -2121,10 +2121,19 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-label-tertiary, #71717a);
   flex-shrink: 0;
 }
+.omnimux-inspiration-doc-record {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
 .omnimux-inspiration-doc-labeled-row {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  text-align: left;
+  gap: 4px;
   font-size: 13px;
   line-height: 1.6;
   margin-bottom: 4px;
@@ -2132,8 +2141,9 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-doc-label {
   font-weight: 600;
   color: var(--dsw-alias-label-primary-dimmed, #f4f4f5);
-  white-space: nowrap;
-  flex-shrink: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 /* 三级描述：说明文本与缩进块 (13px / 400) */
 .omnimux-inspiration-doc-desc-block {
@@ -2144,6 +2154,10 @@ export const INSPIRATION_CSS = `
 }
 .omnimux-inspiration-doc-desc {
   margin: 0;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.65;

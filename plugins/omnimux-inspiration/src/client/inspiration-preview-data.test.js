@@ -105,6 +105,56 @@ describe('inspiration preview data', () => {
   })
 })
 
+describe('Markdown table document records', () => {
+  it('preserves consecutive standalone pipes instead of creating a zero-column table', () => {
+    assert.deepEqual(parseDocAnalysis('|\n|'), [{ title: '', entries: [
+      { type: 'desc', text: '|' },
+      { type: 'desc', text: '|' },
+    ] }])
+  })
+
+  it('converts each table row into a vertical field group inside its section', () => {
+    const raw = '### 分镜\n| 时间 | 画面 |\n| :--- | ---: |\n| 0–3 秒 | 开场。 |\n| 3–6 秒 | 特写。 |\n结束。'
+    assert.deepEqual(parseDocAnalysis(raw), [{ title: '分镜', entries: [
+      { type: 'record', fields: [{ label: '时间', desc: '0–3 秒' }, { label: '画面', desc: '开场。' }] },
+      { type: 'record', fields: [{ label: '时间', desc: '3–6 秒' }, { label: '画面', desc: '特写。' }] },
+      { type: 'desc', text: '结束。' },
+    ] }])
+  })
+
+  it('preserves escaped pipes, code pipes, empty cells and optional outer pipes', () => {
+    const raw = '表达 | 代码 | 空值\n--- | --- | ---\n左\\|右 | `a|b` 与 ``x`|y`` |'
+    assert.deepEqual(parseDocAnalysis(raw)[0].entries, [
+      { type: 'record', fields: [
+        { label: '表达', desc: '左|右' },
+        { label: '代码', desc: '`a|b` 与 ``x`|y``' },
+        { label: '空值', desc: '' },
+      ] },
+    ])
+  })
+
+  it('keeps invalid tables and pipe prose intact rather than dropping separator-like text', () => {
+    const raw = '| 名称 | 说明 |\n| --- |\n| A | B | C |\n--:--\nhttps://example.com/a|b\n提示词 a|b。'
+    const parsed = parseDocAnalysis(raw)
+    const visible = parsed.flatMap((group) => [group.title, ...group.entries.map((entry) => entry.text)]).filter(Boolean)
+    assert.deepEqual(visible, raw.split('\n'))
+  })
+
+  it('does not interpret table syntax inside fenced code', () => {
+    const raw = '```text\n| 名称 | 说明 |\n| --- | --- |\n| A | B |\n```'
+    assert.deepEqual(parseDocAnalysis(raw), [{ title: '', entries: [{ type: 'desc', text: raw }] }])
+  })
+
+  it('retains excess cells in malformed body rows and never changes copy source', () => {
+    const raw = '| 名称 | 说明 |\n| --- | --- |\n| A | B | C |'
+    const parsed = parseDocAnalysis(raw)
+    assert.equal(parsed[0].entries.at(-1).text, '| A | B | C |')
+    assert.deepEqual(parsed[0].entries[0], { type: 'record', fields: [{ label: '名称', desc: '' }, { label: '说明', desc: '' }] })
+    const data = getInspirationPreviewData({ analysis: { sections: [{ title: '分镜', analysis: raw }] } })
+    assert.equal(deconstructionCopyText(data), `## 分镜\n${raw}`)
+  })
+})
+
 describe('canAnalyzeInspiration — degraded items must not offer a failing action (P1-2)', () => {
   it('hides the action for a link or image item, which has no video stream', () => {
     assert.equal(canAnalyzeInspiration({ type: 'link', source_url: 'https://youtu.be/abc' }), false)
