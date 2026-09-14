@@ -140,7 +140,7 @@ dsh 出厂只有 `read_image`：它存在的目的是把图片塞进**模型上�
 
 ## 配置
 
-`crosery-viewer` 命名空间，三个开关，默认值都是「插件该有的行为」：
+`crosery-viewer` 命名空间，四个开关，默认值都是「插件该有的行为」：
 
 | 字段 | 默认 | 关掉之后 |
 | --- | --- | --- |
@@ -169,7 +169,7 @@ npm run build         # 两份 .d.ts + 两个 bundle
 npm test              # 66 个用例
 ```
 
-已在真实环境跑通（`dsh 0.1.1-rc.2`，Node 26.7.0，claude-sonnet-5 路由，headless Chrome 驱动）：
+以下为原上游保留的历史实测记录（`dsh 0.1.1-rc.2`，Node 26.7.0，claude-sonnet-5 路由，headless Chrome 驱动），不代表当前 OmniMux 检出的验收。冷启动耗时也仅属历史测量，不构成性能保证；新版本须重新执行相关测试与浏览器旅程：
 
 - **七种卡片全部渲染**：图片（`<img>` 原尺寸，点击开灯箱、Esc 关闭）、视频（`<video>` 有进度条，`currentTime = 4` 跳转成功，`seekable.end = 6`）、音频（`<audio>`，duration 5）、PDF、**文档（docx / xlsx / pptx）**、网页、通用文件。
 - **Office 三件套真的转出来了**：三个 iframe 的 src 全部返回 `200 application/pdf` 且以 `%PDF-` 开头，frame 内部含 Chrome PDF 阅读器的 `<embed>`；pptx 显示为 1/3 页并带幻灯片缩略图侧栏，正文是真实的幻灯片内容。

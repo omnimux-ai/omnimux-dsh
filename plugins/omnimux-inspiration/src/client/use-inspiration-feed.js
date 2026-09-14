@@ -192,7 +192,10 @@ function useInspirationFilters() {
   const [q, setQ] = useState('')
   const [platform, setPlatform] = useState('')
   const [type, setType] = useState('')
-  const [sort, setSort] = useState('hot')
+  const [sharedSort, setSharedSort] = useState('hot')
+  const [localSort, setLocalSort] = useState('new')
+  const sort = tab === 'local' ? localSort : sharedSort
+  const setSort = tab === 'local' ? setLocalSort : setSharedSort
   const [favorite, setFavorite] = useState('0')
   const [country, setCountry] = useState('')
   const [category, setCategory] = useState('')

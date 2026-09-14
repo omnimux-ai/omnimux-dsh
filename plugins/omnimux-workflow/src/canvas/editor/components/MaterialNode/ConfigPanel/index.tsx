@@ -235,7 +235,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     // Only compatible rows enter the DOM. No disabled greys for incompatible /
     // unlisted / Whisper-when-not-listed models.
     return filteredModels.options.map((row) => {
-      const visuals = getModelVisuals(row.id);
+      const visuals = getModelVisuals(row.id, { family: row.family, kind: outputTypeForCompat });
       const icon = visuals.icon;
       const badge = row.badge ?? visuals.badge;
       const subtitle = row.subtitle ?? visuals.subtitle;
@@ -255,7 +255,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         disabled: false,
       };
     });
-  }, [filteredModels.options]);
+  }, [filteredModels.options, outputTypeForCompat]);
 
 
   const {

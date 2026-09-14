@@ -214,7 +214,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "enabled": true
     }
   ],
-  "deepseek-v4-flash-vision-exp": [
+  "deepseek-v4-flash": [
     {
       "id": "deepseek-official",
       "label": "官方直连版",
@@ -531,10 +531,11 @@ const SHORT_MODEL_NAMES: ReadonlyArray<readonly [string, string]> = [
   ['kling', 'Kling'],
   ['grok-imagine-video', 'Grok Video'],
   ['gpt-image-2.5', 'Image 2.5'],
-  ['gpt-image-2-5', 'Image 2.5'],
-  ['gpt-image-2', 'GPT Image 2'],
   ['midjourney', 'Midjourney'],
+  ['mj-v8-1', 'Midjourney'],
+  ['mj-v7', 'Midjourney'],
   ['nanobanana', 'NanoBanana'],
+  ['nano-banana', 'NanoBanana'],
   ['seedream', 'Seedream'],
   ['grok-imagine-image', 'Grok Image'],
   ['claude-opus-5', 'Opus 5'],
@@ -546,10 +547,28 @@ const SHORT_MODEL_NAMES: ReadonlyArray<readonly [string, string]> = [
   ['gpt-5.5', 'GPT-5.5'],
 ];
 
-/** Compact label for the trigger capsule (the menu itself shows full names). */
-export function resolveShortModelName(modelId?: string): string {
+/**
+ * Family-keyed short names. The contract `family` outlives any canonical rename, so the capsule
+ * keeps its compact label when a model id changes shape (e.g. `midjourney-8.1` → `mj-v8-1`).
+ */
+const FAMILY_SHORT_NAMES: Readonly<Record<string, string>> = {
+  midjourney: 'Midjourney',
+  nanobanana: 'NanoBanana',
+  seedream: 'Seedream',
+};
+
+/**
+ * Compact label for the trigger capsule (the menu itself shows full names).
+ * @param modelId Model id (may carry a `@channelGroup` suffix).
+ * @param family Contract family of the row, when the catalog exposes it.
+ */
+export function resolveShortModelName(modelId?: string, family?: string): string {
   if (!modelId) return '选择模型';
   const { modelId: id } = parseModelAndGroup(modelId);
+  if (typeof family === 'string' && family.trim()) {
+    const byFamily = FAMILY_SHORT_NAMES[family.trim().toLowerCase()];
+    if (byFamily) return byFamily;
+  }
   const lower = id.toLowerCase();
   for (const [fragment, label] of SHORT_MODEL_NAMES) {
     if (lower.includes(fragment)) return label;

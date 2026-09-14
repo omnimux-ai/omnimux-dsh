@@ -16,11 +16,6 @@ export const PRODUCT_ID_ALIASES = Object.freeze({
       .filter((row) => row.disposition === 'alias')
       .map((row) => [row.id, row.target]),
   ),
-  'nano-banana-2': 'nano_banana_2',
-  'nano-banana-pro': 'nano_banana_pro',
-  'mj-v8-1': 'midjourney-8.1',
-  'midjourney-8-1': 'midjourney-8.1',
-  'mj-v7': 'midjourney-7',
   'seedance-2-0-task': 'seedance-2-0',
   'seedance-2-5-task': 'seedance-2-5',
   'seedance-2-0-fast-task': 'seedance-2-0-fast',

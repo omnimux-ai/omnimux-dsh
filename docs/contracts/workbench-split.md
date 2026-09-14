@@ -93,7 +93,9 @@ else if (isWorkbenchTab(tabId)) default = gui
 else do not write focus (third-party Files, etc.)
 ```
 
-MUST NOT inherit `lastOpenMode` across tabs. Re-opening while `chat` restores **that tab's** remembered mode, or the default matrix if none.
+MUST NOT inherit `lastOpenMode` across tabs. Ordinary `open({ tabId })` calls without `focus`, including Agent-driven opens, restore **that tab's** remembered mode and split width while `chat`, or the default matrix if none.
+
+**User navigation exception:** an explicit user click on a left-row workbench entry goes through `createSidebarStore.open()` (or its `set(true)` equivalent), which passes `focus: 'gui'`. This navigation enters GUI focus even when that tab remembers `split`, including after the right panel was closed. It does not change the ordinary no-focus open contract. This exception is not permission for Agent tools to force GUI focus or write `conversationCollapsed`.
 
 Canvas `applyProjectCanvasRatio` MUST skip while focus is `gui` or `chat`, and MUST run only for `omnimux-workflow:canvas`.
 
@@ -135,10 +137,10 @@ In-tab `.omnimux-workbench-focus` / `WorkbenchFocusBar` is **removed**. Layout f
 Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `__omnimuxStage` / `__omnimuxSidebar`). Vertical plugins **MUST NOT** import the hub client. They:
 
 1. `registerTab({ id, single: true, path sentinel })`
-2. Bind a StageStore-shaped adapter via `window.__omnimuxWorkbench.createSidebarStore({ tabId, title, path })` into `createSidebarEntry`. `open()` calls `window.__omnimuxWorkbench.open({ tabId, path })`. **MUST** use this factory for left-row StageStores; **MUST NOT** re-implement highlight/open/close semantics (`isActive` / `closeTab` / focus). A **thin lazy forwarder** (acquire factory when first used; ≤8s poll if hub not ready) is allowed so vertical mount order cannot crash plugin load. Clip may also keep local `CLIP_TAB_ID` / path constants (ADR Q12).
+2. Bind a StageStore-shaped adapter via `window.__omnimuxWorkbench.createSidebarStore({ tabId, title, path })` into `createSidebarEntry`. For explicit user left-row navigation, `open()` calls `window.__omnimuxWorkbench.open({ tabId, path, focus: 'gui' })`. **MUST** use this factory for left-row StageStores; **MUST NOT** re-implement highlight/open/close semantics (`isActive` / `closeTab` / focus). A **thin lazy forwarder** (acquire factory when first used; ≤8s poll if hub not ready) is allowed so vertical mount order cannot crash plugin load. Clip may also keep local `CLIP_TAB_ID` / path constants (ADR Q12).
 3. `attachStore(props.store)` from the Tab component so width writes can `store.reduce` (public API has no `setWidth`)
 
-`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })` → apply Default Focus Rule or restore `(sessionId, tabId)` memory. NEVER `claim` a stage. NEVER `sessions.create({})`.
+`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })` → apply explicit user-navigation focus when provided; otherwise apply Default Focus Rule or restore `(sessionId, tabId)` memory. NEVER `claim` a stage. NEVER `sessions.create({})`.
 
 `createSidebarStore` six-pack: `getSnapshot` / `subscribe` / `open` / `close` / `set` / `readBox`. `close()` = `closeTab(tabId)` then `setFocus('chat')` if no OmniMux workbench tab remains.
 

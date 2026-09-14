@@ -211,6 +211,7 @@ export async function captureStageContract(root, stage) {
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: open must activate the registered Tab`)
+    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar navigation must enter gui`)
     const tabId = state().splits.active
     assert.ok(tabs.has(tabId), `${plugin}: opened an unregistered Tab ${tabId}`)
     assert.ok(notifications > 0, `${plugin}: subscription did not observe open`)
@@ -220,26 +221,47 @@ export async function captureStageContract(root, stage) {
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: explicit open must restore a collapsed panel`)
+    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar reopen must enter gui`)
+    api.setFocus('split')
+    adapter.open()
+    await settle()
+    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar navigation must override a split preference`)
+    api.setFocus('split')
+    api.closePanel()
+    adapter.open()
+    await settle()
+    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar reopen must override a split preference`)
+    assert.equal(state().splits.tabs.filter((tab) => tab.id === tabId).length, 1, `${plugin}: sidebar navigation must not duplicate its Tab`)
     for (const mode of ['split', 'gui']) {
       api.setFocus(mode)
+      if (mode === 'split') {
+        const defaultWidth = state().width
+        store.reduce((s) => ({ ...s, width: 480 }))
+        assert.equal(state().width, 480, `${plugin}: custom split width must be legal`)
+        assert.notEqual(state().width, defaultWidth, `${plugin}: split restoration must test a non-default width`)
+      }
       const width = state().width
       api.closePanel()
       assert.equal(api.getFocus(), 'chat')
       api.detachStore(store)
       api.attachStore(store)
       assert.equal(state().panelOpen, false, `${plugin}: attaching a closed session must not reopen it`)
-      adapter.open()
+      // Ordinary opens restore memory; sidebar navigation explicitly requests gui.
+      assert.equal(await api.open({ tabId }), true, `${plugin}: ordinary reopen must succeed`)
       await settle()
       assert.equal(api.getFocus(), mode, `${plugin}: reopen must preserve ${mode} preference`)
       assert.equal(state().width, width, `${plugin}: reopen must preserve ${mode} width`)
     }
     const box = adapter.readBox()
     for (const key of ['top', 'left', 'width', 'height']) assert.ok(Number.isFinite(box[key]), `${plugin}: invalid readBox.${key}`)
+    api.setFocus('split')
     adapter.set(false)
     assert.equal(adapter.getSnapshot(), false)
     adapter.set(true)
     await settle()
     assert.equal(adapter.getSnapshot(), true)
+    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar set(true) must enter gui`)
+    assert.ok(!win.document.documentElement.dataset.dshProductStage, 'sidebar reopen must not claim an overlay')
     sessionId = 'qa-session-b'
     emit()
     assert.equal(adapter.getSnapshot(), false, `${plugin}: active Tab leaked across sessions`)

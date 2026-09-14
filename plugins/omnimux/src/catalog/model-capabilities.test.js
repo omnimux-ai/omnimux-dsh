@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import {
   loadAll,
   resetContractCache,
-  getModelContract,
   verifyContracts,
   DEFAULT_SPECS_DIR,
 } from './contract/index.js';
@@ -22,8 +21,6 @@ const PHASE_ONE_VIDEO_OPERATIONS = {
   'wan-3.0': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref', 'document_to_video', 'webpage_to_video'],
   'minimax-h3': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
   'grok-imagine-video-1-5': ['text_to_video', 'video_multi_ref'],
-  'minimax-h3-max': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
-  'minimax-h3-max-turbo': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame'],
 };
 
 test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loader）', () => {
@@ -33,15 +30,8 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
 
   const videoModels = index.all().filter((m) => m.managementGroup === 'video');
   assert.ok(videoModels.length >= 6, '必须至少声明主流视频模型');
-
-  // 断言 Kling Avatar 纯数字人绝无首尾帧
-  const avatar = index.get('kling-avatar') ?? getModelContract('kling-avatar', SPECS_DIR);
-  assert.ok(avatar, '必须声明 kling-avatar 数字人');
-  const avatarOps = avatar.operations.map((m) => m.id);
-  assert.ok(avatarOps.includes('digital_human'), '数字人必须包含 digital_human 模式');
-  assert.ok(!avatarOps.includes('first_last_frame'), '数字人严禁包含首尾帧模式');
-  assert.equal(avatar.listed, false);
-  assert.equal(avatar.operations[0].listed, false);
+  // #1751：数字人 kling-avatar 整款撤架后，video 目录收敛为 11 款合约型号
+  assert.equal(videoModels.length, 11);
 
   for (const [modelId, expected] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     const model = index.get(modelId);
@@ -50,15 +40,18 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   }
 });
 
-test('H2: 处置表 76 行 + implementation-ready 集合与处置一致', () => {
+test('H2: 处置表 75 行 + implementation-ready 集合与处置一致', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 76);
+  assert.equal(doc.dispositions.length, 75);
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
+  // #1751：12 款撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
+  assert.equal(forbidden.size, 12);
+  for (const id of forbidden) assert.equal(index.get(id), undefined, id);
 
   for (const model of index.all()) {
     const row = byId.get(model.id);
@@ -76,14 +69,16 @@ test('H2: 处置表 76 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 66);
+  assert.equal(index.listedOperations.length, 55);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
       assert.ok(index.listedOperations.includes(`${modelId}#${operation}`), `${modelId}#${operation}`);
     }
   }
-  assert.ok(!index.listedOperations.includes('gpt-image-2#multi_reference'));
+  // gpt-image-2.5 的 multi_reference 仍是 draft/stub，不得上架
+  assert.ok(!index.listedOperations.includes('gpt-image-2.5#multi_reference'));
+  assert.ok(index.listedOperations.includes('gpt-image-2.5#text_to_image'));
   assert.ok(index.listedOperations.includes('seed-audio-1.0#text_to_speech'));
   // Existing draft audio models remain unlisted.
   assert.ok(!index.listedOperations.some((key) => key.startsWith('suno#')));
@@ -97,7 +92,7 @@ test('H2: 处置表 76 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 76);
+  assert.equal(report.dispositions.total, 75);
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 
@@ -137,10 +132,11 @@ test('real specs load via DEFAULT_SPECS_DIR with canonical schemaVersion', () =>
   assert.equal(index.schemaVersion, '1.1');
   assert.ok(index.get('kling-v3'));
   assert.ok(index.get('suno'));
-  assert.ok(index.get('gpt-image-2'));
   assert.ok(index.get('gpt-image-2.5'));
-  // 2026-09-14：高清型号更名收敛后，旧写法经别名归一到 gpt-image-2.5-hd
-  assert.equal(index.get('gpt-image-2.5-hd')?.aliases?.includes('gpt-image2-hd'), true);
+  // #1751：gpt-image-2 整款撤架（unavailable），YAML 行不再存在
+  assert.equal(index.get('gpt-image-2'), undefined);
+  // #1751：高清别名行 gpt-image-2-hd / gpt-image2-hd 一并删除，旧写法不再归一
+  assert.equal(index.get('gpt-image-2.5-hd')?.aliases, undefined);
   assert.ok(index.get('whisper-1'));
   // extra ghost ids deleted
   assert.equal(index.get('deepseek-v3'), undefined);

@@ -148,14 +148,14 @@ test('image operations derive strip preset and have addButton enabled', () => {
 test('image slots remain empty for text-only, missing and unspecified operations', () => {
   const imgCatalog = {
     models: [{
-      id: 'gpt-image-2',
+      id: 'gpt-image-2.5',
       operations: [
         { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
       ],
     }],
   };
   for (const operation of ['text_to_image', 'absent_op', undefined]) {
-    const derived = deriveSlotLayout(imgCatalog, 'gpt-image-2', operation, 'image');
+    const derived = deriveSlotLayout(imgCatalog, 'gpt-image-2.5', operation, 'image');
     assert.equal(derived.preset, 'none');
     assert.equal(derived.addButton, false);
     assert.deepEqual(derived.slots, []);

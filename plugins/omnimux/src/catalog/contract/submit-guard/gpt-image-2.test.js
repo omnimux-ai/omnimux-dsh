@@ -9,7 +9,9 @@ import {
 import { guardSubmit, mapOpenAiImageSize } from './index.js'
 import { mapOmnimuxInput } from '../../../media/vendors/omnimux.js'
 
-const canonical = 'gpt-image-2'
+// #1751: the former `gpt-image-2` id left the contract universe; its successor on
+// the shelf is `gpt-image-2.5`, which keeps the identical OpenAI size/quality mapping.
+const canonical = 'gpt-image-2.5'
 const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
@@ -39,7 +41,7 @@ test('mapOpenAiImageSize matrix verification', () => {
   assert.deepEqual(mapOpenAiImageSize('auto', '2K'), { size: '1792x1024' })
 })
 
-test('gpt-image-2 guardSubmit maps size & quality across aspect ratios and resolutions', () => {
+test('gpt-image-2.5 guardSubmit maps size & quality across aspect ratios and resolutions', () => {
   const testCases = [
     {
       aspectRatio: '9:16',
@@ -106,7 +108,7 @@ test('gpt-image-2 guardSubmit maps size & quality across aspect ratios and resol
   }
 })
 
-test('gpt-image-2 respects user-specified quality override', () => {
+test('gpt-image-2.5 respects user-specified quality override', () => {
   const plan = guardSubmit(
     {
       model: canonical,

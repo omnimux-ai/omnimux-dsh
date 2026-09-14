@@ -424,6 +424,34 @@ function SelectionQuote({
   )
 }
 
+function isFillableContent(text: string): boolean {
+  if (!text || text.trim() === '') return false
+  const trimmed = text.trim()
+
+  // 1. 过滤开场白、问候语与自我介绍
+  if (
+    /(你好|您好)[!！\s].*我是/i.test(trimmed) ||
+    /欢迎使用/i.test(trimmed) ||
+    /我们可以一起进行[:：]/i.test(trimmed) ||
+    /随时把你的需求.*发给我/i.test(trimmed) ||
+    /今天有什么想推进的/i.test(trimmed)
+  ) {
+    return false
+  }
+
+  // 2. 过滤极短的纯疑问/追问
+  if (trimmed.length < 50 && /[?？]$/.test(trimmed)) {
+    return false
+  }
+
+  // 3. 过滤纯报错与系统提示
+  if (/^\[?(error|warning|系统提示|异常)/i.test(trimmed)) {
+    return false
+  }
+
+  return true
+}
+
 /**
  * One conversation row body. Memoized: rows are immutable (append/merge copy
  * the array but reuse row objects), so markdown is re-parsed only when a
@@ -463,7 +491,7 @@ const MessageBody = memo(function MessageBody({
           />
         )}
         {text.trim() !== '' && <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />}
-        {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && (
+        {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && isFillableContent(text) && (
           <div className="dom-fill-actions">
             <DomFillButton textToFill={text} locale={locale} />
           </div>

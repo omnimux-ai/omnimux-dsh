@@ -85,28 +85,25 @@ test('gpt-image-2.5 natively supports 4K on the unified gpt-image-2.5 endpoint',
   }
 })
 
-test('gpt-image-2-5 alias transparently resolves to unified gpt-image-2.5', () => {
-  const plan1k = guardSubmit(
-    {
-      model: 'gpt-image-2-5',
-      operation: 'text_to_image',
-      prompt: 'test alias 1k',
-      resolution: '1K',
-    },
-    { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
-  )
-  assert.equal(plan1k.ok, true)
-  assert.equal(plan1k.modelId, 'gpt-image-2.5')
-
-  const plan4k = guardSubmit(
-    {
-      model: 'gpt-image-2-5',
-      operation: 'text_to_image',
-      prompt: 'test alias 4k',
-      resolution: '4K',
-    },
-    { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
-  )
-  assert.equal(plan4k.ok, true)
-  assert.equal(plan4k.modelId, 'gpt-image-2.5')
+// 2026-09-14 #1751（评审次要-2）：上游 2026-09-10 变更日志明写「旧 ID 不是兼容别名，也不支持
+// gpt-image-2-5 拼写」，与同时撤销的 gpt-image-2-hd / gpt-image2-hd 同源同口径 —— 该拼写不再是
+// 别名，guardSubmit 必须按未知型号拒绝，而不是静默改写成统一 gpt-image-2.5。
+test('gpt-image-2-5 is not an upstream-recognised spelling: guardSubmit rejects it as unknown', () => {
+  for (const resolution of ['1K', '4K']) {
+    const plan = guardSubmit(
+      {
+        model: 'gpt-image-2-5',
+        operation: 'text_to_image',
+        prompt: `test revoked spelling ${resolution}`,
+        resolution,
+      },
+      { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
+    )
+    assert.equal(plan.ok, false, `${resolution}: the revoked spelling must not resolve`)
+    assert.equal(plan.code, 'unknown_model', resolution)
+    assert.equal(plan.modelId, undefined, resolution)
+  }
+  // 撤销的落地形态：统一 gpt-image-2.5 端点上不再声明任何别名。
+  assert.equal(index.get('gpt-image-2.5')?.aliases, undefined)
+  assert.equal(index.get('gpt-image-2-5'), undefined)
 })

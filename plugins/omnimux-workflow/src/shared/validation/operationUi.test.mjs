@@ -300,8 +300,8 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
       defaults: { image: 'nanobanana-2' },
       image: [
         { id: 'nanobanana-2', label: 'NanoBanana 2', family: 'nanobanana' },
-        { id: 'gpt-image-2', label: 'GPT Image 2', family: 'openai' },
-        { id: 'midjourney', label: 'Midjourney', family: 'midjourney' },
+        { id: 'gpt-image-2.5', label: 'GPT Image 2.5', family: 'openai' },
+        { id: 'nano-banana-pro', label: 'Nano Banana Pro', family: 'google' },
       ],
       models: [
         {
@@ -313,17 +313,17 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
           ],
         },
         {
-          id: 'gpt-image-2',
-          label: 'GPT Image 2',
+          id: 'gpt-image-2.5',
+          label: 'GPT Image 2.5',
           family: 'openai',
           operations: [
             { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
           ],
         },
         {
-          id: 'midjourney',
-          label: 'Midjourney',
-          family: 'midjourney',
+          id: 'nano-banana-pro',
+          label: 'Nano Banana Pro',
+          family: 'google',
           operations: [
             { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
           ],
@@ -345,8 +345,8 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
     assert.equal(result.zeroCandidates, false, 'zeroCandidates must be false to avoid "no compatible model" false positive');
     const ids = result.options.map((o) => o.id);
     assert.ok(ids.includes('nanobanana-2'), 'NanoBanana 2 should be present');
-    assert.ok(ids.includes('gpt-image-2'), 'GPT Image 2 should be present');
-    assert.ok(ids.includes('midjourney'), 'Midjourney should be present');
+    assert.ok(ids.includes('gpt-image-2.5'), 'GPT Image 2.5 should be present');
+    assert.ok(ids.includes('nano-banana-pro'), 'Nano Banana Pro should be present');
     for (const opt of result.options) {
       assert.equal(opt.verdict.acceptsCurrentInputs, true);
     }

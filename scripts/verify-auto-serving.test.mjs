@@ -15,12 +15,18 @@ function checkMutation(mutate, code) {
   assert.ok(report.issues.some((issue) => issue.code === `auto_serving_${code}`), JSON.stringify(report))
 }
 
-test('manifest registers all 19 whitelist IDs without claiming online supply', () => {
+test('manifest registers all whitelist IDs without claiming online supply', () => {
   const report = verifyAutoServing()
   assert.equal(report.ok, true, JSON.stringify(report.issues))
   assert.equal(report.exitCode, 0)
-  assert.equal(report.registeredCount, 19)
-  assert.equal(report.requiredCount, 17)
+  const manifest = fixture()
+  // #1751 移除的 3 款不得再作为 canonical 注册
+  for (const removed of ['gpt-image-2', 'minimax-h3-max', 'minimax-h3-max-turbo']) {
+    assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
+    assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
+  }
+  assert.equal(report.registeredCount, 16)
+  assert.equal(report.requiredCount, 13)
   assert.equal(report.onlineVerified, false)
 })
 
@@ -29,7 +35,7 @@ test('every whitelist model must be registered even when not listed', () => {
 })
 
 test('alias IDs cannot replace canonical product registrations', () => {
-  checkMutation((m) => { m.models.find((row) => row.productId === 'grok-imagine-image-2').productId = 'grok-imagine-image' }, 'not_canonical')
+  checkMutation((m) => { m.models.find((row) => row.productId === 'grok-imagine-image-2-0').productId = 'grok-imagine-image' }, 'not_canonical')
 })
 
 test('every registration requires a canonical disposition, including unlisted audio', () => {
@@ -41,20 +47,20 @@ test('every registration requires a canonical disposition, including unlisted au
 })
 
 test('foreign gateway aliases, duplicates and missing canonical IDs are rejected', () => {
-  for (const gatewayIds of [['gpt-image-2', 'seedance-2.0'], ['gpt-image-2', 'gpt-image-2'], ['unknown'], [], [null]]) {
-    checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2').gatewayIds = gatewayIds }, 'gateway_invalid')
+  for (const gatewayIds of [['gpt-image-2.5', 'seedance-2.0'], ['gpt-image-2.5', 'gpt-image-2.5'], ['unknown'], [], [null]]) {
+    checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').gatewayIds = gatewayIds }, 'gateway_invalid')
   }
 })
 
 test('manifest candidate ordering may override the default without crossing models', () => {
   const manifest = fixture()
-  manifest.models.find((row) => row.productId === 'grok-imagine-image-2').gatewayIds.reverse()
+  manifest.models.find((row) => row.productId === 'grok-imagine-image-2-0').gatewayIds.reverse()
   assert.equal(verifyAutoServing({ manifest }).ok, true)
 })
 
 test('required supply cannot include an unlisted model or exclude a listed whitelist model', () => {
   checkMutation((m) => { m.models.find((row) => row.productId === 'suno').requiredInAuto = true }, 'not_listed')
-  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2').requiredInAuto = false }, 'required')
+  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').requiredInAuto = false }, 'required')
 })
 
 test('wrong modality, duplicate products and wire-model drift fail closed', () => {

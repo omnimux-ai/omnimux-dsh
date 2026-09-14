@@ -29,12 +29,16 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal((index.parseErrors ?? []).length, 0, index.parseErrors?.join('\n'));
   assert.equal(index.schemaVersion, CANONICAL_SCHEMA_VERSION);
   assert.equal(Object.prototype.hasOwnProperty.call(index, 'version'), false);
-  assert.ok(index.all().length >= 14, `expected >=14 models, got ${index.all().length}`);
-  assert.ok(index.get('kling-avatar'));
+  // 2026-09-14 #1751: 12 models removed, 6 renamed → 50 → 38 contracted models.
+  assert.equal(index.all().length, 38, `expected 38 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
+  assert.ok(index.get('nano-banana-2'));
+  assert.ok(index.get('mj-v7'));
+  // kling-avatar was removed upstream and must not survive as a contract.
+  assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 66);
+  assert.equal(index.listedOperations.length, 55);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const key of [
     'seedance-2-0#first_last_frame',

@@ -153,8 +153,8 @@ function createFakeSeamHub(opts = {}) {
       return {
         source: 'omnimux',
         fingerprint: 'fake-catalog',
-        models: [['claude-opus-4-6', 'text', 'chat'], ['deepseek-v4-flash-vision-exp', 'text', 'chat'],
-          ['gpt-5.5', 'text', 'chat'], ['gpt-image-2', 'image', 'text_to_image'],
+        models: [['claude-opus-4-6', 'text', 'chat'], ['deepseek-v4-flash', 'text', 'chat'],
+          ['gpt-5.5', 'text', 'chat'], ['gpt-image-2.5', 'image', 'text_to_image'],
           ['seedance-2-0-fast', 'video', 'text_to_video'], ['suno', 'audio', 'text_to_music'],
           ['gpt-4o-mini-tts', 'audio', 'text_to_speech']].map(([id, type, operation]) => ({ id, label: id,
           operations: [{ id: operation, listed: true, output: { type }, inputs: [
@@ -162,23 +162,23 @@ function createFakeSeamHub(opts = {}) {
           ] }] })),
         defaults: {
           text: 'gemini-3.7-flash',
-          image: 'gpt-image-2',
+          image: 'gpt-image-2.5',
           video: 'seedance-2-0-fast',
           audio: 'suno',
         },
         text: [
           { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-          { id: 'deepseek-v4-flash-vision-exp', label: 'DeepSeek V4 Flash' },
+          { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
           { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
           { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
           { id: 'gpt-5.5', label: 'GPT 5.5' },
         ],
         image: [
-          { id: 'gpt-image-2', label: 'GPT Image 2' },
+          { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
           { id: 'nanobanana-2', label: 'NanoBanana 2' },
         ],
         video: [
-          { id: 'kling-o1', label: 'Kling O1' },
+          { id: 'kling-o3', label: 'Kling O3' },
           { id: 'seedance-2-0-fast', label: 'Seedance 2.0 Fast' },
         ],
         audio: [
@@ -500,7 +500,7 @@ test('text node: textComplete seam → generatedContent 回填 + 落盘', async 
   }
 });
 
-test('sync live 提交没有 taskId 时仍回填产物（gpt-image-2 b64）', async () => {
+test('sync live 提交没有 taskId 时仍回填产物（gpt-image-2.5 b64）', async () => {
   const hub = createFakeSeamHub({
     liveSubmitWithoutTaskId: true,
   });
@@ -716,23 +716,23 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
         fingerprint: 'fake-catalog-env',
         defaults: {
           text: 'gpt-5.5',
-          image: 'gpt-image-2',
-          video: 'kling-o1',
+          image: 'gpt-image-2.5',
+          video: 'kling-o3',
           audio: 'suno',
         },
         text: [
           { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-          { id: 'deepseek-v4-flash-vision-exp', label: 'DeepSeek V4 Flash' },
+          { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
           { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
           { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
           { id: 'gpt-5.5', label: 'GPT 5.5' },
         ],
         image: [
-          { id: 'gpt-image-2', label: 'GPT Image 2' },
+          { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
           { id: 'nanobanana-2', label: 'NanoBanana 2' },
         ],
         video: [
-          { id: 'kling-o1', label: 'Kling O1' },
+          { id: 'kling-o3', label: 'Kling O3' },
           { id: 'seedance-2-0-fast', label: 'Seedance 2.0 Fast' },
         ],
         audio: [
@@ -744,7 +744,7 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
   });
   const h = makeHarness({
     seamHub: hub,
-    env: { OMNIMUX_VIDEO_MODEL: 'kling-o1' },
+    env: { OMNIMUX_VIDEO_MODEL: 'kling-o3' },
   });
   try {
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
@@ -752,13 +752,13 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
     assert.match(caps.body.fingerprint, /^fake-catalog-env:canvas:/);
     assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
     assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
-    assert.equal(caps.body.video.some((row) => row.id === 'kling-o1'), false);
-    assert.ok(caps.body.image.some((row) => row.id === 'gpt-image-2'));
+    assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
+    assert.ok(caps.body.image.some((row) => row.id === 'gpt-image-2.5'));
     assert.equal(caps.body.image.some((row) => row.id === 'nanobanana-2'), false);
     assert.equal(caps.body.text.length, 3);
     assert.deepEqual(caps.body.text.map((r) => r.id), [
       'claude-opus-4-6',
-      'deepseek-v4-flash-vision-exp',
+      'deepseek-v4-flash',
       'gpt-5.5',
     ]);
     assert.ok(caps.body.audio.some((row) => row.id === 'suno'));
@@ -774,7 +774,7 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
   try {
     const caps = await hDefault.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
-    assert.equal(caps.body.video.some((row) => row.id === 'kling-o1'), false);
+    assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
     assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
     assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
   } finally {
@@ -1067,7 +1067,7 @@ test('auto 晚绑定：mount 时无 seam，hub 出现后目录升级为 omnimux'
     const after = await h0call(captured, { url: '/omnimux-workflow/api/capabilities' });
     assert.equal(after.body.source, 'omnimux');
     assert.ok(after.body.fingerprint);
-    assert.equal(after.body.video.some((row) => row.id === 'kling-o1'), false);
+    assert.equal(after.body.video.some((row) => row.id === 'kling-o3'), false);
     assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
     assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
     assert.ok(after.body.defaults?.video);

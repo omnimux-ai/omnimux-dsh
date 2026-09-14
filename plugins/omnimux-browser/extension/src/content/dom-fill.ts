@@ -153,7 +153,7 @@ export async function fillHostInput(text: string, platform: string = 'generic', 
       success: true,
       fallbackToClipboard: false,
       method: 'native-input',
-      message: '已填入输入框',
+      message: '已完成填写',
     }
   }
 
@@ -188,7 +188,7 @@ export async function fillHostInput(text: string, platform: string = 'generic', 
       success: true,
       fallbackToClipboard: false,
       method: 'textContent',
-      message: '已填入输入框',
+      message: '已完成填写',
     }
   }
 

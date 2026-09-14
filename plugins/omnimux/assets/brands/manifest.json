@@ -7,7 +7,7 @@
       "company": "OpenAI",
       "series": { "zh": "Sora / GPT", "en": "Sora / GPT" },
       "primaryColor": "#10A37F",
-      "models": ["gpt-5.5", "gpt-4o", "gpt-image-2", "gpt-image-2.5", "sora-2", "sora-2-standard", "sora2", "dall-e-3"]
+      "models": ["gpt-5.5", "gpt-4o", "gpt-image-2.5", "sora-2", "sora-2-standard", "sora2", "dall-e-3"]
     },
     "anthropic": {
       "id": "anthropic",
@@ -21,21 +21,21 @@
       "company": "Google",
       "series": { "zh": "Gemini", "en": "Gemini" },
       "primaryColor": "#4285F4",
-      "models": ["gemini-3.1-pro-preview", "gemini-3.7-flash", "gemini-3-pro", "nano-banana-2", "nanobanana-2", "nanobanana-pro"]
+      "models": ["gemini-3.1-pro-preview", "gemini-3.7-flash", "gemini-3-pro", "nano-banana-2", "nano-banana-pro", "nanobanana-2", "nanobanana-pro"]
     },
     "veo": {
       "id": "veo",
       "company": "Google DeepMind",
       "series": { "zh": "Veo", "en": "Veo" },
       "primaryColor": "#1A73E8",
-      "models": ["veo-3.1-fast", "veo-3.1", "veo31", "veo3.1", "veo-3", "veo3", "omni-flash"]
+      "models": ["veo31", "veo3.1", "veo-3", "veo3", "omni-flash"]
     },
     "kling": {
       "id": "kling",
       "company": "快手",
       "series": { "zh": "可灵", "en": "Kling" },
       "primaryColor": "#FF5000",
-      "models": ["kling-o1", "kling-o3", "kling-avatar", "kling-motion-control", "kling-video-o1", "kling-1-5", "kling30"]
+      "models": ["kling-o3", "kling-v3-motion-control", "kling-motion-control", "kling-video-o1", "kling-1-5", "kling30"]
     },
     "alibaba": {
       "id": "alibaba",
@@ -49,28 +49,28 @@
       "company": "字节跳动",
       "series": { "zh": "即梦 / 豆包", "en": "Seedance / Seedream" },
       "primaryColor": "#3B82F6",
-      "models": ["seedream-5-0-pro", "seedream-4.5", "seedance-2-0-fast", "seedance-2", "doubao-seedance-pro", "seedream"]
+      "models": ["seedream-5-0-pro", "seedance-2-0-fast", "seedance-2", "doubao-seedance-pro", "seedream"]
     },
     "deepseek": {
       "id": "deepseek",
       "company": "DeepSeek",
       "series": { "zh": "深度求索", "en": "DeepSeek" },
       "primaryColor": "#0284C7",
-      "models": ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"]
+      "models": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"]
     },
     "midjourney": {
       "id": "midjourney",
       "company": "Midjourney",
       "series": { "zh": "Midjourney", "en": "Midjourney" },
       "primaryColor": "#FFFFFF",
-      "models": ["midjourney-8.1", "midjourney-7", "midjourney-niji-7", "midjourney-video"]
+      "models": ["mj-v8-1", "mj-v7", "midjourney-video"]
     },
     "minimax": {
       "id": "minimax",
       "company": "MiniMax",
       "series": { "zh": "海螺", "en": "Hailuo" },
       "primaryColor": "#10B981",
-      "models": ["minimax-h3", "minimax-h3-max", "minimax-h3-max-turbo", "minimax-video", "hailuo-01", "minimax-chat"]
+      "models": ["minimax-h3", "minimax-video", "hailuo-01", "minimax-chat"]
     },
     "grok": {
       "id": "grok",
