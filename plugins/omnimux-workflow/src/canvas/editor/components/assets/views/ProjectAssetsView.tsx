@@ -143,7 +143,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
           {!isFolder && (
             <div
               className="wf-item-locate-icon-compact"
-              title="在画布定位"
+              title="在创作画布定位"
               onClick={(e) => {
                 e.stopPropagation();
                 onInsertToCanvas(item);

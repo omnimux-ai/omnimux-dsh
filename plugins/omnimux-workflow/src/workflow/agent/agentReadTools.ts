@@ -35,7 +35,7 @@ export function createWorkflowListTool(deps: WorkflowAgentDeps): AgentToolSpec {
   return {
     name: 'workflow_list',
     description:
-      'List the workflow infinite-canvas workspaces of the omnimux-workflow plugin (id, name, version, nodeCount, updatedAt), newest first. Set includeExecutions=true to also get the 5 most recent executions (current process) with status and progress. Read-only. Use workflow_snapshot to inspect one workspace and workflow_run to execute it.',
+      'List the workflow creative-canvas workspaces of the omnimux-workflow plugin (id, name, version, nodeCount, updatedAt), newest first. Set includeExecutions=true to also get the 5 most recent executions (current process) with status and progress. Read-only. Use workflow_snapshot to inspect one workspace and workflow_run to execute it.',
     parameters: objectParams({
       include_executions: {
         type: 'boolean',

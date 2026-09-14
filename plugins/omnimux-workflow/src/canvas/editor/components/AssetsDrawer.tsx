@@ -93,7 +93,7 @@ const CanvasTabWrap: React.FC<CanvasTabWrapProps> = ({
       onHoverItem={onHoverItem}
       viewMode={viewMode}
       onViewModeChange={onViewModeChange}
-      onRefresh={() => toast.success('已刷新画布素材')}
+      onRefresh={() => toast.success('已刷新创作画布素材')}
     />
     <div className="wf-assets-bottom-bar-compact">
       <button
@@ -138,7 +138,7 @@ export function executeCanvasMenuAction(
     case 'add-to-canvas':
     case 'focus-in-canvas':
       handleFocusNode(item.id);
-      toast.info('已在画布中定位');
+      toast.info('已在创作画布中定位');
       break;
     case 'add-to-dialog':
     case 'add-to-chat':

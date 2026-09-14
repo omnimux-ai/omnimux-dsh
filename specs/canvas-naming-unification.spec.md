@@ -76,6 +76,8 @@ pnpm --filter omnimux-clip test
 - 界面文案：工作流侧统一「创作画布」、图像侧统一「图像生成」（页签名、卡片按钮、项目页标题、设置项、登录页卖点、应用页提示、剪辑页签与自动建项目名、看图画布页签名）。
 - 旧名清除：`plugins/omnimux-workflow/dsh.manifest.json`、`plugins.registry.json`（原「无限画布」）；`scripts/build-agent-presets.mjs` 与 `presets/tiktok-agent/agent.cordis.yml`（原「工作流画布」，属对外话术，用户会看到 Agent 如此称呼）。
 - 中英对齐：`plugins/omnimux-clip/src/client/index.js` 英文侧 `tab.canvasMode` 原为 `Canvas Link Mode`，随中文一并改 `Creative Canvas Link Mode`。
+- 资源抽屉族文案：页签「画布」改「创作画布」（`AssetsDrawerHeader`），以及「刷新画布素材」「画布暂无素材」「在画布中定位」「添加到画布」「请在画布上…」「已添加到画布…」等同族 19 处。
+- 英文旧名清除：Agent 工具描述 `workflow infinite-canvas workspaces`、注入系统提示 `an infinite canvas`。
 - 契约同步：`docs/contracts/gxgen-workflow-migration.md` 原写「UI 文案尽量说『画布』」，与新命名标准冲突，改「统一说『创作画布』」，并把 `canvas.json` 描述由「一张无限画布文档」改「一张创作画布文档」。
 
 ### 6.2 明确不在本次范围（另行收敛）
@@ -83,7 +85,7 @@ pnpm --filter omnimux-clip test
 下列位置同样含「画布」，但属**创作画布内部自指**——用户身处该画布内、语境唯一，不构成两个画布的区分障碍；改动量 30+ 处并需连带同步多条测试断言，按"最小实现满足当前需求"原则另行收敛：
 
 - `plugins/omnimux-workflow/src/canvas/i18n/dict.zh.ts` 的 12 条字典值（「画布产物」「从画布添加」「画布尚未保存」等）。
-- `src/canvas/` 下的错误提示（`CanvasErrorBoundary`、`useWorkspacePersistence`）、快捷键说明（`ShortcutsModal`）、toast（`AssetsDrawer`、`videoComposition`）、资源选择文案（`VirtualDataGrid`、`ProjectAssetsView`、`SubjectLibraryView`）。
+- `src/canvas/` 下的错误提示（`CanvasErrorBoundary`、`useWorkspacePersistence`，12 处）、快捷键说明（`ShortcutsModal`，3 处）、`videoComposition` 的导出 toast（1 处）。
 - `tableTools.ts` 的 Agent 可见表格工具描述。
 - 历史设计文档（`docs/contracts/multimodal-creative-agent-architecture.md`、`plugin-agent-tools-inventory.md`）与 Agent 工具评估数据集 `scripts/agent-tools-suite/dataset.json`。
 

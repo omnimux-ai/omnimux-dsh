@@ -28,7 +28,7 @@ export const AssetsDrawerHeader: React.FC<AssetsDrawerHeaderProps> = ({
           className={`wf-segmented-tab-compact ${isCanvasActive ? 'active' : ''}`}
           onClick={onSelectCanvas}
         >
-          画布
+          创作画布
         </button>
 
         <button
