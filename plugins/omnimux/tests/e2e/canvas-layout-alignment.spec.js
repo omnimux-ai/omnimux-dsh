@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import {
   CONVERSATION_COLLAPSED_ATTR,
   CONVERSATION_COLLAPSE_CSS,
+  IMAGE_CANVAS_PROJECTION_SELECTOR,
   setConversationCollapsed,
   getConversationCollapsed,
 } from '../../src/client/conversation-collapse.js';
@@ -75,7 +76,8 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
       assert.match(stylesSrc, /\.omx-mv-thumbnails-rail\s*\{[^}]*position:\s*absolute/);
       assert.match(stylesSrc, /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border-color:\s*var\(--dsw-alias-brand-primary\)/);
 
-      // 9. Verify native composer projection preserves [data-conversation-scroll] and hides [data-slot="conversation.session"]
+      // 9. Native composer projection is keyed by the image-canvas stage identity plus a
+      //    fullscreen right panel — never by the conversation-collapse flag alone (#1821).
       assert.doesNotMatch(
         CONVERSATION_COLLAPSE_CSS,
         /\[data-conversation-scroll\][^{]*\{[^}]*display:\s*none/,
@@ -87,9 +89,39 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
         '[data-slot="conversation.session"] message transcript must be display:none'
       );
       assert.match(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /\[data-omnimux-image-canvas\]/,
+        'Projection must require the image-canvas stage identity'
+      );
+      assert.match(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /\[data-visible="true"\]/,
+        'Projection must require the canvas stage to be the visible one'
+      );
+      assert.match(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /\[data-rightbar-fullscreen="true"\]/,
+        'Projection must require the right panel to be fullscreen'
+      );
+      assert.doesNotMatch(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /conversation-collapsed/,
+        'Projection must not depend on the conversation-collapse flag'
+      );
+      assert.match(
         CONVERSATION_COLLAPSE_CSS,
-        /html\[data-omnimux-conversation-collapsed\]\s+\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*10px\s*!important/,
-        'Native composer seat must be fixed at bottom 10px in collapsed conversation state'
+        /html\[data-omnimux-left-collapsed\]:has\(\[data-omnimux-image-canvas\]\[data-visible="true"\]\)[^{]*\[data-composer-seat\][^{]*\{[^}]*left:\s*0\s*!important/,
+        'Left-collapsed rail must still anchor the projected composer at viewport left'
+      );
+      assert.doesNotMatch(
+        CONVERSATION_COLLAPSE_CSS,
+        /html\[data-omnimux-left-collapsed\]\s+html:has\(/,
+        'An html descendant of html never matches: the left-collapsed rule must spell out the full selector'
+      );
+      assert.match(
+        CONVERSATION_COLLAPSE_CSS,
+        /\[data-composer-seat\][^{]*\{[^}]*position:\s*fixed\s*!important;[^}]*bottom:\s*10px\s*!important/,
+        'Native composer seat must be fixed at bottom 10px while the canvas is projecting'
       );
     });
   });

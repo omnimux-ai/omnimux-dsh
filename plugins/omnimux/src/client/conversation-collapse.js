@@ -13,6 +13,20 @@ export const CONVERSATION_COLLAPSED_ATTR = 'data-omnimux-conversation-collapsed'
 export const CONVERSATION_COLLAPSE_STYLE_ID = 'omnimux-conversation-collapse-chrome'
 export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collapsed:v1:'
 
+/**
+ * 原生输入框投射规则的前缀：图像画布身份 + 右侧栏全屏铺满。
+ *
+ * 会话列是否收起只表达布局意图，不能当作「当前是哪个画布」的判据：任一插件页
+ * 全屏都会收起会话列，若以它为键，技能/专家、工作流画布等页面底部都会浮出输入框，
+ * 而图像画布自身反而没有专属条件（Issue #1821）。身份标识由媒体查看器投影
+ * （见 media-viewer/image-canvas-stage.js）。
+ *
+ * 不排除左栏收起态：真机实测（1708×974）左栏收起时全屏面板铺满 100vw、座席
+ * 左基准由既有左栏规则归零，投射后卡片仍居中于画布。
+ */
+export const IMAGE_CANVAS_IDENTITY_SELECTOR = 'html:has([data-omnimux-image-canvas][data-visible="true"])'
+export const IMAGE_CANVAS_PROJECTION_SELECTOR = `${IMAGE_CANVAS_IDENTITY_SELECTOR} .dshDesktopFrame[data-rightbar-fullscreen="true"]`
+
 export const CONVERSATION_COLLAPSE_CSS = `
 /* Middle conversation column — collapse layout width while projecting native composer fixed to canvas bottom.
    Excludes rightbar collapsed state so conversation remains fully visible when auxiliary panel is closed. */
@@ -50,8 +64,8 @@ html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"]))
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [class*="widthHandle"]{
   display:none!important;
 }
-/* Native DSH Composer floating dock at the bottom of the canvas - 紧凑靠底停靠 */
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-seat]{
+/* Native DSH composer floating dock — 仅图像画布 + 右侧栏全屏时投射到画布底端（紧凑靠底停靠） */
+${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-seat]{
   position:fixed!important;
   bottom:10px!important;
   left:var(--omnimux-sidebar-width, 280px)!important;
@@ -66,10 +80,14 @@ html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-seat]{
   opacity:1!important;
   background:transparent!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] [data-composer-seat]{
+/* 左栏收起时全屏面板铺满 100vw（sidebar-toggle-topbar 的 5.2 规则），座席左基准归零。
+   收起态由插件镜像到 html[data-omnimux-left-collapsed]；这里必须显式写完整选择器，
+   不能把带 html 前缀的投射选择器再接在它后面——那会要求 html 是 html 的后代，
+   整条规则永远不命中（聚合校验抓不到，只有真实浏览器会暴露）。 */
+html[data-omnimux-left-collapsed]:has([data-omnimux-image-canvas][data-visible="true"]) .dshDesktopFrame[data-rightbar-fullscreen="true"] [data-composer-seat]{
   left:0!important;
 }
-html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-card]{
+${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-card]{
   width:640px!important;
   max-width:min(640px, calc(100vw - var(--omnimux-sidebar-width, 280px) - 64px))!important;
   margin:0 auto!important;
