@@ -13,8 +13,8 @@
 
 ## 命令与项目结构
 复用 scripts/worktree.sh 管理任务工作树；复用已安装正式 CLI 与插件安装机制，不修改官方源码或分发包。
-拟在 scripts/ 增加或扩展共享测试准备模块与对应 *.test.mjs；准确命名在入口调查完成后固定。
-验证：`node --test scripts/*test-env*.test.mjs`（实现后以准确文件名替换）、`pnpm test:gates`、`git diff --check`，以及本工作树真实浏览器证据。
+scripts/test-env-credentials.mjs 负责固定 Dev 引用的严格只读解析；scripts/test-env-bootstrap.mjs 负责正式 CLI 的一次性私有环境与生命周期，分别配同名 *.test.mjs。
+验证：`node --test scripts/test-env-credentials.test.mjs scripts/test-env-bootstrap.test.mjs`、`pnpm test:gates`、`git diff --check`，以及本工作树真实浏览器证据。
 文档更新 owning contracts：docs/contracts/plugin-qa.md、docs/contracts/dev-pipeline.md 及 AGENTS.md 的薄入口指针；具体说明只保留一处真源。
 
 ## 代码风格
@@ -32,5 +32,8 @@
 先确认：扩张至其它提供商、生产配置、跨仓写入、额外付费请求或长期运行服务。
 绝不：复制整个 Dev profile、写回 Dev、读取 Prod、提交/打印密钥、伪造登录 Cookie、绕过安全检查、修改官方源码或替换当前 GUI 服务。
 
-## 待核实技术项（不扩大已批业务范围）
-现有完整临时 Host 流程来自任务报告；其公开配置键、DeepSeek 入口及无密钥首次配置条件需要核实。若无法通过公开配置实现，应报告具体限制，不猜测键、不伪造已配置状态。
+## 已核实集成设计与剩余验证
+安装包只读证据见主仓 .agent-reports/test-env-bootstrap/entry-investigation.md：官方 DeepSeek 的 apiKeyEnv 默认为 DEEPSEEK_API_KEY，支持 DEEPSEEK_BASE_URL；环境凭据存在可满足模型首启 readiness，不证明真实凭据有效。跳过配置仅为 React 状态，刷新会重新判定。欢迎声明独立，普通测试通过正常 Continue，不伪造确认。
+统一 startTestEnvironment({root, mode='ui'}) 使用已安装正式 CLI，仅在任务树私有数据目录启动完整核心 Web；普通 ui 用合成测试 key 和本机动态模拟端点，禁止对真实端点发假 key。live 只读固定 Dev 引用并使用官方 DeepSeek 端点；onboarding 模式保留无配置首启。无任意带密钥子命令入口。返回运行时登录入口只能供受信调用者完成同源登录，序列化回执不含它。
+凭据模块和启动生命周期分别以合成测试先红后绿。真实浏览器必须验证首次进入、正常确认欢迎声明后不出现密钥输入、刷新仍不出现；onboarding 模式反向验证首次配置仍存在。core-only 通过不代表任务插件已装载；业务任务须通过正式插件安装机制装入任务产物并另验其身份，不自动复制共享配置。
+剩余验证为实际 runtime 装配、动态模拟端点协议和启动/失败清理，不猜测配置键，不以模拟结果声称真实模型成功。
