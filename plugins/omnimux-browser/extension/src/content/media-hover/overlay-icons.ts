@@ -52,7 +52,7 @@ export const SVG_FILLED_ROOT_ATTRS =
  * identical ink bbox `198x240+21+0` at 240px, normalised RMSE `0.0004`, and both
  * eye holes fully formed from 24px up.
  */
-const BRAND_GHOST_PATH =
+export const BRAND_GHOST_PATH =
   'M11.6666 0.0318c-0.3531 0.1143 -0.4928 0.4573 -0.3938 0.9653c0.1626 0.8155 -0.0813 1.5877 -0.6757 2.'
   + '1618c-0.315 0.3023 -0.6325 0.4852 -1.448 0.8383c-1.697 0.7316 -2.8808 1.5979 -3.869 2.835c-0.9806 1.'
   + '2219 -1.6233 2.6775 -1.8951 4.2907c-0.1067 0.6427 -0.1372 1.0924 -0.1194 1.8494c0.0178 0.8536 0.0457'
