@@ -23,7 +23,7 @@ import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -3046,7 +3046,7 @@ export function App(): React.JSX.Element {
                 void send()
               }
             }}
-            placeholder={locale === 'en' ? 'Ask me anything...' : '问我任何问题~'}
+            placeholder={locale === 'en' ? 'Ask anything...' : '随便问点什么'}
             disabled={composerDisabled}
             rows={1}
           />
@@ -3074,7 +3074,7 @@ export function App(): React.JSX.Element {
                 title={imageLimits === null ? copy.app.imageUnavailable : copy.app.addImages}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <PlusSvgIcon size={14} />
+                <PaperclipIcon size={18} />
               </button>
             </span>
             {working ? (
