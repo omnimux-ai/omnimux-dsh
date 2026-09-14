@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 export function copySyncScripts(root) {
   const here = dirname(fileURLToPath(import.meta.url))
   mkdirSync(join(root, 'scripts'), { recursive: true })
-  for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'sync-main.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
+  for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'sync-main.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py', 'verify-profile-preflight.mjs']) {
     copyFileSync(join(here, name), join(root, 'scripts', name))
   }
   mkdirSync(join(root, 'plugins/omnimux/src'), { recursive: true })
@@ -24,7 +24,8 @@ shift 2
 case "$*" in
   'rev-parse --show-toplevel') printf '%s\\n' ${JSON.stringify(root)} ;;
   'symbolic-ref --quiet --short HEAD') echo main ;;
-  'status --porcelain --untracked-files=all') ;;
+  'status --porcelain --untracked-files=no') ;;
+  'ls-files --others --exclude-standard') ;;
   'remote') echo origin ;;
   'fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main') ;;
   'rev-parse --verify HEAD^{commit}'|'rev-parse --verify refs/remotes/origin/main^{commit}') echo 1111111111111111111111111111111111111111 ;;

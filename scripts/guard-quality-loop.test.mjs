@@ -343,3 +343,80 @@ test('taskChangeSet merges uncommitted and branch-ahead changes', () => {
     cleanup(root)
   }
 })
+
+/* ------------------------------- 跨仓库（工作树）判定：门禁必须落在被改文件所在仓库 */
+
+test('CONVERGENCE: spec gate judges the repo that owns the edited file, not the session cwd', () => {
+  const sessionRoot = makeRepo('session-root') // 会话工作目录：模拟主检出，无本任务规格
+  const taskRoot = makeRepo('task-root') // 被改文件所在仓库：模拟工作树
+  try {
+    const target = join(taskRoot, 'plugins/omnimux/src/client/a.js')
+
+    // 1. 工作树内没有本任务规格 → 必须拒绝（旧实现因路径落在会话仓库之外而误放行）
+    const denied = decideQualityGate({
+      toolName: 'default_api:edit',
+      toolInput: { file_path: target },
+      cwd: sessionRoot,
+    })
+    assert.equal(denied.decision, 'deny')
+    assert.equal(denied.reason, 'missing-spec-for-source-code')
+
+    // 2. 规格产出在工作树内（未提交）→ 放行，且全程无需触碰会话仓库
+    writeFileAt(taskRoot, 'specs/task.spec.md', SPEC_BODY)
+    const allowed = decideQualityGate({
+      toolName: 'default_api:edit',
+      toolInput: { file_path: target },
+      cwd: sessionRoot,
+    })
+    assert.equal(allowed.decision, 'allow')
+
+    // 3. 会话仓库里的规格不得替工作树背书（反向隔离）
+    const otherTask = makeRepo('other-task-root')
+    writeFileAt(sessionRoot, 'specs/unrelated.spec.md', SPEC_BODY)
+    const stillDenied = decideQualityGate({
+      toolName: 'default_api:edit',
+      toolInput: { file_path: join(otherTask, 'plugins/omnimux/src/client/b.js') },
+      cwd: sessionRoot,
+    })
+    assert.equal(stillDenied.decision, 'deny')
+
+    cleanup(otherTask)
+  } finally {
+    cleanup(sessionRoot)
+    cleanup(taskRoot)
+  }
+})
+
+test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change set', () => {
+  const sessionRoot = makeRepo('session-delivery')
+  const taskRoot = makeRepo('task-delivery')
+  try {
+    writeFileAt(taskRoot, 'specs/task.spec.md', SPEC_BODY)
+    writeFileAt(taskRoot, 'plugins/omnimux/src/client/a.js', 'export const a = 1\n')
+    writeFileAt(taskRoot, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
+
+    // -C 指向工作树：界面改动 + 端到端测试齐全 → 放行
+    const allowed = decideQualityGate({
+      toolName: 'bash',
+      toolInput: { command: `git -C "${taskRoot}" commit -m "feat ui"` },
+      cwd: sessionRoot,
+    })
+    assert.equal(allowed.decision, 'allow')
+
+    // 同一批改动但在工作树里缺端到端测试 → 拒绝，证明 -C 目标确实被采用
+    const missing = makeRepo('task-delivery-missing-e2e')
+    writeFileAt(missing, 'specs/task.spec.md', SPEC_BODY)
+    writeFileAt(missing, 'plugins/omnimux/src/client/a.js', 'export const a = 1\n')
+    const denied = decideQualityGate({
+      toolName: 'bash',
+      toolInput: { command: `git -C ${missing} commit -m "feat ui"` },
+      cwd: sessionRoot,
+    })
+    assert.equal(denied.decision, 'deny')
+    assert.equal(denied.reason, 'missing-e2e-for-ui-change')
+    cleanup(missing)
+  } finally {
+    cleanup(sessionRoot)
+    cleanup(taskRoot)
+  }
+})

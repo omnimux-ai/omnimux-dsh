@@ -25,8 +25,8 @@ export function findRepoRoot(startDir) {
   let cur = resolve(startDir)
   for (let i = 0; i < 8; i++) {
     try {
-      const data = readFileSync(resolve(cur, 'package.json'), 'utf8')
-      if (data.includes('"name": "omnimux-dsh"')) return cur
+      const data = JSON.parse(readFileSync(resolve(cur, 'package.json'), 'utf8'))
+      if (data && (data.name === 'omnimux-dsh' || String(data.name || '').endsWith('/omnimux-dsh'))) return cur
     } catch {}
     const parent = dirname(cur)
     if (parent === cur) break
@@ -204,12 +204,21 @@ export function bashWritesSource(command) {
   return patterns.some((p) => p.test(command))
 }
 
+/** 剥离 git 全局选项（-C/-c/--git-dir/--work-tree 等），避免 `git -C <路径> commit` 这类常见写法漏判。 */
+export function stripGitGlobalOptions(command) {
+  return String(command).replace(
+    /\s-(?:C|-c)\s+(?:"[^"]*"|'[^']*'|\S+)|\s--(?:git-dir|work-tree)(?:=\S+|\s+(?:"[^"]*"|'[^']*'|\S+))/g,
+    ' ',
+  )
+}
+
 /** 提交/推送/建 PR 类命令。 */
 export function isDeliveryCommand(command) {
   if (!command || typeof command !== 'string') return false
+  const normalized = stripGitGlobalOptions(command)
   return (
-    /\bgit\s+commit\b/.test(command) ||
-    /\bgit\s+push\b/.test(command) ||
+    /\bgit\s+commit\b/.test(normalized) ||
+    /\bgit\s+push\b/.test(normalized) ||
     /\bgh\s+pr\s+(create|merge|ready)\b/.test(command) ||
     /\bgit-wt\.sh\s+finish\b/.test(command)
   )
@@ -217,13 +226,25 @@ export function isDeliveryCommand(command) {
 
 /* ------------------------------------------------------------- 门禁判定 */
 
+/** 从命令里解析 `-C <path>` 的目标仓库根；无 -C 时回落会话工作目录。 */
+export function effectiveRepoRoot(command, cwd) {
+  const sessionRoot = findRepoRoot(cwd)
+  if (!command || typeof command !== 'string') return sessionRoot
+  const m = /(?:^|\s)-C\s+(?:"([^"]+)"|'([^']+)'|(\S+))/.exec(command)
+  if (!m) return sessionRoot
+  const raw = (m[1] || m[2] || m[3] || '').trim()
+  if (!raw) return sessionRoot
+  const target = isAbsolute(raw) ? raw : resolve(cwd, raw)
+  return findRepoRoot(target)
+}
+
 export function decideQualityGate({ toolName, toolInput, cwd }) {
   const rawTool = String(toolName || '').toLowerCase()
   const name = rawTool.replace(/^.*:/, '')
-  const root = findRepoRoot(cwd)
 
   if (name === 'bash') {
     const command = String(toolInput.command || '')
+    const root = effectiveRepoRoot(command, cwd)
     if (isDeliveryCommand(command)) {
       const changed = taskChangeSet(root)
       const ui = changed.filter(isUiSourcePath)
@@ -249,6 +270,10 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
   const rawPath = String(toolInput.file_path || '').trim()
   if (!rawPath) return { decision: 'allow' }
   const fullPath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath)
+
+  // 判定必须落在「被改文件所在仓库」：工作树里干活就查工作树的规格，
+  // 否则会退化成要求把草稿镜像进主检出，与物化洁净门禁方向相反。
+  const root = findRepoRoot(dirname(fullPath))
 
   if (isBusinessSourceFile(fullPath, root)) {
     if (taskSpecs(root).length === 0) {

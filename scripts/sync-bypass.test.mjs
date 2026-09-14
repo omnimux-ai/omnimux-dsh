@@ -57,7 +57,7 @@ for (const state of ['feature', 'master', 'detached', 'dirty', 'untracked', 'ahe
           OMNIMUX_ALLOW_UNMERGED_TARGET: f.target },
       })
       assert.notEqual(result.status, 0, `${entry}/${state}`)
-      assert.match(result.stderr, /sync:.*(main|Git|未提交)/, result.stderr)
+      assert.match(result.stderr, /sync:.*(main|Git|未提交|未跟踪)/, result.stderr)
       assert.equal(readFileSync(join(f.profile, 'package.json'), 'utf8'), '{"sentinel":"unchanged"}\n')
       assert.doesNotMatch(result.stdout, /物化完成|已物化进/)
     }
@@ -73,7 +73,32 @@ test('clean main must match origin/main exactly; inherited Git overrides cannot 
   assert.equal(gate(aligned).status, 0)
   const spoofed = gate(dirty, { GIT_DIR: join(aligned.repo, '.git'), GIT_WORK_TREE: aligned.repo })
   assert.equal(spoofed.status, 1)
-  assert.match(spoofed.stderr, /未提交/)
+  assert.match(spoofed.stderr, /已跟踪文件的未提交改动|会进入物化产物的未跟踪文件/)
+})
+
+test('untracked drafts under the allow-list pass the cleanliness gate and proceed downstream', t => {
+  const f = fixture(t)
+  for (const draft of ['specs/gate-draft.spec.md', 'tmp/scratch.txt']) {
+    mkdirSync(dirname(join(f.repo, draft)), { recursive: true })
+    writeFileSync(join(f.repo, draft), 'draft\n')
+  }
+  const gate = spawnSync('bash', [join(here, 'sync-main.sh'), f.repo], { encoding: 'utf8', env: f.gitEnv })
+  assert.equal(gate.status, 0, gate.stderr)
+  assert.doesNotMatch(gate.stderr, /拒绝物化/)
+  for (const entry of ['sync-to-app.sh', 'sync-stable.sh']) {
+    const result = spawnSync('bash', [join(f.repo, 'scripts', entry), '--skip-build', `--target=${f.target}`, 'missing-plugin'], {
+      encoding: 'utf8', env: { ...f.gitEnv, HOME: f.home, OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_SYNC_TARGETS: '' },
+    })
+    assert.doesNotMatch(result.stderr, /已跟踪文件的未提交改动|会进入物化产物的未跟踪文件/, `${entry}: ${result.stderr}`)
+    // 越过洁净度门禁的实证：失败点已在下游插件解析，而不是源码身份门禁。
+    assert.match(result.stderr, /源码缺失/, `${entry}: ${result.stderr}`)
+  }
+  // 白名单是过滤器，不是全量放行：清单外的未跟踪文件仍然必须拦截。
+  writeFileSync(join(f.repo, 'unlisted.txt'), 'not a draft\n')
+  const blocked = spawnSync('bash', [join(here, 'sync-main.sh'), f.repo], { encoding: 'utf8', env: f.gitEnv })
+  assert.equal(blocked.status, 1)
+  assert.match(blocked.stderr, /会进入物化产物的未跟踪文件/)
+  assert.match(blocked.stderr, /unlisted\.txt/)
 })
 
 test('both entrypoints reject external plugin roots even from clean aligned main', t => {
