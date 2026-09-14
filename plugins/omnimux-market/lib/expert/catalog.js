@@ -191,12 +191,16 @@ function parseItem(raw) {
 /**
  * 套件三块清单（技能 / 规则 / Agent）。条目名必填，标题缺省回落到条目名；
  * 说明允许为空——规则与部分包内文件本身没有描述字段，货架不伪造文案。
+ *
+ * 技能项另有可选的 `path`（包内相对路径）：平铺仓库把技能直接摆在包根之下，
+ * 没有统一的 `skills/` 中间层，装载只能靠它定位。缺省空串表示沿用
+ * `<包根>/skills/<name>/` 的旧语义。规则项与 Agent 项不设该键，形状保持不变。
  * @param {unknown} raw
  * @param {string} id
  */
 function parseSuiteManifest(raw, id) {
   const row = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {}
-  const group = (value, label) => {
+  const group = (value, label, withPath = false) => {
     if (!Array.isArray(value)) return []
     return value.map((entry) => {
       const item = entry && typeof entry === 'object' ? /** @type {Record<string, unknown>} */ (entry) : {}
@@ -204,16 +208,18 @@ function parseSuiteManifest(raw, id) {
       if (!name) throw new Error(`catalog: item ${id} suite ${label} entry missing name`)
       const title = String(item.title || '').trim()
       // content 是规则类条目的完整源文本，也就是安装后写进 AGENTS.md 的内容，详情页直接展示它。
-      return {
+      const out = {
         name,
         title: title || name,
         desc: String(item.desc || '').trim(),
         content: String(item.content || '').trim(),
       }
+      if (withPath) out.path = typeof item.path === 'string' ? item.path.trim() : ''
+      return out
     })
   }
   return {
-    skills: group(row.skills, 'skills'),
+    skills: group(row.skills, 'skills', true),
     rules: group(row.rules, 'rules'),
     agents: group(row.agents, 'agents'),
   }

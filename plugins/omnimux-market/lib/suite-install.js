@@ -3,6 +3,7 @@
  * 技能市场「套件」一键安装：一次把三样东西装到位。
  *
  *   1. 技能：包内 `skills/<name>/` 摊平到 `$DSH_HOME/skills/<name>/`（既有摊平语义）；
+ *      平铺仓库（技能直接躺在包根下、没有 `skills/` 中间层）由清单项的可选 `path` 定位；
  *   2. 规则：包内 `contracts/*.md` 转成文本段，幂等写进目标 `AGENTS.md` 的套件托管段；
  *   3. Agent：包内 `agents/*.md` 的正文写成 `$DSH_HOME/.agent-presets/<套件>-<agent>/`。
  *
@@ -12,7 +13,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { invalidateCatalogMemos } from './expert/catalog.js';
-import { installItem, installNestedSkills } from './expert/install.js';
+import { installItem, installNestedSkills, installSkillAt } from './expert/install.js';
 import { skillDir } from './expert/paths.js';
 import { writeAgentPreset } from './expert-presets.js';
 import { uninstallSkill } from './install.js';
@@ -110,6 +111,20 @@ export function resolveRuleTarget(opts) {
 /** 条目名进路径前先过闸：不许 `..`、不许分隔符、不许绝对路径。 */
 function isSafeName(name) {
     return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name) && !name.includes('..');
+}
+/** 清单项 `path` 进路径前先过闸：必须是包内相对路径，逐段套用 `isSafeName`（故无 `..`、无绝对路径）。 */
+function isSafeRelPath(relPath) {
+    return relPath.split('/').every((segment) => isSafeName(segment));
+}
+/**
+ * 技能的源目录：清单项带 `path` 时按 `<包根>/<path>/`，缺省沿用 `<包根>/skills/<name>/`。
+ * @param {string} packDir
+ * @param {string} nestedRoot
+ * @param {string} name
+ * @param {string} relPath
+ */
+function skillSourceDir(packDir, nestedRoot, name, relPath) {
+    return relPath ? join(packDir, relPath) : join(nestedRoot, name);
 }
 function stripFrontmatter(text) {
     const match = text.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
@@ -262,6 +277,8 @@ export function installSuite(opts) {
 function installSuiteSkills(home, packDir, plan, result, skillsBefore) {
     const nestedRoot = join(packDir, 'skills');
     const names = union(plan.skills.map((entry) => entry.name), dirNames(nestedRoot));
+    const relPaths = new Map(plan.skills.filter((entry) => entry.path).map((entry) => [entry.name, String(entry.path)]));
+    const flat = [];
     const pending = [];
     for (const name of names) {
         if (!isSafeName(name)) {
@@ -271,13 +288,22 @@ function installSuiteSkills(home, packDir, plan, result, skillsBefore) {
         }
         const path = skillDir(home, name);
         const existed = skillsBefore.has(name);
-        const hasSource = existsSync(join(nestedRoot, name, 'SKILL.md'));
+        const relPath = relPaths.get(name) || '';
+        const sourceDir = skillSourceDir(packDir, nestedRoot, name, relPath);
+        const sourceLabel = relPath ? `${relPath}/SKILL.md` : `skills/${name}/SKILL.md`;
+        if (relPath && !isSafeRelPath(relPath)) {
+            const error = `清单项 path 非法（须为包内相对路径）: ${relPath}`;
+            result.failed.push({ part: 'skills', name, error });
+            result.skills.items.push({ name, status: 'failed', path, error });
+            continue;
+        }
+        const hasSource = existsSync(join(sourceDir, 'SKILL.md'));
         if (existed) {
             result.skills.items.push({ name, status: 'already', path });
             continue;
         }
         if (!hasSource) {
-            const error = `包内缺少 skills/${name}/SKILL.md`;
+            const error = `包内缺少 ${sourceLabel}`;
             result.failed.push({ part: 'skills', name, error });
             result.skills.items.push({ name, status: 'failed', path, error });
             continue;
@@ -285,12 +311,27 @@ function installSuiteSkills(home, packDir, plan, result, skillsBefore) {
         const entry = { name, status: 'installed', path };
         result.skills.items.push(entry);
         pending.push(entry);
+        if (relPath)
+            flat.push({ entry, relPath });
+    }
+    // 平铺仓库（技能在包根下、无 skills/ 中间层）逐条装载；一条失败不影响其余
+    for (const item of flat) {
+        try {
+            installSkillAt(home, packDir, item.entry.name, item.relPath);
+        }
+        catch (err) {
+            item.entry.status = 'failed';
+            item.entry.error = message(err);
+            result.failed.push({ part: 'skills', name: item.entry.name, error: message(err) });
+        }
     }
     try {
         installNestedSkills(home, packDir);
     }
     catch (err) {
         for (const entry of pending) {
+            if (flat.some((item) => item.entry === entry))
+                continue;
             entry.status = 'failed';
             entry.error = message(err);
             result.failed.push({ part: 'skills', name: entry.name, error: message(err) });

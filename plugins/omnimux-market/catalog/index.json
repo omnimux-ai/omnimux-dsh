@@ -8218,6 +8218,344 @@
           }
         ]
       }
+    },
+    {
+      "id": "suite-amazon-skills",
+      "tab": "skills",
+      "kind": "suite",
+      "title": "亚马逊运营全套",
+      "summary": "52 个亚马逊卖家运营技能包，覆盖广告投放、关键词研究、Listing 优化、评论管理、FBA 计算与品牌合规。",
+      "category": "sk-suite",
+      "tags": [
+        "亚马逊",
+        "跨境电商",
+        "运营"
+      ],
+      "skill": "amazon-skills",
+      "source": {
+        "type": "git",
+        "repo": "nexscope-ai/Amazon-Skills",
+        "path": ".",
+        "ref": "main"
+      },
+      "suite": {
+        "skills": [
+          {
+            "name": "amazon-ppc-campaign",
+            "title": "PPC广告活动搭建与优化",
+            "desc": "两种模式：A) 从零搭建完整广告结构（关键词分组、竞价计算、否定词清单）；B) 用搜索词报告审计现有广告",
+            "path": "amazon-ppc-campaign"
+          },
+          {
+            "name": "amazon-advertising-strategy",
+            "title": "广告整体策略",
+            "desc": "SP/SB/SD 全类型广告策略、预算分配、ACoS优化、效果追踪",
+            "path": "amazon-advertising-strategy"
+          },
+          {
+            "name": "amazon-negative-keywords",
+            "title": "否定关键词管理",
+            "desc": "搜索词分析、广告浪费削减、节省金额估算、自动化否词策略",
+            "path": "amazon-negative-keywords"
+          },
+          {
+            "name": "amazon-display-ads",
+            "title": "展示型广告（SD）",
+            "desc": "受众定向、再营销、创意优化",
+            "path": "amazon-display-ads"
+          },
+          {
+            "name": "amazon-dayparting-strategy",
+            "title": "分时段投放策略",
+            "desc": "按小时/星期调整竞价、高峰购物时段分析、分时段预算优化",
+            "path": "amazon-dayparting-strategy"
+          },
+          {
+            "name": "amazon-keyword-tracker",
+            "title": "关键词排名监控",
+            "desc": "实时排名追踪、竞对动向警报、搜索结果变化分析",
+            "path": "amazon-keyword-tracker"
+          },
+          {
+            "name": "amazon-rank-tracker",
+            "title": "排名追踪与诊断",
+            "desc": "排名因素分析、排名变化原因诊断、改进策略",
+            "path": "amazon-rank-tracker"
+          },
+          {
+            "name": "amazon-brand-analytics",
+            "title": "品牌分析（ABA）解读",
+            "desc": "解读搜索频率排名(SFR)、购物篮分析、商品对比报告、人群画像（需品牌备案）",
+            "path": "amazon-brand-analytics"
+          },
+          {
+            "name": "amazon-listing-optimization",
+            "title": "Listing创建与优化",
+            "desc": "A) 用关键词库从零生成Listing；B) 审计现有Listing、找关键词缺口、8维度打分并重写",
+            "path": "amazon-listing-optimization"
+          },
+          {
+            "name": "amazon-backend-keywords",
+            "title": "后台搜索词(ST)优化",
+            "desc": "250字节限制管理、关键词去重、优先级框架",
+            "path": "amazon-backend-keywords"
+          },
+          {
+            "name": "amazon-search-optimization",
+            "title": "搜索排名优化（A9算法）",
+            "desc": "SEO整体策略、收录优化、关键词排名提升",
+            "path": "amazon-search-optimization"
+          },
+          {
+            "name": "amazon-listing-images",
+            "title": "Listing图片策略",
+            "desc": "图片规划、信息图设计、场景图、移动端优化",
+            "path": "amazon-listing-images"
+          },
+          {
+            "name": "amazon-product-photography",
+            "title": "产品摄影规划",
+            "desc": "拍摄清单、灯光方案、信息图脚本、符合亚马逊图片要求",
+            "path": "amazon-product-photography"
+          },
+          {
+            "name": "amazon-a-plus-content",
+            "title": "A+页面策略",
+            "desc": "模块布局、说服性文案、对比表、图片需求文档",
+            "path": "amazon-a-plus-content"
+          },
+          {
+            "name": "amazon-enhanced-brand-content",
+            "title": "高级A+与品牌故事",
+            "desc": "Premium A+模块设计、生活场景图、移动端优化",
+            "path": "amazon-enhanced-brand-content"
+          },
+          {
+            "name": "amazon-keyword-research",
+            "title": "关键词调研",
+            "desc": "抓取自动补全长尾词、竞争格局分析、市场机会评估，支持12个站点，无需API",
+            "path": "amazon-keyword-research"
+          },
+          {
+            "name": "amazon-product-research",
+            "title": "选品调研",
+            "desc": "需求/竞争/利润分析、进入门槛评估、产品创意验证",
+            "path": "amazon-product-research"
+          },
+          {
+            "name": "amazon-niche-finder",
+            "title": "利基市场发现",
+            "desc": "找高需求低竞争的细分市场、市场空白分析",
+            "path": "amazon-niche-finder"
+          },
+          {
+            "name": "amazon-trending-products",
+            "title": "趋势产品发现",
+            "desc": "BSR变化模式、季节趋势、新品势头分析，在爆发前发现机会",
+            "path": "amazon-trending-products"
+          },
+          {
+            "name": "amazon-sales-estimator",
+            "title": "销量估算",
+            "desc": "通过BSR/ASIN/关键词估算月销量和营收",
+            "path": "amazon-sales-estimator"
+          },
+          {
+            "name": "amazon-seller-analytics",
+            "title": "竞对卖家店铺分析",
+            "desc": "卖家营收估算、产品组合策略、逆向拆解成功卖家打法",
+            "path": "amazon-seller-analytics"
+          },
+          {
+            "name": "amazon-competitor-analysis",
+            "title": "竞对全面分析",
+            "desc": "对比Listing、价格、评论、广告策略、市场定位，找可攻击的弱点",
+            "path": "amazon-competitor-analysis"
+          },
+          {
+            "name": "amazon-competitor-monitoring",
+            "title": "竞对持续监控",
+            "desc": "追踪竞对价格变化、库存水位、新品上架、评论增速，设置断货/降价警报",
+            "path": "amazon-competitor-monitoring"
+          },
+          {
+            "name": "amazon-price-tracker",
+            "title": "价格监控",
+            "desc": "实时价格追踪、Buy Box分析、促销检测",
+            "path": "amazon-price-tracker"
+          },
+          {
+            "name": "amazon-review-analyzer",
+            "title": "评论深度分析",
+            "desc": "从竞对/自己的评论中提取情绪模式、高频抱怨、功能需求",
+            "path": "amazon-review-analyzer"
+          },
+          {
+            "name": "amazon-profit-analyzer",
+            "title": "利润分析",
+            "desc": "营收瀑布分析、隐藏费用识别、ACoS影响评估、退货成本计算",
+            "path": "amazon-profit-analyzer"
+          },
+          {
+            "name": "amazon-fba-calculator",
+            "title": "FBA费用计算器",
+            "desc": "完整费用拆解和利润分析",
+            "path": "amazon-fba-calculator"
+          },
+          {
+            "name": "tariff-calculator-amazon",
+            "title": "关税计算器",
+            "desc": "计算进口关税、到岸成本、VAT/GST，支持中国→美国等路线，含301关税",
+            "path": "tariff-calculator-amazon"
+          },
+          {
+            "name": "amazon-shipping-calculator",
+            "title": "物流费用计算",
+            "desc": "体积重分析、仓储费计算、移除费估算、FBA/FBM对比",
+            "path": "amazon-shipping-calculator"
+          },
+          {
+            "name": "amazon-repricing-strategy",
+            "title": "调价策略",
+            "desc": "竞争性定价分析、动态调价规则、利润保护",
+            "path": "amazon-repricing-strategy"
+          },
+          {
+            "name": "amazon-deal-finder",
+            "title": "促销活动规划",
+            "desc": "秒杀(LD)、BD、优惠券、Prime专享折扣的ROI计算与时机选择",
+            "path": "amazon-deal-finder"
+          },
+          {
+            "name": "amazon-coupon-strategy",
+            "title": "优惠券策略",
+            "desc": "券类型选择、叠加规则、投放时机、核销优化",
+            "path": "amazon-coupon-strategy"
+          },
+          {
+            "name": "amazon-brand-tailored-promotions",
+            "title": "品牌定制促销(BTP)",
+            "desc": "人群定向、折扣梯度、复购激励",
+            "path": "amazon-brand-tailored-promotions"
+          },
+          {
+            "name": "amazon-subscribe-save",
+            "title": "订阅省(S&S)优化",
+            "desc": "报名、折扣梯度、频率优化、留存分析",
+            "path": "amazon-subscribe-save"
+          },
+          {
+            "name": "amazon-product-bundling",
+            "title": "捆绑销售策略",
+            "desc": "虚拟捆绑、多件装定价、交叉销售组合",
+            "path": "amazon-product-bundling"
+          },
+          {
+            "name": "amazon-buy-box",
+            "title": "黄金购物车(Buy Box)",
+            "desc": "资格因素分析、竞争定价、FBA/FBM影响、抢Buy Box战术",
+            "path": "amazon-buy-box"
+          },
+          {
+            "name": "amazon-review-strategy",
+            "title": "索评策略",
+            "desc": "Request a Review、跟进邮件、售后卡、Vine、早期评论人计划",
+            "path": "amazon-review-strategy"
+          },
+          {
+            "name": "amazon-vine-program",
+            "title": "Vine绿标计划",
+            "desc": "报名、选品、时机、评论质量最大化",
+            "path": "amazon-vine-program"
+          },
+          {
+            "name": "amazon-inventory-management",
+            "title": "FBA库存管理",
+            "desc": "补货时机、安全库存、IPI分数优化、滞留库存处理",
+            "path": "amazon-inventory-management"
+          },
+          {
+            "name": "amazon-fba-prep",
+            "title": "FBA入仓准备",
+            "desc": "产品贴标、包装要求、货件计划、避免常见拒收原因",
+            "path": "amazon-fba-prep"
+          },
+          {
+            "name": "amazon-wholesale-sourcing",
+            "title": "批发采购",
+            "desc": "供应商发掘、谈判、MOQ优化、利润分析",
+            "path": "amazon-wholesale-sourcing"
+          },
+          {
+            "name": "amazon-seasonal-planning",
+            "title": "季节性规划",
+            "desc": "Prime Day、黑五、Q4备货日历、促销排期",
+            "path": "amazon-seasonal-planning"
+          },
+          {
+            "name": "amazon-brand-registry",
+            "title": "品牌备案",
+            "desc": "资格要求、申请流程、A+权限、品牌保护工具",
+            "path": "amazon-brand-registry"
+          },
+          {
+            "name": "amazon-product-compliance",
+            "title": "产品合规",
+            "desc": "认证、标签要求、受限物质、文件准备",
+            "path": "amazon-product-compliance"
+          },
+          {
+            "name": "amazon-category-ungating",
+            "title": "类目/品牌解禁",
+            "desc": "解禁要求、文件准备、申诉流程",
+            "path": "amazon-category-ungating"
+          },
+          {
+            "name": "amazon-suspension-appeal",
+            "title": "账号申诉",
+            "desc": "封号预防、POA行动计划撰写、恢复流程",
+            "path": "amazon-suspension-appeal"
+          },
+          {
+            "name": "amazon-return-reduction",
+            "title": "退货率降低",
+            "desc": "根因分析、Listing准确性、包装改进、尺码指南",
+            "path": "amazon-return-reduction"
+          },
+          {
+            "name": "amazon-storefront-design",
+            "title": "品牌旗舰店设计",
+            "desc": "页面布局、品牌故事、可购图片、引流与转化",
+            "path": "amazon-storefront-design"
+          },
+          {
+            "name": "amazon-global-selling",
+            "title": "全球开店评估",
+            "desc": "欧洲/英国/日本/澳洲等站点扩张：市场规模、法规、物流、本地化",
+            "path": "amazon-global-selling"
+          },
+          {
+            "name": "amazon-international-listings",
+            "title": "多站点Listing管理",
+            "desc": "翻译、定价本地化、BIL国际化Listing同步",
+            "path": "amazon-international-listings"
+          },
+          {
+            "name": "amazon-private-label",
+            "title": "自有品牌打法",
+            "desc": "选品、品牌打造、供应商管理、差异化策略",
+            "path": "amazon-private-label"
+          },
+          {
+            "name": "amazon-variation-strategy",
+            "title": "变体策略",
+            "desc": "父子变体规划、何时合并/拆分、颜色尺寸变体、排名收益",
+            "path": "amazon-variation-strategy"
+          }
+        ],
+        "rules": [],
+        "agents": []
+      }
     }
   ]
 }

@@ -57,7 +57,12 @@ function t(tr, key, fallback, params) {
 export function resolveSuiteSourceLabel(item) {
   const src = item && item.source;
   if (typeof src === 'string' && src) return src;
-  if (src && typeof src === 'object') return String(src.path || src.type || '');
+  if (src && typeof src === 'object') {
+    const path = String(src.path || '');
+    // 平铺仓库（技能直接躺在仓库根）用 `.` 表示包根，对用户没有信息量，回落显示仓库名。
+    if (path && path !== '.') return path;
+    return String(src.repo || src.type || '');
+  }
   return String((item && item.channel) || 'OmniMux');
 }
 
