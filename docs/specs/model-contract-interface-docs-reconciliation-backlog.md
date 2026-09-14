@@ -443,7 +443,7 @@ related:
 | --- | --- | --- | --- |
 | **P0** | `seedream-5-0-pro` | 契约 canonical 改连字符形（或补 alias），与 `model-picker.js` 对齐 | 无（裁决已由 lint + 文档 redirect 给出方向） |
 | **P0** | `jina-reader-v1` | 新建音频/阅读族契约行；同时裁决 registry 是否扩"网页提取"op | U10 |
-| **P1** | `wan-3.0-prime` / `-prime-ref` / `-ref` | 新建 3 个独立模型行（t2v+first_frame / video_multi_ref / video_multi_ref） | U4（wire 字段） |
+| **P1** | `wan-3.0-prime` / `-prime-ref` / `-ref` | **已完成架构收敛**：上游网关已统合为单一公开 ID `wan-3.0`，三款衍生型号降级为过渡别名（Issue #1696） | 已收敛 |
 | **P1** | `pixverse-v6` / `vidu-q3` / `qwen-image-3-0` | 各新建独立行（text_to_video / text_to_video / text_to_image） | U8（日期口径）；qwen 还有 N2 拼写 |
 | **P1** | `ltx-2-3-kj` / `index-tts` / `zimage-makeup` | 各新建独立行（digital_human / voice_clone / text_to_image） | U12（端点族表达）、U14（promptPolicy）、U7（快照） |
 | **P1** | `grok-imagine-video` | 裁决后补 alias 或新建行 | N6 |
