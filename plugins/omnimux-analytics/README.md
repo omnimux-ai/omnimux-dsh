@@ -84,7 +84,7 @@ node scripts/contract-probe.mjs            # 手动执行，需联网；CI 不�
 
 探针用**不存在的站点编号**发送队列真实生成的报文：结构通过则实例回 `Website not found.`（`CONTRACT OK`），并附带一次反向校验确认旧字段仍被拒收。不会向任何真实站点写入数据。
 
-并发上限 4、单请求 8s 超时、失败静默丢弃并计数——**埋点永不影响工具管线**。
+并发上限 4、单请求 8s 超时、失败仅计入 `stats.failed`（默认日志级别不可见，异常不外抛）——**埋点永不影响工具管线**。
 
 ## 开发与发布
 
@@ -109,3 +109,5 @@ Umami 后台（`https://analytics.omnimux.ai`）→ 选择为该插件建的 Sit
 - `stage-open` / `stage-close`：首层页面使用（`data.stage` 是页面标识，`stage-close` 另带 `data.dwellMs` 停留时长）。
 
 按 `data.plugin` 过滤即可对比各插件的使用情况；按 `data.stage` 过滤即可看各功能页面的打开次数与停留时长。
+
+**数据口径（务必先读）**：`stage-open` / `stage-close` 只覆盖 **claim 产品舞台的「舞台型」一级页面**。按 workbench-split 合同，资产 / 产品 / 账号 / 灵感 / 发布 / 分析 等一级页面以 workbench Tab 承载且**不得 claim 产品舞台**，因此**不计入**这两类事件（也不产生停留时长）。请把它们读作「舞台型一级页面使用率」，**不要**当作全站页面覆盖率；workbench Tab 的打开统计需另立事件，本插件暂无。关闭标签页/切到后台时同样会补报最后一段停留时长。

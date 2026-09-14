@@ -18,7 +18,7 @@ Issue: #1658 · Track B · 插件：`omnimux-analytics` · 风险初判 R2
 | A2 | 报文不再出现旧字段 | 单测断言 payload 含 `website` 且 **不**含 `websiteId` |
 | A3 | 首层页面打开上报 | 派发 `dsh-product-stage` 事件（`detail.id = 'omnimux-assets'`）后，宿主队列收到 `stage-open`，数据含 `stage=omnimux-assets` |
 | A4 | 首层页面关闭上报并带停留时长 | 随后派发 `detail.id = ''`，宿主队列收到 `stage-close`，数据含 `stage` 与 `dwellMs ≥ 0` |
-| A5 | 汇聚路由只接受白名单 | 未知事件名 / 未知字段 / 超长值 / 非 POST → 拒绝（4xx），不入队；合法请求 → 200 且入队 |
+| A5 | 汇聚路由只接受白名单 | 未知事件名 / 未知字段 / 超长值 / 非 POST → 拒绝（4xx），不入队；合法请求 → **202** 且入队 |
 | A6 | 埋点失败永不影响产品 | 队列发送失败、路由异常均不得抛出到调用方；插件缺站点编号时 soft-disable，路由仍可用但只计数不发送 |
 | A7 | 线上契约可自检 | `node plugins/omnimux-analytics/scripts/contract-probe.mjs` 输出 `CONTRACT OK`（须联网，手动执行；CI 不联网） |
 | A8 | 插件测试全绿 | `pnpm --filter omnimux-analytics test` 退出码 0 |
@@ -42,7 +42,7 @@ pnpm test:gates
 | --- | --- |
 | `plugins/omnimux-analytics/src/queue.js` | 宿主侧事件队列与 Umami 上报（契约真源） |
 | `plugins/omnimux-analytics/src/stage-events.js` | 页面事件的**白名单校验**（新增，纯函数） |
-| `plugins/omnimux-analytics/src/http-routes.js` | 宿主汇聚路由 `POST /omnimux/analytics/event`（新增） |
+| `plugins/omnimux-analytics/src/http-routes.js` | 宿主汇聚路由 `POST /omnimux-analytics/event`（新增；自有前缀，**不得**写成枢纽已占用的 `/omnimux/analytics`） |
 | `plugins/omnimux-analytics/src/index.js` | 组装：队列 + 路由 + 管线埋点 |
 | `plugins/omnimux-analytics/src/client/stage-tracker.js` | 渲染层：订阅 `window.__omnimuxStage` 的 `dsh-product-stage`（新增） |
 | `plugins/omnimux-analytics/scripts/contract-probe.mjs` | 线上契约自检（新增） |
@@ -74,6 +74,7 @@ pnpm test:gates
 - 不引入安装编号或 `identify`（第二步）。
 - 不改站点归属（同实例、独立站点）。
 - 不向任何真实站点写入事件。
+- **不统计 workbench Tab 型一级页面**（资产 / 产品 / 账号 / 灵感 / 发布 / 分析）：按 `docs/contracts/workbench-split.md` 它们合同上不得 claim 产品舞台，故本 Issue 的事件不覆盖它们；需要时另立事件，且 README 必须写明该口径，避免把「舞台型页面使用率」误读为全站页面覆盖率。
 
 ## 8. 验证步骤（本任务）
 

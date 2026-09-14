@@ -13,7 +13,12 @@ import { MAX_STAGE_ID_LENGTH, MAX_DWELL_MS, parseStageEvent } from './stage-even
 /** Exact route path owned by this plugin. */
 export const ANALYTICS_INGEST_PATH = '/omnimux-analytics/event'
 
-/** Largest accepted request body (stage events are tiny). */
+/**
+ * Largest accepted request body.
+ *
+ * This is a denial-of-service bound for any local caller, not a semantic
+ * constraint: a whitelisted page event is ~130 bytes, far below the cap.
+ */
 export const MAX_INGEST_BODY_BYTES = 4 * 1024
 
 /**
