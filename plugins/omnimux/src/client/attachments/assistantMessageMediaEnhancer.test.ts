@@ -183,11 +183,23 @@ test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generat
   const mountedImg = cards[0].querySelector('img')!;
   assert.equal(mountedImg.getAttribute('src'), persistentUrl);
 
-  // 3. Verify right sidebar auto-open triggered
+  // 3. Verify old action bar removed, and new canvas pill button present
+  assert.equal(cards[0].querySelector('.omx-chat-media-tail__actions'), null, 'Old bottom actions bar must be removed');
+  const canvasBtn = cards[0].querySelector('.omx-chat-media-tail__canvas-btn');
+  assert.ok(canvasBtn, 'Pill canvas button must exist in top-right of card');
+  assert.match(canvasBtn.textContent || '', /画布/, 'Canvas button must display "画布"');
+
+  // 4. Verify clicking the canvas button switches to 2col canvas mode and collapses conversation
+  const store = getGlobalMediaViewerStore();
+  (canvasBtn as HTMLElement).click();
+  assert.equal(store.getSnapshot().layoutMode, '2col', 'Must enter 2col canvas layout mode');
+  assert.equal(doc.documentElement.getAttribute('data-omnimux-conversation-collapsed'), 'true', 'Must collapse middle conversation column');
+
+  // 5. Verify right sidebar auto-open triggered
   assert.equal(openedTabId, 'omnimux:media-viewer');
   assert.equal(hasAutoOpened(`file:${filename.toLowerCase()}`), true);
 
-  // 4. Idempotent: second call returns false
+  // 6. Idempotent: second call returns false
   const secondCall = enhanceTurnMedia('88', turnNodes, doc);
   assert.equal(secondCall, false);
   assert.equal(answerBubble.querySelectorAll('.omx-chat-media-tail').length, 1);
