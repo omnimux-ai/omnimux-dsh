@@ -647,7 +647,7 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(source).toContain('context: {')
   })
 
-  it('T25: 收起态过滤 - 推特评论区处于未激活紧凑占位栏（无激活编辑框/无底部工具栏）时，绝不挂载 OmniMux 图标', () => {
+  it('T25: 未激活与激活双态挂载 - 推特评论区处于未激活紧凑占位栏时，必须正常挂载唯一 OmniMux 图标', () => {
     const collapsedBar = document.createElement('div')
     collapsedBar.innerHTML = `
       <div class="avatar"></div>
@@ -671,13 +671,15 @@ AIGC 现在的残酷真相是：模型能力每`
       toJSON: () => {},
     })
 
-    expect(isCollapsedInlineReply(replyBtn)).toBe(true)
+    // 未激活紧凑回复条是合法挂载目标（不再被识别为陈旧孤立节点）
+    expect(isCollapsedInlineReply(replyBtn)).toBe(false)
 
     mountCopilotToTwitterButtons()
 
-    // 绝不挂载到收起态占位条上
+    // 验证未激活紧凑占位条上正常挂载了唯一图标
     const mounted = document.querySelectorAll('.omnimux-copilot-anchor-btn')
-    expect(mounted.length).toBe(0)
+    expect(mounted.length).toBe(1)
+    expect(mounted[0].parentElement).toBe(replyBtn.parentElement)
   })
 
   it('T26: 展开态精准挂载 - 用户激活展开回复框后，仅在底部工具栏回复按钮旁单一挂载', () => {
@@ -935,5 +937,118 @@ AIGC 现在的残酷真相是：模型能力每`
     const mountedCopilot = rootCard.querySelector('.omnimux-copilot-anchor-btn') as HTMLElement
     expect(mountedCopilot).not.toBeNull()
     expect(mountedCopilot.parentElement).toBe(toolbarBtn.parentElement)
+  })
+
+  it('T30: 未激活到激活状态切换流转 - 从紧凑条展开为编辑卡片后，旧位置图标被卡片级单实例守卫清除，底部工具栏挂载唯一图标', () => {
+    // 1. 初始为未激活紧凑占位条
+    const container = document.createElement('div')
+    container.className = 'comment-reply-region'
+    container.innerHTML = `
+      <div class="compact-bar" style="display: flex;">
+        <div class="placeholder">发布你的回复</div>
+        <button data-testid="tweetButtonInline" id="compact-btn">回复</button>
+      </div>
+    `
+    document.body.appendChild(container)
+    const compactBtn = container.querySelector('#compact-btn') as HTMLElement
+    vi.spyOn(compactBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 32,
+      top: 100,
+      left: 500,
+      right: 560,
+      bottom: 132,
+      x: 500,
+      y: 100,
+      toJSON: () => {},
+    })
+
+    mountCopilotToTwitterButtons()
+    expect(container.querySelectorAll('.omnimux-copilot-anchor-btn').length).toBe(1)
+
+    // 2. 模拟推特状态切换：点击后展开成多行编辑卡片
+    // 假设旧紧凑条节点被推特变形为顶部或者保留在顶部，同时底部创建了新的媒体工具栏
+    container.innerHTML = `
+      <div class="expanded-top-header" style="display: flex;">
+        <span>回复 @target</span>
+        <button class="omnimux-copilot-anchor-btn" data-omnimux-copilot="true" id="stale-top-icon">旧图标</button>
+      </div>
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true">准备输入的回复</div>
+      </div>
+      <div data-testid="toolBar" class="expanded-bottom-toolbar" style="display: flex;">
+        <button aria-label="媒体"></button>
+        <button data-testid="tweetButtonInline" id="expanded-btn">回复</button>
+      </div>
+    `
+
+    const staleTop = container.querySelector('#stale-top-icon') as HTMLElement
+    vi.spyOn(staleTop, 'getBoundingClientRect').mockReturnValue({
+      width: 32,
+      height: 32,
+      top: 105,
+      left: 550,
+      right: 582,
+      bottom: 137,
+      x: 550,
+      y: 105,
+      toJSON: () => {},
+    })
+
+    const expandedBtn = container.querySelector('#expanded-btn') as HTMLElement
+    vi.spyOn(expandedBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 36,
+      top: 250,
+      left: 520,
+      right: 580,
+      bottom: 286,
+      x: 520,
+      y: 250,
+      toJSON: () => {},
+    })
+
+    // 执行扫描挂载
+    mountCopilotToTwitterButtons()
+
+    // 验证：顶部旧图标已被清除，仅在底部工具栏保留 1 个图标
+    expect(document.getElementById('stale-top-icon')).toBeNull()
+    const finalCopilots = container.querySelectorAll('.omnimux-copilot-anchor-btn')
+    expect(finalCopilots.length).toBe(1)
+    expect(finalCopilots[0].parentElement).toBe(expandedBtn.parentElement)
+  })
+
+  it('T31: 竞品覆盖对齐 - 当同级存在 SoPilot 竞品按钮时，OmniMux 图标在其位置挂载并优雅覆盖', () => {
+    const bar = document.createElement('div')
+    bar.innerHTML = `
+      <div class="row-flex" style="display: flex; flex-direction: row;">
+        <button data-testid="tweetButtonInline" id="reply-btn">回复</button>
+        <button class="ai-assistant-button" id="sopilot-btn">SoPilot</button>
+      </div>
+    `
+    document.body.appendChild(bar)
+    const replyBtn = bar.querySelector('#reply-btn') as HTMLElement
+    const sopilotBtn = bar.querySelector('#sopilot-btn') as HTMLElement
+
+    vi.spyOn(replyBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 32,
+      top: 100,
+      left: 400,
+      right: 460,
+      bottom: 132,
+      x: 400,
+      y: 100,
+      toJSON: () => {},
+    })
+
+    mountCopilotToTwitterButtons()
+
+    const copilotBtn = bar.querySelector('.omnimux-copilot-anchor-btn') as HTMLElement
+    expect(copilotBtn).not.toBeNull()
+    // 验证 SoPilot 被干净覆盖抑制
+    expect(sopilotBtn.style.display).toBe('none')
+    // 验证 OmniMux 成功挂载在工具行
+    expect(copilotBtn.parentElement).toBe(sopilotBtn.parentElement)
   })
 })
