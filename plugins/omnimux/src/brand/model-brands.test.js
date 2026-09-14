@@ -15,7 +15,7 @@ test('resolveModelBrand: resolves all mainstream models accurately', () => {
   assert.equal(resolveModelBrand('wan-2.7'), 'alibaba');
   assert.equal(resolveModelBrand('wan2.7'), 'alibaba');
   assert.equal(resolveModelBrand('wan-2.6'), 'alibaba');
-  assert.equal(resolveModelBrand('seedream-5.0-pro'), 'bytedance');
+  assert.equal(resolveModelBrand('seedream-5-0-pro'), 'bytedance');
   assert.equal(resolveModelBrand('deepseek-v4-flash'), 'deepseek');
   assert.equal(resolveModelBrand('midjourney-8.1'), 'midjourney');
   assert.equal(resolveModelBrand('minimax-h3'), 'minimax');

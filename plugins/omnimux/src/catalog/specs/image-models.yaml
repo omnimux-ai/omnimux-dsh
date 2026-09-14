@@ -866,10 +866,12 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
-  - id: "seedream-5.0-pro"
+  - id: "seedream-5-0-pro"
     label: "Seedream 5.0 Pro"
     family: "seedream"
     subtitle: "1K-2K"
+    aliases:
+      - "seedream-5.0-pro"
     operations:
       - id: "text_to_image"
         label: "文生图"
@@ -924,6 +926,7 @@ models:
         defaultValue: "2K"
     research:
       status: "draft"
+      notes: "2026-09-14 命名收敛：canonical 采用网关命名规则要求的连字符形（GW 命名检查 rules/media-dot.js 对 media 家族的点号形判 error）；点号形登记为别名以打通别名归一。渠道官方文档 URL 未取证，故不上架。"
     implementation:
       status: "none"
     execution:
