@@ -26,10 +26,159 @@ const SECRET_PATTERNS = [
   /(?:api[_-]?key|secret|token|password)\s*[:=]\s*['"][a-zA-Z0-9_\-]{16,}['"]/i,
 ]
 
+// base64 承载的凭据逐字面量解码后再跑 SECRET_PATTERNS（明文规则对手工编码的密钥 0 命中）。
+const ENCODED_SECRET_LITERAL_PATTERNS = [
+  /\batob\s*\(\s*(['"])([A-Za-z0-9+/=_-]{16,})\1\s*\)/g,
+  /\bBuffer\.from\s*\(\s*(['"])([A-Za-z0-9+/=_-]{16,})\1\s*,\s*(['"])(?:base64|base64url)\3\s*\)/g,
+]
+
+/**
+ * 扩展联网出口白名单（唯一真源，审查只需看这里）。
+ *
+ * 扩展页 connect-src 只允许两类出口：
+ *   1. 本机服务：`127.0.0.1` / `localhost` / `::1`，含 `ws://` / `wss://`、
+ *      任意端口与端口通配 `:*`（由 LOOPBACK_HOSTS 无条件放行，不在此列表重复声明）；
+ *   2. 下面显式列出的仓库白名单主机。
+ * 其它任何主机（例如 api.deepseek.com、api.apikey.fun）以及 `*` 通配一律阻断。
+ */
+export const EXTENSION_CONNECT_SRC_ALLOWED_HOSTS = [
+  // 扩展分发资源的唯一公开来源（更新检查与静态资源）。
+  'raw.githubusercontent.com',
+]
+
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
+const NON_NETWORK_SCHEME_RE = /^(?:data|blob|filesystem|about|chrome|chrome-extension|moz-extension|javascript|file):/i
+const EXTENSION_MANIFEST_RE = /^plugins\/[^/]+\/extension\/manifest(?:\.[A-Za-z0-9_-]+)?\.json$/
+const CONNECT_SRC_DIRECTIVE_RE = /\bconnect-src\b([^;]*)/gi
+
+/** 扩展清单路径：plugins/<name>/extension/manifest.json 与 manifest.<variant>.json。 */
+export function isExtensionManifestPath(rel) {
+  return EXTENSION_MANIFEST_RE.test(String(rel || '').replaceAll('\\', '/'))
+}
+
+function decodeBase64Literal(value) {
+  const normalized = String(value).replaceAll('-', '+').replaceAll('_', '/')
+  try {
+    return Buffer.from(normalized, 'base64').toString('utf8')
+  } catch {
+    return ''
+  }
+}
+
+/** 源码里是否存在解码后命中密钥特征的 base64 字面量（atob / Buffer.from base64）。 */
+export function hasEncodedCredential(content) {
+  for (const pattern of ENCODED_SECRET_LITERAL_PATTERNS) {
+    pattern.lastIndex = 0
+    let match
+    while ((match = pattern.exec(content)) !== null) {
+      const decoded = decodeBase64Literal(match[2])
+      if (decoded && SECRET_PATTERNS.some((rule) => rule.test(decoded))) return true
+    }
+  }
+  return false
+}
+
+/** connect-src 令牌 → 主机名；CSP 关键字（'self' 等）与非网络地址返回 null。 */
+export function connectSrcHost(token) {
+  let rest = String(token || '').trim()
+  if (!rest || rest.startsWith("'")) return null
+  if (NON_NETWORK_SCHEME_RE.test(rest)) return null
+  const scheme = /^[a-z][a-z0-9+.-]*:\/\//i.exec(rest)
+  if (scheme) rest = rest.slice(scheme[0].length)
+  rest = rest.replace(/^[^/@]*@/, '').split(/[/?#]/)[0]
+  if (rest.startsWith('[')) {
+    const end = rest.indexOf(']')
+    return end === -1 ? null : rest.slice(1, end).toLowerCase() || null
+  }
+  const colon = rest.lastIndexOf(':')
+  if (colon !== -1) rest = rest.slice(0, colon)
+  return rest.toLowerCase() || null
+}
+
+/** 主机是否被放行（本机环回 + 显式白名单）。 */
+export function isAllowedExtensionHost(host) {
+  const normalized = String(host || '').trim().toLowerCase()
+  if (!normalized) return false
+  if (LOOPBACK_HOSTS.has(normalized)) return true
+  return EXTENSION_CONNECT_SRC_ALLOWED_HOSTS.includes(normalized)
+}
+
+// 把 CSP 的字符串 / 数组 / 对象三种形态拍平成指令文本，供统一的 connect-src 抽取复用。
+function cspTextFromValue(value) {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map((item) => cspTextFromValue(item)).join(' ')
+  if (value && typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, item]) => `${key} ${cspTextFromValue(item)};`)
+      .join(' ')
+  }
+  return ''
+}
+
+function asTextList(value) {
+  if (Array.isArray(value)) return value.map((item) => cspTextFromValue(item))
+  if (value === undefined || value === null) return []
+  return [cspTextFromValue(value)]
+}
+
+/** 抽出清单声明的全部 connect-src 主机（含 host_permissions / permissions 中的 connect-src 声明）。 */
+export function connectSrcHostsFromManifest(manifest) {
+  const texts = [
+    cspTextFromValue(manifest?.content_security_policy),
+    ...asTextList(manifest?.host_permissions),
+    ...asTextList(manifest?.permissions),
+  ]
+  const hosts = []
+  for (const text of texts) {
+    if (!text) continue
+    CONNECT_SRC_DIRECTIVE_RE.lastIndex = 0
+    let match
+    while ((match = CONNECT_SRC_DIRECTIVE_RE.exec(text)) !== null) {
+      for (const token of match[1].trim().split(/\s+/)) {
+        const host = connectSrcHost(token)
+        if (host) hosts.push(host)
+      }
+    }
+  }
+  return hosts
+}
+
+/** 越界的 connect-src 主机列表；清单不是合法 JSON 时返回 null（无法校验）。 */
+export function extensionOutboundViolations(manifestText) {
+  let manifest
+  try {
+    manifest = JSON.parse(manifestText)
+  } catch {
+    return null
+  }
+  const seen = new Set()
+  const violations = []
+  for (const host of connectSrcHostsFromManifest(manifest)) {
+    if (isAllowedExtensionHost(host) || seen.has(host)) continue
+    seen.add(host)
+    violations.push(host)
+  }
+  return violations
+}
+
 const SECURITY_RULES = [
   {
     check: (content) => SECRET_PATTERNS.some((pattern) => pattern.test(content)),
     message: '检测到疑似硬编码敏感凭据。',
+  },
+  {
+    check: (content) => hasEncodedCredential(content),
+    message: '检测到 base64 承载的硬编码凭据（解码后命中密钥特征）。',
+  },
+  {
+    fileMatch: EXTENSION_MANIFEST_RE,
+    // 该规则需要报出具体越界主机，故直接产出文案。
+    inspect: (content) => {
+      const violations = extensionOutboundViolations(content)
+      if (violations === null) return '扩展清单不是合法 JSON，无法校验联网出口白名单。'
+      if (violations.length === 0) return null
+      return `扩展联网出口只允许本机服务与本仓库白名单主机，禁止 ${violations.join('、')}。`
+    },
   },
   {
     check: (content) => /JSON\.(?:stringify|parse)\s*\(\s*(?:ctx|service|session|props)\b/.test(content),
@@ -44,7 +193,7 @@ const SECURITY_RULES = [
 const DIMENSION_CHECKS = [
   ['syntax', (count) => `已检查 ${count} 个变更源码文件的 JavaScript 语法与动态插件语法`],
   ['lifecycle', '已检查定时器、全局事件与 disposer 线索'],
-  ['security', '已检查凭据、live data 序列化与跨界写入'],
+  ['security', '已检查凭据（含 base64 载体）、扩展联网出口白名单、live data 序列化与跨界写入'],
   ['tokens', '已检查 UI 裸颜色与废弃 token（无 UI 变更时为空检查）'],
   ['guards', '已检查 Stage 保活线索（无 Stage 变更时为空检查）'],
 ]
@@ -268,19 +417,58 @@ function scanLifecycle(report, file, rel, content) {
   checkEventListenerCleanup(report, rel, content)
 }
 
-function scanSecurity(report, file, rel, content) {
-  if (isTestFile(file)) return
-  if (rel.startsWith('scripts/')) return
-  if (rel.includes('fixtures/')) return
+function isSecurityScanSkipped(file, rel) {
+  if (isTestFile(file)) return true
+  if (rel.startsWith('scripts/')) return true
+  if (rel.includes('fixtures/')) return true
+  return false
+}
 
+function securityRuleMessage(rule, content, rel) {
+  if (rule.fileMatch && !rule.fileMatch.test(rel)) return null
+  if (typeof rule.inspect === 'function') return rule.inspect(content, rel)
+  return rule.check(content, rel) ? rule.message : null
+}
+
+function collectSecurityErrors(report, rel, content) {
   for (const rule of SECURITY_RULES) {
-    if (rule.check(content)) {
+    const message = securityRuleMessage(rule, content, rel)
+    if (message) {
       addError(report, 'security', {
         file: rel,
-        message: rule.message,
+        message,
       })
     }
   }
+}
+
+function securityDimension() {
+  return { pass: true, checks: [], errors: [] }
+}
+
+/** 对单段文本跑安全规则，返回命中文案（供门禁与测试复用）。 */
+export function securityViolations(rel, content) {
+  const report = { targetDir: '', dimensions: { security: securityDimension() } }
+  collectSecurityErrors(report, rel, content)
+  return report.dimensions.security.errors.map((error) => error.message)
+}
+
+/** 对一组真实文件跑安全维度（跳过测试文件、scripts/ 与 fixtures/，与门禁口径一致）。 */
+export function securityFindings(files, root) {
+  const report = { targetDir: root, dimensions: { security: securityDimension() } }
+  for (const file of files) {
+    const rel = normalizedRelative(root, file)
+    if (isSecurityScanSkipped(file, rel)) continue
+    const content = readText(file, report, 'security')
+    if (content === null) continue
+    collectSecurityErrors(report, rel, content)
+  }
+  return report.dimensions.security.errors
+}
+
+function scanSecurity(report, file, rel, content) {
+  if (isSecurityScanSkipped(file, rel)) return
+  collectSecurityErrors(report, rel, content)
 }
 
 function isIgnoredTokenLine(trimmed, line) {
