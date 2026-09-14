@@ -33,7 +33,7 @@
       "evidence": [
         "docs/evidence/2026-08-16-omnimux-image.md"
       ],
-      "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft"
+      "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft；2026-09-14 登记冲突：公开文档公告 gpt-image-2 更名至 gpt-image-2.5（旧 ID 不再提供），但网关 relay/channel/task/goeasy/adaptor.go 仍接受 gpt-image-2 并映射到 gpt-image-2.5-async，故本行保持 canonical，待网关侧裁定后再决定是否降级为别名"
     },
     {
       "id": "gpt-image-2.5",
@@ -346,8 +346,20 @@
     },
     {
       "id": "gpt-image2-hd",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "alias",
+      "target": "gpt-image-2.5-hd",
+      "reason": "命名变体（无点号/短横）；随 gpt-image-2-hd 一并归并为 gpt-image-2.5-hd 的别名"
+    },
+    {
+      "id": "gpt-image-2-hd",
+      "disposition": "alias",
+      "target": "gpt-image-2.5-hd",
+      "reason": "公开文档 2026-09-10 起将 gpt-image-2-hd 更名至 gpt-image-2.5-hd；收敛为别名"
+    },
+    {
+      "id": "gpt-image-2.5-hd",
+      "disposition": "canonical",
+      "reason": "契约行更名承接：公开文档已公告的更名后高清型号；因无 dated live 证据不上架（op 保持 draft/none）"
     },
     {
       "id": "grok-imagine-image-quality",
