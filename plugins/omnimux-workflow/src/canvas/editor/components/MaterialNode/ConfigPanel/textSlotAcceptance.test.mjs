@@ -2,7 +2,7 @@
  * 文本生成节点多模态卡槽机制与空态高度优化 专项验收测试 (QA Acceptance)
  *
  * 验收目标：
- * 场景 1：多模态模型（如 Gemini 3.8 Flash、Claude Opus 4.6、GPT-5.5），空态未连线时，卡槽能正确展示（strip 预设，包含参考图槽位，虚线加号框，addButton=true）；
+ * 场景 1：显式 vision_chat 按契约展示媒体槽；chat 与未指定操作不借其他操作的槽；
  * 场景 2：纯文本模型（如 DeepSeek V4 Pro、Claude Opus 5、GLM-5.3），卡槽不展示（none 预设），且 prompt-header 容器带有 empty-slots 类名，消除 44px 死高；
  * 场景 3：连入素材后，卡槽装填与操作升迁机制正常；
  * 场景 4：中英文国际化词条完整且无缺失。
@@ -198,9 +198,9 @@ const mockCatalog = {
 };
 
 describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽（strip 预设 + addButton=true）', () => {
-  it('TC-T01-01: Gemini 3.8 Flash 在空态未连线、默认 chat 模式下自动派生 strip 预设与多媒体槽位', () => {
-    // 默认空态未连线：operationId 为 'chat' 或 undefined
-    const layoutChat = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
+  it('TC-T01-01: Gemini 显式 vision_chat 派生精确多媒体槽，未选操作不借槽', () => {
+    // 显式选择有媒体输入的操作，空态也保留其声明槽位。
+    const layoutChat = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     assert.equal(layoutChat.preset, 'strip', '多模态模型必须派生 strip 预设');
     assert.equal(layoutChat.addButton, true, '应允许添加素材（addButton: true）');
     assert.equal(layoutChat.slots.length, 2, '包含 reference_images 和 reference_videos 两个槽位');
@@ -215,13 +215,13 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
 
     // 未指定 operationId 时兜底
     const layoutUnspec = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', undefined, 'text');
-    assert.equal(layoutUnspec.preset, 'strip');
-    assert.equal(layoutUnspec.addButton, true);
-    assert.equal(layoutUnspec.slots.length, 2);
+    assert.equal(layoutUnspec.preset, 'none');
+    assert.equal(layoutUnspec.addButton, false);
+    assert.deepEqual(layoutUnspec.slots, []);
   });
 
   it('TC-T01-02: Claude Opus 4.6 与 GPT-5.5 在未连线时正确派生 strip 预设与参考图槽位', () => {
-    const claudeLayout = deriveSlotLayout(mockCatalog, 'claude-opus-4-6', 'chat', 'text');
+    const claudeLayout = deriveSlotLayout(mockCatalog, 'claude-opus-4-6', 'vision_chat', 'text');
     assert.equal(claudeLayout.preset, 'strip');
     assert.equal(claudeLayout.addButton, true);
     assert.equal(claudeLayout.slots.length, 1);
@@ -229,7 +229,7 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
     assert.equal(claudeLayout.slots[0].type, 'image');
     assert.equal(claudeLayout.slots[0].labelKey, 'panel.slot.reference_images');
 
-    const gptLayout = deriveSlotLayout(mockCatalog, 'gpt-5.5', 'chat', 'text');
+    const gptLayout = deriveSlotLayout(mockCatalog, 'gpt-5.5', 'vision_chat', 'text');
     assert.equal(gptLayout.preset, 'strip');
     assert.equal(gptLayout.addButton, true);
     assert.equal(gptLayout.slots.length, 1);
@@ -237,14 +237,15 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
     assert.equal(gptLayout.slots[0].type, 'image');
   });
 
-  it('TC-T01-03: ConfigPanel 源码防线保证多模态文本模型卡槽兜底成立且 hasSlots 为 true', () => {
-    // 检查 ConfigPanel 中针对 materialType === 'text' 的模型多模态感知逻辑
-    assert.match(configPanelSrc, /if\s*\(materialType\s*===\s*'text'\)\s*\{/);
-    assert.match(configPanelSrc, /const\s+contractView\s*=\s*buildContractView\(activeCatalog\);/);
-    assert.match(configPanelSrc, /const\s+model\s*=\s*resolveModelView\(contractView,\s*modelValue\);/);
-    assert.match(configPanelSrc, /const\s+isMultimodal\s*=\s*model\?\.operations\.some/);
-    assert.match(configPanelSrc, /slot:\s*'reference_images'/);
-    assert.match(configPanelSrc, /const\s+hasSlots\s*=\s*effectiveSlotLayout\.preset\s*!==\s*'none'\s*&&\s*effectiveSlotLayout\.slots\.length\s*>\s*0;/);
+  it('TC-T01-03: 多模态模型的 chat 操作不借 vision_chat 槽，不装填图片', () => {
+    for (const modelId of ['gemini-3.8-flash', 'claude-opus-4-6', 'gpt-5.5']) {
+      const plain = deriveSlotLayout(mockCatalog, modelId, 'chat', 'text');
+      assert.equal(plain.preset, 'none');
+      assert.equal(plain.addButton, false);
+      assert.deepEqual(plain.slots, [], 'chat 不借用 vision_chat 槽位');
+      const fill = autoFillSlots([{edgeId:'image',sourceNodeId:'image',type:'image',ordinal:0,availability:'ready'}], plain);
+      assert.deepEqual(fill.bindings, {});
+    }
   });
 });
 
@@ -266,7 +267,7 @@ describe('场景 2 验收：纯文本模型卡槽不展示（none 预设），�
     // 验证类名拼接逻辑
     assert.match(
       configPanelSrc,
-      /className=\{\`wf-config-panel__prompt-header\$\{\!hasSlots \? ' wf-config-panel__prompt-header--empty-slots' : ''\}\`\}/,
+      /className=\{\`wf-config-panel__prompt-header\$\{!hasSlots && !textSources\.length \? ' wf-config-panel__prompt-header--empty-slots' : ''\}\`\}/,
     );
     // 验证当 !hasSlots 时不渲染 SlotWells，且不再渲染旧版的多余 <span /> 标签
     assert.match(configPanelSrc, /\{hasSlots\s*&&\s*\(\s*<SlotWells/);
@@ -285,7 +286,7 @@ describe('场景 2 验收：纯文本模型卡槽不展示（none 预设），�
 
 describe('场景 3 验收：连入素材后卡槽装填与操作升迁机制正常', () => {
   it('TC-T03-01: 多模态模型连入单张图片素材，autoFillSlots 成功装填 reference_images 并保留加号', () => {
-    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     const imageFeed = [
       {
         edgeId: 'edge-img-1',
@@ -310,7 +311,7 @@ describe('场景 3 验收：连入素材后卡槽装填与操作升迁机制正�
   });
 
   it('TC-T03-02: 多模态模型连入多张图片与视频，分别匹配各自槽位', () => {
-    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     const multiFeed = [
       { edgeId: 'edge-1', sourceNodeId: 'img-1', type: 'image', ordinal: 0, availability: 'ready' },
       { edgeId: 'edge-2', sourceNodeId: 'img-2', type: 'image', ordinal: 1, availability: 'ready' },
@@ -440,7 +441,7 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
   const { renderSlotWells } = mod.exports;
 
   it('TC-T05-01: 多模态文本模型空态时，SlotWells 渲染出虚线加号框 wf-slot-well--append', () => {
-    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     const html = renderSlotWells({
       layout,
       bindings: {},
@@ -459,7 +460,7 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
   });
 
   it('TC-T05-02: 连入素材后，SlotWells 渲染已填入卡片 data-slot-state="filled" 并保留尾部添加按钮', () => {
-    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     const html = renderSlotWells({
       layout,
       bindings: {

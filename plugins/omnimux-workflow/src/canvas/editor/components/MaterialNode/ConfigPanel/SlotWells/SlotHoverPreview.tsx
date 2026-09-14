@@ -8,7 +8,7 @@ import type { UpstreamMediaItem } from '../../../../hooks/useUpstreamMedia.ts';
 interface SlotHoverPreviewProps {
   anchor: HTMLElement;
   upstream?: UpstreamMediaItem;
-  onReplace: () => void;
+  onReplace?: () => void;
   onClose: () => void;
 }
 
@@ -53,8 +53,10 @@ export default function SlotHoverPreview({ anchor, upstream, onReplace, onClose 
       onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
       {upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'image' ? <img src={upstream.url} alt={upstream.label} style={{ maxHeight: Math.max(0, available - 56) }} />
         : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'video' ? <video src={upstream.url} muted controls style={{ maxHeight: Math.max(0, available - 56) }} />
-          : <span>{t(upstream?.availability === 'unavailable' ? 'mention.unavailable' : 'mention.waiting')}</span>}
-      <button type="button" className="wf-slot-well__replace-pill nodrag" aria-label={t('node.replaceMaterial')} onClick={(event) => { event.stopPropagation(); onReplace(); onClose(); }}>{t('node.replaceMaterial')}</button>
+          : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'audio' ? <audio src={upstream.url} controls />
+            : upstream?.textContent && upstream.availability === 'ready' ? <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{upstream.textContent}</span>
+              : <span>{t(upstream?.availability === 'unavailable' ? 'mention.unavailable' : 'mention.waiting')}</span>}
+      {onReplace && <button type="button" className="wf-slot-well__replace-pill nodrag" aria-label={t('node.replaceMaterial')} onClick={(event) => { event.stopPropagation(); onReplace(); onClose(); }}>{t('node.replaceMaterial')}</button>}
     </div>, document.body,
   );
 }

@@ -2,8 +2,8 @@
  * Issue #739: 修复图像节点卡槽缺失及上游连线后误报『暂无兼容模型』 全面验收测试
  *
  * 验收核查重点：
- * 1. 图像节点卡槽常驻验证：
- *    - 新建、未连线、连入文本、连入图片等状态下，卡槽区域（strip 预设 + reference_image 槽位）均正常派生与渲染；
+ * 1. 图像槽精确契约验证（#1760）：
+ *    - 未选操作或所选操作不声明媒体时不造槽；合法媒体槽按声明容量派生与装填；
  *    - 未填入素材时渲染 44x44px 虚线加号；
  *    - 连入素材后展示缩略图卡片并保留尾部 + 添加按钮；
  *    - panel.slot.reference_image 双语词条（中/英）完整性。
@@ -71,38 +71,34 @@ const prodCatalog = {
   ],
 };
 
-describe('Issue #739 Acceptance: 图像节点卡槽常驻验证', () => {
-  it('TC-739-01: 新建状态（未选模型、未选操作），图像节点 deriveSlotLayout 兜底 strip 卡槽', () => {
+describe('Issue #739/#1760 Acceptance: 图像槽严格来自所选操作', () => {
+  it('TC-739-01: 未选模型/操作时不伪造图片槽', () => {
     const layout = deriveSlotLayout(prodCatalog, undefined, undefined, 'image');
-    assert.equal(layout.preset, 'strip', '新建状态应派生 strip 预设');
-    assert.equal(layout.addButton, true, '应允许添加按钮');
-    assert.equal(layout.slots.length, 1, '应有 1 个默认卡槽');
-    assert.equal(layout.slots[0].slot, 'reference_image');
-    assert.equal(layout.slots[0].role, 'reference');
-    assert.equal(layout.slots[0].type, 'image');
-    assert.equal(layout.slots[0].min, 0);
-    assert.equal(layout.slots[0].max, 10);
-    assert.equal(layout.slots[0].labelKey, 'panel.slot.reference_image');
+    assert.equal(layout.preset, 'none');
+    assert.equal(layout.addButton, false);
+    assert.deepEqual(layout.slots, [], '未选模型/操作不能合成 max10 图片槽');
   });
 
-  it('TC-739-02: 未连线状态（已选模型 nanobanana-2，默认 text_to_image），卡槽保持常驻在线', () => {
+  it('TC-739-02: 所选 text_to_image 未声明媒体输入时无图片槽', () => {
     const layout = deriveSlotLayout(prodCatalog, 'nanobanana-2', 'text_to_image', 'image');
-    assert.equal(layout.preset, 'strip');
-    assert.equal(layout.addButton, true);
-    assert.ok(layout.slots.length >= 1);
-    assert.equal(layout.slots[0].slot, 'reference_image');
+    assert.equal(layout.preset, 'none');
+    assert.equal(layout.addButton, false);
+    assert.deepEqual(layout.slots, []);
   });
 
-  it('TC-739-03: 连入纯文本状态，图像节点卡槽依然常驻', () => {
-    // 文本上游不产生图像资产，deriveSlotLayout 依然返回 strip
+  it('TC-739-03: 纯文本供给不会制造媒体槽或媒体绑定', () => {
     const layout = deriveSlotLayout(prodCatalog, 'nanobanana-2', 'text_to_image', 'image');
-    assert.equal(layout.preset, 'strip');
-    assert.equal(layout.addButton, true);
-    assert.equal(layout.slots[0].slot, 'reference_image');
+    const result = autoFillSlots([{edgeId:'text-1',sourceNodeId:'text',type:'text',ordinal:0,availability:'ready'}], layout);
+    assert.equal(layout.preset, 'none');
+    assert.equal(layout.addButton, false);
+    assert.deepEqual(result.bindings, {});
   });
 
   it('TC-739-04: 连入图片素材后，autoFillSlots 成功入槽，并保留尾部 + 添加按钮', () => {
-    const layout = deriveSlotLayout(prodCatalog, 'nanobanana-2', 'text_to_image', 'image');
+    const catalog = structuredClone(prodCatalog);
+    catalog.models[0].operations[0].inputs = [{slot:'reference_image',type:'image',role:'reference',source:'upstream_edge',min:0,max:2}];
+    const layout = deriveSlotLayout(catalog, 'nanobanana-2', 'text_to_image', 'image');
+    assert.equal(layout.slots[0].max, 2);
     const imageFeedAssets = [
       {
         edgeId: 'edge-1',
@@ -124,12 +120,15 @@ describe('Issue #739 Acceptance: 图像节点卡槽常驻验证', () => {
     assert.ok(occupants.length < (layout.slots[0].max ?? 10), '未达到最大卡槽限制时应可继续添加');
   });
 
-  it('TC-739-05: ConfigPanel 中双重兜底保证图像节点卡槽绝对不为 none', () => {
-    // 验证 ConfigPanel/index.tsx 源码中存在针对 materialType === "image" 的 effectiveSlotLayout 兜底与常驻渲染
-    assert.match(configPanelSrc, /const\s+effectiveSlotLayout\s*=\s*useMemo<SlotLayout>/);
-    assert.match(configPanelSrc, /if\s*\(materialType\s*===\s*'image'\s*&&\s*\(slotLayout\.preset\s*===\s*'none'/);
-    assert.match(configPanelSrc, /slot:\s*'reference_image'/);
-    assert.match(configPanelSrc, /effectiveSlotLayout\.preset\s*!==\s*'none'\s*&&\s*effectiveSlotLayout\.slots\.length\s*>\s*0/);
+  it('TC-739-05: 不借其他操作槽、不合成未知容量、未列出操作不放行', () => {
+    const catalog = structuredClone(prodCatalog);
+    catalog.models[0].operations.push({id:'image_to_image',listed:true,output:{type:'image'},inputs:[{slot:'reference_image',type:'image',source:'upstream_edge',role:'reference',min:0,max:null}]});
+    assert.deepEqual(deriveSlotLayout(catalog, 'nanobanana-2', 'text_to_image', 'image').slots, []);
+    const selected = deriveSlotLayout(catalog, 'nanobanana-2', 'image_to_image', 'image');
+    assert.equal(selected.slots[0].max, null, '未知容量不能改成10');
+    assert.equal(selected.slots[0].slot, 'reference_image');
+    catalog.models[0].operations[1].listed = false;
+    assert.deepEqual(deriveSlotLayout(catalog, 'nanobanana-2', 'image_to_image', 'image').slots, []);
   });
 
   it('TC-739-06: 视觉规格核查：44x44px 虚线加号框与样式规范', () => {

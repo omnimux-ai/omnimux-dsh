@@ -28,13 +28,14 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const permitted = !policy || policy.allowedModelIds.includes(String(model?.id ?? params.model));
   const layout = deriveSlotLayout(catalog, model?.id, operation?.id);
   const feed = feedFromFingerprint(raw);
-  let explicit = node.data.slotBindings as SlotBindings | undefined;
+  const plainSpeech = outputType === 'audio' && params.operation === 'text_to_speech';
+  let explicit = plainSpeech ? {} : node.data.slotBindings as SlotBindings | undefined;
   const priorParams = previous ? readCanvasParams(previous) : {};
   const modeChanged = previous && (priorParams.operation !== params.operation || priorParams.model !== params.model);
   if (explicit) {
     explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
       occupants.filter((occupant) => !modeChanged || occupant.pinned).map((occupant) => ({ ...occupant }))]));
-    for (const conflict of (node.data.slotConflicts ?? []) as SlotConflict[]) {
+    for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
       const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
     }
