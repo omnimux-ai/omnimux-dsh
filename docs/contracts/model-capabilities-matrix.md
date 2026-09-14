@@ -74,23 +74,23 @@ related:
 |---|---|---|---|---|---|
 | 文本 | `chat` | 纯文本对话 | prompt（可无媒体槽） | `text` | required |
 | 文本 | `vision_chat` | 图文多模态对话 | prompt + reference 图 | `text` | required |
-| 文本 | `document_analyze` | 文档解析 | document | `text` | optional/required（registry） |
+| 文本 | `document_analyze` | 文档解析 | document | `text` | required |
 | 图像 | `text_to_image` | 文生图 | prompt | `image` | required |
-| 图像 | `image_to_image` | 图生图 | source 图 ± prompt | `image` | optional 或 required（registry） |
-| 图像 | `multi_reference` | 多图主体参考 | reference 多图 | `image` | optional/required |
-| 图像 | `inpaint_outpaint` | 局部重绘 | source + mask | `image` | optional/required |
+| 图像 | `image_to_image` | 图生图 | source 图 ± prompt | `image` | required |
+| 图像 | `multi_reference` | 多图主体参考 | reference 多图 | `image` | required |
+| 图像 | `inpaint_outpaint` | 局部重绘 | source + mask | `image` | required |
 | 视频 | `text_to_video` | 文生视频 | prompt | `video` | required |
-| 视频 | `first_frame` | 首帧驱动 | first_frame 图 ×1 | `video` | optional/required |
-| 视频 | `first_last_frame` | 首尾帧过渡 | first_frame + last_frame | `video` | optional/required |
+| 视频 | `first_frame` | 首帧驱动 | first_frame 图 ×1 | `video` | optional |
+| 视频 | `first_last_frame` | 首尾帧过渡 | first_frame + last_frame | `video` | optional |
 | 视频 | `end_frame` | 尾帧参考 | end_frame 图 ×1（`slot=end_frame`、`role=last_frame`；**禁止映射为 `first_frame`**） | `video` | optional |
-| 视频 | `video_multi_ref` | 全能参考 | reference 多图 | `video` | optional/required |
+| 视频 | `video_multi_ref` | 全能参考 | reference 多图 | `video` | optional |
 | 视频 | `digital_human` | 数字人/对口型 | 图/视频 + 音频驱动 | `video` | **optional**（不得强制 prompt） |
-| 视频 | `video_edit` | 视频编辑/重绘 | source 视频 ± 参考 | `video` | optional/required |
+| 视频 | `video_edit` | 视频编辑/重绘 | source 视频 ± 参考 | `video` | optional |
 | 视频 | `video_extend` | 视频延长 | source 视频（`video_urls`） | `video` | optional |
 | 视频 | `document_to_video` | 文档参考 | 文档（`file_url`） | `video` | optional |
 | 视频 | `webpage_to_video` | 网页参考 | 网页链接（`link_url`） | `video` | optional |
 | 音频 | `text_to_speech` | 语音合成 | 文本 | `audio` | required |
-| 音频 | `voice_clone` | 声音克隆 | voice_sample 音频 | `audio` | optional/required |
+| 音频 | `voice_clone` | 声音克隆 | voice_sample 音频 | `audio` | required |
 | 音频 | `text_to_music` | 音乐创作 | 文本 ± 参考音频 | `audio` | required |
 | 音频 | `speech_to_text` | 语音转文字 | source **音频** | **`text`（非 audio）** | **none** |
 
@@ -161,8 +161,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 | `totalMinExclusive` | boolean；`totalMinDurationSec` 判定是否取严格（true → 合计须 **>** 下限） |
 | `totalMaxExclusive` | boolean；`totalMaxDurationSec` 判定是否取严格（true → 合计须 **<** 上限） |
 | `limitSource` | 现有 schema 支持 `official_docs` / `measured` / `policy_conservative` + url/note；新增接口约束以渠道 `official_docs` 为准，后两类仅保留历史或单独的产品限制含义，不可覆盖官方规范 |
-| `hint` | string；槽位说明文案（输入组 `min` 不足时用作拒绝原因） |
-| `inputGroups` | **operation 级**（非槽位自身字段）：`inputGroups[]`，每项 `slots[]`（须引用已声明槽位）+ `min`（非负整数）+ 可选 `hint`；按组内槽位**合计**素材数校验，不足 → `min_unsatisfied` |
+| `inputGroups` | **operation 级**（非槽位自身字段）：`inputGroups[]`，每项 `slots[]`（须引用已声明槽位）+ `min`（非负整数）+ 可选 `hint`（**组内** `min` 不足时作为拒绝文案读取）；按组内槽位**合计**素材数校验，不足 → `min_unsatisfied`。槽位自身的 `hint` 目前仅被 loader 原样保留、无运行时消费者 |
 
 **上限来源是硬要求**：槽位一旦声明体积类上限（`maxSizeMb`）或时长类上限（`minDurationSec` / `maxDurationSec` / `totalMinDurationSec` / `totalMaxDurationSec` / `combinedOutputMaxDurationSec`），**必须**同时给出 `limitSource`；缺失即 admission **error** 级 `limit_source_missing`（不是覆盖警告）。
 
@@ -184,7 +183,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 | `status` | `live` \| `stub` \| `unavailable` |
 | `operations` | 该 profile **显式支持**的 operation id 列表；**每一项必须 ∈ operation-registry** |
 | `outputTypes` | 相容的 output.type 列表 |
-| `logicalFields` | 该 profile 受理的**逻辑字段**白名单；已 live 的 model / operation 其 `parameters` 键必须全部登记在此（否则 admission error `parameter_dispatch_closure_missing`） |
+| `logicalFields` | 该 profile 受理的**逻辑字段**白名单。**当前门禁只覆盖 model 级 `parameters`**：已 live 的 model 若声明了未登记的参数键 → admission error `parameter_dispatch_closure_missing`；operation 级 `parameters` 尚未纳入该检查（实现缺口，按本表口径登记而非按现状放行） |
 | `vendorFields` | 允许出现在**厂商载荷**中的字段白名单；不在表内的字段按 `unknownFieldPolicy` 处置 |
 | `forbiddenVendorFields` | 显式**禁止**发往厂商的字段（即便同时列入 `vendorFields` 也拒绝 → `vendor_field_forbidden`） |
 | `unknownFieldPolicy` | 未登记字段的处置：`reject`（默认，直接拒绝）/ `drop`（丢弃后继续）；当前 6 个档案均为 `reject` |
