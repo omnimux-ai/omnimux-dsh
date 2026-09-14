@@ -143,6 +143,11 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 100,
         "avgWaitTimeSec": 45
       },
+      "parameterConstraints": {
+        "duration": {
+          "fixed": 30
+        }
+      },
       "wireGroup": "seedance-2-5-task-pro",
       "enabled": true
     },
@@ -174,6 +179,11 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "sla": {
         "stability24h": 90,
         "avgWaitTimeSec": 120
+      },
+      "parameterConstraints": {
+        "duration": {
+          "fixed": 30
+        }
       },
       "wireGroup": "seedance-cheap",
       "enabled": true
