@@ -37,7 +37,7 @@ export function createMediaViewerStore(initialState = {}) {
   let state = {
     mediaList: initialState.mediaList || [],
     activeId: initialState.activeId || null,
-    subViewMode: initialState.subViewMode || 'grid', // 'grid' (时间线模式) | 'single' (大图浏览模式)
+    subViewMode: initialState.subViewMode || 'single', // 'single' (大图浏览/画布模式) | 'grid' (时间线模式)
     layoutMode: initialState.layoutMode || '3col',   // '3col' (三栏模式) | '2col' (两栏模式)
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),

@@ -45,6 +45,7 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-chat-media-tail__canvas-btn {
   position: absolute;
+  top: auto;
   bottom: 10px;
   right: 10px;
   z-index: 3;

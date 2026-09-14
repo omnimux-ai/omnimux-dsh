@@ -31,11 +31,17 @@ html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"]{
 }
 /* 收起后网格第三列会吃掉全部剩余宽度，而外壳的右栏面板是固定宽度 + 右对齐
    （left = 容器宽 − 面板宽）。不补这一条，面板左侧就会留下等宽黑空（实测 670px
-   的「中间空白占位」）。让面板左端贴住容器左端，页签区与页头随之上移铺满。 */
-html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
+   的「中间空白占位」）。必须让面板左端紧贴左侧导航栏右端，不可穿透覆盖左侧栏。 */
+html[${CONVERSATION_COLLAPSED_ATTR}]:not([data-omnimux-left-collapsed]) .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
+  left:var(--omnimux-sidebar-width, 280px)!important;
+  right:0!important;
+  width:calc(100vw - var(--omnimux-sidebar-width, 280px))!important;
+  max-width:none!important;
+}
+html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] .dshDesktopRightbarSurface [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]){
   left:0!important;
   right:0!important;
-  width:auto!important;
+  width:100vw!important;
   max-width:none!important;
 }
 `

@@ -93,17 +93,51 @@ export function MediaViewerTab({ scope }) {
 
         <div className="omx-mv-toolbar__center">
           {subViewMode === 'single' ? (
-            <button // exempt-ui01: 变焦缩放按钮
-              type="button"
-              className="omx-mv-btn"
-              onClick={() => store.cycleZoom()}
-              title="调整缩放比例"
-            >
-              <span>{zoom}%</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
+            <>
+              <button // exempt-ui01: 顶部工具栏添加评论按钮
+                type="button"
+                className="omx-mv-btn"
+                title="添加评论"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>添加评论</span>
+              </button>
+              <button // exempt-ui01: 顶部工具栏移除背景按钮
+                type="button"
+                className="omx-mv-btn"
+                title="移除背景"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m15 4-3 3 3 3" />
+                  <path d="M18 10h-6a4 4 0 0 0-4 4v4" />
+                </svg>
+                <span>移除背景</span>
+              </button>
+              <button // exempt-ui01: 顶部工具栏移除按钮
+                type="button"
+                className="omx-mv-btn"
+                title="移除"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+                <span>移除</span>
+              </button>
+              <button // exempt-ui01: 顶部工具栏调整大小按钮
+                type="button"
+                className="omx-mv-btn"
+                title="调整大小"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h6v6" />
+                  <path d="M9 21H3v-6" />
+                </svg>
+                <span>调整大小</span>
+              </button>
+            </>
           ) : (
             <button // exempt-ui01: 时间线多选按钮
               type="button"
@@ -118,6 +152,17 @@ export function MediaViewerTab({ scope }) {
         <div className="omx-mv-toolbar__right">
           {subViewMode === 'single' ? (
             <>
+              <button // exempt-ui01: 变焦缩放按钮
+                type="button"
+                className="omx-mv-btn"
+                onClick={() => store.cycleZoom()}
+                title="调整缩放比例"
+              >
+                <span>{zoom}%</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
               <button // exempt-ui01: 外部打开按钮
                 type="button"
                 className="omx-mv-btn"
