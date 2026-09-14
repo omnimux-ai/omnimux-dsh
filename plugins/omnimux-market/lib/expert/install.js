@@ -146,6 +146,25 @@ export function installNestedSkills(home, packDir) {
 }
 
 /**
+ * Flatten one skill that lives at a caller-named pack-relative location, for packs
+ * that are already flat (each skill directly under the pack root) and therefore
+ * carry no `skills/` middle layer for `installNestedSkills` to scan.
+ * Returns false when the source has no SKILL.md or the destination already exists.
+ * @param {string} home
+ * @param {string} packDir
+ * @param {string} name destination slug under $DSH_HOME/skills/
+ * @param {string} relPath pack-relative source directory
+ */
+export function installSkillAt(home, packDir, name, relPath) {
+  const src = join(packDir, relPath)
+  if (!existsSync(join(src, 'SKILL.md'))) return false
+  const dest = skillDir(home, name)
+  if (existsSync(join(dest, 'SKILL.md'))) return false
+  cpRecursive(src, dest)
+  return true
+}
+
+/**
  * @param {string} home
  * @param {{ source: { repo?: string, path?: string, ref?: string } }} item
  */

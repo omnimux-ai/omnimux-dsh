@@ -378,6 +378,157 @@ test('未知套件卸载 400，卸载缺失的套件不抛错', async () => {
             process.env.DSH_HOME = previous;
     }
 });
+/* ------------------------------------------- 平铺多技能仓库（Issue #1685） */
+/**
+ * 造一个「平铺多技能仓库」包：技能直接躺在包根之下，没有 `skills/` 中间层，
+ * 清单项靠可选的 `path` 定位。`paths` 可让某个技能落在多级子目录里。
+ */
+function flatFixture(extra = {}) {
+    const home = tempDir('omx-flat-home-');
+    const projectRoot = tempDir('omx-flat-proj-');
+    mkdirSync(join(projectRoot, '.git'), { recursive: true });
+    const packRoot = tempDir('omx-flat-pack-');
+    const packDir = join(packRoot, 'experts', 'flat-pack');
+    const skills = extra.skills ?? ['flat-a', 'flat-b', 'flat-c'];
+    const relOf = (name) => extra.paths?.[name] ?? name;
+    for (const name of skills) {
+        mkdirSync(join(packDir, relOf(name)), { recursive: true });
+        writeFileSync(join(packDir, relOf(name), 'SKILL.md'), `---\nname: ${name}\ndescription: ${name}\n---\n\n# ${name}\n`);
+    }
+    const item = {
+        id: 'suite-flat',
+        kind: 'suite',
+        skill: 'flat-pack',
+        title: '平铺套件',
+        summary: '平铺夹具套件',
+        source: { type: 'bundled', path: 'experts/flat-pack' },
+        suite: {
+            skills: skills.map((name) => ({ name, title: name, desc: `${name} 说明`, path: relOf(name) })),
+            rules: [],
+            agents: [],
+        },
+    };
+    return { home, projectRoot, workspace: projectRoot, packRoot, item };
+}
+test('清单项带 path 时从 <包根>/<path>/ 平铺装载，落点仍是技能库根', () => {
+    const fx = flatFixture();
+    const result = install(fx);
+    assert.equal(result.skills.total, 3);
+    assert.equal(result.skills.installed, 3);
+    assert.equal(result.skills.failed, 0);
+    assert.equal(result.partial, false);
+    assert.equal(result.already, false);
+    for (const name of ['flat-a', 'flat-b', 'flat-c']) {
+        assert.equal(existsSync(join(fx.home, 'skills', name, 'SKILL.md')), true, `${name} 未落盘`);
+        assert.match(readFileSync(join(fx.home, 'skills', name, 'SKILL.md'), 'utf8'), new RegExp(`# ${name}`));
+    }
+    // 平铺装载不改写包自身：包根下仍是原样目录
+    assert.equal(existsSync(join(fx.home, 'skills', 'flat-pack', 'flat-a', 'SKILL.md')), true);
+    // 规则 / Agent 为空 → 不产生任何写入
+    assert.equal(result.rules.total, 0);
+    assert.equal(result.rules.written, 0);
+    assert.equal(result.agents.total, 0);
+    assert.equal(existsSync(join(fx.projectRoot, 'AGENTS.md')), false);
+    assert.equal(existsSync(join(fx.home, '.agent-presets')), false);
+});
+test('path 支持多级子目录，落点仍按技能名摊平', () => {
+    const fx = flatFixture({ skills: ['deep-a'], paths: { 'deep-a': 'tools/deep/deep-a' } });
+    const result = install(fx);
+    assert.equal(result.skills.installed, 1);
+    assert.equal(existsSync(join(fx.home, 'skills', 'deep-a', 'SKILL.md')), true);
+    assert.equal(existsSync(join(fx.home, 'skills', 'tools')), false);
+});
+test('带 path 与不带 path 的清单项可在同一个套件里并存', () => {
+    const fx = flatFixture({ skills: ['flat-a'] });
+    // 第二个技能沿用旧语义：<包根>/skills/<name>/
+    const nested = join(fx.packRoot, 'experts', 'flat-pack', 'skills', 'nested-b');
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(join(nested, 'SKILL.md'), '---\nname: nested-b\ndescription: nested-b\n---\n\n# nested-b\n');
+    fx.item.suite = {
+        skills: [
+            { name: 'flat-a', title: 'flat-a', desc: '平铺项', path: 'flat-a' },
+            { name: 'nested-b', title: 'nested-b', desc: '旧语义项' },
+        ],
+        rules: [],
+        agents: [],
+    };
+    const result = install(fx);
+    assert.equal(result.skills.installed, 2);
+    assert.equal(result.skills.failed, 0);
+    assert.equal(existsSync(join(fx.home, 'skills', 'flat-a', 'SKILL.md')), true);
+    assert.equal(existsSync(join(fx.home, 'skills', 'nested-b', 'SKILL.md')), true);
+});
+test('平铺装载幂等：重复安装第二次全部 already，不再写入', () => {
+    const fx = flatFixture();
+    const first = install(fx);
+    assert.equal(first.skills.installed, 3);
+    const second = install(fx);
+    assert.equal(second.skills.installed, 0);
+    assert.equal(second.skills.already, 3);
+    assert.equal(second.already, true);
+    assert.equal(second.partial, false);
+});
+test('不安全的 path 被拒并记失败，不落盘也不越界读取', () => {
+    const fx = flatFixture({ skills: ['escape-a'], paths: { 'escape-a': 'escape-a' } });
+    for (const bad of ['../outside', '/etc', 'a/../../b', 'a//b']) {
+        const item = {
+            ...fx.item,
+            id: `suite-flat-${bad.replace(/[^a-z]/g, '')}`,
+            suite: { skills: [{ name: 'escape-a', title: '越界', desc: '越界项', path: bad }], rules: [], agents: [] },
+        };
+        const result = installSuite({
+            catalog: { items: [item] },
+            item,
+            home: tempDir('omx-flat-bad-'),
+            profileDir: join(fx.home, 'profiles', 'omnimux'),
+            packageRoot: fx.packRoot,
+            ruleTarget: 'project',
+            projectDir: fx.projectRoot,
+        });
+        assert.equal(result.skills.installed, 0, `path=${bad} 不应落盘`);
+        assert.equal(result.skills.failed, 1, `path=${bad} 应记失败`);
+        assert.equal(result.partial, true);
+        assert.match(String(result.failed[0].error), /path 非法/);
+    }
+    assert.equal(existsSync(join(fx.home, 'outside')), false);
+});
+test('带 path 缺 SKILL.md 时失败文案指向该 path，缺省项仍指向 skills/<name>', () => {
+    const fx = flatFixture({ skills: ['ghost-a'], paths: { 'ghost-a': 'ghost-a' } });
+    const item = {
+        ...fx.item,
+        suite: {
+            skills: [
+                { name: 'ghost-a', title: '缺源', desc: '带 path 但无 SKILL.md', path: 'missing-dir' },
+                { name: 'ghost-b', title: '缺源旧语义', desc: '无 path 且包内没有 skills/' },
+            ],
+            rules: [],
+            agents: [],
+        },
+    };
+    const result = installSuite({
+        catalog: { items: [item] },
+        item,
+        home: fx.home,
+        profileDir: join(fx.home, 'profiles', 'omnimux'),
+        packageRoot: fx.packRoot,
+        ruleTarget: 'project',
+        projectDir: fx.projectRoot,
+    });
+    assert.equal(result.skills.installed, 0);
+    assert.equal(result.skills.failed, 2);
+    const errors = result.failed.map((row) => row.error).join('\n');
+    assert.match(errors, /包内缺少 missing-dir\/SKILL\.md/);
+    assert.match(errors, /包内缺少 skills\/ghost-b\/SKILL\.md/);
+});
+test('既有套件形态不回归：无 path 的清单项仍读 <包根>/skills/<name>/', () => {
+    const fx = fixture();
+    assert.equal(fx.item.suite?.skills.every((entry) => !entry.path), true);
+    const result = install(fx);
+    assert.equal(result.skills.installed, 2);
+    assert.equal(result.skills.failed, 0);
+    assert.equal(existsSync(join(fx.home, 'skills', 'skill-a', 'SKILL.md')), true);
+    assert.equal(existsSync(join(fx.home, 'skills', 'skill-b', 'SKILL.md')), true);
+});
 /* ------------------------------------------------------------------ 工具 */
 function mockReq(method, url, headers, body) {
     const bodyStr = body !== undefined ? JSON.stringify(body) : '';

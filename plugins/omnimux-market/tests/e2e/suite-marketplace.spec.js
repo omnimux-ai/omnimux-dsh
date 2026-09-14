@@ -23,6 +23,7 @@ const clientRequire = createRequire(new URL('skill-plaza.js', clientDir))
 
 const SUITES = catalog.items.filter((item) => item.kind === 'suite')
 const SOCIAL = SUITES.find((item) => item.id === 'suite-social-content-team')
+const AMAZON = SUITES.find((item) => item.id === 'suite-amazon-skills')
 
 // 真实词典：直接从 i18n 片段求值取 lookup，断言用户可见中文。
 const i18n = runInNewContext(`${readClient('i18n.js')}\n({ lookup })`, {
@@ -197,8 +198,9 @@ async function confirmInstall(suite = SOCIAL, opts) {
 
 const installButton = (view) => byClass(view, 'ws-detail-header-actions')[0].children[0]
 
-test('E2E 旅程一：套件分类只列真实套件，6 张卡的构成计数与目录一致', async () => {
-  assert.equal(SUITES.length, 6)
+test('E2E 旅程一：套件分类只列真实套件，7 张卡的构成计数与目录一致', async () => {
+  assert.equal(SUITES.length, 7)
+  assert.ok(AMAZON, '平铺仓库套件必须在货架上')
   const { ui, tree } = await browseSuiteCategory()
 
   // 套件只存在于本地目录：该分类不发远端检索。
@@ -281,6 +283,31 @@ test('E2E 旅程二：点卡进详情，空块整块省略，其余块按目录�
   assert.equal(byClass(view, 'ws-suite-item').length, SOCIAL.suite.agents.length)
   assert.equal(byClass(view, 'ws-detail-source-label')[0].children[0], lookup('suite.source'))
   assert.equal(installButton(view).children[0], lookup('suite.install'))
+})
+
+test('E2E 旅程二（平铺仓库）：详情只挂「技能」块，52 条中文条目逐条落地', async () => {
+  const { view } = await openSuiteDetail(AMAZON)
+
+  assert.deepEqual(plazaUtils.resolveSuiteCounts(AMAZON), { skills: 52, rules: 0, agents: 0 })
+  assert.equal(byClass(view, 'ws-detail-header-title')[0].children[0], AMAZON.title)
+  assert.equal(byClass(view, 'ws-detail-desc')[0].children[0], AMAZON.summary)
+  // 仓库根用 `.` 表示，对用户没有信息量 → 来源行回落显示仓库名
+  assert.equal(AMAZON.source.path, '.')
+  assert.equal(byClass(view, 'ws-detail-source-value')[0].children[0], AMAZON.source.repo)
+
+  // 规则 / Agent 为空 → 只剩「技能」一块，空块连标题一起不渲染
+  assert.deepEqual(texts(byClass(view, 'ws-suite-block-title')), [lookup('suite.section.skills')])
+  assert.deepEqual(texts(byClass(view, 'ws-suite-block-hint')), [lookup('suite.section.skillsHint')])
+  assert.equal(byClass(view, 'ws-suite-item').length, AMAZON.suite.skills.length)
+
+  // 每条技能卡渲染中文标题 + 中文说明，逐条与目录数据一致
+  const itemTitles = texts(byClass(view, 'ws-suite-item-title'))
+  const itemDescs = texts(byClass(view, 'ws-suite-item-desc'))
+  assert.equal(itemDescs.length, AMAZON.suite.skills.length)
+  for (const skill of AMAZON.suite.skills) {
+    assert.ok(itemTitles.includes(skill.title), `skill ${skill.name} 标题缺失`)
+    assert.ok(itemDescs.includes(skill.desc), `skill ${skill.name} 说明缺失`)
+  }
 })
 
 test('E2E 旅程三：安装确认框默认当前项目，确认后请求为 { suiteInstall, id, ruleTarget, projectDir }', async () => {

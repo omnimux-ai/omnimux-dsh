@@ -4,6 +4,8 @@
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { invalidateCatalogMemos, loadCatalog, parseCatalog } from './catalog.js'
 
 const SUITE_IDS = [
@@ -13,9 +15,15 @@ const SUITE_IDS = [
   'suite-ai-content-creator-team',
   'suite-marketing-campaign-team',
   'suite-content-monetization-team',
+  'suite-amazon-skills',
 ]
 
-test('shelf exposes the six suites with structured manifests', () => {
+/** 平铺多技能仓库（技能直接躺在仓库根、无 `skills/` 中间层）。 */
+const FLAT_SUITE_ID = 'suite-amazon-skills'
+const FLAT_SUITE_SKILLS = 52
+const FLAT_SUITE_CLONE = '/Users/x/Desktop/Project/Github/Amazon-Skills'
+
+test('shelf exposes the seven suites with structured manifests', () => {
   invalidateCatalogMemos()
   const doc = loadCatalog()
   const suites = doc.items.filter((row) => row.kind === 'suite')
@@ -69,8 +77,62 @@ test('suite entries keep their declared source shape', () => {
     const { source } = byId.get(id)
     assert.ok(source.type === 'bundled' || source.type === 'git')
     if (source.type === 'bundled') assert.match(source.path, /^catalog\/experts\//)
-    else assert.match(source.path, /^experts\//)
+    // git 包可以是仓库内的子目录（experts/…），也可以是仓库根（`.`）
+    else assert.ok(source.path === '.' || /^experts\//.test(source.path), `${id} git path ${source.path}`)
   }
+})
+
+/* ------------------------------------------------- 平铺多技能仓库（Issue #1685） */
+
+test('flat suite declares 52 skills whose path names their own directory', () => {
+  invalidateCatalogMemos()
+  const doc = loadCatalog()
+  const suite = doc.items.find((row) => row.id === FLAT_SUITE_ID)
+  assert.ok(suite, `${FLAT_SUITE_ID} missing from the shelf`)
+  assert.equal(suite.kind, 'suite')
+  assert.equal(suite.category, 'sk-suite')
+  assert.equal(suite.skill, 'amazon-skills')
+  assert.deepEqual(suite.source, { type: 'git', repo: 'nexscope-ai/Amazon-Skills', path: '.', ref: 'main' })
+
+  const { skills, rules, agents } = suite.suite
+  assert.equal(skills.length, FLAT_SUITE_SKILLS)
+  assert.equal(rules.length, 0)
+  assert.equal(agents.length, 0)
+
+  // 平铺仓库：path 就是技能目录名，且必须唯一——装载靠它定位
+  assert.deepEqual(new Set(skills.map((entry) => entry.path)).size, FLAT_SUITE_SKILLS)
+  for (const entry of skills) {
+    assert.equal(entry.path, entry.name, `${entry.name} path must name its own directory`)
+    assert.ok(entry.title, `${entry.name} without a Chinese title`)
+    assert.ok(entry.desc, `${entry.name} without a Chinese description`)
+    assert.match(entry.name, /^[A-Za-z0-9][A-Za-z0-9._-]*$/)
+  }
+})
+
+test('legacy suites carry an empty path and rules/agents stay path-free', () => {
+  invalidateCatalogMemos()
+  const doc = loadCatalog()
+  const byId = new Map(doc.items.map((row) => [row.id, row]))
+  for (const id of SUITE_IDS) {
+    const { skills, rules, agents } = byId.get(id).suite
+    for (const entry of skills) {
+      assert.equal(entry.path, id === FLAT_SUITE_ID ? entry.name : '', `${id} ${entry.name} path`)
+    }
+    // 旧语义不因本次新增能力而改变形状：规则与 Agent 项不得多出 path 键
+    for (const entry of [...rules, ...agents]) {
+      assert.equal(Object.hasOwn(entry, 'path'), false, `${id} ${entry.name} must not carry path`)
+    }
+  }
+})
+
+/** 本机克隆在场时顺带核对目录白名单；CI 无该克隆则只保留上面的结构断言。 */
+test('flat suite paths match the local clone directory whitelist', { skip: !existsSync(FLAT_SUITE_CLONE) }, () => {
+  const dirs = readdirSync(FLAT_SUITE_CLONE)
+    .filter((name) => statSync(join(FLAT_SUITE_CLONE, name)).isDirectory())
+    .filter((name) => existsSync(join(FLAT_SUITE_CLONE, name, 'SKILL.md')))
+  invalidateCatalogMemos()
+  const skills = loadCatalog().items.find((row) => row.id === FLAT_SUITE_ID).suite.skills
+  assert.deepEqual(skills.map((entry) => entry.path).sort(), [...dirs].sort())
 })
 
 const docOf = (items) => ({ schema: 1, generated_at: '2026-09-14T00:00:00.000Z', items })
@@ -140,4 +202,44 @@ test('packaged suites expose rule content identical to the packaged source text'
     assert.equal(rule.content.startsWith('---'), false, `rule ${rule.name} must not carry frontmatter`)
     assert.notEqual(rule.content, rule.desc)
   }
+})
+
+test('skill entries project an optional path and default it to empty', () => {
+  const doc = parseCatalog(docOf([{
+    ...baseSuite,
+    suite: {
+      skills: [
+        { name: 'flat', title: '平铺', desc: '仓库根下的技能', path: 'flat' },
+        { name: 'nested', title: '嵌套', desc: '没有 path 的技能' },
+        { name: 'blank', title: '空白', desc: '空串 path', path: '' },
+        { name: 'padded', title: '带空白', desc: '两侧空白被 trim', path: '  deep/nested  ' },
+      ],
+    },
+  }]))
+  assert.deepEqual(doc.items[0].suite.skills, [
+    { name: 'flat', title: '平铺', desc: '仓库根下的技能', path: 'flat', content: '' },
+    { name: 'nested', title: '嵌套', desc: '没有 path 的技能', path: '', content: '' },
+    { name: 'blank', title: '空白', desc: '空串 path', path: '', content: '' },
+    { name: 'padded', title: '带空白', desc: '两侧空白被 trim', path: 'deep/nested', content: '' },
+  ])
+})
+
+test('non-string skill path degrades to empty instead of throwing', () => {
+  const doc = parseCatalog(docOf([{
+    ...baseSuite,
+    suite: { skills: [{ name: 'k', title: 'K', path: 42 }] },
+  }]))
+  assert.equal(doc.items[0].suite.skills[0].path, '')
+})
+
+test('rules and agents never gain a path key', () => {
+  const doc = parseCatalog(docOf([{
+    ...baseSuite,
+    suite: {
+      rules: [{ name: 'r', title: 'R', path: 'ignored' }],
+      agents: [{ name: 'a', title: 'A', path: 'ignored' }],
+    },
+  }]))
+  assert.deepEqual(doc.items[0].suite.rules, [{ name: 'r', title: 'R', desc: '', content: '' }])
+  assert.deepEqual(doc.items[0].suite.agents, [{ name: 'a', title: 'A', desc: '', content: '' }])
 })
