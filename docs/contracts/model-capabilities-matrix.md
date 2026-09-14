@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-09-09"
+updated: "2026-09-14"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan"]
 subsystem: "omnimux/catalog"
 tags:
@@ -65,9 +65,9 @@ related:
 8. **H1 诚实上架（历史阶段）**
    以下仅记录 H1（#464）shadow 阶段政策，不覆盖当前 §4 准入：现有实文件 specs **不得**对任何 operation 做 listed claim（normalize 后 `listedOperations = []`）。`verified`/`live` 正例仅用于 **fixtures** 验证判定逻辑。逐 op 补证上架与 runtime constraints 对账属 **H2**。
 
-## 2. 全模态标准 operation（首批 17）
+## 2. 全模态标准 operation（21）
 
-> 人读表。机器枚举以 `operation-registry.json` 为准（含 `promptPolicy`）；扩展先改 registry + 本表，再录入 YAML。
+> 人读表。机器枚举以 `operation-registry.json` 为准（当前 **21** 个标准 operation，含 `promptPolicy`）；扩展先改 registry + 本表，再录入 YAML。
 > **Workflow 不得复制本表为 TypeScript 穷尽联合真源**；DTO 使用 `string` + 中枢下发的 metadata。
 
 | 模态族 | operation ID | 中文名 | 典型输入 | **output.type（必须显式）** | promptPolicy（机器表为准） |
@@ -82,15 +82,19 @@ related:
 | 视频 | `text_to_video` | 文生视频 | prompt | `video` | required |
 | 视频 | `first_frame` | 首帧驱动 | first_frame 图 ×1 | `video` | optional/required |
 | 视频 | `first_last_frame` | 首尾帧过渡 | first_frame + last_frame | `video` | optional/required |
-| 视频 | `video_multi_ref` | 多图风格/主体参考 | reference 多图 | `video` | optional/required |
+| 视频 | `end_frame` | 尾帧参考 | end_frame 图 ×1（`slot=end_frame`、`role=last_frame`；**禁止映射为 `first_frame`**） | `video` | optional |
+| 视频 | `video_multi_ref` | 全能参考 | reference 多图 | `video` | optional/required |
 | 视频 | `digital_human` | 数字人/对口型 | 图/视频 + 音频驱动 | `video` | **optional**（不得强制 prompt） |
 | 视频 | `video_edit` | 视频编辑/重绘 | source 视频 ± 参考 | `video` | optional/required |
+| 视频 | `video_extend` | 视频延长 | source 视频（`video_urls`） | `video` | optional |
+| 视频 | `document_to_video` | 文档参考 | 文档（`file_url`） | `video` | optional |
+| 视频 | `webpage_to_video` | 网页参考 | 网页链接（`link_url`） | `video` | optional |
 | 音频 | `text_to_speech` | 语音合成 | 文本 | `audio` | required |
 | 音频 | `voice_clone` | 声音克隆 | voice_sample 音频 | `audio` | optional/required |
 | 音频 | `text_to_music` | 音乐创作 | 文本 ± 参考音频 | `audio` | required |
 | 音频 | `speech_to_text` | 语音转文字 | source **音频** | **`text`（非 audio）** | **none** |
 
-以上是现有标准 operation 表，不是渠道完整模式清单。首尾帧及全能参考须按渠道文档核对；全能参考不能直接等同于 `video_multi_ref`，registry 无对应表达时记录实现缺口。
+以上是现有标准 operation 表（**21** 个，与 `operation-registry.json` 的 operation 数一致），不是渠道完整模式清单。首尾帧及全能参考须按渠道文档核对；registry 现以 `video_multi_ref` 承载「全能参考 / 多素材参考」模式（中文名与上表一致），按渠道文档核对时**仍须逐渠道确认素材类型与角色组合，不得据名称推定**。
 
 参数（aspectRatio、duration、seed…）**不是** operation，挂在 model/operation 的 `parameters` 上。
 
@@ -120,12 +124,15 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 
 - `id` / `label`：非空
 - **`aliases`（可选，model metadata）**：string[]；唯一、非空元素；用于 **runtime / wire model ID 归一**到 `model.id`；跨 model 全局唯一（含不得抢占他模 `id`）
+- `family` / `badge` / `subtitle`（可选 string）：展示与分族元数据；`family` 参与提交映射分支（如 `openai` / `kling` / `wan`）
 - `operations`（或遗留 `modes`→normalize 为 operations）
+- **`routing`（可选；一旦声明则 `channel` / `wireModel` / `endpoint` 三者必填非空 string，`automaticFallback` 可选 boolean）**：**该块是「渠道 + 线上模型名（wire model）+ endpoint」的唯一真源**（`plugins/omnimux/src/catalog/` 的契约与 specs 内，`channel:` / `wireModel:` 只出现在 `routing:` 块内；其余出现处均为读取该块的消费者）
+- `governance`（可选 object：`docUrl` / `confidence`）：research 归一的回退来源——operation/model 未显式声明 research 时，`confidence: verified` → `verified`、`confidence: rejected` → `rejected`、其余 → `draft`；`docUrl` 作为 research 依据回填
 - 可选 model 级 `parameters` / `research` / `implementation` / `execution`（**仅 defaults**）
 
 每个模型的每个 **operation** 必须声明：
 
-- `id` ∈ 上表 / registry
+- `id` ∈ 上表 / registry（遗留 `mode` → normalize 为 `id`；两者并存时以 `id` 为准）
 - **`output.type`**：`text` | `image` | `video` | `audio`（**禁止**从文件管理分组或输入模态推断）
 - `output.allowedMimes` / `min` / `max`（可选；若出现则 allowedMimes 为非空字符串数组，min/max 为有限数字且 min≤max）
 - `inputs[]`：输入槽列表
@@ -145,8 +152,19 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 | `min` / `max` | 数量（有限数字，min≤max，≥0） |
 | `allowedMimes` | 允许 MIME（数组元素非空字符串） |
 | `maxSizeMb` | 单素材体积上限（MB）；比较时按 MiB 字节 |
+| `maxSizeExclusive` | boolean；`maxSizeMb` 的比较是否取严格小于（true → `sizeBytes < maxSizeMb`，缺省为 `≤`） |
+| `minDurationSec` | 单素材时长下限（秒，有限非负数） |
 | `maxDurationSec` | 时长上限（秒） |
+| `totalMinDurationSec` | 该槽位**受理素材合计时长**下限（秒；仅当槽内全部素材时长已知时参与判定，不足 → `duration_exceeded`） |
+| `totalMaxDurationSec` | 该槽位**受理素材合计时长**上限（秒） |
+| `combinedOutputMaxDurationSec` | 该槽位素材合计时长 **+ 请求输出时长** 之和的上限（秒） |
+| `totalMinExclusive` | boolean；`totalMinDurationSec` 判定是否取严格（true → 合计须 **>** 下限） |
+| `totalMaxExclusive` | boolean；`totalMaxDurationSec` 判定是否取严格（true → 合计须 **<** 上限） |
 | `limitSource` | 现有 schema 支持 `official_docs` / `measured` / `policy_conservative` + url/note；新增接口约束以渠道 `official_docs` 为准，后两类仅保留历史或单独的产品限制含义，不可覆盖官方规范 |
+| `hint` | string；槽位说明文案（输入组 `min` 不足时用作拒绝原因） |
+| `inputGroups` | **operation 级**（非槽位自身字段）：`inputGroups[]`，每项 `slots[]`（须引用已声明槽位）+ `min`（非负整数）+ 可选 `hint`；按组内槽位**合计**素材数校验，不足 → `min_unsatisfied` |
+
+**上限来源是硬要求**：槽位一旦声明体积类上限（`maxSizeMb`）或时长类上限（`minDurationSec` / `maxDurationSec` / `totalMinDurationSec` / `totalMaxDurationSec` / `combinedOutputMaxDurationSec`），**必须**同时给出 `limitSource`；缺失即 admission **error** 级 `limit_source_missing`（不是覆盖警告）。
 
 ### 3.3 文件分组 vs Catalog 投影
 
@@ -166,7 +184,15 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 | `status` | `live` \| `stub` \| `unavailable` |
 | `operations` | 该 profile **显式支持**的 operation id 列表；**每一项必须 ∈ operation-registry** |
 | `outputTypes` | 相容的 output.type 列表 |
-| `slotRoles` / `notes` | 可选 |
+| `logicalFields` | 该 profile 受理的**逻辑字段**白名单；已 live 的 model / operation 其 `parameters` 键必须全部登记在此（否则 admission error `parameter_dispatch_closure_missing`） |
+| `vendorFields` | 允许出现在**厂商载荷**中的字段白名单；不在表内的字段按 `unknownFieldPolicy` 处置 |
+| `forbiddenVendorFields` | 显式**禁止**发往厂商的字段（即便同时列入 `vendorFields` 也拒绝 → `vendor_field_forbidden`） |
+| `unknownFieldPolicy` | 未登记字段的处置：`reject`（默认，直接拒绝）/ `drop`（丢弃后继续）；当前 6 个档案均为 `reject` |
+| `operationVendorShapes` | **「哪些字段会发给厂商」的真源**：按 operation 声明 `allow[]`（可发字段）与可选 `require[]`（必须非空）；越界 → `vendor_field_forbidden`，缺必填 → `mapper_incomplete`。profile 未声明时由 `submit-guard/map-contract.js` 的默认表兜底 |
+| `slotRoles` | 可选；非空时列出输入必须包含的 role。**该字段为可选，当前 6 个档案均未声明** |
+| `notes` | 可选说明 |
+
+**`slotRoles` 现状**：该字段为可选，当前 `adapter-profiles.json` 的 **6 个档案**（`textComplete` / `imageGenerate` / `videoGenerate` / `audioGenerate` / `speechToText` / `videoDigitalHuman`）**均未声明**；因此现行兼容判定实际由 `status` / `operations` / `outputTypes` / `seam` 决定，role 抽检只在声明了非空 `slotRoles` 后才生效。
 
 **Profile 文档合法性（H1 强制，不可推 H2）**：`validateAdapterProfiles` 必须拒绝 `operations[]` 中的未知 operation（code **`profile_operation_unknown`** 或可定位的 `schema_invalid`）。未知 op = **malformed profile**；**`--audit` 与 `--strict` 均为 error**（admission fail），不是 coverage 警告。
 
