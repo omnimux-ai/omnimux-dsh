@@ -145,7 +145,7 @@ Chrome 侧边栏插件的对话记录里，媒体预览当前不可用：
 
 1. **单元/组件测试**：`pnpm --filter dsh-browser-extension test`（vitest + jsdom），覆盖第 4 节全部 AC
 2. **类型检查**：`pnpm --filter dsh-browser-extension typecheck`（基线即红，按「本 diff 新增 0 条错误」口径判定）
-3. **构建**：`pnpm --filter dsh-browser-extension run build:extension` 与 `pnpm --filter dsh-browser-extension run build:harness`
+3. **构建**：`pnpm --filter omnimux-browser run build:extension`（该脚本归属宿主包 `plugins/omnimux-browser`，不在 `extension` 包里）与 `pnpm --filter dsh-browser-extension run build:harness`
 4. **真实浏览器验收**：在本任务工作树内起 harness（组件真实渲染 + 固定数据），用 ego-browser 打开并断言几何与交互，保存 PNG 截图到 `.agent-reports/browser-media-gallery/`
 
 真实浏览器证据必须来自本工作树自身，不得引用共享 Dev 实例。
