@@ -7,11 +7,11 @@
 桌面视口 1440×900、1200×800，各从左栏展开和折叠两态开始，实际点击已观察到的原生全屏按钮，再点击退出。
 1. 每帧记录 frame/left/center/panel 的 rect、grid-template-columns、position、transform、transition 属性/时长/缓动、根 collapsed 属性、panel mode、store width/layout；捕获点击前后、MutationObserver、rAF 和动画事件时间线。
 2. 展开导航全过程 x/width/right 与初始值偏差 ≤1 CSS px，collapsed 属性不变；折叠导航保持折叠，不意外展开。面板左边界始终 ≥导航右边界−1，不出现全视口覆盖导航再缩回。
-3. 进入终态 panel.left=导航右边界±1，panel.right=视口宽±1；退出恢复初始分栏宽±1。中间帧边界介于起终值之间，无越界回跳；有至少两个不同的中间几何样本，证明非瞬跳。
-4. 进入/退出的 computed transition 属性集合、duration、timing-function 相同并来自原生动画参数；归一化轨迹允许浏览器采样误差，动画停止时间差 ≤2 个实测帧周期。
+3. 进入终态 panel.left=导航右边界±1，panel.right=视口宽±1；退出恢复初始分栏宽±1。中间帧边界介于起终值之间，无越界回跳；进入左边界单调非增/宽度非减，退出相反，单帧误差容差 1 px、累计反向行程 ≤2 px；每次用户反向点击重新分段，以点击时实测值作为新起点。有至少两个不同的中间几何样本，证明非瞬跳。
+4. 进入/退出的 computed transition 属性集合、duration、timing-function 相同并来自原生动画参数；记录原生 token 的源码/实际样式来源。比较各自 10%→90% 归一化进度的运动持续时长，而非绝对停止时刻；差值容差为 max(2 个实测帧周期, 较长时长的 20%)。每次采样覆盖终态稳定后 500ms（包含原有 320ms settle 回写窗口），总上限 2s，采样空洞不补造。
 5. 快速反向：进入后运动过程中点击退出，再反向进入，最终状态与最后点击一致，左导航不变，无残留过渡/错宽。避免固定超时控制生产行为；测试以活动动画/实测几何进度作为触发依据。
 6. prefers-reduced-motion:reduce 下次帧到稳定目标，无非必要动画；重开普通模式后行为恢复。
-7. 全过程同一内容 DOM 节点保持 connected，navigation entry/页面实例标识不变；全屏按钮数量=1，无重复按钮；内容正面积、不出现未覆盖空黑区。截图覆盖初态、中间帧、终态与退出态，JSON 与 PNG 绑定同一运行和代码身份。
+7. 全过程同一内容 DOM 节点保持 connected，navigation entry/页面实例标识不变；可见且可交互的全屏按钮数量=1，无重复按钮；内容正面积、不出现未覆盖空黑区。截图覆盖初态、中间帧、终态与退出态，JSON 与 PNG 绑定同一运行和代码身份。
 未取得上述真实浏览器证据不得宣布修复完成；源码嫌疑不等于用户现场根因。
 
 ## 2. Commands（命令）
@@ -21,7 +21,7 @@
 - `pnpm --filter omnimux test`
 - `pnpm --filter omnimux build`
 - `pnpm verify:stages`
-- `ego-browser nodejs`：真实源装配服务由任务报告记录精确启动命令、动态端口、PID 和 URL；同次最终调用尾部 `await task.finish({ keep: [] })` 并确认关闭。
+- `ego-browser nodejs`：真实源装配服务由任务报告记录精确启动命令、动态端口、PID 和 URL；同次最终调用的 finally 尾部 `await task.finish({ keep: [] })` 并确认关闭；空间丢失/用户接管时按浏览器生命周期约束停止，不声称已取得 finish 回执。
 完整输出保存 `.agent-reports/sidebar-fullscreen-entry/`。不执行 sync、push、merge。
 
 ## 3. Project Structure（项目结构）
