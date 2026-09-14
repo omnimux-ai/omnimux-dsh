@@ -28,7 +28,7 @@ OmniMux 网关的 OpenAI 文本接口（Completions、Chat Completions、Respons
 3. 经授权发布网关后，确认实际 App 使用未修改官方版本，验证零余额和正余额预扣不足的聊天、轨迹与插件钱包提示。网络中断、私有测试夹具和投影测试都不算实际 App 验收。
 4. 网关及公共文档交付已核验后再合入本退役变更。无需通过源码补丁修复旧版本；保留插件提示。#668 只有所有适用层完成才关闭。
 
-本地替代链路与现有插件 10 项额度测试已通过；生产部署、实际 App 和合入后 Dev 尚待验收。网关测试入口：`scripts/ops/quota-compat/README.md`（OmniMux 仓库）。
+本地替代链路与现有插件 10 项额度测试已通过；生产部署与实际 App 尚待验收。合入后的 Agent 侧验收为自身隔离 worktree 内的真实浏览器 Web 验证；Dev 真机验收归人工，不作为 Agent 交付卡点。网关测试入口：`scripts/ops/quota-compat/README.md`（OmniMux 仓库）。
 
 ## 历史证据
 

@@ -16,16 +16,16 @@ subsystem: "global"
 
 ## 开发与交付顺序
 
-隔离 worktree 中的相关自动化测试、静态检查与独立评审 → PR required CI / Merge Queue → 合入 `main` → 按变更面物化 Dev、运行与验收。**不存在合并前独立 App/Host 测试环境，不得换名保留。** 自动化测试可使用进程、临时目录和合成 fixture；这些不是独立部署环境，也不证明 Dev 通过。物化（sync）成功不等于交付完成：凡涉及插件物化或 Host 改动的任务，必须在物化中通过内置启动演练预检（`verify-profile-preflight.mjs`）并取得 Host 真实运行与探活证据（如 HTTP 探活或 `verify:live` / CDP 探针），拿不到 Host 正常运行证据，不得在交接日志中宣布收尾。预检以普通 Node 运行，而宿主自带包（`@deepseek-ai/*`）只存在于桌面 App 的 `app.asar` 内：预检在解析不到这些包时按 `module.registerHooks()` 注入只保签名的最小替身，并在摘要中如实标注替身介入次数。
+隔离 worktree 中的相关自动化测试、静态检查、隔离 worktree Web 验证与独立评审 → PR required CI / Merge Queue → 合入 `main` → 按变更面按需物化 Dev（保留给人工查看或人工要求时）、Dev 真机验收归人工。**不存在合并前独立 App/Host 测试环境，不得换名保留。** 自动化测试可使用进程、临时目录和合成 fixture；这些不是独立部署环境，也不证明 Dev 通过。物化（sync）成功不等于交付完成：**仅当 Agent 实际执行物化或触及 Host 运行时变更时**，才须在物化中通过内置启动演练预检（`verify-profile-preflight.mjs`）并取得 Host 真实运行与探活证据（如 HTTP 探活或 `verify:live` / CDP 探针），拿不到该证据不得声明该次物化收尾；未物化时不得以 Dev 真机验收作为交付前置，Dev 真机验收归人工。预检以普通 Node 运行，而宿主自带包（`@deepseek-ai/*`）只存在于桌面 App 的 `app.asar` 内：预检在解析不到这些包时按 `module.registerHooks()` 注入只保签名的最小替身，并在摘要中如实标注替身介入次数。
 
 | 位置 | 用途 | 载体 | 代码形态 |
 |---|---|---|---|
 | Worktree | 合并前源码检查、自动化测试与独立评审 | 仓内隔离任务 worktree | 源码/测试 fixture，无 App 物化 |
-| Dev | 合并后日常物化与适用运行验收 | `~/.omnimux-dev/profiles/omnimux`，Dev App/Host `45120` | 已合并 `main` 的物化副本 |
+| Dev | 物化产物载体与人工真机验收 | `~/.omnimux-dev/profiles/omnimux`，Dev App/Host `45120` | 已合并 `main` 的物化副本；按需保留供人工查看 |
 | Prod | 正式运行 | `~/.omnimux/profiles/omnimux`，OmniMux App `44200` | 仅独立发布授权后的物化副本 |
 | Base | 官方底座 | `~/.dsh` | 不接收 OmniMux 日常交付 |
 
-Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并运行物化旁路。纯文档、流程、脚本和不影响已安装运行时的测试任务无需 App 物化或浏览器验收。运行行为变更合并后使用干净且 HEAD 精确等于本次成功 fetch 的 `origin/main` 的源码树（支持主检出、命名分支或 detached HEAD 的 linked worktree），默认同步到 Dev，在 45120 验证；普通交付不得自动追加 `--prod`、`--all` 或正式包发布。普通同步在构建与目标写入前显式 fetch `refs/heads/main` 到 `refs/remotes/origin/main`；非 Git 源、状态读取失败、dirty（含 staged/untracked）、remote 缺失、fetch 失败、远端 main 缺失及 HEAD ahead/behind/diverged 均拒绝。
+Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并运行物化旁路。纯文档、流程、脚本和不影响已安装运行时的测试任务无需 App 物化或浏览器验收。运行行为变更合并后使用干净且 HEAD 精确等于本次成功 fetch 的 `origin/main` 的源码树（支持主检出、命名分支或 detached HEAD 的 linked worktree）按需同步到 Dev，保留给人工查看或人工要求时执行；Agent 侧验收在自身隔离 worktree 内完成真实浏览器 Web 验证（动态端口、自清理），Dev 真机验收归人工，不阻塞、不等待、不声称取得；普通交付不得自动追加 `--prod`、`--all` 或正式包发布。普通同步在构建与目标写入前显式 fetch `refs/heads/main` 到 `refs/remotes/origin/main`；非 Git 源、状态读取失败、dirty（含 staged/untracked）、remote 缺失、fetch 失败、远端 main 缺失及 HEAD ahead/behind/diverged 均拒绝。
 
 原 L2 生命周期、端口池、env/guard/gates 及其专属稳定 baseline D/C/S 迁移已退役；[历史规格](../specs/2026-09-09-stable-baseline-migration.md)不再定义执行前提。历史失败和 QA 证据保持原样，不因流程变化改成通过。
 
@@ -63,7 +63,7 @@ Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并�
 
 - 构建 watcher 只产出构建文件，不代表 Host 已加载，也不承诺 HMR。Client 物化后在指定 Dev 页面或窗口刷新；Host 变更只有在目标进程重新加载后才生效。
 - Dev 重启按 [Git/PR 授权边界](plugin-git-pr.md#授权边界)执行：Agent 核实目标身份、状态可恢复性及占用冲突；无冲突时自主执行并复核，有冲突时只协调该冲突。Prod 保留生产授权边界，不得默认 `pkill` 未确认目标。
-- 只有壳层/平台门控改动需要额外 Electron renderer/CDP；普通 Web/Stage 以合并后 45120 的 ego-browser 与共享 `verify:live` 证据为准。
+- 只有壳层/平台门控改动需要额外 Electron renderer/CDP；普通 Web/Stage 的 Agent 侧验收以隔离 worktree 的真实浏览器 Web 验证为准，Dev 45120 真机验收归人工，不作为 Agent 交付卡点。
 
 ## 数据与诊断边界
 

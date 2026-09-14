@@ -34,18 +34,18 @@ export function deriveImpactMatrix(changedFiles = []) {
   const isUiChange = requiresBrowser(changedFiles)
   const devRequired = requiresDev(changedFiles)
   const reason = isUiChange
-    ? '包含客户端/UI文件变更，合并后必须提供 Dev 45120 的 ego-browser 验收证据'
-    : '无客户端/UI文件变更，ego-browser 浏览器验收不适用'
+    ? '包含客户端/UI文件变更，必须在本任务独立工作树内完成真实浏览器 Web 验证并留存证据（截图/结构化报告）'
+    : '无客户端/UI文件变更，浏览器 Web 验证不适用'
   return {
     dimensions: {
       l0: { required: true, phase: 'pre-merge', reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
-      dev: { required: devRequired, phase: 'post-merge', target: 'dev', reason: devRequired
-        ? '路径涉及产品运行时或依赖，合并后 Dev required；协调 Agent 按实际 diff 复核，纯 scripts/元数据需记录不适用理由'
-        : '无产品运行时或依赖变更，Dev 物化与验收不适用' },
-      browser: { required: isUiChange, phase: 'post-merge', target: 'dev', reason },
+      dev: { required: false, phase: 'post-merge', target: 'human', reason: devRequired
+        ? '开发版真机验收为人工职责：多工作树并发时共享开发版为单实例、无法并行验收，不作为 Agent 交付卡点；物化保留为可选（供人工实机查看）'
+        : '无产品运行时或依赖变更，物化与真机验收均不适用' },
+      browser: { required: isUiChange, phase: 'post-merge', target: 'worktree', reason },
     },
     isUiChange,
-    summary: `L0: pre-merge required；Dev: post-merge ${devRequired ? 'required' : 'not-applicable'}；ego-browser: post-merge ${isUiChange ? 'required' : 'not-applicable'}（${reason}）`,
+    summary: `L0: pre-merge required；工作树 Web 验证: ${isUiChange ? 'required' : 'not-applicable'}；开发版真机验收: 人工职责、非 Agent 卡点（${reason}）`,
   }
 }
 

@@ -16,33 +16,34 @@ subsystem: "omnimux"
 
 ## 适用矩阵
 
-合并前只在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 PR required CI 与 Merge Queue 合入 `main`。没有合并前独立 App/Host 测试环境，不得换名保留；运行与浏览器验收按需在合并后 Dev 执行。
+合并前只在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 PR required CI 与 Merge Queue 合入 `main`。没有合并前独立 App/Host 测试环境，不得换名保留；Agent 侧运行与浏览器验收在**自身隔离 worktree 内**用动态端口执行（ego-browser 或 worktree 隔离 Web QA 运行器，随测随清、保留截图与结构化报告），不再要求 Dev App 真机验收。Dev 真机验收为人工职责，不作为 Agent 交付卡点，也不得由 Agent 声称已取得。
 
-| 变更面 | 合并前 | 合并后 | 不要求 |
+| 变更面 | 合并前 | Agent 侧验收（隔离 worktree Web） | 不要求 |
 |---|---|---|---|
 | 纯文档 / Issue 模板 / 流程 | metadata、链接、命令与适用文档检查；独立评审 | 无 App 验收 | 45120、App 物化、Electron |
 | 纯脚本 / 测试 | 相关脚本测试、静态检查、边界/错误路径；独立评审 | 无 App 验收 | App 物化、无关浏览器截图 |
-| Host / 插件运行行为 | 相关单元/集成测试与静态检查；独立评审 | 从已合并 `main` 物化 Dev，验证目标 HTTP/RPC/运行行为 | 无 UI 时不要求 DOM |
-| Client / Stage / 侧栏 | 相关组件/行为测试与静态 Stage 检查；独立评审 | Dev `~/.omnimux-dev` / 45120 的 ego-browser + 共享 `verify:live` | 默认不要求 Electron |
-| 壳层 / 平台门控 | 相关自动化测试与静态检查；独立评审 | Dev App 中的适用浏览器证据 + 真实 Electron renderer/CDP | 不能只用 45120 web 页面替代 Electron |
+| Host / 插件运行行为 | 相关单元/集成测试与静态检查；独立评审 | 在隔离 worktree 启动本地服务，验证目标 HTTP/RPC/运行行为 | 无 UI 时不要求 DOM |
+| Client / Stage / 侧栏 | 相关组件/行为测试与静态 Stage 检查；独立评审 | 隔离 worktree 的真实浏览器 Web 验证（ego-browser 或 worktree 隔离 Web QA 运行器，动态端口、自清理）+ 截图/结构化报告 | 默认不要求 Electron；Dev 45120 真机验收归人工 |
+| 壳层 / 平台门控 | 相关自动化测试与静态检查；独立评审 | 隔离 worktree 的适用浏览器证据 + 真实 Electron renderer/CDP | 不能只用 web 页面替代 Electron |
 | 生产发布 | 另见发布授权与发布计划 | 授权目标上的发布/回滚证据 | 不属于普通开发验收 |
 
-每条 Issue acceptance 只绑定适用阶段。`not applicable` 必须给出变更面理由；skip、环境错误或未执行检查不能写成 PASS。CI `qa:pass` 仅证明合入前静态与测试，不等于合并后 Dev 通过。历史 QA/evidence 中的失败或未执行不重标为通过。
+每条 Issue acceptance 只绑定适用阶段。`not applicable` 必须给出变更面理由；skip、环境错误或未执行检查不能写成 PASS。CI `qa:pass` 仅证明合入前静态与测试，不等于隔离 worktree Web 验证通过。历史 QA/evidence 中的失败或未执行不重标为通过。
 
 ## 环境身份
 
 | 位置 | 身份要求 |
 |---|---|
 | 合并前 worktree | base/head SHA、dirty 状态、实际 diff 与测试命令；无 App 物化 |
-| 合并后 Dev | `~/.omnimux-dev`，端口 `45120`，物化源必须是已合并 `main`；Dev/Prod 不得 link 或接收未合并 worktree |
+| 隔离 worktree Web 验收 | 任务自身 worktree 内启动的本地服务，动态端口、自清理；Agent 可自证的验收基线，保留截图与结构化报告 |
+| Dev 真机 | `~/.omnimux-dev`，端口 `45120`；**人工职责**，Agent 不据其出证据、不等待、不阻塞交付；物化仅按需保留供人工查看；Dev/Prod 不得 link 或接收未合并 worktree |
 | Prod | `~/.omnimux`；没有独立发布授权不得写入或用于普通交付 |
 
-Dev 运行证据须绑定实际物化版本、profile、URL 与 Host 身份。源码提交、物化产物或目标 Host 变化后，不得拿旧请求、截图或运行身份冒充当前版本；在报告中区分源码检查与已加载版本。
+隔离 worktree Web 验收证据须绑定实际运行的服务进程、端口、URL 与源码身份。源码提交或目标进程变化后，不得拿旧请求、截图或运行身份冒充当前版本；在报告中区分源码检查与已加载版本。
 
 ## 浏览器与共享探针
 
 - API、脚本和配置优先；需要 Web/Stage 浏览器验收时统一使用 ego-browser 的任务隔离空间，先加载 ego-browser skill。不得回退 IAB，也不得用桌面截图替代浏览器检查。ego 缺少 CDP 事件、脚本源、稳定 task/tab 身份或真实 PNG 能力时为 BLOCKED，不降低校验。
-- 合并并物化 Dev 后运行 `pnpm verify:live <stage>`；目标仅为 `dev`、URL 为 `http://127.0.0.1:45120/`。`all` 只覆盖已登记的公开 Stage；不是所有业务路径验收。
+- Agent 侧验收在自身隔离 worktree 内完成真实浏览器 Web 验证，动态端口、自清理，可用 `pnpm test:worktree-web`（worktree 隔离 Web QA 运行器）或 ego-browser。Dev 真机 45120 的验收归人工，可使用 `pnpm verify:live <stage>`（目标仅为 `dev`、URL 为 `http://127.0.0.1:45120/`，`all` 只覆盖已登记的公开 Stage）；它不是 Agent 必做项，也不作为 Agent 交付卡点。
 - CLI 返回 pending/request path（exit 2）只表示请求已准备，不是通过。在 `ego-browser nodejs` heredoc 中通过唯一正式模块 `scripts/ego-live-qa.mjs` 创建适配页并调用 `runPreparedQa(requestPath, { tab })`；它不会自动登录。历史弱执行器或 IAB 报告不作为当前验收。
 - 请求在页面准备成功后原子消费一次；准备前后均检查有效期、代码 SHA 与请求身份。认证或浏览器预检失败不消费请求；真正探针开始后即使失败也保留实际 consumedAt，不得复用或声称未消费。并发执行只能有一个消费者，未取得执行权的调用不得覆盖消费者报告。
 - run ID、代码 SHA、目标、URL、ego task space/Tab、profile、Host 或运行版本不匹配时失败。前后身份必须相同，runtimeProof 必须读取同源真实加载脚本并核对唯一注册和 bundle 指纹；截图必须真实可解码。不得复用旧 run、旧截图或旧空白会话。
@@ -104,7 +105,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 只有改动依赖 Electron 壳层、`data-dsh-desktop-*`、macOS/Windows 平台门控、原生拖拽/窗口布局等 web 页面无法呈现的行为时，才额外执行 `pnpm verify:cdp` 并保存 `docs/evidence/live-cdp-qa-report.json`。普通插件 Client/Stage 不要求重复做 Electron 验收。
 
-45120 是 Dev Host 的 web 页面；它能证明 Dev 物化后的 Web/Stage 行为，但不能证明 Electron-only DOM 或 computed style。Electron-required 任务若 CDP 不可用应报告 BLOCKED，不得回退到截图猜测。
+45120 是 Dev Host 的 web 页面；它能证明 Dev 物化后的 Web/Stage 行为，但不能证明 Electron-only DOM 或 computed style，且按 2026-09-14 政策变更属人工验收范围，不作为 Agent 交付卡点。Electron-required 任务若 CDP 不可用应报告 BLOCKED，不得回退到截图猜测。
 
 ## 静态与测试证据
 
@@ -115,6 +116,6 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 ## 评审与验收结论
 
-实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。合并后仍需完成适用的 Dev 与 Electron 验收才可声明运行交付完成；合入前评审和 CI 不能代替这些证据。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
+实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。拿不到**隔离 worktree Web 验证证据**不得宣布交付完成；开发版真机验收归人工，不阻塞 Agent 交付。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
 
 `qa:pass`、合入方式与 R0–R3 权限统一遵循 [plugin-git-pr](plugin-git-pr.md)。

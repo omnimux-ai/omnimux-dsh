@@ -30,9 +30,9 @@ PR 必须关联 `Closes #<issue-id>`。Issue ID 应贯穿分支、worktree、com
 
 ## 授权边界
 
-- 用户确认需求并要求实施、修复或交付后，任务授权覆盖约定范围内的调查、隔离实施、测试、Issue/分支写入、push、PR、合并、Dev 物化与验收、任务清理。授权跨轮有效，直至撤销、任务结束或边界实质变化；不得逐阶段索要确认。仅分析、仅本地修改、仅开 PR 不合并等明确限制优先。
+- 用户确认需求并要求实施、修复或交付后，任务授权覆盖约定范围内的调查、隔离实施、测试、Issue/分支写入、push、PR、合并、按需 Dev 物化、任务清理。授权跨轮有效，直至撤销、任务结束或边界实质变化；不得逐阶段索要确认。仅分析、仅本地修改、仅开 PR 不合并等明确限制优先。Agent 不再被要求执行 Dev 45120 真机验收：该验收为人工职责，Agent 不等待、不以其为卡点、不声称取得该证据。
 - 授权来自用户确认的任务范围；测试和审查证明动作已就绪，不产生或扩大权限。风险等级决定检查深度，不单独决定是否需要人类确认。合并前核实自动部署、迁移或外部发布等下游影响，不能仅凭 Git 可 revert 就认定全部后果可逆。
-- 合并前相关自动化测试、静态检查、独立评审或 required CI 失败阻止合并；合并后的适用 Dev/浏览器验收失败阻止运行交付声明，不回填为合并前通过。Agent 在既有范围和风险内继续诊断、修复、复验。只有目标、成本、权限或不可逆影响超出任务，缺少只能由人提供的必要输入，或不存在合规可行路径时，暂停受影响动作；继续独立授权工作。
+- 合并前相关自动化测试、静态检查、独立评审或 required CI 失败阻止合并；Agent 侧交付以隔离 worktree 的真实浏览器 Web 验证证据为准，Dev 真机验收归人工、不阻止 Agent 交付声明、不回填为合入前通过。Agent 在既有范围和风险内继续诊断、修复、复验。只有目标、成本、权限或不可逆影响超出任务，缺少只能由人提供的必要输入，或不存在合规可行路径时，暂停受影响动作；继续独立授权工作。
 - 生产 `~/.omnimux`、`--prod`、`--all`、正式包发布、凭据引导、破坏性数据操作和越界写入需要明确覆盖相应边界的授权；普通开发交付不包含这些动作。Dev 交付默认只使用 `~/.omnimux-dev`。
 - Dev 重启属于开发交付；Agent 先核实 App/profile/PID、保存状态及并发使用情况。可安全恢复且无占用冲突时自主执行；存在未保存工作、活跃生成或共享使用冲突时先协调该冲突。Prod 重启按生产授权处理；不得强杀不明进程。
 - 真实付款、购买、订阅结算、退款或资金转移由人类完成。已授权流程中的密码、OTP、captcha 或浏览器交还只请求必要输入，随后由 Agent 恢复执行。
@@ -70,23 +70,23 @@ R0/R1 不在无人值守机器预授权范围内，由协调 Agent 接收现场�
 - `auto-pipeline` 不能读取当前对话中的直接用户授权。`--manual` 兼容入口允许协调 Agent 驱动准备，但参数本身不构成许可，调用前须核对任务授权。机器授权不足的 R0/R1 也必须显式选择该入口才可写远端。准备完成后返回 `ready-for-agent`，保留 PR、风险、证据与下一动作；协调 Agent 读取最新授权、撤销状态、PR head 和 required checks 后继续交付，不要求用户再次批准已授权动作。旧 `ready-for-boss` 现场按相同交接语义恢复，不盲目重跑实施。
 - `waitForCi` 只判断 PR 上可见 check rollup 是否非空、无失败且无 pending，尚未核对分支保护的 required-check 名单；该结果不能单独证明 required checks 完整。
 - `quality-gate.yml` 与 `ci-verdict.mjs` 只聚合当前 diff 的合入前静态检查、自动化测试和前序 CI 状态，不要求或消费合入前浏览器报告。标签投影先清理旧 `qa:pass`，再按真实聚合结果决定是否添加；它不证明 Dev 物化或运行通过。影响面中的 `browser`/`dev` 维度记录合并后验收需求（`phase=post-merge`、`target=dev`）；尚未执行时为 `status=pending`、`pass=null`，不得伪造成通过。
-- 适用 Dev 验收的自动流水线在确认合并后返回 `ready-for-agent`，由协调 Agent 完成 Dev 物化和运行验收；此前不得清理任务 worktree 或声明 `succeeded`。`--no-merge` / `--no-materialize` 仍须遵守；纯文档、流程或脚本无需 App 物化。
+- 适用 Dev 真机验收的部分属人工职责，Agent 不等待、不以其为卡点；自动流水线在确认合并后返回 `ready-for-agent`，Agent 只完成隔离 worktree Web 验证与按需（保留给人工查看或人工要求时）的 Dev 物化，不再把 Dev 运行验收作为交付前置。清理任务 worktree 不以 Dev 验收为前置。`--no-merge` / `--no-materialize` 仍须遵守；纯文档、流程或脚本无需 App 物化。
 - dry-run 仅验证模拟流程，不执行真实浏览器、远端写入、合入或物化；模拟日志不构成实际验收证据。
 
 这些缺口必须作为残留代码问题处理。不得通过改文档把它们描述成已经修复；合入前由独立最终验收补核 GitHub required checks、当前任务授权与 [plugin-qa](plugin-qa.md) 的适用证据。
 
 ## 证据与合入条件
 
-- 测试与运行证据按变更面决定，不按风险等级机械补齐；矩阵见 [plugin-qa](plugin-qa.md)。纯文档、流程和脚本变更不要求 45120 或 App 物化。
-- 合并前在隔离 worktree 完成相关自动化测试、静态检查与独立评审；没有独立 App/Host 测试环境。PR 满足 required CI 经 Merge Queue 合入后，涉及运行行为才将 `main` 物化到 Dev `~/.omnimux-dev` 并在 45120 验收。壳层或平台门控改动额外要求 Electron renderer 证据。
-- 独立评审与实施分离；测试通过、PR 绿灯或 merge 命令发出不能替代适用的合并后运行验收。
+- 测试与运行证据按变更面决定，不按风险等级机械补齐；矩阵见 [plugin-qa](plugin-qa.md)。Agent 侧验收就是隔离 worktree 内的真实浏览器 Web 验证（动态端口、自清理，保留截图/结构化报告）；纯文档、流程和脚本变更不要求物化或浏览器验收。
+- 合并前在隔离 worktree 完成相关自动化测试、静态检查与独立评审；没有独立 App/Host 测试环境。Agent 的交付证据在自身隔离 worktree 内取得（ego-browser 或 worktree 隔离 Web QA 运行器）；PR 满足 required CI 经 Merge Queue 合入后，Dev `~/.omnimux-dev`（45120）的真机验收归人工，Agent 不必物化、不必等待、不作为交付卡点。物化仍允许，按需保留供人工查看。壳层或平台门控改动额外要求 Electron renderer 证据。
+- 独立评审与实施分离；测试通过、PR 绿灯或 merge 命令发出不能替代适用的隔离 worktree Web 验证证据；Dev 真机验收归人工，不作为 Agent 交付卡点。
 - `qa:pass` 只能由已授权的 CI 聚合机制在合入前静态与测试真实通过后写入；不表示 Dev 已物化或验收通过。本地 Agent、PR 作者和当前 `auto-pipeline` 不得自打该标签。
 - 只有 GitHub 返回 `state=MERGED`、`mergedAt` 和 merge commit 才算合入确认。未确认前不得执行合并后物化或清理 worktree。
 - 模型合同遵循 [model-api-authority](model-api-authority.md)，不得用真实模型请求代替官方文档与离线合同验证。
 
 ## 合并后与收尾
 
-合并确认后，Agent 用 fast-forward 同步本地主检出。若有未提交改动，先核对更新路径不重叠，并记录内容和模式以便同步后验证原样保留；无法证明安全时保留主检出，在任务 worktree 继续不涉及物化的独立工作；实际同步必须满足 [dev-pipeline](dev-pipeline.md) 的干净 `main`、精确 `origin/main` 与 source 身份条件。不得 stash、reset 或覆盖他人工作来满足同步条件。`worktree.sh ship` 必须核对匹配 PR/head/base 且 `MERGED`，仅快进主线；它与 `git-wt.sh finish` 都保留任务现场，不证明 Dev 通过，也不自动清理。完成已授权且适用的 Dev 物化及 45120 验收后，再用既有 `remove` / `clean` 清理任务所属 worktree；纯文档、流程或脚本按无 App 物化收尾。普通任务授权已覆盖 Dev 物化和无冲突重启；用户明确限制交付范围时遵守该限制。生产发布需单独授权。物化失败或必要证据不完整时保留现场并继续可行修复，不得把“已合并”写成“已交付”。
+合并确认后，Agent 用 fast-forward 同步本地主检出。若有未提交改动，先核对更新路径不重叠，并记录内容和模式以便同步后验证原样保留；无法证明安全时保留主检出，在任务 worktree 继续不涉及物化的独立工作；实际同步必须满足 [dev-pipeline](dev-pipeline.md) 的干净 `main`、精确 `origin/main` 与 source 身份条件。不得 stash、reset 或覆盖他人工作来满足同步条件。`worktree.sh ship` 必须核对匹配 PR/head/base 且 `MERGED`，仅快进主线；它与 `git-wt.sh finish` 都保留任务现场，不证明 Dev 通过，也不自动清理。完成隔离 worktree Web 验证证据留存后，即可用既有 `remove` / `clean` 清理任务所属 worktree，不以 Dev 45120 真机验收为前置；纯文档、流程或脚本按无 App 物化收尾。Dev 物化仍允许，按需保留供人工查看或人工要求时执行；45120 真机验收归人工，Agent 不等待、不阻塞、不声称取得。普通任务授权已覆盖 Dev 物化和无冲突重启；用户明确限制交付范围时遵守该限制。生产发布需单独授权。物化失败或必要证据不完整时保留现场并继续可行修复，不得把“已合并”写成“已交付”。
 
 最终报告只列适用信息：目标与结论、变更文件、实际执行的检查及证据、PR/merge/worktree/Dev 状态、未完成项与下一动作。不得要求每轮都复制固定四栏看板，也不得把不适用层写成已通过。
 

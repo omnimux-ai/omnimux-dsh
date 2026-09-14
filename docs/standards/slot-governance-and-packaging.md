@@ -84,7 +84,7 @@ macOS 下的 Electron 应用在启用 Asar 完整性校验时，会在应用包�
 - 违规（缺少 priority / priority 错误 / 缺少 id）直接输出行号并阻断 CI（Exit 1）。
 
 ### 4.2 端到端冷启 Smoke 探针 (`pnpm verify:smoke`)
-- 针对本地开发版（45120）或生产版（44120）发起 HTTP 探测；
+- 针对本地开发版（45120）或生产版（44120）发起 HTTP 探测（Agent 侧验收同源复用该探针能力，在自身隔离 worktree 的动态端口本地服务上执行；Dev 45120 真机验收归人工，不作为 Agent 交付卡点）；
 - 校验响应状态码 200；
 - 解析 DOM 骨架，断言无 `data-dsh-boot="hanging"` 挂起、无 `data-dsh-desktop-recovery` 恢复遮罩；
 - CDP 控制台错误探针，确保 0 Fatal Console Errors。

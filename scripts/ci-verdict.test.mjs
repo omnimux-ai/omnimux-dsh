@@ -28,45 +28,64 @@ test('requires impact context and rejects malformed, pre-merge browser or contra
   assert.equal(evaluateVerdict({ pass: true }).pass, false)
   const legacy = deriveImpactMatrix([])
   legacy.dimensions.browser.phase = 'pre-merge'
-  for (const impactMatrix of [{}, { dimensions: {} }, legacy, { ...deriveImpactMatrix([]), isUiChange: true }]) {
+  // Old-policy shapes stay invalid: the shared Dev app is no longer the browser or Dev target.
+  const legacyBrowserTarget = deriveImpactMatrix([])
+  legacyBrowserTarget.dimensions.browser.target = 'dev'
+  const legacyDevTarget = deriveImpactMatrix([])
+  legacyDevTarget.dimensions.dev.target = 'dev'
+  for (const impactMatrix of [{}, { dimensions: {} }, legacy, legacyBrowserTarget, legacyDevTarget, { ...deriveImpactMatrix([]), isUiChange: true }]) {
     assert.equal(evaluateVerdict(qa([]), { impactMatrix }).pass, false)
   }
   assert.equal(evaluateVerdict(qa(uiFiles), { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
-  assert.equal(evaluateVerdict(qa(['plugins/a/src/server.js']), { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
+  // Non-UI files carry no Dev gate anymore, so runtime-only and docs matrices are interchangeable...
+  assert.equal(evaluateVerdict(qa(['plugins/a/src/server.js']), { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, true)
+  // ...and the surviving contradiction is a supplied matrix that overstates the browser requirement.
+  assert.equal(evaluateVerdict(qa(docsFiles), { impactMatrix: deriveImpactMatrix(uiFiles) }).pass, false)
   assert.equal(evaluateVerdict({ pass: true }, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, true)
 })
 
-test('non-UI changes mark browser not applicable rather than passed', () => {
+test('non-UI changes mark browser and Dev acceptance not applicable rather than passed', () => {
   for (const files of [[], docsFiles, ['scripts/server.mjs', 'docs/contracts/plugin-qa.md']]) {
     const verdict = evaluateVerdict(qa(files))
     assert.equal(verdict.pass, true)
     assert.equal(verdict.scope, 'pre-merge-static-tests')
     assert.equal(verdict.dimensions.browser.pass, null)
     assert.equal(verdict.dimensions.browser.status, 'not-applicable')
+    assert.equal(verdict.dimensions.browser.target, 'worktree')
+    assert.equal(verdict.dimensions.dev.required, false)
+    assert.equal(verdict.dimensions.dev.pass, null)
     assert.equal(verdict.dimensions.dev.status, 'not-applicable')
+    assert.equal(verdict.dimensions.dev.target, 'human')
     assert.match(verdict.summary, /无客户端\/UI文件变更/)
   }
 })
 
-test('UI static CI passes while Dev and browser remain post-merge pending, not accepted', () => {
+test('UI static CI passes while isolated-worktree browser verification stays post-merge pending and Dev is never required', () => {
   for (const files of [uiFiles, [...uiFiles, ...docsFiles], ['theme.scss']]) {
     const verdict = evaluateVerdict(qa(files))
     assert.equal(verdict.pass, true)
     assert.equal(verdict.dimensions.l0.status, 'passed')
-    for (const name of ['dev', 'browser']) {
-      assert.equal(verdict.dimensions[name].pass, null)
-      assert.equal(verdict.dimensions[name].status, 'pending')
-      assert.equal(verdict.dimensions[name].phase, 'post-merge')
-      assert.equal(verdict.dimensions[name].target, 'dev')
-    }
+    assert.equal(verdict.dimensions.browser.required, true)
+    assert.equal(verdict.dimensions.browser.pass, null)
+    assert.equal(verdict.dimensions.browser.status, 'pending')
+    assert.equal(verdict.dimensions.browser.phase, 'post-merge')
+    assert.equal(verdict.dimensions.browser.target, 'worktree')
+    assert.equal(verdict.dimensions.dev.required, false)
+    assert.equal(verdict.dimensions.dev.pass, null)
+    assert.equal(verdict.dimensions.dev.status, 'not-applicable')
+    assert.equal(verdict.dimensions.dev.phase, 'post-merge')
+    assert.equal(verdict.dimensions.dev.target, 'human')
     assert.doesNotMatch(verdict.summary, /ego-browser 通过/)
   }
 })
 
-test('Host runtime changes need Dev after merge without inventing browser requirements', () => {
+test('Host runtime changes no longer require Dev acceptance and never invent browser requirements', () => {
   const verdict = evaluateVerdict(qa(['plugins/a/src/service.js']))
   assert.equal(verdict.pass, true)
-  assert.equal(verdict.dimensions.dev.status, 'pending')
+  assert.equal(verdict.dimensions.dev.required, false)
+  assert.equal(verdict.dimensions.dev.status, 'not-applicable')
+  assert.equal(verdict.dimensions.dev.pass, null)
+  assert.equal(verdict.dimensions.dev.target, 'human')
   assert.equal(verdict.dimensions.browser.status, 'not-applicable')
 })
 
@@ -79,18 +98,32 @@ test('missing, false or truthy non-boolean L0 reports and prior CI failure are r
   }
 })
 
-test('environment cannot turn pending Dev into a browser pass or waive static failure', () => {
+test('environment cannot turn pending worktree browser verification into a pass, borrow one from Dev, or waive static failure', () => {
   const root = sandbox()
   for (const pass of [true, false]) {
+    // Required browser dimension (UI files) plus an L0 report whose pass flag is environment-independent.
     writeFileSync(join(root, 'qa.json'), JSON.stringify({ ...qa(uiFiles), pass }))
     const run = extraEnv => spawnSync(process.execPath, [script, '--report', 'qa.json', '--ci-status', 'success', '--dry-run', '--json'], {
       cwd: root, encoding: 'utf8', env: { ...process.env, ...extraEnv },
     })
     const normal = run({ GITHUB_ACTIONS: '', GITHUB_RUN_ID: '', OMNIMUX_ALLOW_L0_UI_PASS: '' })
-    const hosted = run({ GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '123', OMNIMUX_ALLOW_L0_UI_PASS: '1', OMNIMUX_BROWSER_TARGET: 'l2' })
+    const hosted = run({
+      GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '123', OMNIMUX_ALLOW_L0_UI_PASS: '1',
+      OMNIMUX_BROWSER_TARGET: 'l2', OMNIMUX_DEV_ACCEPTED: '1', OMNIMUX_REQUIRE_DEV: '1',
+    })
     assert.equal(hosted.status, pass ? 0 : 1)
     assert.deepEqual(JSON.parse(hosted.stdout), JSON.parse(normal.stdout))
-    assert.equal(JSON.parse(hosted.stdout).dimensions.browser.status, 'pending')
+    const verdict = JSON.parse(hosted.stdout)
+    assert.equal(verdict.dimensions.browser.required, true)
+    assert.equal(verdict.dimensions.browser.target, 'worktree')
+    assert.equal(verdict.dimensions.browser.status, 'pending')
+    assert.equal(verdict.dimensions.browser.pass, null)
+    // Dev is human-owned: it cannot supply the browser pass, and it cannot rescue a failed L0.
+    assert.equal(verdict.dimensions.dev.required, false)
+    assert.equal(verdict.dimensions.dev.status, 'not-applicable')
+    assert.equal(verdict.dimensions.dev.pass, null)
+    assert.equal(verdict.dimensions.l0.status, pass ? 'passed' : 'failed')
+    assert.equal(verdict.pass, pass)
   }
 })
 
@@ -142,8 +175,14 @@ test('CLI derives impact from explicit files or strict git diff and clears failu
   writeFileSync(join(root, 'x.tsx'), 'export default null\n')
   const ui = run(['--files-from-git', '--base', 'HEAD'])
   assert.equal(ui.status, 0, ui.stderr)
-  assert.equal(JSON.parse(ui.stdout).impactMatrix.isUiChange, true)
-  assert.equal(JSON.parse(ui.stdout).dimensions.browser.status, 'pending')
+  const uiVerdict = JSON.parse(ui.stdout)
+  assert.equal(uiVerdict.impactMatrix.isUiChange, true)
+  assert.equal(uiVerdict.impactMatrix.dimensions.browser.target, 'worktree')
+  assert.equal(uiVerdict.impactMatrix.dimensions.dev.required, false)
+  assert.equal(uiVerdict.impactMatrix.dimensions.dev.target, 'human')
+  assert.equal(uiVerdict.dimensions.browser.required, true)
+  assert.equal(uiVerdict.dimensions.browser.status, 'pending')
+  assert.equal(uiVerdict.dimensions.dev.status, 'not-applicable')
   assert.equal(existsSync(join(root, 'docs/evidence')), false)
 })
 

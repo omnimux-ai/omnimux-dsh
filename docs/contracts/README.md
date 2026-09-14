@@ -43,7 +43,7 @@ subsystem: "global"
 | `living` | [first-level-page-layout.md](first-level-page-layout.md) | OmniMux 全局插件一级页 UI 布局结构方法论与开发规范 | `omnimux-assets` | 2026-08-26 | 通过对比 **「项目库」**、**「资产中心」**、**「Skill 市场」**，可以提炼出 5 个高度一致的 UI 骨架共同点： |
 | `living` | [icon-design-standards.md](icon-design-standards.md) | OmniMux 图标组件选型与迁移规范 (Icon Standards Contract) | `omnimux` | 2026-08-26 | 在所有 OmniMux 插件 UI 开发中，图标引入严格遵循 **两级降级选型机制**： |
 | `living` | [ops-entry.md](ops-entry.md) | ops-entry — 插件运维命令唯一入口 | `global` | 2026-09-09 | fork `yarn omnimux:*` 的同步、诊断与目标重启边界；无合入前独立运行环境。 |
-| `living` | [plugin-qa.md](plugin-qa.md) | plugin-qa — OmniMux 插件验收证据合同 | `omnimux` | 2026-09-09 | 合入前自动化/静态与独立评审；合入后按需 Dev/ego/shared probe；CI 不证明 Dev 通过。 |
+| `living` | [plugin-qa.md](plugin-qa.md) | plugin-qa — OmniMux 插件验收证据合同 | `omnimux` | 2026-09-09 | 合入前自动化/静态与独立评审；Agent 侧按需隔离 worktree 真实浏览器 Web 验收；CI 不证明 Dev 真机通过，Dev 真机验收归人工。 |
 | `archived` | [series.md](series.md) | series/ contract | `omnimux-workflow` | 2026-08-26 | Product store. Session logs are not this store. |
 | `living` | [settings-ui.md](settings-ui.md) | Settings UI placement | `omnimux-accounts` | 2026-08-26 | Normative seat for OmniMux plugin UI in the official Web Settings panel. Live slot names come from t |
 | `living` | [workbench-split.md](workbench-split.md) | Workbench split — 对话可收、插件 GUI 常驻 | `omnimux` | 2026-08-31 | 工作台与一级库页统一使用 `dsh-better-sidebar` Tabs；焦点 = 右栏几何（split/gui/chat）；禁止 claim product-stage，合法 overlay 仅按合同限定。 |
@@ -51,7 +51,7 @@ subsystem: "global"
 | `living` | [stage-guards.md](stage-guards.md) | stage-guards — 一级 Stage / 本地写闸 / 空态静态契约 | `omnimux-accounts` | 2026-08-26 | \| 规则 \| 判定 \| |
 | `living` | [ui-copywriting-and-naming-standards.md](ui-copywriting-and-naming-standards.md) | OmniMux 全局 UI 命名与微文案规范 (UI Copywriting & Naming Standards) | `omnimux` | 2026-08-26 | * **规则**：维度标识、筛选字段必须使用 **2~4 字纯实体名词**。 |
 | `living` | [ui-design-guidelines.md](ui-design-guidelines.md) | OmniMux UI Design & Interaction Guidelines | `omnimux-accounts` | 2026-08-26 | 1. **严禁裸用原生 `<select>`**： |
-| `living` | [plugin-git-pr.md](plugin-git-pr.md) | plugin-git-pr — OmniMux 插件仓 Git / PR 与授权合同 | `global` | 2026-09-09 | 禁止直推 main；required CI/MQ；qa:pass 仅合入前静态与测试；Dev 验收另行记录。 |
+| `living` | [plugin-git-pr.md](plugin-git-pr.md) | plugin-git-pr — OmniMux 插件仓 Git / PR 与授权合同 | `global` | 2026-09-09 | 禁止直推 main；required CI/MQ；qa:pass 仅合入前静态与测试；Agent 交付以隔离 worktree Web 验证为准，Dev 真机验收归人工、另行记录。 |
 | `living` | [client-external-store.md](client-external-store.md) | Client external store（useSyncExternalStore） | `omnimux-workflow` | 2026-08-22 | Normative rule for first-level product pages that subscribe to Cordis / Locale faces via React `useS |
 | `living` | [dsh-video-plugin.md](dsh-video-plugin.md) | PRD：omnimux-video 视频能力插件（自包含本地执行 + 理解层） | `omnimux-video` | 2026-08-22 | 状态：**Revised v2.1（2026-08-22：增补视频理解两工具；处理层仍为本机 ffmpeg）** |
 | `living` | [gxgen-workflow-migration.md](gxgen-workflow-migration.md) | Gxgen → OmniMux 工作流迁移蓝图（代理必读） | `omnimux-workflow` | 2026-08-22 | \| 项 \| 决定 \| |

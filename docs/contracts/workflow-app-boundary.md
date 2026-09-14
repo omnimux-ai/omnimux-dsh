@@ -145,4 +145,4 @@ Canvas 必须复用 `executionRoutes.ts` 已有的准备语义：图/版本解�
 
 前序 `pnpm test:gates` 结果由主理人提供：124 pass / 4 fail / 1 cancel，涉及 pnpm 下载受限及超时；该历史结果不代表本次 main 基线检查。当前文档交付须另行记录 diff、链接、声明一致性与适用 gates 的实际结果。全审计区间既有 `plugins/omnimux-apps/src/client/style.css:41` 空白属于旧树代码，本次不合入或修复。
 
-本次纯文档按用户授权跳过 L2，无 App 物化，不声明运行通过。后续实现验收复用现有单测/请求捕获和 [plugin QA](plugin-qa.md)：合入前自动化/静态及独立评审，合入后按需 Dev、ego-browser、shared verify:live，绑定实际构建 SHA。至少证明合法输入携带完整内容、拒绝输入未执行、真实发布后读回、可播放产物、刷新/重启/断连后的状态真伪、取消竞态。测试通过、代码完成、合并、Dev 物化与运行验收分别报告，不新造测试平台。
+本次纯文档按用户授权跳过 L2，无 App 物化，不声明运行通过。后续实现验收复用现有单测/请求捕获和 [plugin QA](plugin-qa.md)：合入前自动化/静态及独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器 Web 验证（动态端口、自清理），绑定实际构建 SHA。至少证明合法输入携带完整内容、拒绝输入未执行、真实发布后读回、可播放产物、刷新/重启/断连后的状态真伪、取消竞态。测试通过、代码完成、合并、Dev 物化（按需）与人工 Dev 真机验收分别报告，不新造测试平台。
