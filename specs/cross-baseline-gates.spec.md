@@ -25,5 +25,8 @@ node --test scripts/sync-release-policy.test.mjs
 pnpm test:gates
 完整环境固定已存在真实工具及离线 Corepack 缓存，记录实际版本；检查失败不得以其他检查成功替代。
 
+## 持久资产准备补充（父代理批准）
+根 package.json 的 test:gates 与 check:package-files 仅前置 `node plugins/omnimux-forms/scripts/build-client.mjs &&`，保留后续检查原样，并将新增 package-preparation.test.mjs 加入 test:gates 原测试列表持续执行。复用现有构建复制真实示例，不修改检查器或共享配置。新增 scripts/package-preparation.test.mjs：验证两个入口必须先准备；隔离缺产物目录运行真实构建后源/目标媒体 SHA 相等；真实示例源缺失必须构建失败，不能执行后续检查。测试先红后绿，临时目录自清理，不运行完整门禁、不执行 Git 写入。实施报告位于 .agent-reports/preparation-implementation.md。
+
 ## 风格与边界自审
 沿用现有 Node 测试与配置格式；不用新依赖或泛化框架。范围是候选上限，不要求全部改动。无待用户决定的常规实施项；若需新增功能、真实配置或发布，停止该动作报告。
