@@ -269,18 +269,21 @@
     },
     {
       "id": "wan-3.0-prime",
-      "disposition": "draft",
-      "reason": "网关 ch34 有独立销售行与主数据行；官方文档 URL 未取证，op 保持 draft 不上架"
+      "disposition": "alias",
+      "target": "wan-3.0",
+      "reason": "2026-09-14 上游网关架构收敛（spec 6919f4db9 / 5a88dbe5e）：统合为单一公开 ID wan-3.0，衍生 ID 降级为过渡别名与底层映射"
     },
     {
       "id": "wan-3.0-ref",
-      "disposition": "draft",
-      "reason": "网关 ch34 有独立销售行与主数据行；参考素材 wire 字段三方冲突未解、上限未公布，op 保持 draft 不上架"
+      "disposition": "alias",
+      "target": "wan-3.0",
+      "reason": "2026-09-14 上游网关架构收敛：参考能力收敛至统一 wan-3.0 的 video_multi_ref 模式，本 ID 降级为过渡别名"
     },
     {
       "id": "wan-3.0-prime-ref",
-      "disposition": "draft",
-      "reason": "网关 ch34 有独立销售行与主数据行；参考素材 wire 字段三方冲突未解、上限未公布，op 保持 draft 不上架"
+      "disposition": "alias",
+      "target": "wan-3.0",
+      "reason": "2026-09-14 上游网关架构收敛：Prime 参考能力收敛至统一 wan-3.0 画质档位与模式，本 ID 降级为过渡别名"
     },
     {
       "id": "minimax-h3",

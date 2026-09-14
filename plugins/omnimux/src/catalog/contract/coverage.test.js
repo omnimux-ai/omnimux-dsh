@@ -54,6 +54,9 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'seedance-2.5',
     'seedasr-auc',
     'seedream-5.0-pro',
+    'wan-3.0-prime',
+    'wan-3.0-prime-ref',
+    'wan-3.0-ref',
     'wan3.0-video',
   ]);
   assert.ok(cov.contractIds.includes('kling-avatar'));
