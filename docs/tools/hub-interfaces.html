@@ -294,7 +294,7 @@
         <span id="themeLabel">深色</span>
       </button>
       <dl class="meta-list">
-        <div><dt>生成时间</dt><dd>2026/9/14 16:02:15</dd></div>
+        <div><dt>生成时间</dt><dd>2026/9/14 16:13:34</dd></div>
         <div><dt>契约指纹</dt><dd>a29c47355e</dd></div>
       </dl>
     </div>
@@ -314,12 +314,12 @@
     <article class="stat" data-stat="platforms" data-count="8">
       <div class="stat-label">账号接入平台</div>
       <div class="stat-value">8<span class="stat-unit">个</span></div>
-      <div class="stat-note">已接入 3 · 规划中 2 · 仅文案 3</div>
+      <div class="stat-note">已开放连接 3 · 规划中 2 · 仅文案占位 3</div>
     </article>
-    <article class="stat" data-stat="channels" data-count="3">
-      <div class="stat-label">发布通道</div>
-      <div class="stat-value">3<span class="stat-unit">条</span></div>
-      <div class="stat-note">平台能力矩阵 10 项 · 直投 tiktok_direct</div>
+    <article class="stat" data-stat="channels" data-count="2">
+      <div class="stat-label">发布投递通道</div>
+      <div class="stat-value">2<span class="stat-unit">条</span></div>
+      <div class="stat-note">直投 tiktok_direct · 媒体预签名直传 · 账号来源 1 条另计</div>
     </article>
   </section>
 
@@ -333,7 +333,7 @@
       <button type="button" class="chip" data-filter="models">模型能力 <span class="n">50</span></button>
       <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">116</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">8</span></button>
-      <button type="button" class="chip" data-filter="channels">发布通道 <span class="n">13</span></button>
+      <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">13</span></button>
     </div>
   </div>
   <p class="result-line" id="resultLine" role="status"></p>
@@ -1201,28 +1201,28 @@
         <span class="block-count" data-block-count>8</span>
       </div>
       <div class="grid grid-card">
-          <article class="card item" data-cat="platforms" data-search="tiktok tiktok 已接入">
+          <article class="card item" data-cat="platforms" data-search="tiktok tiktok 已开放连接">
             <div class="card-head">
               <span class="card-kicker">账号接入</span>
-              <span class="chip chip-status-ok">已接入</span>
+              <span class="chip chip-status-ok">已开放连接</span>
             </div>
             <h4 class="card-title">TikTok</h4>
             <button type="button" class="copy mono" data-copy="tiktok" title="点击复制平台标识">tiktok</button>
             <p class="card-foot">账号注册表已声明，可在账号中心发起连接</p>
           </article>
-          <article class="card item" data-cat="platforms" data-search="instagram instagram 已接入">
+          <article class="card item" data-cat="platforms" data-search="instagram instagram 已开放连接">
             <div class="card-head">
               <span class="card-kicker">账号接入</span>
-              <span class="chip chip-status-ok">已接入</span>
+              <span class="chip chip-status-ok">已开放连接</span>
             </div>
             <h4 class="card-title">Instagram</h4>
             <button type="button" class="copy mono" data-copy="instagram" title="点击复制平台标识">instagram</button>
             <p class="card-foot">账号注册表已声明，可在账号中心发起连接</p>
           </article>
-          <article class="card item" data-cat="platforms" data-search="youtube youtube 已接入">
+          <article class="card item" data-cat="platforms" data-search="youtube youtube 已开放连接">
             <div class="card-head">
               <span class="card-kicker">账号接入</span>
-              <span class="chip chip-status-ok">已接入</span>
+              <span class="chip chip-status-ok">已开放连接</span>
             </div>
             <h4 class="card-title">YouTube</h4>
             <button type="button" class="copy mono" data-copy="youtube" title="点击复制平台标识">youtube</button>
@@ -1291,7 +1291,7 @@
       <div class="group" data-group>
         <div class="group-head">
           <h3 class="group-title">投递通道</h3>
-          <span class="group-count mono" data-group-count>3</span>
+          <span class="group-count mono" data-group-count>2</span>
         </div>
         <div class="grid grid-card">
           <article class="card item" data-cat="channels" data-search="tiktok_direct 官方直投通道 direct">
@@ -1311,7 +1311,14 @@
             <h4 class="card-title">媒体预签名直传通道</h4>
             <button type="button" class="copy mono" data-copy="media_presign_put" title="点击复制通道标识">media_presign_put</button>
             <p class="card-foot">草稿媒体按需申请预签名地址后以 PUT 直传（无 secret header），回填公共地址供投递使用</p>
-          </article>
+          </article></div>
+      </div>
+      <div class="group" data-group>
+        <div class="group-head">
+          <h3 class="group-title">账号来源（不参与发布投递）</h3>
+          <span class="group-count mono" data-group-count>1</span>
+        </div>
+        <div class="grid grid-card">
           <article class="card item" data-cat="channels" data-search="zernio 通用社交账号来源 provider">
             <div class="card-head">
               <span class="card-kicker">投递通道</span>
@@ -1324,19 +1331,20 @@
       </div>
       <div class="group" data-group>
         <div class="group-head">
-          <h3 class="group-title">平台能力矩阵（声明）</h3>
+          <h3 class="group-title">平台能力矩阵（渠道方声明，非已打通投递）</h3>
           <span class="group-count mono" data-group-count>10</span>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>平台</th><th>内容类型</th><th>封面</th><th>定时</th><th>原创声明</th><th>AI 声明</th><th>图文上限</th>
+                <th>平台</th><th>账号可用性</th><th>内容类型</th><th>封面</th><th>定时</th><th>原创声明</th><th>AI 声明</th><th>图文上限</th>
               </tr>
             </thead>
             <tbody>
-            <tr class="item" data-cat="channels" data-search="xiaohongshu 小红书">
+            <tr class="item" data-cat="channels" data-search="xiaohongshu 小红书 未接入账号">
               <td><span class="mono">xiaohongshu</span><span class="cell-sub">小红书</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">图文</span><span class="tag">视频</span></td>
               <td class="cell-flag">—</td>
               <td class="cell-flag">—</td>
@@ -1344,8 +1352,9 @@
               <td class="cell-flag">—</td>
               <td class="cell-num mono">18</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="douyin 抖音">
+            <tr class="item" data-cat="channels" data-search="douyin 抖音 未接入账号">
               <td><span class="mono">douyin</span><span class="cell-sub">抖音</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">视频</span><span class="tag">图文</span></td>
               <td class="cell-flag">支持</td>
               <td class="cell-flag">支持</td>
@@ -1353,8 +1362,9 @@
               <td class="cell-flag">支持</td>
               <td class="cell-num mono">35</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="kuaishou 快手">
+            <tr class="item" data-cat="channels" data-search="kuaishou 快手 未接入账号">
               <td><span class="mono">kuaishou</span><span class="cell-sub">快手</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">视频</span><span class="tag">图文</span></td>
               <td class="cell-flag">支持</td>
               <td class="cell-flag">—</td>
@@ -1362,8 +1372,9 @@
               <td class="cell-flag">—</td>
               <td class="cell-num mono">35</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="weibo 微博">
+            <tr class="item" data-cat="channels" data-search="weibo 微博 未接入账号">
               <td><span class="mono">weibo</span><span class="cell-sub">微博</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">图文</span><span class="tag">视频</span></td>
               <td class="cell-flag">—</td>
               <td class="cell-flag">—</td>
@@ -1371,8 +1382,9 @@
               <td class="cell-flag">—</td>
               <td class="cell-num mono">9</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="bilibili 哔哩哔哩">
+            <tr class="item" data-cat="channels" data-search="bilibili 哔哩哔哩 未接入账号">
               <td><span class="mono">bilibili</span><span class="cell-sub">哔哩哔哩</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">视频</span></td>
               <td class="cell-flag">支持</td>
               <td class="cell-flag">—</td>
@@ -1380,8 +1392,9 @@
               <td class="cell-flag">—</td>
               <td class="cell-num mono">—</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="wechat_channels 视频号">
+            <tr class="item" data-cat="channels" data-search="wechat_channels 视频号 未接入账号">
               <td><span class="mono">wechat_channels</span><span class="cell-sub">视频号</span></td>
+              <td>未接入账号</td>
               <td><span class="tag">视频</span><span class="tag">图文</span></td>
               <td class="cell-flag">支持</td>
               <td class="cell-flag">—</td>
@@ -1389,8 +1402,9 @@
               <td class="cell-flag">—</td>
               <td class="cell-num mono">9</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="tiktok tiktok">
+            <tr class="item" data-cat="channels" data-search="tiktok tiktok 已开放连接">
               <td><span class="mono">tiktok</span><span class="cell-sub">TikTok</span></td>
+              <td>已开放连接</td>
               <td><span class="tag">视频</span><span class="tag">图文</span></td>
               <td class="cell-flag">—</td>
               <td class="cell-flag">支持</td>
@@ -1398,8 +1412,9 @@
               <td class="cell-flag">支持</td>
               <td class="cell-num mono">35</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="instagram instagram">
+            <tr class="item" data-cat="channels" data-search="instagram instagram 已开放连接">
               <td><span class="mono">instagram</span><span class="cell-sub">Instagram</span></td>
+              <td>已开放连接</td>
               <td><span class="tag">图文</span><span class="tag">视频</span></td>
               <td class="cell-flag">—</td>
               <td class="cell-flag">—</td>
@@ -1407,8 +1422,9 @@
               <td class="cell-flag">支持</td>
               <td class="cell-num mono">10</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="youtube youtube">
+            <tr class="item" data-cat="channels" data-search="youtube youtube 已开放连接">
               <td><span class="mono">youtube</span><span class="cell-sub">YouTube</span></td>
+              <td>已开放连接</td>
               <td><span class="tag">视频</span></td>
               <td class="cell-flag">支持</td>
               <td class="cell-flag">支持</td>
@@ -1416,8 +1432,9 @@
               <td class="cell-flag">支持</td>
               <td class="cell-num mono">—</td>
             </tr>
-            <tr class="item" data-cat="channels" data-search="x x">
+            <tr class="item" data-cat="channels" data-search="x x 规划中">
               <td><span class="mono">x</span><span class="cell-sub">X</span></td>
+              <td>规划中</td>
               <td><span class="tag">图文</span><span class="tag">视频</span></td>
               <td class="cell-flag">—</td>
               <td class="cell-flag">—</td>
@@ -1456,11 +1473,11 @@
         <div class="source-path">plugins/omnimux-publish/src/config.js · plugins/omnimux-publish/src/account-policy.js · plugins/omnimux-publish/src/submit-media.js + src/hubtools.js · plugins/omnimux/src/official/provider.js</div>
       </div>
     </div>
-    <p class="footer-note">生成时间 2026/9/14 16:02:15 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 a29c47355e · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
+    <p class="footer-note">生成时间 2026/9/14 16:13:34 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 a29c47355e · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
   </footer>
 </div>
 
-<script id="hub-data" type="application/json">{"generatedAt":"2026/9/14 16:02:15","fingerprint":"a29c47355e","stats":{"models":{"total":50,"listed":26,"draft":24,"dispositions":76},"tools":{"total":116,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":7},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":3,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"models":50,"tools":116,"platforms":8,"channels":13}}</script>
+<script id="hub-data" type="application/json">{"generatedAt":"2026/9/14 16:13:34","fingerprint":"a29c47355e","stats":{"models":{"total":50,"listed":26,"draft":24,"dispositions":76},"tools":{"total":116,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":7},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"models":50,"tools":116,"platforms":8,"channels":13}}</script>
 <script>
 (function () {
   var root = document.documentElement;

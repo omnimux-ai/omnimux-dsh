@@ -285,8 +285,13 @@ const publishChannels = [
   }))
 ];
 
+// 投递通道与账号来源语义不同，计数必须分开：accountSources 不参与投递
+const deliveryChannels = publishChannels.filter((channel) => channel.kind !== 'provider');
+const providerSources = publishChannels.filter((channel) => channel.kind === 'provider');
+
 const publishStats = {
-  channels: publishChannels.length,
+  channels: deliveryChannels.length,
+  accountSources: providerSources.length,
   platforms: publishPlatforms.length,
   directProvider: publishPolicy.PUBLISH_PROVIDER,
   hubTools: hubToolNames.length
@@ -359,7 +364,7 @@ const lightTokens = `
 `;
 
 const TIER_LABEL = {
-  connected: '已接入',
+  connected: '已开放连接',
   coming: '规划中',
   locale: '仅文案占位'
 };
@@ -438,8 +443,8 @@ function accountCards() {
           </article>`).join('');
 }
 
-function channelCards() {
-  return publishChannels.map((channel) => `
+function channelCards(list) {
+  return list.map((channel) => `
           <article class="card item" data-cat="channels" data-search="${esc(haystack(channel.id, channel.label, channel.kind))}">
             <div class="card-head">
               <span class="card-kicker">投递通道</span>
@@ -451,24 +456,35 @@ function channelCards() {
           </article>`).join('');
 }
 
+const ACCOUNT_AVAILABILITY = {
+  connected: '已开放连接',
+  coming: '规划中',
+  none: '未接入账号'
+};
+
 function platformMatrixRows() {
-  return publishPlatforms.map((platform) => `
-            <tr class="item" data-cat="channels" data-search="${esc(haystack(platform.id, platform.label))}">
+  return publishPlatforms.map((platform) => {
+    const tier = platformTier(platform.id);
+    const availability = ACCOUNT_AVAILABILITY[tier] || ACCOUNT_AVAILABILITY.none;
+    return `
+            <tr class="item" data-cat="channels" data-search="${esc(haystack(platform.id, platform.label, availability))}">
               <td><span class="mono">${esc(platform.id)}</span><span class="cell-sub">${esc(platform.label)}</span></td>
+              <td>${esc(availability)}</td>
               <td>${platform.mediaTypes.map((type) => `<span class="tag">${esc(type === 'video' ? '视频' : type === 'image' ? '图文' : type)}</span>`).join('')}</td>
               <td class="cell-flag">${platform.supportsCover ? '支持' : '—'}</td>
               <td class="cell-flag">${platform.supportsSchedule ? '支持' : '—'}</td>
               <td class="cell-flag">${platform.supportsOriginalDeclaration ? '支持' : '—'}</td>
               <td class="cell-flag">${platform.supportsAiDeclaration ? '支持' : '—'}</td>
               <td class="cell-num mono">${platform.maxImages === null ? '—' : platform.maxImages}</td>
-            </tr>`).join('');
+            </tr>`;
+  }).join('');
 }
 
 const statsCards = [
   { key: 'models', label: '模型能力接口', value: modelStats.total, unit: '款', note: `已就绪 ${modelStats.listed} · 已登记 ${modelStats.draft} · 处置规则 ${modelStats.dispositions} 条` },
   { key: 'tools', label: '智能体工具接口', value: toolStats.total, unit: '个', note: `跨 ${toolStats.plugins} 个插件（扫描 ${toolStats.scannedPlugins} 个）` },
-  { key: 'platforms', label: '账号接入平台', value: accountStats.total, unit: '个', note: `已接入 ${accountStats.connected} · 规划中 ${accountStats.coming} · 仅文案 ${accountStats.localeOnly}` },
-  { key: 'channels', label: '发布通道', value: publishStats.channels, unit: '条', note: `平台能力矩阵 ${publishStats.platforms} 项 · 直投 ${publishStats.directProvider}` }
+  { key: 'platforms', label: '账号接入平台', value: accountStats.total, unit: '个', note: `已开放连接 ${accountStats.connected} · 规划中 ${accountStats.coming} · 仅文案占位 ${accountStats.localeOnly}` },
+  { key: 'channels', label: '发布投递通道', value: publishStats.channels, unit: '条', note: `直投 ${publishStats.directProvider} · 媒体预签名直传 · 账号来源 ${publishStats.accountSources} 条另计` }
 ];
 
 const payload = {
@@ -730,7 +746,7 @@ ${darkTokens}
       <button type="button" class="chip" data-filter="models">模型能力 <span class="n">${payload.filters.models}</span></button>
       <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">${payload.filters.tools}</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">${payload.filters.platforms}</span></button>
-      <button type="button" class="chip" data-filter="channels">发布通道 <span class="n">${payload.filters.channels}</span></button>
+      <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">${payload.filters.channels}</span></button>
     </div>
   </div>
   <p class="result-line" id="resultLine" role="status"></p>
@@ -795,20 +811,27 @@ ${darkTokens}
       <div class="group" data-group>
         <div class="group-head">
           <h3 class="group-title">投递通道</h3>
-          <span class="group-count mono" data-group-count>${publishChannels.length}</span>
+          <span class="group-count mono" data-group-count>${deliveryChannels.length}</span>
         </div>
-        <div class="grid grid-card">${channelCards()}</div>
+        <div class="grid grid-card">${channelCards(deliveryChannels)}</div>
       </div>
       <div class="group" data-group>
         <div class="group-head">
-          <h3 class="group-title">平台能力矩阵（声明）</h3>
+          <h3 class="group-title">账号来源（不参与发布投递）</h3>
+          <span class="group-count mono" data-group-count>${providerSources.length}</span>
+        </div>
+        <div class="grid grid-card">${channelCards(providerSources)}</div>
+      </div>
+      <div class="group" data-group>
+        <div class="group-head">
+          <h3 class="group-title">平台能力矩阵（渠道方声明，非已打通投递）</h3>
           <span class="group-count mono" data-group-count>${publishPlatforms.length}</span>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>平台</th><th>内容类型</th><th>封面</th><th>定时</th><th>原创声明</th><th>AI 声明</th><th>图文上限</th>
+                <th>平台</th><th>账号可用性</th><th>内容类型</th><th>封面</th><th>定时</th><th>原创声明</th><th>AI 声明</th><th>图文上限</th>
               </tr>
             </thead>
             <tbody>${platformMatrixRows()}
@@ -982,5 +1005,5 @@ fs.writeFileSync(outPath, cleaned, 'utf8');
 console.log(`接口全景面板生成成功: ${rel(outPath)}`);
 console.log(`  模型能力接口    ${modelStats.total} 款（已就绪 ${modelStats.listed} / 已登记 ${modelStats.draft}，处置规则 ${modelStats.dispositions} 条）`);
 console.log(`  智能体工具接口  ${toolStats.total} 个（跨 ${toolStats.plugins} 个插件；门禁总览 ${toolStats.scannerTotal} 个，逐插件累加一致）`);
-console.log(`  账号接入平台    ${accountStats.total} 个（已接入 ${accountStats.connected} / 规划中 ${accountStats.coming} / 仅文案 ${accountStats.localeOnly}）`);
-console.log(`  发布通道        ${publishStats.channels} 条（平台能力矩阵 ${publishStats.platforms} 项，直投 provider ${publishStats.directProvider}）`);
+console.log(`  账号接入平台    ${accountStats.total} 个（已开放连接 ${accountStats.connected} / 规划中 ${accountStats.coming} / 仅文案占位 ${accountStats.localeOnly}）`);
+console.log(`  发布投递通道    ${publishStats.channels} 条（直投 ${publishStats.directProvider}；账号来源 ${publishStats.accountSources} 条另计；平台能力矩阵 ${publishStats.platforms} 项为渠道声明）`);
