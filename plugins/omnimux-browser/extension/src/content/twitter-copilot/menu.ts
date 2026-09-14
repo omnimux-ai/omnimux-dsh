@@ -189,12 +189,39 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
   })
 }
 
+/**
+ * 上下文就绪闸门：抓不到内容时不许调用模型凭空生成（竞品同款「页面即上下文」纪律）。
+ * 返回 null 表示就绪；否则返回给用户看的双语提示。
+ */
+export function checkContextReady(scene: TwitterCopilotScene, ctx: TwitterContext, locale: 'zh' | 'en'): string | null {
+  const has = (v?: string) => Boolean((v || '').trim())
+  const t = (zh: string, en: string) => (locale === 'en' ? en : zh)
+
+  if (scene === 'POST_NEW' && !has(ctx.draftText)) {
+    return t('请先在发帖框写下你的主题或想法，再使用该功能。', 'Write your topic or idea in the composer first, then run this again.')
+  }
+  if (scene === 'POST_QUOTE' && !has(ctx.quotedTweetText)) {
+    return t('没有读到被引用的推文，请刷新页面后重试。', "Couldn't read the quoted tweet — refresh the page and try again.")
+  }
+  if ((scene === 'REPLY_DETAIL' || scene === 'REPLY_FEED') && !has(ctx.targetTweetText)) {
+    return t('没有读到原推内容，请刷新页面后重试。', "Couldn't read the target tweet — refresh the page and try again.")
+  }
+  return null
+}
+
 async function handleExecuteItem(
   anchorButton: HTMLElement,
   scene: TwitterCopilotScene,
   item: CopilotMenuItem,
   locale: 'zh' | 'en',
 ) {
+  const ctx = extractTwitterContext(anchorButton, scene)
+  const blocked = checkContextReady(scene, ctx, locale)
+  if (blocked) {
+    showCopilotToast(blocked, 'info')
+    return
+  }
+
   anchorButton.classList.add('omnimux-copilot-anchor-btn--loading')
   showCopilotToast(
     locale === 'en' ? `AI is crafting: ${item.nameEn}...` : `AI 正在深度思考生成：${item.name}...`,
@@ -202,7 +229,6 @@ async function handleExecuteItem(
   )
 
   try {
-    const ctx = extractTwitterContext(anchorButton, scene)
     const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale)
 
     // 真正调用大模型补全
@@ -241,10 +267,13 @@ async function requestLlmGeneration(
       userMessage,
       locale,
       context: {
+        scene,
         targetTweetText: ctx.targetTweetText,
         targetAuthor: ctx.targetAuthor,
         draftText: ctx.draftText,
         quotedTweetText: ctx.quotedTweetText,
+        quotedAuthor: ctx.quotedAuthor,
+        tweetUrl: ctx.tweetUrl,
         itemId,
       },
     })

@@ -4,7 +4,7 @@ import { detectTwitterScene, extractTwitterContext } from '../src/content/twitte
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import { mountCopilotToTwitterButtons } from '../src/content/twitter-copilot/anchor.ts'
 import { injectTweetText, INJECTOR_COPY, COPILOT_TOAST_BG, COPILOT_TOAST_TEXT_COLOR } from '../src/content/twitter-copilot/injector.ts'
-import { detectCopilotLocale } from '../src/content/twitter-copilot/menu.ts'
+import { detectCopilotLocale, checkContextReady } from '../src/content/twitter-copilot/menu.ts'
 import { sanitizeTweetText } from '../src/content/twitter-copilot/sanitizer.ts'
 
 describe('Twitter Copilot Native Unit Tests', () => {
@@ -424,5 +424,67 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(purpleLike.test(bg)).toBe(false)
     expect([COPILOT_TOAST_BG, 'rgb(24, 24, 27)']).toContain(bg)
     expect([COPILOT_TOAST_TEXT_COLOR.success, 'rgb(74, 222, 128)']).toContain(fg)
+  })
+
+  it('T15: 上下文缺失时不再编造主题或身份（历史写死值全部绝迹）', () => {
+    const banned = [
+      '分享关于效率工具与现代技术创新的思考',
+      '深度教程与核心经验复盘',
+      '很多时候越做加法产品越难用，极简才是硬功夫',
+      '探讨当前技术工具的快速演进',
+      '无特别指定，请给出高价值专业延伸',
+      '行业最新动态',
+      'AI agents and software evolution trends',
+      'Hard lessons learned in software development',
+      'Product simplicity always beats feature bloat',
+      'Practical developer insights',
+      'Building useful developer tools and shipping fast',
+      'Tech trends',
+    ]
+    const emptyCtx = { scene: 'POST_NEW' as const, draftText: '' }
+
+    for (const item of COPILOT_MENU_ITEMS) {
+      for (const locale of ['zh', 'en'] as const) {
+        const { systemPrompt, userMessage } = item.generatePrompt({ ...emptyCtx, scene: item.scenes[0] }, locale)
+        const joined = `${systemPrompt}\n${userMessage}`
+        for (const phrase of banned) {
+          expect(joined.includes(phrase), `${item.id}(${locale}) 仍包含写死内容：${phrase}`).toBe(false)
+        }
+        expect(joined.includes('undefined'), `${item.id}(${locale}) 出现 undefined`).toBe(false)
+        // 身份伪造：抓不到作者时不得出现这些占位身份
+        for (const fake of ['@博主', '@author', '@同行', '@peer', '@creator']) {
+          expect(joined.includes(fake), `${item.id}(${locale}) 伪造身份：${fake}`).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('T16: 抓不到推文时上下文字段为空串而非 undefined', () => {
+    setPathname('/home')
+    const replyBtn = document.createElement('button')
+    replyBtn.setAttribute('data-testid', 'tweetButtonInline')
+    document.body.appendChild(replyBtn)
+
+    const ctx = extractTwitterContext(replyBtn, 'REPLY_DETAIL')
+    expect(ctx.targetTweetText).toBe('')
+    expect(ctx.targetAuthor).toBe('')
+    expect(ctx.quotedTweetText).toBe('')
+    expect(ctx.quotedAuthor).toBe('')
+    expect(ctx.draftText).toBe('')
+  })
+
+  it('T17: 上下文闸门 - 四场景缺上下文时阻止生成并给双语提示', () => {
+    const empty = { scene: 'POST_NEW' as const, draftText: '', targetTweetText: '', quotedTweetText: '' }
+    expect(checkContextReady('POST_NEW', empty, 'zh')).toContain('请先在发帖框写下你的主题')
+    expect(checkContextReady('POST_NEW', empty, 'en')).toContain('Write your topic')
+    expect(checkContextReady('POST_QUOTE', empty, 'zh')).toContain('没有读到被引用的推文')
+    expect(checkContextReady('REPLY_DETAIL', empty, 'zh')).toContain('没有读到原推内容')
+    expect(checkContextReady('REPLY_FEED', empty, 'en')).toContain("Couldn't read the target tweet")
+
+    // 上下文就绪时放行
+    expect(checkContextReady('POST_NEW', { ...empty, draftText: '量子计算' }, 'zh')).toBeNull()
+    expect(checkContextReady('POST_QUOTE', { ...empty, quotedTweetText: '被引正文' }, 'zh')).toBeNull()
+    expect(checkContextReady('REPLY_DETAIL', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
+    expect(checkContextReady('REPLY_FEED', { ...empty, targetTweetText: '原推正文' }, 'zh')).toBeNull()
   })
 })
