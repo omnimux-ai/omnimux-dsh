@@ -55,6 +55,7 @@ const byClass = (node, className) => nodes(node, (n) => {
   return typeof cls === 'string' && cls.split(' ').includes(className)
 })
 const texts = (node) => nodes(node, (n) => typeof n.children?.[0] === 'string').map((n) => n.children[0])
+const findSwitch = (card) => nodes(card, (n) => n.type === plazaUtils.WorkshopSwitch || (n.props && n.props.className === 'toggle-wrap'))[0]
 
 const OK_SESSIONS = { list: { getSnapshot: () => ({ current: 's1', byId: { s1: { cwd: '/work/current-project' } } }) } }
 const defaultRespond = (action) => (action === 'search'
@@ -222,8 +223,8 @@ test('E2E 旅程一：套件分类只列真实套件，8 张卡的构成计数�
       `技能 ${counts.skills} · 规则 ${counts.rules} · Agent ${counts.agents}`,
       `${suite.id} composition`,
     )
-    // 套件卡不挂技能安装开关：安装入口在详情页。
-    assert.equal(byClass(card, 'toggle-wrap').length, 0)
+    // 套件卡右侧统一挂载 WorkshopSwitch 开关，与普通技能卡片保持 100% 视觉一致。
+    assert.ok(findSwitch(card), `${suite.id} must mount a switch`)
   }
 })
 
@@ -430,4 +431,34 @@ test('E2E 旅程三：TikTok 预装套件出厂默认展示「卸载」，点击
   const afterView = detail.ui.mountModal(findModal(detail.ui.draw()))
   assert.equal(installButton(afterView).children[0], lookup('suite.install'))
   assert.equal(installButton(afterView).props.disabled, false)
+})
+
+test('E2E 旅程四：套件卡片开关点击分别打开安装/卸载确认框并阻断冒泡', async () => {
+  // 1. 点击未安装套件开关：弹出安装确认弹窗
+  const { ui: ui1, tree: tree1 } = await browseSuiteCategory()
+  const amazonCard = findSuiteCard(tree1, AMAZON)
+  assert.ok(amazonCard)
+  const amazonSwitch = findSwitch(amazonCard)
+  assert.ok(amazonSwitch, '亚马逊卡片开关必须挂载')
+  assert.equal(amazonSwitch.props.checked, false)
+  amazonSwitch.props.onChange(true)
+  await ui1.settle()
+  const installModal = ui1.mountModal(findModal(ui1.draw()))
+  const installDialog = byClass(installModal, 'ws-suite-install-dialog')[0]
+  assert.ok(installDialog, '必须弹出套件安装确认弹窗')
+  assert.equal(byClass(installDialog, 'modal-title')[0].children[0], lookup('suite.install.title'))
+
+  // 2. 点击已安装套件开关：弹出卸载确认弹窗
+  const { ui: ui2, tree: tree2 } = await browseSuiteCategory()
+  const tiktokCard = findSuiteCard(tree2, TIKTOK)
+  assert.ok(tiktokCard)
+  const tiktokSwitch = findSwitch(tiktokCard)
+  assert.ok(tiktokSwitch, 'TikTok 卡片开关必须挂载')
+  assert.equal(tiktokSwitch.props.checked, true)
+  tiktokSwitch.props.onChange(false)
+  await ui2.settle()
+  const uninstallModal = ui2.mountModal(findModal(ui2.draw()))
+  const uninstallDialog = byClass(uninstallModal, 'ws-suite-install-dialog')[0]
+  assert.ok(uninstallDialog, '必须弹出套件卸载确认弹窗')
+  assert.equal(byClass(uninstallDialog, 'modal-title')[0].children[0], lookup('suite.uninstall.title'))
 })
