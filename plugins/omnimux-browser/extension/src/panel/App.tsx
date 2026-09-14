@@ -607,7 +607,7 @@ interface HistoryPage {
 export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
   const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
-    .map((step) => Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
+    .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
 
   return (
     <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">

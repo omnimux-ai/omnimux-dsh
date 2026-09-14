@@ -97,6 +97,13 @@ describe('页面操作卡片 ToolActivity 视觉与结构规范', () => {
     expect(container.querySelector('.tool-step-text')?.textContent).toBe('unknown_tool')
     await act(async () => {
       root.render(createElement(ToolActivity, {
+        row: { seq: 41, kind: 'tool', text: 'custom_hook -> skill', status: 'complete' }, copy,
+      }))
+    })
+    expect(container.querySelector('.tool-step-tag')?.textContent).toBe('custom_hook')
+    expect(container.querySelector('.tool-step-text')?.textContent).toBe(expected[0])
+    await act(async () => {
+      root.render(createElement(ToolActivity, {
         row: { seq: 5, kind: 'tool', text: 'read', status: 'running' }, copy,
       }))
     })
