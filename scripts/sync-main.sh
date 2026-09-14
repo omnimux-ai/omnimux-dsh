@@ -35,7 +35,7 @@ assert_omnimux_sync_main() (
     echo '❌ sync: 无法读取未跟踪文件清单，拒绝物化。' >&2; return 1;
   }
   if [ -n "$untracked" ]; then
-    blocking=$(printf '%s\n' "$untracked" | grep -Ev '^(specs|docs|tmp|\.workbuddy|\.agent-backups|\.worktrees)/' || true)
+    blocking=$(printf '%s\n' "$untracked" | grep -Ev '^(specs|docs|tmp|\.workbuddy|\.agent-backups|\.worktrees|\.agent-reports)/' || true)
     if [ -n "$blocking" ]; then
       echo '❌ sync: 工作区存在会进入物化产物的未跟踪文件，拒绝物化。' >&2
       printf '%s\n' "$blocking" >&2

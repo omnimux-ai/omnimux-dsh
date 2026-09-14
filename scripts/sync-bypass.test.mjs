@@ -78,7 +78,7 @@ test('clean main must match origin/main exactly; inherited Git overrides cannot 
 
 test('untracked drafts under the allow-list pass the cleanliness gate and proceed downstream', t => {
   const f = fixture(t)
-  for (const draft of ['specs/gate-draft.spec.md', 'tmp/scratch.txt']) {
+  for (const draft of ['specs/gate-draft.spec.md', 'tmp/scratch.txt', '.agent-reports/task/report.md']) {
     mkdirSync(dirname(join(f.repo, draft)), { recursive: true })
     writeFileSync(join(f.repo, draft), 'draft\n')
   }
