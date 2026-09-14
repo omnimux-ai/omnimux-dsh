@@ -15,7 +15,7 @@ const pluginRequire = createRequire(resolve(plugin,'package.json'));
 const common = {absWorkingDir:plugin,bundle:true,write:false,logLevel:'info',nodePaths:[resolve(plugin,'node_modules'),resolve(root,'node_modules/.pnpm/node_modules'),resolve(root,'node_modules')]};
 let browserCode, capture, identity;
 async function rebuild() {
-  const browser = await build({...common,entryPoints:[resolve(sourceDir,'workflow-effective-input-entry.tsx')],banner:{js:`window.__errors=[];for(const name of ['error','unhandledrejection'])window.addEventListener(name,event=>{const message=String(event.error?.stack||event.reason?.stack||event.message||event.reason);window.__errors.push(message);const p=document.createElement('pre');p.textContent=message;document.body.append(p);});`},jsx:'automatic',platform:'browser',format:'iife',loader:{'.css':'text'},define:{'process.env.NODE_ENV':'"development"'},plugins:[{
+  const browser = await build({...common,entryPoints:[resolve(sourceDir,'workflow-effective-input-entry.tsx')],jsx:'automatic',platform:'browser',format:'iife',loader:{'.css':'text'},define:{'process.env.NODE_ENV':'"development"'},plugins:[{
     name:'isolate-preferences-persistence',setup(b){
       b.onResolve({filter:/^react(?:-dom)?(?:\/.*)?$/},args=>({path:pluginRequire.resolve(args.path)}));
       b.onResolve({filter:/generationPreferencesStore(?:\.ts)?$/},()=>({path:'preferences',namespace:'fixture'}));
@@ -55,7 +55,7 @@ const server=createServer(async(req,res)=>{
       res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data:; connect-src 'self'; font-src 'self' data:");
       return send(200,'<!doctype html><html lang="zh"><meta charset="utf-8"><title>1760 真实面板离线验证</title><body><div id="root" class="wf-canvas-root" style="min-height:100vh"></div><script src="/errors.js"></script><script src="/panel.js"></script></body></html>','text/html; charset=utf-8');
     }
-    if(req.method==='GET'&&url.pathname==='/errors.js') return send(200,"window.__errors=[];for(const name of ['error','unhandledrejection'])window.addEventListener(name,event=>{const message=String(event.error?.stack||event.reason?.stack||event.message||event.reason);window.__errors.push(message);const p=document.createElement('pre');p.textContent=message;document.body.append(p);});",'application/javascript');
+    if(req.method==='GET'&&url.pathname==='/errors.js') return send(200,"window.__errors=[];const captureError=event=>{const message=String(event.error?.stack||event.reason?.stack||event.message||event.reason);window.__errors.push(message);const p=document.createElement('pre');p.textContent=message;document.body.append(p);};const errorEvents=['error','unhandledrejection'];const cleanupErrors=()=>{for(const name of errorEvents)window.removeEventListener(name,captureError);window.removeEventListener('pagehide',cleanupErrors);};for(const name of errorEvents)window.addEventListener(name,captureError);window.addEventListener('pagehide',cleanupErrors);",'application/javascript');
     if(req.method==='GET'&&url.pathname==='/panel.js') return send(200,browserCode,'application/javascript');
     if(req.method==='GET'&&url.pathname==='/identity') return send(200,{...identity,origin,pid:process.pid});
     if(req.method==='GET'&&url.pathname==='/catalog') return send(200,catalog);
