@@ -5,9 +5,15 @@
  * Core Business Logic (Autonomous & Guaranteed):
  * 1. Scans the ENTIRE turn (including collapsed [data-turn-process-hidden] tool steps)
  *    to extract generated media items (image_generate / display_file).
- * 2. Forces the extracted media preview card to be displayed at the TAIL of the
+ * 2. Multi-dimensional Normalization & Fingerprint Deduplication:
+ *    - Eliminates duplicate entries caused by the same asset appearing across
+ *      different lifecycle stages (e.g. Base64 data stream in image_generate
+ *      and persistent file URL in display_file).
+ *    - Correlates filenames, aspect ratios, and turn context to converge
+ *      on the canonical high-resolution source.
+ * 3. Forces the extracted media preview card to be displayed at the TAIL of the
  *    assistant's final answer bubble, completely visible outside the collapsed fold.
- * 3. Automatically opens the right sidebar workbench via business logic,
+ * 4. Automatically opens the right sidebar workbench via business logic,
  *    without relying on manual user clicks or agent instructions.
  */
 
@@ -16,7 +22,6 @@ import { getGlobalMediaViewerStore, MEDIA_VIEWER_TAB_ID } from '../media-viewer/
 import { injectMediaViewerStyles } from '../media-viewer/styles.js';
 
 const ENHANCED_ATTR = 'data-omx-media-enhanced';
-const TURN_PROCESSED_ATTR = 'data-omx-turn-media-scanned';
 
 export interface DetectedMedia {
   id?: string;
@@ -24,30 +29,73 @@ export interface DetectedMedia {
   type: 'image' | 'video';
   title?: string;
   timestamp?: number;
+  filename?: string;
+  canonicalKey?: string;
+  isDataUrl?: boolean;
+  score?: number;
 }
 
-// Track URLs that have already triggered auto-opening the right sidebar
-const autoOpenedUrls = new Set<string>();
+// Track URLs and canonical keys that have already triggered auto-opening the right sidebar
+const autoOpenedKeys = new Set<string>();
 
-export function markAutoOpened(url: string): void {
-  if (url) autoOpenedUrls.add(url);
+export function markAutoOpened(key: string): void {
+  if (key) autoOpenedKeys.add(key);
 }
 
-export function hasAutoOpened(url: string): boolean {
-  return Boolean(url && autoOpenedUrls.has(url));
+export function hasAutoOpened(key: string): boolean {
+  return Boolean(key && autoOpenedKeys.has(key));
 }
 
 export function resetAutoOpenedForTests(): void {
-  autoOpenedUrls.clear();
+  autoOpenedKeys.clear();
+}
+
+/**
+ * Extract a canonical filename (e.g. "image-2026-09-14T...jpg") from a URL,
+ * alt attribute, title attribute, or nearby path strings.
+ */
+export function extractFilename(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+
+  // 1. Check query parameters (?path=..., ?file=..., ?target=...)
+  const queryMatch = raw.match(/[?&](?:path|file|target)=([^&#]+)/i);
+  if (queryMatch && queryMatch[1]) {
+    try {
+      const decoded = decodeURIComponent(queryMatch[1]);
+      const base = decoded.split(/[\\/]/).pop();
+      if (base && /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|mov|m4v|ogg)$/i.test(base)) {
+        return base;
+      }
+    } catch {
+      // ignore decode error
+    }
+  }
+
+  // 2. Direct path or filename pattern
+  const fileMatch = raw.match(/(?:^|[\\/])([a-zA-Z0-9_\-\.\%]+\.(?:png|jpe?g|webp|gif|bmp|avif|mp4|webm|mov|m4v|ogg))(?:\?|#|$)/i);
+  if (fileMatch && fileMatch[1]) {
+    try {
+      return decodeURIComponent(fileMatch[1]);
+    } catch {
+      return fileMatch[1];
+    }
+  }
+
+  return undefined;
 }
 
 /**
  * Scan an element or subtree for generated images or videos,
  * ignoring avatars, icons, and small UI glyphs.
+ * Computes normalization features (filename, canonicalKey, priority score).
  */
 export function extractMediaFromElement(el: HTMLElement): DetectedMedia[] {
   const mediaList: DetectedMedia[] = [];
-  const seen = new Set<string>();
+
+  // Context-level filename hint (e.g. from .dshview-path or toolview text)
+  const pathElem = el.querySelector('.dshview-path');
+  const contextPath = pathElem?.getAttribute('title') || pathElem?.textContent || el.getAttribute('data-target-path') || undefined;
+  const contextFilename = extractFilename(contextPath) || extractFilename(el.textContent);
 
   // 1. Check img tags
   const imgs = el.querySelectorAll<HTMLImageElement>('img');
@@ -58,31 +106,127 @@ export function extractMediaFromElement(el: HTMLElement): DetectedMedia[] {
     if (src.startsWith('data:image/svg') || img.classList.contains('avatar') || img.width === 16 || img.height === 16) {
       continue;
     }
-    if (!seen.has(src)) {
-      seen.add(src);
-      mediaList.push({
-        url: src,
-        type: 'image',
-        title: img.getAttribute('alt') || '生成图片',
-      });
+
+    const alt = img.getAttribute('alt') || '';
+    const titleAttr = img.getAttribute('title') || '';
+    const filename = extractFilename(src) || extractFilename(alt) || extractFilename(titleAttr) || contextFilename;
+    const isData = src.startsWith('data:');
+    const isBlob = src.startsWith('blob:');
+
+    let canonicalKey: string;
+    let score = 20; // Default persistent URL score
+    if (filename) {
+      canonicalKey = `file:${filename.toLowerCase()}`;
+      if (isData) score = 5;
+      else if (isBlob) score = 10;
+    } else if (isData) {
+      canonicalKey = `data:${src.length}:${src.slice(0, 100)}`;
+      score = 5;
+    } else if (isBlob) {
+      canonicalKey = `blob:${src}`;
+      score = 10;
+    } else {
+      canonicalKey = `url:${src.split('?')[0].split('#')[0].toLowerCase()}`;
+      score = 20;
     }
+
+    mediaList.push({
+      url: src,
+      type: 'image',
+      title: (alt && !alt.startsWith('data:') && alt !== '生成图片' && alt !== '预览') ? alt : (filename || '生成图片'),
+      filename,
+      canonicalKey,
+      isDataUrl: isData,
+      score,
+    });
   }
 
   // 2. Check video tags
   const videos = el.querySelectorAll<HTMLVideoElement>('video');
   for (const vid of videos) {
     const src = vid.getAttribute('src');
-    if (src && !seen.has(src)) {
-      seen.add(src);
-      mediaList.push({
-        url: src,
-        type: 'video',
-        title: vid.getAttribute('title') || '生成视频',
-      });
+    if (!src) continue;
+
+    const titleAttr = vid.getAttribute('title') || '';
+    const filename = extractFilename(src) || extractFilename(titleAttr) || contextFilename;
+    const isBlob = src.startsWith('blob:');
+
+    let canonicalKey: string;
+    let score = 20;
+    if (filename) {
+      canonicalKey = `file:${filename.toLowerCase()}`;
+      if (isBlob) score = 10;
+    } else if (isBlob) {
+      canonicalKey = `blob:${src}`;
+      score = 10;
+    } else {
+      canonicalKey = `url:${src.split('?')[0].split('#')[0].toLowerCase()}`;
     }
+
+    mediaList.push({
+      url: src,
+      type: 'video',
+      title: titleAttr || filename || '生成视频',
+      filename,
+      canonicalKey,
+      isDataUrl: false,
+      score,
+    });
   }
 
   return mediaList;
+}
+
+/**
+ * Deduplicate and normalize media items collected within a conversation turn:
+ * 1. Merges data stream previews and persistent file views referencing the same filename.
+ * 2. If a single data URL generation item and a single persistent viewer item exist in the turn,
+ *    correlates them into the canonical persistent item.
+ * 3. Preserves distinct files (multi-image generation) in multiple cards.
+ * 4. Selects the highest quality persistent source for downstream display and right sidebar.
+ */
+export function deduplicateTurnMedia(rawItems: readonly DetectedMedia[]): DetectedMedia[] {
+  if (rawItems.length <= 1) return [...rawItems];
+
+  // 1. Check for single generation (unnamed data URL) + single viewer (named persistent URL)
+  const persistentNamed = rawItems.filter((item) => !item.isDataUrl && item.filename);
+  const unnamedDataUrls = rawItems.filter((item) => item.isDataUrl && !item.filename);
+
+  if (persistentNamed.length === 1 && unnamedDataUrls.length === 1 && persistentNamed[0].type === unnamedDataUrls[0].type) {
+    unnamedDataUrls[0].canonicalKey = persistentNamed[0].canonicalKey;
+    unnamedDataUrls[0].filename = persistentNamed[0].filename;
+  }
+
+  // 2. Cluster items by canonicalKey
+  const clusters = new Map<string, DetectedMedia[]>();
+  for (const item of rawItems) {
+    const key = item.canonicalKey || item.url;
+    if (!clusters.has(key)) {
+      clusters.set(key, []);
+    }
+    clusters.get(key)!.push(item);
+  }
+
+  // 3. For each cluster, elect the highest-scoring canonical representative
+  const result: DetectedMedia[] = [];
+  for (const group of clusters.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+    // Sort by score descending (persistent > blob > data URL)
+    group.sort((a, b) => {
+      const scoreDiff = (b.score ?? 0) - (a.score ?? 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      // Prefer item with a specific filename/title over generic
+      const aTitleValid = a.title && a.title !== '生成图片' && a.title !== '预览' ? 1 : 0;
+      const bTitleValid = b.title && b.title !== '生成图片' && b.title !== '预览' ? 1 : 0;
+      return bTitleValid - aTitleValid;
+    });
+    result.push(group[0]);
+  }
+
+  return result;
 }
 
 /**
@@ -193,10 +337,10 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
 /**
  * Enhance a conversation Turn:
  * 1. Find all nodes belonging to this turn (including collapsed/hidden tool rows).
- * 2. Extract generated media.
- * 3. Locate the final visible assistant text bubble of this turn.
+ * 2. Extract and deduplicate/normalize generated media.
+ * 3. Locate the final assistant answer bubble in this turn.
  * 4. Mount the media tail card onto the bottom of the assistant bubble.
- * 5. Automatically trigger openWorkbench in right sidebar.
+ * 5. Automatically trigger openWorkbench in right sidebar for the canonical asset.
  */
 export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement[], doc: Document = document): boolean {
   if (!turnNodes || turnNodes.length === 0) return false;
@@ -206,18 +350,15 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
   if (alreadyHasTail) return false;
 
   // 1. Aggregate all media in this turn (scans hidden tool results, image_generate, dshview)
-  const allMedia: DetectedMedia[] = [];
-  const seenUrls = new Set<string>();
+  const rawMedia: DetectedMedia[] = [];
 
   for (const node of turnNodes) {
     const items = extractMediaFromElement(node);
-    for (const item of items) {
-      if (!seenUrls.has(item.url)) {
-        seenUrls.add(item.url);
-        allMedia.push(item);
-      }
-    }
+    rawMedia.push(...items);
   }
+
+  // Deduplicate and normalize multi-source media across this turn
+  const allMedia = deduplicateTurnMedia(rawMedia);
 
   if (allMedia.length === 0) return false;
 
@@ -244,7 +385,7 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
     targetBubble = turnNodes[turnNodes.length - 1];
   }
 
-  // 3. Register media into Global Media Viewer Store
+  // 3. Register canonical media into Global Media Viewer Store
   const store = getGlobalMediaViewerStore();
   let firstAddedId = '';
   let shouldAutoOpen = false;
@@ -256,8 +397,10 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
       title: m.title,
     });
     if (!firstAddedId) firstAddedId = added.id;
-    if (!hasAutoOpened(m.url)) {
+    const trackingKey = m.canonicalKey || m.url;
+    if (!hasAutoOpened(trackingKey)) {
       shouldAutoOpen = true;
+      markAutoOpened(trackingKey);
       markAutoOpened(m.url);
     }
   }
@@ -321,7 +464,8 @@ export function scanAndEnhanceTurns(root: ParentNode = (typeof document !== 'und
   for (const bubble of isolatedBubbles) {
     const parentTurn = bubble.closest('[data-chat-turn]');
     if (!parentTurn) {
-      const media = extractMediaFromElement(bubble);
+      const rawMedia = extractMediaFromElement(bubble);
+      const media = deduplicateTurnMedia(rawMedia);
       if (media.length > 0 && !bubble.querySelector('.omx-chat-media-tail')) {
         bubble.setAttribute(ENHANCED_ATTR, 'true');
         const tail = createMediaTailElement(media, targetDoc);
