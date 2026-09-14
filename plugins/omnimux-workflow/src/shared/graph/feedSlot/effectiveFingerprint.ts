@@ -1,5 +1,6 @@
 import { buildUpstreamFingerprint, isMediaInputType, type UpstreamFingerprint } from '../../validation/compatKernel.ts';
 import { selectSlotOccupants } from './assembleEffectiveInputs.ts';
+import { selectGenerationTextSources } from '../generationPrompt.ts';
 import type { FeedAsset, SlotBindings, SlotConflict, SlotLayout } from './types.ts';
 
 export function feedFromFingerprint(fingerprint: UpstreamFingerprint): FeedAsset[] {
@@ -9,7 +10,7 @@ export function feedFromFingerprint(fingerprint: UpstreamFingerprint): FeedAsset
   }] : []);
 }
 
-/** Readiness uses the same slot traversal as payload assembly, including waiting occupants. */
+/** Readiness uses the same available occupant traversal as payload assembly. */
 export function effectiveSlotFingerprint(
   fingerprint: UpstreamFingerprint, layout: SlotLayout, bindings: SlotBindings, conflicts: SlotConflict[] = [],
 ): UpstreamFingerprint {
@@ -21,6 +22,8 @@ export function effectiveSlotFingerprint(
     ...(asset && asset.type !== slot.type ? { availability: 'unavailable' as const } : {}),
   }));
   return buildUpstreamFingerprint({
-    ...fingerprint, assets: [...fingerprint.assets.filter((asset) => !isMediaInputType(asset.type)), ...media],
+    ...fingerprint,
+    prompt: layout.acceptsText === false ? '' : fingerprint.prompt,
+    assets: [...(layout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets)), ...media],
   });
 }

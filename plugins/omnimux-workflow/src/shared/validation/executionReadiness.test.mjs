@@ -304,7 +304,7 @@ test('MiniMax H3: video_multi_ref with reference image upstream passes execution
   };
   const singleModeFailure = findExecutionReadinessFailure([singleModeNode], realHubCatalog, singleModeGraph);
   assert.ok(singleModeFailure !== null);
-  assert.equal(singleModeFailure.reasonCode, 'role_conflict');
+  assert.equal(singleModeFailure.reasonCode, 'min_unsatisfied');
 });
 
 test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsupported', () => {

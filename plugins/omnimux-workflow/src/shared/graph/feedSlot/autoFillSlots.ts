@@ -1,8 +1,18 @@
 import type { FeedAsset, FillResult, SlotBindings, SlotLayout, SlotOccupant, SlotSpec } from './types.ts';
 
 export function acceptsFeedAsset(slot: SlotSpec, asset: FeedAsset): boolean {
-  return slot.type === asset.type && (!asset.mimeType || !slot.allowedMimes?.length
-    || slot.allowedMimes.includes(asset.mimeType));
+  if (slot.type !== asset.type || (asset.mimeType && slot.allowedMimes?.length && !slot.allowedMimes.includes(asset.mimeType))) return false;
+  if (Number.isFinite(slot.maxSizeMb) && Number.isFinite(asset.sizeBytes)
+    && (slot.maxSizeExclusive ? asset.sizeBytes! >= slot.maxSizeMb! * 1024 * 1024 : asset.sizeBytes! > slot.maxSizeMb! * 1024 * 1024)) return false;
+  if (Number.isFinite(asset.durationSec) && ((Number.isFinite(slot.minDurationSec) && asset.durationSec! < slot.minDurationSec!)
+    || (Number.isFinite(slot.maxDurationSec) && asset.durationSec! > slot.maxDurationSec!))) return false;
+  return true;
+}
+
+/** Content eligibility is shared by loading, display and submission. */
+export function isReadyFeedAsset(asset: FeedAsset | undefined): asset is FeedAsset {
+  const path = asset?.pathOrUrl ?? asset?.url;
+  return asset?.availability === 'ready' && Boolean(path?.trim()) && !path!.trim().startsWith('blob:');
 }
 
 /** Preserve explicit choices first; automatically use each supply edge at most once. */
@@ -26,7 +36,12 @@ export function autoFillSlots(feedAssets: FeedAsset[], layout: SlotLayout, expli
       for (const occupant of occupants) {
         if (occupant.pinned !== pinned) continue;
         const asset = byEdge.get(occupant.edgeId);
-        if (!asset || asset.sourceNodeId !== occupant.sourceNodeId) continue;
+        if (!asset || asset.sourceNodeId !== occupant.sourceNodeId) {
+          if (pinned && slot) bindings[name]!.push({ ...occupant });
+          else if (pinned) conflicts.push({ slot: name, occupant: { ...occupant }, reason: 'slot_removed' });
+          continue;
+        }
+        if (!pinned && !isReadyFeedAsset(asset)) continue;
         const next: SlotOccupant = { ...occupant, outputId: asset.outputId };
         const reason = !slot ? 'slot_removed' : slot.type !== asset.type ? 'type_mismatch'
           : !acceptsFeedAsset(slot, asset) ? 'role_illegal' : undefined;
@@ -47,9 +62,11 @@ export function autoFillSlots(feedAssets: FeedAsset[], layout: SlotLayout, expli
     }
   }
   for (const slot of slots) {
+    if (conflicts.some((conflict) => conflict.slot === slot.slot)
+      || bindings[slot.slot]!.some((occupant) => occupant.pinned && !isReadyFeedAsset(byEdge.get(occupant.edgeId)))) continue;
     for (const asset of feed) {
       if (bindings[slot.slot]!.length >= (slot.max ?? Infinity)) break;
-      if (used.has(asset.edgeId) || usedInputs.has(identity(asset)) || reserved.has(asset.edgeId) || !acceptsFeedAsset(slot, asset)) continue;
+      if (!isReadyFeedAsset(asset) || used.has(asset.edgeId) || usedInputs.has(identity(asset)) || reserved.has(asset.edgeId) || !acceptsFeedAsset(slot, asset)) continue;
       // Role-specific assets must be chosen explicitly, not inferred as masks/control signals.
       if (slot.role === 'mask' || slot.role === 'controlnet') continue;
       bindings[slot.slot]!.push({

@@ -31,12 +31,12 @@ test('table and text-without-url sources participate, media URLs do not become p
     '来源 1：\n列名\n值\n\n来源 2：\n正文');
 });
 
-test('waiting and blank text/table sources remain observable and cannot be replaced by a later duplicate', () => {
+test('waiting and blank text/table sources are omitted and cannot be replaced by a stale later duplicate', () => {
   const waiting = { sourceNodeId: 'waiting', type: 'text', availability: 'waiting' };
   const blank = { sourceNodeId: 'table', type: 'table', textContent: '  ', availability: 'unavailable' };
   assert.deepEqual(selectGenerationTextSources([
     waiting, blank, { sourceNodeId: 'waiting', type: 'text', textContent: 'stale duplicate' },
-  ]), [waiting, blank]);
+  ]), []);
 });
 
 test('a non-text entry does not suppress a later eligible source with the same node identity', () => {

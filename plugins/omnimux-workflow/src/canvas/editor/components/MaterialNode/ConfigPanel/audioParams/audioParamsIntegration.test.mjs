@@ -64,7 +64,7 @@ test('Issue #763/#1760：speech 不消费音频，music 严格保留所选操作
     {id:'text_to_speech',listed:true,output:{type:'audio'},inputs:[]},
     {id:'text_to_music',listed:true,output:{type:'audio'},inputs:[{slot:'reference_audio',type:'audio',role:'reference',source:'upstream_edge',min:0,max:1}]},
   ]}]};
-  const feed = [0,1].map(i => ({edgeId:`audio-${i}`,sourceNodeId:`audio-${i}`,type:'audio',ordinal:i,availability:'ready'}));
+  const feed = [0,1].map(i => ({edgeId:`audio-${i}`,sourceNodeId:`audio-${i}`,type:'audio',ordinal:i,availability:'ready',url:`https://fixture.test/audio-${i}.mp3`}));
   const speech = deriveSlotLayout(catalog, 'audio-model', 'text_to_speech', 'audio');
   assert.equal(speech.preset, 'none');
   assert.deepEqual(speech.slots, []);

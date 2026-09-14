@@ -59,7 +59,7 @@ test('executor guards missing required assets and connected empty outputs before
   const gateway = captureGateway(catalog);
   const executor = createMaterialGatewayExecutor({ gateway });
   await assert.rejects(executor.execute(node(), context()), { code: 'min_unsatisfied' });
-  await assert.rejects(executor.execute(node(), context({ upstreamBindings: [{ sourceNodeId: 'empty', output: {} }] })), { code: 'input_waiting' });
+  await assert.rejects(executor.execute(node(), context({ upstreamBindings: [{ sourceNodeId: 'empty', output: {} }] })), { code: 'min_unsatisfied' });
   await assert.rejects(executor.execute(node(), context({ upstreamBindings: [{ sourceNodeId: 'lost', output: { mediaAssets: [{ type: 'image', url: 'blob:lost' }] } }] })), /素材/);
   assert.equal(gateway.requests.length, 0);
 });

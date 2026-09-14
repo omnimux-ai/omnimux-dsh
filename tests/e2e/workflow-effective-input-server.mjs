@@ -63,6 +63,7 @@ const server=createServer(async(req,res)=>{
     if(req.method==='GET'&&url.pathname==='/captures') return send(200,captures);
     if(req.method==='GET'&&/^\/media\/[ab]\.svg$/.test(url.pathname)) return send(200,svg(url.pathname.includes('/a.')?'a':'b'),'image/svg+xml');
     if(req.method==='GET'&&url.pathname==='/media/silence.wav') return send(200,wav,'audio/wav');
+    if(req.method==='GET'&&url.pathname==='/media/demo.mp4') return send(200,await readFile(resolve(root,'packages/form-contract/examples/replication-demo.mp4')),'video/mp4');
     if(req.method==='POST'&&url.pathname==='/rebuild') return send(200,await rebuild());
     if(req.method==='POST'&&url.pathname==='/capture') {
       let body=''; for await(const chunk of req) {body+=chunk;if(body.length>4_000_000) throw Error('Graph too large');}

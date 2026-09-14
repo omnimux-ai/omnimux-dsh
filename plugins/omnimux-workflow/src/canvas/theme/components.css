@@ -1421,6 +1421,23 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 .wf-effective-text strong { font-size: 11px; font-weight: 500; color: var(--dsw-alias-label-secondary); }
 .wf-effective-text span > span, .wf-effective-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wf-effective-text span > span { font-size: 12px; }
+.wf-effective-text--slot {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  aspect-ratio: 1;
+  padding: 4px;
+  gap: 2px;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+.wf-effective-text--slot > span { display: block; width: 100%; text-align: center; }
+.wf-effective-text--slot strong { display: none; }
+.wf-effective-text--slot span > span { display: block; font-size: 10px; }
 .wf-slot-hover-preview audio { width: 100%; }
 
 .wf-slot-well {

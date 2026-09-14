@@ -7,7 +7,7 @@ import { findExecutionReadinessFailure } from '../../shared/validation/execution
 
 const catalog = { source: 'omnimux', text: [{ id: 'text-model' }], image: [], video: [], audio: [], models: [{ id: 'text-model', listed: true, operations: [{
   id: 'text_generate', listed: true, output: { type: 'text' }, inputs: [
-    { slot: 'prompt', role: 'prompt', accepts: ['text'], source: 'node_field', min: 1, max: 1 },
+    { slot: 'prompt', role: 'prompt', type: 'text', source: 'node_field', min: 1, max: 1 },
   ],
 }] }] };
 const target = { id: 'target', type: 'material', data: { materialType: 'text', prompt: '缩短到 30 秒', params: { model: 'text-model', operation: 'text_generate' } } };
@@ -34,22 +34,23 @@ test('dispatch sends both current text outputs and the local instruction in stab
   assert.ok(requests[0].prompt.indexOf('第一段剧本') < requests[0].prompt.indexOf('第二段剧本'));
 });
 
-test('missing or empty scheduler outputs make zero gateway requests despite local text', async () => {
+test('missing or empty scheduler outputs are omitted when actual text satisfies the prompt', async () => {
   for (const output of [undefined, {}, { status: 'waiting' }, { text: '' }, { text: '   ' }]) {
     const requests = [];
-    await assert.rejects(dispatch({ first: { text: 'usable' }, second: output }, requests), /等待/);
-    assert.equal(requests.length, 0);
+    await dispatch({ first: { text: 'usable' }, second: output }, requests);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].prompt, '来源 1：\nusable\n\n补充要求：\n缩短到 30 秒');
   }
 });
 
-test('full scheduling may defer a generated dependency; single execution and missing imports cannot', () => {
+test('empty generated and imported text does not block either execution mode with a local prompt', () => {
   const generated = { id: 'first', type: 'material', data: { materialType: 'text', prompt: 'write', params: { model: 'text-model' } } };
   const imported = { id: 'second', type: 'material', data: { materialType: 'text', nodeKind: 'import', content: 'ready' } };
   const graph = { nodes: [generated, imported, target], edges };
-  assert.equal(findExecutionReadinessFailure([target], catalog, graph).reasonCode, 'input_waiting');
+  assert.equal(findExecutionReadinessFailure([target], catalog, graph), null);
   assert.equal(findExecutionReadinessFailure([target], catalog, { ...graph, scheduledNodeIds: new Set(['first', 'second', 'target']) }), null);
   imported.data.content = '';
-  assert.equal(findExecutionReadinessFailure([target], catalog, { ...graph, scheduledNodeIds: new Set(['first', 'second', 'target']) }).reasonCode, 'input_waiting');
+  assert.equal(findExecutionReadinessFailure([target], catalog, { ...graph, scheduledNodeIds: new Set(['first', 'second', 'target']) }), null);
 });
 
 
@@ -60,7 +61,7 @@ test('nonconsumed media stays out of requests; ambiguous audio text remains bloc
   assert.equal(requests[0].references, undefined);
   assert.equal(requests[0].image, undefined);
   requests.length = 0;
-  const audioCatalog = { source: 'omnimux', models: [{ id: 'voice-model', listed: true, operations: [{ id: 'speak', listed: true, output: { type: 'audio' }, inputs: [{ slot: 'prompt', role: 'prompt', source: 'node_field', accepts: ['text'], min: 1, max: 1 }] }] }] };
+  const audioCatalog = { source: 'omnimux', models: [{ id: 'voice-model', listed: true, operations: [{ id: 'speak', listed: true, output: { type: 'audio' }, inputs: [{ slot: 'prompt', role: 'prompt', source: 'node_field', type: 'text', min: 1, max: 1 }] }] }] };
   await assert.rejects(dispatch({ first: { text: '朗读正文' }, second: { text: '另一段正文' } }, requests, { ...target, data: { materialType: 'audio', prompt: '温柔一点', params: { model: 'voice-model', operation: 'speak' } } }, audioCatalog), /正文/);
   assert.equal(requests.length, 0);
 });

@@ -1,11 +1,11 @@
-/** Select each connected text source once, preserving connection order and waiting sources. */
-export function selectGenerationTextSources<T extends { sourceNodeId: string; type: string; textContent?: string; url?: string }>(sources: readonly T[]): T[] {
+/** Select available nonempty current text once, preserving connection order. */
+export function selectGenerationTextSources<T extends { sourceNodeId: string; type: string; textContent?: string; url?: string; availability?: string }>(sources: readonly T[]): T[] {
   const seen = new Set<string>();
   return sources.filter((source) => {
     const text = source.type === 'text' || source.type === 'table' || (Boolean(source.textContent) && !source.url);
     if (!text || seen.has(source.sourceNodeId)) return false;
     seen.add(source.sourceNodeId);
-    return true;
+    return Boolean(source.textContent?.trim()) && (!source.availability || source.availability === 'ready');
   });
 }
 

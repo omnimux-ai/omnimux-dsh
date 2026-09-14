@@ -16,7 +16,8 @@ export function deriveSlotLayout(
   };
   const model = resolveModelView(buildContractView(catalog), modelId);
   const operation = model?.operations.find((op) => op.id === operationId && op.listed);
-  if (!operation) return { ...layout, implementationGaps: ['operation_unlisted'] };
+  if (!operation) return { ...layout, acceptsText: false, implementationGaps: ['operation_unlisted'] };
+  layout.acceptsText = operation.inputs.some((input) => input.type === 'text' || input.role === 'prompt' || input.slot === 'prompt');
   // Plain speech submission intentionally accepts no reference media.
   const inputs = operation.output.type === 'audio' && operation.id === 'text_to_speech'
     ? [] : bindableSlots(operation);
@@ -37,6 +38,8 @@ export function deriveSlotLayout(
   layout.slots = ordered.map((input) => ({
     slot: input.slot, role: input.role, type: input.type, min: input.min, max: input.max,
     labelKey: `panel.slot.${input.slot}`,
+    maxSizeMb: input.maxSizeMb, maxSizeExclusive: input.maxSizeExclusive,
+    minDurationSec: input.minDurationSec, maxDurationSec: input.maxDurationSec,
     ...(input.allowedMimes ? { allowedMimes: [...input.allowedMimes] } : {}),
   }));
   layout.swap = policy?.swap === true && layout.slots.length === 2

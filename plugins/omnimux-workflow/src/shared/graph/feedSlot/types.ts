@@ -41,8 +41,14 @@ export interface SlotSpec {
   max: number | null;
   labelKey: string;
   allowedMimes?: string[];
+  maxSizeMb?: number;
+  maxSizeExclusive?: boolean;
+  minDurationSec?: number;
+  maxDurationSec?: number;
 }
 export interface SlotLayout {
+  /** True only when the selected operation declares a text/prompt input. */
+  acceptsText?: boolean;
   operationId: string;
   preset: SlotLayoutPreset;
   slots: SlotSpec[];

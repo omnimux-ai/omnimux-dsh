@@ -80,15 +80,39 @@ test('invalid pinned types and removed slots become conflicts, deleted edges dis
   const removed = autoFillSlots([a], layout('text_to_video'), { old: [occupant(a)] });
   assert.equal(removed.conflicts[0].reason, 'slot_removed');
 });
-test('waiting occupied inputs block, optional included inputs cannot be silently skipped', () => {
-  const a = feed(1, 'image', { availability: 'waiting' }); const l = layout('first_frame');
+test('ordinary waiting supply is omitted and leaves the required slot unsatisfied', () => {
+  const a = feed(1, 'image', { availability: 'waiting', url: undefined }); const l = layout('first_frame');
   const payload = assemble(l, [a], autoFillSlots([a], l, {}).bindings);
-  assert.equal(payload.blockedInputs[0].reason, 'input_waiting'); assert.equal(payload.references.length, 0);
+  assert.deepEqual(payload.blockedInputs, []);
+  assert.deepEqual(payload.emptyRequiredSlots, ['first_frame']);
+  assert.deepEqual(payload.references, []);
+});
+test('empty before ready does not consume max-one capacity and overflow stays unused', () => {
+  const l = layout('first_frame');
+  const assets = [feed(0, 'image', { url: undefined }), feed(1), feed(2)];
+  const fill = autoFillSlots(assets, l, {});
+  assert.deepEqual(fill.bindings.first_frame.map((item) => item.edgeId), ['e1']);
+  assert.deepEqual(fill.unusedFeed.map((item) => item.edgeId), ['e0', 'e2']);
+  assert.deepEqual(assemble(l, assets, fill.bindings).emptyRequiredSlots, []);
 });
 test('MIME mismatch stays feed; unknown MIME is not treated as unsupported', () => {
   const l = layout('first_frame'); l.slots[0].allowedMimes = ['image/png'];
   assert.equal(autoFillSlots([feed(1, 'image', { mimeType: 'image/gif' })], l, {}).unusedFeed.length, 1);
   assert.equal(autoFillSlots([feed(1)], l, {}).bindings.first_frame.length, 1);
+});
+test('known invalid duration or size cannot occupy capacity before valid supply; unknown metadata remains eligible', () => {
+  const custom = structuredClone(catalog);
+  custom.models[0].operations.push({ id: 'custom', listed: true, output: { type: 'video' }, inputs: [{
+    ...input('videos', 'video', 'reference', 1, 1), minDurationSec: 2, maxDurationSec: 10, maxSizeMb: 1, maxSizeExclusive: true,
+  }] });
+  const l = deriveSlotLayout(custom, 'video', 'custom');
+  for (const invalid of [{ durationSec: 1 }, { durationSec: 11 }, { sizeBytes: 1024 * 1024 }, { sizeBytes: 1024 * 1024 + 1 }]) {
+    const assets = [feed(0, 'video', invalid), feed(1, 'video', { durationSec: 5, sizeBytes: 1024 })];
+    const fill = autoFillSlots(assets, l, {});
+    assert.deepEqual(fill.bindings.videos.map((entry) => entry.edgeId), ['e1']);
+    assert.deepEqual(fill.unusedFeed.map((entry) => entry.edgeId), ['e0']);
+  }
+  assert.deepEqual(autoFillSlots([feed(0, 'video')], l, {}).bindings.videos.map((entry) => entry.edgeId), ['e0']);
 });
 test('legacy edge mirrors hydrate in role order without mutating graph', () => {
   const assets = [feed(1), feed(2)]; const l = layout('first_last_frame');
