@@ -15,7 +15,9 @@ import { generatePixelAvatarDataUrl, generatePixelAvatarSvg } from './pixel-avat
 
 describe('Agent 输入框与专家市场头像收敛一致性契约', () => {
   const factoryPresets = [
-    { name: '全能社媒操盘手', id: 'tiktok-agent' },
+    { name: '全能社媒操盘手', id: 'omni-agent' },
+    { name: '全能营销操盘手', id: 'marketing-agent' },
+    { name: '全能短剧操盘手', id: 'drama-agent' },
     { name: '代码开发', id: 'standard' },
     { name: '日常工作', id: 'daily-work' },
     { name: '创造模式', id: 'cordis' },
@@ -57,20 +59,24 @@ describe('Agent 输入框与专家市场头像收敛一致性契约', () => {
     }
   })
 
-  it('市场垂直专家在输入框能够无缝映射至官方专属肖像封面', () => {
+  it('市场垂直专家在输入框与专家市场全部统一收敛至确定性像素艺术头像', () => {
     const marketHiredExperts = [
-      { name: 'Shopee运营专家', id: 'shopee-ops-expert', cover: 'expert-shopee-ops.png' },
-      { name: 'YouTube创作者专家', id: 'youtube-creator-expert', cover: 'expert-youtube-creator.png' },
-      { name: '亚马逊运营专家', id: 'amazon-ops-expert', cover: 'expert-amazon-ops.png' },
-      { name: 'TikTok Shop运营专家', id: 'tiktok-shop-ops-expert', cover: 'expert-tiktok-shop-ops.png' },
-      { name: 'HTML生成器', id: 'html-generator', cover: 'expert-html-generator.png' },
+      { name: 'Shopee运营专家', id: 'shopee-ops-expert' },
+      { name: 'YouTube创作者专家', id: 'youtube-creator-expert' },
+      { name: '亚马逊运营专家', id: 'amazon-ops-expert' },
+      { name: 'TikTok Shop运营专家', id: 'tiktok-shop-ops-expert' },
+      { name: 'HTML生成器', id: 'html-generator' },
+      { name: '媒体创作者', id: 'media-creator' },
+      { name: 'TikTok电商专家', id: 'tiktok-ecommerce-expert' },
     ]
 
     for (const exp of marketHiredExperts) {
-      const resolved = resolveAgentPresetAvatar(exp.name)
+      const resolved = resolveAgentPresetAvatar(exp.name, { size: 20 })
+      const expectedDataUrl = generatePixelAvatarDataUrl(exp.id, { size: 20 })
       assert.ok(resolved, `市场专家「${exp.name}」应能被输入框识别`)
       assert.equal(resolved.id, exp.id)
-      assert.match(resolved.src, new RegExp(exp.cover), `输入框应展示「${exp.name}」的官方封面`)
+      assert.equal(resolved.src, expectedDataUrl, `输入框中「${exp.name}」必须展示确定性像素头像`)
+      assert.doesNotMatch(resolved.src, /\.png$/, '严禁回退或读取写实人物封面图片')
     }
   })
 
