@@ -20,10 +20,11 @@ export function createOfficialClient(deps) {
    * @param {string} base
    * @param {string} path
    * @param {{ method?: string, headers?: Record<string, string>, body?: unknown }} [opts]
+   * @param {() => void} [beforeSend] Trusted synchronous authorization check.
    */
-  async function request(base, path, opts = {}) {
+  async function request(base, path, opts = {}, beforeSend) {
     const method = opts.method || 'GET'
-    const response = await fetcher(`${base}${path}`, {
+    const init = {
       method,
       headers: {
         accept: 'application/json',
@@ -31,7 +32,9 @@ export function createOfficialClient(deps) {
         ...opts.headers,
       },
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
-    })
+    }
+    beforeSend?.()
+    const response = await fetcher(`${base}${path}`, init)
     let json = null
     try {
       json = await response.json()
@@ -67,7 +70,8 @@ export function createOfficialClient(deps) {
     })
   }
 
-  async function withPat(path, opts = {}) {
+  /** @param {string} path @param {object} [opts] @param {() => void} [beforeSend] */
+  async function withPat(path, opts = {}, beforeSend) {
     const access = await deps.resolveAccess()
     if (!access?.token) {
       throw new OmnimuxError('needs-omnimux', 'sign in to OmniMux or set OMNIMUX_ACCESS_TOKEN')
@@ -80,7 +84,7 @@ export function createOfficialClient(deps) {
     return request(siteBaseUrl, path, {
       ...opts,
       headers: { ...headers, ...opts.headers },
-    })
+    }, beforeSend)
   }
 
   /**

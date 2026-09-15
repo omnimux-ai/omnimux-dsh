@@ -1,0 +1,30 @@
+{
+  "task": "avatar-card-cover-fix",
+  "issue": 1966,
+  "verified_at": "2026-09-15T23:39:00.000Z",
+  "summary": "角色卡立绘优先渲染修复的实测证据。",
+  "root_cause": "免费数字人角色的本地素材是语音样本（.wav），cloudCardKind 按 mediaType === 'audio' 直接判成语音卡，渲染分支只画色块与播放键，cover_url 上的立绘未进入渲染路径。",
+  "catalog_facts": {
+    "character_total": 429,
+    "rows_with_both_cover_and_audio": 100,
+    "sample": {
+      "name": "Anchor Parrot",
+      "sub_category": "animal-character",
+      "media_type": "audio",
+      "media_url": "file:library/opc/free-ai-avatars/versions/v1/files/Animal Character/Anchor Parrot/068-anchor-parrot.wav",
+      "cover_url": "file:library/opc/free-ai-avatars/versions/v1/files/Animal Character/Anchor Parrot/Anchor Parrot.png",
+      "cover_bytes_on_disk": 3314747
+    }
+  },
+  "post_fix_expectation": {
+    "kind": "media",
+    "renders_img": true,
+    "renders_play_control": true
+  },
+  "unit_evidence": {
+    "command": "node --test plugins/omnimux-assets/src/*.test.js plugins/omnimux-assets/src/client/*.test.js",
+    "pass": 500,
+    "fail": 1,
+    "only_failure": "tabs-spacing.e2e.test.js — 干净基线上同样失败，属既有基线问题"
+  }
+}

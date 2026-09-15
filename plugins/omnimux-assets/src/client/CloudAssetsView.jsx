@@ -180,7 +180,9 @@ export function CloudAssetCard(props) {
   }, [])
 
   const kind = cloudCardKind(asset)
-  const canPlay = kind === 'audio'
+  // 能播的语音行都挂播放键；有立绘时它浮在立绘上，没有立绘才是纯语音色块。
+  const canPlay = asset?.mediaType === 'audio' && asset?.hasMedia === true && asset?.playable !== false
+  const showArt = asset?.hasCover === true || (asset?.hasMedia === true && asset?.mediaType !== 'audio')
   const handleBroken = useCallback(() => { setBroken(true) }, [])
   const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
   const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
@@ -205,7 +207,7 @@ export function CloudAssetCard(props) {
   const previewLabel = `${asset.name} · ${t('card.view')}`
   // A voice card carries one of five restrained dark washes, picked by row id so
   // it never changes between renders. Other kinds declare no theme.
-  const theme = canPlay ? cloudAudioTheme(asset.id) : undefined
+  const theme = canPlay && !showArt ? cloudAudioTheme(asset.id) : undefined
 
   return (
     <div
@@ -227,7 +229,7 @@ export function CloudAssetCard(props) {
           onClick={canPlay ? handlePlayClick : undefined}
           onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
         >
-          {canPlay ? null : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} hovering={hovering} />}
+          {showArt ? <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} hovering={hovering} /> : null}
           {canPlay ? (
             <span className="omnimux-assets-cloud-play" aria-hidden="true">
               {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}

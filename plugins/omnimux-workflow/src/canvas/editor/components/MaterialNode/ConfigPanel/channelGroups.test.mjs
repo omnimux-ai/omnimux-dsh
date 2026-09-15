@@ -160,13 +160,6 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
 
   // #1818：线路约束是完整规格——可用生成方式、参数选项集与输入能力，不只是固定时长。
   it('resolves the full spec of the lines the node routes to', () => {
-    const cheap = resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap'] });
-    assert.deepEqual(cheap.operations, ['video_multi_ref']);
-    assert.deepEqual(cheap.parameters.duration, { fixed: 30 });
-    assert.deepEqual(cheap.parameters.resolution, { only: ['720p'] });
-    assert.deepEqual(cheap.parameters.aspectRatio, { only: ['16:9', '9:16'] });
-    assert.deepEqual(cheap.inputs, { image: { max: 9 }, video: { max: 0 }, audio: { max: 0 } });
-
     // 进阶版目前只固定了时长；标准版与自动路由都不施加约束
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'pro' }), { parameters: { duration: { fixed: 30 } } });
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['standard'] }), {});
@@ -175,15 +168,15 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }), {});
     // 未声明约束的模型行为不变
     assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['pro'] }), {});
-    // 网关分组标识同样可寻址，带渠道后缀的模型 id 先归一
-    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'seedance-cheap' }).parameters.duration, { fixed: 30 });
-    assert.deepEqual(resolveLineConstraints('seedance-2-5@cheap', { allowedGroups: ['cheap'] }).inputs.video, { max: 0 });
   });
 
-  it('keeps what several selected lines agree on, with the stricter ceiling', () => {
-    const mixed = resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] });
-    assert.deepEqual(mixed.parameters.duration, { fixed: 30 });
-    assert.deepEqual(mixed.inputs, { image: { max: 9 }, video: { max: 0 }, audio: { max: 0 } });
-    assert.deepEqual(mixed.operations, ['video_multi_ref']);
+  // 30 秒 / 9 图特惠线路（wireGroup seedance-cheap）上游断货已下架：
+  // 它不再贡献任何约束，选中它的历史工程也不得把 30 秒 / 9 图能力继续挂在节点上。
+  it('drops every constraint of the delisted cheap line', () => {
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'seedance-cheap' }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@cheap', { allowedGroups: ['cheap'] }), {});
+    // 下架线路与仍在售的标准版混选时，只剩标准版（无约束）
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
 });

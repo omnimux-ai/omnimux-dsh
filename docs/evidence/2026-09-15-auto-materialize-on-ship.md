@@ -19,6 +19,7 @@
 2. **桌面应用静默热重载**：
    - 新增 `scripts/reload-dev-app.mjs`，通过原生 WebSocket 连接本地 Dev App 的 CDP 调试端口（9229）；
    - 物化完成后自动发送 `Page.reload` 静默刷新，使最新代码在用户屏幕上即刻生效；若应用未开启则平滑跳过；
+   - 后续修订（Issue #1981）：`Page.reload` 只覆盖 Client 产物（由 Web 服务按请求读盘），宿主进程内的插件模块不会随之重载，宿主侧变更会留下「新前端 + 旧后端」混装。因此 `worktree.sh` 收尾改为按变更面分流——`plugins/<p>/src/client/` 之外的变更走 `reload-dev-app.mjs --restart` 受控重启，纯 Client 变更仍只刷新页面。规格见 `specs/dev-ship-restart-consistency.spec.md`；上表「CDP 热重载探针实测」仅证明页面刷新链路，不代表宿主侧变更已生效。
 3. **清理命令（remove）自动兜底**：
    - 在 `cmd_remove` 中，若带 `--pr` 且主检出落后于远端，自动补全同步拉取与物化刷新，彻底堵死所有漏网路径。
 

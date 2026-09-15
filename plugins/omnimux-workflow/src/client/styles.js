@@ -323,7 +323,7 @@ export const WORKFLOW_CSS = `
   justify-content: space-between;
   padding: 12px 20px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-surface-raised);
+  background: var(--dsw-alias-bg-layer-1);
   flex-shrink: 0;
 }
 .omx-apptab-header-left {
@@ -341,7 +341,7 @@ export const WORKFLOW_CSS = `
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
-  background: var(--dsw-alias-interactive-bg);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   border: 1px solid var(--dsw-alias-border-l1);
 }
@@ -372,7 +372,7 @@ export const WORKFLOW_CSS = `
   border-right: 1px solid var(--dsw-alias-border-l2);
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-surface-raised);
+  background: var(--dsw-alias-bg-layer-1);
   overflow-y: auto;
 }
 .omx-apptab-form {
@@ -406,7 +406,7 @@ export const WORKFLOW_CSS = `
   gap: 4px;
 }
 .omx-apptab-required {
-  color: var(--dsw-alias-status-danger);
+  color: var(--dsw-alias-state-error-primary);
 }
 .omx-apptab-hint {
   font-size: 11px;
@@ -418,7 +418,7 @@ export const WORKFLOW_CSS = `
   width: 398px;
   border-radius: 8px;
   border: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-interactive-bg);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   padding: 0 12px;
   font-size: 13px;
@@ -428,7 +428,7 @@ export const WORKFLOW_CSS = `
 .omx-apptab-input.is-error,
 .omx-apptab-select.is-error,
 .omx-apptab-textarea.is-error {
-  border-color: var(--dsw-alias-status-danger);
+  border-color: var(--dsw-alias-state-error-primary);
 }
 .omx-apptab-select option {
   background: var(--dsw-alias-bg-base);
@@ -453,7 +453,7 @@ export const WORKFLOW_CSS = `
   width: 398px;
   border-radius: 10px;
   border: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-interactive-bg);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   padding: 8px 12px;
   font-size: 13px;
@@ -464,7 +464,7 @@ export const WORKFLOW_CSS = `
 }
 .omx-apptab-error-text {
   font-size: 11px;
-  color: var(--dsw-alias-status-danger);
+  color: var(--dsw-alias-state-error-primary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -474,12 +474,14 @@ export const WORKFLOW_CSS = `
   padding-top: 16px;
   border-top: 1px solid var(--dsw-alias-border-l1);
 }
+/* Ink CTA：填充取 label-primary、文字取 label-primary-foreground，
+   深色主题为浅底深字、浅色主题为深底浅字，随宿主主题级联自适应。 */
 .omx-apptab-cta-btn {
   height: 44px;
   width: 398px;
   border-radius: 8px;
-  background: var(--dsw-alias-interactive-primary);
-  color: var(--dsw-alias-label-inverse);
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
   border: none;
   font-size: 14px;
   font-weight: 600;
@@ -488,12 +490,18 @@ export const WORKFLOW_CSS = `
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: opacity 0.2s;
-  box-shadow: 0 2px 8px var(--dsw-alias-bg-mask-1);
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omx-apptab-cta-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-button-primary-hover);
+}
+.omx-apptab-cta-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 .omx-apptab-cta-btn:disabled {
-  background: var(--dsw-alias-interactive-bg-disabled);
-  color: var(--dsw-alias-label-disabled);
+  background: var(--dsw-alias-button-primary-dimmed);
+  color: var(--dsw-alias-label-tertiary);
   cursor: not-allowed;
 }
 .omx-apptab-output-panel {
@@ -511,7 +519,7 @@ export const WORKFLOW_CSS = `
   height: 40px;
   padding: 0 20px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-surface-raised);
+  background: var(--dsw-alias-bg-layer-1);
   flex-shrink: 0;
 }
 .omx-apptab-tab-pill {
@@ -567,7 +575,7 @@ export const WORKFLOW_CSS = `
 .omx-apptab-task-card {
   padding: 16px;
   border-radius: 10px;
-  background: var(--dsw-alias-surface-raised);
+  background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
   display: flex;
   flex-direction: column;
@@ -588,16 +596,17 @@ export const WORKFLOW_CSS = `
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
-  background: var(--dsw-alias-interactive-bg);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-brand-primary);
 }
 .omx-apptab-status-badge.is-completed {
-  background: var(--dsw-alias-status-success-bg, var(--dsw-alias-interactive-bg));
-  color: var(--dsw-alias-status-success);
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-primary);
 }
+/* 宿主未提供 error 层浅色底，danger 只存在半透明叠加色，故失败态与错误框共用该色。 */
 .omx-apptab-status-badge.is-failed {
-  background: var(--dsw-alias-status-danger-bg, var(--dsw-alias-interactive-bg));
-  color: var(--dsw-alias-status-danger);
+  background: var(--dsw-alias-interactive-bg-hover-danger);
+  color: var(--dsw-alias-state-error-primary);
 }
 .omx-apptab-task-time {
   font-size: 12px;
@@ -611,7 +620,7 @@ export const WORKFLOW_CSS = `
 .omx-apptab-media-box {
   border-radius: 8px;
   overflow: hidden;
-  background: var(--dsw-alias-bg-surface, var(--dsw-alias-bg-elevated));
+  background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   flex-direction: column;
@@ -637,9 +646,9 @@ export const WORKFLOW_CSS = `
 .omx-apptab-error-box {
   padding: 8px 12px;
   border-radius: 6px;
-  background: var(--dsw-alias-status-danger-bg, var(--dsw-alias-interactive-bg));
-  border: 1px solid var(--dsw-alias-border-danger, var(--dsw-alias-border-l2));
-  color: var(--dsw-alias-status-danger);
+  background: var(--dsw-alias-interactive-bg-hover-danger);
+  border: 1px solid var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-state-error-primary);
   font-size: 12px;
 }
 .omx-apptab-inputs-summary {
@@ -665,7 +674,7 @@ export const WORKFLOW_CSS = `
 .omx-apptab-showcase-card {
   padding: 16px;
   border-radius: 10px;
-  background: var(--dsw-alias-surface-raised);
+  background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
   display: flex;
   flex-direction: column;
@@ -685,7 +694,7 @@ export const WORKFLOW_CSS = `
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 6px;
-  background: var(--dsw-alias-interactive-bg);
+  background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
@@ -693,7 +702,7 @@ export const WORKFLOW_CSS = `
 .omx-apptab-showcase-media {
   border-radius: 8px;
   overflow: hidden;
-  background: var(--dsw-alias-bg-surface, var(--dsw-alias-bg-elevated));
+  background: var(--dsw-alias-bg-layer-2);
   display: flex;
   justify-content: center;
 }

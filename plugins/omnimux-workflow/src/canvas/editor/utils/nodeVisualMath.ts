@@ -120,7 +120,7 @@ export interface GroupHeaderLayout {
 
 export interface GroupTopBarLayout {
   top: number;
-  left: string;
+  left: number;
   right: number | 'auto';
   transform: string;
   transformOrigin: string;

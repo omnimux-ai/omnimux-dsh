@@ -188,8 +188,11 @@ export function normalizeCloudAsset(row) {
  */
 export function cloudCardKind(asset) {
   const hasMedia = asset?.hasMedia === true
+  // 立绘优先：数字人 / 拟人角色的素材是语音样本，但卡片门面是那张立绘。
+  // 只有「没有立绘的纯语音行」才走语音色块版式。
+  if (asset?.hasCover === true) return 'media'
   if (asset?.mediaType === 'audio') return hasMedia && asset?.playable !== false ? 'audio' : 'text'
-  if (asset?.hasCover === true || hasMedia) return 'media'
+  if (hasMedia) return 'media'
   return 'text'
 }
 
