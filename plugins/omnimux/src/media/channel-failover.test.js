@@ -43,8 +43,10 @@ describe('Channel Group Routing & Failover', () => {
     assert.equal(result.mode, 'live')
     assert.equal(result.taskId, 'task-success')
     assert.ok(attempts.length >= 2, 'should have attempted at least two candidates')
-    assert.equal(attempts[0], 'seedance-2-0@cheap')
-    assert.equal(attempts[1], 'seedance-2-0@default')
+    // Issue #1851: the media path sends the bare model id and carries the group
+    // as X-Omnimux-Group, so the injected runtime must never see the candidate
+    // string — and a shared injection must survive every failover attempt.
+    assert.deepEqual(attempts, ['seedance-2-0', 'seedance-2-0'])
   })
 
   it('completeTextViaChat falls over to next candidate when first candidate returns 503', async () => {

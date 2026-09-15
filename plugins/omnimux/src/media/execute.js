@@ -178,14 +178,19 @@ export async function executeOmnimuxMedia(capability, input) {
     .slice(0, isChannelRouting ? 4 : 2)
   for (const [attempt, candidate] of candidates.entries()) {
     let submitted = false
+    // A candidate carries routing intent as `model@wireGroup`. The group travels
+    // as its own header, so the model id sent upstream must be the bare id — not
+    // the candidate string, which the gateway would read as an unknown model.
+    const { modelId: candidateModelId, group: candidateGroup } = splitRoutingCandidate(candidate)
     const runtime = input.runtime ?? createProtocolRuntime(
-      { ...route, modelId: candidate }, input.fetcher, auth.apiKey, () => { submitted = true },
+      { ...route, modelId: candidateModelId || route.modelId, group: candidateGroup ?? route.group },
+      input.fetcher, auth.apiKey, () => { submitted = true },
     )
     try {
       result = await runtime.execute({
         providerId: route.providerId,
         modelId: `${route.providerId}-${capability}`,
-        input: { ...finalInput, model: candidate },
+        input: { ...finalInput, model: candidateModelId || candidate },
         // Covers submit *and* the poll this same call performs when it waits
         // (`metadata.wait`): the outer budget must sit above the poll deadline,
         // otherwise runtime-kit's own abort replaces `omnimux-task-timeout`.
@@ -327,8 +332,32 @@ function createProtocolRuntime(route, fetcher, apiKey = route.apiKey, onSubmitte
       providerId: route.providerId,
       modelId: route.modelId,
       capability: route.capability,
+      group: route.group,
       onSubmitted,
     })
   }
   throw new OmnimuxError('unknown-protocol', `unsupported media protocol '${route.protocol}'`)
+}
+
+/**
+ * Split a routing candidate `model@wireGroup` into its two halves.
+ *
+ * Routing candidates are *gateway* ids, not product ids: `gatewayCandidates`
+ * deliberately keeps every upstream-accepted spelling (e.g. `seedance-2-0-fast`
+ * and `seedance-2.0-fast`) so the alias retry can walk them in order. Resolving
+ * the candidate through the product-id normalizer would collapse those spellings
+ * into one and silently drop the retry, so this split stays literal.
+ *
+ * @param {unknown} candidate
+ * @returns {{ modelId: string, group: string | null }}
+ */
+function splitRoutingCandidate(candidate) {
+  const raw = typeof candidate === 'string' ? candidate.trim() : ''
+  if (!raw) return { modelId: '', group: null }
+  const atIndex = raw.indexOf('@')
+  if (atIndex <= 0) return { modelId: raw, group: null }
+  const modelId = raw.slice(0, atIndex).trim()
+  const group = raw.slice(atIndex + 1).trim()
+  if (!modelId) return { modelId: raw, group: null }
+  return { modelId, group: group || null }
 }
