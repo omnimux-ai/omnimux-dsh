@@ -96,6 +96,22 @@ export const GroupNode: React.FC<NodeProps> = memo(({
     );
   }, [id, title, liveNodes]);
 
+  const handlePublishApp = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('omnimux:workflow:publish-app', {
+        detail: { groupId: id, groupTitle: title, nodeIds: childIdsOfGroup(liveNodes, id) },
+      }),
+    );
+  }, [id, title, liveNodes]);
+
+  const handleDeleteWorkflow = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('omnimux:workflow:delete-group', {
+        detail: { groupId: id, groupTitle: title },
+      }),
+    );
+  }, [id, title]);
+
   const handleUngroup = useCallback(() => {
     ungroup(id);
   }, [id, ungroup]);
@@ -128,9 +144,11 @@ export const GroupNode: React.FC<NodeProps> = memo(({
           isCollapsed={isCollapsed}
           onExecuteGroup={handleExecuteGroup}
           onCreateWorkflow={handleCreateWorkflow}
+          onPublishApp={handlePublishApp}
           onUngroup={handleUngroup}
-          onLayout={handleLayout}
+          onDeleteWorkflow={handleDeleteWorkflow}
           onColorChange={handleColorChange}
+          onRename={handleRename}
         />
       )}
 

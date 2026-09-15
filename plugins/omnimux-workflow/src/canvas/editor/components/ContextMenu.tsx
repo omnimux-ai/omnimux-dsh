@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  Boxes,
   ChevronRight,
   Plus,
   UploadCloud,
@@ -33,7 +34,8 @@ export type ContextMenuAction =
   | 'redo'
   | 'select-all'
   | 'execute-selection'
-  | 'execute-node';
+  | 'execute-node'
+  | 'create-workflow';
 
 export type ContextMenuContext =
   | { type: 'pane' }
@@ -125,6 +127,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         { action: 'execute-selection', label: t('menu.executeSelection') },
         { action: 'copy', label: t('menu.copy'), shortcut: '⌘C', disabled: !hasSelection },
         { action: 'duplicate', label: t('menu.duplicate'), shortcut: '⌘D', disabled: !hasSelection },
+        { action: 'create-workflow', label: t('menu.createWorkflow'), shortcut: '⌘G', icon: <Boxes size={15} /> },
         { action: 'paste', label: t('menu.paste'), shortcut: '⌘V', disabled: !hasClipboard },
         { action: 'delete', label: t('menu.delete'), shortcut: 'Del' },
       ];
@@ -135,6 +138,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       { action: 'open-add-node', label: t('menu.addNode'), icon: <Plus size={15} /> },
       { action: 'undo', label: t('toolbar.undo'), shortcut: '⌘Z', disabled: !canUndo },
       { action: 'redo', label: t('toolbar.redo'), shortcut: '⇧⌘Z', disabled: !canRedo },
+      { action: 'create-workflow', label: t('menu.createWorkflow'), icon: <Boxes size={15} /> },
       { action: 'paste', label: t('menu.paste'), shortcut: '⌘V', disabled: !hasClipboard },
       { action: 'select-all', label: t('menu.selectAll'), shortcut: '⌘A' },
     ];
@@ -163,10 +167,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             {context.type === 'pane' && item.action === 'undo' ? (
               <div className="wf-context-menu__separator" />
             ) : null}
+            {context.type === 'pane' && item.action === 'create-workflow' ? (
+              <div className="wf-context-menu__separator" />
+            ) : null}
             {context.type === 'pane' && item.action === 'delete' ? (
               <div className="wf-context-menu__separator" />
             ) : null}
-            {context.type !== 'pane' && item.action === 'paste' ? (
+            {context.type !== 'pane' && item.action === 'create-workflow' ? (
+              <div className="wf-context-menu__separator" />
+            ) : null}
+            {context.type !== 'pane' && item.action === 'delete' ? (
               <div className="wf-context-menu__separator" />
             ) : null}
             <button
