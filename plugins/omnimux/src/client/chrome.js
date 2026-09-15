@@ -7,6 +7,7 @@ import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSideba
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
+import { installWelcomeGreetingObserver } from './welcome-greeting.js'
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
 import { installCollapsedPanelFill } from './rightbar-collapsed-fill.js'
@@ -65,6 +66,7 @@ export function installHubChrome(ctx) {
     const unsubSidebarTopbar = installSidebarToggleTopbar()
     const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
+    const unsubWelcome = installWelcomeGreetingObserver()
     return () => {
       unsubActivation?.()
       unsubToggle?.()
@@ -74,6 +76,7 @@ export function installHubChrome(ctx) {
       unsubSidebarTopbar?.()
       unsubCollapsedFill?.()
       unsubPresetAvatars?.()
+      unsubWelcome?.()
     }
   }, 'omnimux: product-stage chrome, chat toggle, topbar sidebar toggle & workbench left-rail sync')
   // 临时关闭：ctx.effect(() => applyXaiShellTheme(ctx), 'omnimux: xai shell theme')

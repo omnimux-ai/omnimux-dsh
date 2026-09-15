@@ -233,13 +233,27 @@ html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapse
 [class*="frame"][data-rightbar-collapsed="true"] {
   grid-template-columns: var(--omnimux-sidebar-width, 280px) minmax(0px, 1fr) 0px !important;
 }
-/* 非全屏/分屏状态下，中间会话栏必须保证最小物理宽度并自适应填满中间可用区域，绝不出现黑洞死区（Issue #1877） */
+/* 非全屏/分屏状态下，中间会话栏必须保证最小物理宽度并自适应填满中间可用区域，绝不出现黑洞死区（Issue 1877） */
 html:not([data-omnimux-conversation-collapsed]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface,
 html:not([data-omnimux-conversation-collapsed]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface {
   min-width: 420px !important;
   flex: 1 1 0% !important;
   width: auto !important;
   overflow: hidden;
+}
+/* 分屏模式下中间会话栏收窄至紧凑黄金比例，右侧面板充盈铺满视口 */
+html:not([data-omnimux-conversation-collapsed]) .dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .dshDesktopConversationSurface,
+html:not([data-omnimux-conversation-collapsed]) [class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .dshDesktopConversationSurface {
+  width: 440px !important;
+  min-width: 380px !important;
+  max-width: 480px !important;
+  flex: 0 0 440px !important;
+}
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) {
+  grid-template-columns: var(--omnimux-sidebar-width, 280px) 440px minmax(0px, 1fr) !important;
+}
+.dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]) {
+  width: calc(100vw - var(--omnimux-sidebar-width, 280px) - 440px) !important;
 }
 html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])),
 html[data-omnimux-left-collapsed] [class*="frame"][data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])) {
