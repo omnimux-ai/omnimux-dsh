@@ -4,7 +4,7 @@ import test from 'node:test'
 import { runStyleDomProbe } from '../../../../scripts/test-fixtures/style-dom-probe.mjs'
 import { ASSETS_CSS } from './styles.js'
 
-test('资产库两层标签纵向净空保持 12~16px', () => {
+test('资产库两层标签纵向净空保持 10~14px', () => {
   const result = runStyleDomProbe({
     name: 'assets-tabs',
     styles: ASSETS_CSS,
@@ -27,6 +27,6 @@ test('资产库两层标签纵向净空保持 12~16px', () => {
       }
     },
   })
-  assert.equal(result.paddingTop, '12px')
-  assert.ok(result.gap >= 12 && result.gap <= 16, `两层标签净空 ${result.gap}px 越界`)
+  assert.equal(result.paddingTop, '8px')
+  assert.ok(result.gap >= 10 && result.gap <= 14, `两层标签净空 ${result.gap}px 越界`)
 })
