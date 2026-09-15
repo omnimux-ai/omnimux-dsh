@@ -441,11 +441,21 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                         tabIndex={0}
                         title={item.title || '切换图片'}
                       >
-                        <img
-                          src={item.url}
-                          alt={item.title || '缩略图'}
-                          className="omx-mv-thumbnails-rail__img"
-                        />
+                        {item.type === 'video' ? (
+                          <video
+                            src={item.url ? `${item.url}#t=0.001` : ''}
+                            className="omx-mv-thumbnails-rail__img"
+                            muted
+                            preload="metadata"
+                            playsInline
+                          />
+                        ) : (
+                          <img
+                            src={item.url}
+                            alt={item.title || '缩略图'}
+                            className="omx-mv-thumbnails-rail__img"
+                          />
+                        )}
                         {item.type === 'video' && item.duration ? (
                           <div className="omx-mv-thumbnails-rail__badge">{item.duration}</div>
                         ) : null}

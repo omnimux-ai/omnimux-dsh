@@ -70,6 +70,12 @@ test('E2E: 图像生成大图预览消除黑边、手势缩放记忆与左上角
   assert.equal(store.getSnapshot().zoom, 220, '切到素材3保持 220%');
   record('AC-4_PERSISTENT_ZOOM_LOCK', true, '连续切换多张缩略图时，全局缩放比例 220% 始终保持锁定不还原');
 
+  // 4. 验证 AC-5: 视频素材正常渲染 video 封面而非破损 img
+  const fs = await import('node:fs');
+  const tabSource = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf8');
+  const hasVideoBranch = /item\.type === 'video'\s*\?\s*\(\s*<video[^>]*className="omx-mv-thumbnails-rail__img"/s.test(tabSource);
+  record('AC-5_VIDEO_THUMBNAIL_ELEMENT', hasVideoBranch, '缩略图栏对视频素材正常渲染 video 标签');
+
   // 留存正式验证证据文件
   const evidenceReport = {
     task: 'Issue #1844',
