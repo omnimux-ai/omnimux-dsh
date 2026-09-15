@@ -1,0 +1,39 @@
+{
+  "task": "free-ai-avatars-cloud-ingest",
+  "date": "2026-09-15",
+  "type": "character-cloud-catalog-ingest",
+  "totalAssets": 429,
+  "types": [
+    {
+      "id": "digital-human",
+      "label": "数字人",
+      "count": 329
+    },
+    {
+      "id": "Human Archetypes",
+      "label": "人类原型",
+      "count": 30
+    },
+    {
+      "id": "Meme Characters",
+      "label": "流行网梗",
+      "count": 25
+    },
+    {
+      "id": "Animal Character",
+      "label": "动物拟人",
+      "count": 20
+    },
+    {
+      "id": "Fantasy_GenreX",
+      "label": "奇幻世界",
+      "count": 25
+    }
+  ],
+  "verified": {
+    "unitTests": "475 passed, 0 failed",
+    "e2eTests": "tests/e2e/free-ai-avatars-cloud-ingest.e2e.test.mjs passed",
+    "r2_binding": "https://media.aftermark.ai/avatars/free-ai-avatars/",
+    "status": "passed"
+  }
+}

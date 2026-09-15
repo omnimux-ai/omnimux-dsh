@@ -40,17 +40,17 @@ function orderedIds(source) {
   return [...block.matchAll(/id: '([a-z]+)'/g)].map((match) => match[1])
 }
 
-describe('The eight dimensions are the builder\u2019s eight, in the builder\u2019s order', () => {
+describe('The character dimensions are the builder\u2019s dimensions, in the builder\u2019s order', () => {
   it('names the same dimensions as the catalog build script', () => {
     const built = orderedIds(builder)
-    assert.equal(built.length, 8)
+    assert.equal(built.length, CHARACTER_DIMENSION_IDS.length)
     assert.deepEqual([...CHARACTER_DIMENSION_IDS], built)
   })
 
-  it('keeps 姓名 4th, between 体型 and 行业', () => {
+  it('keeps 姓名 between 体型 and 行业', () => {
     assert.deepEqual(
       [...CHARACTER_DIMENSION_IDS],
-      ['gender', 'age', 'figure', 'name', 'industry', 'scene', 'pose', 'outfit'],
+      ['type', 'gender', 'age', 'figure', 'name', 'industry', 'scene', 'pose', 'outfit'],
     )
   })
 

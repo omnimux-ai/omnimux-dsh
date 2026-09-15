@@ -21,7 +21,7 @@ const character = manifest.categories.find((row) => row.id === 'character')
 const index = JSON.parse(readFileSync(join(catalogDir, 'index.json'), 'utf8'))
 const characterRows = index.filter((row) => row.category === 'character')
 
-const DIMENSION_IDS = ['gender', 'age', 'figure', 'name', 'industry', 'scene', 'pose', 'outfit']
+const DIMENSION_IDS = ['type', 'gender', 'age', 'figure', 'name', 'industry', 'scene', 'pose', 'outfit']
 
 /** The wire token for one option value, mirrored from the build script. */
 const token = (value) => `1${String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/-/g, '_')}`
