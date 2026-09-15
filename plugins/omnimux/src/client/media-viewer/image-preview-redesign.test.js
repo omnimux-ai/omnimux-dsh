@@ -52,18 +52,28 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
       '所有缩略图卡片必须保持 1:1 正方形比例'
     );
 
-    // 验证当前选中项 (active) 具备纯白高亮边框和强光晕
+    // 验证当前选中项 (active) 具备极简克制白边，且彻底移除刺眼漫射发光
     assert.match(
       css,
-      /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border:\s*2\.5px solid/s,
-      '当前选中的缩略图必须具备 2.5px 纯白高亮聚焦边框'
+      /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border:\s*2px solid/s,
+      '当前选中的缩略图必须具备 2px 极简纯白聚焦边框'
+    );
+    assert.doesNotMatch(
+      css,
+      /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*box-shadow:\s*0\s*0\s*14px/s,
+      '严禁残留刺眼的白色漫射发光大光晕'
     );
 
-    // 验证候选未选中项 (inactive) 尺寸更小且暗淡
+    // 验证候选未选中项 (inactive) 尺寸更小且清晰透亮（无压暗滤镜）
     assert.match(
       css,
-      /\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*width:\s*38px;[^}]*height:\s*38px;[^}]*opacity:\s*0\.38/s,
-      '候选未选中的缩略图必须保持 38px 微型尺寸并压暗'
+      /\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*width:\s*38px;[^}]*height:\s*38px;[^}]*opacity:\s*0\.72/s,
+      '候选未选中的缩略图必须保持 38px 且 opacity 提升至 0.72'
+    );
+    assert.doesNotMatch(
+      css,
+      /\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*filter:\s*brightness/s,
+      '严禁对候选缩略图施加 brightness 压暗滤镜'
     );
   });
 
