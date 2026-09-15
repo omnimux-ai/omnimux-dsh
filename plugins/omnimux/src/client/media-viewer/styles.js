@@ -36,8 +36,9 @@ export const MEDIA_VIEWER_CSS = `
   align-items: stretch !important;
   width: 100% !important;
   max-width: 580px !important;
-  height: min(400px, 48vh) !important;
-  min-height: 200px !important;
+  height: auto !important;
+  max-height: min(440px, 50vh) !important;
+  min-height: 180px !important;
   outline: none !important;
 }
 
@@ -46,10 +47,11 @@ export const MEDIA_VIEWER_CSS = `
   flex: 1 1 auto;
   min-width: 0;
   height: 100%;
+  max-height: min(440px, 50vh);
   border-radius: 12px;
   overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-border-l1);
+  background: transparent !important;
+  border: none !important;
   box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 消息卡片微投影 */
   cursor: pointer;
   outline: none;
@@ -67,7 +69,8 @@ export const MEDIA_VIEWER_CSS = `
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: var(--dsw-alias-bg-base);
+  background: transparent !important;
+  border-radius: 10px;
   display: block;
 }
 
@@ -98,7 +101,7 @@ export const MEDIA_VIEWER_CSS = `
   overflow-x: hidden;
   min-height: 0;
   height: 100%;
-  padding-right: 2px;
+  padding: 2px 3px 2px 3px;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
 }
@@ -147,8 +150,8 @@ export const MEDIA_VIEWER_CSS = `
 .omx-chat-media-tail__thumb.is-active,
 .omx-chat-media-tail__thumb[aria-selected="true"] {
   opacity: 1;
-  border-color: var(--dsw-alias-brand-primary);
-  box-shadow: 0 0 0 1.5px var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-brand-primary) !important;
+  box-shadow: inset 0 0 0 2px var(--dsw-alias-brand-primary) !important;
 }
 
 .omx-chat-media-tail__thumb img {

@@ -58,6 +58,7 @@ test('QA: Chat media gallery AC-1 to AC-9 verification', async (t) => {
     const video = main?.querySelector('video');
     assert.ok(video);
     assert.equal(video?.getAttribute('src'), 'http://example.com/item2.mp4');
+    assert.equal(main?.style.aspectRatio, '16 / 9');
 
     // AC-8: Keyboard navigation ArrowRight
     el.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
