@@ -108,6 +108,16 @@ export interface WorkflowBinding {
     nodes: unknown[];
     edges: unknown[];
   };
+  /**
+   * 发布时画布所属项目 id（项目页「AI应用」卡片的「编辑」定位依据）。
+   * 旧记录可能没有该字段，消费端按 workspaceId 反查兜底。
+   */
+  projectId?: string;
+  /**
+   * 发布时被收敛的工作流组节点 id。snapshot 只含组内子节点（组节点被
+   * childIdsOfGroup 排除），组身份只能靠这里显式落盘。
+   */
+  sourceGroupId?: string;
 }
 
 /**

@@ -34,10 +34,20 @@ import {
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
 import { createProjectSession, dismissProductStage, runNewProject } from './newProject.js'
-import { activateProjectCanvas } from './projectCanvas.js'
+import { activateProjectCanvas, closeAppTab, openAppTab } from './projectCanvas.js'
 import { ProjectFolderCard } from './ProjectFolderCard.jsx'
 import { ProjectPagesTab } from './ProjectPagesTab.jsx'
 import { ProjectAssetsTab } from './ProjectAssetsTab.jsx'
+import { AIAppCard } from './AIAppCard.jsx'
+import {
+  APP_REMOVE_ERROR_KEYS,
+  appEntryMatchesQuery,
+  defaultAppStorage,
+  listPublishedApps,
+  removePublishedApp,
+  resolveAppEditTarget,
+  resolveOwningProject,
+} from './appLibrary.js'
 
 export const WORKFLOW_LIBRARY_TAB_ID = 'omnimux-workflow:library'
 
@@ -68,7 +78,12 @@ export function ProjectLibraryPage(props) {
   const [busy, setBusy] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [pendingAppDelete, setPendingAppDelete] = useState(null)
   const [libraryTab, setLibraryTab] = useState('local')
+  // 「AI应用」分类的独立数据源：localStorage['omnimux_apps_manifests']
+  // （发布向导写的唯一真实落点），与顶层项目列表互不影响。
+  const [apps, setApps] = useState([])
+  const [appsError, setAppsError] = useState('')
 
   // 1. 重新加载顶层项目列表
   const reload = useCallback(async () => {
@@ -88,6 +103,40 @@ export function ProjectLibraryPage(props) {
   useEffect(() => {
     if (visible) void reload()
   }, [visible, reload])
+
+  // 1b. 「AI应用」分类的独立列表：数据源是发布向导写入的 manifest 映射。
+  // 存储根本不可用（隐私模式 / 被策略禁用）与清单损坏是两种不同的失败，
+  // 各自给真实错误；空映射才是真空态——三者不混。
+  const reloadApps = useCallback(() => {
+    if (!defaultAppStorage()) {
+      setApps([])
+      setAppsError(t('projects.appStorageUnavailable') || '本地存储不可用，无法读取应用清单。')
+      return
+    }
+    try {
+      setApps(listPublishedApps())
+      setAppsError('')
+    } catch {
+      setApps([])
+      setAppsError(t('projects.appStorageUnreadable') || '应用清单读取失败，请刷新后重试。')
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (!visible || libraryTab !== 'apps') return undefined
+    reloadApps()
+    if (typeof window === 'undefined') return undefined
+    // 发布向导发布成功后派发（PublishWizardModal），列表就地刷新。
+    const onAppTabsChanged = () => { reloadApps() }
+    window.addEventListener('omnimux-app-tabs-changed', onAppTabsChanged)
+    return () => window.removeEventListener('omnimux-app-tabs-changed', onAppTabsChanged)
+  }, [visible, libraryTab, reloadApps])
+
+  const handleLibraryTabChange = useCallback((nextId) => {
+    setLibraryTab(nextId)
+    setError('')
+    setAppsError('')
+  }, [])
 
   // 2. 当进入某个项目时，加载该项目的完整 pages 与资产列表
   const loadProjectDetail = useCallback(async (project) => {
@@ -174,6 +223,82 @@ export function ProjectLibraryPage(props) {
       sessionId,
       canvasWorkspaceId: page.canvasWorkspaceId,
     })
+  }
+
+  // 4b. 点击 AI 应用卡片 → 右侧栏应用标签页。宿主会丢弃 openTab 的 extra，
+  //     所以 tab.id=`app_<appId>` 才是通道，AppTab 据此从 localStorage 读回 manifest。
+  const handleOpenApp = (app) => {
+    const opened = openAppTab(
+      app?.manifest || { appId: app?.appId },
+      { appId: app?.appId, title: app?.name },
+    )
+    if (!opened) setAppsError(t('projects.genericError') || '打开应用失败，请重试。')
+    else setAppsError('')
+  }
+
+  // 4c. 卡片「编辑」→ 打开该应用所属项目的创作画布，并聚焦发布时的工作流组。
+  //     缺项目/缺组归属时不伪造「已定位」，仍打开画布并给出可理解的提示。
+  const handleEditApp = async (app) => {
+    const target = resolveAppEditTarget(app)
+    const project = resolveOwningProject(projects, app)
+    const canvasWorkspaceId = target.workspaceId
+      || project?.canvasWorkspaceIds?.[0]
+      || ''
+    dismissProductStage()
+
+    // 画布 tab 是 single:true：光 openTab 只会聚焦已挂载的旧实例，
+    // 必须把目标工作区写进既有 live 通道，画布才会切到该应用所属项目。
+    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
+      localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
+    }
+    if (canvasWorkspaceId && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+        detail: { workspaceId: canvasWorkspaceId },
+      }))
+    }
+
+    let sessionId = project?.sessionId
+    if (!sessionId && project && sessions && typeof sessions.create === 'function') {
+      try {
+        const created = await createProjectSession(sessions, workspaces, project.title)
+        sessionId = created?.id
+        if (sessionId) void bindProjectSession(project.id, sessionId)
+      } catch (e) {
+        console.error('[omnimux-workflow] failed to create project session', e)
+      }
+    }
+    if (sessionId && sessions && typeof sessions.open === 'function') {
+      try { sessions.open(sessionId) } catch {}
+    }
+
+    if (!project) {
+      setAppsError(t('projects.appEditNoProject') || '找不到该应用所属项目，已为你打开创作画布。')
+    } else if (!target.groupId) {
+      setAppsError(t('projects.appEditOpened') || '已打开所属项目画布，未能定位到工作流组。')
+    } else {
+      setAppsError('')
+    }
+
+    await activateProjectCanvas(
+      { layout, betterSidebar, t },
+      { sessionId, focusGroupId: target.groupId },
+    )
+  }
+
+  // 4d. 卡片「删除」：先二次确认，再移除记录并关掉对应应用标签页。
+  //     存储写失败 / 记录不存在一律保留卡片并报错，不伪造成功。
+  const confirmDeleteApp = () => {
+    if (!pendingAppDelete) return
+    const target = pendingAppDelete
+    setPendingAppDelete(null)
+    const result = removePublishedApp(target.appId)
+    if (!result.ok) {
+      setAppsError(t(APP_REMOVE_ERROR_KEYS[result.reason] || 'projects.appDeleteFailed')
+        || '删除应用失败，请重试。')
+      return
+    }
+    closeAppTab(target.appId)
+    reloadApps()
   }
 
   // 5. 在项目内新建创作页
@@ -337,6 +462,9 @@ export function ProjectLibraryPage(props) {
     return (p.title || '').toLowerCase().includes(q)
   })
 
+  // 「AI应用」分类同样吃同一搜索框（按应用名/描述过滤），本地项目分支行为不变。
+  const filteredApps = apps.filter((app) => appEntryMatchesQuery(app, query))
+
   const rawPages = projectDetail?.pages ?? selectedProject?.pages ?? []
   const currentProjectPages = Array.isArray(rawPages) && rawPages.length > 0
     ? rawPages
@@ -479,25 +607,48 @@ export function ProjectLibraryPage(props) {
                     label: t('workflow.tab.featured') || '共创项目（即将上线）',
                     disabled: true,
                   },
+                  { id: 'apps', label: t('workflow.tab.aiApps') || 'AI应用' },
                 ]}
                 activeId={libraryTab}
-                onChange={setLibraryTab}
+                onChange={handleLibraryTabChange}
               />
             }
             search={(
               <SearchField
                 value={query}
                 placeholder={t('projects.searchPlaceholder') || '搜索项目名称'}
-                onChange={setQuery}
+                onValueChange={setQuery}
                 onClear={() => { setQuery('') }}
               />
             )}
           />
 
           {error ? <div className="omnimux-workflow-library-error">{error}</div> : null}
+          {appsError ? <div className="omnimux-workflow-library-error">{appsError}</div> : null}
 
           <div className="omnimux-workflow-library-body">
-            {filtered.length === 0 ? (
+            {libraryTab === 'apps' ? (
+              /* 视图分支 C：已发布 AI 应用卡片网格（数据源 = 发布向导写的 manifest 映射） */
+              filteredApps.length === 0 ? (
+                <div className="omnimux-workflow-library-empty">
+                  <div className="omnimux-workflow-library-empty-title">{t('projects.appsEmptyTitle') || '还没有 AI 应用'}</div>
+                  <div className="omnimux-workflow-library-empty-sub">{t('projects.appsEmptySubtitle') || '在创作画布中把工作流打组后点「发布应用」，发布的应用会出现在这里。'}</div>
+                </div>
+              ) : (
+                <div className="omnimux-workflow-grid">
+                  {filteredApps.map((app) => (
+                    <AIAppCard
+                      key={app.appId}
+                      app={app}
+                      t={t}
+                      onOpen={handleOpenApp}
+                      onEdit={(target) => { void handleEditApp(target) }}
+                      onDelete={setPendingAppDelete}
+                    />
+                  ))}
+                </div>
+              )
+            ) : filtered.length === 0 ? (
               <div className="omnimux-workflow-library-empty">
                 <div className="omnimux-workflow-library-empty-title">{t('projects.emptyTitle') || '暂无项目'}</div>
                 <div className="omnimux-workflow-library-empty-sub">{t('projects.emptySubtitle') || '点击下方按钮创建第一个项目工程'}</div>
@@ -547,6 +698,19 @@ export function ProjectLibraryPage(props) {
           cancelLabel={t('projects.dialog.cancel') || '取消'}
           confirmVariant="danger"
           onConfirm={() => { void confirmDeleteProject() }}
+        />
+      ) : null}
+
+      {pendingAppDelete ? (
+        <ConfirmModal
+          open
+          onClose={() => { setPendingAppDelete(null) }}
+          title={t('projects.appDelete') || '删除应用'}
+          message={(t('projects.appDeleteConfirm') || '将删除应用「{title}」，其侧栏标签页会一并关闭。').replace('{title}', pendingAppDelete.name)}
+          confirmLabel={t('projects.appDelete') || '删除'}
+          cancelLabel={t('projects.dialog.cancel') || '取消'}
+          confirmVariant="danger"
+          onConfirm={confirmDeleteApp}
         />
       ) : null}
     </div>

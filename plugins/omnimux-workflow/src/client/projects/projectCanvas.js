@@ -10,6 +10,8 @@
  * - 新建/打开项目：关掉官方 details，关掉空 Files 种子，打开画布 tab，
  *   并把本会话右侧栏默认设成对话:画布 = 15:85。
  */
+import { appTabIdFor } from './appLibrary.js'
+
 export const CANVAS_TAB_ID = 'omnimux-workflow:canvas'
 export const APP_TAB_ID = 'omnimux-workflow:app'
 /** 让 better-sidebar 把这次 open 当成 content open，从而自动展开右侧栏。 */
@@ -86,6 +88,24 @@ export function openAppTab(manifest = {}, opts = {}) {
     return true
   }
   return false
+}
+
+/**
+ * 关闭某个已发布应用的侧栏 Tab（「项目」页「AI应用」卡片删除后的收尾）。
+ *
+ * 应用 Tab 的 id 契约是 `app_<appId>`（better-sidebar 会丢弃 openTab 的
+ * `extra`，id 是唯一通道），所以这里同样只按 id 关。
+ *
+ * @param {string} appId
+ * @returns {boolean} 真正调用了 closeTab 才为 true
+ */
+export function closeAppTab(appId) {
+  const tabId = appTabIdFor(appId)
+  if (!tabId) return false
+  const service = getBetterSidebar()
+  if (!service || typeof service.closeTab !== 'function') return false
+  service.closeTab(tabId)
+  return true
 }
 
 // 安全同步挂载至 globalThis.window.__omnimuxOpenAppTab
@@ -454,7 +474,9 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
 /**
  * 项目会话占用右侧栏：关官方 details → 关空 Files 种子 → 打开画布。
  * @param {{ betterSidebar?: object, layout?: { closeDetails?: Function }, t?: Function }} ctx
- * @param {{ sessionId?: string, cwd?: string }} [opts]
+ * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string }} [opts]
+ *   `focusGroupId`：「项目」页「AI应用」卡片「编辑」的目标工作流组，
+ *   写入画布 tab 的 `meta`（契约字段，随布局持久化），由 CanvasTab 读出并透传。
  * @returns {Promise<boolean>}
  */
 export async function activateProjectCanvas(ctx, opts = {}) {
@@ -493,6 +515,13 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     title,
     path: CANVAS_SENTINEL_PATH,
   }, openScope)
+
+  // 卡片「编辑」定位：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
+  // 不会写入新的 meta，必须用 updateTab 覆盖（meta 随布局持久化）。
+  const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
+  if (focusGroupId && typeof service.updateTab === 'function') {
+    service.updateTab(CANVAS_TAB_ID, { meta: { focusGroupId } })
+  }
 
   // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，
   // 必须显式解除中间会话栏折叠并切到 split，否则 conversation-collapse.css 会把

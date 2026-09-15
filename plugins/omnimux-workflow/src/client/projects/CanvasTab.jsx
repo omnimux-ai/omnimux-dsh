@@ -18,9 +18,10 @@ export const CANVAS_PAGE_ID = 'workflow-canvas'
  *   visible: boolean,
  *   store?: { reduce?: Function, getSnapshot?: Function, getPrefs?: Function },
  *   scope?: { sessionId?: string },
+ *   tab?: { id?: string, meta?: { focusGroupId?: unknown } },
  * }} props
  */
-export function CanvasTab({ ctx, t, visible, store, scope }) {
+export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const locale = ctx?.locale
   const activeLocale = useSyncExternalStore(
@@ -60,6 +61,12 @@ export function CanvasTab({ ctx, t, visible, store, scope }) {
   // 确保同工作区新建会话时，画布稳定停留在当前激活的创作页上，不跳图、不重置。
   const explicitWorkspaceId = scope?.canvasWorkspaceId || scope?.workspaceId
   const targetWorkspaceId = activeOverride || explicitWorkspaceId || resolveEffectiveWorkspaceId(sessionId)
+
+  // 「项目」页「AI应用」卡片「编辑」的目标工作流组：走 better-sidebar tab.meta
+  // （契约字段，随布局持久化，可 live 更新）。画布 tab 是 single:true，
+  // 已打开时重复 openTab 不会带上新 meta，必须由 activateProjectCanvas 用
+  // updateTab 覆盖；tab 对象换引用后 tabContentCompare 会让本组件重渲。
+  const focusGroupId = typeof tab?.meta?.focusGroupId === 'string' ? tab.meta.focusGroupId : undefined
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -166,7 +173,7 @@ export function CanvasTab({ ctx, t, visible, store, scope }) {
     >
       <div className="omnimux-workflow-canvas-body">
         {targetWorkspaceId ? (
-          <CanvasBridge onClose={onClose} t={t} locale={activeLocale} workspaceId={targetWorkspaceId} />
+          <CanvasBridge onClose={onClose} t={t} locale={activeLocale} workspaceId={targetWorkspaceId} focusGroupId={focusGroupId} />
         ) : (
           <div className="omnimux-workflow-canvas-status">
             {t('canvas.loading')}

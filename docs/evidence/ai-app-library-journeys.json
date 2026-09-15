@@ -1,0 +1,154 @@
+{
+  "task": "Issue #1964 「项目」页「AI应用」分类与已发布应用管理",
+  "kind": "worktree-isolated real-browser web verification (Verify stage)",
+  "date": "2026-09-16",
+  "identity": {
+    "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-ai-app-library-issue-1964",
+    "branch": "agent/omnimux-workflow-ai-app-library-issue-1964",
+    "base": "origin/main@bdf51d43100b5b0afaa3bbfb100a8e58188ecc81",
+    "head": "bdf51d431 (改动未提交，19 文件已暂存 + 本阶段新增证据/E2E)",
+    "dirty": true,
+    "loadedArtifact": {
+      "plugin": "omnimux-workflow",
+      "resolvedEntry": "<worktree>/plugins/omnimux-workflow",
+      "clientBundle": "plugins/omnimux-workflow/lib/client.js",
+      "clientBundleSha256": "2ed204c99a00b812a7fdcd1ac763e884bfac718c9b3c718d6127952273de01e7",
+      "note": "私有 profile 的 node_modules/omnimux-workflow 指向本工作树；其余插件只读链接 Dev 物化副本。首次预演发现 lib/client.js 构建时间早于最后一次源码编辑（23:42:31 vs 23:45:34），已重建后重跑全部旅程。"
+    }
+  },
+  "runtime": {
+    "runner": "tmp/ai-app-library-qa/serve-worktree-app.mjs（任务私有、工作树隔离；模型端口 mock；未注入真实密钥）",
+    "startCommand": "node tmp/ai-app-library-qa/serve-worktree-app.mjs（cwd=工作树）",
+    "privateProfileDir": "<worktree>/.test-env-vrWLGS（退出即删，测试后已回收）",
+    "origin": "http://127.0.0.1:55279",
+    "port": "动态（--port 0，由进程分配）",
+    "profilePollution": "无：不写 ~/.omnimux-dev，不改主检出，不使用共享 Dev 桌面端 45120",
+    "browser": "ego-browser（ego-lite，TaskSpace #61，Tab p1）",
+    "login": "私有实例打印的一次性 token→Cookie 交换 URL，仅存于 0700 私有目录文件，未打印/未入截图/未入报告，验证后随实例回收",
+    "model": "本机 mock 端点（未发起任何真实模型请求）"
+  },
+  "dataSeeding": {
+    "storageKey": "localStorage['omnimux_apps_manifests']",
+    "shape": "Record<appId, ApplicationManifest>；字段 appId/version/createdAt/metadata{name,category,description,coverUrl}/workflowBinding{workspaceId,projectId,sourceGroupId}",
+    "seeded": [
+      { "appId": "app_demo_image_002", "name": "商品图生成器", "category": "image", "createdAt": "2026-09-15T12:30:00.000Z" },
+      { "appId": "app_demo_video_001", "name": "爆款复刻助手", "category": "video", "createdAt": "2026-09-15T10:00:00.000Z" }
+    ],
+    "boundary": "播种只用于构造被测状态；发布向导真实写盘链路不在本次验证范围，未被任何结论引用。"
+  },
+  "journeys": [
+    {
+      "id": 1,
+      "requirement": "「项目」页顶层分类栏出现第三项「AI应用」，位于「共创项目（即将上线）」右侧",
+      "result": "PASS",
+      "observed": [
+        "三个 tab：Local Projects（选中）/ Co-created Projects (Coming Soon)（disabled）/ AI Apps",
+        "第三项确有 disabled 属性为空、可点击；三项均有正几何（width>0 && height>0）",
+        "库页根容器几何 860x879"
+      ],
+      "screenshot": "docs/evidence/ai-app-library-j1-category-tabs.png",
+      "note": "运行实例语言为 en，故标签显示英文；zh 文案（AI应用）由同一 t() 键解析，E2E 用真实 zh 字典断言。"
+    },
+    {
+      "id": 2,
+      "requirement": "切到「AI应用」显示卡片网格；无数据时是真实空态文案（不伪造数据）",
+      "result": "PASS",
+      "observed": [
+        "无数据：0 张卡片，空态节点 .omnimux-workflow-library-empty 文案为 “No AI apps yet / Group a workflow on the creative canvas and click \\\"Publish app\\\"…”，无错误块",
+        "有数据：2 张卡片按 createdAt 倒序（商品图生成器 12:30 → 爆款复刻助手 10:00），网格复用 .omnimux-workflow-grid",
+        "卡片 DOM：div.dshUk-MediaCard-card.omnimux-workflow-app-card[role=button][tabindex=0]，尺寸 265x210"
+      ],
+      "screenshots": ["docs/evidence/ai-app-library-j2-empty-state.png", "docs/evidence/ai-app-library-j2-card-grid.png"]
+    },
+    {
+      "id": 3,
+      "requirement": "卡片点击 → 在右侧栏打开标题为应用名的应用标签页",
+      "result": "PARTIAL",
+      "observed": [
+        "点击卡片确实在右侧栏打开/聚焦应用标签页，面板渲染被点应用（商品图生成器 / 图片应用 / v0.2.1 / 批量生成电商商品图）",
+        "标签页标题在稳定后显示应用名（实测一次读到“商品图生成器”）；但同一标签页会先渲染通用兜底标题「AI 应用」再更新，存在标题短暂不一致",
+        "点击「第二张卡片」不会切到第二个应用：右侧栏始终只有一个应用标签页，面板仍显示最新一条 manifest（宿主按 tab kind 收敛 + openTab 的 extra 被丢弃，AppTab 回落到“最新 manifest”）——该行为来自既有 openAppTab/AppTab 与宿主，不是本次新增代码"
+      ],
+      "screenshot": "docs/evidence/ai-app-library-j3-open-app-tab.png",
+      "notCovered": "“同一应用多个标签页/多应用并行标签页”的宿主行为未纳入本次验收"
+    },
+    {
+      "id": 4,
+      "requirement": "卡片右下角「⋯」→ 菜单含「编辑」「删除」两项",
+      "result": "PASS",
+      "observed": [
+        "触发器 button[aria-label=\"More actions\"][aria-haspopup=menu][aria-expanded=false|true]，展开后 aria-expanded 回写 true",
+        "菜单 role=menu，portal 挂在 BODY 上（未被 overflow:auto 裁切）",
+        "恰好两项：Edit、Delete；Delete 带危险样式（class 含 _danger_）"
+      ],
+      "screenshot": "docs/evidence/ai-app-library-j4-card-menu.png"
+    },
+    {
+      "id": 5,
+      "requirement": "删除 → 二次确认弹窗 → 确认后卡片消失且应用标签页关闭；取消则卡片保留",
+      "result": "PARTIAL",
+      "observed": [
+        "二次确认弹窗出现，文案点名应用名：“Delete App “商品图生成器” will be deleted and its sidebar tab closed.”，按钮 Cancel / Delete(危险)",
+        "取消：弹窗关闭，卡片保留（2 张），存储键不变（app_demo_video_001, app_demo_image_002）",
+        "确认：卡片从网格消失（剩 1 张），存储键只剩 app_demo_video_001，无错误提示",
+        "应用标签页未关闭：确认后右侧栏仍保留该应用标签页；closeAppTab(appId) 调用了侧栏 closeTab('app_app_demo_image_002') 但该实例的原生 surface 面板不响应（同一面板对 __omnimuxWorkbench.closeTab 亦无关闭效果）"
+      ],
+      "screenshots": ["docs/evidence/ai-app-library-j5a-delete-confirm.png", "docs/evidence/ai-app-library-j5b-delete-cancelled.png", "docs/evidence/ai-app-library-j5c-delete-confirmed.png"],
+      "notCovered": "标签页关闭动作在本宿主未生效，记为未达成，未伪造通过"
+    },
+    {
+      "id": 6,
+      "requirement": "编辑 → 打开所属项目画布并聚焦到该工作流组",
+      "result": "PARTIAL",
+      "observed": [
+        "点「编辑」后右侧栏打开 Creative Canvas 标签页并选中，画布渲染（React Flow / 创作页 1）",
+        "localStorage['omnimux:latest-active-canvas'] 被写成该应用 workflowBinding.workspaceId（ws_demo_alpha），即画布切到应用所属工作区",
+        "本次环境没有可用的真实项目 + 工作流组夹具（种子 manifest 的 projectId 指向不存在项目），因此“视口/小组件被带到该组”这一步未取得实测证据"
+      ],
+      "screenshot": "docs/evidence/ai-app-library-j6-edit-focused.png",
+      "notCovered": "聚焦到工作流组（viewport 位移）未覆盖；E2E 以 tab meta.focusGroupId 契约断言代替"
+    },
+    {
+      "id": 7,
+      "requirement": "应用名搜索过滤在该分类下生效",
+      "result": "PASS",
+      "observed": [
+        "输入「爆款」→ 仅剩 爆款复刻助手；输入「商品」→ 仅剩 商品图生成器",
+        "输入「zzz」→ 0 张卡片并回落真实空态；清空后恢复 2 张",
+        "修复前（重建前的旧产物）输入完全不进状态，说明 onValueChange 接线是本次生效的关键"
+      ],
+      "screenshot": "docs/evidence/ai-app-library-j7-search-filter.png"
+    }
+  ],
+  "additionalChecks": {
+    "positiveGeometry": "库页根 860x879、卡片 265x210，均为正几何（width>0 && height>0）",
+    "emptyVsError": "空态与错误态分离：损坏清单回落真实空态；本地存储不可用才渲染 .omnimux-workflow-library-error",
+    "menuPortalNotClipped": "菜单 portal 到 BODY，未出现被 overflow:auto 裁切"
+  },
+  "notCovered": [
+    "真实发布链路（画布发布向导写 omnimux_apps_manifests 的全链路）",
+    "跨设备/跨会话同步（数据源只有 localStorage）",
+    "应用标签页关闭在本宿主未生效（见旅程 5）",
+    "工作流组聚焦的视口位移（见旅程 6）",
+    "多应用并行标签页的宿主行为（见旅程 3）",
+    "Electron / 桌面壳层行为",
+    "开发版（Dev 45120）真机验收：人工职责，本次未执行、未声称取得"
+  ],
+  "artifacts": [
+    "docs/evidence/ai-app-library-j1-category-tabs.png",
+    "docs/evidence/ai-app-library-j2-empty-state.png",
+    "docs/evidence/ai-app-library-j2-card-grid.png",
+    "docs/evidence/ai-app-library-j3-open-app-tab.png",
+    "docs/evidence/ai-app-library-j4-card-menu.png",
+    "docs/evidence/ai-app-library-j5a-delete-confirm.png",
+    "docs/evidence/ai-app-library-j5b-delete-cancelled.png",
+    "docs/evidence/ai-app-library-j5c-delete-confirmed.png",
+    "docs/evidence/ai-app-library-j6-edit-focused.png",
+    "docs/evidence/ai-app-library-j7-search-filter.png"
+  ],
+  "cleanup": {
+    "appRunner": "写入 STOP 后进程自清理，私有 profile 目录已删除",
+    "browser": "ego TaskSpace 已 finish（keep: []）",
+    "measuredAt": "2026-09-16T00:2x +08:00"
+  }
+}
