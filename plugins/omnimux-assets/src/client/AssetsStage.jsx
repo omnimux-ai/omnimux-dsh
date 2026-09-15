@@ -13,7 +13,7 @@ import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState, countAssetsByType } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
-import { ProductsView } from './ProductsView.jsx'
+import { ProductCategoryNav, ProductsView } from './ProductsView.jsx'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
 
 const TAB_ID = 'omnimux-assets:library'
@@ -266,7 +266,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, onOpenCreateProduct, onEditDetail } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -294,6 +294,7 @@ function AssetsBody(props) {
             t={t}
             open={visible}
             query={feed.query}
+            kindTab={productKindTab}
             onOpenCreate={onOpenCreateProduct}
           />
         </div>
@@ -405,6 +406,7 @@ export function AssetsStage(props) {
   const feed = useAssetsFeed({ t, open: visible })
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
+  const [productKindTab, setProductKindTab] = useState('all')
 
   // A cloud row has no library record behind it, so opening its preview means
   // translating the catalog row first — and the translation remembers the row
@@ -472,6 +474,13 @@ export function AssetsStage(props) {
           onTypeChange={feed.setFilterType}
         />
       ) : null}
+      {sourceTab === 'product' ? (
+        <ProductCategoryNav
+          t={t}
+          kindTab={productKindTab}
+          onKindTabChange={setProductKindTab}
+        />
+      ) : null}
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}
@@ -484,6 +493,7 @@ export function AssetsStage(props) {
         cloudSave={cloudSave}
         sourceTab={sourceTab}
         visible={visible}
+        productKindTab={productKindTab}
         onOpenCreateProduct={handleOpenCreateProduct}
         onEditDetail={() => setDetailModalOpen(true)}
       />
