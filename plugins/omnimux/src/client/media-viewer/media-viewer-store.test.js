@@ -152,3 +152,40 @@ test('media-viewer-store: annotations lifecycle, consecutive indexing, and promp
   assert.equal(store.getAnnotations(mediaId).length, 0);
   assert.equal(store.formatAnnotationsPrompt(mediaId), '');
 });
+
+test('media-viewer-store: session binding, deduplication and session-scoped filtering', () => {
+  const store = createMediaViewerStore();
+  const sessionA = 'session-extract-video-123';
+  const sessionB = 'session-black-theme-456';
+
+  // Add media in session A
+  const itemA1 = store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1关键帧', sessionId: sessionA });
+  const itemA2 = store.addMedia({ url: 'http://example.com/a2.jpg', title: 'A2关键帧', sessionId: sessionA });
+
+  // Add media in session B
+  const itemB1 = store.addMedia({ url: 'http://example.com/b1.jpg', title: 'B1黑色图表', sessionId: sessionB });
+
+  // Verify full list vs scoped list
+  assert.equal(store.getSnapshot().mediaList.length, 3);
+  const listA = store.getMediaList(sessionA);
+  const listB = store.getMediaList(sessionB);
+  assert.equal(listA.length, 2);
+  assert.equal(listA[0].id, itemA1.id);
+  assert.equal(listA[1].id, itemA2.id);
+  assert.equal(listB.length, 1);
+  assert.equal(listB[0].id, itemB1.id);
+
+  // Verify deduplication within same session
+  store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1更新标题', sessionId: sessionA });
+  assert.equal(store.getMediaList(sessionA).length, 2);
+  assert.equal(store.getMediaList(sessionA)[0].title, 'A1更新标题');
+
+  // Verify timeline grouping scoped by session
+  const groupsA = store.getTimelineGroups(sessionA);
+  const groupsB = store.getTimelineGroups(sessionB);
+  assert.equal(groupsA.length, 1);
+  assert.equal(groupsA[0].items.length, 2);
+  assert.equal(groupsB.length, 1);
+  assert.equal(groupsB[0].items.length, 1);
+  assert.equal(groupsB[0].items[0].id, itemB1.id);
+});

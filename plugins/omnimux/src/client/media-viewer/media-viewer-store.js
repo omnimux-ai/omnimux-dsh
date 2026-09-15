@@ -73,6 +73,7 @@ export function createMediaViewerStore(initialState = {}) {
     addMedia(item) {
       const id = item.id || `media_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const timestamp = item.timestamp || Date.now();
+      const resolvedSessionId = item.sessionId || (composerSessionId && composerSessionId !== 'default' ? composerSessionId : undefined);
       const newItem = {
         id,
         timestamp,
@@ -81,10 +82,11 @@ export function createMediaViewerStore(initialState = {}) {
         title: item.title || '',
         duration: item.duration || '',
         groupId: item.groupId || String(timestamp),
+        sessionId: resolvedSessionId,
         ...item,
       };
 
-      const existingIndex = state.mediaList.findIndex((m) => m.id === id);
+      const existingIndex = state.mediaList.findIndex((m) => m.id === id || (m.url && m.url === item.url && (!item.sessionId || m.sessionId === item.sessionId)));
       let nextList;
       if (existingIndex >= 0) {
         nextList = [...state.mediaList];
@@ -100,6 +102,11 @@ export function createMediaViewerStore(initialState = {}) {
       };
       notify();
       return newItem;
+    },
+
+    getMediaList(targetSessionId) {
+      if (!targetSessionId) return state.mediaList;
+      return state.mediaList.filter((m) => m.sessionId === targetSessionId);
     },
 
     setActiveId(id) {
@@ -307,10 +314,12 @@ export function createMediaViewerStore(initialState = {}) {
     /**
      * Group items into timeline buckets sorted by timestamp ascending.
      * Items in the same group or minute bucket are grouped together for multi-card row rendering.
+     * @param {string} [targetSessionId] - Optional session filter
      */
-    getTimelineGroups() {
+    getTimelineGroups(targetSessionId) {
       const groups = new Map();
-      for (const item of state.mediaList) {
+      const list = targetSessionId ? state.mediaList.filter((m) => m.sessionId === targetSessionId) : state.mediaList;
+      for (const item of list) {
         const timeKey = formatTimelineDate(item.timestamp);
         const key = item.groupId ? `${timeKey}#${item.groupId}` : timeKey;
         if (!groups.has(key)) {
@@ -328,11 +337,11 @@ export function createMediaViewerStore(initialState = {}) {
   };
 }
 
-let globalMediaStore = null;
+const GLOBAL_STORE_KEY = Symbol.for('omnimux.mediaViewer.store');
 
 export function getGlobalMediaViewerStore() {
-  if (!globalMediaStore) {
-    globalMediaStore = createMediaViewerStore();
+  if (!globalThis[GLOBAL_STORE_KEY]) {
+    globalThis[GLOBAL_STORE_KEY] = createMediaViewerStore();
   }
-  return globalMediaStore;
+  return globalThis[GLOBAL_STORE_KEY];
 }

@@ -21,18 +21,33 @@ export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
 const noSubscription = () => () => {};
 
 export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
-  const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, () => sessions?.list?.getSnapshot().current || currentSessionId());
+  const getSessionSnapshot = () => sessions?.list?.getSnapshot().current || currentSessionId();
+  const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, getSessionSnapshot, getSessionSnapshot);
   useEffect(() => {
     injectMediaViewerStyles();
   }, []);
 
   const store = getGlobalMediaViewerStore();
-  const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
   const { mediaList, activeId, subViewMode, layoutMode, zoom, isGenerating, isAnnotating } = state;
 
-  const activeItem = mediaList.find((m) => m.id === activeId) || mediaList[0];
-  const timelineGroups = store.getTimelineGroups();
+  const sessionMediaList = React.useMemo(() => {
+    if (!sessionId) return mediaList;
+    return mediaList.filter((m) => m.sessionId === sessionId);
+  }, [mediaList, sessionId]);
+
+  const activeItem = sessionMediaList.find((m) => m.id === activeId) || sessionMediaList[0];
+  const timelineGroups = store.getTimelineGroups(sessionId);
+
+  // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话的第一张素材
+  useEffect(() => {
+    if (!sessionId || sessionMediaList.length === 0) return;
+    const exists = sessionMediaList.some((m) => m.id === activeId);
+    if (!exists) {
+      store.setActiveId(sessionMediaList[0].id);
+    }
+  }, [sessionId, sessionMediaList, activeId]);
 
   const imageRef = useRef(null);
   const viewerRootRef = useRef(null);
@@ -320,6 +335,15 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     src={activeItem?.url}
                     alt={activeItem?.title || '预览'}
                   />
+                ) : !state.generationTasks.some((task) => task.sessionId === sessionId) ? (
+                  <div className="omx-mv-empty-state">
+                    <svg className="omx-mv-empty-state__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                      <circle cx="9" cy="9" r="2"/>
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                    </svg>
+                    <span className="omx-mv-empty-state__text">当前会话暂无生成的图片或视频</span>
+                  </div>
                 ) : null}
 
                 {/* 局部打点与气泡输入框层 */}
@@ -391,9 +415,9 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               </div>
 
               {/* 右侧候选多图纵向滚动切换栏 (当生成多图时收敛浮现) */}
-              {mediaList.length > 1 ? (
+              {sessionMediaList.length > 1 ? (
                 <div className="omx-mv-thumbnails-rail" title="上下滚动切换浏览">
-                  {mediaList.map((item) => {
+                  {sessionMediaList.map((item) => {
                     const isSelected = item.id === activeItem?.id;
                     return (
                       <div

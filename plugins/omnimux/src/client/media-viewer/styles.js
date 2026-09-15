@@ -973,6 +973,22 @@ export const MEDIA_VIEWER_CSS = `
   color: var(--dsw-alias-label-tertiary);
   margin-left: 2px;
 }
+.omx-mv-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  user-select: none;
+}
+.omx-mv-empty-state__icon {
+  opacity: 0.4;
+}
+.omx-mv-empty-state__text {
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+}
 `;
 
 export function injectMediaViewerStyles(doc = typeof document !== 'undefined' ? document : undefined) {
