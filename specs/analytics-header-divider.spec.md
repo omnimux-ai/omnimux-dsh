@@ -58,7 +58,7 @@ tab 选项卡行因此被并进页头区块，与「标题 + 描述」之间没�
 | AC-4 | tab 选项卡行（`ActionNavRow`）下方**不再**有这条分割线：stage 内 `role="separator"` 元素唯一，且在 tab 行之前。 | 统计 stage 内水平 separator 数量 === 1，且其 `top < ActionNavRow.top` |
 | AC-5 | tab 行与筛选行之间不出现视觉断裂：tab 行与筛选行垂直间距与修复前的对应节奏同量级（>0 且无明显空白断层）。 | 实测 `FilterBar.top - ActionNavRow.bottom` |
 | AC-6 | 标题描述与分割线之间、分割线与 tab 行之间间距协调：两段间距均在 8px ~ 28px 区间内。 | 实测两段净空数字 |
-| AC-7 | 键盘可达与 tab 切换行为不变：tab 仍可聚焦、方向键/回车切换、`aria-selected` 唯一。 | 真实浏览器键盘事件 + DOM 断言 |
+| AC-7 | 键盘可达与 tab 切换行为**不发生回归**（如实口径）：tab 项仍可聚焦并进入 Tab 焦点顺序；聚焦未激活 tab 后**空格键**可激活切换；`aria-selected` 保持唯一。**方向键不切换、回车不触发**——共享 `Tabs` 组件本身无 keydown 处理，改动前后表现一致，属**既有能力边界，不是本次引入**，故本次只要求「未回归」，不要求新增方向键导航。 | 真实浏览器键盘事件（空格 / 方向键 / 回车分别实测）+ DOM 断言 |
 | AC-8 | 浅色与深色主题均正常：分割线在两种主题下都可见且取到主题令牌值。 | 两种主题各取一次计算样式 + 截图 |
 | AC-9 | 回归测试锁定「分割线必须在 PageHeader 与 ActionNavRow 之间，且不在 ActionNavRow 之后」。 | 新增 `analytics-stage-divider.test.js`（react-dom/server 渲染真实 AnalyticsStage 后断言元素顺序）与 `analytics-header-divider.e2e.test.js`（headless Chrome 渲染真实 stage 后断言几何与顺序），随 `pnpm --filter omnimux-analytics test` 执行；并做红绿验证 |
 | AC-10 | 相关自动化测试与静态门禁（`pnpm verify:stages`）通过。 | 命令退出码 + 真实用例数 |
@@ -195,7 +195,7 @@ return (
 | 浅色分割线取色 | `rgb(204, 204, 204)`（= 主题 `--dsw-alias-border-l2`） |
 | 深色分割线取色 | `rgba(255, 255, 255, 0.12)`（= 主题 `--dsw-alias-border-l1` / `l2`） |
 | tab 切换 | 点击「私信」后 `aria-selected` 正确翻转、内容区切换，分割线仍在 tab 行之上（84 < 93） |
-| 键盘可达 | 焦点保持在 tab 按钮上 |
+| 键盘可达 | 如实口径：tab 项可聚焦、Tab 焦点顺序自洽；聚焦未激活 tab 后**空格键**可激活切换；**方向键不切换、回车不触发**（共享 `Tabs` 组件无 keydown 处理，改动前后完全一致，**既有能力边界、非本次引入**） |
 | harness 控制台错误 | 0 |
 
 **逐字节与像素判定（修复前 / 修复后 四张截图）**
@@ -203,13 +203,20 @@ return (
 | 判定 | 结果 |
 | --- | --- |
 | 四图 SHA-256 | 两两互不相同（浅色/深色、前/后均不同） |
-| 修复前 vs 修复后（浅色） | 差异集中在 y 80–141、x 320–1600，共 9177 px；差异行 51 行 |
-| 修复前 vs 修复后（深色） | 同一区域，共 9252 px |
+| 修复前 vs 修复后（浅色）· **页头条带**（x320–1600, y0–141） | 差异 **8773 px**，**51 行** |
+| 修复前 vs 修复后（浅色）· **全图**（x320–1600, y0–929） | 差异 **88787 px**，**381 行**，延伸到 y=799 |
+| 修复前 vs 修复后（深色） | 深色同型；QA 仅独立复测浅色，深色的带内/全图数值**未独立复测**（原记带内 9252 px，保留原值并标注未复测） |
 | 浅色 vs 深色（同阶段） | 全图差异 1 783 116 px（确为两套主题） |
 | 分割线所在行 | 修复前 y=140（全宽均匀行，浅 204.0 / 深 42.0，std 0.0）；修复后 y=84（同一签名） |
 | 修复后 y=140 | 已回归纯背景（浅 255.0 / 深 13.0）——标签行下方确无分割线 |
 
-证据路径：`qa-evidence/analytics-header-divider/`（`before|after-light|dark.png`、`compare-light.png`、`compare-dark.png`、裁剪对照图）。
+> **差异口径与截图来源（2026-09-15 按 QA 独立复测订正）**
+>
+> - 本表**区分「页头条带差异」与「全图差异」**，两者不可混用。原文以「差异 bbox」措辞只统计页头条带（9177 px），量级低估约十倍；实测页头带 8773 px / 51 行，全图 88787 px / 381 行（至 y=799）。
+> - **全图差异不等于本次改动的影响面。** 正文区差异来源不是本次改动：受控渲染下正文区差异应为 **0 px**（`tmp/` 原始前后对实测正文 0 px，QA 独立受控实验 0 px）。
+> - **存档截图与原始采集并非同一批。** `qa-evidence/after-*.png` 与 `tmp/after-*.png` 哈希不同，差异为页头 1825 px + 正文 80014 px（深色 1814 / 79958）。对比图 `compare-light.png` / `compare-dark.png` 由 **QA 用受控渲染重做**，工程师原图已另存为 `compare-*.engineer-original.png` 备份，无信息损失；QA 产物未被本次订正改动。
+
+证据路径：`qa-evidence/analytics-header-divider/`（`before|after-light|dark.png`、`compare-light.png`、`compare-dark.png`、`compare-*.engineer-original.png`、裁剪对照图）。
 
 **红绿验证**
 
