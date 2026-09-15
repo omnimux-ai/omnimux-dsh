@@ -10,3 +10,4 @@
 ## Review regression controls
 - Browser copilot uses authenticated unary Hub completion and waits for actual text; accepted-only session receipts never count as generated text. Service errors and bounded timeout are returned to the caller.
 - Existing analysis JSON with well-formed shots and structure remains translatable/cacheable without requiring a newer marker. Arbitrary JSON remains rejected.
+- Signing-related route and breakdown tests must create their own temporary DSH_HOME, restore the prior value, and remove their temporary files; authorization success uses an owned media file and verifies the returned file grant.

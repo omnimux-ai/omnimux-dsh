@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { after, before, test } from 'node:test'
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { verifyVideoStreamGrant } from '../plugins/omnimux-video-preview/src/stream-capability.js'
 import { Readable } from 'node:stream'
 import { requestRejection as hubGuard } from '../plugins/omnimux/src/host/request-authorization.js'
 import { requestRejection as clipGuard } from '../plugins/omnimux-clip/src/http/request-authorization.js'
@@ -9,6 +13,21 @@ import { registerWorkbenchHttpRoutes } from '../plugins/omnimux/src/workbench/ht
 import { registerAuthRoutes } from '../plugins/omnimux/src/auth/http-routes.js'
 import { registerClipRoutes } from '../plugins/omnimux-clip/src/http/routes.js'
 import { apply as mountVideo } from '../plugins/omnimux-video-preview/src/index.js'
+let fixtureHome
+let fixtureVideo
+let previousHome
+before(() => {
+  previousHome = process.env.DSH_HOME
+  fixtureHome = mkdtempSync(join(tmpdir(), 'security-http-'))
+  process.env.DSH_HOME = fixtureHome
+  fixtureVideo = join(fixtureHome, 'selected.mp4')
+  writeFileSync(fixtureVideo, Buffer.from('synthetic media fixture'))
+})
+after(() => {
+  if (previousHome === undefined) delete process.env.DSH_HOME
+  else process.env.DSH_HOME = previousHome
+  if (fixtureHome) rmSync(fixtureHome, { recursive: true, force: true })
+})
 const authorized = () => ({ requestRejection: () => undefined })
 const headers = { host: 'localhost:8123', origin: 'http://localhost:8123', 'sec-fetch-site': 'same-origin' }
 function request(method = 'POST', extra = {}, body = {}) {
@@ -51,8 +70,13 @@ test('authorized same-origin routes preserve successful dispatch; missing author
   const touched=[]
   for(const route of fixtures(getConnection,touched)) {
    if(route.path.endsWith('/status')||route.path.endsWith('/capabilities')||route.path.endsWith('/translate')) continue
-   const req=request('POST',{}, {prompt:'hello'});req.url=route.path
+   const req=request('POST',{}, route.path.endsWith('/authorize') ? {path:fixtureVideo} : {prompt:'hello'});req.url=route.path
    const res=response();await route.handler(req,res);assert.equal(res.status,getConnection===authorized?200:getConnection?401:503,route.path)
+   if (getConnection === authorized && route.path.endsWith('/authorize')) {
+    const { streamUrl } = JSON.parse(res.body)
+    const grant = verifyVideoStreamGrant(new URL(streamUrl, 'http://localhost:8123'))
+    assert.equal(grant?.path, realpathSync(fixtureVideo))
+   }
   }
   assert.equal(touched.length>0,getConnection===authorized)
  }
