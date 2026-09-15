@@ -20,7 +20,7 @@ test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', ()
     AGENT_PRESETS_I18N.zh.presetDailyWorkDescription,
     '日常办公协同、文档拟定与事务闭环。',
   )
-  assert.equal(AGENT_PRESETS_I18N.zh.presetCordisName, '创造模式')
+  assert.equal(AGENT_PRESETS_I18N.zh.presetCordisName, '创建Agent')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetCordisDescription,
     '插件实验开发、运行时检查与团队搭建。',
@@ -36,7 +36,7 @@ test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', ()
     AGENT_PRESETS_I18N.en.presetDailyWorkDescription,
     'Daily office collaboration, docs drafting, and task closure.',
   )
-  assert.equal(AGENT_PRESETS_I18N.en.presetCordisName, 'Creator Mode')
+  assert.equal(AGENT_PRESETS_I18N.en.presetCordisName, 'Create Agent')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetCordisDescription,
     'Plugin development, runtime inspection, and team building.',
@@ -58,12 +58,12 @@ test('getPresetFallbackCopy returns localized fallback copy for all presets', ()
   assert.ok(enDailyWork.description.includes('office collaboration'))
 
   const zhCordis = getPresetFallbackCopy('cordis', 'zh')
-  assert.equal(zhCordis.name, '创造模式')
+  assert.equal(zhCordis.name, '创建Agent')
   const enCordis = getPresetFallbackCopy('cordis', 'en')
-  assert.equal(enCordis.name, 'Creator Mode')
+  assert.equal(enCordis.name, 'Create Agent')
 
   const zhSocial = getPresetFallbackCopy('tiktok-agent', 'zh')
-  assert.equal(zhSocial.name, '全能社媒操盘手')
+  assert.equal(zhSocial.name, '社媒专家')
   assert.ok(zhSocial.description.includes('矩阵运营增长'))
 
   assert.equal(getPresetFallbackCopy('unknown-preset', 'zh'), null)
@@ -94,7 +94,7 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
   const zhDict = {
     presetStandardName: 'Standard mode (raw)',
     presetStandardDescription: 'Standard description',
-    presetCordisName: 'Creator mode',
+    presetCordisName: 'Create Agent mode',
     presetCordisDescription: 'Creator description',
   }
   const enDict = {
@@ -129,7 +129,7 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
     '全栈架构设计、代码编写与工程交付。',
   )
   assert.equal(zhDict.presetDailyWorkName, '日常工作')
-  assert.equal(zhDict.presetCordisName, '创造模式')
+  assert.equal(zhDict.presetCordisName, '创建Agent')
 
   assert.equal(enDict.presetStandardName, 'CodeDev')
   assert.equal(
@@ -137,7 +137,7 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
     'Full-stack architecture, coding, and engineering delivery.',
   )
   assert.equal(enDict.presetDailyWorkName, 'WorkAssistant')
-  assert.equal(enDict.presetCordisName, 'Creator Mode')
+  assert.equal(enDict.presetCordisName, 'Create Agent')
 })
 
 test('patchAgentPresetsLocaleDicts handles region variants like zh-CN and en-US', () => {
@@ -154,10 +154,10 @@ test('patchAgentPresetsLocaleDicts handles region variants like zh-CN and en-US'
   patchAgentPresetsLocaleDicts(locale)
   assert.equal(zhCnDict.presetStandardName, '代码开发')
   assert.equal(zhCnDict.presetDailyWorkName, '日常工作')
-  assert.equal(zhCnDict.presetCordisName, '创造模式')
+  assert.equal(zhCnDict.presetCordisName, '创建Agent')
   assert.equal(enUsDict.presetStandardName, 'CodeDev')
   assert.equal(enUsDict.presetDailyWorkName, 'WorkAssistant')
-  assert.equal(enUsDict.presetCordisName, 'Creator Mode')
+  assert.equal(enUsDict.presetCordisName, 'Create Agent')
 })
 
 test('installAgentPresetsI18n intercepts late register calls and applies patch immediately', () => {
@@ -202,10 +202,10 @@ test('installAgentPresetsI18n intercepts late register calls and applies patch i
   assert.ok(locs)
   assert.equal(locs.get('zh').presetStandardName, '代码开发')
   assert.equal(locs.get('zh').presetDailyWorkName, '日常工作')
-  assert.equal(locs.get('zh').presetCordisName, '创造模式')
+  assert.equal(locs.get('zh').presetCordisName, '创建Agent')
   assert.equal(locs.get('en').presetStandardName, 'CodeDev')
   assert.equal(locs.get('en').presetDailyWorkName, 'WorkAssistant')
-  assert.equal(locs.get('en').presetCordisName, 'Creator Mode')
+  assert.equal(locs.get('en').presetCordisName, 'Create Agent')
 
   cleanup()
 })

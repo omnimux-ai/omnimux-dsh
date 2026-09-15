@@ -243,7 +243,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：omni-agent (全能社媒操盘手) + marketing-agent + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent
@@ -253,7 +253,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：omni-agent (全能社媒操盘手) + marketing-agent + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent

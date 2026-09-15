@@ -80,13 +80,16 @@ export const AGENT_PRESET_AVATARS = Object.freeze({
  * unknown name still gets a deterministic face seeded by its own text.
  */
 export const AGENT_PRESET_NAMES = Object.freeze({
+  '社媒专家': 'omni-agent',
   '全能社媒操盘手': 'omni-agent',
   'Social Media Lead': 'omni-agent',
   'omni-agent': 'omni-agent',
   'tiktok-agent': 'omni-agent',
+  '营销专家': 'marketing-agent',
   '全能营销操盘手': 'marketing-agent',
   'Marketing Lead': 'marketing-agent',
   'marketing-agent': 'marketing-agent',
+  '短剧专家': 'drama-agent',
   '全能短剧操盘手': 'drama-agent',
   'Short Drama Showrunner': 'drama-agent',
   'drama-agent': 'drama-agent',
@@ -98,8 +101,10 @@ export const AGENT_PRESET_NAMES = Object.freeze({
   CodeDev: 'standard',
   Standard: 'standard',
   standard: 'standard',
+  '创建Agent': 'cordis',
   '创造模式': 'cordis',
   '创作模式': 'cordis',
+  'Create Agent': 'cordis',
   'Creator Mode': 'cordis',
   cordis: 'cordis',
   HTML生成器: 'html-generator',

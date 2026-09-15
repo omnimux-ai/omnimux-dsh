@@ -43,25 +43,25 @@ test('E2E: omni-agent, marketing-agent, drama-agent 端到端预设渲染与货�
   assert.ok(avatar, '芯片必须注入全能操盘手头像')
   assert.equal(avatar.getAttribute(PRESET_ID_ATTR), 'omni-agent')
 
-  // 2. 切换至全能营销操盘手
-  seat.querySelector('.PnBhwW_seatLabel').textContent = '全能营销操盘手'
+  // 2. 切换至营销专家
+  seat.querySelector('.PnBhwW_seatLabel').textContent = '营销专家'
   applyAgentPresetAvatars(doc)
   assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'marketing-agent')
 
-  // 3. 切换至全能短剧操盘手
-  seat.querySelector('.PnBhwW_seatLabel').textContent = '全能短剧操盘手'
+  // 3. 切换至短剧专家
+  seat.querySelector('.PnBhwW_seatLabel').textContent = '短剧专家'
   applyAgentPresetAvatars(doc)
   assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'drama-agent')
 
   // 4. 验证国际化文案
   const mktZh = getPresetFallbackCopy('marketing-agent', 'zh')
   const mktEn = getPresetFallbackCopy('marketing-agent', 'en')
-  assert.equal(mktZh.name, '全能营销操盘手')
+  assert.equal(mktZh.name, '营销专家')
   assert.equal(mktEn.name, 'Marketing Lead')
 
   const drmZh = getPresetFallbackCopy('drama-agent', 'zh')
   const drmEn = getPresetFallbackCopy('drama-agent', 'en')
-  assert.equal(drmZh.name, '全能短剧操盘手')
+  assert.equal(drmZh.name, '短剧专家')
   assert.equal(drmEn.name, 'Short Drama Showrunner')
 
   // 5. 验证技能货架深度绑定
