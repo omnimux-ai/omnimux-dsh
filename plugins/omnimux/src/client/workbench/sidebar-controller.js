@@ -390,8 +390,8 @@ function openSidebarStore(options, tabId, path) {
   const api = getWorkbenchApi()
   if (api && typeof api.open === 'function') {
     const title = resolveStoreTitle(options, tabId)
-    // 左侧侧边栏按钮直接点击：契约约束默认进入右侧全屏状态（不显示会话栏）
-    void api.open({ tabId, title, focus: WORKBENCH_FOCUS.gui, ...(path ? { path } : {}) })
+    // 左侧侧边栏按钮直接点击：遵从现代桌面端三栏规范，默认采用分屏模式呈现（保留会话栏，Issue #1882）
+    void api.open({ tabId, title, ...(path ? { path } : {}) })
   }
 }
 

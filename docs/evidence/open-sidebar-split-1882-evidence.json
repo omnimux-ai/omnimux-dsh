@@ -1,0 +1,11 @@
+{
+  "task": "fix(omnimux): 收敛侧边栏按钮直接点击的强制伪全屏行为，统一走默认分屏",
+  "issueId": 1882,
+  "timestamp": "2026-09-15T12:57:00+08:00",
+  "verifiedBy": "Unit Tests & Sidebar Controller Contract",
+  "findings": {
+    "openSidebarStore": "Removed hardcoded focus: WORKBENCH_FOCUS.gui so clicking nav icons defaults to split mode.",
+    "workbenchTests": "57 passed, 0 failed."
+  },
+  "verdict": "PASS"
+}
