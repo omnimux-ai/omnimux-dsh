@@ -3,7 +3,11 @@ import { useReactFlow, type NodeProps } from '@xyflow/react';
 import { useCanvasStore } from '../../../store/canvasStore';
 import type { GroupNodeData } from '../../../../shared/canvasTypes';
 import { useT } from '../../../i18n';
-import { childIdsOfGroup, resolveGroupAccentStyle } from '../../utils/nodeVisualMath';
+import {
+  childIdsOfGroup,
+  inverseScaleForZoom,
+  resolveGroupAccentStyle,
+} from '../../utils/nodeVisualMath';
 import { GroupTopBar } from './GroupTopBar';
 import { GroupResizeHandles } from './GroupResizeHandles';
 import { GroupHeader } from './GroupHeader';

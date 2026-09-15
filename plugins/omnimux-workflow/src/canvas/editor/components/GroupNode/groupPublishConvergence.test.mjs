@@ -57,7 +57,12 @@ test('T04.2: GroupNode 顶部行中工具栏位于节点名称右侧，GroupTopB
   assert.ok(groupTopBarSrc.includes('PALETTE_COLORS.map'), '必须遍历高对比度调色板');
 });
 
-test('T04.3: GroupNode 派发组内发布与删除事件', () => {
+test('T04.3: GroupNode 派发组内发布与删除事件，且完整导入 inverseScaleForZoom 防崩溃', () => {
+  assert.match(
+    groupNodeSrc,
+    /inverseScaleForZoom/,
+    'GroupNode 必须显式 import 并使用 inverseScaleForZoom，杜绝运行时未定义崩溃',
+  );
   assert.match(
     groupNodeSrc,
     /omnimux:workflow:publish-app/,

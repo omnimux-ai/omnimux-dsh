@@ -60,6 +60,7 @@ test('e2e: 工作流打组收敛发布与右键创建工作流端到端规格验
   assert.ok(groupTopBarSrc.includes('onDeleteWorkflow'), '打组工具栏必须包含删除工作流动作');
 
   // 4. 打组容器与应用发布子图隔离
+  assert.match(groupNodeSrc, /inverseScaleForZoom/, 'GroupNode 必须导入并使用 inverseScaleForZoom');
   assert.match(groupNodeSrc, /omnimux:workflow:publish-app/, 'GroupNode 必须派发组级发布事件');
   assert.match(groupNodeSrc, /omnimux:workflow:delete-group/, 'GroupNode 必须派发组级删除事件');
 
