@@ -1,70 +1,43 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { JSDOM } from 'jsdom'
 import { ensureComposerCompactChrome } from './composer-compact.js'
 
-describe('composer split spacing e2e geometry verification', () => {
-  it('enforces 25px sides and 25px bottom clearance on non-fullscreen composer seats', () => {
-    const dom = new JSDOM(`
-      <!DOCTYPE html>
-      <html data-omnimux-split-compact="true">
-        <head></head>
-        <body>
-          <div class="dshDesktopFrame">
-            <div class="centerCol">
-              <div data-composer-seat>
-                <div class="composerStack">
-                  <div class="heroWorkspaceRow">
-                    <button aria-haspopup="menu"><span>测试工作区</span></button>
-                  </div>
-                  <div data-composer-card>
-                    <div class="inputBar">
-                      <div contenteditable="true"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div data-sidebar-right-panel="push" data-sidebar-right-open="true"></div>
-          </div>
-        </body>
-      </html>
-    `, { runScripts: 'dangerously' })
+describe('composer native geometry preservation e2e verification', () => {
+  it('does not interfere with native composer-card max-width and margins in fullscreen mode', () => {
+    let styleTag = null
+    const doc = {
+      getElementById(id) {
+        return styleTag?.id === id ? styleTag : null
+      },
+      createElement(tag) {
+        return {
+          id: '',
+          textContent: '',
+        }
+      },
+      head: {
+        append(el) {
+          styleTag = el
+        },
+      },
+    }
 
-    const { window } = dom
-    const { document } = window
-    globalThis.document = document
-    globalThis.window = window
-
-    // Inject compact chrome styles
-    ensureComposerCompactChrome(document)
-
-    const style = document.getElementById('omnimux-composer-compact-chrome')
+    const style = ensureComposerCompactChrome(doc)
     assert.ok(style, 'compact chrome style tag must exist')
     const css = style.textContent
 
-    // 1. Verify padding rules for split compact mode
-    assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-seat\]/)
-    assert.match(css, /padding-left:25px!important/)
-    assert.match(css, /padding-right:25px!important/)
-    assert.match(css, /padding-bottom:25px!important/)
-    assert.match(css, /padding-top:0!important/)
+    // 1. Verify card is NOT forced to 100% max-width or full-width stretch
+    assert.doesNotMatch(css, /\[data-composer-card\]\{\s*width:100%!important/)
+    assert.doesNotMatch(css, /\[data-composer-card\]\{\s*max-width:100%!important/)
 
-    // 2. Verify composerStack and composerHero 100% full width with zero side margins
-    assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-seat\] \[class\*="composerStack"\]/)
-    assert.match(css, /margin-inline:0!important/)
-    assert.match(css, /padding-inline:0!important/)
+    // 2. Verify composerSeat does not force 25px padding that destroys native centering
+    assert.doesNotMatch(css, /padding-left:25px!important/)
+    assert.doesNotMatch(css, /padding-right:25px!important/)
 
-    // 3. Verify composerCard 100% full width and no margins inside seat
-    assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-card\]/)
-    assert.match(css, /width:100%!important/)
-    assert.match(css, /max-width:100%!important/)
+    // 3. Verify content-width is not forcibly overridden to 0.92
+    assert.doesNotMatch(css, /--dsh-chat-content-width:min\(/)
 
-    // 4. Verify heroWorkspaceRow 100% width and aligned with card
-    assert.match(css, /html\[data-omnimux-split-compact\] \[class\*="heroWorkspaceRow"\]/)
-
-    // 5. Verify welcome header left and right padding alignment to 25px
-    assert.match(css, /left:25px!important/)
-    assert.match(css, /right:25px!important/)
+    // 4. Verify composerStack width is not forced to calc(100% - 24px)
+    assert.doesNotMatch(css, /\[data-composer-seat\] \[class\*="composerStack"\]\{\s*width:calc\(100% - 24px\)!important/)
   })
 })

@@ -139,7 +139,6 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.equal(doc.getElementById(COMPOSER_COMPACT_STYLE_ID), style)
   assert.equal(style.id, COMPOSER_COMPACT_STYLE_ID)
   assert.match(style.textContent, /justify-content:flex-end/)
-  assert.match(style.textContent, /--dsh-chat-content-width/)
   assert.match(style.textContent, /min-width:360px/)
   assert.match(style.textContent, /data-omnimux-composer-density='short'/)
   assert.match(style.textContent, /data-omnimux-composer-density='icon'/)
@@ -147,7 +146,7 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(style.textContent, /margin-left:auto/)
   assert.match(style.textContent, /scrollbar-gutter:stable both-edges/)
   assert.match(style.textContent, /\[data-conversation-scroll\]:has\(\[data-conversation-composer-overlay\]\) > \[data-composer-seat\]\{\s*left:var\(--dsh-scrollbar-width\)/)
-  assert.match(style.textContent, /\[data-composer-seat\] \[class\*="composerStack"\]/)
+  assert.doesNotMatch(style.textContent, /\[data-composer-card\]\{\s*width:100%!important/)
   assert.doesNotMatch(style.textContent, /\[data-composer-seat\] > \*/)
   assert.match(style.textContent, /\[class\*="headline"\]:has\(> \[class\*="previewBadge"\]\[data-omnimux-hide\]\)\{\s*grid-template-columns:auto auto;/)
   // Narrow densities (short + icon): model seat (trailing + aria-haspopup=menu)
@@ -280,13 +279,6 @@ test('icon toolbar nowrap selector does not match grow (#517)', () => {
     css,
     /\[data-composer-card\] \[data-input-scroll\]\{[^}]*overflow-x:(hidden|clip)/,
   )
-
-  // Split-compact / non-fullscreen composer spacing (issue requested: 25px sides and bottom)
-  assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-seat\]/)
-  assert.match(css, /padding-left:25px!important/)
-  assert.match(css, /padding-right:25px!important/)
-  assert.match(css, /padding-bottom:25px!important/)
-  assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-card\]/)
 
   // Structural proof with hashed class names: hash_grow contains "row" so a
   // descendant [class*="row"] would match it; the scoped direct-child + tools
