@@ -15,7 +15,6 @@ buildSync({
       export { createWorkflowDispatcher } from './canvasRoutes.ts';
       export { TableStorageService } from '../storage/TableStorageService.ts';
       export { resolveTableAbsPath } from '../storage/tablePath.ts';
-      export { PLACEHOLDER_FRAME_BASE64 } from '../videoDeconstruct/service.ts';
     `,
     resolveDir: fileURLToPath(new URL('.', import.meta.url)),
   },
@@ -24,7 +23,7 @@ buildSync({
   format: 'esm',
   outfile: bundle,
 });
-const { createWorkspaceStore, createWorkflowDispatcher, TableStorageService, resolveTableAbsPath, PLACEHOLDER_FRAME_BASE64 } =
+const { createWorkspaceStore, createWorkflowDispatcher, TableStorageService, resolveTableAbsPath } =
   await import(pathToFileURL(bundle).href);
 after(() => rmSync(buildDir, { recursive: true, force: true }));
 
@@ -52,13 +51,31 @@ function harness(t, opts = {}) {
       toolCalls.push(args);
       if (opts.toolExecute) return opts.toolExecute(args);
       return {
-        report: `# 视频逐镜头分解
+        report: `# 《测试视频》逐镜头分解与五维分析报告
 
 ## 逐镜头分解表
 | 镜头序号 | 时间段 | 景别 | 画面描述 | 关键动作 | 台词脚本 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 00:00 - 00:03 | 特写 | 开场反差视觉 | 快速推入 | "痛点前置" |
 | 2 | 00:03 - 00:10 | 中景 | 实操演示过程 | 涂抹吸收 | "效果真实可见" |
+
+## 一句话视频描述
+以真实拆解结果为核心的高转化短视频。
+
+## I. 核心目标
+* 转化目标: 引导点击左下角购买同款
+
+## II. 影响力分析
+明线展示直观功效，暗线击中受众痛点。
+
+## III. 叙事结构
+0-3s 抛痛点 → 3-10s 实测演示 → 结尾明确 CTA
+
+## IV. 画面分析
+近景特写为主，原生自然光影。
+
+## V. 核心复刻策略
+[痛点开场] + [第一人称实测] + [CTA 引导]
 `,
       };
     },
@@ -145,30 +162,71 @@ test('videoDeconstruct: 成功拆解视频并持久化五维内容拆解表格�
   assert.ok(edge, '视频节点到表格节点的连线应写入 canvas.json');
 });
 
-test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆解保底模板', async (t) => {
+test('videoDeconstruct: 分析能力不可用时直接报错，不落盘任何保底模板', async (t) => {
   const h = harness(t, { disableTool: true });
   const res = await h.call({
-    nodeId: 'node_video_fallback',
+    nodeId: 'node_video_1',
     videoPath: h.dummyVideo,
-    title: '保底拆解视频',
+    title: '不可用拆解视频',
   });
 
-  assert.equal(res.status, 200);
-  assert.equal(res.body.ok, true);
-  assert.equal(res.body.title, '保底拆解视频');
-  assert.ok(res.body.tableId.startsWith('tbl_'));
-  assert.equal(res.body.columnCount, 2);
-  assert.equal(res.body.rowCount, 6);
-  assert.ok(res.body.markdown.includes('逐镜头分解与五维分析报告'));
+  assert.equal(res.status, 502);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.error, 'analyze-unavailable');
 
-  // 验证磁盘持久化有效且为五维结构
-  const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
-  const savedDoc = await TableStorageService.loadTable(absPath);
-  assert.equal(savedDoc.title, '保底拆解视频');
-  assert.equal(savedDoc.rows.length, 6);
-  assert.equal(savedDoc.rowHeight, 'low');
-  assert.equal(savedDoc.columns[0].title, '分析维度');
-  assert.equal(savedDoc.columns[1].title, '分析内容');
+  // 失败必须不落盘、不建节点、不留连线
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 0);
+  assert.equal(snapshot.edges.length, 0);
+});
+
+test('videoDeconstruct: 分析调用抛错时直接报错，不再降级为保底模板', async (t) => {
+  const h = harness(t, {
+    toolExecute: async () => {
+      throw new Error('provider upstream 503');
+    },
+  });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-failed');
+  assert.equal(h.store.get(h.workspace.id).nodes.filter((n) => n.type === 'table').length, 0);
+});
+
+test('videoDeconstruct: 上游错误码映射为可读中文原因（渠道不支持视频输入）', async (t) => {
+  const h = harness(t, {
+    toolExecute: async () => {
+      throw Object.assign(new Error('model does not accept video input'), {
+        code: 'video-understand-unsupported',
+      });
+    },
+  });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-unsupported');
+  assert.match(res.body.message, /不支持视频输入/);
+  // 上游原文绝不外发
+  assert.equal(String(res.body.message).includes('does not accept video input'), false);
+});
+
+test('videoDeconstruct: 分析返回空内容时直接报错', async (t) => {
+  const h = harness(t, { toolExecute: async () => ({ report: '   \n  ' }) });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-empty');
+});
+
+test('videoDeconstruct: 分析结果中解析不出任何维度时直接报错，不填充写死文案', async (t) => {
+  const h = harness(t, {
+    toolExecute: async () => ({ report: '# 视频概述\n\n这段文字没有任何五维章节。' }),
+  });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-empty');
+  assert.equal(h.store.get(h.workspace.id).nodes.filter((n) => n.type === 'table').length, 0);
 });
 
 test('videoDeconstruct: 无 Markdown 表格时，按五维分析维度构造结构化表格', async (t) => {
@@ -371,13 +429,4 @@ test('videoDeconstruct: 纯净五维内容分析，不插入分镜画面附件�
   assert.equal(savedDoc.columns[0].title, '分析维度');
   assert.equal(savedDoc.columns[1].title, '分析内容');
   assert.equal(savedDoc.rows.length, 6);
-});
-
-test('PLACEHOLDER_FRAME_BASE64: 占位图标准合规（非截断，带 EOI 标识，文件大小 > 500 字节）', () => {
-  const buf = Buffer.from(PLACEHOLDER_FRAME_BASE64, 'base64');
-  assert.ok(buf.length > 500, '占位图大小应大于 500 字节');
-  assert.equal(buf[0], 0xff);
-  assert.equal(buf[1], 0xd8); // SOI
-  assert.equal(buf[buf.length - 2], 0xff);
-  assert.equal(buf[buf.length - 1], 0xd9); // EOI
 });
