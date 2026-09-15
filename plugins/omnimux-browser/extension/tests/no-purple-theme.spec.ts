@@ -57,6 +57,21 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc
 }
 
+/**
+ * Brand-mark fills that may be purple, and only in the file that draws them.
+ *
+ * This gate守住的是扩展**自己的主行动色**：design.md 把它定为黑白高对比，三处历史残留
+ * （填入层描边、推特小面板、设置页）都是扩展在讲自己。TikTok 场景触发器不属于这一类——
+ * 它是画在第三方页面上的 OmniMux 品牌标识，淡紫是已确认的品牌填充色，不是扩展给自身
+ * 控件用的强调色。
+ *
+ * 放行面刻意收成一个精确值 + 一个精确文件：换一个文件用同一个值、或在同一个文件里用
+ * 第二个紫色，T1 照旧报红。denylist 里的历史值任何文件都不放行。
+ */
+const BRAND_MARK_ALLOW: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ['content/tiktok-scene/styles.css', new Set(['#b8b7ff'])],
+])
+
 function hexToRgb(hex: string): [number, number, number] | null {
   const body = hex.replace('#', '')
   const full = body.length === 3 ? body.split('').map((c) => c + c).join('') : body
@@ -81,12 +96,19 @@ function isPurpleRgb(r: number, g: number, b: number): boolean {
   return h >= 240 && h <= 300 && l * 100 >= 8 && l * 100 <= 98
 }
 
-function findPurpleHits(source: string): string[] {
-  const hits: string[] = []
+/** One flagged literal, kept structured so the brand exemption can match it exactly. */
+interface PurpleHit {
+  /** The literal as written, lowercased, or the denylist entry for a banned value. */
+  readonly token: string
+  readonly reason: string
+}
+
+function findPurpleHits(source: string): PurpleHit[] {
+  const hits: PurpleHit[] = []
   const lowered = source.toLowerCase()
 
   for (const token of PURPLE_DENYLIST) {
-    if (lowered.includes(token)) hits.push(`禁用值 ${token}`)
+    if (lowered.includes(token)) hits.push({ token, reason: `禁用值 ${token}` })
   }
 
   const colorPattern = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/g
@@ -94,17 +116,37 @@ function findPurpleHits(source: string): string[] {
     const raw = match[0]
     if (raw.startsWith('#')) {
       const rgb = hexToRgb(raw)
-      if (rgb && isPurpleRgb(...rgb)) hits.push(`紫色 ${raw}`)
+      if (rgb && isPurpleRgb(...rgb)) hits.push({ token: raw.toLowerCase(), reason: `紫色 ${raw}` })
     } else {
       const nums = raw.match(/\d{1,3}/g)
       if (nums && nums.length >= 3) {
         const rgb = nums.slice(0, 3).map(Number) as [number, number, number]
-        if (isPurpleRgb(...rgb)) hits.push(`紫色 ${raw})`)
+        if (isPurpleRgb(...rgb)) {
+          hits.push({ token: raw.toLowerCase().replace(/\s+/g, ''), reason: `紫色 ${raw})` })
+        }
       }
     }
   }
 
-  return Array.from(new Set(hits))
+  const seen = new Set<string>()
+  return hits.filter((hit) => {
+    const key = `${hit.token}|${hit.reason}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/**
+ * Whether a hit is the brand mark's own fill in the file that draws it.
+ *
+ * A denylisted historical value is never exempt, in any file.
+ * @param relPath the scanned file, relative to `src/`
+ * @param hit the flagged literal
+ */
+function isAllowedBrandMark(relPath: string, hit: PurpleHit): boolean {
+  if (hit.reason.startsWith('禁用值')) return false
+  return BRAND_MARK_ALLOW.get(relPath)?.has(hit.token) === true
 }
 
 describe('扩展主题硬门禁：源码不得出现紫色', () => {
@@ -112,14 +154,28 @@ describe('扩展主题硬门禁：源码不得出现紫色', () => {
     const offenders: string[] = []
 
     for (const file of walk(SRC_ROOT)) {
+      const rel = relative(SRC_ROOT, file).replace(/\\/g, '/')
       const source = readFileSync(file, 'utf8')
-      const hits = findPurpleHits(source)
+      const hits = findPurpleHits(source).filter((hit) => !isAllowedBrandMark(rel, hit))
       if (hits.length > 0) {
-        offenders.push(`${relative(SRC_ROOT, file)} → ${hits.join(' / ')}`)
+        offenders.push(`${rel} → ${hits.map((hit) => hit.reason).join(' / ')}`)
       }
     }
 
     expect(offenders, `以下文件仍含紫色，请改用 design.md 的黑白中性/状态色：\n${offenders.join('\n')}`).toEqual([])
+  })
+
+  it('T1b: 品牌标记的放行面只有那一个值、那一个文件', () => {
+    // 放行一旦变宽就失去意义，所以把它本身也锁住。
+    expect([...BRAND_MARK_ALLOW.keys()]).toEqual(['content/tiktok-scene/styles.css'])
+    expect([...BRAND_MARK_ALLOW.get('content/tiktok-scene/styles.css') ?? []]).toEqual(['#b8b7ff'])
+
+    // denylist 里的历史值在任何文件都不放行，包括放行文件自己。
+    const banned: PurpleHit = { token: '#a855f7', reason: '禁用值 #a855f7' }
+    expect(isAllowedBrandMark('content/tiktok-scene/styles.css', banned)).toBe(false)
+    // 同一个值出现在别的文件里照样报红。
+    const brand: PurpleHit = { token: '#b8b7ff', reason: '紫色 #b8b7ff' }
+    expect(isAllowedBrandMark('content/media-hover/styles.css', brand)).toBe(false)
   })
 
   it('T2: 三处历史残留表面已改为黑白口径', () => {
