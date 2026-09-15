@@ -93,16 +93,11 @@ async function bundle() {
 <style>${THEME_TOKENS}</style><link rel="stylesheet" href="./bundle.css"></head>
 <body><div id="root"></div>
 <script>
-window.addEventListener('error', function (e) {
-  var p = document.createElement('pre'); p.id = 'boot-error';
-  p.textContent = 'ERR: ' + (e.message || e.error) + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
-  document.body.appendChild(p);
-});
-window.addEventListener('unhandledrejection', function (e) {
-  var p = document.createElement('pre'); p.id = 'boot-error';
-  p.textContent = 'REJ: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
-  document.body.appendChild(p);
-});
+function reportBootFailure(text) {
+  var p = document.createElement('pre'); p.id = 'boot-error'; p.textContent = text; document.body.appendChild(p);
+}
+window.onerror = function (message, source, line) { reportBootFailure('ERR: ' + message + ' @ ' + source + ':' + line); };
+window.onunhandledrejection = function (e) { reportBootFailure('REJ: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)); };
 </script>
 <script src="./bundle.js"></script></body></html>`,
   );
