@@ -97,4 +97,16 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
     assert.equal(snapshot.activeId, 'img-2', '活动图片应切换至图2');
     assert.equal(snapshot.zoom, 180, '切换图片后缩放比例必须保持锁定在 180%，严禁还原重置');
   });
+
+  it('AC-5: 缩略图栏对视频素材正常渲染 video 封面而非破损 img (Issue #1852)', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const tabSource = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf8');
+
+    assert.match(
+      tabSource,
+      /item\.type === 'video'\s*\?\s*\(\s*<video[^>]*className="omx-mv-thumbnails-rail__img"/s,
+      '当素材为视频时必须渲染包含 omx-mv-thumbnails-rail__img 类名的 video 标签'
+    );
+  });
 });
