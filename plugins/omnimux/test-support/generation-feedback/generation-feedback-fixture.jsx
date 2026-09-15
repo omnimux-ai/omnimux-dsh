@@ -2,10 +2,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from 'dsh-ui-kit';
-import { MediaViewerTab } from '../MediaViewerTab.jsx';
-import { getGlobalMediaViewerStore } from '../media-viewer-store.js';
-import { createGenerationFeedback } from '../generation-feedback.js';
-import { bindWorkbenchDeps } from '../../workbench/host-adapter.js';
+import { MediaViewerTab } from '../../src/client/media-viewer/MediaViewerTab.jsx';
+import { getGlobalMediaViewerStore } from '../../src/client/media-viewer/media-viewer-store.js';
+import { createGenerationFeedback } from '../../src/client/media-viewer/generation-feedback.js';
+import { bindWorkbenchDeps } from '../../src/client/workbench/host-adapter.js';
 
 function observable(value) {
   const listeners = new Set();

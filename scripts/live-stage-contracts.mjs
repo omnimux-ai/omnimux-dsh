@@ -40,10 +40,23 @@ export async function captureStageContract(root, stage) {
   const require = createRequire(join(root, 'plugins', plugin, 'package.json'))
   const { build } = hubRequire('esbuild')
   const { JSDOM } = hubRequire('jsdom')
-  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+  const dom = new JSDOM(`<!doctype html><html><head></head><body>
+    <div data-slot="root">
+      <aside data-pane="sidebar">
+        <button type="button" role="treeitem" aria-selected="false">QA session</button>
+      </aside>
+      <main data-slot="conversation"></main>
+      <aside data-sidebar-right-panel="push"></aside>
+    </div>
+  </body></html>`, {
     url: 'http://127.0.0.1:45120/', runScripts: 'outside-only', pretendToBeVisual: true,
   })
   const win = dom.window
+  const sessionRow = win.document.querySelector('[role="treeitem"]')
+  const conversation = win.document.querySelector('[data-slot="conversation"]')
+  conversation.getBoundingClientRect = () => ({
+    x: 280, y: 0, left: 280, top: 0, right: 700, bottom: 800, width: 420, height: 800,
+  })
   const entries = []
   const slots = []
   const tabs = new Map()
@@ -80,8 +93,16 @@ export async function captureStageContract(root, stage) {
       })
     },
   }
+  const sidebarRight = {
+    isExpanded: () => state().panelOpen === true,
+    active: () => {
+      const kind = state().splits.active
+      return kind ? { kind } : null
+    },
+  }
   const ctx = {
     betterSidebar: sidebar,
+    sidebarRight,
     sessions: { list: { getSnapshot: () => ({ current: sessionId }), subscribe: store.subscribe } },
     workspaces: { list: { getSnapshot: () => ({ workspaces: [] }), subscribe: () => () => {} } },
     layout: { closeDetails() {}, openDetails() {} },
@@ -120,6 +141,16 @@ export async function captureStageContract(root, stage) {
     const api = wb.installWorkbenchGlobal(win)
     api.bind(ctx)
     api.attachStore(store, { sessionId })
+    disposers.push(wb.installSidebarActivation({ document: win.document }))
+    const settle = async () => {
+      for (let i = 0; i < 12; i++) await Promise.resolve()
+      api.syncActivation()
+      for (let i = 0; i < 4; i++) await Promise.resolve()
+    }
+    const setSessionSelected = async (selected) => {
+      sessionRow.setAttribute('aria-selected', selected ? 'true' : 'false')
+      await settle()
+    }
     if (stage === 'market') {
       execFileSync(process.execPath, ['scripts/concat-client.mjs'], { cwd: join(root, 'plugins', plugin), stdio: 'pipe' })
       let client
@@ -139,31 +170,48 @@ export async function captureStageContract(root, stage) {
       assert.equal(win.document.querySelectorAll(`[${datasetKey}]`).length, 1)
       const lifecycle = JSON.parse(readFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), 'utf8'))
       assert.equal(Object.hasOwn(lifecycle, plugin), false, 'Market must remain available in formal releases')
-      const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
       action.click()
       await settle()
       const tabId = state().splits.active
       assert.equal(tabId, 'omnimux-market:plaza')
       assert.ok(tabs.has(tabId) && api.isActive(tabId), 'Market action must activate its registered Tab')
+      assert.equal(sidebarRight.isExpanded(), true, 'Market must expand the official right panel')
+      assert.equal(sidebarRight.active()?.kind, tabId, 'Market must be the official current right Tab')
+      assert.equal(api.getFocus(), 'split', 'Market sidebar navigation must keep the conversation visible')
       assert.equal(tabs.get(tabId).single, true)
       assert.equal(tabs.get(tabId).hidden, false)
       assert.equal(action.dataset.active, 'true')
       assert.ok(!win.document.documentElement.dataset.dshProductStage, 'Market must not claim an overlay')
+      await setSessionSelected(true)
+      assert.equal(api.getRailVerdict().winner, 'session', 'Selected conversation must own the single activation slot')
+      assert.equal(api.isActive(tabId), false, 'Market row must yield to the selected conversation')
+      assert.notEqual(action.dataset.active, 'true')
+      assert.equal(sidebarRight.active()?.kind, tabId, 'Session precedence must not close the current right Tab')
+      await setSessionSelected(false)
+      assert.ok(api.isActive(tabId), 'Market row must recover when the conversation releases the activation slot')
+      assert.equal(action.dataset.active, 'true')
       action.click()
       await settle()
       assert.equal(state().splits.tabs.filter((tab) => tab.id === tabId).length, 1, 'Market must not duplicate its Tab')
       api.closePanel()
+      await settle()
       assert.equal(api.isActive(tabId), false)
+      assert.equal(sidebarRight.isExpanded(), false)
       assert.notEqual(action.dataset.active, 'true')
       action.click()
       await settle()
       assert.ok(api.isActive(tabId), 'Market must reopen its collapsed panel')
+      assert.equal(api.getFocus(), 'split', 'Market reopen must preserve split focus')
       sessionId = 'qa-session-b'
       emit()
+      await settle()
       assert.equal(api.isActive(tabId), false, 'Market must not leak across sessions')
+      assert.equal(sidebarRight.active(), null, 'Market Tab must be absent from session B')
       sessionId = 'qa-session-a'
       emit()
+      await settle()
       assert.ok(api.isActive(tabId), 'Market must restore session A')
+      assert.equal(sidebarRight.active()?.kind, tabId, 'Market must restore the official current Tab in session A')
       for (const dispose of disposers.splice(0).reverse()) dispose()
       assert.equal(sidebarRows.length, 0, 'Market must dispose its coordinator registration')
       assert.equal(win.document.querySelectorAll(`[${datasetKey}]`).length, 0)
@@ -174,7 +222,11 @@ export async function captureStageContract(root, stage) {
         return [ZH, EN].flatMap(dict => [dict['mkt.empty'], dict['search.empty'], dict['expert.empty']]);
       })()`)
       assert.ok(allowedStatusTexts.length === 6 && allowedStatusTexts.every((text) => typeof text === 'string' && text.trim()), 'Market empty-state translations are missing')
-      return { stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'sidebar-coordinator', rank }
+      return {
+        stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage],
+        ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'sidebar-coordinator', rank,
+        defaultFocus: 'split', activationModel: 'official-right-tab-with-session-precedence',
+      }
     }
     const hostStyles = [...win.document.head.querySelectorAll('style')]
     const client = evaluate(await compile(`plugins/${plugin}/src/client/index.js`))
@@ -185,10 +237,13 @@ export async function captureStageContract(root, stage) {
       assert.ok(tab && tab.single === true && tab.hidden === false && typeof tab.component === 'function', 'Studio must register its visible single community Tab')
       assert.equal(entries.length, 0, 'Studio must not manufacture a sidebar Stage')
       await api.open({ tabId, title: tab.title() })
+      await settle()
       assert.ok(api.isActive(tabId), 'Studio must open through the public workbench')
       api.closePanel()
+      await settle()
       assert.equal(api.isActive(tabId), false)
       await api.open({ tabId, title: tab.title() })
+      await settle()
       assert.ok(api.isActive(tabId), 'Studio must restore through the public workbench')
       assert.equal(state().splits.tabs.filter(item => item.id === tabId).length, 1)
       for (const dispose of disposers.splice(0).reverse()) dispose()
@@ -207,30 +262,41 @@ export async function captureStageContract(root, stage) {
     let notifications = 0
     const unsubscribe = adapter.subscribe(() => notifications++)
     assert.equal(typeof unsubscribe, 'function', `${plugin}: subscribe must return disposer`)
-    const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: open must activate the registered Tab`)
-    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar navigation must enter gui`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar navigation must keep the conversation visible`)
     const tabId = state().splits.active
     assert.ok(tabs.has(tabId), `${plugin}: opened an unregistered Tab ${tabId}`)
+    assert.equal(sidebarRight.isExpanded(), true, `${plugin}: official right panel must be expanded`)
+    assert.equal(sidebarRight.active()?.kind, tabId, `${plugin}: official right panel must expose the current Tab`)
     assert.ok(notifications > 0, `${plugin}: subscription did not observe open`)
     assert.ok(!win.document.documentElement.dataset.dshProductStage, 'sidebar must not claim an overlay')
+    await setSessionSelected(true)
+    assert.equal(api.getRailVerdict().winner, 'session', `${plugin}: selected conversation must own the single activation slot`)
+    assert.equal(adapter.getSnapshot(), false, `${plugin}: sidebar row must yield to the selected conversation`)
+    assert.equal(sidebarRight.active()?.kind, tabId, `${plugin}: session precedence must not close the current right Tab`)
+    assert.equal(state().splits.tabs.filter((tab) => tab.id === tabId).length, 1, `${plugin}: session precedence must not duplicate its Tab`)
+    await setSessionSelected(false)
+    assert.equal(adapter.getSnapshot(), true, `${plugin}: sidebar row must recover when the conversation releases the activation slot`)
     api.closePanel()
+    await settle()
     assert.equal(adapter.getSnapshot(), false)
+    assert.equal(sidebarRight.isExpanded(), false, `${plugin}: close must collapse the official right panel`)
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: explicit open must restore a collapsed panel`)
-    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar reopen must enter gui`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar reopen must restore split focus`)
     api.setFocus('split')
     adapter.open()
     await settle()
-    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar navigation must override a split preference`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar navigation must preserve a split preference`)
     api.setFocus('split')
     api.closePanel()
+    await settle()
     adapter.open()
     await settle()
-    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar reopen must override a split preference`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar reopen must preserve a split preference`)
     assert.equal(state().splits.tabs.filter((tab) => tab.id === tabId).length, 1, `${plugin}: sidebar navigation must not duplicate its Tab`)
     for (const mode of ['split', 'gui']) {
       api.setFocus(mode)
@@ -242,11 +308,12 @@ export async function captureStageContract(root, stage) {
       }
       const width = state().width
       api.closePanel()
+      await settle()
       assert.equal(api.getFocus(), 'chat')
       api.detachStore(store)
       api.attachStore(store)
       assert.equal(state().panelOpen, false, `${plugin}: attaching a closed session must not reopen it`)
-      // Ordinary opens restore memory; sidebar navigation explicitly requests gui.
+      // Ordinary opens restore the current tab's remembered split/gui preference.
       assert.equal(await api.open({ tabId }), true, `${plugin}: ordinary reopen must succeed`)
       await settle()
       assert.equal(api.getFocus(), mode, `${plugin}: reopen must preserve ${mode} preference`)
@@ -256,26 +323,36 @@ export async function captureStageContract(root, stage) {
     for (const key of ['top', 'left', 'width', 'height']) assert.ok(Number.isFinite(box[key]), `${plugin}: invalid readBox.${key}`)
     api.setFocus('split')
     adapter.set(false)
+    await settle()
     assert.equal(adapter.getSnapshot(), false)
     adapter.set(true)
     await settle()
     assert.equal(adapter.getSnapshot(), true)
-    assert.equal(api.getFocus(), 'gui', `${plugin}: sidebar set(true) must enter gui`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar set(true) must preserve split focus`)
     assert.ok(!win.document.documentElement.dataset.dshProductStage, 'sidebar reopen must not claim an overlay')
     sessionId = 'qa-session-b'
     emit()
+    await settle()
     assert.equal(adapter.getSnapshot(), false, `${plugin}: active Tab leaked across sessions`)
+    assert.equal(sidebarRight.active(), null, `${plugin}: official current Tab leaked across sessions`)
     assert.equal(api.getUiContext().sessionId, sessionId)
     assert.equal(api.getUiContext().surface.openedTabs.length, 0, `${plugin}: viewport leaked across sessions`)
     sessionId = 'qa-session-a'
     emit()
+    await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: failed to restore session A`)
+    assert.equal(sidebarRight.active()?.kind, tabId, `${plugin}: failed to restore the official current Tab in session A`)
     unsubscribe()
     const afterUnsubscribe = notifications
     adapter.close()
+    await settle()
     assert.equal(adapter.getSnapshot(), false)
     assert.equal(notifications, afterUnsubscribe, `${plugin}: listener survived unsubscribe`)
-    return { stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage], adapter: 'six-methods-and-disposer' }
+    return {
+      stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage],
+      ...STAGE_STATUS[stage], adapter: 'six-methods-and-disposer', defaultFocus: 'split',
+      activationModel: 'official-right-tab-with-session-precedence',
+    }
   } finally {
     for (const dispose of disposers.reverse()) dispose()
     win.close()

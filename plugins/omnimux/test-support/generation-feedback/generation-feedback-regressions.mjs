@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { createGenerationFeedback } from '../generation-feedback.js';
-import { createMediaViewerStore } from '../media-viewer-store.js';
+import { createGenerationFeedback } from '../../src/client/media-viewer/generation-feedback.js';
+import { createMediaViewerStore } from '../../src/client/media-viewer/media-viewer-store.js';
 
 function observable(value) {
   const listeners = new Set();
