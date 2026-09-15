@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Badge, Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
-import { EditIcon, FileIcon, FolderIcon } from './icons.jsx'
-import { listAssetFiles, previewUrl } from './api.js'
+import { EditIcon, FileIcon, FolderIcon, RevealLocationIcon } from './icons.jsx'
+import { listAssetFiles, previewUrl, revealAssetEntry } from './api.js'
 import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
 
 export { isDirectoryRef }
@@ -35,12 +35,26 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     setStack(initialStack(asset))
     setEntries([])
     setError('')
+    setNotice('')
   }, [asset.id])
+
+  /**
+   * Hand one entry to the Host so the platform file manager shows it. The Host
+   * owns path validation and platform support; a refusal surfaces here as a
+   * readable notice instead of a silent no-op.
+   * @param {{ fileId: string, subPath: string }} target
+   */
+  const revealEntry = async (target) => {
+    setNotice('')
+    const result = await revealAssetEntry(asset.id, target.fileId, target.subPath)
+    if (!result.ok) setNotice(t('browse.revealFailed'))
+  }
 
   useEffect(() => {
     if (!stack) return undefined
@@ -130,6 +144,8 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
         ) : null}
       </div>
 
+      {notice ? <p className="omnimux-assets-error" role="alert">{notice}</p> : null}
+
       {stack ? (
         <>
           {loading ? <p className="omnimux-assets-muted">{t('loading')}</p> : null}
@@ -140,9 +156,8 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
               {entries.map((entry) => {
                 const folder = Boolean(entry.is_dir) || isDirectoryRef(entry)
                 const kind = detectMediaKind(entry)
-                const src = folder
-                  ? ''
-                  : previewUrl(asset.id, stack.file.id, entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'))
+                const entryPath = entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/')
+                const src = folder ? '' : previewUrl(asset.id, stack.file.id, entryPath)
                 return (
                   <MediaCard
                     key={String(entry.relative_path || entry.name)}
@@ -150,12 +165,10 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
                     title={entry.name}
                     kind={kind}
                     src={src}
+                    onReveal={() => revealEntry({ fileId: stack.file.id, subPath: entryPath })}
                     onOpen={folder
                       ? () => {
-                          setStack({
-                            file: stack.file,
-                            path: entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'),
-                          })
+                          setStack({ file: stack.file, path: entryPath })
                         }
                       : () => {
                           if (typeof onPreview === 'function') {
@@ -184,6 +197,7 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
                     title={file.original_name || file.real_path}
                     kind={kind}
                     src={src}
+                    onReveal={() => revealEntry({ fileId: file.id, subPath: '' })}
                     onOpen={folder
                       ? () => { setStack({ file, path: '' }) }
                       : () => {
@@ -208,21 +222,29 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
  *   kind: 'folder' | 'image' | 'video' | 'file',
  *   src?: string,
  *   onOpen?: () => void,
+ *   onReveal?: () => void,
  * }} props
  */
-function MediaCard({ t, title, kind, src, onOpen }) {
+function MediaCard({ t, title, kind, src, onOpen, onReveal }) {
   const clickable = typeof onOpen === 'function'
   const activate = clickable ? onOpen : undefined
   const [broken, setBroken] = useState(false)
   const showImage = kind === 'image' && Boolean(src) && !broken
   const showVideo = kind === 'video' && Boolean(src) && !broken
+  // A rendered thumbnail already states its own media type, so the badge is
+  // reserved for the entries whose type cannot be read off the card face.
   const badge = kind === 'folder'
     ? t('detail.folder')
-    : kind === 'image'
-      ? t('media.image')
-      : kind === 'video'
-        ? t('media.video')
-        : t('detail.file')
+    : kind === 'file'
+      ? t('detail.file')
+      : ''
+  const revealable = typeof onReveal === 'function'
+
+  const handleReveal = (event) => {
+    event.stopPropagation()
+    onReveal()
+  }
+
   return (
     <article
       className="omnimux-assets-focusable omnimux-assets-card"
@@ -255,7 +277,34 @@ function MediaCard({ t, title, kind, src, onOpen }) {
           />
         ) : null}
         {!showImage && !showVideo ? (kind === 'folder' ? <FolderIcon size={28} /> : <FileIcon size={28} />) : null}
-        <Badge size="sm" shape="capsule" className="omnimux-assets-badge">{badge}</Badge>
+        {badge || revealable ? (
+          <div className="omnimux-assets-card-corner">
+            {badge ? (
+              <Badge size="sm" shape="capsule" className="omnimux-assets-badge">{badge}</Badge>
+            ) : null}
+            {revealable ? (
+              <IconButton
+                variant="ghost"
+                size="xs"
+                className="omnimux-assets-reveal"
+                aria-label={t('browse.revealLocation')}
+                title={t('browse.revealLocation')}
+                onClick={handleReveal}
+                onMouseDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  event.stopPropagation()
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleReveal(event)
+                  }
+                }}
+              >
+                <RevealLocationIcon size={14} />
+              </IconButton>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div className="omnimux-assets-card-body">
         <div className="omnimux-assets-card-title">{title}</div>

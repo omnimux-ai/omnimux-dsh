@@ -45,4 +45,45 @@ describe('AssetBrowse drill-down and sub-media preview contract', () => {
     assert.match(browseJsx, /<EditIcon\s+size=\{14\}\s*\/>/)
     assert.match(browseJsx, /onClick=\{onEdit\}/)
   })
+
+  it('drops the media badge for previewable cards and keeps it for the rest', () => {
+    // A rendered thumbnail already states its own type, so the badge is built
+    // only for folders and unclassified files.
+    assert.match(browseJsx, /const badge = kind === 'folder'[\s\S]*?t\('detail\.folder'\)[\s\S]*?t\('detail\.file'\)[\s\S]*?: ''/)
+    assert.doesNotMatch(browseJsx, /kind === 'image'\s*\n?\s*\?\s*t\('media\.image'\)/)
+    assert.doesNotMatch(browseJsx, /kind === 'video'\s*\n?\s*\?\s*t\('media\.video'\)/)
+  })
+
+  it('adds a reveal-in-file-manager control wired to the Host route', () => {
+    assert.match(browseJsx, /import\s+.*RevealLocationIcon.*from '\.\/icons\.jsx'/)
+    assert.match(browseJsx, /import\s+.*revealAssetEntry.*from '\.\/api\.js'/)
+    assert.match(browseJsx, /className="omnimux-assets-reveal"/)
+    assert.match(browseJsx, /aria-label=\{t\('browse\.revealLocation'\)\}/)
+    assert.match(browseJsx, /revealAssetEntry\(asset\.id,\s*target\.fileId,\s*target\.subPath\)/)
+    // The control must not also activate the card's own open/preview action.
+    assert.match(browseJsx, /const handleReveal = \(event\) => \{\s*event\.stopPropagation\(\)/)
+    // Both card lists (drill-down entries and top-level files) wire it.
+    assert.equal((browseJsx.match(/onReveal=\{/g) || []).length, 2)
+  })
+})
+
+describe('Asset reveal surface', () => {
+  const here = dirname(fileURLToPath(import.meta.url))
+
+  it('ships the icon, the API call and the bilingual label', () => {
+    const iconsJsx = readFileSync(join(here, 'icons.jsx'), 'utf8')
+    const apiJs = readFileSync(join(here, 'api.js'), 'utf8')
+    const localesJs = readFileSync(join(here, 'locales.js'), 'utf8')
+    assert.match(iconsJsx, /export function RevealLocationIcon/)
+    assert.match(apiJs, /export function revealAssetEntry[\s\S]*?'\/omnimux\/assets\/library\/reveal'/)
+    assert.match(localesJs, /'browse\.revealLocation': '打开文件位置'/)
+    assert.match(localesJs, /'browse\.revealLocation': 'Reveal in Finder'/)
+  })
+
+  it('positions the reveal control beside the badge in the card corner', () => {
+    const stylesJs = readFileSync(join(here, 'styles.js'), 'utf8')
+    assert.match(stylesJs, /\.omnimux-assets-card-corner \{[\s\S]*?position: absolute;[\s\S]*?z-index: 2;/)
+    assert.match(stylesJs, /\.omnimux-assets-card-corner \.omnimux-assets-badge \{\s*position: static;/)
+    assert.match(stylesJs, /\.omnimux-assets-card-corner \.omnimux-assets-reveal/)
+  })
 })

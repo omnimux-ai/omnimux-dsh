@@ -344,4 +344,14 @@ export function EditIcon(props) {
   )
 }
 
+/** 打开文件位置图标：打开的文件夹轮廓，用于在文件管理器中定位条目 */
+export function RevealLocationIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2 5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v2" />
+      <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2v-3.5" />
+    </Icon>
+  )
+}
+
 
