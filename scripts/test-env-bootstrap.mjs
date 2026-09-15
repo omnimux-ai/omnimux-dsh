@@ -208,6 +208,21 @@ export function createTestEnvironmentStarter(deps = {}) {
       // JSON is YAML-compatible. The fresh fixed settings layer wins over bundle adapter defaults.
       io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify({ 'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint } }) + '\n', { mode: 0o600, flag: 'wx' });
 
+      // 预置标准测试工程夹具（自带视频素材节点，解除测试环境空画布造数据死锁）
+      const fixtureSrc = join(root, 'tests', 'fixtures', 'qa-workspace-media');
+      const seededWorkspaceId = 'ws_qa_media';
+      let hasSeededFixture = false;
+      try {
+        if (io.existsSync(fixtureSrc)) {
+          const targetWsDir = join(env.DSH_HOME, 'workspaces', seededWorkspaceId);
+          io.mkdirSync(targetWsDir, { recursive: true, mode: 0o700 });
+          if (typeof io.cpSync === 'function') {
+            io.cpSync(fixtureSrc, targetWsDir, { recursive: true });
+            hasSeededFixture = true;
+          }
+        }
+      } catch {}
+
       // 检测并挂载本地 OmniMux 完整插件 Profile（若存在）
       const devProfile = join(process.env.HOME || '', '.omnimux-dev', 'profiles', 'omnimux');
       let profileName = 'web';
@@ -261,7 +276,7 @@ export function createTestEnvironmentStarter(deps = {}) {
       });
       startupReject = undefined; releaseOutput();
       if (exited || child?.exitCode !== null || child?.signalCode !== null) throw failure('RUNTIME_EXIT');
-      const summary = Object.freeze({ mode, origin: url.origin, evidenceLevel, taskPluginsInstalled: pluginsInstalled, realModelRequest: false, modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured' });
+      const summary = Object.freeze({ mode, origin: url.origin, evidenceLevel, taskPluginsInstalled: pluginsInstalled, realModelRequest: false, modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured', seededWorkspace: hasSeededFixture ? seededWorkspaceId : null });
       const result = { origin: url.origin, summary, cleanup };
       Object.defineProperty(result, 'loginUrl', { value: url.href, enumerable: false });
       return result;

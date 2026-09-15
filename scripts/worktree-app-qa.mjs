@@ -240,6 +240,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(`✅ 应用级 Web 验收通过（${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
       console.log(`   截图: ${report.screenshot?.path} (${report.screenshot?.width}x${report.screenshot?.height}, ${report.screenshot?.bytes} 字节)`);
       console.log('   证据: docs/evidence/worktree-app-qa-report.json');
+      if (report.summary?.seededWorkspace) {
+        console.log(`💡【测试工程夹具】：已自动预装带媒体素材的标准测试工程（ID: ${report.summary.seededWorkspace}）`);
+        console.log(`   前置测试直达：${report.origin}/#/workspace/${report.summary.seededWorkspace}`);
+        console.log('   说明：内置非空视频素材节点，悬浮工具栏「添加到会话」等按钮均已就绪，无需手动造数据。');
+      }
     } else {
       console.error(`❌ 应用级 Web 验收未通过 -> ${[...report.errors, ...failed].join('; ')}`);
       if (report.hint) console.error(`   原因: ${report.hint}`);
