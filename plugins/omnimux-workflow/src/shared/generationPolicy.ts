@@ -16,8 +16,8 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'automatic',
   },
   image: {
-    // 仅保留 OpenAI GPT Image 2.5 官方主模型（含 pro/economy 双档）
-    allowedModelIds: ['gpt-image-2.5'],
+    // 官方价目表在售生图模型全量准入：GPT Image 2.5 标准版、极速版 (Flare)、画质版 (Sunburst)
+    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },

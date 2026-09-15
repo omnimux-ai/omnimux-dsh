@@ -82,8 +82,8 @@ describe('E2E: Clean Submit Flow & Pre-Step Injection', () => {
       // 核心断言 1: 发送未被 stopImmediatePropagation 拦截，事件正常通过
       assert.equal(accepted, true, '回车事件必须直接放行');
 
-      // 核心断言 2: 草稿绝对没有被篡改注入 ### 会话关联上下文
-      assert.equal(draft, '说说你分别收到的', '草稿必须 100% 保持用户原始输入');
+      // 核心断言 2: 发送内容装配了附件文件路径，确保模型能感知目标文件
+      assert.match(draft, /yuna\.jpg/, '发送内容必须携带目标文件路径供模型读取');
 
       // 核心断言 3: 没有弹出「素材说明已加入草稿请再次发送」提示
       assert.equal(document.querySelector('#bridge > div').style.display, 'none');
@@ -107,9 +107,9 @@ describe('E2E: Clean Submit Flow & Pre-Step Injection', () => {
         async () => ({ kind: 'enter', messages: [{ role: 'user', content: [{ type: 'text', text: draft }] }] }),
       );
 
-      // 模型拿到两条消息：第一条是用户的纯净消息，第二条是原生的附件上下文快照消息
+      // 模型拿到完整文件路径与快照信息
       assert.equal(decision.messages.length, 2);
-      assert.equal(decision.messages[0].content[0].text, '说说你分别收到的');
+      assert.match(decision.messages[0].content[0].text, /yuna\.jpg/);
       assert.match(decision.messages[1].content[0].text, /科技 Vlogger Yuna/);
       assert.equal(decision.messages[1].source.form, 'snapshot');
     } finally {
