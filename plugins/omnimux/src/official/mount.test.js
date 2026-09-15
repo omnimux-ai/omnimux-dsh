@@ -134,3 +134,23 @@ describe('official mount', () => {
     assert.equal(result.data.id, 'insp_1')
   })
 })
+
+ it('direct registered publication uses current owner permission', async () => {
+  const capture = registerCapture()
+  let disabled = true
+  let posts = 0
+  capture.deps.accountMetaStore = { readForAuthorization: () => ({ a: { agent_usable: !disabled } }) }
+  capture.deps.fetcher = async (url, init) => {
+    if (String(url).includes('/accounts?')) return { ok: true, json: async () => ({ accounts: [{ id: 'a', provider: 'zernio' }] }) }
+    posts++
+    return { ok: true, json: async () => ({ success: true, id: 'p' }) }
+  }
+  mountOfficial(capture.ctx, capture.deps)
+  const tool = capture.registeredTools.omnimux_publish_create
+  const args = { provider: 'zernio', account_ids: ['a'] }
+  await assert.rejects(tool.execute(args), /does not allow/)
+  assert.equal(posts, 0)
+  disabled = false
+  await tool.execute(args)
+  assert.equal(posts, 1)
+ })
