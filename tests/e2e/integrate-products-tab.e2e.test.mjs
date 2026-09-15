@@ -31,34 +31,35 @@ test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证'
   assert.ok(
     localesContent.includes("'source.product': '产品库'") &&
     localesContent.includes("'source.product': 'Products'") &&
-    localesContent.includes("'product.create': '新建产品'") &&
+    localesContent.includes("'product.create': '添加产品'") &&
     localesContent.includes("'product.chatButton': '对话中添加'"),
     'locales.js 必须包含中英文产品库及按钮动作词条'
   )
 
-  // 3. 验证进入产品库后一级按钮动态切换为「新建产品」
+  // 3. 验证进入产品库后一级按钮动态切换为带下拉分流菜单的「添加产品」
   assert.ok(
     stageContent.includes("if (sourceTab === 'product')") &&
-    stageContent.includes("{t('product.create') || '新建产品'}") &&
+    stageContent.includes("<CreateProductMenu") &&
     stageContent.includes("{t('product.chatButton') || '对话中添加'}") &&
     stageContent.includes("{t('add.button')}") &&
     stageContent.includes("{t('import.button')}"),
-    'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作「新建产品」，其他 Tab 保持「添加资产」'
+    'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作 CreateProductMenu 菜单，其他 Tab 保持「添加资产」'
   )
 
   // 4. 验证产品库子视图 ProductsView 的挂载与设计规范遵从
   assert.ok(
     stageContent.includes("<ProductsView") &&
-    productsViewContent.includes("omnimux-assets-products-view") &&
-    productsViewContent.includes("omnimux-assets-product-card"),
-    'AssetsBody 必须在选中产品库时挂载 ProductsView'
+    productsViewContent.includes("omnimux-products-list-view") &&
+    productsViewContent.includes("omnimux-products-empty") &&
+    productsViewContent.includes("omnimux-products-grid"),
+    'AssetsBody 必须在选中产品库时挂载 ProductsView 并提供 1:1 对齐的 empty 和 grid 容器'
   )
 
   assert.ok(
-    stylesContent.includes(".omnimux-assets-products-view") &&
-    stylesContent.includes(".omnimux-assets-product-card") &&
-    stylesContent.includes("var(--dsw-alias-bg-layer-1)") &&
-    stylesContent.includes("var(--dsw-alias-border-l1)"),
+    stylesContent.includes(".omnimux-products-empty") &&
+    stylesContent.includes(".omnimux-products-card") &&
+    stylesContent.includes("var(--dsw-alias-border-l4)") &&
+    stylesContent.includes("var(--dsw-alias-border-l2)"),
     '产品库整合样式必须 100% 遵循 --dsw-* 设计令牌规范'
   )
 })
