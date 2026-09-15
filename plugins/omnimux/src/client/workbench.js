@@ -79,8 +79,26 @@ import {
   installSplitConversationMin,
   uninstallSplitConversationMin,
 } from './workbench/split-layout.js'
+import {
+  getRailVerdict,
+  installSidebarActivation,
+  isRailRowActive,
+  requestRailActivationSync,
+  resetSidebarActivationForTests,
+  resolveSidebarActiveTarget,
+  uninstallSidebarActivation,
+} from './workbench/sidebar-activation.js'
 
 export const WORKBENCH_GLOBAL_KEY = '__omnimuxWorkbench'
+
+export {
+  getRailVerdict,
+  installSidebarActivation,
+  isRailRowActive,
+  requestRailActivationSync,
+  resolveSidebarActiveTarget,
+  uninstallSidebarActivation,
+} from './workbench/sidebar-activation.js'
 
 export {
   getConversationCollapsed,
@@ -218,6 +236,10 @@ function createApi() {
     closePanel: closeWorkbenchPanel,
     isOpen: isWorkbenchOpen,
     isActive: isWorkbenchActive,
+    // 诊断与测试：读完整裁决 / 强制重算一次。
+    getRailVerdict: () => getRailVerdict(),
+    isRailRowActive: (tabId) => isRailRowActive(tabId),
+    syncActivation: () => requestRailActivationSync(),
     isWorkbenchTab,
     resolveDefaultFocus,
     subscribe: subscribeWorkbench,
@@ -272,6 +294,7 @@ export function installWorkbenchGlobal(target = hostWindow()) {
 export function resetWorkbenchForTests(target = hostWindow()) {
   uninstallWorkbenchLeftRailObserver()
   uninstallSplitConversationMin()
+  resetSidebarActivationForTests()
   resetWorkbenchHostAdapter()
   resetWorkbenchListeners()
   resetWorkbenchWidthMemory()

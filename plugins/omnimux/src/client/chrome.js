@@ -3,7 +3,7 @@ import { ensureProductStageChrome } from './conversation-box.js'
 import { installStageGlobal } from './stage.js'
 import { installSidebarGlobal } from './sidebar-coordinator.js'
 import { installAuthGlobal } from './auth-gate.js'
-import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSplitConversationMin, hydrateConversationCollapsed } from './workbench.js'
+import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSidebarActivation, installSplitConversationMin, hydrateConversationCollapsed } from './workbench.js'
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
@@ -56,6 +56,8 @@ export function installHubChrome(ctx) {
     ensureConversationCollapseChrome()
     ensureComposerCompactChrome()
     hydrateConversationCollapsed()
+    // 左侧栏激活位仲裁器：观察宿主三栏状态，裁决变化走既有 notifyWorkbenchChange 广播。
+    const unsubActivation = installSidebarActivation()
     const unsubToggle = installChatToggle()
     const unsubLeftRail = installWorkbenchLeftRailObserver()
     const unsubSplitMin = installSplitConversationMin()
@@ -64,6 +66,7 @@ export function installHubChrome(ctx) {
     const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     return () => {
+      unsubActivation?.()
       unsubToggle?.()
       unsubLeftRail?.()
       unsubSplitMin?.()

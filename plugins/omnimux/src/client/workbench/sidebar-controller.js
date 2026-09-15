@@ -5,7 +5,6 @@
  */
 
 import {
-  activeTabId,
   closeSeedFiles,
   ensureSessionId,
   getAttachedStore,
@@ -29,6 +28,7 @@ import {
   resolveWorkbenchTabTitle,
 } from './focus-state.js'
 import { notifyWorkbenchChange } from './event-bus.js'
+import { isRailRowActive } from './sidebar-activation.js'
 import { setWorkbenchFocus } from './split-layout.js'
 
 export const WORKBENCH_GLOBAL_KEY = '__omnimuxWorkbench'
@@ -307,12 +307,17 @@ export function isWorkbenchOpen(tabId) {
   return tabIsOpen(snapshot?.state, tabId)
 }
 
+/**
+ * 行的激活读数：唯一真源是统一仲裁裁决（会话记录优先，其次官方右栏聚焦页签）。
+ *
+ * 不再读 better-sidebar 快照：右栏已交还官方 `ctx.sidebarRight`，那份镜像上的
+ * `panelOpen` / `splits` 在本宿主上已不存在，谓词因此恒为 false（点击插件项不高亮的根因）。
+ * @param {string} tabId
+ * @returns {boolean}
+ */
 export function isWorkbenchActive(tabId) {
   if (!tabId) return false
-  const snapshot = liveSnapshot()
-  const state = snapshot?.state
-  if (!state || state.panelOpen === false) return false
-  return activeTabId(state) === tabId
+  return isRailRowActive(tabId)
 }
 
 function getWorkbenchApi() {
@@ -329,15 +334,16 @@ function resolveStoreTitle(options, tabId) {
   return title || tabId
 }
 
+/**
+ * 行的读面：与 `isWorkbenchActive` 同源，都是仲裁裁决的投影。
+ *
+ * 契约约束（docs/contracts/sidebar-extra-entries.md）：高亮 MUST 跟随**聚焦**的页签，
+ * 不是 Tab 是否存在。历史上的 `isOpen` 回退会把「存在但未聚焦」判成 active，
+ * 是双高亮的唯一可复现路径，已删除。
+ */
 function readSidebarSnapshot(tabId) {
-  const api = getWorkbenchApi()
-  if (api && typeof api.isActive === 'function') {
-    return Boolean(api.isActive(tabId))
-  }
-  if (api && typeof api.isOpen === 'function') {
-    return Boolean(api.isOpen(tabId))
-  }
-  return false
+  if (!tabId) return false
+  return isRailRowActive(tabId)
 }
 
 function closeSidebarStore(tabId) {

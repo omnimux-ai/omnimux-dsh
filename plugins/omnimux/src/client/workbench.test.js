@@ -1151,20 +1151,25 @@ test('createWorkbenchSidebarStore.close uses closeTab not closePanel', () => {
   assert.deepEqual(closed, [['tab', 'omnimux-clip:studio']])
 })
 
-test('isActive follows focused tab; isOpen keeps coexistence; chat clears active', () => {
+test('isActive is the rail arbitration verdict; isOpen keeps coexistence; a closed panel clears active', () => {
   const win = setupWindow()
   const api = installWorkbenchGlobal(win)
   const assets = 'omnimux-assets:library'
   const clip = 'omnimux-clip:studio'
-  let state = makeState([
+  const state = makeState([
     { id: assets, type: assets },
     { id: clip, type: clip },
   ], 780, true)
-  state.splits.active = assets
+  // 官方右栏聚焦页签是唯一激活真源：旧 better-sidebar 快照的 splits.active 不再参与判定。
+  let native = { expanded: true, kind: assets }
   api.bind({
     betterSidebar: {
       getSnapshot() { return { sessionId: 's-active', state } },
       subscribeState() { return () => {} },
+    },
+    sidebarRight: {
+      isExpanded: () => native.expanded,
+      active: () => (native.kind ? { id: `tab:${native.kind}`, kind: native.kind } : null),
     },
   })
 
@@ -1174,13 +1179,13 @@ test('isActive follows focused tab; isOpen keeps coexistence; chat clears active
   assert.equal(isWorkbenchActive(clip), false)
   assert.equal(api.isActive(assets), true)
   assert.equal(api.isActive(clip), false)
+  assert.deepEqual(api.getRailVerdict(), { winner: 'row', tabId: assets, reason: 'focused-tab' })
 
-  state = {
-    ...state,
-    splits: { ...state.splits, active: clip },
-  }
+  native = { expanded: true, kind: clip }
+  api.syncActivation()
   assert.equal(api.isActive(assets), false)
   assert.equal(api.isActive(clip), true)
+  // Tab 仍在快照里：存在语义与激活语义解耦，绝不回退成双高亮。
   assert.equal(isWorkbenchOpen(assets), true)
 
   const assetsStore = createWorkbenchSidebarStore({ tabId: assets })
@@ -1188,11 +1193,23 @@ test('isActive follows focused tab; isOpen keeps coexistence; chat clears active
   assert.equal(assetsStore.getSnapshot(), false)
   assert.equal(clipStore.getSnapshot(), true)
 
-  state = { ...state, panelOpen: false }
+  native = { expanded: false, kind: clip }
+  api.syncActivation()
   assert.equal(api.isActive(assets), false)
   assert.equal(api.isActive(clip), false)
   assert.equal(assetsStore.getSnapshot(), false)
   assert.equal(clipStore.getSnapshot(), false)
+  assert.equal(api.getRailVerdict().winner, 'none')
+})
+
+test('a focused tab without a left rail row never lights any plugin row', () => {
+  const win = setupWindow()
+  const api = installWorkbenchGlobal(win)
+  api.bind({
+    sidebarRight: { isExpanded: () => true, active: () => ({ id: 'tab:5', kind: 'tab:5' }) },
+  })
+  assert.equal(api.isActive('omnimux-assets:library'), false)
+  assert.deepEqual(api.getRailVerdict(), { winner: 'none', reason: 'tab-has-no-rail-row' })
 })
 
 test('resolveWorkbenchTabTitle prefers opts, then getTab, then human fallback (#345)', () => {

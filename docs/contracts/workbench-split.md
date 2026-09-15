@@ -81,7 +81,17 @@ Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCan
 
 Toggling one pane **MUST NOT** flip another pane's sticky intent.
 
-**Exception — enter-conversation gesture:** clicking a workspace session row (`[role="treeitem"]` plain click, not pin/delete), workspace-group「新建会话」, shell「新会话」, or the brand new-session control **MUST** clear `conversationCollapsed` via `setFocus(split)` when the middle pane is hidden. Intent is to enter the conversation column, not keep it collapsed.
+**Exception — enter-conversation gesture:** clicking a workspace session row (`[role="treeitem"]` plain click, not pin/delete), workspace-group「新建会话」, shell「新会话」, or the brand new-session control **MUST** make the conversation visible in one gesture:
+
+| Step | Action | Why |
+|---|---|---|
+| a | Exit the native right panel's fullscreen presentation if it is active — click the panel's own mode control (`[data-sidebar-right-panel="fullscreen"] button[data-sidebar-right-mode="push"]`) | Fullscreen is the **host's** state key (`surface.layout.mode`), not the plugin's collapse key; the plugin has no `setMode` / `exitFullscreen` seam, and clearing the collapse key alone leaves the panel `position:fixed; width:100%` over the middle column |
+| b | Clear `conversationCollapsed` via `setFocus('split')` when it is set | `setFocus` also rewrites the focus record, so a later left-rail change cannot flip the panel back to fullscreen via `record.mode` |
+| c | Leave the panel's expanded state and open tabs untouched | The gesture enters the conversation column; it is not a close-panel gesture |
+
+The gesture is idempotent: clicking the already-selected session row repeats no destructive work and resets no panel width.
+
+**Session row highlight (normative):** the official `[role="treeitem"][aria-selected="true"]` in the left column is the single truth for session selection. Plugins MUST NOT mirror session selection, and plugin-side highlighting MUST yield to it: while a session row is selected and the middle column is visible, every plugin left-row is inactive. See [sidebar-extra-entries.md](./sidebar-extra-entries.md) 「Left-rail single activation slot」.
 
 ### Default Focus Rule
 
