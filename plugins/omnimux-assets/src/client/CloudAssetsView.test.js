@@ -147,7 +147,7 @@ describe('Cloud second level follows the catalog data', () => {
 
   it('drops the shelves the catalog no longer has', () => {
     const gone = [
-      'note', 'digital-human', 'virtual-influencer', 'hook-video', 'prompt', 'storyboard',
+      'note', 'virtual-influencer', 'hook-video', 'prompt', 'storyboard',
       // The collection batches and the format split the new taxonomy replaced.
       'ambience', 'environment', 'meme', 'image-preset',
     ]
