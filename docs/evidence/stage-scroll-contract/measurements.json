@@ -1,0 +1,32 @@
+{
+  "after": {
+    "assets": {
+      "before": 71,
+      "after": 71,
+      "delta": 0,
+      "scrolled": 220
+    },
+    "market": {
+      "before": 0,
+      "after": 0,
+      "delta": 0,
+      "scrolled": 220
+    }
+  },
+  "before": {
+    "assets": {
+      "before": 85,
+      "after": -135,
+      "delta": -220,
+      "scrolled": 220
+    },
+    "market": {
+      "before": 14,
+      "after": -206,
+      "delta": -220,
+      "scrolled": 220
+    }
+  },
+  "okAfter": true,
+  "okBefore": true
+}

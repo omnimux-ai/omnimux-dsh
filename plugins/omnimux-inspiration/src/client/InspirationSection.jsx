@@ -217,6 +217,8 @@ export function InspirationSection({ t, active }) {
 
   return (
     <div className="omnimux-inspiration-root">
+      {/* 固定栈：动作行 + 一级 Tab 工具栏（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-pinned">
       <div className="omnimux-inspiration-action-row">
         <Button
           variant="primary"
@@ -329,6 +331,7 @@ export function InspirationSection({ t, active }) {
           </>
         )}
       />
+      </div>
 
       {/* Content area — the one region a tab switch replaces. */}
       {rivalTab ? (
@@ -346,6 +349,8 @@ export function InspirationSection({ t, active }) {
         />
       ) : (
         <>
+          {/* 固定栈：二级筛选行 + 批量选择条（骨架契约 §二·补） */}
+          <div className="omx-stage-pinned">
           <div className="omnimux-inspiration-subfilter-row">
             <DropdownSelect
               value={country}
@@ -457,7 +462,10 @@ export function InspirationSection({ t, active }) {
               </div>
             </div>
           ) : null}
+          </div>
 
+          {/* 唯一滚动区：卡片网格 / 空态 / 骨架屏（骨架契约 §二·补） */}
+          <div className="omx-stage-scroll">
           {loading && items.length === 0 ? (
             <div className="omnimux-inspiration-skeleton">
               {Array.from({ length: 10 }).map((_, i) => (
@@ -530,6 +538,7 @@ export function InspirationSection({ t, active }) {
           ) : null}
 
           <div ref={sentinelRef} />
+          </div>
 
           {selectedItem ? (
             <InspirationPreviewModal

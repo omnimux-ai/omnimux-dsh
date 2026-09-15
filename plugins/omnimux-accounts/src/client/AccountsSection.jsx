@@ -291,6 +291,8 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
           closeTitle={t('close')}
         />
       )}
+      {/* 固定栈：动作行 + 概览 + 筛选工具行 + 批量条（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-pinned">
       <div className="omnimux-accounts-action-row">
         <ActionRow
           primaryAction={
@@ -395,6 +397,10 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
       ) : null}
       {errorText !== '' ? <p className="omnimux-accounts-error" role="alert">{errorText}</p> : null}
       {notice !== '' ? <p className="omnimux-accounts-notice" role="status">{notice}</p> : null}
+      </div>
+
+      {/* 唯一滚动区：账号网格 / 表格（骨架契约 §二·补） */}
+      <div className="omx-stage-scroll">
       {accounts.length === 0 ? (
         <EmptyState t={t} onConnect={openConnect} busy={combinedBusy} />
       ) : visible.length === 0 ? (
@@ -427,6 +433,7 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
           ))}
         </div>
       )}
+      </div>
       {modalOpen ? (
         <ConnectModal
           t={t}

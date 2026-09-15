@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { ChatIcon, GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
@@ -233,6 +233,7 @@ function AssetsMainView(props) {
 
   if (detail) {
     return (
+      <div className="omx-stage-scroll">
       <AssetBrowse
         key={detail.id}
         t={t}
@@ -241,10 +242,12 @@ function AssetsMainView(props) {
         onPreview={onPreview}
         onEdit={onEditDetail}
       />
+      </div>
     )
   }
 
   return (
+    <div className="omx-stage-scroll">
     <AssetGrid
       t={t}
       assets={visible}
@@ -262,6 +265,7 @@ function AssetsMainView(props) {
       onToggleSelect={toggleSelect}
       onBrowse={setDetail}
     />
+    </div>
   )
 }
 
@@ -407,6 +411,13 @@ export function AssetsStage(props) {
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
   const [productKindTab, setProductKindTab] = useState('all')
+  const stageRootRef = useRef(null)
+
+  // 一级/二级分类切换后，内容区滚动位置归零（骨架契约 §二·补，Issue 1977）
+  useEffect(() => {
+    const scroller = stageRootRef.current?.querySelector?.('.omx-stage-scroll')
+    if (scroller) scroller.scrollTop = 0
+  }, [sourceTab, feed.filterType, productKindTab])
 
   // A cloud row has no library record behind it, so opening its preview means
   // translating the catalog row first — and the translation remembers the row
@@ -452,6 +463,7 @@ export function AssetsStage(props) {
 
   return (
     <div
+      ref={stageRootRef}
       role="region"
       aria-label={t('stage.title')}
       aria-hidden={visible ? undefined : 'true'}
@@ -460,6 +472,8 @@ export function AssetsStage(props) {
       style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} sourceTab={sourceTab} />
+      {/* 固定栈：动作行 + 一级 Tab + 二级分类行 + 批量条（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-pinned">
       <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
@@ -484,6 +498,7 @@ export function AssetsStage(props) {
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}
+      </div>
       <AssetsBody
         t={t}
         feed={feed}

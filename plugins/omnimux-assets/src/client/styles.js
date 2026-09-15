@@ -1,6 +1,16 @@
 export const STYLES_ID = 'omnimux-assets-styles'
 
 export const ASSETS_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：固定栈 + 唯一滚动区，声明与其它插件逐字一致 */
+.omx-stage-pinned {
+  flex: none;
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-assets-stage {
   position: relative;
   width: 100%;
@@ -148,7 +158,10 @@ export const ASSETS_CSS = `
 .omnimux-assets-main {
   flex: 1;
   min-width: 0;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 16px 24px;
 }
 .omnimux-assets-grid {

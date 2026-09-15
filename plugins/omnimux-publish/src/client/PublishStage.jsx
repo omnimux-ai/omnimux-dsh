@@ -150,7 +150,10 @@ export function PublishStage(props) {
         onClose={handleClose}
         closeTitle={t('close')}
       />
+      {/* 固定栈：三 Tab 账本切换行（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-pinned">
       <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
+      </div>
       <PublishViewport
         t={t}
         viewMode={viewMode}

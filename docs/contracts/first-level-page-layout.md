@@ -185,6 +185,42 @@ export function StandardStage({ t, stage, ...props }) {
 
 ---
 
+## 二·补、 滚动归属：页头与一级/二级 Tab 固定，仅内容区滚动（Issue #1977）
+
+> **强制 (MANDATORY)** —— 适用于全部一级页（A 类 4 层页、B2 仪表盘、B3 集市）。
+
+一级页根节点是 flex 列容器，**只有 Layer 4（内容数据区）允许滚动**；Layer 1 页头、Layer 2 动作行、Layer 3A 一级 Tab、Layer 3B 二级分类行**必须固定**，向上滚动时不得离开视口。
+
+统一骨架：两个 class 是全站契约词汇，语义与声明在**所有插件中必须逐字一致**。
+
+| class | 归属 | 声明（唯一真源，禁止改写） |
+|---|---|---|
+| `.omx-stage-pinned` | 固定栈：页头之后的导航/工具栈（动作行、一级 Tab、二级分类、单行 FilterBar） | `flex: none;` |
+| `.omx-stage-scroll` | 唯一滚动区：Layer 4 数据区 | `flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;` |
+
+```
+<div className="omnimux-<p>-stage">          /* flex 列 + overflow:hidden */
+  <PageHeader … />                           /* Layer 1 固定 */
+  <div className="omx-stage-pinned">         /* Layer 2/3A/3B 固定栈 */
+    动作行 / 一级 Tab / 二级分类行 / FilterBar
+  </div>
+  <div className="omnimux-<p>-body">         /* Layer 4 */
+    <div className="omx-stage-scroll">数据网格 / 列表 / 表格</div>
+  </div>
+</div>
+```
+
+- **MUST**：每个一级页恰好一条滚动路径，落在 `.omx-stage-scroll` 上。
+- **MUST**：一级/二级分类切换后，`.omx-stage-scroll` 的 `scrollTop` 归零。
+- **MUST NOT**：把任何一级/二级 Tab、分类 Chip、搜索/排序工具栏放进 `.omx-stage-scroll` 内部，或放进其任何祖先滚动容器内部。
+- **MUST NOT**：给 stage 根节点或 Layer 3 容器加 `overflow: auto`（会产出第二条滚动条，并让导航随内容滚走）。
+- **MUST NOT**：用 `position: sticky` 伪装固定（背景穿透 + 双层滚动条）。
+- 子视图（Section / View / Plaza）自带滚动时，其根节点同样遵守本表：`flex 列 + overflow:hidden`，内部导航栈 `flex: none`，数据区 `.omx-stage-scroll`。
+
+防漂移门禁：各一级页的布局测试断言页面存在 `.omx-stage-scroll` 且导航栈标记先于滚动区标记；`pnpm verify:stage-scroll` 断言两个 class 在各插件样式表中的声明逐字一致。
+
+---
+
 ## 三、 五条强制性交互与视觉准则 (Golden Rules)
 
 ### 1. 严格禁止把「主 CTA」塞入 FilterBar 搜索行

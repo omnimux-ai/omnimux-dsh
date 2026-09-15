@@ -355,11 +355,21 @@
       const projectDir = resolveProjectDir(typeof plazaSessions !== "undefined" ? plazaSessions : null, workspaces);
       const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm, tr, projectDir });
 
+      // 滚动归属（契约 §二·补）：一级/二级 Tab 固定，只有卡片网格滚动。
+      const [scrollNode, setScrollNode] = hooks.useState(null);
+      hooks.useEffect(() => {
+        if (scrollNode) scrollNode.scrollTop = 0;
+      }, [scrollNode, state.mainTab, state.category, state.mineCategory]);
+
       return h("div", { className: "sh-mkt" },
-        renderWorkshopIntro(sections.introOpts),
-        renderPlazaNavBar(sections.navBarOpts),
-        sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
-        renderPlazaTabContent(sections.tabContentOpts),
+        h("div", { className: "omx-stage-pinned" },
+          renderWorkshopIntro(sections.introOpts),
+          renderPlazaNavBar(sections.navBarOpts),
+          sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
+        ),
+        h("div", { className: "omx-stage-scroll", ref: setScrollNode },
+          renderPlazaTabContent(sections.tabContentOpts),
+        ),
         drawerNode,
         installNode,
         confirmNode,

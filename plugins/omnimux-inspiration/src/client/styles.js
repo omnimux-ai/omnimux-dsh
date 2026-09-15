@@ -5,6 +5,16 @@
 export const INSPIRATION_STYLES_ID = 'omnimux-inspiration-styles'
 
 export const INSPIRATION_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：固定栈 + 唯一滚动区，声明与其它插件逐字一致 */
+.omx-stage-pinned {
+  flex: none;
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-inspiration-stage {
   position: relative;
   width: 100%;
@@ -45,7 +55,7 @@ export const INSPIRATION_CSS = `
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   padding: 0 20px 24px;
   gap: 12px;
   background: var(--dsw-alias-bg-primary, var(--dsw-bg));

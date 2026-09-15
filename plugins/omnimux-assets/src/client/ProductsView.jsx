@@ -127,7 +127,7 @@ export function ProductsView(props) {
   return (
     <div className="omnimux-products-list-view">
       {/* 1:1 对齐原产品库主体内容与居中虚线大空状态 */}
-      <div className="omnimux-products-body">
+      <div className="omnimux-products-body omx-stage-scroll">
         {visibleProducts.length === 0 ? (
           <div className="omnimux-products-empty">
             <p>
