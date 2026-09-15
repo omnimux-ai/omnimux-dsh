@@ -401,7 +401,17 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         vid.preload = 'metadata';
         vid.setAttribute('playsinline', '');
         vid.addEventListener('click', (e) => e.stopPropagation());
-        mainStage.style.aspectRatio = '16 / 9';
+        const applyVideoRatio = () => {
+          if (vid.videoWidth && vid.videoHeight) {
+            mainStage.style.aspectRatio = `${vid.videoWidth} / ${vid.videoHeight}`;
+          }
+        };
+        vid.addEventListener('loadedmetadata', applyVideoRatio);
+        if (vid.videoWidth && vid.videoHeight) {
+          applyVideoRatio();
+        } else {
+          mainStage.style.aspectRatio = '16 / 9';
+        }
         mainContent.appendChild(vid);
       } else {
         const img = doc.createElement('img');
@@ -440,16 +450,23 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
       thumb.setAttribute('aria-label', `查看素材 ${index + 1}: ${item.title || item.filename || ''}`);
       thumb.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
 
-      const img = doc.createElement('img');
-      img.src = item.url;
-      img.alt = item.title || '';
-      thumb.appendChild(img);
-
       if (item.type === 'video') {
+        const vid = doc.createElement('video');
+        vid.src = item.url ? `${item.url}#t=0.001` : '';
+        vid.preload = 'metadata';
+        vid.muted = true;
+        vid.setAttribute('playsinline', '');
+        thumb.appendChild(vid);
+
         const dur = doc.createElement('span');
         dur.className = 'omx-chat-media-tail__dur';
         dur.textContent = '视频';
         thumb.appendChild(dur);
+      } else {
+        const img = doc.createElement('img');
+        img.src = item.url;
+        img.alt = item.title || '';
+        thumb.appendChild(img);
       }
 
       thumb.addEventListener('click', (e) => {

@@ -34,8 +34,8 @@ export const MEDIA_VIEWER_CSS = `
   flex-direction: row !important;
   gap: 10px !important;
   align-items: stretch !important;
-  width: 100% !important;
-  max-width: 580px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
   height: auto !important;
   max-height: min(440px, 50vh) !important;
   min-height: 180px !important;
@@ -44,7 +44,8 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-chat-media-tail__main {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 1 auto !important;
+  width: auto !important;
   min-width: 0;
   height: 100%;
   max-height: min(440px, 50vh);
@@ -137,7 +138,8 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: inset 0 0 0 2px var(--dsw-alias-brand-primary) !important;
 }
 
-.omx-chat-media-tail__thumb img {
+.omx-chat-media-tail__thumb img,
+.omx-chat-media-tail__thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;
