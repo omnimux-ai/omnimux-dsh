@@ -242,7 +242,12 @@ export function TaskDetailPanel({
   const state = automationStateOf(item)
   const promptText = String(draft.prompt ?? '')
   const promptLong = promptText.split('\n').length > PROMPT_CLAMP_LINES || promptText.length > 280
-  const update = patch => onFieldChange?.(patch)
+  const update = (patch, immediateSave = false) => {
+    onFieldChange?.(patch)
+    if (immediateSave) {
+      onSave?.({ ...draft, ...patch })
+    }
+  }
 
   const selectedModel = models.find(entry => `${entry.provider}::${entry.model}` === draft.modelKey)
   const effortOptions = selectedModel?.reasoning?.efforts?.length > 0
@@ -293,6 +298,7 @@ export function TaskDetailPanel({
               value={draft.name ?? ''}
               placeholder={t('form.namePlaceholder')}
               onChange={event => update({ name: event.target.value })}
+              onBlur={() => onSave?.(draft)}
             />
           </label>
 
@@ -305,7 +311,10 @@ export function TaskDetailPanel({
                   value={promptText}
                   placeholder={t('form.promptPlaceholder')}
                   onChange={event => update({ prompt: event.target.value })}
-                  onBlur={() => setPromptEditing(false)}
+                  onBlur={() => {
+                    setPromptEditing(false)
+                    onSave?.(draft)
+                  }}
                 />
               )
               : (
@@ -342,7 +351,7 @@ export function TaskDetailPanel({
                   value={draft.workspaceId ?? ''}
                   options={workspaceOptions}
                   emptyLabel={t('form.error.workspace')}
-                  onSelect={value => update({ workspaceId: value })}
+                  onSelect={value => update({ workspaceId: value }, true)}
                 />
               </FieldRow>
               <FieldRow label={t('form.model')}>
@@ -357,7 +366,7 @@ export function TaskDetailPanel({
                       {modelT('warning.groupLoad', { name: failure.providerLabel, message: failure.message })}
                     </div>
                   ))}
-                  onSelect={value => update({ modelKey: value })}
+                  onSelect={value => update({ modelKey: value }, true)}
                 />
               </FieldRow>
               <FieldRow label={t('form.effort')}>
@@ -367,7 +376,7 @@ export function TaskDetailPanel({
                       key={option.value}
                       className={`dsh-st-md-segment${draft.reasoningEffort === option.value ? ' is-on' : ''}`}
                       aria-pressed={draft.reasoningEffort === option.value}
-                      onClick={() => update({ reasoningEffort: option.value })}
+                      onClick={() => update({ reasoningEffort: option.value }, true)}
                     >{option.label}</Button>
                   ))}
                 </div>
@@ -378,7 +387,7 @@ export function TaskDetailPanel({
                   value={draft.permission ?? ''}
                   options={permissionOptions}
                   emptyLabel={t('form.permission')}
-                  onSelect={value => update({ permission: value })}
+                  onSelect={value => update({ permission: value }, true)}
                 />
               </FieldRow>
             </div>
@@ -392,7 +401,7 @@ export function TaskDetailPanel({
                   label={t('form.planTime')}
                   value={draft.scheduleKind ?? 'daily'}
                   options={kindOptions}
-                  onSelect={value => update({ scheduleKind: value })}
+                  onSelect={value => update({ scheduleKind: value }, true)}
                 />
               </FieldRow>
               <FieldRow label={t('form.runAt')}>
@@ -404,9 +413,9 @@ export function TaskDetailPanel({
                         type="date"
                         value={onceDate}
                         aria-label={t('form.runAt')}
-                        onChange={event => update({ onceAt: `${event.target.value}T${onceTime}` })}
+                        onChange={event => update({ onceAt: `${event.target.value}T${onceTime}` }, true)}
                       />
-                      <TimeSelect value={onceTime} onChange={value => update({ onceAt: `${onceDate}T${value}` })} />
+                      <TimeSelect value={onceTime} onChange={value => update({ onceAt: `${onceDate}T${value}` }, true)} />
                     </>
                   )}
                   {draft.scheduleKind === 'interval' && (
@@ -418,6 +427,7 @@ export function TaskDetailPanel({
                         value={draft.everyMinutes ?? '60'}
                         aria-label={t('form.interval')}
                         onChange={event => update({ everyMinutes: event.target.value })}
+                        onBlur={() => onSave?.(draft)}
                       />
                       <span className="dsh-st-md-suffix">{t('form.minutes')}</span>
                     </>
@@ -427,13 +437,13 @@ export function TaskDetailPanel({
                       <MenuSelect
                         value={String(draft.hourlyMinute ?? '00')}
                         options={MINUTES.map(minute => ({ value: minute, label: `:${minute}` }))}
-                        onChange={value => update({ hourlyMinute: value })}
+                        onChange={value => update({ hourlyMinute: value }, true)}
                       />
                       <span className="dsh-st-md-suffix">{t('form.hourly')}</span>
                     </>
                   )}
                   {(draft.scheduleKind === 'daily' || draft.scheduleKind === 'weekly') && (
-                    <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                    <TimeSelect value={timePart} onChange={value => update({ time: value }, true)} />
                   )}
                   {draft.scheduleKind === 'monthly' && (
                     <>
@@ -443,9 +453,9 @@ export function TaskDetailPanel({
                           const day = String(index + 1)
                           return { value: day, label: t('form.monthDay', { day }) }
                         })}
-                        onChange={value => update({ monthDay: value })}
+                        onChange={value => update({ monthDay: value }, true)}
                       />
-                      <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                      <TimeSelect value={timePart} onChange={value => update({ time: value }, true)} />
                     </>
                   )}
                   {draft.scheduleKind === 'custom' && (
@@ -457,9 +467,10 @@ export function TaskDetailPanel({
                         value={draft.customDays ?? '2'}
                         aria-label={t('form.custom')}
                         onChange={event => update({ customDays: event.target.value })}
+                        onBlur={() => onSave?.(draft)}
                       />
                       <span className="dsh-st-md-suffix">{t('form.daysShort')}</span>
-                      <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                      <TimeSelect value={timePart} onChange={value => update({ time: value }, true)} />
                     </>
                   )}
                 </div>
@@ -474,11 +485,12 @@ export function TaskDetailPanel({
                           key={day}
                           className={`dsh-st-md-weekday${on ? ' is-on' : ''}`}
                           aria-pressed={on}
-                          onClick={() => update({
-                            weekdays: on
+                          onClick={() => {
+                            const nextDays = on
                               ? draft.weekdays.filter(value => value !== day)
-                              : [...(draft.weekdays ?? []), day],
-                          })}
+                              : [...(draft.weekdays ?? []), day]
+                            update({ weekdays: nextDays }, true)
+                          }}
                         >{t(`day.${day}`)}</Button>
                       )
                     })}
@@ -491,6 +503,7 @@ export function TaskDetailPanel({
                   value={draft.timeZone ?? ''}
                   aria-label={t('form.timeZone')}
                   onChange={event => update({ timeZone: event.target.value })}
+                  onBlur={() => onSave?.(draft)}
                 />
               </FieldRow>
               <div className="dsh-st-md-field dsh-st-md-field--advanced">
@@ -509,6 +522,7 @@ export function TaskDetailPanel({
                     step={1}
                     value={draft.maxConcurrentRuns ?? '1'}
                     onChange={event => update({ maxConcurrentRuns: event.target.value })}
+                    onBlur={() => onSave?.(draft)}
                   />
                 </FieldRow>
               )}
@@ -530,18 +544,6 @@ export function TaskDetailPanel({
             <span>{t('form.subtitle')}</span>
           </div>
         </div>
-
-        <footer className="dsh-st-md-foot">
-          <span className={`dsh-st-md-dirty${dirty ? ' is-on' : ''}`}>{dirty ? t('detail.unsaved') : ''}</span>
-          <div className="dsh-st-md-foot-actions">
-            <Button className="dsh-st-btn" disabled={!dirty || busy} onClick={() => onReset?.()}>
-              {t('form.cancel')}
-            </Button>
-            <Button className="dsh-st-btn dsh-st-btn--primary" disabled={!dirty || busy} onClick={() => onSave?.()}>
-              {busy ? t('detail.saving') : t('detail.save')}
-            </Button>
-          </div>
-        </footer>
       </div>
       <div className="dsh-st-flyout-root" ref={setMenuHost} />
     </MenuHostProvider>

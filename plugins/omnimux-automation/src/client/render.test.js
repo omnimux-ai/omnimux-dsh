@@ -552,67 +552,52 @@ test('AC-5：点行展开右栏并保持选中态，Esc / 关闭按钮回到列�
   assert.match(container.textContent, /每周依赖巡检/)
 })
 
-test('AC-6：改推理等级 → 保存可点 → 发出 update 并持久化 → 回到干净态', async () => {
+test('AC-6：改推理等级 → 自动发出 update 并持久化，无需手动保存，且保存按钮已移除', async () => {
   const { harness } = await mountWorkbench()
 
   await click(container.querySelectorAll('.dsh-st-md-row-open')[0])
-  const save = () => buttonByText('保存', container.querySelector('.dsh-st-md-foot-actions'))
-  assert.equal(save().disabled, true, '未变更时保存必须 disabled')
+  // 验证保存按钮已彻底移除
+  assert.equal(container.querySelector('.dsh-st-md-foot-actions'), null, '详情栏不得存在保存按钮容器')
+  assert.doesNotMatch(container.textContent, /保存/)
 
+  // 点击推理等级
   await click(buttonByText(EFFORT_HIGH, container.querySelector('.dsh-st-md-segments')))
-  assert.match(container.textContent, /有未保存的修改/)
-  assert.equal(save().disabled, false)
+  await flush()
 
-  await click(save())
+  // 自动发出 update
   const update = harness.calls.filter(item => item.endpoint === 'update').at(-1)
-  assert.ok(update !== undefined, '保存必须发出 update')
+  assert.ok(update !== undefined, '修改设置后必须自动发出 update')
   assert.equal(update.payload.automationId, 'a1')
   assert.equal(update.payload.input.reasoningEffort, 'high')
   assert.equal(update.payload.input.schedule.time, '09:00')
 
-  // 服务端版本推进后草稿自动重锚，脏标记归零。
-  assert.equal(save().disabled, true, '保存成功后必须回到干净态')
-  assert.doesNotMatch(container.textContent, /有未保存的修改/)
-
-  // 重新打开该任务，值已持久。
+  // 重新打开该任务，值已持久生效
   await click(container.querySelector('[aria-label="关闭详情"]'))
   await click(container.querySelectorAll('.dsh-st-md-row-open')[0])
   const high = buttonByText(EFFORT_HIGH, container.querySelector('.dsh-st-md-segments'))
   assert.equal(high.className.includes('is-on'), true)
 })
 
-test('脏态保护：Esc 与切换任务都要先二次确认，取消则保留草稿', async () => {
-  await mountWorkbench()
+test('自动保存机制：修改设置自动持久化，切换任务与按 Esc 直接生效无需二次确认', async () => {
+  const { harness } = await mountWorkbench()
 
   await click(container.querySelectorAll('.dsh-st-md-row-open')[0])
   await click(buttonByText(EFFORT_HIGH, container.querySelector('.dsh-st-md-segments')))
+  await flush()
 
-  // 脏态下点另一行：先确认，取消则原样保留。
+  // 点击另一行任务：直接切换，无需阻断弹窗
   await click(container.querySelectorAll('.dsh-st-md-row-open')[2])
-  let dialog = container.querySelector('[role="alertdialog"]')
-  assert.ok(dialog !== null, '脏态切换任务必须先二次确认')
-  assert.match(dialog.textContent, /放弃未保存的修改？/)
-  await click(buttonByText('继续编辑', dialog))
-  assert.equal(container.querySelector('[role="alertdialog"]'), null)
-  assert.equal(container.querySelectorAll('.dsh-st-md-row-name')[0].textContent, '每日检查')
-  assert.equal(buttonByText(EFFORT_HIGH, container.querySelector('.dsh-st-md-segments')).className.includes('is-on'), true)
+  await flush()
+  assert.equal(container.querySelector('[role="alertdialog"]'), null, '自动保存模式下切换任务不得弹出二次确认')
+  assert.equal(container.querySelectorAll('.dsh-st-md-row-name')[2].textContent, '每周依赖巡检')
 
-  // 脏态下按 Esc：确认后关闭。
+  // 按 Esc：直接关闭，无需阻断弹窗
   await React.act(async () => {
     dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
   })
   await flush()
-  dialog = container.querySelector('[role="alertdialog"]')
-  assert.ok(dialog !== null, '脏态关闭必须先二次确认')
-  await click(buttonByText('放弃修改', dialog))
-  assert.equal(detailRegion(), null, '确认放弃后右栏关闭')
-
-  // 取消本次修改：草稿回到服务端值，脏标记消失。
-  await click(container.querySelectorAll('.dsh-st-md-row-open')[1])
-  await click(buttonByText(EFFORT_HIGH, container.querySelector('.dsh-st-md-segments')))
-  assert.equal(buttonByText('保存', container.querySelector('.dsh-st-md-foot-actions')).disabled, false)
-  await click(buttonByText('取消', container.querySelector('.dsh-st-md-foot-actions')))
-  assert.equal(buttonByText('保存', container.querySelector('.dsh-st-md-foot-actions')).disabled, true)
+  assert.equal(container.querySelector('[role="alertdialog"]'), null, '自动保存模式下按 Esc 不得弹出二次确认')
+  assert.equal(detailRegion(), null, '按 Esc 详情栏直接关闭')
 })
 
 test('AC-7：点运行历史行直达会话，无会话的行不可点', async () => {
@@ -710,7 +695,6 @@ test('AC-8：响应式只由 CSS 容器查询判定，跨断点不重挂载、�
   assert.equal(detailRegion(), region, '跨断点不得重挂载右栏')
   assert.equal(region.isConnected, true)
   assert.equal(container.querySelector('.dsh-st-md-title-input').value, '改到一半的名字', '跨断点不得丢编辑态')
-  assert.match(container.textContent, /有未保存的修改/)
 })
 
 test('visible=false 时 runtime 停表，恢复激活后重新挂表', async () => {

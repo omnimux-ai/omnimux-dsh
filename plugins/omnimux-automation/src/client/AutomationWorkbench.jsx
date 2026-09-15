@@ -209,40 +209,32 @@ export function AutomationWorkbench({
 
   const openDetail = (automationId) => {
     if (automationId === selectedId) return
-    if (dirty) {
-      setDiscard({ kind: 'switch', id: automationId })
-      return
-    }
     setSelectedId(automationId)
   }
 
   const closeDetail = () => {
-    if (dirty) {
-      setDiscard({ kind: 'close' })
-      return
-    }
     setSelectedId(undefined)
   }
 
-  // Esc：干净就关闭，脏就二次确认；弹窗/确认框在场时不抢键盘。
+  // Esc：关闭详情；弹窗/确认框在场时不抢键盘。
   useEffect(() => {
     if (selectedId === undefined) return
     if (creating || deleteTarget !== undefined || discard !== undefined) return
     const onKeyDown = (event) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
-      if (dirty) setDiscard({ kind: 'close' })
-      else setSelectedId(undefined)
+      setSelectedId(undefined)
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [creating, deleteTarget, discard, dirty, selectedId])
+  }, [creating, deleteTarget, discard, selectedId])
 
-  const saveDraft = () => {
-    if (draft === undefined || selected === undefined) return
-    const key = automationDraftKey(draft)
+  const saveDraft = (explicitDraft) => {
+    const target = explicitDraft ?? draft
+    if (target === undefined || selected === undefined) return
+    const key = automationDraftKey(target)
     void runAction(async () => {
-      const input = buildCreateInput(draft, workspaces, models, new Date(), { allowPastOnce: true })
+      const input = buildCreateInput(target, workspaces, models, new Date(), { allowPastOnce: true })
       await runtime.updateAutomation(selected.id, input)
       setSavedKey(key)
     })
