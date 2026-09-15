@@ -71,6 +71,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   padding-bottom:0!important;
   padding-top:0!important;
   padding-inline:0!important;
+  --dsh-composer-side-clearance:12px!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerStack"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"],
@@ -102,6 +103,14 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   width:100%!important;
   max-width:100%!important;
   margin-inline:0!important;
+}
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+  padding-left:var(--dsh-composer-side-clearance, 12px)!important;
+  padding-right:var(--dsh-composer-side-clearance, 12px)!important;
+  box-sizing:border-box!important;
 }
 
 /* 热门入门方式与任务指引内容区：自适应宽屏 1200px，舒展大气，层次分明 */
