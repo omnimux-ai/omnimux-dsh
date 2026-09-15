@@ -1910,8 +1910,9 @@ export const INSPIRATION_CSS = `
   line-height: 1.3;
 }
 .omnimux-inspiration-share-tip.is-error {
-  color: var(--dsw-alias-state-error-primary, #ef4444);
+  color: var(--dsw-alias-label-primary, #ffffff);
   background: var(--dsw-alias-state-error-secondary, rgba(220, 68, 68, 0.18));
+  border: 1px solid var(--dsw-alias-state-error-primary, #ef4444);
 }
 .omnimux-inspiration-share-submit-btn {
   width: 100%;

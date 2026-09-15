@@ -1419,3 +1419,41 @@ export async function handleDeleteItem({ id, store }) {
   const removed = await store.delete(id)
   return { status: 200, body: { data: removed } }
 }
+
+export async function handleShare({ id, req, store, identity }) {
+  const item = store.get(id)
+  if (!item) return fail(404, 'not found')
+  const body = req.body || {}
+  const expire = body.expire === 'forever' ? 'forever' : '3days'
+
+  if (expire === 'forever' && identity && typeof identity.require === 'function') {
+    try {
+      const profile = await identity.require()
+      const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
+      if (!isAdmin) {
+        return fail(403, '永久有效分享链接仅限管理员可用，普通用户请选择3天有效期')
+      }
+    } catch {
+      return fail(403, '永久有效分享链接仅限管理员可用，普通用户请选择3天有效期')
+    }
+  }
+
+  const expireAt = expire === 'forever' ? null : new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString()
+  const code = String(id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'share'
+  const shareUrl = `https://omnimux.ai/s/insp_${code}`
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      data: {
+        id,
+        share_url: shareUrl,
+        shareUrl,
+        expire,
+        expire_at: expireAt,
+        title: item.title,
+      },
+    },
+  }
+}
