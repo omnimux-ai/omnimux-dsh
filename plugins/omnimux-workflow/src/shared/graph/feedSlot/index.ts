@@ -6,3 +6,4 @@ export { assembleEffectiveInputs, assembleEffectiveInputsFromSlots, selectSlotOc
 export { hydrateSlotBindings } from './hydrateSlotBindings.ts';
 export { slotBindingConflicts } from './slotBindingConflicts.ts';
 export { effectiveSlotFingerprint, feedFromFingerprint } from './effectiveFingerprint.ts';
+export { resolveSlotOperation } from './resolveSlotOperation.ts';
