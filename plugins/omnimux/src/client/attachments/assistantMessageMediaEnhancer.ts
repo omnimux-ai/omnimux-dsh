@@ -324,14 +324,155 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
   if (items.length === 1) {
     container.appendChild(buildCardElement(items[0]));
   } else {
-    // Multi-card horizontal grid
-    const grid = doc.createElement('div');
-    grid.className = 'omx-chat-media-tail__grid';
+    // Multi-card gallery: 1 Main Stage + N Thumbnail Rail (Left Main, Right Thumbnails)
+    container.classList.add('omx-chat-media-tail--gallery');
+    container.setAttribute('tabindex', '0');
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', '媒体素材画廊');
 
-    for (const item of items) {
-      grid.appendChild(buildCardElement(item));
-    }
-    container.appendChild(grid);
+    let activeIndex = 0;
+
+    const mainStage = doc.createElement('div');
+    mainStage.className = 'omx-chat-media-tail__main';
+    mainStage.setAttribute('role', 'button');
+    mainStage.setAttribute('tabindex', '0');
+    mainStage.title = '点击进入图像生成';
+
+    const mainContent = doc.createElement('div');
+    mainContent.className = 'omx-chat-media-tail__main-content';
+    mainStage.appendChild(mainContent);
+
+    const counter = doc.createElement('span');
+    counter.className = 'omx-chat-media-tail__counter';
+    mainStage.appendChild(counter);
+
+    // Pill canvas button in top-right corner
+    const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
+    canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
+    canvasBtn.title = '进入图像生成';
+    canvasBtn.setAttribute('aria-label', '进入图像生成');
+    canvasBtn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+      </svg>
+      <span>图像生成</span>
+    `;
+    canvasBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openInSidebar(items[activeIndex]);
+    });
+    mainStage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openInSidebar(items[activeIndex]);
+    });
+    mainStage.appendChild(canvasBtn);
+
+    const rail = doc.createElement('div');
+    rail.className = 'omx-chat-media-tail__rail';
+
+    const updateRailScrollHint = () => {
+      const up = rail.scrollTop > 2;
+      const down = rail.scrollTop + rail.clientHeight < rail.scrollHeight - 2;
+      rail.classList.toggle('cs-up', up);
+      rail.classList.toggle('cs-down', down);
+    };
+    rail.addEventListener('scroll', updateRailScrollHint);
+
+    const thumbElements: HTMLElement[] = [];
+
+    const renderActive = () => {
+      const item = items[activeIndex];
+      counter.textContent = `${activeIndex + 1} / ${items.length}`;
+
+      // Clear previous main media and pause any video
+      const prevVideo = mainContent.querySelector('video');
+      if (prevVideo) {
+        try { prevVideo.pause(); } catch {}
+      }
+      mainContent.innerHTML = '';
+
+      if (item.type === 'video') {
+        const vid = doc.createElement('video');
+        vid.src = item.url;
+        vid.className = 'omx-chat-media-tail__video';
+        vid.controls = true;
+        vid.preload = 'metadata';
+        vid.setAttribute('playsinline', '');
+        vid.addEventListener('click', (e) => e.stopPropagation());
+        mainContent.appendChild(vid);
+      } else {
+        const img = doc.createElement('img');
+        img.src = item.url;
+        img.alt = item.title || '生成预览';
+        img.className = 'omx-chat-media-tail__img';
+        mainContent.appendChild(img);
+      }
+
+      thumbElements.forEach((t, i) => {
+        const isActive = i === activeIndex;
+        t.classList.toggle('is-active', isActive);
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+
+      const activeThumb = thumbElements[activeIndex];
+      if (activeThumb && typeof activeThumb.scrollIntoView === 'function') {
+        try {
+          activeThumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch {}
+      }
+      updateRailScrollHint();
+    };
+
+    items.forEach((item, index) => {
+      const thumb = doc.createElement('button'); // exempt-ui01: 缩略图点选按钮
+      thumb.className = 'omx-chat-media-tail__thumb';
+      thumb.setAttribute('type', 'button');
+      thumb.setAttribute('aria-label', `查看素材 ${index + 1}: ${item.title || item.filename || ''}`);
+      thumb.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+
+      const img = doc.createElement('img');
+      img.src = item.url;
+      img.alt = item.title || '';
+      thumb.appendChild(img);
+
+      if (item.type === 'video') {
+        const dur = doc.createElement('span');
+        dur.className = 'omx-chat-media-tail__dur';
+        dur.textContent = '视频';
+        thumb.appendChild(dur);
+      }
+
+      thumb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activeIndex = index;
+        renderActive();
+      });
+
+      thumbElements.push(thumb);
+      rail.appendChild(thumb);
+    });
+
+    container.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        renderActive();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        activeIndex = (activeIndex + 1) % items.length;
+        renderActive();
+      }
+    });
+
+    renderActive();
+    container.appendChild(mainStage);
+    container.appendChild(rail);
   }
 
   return container;

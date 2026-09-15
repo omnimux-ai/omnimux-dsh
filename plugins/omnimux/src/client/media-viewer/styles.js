@@ -29,6 +29,148 @@ export const MEDIA_VIEWER_CSS = `
   user-select: none;
 }
 
+.omx-chat-media-tail--gallery {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 580px !important;
+  height: min(400px, 48vh) !important;
+  min-height: 200px !important;
+  outline: none !important;
+}
+
+.omx-chat-media-tail__main {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 消息卡片微投影 */
+  cursor: pointer;
+  outline: none;
+}
+
+.omx-chat-media-tail__main-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.omx-chat-media-tail__main-content img,
+.omx-chat-media-tail__main-content video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--dsw-alias-bg-base);
+  display: block;
+}
+
+.omx-chat-media-tail__counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--dsw-alias-label-primary-foreground);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.omx-chat-media-tail__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 96px;
+  width: 96px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  height: 100%;
+  padding-right: 2px;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.omx-chat-media-tail__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.omx-chat-media-tail__rail.cs-down {
+  mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
+}
+
+.omx-chat-media-tail__rail.cs-up {
+  mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
+}
+
+.omx-chat-media-tail__rail.cs-up.cs-down {
+  mask-image: linear-gradient(to bottom, transparent 0, black 16px, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 16px, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
+}
+
+.omx-chat-media-tail__thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-2);
+  cursor: pointer;
+  opacity: 0.68;
+  flex: 0 0 auto;
+  transition: opacity 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.omx-chat-media-tail__thumb:hover {
+  opacity: 0.95;
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.omx-chat-media-tail__thumb.is-active,
+.omx-chat-media-tail__thumb[aria-selected="true"] {
+  opacity: 1;
+  border-color: var(--dsw-alias-brand-primary);
+  box-shadow: 0 0 0 1.5px var(--dsw-alias-brand-primary);
+}
+
+.omx-chat-media-tail__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.omx-chat-media-tail__dur {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--dsw-alias-bg-mask-1);
+  pointer-events: none;
+}
+
 .omx-chat-media-tail__grid {
   display: flex;
   gap: 8px;
