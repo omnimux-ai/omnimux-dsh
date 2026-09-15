@@ -498,3 +498,16 @@ export function resolveCreatorProfileUrl(creator, sourceUrl = '', platform = '')
   }
   return `https://www.tiktok.com/@${handle}`
 }
+
+/**
+ * Create a public share link for an inspiration item via OmniMux gateway.
+ * @param {string} id
+ * @param {{ expire?: '3days' | 'forever' }} [opts]
+ */
+export async function createShareLink(id, opts = {}) {
+  const expire = opts.expire === 'forever' ? 'forever' : '3days'
+  return inspirationRequest(`/omnimux/inspiration/${encodeURIComponent(id)}/share`, {
+    method: 'POST',
+    body: { expire },
+  })
+}

@@ -117,6 +117,19 @@ export function inspirationStatus(client) {
 }
 
 /**
+ * @param {{ withPat: Function }} client
+ * @param {{ id?: string, expire?: '3days' | 'forever' }} args
+ */
+export function createInspirationShare(client, args) {
+  const id = encodeURIComponent(String(args.id || ''))
+  const expire = args.expire === 'forever' ? 'forever' : '3days'
+  return client.withPat(`${API}/inspirations/${id}/share`, {
+    method: 'POST',
+    body: { expire },
+  })
+}
+
+/**
  * @param {string} pathname
  */
 export function mediaKeyFromHostPath(pathname) {

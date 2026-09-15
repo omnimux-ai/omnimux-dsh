@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  createInspirationShare,
   listQueryString,
   listInspirations,
   mediaKeyFromHostPath,
@@ -62,5 +63,26 @@ describe('inspiration query + rewrite', () => {
     }, { type: 'image', sort: 'hot' })
     assert.deepEqual(seen, ['/api/inspiration/v1/inspirations?type=image&sort=hot'])
     assert.equal(json.success, true)
+  })
+
+  it('creates share link through client.withPat', async () => {
+    /** @type {{ path: string, opts?: any }[]} */
+    const calls = []
+    const client = {
+      withPat: async (path, opts) => {
+        calls.push({ path, opts })
+        return { ok: true, data: { share_url: 'https://omnimux.ai/s/test', expire: opts.body.expire } }
+      },
+    }
+
+    const res3Days = await createInspirationShare(client, { id: 'insp-123' })
+    assert.equal(res3Days.data.expire, '3days')
+    assert.equal(calls[0].path, '/api/inspiration/v1/inspirations/insp-123/share')
+    assert.equal(calls[0].opts.method, 'POST')
+    assert.deepEqual(calls[0].opts.body, { expire: '3days' })
+
+    const resForever = await createInspirationShare(client, { id: 'insp-123', expire: 'forever' })
+    assert.equal(resForever.data.expire, 'forever')
+    assert.deepEqual(calls[1].opts.body, { expire: 'forever' })
   })
 })

@@ -190,6 +190,52 @@ describe('inspiration dispatcher', () => {
     await dispatcher.streamMedia({ method: 'GET', url: '/omnimux/inspiration/media/../etc/passwd' }, bad)
     assert.match(bad.body, /invalid media key/)
   })
+
+  it('handles inspiration share creation with permission checks', async () => {
+    let currentProfile = { id: 'u1', role: 1, is_admin: false }
+    const calls = []
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      identity: {
+        require: async () => currentProfile,
+      },
+      client: clientWith(async (path, init) => {
+        calls.push({ path, init })
+        return { ok: true, data: { share_url: 'https://omnimux.ai/s/abc', expire: init.body?.expire } }
+      }),
+    })
+
+    // 1. 普通用户创建 3 天分享链接成功
+    const res3Days = await dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration/insp-1/share',
+      body: { expire: '3days' },
+      origin: LOCAL_ORIGIN,
+    })
+    assert.equal(res3Days.status, 200)
+    assert.equal(res3Days.body.data.expire, '3days')
+
+    // 2. 普通用户请求永久有效被拦截为 403
+    const resForeverDenied = await dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration/insp-1/share',
+      body: { expire: 'forever' },
+      origin: LOCAL_ORIGIN,
+    })
+    assert.equal(resForeverDenied.status, 403)
+    assert.match(resForeverDenied.body.error, /永久有效/)
+
+    // 3. 管理员用户创建永久有效分享链接成功
+    currentProfile = { id: 'admin-1', role: 10, is_admin: true }
+    const resForeverAdmin = await dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration/insp-1/share',
+      body: { expire: 'forever' },
+      origin: LOCAL_ORIGIN,
+    })
+    assert.equal(resForeverAdmin.status, 200)
+    assert.equal(resForeverAdmin.body.data.expire, 'forever')
+  })
 })
 
 describe('registerInspirationRoutes', () => {
