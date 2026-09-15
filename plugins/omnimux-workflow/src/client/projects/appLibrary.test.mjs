@@ -13,11 +13,16 @@ import {
   appCategoryLabelKey,
   appEntryMatchesQuery,
   appIdFromTabId,
+  appIdOfOpenAppTab,
   appTabIdFor,
+  forgetOpenAppTab,
   listPublishedApps,
+  openAppTabIdFor,
   projectOwnsWorkspace,
   readAppManifestMap,
+  registerOpenAppTab,
   removePublishedApp,
+  resetOpenAppTabs,
   resolveAppEditTarget,
   resolveOwningProject,
   toPublishedAppEntry,
@@ -233,5 +238,38 @@ describe('appLibrary: 标签页 id 与卡片文案', () => {
     assert.equal(appEntryMatchesQuery(entry, 'PROMO'), true, '大小写不敏感')
     assert.equal(appEntryMatchesQuery(entry, '不存在'), false)
     assert.equal(appEntryMatchesQuery(null, '营销'), false)
+  })
+
+  // 宿主原生 surface 另发标签页 id（实测 tab6），插件在 openTab 时拿不到；
+  // 「删除后关掉该应用的标签页」只能靠标签页组件登记回来的映射。
+  describe('应用标签页登记表', () => {
+    it('登记后可按 appId 反查宿主标签页 id，并按 id 忘掉', () => {
+      resetOpenAppTabs()
+      registerOpenAppTab('tab6', 'app_demo_video_001')
+      assert.equal(appIdOfOpenAppTab('tab6'), 'app_demo_video_001')
+      assert.equal(openAppTabIdFor('app_demo_video_001'), 'tab6')
+      forgetOpenAppTab('tab6')
+      assert.equal(appIdOfOpenAppTab('tab6'), '')
+      assert.equal(openAppTabIdFor('app_demo_video_001'), '', '忘掉后不得再命中')
+    })
+
+    it('同一标签页换应用后反查跟着走，不会指向旧应用', () => {
+      resetOpenAppTabs()
+      registerOpenAppTab('tab6', 'app_demo_image_002')
+      registerOpenAppTab('tab6', 'app_demo_video_001')
+      assert.equal(openAppTabIdFor('app_demo_image_002'), '', '旧应用不得再命中这个标签页')
+      assert.equal(openAppTabIdFor('app_demo_video_001'), 'tab6')
+    })
+
+    it('空 id / 空 appId 不写脏登记，查询也不返回 undefined', () => {
+      resetOpenAppTabs()
+      registerOpenAppTab('', 'app_demo_video_001')
+      registerOpenAppTab('tab6', '')
+      assert.equal(appIdOfOpenAppTab('tab6'), '')
+      assert.equal(openAppTabIdFor('app_demo_video_001'), '', 'appId 为空的登记不得被当成命中')
+      assert.equal(openAppTabIdFor(''), '')
+      assert.equal(appIdOfOpenAppTab(undefined), '')
+      assert.equal(openAppTabIdFor(undefined), '')
+    })
   })
 })

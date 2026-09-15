@@ -13,7 +13,7 @@
 /** 发布向导写入的存储键（与 AppTab / 向导保持一致，改名即破坏读回）。 */
 export const APP_MANIFESTS_STORAGE_KEY = 'omnimux_apps_manifests'
 
-/** 应用标签页 id 前缀：`app_<appId>`（宿主会丢弃 openTab 的 extra，id 才是通道）。 */
+/** 应用标签页 id 前缀：`app_<appId>`（插件自有面板布局下的关闭约定）。 */
 export const APP_TAB_ID_PREFIX = 'app_'
 
 /** 应用分类 → i18n 键后缀，用于卡片副标题。 */
@@ -229,4 +229,48 @@ export function resolveAppEditTarget(entry) {
  */
 export function appCategoryLabelKey(category) {
   return APP_CATEGORY_LABEL_KEYS[textOf(category)] || 'projects.appCategoryUnknown'
+}
+
+/**
+ * 已打开的应用标签页登记表：`标签页 id -> 该标签页当前展示的 appId`。
+ *
+ * 宿主 dsh-better-sidebar 的原生 surface 会另发一个标签页 id（实测形如 `tab6`），
+ * 插件在 openTab 时拿不到；只有标签页组件渲染时能从自己的 tab 上读到它。
+ * 「确认删除后关掉该应用的标签页」必须按这个真实 id 关（宿主的 close 只认它，
+ * 查不到就整体放弃），因此由组件把「哪个标签页正开着哪个应用」登记回来。
+ */
+const openAppTabs = new Map()
+
+/** 登记 / 更新某个标签页当前展示的应用。 */
+export function registerOpenAppTab(tabId, appId) {
+  const id = textOf(tabId)
+  if (!id) return
+  const next = textOf(appId)
+  if (openAppTabs.get(id) === next) return
+  openAppTabs.set(id, next)
+}
+
+/** 某个标签页当前展示的 appId（未登记或登记为空时返回空串）。 */
+export function appIdOfOpenAppTab(tabId) {
+  return openAppTabs.get(textOf(tabId)) || ''
+}
+
+/** 正在展示该应用的标签页 id（没有则空串）。 */
+export function openAppTabIdFor(appId) {
+  const app = textOf(appId)
+  if (!app) return ''
+  for (const [tabId, current] of openAppTabs) {
+    if (current === app) return tabId
+  }
+  return ''
+}
+
+/** 忘掉一个标签页的登记（标签页刚被关掉时调用）。 */
+export function forgetOpenAppTab(tabId) {
+  openAppTabs.delete(textOf(tabId))
+}
+
+/** 测试用：清空登记表（模块级状态，跨用例必须显式重置）。 */
+export function resetOpenAppTabs() {
+  openAppTabs.clear()
 }

@@ -25,6 +25,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { zh } from '../src/client/locales.js'
 import { APP_MANIFESTS_STORAGE_KEY, APP_TAB_ID_PREFIX } from '../src/client/projects/appLibrary.js'
+import { APP_TAB_ID } from '../src/client/projects/projectCanvas.js'
 
 const require = createRequire(import.meta.url)
 const React = require('react')
@@ -59,10 +60,32 @@ exports.dismissProductStage = () => {}
 exports.runNewProject = async () => ({ ok: true })
 `
 
+/**
+ * 一次构建出「库页 + 应用标签页 + 侧栏通道」的**同一个**模块图。
+ *
+ * 生产里它们是同一个 `lib/client.js`，模块级状态（应用标签页登记表）天然共享；
+ * 拆成多个 entry 会各拿一份模块实例，让「标签页登记 → 按宿主 id 关闭」这条链路
+ * 在测试里假失败。所以这里用 stdin 合成单一入口。
+ */
+const ENTRY_SOURCE = `
+export { ProjectLibraryPage, WORKFLOW_LIBRARY_TAB_ID } from './ProjectLibraryPage.jsx'
+export { AppTab, readCachedManifest } from './AppTab.jsx'
+export { openAppTab, closeAppTab, APP_TAB_ID } from './projectCanvas.js'
+export { resetOpenAppTabs, openAppTabIdFor, appIdOfOpenAppTab } from './appLibrary.js'
+`
+
+let pageModule = null
+
 async function loadPage() {
+  if (pageModule) return pageModule
   const result = await build({
     absWorkingDir: resolve(here, '..'),
-    entryPoints: [resolve(here, '..', 'src', 'client', 'projects', 'ProjectLibraryPage.jsx')],
+    stdin: {
+      contents: ENTRY_SOURCE,
+      resolveDir: resolve(here, '..', 'src', 'client', 'projects'),
+      sourcefile: 'ai-app-library.e2e.entry.js',
+      loader: 'js',
+    },
     bundle: true,
     write: false,
     platform: 'node',
@@ -88,7 +111,8 @@ async function loadPage() {
   })
   const mod = { exports: {} }
   new Function('require', 'module', 'exports', result.outputFiles[0].text)(require, mod, mod.exports)
-  return mod.exports
+  pageModule = mod.exports
+  return pageModule
 }
 
 /** 侧栏服务桩：记录 openTab / closeTab / updateTab，并可回答 getTab / getSnapshot。 */
@@ -109,7 +133,8 @@ function makeSidebar() {
   }
 }
 
-async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
+/** jsdom + 宿主全局的最小真实环境（库页与应用标签页共用同一套）。 */
+function createDomEnv(sidebar) {
   const { JSDOM } = require('jsdom')
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' })
   const defineGlobal = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true })
@@ -141,12 +166,23 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   globalThis.__testProjects = [{ id: 'proj_alpha', title: '项目甲', canvasWorkspaceIds: ['ws_alpha'], pages: [] }]
   if (sidebar) dom.window.__omnimuxBetterSidebar = sidebar
+  return {
+    dom,
+    container: dom.window.document.getElementById('root'),
+    teardown() {
+      dom.window.close()
+      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent']) delete globalThis[name]
+      delete globalThis.__testProjects
+    },
+  }
+}
 
+async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar)
   const { ProjectLibraryPage } = await loadPage()
   const reactDomClient = require('react-dom/client')
   const { act } = require('react')
-  const container = document.getElementById('root')
-  const root = reactDomClient.createRoot(container)
+  const root = reactDomClient.createRoot(env.container)
   await act(async () => {
     root.render(React.createElement(ProjectLibraryPage, {
       t,
@@ -161,14 +197,50 @@ async function mountPage({ sidebar, t = (key) => zh[key] || key } = {}) {
   })
   await act(async () => { await Promise.resolve() })
   return {
-    dom,
+    dom: env.dom,
     act,
-    container,
+    container: env.container,
     async teardown() {
       await act(async () => root.unmount())
-      dom.window.close()
-      for (const name of ['window', 'document', 'localStorage', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent']) delete globalThis[name]
-      delete globalThis.__testProjects
+      env.teardown()
+    },
+  }
+}
+
+/**
+ * 挂载应用标签页本体（AppTab），props 形状对齐宿主原生 surface：
+ * 标签页 id 由宿主生成（实测 `tab6`），应用身份只走 `tab.meta.appId`。
+ */
+async function mountAppTab({ sidebar, tab, seed, t = (key) => zh[key] || key } = {}) {
+  const env = createDomEnv(sidebar)
+  // 标签页在首次渲染时就按 appId 读 manifest，播种必须发生在挂载之前。
+  seed?.(env.dom.window)
+  const { AppTab } = await loadPage()
+  const reactDomClient = require('react-dom/client')
+  const { act } = require('react')
+  const root = reactDomClient.createRoot(env.container)
+  await act(async () => {
+    root.render(React.createElement(AppTab, {
+      ctx: { t, betterSidebar: sidebar },
+      t,
+      store: null,
+      scope: { sessionId: 'sess-1' },
+      tab,
+      visible: true,
+      expanded: [],
+      revealed: [],
+    }))
+  })
+  await act(async () => { await Promise.resolve() })
+  return {
+    dom: env.dom,
+    act,
+    container: env.container,
+    title: () => env.container.querySelector('.omx-apptab-title')?.textContent.trim() ?? null,
+    badge: () => env.container.querySelector('.omx-apptab-badge')?.textContent.trim() ?? null,
+    async teardown() {
+      await act(async () => root.unmount())
+      env.teardown()
     },
   }
 }
@@ -265,8 +337,9 @@ test('旅程 1→7：一次会话走完分类切换、空态、网格、过滤�
     await page.act(async () => cards[0].click())
     const appOpen = sidebar.opened.find((entry) => String(entry.seed.id).startsWith(APP_TAB_ID_PREFIX))
     assert.ok(appOpen, '点卡片必须调用侧栏 openTab')
-    assert.equal(appOpen.seed.id, `${APP_TAB_ID_PREFIX}app_demo_image_002`, '标签页 id 必须是 app_<appId>')
+    assert.equal(appOpen.seed.id, `${APP_TAB_ID_PREFIX}app_demo_image_002`, '插件自有面板布局仍按 app_<appId> 约定开标签页')
     assert.equal(appOpen.seed.title, openedCardName, '标签页标题必须是应用名')
+    assert.deepEqual(appOpen.seed.meta, { appId: 'app_demo_image_002' }, '应用身份必须同时走宿主唯一转发的 meta.appId')
 
     // ── 旅程 4：卡片「⋯」→ 菜单含「编辑」「删除」
     await page.act(async () => moreButton(page.container, 0).click())
@@ -340,5 +413,108 @@ test('旅程 2 负向：清单损坏时回落真实空态，存储不可用时�
     }
   } finally {
     await page.teardown()
+  }
+})
+
+/**
+ * 第二轮修复：宿主启用原生 surface 后，`openTab` 会丢掉 seed.id 与 extra，
+ * 只把 title / meta 转给标签页，且同一 kind 只保留一个标签页。
+ * 因此「点哪张卡进哪个应用」靠 meta.appId，「删除后关掉标签页」靠标签页
+ * 登记回来的宿主 id。下面的用例按实测形状（宿主 id 形如 tab6）钉住这两条。
+ */
+const nativeTab = (appId, title = zh['nav'] ?? 'AI 应用') => ({
+  id: 'tab6',
+  type: APP_TAB_ID,
+  title,
+  meta: { appId },
+})
+
+const seedTwoApps = (win) => win.localStorage.setItem(APP_MANIFESTS_STORAGE_KEY, JSON.stringify({
+  // 最新的一条是「商品图生成器」：标签页若回落「最新 manifest」就会渲染成它。
+  app_demo_image_002: manifestRow('app_demo_image_002', '商品图生成器', '2026-09-15T12:30:00.000Z', { category: 'image' }),
+  app_demo_video_001: manifestRow('app_demo_video_001', '爆款复刻助手', '2026-09-15T10:00:00.000Z'),
+}))
+
+test('旅程 3b：原生 surface 下标签页按 tab.meta 认领应用，chip 自改名，删除后按宿主 id 关闭', async () => {
+  const sidebar = makeSidebar()
+  const mod = await loadPage()
+  mod.resetOpenAppTabs()
+  const tab = await mountAppTab({
+    sidebar,
+    tab: nativeTab('app_demo_video_001'),
+    seed: seedTwoApps,
+  })
+  try {
+    assert.equal(tab.title(), '爆款复刻助手', '必须渲染 meta 指定的应用，而不是回落最新的「商品图生成器」')
+    assert.equal(tab.badge(), zh['projects.appCategoryVideo'])
+    // 宿主记录表首次铸造时不通知订阅者：不主动 updateTab，chip 会一直停在兜底名。
+    assert.deepEqual(
+      sidebar.updated.at(-1),
+      { id: 'tab6', patch: { title: '爆款复刻助手', meta: { appId: 'app_demo_video_001' } } },
+      '标签页必须用宿主文档化的 updateTab 把自己改名为应用名',
+    )
+    assert.equal(mod.appIdOfOpenAppTab('tab6'), 'app_demo_video_001', '必须把宿主生成的标签页 id 登记回来')
+
+    // 删除该应用后的收尾：按宿主 id 关，而不是插件自己的 app_<appId> 约定。
+    assert.equal(mod.closeAppTab('app_demo_video_001'), true)
+    assert.deepEqual(sidebar.closed, ['tab6'], '必须按宿主生成的标签页 id 关闭')
+    assert.equal(mod.openAppTabIdFor('app_demo_video_001'), '', '关闭后必须清掉登记，避免误关别的应用')
+
+    // 没登记过宿主 id 的旧布局：仍按 app_<appId> 约定关。
+    assert.equal(mod.closeAppTab('app_demo_image_002'), true)
+    assert.deepEqual(sidebar.closed, ['tab6', `${APP_TAB_ID_PREFIX}app_demo_image_002`])
+  } finally {
+    await tab.teardown()
+  }
+})
+
+test('旅程 3c：标签页已挂载时，打开另一个应用会切过去；自有面板布局不被别的应用抢走', async () => {
+  const sidebar = makeSidebar()
+  const mod = await loadPage()
+  mod.resetOpenAppTabs()
+  const tab = await mountAppTab({
+    sidebar,
+    tab: nativeTab('app_demo_image_002'),
+    seed: seedTwoApps,
+  })
+  try {
+    assert.equal(tab.title(), '商品图生成器')
+    // 宿主对同一个 kind 只保留一个标签页：换应用是「聚焦已存在 + 刷新导航参数」，
+    // 记录表在已存在时不会重写 meta，所以还要靠打开事件把面板切过去。
+    await tab.act(async () => {
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { id: 'app_demo_video_001', appId: 'app_demo_video_001', manifest: JSON.parse(globalThis.window.localStorage.getItem(APP_MANIFESTS_STORAGE_KEY))['app_demo_video_001'] },
+      }))
+    })
+    await tab.act(async () => { await Promise.resolve() })
+    assert.equal(tab.title(), '爆款复刻助手', '打开事件必须把面板切到被点应用')
+    assert.equal(tab.badge(), zh['projects.appCategoryVideo'])
+    assert.deepEqual(
+      sidebar.updated.at(-1),
+      { id: 'tab6', patch: { title: '爆款复刻助手', meta: { appId: 'app_demo_video_001' } } },
+      '切换后 chip 必须跟着改名',
+    )
+  } finally {
+    await tab.teardown()
+  }
+
+  // 插件自有面板布局：标签页 id 自己绑定了应用，别的应用打开不得抢走它的面板。
+  const legacySidebar = makeSidebar()
+  const legacy = await mountAppTab({
+    sidebar: legacySidebar,
+    tab: { id: `${APP_TAB_ID_PREFIX}app_demo_image_002`, type: APP_TAB_ID, title: '商品图生成器' },
+    seed: seedTwoApps,
+  })
+  try {
+    assert.equal(legacy.title(), '商品图生成器')
+    await legacy.act(async () => {
+      globalThis.window.dispatchEvent(new globalThis.window.CustomEvent('omnimux-app-open', {
+        detail: { id: 'app_demo_video_001', appId: 'app_demo_video_001' },
+      }))
+    })
+    await legacy.act(async () => { await Promise.resolve() })
+    assert.equal(legacy.title(), '商品图生成器', '自有面板布局下每个应用各自一个标签页，不得被别的应用抢走')
+  } finally {
+    await legacy.teardown()
   }
 })

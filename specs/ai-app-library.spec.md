@@ -101,7 +101,31 @@
 - 不做应用版本管理、重命名、上下架审批。
 - 不新增浏览器端到端测试（真实浏览器验收由后续 QA 阶段承担）。
 
-## 7. 失败与回滚
+## 7. 修订（第二轮：应用标签页打开/切换/关闭的真实宿主机制）
+
+第一轮验证发现 §3 J2 的「`id = app_<appId>` 是唯一通道」与 J3 的「确认后关掉 `app_<appId>` 标签页」与真实宿主不符。在隔离实例上实测 + 读宿主源码（`dsh-better-sidebar@0.19.1` 的 `src/client/native/{surface,tab-adapter}.tsx`）得到确定机制：
+
+| 事实 | 证据 |
+| --- | --- |
+| 宿主启用「原生 surface」时，`openTab` **不再使用** `seed.id`、也不转发 `seed.extra`；只有 `seed.title` / `seed.meta` 会进原生标签页记录 | `service.ts` openTab：`surface.openTab({kind: seed.type, params: {title, meta}})`；`tab-adapter.tsx` `ensure()` 只读 `params` |
+| 原生标签页 id 由宿主生成（实测 `tab6`），不是 `app_<appId>` | 页面内探针组件读 `props.tab.id` |
+| 同一个 `kind` 在原生 surface 上**只保留一个标签页**，重复 open 是「聚焦已存在」；`createTab` 只影响 `revealIfOpened`，不会产出第二个同 kind 标签页 | 页面内注册两个探针 kind 各 open 两次，侧栏始终各一个 chip |
+| 聚焦已存在的同 kind 标签页时，`params`（title/meta）会随本次 open 更新（记录在标签页卸载时被丢弃，重新挂载时按新 params 重建） | 探针实测 `title: EchoA → EchoB`、`meta.appId: A → B`，id 恒为 `tab6` |
+| 关闭必须给**宿主生成的标签页 id**：`surface.close(tabId)` 先查插件侧记录表 `records.get(tabId)`，查不到就整体放弃（不再回落到插件自有布局） | `native/surface.ts` close → `records.get(tabId)`；`service.ts` closeTab 先行 native 分支 |
+
+### 7.1 修订后的验收标准（覆盖 §5 中冲突项）
+
+- **AC-19**（改 J2）点任意卡片后，应用标签页**聚焦并展示被点应用**：内容标题 = 被点应用名，且不同应用交替点击时每次都切换到最近点击的那个应用；`meta.appId` 是穿过宿主的应用身份通道，`extra`/`id` 不再作为通道依赖。
+- **AC-20** 标签页 chip 标题稳定显示应用名，不停留在通用兜底名「AI 应用」：标签页组件挂载后按宿主文档化的 `updateTab` 自改名（该路径会通知 chip 重渲）。
+- **AC-21**（改 J3-4）删除确认后，**该应用对应的标签页被关闭**：按标签页组件登记回来的宿主标签页 id 调 `service.closeTab(tabId)`；宿主未提供该通道（旧布局）时回落到 `app_<appId>` 约定，不伪造成功。
+- **AC-22** 同一应用重复点击不堆叠标签页：宿主同 kind 单标签页 + 我们不做重复登记，重复点击只聚焦/刷新同一标签页。
+- **AC-13/AC-12/AC-17 等既有条目不变**；卡片「更多」菜单、删除二次确认、空态/错误态、编辑定位均不得回归。
+
+### 7.2 本轮明确的宿主限制（不在插件内修复）
+
+- **多应用并行标签页不可得**：宿主原生 surface 对同一 `kind` 只保留一个标签页（实测，见上表）。因此「不同应用各占一个并行标签页」在本插件内无法实现，属宿主行为。本轮达到的最好状态是：单个应用标签页始终展示「最近点击的那个应用」，标题与内容都正确，删除后能关掉。该项作为需人工裁决的遗留项上报，不做绕过式 hack（不为每个 app 动态注册独立 kind）。
+
+## 8. 失败与回滚
 
 - 应用清单读取失败 → 显示真实空态/错误，不伪造成功。
 - 删除失败 → 保留卡片并报错。

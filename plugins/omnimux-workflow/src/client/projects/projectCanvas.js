@@ -10,7 +10,7 @@
  * - 新建/打开项目：关掉官方 details，关掉空 Files 种子，打开画布 tab，
  *   并把本会话右侧栏默认设成对话:画布 = 15:85。
  */
-import { appTabIdFor } from './appLibrary.js'
+import { appTabIdFor, forgetOpenAppTab, openAppTabIdFor } from './appLibrary.js'
 
 export const CANVAS_TAB_ID = 'omnimux-workflow:canvas'
 export const APP_TAB_ID = 'omnimux-workflow:app'
@@ -66,8 +66,28 @@ export function getBetterSidebar(ctx) {
   return boundService || win?.__omnimuxBetterSidebar || null
 }
 
+/** 广播「某个应用被打开」：应用标签页据此切到被点应用（含标签页已挂载的情况）。 */
+function announceAppOpen(appId, title, manifest) {
+  const win = typeof globalThis !== 'undefined' && globalThis.window
+    ? globalThis.window
+    : (typeof window !== 'undefined' ? window : undefined)
+  if (!win || typeof win.dispatchEvent !== 'function' || typeof win.CustomEvent !== 'function') return
+  try {
+    win.dispatchEvent(new win.CustomEvent('omnimux-app-open', {
+      detail: { id: appId, appId, title, manifest },
+    }))
+  } catch {
+    // ignore: 事件只是加急通道，标签页仍会按 tab 上的 appId 自行解析。
+  }
+}
+
 /**
  * 打开发布生成的独立 AI 应用 Tab。
+ *
+ * 应用身份靠 `meta.appId` 穿过宿主：宿主 dsh-better-sidebar 启用原生 surface 后
+ * 只把 `title` 与 `meta` 转给标签页（`seed.id` 与 `extra` 都会被丢掉），
+ * 且同一个 kind 只保留一个标签页——重复打开是「聚焦已存在 + 用新 params 重挂载」，
+ * 所以 meta 既要带在 open 上，也要在标签页渲染后由 AppTab 用 updateTab 维持。
  *
  * @param {object} [manifest]
  * @param {{ appId?: string, title?: string, scope?: object }} [opts]
@@ -75,16 +95,22 @@ export function getBetterSidebar(ctx) {
  */
 export function openAppTab(manifest = {}, opts = {}) {
   const service = getBetterSidebar()
+  const appId = typeof manifest?.appId === 'string' && manifest.appId
+    ? manifest.appId
+    : (typeof opts?.appId === 'string' ? opts.appId : '')
+  const title = manifest?.metadata?.name || opts?.title || 'AI 应用'
   if (service && typeof service.openTab === 'function') {
-    const targetAppId = manifest?.appId || opts?.appId || Date.now()
-    const title = manifest?.metadata?.name || opts?.title || 'AI 应用'
+    const fallback = Date.now()
+    const tabKey = appId || fallback
     service.openTab({
       type: APP_TAB_ID,
-      id: `app_${manifest?.appId || opts?.appId || targetAppId}`,
+      id: appTabIdFor(appId) || `app_${tabKey}`,
       title,
-      path: `app://${manifest?.appId || opts?.appId || targetAppId}`,
-      extra: { manifest, appId: manifest?.appId || opts?.appId || targetAppId },
+      path: `app://${tabKey}`,
+      meta: { appId },
+      extra: { manifest, appId },
     }, opts?.scope)
+    announceAppOpen(appId, title, manifest)
     return true
   }
   return false
@@ -93,18 +119,22 @@ export function openAppTab(manifest = {}, opts = {}) {
 /**
  * 关闭某个已发布应用的侧栏 Tab（「项目」页「AI应用」卡片删除后的收尾）。
  *
- * 应用 Tab 的 id 契约是 `app_<appId>`（better-sidebar 会丢弃 openTab 的
- * `extra`，id 是唯一通道），所以这里同样只按 id 关。
+ * 宿主原生 surface 会另发标签页 id（实测形如 `tab6`），`close` 只认这个 id，
+ * 认不出就整体放弃；该 id 只有标签页组件读得到，已由 AppTab 登记回
+ * `appLibrary` 的登记表。登记表没命中时回落到插件自有面板布局的 `app_<appId>` 约定。
  *
  * @param {string} appId
  * @returns {boolean} 真正调用了 closeTab 才为 true
  */
 export function closeAppTab(appId) {
-  const tabId = appTabIdFor(appId)
-  if (!tabId) return false
+  const id = typeof appId === 'string' ? appId.trim() : ''
+  if (!id) return false
   const service = getBetterSidebar()
   if (!service || typeof service.closeTab !== 'function') return false
+  const tabId = openAppTabIdFor(id) || appTabIdFor(id)
+  if (!tabId) return false
   service.closeTab(tabId)
+  forgetOpenAppTab(tabId)
   return true
 }
 

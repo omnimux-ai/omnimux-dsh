@@ -2,31 +2,50 @@
   "task": "Issue #1964 「项目」页「AI应用」分类与已发布应用管理",
   "kind": "worktree-isolated real-browser web verification (Verify stage)",
   "date": "2026-09-16",
-  "identity": {
-    "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-ai-app-library-issue-1964",
-    "branch": "agent/omnimux-workflow-ai-app-library-issue-1964",
-    "base": "origin/main@bdf51d43100b5b0afaa3bbfb100a8e58188ecc81",
-    "head": "bdf51d431 (改动未提交，19 文件已暂存 + 本阶段新增证据/E2E)",
-    "dirty": true,
-    "loadedArtifact": {
-      "plugin": "omnimux-workflow",
-      "resolvedEntry": "<worktree>/plugins/omnimux-workflow",
-      "clientBundle": "plugins/omnimux-workflow/lib/client.js",
-      "clientBundleSha256": "2ed204c99a00b812a7fdcd1ac763e884bfac718c9b3c718d6127952273de01e7",
-      "note": "私有 profile 的 node_modules/omnimux-workflow 指向本工作树；其余插件只读链接 Dev 物化副本。首次预演发现 lib/client.js 构建时间早于最后一次源码编辑（23:42:31 vs 23:45:34），已重建后重跑全部旅程。"
+  "rounds": [
+    {
+      "round": 1,
+      "summary": "首轮预演：7 条旅程，旅程 1/2/4/7 PASS，旅程 3/5/6 PARTIAL（应用标签页切换/关闭未达成）。证据：ai-app-library-j1..j7*.png。",
+      "identity": {
+        "loadedArtifact": {
+          "plugin": "omnimux-workflow",
+          "clientBundle": "plugins/omnimux-workflow/lib/client.js",
+          "clientBundleSha256": "2ed204c99a00b812a7fdcd1ac763e884bfac718c9b3c718d6127952273de01e7"
+        },
+        "port": "动态（--port 0，本次 127.0.0.1:55279）"
+      }
+    },
+    {
+      "round": 2,
+      "summary": "第二轮修复复验：在真实宿主机制下修掉「点第二张卡不切应用」与「删除后标签页不关」，逐条复验 5 项全部 PASS；另发现 2 项宿主限制型遗留（多应用并行标签页、后台 chip 回落兜底名），插件内不做 hack 绕过。",
+      "identity": {
+        "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-ai-app-library-issue-1964",
+        "branch": "agent/omnimux-workflow-ai-app-library-issue-1964",
+        "base": "origin/main@bdf51d43100b5b0afaa3bbfb100a8e58188ecc81",
+        "head": "a431931f2（本轮修复在此基础上追加；未 push、未开 PR、未合并）",
+        "runner": "tmp/ai-app-library-qa/serve-worktree-app.mjs（任务私有；复用 scripts/test-env-bootstrap.mjs，唯一覆盖点：私有 profile 的 node_modules/omnimux-workflow 指向本工作树，其余包只读链接 Dev 物化副本；启动时读回软链目标校验覆盖是否生效，不生效即中止预演）",
+        "privateProfileDir": "<worktree>/.test-env-en4Lcl（退出即删）",
+        "origin": "http://127.0.0.1:51481",
+        "port": "动态（--port 0，由进程分配）",
+        "profilePollution": "无：不写 ~/.omnimux-dev、不改主检出、不使用共享 Dev 桌面端 45120",
+        "evidenceLevel": "full（taskPluginsInstalled=true）",
+        "loadedArtifact": {
+          "plugin": "omnimux-workflow",
+          "clientBundle": "plugins/omnimux-workflow/lib/client.js",
+          "clientBundleSha256": "6ff121432df6b91f5158a575fdc3c817af93ad3d5afff3e2bb9942c3502a6e9b",
+          "note": "预演前重新构建产物（旧产物会让预演失真）；运行器启动时打印同一 sha，确认加载的就是本次源码构建的产物"
+        },
+        "host": {
+          "plugin": "dsh-better-sidebar",
+          "version": "0.19.1（Dev 物化副本；仓库 lockfile 里的 0.18.0 不含 native surface，行为不同）",
+          "surface": "原生右侧边栏（native surface）：标签页 id 由宿主生成，插件 openTab 的 seed.id 与 extra 都不会转给标签页"
+        },
+        "browser": "ego-browser（ego-lite，TaskSpace #70）",
+        "login": "私有实例打印的一次性 token→Cookie 交换 URL；仅经 0700 私有目录文件交给同一 ego Tab，未打印、未落截图、未入报告",
+        "model": "本机 mock 端点（未发起任何真实模型请求；未读取任何生产/Dev 凭据）"
+      }
     }
-  },
-  "runtime": {
-    "runner": "tmp/ai-app-library-qa/serve-worktree-app.mjs（任务私有、工作树隔离；模型端口 mock；未注入真实密钥）",
-    "startCommand": "node tmp/ai-app-library-qa/serve-worktree-app.mjs（cwd=工作树）",
-    "privateProfileDir": "<worktree>/.test-env-vrWLGS（退出即删，测试后已回收）",
-    "origin": "http://127.0.0.1:55279",
-    "port": "动态（--port 0，由进程分配）",
-    "profilePollution": "无：不写 ~/.omnimux-dev，不改主检出，不使用共享 Dev 桌面端 45120",
-    "browser": "ego-browser（ego-lite，TaskSpace #61，Tab p1）",
-    "login": "私有实例打印的一次性 token→Cookie 交换 URL，仅存于 0700 私有目录文件，未打印/未入截图/未入报告，验证后随实例回收",
-    "model": "本机 mock 端点（未发起任何真实模型请求）"
-  },
+  ],
   "dataSeeding": {
     "storageKey": "localStorage['omnimux_apps_manifests']",
     "shape": "Record<appId, ApplicationManifest>；字段 appId/version/createdAt/metadata{name,category,description,coverUrl}/workflowBinding{workspaceId,projectId,sourceGroupId}",
@@ -36,6 +55,18 @@
     ],
     "boundary": "播种只用于构造被测状态；发布向导真实写盘链路不在本次验证范围，未被任何结论引用。"
   },
+  "hostMechanism": {
+    "question": "为什么点第二张卡不切应用、删除后标签页不关？",
+    "method": "在隔离实例页面内注册探针 kind 直接观察宿主行为 + 读宿主 0.19.1 源码（src/client/native/{surface,tab-adapter}.tsx、service.ts）",
+    "findings": [
+      "宿主启用原生 surface 后，openTab 不再使用 seed.id，也不转发 seed.extra；只有 seed.title / seed.meta 会进原生标签页记录（service.ts openTab → surface.openTab({kind, params:{title, meta}})）。",
+      "原生标签页 id 由宿主生成（探针实测 tab6），不是插件的 app_<appId>；surface.close(tabId) 先查插件侧记录表 records.get(tabId)，查不到就整体放弃、不再回落到插件自有布局。",
+      "同一个 kind 在原生 surface 上只保留一个标签页：探针各 open 两次（含带 createTab 的多实例 kind），侧栏始终各一个 chip；重复 open 是「聚焦已存在 + 用新 params 重新挂载记录」。",
+      "聚焦已存在的同 kind 标签页时 params（title/meta）会随本次 open 更新（探针实测 title: EchoA→EchoB、meta.appId: A→B，id 恒为 tab6）。",
+      "标签页 chip 标题优先读插件侧记录，记录不存在时回落「宿主原生 type 标题」；type 标题在标签页创建时捕获、之后不再重算（探针实测改全局变量无效），而插件侧记录会在标签页卸载（切到别的标签页）时被宿主丢弃。"
+    ],
+    "conclusion": "旧实现按 seed.id / extra 传应用身份、按 app_<appId> 关标签页，这两条在原生 surface 上都不成立。修法：应用身份走 seed.meta.appId（宿主唯一转发的字段）；关闭时用标签页组件读到的宿主标签页 id（插件在 openTab 时拿不到它）。"
+  },
   "journeys": [
     {
       "id": 1,
@@ -43,8 +74,7 @@
       "result": "PASS",
       "observed": [
         "三个 tab：Local Projects（选中）/ Co-created Projects (Coming Soon)（disabled）/ AI Apps",
-        "第三项确有 disabled 属性为空、可点击；三项均有正几何（width>0 && height>0）",
-        "库页根容器几何 860x879"
+        "第三项可点击；三项均有正几何（width>0 && height>0）"
       ],
       "screenshot": "docs/evidence/ai-app-library-j1-category-tabs.png",
       "note": "运行实例语言为 en，故标签显示英文；zh 文案（AI应用）由同一 t() 键解析，E2E 用真实 zh 字典断言。"
@@ -56,45 +86,50 @@
       "observed": [
         "无数据：0 张卡片，空态节点 .omnimux-workflow-library-empty 文案为 “No AI apps yet / Group a workflow on the creative canvas and click \\\"Publish app\\\"…”，无错误块",
         "有数据：2 张卡片按 createdAt 倒序（商品图生成器 12:30 → 爆款复刻助手 10:00），网格复用 .omnimux-workflow-grid",
-        "卡片 DOM：div.dshUk-MediaCard-card.omnimux-workflow-app-card[role=button][tabindex=0]，尺寸 265x210"
+        "卡片 DOM：div.dshUk-MediaCard-card.omnimux-workflow-app-card[role=button][tabindex=0]，尺寸 267x211"
       ],
       "screenshots": ["docs/evidence/ai-app-library-j2-empty-state.png", "docs/evidence/ai-app-library-j2-card-grid.png"]
     },
     {
       "id": 3,
-      "requirement": "卡片点击 → 在右侧栏打开标题为应用名的应用标签页",
-      "result": "PARTIAL",
+      "requirement": "卡片点击 → 打开/切到对应应用的标签页，标题与内容都指向被点应用",
+      "result": "PASS",
       "observed": [
-        "点击卡片确实在右侧栏打开/聚焦应用标签页，面板渲染被点应用（商品图生成器 / 图片应用 / v0.2.1 / 批量生成电商商品图）",
-        "标签页标题在稳定后显示应用名（实测一次读到“商品图生成器”）；但同一标签页会先渲染通用兜底标题「AI 应用」再更新，存在标题短暂不一致",
-        "点击「第二张卡片」不会切到第二个应用：右侧栏始终只有一个应用标签页，面板仍显示最新一条 manifest（宿主按 tab kind 收敛 + openTab 的 extra 被丢弃，AppTab 回落到“最新 manifest”）——该行为来自既有 openAppTab/AppTab 与宿主，不是本次新增代码"
+        "点卡片 1（商品图生成器）：右侧栏应用标签页 chip 显示「商品图生成器」，面板标题「商品图生成器」、副标题「图片应用」（实测 chips=[Projects, 商品图生成器]）",
+        "点卡片 2（爆款复刻助手）：同一个应用标签页切到被点应用，chip 与面板都变成「爆款复刻助手 / 视频应用」，不再回落最新一条 manifest（实测 chips=[Projects, 爆款复刻助手]）",
+        "同一应用重复点：仍只有一个应用标签页、内容不变（不堆叠）",
+        "chip 标题不再长期停在兜底名「AI 应用」：标签页挂载后主动 updateTab 自改名，chip 立即显示应用名",
+        "首轮 PARTIAL 的三条子断言（只有一个应用标签页、点第二张卡不切、标题先闪兜底名）已全部消除"
       ],
-      "screenshot": "docs/evidence/ai-app-library-j3-open-app-tab.png",
-      "notCovered": "“同一应用多个标签页/多应用并行标签页”的宿主行为未纳入本次验收"
+      "screenshots": ["docs/evidence/ai-app-library-j3b-card1.png", "docs/evidence/ai-app-library-j3b-card2.png"],
+      "residual": "标签页切到后台（用户回到「项目」页）后，宿主会丢弃插件侧记录，chip 回落宿主原生 type 标题「AI 应用」。这是宿主机制（type 标题在标签页创建时捕获、之后不重算），插件内不 hack 绕过；详见 residualsRequiringHumanDecision。"
     },
     {
       "id": 4,
       "requirement": "卡片右下角「⋯」→ 菜单含「编辑」「删除」两项",
       "result": "PASS",
       "observed": [
-        "触发器 button[aria-label=\"More actions\"][aria-haspopup=menu][aria-expanded=false|true]，展开后 aria-expanded 回写 true",
+        "触发器 button[aria-label=更多操作/More actions][aria-haspopup=menu][aria-expanded=false|true]，展开后 aria-expanded 回写 true",
         "菜单 role=menu，portal 挂在 BODY 上（未被 overflow:auto 裁切）",
-        "恰好两项：Edit、Delete；Delete 带危险样式（class 含 _danger_）"
+        "恰好两项：Edit、Delete；Delete 带危险样式（class 含 danger）"
       ],
       "screenshot": "docs/evidence/ai-app-library-j4-card-menu.png"
     },
     {
       "id": 5,
-      "requirement": "删除 → 二次确认弹窗 → 确认后卡片消失且应用标签页关闭；取消则卡片保留",
-      "result": "PARTIAL",
+      "requirement": "删除 → 二次确认弹窗 → 确认后卡片消失且应用标签页关闭；取消则卡片与标签页都保留",
+      "result": "PASS",
       "observed": [
-        "二次确认弹窗出现，文案点名应用名：“Delete App “商品图生成器” will be deleted and its sidebar tab closed.”，按钮 Cancel / Delete(危险)",
-        "取消：弹窗关闭，卡片保留（2 张），存储键不变（app_demo_video_001, app_demo_image_002）",
-        "确认：卡片从网格消失（剩 1 张），存储键只剩 app_demo_video_001，无错误提示",
-        "应用标签页未关闭：确认后右侧栏仍保留该应用标签页；closeAppTab(appId) 调用了侧栏 closeTab('app_app_demo_image_002') 但该实例的原生 surface 面板不响应（同一面板对 __omnimuxWorkbench.closeTab 亦无关闭效果）"
+        "二次确认弹窗出现，文案点名应用名：“Delete App “爆款复刻助手” will be deleted and its sidebar tab closed.”，按钮 Cancel / Delete(危险)",
+        "取消：弹窗关闭，卡片保留（2 张），存储键不变（app_demo_image_002, app_demo_video_001），应用标签页保留（chips=[Projects, AI 应用]）",
+        "确认：卡片从网格消失（剩 1 张），存储键只剩 app_demo_image_002，无错误提示，且应用标签页被关闭（chips 由 [Projects, AI 应用] 变为 [Projects]）",
+        "关闭走的是宿主生成的标签页 id（由 AppTab 读到自己 tab 时登记回来），不再是首轮失效的 app_<appId>"
       ],
-      "screenshots": ["docs/evidence/ai-app-library-j5a-delete-confirm.png", "docs/evidence/ai-app-library-j5b-delete-cancelled.png", "docs/evidence/ai-app-library-j5c-delete-confirmed.png"],
-      "notCovered": "标签页关闭动作在本宿主未生效，记为未达成，未伪造通过"
+      "screenshots": [
+        "docs/evidence/ai-app-library-j5d-delete-confirm.png",
+        "docs/evidence/ai-app-library-j5d-delete-cancelled.png",
+        "docs/evidence/ai-app-library-j5d-tab-closed.png"
+      ]
     },
     {
       "id": 6,
@@ -102,11 +137,11 @@
       "result": "PARTIAL",
       "observed": [
         "点「编辑」后右侧栏打开 Creative Canvas 标签页并选中，画布渲染（React Flow / 创作页 1）",
-        "localStorage['omnimux:latest-active-canvas'] 被写成该应用 workflowBinding.workspaceId（ws_demo_alpha），即画布切到应用所属工作区",
+        "localStorage['omnimux:latest-active-canvas'] 被写成该应用 workflowBinding.workspaceId（ws_demo_alpha）",
         "本次环境没有可用的真实项目 + 工作流组夹具（种子 manifest 的 projectId 指向不存在项目），因此“视口/小组件被带到该组”这一步未取得实测证据"
       ],
       "screenshot": "docs/evidence/ai-app-library-j6-edit-focused.png",
-      "notCovered": "聚焦到工作流组（viewport 位移）未覆盖；E2E 以 tab meta.focusGroupId 契约断言代替"
+      "notCovered": "聚焦到工作流组（viewport 位移）未覆盖；E2E 以 tab meta.focusGroupId 契约断言代替。本轮未改动这条链路。"
     },
     {
       "id": 7,
@@ -114,41 +149,65 @@
       "result": "PASS",
       "observed": [
         "输入「爆款」→ 仅剩 爆款复刻助手；输入「商品」→ 仅剩 商品图生成器",
-        "输入「zzz」→ 0 张卡片并回落真实空态；清空后恢复 2 张",
-        "修复前（重建前的旧产物）输入完全不进状态，说明 onValueChange 接线是本次生效的关键"
+        "输入「zzz」→ 0 张卡片并回落真实空态；清空后恢复 2 张"
       ],
       "screenshot": "docs/evidence/ai-app-library-j7-search-filter.png"
     }
   ],
   "additionalChecks": {
-    "positiveGeometry": "库页根 860x879、卡片 265x210，均为正几何（width>0 && height>0）",
+    "positiveGeometry": "库页与应用标签页均渲染出正几何内容（截图 1920x929、可解码）",
     "emptyVsError": "空态与错误态分离：损坏清单回落真实空态；本地存储不可用才渲染 .omnimux-workflow-library-error",
-    "menuPortalNotClipped": "菜单 portal 到 BODY，未出现被 overflow:auto 裁切"
+    "menuPortalNotClipped": "菜单 portal 到 BODY，未出现被 overflow:auto 裁切",
+    "artifactIdentity": "运行器启动时打印 lib/client.js 的 sha256=6ff121432df6b91f5158a575fdc3c817af93ad3d5afff3e2bb9942c3502a6e9b，与本工作树构建产物一致"
   },
   "notCovered": [
     "真实发布链路（画布发布向导写 omnimux_apps_manifests 的全链路）",
     "跨设备/跨会话同步（数据源只有 localStorage）",
-    "应用标签页关闭在本宿主未生效（见旅程 5）",
     "工作流组聚焦的视口位移（见旅程 6）",
-    "多应用并行标签页的宿主行为（见旅程 3）",
     "Electron / 桌面壳层行为",
     "开发版（Dev 45120）真机验收：人工职责，本次未执行、未声称取得"
+  ],
+  "residualsRequiringHumanDecision": [
+    {
+      "item": "多应用并行标签页（用户原话「打开新的 tab 窗口」的严格读法）",
+      "status": "宿主限制，插件内不可得",
+      "evidence": "宿主原生 surface 对同一个 kind 只保留一个标签页（探针 kind 连续 open 两次仍只有一个 chip；带 createTab 的多实例 kind 同样只有一个）",
+      "currentBestState": "单个应用标签页始终展示「最近点击的那个应用」，标题与内容都正确、重复点不堆叠、删除后能关掉；不同应用可依次进入",
+      "whyNotHacked": "为每个 app 动态注册独立 kind 会把应用清单灌进标签页注册表与侧卡设置项，属重设计标签页系统，超出本次边界"
+    },
+    {
+      "item": "后台应用标签页的 chip 标题回落兜底名「AI 应用」",
+      "status": "宿主限制，插件内不可得",
+      "evidence": "chip 标题优先读插件侧记录，而记录在标签页卸载（切到别的标签页）时被宿主丢弃；回落用的宿主原生 type 标题在标签页创建时捕获、之后不再重算（探针改全局变量无效）",
+      "currentBestState": "应用标签页在前台时 chip 稳定显示应用名（不再长时间停留兜底名），删除确认后标签页正常关闭",
+      "whyNotHacked": "唯一可行解是每次换应用都关掉再新开标签页以刷新 type 标题，会造成标签页抖动与位置变化，属绕过式 hack，不做"
+    }
   ],
   "artifacts": [
     "docs/evidence/ai-app-library-j1-category-tabs.png",
     "docs/evidence/ai-app-library-j2-empty-state.png",
     "docs/evidence/ai-app-library-j2-card-grid.png",
     "docs/evidence/ai-app-library-j3-open-app-tab.png",
+    "docs/evidence/ai-app-library-j3b-card1.png",
+    "docs/evidence/ai-app-library-j3b-card2.png",
     "docs/evidence/ai-app-library-j4-card-menu.png",
     "docs/evidence/ai-app-library-j5a-delete-confirm.png",
     "docs/evidence/ai-app-library-j5b-delete-cancelled.png",
     "docs/evidence/ai-app-library-j5c-delete-confirmed.png",
+    "docs/evidence/ai-app-library-j5d-delete-confirm.png",
+    "docs/evidence/ai-app-library-j5d-delete-cancelled.png",
+    "docs/evidence/ai-app-library-j5d-tab-closed.png",
     "docs/evidence/ai-app-library-j6-edit-focused.png",
     "docs/evidence/ai-app-library-j7-search-filter.png"
   ],
+  "automatedChecks": {
+    "node --test tests/ai-app-library.e2e.test.mjs": "4 passed / 0 failed（旅程 1→7、旅程 2 负向、旅程 3b 原生 surface 身份与关闭、旅程 3c 切换与旧布局守卫）",
+    "pnpm --filter omnimux-workflow test": "1888 tests / 100 suites / pass 1888 / fail 0 / skipped 0",
+    "pnpm test:ui": "PASS：527 个客户端视图源文件，UI01~UI10 零违规"
+  },
   "cleanup": {
-    "appRunner": "写入 STOP 后进程自清理，私有 profile 目录已删除",
-    "browser": "ego TaskSpace 已 finish（keep: []）",
-    "measuredAt": "2026-09-16T00:2x +08:00"
+    "appRunner": "SIGTERM / STOP 文件触发自清理，私有 profile 目录随之删除",
+    "browser": "ego TaskSpace 以 finish({ keep: [] }) 释放",
+    "measuredAt": "2026-09-16T00:4x +08:00"
   }
 }
