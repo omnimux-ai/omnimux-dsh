@@ -162,7 +162,7 @@ test('collectTabs / isSeedFilesTab / tabIsOpen walk split trees', () => {
   assert.equal(tabIsOpen({ splits: node }, 'omnimux-clip:studio'), false)
 })
 
-test('default focus matrix: canvas defaults to split, all 9 libraries default to gui', () => {
+test('default focus matrix: canvas and all libraries default to split (Issue #1877)', () => {
   assert.equal(resolveDefaultFocus('omnimux-workflow:canvas'), WORKBENCH_FOCUS.split)
   const libraries = [
     'omnimux-clip:studio',
@@ -177,7 +177,7 @@ test('default focus matrix: canvas defaults to split, all 9 libraries default to
     'omnimux-market:plaza',
   ]
   for (const lib of libraries) {
-    assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.gui, `${lib} must default to gui`)
+    assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.split, `${lib} must default to split`)
     assert.ok(isWorkbenchTab(lib), `${lib} must be recognized as workbench tab`)
   }
   assert.equal(WORKBENCH_OCCUPANTS.length, 11)
@@ -506,10 +506,10 @@ test('openWorkbench switches focus mode to default per tab without cross-tab lea
   assert.equal(api.getFocus(), WORKBENCH_FOCUS.split)
   assert.equal(state.width, 780)
 
-  // 2. Open assets library -> defaults to gui
+  // 2. Open assets library -> defaults to split (Issue #1877)
   await api.open({ tabId: 'omnimux-assets:library', timeoutMs: 0 })
-  assert.equal(api.getFocus(), WORKBENCH_FOCUS.gui)
-  assert.equal(state.width, 1200)
+  assert.equal(api.getFocus(), WORKBENCH_FOCUS.split)
+  assert.equal(state.width, 780)
 
   // 3. Switch back to canvas -> split
   await api.open({ tabId: 'omnimux-workflow:canvas', timeoutMs: 0 })
