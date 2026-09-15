@@ -37,15 +37,15 @@ export function FilterBar(props) {
     { value: 'expires_at', label: t('sort.expiresAt') },
   ]
   const platformOptions = [
-    { value: '', label: `${t('platform')} · ${t('all')}` },
+    { value: '', label: t('all') },
     ...platforms.map((value) => ({ value, label: localeText(t, `platform.${value}`, value) })),
   ]
   const groupOptions = [
-    { value: '', label: `${t('group')} · ${t('all')}` },
+    { value: '', label: t('all') },
     ...groups.map((value) => ({ value, label: value })),
   ]
   const statusOptions = [
-    { value: '', label: t('filter.status') },
+    { value: '', label: t('all') },
     ...statuses.map((value) => ({ value, label: t(`status.${value}`) })),
   ]
 
@@ -80,6 +80,7 @@ export function FilterBar(props) {
           {statuses.length > 0 ? (
             <DropdownSelect
               value={status}
+              placeholder={t('filter.status')}
               options={statusOptions}
               aria-label={t('filter.status')}
               disabled={disabled}
@@ -89,6 +90,7 @@ export function FilterBar(props) {
           {groups.length > 0 ? (
             <DropdownSelect
               value={group}
+              placeholder={t('group')}
               options={groupOptions}
               aria-label={t('group')}
               disabled={disabled}

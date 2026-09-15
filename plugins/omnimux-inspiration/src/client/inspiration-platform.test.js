@@ -55,12 +55,12 @@ describe('Inspiration Platform Formatting & Dynamic Registration', () => {
 
     // The exact option list the dropdown renders, in both locales.
     assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'x'], tZh), [
-      { value: '', label: '全部平台' },
+      { value: '', label: '全部' },
       { value: 'tiktok', label: 'TikTok' },
       { value: 'x', label: '推特 (X)' },
     ])
     assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'x'], tEn), [
-      { value: '', label: 'All Platforms' },
+      { value: '', label: 'All' },
       { value: 'tiktok', label: 'TikTok' },
       { value: 'x', label: 'Twitter (X)' },
     ])
