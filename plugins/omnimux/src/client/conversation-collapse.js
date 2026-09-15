@@ -38,8 +38,8 @@ html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"]))
   width:0!important;
   min-width:0!important;
   max-width:0!important;
-  overflow:visible!important;
-  opacity:1!important;
+  overflow:hidden!important;
+  opacity:0!important;
   pointer-events:none!important;
 }
 html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface,
@@ -50,10 +50,10 @@ html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"]))
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation"] > *,
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-phase="active"],
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-conversation-scroll]{
-  overflow:visible!important;
+  overflow:hidden!important;
   pointer-events:none!important;
-  visibility:visible!important;
-  opacity:1!important;
+  visibility:hidden!important;
+  opacity:0!important;
 }
 /* Hide only the message transcript stream and header bar while rightbar is open, keep composerSeat mounted and visible */
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [data-slot="conversation.session"],

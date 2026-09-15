@@ -55,9 +55,8 @@ export function isWorkbenchTab(tabId) {
 }
 
 export function resolveDefaultFocus(tabId) {
-  if (tabId && isWorkbenchTab(tabId) && tabId !== 'omnimux-workflow:canvas' && tabId !== 'omnimux:media-viewer') {
-    return WORKBENCH_FOCUS.gui
-  }
+  // 遵循现代三栏工作台规范：所有业务工作台/库（项目库、资产库等）默认均以分屏（split）模式呈现，
+  // 保持会话栏与工作台并存，彻底消除私自折叠会话栏的伪全屏与文字穿透缺陷（Issue #1877）
   return WORKBENCH_FOCUS.split
 }
 

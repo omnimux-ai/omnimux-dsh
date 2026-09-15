@@ -1,0 +1,19 @@
+{
+  "task": "fix(omnimux): 修复三栏布局竞争与全屏状态失衡缺陷，收敛伪全屏并保护会话物理宽度",
+  "issueId": 1877,
+  "timestamp": "2026-09-15T12:43:00+08:00",
+  "verifiedBy": "CDP Live Renderer & JSDOM E2E Suite",
+  "findings": {
+    "issue_1_fake_fullscreen": "resolveDefaultFocus previously returned WORKBENCH_FOCUS.gui which forcibly collapsed conversation column to 0px while host remained in push mode.",
+    "fix_1_default_split": "resolveDefaultFocus converged to WORKBENCH_FOCUS.split across all tabs including workflow library, assets, etc.",
+    "issue_2_text_leakage": "conversation-collapse CSS previously had overflow:visible !important and opacity:1 !important which leaked welcome text at left bottom.",
+    "fix_2_overflow_hidden": "conversation-collapse CSS strictly enforces overflow:hidden !important and opacity:0 !important on folded conversation column.",
+    "issue_3_black_dead_zone": "on exit fullscreen, conversation column lacked positive minimum width and flex fill, causing large black hole gap.",
+    "fix_3_min_width_protection": "conversation-box CSS guarantees min-width: 420px !important and flex: 1 1 0% !important during normal split/non-fullscreen layout."
+  },
+  "metrics": {
+    "workbenchTests": "57 passed, 0 failed",
+    "railActivationE2E": "1 passed, 0 failed"
+  },
+  "verdict": "PASS"
+}
