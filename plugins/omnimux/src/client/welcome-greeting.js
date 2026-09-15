@@ -36,9 +36,17 @@ export function resolveGreetingUserName(win = hostWindow()) {
  */
 export function isSplitMode(doc = hostDocument()) {
   if (!doc) return false
+  const frame = doc.querySelector('.dshDesktopFrame') || doc.querySelector('[class*="frame"]')
+  if (frame && (frame.getAttribute('data-rightbar-collapsed') === 'true' || frame.hasAttribute('data-rightbar-collapsed'))) {
+    return false
+  }
+  if (doc.documentElement?.hasAttribute('data-omnimux-conversation-collapsed')) return false
   const panel = doc.querySelector('[data-sidebar-right-panel]')
   const isOpen = panel ? panel.hasAttribute('data-sidebar-right-open') : false
   const isFullscreen = panel ? panel.getAttribute('data-sidebar-right-panel') === 'fullscreen' : false
+  if (doc.documentElement?.hasAttribute('data-omnimux-split-compact')) {
+    return !isFullscreen && (isOpen || !panel)
+  }
   return Boolean(isOpen && !isFullscreen)
 }
 
@@ -130,7 +138,14 @@ export function installWelcomeGreetingObserver(doc = hostDocument()) {
     try {
       observerInstance.observe(doc.documentElement, {
         attributes: true,
-        attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-omnimux-conversation-collapsed'],
+        attributeFilter: [
+          'data-sidebar-right-panel',
+          'data-sidebar-right-open',
+          'data-rightbar-collapsed',
+          'data-omnimux-split-compact',
+          'data-omnimux-conversation-collapsed',
+          'data-omnimux-composer-density'
+        ],
         subtree: true,
         childList: true,
       })

@@ -75,20 +75,67 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   padding-right:0!important;
 }
 
-/* 非全屏（分屏）模式下，迎宾区靠左上角对齐排布 */
-.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"],
-[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"]{
-  justify-content:flex-start!important;
-  padding-top:24px!important;
+/* 非全屏（分屏）模式下，迎宾区靠左上角独立图层对齐排布 */
+html[data-omnimux-split-compact] .omnimux-welcome-header,
+.dshDesktopFrame:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-header,
+[class*="frame"]:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-header,
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-header,
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-header {
+  position:absolute!important;
+  top:28px!important;
+  left:24px!important;
+  right:24px!important;
+  width:auto!important;
+  max-width:calc(100% - 48px)!important;
+  margin:0!important;
+  padding:0!important;
+  z-index:10!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
 }
-.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child,
-[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child{
-  margin-top:0!important;
-  margin-bottom:auto!important;
-  align-self:flex-start!important;
-  padding-left:16px!important;
-  width:100%!important;
-  box-sizing:border-box!important;
+html[data-omnimux-split-compact] .omnimux-welcome-texts,
+.dshDesktopFrame:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-texts,
+[class*="frame"]:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-texts,
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-texts,
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-texts {
+  width:auto!important;
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+html[data-omnimux-split-compact] .omnimux-welcome-title,
+.dshDesktopFrame:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-title,
+[class*="frame"]:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-title,
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-title,
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-title {
+  font-size:18px!important;
+  line-height:24px!important;
+  font-weight:600!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html[data-omnimux-split-compact] .omnimux-welcome-subtitle,
+.dshDesktopFrame:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-subtitle,
+[class*="frame"]:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) .omnimux-welcome-subtitle,
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-subtitle,
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omnimux-welcome-subtitle {
+  font-size:13px!important;
+  line-height:18px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+/* 隐藏非全屏模式下输入框上方的空居中外壳，确保输入框紧凑贴底 */
+html[data-omnimux-split-compact] [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
+.dshDesktopFrame:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
+[class*="frame"]:has([data-sidebar-right-panel]:not([data-sidebar-right-panel="fullscreen"]):not([data-rightbar-collapsed="true"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header),
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child:not(.omnimux-welcome-header) {
+  height:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
 }
 
 /* 迎宾打招呼头部样式 */
