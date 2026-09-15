@@ -139,7 +139,7 @@ test('marketing-agent agent.cordis.yml is structurally valid and mounts all 6 ma
   const text = read(rel)
   ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
   deepEqual(toolNames(text), MARKETING)
-  ok(text.includes('全能营销操盘手'))
+  ok(text.includes('营销专家') || text.includes('全能营销操盘手'))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `marketing-agent parsed ${rows} top-level rows`)
 })
@@ -150,7 +150,7 @@ test('drama-agent agent.cordis.yml is structurally valid and mounts all 6 drama 
   const text = read(rel)
   ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
   deepEqual(toolNames(text), DRAMA)
-  ok(text.includes('全能短剧操盘手'))
+  ok(text.includes('短剧专家') || text.includes('全能短剧操盘手'))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `drama-agent parsed ${rows} top-level rows`)
 })
@@ -200,26 +200,28 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
 })
 
 test('preset.yml metadata matches requirements for shipped presets', () => {
-  const omniPreset = read('presets/omni-agent/preset.yml')
-  ok(omniPreset.includes('name: 全能社媒操盘手'))
-  ok(omniPreset.includes('order: 1'))
-
-  const marketingPreset = read('presets/marketing-agent/preset.yml')
-  ok(marketingPreset.includes('name: 全能营销操盘手'))
-  ok(marketingPreset.includes('order: 2'))
+  const cordisPreset = read('presets/cordis/preset.yml')
+  ok(cordisPreset.includes('name: 创建Agent'))
+  ok(cordisPreset.includes('order: 1'))
 
   const dramaPreset = read('presets/drama-agent/preset.yml')
-  ok(dramaPreset.includes('name: 全能短剧操盘手'))
-  ok(dramaPreset.includes('order: 3'))
-
-  const standardPreset = read('presets/standard/preset.yml')
-  ok(standardPreset.includes('name: 代码开发'))
+  ok(dramaPreset.includes('name: 短剧专家'))
+  ok(dramaPreset.includes('order: 2'))
 
   const dailyWorkPreset = read('presets/daily-work/preset.yml')
   ok(dailyWorkPreset.includes('name: 日常工作'))
+  ok(dailyWorkPreset.includes('order: 3'))
 
-  const cordisPreset = read('presets/cordis/preset.yml')
-  ok(cordisPreset.includes('name: 创造模式') || cordisPreset.includes('name: 组建团队'))
+  const omniPreset = read('presets/omni-agent/preset.yml')
+  ok(omniPreset.includes('name: 社媒专家'))
+  ok(omniPreset.includes('order: 4'))
+
+  const marketingPreset = read('presets/marketing-agent/preset.yml')
+  ok(marketingPreset.includes('name: 营销专家'))
+  ok(marketingPreset.includes('order: 5'))
+
+  const standardPreset = read('presets/standard/preset.yml')
+  ok(standardPreset.includes('name: 代码开发'))
 })
 
 test('sync-agent-presets.sh maintains presets in KEEP array', () => {
@@ -229,7 +231,7 @@ test('sync-agent-presets.sh maintains presets in KEEP array', () => {
 
 test('omni-agent persona positions as universal social lead and forbids forced spawn', () => {
   const text = read('presets/omni-agent/agent.cordis.yml')
-  ok(text.includes('全能社媒操盘手'))
+  ok(text.includes('社媒专家') || text.includes('全能社媒操盘手'))
   ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
   ok(text.includes('不要尝试切换会话 preset'))
 })

@@ -1,7 +1,7 @@
 {
   "presetId": "marketing-agent",
-  "name": "全能营销操盘手",
-  "description": "全能营销操盘手专属技能与分类集",
+  "name": "营销专家",
+  "description": "营销专家专属技能与分类集",
   "categories": [
     { "id": "广告创意", "name": "广告创意" },
     { "id": "转化文案", "name": "转化文案" },
