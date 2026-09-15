@@ -255,10 +255,24 @@ export function TaskMasterList({
   }, [selectedId])
   return (
     <div className="dsh-st-md-pane">
+      <div className="dsh-st-md-heading" style={{ display: 'none' }}>
+        <h1>{t('list.title')}</h1>
+        <p>{t('list.subtitle')}</p>
+      </div>
       <header className="dsh-st-md-head">
-        <div className="dsh-st-md-heading">
-          <h1>{t('list.title')}</h1>
-          <p>{t('list.subtitle')}</p>
+        <div className="dsh-st-md-capsules" role="tablist" aria-label={t('filter.label')}>
+          {STATUS_FILTERS.map(key => (
+            <Button
+              key={key}
+              role="tab"
+              aria-selected={statusFilter === key}
+              className={`dsh-st-md-capsule${statusFilter === key ? ' is-on' : ''}`}
+              onClick={() => onStatusFilterChange?.(key)}
+            >
+              <span>{t(`filter.${key}`)}</span>
+              <span className="dsh-st-md-capsule-count">{counts === undefined ? 0 : counts[key]}</span>
+            </Button>
+          ))}
         </div>
         <div className="dsh-st-md-head-actions">
           <SplitCreateButton
@@ -280,7 +294,7 @@ export function TaskMasterList({
             ]}
           />
           <Button
-            className="dsh-st-icon"
+            className="dsh-st-icon dsh-st-md-refresh-btn"
             aria-label={t('section.refresh')}
             onClick={() => onRefresh?.()}
           ><RefreshIcon width={16} height={16} /></Button>
@@ -306,21 +320,6 @@ export function TaskMasterList({
             ><CloseOutlineIcon width={12} height={12} /></Button>
           )}
         </div>
-      </div>
-
-      <div className="dsh-st-md-capsules" role="tablist" aria-label={t('filter.label')}>
-        {STATUS_FILTERS.map(key => (
-          <Button
-            key={key}
-            role="tab"
-            aria-selected={statusFilter === key}
-            className={`dsh-st-md-capsule${statusFilter === key ? ' is-on' : ''}`}
-            onClick={() => onStatusFilterChange?.(key)}
-          >
-            <span>{t(`filter.${key}`)}</span>
-            <span className="dsh-st-md-capsule-count">{counts === undefined ? 0 : counts[key]}</span>
-          </Button>
-        ))}
       </div>
 
       <div className="dsh-st-md-list" role="list" aria-label={t('list.title')}>
