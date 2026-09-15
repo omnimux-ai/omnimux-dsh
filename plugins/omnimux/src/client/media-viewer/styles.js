@@ -341,7 +341,7 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 /* ========================================================
-   3. 单图大画布与右侧多图候选滚动栏 (Single Stage & Thumbnails Rail)
+   3. 单图大画布与左上角 1:1 居中悬浮缩略图栏 (Single Stage & Floating Rail)
    ======================================================== */
 .omx-mv-single-stage {
   width: 100%;
@@ -351,46 +351,79 @@ export const MEDIA_VIEWER_CSS = `
   justify-content: center;
   position: relative;
   overflow: hidden;
+  user-select: none;
 }
 
 .omx-mv-thumbnails-rail {
   position: absolute;
-  top: 24px;
-  right: 28px;
+  top: 20px;
+  left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: calc(100vh - 220px);
+  align-items: center;
+  gap: 10px;
+  width: 68px;
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px;
-  z-index: 10;
-  scrollbar-width: thin;
+  padding: 8px 6px;
+  z-index: 30;
+  scrollbar-width: none;
+  background: var(--dsw-alias-bg-layer-2);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
+  box-shadow: 0 12px 36px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 悬浮胶囊外阴影 */
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omx-mv-thumbnails-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .omx-mv-thumbnails-rail__item {
-  width: 108px;
-  height: 72px;
-  border-radius: 10px;
+  position: relative;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--dsw-alias-bg-layer-2);
-  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 缩略图卡片微投影 */
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s, box-shadow 0.15s;
+  aspect-ratio: 1 / 1;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
-  position: relative;
 }
 
-.omx-mv-thumbnails-rail__item:hover {
-  transform: scale(1.02);
-  border-color: var(--dsw-alias-brand-primary);
+/* 可选（非当前）状态：1:1 正方形、更小、暗色半透明、左右绝对居中 */
+.omx-mv-thumbnails-rail__item.inactive,
+.omx-mv-thumbnails-rail__item:not(.active) {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  opacity: 0.38;
+  filter: brightness(0.6);
+  border: 1px solid var(--dsw-alias-border-l2);
 }
 
+.omx-mv-thumbnails-rail__item.inactive:hover,
+.omx-mv-thumbnails-rail__item:not(.active):hover {
+  opacity: 0.85;
+  filter: brightness(0.95);
+  transform: scale(1.08);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+/* 当前选中状态：1:1 正方形、明显更大、强白光发光边框光晕、左右居中 */
 .omx-mv-thumbnails-rail__item.active {
-  border-color: var(--dsw-alias-brand-primary) !important; /* 对标截图高亮蓝框 */
-  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary), 0 6px 20px var(--dsw-alias-bg-layer-1) !important; /* exempt-ui03: 选中态光晕 */
-  transform: scale(1.02);
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  opacity: 1;
+  filter: brightness(1.05);
+  border: 2.5px solid var(--dsw-alias-label-primary) !important;
+  box-shadow: 0 0 14px var(--dsw-alias-label-primary), 0 0 28px var(--dsw-alias-bg-layer-1), 0 4px 16px var(--dsw-alias-bg-base) !important; /* exempt-ui03: 选中态高亮白光光晕 */
+  transform: scale(1);
 }
 
 .omx-mv-thumbnails-rail__img {
@@ -512,28 +545,37 @@ export const MEDIA_VIEWER_CSS = `
   background: var(--dsw-alias-bg-base);
 }
 
+.omx-mv-stage-wrapper[data-subview="single"] .omx-mv-viewport {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
 .omx-mv-display {
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 8px;
+  overflow: visible;
   border: none !important;
   outline: none !important;
   box-shadow: 0 16px 56px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 大图视口深色投影 */
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 100%;
+  max-height: 100%;
   display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
+  transform-origin: center center;
+  transition: transform 0.05s linear;
 }
 
 .omx-mv-display img {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 170px);
+  max-height: calc(100vh - 120px);
   object-fit: contain;
   display: block;
   border: none !important;
   outline: none !important;
+  border-radius: 6px;
 }
 
 /* ========================================================

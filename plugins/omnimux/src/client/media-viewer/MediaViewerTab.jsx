@@ -36,10 +36,42 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
 
   const imageRef = useRef(null);
   const viewerRootRef = useRef(null);
+  const stageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
+
+  // 缩放平移与跨图记忆锁定引擎
+  const [zoomScale, setZoomScale] = useState(1.0);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ startX: 0, startY: 0 });
 
   const annotations = store.getAnnotations(activeItem?.id);
   const savedAnnotations = annotations.filter((a) => a.status === 'saved');
+
+  // 鼠标滚轮与触控板/手写板双指捏合无级平滑缩放
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const zoomFactor = e.ctrlKey ? 0.04 : 0.0015;
+      const delta = -e.deltaY * zoomFactor;
+      setZoomScale((prev) => {
+        const next = Math.min(Math.max(prev * (1 + delta), 0.15), 5.0);
+        store.setZoom(Math.round(next * 100));
+        return next;
+      });
+    };
+    stage.addEventListener('wheel', handleWheel, { passive: false });
+    return () => stage.removeEventListener('wheel', handleWheel);
+  }, [subViewMode]);
+
+  // 全局鼠标拖拽释放兜底
+  useEffect(() => {
+    const handleGlobalMouseUp = () => setIsDragging(false);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
 
   // 画布身份投影：单图浏览 = 图像画布。hub 侧的原生输入框投射规则以该标识为键，
   // 只有画布 + 右侧栏全屏才把输入框悬浮到画布底端（Issue #1821）。
@@ -96,9 +128,53 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAnnotating, activeItem?.id]);
 
+  // 切换图片：严格保持当前缩放比例不变（跨图锁定）
   const handleSelectMedia = (item) => {
     store.setActiveId(item.id);
     store.setSubViewMode('single');
+  };
+
+  const handleResetZoom = () => {
+    setZoomScale(1.0);
+    setPanOffset({ x: 0, y: 0 });
+    store.setZoom(100);
+  };
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0 || isAnnotating) return;
+    if (e.target.closest('.omx-mv-thumbnails-rail') || e.target.closest('.omx-mv-annotation-popover') || e.target.closest('.omx-mv-annotation-pin')) {
+      return;
+    }
+    setIsDragging(true);
+    dragStartRef.current = {
+      startX: e.clientX - panOffset.x,
+      startY: e.clientY - panOffset.y,
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPanOffset({
+      x: e.clientX - dragStartRef.current.startX,
+      y: e.clientY - dragStartRef.current.startY,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleDoubleClick = (e) => {
+    if (isAnnotating) return;
+    if (e.target.closest('.omx-mv-thumbnails-rail') || e.target.closest('.omx-mv-annotation-popover') || e.target.closest('.omx-mv-annotation-pin')) {
+      return;
+    }
+    if (Math.abs(zoomScale - 1.0) < 0.08) {
+      setZoomScale(1.5);
+      store.setZoom(150);
+    } else {
+      handleResetZoom();
+    }
   };
 
   const handleDownload = () => {
@@ -214,14 +290,32 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               <button // exempt-ui01: 变焦缩放按钮
                 type="button"
                 className="omx-mv-btn"
-                onClick={() => store.cycleZoom()}
-                title="调整缩放比例"
+                onClick={() => {
+                  const levels = [0.5, 0.7, 1.0, 1.5, 2.0];
+                  let idx = levels.indexOf(Math.round(zoomScale * 10) / 10);
+                  idx = (idx + 1) % levels.length;
+                  const next = levels[idx];
+                  setZoomScale(next);
+                  setPanOffset({ x: 0, y: 0 });
+                  store.setZoom(Math.round(next * 100));
+                }}
+                title="调整缩放比例 (滚轮/手势可无级缩放，双击画面快速复位)"
               >
-                <span>{zoom}%</span>
+                <span>{Math.round(zoomScale * 100)}%</span>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
+              {Math.abs(zoomScale - 1.0) >= 0.05 ? (
+                <button // exempt-ui01: 适应窗口按钮
+                  type="button"
+                  className="omx-mv-btn"
+                  onClick={handleResetZoom}
+                  title="恢复适合窗口大小"
+                >
+                  适应窗口
+                </button>
+              ) : null}
               <button // exempt-ui01: 外部打开按钮
                 type="button"
                 className="omx-mv-btn"
@@ -306,11 +400,58 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               ) : null}
             </div>
           ) : (
-            /* 单图大画布展示区与右侧多图纵向候选栏 (完全对标截图) */
-            <div className="omx-mv-single-stage">
+            /* 单图大画布展示区与左上角 1:1 居中微型缩略图悬浮栏 */
+            <div
+              className="omx-mv-single-stage"
+              ref={stageRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
+            >
+              {/* 左上角候选多图纵向微型 1:1 居中滚动切换栏 (对标参考图) */}
+              {mediaList.length > 1 ? (
+                <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
+                  {mediaList.map((item) => {
+                    const isSelected = item.id === activeItem?.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`omx-mv-thumbnails-rail__item ${isSelected ? 'active' : 'inactive'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectMedia(item);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        title={item.title || '切换图片'}
+                      >
+                        <img
+                          src={item.url}
+                          alt={item.title || '缩略图'}
+                          className="omx-mv-thumbnails-rail__img"
+                        />
+                        {item.type === 'video' && item.duration ? (
+                          <div className="omx-mv-thumbnails-rail__badge">{item.duration}</div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {isGenerating ? (
+                    <div className="omx-mv-thumbnails-rail__item">
+                      <GeneratingStateCard />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div
                 className={`omx-mv-display ${isAnnotating ? 'is-annotating' : ''}`}
                 onClick={handleImageClick}
+                style={{
+                  transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+                  cursor: isDragging ? 'grabbing' : (zoomScale > 1.05 ? 'grab' : 'default'),
+                }}
               >
                 {activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls autoPlay playsInline />
@@ -389,39 +530,6 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                   );
                 })}
               </div>
-
-              {/* 右侧候选多图纵向滚动切换栏 (当生成多图时收敛浮现) */}
-              {mediaList.length > 1 ? (
-                <div className="omx-mv-thumbnails-rail" title="上下滚动切换浏览">
-                  {mediaList.map((item) => {
-                    const isSelected = item.id === activeItem?.id;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`omx-mv-thumbnails-rail__item ${isSelected ? 'active' : ''}`}
-                        onClick={() => handleSelectMedia(item)}
-                        role="button"
-                        tabIndex={0}
-                        title={item.title || '切换图片'}
-                      >
-                        <img
-                          src={item.url}
-                          alt={item.title || '缩略图'}
-                          className="omx-mv-thumbnails-rail__img"
-                        />
-                        {item.type === 'video' && item.duration ? (
-                          <div className="omx-mv-thumbnails-rail__badge">{item.duration}</div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                  {isGenerating ? (
-                    <div className="omx-mv-thumbnails-rail__item">
-                      <GeneratingStateCard />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           )}
         </div>
