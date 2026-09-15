@@ -464,8 +464,8 @@ describe('Cloud card opens the preview', () => {
 describe('Cloud chrome stays neutral', () => {
   it('inks the selected chip with the label colour and inverts the label on it', () => {
     const selected = ASSETS_CSS.slice(ASSETS_CSS.indexOf('.omnimux-assets-cloud-chip[aria-pressed="true"]'))
-    assert.match(selected, /background: var\(--dsw-alias-label-primary\)/)
-    assert.match(selected, /color: var\(--dsw-alias-label-primary-foreground\)/)
+    assert.match(selected, /background: var\(--dsw-alias-interactive-bg-active/)
+    assert.match(selected, /color: var\(--dsw-alias-label-primary/)
     assert.doesNotMatch(selected.slice(0, selected.indexOf('}')), /brand-primary|interactive-bg-hover-accent/)
   })
 

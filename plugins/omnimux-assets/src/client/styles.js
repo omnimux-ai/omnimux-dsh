@@ -847,11 +847,11 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
-  background: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.16));
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.28));
   box-shadow: none;
-  color: var(--dsw-alias-label-primary-foreground);
-  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 700;
 }
 /* On a filled chip the count has to invert with the label, or it lands as
    tertiary grey on white. */

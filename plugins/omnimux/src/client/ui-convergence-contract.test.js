@@ -8,19 +8,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '../../../../');
 
-test('AC-1: 分类筛选胶囊选中态必须声明加粗字重 (font-weight: 600)', () => {
+test('AC-1: 分类筛选胶囊选中态必须声明加粗字重 (font-weight: 700)', () => {
   const assetsStylesPath = path.join(root, 'plugins/omnimux-assets/src/client/styles.js');
   const assetsStyles = fs.readFileSync(assetsStylesPath, 'utf-8');
   assert.ok(
-    assetsStyles.includes('font-weight: 600;') && assetsStyles.includes('.omnimux-assets-cloud-chip[aria-pressed="true"]'),
-    '资产库分类胶囊激活态必须包含 font-weight: 600;'
+    assetsStyles.includes('font-weight: 700;') && assetsStyles.includes('.omnimux-assets-cloud-chip[aria-pressed="true"]'),
+    '资产库分类胶囊激活态必须包含 font-weight: 700;'
   );
 
   const marketCssPath = path.join(root, 'plugins/omnimux-market/src/client/css.js');
   const marketCss = fs.readFileSync(marketCssPath, 'utf-8');
   assert.ok(
-    marketCss.includes('.cat-btn.active') && marketCss.includes('font-weight:600'),
-    '技能市场分类胶囊激活态必须包含 font-weight:600'
+    marketCss.includes('.cat-btn.active') && marketCss.includes('font-weight:700'),
+    '技能市场分类胶囊激活态必须包含 font-weight:700'
   );
 });
 
