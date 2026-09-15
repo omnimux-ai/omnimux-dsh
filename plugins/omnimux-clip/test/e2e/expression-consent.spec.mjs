@@ -26,6 +26,8 @@ try {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const options = { url: `http://127.0.0.1:${server.address().port}/`, output,
+    duplicateJourney: join(dirname(fileURLToPath(import.meta.url)), 'expression-consent/duplicate-approval-journey.mjs'),
+    deferClosure: process.env.CLIP_QA_DEFER_CLOSURE === '1',
     samples: join(output, 'samples'), spaceId: Number(process.env.CLIP_QA_SPACE_ID) || undefined };
   const journey = await readFile(join(dirname(fileURLToPath(import.meta.url)), 'expression-consent/browser-journey.mjs'), 'utf8');
   const result = await new Promise((resolve, reject) => {

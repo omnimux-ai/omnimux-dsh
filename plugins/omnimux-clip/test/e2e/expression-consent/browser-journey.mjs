@@ -5,6 +5,7 @@ const path = await import('node:path');
 const task = await taskSpace(options.spaceId || 'Clip expression consent regression');
 const page = task.page('p1');
 const checks = [];
+let passed = false;
 async function state() {
   return page.evaluate(() => {
     const { frame, marker, project } = window.__clipFixtureReadState();
@@ -84,6 +85,9 @@ try {
   assert.equal(reopened.marker, beforeImport);
   checks.push({ name: 'reimport of matching ID and approved text clears grant', ...reopened });
 
+  const { verifyDuplicateApproval } = await import(options.duplicateJourney);
+  checks.push(await verifyDuplicateApproval(page, options));
+
   await importSample('built-in-sine');
   await page.click('button[aria-label="Time 0.25"]');
   const sine = await expectPosition(200);
@@ -94,11 +98,16 @@ try {
   const keyed = await expectPosition(200);
   assert.equal(keyed.marker, beforeImport);
   checks.push({ name: 'keyframe interpolation remains functional', ...keyed });
+  passed = true;
   console.log(JSON.stringify({ passed: true, checks: checks.length, output: options.output }));
 } finally {
   await fs.writeFile(path.join(options.output, 'browser-report.json'), JSON.stringify({
     finishedAt: new Date().toISOString(), spaceId: task.spaceId, checks,
   }, null, 2));
-  const closure = await task.finish({ keep: [] });
-  await fs.writeFile(path.join(options.output, 'browser-closure.json'), JSON.stringify({ closed: true, receipt: closure ?? null }, null, 2));
+  if (passed && !options.deferClosure) {
+    const closure = await task.finish({ keep: [] });
+    await fs.writeFile(path.join(options.output, 'browser-closure.json'), JSON.stringify({ closed: true, receipt: closure ?? null }, null, 2));
+  } else {
+    await fs.writeFile(path.join(options.output, 'browser-closure.json'), JSON.stringify({ closed: false, deferred: Boolean(options.deferClosure), passed }, null, 2));
+  }
 }

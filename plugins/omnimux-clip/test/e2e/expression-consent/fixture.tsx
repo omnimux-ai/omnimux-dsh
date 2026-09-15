@@ -13,14 +13,14 @@ import type { MotionComposition } from '@openreel/core/motion/types';
 declare global { interface Window { __clipSecurityMarker: number; __clipFixtureReadState: () => unknown; } }
 window.__clipSecurityMarker = 0;
 const renderer = new MotionRenderer();
-type FrameState = { status: string; x: number | null; propertyValue: number | null; marker: number; error: string | null; };
+type FrameState = { renderedRequest?: number; status: string; x: number | null; y: number | null; propertyValue: number | null; marker: number; error: string | null; };
 
 function Fixture() {
   const project = useProjectStore(state => state.project);
   const composition = project.motionCompositions?.[0];
   const playhead = useMotionStore(state => state.playhead);
   const [isOpen, setOpen] = useState(false);
-  const [frame, setFrame] = useState<FrameState>({ status: 'waiting-import', x: null, propertyValue: null, marker: 0, error: null });
+  const [frame, setFrame] = useState<FrameState>({ status: 'waiting-import', x: null, y: null, propertyValue: null, marker: 0, error: null });
   const [requestId, setRequestId] = useState(0);
   const [cloneForExport, setCloneForExport] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,11 +50,11 @@ function Fixture() {
           canvas.width = composition.width;
           canvas.height = composition.height;
           canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
-          setFrame({ status: 'rendered', x: transform.position.x, propertyValue: value, marker: window.__clipSecurityMarker, error: null });
+          setFrame({ renderedRequest: requestId, status: 'rendered', x: transform.position.x, y: transform.position.y, propertyValue: value, marker: window.__clipSecurityMarker, error: null });
         }
         bitmap.close();
       } catch (error) {
-        if (!canceled) setFrame({ status: 'error', x: null, propertyValue: null, marker: window.__clipSecurityMarker, error: String(error) });
+        if (!canceled) setFrame({ status: 'error', x: null, y: null, propertyValue: null, marker: window.__clipSecurityMarker, error: String(error) });
       }
     };
     void render();

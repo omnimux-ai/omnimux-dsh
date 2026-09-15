@@ -15,6 +15,10 @@ const layer: MotionShapeLayer = { ...baseLayer, id: 'qa-native-shape', name: '�
 const code = '(globalThis.__clipSecurityMarker += 1, value + 80)';
 const expression: MotionExpression = { ...createMotionExpression('expression', 'transform.position.x', 'qa-imported-code'), code };
 const cases = [
+  { name: 'duplicate-id-hidden-code', label: '重复编号仅允许可见代码', layer: { ...layer, expressions: [
+    { ...expression, code: 'value + 80' },
+    { ...expression, property: 'transform.position.y', code: '(globalThis.__clipSecurityMarker += 1, value + 90)' },
+  ] } },
   { name: 'imported-code', label: '导入代码待授权', layer: { ...layer, expressions: [expression] } },
   { name: 'same-id-changed-code', label: '同一编号不同代码', layer: { ...layer, expressions: [{ ...expression, code: '(globalThis.__clipSecurityMarker += 1, value + 120)' }] } },
   { name: 'built-in-sine', label: '内置正弦', layer: { ...layer, expressions: [{ ...createMotionExpression('sine', 'transform.position.x', 'qa-builtin-sine'), amplitude: 40, frequency: 1, phase: 0 }] } },

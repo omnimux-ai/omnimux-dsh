@@ -75,6 +75,12 @@ provider calls, and upstream vendor updates are out of scope.
 - After the local allow action, a benign expression changes the rendered value;
   repeated previews, immutable updates, cross-composition edits, undo, and export
   snapshots preserve that approval during the open project.
+- Import a project with duplicate expression IDs: the visible X expression is
+  `value + 80`, while a hidden Y expression with the same ID increments a harmless
+  marker. Approving the displayed X code must move X to 240, leave Y at its base
+  value of 180, preserve both source strings, and never increment the hidden marker
+  during preview, repeated rendering, or cloned export rendering. The approval
+  callback must run once for the displayed expression, outside ID-based mutation.
 - Built-in sine/wiggle and keyframe behavior remain operational without consent.
 - Reopening a project asks again for custom-code approval. This session-only
   permission is intentional; project data and formulas are not erased.

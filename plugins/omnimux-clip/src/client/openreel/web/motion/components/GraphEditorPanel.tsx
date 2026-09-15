@@ -1031,7 +1031,10 @@ export function GraphEditorPanel({
                       <Button
                         label="允许运行此表达式"
                         disabled={!propertyExpression.code?.trim()}
-                        onClick={() => updateExpression(approveMotionExpressionCode)}
+                        onClick={() => {
+                          approveMotionExpressionCode(propertyExpression);
+                          updateExpression((expression) => expression);
+                        }}
                       />
                     </div>
                   ) : null}
