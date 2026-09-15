@@ -63,10 +63,27 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-seat],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-seat] {
   justify-content:flex-end!important;
+  padding-left:25px!important;
+  padding-right:25px!important;
+  padding-bottom:25px!important;
+  padding-top:0!important;
+  box-sizing:border-box!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerStack"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"] {
   justify-content:flex-end!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
+  padding-inline:0!important;
+}
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-card],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-card],
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
 }
 
 /* 热门入门方式与任务指引内容区：自适应宽屏 1200px，舒展大气，层次分明 */

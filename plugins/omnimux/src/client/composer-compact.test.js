@@ -281,6 +281,13 @@ test('icon toolbar nowrap selector does not match grow (#517)', () => {
     /\[data-composer-card\] \[data-input-scroll\]\{[^}]*overflow-x:(hidden|clip)/,
   )
 
+  // Split-compact / non-fullscreen composer spacing (issue requested: 25px sides and bottom)
+  assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-seat\]/)
+  assert.match(css, /padding-left:25px!important/)
+  assert.match(css, /padding-right:25px!important/)
+  assert.match(css, /padding-bottom:25px!important/)
+  assert.match(css, /html\[data-omnimux-split-compact\] \[data-composer-card\]/)
+
   // Structural proof with hashed class names: hash_grow contains "row" so a
   // descendant [class*="row"] would match it; the scoped direct-child + tools
   // guard does not.
