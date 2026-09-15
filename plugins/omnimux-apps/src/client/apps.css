@@ -543,6 +543,77 @@
 }
 
 /* 4. Primary CTA: 44px high, 398px wide, 8px radius, Ink style */
+/* Author-fixed summary: the decisions the publisher made, hidden from end users */
+.omx-apps-fixed-summary {
+  width: 398px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+}
+
+.omx-apps-fixed-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
+}
+
+.omx-apps-fixed-summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.omx-apps-fixed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.72));
+}
+
+.omx-apps-fixed-chip b {
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary, #ffffff);
+}
+
+/* Empty state: the publisher exposed no field for consumers to fill in */
+.omx-apps-form-empty {
+  width: 398px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  border-radius: 10px;
+  border: 1px dashed var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
+  text-align: center;
+}
+
+.omx-apps-form-empty-title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #ffffff);
+}
+
+.omx-apps-form-empty-desc {
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .omx-apps-cta-btn {
   width: 398px;
   height: 44px;
