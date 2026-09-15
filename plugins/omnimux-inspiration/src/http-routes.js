@@ -290,6 +290,7 @@ function pipeRange(opts) {
  *   resolver?: Function,
  *   analyzeInspiration?: Function,
  *   rivalDispatcher?: { owns: (pathname: string) => boolean, dispatch: Function },
+ *   inspirationShare?: () => { publishLocal: Function } | undefined,
  * }} deps
  */
 export function createLocalInspirationDispatcher(deps) {
@@ -319,6 +320,10 @@ export function createLocalInspirationDispatcher(deps) {
     // records the reason" contract.
     analyzeInspiration: deps.analyzeInspiration,
     rivalDispatcher: deps.rivalDispatcher,
+    // The hub's publish capability, resolved per request: a plugin loaded after
+    // this one still gets picked up, and a missing one is reported instead of
+    // silently skipping the share.
+    inspirationShare: deps.inspirationShare,
     detectPlatformFromUrl,
     formatErrorMessage,
   }

@@ -277,7 +277,7 @@ describe('listInspirations query params', () => {
     }
   })
 
-  it('posts createShareLink to Host and parses response', async () => {
+  it('posts createShareLink to Host and never invents a link', async () => {
     const originalFetch = globalThis.fetch
     /** @type {{ url: string, opts?: any }[]} */
     const calls = []
@@ -286,38 +286,42 @@ describe('listInspirations query params', () => {
         calls.push({ url, opts })
         return {
           ok: true,
-          status: 200,
+          status: 202,
           json: async () => ({
             ok: true,
             data: {
               id: 'insp-42',
-              share_url: 'https://omnimux.ai/s/insp42',
-              expire: JSON.parse(opts.body).expire,
+              share_status: 'running',
+              share_stage: 'preparing',
             },
           }),
         }
       }
 
-      const res3Days = await createShareLink('insp-42')
-      assert.equal(res3Days.ok, true)
+      const started = await createShareLink('insp-42')
+      assert.equal(started.ok, true)
+      assert.equal(started.status, 202)
       assert.equal(calls[0].url, '/omnimux/inspiration/local/insp-42/share')
       assert.equal(calls[0].opts.method, 'POST')
-      assert.deepEqual(JSON.parse(calls[0].opts.body), { expire: '3days' })
-      assert.equal(res3Days.body.data.expire, '3days')
+      assert.equal(calls[0].opts.body, undefined, 'the job takes no client-chosen expiry')
+      assert.equal(started.body.data.share_status, 'running')
+      assert.equal(started.body.data.share_url, undefined, 'a running job carries no link')
 
-      const resForever = await createShareLink('insp-42', { expire: 'forever' })
-      assert.equal(resForever.ok, true)
-      assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
-      assert.equal(resForever.body.data.expire, 'forever')
+      // A Host refusal is reported as-is, with its reason.
+      globalThis.fetch = async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: '本地没有可上传的素材（视频或封面），请先补全素材后再分享' }),
+      })
+      const refused = await createShareLink('insp-42')
+      assert.equal(refused.ok, false)
+      assert.equal(refused.status, 400)
+      assert.match(refused.body.error, /没有可上传的素材/)
+      assert.equal(refused.body.data, undefined)
 
-      // 测试网络不可用时的平滑保底
+      // A dead network is a failure, never a locally assembled link.
       globalThis.fetch = async () => { throw new Error('network down') }
-      const resFallback = await createShareLink('insp-offline')
-      assert.equal(resFallback.ok, true)
-      assert.equal(resFallback.body.data.id, 'insp-offline')
-      assert.match(resFallback.body.data.share_url, /https:\/\/omnimux\.ai\/s\/insp_/)
-      assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
-      assert.equal(resForever.body.data.expire, 'forever')
+      await assert.rejects(() => createShareLink('insp-offline'), /network down/)
     } finally {
       globalThis.fetch = originalFetch
     }
