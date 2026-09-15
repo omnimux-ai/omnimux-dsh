@@ -50,3 +50,48 @@ for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr']) {
     } finally { rmSync(fixture, { recursive: true, force: true }) }
   })
 }
+
+test('worktree ship auto-triggers materialization when plugins are modified', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'omnimux-ship-auto-mat-'))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  try {
+    mkdirSync(repo)
+    mkdirSync(bin)
+    git('init', '--bare', '-b', 'main', remote)
+    git('init', '-b', 'main')
+    git('config', 'user.name', 'delivery-test')
+    git('config', 'user.email', 'delivery@example.test')
+    mkdirSync(join(repo, 'scripts'))
+    copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+    writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+    // 模拟一个 sync-to-app.sh 脚本，用于断言是否被正确调用
+    writeFileSync(join(repo, 'scripts/sync-to-app.sh'), '#!/bin/sh\necho "SYNC_CALLED: $*" > sync_receipt.txt\n', { mode: 0o755 })
+    git('add', '.')
+    git('commit', '-m', 'seed')
+    git('remote', 'add', 'origin', remote)
+    git('push', '-u', 'origin', 'main')
+
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux-workflow/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux-workflow/src/index.ts'), 'export const a = 1;\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat(workflow): test')
+    const head = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/plugin-feature:main')
+
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/plugin-feature\\t${head}\\tmain\\n' ;;\nesac\n`, { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '999'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /自动物化.*omnimux-workflow/)
+    assert.ok(existsSync(join(repo, 'sync_receipt.txt')), 'sync-to-app.sh must be automatically executed')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})

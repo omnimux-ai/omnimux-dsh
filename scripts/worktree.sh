@@ -330,6 +330,40 @@ cmd_list() {
   echo
 }
 
+# ---------------------------------------------------------------------------
+# 自动物化与实机热重载辅助函数（Post-Merge Auto-Materialize & Live Reload）
+# ---------------------------------------------------------------------------
+auto_materialize_and_reload() {
+  local base_ref="${1:-HEAD~1}"
+  local target_ref="${2:-HEAD}"
+
+  if [ ! -f "${ROOT}/scripts/sync-to-app.sh" ]; then
+    return 0
+  fi
+
+  # 检测改动的插件
+  local changed_plugins=()
+  while IFS= read -r p; do
+    [ -n "${p}" ] && changed_plugins+=("${p}")
+  done < <(git -C "${ROOT}" diff --name-only "${base_ref}" "${target_ref}" 2>/dev/null | grep -E '^plugins/' | cut -d'/' -f2 | sort -u || true)
+
+  if [ "${#changed_plugins[@]}" -eq 0 ]; then
+    say "ℹ️ 本次合入未包含 plugins/ 插件源码变更，无需物化。"
+    return 0
+  fi
+
+  say "🔄 自动物化：检测到变更插件 [${changed_plugins[*]}]，开始增量同步至开发版 (~/.omnimux-dev)..."
+  if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
+    say "✅ 增量物化成功！"
+    # 自动探测 Dev App 并热重载
+    if [ -f "${ROOT}/scripts/reload-dev-app.mjs" ]; then
+      node "${ROOT}/scripts/reload-dev-app.mjs" 2>/dev/null || true
+    fi
+  else
+    say "⚠️ 自动物化未成功，请手动在主检出运行: ./scripts/sync-to-app.sh ${changed_plugins[*]}"
+  fi
+}
+
 cmd_ship() {
   local task="$1"
   shift || true
@@ -375,7 +409,11 @@ cmd_ship() {
   [ "${pr_branch}" = "${branch}" ] && [ "${pr_head}" = "$(git -C "${wt}" rev-parse HEAD)" ] \
     && [ "${pr_base}" = "${DEFAULT_BRANCH}" ] || die "PR #${pr_number} does not match this task branch, HEAD and base"
   git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}"
-  say "PR MERGED; applicable Dev materialization/acceptance is pending. Worktree retained: ${wt}"
+
+  # 自动物化与桌面 Dev 应用热重载闭环
+  auto_materialize_and_reload "HEAD~1" "HEAD"
+
+  say "PR MERGED; applicable Dev materialization auto-completed, human acceptance is pending. Worktree retained: ${wt}"
   say "After acceptance, run: worktree.sh remove ${task} --pr ${pr_number}"
 }
 
@@ -448,6 +486,24 @@ cmd_remove() {
 
   git worktree prune
   say "done: ${task} removed"
+
+  # 兜底：若带 --pr 且主检出干净，确保主分支同步并自动物化
+  if [ -n "${pr_number}" ] && [ -z "$(git -C "${ROOT}" status --porcelain 2>/dev/null)" ]; then
+    local cur_branch
+    cur_branch="$(git -C "${ROOT}" symbolic-ref --short HEAD 2>/dev/null || true)"
+    if [ "${cur_branch}" = "${DEFAULT_BRANCH}" ]; then
+      git -C "${ROOT}" fetch "${REMOTE}" "${DEFAULT_BRANCH}" 2>/dev/null || true
+      local local_head remote_head
+      local_head="$(git -C "${ROOT}" rev-parse HEAD 2>/dev/null || true)"
+      remote_head="$(git -C "${ROOT}" rev-parse "${REMOTE}/${DEFAULT_BRANCH}" 2>/dev/null || true)"
+      if [ -n "${local_head}" ] && [ -n "${remote_head}" ] && [ "${local_head}" != "${remote_head}" ]; then
+        say "🔄 自动同步：主工作区落后于远端主干，正在自动拉取最新代码并物化..."
+        if git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}" 2>/dev/null; then
+          auto_materialize_and_reload "${local_head}" "HEAD"
+        fi
+      fi
+    fi
+  fi
 }
 
 cmd_prune() {
