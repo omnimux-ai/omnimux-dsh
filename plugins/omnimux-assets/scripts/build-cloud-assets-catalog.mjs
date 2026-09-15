@@ -389,6 +389,27 @@ export function shelfListOf(row) {
  * }} spec
  * @returns {CatalogAsset}
  */
+/** 官方加速域名：云端地址的唯一出口。 */
+const CDN_BASE = 'https://assets.omnimux.ai'
+
+/**
+ * 对象键 → 官方 CDN 地址。
+ *
+ * 键使用文件的原始名字拼写（含空格），不做 URL 编码：浏览器请求
+ * `.../Human%20Archetypes/...` 时边缘节点会先解码，再按含空格的对象键取值。
+ * @param {string} key
+ */
+function cdnUrl(key) {
+  const value = text(key)
+  return value === '' ? '' : `${CDN_BASE}/${value}`
+}
+
+/** 本地绝对路径 → 文件名。 @param {string} abs */
+function fileNameOf(abs) {
+  const value = String(abs ?? '')
+  return value === '' ? '' : value.slice(value.lastIndexOf(sep) + 1)
+}
+
 function makeAsset(ctx, spec) {
   const sub = spec.subCategory ?? ''
   const id = `${spec.category}${sub ? `-${sub}` : ''}-${shortId(spec.key)}`
@@ -782,6 +803,9 @@ function sceneShelfOf(haystack) {
 export function collectCharacter(ctx, add) {
   const { assetsRoot } = ctx
   const source = join(assetsRoot, '素材库', 'gxgen-data', 'character-library', 'pippit-local-avatars-source')
+  // 本地文件夹 → 云端对象键的映射由资产库自己持有，构建时只读不猜。
+  const cloudIndex = readJsonSafe(join(source, 'cloud-index.json')) ?? {}
+  const cloudFolders = cloudIndex.folders ?? {}
 
   for (const entry of listDirSafe(source)) {
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue
@@ -808,7 +832,9 @@ export function collectCharacter(ctx, add) {
       tags: ['实景数字人', 'Pippit', ...metaTags],
       localMedia: join(dir, 'video.mp4'),
       localCover: join(dir, 'cover.jpg'),
-      remoteCover: text(meta.cover_image?.url),
+      // 云端地址一律走官方域名；映射缺失时才退回源站封面（签名链接会过期）。
+      remoteMedia: cdnUrl(cloudFolders[entry.name]?.video),
+      remoteCover: cdnUrl(cloudFolders[entry.name]?.cover) || text(meta.cover_image?.url),
       meta: {
         source: 'pippit.ai',
         source_url: text(meta.source_url),
@@ -921,7 +947,9 @@ function findPoster(dir, base) {
  * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
  * @param {{ category: string, subCategory: string | ((row: any) => string),
  *   tag: string | ((row: any, subCategory: string) => string), fallbackDesc: string,
- *   promptFrom?: (title: string, description: string) => string }} opts
+ *   promptFrom?: (title: string, description: string) => string,
+ *   remoteKey?: (row: any, localMedia: string) => string,
+ *   coverKey?: (row: any, localCover: string) => string }} opts
  */
 function collectElementIndex(ctx, dirName, add, opts) {
   const dir = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'element-library', dirName)
@@ -963,9 +991,14 @@ function collectElementIndex(ctx, dirName, add, opts) {
       description,
       tags: [tag, ...(Array.isArray(row.tags) ? row.tags : [])],
       localMedia,
-      remoteMedia: text(row.media_url),
+      // 有本地副本的行走官方域名；没有的才退回源站地址。
+      remoteMedia: opts.remoteKey && localMedia !== ''
+        ? cdnUrl(opts.remoteKey(row, localMedia))
+        : text(row.media_url),
       localCover,
-      remoteCover: text(row.metadata?.poster_url),
+      remoteCover: opts.coverKey && localCover !== ''
+        ? cdnUrl(opts.coverKey(row, localCover))
+        : text(row.metadata?.poster_url),
       meta,
     }))
   }
@@ -1129,6 +1162,8 @@ function collectScene(ctx, add) {
     subCategory: 'nature',
     tag: '场景氛围',
     fallbackDesc: '高清动态场景氛围视频',
+    remoteKey: (_row, localMedia) => `scenes/nature/${fileNameOf(localMedia)}`,
+    coverKey: (_row, localCover) => `scenes/nature/${fileNameOf(localCover)}`,
   })
 
   const mediaRoot = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'image-sets-library', 'media')
@@ -1207,9 +1242,13 @@ function collectGreenScreen(ctx, add) {
       description: '绿幕动态贴片，可直接抠像叠加到成片中',
       tags: ['绿幕', '动态贴片', '抠像'],
       localMedia: localVideo,
-      remoteMedia: remote,
+      remoteMedia: localVideo !== ''
+        ? cdnUrl(`elements/green-screen/${fileNameOf(localVideo)}`)
+        : remote,
       localCover: thumb,
-      remoteCover: `https://assets.omnimux.ai/elements/green-screen/${id}.webp`,
+      remoteCover: thumb !== ''
+        ? cdnUrl(`elements/green-screen/${fileNameOf(thumb)}`)
+        : text(row.thumbUrl),
       meta: { source: text(row.sourcePlatform) || 'fastlane', source_id: id },
     }))
   }
@@ -1224,17 +1263,23 @@ function collectGreenScreen(ctx, add) {
  * shape already supports.
  */
 function collectHook(ctx, add) {
+  const remoteKey = (_row, localMedia) => `elements/hooks/${fileNameOf(localMedia)}`
+  const coverKey = (_row, localCover) => `elements/hooks/${fileNameOf(localCover)}`
   collectElementIndex(ctx, 'hook-videos', add, {
     category: 'material',
     subCategory: 'hook',
     tag: '前三秒钩子',
     fallbackDesc: '短视频前 3 秒开场钩子素材',
+    remoteKey,
+    coverKey,
   })
   collectElementIndex(ctx, 'hook', add, {
     category: 'material',
     subCategory: 'hook',
     tag: '商品特写',
     fallbackDesc: '商品特写互动镜头钩子',
+    remoteKey,
+    coverKey,
   })
 }
 
@@ -1668,16 +1713,19 @@ function collectStyle(ctx, add) {
       const cover = localAsset !== '' && (kind === 'image' || kind === 'video')
         ? localAsset
         : join(localMediaDir, `${slugify(title)}.webp`)
+      const shelf = styleShelfOf(fileName, title, className)
 
       add(makeAsset(ctx, {
         key: `style/${fileName}/${text(row.source_id) || text(row.id) || title}`,
         category: 'style',
-        subCategory: styleShelfOf(fileName, title, className),
+        subCategory: shelf,
         name: title,
         description: clamp(description || prompt, MAX_DESCRIPTION) || title,
         tags: [pack, className, text(row.category_zh)],
         localCover: cover,
-        remoteCover: text(row.cover_url) || text(row.remotePosterUrl),
+        remoteCover: cover !== ''
+          ? cdnUrl(`styles/${shelf}/${fileNameOf(cover)}`)
+          : (text(row.cover_url) || text(row.remotePosterUrl)),
         meta: {
           source: 'style-library',
           source_file: fileName,
@@ -1699,6 +1747,8 @@ function collectStyle(ctx, add) {
     subCategory: 'video-tone',
     tag: '视频调性',
     fallbackDesc: '视频调性预设',
+    remoteKey: (_row, localMedia) => `styles/video-tone/${fileNameOf(localMedia)}`,
+    coverKey: (_row, localCover) => `styles/video-tone/${fileNameOf(localCover)}`,
     // This shelf records a look in one English line rather than as a prompt, so
     // the line is composed into the prompt it stands for.
     promptFrom: (title, description) => `视频调性「${title}」：${description}`,
@@ -1858,7 +1908,7 @@ function collectBgm(ctx, add) {
       description: `短视频卡点配乐${duration ? ` · ${duration}` : ''}`,
       tags: ['背景音乐', '卡点节奏', duration],
       localMedia: join(filesDir, fileName),
-      remoteMedia: text(row.source_url),
+      remoteMedia: cdnUrl(`audio/bgm/${fileName}`) || text(row.source_url),
       meta: { source: 'fastlane-music-library', duration, page: Number(row.page) || null },
     }))
   }
