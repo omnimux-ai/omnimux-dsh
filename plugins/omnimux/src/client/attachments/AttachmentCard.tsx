@@ -115,6 +115,7 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
     return (
       <div
         className={`omx-att-card omx-att-card--media ${isHighlighted ? 'omx-att-card--highlight' : ''}`}
+        data-omnimux-attachment-id={attachment.id}
         role="listitem"
         title={`${attachment.title} (${attachment.relativePath})`}
         onClick={onOpen ? handleOpen : undefined}
@@ -163,6 +164,7 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
   return (
     <div
       className={`omx-att-card omx-att-card--file ${isHighlighted ? 'omx-att-card--highlight' : ''}`}
+      data-omnimux-attachment-id={attachment.id}
       role="listitem"
       title={`${attachment.title} (${attachment.relativePath})`}
     >

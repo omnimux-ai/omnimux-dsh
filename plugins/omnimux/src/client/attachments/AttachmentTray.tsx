@@ -7,6 +7,7 @@ import { PromptSlotChips } from './PromptSlotChips.tsx';
 import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
 import { ensureStylesInjected } from './trayStyles.ts';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
+import { COMPOSER_EDITOR_SELECTOR, focusEditorElement } from './focusEditorElement.ts';
 import { useDragDrop } from './useDragDrop.ts';
 import { useCommentAttachment, removeCommentAttachment } from './useCommentAttachment.ts';
 import { usePasteVideoInterceptor } from './usePasteVideoInterceptor.ts';
@@ -71,9 +72,7 @@ const LinkIcon = ({ size = 14 }: { size?: number }) => (
 
 function captureEditorSelection(): Range | null {
   if (typeof document === 'undefined') return null;
-  const editor = document.querySelector(
-    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]',
-  );
+  const editor = document.querySelector(COMPOSER_EDITOR_SELECTOR);
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !editor) return null;
   const range = sel.getRangeAt(0);
@@ -81,15 +80,8 @@ function captureEditorSelection(): Range | null {
   return range.cloneRange();
 }
 
-function focusEditorElement(): void {
-  if (typeof document === 'undefined') return;
-  const editor = document.querySelector(
-    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]',
-  ) as HTMLElement | null;
-  if (editor) {
-    editor.focus();
-  }
-}
+/** 提交桥接等模块复用同一实现；实现在 ./focusEditorElement.ts。 */
+export { focusEditorElement };
 
 interface AttachmentTrayRailProps {
   label: string;
@@ -157,6 +149,19 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
 
 const SHOW_MANUAL_LINK_BUTTON = false;
 
+/** 中枢「把视线带到附件区」事件：跨插件调用方只在拿不到能力时静默跳过。 */
+export const REVEAL_ATTACHMENTS_EVENT = 'omnimux:attachments:reveal';
+/** 复用既有 omx-att-card--highlight / omx-att-pulse（0.6s 脉冲）的清理余量，总时长 ≤1.2s。 */
+const REVEAL_HIGHLIGHT_MS = 900;
+/** 附件落库通知与 React 重渲染之间有一拍延迟，首次未命中时补一次。 */
+const REVEAL_RETRY_MS = 60;
+const REVEAL_HIGHLIGHT_CLASS = 'omx-att-card--highlight';
+
+/** 附件区可视容器。 */
+const ATTACHMENT_DOCK_SELECTOR = '[data-omnimux-attachments-dock="true"]';
+/** 卡片根节点；带 data 属性的那批由本插件托管，优先级高于原生上传卡片。 */
+const ATTACHMENT_CARD_SELECTOR = '.omx-att-card';
+
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const store = getGlobalAttachmentStore();
   const sessionObj = props.session;
@@ -186,6 +191,69 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   useEffect(() => {
     ensureStylesInjected();
+  }, []);
+
+  // 「把视线带到附件区」：滚动到可见 + 末张卡片一次克制高亮。
+  // 由 `__omnimuxComposerActions.revealAttachments()` 派发（其同时聚焦输入框）。
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let highlighted: HTMLElement | null = null;
+
+    const clearHighlight = () => {
+      if (highlightTimer !== null) {
+        clearTimeout(highlightTimer);
+        highlightTimer = null;
+      }
+      if (highlighted) {
+        highlighted.classList.remove(REVEAL_HIGHLIGHT_CLASS);
+        highlighted = null;
+      }
+    };
+
+    const highlightLatestCard = (): boolean => {
+      const dock = document.querySelector(ATTACHMENT_DOCK_SELECTOR);
+      if (!dock) return false;
+      try {
+        dock.scrollIntoView?.({ block: 'nearest' });
+      } catch {
+        /* 非可滚动容器忽略 */
+      }
+      const owned = dock.querySelectorAll<HTMLElement>(`${ATTACHMENT_CARD_SELECTOR}[data-omnimux-attachment-id]`);
+      const all = dock.querySelectorAll<HTMLElement>(ATTACHMENT_CARD_SELECTOR);
+      const pool = owned.length > 0 ? owned : all;
+      if (pool.length === 0) return false;
+
+      clearHighlight();
+      highlighted = pool[pool.length - 1];
+      highlighted.classList.add(REVEAL_HIGHLIGHT_CLASS);
+      highlightTimer = setTimeout(clearHighlight, REVEAL_HIGHLIGHT_MS);
+      return true;
+    };
+
+    const handleReveal = () => {
+      // 先给出即时反馈（导轨里已有卡片时就是它）。
+      highlightLatestCard();
+      // 再补一次确认：附件落库通知与 React 重渲染之间有一拍延迟，首帧的「末张」可能还是上一张，
+      // 补读一次让高亮落到刚落库的新卡片上；已有待执行的重试则不重复排程。
+      if (retryTimer !== null) return;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        highlightLatestCard();
+      }, REVEAL_RETRY_MS);
+    };
+
+    window.addEventListener(REVEAL_ATTACHMENTS_EVENT, handleReveal);
+    return () => {
+      window.removeEventListener(REVEAL_ATTACHMENTS_EVENT, handleReveal);
+      if (retryTimer !== null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      clearHighlight();
+    };
   }, []);
 
   useEffect(() => {
