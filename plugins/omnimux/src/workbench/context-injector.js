@@ -48,18 +48,25 @@ export function mountWorkbenchContextInjector(ctx, deps) {
     const activeView = mailbox.getActiveView(sessionId)
     if (!activeView?.ok || !activeView.uiContext) return decision
 
+    const messages = [...(decision.messages || [])]
+
+    // 1. 原生 DSH 方式注入会话附件与场景上下文 (绝不污染用户输入框)
+    if (activeView.uiContext.attachedContextText) {
+      messages.push(createWorkbenchContextMessage(activeView.uiContext.attachedContextText))
+    }
+
+    // 2. 注入工作台面板视图快照 (面板展开时)
     const { surface } = activeView.uiContext
-    // Only inject when panel is actually open and has an active tab
-    if (!surface?.panelOpen || !surface?.tabId) return decision
-
-    const text = formatCompactContextBlock(activeView.uiContext)
-    if (!text) return decision
-
-    const contextMessage = createWorkbenchContextMessage(text)
+    if (surface?.panelOpen && surface?.tabId) {
+      const text = formatCompactContextBlock(activeView.uiContext)
+      if (text) {
+        messages.push(createWorkbenchContextMessage(text))
+      }
+    }
 
     return {
       ...decision,
-      messages: [...(decision.messages || []), contextMessage],
+      messages,
     }
   }, { prepend: true })
 }

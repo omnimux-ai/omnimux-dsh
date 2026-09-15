@@ -33,12 +33,12 @@ test('owner draft is updated before send; URL textarea, other sessions and faile
     await act(async () => root.render(React.createElement(AttachmentSubmitBridge, props)))
     assert.equal(document.querySelector('#bridge > div').style.display, 'none', 'empty notice container should not occupy layout space')
     await act(async () => document.querySelector('button').click())
-    assert.equal(sends, 0); assert.equal(arms.length, 0); assert.match(draft, /brief.md/)
-    assert.equal(document.querySelector('#bridge > div').style.display, '', 'active notice container should be visible')
+    // 核心断言：单次回车/点击立即发送，绝不被拦截，且草稿绝不被篡改注入附件上下文
+    assert.equal(sends, 1)
+    assert.equal(arms.length, 1)
+    assert.equal(draft, 'ask', '用户草稿必须 100% 保持原始输入，绝不包含上下文代码')
+    assert.equal(document.querySelector('#bridge > div').style.display, 'none', '不再弹出素材说明已加入草稿通知')
     assert.equal(document.querySelector('textarea').value, 'https://example.com/video')
-    await act(async () => root.render(React.createElement(AttachmentSubmitBridge, props)))
-    await act(async () => document.querySelector('button').click())
-    assert.equal(sends, 1); assert.equal(arms[0][0], 'A'); assert.equal(arms[0][1], draft)
     current = 'B'; draft = 'another session'
     await act(async () => document.querySelector('button').click())
     assert.equal(draft, 'another session'); assert.equal(arms.length, 1)
@@ -61,8 +61,8 @@ test('owner draft is updated before send; URL textarea, other sessions and faile
     list.removeAttribute('aria-activedescendant')
     let accepted = true
     await act(async () => { accepted = editor.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })) })
-    assert.equal(accepted, false, 'a menu without a selection still needs submission checks')
-    assert.match(draft, /brief.md/)
+    assert.equal(accepted, true, '无候选选中时回车直接放行发送，不再拦截')
+    assert.equal(draft, 'select @reference', '草稿绝不被篡改注入上下文')
   } finally {
     await act(async () => root.unmount()); dom.window.close()
     globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
