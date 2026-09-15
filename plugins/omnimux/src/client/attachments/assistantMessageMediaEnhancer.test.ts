@@ -243,3 +243,57 @@ test('assistantMessageMediaEnhancer: scanAndEnhanceTurns scans full conversation
   const tails = doc.querySelectorAll('.omx-chat-media-tail');
   assert.equal(tails.length, 2);
 });
+
+test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, video and keyboard navigation', async () => {
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+  const doc = dom.window.document;
+
+  const items = [
+    { url: 'http://example.com/face1.png', type: 'image' as const, title: '微笑·正面', filename: 'face1.png' },
+    { url: 'http://example.com/demo.mp4', type: 'video' as const, title: '讲解·近景', filename: 'demo.mp4' },
+    { url: 'http://example.com/face2.png', type: 'image' as const, title: '眨眼·侧身', filename: 'face2.png' },
+  ];
+
+  const gallery = createMediaTailElement(items, doc);
+  doc.body.appendChild(gallery);
+
+  // 1. Gallery layout & structure
+  assert.ok(gallery.classList.contains('omx-chat-media-tail--gallery'), 'Must have gallery layout modifier class');
+  const mainStage = gallery.querySelector('.omx-chat-media-tail__main');
+  const rail = gallery.querySelector('.omx-chat-media-tail__rail');
+  assert.ok(mainStage, 'Main stage must be present');
+  assert.ok(rail, 'Thumbnail rail must be present');
+
+  // 2. Counter display
+  const counter = mainStage.querySelector('.omx-chat-media-tail__counter');
+  assert.ok(counter, 'Counter must be present in main stage');
+  assert.equal(counter.textContent?.trim(), '1 / 3');
+
+  // 3. Thumbnails count and active state
+  const thumbs = rail.querySelectorAll<HTMLElement>('.omx-chat-media-tail__thumb');
+  assert.equal(thumbs.length, 3, 'Must render 3 thumbnails');
+  assert.ok(thumbs[0].classList.contains('is-active'), 'First thumbnail must be initially active');
+
+  // 4. Video thumbnail tag
+  const videoThumb = thumbs[1];
+  const durTag = videoThumb.querySelector('.omx-chat-media-tail__dur');
+  assert.ok(durTag, 'Video thumbnail must carry duration tag');
+
+  // 5. Click thumbnail to switch to item 1 (video)
+  videoThumb.click();
+  assert.equal(counter.textContent?.trim(), '2 / 3');
+  assert.ok(videoThumb.classList.contains('is-active'), 'Second thumb must become active');
+  assert.equal(thumbs[0].classList.contains('is-active'), false);
+  const mainVideo = mainStage.querySelector('video');
+  assert.ok(mainVideo, 'Main stage must now render video element');
+  assert.equal(mainVideo?.getAttribute('src'), 'http://example.com/demo.mp4');
+
+  // 6. Keyboard navigation (ArrowRight)
+  const keyEvent = new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+  gallery.dispatchEvent(keyEvent);
+  assert.equal(counter.textContent?.trim(), '3 / 3');
+  assert.ok(thumbs[2].classList.contains('is-active'), 'Third thumb must become active on ArrowRight');
+  const mainImg = mainStage.querySelector('img');
+  assert.ok(mainImg, 'Main stage must now render third image');
+  assert.equal(mainImg?.getAttribute('src'), 'http://example.com/face2.png');
+});

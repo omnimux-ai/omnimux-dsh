@@ -24,6 +24,77 @@ export const BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD = 'bridge.injectBrowserSnapsh
 /** Internal RPC used by the panel to permanently delete one session's durable storage. */
 export const BRIDGE_SESSION_PURGE_METHOD = 'bridge.session.purge'
 
+/**
+ * Internal RPC the panel uses to fetch ONE page media the user explicitly lit.
+ *
+ * It exists because the extension page may not reach the open internet (its
+ * `connect-src` is loopback plus a fixed host allowlist), while the bytes have to
+ * reach the model as a real attachment. The host performs the request on the
+ * panel's behalf; the panel never opens an outbound connection of its own.
+ */
+export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
+
+/**
+ * How one {@link BRIDGE_FETCH_MEDIA_METHOD} call settled.
+ *
+ * Every outcome is a tagged **success** at the carrier level, because a 404 or a
+ * timeout on someone else's server is an expected answer to "fetch this", not a
+ * transport fault. Two consequences the shape is built around: the panel can tell
+ * the cases apart (the port collapses carrier errors into one code), and each
+ * failure keeps the evidence the message needs — the status code, the byte limit,
+ * the timeout budget — instead of flattening into a string.
+ */
+export type MediaFetchOutcome =
+  /** Bytes plus the type the response declared (empty when it declared none). */
+  | { status: 'ok'; contentType: string; byteLength: number; data: string }
+  /** The address is not something the host will fetch (not http/https). */
+  | { status: 'bad-request'; message: string }
+  | { status: 'timeout'; timeoutMs: number }
+  | { status: 'too-large'; limit: number }
+  | { status: 'http-error'; statusCode: number }
+  | { status: 'failed'; message: string }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+}
+
+/**
+ * Validate a {@link MediaFetchOutcome} that arrived over the bridge.
+ *
+ * The payload crosses a socket and a port, so the receiving half re-checks it
+ * before acting on it — an unreadable base64 body must not reach the image intake.
+ * @param value - the decoded `rpc.result` payload.
+ * @returns the outcome, or `null` when the payload is not one.
+ */
+export function parseMediaFetchOutcome(value: unknown): MediaFetchOutcome | null {
+  if (!isRecord(value)) return null
+  switch (value.status) {
+    case 'ok':
+      return typeof value.contentType === 'string'
+        && isPositiveInteger(value.byteLength)
+        && typeof value.data === 'string'
+        && /^[A-Za-z0-9+/]*={0,2}$/.test(value.data)
+        ? { status: 'ok', contentType: value.contentType, byteLength: value.byteLength, data: value.data }
+        : null
+    case 'bad-request':
+      return typeof value.message === 'string' ? { status: 'bad-request', message: value.message } : null
+    case 'timeout':
+      return isPositiveInteger(value.timeoutMs) ? { status: 'timeout', timeoutMs: value.timeoutMs } : null
+    case 'too-large':
+      return isPositiveInteger(value.limit) ? { status: 'too-large', limit: value.limit } : null
+    case 'http-error':
+      return isPositiveInteger(value.statusCode) ? { status: 'http-error', statusCode: value.statusCode } : null
+    case 'failed':
+      return typeof value.message === 'string' ? { status: 'failed', message: value.message } : null
+    default:
+      return null
+  }
+}
+
 /** Seconds a fresh socket may take to present `hello` before it is closed. */
 export const HELLO_TIMEOUT_MS = 5_000
 

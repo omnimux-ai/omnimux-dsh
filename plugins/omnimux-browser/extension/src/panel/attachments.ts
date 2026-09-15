@@ -1,5 +1,7 @@
 /** Multimodal image intake and durable attachment wire helpers. */
 
+import { parseMediaFetchOutcome, type MediaFetchOutcome } from 'omnimux-browser/src/protocol.ts'
+
 export const IMAGE_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
 
 export type ImageMediaType = typeof IMAGE_MEDIA_TYPES[number]
@@ -249,6 +251,121 @@ export async function prepareImageFiles(
     })
   }
   return prepared
+}
+
+export type MediaDownloadFailure = 'timeout' | 'download-failed'
+
+export class MediaDownloadError extends Error {
+  /**
+   * @param reason - which failure to report.
+   * @param timeoutMs - the budget the HOST spent, for the timeout message. Always
+   *   present on a timeout, because the host reports the budget it used rather
+   *   than the panel guessing at a constant that could drift from it.
+   */
+  constructor(
+    readonly reason: MediaDownloadFailure,
+    readonly timeoutMs?: number,
+  ) {
+    super(reason)
+    this.name = 'MediaDownloadError'
+  }
+}
+
+/** `image/jpg` is a widespread server alias; the host contract only admits `image/jpeg`. */
+const MEDIA_TYPE_ALIASES: Record<string, string> = { 'image/jpg': 'image/jpeg' }
+
+/** Types named by the extension a URL advertises, for servers that send no content type. */
+const EXTENSION_MEDIA_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+}
+
+/**
+ * The media type to hand the intake for a downloaded response.
+ *
+ * The response header is the first choice, then the extension the page
+ * advertised. What is left untyped stays empty rather than guessed at, so
+ * {@link prepareImageFiles} turns it away with the same `unsupported-type` code
+ * the picker produces — a download never widens what the host accepts.
+ */
+function downloadedMediaType(declared: string, src: string): string {
+  const normalized = declared.split(';')[0].trim().toLowerCase()
+  if (normalized !== '') return MEDIA_TYPE_ALIASES[normalized] ?? normalized
+  const path = src.split(/[?#]/)[0]
+  const dot = path.lastIndexOf('.')
+  if (dot < 0) return ''
+  return EXTENSION_MEDIA_TYPES[path.slice(dot + 1).toLowerCase()] ?? ''
+}
+
+/** Decode the bridge's base64 body into the bytes a `File` is built from. */
+function decodeBase64(data: string): Uint8Array {
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let at = 0; at < binary.length; at += 1) bytes[at] = binary.charCodeAt(at)
+  return bytes
+}
+
+/**
+ * Ask the HOST to fetch one lit page media, and hand it to the intake as a `File`.
+ *
+ * The bytes come over the existing bridge (`bridge.fetchMedia`), never from this
+ * page: the extension's `connect-src` stays loopback plus the repository's host
+ * allowlist, so there is no outbound connection for the panel to open. Every
+ * admission rule — supported type, byte, pixel, and dimension limits — still
+ * lives in {@link prepareImageFiles}, so media the user lit on the page is
+ * measured by exactly the rules the picker and the drop path use, and reports the
+ * same error codes when it is refused.
+ *
+ * @param src - the media address the page reported.
+ * @param mediaId - the shelf item's id, which names the file and marks the chip.
+ * @param request - the bridge call; returns the {@link MediaFetchOutcome} payload.
+ * @throws {MediaDownloadError} When the host could not produce the bytes — a
+ *   timeout is kept distinct because its message names the budget.
+ */
+export async function downloadPageMedia(
+  src: string,
+  mediaId: string,
+  request: (url: string) => Promise<unknown>,
+): Promise<File> {
+  let outcome: MediaFetchOutcome | null
+  try {
+    outcome = parseMediaFetchOutcome(await request(src))
+  } catch {
+    // The bridge itself refused or dropped the call; nothing to distinguish.
+    throw new MediaDownloadError('download-failed')
+  }
+  if (outcome === null || outcome.status === 'bad-request' || outcome.status === 'failed') {
+    throw new MediaDownloadError('download-failed')
+  }
+  if (outcome.status === 'timeout') throw new MediaDownloadError('timeout', outcome.timeoutMs)
+  if (outcome.status === 'too-large' || outcome.status === 'http-error') {
+    throw new MediaDownloadError('download-failed')
+  }
+  if (outcome.byteLength === 0) throw new MediaDownloadError('download-failed')
+
+  const mediaType = downloadedMediaType(outcome.contentType, src)
+  const extension = mediaType === '' ? 'bin' : mediaType.slice(mediaType.indexOf('/') + 1)
+  const bytes = decodeBase64(outcome.data)
+  return new File([bytes.buffer as ArrayBuffer], `page-media-${mediaId}.${extension}`, { type: mediaType })
+}
+
+/**
+ * One error line for a batch of page media.
+ *
+ * A single failure speaks for itself; several would otherwise stack one line per
+ * item, so they collapse into the batch summary instead.
+ */
+export function attachFailureLine(
+  failures: readonly string[],
+  total: number,
+  summary: (failed: number, total: number, first: string) => string,
+): string | null {
+  if (failures.length === 0) return null
+  if (failures.length === 1) return failures[0]
+  return summary(failures.length, total, failures[0])
 }
 
 export function draftImageDataUrl(image: DraftImage): string {
