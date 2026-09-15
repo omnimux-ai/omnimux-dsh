@@ -44,7 +44,7 @@ export async function probeMediaAssets(input, context = {}) {
     capability,
     seam,
   })
-  return Promise.all(normalized.assets.map(async (asset) => {
+  const probe = async (asset) => {
     const identity = {
       type: asset.type,
       pathOrUrl: asset.pathOrUrl,
@@ -94,5 +94,8 @@ export async function probeMediaAssets(input, context = {}) {
       return { ...identity, mime: document.mime, sizeBytes: document.sizeBytes }
     }
     return identity
-  }))
+  }
+  const results = []
+  for (const asset of normalized.assets) results.push(await probe(asset))
+  return results
 }

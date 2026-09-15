@@ -159,7 +159,7 @@ describe('textComplete execute', () => {
         fetcher: async () => ({
           ok: true,
           headers: { get: () => 'image/png' },
-          arrayBuffer: async () => bytes,
+          body: new Response(bytes).body,
         }),
         llm: {
           async * stream() {

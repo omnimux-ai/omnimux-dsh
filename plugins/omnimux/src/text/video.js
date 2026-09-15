@@ -1,3 +1,4 @@
+import { readBoundedBody } from '../media/read-bounded-body.js'
 import { readFile } from 'node:fs/promises'
 import { basename, isAbsolute } from 'node:path'
 import { OmnimuxError } from '../media/errors.js'
@@ -147,16 +148,15 @@ async function fetchRemoteVideo(url, opts) {
     throw new OmnimuxError('omnimux-invalid-request', `failed to fetch video: ${error instanceof Error ? error.message : String(error)}`)
   }
   if (!response.ok) {
+    await response.body?.cancel().catch(() => {})
     throw new OmnimuxError('omnimux-invalid-request', `video URL returned HTTP ${response.status}`)
   }
-  const declaredLength = Number(response.headers?.get?.('content-length'))
-  if (Number.isFinite(declaredLength) && declaredLength > cap) {
-    throw new OmnimuxError('omnimux-invalid-request', `video exceeds ${cap} bytes`)
-  }
   const headerType = MIME_MEDIA[(response.headers?.get?.('content-type') || '').split(';')[0].trim().toLowerCase()]
-  const data = new Uint8Array(await response.arrayBuffer())
-  if (data.byteLength > cap) {
-    throw new OmnimuxError('omnimux-invalid-request', `video exceeds ${cap} bytes`)
+  let data
+  try {
+    data = await readBoundedBody(response, cap, { signal: opts.signal, message: `video exceeds ${cap} bytes` })
+  } catch (error) {
+    throw new OmnimuxError('omnimux-invalid-request', error instanceof Error ? error.message : String(error))
   }
   return {
     data,
