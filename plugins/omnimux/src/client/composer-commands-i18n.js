@@ -1200,4 +1200,363 @@ export function installCommandsI18n(ctx, primitives) {
       }
     }, 'omnimux: command i18n & query enhancement')
   })
+
+  // 3. Install skill multi-modal i18n enhancement (#1837)
+  installSkillsI18n(ctx)
+}
+
+// ==========================================
+// 4. Skills i18n & Multi-modal Bilingual Search (#1837)
+// ==========================================
+
+export const SKILL_I18N = {
+  zh: {
+    'ip-character-consistency-studio': {
+      name: '角色一致性形象包',
+      description: '根据角色设定和参考图，制作可持续复用的 AI IP 角色形象包',
+      keywords: ['角色', '一致性', '形象', 'ip', '三视图', '立绘', '设定集', '漫画', '绘本', 'jiaose', 'js', 'yizhixing', 'xingxiang'],
+    },
+    'character-sheet-designer': {
+      name: '角色设定集设计师',
+      description: '生成高精度角色设定板，多角度三视图与表情姿态系统',
+      keywords: ['角色', '设定', '三视图', '立绘', '表情', 'jiaose', 'sheji', 'sheting'],
+    },
+    'candid-character-photography': {
+      name: '角色抓拍摄影',
+      description: '设计具有偷拍感、窥视机位与抓拍质感的角色摄影提示词',
+      keywords: ['摄影', '抓拍', '写真', '角色', 'sheying', 'zhuapai'],
+    },
+    'candid-swimsuit-photography': {
+      name: '泳装摄影抓拍',
+      description: '生成具有私人相册感与旅行亲密视角的泳装抓拍提示词',
+      keywords: ['泳装', '摄影', '抓拍', 'yongzhuang', 'sheying'],
+    },
+    'surveillance-camera-photography': {
+      name: '监控视角摄影',
+      description: '固定机位、鱼眼广角与生活化记录质感的监控视角生图提示词',
+      keywords: ['监控', '摄像头', 'cctv', 'jiankong'],
+    },
+    'nuyoah-portrait-character-designer': {
+      name: '人物肖像气质设计',
+      description: '将人物气质转为人脸结构、妆容与生图提示词',
+      keywords: ['肖像', '人像', '妆容', '人脸', 'xiaoxiang', 'renwu'],
+    },
+    'generate-feature-cover': {
+      name: '功能卡片封面生成',
+      description: '生成主页功能卡片封面图与应用入口缩略图',
+      keywords: ['封面', '卡片', '缩略图', 'fengmian'],
+    },
+    'baoyu-cover-image': {
+      name: '宝玉文章封面图',
+      description: '生成多维度高质感文章封面图（支持宽屏与方图）',
+      keywords: ['封面', '文章', '宝玉', '配图', 'fengmian'],
+    },
+    'youtube-creator': {
+      name: 'YouTube 视频创作者',
+      description: 'YouTube 选题规划、脚本撰写与高点击率封面生成',
+      keywords: ['youtube', '视频', '创作者', '脚本', 'shipin'],
+    },
+    'subagent-reports': {
+      name: '子代理报告协作',
+      description: '将复杂工作并发派发到独立子代理并落盘结果报告',
+      keywords: ['子代理', '并发', '报告', '协作', 'zidaili', 'baogao'],
+    },
+    'spec-driven-development': {
+      name: '规格驱动开发规范',
+      description: '写代码前先写结构化规格作为真相源与质量门禁',
+      keywords: ['规格', '设计', 'tdd', '门禁', 'guige', 'kaifa'],
+    },
+    'worktree-ops': {
+      name: 'Git 工作树隔离操作',
+      description: '标准工作树生命周期管理与多智能体隔离并发开发',
+      keywords: ['工作树', 'worktree', 'git', '隔离', 'gongzuoshu'],
+    },
+    'agent-backup': {
+      name: '智能体改前安全备份',
+      description: '在文件变动前创建、检查与恢复代码快照',
+      keywords: ['备份', '快照', '恢复', '回滚', 'beifen'],
+    },
+    'agent-self-evolution': {
+      name: '自主根因免疫自进化',
+      description: '从故障提取根因、建立防复发硬门禁并推动自我进化',
+      keywords: ['进化', '根因', '自进化', '免疫', 'jinhua', 'genyin'],
+    },
+    'agents-md': {
+      name: '智能体规范维护瘦身',
+      description: '诊断、编写与精简 AGENTS.md 常驻硬约束',
+      keywords: ['规范', '瘦身', '约束', 'guifan', 'shoushen'],
+    },
+    'superpowers-zh': {
+      name: 'AI 编程方法论专家',
+      description: '规格驱动、分步规划、测试先行与代码审查专家',
+      keywords: ['编程', '方法论', '测试', '开发', 'biancheng'],
+    },
+    'prompt-engineer': {
+      name: '提示词架构工程师',
+      description: '系统提示词架构设计、思维链与提示词评测优化',
+      keywords: ['提示词', 'prompt', '指令', 'tishici'],
+    },
+    'frontend-developer': {
+      name: '前端开发专家',
+      description: '现代 Web 技术栈、UI 组件实现与性能调优',
+      keywords: ['前端', 'react', 'vue', 'ui', 'qianduan'],
+    },
+    'backend-architect': {
+      name: '后端架构专家',
+      description: '服务端高并发系统设计、数据库与 API 接口开发',
+      keywords: ['后端', '架构', '数据库', 'api', 'houduan'],
+    },
+    'ui-designer': {
+      name: 'UI 视觉设计专家',
+      description: '视觉设计系统、组件库与高美感界面交互设计',
+      keywords: ['设计', 'ui', '视觉', '界面', 'sheji'],
+    },
+    'code-review-expert': {
+      name: '代码审查专家',
+      description: '严谨建设性的代码质量、安全与可维护性审查',
+      keywords: ['代码', '审查', '评审', 'review', 'daima', 'shencha'],
+    },
+    'growth-hacker': {
+      name: '增长黑客策略专家',
+      description: '数据驱动的裂变闭环、获客漏斗优化与业务增长',
+      keywords: ['增长', '黑客', '运营', '裂变', 'zengzhang'],
+    },
+    'bitmap-vectorize': {
+      name: '位图矢量化转换',
+      description: '将截图、照片转换为精确的 SVG 矢量代码',
+      keywords: ['位图', '矢量', 'svg', '转矢量', 'weitu', 'shiliang'],
+    },
+    'ego-browser': {
+      name: 'Ego 真实浏览器代理',
+      description: '自动化操控真实浏览器完成网页操作与端到端取证',
+      keywords: ['浏览器', '网页', '自动化', '爬虫', 'liulanqi'],
+    },
+  },
+  en: {},
+}
+
+/**
+ * Resolve localized display name for a skill.
+ * @param {string} rawName
+ * @param {string} [fallbackDesc]
+ * @param {any} [locale]
+ * @returns {string}
+ */
+export function resolveSkillDisplayName(rawName, fallbackDesc, locale) {
+  const lang = getActiveLang(locale)
+  if (lang !== 'zh') return rawName
+  const config = SKILL_I18N.zh[rawName]
+  if (config?.name) return config.name
+  return rawName
+}
+
+/**
+ * Resolve localized description for a skill.
+ * In Chinese locale, prefixes the canonical English rawName to retain clarity.
+ * @param {string} rawName
+ * @param {string} [fallbackDesc]
+ * @param {any} [locale]
+ * @returns {string}
+ */
+export function resolveSkillDescription(rawName, fallbackDesc, locale) {
+  const lang = getActiveLang(locale)
+  if (lang !== 'zh') return fallbackDesc || ''
+  const config = SKILL_I18N.zh[rawName]
+  const desc = config?.description || fallbackDesc || ''
+  if (!desc) return rawName
+  if (desc.includes(rawName)) return desc
+  return `${rawName} · ${desc}`
+}
+
+/**
+ * Calculate match relevance score for a skill candidate.
+ * Higher score means better match. Returns undefined if not matched.
+ * @param {{ name: string, rawName?: string, description?: string }} candidate
+ * @param {string} rawQuery
+ * @param {'zh' | 'en'} lang
+ * @returns {number | undefined}
+ */
+export function scoreSkillCandidate(candidate, rawQuery, lang) {
+  const query = (rawQuery || '').trim().toLowerCase()
+  if (!query) return 1
+
+  const name = (candidate.name || '').toLowerCase()
+  const rawName = (candidate.rawName || candidate.name || '').toLowerCase()
+  const desc = (candidate.description || '').toLowerCase()
+  const config = SKILL_I18N[lang]?.[rawName]
+  const keywords = (config?.keywords || []).map((k) => k.toLowerCase())
+
+  // 1. Exact matches
+  if (name === query || rawName === query) return 1000
+
+  // 2. Chinese display name prefix match
+  if (name.startsWith(query)) return 600 - (name.length - query.length)
+
+  // 3. English rawName prefix match
+  if (rawName.startsWith(query)) return 500 - (rawName.length - query.length)
+
+  // 4. Chinese display name substring match
+  const nameIdx = name.indexOf(query)
+  if (nameIdx >= 0) return 400 - nameIdx
+
+  // 5. English rawName substring match
+  const rawIdx = rawName.indexOf(query)
+  if (rawIdx >= 0) return 300 - rawIdx
+
+  // 6. Keywords match (pinyin, tags, synonyms)
+  for (const kw of keywords) {
+    if (kw === query) return 250
+    if (kw.startsWith(query)) return 220
+    if (kw.includes(query)) return 200
+  }
+
+  // 7. Description prefix match
+  if (desc.startsWith(query)) return 180
+
+  // 8. Description substring / intent keyword match
+  const descIdx = desc.indexOf(query)
+  if (descIdx >= 0) return 150 - Math.min(50, descIdx)
+
+  return undefined
+}
+
+/**
+ * Enhance skill candidates by localizing names, descriptions, and filtering with smart multi-modal scores.
+ * @param {Array<{ name: string, rawName?: string, description?: string, hint?: string, icon?: string }>} allSkills
+ * @param {{ query?: string }} req
+ * @param {any} locale
+ * @returns {Array<{ name: string, rawName: string, description?: string, hint?: string, icon?: string }>}
+ */
+export function enhanceSkillCandidates(allSkills, req, locale) {
+  if (!Array.isArray(allSkills)) return []
+  const lang = getActiveLang(locale)
+
+  // 1. Map to localized display items with rawName preserved
+  const localized = allSkills.map((skill) => {
+    const rawName = skill.rawName || skill.name
+    const displayName = resolveSkillDisplayName(rawName, skill.description, locale)
+    const displayDesc = resolveSkillDescription(rawName, skill.description, locale)
+    return {
+      ...skill,
+      name: displayName,
+      rawName,
+      description: displayDesc,
+    }
+  })
+
+  const rawQuery = (req?.query || '').trim()
+  if (!rawQuery) {
+    return localized
+  }
+
+  // 2. Filter and score
+  const scored = []
+  localized.forEach((candidate, index) => {
+    const score = scoreSkillCandidate(candidate, rawQuery, lang)
+    if (score !== undefined) {
+      scored.push({ candidate, score, index })
+    }
+  })
+
+  // 3. Stable sort: higher score first
+  scored.sort((a, b) => b.score - a.score || a.index - b.index)
+  return scored.map((s) => s.candidate)
+}
+
+/**
+ * Wrap a single skill InputTriggerSource to adaptively support bilingual queries and onPick unwrap.
+ * @param {any} source
+ * @param {any} locale
+ * @returns {any} wrapped source
+ */
+export function wrapSkillInputTriggerSource(source, locale) {
+  if (!source || typeof source.candidates !== 'function') return source
+  const originalCandidates = source.candidates
+  const originalOnPick = source.onPick
+
+  const wrappedCandidates = async function (session, req) {
+    // Request full list with empty query so enhanceSkillCandidates can perform multi-modal matching
+    const baseReq = req ? { ...req, query: '' } : { query: '' }
+    let allSkills = []
+    try {
+      allSkills = await originalCandidates.call(this, session, baseReq)
+    } catch {
+      allSkills = await originalCandidates.call(this, session, req)
+    }
+    return enhanceSkillCandidates(allSkills, req, locale)
+  }
+
+  const wrappedOnPick = function (pick) {
+    if (!pick || !pick.candidate) {
+      return typeof originalOnPick === 'function' ? originalOnPick.call(this, pick) : { text: '' }
+    }
+    // Transparently resolve to canonical English rawName so host dsh-tool-skill recognizes it!
+    const rawName = pick.candidate.rawName || pick.candidate.name
+    return { text: `/${rawName} ` }
+  }
+
+  source.candidates = wrappedCandidates
+  if (typeof originalOnPick === 'function') {
+    source.onPick = wrappedOnPick
+  }
+
+  return source
+}
+
+/**
+ * Wrap inputTriggers to intercept both existing and late-registered skill sources.
+ * @param {any} inputTriggers
+ * @param {any} locale
+ * @returns {() => void} Disposer
+ */
+export function wrapInputTriggersSkills(inputTriggers, locale) {
+  if (!inputTriggers) return () => {}
+
+  const wrappedSources = new WeakSet()
+
+  const wrapExisting = () => {
+    const sources = inputTriggers.live?.sources || []
+    for (const src of sources) {
+      if (src && src.trigger === '/' && src.name === 'skill' && !wrappedSources.has(src)) {
+        wrapSkillInputTriggerSource(src, locale)
+        wrappedSources.add(src)
+      }
+    }
+  }
+
+  // 1. Wrap currently registered skill sources
+  wrapExisting()
+
+  // 2. Intercept future registrations via registerSource
+  const originalRegisterSource = inputTriggers.registerSource
+  if (typeof originalRegisterSource === 'function') {
+    inputTriggers.registerSource = function (src) {
+      if (src && src.trigger === '/' && src.name === 'skill') {
+        wrapSkillInputTriggerSource(src, locale)
+        wrappedSources.add(src)
+      }
+      return originalRegisterSource.call(this, src)
+    }
+  }
+
+  return () => {
+    if (originalRegisterSource) {
+      inputTriggers.registerSource = originalRegisterSource
+    }
+  }
+}
+
+/**
+ * Install the adaptive skill localization into client runtime.
+ * @param {{ inject?: Function }} ctx
+ */
+export function installSkillsI18n(ctx) {
+  if (!ctx || typeof ctx.inject !== 'function') return
+  ctx.inject(['inputTriggers', 'locale'], (inner) => {
+    inner.effect?.(() => {
+      const inputTriggers = inner.inputTriggers || inner.get?.('inputTriggers')
+      const locale = inner.locale || inner.get?.('locale')
+      return wrapInputTriggersSkills(inputTriggers, locale)
+    }, 'omnimux: skill i18n & query enhancement')
+  })
 }
