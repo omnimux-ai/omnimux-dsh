@@ -29,7 +29,7 @@ export const FOLDER_STYLES = `
 .omnimux-page-open:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .omnimux-folder-open:focus-visible, .omnimux-folder-more:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
 .omnimux-folder:hover .omnimux-folder-back { border-color: var(--dsw-alias-border-l3); }
-.omnimux-folder-menu { position: absolute; z-index: 4; bottom: 20%; right: 5%; padding: 4px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-overlay); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-1); }
+.omnimux-folder-menu { position: absolute; z-index: 4; bottom: 20%; right: 5%; display: flex; flex-direction: column; gap: 2px; min-width: 148px; padding: 4px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-overlay); box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1); }
 .omnimux-folder-menu [role=menuitem] { display: flex; gap: 8px; width: 100%; justify-content: flex-start; }
 .omnimux-cover-content { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-tertiary); }
 .omnimux-cover-content > svg:not(.omnimux-cover-audio) { width: 15%; height: 25%; align-self: flex-start; margin-top: 18%; }
