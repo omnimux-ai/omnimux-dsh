@@ -218,7 +218,7 @@ describe('mountMedia capability gate', () => {
     const request = {
       prompt: 'two reference subjects in one scene',
       dest: '/tmp/omnimux-mounted-multi-ref.mp4',
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'video_multi_ref',
       // Workflow stores the leading reference in image as well as references.
       image: firstReference,
@@ -226,7 +226,7 @@ describe('mountMedia capability gate', () => {
         { type: 'image', role: 'reference', pathOrUrl: firstReference },
         { type: 'image', role: 'reference', pathOrUrl: secondReference },
       ],
-      duration: 4,
+      duration: 5,
       resolution: '720p',
       aspectRatio: '16:9',
       wait: false,

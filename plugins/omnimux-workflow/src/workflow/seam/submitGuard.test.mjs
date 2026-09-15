@@ -14,7 +14,7 @@ after(() => rmSync(root, { recursive: true, force: true }));
 const first = slot('image', 'first_frame', 1, 1, 'start_frame');
 const last = slot('image', 'last_frame', 1, 1, 'end_frame');
 const frameOp = operation('first_last_frame', 'video', [first, last], false);
-const catalog = catalogFor('video', 'seedance-2-0-fast', [
+const catalog = catalogFor('video', 'seedance-2-5', [
   frameOp, operation('text_to_video', 'video'),
   { ...operation('draft', 'video'), listed: false }, operation('wrong-output', 'image'),
 ]);
@@ -22,7 +22,7 @@ const reference = (role = 'first_frame', targetSlot = 'start_frame') => ({
   type: 'image', role, targetSlot, pathOrUrl: 'https://example.test/frame.png',
   sourceNodeId: 'frame-node', edgeId: `edge-${targetSlot}`, mimeType: 'image/png', sizeBytes: 100,
 });
-const request = (overrides = {}) => ({ capability: 'video', model: 'seedance-2-0-fast',
+const request = (overrides = {}) => ({ capability: 'video', model: 'seedance-2-5',
   operation: 'text_to_video', prompt: 'A real prompt', dest: join(root, 'out.mp4'), ...overrides });
 
 for (const mode of ['live', 'mock']) {
@@ -88,7 +88,7 @@ test('explicit valid frames need no prompt and resume ignores changed catalog or
 });
 
 test('executor resolves unique/automatic operations but never silently replaces an explicit choice', () => {
-  const textCatalog = catalogFor('text', 'gpt-5.5', [operation('chat', 'text'), operation('vision_chat', 'text', [slot('image', 'reference', 1)])]);
+  const textCatalog = catalogFor('text', 'gemini-3.8-flash', [operation('chat', 'text'), operation('vision_chat', 'text', [slot('image', 'reference', 1)])]);
   const text = { capability: 'text', prompt: 'one word', dest: '/unused' };
   assert.equal(resolveExecutorSubmission(text, textCatalog).operation, 'chat');
   assert.equal(resolveExecutorSubmission({ ...text, references: [{ ...reference('reference'), targetSlot: undefined }] }, textCatalog).operation, 'vision_chat');
@@ -99,7 +99,7 @@ test('executor resolves unique/automatic operations but never silently replaces 
 });
 
 test('metadata constraints reject missing, oversized and overlong references in both gateways', async () => {
-  const limited = catalogFor('video', 'seedance-2-0-fast', [operation('reference_video', 'video', [{
+  const limited = catalogFor('video', 'seedance-2-5', [operation('reference_video', 'video', [{
     ...slot('video', 'reference', 1), maxSizeMb: 1, minDurationSec: 1, maxDurationSec: 5, allowedMimes: ['video/mp4'],
   }])]);
   for (const mode of ['live', 'mock']) {
@@ -117,7 +117,7 @@ test('metadata constraints reject missing, oversized and overlong references in 
 });
 
 test('invalid text output is rejected before creating a text file', async () => {
-  const textCatalog = catalogFor('text', 'gpt-5.5', [operation('chat', 'text')]);
+  const textCatalog = catalogFor('text', 'gemini-3.8-flash', [operation('chat', 'text')]);
   const gateway = createOmnimuxSeamClient({ getSeam: (name) => name === 'modelCatalog' ? { list: () => textCatalog }
     : name === 'textComplete' ? { execute: async () => ({ type: 'image', url: 'https://example.test/wrong.png' }) } : undefined });
   const submitted = await gateway.submit({ capability: 'text', operation: 'chat', prompt: 'go', dest: join(root, 'text.txt') });

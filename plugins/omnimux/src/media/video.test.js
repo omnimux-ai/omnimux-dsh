@@ -17,7 +17,7 @@ describe('omnimux video helpers', () => {
   it('reads env defaults', () => {
     const config = readOmnimuxConfig({})
     assert.equal(config.baseUrl, 'https://api.omnimux.ai/v1')
-    assert.equal(config.modelId, 'seedance-2-0-fast')
+    assert.equal(config.modelId, 'seedance-2-5')
     assert.equal(config.apiKey, '')
   })
 
@@ -50,7 +50,7 @@ describe('omnimux video helpers', () => {
       () => executeOmnimuxVideo({
         prompt: 'x',
         dest: '/tmp/no.mp4',
-        model: 'seedance-2-0-fast',
+        model: 'seedance-2-5',
         operation: 'text_to_video',
         env: {},
       }),
@@ -64,9 +64,9 @@ describe('omnimux video helpers', () => {
     const result = await executeOmnimuxVideo({
       prompt: 'a wall with pat',
       dest,
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'text_to_video',
-      duration: 4,
+      duration: 5,
       env: {},
       store: {
         resolve: async () => 'pat-video-token',
@@ -97,9 +97,9 @@ describe('omnimux video helpers', () => {
     const result = await executeOmnimuxVideo({
       prompt: 'a wall at night',
       dest,
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'text_to_video',
-      duration: 4,
+      duration: 5,
       env: { OMNIMUX_API_KEY: 'sk-video-auth' },
       runtime: {
         async execute() {
@@ -127,9 +127,9 @@ describe('omnimux video helpers', () => {
     const result = await executeOmnimuxVideo({
       prompt: 'a wall at night',
       dest,
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'text_to_video',
-      duration: 4,
+      duration: 5,
       env: { OMNIMUX_API_KEY: 'sk-test' },
       runtime: {
         async execute() {
@@ -156,10 +156,11 @@ describe('omnimux video helpers', () => {
     const result = await executeOmnimuxVideo({
       prompt: 'a wall at night',
       dest,
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'text_to_video',
       wait: false,
       env: { OMNIMUX_API_KEY: 'sk-test' },
+      duration: 5,
       runtime: {
         async execute() {
           return { taskId: 'task-wait', outputs: [] }
@@ -522,7 +523,7 @@ describe('mapOmnimuxInput digital_human audioTrack passthrough (#538)', () => {
   it('still drops audioTrack for non-digital-human video models', () => {
     const input = mapOmnimuxInput('video', {
       prompt: 'talk',
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       audioTrack: { role: 'audio_track', type: 'audio', pathOrUrl: '/local/track.mp3' },
     })
     assert.equal('audioTrack' in input, false)
@@ -588,8 +589,9 @@ describe('mapOmnimuxInput digital_human audioTrack passthrough (#538)', () => {
     await executeOmnimuxVideo({
       prompt: 'speak',
       dest,
-      model: 'seedance-2-0-fast',
+      model: 'seedance-2-5',
       operation: 'text_to_video',
+      duration: 5,
       env: { OMNIMUX_API_KEY: 'sk-test' },
       runtime: {
         async execute(req) {

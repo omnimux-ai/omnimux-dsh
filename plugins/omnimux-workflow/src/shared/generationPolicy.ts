@@ -10,23 +10,26 @@ export interface GenerationPolicy {
 
 export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationPolicy>> = {
   text: {
-    allowedModelIds: ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5'],
+    // 网关生产基线已收敛，仅保留谷歌 Gemini 3.8 Flash 主力文本模型
+    allowedModelIds: ['gemini-3.8-flash'],
     defaultModelId: 'gemini-3.8-flash',
     modeSelection: 'automatic',
   },
   image: {
-    // grok-imagine-image-2-0 只剩「已登记」（无 listed 操作），按 curated 白名单口径不得进入画布。
-    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
+    // 仅保留 OpenAI GPT Image 2.5 官方主模型（含 pro/economy 双档）
+    allowedModelIds: ['gpt-image-2.5'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
   video: {
-    allowedModelIds: ['seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'seedance-2-5', 'wan-3.0', 'minimax-h3', 'grok-imagine-video-1-5'],
-    defaultModelId: 'seedance-2-0-fast',
+    // 仅保留网关在售主流视频模型：字节即梦 2.5/2.0 与 MiniMax H3（含对应任务版）
+    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'minimax-h3'],
+    defaultModelId: 'seedance-2-5',
     modeSelection: 'model',
   },
   audio: {
-    allowedModelIds: ['seed-audio-1.0', 'suno'],
+    // 仅保留火山官方直连配音主力模型
+    allowedModelIds: ['seed-audio-1.0'],
     defaultModelId: 'seed-audio-1.0',
     modeSelection: 'model',
   },

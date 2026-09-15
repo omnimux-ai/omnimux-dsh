@@ -247,7 +247,7 @@ describe('Issue #469 QA Acceptance Matrix Verification', () => {
   describe('TC-04: Seam 前 Fail-Fast 拦截', () => {
     it('缺少必需素材、缺少必需 prompt、不兼容格式时，在 seam 调用前全部阻断，调用次数为 0', async () => {
       let seamCalls = 0;
-      const limitedCatalog = catalogFor('video', 'seedance-2-0-fast', [
+      const limitedCatalog = catalogFor('video', 'seedance-2-5', [
         operation('strict_op', 'video', [
           {
             ...slot('video', 'reference', 1, 1, 'ref_video'),
@@ -275,7 +275,7 @@ describe('Issue #469 QA Acceptance Matrix Verification', () => {
 
       const baseReq = {
         capability: 'video',
-        model: 'seedance-2-0-fast',
+        model: 'seedance-2-5',
         operation: 'strict_op',
         dest: join(root, 'out.mp4'),
       };
@@ -405,7 +405,7 @@ describe('Issue #469 QA Acceptance Matrix Verification', () => {
   // ==========================================================================
   describe('TC-06: TaskId 轮询恢复', () => {
     it('awaitTask 仅依赖 taskId 和 dest 恢复轮询，跳过素材与 catalog 校验', async () => {
-      const catalog = catalogFor('video', 'seedance-2-0-fast', [
+      const catalog = catalogFor('video', 'seedance-2-5', [
         operation('v_op', 'video', [slot('image', 'reference', 1, 1, 'ref_image')]),
       ]);
 
@@ -436,7 +436,7 @@ describe('Issue #469 QA Acceptance Matrix Verification', () => {
       // 1. Submit
       const submitRes = await client.submit({
         capability: 'video',
-        model: 'seedance-2-0-fast',
+        model: 'seedance-2-5',
         operation: 'v_op',
         prompt: 'test prompt',
         dest: join(root, 'dest.mp4'),

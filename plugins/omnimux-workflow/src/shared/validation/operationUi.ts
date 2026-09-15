@@ -609,7 +609,7 @@ export function buildFilteredModelOptions(args: {
     const bucket = args.outputType
       ? findBucketItem(catalog, args.outputType, verdict.modelId)
       : undefined;
-    if (args.outputType && !bucket) continue;
+    if (args.outputType && !bucket && !isCanvasCapabilityModel(catalog, verdict.modelId)) continue;
     const label = auth?.label || bucket?.label || verdict.modelId;
     options.push({
       id: verdict.modelId,

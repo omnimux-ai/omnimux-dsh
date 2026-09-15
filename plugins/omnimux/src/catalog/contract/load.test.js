@@ -40,7 +40,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 58);
+  assert.equal(index.listedOperations.length, 21);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #1789: the ASR pair are two independent models; neither declares the other as an alias.
   assert.ok(index.listedOperations.includes('seedasr-auc#speech_to_text'));
@@ -48,14 +48,12 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.deepEqual(index.get('doubao-asr-bigmodel').aliases ?? [], []);
   for (const key of [
     'seedance-2-0#first_last_frame',
-    'seedance-2-0-fast#video_multi_ref',
-    'seedance-2-0-mini#first_frame',
+    'seedance-2-0#video_multi_ref',
+    'seedance-2-5#first_frame',
     'seedance-2-5#video_edit',
     'seedance-2-5#video_extend',
-    'wan-3.0#document_to_video',
-    'wan-3.0#webpage_to_video',
     'minimax-h3#end_frame',
-    'grok-imagine-video-1-5#video_multi_ref',
+    'minimax-h3#first_frame',
   ]) {
     assert.ok(index.listedOperations.includes(key), key);
   }

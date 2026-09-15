@@ -142,7 +142,7 @@ function createFakeSeamHub(opts = {}) {
       if (opts.failTextWith) throw opts.failTextWith;
       return {
         mode: 'live',
-        model: req.model ?? 'gemini-3.7-flash',
+        model: req.model ?? 'gemini-3.8-flash',
         text: `echo:${req.prompt}${req.image ? ' (+img)' : ''}`,
       };
     },
@@ -154,37 +154,30 @@ function createFakeSeamHub(opts = {}) {
       return {
         source: 'omnimux',
         fingerprint: 'fake-catalog',
-        models: [['claude-opus-4-6', 'text', 'chat'], ['deepseek-v4-flash', 'text', 'chat'],
-          ['gpt-5.5', 'text', 'chat'], ['gpt-image-2.5', 'image', 'text_to_image'],
-          ['seedance-2-0-fast', 'video', 'text_to_video'], ['suno', 'audio', 'text_to_music'],
-          ['gpt-4o-mini-tts', 'audio', 'text_to_speech']].map(([id, type, operation]) => ({ id, label: id,
+        models: [['gemini-3.8-flash', 'text', 'chat'],
+          ['gpt-image-2.5', 'image', 'text_to_image'],
+          ['seedance-2-5', 'video', 'text_to_video'],
+          ['seed-audio-1.0', 'audio', 'text_to_speech']].map(([id, type, operation]) => ({ id, label: id,
           operations: [{ id: operation, listed: true, output: { type }, inputs: [
             { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 },
           ] }] })),
         defaults: {
-          text: 'gemini-3.7-flash',
+          text: 'gemini-3.8-flash',
           image: 'gpt-image-2.5',
-          video: 'seedance-2-0-fast',
-          audio: 'suno',
+          video: 'seedance-2-5',
+          audio: 'seed-audio-1.0',
         },
         text: [
-          { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-          { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
-          { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
-          { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
-          { id: 'gpt-5.5', label: 'GPT 5.5' },
+          { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
         ],
         image: [
           { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
-          { id: 'nanobanana-2', label: 'NanoBanana 2' },
         ],
         video: [
-          { id: 'kling-o3', label: 'Kling O3' },
-          { id: 'seedance-2-0-fast', label: 'Seedance 2.0 Fast' },
+          { id: 'seedance-2-5', label: 'Seedance 2.5' },
         ],
         audio: [
-          { id: 'gpt-4o-mini-tts', label: 'GPT 4o Mini TTS' },
-          { id: 'suno', label: 'Suno' },
+          { id: 'seed-audio-1.0', label: 'Seed Audio 1.0' },
         ],
       };
     },
@@ -717,31 +710,23 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
         fingerprint: 'fake-catalog-env',
         schemaVersion: '1.1',
         models: [
-          { id: 'claude-opus-4-6', operations: [operation('text_to_text', 'text')] },
-          { id: 'deepseek-v4-flash', operations: [operation('text_to_text', 'text')] },
-          { id: 'gemini-3.1-pro-preview', operations: [operation('text_to_text', 'text')] },
-          { id: 'gemini-3.7-flash', operations: [operation('text_to_text', 'text')] },
-          { id: 'gpt-5.5', operations: [operation('text_to_text', 'text')] },
+          { id: 'gemini-3.8-flash', operations: [operation('chat', 'text')] },
           { id: 'gpt-image-2.5', operations: [operation('text_to_image', 'image')] },
           { id: 'nanobanana-2', operations: [operation('text_to_image', 'image')] },
           { id: 'kling-o3', operations: [operation('text_to_video', 'video')] },
-          { id: 'seedance-2-0-fast', operations: [operation('text_to_video', 'video')] },
+          { id: 'seedance-2-5', operations: [operation('text_to_video', 'video')] },
           { id: 'seed-audio-1.0', operations: [operation('text_to_speech', 'audio')] },
           { id: 'gpt-4o-mini-tts', operations: [{ ...operation('text_to_speech', 'audio'), listed: false }] },
           { id: 'suno', operations: [{ ...operation('text_to_music', 'audio'), listed: false }] },
         ],
         defaults: {
-          text: 'gpt-5.5',
+          text: 'gemini-3.8-flash',
           image: 'gpt-image-2.5',
           video: 'kling-o3',
           audio: 'suno',
         },
         text: [
-          { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-          { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
-          { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
-          { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
-          { id: 'gpt-5.5', label: 'GPT 5.5' },
+          { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
         ],
         image: [
           { id: 'gpt-image-2.5', label: 'GPT Image 2.5' },
@@ -749,7 +734,7 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
         ],
         video: [
           { id: 'kling-o3', label: 'Kling O3' },
-          { id: 'seedance-2-0-fast', label: 'Seedance 2.0 Fast' },
+          { id: 'seedance-2-5', label: 'Seedance 2.5' },
         ],
         audio: [
           { id: 'gpt-4o-mini-tts', label: 'GPT 4o Mini TTS' },
@@ -767,16 +752,14 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
     assert.match(caps.body.fingerprint, /^fake-catalog-env:canvas:/);
-    assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
-    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
+    assert.equal(caps.body.defaults.video, 'seedance-2-5');
+    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-5'));
     assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
     assert.ok(caps.body.image.some((row) => row.id === 'gpt-image-2.5'));
     assert.equal(caps.body.image.some((row) => row.id === 'nanobanana-2'), false);
-    assert.equal(caps.body.text.length, 3);
+    assert.equal(caps.body.text.length, 1);
     assert.deepEqual(caps.body.text.map((r) => r.id), [
-      'claude-opus-4-6',
-      'deepseek-v4-flash',
-      'gpt-5.5',
+      'gemini-3.8-flash',
     ]);
     assert.deepEqual(caps.body.audio.map((row) => row.id), ['seed-audio-1.0']);
     assert.equal(caps.body.defaults.audio, 'seed-audio-1.0');
@@ -794,8 +777,8 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
     const caps = await hDefault.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
     assert.equal(caps.body.video.some((row) => row.id === 'kling-o3'), false);
-    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
-    assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
+    assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-5'));
+    assert.equal(caps.body.defaults.video, 'seedance-2-5');
   } finally {
     hDefault.dispose();
     rmSync(hDefault.root, { recursive: true, force: true });
@@ -861,16 +844,16 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
         source: 'omnimux',
         schemaVersion: '1.1',
         fingerprint: 'v11-pass',
-        defaults: { video: 'seedance-2-0-fast' },
-        defaultsByOperation: { text_to_video: 'seedance-2-0-fast' },
+        defaults: { video: 'seedance-2-5' },
+        defaultsByOperation: { text_to_video: 'seedance-2-5' },
         models: [
           {
-            id: 'seedance-2-0-fast',
-            label: 'Seedance 2.0 Fast',
+            id: 'seedance-2-5',
+            label: 'Seedance 2.5',
             family: 'bytedance',
-            aliases: ['seedance-2.0-fast'],
+            aliases: ['seedance-2.5'],
             listed: true,
-            listedOperations: ['seedance-2-0-fast#text_to_video'],
+            listedOperations: ['seedance-2-5#text_to_video'],
             disposition: 'canonical',
             parameters: { aspectRatio: { options: [{ value: '16:9', label: '16:9' }], defaultValue: '16:9' } },
             operations: [
@@ -892,9 +875,9 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
         image: [],
         video: [
           {
-            id: 'seedance-2-0-fast',
-            label: 'Seedance 2.0 Fast',
-            aliases: ['seedance-2.0-fast'],
+            id: 'seedance-2-5',
+            label: 'Seedance 2.5',
+            aliases: ['seedance-2.5'],
             inputCapability: { modalities: ['text', 'image'] },
           },
         ],
@@ -908,14 +891,14 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
     assert.equal(caps.body.source, 'omnimux');
     assert.equal(caps.body.schemaVersion, '1.1');
     assert.match(caps.body.fingerprint, /^v11-pass:canvas:/);
-    assert.deepEqual(caps.body.defaultsByOperation, { text_to_video: 'seedance-2-0-fast' });
+    assert.deepEqual(caps.body.defaultsByOperation, { text_to_video: 'seedance-2-5' });
 
     // 权威 models[]：operations/inputs/output/research/execution/aliases/parameters 不丢。
     assert.equal(caps.body.models.length, 1);
     const model = caps.body.models[0];
-    assert.equal(model.id, 'seedance-2-0-fast');
-    assert.deepEqual(model.aliases, ['seedance-2.0-fast']);
-    assert.deepEqual(model.listedOperations, ['seedance-2-0-fast#text_to_video']);
+    assert.equal(model.id, 'seedance-2-5');
+    assert.deepEqual(model.aliases, ['seedance-2.5']);
+    assert.deepEqual(model.listedOperations, ['seedance-2-5#text_to_video']);
     assert.equal(model.disposition, 'canonical');
     assert.equal(model.parameters.aspectRatio.defaultValue, '16:9');
     const op = model.operations[0];
@@ -931,7 +914,7 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
 
     // 桶行保留 inputCapability / aliases（旧 UI 消费路径）。
     const row = caps.body.video[0];
-    assert.deepEqual(row.aliases, ['seedance-2.0-fast']);
+    assert.deepEqual(row.aliases, ['seedance-2.5']);
     assert.deepEqual(row.inputCapability, { modalities: ['text', 'image'] });
   } finally {
     h.dispose();
@@ -940,6 +923,7 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
 });
 
 test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 generation seam', async () => {
+  const videoModelIds = CANVAS_GENERATION_POLICY.video.allowedModelIds;
   const operations = Array.from({ length: 31 }, (_, index) => ({
     id: `video_op_${index + 1}`,
     label: `Video operation ${index + 1}`,
@@ -947,11 +931,11 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
     inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 }],
     listed: true,
   }));
-  const models = Array.from({ length: 7 }, (_, index) => ({
-    id: CANVAS_GENERATION_POLICY.video.allowedModelIds[index],
+  const models = Array.from({ length: videoModelIds.length }, (_, index) => ({
+    id: videoModelIds[index],
     label: `Video Model ${index + 1}`,
     listed: true,
-    operations: operations.filter((_, operationIndex) => operationIndex % 7 === index),
+    operations: operations.filter((_, operationIndex) => operationIndex % videoModelIds.length === index),
   }));
   const hub = createFakeSeamHub({
     catalogList: () => ({
@@ -974,13 +958,13 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
     assert.match(caps.body.fingerprint, /^seven-video-models:canvas:/);
-    assert.equal(caps.body.video.length, 7);
-    assert.equal(caps.body.models.length, 7);
+    assert.equal(caps.body.video.length, videoModelIds.length);
+    assert.equal(caps.body.models.length, videoModelIds.length);
     assert.equal(caps.body.models.flatMap((model) => model.operations).length, 31);
 
     const { wsId } = await h.createGraph({
       nodes: [h.materialNode('n1', 'video', {
-        params: { model: 'seedance-2-0', operation: 'video_op_1' },
+        params: { model: 'seedance-2-5', operation: 'video_op_1' },
       })],
       bind: true,
     });
@@ -1118,8 +1102,7 @@ test('auto 晚绑定：mount 时无 seam，hub 出现后目录升级为 omnimux'
     assert.equal(after.body.source, 'omnimux');
     assert.ok(after.body.fingerprint);
     assert.equal(after.body.video.some((row) => row.id === 'kling-o3'), false);
-    assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
-    assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
+    assert.ok(after.body.video.some((row) => row.id === 'seedance-2-5'));
     assert.ok(after.body.defaults?.video);
   } finally {
     dispose();

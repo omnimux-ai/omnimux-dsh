@@ -17,10 +17,10 @@ const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 58 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 21 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
-    assert.equal(report.listedOperations.length, 58)
+    assert.equal(report.listedOperations.length, 21)
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')
@@ -131,8 +131,8 @@ describe('SubmitGuard admission', () => {
     assert.equal(hit.ok, false)
   })
 
-  it('admits seedance-2-0-fast#text_to_video', () => {
-    const model = index.get('seedance-2-0-fast')
+  it('admits seedance-2-5#text_to_video', () => {
+    const model = index.get('seedance-2-5')
     const hit = admitOperation(model, 'text_to_video', profiles)
     assert.equal(hit.ok, true)
     assert.equal(hit.profileId, 'videoGenerate')
@@ -147,22 +147,22 @@ describe('SubmitGuard admission', () => {
 })
 
 describe('SubmitGuard legacy operation inference', () => {
-  it('infers chat uniquely on claude-opus-5 (single listed op)', () => {
-    const model = index.get('claude-opus-5')
-    const hit = inferUniqueOperation(model, [], { prompt: 'hi', seam: 'textComplete', profiles })
+  it('infers text_to_image uniquely on gpt-image-2.5 (single listed op)', () => {
+    const model = index.get('gpt-image-2.5')
+    const hit = inferUniqueOperation(model, [], { prompt: 'hi', seam: 'imageGenerate', profiles })
     assert.equal(hit.ok, true)
-    assert.equal(hit.operationId, 'chat')
+    assert.equal(hit.operationId, 'text_to_image')
   })
 
-  it('infers chat on gemini-3.7-flash when no media (chat more specific than vision_chat)', () => {
-    const model = index.get('gemini-3.7-flash')
+  it('infers chat on gemini-3.8-flash when no media (chat more specific than vision_chat)', () => {
+    const model = index.get('gemini-3.8-flash')
     const hit = inferUniqueOperation(model, [], { prompt: 'hi', seam: 'textComplete', profiles })
     assert.equal(hit.ok, true)
     assert.equal(hit.operationId, 'chat')
   })
 
   it('infers vision_chat when an image asset is present', () => {
-    const model = index.get('gemini-3.7-flash')
+    const model = index.get('gemini-3.8-flash')
     const hit = inferUniqueOperation(
       model,
       [{ type: 'image', role: 'reference', pathOrUrl: 'https://example.com/a.png', mime: 'image/png', sizeBytes: 10 }],
@@ -181,12 +181,12 @@ describe('SubmitGuard legacy operation inference', () => {
 
   it('guardSubmit records deprecation diagnostic only when the operation is unique', () => {
     const plan = guardSubmit(
-      { model: 'claude-opus-5', prompt: 'hello' },
-      { index, profiles, seam: 'textComplete', outputType: 'text' },
+      { model: 'gpt-image-2.5', prompt: 'hello' },
+      { index, profiles, seam: 'imageGenerate', outputType: 'image' },
     )
     assert.equal(plan.ok, true)
     assert.equal(plan.operationInferred, true)
-    assert.equal(plan.operationId, 'chat')
+    assert.equal(plan.operationId, 'text_to_image')
     assert.ok(plan.diagnostics.some((d) => d.code === 'legacy_operation_inferred'))
   })
 

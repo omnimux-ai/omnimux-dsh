@@ -12,9 +12,9 @@ const { createOmnimuxSeamClient, assembleGateway } = await import(pathToFileURL(
 after(() => rmSync(bundleRoot, { recursive: true, force: true }));
 
 const catalog = {
-  text: [{ id: 'gpt-5.5', label: 'GPT 5.5' }, { id: 'excluded', label: 'Excluded' }],
+  text: [{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }, { id: 'excluded', label: 'Excluded' }],
   image: [], video: [], audio: [], defaults: { text: 'excluded' },
-  models: ['gpt-5.5', 'excluded'].map((id) => ({ id, operations: [
+  models: ['gemini-3.8-flash', 'excluded'].map((id) => ({ id, operations: [
     { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: ['image', 'video', 'audio'].map((type) => ({
       slot: `reference_${type}s`, role: 'reference', type, source: 'upstream_edge', min: 0, max: 4,
     })) },
@@ -30,7 +30,7 @@ for (const mode of ['omnimux', 'mock']) {
       : { execute: async () => { calls++; throw new Error('must not generate'); } },
     }).gateway;
     await assert.rejects(gateway.submit({ capability: 'text', model: 'excluded', prompt: 'x' }), { code: 'model-not-allowed' });
-    await assert.rejects(gateway.submit({ capability: 'text', model: 'gpt-5.5', operation: 'draft', prompt: 'x' }), { code: 'operation-not-allowed' });
+    await assert.rejects(gateway.submit({ capability: 'text', model: 'gemini-3.8-flash', operation: 'draft', prompt: 'x' }), { code: 'operation-not-allowed' });
     assert.equal(calls, 0);
   });
 }
@@ -48,11 +48,11 @@ test('text seam forwards ordered references and operation without duplicating le
     { type: 'audio', role: 'reference', pathOrUrl: 'https://example.test/three.wav', targetSlot: 'reference_audios', mimeType: 'audio/wav' },
   ];
   try {
-    const { taskId } = await gateway.submit({ capability: 'text', operation: 'vision_chat', prompt: '分析',
+    const { taskId } = await gateway.submit({ capability: 'text', model: 'gemini-3.8-flash', operation: 'vision_chat', prompt: '分析',
       references, image: 'https://example.test/one.png', video: 'https://example.test/two.mp4', audioTrack: references[2] });
     assert.equal(received.length, 0);
     await gateway.awaitTask(taskId, join(root, 'out.txt'));
-    assert.deepEqual(received, [{ prompt: '分析', model: 'gpt-5.5', operation: 'vision_chat',
+    assert.deepEqual(received, [{ prompt: '分析', model: 'gemini-3.8-flash', operation: 'vision_chat',
       references, audioTrack: references[2] }]);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

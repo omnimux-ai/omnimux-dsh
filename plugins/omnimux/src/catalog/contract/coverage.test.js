@@ -105,11 +105,12 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 58, 'H2 lists evidence-backed ops');
-  assert.ok(cov.listedOperations.includes('seedance-2-0-fast#text_to_video'));
+  assert.equal(cov.listedOperationCount, 21, 'H2 lists evidence-backed ops');
+  assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
+  assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
+  assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
   assert.ok(cov.listedOperations.includes('gpt-image-2.5#text_to_image'));
-  assert.ok(cov.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
-  assert.ok(cov.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
+  assert.ok(cov.listedOperations.includes('gemini-3.8-flash#chat'));
   // #1789: both ASR models are listed independently; neither aliases the other.
   assert.ok(cov.listedOperations.includes('seedasr-auc#speech_to_text'));
   assert.ok(cov.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
@@ -154,7 +155,7 @@ test('verifyContracts: audit ok; strict ok once 78 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 78);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 58);
+  assert.equal(strict.listedOperations.length, 21);
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

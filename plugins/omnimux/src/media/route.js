@@ -34,7 +34,7 @@ export const DEFAULT_MEDIA = Object.freeze({
       baseUrl: 'https://api.omnimux.ai/v1',
       apiKeyEnv: 'OMNIMUX_API_KEY',
       models: Object.freeze({
-        video: 'seedance-2-0-fast',
+        video: 'seedance-2-5',
         image: 'gpt-image-2.5',
         audio: 'seed-audio-1.0',
         stt: 'doubao-asr-bigmodel',

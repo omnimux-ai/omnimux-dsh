@@ -6,56 +6,86 @@
       "productId": "claude-opus-4-6",
       "kind": "text",
       "priority": "P0",
-      "gatewayIds": ["claude-opus-4-6"],
-      "requiredInAuto": true
+      "gatewayIds": [
+        "claude-opus-4-6"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "gemini-3.8-flash",
       "kind": "text",
       "priority": "P0",
-      "gatewayIds": ["gemini-3.8-flash"],
+      "gatewayIds": [
+        "gemini-3.8-flash"
+      ],
       "requiredInAuto": true
     },
     {
       "productId": "deepseek-v4-flash",
       "kind": "text",
       "priority": "P0",
-      "gatewayIds": ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
-      "requiredInAuto": true
+      "gatewayIds": [
+        "deepseek-v4-flash",
+        "deepseek-v4-flash-vision-exp"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "gpt-5.5",
       "kind": "text",
       "priority": "P0",
-      "gatewayIds": ["gpt-5.5"],
-      "requiredInAuto": true
+      "gatewayIds": [
+        "gpt-5.5"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "gpt-image-2.5",
       "kind": "image",
       "priority": "P0",
-      "gatewayIds": ["gpt-image-2.5"],
+      "gatewayIds": [
+        "gpt-image-2.5"
+      ],
       "requiredInAuto": true
     },
     {
       "productId": "gpt-image-2.5-flare",
       "kind": "image",
       "priority": "P1",
-      "gatewayIds": ["gpt-image-2.5-flare"],
-      "requiredInAuto": true
+      "gatewayIds": [
+        "gpt-image-2.5-flare"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "gpt-image-2.5-sunburst",
       "kind": "image",
       "priority": "P1",
-      "gatewayIds": ["gpt-image-2.5-sunburst"],
-      "requiredInAuto": true
+      "gatewayIds": [
+        "gpt-image-2.5-sunburst"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "grok-imagine-image-2-0",
       "kind": "image",
       "priority": "P1",
-      "gatewayIds": ["grok-imagine-image-2-0", "grok-imagine-image-2", "grok-imagine-image", "grok-imagine-image-2.0"],
+      "gatewayIds": [
+        "grok-imagine-image-2-0",
+        "grok-imagine-image-2",
+        "grok-imagine-image",
+        "grok-imagine-image-2.0"
+      ],
       "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-14 #1751：上游两份独立清单零命中，已由已就绪降为已登记（无 listed 操作），不再是自动调度必需项；登记保留承载历史别名归一。"
@@ -64,7 +94,10 @@
       "productId": "seedance-2-0",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["seedance-2-0", "seedance-2.0"],
+      "gatewayIds": [
+        "seedance-2-0",
+        "seedance-2.0"
+      ],
       "upstreamWireId": "seedance-2.0",
       "requiredInAuto": true
     },
@@ -72,23 +105,36 @@
       "productId": "seedance-2-0-fast",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["seedance-2-0-fast", "seedance-2.0-fast"],
+      "gatewayIds": [
+        "seedance-2-0-fast",
+        "seedance-2.0-fast"
+      ],
       "upstreamWireId": "seedance-2.0-fast",
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "seedance-2-0-mini",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["seedance-2-0-mini", "seedance-2.0-mini"],
+      "gatewayIds": [
+        "seedance-2-0-mini",
+        "seedance-2.0-mini"
+      ],
       "upstreamWireId": "seedance-2.0-mini",
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "seedance-2-5",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["seedance-2-5", "seedance-2.5"],
+      "gatewayIds": [
+        "seedance-2-5",
+        "seedance-2.5"
+      ],
       "upstreamWireId": "seedance-2.5",
       "requiredInAuto": true
     },
@@ -96,15 +142,23 @@
       "productId": "wan-3.0",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["wan-3.0", "wan3.0-video"],
+      "gatewayIds": [
+        "wan-3.0",
+        "wan3.0-video"
+      ],
       "upstreamWireId": "wan3.0-video",
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "minimax-h3",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["minimax-h3", "MiniMax-H3"],
+      "gatewayIds": [
+        "minimax-h3",
+        "MiniMax-H3"
+      ],
       "upstreamWireId": "MiniMax-H3",
       "requiredInAuto": true
     },
@@ -112,30 +166,44 @@
       "productId": "grok-imagine-video-1-5",
       "kind": "video",
       "priority": "P0",
-      "gatewayIds": ["grok-imagine-video-1-5", "grok-imagine-video-1.5"],
+      "gatewayIds": [
+        "grok-imagine-video-1-5",
+        "grok-imagine-video-1.5"
+      ],
       "upstreamWireId": "grok-imagine-video-1.5",
-      "requiredInAuto": true
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
       "productId": "seed-audio-1.0",
       "kind": "audio",
       "priority": "P0",
-      "gatewayIds": ["seed-audio-1.0", "doubao-seed-audio-1.0", "seed-audio"],
+      "gatewayIds": [
+        "seed-audio-1.0",
+        "doubao-seed-audio-1.0",
+        "seed-audio"
+      ],
       "requiredInAuto": true
     },
     {
       "productId": "suno",
       "kind": "audio",
       "priority": "P1",
-      "gatewayIds": ["suno"],
+      "gatewayIds": [
+        "suno"
+      ],
       "requiredInAuto": false,
-      "note": "No listed audio operation; registration is not a serving claim."
+      "note": "No listed audio operation; registration is not a serving claim.",
+      "canvasExcluded": true
     },
     {
       "productId": "gpt-4o-mini-tts",
       "kind": "audio",
       "priority": "P1",
-      "gatewayIds": ["gpt-4o-mini-tts"],
+      "gatewayIds": [
+        "gpt-4o-mini-tts"
+      ],
       "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "No listed audio operation; registration is not a serving claim. canvasExcluded: draft+stub 无 listed 操作，不得出现在画布白名单里。"
@@ -144,7 +212,9 @@
       "productId": "seedasr-auc",
       "kind": "audio",
       "priority": "P1",
-      "gatewayIds": ["seedasr-auc"],
+      "gatewayIds": [
+        "seedasr-auc"
+      ],
       "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "2026-09-14 #1789：独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），以独立 canonical 登记；speech_to_text 产出 text，不属于任何画布产出桶，故 canvasExcluded。登记只声明网关注册名，不改变默认语音识别型号（仍为 doubao-asr-bigmodel，见 catalog-defaults.json）。"
