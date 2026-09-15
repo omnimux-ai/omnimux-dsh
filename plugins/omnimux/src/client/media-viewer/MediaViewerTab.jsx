@@ -387,7 +387,16 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                       role="button"
                       tabIndex={0}
                     >
-                      <img src={group.items[0].url} alt={group.items[0].title || '图片'} />
+                      {group.items[0].type === 'video' ? (
+                        <video
+                          src={group.items[0].url ? `${group.items[0].url}#t=0.001` : ''}
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img src={group.items[0].url} alt={group.items[0].title || '图片'} />
+                      )}
                     </div>
                   ) : (
                     <div className="omx-mv-timeline__row">
@@ -399,7 +408,16 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                           role="button"
                           tabIndex={0}
                         >
-                          <img src={it.url} alt={it.title || '图片'} />
+                          {it.type === 'video' ? (
+                            <video
+                              src={it.url ? `${it.url}#t=0.001` : ''}
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                          ) : (
+                            <img src={it.url} alt={it.title || '图片'} />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -442,13 +460,20 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                         title={item.title || '切换图片'}
                       >
                         {item.type === 'video' ? (
-                          <video
-                            src={item.url ? `${item.url}#t=0.001` : ''}
-                            className="omx-mv-thumbnails-rail__img"
-                            muted
-                            preload="metadata"
-                            playsInline
-                          />
+                          <>
+                            <video
+                              src={item.url ? `${item.url}#t=0.001` : ''}
+                              className="omx-mv-thumbnails-rail__img"
+                              muted
+                              preload="metadata"
+                              playsInline
+                            />
+                            <div className="omx-mv-thumbnails-rail__play-icon" title="视频素材">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="6 3 20 12 6 21 6 3" />
+                              </svg>
+                            </div>
+                          </>
                         ) : (
                           <img
                             src={item.url}

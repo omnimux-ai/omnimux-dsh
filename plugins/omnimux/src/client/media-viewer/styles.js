@@ -413,6 +413,25 @@ export const MEDIA_VIEWER_CSS = `
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+}
+
+.omx-mv-thumbnails-rail__play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-base);
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-primary);
+  pointer-events: none;
+  border: 1px solid var(--dsw-alias-border-l3);
 }
 
 .omx-mv-thumbnails-rail__badge {
@@ -474,7 +493,8 @@ export const MEDIA_VIEWER_CSS = `
   outline-offset: -1px;
 }
 
-.omx-mv-timeline__card-single img {
+.omx-mv-timeline__card-single img,
+.omx-mv-timeline__card-single video {
   width: 100%;
   height: 270px;
   object-fit: cover;
@@ -506,7 +526,8 @@ export const MEDIA_VIEWER_CSS = `
   transform: translateY(-2px);
 }
 
-.omx-mv-timeline__card-multi img {
+.omx-mv-timeline__card-multi img,
+.omx-mv-timeline__card-multi video {
   width: 100%;
   height: 100%;
   object-fit: cover;
