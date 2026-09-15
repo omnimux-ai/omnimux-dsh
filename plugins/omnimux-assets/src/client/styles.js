@@ -325,10 +325,12 @@ export const ASSETS_CSS = `
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   border: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-secondary);
-  opacity: 0.72;
+  opacity: 0;
   transition: opacity 0.15s ease, color 0.15s ease;
 }
+/* 悬停卡片才浮现；键盘进入卡片或聚焦按钮时同样可见，不牺牲可达性。 */
 .omnimux-assets-card:hover .omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card:focus-within .omnimux-assets-card-corner .omnimux-assets-reveal,
 .omnimux-assets-card-corner .omnimux-assets-reveal:hover,
 .omnimux-assets-card-corner .omnimux-assets-reveal:focus-visible {
   opacity: 1;

@@ -85,5 +85,11 @@ describe('Asset reveal surface', () => {
     assert.match(stylesJs, /\.omnimux-assets-card-corner \{[\s\S]*?position: absolute;[\s\S]*?z-index: 2;/)
     assert.match(stylesJs, /\.omnimux-assets-card-corner \.omnimux-assets-badge \{\s*position: static;/)
     assert.match(stylesJs, /\.omnimux-assets-card-corner \.omnimux-assets-reveal/)
+    // Hidden until the card is hovered, and reachable by keyboard without hover.
+    assert.match(stylesJs, /\.omnimux-assets-card-corner \.omnimux-assets-reveal:active \{[\s\S]*?opacity: 0;/)
+    assert.match(
+      stylesJs,
+      /\.omnimux-assets-card:hover \.omnimux-assets-card-corner \.omnimux-assets-reveal,\s*\n\.omnimux-assets-card:focus-within \.omnimux-assets-card-corner \.omnimux-assets-reveal,[\s\S]*?opacity: 1;/,
+    )
   })
 })
