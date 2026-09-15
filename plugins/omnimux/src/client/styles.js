@@ -211,7 +211,8 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 /* Accounts and Inspiration already inset their entire content root by 20px. */
 :is(.omnimux-assets-stage, .omnimux-products-stage, .omnimux-publish-stage,
     .omnimux-analytics-stage, .omnimux-workflow-library-page)
-  > [role="separator"][aria-orientation="horizontal"] {
+  > [role="separator"][aria-orientation="horizontal"],
+.omnimux-products-list-view > [role="separator"][aria-orientation="horizontal"] {
   width: auto;
   margin-inline: 20px;
 }

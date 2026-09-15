@@ -87,7 +87,6 @@ export const ANALYTICS_CSS = `
   height: 44px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.16));
 }
 .omnimux-analytics-filterbar {
   width: 100%;

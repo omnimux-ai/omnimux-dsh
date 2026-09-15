@@ -26,6 +26,10 @@ export const PRODUCTS_CSS = `
   flex-direction: column;
   overflow: hidden;
 }
+.omnimux-products-list-view > [role="separator"][aria-orientation="horizontal"] {
+  width: auto;
+  margin-inline: 20px;
+}
 
 /* Link import bar: one quiet row above the product name.
    The row reuses the kit's InputField / Button as-is — the bar owns only the

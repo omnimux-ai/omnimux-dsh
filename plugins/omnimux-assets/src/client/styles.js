@@ -43,7 +43,7 @@ export const ASSETS_CSS = `
    one's so the two rows cannot drift apart. */
 .omnimux-assets-local-nav {
   flex: none;
-  padding: 0 24px 10px;
+  padding: 12px 24px 10px;
 }
 .omnimux-assets-local-nav-row {
   display: flex;
