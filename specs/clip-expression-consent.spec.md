@@ -7,8 +7,9 @@ opening, recovering, previewing, or exporting a project must not execute its cus
 JavaScript until the local user explicitly allows that exact expression. Preserve
 the native editor, serialized expressions, built-in procedural presets, and normal
 custom expressions after consent. The user authorized implementation on 2026-09-15;
-no additional requirements approval is needed. Public disclosure/remote delivery
-is pending the private-first SECURITY.md decision. UI merge requires demonstration.
+no additional requirements approval is needed. After the recorded demonstration,
+the user's "立即合入" instruction authorizes the public Issue/PR and UI merge for
+these two fixes. Required checks and independent review remain mandatory.
 
 ## Capability map and scope
 
@@ -46,6 +47,9 @@ provider calls, and upstream vendor updates are out of scope.
 - Evidence: `docs/evidence/clip-expression-consent/` and task `.agent-reports/`.
 - Use existing TypeScript annotations, double quotes, semicolons, and native
   controls/design tokens. No new dependency or parallel editor.
+- Remove the redundant export-code background override reported by CI. Reuse the
+  already selected syntax-highlighter theme so its existing background and text
+  contrast remain unchanged; verify the export window in the native browser.
 - Package tests: `pnpm --filter omnimux-clip test`.
 - Client build: `pnpm --filter omnimux-clip build`.
 - Native browser regression: `node plugins/omnimux-clip/test/e2e/expression-consent.spec.mjs`.
@@ -79,8 +83,8 @@ provider calls, and upstream vendor updates are out of scope.
 
 - Always: synthetic inputs, isolated task worktree, exact-file evidence, source
   preservation, native editor reuse, retained reports, independent review.
-- Ask: public disclosure/PR versus private patch, and UI demonstration approval
-  before merge. Do not repeat authorization for local fixes or tests.
+- Public delivery and the demonstrated UI are approved in Issue #1930's task.
+  Do not repeat those approvals. Pause only for new boundaries or missing checks.
 - Never: mutate shared Dev/production or another workspace, bypass gates, persist
   trust in JSON, execute real malicious operations, or silently drop user code.
 
