@@ -4,10 +4,11 @@ import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
+import { getGlobalShadowContextStore } from '../reference/shadow-context.ts'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
-export function reconcileAttachmentDraft(draft, previous, attachments) {
-  const block = buildAttachedContextBlock(attachments)
+export function reconcileAttachmentDraft(draft, previous, attachments, sessionId) {
+  const block = buildAttachedContextBlock(attachments, sessionId)
   if (previous) {
     const index = draft.indexOf(previous)
     const end = index + previous.length
@@ -147,7 +148,7 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       }
 
       if (!draft.trim() && !attachments.length) return true
-      const result = reconcileAttachmentDraft(draft, previous, attachments)
+      const result = reconcileAttachmentDraft(draft, previous, attachments, sessionId)
       const attachmentsChanged = result.status === 'synced'
       if (result.status === 'ready' && result.draft !== value.draft) result.status = 'synced'
       if (result.status === 'edited') {
@@ -166,8 +167,13 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       } catch { setNotice('unavailable') }
       return false
     }
-    const arm = () => attachmentAdmission.arm(sessionId, live.current.input.draft,
-      attachmentStore.getSnapshot(sessionId), attachmentDrafts.get(sessionId))
+    const arm = () => {
+      try {
+        getGlobalShadowContextStore().consume(sessionId)
+      } catch {}
+      attachmentAdmission.arm(sessionId, live.current.input.draft,
+        attachmentStore.getSnapshot(sessionId), attachmentDrafts.get(sessionId))
+    }
     const pointer = event => {
       if (!belongs(event.target) || !send(event.target)) return
       blockedPointer = !check()

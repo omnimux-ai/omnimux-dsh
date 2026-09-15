@@ -197,7 +197,34 @@ function sendPayloadToConversation(payload, io = {}) {
   const win = io.window || (typeof window !== 'undefined' ? window : undefined)
   if (!win) return { ok: false, error: 'no-window' }
 
-  // 1. 展开/露出中间会话栏
+  // 1. 优先通过全局统一引用服务 (Unified Reference Hub) 投递
+  const refApi = win.__omnimuxReference
+  if (refApi && typeof refApi.deliver === 'function') {
+    try {
+      const unifiedRef = {
+        id: String(payload.entityId || ''),
+        source: 'asset',
+        title: String(payload.title || '资产'),
+        kind: payload.kind || 'asset',
+        file: {
+          relativePath: payload.relativePath || '',
+          previewUrl: payload.previewUrl || '',
+          extension: payload.extension || 'ASSET',
+        },
+        context: {
+          scene: 'general',
+          summary: payload.title,
+          metadata: payload.metadata,
+        },
+      }
+      refApi.deliver(unifiedRef)
+      return { ok: true, payload }
+    } catch {
+      // 出现异常降级走既有通道
+    }
+  }
+
+  // 2. 展开/露出中间会话栏
   const wb = win.__omnimuxWorkbench
   if (wb) {
     if (typeof wb.setConversationCollapsed === 'function') {
@@ -208,7 +235,7 @@ function sendPayloadToConversation(payload, io = {}) {
     }
   }
 
-  // 2. 优先调用 window.__omnimuxAttachments?.addAttachment?.('', payload)
+  // 3. 优先调用 window.__omnimuxAttachments?.addAttachment?.('', payload)
   const store = win.__omnimuxAttachments
   let addResult = null
   if (store && typeof store.addAttachment === 'function') {
@@ -219,7 +246,7 @@ function sendPayloadToConversation(payload, io = {}) {
     }
   }
 
-  // 3. 同时派发全局 window.dispatchEvent(new CustomEvent('omnimux:add-to-conversation', { detail: payload }))
+  // 4. 同时派发全局 window.dispatchEvent(new CustomEvent('omnimux:add-to-conversation', { detail: payload }))
   try {
     if (typeof win.dispatchEvent === 'function') {
       const Evt = io.CustomEvent || (typeof CustomEvent !== 'undefined' ? CustomEvent : null)

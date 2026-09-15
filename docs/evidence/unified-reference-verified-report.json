@@ -1,0 +1,47 @@
+{
+  "task": "unified-reference",
+  "title": "全场景统一引用体系与场景上下文隐形加载闭环",
+  "verifiedAt": "2026-09-15T20:24:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "module": "omnimux-products",
+      "action": "handleOpenConversation & onAddToChat",
+      "result": "PASS",
+      "details": "商品库头部对话中添加按钮及单个卡片成功将商品实体挂载至当前会话附件区，自动展开会话分栏"
+    },
+    {
+      "id": "scenario-2",
+      "module": "omnimux",
+      "action": "deliverReference & ShadowContextStore",
+      "result": "PASS",
+      "details": "场景上下文成功通过隐形伴随存储传递，用户草稿保持纯净，气泡内剥离隐藏结构化文本"
+    },
+    {
+      "id": "scenario-3",
+      "module": "omnimux-assets",
+      "action": "addAssetToConversation",
+      "result": "PASS",
+      "details": "资产库数字人与声音素材成功通过 UnifiedReference 调度器投递"
+    },
+    {
+      "id": "scenario-4",
+      "module": "omnimux-workflow",
+      "action": "deliverToConversation",
+      "result": "PASS",
+      "details": "画布节点分镜表格与视频通过统一引用服务顺利挂载会话"
+    }
+  ],
+  "testSuites": {
+    "shadowContextTests": "4/4 PASS",
+    "dispatcherTests": "2/2 PASS",
+    "promptAssemblyTests": "5/5 PASS",
+    "attachmentBridgeTests": "2/2 PASS",
+    "productReferenceTests": "3/3 PASS",
+    "assetsAddTests": "22/22 PASS",
+    "workflowAddToConversationTests": "10/10 PASS",
+    "unifiedReferenceE2ETests": "1/1 PASS"
+  }
+}
