@@ -26,7 +26,6 @@ import {
   Pause,
   X,
   RotateCcw,
-  Share2,
 } from 'lucide-react';
 import { useExecutionStore, type ExecutionUiStatus } from '../../store/executionStore';
 import { useT, type DictKey } from '../../i18n';
@@ -45,7 +44,6 @@ export interface HeaderControlsProps {
   onResumeExecution?: () => void;
   onCancelExecution?: () => void;
   onResetExecution?: () => void;
-  onOpenPublish?: () => void;
 }
 
 const STATUS_LABEL_KEYS: Record<ExecutionUiStatus, DictKey> = {
@@ -70,7 +68,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onResumeExecution,
   onCancelExecution,
   onResetExecution,
-  onOpenPublish,
 }) => {
   const t = useT();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -245,19 +242,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
         >
           <Map size={15} />
         </button>
-
-        {onOpenPublish && (
-          <button
-            type="button"
-            className={`wf-header-capsule__btn ${busy || paused ? 'wf-header-capsule__btn--disabled' : ''}`}
-            onClick={onOpenPublish}
-            disabled={busy || paused}
-            title="发布为 AI 应用"
-            aria-label="发布为 AI 应用"
-          >
-            <Share2 size={15} />
-          </button>
-        )}
 
         {onLayoutModeChange && (
           <>

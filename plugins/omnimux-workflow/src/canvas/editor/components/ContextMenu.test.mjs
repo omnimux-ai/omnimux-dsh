@@ -67,3 +67,29 @@ test('useCanvasContextMenu 契约：未传特定 node 时支持单选与多选�
     'delete 动作必须最终触发 deleteSelectedNodes',
   );
 });
+
+test('ContextMenu 契约：pane 与 selection 模式在 paste 项上方必须包含 create-workflow 项', () => {
+  // 1. 验证 pane 菜单片段在 paste 上方包含 create-workflow
+  const paneBlock = contextMenuSrc.slice(contextMenuSrc.indexOf('const paneItems: MenuItemSpec[]'));
+  const paneCreateIdx = paneBlock.indexOf("{ action: 'create-workflow', label: t('menu.createWorkflow')");
+  const panePasteIdx = paneBlock.indexOf("{ action: 'paste', label: t('menu.paste')");
+  assert.ok(paneCreateIdx > 0, 'pane 菜单必须包含 create-workflow');
+  assert.ok(panePasteIdx > paneCreateIdx, 'pane 菜单的 create-workflow 必须位于 paste 上方');
+
+  // 2. 验证 selection 菜单片段在 paste 上方包含 create-workflow
+  const selBlock = contextMenuSrc.slice(
+    contextMenuSrc.indexOf("if (context.type === 'selection')"),
+    contextMenuSrc.indexOf('const paneItems: MenuItemSpec[]'),
+  );
+  const selCreateIdx = selBlock.indexOf("{ action: 'create-workflow', label: t('menu.createWorkflow'), shortcut: '⌘G'");
+  const selPasteIdx = selBlock.indexOf("{ action: 'paste', label: t('menu.paste')");
+  assert.ok(selCreateIdx > 0, 'selection 菜单必须包含 create-workflow 并带有 ⌘G 快捷键提示');
+  assert.ok(selPasteIdx > selCreateIdx, 'selection 菜单的 create-workflow 必须位于 paste 上方');
+
+  // 3. 验证 useCanvasContextMenu 支持响应 create-workflow 并调用 onCreateWorkflow
+  assert.match(
+    useCanvasContextMenuSrc,
+    /case\s+'create-workflow':\s*\{\s*onCreateWorkflow\?\.\(flowPosition\);/s,
+    'useCanvasContextMenu 必须派发 onCreateWorkflow(flowPosition)',
+  );
+});

@@ -199,6 +199,12 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [targetGroupForPublish, setTargetGroupForPublish] = useState<{
+    id: string;
+    title: string;
+    nodes: Node[];
+    edges: Edge[];
+  } | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [assetsCategoryIndex, setAssetsCategoryIndex] = useState<number | undefined>(undefined);
@@ -353,6 +359,54 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     }
   }, [selectedRegularNodes, groupNodes, t]);
 
+  const handleCreateWorkflowFromMenu = useCallback(
+    (position: { x: number; y: number }) => {
+      const topLevelNodes = selectedRegularNodes.filter((n) => !n.parentId);
+      if (topLevelNodes.length >= 2) {
+        handleGroupSelected();
+        return;
+      }
+
+      // 空白画布或单节点右键：在当前鼠标坐标处创建空工作流组容器
+      const existingGroups = nodes.filter((n) => n.type === 'group');
+      const groupTitle = `工作流-${existingGroups.length + 1}`;
+      const groupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const width = 640;
+      const height = 360;
+      const newGroupNode = {
+        id: groupId,
+        type: 'group',
+        position: { x: position.x, y: position.y },
+        width,
+        height,
+        selected: true,
+        style: {
+          width,
+          height,
+          zIndex: 0,
+        },
+        data: {
+          title: groupTitle,
+          color: '',
+          isCollapsed: false,
+          expandedBounds: { width, height },
+          minWidth: 260,
+          minHeight: 120,
+          padding: 32,
+          nodeIds: [],
+        },
+      };
+
+      setNodes((current) => [
+        ...current.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        newGroupNode as never,
+      ]);
+      setSelectedElement('node', groupId);
+      toast.success(t('group.toast.grouped'));
+    },
+    [nodes, selectedRegularNodes, handleGroupSelected, setNodes, setSelectedElement, t],
+  );
+
   const handleAlignLayout = useCallback(
     (layoutType: 'horizontal' | 'vertical' | 'grid', targetNodes = selectedRegularNodes) => {
       if (targetNodes.length < 2) return;
@@ -452,16 +506,52 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       setCreateWorkflowModalOpen(true);
     };
 
+    const handlePublishAppEvent = (e: Event) => {
+      const customEvt = e as CustomEvent<{ groupId: string; groupTitle: string }>;
+      const { groupId, groupTitle } = customEvt.detail;
+      const childIds = new Set(childIdsOfGroup(nodes, groupId));
+      const childNodes = nodes.filter((n) => childIds.has(n.id));
+      const childEdges = edges.filter((edge) => childIds.has(edge.source) && childIds.has(edge.target));
+      if (childNodes.length === 0) {
+        toast.warning(t('group.toast.emptyWarn'));
+        return;
+      }
+      setTargetGroupForPublish({
+        id: groupId,
+        title: groupTitle || t('template.modal.defaultName'),
+        nodes: childNodes,
+        edges: childEdges,
+      });
+      setIsPublishModalOpen(true);
+    };
+
+    const handleDeleteGroupEvent = (e: Event) => {
+      const customEvt = e as CustomEvent<{ groupId: string; groupTitle: string }>;
+      const { groupId, groupTitle } = customEvt.detail;
+      const confirmMsg = t('group.deleteConfirm').replace('{name}', groupTitle || groupId);
+      if (typeof window !== 'undefined' && !window.confirm(confirmMsg)) {
+        return;
+      }
+      const childIds = new Set(childIdsOfGroup(nodes, groupId));
+      const removeNodeIds = [groupId, ...Array.from(childIds)];
+      applyCanvasInputMutation({ removeNodeIds });
+      toast.success(t('group.toast.deleted'));
+    };
+
     window.addEventListener('omnimux:workflow:execute-group', handleExecuteGroupEvent);
     window.addEventListener('omnimux:workflow:layout-group', handleLayoutGroupEvent);
     window.addEventListener('omnimux:workflow:batch-create-asset', handleBatchAssetEvent);
     window.addEventListener('omnimux:workflow:create-subworkflow', handleCreateSubworkflowEvent);
+    window.addEventListener('omnimux:workflow:publish-app', handlePublishAppEvent);
+    window.addEventListener('omnimux:workflow:delete-group', handleDeleteGroupEvent);
 
     return () => {
       window.removeEventListener('omnimux:workflow:execute-group', handleExecuteGroupEvent);
       window.removeEventListener('omnimux:workflow:layout-group', handleLayoutGroupEvent);
       window.removeEventListener('omnimux:workflow:batch-create-asset', handleBatchAssetEvent);
       window.removeEventListener('omnimux:workflow:create-subworkflow', handleCreateSubworkflowEvent);
+      window.removeEventListener('omnimux:workflow:publish-app', handlePublishAppEvent);
+      window.removeEventListener('omnimux:workflow:delete-group', handleDeleteGroupEvent);
     };
   }, [nodes, onExecuteNodeIds, handleAlignLayout, t]);
 
@@ -625,6 +715,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     redo,
     onExecuteNodeIds,
     onAddNode: handleAddNode,
+    onCreateWorkflow: handleCreateWorkflowFromMenu,
   });
 
   // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
@@ -822,7 +913,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onResumeExecution={onResumeExecution}
         onCancelExecution={onCancelExecution}
         onResetExecution={onResetExecution}
-        onOpenPublish={() => setIsPublishModalOpen(true)}
       />
 
       {/* 浮动小地图 Popover */}
@@ -873,12 +963,16 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onClose={() => setIsShortcutsOpen(false)}
       />
 
-      {/* 发布为 AI 应用向导弹窗 */}
+      {/* 发布为 AI 应用向导弹窗 (精准收敛至工作流打组) */}
       <PublishWizardModal
         isOpen={isPublishModalOpen}
-        onClose={() => setIsPublishModalOpen(false)}
-        nodes={nodes}
-        edges={edges}
+        onClose={() => {
+          setIsPublishModalOpen(false);
+          setTargetGroupForPublish(null);
+        }}
+        nodes={targetGroupForPublish ? targetGroupForPublish.nodes : nodes}
+        edges={targetGroupForPublish ? targetGroupForPublish.edges : edges}
+        workflowName={targetGroupForPublish?.title}
         catalog={catalog}
         workspaceId={workspaceId}
       />
