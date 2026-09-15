@@ -64,4 +64,16 @@ test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证'
     stylesContent.includes("var(--dsw-alias-border-l4)"),
     '产品库主体 padding 必须收敛为 0 以保证与顶层 24px 左对齐基准线严格吻合'
   )
+
+  // 5. 验证空状态已彻底移除重复操作按钮且侧边栏不再注册产品库
+  const productsIndexPath = path.join(root, 'plugins/omnimux-products/src/client/index.js')
+  const productsIndexContent = fs.readFileSync(productsIndexPath, 'utf-8')
+  assert.ok(
+    !productsViewContent.includes('<CreateProductMenu'),
+    'ProductsView 空状态中必须移除 CreateProductMenu 按钮，避免遮挡'
+  )
+  assert.ok(
+    !productsIndexContent.includes('mountSidebarEntry'),
+    'omnimux-products 客户端入口不得再注册独立的侧边栏入口'
+  )
 })
