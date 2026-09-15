@@ -41,7 +41,6 @@ export interface HeaderControlsProps {
   onAlignGrid?: () => void;
   layoutMode?: SplitLayoutMode;
   onLayoutModeChange?: (mode: SplitLayoutMode) => void;
-  onStartExecution?: () => void;
   onPauseExecution?: () => void;
   onResumeExecution?: () => void;
   onCancelExecution?: () => void;
@@ -67,7 +66,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onAlignGrid,
   layoutMode = 'split-left',
   onLayoutModeChange,
-  onStartExecution,
   onPauseExecution,
   onResumeExecution,
   onCancelExecution,
@@ -128,84 +126,66 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
       onPointerDown={stopToolbarNativeEvent}
       onMouseDown={stopToolbarNativeEvent}
     >
-      {/* 1. 执行控制（闲态为独立的纯圆按钮；执行/终态时展开为状态胶囊） */}
-      {onStartExecution && (
-        busy || paused || (terminal && onResetExecution) ? (
-          <div
-            className={`wf-header-capsule wf-header-capsule--exec ${
-              busy || paused ? 'wf-header-capsule--busy' : 'wf-header-capsule--terminal'
-            }`}
-          >
-            {busy || paused ? (
-              <>
-                <span className={`wf-header-capsule__status-pill wf-header-capsule__status-pill--${status}`}>
-                  {t(STATUS_LABEL_KEYS[status])}
-                  {hasProgress && ` (${progress.completed}/${progress.total})`}
-                </span>
+      {/* 1. 执行控制（闲态不提供全画布一键运行；仅在执行中或终态时展示状态胶囊） */}
+      {(busy || paused || (terminal && onResetExecution)) && (
+        <div
+          className={`wf-header-capsule wf-header-capsule--exec ${
+            busy || paused ? 'wf-header-capsule--busy' : 'wf-header-capsule--terminal'
+          }`}
+        >
+          {busy || paused ? (
+            <>
+              <span className={`wf-header-capsule__status-pill wf-header-capsule__status-pill--${status}`}>
+                {t(STATUS_LABEL_KEYS[status])}
+                {hasProgress && ` (${progress.completed}/${progress.total})`}
+              </span>
 
-                {busy ? (
-                  <button
-                    type="button"
-                    className="wf-header-capsule__btn"
-                    onClick={onPauseExecution}
-                    title={t('exec.pauseTitle')}
-                  >
-                    <Pause size={14} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="wf-header-capsule__btn wf-header-capsule__btn--active"
-                    onClick={onResumeExecution}
-                    title={t('exec.resumeTitle')}
-                  >
-                    <Play size={14} />
-                  </button>
-                )}
-
+              {busy ? (
                 <button
                   type="button"
-                  className="wf-header-capsule__btn wf-header-capsule__btn--danger"
-                  onClick={onCancelExecution}
-                  title={t('exec.cancelTitle')}
+                  className="wf-header-capsule__btn"
+                  onClick={onPauseExecution}
+                  title={t('exec.pauseTitle')}
                 >
-                  <X size={14} />
+                  <Pause size={14} />
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="wf-header-capsule__btn wf-header-capsule__btn--run-all"
-                onClick={onStartExecution}
-                title={error ? error : t('exec.runAll')}
-                aria-label={t('exec.runAll')}
-              >
-                <Play size={14} fill="currentColor" style={{ marginLeft: 2 }} />
-              </button>
-            )}
+              ) : (
+                <button
+                  type="button"
+                  className="wf-header-capsule__btn wf-header-capsule__btn--active"
+                  onClick={onResumeExecution}
+                  title={t('exec.resumeTitle')}
+                >
+                  <Play size={14} />
+                </button>
+              )}
 
-            {terminal && onResetExecution && (
               <button
                 type="button"
-                className="wf-header-capsule__btn"
-                onClick={onResetExecution}
-                title={t('exec.resetTitle')}
+                className="wf-header-capsule__btn wf-header-capsule__btn--danger"
+                onClick={onCancelExecution}
+                title={t('exec.cancelTitle')}
               >
-                <RotateCcw size={14} />
+                <X size={14} />
               </button>
-            )}
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="wf-header-capsule wf-header-capsule--exec-standalone"
-            onClick={onStartExecution}
-            title={error ? error : t('exec.runAll')}
-            aria-label={t('exec.runAll')}
-          >
-            <Play size={14} fill="currentColor" style={{ marginLeft: 2 }} />
-          </button>
-        )
+            </>
+          ) : (
+            <span className={`wf-header-capsule__status-pill wf-header-capsule__status-pill--${status}`}>
+              {t(STATUS_LABEL_KEYS[status])}
+            </span>
+          )}
+
+          {terminal && onResetExecution && (
+            <button
+              type="button"
+              className="wf-header-capsule__btn"
+              onClick={onResetExecution}
+              title={t('exec.resetTitle')}
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+        </div>
       )}
 
       {/* 2. 视口与缩放胶囊 */}

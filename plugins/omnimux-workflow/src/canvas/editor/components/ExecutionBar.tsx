@@ -21,7 +21,7 @@ const STATUS_LABEL_KEYS: Record<ExecutionUiStatus, DictKey> = {
 };
 
 export interface ExecutionBarProps {
-  onStart: () => void;
+  onStart?: () => void;
   onPause: () => void;
   onResume: () => void;
   onCancel: () => void;
@@ -78,17 +78,7 @@ const ExecutionBar: React.FC<ExecutionBarProps> = ({ onStart, onPause, onResume,
             {t('exec.cancel')}
           </button>
         </>
-      ) : (
-        <button
-          type="button"
-          className="wf-exec-bar__button wf-exec-bar__button--primary"
-          onClick={onStart}
-          title={t('exec.runAllTitle')}
-        >
-          <Play size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-          {t('exec.runAll')}
-        </button>
-      )}
+      ) : null}
 
       {terminal ? (
         <button type="button" className="wf-exec-bar__button wf-exec-bar__button--ghost" onClick={onReset} title={t('exec.resetTitle')}>

@@ -145,7 +145,6 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId })
               // M4 组/子集执行入口（右键菜单）：subset 模式自动补传递上游闭包。
               void execution.startExecution({ mode: 'subset', nodeIds });
             }}
-            onStartExecution={() => void execution.startExecution({ mode: 'full' })}
             onPauseExecution={() => void execution.pause()}
             onResumeExecution={() => void execution.resume()}
             onCancelExecution={() => void execution.cancel()}

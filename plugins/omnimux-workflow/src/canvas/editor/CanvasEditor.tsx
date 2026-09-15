@@ -160,7 +160,6 @@ interface CanvasEditorProps {
    * （subset 模式：nodeIds + 传递上游闭包，由 host 解析）。
    */
   onExecuteNodeIds?: (nodeIds: string[]) => void;
-  onStartExecution?: () => void;
   onPauseExecution?: () => void;
   onResumeExecution?: () => void;
   onCancelExecution?: () => void;
@@ -172,7 +171,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   catalog,
   workspaceId,
   onExecuteNodeIds,
-  onStartExecution,
   onPauseExecution,
   onResumeExecution,
   onCancelExecution,
@@ -820,7 +818,6 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         isMinimapOpen={isMinimapOpen}
         onToggleMinimap={() => setIsMinimapOpen((prev) => !prev)}
         onAlignGrid={handleAlignGrid}
-        onStartExecution={onStartExecution}
         onPauseExecution={onPauseExecution}
         onResumeExecution={onResumeExecution}
         onCancelExecution={onCancelExecution}
