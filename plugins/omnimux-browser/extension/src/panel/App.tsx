@@ -1156,8 +1156,12 @@ export function App(): React.JSX.Element {
         } else if (e.data.type === 'MEDIA_SNIFFED_RESULT') {
           setDetectedMedia(e.data.payload || [])
         } else if (e.data.type === 'MEDIA_ATTACH_REQUEST') {
-          const payload = readHoveredMedia(e.data.payload)
-          if (payload !== null) void attachHoveredMedia(payload)
+          // The runtime owns the user-selected URL; page messages carry no payload authority.
+          if (typeof e.data.grant !== 'string') return
+          void chrome.runtime.sendMessage({ type: 'TAKE_FLOAT_MEDIA_GRANT', grant: e.data.grant }).then((result) => {
+            const payload = readHoveredMedia(result?.media)
+            if (payload !== null) void attachHoveredMediaRef.current(payload)
+          }).catch(() => {})
         }
       }
       window.addEventListener('message', handleMessage)
@@ -2306,28 +2310,13 @@ export function App(): React.JSX.Element {
 
   const handleFillDraft = async (fields: DraftField[]): Promise<{ ok: boolean; message?: string }> => {
     if (window.parent && window.parent !== window) {
-      return new Promise((resolve) => {
-        const onMessage = (e: MessageEvent) => {
-          if (e.data?.type === 'FILL_STRUCTURED_DRAFT_RESULT') {
-            window.removeEventListener('message', onMessage)
-            const res = e.data.payload
-            resolve(res || { ok: false, message: '未收到有效响应' })
-          } else if (e.data?.type === 'FILL_HOST_DOM_RESULT') {
-            window.removeEventListener('message', onMessage)
-            const res = e.data.payload
-            resolve({ ok: Boolean(res?.success), message: res?.message })
-          }
-        }
-        window.addEventListener('message', onMessage)
-        window.parent.postMessage({
-          type: 'FILL_STRUCTURED_DRAFT',
-          fields,
-        }, '*')
-        setTimeout(() => {
-          window.removeEventListener('message', onMessage)
-          resolve({ ok: false, message: '填写超时' })
-        }, 5000)
-      })
+      try {
+        return await chrome.runtime.sendMessage({
+          type: 'FILL_FLOAT_STRUCTURED_DRAFT', payload: { fields },
+        }) ?? { ok: false, message: '未收到有效响应' }
+      } catch {
+        return { ok: false, message: '页面暂时无法填写' }
+      }
     }
 
     const targetTabId = tabAffinity?.active?.tabId ?? tabAffinity?.controlled?.tabId

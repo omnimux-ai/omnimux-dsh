@@ -1,0 +1,19 @@
+{
+  "before": {
+    "colW": 1446,
+    "cardW": 780,
+    "cardLpad": 333,
+    "cardRpad": 333,
+    "maxW": "min(780px, 100% - 24px)",
+    "starter": true
+  },
+  "after": {
+    "colW": 1446,
+    "cardW": 952,
+    "cardLpad": 247,
+    "cardRpad": 247,
+    "maxW": "952px",
+    "starter": true
+  },
+  "verdict": "INCONCLUSIVE"
+}

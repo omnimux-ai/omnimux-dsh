@@ -1065,6 +1065,37 @@ export const ASSETS_CSS = `
   height: 164px;
   aspect-ratio: auto;
 }
+/* 首次加载的骨架卡：占位几何与真卡片逐字对齐——同一个 164px 缩略图高度、同一行
+   标题高度，因此数据到达时卡片在原位换成真图，不产生任何高度跳动。
+   动效只用一次克制的透明度呼吸，跟随主题 token，深浅色下都读得清。 */
+.omnimux-assets-cloud-skeleton {
+  pointer-events: none;
+}
+.omnimux-assets-cloud-skeleton-thumb {
+  height: 164px;
+  border-radius: 10px;
+  background-color: var(--dsw-alias-bg-elevated);
+  animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
+}
+.omnimux-assets-cloud-skeleton-line {
+  height: 14px;
+  margin-top: 10px;
+  width: 60%;
+  border-radius: 6px;
+  background-color: var(--dsw-alias-bg-elevated);
+  animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
+}
+@keyframes omnimux-assets-skeleton-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-assets-cloud-skeleton-thumb,
+  .omnimux-assets-cloud-skeleton-line {
+    animation: none;
+    opacity: 0.6;
+  }
+}
 /* 声音：一块暗调微彩底板，正中间一个居中的播放/暂停键，点一下即播即停。
    底板不画任何波形、刻度或跳动条——一排音色卡片同时出现细密竖线会变成视觉噪点，
    行与行的区别只交给颜色本身，整块面板因此保持干净。

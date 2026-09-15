@@ -53,6 +53,8 @@ export function initFabCompanion(): void {
   const shadow = host.attachShadow({ mode: 'open' })
   const iconUrl = chrome.runtime.getURL('assets/icons/icon48.png')
   const panelUrl = chrome.runtime.getURL('panel/index.html?mode=float')
+  const parsedPanelUrl = new URL(panelUrl)
+  const panelOrigin = `${parsedPanelUrl.protocol}//${parsedPanelUrl.host}`
 
   shadow.innerHTML = `
     <style>
@@ -298,7 +300,7 @@ export function initFabCompanion(): void {
           type: 'PAGE_CONTEXT_UPDATE',
           payload,
           timestamp: Date.now(),
-        }, '*')
+        }, panelOrigin)
       }
 
       // 2. 主动广播给 Chrome 原生侧边栏 / 扩展后台
@@ -338,18 +340,19 @@ export function initFabCompanion(): void {
         resolve(false)
       }, TIMING.attachReceiptTimeout)
       pending.set(payload.id, { resolve, timer })
-      try {
+      void chrome.runtime.sendMessage({ type: 'ISSUE_FLOAT_MEDIA_GRANT', payload }).then((result) => {
+        if (typeof result?.grant !== 'string') throw new Error('media grant refused')
         iframe.contentWindow?.postMessage({
           source: CONTENT_MESSAGE_SOURCE,
           type: BRIDGE_MESSAGE.mediaAttachRequest,
-          payload,
+          grant: result.grant,
           timestamp: Date.now(),
-        }, '*')
-      } catch {
+        }, panelOrigin)
+      }).catch(() => {
         clearTimeout(timer)
         pending.delete(payload.id)
         resolve(false)
-      }
+      })
     })
   }
 
@@ -458,6 +461,7 @@ export function initFabCompanion(): void {
 
   // Listen for messages from workstation iframe
   const handleMessage = async (e: MessageEvent) => {
+    if (e.source !== iframe.contentWindow || e.origin !== panelOrigin) return
     if (!e.data || typeof e.data !== 'object') return
     const { type, text } = e.data
 
@@ -482,7 +486,7 @@ export function initFabCompanion(): void {
         source: 'omnimux-content-script',
         type: 'MEDIA_SNIFFED_RESULT',
         payload: media,
-      }, '*')
+      }, panelOrigin)
       return
     }
 
@@ -497,8 +501,9 @@ export function initFabCompanion(): void {
       iframe.contentWindow?.postMessage({
         source: 'omnimux-content-script',
         type: 'FILL_STRUCTURED_DRAFT_RESULT',
+        requestId: e.data.requestId,
         payload: result,
-      }, '*')
+      }, panelOrigin)
       return
     }
 
@@ -508,8 +513,9 @@ export function initFabCompanion(): void {
       iframe.contentWindow?.postMessage({
         source: 'omnimux-content-script',
         type: 'FILL_HOST_DOM_RESULT',
+        requestId: e.data.requestId,
         payload: result,
-      }, '*')
+      }, panelOrigin)
       return
     }
   }

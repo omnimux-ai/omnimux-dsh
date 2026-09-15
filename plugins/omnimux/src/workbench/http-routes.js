@@ -4,7 +4,7 @@
  * - POST /omnimux/workbench/rpc/ack (RPC acknowledgement)
  */
 
-import { assertLocalWrite } from '../apps/origin.js'
+import { requestRejection } from '../host/request-authorization.js'
 import { readJsonBody, sendJson } from '../auth/http-routes.js'
 
 export function isLocalRequest(req) {
@@ -46,12 +46,8 @@ export function registerWorkbenchHttpRoutes(webServer, deps) {
         return
       }
 
-      try {
-        assertLocalWrite(req)
-      } catch {
-        sendJson(res, 403, { ok: false, error: 'not-local' })
-        return
-      }
+      const rejection = requestRejection(req, deps.getConnection)
+      if (rejection !== undefined) return sendJson(res, rejection, { ok: false, error: 'request-denied' })
 
       const body = await readJsonBody(req)
       if (!body) {
@@ -74,12 +70,8 @@ export function registerWorkbenchHttpRoutes(webServer, deps) {
         return
       }
 
-      try {
-        assertLocalWrite(req)
-      } catch {
-        sendJson(res, 403, { ok: false, error: 'not-local' })
-        return
-      }
+      const rejection = requestRejection(req, deps.getConnection)
+      if (rejection !== undefined) return sendJson(res, rejection, { ok: false, error: 'request-denied' })
 
       const body = await readJsonBody(req)
       if (!body) {

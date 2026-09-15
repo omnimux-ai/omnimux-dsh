@@ -248,6 +248,11 @@ function mountBridge(
     },
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
+    completeText: async (request) => {
+      const service = ctx.get('textComplete') as { execute?: (input: typeof request) => Promise<unknown> } | undefined
+      if (typeof service?.execute !== 'function') throw new Error('Text completion service unavailable')
+      return service.execute(request)
+    },
   })
 
   const route: WebUpgradeRoute = {
