@@ -105,7 +105,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 21, 'H2 lists evidence-backed ops');
+  assert.equal(cov.listedOperationCount, 23, 'H2 lists evidence-backed ops');
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
   assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
@@ -155,7 +155,7 @@ test('verifyContracts: audit ok; strict ok once 78 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 78);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 21);
+  assert.equal(strict.listedOperations.length, 23);
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

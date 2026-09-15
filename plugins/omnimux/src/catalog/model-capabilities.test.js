@@ -65,7 +65,7 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 21);
+  assert.equal(index.listedOperations.length, 23);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
@@ -75,9 +75,9 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
   // gpt-image-2.5 的 multi_reference 仍是 draft/stub，不得上架
   assert.ok(!index.listedOperations.includes('gpt-image-2.5#multi_reference'));
   assert.ok(index.listedOperations.includes('gpt-image-2.5#text_to_image'));
-  // flare 与 sunburst 仅登记不上架
-  assert.ok(!index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
-  assert.ok(!index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
+  // flare 与 sunburst 在售开放
+  assert.ok(index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
+  assert.ok(index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
   assert.ok(index.listedOperations.includes('seed-audio-1.0#text_to_speech'));
   // Existing draft audio models remain unlisted.
   assert.ok(!index.listedOperations.some((key) => key.startsWith('suno#')));

@@ -36,7 +36,7 @@ const dictZhSrc = readFileSync(dictZhPath, 'utf8');
 
 /** 真实 Hub 目录 → 真实客户端目录接缝，与产品运行时读取的是同一条链路。 */
 const ASR_MODELS = ['doubao-asr-bigmodel', 'seedasr-auc'];
-const CHAT_MODELS = ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5'];
+const CHAT_MODELS = ['gemini-3.8-flash'];
 
 function canvasCatalog() {
   const body = buildModelCatalog({ env: {} });
