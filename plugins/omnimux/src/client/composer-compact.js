@@ -53,20 +53,83 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
 /* The card and workspace row share a cap; the input bar owns side clearance. */
 [data-composer-card]{
   width:100%!important;
-  max-width:var(--dsh-chat-content-width)!important;
-  margin-left:auto!important;
-  margin-right:auto!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
   box-sizing:border-box!important;
 }
 [data-composer-seat]{
   box-sizing:border-box!important;
+  padding-bottom:12px!important;
+  padding-top:12px!important;
 }
 [data-composer-seat] [class*="composerStack"]{
-  width:100%!important;
+  width:calc(100% - 24px)!important;
   min-width:0;
-  margin-left:auto!important;
-  margin-right:auto!important;
+  margin-left:12px!important;
+  margin-right:12px!important;
   box-sizing:border-box!important;
+}
+[data-phase='hero'] [class*="root"][class*="hero"]{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+
+/* 非全屏（分屏）模式下，迎宾区靠左上角对齐排布 */
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"],
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"]{
+  justify-content:flex-start!important;
+  padding-top:24px!important;
+}
+.dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child,
+[class*="frame"]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] > :first-child{
+  margin-top:0!important;
+  margin-bottom:auto!important;
+  align-self:flex-start!important;
+  padding-left:16px!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+}
+
+/* 迎宾打招呼头部样式 */
+.omnimux-welcome-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:16px;
+  user-select:none;
+}
+.omnimux-welcome-logo{
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  flex-shrink:0;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.omnimux-welcome-logo svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.omnimux-welcome-texts{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.omnimux-welcome-title{
+  font-size:20px;
+  font-weight:600;
+  line-height:26px;
+  color:var(--dsw-alias-label-primary, currentColor);
+  letter-spacing:-0.2px;
+}
+.omnimux-welcome-subtitle{
+  font-size:13px;
+  line-height:18px;
+  color:var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
 }
 
 /* (B1) hero (no session yet): the whole stack is what the official scrollBody
