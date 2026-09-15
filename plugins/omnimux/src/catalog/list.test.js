@@ -63,7 +63,11 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     }
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), [
+      'gpt-image-2.5',
+      'gpt-image-2.5-flare',
+      'gpt-image-2.5-sunburst',
+    ])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
     assert.equal(imageRow.subtitle, '1k-4k')

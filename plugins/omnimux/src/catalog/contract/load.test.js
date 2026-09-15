@@ -40,7 +40,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 21);
+  assert.equal(index.listedOperations.length, 23);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #1789: the ASR pair are two independent models; neither declares the other as an alias.
   assert.ok(index.listedOperations.includes('seedasr-auc#speech_to_text'));

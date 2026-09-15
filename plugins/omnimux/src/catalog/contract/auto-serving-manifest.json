@@ -61,9 +61,7 @@
       "gatewayIds": [
         "gpt-image-2.5-flare"
       ],
-      "requiredInAuto": false,
-      "canvasExcluded": true,
-      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
+      "requiredInAuto": true
     },
     {
       "productId": "gpt-image-2.5-sunburst",
@@ -72,9 +70,7 @@
       "gatewayIds": [
         "gpt-image-2.5-sunburst"
       ],
-      "requiredInAuto": false,
-      "canvasExcluded": true,
-      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
+      "requiredInAuto": true
     },
     {
       "productId": "grok-imagine-image-2-0",
