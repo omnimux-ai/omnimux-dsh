@@ -143,6 +143,7 @@ export async function pollOpenAiMediaTask(options) {
  *   providerId: string,
  *   modelId: string,
  *   capability: string,
+ *   group?: string,
  *   poll?: typeof pollOpenAiMediaTask,
  *   onSubmitted?: (taskId: string) => void,
  * }} options
@@ -150,6 +151,7 @@ export async function pollOpenAiMediaTask(options) {
 export function createOpenAiMediaRuntime(options) {
   const fetcher = options.fetcher ?? fetch
   const capability = options.capability
+  const routing = withRoutingGroup(fetcher, options.group)
   const endpoint = TASK_PATH[capability]
   if (!endpoint) {
     throw new OmnimuxError('unknown-protocol', `openai-media has no endpoint for ${capability}`)
@@ -158,7 +160,7 @@ export function createOpenAiMediaRuntime(options) {
     baseUrl: options.baseUrl,
     apiKey: options.apiKey,
     fetcher: async (...args) => {
-      const response = await fetcher(...args)
+      const response = await routing.fetcher(...args)
       // runtime-kit keeps only error.message; classify code-only envelopes first.
       if (!response.ok && typeof response.clone === 'function') {
         let body
@@ -229,7 +231,7 @@ export function createOpenAiMediaRuntime(options) {
         }
       }
       const done = await poll({
-        fetcher,
+        fetcher: routing.fetcher,
         baseUrl: options.baseUrl,
         apiKey: options.apiKey,
         taskId,
@@ -255,4 +257,28 @@ export function createOpenAiMediaRuntime(options) {
     registry,
     adapters: [adapter],
   })
+}
+
+/**
+ * Bind a channel group to every request the runtime makes.
+ *
+ * The gateway resolves its pool from `X-Omnimux-Group`; the request body must
+ * keep the bare upstream model id, so the group never reaches `model`. With no
+ * group the fetcher passes through untouched — a request without routing intent
+ * must not gain a header.
+ *
+ * @param {typeof fetch} fetcher
+ * @param {unknown} group
+ * @returns {{ fetcher: typeof fetch }}
+ */
+export function withRoutingGroup(fetcher, group) {
+  const wireGroup = typeof group === 'string' ? group.trim() : ''
+  if (!wireGroup) return { fetcher }
+  return {
+    fetcher: (input, init) => {
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+      headers.set('X-Omnimux-Group', wireGroup)
+      return fetcher(input, { ...init, headers })
+    },
+  }
 }
