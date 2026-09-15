@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { lateReadyRegression, frozenInputRegression } from './test-support/generation-feedback-regressions.mjs';
+import { lateReadyRegression, frozenInputRegression } from '../../../test-support/generation-feedback/generation-feedback-regressions.mjs';
 
 // Bridge contract regressions are explicitly separate from the real-browser journey.
 test('bridge regression: late single request consumes retained turn end', () => lateReadyRegression(false));
@@ -23,7 +23,7 @@ test('generation feedback: real browser transport-to-viewer journeys', async (t)
   const evidence = resolve(root, '.agent-reports/canvas-generation-feedback/e2e-runs', randomUUID());
   await mkdir(evidence, { recursive: true });
   t.diagnostic(`retained evidence: ${evidence}`);
-  const moduleUrl = new URL('./test-support/generation-feedback-browser.mjs', import.meta.url).href;
+  const moduleUrl = new URL('../../../test-support/generation-feedback/generation-feedback-browser.mjs', import.meta.url).href;
   const script = `const { runGenerationFeedbackBrowser } = await import(${JSON.stringify(moduleUrl)});
 await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)});`;
   const { NODE_TEST_CONTEXT: _testContext, ...env } = process.env;

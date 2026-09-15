@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const root = resolve(here, '../../../../../..');
+export const root = resolve(here, '../../../..');
 const require = createRequire(resolve(root, 'plugins/omnimux/package.json'));
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -33,7 +33,7 @@ export async function startFixture() {
     window.onerror = (message, source, lineno, colno, error) => { window.qaBoot.errors.push({message: String(message), stack: error?.stack||''}); };
     window.onunhandledrejection = (e) => { window.qaBoot.errors.push({message: String(e.reason), stack: e.reason?.stack||''}); };
     </script><script type="module" src="/fixture.js"></script></html>`;
-  const videoPath = 'plugins/omnimux/src/client/media-viewer/test-support/fixture-video.mp4';
+  const videoPath = 'plugins/omnimux/test-support/generation-feedback/fixture-video.mp4';
   const video = await readFile(resolve(root, videoPath));
   sourceHashes[videoPath] = hash(video);
   const videoResponse = JSON.stringify({ ok: true, value: { offset: 0, eof: true, bytes: video.length, data: video.toString('base64') } });

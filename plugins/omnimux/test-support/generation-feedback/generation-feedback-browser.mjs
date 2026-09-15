@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startFixture } from './generation-feedback-server.mjs';
-import { assertPng } from '../../../../../../scripts/worktree-web-qa.mjs';
+import { assertPng } from '../../../../scripts/worktree-web-qa.mjs';
 
 /** Runs only inside ego-browser nodejs; never launches an alternative browser. */
 export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir) {
