@@ -74,6 +74,7 @@
 | `pnpm test:ui` | 扫描 511 个客户端视图源文件，UI01~UI10 违规 0 |
 | `plugins/omnimux/src/client/shared-tabs-dividers.e2e.test.js` | 4/4 通过（含「数据分析看板移除下方重复分割线」） |
 | 未跑全仓 `pnpm test` | 改动面仅单插件源码 + 规格 + 单插件测试；已跑目标插件套件与受影响门禁 |
+| PR #1873 required check（Static L0 QA & Tests） | pass（1m48s） |
 
 ## 7. 对共享规范 AC-4 的处理
 

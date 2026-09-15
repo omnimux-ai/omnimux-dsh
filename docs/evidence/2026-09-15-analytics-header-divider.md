@@ -48,6 +48,7 @@
 | `pnpm test:ui` | 511 个源文件，违规 0 |
 | `plugins/omnimux/src/client/shared-tabs-dividers.e2e.test.js` | 4/4 通过 |
 | 新测红绿（`analytics-stage-divider.test.js` + `analytics-header-divider.e2e.test.js`） | 红：回退源码后合计 6 条中 4 条失败；绿：还原后 6/6 通过 |
+| PR #1873 required check（Static L0 QA & Tests） | pass（1m48s） |
 
 新增测试说明：`analytics-stage-divider.test.js` 用 react-dom/server 渲染真实 stage 断言元素顺序；`analytics-header-divider.e2e.test.js` 把真实 stage 打成浏览器包后用本机 headless Chrome 打开临时页面，断言子元素顺序为 `PageHeader → separator → action-row → filter`、分割线 1px 高且贯通 stage 全宽、两侧净空 8~28px、筛选栏 `border-bottom` 为 0/none。临时目录随测自清理。
 
