@@ -32,6 +32,7 @@ import { fetchSocialData } from './social-data.js'
  * @param {{
  *   hub: { official: { mount: boolean }, gate?: object },
  *   gate?: object,
+ *   accountMetaStore: { readForAuthorization: () => Record<string, Record<string, unknown>> },
  *   identity: { require: Function },
  *   store: { resolve: () => Promise<string | undefined> },
  *   siteBaseUrl: string,
@@ -148,11 +149,11 @@ export function mountOfficial(ctx, deps) {
     'Create a social post via OmniMux. Requires OmniMux sign-in. Not a scheduling calendar.',
     {
       provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true },
-      account_ids: { type: 'array' },
+      account_ids: { type: 'array', required: true, items: { type: 'string' } },
       content: { type: 'string' },
       media_items: { type: 'array' },
     },
-    (args) => createPost(client, args),
+    (args) => createPost(client, args, deps.accountMetaStore),
   )
   tool(
     'omnimux_publish_get',

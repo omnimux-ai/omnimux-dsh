@@ -34,7 +34,7 @@ export function mergeMeta(row, meta) {
  * File-backed map of account id → { group?, agent_usable?, last_used_at?, updated_at }.
  * Same write discipline as the avatar store and the apps catalog cache:
  * 0o700 directory, 0o600 file, whole-document rewrite. A missing or corrupt
- * file is treated as an empty document.
+ * file is empty for presentation; authorization and writes reject corrupt data.
  * @param {{ home: string, now?: () => string }} deps
  */
 export function createAccountMetaStore(deps) {
@@ -45,16 +45,24 @@ export function createAccountMetaStore(deps) {
   /**
    * @returns {Record<string, Record<string, unknown>>}
    */
-  function readAll() {
+  function readForAuthorization() {
+    let raw
     try {
-      const raw = JSON.parse(readFileSync(path, 'utf8'))
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        return /** @type {Record<string, Record<string, unknown>>} */ (raw)
-      }
-    } catch {
-      // absent or corrupt — treat as empty
+      raw = JSON.parse(readFileSync(path, 'utf8'))
+    } catch (error) {
+      if (error?.code === 'ENOENT') return {}
+      throw new Error('account-policy-unavailable: cannot read account permissions', { cause: error })
     }
-    return {}
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.values(raw).some((row) =>
+      !row || typeof row !== 'object' || Array.isArray(row) ||
+      (Object.hasOwn(row, 'agent_usable') && typeof row.agent_usable !== 'boolean'))) {
+      throw new Error('account-policy-unavailable: invalid account permissions')
+    }
+    return raw
+  }
+
+  function readAll() {
+    try { return readForAuthorization() } catch { return {} }
   }
 
   /**
@@ -82,7 +90,7 @@ export function createAccountMetaStore(deps) {
    * @returns {Record<string, unknown>}
    */
   function update(id, patch) {
-    const doc = readAll()
+    const doc = readForAuthorization()
     const current = doc[id] && typeof doc[id] === 'object' && !Array.isArray(doc[id])
       ? { ...doc[id] }
       : {}
@@ -113,11 +121,11 @@ export function createAccountMetaStore(deps) {
    * @param {string} id
    */
   function remove(id) {
-    const doc = readAll()
+    const doc = readForAuthorization()
     if (!(id in doc)) return
     delete doc[id]
     writeAll(doc)
   }
 
-  return { read, update, remove, path }
+  return { read, readForAuthorization, update, remove, path }
 }
