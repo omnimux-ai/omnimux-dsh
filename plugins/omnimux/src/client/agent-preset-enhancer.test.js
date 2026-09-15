@@ -171,19 +171,30 @@ function flush() {
 describe('agent preset avatars', () => {
   it('resolves one stable face per expert, from either the id or the rendered name', () => {
     const byName = resolveAgentPresetAvatar('全能社媒操盘手')
-    const byId = resolveAgentPresetAvatar('tiktok-agent')
+    const byId = resolveAgentPresetAvatar('omni-agent')
 
-    assert.equal(byName.id, 'tiktok-agent')
+    assert.equal(byName.id, 'omni-agent')
     assert.equal(byName.src, byId.src, 'the localized name and the id must resolve to one face')
-    assert.equal(resolveAgentPresetAvatar('tiktok-agent').src, byId.src, 'resolution must be deterministic')
+    assert.equal(resolveAgentPresetAvatar('omni-agent').src, byId.src, 'resolution must be deterministic')
     assert.match(byId.src, /^data:image\/svg\+xml/, 'pixel avatar renders a percent-encoded SVG data URI')
-    assert.equal(byName.src, generatePixelAvatarDataUrl('tiktok-agent', { size: MENU_AVATAR_SIZE_PX }), 'matches market pixel avatar generator')
+    assert.equal(byName.src, generatePixelAvatarDataUrl('omni-agent', { size: MENU_AVATAR_SIZE_PX }), 'matches market pixel avatar generator')
     assert.equal(resolveAgentPresetAvatar(''), null)
     assert.equal(resolveAgentPresetAvatar('   '), null)
   })
 
   it('gives every known expert a distinct avatar', () => {
-    const ids = ['tiktok-agent', 'software-company', 'standard', 'cordis', 'html-generator', 'superpowers-zh', 'ptc', 'minimal']
+    const ids = [
+      'omni-agent',
+      'marketing-agent',
+      'drama-agent',
+      'software-company',
+      'standard',
+      'cordis',
+      'html-generator',
+      'superpowers-zh',
+      'ptc',
+      'minimal',
+    ]
     assert.deepEqual(Object.keys(AGENT_PRESET_AVATARS).sort(), [...ids, 'daily-work'].sort())
 
     const sources = new Set(ids.map((id) => resolveAgentPresetAvatar(id).src))
@@ -228,15 +239,15 @@ describe('agent preset avatars', () => {
     assert.ok(avatar, 'the chip must carry an injected avatar')
     assert.equal(avatar.getAttribute('width'), String(SEAT_AVATAR_SIZE_PX))
     assert.equal(avatar.getAttribute('height'), String(SEAT_AVATAR_SIZE_PX))
-    assert.equal(avatar.getAttribute('src'), resolveAgentPresetAvatar('tiktok-agent', { size: SEAT_AVATAR_SIZE_PX }).src)
-    assert.equal(avatar.getAttribute(PRESET_ID_ATTR), 'tiktok-agent')
-    assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent')
+    assert.equal(avatar.getAttribute('src'), resolveAgentPresetAvatar('omni-agent', { size: SEAT_AVATAR_SIZE_PX }).src)
+    assert.equal(avatar.getAttribute(PRESET_ID_ATTR), 'omni-agent')
+    assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'omni-agent')
     assert.equal(seat.firstElementChild, avatar, 'the avatar leads the chip, before the label')
     assert.ok(seat.querySelector('[class*="seatIcon"]').hasAttribute(PRESET_ICON_HIDDEN_ATTR), 'the outline glyph yields')
     assert.equal(seatLabelText(seat), '全能社媒操盘手', 'the label itself is untouched')
 
     const again = applyAgentPresetAvatars(doc)
-    assert.deepEqual(again, { seat: { id: 'tiktok-agent', label: '全能社媒操盘手' }, items: 0 })
+    assert.deepEqual(again, { seat: { id: 'omni-agent', label: '全能社媒操盘手' }, items: 0 })
     await flush()
     assert.equal(seat.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 1, 'a re-pass must not duplicate the avatar')
   })
@@ -278,7 +289,7 @@ describe('agent preset avatars', () => {
       assert.equal(row.querySelector('[class*="itemName"]').textContent.length > 0, true)
     }
 
-    assert.deepEqual(rows.map((row) => row.getAttribute(PRESET_ITEM_ATTR)), ['tiktok-agent', 'software-company', 'standard'])
+    assert.deepEqual(rows.map((row) => row.getAttribute(PRESET_ITEM_ATTR)), ['omni-agent', 'software-company', 'standard'])
     const sources = new Set(rows.map((row) => row.querySelector(`img.${PRESET_MENU_AVATAR_CLASS}`).getAttribute('src')))
     assert.equal(sources.size, 3, 'each row shows its own expert')
 
@@ -374,7 +385,7 @@ describe('agent preset avatar lifecycle', () => {
 
     const seat = findAgentPresetSeat(doc)
     assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 1, 'the live install keeps its avatar')
-    assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent', 'the live install keeps its marker')
+    assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'omni-agent', 'the live install keeps its marker')
 
     seat.querySelector('[class*="seatLabel"]').textContent = '软件开发团队'
     await flush()
@@ -459,7 +470,7 @@ describe('agent preset avatar lifecycle', () => {
     assert.equal(doc.querySelectorAll(`img.${PRESET_MENU_AVATAR_CLASS}`).length, 0, 'a foreign menu is never decorated')
     assert.equal(doc.querySelectorAll(`[${PRESET_MENU_ATTR}]`).length, 0, 'a foreign menu is never marked')
     assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 1, 'the chip keeps its avatar')
-    assert.equal(findAgentPresetSeat(doc).getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent', 'the chip keeps its marker')
+    assert.equal(findAgentPresetSeat(doc).getAttribute(PRESET_SEAT_ATTR), 'omni-agent', 'the chip keeps its marker')
     assert.equal(findAgentPresetSeat(doc).querySelector('[class*="seatIcon"]').hasAttribute(PRESET_ICON_HIDDEN_ATTR), true)
   })
 

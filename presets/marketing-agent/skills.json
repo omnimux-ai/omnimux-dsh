@@ -1,0 +1,80 @@
+{
+  "presetId": "marketing-agent",
+  "name": "全能营销操盘手",
+  "description": "全能营销操盘手专属技能与分类集",
+  "categories": [
+    { "id": "广告创意", "name": "广告创意" },
+    { "id": "转化文案", "name": "转化文案" },
+    { "id": "视觉设计", "name": "视觉设计" },
+    { "id": "投放增长", "name": "投放增长" },
+    { "id": "数据洞察", "name": "数据洞察" }
+  ],
+  "skills": [
+    {
+      "id": "sk-mkt-ad-format",
+      "slug": "ad-creative-strategist",
+      "skill": "ad-creative-strategist",
+      "name": "96款广告格式与Hook匹配",
+      "title": "96款广告格式与Hook匹配",
+      "category": "广告创意",
+      "description": "根据产品与受众特征，精准匹配业界 96 款广告格式与 75 款开场黄金 Hook，输出高转化创意脚本。",
+      "summary": "根据产品与受众特征，精准匹配业界 96 款广告格式与 75 款开场黄金 Hook，输出高转化创意脚本。",
+      "installed": true
+    },
+    {
+      "id": "sk-mkt-product-extract",
+      "slug": "product-selling-points",
+      "skill": "product-selling-points",
+      "name": "商品卖点与痛点反推",
+      "title": "商品卖点与痛点反推",
+      "category": "广告创意",
+      "description": "深度解析商品详情页与素材，提炼 3 大核心卖点、目标受众画像与差异化使用场景。",
+      "summary": "深度解析商品详情页与素材，提炼 3 大核心卖点、目标受众画像与差异化使用场景。",
+      "installed": true
+    },
+    {
+      "id": "sk-mkt-conversion-copy",
+      "slug": "ecommerce-copywriter",
+      "skill": "ecommerce-copywriter",
+      "name": "电商高转化文案与落地页",
+      "title": "电商高转化文案与落地页",
+      "category": "转化文案",
+      "description": "基于 AIDA 与 FAB 模型，撰写高点击广告标题、社媒 Caption 与落地页转化文案。",
+      "summary": "基于 AIDA 与 FAB 模型，撰写高点击广告标题、社媒 Caption 与落地页转化文案。",
+      "installed": true
+    },
+    {
+      "id": "sk-mkt-carousel-visual",
+      "slug": "carousel-content-growth-expert",
+      "skill": "carousel-content-growth-expert",
+      "name": "高转化 4:5 轮播图设计",
+      "title": "高转化 4:5 轮播图设计",
+      "category": "视觉设计",
+      "description": "规划并生成 6~8 页高连贯性图文轮播卡片，首图预留大标题抓手，尾页引导转化收藏。",
+      "summary": "规划并生成 6~8 页高连贯性图文轮播卡片，首图预留大标题抓手，尾页引导转化收藏。",
+      "installed": true
+    },
+    {
+      "id": "sk-mkt-growth-testing",
+      "slug": "growth-hacker",
+      "skill": "growth-hacker",
+      "name": "广告素材 A/B 测试实验",
+      "title": "广告素材 A/B 测试实验",
+      "category": "投放增长",
+      "description": "制定多版本创意、文案与定向 A/B 测试实验矩阵，测算最小样本置信度与放量策略。",
+      "summary": "制定多版本创意、文案与定向 A/B 测试实验矩阵，测算最小样本置信度与放量策略。",
+      "installed": true
+    },
+    {
+      "id": "sk-mkt-roi-analytics",
+      "slug": "ad-tracking-analytics",
+      "skill": "ad-tracking-analytics",
+      "name": "全链路 ROI 测算与素材归因",
+      "title": "全链路 ROI 测算与素材归因",
+      "category": "数据洞察",
+      "description": "分析完播率、CTR、CVR 与 ROAS 数据漏斗，定位优质素材特征并输出归因复盘报告。",
+      "summary": "分析完播率、CTR、CVR 与 ROAS 数据漏斗，定位优质素材特征并输出归因复盘报告。",
+      "installed": true
+    }
+  ]
+}

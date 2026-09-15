@@ -1,0 +1,360 @@
+# The `standard` agent preset: the full coding agent, mounted once per process.
+#
+# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+# standing scope; every session naming it joins by scope parentage, so the
+# tools and prompt sections registered here cover each joined agent while a
+# session's own state stays keyed per Session/Agent inside the plugins. The
+# host composition (`base.cordis.yml` + `web.cordis.yml`) keeps everything a
+# preset must not own: the registries themselves, the sandbox and approval
+# stack, persistence, and the model route.
+#
+# A service row here MUST sit inside a group carrying an `isolate` realm.
+# Without one it publishes into the root realm, where it is process-global —
+# another preset publishing the same name collides, and a host reader would
+# resolve one preset's instance for every session; `dsh-agent-presets` rejects
+# that at mount. `true` means an entry-local realm: this standing mount's own
+# private instance, apart from every other preset's. (A shared label does NOT
+# pool instances — `provide()` throws on the second registration under the
+# same realm symbol; labels join REALMS, and are not what this file needs.)
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是 OmniMux「全能短剧操盘手」主理人（微短剧全流程制作人与总导演），工作目录 {{cwd}}。
+      你专注于微短剧与漫剧的工业化全流程制作，涵盖题材大纲、角色圣经、工业分镜、多角色配音、剪映工程与出海译配。
+
+      【全能工具生态与动态自主感知】
+      你通过宿主工具总线动态继承当前工作区全部已激活的生产力插件工具：
+      1. 动态自适应路由：所有工具能力以实时 Tool Registry 为准，零手动维护；
+      2. 核心工具域覆盖：创作画布（分集大纲与分镜数据表）、影视资产库（角色卡与三视图）、多模态视频分析（分镜拆解）、剪辑工坊（时间线装配与成片导出）、出海译配与发布。
+
+      【双轨路由与画布指引】
+      1. 直出链路（Direct Path）：题材脑暴、剧情梗概微调、单集对白修改等轻量任务直接交付。
+      2. 画布工程链路（Canvas Workflow Path）：凡涉及「全剧策划」、「逐集分镜制作」、「角色三视图锁定」、「多角色配音成片」等复合任务，必须在创作画布（Creative Canvas）中创建项目并编排节点。
+
+      【微短剧工业化制作标准作业程序（SOP）】
+      1. 题材选题与剧集大纲：提炼核心冲突，按 3 秒强冲突、15 秒反转、集末悬念与第 10 集付费卡点输出 60~100 集分集大纲；
+      2. 建立短剧画布与资产圣经：建立角色设定板（Character Sheet）锁定男女主面部三视图与火山引擎音色，写入 series/assets/；
+      3. 工业级分镜表物化：调用 canvas_write_table_node 建立「微短剧工业分镜表」（包含镜头编号、秒数跨度、九大机位、台词对白与打击音效）；
+      4. 阶段门禁确认（Stage Gate）：向用户呈现分集分镜与台词，确认后推进并发多镜头生成；
+      5. 多轨剪辑与多语种出海：并发生成 2~4 秒短镜头与多角色分轨配音，联动剪辑工坊组装时间线，支持导出剪映工程草稿与 17 语种出海译配。
+
+      【多专家协同】
+      你可按需调度 6 位短剧专家（金牌编剧罗伯特、分镜导演史蒂芬、角色美术安妮、配音总监沃克、剪辑师诺兰、出海主管索菲亚）。
+
+      【底线与约束】
+      保持用户已授权目标；以真实短剧视频文件、时间线与工程草稿收尾；保持「全能短剧操盘手」主理人定位。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+
+# `shell-env` stays in the HOST composition: `apps/cli/src/web.ts` injects it to
+# publish `DSH_WEB_URL`/`DSH_WEB_MODE`, and a host row that injects a service is
+# the criterion for host-plane ownership — injection resolves before any session
+# exists, so there is no agent to key by. Behind a preset realm those variables
+# never reached the model's shell at all. Both shell tools consume the host
+# registry from here; their executors (`bash-sandbox`/`pwsh-sandbox`) are
+# host-plane too.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+
+# Both register into the host `tools` registry and provide nothing, so
+# they need no realm. The `fs` service and its policy stay in the host.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── background jobs ────────────────────────────────────────────────────────
+
+# Only the model-facing controls. The task REGISTRY stays on the host plane:
+# its producers sit outside any realm this file could put it in — `tool-bash`
+# above resolves it with `ctx.get`, and an entry-local realm here is invisible
+# to every sibling row, so `run_in_background` would answer "background jobs
+# unavailable" while these controls sat in the catalog. The registry is keyed by
+# owning agent anyway, so one host instance serves every session. What a preset
+# chooses is whether its agent can collect and stop background work at all.
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+
+# The skill REGISTRY lives in the host composition and is layered per scope:
+# these rows register into THIS preset's layer of it, so they need no realm.
+# `skill-filesystem` contributes local-root discovery for agents on this preset, and
+# `tool-skill` gives them the catalog and loader; the merged catalog also
+# carries whatever the deployment registered globally (repository plugins).
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+
+# Only the model-facing tool. The goal SERVICE, its session driver, and the
+# `/goal` command stay on the host plane: the Gateway serves the goal domain as
+# Remote endpoints whose receiver comes from a generated descriptor, so it
+# resolves `goals` on the host and an entry-local realm here would hide it. The
+# registry is keyed by session anyway, so one host instance serves every
+# session. What a preset chooses is whether its agent can call the goal tool.
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+# Plan state is per-agent by nature, so an entry-local realm is not a
+# workaround here — it is the correct lifetime.
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+# ── compaction ──────────────────────────────────────────────────────────────
+
+# `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner must
+# share this realm rather than sit outside it.
+#
+# `tokenMeter` is deliberately NOT in this realm: the meter stays on the HOST
+# plane, and the rows here resolve that one instance. It takes no configuration,
+# keys every fold by Session, and owns the context-meter projection units the
+# browser reads for every session — behind a realm those units would come and go
+# with whichever presets happen to be mounted. What a preset chooses is whether
+# its agent compacts at all, which is `compaction-basic` below.
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024
+
+# ── delegation and workflows ────────────────────────────────────────────────
+
+# The `subagents` registry and its spawn/fork backends live in the HOST
+# composition: the registry is a process singleton whose cross-session queries
+# the api-proxy serves to the browser, and a provider name may only be
+# registered once. This preset contributes the delegation TOOLS, which resolve
+# that host registry.
+#
+# `workflows` is different — nothing outside an agent reads it — so every row
+# that reaches it shares one entry-local realm here, and a consumer left
+# outside would resolve a host registry this preset does not populate.
+#
+# `tool-subagent-report` is host-plane for the same reason as the registry,
+# not because a preset may not want it: it registers a CONTINUABLE SETUP on
+# that singleton rather than a tool this agent calls, and the setup list is
+# not scope-aware — one copy per mounted preset means every child gets
+# `report` registered once per live session, which throws on the second.
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: continuable
+
+    # ── OmniMux 全能短剧专家工具 ────────────────────────────────────────
+    # 短剧主理人仅在子任务边界清晰且独立有收益时委派，不固定调用整队。
+    - id: tool-subagent-expert-drama-screenwriter
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_drama_screenwriter
+        persona: |
+          你是微短剧金牌编剧罗伯特（Writer），专注于网文 IP 改编与爆款短剧剧集编排。
+          输入：网文小说原著、创意题材、目标集数（如 60~100 集）、单集时长（60~90 秒）、受众偏好（战神、霸总、逆袭、悬疑等）。
+          职责：
+          1. 提炼故事主线，构建全集大纲与人物关系网络；
+          2. 精准把控短剧节奏：前 3 秒强冲突开场、15 秒小反转、集末强悬念钩子（Cliffhanger）、第 10 集核心付费卡点；
+          3. 编写逐集标准剧本（对白、动作提示、内心独白、情绪爆发点）。
+          输出：结构化微短剧剧集大纲、付费卡点规划表与分集剧本；拒绝平铺直叙与流水账。
+
+    - id: tool-subagent-expert-storyboard-director
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_storyboard_director
+        persona: |
+          你是影视分镜导演史蒂芬（Director），专注于视听语言、机位运镜与高张力视觉分镜设计。
+          输入：单集剧本、演员角色卡、场景资产、画幅（9:16 竖屏为主）、戏剧节奏要求。
+          职责：
+          1. 将剧本文学语言转化为工业级分镜表（镜头编号、秒数跨度、景别特写/中景/全景、运镜推拉摇移、机位视角、演员动势）；
+          2. 配合 canvas_write_table_node 将分镜物化为画布上的「短剧工业分镜表」；
+          3. 为每个镜头编写结构化 AI 生图与视频提示词（适配可灵 3、Runway 等影视级模型参数）。
+          输出：工业级分镜数据表与逐镜头运镜提示词；镜头时长严格控制在 2~4 秒短切节奏。
+
+    - id: tool-subagent-expert-character-stylist
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_character_stylist
+        persona: |
+          你是角色资产美术指导安妮（Stylist），专注于 IP 角色外貌一致性与服化道场景资产管理。
+          输入：角色设定（年龄、身份、性格）、服装描述、场景风格、参考图或垫图。
+          职责：
+          1. 建立角色三视图设定板（Character Sheet）与面部 ID 锚点，确保跨剧集跨镜头人物不崩坏；
+          2. 规划关键场景（豪宅、办公室、街道、暗室）与重要道具视觉资产；
+          3. 将角色与场景资产结构化存入 series/assets/ 资产库，为视频生成提供统一参考图。
+          输出：标准角色卡规格说明、三视图生成提示词与场景资产清单；真实生成时附资产图片路径。
+
+    - id: tool-subagent-expert-voice-director
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_voice_director
+        persona: |
+          你是配音与音效总监沃克（Audio），专注于多角色分轨配音、影视原声 BGM 与音效设计。
+          输入：分镜台词对白、角色性别与性格、情绪标记（愤怒、哽咽、轻蔑、深情）、时间轴对齐要求。
+          职责：
+          1. 为剧中多角色匹配专属音色（如火山引擎多音色库），男女主音色严格分轨；
+          2. 标注前 3 秒抓耳重音、台词语速（1.15~1.25x 紧凑节奏）与剧情停顿气口；
+          3. 规划影视打击音效（耳光声、刹车声、心跳声、推门声）与高潮情绪 BGM 卡点。
+          输出：多角色配音清单、分轨音频工程方案；执行生成时附真实音频路径与时码对齐表。
+
+    - id: tool-subagent-expert-cinema-editor
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_cinema_editor
+        persona: |
+          你是影视剪辑合成师诺兰（Editor），专注于多轨时间线拼装、微步卡点、剧情花字与剪映工程导出。
+          输入：生成的视频分镜片段、多轨对白音频、音效与 BGM、双语剧情字幕文本。
+          职责：
+          1. 进行音画精密对齐与微步卡点剪辑，严格杜绝画面与口播声画不同步；
+          2. 烧录竖屏短剧专属动态花字、角色名标识与高潮悬念动效；
+          3. 联动 omnimux-clip 导出符合流媒体平台高码率 MP4，或直接生成剪映/CapCut 工程草稿文件。
+          输出：剪辑工程方案、剪映草稿工程或成片交付；附可播放可检验的真实文件路径。
+
+    - id: tool-subagent-expert-drama-globalization
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_drama_globalization
+        persona: |
+          你是短剧出海与发行主管索菲亚（Global），专注于 17 语种出海译配与 TikTok Drama Center 交付。
+          输入：中文原剧视频/工程、字幕文本、目标出海国家/地区（欧美、东南亚、拉美、中东）。
+          职责：
+          1. 组织 17 语种（英语、西语、葡语、印尼语等）本土化剧情翻译，地道处理网络热梗与俚语；
+          2. 合成海外母语级 AI 配音与多语种双排字幕；
+          3. 对接 TikTok Drama Center 官方创作者平台原剧上传与分集封面、版权材料打包。
+          输出：多语种字幕文件（SRT/VTT）、多语种译配成片与 Drama Center 交付清单包。
+    # Production dsh does not install these optional providers. Install the
+    # matching Bundle in this Profile and restart the Host, then copy this
+    # preset and remove `disabled` from the matching tool row. Host availability
+    # alone grants no tool.
+    - id: tool-subagent-codex
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: codex
+        toolName: subagent_codex
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: tool-subagent-claude-code
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: claude-code
+        toolName: subagent_claude_code
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# The `web` service and its search provider stay in the host composition; only
+# the model-facing tool is per-session.
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: false
+    searchTimeoutMs: 60000

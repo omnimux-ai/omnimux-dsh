@@ -85,5 +85,5 @@ test('sync-agent-presets keeps preset directories it does not own', () => {
   // Owned entries are still refreshed from the product source.
   assert.equal(existsSync(join(destination, 'standard', 'preset.yml')), true)
   assert.notEqual(readFileSync(join(destination, 'standard', 'preset.yml'), 'utf8'), 'name: stale\n')
-  assert.equal(existsSync(join(destination, 'tiktok-agent')), true)
+  assert.equal(existsSync(join(destination, 'omni-agent')), true)
 })
