@@ -55,11 +55,16 @@ for (const [method, key] of [['setTimer', 'timersSet'], ['clearTimer', 'timersCl
     return original.apply(this, args)
   }
 }
-for (const kind of ['pointermove', 'pointerover', 'mousemove']) document.addEventListener(kind, (event) => {
+const disposeDiagnostics: Array<() => void> = []
+for (const kind of ['pointermove', 'pointerover', 'mousemove']) {
+ const listener = (event: Event) => {
   const pointer = event as MouseEvent
   diagnostic.bubbles += 1
   diagnostic.lastBubble = { kind, x: pointer.clientX, y: pointer.clientY, target: (event.target as Element)?.tagName, trusted: event.isTrusted }
-})
+ }
+ document.addEventListener(kind, listener)
+ disposeDiagnostics.push(() => document.removeEventListener(kind, listener))
+}
 // This loopback fixture represents a supported social post. Override only the
 // detector's existing environment host seam; hit testing, real pointer events,
 // classification, timers, capsule and action transport remain production code.
@@ -84,12 +89,21 @@ setTimeout(() => {
   }
 }, 0)
 const pointerTrace: Array<Record<string, unknown>> = []
-for (const kind of ['pointermove', 'pointerover', 'mousemove']) document.addEventListener(kind, (event) => {
+for (const kind of ['pointermove', 'pointerover', 'mousemove']) {
+ const listener = (event: Event) => {
   const pointer = event as MouseEvent
   pointerTrace.push({ kind, trusted: event.isTrusted, x: pointer.clientX, y: pointer.clientY,
     target: (event.target as Element)?.tagName, time: Date.now() })
   if (pointerTrace.length > 20) pointerTrace.shift()
-}, { capture: true })
+ }
+ document.addEventListener(kind, listener, { capture: true })
+ disposeDiagnostics.push(() => document.removeEventListener(kind, listener, { capture: true }))
+}
+const cleanupDiagnostics = () => {
+  for (const dispose of disposeDiagnostics) dispose()
+  window.removeEventListener('pagehide', cleanupDiagnostics)
+}
+window.addEventListener('pagehide', cleanupDiagnostics, { once: true })
 Object.assign(globalThis, { __securityOverlayProbe: () => {
   const detector = (overlay as any).detector
   const img = document.querySelector('article img')!
