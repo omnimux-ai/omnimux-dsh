@@ -5,6 +5,7 @@ import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
 import { getGlobalShadowContextStore } from '../reference/shadow-context.ts'
+import { submittedAttachmentStore } from '../attachments/submittedAttachmentStore.ts'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
 export function reconcileAttachmentDraft(draft, previous, attachments, sessionId) {
@@ -153,6 +154,15 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
     }
     const arm = () => {
       try {
+        const attList = attachmentStore.getSnapshot(sessionId)
+        if (attList && attList.length > 0) {
+          submittedAttachmentStore.record(sessionId, live.current?.input?.draft || '', attList)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('omnimux:user-message-submitted', {
+              detail: { sessionId, draft: live.current?.input?.draft || '' },
+            }))
+          }
+        }
         getGlobalShadowContextStore().consume(sessionId)
       } catch {}
       attachmentAdmission.arm(sessionId, live.current.input.draft,

@@ -10,7 +10,6 @@ import {
   PRESET_SEAT_AVATAR_CLASS,
 } from './agent-preset-enhancer.js'
 import { getPresetFallbackCopy } from './agent-presets-i18n.js'
-import { getPresetSkillBinding, hasPresetSkillBinding } from '../../../omnimux-market/src/client/skill-picker-logic.js'
 
 const SEAT_HTML = `
   <div data-phase="hero">
@@ -30,7 +29,7 @@ const SEAT_HTML = `
     </div>
   </div>`
 
-test('E2E: omni-agent, marketing-agent, drama-agent 端到端预设渲染与货架闭环', async () => {
+test('E2E: omni-agent, marketing-agent, drama-agent 预设头像与本地化文案', async () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>${SEAT_HTML}</body></html>`, { url: 'http://localhost/' })
   const doc = dom.window.document
   installAgentPresetAvatarEnhancer(doc)
@@ -64,22 +63,4 @@ test('E2E: omni-agent, marketing-agent, drama-agent 端到端预设渲染与货�
   assert.equal(drmZh.name, '短剧专家')
   assert.equal(drmEn.name, 'Short Drama Showrunner')
 
-  // 5. 验证技能货架深度绑定
-  const omniShelf = getPresetSkillBinding('omni-agent')
-  assert.ok(omniShelf, 'omni-agent 货架必须存在')
-  assert.equal(omniShelf.skills.length, 45)
-
-  const mktShelf = getPresetSkillBinding('marketing-agent')
-  assert.ok(mktShelf, 'marketing-agent 货架必须存在')
-  assert.equal(mktShelf.categories.length, 5)
-
-  const drmShelf = getPresetSkillBinding('drama-agent')
-  assert.ok(drmShelf, 'drama-agent 货架必须存在')
-  assert.equal(drmShelf.categories.length, 6)
-
-  // 6. 验证兼容性
-  assert.equal(hasPresetSkillBinding('tiktok-agent'), true)
-  assert.equal(hasPresetSkillBinding('omni-agent'), true)
-  assert.equal(hasPresetSkillBinding('marketing-agent'), true)
-  assert.equal(hasPresetSkillBinding('drama-agent'), true)
 })

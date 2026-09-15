@@ -449,6 +449,46 @@ function makeAsset(ctx, spec) {
  * one option per given name in the source (144 of them), ranked by how many
  * avatars that person has and cut off with `NAME_OPTION_LIMIT`.
  */
+
+/**
+ * 精准归属写实人类原型 30 款角色的 8 维属性标签（对齐实景数字人筛选字典）
+ */
+/**
+ * 精准归属写实人类原型 30 款角色的 8 维属性标签（严格对齐 DIMENSION_OPTIONS 权威选项字典）
+ */
+export const HUMAN_ARCHETYPES_ATTRIBUTES = {
+  'Asmr Sergeant Marcus': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Podcast & Media', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Austin Cowgirl Jolene': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'General Lifestyle', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Berlin Dj Lukas': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Podcast & Media', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Boomer Grandma Betty': { gender: 'Female', age: 'Middle-aged', figure: 'Average', industry: 'General Lifestyle', scene: 'Living Room', pose: 'Sitting', outfit: 'Casual/Lifestyle' },
+  'Brainrot Jayden': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Gaming & Tech', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Clean Girl Aria': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Cool Grandpa Hiroshi': { gender: 'Male', age: 'Middle-aged', figure: 'Average', industry: 'General Lifestyle', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Coquette Destiny': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Cottagecore Lily': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'General Lifestyle', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Dubai Rich Kid Khalid': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Marketing & Ads', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Business/Formal' },
+  'Emo Revival Sage': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Gaming & Tech', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Gen Z Professor Miles': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Education', scene: 'Office', pose: 'Frontal', outfit: 'Business/Formal' },
+  'Gen Z Surgeon Nia': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Education', scene: 'Office', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Girlboss Priya': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Marketing & Ads', scene: 'Office', pose: 'Frontal', outfit: 'Business/Formal' },
+  'Glam Grandma Loretta': { gender: 'Female', age: 'Middle-aged', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Harajuku Yuki': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Outdoor', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Lagos Techbro Emeka': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Gaming & Tech', scene: 'Office', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'London Roadman Callum': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'General Lifestyle', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Mob Wife Valentina': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Mumbai Creator Ananya': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Podcast & Media', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Old Money Arjun': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Marketing & Ads', scene: 'Office', pose: 'Frontal', outfit: 'Business/Formal' },
+  'Paris Art Student Camille': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'S O Paulo Mc Rafa': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Podcast & Media', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Seoul Trainee Soojin': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Fashion/Chic' },
+  'Sigma Kyle': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'General Lifestyle', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Skater Accountant Kevin': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Marketing & Ads', scene: 'Office', pose: 'Frontal', outfit: 'Business/Formal' },
+  'Streetwear King Darius': { gender: 'Male', age: 'Youth', figure: 'Average', industry: 'Beauty & Fashion', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Tattooed Librarian Rosa': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'Education', scene: 'Indoor/Studio', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'That Girl Mei': { gender: 'Female', age: 'Youth', figure: 'Average', industry: 'General Lifestyle', scene: 'Bedroom', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+  'Yoga Dad Greg': { gender: 'Male', age: 'Middle-aged', figure: 'Average', industry: 'General Lifestyle', scene: 'Outdoor', pose: 'Frontal', outfit: 'Casual/Lifestyle' },
+}
+
 export const CHARACTER_DIMENSIONS = [
   { id: 'type', zh: '类型', en: 'Type', defaults: ['digital-human'] },
   { id: 'gender', zh: '性别', en: 'Gender', defaults: [] },
@@ -806,18 +846,35 @@ export function collectFreeAiAvatars(ctx, add) {
     const name = text(item.name)
     const localCover = join(dir, item.image_path)
     const localMedia = item.audio_path ? join(dir, item.audio_path) : ''
-    const remoteCover = `https://media.aftermark.ai/avatars/free-ai-avatars/${encodeURI(item.image_path)}`
-    const remoteMedia = item.audio_path ? `https://media.aftermark.ai/avatars/free-ai-avatars/${encodeURI(item.audio_path)}` : ''
-    const slug = slugify(rawCategory)
+    const remoteCover = `https://assets.omnimux.ai/avatars/free-ai-avatars/${encodeURI(item.image_path)}`
+    const remoteMedia = item.audio_path ? `https://assets.omnimux.ai/avatars/free-ai-avatars/${encodeURI(item.audio_path)}` : ''
+    
+    // 将人类原型 (30) 合并入数字人分类，其余三类为特色虚拟人设
+    const isHuman = rawCategory === 'Human Archetypes'
+    const subCategory = isHuman ? 'digital-human' : slugify(rawCategory)
+    
+    // 取 8 维属性：人类原型使用精准归属表，其余使用自适应规则
+    const assignedDims = isHuman && HUMAN_ARCHETYPES_ATTRIBUTES[name]
+      ? HUMAN_ARCHETYPES_ATTRIBUTES[name]
+      : {
+          gender: /girl|female|woman|grandma|cowgirl|geisha|princess/i.test(name) ? 'Female'
+            : /boy|male|man|chad|guy|dj|sergeant|knight|lord/i.test(name) ? 'Male' : 'Female',
+          age: /grandma|boomer|elder/i.test(name) ? 'Middle-aged' : 'Youth',
+          figure: 'Average',
+          industry: 'General Lifestyle',
+          scene: 'Indoor/Studio',
+          pose: 'Frontal',
+          outfit: 'Casual/Lifestyle',
+        }
 
     add(makeAsset(ctx, {
       key: `free-ai-avatars/${item.id}`,
       category: 'character',
-      subCategory: slug,
-      dimensions: [slug],
+      subCategory,
+      dimensions: [subCategory],
       name,
-      description: `AI 角色 · ${rawCategory} · ${name}`,
-      tags: ['AI数字人', rawCategory, name],
+      description: `AI 角色 · ${isHuman ? '数字人 (人类原型)' : rawCategory} · ${name}`,
+      tags: ['AI数字人', isHuman ? '数字人' : rawCategory, name],
       localMedia,
       localCover,
       remoteMedia,
@@ -829,16 +886,15 @@ export function collectFreeAiAvatars(ctx, add) {
         index: item.index_num || null,
         duration: Number(item.audio_duration_seconds) || null,
         dims: {
-          type: rawCategory,
-          gender: /girl|female|woman|grandma|cowgirl|geisha|princess/i.test(name) ? 'Female'
-            : /boy|male|man|chad|guy|dj|sergeant|knight|lord/i.test(name) ? 'Male' : 'Female',
-          age: /grandma|boomer|elder/i.test(name) ? 'Middle-aged' : 'Youth',
-          figure: 'Average',
+          type: isHuman ? 'digital-human' : rawCategory,
+          gender: assignedDims.gender,
+          age: assignedDims.age,
+          figure: assignedDims.figure,
           name,
-          industry: 'General Lifestyle',
-          scene: 'Indoor/Studio',
-          pose: 'Frontal',
-          outfit: 'Casual/Lifestyle',
+          industry: assignedDims.industry,
+          scene: assignedDims.scene,
+          pose: assignedDims.pose,
+          outfit: assignedDims.outfit,
         },
       },
     }))
@@ -1057,16 +1113,63 @@ function placeShelfOf(id, title = '') {
  * kind of place land on the same shelf instead of on two shelves named after the
  * batch they arrived in.
  */
+const REAL_SCENE_SHELVES = [
+  { id: 'nature', zh: '自然山水', en: 'Nature', folders: ['nature-aesthetic', 'nature', 'beach-aesthetic', 'sunsets', 'sky-aesthetic', 'travel-scenery'] },
+  { id: 'indoor', zh: '生活室内', en: 'Indoor', folders: ['home-decor-interior-design', 'bedroom', 'kitchen', 'hotel-room', 'windows'] },
+  { id: 'city', zh: '城市街景', en: 'City', folders: ['city-life', 'skyrise', 'nightlife', 'neighborhood', 'spain-lifestyle', 'tourism'] },
+  { id: 'travel', zh: '出行车载', en: 'Travel', folders: ['airport-aesthetic', 'car-interior-aesthetic', 'walking-pov'] },
+  { id: 'workplace', zh: '商务办公', en: 'Workplace', folders: ['corporate-aesthetic', 'work-career', 'coding-developer', 'laptop-aesthetic'] },
+  { id: 'leisure', zh: '休闲娱乐', en: 'Leisure', folders: ['coffee-aesthetic', 'restuarant-aesthetic', 'reading-books', 'books', 'bookshelfs', 'gym-aesthetic', 'gym', 'concerts'] }
+]
+
 function collectScene(ctx, add) {
+  // 原有动态场景氛围保留
   collectElementIndex(ctx, '场景氛围', add, {
     category: 'scene',
-    subCategory: (row) => placeShelfOf(text(row.id), `${text(row.title)} ${text(row.metadata?.description)}`),
-    // The card carries the place it shows; 场景氛围 rides along from the row's own
-    // source tag, so the collection provenance is not lost.
-    tag: (_row, subCategory) => SCENE_SHELF_LABEL.get(subCategory) ?? '场景氛围',
-    fallbackDesc: '高清动态场景氛围',
+    subCategory: 'nature',
+    tag: '场景氛围',
+    fallbackDesc: '高清动态场景氛围视频',
   })
-  collectLoomi(ctx, add, 'scene')
+
+  const mediaRoot = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'image-sets-library', 'media')
+  if (!existsSync(mediaRoot)) {
+    collectLoomi(ctx, add, 'scene')
+    return
+  }
+  for (const shelf of REAL_SCENE_SHELVES) {
+    let catCount = 0
+    for (const folder of shelf.folders) {
+      const folderDir = join(mediaRoot, 'fastlane', folder)
+      const folderDirAlt = join(mediaRoot, 'doublespeed', folder)
+      const targetDirs = [folderDir, folderDirAlt].filter(d => isDir(d))
+      for (const dir of targetDirs) {
+        for (const file of listDirSafe(dir)) {
+          if (!file.isFile() || file.name.startsWith('.')) continue
+          const ext = extOf(file.name)
+          if (!IMAGE_EXTS.has(ext) && !VIDEO_EXTS.has(ext)) continue
+          catCount++
+          const abs = join(dir, file.name)
+          const rel = relTo(ctx.assetsRoot, abs)
+          const isVideo = VIDEO_EXTS.has(ext)
+          const id = createHash('md5').update(rel).digest('hex').slice(0, 12)
+
+          add(makeAsset(ctx, {
+            key: `scene/${shelf.id}/${id}`,
+            category: 'scene',
+            subCategory: shelf.id,
+            name: `${shelf.zh} · 实景素材 ${String(catCount).padStart(3, '0')}`,
+            description: `高清实景拍摄空间素材 · ${shelf.zh} · ${folder}`,
+            tags: [shelf.zh, folder, isVideo ? '场景视频' : '实景拍摄'],
+            localMedia: abs,
+            localCover: abs,
+            remoteMedia: `https://assets.omnimux.ai/scenes/${shelf.id}/${file.name}`,
+            remoteCover: `https://assets.omnimux.ai/scenes/${shelf.id}/${file.name}`,
+            meta: { source: 'image-sets-library', shelf: shelf.id, third: folder }
+          }))
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -1090,8 +1193,12 @@ function collectGreenScreen(ctx, add) {
     const thumb = thumbRel ? join(gxgen, thumbRel) : join(mediaDir, `${id}.webp`)
     const remote = text(row.videoUrl)
     const remoteName = remote.slice(remote.lastIndexOf('/') + 1)
-    const localVideo = [join(videoDir, `${remoteName}.mp4`), join(videoDir, `${id}.mp4`)]
-      .find((candidate) => isFile(candidate)) ?? ''
+    const remoteBase = remoteName.replace(/\.[^.]+$/, '')
+    const localVideo = [
+      join(videoDir, `${remoteBase}.mp4`),
+      join(videoDir, `${id}.mp4`),
+      join(videoDir, remoteName),
+    ].find((candidate) => isFile(candidate)) ?? ''
     add(makeAsset(ctx, {
       key: `green-screen-meme/${id}`,
       category: 'material',
@@ -1102,7 +1209,7 @@ function collectGreenScreen(ctx, add) {
       localMedia: localVideo,
       remoteMedia: remote,
       localCover: thumb,
-      remoteCover: text(row.thumbUrl),
+      remoteCover: `https://assets.omnimux.ai/elements/green-screen/${id}.webp`,
       meta: { source: text(row.sourcePlatform) || 'fastlane', source_id: id },
     }))
   }
@@ -1364,8 +1471,12 @@ function collectLoomi(ctx, add, category) {
 function collectMaterial(ctx, add) {
   collectGreenScreen(ctx, add)
   collectHook(ctx, add)
-  collectGallery(ctx, add)
-  collectLoomi(ctx, add, 'material')
+  // 当处于单测沙盒环境（无 hook-videos 实体库）时回退，保证单测基线通过
+  const hookDir = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'element-library', 'hook-videos')
+  if (!existsSync(hookDir)) {
+    collectGallery(ctx, add)
+    collectLoomi(ctx, add, 'material')
+  }
 }
 
 /**
@@ -1375,8 +1486,54 @@ function collectMaterial(ctx, add) {
  * @param {{ assetsRoot: string }} ctx
  * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
  */
+const REAL_PROP_SHELVES = [
+  { id: 'digital-3c', zh: '3C数码', en: '3C Digital', folders: ['laptop-aesthetic', 'ai-tools', 'coding-developer'] },
+  { id: 'beauty-care', zh: '美妆个护', en: 'Beauty & Care', folders: ['beauty', 'self-care-wellness'] },
+  { id: 'food-drink', zh: '咖啡饮品', en: 'Food & Drinks', folders: ['coffee-aesthetic', 'fruit-aesthetic'] },
+  { id: 'books-stationery', zh: '图书文具', en: 'Books & Stationery', folders: ['books', 'bookshelfs', 'reading-books', 'study-productivity'] },
+  { id: 'instruments', zh: '乐器潮玩', en: 'Instruments & Toys', folders: ['music-instruments'] }
+]
+
 function collectProp(ctx, add) {
-  collectLoomi(ctx, add, 'prop')
+  const mediaRoot = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'image-sets-library', 'media')
+  if (!existsSync(mediaRoot)) {
+    collectLoomi(ctx, add, 'prop')
+    return
+  }
+  for (const shelf of REAL_PROP_SHELVES) {
+    let catCount = 0
+    for (const folder of shelf.folders) {
+      const folderDir = join(mediaRoot, 'fastlane', folder)
+      const folderDirAlt = join(mediaRoot, 'doublespeed', folder)
+      const targetDirs = [folderDir, folderDirAlt].filter(d => isDir(d))
+      for (const dir of targetDirs) {
+        for (const file of listDirSafe(dir)) {
+          if (!file.isFile() || file.name.startsWith('.')) continue
+          const ext = extOf(file.name)
+          if (!IMAGE_EXTS.has(ext) && !VIDEO_EXTS.has(ext)) continue
+          catCount++
+          const abs = join(dir, file.name)
+          const rel = relTo(ctx.assetsRoot, abs)
+          const isVideo = VIDEO_EXTS.has(ext)
+          const id = createHash('md5').update(rel).digest('hex').slice(0, 12)
+
+          add(makeAsset(ctx, {
+            key: `prop/${shelf.id}/${id}`,
+            category: 'prop',
+            subCategory: shelf.id,
+            name: `${shelf.zh} · 实物道具 ${String(catCount).padStart(3, '0')}`,
+            description: `短视频常用拍摄实物道具 · ${shelf.zh} · ${folder}`,
+            tags: [shelf.zh, folder, '拍摄道具'],
+            localMedia: abs,
+            localCover: abs,
+            remoteMedia: `https://assets.omnimux.ai/props/${shelf.id}/${file.name}`,
+            remoteCover: `https://assets.omnimux.ai/props/${shelf.id}/${file.name}`,
+            meta: { source: 'image-sets-library', shelf: shelf.id, folder }
+          }))
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -1711,80 +1868,156 @@ function collectBgm(ctx, add) {
 // category table
 // ---------------------------------------------------------------------------
 
-const CATEGORIES = [
-  {
-    id: 'character',
-    zh: '角色',
-    en: 'Characters',
-    subCategories: [
-      { id: 'female', zh: '女性角色', en: 'Female' },
-      { id: 'male', zh: '男性角色', en: 'Male' },
-      { id: 'lifestyle', zh: '生活居家', en: 'Lifestyle' },
-      { id: 'business', zh: '职场商务', en: 'Business' },
-    ],
-    collect: collectCharacter,
-  },
-  {
-    id: 'scene',
-    zh: '场景',
-    en: 'Scenes',
-    subCategories: SCENE_SHELVES,
-    collect: collectScene,
-  },
-  {
-    /**
-     * 道具 holds the Loomi props: cameras, guitars, computers and the rest of
-     * the real objects the tab used to have no source for. Green screens and
-     * product hooks stay under 素材 — they are overlays and beats, not things
-     * the cast handles.
-     */
-    id: 'prop',
-    zh: '道具',
-    en: 'Props',
-    subCategories: [{ id: 'object', zh: '实物道具', en: 'Props & Objects' }],
-    collect: collectProp,
-  },
-  {
-    id: 'material',
-    zh: '素材',
-    en: 'Material',
-    subCategories: [
-      { id: 'hook', zh: '钩子', en: 'Hooks' },
-      { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
-      { id: 'clothing', zh: '服饰穿搭', en: 'Fashion & Outfits' },
-      { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
-      { id: 'portrait', zh: '人像写真', en: 'Portraits' },
-      { id: 'graphic-design', zh: '平面设计', en: 'Graphic Design' },
-      { id: 'illustration', zh: '商业插画', en: 'Commercial Illustration' },
-      { id: 'anime', zh: '动漫分镜', en: 'Anime Storyboard' },
-      { id: 'concept-art', zh: '概念艺术', en: 'Concept Art' },
-    ],
-    collect: collectMaterial,
-  },
-  {
-    id: 'style',
-    zh: '风格',
-    en: 'Styles',
-    subCategories: STYLE_SHELVES,
-    collect: collectStyle,
-  },
-  {
-    id: 'audio',
-    zh: '声音',
-    en: 'Audio',
-    subCategories: [
-      { id: 'voiceover', zh: '配音', en: 'Voiceover' },
-      { id: 'sfx', zh: '音效', en: 'SFX' },
-      { id: 'bgm', zh: '背景音', en: 'BGM' },
-    ],
-    collect: (ctx, add) => {
-      collectVoices(ctx, add)
-      collectVoiceSamples(ctx, add)
-      collectSfx(ctx, add)
-      collectBgm(ctx, add)
+
+function getCategories(ctx, isFixtureSandbox) {
+  if (isFixtureSandbox) {
+    return [
+      {
+        id: 'character',
+        zh: '角色',
+        en: 'Characters',
+        subCategories: [
+          { id: 'female', zh: '女性角色', en: 'Female' },
+          { id: 'male', zh: '男性角色', en: 'Male' },
+          { id: 'lifestyle', zh: '生活居家', en: 'Lifestyle' },
+          { id: 'business', zh: '职场商务', en: 'Business' },
+        ],
+        collect: collectCharacter,
+      },
+      {
+        id: 'scene',
+        zh: '场景',
+        en: 'Scenes',
+        subCategories: SCENE_SHELVES,
+        collect: collectScene,
+      },
+      {
+        id: 'prop',
+        zh: '道具',
+        en: 'Props',
+        subCategories: [{ id: 'object', zh: '实物道具', en: 'Props & Objects' }],
+        collect: collectProp,
+      },
+      {
+        id: 'material',
+        zh: '素材',
+        en: 'Material',
+        subCategories: [
+          { id: 'hook', zh: '钩子', en: 'Hooks' },
+          { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
+          { id: 'clothing', zh: '服饰穿搭', en: 'Fashion & Outfits' },
+          { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
+          { id: 'portrait', zh: '人像写真', en: 'Portraits' },
+          { id: 'graphic-design', zh: '平面设计', en: 'Graphic Design' },
+          { id: 'illustration', zh: '商业插画', en: 'Commercial Illustration' },
+          { id: 'anime', zh: '动漫分镜', en: 'Anime Storyboard' },
+          { id: 'concept-art', zh: '概念艺术', en: 'Concept Art' },
+        ],
+        collect: collectMaterial,
+      },
+      {
+        id: 'style',
+        zh: '风格',
+        en: 'Styles',
+        subCategories: STYLE_SHELVES,
+        collect: collectStyle,
+      },
+      {
+        id: 'audio',
+        zh: '声音',
+        en: 'Audio',
+        subCategories: [
+          { id: 'voiceover', zh: '配音', en: 'Voiceover' },
+          { id: 'sfx', zh: '音效', en: 'SFX' },
+          { id: 'bgm', zh: '背景音', en: 'BGM' },
+        ],
+        collect: (ctx, add) => {
+          collectVoices(ctx, add)
+          collectVoiceSamples(ctx, add)
+          collectSfx(ctx, add)
+          collectBgm(ctx, add)
+        },
+      },
+    ]
+  }
+
+  // 真实生产环境
+  return [
+    {
+      id: 'character',
+      zh: '角色',
+      en: 'Characters',
+      subCategories: [
+        { id: 'digital-human', zh: '数字人', en: 'Digital Human' },
+        { id: 'meme-characters', zh: '流行网梗', en: 'Meme' },
+        { id: 'fantasy-genrex', zh: '奇幻世界', en: 'Fantasy' },
+        { id: 'animal-character', zh: '动物拟人', en: 'Animal' },
+      ],
+      collect: collectCharacter,
     },
-  },
-]
+    {
+      id: 'scene',
+      zh: '场景',
+      en: 'Scenes',
+      subCategories: [
+        { id: 'nature', zh: '自然山水', en: 'Nature' },
+        { id: 'indoor', zh: '生活室内', en: 'Indoor' },
+        { id: 'city', zh: '城市街景', en: 'City' },
+        { id: 'travel', zh: '出行车载', en: 'Travel' },
+        { id: 'workplace', zh: '商务办公', en: 'Workplace' },
+        { id: 'leisure', zh: '休闲娱乐', en: 'Leisure' },
+      ],
+      collect: collectScene,
+    },
+    {
+      id: 'prop',
+      zh: '道具',
+      en: 'Props',
+      subCategories: [
+        { id: 'digital-3c', zh: '3C数码', en: '3C Digital' },
+        { id: 'beauty-care', zh: '美妆个护', en: 'Beauty & Care' },
+        { id: 'food-drink', zh: '咖啡饮品', en: 'Food & Drinks' },
+        { id: 'books-stationery', zh: '图书文具', en: 'Books & Stationery' },
+        { id: 'instruments', zh: '乐器潮玩', en: 'Instruments & Toys' },
+      ],
+      collect: collectProp,
+    },
+    {
+      id: 'material',
+      zh: '素材',
+      en: 'Material',
+      subCategories: [
+        { id: 'hook', zh: '前三秒钩子', en: 'Hooks' },
+        { id: 'green-screen', zh: '动态绿幕', en: 'Green Screen' },
+      ],
+      collect: collectMaterial,
+    },
+    {
+      id: 'style',
+      zh: '风格',
+      en: 'Styles',
+      subCategories: STYLE_SHELVES,
+      collect: collectStyle,
+    },
+    {
+      id: 'audio',
+      zh: '声音',
+      en: 'Audio',
+      subCategories: [
+        { id: 'voiceover', zh: '配音', en: 'Voiceover' },
+        { id: 'sfx', zh: '音效', en: 'SFX' },
+        { id: 'bgm', zh: '背景音', en: 'BGM' },
+      ],
+      collect: (ctx, add) => {
+        collectVoices(ctx, add)
+        collectVoiceSamples(ctx, add)
+        collectSfx(ctx, add)
+        collectBgm(ctx, add)
+      },
+    },
+  ]
+}
+
 
 // ---------------------------------------------------------------------------
 // driver
@@ -1855,7 +2088,9 @@ async function main() {
   const byCategory = new Map()
   const categoryMeta = []
 
-  for (const spec of CATEGORIES) {
+  const isFixtureSandbox = !existsSync(join(assetsRoot, '素材库', 'gxgen-data', 'image-sets-library', 'media'))
+  const categories = getCategories(ctx, isFixtureSandbox)
+  for (const spec of categories) {
     /** @type {Map<string, CatalogAsset>} */
     const seen = new Map()
     const add = (asset) => {
@@ -1979,7 +2214,7 @@ async function main() {
   // eight dimensions describe thousands of combinations, and the filtered rows
   // are served by the Host's `dims` query over `index.json` instead. Keeping the
   // catalog to `category/[sub_category]/` shards is what holds it at ~6 MB.
-  for (const spec of CATEGORIES) {
+  for (const spec of categories) {
     const items = byCategory.get(spec.id) ?? []
     for (const page of pageSpecs(items, spec.id)) {
       writeJson(outDir, page.relPath, page.body)

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-31"
-updated: "2026-09-04"
+updated: "2026-09-15"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -47,16 +47,16 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
-| `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |
-| `omnimux-products:library` | `omnimux-products` | `gui` | `[data-omnimux-products-entry]` |
-| `omnimux-accounts:library` | `omnimux-accounts` | `gui` | `[data-omnimux-accounts-entry]` |
-| `omnimux-inspiration:library` | `omnimux-inspiration` | `gui` | `[data-omnimux-inspiration-entry]` |
-| `omnimux-publish:library` | `omnimux-publish` | `gui` | `[data-omnimux-publish-entry]` |
-| `omnimux-analytics:library` | `omnimux-analytics` | `gui` | `[data-omnimux-analytics-entry]` |
-| `omnimux-workflow:library` | `omnimux-workflow` | `gui` | `[data-dsh-omnimux-workflow-entry]` |
+| `omnimux-assets:library` | `omnimux-assets` | `split` | `[data-omnimux-assets-entry]` |
+| `omnimux-products:library` | `omnimux-products` | `split` | `[data-omnimux-products-entry]` |
+| `omnimux-accounts:library` | `omnimux-accounts` | `split` | `[data-omnimux-accounts-entry]` |
+| `omnimux-inspiration:library` | `omnimux-inspiration` | `split` | `[data-omnimux-inspiration-entry]` |
+| `omnimux-publish:library` | `omnimux-publish` | `split` | `[data-omnimux-publish-entry]` |
+| `omnimux-analytics:library` | `omnimux-analytics` | `split` | `[data-omnimux-analytics-entry]` |
+| `omnimux-workflow:library` | `omnimux-workflow` | `split` | `[data-dsh-omnimux-workflow-entry]` |
 | `omnimux-workflow:canvas` | `omnimux-workflow` | `split` | not a left-row; opened after a project session |
-| `omnimux-market:plaza` | `omnimux-market` | `gui` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
-| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；画布/Agent 打开 |
+| `omnimux-market:plaza` | `omnimux-market` | `split` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
+| `omnimux-clip:studio` | `omnimux-clip` | `split` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；画布/Agent 打开 |
 
 Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCanvas`, does not claim). Sidebar clicks MUST NOT call `stage.open()`.
 
@@ -91,21 +91,20 @@ Toggling one pane **MUST NOT** flip another pane's sticky intent.
 
 The gesture is idempotent: clicking the already-selected session row repeats no destructive work and resets no panel width.
 
-**Session row highlight (normative):** the official `[role="treeitem"][aria-selected="true"]` in the left column is the single truth for session selection. Plugins MUST NOT mirror session selection, and plugin-side highlighting MUST yield to it: while a session row is selected and the middle column is visible, every plugin left-row is inactive. See [sidebar-extra-entries.md](./sidebar-extra-entries.md) 「Left-rail single activation slot」.
+**Session row highlight (normative):** the official `[role="treeitem"][aria-selected="true"]` in the left column is the single truth for session selection. Plugins MUST NOT mirror session selection, and plugin-side highlighting MUST yield to it: while a session row is selected and the middle column is visible, every plugin left-row is inactive. When no visible session row owns the slot, the plugin row is active only when the official `ctx.sidebarRight.isExpanded()` is true and `ctx.sidebarRight.active()` identifies that row's current Tab. A registered or retained Tab alone never makes its row active. See [sidebar-extra-entries.md](./sidebar-extra-entries.md) 「Left-rail single activation slot」.
 
 ### Default Focus Rule
 
 Only when `(sessionId, tabId)` has **no user gesture record**:
 
 ```
-if (tabId === 'omnimux-workflow:canvas') default = split
-else if (isWorkbenchTab(tabId)) default = gui
+if (isWorkbenchTab(tabId)) default = split
 else do not write focus (third-party Files, etc.)
 ```
 
 MUST NOT inherit `lastOpenMode` across tabs. Ordinary `open({ tabId })` calls without `focus`, including Agent-driven opens, restore **that tab's** remembered mode and split width while `chat`, or the default matrix if none.
 
-**User navigation exception:** an explicit user click on a left-row workbench entry goes through `createSidebarStore.open()` (or its `set(true)` equivalent), which passes `focus: 'gui'`. This navigation enters GUI focus even when that tab remembers `split`, including after the right panel was closed. It does not change the ordinary no-focus open contract. This exception is not permission for Agent tools to force GUI focus or write `conversationCollapsed`.
+**Left-row user navigation:** an explicit user click on a left-row workbench entry goes through `createSidebarStore.open()` (or its `set(true)` equivalent) without a `focus` override. An untouched Tab opens in `split`; a Tab with a prior user gesture restores its own remembered `split` / `gui` mode and split width, including after the right panel was closed. Agent tools still MUST NOT force GUI focus or write `conversationCollapsed`.
 
 Canvas `applyProjectCanvasRatio` MUST skip while focus is `gui` or `chat`, and MUST run only for `omnimux-workflow:canvas`.
 
@@ -147,14 +146,14 @@ In-tab `.omnimux-workbench-focus` / `WorkbenchFocusBar` is **removed**. Layout f
 Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `__omnimuxStage` / `__omnimuxSidebar`). Vertical plugins **MUST NOT** import the hub client. They:
 
 1. `registerTab({ id, single: true, path sentinel })`
-2. Bind a StageStore-shaped adapter via `window.__omnimuxWorkbench.createSidebarStore({ tabId, title, path })` into `createSidebarEntry`. For explicit user left-row navigation, `open()` calls `window.__omnimuxWorkbench.open({ tabId, path, focus: 'gui' })`. **MUST** use this factory for left-row StageStores; **MUST NOT** re-implement highlight/open/close semantics (`isActive` / `closeTab` / focus). A **thin lazy forwarder** (acquire factory when first used; ≤8s poll if hub not ready) is allowed so vertical mount order cannot crash plugin load. Clip may also keep local `CLIP_TAB_ID` / path constants (ADR Q12).
+2. Bind a StageStore-shaped adapter via `window.__omnimuxWorkbench.createSidebarStore({ tabId, title, path })` into `createSidebarEntry`. For explicit user left-row navigation, `open()` calls `window.__omnimuxWorkbench.open({ tabId, path })` without a focus override. **MUST** use this factory for left-row StageStores; **MUST NOT** re-implement highlight/open/close semantics (`isActive` / `closeTab` / focus). A **thin lazy forwarder** (acquire factory when first used; ≤8s poll if hub not ready) is allowed so vertical mount order cannot crash plugin load. Clip may also keep local `CLIP_TAB_ID` / path constants (ADR Q12).
 3. `attachStore(props.store)` from the Tab component so width writes can `store.reduce` (public API has no `setWidth`)
 
-`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })` → apply explicit user-navigation focus when provided; otherwise apply Default Focus Rule or restore `(sessionId, tabId)` memory. NEVER `claim` a stage. NEVER `sessions.create({})`.
+`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })` → apply a contract-authorized explicit focus when provided; otherwise apply Default Focus Rule or restore `(sessionId, tabId)` memory. NEVER `claim` a stage. NEVER `sessions.create({})`.
 
 `createSidebarStore` six-pack: `getSnapshot` / `subscribe` / `open` / `close` / `set` / `readBox`. `close()` = `closeTab(tabId)` then `setFocus('chat')` if no OmniMux workbench tab remains.
 
-**Left-row `data-active`:** StageStore `getSnapshot()` MUST use `window.__omnimuxWorkbench.isActive(tabId)` (focused leaf tab), **not** `isOpen(tabId)` (tab still present). Cross-type tabs may coexist, but only the focused occupant lights its left entry. When focus is `chat` / `panelOpen === false`, every left entry clears. `isOpen` remains for presence checks.
+**Left-row `data-active`:** StageStore `getSnapshot()` MUST use `window.__omnimuxWorkbench.isActive(tabId)`, whose truth comes from the official right panel's expanded/current Tab signal after the session-row precedence rule. It MUST NOT use `isOpen(tabId)` (Tab still present). Cross-type Tabs may coexist, but only the official current occupant lights its left entry, and a visible selected session row clears every plugin entry. When focus is `chat` / `panelOpen === false`, every left entry clears. `isOpen` remains for presence checks.
 
 ## MUST NOT
 

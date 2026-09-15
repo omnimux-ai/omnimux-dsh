@@ -43,7 +43,7 @@ export const ASSETS_CSS = `
    one's so the two rows cannot drift apart. */
 .omnimux-assets-local-nav {
   flex: none;
-  padding: 12px 24px 10px;
+  padding: 8px 24px 10px;
 }
 .omnimux-assets-local-nav-row {
   display: flex;
@@ -1254,7 +1254,7 @@ export const ASSETS_CSS = `
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 16px 20px;
+  padding: 0;
 }
 .omnimux-products-grid {
   display: grid;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button } from 'dsh-ui-kit'
 import { CheckIcon } from './icons.jsx'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
 
@@ -12,21 +12,59 @@ function previewUrl(productId, mediaId) {
 }
 
 /**
+ * 产品二级分类胶囊导航组件，复用 UI 共享胶囊规范（参考图 2）。
+ * 挂载在第一层 FilterBar 正下方，与本地分类导航共享 24px 左对齐基准线与黄金垂直净空。
+ *
+ * @param {{
+ *   t: (key: string) => string,
+ *   kindTab: string,
+ *   onKindTabChange: (kind: string) => void,
+ * }} props
+ */
+export function ProductCategoryNav(props) {
+  const { t, kindTab = 'all', onKindTabChange } = props
+  const chips = [
+    { id: 'all', label: t('product.all') || '全部' },
+    { id: 'physical', label: t('product.physical') || '实物产品' },
+    { id: 'digital', label: t('product.digital') || '数字产品' },
+  ]
+
+  return (
+    <div className="omnimux-assets-local-nav" role="group" aria-label="产品二级分类">
+      <div className="omnimux-assets-local-nav-row">
+        {chips.map((chip) => (
+          <Button
+            key={chip.id}
+            variant="ghost"
+            size="sm"
+            className="omnimux-assets-cloud-chip"
+            aria-pressed={kindTab === chip.id ? 'true' : 'false'}
+            onClick={() => onKindTabChange?.(chip.id)}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
  * 产品库 1:1 对齐原页面的嵌入视图组件。
- * 遵循原产品库 FilterBar (Tabs + stretch SearchField) 与全宽虚线居中空状态标准。
+ * 遵循原产品库全宽居中虚线大空状态与商品微卡标准。
  *
  * @param {{
  *   t: (key: string) => string,
  *   open?: boolean,
+ *   query?: string,
+ *   kindTab?: string,
  *   onOpenCreate?: (kind: 'physical' | 'digital') => void,
  * }} props
  */
 export function ProductsView(props) {
-  const { t, open = true, onOpenCreate } = props
+  const { t, open = true, query = '', kindTab = 'all', onOpenCreate } = props
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
-  const [query, setQuery] = useState('')
-  const [kindTab, setKindTab] = useState('all')
   const [copiedId, setCopiedId] = useState(null)
 
   const fetchProducts = useCallback(async () => {
@@ -89,28 +127,6 @@ export function ProductsView(props) {
 
   return (
     <div className="omnimux-products-list-view">
-      {/* 二级分类：从 UI 共享组件复用胶囊（Pill/Chip）规范，1:1 对标参考图 2 */}
-      <div className="omnimux-assets-local-nav" role="group" aria-label="产品二级分类">
-        <div className="omnimux-assets-local-nav-row">
-          {[
-            { id: 'all', label: t('product.all') || '全部' },
-            { id: 'physical', label: t('product.physical') || '实物产品' },
-            { id: 'digital', label: t('product.digital') || '数字产品' },
-          ].map((chip) => (
-            <Button
-              key={chip.id}
-              variant="ghost"
-              size="sm"
-              className="omnimux-assets-cloud-chip"
-              aria-pressed={kindTab === chip.id ? 'true' : 'false'}
-              onClick={() => setKindTab(chip.id)}
-            >
-              {chip.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
       {/* 1:1 对齐原产品库主体内容与居中虚线大空状态 */}
       <div className="omnimux-products-body">
         {visibleProducts.length === 0 ? (
