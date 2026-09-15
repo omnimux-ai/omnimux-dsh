@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Badge, Button } from 'dsh-ui-kit'
+import { Badge, Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
-import { FileIcon, FolderIcon } from './icons.jsx'
+import { EditIcon, FileIcon, FolderIcon } from './icons.jsx'
 import { listAssetFiles, previewUrl } from './api.js'
 import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
 
@@ -30,7 +30,7 @@ function initialStack(asset) {
  *   onPreview?: (item: any) => void,
  * }} props
  */
-export function AssetBrowse({ t, asset, onBack, onPreview }) {
+export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
   const [stack, setStack] = useState(() => initialStack(asset))
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)
@@ -116,6 +116,18 @@ export function AssetBrowse({ t, asset, onBack, onPreview }) {
             </Button>
           </span>
         ))}
+        {typeof onEdit === 'function' ? (
+          <IconButton
+            variant="ghost"
+            size="xs"
+            aria-label={t('detail.edit')}
+            title={t('detail.edit')}
+            onClick={onEdit}
+            className="omnimux-assets-crumb-edit"
+          >
+            <EditIcon size={14} />
+          </IconButton>
+        ) : null}
       </div>
 
       {stack ? (

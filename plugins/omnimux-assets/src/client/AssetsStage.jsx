@@ -227,7 +227,7 @@ function AssetsSelectionBar(props) {
 }
 
 function AssetsMainView(props) {
-  const { t, feed, emptyProps, onOpenAdd, onPreview } = props
+  const { t, feed, emptyProps, onOpenAdd, onPreview, onEditDetail } = props
   const { detail, setDetail, visible, viewMode, copyCite, copiedId, selectedIds, toggleSelect, handleRemoveSingle } = feed
   const { emptyLabel, emptyActionLabel, searching } = emptyProps
 
@@ -239,6 +239,7 @@ function AssetsMainView(props) {
         asset={detail}
         onBack={() => setDetail(null)}
         onPreview={onPreview}
+        onEdit={onEditDetail}
       />
     )
   }
@@ -265,7 +266,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, onOpenCreateProduct } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, onOpenCreateProduct, onEditDetail } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -303,17 +304,15 @@ function AssetsBody(props) {
   return (
     <div className="omnimux-assets-body">
       <div className="omnimux-assets-main">
-        <AssetsMainView t={t} feed={feed} emptyProps={emptyProps} onOpenAdd={onOpenAdd} onPreview={onPreview} />
-      </div>
-      {feed.detail && (
-        <AssetDetail
+        <AssetsMainView
           t={t}
-          asset={feed.detail}
-          busy={feed.busy}
-          onClose={() => feed.setDetail(null)}
-          onSave={feed.handleSaveDetail}
+          feed={feed}
+          emptyProps={emptyProps}
+          onOpenAdd={onOpenAdd}
+          onPreview={onPreview}
+          onEditDetail={onEditDetail}
         />
-      )}
+      </div>
     </div>
   )
 }
@@ -356,11 +355,23 @@ function ConfirmRemoveDialogItem(props) {
 }
 
 function AssetsDialogs(props) {
-  const { t, feed } = props
+  const { t, feed, detailModalOpen, onCloseDetailModal } = props
   return (
     <>
       {feed.creating ? <AddAssetDialogItem t={t} feed={feed} /> : null}
       {feed.pendingRemove ? <ConfirmRemoveDialogItem t={t} feed={feed} /> : null}
+      {detailModalOpen && feed.detail ? (
+        <AssetDetail
+          t={t}
+          asset={feed.detail}
+          busy={feed.busy}
+          onClose={onCloseDetailModal}
+          onSave={async (patch) => {
+            await feed.handleSaveDetail(patch)
+            onCloseDetailModal?.()
+          }}
+        />
+      ) : null}
     </>
   )
 }
@@ -377,6 +388,7 @@ function AssetsDialogs(props) {
 export function AssetsStage(props) {
   const { t, stage, store, visible = true } = props
   const [previewTarget, setPreviewTarget] = useState(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
   // One save controller for the whole stage: the cloud cards and the preview
   // modal share it, so a row saved from either one is marked in both.
   const cloudSave = useCloudSave({ t })
@@ -473,8 +485,14 @@ export function AssetsStage(props) {
         sourceTab={sourceTab}
         visible={visible}
         onOpenCreateProduct={handleOpenCreateProduct}
+        onEditDetail={() => setDetailModalOpen(true)}
       />
-      <AssetsDialogs t={t} feed={feed} />
+      <AssetsDialogs
+        t={t}
+        feed={feed}
+        detailModalOpen={detailModalOpen}
+        onCloseDetailModal={() => setDetailModalOpen(false)}
+      />
       {previewTarget && (
         <AssetPreviewModal
           item={previewTarget}
