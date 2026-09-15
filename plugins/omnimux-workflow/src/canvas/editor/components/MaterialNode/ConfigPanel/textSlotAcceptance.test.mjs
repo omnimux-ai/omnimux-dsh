@@ -20,6 +20,7 @@ import { build } from 'esbuild';
 import {
   deriveSlotLayout,
   autoFillSlots,
+  resolveSlotOperation,
 } from '../../../../../shared/graph/feedSlot/index.ts';
 import {
   buildContractView,
@@ -246,6 +247,54 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
       const fill = autoFillSlots([{edgeId:'image',sourceNodeId:'image',type:'image',ordinal:0,availability:'ready'}], plain);
       assert.deepEqual(fill.bindings, {});
     }
+  });
+
+  it('TC-T01-04: 多模态文本模型在未显式指定 operation 时，resolveSlotOperation 优先解析为多模态 operation（vision_chat），空态即派生出卡槽', () => {
+    const emptyFingerprint = { prompt: '', assets: [], mediaAssets: [] };
+    const op = resolveSlotOperation(mockCatalog, 'gemini-3.8-flash', undefined, 'text', emptyFingerprint);
+    assert.equal(op, 'vision_chat', '未连线多模态模型应优先派生 vision_chat');
+
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', op, 'text');
+    assert.equal(layout.preset, 'strip');
+    assert.equal(layout.addButton, true);
+    assert.equal(layout.slots.length, 2);
+    assert.equal(layout.slots[0].slot, 'reference_images');
+    assert.equal(layout.slots[1].slot, 'reference_videos');
+  });
+
+  it('TC-T01-05: 纯文本模型在未显式指定 operation 时，resolveSlotOperation 保持解析为 chat，派生 none 预设', () => {
+    const emptyFingerprint = { prompt: '', assets: [], mediaAssets: [] };
+    for (const modelId of ['deepseek-v4-pro', 'claude-opus-5', 'glm-5.3']) {
+      const op = resolveSlotOperation(mockCatalog, modelId, undefined, 'text', emptyFingerprint);
+      assert.equal(op, 'chat', `${modelId} 纯文本模型解析应为 chat`);
+
+      const layout = deriveSlotLayout(mockCatalog, modelId, op, 'text');
+      assert.equal(layout.preset, 'none');
+      assert.equal(layout.slots.length, 0);
+    }
+  });
+
+  it('TC-T01-06: 连入超限视频时，resolveSlotOperation 保持解析为多模态 operation（vision_chat），卡槽骨架不消失', () => {
+    const largeVideoAsset = {
+      type: 'video',
+      edgeId: 'e-large-video',
+      sourceNodeId: 'video-1',
+      url: 'https://example.test/20min.mp4',
+      mimeType: 'video/mp4',
+      sizeBytes: 120 * 1024 * 1024, // 120MB > 50MB 上限
+    };
+    const fingerprint = {
+      prompt: '',
+      assets: [largeVideoAsset],
+      mediaAssets: [largeVideoAsset],
+    };
+    const op = resolveSlotOperation(mockCatalog, 'gemini-3.8-flash', undefined, 'text', fingerprint);
+    assert.equal(op, 'vision_chat', '超限视频连入时卡槽操作仍应保持为 vision_chat');
+
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', op, 'text');
+    assert.equal(layout.preset, 'strip');
+    assert.equal(layout.addButton, true);
+    assert.equal(layout.slots.length, 2);
   });
 });
 
