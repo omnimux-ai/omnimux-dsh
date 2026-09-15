@@ -61,8 +61,10 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
       if (node) {
         context = { type: 'node', nodeId: node.id };
       } else {
-        const selectedCount = useCanvasStore.getState().nodes.filter((n) => n.selected).length;
-        if (selectedCount > 1) {
+        const selectedNodes = useCanvasStore.getState().nodes.filter((n) => n.selected);
+        if (selectedNodes.length === 1) {
+          context = { type: 'node', nodeId: selectedNodes[0].id };
+        } else if (selectedNodes.length > 1) {
           context = { type: 'selection' };
         }
       }
