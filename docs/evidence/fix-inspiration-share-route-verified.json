@@ -1,0 +1,12 @@
+{
+  "task": "fix-inspiration-share-route-offline-fallback",
+  "timestamp": "2026-09-15T13:30:10.289Z",
+  "issue": 1948,
+  "fix": {
+    "localRouteAdded": true,
+    "path": "/omnimux/inspiration/local/:id/share",
+    "clientFallbackAdded": true,
+    "errorAutoDismiss": true
+  },
+  "verification": "pass"
+}

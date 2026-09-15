@@ -332,6 +332,29 @@ describe('HTTP entry: the existing inspiration endpoints are unchanged', () => {
     assert.equal(response.status, 400, `POST ${LOCAL_PREFIX} → ${response.raw}`)
     assert.equal(response.body.error, 'title is required')
   })
+
+  it('handles inspiration share creation on /local/:id/share', async () => {
+    const world = bootPlugin()
+    // 先创建一个本地灵感
+    const created = await httpCall(world.route, {
+      method: 'POST',
+      url: LOCAL_PREFIX,
+      body: { title: '测试分享素材', source_url: 'https://example.com/share' },
+    })
+    assert.equal(created.status, 201)
+    const id = created.body.data.id
+
+    // 创建 3 天有效分享链接
+    const shareRes = await httpCall(world.route, {
+      method: 'POST',
+      url: `${LOCAL_PREFIX}/${id}/share`,
+      body: { expire: '3days' },
+    })
+    assert.equal(shareRes.status, 200)
+    assert.equal(shareRes.body.data.id, id)
+    assert.equal(shareRes.body.data.expire, '3days')
+    assert.match(shareRes.body.data.share_url, /https:\/\/omnimux\.ai\/s\/insp_/)
+  })
 })
 
 describe('HTTP entry: assembly completeness and teardown', () => {

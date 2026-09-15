@@ -10,6 +10,7 @@ import {
   handleImportUrl,
   handleList,
   handlePatchItem,
+  handleShare,
   handleTranslate,
 } from './http-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
@@ -41,6 +42,7 @@ const ROUTE_HANDLERS = {
   'fetch-media': handleFetchMedia,
   analyze: handleAnalyze,
   translate: handleTranslate,
+  share: handleShare,
   'batch-delete': handleBatchDelete,
   get: handleGetItem,
   patch: handlePatchItem,
@@ -159,6 +161,8 @@ function matchAnalyze(method, path) {
   if (analyzeId) return { name: 'analyze', id: analyzeId }
   const translateId = parseActionId(path, 'translate')
   if (translateId) return { name: 'translate', id: translateId }
+  const shareId = parseActionId(path, 'share')
+  if (shareId) return { name: 'share', id: shareId }
   return null
 }
 

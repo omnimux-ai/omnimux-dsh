@@ -48,8 +48,8 @@ test('e2e: 工作流打组收敛发布与右键创建工作流端到端规格验
   assert.ok(selCreateIdx > 0, 'selection 菜单必须包含 create-workflow');
   assert.ok(selPasteIdx > selCreateIdx, 'selection 菜单中的 create-workflow 必须位于 paste 正上方');
 
-  // 3. 打组工具栏对标图示：药丸标题、整组执行、保存工作流、发布应用、调色板收敛下拉、解体与删除
-  assert.ok(groupTopBarSrc.includes('wf-group-topbar__badge'), '打组工具栏必须包含药丸标题徽标');
+  // 3. 打组工具栏对标图示：工作流名称在左，工具栏排在其右侧，整组执行、保存工作流、发布应用、调色板收敛下拉、解体与删除
+  assert.ok(groupNodeSrc.includes('wf-group-top-row'), '打组顶部行必须通过 wf-group-top-row 弹性并排');
   assert.ok(groupTopBarSrc.includes('onExecuteGroup'), '打组工具栏必须包含整组执行动作');
   assert.ok(groupTopBarSrc.includes('onCreateWorkflow'), '打组工具栏必须包含保存工作流动作');
   assert.ok(groupTopBarSrc.includes('onPublishApp'), '打组工具栏必须包含发布应用动作（核心收敛）');

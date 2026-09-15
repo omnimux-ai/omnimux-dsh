@@ -36,11 +36,12 @@ test('T04.1: HeaderControls 彻底移除全局 onOpenPublish 与 Share2 图标',
   );
 });
 
-test('T04.2: GroupTopBar 包含名称药丸、整组执行、保存工作流、发布应用、调色板、解体与删除', () => {
-  // 1. 验证药丸徽标与名称重命名
-  assert.ok(groupTopBarSrc.includes('wf-group-topbar__badge'), '必须渲染工作流药丸徽标');
-  assert.ok(groupTopBarSrc.includes('wf-group-topbar__badge-dot'), '药丸徽标中必须带有状态小圆点');
-  assert.ok(groupTopBarSrc.includes('onRename'), '支持重命名工作流标题');
+test('T04.2: GroupNode 顶部行中工具栏位于节点名称右侧，GroupTopBar 包含整组执行、保存工作流、发布应用、调色板收敛下拉、解体与删除', () => {
+  // 1. 验证顶部排布：GroupHeader 在左，GroupTopBar 在其右侧，弹性并排杜绝遮挡
+  assert.ok(groupNodeSrc.includes('wf-group-top-row'), '必须通过 wf-group-top-row 弹性行并排排布');
+  const headerIdx = groupNodeSrc.indexOf('<GroupHeader');
+  const topBarIdx = groupNodeSrc.indexOf('<GroupTopBar');
+  assert.ok(headerIdx > 0 && topBarIdx > headerIdx, '工具栏必须排在工作流节点名称组件的右侧');
 
   // 2. 验证核心按钮
   assert.ok(groupTopBarSrc.includes('onExecuteGroup'), '必须包含整组执行动作');
