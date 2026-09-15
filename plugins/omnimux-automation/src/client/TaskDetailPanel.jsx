@@ -332,181 +332,187 @@ export function TaskDetailPanel({
 
           <section className="dsh-st-md-block">
             <h3 className="dsh-st-md-block-title"><span>{t('detail.detailGroup')}</span></h3>
-            <FieldRow label={t('detail.runtime')} hint={t('detail.runtimeHint')}>
-              <span className="dsh-st-md-static">{t('detail.runtimeValue')}</span>
-            </FieldRow>
-            <FieldRow label={t('form.workspace')}>
-              <DetailSelect
-                label={t('form.workspace')}
-                value={draft.workspaceId ?? ''}
-                options={workspaceOptions}
-                emptyLabel={t('form.error.workspace')}
-                onSelect={value => update({ workspaceId: value })}
-              />
-            </FieldRow>
-            <FieldRow label={t('form.model')}>
-              <DetailSelect
-                label={t('form.model')}
-                value={draft.modelKey ?? 'default'}
-                options={modelOptions}
-                searchPlaceholder={t('detail.modelSearch')}
-                emptyLabel={modelT('empty.models')}
-                warning={modelFailures.map(failure => (
-                  <div key={failure.provider} className="dsh-st-md-select-warning">
-                    {modelT('warning.groupLoad', { name: failure.providerLabel, message: failure.message })}
-                  </div>
-                ))}
-                onSelect={value => update({ modelKey: value })}
-              />
-            </FieldRow>
-            <FieldRow label={t('form.effort')}>
-              <div className="dsh-st-md-segments" role="group" aria-label={t('form.effort')}>
-                {effortOptions.map(option => (
-                  <Button
-                    key={option.value}
-                    className={`dsh-st-md-segment${draft.reasoningEffort === option.value ? ' is-on' : ''}`}
-                    aria-pressed={draft.reasoningEffort === option.value}
-                    onClick={() => update({ reasoningEffort: option.value })}
-                  >{option.label}</Button>
-                ))}
-              </div>
-            </FieldRow>
-            <FieldRow label={t('form.permission')}>
-              <DetailSelect
-                label={t('form.permission')}
-                value={draft.permission ?? ''}
-                options={permissionOptions}
-                emptyLabel={t('form.permission')}
-                onSelect={value => update({ permission: value })}
-              />
-            </FieldRow>
+            <div className="dsh-st-md-group-card">
+              <FieldRow label={t('detail.runtime')} hint={t('detail.runtimeHint')}>
+                <span className="dsh-st-md-static">{t('detail.runtimeValue')}</span>
+              </FieldRow>
+              <FieldRow label={t('form.workspace')}>
+                <DetailSelect
+                  label={t('form.workspace')}
+                  value={draft.workspaceId ?? ''}
+                  options={workspaceOptions}
+                  emptyLabel={t('form.error.workspace')}
+                  onSelect={value => update({ workspaceId: value })}
+                />
+              </FieldRow>
+              <FieldRow label={t('form.model')}>
+                <DetailSelect
+                  label={t('form.model')}
+                  value={draft.modelKey ?? 'default'}
+                  options={modelOptions}
+                  searchPlaceholder={t('detail.modelSearch')}
+                  emptyLabel={modelT('empty.models')}
+                  warning={modelFailures.map(failure => (
+                    <div key={failure.provider} className="dsh-st-md-select-warning">
+                      {modelT('warning.groupLoad', { name: failure.providerLabel, message: failure.message })}
+                    </div>
+                  ))}
+                  onSelect={value => update({ modelKey: value })}
+                />
+              </FieldRow>
+              <FieldRow label={t('form.effort')}>
+                <div className="dsh-st-md-segments" role="group" aria-label={t('form.effort')}>
+                  {effortOptions.map(option => (
+                    <Button
+                      key={option.value}
+                      className={`dsh-st-md-segment${draft.reasoningEffort === option.value ? ' is-on' : ''}`}
+                      aria-pressed={draft.reasoningEffort === option.value}
+                      onClick={() => update({ reasoningEffort: option.value })}
+                    >{option.label}</Button>
+                  ))}
+                </div>
+              </FieldRow>
+              <FieldRow label={t('form.permission')}>
+                <DetailSelect
+                  label={t('form.permission')}
+                  value={draft.permission ?? ''}
+                  options={permissionOptions}
+                  emptyLabel={t('form.permission')}
+                  onSelect={value => update({ permission: value })}
+                />
+              </FieldRow>
+            </div>
           </section>
 
           <section className="dsh-st-md-block">
             <h3 className="dsh-st-md-block-title"><span>{t('detail.scheduleGroup')}</span></h3>
-            <FieldRow label={t('form.planTime')}>
-              <DetailSelect
-                label={t('form.planTime')}
-                value={draft.scheduleKind ?? 'daily'}
-                options={kindOptions}
-                onSelect={value => update({ scheduleKind: value })}
-              />
-            </FieldRow>
-            <FieldRow label={t('form.runAt')}>
-              <div className="dsh-st-md-inline">
-                {draft.scheduleKind === 'once' && (
-                  <>
-                    <input
-                      className="dsh-st-md-input"
-                      type="date"
-                      value={onceDate}
-                      aria-label={t('form.runAt')}
-                      onChange={event => update({ onceAt: `${event.target.value}T${onceTime}` })}
-                    />
-                    <TimeSelect value={onceTime} onChange={value => update({ onceAt: `${onceDate}T${value}` })} />
-                  </>
-                )}
-                {draft.scheduleKind === 'interval' && (
-                  <>
-                    <input
-                      className="dsh-st-md-input is-narrow"
-                      type="number"
-                      min={1}
-                      value={draft.everyMinutes ?? '60'}
-                      aria-label={t('form.interval')}
-                      onChange={event => update({ everyMinutes: event.target.value })}
-                    />
-                    <span className="dsh-st-md-suffix">{t('form.minutes')}</span>
-                  </>
-                )}
-                {draft.scheduleKind === 'hourly' && (
-                  <>
-                    <MenuSelect
-                      value={String(draft.hourlyMinute ?? '00')}
-                      options={MINUTES.map(minute => ({ value: minute, label: `:${minute}` }))}
-                      onChange={value => update({ hourlyMinute: value })}
-                    />
-                    <span className="dsh-st-md-suffix">{t('form.hourly')}</span>
-                  </>
-                )}
-                {(draft.scheduleKind === 'daily' || draft.scheduleKind === 'weekly') && (
-                  <TimeSelect value={timePart} onChange={value => update({ time: value })} />
-                )}
-                {draft.scheduleKind === 'monthly' && (
-                  <>
-                    <MenuSelect
-                      value={String(draft.monthDay ?? '1')}
-                      options={Array.from({ length: 31 }, (_value, index) => {
-                        const day = String(index + 1)
-                        return { value: day, label: t('form.monthDay', { day }) }
-                      })}
-                      onChange={value => update({ monthDay: value })}
-                    />
-                    <TimeSelect value={timePart} onChange={value => update({ time: value })} />
-                  </>
-                )}
-                {draft.scheduleKind === 'custom' && (
-                  <>
-                    <input
-                      className="dsh-st-md-input is-narrow"
-                      type="number"
-                      min={1}
-                      value={draft.customDays ?? '2'}
-                      aria-label={t('form.custom')}
-                      onChange={event => update({ customDays: event.target.value })}
-                    />
-                    <span className="dsh-st-md-suffix">{t('form.daysShort')}</span>
-                    <TimeSelect value={timePart} onChange={value => update({ time: value })} />
-                  </>
-                )}
-              </div>
-            </FieldRow>
-            {draft.scheduleKind === 'weekly' && (
-              <FieldRow label={t('form.days')}>
-                <div className="dsh-st-md-weekdays">
-                  {WEEKDAYS.map(day => {
-                    const on = (draft.weekdays ?? []).includes(day)
-                    return (
-                      <Button
-                        key={day}
-                        className={`dsh-st-md-weekday${on ? ' is-on' : ''}`}
-                        aria-pressed={on}
-                        onClick={() => update({
-                          weekdays: on
-                            ? draft.weekdays.filter(value => value !== day)
-                            : [...(draft.weekdays ?? []), day],
-                        })}
-                      >{t(`day.${day}`)}</Button>
-                    )
-                  })}
-                </div>
-              </FieldRow>
-            )}
-            <FieldRow label={t('form.timeZone')}>
-              <input
-                className="dsh-st-md-input"
-                value={draft.timeZone ?? ''}
-                aria-label={t('form.timeZone')}
-                onChange={event => update({ timeZone: event.target.value })}
-              />
-            </FieldRow>
-            <Button
-              className="dsh-st-md-advanced"
-              aria-expanded={advancedOpen}
-              onClick={() => setAdvancedOpen(value => !value)}
-            >{t('detail.advanced')}</Button>
-            {advancedOpen && (
-              <FieldRow label={t('form.maxConcurrentRuns')} hint={t('form.maxConcurrentRunsHint')}>
-                <input
-                  className="dsh-st-md-input is-narrow"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={draft.maxConcurrentRuns ?? '1'}
-                  onChange={event => update({ maxConcurrentRuns: event.target.value })}
+            <div className="dsh-st-md-group-card">
+              <FieldRow label={t('form.planTime')}>
+                <DetailSelect
+                  label={t('form.planTime')}
+                  value={draft.scheduleKind ?? 'daily'}
+                  options={kindOptions}
+                  onSelect={value => update({ scheduleKind: value })}
                 />
               </FieldRow>
-            )}
+              <FieldRow label={t('form.runAt')}>
+                <div className="dsh-st-md-inline">
+                  {draft.scheduleKind === 'once' && (
+                    <>
+                      <input
+                        className="dsh-st-md-input"
+                        type="date"
+                        value={onceDate}
+                        aria-label={t('form.runAt')}
+                        onChange={event => update({ onceAt: `${event.target.value}T${onceTime}` })}
+                      />
+                      <TimeSelect value={onceTime} onChange={value => update({ onceAt: `${onceDate}T${value}` })} />
+                    </>
+                  )}
+                  {draft.scheduleKind === 'interval' && (
+                    <>
+                      <input
+                        className="dsh-st-md-input is-narrow"
+                        type="number"
+                        min={1}
+                        value={draft.everyMinutes ?? '60'}
+                        aria-label={t('form.interval')}
+                        onChange={event => update({ everyMinutes: event.target.value })}
+                      />
+                      <span className="dsh-st-md-suffix">{t('form.minutes')}</span>
+                    </>
+                  )}
+                  {draft.scheduleKind === 'hourly' && (
+                    <>
+                      <MenuSelect
+                        value={String(draft.hourlyMinute ?? '00')}
+                        options={MINUTES.map(minute => ({ value: minute, label: `:${minute}` }))}
+                        onChange={value => update({ hourlyMinute: value })}
+                      />
+                      <span className="dsh-st-md-suffix">{t('form.hourly')}</span>
+                    </>
+                  )}
+                  {(draft.scheduleKind === 'daily' || draft.scheduleKind === 'weekly') && (
+                    <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                  )}
+                  {draft.scheduleKind === 'monthly' && (
+                    <>
+                      <MenuSelect
+                        value={String(draft.monthDay ?? '1')}
+                        options={Array.from({ length: 31 }, (_value, index) => {
+                          const day = String(index + 1)
+                          return { value: day, label: t('form.monthDay', { day }) }
+                        })}
+                        onChange={value => update({ monthDay: value })}
+                      />
+                      <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                    </>
+                  )}
+                  {draft.scheduleKind === 'custom' && (
+                    <>
+                      <input
+                        className="dsh-st-md-input is-narrow"
+                        type="number"
+                        min={1}
+                        value={draft.customDays ?? '2'}
+                        aria-label={t('form.custom')}
+                        onChange={event => update({ customDays: event.target.value })}
+                      />
+                      <span className="dsh-st-md-suffix">{t('form.daysShort')}</span>
+                      <TimeSelect value={timePart} onChange={value => update({ time: value })} />
+                    </>
+                  )}
+                </div>
+              </FieldRow>
+              {draft.scheduleKind === 'weekly' && (
+                <FieldRow label={t('form.days')}>
+                  <div className="dsh-st-md-weekdays">
+                    {WEEKDAYS.map(day => {
+                      const on = (draft.weekdays ?? []).includes(day)
+                      return (
+                        <Button
+                          key={day}
+                          className={`dsh-st-md-weekday${on ? ' is-on' : ''}`}
+                          aria-pressed={on}
+                          onClick={() => update({
+                            weekdays: on
+                              ? draft.weekdays.filter(value => value !== day)
+                              : [...(draft.weekdays ?? []), day],
+                          })}
+                        >{t(`day.${day}`)}</Button>
+                      )
+                    })}
+                  </div>
+                </FieldRow>
+              )}
+              <FieldRow label={t('form.timeZone')}>
+                <input
+                  className="dsh-st-md-input"
+                  value={draft.timeZone ?? ''}
+                  aria-label={t('form.timeZone')}
+                  onChange={event => update({ timeZone: event.target.value })}
+                />
+              </FieldRow>
+              <div className="dsh-st-md-field dsh-st-md-field--advanced">
+                <Button
+                  className="dsh-st-md-advanced"
+                  aria-expanded={advancedOpen}
+                  onClick={() => setAdvancedOpen(value => !value)}
+                >{t('detail.advanced')}</Button>
+              </div>
+              {advancedOpen && (
+                <FieldRow label={t('form.maxConcurrentRuns')} hint={t('form.maxConcurrentRunsHint')}>
+                  <input
+                    className="dsh-st-md-input is-narrow"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={draft.maxConcurrentRuns ?? '1'}
+                    onChange={event => update({ maxConcurrentRuns: event.target.value })}
+                  />
+                </FieldRow>
+              )}
+            </div>
           </section>
 
           <DetailHistory
