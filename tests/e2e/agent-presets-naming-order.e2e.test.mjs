@@ -41,3 +41,9 @@ test('E2E: 确保社媒专家锁定为默认值守 Agent', () => {
   const syncScript = fs.readFileSync(path.join(root, 'scripts/sync-agent-presets.sh'), 'utf8');
   assert.match(syncScript, /default:\s*omni-agent/, '同步脚本必须配置默认预设为 omni-agent (社媒专家)');
 });
+
+test('E2E: 出厂保留 tiktok-agent 向后兼容别名，且名称对齐社媒专家', () => {
+  const presetsDir = path.join(root, 'presets');
+  const tiktokPreset = fs.readFileSync(path.join(presetsDir, 'tiktok-agent/preset.yml'), 'utf8');
+  assert.match(tiktokPreset, /name:\s*社媒专家/, 'tiktok-agent 兼容别名名称必须对齐社媒专家');
+});

@@ -1,0 +1,11 @@
+{
+  "task": "fix-legacy-preset-alias-and-resume",
+  "timestamp": "2026-09-15T16:29:10+08:00",
+  "feature": "Backward-compatible alias for tiktok-agent to fix session resume error and frontend deduplication",
+  "verification": {
+    "aliasMounted": "presets/tiktok-agent",
+    "name": "社媒专家",
+    "deduplication": "agent-preset-enhancer syncMenuAvatars seenIds filtering",
+    "resumeStatus": "PASS"
+  }
+}
