@@ -7,6 +7,7 @@ import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSideba
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
+import { ensureConversationScrollbarChrome, installConversationScrollbarReveal } from './conversation-scrollbar.js'
 import { installWelcomeGreetingObserver } from './welcome-greeting.js'
 import { installFullscreenCollapseSync } from './workbench/fullscreen-collapse-sync.js'
 import { installComposerWidthGuard } from './composer-width-guard.js'
@@ -58,6 +59,7 @@ export function installHubChrome(ctx) {
     ensureProductStageChrome()
     ensureConversationCollapseChrome()
     ensureComposerCompactChrome()
+    ensureConversationScrollbarChrome()
     hydrateConversationCollapsed()
     // 左侧栏激活位仲裁器：观察宿主三栏状态，裁决变化走既有 notifyWorkbenchChange 广播。
     const unsubActivation = installSidebarActivation()
@@ -69,6 +71,7 @@ export function installHubChrome(ctx) {
     const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     const unsubWelcome = installWelcomeGreetingObserver()
+    const unsubScrollbar = installConversationScrollbarReveal()
     const unsubFullscreenCollapse = installFullscreenCollapseSync()
     const unsubWidthGuard = installComposerWidthGuard()
     return () => {
@@ -81,6 +84,7 @@ export function installHubChrome(ctx) {
       unsubCollapsedFill?.()
       unsubPresetAvatars?.()
       unsubWelcome?.()
+      unsubScrollbar?.()
       unsubFullscreenCollapse?.()
       unsubWidthGuard?.()
     }
