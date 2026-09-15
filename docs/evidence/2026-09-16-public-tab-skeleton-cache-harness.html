@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>资产中心 · 骨架屏与真卡片几何对齐验证</title>
+<style>
+  :root {
+    /* 只用设计 token 的替身值，验证页与真实主题同构 */
+    --dsw-alias-bg-elevated: #21242c;
+    --dsw-alias-label-primary: #f9fafb;
+    --dsw-alias-label-secondary: #9aa0aa;
+    --dsw-alias-bg-base: #0f1115;
+  }
+  body { margin: 0; padding: 28px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary);
+    font: 13px/1.5 -apple-system, "PingFang SC", sans-serif; }
+  h2 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  p.hint { color: var(--dsw-alias-label-secondary); margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 30px; }
+
+  /* —— 以下两段与 plugins/omnimux-assets/src/client/styles.js 逐字一致 —— */
+  .omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb { height: 164px; aspect-ratio: auto; }
+  .omnimux-assets-cloud-skeleton { pointer-events: none; }
+  .omnimux-assets-cloud-skeleton-thumb { height: 164px; border-radius: 10px;
+    background-color: var(--dsw-alias-bg-elevated);
+    animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite; }
+  .omnimux-assets-cloud-skeleton-line { height: 14px; margin-top: 10px; width: 60%; border-radius: 6px;
+    background-color: var(--dsw-alias-bg-elevated);
+    animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite; }
+  @keyframes omnimux-assets-skeleton-breathe { 0%,100% { opacity: .45 } 50% { opacity: .85 } }
+  /* —— 以上为真源逐字复制 —— */
+
+  /* 验证页自己的量尺与真卡片外观 */
+  .omnimux-assets-cloud-thumb { border-radius: 10px; overflow: hidden;
+    background: linear-gradient(135deg, #2b3040, #3a2f4a); }
+  .omnimux-assets-card-title { margin: 10px 0 0; font-size: 13px; line-height: 20px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .probe { position: relative; }
+  .probe::after { content: ""; position: absolute; left: 0; right: 0; top: 164px;
+    border-top: 1px dashed #5b6472; }
+  .badge { position: absolute; top: 168px; right: 0; font-size: 11px; color: #5b6472; }
+</style>
+</head>
+<body>
+  <h2>首次加载：骨架网格（12 张）</h2>
+  <p class="hint">虚线是真卡片缩略图的下沿（164px）。骨架块必须正好压在这条线上。</p>
+  <div class="grid">
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><span class="badge">164px</span><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+    <div class="omnimux-assets-cloud-skeleton probe"><div class="omnimux-assets-cloud-skeleton-thumb"></div><div class="omnimux-assets-cloud-skeleton-line"></div></div>
+  </div>
+
+  <h2>数据到达后：真卡片</h2>
+  <p class="hint">同样的栅格、同样的 164px 缩略图与同一行标题高度——骨架换成真卡片时高度不变。</p>
+  <div class="grid">
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><span class="badge">164px</span><p class="omnimux-assets-card-title">Judge Owl</p></div>
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><p class="omnimux-assets-card-title">Ceo Orange Tabby</p></div>
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><p class="omnimux-assets-card-title">Spy Siamese</p></div>
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><p class="omnimux-assets-card-title">Lazy Garfield</p></div>
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><p class="omnimux-assets-card-title">Chef Frog</p></div>
+    <div class="omnimux-assets-cloud-card--media probe"><div class="omnimux-assets-cloud-thumb"></div><p class="omnimux-assets-card-title">Coder Red Panda</p></div>
+  </div>
+
+  <h2>页签文案</h2>
+  <p class="hint">改名后：本地 / <strong>公共</strong> / 产品库</p>
+  <div style="display:flex;gap:24px;font-size:13px">
+    <span style="color:var(--dsw-alias-label-secondary)">本地</span>
+    <span style="color:var(--dsw-alias-label-primary);font-weight:600;border-bottom:2px solid var(--dsw-alias-label-primary);padding-bottom:4px">公共</span>
+    <span style="color:var(--dsw-alias-label-secondary)">产品库</span>
+  </div>
+</body>
+</html>
