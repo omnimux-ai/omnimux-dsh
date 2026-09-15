@@ -54,13 +54,12 @@ test('install action opens existing modal and category row precedes content', ()
     categories.children.slice(0, 4).map((node) => node.props.key),
     ['', '套件', 'featured', '短剧漫剧'],
   )
-  // 骨架契约 §二·补：标题/动作行 + 一级 Tab + 二级分类行固定在 .omx-stage-pinned，只有网格滚动。
-  const pinned = tree.children[0]
-  assert.equal(pinned.props.className, 'omx-stage-pinned')
-  assert.equal(pinned.children[0].props.className, 'workshop-intro')
-  assert.equal(pinned.children[1].props.className, 'nav-bar')
-  assert.equal(pinned.children[2].props.className, 'category-bar')
-  assert.equal(tree.children[1].props.className, 'omx-stage-scroll')
+  // 骨架契约 §二·补：标题/动作行随页面滚走，一级/二级 Tab 行吸附在顶部。
+  assert.equal(tree.children[0].props.className, 'workshop-intro')
+  const sticky = tree.children[1]
+  assert.equal(sticky.props.className, 'omx-stage-sticky')
+  assert.equal(sticky.children[0].props.className, 'nav-bar')
+  assert.equal(sticky.children[1].props.className, 'category-bar')
 })
 
 test('failed installation retains dialog and reports error without installed callback', async () => {

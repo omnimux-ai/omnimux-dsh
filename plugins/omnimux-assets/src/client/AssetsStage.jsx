@@ -233,7 +233,6 @@ function AssetsMainView(props) {
 
   if (detail) {
     return (
-      <div className="omx-stage-scroll">
       <AssetBrowse
         key={detail.id}
         t={t}
@@ -242,12 +241,10 @@ function AssetsMainView(props) {
         onPreview={onPreview}
         onEdit={onEditDetail}
       />
-      </div>
     )
   }
 
   return (
-    <div className="omx-stage-scroll">
     <AssetGrid
       t={t}
       assets={visible}
@@ -265,7 +262,6 @@ function AssetsMainView(props) {
       onToggleSelect={toggleSelect}
       onBrowse={setDetail}
     />
-    </div>
   )
 }
 
@@ -412,11 +408,24 @@ export function AssetsStage(props) {
   const [sourceTab, setSourceTab] = useState('local')
   const [productKindTab, setProductKindTab] = useState('all')
   const stageRootRef = useRef(null)
+  const railRef = useRef(null)
 
-  // 一级/二级分类切换后，内容区滚动位置归零（骨架契约 §二·补，Issue 1977）
+  // 云端分类行吸附在一级工具栏之下：偏移跟随工具栏实测高度（骨架契约 §二·补）
   useEffect(() => {
-    const scroller = stageRootRef.current?.querySelector?.('.omx-stage-scroll')
-    if (scroller) scroller.scrollTop = 0
+    const rail = railRef.current
+    const stage = stageRootRef.current
+    if (!rail || !stage || typeof ResizeObserver !== 'function') return undefined
+    const apply = () => stage.style.setProperty('--omx-rail-h', `${Math.round(rail.getBoundingClientRect().height)}px`)
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(rail)
+    return () => observer.disconnect()
+  }, [])
+
+  // 一级/二级分类切换后，整页滚动位置归零（骨架契约 §二·补，Issue 1977）
+  useEffect(() => {
+    const stage = stageRootRef.current
+    if (stage) stage.scrollTop = 0
   }, [sourceTab, feed.filterType, productKindTab])
 
   // A cloud row has no library record behind it, so opening its preview means
@@ -467,15 +476,15 @@ export function AssetsStage(props) {
       role="region"
       aria-label={t('stage.title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-assets-stage"
+      className="omnimux-assets-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
-      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
+      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} sourceTab={sourceTab} />
-      {/* 固定栈：动作行 + 一级 Tab + 二级分类行 + 批量条（骨架契约 §二·补，Issue 1977） */}
-      <div className="omx-stage-pinned">
       <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
+      {/* 吸附栈：一级 Tab + 二级分类行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky" ref={railRef}>
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       {sourceTab === 'local' ? (
         // The local tab draws its own category row here, under the toolbar. The

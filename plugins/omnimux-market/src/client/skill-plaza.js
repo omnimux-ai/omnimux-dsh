@@ -355,21 +355,26 @@
       const projectDir = resolveProjectDir(typeof plazaSessions !== "undefined" ? plazaSessions : null, workspaces);
       const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm, tr, projectDir });
 
-      // 滚动归属（契约 §二·补）：一级/二级 Tab 固定，只有卡片网格滚动。
-      const [scrollNode, setScrollNode] = hooks.useState(null);
+      // 滚动归属（骨架契约 §二·补）：整页滚动，标题/动作行随页面滚走，一级/二级 Tab 到顶吸附。
+      const [stickyNode, setStickyNode] = hooks.useState(null);
       hooks.useEffect(() => {
-        if (scrollNode) scrollNode.scrollTop = 0;
-      }, [scrollNode, state.mainTab, state.category, state.mineCategory]);
+        if (!stickyNode) return;
+        let el = stickyNode.parentElement;
+        while (el) {
+          const overflowY = typeof getComputedStyle === "function" ? getComputedStyle(el).overflowY : "";
+          if ((overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight) break;
+          el = el.parentElement;
+        }
+        if (el) el.scrollTop = 0;
+      }, [stickyNode, state.mainTab, state.category, state.mineCategory]);
 
       return h("div", { className: "sh-mkt" },
-        h("div", { className: "omx-stage-pinned" },
-          renderWorkshopIntro(sections.introOpts),
+        renderWorkshopIntro(sections.introOpts),
+        h("div", { className: "omx-stage-sticky", ref: setStickyNode },
           renderPlazaNavBar(sections.navBarOpts),
           sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
         ),
-        h("div", { className: "omx-stage-scroll", ref: setScrollNode },
-          renderPlazaTabContent(sections.tabContentOpts),
-        ),
+        renderPlazaTabContent(sections.tabContentOpts),
         drawerNode,
         installNode,
         confirmNode,

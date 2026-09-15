@@ -8,9 +8,12 @@
  */
 
 export const STYLES = `
-/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：固定栈 + 唯一滚动区，声明与其它插件逐字一致 */
-.omx-stage-pinned {
-  flex: none;
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;
@@ -38,15 +41,13 @@ export const STYLES = `
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .omnimux-accounts-root {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
   gap: 12px;
   padding: 0 20px 24px;
   color: var(--dsw-alias-label-primary, var(--dsw-text-primary, inherit));

@@ -215,10 +215,30 @@ export function InspirationSection({ t, active }) {
     injectInspirationStyles()
   }, [])
 
+  const toolbarRef = useRef(null)
+
+  // 骨架契约 §二·补：二级筛选行吸附在一级工具栏之下，偏移量跟随工具栏实测高度。
+  useEffect(() => {
+    const el = toolbarRef.current
+    if (!el || typeof ResizeObserver !== 'function') return undefined
+    const apply = () => {
+      const root = el.closest('.omnimux-inspiration-root')
+      if (root) root.style.setProperty('--omx-sticky-h', `${Math.round(el.getBoundingClientRect().height)}px`)
+    }
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // 一级分类切换后回到页面顶部。
+  useEffect(() => {
+    const root = toolbarRef.current?.closest?.('.omnimux-inspiration-root')
+    if (root) root.scrollTop = 0
+  }, [tab])
+
   return (
-    <div className="omnimux-inspiration-root">
-      {/* 固定栈：动作行 + 一级 Tab 工具栏（骨架契约 §二·补，Issue 1977） */}
-      <div className="omx-stage-pinned">
+    <div className="omnimux-inspiration-root omx-stage-scroll">
       <div className="omnimux-inspiration-action-row">
         <Button
           variant="primary"
@@ -231,6 +251,8 @@ export function InspirationSection({ t, active }) {
 
       <Divider />
 
+      {/* 吸附栈：一级 Tab 工具栏（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky" ref={toolbarRef}>
       <FilterBar
         className="omnimux-inspiration-toolbar"
         filters={
@@ -349,8 +371,8 @@ export function InspirationSection({ t, active }) {
         />
       ) : (
         <>
-          {/* 固定栈：二级筛选行 + 批量选择条（骨架契约 §二·补） */}
-          <div className="omx-stage-pinned">
+          {/* 吸附栈：二级筛选行 + 批量选择条，贴在一级工具栏下方（骨架契约 §二·补） */}
+          <div className="omx-stage-sticky omnimux-inspiration-subfilter-sticky">
           <div className="omnimux-inspiration-subfilter-row">
             <DropdownSelect
               value={country}
@@ -464,8 +486,6 @@ export function InspirationSection({ t, active }) {
           ) : null}
           </div>
 
-          {/* 唯一滚动区：卡片网格 / 空态 / 骨架屏（骨架契约 §二·补） */}
-          <div className="omx-stage-scroll">
           {loading && items.length === 0 ? (
             <div className="omnimux-inspiration-skeleton">
               {Array.from({ length: 10 }).map((_, i) => (
@@ -538,7 +558,6 @@ export function InspirationSection({ t, active }) {
           ) : null}
 
           <div ref={sentinelRef} />
-          </div>
 
           {selectedItem ? (
             <InspirationPreviewModal

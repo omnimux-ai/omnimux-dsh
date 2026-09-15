@@ -1,9 +1,12 @@
 export const STYLES_ID = 'omnimux-assets-styles'
 
 export const ASSETS_CSS = `
-/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：固定栈 + 唯一滚动区，声明与其它插件逐字一致 */
-.omx-stage-pinned {
-  flex: none;
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;
@@ -161,7 +164,6 @@ export const ASSETS_CSS = `
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   padding: 16px 24px;
 }
 .omnimux-assets-grid {
@@ -882,10 +884,13 @@ export const ASSETS_CSS = `
   gap: 10px;
 }
 .omnimux-assets-cloud-nav {
-  display: flex;
-  flex-direction: column;
+  display: flex;  flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
+}
+/* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
+.omnimux-assets-cloud-nav.omx-stage-sticky {
+  top: var(--omx-rail-h, 0px);
 }
 .omnimux-assets-cloud-nav-row,
 .omnimux-assets-cloud-subnav {
@@ -1038,11 +1043,7 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-cloud-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 2px;
+  display: contents;
 }
 .omnimux-assets-cloud-grid {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1303,9 +1304,7 @@ export const ASSETS_CSS = `
   height: 44px;
 }
 .omnimux-products-body {
-  flex: 1;
   min-height: 0;
-  overflow: auto;
   padding: 0;
 }
 .omnimux-products-grid {

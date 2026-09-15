@@ -130,7 +130,7 @@ export function PublishStage(props) {
       role="region"
       aria-label={t('title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-publish-stage"
+      className="omnimux-publish-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
       style={{
         display: visible ? 'flex' : 'none',
@@ -150,8 +150,8 @@ export function PublishStage(props) {
         onClose={handleClose}
         closeTitle={t('close')}
       />
-      {/* 固定栈：三 Tab 账本切换行（骨架契约 §二·补，Issue 1977） */}
-      <div className="omx-stage-pinned">
+      {/* 吸附栈：三 Tab 账本切换行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky">
       <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
       </div>
       <PublishViewport

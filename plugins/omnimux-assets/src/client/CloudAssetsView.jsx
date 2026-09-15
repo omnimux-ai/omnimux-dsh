@@ -431,7 +431,7 @@ function CloudCategoryNav(props) {
   const filterBarOwnsSecondLevel = characterFilters.dimensions.length > 0
 
   return (
-    <div className="omnimux-assets-cloud-nav omx-stage-pinned">
+    <div className="omnimux-assets-cloud-nav omx-stage-sticky">
       <div className="omnimux-assets-cloud-nav-row" role="group" aria-label={t('cloud.nav.label')}>
         {categories.map((row) => (
           <Button
@@ -528,7 +528,7 @@ export function CloudAssetsView(props) {
     body = <EmptyState title={emptyState.title} description={emptyState.description} />
   } else {
     body = (
-      <div className="omnimux-assets-cloud-scroll omx-stage-scroll">
+      <div className="omnimux-assets-cloud-scroll">
         <div className="omnimux-assets-grid omnimux-assets-cloud-grid">
           {items.map((asset) => (
             <CloudAssetCard

@@ -77,7 +77,7 @@ export function PublishViewContent(props) {
 export function PublishViewport(props) {
   const { toastMsg, isBatchMode, selectedIds, filteredRecords, batchActions } = props
   return (
-    <main className="omnimux-publish-viewport omx-stage-scroll">
+    <main className="omnimux-publish-viewport">
       {toastMsg ? <div className="omnimux-publish-alert">{toastMsg}</div> : null}
       {isBatchMode ? (
         <PublishBatchBar

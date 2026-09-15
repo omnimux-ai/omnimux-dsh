@@ -1,6 +1,6 @@
     const CSS = `
-/* 全站一级页骨架契约类（Issue #1977）：固定栈 + 唯一滚动区，声明与其它插件逐字一致 */
-.omx-stage-pinned{flex:none}
+/* 全站一级页骨架契约类（Issue 1977）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky{position:sticky;top:0;z-index:3;background:var(--dsw-alias-bg-base,var(--dsw-bg))}
 .omx-stage-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
 .sh-root{font-family:inherit;color:var(--dsw-alias-label-primary,inherit);max-width:920px}
 .sh-hint{color:var(--dsw-alias-label-caption,#6b7280);font-size:12px;line-height:18px;margin:0 0 10px}
@@ -195,10 +195,8 @@
 .sh-plaza-search{display:flex;align-items:center;margin-left:auto;min-width:180px;max-width:280px;width:100%;flex:0 1 280px}
 .sh-plaza-search .dshUk-SearchField-root,.sh-plaza-search .dshUk-SearchField-stretch{width:100%;max-width:none}
 .sh-plaza-close{display:flex;align-items:center;flex:none}
-.sh-plaza-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:18px 20px 32px}
-.sh-plaza-body > *{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
-.sh-plaza-body > .sh-mkt{overflow:hidden}
-.sh-plaza-body .sh-mkt{max-width:none;width:100%;display:flex;flex-direction:column;min-height:0}
+.sh-plaza-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:18px 20px 32px}
+.sh-plaza-body .sh-mkt{max-width:none;width:100%}
 .sh-plaza-body .sh-cards,.sh-plaza-body .sh-mkt-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 @media (max-width:1400px){.sh-plaza-body .sh-cards,.sh-plaza-body .sh-mkt-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:980px){.sh-plaza-body .sh-cards,.sh-plaza-body .sh-mkt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

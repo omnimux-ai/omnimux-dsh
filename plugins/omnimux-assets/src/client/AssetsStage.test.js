@@ -82,7 +82,7 @@ describe('Local library category row', () => {
     assert.equal(stageJsx.split('<LocalCategoryNav').length - 1, 1)
     // The cloud tab keeps drawing its own row from the catalog manifest.
     assert.match(cloudJsx, /<CloudCategoryNav\b/)
-    assert.match(cloudJsx, /className="omnimux-assets-cloud-nav"/)
+    assert.match(cloudJsx, /className="omnimux-assets-cloud-nav\b[^"]*"/)
   })
 
   it('shares the cloud chip treatment instead of restating it', () => {
