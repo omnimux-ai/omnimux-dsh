@@ -380,34 +380,31 @@ export const MEDIA_VIEWER_CSS = `
   flex-shrink: 0;
 }
 
-/* 可选（非当前）状态：1:1 正方形、更小、暗色半透明、左右绝对居中 */
+/* 可选（非当前）状态：1:1 正方形、更小、清晰透亮（无压暗滤镜，确保内容清晰可读）、左右绝对居中 */
 .omx-mv-thumbnails-rail__item.inactive,
 .omx-mv-thumbnails-rail__item:not(.active) {
   width: 38px;
   height: 38px;
   border-radius: 9px;
-  opacity: 0.38;
-  filter: brightness(0.6);
+  opacity: 0.72;
   border: 1px solid var(--dsw-alias-border-l2);
 }
 
 .omx-mv-thumbnails-rail__item.inactive:hover,
 .omx-mv-thumbnails-rail__item:not(.active):hover {
-  opacity: 0.85;
-  filter: brightness(0.95);
-  transform: scale(1.08);
+  opacity: 0.95;
+  transform: scale(1.06);
   border-color: var(--dsw-alias-border-l3);
 }
 
-/* 当前选中状态：1:1 正方形、明显更大、强白光发光边框光晕、左右居中 */
+/* 当前选中状态：1:1 正方形、极简克制白边（无刺眼漫射发光光晕）、左右居中 */
 .omx-mv-thumbnails-rail__item.active {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+  width: 50px;
+  height: 50px;
+  border-radius: 11px;
   opacity: 1;
-  filter: brightness(1.05);
-  border: 2.5px solid var(--dsw-alias-label-primary) !important;
-  box-shadow: 0 0 14px var(--dsw-alias-label-primary), 0 0 28px var(--dsw-alias-bg-layer-1), 0 4px 16px var(--dsw-alias-bg-base) !important; /* exempt-ui03: 选中态高亮白光光晕 */
+  border: 2px solid var(--dsw-alias-label-primary) !important;
+  box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1) !important; /* exempt-ui03: 选中态微投影 */
   transform: scale(1);
 }
 

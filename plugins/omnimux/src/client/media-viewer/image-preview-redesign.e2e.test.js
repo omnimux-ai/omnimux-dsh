@@ -42,11 +42,13 @@ test('E2E: 图像生成大图预览消除黑边、手势缩放记忆与左上角
   const isSquareAspect = /\.omx-mv-thumbnails-rail__item\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1;/s.test(css);
   record('AC-3_THUMBNAIL_1_TO_1_RATIO', isSquareAspect, '所有缩略图卡片严格采用 1:1 正方形比例');
 
-  const hasActiveHighlightGlow = /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border:\s*2\.5px solid/s.test(css);
-  record('AC-3_ACTIVE_HIGHLIGHT_GLOW', hasActiveHighlightGlow, '当前选中项具备 2.5px 纯白发光边框光晕');
+  const hasActiveBorder = /\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*border:\s*2px solid/s.test(css);
+  const noWhiteGlow = !/\.omx-mv-thumbnails-rail__item\.active\s*\{[^}]*box-shadow:\s*0\s*0\s*14px/s.test(css);
+  record('AC-3_ACTIVE_CRISP_BORDER', hasActiveBorder && noWhiteGlow, '当前选中项具备 2px 极简纯白边框，且无刺眼漫射发光光晕');
 
-  const hasInactiveDimmed = /\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*width:\s*38px;[^}]*height:\s*38px;[^}]*opacity:\s*0\.38/s.test(css);
-  record('AC-3_INACTIVE_DIMMED_MINI', hasInactiveDimmed, '候选未选中项为 38px 微缩暗色半透明');
+  const hasInactiveClear = /\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*width:\s*38px;[^}]*height:\s*38px;[^}]*opacity:\s*0\.72/s.test(css);
+  const noBrightnessFilter = !/\.omx-mv-thumbnails-rail__item\.inactive[^}]*\{[^}]*filter:\s*brightness/s.test(css);
+  record('AC-3_INACTIVE_CLEAR_PREVIEW', hasInactiveClear && noBrightnessFilter, '候选未选中项保持 38px，透明度提至 0.72 且无压暗滤镜，画面清晰');
 
   // 3. 验证 AC-4: 跨图缩放记忆锁定
   const store = createMediaViewerStore({
