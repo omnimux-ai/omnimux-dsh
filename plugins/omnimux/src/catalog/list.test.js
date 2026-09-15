@@ -63,7 +63,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     }
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
     assert.equal(imageRow.subtitle, '1k-4k')
@@ -77,29 +77,14 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     assert.deepEqual(catalog.video.map((row) => row.id), [
-      'grok-imagine-video-1-5',
       'minimax-h3',
       'seedance-2-0',
-      'seedance-2-0-fast',
-      'seedance-2-0-mini',
       'seedance-2-5',
-      'wan-3.0',
     ])
     assert.deepEqual(catalog.audio.map((row) => row.id), ['seed-audio-1.0'])
     // Text bucket includes implementation-ready models without requiring live history.
     assert.deepEqual(catalog.text.map((row) => row.id), [
-      'claude-opus-4-6',
-      'claude-opus-5',
-      'deepseek-v4-flash',
-      'deepseek-v4-pro',
-      'gemini-3.1-pro-preview',
-      'gemini-3.7-flash',
       'gemini-3.8-flash',
-      'glm-5.3',
-      'gpt-5.5',
-      'gpt-5.6-sol',
-      'grok-4.6',
-      'kimi-k3',
     ])
 
     // draft / canonical-without-listed-ops models never appear in any bucket
@@ -121,13 +106,13 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
-    assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
+    assert.equal(catalog.defaults.video, 'seedance-2-5')
     assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
-    assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-0-fast')
+    assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-5')
     assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2.5')
     assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
 
-    assert.equal(catalog.text.length, 12)
+    assert.equal(catalog.text.length, 1)
   })
 
   it('forbids ASCII hyphen-minus in every catalog model label', () => {
@@ -145,19 +130,19 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({
       text: h.text,
       media: h.media,
-      env: { OMNIMUX_VIDEO_MODEL: 'kling-o3', OMNIMUX_TEXT_DEFAULT_MODEL: 'gpt-5.5' },
+      env: { OMNIMUX_VIDEO_MODEL: 'kling-o3', OMNIMUX_TEXT_DEFAULT_MODEL: 'gemini-3.8-flash' },
     })
     // kling-o3 is canonical but declares no listed op → env overlay refused
-    assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
-    // #530 PR-A: gpt-5.5#chat is listed → env overlay accepted
-    assert.equal(catalog.defaults.text, 'gpt-5.5')
+    assert.equal(catalog.defaults.video, 'seedance-2-5')
+    // gemini-3.8-flash#chat is listed → env overlay accepted
+    assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     // #1751: a withdrawn id is refused for the same reason
     const withdrawn = buildModelCatalog({
       text: h.text,
       media: h.media,
       env: { OMNIMUX_VIDEO_MODEL: 'kling-o1' },
     })
-    assert.equal(withdrawn.defaults.video, 'seedance-2-0-fast')
+    assert.equal(withdrawn.defaults.video, 'seedance-2-5')
   })
 
   it('ignores env / settings ids that are not in the list', () => {
@@ -168,7 +153,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       env: { OMNIMUX_VIDEO_MODEL: 'not-a-real-model' },
       settingsDefaults: { defaultTextModel: 'totally-fake' },
     })
-    assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
+    assert.equal(catalog.defaults.video, 'seedance-2-5')
     // fake text id refused → fall back to listed config default
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
@@ -180,13 +165,13 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       media: h.media,
       env: {},
       settingsDefaults: {
-        defaultTextModel: 'gpt-5.5',
+        defaultTextModel: 'gemini-3.8-flash',
         defaultImageModel: 'grok-imagine-image',
         defaultAudioModel: 'gpt-4o-mini-tts',
       },
     })
     // settings beats the config text default while env is absent
-    assert.equal(catalog.defaults.text, 'gpt-5.5')
+    assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     // grok-imagine-image normalizes to grok-imagine-image-2-0, which declares no listed
     // op → the image overlay is refused and the listed config default survives.
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
@@ -222,11 +207,11 @@ describe('buildModelCatalog (H2 contract projection)', () => {
   })
 
   it('text bucket lists PR-A verified models; gate cannot invent unlisted ids', () => {
-    const h = parseHubConfig({ gate: { models: { textComplete: { 'grok-4.6': true } } } })
+    const h = parseHubConfig({ gate: { models: { textComplete: { 'gemini-3.8-flash': true } } } })
     const catalog = buildModelCatalog({ text: h.text, media: h.media, gate: h.gate, env: {} })
     // #530 PR-A listed text set is contract-driven, not gate-invented
-    assert.ok(catalog.text.some((row) => row.id === 'grok-4.6'))
-    assert.equal(catalog.text.length, 12)
+    assert.ok(catalog.text.some((row) => row.id === 'gemini-3.8-flash'))
+    assert.equal(catalog.text.length, 1)
     assert.equal(catalog.text.some((row) => row.id === 'whisper-1'), false)
   })
 

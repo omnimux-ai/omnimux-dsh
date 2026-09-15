@@ -28,31 +28,32 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-claude-opus-5-chat.md"
           verifiedAt: "2026-09-05"
-          notes: "2026-09-05 token45：/v1/chat/completions 200 live（历史 chat-completions 403 已解除于本 key）"
+          notes: "2026-09-15 仅登记不开放访问：网关生产基线已下架收敛，本地保留契约元数据登记，避免调用失败"
         implementation:
           status: "ready"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
-          notes: "2026-09-05 dated live chat-completions 200"
+          notes: "网关未开放访问"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-claude-opus-5-chat.md"
       verifiedAt: "2026-09-05"
+      notes: "2026-09-15 仅登记不开放访问"
     implementation:
       status: "ready"
       profileId: "textComplete"
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -73,7 +74,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -83,7 +84,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -110,7 +111,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -120,12 +121,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -134,7 +135,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -155,7 +156,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gpt-5.6-sol-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -165,7 +166,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -192,7 +193,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gpt-5.6-sol-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -202,12 +203,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-gpt-5.6-sol-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -216,7 +217,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -237,7 +238,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gpt-5.5-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 live；请求 reasoning_effort=low"
@@ -247,7 +248,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -274,7 +275,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gpt-5.5-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -284,12 +285,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-gpt-5.5-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -298,7 +299,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -319,7 +320,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-grok-4.6-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -329,7 +330,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -356,7 +357,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-grok-4.6-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -366,12 +367,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-grok-4.6-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -380,7 +381,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -401,7 +402,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-kimi-k3-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -411,7 +412,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -438,7 +439,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-kimi-k3-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -448,12 +449,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-kimi-k3-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -462,7 +463,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -483,7 +484,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-deepseek-v4-pro-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -493,12 +494,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-deepseek-v4-pro-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -507,7 +508,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -529,7 +530,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-deepseek-v4-flash-vision-exp-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 独立 live；小 max_tokens 时 reasoning 占满 content 空，max_tokens≥256 得 pong"
@@ -539,7 +540,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -566,7 +567,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 独立 vision-exp live：PNG/JPEG/WebP + 1/2/10/11 图均 200；11 未拒故 max10 保守，非 measured"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-deepseek-v4-flash-vision-exp-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 独立 vision-exp live（禁止继承 deepseek-v4-flash）；PNG/JPEG/WebP 识别 red"
@@ -576,12 +577,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-deepseek-v4-flash-vision-exp-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -590,7 +591,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -704,7 +705,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gemini-3.7-flash-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -714,7 +715,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -752,7 +753,7 @@ models:
               kind: "policy_conservative"
               note: "2026-08-22 video spike（data:video 原生 mp4 理解）；保守 50MB 待官方审计"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gemini-3.7-flash-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 image live；video 槽未本批证实，保持 policy_conservative"
@@ -762,12 +763,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-gemini-3.7-flash-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -776,7 +777,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -797,7 +798,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gemini-3.1-pro-preview-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -807,7 +808,7 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
@@ -834,7 +835,7 @@ models:
               kind: "policy_conservative"
               note: "2026-09-05 live：1/2/10 图 200；11 图仍 200 未拒，不得写 max10 measured；契约 max10 保守"
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-gemini-3.1-pro-preview-vision_chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -844,12 +845,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-gemini-3.1-pro-preview-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -858,7 +859,7 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"
 
@@ -879,7 +880,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-05-model-glm-5.3-chat.md"
           verifiedAt: "2026-09-05"
           notes: "2026-09-05 #530 PR-A live 四要素齐全"
@@ -889,12 +890,12 @@ models:
           seam: "textComplete"
           notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "textComplete"
           seam: "textComplete"
           notes: "2026-09-05 dated live chat-completions 200"
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-05-model-glm-5.3-chat.md"
       verifiedAt: "2026-09-05"
     implementation:
@@ -903,6 +904,6 @@ models:
       seam: "textComplete"
       notes: "迁移既有已落地适配；与历史 execution 证据分开记录"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "textComplete"
       seam: "textComplete"

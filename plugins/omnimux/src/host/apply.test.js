@@ -68,7 +68,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.source, 'omnimux')
     assert.ok(Array.isArray(catalog.text))
     // Catalog includes the user-confirmed Gemini 3.8 mapping.
-    assert.equal(catalog.text.length, 12)
+    assert.equal(catalog.text.length, 1)
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 

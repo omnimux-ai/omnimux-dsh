@@ -26,7 +26,7 @@ describe('test network guard', () => {
             protocol: 'openai-media',
             baseUrl: 'https://external.test/v1',
             apiKey: 'test-network-guard-key',
-            models: { video: 'seedance-2-0-fast' },
+            models: { video: 'seedance-2-5' },
           },
         },
       },
@@ -37,7 +37,7 @@ describe('test network guard', () => {
       () => tools[0].execute({
         prompt: 'offline guard probe',
         dest: '/tmp/omnimux-network-guard.mp4',
-        model: 'seedance-2-0-fast',
+        model: 'seedance-2-5',
         operation: 'text_to_video',
         duration: 4,
         wait: false,

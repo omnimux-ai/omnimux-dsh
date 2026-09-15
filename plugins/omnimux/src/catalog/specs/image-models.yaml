@@ -226,7 +226,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
           verifiedAt: "2026-09-15"
         implementation:
@@ -235,7 +235,7 @@ models:
           seam: "imageGenerate"
           notes: "复用既有 OpenAI 图像协议映射；上游同步返回 b64_json"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "imageGenerate"
           seam: "imageGenerate"
     parameters:
@@ -269,7 +269,7 @@ models:
           - { value: 4, label: "4 张" }
         defaultValue: 1
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
       verifiedAt: "2026-09-15"
       notes: "网关公开价目表模型级元数据（USD 0.014706/次）+ dated live 出图记录；专属分组 gpt-image-2.5-flare-std / -pro"
@@ -278,7 +278,7 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
@@ -300,7 +300,7 @@ models:
             min: 1
             max: 1
         research:
-          status: "verified"
+          status: "draft"
           docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
           verifiedAt: "2026-09-15"
         implementation:
@@ -309,7 +309,7 @@ models:
           seam: "imageGenerate"
           notes: "复用既有 OpenAI 图像协议映射；上游同步返回 b64_json"
         execution:
-          status: "live"
+          status: "stub"
           profileId: "imageGenerate"
           seam: "imageGenerate"
     parameters:
@@ -343,7 +343,7 @@ models:
           - { value: 4, label: "4 张" }
         defaultValue: 1
     research:
-      status: "verified"
+      status: "draft"
       docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
       verifiedAt: "2026-09-15"
       notes: "网关公开价目表模型级元数据（USD 0.014706/次）+ dated live 出图记录；专属分组 gpt-image-2.5-sunburst-std / -pro"
@@ -352,7 +352,7 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
     execution:
-      status: "live"
+      status: "stub"
       profileId: "imageGenerate"
       seam: "imageGenerate"
 

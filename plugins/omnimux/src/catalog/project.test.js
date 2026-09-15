@@ -140,38 +140,23 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
   assert.equal(dto.schemaVersion, '1.1');
   assert.equal(dto.source, 'omnimux');
-  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']);
+  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2.5']);
   assert.deepEqual(dto.video.map((r) => r.id), [
-    'grok-imagine-video-1-5',
     'minimax-h3',
     'seedance-2-0',
-    'seedance-2-0-fast',
-    'seedance-2-0-mini',
     'seedance-2-5',
-    'wan-3.0',
   ]);
   assert.deepEqual(dto.audio.map((row) => row.id), ['seed-audio-1.0']);
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
-    'claude-opus-4-6',
-    'claude-opus-5',
-    'deepseek-v4-flash',
-    'deepseek-v4-pro',
-    'gemini-3.1-pro-preview',
-    'gemini-3.7-flash',
     'gemini-3.8-flash',
-    'glm-5.3',
-    'gpt-5.5',
-    'gpt-5.6-sol',
-    'grok-4.6',
-    'kimi-k3',
     // #1789: the two ASR contracts output text, so both sit in the text bucket by output.type;
     // they are independent rows — seedasr-auc is not folded into doubao-asr-bigmodel.
     'seedasr-auc',
     'doubao-asr-bigmodel',
   ]);
   assert.equal(dto.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
-  assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-0-fast');
+  assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-5');
   assert.equal(dto.defaultsByOperation.chat, 'gemini-3.8-flash');
 });
 
@@ -276,10 +261,10 @@ test('getHealthyContractIndex returns the healthy on-disk index', () => {
 
 test('visibleOps only surfaces listed ops', () => {
   const index = freshIndex();
-  const seedance = index.get('seedance-2-0-fast');
+  const seedance = index.get('seedance-2-0');
   assert.deepEqual(
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 7);
+  assert.equal(projectKindRows(index, 'video').length, 3);
 });

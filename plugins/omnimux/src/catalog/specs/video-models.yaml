@@ -36,7 +36,7 @@ models:
             min: 1
             max: 1
         execution:
-          status: live
+          status: stub
           profileId: videoGenerate
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
@@ -153,7 +153,7 @@ models:
             min: 1
             hint: Seedance 2.0 参考模式至少需要一张图片或一个视频；音频不能单独输入
         execution:
-          status: live
+          status: stub
           profileId: videoGenerate
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
@@ -206,7 +206,7 @@ models:
         supported: true
         defaultValue: false
     research:
-      status: verified
+      status: draft
       docUrl: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       verifiedAt: 2026-09-05
       notes: 能力和约束取 APIMart 官方 Seedance 2.0 文档；未知上限不以历史测试补齐
@@ -248,7 +248,7 @@ models:
             min: 1
             max: 1
         execution:
-          status: live
+          status: stub
           profileId: videoGenerate
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
@@ -414,7 +414,7 @@ models:
         supported: true
         defaultValue: false
     research:
-      status: verified
+      status: draft
       docUrl: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       verifiedAt: 2026-09-05
       notes: 能力和约束取 APIMart 官方 Seedance 2.0 文档；未知上限不以历史测试补齐
@@ -1368,7 +1368,7 @@ models:
         supported: true
         defaultValue: false
     research:
-      status: verified
+      status: draft
       docUrl: https://docs.apimart.ai/en/api-reference/videos/grok-imagine/official.md
       verifiedAt: 2026-09-05
       notes: 仅接 APIMart 官方 grok-imagine-video-1.5；不混入 EXT 或基础版视频编辑能力
@@ -1685,7 +1685,7 @@ models:
         supported: true
         defaultValue: false
     research:
-      status: verified
+      status: draft
       docUrl: https://docs.apimart.ai/en/api-reference/videos/wan3.0-video/generation.md
       verifiedAt: 2026-09-05
       notes: 文生、首帧、首尾帧、全模态参考、文档和网页模式均取 APIMart Wan 3.0 官方文档

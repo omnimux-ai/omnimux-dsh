@@ -79,9 +79,9 @@ test('audio modes come from the selected model, with no fixed speech/music tabs'
 });
 
 test('text sources occupy the input header without creating media slots or copying the editor value', () => {
-  const empty = render(node('text'), fixture('text'));
+  const empty = render(node('text'), fixture('text', false));
   assert.match(empty, /wf-config-panel__prompt-header--empty-slots/);
-  const supplied = render(node('text'), fixture('text'), [{nodeId:'source',edgeId:'text-edge',label:'正文来源',materialType:'text',textContent:'1dog',hasMedia:true,availability:'ready'}]);
+  const supplied = render(node('text'), fixture('text', false), [{nodeId:'source',edgeId:'text-edge',label:'正文来源',materialType:'text',textContent:'1dog',hasMedia:true,availability:'ready'}]);
   assert.match(supplied, /1dog/);
   assert.doesNotMatch(supplied, /wf-config-panel__prompt-header--empty-slots|data-testid="wf-slot-wells"/);
   assert.match(supplied, /<textarea[^>]*><\/textarea>/);
