@@ -1130,10 +1130,10 @@ test('createWorkbenchSidebarStore.open never claims product stage', () => {
     title: '资产库',
   })
   adapter.open()
-  assert.deepEqual(openedTab, { tabId: 'omnimux-assets:library', title: '资产库', focus: WORKBENCH_FOCUS.gui })
+  assert.deepEqual(openedTab, { tabId: 'omnimux-assets:library', title: '资产库' })
   openedTab = null
   adapter.set(true)
-  assert.deepEqual(openedTab, { tabId: 'omnimux-assets:library', title: '资产库', focus: WORKBENCH_FOCUS.gui })
+  assert.deepEqual(openedTab, { tabId: 'omnimux-assets:library', title: '资产库' })
   assert.equal(claimed, 0)
 })
 
