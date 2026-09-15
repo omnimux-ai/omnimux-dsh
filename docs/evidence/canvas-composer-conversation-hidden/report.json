@@ -1,0 +1,376 @@
+{
+  "runId": "5973eb8f-72d2-4bc8-8f46-027f6aef0554",
+  "task": "issue-1998",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998",
+  "startedAt": "2026-09-15T17:29:44.166Z",
+  "completedAt": "2026-09-15T17:29:48.776Z",
+  "pass": true,
+  "method": "real-chromium + 本工作树源码导出的生产样式表 + 忠实宿主 DOM",
+  "projectionSelector": ":is(html:has([data-omnimux-image-canvas][data-visible=\"true\"]) .dshDesktopFrame[data-rightbar-fullscreen=\"true\"], html[data-omnimux-conversation-collapsed]:not(:has([data-rightbar-collapsed=\"true\"])):has([data-omnimux-image-canvas][data-visible=\"true\"]))",
+  "productionCssBytes": 5801,
+  "scenes": [
+    {
+      "key": "S1-canvas-collapsed",
+      "ac": "AC-1",
+      "desc": "图像画布 + 会话栏收起（右栏未收起）→ 必须投射",
+      "expect": "projected",
+      "projected": true,
+      "pass": true,
+      "applied": {
+        "collapsed": true,
+        "leftCollapsed": false,
+        "identity": true,
+        "visible": "true",
+        "fullscreen": null,
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "fixed",
+        "seatBottom": "10px",
+        "seatLeft": "280px",
+        "seatRect": {
+          "x": 280,
+          "y": 859,
+          "w": 1448,
+          "h": 38
+        },
+        "seatVisibility": "visible",
+        "seatPointerEvents": "auto",
+        "cardRect": {
+          "x": 684,
+          "y": 859,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "18px",
+        "stageRect": {
+          "x": 280,
+          "y": 0,
+          "w": 1448,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S1-canvas-collapsed.png",
+        "bytes": 6474
+      },
+      "cardInsideStage": true
+    },
+    {
+      "key": "S2-canvas-expanded",
+      "ac": "AC-2",
+      "desc": "图像画布 + 会话栏展开 → 不得投射（输入框留在会话列内）",
+      "expect": "not-projected",
+      "projected": false,
+      "pass": true,
+      "applied": {
+        "collapsed": false,
+        "leftCollapsed": false,
+        "identity": true,
+        "visible": "true",
+        "fullscreen": null,
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "sticky",
+        "seatBottom": "0px",
+        "seatLeft": "auto",
+        "seatRect": {
+          "x": 280,
+          "y": 869,
+          "w": 670,
+          "h": 38
+        },
+        "seatVisibility": "visible",
+        "seatPointerEvents": "auto",
+        "cardRect": {
+          "x": 295,
+          "y": 869,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "0px",
+        "stageRect": {
+          "x": 950,
+          "y": 0,
+          "w": 778,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S2-canvas-expanded.png",
+        "bytes": 8845
+      }
+    },
+    {
+      "key": "S3-canvas-fullscreen",
+      "ac": "AC-3",
+      "desc": "图像画布 + 右栏全屏 → 保持既有投射（不回归）",
+      "expect": "projected",
+      "projected": true,
+      "pass": true,
+      "applied": {
+        "collapsed": false,
+        "leftCollapsed": false,
+        "identity": true,
+        "visible": "true",
+        "fullscreen": "true",
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "fixed",
+        "seatBottom": "10px",
+        "seatLeft": "280px",
+        "seatRect": {
+          "x": 280,
+          "y": 859,
+          "w": 1448,
+          "h": 38
+        },
+        "seatVisibility": "visible",
+        "seatPointerEvents": "auto",
+        "cardRect": {
+          "x": 684,
+          "y": 859,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "18px",
+        "stageRect": {
+          "x": 950,
+          "y": 0,
+          "w": 778,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S3-canvas-fullscreen.png",
+        "bytes": 10048
+      }
+    },
+    {
+      "key": "S4-collapsed-and-rightbar-collapsed",
+      "ac": "AC-4",
+      "desc": "会话栏折叠 + 右栏确证收起（会话列被强制占满）→ 不得投射",
+      "expect": "not-projected",
+      "projected": false,
+      "pass": true,
+      "applied": {
+        "collapsed": true,
+        "leftCollapsed": false,
+        "identity": true,
+        "visible": "true",
+        "fullscreen": null,
+        "rightbarCollapsed": "true"
+      },
+      "measured": {
+        "seatPosition": "sticky",
+        "seatBottom": "0px",
+        "seatLeft": "auto",
+        "seatRect": {
+          "x": 280,
+          "y": 869,
+          "w": 670,
+          "h": 38
+        },
+        "seatVisibility": "visible",
+        "seatPointerEvents": "auto",
+        "cardRect": {
+          "x": 295,
+          "y": 869,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "0px",
+        "stageRect": {
+          "x": 950,
+          "y": 0,
+          "w": 778,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S4-collapsed-and-rightbar-collapsed.png",
+        "bytes": 8845
+      }
+    },
+    {
+      "key": "S5-other-page-collapsed",
+      "ac": "AC-5",
+      "desc": "其他插件页（无画布身份）+ 会话栏收起 → 不得投射",
+      "expect": "not-projected",
+      "projected": false,
+      "pass": true,
+      "applied": {
+        "collapsed": true,
+        "leftCollapsed": false,
+        "identity": false,
+        "visible": null,
+        "fullscreen": null,
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "sticky",
+        "seatBottom": "0px",
+        "seatLeft": "auto",
+        "seatRect": {
+          "x": 280,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "seatVisibility": "hidden",
+        "seatPointerEvents": "none",
+        "cardRect": {
+          "x": 280,
+          "y": 0,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "0px",
+        "stageRect": {
+          "x": 280,
+          "y": 0,
+          "w": 1448,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S5-other-page-collapsed.png",
+        "bytes": 6474
+      }
+    },
+    {
+      "key": "S6-canvas-collapsed-background",
+      "ac": "AC-6",
+      "desc": "画布身份在后台（data-visible 非 true）→ 不得投射",
+      "expect": "not-projected",
+      "projected": false,
+      "pass": true,
+      "applied": {
+        "collapsed": true,
+        "leftCollapsed": false,
+        "identity": true,
+        "visible": null,
+        "fullscreen": null,
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "sticky",
+        "seatBottom": "0px",
+        "seatLeft": "auto",
+        "seatRect": {
+          "x": 280,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "seatVisibility": "hidden",
+        "seatPointerEvents": "none",
+        "cardRect": {
+          "x": 280,
+          "y": 0,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "0px",
+        "stageRect": {
+          "x": 280,
+          "y": 0,
+          "w": 1448,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S6-canvas-collapsed-background.png",
+        "bytes": 6474
+      }
+    },
+    {
+      "key": "S7-canvas-collapsed-left-collapsed",
+      "ac": "AC-7",
+      "desc": "左栏收起 + 会话栏收起 → 投射且座席左基准归零",
+      "expect": "projected",
+      "projected": true,
+      "pass": true,
+      "applied": {
+        "collapsed": true,
+        "leftCollapsed": true,
+        "identity": true,
+        "visible": "true",
+        "fullscreen": null,
+        "rightbarCollapsed": null
+      },
+      "measured": {
+        "seatPosition": "fixed",
+        "seatBottom": "10px",
+        "seatLeft": "0px",
+        "seatRect": {
+          "x": 0,
+          "y": 859,
+          "w": 1728,
+          "h": 38
+        },
+        "seatVisibility": "visible",
+        "seatPointerEvents": "auto",
+        "cardRect": {
+          "x": 544,
+          "y": 859,
+          "w": 640,
+          "h": 38
+        },
+        "cardWidth": "640px",
+        "cardRadius": "18px",
+        "stageRect": {
+          "x": 280,
+          "y": 0,
+          "w": 1448,
+          "h": 0
+        },
+        "viewport": {
+          "w": 1728,
+          "h": 907
+        }
+      },
+      "screenshot": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/S7-canvas-collapsed-left-collapsed.png",
+        "bytes": 6474
+      },
+      "leftAnchorZero": true
+    }
+  ],
+  "errors": [],
+  "boundary": "规则级预演：证明本次改动的投射规则在真实渲染引擎中的行为；不覆盖「媒体卡 → 画布」产品链路与真实应用外壳的其它规则。",
+  "harness": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/task-1998/docs/evidence/canvas-composer-conversation-hidden/harness.html",
+  "cdpPort": 56940
+}
