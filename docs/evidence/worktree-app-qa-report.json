@@ -1,18 +1,18 @@
 {
-  "runId": "ba98397b-bc90-4a22-a984-a871e24bfe41",
+  "runId": "ed9a1a02-1457-47f1-a4bf-c4c2484b00ac",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-media-viewer-session-binding-issue-1835",
-  "origin": "http://127.0.0.1:49250",
-  "appPort": 49250,
-  "cdpPort": 49258,
-  "startedAt": "2026-09-15T02:06:05.717Z",
-  "completedAt": "2026-09-15T02:06:10.219Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/test-env-plugin-mount-fix",
+  "origin": "http://127.0.0.1:61838",
+  "appPort": 61838,
+  "cdpPort": 61867,
+  "startedAt": "2026-09-15T04:17:34.885Z",
+  "completedAt": "2026-09-15T04:17:43.154Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:49250",
-    "evidenceLevel": "core-only",
-    "taskPluginsInstalled": false,
+    "origin": "http://127.0.0.1:61838",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
     "realModelRequest": false,
     "modelConfiguration": "QA模拟"
   },
@@ -20,19 +20,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:49250",
-      "evidenceLevel": "core-only"
+      "origin": "http://127.0.0.1:61838",
+      "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-oVQ85kmS2eFQjLMbf5W7B1QpVL5naUaGcLcyk1YZRXs"
+      "cookieName": "dsh-auth-8KD6e_SBFFb6Hetad0s9swdqgG23FXTRkK7D2zfwmoQ"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 49258
+      "port": 61867
     },
     {
       "name": "auth-cookie-applied",
@@ -42,7 +42,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 114,
+        "visibleCount": 106,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -50,8 +50,8 @@
         },
         "vw": 1280,
         "vh": 713,
-        "title": "DeepSeek Harness",
-        "bodyTextLength": 42
+        "title": "OmniMux",
+        "bodyTextLength": 52
       }
     },
     {
@@ -62,7 +62,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 114
+      "visibleCount": 106
     },
     {
       "name": "screenshot-png-verified",
@@ -71,14 +71,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 76134
+      "bytes": 80454
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-media-viewer-session-binding-issue-1835/.workbuddy/evidence/app-qa/ba98397b-bc90-4a22-a984-a871e24bfe41/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/test-env-plugin-mount-fix/.workbuddy/evidence/app-qa/ed9a1a02-1457-47f1-a4bf-c4c2484b00ac/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 76134
+    "bytes": 80454
   },
   "errors": [],
   "cleanup": {

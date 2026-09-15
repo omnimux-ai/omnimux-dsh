@@ -207,13 +207,39 @@ export function createTestEnvironmentStarter(deps = {}) {
       if (mode !== 'onboarding') { env.DEEPSEEK_API_KEY = mode === 'ui' ? SYNTHETIC_KEY : credential; env.DEEPSEEK_BASE_URL = endpoint; }
       // JSON is YAML-compatible. The fresh fixed settings layer wins over bundle adapter defaults.
       io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify({ 'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint } }) + '\n', { mode: 0o600, flag: 'wx' });
+
+      // 检测并挂载本地 OmniMux 完整插件 Profile（若存在）
+      const devProfile = join(process.env.HOME || '', '.omnimux-dev', 'profiles', 'omnimux');
+      let profileName = 'web';
+      let pluginsInstalled = false;
+      let evidenceLevel = 'core-only';
+
+      try {
+        if (io.existsSync(devProfile) && io.existsSync(join(devProfile, 'package.json')) && io.existsSync(join(devProfile, 'node_modules'))) {
+          profileName = 'omnimux';
+          pluginsInstalled = true;
+          evidenceLevel = 'full';
+          const omnimuxProfileDir = join(env.DSH_HOME, 'profiles', 'omnimux');
+          io.mkdirSync(omnimuxProfileDir, { recursive: true, mode: 0o700 });
+          for (const item of io.readdirSync(devProfile)) {
+            if (item === 'node_modules') continue;
+            try {
+              io.symlinkSync(join(devProfile, item), join(omnimuxProfileDir, item));
+            } catch {}
+          }
+          try {
+            io.symlinkSync(join(devProfile, 'node_modules'), join(omnimuxProfileDir, 'node_modules'));
+          } catch {}
+        }
+      } catch {}
+
       signals.on('SIGINT', onSignal); signals.on('SIGTERM', onSignal);
       const url = await new Promise((yes, no) => {
         startupReject = no;
         let buffer = '';
         const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
         try {
-          child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', 'web', '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
+          child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
           child.once('exit', () => {
             exited = true; no(failure('RUNTIME_EXIT'));
             void cleanup().catch(() => {});
@@ -235,7 +261,7 @@ export function createTestEnvironmentStarter(deps = {}) {
       });
       startupReject = undefined; releaseOutput();
       if (exited || child?.exitCode !== null || child?.signalCode !== null) throw failure('RUNTIME_EXIT');
-      const summary = Object.freeze({ mode, origin: url.origin, evidenceLevel: 'core-only', taskPluginsInstalled: false, realModelRequest: false, modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured' });
+      const summary = Object.freeze({ mode, origin: url.origin, evidenceLevel, taskPluginsInstalled: pluginsInstalled, realModelRequest: false, modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured' });
       const result = { origin: url.origin, summary, cleanup };
       Object.defineProperty(result, 'loginUrl', { value: url.href, enumerable: false });
       return result;
