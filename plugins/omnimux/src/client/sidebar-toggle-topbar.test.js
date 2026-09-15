@@ -46,9 +46,18 @@ it('conversation fill rules leave native panel geometry to its mode owner', () =
   for (const selector of fillSelectors) assert.ok(selector.includes(':not([data-sidebar-right-panel])'), 'native push must not acquire width:auto before fullscreen commits')
 })
 
-it('native open panels share a right-anchored geometry transition across fullscreen modes', () => {
-  const shared = moduleSource.match(/\.dshDesktopFrame \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{([^}]+)\}/)?.[1]
-  assert.ok(shared, 'push and fullscreen need the same positioned geometry before the click')
+it('split panels keep native grid geometry while fullscreen stays right-anchored', () => {
+  // 分栏态（push）的定位、宽度与过渡归外壳原生三列网格所有：外壳把面板作为第三列
+  // 的网格项渲染，拖拽分割线时按列宽实时定位。把面板改成视口右锚 fixed 元素的规则
+  // 必须带 fullscreen 限定，否则面板脱离网格不再跟随列宽（CDP 实测拖拽中左缘最多
+  // 落后分割线 71px 黑缝），并会以自身 0.3s 宽度过渡追赶指针。
+  assert.doesNotMatch(
+    moduleSource,
+    /\[data-sidebar-right-panel\]\[data-sidebar-right-open\]/,
+    'no unqualified panel rule may force split panels out of the native grid',
+  )
+  const shared = moduleSource.match(/\.dshDesktopFrame \[data-sidebar-right-panel="fullscreen"\]\[data-sidebar-right-open\]\s*\{([^}]+)\}/)?.[1]
+  assert.ok(shared, 'fullscreen needs the right-anchored geometry before the click')
   assert.match(shared, /position:\s*fixed\s*!important/)
   assert.match(shared, /left:\s*auto\s*!important/)
   assert.match(shared, /right:\s*0\s*!important/)
@@ -56,7 +65,7 @@ it('native open panels share a right-anchored geometry transition across fullscr
   assert.doesNotMatch(shared, /transition:\s*left/)
   const collapsed = moduleSource.match(/\.dshDesktopFrame\[data-sidebar-collapsed\] \[class\*="_panel"\]\[data-sidebar-right-panel="fullscreen"\]\s*\{([^}]+)\}/)?.[1]
   assert.match(collapsed, /left:\s*auto\s*!important/, 'collapsed fullscreen must stay right-anchored during width interpolation')
-  assert.match(moduleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-sidebar-right-panel\]\[data-sidebar-right-open\][\s\S]*?transition:\s*none\s*!important/)
+  assert.match(moduleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-sidebar-right-panel="fullscreen"\]\[data-sidebar-right-open\][\s\S]*?transition:\s*none\s*!important/)
 })
 
 /** @type {JSDOM | undefined} */
