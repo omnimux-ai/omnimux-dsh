@@ -37,4 +37,12 @@ describe('AssetBrowse drill-down and sub-media preview contract', () => {
     assert.match(browseJsx, /\{t\('browse\.back'\)\}/)
     assert.match(browseJsx, /goCrumb\(index\)/)
   })
+
+  it('renders edit icon in the breadcrumb back row and wires onEdit', () => {
+    assert.match(browseJsx, /import\s+.*EditIcon.*from '\.\/icons\.jsx'/)
+    assert.match(browseJsx, /export function AssetBrowse\(\{[\s\S]*?onEdit[\s\S]*?\}\)/)
+    assert.match(browseJsx, /className="omnimux-assets-crumb-edit"/)
+    assert.match(browseJsx, /<EditIcon\s+size=\{14\}\s*\/>/)
+    assert.match(browseJsx, /onClick=\{onEdit\}/)
+  })
 })

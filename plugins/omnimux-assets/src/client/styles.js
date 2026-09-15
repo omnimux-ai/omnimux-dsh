@@ -379,6 +379,27 @@ export const ASSETS_CSS = `
   align-items: center;
   font-size: 13px;
 }
+.omnimux-assets-crumb-edit {
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-assets-crumb-edit:hover {
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-assets-detail-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.omnimux-assets-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .omnimux-assets-crumb {
   display: inline-flex;
   gap: 6px;
