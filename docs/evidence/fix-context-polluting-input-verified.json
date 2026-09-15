@@ -1,0 +1,33 @@
+{
+  "task": "fix-context-polluting-input",
+  "title": "彻底根除上下文污染输入框与发送拦截问题",
+  "verifiedAt": "2026-09-15T21:08:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "rootCauseFixed": "彻底移除 AttachmentSubmitBridge 中 reconcileAttachmentDraft 对草稿的篡改与 synced 拦截发送通知，回归 DSH 原生 agent/pre-step 注入机制",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "name": "回车单次畅通发送",
+      "result": "PASS",
+      "details": "用户按回车直接放行发送，绝不被 stopImmediatePropagation 拦截，绝不弹出「素材说明已加入草稿请再次发送」"
+    },
+    {
+      "id": "scenario-2",
+      "name": "输入框草稿零污染",
+      "result": "PASS",
+      "details": "用户手打的「说说你分别收到的」100% 纯净保留，输入框绝对不出现任何 ### 会话关联上下文 代码"
+    },
+    {
+      "id": "scenario-3",
+      "name": "DSH 原生 Pre-Step 注入",
+      "result": "PASS",
+      "details": "模型推理前通过 agent/pre-step 原生快照通道获取完整的附件路径与场景卖点，用户气泡与输入框双双纯净"
+    }
+  ],
+  "testSuites": {
+    "attachmentBridgeTests": "2/2 PASS",
+    "contextInjectorTests": "5/5 PASS",
+    "unifiedReferenceE2ETests": "1/1 PASS"
+  }
+}

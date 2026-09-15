@@ -22,6 +22,7 @@ import {
   getWorkbenchFocus,
   isWorkbenchTab,
 } from './focus-state.js'
+import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
 
 /** @type {Map<string, () => ({ view?: object, selection?: Array<object> } | null | undefined)>} */
 const contextContributors = new Map()
@@ -91,6 +92,19 @@ export function getUiContext() {
   let view = null
   let selection = []
 
+  let attachedContextText = ''
+  try {
+    if (typeof window !== 'undefined') {
+      const attStore = window.__omnimuxAttachments
+      const attList = attStore?.getSnapshot?.(sessionId) || []
+      if (attList.length > 0) {
+        attachedContextText = buildAttachedContextBlock(attList, sessionId)
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   if (!panelOpen) {
     reason = 'panel-collapsed'
   } else if (activeTab) {
@@ -132,6 +146,7 @@ export function getUiContext() {
     },
     view,
     selection,
+    attachedContextText,
   }
 
   return envelope
