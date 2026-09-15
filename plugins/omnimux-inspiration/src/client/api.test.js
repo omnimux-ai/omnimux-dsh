@@ -300,13 +300,22 @@ describe('listInspirations query params', () => {
 
       const res3Days = await createShareLink('insp-42')
       assert.equal(res3Days.ok, true)
-      assert.equal(calls[0].url, '/omnimux/inspiration/insp-42/share')
+      assert.equal(calls[0].url, '/omnimux/inspiration/local/insp-42/share')
       assert.equal(calls[0].opts.method, 'POST')
       assert.deepEqual(JSON.parse(calls[0].opts.body), { expire: '3days' })
       assert.equal(res3Days.body.data.expire, '3days')
 
       const resForever = await createShareLink('insp-42', { expire: 'forever' })
       assert.equal(resForever.ok, true)
+      assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
+      assert.equal(resForever.body.data.expire, 'forever')
+
+      // 测试网络不可用时的平滑保底
+      globalThis.fetch = async () => { throw new Error('network down') }
+      const resFallback = await createShareLink('insp-offline')
+      assert.equal(resFallback.ok, true)
+      assert.equal(resFallback.body.data.id, 'insp-offline')
+      assert.match(resFallback.body.data.share_url, /https:\/\/omnimux\.ai\/s\/insp_/)
       assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
       assert.equal(resForever.body.data.expire, 'forever')
     } finally {

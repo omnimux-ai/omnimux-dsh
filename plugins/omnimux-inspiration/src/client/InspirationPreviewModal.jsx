@@ -178,10 +178,13 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
       if (response.ok && response.body?.data) {
         setShareResult(response.body.data)
       } else {
-        setShareError(response.body?.error || t('modal.share.failed') || '创建失败')
+        const msg = response.body?.error || t('modal.share.failed') || '创建失败'
+        setShareError(msg)
+        setTimeout(() => setShareError(null), 3000)
       }
     } catch (error) {
       setShareError(String(error?.message || error))
+      setTimeout(() => setShareError(null), 3000)
     } finally {
       setSharing(false)
     }

@@ -70,6 +70,9 @@ describe('E2E: Inspiration Preview Modal Share Flow', () => {
       // 2. 验证初始状态下 Popover 未展开（默认关闭以保持极简）
       const popover = actions.querySelector('.omnimux-inspiration-share-popover')
       assert.equal(popover, null, '默认状态下 Popover 不应展开')
+
+      // 3. 验证本地灵感具备分享行为绑定
+      assert.equal(shareBtn.getAttribute('title'), '分享')
     } finally {
       dom.window.close()
       rmSync(cache, { recursive: true, force: true })
