@@ -130,7 +130,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       ];
     }
     // pane: 允许快速「素材导入」与「添加节点」展开面板 + 常规编辑动作
-    return [
+    const paneItems: MenuItemSpec[] = [
       { action: 'import-asset', label: t('toolbar.add.import_asset'), icon: <UploadCloud size={15} /> },
       { action: 'open-add-node', label: t('menu.addNode'), icon: <Plus size={15} /> },
       { action: 'undo', label: t('toolbar.undo'), shortcut: '⌘Z', disabled: !canUndo },
@@ -138,6 +138,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       { action: 'paste', label: t('menu.paste'), shortcut: '⌘V', disabled: !hasClipboard },
       { action: 'select-all', label: t('menu.selectAll'), shortcut: '⌘A' },
     ];
+    if (hasSelection) {
+      paneItems.push({ action: 'delete', label: t('menu.delete'), shortcut: 'Del' });
+    }
+    return paneItems;
   }, [context, canUndo, canRedo, hasClipboard, hasSelection, t]);
 
   if (!visible) return null;
@@ -157,6 +161,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         items.map((item) => (
           <React.Fragment key={item.action}>
             {context.type === 'pane' && item.action === 'undo' ? (
+              <div className="wf-context-menu__separator" />
+            ) : null}
+            {context.type === 'pane' && item.action === 'delete' ? (
               <div className="wf-context-menu__separator" />
             ) : null}
             {context.type !== 'pane' && item.action === 'paste' ? (
