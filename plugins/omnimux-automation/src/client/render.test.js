@@ -853,6 +853,16 @@ test('创建按钮是分裂胶囊：左半创建、右半展开两项下拉，�
   assert.equal(toggle().getAttribute('aria-expanded'), 'false')
 })
 
+test('创建按钮样式对齐主行动按钮底色，且悬停底色使用 primary-hover 浅色令牌', () => {
+  const styleEl = dom.window.document.getElementById('omnimux-automation-styles')
+  assert.ok(styleEl !== null, '必须已注入自动化样式')
+  const css = styleEl.textContent
+  assert.match(css, /\.dsh-st-split \.dsh-st-split-toggle\{[^}]*background:var\(--dsw-alias-button-primary-fill/)
+  assert.match(css, /\.dsh-st-split \.dsh-st-split-toggle:hover[^{]*\{background:var\(--dsw-alias-button-primary-hover/)
+  assert.match(css, /\.dsh-st-split \.dsh-st-split-main:hover\{background:var\(--dsw-alias-button-primary-hover/)
+  assert.doesNotMatch(css, /\.dsh-st-split \.dsh-st-split-toggle:hover\{background:var\(--dsw-alias-interactive-bg-hover/)
+})
+
 test('主按钮点击默认走「手动设置」，直接打开任务配置弹窗且不展开浮层', async () => {
   const { main, items } = await mountWorkbenchSplit()
 
