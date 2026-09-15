@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -485,7 +485,10 @@ test('text node: textComplete seam → generatedContent 回填 + 落盘', async 
     assert.equal(hub.state.textRequests[0].prompt, 'prompt for n1');
 
     // Text artifact persisted beside media outputs (same dest contract).
-    const absolute = join(h.root, 'media', 'executions', execId, 'n1.txt');
+    const outputDir = join(h.root, 'media', 'executions', execId);
+    const files = readdirSync(outputDir).filter((name) => /^[a-f0-9]{64}-[a-f0-9-]{36}\.txt$/.test(name));
+    assert.equal(files.length, 1);
+    const absolute = join(outputDir, files[0]);
     assert.ok(existsSync(absolute));
     assert.equal(readFileSync(absolute, 'utf8'), 'echo:prompt for n1');
   } finally {

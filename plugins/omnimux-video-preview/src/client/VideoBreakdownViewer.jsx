@@ -224,6 +224,9 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       />
       <div className="omnimux-video-breakdown-body">
         <aside className="omnimux-video-breakdown-left">
+          {ctx.streamUrl.startsWith('/omnimux/video-preview/stream?path=') && (
+            <p role="status">此旧分析文件需要重新授权本机视频。请让助手使用此分析文件及您确认的视频、封面路径恢复播放，无需重新分析。</p>
+          )}
           <VideoPlayerCard {...playerCardProps} />
           <VideoMetadataBox video={ctx.video} shotsCount={model.shots.length} isZh={isZh} />
         </aside>
