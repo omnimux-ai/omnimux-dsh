@@ -277,6 +277,9 @@ test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, vi
   const videoThumb = thumbs[1];
   const durTag = videoThumb.querySelector('.omx-chat-media-tail__dur');
   assert.ok(durTag, 'Video thumbnail must carry duration tag');
+  const thumbVideo = videoThumb.querySelector('video');
+  assert.ok(thumbVideo, 'Video thumbnail must render video element');
+  assert.match(thumbVideo?.getAttribute('src') || '', /demo\.mp4/);
 
   // 5. Click thumbnail to switch to item 1 (video)
   videoThumb.click();

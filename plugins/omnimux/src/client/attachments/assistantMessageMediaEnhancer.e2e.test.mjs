@@ -46,9 +46,12 @@ test('QA: Chat media gallery AC-1 to AC-9 verification', async (t) => {
     assert.ok(thumbs[0].classList.contains('is-active'));
     assert.equal(thumbs[0].getAttribute('aria-selected'), 'true');
 
-    // AC-7: Video item has duration tag in thumbnail
+    // AC-7: Video item has duration tag and video element in thumbnail
     const videoThumb = thumbs[1];
     assert.ok(videoThumb.querySelector('.omx-chat-media-tail__dur'));
+    const thumbVid = videoThumb.querySelector('video');
+    assert.ok(thumbVid);
+    assert.match(thumbVid?.getAttribute('src') || '', /item2\.mp4/);
 
     // AC-4: Click thumbnail 1 (video)
     videoThumb.click();
