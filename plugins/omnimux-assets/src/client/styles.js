@@ -1158,6 +1158,115 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
+/* ---- integrated products tab view ---------------------------------------- */
+.omnimux-assets-products-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.omnimux-assets-products-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 24px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+.omnimux-assets-product-card {
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+.omnimux-assets-product-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--dsw-alias-border-l3);
+}
+.omnimux-assets-product-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--dsw-alias-bg-layer-2);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-assets-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.omnimux-assets-product-glyph {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-tertiary);
+  user-select: none;
+}
+.omnimux-assets-product-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.6));
+  color: var(--dsw-alias-label-primary);
+  border-radius: var(--dsw-radius-sm, 6px);
+  padding: 2px 8px;
+  font-size: 11px;
+  backdrop-filter: blur(8px);
+}
+.omnimux-assets-product-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omnimux-assets-product-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omnimux-assets-product-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omnimux-assets-product-brand {
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-product-price {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-assets-product-desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omnimux-assets-product-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.omnimux-assets-cite-btn {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+
 `
 
 export function injectAssetsStyles() {
