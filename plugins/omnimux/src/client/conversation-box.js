@@ -194,14 +194,17 @@ html[data-omnimux-sidebar-toggle-topbar] [data-omnimux-original-sidebar-toggle="
    Key on both html[data-omnimux-left-collapsed] (user intent) and frame
    [data-sidebar-collapsed] so AppFrame's 1024px narrow auto-uncollapse flip
    during divider drags cannot momentarily pop the left sidebar open. */
-html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="sidebarCol"]:not(:is(.dshDesktopFrame, [class*="frame"]):has([data-sidebar-right-panel]) [class*="sidebarCol"]),
-html[data-omnimux-sidebar-toggle-topbar] [data-sidebar-collapsed] [class*="sidebarCol"]:not(:is(.dshDesktopFrame, [class*="frame"]):has([data-sidebar-right-panel]) [class*="sidebarCol"]){
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="sidebarCol"],
+html[data-omnimux-sidebar-toggle-topbar] [data-sidebar-collapsed] [class*="sidebarCol"],
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopSidebarSurface,
+html[data-omnimux-sidebar-toggle-topbar] [data-sidebar-collapsed] .dshDesktopSidebarSurface {
   width:0!important;
   min-width:0!important;
   max-width:0!important;
   overflow:hidden!important;
   border:none!important;
   padding:0!important;
+  display:none!important;
 }
 html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="frame"]:not(:has([data-sidebar-right-panel])),
 html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not(:has([data-sidebar-right-panel])),
@@ -252,8 +255,16 @@ html:not([data-omnimux-conversation-collapsed]) [class*="frame"]:has([data-sideb
 .dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) {
   grid-template-columns: var(--omnimux-sidebar-width, 280px) 440px minmax(0px, 1fr) !important;
 }
+html[data-omnimux-left-collapsed] .dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])),
+.dshDesktopFrame[data-sidebar-collapsed]:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) {
+  grid-template-columns: 0px 440px minmax(0px, 1fr) !important;
+}
 .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]) {
   width: calc(100vw - var(--omnimux-sidebar-width, 280px) - 440px) !important;
+}
+html[data-omnimux-left-collapsed] .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]),
+.dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]) {
+  width: calc(100vw - 440px) !important;
 }
 html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])),
 html[data-omnimux-left-collapsed] [class*="frame"][data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])) {
