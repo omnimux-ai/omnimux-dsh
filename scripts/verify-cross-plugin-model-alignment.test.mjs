@@ -18,7 +18,7 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.ok, true, JSON.stringify(report.issues));
   assert.equal(report.exitCode, 0);
   assert.equal(report.issues.length, 0);
-  assert.equal(report.alignment.whitelistModelsChecked, 14);
+  assert.equal(report.alignment.whitelistModelsChecked, 16);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789: the capability seam behind audio transcription admits the two ASR contracts.
