@@ -213,6 +213,7 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-filter-select > button {
   min-width: 74px !important;
   width: auto;
+  border-radius: 999px;
   padding: 0 10px;
   gap: 6px;
 }
@@ -236,7 +237,7 @@ export const INSPIRATION_CSS = `
   height: 32px;
   background: var(--dsw-alias-bg-module-platform, #141414);
   border: 1px solid var(--dsw-alias-border-l2, #242424);
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 0 12px;
   font-size: 13px;
   font-weight: 500;
