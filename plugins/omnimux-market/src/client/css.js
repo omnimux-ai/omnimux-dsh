@@ -326,7 +326,7 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .btn-create svg rect{fill:none}
 .btn-install{background:var(--dsw-alias-bg-subtle,var(--dsw-alias-bg-layer-3,rgba(255,255,255,.08)));color:var(--dsw-alias-label-primary,#fff);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.14));border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;transition:background .15s}
 .btn-install:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.14))}
-.nav-bar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;margin-bottom:0;gap:16px;min-width:0;padding-bottom:2px}
+.nav-bar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;margin-bottom:14px;gap:16px;min-width:0;padding-bottom:2px}
 .nav-tabs{display:flex;align-items:center;gap:24px;flex:none;white-space:nowrap}
 @container (max-width:380px){.nav-bar{flex-wrap:wrap;gap:8px}.sh-mkt .search-box{flex-basis:100%;max-width:none}.nav-tabs{gap:16px}}
 .nav-tab{position:relative;display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;font-family:inherit;font-size:14px;color:var(--dsw-alias-label-tertiary,#84878f);cursor:pointer;user-select:none;padding:6px 0 10px;transition:color .15s}
