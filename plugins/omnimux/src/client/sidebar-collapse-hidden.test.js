@@ -24,10 +24,17 @@ describe('sidebar collapse hidden (Issue 56d2b4af565e)', () => {
     )
   })
 
-  it('PRODUCT_STAGE_CHROME preserves flexible layout for centerCol under split mode without locking grid to fixed widths', () => {
-    assert.match(
+  it('PRODUCT_STAGE_CHROME preserves flexible layout for the conversation column without locking grid to fixed widths', () => {
+    // 会话列地板由外壳 computeDesktopColumns 统一负责（CENTER_MIN 400px）。
+    // 这里曾写死 min-width: 420px，比地板高 20px，元素会溢出自己的网格轨道，
+    // 多出的 20px 压在右侧面板底下露出近黑底色（拖到最宽画布时的分割线黑边）。
+    assert.doesNotMatch(
       PRODUCT_STAGE_CHROME,
       /min-width:\s*420px\s*!important/,
+    )
+    assert.match(
+      PRODUCT_STAGE_CHROME,
+      /min-width:\s*0\s*!important/,
     )
     assert.match(
       PRODUCT_STAGE_CHROME,

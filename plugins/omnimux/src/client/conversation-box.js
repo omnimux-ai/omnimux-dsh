@@ -236,11 +236,15 @@ html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapse
 [class*="frame"][data-rightbar-collapsed="true"] {
   grid-template-columns: var(--omnimux-sidebar-width, 280px) minmax(0px, 1fr) 0px !important;
 }
-/* 非全屏/分屏状态下，中间会话栏必须保证最小物理宽度并自适应填满中间可用区域，绝不出现黑洞死区（Issue 1877）；
-   同时严禁使用 !important 强制写死分屏列宽或面板宽度，保证底座原生拖拽手柄自由缩放（Issue 1940） */
+/* 非全屏/分屏状态下，中间会话栏必须自适应填满原生网格轨道，绝不出现黑洞死区（Issue 1877）；
+   同时严禁使用 !important 强制写死分屏列宽或面板宽度，保证底座原生拖拽手柄自由缩放（Issue 1940）。
+   这里曾写死 min-width: 420px，比原生会话列地板（外壳 CENTER_MIN 400px）高 20px ——
+   网格轨道收到 400px 时元素仍是 420px，多出的 20px 压在右侧面板底下露出近黑底色，
+   就是拖到最宽画布时分割线旁那道黑边。地板由外壳 computeDesktopColumns 统一负责，
+   这里只保证不溢出自己的轨道。 */
 html:not([data-omnimux-conversation-collapsed]) .dshDesktopFrame:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface,
 html:not([data-omnimux-conversation-collapsed]) [class*="frame"]:not([data-rightbar-collapsed="true"]) .dshDesktopConversationSurface {
-  min-width: 420px !important;
+  min-width: 0 !important;
   flex: 1 1 0% !important;
   width: auto !important;
   overflow: hidden;

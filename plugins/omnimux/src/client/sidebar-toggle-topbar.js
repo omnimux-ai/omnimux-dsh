@@ -709,8 +709,13 @@ button[data-sidebar-right-expand] {
   align-items: center !important;
 }
 
-/* 原生分栏与全屏共享右锚点，避免切换定位方式后从视口左缘回弹。 */
-.dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+/* 只有全屏态需要视口右锚的 fixed 定位；分栏态（push）必须留在原生三列网格里。
+   外壳把面板作为第三列的网格项渲染，拖拽分割线时按列宽实时定位。此前这条规则
+   对分栏态也生效，面板被改成 fixed 元素后脱离网格不再跟随列宽 —— CDP 实测拖拽中
+   面板左缘最多落后分割线 71px（黑缝），松手后才回弹；同时它给面板声明的 0.3s
+   宽度过渡不在外壳 data-dragging 的中和范围内（那只覆盖帧与手柄），面板只能
+   以 300ms 缓动追赶指针，跟手彻底丢失。分栏态的定位、宽度与过渡一律归还原生。 */
+.dshDesktopFrame [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open] {
   position: fixed !important;
   left: auto !important;
   right: 0 !important;
@@ -719,7 +724,7 @@ button[data-sidebar-right-expand] {
               transform var(--ds-transition-duration-slow) var(--ds-ease-in-out) !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open] {
+  .dshDesktopFrame [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open] {
     transition: none !important;
   }
 }
