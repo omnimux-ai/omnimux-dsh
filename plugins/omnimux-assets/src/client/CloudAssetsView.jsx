@@ -433,7 +433,7 @@ function CloudCategoryNav(props) {
   const filterBarOwnsSecondLevel = characterFilters.dimensions.length > 0
 
   return (
-    <div className="omnimux-assets-cloud-nav">
+    <div className="omnimux-assets-cloud-nav omx-stage-sticky">
       <div className="omnimux-assets-cloud-nav-row" role="group" aria-label={t('cloud.nav.label')}>
         {categories.map((row) => (
           <Button

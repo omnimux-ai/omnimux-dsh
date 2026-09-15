@@ -1,6 +1,19 @@
 export const STYLES_ID = 'omnimux-products-styles'
 
 export const PRODUCTS_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 /* ── 一级视图（列表）：常驻挂载，关页与切子屏都保活滚动与筛选 ───────────── */
 .omnimux-products-stage {
@@ -11,7 +24,8 @@ export const PRODUCTS_CSS = `
   flex-direction: column;
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   color: var(--dsw-alias-label-primary, inherit);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   pointer-events: auto;
 }
 .omnimux-products-stage[data-visible="false"] {
@@ -20,11 +34,9 @@ export const PRODUCTS_CSS = `
 }
 .omnimux-products-list-view {
   position: relative;
-  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 .omnimux-products-list-view > [role="separator"][aria-orientation="horizontal"] {
   width: auto;
@@ -167,9 +179,7 @@ export const PRODUCTS_CSS = `
   color: var(--dsw-alias-state-error-primary);
 }
 .omnimux-products-body {
-  flex: 1;
   min-height: 0;
-  overflow: auto;
   padding: 16px;
 }
 .omnimux-products-grid {

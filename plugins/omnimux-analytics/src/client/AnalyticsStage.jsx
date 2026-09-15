@@ -111,7 +111,7 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
       role="region"
       aria-label={t('title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-analytics-stage"
+      className="omnimux-analytics-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
       style={{
         display: visible ? 'flex' : 'none',
@@ -119,7 +119,8 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         width: '100%',
         height: '100%',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}
     >
       <PageHeader
@@ -144,6 +145,8 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         closeTitle={t('close')}
       />
       <Divider />
+      {/* 吸附栈：一级 Tab + 筛选工具栏，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky">
       <ActionNavRow
         t={t}
         tab={analyticsStore.query.tab}
@@ -160,6 +163,7 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         disabled={analyticsStore.syncing}
         onChange={(patch) => analyticsStore.setQuery(patch)}
       />
+      </div>
       <div className="omnimux-analytics-stage-body">
         {analyticsStore.phase === 'loading' && !payload ? (
           <LoadingState t={t} />

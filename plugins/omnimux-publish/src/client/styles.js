@@ -3,6 +3,19 @@
 const CSS_ID = 'omnimux-publish-styles'
 
 const CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-publish-stage {
   position: relative;
   width: 100%;
@@ -11,7 +24,8 @@ const CSS = `
   flex-direction: column;
   background: var(--dsw-alias-bg-base, #ffffff);
   color: var(--dsw-alias-label-primary, #0f172a);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   pointer-events: auto;
 }
 .omnimux-publish-stage[data-visible="false"] {
@@ -93,15 +107,12 @@ const CSS = `
   color: var(--dsw-alias-state-error, #ef4444);
 }
 
-/* Layer 4: Content Viewport (padding: 16px; gap: 16px) */
+/* Layer 4: Content Viewport (padding: 16px; gap: 16px) —— 随整页滚动（骨架契约 §二·补） */
 .omnimux-publish-viewport {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 16px;
   gap: 16px;
-  overflow: auto;
 }
 
 /* Batch Action Bar */

@@ -167,7 +167,7 @@
               }, h(IconCloseOutline16)),
             ),
           ),
-          h("div", { className: "sh-plaza-body" },
+          h("div", { className: "sh-plaza-body omx-stage-scroll" },
             tab === "plugins" ? h(Marketplace, { t: tr, query: tabQueries.plugins, submittedQuery: submittedQueries.plugins })
               : tab === "skills" ? h(SkillPlaza, { query: tabQueries.skills, submittedQuery: submittedQueries.skills })
               : tab === "experts" ? h(ExpertPanel, { query: tabQueries.experts, onClose: handleClose })
