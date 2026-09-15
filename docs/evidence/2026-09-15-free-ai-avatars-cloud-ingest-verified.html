@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniMux 云端资产库 · 角色「类型」体系落架展示</title>
+  <style>
+    :root {
+      --dsw-bg: #121214;
+      --dsw-bg-subtle: #18181c;
+      --dsw-bg-card: #1f1f24;
+      --dsw-bg-hover: #27272e;
+      --dsw-border-l1: rgba(255, 255, 255, 0.14);
+      --dsw-border-l2: rgba(255, 255, 255, 0.08);
+      --dsw-label-primary: #f4f4f6;
+      --dsw-label-secondary: #a1a1aa;
+      --dsw-label-tertiary: #71717a;
+      --dsw-accent: #3b82f6;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-pill: 9999px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--dsw-bg);
+      color: var(--dsw-label-primary);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* 顶层 Tab：本地 / 云端 */
+    .view-mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 16px 24px 8px;
+      border-bottom: 1px solid var(--dsw-border-l2);
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .view-mode-item {
+      color: var(--dsw-label-secondary);
+      cursor: pointer;
+      padding-bottom: 6px;
+      position: relative;
+      user-select: none;
+    }
+    .view-mode-item.active {
+      color: #fff;
+      font-weight: 600;
+    }
+    .view-mode-item.active::after {
+      content: "";
+      position: absolute;
+      bottom: -9px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+    }
+
+    /* 一级分类大栏 */
+    .primary-category-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px 10px;
+      overflow-x: auto;
+    }
+    .cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      color: var(--dsw-label-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      border: 1px solid transparent;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .cat-chip.active {
+      background: #ffffff;
+      color: #0c0c0e;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    .cat-chip-count {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .cat-chip.active .cat-chip-count { color: #4b5563; }
+
+    /* 维度筛选栏（新增「类型 >」+ 既有 8 维） */
+    .dimension-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 24px 14px;
+      border-bottom: 1px solid var(--dsw-border-l2);
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 100;
+    }
+    .dim-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--dsw-border-l2);
+      background: var(--dsw-bg-subtle);
+      color: var(--dsw-label-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .dim-pill:hover {
+      border-color: var(--dsw-border-l1);
+      color: var(--dsw-label-primary);
+    }
+    .dim-pill.active {
+      background: #27272a;
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+    }
+    .dim-pill.primary-type {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .dim-arrow {
+      font-size: 10px;
+      opacity: 0.6;
+      margin-left: 2px;
+    }
+
+    /* 下拉面板（解决遮挡：高 z-index 与绝对定位） */
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: #1c1c22;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+      padding: 6px;
+      min-width: 250px;
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .dropdown-menu.show { display: flex; }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 4px;
+      color: var(--dsw-label-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .dropdown-item:hover {
+      background: var(--dsw-bg-hover);
+      color: #fff;
+    }
+    .dropdown-item.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .dropdown-count {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    /* 搜索与工具条 */
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .search-input-box {
+      width: 260px;
+      height: 32px;
+      background: var(--dsw-bg-subtle);
+      border: 1px solid var(--dsw-border-l2);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 6px;
+    }
+    .search-input-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 12px;
+      width: 100%;
+    }
+    .search-input-box input::placeholder { color: var(--dsw-label-tertiary); }
+    .status-text {
+      color: var(--dsw-label-tertiary);
+      font-size: 12px;
+    }
+
+    /* 卡片网格 */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 0 24px 60px;
+    }
+    .asset-card {
+      background: var(--dsw-bg-card);
+      border: 1px solid var(--dsw-border-l2);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    .asset-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--dsw-border-l1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+    .asset-thumb {
+      aspect-ratio: 9 / 13;
+      width: 100%;
+      background: #17171a;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .avatar-preview-bg {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #272730 0%, #151518 100%);
+    }
+    .avatar-letter {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .card-top-badges {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .card-num {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .card-tag {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+    }
+
+    /* 播放条（体现声音与角色的强绑定） */
+    .play-dock {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      background: rgba(18, 18, 22, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-pill);
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .play-round-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      color: #000;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+    .play-round-btn.playing { background: var(--dsw-accent); color: #fff; }
+    .play-time-label {
+      font-size: 11px;
+      color: var(--dsw-label-secondary);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-info {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dsw-label-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--dsw-label-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-meta-chips {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 10px;
+      color: var(--dsw-label-tertiary);
+    }
+    .card-chip-item {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶层 Tab：本地 / 云端 -->
+  <div class="view-mode-tabs">
+    <div class="view-mode-item">本地</div>
+    <div class="view-mode-item active">云端</div>
+  </div>
+
+  <!-- 一级分类大栏 -->
+  <div class="primary-category-bar">
+    <div class="cat-chip">全部 <span class="cat-chip-count">2882</span></div>
+    <div class="cat-chip active">角色 <span class="cat-chip-count">429</span></div>
+    <div class="cat-chip">场景 <span class="cat-chip-count">139</span></div>
+    <div class="cat-chip">道具 <span class="cat-chip-count">125</span></div>
+    <div class="cat-chip">素材 <span class="cat-chip-count">1398</span></div>
+    <div class="cat-chip">风格 <span class="cat-chip-count">151</span></div>
+    <div class="cat-chip">声音 <span class="cat-chip-count">640</span></div>
+  </div>
+
+  <!-- 维度筛选栏：完全采纳您的提议，将分类维度定名为【类型 >】 -->
+  <div class="dimension-filter-bar">
+    <div class="dim-pill primary-type" onclick="toggleDropdown(event, 'menuType')">
+      <span id="dimTypeLabel">类型: 全部</span>
+      <span class="dim-arrow">▼</span>
+      <div class="dropdown-menu" id="menuType">
+        <div class="dropdown-item active" onclick="pickType('all', '全部')">
+          <span>全部角色</span>
+          <span class="dropdown-count">429</span>
+        </div>
+        <div class="dropdown-item" onclick="pickType('digital-human', '数字人')">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#e4e4e7;"></span>数字人 (现有全部角色统称)</span>
+          <span class="dropdown-count">329</span>
+        </div>
+        <div class="dropdown-item" onclick="pickType('Human Archetypes', '人类原型')">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></span>人类原型 (新增人设)</span>
+          <span class="dropdown-count">30</span>
+        </div>
+        <div class="dropdown-item" onclick="pickType('Meme Characters', '流行网梗')">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></span>流行网梗 (新增人设)</span>
+          <span class="dropdown-count">25</span>
+        </div>
+        <div class="dropdown-item" onclick="pickType('Animal Character', '动物拟人')">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>动物拟人 (新增人设)</span>
+          <span class="dropdown-count">20</span>
+        </div>
+        <div class="dropdown-item" onclick="pickType('Fantasy_GenreX', '奇幻世界')">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;"></span>奇幻世界 (新增人设)</span>
+          <span class="dropdown-count">25</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dim-pill"><span>性别 ></span></div>
+    <div class="dim-pill"><span>年龄 ></span></div>
+    <div class="dim-pill"><span>体型 ></span></div>
+    <div class="dim-pill"><span>姓名 ></span></div>
+    <div class="dim-pill"><span>行业 ></span></div>
+    <div class="dim-pill"><span>场景 ></span></div>
+    <div class="dim-pill"><span>姿势 ></span></div>
+    <div class="dim-pill"><span>服装风格 ></span></div>
+  </div>
+
+  <!-- 工具与状态栏 -->
+  <div class="toolbar-row">
+    <div class="search-input-box">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索角色名称、编号 (如 068)...">
+    </div>
+    <div class="status-text" id="statusText">
+      显示 104 款示例（含新增 100 款 + 现有数字人对照） · 角色与声音 1:1 配对
+    </div>
+  </div>
+
+  <!-- 卡片展示区 -->
+  <div class="card-grid" id="cardGrid"></div>
+
+  <script>
+    const items = [{"id":"avatar-animal_character-anchor_parrot","name":"Anchor Parrot","name_zh":"鹦鹉主播","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"068","image_path":"Animal Character/Anchor Parrot/Anchor Parrot.png","audio_path":"Animal Character/Anchor Parrot/068-anchor-parrot.wav","duration":7.84,"has_audio":true},{"id":"avatar-animal_character-barista_calico","name":"Barista Calico","name_zh":"三花猫咖啡师","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"061","image_path":"Animal Character/Barista Calico/Barista Calico.png","audio_path":"Animal Character/Barista Calico/061-barista-calico.wav","duration":6.72,"has_audio":true},{"id":"avatar-animal_character-boss_corgi","name":"Boss Corgi","name_zh":"柯基老板","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"062","image_path":"Animal Character/Boss Corgi/Boss Corgi.png","audio_path":"Animal Character/Boss Corgi/062-boss-corgi.wav","duration":5.92,"has_audio":true},{"id":"avatar-animal_character-boxer_bunny","name":"Boxer Bunny","name_zh":"拳击手兔兔","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"073","image_path":"Animal Character/Boxer Bunny/Boxer Bunny.png","audio_path":"Animal Character/Boxer Bunny/073-boxer-bunny.wav","duration":7.04,"has_audio":true},{"id":"avatar-animal_character-ceo_orange_tabby","name":"Ceo Orange Tabby","name_zh":"Ceo Orange Tabby","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"056","image_path":"Animal Character/Ceo Orange Tabby/Ceo Orange Tabby.png","audio_path":"Animal Character/Ceo Orange Tabby/056-ceo-orange-tabby.wav","duration":7.2,"has_audio":true},{"id":"avatar-animal_character-chaos_husky","name":"Chaos Husky","name_zh":"Chaos Husky","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"066","image_path":"Animal Character/Chaos Husky/Chaos Husky.png","audio_path":"Animal Character/Chaos Husky/066-chaos-husky.wav","duration":6.24,"has_audio":true},{"id":"avatar-animal_character-chef_frog","name":"Chef Frog","name_zh":"Chef Frog","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"072","image_path":"Animal Character/Chef Frog/Chef Frog.png","audio_path":"Animal Character/Chef Frog/072-chef-frog.wav","duration":11.84,"has_audio":true},{"id":"avatar-animal_character-coach_shiba","name":"Coach Shiba","name_zh":"Coach Shiba","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"063","image_path":"Animal Character/Coach Shiba/Coach Shiba.png","audio_path":"Animal Character/Coach Shiba/063-coach-shiba.wav","duration":5.28,"has_audio":true},{"id":"avatar-animal_character-coder_red_panda","name":"Coder Red Panda","name_zh":"Coder Red Panda","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"075","image_path":"Animal Character/Coder Red Panda/Coder Red Panda.png","audio_path":"Animal Character/Coder Red Panda/075-coder-red-panda.wav","duration":11.36,"has_audio":true},{"id":"avatar-animal_character-himbo_golden","name":"Himbo Golden","name_zh":"Himbo Golden","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"064","image_path":"Animal Character/Himbo Golden/Himbo Golden.png","audio_path":"Animal Character/Himbo Golden/064-himbo-golden.wav","duration":11.36,"has_audio":true},{"id":"avatar-animal_character-judge_owl","name":"Judge Owl","name_zh":"Judge Owl","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"071","image_path":"Animal Character/Judge Owl/Judge Owl.png","audio_path":"Animal Character/Judge Owl/071-judge-owl.wav","duration":8.8,"has_audio":true},{"id":"avatar-animal_character-lawyer_shark","name":"Lawyer Shark","name_zh":"Lawyer Shark","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"074","image_path":"Animal Character/Lawyer Shark/Lawyer Shark.png","audio_path":"Animal Character/Lawyer Shark/074-lawyer-shark.wav","duration":8.8,"has_audio":true},{"id":"avatar-animal_character-lazy_garfield","name":"Lazy Garfield","name_zh":"Lazy Garfield","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"060","image_path":"Animal Character/Lazy Garfield/Lazy Garfield.png","audio_path":"Animal Character/Lazy Garfield/060-lazy-garfield.wav","duration":10.4,"has_audio":true},{"id":"avatar-animal_character-madame_poodle","name":"Madame Poodle","name_zh":"Madame Poodle","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"","image_path":"Animal Character/Madame Poodle/Madame Poodle.png","audio_path":"","duration":0,"has_audio":false},{"id":"avatar-animal_character-princess_ragdoll","name":"Princess Ragdoll","name_zh":"Princess Ragdoll","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"058","image_path":"Animal Character/Princess Ragdoll/Princess Ragdoll.png","audio_path":"Animal Character/Princess Ragdoll/058-princess-ragdoll.wav","duration":9.44,"has_audio":true},{"id":"avatar-animal_character-professor_penguin","name":"Professor Penguin","name_zh":"Professor Penguin","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"069","image_path":"Animal Character/Professor Penguin/Professor Penguin.png","audio_path":"Animal Character/Professor Penguin/069-professor-penguin.wav","duration":6.24,"has_audio":true},{"id":"avatar-animal_character-raccoon_bandit","name":"Raccoon Bandit","name_zh":"Raccoon Bandit","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"067","image_path":"Animal Character/Raccoon Bandit/Raccoon Bandit.png","audio_path":"Animal Character/Raccoon Bandit/067-raccoon-bandit.wav","duration":6.72,"has_audio":true},{"id":"avatar-animal_character-spy_siamese","name":"Spy Siamese","name_zh":"Spy Siamese","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"059","image_path":"Animal Character/Spy Siamese/Spy Siamese.png","audio_path":"Animal Character/Spy Siamese/059-spy-siamese.wav","duration":6.56,"has_audio":true},{"id":"avatar-animal_character-trader_hamster","name":"Trader Hamster","name_zh":"Trader Hamster","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"070","image_path":"Animal Character/Trader Hamster/Trader Hamster.png","audio_path":"Animal Character/Trader Hamster/070-trader-hamster.wav","duration":5.44,"has_audio":true},{"id":"avatar-animal_character-witch_black_cat","name":"Witch Black Cat","name_zh":"Witch Black Cat","type":"Animal Character","type_zh":"动物拟人","type_color":"#10b981","index_num":"057","image_path":"Animal Character/Witch Black Cat/Witch Black Cat.png","audio_path":"Animal Character/Witch Black Cat/057-witch-black-cat.wav","duration":11.04,"has_audio":true},{"id":"avatar-fantasy_genrex-50s_greaser","name":"50s Greaser","name_zh":"50年代机车青年","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"098","image_path":"Fantasy_GenreX/50s Greaser/50s Greaser.png","audio_path":"Fantasy_GenreX/50s Greaser/098-50s-greaser.wav","duration":6.4,"has_audio":true},{"id":"avatar-fantasy_genrex-80s_aerobics_coach","name":"80s Aerobics Coach","name_zh":"80年代健美操教练","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"094","image_path":"Fantasy_GenreX/80s Aerobics Coach/80s Aerobics Coach.png","audio_path":"Fantasy_GenreX/80s Aerobics Coach/094-80s-aerobics-coach.wav","duration":5.92,"has_audio":true},{"id":"avatar-fantasy_genrex-android","name":"Android","name_zh":"仿生机械人","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"084","image_path":"Fantasy_GenreX/Android/Android.png","audio_path":"Fantasy_GenreX/Android/084-android.wav","duration":10.08,"has_audio":true},{"id":"avatar-fantasy_genrex-angel_influencer","name":"Angel Influencer","name_zh":"天使网红","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"089","image_path":"Fantasy_GenreX/Angel Influencer/Angel Influencer.png","audio_path":"Fantasy_GenreX/Angel Influencer/089-angel-influencer.wav","duration":6.88,"has_audio":true},{"id":"avatar-fantasy_genrex-classic_goth_girl","name":"Classic Goth Girl","name_zh":"Classic Goth Girl","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"076","image_path":"Fantasy_GenreX/Classic Goth Girl/Classic Goth Girl.png","audio_path":"Fantasy_GenreX/Classic Goth Girl/076-classic-goth-girl.wav","duration":10.72,"has_audio":true},{"id":"avatar-fantasy_genrex-cyber_goth","name":"Cyber Goth","name_zh":"Cyber Goth","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"077","image_path":"Fantasy_GenreX/Cyber Goth/Cyber Goth.png","audio_path":"Fantasy_GenreX/Cyber Goth/077-cyber-goth.wav","duration":7.68,"has_audio":true},{"id":"avatar-fantasy_genrex-cyberpunk_runner","name":"Cyberpunk Runner","name_zh":"Cyberpunk Runner","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"083","image_path":"Fantasy_GenreX/Cyberpunk Runner/Cyberpunk Runner.png","audio_path":"Fantasy_GenreX/Cyberpunk Runner/083-cyberpunk-runner.wav","duration":7.04,"has_audio":true},{"id":"avatar-fantasy_genrex-dark_academia_boy","name":"Dark Academia Boy","name_zh":"Dark Academia Boy","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"079","image_path":"Fantasy_GenreX/Dark Academia Boy/Dark Academia Boy.png","audio_path":"Fantasy_GenreX/Dark Academia Boy/079-dark-academia-boy.wav","duration":8,"has_audio":true},{"id":"avatar-fantasy_genrex-day_of_the_dead","name":"Day Of The Dead","name_zh":"Day Of The Dead","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"082","image_path":"Fantasy_GenreX/Day Of The Dead/Day Of The Dead.png","audio_path":"Fantasy_GenreX/Day Of The Dead/082-day-of-the-dead.wav","duration":9.76,"has_audio":true},{"id":"avatar-fantasy_genrex-demon_ceo","name":"Demon Ceo","name_zh":"Demon Ceo","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"088","image_path":"Fantasy_GenreX/Demon Ceo/Demon Ceo.png","audio_path":"Fantasy_GenreX/Demon Ceo/088-demon-ceo.wav","duration":11.52,"has_audio":true},{"id":"avatar-fantasy_genrex-disco_king","name":"Disco King","name_zh":"迪斯科舞王","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"095","image_path":"Fantasy_GenreX/Disco King/Disco King.png","audio_path":"Fantasy_GenreX/Disco King/095-disco-king.wav","duration":6.08,"has_audio":true},{"id":"avatar-fantasy_genrex-elf_archer","name":"Elf Archer","name_zh":"Elf Archer","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"087","image_path":"Fantasy_GenreX/Elf Archer/Elf Archer.png","audio_path":"Fantasy_GenreX/Elf Archer/087-elf-archer.wav","duration":9.76,"has_audio":true},{"id":"avatar-fantasy_genrex-gladiator","name":"Gladiator","name_zh":"Gladiator","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"092","image_path":"Fantasy_GenreX/Gladiator/Gladiator.png","audio_path":"Fantasy_GenreX/Gladiator/092-gladiator.wav","duration":7.52,"has_audio":true},{"id":"avatar-fantasy_genrex-medieval_knight","name":"Medieval Knight","name_zh":"Medieval Knight","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"093","image_path":"Fantasy_GenreX/Medieval Knight/Medieval Knight.png","audio_path":"Fantasy_GenreX/Medieval Knight/093-medieval-knight.wav","duration":7.2,"has_audio":true},{"id":"avatar-fantasy_genrex-mermaid","name":"Mermaid","name_zh":"Mermaid","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"090","image_path":"Fantasy_GenreX/Mermaid/Mermaid.png","audio_path":"Fantasy_GenreX/Mermaid/090-mermaid.wav","duration":8.96,"has_audio":true},{"id":"avatar-fantasy_genrex-pharaoh","name":"Pharaoh","name_zh":"Pharaoh","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"091","image_path":"Fantasy_GenreX/Pharaoh/Pharaoh.png","audio_path":"Fantasy_GenreX/Pharaoh/091-pharaoh.wav","duration":11.2,"has_audio":true},{"id":"avatar-fantasy_genrex-pirate_captain","name":"Pirate Captain","name_zh":"Pirate Captain","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"096","image_path":"Fantasy_GenreX/Pirate Captain/Pirate Captain.png","audio_path":"Fantasy_GenreX/Pirate Captain/096-pirate-captain.wav","duration":10.72,"has_audio":true},{"id":"avatar-fantasy_genrex-samurai","name":"Samurai","name_zh":"Samurai","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"100","image_path":"Fantasy_GenreX/Samurai/Samurai.png","audio_path":"Fantasy_GenreX/Samurai/100-samurai.wav","duration":11.68,"has_audio":true},{"id":"avatar-fantasy_genrex-steampunk_inventor","name":"Steampunk Inventor","name_zh":"Steampunk Inventor","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"086","image_path":"Fantasy_GenreX/Steampunk Inventor/Steampunk Inventor.png","audio_path":"Fantasy_GenreX/Steampunk Inventor/086-steampunk-inventor.wav","duration":6.72,"has_audio":true},{"id":"avatar-fantasy_genrex-vampire_lord","name":"Vampire Lord","name_zh":"Vampire Lord","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"080","image_path":"Fantasy_GenreX/Vampire Lord/Vampire Lord.png","audio_path":"Fantasy_GenreX/Vampire Lord/080-vampire-lord.wav","duration":11.68,"has_audio":true},{"id":"avatar-fantasy_genrex-vaporwave_statue","name":"Vaporwave Statue","name_zh":"Vaporwave Statue","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"085","image_path":"Fantasy_GenreX/Vaporwave Statue/Vaporwave Statue.png","audio_path":"Fantasy_GenreX/Vaporwave Statue/085-vaporwave-statue.wav","duration":13.44,"has_audio":true},{"id":"avatar-fantasy_genrex-victorian_goth","name":"Victorian Goth","name_zh":"Victorian Goth","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"078","image_path":"Fantasy_GenreX/Victorian Goth/Victorian Goth.png","audio_path":"Fantasy_GenreX/Victorian Goth/078-victorian-goth.wav","duration":10.72,"has_audio":true},{"id":"avatar-fantasy_genrex-viking_warrior","name":"Viking Warrior","name_zh":"Viking Warrior","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"099","image_path":"Fantasy_GenreX/Viking Warrior/Viking Warrior.png","audio_path":"Fantasy_GenreX/Viking Warrior/099-viking-warrior.wav","duration":9.12,"has_audio":true},{"id":"avatar-fantasy_genrex-wild_west_cowboy","name":"Wild West Cowboy","name_zh":"Wild West Cowboy","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"097","image_path":"Fantasy_GenreX/Wild West Cowboy/Wild West Cowboy.png","audio_path":"Fantasy_GenreX/Wild West Cowboy/097-wild-west-cowboy.wav","duration":11.04,"has_audio":true},{"id":"avatar-fantasy_genrex-witch","name":"Witch","name_zh":"Witch","type":"Fantasy_GenreX","type_zh":"奇幻世界","type_color":"#8b5cf6","index_num":"081","image_path":"Fantasy_GenreX/Witch/Witch.png","audio_path":"Fantasy_GenreX/Witch/081-witch.wav","duration":7.68,"has_audio":true},{"id":"avatar-human_archetypes-asmr_sergeant_marcus","name":"Asmr Sergeant Marcus","name_zh":"ASMR教官马库斯","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"017","image_path":"Human Archetypes/Asmr Sergeant Marcus/Asmr Sergeant Marcus.png","audio_path":"Human Archetypes/Asmr Sergeant Marcus/017-asmr-sergeant-marcus.wav","duration":8.64,"has_audio":true},{"id":"avatar-human_archetypes-austin_cowgirl_jolene","name":"Austin Cowgirl Jolene","name_zh":"奥斯汀牛仔女郎","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"030","image_path":"Human Archetypes/Austin Cowgirl Jolene/Austin Cowgirl Jolene.png","audio_path":"Human Archetypes/Austin Cowgirl Jolene/030-austin-cowgirl-jolene.wav","duration":6.56,"has_audio":true},{"id":"avatar-human_archetypes-berlin_dj_lukas","name":"Berlin Dj Lukas","name_zh":"柏林DJ卢卡斯","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"023","image_path":"Human Archetypes/Berlin Dj Lukas/Berlin Dj Lukas.png","audio_path":"Human Archetypes/Berlin Dj Lukas/023-berlin-dj-lukas.wav","duration":7.04,"has_audio":true},{"id":"avatar-human_archetypes-boomer_grandma_betty","name":"Boomer Grandma Betty","name_zh":"贝蒂老奶奶","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"012","image_path":"Human Archetypes/Boomer Grandma Betty/Boomer Grandma Betty.png","audio_path":"Human Archetypes/Boomer Grandma Betty/012-boomer-grandma-betty.wav","duration":8.96,"has_audio":true},{"id":"avatar-human_archetypes-brainrot_jayden","name":"Brainrot Jayden","name_zh":"Brainrot Jayden","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"006","image_path":"Human Archetypes/Brainrot Jayden/Brainrot Jayden.png","audio_path":"Human Archetypes/Brainrot Jayden/006-brainrot-jayden.wav","duration":5.44,"has_audio":true},{"id":"avatar-human_archetypes-clean_girl_aria","name":"Clean Girl Aria","name_zh":"Clean Girl Aria","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"001","image_path":"Human Archetypes/Clean Girl Aria/Clean Girl Aria.png","audio_path":"Human Archetypes/Clean Girl Aria/001-clean-girl-aria.wav","duration":10.24,"has_audio":true},{"id":"avatar-human_archetypes-cool_grandpa_hiroshi","name":"Cool Grandpa Hiroshi","name_zh":"Cool Grandpa Hiroshi","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"013","image_path":"Human Archetypes/Cool Grandpa Hiroshi/Cool Grandpa Hiroshi.png","audio_path":"Human Archetypes/Cool Grandpa Hiroshi/013-cool-grandpa-hiroshi.wav","duration":9.44,"has_audio":true},{"id":"avatar-human_archetypes-coquette_destiny","name":"Coquette Destiny","name_zh":"Coquette Destiny","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"003","image_path":"Human Archetypes/Coquette Destiny/Coquette Destiny.png","audio_path":"Human Archetypes/Coquette Destiny/003-coquette-destiny.wav","duration":6.88,"has_audio":true},{"id":"avatar-human_archetypes-cottagecore_lily","name":"Cottagecore Lily","name_zh":"Cottagecore Lily","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"010","image_path":"Human Archetypes/Cottagecore Lily/Cottagecore Lily.png","audio_path":"Human Archetypes/Cottagecore Lily/010-cottagecore-lily.wav","duration":7.36,"has_audio":true},{"id":"avatar-human_archetypes-dubai_rich_kid_khalid","name":"Dubai Rich Kid Khalid","name_zh":"Dubai Rich Kid Khalid","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"028","image_path":"Human Archetypes/Dubai Rich Kid Khalid/Dubai Rich Kid Khalid.png","audio_path":"Human Archetypes/Dubai Rich Kid Khalid/028-dubai-rich-kid-khalid.wav","duration":6.4,"has_audio":true},{"id":"avatar-human_archetypes-emo_revival_sage","name":"Emo Revival Sage","name_zh":"Emo Revival Sage","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"008","image_path":"Human Archetypes/Emo Revival Sage/Emo Revival Sage.png","audio_path":"Human Archetypes/Emo Revival Sage/008-emo-revival-sage.wav","duration":7.04,"has_audio":true},{"id":"avatar-human_archetypes-gen_z_professor_miles","name":"Gen Z Professor Miles","name_zh":"Gen Z Professor Miles","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"016","image_path":"Human Archetypes/Gen Z Professor Miles/Gen Z Professor Miles.png","audio_path":"Human Archetypes/Gen Z Professor Miles/016-gen-z-professor-miles.wav","duration":5.92,"has_audio":true},{"id":"avatar-human_archetypes-gen_z_surgeon_nia","name":"Gen Z Surgeon Nia","name_zh":"Gen Z Surgeon Nia","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"011","image_path":"Human Archetypes/Gen Z Surgeon Nia/Gen Z Surgeon Nia.png","audio_path":"Human Archetypes/Gen Z Surgeon Nia/011-gen-z-surgeon-nia.wav","duration":7.84,"has_audio":true},{"id":"avatar-human_archetypes-girlboss_priya","name":"Girlboss Priya","name_zh":"Girlboss Priya","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"015","image_path":"Human Archetypes/Girlboss Priya/Girlboss Priya.png","audio_path":"Human Archetypes/Girlboss Priya/015-girlboss-priya.wav","duration":6.24,"has_audio":true},{"id":"avatar-human_archetypes-glam_grandma_loretta","name":"Glam Grandma Loretta","name_zh":"Glam Grandma Loretta","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"020","image_path":"Human Archetypes/Glam Grandma Loretta/Glam Grandma Loretta.png","audio_path":"Human Archetypes/Glam Grandma Loretta/020-glam-grandma-loretta.wav","duration":8.96,"has_audio":true},{"id":"avatar-human_archetypes-harajuku_yuki","name":"Harajuku Yuki","name_zh":"Harajuku Yuki","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"022","image_path":"Human Archetypes/Harajuku Yuki/Harajuku Yuki.png","audio_path":"Human Archetypes/Harajuku Yuki/022-harajuku-yuki.wav","duration":6.4,"has_audio":true},{"id":"avatar-human_archetypes-lagos_techbro_emeka","name":"Lagos Techbro Emeka","name_zh":"Lagos Techbro Emeka","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"021","image_path":"Human Archetypes/Lagos Techbro Emeka/Lagos Techbro Emeka.png","audio_path":"Human Archetypes/Lagos Techbro Emeka/021-lagos-techbro-emeka.wav","duration":7.04,"has_audio":true},{"id":"avatar-human_archetypes-london_roadman_callum","name":"London Roadman Callum","name_zh":"London Roadman Callum","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"026","image_path":"Human Archetypes/London Roadman Callum/London Roadman Callum.png","audio_path":"Human Archetypes/London Roadman Callum/026-london-roadman-callum.wav","duration":6.24,"has_audio":true},{"id":"avatar-human_archetypes-mob_wife_valentina","name":"Mob Wife Valentina","name_zh":"Mob Wife Valentina","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"004","image_path":"Human Archetypes/Mob Wife Valentina/Mob Wife Valentina.png","audio_path":"Human Archetypes/Mob Wife Valentina/004-mob-wife-valentina.wav","duration":6.24,"has_audio":true},{"id":"avatar-human_archetypes-mumbai_creator_ananya","name":"Mumbai Creator Ananya","name_zh":"Mumbai Creator Ananya","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"024","image_path":"Human Archetypes/Mumbai Creator Ananya/Mumbai Creator Ananya.png","audio_path":"Human Archetypes/Mumbai Creator Ananya/024-mumbai-creator-ananya.wav","duration":7.04,"has_audio":true},{"id":"avatar-human_archetypes-old_money_arjun","name":"Old Money Arjun","name_zh":"Old Money Arjun","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"005","image_path":"Human Archetypes/Old Money Arjun/Old Money Arjun.png","audio_path":"Human Archetypes/Old Money Arjun/005-old-money-arjun.wav","duration":7.84,"has_audio":true},{"id":"avatar-human_archetypes-paris_art_student_camille","name":"Paris Art Student Camille","name_zh":"Paris Art Student Camille","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"029","image_path":"Human Archetypes/Paris Art Student Camille/Paris Art Student Camille.png","audio_path":"Human Archetypes/Paris Art Student Camille/029-paris-art-student-camille.wav","duration":9.6,"has_audio":true},{"id":"avatar-human_archetypes-s_o_paulo_mc_rafa","name":"S O Paulo Mc Rafa","name_zh":"S O Paulo Mc Rafa","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"025","image_path":"Human Archetypes/S O Paulo Mc Rafa/S O Paulo Mc Rafa.png","audio_path":"Human Archetypes/S O Paulo Mc Rafa/025-s-o-paulo-mc-rafa.wav","duration":7.84,"has_audio":true},{"id":"avatar-human_archetypes-seoul_trainee_soojin","name":"Seoul Trainee Soojin","name_zh":"Seoul Trainee Soojin","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"027","image_path":"Human Archetypes/Seoul Trainee Soojin/Seoul Trainee Soojin.png","audio_path":"Human Archetypes/Seoul Trainee Soojin/027-seoul-trainee-soojin.wav","duration":8.96,"has_audio":true},{"id":"avatar-human_archetypes-sigma_kyle","name":"Sigma Kyle","name_zh":"Sigma Kyle","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"002","image_path":"Human Archetypes/Sigma Kyle/Sigma Kyle.png","audio_path":"Human Archetypes/Sigma Kyle/002-sigma-kyle.wav","duration":4.32,"has_audio":true},{"id":"avatar-human_archetypes-skater_accountant_kevin","name":"Skater Accountant Kevin","name_zh":"Skater Accountant Kevin","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"019","image_path":"Human Archetypes/Skater Accountant Kevin/Skater Accountant Kevin.png","audio_path":"Human Archetypes/Skater Accountant Kevin/019-skater-accountant-kevin.wav","duration":6.4,"has_audio":true},{"id":"avatar-human_archetypes-streetwear_king_darius","name":"Streetwear King Darius","name_zh":"Streetwear King Darius","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"009","image_path":"Human Archetypes/Streetwear King Darius/Streetwear King Darius.png","audio_path":"Human Archetypes/Streetwear King Darius/009-streetwear-king-darius.wav","duration":5.6,"has_audio":true},{"id":"avatar-human_archetypes-tattooed_librarian_rosa","name":"Tattooed Librarian Rosa","name_zh":"Tattooed Librarian Rosa","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"018","image_path":"Human Archetypes/Tattooed Librarian Rosa/Tattooed Librarian Rosa.png","audio_path":"Human Archetypes/Tattooed Librarian Rosa/018-tattooed-librarian-rosa.wav","duration":7.04,"has_audio":true},{"id":"avatar-human_archetypes-that_girl_mei","name":"That Girl Mei","name_zh":"That Girl Mei","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"007","image_path":"Human Archetypes/That Girl Mei/That Girl Mei.png","audio_path":"Human Archetypes/That Girl Mei/007-that-girl-mei.wav","duration":8.64,"has_audio":true},{"id":"avatar-human_archetypes-yoga_dad_greg","name":"Yoga Dad Greg","name_zh":"Yoga Dad Greg","type":"Human Archetypes","type_zh":"人类原型","type_color":"#3b82f6","index_num":"014","image_path":"Human Archetypes/Yoga Dad Greg/Yoga Dad Greg.png","audio_path":"Human Archetypes/Yoga Dad Greg/014-yoga-dad-greg.wav","duration":8.8,"has_audio":true},{"id":"avatar-meme_characters-banana_cat","name":"Banana Cat","name_zh":"香蕉猫咪","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"044","image_path":"Meme Characters/Banana Cat/Banana Cat.png","audio_path":"Meme Characters/Banana Cat/044-banana-cat.wav","duration":9.76,"has_audio":true},{"id":"avatar-meme_characters-bloomer","name":"Bloomer","name_zh":"乐观青年布鲁默","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"036","image_path":"Meme Characters/Bloomer/Bloomer.png","audio_path":"Meme Characters/Bloomer/036-bloomer.wav","duration":6.08,"has_audio":true},{"id":"avatar-meme_characters-boomer_wojak","name":"Boomer Wojak","name_zh":"怀旧沃杰克","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"038","image_path":"Meme Characters/Boomer Wojak/Boomer Wojak.png","audio_path":"Meme Characters/Boomer Wojak/038-boomer-wojak.wav","duration":5.92,"has_audio":true},{"id":"avatar-meme_characters-buff_doge","name":"Buff Doge","name_zh":"肌肉柴犬","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"049","image_path":"Meme Characters/Buff Doge/Buff Doge.png","audio_path":"Meme Characters/Buff Doge/049-buff-doge.wav","duration":8.32,"has_audio":true},{"id":"avatar-meme_characters-cheems","name":"Cheems","name_zh":"委屈小柴切姆斯","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"043","image_path":"Meme Characters/Cheems/Cheems.png","audio_path":"Meme Characters/Cheems/043-cheems.wav","duration":9.92,"has_audio":true},{"id":"avatar-meme_characters-crying_cat_thumbs_up","name":"Crying Cat Thumbs Up","name_zh":"Crying Cat Thumbs Up","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"050","image_path":"Meme Characters/Crying Cat Thumbs Up/Crying Cat Thumbs Up.png","audio_path":"Meme Characters/Crying Cat Thumbs Up/050-crying-cat-thumbs-up.wav","duration":10.24,"has_audio":true},{"id":"avatar-meme_characters-distracted_boyfriend","name":"Distracted Boyfriend","name_zh":"Distracted Boyfriend","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"053","image_path":"Meme Characters/Distracted Boyfriend/Distracted Boyfriend.png","audio_path":"Meme Characters/Distracted Boyfriend/053-distracted-boyfriend.wav","duration":6.24,"has_audio":true},{"id":"avatar-meme_characters-doge","name":"Doge","name_zh":"Doge","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"042","image_path":"Meme Characters/Doge/Doge.png","audio_path":"Meme Characters/Doge/042-doge.wav","duration":12.64,"has_audio":true},{"id":"avatar-meme_characters-doomer_dan","name":"Doomer Dan","name_zh":"Doomer Dan","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"031","image_path":"Meme Characters/Doomer Dan/Doomer Dan.png","audio_path":"Meme Characters/Doomer Dan/031-doomer-dan.wav","duration":9.76,"has_audio":true},{"id":"avatar-meme_characters-doomer_girl","name":"Doomer Girl","name_zh":"Doomer Girl","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"032","image_path":"Meme Characters/Doomer Girl/Doomer Girl.png","audio_path":"Meme Characters/Doomer Girl/032-doomer-girl.wav","duration":8.16,"has_audio":true},{"id":"avatar-meme_characters-gigachad","name":"Gigachad","name_zh":"Gigachad","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"034","image_path":"Meme Characters/Gigachad/Gigachad.png","audio_path":"Meme Characters/Gigachad/034-gigachad.wav","duration":14.56,"has_audio":true},{"id":"avatar-meme_characters-grumpy_bird","name":"Grumpy Bird","name_zh":"Grumpy Bird","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"051","image_path":"Meme Characters/Grumpy Bird/051-grumpy-bird-original-02.png","audio_path":"Meme Characters/Grumpy Bird/051-grumpy-bird.wav","duration":7.68,"has_audio":true},{"id":"avatar-meme_characters-grumpy_cat","name":"Grumpy Cat","name_zh":"Grumpy Cat","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"047","image_path":"Meme Characters/Grumpy Cat/Grumpy Cat.png","audio_path":"Meme Characters/Grumpy Cat/047-grumpy-cat.wav","duration":9.92,"has_audio":true},{"id":"avatar-meme_characters-npc","name":"Npc","name_zh":"Npc","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"046","image_path":"Meme Characters/Npc/npc.png","audio_path":"Meme Characters/Npc/046-npc.wav","duration":7.04,"has_audio":true},{"id":"avatar-meme_characters-nyan_cat","name":"Nyan Cat","name_zh":"Nyan Cat","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"055","image_path":"Meme Characters/Nyan Cat/Nyan Cat.png","audio_path":"Meme Characters/Nyan Cat/055-nyan-cat.wav","duration":10.56,"has_audio":true},{"id":"avatar-meme_characters-pepe_classic","name":"Pepe Classic","name_zh":"Pepe Classic","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"039","image_path":"Meme Characters/Pepe Classic/Pepe Classic.png","audio_path":"Meme Characters/Pepe Classic/039-pepe-classic.wav","duration":7.04,"has_audio":true},{"id":"avatar-meme_characters-sad_pepe","name":"Sad Pepe","name_zh":"Sad Pepe","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"040","image_path":"Meme Characters/Sad Pepe/Sad Pepe.png","audio_path":"Meme Characters/Sad Pepe/040-sad-pepe.wav","duration":10.56,"has_audio":true},{"id":"avatar-meme_characters-smudge","name":"Smudge","name_zh":"Smudge","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"048","image_path":"Meme Characters/Smudge/Smudge.png","audio_path":"Meme Characters/Smudge/048-smudge.wav","duration":7.04,"has_audio":true},{"id":"avatar-meme_characters-smug_pepe","name":"Smug Pepe","name_zh":"Smug Pepe","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"041","image_path":"Meme Characters/Smug Pepe/Smug Pepe.png","audio_path":"Meme Characters/Smug Pepe/041-smug-pepe.wav","duration":7.2,"has_audio":true},{"id":"avatar-meme_characters-soyjak","name":"Soyjak","name_zh":"震惊大豆男","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"033","image_path":"Meme Characters/Soyjak/Soyjak.png","audio_path":"Meme Characters/Soyjak/033-soyjak.wav","duration":6.24,"has_audio":true},{"id":"avatar-meme_characters-stonks_man","name":"Stonks Man","name_zh":"Stonks Man","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"052","image_path":"Meme Characters/Stonks Man/Stonks Man.png","audio_path":"Meme Characters/Stonks Man/052-stonks-man.wav","duration":6.72,"has_audio":true},{"id":"avatar-meme_characters-this_is_fine_dog","name":"This Is Fine Dog","name_zh":"This Is Fine Dog","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"054","image_path":"Meme Characters/This Is Fine Dog/This Is Fine Dog.png","audio_path":"Meme Characters/This Is Fine Dog/054-this-is-fine-dog.wav","duration":10.24,"has_audio":true},{"id":"avatar-meme_characters-tradwife","name":"Tradwife","name_zh":"Tradwife","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"035","image_path":"Meme Characters/Tradwife/Tradwife.png","audio_path":"Meme Characters/Tradwife/035-tradwife.wav","duration":9.12,"has_audio":true},{"id":"avatar-meme_characters-trollface","name":"Trollface","name_zh":"Trollface","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"045","image_path":"Meme Characters/Trollface/Trollface.png","audio_path":"Meme Characters/Trollface/045-trollface.wav","duration":7.84,"has_audio":true},{"id":"avatar-meme_characters-zoomer","name":"Zoomer","name_zh":"Zoomer","type":"Meme Characters","type_zh":"流行网梗","type_color":"#f59e0b","index_num":"037","image_path":"Meme Characters/Zoomer/Zoomer.png","audio_path":"Meme Characters/Zoomer/037-zoomer.wav","duration":6.72,"has_audio":true},{"id":"pippit-stella","name":"Stella","name_zh":"实景口播·斯特拉","type":"digital-human","type_zh":"数字人","type_color":"#e4e4e7","index_num":"P001","image_path":"Stella in a bathroom","audio_path":"Stella voice","duration":15.2,"has_audio":true},{"id":"pippit-noor","name":"Noor","name_zh":"实景口播·诺尔","type":"digital-human","type_zh":"数字人","type_color":"#e4e4e7","index_num":"P002","image_path":"Noor in the living room","audio_path":"Noor voice","duration":12,"has_audio":true},{"id":"pippit-diego","name":"Diego","name_zh":"实景口播·迭戈","type":"digital-human","type_zh":"数字人","type_color":"#e4e4e7","index_num":"P003","image_path":"Diego in office","audio_path":"Diego voice","duration":18.5,"has_audio":true},{"id":"pippit-fatima","name":"Fatima","name_zh":"实景口播·法蒂玛","type":"digital-human","type_zh":"数字人","type_color":"#e4e4e7","index_num":"P004","image_path":"Fatima presenter","audio_path":"Fatima voice","duration":14.8,"has_audio":true}];
+    let selectedType = "all";
+    let searchQuery = "";
+    let audioCtx = null;
+    let playingBtn = null;
+
+    function renderCards() {
+      const filtered = items.filter(item => {
+        const matchType = (selectedType === "all" || item.type === selectedType);
+        const q = searchQuery.toLowerCase().trim();
+        const matchSearch = !q || (
+          item.name.toLowerCase().includes(q) ||
+          item.name_zh.toLowerCase().includes(q) ||
+          (item.index_num && item.index_num.includes(q))
+        );
+        return matchType && matchSearch;
+      });
+
+      document.getElementById("statusText").textContent = "显示 " + filtered.length + " 款角色 · 配套专属声音样本";
+
+      const grid = document.getElementById("cardGrid");
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--dsw-label-tertiary);">没有找到匹配项</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const initial = item.name.charAt(0);
+        const pitch = 180 + (item.name.charCodeAt(0) * 5) % 300;
+        const color = item.type_color || "#3b82f6";
+        const tagBg = item.type === "digital-human" ? "rgba(255,255,255,0.1)" : color + "22";
+
+        return `
+          <div class="asset-card">
+            <div class="asset-thumb">
+              <div class="avatar-preview-bg">
+                <div class="avatar-letter" style="background: radial-gradient(circle at 30% 30%, ${color}, #09090b);">
+                  ${initial}
+                </div>
+              </div>
+
+              <div class="card-top-badges">
+                <span class="card-num">#${item.index_num}</span>
+                <span class="card-tag" style="background:${tagBg}; color:${color}; border:1px solid ${color}44;">
+                  ${item.type_zh}
+                </span>
+              </div>
+
+              <div class="play-dock">
+                <button class="play-round-btn" onclick="playAudio(${pitch}, ${item.duration}, this)">&#9654;</button>
+                <div class="play-time-label">${item.duration}s · 专属音色</div>
+              </div>
+            </div>
+
+            <div class="card-info">
+              <div class="card-title">${item.name}</div>
+              <div class="card-subtitle">${item.name_zh}</div>
+              <div class="card-meta-chips">
+                <span class="card-chip-item">高清立绘</span>
+                <span class="card-chip-item">专属WAV音频</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    window.toggleDropdown = function(e, id) {
+      e.stopPropagation();
+      const el = document.getElementById(id);
+      const isShown = el.classList.contains("show");
+      document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.remove("show"));
+      if (!isShown) el.classList.add("show");
+    };
+
+    window.pickType = function(cat, label) {
+      selectedType = cat;
+      document.getElementById("dimTypeLabel").textContent = "类型: " + label;
+      document.querySelectorAll("#menuType .dropdown-item").forEach(item => item.classList.remove("active"));
+      event.currentTarget.classList.add("active");
+      document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.remove("show"));
+      renderCards();
+    };
+
+    document.addEventListener("click", () => {
+      document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.remove("show"));
+    });
+
+    document.getElementById("searchInput").addEventListener("input", (e) => {
+      searchQuery = e.target.value;
+      renderCards();
+    });
+
+    window.playAudio = function(pitch, duration, btn) {
+      if (playingBtn) {
+        playingBtn.classList.remove("playing");
+        playingBtn.innerHTML = "&#9654;";
+      }
+      if (playingBtn === btn) {
+        playingBtn = null;
+        return;
+      }
+      playingBtn = btn;
+      btn.classList.add("playing");
+      btn.innerHTML = "&#10074;&#10074;";
+
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + Math.min(duration, 3));
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + Math.min(duration, 3));
+        setTimeout(() => {
+          if (playingBtn === btn) {
+            btn.classList.remove("playing");
+            btn.innerHTML = "&#9654;";
+            playingBtn = null;
+          }
+        }, Math.min(duration, 3) * 1000);
+      } catch (e) {
+        setTimeout(() => {
+          btn.classList.remove("playing");
+          btn.innerHTML = "&#9654;";
+          playingBtn = null;
+        }, 1500);
+      }
+    };
+
+    renderCards();
+  </script>
+</body>
+</html>

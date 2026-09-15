@@ -20,6 +20,7 @@
  * dimension's shards.
  */
 export const CHARACTER_DIMENSION_IDS = [
+  'type',
   'gender',
   'age',
   'figure',
@@ -167,6 +168,13 @@ export function optionKeyOf(dimensionId, value) {
  * its slug, which is why this table is an optimisation and not a gate.
  */
 const OPTION_KEYS = {
+  type: {
+    'digital-human': 'digital_human',
+    'Human Archetypes': 'human_archetypes',
+    'Meme Characters': 'meme_characters',
+    'Animal Character': 'animal_character',
+    'Fantasy_GenreX': 'fantasy_genrex',
+  },
   gender: { Female: 'female', Male: 'male' },
   age: { Youth: 'youth', 'Middle-aged': 'middle' },
   figure: { Slim: 'slim', Average: 'average', Curvy: 'curvy' },

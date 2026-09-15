@@ -450,6 +450,7 @@ function makeAsset(ctx, spec) {
  * avatars that person has and cut off with `NAME_OPTION_LIMIT`.
  */
 export const CHARACTER_DIMENSIONS = [
+  { id: 'type', zh: '类型', en: 'Type', defaults: ['digital-human'] },
   { id: 'gender', zh: '性别', en: 'Gender', defaults: [] },
   { id: 'age', zh: '年龄', en: 'Age', defaults: [] },
   { id: 'figure', zh: '体型', en: 'Figure', defaults: [] },
@@ -608,6 +609,7 @@ export function characterDimensionsOf(input) {
   return {
     given,
     values: {
+      type: 'digital-human',
       gender,
       age: mentions(haystack, YOUTH_WORDS) ? 'Youth'
         : mentions(haystack, MIDDLE_AGED_SIGNALS) ? 'Middle-aged' : 'Youth',
@@ -777,6 +779,67 @@ export function collectCharacter(ctx, add) {
         // The eight professional dimensions, one value each. Kept on the row so
         // the client can filter a page it already holds without another request.
         dims: profile.values,
+      },
+    }))
+  }
+
+  collectFreeAiAvatars(ctx, add)
+}
+
+/**
+ * Collect the Free AI Avatars catalogue: 100 stylised character personas
+ * across 4 native categories, with high-res PNG portraits and 24kHz WAV voice samples.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
+ */
+export function collectFreeAiAvatars(ctx, add) {
+  const { assetsRoot } = ctx
+  const dir = join(assetsRoot, 'library', 'opc', 'free-ai-avatars', 'versions', 'v1', 'files')
+  const catalogPath = join(dir, 'avatars-catalog.json')
+  if (!existsSync(catalogPath)) return
+
+  const catalog = readJsonSafe(catalogPath)
+  if (!catalog || !Array.isArray(catalog.avatars)) return
+
+  for (const item of catalog.avatars) {
+    const rawCategory = text(item.category) || 'Human Archetypes'
+    const name = text(item.name)
+    const localCover = join(dir, item.image_path)
+    const localMedia = item.audio_path ? join(dir, item.audio_path) : ''
+    const remoteCover = `https://media.aftermark.ai/avatars/free-ai-avatars/${encodeURI(item.image_path)}`
+    const remoteMedia = item.audio_path ? `https://media.aftermark.ai/avatars/free-ai-avatars/${encodeURI(item.audio_path)}` : ''
+    const slug = slugify(rawCategory)
+
+    add(makeAsset(ctx, {
+      key: `free-ai-avatars/${item.id}`,
+      category: 'character',
+      subCategory: slug,
+      dimensions: [slug],
+      name,
+      description: `AI 角色 · ${rawCategory} · ${name}`,
+      tags: ['AI数字人', rawCategory, name],
+      localMedia,
+      localCover,
+      remoteMedia,
+      remoteCover,
+      meta: {
+        source: 'free-ai-avatars',
+        source_url: text(catalog.source),
+        category: rawCategory,
+        index: item.index_num || null,
+        duration: Number(item.audio_duration_seconds) || null,
+        dims: {
+          type: rawCategory,
+          gender: /girl|female|woman|grandma|cowgirl|geisha|princess/i.test(name) ? 'Female'
+            : /boy|male|man|chad|guy|dj|sergeant|knight|lord/i.test(name) ? 'Male' : 'Female',
+          age: /grandma|boomer|elder/i.test(name) ? 'Middle-aged' : 'Youth',
+          figure: 'Average',
+          name,
+          industry: 'General Lifestyle',
+          scene: 'Indoor/Studio',
+          pose: 'Frontal',
+          outfit: 'Casual/Lifestyle',
+        },
       },
     }))
   }
