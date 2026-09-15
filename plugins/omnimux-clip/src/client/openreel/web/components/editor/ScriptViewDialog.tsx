@@ -228,7 +228,6 @@ export const ScriptViewDialog: React.FC<ScriptViewDialogProps> = ({
                         customStyle={{
                           margin: 0,
                           padding: "1rem",
-                          background: "#1e1e1e",
                           fontSize: "12px",
                         }}
                       >
