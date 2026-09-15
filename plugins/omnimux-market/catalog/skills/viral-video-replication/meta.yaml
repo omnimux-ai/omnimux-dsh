@@ -1,0 +1,18 @@
+display-name-zh: 爆款视频复刻
+version: 1.0.0
+tag-en: "Video Production / Viral Replication"
+tag-cn: "视频创作 / 爆款复刻"
+complete-tags-en:
+  - "Video Production"
+  - "Content Strategy"
+complete-tags-cn:
+  - "视频创作"
+  - "内容策略"
+summary-en: "Clone viral videos with word-anchored semantic timeline"
+summary-cn: "基于字词级语义时间轴与导演心法复刻爆款视频"
+desc-en: "End-to-end viral video replication suite based on director and producer craftsmanship. Deconstructs reference videos into 3-second hooks, pacing, and visual systems, orchestrates multi-modal models (Seedance, GPT, FishAudio), and compiles word-anchored timelines directly into OmniMux Clip multi-track projects for fine-tuning."
+desc-cn: "基于导演与制片人专业心法的全链路爆款视频复刻套件。支持对参考样片进行黄金前3秒钩子、情绪节奏与分镜视听解构，自动调度多模态模型集群，并按字词级时序毫秒级装配为成片工程，直通 OmniMux Clip 剪辑工作台进行多轨精修与导出。"
+cover: ""
+author-en: "OmniMux Team"
+author-cn: "OmniMux 团队"
+source: official
