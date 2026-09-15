@@ -67,22 +67,45 @@ export function getPresetSkillBinding(presetId, mode) {
     const isDrama = mode === 'drama' ||
         norm === 'drama' ||
         norm === 'drama-agent' ||
+        norm === 'omni-drama-agent' ||
         norm === 'short-drama' ||
         norm === 'short-drama-creator' ||
         presetId === '短剧' ||
         presetId === '短剧制作人' ||
-        presetId === '短剧专精';
+        presetId === '短剧专精' ||
+        presetId === '全能短剧操盘手';
+    const isMarketing = mode === 'marketing' ||
+        norm === 'marketing' ||
+        norm === 'marketing-agent' ||
+        norm === 'omni-marketing-agent' ||
+        presetId === '营销' ||
+        presetId === '全能营销操盘手';
+    const isTiktokExplicit = norm === 'tiktok-agent' ||
+        norm === 'tiktokagent' ||
+        norm === 'tiktok';
+    const isOmniExplicit = norm === 'omni-agent' ||
+        norm === 'omni' ||
+        norm === 'omni-social-agent';
+    const isOmniSocial = isTiktokExplicit ||
+        isOmniExplicit ||
+        norm === '全能社媒操盘手' ||
+        presetId === '全能社媒操盘手';
     const isAgentDefault = mode === 'agent' ||
         norm === 'agent' ||
         norm === 'default';
     const entry = (isDrama ? AGENT_PRESET_SKILL_BINDINGS['drama-agent'] : null) ||
+        (isMarketing ? AGENT_PRESET_SKILL_BINDINGS['marketing-agent'] : null) ||
+        (isOmniExplicit ? AGENT_PRESET_SKILL_BINDINGS['omni-agent'] : null) ||
+        (isTiktokExplicit ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] : null) ||
         AGENT_PRESET_SKILL_BINDINGS[presetId] ||
         AGENT_PRESET_SKILL_BINDINGS[norm] ||
-        (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok' || norm === '全能社媒操盘手' || presetId === '全能社媒操盘手'
-            ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
+        (isOmniSocial
+            ? (AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] || AGENT_PRESET_SKILL_BINDINGS['omni-agent'])
             : null) ||
         (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null) ||
-        (isAgentDefault ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] : null);
+        (isAgentDefault
+            ? (AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] || AGENT_PRESET_SKILL_BINDINGS['omni-agent'])
+            : null);
     if (!entry)
         return null;
     if (entry.useDefaultContentCatalog) {
