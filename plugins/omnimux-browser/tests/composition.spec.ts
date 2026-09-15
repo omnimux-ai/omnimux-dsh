@@ -177,7 +177,7 @@ async function loadComposition(): Promise<{ ctx: Context; configPath: string; po
   return { ctx: context, configPath, port: web.port }
 }
 
-/** 扩展上下文 Origin（回环免 token 的必要条件）。 */
+/** Extension origin; every connection still requires the configured token. */
 const EXT_ORIGIN = 'chrome-extension://test-extension-id'
 
 function connect(port: number): Promise<{
@@ -216,7 +216,7 @@ async function waitFor(predicate: () => boolean, timeoutMs = 5_000): Promise<voi
 
 async function connectReady(port: number): Promise<Awaited<ReturnType<typeof connect>>> {
   const client = await connect(port)
-  send(client.ws, { t: 'hello', token: '', caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60 } })
+  send(client.ws, { t: 'hello', token: TOKEN, caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60 } })
   await Promise.race([
     waitFor(() => client.frames.some((f) => f.t === 'hello.ok')),
     client.closed.then(({ code, reason }) => {
@@ -227,6 +227,19 @@ async function connectReady(port: number): Promise<Awaited<ReturnType<typeof con
 }
 
 describe('real Loader composition', () => {
+  it('rejects an extension without its token while preserving the paired connection', { timeout: 60_000 }, async () => {
+    const { port } = await loadComposition()
+    const paired = await connectReady(port)
+    const anonymous = await connect(port)
+    send(anonymous.ws, { t: 'hello', token: '', caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60 } })
+    const closed = await anonymous.closed
+    expect(closed).toEqual({ code: 4002, reason: 'bad token' })
+    expect(anonymous.frames.some(frame => frame.t === 'hello.ok')).toBe(false)
+    send(paired.ws, { t: 'rpc', id: 'after-rejection', method: 'session.list', payload: {} })
+    await waitFor(() => paired.frames.some(frame => frame.t === 'rpc.result' && frame.id === 'after-rejection'))
+    expect(paired.frames.find(frame => frame.t === 'rpc.result' && frame.id === 'after-rejection')).toMatchObject({ ok: true })
+    paired.ws.close()
+  })
   it('delivers only the latest followed page through the durable inbox without waking an idle Agent', async () => {
     const { ctx, port } = await loadComposition()
     const client = await connectReady(port)
@@ -304,12 +317,11 @@ describe('real Loader composition', () => {
     expect(tools.get('browser_click')).toBeDefined()
     expect(tools.get('browser_navigate')).toBeDefined()
 
-    // Zero-config semantics: loopback connections need no token (the
-    // non-loopback token gate is covered by server.spec overrides).
+    // The real Loader composition authenticates using its configured token.
     const client = await connectReady(port)
     expect(client.frames.find((f) => f.t === 'hello.ok')).toEqual({
       t: 'hello.ok',
-      caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60 },
+      caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60, locale: 'zh' },
     })
 
     // Gateway RPC round-trip against the real session store.

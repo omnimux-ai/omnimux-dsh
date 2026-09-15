@@ -27,6 +27,7 @@ export default defineConfig({
       input: {
         index: resolve(harnessRoot, 'index.html'),
         frame: resolve(harnessRoot, 'frame.html'),
+        security: resolve(harnessRoot, 'security.html'),
       },
     },
   },
