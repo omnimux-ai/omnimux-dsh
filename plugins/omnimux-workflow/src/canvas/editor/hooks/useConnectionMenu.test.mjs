@@ -138,9 +138,9 @@ test('key 解码：非法 key 返回 null', () => {
 
 test('选项集派生：四类源节点选项数量与矩阵一致', () => {
   assert.equal(getOutputOptionSpecs('text').length, 4);
-  assert.equal(getOutputOptionSpecs('image').length, 2);
+  assert.equal(getOutputOptionSpecs('image').length, 3);
   assert.equal(getOutputOptionSpecs('video').length, 2);
-  assert.equal(getOutputOptionSpecs('audio').length, 3);
+  assert.equal(getOutputOptionSpecs('audio').length, 4);
 });
 
 test('选项集派生：每项 key 可解码回 target，i18n key 含源类型前缀', () => {

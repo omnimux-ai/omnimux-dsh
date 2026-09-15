@@ -54,7 +54,7 @@ export const materialTools: Record<string, ToolSpec> = {
     labelKey: 'tool.text-to-text',
     materialType: 'text',
     outputType: 'text',
-    acceptedInputTypes: ['text', 'image', 'video'],
+    acceptedInputTypes: ['text', 'image', 'video', 'audio'],
     modelCategory: 'text',
     slots: [
       {
