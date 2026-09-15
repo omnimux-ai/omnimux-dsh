@@ -261,6 +261,32 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
 })
 
 /**
+ * 带立绘的语音角色卡：立绘是门面，播放键浮在立绘上。
+ *
+ * 这类行的素材是语音样本（`mediaUrl` 指向 wav），早先按媒体类型直接判成纯语音卡，
+ * 立绘根本没进入渲染路径，整屏角色卡就只剩色板和播放键。
+ */
+describe('Cloud avatar card paints the portrait under its play control', () => {
+  it('decides the artwork by the cover, not by the playable media type', () => {
+    assert.match(viewJsx, /const showArt = asset\?\.hasCover === true \|\| \(asset\?\.hasMedia === true && asset\?\.mediaType !== 'audio'\)/)
+  })
+
+  it('mounts the tile from that flag, so a playable row can still show its portrait', () => {
+    assert.match(viewJsx, /\{showArt \? <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/> : null\}/)
+    assert.doesNotMatch(viewJsx, /\{canPlay \? null : <CloudTileMedia/)
+  })
+
+  it('keeps one play control on the same row', () => {
+    assert.match(viewJsx, /\{canPlay \? \(/)
+    assert.match(viewJsx, /className="omnimux-assets-cloud-play"/)
+  })
+
+  it('paints a voice wash only when there is no portrait to cover it', () => {
+    assert.match(viewJsx, /const theme = canPlay && !showArt \? cloudAudioTheme\(asset\.id\) : undefined/)
+  })
+})
+
+/**
  * 视频卡片不再退化成灰底图标。
  *
  * 旧版把「封面失败」当成「再拿原始文件当图片试一次」，对视频来说那是一个 mp4，浏览器
@@ -273,7 +299,7 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
     assert.match(viewJsx, /const \[hovering, setHovering\] = useState\(false\)/)
     assert.match(viewJsx, /onMouseEnter=\{\(\) => \{ setHovering\(true\) \}\}/)
     assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
-    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/>\}/)
+    assert.match(viewJsx, /\{showArt \? <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/> : null\}/)
     // The one effect that turns the pointer state into playback.
     assert.match(viewJsx, /if \(hovering\) \{\n      void element\.play\(\)\.catch/)
     assert.match(viewJsx, /element\.pause\(\)\n      element\.currentTime = 0\n    \}\n  \}, \[hovering\]\)/)
@@ -308,8 +334,7 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
  */
 describe('Cloud voice card plays from its colour plate', () => {
   it('makes the colour plate the play control', () => {
-    assert.match(viewJsx, /const canPlay = kind === 'audio'/)
-    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/>\}/)
+    assert.match(viewJsx, /const canPlay = asset\?\.mediaType === 'audio' && asset\?\.hasMedia === true && asset\?\.playable !== false/)
     assert.match(viewJsx, /role=\{canPlay \? 'button' : undefined\}/)
     assert.match(viewJsx, /aria-pressed=\{canPlay \? \(playing \? 'true' : 'false'\) : undefined\}/)
     assert.match(viewJsx, /onKeyDown=\{canPlay \? activateRowKeydown\(togglePlay\) : undefined\}/)
@@ -340,7 +365,7 @@ describe('Cloud voice card plays from its colour plate', () => {
   })
 
   it('carries one of the five restrained dark washes, chosen from the row id', () => {
-    assert.match(viewJsx, /const theme = canPlay \? cloudAudioTheme\(asset\.id\) : undefined/)
+    assert.match(viewJsx, /const theme = canPlay && !showArt \? cloudAudioTheme\(asset\.id\) : undefined/)
     assert.match(viewJsx, /data-theme=\{theme\}/)
 
     const plate = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb')

@@ -137,6 +137,39 @@ describe('LibraryStore copy-on-ingest', () => {
     )
   })
 
+  it('resolves an entry path for reveal without leaving the file root', async () => {
+    const store = makeStore()
+    const pack = join(root, 'pack-reveal')
+    mkdirSync(join(pack, 'looks'), { recursive: true })
+    writeFileSync(join(pack, 'cover.png'), 'png')
+    writeFileSync(join(pack, 'looks', 'front.png'), 'png')
+    const asset = await store.add({ name: '风格包B', type: 'style', files: [{ real_path: pack }] })
+    const fileId = asset.files[0].id
+
+    const folder = store.resolveEntryPath(asset.id, fileId, '')
+    assert.equal(folder.isDirectory, true)
+    assert.equal(folder.absolutePath.startsWith(join(root, 'store')), true)
+
+    const nested = store.resolveEntryPath(asset.id, fileId, 'looks')
+    assert.equal(nested.isDirectory, true)
+    assert.equal(nested.absolutePath.endsWith('looks'), true)
+
+    const file = store.resolveEntryPath(asset.id, fileId, 'cover.png')
+    assert.equal(file.isDirectory, false)
+    assert.equal(file.absolutePath.endsWith('cover.png'), true)
+
+    assert.throws(() => store.resolveEntryPath(asset.id, fileId, '../../..'), (error) => error.code === 'path-denied')
+    assert.throws(() => store.resolveEntryPath('ast_missing', fileId, ''), (error) => error.code === 'asset-not-found')
+    assert.throws(() => store.resolveEntryPath(asset.id, 'nope', ''), (error) => error.code === 'path-not-found')
+
+    const single = await store.add({ name: '单文件', type: 'custom', files: [{ real_path: realFile }] })
+    assert.throws(
+      () => store.resolveEntryPath(single.id, single.files[0].id, 'nested.png'),
+      (error) => error.code === 'path-not-dir',
+    )
+    assert.equal(store.resolveEntryPath(single.id, single.files[0].id, '').isDirectory, false)
+  })
+
   it('remove recycles the managed copy and never unlinks the original', async () => {
     const store = makeStore()
     const asset = await store.add({ name: '林晓', files: [{ real_path: realFile }] })

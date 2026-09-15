@@ -44,6 +44,8 @@ function makeDispatcher(opts = {}) {
   })
   const deps = { mappings, artifacts, library }
   if (opts.picker) deps.picker = opts.picker
+  if (opts.platform) deps.platform = opts.platform
+  if (opts.run) deps.run = opts.run
   return { dispatcher: createAssetsDispatcher(deps), mappings, artifacts, library }
 }
 
@@ -218,6 +220,93 @@ describe('AssetsDispatcher state', () => {
     assert.equal(JSON.stringify(created.body.asset.files[0].relative_path).includes('/Users'), false)
     const listed = library.list()
     assert.equal(listed[0].files[0].real_path.startsWith(join(root, 'store')), true)
+  })
+})
+
+describe('AssetsDispatcher reveal route', () => {
+  /** Seed one directory-backed asset and return its asset/file ids. */
+  async function seedDirectoryAsset(dispatcher, name = '科技Vlogger') {
+    mkdirSync(join(realDir, 'looks'), { recursive: true })
+    writeFileSync(join(realDir, 'looks', 'front.png'), 'png')
+    const created = await dispatcher.dispatch(post('/omnimux/assets/library', {
+      name,
+      type: 'custom',
+      files: [{ real_path: realDir }],
+    }))
+    assert.equal(created.status, 200)
+    return { id: created.body.asset.id, fileId: created.body.asset.files[0].id }
+  }
+
+  it('opens a folder entry directly and selects a file entry in place', async () => {
+    const calls = []
+    const { dispatcher } = makeDispatcher({
+      platform: 'darwin',
+      run: async (command, args) => { calls.push({ command, args }) },
+    })
+    const { id, fileId } = await seedDirectoryAsset(dispatcher)
+
+    const folder = await dispatcher.dispatch(post('/omnimux/assets/library/reveal', { id, file: fileId }))
+    assert.equal(folder.status, 200)
+    assert.equal(folder.body.isDirectory, true)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].command, '/usr/bin/open')
+    assert.deepEqual(calls[0].args, ['--', folder.body.path])
+
+    const file = await dispatcher.dispatch(post('/omnimux/assets/library/reveal', {
+      id, file: fileId, path: 'hero.png',
+    }))
+    assert.equal(file.status, 200)
+    assert.equal(file.body.isDirectory, false)
+    assert.equal(file.body.path.endsWith('hero.png'), true)
+    assert.deepEqual(calls[1].args, ['-R', '--', file.body.path])
+  })
+
+  it('refuses an escaping sub path without spawning a helper', async () => {
+    const calls = []
+    const { dispatcher } = makeDispatcher({
+      platform: 'darwin',
+      run: async (command, args) => { calls.push({ command, args }) },
+    })
+    const { id, fileId } = await seedDirectoryAsset(dispatcher)
+
+    const escaped = await dispatcher.dispatch(post('/omnimux/assets/library/reveal', {
+      id, file: fileId, path: '../../..',
+    }))
+    assert.equal(escaped.status, 400)
+    assert.equal(escaped.body.error, 'path-denied')
+    assert.equal(calls.length, 0)
+  })
+
+  it('answers 501 off macOS and 500 when the helper fails', async () => {
+    const foreign = makeDispatcher({ platform: 'linux', run: async () => {} })
+    const seeded = await seedDirectoryAsset(foreign.dispatcher)
+    const unsupported = await foreign.dispatcher.dispatch(post('/omnimux/assets/library/reveal', {
+      id: seeded.id, file: seeded.fileId,
+    }))
+    assert.equal(unsupported.status, 501)
+    assert.equal(unsupported.body.error, 'reveal-unsupported')
+
+    const failing = makeDispatcher({ platform: 'darwin', run: async () => { throw new Error('boom') } })
+    const broken = await seedDirectoryAsset(failing.dispatcher, '科技Vlogger二')
+    const failed = await failing.dispatcher.dispatch(post('/omnimux/assets/library/reveal', {
+      id: broken.id, file: broken.fileId,
+    }))
+    assert.equal(failed.status, 500)
+    assert.equal(failed.body.error, 'reveal-failed')
+  })
+
+  it('reports an unknown asset and an unknown file ref', async () => {
+    const { dispatcher } = makeDispatcher({ platform: 'darwin', run: async () => {} })
+    const missingAsset = await dispatcher.dispatch(post('/omnimux/assets/library/reveal', {
+      id: 'ast_deadbeef', file: 'f1',
+    }))
+    assert.equal(missingAsset.status, 404)
+    assert.equal(missingAsset.body.error, 'asset-not-found')
+
+    const { id } = await seedDirectoryAsset(dispatcher)
+    const missingFile = await dispatcher.dispatch(post('/omnimux/assets/library/reveal', { id, file: 'nope' }))
+    assert.equal(missingFile.status, 400)
+    assert.equal(missingFile.body.error, 'path-not-found')
   })
 })
 

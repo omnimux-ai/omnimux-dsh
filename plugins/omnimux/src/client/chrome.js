@@ -9,6 +9,8 @@ import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
 import { ensureConversationScrollbarChrome, installConversationScrollbarReveal } from './conversation-scrollbar.js'
 import { installWelcomeGreetingObserver } from './welcome-greeting.js'
+import { installFullscreenCollapseSync } from './workbench/fullscreen-collapse-sync.js'
+import { installComposerWidthGuard } from './composer-width-guard.js'
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
 import { installCollapsedPanelFill } from './rightbar-collapsed-fill.js'
@@ -70,6 +72,8 @@ export function installHubChrome(ctx) {
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     const unsubWelcome = installWelcomeGreetingObserver()
     const unsubScrollbar = installConversationScrollbarReveal()
+    const unsubFullscreenCollapse = installFullscreenCollapseSync()
+    const unsubWidthGuard = installComposerWidthGuard()
     return () => {
       unsubActivation?.()
       unsubToggle?.()
@@ -81,6 +85,8 @@ export function installHubChrome(ctx) {
       unsubPresetAvatars?.()
       unsubWelcome?.()
       unsubScrollbar?.()
+      unsubFullscreenCollapse?.()
+      unsubWidthGuard?.()
     }
   }, 'omnimux: product-stage chrome, chat toggle, topbar sidebar toggle & workbench left-rail sync')
   // 临时关闭：ctx.effect(() => applyXaiShellTheme(ctx), 'omnimux: xai shell theme')

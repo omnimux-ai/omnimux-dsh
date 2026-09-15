@@ -94,14 +94,14 @@ export function apply(ctx) {
 
   ctx.tools.register({
     name: 'accounts_update_group',
-    description: 'Update the business group name and agent_usable permission flag for a social account.',
+    description: 'Update the business group name for a social account.',
     parameters: objectParams({
       id: { type: 'string', required: true, description: 'Social account unique ID' },
       group: { type: 'string', description: 'New business group name (empty string to unassign)' },
-      agent_usable: { type: 'boolean', description: 'Enable or disable Agent invocation permission for this account' },
     }),
     output: jsonOut,
     async execute(args) {
+      if (Object.hasOwn(args, 'agent_usable')) throw new Error('account-permission-owner-only: change permissions in account settings')
       const id = String(args.id)
       const rows = await listZernioAccounts()
       if (!rows.some((acc) => String(acc.id) === id)) {
@@ -109,7 +109,6 @@ export function apply(ctx) {
       }
       const patch = {}
       if (args.group !== undefined) patch.group = args.group === '' ? null : String(args.group)
-      if (args.agent_usable !== undefined) patch.agent_usable = Boolean(args.agent_usable)
       const updated = metaStore.patch(id, patch)
       return { ok: true, id, meta: updated }
     },
