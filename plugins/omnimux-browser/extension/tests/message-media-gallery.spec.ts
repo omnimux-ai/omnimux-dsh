@@ -116,10 +116,20 @@ describe('conversation media gallery', () => {
     document.body.innerHTML = ''
   })
 
+  /**
+   * Renders the component for the ASSISTANT case by default.
+   *
+   * Per `specs/browser-attach-media.spec.md` §3.5 the two message kinds now render
+   * differently: `align="end"` (the user's own message) is a row of 48px chips,
+   * while `align="start"` (the assistant's message) keeps the browseable gallery
+   * this suite was written for. The gallery assertions below therefore address the
+   * assistant shape; the user shape has its own suite in
+   * `message-images-user-chips.spec.ts`.
+   */
   async function render(
     images: readonly MediaAttachmentRef[],
     api: PanelApi,
-    align: 'start' | 'end' = 'end',
+    align: 'start' | 'end' = 'start',
   ): Promise<void> {
     await act(async () => {
       root.render(createElement(MessageImages, { images, sessionId: 's1', api, align, copy: PANEL_COPY.zh }))

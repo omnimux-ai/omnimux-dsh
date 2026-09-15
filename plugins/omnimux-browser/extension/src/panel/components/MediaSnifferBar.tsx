@@ -145,7 +145,6 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
       <div className="media-items-row">
         {items.map((item) => {
           const isActive = activeIds.has(item.id) || attachedIds?.has(item.id)
-          const typeTag = item.type === 'video' ? 'MP4' : (item.src.toLowerCase().includes('.png') ? 'PNG' : 'JPG')
           return (
             <div
               key={item.id}
@@ -160,7 +159,18 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
               onMouseOver={() => handleChipHover(item)}
             >
               <img src={item.previewSrc} alt={item.alt || ''} className="media-thumb" />
-              <span className="media-type-badge">{typeTag}</span>
+              {item.type === 'video' && (
+                <span
+                  className="media-play-badge"
+                  role="img"
+                  aria-label={locale === 'en' ? 'Video' : '视频'}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)" />
+                    <path d="M9.6 7.4 17.2 12l-7.6 4.6z" fill="#ffffff" />
+                  </svg>
+                </span>
+              )}
             </div>
           )
         })}

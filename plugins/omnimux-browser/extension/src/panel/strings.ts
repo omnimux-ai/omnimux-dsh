@@ -226,6 +226,9 @@ export interface PanelCopy {
     imageModelUnsupported: string
     imageSubagentUnsupported: string
     imageSendFailed: (reason: string) => string
+    attachMediaDownloadFailed: (name: string) => string
+    attachMediaTimeout: (name: string, seconds: number) => string
+    attachMediaSummary: (failed: number, total: number, first: string) => string
     selectionChip: string
     selectionAttached: string
     selectionTruncated: string
@@ -481,6 +484,9 @@ const EN: PanelCopy = {
     imageModelUnsupported: 'The current model does not support images; switch to a model that does.',
     imageSubagentUnsupported: 'Subagent sessions do not support images yet.',
     imageSendFailed: (reason) => `Sending images failed (${reason}). Your draft has been restored; try again.`,
+    attachMediaDownloadFailed: (name) => `${name} could not be downloaded, so it is not in your message.`,
+    attachMediaTimeout: (name, seconds) => `${name} did not download within ${seconds}s, so it is not in your message.`,
+    attachMediaSummary: (failed, total, first) => `${failed} of ${total} page media are not in your message — ${first}`,
     selectionChip: '1 selection',
     selectionAttached: 'Selected text',
     selectionTruncated: '(truncated)',
@@ -736,6 +742,9 @@ const ZH: PanelCopy = {
     imageModelUnsupported: '当前模型不支持图片，请切换到支持图片的模型。',
     imageSubagentUnsupported: '子智能体会话暂不支持图片。',
     imageSendFailed: (reason) => `图片发送失败（${reason}）。草稿已恢复，请重试。`,
+    attachMediaDownloadFailed: (name) => `${name} 下载失败，未加入待发区。`,
+    attachMediaTimeout: (name, seconds) => `${name} 下载超过 ${seconds} 秒，未加入待发区。`,
+    attachMediaSummary: (failed, total, first) => `${total} 个素材中有 ${failed} 个未加入待发区 —— ${first}`,
     selectionChip: '1 处选中内容',
     selectionAttached: '选中的网页内容',
     selectionTruncated: '（已截断）',
