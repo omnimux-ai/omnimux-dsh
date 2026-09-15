@@ -261,17 +261,12 @@ html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [data-slot
   box-sizing:border-box;
 }
 /* macOS desktop traffic lights safe inset for full-width stage/workbench page headers.
-   Inset the header box only. Naming any descendant — .dshUk-PageHeader-heading, or a
-   [class*="PageHeader"] wildcard that also catches titleRow/title/subtitle/controls —
-   applies 84px on every nesting level, so the title collects 4 insets and the subtitle 3:
-   both drift toward the middle of the page and no longer share a left edge.
-   The inset is only needed where the panel really reaches the window's left edge, which is
-   when the left rail or the conversation column is collapsed (the right panel then spans the
-   full viewport). With the left rail expanded the panel starts at the rail width, so page
-   headers keep their own padding. The collapse flags live on <html>, so they must precede
-   <body> in the selector — the reverse order can never match. */
-html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] .dshUk-PageHeader-pageHeader,
-html[data-omnimux-conversation-collapsed] body[data-dsh-desktop-platform="darwin"] .dshUk-PageHeader-pageHeader {
+   Inset the header box only when the left rail is collapsed (the right panel then spans
+   the full 100vw viewport and reaches the window's left edge under traffic lights).
+   With the left rail expanded the panel starts at var(--omnimux-sidebar-width, 280px),
+   well clear of the 84px traffic lights, so page headers keep their own 20px padding
+   regardless of whether the middle conversation column is collapsed. */
+html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] .dshUk-PageHeader-pageHeader {
   padding-left: 84px !important;
   box-sizing: border-box !important;
 }

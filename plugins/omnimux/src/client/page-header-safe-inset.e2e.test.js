@@ -121,13 +121,21 @@ test('页头安全区不在嵌套层级上累加，标题与描述保持左对�
   )
 })
 
-test('左栏或会话列收起时页头保留 84px 窗口按钮安全区', () => {
+test('左栏收起时页头保留 84px 窗口按钮安全区', () => {
   const leftCollapsed = measure({ darwin: true, leftCollapsed: true })
   assert.equal(leftCollapsed.pageHeader.paddingLeft, '84px', '左栏收起时页头应避让窗口按钮')
   assert.equal(leftCollapsed.title.paddingLeft, '0px', '安全区仍不得命中标题')
+})
 
+test('左栏展开且会话列收起时（工作台全屏常态），页头保持自身 20px 内边距不被安全区误伤', () => {
   const conversationCollapsed = measure({ darwin: true, conversationCollapsed: true })
-  assert.equal(conversationCollapsed.pageHeader.paddingLeft, '84px', '会话列收起时页头应避让窗口按钮')
+  assert.equal(conversationCollapsed.pageHeader.paddingLeft, '20px', '左栏展开时无需避让窗口按钮')
+  assert.equal(conversationCollapsed.title.paddingLeft, '0px')
+  assert.equal(conversationCollapsed.title.offset, conversationCollapsed.subtitle.offset)
+  assert.ok(
+    Math.abs(conversationCollapsed.title.offset - conversationCollapsed.actionRow.offset) <= 24,
+    `标题应与「新建项目」按钮同左基线，实际 标题=${conversationCollapsed.title.offset} 按钮=${conversationCollapsed.actionRow.offset}`,
+  )
 })
 
 test('非 macOS 平台不受安全区规则影响', () => {
