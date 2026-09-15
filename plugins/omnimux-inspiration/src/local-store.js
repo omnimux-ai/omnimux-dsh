@@ -20,6 +20,8 @@ export class InspirationError extends Error {
   }
 }
 
+import { SHARE_STATUS_IDLE } from './share-status.js'
+
 /**
  * @typedef {Object} LocalInspirationRecord
  * @property {string} id
@@ -51,6 +53,15 @@ export class InspirationError extends Error {
  * @property {string | null} [import_error] reason a step could not finish; a non-terminal marker, so it also appears on `ready`/`degraded` rows (the import succeeded, one part of it — the AI breakdown — did not). Only `failed` means nothing was stored. Never read this as "the import failed": check `import_status` first.
  * @property {boolean} [auto_analyze] whether a retry of this URL should re-run the AI breakdown; absent means `true`
  * @property {string} [import_started_at] ISO timestamp the running import began at
+ * @property {'idle' | 'running' | 'done' | 'failed'} [share_status] absent means `idle` (legacy rows): nothing was published
+ * @property {'preparing' | 'uploading' | 'publishing' | null} [share_stage] phase a running publish is in
+ * @property {string | null} [share_error] reason a publish failed; the row keeps no link in that state
+ * @property {string | null} [share_id] server-issued share id, stored as returned
+ * @property {string | null} [share_url] server-issued share link, stored as returned — never built locally
+ * @property {string | null} [share_storage_bucket] bucket the cloud stored the media in
+ * @property {boolean | null} [share_is_admin] whether the cloud granted the permanent tier
+ * @property {string | null} [share_expires_at] cloud-side expiry timestamp
+ * @property {string | null} [share_expires_in] cloud-side validity description (`72h`, `permanent`)
  * @property {string} created_at
  * @property {string} updated_at
  */
@@ -117,6 +128,17 @@ function buildRow(record, identity = {}) {
     // breakdown, and `||` would silently turn it back into `true` on the way out.
     auto_analyze: record.auto_analyze ?? true,
     import_started_at: record.import_started_at,
+    share_status: record.share_status || SHARE_STATUS_IDLE,
+    share_stage: record.share_stage ?? null,
+    share_error: record.share_error ?? null,
+    share_started_at: record.share_started_at ?? null,
+    share_completed_at: record.share_completed_at ?? null,
+    share_id: record.share_id ?? null,
+    share_url: record.share_url ?? null,
+    share_storage_bucket: record.share_storage_bucket ?? null,
+    share_is_admin: record.share_is_admin ?? null,
+    share_expires_at: record.share_expires_at ?? null,
+    share_expires_in: record.share_expires_in ?? null,
     created_at: identity.created_at || record.created_at || now,
     updated_at: now,
   }

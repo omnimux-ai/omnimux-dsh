@@ -241,6 +241,10 @@ export function apply(ctx) {
     videoAnalyzeTool,
     textComplete,
     rivalDispatcher,
+    // Hub capability `inspirationShare` owns the cloud publish (upload assets →
+    // publish). Resolved at request time: this plugin must not hold the gateway
+    // key, build a publish payload, or fall back to a link of its own.
+    inspirationShare: () => (typeof ctx.get === 'function' ? ctx.get('inspirationShare') : undefined),
   })
 
   /** Start the refresh tick, and stop it when the host tears the plugin down. */

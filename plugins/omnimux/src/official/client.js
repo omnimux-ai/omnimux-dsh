@@ -2,7 +2,8 @@ import { OmnimuxError } from '../media/errors.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 
 /**
- * Two-lane HTTP for official-only tools. Never returns PAT or sk- to callers.
+ * Two credentials, two origins, for official-only callers: the site PAT lane and
+ * the gateway-key (`sk-`) lane. Never returns PAT or sk- to callers.
  * @param {{
  *   fetcher?: typeof fetch,
  *   siteBaseUrl: string,
@@ -24,14 +25,17 @@ export function createOfficialClient(deps) {
    */
   async function request(base, path, opts = {}, beforeSend) {
     const method = opts.method || 'GET'
+    // A FormData body is multipart: it must reach fetch untouched, and the
+    // boundary header belongs to fetch alone.
+    const multipart = typeof FormData !== 'undefined' && opts.body instanceof FormData
     const init = {
       method,
       headers: {
         accept: 'application/json',
-        ...(opts.body !== undefined ? { 'content-type': 'application/json' } : {}),
+        ...(opts.body !== undefined && !multipart ? { 'content-type': 'application/json' } : {}),
         ...opts.headers,
       },
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.body === undefined ? undefined : multipart ? opts.body : JSON.stringify(opts.body),
     }
     beforeSend?.()
     const response = await fetcher(`${base}${path}`, init)
@@ -59,14 +63,34 @@ export function createOfficialClient(deps) {
     return json
   }
 
-  async function withSk(path, opts = {}) {
+  async function gatewayKeyHeader() {
     const key = await deps.resolveApiKey()
     if (!key || !String(key).trim()) {
       throw new OmnimuxError('omnimux-unconfigured', 'set OMNIMUX_API_KEY or OMNIMUX_TOKEN')
     }
+    return { authorization: `Bearer ${String(key).trim()}` }
+  }
+
+  async function withSk(path, opts = {}) {
     return request(apiBaseUrl, path, {
       ...opts,
-      headers: { authorization: `Bearer ${String(key).trim()}`, ...opts.headers },
+      headers: { ...(await gatewayKeyHeader()), ...opts.headers },
+    })
+  }
+
+  /**
+   * Gateway-key request against the SITE origin.
+   *
+   * The site's `TokenOrUserAuth` middleware — file upload, inspiration publish —
+   * accepts the `sk-` gateway key, and those routes live on the site base rather
+   * than the API base. Same key resolution, same error mapping as `withSk`.
+   * @param {string} path
+   * @param {{ method?: string, headers?: Record<string, string>, body?: unknown }} [opts]
+   */
+  async function withSkSite(path, opts = {}) {
+    return request(siteBaseUrl, path, {
+      ...opts,
+      headers: { ...(await gatewayKeyHeader()), ...opts.headers },
     })
   }
 
@@ -118,7 +142,7 @@ export function createOfficialClient(deps) {
     return response
   }
 
-  return { withSk, withPat, withPatRaw }
+  return { withSk, withSkSite, withPat, withPatRaw }
 }
 
 /**

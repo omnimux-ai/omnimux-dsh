@@ -20,7 +20,7 @@
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply } from './index.js'
@@ -91,9 +91,11 @@ function makeCloudTool() {
  *
  * The context shape mirrors the cordis one the host calls `apply` with:
  * `ctx.tools` for tool registration, `ctx.inject` for the async `webServer`
- * dependency, and `ctx.effect` for teardown.
+ * dependency, and `ctx.effect` for teardown. `ctx.get` is the hub seam; a test
+ * passes the capability it wants the hub to have exposed (`inspirationShare`).
+ * @param {{ capability?: Record<string, unknown> }} [options]
  */
-function bootPlugin() {
+function bootPlugin(options = {}) {
   const root = mkdtempSync(join(tmpdir(), 'inspiration-http-entry-'))
   sandboxes.push(root)
   // `apply` resolves the library and rival paths from `DSH_HOME` at mount time,
@@ -111,6 +113,9 @@ function bootPlugin() {
       get(toolName) {
         return toolName === SOCIAL_DATA_TOOL ? makeCloudTool() : undefined
       },
+    },
+    get(capability) {
+      return capability === 'inspirationShare' ? options.capability : undefined
     },
     inject(deps, callback) {
       injects.push({ deps, callback })
@@ -183,6 +188,51 @@ async function httpCall(route, { method = 'GET', url, headers = {}, body } = {})
   const res = makeRes()
   await route.handler(req, res)
   return { status: res.state.status, headers: res.state.headers, body: res.json(), raw: res.state.body }
+}
+
+/**
+ * A real file on disk for a row's `local_paths`.
+ *
+ * The share preflight stats the file and the hub would upload it, so a path that
+ * points nowhere is not the same test as one that points at bytes. Sparse: the
+ * 100MB-limit case must not cost 100MB of disk.
+ * @param {{ root: string }} world
+ * @param {string} name
+ * @param {number} bytes
+ */
+function writeMediaFile(world, name, bytes) {
+  const path = join(world.root, name)
+  writeFileSync(path, '')
+  truncateSync(path, bytes)
+  return path
+}
+
+/**
+ * Create one local inspiration row through the plugin's own HTTP entry.
+ * @param {{ route: any }} world
+ * @param {Record<string, unknown>} body
+ * @returns {Promise<string>} the new row's id
+ */
+async function createLocalItem(world, body) {
+  const created = await httpCall(world.route, { method: 'POST', url: LOCAL_PREFIX, body })
+  assert.equal(created.status, 201, `POST ${LOCAL_PREFIX} → ${created.raw}`)
+  return created.body.data.id
+}
+
+/**
+ * Poll one row the way the page does, until it carries `status`.
+ * @param {{ route: any }} world
+ * @param {string} id
+ * @param {string} status
+ * @param {{ stage?: string }} [options]
+ */
+async function waitForShare(world, id, status, options = {}) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const row = (await httpCall(world.route, { url: `${LOCAL_PREFIX}/${id}` })).body.data
+    if (row?.share_status === status && (!options.stage || row.share_stage === options.stage)) return row
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error(`row ${id} never reached ${status}${options.stage ? `/${options.stage}` : ''}`)
 }
 
 describe('HTTP entry: the rival prefix is reachable through the registered handler', () => {
@@ -333,27 +383,163 @@ describe('HTTP entry: the existing inspiration endpoints are unchanged', () => {
     assert.equal(response.body.error, 'title is required')
   })
 
-  it('handles inspiration share creation on /local/:id/share', async () => {
-    const world = bootPlugin()
-    // 先创建一个本地灵感
-    const created = await httpCall(world.route, {
-      method: 'POST',
-      url: LOCAL_PREFIX,
-      body: { title: '测试分享素材', source_url: 'https://example.com/share' },
+  it('publishes through the hub capability and stores the link it returns', async () => {
+    const calls = []
+    const capability = {
+      async publishLocal(args) {
+        calls.push(args)
+        args.onStage?.('uploading')
+        args.onStage?.('publishing')
+        return {
+          shareId: 'insp_real123',
+          shareUrl: 'https://omnimux.ai/s/insp_real123',
+          storageBucket: 'omnimux-files',
+          isAdmin: false,
+          expiresAt: '2026-09-18T23:00:00+08:00',
+          expiresIn: '72h',
+        }
+      },
+    }
+    const world = bootPlugin({ capability })
+    const mediaPath = writeMediaFile(world, 'clip.mp4', 2048)
+    const id = await createLocalItem(world, {
+      title: '测试分享素材',
+      content: '把产品放在晨光里拍',
+      local_paths: { video: mediaPath },
     })
-    assert.equal(created.status, 201)
-    const id = created.body.data.id
 
-    // 创建 3 天有效分享链接
-    const shareRes = await httpCall(world.route, {
-      method: 'POST',
-      url: `${LOCAL_PREFIX}/${id}/share`,
-      body: { expire: '3days' },
+    const started = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    assert.equal(started.status, 202, `POST ${LOCAL_PREFIX}/${id}/share → ${started.raw}`)
+    assert.equal(started.body.data.share_status, 'running')
+    assert.equal(started.body.data.share_stage, 'preparing')
+    assert.equal(started.body.data.share_url, null)
+
+    const settled = await waitForShare(world, id, 'done')
+    assert.equal(settled.share_url, 'https://omnimux.ai/s/insp_real123', 'the page renders the server link, not a local one')
+    assert.equal(settled.share_id, 'insp_real123')
+    assert.equal(settled.share_expires_in, '72h')
+    assert.equal(settled.share_is_admin, false)
+    assert.equal(settled.share_stage, null)
+    assert.equal(settled.share_error, null)
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].media.path, mediaPath)
+    assert.equal(calls[0].cover, null)
+    assert.equal(calls[0].meta.title, '测试分享素材')
+    assert.equal(calls[0].meta.prompt, '把产品放在晨光里拍')
+  })
+
+  it('shows the stage the job is really in, not a timer', async () => {
+    let release = () => {}
+    const gate = new Promise((resolve) => { release = resolve })
+    const capability = {
+      async publishLocal(args) {
+        args.onStage?.('uploading')
+        await gate
+        args.onStage?.('publishing')
+        return { shareId: 'insp_gated', shareUrl: 'https://omnimux.ai/s/insp_gated', expiresIn: '72h' }
+      },
+    }
+    const world = bootPlugin({ capability })
+    const mediaPath = writeMediaFile(world, 'staged.mp4', 4096)
+    const id = await createLocalItem(world, {
+      title: '分阶段校验',
+      content: '分阶段校验提示词',
+      local_paths: { video: mediaPath },
     })
-    assert.equal(shareRes.status, 200)
-    assert.equal(shareRes.body.data.id, id)
-    assert.equal(shareRes.body.data.expire, '3days')
-    assert.match(shareRes.body.data.share_url, /https:\/\/omnimux\.ai\/s\/insp_/)
+
+    await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    const uploading = await waitForShare(world, id, 'running', { stage: 'uploading' })
+    assert.equal(uploading.share_url, null, 'no link exists before the cloud answered')
+
+    release()
+    const settled = await waitForShare(world, id, 'done')
+    assert.equal(settled.share_url, 'https://omnimux.ai/s/insp_gated')
+  })
+
+  it('reports a failed publish on the row and keeps no link', async () => {
+    const capability = {
+      async publishLocal() {
+        throw new Error('未配置 OmniMux 网关密钥（sk-）：请在凭据中配置 OMNIMUX_API_KEY 后再分享')
+      },
+    }
+    const world = bootPlugin({ capability })
+    const mediaPath = writeMediaFile(world, 'nokey.mp4', 1024)
+    const id = await createLocalItem(world, {
+      title: '凭证缺失',
+      content: '凭证缺失提示词',
+      local_paths: { video: mediaPath },
+    })
+
+    await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    const failed = await waitForShare(world, id, 'failed')
+    assert.match(failed.share_error, /网关密钥/)
+    assert.equal(failed.share_url, null, 'a failure never leaves a link behind')
+  })
+
+  it('refuses the four cases the user can fix before any job starts', async () => {
+    const world = bootPlugin({
+      capability: { async publishLocal() { throw new Error('must not be called') } },
+    })
+
+    const noAssets = await createLocalItem(world, { title: '没有素材', content: '有提示词' })
+    const missing = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${noAssets}/share` })
+    assert.equal(missing.status, 400)
+    assert.match(missing.body.error, /没有可上传的素材/)
+
+    const gone = await createLocalItem(world, {
+      title: '文件丢了',
+      content: '有提示词',
+      local_paths: { video: join(world.root, 'never-written.mp4') },
+    })
+    const absent = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${gone}/share` })
+    assert.equal(absent.status, 400)
+    assert.match(absent.body.error, /素材文件不存在/)
+
+    const big = await createLocalItem(world, {
+      title: '超大素材',
+      content: '有提示词',
+      local_paths: { video: writeMediaFile(world, 'big.mp4', 101 * 1024 * 1024) },
+    })
+    const oversized = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${big}/share` })
+    assert.equal(oversized.status, 400)
+    assert.match(oversized.body.error, /100MB/)
+
+    const silentPath = writeMediaFile(world, 'silent.mp4', 1024)
+    const silent = await createLocalItem(world, {
+      title: '待清空标题',
+      content: '',
+      local_paths: { video: silentPath },
+    })
+    // Emptied through the row's own PATCH, the way an edit leaves it.
+    await httpCall(world.route, { method: 'PATCH', url: `${LOCAL_PREFIX}/${silent}`, body: { title: '   ', content: '' } })
+    const untitled = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${silent}/share` })
+    assert.equal(untitled.status, 400)
+    assert.match(untitled.body.error, /标题为空/)
+
+    const promptlessPath = writeMediaFile(world, 'promptless.mp4', 1024)
+    const emptyPrompt = await createLocalItem(world, {
+      title: '有标题没提示词',
+      local_paths: { video: promptlessPath },
+    })
+    const promptless = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${emptyPrompt}/share` })
+    assert.equal(promptless.status, 400)
+    assert.match(promptless.body.error, /提示词为空/)
+  })
+
+  it('says so when the hub exposes no share capability, instead of faking a link', async () => {
+    const world = bootPlugin()
+    const mediaPath = writeMediaFile(world, 'nocap.mp4', 1024)
+    const id = await createLocalItem(world, {
+      title: '中枢缺席',
+      content: '提示词',
+      local_paths: { video: mediaPath },
+    })
+
+    const response = await httpCall(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    assert.equal(response.status, 503)
+    assert.match(response.body.error, /inspirationShare/)
+    assert.equal(response.body.data, undefined)
   })
 })
 

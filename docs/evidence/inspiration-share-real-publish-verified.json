@@ -1,0 +1,115 @@
+{
+  "task": "inspiration-share-real-publish",
+  "issue": 1978,
+  "origin": "http://127.0.0.1:53454",
+  "headSha": "aee1ddf8b893709a49dc9c4452b6eda905ae49ff",
+  "startedAt": "2026-09-15T16:05:28.268Z",
+  "assertions": [
+    {
+      "name": "share-popover-opened-by-click",
+      "pass": true
+    },
+    {
+      "name": "create-link-clicked",
+      "pass": true
+    },
+    {
+      "name": "progress-rendered",
+      "pass": true
+    },
+    {
+      "name": "progress-follows-the-server-stage",
+      "pass": true,
+      "steps": [
+        {
+          "id": "preparing",
+          "state": "done",
+          "label": "准备素材"
+        },
+        {
+          "id": "uploading",
+          "state": "active",
+          "label": "上传素材"
+        },
+        {
+          "id": "publishing",
+          "state": "todo",
+          "label": "发布中"
+        }
+      ]
+    },
+    {
+      "name": "progress-has-positive-geometry",
+      "pass": true,
+      "box": {
+        "width": 250,
+        "height": 67
+      }
+    },
+    {
+      "name": "no-link-while-running",
+      "pass": true
+    },
+    {
+      "name": "published-link-rendered",
+      "pass": true,
+      "link": "https://omnimux.ai/s/insp_e2e_9f2c41ab",
+      "meta": "链接有效期 72 小时已发布",
+      "box": {
+        "width": 250,
+        "height": 32
+      }
+    },
+    {
+      "name": "link-is-the-cloud-url",
+      "pass": true,
+      "link": "https://omnimux.ai/s/insp_e2e_9f2c41ab"
+    },
+    {
+      "name": "validity-comes-from-expires-in",
+      "pass": true,
+      "meta": "链接有效期 72 小时已发布"
+    },
+    {
+      "name": "result-has-positive-geometry",
+      "pass": true,
+      "box": {
+        "width": 250,
+        "height": 32
+      }
+    },
+    {
+      "name": "failure-reason-shown-in-popover",
+      "pass": true,
+      "error": "未配置 OmniMux 网关密钥（sk-）：请在凭据中配置 OMNIMUX_API_KEY 后再分享"
+    },
+    {
+      "name": "failure-shows-no-link",
+      "pass": true
+    },
+    {
+      "name": "failure-offers-retry",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-share-real-publish/docs/evidence/inspiration-share-real-publish-progress.png",
+      "width": 1280,
+      "height": 813
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-share-real-publish/docs/evidence/inspiration-share-real-publish-result.png",
+      "width": 1280,
+      "height": 813
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-share-real-publish/docs/evidence/inspiration-share-real-publish-failure.png",
+      "width": 1280,
+      "height": 813
+    }
+  ],
+  "pass": true,
+  "errors": [],
+  "completedAt": "2026-09-15T16:05:34.850Z"
+}
