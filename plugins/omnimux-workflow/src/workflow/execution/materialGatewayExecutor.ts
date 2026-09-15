@@ -7,6 +7,8 @@
  */
 
 import { join } from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+import { assertProjectWriteSafe } from '../../projects/paths.ts';
 import type { ResolveExecutionProjectFile } from './executionMediaSource.ts';
 import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
@@ -110,7 +112,9 @@ export function createMaterialGatewayExecutor(opts: {
         throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
       }
       const rawPrompt = upstream.prompt;
-      const dest = join(ctx.mediaDir, `${node.id}.${extFor(capability)}`);
+      const fileId = createHash('sha256').update(node.id).digest('hex');
+      const dest = join(ctx.mediaDir, `${fileId}-${randomUUID()}.${extFor(capability)}`);
+      assertProjectWriteSafe(dest, ctx.mediaDir);
 
       /**
        * Shared tail of both paths: validate the settled result, hand it to the

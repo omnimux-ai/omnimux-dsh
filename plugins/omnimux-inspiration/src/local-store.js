@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, renameSync, realpathSync, lstatSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, relative, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveInspirationPaths } from './paths.js'
 import { getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
@@ -144,6 +144,7 @@ function orphanedMedia(previous, next) {
 
 export function createLocalStore(opts = {}) {
   const paths = opts.paths ?? resolveInspirationPaths()
+  const recycleFile = opts.recycleFile ?? moveToTrash
 
   /**
    * Tail of the store's exclusive-work chain.
@@ -196,7 +197,17 @@ export function createLocalStore(opts = {}) {
     trashTail = trashTail.then(async () => {
       for (const filePath of pending) {
         try {
-          await moveToTrash(filePath)
+          // Imported record metadata does not grant authority over external originals.
+          const canonical = realpathSync(filePath)
+          if (!lstatSync(filePath).isFile()) continue
+          const owned = [paths.coversDir, paths.videosDir, paths.imagesDir].some((root) => {
+            try {
+              const rel = relative(realpathSync(root), canonical)
+              return rel !== '' && rel !== '..' && !rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(rel)
+            } catch { return false }
+          })
+          if (!owned) continue
+          await recycleFile(canonical)
         } catch (err) {
           console.error(`Failed to move ${filePath} to trash:`, err)
         }
