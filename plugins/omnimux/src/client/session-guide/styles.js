@@ -101,8 +101,12 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 [class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
-  max-width:100%!important;
-  margin-inline:0!important;
+  /* 宽度上限与居中一律交还原生 token：这里曾写死 max-width:100% / margin-inline:0，
+     把原生 .card { max-width: var(--dsh-composer-card-max-width) } 整条压掉，
+     输入框于是随窗口无限变宽（实测会话列 1446px 时卡片 1406px，几乎占满整列）。
+     还原本地 token 后同条件封顶 952px 并居中，与官方 DSH 观感一致。 */
+  max-width:var(--dsh-composer-card-max-width, 952px)!important;
+  margin-inline:auto!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
