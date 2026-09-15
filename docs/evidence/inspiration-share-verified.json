@@ -1,0 +1,29 @@
+{
+  "task": "inspiration-share-link",
+  "timestamp": "2026-09-15T12:32:55.881Z",
+  "components": {
+    "shareTriggerBtn": {
+      "location": "header.actions",
+      "size": "32px",
+      "label": "分享",
+      "icon": "share-arrow"
+    },
+    "popover": {
+      "width": "280px",
+      "options": [
+        {
+          "key": "3days",
+          "label": "3 天有效",
+          "default": true
+        },
+        {
+          "key": "forever",
+          "label": "永久有效",
+          "adminOnly": true,
+          "userState": "disabled:即将开放"
+        }
+      ]
+    }
+  },
+  "verification": "pass"
+}

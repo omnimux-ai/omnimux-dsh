@@ -117,4 +117,40 @@ describe('Workbench Context Injector', () => {
     assert.ok(contextMsg.content[0].text.includes('tab: omnimux-inspiration:library (灵感社区)'))
     assert.ok(contextMsg.content[0].text.includes('panel: open | focus: split'))
   })
+
+  it('injects attached reference context natively while keeping user message pristine', async () => {
+    const listeners = new Map()
+    const ctx = {
+      on: (ev, fn) => { listeners.set(ev, fn); return () => {} },
+    }
+    const mailbox = {
+      getActiveView: (sessionId) => ({
+        ok: true,
+        sessionId,
+        uiContext: {
+          schemaVersion: 1,
+          ok: true,
+          capturedAt: Date.now(),
+          surface: { panelOpen: false },
+          attachedContextText: '### 会话关联上下文 (Attached Context):\n- [产品] 降噪耳机 (@.omnimux/products/prod_1.json)',
+        },
+      }),
+    }
+
+    mountWorkbenchContextInjector(ctx, { mailbox })
+    const handler = listeners.get('agent/pre-step')
+
+    const userMsg = { role: 'user', content: [{ type: 'text', text: '说说你分别收到的' }] }
+    const decision = await handler(
+      { agent: { session: { id: 'session-clean' } }, turn: 1, step: 1, signal: {} },
+      async () => ({ kind: 'enter', messages: [userMsg] }),
+    )
+
+    // 验证：用户消息 100% 保持原始文本，且原生注入附件上下文消息
+    assert.equal(decision.messages.length, 2)
+    assert.equal(decision.messages[0].content[0].text, '说说你分别收到的')
+    assert.match(decision.messages[1].content[0].text, /### 会话关联上下文/)
+    assert.equal(decision.messages[1].source.kind, 'plugin')
+    assert.equal(decision.messages[1].source.form, 'snapshot')
+  })
 })

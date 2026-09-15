@@ -15,12 +15,8 @@ const SPECS_DIR = join(__dirname, 'specs');
 
 const PHASE_ONE_VIDEO_OPERATIONS = {
   'seedance-2-0': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
-  'seedance-2-0-fast': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
-  'seedance-2-0-mini': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   'seedance-2-5': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref', 'video_edit', 'video_extend'],
-  'wan-3.0': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref', 'document_to_video', 'webpage_to_video'],
   'minimax-h3': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
-  'grok-imagine-video-1-5': ['text_to_video', 'video_multi_ref'],
 };
 
 test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loader）', () => {
@@ -69,7 +65,7 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 58);
+  assert.equal(index.listedOperations.length, 21);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
@@ -79,8 +75,9 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
   // gpt-image-2.5 的 multi_reference 仍是 draft/stub，不得上架
   assert.ok(!index.listedOperations.includes('gpt-image-2.5#multi_reference'));
   assert.ok(index.listedOperations.includes('gpt-image-2.5#text_to_image'));
-  assert.ok(index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
-  assert.ok(index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
+  // flare 与 sunburst 仅登记不上架
+  assert.ok(!index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
+  assert.ok(!index.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
   assert.ok(index.listedOperations.includes('seed-audio-1.0#text_to_speech'));
   // Existing draft audio models remain unlisted.
   assert.ok(!index.listedOperations.some((key) => key.startsWith('suno#')));

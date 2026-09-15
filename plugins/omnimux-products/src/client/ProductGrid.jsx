@@ -1,7 +1,7 @@
 import { Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { previewUrl } from './api.js'
-import { CheckIcon } from './icons.jsx'
+import { CheckIcon, ChatIcon } from './icons.jsx'
 
 /**
  * @param {{
@@ -15,12 +15,13 @@ import { CheckIcon } from './icons.jsx'
  *   onOpen?: (product: any) => void,
  *   onCopy: (product: any) => void,
  *   onRemove: (product: any) => void,
+ *   onAddToChat?: (product: any) => void,
  *   copiedId?: string,
  *   selectedIds?: Set<string>,
  *   onToggleSelect?: (product: any) => void,
  * }} props
  */
-export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAction, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, copiedId, selectedIds, onToggleSelect }) {
+export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAction, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, onAddToChat, copiedId, selectedIds, onToggleSelect }) {
   const safeEmptyLabel = emptyLabel || (typeof t === 'function' ? t('empty.all') : '')
   const safeEmptyActionLabel = emptyActionLabel ?? (typeof t === 'function' ? t('add.button') : '')
   if (products.length === 0) {
@@ -83,6 +84,21 @@ export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAc
                   onClick={(event) => { event.stopPropagation(); onToggleSelect(product) }}
                 >
                   {selected ? <CheckIcon size={12} /> : <span />}
+                </IconButton>
+              ) : null}
+              {onAddToChat ? (
+                <IconButton
+                  variant="ghost"
+                  size="xs"
+                  className="omnimux-products-chat-btn"
+                  aria-label={typeof t === 'function' ? (t('add.chatButton') || '添加到会话') : '添加到会话'}
+                  title={typeof t === 'function' ? (t('add.chatButton') || '添加到会话') : '添加到会话'}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onAddToChat(product)
+                  }}
+                >
+                  <ChatIcon size={13} />
                 </IconButton>
               ) : null}
             </div>

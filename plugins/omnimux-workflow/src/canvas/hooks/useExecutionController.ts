@@ -457,6 +457,9 @@ export function useExecutionController(
       const workspace = workspaceIdRef.current;
       if (!workspace) return;
       if (startingRef.current || LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
+      if (opts.mode === 'full') {
+        throw new Error('创作画布不支持全画布一键运行，请选择指定节点执行');
+      }
       startingRef.current = true;
       const graph = useCanvasStore.getState();
       const signature = signatureOf(graph.nodes, graph.edges, { workspaceId: workspace });

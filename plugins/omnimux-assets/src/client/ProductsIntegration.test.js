@@ -20,8 +20,8 @@ describe('Product library integration into Assets stage', () => {
   it('contains valid i18n locales for product integration in both zh and en', () => {
     assert.equal(zh['source.product'], '产品库')
     assert.equal(en['source.product'], 'Products')
-    assert.equal(zh['product.create'], '新建产品')
-    assert.equal(en['product.create'], 'New Product')
+    assert.equal(zh['product.create'], '添加产品')
+    assert.equal(en['product.create'], 'Add Product')
     assert.equal(zh['product.chatButton'], '对话中添加')
     assert.equal(en['product.chatButton'], 'Add in Chat')
     assert.equal(zh['product.all'], '全部')
@@ -31,7 +31,7 @@ describe('Product library integration into Assets stage', () => {
 
   it('switches action row buttons dynamically when sourceTab is product', () => {
     assert.match(stageJsx, /if \(sourceTab === 'product'\)/)
-    assert.match(stageJsx, /\{t\('product\.create'\) \|\| '新建产品'\}/)
+    assert.match(stageJsx, /<CreateProductMenu\b/)
     assert.match(stageJsx, /\{t\('product\.chatButton'\) \|\| '对话中添加'\}/)
     assert.match(stageJsx, /\{t\('add\.button'\)\}/)
     assert.match(stageJsx, /\{t\('import\.button'\)\}/)
@@ -41,14 +41,15 @@ describe('Product library integration into Assets stage', () => {
     assert.match(stageJsx, /if \(sourceTab === 'product'\) \{\s*return \(\s*<div className="omnimux-assets-body">\s*<div className="omnimux-assets-main">\s*<ProductsView/)
   })
 
-  it('ProductsView conforms to design tokens and provides category chips and cards', () => {
+  it('ProductsView conforms to design tokens and provides category pills and empty card', () => {
     assert.match(productsViewJsx, /t\('product\.all'\) \|\| '全部'/)
     assert.match(productsViewJsx, /t\('product\.physical'\) \|\| '实物产品'/)
     assert.match(productsViewJsx, /t\('product\.digital'\) \|\| '数字产品'/)
-    assert.match(productsViewJsx, /className="omnimux-assets-products-view"/)
-    assert.match(productsViewJsx, /className="omnimux-assets-products-grid"/)
-    assert.match(productsViewJsx, /className="omnimux-assets-product-card"/)
-    assert.match(ASSETS_CSS, /\.omnimux-assets-products-grid/)
-    assert.match(ASSETS_CSS, /\.omnimux-assets-product-card/)
+    assert.match(productsViewJsx, /className="omnimux-assets-cloud-chip"/)
+    assert.match(productsViewJsx, /className="omnimux-products-list-view"/)
+    assert.match(productsViewJsx, /className="omnimux-products-empty"/)
+    assert.match(productsViewJsx, /className="omnimux-products-grid"/)
+    assert.match(ASSETS_CSS, /\.omnimux-products-grid/)
+    assert.match(ASSETS_CSS, /\.omnimux-products-empty/)
   })
 })

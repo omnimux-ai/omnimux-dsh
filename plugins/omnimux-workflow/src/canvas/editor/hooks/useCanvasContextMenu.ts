@@ -29,6 +29,7 @@ export interface CanvasContextMenuDeps {
   redo: () => void;
   onExecuteNodeIds?: (nodeIds: string[]) => void;
   onAddNode?: (type: CanvasAddNodeType, position?: { x: number; y: number }) => void;
+  onCreateWorkflow?: (position: { x: number; y: number }) => void;
 }
 
 export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
@@ -45,6 +46,7 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
     redo,
     onExecuteNodeIds,
     onAddNode,
+    onCreateWorkflow,
   } = deps;
 
   const [menu, setMenu] = useState<MenuState>({
@@ -162,6 +164,10 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
           if (context.type === 'node') onExecuteNodeIds?.([context.nodeId]);
           break;
         }
+        case 'create-workflow': {
+          onCreateWorkflow?.(flowPosition);
+          break;
+        }
       }
       closeMenu();
     },
@@ -181,6 +187,7 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
       closeMenu,
       onExecuteNodeIds,
       onAddNode,
+      onCreateWorkflow,
     ],
   );
 

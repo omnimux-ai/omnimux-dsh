@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
+import { deliverProductReference } from './reference.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
 import { ChatIcon } from './icons.jsx'
@@ -275,8 +276,26 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
-  const handleOpenConversation = () => {
+  const handleOpenConversation = async () => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+
+    // 1. 若当前用户已勾选若干商品，批量挂载选中商品到会话
+    if (selectedIds.size > 0) {
+      const selectedProducts = products.filter((p) => selectedIds.has(p.id))
+      for (const prod of selectedProducts) {
+        await deliverProductReference(prod)
+      }
+      clearSelection()
+      return
+    }
+
+    // 2. 若仅展示单个商品且未勾选，直接将该商品挂载到会话
+    if (visibleProducts.length === 1) {
+      await deliverProductReference(visibleProducts[0])
+      return
+    }
+
+    // 3. 默认展开会话分栏
     if (api) {
       if (typeof api.setConversationCollapsed === 'function') {
         try { api.setConversationCollapsed(false) } catch { /* ignore */ }
@@ -400,6 +419,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
             onOpen={handleOpenProduct}
             onRemove={(p) => { setPendingRemove({ isBatch: false, product: p, names: [p.name] }) }}
             onCopy={handleCopyCite}
+            onAddToChat={deliverProductReference}
             onEmptyAction={handleCreate}
             t={t}
           />

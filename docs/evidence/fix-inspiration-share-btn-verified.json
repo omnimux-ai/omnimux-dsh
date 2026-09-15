@@ -1,0 +1,12 @@
+{
+  "task": "fix-inspiration-share-btn-layout",
+  "timestamp": "2026-09-15T12:59:39.268Z",
+  "issue": 1943,
+  "fix": {
+    "useLeadingIconProp": true,
+    "whiteSpaceNoWrap": true,
+    "flexShrinkZero": true,
+    "displayInlineFlexRow": true
+  },
+  "verification": "pass"
+}

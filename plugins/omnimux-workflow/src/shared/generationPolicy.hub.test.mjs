@@ -5,14 +5,14 @@ import { projectCanvasCatalog } from './generationPolicy.ts';
 import { buildFilteredModelOptions, isZeroCandidateEmptyState } from './validation/operationUi.ts';
 import { buildUpstreamFingerprint, planAutoAdaptation } from './validation/compatKernel.ts';
 
-test('real Hub catalog exposes the four curated text models and selects Gemini 3.8 for video', () => {
+test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  assert.deepEqual(catalog.text.map((row) => row.id), ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
     fingerprint: buildUpstreamFingerprint({ prompt: 'analyze', assets }) });
   assert.equal(select().modelId, 'gemini-3.8-flash');
-  const pick = select([{ sourceNodeId: 'video', type: 'video', mimeType: 'video/mp4', sizeBytes: 1024 }], 'claude-opus-4-6');
+  const pick = select([{ sourceNodeId: 'video', type: 'video', mimeType: 'video/mp4', sizeBytes: 1024 }], 'gemini-3.8-flash');
   assert.equal(pick.modelId, 'gemini-3.8-flash');
   assert.equal(pick.operationId, 'vision_chat');
   assert.equal(catalog.models.find((row) => row.id === pick.modelId).operations.find((op) => op.id === pick.operationId).execution.status, 'none');
@@ -30,7 +30,7 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
     assert.deepEqual(row.listedOperations, [`${id}#speech_to_text`]);
   }
   // ...and never through a generative bucket: the chat whitelist stays chat-only.
-  assert.deepEqual(catalog.text.map((row) => row.id), ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
 
   const withAudio = buildUpstreamFingerprint({
     prompt: '',
@@ -43,7 +43,7 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
   assert.equal(isZeroCandidateEmptyState(transcription), false);
 
   // Every other tool keeps the curated whitelist: a chat node never offers an ASR model.
-  const CHAT = ['claude-opus-4-6', 'gemini-3.8-flash', 'deepseek-v4-flash', 'gpt-5.5'];
+  const CHAT = ['gemini-3.8-flash'];
   const chat = buildFilteredModelOptions({ catalog, fingerprint: buildUpstreamFingerprint({ prompt: '请润色这段文字' }), outputType: 'text', tool: 'text-to-text' });
   assert.deepEqual(chat.options.map((row) => row.id).sort(), [...CHAT].sort());
   // Callers that pass no tool keep the pre-#1789 behaviour (whitelist only).

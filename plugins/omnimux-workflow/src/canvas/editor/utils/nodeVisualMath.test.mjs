@@ -154,19 +154,19 @@ test('resolveGroupHeaderLayout：展开态外挂 + 反缩放；折叠态内置',
   assert.equal(fallback.top, -(GROUP_HEADER_HEIGHT + GROUP_HEADER_EXTERNAL_GAP));
 });
 
-test('resolveGroupTopBarLayout：展开态右侧避让；折叠态水平居中', () => {
+test('resolveGroupTopBarLayout：始终靠左对齐工作流节点左上角', () => {
   const expanded = resolveGroupTopBarLayout({ isCollapsed: false, inverseScale: 2 });
-  assert.equal(expanded.left, 'auto');
-  assert.equal(expanded.right, GROUP_CHROME_INSET);
+  assert.equal(expanded.left, GROUP_CHROME_INSET);
+  assert.equal(expanded.right, 'auto');
   assert.equal(expanded.top, -(GROUP_CHROME_INSET * 2));
   assert.equal(expanded.transform, 'translate(0, -100%) scale(2)');
-  assert.equal(expanded.transformOrigin, 'bottom right');
+  assert.equal(expanded.transformOrigin, 'bottom left');
 
   const collapsed = resolveGroupTopBarLayout({ isCollapsed: true, inverseScale: 2 });
-  assert.equal(collapsed.left, '50%');
+  assert.equal(collapsed.left, GROUP_CHROME_INSET);
   assert.equal(collapsed.right, 'auto');
-  assert.equal(collapsed.transform, 'translate(-50%, -100%) scale(2)');
-  assert.equal(collapsed.transformOrigin, 'bottom center');
+  assert.equal(collapsed.transform, 'translate(0, -100%) scale(2)');
+  assert.equal(collapsed.transformOrigin, 'bottom left');
 });
 
 test('MediaPreview URL：mediaAssets 匹配类型优先，回退首条，再回退 mediaUrl', () => {

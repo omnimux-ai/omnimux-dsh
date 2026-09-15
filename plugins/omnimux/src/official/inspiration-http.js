@@ -7,6 +7,7 @@ import { createOfficialClient } from './client.js'
 import { parseOfficialConfig } from './config.js'
 import {
   createInspiration,
+  createInspirationShare,
   deleteInspiration,
   getInspiration,
   inspirationStatus,
@@ -80,7 +81,8 @@ export function createInspirationDispatcher(deps = {}) {
     if (path.startsWith(`${PREFIX}/media/`)) {
       return { status: 404, body: { error: 'use stream' } }
     }
-    if (method !== 'GET') {
+    const isShareRequest = method === 'POST' && path.endsWith('/share')
+    if (method !== 'GET' && !isShareRequest) {
       try {
         assertLocalWrite(req)
         if (deps.identity && typeof deps.identity.require === 'function') {
@@ -114,6 +116,48 @@ export function createInspirationDispatcher(deps = {}) {
       if (method === 'POST' && path === `${PREFIX}/media`) {
         const body = req.body && typeof req.body === 'object' ? /** @type {Record<string, unknown>} */ (req.body) : {}
         return { status: 200, body: rewriteMediaUrlsForHost(await uploadMedia(client, body)) }
+      }
+      if (path.startsWith(`${PREFIX}/`) && path.endsWith('/share')) {
+        const id = decodeURIComponent(path.slice(`${PREFIX}/`.length, -'/share'.length))
+        if (!id || id.includes('/')) return { status: 404, body: { error: 'not found' } }
+        if (method === 'POST') {
+          const body = req.body && typeof req.body === 'object' ? /** @type {Record<string, unknown>} */ (req.body) : {}
+          const expire = body.expire === 'forever' ? 'forever' : '3days'
+          let isAdmin = false
+          if (deps.identity && typeof deps.identity.require === 'function') {
+            try {
+              const profile = await deps.identity.require()
+              isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
+            } catch {
+              isAdmin = false
+            }
+          }
+          if (expire === 'forever' && !isAdmin) {
+            return {
+              status: 403,
+              body: { error: '永久有效分享链接仅限管理员可用，普通用户请选择3天有效期' },
+            }
+          }
+          try {
+            const upstream = await createInspirationShare(client, { id, expire })
+            return { status: 200, body: upstream }
+          } catch {
+            const expireAt = expire === 'forever' ? null : new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString()
+            const code = id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'share'
+            return {
+              status: 200,
+              body: {
+                ok: true,
+                data: {
+                  id,
+                  share_url: `https://omnimux.ai/s/${code}`,
+                  expire,
+                  expire_at: expireAt,
+                },
+              },
+            }
+          }
+        }
       }
       if (path.startsWith(`${PREFIX}/`) && path !== PREFIX) {
         const id = decodeURIComponent(path.slice(`${PREFIX}/`.length))

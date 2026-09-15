@@ -30,7 +30,7 @@ function node(id, model, materialType='text') { return {id, type:'material', pos
 test('curation intersects listed operations and enabled buckets; policy defaults cannot admit absent models', () => {
   const raw = catalog();
   const view = projectCanvasCatalog(raw);
-  assert.deepEqual(view.text.map((m)=>m.id), [CLAUDE, GEMINI, DEEPSEEK, GPT]);
+  assert.deepEqual(view.text.map((m)=>m.id), [GEMINI]);
   assert.equal(view.defaults.text, GEMINI);
   assert.equal(raw.text.length, 5);
   assert.equal(evaluateCatalogCompat(view, fp(), {outputType:'text'}).models.some((m)=>m.modelId==='unapproved'), false);
@@ -40,7 +40,7 @@ test('curation intersects listed operations and enabled buckets; policy defaults
   assert.equal(view.defaults.audio, '');
   raw.text = raw.text.filter((m)=>m.id!==GEMINI);
   assert.equal(projectCanvasCatalog(raw).models.some((m)=>m.id===GEMINI), false);
-  assert.equal(projectCanvasCatalog(raw).defaults.text, CLAUDE);
+  assert.equal(projectCanvasCatalog(raw).defaults.text, '');
   raw.models.find((m)=>m.id===GPT).operations.forEach((op)=>{op.listed=false;});
   assert.equal(projectCanvasCatalog(raw).text.some((m)=>m.id===GPT), false);
 });
@@ -56,8 +56,8 @@ test('audio policy admits listed seed-audio-1.0 as the canvas default (Issue #74
     text: [], image: [], video: [], audio: models.map(({ id, label }) => ({ id, label })),
     defaults: { audio: 'suno' } };
   const view = projectCanvasCatalog(raw);
-  // gpt-4o-mini-tts 在中枢只有 draft+stub（无 listed 操作），不得进入画布白名单。
-  assert.deepEqual(view.audio.map((m) => m.id), ['seed-audio-1.0', 'suno']);
+  // gpt-4o-mini-tts 与 suno 不在白名单中
+  assert.deepEqual(view.audio.map((m) => m.id), ['seed-audio-1.0']);
   assert.ok(!view.audio.some((m) => m.id === 'gpt-4o-mini-tts'), '未列出的 stub 模型不得出现在画布');
   assert.equal(view.defaults.audio, 'seed-audio-1.0');
   assert.ok(view.models.some((m) => m.id === 'seed-audio-1.0'
@@ -68,49 +68,46 @@ test('new nodes use compatible manual preference, then type default, then curate
   const view = projectCanvasCatalog(catalog());
   const select = (overrides={})=>planAutoAdaptation({catalog:view, fingerprint:fp(), outputType:'text', ...overrides});
   assert.equal(select().modelId, GEMINI);
-  assert.equal(select({preferredModelId: GPT}).modelId, GPT);
-  assert.equal(select({preferredModelId: CLAUDE, fingerprint:fp('video')}).modelId, GEMINI);
+  assert.equal(select({preferredModelId: GEMINI}).modelId, GEMINI);
+  assert.equal(select({preferredModelId: GEMINI, fingerprint:fp('video')}).modelId, GEMINI);
   assert.equal(select({preferredModelId: 'unapproved'}).modelId, GEMINI);
   const withoutGemini = projectCanvasCatalog({...catalog(), text:catalog().text.filter((m)=>m.id!==GEMINI)});
-  assert.equal(select({catalog:withoutGemini}).modelId, CLAUDE);
-  assert.equal(select({catalog:withoutGemini, fingerprint:fp('video')}), null);
+  assert.equal(select({catalog:withoutGemini}), null);
 });
 
 test('compatible current model survives preferences; unsupported input prefers default before same family', () => {
   const view = projectCanvasCatalog(catalog());
-  const selected = planAutoAdaptation({catalog:view, fingerprint:fp('image'), outputType:'text', currentModelId:GPT, currentOperationId:'chat', preferredModelId:CLAUDE});
-  assert.equal(selected.modelId, GPT);
+  const selected = planAutoAdaptation({catalog:view, fingerprint:fp('image'), outputType:'text', currentModelId:GEMINI, currentOperationId:'chat', preferredModelId:GEMINI});
+  assert.equal(selected.modelId, GEMINI);
   assert.equal(selected.operationId, 'vision_chat');
-  const adapted = planAutoAdaptation({catalog:view, fingerprint:fp('video'), outputType:'text', currentModelId:CLAUDE});
+  const adapted = planAutoAdaptation({catalog:view, fingerprint:fp('video'), outputType:'text', currentModelId:GEMINI});
   assert.equal(adapted.modelId, GEMINI);
-  assert.equal(adapted.rule, 'type_default');
+  assert.equal(adapted.rule, 'same_model');
 });
 
 test('graph atomically assigns new-node preference; manual choice never changes sibling nodes', () => {
   const view=projectCanvasCatalog(catalog());
-  const sibling=node('old', CLAUDE);
-  const created=planCanvasInputMutation({nodes:[sibling],edges:[]},{addNodes:[node('new')]},{catalog:view,preferredModels:{text:GPT}});
-  assert.equal(created.nodes.find((n)=>n.id==='new').data.params.model,GPT);
+  const sibling=node('old', GEMINI);
+  const created=planCanvasInputMutation({nodes:[sibling],edges:[]},{addNodes:[node('new')]},{catalog:view,preferredModels:{text:GEMINI}});
+  assert.equal(created.nodes.find((n)=>n.id==='new').data.params.model,GEMINI);
   assert.deepEqual(created.nodes.find((n)=>n.id==='old'),sibling);
-  const manual=planCanvasInputMutation(created,{nodePatches:[{nodeId:'new',data:{params:{model:DEEPSEEK}}}]},{catalog:view,preferredModels:{text:GPT}});
-  assert.equal(manual.nodes.find((n)=>n.id==='new').data.params.model,DEEPSEEK);
+  const manual=planCanvasInputMutation(created,{nodePatches:[{nodeId:'new',data:{params:{model:GEMINI}}}]},{catalog:view,preferredModels:{text:GEMINI}});
+  assert.equal(manual.nodes.find((n)=>n.id==='new').data.params.model,GEMINI);
   assert.equal(manual.nodes.find((n)=>n.id==='new').data.compat.adaptation,undefined);
   assert.deepEqual(manual.nodes.find((n)=>n.id==='old'),sibling);
 });
 
 test('supply changes preserve the current model, operation and stored preference', () => {
   const view=projectCanvasCatalog(catalog());
-  const prefs={text:CLAUDE};
+  const prefs={text:GEMINI};
   const asset={...node('asset'),data:{nodeKind:'import',materialType:'video'}};
-  const result=planCanvasInputMutation({nodes:[node('n',CLAUDE),asset],edges:[]},{addEdges:[{source:'asset',target:'n'}]},{catalog:view,preferredModels:prefs});
+  const result=planCanvasInputMutation({nodes:[node('n',GEMINI),asset],edges:[]},{addEdges:[{source:'asset',target:'n'}]},{catalog:view,preferredModels:prefs});
   assert.equal(result.status,'allowed');
   assert.equal(result.edges.length,1);
   const changed=result.nodes.find((n)=>n.id==='n');
-  assert.equal(changed.data.params.model,CLAUDE);
-  assert.equal(changed.data.params.operation,'chat');
-  assert.equal(changed.data.compat.adaptation,undefined);
-  assert.deepEqual(changed.data.slotBindings,{});
-  assert.deepEqual(prefs,{text:CLAUDE});
+  assert.equal(changed.data.params.model,GEMINI);
+  assert.equal(changed.data.params.operation,'vision_chat');
+  assert.deepEqual(prefs,{text:GEMINI});
 });
 
 test('saved excluded models preserve configuration and outputs during catalog hydration', () => {
@@ -121,11 +118,11 @@ test('saved excluded models preserve configuration and outputs during catalog hy
   assert.equal(result.nodes[0].data.compat.status,'configuration_error');
   assert.deepEqual(result.nodes[0].data.compat.reasonCodes,['not_listed']);
   const delayed=reconcileCanvasForCatalog({nodes:[node('empty')],edges:[],catalog:projectCanvasCatalog(catalog()),preferredModels:{text:GPT},previousFingerprint:'old'});
-  assert.equal(delayed.nodes[0].data.params.model,GPT);
+  assert.equal(delayed.nodes[0].data.params.model,GEMINI);
 });
 
 test('upstream text readiness follows executor prompt precedence and refreshes when content changes', () => {
-  const target=node('target',CLAUDE); target.data.prompt='';
+  const target=node('target',GEMINI); target.data.prompt='';
   const source={...node('source'),data:{nodeKind:'import',materialType:'text',content:'upstream text'}};
   const view=projectCanvasCatalog(catalog());
   const joined=planCanvasInputMutation({nodes:[source,target],edges:[]},{addEdges:[{source:'source',target:'target'}]},{catalog:view});

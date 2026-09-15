@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   authGuard,
+  createShareLink,
   extractTikTokVideoId,
   hostMediaSrc,
   listInspirations,
@@ -271,6 +272,52 @@ describe('listInspirations query params', () => {
 
       await listLocalInspirations({ platform: 'tiktok' })
       assert.equal(calls.at(-1), '/omnimux/inspiration/local?platform=tiktok')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('posts createShareLink to Host and parses response', async () => {
+    const originalFetch = globalThis.fetch
+    /** @type {{ url: string, opts?: any }[]} */
+    const calls = []
+    try {
+      globalThis.fetch = async (url, opts) => {
+        calls.push({ url, opts })
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            data: {
+              id: 'insp-42',
+              share_url: 'https://omnimux.ai/s/insp42',
+              expire: JSON.parse(opts.body).expire,
+            },
+          }),
+        }
+      }
+
+      const res3Days = await createShareLink('insp-42')
+      assert.equal(res3Days.ok, true)
+      assert.equal(calls[0].url, '/omnimux/inspiration/local/insp-42/share')
+      assert.equal(calls[0].opts.method, 'POST')
+      assert.deepEqual(JSON.parse(calls[0].opts.body), { expire: '3days' })
+      assert.equal(res3Days.body.data.expire, '3days')
+
+      const resForever = await createShareLink('insp-42', { expire: 'forever' })
+      assert.equal(resForever.ok, true)
+      assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
+      assert.equal(resForever.body.data.expire, 'forever')
+
+      // 测试网络不可用时的平滑保底
+      globalThis.fetch = async () => { throw new Error('network down') }
+      const resFallback = await createShareLink('insp-offline')
+      assert.equal(resFallback.ok, true)
+      assert.equal(resFallback.body.data.id, 'insp-offline')
+      assert.match(resFallback.body.data.share_url, /https:\/\/omnimux\.ai\/s\/insp_/)
+      assert.deepEqual(JSON.parse(calls[1].opts.body), { expire: 'forever' })
+      assert.equal(resForever.body.data.expire, 'forever')
     } finally {
       globalThis.fetch = originalFetch
     }

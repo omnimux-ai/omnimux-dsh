@@ -50,13 +50,13 @@ describe('SubmitGuard execute integration', () => {
     const dest = join(dir, 'o.mp4')
     let calls = 0
     const result = await executeOmnimuxVideo({
-      prompt: 'a wall at night', dest, model: 'seedance-2-0-fast', operation: 'text_to_video',
-      duration: 4, resolution: '720p', env: { OMNIMUX_API_KEY: 'sk-test' },
+      prompt: 'a wall at night', dest, model: 'seedance-2-5', operation: 'text_to_video',
+      duration: 5, resolution: '720p', env: { OMNIMUX_API_KEY: 'sk-test' },
       runtime: {
         async execute(req) {
           calls += 1
           assert.equal(req.input.prompt, 'a wall at night')
-          assert.equal(req.input.duration, 4)
+          assert.equal(req.input.duration, 5)
           assert.equal(req.input.resolution, '720p')
           assert.equal('audioTrack' in req.input, false)
           assert.equal('metadata' in req.input, false)
@@ -77,7 +77,7 @@ describe('SubmitGuard execute integration', () => {
     let calls = 0
     await assert.rejects(
       () => executeOmnimuxVideo({
-        prompt: '', dest, model: 'seedance-2-0-fast', operation: 'text_to_video',
+        prompt: '', dest, model: 'seedance-2-5', operation: 'text_to_video',
         env: { OMNIMUX_API_KEY: 'sk-test' }, runtime: { async execute() { calls += 1; return { outputs: [] } } },
       }),
       (e) => e instanceof OmnimuxError,
@@ -91,7 +91,7 @@ describe('SubmitGuard execute integration', () => {
     await assert.rejects(
       () => executeOmnimuxVideo({
         prompt: 'a wall at night', dest: '/tmp/sg-unsupported-parameter.mp4',
-        model: 'seedance-2-0-fast', operation: 'text_to_video', duration: 3, resolution: 'bogus',
+        model: 'seedance-2-5', operation: 'text_to_video', duration: 3, resolution: 'bogus',
         env: { OMNIMUX_API_KEY: 'sk-test' }, runtime: { async execute() { calls += 1; return { outputs: [] } } },
       }),
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
@@ -137,7 +137,7 @@ describe('SubmitGuard execute integration', () => {
       yield { type: 'finish', reason: { kind: 'stop' } }
     }
     const result = await executeOmnimuxText({
-      prompt: 'hi', model: 'claude-opus-5', operation: 'chat', llm: { stream: () => stream() },
+      prompt: 'hi', model: 'gemini-3.8-flash', operation: 'chat', llm: { stream: () => stream() },
     })
     assert.equal(result.text, 'hello')
   })
@@ -149,7 +149,7 @@ describe('SubmitGuard execute integration', () => {
     }
     const dataUri = 'data:image/png;base64,iVBORw0KGgo='
     const result = await executeOmnimuxText({
-      prompt: 'what', model: 'gemini-3.7-flash', operation: 'vision_chat', image: dataUri,
+      prompt: 'what', model: 'gemini-3.8-flash', operation: 'vision_chat', image: dataUri,
       assetMeta: { [dataUri]: { mime: 'image/png', sizeBytes: 12 } },
       llm: { stream: () => stream() }, attachments: { saveImage: async () => ({ id: 'att-1' }) },
     })
@@ -158,7 +158,7 @@ describe('SubmitGuard execute integration', () => {
 
   it('assertGuardOutput throws typed invalid_response on mismatch', () => {
     const plan = assertGuardSubmit(
-      { model: 'seedance-2-0-fast', operation: 'text_to_video', prompt: 'x' },
+      { model: 'seedance-2-5', operation: 'text_to_video', prompt: 'x' },
       { index, profiles, seam: 'videoGenerate', outputType: 'video' },
     )
     assert.throws(

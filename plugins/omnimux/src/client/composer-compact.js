@@ -89,6 +89,33 @@ html[data-omnimux-split-compact] [data-phase='hero'] [class*="composerHero"] > :
   display:none!important;
 }
 
+/* 非全屏（分栏）模式下：输入框两侧紧凑收敛至12px，严格对齐工作区行左侧，消除底部悬空 */
+html[data-omnimux-split-compact] [data-composer-seat],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-composer-seat],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-composer-seat] {
+  padding-bottom:0!important;
+  padding-top:0!important;
+  --dsh-composer-side-clearance:12px!important;
+}
+html[data-omnimux-split-compact] [data-phase='hero'] [class*="composerHero"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="composerHero"] {
+  padding-bottom:0!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
+}
+html[data-omnimux-split-compact] [data-phase='hero'] [class*="heroWorkspaceRow"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="heroWorkspaceRow"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-phase='hero'] [class*="heroWorkspaceRow"] {
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
+  padding-left:var(--dsh-composer-side-clearance, 12px)!important;
+  padding-right:var(--dsh-composer-side-clearance, 12px)!important;
+  box-sizing:border-box!important;
+}
+
 /* 迎宾打招呼头部样式 */
 .omnimux-welcome-header{
   display:flex;

@@ -300,3 +300,48 @@ export function ChatIcon(props) {
 
 /** Alias MessageIcon for convenience */
 export const MessageIcon = ChatIcon
+
+/** 下拉浮层的展开指示：矢量折角 */
+export function ChevronDownIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  )
+}
+
+/** 实物产品：带盖的包装盒轮廓 */
+export function BoxIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M21 8 12 3 3 8v8l9 5 9-5z" />
+      <path d="m3 8 9 5 9-5" />
+      <path d="M12 13v8" />
+    </Icon>
+  )
+}
+
+/** 数字产品：发光点 */
+export function SparkIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v4" />
+      <path d="M12 17v4" />
+      <path d="M3 12h4" />
+      <path d="M17 12h4" />
+      <path d="M12 8.5 13.6 12 12 15.5 10.4 12z" />
+    </Icon>
+  )
+}
+
+/** 编辑图标：铅笔轮廓 */
+export function EditIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </Icon>
+  )
+}
+
+

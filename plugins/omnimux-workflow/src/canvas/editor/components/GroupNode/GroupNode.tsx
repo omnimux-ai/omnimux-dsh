@@ -96,6 +96,22 @@ export const GroupNode: React.FC<NodeProps> = memo(({
     );
   }, [id, title, liveNodes]);
 
+  const handlePublishApp = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('omnimux:workflow:publish-app', {
+        detail: { groupId: id, groupTitle: title, nodeIds: childIdsOfGroup(liveNodes, id) },
+      }),
+    );
+  }, [id, title, liveNodes]);
+
+  const handleDeleteWorkflow = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('omnimux:workflow:delete-group', {
+        detail: { groupId: id, groupTitle: title },
+      }),
+    );
+  }, [id, title]);
+
   const handleUngroup = useCallback(() => {
     ungroup(id);
   }, [id, ungroup]);
@@ -111,6 +127,8 @@ export const GroupNode: React.FC<NodeProps> = memo(({
     [id],
   );
 
+  const inverseScale = useMemo(() => inverseScaleForZoom(zoom), [zoom]);
+
   return (
     <div
       className={`wf-group-node ${selected ? 'wf-group-node--selected' : ''} ${isCollapsed ? 'wf-group-node--collapsed' : ''}`}
@@ -120,19 +138,46 @@ export const GroupNode: React.FC<NodeProps> = memo(({
         ...accentStyle,
       }}
     >
-      {selected && (
-        <GroupTopBar
+      {/* 顶部标题与工具栏弹性行：名称在左，工具栏排在其右侧，彻底消除重叠 */}
+      <div
+        className="wf-group-top-row nodrag nopan"
+        style={{
+          position: 'absolute',
+          top: isCollapsed ? 10 : -(28 + 10 * inverseScale),
+          left: 12,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          zIndex: 10,
+          transform: `scale(${inverseScale})`,
+          transformOrigin: 'bottom left',
+          pointerEvents: 'none',
+        }}
+      >
+        <GroupHeader
           groupId={id}
-          groupTitle={title}
-          groupColor={color}
+          title={title}
           isCollapsed={isCollapsed}
-          onExecuteGroup={handleExecuteGroup}
-          onCreateWorkflow={handleCreateWorkflow}
-          onUngroup={handleUngroup}
-          onLayout={handleLayout}
-          onColorChange={handleColorChange}
+          selected={selected}
+          color={color}
+          onToggleCollapse={() => toggleGroupCollapse(id)}
+          onRename={handleRename}
+          onSelect={handleSelectGroup}
         />
-      )}
+        {selected && (
+          <GroupTopBar
+            groupId={id}
+            groupColor={color}
+            isCollapsed={isCollapsed}
+            onExecuteGroup={handleExecuteGroup}
+            onCreateWorkflow={handleCreateWorkflow}
+            onPublishApp={handlePublishApp}
+            onUngroup={handleUngroup}
+            onDeleteWorkflow={handleDeleteWorkflow}
+            onColorChange={handleColorChange}
+          />
+        )}
+      </div>
 
       {selected && !isCollapsed && (
         <GroupResizeHandles
@@ -143,17 +188,6 @@ export const GroupNode: React.FC<NodeProps> = memo(({
           onResize={handleResize}
         />
       )}
-
-      <GroupHeader
-        groupId={id}
-        title={title}
-        isCollapsed={isCollapsed}
-        selected={selected}
-        color={color}
-        onToggleCollapse={() => toggleGroupCollapse(id)}
-        onRename={handleRename}
-        onSelect={handleSelectGroup}
-      />
     </div>
   );
 });

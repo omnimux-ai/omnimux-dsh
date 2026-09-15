@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, EmptyState } from 'dsh-ui-kit'
-import { ChatIcon, CheckIcon, PlusIcon } from './icons.jsx'
+import { Button, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
+import { CheckIcon } from './icons.jsx'
+import { CreateProductMenu } from './CreateProductMenu.jsx'
 
 /**
  * @param {string} productId
@@ -11,18 +12,21 @@ function previewUrl(productId, mediaId) {
 }
 
 /**
+ * 产品库 1:1 对齐原页面的嵌入视图组件。
+ * 遵循原产品库 FilterBar (Tabs + stretch SearchField) 与全宽虚线居中空状态标准。
+ *
  * @param {{
  *   t: (key: string) => string,
- *   query?: string,
  *   open?: boolean,
  *   onOpenCreate?: (kind: 'physical' | 'digital') => void,
  * }} props
  */
 export function ProductsView(props) {
-  const { t, query = '', open = true, onOpenCreate } = props
+  const { t, open = true, onOpenCreate } = props
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
-  const [kindFilter, setKindFilter] = useState('all')
+  const [query, setQuery] = useState('')
+  const [kindTab, setKindTab] = useState('all')
   const [copiedId, setCopiedId] = useState(null)
 
   const fetchProducts = useCallback(async () => {
@@ -48,31 +52,11 @@ export function ProductsView(props) {
     }
   }, [open, fetchProducts])
 
-  const counts = useMemo(() => {
-    let physical = 0
-    let digital = 0
-    for (const p of products) {
-      if (p.kind === 'digital') digital++
-      else physical++
-    }
-    return {
-      all: products.length,
-      physical,
-      digital,
-    }
-  }, [products])
-
-  const chips = useMemo(() => [
-    { key: 'all', label: t('product.all') || '全部', total: counts.all },
-    { key: 'physical', label: t('product.physical') || '实物产品', total: counts.physical },
-    { key: 'digital', label: t('product.digital') || '数字产品', total: counts.digital },
-  ], [t, counts])
-
   const visibleProducts = useMemo(() => {
     let list = products
-    if (kindFilter === 'physical') {
+    if (kindTab === 'physical') {
       list = list.filter((p) => p.kind !== 'digital')
-    } else if (kindFilter === 'digital') {
+    } else if (kindTab === 'digital') {
       list = list.filter((p) => p.kind === 'digital')
     }
     if (query && query.trim()) {
@@ -85,7 +69,7 @@ export function ProductsView(props) {
       })
     }
     return list
-  }, [products, kindFilter, query])
+  }, [products, kindTab, query])
 
   const handleCopyCite = (product, e) => {
     e.stopPropagation()
@@ -99,106 +83,104 @@ export function ProductsView(props) {
     }
   }
 
+  const handleCreate = (kind) => {
+    onOpenCreate?.(kind)
+  }
+
   return (
-    <div className="omnimux-assets-products-view">
-      {/* 二级分类 Chips */}
-      <div className="omnimux-assets-local-nav">
-        <div className="omnimux-assets-local-nav-row" role="group" aria-label="产品库分类">
-          {chips.map((c) => (
+    <div className="omnimux-products-list-view">
+      {/* 二级分类：从 UI 共享组件复用胶囊（Pill/Chip）规范，1:1 对标参考图 2 */}
+      <div className="omnimux-assets-local-nav" role="group" aria-label="产品二级分类">
+        <div className="omnimux-assets-local-nav-row">
+          {[
+            { id: 'all', label: t('product.all') || '全部' },
+            { id: 'physical', label: t('product.physical') || '实物产品' },
+            { id: 'digital', label: t('product.digital') || '数字产品' },
+          ].map((chip) => (
             <Button
-              key={c.key}
+              key={chip.id}
               variant="ghost"
               size="sm"
               className="omnimux-assets-cloud-chip"
-              aria-pressed={c.key === kindFilter ? 'true' : 'false'}
-              onClick={() => setKindFilter(c.key)}
+              aria-pressed={kindTab === chip.id ? 'true' : 'false'}
+              onClick={() => setKindTab(chip.id)}
             >
-              {c.label}
-              <span className="omnimux-assets-cloud-count">{c.total}</span>
+              {chip.label}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* 内容网格 */}
-      <div className="omnimux-assets-products-grid">
+      {/* 1:1 对齐原产品库主体内容与居中虚线大空状态 */}
+      <div className="omnimux-products-body">
         {visibleProducts.length === 0 ? (
-          <div className="omnimux-assets-empty-wrap">
-            <EmptyState
-              title={t('product.empty') || '暂无商品数据'}
-              description="沉淀要卖的货：卖点、人群与主图，供 Agent 在创作中精准调用"
-              action={
-                onOpenCreate ? (
-                  <Button variant="primary" leadingIcon={<PlusIcon />} onClick={() => onOpenCreate('physical')}>
-                    {t('product.create') || '新建产品'}
-                  </Button>
-                ) : null
-              }
-            />
+          <div className="omnimux-products-empty">
+            <p>
+              {query.trim()
+                ? '没有找到匹配的产品。'
+                : '暂无产品数据。点击「添加产品」录入首件标品。'}
+            </p>
+            {query.trim() === '' ? (
+              <CreateProductMenu t={t} onSelect={handleCreate} />
+            ) : null}
           </div>
         ) : (
-          visibleProducts.map((product) => {
-            const glyph = (product.name || '?').trim().slice(0, 1)
-            const cover = product.cover
-            const preview = cover?.kind === 'image' && cover.id
-              ? previewUrl(product.id, cover.id)
-              : ''
-            const isDigital = product.kind === 'digital'
-            const cite = product.cite || `@产品/${product.name}`
-            const copied = copiedId === product.id
+          <div className="omnimux-products-grid">
+            {visibleProducts.map((product) => {
+              const glyph = (product.name || '?').trim().slice(0, 1)
+              const cover = product.cover
+              const preview = cover?.kind === 'image' && cover.id
+                ? previewUrl(product.id, cover.id)
+                : ''
+              const isDigital = product.kind === 'digital'
+              const copied = copiedId === product.id
 
-            return (
-              <article
-                key={product.id}
-                className="omnimux-assets-product-card"
-                tabIndex={0}
-              >
-                <div className="omnimux-assets-product-thumb">
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt={product.name}
-                      className="omnimux-assets-product-img"
-                      onError={(e) => { e.currentTarget.style.display = 'none' }}
-                    />
-                  ) : null}
-                  <span className="omnimux-assets-product-glyph">{glyph}</span>
-                  <span className="omnimux-assets-product-badge">
-                    {isDigital ? (t('product.digital') || '数字产品') : (t('product.physical') || '实物产品')}
-                  </span>
-                </div>
-
-                <div className="omnimux-assets-product-info">
-                  <h3 className="omnimux-assets-product-name" title={product.name}>
-                    {product.name}
-                  </h3>
-                  <p className="omnimux-assets-product-meta">
-                    {product.brand ? <span className="omnimux-assets-product-brand">{product.brand}</span> : null}
-                    {product.price ? <span className="omnimux-assets-product-price">¥{product.price}</span> : null}
-                    {!product.brand && !product.price ? (
-                      <span className="omnimux-assets-product-desc">
-                        {Array.isArray(product.selling_points) && product.selling_points.length > 0
-                          ? product.selling_points[0]
-                          : (product.description || '无详细描述')}
-                      </span>
+              return (
+                <article
+                  key={product.id}
+                  className="omnimux-products-card"
+                  tabIndex={0}
+                  onClick={() => handleCreate(isDigital ? 'digital' : 'physical')}
+                >
+                  <div className="omnimux-products-card-thumb">
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt={product.name}
+                        className="omnimux-products-card-media"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
                     ) : null}
-                  </p>
-
-                  <div className="omnimux-assets-product-actions">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="omnimux-assets-cite-btn"
-                      onClick={(e) => handleCopyCite(product, e)}
-                    >
-                      {copied ? <CheckIcon size={12} /> : null}
-                      <span>{copied ? (t('product.copied') || '已复制') : (t('product.copyCite') || '复制引用')}</span>
-                    </Button>
+                    <span className="omnimux-products-glyph">{glyph}</span>
+                    <span className="omnimux-products-badge">
+                      {isDigital ? (t('product.digital') || '数字产品') : (t('product.physical') || '实物产品')}
+                    </span>
                   </div>
-                </div>
-              </article>
-            )
-          })
+
+                  <div className="omnimux-products-card-body">
+                    <h3 className="omnimux-products-card-name" title={product.name}>
+                      {product.name}
+                    </h3>
+                    <p className="omnimux-products-card-sub">
+                      <span>{product.brand || (Array.isArray(product.selling_points) ? product.selling_points[0] : '') || '通用'}</span>
+                      {product.price ? <span className="omnimux-products-card-price">¥{product.price}</span> : null}
+                    </p>
+
+                    <div className="omnimux-products-card-actions">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={(e) => handleCopyCite(product, e)}
+                      >
+                        {copied ? <CheckIcon size={12} /> : null}
+                        <span>{copied ? (t('product.copied') || '已复制') : (t('product.copyCite') || '复制引用')}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>

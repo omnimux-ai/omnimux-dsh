@@ -292,6 +292,37 @@ export const PRODUCTS_CSS = `
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
+.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-chat-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0;
+  transform: none;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  border: 1px solid var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-products-stage .omnimux-products-card-thumb .omnimux-products-chat-btn:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l4);
+}
+.omnimux-products-focusable:hover .omnimux-products-chat-btn,
+.omnimux-products-focusable:focus-within .omnimux-products-chat-btn {
+  opacity: 1;
+}
 .omnimux-products-icon {
   flex: none;
   display: inline-block;

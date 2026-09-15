@@ -55,12 +55,18 @@ let splitResizeHandler = null
  * @returns {Element | null} the resolved panel
  */
 export function tagWorkbenchPanel(doc = hostDocument()) {
+  // 清理可能被误标的外层 AppFrame 节点，保证桌面外框永远不被 max-width 误截断
+  try {
+    doc?.querySelector?.('.dshDesktopFrame[' + WORKBENCH_PANEL_ATTR + '], [class*="frame"][' + WORKBENCH_PANEL_ATTR + ']')?.removeAttribute?.(WORKBENCH_PANEL_ATTR)
+  } catch {}
   const panel = findWorkbenchPanelElement(doc)
   if (panel && typeof panel.setAttribute === 'function' && !panel.hasAttribute?.(WORKBENCH_PANEL_ATTR)) {
-    try {
-      panel.setAttribute(WORKBENCH_PANEL_ATTR, '')
-    } catch {
-      // ignore
+    if (!panel.classList?.contains('dshDesktopFrame') && (typeof panel.matches !== 'function' || !panel.matches('.dshDesktopFrame, [class*="frame"]'))) {
+      try {
+        panel.setAttribute(WORKBENCH_PANEL_ATTR, '')
+      } catch {
+        // ignore
+      }
     }
   }
   return panel

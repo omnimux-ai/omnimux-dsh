@@ -4,10 +4,11 @@ import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
+import { getGlobalShadowContextStore } from '../reference/shadow-context.ts'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
-export function reconcileAttachmentDraft(draft, previous, attachments) {
-  const block = buildAttachedContextBlock(attachments)
+export function reconcileAttachmentDraft(draft, previous, attachments, sessionId) {
+  const block = buildAttachedContextBlock(attachments, sessionId)
   if (previous) {
     const index = draft.indexOf(previous)
     const end = index + previous.length
@@ -146,28 +147,17 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         console.error('[CreativePresets] Failed to compile prompt:', err)
       }
 
-      if (!draft.trim() && !attachments.length) return true
-      const result = reconcileAttachmentDraft(draft, previous, attachments)
-      const attachmentsChanged = result.status === 'synced'
-      if (result.status === 'ready' && result.draft !== value.draft) result.status = 'synced'
-      if (result.status === 'edited') {
-        // Removing all attachments explicitly leaves a manually edited draft alone.
-        if (!attachments.length) { attachmentDrafts.delete(sessionId); setNotice(null); return true }
-        setNotice('edited'); return false
-      }
-      if (result.status === 'ready') { setNotice(null); return true }
-      if (value.phase !== 'plain' || value.occurrences?.length || !actions?.setDraft) { setNotice('unavailable'); return false }
-      try {
-        actions.setDraft(result.draft)
-        live.current = { ...live.current, input: { ...value, draft: result.draft } }
-        attachmentDrafts.set(sessionId, result.block)
-        setNotice(attachmentsChanged ? 'synced' : null)
-        if (!attachmentsChanged) return true
-      } catch { setNotice('unavailable') }
-      return false
+      // 核心修复：保持用户输入框草稿 100% 纯净，坚决不覆写草稿，坚决不拦截用户回车发送
+      setNotice(null)
+      return true
     }
-    const arm = () => attachmentAdmission.arm(sessionId, live.current.input.draft,
-      attachmentStore.getSnapshot(sessionId), attachmentDrafts.get(sessionId))
+    const arm = () => {
+      try {
+        getGlobalShadowContextStore().consume(sessionId)
+      } catch {}
+      attachmentAdmission.arm(sessionId, live.current.input.draft,
+        attachmentStore.getSnapshot(sessionId), attachmentDrafts.get(sessionId))
+    }
     const pointer = event => {
       if (!belongs(event.target) || !send(event.target)) return
       blockedPointer = !check()

@@ -6671,6 +6671,35 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   outline: none;
 }
 
+/* ==================== 编组顶部整行 (GroupTopRow: 名称在左，工具栏在右) ==================== */
+.wf-group-top-row {
+  position: absolute;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wf-group-top-row > * {
+  pointer-events: auto;
+}
+
+.wf-group-top-row .wf-group-header-pill {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+}
+
+.wf-group-top-row .wf-floating-top-pill {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
 .wf-group-topbar {
   position: absolute;
   z-index: 30;
@@ -6720,6 +6749,68 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-group-topbar__palette-dot.is-active {
   border-color: #ffffff;
+}
+
+.wf-group-topbar__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.2));
+  background: var(--dsw-alias-bg-hover, rgba(255, 255, 255, 0.06));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 120ms ease;
+}
+
+.wf-group-topbar__badge:hover {
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.35));
+}
+
+.wf-group-topbar__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wf-group-topbar__badge-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  white-space: nowrap;
+}
+
+.wf-group-topbar__badge-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  padding: 0;
+  width: 70px;
+}
+
+.wf-group-topbar__palette-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px;
+}
+
+.wf-floating-top-pill__btn--danger {
+  color: var(--dsw-alias-danger, var(--wb-danger, #ef4444));
+}
+
+.wf-floating-top-pill__btn--danger:hover {
+  background: color-mix(in srgb, var(--dsw-alias-danger, var(--wb-danger, #ef4444)) 16%, transparent);
+}
+
+.wf-floating-top-pill__icon--danger {
+  color: var(--dsw-alias-danger, var(--wb-danger, #ef4444));
 }
 
 .wf-group-topbar__menu {

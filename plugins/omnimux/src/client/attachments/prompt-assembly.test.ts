@@ -97,3 +97,27 @@ test('formatAttachmentLine: 资产多文件各写一行 @path', () => {
   assert.match(line, /@assets\/imported\/ast_1\/hero\.png/);
   assert.match(line, /@assets\/imported\/ast_1\/pose\.png/);
 });
+
+test('formatAttachmentLine: 支持场景上下文注入', () => {
+  const att: ConversationAttachment = {
+    id: 'att-p',
+    fingerprint: 'fp-p',
+    sessionId: 'sess-p',
+    sourcePlugin: 'omnimux',
+    kind: 'product',
+    entityId: 'prd-01',
+    title: '降噪耳机',
+    extension: 'JSON',
+    relativePath: '.omnimux/products/prd-01.json',
+    status: 'ready',
+    createdAt: 100,
+    metadata: {
+      scene: 'ecommerce_marketing',
+      summary: '45dB深度降噪',
+    },
+  };
+  const line = formatAttachmentLine(att);
+  assert.match(line, /- \[产品\] 降噪耳机 \(`JSON`\): @\.omnimux\/products\/prd-01\.json/);
+  assert.match(line, /\* 场景: ecommerce_marketing/);
+  assert.match(line, /\* 简述: 45dB深度降噪/);
+});

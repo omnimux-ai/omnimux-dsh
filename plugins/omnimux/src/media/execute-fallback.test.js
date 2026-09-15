@@ -67,18 +67,18 @@ test('structured code-only HTTP failures survive runtime-kit message extraction'
 })
 
 // 2026-09-14 #1751：图片侧默认型号 gpt-image-2.5 已无别名，别名重试的覆盖由 video 路径承担
-// （seedance-2-0-fast → 上游承认的 seedance-2.0-fast）。
+// （seedance-2-5 → 上游承认的 seedance-2.5）。
 test('video fallback uses the documented gateway alias without switching provider or input', async (t) => {
   const bodies = []
-  const input = inputFor(t, { model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false, fetcher: async (url, init) => {
+  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, fetcher: async (url, init) => {
     assert.match(String(url), /video\/generations$/)
     bodies.push(JSON.parse(init.body))
     return bodies.length === 1 ? json({ error: { message: channelMessage } }, 503) : json({ task_id: 'video-alias-task' })
   } })
   assert.deepEqual(await executeOmnimuxMedia('video', input), { mode: 'submitted', taskId: 'video-alias-task', url: null })
-  assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-0-fast', 'seedance-2.0-fast'])
+  assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5', 'seedance-2.5'])
   assert.deepEqual({ ...bodies[0], model: bodies[1].model }, bodies[1])
-  assert.equal(input.model, 'seedance-2-0-fast')
+  assert.equal(input.model, 'seedance-2-5')
 })
 
 test('successful primary sends one request only', async (t) => {
@@ -91,11 +91,11 @@ test('successful primary sends one request only', async (t) => {
 test('two channel failures exhaust the gateway alias list', async (t) => {
   const models = []
   const input = inputFor(t, {
-    model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false,
+    model: 'seedance-2-5', operation: 'text_to_video', wait: false,
     runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } },
   })
   await assert.rejects(() => executeOmnimuxMedia('video', input), assertChannel)
-  assert.deepEqual(models, ['seedance-2-0-fast', 'seedance-2.0-fast'])
+  assert.deepEqual(models, ['seedance-2-5', 'seedance-2.5'])
   assert.equal(existsSync(input.dest), false)
 })
 
@@ -137,12 +137,12 @@ for (const [status, code] of [[401, 'needs-omnimux'], [402, 'quota-exceeded']]) 
   })
 }
 
-// 别名路径仍存在（video seedance-2-0-fast → seedance-2.0-fast）：第二次尝试上的另一种错误必须保留
+// 别名路径仍存在（video seedance-2-5 → seedance-2.5）：第二次尝试上的另一种错误必须保留
 // 它自己的分类并立刻停止，不得被当作渠道不可用继续退避。
 test('a different error on the alias retains its classification and stops', async (t) => {
   let calls = 0
   const input = inputFor(t, {
-    model: 'seedance-2-0-fast', operation: 'text_to_video', wait: false,
+    model: 'seedance-2-5', operation: 'text_to_video', wait: false,
     runtime: { execute: async () => {
       if (++calls === 1) throw channelError()
       throw new Error('quota exceeded')

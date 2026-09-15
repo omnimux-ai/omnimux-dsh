@@ -45,6 +45,7 @@ import { getSubmittedCanvasText, subscribeSubmittedCanvasText } from './attachme
 import { getUiContext } from './workbench/context.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
 import { findReplicateAttachment, shouldReleaseReplicateAttachments } from './session-guide/trending/replicate-linkage.js'
+import { installGlobalReferenceApi } from './reference/index.ts'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -166,6 +167,7 @@ export function apply(ctx) {
     attachmentDrafts,
     getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
   }
+  installGlobalReferenceApi()
   ctx.effect(() => ctx.locale.register('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux: starter locale')
   ctx.effect(() => () => guideStore.dispose(), 'omnimux: starter state')
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
