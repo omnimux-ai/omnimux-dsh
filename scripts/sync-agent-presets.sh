@@ -178,6 +178,12 @@ materialize_into() {
     cp -R "$SRC/$k/." "$dest/$k/"
     echo "  + synced $k"
   done
+  if [ -d "$SRC/tiktok-agent" ]; then
+    rm -rf "$dest/tiktok-agent"
+    mkdir -p "$dest/tiktok-agent"
+    cp -R "$SRC/tiktok-agent/." "$dest/tiktok-agent/"
+    echo "  + synced alias tiktok-agent"
+  fi
 }
 
 # 1) profiles under target homes that vendor @deepseek-ai/dsh

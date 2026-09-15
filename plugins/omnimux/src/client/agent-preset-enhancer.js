@@ -495,8 +495,17 @@ export function syncMenuAvatars(doc = globalThis.document) {
   let count = 0
   for (const { menu, items } of findAgentPresetMenus(doc)) {
     if (menu.getAttribute(PRESET_MENU_ATTR) !== 'true') menu.setAttribute(PRESET_MENU_ATTR, 'true')
+    const seenIds = new Set()
     for (const item of items) {
-      if (decorateMenuItem(doc, item)) count += 1
+      const resolvedId = decorateMenuItem(doc, item)
+      if (resolvedId) {
+        if (seenIds.has(resolvedId)) {
+          item.style.display = 'none'
+          continue
+        }
+        seenIds.add(resolvedId)
+        count += 1
+      }
     }
   }
   return count
