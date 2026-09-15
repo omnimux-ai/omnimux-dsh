@@ -55,7 +55,8 @@
 | 步骤 | 操作 | 期望的视觉/状态结果 |
 | --- | --- | --- |
 | C1 | 当前会话附件已达 8 个上限时点「添加到会话」 | 警告样式的「附件最多 8 个，请先移除一个再添加」；**不**报成功 |
-| C2 | 同一文件重复添加（指纹命中） | 视为成功：成功提示「已添加到会话：<文件名>」，附件区不重复追加 |
+| C2 | 同一文件重复添加（指纹命中，且当前会话未满 8 条） | 视为成功：成功提示「已添加到会话：<文件名>」，附件区不重复追加 |
+| C2b | 当前会话**已满 8 条**时重复添加同一文件 | 中枢的检查顺序是「先配额、后指纹」，故得到 C1 的「附件最多 8 个，请先移除一个再添加」而非成功——组合行为由中枢既有实现决定，本次不改变，按此记录 |
 | C3 | 回执为其它失败原因（含 `invalid-payload`） | 警告样式的「添加失败，请重试」；**不**报成功 |
 | C4 | 中枢 store 全局不存在（`window.__omnimuxAttachments` 缺失） | 回退到既有行为：派发 `omnimux:add-to-conversation` 事件 + 成功提示 + 剪贴板兜底，向后兼容不退化 |
 
@@ -77,12 +78,12 @@
 - **候选 A（折叠位）**：workbench 焦点为 `gui` → 写 `html[data-omnimux-conversation-collapsed]`，会话列被 CSS 压成 0 宽。
 - **候选 B（宿主原生 fixed 全屏覆盖）**：宿主写入 `[data-sidebar-right-panel="fullscreen"]`，用 `position:fixed` 覆盖在会话列之上，**可能不写折叠位**；该状态自 #1784 起已与折叠位解耦，且插件侧没有任何导出 API 能读到「宿主原生全屏正在覆盖会话列」。
 
-本次实现要求：reveal 对两种情况**尽可能**生效——先读折叠位，已展开则不做布局动作；否则调 `setConversationCollapsed(false)` + `setFocus('split')`，随后**再读一次确认**，若仍为折叠则再补一次。
+本次实现要求：reveal 对候选 A 生效——先读折叠位，已展开则不做布局动作；否则调 `setConversationCollapsed(false)` + `setFocus('split')`，随后**再读一次**作退化路径守卫（若设置器抛错或未生效则再补一次；真实宿主下 `setConversationCollapsed` 同步写内存态，这次读回必为 `false`，因此该分支在真实宿主不会命中）。**该守卫不覆盖候选 B**。
 
 | 候选 | 本次实现能否覆盖 | 判定所需证据 |
 | --- | --- | --- |
 | A（折叠位） | **能**：读折叠位 → 展开 → 读回确认，链路可自证 | 静态可推 + 单测覆盖 |
-| B（宿主原生覆盖） | **不能自证**：`getConversationCollapsed()` 只回答「是否折叠」，不回答「是否可见」。补的第二次 reveal 会把折叠位推到 `false`，但宿主原生覆盖层是否会因宽度回写自行退出 `fullscreen`，**需要运行态证据才能判定** | 需在真实运行态观察 `[data-sidebar-right-panel]` 属性与右侧栏几何 |
+| B（宿主原生覆盖） | **不能**：`getConversationCollapsed()` 只回答「是否折叠」，不回答「是否可见」。当宿主原生全屏**未写折叠位**时，本函数会按「已展开」直接跳过，用户仍看不到附件（与修复前同症状） | 需在真实运行态观察 `[data-sidebar-right-panel]` 属性与右侧栏几何；**截至合入未取得该证据** |
 
 ## 三、非目标
 
@@ -101,7 +102,7 @@
 | 画布侧单测 | `plugins/omnimux-workflow/src/canvas/hooks/useAddToConversation.test.mjs`（esbuild 打包 + mock `react`/toast，沿用 `bootOwnership.test.mjs` 的做法） | 折叠触发 reveal / 未折叠零布局动作 / `ok:true` 成功提示 / `quota-exceeded` 与 `duplicate` 分支提示 / 回执存在时不派发事件 / store 缺失时回退派发 / 全局 API 缺失不抛错 |
 | 中枢侧单测 | `plugins/omnimux/src/client/attachments/*.test.ts`（`node --test`，与 `store.test.ts` 同目录同框架） | `installGlobalEvents` 幂等（重复调用只注册一次）；reveal 事件对 DOM 的实际效果（滚动可见、末张卡片加高亮类、timer 后清理、卸载移除监听） |
 | 跨插件端到端 | `plugins/omnimux-workflow/tests/attach-to-conversation-reveal.e2e.test.mjs` | 用真实 DOM（JSDOM）+ 真实中枢 store/桥接模块，跑通「画布 hook → 会话栏展开 → 附件落库 → 回执提示 → 视线引导事件」全链路，并断言 UI 侧实际 DOM 状态 |
-| 真实浏览器 | 本工作树内的真实浏览器验证 | **本次未执行**（见实现报告「未覆盖项」）；单测与 JSDOM 证据不代替真实浏览器验收 |
+| 真实浏览器 | 工作树内 `pnpm verify:app`（真实浏览器 + CDP，动态端口 59043，产出截图与结构化报告） | **仅证明应用本体可运行**：该入口 `evidenceLevel: core-only`、`taskPluginsInstalled: false`，**不装载任务插件、不证明**「展开会话栏 / 滚动 / 高亮 / 焦点」任一行为；本改动的真实浏览器场景级验收**未取得**，由 Dev 真机人工复验补齐 |
 | 构建 | `pnpm --filter omnimux build` + `pnpm --filter omnimux-workflow build` | 客户端产物无编译错误 |
 
 ## 五、涉及文件清单
@@ -112,6 +113,8 @@
 | `plugins/omnimux-workflow/src/canvas/hooks/useAddToConversation.test.mjs` | 新增单测 |
 | `plugins/omnimux/src/client/attachments/AttachmentTray.tsx` | 导出 `focusEditorElement`；监听 reveal 事件 |
 | `plugins/omnimux/src/client/attachments/AttachmentCard.tsx` | 卡片根节点加 `data-omnimux-attachment-id`（供精确定位最新卡片） |
+| `plugins/omnimux/src/client/attachments/focusEditorElement.ts` | 新增：composer 选择器与聚焦的单一实现（导轨与提交桥接共用） |
+| `plugins/omnimux/src/client/attachments/store.globalEvents.test.ts` | 新增单测：`installGlobalEvents` 幂等 |
 | `plugins/omnimux/src/client/composer-add/AttachmentSubmitBridge.jsx` | `revealAttachments()` |
 | `plugins/omnimux/src/client/attachments/store.ts` | `installGlobalEvents()` 幂等 |
 | `plugins/omnimux-workflow/tests/attach-to-conversation-reveal.e2e.test.mjs` | 新增跨插件端到端测试 |

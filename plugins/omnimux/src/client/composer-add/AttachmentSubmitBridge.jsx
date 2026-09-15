@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
+import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
@@ -40,6 +41,16 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         }
       },
       getDraft: () => live.current?.input?.draft || '',
+      // 把用户视线带到附件区：附件导轨监听后滚动到可见、高亮最新卡片，这里补上输入框焦点。
+      // 事件名与 AttachmentTray 的 REVEAL_ATTACHMENTS_EVENT 一致；按既有跨插件惯例写字面量，避免引入组件模块。
+      revealAttachments: () => {
+        try {
+          window.dispatchEvent(new CustomEvent('omnimux:attachments:reveal', { detail: { sessionId } }))
+        } catch (err) {
+          console.warn('[AttachmentSubmitBridge] revealAttachments failed:', err)
+        }
+        focusEditorElement()
+      },
     }
     const handleSetDraftEvent = (e) => {
       const { sessionId: targetSessionId, draft } = e.detail || {}

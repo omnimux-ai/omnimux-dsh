@@ -64,6 +64,8 @@ export function createAttachmentStore(): AttachmentStore {
   const sessionMap = new Map<string, ConversationAttachment[]>();
   const listenersMap = new Map<string, Set<() => void>>();
   let activeSessionId = 'default';
+  /** 同一 store 实例只允许注册一套全局事件监听（单例创建与插件 effect 各调用一次）。 */
+  let globalEventsInstalled = false;
 
   function notify(sessionId: string) {
     const listeners = listenersMap.get(sessionId);
@@ -244,6 +246,10 @@ export function createAttachmentStore(): AttachmentStore {
 
     installGlobalEvents(): () => void {
       if (typeof window === 'undefined') return () => {};
+      // 幂等：`getGlobalAttachmentStore()` 与插件 effect 各安装一次，重复注册会让同一事件被处理两次。
+      // 返回空清理函数而非真实卸载器，避免后安装方撤销先安装方的监听。
+      if (globalEventsInstalled) return () => {};
+      globalEventsInstalled = true;
 
       const handleAdd = (e: Event) => {
         const customEvent = e as CustomEvent<AttachmentPayload & { sessionId?: string }>;
@@ -273,6 +279,7 @@ export function createAttachmentStore(): AttachmentStore {
       window.addEventListener('omnimux:clear-conversation-attachments', handleClear);
 
       return () => {
+        globalEventsInstalled = false;
         window.removeEventListener('omnimux:add-to-conversation', handleAdd);
         window.removeEventListener('omnimux:remove-from-conversation', handleRemove);
         window.removeEventListener('omnimux:clear-conversation-attachments', handleClear);
