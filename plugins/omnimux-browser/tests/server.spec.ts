@@ -129,14 +129,20 @@ describe('BridgeServer', () => {
     ws.close()
   })
 
-  it('accepts loopback connections without a token when Origin is an extension (zero-config mode)', async () => {
+  it.each([EXT_ORIGIN, 'chrome-extension://unrelated', 'chrome-extension://test/suffix'])('rejects unpaired extension %s without replacing the paired connection', async (origin) => {
     const h = await startBridge()
     harnesses.push(h)
-    const { ws, frames } = await connect(h.url, EXT_ORIGIN)
-    send(ws, { t: 'hello', token: '', caps: CAPS })
-    await waitFor(() => frames.some((f) => f.t === 'hello.ok'))
-    expect(frames.find((f) => f.t === 'hello.ok')).toBeDefined()
-    ws.close()
+    const paired = await connect(h.url, EXT_ORIGIN)
+    send(paired.ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => paired.frames.some((f) => f.t === 'hello.ok'))
+    for (const token of ['', 'wrong']) {
+      const { ws, frames, done } = await connect(h.url, origin)
+      send(ws, { t: 'hello', token, caps: CAPS })
+      await done
+      expect(frames.some((f) => f.t === 'hello.ok')).toBe(false)
+      expect(paired.ws.readyState).toBe(WebSocket.OPEN)
+    }
+    paired.ws.close()
   })
 
   it('requires a token from Firefox extension origins because their UUID is not an extension identity', async () => {
@@ -462,7 +468,7 @@ describe('BridgeServer', () => {
     const h = await startBridge()
     harnesses.push(h)
     const { ws, frames } = await connect(h.url, EXT_ORIGIN)
-    send(ws, { t: 'hello', token: '', caps: CAPS })
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
     await waitFor(() => frames.some((f) => f.t === 'hello.ok'))
     const abort = new AbortController()
     abort.abort()

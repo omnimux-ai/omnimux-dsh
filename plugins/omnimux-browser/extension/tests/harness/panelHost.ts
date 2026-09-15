@@ -129,12 +129,12 @@ export function installHarnessHost(): HarnessHostState {
     void Promise.resolve()
       .then(() => rpcValue(method, message.payload))
       .then(
-        (value) => deliver({ type: 'rpc.result', id, ok: true, result: { result: { ok: true, value } } }),
+        (value) => deliver({ type: 'rpc.result', id, ok: true, result: method === BRIDGE_FETCH_MEDIA_METHOD ? value : { type: 'server-response', rpcId: id, result: { ok: true, value } } }),
         (cause: unknown) => deliver({
           type: 'rpc.result',
           id,
           ok: true,
-          result: { result: { ok: false, error: { message: cause instanceof Error ? cause.message : String(cause) } } },
+          result: { type: 'server-response', rpcId: id, result: { ok: false, error: { code: 'synthetic-error', message: cause instanceof Error ? cause.message : String(cause), details: {} } } },
         }),
       )
   }

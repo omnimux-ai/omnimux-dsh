@@ -185,6 +185,42 @@ export function StandardStage({ t, stage, ...props }) {
 
 ---
 
+## 二·补、 滚动归属：整页滚动，一级/二级 Tab 到顶吸附（Issue #1977）
+
+> **强制 (MANDATORY)** —— 适用于全部一级页（A 类 4 层页、B2 仪表盘、B3 集市）。
+
+一级页**整体滚动**：页头与动作行随页面正常滚走，**一级/二级 Tab 行在滚到顶部后吸附不动**。
+
+统一骨架：两个 class 是全站契约词汇，声明在**所有插件中必须逐字一致**。
+
+| class | 归属 | 声明（唯一真源，禁止改写） |
+|---|---|---|
+| `.omx-stage-sticky` | 吸附栈：一级 Tab + 二级分类行（含其上的搜索/排序工具栏） | `position: sticky; top: 0; z-index: 3; background: var(--dsw-alias-bg-base, var(--dsw-bg));` |
+| `.omx-stage-scroll` | 页面唯一滚动容器：Stage 根或页面根 | `flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;` |
+
+```
+<div className="omnimux-<p>-stage omx-stage-scroll">   /* 整页唯一滚动容器 */
+  <PageHeader … />                                     /* 随页面滚走 */
+  <Layer2 动作行 … />                                   /* 随页面滚走 */
+  <div className="omx-stage-sticky">                   /* 滚到顶部后吸附 */
+    一级 Tab 行 / 二级分类行 / 单行 FilterBar
+  </div>
+  内容数据区（网格 / 列表 / 表格）                       /* 随页面滚走 */
+</div>
+```
+
+- **MUST**：一级页恰好一条滚动路径，落在带 `.omx-stage-scroll` 的页面根/内容根上。
+- **MUST**：一级/二级分类切换后，该滚动容器的 `scrollTop` 归零。
+- **MUST**：吸附栈必须有**不透明背景**（否则内容会从下方透出）。
+- **MUST NOT**：把页头或动作行也做成吸附/固定（用户明确要求它们随页面滚走）。
+- **MUST NOT**：给吸附栈的祖先加 `overflow: hidden`（会让 sticky 失效）。
+- **MUST NOT**：在页面内再造第二条滚动区（内容区不得自带 `overflow: auto`）。
+- 同一页面出现两段吸附栈时（例如资产库云端：一级 Tab 行 + 云端的分类行），后一段用 CSS 变量 `--omx-rail-h` 取前一段的实测高度做 `top` 偏移，避免重叠。
+
+防漂移门禁：`pnpm verify:stage-scroll` 断言两个 class 在各插件样式表中的声明逐字一致、每个登记一级页都引用两个类、且两个类不写在同一 `className` 上。
+
+---
+
 ## 三、 五条强制性交互与视觉准则 (Golden Rules)
 
 ### 1. 严格禁止把「主 CTA」塞入 FilterBar 搜索行

@@ -223,6 +223,8 @@ export class MediaCapsule {
     button.addEventListener('contextmenu', swallowEvent)
     button.addEventListener('click', (event) => {
       swallowEvent(event)
+      // The host page can reach shadow DOM nodes and dispatch synthetic clicks.
+      if (!event.isTrusted) return
       this.actionHandler?.({ action, element: button })
     })
 

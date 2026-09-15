@@ -1,7 +1,7 @@
 export const zh = {
   'nav': '资产库',
   'source.local': '本地',
-  'source.cloud': '云端',
+  'source.cloud': '公共',
   'source.product': '产品库',
   'product.create': '添加产品',
   'product.createPhysical': '实物产品',
@@ -236,7 +236,7 @@ export const zh = {
 export const en = {
   'nav': 'Assets',
   'source.local': 'Local',
-  'source.cloud': 'Cloud',
+  'source.cloud': 'Public',
   'source.product': 'Products',
   'product.create': 'Add Product',
   'product.createPhysical': 'Physical Product',

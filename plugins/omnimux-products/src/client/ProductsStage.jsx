@@ -321,7 +321,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       role="region"
       aria-label={t('stage.title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-products-stage"
+      className="omnimux-products-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
       data-form-dirty={formDirty ? 'true' : 'false'}
       style={visible ? undefined : { display: 'none' }}
@@ -356,6 +356,8 @@ export function ProductsStage({ t, stage, store, visible = true }) {
 
         <Divider />
 
+        {/* 吸附栈：一级 Tab + 筛选工具栏（骨架契约 §二·补，Issue 1977） */}
+        <div className="omx-stage-sticky">
         <FilterBar
           className="omnimux-products-stage-toolbar"
           filters={
@@ -405,6 +407,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         )}
 
         {error !== '' && <p className="omnimux-products-error">{error}</p>}
+        </div>
 
         <div className="omnimux-products-body">
           <ProductGrid

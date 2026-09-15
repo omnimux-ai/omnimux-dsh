@@ -1,3 +1,4 @@
+import { createMediaGrants, isOwnFloatingPanel } from './media-grants.ts'
 /**
  * Background service worker entry: owns the bridge connection, the gateway
  * RPC client, controlled-tab tool dispatch, and the panel port service.
@@ -1386,6 +1387,27 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     startBridge()
     sendResponse({ ok: true })
     return true
+  }
+})
+
+const floatingMediaGrants = createMediaGrants(chrome.runtime.id, chrome.runtime.getURL('panel/index.html'))
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+  if (!message || typeof message !== 'object') return
+  const msg = message as { type?: unknown; payload?: unknown; grant?: unknown }
+  if (msg.type === 'FILL_FLOAT_STRUCTURED_DRAFT') {
+    if (!isOwnFloatingPanel(sender, chrome.runtime.id, chrome.runtime.getURL('panel/index.html'))) {
+      sendResponse({ ok: false, message: '填写来源无效' })
+      return
+    }
+    void chrome.tabs.sendMessage(sender.tab!.id!, {
+      action: 'FILL_STRUCTURED_DRAFT', payload: msg.payload,
+    }, { frameId: 0 }).then(sendResponse, () => sendResponse({ ok: false, message: '页面暂时无法填写' }))
+    return true
+  }
+  if (msg.type === 'ISSUE_FLOAT_MEDIA_GRANT') {
+    sendResponse({ grant: floatingMediaGrants.issue(sender, msg.payload) })
+  } else if (msg.type === 'TAKE_FLOAT_MEDIA_GRANT') {
+    sendResponse({ media: floatingMediaGrants.take(sender, msg.grant) })
   }
 })
 

@@ -5,6 +5,19 @@
 export const INSPIRATION_STYLES_ID = 'omnimux-inspiration-styles'
 
 export const INSPIRATION_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-inspiration-stage {
   position: relative;
   width: 100%;
@@ -229,6 +242,11 @@ export const INSPIRATION_CSS = `
   flex-wrap: wrap;
   padding: 8px 0 12px 0;
   width: 100%;
+}
+
+/* 二级筛选行吸附在一级工具栏正下方（骨架契约 §二·补）；偏移取工具栏实测高度。 */
+.omnimux-inspiration-subfilter-sticky {
+  top: var(--stage-sticky-offset, 44px);
 }
 
 .omnimux-inspiration-subfilter-select .dshUk-DropdownSelect-trigger,

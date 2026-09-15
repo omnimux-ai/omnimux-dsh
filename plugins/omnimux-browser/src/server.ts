@@ -178,8 +178,7 @@ export class BridgeServer {
    */
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
     const remote = this.deps.remoteAddressOverride ?? req.socket.remoteAddress
-    const origin = req.headers.origin
-    this.wss.handleUpgrade(req, socket, head, (ws) => { this.attach(ws, remote, origin) })
+    this.wss.handleUpgrade(req, socket, head, (ws) => { this.attach(ws, remote) })
   }
 
   /**
@@ -285,7 +284,7 @@ export class BridgeServer {
     return this.current !== null
   }
 
-  private attach(ws: WebSocket, remoteAddress: string | undefined, origin: string | undefined): void {
+  private attach(ws: WebSocket, remoteAddress: string | undefined): void {
     let helloTimer: NodeJS.Timeout | undefined = setTimeout(() => {
       ws.close(4001, 'hello timeout')
     }, this.deps.helloTimeoutMs ?? HELLO_TIMEOUT_MS)
@@ -303,20 +302,8 @@ export class BridgeServer {
           ws.close(1008, 'hello first')
           return
         }
-        // Zero-config local mode: loopback sockets skip the token (the
-        // extension auto-discovers the bridge and connects without setup).
-        // WebSockets have no same-origin policy, so a malicious page could
-        // open a cross-origin socket to 127.0.0.1 with a loopback remote —
-        // the loopback shortcut therefore requires a chrome-extension://
-        // Origin (only extension contexts can present one; pages cannot
-        // forge the header). Firefox moz-extension:// origins contain a
-        // per-install UUID rather than the manifest's stable Gecko ID, so
-        // they are not an identity boundary and must present the bearer token.
-        // Non-loopback remotes must also present the bearer token.
-        const loopbackNoToken = isLoopbackAddress(remoteAddress)
-          && typeof origin === 'string'
-          && origin.startsWith('chrome-extension://')
-        if (!loopbackNoToken && !verifyToken(this.deps.token, frame.token)) {
+        // Origin identifies a browser context, not a paired installation.
+        if (!verifyToken(this.deps.token, frame.token)) {
           ws.close(4002, 'bad token')
           return
         }
