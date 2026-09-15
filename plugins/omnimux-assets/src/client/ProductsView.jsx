@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { CheckIcon } from './icons.jsx'
-import { CreateProductMenu } from './CreateProductMenu.jsx'
 
 /**
  * @param {string} productId
@@ -134,11 +133,8 @@ export function ProductsView(props) {
             <p>
               {query.trim()
                 ? '没有找到匹配的产品。'
-                : '暂无产品数据。点击「添加产品」录入首件标品。'}
+                : '暂无产品数据。点击上方「添加产品」录入首件标品。'}
             </p>
-            {query.trim() === '' ? (
-              <CreateProductMenu t={t} onSelect={handleCreate} />
-            ) : null}
           </div>
         ) : (
           <div className="omnimux-products-grid">
