@@ -119,6 +119,8 @@ export interface MaterialNodeData {
   /** Media consumption authority; absent only on graphs awaiting hydration. */
   slotBindings?: SlotBindings;
   slotConflicts?: SlotConflict[];
+  /** Incoming edge IDs explicitly kept outside the active input slots. */
+  slotStandbyEdgeIds?: string[];
 
   // === 尺寸配置 ===
   nodeWidth?: number;

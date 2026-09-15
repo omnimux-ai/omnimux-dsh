@@ -49,7 +49,7 @@ test('useCanvasContextMenu 契约：未传特定 node 时支持单选与多选�
   // 2. 验证单选节点时识别为 { type: 'node', nodeId: selectedNodes[0].id }
   assert.match(
     useCanvasContextMenuSrc,
-    /if\s*\(selectedNodes\.length\s*===\s*1\)\s*\{\s*context\s*=\s*\{\s*type:\s*'node',\s*nodeId:\s*selectedNodes\[0\]\.id\s*\};/s,
+    /if\s*\(selectedNodes\.length\s*===\s*1\s*&&\s*selectedNodes\[0\]\)\s*\{\s*context\s*=\s*\{\s*type:\s*'node',\s*nodeId:\s*selectedNodes\[0\]\.id\s*\};/s,
     '单选节点时必须识别为 node 上下文并绑定对应 nodeId',
   );
 

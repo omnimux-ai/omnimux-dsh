@@ -40,16 +40,24 @@ export function createAccountMetaStore(deps) {
   /**
    * @returns {Record<string, Record<string, unknown>>}
    */
-  function readAll() {
+  function readForAuthorization() {
+    let raw
     try {
-      const raw = JSON.parse(readFileSync(path, 'utf8'))
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        return /** @type {Record<string, Record<string, unknown>>} */ (raw)
-      }
-    } catch {
-      // absent or corrupt
+      raw = JSON.parse(readFileSync(path, 'utf8'))
+    } catch (error) {
+      if (error?.code === 'ENOENT') return {}
+      throw new Error('account-policy-unavailable: cannot read account permissions', { cause: error })
     }
-    return {}
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.values(raw).some((row) =>
+      !row || typeof row !== 'object' || Array.isArray(row) ||
+      (Object.hasOwn(row, 'agent_usable') && typeof row.agent_usable !== 'boolean'))) {
+      throw new Error('account-policy-unavailable: invalid account permissions')
+    }
+    return raw
+  }
+
+  function readAll() {
+    try { return readForAuthorization() } catch { return {} }
   }
 
   /**
@@ -70,7 +78,7 @@ export function createAccountMetaStore(deps) {
    */
   function patch(id, patchData) {
     if (!id || typeof id !== 'string') throw new Error('Account id is required')
-    const doc = readAll()
+    const doc = readForAuthorization()
     const current = doc[id] || {}
     const next = { ...current }
     if (patchData.group !== undefined) {
@@ -86,5 +94,5 @@ export function createAccountMetaStore(deps) {
     return next
   }
 
-  return { read, patch, readAll, writeAll }
+  return { read, readForAuthorization, patch, readAll, writeAll }
 }
