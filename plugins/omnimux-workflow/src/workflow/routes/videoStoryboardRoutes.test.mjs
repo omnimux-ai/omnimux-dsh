@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -51,13 +51,31 @@ function harness(t, opts = {}) {
       toolCalls.push({ tool: 'video_analyze', args });
       if (opts.analyzeExecute) return opts.analyzeExecute(args);
       return {
-        report: `# 视频逐镜头分解
+        report: `# 《测试视频》逐镜头分解与五维分析报告
 
 ## 逐镜头分解表
 | 镜头序号 | 时间段 | 景别 | 画面描述 | 关键动作 | 台词脚本 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 00:00 - 00:03 | 特写 | 开场抓人视觉反差 | 快速镜头推入 | "痛点前置" |
 | 2 | 00:03 - 00:08 | 中景 | 实操演示过程细节 | 真实手部操作 | "效果惊艳" |
+
+## 一句话视频描述
+以真实拆解结果为核心的高转化短视频。
+
+## I. 核心目标
+* 转化目标: 引导点击左下角购买同款
+
+## II. 影响力分析
+明线展示直观功效，暗线击中受众痛点。
+
+## III. 叙事结构
+0-3s 抛痛点 → 3-10s 实测演示 → 结尾明确 CTA
+
+## IV. 画面分析
+近景特写为主，原生自然光影。
+
+## V. 核心复刻策略
+[痛点开场] + [第一人称实测] + [CTA 引导]
 `,
       };
     },
@@ -210,25 +228,66 @@ test('videoStoryboard: 二次调用触发单一下游就地更新，不产生重
   assert.equal(tableNodes[0].data.title, '精修版分镜表');
 });
 
-test('videoStoryboard: 离线/无工具时自动启用保底生成，稳定返回分镜表', async (t) => {
+test('videoStoryboard: 分析能力不可用时直接报错，不生成保底分镜表', async (t) => {
   const h = harness(t, { disableTools: true });
   const res = await h.call({
     nodeId: 'node_video_1',
     videoPath: h.dummyVideo,
   });
 
-  assert.equal(res.status, 200);
-  assert.equal(res.body.ok, true);
-  assert.ok(res.body.rowCount >= 3);
+  assert.equal(res.status, 502);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.error, 'analyze-unavailable');
 
+  const snapshot = h.store.get(h.workspace.id);
+  assert.equal(snapshot.nodes.filter((n) => n.type === 'table').length, 0, '失败不得新建表格节点');
+});
+
+test('videoStoryboard: 分析调用抛错时直接报错，不再降级为保底模板', async (t) => {
+  const h = harness(t, {
+    analyzeExecute: async () => {
+      throw new Error('provider upstream 503');
+    },
+  });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'analyze-failed');
+  assert.equal(h.store.get(h.workspace.id).nodes.filter((n) => n.type === 'table').length, 0);
+});
+
+test('videoStoryboard: 分析结果中解析不出分镜镜头时直接报错', async (t) => {
+  const h = harness(t, {
+    analyzeExecute: async () => ({ report: '# 视频概述\n\n只有一段描述，没有任何分镜表格。' }),
+  });
+  const res = await h.call({ nodeId: 'node_video_1', videoPath: h.dummyVideo });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.error, 'shots-empty');
+});
+
+test('videoStoryboard: 抽帧失败时画面单元格留空，绝不写入占位图', async (t) => {
+  const h = harness(t, {
+    processExecute: async () => ({ mode: 'live', files: [], result: { scenes: [], count: 0 } }),
+  });
+  const res = await h.call({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '无帧分镜表',
+  });
+
+  assert.equal(res.status, 200);
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const doc = await TableStorageService.loadTable(absPath);
-  assert.equal(doc.rowHeight, 'low');
   const imgCol = doc.columns.find((c) => c.title === '分镜画面');
   assert.ok(imgCol);
-  // 保底帧也应生成有效占位图片附件
-  assert.ok(Array.isArray(doc.rows[0].cells[imgCol.id]));
-  assert.equal(doc.rows[0].cells[imgCol.id].length, 1);
+  for (const row of doc.rows) {
+    assert.deepEqual(row.cells[imgCol.id], [], '抽帧失败必须留空，不得写占位图');
+  }
+
+  const framesDir = join(h.mediaDir, 'storyboard', res.body.tableId);
+  const produced = existsSync(framesDir) ? readdirSync(framesDir) : [];
+  assert.deepEqual(produced, [], '不得写入任何伪造帧文件');
 });
 
 test('videoStoryboard: 拒绝跨域写入 (not-local)', async (t) => {

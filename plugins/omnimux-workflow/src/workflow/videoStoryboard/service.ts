@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { isAbsolute, join, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import type { StoryboardVideoRequest, StoryboardVideoResult } from './schema.ts';
 import { VideoStoryboardError } from './errors.ts';
+import { describeVideoAnalyzeFailure } from '../videoAnalyzeFailure.ts';
 import {
   type HTableColumn,
   type HTableDocument,
@@ -21,7 +22,7 @@ import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
-import { resolveVideoAbsolutePath, extractMarkdownTables, PLACEHOLDER_FRAME_BASE64 } from '../videoDeconstruct/service.ts';
+import { resolveVideoAbsolutePath, extractMarkdownTables } from '../videoDeconstruct/service.ts';
 
 export interface VideoStoryboardServiceDeps {
   store: WorkspaceStore;
@@ -38,36 +39,6 @@ export interface ExtractedShotItem {
   description: string;
   dialogue: string;
   imageAttachment?: HTableAttachment;
-}
-
-/**
- * 默认保底逐镜头分镜脚本模板
- */
-export function getFallbackStoryboardShots(videoTitle: string): ExtractedShotItem[] {
-  const name = videoTitle.trim() || '爆款短视频';
-  return [
-    {
-      shotNo: 1,
-      timeRange: '00:00 - 00:03',
-      shotType: '特写 (Close-up) / 快速推入',
-      description: `《${name}》开场黄金3秒：抓人视觉反差，核心产品与痛点高光前置`,
-      dialogue: '“别划走！这个痛点你肯定也有！”',
-    },
-    {
-      shotNo: 2,
-      timeRange: '00:03 - 00:08',
-      shotType: '中景 (Medium Shot) / 手持微跟随',
-      description: '生活化第一人称实测演示，呈现使用过程与质地细节',
-      dialogue: '“实测效果惊艳，质地非常清爽吸收快”',
-    },
-    {
-      shotNo: 3,
-      timeRange: '00:08 - 00:15',
-      shotType: '近景 (Medium Close-up) / 镜头缓拉',
-      description: '直观对比展示与信任感建立，强化功效转化并引导下单',
-      dialogue: '“现在点击左下角链接，马上体验同款变化！”',
-    },
-  ];
 }
 
 /**
@@ -269,33 +240,48 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       }
     }
 
-    // 5. 调用 video_analyze 工具获取逐镜头脚本分析
+    // 5. 调用 video_analyze 工具获取逐镜头脚本分析（失败即报错，不做保底降级）
     const analyzeTool = (deps.getTool?.('video_analyze') ?? deps.getSeam?.('videoAnalyze')) as
       | { execute?: (args: Record<string, unknown>) => Promise<any> }
       | undefined;
 
-    let analyzeMarkdown = '';
-    if (analyzeTool && typeof analyzeTool.execute === 'function') {
-      try {
-        const res = await analyzeTool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
-        const text =
-          res?.report ||
-          res?.text ||
-          res?.data?.report ||
-          res?.data?.text ||
-          (typeof res === 'string' ? res : '');
-        if (typeof text === 'string' && text.trim()) {
-          analyzeMarkdown = text.trim();
-        }
-      } catch (err) {
-        logger.warn('video_analyze invocation failed in storyboard, falling back to template', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+    if (!analyzeTool || typeof analyzeTool.execute !== 'function') {
+      throw new VideoStoryboardError(
+        'analyze-unavailable',
+        '视频理解能力不可用，请确认已启用视频理解能力后重试',
+        502,
+      );
     }
 
-    // 6. 解析 Markdown 中的分镜表格或使用保底脚本
-    const parsedTables = analyzeMarkdown ? extractMarkdownTables(analyzeMarkdown) : [];
+    let analyzeMarkdown = '';
+    try {
+      const res = await analyzeTool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
+      const text =
+        res?.report ||
+        res?.text ||
+        res?.data?.report ||
+        res?.data?.text ||
+        (typeof res === 'string' ? res : '');
+      if (typeof text === 'string') analyzeMarkdown = text.trim();
+    } catch (err) {
+      const failure = describeVideoAnalyzeFailure(err);
+      logger.error('video_analyze invocation failed', {
+        code: failure.code,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw new VideoStoryboardError(failure.code, failure.message, 502);
+    }
+
+    if (!analyzeMarkdown) {
+      throw new VideoStoryboardError(
+        'analyze-empty',
+        '视频理解未返回可用的分析内容，请重试',
+        502,
+      );
+    }
+
+    // 6. 解析 Markdown 中的分镜表格（解析不到真实镜头即报错）
+    const parsedTables = extractMarkdownTables(analyzeMarkdown);
     let scriptShots: ExtractedShotItem[] = [];
 
     if (parsedTables.length > 0 && parsedTables[0]!.rows.length > 0) {
@@ -310,58 +296,57 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       const scriptCol = findColIdx(['脚本', 'Script', '台词', '模板']);
 
       scriptShots = t.rows.map((r, idx) => {
-        const timeRange = timeCol >= 0 && r[timeCol] ? r[timeCol]! : `00:${String(idx * 3).padStart(2, '0')} - 00:${String((idx + 1) * 3).padStart(2, '0')}`;
-        const visual = visualCol >= 0 && r[visualCol] ? r[visualCol]! : '分镜镜头画面';
+        const timeRange = timeCol >= 0 && r[timeCol] ? r[timeCol]! : '';
+        const visual = visualCol >= 0 && r[visualCol] ? r[visualCol]! : '';
         const action = actionCol >= 0 && r[actionCol] ? r[actionCol]! : '';
         const script = scriptCol >= 0 && r[scriptCol] ? r[scriptCol]! : '';
 
         return {
           shotNo: idx + 1,
           timeRange,
-          shotType: visual.includes('/') ? visual.split('/')[0]!.trim() : '标准镜头',
-          description: action ? `${visual}；${action}` : visual,
+          shotType: visual.includes('/') ? visual.split('/')[0]!.trim() : '',
+          description: action ? (visual ? `${visual}；${action}` : action) : visual,
           dialogue: script || '（无对白/环境音）',
         };
       });
     }
 
     if (scriptShots.length === 0) {
-      scriptShots = getFallbackStoryboardShots(input.title);
+      throw new VideoStoryboardError(
+        'shots-empty',
+        '未能从视频理解结果中解析出分镜镜头，请重试',
+        502,
+      );
     }
 
-    // 7. 图文对齐与精确抽帧：确保每个分镜镜头都有对应时间段的高清视频画面
-    const rowCount = Math.max(detectedFrames.length, scriptShots.length);
+    // 7. 逐镜头抽取关键帧配图：行由真实分镜脚本驱动，抽帧失败留空（不写占位图）
     const finalShots: ExtractedShotItem[] = [];
 
-    for (let i = 0; i < rowCount; i++) {
+    for (let i = 0; i < scriptShots.length; i++) {
       const frame = detectedFrames[i];
-      const script = scriptShots[i];
+      const script = scriptShots[i]!;
 
-      let timeRange = script?.timeRange;
+      let timeRange = script.timeRange;
       if (!timeRange && frame) {
         const startSec = frame.timeSeconds;
         const endSec = (detectedFrames[i + 1]?.timeSeconds) ?? (startSec + 3);
         timeRange = `${formatSeconds(startSec)} - ${formatSeconds(endSec)}`;
       }
-
-      const defaultTime = `00:${String(i * 3).padStart(2, '0')} - 00:${String((i + 1) * 3).padStart(2, '0')}`;
-      const effectiveTimeRange = timeRange || defaultTime;
+      const effectiveTimeRange = timeRange || '';
 
       const shotItem: ExtractedShotItem = {
         shotNo: i + 1,
         timeRange: effectiveTimeRange,
-        shotType: script?.shotType || (i === 0 ? '特写 (Close-up)' : '中景 (Medium Shot)'),
-        description: script?.description || `镜头 ${i + 1} 画面与动作展开`,
-        dialogue: script?.dialogue || '“点击查看更多精彩”',
+        shotType: script.shotType,
+        description: script.description,
+        dialogue: script.dialogue,
       };
 
       const fname = `frame-${String(i + 1).padStart(3, '0')}.jpg`;
       const fpath = join(framesDir, fname);
 
-      let hasValidFrame = false;
       // 1. 若 scene_detect 抽出的 frame 存在且有效 (> 500 bytes)，优先复用
       if (frame && existsSync(frame.path) && statSync(frame.path).size > 500) {
-        hasValidFrame = true;
         shotItem.imageAttachment = {
           assetId: `ast_${randomUUID().slice(0, 8)}`,
           name: frame.filename,
@@ -375,7 +360,6 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
         const captureSec = parseTimeRangeSeconds(effectiveTimeRange, i * 3 + 1);
         const extracted = await extractVideoFrame(absVideoPath, captureSec, fpath, videoProcess);
         if (extracted && existsSync(fpath) && statSync(fpath).size > 500) {
-          hasValidFrame = true;
           shotItem.imageAttachment = {
             assetId: `ast_${randomUUID().slice(0, 8)}`,
             name: fname,
@@ -384,33 +368,6 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
             url: getMediaUrl(fname),
             thumbnailUrl: getMediaUrl(fname),
           };
-        }
-      }
-
-      // 3. 保底：若所有抽帧均失败（如无解码器或假文件），保留已有路径或写入占位文件保证渲染
-      if (!hasValidFrame) {
-        if (frame && existsSync(frame.path)) {
-          shotItem.imageAttachment = {
-            assetId: `ast_${randomUUID().slice(0, 8)}`,
-            name: frame.filename,
-            kind: 'image',
-            path: frame.path,
-            url: frame.url,
-            thumbnailUrl: frame.url,
-          };
-        } else {
-          const placeholderJpg = Buffer.from(PLACEHOLDER_FRAME_BASE64, 'base64');
-          try {
-            if (!existsSync(fpath)) writeFileSync(fpath, placeholderJpg);
-            shotItem.imageAttachment = {
-              assetId: `ast_${randomUUID().slice(0, 8)}`,
-              name: fname,
-              kind: 'image',
-              path: fpath,
-              url: getMediaUrl(fname),
-              thumbnailUrl: getMediaUrl(fname),
-            };
-          } catch {}
         }
       }
 
