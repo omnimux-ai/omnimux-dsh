@@ -36,6 +36,7 @@ import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
+import { installUserMessageAttachmentsEnhancer } from './attachments/userMessageAttachmentsEnhancer.ts'
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
 import { injectMediaViewerStyles } from './media-viewer/styles.js'
@@ -234,6 +235,7 @@ export function apply(ctx) {
     ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
     ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.effect(() => installUserMessageLinkEnhancer(document), 'omnimux: user message link pill enhancer')
+    ctx.effect(() => installUserMessageAttachmentsEnhancer(document), 'omnimux: user message attachments enhancer')
     ctx.effect(() => { injectMediaViewerStyles(document) }, 'omnimux: media viewer styles')
     ctx.effect(() => installAssistantMessageMediaEnhancer(document), 'omnimux: assistant message media enhancer')
     if (typeof ctx.inject === 'function') {
