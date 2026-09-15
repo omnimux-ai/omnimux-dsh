@@ -17,7 +17,7 @@ export function ConfirmRemoveDialog({ t, name, title, busy, onCancel, onConfirm 
       open
       onClose={onCancel}
       title={title || t('mapping.removeTitle').replace('{name}', name)}
-      message={t('mapping.removeHint')}
+      message={name ? `${t('mapping.removeHint')}（关联资产: ${name}）` : t('mapping.removeHint')}
       confirmLabel={t('mapping.removeConfirm')}
       cancelLabel={t('mapping.cancel')}
       confirmVariant="danger"

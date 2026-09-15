@@ -851,6 +851,7 @@ export const ASSETS_CSS = `
   border-color: var(--dsw-alias-label-primary);
   box-shadow: none;
   color: var(--dsw-alias-label-primary-foreground);
+  font-weight: 600;
 }
 /* On a filled chip the count has to invert with the label, or it lands as
    tertiary grey on white. */

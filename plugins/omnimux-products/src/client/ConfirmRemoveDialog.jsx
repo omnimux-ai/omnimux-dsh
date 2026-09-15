@@ -17,7 +17,7 @@ export function ConfirmRemoveDialog({ t, name, title, busy, onCancel, onConfirm 
       open
       onClose={onCancel}
       title={title || t('remove.title').replace('{name}', name)}
-      message={t('remove.hint')}
+      message={name ? `${t('remove.hint')}（关联资产: ${name}）` : t('remove.hint')}
       confirmLabel={t('remove.confirm')}
       cancelLabel={t('remove.cancel')}
       confirmVariant="danger"
