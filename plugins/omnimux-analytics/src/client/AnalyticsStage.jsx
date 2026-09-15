@@ -143,6 +143,7 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         onClose={handleClose}
         closeTitle={t('close')}
       />
+      <Divider />
       <ActionNavRow
         t={t}
         tab={analyticsStore.query.tab}
@@ -152,7 +153,6 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         onTabChange={(tab) => analyticsStore.setQuery({ tab })}
         onSync={() => { void analyticsStore.syncNow() }}
       />
-      <Divider />
       <FilterBar
         t={t}
         query={analyticsStore.query}
