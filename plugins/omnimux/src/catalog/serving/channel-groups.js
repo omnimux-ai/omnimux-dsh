@@ -357,6 +357,39 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "enabled": true
     }
   ],
+  // 2026-09-15：分组与模型名绑定 —— 实测 `model=gpt-image-2.5` 配 `-flare-std`
+  // 分组回 503「分组 … 下模型 … 无可用渠道」，故两个 profile 各自成独立模型，
+  // 且各自的 std 分组即其唯一可达线路。网关 `-pro` 分组未取得档位定价依据，暂不登记。
+  "gpt-image-2.5-flare": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "极速专线 · 快速迭代",
+      "pricing": {
+        "pointsEstimate": 225,
+        "discountRate": 1.125,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-flare-std",
+      "default": true,
+      "enabled": true
+    }
+  ],
+  "gpt-image-2.5-sunburst": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "画质专线 · 精细成品",
+      "pricing": {
+        "pointsEstimate": 225,
+        "discountRate": 1.125,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-sunburst-std",
+      "default": true,
+      "enabled": true
+    }
+  ],
   "nano-banana-2": [
     {
       "id": "standard",

@@ -9,13 +9,15 @@ import { loadAll, resetContractCache, DEFAULT_SPECS_DIR } from './load.js';
 import { verifyContracts } from './index.js';
 import { loadDispositions } from './dispositions.js';
 
-test('collectRuntimeModelIds returns the 64-id universe (contracts + wire aliases)', () => {
+test('collectRuntimeModelIds returns the 66-id universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 64, `expected 64 runtime ids, got ${ids.length}`);
+  assert.equal(ids.length, 66, `expected 66 runtime ids, got ${ids.length}`);
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
+  assert.ok(ids.includes('gpt-image-2.5-flare'));
+  assert.ok(ids.includes('gpt-image-2.5-sunburst'));
   assert.ok(ids.includes('nanobanana-2')); // wire alias of nano-banana-2
   assert.ok(ids.includes('nano_banana_2')); // pre-rename spelling, now an alias
   assert.ok(ids.includes('nano-banana-2')); // 2026-09-14 renamed canonical
@@ -94,16 +96,20 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'wan-3.0-ref',
     'wan3.0-video',
   ]);
-  assert.equal(cov.contractIds.length, 39);
+  assert.equal(cov.contractIds.length, 41);
   assert.ok(cov.contractIds.includes('whisper-1'));
+  assert.ok(cov.contractIds.includes('gpt-image-2.5-flare'));
+  assert.ok(cov.contractIds.includes('gpt-image-2.5-sunburst'));
   assert.ok(cov.contractIds.includes('mj-v7'));
   assert.ok(cov.contractIds.includes('nano-banana-2'));
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 56, 'H2 lists evidence-backed ops');
+  assert.equal(cov.listedOperationCount, 58, 'H2 lists evidence-backed ops');
   assert.ok(cov.listedOperations.includes('seedance-2-0-fast#text_to_video'));
   assert.ok(cov.listedOperations.includes('gpt-image-2.5#text_to_image'));
+  assert.ok(cov.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
+  assert.ok(cov.listedOperations.includes('gpt-image-2.5-sunburst#text_to_image'));
   // #1789: both ASR models are listed independently; neither aliases the other.
   assert.ok(cov.listedOperations.includes('seedasr-auc#speech_to_text'));
   assert.ok(cov.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
@@ -135,7 +141,7 @@ test('negative: canonical-disposition missing contract is a strict coverage erro
   assert.ok(auditIssues.some((i) => i.code === 'coverage_missing' && i.level === 'warning'));
 });
 
-test('verifyContracts: audit ok; strict ok once 76 dispositions resolve', () => {
+test('verifyContracts: audit ok; strict ok once 78 dispositions resolve', () => {
   const audit = verifyContracts({ strict: false });
   assert.equal(audit.ok, true, JSON.stringify(audit.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(audit.exitCode, 0);
@@ -145,10 +151,10 @@ test('verifyContracts: audit ok; strict ok once 76 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 76);
+  assert.equal(strict.dispositions.total, 78);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 56);
+  assert.equal(strict.listedOperations.length, 58);
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

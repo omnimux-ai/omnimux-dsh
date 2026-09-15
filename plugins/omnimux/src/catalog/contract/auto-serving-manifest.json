@@ -38,6 +38,20 @@
       "requiredInAuto": true
     },
     {
+      "productId": "gpt-image-2.5-flare",
+      "kind": "image",
+      "priority": "P1",
+      "gatewayIds": ["gpt-image-2.5-flare"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "gpt-image-2.5-sunburst",
+      "kind": "image",
+      "priority": "P1",
+      "gatewayIds": ["gpt-image-2.5-sunburst"],
+      "requiredInAuto": true
+    },
+    {
       "productId": "grok-imagine-image-2-0",
       "kind": "image",
       "priority": "P1",

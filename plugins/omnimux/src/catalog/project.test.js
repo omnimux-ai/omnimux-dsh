@@ -107,7 +107,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 39);
+  assert.equal(dto.models.length, 41);
   // #1751: the 12 withdrawn (disposition=unavailable) rows have no YAML block, so they
   // vanish from the authoritative list and from every derived bucket.
   for (const gone of [
@@ -140,7 +140,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
   assert.equal(dto.schemaVersion, '1.1');
   assert.equal(dto.source, 'omnimux');
-  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2.5']);
+  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']);
   assert.deepEqual(dto.video.map((r) => r.id), [
     'grok-imagine-video-1-5',
     'minimax-h3',
@@ -230,7 +230,7 @@ test('projectChatRows: full text directory with brand/role/input derived from op
 
 test('projectDirectoryRows: media groups project every contracted model (listed or not)', () => {
   const index = freshIndex();
-  assert.equal(projectDirectoryRows(index, 'image').length, 9);
+  assert.equal(projectDirectoryRows(index, 'image').length, 11);
   assert.equal(projectDirectoryRows(index, 'video').length, 11);
   // #1789: seedasr-auc joins the audio management group as its own contracted model.
   assert.equal(projectDirectoryRows(index, 'audio').length, 6);

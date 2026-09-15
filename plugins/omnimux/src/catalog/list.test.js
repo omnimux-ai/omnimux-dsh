@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 39)
+    assert.equal(catalog.models.length, 41)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
@@ -63,7 +63,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     }
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
     assert.equal(imageRow.subtitle, '1k-4k')
@@ -272,7 +272,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
-    assert.equal(IMAGE_MODEL_SPECS.length, 9)
+    assert.equal(IMAGE_MODEL_SPECS.length, 11)
     assert.equal(VIDEO_MODEL_SPECS.length, 11)
     // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
     assert.equal(AUDIO_MODEL_SPECS.length, 6)
