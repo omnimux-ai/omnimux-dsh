@@ -243,7 +243,7 @@ OmniMux 的构建与演进站在了开源巨人的肩膀上，我们对以下直
 ## 📄 开源许可与商业授权 (License & Commercial)
 
 * **开源自托管许可**：本项目遵循 **[OmniMux Sustainable Source License (Version 1.0)](LICENSE)**（Source-Available 模式）。个人使用、科研学术及企业内部自建业务完全免费。
-* **商业授权**：若您需要将 OmniMux 包装成商业产品转售（OEM 贴牌）、搭建收费 SaaS 云服务或采购 Enterprise 企业版，请联系 `commercial@omnimux.ai` 或查阅 **[COMMERCIAL.md](COMMERCIAL.md)**。
+* **商业授权**：若您需要将 OmniMux 包装成商业产品转售（OEM 贴牌）、搭建收费 SaaS 云服务或采购 Enterprise 企业版，请联系 `hello@omnimux.ai` 或查阅 **[COMMERCIAL.md](COMMERCIAL.md)**。
 
 ---
 
