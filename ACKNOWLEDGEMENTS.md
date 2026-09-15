@@ -41,6 +41,30 @@ OmniMux 的诞生与演进离不开全球开源社区与先锋项目的杰出贡
 
 ---
 
+### 4. `omnimux-viewer` (全能媒体渲染与视频播放器插件)
+* **上游原始项目**：[liustack/dsh-viewer](https://github.com/liustack/dsh-viewer)
+* **原始作者 / 维护团队**：[@liustack](https://github.com/liustack)
+* **开源许可证**：[MIT License](https://opensource.org/licenses/MIT)
+* **在 OmniMux 中的定位与改造**：
+  * 为 OmniMux 提供涵盖 36 种媒体格式（MP4/WebM 视频、MP3/WAV 音频、高精度图片、PDF、Office 文档）的就地渲染能力；
+  * 彻底颠覆了传统 AI 生成仅返回一串文件名和字节数的糟糕体验，为用户提供原生内置播放器、画中画与灯箱缩放交互；
+  * 深度适配 OmniMux 主题 Token 与画布成果即时回放链路。
+* **致谢辞**：致敬 @liustack 为 DSH 生态贡献的开箱即用、极度丝滑的全能媒体渲染底座！
+
+---
+
+### 5. `omnimux-browser` (浏览器协同与媒体采集插件)
+* **上游原始项目**：[Lum1104/dsh-browser](https://github.com/Lum1104/dsh-browser)
+* **原始作者 / 维护团队**：[@Lum1104](https://github.com/Lum1104)
+* **开源许可证**：[MIT License](https://opensource.org/licenses/MIT)
+* **在 OmniMux 中的定位与改造**：
+  * 作为 OmniMux 的浏览器伴侣插件与 Chrome 扩展底座，通过 WebSocket 双向安全桥接打通宿主与浏览器；
+  * 支持电商商品页一键解析、社媒带货爆款视频直链嗅探，以及悬停媒体一键直达灵感库；
+  * 深度集成侧边栏对话面板与多账号安全隔离发布通道。
+* **致谢辞**：感谢 @Lum1104 在浏览器双向交互与扩展通信架构上的开创性开源贡献！
+
+---
+
 ## 二、底层宿主与核心基础设施 (Core Host & Infrastructure)
 
 ### 4. DeepSeek Harness (DSH)
