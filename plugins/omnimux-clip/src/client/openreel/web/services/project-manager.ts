@@ -1,5 +1,5 @@
 import type { Project, ProjectSettings } from "@openreel/core";
-import { normalizeProjectStoredFields } from "@openreel/core";
+import { normalizeProjectStoredFields, clearMotionExpressionCodeApprovals } from "@openreel/core";
 import { v4 as uuidv4 } from "uuid";
 
 interface FilePickerAcceptType {
@@ -725,6 +725,7 @@ class ProjectManager {
   }
 
   private emit(event: ProjectManagerEvent, data?: unknown): void {
+    if (event === "projectOpened") clearMotionExpressionCodeApprovals();
     this.listeners.get(event)?.forEach((cb) => {
       try {
         cb(data);

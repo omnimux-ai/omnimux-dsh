@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "output": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-security-high-20260915/.agent-reports/clip-expression-consent/run-XNxpsi",
+  "browser": "ego-browser",
+  "scope": "native Clip import, graph editor and render/export-frame; no full host or video encoder"
+}

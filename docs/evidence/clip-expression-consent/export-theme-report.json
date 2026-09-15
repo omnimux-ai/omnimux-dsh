@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "appearance": [
+    {
+      "background": "rgb(30, 30, 30)",
+      "color": "rgb(220, 220, 220)",
+      "width": 850,
+      "height": 662,
+      "hasContent": true
+    }
+  ],
+  "expectedSource": "existing vs2015 theme",
+  "spaceId": 994
+}

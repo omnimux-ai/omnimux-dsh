@@ -19,6 +19,29 @@ export interface MotionExpressionContext {
   readonly layer: MotionLayer;
 }
 
+// Permission belongs to the open project, never to serialized project data.
+// Exact text survives normal edit/undo/export clones without trusting imported IDs.
+const approvedExpressionCode = new Map<string, string>();
+
+export function isMotionExpressionCodeApproved(expression: MotionExpression): boolean {
+  return expression.type === "expression"
+    && typeof expression.code === "string"
+    && approvedExpressionCode.get(expression.id) === expression.code;
+}
+
+/** Call only from the user's explicit code approval action. */
+export function approveMotionExpressionCode(expression: MotionExpression): MotionExpression {
+  if (expression.type === "expression" && typeof expression.code === "string") {
+    approvedExpressionCode.set(expression.id, expression.code);
+    clearMotionExpressionError(expression.id);
+  }
+  return expression;
+}
+
+export function clearMotionExpressionCodeApprovals(): void {
+  approvedExpressionCode.clear();
+}
+
 let motionExpressionBaseValueResolver:
   | ((layer: MotionLayer, property: string) => number)
   | null = null;
@@ -961,6 +984,13 @@ function evaluateCodeExpression(
 ): number {
   const code = expression.code;
   if (typeof code !== "string" || code.trim().length === 0) {
+    return baseValue;
+  }
+  if (!isMotionExpressionCodeApproved(expression)) {
+    recordMotionExpressionError(
+      expression.id,
+      "自定义脚本已暂停。请在表达式面板检查内容后明确允许运行。",
+    );
     return baseValue;
   }
   const compiled = compileMotionExpression(code);

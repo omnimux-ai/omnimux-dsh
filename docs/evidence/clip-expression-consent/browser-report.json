@@ -1,0 +1,215 @@
+{
+  "finishedAt": "2026-09-15T10:58:13.113Z",
+  "spaceId": 993,
+  "checks": [
+    {
+      "name": "native import blocks execution with visible consent",
+      "frame": {
+        "status": "rendered",
+        "x": 160,
+        "propertyValue": 160,
+        "marker": 0,
+        "error": null
+      },
+      "marker": 0,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ],
+      "geometry": [
+        {
+          "selector": "canvas[aria-label=\"Native motion render\"]",
+          "width": 1388,
+          "height": 780.75
+        },
+        {
+          "selector": "textarea[aria-label=\"Expression code\"]",
+          "width": 420,
+          "height": 96
+        },
+        {
+          "selector": "button[aria-label=\"允许运行此表达式\"]",
+          "width": 121.5,
+          "height": 36
+        }
+      ]
+    },
+    {
+      "name": "explicit local approval moves real native rendering",
+      "frame": {
+        "status": "rendered",
+        "x": 240,
+        "propertyValue": 240,
+        "marker": 11,
+        "error": null
+      },
+      "marker": 12,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "unrelated composition edit preserves consent",
+      "frame": {
+        "status": "rendered",
+        "x": 240,
+        "propertyValue": 240,
+        "marker": 23,
+        "error": null
+      },
+      "marker": 24,
+      "projectName": "导入代码待授权",
+      "compositions": 2,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "undo preserves consent",
+      "frame": {
+        "status": "rendered",
+        "x": 240,
+        "propertyValue": 240,
+        "marker": 30,
+        "error": null
+      },
+      "marker": 31,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "cloned export frame preserves consent",
+      "frame": {
+        "status": "rendered",
+        "x": 240,
+        "propertyValue": 240,
+        "marker": 36,
+        "error": null
+      },
+      "marker": 37,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "editing exact text pauses execution",
+      "frame": {
+        "status": "rendered",
+        "x": 160,
+        "propertyValue": 160,
+        "marker": 37,
+        "error": null
+      },
+      "marker": 37,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ]
+    },
+    {
+      "name": "reimport of matching ID and approved text clears grant",
+      "frame": {
+        "status": "rendered",
+        "x": 160,
+        "propertyValue": 160,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "同一编号不同代码",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ]
+    },
+    {
+      "name": "built-in sine needs no code permission",
+      "frame": {
+        "status": "rendered",
+        "x": 200,
+        "propertyValue": 200,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "内置正弦",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "keyframe interpolation remains functional",
+      "frame": {
+        "status": "rendered",
+        "x": 200,
+        "propertyValue": 200,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "关键帧",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    }
+  ],
+  "result": {
+    "passed": true,
+    "output": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-security-high-20260915/.agent-reports/clip-expression-consent/run-JmwzQd",
+    "browser": "ego-browser",
+    "scope": "native Clip import, graph editor and render/export-frame; no full host or video encoder"
+  },
+  "browserClosure": {
+    "closed": true,
+    "receipt": {
+      "spaceId": 993,
+      "closedSpace": true,
+      "keptManagedLabels": [],
+      "closedManagedLabels": [
+        "p1"
+      ],
+      "preservedUnmanagedCount": 0
+    }
+  },
+  "serverClosure": {
+    "stopped": true
+  }
+}

@@ -1,0 +1,296 @@
+{
+  "finishedAt": "2026-09-15T13:58:13.171Z",
+  "spaceId": 27,
+  "checks": [
+    {
+      "name": "native import blocks execution with visible consent",
+      "frame": {
+        "renderedRequest": 0,
+        "status": "rendered",
+        "x": 160,
+        "y": 180,
+        "propertyValue": 160,
+        "marker": 0,
+        "error": null
+      },
+      "marker": 0,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ],
+      "geometry": [
+        {
+          "selector": "canvas[aria-label=\"Native motion render\"]",
+          "width": 1378,
+          "height": 775.125
+        },
+        {
+          "selector": "textarea[aria-label=\"Expression code\"]",
+          "width": 420,
+          "height": 96
+        },
+        {
+          "selector": "button[aria-label=\"允许运行此表达式\"]",
+          "width": 121.5,
+          "height": 36
+        }
+      ]
+    },
+    {
+      "name": "explicit local approval moves real native rendering",
+      "frame": {
+        "renderedRequest": 1,
+        "status": "rendered",
+        "x": 240,
+        "y": 180,
+        "propertyValue": 240,
+        "marker": 11,
+        "error": null
+      },
+      "marker": 12,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "unrelated composition edit preserves consent",
+      "frame": {
+        "renderedRequest": 2,
+        "status": "rendered",
+        "x": 240,
+        "y": 180,
+        "propertyValue": 240,
+        "marker": 23,
+        "error": null
+      },
+      "marker": 24,
+      "projectName": "导入代码待授权",
+      "compositions": 2,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "undo preserves consent",
+      "frame": {
+        "renderedRequest": 3,
+        "status": "rendered",
+        "x": 240,
+        "y": 180,
+        "propertyValue": 240,
+        "marker": 30,
+        "error": null
+      },
+      "marker": 31,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "cloned export frame preserves consent",
+      "frame": {
+        "renderedRequest": 4,
+        "status": "rendered",
+        "x": 240,
+        "y": 180,
+        "propertyValue": 240,
+        "marker": 36,
+        "error": null
+      },
+      "marker": 37,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "editing exact text pauses execution",
+      "frame": {
+        "renderedRequest": 5,
+        "status": "rendered",
+        "x": 160,
+        "y": 180,
+        "propertyValue": 160,
+        "marker": 37,
+        "error": null
+      },
+      "marker": 37,
+      "projectName": "导入代码待授权",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ]
+    },
+    {
+      "name": "reimport of matching ID and approved text clears grant",
+      "frame": {
+        "renderedRequest": 6,
+        "status": "rendered",
+        "x": 160,
+        "y": 180,
+        "propertyValue": 160,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "同一编号不同代码",
+      "compositions": 1,
+      "pixel": [
+        20,
+        184,
+        166,
+        255
+      ]
+    },
+    {
+      "name": "duplicate ID approval grants only displayed code",
+      "markerBefore": 44,
+      "preview": {
+        "frame": {
+          "renderedRequest": 7,
+          "status": "rendered",
+          "x": 240,
+          "y": 180,
+          "propertyValue": 240,
+          "marker": 44,
+          "error": null
+        },
+        "marker": 44,
+        "expressions": [
+          {
+            "id": "qa-imported-code",
+            "property": "transform.position.x",
+            "type": "expression",
+            "name": "Expression",
+            "enabled": true,
+            "amplitude": 0,
+            "frequency": 1,
+            "phase": 0,
+            "seed": 1,
+            "decay": 3,
+            "code": "value + 80"
+          },
+          {
+            "id": "qa-imported-code",
+            "property": "transform.position.y",
+            "type": "expression",
+            "name": "Expression",
+            "enabled": true,
+            "amplitude": 0,
+            "frequency": 1,
+            "phase": 0,
+            "seed": 1,
+            "decay": 3,
+            "code": "(globalThis.__clipSecurityMarker += 1, value + 90)"
+          }
+        ]
+      },
+      "exported": {
+        "frame": {
+          "renderedRequest": 8,
+          "status": "rendered",
+          "x": 240,
+          "y": 180,
+          "propertyValue": 240,
+          "marker": 44,
+          "error": null
+        },
+        "marker": 44,
+        "expressions": [
+          {
+            "id": "qa-imported-code",
+            "property": "transform.position.x",
+            "type": "expression",
+            "name": "Expression",
+            "enabled": true,
+            "amplitude": 0,
+            "frequency": 1,
+            "phase": 0,
+            "seed": 1,
+            "decay": 3,
+            "code": "value + 80"
+          },
+          {
+            "id": "qa-imported-code",
+            "property": "transform.position.y",
+            "type": "expression",
+            "name": "Expression",
+            "enabled": true,
+            "amplitude": 0,
+            "frequency": 1,
+            "phase": 0,
+            "seed": 1,
+            "decay": 3,
+            "code": "(globalThis.__clipSecurityMarker += 1, value + 90)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "built-in sine needs no code permission",
+      "frame": {
+        "renderedRequest": 8,
+        "status": "rendered",
+        "x": 200,
+        "y": 180,
+        "propertyValue": 200,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "内置正弦",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    },
+    {
+      "name": "keyframe interpolation remains functional",
+      "frame": {
+        "renderedRequest": 8,
+        "status": "rendered",
+        "x": 200,
+        "y": 180,
+        "propertyValue": 200,
+        "marker": 44,
+        "error": null
+      },
+      "marker": 44,
+      "projectName": "关键帧",
+      "compositions": 1,
+      "pixel": [
+        240,
+        240,
+        243,
+        255
+      ]
+    }
+  ]
+}

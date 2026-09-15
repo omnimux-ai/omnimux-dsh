@@ -228,7 +228,6 @@ export const ScriptViewDialog: React.FC<ScriptViewDialogProps> = ({
                         customStyle={{
                           margin: 0,
                           padding: "1rem",
-                          background: "#1e1e1e",
                           fontSize: "12px",
                         }}
                       >
@@ -250,6 +249,9 @@ export const ScriptViewDialog: React.FC<ScriptViewDialogProps> = ({
 
           {activeTab === "import" && (
             <div className="flex-1 flex flex-col gap-4 p-4 overflow-auto">
+              <Text type="supporting" color="secondary" display="block">
+                导入不会自动运行项目中的自定义脚本。需要时，请在表达式面板检查内容后单独允许运行；普通动画不受影响。
+              </Text>
               <FileInput
                 label="Project JSON file"
                 isLabelHidden

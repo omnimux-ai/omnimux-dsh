@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { downloadMedia } from '../download-helper.js'
 import { detectPhysicalScenes } from '../scene-detect.js'
 import { formatTime } from './timeUtils.js'
@@ -267,7 +267,7 @@ function extractVideoCoverFrame(localVideoPath) {
   try {
     const candidateCover = localVideoPath.replace(/\.mp4$/i, '_cover.jpg')
     if (!existsSync(candidateCover)) {
-      execSync(`ffmpeg -v error -y -ss 00:00:01 -i "${localVideoPath}" -vframes 1 "${candidateCover}"`, { timeout: 5000 })
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '00:00:01', '-i', localVideoPath, '-vframes', '1', candidateCover], { timeout: 5000 })
     }
     if (existsSync(candidateCover)) {
       return candidateCover
@@ -291,8 +291,9 @@ function prepareAnalysisSampleVideo(localVideoPath) {
 
     const samplePath = localVideoPath.replace(/\.mp4$/i, '_sample.mp4')
     if (!existsSync(samplePath)) {
-      execSync(
-        `ffmpeg -v error -y -i "${localVideoPath}" -vf "fps=1/3,scale=360:-2" -c:v libx264 -preset ultrafast -crf 32 -an "${samplePath}"`,
+      execFileSync(
+        'ffmpeg',
+        ['-v', 'error', '-y', '-i', localVideoPath, '-vf', 'fps=1/3,scale=360:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32', '-an', samplePath],
         { timeout: 15000 }
       )
     }
