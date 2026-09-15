@@ -66,31 +66,28 @@ export function clearGatewayUploadCache() {
  * @param {unknown} source
  * @returns {boolean}
  */
-export function isLocalMediaSource(source) {
-  if (typeof source !== 'string') return false
-  const trimmed = source.trim()
-  if (!trimmed) return false
-
-  if (trimmed.startsWith('data:')) return true
-  if (trimmed.startsWith('file:')) return true
-  if (trimmed.startsWith('asset://')) return true
-  if (trimmed.includes('api/local-file') || trimmed.includes('omnimux-workflow/media')) return true
-
-  // Windows absolute paths like C:\... or C:/...
-  if (/^[A-Za-z]:[/\\]/.test(trimmed)) return true
-
-  // POSIX absolute paths like /Users/...
-  if (trimmed.startsWith('/')) return true
-
-  // Local loopback URLs cannot be fetched by cloud model clusters
-  if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(trimmed)) {
-    return true
+function parseMediaSource(source) {
+  const value = typeof source === 'string' ? source.trim() : ''
+  if (!value) return { kind: 'invalid', value }
+  if (/^[A-Za-z]:[/\\]/.test(value)) return { kind: 'path', value }
+  if (/^(?:https?:|\/\/)/i.test(value)) {
+    let url
+    try { url = new URL(value, 'http://localhost') } catch { return { kind: 'invalid', value } }
+    if (!['http:', 'https:'].includes(url.protocol)) return { kind: 'invalid', value }
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return { kind: 'remote', value }
+    return { kind: 'local-url', value, url }
   }
+  if (/^(?:data:|file:|asset:)/i.test(value)) return { kind: value.slice(0, value.indexOf(':')).toLowerCase(), value }
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return { kind: 'invalid', value }
+  if (value.startsWith('/api/local-file?') || value.startsWith('/omnimux-workflow/api/local-file?')) {
+    return { kind: 'local-url', value, url: new URL(value, 'http://localhost') }
+  }
+  return { kind: 'path', value }
+}
 
-  // Any other http(s) URL is remote public
-  if (/^https?:\/\//i.test(trimmed)) return false
-
-  return true
+export function isLocalMediaSource(source) {
+  const { kind } = parseMediaSource(source)
+  return kind !== 'remote' && kind !== 'invalid'
 }
 
 /**
@@ -154,11 +151,15 @@ function detectMimeType(filename, bytes) {
  * @returns {Promise<{ buffer: Buffer, mimeType: string, filename: string, filePath?: string, stat?: import('node:fs').Stats }>}
  */
 export async function resolveMediaBytes(source) {
-  const trimmed = source.trim()
+  const parsedSource = parseMediaSource(source)
+  const trimmed = parsedSource.value
+  if (parsedSource.kind === 'remote' || parsedSource.kind === 'invalid') {
+    throw new OmnimuxError('omnimux-invalid-request', '该地址不是受支持的本地素材')
+  }
 
   // 1. Data URI
-  if (trimmed.startsWith('data:')) {
-    const match = trimmed.match(/^data:([^;,]+)?(;base64)?,(.*)$/s)
+  if (parsedSource.kind === 'data') {
+    const match = trimmed.match(/^data:([^;,]+)?(;base64)?,(.*)$/is)
     if (!match) {
       throw new OmnimuxError('omnimux-invalid-request', '数据格式错误：无法解析 data URI')
     }
@@ -176,21 +177,16 @@ export async function resolveMediaBytes(source) {
 
   // 2. Resolve to physical file path
   let targetPath = trimmed
-  if (trimmed.startsWith('file:')) {
-    try {
-      targetPath = fileURLToPath(trimmed)
-    } catch {
-      targetPath = trimmed.replace(/^file:\/\/+/, '/')
+  if (parsedSource.kind === 'file') {
+    try { targetPath = fileURLToPath(trimmed) } catch {
+      throw new OmnimuxError('omnimux-invalid-request', '本地文件地址无效')
     }
-  } else if (trimmed.includes('api/local-file')) {
-    try {
-      const parsed = new URL(trimmed, 'http://localhost')
-      const queryPath = parsed.searchParams.get('path')
-      if (queryPath) targetPath = queryPath
-    } catch {
-      const match = trimmed.match(/[?&]path=([^&]+)/)
-      if (match) targetPath = decodeURIComponent(match[1])
+  } else if (parsedSource.kind === 'local-url') {
+    const parsed = parsedSource.url
+    if (!['/api/local-file', '/omnimux-workflow/api/local-file'].includes(parsed.pathname) || !parsed.searchParams.get('path')) {
+      throw new OmnimuxError('omnimux-invalid-request', '不支持的本地素材地址')
     }
+    targetPath = parsed.searchParams.get('path')
   } else if (trimmed.startsWith('asset://')) {
     const home = process.env.DSH_HOME || (process.env.HOME ? join(process.env.HOME, '.dsh') : '')
     const raw = trimmed.slice('asset://'.length)

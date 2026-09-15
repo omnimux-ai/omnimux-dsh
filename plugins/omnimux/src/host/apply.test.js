@@ -72,7 +72,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 32 tools and 8 seams by default', () => {
+  it('registers all 32 tools and 9 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -94,7 +94,7 @@ describe('hub apply composition', () => {
     assert.ok(names.includes('workbench_open_tab'))
     assert.ok(names.includes('omnimux_marketing_presets_search'))
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'modelCatalog'])
   })
 
   it('disables all gated capabilities when gate.enabled is false', () => {
@@ -108,7 +108,7 @@ describe('hub apply composition', () => {
 
     // workbench tools are ungated core facilities, marketing presets search is ungated
     assert.equal(names.length, 3)
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'inspirationShare', 'modelCatalog'])
   })
 
   it('fine-grained disables media, text models, and official tools via gate', () => {
@@ -133,7 +133,7 @@ describe('hub apply composition', () => {
     assert.ok(tools.omnimux_page_fetch)
     assert.ok(tools.omnimux_accounts_list)
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'modelCatalog'])
 
     // grok-4.6 excluded from enum
     const textEnum = tools.omnimux_text_complete.parameters.properties.model.enum

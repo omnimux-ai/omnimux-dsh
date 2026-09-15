@@ -105,3 +105,15 @@ for (const persist of [false, true]) {
       mimeType: 'video/mp4', sizeBytes: persist ? 2200 : 2000, durationSec: 7 });
   });
 }
+
+test('untrusted node identifiers never become output path components', async () => {
+ const destinations = [];
+ for (const id of ['../../outside', '/absolute', '..\\outside', 'a/b', 'a_b', '中文节点']) {
+  const gateway = captureGateway(catalogFor('text'), { type: 'text', text: 'result' });
+  gateway.awaitTask = async (_id, dest) => { destinations.push(dest); writeFileSync(dest, 'result'); return { type: 'text', text: 'result', url: dest }; };
+  const output = await createMaterialGatewayExecutor({ gateway }).execute({ ...node('text'), id }, context());
+  assert.equal(output.text, 'result');
+ }
+ assert.equal(new Set(destinations).size, destinations.length);
+ for (const dest of destinations) assert.match(dest.slice(root.length + 1), /^[a-f0-9]{64}-[a-f0-9-]+\.txt$/);
+});

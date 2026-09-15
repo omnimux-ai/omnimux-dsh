@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { resolveProjectPaths } from '../../projects/paths.ts';
+import { resolveProjectPaths, assertProjectWriteSafe } from '../../projects/paths.ts';
 import {
   DEFAULT_CANVAS_SETTINGS,
   SNAPSHOT_SCHEMA_VERSION,
@@ -68,8 +68,8 @@ function newWorkspaceId(): string {
 
 function atomicWriteJson(filePath: string, value: unknown): void {
   mkdirSync(join(filePath, '..'), { recursive: true });
-  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const tmp = `${filePath}.tmp-${randomUUID()}`;
+  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
   renameSync(tmp, filePath);
 }
 
@@ -93,11 +93,17 @@ function readSnapshotFile(filePath: string): CanvasWorkspaceSnapshot | null {
 }
 
 function homeCanvasFile(workspacesDir: string, id: string): string {
-  return join(workspacesDir, id, 'canvas.json');
+  if (!isWorkspaceId(id)) throw new WorkflowStoreError('invalid-id', 'invalid workspace id');
+  const file = join(workspacesDir, id, 'canvas.json');
+  assertProjectWriteSafe(file, workspacesDir);
+  return file;
 }
 
 function projectCanvasFile(projectRoot: string, id: string): string {
-  return join(resolveProjectPaths(projectRoot).canvasesDir, `${id}.json`);
+  if (!isWorkspaceId(id)) throw new WorkflowStoreError('invalid-id', 'invalid workspace id');
+  const file = join(resolveProjectPaths(projectRoot).canvasesDir, `${id}.json`);
+  assertProjectWriteSafe(file, projectRoot);
+  return file;
 }
 
 /**
@@ -168,7 +174,7 @@ export function createWorkspaceStore(opts: {
       if (!existsSync(workspacesDir)) return [];
       const rows: WorkspaceSummary[] = [];
       for (const entry of readdirSync(workspacesDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory() || !isWorkspaceId(entry.name)) continue;
         const snapshot = readSnapshotFile(fileOf(entry.name));
         if (!snapshot) continue;
         rows.push({
@@ -194,7 +200,8 @@ export function createWorkspaceStore(opts: {
           `workspace name exceeds ${MAX_WORKSPACE_NAME_LENGTH} characters (got ${name.trim().length})`,
         );
       }
-      const id = (typeof explicitId === 'string' && explicitId.trim() !== '') ? explicitId.trim() : newWorkspaceId();
+      const id = explicitId === undefined ? newWorkspaceId() : explicitId;
+      if (typeof id !== 'string' || !isWorkspaceId(id)) throw new WorkflowStoreError('invalid-id', 'invalid workspace id');
       const now = new Date().toISOString();
       const snapshot: CanvasWorkspaceSnapshot = {
         schemaVersion: SNAPSHOT_SCHEMA_VERSION,
@@ -273,6 +280,7 @@ export function createWorkspaceStore(opts: {
       if (!isWorkspaceId(id)) {
         throw new WorkflowStoreError('invalid-id', `invalid workspace id ${id}`);
       }
+      homeCanvasFile(workspacesDir, id);
       const homeDir = join(workspacesDir, id);
       const bound = resolveProjectRoot?.(id);
       if (bound) {

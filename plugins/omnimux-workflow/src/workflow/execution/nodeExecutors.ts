@@ -11,6 +11,7 @@
  *  - rewrites artifact paths into project-file URLs when bound.
  */
 
+import { assertProjectWriteSafe } from '../../projects/paths.ts';
 import { relative, resolve } from 'node:path';
 import type { ExecutionContext } from './ExecutionContext.ts';
 import type {
@@ -118,6 +119,7 @@ export function createDispatchingNodeExecutor(
       if (failure) throw new Error(failure.message);
     }
 
+    assertProjectWriteSafe(mediaDir, opts.mediaRoot);
     const ctx: ExecutorContext = {
       catalog,
       upstreamOutputs,

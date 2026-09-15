@@ -1,3 +1,4 @@
+import { importProductFromUrl } from './link-importer.js'
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -348,7 +349,7 @@ describe('ProductsDispatcher import-from-link', () => {
       text: async () => '<head><title>首页 | Example Store</title></head><body><ul><li>首页</li><li>登录</li><li>购物车</li></ul></body>',
     })
     try {
-      const { dispatcher } = makeDispatcher()
+      const { dispatcher } = makeDispatcher({ importFromUrl: (args) => importProductFromUrl({ ...args, fetcher: globalThis.fetch }) })
       const empty = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
       assert.equal(empty.status, 422)
       assert.equal(empty.body.error, 'link-import-empty')
@@ -397,6 +398,7 @@ describe('ProductsDispatcher import-from-link', () => {
     const { dispatcher } = makeDispatcher({
       ctx,
       channelTimeoutMs: 30,
+      importFromUrl: (args) => importProductFromUrl({ ...args, fetcher: globalThis.fetch }),
       chatComplete: async () => ({ mode: 'live', model: 'gemini-3.8-flash', text: modelReport }),
     })
     // The vertical's own page read is stubbed; the point here is the model chain.
@@ -560,6 +562,7 @@ describe('products hub seams', () => {
     const seams = createHubSeams(ctx, {
       chatComplete: async () => { throw new Error('bridge offline') },
       channelTimeoutMs: 30,
+      importFromUrl: (args) => importProductFromUrl({ ...args, fetcher: globalThis.fetch }),
     })
     const startedAt = Date.now()
     await assert.rejects(
@@ -578,6 +581,7 @@ describe('products hub seams', () => {
     const seams = createHubSeams(ctx, {
       chatComplete: async () => { throw new Error('bridge offline') },
       channelTimeoutMs: 30,
+      importFromUrl: (args) => importProductFromUrl({ ...args, fetcher: globalThis.fetch }),
     })
     await assert.rejects(
       () => seams.textComplete({ prompt: 'p' }),
@@ -592,6 +596,7 @@ describe('products hub seams', () => {
     const seams = createHubSeams(ctx, {
       chatComplete: async () => ({ mode: 'live', text: 'fast' }),
       channelTimeoutMs: 30,
+      importFromUrl: (args) => importProductFromUrl({ ...args, fetcher: globalThis.fetch }),
     })
     const startedAt = Date.now()
     assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { mode: 'live', text: 'fast' })

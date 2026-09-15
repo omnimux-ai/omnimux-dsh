@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { downloadMedia } from './downloader.js'
@@ -17,6 +17,14 @@ import {
   isImporting,
   staleImportPatch,
 } from './import-status.js'
+import {
+  SHARE_STAGES,
+  SHARE_STAGE_ORDER,
+  shareDonePatch,
+  shareFailedPatch,
+  shareRunningPatch,
+  shareUploadLimitMessage,
+} from './share-status.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
@@ -685,6 +693,170 @@ export function handleList({ url, store }) {
     ? result.items.map((row) => failed.get(String(row.id)) || row)
     : result.items
   return { status: 200, body: { data: { ...result, items, platforms } } }
+}
+
+/**
+ * Row ids a publish job owns right now, in this process.
+ *
+ * A second click while the first publish runs must not start a competing job on
+ * the same row: both would write stages into it and the later writer would win.
+ * Exported for the handler's tests.
+ * @type {Set<string>}
+ */
+export const activeShares = new Set()
+
+/**
+ * Publish the local item to the cloud and answer the *job*, not the result.
+ *
+ * A publish is: upload assets → publish → return the server's link. The client
+ * needs to see which of those is happening, and the answer only exists at the
+ * end, so the work runs in-process while the row carries the progress the page
+ * polls (the same shape a background import uses). Nothing here fabricates a
+ * link: a row is published only when the cloud answered with one, and every
+ * failure lands on the row as a readable reason with no link attached.
+ *
+ * The preflight below runs before the job starts, so the four cases the user can
+ * fix — no material, a missing file, an oversized file, an empty title/prompt —
+ * come back as an actionable 400 instead of a job that fails a second later.
+ * @param {Record<string, any>} ctx dispatcher context plus the parsed request
+ * @returns {Promise<{ status: number, body: Record<string, any> }>}
+ */
+export async function handleShare(ctx) {
+  const { id, store } = ctx
+  const item = store.get(id)
+  if (!item) return fail(404, 'not found')
+  const capability = resolveShareCapability(ctx)
+  if (typeof capability?.publishLocal !== 'function') {
+    return fail(503, '中枢未提供分享能力（inspirationShare）：请确认 omnimux 插件已加载并重启后再试')
+  }
+
+  const cover = assetOf(item.local_paths?.cover)
+  const media = assetOf(item.local_paths?.video)
+  if (!cover && !media) {
+    return fail(400, '本地没有可上传的素材（视频或封面），请先补全素材后再分享')
+  }
+  const title = String(item.title || '').trim()
+  if (!title) return fail(400, '标题为空，请先补全标题后再分享')
+  const prompt = sharePromptOf(item)
+  if (!prompt) return fail(400, '提示词为空：请先补全灵感内容或完成 AI 解构后再分享')
+
+  for (const asset of [cover, media]) {
+    if (!asset) continue
+    const problem = inspectShareAsset(asset)
+    if (problem) return fail(400, problem)
+  }
+
+  if (activeShares.has(String(id))) return { status: 202, body: { data: store.get(id) } }
+
+  const claimed = store.update(String(id), shareRunningPatch(SHARE_STAGES.PREPARING))
+  activeShares.add(String(id))
+  void runShareJob({ store, id: String(id), capability, cover, media, meta: shareMetaOf(item, { title, prompt }) })
+    .finally(() => activeShares.delete(String(id)))
+
+  return { status: 202, body: { data: claimed } }
+}
+
+/**
+ * The hub capability, resolved per request so a plugin loaded after this one is
+ * still picked up. Absent means the official surface is unmounted — the handler
+ * says so instead of silently pretending the share worked.
+ * @param {Record<string, any>} ctx
+ */
+function resolveShareCapability(ctx) {
+  const source = ctx.inspirationShare
+  const resolved = typeof source === 'function' ? source() : source
+  return resolved && typeof resolved.publishLocal === 'function' ? resolved : null
+}
+
+/**
+ * @param {unknown} path
+ * @returns {{ path: string } | null}
+ */
+function assetOf(path) {
+  const value = typeof path === 'string' ? path.trim() : ''
+  return value ? { path: value } : null
+}
+
+/**
+ * Readable problem with a local asset, or `''` when it can be uploaded.
+ * @param {{ path: string }} asset
+ * @returns {string}
+ */
+function inspectShareAsset(asset) {
+  if (!existsSync(asset.path)) {
+    return `素材文件不存在：${asset.path}（可能已被清理），请重新下载素材后再分享`
+  }
+  try {
+    const leaf = asset.path.split('/').pop() || asset.path
+    return shareUploadLimitMessage(leaf, statSync(asset.path).size)
+  } catch {
+    return `素材文件无法读取：${asset.path}，请重新下载素材后再分享`
+  }
+}
+
+/**
+ * The prompt a share carries.
+ *
+ * `content` is what the user typed or what the import stored; when it is empty
+ * the AI breakdown's hook line stands in, because a decomposed item does have a
+ * prompt — it is just stored in the deconstruction. Both empty is a real
+ * "nothing to publish" and the handler says so.
+ * @param {Record<string, any>} item
+ * @returns {string}
+ */
+export function sharePromptOf(item) {
+  const content = String(item?.content || '').trim()
+  if (content) return content
+  const deconstruction = item?.deconstruction
+  if (typeof deconstruction === 'string') return deconstruction.trim()
+  if (deconstruction && typeof deconstruction === 'object') {
+    const row = /** @type {Record<string, any>} */ (deconstruction)
+    for (const key of ['hook', 'prompt', 'replication', 'summary']) {
+      const value = typeof row[key] === 'string' ? row[key].trim() : ''
+      if (value) return value
+    }
+  }
+  return ''
+}
+
+/**
+ * Content of the publish, from the local row.
+ * @param {Record<string, any>} item
+ * @param {{ title: string, prompt: string, me: { path: string } | null }} resolved
+ */
+export function shareMetaOf(item, resolved) {
+  const category = String(item?.category || item?.source_platform || item?.type || '').trim()
+  return {
+    category: category || 'other',
+    title: resolved.title,
+    description: String(item?.content || '').trim().slice(0, 200),
+    prompt: resolved.prompt,
+    mediaType: item?.type === 'image' ? 'image' : 'video',
+  }
+}
+
+/**
+ * Job body: walk the real stages, store the cloud's answer, report failures.
+ *
+ * Every outcome is written to the row — including an unexpected throw — so the
+ * page polling it always settles instead of reading "publishing" forever.
+ * @param {{ store: Record<string, any>, id: string, capability: { publishLocal: Function }, cover: any, media: any, meta: Record<string, any> }} args
+ */
+async function runShareJob(args) {
+  const { store, id } = args
+  try {
+    const result = await args.capability.publishLocal({
+      cover: args.cover,
+      media: args.media,
+      meta: args.meta,
+      onStage: (stage) => {
+        if (SHARE_STAGE_ORDER.includes(stage)) void safeUpdate(store, id, { share_stage: stage })
+      },
+    })
+    await safeUpdate(store, id, shareDonePatch(result))
+  } catch (error) {
+    await safeUpdate(store, id, shareFailedPatch(error instanceof Error ? error.message : String(error)))
+  }
 }
 
 export function handleCreate({ req, store }) {
@@ -1420,40 +1592,3 @@ export async function handleDeleteItem({ id, store }) {
   return { status: 200, body: { data: removed } }
 }
 
-export async function handleShare({ id, req, store, identity }) {
-  const item = store.get(id)
-  if (!item) return fail(404, 'not found')
-  const body = req.body || {}
-  const expire = body.expire === 'forever' ? 'forever' : '3days'
-
-  if (expire === 'forever' && identity && typeof identity.require === 'function') {
-    try {
-      const profile = await identity.require()
-      const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
-      if (!isAdmin) {
-        return fail(403, '永久有效分享链接仅限管理员可用，普通用户请选择3天有效期')
-      }
-    } catch {
-      return fail(403, '永久有效分享链接仅限管理员可用，普通用户请选择3天有效期')
-    }
-  }
-
-  const expireAt = expire === 'forever' ? null : new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString()
-  const code = String(id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'share'
-  const shareUrl = `https://omnimux.ai/s/insp_${code}`
-
-  return {
-    status: 200,
-    body: {
-      ok: true,
-      data: {
-        id,
-        share_url: shareUrl,
-        shareUrl,
-        expire,
-        expire_at: expireAt,
-        title: item.title,
-      },
-    },
-  }
-}

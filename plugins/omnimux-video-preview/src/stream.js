@@ -1,5 +1,6 @@
-import { createReadStream, existsSync, statSync } from 'node:fs'
-import { extname, resolve } from 'node:path'
+import { verifyVideoStreamGrant } from './stream-capability.js'
+import { createReadStream, closeSync, constants, fstatSync, openSync } from 'node:fs'
+import { extname } from 'node:path'
 
 const MIME_MAP = {
   '.mp4': 'video/mp4',
@@ -58,28 +59,21 @@ export function parseRange(rangeHeader, totalSize) {
   return { start, end }
 }
 
-export function handleVideoStream(req, res, targetPath) {
+export function handleVideoStream(req, res) {
+  let fd
   try {
-    if (!targetPath || typeof targetPath !== 'string' || targetPath.includes('\0')) {
-      res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: 'Invalid path' }))
-      return
+    if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+      res.writeHead(405); res.end(); return
     }
-
-    const absolutePath = resolve(targetPath)
-    if (!existsSync(absolutePath)) {
-      res.writeHead(404, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: 'File not found' }))
-      return
+    const grant = verifyVideoStreamGrant(new URL(req.url || '', 'http://localhost'))
+    if (!grant) { res.writeHead(404); res.end('Media permission required'); return }
+    const absolutePath = grant.path
+    try { fd = openSync(absolutePath, constants.O_RDONLY | constants.O_NOFOLLOW) }
+    catch { res.writeHead(404); res.end('Media unavailable'); return }
+    const stats = fstatSync(fd)
+    if (!stats.isFile() || stats.dev !== grant.dev || stats.ino !== grant.ino) {
+      res.writeHead(404); res.end('Media unavailable'); return
     }
-
-    const stats = statSync(absolutePath)
-    if (!stats.isFile()) {
-      res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: 'Path is not a regular file' }))
-      return
-    }
-
     const totalSize = stats.size
     const mimeType = getMimeType(absolutePath)
     const rangeHeader = req.headers.range
@@ -90,7 +84,7 @@ export function handleVideoStream(req, res, targetPath) {
         'Content-Length': totalSize,
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
       })
       res.end()
       return
@@ -102,9 +96,10 @@ export function handleVideoStream(req, res, targetPath) {
         'Content-Length': totalSize,
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
       })
-      const stream = createReadStream(absolutePath)
+      const stream = createReadStream(absolutePath, { fd, autoClose: true })
+      fd = undefined
       if (typeof req.on === 'function') req.on('close', () => stream.destroy())
       if (typeof stream.pipe === 'function') stream.pipe(res)
       return
@@ -115,7 +110,7 @@ export function handleVideoStream(req, res, targetPath) {
       res.writeHead(416, {
         'Content-Range': `bytes */${totalSize}`,
         'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
       })
       res.end('Requested Range Not Satisfiable')
       return
@@ -130,10 +125,11 @@ export function handleVideoStream(req, res, targetPath) {
       'Content-Length': chunkSize,
       'Content-Type': mimeType,
       'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
+      'X-Content-Type-Options': 'nosniff',
     })
 
-    const stream = createReadStream(absolutePath, { start, end })
+    const stream = createReadStream(absolutePath, { fd, autoClose: true, start, end })
+    fd = undefined
     if (typeof req.on === 'function') req.on('close', () => stream.destroy())
     if (typeof stream.pipe === 'function') stream.pipe(res)
   } catch (error) {
@@ -141,5 +137,7 @@ export function handleVideoStream(req, res, targetPath) {
       res.writeHead(500, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: error.message }))
     }
+  } finally {
+    if (fd !== undefined) closeSync(fd)
   }
 }

@@ -1,0 +1,25 @@
+{
+  "planB": {
+    "assets": {
+      "scrolled": 367,
+      "headTop0": 0,
+      "headTop300": -300,
+      "navTop0": 113,
+      "navTop300": 0,
+      "navTop900": 0
+    },
+    "market": {
+      "scrolled": 321,
+      "headTop0": 0,
+      "headTop300": -300,
+      "navTop0": 113,
+      "navTop300": 0,
+      "navTop900": 0
+    }
+  },
+  "planA": {
+    "headTop": 0,
+    "navTop": 113
+  },
+  "ok": true
+}

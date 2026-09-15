@@ -1,3 +1,4 @@
+import { createVideoStreamUrl } from '../stream-capability.js'
 /**
  * @file plugins/omnimux-video-preview/src/breakdown/analyzerPipeline.js
  * Video breakdown multimodal analysis pipeline and artifact extraction.
@@ -444,7 +445,7 @@ function resolveInitialCoverUrl(realMeta, options) {
  */
 function buildStreamUrl(localVideoPath, videoPlayUrl, isHttp, trimmed) {
   if (localVideoPath) {
-    return `/omnimux/video-preview/stream?path=${encodeURIComponent(localVideoPath)}`
+    return createVideoStreamUrl(localVideoPath)
   }
   if (videoPlayUrl) return videoPlayUrl
   return isHttp ? trimmed : ''
@@ -559,7 +560,7 @@ function buildVideoPayload(config) {
     source_url: isHttp ? trimmed : '',
     video_url: videoPlayUrl,
     stream_url: buildStreamUrl(localVideoPath, videoPlayUrl, isHttp, trimmed),
-    cover_url: localCoverPath ? `/omnimux/video-preview/stream?path=${encodeURIComponent(localCoverPath)}` : coverUrl,
+    cover_url: localCoverPath ? createVideoStreamUrl(localCoverPath) : coverUrl,
     duration_seconds: durationSeconds,
     duration_text: formatTime(durationSeconds),
     scene_count: shots.length,

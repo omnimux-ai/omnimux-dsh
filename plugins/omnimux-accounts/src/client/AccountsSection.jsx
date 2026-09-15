@@ -307,6 +307,9 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
       </div>
       <OverviewBar t={t} summary={summary} filters={filters} onFilterClick={onFilterClick} busy={combinedBusy} />
       <Divider />
+
+      {/* 吸附栈：筛选工具行 + 批量条，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky">
       {accounts.length > 0 ? (
         <div className="omnimux-accounts-toolbar">
           <FilterBar
@@ -395,6 +398,8 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
       ) : null}
       {errorText !== '' ? <p className="omnimux-accounts-error" role="alert">{errorText}</p> : null}
       {notice !== '' ? <p className="omnimux-accounts-notice" role="status">{notice}</p> : null}
+      </div>
+
       {accounts.length === 0 ? (
         <EmptyState t={t} onConnect={openConnect} busy={combinedBusy} />
       ) : visible.length === 0 ? (

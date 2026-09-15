@@ -1,3 +1,7 @@
+import { readBoundedBody } from './read-bounded-body.js'
+
+// Remote audio shares the 200 MiB media-probe transport ceiling.
+export const MAX_REMOTE_AUDIO_BYTES = 200 * 1024 * 1024
 import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import { BlockList, isIP } from 'node:net'
@@ -81,9 +85,15 @@ export async function loadAudioBytes(audio, deps = {}) {
       ...(deps.signal ? { signal: deps.signal } : {}),
     })
     if (!response.ok) {
+      await response.body?.cancel().catch(() => {})
       throw new OmnimuxError('omnimux-download-failed', `audio download failed: ${response.status}`, { status: response.status })
     }
-    const bytes = Buffer.from(await response.arrayBuffer())
+    let bytes
+    try {
+      bytes = Buffer.from(await readBoundedBody(response, MAX_REMOTE_AUDIO_BYTES, { signal: deps.signal, message: `audio exceeds ${MAX_REMOTE_AUDIO_BYTES} bytes` }))
+    } catch (error) {
+      throw new OmnimuxError('omnimux-download-failed', error instanceof Error ? error.message : String(error))
+    }
     const filename = basename(new URL(value).pathname) || 'audio'
     const headerType = typeof response.headers?.get === 'function'
       ? String(response.headers.get('content-type') ?? '').split(';')[0].trim()

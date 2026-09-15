@@ -1,3 +1,4 @@
+import { createVideoStreamUrl } from '../src/stream-capability.js'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
@@ -377,7 +378,7 @@ describe('video breakdown & shots analysis engine', () => {
     }
 
     const mockReq = {
-      url: `/omnimux/video-preview/stream?path=${encodeURIComponent(dummyVideoPath)}`,
+      url: createVideoStreamUrl(dummyVideoPath),
       headers: { range: 'bytes=0-100' },
       on: () => {},
     }

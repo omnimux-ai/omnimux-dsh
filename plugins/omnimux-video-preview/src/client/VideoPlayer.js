@@ -1,12 +1,29 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 export function VideoPlayer({ mediaUrl, path, title }) {
   const [error, setError] = useState(null)
 
-  // Use custom streaming endpoint if path is available, otherwise fallback to mediaUrl
-  const streamUrl = path
-    ? `/omnimux/video-preview/stream?path=${encodeURIComponent(path)}`
-    : mediaUrl
+  const [streamUrl, setStreamUrl] = useState(path ? '' : mediaUrl)
+  useEffect(() => {
+    const controller = new AbortController()
+    setError(null)
+    setStreamUrl(path ? '' : mediaUrl)
+    if (path) {
+      fetch('/omnimux/video-preview/authorize', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+        signal: controller.signal,
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Media authorization failed')
+        const value = await response.json()
+        if (typeof value.streamUrl !== 'string' || !value.streamUrl.startsWith('/omnimux/video-preview/stream?grant=')) throw new Error('Invalid media grant')
+        if (!controller.signal.aborted) setStreamUrl(value.streamUrl)
+      }).catch(() => { if (!controller.signal.aborted) setError('Media authorization failed') })
+    }
+    return () => controller.abort()
+  }, [path, mediaUrl])
 
   return React.createElement(
     'div',
@@ -39,7 +56,7 @@ export function VideoPlayer({ mediaUrl, path, title }) {
             React.createElement(
               'a',
               {
-                href: mediaUrl,
+                href: streamUrl || mediaUrl,
                 download: title || 'video',
                 style: {
                   color: 'var(--dsw-alias-brand-accent, #3b82f6)',
@@ -51,7 +68,7 @@ export function VideoPlayer({ mediaUrl, path, title }) {
             )
         )
       : React.createElement('video', {
-          src: streamUrl,
+          src: streamUrl || undefined,
           controls: true,
           playsInline: true,
           onError: () => setError('Video playback error'),

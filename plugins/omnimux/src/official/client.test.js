@@ -104,4 +104,61 @@ describe('official client', () => {
     })
     await assert.rejects(() => client.withPatRaw('/api/media'), (error) => error instanceof OmnimuxError && error.code === 'quota-exceeded')
   })
+
+  it('withSkSite calls the site origin with the gateway key', async () => {
+    /** @type {any[]} */
+    const seen = []
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://omnimux.ai/',
+      apiBaseUrl: 'https://api.omnimux.ai/v1/',
+      resolveApiKey: () => ' sk-gateway ',
+      resolveAccess: async () => ({ token: 'pat-x' }),
+      fetcher: async (url, init) => {
+        seen.push({ url, init })
+        return { ok: true, status: 200, json: async () => ({ success: true, data: { file_id: 'f1' } }) }
+      },
+    })
+
+    const json = await client.withSkSite('/api/v1/files/upload/stream', { method: 'POST', body: { a: 1 } })
+
+    assert.deepEqual(json, { success: true, data: { file_id: 'f1' } })
+    assert.equal(seen[0].url, 'https://omnimux.ai/api/v1/files/upload/stream')
+    assert.equal(seen[0].init.headers.authorization, 'Bearer sk-gateway')
+    assert.equal(seen[0].init.headers['content-type'], 'application/json')
+    assert.equal(seen[0].init.body, JSON.stringify({ a: 1 }))
+  })
+
+  it('withSkSite passes a FormData body through as multipart', async () => {
+    /** @type {any[]} */
+    const seen = []
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://omnimux.ai',
+      resolveApiKey: () => 'sk-x',
+      resolveAccess: async () => ({ token: 'pat-x' }),
+      fetcher: async (url, init) => {
+        seen.push({ url, init })
+        return { ok: true, status: 200, json: async () => ({ success: true }) }
+      },
+    })
+
+    const form = new FormData()
+    form.append('file', new Blob([new Uint8Array([7])], { type: 'image/png' }), 'c.png')
+    form.append('file_name', 'c.png')
+    await client.withSkSite('/api/v1/files/upload/stream', { method: 'POST', body: form })
+
+    assert.equal(seen[0].init.body, form)
+    assert.equal('content-type' in seen[0].init.headers, false, 'fetch owns the multipart boundary header')
+  })
+
+  it('withSkSite reports the missing key like withSk', async () => {
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://omnimux.ai',
+      resolveApiKey: () => undefined,
+      resolveAccess: async () => ({ token: 'pat-x' }),
+    })
+    await assert.rejects(
+      () => client.withSkSite('/api/inspiration/v1/publish', { method: 'POST', body: {} }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
 })

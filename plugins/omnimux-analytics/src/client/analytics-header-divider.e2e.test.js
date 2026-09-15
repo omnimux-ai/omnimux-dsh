@@ -141,11 +141,11 @@ test('数据分析看板的分割线渲染在页头与标签行之间', () => {
     probe.divider.top < probe.actionRow.top,
     `分割线应在标签行上方: divider.top=${probe.divider.top} actionRow.top=${probe.actionRow.top}`,
   )
-  assert.deepEqual(probe.childOrder.slice(0, 4), [
+  // 页头 → 分割线 → 吸附栈（一级 Tab + 筛选行都在栈内，随整页滚动到顶后固定）。
+  assert.deepEqual(probe.childOrder.slice(0, 3), [
     'dshUk-PageHeader-pageHeader',
     'SEPARATOR',
-    'omnimux-analytics-stage-action-row',
-    'omnimux-analytics-stage-filter',
+    'omx-stage-sticky',
   ])
 })
 

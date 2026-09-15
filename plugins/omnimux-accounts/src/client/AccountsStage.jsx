@@ -56,7 +56,7 @@ export function AccountsStage({ t, stage, store, visible = true }) {
         onClose={handleClose}
         closeTitle={t('close')}
       />
-      <div className="omnimux-accounts-stage-body">
+      <div className="omnimux-accounts-stage-body omx-stage-scroll">
         <AccountsSection t={t} active={visible} />
       </div>
     </div>
