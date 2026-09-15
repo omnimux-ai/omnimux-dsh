@@ -264,10 +264,9 @@ test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, vi
   assert.ok(mainStage, 'Main stage must be present');
   assert.ok(rail, 'Thumbnail rail must be present');
 
-  // 2. Counter display
+  // 2. Counter display removed for minimalist presentation
   const counter = mainStage.querySelector('.omx-chat-media-tail__counter');
-  assert.ok(counter, 'Counter must be present in main stage');
-  assert.equal(counter.textContent?.trim(), '1 / 3');
+  assert.equal(counter, null, 'Counter must be removed');
 
   // 3. Thumbnails count and active state
   const thumbs = rail.querySelectorAll<HTMLElement>('.omx-chat-media-tail__thumb');
@@ -281,7 +280,6 @@ test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, vi
 
   // 5. Click thumbnail to switch to item 1 (video)
   videoThumb.click();
-  assert.equal(counter.textContent?.trim(), '2 / 3');
   assert.ok(videoThumb.classList.contains('is-active'), 'Second thumb must become active');
   assert.equal(thumbs[0].classList.contains('is-active'), false);
   const mainVideo = mainStage.querySelector('video');
@@ -291,7 +289,6 @@ test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, vi
   // 6. Keyboard navigation (ArrowRight)
   const keyEvent = new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
   gallery.dispatchEvent(keyEvent);
-  assert.equal(counter.textContent?.trim(), '3 / 3');
   assert.ok(thumbs[2].classList.contains('is-active'), 'Third thumb must become active on ArrowRight');
   const mainImg = mainStage.querySelector('img');
   assert.ok(mainImg, 'Main stage must now render third image');

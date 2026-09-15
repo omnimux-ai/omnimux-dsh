@@ -33,6 +33,14 @@ import {
   COMMAND_ICONS,
   COMMAND_I18N,
   ZH_NAME_TO_RAW,
+  SKILL_I18N,
+  resolveSkillDisplayName,
+  resolveSkillDescription,
+  scoreSkillCandidate,
+  enhanceSkillCandidates,
+  wrapSkillInputTriggerSource,
+  wrapInputTriggersSkills,
+  installSkillsI18n,
 } from './composer-commands-i18n.js'
 
 test('isZhLocale & getActiveLang', () => {
@@ -736,4 +744,222 @@ test('wrapCommandUi keeps the host receiver so dispatch resolves its own dotted 
   seenReceivers.length = 0
   assert.equal(instance.dispatch({ candidate: { name: 'compact' } }), 'executed:compact')
   assert.equal(seenReceivers[0], instance)
+})
+
+// ==========================================
+// Skill i18n & Multi-modal Bilingual Search Tests (#1837)
+// ==========================================
+
+const fakeEnLocale = { getSnapshot: () => ({ active: 'en-US' }) }
+
+test('resolveSkillDisplayName & resolveSkillDescription', () => {
+  const sampleRaw = 'ip-character-consistency-studio'
+  const sampleDesc = '根据角色设定和参考图，制作持续复用的 AI IP 形象包'
+
+  // 1. Chinese locale: resolve to friendly Chinese title
+  assert.equal(resolveSkillDisplayName(sampleRaw, sampleDesc, fakeZhLocale), '角色一致性形象包')
+  // Description prefixes English rawName for clear dual-layer understanding
+  const zhDesc = resolveSkillDescription(sampleRaw, sampleDesc, fakeZhLocale)
+  assert.match(zhDesc, /ip-character-consistency-studio/)
+  assert.match(zhDesc, /根据角色设定/)
+
+  // 2. English locale: retain canonical English name and desc
+  assert.equal(resolveSkillDisplayName(sampleRaw, sampleDesc, fakeEnLocale), sampleRaw)
+  assert.equal(resolveSkillDescription(sampleRaw, sampleDesc, fakeEnLocale), sampleDesc)
+
+  // 3. Fallback for unindexed skill
+  const unknownRaw = 'custom-unknown-tool'
+  assert.equal(resolveSkillDisplayName(unknownRaw, '自定义工具说明', fakeZhLocale), unknownRaw)
+})
+
+test('scoreSkillCandidate handles Chinese name, prefix, substring, pinyin, English rawName and intent keywords', () => {
+  const candidate = {
+    name: '角色一致性形象包',
+    rawName: 'ip-character-consistency-studio',
+    description: '根据角色设定和一至四张参考图制作可持续复用的 IP 形象包，适合漫画、绘本出图',
+  }
+
+  // 1. Exact matches (score = 1000)
+  assert.equal(scoreSkillCandidate(candidate, '角色一致性形象包', 'zh'), 1000)
+  assert.equal(scoreSkillCandidate(candidate, 'ip-character-consistency-studio', 'zh'), 1000)
+
+  // 2. Chinese prefix match (score ~ 600)
+  const prefixScore = scoreSkillCandidate(candidate, '角色', 'zh')
+  assert.ok(prefixScore >= 590 && prefixScore <= 600)
+
+  // 3. Chinese substring match (score ~ 400)
+  const substrScore = scoreSkillCandidate(candidate, '一致性', 'zh')
+  assert.ok(substrScore >= 390 && substrScore <= 400)
+
+  // 4. Pinyin matches (score >= 200)
+  const pinyinScore = scoreSkillCandidate(candidate, 'jiaose', 'zh')
+  assert.ok(pinyinScore >= 200, `Expected pinyin score >= 200, got ${pinyinScore}`)
+
+  const pinyinAbbrScore = scoreSkillCandidate(candidate, 'js', 'zh')
+  assert.ok(pinyinAbbrScore >= 200, `Expected pinyin abbr score >= 200, got ${pinyinAbbrScore}`)
+
+  // 5. English rawName prefix match (score ~ 500)
+  const enPrefixScore = scoreSkillCandidate(candidate, 'ip', 'zh')
+  assert.ok(enPrefixScore >= 450 && enPrefixScore <= 500)
+
+  // 6. English rawName substring match (score ~ 300)
+  const enSubstrScore = scoreSkillCandidate(candidate, 'consistency', 'zh')
+  assert.ok(enSubstrScore >= 280 && enSubstrScore <= 300, `Expected enSubstrScore between 280 and 300, got ${enSubstrScore}`)
+
+  // 7. Intent / Description keywords match (score >= 100)
+  const intentScore = scoreSkillCandidate(candidate, '绘本', 'zh')
+  assert.ok(intentScore >= 100, `Expected intent score >= 100, got ${intentScore}`)
+
+  // 8. Irrelevant query returns undefined
+  assert.equal(scoreSkillCandidate(candidate, 'something-totally-unrelated', 'zh'), undefined)
+})
+
+test('enhanceSkillCandidates localizes skill rows, filters and sorts by relevance', () => {
+  const rawSkills = [
+    { name: 'frontend-developer', description: 'Expert frontend developer' },
+    { name: 'ip-character-consistency-studio', description: '根据角色设定和参考图制作 IP 形象包，适合绘本' },
+    { name: 'code-review-expert', description: 'Expert code reviewer' },
+  ]
+
+  // A. Query: "角色" in Chinese locale
+  const zhResults = enhanceSkillCandidates(rawSkills, { query: '角色' }, fakeZhLocale)
+  assert.equal(zhResults.length, 1)
+  assert.equal(zhResults[0].name, '角色一致性形象包')
+  assert.equal(zhResults[0].rawName, 'ip-character-consistency-studio')
+
+  // B. Query: "ip" in Chinese locale (matches rawName, presents in Chinese)
+  const ipResults = enhanceSkillCandidates(rawSkills, { query: 'ip' }, fakeZhLocale)
+  assert.equal(ipResults.length, 1)
+  assert.equal(ipResults[0].name, '角色一致性形象包')
+
+  // C. Empty query in Chinese locale: lists all with localized display names
+  const allZh = enhanceSkillCandidates(rawSkills, { query: '' }, fakeZhLocale)
+  assert.equal(allZh.length, 3)
+  const names = allZh.map(s => s.name)
+  assert.ok(names.includes('角色一致性形象包'))
+  assert.ok(names.includes('前端开发专家'))
+  assert.ok(names.includes('代码审查专家'))
+
+  // D. Query in English locale: retains English rawName as primary
+  const enResults = enhanceSkillCandidates(rawSkills, { query: 'front' }, fakeEnLocale)
+  assert.equal(enResults.length, 1)
+  assert.equal(enResults[0].name, 'frontend-developer')
+})
+
+test('wrapSkillInputTriggerSource wraps candidates and transparently resolves onPick to raw English slug', async () => {
+  const originalSkillSource = {
+    trigger: '/',
+    name: 'skill',
+    order: 2,
+    async candidates(session, req) {
+      const all = [
+        { name: 'ip-character-consistency-studio', description: '角色一致性形象包说明' },
+        { name: 'frontend-developer', description: '前端开发说明' },
+      ]
+      const q = (req?.query || '').trim().toLowerCase()
+      if (!q) return all
+      return all.filter(s => s.name.startsWith(q))
+    },
+    onPick({ candidate }) {
+      return { text: `/${candidate.name} ` }
+    },
+  }
+
+  const wrapped = wrapSkillInputTriggerSource(originalSkillSource, fakeZhLocale)
+
+  // 1. In Chinese locale, search by Chinese query "角色"
+  const candidates = await wrapped.candidates({ sessionId: 's1' }, { query: '角色', signal: new AbortController().signal })
+  assert.equal(candidates.length, 1)
+  assert.equal(candidates[0].name, '角色一致性形象包')
+  assert.equal(candidates[0].rawName, 'ip-character-consistency-studio')
+
+  // 2. onPick with Chinese candidate name transparently fills canonical English rawName
+  const pickOutcome = wrapped.onPick({
+    candidate: candidates[0],
+    session: { sessionId: 's1' },
+    position: 'leading',
+    via: 'menu',
+    action: 'pick',
+    span: { start: 0, end: 3 },
+  })
+  assert.equal(pickOutcome.text, '/ip-character-consistency-studio ')
+})
+
+test('wrapInputTriggersSkills hooks existing and newly registered skill trigger sources', async () => {
+  const existingSkillSource = {
+    trigger: '/',
+    name: 'skill',
+    order: 2,
+    async candidates(session, req) {
+      return [
+        { name: 'ip-character-consistency-studio', description: '制作 IP 角色形象包' },
+      ]
+    },
+    onPick({ candidate }) {
+      return { text: `/${candidate.name} ` }
+    },
+  }
+
+  const commandSource = {
+    trigger: '/',
+    name: 'command',
+    order: 1,
+    async candidates() { return [] },
+    onPick() { return { text: '/cmd ' } },
+  }
+
+  const fakeInputTriggers = {
+    live: {
+      sources: [commandSource, existingSkillSource],
+      controllers: new Map(),
+    },
+    registerSource(src) {
+      this.live.sources.push(src)
+      return () => {
+        const idx = this.live.sources.indexOf(src)
+        if (idx >= 0) this.live.sources.splice(idx, 1)
+      }
+    },
+  }
+
+  const dispose = wrapInputTriggersSkills(fakeInputTriggers, fakeZhLocale)
+
+  // 1. Existing skill source is wrapped
+  const activeSkill = fakeInputTriggers.live.sources.find(s => s.name === 'skill')
+  const found = await activeSkill.candidates({ sessionId: 's1' }, { query: '角色' })
+  assert.equal(found.length, 1)
+  assert.equal(found[0].name, '角色一致性形象包')
+
+  // 2. Newly registered skill source is also intercepted and wrapped
+  const lateSkillSource = {
+    trigger: '/',
+    name: 'skill-late',
+    order: 3,
+    async candidates() {
+      return [{ name: 'frontend-developer', description: '前端工程师' }]
+    },
+    onPick({ candidate }) {
+      return { text: `/${candidate.name} ` }
+    },
+  }
+  // If a source with name 'skill' is registered later
+  const lateRealSkill = {
+    trigger: '/',
+    name: 'skill',
+    async candidates() {
+      return [{ name: 'frontend-developer', description: '前端工程师' }]
+    },
+    onPick({ candidate }) {
+      return { text: `/${candidate.name} ` }
+    },
+  }
+  fakeInputTriggers.registerSource(lateRealSkill)
+  const lateActive = fakeInputTriggers.live.sources.at(-1)
+  const lateFound = await lateActive.candidates({ sessionId: 's1' }, { query: '前端' })
+  assert.equal(lateFound.length, 1)
+  assert.equal(lateFound[0].name, '前端开发专家')
+
+  // 3. Disposer restores cleanly
+  dispose()
+  assert.equal(typeof activeSkill.candidates, 'function')
 })

@@ -36,9 +36,9 @@ test('QA: Chat media gallery AC-1 to AC-9 verification', async (t) => {
     assert.ok(main);
     assert.ok(rail);
 
-    // AC-3: Initial counter
+    // AC-3: Counter element is removed
     const counter = main?.querySelector('.omx-chat-media-tail__counter');
-    assert.equal(counter?.textContent?.trim(), '1 / 4');
+    assert.equal(counter, null, 'Counter element must not be rendered');
 
     // AC-4: Thumbnails and active state
     const thumbs = rail?.querySelectorAll('.omx-chat-media-tail__thumb') || [];
@@ -52,7 +52,6 @@ test('QA: Chat media gallery AC-1 to AC-9 verification', async (t) => {
 
     // AC-4: Click thumbnail 1 (video)
     videoThumb.click();
-    assert.equal(counter?.textContent?.trim(), '2 / 4');
     assert.ok(videoThumb.classList.contains('is-active'));
     assert.equal(thumbs[0].classList.contains('is-active'), false);
     const video = main?.querySelector('video');
@@ -62,13 +61,11 @@ test('QA: Chat media gallery AC-1 to AC-9 verification', async (t) => {
 
     // AC-8: Keyboard navigation ArrowRight
     el.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    assert.equal(counter?.textContent?.trim(), '3 / 4');
     assert.ok(thumbs[2].classList.contains('is-active'));
     assert.equal(main?.querySelector('img')?.getAttribute('src'), 'http://example.com/item3.png');
 
     // ArrowLeft wraps or navigates backwards
     el.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    assert.equal(counter?.textContent?.trim(), '2 / 4');
     assert.ok(thumbs[1].classList.contains('is-active'));
   });
 });

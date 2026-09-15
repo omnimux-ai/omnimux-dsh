@@ -20,6 +20,7 @@
 import { useEffect } from 'react';
 import { getGlobalMediaViewerStore, MEDIA_VIEWER_TAB_ID } from '../media-viewer/media-viewer-store.js';
 import { injectMediaViewerStyles } from '../media-viewer/styles.js';
+import { currentSessionId } from '../workbench/host-adapter.js';
 
 const ENHANCED_ATTR = 'data-omx-media-enhanced';
 
@@ -33,6 +34,7 @@ export interface DetectedMedia {
   canonicalKey?: string;
   isDataUrl?: boolean;
   score?: number;
+  sessionId?: string;
 }
 
 // Track URLs and canonical keys that have already triggered auto-opening the right sidebar
@@ -269,6 +271,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
       url: item.url,
       type: item.type,
       title: item.title,
+      sessionId: item.sessionId || currentSessionId(),
     });
     store.setActiveId(media.id);
     store.setSubViewMode('single');
@@ -342,10 +345,6 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     mainContent.className = 'omx-chat-media-tail__main-content';
     mainStage.appendChild(mainContent);
 
-    const counter = doc.createElement('span');
-    counter.className = 'omx-chat-media-tail__counter';
-    mainStage.appendChild(counter);
-
     // Pill canvas button in top-right corner
     const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
     canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
@@ -386,7 +385,6 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
 
     const renderActive = () => {
       const item = items[activeIndex];
-      counter.textContent = `${activeIndex + 1} / ${items.length}`;
 
       // Clear previous main media and pause any video
       const prevVideo = mainContent.querySelector('video');
@@ -541,12 +539,17 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
   const store = getGlobalMediaViewerStore();
   let firstAddedId = '';
   let shouldAutoOpen = false;
+  const activeSessionId = currentSessionId();
 
   for (const m of allMedia) {
+    if (!m.sessionId && activeSessionId) {
+      m.sessionId = activeSessionId;
+    }
     const added = store.addMedia({
       url: m.url,
       type: m.type,
       title: m.title,
+      sessionId: m.sessionId || activeSessionId,
     });
     if (!firstAddedId) firstAddedId = added.id;
     const trackingKey = m.canonicalKey || m.url;
@@ -620,6 +623,10 @@ export function scanAndEnhanceTurns(root: ParentNode = (typeof document !== 'und
     if (!parentTurn) {
       const rawMedia = extractMediaFromElement(bubble);
       const media = deduplicateTurnMedia(rawMedia);
+      const activeSessionId = currentSessionId();
+      for (const m of media) {
+        if (!m.sessionId && activeSessionId) m.sessionId = activeSessionId;
+      }
       if (media.length > 0 && !bubble.querySelector('.omx-chat-media-tail')) {
         bubble.setAttribute(ENHANCED_ATTR, 'true');
         const tail = createMediaTailElement(media, targetDoc);
