@@ -75,6 +75,22 @@ export const STAGE_PAGES = [
       'plugins/omnimux-publish/src/client/PublishStage.jsx',
     ],
   },
+  {
+    plugin: 'omnimux-analytics',
+    label: '数据分析',
+    styles: 'plugins/omnimux-analytics/src/client/styles.js',
+    pages: [
+      'plugins/omnimux-analytics/src/client/AnalyticsStage.jsx',
+    ],
+  },
+  {
+    plugin: 'omnimux-products',
+    label: '商品库',
+    styles: 'plugins/omnimux-products/src/client/styles.js',
+    pages: [
+      'plugins/omnimux-products/src/client/ProductsStage.jsx',
+    ],
+  },
 ]
 
 /**

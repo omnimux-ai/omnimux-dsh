@@ -8,6 +8,19 @@
 export const STYLES_ID = 'omnimux-analytics-styles'
 
 export const ANALYTICS_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-analytics-stage {
   --omnimux-analytics-metric-likes: var(--dsw-alias-state-error-primary, #ef4444);
   --omnimux-analytics-metric-comments: var(--dsw-alias-brand-primary, #3b82f6);
@@ -107,7 +120,6 @@ export const ANALYTICS_CSS = `
   display: flex;
   flex-direction: column;
   gap: 20px;
-  overflow: auto;
   padding: 20px 20px 32px;
 }
 
