@@ -21,6 +21,7 @@ import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
+import { assertProjectWriteSafe, resolveProjectRelPath } from '../../projects/paths.ts';
 
 export interface VideoDeconstructServiceDeps {
   store: WorkspaceStore;
@@ -211,6 +212,32 @@ export function resolveVideoAbsolutePath(
       const decoded = decodeURIComponent(localMatch[1]);
       if (isAbsolute(decoded) && existsSync(decoded)) {
         return decoded;
+      }
+    } catch {}
+  }
+
+  // 1b. 尝试从项目文件流 URL 还原（?rel=<项目相对路径>）。已绑定项目的画布节点只带
+  // relativePath + 该形式的 mediaUrl（没有 realPath），不识别它就会退化到把
+  // /api/workspaces/<id>/file 当作绝对路径返回，存在性校验随即失败。
+  const relMatch = /[\?&]rel=([^&]+)/.exec(trimmed);
+  if (relMatch?.[1]) {
+    try {
+      const rel = decodeURIComponent(relMatch[1]);
+      // 绝对路径不进项目相对解析；工作区标识以调用方传入的为准，不信任 query 参数。
+      if (rel && !isAbsolute(rel)) {
+        if (deps.resolveProjectFile) {
+          try {
+            const resolved = deps.resolveProjectFile(workspaceId, rel);
+            if (resolved && existsSync(resolved)) return resolved;
+          } catch {}
+        }
+        const boundRoot = deps.store.resolveProjectRoot(workspaceId);
+        if (boundRoot?.path) {
+          // 兜底分支同样复用项目路径安全原语：rel 来自请求体，必须挡住 ../ 与符号链接逃逸。
+          const candidate = resolveProjectRelPath(boundRoot.path, rel);
+          assertProjectWriteSafe(candidate, boundRoot.path);
+          if (existsSync(candidate)) return candidate;
+        }
       }
     } catch {}
   }

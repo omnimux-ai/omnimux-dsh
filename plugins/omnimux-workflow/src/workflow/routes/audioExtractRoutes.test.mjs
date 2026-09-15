@@ -12,6 +12,7 @@ buildSync({
   stdin: {
     contents: `
       export { createWorkspaceStore } from '../workspace/WorkspaceStore.ts';
+      export { createProjectAssetsStore } from '../workspace/ProjectAssetsStore.ts';
       export { createWorkflowDispatcher } from './canvasRoutes.ts';
     `,
     resolveDir: fileURLToPath(new URL('.', import.meta.url)),
@@ -21,7 +22,7 @@ buildSync({
   format: 'esm',
   outfile: bundle,
 });
-const { createWorkspaceStore, createWorkflowDispatcher } =
+const { createWorkspaceStore, createProjectAssetsStore, createWorkflowDispatcher } =
   await import(pathToFileURL(bundle).href);
 after(() => rmSync(buildDir, { recursive: true, force: true }));
 
@@ -176,4 +177,81 @@ test('audioExtract: 请求体格式不合法返回 400 (invalid-request)', async
   });
   assert.equal(res.status, 400);
   assert.equal(res.body.error, 'invalid-request');
+});
+
+// ---------------------------------------------------------------------------
+// 已绑定项目画布：视频节点只有 relativePath + 项目文件流 mediaUrl（无 realPath）。
+// Issue #1827：该形式此前不被解析，导致「提取音频」返回 404 video-not-found。
+// ---------------------------------------------------------------------------
+
+function projectHarness(t) {
+  const root = mkdtempSync(join(tmpdir(), 'audio-extract-project-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const projectRoot = join(root, '项目 测试');
+  mkdirSync(projectRoot, { recursive: true });
+  const workspacesDir = join(root, 'workspaces');
+  const store = createWorkspaceStore({ workspacesDir });
+  const workspace = store.create('项目音频提取工作区');
+  const assetsStore = createProjectAssetsStore({
+    workspacesDir,
+    resolveProjectRoot: () => ({ path: projectRoot }),
+  });
+
+  const videoProcessTool = {
+    async execute(args) {
+      if (args.dest) {
+        mkdirSync(join(args.dest, '..'), { recursive: true });
+        writeFileSync(args.dest, Buffer.from('FAKE_MP3_DATA'));
+      }
+      return { files: [{ path: args.dest, kind: 'audio' }], result: { duration: 5 } };
+    },
+  };
+
+  const dispatcher = createWorkflowDispatcher({
+    store,
+    mediaDir: join(root, 'media'),
+    assetsStore,
+    getTool: (name) => (name === 'video_process' ? videoProcessTool : undefined),
+    getSeam: (name) => (name === 'videoProcess' ? videoProcessTool : undefined),
+  });
+
+  return { root, projectRoot, workspace, dispatcher };
+}
+
+test('audioExtract: 项目文件流 videoPath（?rel=）成功提取音频', async (t) => {
+  const { projectRoot, workspace, dispatcher } = projectHarness(t);
+  const artifacts = join(projectRoot, 'artifacts');
+  mkdirSync(artifacts, { recursive: true });
+  writeFileSync(join(artifacts, 'clip.mp4'), 'FAKE_VIDEO_CONTENT');
+
+  const mediaUrl = `/omnimux-workflow/api/workspaces/${workspace.id}/file?rel=${encodeURIComponent('artifacts/clip.mp4')}`;
+  const res = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/workspaces/${workspace.id}/extract-audio`,
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: 'node_audio_1', videoPath: mediaUrl, title: '视频原声' },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.data.title, '视频原声');
+  assert.equal(res.body.data.format, 'mp3');
+  assert.ok(res.body.data.audioPath.endsWith('.mp3'));
+  assert.ok(existsSync(res.body.data.audioPath));
+});
+
+test('audioExtract: 越界 rel 不解析到项目外，返回 404 video-not-found', async (t) => {
+  const { root, workspace, dispatcher } = projectHarness(t);
+  writeFileSync(join(root, 'outside.mp4'), 'OUTSIDE');
+
+  const mediaUrl = `/omnimux-workflow/api/workspaces/${workspace.id}/file?rel=${encodeURIComponent('../outside.mp4')}`;
+  const res = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/workspaces/${workspace.id}/extract-audio`,
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: 'node_audio_1', videoPath: mediaUrl },
+  });
+
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'video-not-found');
 });
