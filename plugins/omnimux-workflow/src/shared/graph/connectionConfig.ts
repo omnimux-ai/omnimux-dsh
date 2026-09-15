@@ -38,6 +38,7 @@ const MATERIAL_OUTPUT_OPTIONS: Record<MaterialType, MaterialOutputOption[]> = {
     { targetMaterialType: 'audio', targetTool: 'text-to-audio', icon: 'AudioLines' },
   ],
   image: [
+    { targetMaterialType: 'text', targetTool: 'text-to-text', icon: 'TextGen' },
     { targetMaterialType: 'image', targetTool: 'image-to-image', icon: 'ImageGen' },
     { targetMaterialType: 'video', targetTool: 'video-generation', icon: 'VideoGen' },
   ],
@@ -46,6 +47,7 @@ const MATERIAL_OUTPUT_OPTIONS: Record<MaterialType, MaterialOutputOption[]> = {
     { targetMaterialType: 'video', targetTool: 'video-generation', icon: 'VideoGen' },
   ],
   audio: [
+    { targetMaterialType: 'text', targetTool: 'text-to-text', icon: 'TextGen' },
     { targetMaterialType: 'video', targetTool: 'video-generation', icon: 'VideoGen' },
     { targetMaterialType: 'audio', targetTool: 'voice-clone', icon: 'Mic' },
     { targetMaterialType: 'text', targetTool: 'audio-transcription', icon: 'TextGen' },

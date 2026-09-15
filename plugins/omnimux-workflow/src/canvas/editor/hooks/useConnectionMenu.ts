@@ -146,7 +146,11 @@ export function useConnectionMenu(options?: {
       const position = dropPositionRef.current;
       const parsed = parseOutputOptionKey(key);
       if (start && position && parsed) {
-        const result = createMaterialNode(parsed.targetMaterialType, position);
+        const result = createMaterialNode(
+          parsed.targetMaterialType,
+          position,
+          parsed.targetTool ? { selectedTool: parsed.targetTool as any } : undefined,
+        );
         const newNode = result.nodes[0];
         if (newNode) {
           applyCanvasInputMutation({

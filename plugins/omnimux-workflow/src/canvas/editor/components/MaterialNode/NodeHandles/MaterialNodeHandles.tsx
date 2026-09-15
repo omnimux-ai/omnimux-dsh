@@ -3,7 +3,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from 'react';
-import type { MaterialType } from '../../../../types/materialNode';
+import type { MaterialType, MaterialTool } from '../../../../types/materialNode';
 import CanvasNodeHandle, { type CanvasNodeHandleSelectMeta } from '../../CanvasNodeHandle';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../../utils/nodeFactory';
@@ -40,7 +40,11 @@ export const MaterialNodeHandles: React.FC<MaterialNodeHandlesProps> = memo(({
       const parsed = parseOutputOptionKey(key);
       const position = meta?.flowPosition;
       if (!parsed || !position) return;
-      const result = createMaterialNode(parsed.targetMaterialType, position);
+      const result = createMaterialNode(
+        parsed.targetMaterialType,
+        position,
+        parsed.targetTool ? { selectedTool: parsed.targetTool as MaterialTool } : undefined,
+      );
       const newNode = result.nodes[0];
       if (!newNode) return;
       applyCanvasInputMutation({

@@ -71,7 +71,7 @@ test('Test 1: NodeSpecRegistry contains all built-in node specifications', () =>
 test('Test 2: MATERIAL_TOOL_INPUT_TYPES is 100% equivalent to legacy behavior across all 16 tools', () => {
   const expectedToolInputs = {
     'text-editor': [],
-    'text-to-text': ['text', 'image', 'video'],
+    'text-to-text': ['text', 'image', 'video', 'audio'],
     'link-extract': ['text'],
     'audio-transcription': ['audio'],
     import: [],
