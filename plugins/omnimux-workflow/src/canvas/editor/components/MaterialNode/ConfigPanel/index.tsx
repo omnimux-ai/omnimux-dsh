@@ -204,7 +204,16 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const effectiveSlotLayout = useMemo(() => deriveSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
   const textSources = useMemo(() => effectiveSlotLayout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets), [fingerprint, effectiveSlotLayout]);
   const feedAssets = useMemo(() => feedFromFingerprint(fingerprint), [fingerprint]);
-  const storedSlotBindings = nodeData.slotBindings as SlotBindings | undefined;
+  const storedSlotBindings = useMemo(() => {
+    const raw = nodeData.slotBindings as SlotBindings | undefined;
+    if (!raw) return undefined;
+    // 若当前有可用卡槽，但已保存的 slotBindings 为空对象且用户未在待命池中显式记录卸载边，
+    // 说明这是节点未装填状态或旧纯文本模式残留，应允许自动装填上游连线素材。
+    if (Object.keys(raw).length === 0 && (!nodeData.slotStandbyEdgeIds || nodeData.slotStandbyEdgeIds.length === 0)) {
+      return undefined;
+    }
+    return raw;
+  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds]);
   const canvasEdges = useCanvasStore((state) => state.edges);
   const inputDisplay = useMemo(() => effectiveInputDisplay(effectiveSlotLayout, feedAssets,
     materialType === 'audio' && currentOperationId === 'text_to_speech' ? {} : storedSlotBindings,
