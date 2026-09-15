@@ -32,6 +32,7 @@
  * @module
  */
 
+import { fetchPublicMedia, isNonPublicAddress, NonPublicAddressError } from './public-media-transport.ts'
 import type { MediaFetchOutcome } from './protocol.ts'
 
 /** Wall-clock budget for one lit page media. */
@@ -62,43 +63,9 @@ export interface MediaFetchOptions {
   maxBytes?: number
 }
 
-/**
- * Whether a hostname names the machine itself or its local network.
- *
- * Literal-only: a public name that *resolves* to a private address (DNS rebinding)
- * still gets through, because resolving it here would duplicate the resolver and
- * race it. The redirect check below closes the realistic path to that, and the
- * residual gap is recorded in the task report.
- */
+/** Whether a hostname is outside the public network policy. */
 export function isLocalHostname(hostname: string): boolean {
-  const host = hostname.trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '')
-  if (host === '') return true
-  if (host === 'localhost' || host.endsWith('.localhost')) return true
-  if (host.endsWith('.local')) return true
-
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
-  if (ipv4 !== null) {
-    const a = Number(ipv4[1])
-    const b = Number(ipv4[2])
-    return a === 0 // "this network", includes 0.0.0.0
-      || a === 10
-      || a === 127
-      || (a === 172 && b >= 16 && b <= 31)
-      || (a === 192 && b === 168)
-      || (a === 169 && b === 254) // link-local, includes the cloud metadata address
-  }
-
-  if (host.includes(':')) {
-    // Anything `::`-prefixed is unspecified, loopback, or IPv4-mapped.
-    if (host.startsWith('::')) return true
-    const first = Number.parseInt(host.split(':')[0] ?? '', 16)
-    if (!Number.isFinite(first)) return false
-    if ((first & 0xfe00) === 0xfc00) return true // fc00::/7 unique-local
-    if ((first & 0xffc0) === 0xfe80) return true // fe80::/10 link-local
-    return false
-  }
-
-  return false
+  return isNonPublicAddress(hostname)
 }
 
 /** Whether a lit media address is one the host is willing to dial. */
@@ -107,7 +74,7 @@ export function isFetchableMediaUrl(value: unknown): value is string {
   try {
     const parsed = new URL(value)
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
-    return !isLocalHostname(parsed.hostname)
+    return !parsed.username && !parsed.password && !isLocalHostname(parsed.hostname)
   } catch {
     return false
   }
@@ -127,7 +94,10 @@ async function readCapped(response: Response, maxBytes: number): Promise<CappedB
   // otherwise read as a declared zero-length body.
   const raw = response.headers?.get?.('content-length') ?? ''
   const declared = raw.trim() === '' ? Number.NaN : Number(raw)
-  if (Number.isFinite(declared) && declared > maxBytes) return { ok: false, reason: 'too-large' }
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await response.body?.cancel()
+    return { ok: false, reason: 'too-large' }
+  }
 
   const body = response.body
   if (body === null || body === undefined) {
@@ -182,7 +152,7 @@ export async function fetchMediaBytes(
   if (!isFetchableMediaUrl(url)) {
     return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
   }
-  const fetchImpl = options.fetchImpl ?? fetch
+  const fetchImpl = options.fetchImpl ?? fetchPublicMedia
   const timeoutMs = options.timeoutMs ?? MEDIA_FETCH_TIMEOUT_MS
   const maxBytes = options.maxBytes ?? MEDIA_FETCH_MAX_BYTES
 
@@ -201,6 +171,7 @@ export async function fetchMediaBytes(
       }
 
       if (isRedirect(response.status)) {
+        await response.body?.cancel()
         const location = response.headers?.get?.('location') ?? ''
         if (location === '') {
           return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
@@ -220,7 +191,10 @@ export async function fetchMediaBytes(
         continue
       }
 
-      if (!response.ok) return { status: 'http-error', statusCode: response.status }
+      if (!response.ok) {
+        await response.body?.cancel()
+        return { status: 'http-error', statusCode: response.status }
+      }
 
       const body = await readCapped(response, maxBytes)
       if (!body.ok) {
@@ -238,6 +212,7 @@ export async function fetchMediaBytes(
     // Every hop was a redirect: the chain never reached a body.
     return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
   } catch (error: unknown) {
+    if (error instanceof NonPublicAddressError) return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
     if (controller.signal.aborted) return { status: 'timeout', timeoutMs }
     // The cause stays host-side: it can name internal hosts, and the panel writes
     // its own localized copy from the outcome status rather than showing this.
