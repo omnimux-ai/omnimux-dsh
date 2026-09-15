@@ -296,6 +296,16 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
     assert.equal(layout.addButton, true);
     assert.equal(layout.slots.length, 2);
   });
+
+  it('TC-T01-07: 老节点残留 operation: "chat" 时，多模态模型依然优先派生 vision_chat，不被旧数据锁死', () => {
+    const emptyFingerprint = { prompt: '', assets: [], mediaAssets: [] };
+    const op = resolveSlotOperation(mockCatalog, 'gemini-3.8-flash', 'chat', 'text', emptyFingerprint);
+    assert.equal(op, 'vision_chat', '老节点残留 chat 仍应解析为 vision_chat');
+
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', op, 'text');
+    assert.equal(layout.preset, 'strip');
+    assert.equal(layout.slots.length, 2);
+  });
 });
 
 describe('场景 2 验收：纯文本模型卡槽不展示（none 预设），消除 44px 死高', () => {

@@ -16,11 +16,12 @@ export function resolveSlotOperation(
   outputType: string | undefined,
   fingerprint: UpstreamFingerprint,
 ): string | undefined {
-  if (typeof operation === 'string' && operation.trim()) return operation.trim();
+  const isTextTask = outputType === 'text' || !outputType;
 
-  // 文本节点多模态支持：当模型支持多模态媒体输入且未显式指定操作时，
-  // 槽位解析优先采用多模态 operation（如 vision_chat），以反映执行中枢模型契约规格所允许的文件类型与数量。
-  if (outputType === 'text' || !outputType) {
+  // 文本节点多模态自适应：文本节点在界面上无 operation 切换菜单，老节点残留或默认写入的 'chat' 不得锁死卡槽。
+  // 只要模型在执行中枢具备多模态媒体输入能力（如 vision_chat），卡槽解析一律优先采用多模态 operation，
+  // 保证无论老节点还是新节点，均能根据模型规格呈现文件卡槽（图片/视频等）与添加按钮。
+  if (isTextTask) {
     const view = buildContractView(catalog);
     const model = resolveModelView(view, modelId);
     if (model) {
@@ -33,6 +34,8 @@ export function resolveSlotOperation(
       if (multimodal) return multimodal.id;
     }
   }
+
+  if (typeof operation === 'string' && operation.trim()) return operation.trim();
 
   const current = buildEffectiveOpsUiState({ catalog, modelId, outputType, fingerprint });
   if (current.count > 0) return current.selectedOperationId;
