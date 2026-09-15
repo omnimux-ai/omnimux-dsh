@@ -48,6 +48,9 @@ provider calls, and upstream vendor updates are out of scope.
   controls/design tokens. No new dependency or parallel editor.
 - Package tests: `pnpm --filter omnimux-clip test`.
 - Client build: `pnpm --filter omnimux-clip build`.
+- Native browser regression: `node plugins/omnimux-clip/test/e2e/expression-consent.spec.mjs`.
+  It uses ego-browser, a dynamic loopback port, task-local generated samples,
+  retained reports/screenshots, and closes its browser space/server after each run.
 - Formatting: `git diff --check`.
 
 ## Acceptance and verification

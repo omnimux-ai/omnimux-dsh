@@ -10,7 +10,7 @@ import type {
   TemplateSummary,
   TemplateCategory,
 } from "@openreel/core";
-import { TEMPLATE_CATEGORIES } from "@openreel/core";
+import { TEMPLATE_CATEGORIES, clearMotionExpressionCodeApprovals } from "@openreel/core";
 
 export const TemplatesTab: React.FC = () => {
   const getTemplateEngine = useEngineStore((s) => s.getTemplateEngine);
@@ -73,6 +73,7 @@ export const TemplatesTab: React.FC = () => {
         if (!template) return;
 
         const result = engine.applyTemplate(template, {});
+        clearMotionExpressionCodeApprovals();
         useProjectStore.setState(() => ({
           project: { ...result.project, modifiedAt: Date.now() },
         }));

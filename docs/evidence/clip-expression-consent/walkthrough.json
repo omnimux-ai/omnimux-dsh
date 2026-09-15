@@ -1,0 +1,35 @@
+{
+  "before": {
+    "frame": {
+      "status": "rendered",
+      "x": 160,
+      "propertyValue": 160,
+      "marker": 0,
+      "error": null
+    },
+    "marker": 0,
+    "pixel": [
+      20,
+      184,
+      166,
+      255
+    ]
+  },
+  "after": {
+    "frame": {
+      "status": "rendered",
+      "x": 240,
+      "propertyValue": 240,
+      "marker": 11,
+      "error": null
+    },
+    "marker": 12,
+    "pixel": [
+      240,
+      240,
+      243,
+      255
+    ]
+  },
+  "observedAt": "2026-09-15T10:45:04.981Z"
+}

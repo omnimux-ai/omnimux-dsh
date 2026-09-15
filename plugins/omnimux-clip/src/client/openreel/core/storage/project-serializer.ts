@@ -16,6 +16,7 @@ import { normalizeMotionCamera } from "../motion/motion-camera";
 import { normalizeMotionLights } from "../motion/motion-lights";
 import { normalizeMotionTracks } from "../motion/motion-tracking";
 import { normalizeCreationState } from "../creation";
+import { clearMotionExpressionCodeApprovals } from "../motion/motion-expressions";
 
 const MOTION_SHADER_CATEGORIES: ReadonlySet<MotionShaderCategory> = new Set([
   "fill",
@@ -186,6 +187,7 @@ export class ProjectSerializer {
     }
 
     const restoredProject = await this.restoreMediaBlobs(project);
+    clearMotionExpressionCodeApprovals();
     return restoredProject;
   }
 
@@ -201,7 +203,9 @@ export class ProjectSerializer {
     const projectFile = JSON.parse(json) as ProjectFile;
 
     if (projectFile.version !== SCHEMA_VERSION) {
-      return this.migrateProject(projectFile);
+      const migrated = this.migrateProject(projectFile);
+      clearMotionExpressionCodeApprovals();
+      return migrated;
     }
 
     const project = this.normalizeStoredFields(projectFile.project);
@@ -219,6 +223,7 @@ export class ProjectSerializer {
       },
     );
 
+    clearMotionExpressionCodeApprovals();
     return {
       ...project,
       mediaLibrary: {

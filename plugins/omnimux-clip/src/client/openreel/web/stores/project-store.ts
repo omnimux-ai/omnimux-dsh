@@ -38,6 +38,7 @@ import type {
 import {
   ActionExecutor,
   ActionHistory,
+  clearMotionExpressionCodeApprovals,
   getBuiltInEditingTemplate,
   getBuiltInEditingTemplates,
   getMotionPreset,
@@ -1717,6 +1718,8 @@ export const useProjectStore = create<ProjectState>()(
         const previousProject = get().project;
         const nextProject = createEmptyProject(name, settings);
 
+        clearMotionExpressionCodeApprovals();
+
         syncProjectEffectsBridge(nextProject, previousProject);
         syncProjectTransitionsBridge(nextProject, previousProject);
 
@@ -1745,6 +1748,7 @@ export const useProjectStore = create<ProjectState>()(
 
       loadProject: (incomingProject: Project) => {
         const motionNormalized = normalizeProjectMotionFields(incomingProject);
+        clearMotionExpressionCodeApprovals();
         const project: Project = {
           ...motionNormalized,
           generatedShaders: normalizeGeneratedShaders(
@@ -2995,6 +2999,7 @@ export const useProjectStore = create<ProjectState>()(
 
           registerProjectGeneratedShaders(projectWithMedia);
 
+          clearMotionExpressionCodeApprovals();
           set({
             project: projectWithMedia,
             hasOpenProject: true,

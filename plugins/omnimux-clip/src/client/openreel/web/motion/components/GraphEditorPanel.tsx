@@ -24,6 +24,7 @@ import {
   MOTION_CAMERA_PROPERTY_DESCRIPTORS,
   MOTION_LIGHT_PROPERTY_DESCRIPTORS,
   addMotionLayerExpression,
+  approveMotionExpressionCode,
   copyMotionPropertyKeyframes,
   createMotionExpression,
   duplicateMotionPropertyKeyframes,
@@ -48,6 +49,7 @@ import {
   getMotionExpressionError,
   getMotionPropertyDescriptor,
   isMotionAnimatableProperty,
+  isMotionExpressionCodeApproved,
   isMotionCameraProperty,
   isMotionLightProperty,
   normalizeMotionCamera,
@@ -853,8 +855,10 @@ export function GraphEditorPanel({
     );
   };
 
+  const expressionNeedsApproval = propertyExpression?.type === "expression"
+    && !isMotionExpressionCodeApproved(propertyExpression);
   const expressionError =
-    propertyExpression && propertyExpression.enabled
+    propertyExpression && propertyExpression.enabled && !expressionNeedsApproval
       ? getMotionExpressionError(propertyExpression.id)
       : null;
 
@@ -1017,6 +1021,20 @@ export function GraphEditorPanel({
                       className="w-full resize-y rounded-[7px] border border-border bg-bg-1 px-2.5 py-2 font-mono text-[12px] leading-relaxed text-fg-2 outline-none focus:border-border-strong"
                     />
                   </Field>
+
+                  {expressionNeedsApproval ? (
+                    <div className="space-y-2 rounded-md border border-border bg-bg-2 p-3">
+                      <ToolcraftText type="supporting" color="secondary" display="block">
+                        此脚本已暂停。运行后可访问当前页面的数据。请检查上方内容，仅允许您信任的脚本。
+                        许可只对当前工程中的这段脚本有效；修改脚本或重新打开工程后需再次确认。
+                      </ToolcraftText>
+                      <Button
+                        label="允许运行此表达式"
+                        disabled={!propertyExpression.code?.trim()}
+                        onClick={() => updateExpression(approveMotionExpressionCode)}
+                      />
+                    </div>
+                  ) : null}
 
                   {expressionError ? (
                     <div
