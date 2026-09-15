@@ -14,6 +14,7 @@ import { computeEmptyState, countAssetsByType } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
 import { ProductsView } from './ProductsView.jsx'
+import { CreateProductMenu } from './CreateProductMenu.jsx'
 
 const TAB_ID = 'omnimux-assets:library'
 
@@ -56,37 +57,35 @@ function AssetsActionRow(props) {
     setTimeout(() => feed.setError(''), 3000)
   }
 
-  if (sourceTab === 'product') {
-    return (
-      <div className="omnimux-assets-action-row">
-        <Button variant="primary" leadingIcon={<PlusIcon />} onClick={onOpenCreateProduct}>
-          {t('product.create') || '新建产品'}
-        </Button>
-        <Button
-          variant="outline"
-          leadingIcon={<ChatIcon />}
-          onClick={() => {
-            const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-            if (api) {
-              try { api.setConversationCollapsed?.(false) } catch {}
-              try { api.setFocus?.('split') } catch {}
-            }
-          }}
-        >
-          {t('product.chatButton') || '对话中添加'}
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="omnimux-assets-action-row">
-      <Button variant="primary" leadingIcon={<PlusIcon />} onClick={onAdd}>
-        {t('add.button')}
-      </Button>
-      <Button variant="outline" leadingIcon={<ImportIcon />} onClick={onImport}>
-        {t('import.button')}
-      </Button>
+      {sourceTab === 'product' ? (
+        <>
+          <CreateProductMenu t={t} onSelect={onOpenCreateProduct} label="添加产品" />
+          <Button
+            variant="secondary"
+            leadingIcon={<ChatIcon />}
+            onClick={() => {
+              const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+              if (api) {
+                try { api.setConversationCollapsed?.(false) } catch {}
+                try { api.setFocus?.('split') } catch {}
+              }
+            }}
+          >
+            {t('product.chatButton') || '对话中添加'}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="primary" leadingIcon={<PlusIcon />} onClick={onAdd}>
+            {t('add.button')}
+          </Button>
+          <Button variant="outline" leadingIcon={<ImportIcon />} onClick={onImport}>
+            {t('import.button')}
+          </Button>
+        </>
+      )}
     </div>
   )
 }
@@ -186,17 +185,19 @@ function AssetsFilterBar(props) {
         />
       }
       tools={
-        <div className="omnimux-assets-tools-cluster">
-          <div className="omnimux-assets-search-wrap">
-            <SearchField
-              placeholder={sourceTab === 'product' ? (t('product.searchPlaceholder') || '搜索商品、品牌、核心卖点...') : t('search.placeholder')}
-              value={feed.query}
-              onChange={feed.setQuery}
-              onClear={() => feed.setQuery('')}
-            />
+        sourceTab === 'product' ? null : (
+          <div className="omnimux-assets-tools-cluster">
+            <div className="omnimux-assets-search-wrap">
+              <SearchField
+                placeholder={t('search.placeholder')}
+                value={feed.query}
+                onChange={feed.setQuery}
+                onClear={() => feed.setQuery('')}
+              />
+            </div>
+            <AssetsViewToggle t={t} viewMode={feed.viewMode} onViewModeChange={feed.setViewMode} />
           </div>
-          <AssetsViewToggle t={t} viewMode={feed.viewMode} onViewModeChange={feed.setViewMode} />
-        </div>
+        )
       }
     />
   )
@@ -440,7 +441,7 @@ export function AssetsStage(props) {
       data-visible={visible ? 'true' : 'false'}
       style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
-      <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} />
+      <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} sourceTab={sourceTab} />
       <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
