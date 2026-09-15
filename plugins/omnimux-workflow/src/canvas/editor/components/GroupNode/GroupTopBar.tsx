@@ -1,9 +1,10 @@
-import React, { memo, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useViewport } from '@xyflow/react';
 import {
   Play,
   Save,
   Rocket,
+  Palette,
   Ungroup,
   Trash2,
 } from 'lucide-react';
@@ -67,10 +68,22 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(groupTitle);
+  const [isColorOpen, setIsColorOpen] = useState(false);
+  const colorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setEditTitle(groupTitle);
   }, [groupTitle]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (colorRef.current && !colorRef.current.contains(e.target as Node)) {
+        setIsColorOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleTitleSubmit = useCallback(() => {
     setIsEditing(false);
@@ -95,7 +108,7 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
       }}
     >
       <div className="wf-floating-top-pill__group">
-        {/* 工作流标题药丸（带圆点，支持点击就地重命名） */}
+        {/* 工作流标题药丸（带圆点，始终靠左对齐，支持点击就地重命名） */}
         <div
           className="wf-group-topbar__badge"
           title={t('group.renameHint')}
@@ -155,7 +168,7 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
 
         <span className="wf-floating-top-pill__divider" />
 
-        {/* 发布应用 (收敛新增) */}
+        {/* 发布应用 (收敛在打组内) */}
         {onPublishApp && (
           <>
             <button
@@ -171,22 +184,41 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
           </>
         )}
 
-        {/* 调色盘横排 8 色点 */}
-        <div className="wf-group-topbar__palette-row" title={t('group.colorTitle')}>
-          {PALETTE_COLORS.map((c) => {
-            const isReset = c === NEUTRAL_SWATCH;
-            const isActive = isReset ? isNeutral : groupColor === c;
-            return (
-              <button
-                key={isReset ? 'neutral-reset' : c}
-                type="button"
-                className={`wf-group-topbar__palette-dot ${isActive ? 'is-active' : ''}`}
-                style={{ backgroundColor: isReset ? 'var(--wb-node-ring)' : c }}
-                title={isReset ? t('group.colorReset') : undefined}
-                onClick={() => onColorChange(isReset ? '' : c)}
-              />
-            );
-          })}
+        {/* 调色盘：收敛为单个图标按钮，点击后下拉选择切换 */}
+        <div style={{ position: 'relative' }} ref={colorRef}>
+          <button
+            type="button"
+            className="wf-floating-top-pill__btn"
+            onClick={() => setIsColorOpen((prev) => !prev)}
+            title={t('group.colorTitle')}
+          >
+            <Palette size={13} className="wf-floating-top-pill__icon" />
+            <div
+              className="wf-group-topbar__swatch"
+              style={{ backgroundColor: isNeutral ? 'var(--wb-node-ring)' : groupColor }}
+            />
+          </button>
+          {isColorOpen && (
+            <div className="wf-group-topbar__palette">
+              {PALETTE_COLORS.map((c) => {
+                const isReset = c === NEUTRAL_SWATCH;
+                const isActive = isReset ? isNeutral : groupColor === c;
+                return (
+                  <button
+                    key={isReset ? 'neutral-reset' : c}
+                    type="button"
+                    className={`wf-group-topbar__palette-dot ${isActive ? 'is-active' : ''}`}
+                    style={{ backgroundColor: isReset ? 'var(--wb-node-ring)' : c }}
+                    title={isReset ? t('group.colorReset') : undefined}
+                    onClick={() => {
+                      onColorChange(isReset ? '' : c);
+                      setIsColorOpen(false);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <span className="wf-floating-top-pill__divider" />

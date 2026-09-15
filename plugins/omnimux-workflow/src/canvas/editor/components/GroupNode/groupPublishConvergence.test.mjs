@@ -49,8 +49,10 @@ test('T04.2: GroupTopBar 包含名称药丸、整组执行、保存工作流、�
   assert.ok(groupTopBarSrc.includes('onUngroup'), '必须包含解体动作');
   assert.ok(groupTopBarSrc.includes('onDeleteWorkflow'), '必须包含删除工作流动作');
 
-  // 3. 验证 8 种调色盘平铺色点
-  assert.ok(groupTopBarSrc.includes('wf-group-topbar__palette-row'), '必须平铺调色盘色点容器');
+  // 3. 验证调色盘收敛为图标按钮与下拉选择
+  assert.ok(groupTopBarSrc.includes('wf-group-topbar__swatch'), '必须包含当前颜色指示色块');
+  assert.ok(groupTopBarSrc.includes('Palette'), '必须包含 Palette 调色盘图标');
+  assert.ok(groupTopBarSrc.includes('wf-group-topbar__palette'), '必须包含调色盘下拉选择气泡');
   assert.ok(groupTopBarSrc.includes('PALETTE_COLORS.map'), '必须遍历高对比度调色板');
 });
 

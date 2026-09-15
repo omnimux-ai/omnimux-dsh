@@ -182,7 +182,7 @@ export function resolveGroupHeaderLayout(options: {
 }
 
 /**
- * 组顶栏定位：展开态贴右侧避让外挂标题；折叠态水平居中。
+ * 组顶栏定位：始终靠左对齐工作流节点左上角（与最左侧名称组件垂直对齐）。
  */
 export function resolveGroupTopBarLayout(options: {
   isCollapsed: boolean;
@@ -190,21 +190,12 @@ export function resolveGroupTopBarLayout(options: {
 }): GroupTopBarLayout {
   const inverseScale = safeInverseScale(options.inverseScale);
   const top = -(GROUP_CHROME_INSET * inverseScale);
-  if (options.isCollapsed) {
-    return {
-      top,
-      left: '50%',
-      right: 'auto',
-      transform: `translate(-50%, -100%) scale(${inverseScale})`,
-      transformOrigin: 'bottom center',
-    };
-  }
   return {
     top,
-    left: 'auto',
-    right: GROUP_CHROME_INSET,
+    left: GROUP_CHROME_INSET,
+    right: 'auto',
     transform: `translate(0, -100%) scale(${inverseScale})`,
-    transformOrigin: 'bottom right',
+    transformOrigin: 'bottom left',
   };
 }
 
