@@ -1,4 +1,5 @@
 import type { ConversationAttachment } from './types.ts';
+import { getGlobalShadowContextStore, type StoredShadowContext } from '../reference/shadow-context.ts';
 
 const KIND_LABELS: Record<string, string> = {
   table: '表格',
@@ -37,28 +38,76 @@ function attachmentPaths(att: ConversationAttachment): string[] {
   return att.relativePath ? [att.relativePath] : [];
 }
 
-export function formatAttachmentLine(att: ConversationAttachment): string {
+export function formatAttachmentLine(
+  att: ConversationAttachment,
+  shadowMap?: Map<string, StoredShadowContext>
+): string {
   const kindLabel = KIND_LABELS[att.kind] || '文件';
   const ext = att.extension || 'FILE';
   const durationPart = att.duration ? `, ${att.duration}` : '';
   const paths = attachmentPaths(att);
+
+  let header = '';
   if (paths.length <= 1) {
     const pathRef = formatPathReference(paths[0] || att.relativePath);
-    return `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}): ${pathRef}`;
+    header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}): ${pathRef}`;
+  } else {
+    const lines = paths.map((rel) => `  - ${formatPathReference(rel)}`);
+    header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}):\n${lines.join('\n')}`;
   }
-  const lines = paths.map((rel) => `  - ${formatPathReference(rel)}`);
-  return `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}):\n${lines.join('\n')}`;
+
+  // 场景上下文注入 (若有)：仅供 Agent 模型感知，在前端气泡中被整体剥离隐藏
+  const shadow = shadowMap?.get(att.entityId) || (att.metadata?.summary ? {
+    entityId: att.entityId,
+    context: {
+      scene: att.metadata.scene as any,
+      summary: att.metadata.summary as string,
+      metadata: att.metadata,
+    },
+    registeredAt: 0,
+  } : undefined);
+
+  if (shadow?.context) {
+    const subLines: string[] = [];
+    if (shadow.context.scene) {
+      subLines.push(`  * 场景: ${shadow.context.scene}`);
+    }
+    if (shadow.context.summary) {
+      subLines.push(`  * 简述: ${shadow.context.summary}`);
+    }
+    if (subLines.length > 0) {
+      header = `${header}\n${subLines.join('\n')}`;
+    }
+  }
+
+  return header;
 }
 
 /**
  * 组装结构化上下文附着块
  */
-export function buildAttachedContextBlock(attachments: readonly ConversationAttachment[]): string {
+export function buildAttachedContextBlock(
+  attachments: readonly ConversationAttachment[],
+  sessionId?: string
+): string {
   if (!attachments || attachments.length === 0) {
     return '';
   }
 
-  const lines = attachments.map(formatAttachmentLine);
+  let shadowMap: Map<string, StoredShadowContext> | undefined;
+  if (sessionId) {
+    try {
+      const shadowStore = getGlobalShadowContextStore();
+      const shadowList = shadowStore.getSnapshot(sessionId);
+      if (shadowList.length > 0) {
+        shadowMap = new Map(shadowList.map((item) => [item.entityId, item]));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const lines = attachments.map((att) => formatAttachmentLine(att, shadowMap));
   return `\n\n---\n### 会话关联上下文 (Attached Context):\n${lines.join('\n')}`;
 }
 
@@ -67,13 +116,14 @@ export function buildAttachedContextBlock(attachments: readonly ConversationAtta
  */
 export function assemblePromptWithAttachments(
   userPrompt: string,
-  attachments: readonly ConversationAttachment[]
+  attachments: readonly ConversationAttachment[],
+  sessionId?: string
 ): string {
   const trimmed = userPrompt || '';
   if (!attachments || attachments.length === 0) {
     return trimmed;
   }
 
-  const contextBlock = buildAttachedContextBlock(attachments);
+  const contextBlock = buildAttachedContextBlock(attachments, sessionId);
   return `${trimmed}${contextBlock}`;
 }

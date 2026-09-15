@@ -197,6 +197,33 @@ export function deliverToConversation(
   // 1. 先检查会话栏：已展开则不做任何布局动作
   const revealed = revealConversationColumn(targetWindow);
 
+  // 1.5 尝试同步注册至全局统一引用服务 (Unified Reference Hub)
+  const refApi = (targetWindow as any)?.__omnimuxReference;
+  if (refApi && typeof refApi.deliver === 'function') {
+    try {
+      refApi.deliver({
+        id: detail.entityId,
+        source: 'workflow',
+        title: detail.title,
+        kind: detail.kind,
+        file: {
+          relativePath: detail.relativePath,
+          absolutePath: detail.absolutePath,
+          previewUrl: detail.previewUrl,
+          extension: detail.extension,
+          duration: detail.duration,
+        },
+        context: {
+          scene: 'storyboard_refine',
+          summary: detail.title,
+          metadata: detail.metadata,
+        },
+      }, { sessionId, revealMode: 'keep', showToast: false });
+    } catch {
+      // ignore
+    }
+  }
+
   // 2. 落库并拿同步回执，由回执决定提示文案
   const receipt = addToAttachmentStore(targetWindow, detail);
   let attached: boolean;
