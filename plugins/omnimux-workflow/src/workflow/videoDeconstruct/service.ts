@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import type { DeconstructVideoRequest, DeconstructVideoResult } from './schema.ts';
 import { VideoDeconstructError } from './errors.ts';
+import { describeVideoAnalyzeFailure } from '../videoAnalyzeFailure.ts';
 import {
   type HTableColumn,
   type HTableDocument,
@@ -30,9 +31,6 @@ export interface VideoDeconstructServiceDeps {
   mediaDir?: string;
   resolveProjectFile?: (workspaceId: string, rel: string) => string;
 }
-
-/** 320x180 (16:9) 标准合规中性底占位图（非截断，所有解码器正常渲染） */
-export const PLACEHOLDER_FRAME_BASE64 = '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SAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigCxB/x53P/Af51XqxB/x53P8AwH+dV6YBVif/AI87b/gX86r1NHdTxoER8KOgwKAIaKsfbbn/AJ6/+Oij7bc/89f/AB0UaAV6Ksfbbn/nr/46KPttz/z1/wDHRRoBXoqx9tuf+ev/AI6KPttz/wA9f/HRRoBXoqx9tuf+ev8A46KPttz/AM9f/HRRoBXoqx9tuf8Anr/46KPttz/z1/8AHRRoBXoqx9tuf+ev/joo+23P/PX/AMdFGgFeirH225/56/8Ajoo+23P/AD1/8dFGgFeirH225/56/wDjoo+23P8Az1/8dFGgFeirH225/wCev/joo+23P/PX/wAdFGgFeirH225/56/+Oij7bc/89f8Ax0UaAV6Ksfbbn/nr/wCOij7bc/8APX/x0UaAV6Ksfbbn/nr/AOOij7bc/wDPX/x0UaAV6Ksfbbn/AJ6/+Oij7bc/89f/AB0UaAV6Ksfbbn/nr/46KPttz/z1/wDHRRoBXoqx9tuf+ev/AI6KPttz/wA9f/HRRoBXoqx9tuf+ev8A46KPttz/AM9f/HRRoBXoqx9tuf8Anr/46KPttz/z1/8AHRRoBXoqx9tuf+ev/joo+23P/PX/AMdFGgBB/wAedz/wH+dV6mkup5EKO+VPUYFQ0AFFFFIAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z';
 
 interface ParsedMarkdownTable {
   headers: string[];
@@ -94,7 +92,7 @@ export function extractMarkdownTables(markdown: string): ParsedMarkdownTable[] {
 }
 
 /**
- * 当 Markdown 中没有标准表格时，提取五维分析维度生成结构化行记录
+ * 从 Markdown 中提取五维分析维度；未在文本中出现的维度不产出，绝不填充写死文案
  */
 export function extractFiveDimensions(markdown: string): Array<{ dimension: string; content: string }> {
   const extractSection = (regexes: RegExp[]): string => {
@@ -107,92 +105,42 @@ export function extractFiveDimensions(markdown: string): Array<{ dimension: stri
     return '';
   };
 
-  const summary =
-    extractSection([
-      /##\s*(?:一句话(?:视频)?描述|概要)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:一句话描述|核心概述)[：:]\s*([^\n]+)/i,
-    ]) || '短视频爆款内容拆解';
+  const found: Array<{ dimension: string; content: string }> = [];
+  const push = (dimension: string, content: string): void => {
+    if (content) found.push({ dimension, content });
+  };
 
-  const targetGoal =
-    extractSection([
-      /##\s*(?:I\.\s*)?(?:核心目标|转化目标)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:核心目标|转化目标)[：:]\s*([^\n]+)/i,
-    ]) || '强化品牌认知与爆款种草转化';
+  push('一句话描述', extractSection([
+    /##\s*(?:一句话(?:视频)?描述|概要)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:一句话描述|核心概述)[：:]\s*([^\n]+)/i,
+  ]));
 
-  const influence =
-    extractSection([
-      /##\s*(?:II\.\s*)?(?:影响力(?:分析)?|传播机制)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:影响力|传播价值)[：:]\s*([^\n]+)/i,
-    ]) || '明线展现高性价比与直观效果，暗线击中受众痛点';
+  push('核心目标', extractSection([
+    /##\s*(?:I\.\s*)?(?:核心目标|转化目标)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:核心目标|转化目标)[：:]\s*([^\n]+)/i,
+  ]));
 
-  const narrative =
-    extractSection([
-      /##\s*(?:III\.\s*)?(?:叙事分析|叙事结构|脚本结构)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:叙事分析|叙事结构)[：:]\s*([^\n]+)/i,
-    ]) || '0-3s 黄金钩子抛出痛点 → 3-10s 沉浸演示 → 结尾明确引导下单';
+  push('影响力', extractSection([
+    /##\s*(?:II\.\s*)?(?:影响力(?:分析)?|传播机制)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:影响力|传播价值)[：:]\s*([^\n]+)/i,
+  ]));
 
-  const visual =
-    extractSection([
-      /##\s*(?:IV\.\s*)?(?:画面分析|视听分析|视觉语言)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:画面分析|视觉节奏)[：:]\s*([^\n]+)/i,
-    ]) || '开场强对比特写视觉冲击，中段多角度近景实操细节展示';
+  push('叙事结构', extractSection([
+    /##\s*(?:III\.\s*)?(?:叙事分析|叙事结构|脚本结构)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:叙事分析|叙事结构)[：:]\s*([^\n]+)/i,
+  ]));
 
-  const replication =
-    extractSection([
-      /##\s*(?:V\.\s*)?(?:核心复刻策略|复刻策略|实操建议)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
-      /(?:复刻策略|翻拍公式)[：:]\s*([^\n]+)/i,
-    ]) || '[痛点反问/冲突开场] + [第一人称实测演示] + [视觉效果即时展示] + [CTA购买引导]';
+  push('画面分析', extractSection([
+    /##\s*(?:IV\.\s*)?(?:画面分析|视听分析|视觉语言)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:画面分析|视觉节奏)[：:]\s*([^\n]+)/i,
+  ]));
 
-  return [
-    { dimension: '一句话描述', content: summary },
-    { dimension: '核心目标', content: targetGoal },
-    { dimension: '影响力', content: influence },
-    { dimension: '叙事结构', content: narrative },
-    { dimension: '画面分析', content: visual },
-    { dimension: '复刻策略', content: replication },
-  ];
-}
+  push('复刻策略', extractSection([
+    /##\s*(?:V\.\s*)?(?:核心复刻策略|复刻策略|实操建议)[^\n]*\n+([\s\S]*?)(?=\n##|$)/i,
+    /(?:复刻策略|翻拍公式)[：:]\s*([^\n]+)/i,
+  ]));
 
-/**
- * 语义五维拆解保底模板，确保在未配置 video_analyze 或离线/异常时稳定产出
- */
-export function generateFallbackDeconstructionMarkdown(videoTitle: string): string {
-  const name = videoTitle.trim() || '爆款短视频';
-  return `# 《${name}》逐镜头分解与五维分析报告
-
-## 逐镜头分解表
-| 镜头序号 | 时间段 | 景别 | 画面描述 | 关键动作 | 台词脚本 |
-| --- | --- | --- | --- | --- | --- |
-| 1 | 00:00 - 00:03 | 特写 (Close-up) | 开场抓人视觉反差，产品与问题高光前置 | 快速镜头推入，突出视觉冲击 | "别划走！这个痛点你肯定也有！" |
-| 2 | 00:03 - 00:08 | 中景 (Medium Shot) | 生活化实测演示，呈现使用过程与质感细节 | 第一人称实操，配合手势强调真实性 | "实测效果惊艳，质地非常清爽吸收快" |
-| 3 | 00:08 - 00:15 | 近景 (Medium Close-up) | 直观对比展示与信任感建立，强化功效转化 | 露出满意神态，手持成果向镜头示意 | "现在点击左下角链接，马上体验同款变化！" |
-
-## 一句话视频描述
-以「痛点反差+沉浸实测」为核心载体的高转化短视频，前3秒紧抓眼球，中段建立强信任，结尾清晰引导点击下单。
-
-## I. 核心目标
-* **转化目标**: 强化产品功效心智，直接引导主页橱窗链接点击与转化购买
-* **情绪基调**: 惊喜、种草、信任感
-* **爆款基因**: 痛点即时唤醒 + 直观使用前后对比效果 + 评论区购买路径指引
-
-## II. 影响力分析
-* **明线卖点**: 产品直观功效展示与高性价比卖点
-* **暗线价值**: 解决核心痛点与生活焦虑，提升品质认同
-
-## III. 叙事结构
-* **核心载体**: 口播种草 + 第一视角实测演示
-* **人声DNA**: 亲切真诚的博主分享口吻，语速适中微快，情绪饱满
-* **叙事节奏**: 0-3s 抛出痛点反问 → 中段 3-10s 演示解决过程与质地细节 → 结尾 10-15s 抛出 CTA 购买指引
-
-## IV. 画面分析
-* **场景设置**: 明亮简约的生活化室内场景
-* **镜头语言**: 0-3s 紧凑特写(Close-up) → 演示段多角度近景切换，突出产品细节质感
-* **视听节奏**: 视听卡点增强种草真实度，搭配轻快背景音乐
-
-## V. 核心复刻策略
-* **复刻公式**: [痛点反问/冲突开场] + [产品第一人称实测] + [视觉效果即时展示] + [引导主页 Bio 下单]
-* **创作建议**: 保持原生无滤镜光影，前3秒必须出现核心产品与视觉动作
-`;
+  return found;
 }
 
 /**
@@ -371,38 +319,55 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
 
     const title = input.title?.trim() || ((existingNode?.data as Record<string, unknown> | undefined)?.title as string) || '视频内容拆解表';
 
-    // 4. 调用 video_analyze 工具或 videoAnalyze 接缝执行五维拆解
+    // 4. 调用 video_analyze 工具或 videoAnalyze 接缝执行五维拆解（失败即报错，不做保底降级）
     const tool = (deps.getTool?.('video_analyze') ?? deps.getSeam?.('videoAnalyze')) as
       | { execute?: (args: Record<string, unknown>) => Promise<any> }
       | undefined;
 
+    if (!tool || typeof tool.execute !== 'function') {
+      throw new VideoDeconstructError(
+        'analyze-unavailable',
+        '视频理解能力不可用，请确认已启用视频理解能力后重试',
+        502,
+      );
+    }
+
     let markdown = '';
-    if (tool && typeof tool.execute === 'function') {
-      try {
-        const res = await tool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
-        const text =
-          res?.report ||
-          res?.text ||
-          res?.data?.report ||
-          res?.data?.text ||
-          (typeof res === 'string' ? res : '');
-        if (typeof text === 'string' && text.trim()) {
-          markdown = text.trim();
-        }
-      } catch (err) {
-        logger.warn('video_analyze invocation failed, falling back to template', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+    try {
+      const res = await tool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
+      const text =
+        res?.report ||
+        res?.text ||
+        res?.data?.report ||
+        res?.data?.text ||
+        (typeof res === 'string' ? res : '');
+      if (typeof text === 'string') markdown = text.trim();
+    } catch (err) {
+      const failure = describeVideoAnalyzeFailure(err);
+      logger.error('video_analyze invocation failed', {
+        code: failure.code,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw new VideoDeconstructError(failure.code, failure.message, 502);
     }
 
-    // 5. 若无分析文本，则启用语义五维拆解保底模板，保证稳定可用
     if (!markdown) {
-      markdown = generateFallbackDeconstructionMarkdown(input.title);
+      throw new VideoDeconstructError(
+        'analyze-empty',
+        '视频理解未返回可用的分析内容，请重试',
+        502,
+      );
     }
 
-    // 6. 结构化解析：提取五维分析维度构造标准内容拆解表（分析维度 + 分析内容）
+    // 5. 结构化解析：提取五维分析维度构造标准内容拆解表（分析维度 + 分析内容）
     const dimensions = extractFiveDimensions(markdown);
+    if (dimensions.length === 0) {
+      throw new VideoDeconstructError(
+        'analyze-empty',
+        '未能从视频理解结果中解析出分析维度，请重试',
+        502,
+      );
+    }
     const colDim: HTableColumn = {
       id: newColumnId(),
       title: '分析维度',

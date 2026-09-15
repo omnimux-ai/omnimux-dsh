@@ -14,6 +14,11 @@ const FAILURES: Record<string, [number, string]> = {
   'video-not-found': [404, '未找到指定视频文件'],
   'table-save-failed': [500, '表格文件保存失败'],
   'deconstruct-failed': [502, '视频内容拆解失败'],
+  'analyze-unavailable': [502, '视频理解能力不可用，请确认已启用视频理解能力后重试'],
+  'analyze-failed': [502, '视频理解调用失败，请检查模型渠道配置后重试'],
+  'analyze-empty': [502, '视频理解未返回可用的分析内容，请重试'],
+  'analyze-unsupported': [502, '当前模型渠道不支持视频输入，请更换支持视频的渠道后重试'],
+  'analyze-invalid-input': [502, '视频文件不满足理解要求（格式、大小或路径），请更换视频后重试'],
 };
 
 export function videoDeconstructFailure(error: unknown) {
