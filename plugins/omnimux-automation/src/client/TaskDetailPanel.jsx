@@ -296,8 +296,8 @@ export function TaskDetailPanel({
             />
           </label>
 
-          <section className="dsh-st-md-block">
-            <h3 className="dsh-st-md-block-title"><span>{t('form.prompt')}</span></h3>
+          <section className="dsh-st-md-block dsh-st-md-block--prompt">
+            <h3 className="dsh-st-md-block-title dsh-st-md-prompt-title"><span>{t('form.prompt')}</span></h3>
             {promptEditing
               ? (
                 <textarea
