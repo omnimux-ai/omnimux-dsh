@@ -211,14 +211,14 @@ describe('agent preset avatars', () => {
     assert.equal(resolveAgentPresetAvatar('standard').src.startsWith('data:image/svg+xml'), true)
   })
 
-  it('resolves market expert covers for hired domain experts', () => {
+  it('resolves deterministic pixel avatar for domain experts consistently', () => {
     const shopee = resolveAgentPresetAvatar('Shopee运营专家')
     assert.equal(shopee.id, 'shopee-ops-expert')
-    assert.match(shopee.src, /expert-shopee-ops\.png/)
+    assert.equal(shopee.src, generatePixelAvatarDataUrl('shopee-ops-expert', { size: MENU_AVATAR_SIZE_PX }))
 
     const youtube = resolveAgentPresetAvatar('YouTube创作者专家')
     assert.equal(youtube.id, 'youtube-creator-expert')
-    assert.match(youtube.src, /expert-youtube-creator\.png/)
+    assert.equal(youtube.src, generatePixelAvatarDataUrl('youtube-creator-expert', { size: MENU_AVATAR_SIZE_PX }))
   })
 
   it('finds the preset chip, not the workspace picker beside it', () => {

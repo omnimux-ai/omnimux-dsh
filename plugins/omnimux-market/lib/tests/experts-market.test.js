@@ -215,9 +215,11 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     assert.doesNotMatch(apply, /plazaRemote\s*=\s*ctx\.remote/, 'must not synchronously access ctx.remote without inject');
     assert.match(apply, /ctx\.inject\(\["remote"\],/, 'must safely inject remote service');
 });
-test('all 8 circular avatar images exist in catalog/covers/', () => {
+test('all 8 experts define crisp deterministic pixel avatars', () => {
     for (const exp of DEFAULT_MARKET_EXPERTS) {
-        const file = new URL(`../../${exp.avatar}`, import.meta.url);
-        assert.ok(existsSync(file), `avatar file exists: ${exp.avatar}`);
+        assert.ok(exp.avatar, `${exp.id} has avatar`);
+        assert.match(exp.avatar, /^data:image\/svg\+xml/, `${exp.id} avatar is svg data uri`);
+        assert.match(decodeURIComponent(exp.avatar), /shape-rendering="crispEdges"/, `${exp.id} has pixel art rendering tag`);
+        assert.match(decodeURIComponent(exp.avatar), /viewBox="0 0 16 16"/, `${exp.id} is 16x16 pixel grid`);
     }
 });

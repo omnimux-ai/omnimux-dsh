@@ -129,6 +129,8 @@ export const AGENT_PRESET_NAMES = Object.freeze({
   '亚马逊运营专员': 'amazon-ops-expert',
   'Amazon Ops Expert': 'amazon-ops-expert',
   'amazon-ops-expert': 'amazon-ops-expert',
+  'Amazon Operations Expert': 'amazon-operations-expert',
+  'amazon-operations-expert': 'amazon-operations-expert',
   'TikTok Shop运营专家': 'tiktok-shop-ops-expert',
   'TikTok Shop 运营专家': 'tiktok-shop-ops-expert',
   'TikTok Shop': 'tiktok-shop-ops-expert',
@@ -144,17 +146,9 @@ export const AGENT_PRESET_NAMES = Object.freeze({
 
 /**
  * Known market expert covers from omnimux-market.
+ * 专家头像已全面统一为确定性像素艺术头像（pixel-avatar），此处清空历史旧图映射。
  */
-export const BUILTIN_EXPERT_COVERS = Object.freeze({
-  'shopee-ops-expert': 'catalog/covers/expert-shopee-ops.png',
-  'youtube-creator-expert': 'catalog/covers/expert-youtube-creator.png',
-  'amazon-ops-expert': 'catalog/covers/expert-amazon-ops.png',
-  'tiktok-shop-ops-expert': 'catalog/covers/expert-tiktok-shop-ops.png',
-  'media-creator': 'catalog/covers/expert-media-creator.png',
-  'html-generator': 'catalog/covers/expert-html-generator.png',
-  'amazon-operations-expert': 'catalog/covers/expert-amazon-operations.png',
-  'tiktok-ecommerce-expert': 'catalog/covers/expert-tiktok-ecommerce.png',
-})
+export const BUILTIN_EXPERT_COVERS = Object.freeze({})
 
 /**
  * Resolve a preset avatar URL or cover path to a browser-loadable image URI.
@@ -271,11 +265,6 @@ export function resolveAgentPresetAvatar(label, opts = {}) {
   const overrides = { ...readAgentPresetAvatarOverrides(), ...(opts.overrides ?? {}) }
   const configured = configuredAvatarFor(overrides, id, text)
   if (configured) return { id, label: text, src: configured }
-
-  const builtinCover = BUILTIN_EXPERT_COVERS[id]
-  if (builtinCover) {
-    return { id, label: text, src: resolvePresetCoverUrl(builtinCover) }
-  }
 
   const size = Number.isFinite(Number(opts.size)) && Number(opts.size) > 0
     ? Math.round(Number(opts.size))

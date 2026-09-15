@@ -1,4 +1,5 @@
 import React from 'react';
+import { generatePixelAvatarDataUrl } from './pixel-avatar.js';
 
 export function isValidPositiveNumber(val) {
   if (typeof val !== 'number') return false;
@@ -158,15 +159,25 @@ export function suiteCompositionText(item, tr) {
 }
 
 export const DEFAULT_MARKET_EXPERTS = [
-  { id: 'shopee-ops-expert', name: 'Shopee运营专家', nameEn: 'Shopee Ops Expert', description: '负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。', descriptionEn: 'Shopee operation specialist for market, product, shop, brand and keyword analysis.', avatar: 'catalog/covers/expert-shopee-ops.png', status: 'enabled' },
-  { id: 'youtube-creator-expert', name: 'YouTube创作者专家', nameEn: 'YouTube Creator Expert', description: '帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。', descriptionEn: 'Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.', avatar: 'catalog/covers/expert-youtube-creator.png', status: 'enabled' },
-  { id: 'amazon-ops-expert', name: '亚马逊运营专家', nameEn: 'Amazon Ops Expert', description: '亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。', descriptionEn: 'Amazon operation specialist for market, product, listing, keyword, review and risk analysis.', avatar: 'catalog/covers/expert-amazon-ops.png', status: 'enabled' },
-  { id: 'tiktok-shop-ops-expert', name: 'TikTok Shop运营专家', nameEn: 'TikTok Shop Ops Expert', description: '负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。', descriptionEn: 'TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.', avatar: 'catalog/covers/expert-tiktok-shop-ops.png', status: 'enabled' },
-  { id: 'media-creator', name: '媒体创作者', nameEn: 'Media Creator', description: 'AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。', descriptionEn: 'AI content generation: videos, images, digital avatars, background removal, TTS, and voice cloning using Topview AI', avatar: 'catalog/covers/expert-media-creator.png', status: 'available' },
-  { id: 'html-generator', name: 'HTML生成器', nameEn: 'HTML Generator', description: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示', descriptionEn: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示', avatar: 'catalog/covers/expert-html-generator.png', status: 'available' },
-  { id: 'amazon-operations-expert', name: '亚马逊运营专家', nameEn: 'Amazon Operations Expert', description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。', descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion', avatar: 'catalog/covers/expert-amazon-operations.png', status: 'available' },
-  { id: 'tiktok-ecommerce-expert', name: 'TikTok电商专家', nameEn: 'TikTok Ecommerce Expert', description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。', descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.', avatar: 'catalog/covers/expert-tiktok-ecommerce.png', status: 'available' },
+  { id: 'shopee-ops-expert', name: 'Shopee运营专家', nameEn: 'Shopee Ops Expert', description: '负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。', descriptionEn: 'Shopee operation specialist for market, product, shop, brand and keyword analysis.', avatar: generatePixelAvatarDataUrl('shopee-ops-expert', { size: 96 }), status: 'enabled' },
+  { id: 'youtube-creator-expert', name: 'YouTube创作者专家', nameEn: 'YouTube Creator Expert', description: '帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。', descriptionEn: 'Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.', avatar: generatePixelAvatarDataUrl('youtube-creator-expert', { size: 96 }), status: 'enabled' },
+  { id: 'amazon-ops-expert', name: '亚马逊运营专家', nameEn: 'Amazon Ops Expert', description: '亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。', descriptionEn: 'Amazon operation specialist for market, product, listing, keyword, review and risk analysis.', avatar: generatePixelAvatarDataUrl('amazon-ops-expert', { size: 96 }), status: 'enabled' },
+  { id: 'tiktok-shop-ops-expert', name: 'TikTok Shop运营专家', nameEn: 'TikTok Shop Ops Expert', description: '负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。', descriptionEn: 'TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.', avatar: generatePixelAvatarDataUrl('tiktok-shop-ops-expert', { size: 96 }), status: 'enabled' },
+  { id: 'media-creator', name: '媒体创作者', nameEn: 'Media Creator', description: 'AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。', descriptionEn: 'AI content generation: videos, images, digital avatars, background removal, TTS, and voice cloning using Topview AI', avatar: generatePixelAvatarDataUrl('media-creator', { size: 96 }), status: 'available' },
+  { id: 'html-generator', name: 'HTML生成器', nameEn: 'HTML Generator', description: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示', descriptionEn: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示', avatar: generatePixelAvatarDataUrl('html-generator', { size: 96 }), status: 'available' },
+  { id: 'amazon-operations-expert', name: '亚马逊运营专家', nameEn: 'Amazon Operations Expert', description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。', descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion', avatar: generatePixelAvatarDataUrl('amazon-operations-expert', { size: 96 }), status: 'available' },
+  { id: 'tiktok-ecommerce-expert', name: 'TikTok电商专家', nameEn: 'TikTok Ecommerce Expert', description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。', descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.', avatar: generatePixelAvatarDataUrl('tiktok-ecommerce-expert', { size: 96 }), status: 'available' },
 ];
+
+export function resolveExpertAvatar(item, size = 96) {
+  if (!item) return '';
+  if (item.avatar && typeof item.avatar === 'string') {
+    if (item.avatar.startsWith('data:') || item.avatar.startsWith('http://') || item.avatar.startsWith('https://')) {
+      return item.avatar;
+    }
+  }
+  return generatePixelAvatarDataUrl(item.id || item.name || '', { size });
+}
 
 export function safeTrySkillInSession(item) {
   if (typeof trySkillInSession === 'function') {

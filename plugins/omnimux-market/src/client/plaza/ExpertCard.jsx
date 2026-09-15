@@ -4,6 +4,7 @@ import {
   getExpertButtonText,
   getExpertLocalizedNames,
   getExpertStatusText,
+  resolveExpertAvatar,
   resolveIconSrc,
   resolveInitials,
 } from './plazaUtils.js';
@@ -27,6 +28,11 @@ export function renderExpertCard(item, opts) {
   const isToggling = expertMarketToggling === item.id;
 
   const onAvatarErr = (e) => {
+    const fallbackSrc = resolveExpertAvatar(item);
+    if (e.currentTarget.src !== fallbackSrc) {
+      e.currentTarget.src = fallbackSrc;
+      return;
+    }
     e.currentTarget.style.display = 'none';
     const n = e.currentTarget.nextElementSibling;
     if (n) n.style.display = 'grid';
@@ -36,9 +42,11 @@ export function renderExpertCard(item, opts) {
     onToggle(item);
   };
 
+  const avatarSrc = resolveExpertAvatar(item);
+
   return h('div', { key: item.id, className: 'expert-card' },
     h('div', { className: 'expert-card-avatar-wrap' },
-      h('img', { className: 'expert-card-avatar', src: getIconSrc(item.avatar), alt: title, loading: 'lazy', onError: onAvatarErr }),
+      h('img', { className: 'expert-card-avatar', src: avatarSrc, alt: title, loading: 'lazy', onError: onAvatarErr }),
       h('div', { className: 'expert-card-avatar-fallback', style: { display: 'none' } }, getInitials(title)),
     ),
     conf.btnKey ? h('div', { className: 'expert-card-action' },

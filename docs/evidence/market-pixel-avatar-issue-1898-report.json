@@ -1,0 +1,64 @@
+{
+  "task": "Issue #1898: 专家市场卡片头像统一为像素小人头像并与输入框预设完全对齐",
+  "timestamp": "2026-09-15T06:45:19.443Z",
+  "verified": true,
+  "expertCount": 8,
+  "results": [
+    {
+      "id": "shopee-ops-expert",
+      "name": "Shopee运营专家",
+      "status": "enabled",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "youtube-creator-expert",
+      "name": "YouTube创作者专家",
+      "status": "enabled",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "amazon-ops-expert",
+      "name": "亚马逊运营专家",
+      "status": "enabled",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "tiktok-shop-ops-expert",
+      "name": "TikTok Shop运营专家",
+      "status": "enabled",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "media-creator",
+      "name": "媒体创作者",
+      "status": "available",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "html-generator",
+      "name": "HTML生成器",
+      "status": "available",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "amazon-operations-expert",
+      "name": "亚马逊运营专家",
+      "status": "available",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    },
+    {
+      "id": "tiktok-ecommerce-expert",
+      "name": "TikTok电商专家",
+      "status": "available",
+      "avatarPrefix": "data:image/svg+xml;charset=utf-8,%3Csvg%...",
+      "verified": true
+    }
+  ]
+}
