@@ -20,6 +20,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cloudFilter, cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
+import { LruCache } from './lru-cache.js'
 import {
   CHARACTER_CATEGORY,
   activeDimensionCount,
@@ -125,6 +126,14 @@ export function useCloudAudition() {
 }
 
 /**
+ * 分页结果缓存：键＝「分类/二级分类 + 筛选条件 + 页码」。
+ *
+ * 一次会话里来回切分类、来回翻页都不该重复请求同一片；上限 240 条足够覆盖常用的
+ * 十几个分类 × 若干页，超出按最久未用淘汰，避免无限增长。
+ */
+const pageCache = new LruCache(240)
+
+/**
  * @param {{
  *   t: (key: string) => string,
  *   open: boolean,
@@ -227,9 +236,14 @@ export function useCloudAssetsFeed(options) {
     requestRef.current = token
     setLoadingPage(true)
     try {
-      const result = filtering
+      // 命中分页缓存就直接用，来回切分类不会二次请求；键含筛选条件，不同
+      // 筛选组合不会互相污染。错误结果不入缓存（见下方各失败分支）。
+      const cacheKey = LruCache.keyOf(scope, filtering ? filterTokens : '', page)
+      const cached = pageCache.get(cacheKey)
+      const result = cached ?? (filtering
         ? await cloudFilter({ tokens: filterTokens, limit: CLOUD_PAGE_SIZE, offset: page * CLOUD_PAGE_SIZE })
-        : await cloudPage(scope, page)
+        : await cloudPage(scope, page))
+      if (cached === undefined && result.ok === true) pageCache.set(cacheKey, result)
       if (requestRef.current !== token) return
       if (!result.ok) {
         // A missing page file is a valid end-of-list signal for a scope whose
