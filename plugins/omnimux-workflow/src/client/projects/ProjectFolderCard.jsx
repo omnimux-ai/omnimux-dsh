@@ -64,8 +64,8 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
         items[event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length]?.focus()
       }
     }}>
-      <Button variant="ghost" role="menuitem" onClick={() => { closeMenu(); onRename(project) }}><IconEditOutline16 size={16}/>{t('projects.rename')}</Button>
-      <Button variant="ghost" role="menuitem" onClick={() => { closeMenu(); onDelete(project) }}><IconTrashOutline16 size={16}/>{t('projects.delete')}</Button>
+      <Button variant="ghost" role="menuitem" leadingIcon={<IconEditOutline16 size={16}/>} onClick={() => { closeMenu(); onRename(project) }}>{t('projects.rename')}</Button>
+      <Button variant="ghost" role="menuitem" leadingIcon={<IconTrashOutline16 size={16}/>} onClick={() => { closeMenu(); onDelete(project) }}>{t('projects.delete')}</Button>
     </div>}
   </article>
 }
