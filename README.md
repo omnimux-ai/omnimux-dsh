@@ -10,6 +10,9 @@
   <a href="COMMERCIAL.md"><img src="https://img.shields.io/badge/Edition-Community%20%7C%20Enterprise-success.svg" alt="Community | Enterprise"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D22.19%20%7C%7C%20%3E%3D24-brightgreen.svg" alt="Node Version"></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/Ecosystem-DeepSeek%20Harness-purple.svg" alt="DSH Ecosystem"></a>
+  <a href="https://discord.gg/omnimux"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2.svg?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://x.com/omnimux_ai"><img src="https://img.shields.io/badge/X%20(Twitter)-@omnimux__ai-black.svg?logo=x&logoColor=white" alt="Twitter"></a>
+  <a href="#-社区交流与开发者群-community"><img src="https://img.shields.io/badge/WeChat-开发者交流群-07C160.svg?logo=wechat&logoColor=white" alt="WeChat"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-orange.svg" alt="PRs Welcome"></a>
 </p>
 
@@ -82,13 +85,56 @@ OmniMux 采用“执行中枢 + 业务垂直插件”的微内核模块化架构
 └──────────────────┘ └─────────────┘ └──────────┘ └─────────────┘ └──────────────────┘
 ```
 
-* **`omnimux`**：执行中枢。统一产品外壳、账号鉴权、模型/出片服务路由。业务插件无缝复用。
-* **`omnimux-workflow`**：工作流无限画布。拖拽编排 DAG、Agent 工具调用与多模态内容生成流。
-* **`omnimux-assets` & `omnimux-products`**：创作资产与商品库。角色、场景、风格包与带货商品资产统一管理。
-* **`omnimux-clip`**：剪辑工坊。集成专业微应用时间轴与视频轨道编排合成。
-* **`omnimux-accounts`**：社媒矩阵账号池。多平台账号状态监控、授权与可用性保护。
-* **`omnimux-inspiration`**：灵感复刻库。爆款视频拆解、提示词与多模态工程复刻。
-* **`omnimux-publish`**：多账号内容发布中心。草稿箱、多平台并发分发与子任务台账管理。
+---
+
+## 🧩 核心插件功能矩阵与开发阶段 (Plugin Matrix & Lifecycle)
+
+OmniMux 遵循“一切皆插件”的模块化设计，业务垂直插件各司其职且松耦合，当前全量插件的功能与演进阶段如下：
+
+### 1. 多模态内容创作与视频出片中枢
+
+| 插件模块 (Package) | 中文定位 | 核心功能亮点 | 当前阶段 (Status) |
+| :--- | :--- | :--- | :---: |
+| **`omnimux`** | 执行中枢底座 | 统一产品外观、全模态模型统一路由调度、账号鉴权与凭证安全托管 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-workflow`** | 工作流无限画布 | 基于 React Flow 的可视化 DAG 画布，支持模型节点连线、参数微调与分镜生图/生视频 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-clip`** | 视频剪辑工坊 | 集成 OpenReel 引擎，提供专业级多轨时间轴、WebCodecs 硬件加速与画中画/音轨精修 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-viewer`** | 全能媒体渲染底座 | 支持 36 种音视频/图片/文档本地就地内联播放、画中画与放大预览，告别纯文本文件名 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-assets`** | 创作资产库 | 300+ 热门数字人角色、声音音色库、背景与风格预设统一存储与管理 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-products`** | 电商商品库 | 跨平台商品信息抓取、白底图清洗、卖点提炼与带货分镜脚本智能派生 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-inspiration`** | 爆款灵感复刻库 | 热门带货短视频逆向拆解、黄金前 3 秒吸睛钩子 (Hook) 分析与结构化工程导出 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+
+### 2. 社媒矩阵增长与运营自动化
+
+| 插件模块 (Package) | 中文定位 | 核心功能亮点 | 当前阶段 (Status) |
+| :--- | :--- | :--- | :---: |
+| **`omnimux-publish`** | 多平台发布中心 | 草稿箱管理、多平台（TikTok/YouTube/X等）并发排期分发、任务台账与回流 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+| **`omnimux-accounts`** | 矩阵账号池风控 | 社交媒体多账号授权绑定、状态心跳监控、代理 IP 隔离与防关联安全保障 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+| **`omnimux-browser`** | 浏览器伴侣扩展 | Chrome 扩展双向安全桥接、网页素材直链嗅探、原生侧边栏对话交互 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-automation`** | 自动化任务工作台 | 独立会话定时无人值守调度、巡检监控与执行历史总览卡片 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+| **`omnimux-analytics`** | 运营与插件指标分析 | 隐私友好的本地数据计算（基于 Umami 内核），出片与发布效果数据看板 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+| **`omnimux-intercept`** | 社媒爆速监测与截流 | 推文存活时速算法计算、三档爆速评级、高赞评论与引用转发草稿一键生成 | ![Alpha](https://img.shields.io/badge/%E5%AE%9E%E9%AA%8C-Alpha-6B7280?style=flat-square) |
+
+### 3. 插件生态与应用形式
+
+| 插件模块 (Package) | 中文定位 | 核心功能亮点 | 当前阶段 (Status) |
+| :--- | :--- | :--- | :---: |
+| **`omnimux-market`** | 扩展与技能市场 | 基于 SkillHub 架构，提供技能 (Skills)、插件、专家角色与连接器四合一生态 | ![GA](https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-GA-2EA44F?style=flat-square) |
+| **`omnimux-forms`** | 任务配置表单 | Schema 驱动的配置式表单向导，快速引导出片参数并生成会话草稿 | ![Beta](https://img.shields.io/badge/%E5%85%AC%E6%B5%8B-Beta-F59E0B?style=flat-square) |
+| **`omnimux-apps`** | AI 独立应用工坊 | 针对特定出片业务的独立轻量交互界面，支持表单与结果对照 | ![Alpha](https://img.shields.io/badge/%E5%AE%9E%E9%AA%8C-Alpha-6B7280?style=flat-square) |
+
+---
+
+## 📚 开发者资源与生态文档 (Developer Resources)
+
+我们为开源贡献者与二次开发团队提供了完备的规范与文档支持：
+
+| 关注目标 | 资源与文档入口 | 说明 |
+| :--- | :--- | :--- |
+| **快速上手与业务实战** | [跨境电商与社媒短视频出片实战指南](docs/guides/ecommerce-video-replication.md) | 从爆款视频拆解、商品转视频到多轨剪辑与矩阵分发的端到端手册 |
+| **执行中枢接口全景** | [执行中枢接口全景面板](docs/tools/hub-interfaces.html) | 模型能力、智能体工具、账号平台与发布通道的实时映射与门禁真源 |
+| **开发与协作约束** | [AGENTS.md 开发规范](AGENTS.md) / [CLAUDE.md](CLAUDE.md) | 涵盖 Agent 驱动开发约束、质量闭环与多 Worktree 物理隔离守卫 |
+| **商业模式与授权申请** | [商业与企业许可指南](COMMERCIAL.md) | 社区开源自托管 vs 商业企业版授权、成本优势与 OEM 白标申请 |
+| **开源第三方项目公示** | [致谢与第三方声明](ACKNOWLEDGEMENTS.md) | 完整收录所有 Fork、引入的开源插件、底层引擎与许可证溯源 |
 
 ---
 
@@ -131,7 +177,42 @@ OmniMux 采用标准的 **Open-Core** 模式与 **Sustainable Source** 许可：
 
 ---
 
-## 🤝 贡献与社区 (Contributing)
+## 💬 社区交流与开发者群 (Community)
+
+可选择常用的平台参与讨论，交流 AI 视频出片技巧、探讨插件二次开发、反馈需求与跟踪最新进展：
+
+<table>
+  <thead>
+    <tr>
+      <th align="center" width="50%">微信 / 企业微信开发者交流群</th>
+      <th align="center" width="50%">全球社交媒体与开发者频道</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" valign="middle">
+        <img src="docs/assets/community-wechat-group.png" alt="OmniMux 微信 / 企业微信开发者交流群" width="220"><br>
+        <sub>扫码加入 <strong>OmniMux 开发者交流群</strong><br>（微信或企业微信均可扫码进入）</sub>
+      </td>
+      <td align="center" valign="middle">
+        <p>
+          <a href="https://discord.gg/omnimux"><img src="https://img.shields.io/badge/Discord-Join%20OmniMux-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+        </p>
+        <p>
+          <a href="https://x.com/omnimux_ai"><img src="https://img.shields.io/badge/X%20(Twitter)-Follow%20@omnimux__ai-black?style=for-the-badge&logo=x&logoColor=white" alt="Twitter"></a>
+        </p>
+        <p>
+          <a href="https://github.com/omnimux-ai/omnimux-dsh/discussions"><img src="https://img.shields.io/badge/GitHub-Discussions-0969DA?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Discussions"></a>
+        </p>
+        <sub>欢迎提交 Issue、参与功能共建或在 Discord / X 与全球开发者互动！</sub>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 🤝 贡献与共建 (Contributing)
 
 我们非常欢迎开发者参与共建！无论是修复 Bug、编写文档，还是为 OmniMux 贡献新的 Agent Skills 或插件：
 1. 查阅 [CONTRIBUTING.md](CONTRIBUTING.md) 了解代码规范与 PR 提交流程。
