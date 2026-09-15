@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { memo, useState, useEffect, useMemo, useRef } from 'react';
 import { useViewport } from '@xyflow/react';
 import {
   Play,
@@ -19,7 +19,7 @@ import {
 
 export interface GroupTopBarProps {
   groupId: string;
-  groupTitle: string;
+  groupTitle?: string;
   groupColor: string;
   isCollapsed?: boolean;
   onExecuteGroup: () => void;
@@ -32,7 +32,7 @@ export interface GroupTopBarProps {
 }
 
 const NEUTRAL_SWATCH = '';
-/** 8个经典高对比度调色板（对标图示色彩序列） */
+/** 8个经典高对比度调色板 */
 const PALETTE_COLORS = [
   NEUTRAL_SWATCH,
   '#8b5cf6', // 紫罗兰
@@ -45,7 +45,6 @@ const PALETTE_COLORS = [
 ];
 
 export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
-  groupTitle,
   groupColor,
   isCollapsed = false,
   onExecuteGroup,
@@ -54,7 +53,6 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
   onUngroup,
   onDeleteWorkflow,
   onColorChange,
-  onRename,
 }) => {
   const t = useT();
   const { zoom } = useViewport();
@@ -66,14 +64,8 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
   const accentStyle = useMemo(() => resolveGroupAccentStyle(groupColor), [groupColor]);
   const isNeutral = !isCustomGroupAccent(groupColor);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(groupTitle);
   const [isColorOpen, setIsColorOpen] = useState(false);
   const colorRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setEditTitle(groupTitle);
-  }, [groupTitle]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -84,14 +76,6 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleTitleSubmit = useCallback(() => {
-    setIsEditing(false);
-    const clean = editTitle.trim();
-    if (clean && clean !== groupTitle && onRename) {
-      onRename(clean);
-    }
-  }, [editTitle, groupTitle, onRename]);
 
   return (
     <div
@@ -108,40 +92,6 @@ export const GroupTopBar: React.FC<GroupTopBarProps> = memo(({
       }}
     >
       <div className="wf-floating-top-pill__group">
-        {/* 工作流标题药丸（带圆点，始终靠左对齐，支持点击就地重命名） */}
-        <div
-          className="wf-group-topbar__badge"
-          title={t('group.renameHint')}
-          onClick={() => setIsEditing(true)}
-        >
-          <span
-            className="wf-group-topbar__badge-dot"
-            style={{ backgroundColor: isNeutral ? 'var(--wb-node-ring)' : groupColor }}
-          />
-          {isEditing ? (
-            <input
-              type="text"
-              className="wf-group-topbar__badge-input"
-              value={editTitle}
-              autoFocus
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleTitleSubmit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleTitleSubmit();
-                if (e.key === 'Escape') {
-                  setEditTitle(groupTitle);
-                  setIsEditing(false);
-                }
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <span className="wf-group-topbar__badge-title">{groupTitle}</span>
-          )}
-        </div>
-
-        <span className="wf-floating-top-pill__divider" />
-
         {/* 整组执行 */}
         <button
           type="button"
