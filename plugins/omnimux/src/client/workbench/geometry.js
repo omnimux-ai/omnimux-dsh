@@ -99,6 +99,13 @@ export function findOfficialSidebarColumn(doc = hostDocument()) {
  */
 function isLikelyWorkbenchPanel(el) {
   if (!el || typeof el !== 'object') return false
+  // 严格排除外层总容器与顶层布局节点，防止将整个 AppFrame 误判为右面板
+  if (el.classList?.contains('dshDesktopFrame')
+    || el.hasAttribute?.('data-desktop-mode')
+    || el.hasAttribute?.('data-desktop-platform')
+    || (typeof el.matches === 'function' && (el.matches('.dshDesktopFrame, [class*="frame"], [class*="centerCol"], [class*="sidebarCol"]') || el.matches('#root, body, html')))) {
+    return false
+  }
   if (typeof el.getBoundingClientRect !== 'function') return true
   let rect
   try { rect = el.getBoundingClientRect() } catch { return true }
@@ -107,6 +114,8 @@ function isLikelyWorkbenchPanel(el) {
   if (viewport > 0 && rect.right < viewport - 12) return false
   if (typeof rect.width === 'number' && Number.isFinite(rect.width)
     && rect.width > 0 && rect.width < WORKBENCH_PANEL_MIN_PX - 1) return false
+  // 右侧分栏面板在分栏模式下宽度不可能占满整个视口，全宽节点必为外层视口容器
+  if (viewport > 0 && typeof rect.width === 'number' && rect.width >= viewport - 10) return false
   return true
 }
 
@@ -130,10 +139,12 @@ export function findWorkbenchPanelElement(doc = hostDocument()) {
     if (handle?.parentElement && isLikelyWorkbenchPanel(handle.parentElement)) {
       return handle.parentElement
     }
-    const tagged = doc.querySelector(`[${WORKBENCH_PANEL_ATTR}]`)
-    if (tagged) return tagged
-    const dragging = doc.querySelector('[data-dragging]')
+    const tagged = doc.querySelector(`[${WORKBENCH_PANEL_ATTR}]:not(.dshDesktopFrame):not([class*="frame"])`)
+    if (tagged && isLikelyWorkbenchPanel(tagged)) return tagged
+    const dragging = doc.querySelector('[data-dragging]:not(.dshDesktopFrame):not([class*="frame"])')
     if (dragging && isLikelyWorkbenchPanel(dragging)) return dragging
+    const rightPanel = doc.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')
+    if (rightPanel && isLikelyWorkbenchPanel(rightPanel)) return rightPanel
   } catch {
     // ignore
   }
