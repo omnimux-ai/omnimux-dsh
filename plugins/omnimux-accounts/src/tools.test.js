@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createAccountMetaStore } from './account-meta.js'
 import { apply, ACCOUNTS_TOOL_NAMES } from './index.js'
 
 test('omnimux-accounts tools lifecycle', async (t) => {
@@ -56,15 +57,16 @@ test('omnimux-accounts tools lifecycle', async (t) => {
   assert.equal(res1.count, 2)
   assert.equal(res1.accounts[0].id, 'acc_1')
 
-  // 2. Update group and agent_usable
+  // Owner disables invocation; group changes cannot re-enable it.
+  createAccountMetaStore({ home: tmp }).patch('acc_1', { agent_usable: false })
   const updateTool = registered.get('accounts_update_group')
   for (const id of ['acc_direct', 'acc_missing', 'acc_unknown']) {
     await assert.rejects(updateTool.execute({ id, group: 'forbidden' }), /account-provider-mismatch/)
   }
+  await assert.rejects(updateTool.execute({ id: 'acc_1', agent_usable: true }), /account-permission-owner-only/)
   const updateRes = await updateTool.execute({
     id: 'acc_1',
     group: '短剧矩阵A',
-    agent_usable: false,
   })
   assert.equal(updateRes.ok, true)
   assert.equal(updateRes.meta.group, '短剧矩阵A')
