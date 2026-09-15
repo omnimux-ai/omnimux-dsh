@@ -13,6 +13,7 @@ import type {
   RestrictedJsonSchema,
   FormPropertySchema,
   FieldMappingEntry,
+  FixedFieldSummaryEntry,
   ShowcaseItem,
 } from './manifest.ts';
 
@@ -168,6 +169,40 @@ export function validateApplicationManifest(manifest: unknown): ValidationResult
           `fieldMappings["${key}"].widget must be one of [${VALID_WIDGETS.join(', ')}], received "${mapping.widget}"`,
         );
       }
+    }
+  }
+
+  // 5b. Optional author-fixed summary (absent on manifests published before the field existed)
+  if (m.fixedFields !== undefined) {
+    if (!Array.isArray(m.fixedFields)) {
+      errors.push('fixedFields must be an array when present');
+    } else {
+      m.fixedFields.forEach((entry: FixedFieldSummaryEntry, idx: number) => {
+        if (!entry || typeof entry !== 'object') {
+          errors.push(`fixedFields[${idx}] must be an object`);
+          return;
+        }
+        if (typeof entry.key !== 'string' || !entry.key.trim()) {
+          errors.push(`fixedFields[${idx}].key must be a non-empty string`);
+        }
+        if (typeof entry.label !== 'string' || !entry.label.trim()) {
+          errors.push(`fixedFields[${idx}].label must be a non-empty string`);
+        }
+        if (typeof entry.value !== 'string' || !entry.value.trim()) {
+          errors.push(`fixedFields[${idx}].value must be a non-empty string`);
+        }
+        if (
+          entry.key &&
+          m.formSchema &&
+          typeof m.formSchema === 'object' &&
+          m.formSchema.properties &&
+          Object.prototype.hasOwnProperty.call(m.formSchema.properties, entry.key)
+        ) {
+          errors.push(
+            `fixedFields[${idx}] "${entry.key}" is also an exposed form property; a candidate is either exposed or fixed`,
+          );
+        }
+      });
     }
   }
 

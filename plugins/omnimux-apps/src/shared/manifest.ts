@@ -24,6 +24,22 @@ export type FormWidgetType =
 /** Mapping type between form field and workflow execution slot / parameter */
 export type FieldMappingType = 'text' | 'param' | 'slot' | 'media';
 
+/**
+ * Wizard grouping for a publishing candidate.
+ * `asset` / `text` are user-provided content; `config` is a generation parameter
+ * the publisher either opened up or kept fixed.
+ */
+export type InputGroupId = 'asset' | 'text' | 'config';
+
+/** A field the publisher kept fixed: executed with the author value, hidden from consumers */
+export interface FixedFieldSummaryEntry {
+  key: string;
+  nodeId: string;
+  label: string;
+  value: string;
+  group: InputGroupId;
+}
+
 /** Field mapping descriptor for binding form schema keys to workflow nodes */
 export interface FieldMappingEntry {
   nodeId: string;
@@ -127,4 +143,6 @@ export interface ApplicationManifest {
   fieldMappings: Record<string, FieldMappingEntry>;
   showcase: ShowcaseConfig;
   demoSnapshot: Record<string, unknown>;
+  /** Optional author-fixed field summary; absent on manifests published before this field existed */
+  fixedFields?: FixedFieldSummaryEntry[];
 }

@@ -17,10 +17,55 @@ import type {
   RestrictedJsonSchema,
   FormPropertySchema,
   FieldMappingEntry,
+  FixedFieldSummaryEntry,
 } from './publishTypes.ts';
 import { NodeSpecRegistry } from '../../../../shared/specs/registry.ts';
 
 export const STANDARD_ASPECT_RATIOS = ['1:1', '4:3', '16:9', '9:16'] as const;
+
+/**
+ * Parameter keys that stay user-adjustable by default: consumers notice them and
+ * they do not raise the cost ceiling of a run.
+ */
+const USER_ADJUSTABLE_PARAM_KEYS = new Set([
+  'aspectratio',
+  'duration',
+  'durationseconds',
+  'videoduration',
+  'clipduration',
+]);
+
+/** Parameter key tokens that are implementation details and never reach the consumer form. */
+const INTERNAL_PARAM_KEY_TOKENS = new Set([
+  'nodeid',
+  'workspaceid',
+  'workflowhash',
+  'snapshot',
+  'debug',
+  'trace',
+  'internal',
+]);
+
+/** True when a parameter key is an implementation detail rather than a user-facing option. */
+function isInternalParamKey(paramKey: string): boolean {
+  const key = paramKey.toLowerCase();
+  return key.endsWith('path') || INTERNAL_PARAM_KEY_TOKENS.has(key);
+}
+
+/** True when a parameter key stays user-adjustable by default. */
+function isUserAdjustableParamKey(paramKey: string): boolean {
+  return USER_ADJUSTABLE_PARAM_KEYS.has(paramKey.toLowerCase());
+}
+
+/**
+ * Human-readable fixed value, shared by the publishing wizard and the consumer form
+ * so both sides describe an author-fixed field identically.
+ */
+export function describeFixedValue(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '未设置';
+  if (typeof value === 'boolean') return value ? '开启' : '关闭';
+  return String(value);
+}
 
 /** Minimal interface representing a canvas node */
 export interface FlowNodeLike {
@@ -49,11 +94,12 @@ export interface ToolCatalogProvider {
  *
  * 1. Computes InDegree and OutDegree for each node.
  * 2. InDegree === 0 (root nodes like text prompt or media import):
- *    Default to mandatory core inputs (isExposed: true, isRequired: true).
+ *    Recommended as user-provided inputs: exposed and required.
  * 3. InDegree > 0 (generative nodes):
- *    Default to unexposed (isExposed: false, isRequired: false),
- *    but extracts unwired slots and adjustable parameters as advanced options.
- * 4. Derives widget mappings:
+ *    Unwired slots and generative prompts are recommended as author-fixed;
+ *    user-facing generation parameters (aspect ratio, duration) are recommended
+ *    as exposed-but-optional; cost and implementation parameters stay fixed.
+ * 4. Derives widget mappings and a grouping (asset | text | config) per candidate.
  *    - Text: textarea / input-text
  *    - Media: media-uploader
  *    - Ratio/Enum: ratio-cards / select-single
@@ -132,6 +178,12 @@ export function analyzeWorkflowInputs(
           inDegree: inDeg,
           isRoot: true,
           mappingType: 'text',
+          group: 'text',
+          isRecommended: true,
+          recommendedRequired: true,
+          rationale: '用户不描述清楚，产物一定跑偏',
+          fixedDisplay: describeFixedValue(defaultVal),
+          isInternal: false,
         });
       } else if (
         nodeKind === 'import' ||
@@ -155,6 +207,12 @@ export function analyzeWorkflowInputs(
           inDegree: inDeg,
           isRoot: true,
           mappingType: 'media',
+          group: 'asset',
+          isRecommended: true,
+          recommendedRequired: true,
+          rationale: '缺少素材无法生成，交给用户上传',
+          fixedDisplay: describeFixedValue(defaultVal),
+          isInternal: false,
         });
       } else {
         inputs.push({
@@ -173,6 +231,12 @@ export function analyzeWorkflowInputs(
           inDegree: inDeg,
           isRoot: true,
           mappingType: 'text',
+          group: 'text',
+          isRecommended: true,
+          recommendedRequired: true,
+          rationale: '工作流的起始输入，交给用户填写',
+          fixedDisplay: describeFixedValue(data.value ?? ''),
+          isInternal: false,
         });
       }
     } else {
@@ -230,6 +294,14 @@ export function analyzeWorkflowInputs(
             isRoot: false,
             slotId: slot.slotId,
             mappingType: 'slot',
+            group: isText ? 'text' : 'asset',
+            isRecommended: false,
+            recommendedRequired: false,
+            rationale: isText
+              ? '未接入的文本槽位，默认由作者决定'
+              : '高级素材槽位（首帧/参考图），目标用户用不上',
+            fixedDisplay: '未设置',
+            isInternal: false,
           });
         }
       }
@@ -259,6 +331,12 @@ export function analyzeWorkflowInputs(
             inDegree: inDeg,
             isRoot: false,
             mappingType: 'text',
+            group: 'text',
+            isRecommended: false,
+            recommendedRequired: false,
+            rationale: '作者已在画布写好提示词，无需用户填写',
+            fixedDisplay: describeFixedValue((data.prompt as string) || ''),
+            isInternal: false,
           });
         }
       }
@@ -283,19 +361,28 @@ export function analyzeWorkflowInputs(
           description: 'Output aspect ratio option',
           valueType: 'string',
           widget: 'ratio-cards',
-          isExposed: false,
+          isExposed: true,
           isRequired: false,
           defaultValue: defaultRatio,
           enumOptions: STANDARD_ASPECT_RATIOS.map((r) => ({ label: r, value: r })),
           inDegree: inDeg,
           isRoot: false,
           mappingType: 'param',
+          group: 'config',
+          isRecommended: true,
+          recommendedRequired: false,
+          rationale: '用户在意画面比例，且不抬高成本',
+          fixedDisplay: describeFixedValue(defaultRatio),
+          isInternal: false,
         });
       }
 
       // Extract other params
       for (const [paramKey, paramValue] of Object.entries(params)) {
         if (paramKey === 'aspectRatio') continue;
+
+        const internalParam = isInternalParamKey(paramKey);
+        const userAdjustable = !internalParam && isUserAdjustableParamKey(paramKey);
 
         let widget: FormWidgetType = 'input-text';
         let valueType: ExposedWorkflowInput['valueType'] = 'string';
@@ -326,13 +413,23 @@ export function analyzeWorkflowInputs(
           description: `Configurable parameter: ${paramKey}`,
           valueType,
           widget,
-          isExposed: false,
+          isExposed: userAdjustable,
           isRequired: false,
           defaultValue: paramValue,
           range,
           inDegree: inDeg,
           isRoot: false,
           mappingType: 'param',
+          group: 'config',
+          isRecommended: userAdjustable,
+          recommendedRequired: false,
+          rationale: internalParam
+            ? '内部字段，不会展示给用户'
+            : userAdjustable
+              ? '用户在意该参数，且不抬高成本'
+              : '与成本或实现相关，建议由作者固定',
+          fixedDisplay: describeFixedValue(paramValue),
+          isInternal: internalParam,
         });
       }
     }
@@ -356,17 +453,34 @@ export function analyzeWorkflowInputs(
 }
 
 /**
- * Helper: Generate RestrictedJsonSchema, FieldMappingEntry record, and demoSnapshot from inputs.
+ * Helper: Generate RestrictedJsonSchema, FieldMappingEntry record, fixed-field summary,
+ * and demoSnapshot from the candidates the publisher exposed.
+ *
+ * Only explicitly exposed candidates become form fields; candidates the publisher kept
+ * fixed are summarised (when they carry a value) so the consumer form can show what the
+ * author decided. Internal fields never appear on either side.
  */
 export function generateFormConfig(inputs: ExposedWorkflowInput[]): GeneratedFormConfig {
-  const activeInputs = inputs.filter((i) => i.isExposed);
-  // If no inputs explicitly set to isExposed, fallback to root inputs
-  const targetInputs = activeInputs.length > 0 ? activeInputs : inputs.filter((i) => i.isRoot);
+  const targetInputs = inputs.filter((i) => i.isExposed && !i.isInternal);
 
   const properties: Record<string, FormPropertySchema> = {};
   const required: string[] = [];
   const fieldMappings: Record<string, FieldMappingEntry> = {};
   const demoSnapshot: Record<string, unknown> = {};
+  const fixedFields: FixedFieldSummaryEntry[] = [];
+
+  for (const input of inputs) {
+    if (input.isExposed || input.isInternal) continue;
+    const display = input.fixedDisplay ?? describeFixedValue(input.defaultValue);
+    if (display === '未设置') continue;
+    fixedFields.push({
+      key: input.key,
+      nodeId: input.nodeId,
+      label: input.fieldTitle,
+      value: display,
+      group: input.group,
+    });
+  }
 
   for (const input of targetInputs) {
     const propSchema: FormPropertySchema = {
@@ -418,6 +532,7 @@ export function generateFormConfig(inputs: ExposedWorkflowInput[]): GeneratedFor
     formSchema,
     fieldMappings,
     demoSnapshot,
+    fixedFields,
   };
 }
 

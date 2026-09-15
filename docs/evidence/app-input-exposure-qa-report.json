@@ -1,0 +1,103 @@
+{
+  "task": "Issue #1994 发布为 AI 应用的输入项与配置项可选化",
+  "url": "http://127.0.0.1:54867/",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+  "total": 19,
+  "passed": 19,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "分组渲染：素材输入 / 文本输入 / 生成配置",
+      "pass": true
+    },
+    {
+      "name": "默认概览句：3 项交给用户，其中 1 项必填，5 项固定",
+      "pass": true,
+      "detail": "用户将填写 3 项，其中 1 项必填；另有 5 项按你的设定执行。恢复推荐设置"
+    },
+    {
+      "name": "推荐徽标可见",
+      "pass": true
+    },
+    {
+      "name": "固定值行内可见（2K / Hailuo H3）",
+      "pass": true
+    },
+    {
+      "name": "候选项逐行可开关（8 行：2 输入 + 4 参数 + 2 未接槽位）",
+      "pass": true,
+      "detail": "rows=8"
+    },
+    {
+      "name": "固定项存在开关",
+      "pass": true
+    },
+    {
+      "name": "放开模型后：4 项交给用户",
+      "pass": true,
+      "detail": "用户将填写 4 项，其中 1 项必填；另有 4 项按你的设定执行。恢复推荐设置"
+    },
+    {
+      "name": "恢复推荐设置后回到 3 项",
+      "pass": true,
+      "detail": "用户将填写 3 项，其中 1 项必填；另有 5 项按你的设定执行。恢复推荐设置"
+    },
+    {
+      "name": "关闭描述后：2 项交给用户且无必填",
+      "pass": true,
+      "detail": "用户将填写 2 项；另有 6 项按你的设定执行。恢复推荐设置"
+    },
+    {
+      "name": "全部关闭后出现告警文案",
+      "pass": true,
+      "detail": "当前没有任何一项展示给用户：用户打开应用会看到空表单，无法出片，建议至少保留素材或描述。恢复推荐设置"
+    },
+    {
+      "name": "空清单挂载渲染空态",
+      "pass": true
+    },
+    {
+      "name": "发布后用户端渲染 3 个字段",
+      "pass": true,
+      "detail": "fields=3"
+    },
+    {
+      "name": "用户端字段来自画布节点标题",
+      "pass": true,
+      "detail": "视频生成视频描述*Primary text prompt input0视频生成 - Aspect RatioOutput aspect ratio option1:14:316:99:16视频生成 - DurationConfigurable parameter: duration以下由作者设定，无需填写视频生成 - Quality2K视频生成 - ModelHailuo H3视频生成 - GenerationCount1立即生成"
+    },
+    {
+      "name": "用户端出现「以下由作者设定」汇总行",
+      "pass": true
+    },
+    {
+      "name": "固定项汇总为 3 个标签",
+      "pass": true,
+      "detail": "chips=3"
+    },
+    {
+      "name": "固定项含 2K 与 Hailuo H3",
+      "pass": true
+    },
+    {
+      "name": "固定项不作为表单字段出现",
+      "pass": true,
+      "detail": "视频描述*Primary text prompt input|视频生成 - Aspect RatioOutput aspect ratio option|视频生成 - DurationConfigurable parameter: duration"
+    },
+    {
+      "name": "空表单应用显示空态文案",
+      "pass": true
+    },
+    {
+      "name": "空表单应用主按钮禁用",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/app-input-exposure-qa.png",
+  "screenshotBytes": 64877,
+  "chrome": "Google Chrome 152.0.7977.83",
+  "bundleSha256": "2f82b29405d04b9b790f0e092d5564ad7a3ebf2a2eb6859296d5445fa3fff013",
+  "baseSha": "104486c6e812497b52b7bd4e6917e8344ecc2329",
+  "ranAt": "2026-09-15T17:19:13.753Z"
+}
