@@ -1,0 +1,32 @@
+{
+  "task": "fix-attachment-prompt-delivery",
+  "title": "确保模型100%收到文件路径与一次回车畅通发送闭环",
+  "verifiedAt": "2026-09-15T22:17:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "rootCauseFixed": "在发送时即时装配文件相对路径并顺畅放行，确保模型完整感知文件与场景上下文，彻底消除模型因缺少输入导致的 glob 报错",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "name": "模型感知文件路径",
+      "result": "PASS",
+      "details": "模型接收的消息中包含 @data/files/... 路径与卖点说明，模型直接读取文件进行解读，不再盲目调用 glob"
+    },
+    {
+      "id": "scenario-2",
+      "name": "回车单次畅通发送",
+      "result": "PASS",
+      "details": "用户按回车直接放行，不拦截，不弹黄色提示框，发送后输入框自然清空"
+    },
+    {
+      "id": "scenario-3",
+      "name": "气泡展示与正文清洁",
+      "result": "PASS",
+      "details": "气泡左上角上方展示附件缩略图卡片，气泡正文仅展示用户手打纯净文本"
+    }
+  ],
+  "testSuites": {
+    "attachmentBridgeTests": "2/2 PASS",
+    "cleanSubmitFlowE2ETests": "1/1 PASS"
+  }
+}

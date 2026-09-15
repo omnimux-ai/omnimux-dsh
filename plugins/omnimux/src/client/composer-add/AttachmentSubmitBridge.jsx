@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
-import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
+import { buildAttachedContextBlock, assemblePromptWithAttachments } from '../attachments/prompt-assembly.ts'
 import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
@@ -148,7 +148,21 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         console.error('[CreativePresets] Failed to compile prompt:', err)
       }
 
-      // 核心修复：保持用户输入框草稿 100% 纯净，坚决不覆写草稿，坚决不拦截用户回车发送
+      if (!draft.trim() && !attachments.length) return true
+
+      // 发送时一次性装配附件与场景上下文指针，确保模型 100% 获取文件路径与卖点
+      if (attachments && attachments.length > 0) {
+        const fullDraft = assemblePromptWithAttachments(draft, attachments, sessionId)
+        if (fullDraft !== draft) {
+          try {
+            actions?.setDraft?.(fullDraft)
+            live.current = { ...live.current, input: { ...value, draft: fullDraft } }
+            attachmentDrafts.set(sessionId, fullDraft)
+          } catch {}
+        }
+      }
+
+      // 坚决不拦截发送，坚决不弹出阻断警告，回车立即顺畅发出
       setNotice(null)
       return true
     }
