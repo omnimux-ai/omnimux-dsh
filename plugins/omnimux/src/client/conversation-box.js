@@ -206,16 +206,16 @@ html[data-omnimux-sidebar-toggle-topbar] [data-sidebar-collapsed] .dshDesktopSid
   padding:0!important;
   display:none!important;
 }
-html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="frame"]:not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed]:not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not(:has([data-sidebar-right-panel])){
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="frame"],
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame,
+html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed],
+html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]{
   grid-template-columns: 0px minmax(0px, 1fr) 0px !important;
 }
-html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="frame"]:not([data-details-collapsed="true"]):not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not([data-details-collapsed="true"]):not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed]:not([data-details-collapsed="true"]):not(:has([data-sidebar-right-panel])),
-html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-details-collapsed="true"]):not(:has([data-sidebar-right-panel])){
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="frame"]:not([data-details-collapsed="true"]),
+html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not([data-details-collapsed="true"]),
+html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed]:not([data-details-collapsed="true"]),
+html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-details-collapsed="true"]){
   grid-template-columns: 0px minmax(0px, 1fr) auto !important;
 }
 /* 当中间会话栏收起时（右侧全屏铺满状态）：
@@ -266,8 +266,10 @@ html[data-omnimux-left-collapsed] .dshDesktopFrame [data-sidebar-right-panel][da
 .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]) {
   width: calc(100vw - 440px) !important;
 }
-html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])),
-html[data-omnimux-left-collapsed] [class*="frame"][data-rightbar-collapsed="true"]:not(:has([data-sidebar-right-panel])) {
+html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"],
+html[data-omnimux-left-collapsed] [class*="frame"][data-rightbar-collapsed="true"],
+.dshDesktopFrame[data-sidebar-collapsed][data-rightbar-collapsed="true"],
+[class*="frame"][data-sidebar-collapsed][data-rightbar-collapsed="true"] {
   grid-template-columns: 0px 100vw 0px !important;
 }
 /* Tab labels dock by overlap: pad = max(0, toggleEnd − panel.left), written

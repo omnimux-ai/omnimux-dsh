@@ -89,3 +89,52 @@ test('e2e: left sidebar completely hides on collapse in split mode without leavi
   assert.equal(root.hasAttribute('data-omnimux-left-collapsed'), false)
   assert.equal(frame.hasAttribute('data-sidebar-collapsed'), false)
 })
+
+test('e2e: pure conversation mode completely eliminates left black bar on collapse even with dormant panel in DOM', () => {
+  const dom = new JSDOM(`<!doctype html>
+    <html data-omnimux-sidebar-toggle-topbar>
+      <head>
+        <style>${PRODUCT_STAGE_CHROME}</style>
+      </head>
+      <body>
+        <div class="dshDesktopFrame" data-rightbar-collapsed="true">
+          <aside class="dshDesktopSidebarSurface sidebarCol">
+            <div class="logoRow">
+              <button class="toggle" aria-label="收起侧边栏"></button>
+            </div>
+          </aside>
+          <main class="dshDesktopConversationSurface centerCol">
+            <div data-composer-card>Chat Content</div>
+          </main>
+          <!-- 常驻在 DOM 中但未激活（无 data-sidebar-right-open）的面板节点 -->
+          <div data-sidebar-right-panel="push"></div>
+        </div>
+      </body>
+    </html>`, {
+    url: 'http://127.0.0.1:45120/',
+  })
+
+  const doc = dom.window.document
+  const root = doc.documentElement
+  const frame = doc.querySelector('.dshDesktopFrame')
+
+  // 用户点击收起左侧栏
+  root.setAttribute('data-omnimux-left-collapsed', '')
+  frame.setAttribute('data-sidebar-collapsed', '')
+
+  // 验证通用置零规则命中，不因常驻的 data-sidebar-right-panel 节点而失效
+  assert.ok(
+    frame.matches('html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame'),
+    'frame matches universal zero track rule'
+  )
+  assert.ok(
+    frame.matches('html[data-omnimux-left-collapsed] .dshDesktopFrame[data-rightbar-collapsed="true"]'),
+    'frame matches 100vw fill rule'
+  )
+
+  // 验证规则中严格指定 0px 100vw 0px，彻底消除任何黑边死区
+  assert.match(
+    PRODUCT_STAGE_CHROME,
+    /html\[data-omnimux-left-collapsed\]\s+\.dshDesktopFrame\[data-rightbar-collapsed="true"\][\s\S]*?grid-template-columns:\s*0px 100vw 0px\s*!important/,
+  )
+})
