@@ -36,7 +36,10 @@ body[data-ds-dark-theme] {
   width:100%!important;
 }
 [data-omnimux-starter-host] [class*="composerHero"] > :first-child {
-  margin-top:0!important; margin-bottom:4px!important;
+  margin-top:36px!important;
+  margin-bottom:8px!important;
+  height:auto!important;
+  min-height:auto!important;
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
 
