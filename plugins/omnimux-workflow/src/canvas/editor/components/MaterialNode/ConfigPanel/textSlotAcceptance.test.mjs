@@ -419,6 +419,32 @@ describe('场景 3 验收：连入素材后卡槽装填与操作升迁机制正�
     const submission = resolveExecutorSubmission(pureTextNode, mockCatalog);
     assert.equal(submission.operation, 'chat', '无素材时保持 chat 操作');
   });
+
+  it('TC-T03-05: 文本节点 slotBindings 为历史空对象 {} 且未记录待命卸载边时，连入视频自动装填进 reference_videos 槽位', () => {
+    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
+    const videoFeed = [
+      {
+        edgeId: 'edge-video-1',
+        sourceNodeId: 'node-video-1',
+        outputId: 'video-out-1',
+        type: 'video',
+        ordinal: 0,
+        availability: 'ready',
+        url: 'https://example.com/video.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 10 * 1024 * 1024,
+      },
+    ];
+
+    // 模拟纯文本节点残留 slotBindings: {}
+    const rawBindings = {};
+    const standby = [];
+    const normalized = (Object.keys(rawBindings).length === 0 && standby.length === 0) ? undefined : rawBindings;
+    const fillResult = autoFillSlots(videoFeed, layout, normalized ?? {});
+    const occupants = fillResult.bindings['reference_videos'] ?? [];
+    assert.equal(occupants.length, 1, '视频素材应成功自动装填入 reference_videos 槽位');
+    assert.equal(occupants[0].edgeId, 'edge-video-1');
+  });
 });
 
 describe('场景 4 验收：中英文国际化词条完整性与字典对照', () => {

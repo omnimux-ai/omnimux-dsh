@@ -25,7 +25,9 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   }
   const model = resolveModelView(view, typeof params.model === 'string' ? params.model : undefined);
   if (model) params.model = model.id;
-  if (!params.operation && model) params.operation = resolveSlotOperation(catalog, model.id, params.operation, outputType, raw);
+  if ((!params.operation || (outputType === 'text' && params.operation === 'chat')) && model) {
+    params.operation = resolveSlotOperation(catalog, model.id, params.operation, outputType, raw);
+  }
   const operation = model?.operations.find((op) => op.id === params.operation && op.listed && op.output.type === outputType);
   const policy = catalog?.generationPolicy?.[outputType];
   const permitted = !policy || policy.allowedModelIds.includes(String(model?.id ?? params.model));
@@ -33,6 +35,9 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const feed = feedFromFingerprint(raw);
   const plainSpeech = outputType === 'audio' && params.operation === 'text_to_speech';
   let explicit = plainSpeech ? {} : node.data.slotBindings as SlotBindings | undefined;
+  if (outputType === 'text' && explicit && Object.keys(explicit).length === 0 && (!node.data.slotStandbyEdgeIds || (node.data.slotStandbyEdgeIds as unknown[]).length === 0)) {
+    explicit = undefined;
+  }
   const priorParams = previous ? readCanvasParams(previous) : {};
   const modeChanged = previous && (priorParams.operation !== params.operation || priorParams.model !== params.model);
   if (explicit) {
