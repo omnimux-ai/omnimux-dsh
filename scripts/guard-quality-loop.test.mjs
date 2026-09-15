@@ -297,19 +297,65 @@ test('REGRESSION: UI change without any e2e test blocks commit / push / PR', () 
   }
 })
 
-test('UI change together with an e2e test passes the completeness gate', () => {
-  const root = makeRepo('ui-with-e2e')
+test('UI change without evidence blocks delivery even if e2e test exists', () => {
+  const root = makeRepo('ui-no-evidence')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
     writeFileAt(root, 'plugins/omnimux/src/client/a.js', 'export const a = 1\n')
     writeFileAt(root, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
 
+    for (const command of [
+      'git commit -m "fix ui with e2e but no evidence"',
+      'git push -u origin agent/x',
+      'gh pr create --base main --head agent/x',
+    ]) {
+      const res = decideQualityGate({ toolName: 'bash', toolInput: { command }, cwd: root })
+      assert.equal(res.decision, 'deny', `${command} 应因缺少实测证据被拦截`)
+      assert.equal(res.reason, 'missing-evidence-for-ui-delivery')
+    }
+  } finally {
+    cleanup(root)
+  }
+})
+
+test('UI change with both e2e test and task evidence passes completeness gate', () => {
+  const root = makeRepo('ui-with-e2e-and-evidence')
+  try {
+    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
+    writeFileAt(root, 'plugins/omnimux/src/client/a.js', 'export const a = 1\n')
+    writeFileAt(root, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
+    writeFileAt(root, 'docs/evidence/task-verified.png', 'png bytes')
+
     const res = decideQualityGate({
       toolName: 'bash',
-      toolInput: { command: 'git commit -m "fix ui with e2e"' },
+      toolInput: { command: 'git commit -m "fix ui with e2e and evidence"' },
       cwd: root,
     })
     assert.equal(res.decision, 'allow')
+  } finally {
+    cleanup(root)
+  }
+})
+
+test('REGRESSION: app-home.png smoke screenshot and tmp/ are rejected as valid evidence', () => {
+  const root = makeRepo('banned-evidence')
+  try {
+    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
+    const specAbs = join(root, 'specs/task.spec.md')
+    const specPast = (Date.now() - 10 * 60 * 1000) / 1000
+    utimesSync(specAbs, specPast, specPast)
+
+    // 写入黑名单首页冒烟图
+    writeFileAt(root, 'docs/evidence/app-home.png', 'png bytes')
+    // 写入 tmp/ 临时目录
+    writeFileAt(root, 'tmp/task-report.json', '{"ok":true}')
+
+    // hasEvidenceAfterSpec 必须判定为 false
+    assert.equal(hasEvidenceAfterSpec(root), false)
+
+    // 写入合法专属证据后变为 true
+    writeFileAt(root, 'docs/evidence/task-verified.png', 'png bytes')
+    assert.equal(hasEvidenceAfterSpec(root), true)
   } finally {
     cleanup(root)
   }
@@ -435,6 +481,7 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
     writeFileAt(taskRoot, 'specs/task.spec.md', SPEC_BODY)
     writeFileAt(taskRoot, 'plugins/omnimux/src/client/a.js', 'export const a = 1\n')
     writeFileAt(taskRoot, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
+    writeFileAt(taskRoot, 'docs/evidence/task-verified.png', 'png bytes')
 
     // -C 指向工作树：界面改动 + 端到端测试齐全 → 放行
     const allowed = decideQualityGate({
