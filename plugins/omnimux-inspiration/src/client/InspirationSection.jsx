@@ -223,7 +223,7 @@ export function InspirationSection({ t, active }) {
     if (!el || typeof ResizeObserver !== 'function') return undefined
     const apply = () => {
       const root = el.closest('.omnimux-inspiration-root')
-      if (root) root.style.setProperty('--omx-sticky-h', `${Math.round(el.getBoundingClientRect().height)}px`)
+      if (root) root.style.setProperty('--stage-sticky-offset', `${Math.round(el.getBoundingClientRect().height)}px`)
     }
     apply()
     const observer = new ResizeObserver(apply)

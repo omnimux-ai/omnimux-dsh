@@ -415,7 +415,7 @@ export function AssetsStage(props) {
     const rail = railRef.current
     const stage = stageRootRef.current
     if (!rail || !stage || typeof ResizeObserver !== 'function') return undefined
-    const apply = () => stage.style.setProperty('--omx-rail-h', `${Math.round(rail.getBoundingClientRect().height)}px`)
+    const apply = () => stage.style.setProperty('--stage-rail-h', `${Math.round(rail.getBoundingClientRect().height)}px`)
     apply()
     const observer = new ResizeObserver(apply)
     observer.observe(rail)

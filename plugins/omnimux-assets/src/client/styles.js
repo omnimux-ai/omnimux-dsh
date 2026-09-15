@@ -890,7 +890,7 @@ export const ASSETS_CSS = `
 }
 /* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
 .omnimux-assets-cloud-nav.omx-stage-sticky {
-  top: var(--omx-rail-h, 0px);
+  top: var(--stage-rail-h, 0px);
 }
 .omnimux-assets-cloud-nav-row,
 .omnimux-assets-cloud-subnav {

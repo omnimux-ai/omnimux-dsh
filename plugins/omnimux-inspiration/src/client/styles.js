@@ -246,7 +246,7 @@ export const INSPIRATION_CSS = `
 
 /* 二级筛选行吸附在一级工具栏正下方（骨架契约 §二·补）；偏移取工具栏实测高度。 */
 .omnimux-inspiration-subfilter-sticky {
-  top: var(--omx-sticky-h, 44px);
+  top: var(--stage-sticky-offset, 44px);
 }
 
 .omnimux-inspiration-subfilter-select .dshUk-DropdownSelect-trigger,
