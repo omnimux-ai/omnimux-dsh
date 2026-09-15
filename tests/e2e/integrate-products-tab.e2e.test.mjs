@@ -46,13 +46,14 @@ test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证'
     'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作 CreateProductMenu 菜单，其他 Tab 保持「添加资产」'
   )
 
-  // 4. 验证产品库子视图 ProductsView 的挂载与设计规范遵从
+  // 4. 验证产品库子视图 ProductsView 的挂载与二级胶囊复用
   assert.ok(
     stageContent.includes("<ProductsView") &&
     productsViewContent.includes("omnimux-products-list-view") &&
+    productsViewContent.includes("omnimux-assets-cloud-chip") &&
     productsViewContent.includes("omnimux-products-empty") &&
     productsViewContent.includes("omnimux-products-grid"),
-    'AssetsBody 必须在选中产品库时挂载 ProductsView 并提供 1:1 对齐的 empty 和 grid 容器'
+    'AssetsBody 必须在选中产品库时挂载 ProductsView 并复用共享组件胶囊分类规范'
   )
 
   assert.ok(

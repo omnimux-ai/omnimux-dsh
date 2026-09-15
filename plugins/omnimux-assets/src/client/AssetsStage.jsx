@@ -169,6 +169,10 @@ function AssetsViewToggle(props) {
 function AssetsFilterBar(props) {
   const { t, feed, sourceTab, onSourceTabChange } = props
 
+  const searchPlaceholder = sourceTab === 'product'
+    ? (t('product.searchPlaceholder') || '搜索产品名称、卖点、品牌')
+    : t('search.placeholder')
+
   return (
     <FilterBar
       className="omnimux-assets-stage-toolbar"
@@ -185,19 +189,19 @@ function AssetsFilterBar(props) {
         />
       }
       tools={
-        sourceTab === 'product' ? null : (
-          <div className="omnimux-assets-tools-cluster">
-            <div className="omnimux-assets-search-wrap">
-              <SearchField
-                placeholder={t('search.placeholder')}
-                value={feed.query}
-                onChange={feed.setQuery}
-                onClear={() => feed.setQuery('')}
-              />
-            </div>
-            <AssetsViewToggle t={t} viewMode={feed.viewMode} onViewModeChange={feed.setViewMode} />
+        <div className="omnimux-assets-tools-cluster">
+          <div className="omnimux-assets-search-wrap">
+            <SearchField
+              placeholder={searchPlaceholder}
+              value={feed.query}
+              onChange={feed.setQuery}
+              onClear={() => feed.setQuery('')}
+            />
           </div>
-        )
+          {sourceTab === 'product' ? null : (
+            <AssetsViewToggle t={t} viewMode={feed.viewMode} onViewModeChange={feed.setViewMode} />
+          )}
+        </div>
       }
     />
   )

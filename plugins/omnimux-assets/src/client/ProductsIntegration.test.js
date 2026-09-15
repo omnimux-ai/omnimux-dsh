@@ -41,10 +41,11 @@ describe('Product library integration into Assets stage', () => {
     assert.match(stageJsx, /if \(sourceTab === 'product'\) \{\s*return \(\s*<div className="omnimux-assets-body">\s*<div className="omnimux-assets-main">\s*<ProductsView/)
   })
 
-  it('ProductsView conforms to design tokens and provides category tabs, stretch search, and empty card', () => {
+  it('ProductsView conforms to design tokens and provides category pills and empty card', () => {
     assert.match(productsViewJsx, /t\('product\.all'\) \|\| '全部'/)
     assert.match(productsViewJsx, /t\('product\.physical'\) \|\| '实物产品'/)
     assert.match(productsViewJsx, /t\('product\.digital'\) \|\| '数字产品'/)
+    assert.match(productsViewJsx, /className="omnimux-assets-cloud-chip"/)
     assert.match(productsViewJsx, /className="omnimux-products-list-view"/)
     assert.match(productsViewJsx, /className="omnimux-products-empty"/)
     assert.match(productsViewJsx, /className="omnimux-products-grid"/)

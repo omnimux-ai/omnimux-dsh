@@ -89,32 +89,27 @@ export function ProductsView(props) {
 
   return (
     <div className="omnimux-products-list-view">
-      {/* 1:1 对齐原产品库 FilterBar：左侧下划线Tabs，右侧拉伸搜索框 */}
-      <FilterBar
-        className="omnimux-products-stage-toolbar"
-        filters={
-          <Tabs
-            variant="underline"
-            items={[
-              { id: 'all', label: t('product.all') || '全部' },
-              { id: 'physical', label: t('product.physical') || '实物产品' },
-              { id: 'digital', label: t('product.digital') || '数字产品' },
-            ]}
-            activeId={kindTab}
-            onChange={setKindTab}
-          />
-        }
-        search={
-          <SearchField
-            value={query}
-            placeholder={t('product.searchPlaceholder') || '搜索产品名称、卖点、品牌'}
-            aria-label={t('product.searchPlaceholder') || '搜索产品名称、卖点、品牌'}
-            debounceMs={0}
-            stretch
-            onValueChange={setQuery}
-          />
-        }
-      />
+      {/* 二级分类：从 UI 共享组件复用胶囊（Pill/Chip）规范，1:1 对标参考图 2 */}
+      <div className="omnimux-assets-local-nav" role="group" aria-label="产品二级分类">
+        <div className="omnimux-assets-local-nav-row">
+          {[
+            { id: 'all', label: t('product.all') || '全部' },
+            { id: 'physical', label: t('product.physical') || '实物产品' },
+            { id: 'digital', label: t('product.digital') || '数字产品' },
+          ].map((chip) => (
+            <Button
+              key={chip.id}
+              variant="ghost"
+              size="sm"
+              className="omnimux-assets-cloud-chip"
+              aria-pressed={kindTab === chip.id ? 'true' : 'false'}
+              onClick={() => setKindTab(chip.id)}
+            >
+              {chip.label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       {/* 1:1 对齐原产品库主体内容与居中虚线大空状态 */}
       <div className="omnimux-products-body">
