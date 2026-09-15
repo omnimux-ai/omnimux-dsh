@@ -297,6 +297,45 @@ export const ASSETS_CSS = `
   border: 1px solid var(--dsw-alias-border-l2);
   z-index: 1;
 }
+/* 缩略图右上角：类型角标与「打开文件位置」并排右对齐，避免互相遮挡。 */
+.omnimux-assets-card-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+.omnimux-assets-card-corner .omnimux-assets-badge {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+}
+.omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card-corner .omnimux-assets-reveal:hover,
+.omnimux-assets-card-corner .omnimux-assets-reveal:active {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+/* 悬停卡片才浮现；键盘进入卡片或聚焦按钮时同样可见，不牺牲可达性。 */
+.omnimux-assets-card:hover .omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card:focus-within .omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card-corner .omnimux-assets-reveal:hover,
+.omnimux-assets-card-corner .omnimux-assets-reveal:focus-visible {
+  opacity: 1;
+  color: var(--dsw-alias-label-primary);
+}
 .omnimux-assets-missing {
   position: absolute;
   bottom: 8px;
