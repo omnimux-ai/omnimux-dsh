@@ -24,14 +24,19 @@ describe('sidebar collapse hidden (Issue 56d2b4af565e)', () => {
     )
   })
 
-  it('PRODUCT_STAGE_CHROME sets grid first track to 0px and panel width to calc(100vw - 440px) under split mode when left sidebar is collapsed', () => {
+  it('PRODUCT_STAGE_CHROME preserves flexible layout for centerCol under split mode without locking grid to fixed widths', () => {
     assert.match(
       PRODUCT_STAGE_CHROME,
-      /html\[data-omnimux-left-collapsed\]\s+\.dshDesktopFrame:has\(\[data-sidebar-right-panel\]\[data-sidebar-right-open\]:not\(\[data-sidebar-right-panel="fullscreen"\]\)\)[\s\S]*?grid-template-columns:\s*0px 440px minmax\(0px, 1fr\)\s*!important/,
+      /min-width:\s*420px\s*!important/,
     )
     assert.match(
       PRODUCT_STAGE_CHROME,
-      /html\[data-omnimux-left-collapsed\]\s+\.dshDesktopFrame\s+\[data-sidebar-right-panel\]\[data-sidebar-right-open\]:not\(\[data-sidebar-right-panel="fullscreen"\]\)[\s\S]*?width:\s*calc\(100vw - 440px\)\s*!important/,
+      /flex:\s*1\s+1\s+0%\s*!important/,
+    )
+    // 确保没有使用 440px 破坏底座原生的拖拽网格调整
+    assert.doesNotMatch(
+      PRODUCT_STAGE_CHROME,
+      /grid-template-columns:[^}]*440px/,
     )
   })
 

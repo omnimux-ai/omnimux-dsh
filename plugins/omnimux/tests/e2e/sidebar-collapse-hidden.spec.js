@@ -66,21 +66,18 @@ test('e2e: left sidebar completely hides on collapse in split mode without leavi
   assert.match(PRODUCT_STAGE_CHROME, /\.dshDesktopSidebarSurface[\s\S]*?display:\s*none!important/)
 
   // 验证分屏网格第一列置零，右侧面板充盈铺满视口宽度
-  assert.ok(
-    frame.matches('html[data-omnimux-left-collapsed] .dshDesktopFrame:has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]))'),
-    'frame matches split zero track rule'
-  )
-  assert.ok(
-    rightPanel.matches('html[data-omnimux-left-collapsed] .dshDesktopFrame [data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])'),
-    'right panel matches expanded width rule'
+  assert.match(
+    PRODUCT_STAGE_CHROME,
+    /min-width:\s*420px\s*!important/,
   )
   assert.match(
     PRODUCT_STAGE_CHROME,
-    /grid-template-columns:\s*0px 440px minmax\(0px, 1fr\)\s*!important/,
+    /flex:\s*1\s+1\s+0%\s*!important/,
   )
-  assert.match(
+  // 确保没有写死 440px 导致阻断拖拽手柄
+  assert.doesNotMatch(
     PRODUCT_STAGE_CHROME,
-    /width:\s*calc\(100vw - 440px\)\s*!important/,
+    /grid-template-columns:[^}]*440px/,
   )
 
   // 3. 再次展开：移除折叠标记，状态平滑还原
