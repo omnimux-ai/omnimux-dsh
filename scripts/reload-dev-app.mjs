@@ -252,7 +252,7 @@ if (process.argv[1] && process.argv[1].endsWith('reload-dev-app.mjs')) {
     const result = await restartDevApp();
     if (result.restarted) {
       console.log(`🔁 [Host Reload] 宿主插件有变更，已受控重启开发版并确认就绪 (${result.waitedMs}ms)`);
-    } else if (result.reason === 'not-running' || result.reason === 'no-target') {
+    } else if (result.reason === 'not-running') {
       console.log(`ℹ️ [Host Reload] 无需重启 (${result.detail})`);
     } else {
       console.log(`⚠️ [Host Reload] 未能完成受控重启：${result.detail || result.reason}`);

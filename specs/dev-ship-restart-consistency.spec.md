@@ -30,5 +30,5 @@ Client 产物由 Web 服务按请求从磁盘读取，刷新页面即取得新�
 ## 验证方式
 
 - `node --test scripts/worktree-delivery.test.mjs`：fixture 仓库断言 AC-1/AC-2 的分支选择与 AC-3 的跳过路径。
-- `node --test scripts/reload-dev-app.test.mjs`：以注入的进程探针断言 AC-4/AC-5/AC-6/AC-7 的决策与「不发送强杀信号」约束。
+- `node --test scripts/worktree-delivery.test.mjs`：以注入的进程探针断言 AC-4/AC-5/AC-6/AC-7/AC-8/AC-9 的决策与「不发送强杀信号」约束；同一文件内的 ship fixture 用例断言 AC-1/AC-2 的分支选择。
 - 真实 Dev 实例一次人工触发：确认优雅退出、重新拉起、CDP 就绪判定与就绪前的宿主路由可用性。
