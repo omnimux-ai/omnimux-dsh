@@ -1,0 +1,37 @@
+{
+  "task": "user-message-attachments",
+  "title": "用户消息卡片左上角上方附件展示与消费收敛",
+  "verifiedAt": "2026-09-15T21:49:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "name": "用户消息左上角上方附件排布",
+      "result": "PASS",
+      "details": "已发送用户消息气泡上方依次水平排开展示所附带的图片/视频缩略图及文件卡片，对齐左上角"
+    },
+    {
+      "id": "scenario-2",
+      "name": "图片与视频展示效果",
+      "result": "PASS",
+      "details": "图片呈现 44×44px 高清缩略图，视频带播放小三角形与时长角标"
+    },
+    {
+      "id": "scenario-3",
+      "name": "多类型文件胶囊展示",
+      "result": "PASS",
+      "details": "文档、表格、产品及音频呈现带大写扩展名徽章（如 JSON、HTABLE、MP3）的精致胶囊"
+    },
+    {
+      "id": "scenario-4",
+      "name": "气泡文字与输入框零污染",
+      "result": "PASS",
+      "details": "输入框与消息气泡仅展示用户纯净文字，无任何脏数据代码"
+    }
+  ],
+  "testSuites": {
+    "userMessageAttachmentsEnhancerTests": "4/4 PASS",
+    "userMessageAttachmentsE2ETests": "1/1 PASS"
+  }
+}

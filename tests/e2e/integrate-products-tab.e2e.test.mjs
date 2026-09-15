@@ -46,21 +46,22 @@ test('E2E: 资产库一级 Tab 整合产品库及操作按钮动态联动验证'
     'AssetsActionRow 必须在 sourceTab 为 product 时切换为主操作 CreateProductMenu 菜单，其他 Tab 保持「添加资产」'
   )
 
-  // 4. 验证产品库子视图 ProductsView 的挂载与二级胶囊复用
+  // 4. 验证产品库二级分类 ProductCategoryNav 平级挂载与左侧对齐规范
   assert.ok(
+    stageContent.includes("{sourceTab === 'product' ? (") &&
+    stageContent.includes("<ProductCategoryNav") &&
     stageContent.includes("<ProductsView") &&
     productsViewContent.includes("omnimux-products-list-view") &&
     productsViewContent.includes("omnimux-assets-cloud-chip") &&
-    productsViewContent.includes("omnimux-products-empty") &&
-    productsViewContent.includes("omnimux-products-grid"),
-    'AssetsBody 必须在选中产品库时挂载 ProductsView 并复用共享组件胶囊分类规范'
+    productsViewContent.includes("omnimux-products-empty"),
+    'AssetsStage 必须将 ProductCategoryNav 平级挂载于 FilterBar 下方，消除嵌套 padding 错配'
   )
 
   assert.ok(
     stylesContent.includes(".omnimux-products-empty") &&
     stylesContent.includes(".omnimux-products-card") &&
-    stylesContent.includes("var(--dsw-alias-border-l4)") &&
-    stylesContent.includes("var(--dsw-alias-border-l2)"),
-    '产品库整合样式必须 100% 遵循 --dsw-* 设计令牌规范'
+    stylesContent.includes(".omnimux-products-body {\n  flex: 1;\n  min-height: 0;\n  overflow: auto;\n  padding: 0;\n}") &&
+    stylesContent.includes("var(--dsw-alias-border-l4)"),
+    '产品库主体 padding 必须收敛为 0 以保证与顶层 24px 左对齐基准线严格吻合'
   )
 })

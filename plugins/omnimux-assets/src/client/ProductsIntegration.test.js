@@ -41,6 +41,10 @@ describe('Product library integration into Assets stage', () => {
     assert.match(stageJsx, /if \(sourceTab === 'product'\) \{\s*return \(\s*<div className="omnimux-assets-body">\s*<div className="omnimux-assets-main">\s*<ProductsView/)
   })
 
+  it('mounts ProductCategoryNav under AssetsFilterBar when sourceTab is product', () => {
+    assert.match(stageJsx, /\{sourceTab === 'product' \? \(\s*<ProductCategoryNav\b/)
+  })
+
   it('ProductsView conforms to design tokens and provides category pills and empty card', () => {
     assert.match(productsViewJsx, /t\('product\.all'\) \|\| '全部'/)
     assert.match(productsViewJsx, /t\('product\.physical'\) \|\| '实物产品'/)
