@@ -206,6 +206,16 @@ const SKELETON_REGION_SELECTOR = [
 ].join(', ')
 
 /**
+ * Content roots, whose own wrapper tags are content rather than page chrome.
+ *
+ * X/Twitter paints each status's media carousel as `<nav role="navigation">`
+ * inside the status, so a skeleton region found inside a piece of content is that
+ * content's own wrapper. The exemption stays on real content roots and never on
+ * `<main>`, which may still hold page navigation of its own.
+ */
+const CONTENT_ROOT_SELECTOR = 'article, [role="article"]'
+
+/**
  * Regions that are chrome for the same reason but sit inside the content column.
  *
  * Found by the bounded walk in {@link isInsideAuxiliaryRegion}: a search box, a
@@ -422,14 +432,25 @@ function isInsideChromeRegion(element: Element): boolean {
 /**
  * Whether a header, nav or footer encloses the element.
  *
- * `closest` does not cross shadow boundaries, so the query restarts from the
- * host of each shadow root on the way out: an image inside a web component has
- * no `parentElement` path back to the document, which would hide the region it
+ * The query is unbounded on purpose: a footer buried 26 levels above an image is
+ * still the page footer, so no ancestor budget may stop the walk.
+ *
+ * `closest` does not cross shadow boundaries, so the walk restarts from the host
+ * of each shadow root on the way out: an image inside a web component has no
+ * `parentElement` path back to the document, which would hide the region it
  * actually sits in.
+ *
+ * A region that wraps content is that content's own tag rather than page chrome
+ * (see {@link CONTENT_ROOT_SELECTOR}); the walk then continues *outside* it, so a
+ * status carousel cannot hide a page header above the status.
  */
 function isInsideSkeletonRegion(element: Element): boolean {
-  for (let node: Element | null = element; node !== null; node = shadowHostOf(node)) {
-    if (node.closest(SKELETON_REGION_SELECTOR) !== null) return true
+  let node: Element | null = element
+  while (node !== null) {
+    const region = node.closest(SKELETON_REGION_SELECTOR)
+    if (region === null) return false
+    if (region.closest(CONTENT_ROOT_SELECTOR) === null) return true
+    node = parentOf(region)
   }
   return false
 }
