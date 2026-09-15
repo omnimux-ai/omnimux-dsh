@@ -23,6 +23,7 @@ import {
   uploadMedia,
 } from './inspiration.js'
 import { createPost, getPost, presignMedia } from './publish.js'
+import { createInspirationShareApi } from './inspiration-share.js'
 import { fetchSocialData } from './social-data.js'
 
 /**
@@ -32,6 +33,7 @@ import { fetchSocialData } from './social-data.js'
  * @param {{
  *   hub: { official: { mount: boolean }, gate?: object },
  *   gate?: object,
+ *   accountMetaStore: { readForAuthorization: () => Record<string, Record<string, unknown>> },
  *   identity: { require: Function },
  *   store: { resolve: () => Promise<string | undefined> },
  *   siteBaseUrl: string,
@@ -60,6 +62,19 @@ export function mountOfficial(ctx, deps) {
       return { token, userId: profile.id }
     },
   })
+
+  // Publish a local inspiration (upload assets → publish) on behalf of a
+  // vertical. The vertical owns the local library and hands over file paths plus
+  // metadata; the gateway key, the upload route and the publish payload stay in
+  // the hub. Absent when the official surface is unmounted, which the consumer
+  // reports instead of silently skipping the share.
+  if (typeof ctx.provide === 'function') {
+    ctx.provide('inspirationShare', createInspirationShareApi({
+      client,
+      siteBaseUrl: deps.siteBaseUrl,
+      resolveApiKey: deps.resolveApiKey ?? (() => env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN),
+    }))
+  }
 
   /**
    * @param {string} name
@@ -148,11 +163,11 @@ export function mountOfficial(ctx, deps) {
     'Create a social post via OmniMux. Requires OmniMux sign-in. Not a scheduling calendar.',
     {
       provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true },
-      account_ids: { type: 'array' },
+      account_ids: { type: 'array', required: true, items: { type: 'string' } },
       content: { type: 'string' },
       media_items: { type: 'array' },
     },
-    (args) => createPost(client, args),
+    (args) => createPost(client, args, deps.accountMetaStore),
   )
   tool(
     'omnimux_publish_get',

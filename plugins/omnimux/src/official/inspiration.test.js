@@ -5,7 +5,10 @@ import {
   listQueryString,
   listInspirations,
   mediaKeyFromHostPath,
+  publishBody,
+  publishInspirationShare,
   rewriteMediaUrlsForHost,
+  toShareResult,
 } from './inspiration.js'
 
 describe('inspiration query + rewrite', () => {
@@ -84,5 +87,43 @@ describe('inspiration query + rewrite', () => {
     const resForever = await createInspirationShare(client, { id: 'insp-123', expire: 'forever' })
     assert.equal(resForever.data.expire, 'forever')
     assert.deepEqual(calls[1].opts.body, { expire: 'forever' })
+  })
+
+  it('publishes through the gateway-key site lane with a snake_case body', async () => {
+    /** @type {{ path: string, opts: any }[]} */
+    const calls = []
+    const client = {
+      withSkSite: async (path, opts) => {
+        calls.push({ path, opts })
+        return { success: true, data: { share_id: 'insp_1', share_url: 'https://omnimux.ai/s/insp_1' } }
+      },
+    }
+
+    const result = toShareResult(await publishInspirationShare(client, {
+      category: 'other',
+      title: 't',
+      prompt: 'p',
+      mediaType: 'video/mp4',
+      mediaUrl: 'https://cdn.omnimux.ai/f/v.mp4',
+    }))
+
+    assert.equal(calls[0].path, '/api/inspiration/v1/publish')
+    assert.deepEqual(calls[0].opts.body, {
+      category: 'other',
+      title: 't',
+      prompt: 'p',
+      media_type: 'video/mp4',
+      media_url: 'https://cdn.omnimux.ai/f/v.mp4',
+    })
+    assert.equal(result.shareId, 'insp_1')
+    assert.equal(result.shareUrl, 'https://omnimux.ai/s/insp_1')
+  })
+
+  it('drops empty optional publish fields instead of sending blanks', () => {
+    assert.deepEqual(publishBody({ category: 'a', title: 'b', prompt: 'c', description: '', model: null }), {
+      category: 'a',
+      title: 'b',
+      prompt: 'c',
+    })
   })
 })

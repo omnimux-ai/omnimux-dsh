@@ -342,22 +342,34 @@ auto_materialize_and_reload() {
   fi
 
   # 检测改动的插件
-  local changed_plugins=()
+  local changed_paths changed_plugins=()
+  changed_paths="$(git -C "${ROOT}" diff --name-only "${base_ref}" "${target_ref}" 2>/dev/null | grep -E '^plugins/' || true)"
   while IFS= read -r p; do
     [ -n "${p}" ] && changed_plugins+=("${p}")
-  done < <(git -C "${ROOT}" diff --name-only "${base_ref}" "${target_ref}" 2>/dev/null | grep -E '^plugins/' | cut -d'/' -f2 | sort -u || true)
+  done < <(printf '%s\n' "${changed_paths}" | cut -d'/' -f2 | sort -u)
 
   if [ "${#changed_plugins[@]}" -eq 0 ]; then
     say "ℹ️ 本次合入未包含 plugins/ 插件源码变更，无需物化。"
     return 0
   fi
 
+  # Client 产物由 Web 服务按请求从磁盘读取，刷新页面即取得新版；其余插件文件（宿主路由、
+  # 清单、构建期入口）只有宿主进程重新加载后才生效，必须走受控重启，否则会留下新旧混装。
+  local needs_restart=0
+  if printf '%s\n' "${changed_paths}" | grep -qvE '^plugins/[^/]+/src/client/'; then
+    needs_restart=1
+  fi
+
   say "🔄 自动物化：检测到变更插件 [${changed_plugins[*]}]，开始增量同步至开发版 (~/.omnimux-dev)..."
   if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
     say "✅ 增量物化成功！"
-    # 自动探测 Dev App 并热重载
+    # 自动探测 Dev App：宿主侧变更受控重启，纯 Client 变更刷新页面
     if [ -f "${ROOT}/scripts/reload-dev-app.mjs" ]; then
-      node "${ROOT}/scripts/reload-dev-app.mjs" 2>/dev/null || true
+      if [ "${needs_restart}" -eq 1 ]; then
+        node "${ROOT}/scripts/reload-dev-app.mjs" --restart 2>/dev/null || true
+      else
+        node "${ROOT}/scripts/reload-dev-app.mjs" 2>/dev/null || true
+      fi
     fi
   else
     say "⚠️ 自动物化未成功，请手动在主检出运行: ./scripts/sync-to-app.sh ${changed_plugins[*]}"

@@ -52,6 +52,7 @@ function runCase(t, config = {}) {
     cwd: dir,
     env: {
       ...process.env,
+      DSH_HOME: join(dir, 'home'),
       PATH: config.missingPrograms ? bin : `${bin}:${process.env.PATH || ''}`,
       VIDEO_PROCESS_TRACE: trace,
       VIDEO_PROCESS_FAIL: (config.fail || []).join(','),
@@ -104,8 +105,7 @@ for (const filename of [
       assert.equal(existsSync(join(run.dir, marker)), false, `${marker} must not execute`)
     }
     assert.deepEqual(run.analysisVideos, [run.videoPath.replace(/\.mp4$/i, '_sample.mp4')])
-    assert.equal(run.results[0].video.cover_url,
-      `/omnimux/video-preview/stream?path=${encodeURIComponent(run.videoPath.replace(/\.mp4$/i, '_cover.jpg'))}`)
+    assert.match(run.results[0].video.cover_url, /^\/omnimux\/video-preview\/stream\?grant=[^&]+&signature=[a-f0-9]{64}$/)
     assert.equal(run.results[0].is_video_breakdown, true)
   })
 }

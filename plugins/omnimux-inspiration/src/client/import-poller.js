@@ -8,12 +8,15 @@ import {
 } from './import-status.js'
 
 /**
- * Completion poll for background imports.
+ * Completion poll for background jobs whose progress lives on the row.
  *
- * A background import answers 202 with a placeholder row and finishes on the
- * server; nothing pushes the result back to the page, so the page asks about each
- * row it is waiting for until the row settles. One row per request — the list
- * endpoint cannot say "which of these changed since you last asked".
+ * A background import — and a publish, which walks the same shape — answers 202
+ * with a placeholder row and finishes on the server; nothing pushes the result
+ * back to the page, so the page asks about each row it is waiting for until the
+ * row settles. One row per request — the list endpoint cannot say "which of
+ * these changed since you last asked". Which field says "still running" is the
+ * caller's `interpret`: imports read `import_status`, publishes read
+ * `share_status`.
  *
  * Deliberate properties:
  * - Recursive `setTimeout`, never `setInterval`: a slow response must not queue
@@ -72,6 +75,7 @@ function documentVisible(doc) {
 /**
  * @param {{
  *   intervalMs?: number,
+ *   interpret?: (response: unknown, current: unknown) => { action: PollAction, item?: Record<string, any> },
  *   deps?: {
  *     fetchItem?: (id: string) => Promise<any>,
  *     onItem?: (item: Record<string, any>) => void,
@@ -88,6 +92,7 @@ function documentVisible(doc) {
 export function createImportPoller(options = {}) {
   const deps = options.deps || {}
   const intervalMs = options.intervalMs ?? IMPORT_POLL_INTERVAL_MS
+  const interpret = options.interpret ?? decidePollOutcome
   const schedule = deps.setTimeout ?? ((fn, ms) => setTimeout(fn, ms))
   const unschedule = deps.clearTimeout ?? ((handle) => clearTimeout(handle))
   const fetchItem = deps.fetchItem ?? (async () => null)
@@ -144,7 +149,7 @@ export function createImportPoller(options = {}) {
         if (disposed) break
         let outcome
         try {
-          outcome = decidePollOutcome(await fetchItem(id), null)
+          outcome = interpret(await fetchItem(id), null)
         } catch {
           outcome = { action: 'keep' }
         }

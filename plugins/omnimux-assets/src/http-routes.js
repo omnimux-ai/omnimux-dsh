@@ -117,6 +117,9 @@ export function resolveCatalogPagePath(catalogDir, segments) {
 export function sendPreview(res, status, stream) {
   res.writeHead(status, {
     'Content-Type': stream.mime,
+    'X-Content-Type-Options': 'nosniff',
+    ...(stream.mime.split(';')[0].trim().toLowerCase() === 'image/svg+xml'
+      ? { 'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:" } : {}),
     ...(Number.isFinite(stream.size) ? { 'Content-Length': String(stream.size) } : {}),
     'Cache-Control': 'private, max-age=30',
   })

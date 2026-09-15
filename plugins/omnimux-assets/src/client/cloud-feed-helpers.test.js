@@ -296,6 +296,22 @@ describe('cloudCardKind', () => {
     )
   })
 
+  /**
+   * 数字人 / 拟人角色的素材是语音样本，但卡片门面是那张立绘：有立绘就必须画立绘，
+   * 否则整屏卡片只剩一块色板和播放键，角色长什么样完全看不见。
+   */
+  it('gives a voice row that carries a portrait the picture card, not the colour plate', () => {
+    assert.equal(
+      kindOf({
+        id: 'character-animal-character-1',
+        media_type: 'audio',
+        media_url: 'file:素材库/voice.wav',
+        cover_url: 'file:素材库/portrait.png',
+      }),
+      'media',
+    )
+  })
+
   it('falls back to text for the descriptor-only 音色 rows that have nothing to play', () => {
     assert.equal(kindOf({ id: 'audio-voiceover-1', media_type: 'other', meta: { playable: false } }), 'text')
     assert.equal(

@@ -55,22 +55,20 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.ok(ids.includes('cheap'))
     })
 
-    it('returns defined channel groups for seedance-2-5 including task-based pro and cheap', () => {
+    it('returns defined channel groups for seedance-2-5 with the task-based pro line only', () => {
       const groups = getModelChannelGroups('seedance-2-5')
       assert.ok(Array.isArray(groups))
-      assert.equal(groups.length, 3)
+      assert.equal(groups.length, 2)
       const ids = groups.map((g) => g.id)
       assert.ok(ids.includes('pro'))
       assert.ok(ids.includes('standard'))
-      assert.ok(ids.includes('cheap'))
+      // 30 秒 / 9 图特惠线路（wireGroup seedance-cheap）上游断货，已下架
+      assert.equal(ids.includes('cheap'), false)
+      assert.equal(groups.some((g) => g.wireGroup === 'seedance-cheap'), false)
 
       const proGroup = groups.find((g) => g.id === 'pro')
       assert.equal(proGroup.wireGroup, 'seedance-2-5-task-pro')
       assert.equal(proGroup.pricing?.billingMode, 'per_task')
-
-      const cheapGroup = groups.find((g) => g.id === 'cheap')
-      assert.equal(cheapGroup.wireGroup, 'seedance-cheap')
-      assert.equal(cheapGroup.pricing?.billingMode, 'per_task')
     })
 
     it('returns empty array for models without defined groups', () => {
@@ -92,15 +90,22 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.ok(candidates.every((id) => id.includes('@')), candidates.join(','))
     })
 
-    it('resolves explicit pro and cheap groups for seedance-2-5', () => {
+    it('keeps the pro line, reports the delisted cheap line, and fails closed on a pinned dead line', () => {
       const proCandidates = resolveChannelCandidates('seedance-2-5', { group: 'pro' })
       assert.equal(proCandidates[0], 'seedance-2-5@seedance-2-5-task-pro')
 
-      const cheapCandidates = resolveChannelCandidates('seedance-2-5', { group: 'cheap' })
-      assert.equal(cheapCandidates[0], 'seedance-2-5@seedance-cheap')
+      // 下架后显式请求旧分组必须被报告为不可解析，而不是当成有效线路继续下发。
+      const cheapPlan = resolveChannelPlan('seedance-2-5', { group: 'seedance-cheap' })
+      assert.deepEqual(cheapPlan.unresolvedGroups, ['seedance-cheap'])
 
+      // 低价优先不再指向已下架的特惠线路，落到标准版。
       const costCandidates = resolveChannelCandidates('seedance-2-5', { strategy: 'cost_first' })
-      assert.equal(costCandidates[0], 'seedance-2-5@seedance-cheap')
+      assert.equal(costCandidates[0], 'seedance-2-5@default')
+
+      // 历史工程把该线路钉成白名单时必须失败关闭：零候选，且不放宽为全量线路。
+      const pinned = resolveChannelPlan('seedance-2-5', { allowedGroups: ['seedance-cheap'] })
+      assert.deepEqual(pinned.candidates, [])
+      assert.deepEqual(pinned.unresolvedGroups, ['seedance-cheap'])
     })
 
     it('sorts by cost_first (lowest points estimate first)', () => {

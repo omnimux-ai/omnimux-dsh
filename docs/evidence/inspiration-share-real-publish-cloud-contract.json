@@ -1,0 +1,59 @@
+{
+  "task": "inspiration-share-real-publish",
+  "issue": 1978,
+  "capturedAt": "2026-09-15T16:05:00Z",
+  "purpose": "记录本次改造所依据的上游契约事实：站点路由探测、公开分享校验、上游源码字段核对。不含任何密钥；不产生任何发布写入。",
+  "routeProbes": [
+    {
+      "command": "curl -s -o /dev/null -w '%{http_code}' -X POST https://omnimux.ai/api/v1/files/upload/stream -H 'content-type: application/json' -d '{}'",
+      "status": 401,
+      "reading": "路由存在（无凭证时由 TokenOrUserAuth 拒绝；不存在的路由返回 404）"
+    },
+    {
+      "command": "curl -s -o /dev/null -w '%{http_code}' -X POST https://omnimux.ai/api/inspiration/v1/publish -H 'content-type: application/json' -d '{}'",
+      "status": 401,
+      "reading": "发布路由存在；与规范中「网关密钥 sk- 可通行」一致"
+    },
+    {
+      "command": "curl -s -o /dev/null -w '%{http_code}' -X POST https://api.omnimux.ai/v1/files/upload/stream -H 'content-type: application/json' -d '{}'",
+      "status": 401,
+      "reading": "同一网关在 API 域名下也服务该上传路由；本次实现选择站点路由（与规范实测一致）"
+    }
+  ],
+  "shareVerification": {
+    "command": "curl -s -o /tmp/probe2.out -w '%{http_code}' https://omnimux.ai/api/inspiration/v1/share/insp_17d391a7eb0b4a82",
+    "status": 200,
+    "reading": "规范中给出的实测样本 share_id 在当前线上可查（公开免登），证明 share_id 是云端真值"
+  },
+  "upstreamSourceChecks": [
+    {
+      "file": "/Users/x/Desktop/Project/OmniMux/controller/inspiration_publish.go",
+      "facts": [
+        "category/title/prompt 三者必填，缺失即时 400 并返回中文提示",
+        "media_type 只有 video | image 两种语义（默认 video），不是 MIME",
+        "cover_url 为空且 media_url 指向图片时自动对齐",
+        "响应 data 含 share_id / share_url / storage_bucket / is_admin / expires_at / expires_in",
+        "expire 字段支持 3days | forever；本次实现不传该字段，有效期完全按服务端返回展示"
+      ]
+    },
+    {
+      "file": "/Users/x/Desktop/Project/OmniMux/controller/file.go",
+      "facts": [
+        "file 为必填表单字段；upload_path / file_name 均为可选（file_name 缺失时回退到 multipart 文件名）",
+        "MaxUploadBytes = 100 * 1024 * 1024，超限返回 400",
+        "响应 data 含 file_id / file_url / download_url"
+      ]
+    },
+    {
+      "file": "/Users/x/Desktop/Project/OmniMux/docs/api/inspiration-publish-api-zh.md",
+      "facts": [
+        "普通用户落 omnimux-files + 72h；管理员落 omnimux-inspiration + 永久",
+        "经网关密钥发布时 is_admin 由账号记录判定（上游工单 #252 的既有缺陷域）"
+      ]
+    }
+  ],
+  "notes": [
+    "本次未执行真实发布写入：上游契约已由任务方实测确证，且发布会在生产站点留下公开分享记录。",
+    "浏览器验收证据见 docs/evidence/inspiration-share-real-publish-verified.json 与同名 PNG。"
+  ]
+}

@@ -44,16 +44,16 @@ describe('official social ops', () => {
     const seen = []
     const client = mockClient(async (url, init) => {
       seen.push({ url: String(url), method: init.method || 'GET', body: init.body })
-      return { ok: true, status: 200, json: async () => ({ id: 'post-1' }) }
+      return { ok: true, status: 200, json: async () => String(url).includes('/accounts?') ? { accounts: [{ id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok' }] } : { id: 'post-1' } }
     })
     await presignMedia(client, { filename: 'a.mp4', content_type: 'video/mp4' })
-    await createPost(client, { provider: 'tiktok_direct', account_ids: ['acc-1'], content: 'hello' })
+    await createPost(client, { provider: 'tiktok_direct', account_ids: ['acc-1'], content: 'hello' }, { readForAuthorization: () => ({}) })
     await getPost(client, { provider: 'tiktok_direct', id: 'post-1' })
     assert.equal(seen[0].url, 'https://omnimux.ai/api/social/v1/media/presign')
     assert.equal(JSON.parse(seen[0].body).filename, 'a.mp4')
-    assert.equal(seen[1].url, 'https://omnimux.ai/api/social/v1/posts')
-    assert.equal(JSON.parse(seen[1].body).provider, 'tiktok_direct')
-    assert.equal(seen[2].url, 'https://omnimux.ai/api/social/v1/posts/post-1?provider=tiktok_direct')
+    assert.equal(seen[2].url, 'https://omnimux.ai/api/social/v1/posts')
+    assert.equal(JSON.parse(seen[2].body).provider, 'tiktok_direct')
+    assert.equal(seen[3].url, 'https://omnimux.ai/api/social/v1/posts/post-1?provider=tiktok_direct')
   })
 
   it('unsigned account tools throw needs-omnimux', async () => {

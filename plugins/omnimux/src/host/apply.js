@@ -175,6 +175,7 @@ export function apply(ctx, config = {}) {
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, media: hub.media, gate: hub.gate, store, jsonOut })
   mountTextComplete(ctx, hub, jsonOut, rethrow)
   mountOfficial(ctx, {
+    accountMetaStore,
     hub,
     identity,
     store,

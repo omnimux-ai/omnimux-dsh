@@ -198,54 +198,6 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       },
       "wireGroup": "default",
       "enabled": true
-    },
-    {
-      "id": "cheap",
-      "label": "特惠版",
-      "badge": "限时特惠 · 30秒按次专线",
-      "pricing": {
-        "pointsEstimate": 900,
-        "discountRate": 0.5,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 90,
-        "avgWaitTimeSec": 120
-      },
-      "constraints": {
-        "operations": [
-          "video_multi_ref"
-        ],
-        "parameters": {
-          "duration": {
-            "fixed": 30
-          },
-          "resolution": {
-            "only": [
-              "720p"
-            ]
-          },
-          "aspectRatio": {
-            "only": [
-              "16:9",
-              "9:16"
-            ]
-          }
-        },
-        "inputs": {
-          "image": {
-            "max": 9
-          },
-          "video": {
-            "max": 0
-          },
-          "audio": {
-            "max": 0
-          }
-        }
-      },
-      "wireGroup": "seedance-cheap",
-      "enabled": true
     }
   ],
   "claude-opus-4-6": [
@@ -739,8 +691,9 @@ export function resolveLineConstraints(modelId: string, routing: unknown): LineC
     .filter((group) => selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false))
     .map((group) => group.constraints)
     .filter((constraint): constraint is LineConstraints => Boolean(constraint));
-  if (declarations.length === 0) return {};
-  return declarations.length === 1 ? declarations[0] : intersectLineConstraints(declarations);
+  const first = declarations[0];
+  if (!first) return {};
+  return declarations.length === 1 ? first : intersectLineConstraints(declarations);
 }
 
 // This module owns the group table, so it installs the lookup that the shared contract

@@ -168,54 +168,6 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       },
       "wireGroup": "default",
       "enabled": true
-    },
-    {
-      "id": "cheap",
-      "label": "特惠版",
-      "badge": "限时特惠 · 30秒按次专线",
-      "pricing": {
-        "pointsEstimate": 900,
-        "discountRate": 0.5,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 90,
-        "avgWaitTimeSec": 120
-      },
-      "constraints": {
-        "operations": [
-          "video_multi_ref"
-        ],
-        "parameters": {
-          "duration": {
-            "fixed": 30
-          },
-          "resolution": {
-            "only": [
-              "720p"
-            ]
-          },
-          "aspectRatio": {
-            "only": [
-              "16:9",
-              "9:16"
-            ]
-          }
-        },
-        "inputs": {
-          "image": {
-            "max": 9
-          },
-          "video": {
-            "max": 0
-          },
-          "audio": {
-            "max": 0
-          }
-        }
-      },
-      "wireGroup": "seedance-cheap",
-      "enabled": true
     }
   ],
   "claude-opus-4-6": [

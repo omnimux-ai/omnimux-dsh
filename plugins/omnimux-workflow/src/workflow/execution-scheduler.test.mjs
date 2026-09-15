@@ -466,7 +466,7 @@ test('material nodes run through the mock gateway (success + media URL)', async 
 
     const imageOutput = snapshot.nodeOutputs.i1;
     const url = imageOutput?.mediaAssets?.[0]?.url ?? '';
-    assert.match(url, /^\/omnimux-workflow\/media\/executions\/[^/]+\/i1\.png$/);
+    assert.match(url, /^\/omnimux-workflow\/media\/executions\/[^/]+\/[a-f0-9]{64}-[a-f0-9-]{36}\.png$/);
     assert.equal(imageOutput?.simulated, true);
     assert.equal(snapshot.mediaAssets.i1?.length, 1);
   } finally {

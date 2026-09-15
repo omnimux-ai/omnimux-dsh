@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
 import {
   createShareLink,
+  getLocalInspiration,
   pickCoverSrc,
   pickVideoSrc,
   resolveTikTokEmbedUrl,
@@ -15,6 +16,15 @@ import {
   isFailedRow,
   isImportingRow,
 } from './import-status.js'
+import { createImportPoller } from './import-poller.js'
+import {
+  decideSharePollOutcome,
+  isShareRunning,
+  shareErrorText,
+  shareSteps,
+  shareUrlOf,
+  shareValidityText,
+} from './share-status.js'
 import {
   canAnalyzeInspiration,
   deconstructionCopyText,
@@ -32,20 +42,6 @@ const ICON_SHARE = (
     <line x1="12" y1="2" x2="12" y2="15" />
   </svg>
 )
-
-function detectIsAdmin() {
-  if (typeof window === 'undefined') return false
-  const auth = /** @type {any} */ (window).__omnimuxAuth
-  if (!auth) return false
-  if (typeof auth.isAdmin === 'function') return Boolean(auth.isAdmin())
-  if (typeof auth.getProfile === 'function') {
-    const p = auth.getProfile()
-    return Boolean(p?.is_admin || (typeof p?.role === 'number' && p.role >= 10))
-  }
-  const cached = auth.peekCache?.() || auth.statusCache
-  const body = cached?.body
-  return Boolean(body?.is_admin || (typeof body?.role === 'number' && body.role >= 10))
-}
 
 const ICON_CLOSE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -151,40 +147,71 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [activeSegmentId, setActiveSegmentId] = useState('')
   const [videoFailed, setVideoFailed] = useState(false)
   const [showSharePopover, setShowSharePopover] = useState(false)
-  const [shareExpire, setShareExpire] = useState('3days')
   const [sharing, setSharing] = useState(false)
-  const [shareResult, setShareResult] = useState(null)
   const [shareError, setShareError] = useState(null)
-  const [upcomingTipVisible, setUpcomingTipVisible] = useState(false)
-
-  const isAdmin = useMemo(() => {
-    return detectIsAdmin()
-  }, [])
 
   useEffect(() => {
     setShowSharePopover(false)
-    setShareExpire('3days')
-    setShareResult(null)
     setShareError(null)
-    setUpcomingTipVisible(false)
   }, [item?.id])
+
+  const applyItemRef = useRef(() => {})
+
+  // The row is the single source of the publish's state: the Host starts the job
+  // and writes every stage into it, so the page asks about that row until it
+  // settles. Same poller the background imports use, told how to read a publish
+  // row instead of an import row.
+  const sharePoller = useMemo(() => createImportPoller({
+    interpret: decideSharePollOutcome,
+    deps: {
+      fetchItem: (id) => getLocalInspiration(id),
+      onItem: (row) => applyItemRef.current(row),
+      onSettled: (row) => applyItemRef.current(row),
+      onFailed: (row) => applyItemRef.current(row),
+    },
+  }), [])
+
+  useEffect(() => {
+    sharePoller.start()
+    return () => sharePoller.dispose()
+  }, [sharePoller])
+
+  // Kept fresh on every render so the poll callbacks below never close over a
+  // stale `onItemUpdated`.
+  useEffect(() => {
+    applyItemRef.current = (next) => {
+      if (!next || typeof next !== 'object') return
+      setItem(next)
+      onItemUpdated?.(next)
+    }
+  })
+
+  // A publish started before this popover was opened (closed and reopened, or a
+  // page reload) is still running on the server: pick it back up instead of
+  // showing a create button for work that is already happening.
+  useEffect(() => {
+    if (item?.id && isShareRunning(item)) sharePoller.track(String(item.id))
+  }, [item?.id, item?.share_status, sharePoller])
 
   const handleCreateShare = async () => {
     if (sharing || !data.safeItem.id) return
     setSharing(true)
     setShareError(null)
     try {
-      const response = await createShareLink(data.safeItem.id, { expire: shareExpire })
-      if (response.ok && response.body?.data) {
-        setShareResult(response.body.data)
-      } else {
-        const msg = response.body?.error || t('modal.share.failed') || '创建失败'
-        setShareError(msg)
-        setTimeout(() => setShareError(null), 3000)
+      const response = await createShareLink(data.safeItem.id)
+      const row = response.body?.data
+      if (!response.ok) {
+        // Shown in the popover, not as a full-screen error: the user asked for a
+        // link, and the reason they did not get one belongs next to the button.
+        setShareError(response.body?.error || t('modal.share.failed') || '创建失败')
+        return
+      }
+      if (row) {
+        applyItemRef.current(row)
+        if (isShareRunning(row)) sharePoller.track(row.id)
       }
     } catch (error) {
       setShareError(String(error?.message || error))
-      setTimeout(() => setShareError(null), 3000)
     } finally {
       setSharing(false)
     }
@@ -217,6 +244,13 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   // broken down; `importSettledNotice` is empty for a clean completion and for a
   // row already covered by the failure alert above.
   const settledNotice = importSettledNotice(data.safeItem, t)
+  // Publish state, all of it read off the row: a running job contributes its
+  // real stage list, a finished one contributes the link the cloud returned.
+  const shareUrl = shareUrlOf(data.safeItem)
+  const shareRunning = isShareRunning(data.safeItem)
+  const shareStepsList = shareRunning ? shareSteps(data.safeItem, t) : []
+  const shareFailure = shareError || shareErrorText(data.safeItem)
+  const shareValidity = shareValidityText(data.safeItem, t)
   const dimensions = [
     ['hook', t('modal.deconstruction.hook'), data.hook],
     ['goal', t('modal.deconstruction.goal'), data.targetGoal],
@@ -354,45 +388,53 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                     </IconButton>
                   </div>
 
-                  {!shareResult ? (
-                    <div className="omnimux-inspiration-share-form">
-                      <div className="omnimux-inspiration-share-options">
-                        <div
-                          className={`omnimux-inspiration-share-opt ${shareExpire === '3days' ? 'is-selected' : ''}`}
-                          onClick={() => setShareExpire('3days')}
-                        >
-                          <div className="omnimux-inspiration-share-radio" />
-                          <span className="omnimux-inspiration-share-opt-label">{t('modal.share.3days') || '3 天有效'}</span>
-                        </div>
-
-                        <div
-                          className={`omnimux-inspiration-share-opt ${shareExpire === 'forever' ? 'is-selected' : ''} ${!isAdmin ? 'is-disabled' : ''}`}
-                          onClick={() => {
-                            if (!isAdmin) {
-                              setUpcomingTipVisible(true)
-                              setTimeout(() => setUpcomingTipVisible(false), 2200)
-                              return
-                            }
-                            setShareExpire('forever')
-                          }}
-                        >
-                          <div className="omnimux-inspiration-share-radio" />
-                          <span className="omnimux-inspiration-share-opt-label">{t('modal.share.forever') || '永久有效'}</span>
-                          <span className={`omnimux-inspiration-share-badge ${isAdmin ? 'is-admin' : 'is-upcoming'}`}>
-                            {isAdmin ? (t('modal.share.adminOnly') || '管理员专享') : (t('modal.share.upcoming') || '即将开放')}
-                          </span>
-                        </div>
+                  {shareUrl ? (
+                    <div className="omnimux-inspiration-share-result">
+                      <div className="omnimux-inspiration-share-link-box">
+                        <input
+                          type="text"
+                          readOnly
+                          value={shareUrl}
+                          className="omnimux-inspiration-share-input"
+                        />
+                        <CopyButton
+                          text={shareUrl}
+                          label={t('modal.share.copy') || '复制'}
+                          copiedLabel={t('modal.share.copied') || '已复制'}
+                          size="sm"
+                          variant="secondary"
+                          className="omnimux-inspiration-share-copy-btn"
+                        />
                       </div>
+                      <div className="omnimux-inspiration-share-meta">
+                        <span>{shareValidity}</span>
+                        <span className="omnimux-inspiration-share-done">{t('modal.share.doneTag') || '已发布'}</span>
+                      </div>
+                    </div>
+                  ) : shareRunning ? (
+                    <div className="omnimux-inspiration-share-progress" role="status" aria-live="polite" aria-label={t('modal.share.progress') || '发布进度'}>
+                      <ol className="omnimux-inspiration-share-steps">
+                        {shareStepsList.map((step) => (
+                          <li
+                            key={step.id}
+                            className={`omnimux-inspiration-share-step is-${step.state}`}
+                            data-share-step={step.id}
+                            data-share-state={step.state}
+                            aria-current={step.state === 'active' ? 'step' : undefined}
+                          >
+                            <span className="omnimux-inspiration-share-step-dot" aria-hidden="true" />
+                            <span className="omnimux-inspiration-share-step-label">{step.label}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : (
+                    <div className="omnimux-inspiration-share-form">
+                      <p className="omnimux-inspiration-share-hint">{t('modal.share.validityHint')}</p>
 
-                      {upcomingTipVisible && (
-                        <div className="omnimux-inspiration-share-tip">
-                          {t('modal.share.upcomingTip') || '永久有效即将开放给订阅会员'}
-                        </div>
-                      )}
-
-                      {shareError && (
-                        <div className="omnimux-inspiration-share-tip is-error">
-                          {shareError}
+                      {shareFailure && (
+                        <div className="omnimux-inspiration-share-tip is-error" role="alert">
+                          {shareFailure}
                         </div>
                       )}
 
@@ -404,30 +446,12 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         loading={sharing}
                         disabled={sharing}
                       >
-                        {sharing ? (t('modal.share.creating') || '创建中…') : (t('modal.share.create') || '创建链接')}
+                        {sharing
+                          ? (t('modal.share.creating') || '创建中…')
+                          : shareFailure
+                            ? (t('modal.share.retry') || '重新创建链接')
+                            : (t('modal.share.create') || '创建链接')}
                       </Button>
-                    </div>
-                  ) : (
-                    <div className="omnimux-inspiration-share-result">
-                      <div className="omnimux-inspiration-share-link-box">
-                        <input
-                          type="text"
-                          readOnly
-                          value={shareResult.share_url || shareResult.shareUrl || ''}
-                          className="omnimux-inspiration-share-input"
-                        />
-                        <CopyButton
-                          text={shareResult.share_url || shareResult.shareUrl || ''}
-                          label={t('modal.share.copy') || '复制'}
-                          copiedLabel={t('modal.share.copied') || '已复制'}
-                          size="sm"
-                          variant="secondary"
-                          className="omnimux-inspiration-share-copy-btn"
-                        />
-                      </div>
-                      <div className="omnimux-inspiration-share-meta">
-                        <span>{shareResult.expire === 'forever' ? (t('modal.share.forever') || '永久有效') : (t('modal.share.3days') || '3 天有效')}</span>
-                      </div>
                     </div>
                   )}
                 </div>

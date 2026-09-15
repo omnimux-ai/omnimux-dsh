@@ -9,7 +9,7 @@
  * 实现复用官方 media 路由的 `isInsideDir`（lexical）+ `realpathSync`
  * （symlink）双重 containment。
  */
-import { realpathSync, statSync } from 'node:fs';
+import { realpathSync, statSync, lstatSync } from 'node:fs';
 import { isAbsolute, join, resolve, sep } from 'node:path';
 
 /** 结构化错误：路径非法 / 写入越界。路由层据此映射 400/403。 */
@@ -168,14 +168,28 @@ export function assertProjectWriteSafe(target: string, root: string): void {
   if (!isInsideDir(target, root)) {
     throw new ProjectPathError('path-denied', 'project path escapes containment root');
   }
-  try {
-    const realRoot = realpathSync(root);
-    const realTarget = realpathSync(target);
-    if (!isInsideDir(realTarget, realRoot)) {
-      throw new ProjectPathError('path-denied', 'project path escapes containment root (symlink)');
+  // Resolve the nearest existing ancestor even when the final file is new.
+  // A missing leaf must not conceal an escaping parent symlink.
+  const resolveFuture = (path: string): string => {
+    let ancestor = resolve(path);
+    const suffix: string[] = [];
+    while (true) {
+      try {
+        lstatSync(ancestor);
+        return resolve(realpathSync(ancestor), ...suffix);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        // A dangling symlink exists lexically and must fail closed.
+        try { lstatSync(ancestor); throw new ProjectPathError('path-denied', 'dangling path symlink'); }
+        catch (probe) { if ((probe as NodeJS.ErrnoException).code !== 'ENOENT') throw probe; }
+        const parent = resolve(ancestor, '..');
+        if (parent === ancestor) throw error;
+        suffix.unshift(ancestor.slice(parent.length).replace(/^[/\\]+/, ''));
+        ancestor = parent;
+      }
     }
-  } catch (error) {
-    if (error instanceof ProjectPathError) throw error;
-    // root / target 尚未存在时跳过 realpath 层。
+  };
+  if (!isInsideDir(resolveFuture(target), resolveFuture(root))) {
+    throw new ProjectPathError('path-denied', 'project path escapes containment root (symlink)');
   }
 }

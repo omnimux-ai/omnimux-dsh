@@ -61,7 +61,7 @@ describe('account meta store', () => {
     }
   })
 
-  it('treats a missing or corrupt file as empty and writes 0600/0700', () => {
+  it('keeps corrupt presentation empty but refuses overwriting policy, and writes 0600/0700', () => {
     const home = mkdtempSync(join(tmpdir(), 'omnimux-acct-meta-bad-'))
     try {
       const store = createAccountMetaStore({ home })
@@ -69,6 +69,8 @@ describe('account meta store', () => {
       mkdirSync(join(home, 'omnimux'), { recursive: true, mode: 0o700 })
       writeFileSync(accountsMetaFile(home), 'not-json', { mode: 0o600 })
       assert.deepEqual(store.read(), {})
+      assert.throws(() => store.update('a', { group: 'ops' }), /account-policy-unavailable/)
+      writeFileSync(accountsMetaFile(home), '{}')
       store.update('a', { group: 'ops' })
       assert.equal(store.read()['a'].group, 'ops')
       const raw = JSON.parse(readFileSync(accountsMetaFile(home), 'utf8'))
