@@ -18,8 +18,7 @@ import { registerTextCompleteRoutes } from '../text/http.js'
  *   get?: Function,
  *   effect?: Function,
  * }} httpCtx
- * deps.getConnection is only forwarded to the form-attachment mount, which uses it as
- * the auth hook; mountHubHttp itself never calls it.
+ * deps.getConnection supplies Host authorization to protected HTTP mounts.
  * @param {{
  *   store: object,
  *   identity: object,
@@ -60,7 +59,7 @@ export function mountHubHttp(httpCtx, deps) {
     return Array.isArray(body.apps) ? body.apps : []
   }
   const mount = () => {
-    const stopAuth = registerAuthRoutes(webServer, dispatcher)
+    const stopAuth = registerAuthRoutes(webServer, dispatcher, { getConnection: deps.getConnection })
     const stopCatalog = registerCatalogRoutes(webServer, {
       list: typeof deps.listCatalog === 'function' ? deps.listCatalog : () => null,
     })
@@ -104,6 +103,7 @@ export function mountHubHttp(httpCtx, deps) {
       }),
     )
     const stopTextComplete = registerTextCompleteRoutes(webServer, {
+      getConnection: deps.getConnection,
       getTextComplete: deps.getTextComplete || (() => httpCtx.get?.('textComplete')),
       credentials: deps.credentials || httpCtx.get?.('credentials'),
       settings: deps.settings || httpCtx.get?.('settings'),

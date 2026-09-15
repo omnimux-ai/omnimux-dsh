@@ -788,3 +788,43 @@ describe('BridgeServer', () => {
     expect(frames.filter((f) => f.t === 'event').length).toBe(countBefore)
   })
 })
+
+describe('authenticated unary text completion', () => {
+  it('waits for final text rather than a session acceptance receipt', async () => {
+    let finish!: (value: unknown) => void
+    const completeText = vi.fn(() => new Promise<unknown>(resolve => { finish = resolve }))
+    const h = await startBridge({ completeText }); harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some(f => f.t === 'hello.ok'))
+    send(ws, { t: 'rpc', id: 'completion', method: 'bridge.completeText', payload: { prompt: 'hello', system: 'brief' } })
+    await waitFor(() => completeText.mock.calls.length === 1)
+    expect(frames.some(f => f.t === 'rpc.result' && f.id === 'completion')).toBe(false)
+    finish({ text: ' completed body ' })
+    await waitFor(() => frames.some(f => f.t === 'rpc.result' && f.id === 'completion'))
+    expect(frames.find(f => f.t === 'rpc.result' && f.id === 'completion')).toMatchObject({ ok: true, result: { text: 'completed body' } })
+    expect(h.callMock).not.toHaveBeenCalled()
+    ws.close()
+  })
+  it('propagates completion errors and rejects malformed requests without calling the service', async () => {
+    const completeText = vi.fn(async () => { throw new Error('model unavailable') })
+    const h = await startBridge({ completeText }); harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS }); await waitFor(() => frames.some(f => f.t === 'hello.ok'))
+    send(ws, { t: 'rpc', id: 'bad', method: 'bridge.completeText', payload: { prompt: '' } })
+    await waitFor(() => frames.some(f => f.t === 'rpc.result' && f.id === 'bad'))
+    expect(completeText).not.toHaveBeenCalled()
+    send(ws, { t: 'rpc', id: 'error', method: 'bridge.completeText', payload: { prompt: 'hello' } })
+    await waitFor(() => frames.some(f => f.t === 'rpc.result' && f.id === 'error'))
+    expect(frames.find(f => f.t === 'rpc.result' && f.id === 'error')).toMatchObject({ ok: false, error: { message: 'model unavailable' } })
+    ws.close()
+  })
+  it('does not call completion before authenticated hello', async () => {
+    const completeText = vi.fn(async () => 'never')
+    const h = await startBridge({ completeText }); harnesses.push(h)
+    const { ws, done } = await connect(h.url)
+    send(ws, { t: 'rpc', id: 'unauthorized', method: 'bridge.completeText', payload: { prompt: 'spend' } })
+    await done
+    expect(completeText).not.toHaveBeenCalled()
+  })
+})

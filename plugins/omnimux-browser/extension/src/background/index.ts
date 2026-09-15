@@ -42,7 +42,7 @@ import {
   type RespondResult,
 } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
-import { BRIDGE_CONFIG_PATH, BRIDGE_PATH } from 'omnimux-browser/src/protocol.ts'
+import { BRIDGE_CONFIG_PATH, BRIDGE_PATH, BRIDGE_COMPLETE_TEXT_METHOD } from 'omnimux-browser/src/protocol.ts'
 import { BridgeClient, type BridgeState } from './bridge.ts'
 import { createRpc } from './rpc.ts'
 import {
@@ -2160,63 +2160,13 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     const userMessage = payload.userMessage || ''
 
     void (async () => {
-      // 1. 优先调用本地 OmniMux 宿主服务的标准文案补全接口
-      const candidateBases: string[] = []
       try {
-        const savedPort = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
-        const p = savedPort ? parseInt(savedPort, 10) : undefined
-        if (p && !isNaN(p) && p > 0) {
-          candidateBases.push(`http://127.0.0.1:${p}`)
-        }
-      } catch {}
-      if (bridge?.url) {
-        const bridgeHttp = httpBaseFromBridgeUrl(bridge.url)
-        if (bridgeHttp) candidateBases.push(bridgeHttp)
+        const result = await gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt }) as { text?: unknown }
+        if (typeof result?.text !== 'string' || !result.text.trim()) throw new Error('模型没有返回正文')
+        sendResponse({ ok: true, text: result.text.trim() })
+      } catch (error) {
+        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
       }
-      candidateBases.push('http://127.0.0.1:45120', 'http://127.0.0.1:43120', 'http://127.0.0.1:3080')
-      const uniqueBases = Array.from(new Set(candidateBases))
-
-      for (const base of uniqueBases) {
-        try {
-          const res = await fetch(`${base}/omnimux/text/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system: systemPrompt,
-              prompt: userMessage,
-              maxTokens: 1000,
-            }),
-          })
-          if (res.ok) {
-            const data = (await res.json()) as { ok?: boolean; text?: string; error?: string }
-            if (data?.ok && typeof data.text === 'string' && data.text.trim()) {
-              sendResponse({ ok: true, text: data.text.trim() })
-              return
-            }
-          }
-        } catch {}
-      }
-
-      // 2. 备选通道：已建立连接的 Bridge RPC 会话
-      if (bridge?.connected && gatewayRpc) {
-        try {
-          const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
-          if (session?.sessionId) {
-            const prompt = systemPrompt ? `[系统指令: ${systemPrompt}]\n\n${userMessage}` : userMessage
-            const rpcRes = (await gatewayRpc('session.prompt', {
-              sessionId: session.sessionId,
-              prompt,
-            })) as { answer?: string; text?: string }
-            const textRpc = rpcRes?.answer || rpcRes?.text || ''
-            if (textRpc.trim()) {
-              sendResponse({ ok: true, text: textRpc.trim() })
-              return
-            }
-          }
-        } catch {}
-      }
-
-      sendResponse({ ok: false, message: '本地 OmniMux 服务未就绪或未配置大模型通道' })
     })()
     return true
   }
