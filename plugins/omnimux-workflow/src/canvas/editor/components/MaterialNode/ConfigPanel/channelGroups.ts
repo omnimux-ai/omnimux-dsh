@@ -739,8 +739,9 @@ export function resolveLineConstraints(modelId: string, routing: unknown): LineC
     .filter((group) => selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false))
     .map((group) => group.constraints)
     .filter((constraint): constraint is LineConstraints => Boolean(constraint));
-  if (declarations.length === 0) return {};
-  return declarations.length === 1 ? declarations[0] : intersectLineConstraints(declarations);
+  const first = declarations[0];
+  if (!first) return {};
+  return declarations.length === 1 ? first : intersectLineConstraints(declarations);
 }
 
 // This module owns the group table, so it installs the lookup that the shared contract
