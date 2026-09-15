@@ -6671,6 +6671,35 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   outline: none;
 }
 
+/* ==================== 编组顶部整行 (GroupTopRow: 名称在左，工具栏在右) ==================== */
+.wf-group-top-row {
+  position: absolute;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wf-group-top-row > * {
+  pointer-events: auto;
+}
+
+.wf-group-top-row .wf-group-header-pill {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+}
+
+.wf-group-top-row .wf-floating-top-pill {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
 .wf-group-topbar {
   position: absolute;
   z-index: 30;
