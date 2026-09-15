@@ -1761,10 +1761,15 @@ export const INSPIRATION_CSS = `
   align-items: center;
   gap: 8px;
   position: relative;
+  flex-shrink: 0;
 }
 .omnimux-inspiration-share-trigger-btn {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
   gap: 6px;
   height: 32px;
   padding: 0 12px;

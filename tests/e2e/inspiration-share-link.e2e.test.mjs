@@ -65,6 +65,7 @@ describe('E2E: Inspiration Preview Modal Share Flow', () => {
       const shareBtn = actions.querySelector('.omnimux-inspiration-share-trigger-btn')
       assert.ok(shareBtn, '操作容器内必须包含分享按钮')
       assert.match(shareBtn.textContent, /分享/)
+      assert.ok(shareBtn.querySelector('svg'), '分享按钮内必须包含矢量图标且水平同行挂载')
 
       // 2. 验证初始状态下 Popover 未展开（默认关闭以保持极简）
       const popover = actions.querySelector('.omnimux-inspiration-share-popover')

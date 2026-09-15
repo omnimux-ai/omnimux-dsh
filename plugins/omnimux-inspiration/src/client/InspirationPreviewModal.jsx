@@ -325,13 +325,13 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <Button
                 size="sm"
                 variant="ghost"
+                leadingIcon={ICON_SHARE}
                 className={`omnimux-inspiration-share-trigger-btn ${showSharePopover ? 'is-active' : ''}`}
                 onClick={() => setShowSharePopover((prev) => !prev)}
                 title={t('modal.share.btn') || '分享'}
                 aria-label={t('modal.share.btn') || '分享'}
               >
-                {ICON_SHARE}
-                <span>{t('modal.share.btn') || '分享'}</span>
+                {t('modal.share.btn') || '分享'}
               </Button>
 
               {showSharePopover && (
