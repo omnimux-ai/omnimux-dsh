@@ -64,12 +64,44 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   min-height:0!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-seat],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-seat] {
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-seat],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-seat],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-seat] {
   justify-content:flex-end!important;
+  padding-bottom:0!important;
+  padding-top:0!important;
+  padding-inline:0!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerStack"],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"] {
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerStack"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerStack"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerStack"] {
   justify-content:flex-end!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
+  padding:0!important;
+}
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="composerHero"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="composerHero"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerHero"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="composerHero"] {
+  width:100%!important;
+  max-width:100%!important;
+  padding-bottom:0!important;
+  margin-inline:0!important;
+}
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-card],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-card],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [data-composer-card],
+html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+  width:100%!important;
+  max-width:100%!important;
+  margin-inline:0!important;
 }
 
 /* 热门入门方式与任务指引内容区：自适应宽屏 1200px，舒展大气，层次分明 */
