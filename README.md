@@ -1,7 +1,8 @@
 # OmniMux
 
 <p align="center">
-  <strong>The Open-Source Multi-Agent Creation & Operations Orchestrator for DeepSeek Harness</strong>
+  <strong>The Open-Source AI Marketing Video Engine & Viral Reproduction Studio</strong><br>
+  <sub>开源企业级 AI 营销短视频生成与爆款视频复刻出片中枢</sub>
 </p>
 
 <p align="center">
@@ -16,9 +17,32 @@
 
 ## 🌟 简介 (Introduction)
 
-**OmniMux** 是专为 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 打造的开源多智能体（Multi-Agent）创作与社媒全链路运营编排平台。
+**OmniMux** 是专为跨境电商、短视频创作者、MCN 机构与出海营销团队打造的**开源企业级 AI 营销短视频出片与爆款视频复刻中枢**（基于 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 运行时）。
 
-我们参考了 **Multica**（将 Agent 视为团队员工进行协同与管理）与 **n8n**（可视化工作流自动化）的产品与商业架构，将 AI 创作团与增长团深度融合，提供从**创意灵感 → 脚本生成 → 视觉生图 → 视频分镜 → 剪辑出片 → 账号矩阵多平台发布 → 自动化互动监控**的全链路闭环。
+针对传统云端视频生成平台（如 **Topview.ai**、**Creatok.ai** 等）普遍存在的**高昂积分抽成（出片成本昂贵）**、**黑盒死板模板（无法精细调控分镜与剪辑）**、**商业素材外泄风险**以及**缺乏矩阵分发落地**等核心痛点，OmniMux 提供了**完全自托管、零点数抽水、深度可控**的企业级全链路出片解决方案：
+
+打通从 **爆款灵感逆向拆解 → 电商链接/卖点智能出片 → 无限节点画布精控分镜 → 专业多轨时间轴剪辑精修 → 社媒多账号矩阵全托管批量发布** 的工业级商业闭环。
+
+---
+
+## 🥊 行业标杆对标与核心壁垒 (Benchmarking & Core Moat)
+
+相比于行业知名的商业闭源工具，OmniMux 在自托管私有化、全流程掌控力与出片性价比上具备压倒性优势：
+
+| 核心对比维度 | OmniMux (本项目) | Topview.ai (电商出片标杆) | Creatok.ai (社媒裂变标杆) | 传统云端模板视频 SaaS |
+| :--- | :--- | :--- | :--- | :--- |
+| **核心业务定位** | **企业级 AI 爆款视频复刻与矩阵出片中枢** | 跨境电商商品链接转广告视频 (URL to Video) | 社媒短视频爆款脚本复刻与批量裂变 | 固定模板换字换图拼装 |
+| **视频生成模式** | **爆款反推 + 多模态节点画布 + 多轨剪辑工坊** | 云端黑盒自动拼接，依赖标准广告模板 | 预设短视频模板套用，偏向通用社媒脚本 | 简单图层时间线叠加 |
+| **模型与算力自由度** | **完全私有化自选**，直连各大主流多模态模型 | 平台绑定官方模型，无法自定义底层引擎 | 平台绑定模型，黑盒闭源不可调整 | 无大模型直连能力 |
+| **后期精细剪辑** | **内置专业多轨时间轴工坊 (OpenReel 引擎)** | 仅支持基础字幕与音乐微调，无法深改分镜 | 基础模块替换，缺乏多轨时间轴精剪能力 | 简单替换，极难二次创作 |
+| **社媒矩阵分发闭环** | **内置多平台账号池风控、批量排期与数据回流** | 仅支持生成后单视频下载，无矩阵分发中枢 | 仅支持部分社媒单账号发布，无矩阵风控体系 | 无社媒矩阵托管能力 |
+| **商业模式与成本** | **开源自托管 / 企业授权，零点数抽水** | **高昂积分点数制**（按生成时长与次数重度抽成） | **SaaS 订阅制 + 严格条数限制**，规模化极贵 | 按年高额软件费 + 点数充值 |
+
+### 🚀 OmniMux 四大降维打击优势
+1. **零抽水与成本直降 70%~90%**：彻底终结第三方 SaaS 平台昂贵的“积分点数消耗”。自托管直接调用主流模型底层 API，按实际算力原价付费，无中间商差价。
+2. **兼具 Creatok 爆款解构与 Topview 链接出片**：既能上传热门爆款视频一键提取“前 3 秒黄金吸睛点（Hook）+ 叙事节奏 + 分镜工程”，也能输入电商链接或卖点一键生成高转化带货短视频。
+3. **无限节点画布 + 内置多轨时间轴剪辑（拒绝开盲盒）**：不仅提供一键出片，更拥有类似 ComfyUI 的节点级自由画布，支持单独调节任意镜头模型与参数；内置专业级 OpenReel 多轨时间轴剪辑工坊，字幕、音轨、画中画随心精调。
+4. **原生多账号矩阵安全风控与自动化发布**：自带社媒矩阵账号池、防关联安全风控与全托管批量定时发布，直接完成从“视频批量制作”到“矩阵规模化获客”的商业落地。
 
 ---
 
@@ -70,7 +94,7 @@ OmniMux 采用“执行中枢 + 业务垂直插件”的微内核模块化架构
 
 ## 💼 版本对比 (Community vs Enterprise)
 
-OmniMux 采用与 **Multica** 相同的 **Open-Core** 模式与 **Sustainable Source** 许可：
+OmniMux 采用标准的 **Open-Core** 模式与 **Sustainable Source** 许可：
 
 | 特性 | Community Edition (社区开源自托管) | Commercial / Enterprise (商业企业版) |
 | :--- | :---: | :---: |
@@ -127,7 +151,7 @@ OmniMux 的构建与演进站在了开源巨人的肩膀上，我们对以下直
 * **[@xyflow/react (React Flow)](https://github.com/xyflow/xyflow)** (MIT License, by xyflow)：`omnimux-workflow` 无限画布 DAG 节点连接与编排引擎。
 * **[Umami Analytics](https://github.com/umami-software/umami)** (MIT License)：`omnimux-analytics` 隐私友好的插件指标与社媒运营分析。
 * **[Blobatar](https://github.com/joshglendenning/blobatar)** (MIT License, by Josh Glendenning)：`omnimux` 账号与 Agent 动态色彩头像生成。
-* **模式致敬**：感谢 **[Multica](https://multica.ai)**（AI 员工多智能体团队协同）与 **[n8n](https://n8n.io)**（可视化工作流与可持续源码许可）的产品与商业化启发。
+* **模式致敬**：感谢 **[n8n](https://n8n.io)**（可视化节点编排与可持续源码许可）的产品与商业化启发。
 
 *完整第三方开源项目清单与许可证声明详见 **[ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md)**。*
 

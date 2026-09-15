@@ -58,6 +58,7 @@ OmniMux 的诞生与演进离不开全球开源社区与先锋项目的杰出贡
 
 | 项目名称 | 来源仓库 | 许可证 | 在 OmniMux 中的应用 |
 | :--- | :--- | :---: | :--- |
+| **Augani/openreel-video (OpenReel)** | [Augani/openreel-video](https://github.com/Augani/openreel-video) | MIT | `omnimux-clip` 专业微应用多轨时间轴、WebCodecs 与硬件加速剪辑引擎 |
 | **React Flow (@xyflow/react)** | [xyflow/xyflow](https://github.com/xyflow/xyflow) | MIT | `omnimux-workflow` 无限画布节点连接与 DAG 拓扑编排引擎 |
 | **Umami Analytics** | [umami-software/umami](https://github.com/umami-software/umami) | MIT | `omnimux-analytics` 隐私友好的插件使用指标与社媒运营数据计算 |
 | **Blobatar** | [joshglendenning/blobatar](https://github.com/joshglendenning/blobatar) | MIT | `omnimux` 执行中枢账号与 Agent 动态色彩头像哈希生成 |
@@ -66,12 +67,12 @@ OmniMux 的诞生与演进离不开全球开源社区与先锋项目的杰出贡
 
 ---
 
-## 四、商业模式与产品形态灵感致敬 (Inspirations & Tributes)
+## 四、商业模式与产品架构灵感致敬 (Inspirations & Tributes)
 
-* **[Multica (multica-ai/multica)](https://multica.ai)**：
-  * 启发了我们将 AI Agent 视为专业团队成员进行协同调度、任务看板分发与资产沉淀的产品哲学。
 * **[n8n (n8n-io/n8n)](https://n8n.io)**：
-  * 启发了我们建立兼顾“开发者自由修改开源”与“商业可持续变现”的 **Sustainable Source / Source-Available** 双轨制许可架构。
+  * 启发了我们建立兼顾“开发者自由修改开源”与“商业可持续变现”的 **Sustainable Source / Source-Available** 双轨制许可架构，以及节点级可视化编排的产品思想。
+* **[OpenReel Video (Augani/openreel-video)](https://github.com/Augani/openreel-video)**：
+  * 为 OmniMux 提供了强大的开源多轨时间轴剪辑内核，让 AI 视频生成摆脱了不可控的模板拼装，迈入工业级精剪与微调。
 
 ---
 
