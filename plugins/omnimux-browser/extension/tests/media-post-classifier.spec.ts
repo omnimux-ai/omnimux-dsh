@@ -704,6 +704,38 @@ describe('a nav inside a content root wraps content, it is not page chrome', () 
     expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(false)
     expect(detectOnce(image)).toHaveLength(0)
   })
+
+  it('still rejects media in a shadow root under a page-level nav', () => {
+    // `closest` does not cross shadow boundaries, so a walk that stops at its
+    // first miss loses the page-level region entirely. This image has no region
+    // inside its own tree; the nav sits one boundary out.
+    document.body.innerHTML = '<nav role="navigation"><x-card id="probe-host"></x-card></nav>'
+    const host = document.querySelector('#probe-host')!
+    const shadow = host.attachShadow({ mode: 'open' })
+    shadow.innerHTML = '<article class="post"><img src="https://cdn.example.com/shadow.png" alt=""></article>'
+    const image = shadow.querySelector('img')!
+    stubBox(image, 300, 300)
+
+    expect(isExcludedRegionElement(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(false)
+    expect(detectOnce(image)).toHaveLength(0)
+  })
+
+  it('exempts a site header that a page-shell article wraps', () => {
+    // Known boundary, pinned so a future tightening shows up here: the exemption
+    // asks whether the region sits inside a content root, not whether that root is
+    // the region's own content. A template wrapping the whole page in an
+    // `<article>` therefore exempts the site chrome it encloses.
+    const image = mount(
+      '<article class="page"><header class="site-header"><nav>'
+      + '<img src="https://cdn.example.com/shell.png" alt=""></nav></header><main>x</main></article>',
+      'img',
+    )
+    stubBox(image, 900, 600)
+
+    expect(isExcludedRegionElement(image)).toBe(false)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(true)
+  })
 })
 
 describe('a descriptive alt or title is not a role', () => {

@@ -435,10 +435,10 @@ function isInsideChromeRegion(element: Element): boolean {
  * The query is unbounded on purpose: a footer buried 26 levels above an image is
  * still the page footer, so no ancestor budget may stop the walk.
  *
- * `closest` does not cross shadow boundaries, so the walk restarts from the host
- * of each shadow root on the way out: an image inside a web component has no
- * `parentElement` path back to the document, which would hide the region it
- * actually sits in.
+ * `closest` does not cross shadow boundaries, so a step that finds no region
+ * continues from the host of the shadow root it is in: an image inside a web
+ * component has no `parentElement` path back to the document, and the region it
+ * actually sits in would otherwise stay hidden.
  *
  * A region that wraps content is that content's own tag rather than page chrome
  * (see {@link CONTENT_ROOT_SELECTOR}); the walk then continues *outside* it, so a
@@ -448,7 +448,11 @@ function isInsideSkeletonRegion(element: Element): boolean {
   let node: Element | null = element
   while (node !== null) {
     const region = node.closest(SKELETON_REGION_SELECTOR)
-    if (region === null) return false
+    if (region === null) {
+      // No region in this tree: step out of the shadow root and keep looking.
+      node = shadowHostOf(node)
+      continue
+    }
     if (region.closest(CONTENT_ROOT_SELECTOR) === null) return true
     node = parentOf(region)
   }
