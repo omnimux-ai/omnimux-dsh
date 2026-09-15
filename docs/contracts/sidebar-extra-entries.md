@@ -26,9 +26,29 @@ Official source of the numbers: `dsh-client-ui-workspace` session row (`.session
 | Label | `font: var(--dsw-font-s-14)` fallback `14px / 20px` | Same as official `.title` |
 | Gap icon→label | `6px` | Same as official session row |
 | Corner | `8px` | Same as official session row |
-| Hover / active | `--dsw-alias-interactive-bg-hover` / `--dsw-alias-interactive-bg-active` | Same as official session row |
+| Hover / active | `--dsw-alias-interactive-bg-hover` / `--dsw-alias-interactive-bg-active` | Hover is the same token as the official session row; the official **selected** row paints with the *hover* token family, so plugin active and session selected are not the same shade — an accepted, documented difference (D-2), not a defect to "fix" by touching official CSS |
 
 MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a second visual scale next to 工作区. Icon box and label font-size MUST be the same number (14px).
+
+## Left-rail single activation slot (#rail-active-state-convergence)
+
+The left rail has **exactly one** activation slot at any moment. Plugin rows, dynamic app-tab rows and the plaza row share that slot; the official workspace session row owns it whenever a session row is selected and the middle conversation column is visible.
+
+Derivation order is fixed and exclusive:
+
+1. Middle conversation column visible **and** a selected session row exists → the session row wins and **every** plugin row MUST be inactive.
+2. Otherwise, the native right panel is expanded and has an active tab that maps to a left-rail row → that row wins.
+3. Otherwise — including "the focused tab has no left-rail row" — no row is active.
+
+| Rule | Detail |
+|---|---|
+| Single writer | Rows MUST NOT compute their own active state. The only writer is the hub arbiter behind `window.__omnimuxWorkbench`; `createSidebarStore({ tabId }).getSnapshot()` and `isActive(tabId)` return that arbitration |
+| No presence fallback | `isActive(tabId)` answers "is this tab the focused workbench tab". It MUST NEVER fall back to tab presence (`isOpen`) — that fallback is the one reproducible double-highlight path |
+| Session truth | The official DOM: `[role="treeitem"][aria-selected="true"]` inside the official left column, with search-result rows excluded. Plugins MUST NOT build a session-selection mirror |
+| Column visible | Collapse key absent **and** measured conversation-column width > 0 **and** the host right panel is not in fullscreen presentation (all three, not any) |
+| Tab identity | The focused tab's `kind` maps to a left-rail `tabId`; an unmappable key means "no active row", never a guessed one |
+| Truth order | Host truth (official DOM attributes, `ctx.sidebarRight`, `ctx.sessions.list`) outranks plugin in-memory state |
+| Broadcast | Verdict changes ride the existing `notifyWorkbenchChange` bus; no second subscription channel, and no polling to patch state |
 
 ## Current occupants
 
@@ -93,7 +113,7 @@ MUST NOT fake a tab as a real session row (no `conversation.view`, no session da
 
 ## Independent pages
 
-**Workbench rows (normative, #318):** library / catalog / plaza / clip / canvas left-rows open a `dsh-better-sidebar` Tab via `window.__omnimuxWorkbench.open({ tabId })`. They **MUST NOT** claim `data-dsh-product-stage`. Occupants and default focus: [workbench-split.md](./workbench-split.md). Left-row `data-active` tracks the **focused** workbench tab (`__omnimuxWorkbench.isActive`), not tab presence (`isOpen`); cleared when the right panel is `chat` / `panelOpen === false`.
+**Workbench rows (normative, #318):** library / catalog / plaza / clip / canvas left-rows open a `dsh-better-sidebar` Tab via `window.__omnimuxWorkbench.open({ tabId })`. They **MUST NOT** claim `data-dsh-product-stage`. Occupants and default focus: [workbench-split.md](./workbench-split.md). Left-row `data-active` is the projection of the single activation slot (see below), never computed by the row itself, and **MUST NOT** fall back to tab presence (`isOpen`).
 
 **Overlay leftover (narrow):** Hub 登录门、（未挂载的）Apps 货架、Clip 画布节点 portal。只有这些表面仍可 `claimProductStage`；`PRODUCT_STAGE_CHROME` 只在 `html[data-dsh-product-stage]` 时藏右栏。
 
@@ -104,7 +124,7 @@ MUST NOT fake a tab as a real session row (no `conversation.view`, no session da
 | Top chrome | In-tab L1 still `12px 20px 12px` (same as official conversation header). Do not add a 44/56px inset. Window-drag stays on (no product-stage). | Same 12/20/12. Window-drag off while claimed. |
 | Mutual exclusion | Switching left-rows **activates** the other Tab; does not claim. Cross-type Tabs may coexist (`single: true` per type). | Opening one leftover dispatches `dsh-product-stage` so the others close. |
 | Layout chrome | MUST NOT hide `toggleCluster` or `[data-dsh-panel-host]`. Hub injects the chat-toggle as the cluster's first child. | While claimed, hide `toggleCluster`, `conversation.session.header`, **and** `[data-dsh-panel-host]`; force `--dsh-sidebar-width` / `--dsh-sidebar-height` to `0`. |
-| Session click | Clicking a workspace session row **does not** close workbench Tabs. The right panel follows the better-sidebar **session snapshot**. If middle chat is sticky-collapsed, the same click **MUST** `setFocus(split)` to re-show the conversation (enter-conversation intent; see [workbench-split.md](./workbench-split.md)). | Clicking **any** workspace session row (`[role="treeitem"]`, selected or not) must leave the leftover overlay. Official workspace treats a click on the already-selected row as a no-op, so leftovers must close that case themselves. Clicks on buttons inside a row (pin / delete) MUST NOT close. **新会话** also leaves leftovers. 「新建项目」MUST NOT use this path. |
+| Session click | Clicking a workspace session row **does not** close workbench Tabs. The same click exits the host right panel's fullscreen presentation, restores the middle column, and hands the activation slot back to the session row (enter-conversation intent; see [workbench-split.md](./workbench-split.md)). | Clicking **any** workspace session row (`[role="treeitem"]`, selected or not) must leave the leftover overlay. Official workspace treats a click on the already-selected row as a no-op, so leftovers must close that case themselves. Clicks on buttons inside a row (pin / delete) MUST NOT close. **新会话** also leaves leftovers. 「新建项目」MUST NOT use this path. |
 
 MUST NOT register workbench pages as `conversation.view`. That slot is a session-hosted tab (chat / trajectory / team run).
 
