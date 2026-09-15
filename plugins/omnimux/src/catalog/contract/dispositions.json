@@ -42,6 +42,26 @@
       "notes": "中枢统一端点，原生支持 1K/2K/4K 聚合调度"
     },
     {
+      "id": "gpt-image-2.5-flare",
+      "disposition": "canonical",
+      "batch": "B",
+      "reason": "网关公开价目表独立在售模型；带专属分组 gpt-image-2.5-flare-std / -pro 可达；已入库 dated live 证据",
+      "evidence": [
+        "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
+      ],
+      "notes": "极速生图专线，快速迭代"
+    },
+    {
+      "id": "gpt-image-2.5-sunburst",
+      "disposition": "canonical",
+      "batch": "B",
+      "reason": "网关公开价目表独立在售模型；带专属分组 gpt-image-2.5-sunburst-std / -pro 可达；已入库 dated live 证据",
+      "evidence": [
+        "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
+      ],
+      "notes": "画质生图专线，精细成品"
+    },
+    {
       "id": "grok-imagine-image-2",
       "disposition": "alias",
       "target": "grok-imagine-image-2-0",

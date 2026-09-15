@@ -1,6 +1,7 @@
 import { OmnimuxError } from './errors.js'
 import {
   gatewayCandidates,
+  getModelChannelGroups,
   PRODUCT_ID_ALIASES,
   parseModelAndGroup,
   resolveChannelCandidates,
@@ -148,15 +149,27 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   if (!modelId) {
     throw new OmnimuxError('unknown-model', `no model configured for ${providerId}/${capability}`)
   }
-  const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
+  const requestedGroup = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
   const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
   const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
     ? request.allowedGroups
     : undefined
-  const hasRoutingIntent = Boolean(group || allowedGroups || explicitStrategy)
+  const callerIntent = Boolean(requestedGroup || allowedGroups || explicitStrategy)
+
+  // A model may pin its own line. Callers such as the canvas cannot name a group
+  // (their request whitelist carries `strategy`/`allowedGroups` only), and the
+  // bare model id would land on the gateway's catch-all pool — where a model
+  // served exclusively by a dedicated group has no channel at all. The pinned
+  // group also bounds the pool, so a default line never fails over into a
+  // differently priced one.
+  const pinned = callerIntent || providerId !== 'omnimux' ? undefined : defaultChannelGroup(modelId)
+  const pinnedWire = pinned ? (pinned.wireGroup || pinned.id) : undefined
+  const group = requestedGroup ?? pinnedWire
+  const effectiveAllowedGroups = allowedGroups ?? (pinnedWire ? [pinnedWire] : undefined)
+  const hasRoutingIntent = Boolean(group || effectiveAllowedGroups || explicitStrategy)
 
   const plan = providerId === 'omnimux' && hasRoutingIntent
-    ? resolveChannelPlan(modelId, { strategy: explicitStrategy ? request.strategy : 'auto', group, allowedGroups })
+    ? resolveChannelPlan(modelId, { strategy: explicitStrategy ? request.strategy : 'auto', group, allowedGroups: effectiveAllowedGroups })
     : { candidates: providerId === 'omnimux' ? gatewayCandidates(modelId) : [modelId], unresolvedGroups: [] }
   if (hasRoutingIntent && plan.candidates.length === 0) {
     // Fail closed: an empty plan means every requested channel was excluded or
@@ -183,6 +196,20 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
     unresolvedGroups: plan.unresolvedGroups,
     capability,
   }
+}
+
+/**
+ * The line a model pins for itself, if its pool declares one.
+ *
+ * `default: true` is the model's own routing intent, so it applies only when the
+ * caller expressed none — a caller-chosen group always wins. Disabled groups are
+ * never pinned.
+ *
+ * @param {string} modelId
+ * @returns {{ wireGroup?: string, id: string } | undefined}
+ */
+function defaultChannelGroup(modelId) {
+  return getModelChannelGroups(modelId).find((group) => group.default === true && group.enabled !== false)
 }
 
 /**

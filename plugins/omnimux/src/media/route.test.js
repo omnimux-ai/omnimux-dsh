@@ -333,5 +333,33 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     assert.deepEqual(route.unresolvedGroups, ['standard'])
     assert.ok(route.candidates.includes('grok-imagine-image-2'))
   })
+
+  it('auto-pins the default line when a model declares one and the caller gave no intent', () => {
+    const media = parseMediaConfig(undefined)
+    const flareRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5-flare' }, media)
+    assert.equal(flareRoute.modelId, 'gpt-image-2.5-flare')
+    assert.equal(flareRoute.group, 'gpt-image-2.5-flare-std')
+    // Pool is locked to the single default line so it never fails over into a different price tier.
+    assert.deepEqual(flareRoute.candidates, ['gpt-image-2.5-flare@gpt-image-2.5-flare-std'])
+
+    const sunburstRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5-sunburst' }, media)
+    assert.equal(sunburstRoute.modelId, 'gpt-image-2.5-sunburst')
+    assert.equal(sunburstRoute.group, 'gpt-image-2.5-sunburst-std')
+    assert.deepEqual(sunburstRoute.candidates, ['gpt-image-2.5-sunburst@gpt-image-2.5-sunburst-std'])
+  })
+
+  it('explicit group intent overrides the default line', () => {
+    const media = parseMediaConfig(undefined)
+    const explicit = resolveMediaRoute('image', { model: 'gpt-image-2.5-flare', group: 'pro' }, media)
+    // When the caller specifically asks for pro, that choice is honored instead of the default.
+    assert.equal(explicit.group, 'pro')
+  })
+
+  it('models without a pinned default line retain legacy bare candidates under empty intent', () => {
+    const media = parseMediaConfig(undefined)
+    const baseRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5' }, media)
+    assert.equal(baseRoute.group, undefined)
+    assert.deepEqual(baseRoute.candidates, ['gpt-image-2.5'])
+  })
 })
 

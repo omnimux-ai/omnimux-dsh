@@ -16,7 +16,7 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
   },
   image: {
     // grok-imagine-image-2-0 只剩「已登记」（无 listed 操作），按 curated 白名单口径不得进入画布。
-    allowedModelIds: ['gpt-image-2.5'],
+    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },

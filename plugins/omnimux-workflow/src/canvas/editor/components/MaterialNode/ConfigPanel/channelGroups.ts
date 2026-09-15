@@ -387,6 +387,34 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "enabled": true
     }
   ],
+  "gpt-image-2.5-flare": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "极速专线 · 快速迭代",
+      "pricing": {
+        "pointsEstimate": 225,
+        "discountRate": 1.125,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-flare-std",
+      "enabled": true
+    }
+  ],
+  "gpt-image-2.5-sunburst": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "画质专线 · 精细成品",
+      "pricing": {
+        "pointsEstimate": 225,
+        "discountRate": 1.125,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-sunburst-std",
+      "enabled": true
+    }
+  ],
   "nano-banana-2": [
     {
       "id": "standard",
