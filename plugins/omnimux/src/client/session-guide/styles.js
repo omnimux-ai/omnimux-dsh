@@ -21,15 +21,19 @@ body[data-ds-dark-theme] {
 [data-omnimux-starter-host] [data-conversation-scroll] { justify-content:flex-start!important; }
 [data-omnimux-starter-host] [data-composer-seat] {
   flex:1 0 auto!important; min-height:100%; display:flex; flex-direction:column;
-  justify-content:center!important; padding-block:32px; box-sizing:border-box;
+  justify-content:flex-start!important; padding-top:56px!important; padding-bottom:32px!important; box-sizing:border-box;
 }
 /* 宿主内容总栈：大屏下拓展至 1200px，让下方内容与卡片网格从容展开、更有商业大作底气 */
 [data-omnimux-starter-host] [class*="composerStack"] {
-  flex:0 0 auto!important; display:flex; flex-direction:column; justify-content:center!important;
+  flex:0 0 auto!important; display:flex; flex-direction:column; justify-content:flex-start!important;
   gap:18px; padding-bottom:0!important;
   width:100%!important;
   max-width:min(1200px, calc(100% - 32px))!important;
   margin-inline:auto!important;
+}
+[data-omnimux-starter-host] [class*="composerHero"] {
+  flex:0 0 auto!important;
+  width:100%!important;
 }
 [data-omnimux-starter-host] [class*="composerHero"] > :first-child {
   margin-top:0!important; margin-bottom:4px!important;
