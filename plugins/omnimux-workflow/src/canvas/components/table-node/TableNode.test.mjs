@@ -105,3 +105,25 @@ test('TableNode 自动拉取与缓存同步契约：挂载 ensure + openStage �
     '预览行必须调用 formatRowPreview 智能选择信息量最大的代表列',
   );
 });
+
+test('TableNode 卡片表头圆角收敛与高光内阴影防遮挡契约（Issue #1879）', () => {
+  // 1. 表头容器必须设置顶部左右圆角，贴合外层卡片内切圆角
+  assert.match(
+    tableNodeSrc,
+    /borderTopLeftRadius:\s*'calc\(var\(--wb-node-radius,\s*18px\)\s*-\s*1px\)'/,
+    '表头容器必须声明 borderTopLeftRadius 贴合内圆角',
+  );
+  assert.match(
+    tableNodeSrc,
+    /borderTopRightRadius:\s*'calc\(var\(--wb-node-radius,\s*18px\)\s*-\s*1px\)'/,
+    '表头容器必须声明 borderTopRightRadius 贴合内圆角',
+  );
+
+  // 2. 表头背景保持透明，避免覆盖父容器的 box-shadow: inset 选中环
+  assert.match(
+    tableNodeSrc,
+    /background:\s*'transparent'/,
+    '表头背景必须为 transparent，杜绝半透明深色底色造成双边框并遮挡选中高光线',
+  );
+});
+

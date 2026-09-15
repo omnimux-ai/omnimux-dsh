@@ -203,7 +203,16 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+              borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+              overflow: 'hidden',
+            }}
+          >
             {/* 卡片表头 */}
             <div
               style={{
@@ -212,7 +221,9 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
                 justifyContent: 'space-between',
                 padding: '10px 14px',
                 borderBottom: '1px solid var(--wb-border)',
-                background: 'color-mix(in srgb, var(--wb-surface) 60%, transparent)',
+                borderTopLeftRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+                borderTopRightRadius: 'calc(var(--wb-node-radius, 18px) - 1px)',
+                background: 'transparent',
                 fontSize: 12,
                 fontWeight: 500,
                 color: 'var(--wb-text-secondary)',
