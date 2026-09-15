@@ -51,7 +51,7 @@ date: 2026-09-15
 ## 3. 验收标准（Acceptance Criteria）
 
 - **AC-1（内容内导航豁免）**：`<article data-testid="tweet">` 内 `<nav role="navigation">` 包裹的 `[data-testid="tweetPhoto"]` / `[data-testid="videoComponent"]` / `[data-testid="videoPlayer"]` 媒体被准入，`isPostOrWorkMedia` 返回 `true`。
-- **AC-2（页面骨架仍排除）**：不在 `article` 内的页面级 `<header>` / `<nav>` / `<footer>` / `role=banner|navigation|contentinfo` 仍被排除，含 26 层深度嵌套场景。
+- **AC-2（内容根之外的页面骨架仍排除）**：位于内容根（`article` / `[role="article"]`）**之外**的页面级 `<header>` / `<nav>` / `<footer>` / `role=banner|navigation|contentinfo` 仍被排除，含 26 层深度嵌套、跨 shadow 边界、以及「内容根包住页面骨架」三类场景。
 - **AC-3（真实页面感知非空）**：X 真实推文页面上 `sniffViewportMedia()` 返回 ≥1 条可下载媒体（修复前为 0），且每条 `attachable` 为 `true`、地址为 `https`。
 - **AC-4（无回归）**：现有分类器、媒体检测、媒体动作测试全绿。
 
@@ -64,3 +64,20 @@ date: 2026-09-15
 | AC-1 / AC-2 | `extension/tests/media-post-classifier.spec.ts` 新增用例，红-绿两态 |
 | AC-3 | ego-browser 注入修复后判定链，在真实推文页面输出嗅探条数与地址 |
 | AC-4 | `pnpm --filter omnimux-browser test` 全量结果 |
+
+---
+
+## 5. 独立评审结论与已知边界
+
+独立对抗性评审（未参与实现）结论：**有条件通过**，无 BLOCKER。
+
+### 5.1 已修复（MAJOR）
+
+初版修复把基线的「无条件跨 shadow host 推进」改写成 `closest` 未命中即返回，导致 shadow 树内没有骨架区域时黑名单整体失效——页面级 `<nav>` / `<header>` 内的 shadow 媒体会被误准入（评审以 6 组同构 DOM 差分证明该回归）。
+
+修复：未命中时改走 `shadowHostOf(node)` 跨边界继续，主文档树返回 `null` 自然终止。新增 `still rejects media in a shadow root under a page-level nav` 用例；把修复回退成初版写法时，该用例按预期失败。
+
+### 5.2 已知边界（不改实现，用例钉死）
+
+- **内容根包住页面骨架**：豁免判定问的是「骨架区域是否位于内容根内」，而不是「该内容根是否就是骨架区域自身的内容」。整页被 `<article>` 包住的模板（`<article class="page"><header class="site-header">…`）会让其中的站点 chrome 一并被豁免。以 `exempts a site header that a page-shell article wraps` 钉住，将来收紧会在此处报红。
+- **无 `article` 形态的状态根**：`TWEET_ROOT_SELECTOR` 承认 `<div data-testid="tweet">` 形态，而豁免根只含 `article` / `[role="article"]`；该形态下轮播 `<nav>` 仍被排除。经 ego-browser 实测，X 当前在推文详情页与首页时间线均以 `<article role="article">` 渲染状态根，因此这不是当前缺陷而是防御性边界。**不把平台私有 testid 并入跨平台豁免根**——那会同步放大上一条的扩面，收益仅为防御未来形态。
