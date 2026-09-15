@@ -616,6 +616,96 @@ describe('header, nav and footer are found however deeply they are nested', () =
   })
 })
 
+describe('a nav inside a content root wraps content, it is not page chrome', () => {
+  /**
+   * The status media carousel exactly as X/Twitter renders it.
+   *
+   * The site paints each status's media carousel as `<nav role="navigation">`
+   * inside `[data-testid="tweetPhoto"]`, so a tag-based skeleton rule rejects
+   * every photo and video in every status.
+   */
+  function carouselHtml(inner: string): string {
+    return '<article data-testid="tweet">'
+      + '<div data-testid="User-Name"><div data-testid="UserAvatar-Container">'
+      + '<img class="css-9pa8cd" src="https://pbs.twimg.com/profile_images/1/avatar_normal.jpg" alt="头像">'
+      + '</div><span>某作者</span></div>'
+      + '<div data-testid="tweetPhoto">'
+      + '<div data-testid="ScrollSnap-SwipeableList">'
+      + '<nav role="navigation">'
+      + '<div data-testid="ScrollSnap-List" role="tablist">'
+      + inner
+      + '</div></nav></div></div>'
+      + '</article>'
+  }
+
+  it('admits the status photo inside the carousel nav', () => {
+    const photo = mount(
+      carouselHtml('<img src="https://pbs.twimg.com/media/XYZ?format=jpg" alt="">'),
+      'img[src*="media"]',
+    )
+    stubBox(photo, 600, 400)
+
+    expect(isExcludedRegionElement(photo)).toBe(false)
+    expect(isPostOrWorkMedia(photo, PLATFORM_HOST)).toBe(true)
+    expect(detectOnce(photo)).toHaveLength(1)
+  })
+
+  it('admits the status video inside the carousel nav', () => {
+    document.body.innerHTML = carouselHtml(
+      '<div data-testid="videoComponent">'
+      + '<video poster="https://pbs.twimg.com/poster.jpg" src="blob:https://x.com/abc"></video>'
+      + '</div>',
+    )
+    const video = document.querySelector('video')!
+    stubBox(video, 600, 340)
+
+    expect(isExcludedRegionElement(video)).toBe(false)
+    expect(isPostOrWorkMedia(video, PLATFORM_HOST)).toBe(true)
+    expect(detectOnce(video)[0]?.payload.type).toBe('video')
+  })
+
+  it('still rejects a page-level nav outside any content root', () => {
+    const image = mount(
+      '<nav role="navigation"><img src="https://cdn.example.com/nav.png" alt=""></nav>',
+      'img',
+    )
+    stubBox(image, 800, 200)
+
+    expect(isExcludedRegionElement(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(false)
+    expect(detectOnce(image)).toHaveLength(0)
+  })
+
+  it('still rejects a nav inside a non-article wrapper', () => {
+    // The exemption is scoped to content roots. A `<div class="post">` wrapper is
+    // not one, so a nav inside it stays page chrome.
+    const image = mount(
+      '<div class="post"><nav role="navigation"><img src="https://cdn.example.com/nav2.png" alt=""></nav></div>',
+      'img',
+    )
+    stubBox(image, 800, 600)
+
+    expect(isExcludedRegionElement(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(false)
+  })
+
+  it('still rejects a page header wrapping the whole content root', () => {
+    // The walk continues outside an exempted region, so a status carousel cannot
+    // hide the page header above the status.
+    const image = mount(
+      '<header><article data-testid="tweet"><div data-testid="tweetPhoto">'
+      + '<nav role="navigation"><img src="https://pbs.twimg.com/media/NAV?format=jpg" alt=""></nav>'
+      + '</div></article></header>',
+      'img',
+    )
+    stubBox(image, 600, 400)
+
+    expect(isExcludedRegionElement(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(false)
+    expect(detectOnce(image)).toHaveLength(0)
+  })
+})
+
 describe('a descriptive alt or title is not a role', () => {
   it('admits a work image whose alt names a logo', () => {
     const image = mount(
