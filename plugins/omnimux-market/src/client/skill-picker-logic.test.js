@@ -365,6 +365,26 @@ describe('agent preset skill bindings', () => {
     assert.equal(getPresetSkillBinding('全能社媒操盘手')?.presetId, 'tiktok-agent')
   })
 
+  it('getPresetSkillBinding resolves omni-agent and omni-social-agent', () => {
+    const binding = getPresetSkillBinding('omni-agent')
+    assert.ok(binding)
+    assert.equal(binding.presetId, 'omni-agent')
+    assert.equal(binding.name, '全能社媒操盘手')
+    assert.equal(getPresetSkillBinding('omni')?.presetId, 'omni-agent')
+    assert.equal(getPresetSkillBinding('omni-social-agent')?.presetId, 'omni-agent')
+    assert.equal(hasPresetSkillBinding('omni-agent'), true)
+  })
+
+  it('getPresetSkillBinding resolves marketing-agent and mode === marketing', () => {
+    const binding = getPresetSkillBinding('marketing-agent')
+    assert.ok(binding)
+    assert.equal(binding.presetId, 'marketing-agent')
+    assert.equal(binding.name, '全能营销操盘手')
+    assert.equal(getPresetSkillBinding('marketing')?.presetId, 'marketing-agent')
+    assert.equal(getPresetSkillBinding(null, 'marketing')?.presetId, 'marketing-agent')
+    assert.equal(hasPresetSkillBinding('marketing-agent'), true)
+  })
+
   it('unbound presets return null and hasPresetSkillBinding is false', () => {
     for (const id of ['standard', 'daily-work', 'cordis', 'unknown', '', null, undefined]) {
       assert.equal(getPresetSkillBinding(id), null)

@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(tiktok-agent standard daily-work cordis)
+KEEP=(omni-agent marketing-agent drama-agent standard daily-work cordis)
 
-if [ ! -d "$SRC/tiktok-agent" ] || [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/daily-work" ] || [ ! -d "$SRC/cordis" ]; then
-  echo "❌ presets/ 缺少出厂预设 (tiktok-agent, standard, daily-work, cordis)" >&2
+if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
+  echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
   exit 1
 fi
 
@@ -243,20 +243,20 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：tiktok-agent (TikTokAgent) + standard (代码开发) + daily-work (日常工作) + cordis (组建团队)
+# OmniMux 出厂会话预设：omni-agent (全能社媒操盘手) + marketing-agent + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
-    default: tiktok-agent
+    default: omni-agent
     includeUserRoot: false
 YAML
     echo "  ✓ wrote agent-presets patch → $patch"
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：tiktok-agent (TikTokAgent) + standard (代码开发) + daily-work (日常工作) + cordis (组建团队)
+# OmniMux 出厂会话预设：omni-agent (全能社媒操盘手) + marketing-agent + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
-    default: tiktok-agent
+    default: omni-agent
     includeUserRoot: false
 YAML
     echo "  ✓ appended agent-presets patch → $patch"

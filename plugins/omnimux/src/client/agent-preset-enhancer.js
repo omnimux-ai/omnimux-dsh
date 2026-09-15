@@ -60,7 +60,9 @@ export const MENU_ITEM_MIN_HEIGHT_PX = 36
  * stay distinguishable in a list.
  */
 export const AGENT_PRESET_AVATARS = Object.freeze({
-  'tiktok-agent': Object.freeze({ hue: 320 }),
+  'omni-agent': Object.freeze({ hue: 320 }),
+  'marketing-agent': Object.freeze({ hue: 35 }),
+  'drama-agent': Object.freeze({ hue: 270 }),
   'software-company': Object.freeze({ hue: 214 }),
   standard: Object.freeze({ hue: 246 }),
   cordis: Object.freeze({ hue: 280 }),
@@ -78,9 +80,16 @@ export const AGENT_PRESET_AVATARS = Object.freeze({
  * unknown name still gets a deterministic face seeded by its own text.
  */
 export const AGENT_PRESET_NAMES = Object.freeze({
-  '全能社媒操盘手': 'tiktok-agent',
-  'Social Media Lead': 'tiktok-agent',
-  'tiktok-agent': 'tiktok-agent',
+  '全能社媒操盘手': 'omni-agent',
+  'Social Media Lead': 'omni-agent',
+  'omni-agent': 'omni-agent',
+  'tiktok-agent': 'omni-agent',
+  '全能营销操盘手': 'marketing-agent',
+  'Marketing Lead': 'marketing-agent',
+  'marketing-agent': 'marketing-agent',
+  '全能短剧操盘手': 'drama-agent',
+  'Short Drama Showrunner': 'drama-agent',
+  'drama-agent': 'drama-agent',
   '软件开发团队': 'software-company',
   'Software Company': 'software-company',
   'software-company': 'software-company',

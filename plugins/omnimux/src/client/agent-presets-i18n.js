@@ -81,13 +81,31 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
           : '多模态创意策划、脚本分镜与视听制作。',
     }
   }
-  if (presetId === 'tiktok-agent' || presetId === 'tiktokagent' || presetId === '全能社媒操盘手') {
+  if (presetId === 'omni-agent' || presetId === 'tiktok-agent' || presetId === 'tiktokagent' || presetId === '全能社媒操盘手') {
     return {
       name: lang === 'en' ? 'Social Media Lead' : '全能社媒操盘手',
       description:
         lang === 'en'
           ? 'Cross-platform social media creation and matrix growth.'
           : '全域社媒爆款创作与矩阵运营增长。',
+    }
+  }
+  if (presetId === 'marketing-agent' || presetId === 'omni-marketing-agent' || presetId === '全能营销操盘手') {
+    return {
+      name: lang === 'en' ? 'Marketing Lead' : '全能营销操盘手',
+      description:
+        lang === 'en'
+          ? 'Omnichannel campaign strategy, creative ads, and ROI attribution.'
+          : '全域获客、创意策划、全渠道投放与ROI数据归因。',
+    }
+  }
+  if (presetId === 'drama-agent' || presetId === 'omni-drama-agent' || presetId === '全能短剧操盘手') {
+    return {
+      name: lang === 'en' ? 'Short Drama Showrunner' : '全能短剧操盘手',
+      description:
+        lang === 'en'
+          ? 'Short drama scriptwriting, storyboards, voice acting, and global dubbing.'
+          : '微短剧工业化编剧、分镜运镜、多角色配音、剪辑成片与出海译配。',
     }
   }
   if (presetId === 'shopee-ops-expert') {
