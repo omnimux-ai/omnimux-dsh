@@ -1283,6 +1283,11 @@ button[aria-label*="context used"] {
   display: none !important;
 }
 
+/* ── 全局下拉选择器统一样式：全圆角胶囊风格 (对齐方案 B) ── */
+.dshUk-DropdownSelect-trigger {
+  border-radius: 999px !important;
+}
+
 ${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {
