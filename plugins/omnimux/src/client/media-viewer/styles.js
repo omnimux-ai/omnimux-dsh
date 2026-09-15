@@ -74,23 +74,6 @@ export const MEDIA_VIEWER_CSS = `
   display: block;
 }
 
-.omx-chat-media-tail__counter {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  background: var(--dsw-alias-bg-mask-1);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--dsw-alias-label-primary-foreground);
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-
 .omx-chat-media-tail__rail {
   display: flex;
   flex-direction: column;

@@ -345,10 +345,6 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     mainContent.className = 'omx-chat-media-tail__main-content';
     mainStage.appendChild(mainContent);
 
-    const counter = doc.createElement('span');
-    counter.className = 'omx-chat-media-tail__counter';
-    mainStage.appendChild(counter);
-
     // Pill canvas button in top-right corner
     const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
     canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
@@ -389,7 +385,6 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
 
     const renderActive = () => {
       const item = items[activeIndex];
-      counter.textContent = `${activeIndex + 1} / ${items.length}`;
 
       // Clear previous main media and pause any video
       const prevVideo = mainContent.querySelector('video');
