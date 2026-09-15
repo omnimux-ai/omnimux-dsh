@@ -403,12 +403,20 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         vid.preload = 'metadata';
         vid.setAttribute('playsinline', '');
         vid.addEventListener('click', (e) => e.stopPropagation());
+        mainStage.style.aspectRatio = '16 / 9';
         mainContent.appendChild(vid);
       } else {
         const img = doc.createElement('img');
         img.src = item.url;
         img.alt = item.title || '生成预览';
         img.className = 'omx-chat-media-tail__img';
+        const applyRatio = () => {
+          if (img.naturalWidth && img.naturalHeight) {
+            mainStage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+          }
+        };
+        img.onload = applyRatio;
+        applyRatio();
         mainContent.appendChild(img);
       }
 
