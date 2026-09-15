@@ -1,4 +1,4 @@
-import { spawnSync, execSync } from 'node:child_process'
+import { spawnSync, execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 /**
@@ -50,8 +50,9 @@ export async function detectPhysicalScenes(videoPath, options = {}) {
 
   let totalDuration = 0
   try {
-    const probe = execSync(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`,
+    const probe = execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
       { timeout: 5000, encoding: 'utf8' }
     )
     totalDuration = parseFloat(probe.trim()) || 0
