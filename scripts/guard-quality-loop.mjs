@@ -107,7 +107,22 @@ export function taskSpecs(root) {
   return out
 }
 
-/** 递归收集证据候选文件（受限深度与数量）。 */
+/** 通用首页冒烟黑名单：禁止以首页通用图冒充功能验收证据。 */
+export const BANNED_SMOKE_EVIDENCE_NAMES = new Set([
+  'app-home.png',
+  'app-home.jpg',
+  'app-home.jpeg',
+  'app-home.webp',
+  'home.png',
+  'home.jpg',
+])
+
+export function isBannedSmokeEvidence(name) {
+  if (!name || typeof name !== 'string') return false
+  return BANNED_SMOKE_EVIDENCE_NAMES.has(name.toLowerCase())
+}
+
+/** 递归收集证据候选文件（受限深度与数量，排除黑名单首页冒烟）。 */
 function collectEvidenceFiles(dir, depth, acc) {
   if (depth > 3 || acc.length >= MAX_SCAN_ENTRIES) return
   let entries
@@ -123,15 +138,17 @@ function collectEvidenceFiles(dir, depth, acc) {
       collectEvidenceFiles(abs, depth + 1, acc)
     } else if (entry.isFile()) {
       if (/\.(png|jpg|jpeg|webp|json|log|txt|md)$/i.test(entry.name)) {
-        try {
-          acc.push({ path: abs, mtime: statSync(abs).mtimeMs })
-        } catch {}
+        if (!isBannedSmokeEvidence(entry.name)) {
+          try {
+            acc.push({ path: abs, name: entry.name, mtime: statSync(abs).mtimeMs })
+          } catch {}
+        }
       }
     }
   }
 }
 
-/** 晚于本任务规格产生的验证证据。 */
+/** 晚于本任务规格产生的验证证据（收敛至受控目录，彻底剔除 tmp/ 临时目录）。 */
 export function hasEvidenceAfterSpec(root) {
   const specs = taskSpecs(root)
   if (specs.length === 0) return false
@@ -139,8 +156,9 @@ export function hasEvidenceAfterSpec(root) {
   const now = Date.now()
 
   const acc = []
+  collectEvidenceFiles(resolve(root, 'docs/evidence'), 0, acc)
+  collectEvidenceFiles(resolve(root, '.agent-reports'), 0, acc)
   collectEvidenceFiles(resolve(root, '.workbuddy/evidence'), 0, acc)
-  collectEvidenceFiles(resolve(root, 'tmp'), 0, acc)
 
   return acc.some((f) => f.mtime >= since && now - f.mtime <= EVIDENCE_WINDOW_MS)
 }
@@ -183,6 +201,18 @@ export function isE2ETestFile(fullPath, rootDir) {
   if (!rel || rel.startsWith('..')) return false
   if (rel.startsWith('specs/')) return false
   return isE2EPath(rel)
+}
+
+/** 任务有效实测证据路径：必须在受控持久化目录且非通配首页冒烟图 */
+export function isTaskEvidencePath(relPath) {
+  if (!relPath || typeof relPath !== 'string') return false
+  const norm = relPath.replace(/\\/g, '/')
+  const name = norm.split('/').pop() || ''
+  if (isBannedSmokeEvidence(name)) return false
+  return (
+    (norm.startsWith('docs/evidence/') || norm.startsWith('.agent-reports/')) &&
+    /\.(png|jpg|jpeg|webp|json|md)$/i.test(norm)
+  )
 }
 
 /* ------------------------------------------------- bash 命令识别 */
@@ -262,6 +292,15 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
           sample: ui.slice(0, 3).join(', '),
         }
       }
+      const evidence = changed.filter(isTaskEvidencePath)
+      if (ui.length > 0 && evidence.length === 0) {
+        return {
+          decision: 'deny',
+          reason: 'missing-evidence-for-ui-delivery',
+          uiCount: ui.length,
+          sample: ui.slice(0, 3).join(', '),
+        }
+      }
       return { decision: 'allow' }
     }
     if (bashWritesSource(command) && taskSpecs(root).length === 0) {
@@ -309,9 +348,10 @@ const REASONS = {
     '  3. 规格落盘后方可编写源码。',
   ],
   'missing-verify-evidence-for-e2e': () => [
-    '🚫【质量五步闭环硬门禁：验证前置拦截】尚未在隔离环境完成实机预演，禁止编写端到端测试！',
-    '📌 判定规则：必须存在「晚于本任务规格」产生的验证证据（截图/报告，落盘于 .workbuddy/evidence/ 或 tmp/）。',
-    '👉 正确流程：先用自主浏览器或隔离 Web 验收在真实页面跑通并留存截图证据，再固化端到端测试。',
+    '🚫【质量五步闭环硬门禁：验证前置拦截】尚未在受控目录留存有效实机预演证据，禁止编写端到端测试！',
+    '📌 判定规则：必须存在「晚于本任务规格」产生的专属验证证据（落盘于 docs/evidence/、.agent-reports/ 或 .workbuddy/evidence/）。',
+    '⛔ 严禁使用通用首页冒烟图（如 app-home.png）或 /tmp 临时文件充数：证据必须具备功能专属特征并持久化！',
+    '👉 正确流程：先在真实浏览器中跑通被测功能关键交互并留存专属截图证据，再固化端到端测试。',
   ],
   'missing-e2e-for-ui-change': (extra) => [
     '🚫【质量五步闭环硬门禁：端到端完整性拦截】本任务改动了界面代码，但改动集合中没有端到端测试，禁止提交/推送/建 PR！',
@@ -320,6 +360,17 @@ const REASONS = {
     '  1. 先在隔离环境实机预演并留存证据；',
     '  2. 补齐端到端测试（tests/e2e/**、*.e2e.test.* 或 tests 下的 *.spec.ts/js）；',
     '  3. 单元测试不能替代端到端测试。',
+  ],
+  'missing-evidence-for-ui-delivery': (extra) => [
+    '🚫【质量五步闭环硬门禁：界面实测证据同捆拦截】本任务改动了前端界面代码，但变更集合中没有提交专属实测证据，禁止交付！',
+    `📌 判定规则：改动集合含界面源码（本次 ${extra.uiCount || 0} 个，如 ${extra.sample || '-'}）时，必须同时提交 docs/evidence/ 或 .agent-reports/ 下的专属实测截图/证据文件。`,
+    '⛔ 严禁使用通配首页冒烟图（app-home.png）或 /tmp 临时截图充数：证据必须具备任务专属特征并持久化入库！',
+    '👉 正确行动指引（请按以下步骤操作）：',
+    '  1. 在无痕真实浏览器中进入本次改动的功能页面；',
+    '  2. 模拟真实用户执行核心交互（点击、切换、输入）；',
+    '  3. 将专属实操截图保存至：docs/evidence/<task>-verified.png；',
+    '  4. 执行：git add docs/evidence/<task>-verified.png；',
+    '  5. 重新执行提交/交付命令。',
   ],
 }
 
