@@ -16,6 +16,10 @@
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-orange.svg" alt="PRs Welcome"></a>
 </p>
 
+<p align="center">
+  <img src="docs/assets/omnimux-ui-preview.png" alt="OmniMux 社媒营销 Agent 界面全景" width="100%">
+</p>
+
 ---
 
 ## 🌟 简介 (Introduction)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
-import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
+import { ChatIcon, GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
 import { AssetGrid } from './AssetGrid.jsx'
@@ -13,6 +13,7 @@ import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState, countAssetsByType } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
+import { ProductsView } from './ProductsView.jsx'
 
 const TAB_ID = 'omnimux-assets:library'
 
@@ -45,7 +46,7 @@ function AssetsHeader(props) {
 }
 
 function AssetsActionRow(props) {
-  const { t, feed } = props
+  const { t, feed, sourceTab, onOpenCreateProduct } = props
   const onAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -53,6 +54,29 @@ function AssetsActionRow(props) {
   const onImport = () => {
     feed.setError(t('import.notice'))
     setTimeout(() => feed.setError(''), 3000)
+  }
+
+  if (sourceTab === 'product') {
+    return (
+      <div className="omnimux-assets-action-row">
+        <Button variant="primary" leadingIcon={<PlusIcon />} onClick={onOpenCreateProduct}>
+          {t('product.create') || '新建产品'}
+        </Button>
+        <Button
+          variant="outline"
+          leadingIcon={<ChatIcon />}
+          onClick={() => {
+            const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+            if (api) {
+              try { api.setConversationCollapsed?.(false) } catch {}
+              try { api.setFocus?.('split') } catch {}
+            }
+          }}
+        >
+          {t('product.chatButton') || '对话中添加'}
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -155,6 +179,7 @@ function AssetsFilterBar(props) {
           items={[
             { id: 'local', label: t('source.local') },
             { id: 'cloud', label: t('source.cloud') },
+            { id: 'product', label: t('source.product') || '产品库' },
           ]}
           activeId={sourceTab}
           onChange={onSourceTabChange}
@@ -164,7 +189,7 @@ function AssetsFilterBar(props) {
         <div className="omnimux-assets-tools-cluster">
           <div className="omnimux-assets-search-wrap">
             <SearchField
-              placeholder={t('search.placeholder')}
+              placeholder={sourceTab === 'product' ? (t('product.searchPlaceholder') || '搜索商品、品牌、核心卖点...') : t('search.placeholder')}
               value={feed.query}
               onChange={feed.setQuery}
               onClear={() => feed.setQuery('')}
@@ -235,7 +260,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, onOpenCreateProduct } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -250,6 +275,21 @@ function AssetsBody(props) {
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
           <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} />
+        </div>
+      </div>
+    )
+  }
+
+  if (sourceTab === 'product') {
+    return (
+      <div className="omnimux-assets-body">
+        <div className="omnimux-assets-main">
+          <ProductsView
+            t={t}
+            open={visible}
+            query={feed.query}
+            onOpenCreate={onOpenCreateProduct}
+          />
         </div>
       </div>
     )
@@ -384,6 +424,13 @@ export function AssetsStage(props) {
     }
   }, [feed.filterType, feed.query, feed.sortKey, feed.selectedIds, feed.assets])
 
+  const handleOpenCreateProduct = useCallback((kind = 'physical') => {
+    const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+    if (api && typeof api.openTab === 'function') {
+      api.openTab('omnimux-products:library')
+    }
+  }, [])
+
   return (
     <div
       role="region"
@@ -394,7 +441,7 @@ export function AssetsStage(props) {
       style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} />
-      <AssetsActionRow t={t} feed={feed} />
+      <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       {sourceTab === 'local' ? (
@@ -420,6 +467,7 @@ export function AssetsStage(props) {
         cloudSave={cloudSave}
         sourceTab={sourceTab}
         visible={visible}
+        onOpenCreateProduct={handleOpenCreateProduct}
       />
       <AssetsDialogs t={t} feed={feed} />
       {previewTarget && (
