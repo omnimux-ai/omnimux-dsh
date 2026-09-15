@@ -1,5 +1,5 @@
 import { isRightSidebarExpanded } from './split-compact-layout.js'
-import { exitHostRightSidebarFullscreen } from './workbench/host-fullscreen.js'
+import { ensureConversationVisible as ensureConversationVisibleShared } from './workbench/ensure-conversation-visible.js'
 import { requestRailActivationSync } from './workbench/sidebar-activation.js'
 
 /**
@@ -388,12 +388,11 @@ function isNewSessionIntent(target) {
  * 不关闭右侧面板、不清已开 Tab：面板展开态与 Tab 属于面板自身，本手势只负责「让对话可见」。
  */
 function ensureConversationVisible() {
-  exitHostRightSidebarFullscreen(typeof document !== 'undefined' ? document : undefined)
-  const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-  const collapsed = api && typeof api.getConversationCollapsed === 'function'
-    ? api.getConversationCollapsed()
-    : false
-  if (collapsed) api.setFocus?.('split')
+  // 两层状态的清理与全局 API 共用同一份实现，避免两处漂移。
+  ensureConversationVisibleShared(
+    typeof document !== 'undefined' ? document : undefined,
+    typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined,
+  )
   requestRailActivationSync()
 }
 

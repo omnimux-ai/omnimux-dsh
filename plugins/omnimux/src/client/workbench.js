@@ -16,6 +16,7 @@ import {
   resetConversationCollapseForTests,
   setConversationCollapsed,
 } from './conversation-collapse.js'
+import { ensureConversationVisible } from './workbench/ensure-conversation-visible.js'
 import {
   activeTabId,
   bindWorkbenchDeps,
@@ -259,6 +260,12 @@ function createApi() {
     installSplitMin: installSplitConversationMin,
     getConversationCollapsed,
     setConversationCollapsed,
+    // 「让对话可见」的唯一对外入口：宿主右侧栏全屏 + 插件折叠键两层一起处理。
+    // 垂直插件（如画布「添加会话」）在全屏态下必须走这里，只清折叠键动不了宿主全屏。
+    ensureConversationVisible: () => ensureConversationVisible(
+      typeof document !== 'undefined' ? document : undefined,
+      typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined,
+    ),
     hydrateConversationCollapsed,
     registerContextContributor,
     unregisterContextContributor,

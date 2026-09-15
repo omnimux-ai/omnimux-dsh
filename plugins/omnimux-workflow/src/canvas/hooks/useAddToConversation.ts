@@ -38,6 +38,11 @@ interface WorkbenchApi {
   setConversationCollapsed?: (collapsed: boolean, opts?: Record<string, unknown>) => void;
   setFocus?: (mode: 'split' | 'gui' | 'chat') => void;
   getSnapshot?: () => { sessionId?: string } | null | undefined;
+  /**
+   * 中枢提供的「让对话可见」统一入口：同时处理**宿主右侧栏全屏**与**插件折叠键**两层状态。
+   * 缺失（老内核）时退回下面的 `getConversationCollapsed` + `setFocus` 路径。
+   */
+  ensureConversationVisible?: () => { hostFullscreenExited?: boolean; collapseCleared?: boolean } | undefined;
 }
 
 interface AttachmentStoreApi {
@@ -92,6 +97,20 @@ function readActiveSessionId(targetWindow?: CanvasHostWindow): string | undefine
 export function revealConversationColumn(targetWindow?: CanvasHostWindow): RevealOutcome {
   const workbench = (targetWindow ?? readHostWindow())?.__omnimuxWorkbench;
   if (!workbench) return 'unavailable';
+
+  // 优先走中枢的统一入口：它同时退出「宿主右侧栏全屏」并清折叠键。
+  // 只清折叠键在宿主全屏下无效——全屏由宿主自己的状态键驱动，此刻折叠键往往是 false，
+  // 于是「读到 false 就跳过」的写法会让会话栏永远不被带出来（提示成功、界面不动）。
+  if (typeof workbench.ensureConversationVisible === 'function') {
+    try {
+      const result = workbench.ensureConversationVisible();
+      if (result && typeof result === 'object') {
+        return result.hostFullscreenExited || result.collapseCleared ? 'revealed' : 'skipped';
+      }
+    } catch {
+      /* 中枢入口异常时落到下面的兜底路径，绝不打断添加 */
+    }
+  }
 
   const readCollapsed = (): boolean | undefined => {
     try {
