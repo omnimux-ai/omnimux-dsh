@@ -76,7 +76,7 @@ describe('mountMedia capability gate', () => {
             return null
           },
         },
-        arrayBuffer: async () => bytes,
+        body: new Response(bytes).body,
       }),
     }, { capability: 'video', seam: 'videoGenerate' })
 

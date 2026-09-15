@@ -23,6 +23,10 @@ const MIME_BY_EXT: Record<string, string> = {
 /** Stream workflow media and static files with MIME and Range support. */
 export function serveFile(res: ServerResponse, filePath: string, fallbackMime: string, rangeHeader?: string): void {
   const mime = detectMimeFromFile(filePath, MIME_BY_EXT[extname(filePath)] ?? fallbackMime);
+  const securityHeaders: Record<string, string> = { 'X-Content-Type-Options': 'nosniff' };
+  if ((mime.split(';')[0] ?? '').trim().toLowerCase() === 'image/svg+xml') {
+    securityHeaders['Content-Security-Policy'] = "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:";
+  }
   const stat = statSync(filePath);
   const range = parseByteRange(rangeHeader, stat.size);
   if (range && 'invalid' in range) {
@@ -33,6 +37,7 @@ export function serveFile(res: ServerResponse, filePath: string, fallbackMime: s
   if (range) {
     const chunkSize = range.end - range.start + 1;
     res.writeHead(206, {
+      ...securityHeaders,
       'Content-Type': mime, 'Content-Length': chunkSize,
       'Content-Range': `bytes ${range.start}-${range.end}/${stat.size}`,
       'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache',
@@ -43,6 +48,7 @@ export function serveFile(res: ServerResponse, filePath: string, fallbackMime: s
     return;
   }
   res.writeHead(200, {
+    ...securityHeaders,
     'Content-Type': mime, 'Content-Length': stat.size,
     'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache',
   });
