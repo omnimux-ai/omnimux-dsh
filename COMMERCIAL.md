@@ -75,6 +75,6 @@ OmniMux 采用与 **n8n** 相同的 **Open-Core & Sustainable Source** 商业模
 
 ## 4. 商业授权咨询与联系方式
 
-* **商务合作与授权邮箱**：`commercial@omnimux.ai`
+* **商务合作与授权邮箱**：`hello@omnimux.ai`
 * **官方网站**：[https://omnimux.ai](https://omnimux.ai)
 * **企业微信 / 商务顾问**：请通过官网扫描商务二维码获取 1 对 1 方案咨询。
