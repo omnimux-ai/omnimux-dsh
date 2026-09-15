@@ -1,12 +1,10 @@
+import { requestRejection } from '../host/request-authorization.js'
 import { completeTextViaChat } from './chat.js'
 
 function sendJsonResponse(res, status, body) {
   const text = JSON.stringify(body)
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   })
   res.end(text)
 }
@@ -30,15 +28,9 @@ export function registerTextCompleteRoutes(webServer, deps = {}) {
     kind: 'exact',
     path: '/omnimux/text/complete',
     async handler(req, res) {
-      // CORS preflight
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        })
-        return res.end()
-      }
+      const rejection = requestRejection(req, deps.getConnection)
+      if (rejection !== undefined) return sendJsonResponse(res, rejection, { ok: false, error: 'request-denied' })
+      if (req.method === 'OPTIONS') { res.writeHead(204); return res.end() }
 
       if (req.method !== 'POST') {
         return sendJsonResponse(res, 405, { ok: false, error: 'method-not-allowed' })

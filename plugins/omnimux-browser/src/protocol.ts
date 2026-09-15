@@ -33,6 +33,7 @@ export const BRIDGE_SESSION_PURGE_METHOD = 'bridge.session.purge'
  * panel's behalf; the panel never opens an outbound connection of its own.
  */
 export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
+export const BRIDGE_COMPLETE_TEXT_METHOD = 'bridge.completeText'
 
 /**
  * How one {@link BRIDGE_FETCH_MEDIA_METHOD} call settled.

@@ -1,3 +1,4 @@
+import { requestRejection } from './request-authorization.js'
 import { existsSync, statSync } from 'node:fs'
 import { extname, resolve } from 'node:path'
 import { handleVideoStream, getMimeType } from './stream.js'
@@ -179,14 +180,12 @@ export function apply(ctx) {
       kind: 'prefix',
       path: '/omnimux/video-preview/translate',
       async handler(req, res) {
-        if (req.method === 'OPTIONS') {
-          res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          })
-          return res.end()
+        const rejection = requestRejection(req, () => ctx.get?.('connection'))
+        if (rejection !== undefined) {
+          res.writeHead(rejection, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'request-denied' }))
         }
+        if (req.method === 'OPTIONS') { res.writeHead(204); return res.end() }
 
         if (req.method === 'GET') {
           res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -214,13 +213,11 @@ export function apply(ctx) {
             })
             res.writeHead(200, {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
             })
             res.end(JSON.stringify(result))
           } catch (err) {
             res.writeHead(500, {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
             })
             res.end(JSON.stringify({ error: err?.message || 'Translation error' }))
           }

@@ -1,3 +1,4 @@
+import { requestRejection } from '../host/request-authorization.js'
 import { createIdentity } from './identity.js'
 import {
   CLIENT_NAME,
@@ -191,7 +192,7 @@ export function createAuthDispatcher(deps) {
  * @param {{ register: (route: { kind: string, path: string, handler: Function }) => () => void }} webServer
  * @param {ReturnType<typeof createAuthDispatcher>} dispatcher
  */
-export function registerAuthRoutes(webServer, dispatcher) {
+export function registerAuthRoutes(webServer, dispatcher, deps = {}) {
   const paths = [
     '/omnimux/auth/status',
     '/omnimux/auth/login',
@@ -204,6 +205,10 @@ export function registerAuthRoutes(webServer, dispatcher) {
     path,
     async handler(req, res) {
       try {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          const rejection = requestRejection(req, deps.getConnection)
+          if (rejection !== undefined) return sendJson(res, rejection, { error: 'request-denied' })
+        }
         const body = req.method === 'POST' ? await readJsonBody(req) : undefined
         if (req.method === 'POST' && body === null) {
           sendJson(res, 400, { error: 'invalid json' })

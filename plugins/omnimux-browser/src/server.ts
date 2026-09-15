@@ -25,6 +25,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 import type { BrowserHostApi } from './host-api.ts'
 import {
   BRIDGE_FETCH_MEDIA_METHOD,
+  BRIDGE_COMPLETE_TEXT_METHOD,
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
   HELLO_TIMEOUT_MS,
@@ -105,6 +106,8 @@ export interface BridgeServerDeps {
    * the seam exists so the routing can be exercised without a live network.
    */
   fetchMedia?: (url: unknown) => Promise<MediaFetchOutcome>
+  /** Unary Hub text completion; never a session submission receipt. */
+  completeText?: (request: { prompt: string; system: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
   /**
    * Test seam: force the remote address seen by the privilege gate. The
    * sandbox cannot bind arbitrary loopback literals, so the non-loopback
@@ -467,6 +470,37 @@ export class BridgeServer {
         const code = error instanceof SessionPurgeError ? error.code : 'internal'
         const message = error instanceof Error ? error.message : String(error)
         sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code, message } })
+      }
+      return
+    }
+    if (frame.method === BRIDGE_COMPLETE_TEXT_METHOD) {
+      const payload = frame.payload as { prompt?: unknown; system?: unknown } | null
+      if (!payload || typeof payload.prompt !== 'string' || !payload.prompt.trim()
+        || payload.prompt.length > 32_768 || (payload.system !== undefined && (typeof payload.system !== 'string' || payload.system.length > 32_768))) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'bad-request', message: 'prompt and optional system must be bounded strings' } })
+        return
+      }
+      const deadline = new AbortController()
+      const signal = AbortSignal.any([conn.abort.signal, deadline.signal])
+      const timer = setTimeout(() => deadline.abort(new Error('Text completion timed out')), 25_000)
+      let onAbort: (() => void) | undefined
+      try {
+        if (!this.deps.completeText) throw new Error('Text completion service unavailable')
+        const aborted = new Promise<never>((_resolve, reject) => {
+          onAbort = () => reject(signal.reason)
+          signal.addEventListener('abort', onAbort, { once: true })
+          if (signal.aborted) onAbort()
+        })
+        signal.throwIfAborted()
+        const value = await Promise.race([this.deps.completeText({ prompt: payload.prompt, system: typeof payload.system === 'string' ? payload.system : '', maxTokens: 1000, signal }), aborted])
+        const text = typeof value === 'string' ? value : (value as { text?: unknown })?.text
+        if (typeof text !== 'string' || !text.trim()) throw new Error('Text completion returned no text')
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { text: text.trim() } })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'completion-failed', message: error instanceof Error ? error.message : String(error) } })
+      } finally {
+        clearTimeout(timer)
+        if (onAbort) signal.removeEventListener('abort', onAbort)
       }
       return
     }
