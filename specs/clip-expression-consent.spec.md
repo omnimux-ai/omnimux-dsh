@@ -25,10 +25,11 @@ provider calls, and upstream vendor updates are out of scope.
 
 1. Independently confirm reachability, inspect the fresh boundary report, and
    commit this spec before edits.
-2. Gate the common custom-code evaluator with an in-memory, unforgeable approval
-   bound to the exact script text. Project JSON cannot carry approval. Object
-   normalization must retain local approval; serialization and changed code must
-   require new approval.
+2. Gate the common custom-code evaluator with an in-memory approval map bound to
+   the expression ID and exact script text. JSON cannot carry approval. Clear the
+   map before a project is opened, imported, recovered, created, or replaced by a
+   template; preserve it across ordinary clone/edit/undo/export operations. New
+   text or a different expression ID needs approval, including recursive callers.
 3. Reuse the native graph editor's text/button controls for a visible explanation
    and an explicit allow action. Built-in presets need no code approval. Keep
    imported code and enabled state intact, using the keyed value until approved.
@@ -57,13 +58,16 @@ provider calls, and upstream vendor updates are out of scope.
 - A statement-body payload and a recursively referenced expression are also
   blocked. Forged `trusted`, `approved`, IDs, or previously compiled text grant
   nothing. No network or credential access occurs in these fixtures.
-- Importing, JSON round-trip, and recovery/cloning lose approval; edited code
-  requires new consent even if the expression ID is unchanged.
+- Opening imported JSON or recovering a project clears prior approvals, even if
+  IDs and source text match the previous project. Ordinary internal JSON/structured
+  cloning retains the runtime grant; edited code needs new consent even with the
+  same expression ID. Approval itself is never part of project JSON.
 - The native expression panel has positive geometry, shows the code and clear
   warning, and offers an explicit allow action. Typing, import, and the ordinary
   enabled switch do not grant code execution.
 - After the local allow action, a benign expression changes the rendered value;
-  repeated previews and ordinary immutable updates preserve that approval.
+  repeated previews, immutable updates, cross-composition edits, undo, and export
+  snapshots preserve that approval during the open project.
 - Built-in sine/wiggle and keyframe behavior remain operational without consent.
 - Reopening a project asks again for custom-code approval. This session-only
   permission is intentional; project data and formulas are not erased.
