@@ -65,7 +65,7 @@ export function apply(ctx) {
       properties: {
         url: {
           type: 'string',
-          description: 'Video URL (TikTok, Douyin, YouTube Shorts, Instagram Reels, Xiaohongshu, Bilibili) or local file path.',
+          description: 'Video URL (TikTok, Douyin, YouTube Shorts, Instagram Reels, Xiaohongshu, Bilibili), local file path, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx).',
         },
         dest: {
           type: 'string',

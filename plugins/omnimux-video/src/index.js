@@ -226,7 +226,7 @@ export function apply(ctx, config = {}) {
       video: {
         type: 'string',
         required: true,
-        description: 'Absolute local path (.mp4/.webm/.mov) or data:video URI.',
+        description: 'Absolute local path (.mp4/.webm/.mov), data:video URI, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx).',
       },
       dest: {
         type: 'string',
@@ -272,7 +272,7 @@ export function apply(ctx, config = {}) {
       video: {
         type: 'string',
         required: true,
-        description: 'Absolute local path (.mp4/.webm/.mov) or data:video URI.',
+        description: 'Absolute local path (.mp4/.webm/.mov), data:video URI, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx).',
       },
       dest: {
         type: 'string',
