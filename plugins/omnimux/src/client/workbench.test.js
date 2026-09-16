@@ -162,8 +162,8 @@ test('collectTabs / isSeedFilesTab / tabIsOpen walk split trees', () => {
   assert.equal(tabIsOpen({ splits: node }, 'omnimux-clip:studio'), false)
 })
 
-test('default focus matrix: canvas and all libraries default to split (Issue #1877)', () => {
-  assert.equal(resolveDefaultFocus('omnimux-workflow:canvas'), WORKBENCH_FOCUS.split)
+test('default focus matrix: canvas and all libraries default to gui (Issue #2006)', () => {
+  assert.equal(resolveDefaultFocus('omnimux-workflow:canvas'), WORKBENCH_FOCUS.gui)
   const libraries = [
     'omnimux-clip:studio',
     'omnimux-assets:library',
@@ -177,7 +177,7 @@ test('default focus matrix: canvas and all libraries default to split (Issue #18
     'omnimux-market:plaza',
   ]
   for (const lib of libraries) {
-    assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.split, `${lib} must default to split`)
+    assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.gui, `${lib} must default to gui`)
     assert.ok(isWorkbenchTab(lib), `${lib} must be recognized as workbench tab`)
   }
   assert.equal(WORKBENCH_OCCUPANTS.length, 11)
@@ -501,19 +501,19 @@ test('openWorkbench switches focus mode to default per tab without cross-tab lea
   })
   api.attachStore(store)
 
-  // 1. Open canvas -> defaults to split
+  // 1. Open canvas -> defaults to gui (fullscreen)
   await api.open({ tabId: 'omnimux-workflow:canvas', timeoutMs: 0 })
-  assert.equal(api.getFocus(), WORKBENCH_FOCUS.split)
-  assert.equal(state.width, 780)
+  assert.equal(api.getFocus(), WORKBENCH_FOCUS.gui)
+  assert.equal(state.width, 1200)
 
-  // 2. Open assets library -> defaults to split (Issue #1877)
+  // 2. Open assets library -> defaults to gui
   await api.open({ tabId: 'omnimux-assets:library', timeoutMs: 0 })
-  assert.equal(api.getFocus(), WORKBENCH_FOCUS.split)
-  assert.equal(state.width, 780)
+  assert.equal(api.getFocus(), WORKBENCH_FOCUS.gui)
+  assert.equal(state.width, 1200)
 
-  // 3. Switch back to canvas -> split
+  // 3. Switch back to canvas -> gui
   await api.open({ tabId: 'omnimux-workflow:canvas', timeoutMs: 0 })
-  assert.equal(api.getFocus(), WORKBENCH_FOCUS.split)
+  assert.equal(api.getFocus(), WORKBENCH_FOCUS.gui)
 })
 
 test('applyDefaultWidth writes via store.reduce and skips a second write', () => {

@@ -55,8 +55,12 @@ export function isWorkbenchTab(tabId) {
 }
 
 export function resolveDefaultFocus(tabId) {
-  // 遵循现代三栏工作台规范：所有业务工作台/库（项目库、资产库等）默认均以分屏（split）模式呈现，
-  // 保持会话栏与工作台并存，彻底消除私自折叠会话栏的伪全屏与文字穿透缺陷（Issue #1877）
+  // 插件业务入口页面默认以全屏模式（gui）呈现，最大化沉浸工作空间；
+  // 用户在页面内做出的分栏/全屏选择由单页面视窗记忆体系独立持久化记录与还原。
+  // 非工作台 Tab（如第三方文件查看器等）保持原生分栏（split）。
+  if (isWorkbenchTab(tabId)) {
+    return WORKBENCH_FOCUS.gui
+  }
   return WORKBENCH_FOCUS.split
 }
 
