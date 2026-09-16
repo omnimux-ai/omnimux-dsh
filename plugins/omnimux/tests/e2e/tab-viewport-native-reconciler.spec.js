@@ -131,3 +131,50 @@ test('AC-4: 分栏面板 CSS 铺满保证与健康分栏宽度保底机制', asy
   assert.ok(currentRightbar >= 500, `自愈后宽度必须恢复到健康黄金比例(>=500px)，实际: ${currentRightbar}`)
 })
 
+test('AC-5: 从分栏页面跨页面切回偏好全屏的页面，即便会话选中也必须确定性恢复全屏', async () => {
+  const doc = createDomFixture('push')
+  const root = doc.documentElement
+  const panel = doc.querySelector('[data-sidebar-right-panel]')
+  // 模拟当前会话项选中且会话可见
+  const sessionItem = doc.querySelector('[role="treeitem"]')
+  sessionItem.setAttribute('aria-selected', 'true')
+  root.removeAttribute(CONVERSATION_COLLAPSED_ATTR)
+
+  let currentTab = 'omnimux-workflow:library'
+  const memoryStore = new Map([
+    ['omnimux-workflow:library', { mode: WORKBENCH_FOCUS.split }],
+    ['omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui }]
+  ])
+
+  const reconciler = createTabViewportReconciler({
+    getDoc: () => doc,
+    getSessionId: () => 'sess-1',
+    getTabId: () => currentTab,
+    getFocusRecord: (_s, tab) => memoryStore.get(tab),
+    persistFocus: (_s, tab, rec) => memoryStore.set(tab, rec),
+    isFullscreen: () => panel.getAttribute('data-sidebar-right-panel') === 'fullscreen',
+    enterFullscreen: () => {
+      panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
+      root.setAttribute(CONVERSATION_COLLAPSED_ATTR, '')
+    },
+    exitFullscreen: () => {
+      panel.setAttribute('data-sidebar-right-panel', 'push')
+      root.removeAttribute(CONVERSATION_COLLAPSED_ATTR)
+    }
+  })
+
+  // 1. 初次同步保持当前会话展示
+  reconciler.sync()
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push')
+
+  // 2. 用户切换至资产库（明确跨 Tab 切换）
+  currentTab = 'omnimux-assets:library'
+  reconciler.sync()
+
+  // 必须确定性调和进入全屏，不得被会话选中态误杀
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '切入偏好全屏页面时必须恢复全屏')
+
+  reconciler.reset()
+})
+
+
