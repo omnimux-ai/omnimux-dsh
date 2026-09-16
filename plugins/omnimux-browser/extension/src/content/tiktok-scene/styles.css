@@ -97,7 +97,7 @@
   fill: var(--omx-brand);
 }
 
-/* --- Toolbar: three items in a horizontal row, vertically centred ---------- */
+/* --- Toolbar: three items in a vertical list, vertically centred ---------- */
 .omx-menu {
   position: absolute;
   /* The right-hand side is the default; `menu-side.ts` writes the offset that
@@ -105,10 +105,10 @@
   left: 100%;
   top: 50%;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: nowrap;
-  align-items: center;
-  gap: 4px;
+  align-items: stretch;
+  gap: 2px;
   padding: 6px;
   /* The detail row under the columns carries a saved file's name, which has no
      length bound; wrapping at the viewport's edge keeps a wide toolbar something
@@ -131,11 +131,35 @@
     visibility 0s linear 190ms;
 }
 
+/* 气泡小箭头指针：向左指向触发按钮 */
+.omx-menu::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 7px solid var(--omx-panel);
+  filter: drop-shadow(-1px 0 0 var(--omx-line));
+  pointer-events: none;
+}
+
 /* Flipped to the circle's other side, which only changes which edge the row
    grows from and which way it slides in — the vertical centring is identical. */
 .omx-menu.is-left {
   transform-origin: right center;
   transform: translateY(-50%) translateX(6px) scale(0.97);
+}
+
+.omx-menu.is-left::before {
+  right: auto;
+  left: 100%;
+  border-right: none;
+  border-left: 7px solid var(--omx-panel);
+  filter: drop-shadow(1px 0 0 var(--omx-line));
 }
 
 /* Three ways in, one appearance. Hover is the pointer's path and the only one a
@@ -156,25 +180,25 @@
    is shut: a transparent element still swallows clicks, and this one would sit
    over the page's own controls. */
 
-/* One column of the row: the icon above, the words below. The fixed width is
-   what makes the row's rendered width predictable enough to measure against the
-   viewport (`menu-side.ts`), and the label wraps rather than widening it. */
+/* One item of the vertical list: the icon on the left, words on the right.
+   The fixed width makes the panel's rendered width predictable enough to measure
+   against the viewport (`menu-side.ts`). */
 .omx-item {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
-  width: 68px;
-  padding: 8px 6px;
+  gap: 10px;
+  width: 156px;
+  padding: 8px 10px;
   margin: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: var(--omx-fg);
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 14px;
+  line-height: 16px;
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -194,8 +218,8 @@
 
 .omx-item svg {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   opacity: 0.92;
   pointer-events: none;
@@ -207,8 +231,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
 }
 

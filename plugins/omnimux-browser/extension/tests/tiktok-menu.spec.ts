@@ -112,14 +112,13 @@ function px(body: string, property: string): number {
  *
  * Read from the stylesheet rather than repeated as a literal: the number the
  * direction decision is measured against has to be the number the panel actually
- * gets, and a copy of it in a test cannot tell when the two drift apart. Three
- * columns in a row, one gap between each pair, and the panel's own padding and
- * border on both sides.
+ * gets, and a copy of it in a test cannot tell when the two drift apart. One
+ * vertical column, and the panel's own padding and border on both sides.
  */
 function renderedMenuWidth(): number {
   const columns = px(rule('.omx-item {'), 'width')
   const menu = rule('.omx-menu {')
-  return 3 * columns + 2 * px(menu, 'gap') + 2 * px(menu, 'padding') + 2 * px(menu, 'border')
+  return columns + 2 * px(menu, 'padding') + 2 * px(menu, 'border')
 }
 
 beforeEach(() => {
@@ -153,11 +152,12 @@ describe('TikTok 场景触发器 — 圆形形态', () => {
 })
 
 describe('TikTok 场景工具栏 — 形态', () => {
-  it('横向一排、与按钮垂直居中、默认落在按钮右侧 (AC-304 / AC-305 / AC-401)', () => {
+  it('上下垂直列表、与按钮垂直居中、默认落在按钮右侧 (AC-304 / AC-305 / AC-401)', () => {
     const body = rule('.omx-menu {')
     expect(body).toMatch(/top:\s*50%/)
     expect(body).toMatch(/transform:\s*translateY\(-50%\)/)
     expect(body).toMatch(/display:\s*flex/)
+    expect(body).toMatch(/flex-direction:\s*column/)
     expect(body).toMatch(/left:\s*100%/)
     expect(body).toMatch(/padding:\s*6px/)
     expect(body).toMatch(/border-radius:\s*14px/)
@@ -184,7 +184,7 @@ describe('TikTok 场景工具栏 — 形态', () => {
     expect(body).toMatch(/flex-direction:\s*row/)
     expect(body).toMatch(/align-items:\s*center/)
     expect(body).toMatch(/white-space:\s*nowrap/)
-    expect(rule('.omx-item svg {')).toMatch(/width:\s*16px/)
+    expect(rule('.omx-item svg {')).toMatch(/width:\s*18px/)
     expect(rule('.omx-item-state {')).toMatch(/font-size:\s*10px/)
   })
 
@@ -294,9 +294,9 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
     return Number.parseFloat(anchor().style.left) + Number.parseFloat(menu().style.left)
   }
 
-  it('兜底宽度就是样式渲染出来的宽度（列宽 + 间距 + 内边距 + 边框）(P2-1)', () => {
-    // 226：三个 68px 列 + 两个 4px 间距 + 两侧 6px 内边距 + 两侧 1px 边框。
-    expect(MENU_W).toBe(226)
+  it('兜底宽度就是样式渲染出来的宽度（列宽 + 内边距 + 边框）(P2-1)', () => {
+    // 170：单列 156px + 两侧 6px 内边距 + 两侧 1px 边框。
+    expect(MENU_W).toBe(170)
     expect(MENU_FALLBACK_WIDTH_PX).toBe(MENU_W)
   })
 
