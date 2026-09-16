@@ -21,6 +21,18 @@ export const DISK_HEADROOM_BYTES = 500 * 1024 * 1024
 export const DISK_SIZE_FACTOR = 1.5
 export const IMPORTED_REL = 'assets/imported'
 
+/**
+ * Preview URL the slot card can actually load. Library preview requires a file id.
+ * @param {string} assetId
+ * @param {string} fileId
+ */
+export function libraryPreviewUrl(assetId, fileId) {
+  const id = typeof assetId === 'string' ? assetId : ''
+  const file = typeof fileId === 'string' ? fileId : ''
+  if (!id || !file) return ''
+  return `/omnimux/assets/library/preview?id=${encodeURIComponent(id)}&file=${encodeURIComponent(file)}`
+}
+
 const DEFAULT_FS = {
   createReadStream,
   createWriteStream,
@@ -391,6 +403,7 @@ export async function instantiateAssets(opts) {
       const coverIndex = coverId
         ? visible.findIndex((file) => file && file.id === coverId)
         : 0
+      const coverFile = visible[coverIndex >= 0 ? coverIndex : 0] || visible[0]
       const primary = copiedFiles[coverIndex >= 0 ? coverIndex : 0] || copiedFiles[0]
       results.push({
         ok: true,
@@ -401,7 +414,7 @@ export async function instantiateAssets(opts) {
         kind: 'asset',
         size: primary.size,
         files: copiedFiles.map((row) => row.relativePath),
-        previewUrl: `/omnimux/assets/library/preview?id=${encodeURIComponent(assetId)}`,
+        previewUrl: libraryPreviewUrl(assetId, coverFile?.id || coverId || ''),
         entityId: assetId,
       })
     } catch (error) {

@@ -1,0 +1,14 @@
+{
+  "issue": 2115,
+  "broken": {
+    "url": "/omnimux/assets/library/preview?id=ast_5d967d2c",
+    "status": 400,
+    "type": "application/json"
+  },
+  "fixed": {
+    "url": "/omnimux/assets/library/preview?id=ast_5d967d2c&file=fil_e23d9fe9",
+    "status": 200,
+    "type": "image/png",
+    "bytes": 2011052
+  }
+}

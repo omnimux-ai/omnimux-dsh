@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface NativeComposerAttachment {
   id: string;
@@ -71,6 +71,12 @@ export function resolveRetryHandler(
   return upload?.status === 'error' && typeof onRetry === 'function' ? onRetry : undefined;
 }
 
+const PlayTriangleIcon = () => (
+  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
 const MediaPlaceholderIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -111,6 +117,7 @@ const SpinnerIcon = ({ size = 14 }: { size?: number }) => (
 export const NativeAttachmentCard: React.FC<NativeAttachmentCardProps> = (props) => {
   const { attachment, onOpen, onRemove, removeAriaLabel, upload, onRetry, labels } = props;
   const title = resolveNativeTitle(attachment);
+  const [imageError, setImageError] = useState(false);
   const removeLabel = removeAriaLabel || `移除 ${title}`;
 
   const handleRemoveClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -195,22 +202,29 @@ export const NativeAttachmentCard: React.FC<NativeAttachmentCardProps> = (props)
   return (
     <div
       className="omx-att-card omx-att-card--media"
+      data-omnimux-attachment-id={attachment.id}
       role="listitem"
       title={title}
       onClick={() => onOpen(attachment)}
     >
       <div className="omx-att-card__media-frame">
-        {attachment.previewUrl ? (
+        {attachment.previewUrl && !imageError ? (
           <img
             src={attachment.previewUrl}
             alt={title}
             className="omx-att-card__media-thumb"
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="omx-att-card__media-placeholder">
             <MediaPlaceholderIcon />
           </div>
         )}
+        {attachment.kind === 'video' ? (
+          <div className="omx-att-card__play-icon">
+            <PlayTriangleIcon />
+          </div>
+        ) : null}
       </div>
       {removeButton}
     </div>

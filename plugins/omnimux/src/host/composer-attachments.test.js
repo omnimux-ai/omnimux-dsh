@@ -9,6 +9,7 @@ import {
   forbiddenSourcePathCode,
   inferKindFromExtension,
   instantiateAssets,
+  libraryPreviewUrl,
   materializePaths,
   uniqueImportedName,
 } from './composer-attachments.js'
@@ -154,7 +155,15 @@ describe('instantiateAssets', () => {
       'assets/imported/ast_1/hero.png',
       'assets/imported/ast_1/pose.png',
     ])
-    assert.equal(results[0].previewUrl, '/omnimux/assets/library/preview?id=ast_1')
+    assert.equal(results[0].previewUrl, '/omnimux/assets/library/preview?id=ast_1&file=fil_1')
+  })
+})
+
+describe('libraryPreviewUrl', () => {
+  it('requires both asset id and cover file id', () => {
+    assert.equal(libraryPreviewUrl('ast_1', 'fil_1'), '/omnimux/assets/library/preview?id=ast_1&file=fil_1')
+    assert.equal(libraryPreviewUrl('ast_1', ''), '')
+    assert.equal(libraryPreviewUrl('', 'fil_1'), '')
   })
 })
 
