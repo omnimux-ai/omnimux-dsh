@@ -85,7 +85,8 @@ test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分
     }
   })
 
-  // 1. 初态项目为全屏
+  // 1. 初态项目为全屏（当存在显式全屏偏好记录时）
+  memoryStore.set('omnimux-workflow:library', { mode: WORKBENCH_FOCUS.gui, explicit: true })
   reconciler.sync()
   assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen')
 
@@ -94,10 +95,11 @@ test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分
   reconciler.sync()
   assert.equal(memoryStore.get('omnimux-workflow:library')?.mode, WORKBENCH_FOCUS.split, '应持久化记录 split')
 
-  // 3. 切换至资产库（默认全屏）
+  // 3. 切换至资产库（显式配置全屏偏好时恢复全屏）
+  memoryStore.set('omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui, explicit: true })
   currentTab = 'omnimux-assets:library'
   reconciler.sync()
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '资产库未配置时默认全屏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '资产库显式配置全屏时恢复全屏')
 
   // 4. 切回项目页（应自动恢复分栏，且会话栏展开）
   currentTab = 'omnimux-workflow:library'
@@ -142,8 +144,8 @@ test('AC-5: 从分栏页面跨页面切回偏好全屏的页面，即便会话�
 
   let currentTab = 'omnimux-workflow:library'
   const memoryStore = new Map([
-    ['omnimux-workflow:library', { mode: WORKBENCH_FOCUS.split }],
-    ['omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui }]
+    ['omnimux-workflow:library', { mode: WORKBENCH_FOCUS.split, explicit: true }],
+    ['omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui, explicit: true }]
   ])
 
   const reconciler = createTabViewportReconciler({
@@ -194,6 +196,52 @@ test('AC-6: 自动化 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)'
   assert.equal(verdict.winner, 'row', '自动化页面激活时侧边栏应胜出激活行')
   assert.equal(verdict.tabId, AUTO, '胜出的 tabId 必须严格等于自动化 Tab ID')
 })
+
+test('AC-7: 右侧边栏展开不再强制伪全屏，未显式配置时默认并排分栏 (Issue #2056)', async () => {
+  const doc = createDomFixture('push')
+  const root = doc.documentElement
+  const panel = doc.querySelector('[data-sidebar-right-panel]')
+  const enters = []
+  const exits = []
+
+  let currentTab = 'omnimux-workflow:library'
+  const memoryStore = new Map()
+
+  const reconciler = createTabViewportReconciler({
+    getDoc: () => doc,
+    getSessionId: () => 'sess-1',
+    getTabId: () => currentTab,
+    getFocusRecord: (_s, tab) => memoryStore.get(tab) || { mode: WORKBENCH_FOCUS.gui, explicit: false },
+    persistFocus: (_s, tab, rec) => memoryStore.set(tab, rec),
+    isFullscreen: () => panel.getAttribute('data-sidebar-right-panel') === 'fullscreen',
+    enterFullscreen: () => {
+      enters.push(currentTab)
+      panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
+      root.setAttribute(CONVERSATION_COLLAPSED_ATTR, '')
+    },
+    exitFullscreen: () => {
+      exits.push(currentTab)
+      panel.setAttribute('data-sidebar-right-panel', 'push')
+      root.removeAttribute(CONVERSATION_COLLAPSED_ATTR)
+    },
+  })
+
+  // 1. 未记录显式偏好的工作台页签，展开面板时保持分栏，不得进入全屏
+  reconciler.sync()
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '初始展开时必须保持分栏')
+  assert.deepEqual(enters, [], '不得自动调用 enterFullscreen')
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏保持展开')
+
+  // 2. 即便左侧列表没有任何选中会话，同样保持分栏，绝不受左侧列表渲染状态干扰
+  const sessionItem = doc.querySelector('[role="treeitem"]')
+  if (sessionItem) sessionItem.removeAttribute('aria-selected')
+  reconciler.sync()
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '无选中会话时同样必须保持分栏')
+  assert.deepEqual(enters, [], '无选中会话时不得推入全屏')
+
+  reconciler.reset()
+})
+
 
 
 
