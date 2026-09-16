@@ -225,8 +225,7 @@ export function ProjectLibraryPage(props) {
     })
   }
 
-  // 4b. 点击 AI 应用卡片 → 右侧栏应用标签页。宿主会丢弃 openTab 的 extra，
-  //     所以 tab.id=`app_<appId>` 才是通道，AppTab 据此从 localStorage 读回 manifest。
+  // 4b. 点击 AI 应用卡片 → 右侧栏应用标签页。宿主在原生 surface 下通过 meta.appId 传递应用身份。
   const handleOpenApp = (app) => {
     const opened = openAppTab(
       app?.manifest || { appId: app?.appId },
@@ -279,10 +278,13 @@ export function ProjectLibraryPage(props) {
       setAppsError('')
     }
 
-    await activateProjectCanvas(
+    const opened = await activateProjectCanvas(
       { layout, betterSidebar, t },
       { sessionId, focusGroupId: target.groupId },
     )
+    if (!opened) {
+      setAppsError(t('projects.appEditFailed') || '打开项目画布失败，请重试。')
+    }
   }
 
   // 4d. 卡片「删除」：先二次确认，再移除记录并关掉对应应用标签页。

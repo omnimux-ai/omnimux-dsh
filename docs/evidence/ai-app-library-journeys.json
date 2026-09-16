@@ -170,35 +170,37 @@
   "residualsRequiringHumanDecision": [
     {
       "item": "多应用并行标签页（用户原话「打开新的 tab 窗口」的严格读法）",
-      "status": "宿主限制，插件内不可得",
-      "evidence": "宿主原生 surface 对同一个 kind 只保留一个标签页（探针 kind 连续 open 两次仍只有一个 chip；带 createTab 的多实例 kind 同样只有一个）",
+      "status": "插件 descriptor 未配置独立 createTab 实例生成器，本次未做",
+      "evidence": "宿主原生 surface 默认按单一应用标签页管理；插件当前未为每应用配置独立 createTab 实例生成器",
       "currentBestState": "单个应用标签页始终展示「最近点击的那个应用」，标题与内容都正确、重复点不堆叠、删除后能关掉；不同应用可依次进入",
-      "whyNotHacked": "为每个 app 动态注册独立 kind 会把应用清单灌进标签页注册表与侧卡设置项，属重设计标签页系统，超出本次边界"
+      "whyNotHacked": "为每个 app 动态注册独立 kind 或复杂驻留实例会把应用清单灌进标签页注册表与侧卡设置项，属重设计标签页系统，超出本次边界"
     },
     {
       "item": "后台应用标签页的 chip 标题回落兜底名「AI 应用」",
-      "status": "宿主限制，插件内不可得",
-      "evidence": "chip 标题优先读插件侧记录，而记录在标签页卸载（切到别的标签页）时被宿主丢弃；回落用的宿主原生 type 标题在标签页创建时捕获、之后不再重算（探针改全局变量无效）",
+      "status": "宿主机制与插件侧记录生命周期综合所致，本次未做二次覆写",
+      "evidence": "chip 标题优先读插件侧记录，而记录在标签页卸载（切到别的标签页）时被宿主丢弃；回落用的宿主原生 type 标题在标签页创建时捕获、之后不再重算",
       "currentBestState": "应用标签页在前台时 chip 稳定显示应用名（不再长时间停留兜底名），删除确认后标签页正常关闭",
-      "whyNotHacked": "唯一可行解是每次换应用都关掉再新开标签页以刷新 type 标题，会造成标签页抖动与位置变化，属绕过式 hack，不做"
+      "whyNotHacked": "每次换应用都关掉再新开标签页以刷新 type 标题会造成标签页抖动与位置变化，属绕过式 hack，不做"
     }
   ],
   "artifacts": [
     "docs/evidence/ai-app-library-j1-category-tabs.png",
     "docs/evidence/ai-app-library-j2-empty-state.png",
     "docs/evidence/ai-app-library-j2-card-grid.png",
-    "docs/evidence/ai-app-library-j3-open-app-tab.png",
     "docs/evidence/ai-app-library-j3b-card1.png",
     "docs/evidence/ai-app-library-j3b-card2.png",
     "docs/evidence/ai-app-library-j4-card-menu.png",
-    "docs/evidence/ai-app-library-j5a-delete-confirm.png",
-    "docs/evidence/ai-app-library-j5b-delete-cancelled.png",
-    "docs/evidence/ai-app-library-j5c-delete-confirmed.png",
     "docs/evidence/ai-app-library-j5d-delete-confirm.png",
     "docs/evidence/ai-app-library-j5d-delete-cancelled.png",
     "docs/evidence/ai-app-library-j5d-tab-closed.png",
     "docs/evidence/ai-app-library-j6-edit-focused.png",
     "docs/evidence/ai-app-library-j7-search-filter.png"
+  ],
+  "supersededArtifacts": [
+    "docs/evidence/ai-app-library-j3-open-app-tab.png",
+    "docs/evidence/ai-app-library-j5a-delete-confirm.png",
+    "docs/evidence/ai-app-library-j5b-delete-cancelled.png",
+    "docs/evidence/ai-app-library-j5c-delete-confirmed.png"
   ],
   "automatedChecks": {
     "node --test tests/ai-app-library.e2e.test.mjs": "4 passed / 0 failed（旅程 1→7、旅程 2 负向、旅程 3b 原生 surface 身份与关闭、旅程 3c 切换与旧布局守卫）",
