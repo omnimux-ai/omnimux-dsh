@@ -10,7 +10,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { validateFormData } from '../shared/schemaValidator.ts';
+import { validateApplicationManifest, validateFormData } from '../shared/schemaValidator.ts';
 
 describe('T04: AI Application Form Engine (AppFormPanel)', () => {
   const sampleManifest = {
@@ -241,5 +241,45 @@ describe('T04: AI Application Form Engine (AppFormPanel)', () => {
 
     const valResult = validateFormData(sampleManifest.formSchema, validValues);
     assert.equal(valResult.valid, true, `Validation failed unexpectedly: ${valResult.errors.join('; ')}`);
+  });
+
+  it('T04.8: Renders the author-fixed summary and empty state; honours the optional fixed-fields contract', () => {
+    const filePath = path.resolve(import.meta.dirname, 'AppFormPanel.tsx');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    assert.match(content, /omx-apps-fixed-summary/);
+    assert.match(content, /omx-apps-fixed-chip/);
+    assert.match(content, /以下由作者设定，无需填写/);
+    assert.match(content, /omx-apps-form-empty/);
+
+    const css = fs.readFileSync(path.resolve(import.meta.dirname, 'apps.css'), 'utf-8');
+    assert.match(css, /\.omx-apps-fixed-summary\s*\{/);
+    assert.match(css, /\.omx-apps-fixed-chip\s*\{/);
+    assert.match(css, /\.omx-apps-form-empty\s*\{/);
+
+    // Legacy manifests without the optional summary stay valid
+    const legacyResult = validateApplicationManifest(sampleManifest);
+    assert.equal(legacyResult.valid, true, `Legacy manifest should validate: ${legacyResult.errors.join('; ')}`);
+
+    const withFixed = {
+      ...sampleManifest,
+      fixedFields: [{ key: 'seed', nodeId: 'node_gen', label: '随机种子', value: '42', group: 'config' }],
+    };
+    const okResult = validateApplicationManifest(withFixed);
+    assert.equal(okResult.valid, true, `Manifest with fixedFields should validate: ${okResult.errors.join('; ')}`);
+
+    const malformed = { ...sampleManifest, fixedFields: [{ key: '', label: '', value: '' }] };
+    const badResult = validateApplicationManifest(malformed);
+    assert.equal(badResult.valid, false);
+    assert.ok(badResult.errors.some((e) => e.includes('fixedFields[0].label')));
+    assert.ok(badResult.errors.some((e) => e.includes('fixedFields[0].value')));
+
+    // A candidate is either exposed or fixed, never both
+    const colliding = {
+      ...sampleManifest,
+      fixedFields: [{ key: 'prompt', nodeId: 'node_text', label: '脚本', value: '固定文案', group: 'text' }],
+    };
+    const collisionResult = validateApplicationManifest(colliding);
+    assert.equal(collisionResult.valid, false);
+    assert.ok(collisionResult.errors.some((e) => e.includes('is also an exposed form property')));
   });
 });

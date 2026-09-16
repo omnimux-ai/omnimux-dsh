@@ -132,7 +132,7 @@ export function apply(ctx, config = {}) {
       mountHttp(httpCtx)
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')
       if (server && typeof server.register === 'function') {
-        httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox }), 'omnimux: workbench HTTP')
+        httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
       }
     })
     ctx.inject(['webServer', 'connection'], (streamCtx) => {
@@ -175,6 +175,7 @@ export function apply(ctx, config = {}) {
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, media: hub.media, gate: hub.gate, store, jsonOut })
   mountTextComplete(ctx, hub, jsonOut, rethrow)
   mountOfficial(ctx, {
+    accountMetaStore,
     hub,
     identity,
     store,

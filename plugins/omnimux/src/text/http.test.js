@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { registerTextCompleteRoutes } from './http.js'
+import { registerTextCompleteRoutes as registerRoutes } from './http.js'
+const registerTextCompleteRoutes = (server, deps) => registerRoutes(server, { getConnection: () => ({ requestRejection: () => undefined }), ...deps })
 
 function createMockWebServer() {
   const routes = new Map()
@@ -46,7 +47,7 @@ describe('registerTextCompleteRoutes HTTP gateway', () => {
     assert.equal(server.routes.has('exact:/omnimux/text/complete'), false)
   })
 
-  it('answers CORS preflight OPTIONS request with 204', async () => {
+  it('answers authenticated native OPTIONS without cross-origin permission', async () => {
     const server = createMockWebServer()
     registerTextCompleteRoutes(server, {})
     const handler = server.routes.get('exact:/omnimux/text/complete')
@@ -55,8 +56,8 @@ describe('registerTextCompleteRoutes HTTP gateway', () => {
 
     await handler(req, res)
     assert.equal(res.statusCode, 204)
-    assert.equal(res.headers['access-control-allow-origin'], '*')
-    assert.equal(res.headers['access-control-allow-methods'], 'POST, OPTIONS')
+    assert.equal(res.headers['access-control-allow-origin'], undefined)
+    assert.equal(res.headers['access-control-allow-methods'], undefined)
   })
 
   it('rejects non-POST method with 405', async () => {
@@ -93,7 +94,7 @@ describe('registerTextCompleteRoutes HTTP gateway', () => {
 
     await handler(req, res)
     assert.equal(res.statusCode, 200)
-    assert.equal(res.headers['access-control-allow-origin'], '*')
+    assert.equal(res.headers['access-control-allow-origin'], undefined)
     const json = JSON.parse(res.body)
     assert.equal(json.ok, true)
     assert.equal(json.text, '神评文案测试成功')

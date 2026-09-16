@@ -1,3 +1,5 @@
+import { publicFetch } from './public-fetch.js'
+import { isPrivateHost } from './public-host.js'
 /**
  * 实物产品的商品图落盘。
  *
@@ -90,15 +92,40 @@ export function buildProductImageName(host, index, ext, stamp, rand) {
  * @returns {Promise<{ buffer: Buffer, ext: string } | null>}
  */
 async function readImageResponse(response, maxBytes) {
-  if (!response || response.ok === false) return null
+  if (!response || response.ok === false) {
+    await response?.body?.cancel().catch(() => {})
+    return null
+  }
   const mime = String(response.headers?.get?.('content-type') ?? '').split(';')[0].trim().toLowerCase()
   const ext = PRODUCT_IMAGE_EXT[mime]
-  if (!ext) return null
+  if (!ext) {
+    await response.body?.cancel().catch(() => {})
+    return null
+  }
   const declared = Number(response.headers?.get?.('content-length') ?? NaN)
-  if (Number.isFinite(declared) && declared > maxBytes) return null
-  if (typeof response.arrayBuffer !== 'function') return null
-  const raw = await response.arrayBuffer()
-  const buffer = Buffer.from(raw)
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await response.body?.cancel().catch(() => {})
+    return null
+  }
+  if (!response.body?.getReader) return null
+  const reader = response.body.getReader()
+  const chunks = []
+  let size = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      size += value.byteLength
+      if (size > maxBytes) throw new Error('image response exceeds byte limit')
+      chunks.push(value)
+    }
+  } catch (error) {
+    await reader.cancel(error).catch(() => {})
+    return null
+  } finally {
+    reader.releaseLock()
+  }
+  const buffer = Buffer.concat(chunks, size)
   if (buffer.length === 0 || buffer.length > maxBytes) return null
   return { buffer, ext }
 }
@@ -121,11 +148,26 @@ async function downloadImage(fetcher, url, opts = {}) {
     if (typeof timer.unref === 'function') timer.unref()
   }
   try {
-    const response = await fetcher(url, {
-      headers: { accept: 'image/*' },
-      ...(controller ? { signal: controller.signal } : {}),
-    })
-    return await readImageResponse(response, maxBytes)
+    let target = new URL(url)
+    const visited = new Set()
+    for (let hop = 0; hop <= 5; hop += 1) {
+      if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password || isPrivateHost(target.hostname) || visited.has(target.href)) return null
+      visited.add(target.href)
+      const response = await fetcher(target.href, {
+        redirect: 'manual',
+        headers: { accept: 'image/*' },
+        ...(controller ? { signal: controller.signal } : {}),
+      })
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        const location = response.headers?.get?.('location')
+        await response.body?.cancel().catch(() => {})
+        if (!location) return null
+        target = new URL(location, target)
+        continue
+      }
+      return await readImageResponse(response, maxBytes)
+    }
+    return null
   } catch {
     return null
   } finally {
@@ -192,7 +234,7 @@ export async function persistProductImages(args = {}) {
   const dir = args.mediaDir ?? mediaDirOf(args.paths)
   if (!dir) return []
 
-  const fetcher = args.fetcher ?? (typeof fetch === 'function' ? fetch : null)
+  const fetcher = args.fetcher ?? publicFetch
   if (typeof fetcher !== 'function') return []
 
   const host = args.host ?? hostOf(args.url)

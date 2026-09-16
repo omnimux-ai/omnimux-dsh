@@ -94,6 +94,25 @@ function validateApplicationManifestStructure(manifest) {
     errors.push('fieldMappings must be an object');
   }
 
+  // 4b. Optional author-fixed summary (absent on manifests published before the field existed)
+  if (manifest.fixedFields !== undefined) {
+    if (!Array.isArray(manifest.fixedFields)) {
+      errors.push('fixedFields must be an array when present');
+    } else {
+      for (const [idx, entry] of manifest.fixedFields.entries()) {
+        if (!entry || typeof entry.label !== 'string' || !entry.label.trim()) {
+          errors.push(`fixedFields[${idx}].label must be a non-empty string`);
+        }
+        if (typeof entry?.value !== 'string' || !entry.value.trim()) {
+          errors.push(`fixedFields[${idx}].value must be a non-empty string`);
+        }
+        if (entry?.key && manifest.formSchema?.properties?.[entry.key]) {
+          errors.push(`fixedFields[${idx}] "${entry.key}" is also an exposed form property`);
+        }
+      }
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -148,13 +167,22 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
     assert.equal(rootInp.isRequired, true);
     assert.equal(rootInp.widget, 'textarea');
 
-    // Downstream input (aspectRatio parameter)
+    // Downstream input (aspectRatio parameter): user-facing, exposed but optional
     const ratioInp = analysis.inputs.find((i) => i.key.includes('aspectRatio'));
     assert.ok(ratioInp);
     assert.equal(ratioInp.isRoot, false);
-    assert.equal(ratioInp.isExposed, false);
+    assert.equal(ratioInp.group, 'config');
+    assert.equal(ratioInp.isRecommended, true);
+    assert.equal(ratioInp.isExposed, true);
     assert.equal(ratioInp.isRequired, false);
     assert.equal(ratioInp.widget, 'ratio-cards');
+
+    // Cost parameter stays author-fixed by default
+    const seedInp = analysis.inputs.find((i) => i.key.includes('seed'));
+    assert.ok(seedInp);
+    assert.equal(seedInp.group, 'config');
+    assert.equal(seedInp.isRecommended, false);
+    assert.equal(seedInp.isExposed, false);
   });
 
   it('T03.2: Generates strictly valid ApplicationManifest from exposed inputs', () => {
@@ -204,10 +232,73 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
         ],
       },
       demoSnapshot: formConfig.demoSnapshot,
+      fixedFields: formConfig.fixedFields,
     };
 
     const valResult = validateApplicationManifestStructure(manifest);
     assert.equal(valResult.valid, true, `Manifest should be valid: ${valResult.errors.join('; ')}`);
+  });
+
+  it('T03.6: Keeps author-fixed candidates out of the form and inside the fixed summary', () => {
+    const analysis = analyzeWorkflowInputs(sampleNodes, sampleEdges);
+    // Recommended defaults only: the seed param stays author-fixed
+    const formConfig = generateFormConfig(analysis.inputs);
+
+    assert.ok(Object.prototype.hasOwnProperty.call(formConfig.formSchema.properties, 'text_root_content'));
+    assert.ok(!Object.prototype.hasOwnProperty.call(formConfig.formSchema.properties, 'gen_video_param_seed'));
+
+    const seedEntry = formConfig.fixedFields.find((f) => f.key === 'gen_video_param_seed');
+    assert.ok(seedEntry, 'Fixed seed should be summarised for the consumer form');
+    assert.equal(seedEntry.value, '42');
+    assert.equal(seedEntry.group, 'config');
+
+    const valResult = validateApplicationManifestStructure({
+      appId: 'app_short_drama_fixed',
+      version: '1.0.0',
+      schemaVersion: '1.0',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        name: '爆款短剧生成器',
+        category: 'video',
+        iconSvg: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z"/></svg>',
+      },
+      workflowBinding: {
+        workspaceId: 'ws_sample_01',
+        workflowHash: analysis.workflowHash,
+        snapshot: { nodes: sampleNodes, edges: sampleEdges },
+      },
+      formSchema: formConfig.formSchema,
+      fieldMappings: formConfig.fieldMappings,
+      showcase: { mode: 'carousel', items: [] },
+      demoSnapshot: formConfig.demoSnapshot,
+      fixedFields: formConfig.fixedFields,
+    });
+    assert.equal(valResult.valid, true, `Manifest should be valid: ${valResult.errors.join('; ')}`);
+
+    // A candidate listed as fixed must not also be an exposed form property
+    const colliding = validateApplicationManifestStructure({
+      appId: 'app_collision',
+      version: '1.0.0',
+      schemaVersion: '1.0',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        name: '冲突应用',
+        category: 'video',
+        iconSvg: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z"/></svg>',
+      },
+      workflowBinding: {
+        workspaceId: 'ws_sample_01',
+        workflowHash: analysis.workflowHash,
+        snapshot: { nodes: sampleNodes, edges: sampleEdges },
+      },
+      formSchema: formConfig.formSchema,
+      fieldMappings: formConfig.fieldMappings,
+      showcase: { mode: 'carousel', items: [] },
+      demoSnapshot: formConfig.demoSnapshot,
+      fixedFields: [{ key: 'text_root_content', nodeId: 'text_root', label: '脚本', value: 'x', group: 'text' }],
+    });
+    assert.equal(colliding.valid, false);
+    assert.ok(colliding.errors.some((e) => e.includes('is also an exposed form property')));
   });
 
   it('T03.3: Dispatches omnimux-app-tabs-changed and omnimux-app-open events upon publish', () => {
@@ -269,6 +360,33 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
     const valResult = validateApplicationManifestStructure(invalidManifest);
     assert.equal(valResult.valid, false);
     assert.ok(valResult.errors.some((e) => e.includes('"agent" category is strictly prohibited')));
+  });
+
+  it('T03.7: Publish flow feeds every candidate to the form generator so the fixed summary survives', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const fileURLToPath = (await import('node:url')).fileURLToPath;
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    const wizardSrc = fs.readFileSync(path.join(__dirname, 'PublishWizardModal.tsx'), 'utf-8');
+    assert.match(
+      wizardSrc,
+      /generateFormConfig\(inputs\)/,
+      'Wizard must hand every candidate to the generator',
+    );
+    assert.doesNotMatch(
+      wizardSrc,
+      /generateFormConfig\(exposedInputs\)/,
+      'Filtering to exposed candidates before generation drops the author-fixed summary',
+    );
+    assert.match(wizardSrc, /fixedFields: generatedConfig\.fixedFields/, 'Manifest must carry the fixed-field summary');
+
+    // Behavioural counterpart: the same candidate list yields a summary only when passed whole
+    const analysis = analyzeWorkflowInputs(sampleNodes, sampleEdges);
+    const full = generateFormConfig(analysis.inputs);
+    const exposedOnly = generateFormConfig(analysis.inputs.filter((inp) => inp.isExposed && !inp.isInternal));
+    assert.ok(full.fixedFields.length > 0, 'Full candidate list must produce a fixed summary');
+    assert.equal(exposedOnly.fixedFields.length, 0, 'Exposed-only list cannot produce a fixed summary');
   });
 
   it('T03.5: Prevents scroll jitter and canvas pan propagation in modal and Step 2 container', async () => {

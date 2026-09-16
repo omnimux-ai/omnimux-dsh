@@ -23,6 +23,22 @@ export type FormWidgetType =
 /** Mapping type between form field and workflow execution slot / parameter */
 export type FieldMappingType = 'text' | 'param' | 'slot' | 'media';
 
+/**
+ * Wizard grouping for a publishing candidate.
+ * `asset` / `text` are user-provided content; `config` is a generation parameter
+ * the publisher either opens up or keeps fixed.
+ */
+export type InputGroupId = 'asset' | 'text' | 'config';
+
+/** A field the publisher kept fixed: executed with the author value, hidden from consumers */
+export interface FixedFieldSummaryEntry {
+  key: string;
+  nodeId: string;
+  label: string;
+  value: string;
+  group: InputGroupId;
+}
+
 /** Field mapping descriptor for binding form schema keys to workflow nodes */
 export interface FieldMappingEntry {
   nodeId: string;
@@ -136,6 +152,8 @@ export interface ApplicationManifest {
   fieldMappings: Record<string, FieldMappingEntry>;
   showcase: ShowcaseConfig;
   demoSnapshot: Record<string, unknown>;
+  /** Optional author-fixed field summary; absent on manifests published before this field existed */
+  fixedFields?: FixedFieldSummaryEntry[];
 }
 
 /** An individual workflow input analyzed from the canvas DAG */
@@ -176,6 +194,18 @@ export interface ExposedWorkflowInput {
   slotId?: string;
   /** Mapping type */
   mappingType: FieldMappingType;
+  /** Wizard grouping */
+  group: InputGroupId;
+  /** Default exposure recommended by the topology rules */
+  isRecommended: boolean;
+  /** Default required flag recommended by the topology rules (used by “恢复推荐设置”) */
+  recommendedRequired: boolean;
+  /** One-line rationale shown next to the candidate row */
+  rationale: string;
+  /** Human-readable value used when the publisher keeps this candidate fixed */
+  fixedDisplay?: string;
+  /** Internal field: implementation detail that must never reach the consumer form */
+  isInternal: boolean;
 }
 
 /** Result of the pure workflow topology analysis */
@@ -201,4 +231,6 @@ export interface GeneratedFormConfig {
   formSchema: RestrictedJsonSchema;
   fieldMappings: Record<string, FieldMappingEntry>;
   demoSnapshot: Record<string, unknown>;
+  /** Summary of the candidates the publisher kept fixed, delivered to the consumer form */
+  fixedFields: FixedFieldSummaryEntry[];
 }

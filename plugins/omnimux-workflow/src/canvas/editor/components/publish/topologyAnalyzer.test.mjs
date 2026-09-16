@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 
 import {
   analyzeWorkflowInputs,
+  describeFixedValue,
   generateFormConfig,
 } from './topologyAnalyzer.ts';
 
@@ -108,11 +109,21 @@ test('T01.3: Non-root nodes (inDegree > 0) default to unexposed and extract unwi
   const genInputs = result.inputs.filter((i) => i.nodeId === 'video-gen');
   assert.ok(genInputs.length >= 3, 'Should extract unwired slots and params');
 
-  // All non-root inputs must default to unexposed and non-required
+  // Recommended defaults: cost and slot candidates stay author-fixed, while the
+  // user-facing aspect ratio is exposed without being mandatory.
   for (const input of genInputs) {
-    assert.equal(input.isExposed, false, `Input ${input.key} should default to isExposed: false`);
-    assert.equal(input.isRequired, false, `Input ${input.key} should default to isRequired: false`);
     assert.equal(input.isRoot, false);
+    assert.equal(input.isRequired, false, `Input ${input.key} should default to isRequired: false`);
+  }
+
+  const aspectRatio = genInputs.find((i) => i.targetField === 'params.aspectRatio');
+  assert.equal(aspectRatio.isExposed, true, 'Aspect ratio is user-facing and defaults to exposed');
+  assert.equal(aspectRatio.isRecommended, true);
+  assert.equal(aspectRatio.recommendedRequired, false);
+
+  for (const input of genInputs.filter((i) => i.targetField !== 'params.aspectRatio')) {
+    assert.equal(input.isExposed, false, `Input ${input.key} should default to isExposed: false`);
+    assert.equal(input.isRecommended, false, `Input ${input.key} should not be recommended by default`);
   }
 
   // Check unwired slot: references (image -> media-uploader)
@@ -259,4 +270,134 @@ test('T01.6: generateFormConfig builds valid RestrictedJsonSchema, fieldMappings
   // DemoSnapshot assertions
   assert.equal(config.demoSnapshot['node-prompt_content'], 'Cyberpunk street');
   assert.equal(config.demoSnapshot['node-gen_aspectRatio'], '16:9');
+
+  // Nothing else was fixed in this workflow, so the summary is empty
+  assert.deepEqual(config.fixedFields, []);
+});
+
+test('T01.7: Candidate grouping and recommended defaults follow the approved exposure rules', () => {
+  const nodes = [
+    {
+      id: 'prompt-text',
+      type: 'material',
+      data: { materialType: 'text', selectedTool: 'text-editor', label: 'Prompt' },
+    },
+    {
+      id: 'ref-video',
+      type: 'material',
+      data: { materialType: 'video', selectedTool: 'import', label: 'Ref Video', mediaUrl: 'https://cdn.example.com/a.mp4' },
+    },
+    {
+      id: 'video-gen',
+      type: 'material',
+      data: {
+        materialType: 'video',
+        selectedTool: 'video-generation',
+        label: 'Video Gen',
+        params: { aspectRatio: '16:9', duration: '5s', quality: '2K', generationCount: 1 },
+      },
+    },
+  ];
+
+  const edges = [
+    { id: 'e1', source: 'prompt-text', target: 'video-gen', targetHandle: 'prompt' },
+    { id: 'e2', source: 'ref-video', target: 'video-gen', targetHandle: 'references' },
+  ];
+
+  const result = analyzeWorkflowInputs(nodes, edges);
+  const byKey = (suffix) => result.inputs.find((i) => i.key.endsWith(suffix));
+
+  // User-provided text: recommended, exposed and mandatory
+  const prompt = byKey('_prompt');
+  assert.ok(prompt, 'Root prompt candidate should exist');
+  assert.equal(prompt.group, 'text');
+  assert.equal(prompt.isRecommended, true);
+  assert.equal(prompt.recommendedRequired, true);
+  assert.equal(prompt.isExposed, true);
+  assert.equal(prompt.isRequired, true);
+  assert.ok(prompt.rationale.length > 0, 'Each candidate carries a rationale');
+
+  // User-provided asset: recommended, exposed and mandatory
+  const refVideo = result.inputs.find((i) => i.nodeId === 'ref-video');
+  assert.ok(refVideo, 'Root media candidate should exist');
+  assert.equal(refVideo.group, 'asset');
+  assert.equal(refVideo.isRecommended, true);
+  assert.equal(refVideo.isExposed, true);
+  assert.equal(refVideo.isRequired, true);
+
+  // User-facing generation parameters: exposed but optional
+  const ratio = byKey('_aspectRatio');
+  assert.equal(ratio.group, 'config');
+  assert.equal(ratio.isRecommended, true);
+  assert.equal(ratio.isExposed, true);
+  assert.equal(ratio.isRequired, false);
+
+  const duration = byKey('_param_duration');
+  assert.ok(duration, 'Duration parameter should stay user-adjustable');
+  assert.equal(duration.group, 'config');
+  assert.equal(duration.isRecommended, true);
+  assert.equal(duration.isExposed, true);
+  assert.equal(duration.fixedDisplay, '5s');
+
+  // Cost parameters: author-fixed by default
+  for (const suffix of ['_param_quality', '_param_generationCount']) {
+    const param = byKey(suffix);
+    assert.ok(param, `${suffix} should be extracted`);
+    assert.equal(param.group, 'config');
+    assert.equal(param.isRecommended, false, `${suffix} stays author-fixed by default`);
+    assert.equal(param.isExposed, false);
+  }
+});
+
+test('T01.8: Internal params never reach the form or the fixed summary', () => {
+  const nodes = [
+    {
+      id: 'text-root',
+      type: 'material',
+      data: { materialType: 'text', selectedTool: 'text-editor', label: 'Prompt', content: 'hello' },
+    },
+    {
+      id: 'gen',
+      type: 'material',
+      data: {
+        materialType: 'image',
+        selectedTool: 'image-generation',
+        label: 'Image Gen',
+        params: { quality: '2K', localPath: '/Users/x/demo.png', seed: 7, useUpscale: false },
+      },
+    },
+  ];
+
+  const edges = [{ id: 'e1', source: 'text-root', target: 'gen', targetHandle: 'prompt' }];
+  const analysis = analyzeWorkflowInputs(nodes, edges);
+
+  const internal = analysis.inputs.find((i) => i.targetField === 'params.localPath');
+  assert.ok(internal, 'localPath param should be extracted as a candidate');
+  assert.equal(internal.isInternal, true);
+  assert.equal(internal.isExposed, false);
+
+  const config = generateFormConfig(analysis.inputs);
+  const fixedKeys = config.fixedFields.map((f) => f.key);
+  assert.ok(fixedKeys.includes('gen_param_quality'), 'Fixed quality should be summarised');
+  assert.ok(fixedKeys.includes('gen_param_seed'), 'Fixed seed should be summarised');
+  assert.ok(fixedKeys.includes('gen_param_useUpscale'), 'Fixed boolean should be summarised');
+  assert.ok(!fixedKeys.includes('gen_param_localPath'), 'Internal field must never be summarised');
+  assert.ok(
+    !Object.prototype.hasOwnProperty.call(config.formSchema.properties, 'gen_param_localPath'),
+    'Internal field must never become a form property',
+  );
+
+  const quality = config.fixedFields.find((f) => f.key === 'gen_param_quality');
+  assert.equal(quality.value, '2K');
+  assert.equal(quality.group, 'config');
+  assert.equal(quality.label, 'Image Gen - Quality');
+
+  // The user-provided prompt stays on the form side
+  assert.ok(Object.prototype.hasOwnProperty.call(config.formSchema.properties, 'text-root_content'));
+
+  // Readable fixed values shared by publisher and consumer
+  assert.equal(describeFixedValue(true), '开启');
+  assert.equal(describeFixedValue(false), '关闭');
+  assert.equal(describeFixedValue(''), '未设置');
+  assert.equal(describeFixedValue('16:9'), '16:9');
 });

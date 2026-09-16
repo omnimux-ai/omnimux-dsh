@@ -19,6 +19,7 @@ import {
   Film,
   Image as ImageIcon,
   Volume2,
+  Sliders,
 } from 'lucide-react';
 import type {
   ApplicationManifest,
@@ -150,6 +151,10 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
     }
   };
 
+  // Only exposed candidates become form fields; author-fixed ones are summarised below.
+  const fieldEntries = Object.entries(manifest.formSchema.properties) as [string, FormPropertySchema][];
+  const fixedFields = manifest.fixedFields || [];
+
   return (
     <div className={`omx-apps-form-panel ${className}`}>
       <form onSubmit={handleSubmit} className="omx-apps-form-inner">
@@ -172,8 +177,17 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
           </div>
         )}
 
+        {/* Empty state: the publisher exposed nothing for consumers to fill in */}
+        {fieldEntries.length === 0 && (
+          <div className="omx-apps-form-empty">
+            <AlertCircle size={20} />
+            <div className="omx-apps-form-empty-title">这个应用暂时没有可填写的内容</div>
+            <div className="omx-apps-form-empty-desc">发布者尚未放开任何输入项或生成参数。</div>
+          </div>
+        )}
+
         {/* Dynamic Fields List */}
-        {Object.entries(manifest.formSchema.properties).map(([key, prop]: [string, FormPropertySchema]) => {
+        {fieldEntries.map(([key, prop]: [string, FormPropertySchema]) => {
           const mapping = manifest.fieldMappings[key];
           const label = mapping?.label || prop.title || key;
           const isRequired = manifest.formSchema.required.includes(key);
@@ -403,11 +417,29 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
           );
         })}
 
+        {/* Author-fixed summary: what the publisher decided, hidden from end users */}
+        {fixedFields.length > 0 && (
+          <div className="omx-apps-fixed-summary">
+            <div className="omx-apps-fixed-summary-title">
+              <Sliders size={14} />
+              <span>以下由作者设定，无需填写</span>
+            </div>
+            <div className="omx-apps-fixed-summary-chips">
+              {fixedFields.map((field) => (
+                <span key={field.key} className="omx-apps-fixed-chip">
+                  {field.label}
+                  <b>{field.value}</b>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Primary Ink CTA Button (44px high, 398px wide, 8px radius) */}
         <button // exempt-ui01 ai-app-ui-spec 44px primary Ink CTA button
           type="submit"
           className="omx-apps-cta-btn"
-          disabled={isSubmitting}
+          disabled={isSubmitting || fieldEntries.length === 0}
         >
           <Sparkles size={16} />
           <span>{isSubmitting ? '正在生成...' : '立即生成'}</span>

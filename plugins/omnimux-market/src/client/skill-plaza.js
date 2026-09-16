@@ -355,10 +355,25 @@
       const projectDir = resolveProjectDir(typeof plazaSessions !== "undefined" ? plazaSessions : null, workspaces);
       const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm, tr, projectDir });
 
+      // 滚动归属（骨架契约 §二·补）：整页滚动，标题/动作行随页面滚走，一级/二级 Tab 到顶吸附。
+      const [stickyNode, setStickyNode] = hooks.useState(null);
+      hooks.useEffect(() => {
+        if (!stickyNode) return;
+        let el = stickyNode.parentElement;
+        while (el) {
+          const overflowY = typeof getComputedStyle === "function" ? getComputedStyle(el).overflowY : "";
+          if ((overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight) break;
+          el = el.parentElement;
+        }
+        if (el) el.scrollTop = 0;
+      }, [stickyNode, state.mainTab, state.category, state.mineCategory]);
+
       return h("div", { className: "sh-mkt" },
         renderWorkshopIntro(sections.introOpts),
-        renderPlazaNavBar(sections.navBarOpts),
-        sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
+        h("div", { className: "omx-stage-sticky", ref: setStickyNode },
+          renderPlazaNavBar(sections.navBarOpts),
+          sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
+        ),
         renderPlazaTabContent(sections.tabContentOpts),
         drawerNode,
         installNode,

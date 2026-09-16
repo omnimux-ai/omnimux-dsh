@@ -3,7 +3,7 @@
  *
  * 3-Step Publishing Wizard Modal to transform an OmniMux Workflow into a standalone AI Application.
  * Step 1: Basic Information (Name, strictly video|image|audio category, description)
- * Step 2: Input Field Exposure (Root inDegree=0 defaults to exposed/required, downstream inDegree>0 collapsible)
+ * Step 2: Input & config exposure (grouped candidates, recommended set on by default, per-item switch)
  * Step 3: Cover & Showcase Preview Configuration
  * On Confirm: Assembles ApplicationManifest, validates schema, persists, dispatches sidebar tab events.
  *
@@ -17,12 +17,14 @@ import {
   Video,
   Image as ImageIcon,
   Music,
-  ChevronDown,
-  ChevronRight,
   Layers,
   ArrowRight,
   ArrowLeft,
   Sliders,
+  Type,
+  RotateCcw,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
 import { CustomModal, toast } from '../../../ui';
 import {
@@ -36,6 +38,7 @@ import type {
   ApplicationCategory,
   ApplicationManifest,
   ExposedWorkflowInput,
+  InputGroupId,
   ShowcaseMode,
   ShowcaseItem,
 } from './publishTypes.ts';
@@ -97,6 +100,33 @@ const DEFAULT_CATEGORY_MEDIA_URLS: Record<ApplicationCategory, string> = {
   audio: 'https://cdn.omnimux.com/samples/audio-default.mp3',
 };
 
+/** Candidate groups rendered in step 2, in display order */
+const INPUT_GROUP_META: Array<{ id: InputGroupId; label: string; hint: string; icon: React.ReactNode }> = [
+  { id: 'asset', label: '素材输入', hint: '用户提供的图片 / 视频 / 音频', icon: <ImageIcon size={14} /> },
+  { id: 'text', label: '文本输入', hint: '用户提供的文字内容', icon: <Type size={14} /> },
+  { id: 'config', label: '生成配置', hint: '生成参数，可放开给用户，也可由你固定', icon: <Sliders size={14} /> },
+];
+
+/** Badge palette for candidate rows; colors come from host semantic tokens */
+const BADGE_STYLES: Record<'recommend' | 'required' | 'fixed' | 'internal', React.CSSProperties> = {
+  recommend: {
+    background: 'var(--dsw-alias-state-success-primary, rgba(34,197,94,0.12))',
+    color: 'var(--dsw-alias-label-success, #4ade80)',
+  },
+  required: {
+    background: 'var(--dsw-alias-state-warn-primary, rgba(245,158,11,0.12))',
+    color: 'var(--dsw-alias-label-warning, #fbbf24)',
+  },
+  fixed: {
+    background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.06))',
+    color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
+  },
+  internal: {
+    background: 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.04))',
+    color: 'var(--dsw-alias-label-tertiary, #71717a)',
+  },
+};
+
 export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   isOpen,
   onClose,
@@ -120,9 +150,8 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   const [category, setCategory] = useState<ApplicationCategory>('video');
   const [description, setDescription] = useState('');
 
-  // Step 2: Exposed Inputs
+  // Step 2: Input & config exposure
   const [inputs, setInputs] = useState<ExposedWorkflowInput[]>([]);
-  const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false);
 
   // Step 3: Showcase & Cover
   const [coverUrl, setCoverUrl] = useState('');
@@ -157,10 +186,31 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
 
   if (!isOpen || !analysis) return null;
 
-  // Toggle field exposure
+  // Toggle whether this candidate is shown to consumers
   const handleToggleExpose = (key: string) => {
     setInputs((prev) =>
-      prev.map((inp) => (inp.key === key ? { ...inp, isExposed: !inp.isExposed } : inp)),
+      prev.map((inp) => {
+        if (inp.key !== key || inp.isInternal) return inp;
+        const nextExposed = !inp.isExposed;
+        return {
+          ...inp,
+          isExposed: nextExposed,
+          // Reopening a user-provided input restores its recommended required flag;
+          // closing it clears required so a fixed field is never reported as mandatory.
+          isRequired: nextExposed ? inp.recommendedRequired : false,
+        };
+      }),
+    );
+  };
+
+  // Restore the recommended exposure set
+  const handleResetRecommended = () => {
+    setInputs((prev) =>
+      prev.map((inp) => ({
+        ...inp,
+        isExposed: inp.isInternal ? false : inp.isRecommended,
+        isRequired: inp.recommendedRequired,
+      })),
     );
   };
 
@@ -178,9 +228,10 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
     );
   };
 
-  // Group inputs into root (inDegree === 0) vs downstream (inDegree > 0)
-  const rootInputs = inputs.filter((inp) => inp.isRoot);
-  const downstreamInputs = inputs.filter((inp) => !inp.isRoot);
+  // Exposure counters drive the step 2 summary line
+  const exposedCount = inputs.filter((inp) => inp.isExposed && !inp.isInternal).length;
+  const requiredCount = inputs.filter((inp) => inp.isExposed && inp.isRequired && !inp.isInternal).length;
+  const fixedCount = inputs.filter((inp) => !inp.isExposed && !inp.isInternal).length;
 
   // Handle final publish execution
   const handlePublish = async () => {
@@ -190,7 +241,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       return;
     }
 
-    const exposedInputs = inputs.filter((inp) => inp.isExposed);
+    const exposedInputs = inputs.filter((inp) => inp.isExposed && !inp.isInternal);
     if (exposedInputs.length === 0) {
       toast.warning('请至少暴露一个输入项供消费端填写');
       setCurrentStep(2);
@@ -199,8 +250,10 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
 
     setIsSubmitting(true);
     try {
-      // 1. Generate standard restricted JSON schema and field mappings
-      const generatedConfig = generateFormConfig(exposedInputs);
+      // 1. Generate standard restricted JSON schema, field mappings, and the fixed-field summary.
+      // Pass every candidate: the generator decides what becomes a form field and what is summarised
+      // as author-fixed, so filtering here would silently drop the fixed summary.
+      const generatedConfig = generateFormConfig(inputs);
 
       // 2. Derive stable appId (alphanumeric, underscore, dash)
       const cleanSlug = appName
@@ -241,6 +294,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
         },
         formSchema: generatedConfig.formSchema,
         fieldMappings: generatedConfig.fieldMappings,
+        fixedFields: generatedConfig.fixedFields,
         showcase: {
           mode: showcaseMode,
           items: showcaseItems.length > 0
@@ -310,6 +364,144 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // One publishing candidate row: name, badges, source, rationale, exposure switch, required flag
+  const renderCandidateRow = (inp: ExposedWorkflowInput) => {
+    const isExposed = inp.isExposed && !inp.isInternal;
+    const badge = (text: string, tone: 'recommend' | 'required' | 'fixed' | 'internal') => (
+      <span
+        key={text}
+        style={{
+          ...BADGE_STYLES[tone],
+          fontSize: '10px',
+          lineHeight: '16px',
+          padding: '1px 6px',
+          borderRadius: '4px',
+        }}
+      >
+        {text}
+      </span>
+    );
+
+    return (
+      <div
+        key={inp.key}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '10px 12px',
+          borderRadius: '8px',
+          background: 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.04))',
+          border: isExposed
+            ? '1px solid var(--dsw-alias-border-l3, rgba(255,255,255,0.22))'
+            : '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.08))',
+          opacity: inp.isInternal ? 0.6 : 1,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={inp.fieldTitle}
+              onChange={(e) => handleFieldTitleChange(inp.key, e.target.value)}
+              disabled={inp.isInternal}
+              style={{
+                height: '26px',
+                padding: '0 8px',
+                fontSize: '12px',
+                fontWeight: 500,
+                borderRadius: '6px',
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'var(--dsw-alias-label-primary, #fff)',
+                outline: 'none',
+                width: '150px',
+              }}
+            />
+            {inp.isRecommended && badge('推荐', 'recommend')}
+            {isExposed && inp.isRequired && badge('必填', 'required')}
+            {!inp.isExposed && !inp.isInternal && badge(`固定：${inp.fixedDisplay || '未设置'}`, 'fixed')}
+            {inp.isInternal && badge('内部字段', 'internal')}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary, #71717a)' }}>
+            来源：{inp.nodeLabel} · 控件：{inp.widget}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary, #71717a)' }}>{inp.rationale}</div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+          <label
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '11px',
+              color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
+              cursor: inp.isInternal ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <span>展示给用户</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isExposed}
+              aria-label={`展示给用户：${inp.fieldTitle}`}
+              disabled={inp.isInternal}
+              onClick={() => handleToggleExpose(inp.key)}
+              style={{
+                width: '34px',
+                height: '18px',
+                borderRadius: '999px',
+                border: '1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12))',
+                background: isExposed
+                  ? 'var(--dsw-alias-state-business-primary, #4c8dff)'
+                  : 'var(--dsw-alias-bg-layer-3, rgba(255,255,255,0.08))',
+                position: 'relative',
+                padding: 0,
+                cursor: inp.isInternal ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: '2px',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: 'var(--dsw-alias-label-primary, #ffffff)',
+                  transform: isExposed ? 'translateX(16px)' : 'translateX(0)',
+                  transition: 'transform 140ms ease',
+                }}
+              />
+            </button>
+          </label>
+          <label
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              color: isExposed
+                ? 'var(--dsw-alias-label-secondary, #a1a1aa)'
+                : 'var(--dsw-alias-label-dimmed, rgba(255,255,255,0.28))',
+              cursor: isExposed ? 'pointer' : 'not-allowed',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={inp.isRequired}
+              onChange={() => handleToggleRequired(inp.key)}
+              disabled={!isExposed}
+              style={{ cursor: isExposed ? 'pointer' : 'not-allowed' }}
+            />
+            必填
+          </label>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -449,7 +641,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
         >
           {[
             { step: 1, label: '1. 基础画像' },
-            { step: 2, label: '2. 输入项暴露' },
+            { step: 2, label: '2. 输入项与配置项' },
             { step: 3, label: '3. 封面与预览' },
           ].map((item) => (
             <button
@@ -613,7 +805,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
           </div>
         )}
 
-        {/* STEP 2: 输入项暴露勾选 */}
+        {/* STEP 2: 输入项与配置项 */}
         {currentStep === 2 && (
           <div
             className="nodrag nopan"
@@ -621,186 +813,90 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
-              maxHeight: '420px',
+              gap: '14px',
+              maxHeight: '440px',
               overflowY: 'auto',
               overscrollBehavior: 'contain',
               scrollbarGutter: 'stable',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <Layers size={14} style={{ color: 'var(--dsw-alias-state-business-primary, #4c8dff)' }} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #fff)' }}>
-                  核心输入项（入度 = 0，默认暴露且必填）
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {rootInputs.length === 0 ? (
-                  <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary, #71717a)', padding: '12px 0' }}>
-                    当前工作流无根输入节点。
-                  </div>
-                ) : (
-                  rootInputs.map((inp) => (
-                    <div
-                      key={inp.key}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.04))',
-                        border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.08))',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={inp.isExposed}
-                        onChange={() => handleToggleExpose(inp.key)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <input
-                            type="text"
-                            value={inp.fieldTitle}
-                            onChange={(e) => handleFieldTitleChange(inp.key, e.target.value)}
-                            style={{
-                              height: '28px',
-                              padding: '0 8px',
-                              fontSize: '12px',
-                              borderRadius: '4px',
-                              border: '1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.15))',
-                              background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.08))',
-                              color: 'var(--dsw-alias-label-primary, #fff)',
-                              outline: 'none',
-                              width: '180px',
-                            }}
-                          />
-                          <span
-                            style={{
-                              fontSize: '10px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'var(--dsw-alias-bg-layer-3, rgba(255,255,255,0.12))',
-                              color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
-                            }}
-                          >
-                            {inp.widget}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary, #71717a)' }}>
-                          节点: {inp.nodeLabel} ({inp.nodeId}) · 字段: {inp.targetField}
-                        </div>
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={inp.isRequired}
-                          onChange={() => handleToggleRequired(inp.key)}
-                          disabled={!inp.isExposed}
-                        />
-                        必填
-                      </label>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div
+              data-qa="summary"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: exposedCount === 0
+                  ? 'var(--dsw-alias-state-warn-primary, rgba(245,158,11,0.12))'
+                  : 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.04))',
+                border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.08))',
+                fontSize: '12px',
+                lineHeight: '18px',
+              }}
+            >
+              <span
+                style={{
+                  color: exposedCount === 0
+                    ? 'var(--dsw-alias-label-warning, #fbbf24)'
+                    : 'var(--dsw-alias-label-secondary, #a1a1aa)',
+                  marginTop: '1px',
+                }}
+              >
+                {exposedCount === 0 ? <AlertCircle size={14} /> : <Layers size={14} />}
+              </span>
+              <span style={{ flex: 1, minWidth: 0, color: 'var(--dsw-alias-label-secondary, #a1a1aa)' }}>
+                {exposedCount === 0
+                  ? '当前没有任何一项展示给用户：用户打开应用会看到空表单，无法出片，建议至少保留素材或描述。'
+                  : `用户将填写 ${exposedCount} 项${requiredCount > 0 ? `，其中 ${requiredCount} 项必填` : ''}；另有 ${fixedCount} 项按你的设定执行。`}
+              </span>
+              <button
+                type="button"
+                onClick={handleResetRecommended}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  height: '24px',
+                  padding: '0 8px',
+                  borderRadius: '6px',
+                  background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.06))',
+                  border: '1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12))',
+                  color: 'var(--dsw-alias-label-primary, #fff)',
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
+                <RotateCcw size={12} />
+                恢复推荐设置
+              </button>
             </div>
 
-            {/* Downstream inputs (collapsible) */}
-            {downstreamInputs.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.08))', paddingTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsAdvancedExpanded((prev) => !prev)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: '4px 0',
-                  }}
-                >
-                  {isAdvancedExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  <Sliders size={14} />
-                  <span>高级参数与未接槽位 ({downstreamInputs.length} 项可选暴露)</span>
-                </button>
-
-                {isAdvancedExpanded && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                    {downstreamInputs.map((inp) => (
-                      <div
-                        key={inp.key}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '8px 12px',
-                          borderRadius: '8px',
-                          background: 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.03))',
-                          border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.06))',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={inp.isExposed}
-                          onChange={() => handleToggleExpose(inp.key)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                            <input
-                              type="text"
-                              value={inp.fieldTitle}
-                              onChange={(e) => handleFieldTitleChange(inp.key, e.target.value)}
-                              style={{
-                                height: '26px',
-                                padding: '0 8px',
-                                fontSize: '11px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12))',
-                                background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.06))',
-                                color: 'var(--dsw-alias-label-primary, #fff)',
-                                outline: 'none',
-                                width: '160px',
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontSize: '10px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                background: 'var(--dsw-alias-bg-layer-3, rgba(255,255,255,0.1))',
-                                color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
-                              }}
-                            >
-                              {inp.widget}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary, #71717a)' }}>
-                            下游节点: {inp.nodeLabel} · 参数: {inp.targetField}
-                          </div>
-                        </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={inp.isRequired}
-                            onChange={() => handleToggleRequired(inp.key)}
-                            disabled={!inp.isExposed}
-                          />
-                          必填
-                        </label>
-                      </div>
-                    ))}
+            {INPUT_GROUP_META.map((group) => {
+              const rows = inputs.filter((inp) => inp.group === group.id);
+              if (rows.length === 0) return null;
+              return (
+                <div key={group.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ color: 'var(--dsw-alias-label-secondary, #a1a1aa)' }}>{group.icon}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #fff)' }}>
+                      {group.label}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary, #71717a)' }}>
+                      {group.hint}
+                    </span>
                   </div>
-                )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {rows.map((inp) => renderCandidateRow(inp))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {inputs.length === 0 && (
+              <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary, #71717a)', padding: '12px 0' }}>
+                当前工作流没有可配置的输入项或生成参数。
               </div>
             )}
           </div>

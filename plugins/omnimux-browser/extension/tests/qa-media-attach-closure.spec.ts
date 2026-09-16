@@ -53,6 +53,7 @@ vi.mock('../src/panel/api.ts', async (importOriginal) => ({
   connectPanel: (): PanelApi => panelApi,
 }))
 
+import { createMediaGrants } from '../src/background/media-grants.ts'
 import { App } from '../src/panel/App.tsx'
 
 const HOVERED_MEDIA = {
@@ -100,6 +101,7 @@ interface PostedMessage {
 }
 
 describe('QA: the hover capsule pushes media into the conversation', () => {
+  let grant: string | null
   let root: Root
   let onStatus: ((state: BridgeState, caps: null) => void) | undefined
   let onResumeHint: ((sessionId: string | null) => void) | undefined
@@ -110,7 +112,10 @@ describe('QA: the hover capsule pushes media into the conversation', () => {
     document.body.innerHTML = '<div id="root"></div>'
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
     HTMLElement.prototype.scrollTo = vi.fn()
+    const grants = createMediaGrants('test', 'chrome-extension://test/panel/index.html')
+    grant = grants.issue({ id: 'test', frameId: 0, tab: { id: 1 }, url: 'https://page.example.com' }, HOVERED_MEDIA)
     vi.stubGlobal('chrome', {
+      runtime: { sendMessage: async (message: { type?: string; grant?: string }) => ({ media: message.type === 'TAKE_FLOAT_MEDIA_GRANT' ? grants.take({ id: 'test', tab: { id: 1 }, url: 'chrome-extension://test/panel/index.html?mode=float' }, message.grant) : null }) },
       storage: { local: { get: vi.fn(async () => ({ dshSettings: { autoResumeSession: false } })) } },
       windows: { getCurrent: vi.fn(async () => ({ id: 1 })) },
     })
@@ -176,7 +181,7 @@ describe('QA: the hover capsule pushes media into the conversation', () => {
   async function pushHoveredMedia(): Promise<void> {
     await act(async () => {
       window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'MEDIA_ATTACH_REQUEST', payload: HOVERED_MEDIA },
+        data: { type: 'MEDIA_ATTACH_REQUEST', grant },
       }))
     })
   }

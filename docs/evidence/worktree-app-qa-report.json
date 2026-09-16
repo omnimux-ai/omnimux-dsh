@@ -1,16 +1,16 @@
 {
-  "runId": "fdcd30a8-8b59-4573-ba62-1ffc786b9734",
+  "runId": "b94daf2c-6e5a-4613-955f-9ef52d771e90",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/test-env-qa-fixture-seeding",
-  "origin": "http://127.0.0.1:50064",
-  "appPort": 50064,
-  "cdpPort": 50076,
-  "startedAt": "2026-09-15T05:31:59.248Z",
-  "completedAt": "2026-09-15T05:32:07.618Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/assets-file-reveal",
+  "origin": "http://127.0.0.1:57279",
+  "appPort": 57279,
+  "cdpPort": 57289,
+  "startedAt": "2026-09-15T15:02:52.452Z",
+  "completedAt": "2026-09-15T15:03:01.102Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:50064",
+    "origin": "http://127.0.0.1:57279",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:50064",
+      "origin": "http://127.0.0.1:57279",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-fk7KLZq3kV0DMJvkSVr2HFxFTlzSm3zuQufDuaL9mnE"
+      "cookieName": "dsh-auth-A1Pbtl5-_DzK9sgcUlLsij8CLlkcRjUeX2v6k4Lt-9Y"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 50076
+      "port": 57289
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 132,
+        "visibleCount": 124,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 273
+        "bodyTextLength": 267
       }
     },
     {
@@ -63,7 +63,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 132
+      "visibleCount": 124
     },
     {
       "name": "screenshot-png-verified",
@@ -72,14 +72,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 81368
+      "bytes": 80923
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/test-env-qa-fixture-seeding/.workbuddy/evidence/app-qa/fdcd30a8-8b59-4573-ba62-1ffc786b9734/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/assets-file-reveal/.workbuddy/evidence/app-qa/b94daf2c-6e5a-4613-955f-9ef52d771e90/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 81368
+    "bytes": 80923
   },
   "errors": [],
   "cleanup": {

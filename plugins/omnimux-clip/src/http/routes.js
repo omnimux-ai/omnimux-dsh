@@ -1,3 +1,4 @@
+import { requestRejection } from './request-authorization.js'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import {
@@ -27,9 +28,6 @@ export function sendJson(res, status, body) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(text),
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
   })
   res.end(text)
 }
@@ -197,12 +195,14 @@ export function createClipDispatcher(deps) {
  * @param {{ register: (route: { kind: string, path: string, handler: Function }) => () => void }} webServer
  * @param {{ dispatch: (req: object) => Promise<{ status: number, body: unknown }> }} dispatcher
  */
-export function registerClipRoutes(webServer, dispatcher) {
+export function registerClipRoutes(webServer, dispatcher, deps = {}) {
   const dispose = webServer.register({
     kind: 'prefix',
     path: CLIP_API_PREFIX,
     async handler(req, res) {
       try {
+        const rejection = requestRejection(req, deps.getConnection)
+        if (rejection !== undefined) return sendJson(res, rejection, { error: 'request-denied' })
         if ((req.method || 'GET').toUpperCase() === 'OPTIONS') {
           sendJson(res, 204, {})
           return

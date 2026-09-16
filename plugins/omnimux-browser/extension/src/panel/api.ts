@@ -30,6 +30,25 @@ interface RpcFailurePayload {
   details?: unknown
 }
 
+/** The carrier has both native results and complete Host response envelopes. */
+function hostBusinessResult(value: unknown):
+  | { ok: true; value: unknown }
+  | { ok: false; error: RpcFailurePayload }
+  | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const envelope = value as Record<string, unknown>
+  if (envelope.type !== 'server-response' || typeof envelope.rpcId !== 'string' || envelope.rpcId.length === 0) return null
+  const result = envelope.result
+  if (typeof result !== 'object' || result === null || Array.isArray(result)) return null
+  const business = result as Record<string, unknown>
+  if (business.ok === true && Object.hasOwn(business, 'value')) return { ok: true, value: business.value }
+  if (business.ok !== false || typeof business.error !== 'object' || business.error === null || Array.isArray(business.error)) return null
+  const error = business.error as Record<string, unknown>
+  if (typeof error.code !== 'string' || typeof error.message !== 'string'
+    || typeof error.details !== 'object' || error.details === null || Array.isArray(error.details)) return null
+  return { ok: false, error }
+}
+
 interface RpcResultMessage {
   type: 'rpc.result'
   id: string
@@ -223,16 +242,15 @@ export function connectPanel(): PanelApi {
         const entry = pending.get(msg.id)
         if (entry === undefined) return
         pending.delete(msg.id)
-        // The bridge relays the gateway's ServerResponse envelope verbatim
-        // ({ type, rpcId, result: { ok, value | error } }); unwrap the value
-        // so callers get the business payload, and surface business errors.
-        const envelope = msg.result as { result?: { ok?: boolean; value?: unknown; error?: RpcFailurePayload } } | undefined
-        const business = envelope?.result
-        if (msg.ok && business?.ok !== false) entry.resolve(business?.value)
-        else entry.reject(panelRpcError(
-          business?.ok === false ? business.error : msg.error,
-          getUiLocale() === 'zh' ? 'RPC 请求失败' : 'RPC request failed',
-        ))
+        const business = hostBusinessResult(msg.result)
+        if (!msg.ok || business?.ok === false) {
+          entry.reject(panelRpcError(
+            !msg.ok ? msg.error : business?.ok === false ? business.error : undefined,
+            getUiLocale() === 'zh' ? 'RPC 请求失败' : 'RPC request failed',
+          ))
+        } else {
+          entry.resolve(business?.ok === true ? business.value : msg.result)
+        }
         break
       }
       case 'respond.result': {

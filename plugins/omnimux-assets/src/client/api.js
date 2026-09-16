@@ -126,6 +126,19 @@ export function previewUrl(assetId, fileId = '', subPath = '') {
 }
 
 /**
+ * Ask the Host to show one library entry in the platform file manager.
+ * @param {string} assetId
+ * @param {string} fileId
+ * @param {string} [subPath]
+ */
+export function revealAssetEntry(assetId, fileId, subPath = '') {
+  return assetsRequest('/omnimux/assets/library/reveal', {
+    method: 'POST',
+    body: { id: assetId, file: fileId, path: subPath },
+  })
+}
+
+/**
  * @param {string} id
  */
 export function rescanMapping(id) {

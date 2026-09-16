@@ -42,6 +42,7 @@ describe('panel protocol', () => {
       id: '12345678-1234-4234-8234-123456789aba',
       ok: true,
       result: {
+        type: 'server-response', rpcId: '12345678-1234-4234-8234-123456789aba',
         result: {
           ok: false,
           error: {
@@ -292,7 +293,7 @@ describe('panel protocol', () => {
       type: 'rpc.result',
       id: '12345678-1234-4234-8234-123456789ac0',
       ok: true,
-      result: { result: { ok: true, value: 'reconnected' } },
+      result: { type: 'server-response', rpcId: '12345678-1234-4234-8234-123456789ac0', result: { ok: true, value: 'reconnected' } },
     })
 
     await expect(pending).resolves.toBe('reconnected')

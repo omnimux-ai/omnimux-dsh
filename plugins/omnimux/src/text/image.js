@@ -1,3 +1,4 @@
+import { readBoundedBody } from '../media/read-bounded-body.js'
 import { readFile } from 'node:fs/promises'
 import { basename, isAbsolute } from 'node:path'
 import { OmnimuxError } from '../media/errors.js'
@@ -153,12 +154,15 @@ async function fetchRemoteImage(url, deps) {
     throw new OmnimuxError('omnimux-invalid-request', `failed to fetch image: ${error instanceof Error ? error.message : String(error)}`)
   }
   if (!response.ok) {
+    await response.body?.cancel().catch(() => {})
     throw new OmnimuxError('omnimux-invalid-request', `image URL returned HTTP ${response.status}`)
   }
   const headerType = MIME_MEDIA[(response.headers?.get?.('content-type') || '').split(';')[0].trim().toLowerCase()]
-  const buffer = new Uint8Array(await response.arrayBuffer())
-  if (buffer.byteLength > cap) {
-    throw new OmnimuxError('omnimux-invalid-request', `image exceeds ${cap} bytes`)
+  let buffer
+  try {
+    buffer = await readBoundedBody(response, cap, { signal: deps.signal, message: `image exceeds ${cap} bytes` })
+  } catch (error) {
+    throw new OmnimuxError('omnimux-invalid-request', error instanceof Error ? error.message : String(error))
   }
   return {
     data: buffer,

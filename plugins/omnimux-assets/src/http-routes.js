@@ -5,6 +5,7 @@
  * JSON secret-emission and loopback-write guards stay local to this plugin;
  * domain plugins do not import hub internals.
  */
+import { spawn } from 'node:child_process'
 import { createReadStream, realpathSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { statStatus, scanDir, scanFile } from './scanner.js'
@@ -24,6 +25,8 @@ const STATUS_BY_CODE = {
   'picker-invalid-kind': 400,
   'picker-unsupported': 501,
   'picker-failed': 500,
+  'reveal-unsupported': 501,
+  'reveal-failed': 500,
   'mapping-not-found': 404,
   'artifact-not-found': 404,
   'asset-not-found': 404,
@@ -114,6 +117,9 @@ export function resolveCatalogPagePath(catalogDir, segments) {
 export function sendPreview(res, status, stream) {
   res.writeHead(status, {
     'Content-Type': stream.mime,
+    'X-Content-Type-Options': 'nosniff',
+    ...(stream.mime.split(';')[0].trim().toLowerCase() === 'image/svg+xml'
+      ? { 'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:" } : {}),
     ...(Number.isFinite(stream.size) ? { 'Content-Length': String(stream.size) } : {}),
     'Cache-Control': 'private, max-age=30',
   })
@@ -231,11 +237,28 @@ function messageOf(error) {
 }
 
 /**
+ * Launch a platform helper and resolve only on a clean exit. `shell: false`
+ * keeps the resolved path a single argv entry, so a path can never become a
+ * command.
+ * @param {string} command
+ * @param {string[]} args
+ */
+function runNative(command, args) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, { shell: false, stdio: 'ignore', timeout: 10_000 })
+    child.once('error', rejectPromise)
+    child.once('close', (code) => (code === 0 ? resolvePromise() : rejectPromise(new Error('native-action-failed'))))
+  })
+}
+
+/**
  * @param {{
  *   mappings: ReturnType<typeof import('./mappings.js').createMappingStore>,
  *   artifacts: ReturnType<typeof import('./artifacts.js').createArtifactStore>,
  *   library?: ReturnType<typeof import('./library.js').createLibraryStore>,
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null }>,
+ *   platform?: NodeJS.Platform,
+ *   run?: (command: string, args: string[]) => Promise<void>,
  * }} deps
  */
 export function createAssetsDispatcher(deps) {
@@ -425,6 +448,37 @@ export function createAssetsDispatcher(deps) {
   }
 
   /**
+   * `POST /omnimux/assets/library/reveal` — show one library entry in the
+   * platform file manager.
+   *
+   * The path is resolved by the library store, which enforces the same
+   * containment rules as the preview route, so a request can never point the
+   * file manager at anything outside the asset's own file root. A file is
+   * revealed in place (`-R` selects it); a directory is opened directly.
+   * @param {{ id?: unknown, file?: unknown, path?: unknown }} body
+   */
+  async function revealRoute(body) {
+    if (!library) throw new AssetsError('catalog-unavailable', 'local library is not available')
+    const target = library.resolveEntryPath(
+      String(body.id ?? ''),
+      String(body.file ?? ''),
+      String(body.path ?? ''),
+    )
+    if ((deps.platform ?? process.platform) !== 'darwin') {
+      throw new AssetsError('reveal-unsupported', 'opening the file location is only supported on macOS')
+    }
+    try {
+      await (deps.run ?? runNative)(
+        '/usr/bin/open',
+        target.isDirectory ? ['--', target.absolutePath] : ['-R', '--', target.absolutePath],
+      )
+    } catch {
+      throw new AssetsError('reveal-failed', 'could not open the file location')
+    }
+    return { status: 200, body: { path: target.absolutePath, isDirectory: target.isDirectory } }
+  }
+
+  /**
    * @param {{ method: string, url: string, origin?: string, referer?: string, secFetchSite?: string, body?: unknown }} req
    * @returns {Promise<{ status: number, body: unknown }>}
    */
@@ -531,6 +585,13 @@ export function createAssetsDispatcher(deps) {
         const subPath = url.searchParams.get('path') || ''
         const preview = library.resolvePreview(id, fileId, subPath)
         return { status: 200, stream: preview }
+      }
+
+      if (library && method === 'POST' && path === '/omnimux/assets/library/reveal') {
+        const problem = jsonBodyProblem(req)
+        if (problem) return problem
+        const body = /** @type {{ id?: unknown, file?: unknown, path?: unknown }} */ (req.body)
+        return await revealRoute(body)
       }
 
       if (library && method === 'POST' && path === '/omnimux/assets/library') {

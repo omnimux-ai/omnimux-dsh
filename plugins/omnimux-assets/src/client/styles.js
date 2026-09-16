@@ -1,6 +1,19 @@
 export const STYLES_ID = 'omnimux-assets-styles'
 
 export const ASSETS_CSS = `
+/* 全站一级页骨架契约类（Issue 1977 · 契约 §二·补）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
+.omx-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omx-stage-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .omnimux-assets-stage {
   position: relative;
   width: 100%;
@@ -148,7 +161,9 @@ export const ASSETS_CSS = `
 .omnimux-assets-main {
   flex: 1;
   min-width: 0;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 16px 24px;
 }
 .omnimux-assets-grid {
@@ -296,6 +311,45 @@ export const ASSETS_CSS = `
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   border: 1px solid var(--dsw-alias-border-l2);
   z-index: 1;
+}
+/* 缩略图右上角：类型角标与「打开文件位置」并排右对齐，避免互相遮挡。 */
+.omnimux-assets-card-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+.omnimux-assets-card-corner .omnimux-assets-badge {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+}
+.omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card-corner .omnimux-assets-reveal:hover,
+.omnimux-assets-card-corner .omnimux-assets-reveal:active {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+/* 悬停卡片才浮现；键盘进入卡片或聚焦按钮时同样可见，不牺牲可达性。 */
+.omnimux-assets-card:hover .omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card:focus-within .omnimux-assets-card-corner .omnimux-assets-reveal,
+.omnimux-assets-card-corner .omnimux-assets-reveal:hover,
+.omnimux-assets-card-corner .omnimux-assets-reveal:focus-visible {
+  opacity: 1;
+  color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-missing {
   position: absolute;
@@ -830,10 +884,13 @@ export const ASSETS_CSS = `
   gap: 10px;
 }
 .omnimux-assets-cloud-nav {
-  display: flex;
-  flex-direction: column;
+  display: flex;  flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
+}
+/* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
+.omnimux-assets-cloud-nav.omx-stage-sticky {
+  top: var(--stage-rail-h, 0px);
 }
 .omnimux-assets-cloud-nav-row,
 .omnimux-assets-cloud-subnav {
@@ -986,11 +1043,7 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-cloud-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 2px;
+  display: contents;
 }
 .omnimux-assets-cloud-grid {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1011,6 +1064,37 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb {
   height: 164px;
   aspect-ratio: auto;
+}
+/* 首次加载的骨架卡：占位几何与真卡片逐字对齐——同一个 164px 缩略图高度、同一行
+   标题高度，因此数据到达时卡片在原位换成真图，不产生任何高度跳动。
+   动效只用一次克制的透明度呼吸，跟随主题 token，深浅色下都读得清。 */
+.omnimux-assets-cloud-skeleton {
+  pointer-events: none;
+}
+.omnimux-assets-cloud-skeleton-thumb {
+  height: 164px;
+  border-radius: 10px;
+  background-color: var(--dsw-alias-bg-elevated);
+  animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
+}
+.omnimux-assets-cloud-skeleton-line {
+  height: 14px;
+  margin-top: 10px;
+  width: 60%;
+  border-radius: 6px;
+  background-color: var(--dsw-alias-bg-elevated);
+  animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
+}
+@keyframes omnimux-assets-skeleton-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-assets-cloud-skeleton-thumb,
+  .omnimux-assets-cloud-skeleton-line {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 /* 声音：一块暗调微彩底板，正中间一个居中的播放/暂停键，点一下即播即停。
    底板不画任何波形、刻度或跳动条——一排音色卡片同时出现细密竖线会变成视觉噪点，
@@ -1251,9 +1335,7 @@ export const ASSETS_CSS = `
   height: 44px;
 }
 .omnimux-products-body {
-  flex: 1;
   min-height: 0;
-  overflow: auto;
   padding: 0;
 }
 .omnimux-products-grid {

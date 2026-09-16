@@ -709,5 +709,44 @@ export function createLibraryStore(opts = {}) {
     return { absolutePath, mime, size: Number(info.size) || 0 }
   }
 
-  return { list, get, getView, add, update, remove, migrateMappings, revision, listFileEntries, resolvePreview }
+  /**
+   * Resolve one in-library entry (a file or a directory) to its real absolute
+   * path so the Host can hand it to the platform file manager. Same containment
+   * rules as the preview route: a `..` climb or an escaping symlink is refused
+   * before any process is spawned.
+   * @param {string} assetId
+   * @param {string} fileId
+   * @param {string} [subPath]
+   * @returns {{ absolutePath: string, isDirectory: boolean }}
+   */
+  function resolveEntryPath(assetId, fileId, subPath = '') {
+    const live = get(assetId)
+    if (!live) throw new AssetsError('asset-not-found', 'asset not found')
+    const stored = state.assets.find((row) => row.id === live.id) || live
+    materializeAssetSync(stored)
+    const file = stored.files.find((row) => row.id === fileId)
+    if (!file) throw new AssetsError('path-not-found', 'asset file not found')
+    const abs = absoluteOf(file, vaultRoot)
+    const view = fileView(abs, fs, file)
+    if (!view) throw new AssetsError('path-not-found', 'path does not exist')
+    let absolutePath = abs
+    if (view.kind === 'directory') {
+      const cleaned = String(subPath ?? '').replace(/^\/+/, '')
+      if (cleaned !== '') absolutePath = resolveFileSubPath(abs, cleaned)
+    } else if (String(subPath ?? '') !== '') {
+      throw new AssetsError('path-not-dir', 'file refs have no sub directories')
+    }
+    let info
+    try {
+      info = fs.statSync(absolutePath)
+    } catch {
+      throw new AssetsError('path-not-found', 'path does not exist')
+    }
+    return { absolutePath, isDirectory: info.isDirectory() }
+  }
+
+  return {
+    list, get, getView, add, update, remove, migrateMappings, revision,
+    listFileEntries, resolvePreview, resolveEntryPath,
+  }
 }

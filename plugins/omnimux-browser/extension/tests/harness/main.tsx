@@ -95,6 +95,9 @@ if (panelMode) {
   // port while mounting, and its storage reads happen in the first effects.
   void import('./panelHost.ts').then(({ installHarnessHost, harnessHost }) => {
     installHarnessHost()
+    if (params.get('security') === '1' && window.parent !== window) {
+      chrome.runtime.sendMessage = ((message: unknown) => (window.parent as any).__securityPanelRuntime(message)) as typeof chrome.runtime.sendMessage
+    }
     void import('../../src/panel/App.tsx').then(({ App }) => {
       createRoot(host).render(createElement(App))
       const push = (frame: unknown): void => { harnessHost().push(frame) }

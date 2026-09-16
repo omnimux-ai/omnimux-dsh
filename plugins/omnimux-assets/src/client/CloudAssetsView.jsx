@@ -14,6 +14,7 @@ import {
 import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
+import { preloadMedia } from './media-cache.js'
 import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
@@ -33,6 +34,14 @@ const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action 
 /** Clip classes; the bare variant is the tile's face instead of a hover overlay. */
 const PREVIEW_CLASS = 'omnimux-assets-cloud-preview'
 const BARE_PREVIEW_CLASS = `${PREVIEW_CLASS} omnimux-assets-cloud-preview--bare`
+
+/**
+ * 首次加载铺多少张骨架卡。
+ *
+ * 取 12：宽屏下一屏正好铺满两三行，窄屏时多出的部分被裁掉也不浪费——骨架是纯占位，
+ * 不像真卡片那样要拉图。少于 6 张会在宽屏上露出大片空白，等于没铺。
+ */
+const CLOUD_SKELETON_COUNT = 12
 
 /**
  * Tile media.
@@ -180,7 +189,9 @@ export function CloudAssetCard(props) {
   }, [])
 
   const kind = cloudCardKind(asset)
-  const canPlay = kind === 'audio'
+  // 能播的语音行都挂播放键；有立绘时它浮在立绘上，没有立绘才是纯语音色块。
+  const canPlay = asset?.mediaType === 'audio' && asset?.hasMedia === true && asset?.playable !== false
+  const showArt = asset?.hasCover === true || (asset?.hasMedia === true && asset?.mediaType !== 'audio')
   const handleBroken = useCallback(() => { setBroken(true) }, [])
   const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
   const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
@@ -205,7 +216,7 @@ export function CloudAssetCard(props) {
   const previewLabel = `${asset.name} · ${t('card.view')}`
   // A voice card carries one of five restrained dark washes, picked by row id so
   // it never changes between renders. Other kinds declare no theme.
-  const theme = canPlay ? cloudAudioTheme(asset.id) : undefined
+  const theme = canPlay && !showArt ? cloudAudioTheme(asset.id) : undefined
 
   return (
     <div
@@ -227,7 +238,7 @@ export function CloudAssetCard(props) {
           onClick={canPlay ? handlePlayClick : undefined}
           onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
         >
-          {canPlay ? null : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} hovering={hovering} />}
+          {showArt ? <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} hovering={hovering} /> : null}
           {canPlay ? (
             <span className="omnimux-assets-cloud-play" aria-hidden="true">
               {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
@@ -431,7 +442,7 @@ function CloudCategoryNav(props) {
   const filterBarOwnsSecondLevel = characterFilters.dimensions.length > 0
 
   return (
-    <div className="omnimux-assets-cloud-nav">
+    <div className="omnimux-assets-cloud-nav omx-stage-sticky">
       <div className="omnimux-assets-cloud-nav-row" role="group" aria-label={t('cloud.nav.label')}>
         {categories.map((row) => (
           <Button
@@ -521,9 +532,35 @@ export function CloudAssetsView(props) {
     return { title: t('cloud.empty.title'), description: t('cloud.empty.desc') }
   }, [filtered, searchActive, t])
 
+  // 每加载出一批就把这批的封面提前解码：滚到下一屏时图已在内存里，不会先白一下。
+  useEffect(() => {
+    const covers = items
+      .filter((row) => row?.hasCover === true)
+      .map((row) => cloudMediaUrl(row.id, 'cover'))
+    preloadMedia(covers)
+  }, [items])
+
   let body = null
   if (feed.loading) {
-    body = <div className="omnimux-assets-empty"><p>{t('cloud.loading')}</p></div>
+    // 首次加载铺骨架网格而不是一句「正在加载」：卡片位置先占住，数据到达时在原位
+    // 换成真卡片，不做二次布局，观感上是从模糊到清晰而不是从空白到出现。
+    body = (
+      <div className="omnimux-assets-cloud-scroll">
+        <div
+          className="omnimux-assets-grid omnimux-assets-cloud-grid"
+          data-skeleton="true"
+          aria-busy="true"
+          aria-label={t('cloud.loading')}
+        >
+          {Array.from({ length: CLOUD_SKELETON_COUNT }, (_unused, index) => (
+            <div className="omnimux-assets-card omnimux-assets-cloud-skeleton" key={index}>
+              <div className="omnimux-assets-cloud-skeleton-thumb" />
+              <div className="omnimux-assets-cloud-skeleton-line" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   } else if (items.length === 0) {
     body = <EmptyState title={emptyState.title} description={emptyState.description} />
   } else {

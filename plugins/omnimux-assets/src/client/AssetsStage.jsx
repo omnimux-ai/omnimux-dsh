@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { ChatIcon, GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
@@ -407,6 +407,26 @@ export function AssetsStage(props) {
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
   const [productKindTab, setProductKindTab] = useState('all')
+  const stageRootRef = useRef(null)
+  const railRef = useRef(null)
+
+  // 云端分类行吸附在一级工具栏之下：偏移跟随工具栏实测高度（骨架契约 §二·补）
+  useEffect(() => {
+    const rail = railRef.current
+    const stage = stageRootRef.current
+    if (!rail || !stage || typeof ResizeObserver !== 'function') return undefined
+    const apply = () => stage.style.setProperty('--stage-rail-h', `${Math.round(rail.getBoundingClientRect().height)}px`)
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(rail)
+    return () => observer.disconnect()
+  }, [])
+
+  // 一级/二级分类切换后，整页滚动位置归零（骨架契约 §二·补，Issue 1977）
+  useEffect(() => {
+    const stage = stageRootRef.current
+    if (stage) stage.scrollTop = 0
+  }, [sourceTab, feed.filterType, productKindTab])
 
   // A cloud row has no library record behind it, so opening its preview means
   // translating the catalog row first — and the translation remembers the row
@@ -452,16 +472,19 @@ export function AssetsStage(props) {
 
   return (
     <div
+      ref={stageRootRef}
       role="region"
       aria-label={t('stage.title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-assets-stage"
+      className="omnimux-assets-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
-      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
+      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} sourceTab={sourceTab} />
       <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
+      {/* 吸附栈：一级 Tab + 二级分类行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
+      <div className="omx-stage-sticky" ref={railRef}>
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       {sourceTab === 'local' ? (
         // The local tab draws its own category row here, under the toolbar. The
@@ -484,6 +507,7 @@ export function AssetsStage(props) {
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}
+      </div>
       <AssetsBody
         t={t}
         feed={feed}

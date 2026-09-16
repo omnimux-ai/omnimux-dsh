@@ -47,7 +47,7 @@ function stubFetcher(table) {
         return {
           ok: true,
           headers: { get: (name) => (name.toLowerCase() === 'content-type' ? 'text/html; charset=utf-8' : null) },
-          arrayBuffer: async () => Buffer.from('<html></html>'),
+          body: new Response('<html></html>').body,
         }
       }
       return {
@@ -60,7 +60,7 @@ function stubFetcher(table) {
             return null
           },
         },
-        arrayBuffer: async () => row.buffer ?? PNG,
+        body: new Response(row.buffer ?? PNG).body,
       }
     },
   }
@@ -185,5 +185,47 @@ describe('products · persisting product images', () => {
     assert.deepEqual(await persistProductImages({ images: [], mediaDir: '/tmp/nope', fetcher }), [])
     assert.deepEqual(await persistProductImages({ images: ['https://cdn.example.com/a.png'], mediaDir: '/tmp/nope' }), [])
     assert.equal(calls.length, 0, 'no media directory means no download at all')
+  })
+})
+
+describe('product image remote boundary', () => {
+  it('checks every redirect target and preserves signed public CDN URLs', async () => {
+    for (const status of [301, 302, 303, 307, 308]) {
+      const calls = []
+      const entries = await persistProductImages({
+        images: ['https://shop.example/a'], mediaDir: workDir(),
+        fetcher: async (url) => {
+          calls.push(url)
+          return calls.length === 1 ? new Response('', { status, headers: { location: 'https://cdn.example/b?sig=a%2Fb' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } })
+        },
+      })
+      assert.equal(entries.length, 1)
+      assert.deepEqual(calls, ['https://shop.example/a', 'https://cdn.example/b?sig=a%2Fb'])
+    }
+  })
+  it('refuses private redirects without a second fetch and skips only the rejected image', async () => {
+    const calls = []
+    const entries = await persistProductImages({
+      images: ['https://shop.example/bad', 'https://shop.example/good'], mediaDir: workDir(),
+      fetcher: async (url) => {
+        calls.push(url)
+        return url.endsWith('/bad') ? new Response('', { status: 302, headers: { location: 'http://[::ffff:127.0.0.1]/secret' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } })
+      },
+    })
+    assert.equal(entries.length, 1)
+    assert.equal(calls.length, 2)
+  })
+  it('cancels a headerless endless image without retaining the excess', async () => {
+    let cancelled = false, pulls = 0
+    const entries = await persistProductImages({
+      images: ['https://cdn.example/a'], mediaDir: workDir(), maxBytes: 5,
+      fetcher: async () => new Response(new ReadableStream({
+        pull(controller) { pulls++; controller.enqueue(new Uint8Array(3)) },
+        cancel() { cancelled = true },
+      }, { highWaterMark: 0 }), { headers: { 'content-type': 'image/png', 'content-length': '1' } }),
+    })
+    assert.deepEqual(entries, [])
+    assert.equal(cancelled, true)
+    assert.equal(pulls, 2)
   })
 })

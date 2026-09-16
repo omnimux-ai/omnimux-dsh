@@ -1,6 +1,7 @@
+import { createVideoStreamUrl } from '../src/stream-capability.js'
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
+import { after, before, describe, it } from 'node:test'
+import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
@@ -25,6 +26,19 @@ import {
 } from '../src/breakdown.js'
 import { apply } from '../src/index.js'
 import { createTestToolContext } from '../../omnimux/src/test-support/tool-harness.js'
+
+let signingHome
+let previousHome
+before(() => {
+  previousHome = process.env.DSH_HOME
+  signingHome = mkdtempSync(join(tmpdir(), 'breakdown-signing-'))
+  process.env.DSH_HOME = signingHome
+})
+after(() => {
+  if (previousHome === undefined) delete process.env.DSH_HOME
+  else process.env.DSH_HOME = previousHome
+  if (signingHome) rmSync(signingHome, { recursive: true, force: true })
+})
 
 describe('video breakdown & shots analysis engine', () => {
   it('formats seconds into mm:ss accurately', () => {
@@ -377,7 +391,7 @@ describe('video breakdown & shots analysis engine', () => {
     }
 
     const mockReq = {
-      url: `/omnimux/video-preview/stream?path=${encodeURIComponent(dummyVideoPath)}`,
+      url: createVideoStreamUrl(dummyVideoPath),
       headers: { range: 'bytes=0-100' },
       on: () => {},
     }

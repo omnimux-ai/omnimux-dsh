@@ -500,36 +500,16 @@ export function resolveCreatorProfileUrl(creator, sourceUrl = '', platform = '')
 }
 
 /**
- * Create a public share link for an inspiration item via OmniMux gateway.
+ * Start a publish for an inspiration item.
+ *
+ * The Host owns the publish (it uploads the assets and calls the cloud), and it
+ * answers 202 with the row while the job runs — the caller then polls the row
+ * for the real stages and the link the cloud returned. A failed request comes
+ * back as a failure. Nothing here builds a link of its own: a caller that got
+ * `ok` is holding what the cloud answered, and a caller that did not has
+ * nothing to show.
  * @param {string} id
- * @param {{ expire?: '3days' | 'forever' }} [opts]
  */
-export async function createShareLink(id, opts = {}) {
-  const expire = opts.expire === 'forever' ? 'forever' : '3days'
-  try {
-    const res = await inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/share`, {
-      method: 'POST',
-      body: { expire },
-    })
-    if (res.ok && res.body?.data) return res
-    if (res.status === 403) return res
-  } catch {
-    // offline fallback below
-  }
-  const expireAt = expire === 'forever' ? null : new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString()
-  const code = String(id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'share'
-  return {
-    ok: true,
-    status: 200,
-    body: {
-      ok: true,
-      data: {
-        id,
-        share_url: `https://omnimux.ai/s/insp_${code}`,
-        shareUrl: `https://omnimux.ai/s/insp_${code}`,
-        expire,
-        expire_at: expireAt,
-      },
-    },
-  }
+export async function createShareLink(id) {
+  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/share`, { method: 'POST' })
 }

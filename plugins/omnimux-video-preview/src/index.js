@@ -1,3 +1,7 @@
+import { requestRejection } from './request-authorization.js'
+import { createVideoAuthorizationHandler } from './authorize-stream.js'
+import { refreshBreakdownMedia } from './refresh-breakdown-media.js'
+import { createVideoStreamUrl } from './stream-capability.js'
 import { existsSync, statSync } from 'node:fs'
 import { extname, resolve } from 'node:path'
 import { handleVideoStream, getMimeType } from './stream.js'
@@ -28,16 +32,18 @@ export function apply(ctx) {
   // 1. Register video preview metadata tool
   ctx.tools?.register?.({
     name: 'video_preview_info',
-    description: 'Probe metadata for a local video file and get local streaming URL.',
+    description: 'Probe a selected local video and obtain its authorized streaming URL. To reopen an old saved breakdown without re-analysis, pass its path and explicitly selected authorizeMediaPaths; only those media files are admitted and cached URLs refreshed.',
     parameters: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'File path to video' },
+        path: { type: 'string', description: 'Selected video file, or saved breakdown file when refreshing media permissions' },
+        authorizeMediaPaths: { type: 'array', items: { type: 'string' }, description: 'Explicitly selected local media paths for refreshing an old saved breakdown; document paths alone never authorize reads' },
       },
       required: ['path'],
     },
     output: jsonOut,
-    execute: async ({ path: filePath }) => {
+    execute: async ({ path: filePath, authorizeMediaPaths }) => {
+      if (authorizeMediaPaths !== undefined) return refreshBreakdownMedia(filePath, authorizeMediaPaths)
       const abs = resolve(filePath)
       if (!existsSync(abs)) throw new Error(`File not found: ${filePath}`)
       const stats = statSync(abs)
@@ -45,7 +51,7 @@ export function apply(ctx) {
         path: abs,
         size: stats.size,
         mimeType: getMimeType(abs),
-        streamUrl: `/omnimux/video-preview/stream?path=${encodeURIComponent(abs)}`,
+        streamUrl: createVideoStreamUrl(abs),
       }
     },
   })
@@ -155,15 +161,20 @@ export function apply(ctx) {
 
     const unregisters = []
 
+    const unregAuthorize = webServer.register({
+      kind: 'exact',
+      path: '/omnimux/video-preview/authorize',
+      handler: createVideoAuthorizationHandler(() => ctx.get?.('connection')),
+    })
+    if (typeof unregAuthorize === 'function') unregisters.push(unregAuthorize)
+
     // Route 1: Video stream
     const unregStream = webServer.register({
       kind: 'prefix',
       path: '/omnimux/video-preview/stream',
       async handler(req, res) {
         try {
-          const url = new URL(req.url || '', 'http://localhost')
-          const targetPath = url.searchParams.get('path')
-          handleVideoStream(req, res, targetPath)
+          handleVideoStream(req, res)
         } catch (err) {
           try {
             res.writeHead(500, { 'Content-Type': 'application/json' })
@@ -179,14 +190,12 @@ export function apply(ctx) {
       kind: 'prefix',
       path: '/omnimux/video-preview/translate',
       async handler(req, res) {
-        if (req.method === 'OPTIONS') {
-          res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          })
-          return res.end()
+        const rejection = requestRejection(req, () => ctx.get?.('connection'))
+        if (rejection !== undefined) {
+          res.writeHead(rejection, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'request-denied' }))
         }
+        if (req.method === 'OPTIONS') { res.writeHead(204); return res.end() }
 
         if (req.method === 'GET') {
           res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -214,13 +223,11 @@ export function apply(ctx) {
             })
             res.writeHead(200, {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
             })
             res.end(JSON.stringify(result))
           } catch (err) {
             res.writeHead(500, {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
             })
             res.end(JSON.stringify({ error: err?.message || 'Translation error' }))
           }
