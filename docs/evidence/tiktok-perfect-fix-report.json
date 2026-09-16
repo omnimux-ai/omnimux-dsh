@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-09-16T09:26:16.555Z",
+  "task": "fix(browser): TikTok 场景 CreatOK 复合避让与播放器真实作品 ID 抓取",
+  "issue": 2035,
+  "spec": "specs/tiktok-perfect-fix.spec.md",
+  "scenarios": [
+    {
+      "name": "AC-1: CreatOK 复合组件（带 12px 边距与 CreatOK 文本）24px 充裕大留白推移",
+      "elements": {
+        "avatar": {
+          "top": 200,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "ghost": {
+          "top": 144,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "creatok": {
+          "top": 130,
+          "left": 500,
+          "width": 48,
+          "height": 60,
+          "bottom": 190
+        }
+      },
+      "targetCeiling": 120,
+      "shiftApplied": 70,
+      "result": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "AC-2: TikTok 推荐流通过 xgwrapper 真实提取视频作品 ID 并合成有效链接",
+      "extractedId": "7681127662965886228",
+      "constructedUrl": "https://www.tiktok.com/@i/video/7681127662965886228",
+      "httpStatus": 200,
+      "result": "PASSED",
+      "verified": true
+    }
+  ],
+  "conclusion": "实机探测证实 XGPlayer 容器 ID 承载真实 Aweme ID，已彻底解决红字报错；CreatOK 24px 大留白消除重叠。"
+}

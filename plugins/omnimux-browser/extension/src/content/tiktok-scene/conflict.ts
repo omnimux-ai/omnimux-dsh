@@ -26,7 +26,7 @@ export interface Box {
 
 const SHIFT_ATTR = 'data-omx-shift'
 const ORIGINAL_TRANSFORM_ATTR = 'data-omx-orig-transform'
-export const SAFE_GAP = 16
+export const SAFE_GAP = 24
 
 /**
  * Read the element's un-shifted bounding rectangle.
@@ -130,8 +130,8 @@ export function resolveIconConflicts(
     }
   }
 
-  // B. Check custom extension tags (like plasmo-csui) and common button/item selectors
-  const commonSelectors = 'plasmo-csui, button, [role="button"], a, [class*="action"], [class*="icon"], [class*="btn"], [class*="download"], [class*="extension"], [id*="extension"], [id*="tiktok"], [class*="creat" i]'
+  // B. Check custom extension tags (like plasmo-csui, creatok) and common button/item selectors
+  const commonSelectors = '#creatok-video-trigger, [id*="creatok" i], [class*="creatok" i], [data-placement*="action-bar"], plasmo-csui, button, [role="button"], a, [class*="action"], [class*="icon"], [class*="btn"], [class*="download"], [class*="extension"], [id*="extension"], [id*="tiktok"]'
   for (const el of Array.from(doc.querySelectorAll<HTMLElement>(commonSelectors))) {
     if (checked.has(el)) continue
     checked.add(el)

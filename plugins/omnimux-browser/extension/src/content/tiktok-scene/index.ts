@@ -66,14 +66,42 @@ export function initTiktokScene(): void {
   }
 
   const resolveActiveFeedHref = (): string | null => {
-    // 1. Try currently playing / visible video in browse modal or container
+    // 1. Try active XGPlayer container in viewport (TikTok feed & player architecture)
+    const xgPlayers = Array.from(doc.querySelectorAll<HTMLElement>('[id*="xgwrapper-"], [id*="xgmedia-"]'))
+    const vCenter = window.innerHeight / 2
+    let bestPlayer: HTMLElement | null = null
+    let minDiff = Infinity
+
+    for (const player of xgPlayers) {
+      const r = player.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0) {
+        const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
+        if (diff < minDiff) {
+          minDiff = diff
+          bestPlayer = player
+        }
+      }
+    }
+
+    if (bestPlayer) {
+      const match = bestPlayer.id.match(/\d{18,19}/)
+      if (match) {
+        const card = bestPlayer.closest('section, article, [class*="ItemContainer"], [data-e2e="feed-video"]')
+        const authorLink = card?.querySelector<HTMLAnchorElement>('a[href*="/@"]')
+        const authorMatch = authorLink?.href?.match(/\/@([^/?#]+)/)
+        const author = authorMatch ? authorMatch[1] : 'i'
+        return `https://www.tiktok.com/@${author}/video/${match[0]}`
+      }
+    }
+
+    // 2. Try currently playing / visible video in browse modal or container
     const modal = doc.querySelector('[data-e2e="browse-video"], [class*="DivVideoContainer"], [class*="DivContainer"]')
     if (modal) {
       const modalLink = modal.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
       if (modalLink && modalLink.href) return modalLink.href
     }
 
-    // 2. Try nearby anchor of the active action bar that has a video element
+    // 3. Try nearby anchor of the active action bar that has a video element
     const bar = doc.querySelector('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]')
     if (bar) {
       const card = bar.closest('section, article, [class*="ItemContainer"]')
