@@ -21,11 +21,12 @@ export interface PairingRequest {
   readonly id: string
   readonly expiresAt: number
   approved: boolean
+  cancelled: boolean
   consumed: boolean
 }
 
 /** Poll answer for the extension. */
-export type PairingPoll = 'pending' | 'approved' | 'expired' | 'unknown'
+export type PairingPoll = 'pending' | 'approved' | 'cancelled' | 'expired' | 'unknown'
 
 /** Injectable clock and id source, so tests never depend on wall time. */
 export interface PairingDeps {
@@ -64,6 +65,7 @@ export class PairingRequests {
       id: this.mintId(),
       expiresAt: this.now() + PAIRING_TTL_MS,
       approved: false,
+      cancelled: false,
       consumed: false,
     }
     return this.current
@@ -91,6 +93,19 @@ export class PairingRequests {
     return true
   }
 
+  /**
+   * Cancel one request, as the host's own page does.
+   *
+   * @param id - the request id the page was opened with.
+   * @returns true when a live request was cancelled.
+   */
+  cancel(id: string): boolean {
+    const request = this.live(id)
+    if (request === null) return false
+    request.cancelled = true
+    return true
+  }
+
   /** Read the state the extension polls for. */
   poll(id: string): PairingPoll {
     const request = this.current
@@ -99,6 +114,7 @@ export class PairingRequests {
     }
     const live = this.live(id)
     if (live === null) return 'unknown'
+    if (live.cancelled) return 'cancelled'
     return live.approved ? 'approved' : 'pending'
   }
 
@@ -112,6 +128,17 @@ export class PairingRequests {
   reset(): void {
     this.current = null
   }
+}
+
+/**
+ * The code both sides show so the user can match them: the tail of the request
+ * id, upper-cased. Deterministic, so no extra state has to travel.
+ *
+ * @param requestId - the opaque request id.
+ * @returns six upper-case characters, or the id when it is short.
+ */
+export function shortCode(requestId: string): string {
+  return requestId.slice(-6).toUpperCase()
 }
 
 /**
@@ -158,13 +185,18 @@ export function pairingApprovalAllowed(
 }
 
 /**
- * The pairing page: one button, no numbers, no secrets.
+ * The pairing page: the code to cross-check, then approve or cancel.
  *
- * @param requestId - the request this page approves.
+ * The code is shown, never typed — the extension displays the same one, and a
+ * match is what tells the user this is the request they just started.
+ *
+ * @param requestId - the request this page acts on.
+ * @param code - the short code the extension is showing.
  * @returns a complete HTML document.
  */
-export function pairingPageHtml(requestId: string): string {
+export function pairingPageHtml(requestId: string, code: string): string {
   const id = JSON.stringify(requestId)
+  const shown = JSON.stringify(code)
   return `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -173,30 +205,54 @@ export function pairingPageHtml(requestId: string): string {
  :root{color-scheme:dark}
  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
    background:#0b0b0d;color:#f2f2f4;font:15px/1.6 -apple-system,"PingFang SC",Arial,sans-serif}
- .card{text-align:center}
- button{font:inherit;font-weight:600;font-size:15px;color:#000;background:#f2f2f4;border:0;
-   border-radius:11px;padding:14px 26px;cursor:pointer}
+ .card{width:min(420px,92vw);text-align:center}
+ .label{color:#8b8b93;font-size:12.5px;margin-bottom:8px}
+ .code{font-size:30px;font-weight:700;letter-spacing:0.22em;margin:0 0 6px}
+ .hint{color:#8b8b93;font-size:12.5px;margin:0 0 22px}
+ .row{display:flex;gap:10px}
+ button{flex:1;font:inherit;font-weight:600;font-size:15px;border-radius:11px;padding:13px 0;cursor:pointer}
+ #approve{color:#000;background:#f2f2f4;border:0}
+ #cancel{color:#f2f2f4;background:transparent;border:1px solid #3a3a41}
  button:hover{transform:translateY(-1px)}
  button:disabled{opacity:.4;cursor:default;transform:none}
+ #done{margin-top:20px;color:#8b8b93;font-size:13px}
 </style></head><body>
 <div class="card">
-  <div id="action"><button id="approve">确认授权</button></div>
-  <div id="done" hidden>&#10003; 已授权</div>
+  <div id="action">
+    <div class="label">请在浏览器插件里核对授权码</div>
+    <div class="code" id="code"></div>
+    <p class="hint">两边一致即是在授权这一次请求</p>
+    <div class="row">
+      <button id="approve">确认授权</button>
+      <button id="cancel">取消授权</button>
+    </div>
+  </div>
+  <div id="done" hidden></div>
 </div>
 <script>
   const requestId = ${id};
-  document.getElementById('approve').addEventListener('click', async (event) => {
-    event.currentTarget.disabled = true;
+  document.getElementById('code').textContent = ${shown};
+  async function send(action, done) {
     try {
-      await fetch('/ext/pair/approve', {
+      await fetch('/ext/pair/' + action, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ requestId: requestId })
       });
-    } catch (error) { /* the extension still reads the answer from its poll */ }
+    } catch (error) { /* the extension still learns the outcome from its poll */ }
     document.getElementById('action').hidden = true;
-    document.getElementById('done').hidden = false;
-    setTimeout(function () { window.close() }, 300);
+    const node = document.getElementById('done');
+    node.hidden = false;
+    node.textContent = done;
+    setTimeout(function () { window.close() }, 400);
+  }
+  document.getElementById('approve').addEventListener('click', function (event) {
+    event.currentTarget.disabled = true;
+    void send('approve', '\u2713 已授权');
+  });
+  document.getElementById('cancel').addEventListener('click', function (event) {
+    event.currentTarget.disabled = true;
+    void send('cancel', '已取消授权');
   });
 </script>
 </body></html>`

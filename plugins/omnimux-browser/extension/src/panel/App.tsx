@@ -3479,8 +3479,13 @@ export function App(): React.JSX.Element {
               setPairBusy(true)
               setPairMessage(locale === 'en' ? 'Waiting for approval…' : '等待授权…')
               void chrome.runtime?.sendMessage?.({ type: 'PAIR_START' })
-                .then((res: { ok?: boolean; message?: string } | undefined) => {
-                  if (res?.ok === true) return
+                .then((res: { ok?: boolean; message?: string; code?: string } | undefined) => {
+                  if (res?.ok === true) {
+                    setPairMessage(locale === 'en'
+                      ? `Waiting for approval… code ${res.code ?? ''}`
+                      : `等待授权… 授权码 ${res.code ?? ''}`)
+                    return
+                  }
                   setPairBusy(false)
                   setPairMessage(res?.message ?? (locale === 'en' ? 'Pairing failed' : '配对失败'))
                 })

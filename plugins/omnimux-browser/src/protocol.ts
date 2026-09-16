@@ -30,6 +30,9 @@ export const BRIDGE_PAIR_REQUEST_PATH = '/ext/pair/request'
 /** Pairing approval: accepted only from the host's own page origin. */
 export const BRIDGE_PAIR_APPROVE_PATH = '/ext/pair/approve'
 
+/** Pairing cancellation: the same admission as approval. */
+export const BRIDGE_PAIR_CANCEL_PATH = '/ext/pair/cancel'
+
 /** Pairing poll: the extension reads `pending | approved | expired | unknown`. */
 export const BRIDGE_PAIR_STATUS_PATH = '/ext/pair/status'
 

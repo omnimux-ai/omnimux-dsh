@@ -13,10 +13,11 @@ import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import {
   BRIDGE_PAIR_PATH,
   BRIDGE_PAIR_APPROVE_PATH,
+  BRIDGE_PAIR_CANCEL_PATH,
   BRIDGE_PAIR_REQUEST_PATH,
   BRIDGE_PAIR_STATUS_PATH,
 } from './protocol.ts'
-import { PairingRequests, pairingApprovalAllowed, pairingPageHtml, pairingRequestAllowed } from './pairing.ts'
+import { PairingRequests, pairingApprovalAllowed, pairingPageHtml, pairingRequestAllowed, shortCode } from './pairing.ts'
 
 /** What the routes need from the host. */
 export interface PairingRouteDeps {
@@ -89,7 +90,7 @@ export function createPairingRoutes(deps: PairingRouteDeps): WebRoute[] {
       // closed, and the extension's next poll reports `unknown`.
       const live = requests.poll(id) === 'pending' || requests.poll(id) === 'approved'
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...NO_STORE })
-      res.end(pairingPageHtml(live ? id : ''))
+      res.end(pairingPageHtml(live ? id : '', live ? shortCode(id) : '——————'))
     },
   }
 
@@ -108,6 +109,7 @@ export function createPairingRoutes(deps: PairingRouteDeps): WebRoute[] {
       const request = requests.create()
       sendJson(res, 200, {
         requestId: request.id,
+        code: shortCode(request.id),
         approveUrl: `http://127.0.0.1:${deps.port()}${BRIDGE_PAIR_PATH}?request=${encodeURIComponent(request.id)}`,
       })
     },
@@ -138,6 +140,29 @@ export function createPairingRoutes(deps: PairingRouteDeps): WebRoute[] {
     },
   }
 
+  const cancelRoute: WebRoute = {
+    kind: 'exact',
+    path: BRIDGE_PAIR_CANCEL_PATH,
+    handler: (req, res) => {
+      if (!pairingApprovalAllowed(req.socket.remoteAddress, req.headers.origin, deps.port(), deps.isLoopback)) {
+        sendText(res, 403, 'forbidden')
+        return
+      }
+      if (req.method !== 'POST') {
+        sendText(res, 405, 'method not allowed')
+        return
+      }
+      void readJson(req).then((body) => {
+        const id = typeof body?.requestId === 'string' ? body.requestId : ''
+        if (id === '' || !requests.cancel(id)) {
+          sendJson(res, 404, { error: 'unknown-request' })
+          return
+        }
+        sendJson(res, 200, { cancelled: true })
+      })
+    },
+  }
+
   const statusRoute: WebRoute = {
     kind: 'exact',
     path: BRIDGE_PAIR_STATUS_PATH,
@@ -148,6 +173,11 @@ export function createPairingRoutes(deps: PairingRouteDeps): WebRoute[] {
       }
       const id = new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('request') ?? ''
       const state = requests.poll(id)
+      if (state === 'cancelled') {
+        requests.consume(id)
+        sendJson(res, 200, { state })
+        return
+      }
       if (state === 'approved') {
         // Single delivery: the id is spent the moment the token leaves the host.
         requests.consume(id)
@@ -158,5 +188,5 @@ export function createPairingRoutes(deps: PairingRouteDeps): WebRoute[] {
     },
   }
 
-  return [pageRoute, requestRoute, approveRoute, statusRoute]
+  return [pageRoute, requestRoute, approveRoute, cancelRoute, statusRoute]
 }

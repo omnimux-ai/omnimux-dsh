@@ -1429,19 +1429,21 @@ function stopPairing(): void {
  *
  * @returns the opened approval URL, or the user-facing reason it failed.
  */
-async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: false; message: string }> {
+async function startPairing(): Promise<{ ok: true; approveUrl: string; code: string } | { ok: false; message: string }> {
   const zh = getUiLocale() === 'zh'
   const port = currentHostPort()
   stopPairing()
 
   let requestId = ''
   let approveUrl = ''
+  let code = ''
   try {
     const response = await fetch(`http://127.0.0.1:${port}/ext/pair/request`, { method: 'POST' })
     if (!response.ok) throw new Error(String(response.status))
-    const body = await response.json() as { requestId?: unknown; approveUrl?: unknown }
+    const body = await response.json() as { requestId?: unknown; approveUrl?: unknown; code?: unknown }
     requestId = typeof body.requestId === 'string' ? body.requestId : ''
     approveUrl = typeof body.approveUrl === 'string' ? body.approveUrl : ''
+    code = typeof body.code === 'string' ? body.code : ''
   } catch {
     return {
       ok: false,
@@ -1452,6 +1454,16 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: 
   }
   if (requestId === '' || approveUrl === '') {
     return { ok: false, message: zh ? '本机没有返回授权地址' : 'The host returned no approval page' }
+  }
+
+  // The approval page is a detour: remember where the user was so the pairing
+  // ends by putting them back there instead of on a neighbouring tab.
+  let originTabId: number | null = null
+  try {
+    const [active] = await chrome.tabs.query({ active: true, currentWindow: true })
+    originTabId = typeof active?.id === 'number' ? active.id : null
+  } catch {
+    originTabId = null
   }
 
   let tabId: number | null = null
@@ -1479,6 +1491,10 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: 
             `http://127.0.0.1:${port}/ext/pair/status?request=${encodeURIComponent(attempt.requestId)}`,
           )
           const body = await status.json() as { state?: unknown; token?: unknown }
+          if (body.state === 'cancelled') {
+            stopPairing()
+            return
+          }
           if (body.state !== 'approved') {
             // Nothing to wait for once the request is gone.
             if (body.state === 'unknown' || body.state === 'expired') stopPairing()
@@ -1492,6 +1508,8 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: 
           settings.token = token
           await persistSettings({ token }).catch(() => {})
           startBridge()
+          // Go back first, then close the detour.
+          if (originTabId !== null) await chrome.tabs.update(originTabId, { active: true }).catch(() => {})
           if (attempt.tabId !== null) await chrome.tabs.remove(attempt.tabId).catch(() => {})
           stopPairing()
         } catch {
@@ -1500,7 +1518,7 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: 
       })()
     }, 1_000),
   }
-  return { ok: true, approveUrl }
+  return { ok: true, approveUrl, code }
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
