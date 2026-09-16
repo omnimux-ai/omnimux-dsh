@@ -527,9 +527,13 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
   root.style.setProperty('--omnimux-topbar-toggle-end', `${end}px`)
   root.style.setProperty('--omnimux-tabbar-pad-left', `${Math.max(0, Math.round(tabPad))}px`)
   const nativeFrame = doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])')
-  const sidebarWidth = nativeFrame
-    ? (readShellRailWidthPx(doc) ?? (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280)))
-    : (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280))
+  // 收起意图优先于壳层读数：宿主收起后仍保留一条原生窄栏（真机 90px），照抄这条读数会让
+  // 右侧栏收起规则 `grid-template-columns: var(--omnimux-sidebar-width) minmax(0px,1fr) 0px`
+  // 把框架首列钉成 90px，屏左留下死带；全屏面板左缘与输入框投射也一并偏移 90px。
+  // 本产品要求「收起即完全收起」，故 layout.collapsed 为真时一律镜像 0（Issue #2077）。
+  const expandedRailWidth = (nativeFrame ? readShellRailWidthPx(doc) : null)
+    ?? Math.max(0, layout.leftRailW || 280)
+  const sidebarWidth = layout.collapsed ? 0 : expandedRailWidth
   root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
   const convW = layout.conversationWidth ?? lastGoodConversationWidth ?? 480
   root.style.setProperty('--omnimux-conversation-width', `${convW}px`)
