@@ -175,12 +175,13 @@ test('default focus matrix: canvas and all libraries default to gui (Issue #2006
     'omnimux-analytics:library',
     'omnimux-workflow:library',
     'omnimux-market:plaza',
+    'omnimux-automation:workbench',
   ]
   for (const lib of libraries) {
     assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.gui, `${lib} must default to gui`)
     assert.ok(isWorkbenchTab(lib), `${lib} must be recognized as workbench tab`)
   }
-  assert.equal(WORKBENCH_OCCUPANTS.length, 11)
+  assert.equal(WORKBENCH_OCCUPANTS.length, 12)
 })
 
 test('workbenchDefaultWidthPx keeps ~420px for conversation', () => {

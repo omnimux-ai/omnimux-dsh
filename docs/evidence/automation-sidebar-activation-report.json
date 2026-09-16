@@ -1,0 +1,16 @@
+{
+  "issue": "#2046",
+  "title": "自动化 Tab 身份收敛与左侧栏单激活位仲裁映射修复",
+  "timestamp": "2026-09-16T09:12:59.056Z",
+  "assertions": {
+    "occupantsContract": true,
+    "titleFallbacks": true,
+    "mapById": true,
+    "mapByTitle": true,
+    "verdictWinner": "row",
+    "verdictTabId": "omnimux-automation:workbench",
+    "activePredicateSelf": true,
+    "activePredicateOthersDark": true
+  },
+  "status": "PASSED"
+}

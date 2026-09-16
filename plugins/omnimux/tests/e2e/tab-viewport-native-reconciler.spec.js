@@ -177,4 +177,23 @@ test('AC-5: 从分栏页面跨页面切回偏好全屏的页面，即便会话�
   reconciler.reset()
 })
 
+test('AC-6: 自动化 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)', async () => {
+  const { resolveSidebarActiveTarget, mapNativeTabKeyToRailTab } = await import('../../src/client/workbench/sidebar-activation.js')
+  const AUTO = 'omnimux-automation:workbench'
+
+  assert.equal(mapNativeTabKeyToRailTab(AUTO), AUTO, 'Tab ID 应直接映射为合规的左栏 tabId')
+  assert.equal(mapNativeTabKeyToRailTab('自动化'), AUTO, 'Tab Title 自动化 应映射为合规的左栏 tabId')
+  assert.equal(mapNativeTabKeyToRailTab(' 自动化 '), AUTO, '带空格的 Tab Title 应容错映射')
+
+  const verdict = resolveSidebarActiveTarget({
+    selectedSessionRows: 0,
+    conversationVisible: false,
+    panelExpanded: true,
+    activeTabKey: AUTO,
+  })
+  assert.equal(verdict.winner, 'row', '自动化页面激活时侧边栏应胜出激活行')
+  assert.equal(verdict.tabId, AUTO, '胜出的 tabId 必须严格等于自动化 Tab ID')
+})
+
+
 
