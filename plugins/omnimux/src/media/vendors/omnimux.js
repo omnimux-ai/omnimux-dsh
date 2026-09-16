@@ -117,6 +117,149 @@ export function pickTaskStatus(raw) {
 }
 
 /**
+ * Capabilities whose task-detail endpoint is known to answer.
+ *
+ * Evidence (Issue #2092, probed 2026-09-16): `GET /v1/videos/{id}` returns the
+ * task record including `error.message`, while `GET /v1/images/{id}` and
+ * `GET /v1/audios/{id}` both answer `Invalid URL`. A capability without an entry
+ * here still gets a detail read whenever the poll body carries its own resource
+ * URL (see `taskDetailUrl`).
+ */
+export const TASK_DETAIL_PATH = Object.freeze({
+  video: 'videos',
+})
+
+/** Body keys that carry a human-readable failure reason on some envelope. */
+const FAILURE_REASON_KEYS = Object.freeze(['fail_reason', 'failure_reason', 'reason'])
+
+/**
+ * @param {...unknown} values
+ * @returns {string | undefined}
+ */
+function firstNonEmptyString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return undefined
+}
+
+/**
+ * @param {unknown} value
+ * @returns {Record<string, unknown> | undefined}
+ */
+function asRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? /** @type {Record<string, unknown>} */ (value)
+    : undefined
+}
+
+/**
+ * Upstream failure reason from a terminal task body.
+ *
+ * The platform spreads the same reason across different envelopes per façade:
+ * the detail record carries `error.message`, the shallow poll façade may carry
+ * `message` or `data.error`, and some upstreams answer with a bare string. Every
+ * known shape is read before giving up — an empty answer here means "the poll
+ * body has no reason", not "there is no reason".
+ *
+ * @param {unknown} raw
+ * @returns {string | undefined}
+ */
+export function pickTaskFailureReason(raw) {
+  const row = asRecord(raw)
+  if (!row) return undefined
+  const data = asRecord(row.data)
+  const error = asRecord(row.error)
+  const dataError = asRecord(data?.error)
+  return firstNonEmptyString(
+    error?.message,
+    typeof row.error === 'string' ? row.error : undefined,
+    row.message,
+    dataError?.message,
+    typeof data?.error === 'string' ? data.error : undefined,
+    data?.message,
+    ...FAILURE_REASON_KEYS.map((key) => row[key]),
+    ...FAILURE_REASON_KEYS.map((key) => data?.[key]),
+  )
+}
+
+/**
+ * Detail URL for a terminal task.
+ *
+ * The body's own resource URL wins when it is the evidenced content form
+ * (`…/videos/{id}/content` → `…/videos/{id}`): that host is authoritative and is
+ * not guaranteed to equal `baseUrl`. Otherwise the capability's detail endpoint
+ * on `baseUrl` is used, and a capability with neither yields no URL at all.
+ *
+ * @param {unknown} raw
+ * @param {{ capability: string, baseUrl?: string, taskId?: string }} options
+ * @returns {string | undefined}
+ */
+export function taskDetailUrl(raw, options) {
+  const row = asRecord(raw)
+  const data = asRecord(row?.data)
+  const candidate = firstNonEmptyString(row?.url, row?.result_url, data?.url, data?.result_url)
+  if (candidate && /^https?:\/\//i.test(candidate) && /\/content\/?$/i.test(candidate)) {
+    return candidate.replace(/\/content\/?$/i, '')
+  }
+  const path = TASK_DETAIL_PATH[options.capability]
+  const baseUrl = typeof options.baseUrl === 'string' ? options.baseUrl.replace(/\/+$/, '') : ''
+  if (!path || !baseUrl || !options.taskId) return undefined
+  return `${baseUrl}/${path}/${options.taskId}`
+}
+
+/**
+ * Chinese reading of a known upstream failure, matched by keyword.
+ *
+ * Order matters: the first match wins, so the most specific signatures sit
+ * first. An unmatched reason still reaches the user verbatim — the mapping only
+ * adds an actionable sentence on top of it.
+ */
+const FAILURE_HINTS = Object.freeze([
+  {
+    match: /file_download_error|failed to download|download the file|could ?not download/i,
+    hint: '模型方下载不到参考图，请重试或换一张参考图',
+  },
+  {
+    match: /moderation|sensitive|nsfw|policy|prohibited|risk|审核|违规/i,
+    hint: '内容未通过审核，请调整提示词或更换参考图',
+  },
+  {
+    match: /insufficient|balance|quota|arrears|欠费|余额/i,
+    hint: '账户额度不足，请充值或更换渠道分组',
+  },
+  {
+    match: /expired|not accessible|invalid url|unreachable|失效/i,
+    hint: '参考素材地址已失效，请重新读取素材后再试',
+  },
+  {
+    match: /timeout|timed out|time out|超时/i,
+    hint: '上游生成超时，请重试',
+  },
+])
+
+/**
+ * Compose the `omnimux-failed` message a terminal task failure deserves.
+ *
+ * The leading `"<capability> task <id> failed"` sentence is kept verbatim so
+ * existing log searches and support runbooks keep matching; the reason and its
+ * reading are appended.
+ *
+ * @param {{ capability: string, taskId: string, reason?: string }} input
+ * @returns {string}
+ */
+export function describeTaskFailure(input) {
+  const base = `${input.capability} task ${input.taskId} failed`
+  const reason = typeof input.reason === 'string' ? input.reason.trim() : ''
+  if (!reason) {
+    return `${base}：上游未返回失败原因，请重试；若持续失败请把任务号反馈给支持`
+  }
+  const hit = FAILURE_HINTS.find((row) => row.match.test(reason))
+  const reading = hit ? hit.hint : '上游生成失败，请重试；若持续失败请更换模型或渠道分组'
+  return `${base}：${reading}（上游：${reason}）`
+}
+
+/**
  * Map a capability request onto the OmniMux OpenAI-compat body.
  * When `guardPlan.vendorPayload` is present (SubmitGuard #468), prefer that
  * profile-constrained body and only fill gaps from legacy heuristics.
