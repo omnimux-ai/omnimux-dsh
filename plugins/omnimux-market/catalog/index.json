@@ -8852,6 +8852,204 @@
         "rules": [],
         "agents": []
       }
+    },
+    {
+      "id": "sk-omx-gunpla-poster",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "高达模型收藏海报",
+      "subtitle": "Agentara",
+      "summary": "引导式访谈确认机体、取景、姿态、环境与画幅后出图，生成高端高达/拼装模型收藏海报。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "海报",
+        "Agentara",
+        "商业广告"
+      ],
+      "skill": "gunpla-poster",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/gunpla-poster",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-portrait-clone",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "人像复刻生图提示词",
+      "subtitle": "Agentara",
+      "summary": "把含人物的参考图锁成可复用的 JSON 生图提示词，让每次出图长相尽量一致，适合角色长相固化与复刻。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "提示词",
+        "Agentara",
+        "创意实验"
+      ],
+      "skill": "portrait-clone",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/portrait-clone",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-presentation-design",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "演示设计拼版图",
+      "subtitle": "Agentara",
+      "summary": "一次生成 6 页高级演示设计拼版图（非可编辑 PPT），适合策略、新闻与商业分析类幻灯片的视觉稿。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "演示",
+        "Agentara",
+        "商业广告"
+      ],
+      "skill": "presentation-design",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/presentation-design",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-soviet-storybook-grotesque",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "苏东童书怪诞插画",
+      "subtitle": "Agentara",
+      "summary": "把照片变成怪诞苏东旧童书插画：发抖墨线、褪色水彩、脏纸纹理与荒诞的手写押韵说明。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "插画",
+        "Agentara",
+        "创意实验"
+      ],
+      "skill": "soviet-storybook-grotesque",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/soviet-storybook-grotesque",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-torn-paper-collage-poster",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "撕纸拼贴编辑海报",
+      "subtitle": "Agentara",
+      "summary": "撕纸拼贴编辑海报风：多层撕纸、粗糙字体、邮票胶带、剪贴主体与证据板质感。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "海报",
+        "Agentara",
+        "商业广告"
+      ],
+      "skill": "torn-paper-collage-poster",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/torn-paper-collage-poster",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-character-design",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频角色设定图",
+      "subtitle": "Agentara",
+      "summary": "为视频与分镜做角色设定文档与设定图：先产出可确认的设定稿，通过后再出图。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "角色设定",
+        "Agentara",
+        "专业影视"
+      ],
+      "skill": "video-character-design",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/video-character-design",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-plan",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "短视频分场企划",
+      "subtitle": "Agentara",
+      "summary": "短视频、vlog、旅行等脚本企划：先定时长、故事弧与画风，再拆成 4–15 秒分场。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "企划",
+        "Agentara",
+        "专业影视"
+      ],
+      "skill": "video-plan",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/video-plan",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-poster-design",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "电影感海报与主视觉",
+      "subtitle": "Agentara",
+      "summary": "电影感海报与主视觉：可从企划、分镜或角色设定生成，默认偏 3:4 画幅。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "海报",
+        "Agentara",
+        "专业影视"
+      ],
+      "skill": "video-poster-design",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/video-poster-design",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-storyboard",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频分镜与提示词",
+      "subtitle": "Agentara",
+      "summary": "按分场输出分镜拼版图与视频生成提示词，强调人物、服装、道具与场景的连续。源：agentara/skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "分镜",
+        "Agentara",
+        "专业影视"
+      ],
+      "skill": "video-storyboard",
+      "source": {
+        "type": "git",
+        "repo": "agentara/skills",
+        "path": "skills/aigc/video-storyboard",
+        "ref": "main"
+      }
     }
   ]
 }

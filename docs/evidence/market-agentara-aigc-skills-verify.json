@@ -1,0 +1,229 @@
+{
+  "task": "market-agentara-aigc-skills",
+  "issue": "https://github.com/omnimux-ai/omnimux-dsh/issues/2131",
+  "base": "4fdba1fff108d51232517057292e9e535c336129",
+  "change": "plugins/omnimux-market/catalog/index.json items += 9 (kind=skill, source=git agentara/skills/skills/aigc/<slug>@main)",
+  "generatedAt": "2026-09-16T16:47:38Z",
+  "catalogRuntime": {
+    "checked": 9,
+    "itemsTotal": 366,
+    "failed": 0,
+    "rows": [
+      {
+        "id": "sk-omx-gunpla-poster",
+        "slug": "gunpla-poster",
+        "channel": "custom",
+        "catalogSlug": "gunpla-poster",
+        "domains": [
+          "商业广告"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/gunpla-poster",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-portrait-clone",
+        "slug": "portrait-clone",
+        "channel": "custom",
+        "catalogSlug": "portrait-clone",
+        "domains": [
+          "创意实验"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/portrait-clone",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-presentation-design",
+        "slug": "presentation-design",
+        "channel": "custom",
+        "catalogSlug": "presentation-design",
+        "domains": [
+          "商业广告"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/presentation-design",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-soviet-storybook-grotesque",
+        "slug": "soviet-storybook-grotesque",
+        "channel": "custom",
+        "catalogSlug": "soviet-storybook-grotesque",
+        "domains": [
+          "创意实验"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/soviet-storybook-grotesque",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-torn-paper-collage-poster",
+        "slug": "torn-paper-collage-poster",
+        "channel": "custom",
+        "catalogSlug": "torn-paper-collage-poster",
+        "domains": [
+          "商业广告"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/torn-paper-collage-poster",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-video-character-design",
+        "slug": "video-character-design",
+        "channel": "custom",
+        "catalogSlug": "video-character-design",
+        "domains": [
+          "专业影视"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/video-character-design",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-video-plan",
+        "slug": "video-plan",
+        "channel": "custom",
+        "catalogSlug": "video-plan",
+        "domains": [
+          "专业影视"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/video-plan",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-video-poster-design",
+        "slug": "video-poster-design",
+        "channel": "custom",
+        "catalogSlug": "video-poster-design",
+        "domains": [
+          "专业影视"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/video-poster-design",
+          "ref": "main"
+        }
+      },
+      {
+        "id": "sk-omx-video-storyboard",
+        "slug": "video-storyboard",
+        "channel": "custom",
+        "catalogSlug": "video-storyboard",
+        "domains": [
+          "专业影视"
+        ],
+        "source": {
+          "type": "git",
+          "repo": "agentara/skills",
+          "path": "skills/aigc/video-storyboard",
+          "ref": "main"
+        }
+      }
+    ]
+  },
+  "installEndToEnd": {
+    "checked": 9,
+    "failed": 0,
+    "rows": [
+      {
+        "slug": "gunpla-poster",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 11840
+      },
+      {
+        "slug": "portrait-clone",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 19972
+      },
+      {
+        "slug": "presentation-design",
+        "files": 3,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 9990
+      },
+      {
+        "slug": "soviet-storybook-grotesque",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 5121
+      },
+      {
+        "slug": "torn-paper-collage-poster",
+        "files": 2,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 5245
+      },
+      {
+        "slug": "video-character-design",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 15158
+      },
+      {
+        "slug": "video-plan",
+        "files": 2,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 10133
+      },
+      {
+        "slug": "video-poster-design",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 12090
+      },
+      {
+        "slug": "video-storyboard",
+        "files": 1,
+        "installed": true,
+        "identicalToUpstream": true,
+        "bytes": 15410
+      }
+    ]
+  },
+  "upstreamProbe": {
+    "detail": "9/9 raw.githubusercontent.com agentara/skills main skills/aigc/<slug>/SKILL.md => HTTP 200"
+  },
+  "gates": {
+    "skillBilingual": "corepack pnpm verify:skill-bilingual => 69/69 官方货架技能双语齐备（通过）",
+    "pluginTests": "corepack pnpm --filter omnimux-market test => tests 823 / pass 821 / fail 2; 失败项 host.test.js 与 workshop-request-guard.test.js 在基线 origin/main 主检出复现同一 ERR_MODULE_NOT_FOUND 依赖导出错误（CallId），与本次改动无关"
+  },
+  "diff": {
+    "insertions": 198,
+    "deletions": 0
+  }
+}
