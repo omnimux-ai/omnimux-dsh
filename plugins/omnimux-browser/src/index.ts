@@ -221,7 +221,6 @@ function mountBridge(
       const candidates = [
         process.env.DSH_HOME ? join(process.env.DSH_HOME, 'settings.yaml') : '',
         join(homedir(), '.dsh', 'settings.yaml'),
-        join(homedir(), '.omnimux-dev', 'settings.yaml'),
       ].filter(Boolean)
       for (const p of candidates) {
         if (existsSync(p)) {
@@ -270,7 +269,6 @@ function mountBridge(
       dshHomePath(),
       process.env.DSH_HOME,
       join(homedir(), '.dsh'),
-      join(homedir(), '.omnimux-dev'),
       join(homedir(), '.omnimux'),
     ].filter(Boolean) as string[]
 

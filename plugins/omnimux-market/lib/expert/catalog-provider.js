@@ -123,22 +123,7 @@ export function resolveSkillDefinition(name, roots) {
     }
   }
 
-  // 3. Local OPC / Asset library
-  const opcCandidates = [
-    join('/Users/x/Desktop/Project/OPC/资产库/skills', `OmniMux-skills-${name}`, 'SKILL.md'),
-    join('/Users/x/Desktop/Project/OPC/资产库/skills', name, 'SKILL.md'),
-    join('/Users/x/Desktop/Project/Github/workbuddyskills/skills', name, 'SKILL.md'),
-    join('/Users/x/Desktop/Project/Github/workbuddyskills/experts', name, 'SKILL.md'),
-  ]
-  for (const candidate of opcCandidates) {
-    if (existsSync(candidate)) {
-      const content = readFileSync(candidate, 'utf8')
-      const desc = extractDescription(content) || name
-      return def(name, content, desc)
-    }
-  }
-
-  // 4. Catalog entry JIT install attempt
+  // 3. Catalog entry JIT install attempt
   const catalogItem = catalog.items.find(i => i.skill === name)
   if (catalogItem) {
     try {

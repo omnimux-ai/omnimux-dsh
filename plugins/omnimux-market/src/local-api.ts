@@ -309,14 +309,9 @@ async function handleSkillDetail(ctx: ApiContext): Promise<void> {
 function resolveExploreDirectory(slug: string, skillsDir: string): string {
   const candidates = [
     join(skillsDir, slug),
-    join(process.env.HOME || '', '.omnimux-dev/skills', slug),
     join(process.env.HOME || '', '.dsh/skills', slug),
     join(packageRoot(), 'catalog/skills', slug),
     join(packageRoot(), 'catalog/experts', slug),
-    join('/Users/x/Desktop/Project/Github/OmniMux-skills/skills', slug),
-    join('/Users/x/Desktop/Project/OPC/资产库/skills', 'OmniMux-skills-' + slug),
-    join('/Users/x/Desktop/Project/OPC/资产库/skills', slug),
-    join('/Users/x/Desktop/Project/Github/workbuddyskills/skills', slug),
   ]
   for (const c of candidates) {
     if (existsSync(join(c, 'SKILL.md'))) return c
@@ -700,7 +695,6 @@ function resolveLocalCoverOrAvatar(target: string): { path: string; contentType:
       join(packageRoot(), 'catalog', 'experts', expertId, 'avatars', fileName),
       join(packageRoot(), 'catalog', 'covers', `${expertId}-${fileName}`),
       join(packageRoot(), 'catalog', 'covers', fileName),
-      join('/Users/x/Desktop/Project/Github/workbuddyskills/experts', expertId, 'avatars', fileName),
     ]
     for (const c of candidates) {
       if (existsSync(c)) {
