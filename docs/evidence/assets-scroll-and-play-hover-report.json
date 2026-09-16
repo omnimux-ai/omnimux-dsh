@@ -1,0 +1,16 @@
+{
+  "task": "assets-scroll-and-play-hover",
+  "issue": 2011,
+  "verified_at": "2026-09-16T02:26:40.349Z",
+  "measurements": {
+    "cardCount": 24,
+    "defaultOpacity": "0",
+    "hoverOpacity": "0",
+    "clientH": 954,
+    "beforeScrollH": 2138,
+    "canScroll": true,
+    "afterScrollTop": 450,
+    "stickyTop": 40
+  },
+  "screenshot": "docs/evidence/assets-scroll-and-play-hover.png"
+}
