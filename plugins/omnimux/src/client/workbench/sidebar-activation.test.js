@@ -157,6 +157,16 @@ test('rule 2: the focused native tab owns the slot, and only that row', () => {
   assert.equal(isRailVerdictRow(verdict, CLIP), true)
   assert.equal(isRailVerdictRow(verdict, ASSETS), false)
   assert.equal(isRailVerdictRow(verdict, undefined), false)
+
+  const autoVerdict = resolveSidebarActiveTarget({
+    selectedSessionRows: 0,
+    conversationVisible: false,
+    panelExpanded: true,
+    activeTabKey: '自动化',
+  })
+  assert.equal(autoVerdict.winner, 'row')
+  assert.equal(autoVerdict.tabId, 'omnimux-automation:workbench')
+  assert.equal(isRailVerdictRow(autoVerdict, 'omnimux-automation:workbench'), true)
 })
 
 test('rule 3: no map-able tab, or a closed panel, yields no activation at all', () => {
@@ -178,6 +188,9 @@ test('native tab keys map through the three-tier tolerance', () => {
   assert.equal(mapNativeTabKeyToRailTab(CLIP), CLIP)
   assert.equal(mapNativeTabKeyToRailTab(' 项目 '), 'omnimux-workflow:library')
   assert.equal(mapNativeTabKeyToRailTab('资产库'), ASSETS)
+  assert.equal(mapNativeTabKeyToRailTab('omnimux-automation:workbench'), 'omnimux-automation:workbench')
+  assert.equal(mapNativeTabKeyToRailTab('自动化'), 'omnimux-automation:workbench')
+  assert.equal(mapNativeTabKeyToRailTab(' 自动化 '), 'omnimux-automation:workbench')
   assert.equal(mapNativeTabKeyToRailTab('tab:5'), undefined)
   assert.equal(mapNativeTabKeyToRailTab(''), undefined)
   assert.equal(mapNativeTabKeyToRailTab(undefined), undefined)

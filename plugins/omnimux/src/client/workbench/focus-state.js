@@ -27,6 +27,7 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
   'omnimux-analytics:library': '数据分析',
   'omnimux-workflow:library': '项目',
   'omnimux-market:plaza': '技能/专家',
+  'omnimux-automation:workbench': '自动化',
 })
 
 export function resolveWorkbenchTabTitle(tabId, optsTitle, getTab) {
