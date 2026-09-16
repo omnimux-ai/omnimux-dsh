@@ -109,21 +109,6 @@ export function VideoParamPopover({
     && (activeOperation?.slots.some((slot) => slot.slot === 'file_url') ?? false);
   const needsLinkUrl = advancedKeys.has('linkUrl')
     && (activeOperation?.slots.some((slot) => slot.slot === 'link_url') ?? false);
-  const booleanControls = ([
-    ['watermark', 'AI 水印', schema.watermark, params.watermark],
-    ['returnLastFrame', '返回尾帧', schema.returnLastFrame, params.returnLastFrame],
-    ['webSearch', '联网搜索', schema.webSearch, params.webSearch],
-    ['nsfwCheck', '内容审核', schema.nsfwCheck, params.nsfwCheck],
-  ] as const).filter(([field]) => advancedKeys.has(field));
-  const enumControls = ([
-    ['outputFormat', '输出格式', schema.outputFormat, params.outputFormat],
-    ['referenceTaskType', '参考任务类型', schema.referenceTaskType, params.referenceTaskType],
-    ['generationType', '生成类型', schema.generationType, params.generationType],
-  ] as const).filter(([field]) => advancedKeys.has(field));
-  const showAdvanced = Boolean(
-    booleanControls.some(([, , definition]) => definition?.supported)
-    || enumControls.some(([, , definition]) => definition?.options?.length),
-  );
 
   return (
     <CfgPopoverShell
@@ -269,34 +254,6 @@ export function VideoParamPopover({
               placeholder={needsFileUrl ? 'https://example.com/document.pdf' : 'https://example.com/page'}
               onChange={(event) => onParamChange(needsFileUrl ? 'fileUrl' : 'linkUrl', event.target.value)}
             />
-          </section>
-        ) : null}
-
-        {showAdvanced ? (
-          <section className="wf-video-param-popover__section" data-testid="wf-video-advanced-parameters">
-            <h4 className="wf-video-param-popover__section-title">高级参数</h4>
-            {enumControls.map(([field, label, definition, value]) => definition?.options?.length ? (
-              <div className="wf-video-param-popover__field-row" key={field}>
-                <span>{label}</span>
-                <CustomSelect
-                  className="wf-video-param-popover__select"
-                  value={value ?? definition.defaultValue}
-                  options={definition.options}
-                  placeholder="未设置"
-                  onChange={(next) => onParamChange(field, String(next))}
-                />
-              </div>
-            ) : null)}
-            {booleanControls.map(([field, label, definition, value]) => definition?.supported ? (
-              <div className="wf-video-param-popover__field-row" key={field}>
-                <span>{label}</span>
-                <BooleanSwitchSegment
-                  ariaLabel={label}
-                  value={typeof value === 'boolean' ? value : false}
-                  onChange={(next) => onParamChange(field, next)}
-                />
-              </div>
-            ) : null)}
           </section>
         ) : null}
       </div>
