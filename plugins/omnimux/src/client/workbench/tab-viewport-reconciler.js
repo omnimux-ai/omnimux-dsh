@@ -155,6 +155,10 @@ export function createTabViewportReconciler(deps = {}) {
           lastMode = 'push'
           try {
             exitFullscreen()
+            if (doc?.documentElement) {
+              doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+              doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+            }
           } finally {
             scheduleUnlock()
           }
@@ -176,6 +180,10 @@ export function createTabViewportReconciler(deps = {}) {
       if (isWorkbenchTab(currentTab)) {
         const newMode = currentMode === 'fullscreen' ? WORKBENCH_FOCUS.gui : WORKBENCH_FOCUS.split
         persistFocus(sessionId, currentTab, { mode: newMode })
+        if (newMode === WORKBENCH_FOCUS.split && doc?.documentElement) {
+          doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+          doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+        }
       }
       return
     }

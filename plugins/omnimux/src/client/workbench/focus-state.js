@@ -55,12 +55,7 @@ export function isWorkbenchTab(tabId) {
 }
 
 export function resolveDefaultFocus(tabId) {
-  // 插件业务入口页面默认以全屏模式（gui）呈现，最大化沉浸工作空间；
-  // 用户在页面内做出的分栏/全屏选择由单页面视窗记忆体系独立持久化记录与还原。
-  // 非工作台 Tab（如第三方文件查看器等）保持原生分栏（split）。
-  if (isWorkbenchTab(tabId)) {
-    return WORKBENCH_FOCUS.gui
-  }
+  // 保持契约默认态为 split（会话可见契约），真实 UI 视窗全屏由 tab-viewport-reconciler 调和与记忆
   return WORKBENCH_FOCUS.split
 }
 
