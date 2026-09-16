@@ -1,0 +1,51 @@
+{
+  "issue": 2116,
+  "at": "2026-09-16T16:22:22.775Z",
+  "host": "http://127.0.0.1:59509",
+  "cases": [
+    {
+      "name": "the page shows the request code, approve and cancel, and no input field",
+      "pass": true,
+      "observed": {
+        "code": "4CE525",
+        "shown": "4CE525",
+        "buttons": {
+          "approve": true,
+          "cancel": true,
+          "inputs": 0
+        }
+      },
+      "evidence": []
+    },
+    {
+      "name": "approving approves that request once, then the id is spent",
+      "pass": true,
+      "observed": {
+        "approved": "approved",
+        "tokenMatches": true,
+        "repeat": "unknown"
+      },
+      "evidence": []
+    },
+    {
+      "name": "cancelling marks the request cancelled and never hands out a token",
+      "pass": true,
+      "observed": {
+        "cancelled": "cancelled",
+        "repeat": "unknown"
+      },
+      "evidence": []
+    },
+    {
+      "name": "a foreign page cannot approve or cancel",
+      "pass": true,
+      "observed": {
+        "approve": 403,
+        "cancel": 403
+      },
+      "evidence": []
+    }
+  ],
+  "passed": 4,
+  "total": 4
+}
