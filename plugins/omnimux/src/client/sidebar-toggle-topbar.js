@@ -763,10 +763,21 @@ html[data-omnimux-left-collapsed] [class*="_panel"][data-sidebar-right-panel="fu
   position: relative !important;
 }
 
-/* 5.4 macOS 桌面端在全屏且左侧收起时，给顶栏 strip 预留 84px 避让窗口交通灯 */
+/* 5.4 桌面端在全屏且左侧收起时，给顶栏 strip 预留避让操作按钮组（自适应对接 --omnimux-topbar-toggle-end，macOS 下基准避让交通灯及两按钮共 164px） */
+body[data-dsh-desktop-platform="darwin"] html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
 html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
-body[data-dsh-desktop-platform="darwin"] .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip] {
-  padding-left: 84px !important;
+body[data-dsh-desktop-platform="darwin"] html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"],
+html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"],
+body[data-dsh-desktop-platform="darwin"] .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
+body[data-dsh-desktop-platform="darwin"] .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"] {
+  padding-left: var(--omnimux-topbar-toggle-end, 164px) !important;
+}
+html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
+html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"],
+.dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
+.dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [class*="_tabStrip_"] {
+  padding-left: var(--omnimux-topbar-toggle-end, 88px) !important;
+}
 }
 `
 
