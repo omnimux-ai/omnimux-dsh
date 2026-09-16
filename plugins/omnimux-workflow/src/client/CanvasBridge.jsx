@@ -85,19 +85,26 @@ function ensureCanvasScript(hash) {
 }
 
 /**
- * @param {{ onClose: () => void, t: (key: string) => string, locale?: string, workspaceId?: string }} props
+ * @param {{
+ *   onClose: () => void,
+ *   t: (key: string) => string,
+ *   locale?: string,
+ *   workspaceId?: string,
+ *   focusGroupId?: string,
+ * }} props
  */
-export function CanvasBridge({ onClose, t, locale, workspaceId }) {
+export function CanvasBridge({ onClose, t, locale, workspaceId, focusGroupId }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const containerRef = useRef(null)
   const mountedRef = useRef(false)
   const lifetimeRef = useRef(null)
   const mountedApiRef = useRef(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
-  // 最新 props 快照：load 完成挂载与 locale/onClose/workspaceId live 切换共用（island
-  // 边界纯数据 + 回调，一律走 mountCanvas/updateCanvas，禁止因回调换引用卸岛）。
-  const propsRef = useRef({ onClose, locale, workspaceId })
-  propsRef.current = { onClose, locale, workspaceId }
+  // 最新 props 快照：load 完成挂载与 locale/onClose/workspaceId/focusGroupId live
+  // 切换共用（island 边界纯数据 + 回调，一律走 mountCanvas/updateCanvas，
+  // 禁止因回调换引用卸岛）。
+  const propsRef = useRef({ onClose, locale, workspaceId, focusGroupId })
+  propsRef.current = { onClose, locale, workspaceId, focusGroupId }
 
   // mount 只跑一次。onClose / locale 身份变化不得重跑 load，否则宿主每次
   // 重渲（点选节点、侧栏同步）都会 unmount→mount，岛闪白、选中丢、拖不动。
@@ -141,15 +148,15 @@ export function CanvasBridge({ onClose, t, locale, workspaceId }) {
     }
   }, [load])
 
-  // W4 T4.1：宿主切语言 / 关闭回调换人 / 切换会话与画布 → island updateCanvas 同 root 重 render
-  // （不可 unmount/remount，会丢画布状态）。
+  // W4 T4.1：宿主切语言 / 关闭回调换人 / 切换会话与画布 / 卡片「编辑」定位目标变化
+  // → island updateCanvas 同 root 重 render（不可 unmount/remount，会丢画布状态）。
   useEffect(() => {
     const api = mountedApiRef.current
     const el = containerRef.current
     if (mountedRef.current && el && api && typeof api.updateCanvas === 'function') {
       api.updateCanvas(el, propsRef.current)
     }
-  }, [locale, onClose, workspaceId])
+  }, [locale, onClose, workspaceId, focusGroupId])
 
   return (
     <div className="omnimux-workflow-canvas-host">

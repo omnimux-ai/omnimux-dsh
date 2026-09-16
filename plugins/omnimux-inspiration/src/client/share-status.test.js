@@ -7,7 +7,10 @@ import {
   isShareRunning,
   shareErrorText,
   shareLocaleKeys,
+  shareMediaNotice,
+  shareSourceOf,
   shareStageOf,
+  shareStageOrderOf,
   shareSteps,
   shareUrlOf,
   shareValidityText,
@@ -111,5 +114,58 @@ describe('share status — presentation contract', () => {
       assert.equal(typeof zh[key], 'string', `zh is missing ${key}`)
       assert.equal(typeof en[key], 'string', `en is missing ${key}`)
     }
+  })
+})
+
+describe('share status — cloud entries never render an upload step', () => {
+  it('takes the source from the row, falling back to the feed is_local marker', () => {
+    assert.equal(shareSourceOf({ share_source: 'cloud' }), 'cloud')
+    assert.equal(shareSourceOf({ share_source: 'local' }), 'local')
+    // A row that has not been published yet carries no share_source at all: the
+    // feed's own marker is what makes the very first click take the cloud path.
+    assert.equal(shareSourceOf({ is_local: false }), 'cloud')
+    assert.equal(shareSourceOf({ is_local: true }), 'local')
+    // A local row read back from the Host has neither field; local is the answer.
+    assert.equal(shareSourceOf({ id: 'insp_1' }), 'local')
+    assert.equal(shareSourceOf(null), 'local')
+    // The explicit field wins over a stale marker.
+    assert.equal(shareSourceOf({ share_source: 'cloud', is_local: true }), 'cloud')
+  })
+
+  it('lists two stages for a cloud publish and three for a local one', () => {
+    assert.deepEqual(shareStageOrderOf({ share_source: 'cloud' }), ['preparing', 'publishing'])
+    assert.deepEqual(shareStageOrderOf({ share_source: 'local' }), ['preparing', 'uploading', 'publishing'])
+
+    const cloudStates = (row) => shareSteps(row, t).map((step) => `${step.id}:${step.state}`)
+    assert.deepEqual(
+      cloudStates({ share_status: 'running', share_stage: 'publishing', share_source: 'cloud' }),
+      ['preparing:done', 'publishing:active'],
+    )
+    // A cloud row that somehow reported `uploading` must not invent that step.
+    assert.deepEqual(
+      cloudStates({ share_status: 'running', share_stage: 'uploading', share_source: 'cloud' }),
+      ['preparing:active', 'publishing:todo'],
+    )
+    // The local path keeps all three, unchanged.
+    assert.deepEqual(
+      cloudStates({ share_status: 'running', share_stage: 'publishing', share_source: 'local' }),
+      ['preparing:done', 'uploading:done', 'publishing:active'],
+    )
+  })
+
+  it('says which asset the share had to leave out, in the row\'s own language', () => {
+    const skipped = { share_status: 'done', share_media_skipped: 'video' }
+    assert.equal(
+      shareMediaNotice(skipped, t),
+      '云端视频素材当前不可访问（上游存储问题，工单 No. 257），本次仅分享封面与文案',
+    )
+    assert.match(shareMediaNotice({ share_media_skipped: 'image' }, t), /云端图片素材当前不可访问/)
+    assert.match(shareMediaNotice(skipped, (key) => t(key, en)), /cloud video asset is not reachable/)
+
+    // Nothing to say when nothing was dropped.
+    assert.equal(shareMediaNotice({}, t), '')
+    assert.equal(shareMediaNotice({ share_media_skipped: null }, t), '')
+    assert.equal(shareMediaNotice({ share_media_skipped: 'audio' }, t), '')
+    assert.equal(shareMediaNotice(null, t), '')
   })
 })

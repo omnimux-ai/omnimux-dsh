@@ -42,6 +42,7 @@ import type {
   ShowcaseMode,
   ShowcaseItem,
 } from './publishTypes.ts';
+import { resolveProjectIdForWorkspace } from './publishProjectBinding.ts';
 
 export interface PublishWizardModalProps {
   isOpen: boolean;
@@ -51,6 +52,12 @@ export interface PublishWizardModalProps {
   catalog?: ToolCatalogProvider | null;
   workspaceId?: string | null;
   workflowName?: string;
+  /**
+   * 本次发布收敛的工作流组 id。snapshot 只含组内子节点（组节点被
+   * childIdsOfGroup 排除），组身份必须显式落盘，才能支撑「项目」页
+   * 「AI应用」卡片「编辑」的定位。
+   */
+  groupId?: string | null;
   onPublished?: (manifest: ApplicationManifest) => void;
 }
 
@@ -128,6 +135,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   catalog,
   workspaceId,
   workflowName,
+  groupId,
   onPublished,
 }) => {
   // 1. Run pure topology analysis on workflow graph
@@ -257,6 +265,10 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       const randomSuffix = Math.random().toString(36).substring(2, 7);
       const appId = `app_${cleanSlug}_${randomSuffix}`;
 
+      // 2b. 反查画布所属项目：供「项目」页「AI应用」卡片的「编辑」直接定位。
+      //     失败不阻断发布——卡片侧还能按 workspaceId 反查项目。
+      const projectId = await resolveProjectIdForWorkspace(String(workspaceId || ''));
+
       // 3. Assemble complete ApplicationManifest conforming to L1 schema
       const manifest: ApplicationManifest = {
         appId,
@@ -277,6 +289,8 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
             nodes: nodes as unknown[],
             edges: edges as unknown[],
           },
+          ...(projectId ? { projectId } : {}),
+          ...(groupId ? { sourceGroupId: groupId } : {}),
         },
         formSchema: generatedConfig.formSchema,
         fieldMappings: generatedConfig.fieldMappings,

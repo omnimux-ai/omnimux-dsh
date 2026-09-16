@@ -422,13 +422,70 @@ function attributedAvatarIn(rail: Element | null): Element | null {
 }
 
 /**
+ * Detect the author avatar in the active video feed card's action bar.
+ *
+ * TikTok's recommendation feed heads every video's right-hand action column
+ * with the author's avatar. On large or centred viewports the action bar sits
+ * next to the video rather than hugging the viewport edge, so it does not
+ * qualify as a global side rail, yet it is the primary avatar landmark the user
+ * expects shortcuts to anchor to.
+ */
+function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | null {
+  const vCenter = viewport.height / 2
+
+  // 1. Explicit video-author-avatar hook in view
+  const namedAvatars = Array.from(doc.querySelectorAll('[data-e2e="video-author-avatar"]'))
+  let bestNamed: { element: Element; diff: number } | null = null
+  for (const el of namedAvatars) {
+    const r = rectOf(el)
+    if (r.width > 0 && r.height > 0 && r.top < viewport.height && r.bottom > 0) {
+      const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
+      if (bestNamed === null || diff < bestNamed.diff) {
+        bestNamed = { element: el.querySelector('img') ?? el, diff }
+      }
+    }
+  }
+  if (bestNamed !== null) return bestNamed.element
+
+  // 2. Active SectionActionBarContainer in the current card
+  const actionBars = Array.from(doc.querySelectorAll('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]'))
+  let bestBar: Element | null = null
+  let minBarDiff = Infinity
+
+  for (const bar of actionBars) {
+    const r = rectOf(bar)
+    if (r.height > 0 && r.top < viewport.height && r.bottom > 0) {
+      const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
+      if (diff < minBarDiff) {
+        minBarDiff = diff
+        bestBar = bar
+      }
+    }
+  }
+
+  if (bestBar !== null) {
+    const avatarImg = bestBar.querySelector('img')
+    if (avatarImg !== null && isAvatarRect(rectOf(avatarImg))) return avatarImg
+    const avatarLink = bestBar.querySelector('[data-e2e="video-author-avatar"], a[href*="/@"]')
+    if (avatarLink !== null) return avatarLink
+    const firstItem = bestBar.firstElementChild
+    if (firstItem !== null) {
+      const fr = rectOf(firstItem)
+      if (fr.width > 0 && fr.height > 0) return firstItem
+    }
+  }
+
+  return null
+}
+
+/**
  * The rail's avatar, searched for through the page's own hooks first.
  *
  * @param doc the page
  * @param viewport the viewport box, needed by the structural arm
  */
 export function findAvatarElement(doc: Document, viewport: ViewportSize): Element | null {
-  return firstMeasurable(doc, AVATAR_SELECTORS) ?? attributedAvatarIn(findSideRailElement(doc, viewport))
+  return findActiveFeedAvatar(doc, viewport) ?? firstMeasurable(doc, AVATAR_SELECTORS) ?? attributedAvatarIn(findSideRailElement(doc, viewport))
 }
 
 /**
@@ -441,7 +498,7 @@ export function findAvatarElement(doc: Document, viewport: ViewportSize): Elemen
  */
 export function measureAnchorFacts(doc: Document, viewport: ViewportSize): AnchorFacts {
   const railElement = findSideRailElement(doc, viewport)
-  const avatarElement = firstMeasurable(doc, AVATAR_SELECTORS) ?? attributedAvatarIn(railElement)
+  const avatarElement = findAvatarElement(doc, viewport)
   const rail = railElement === null ? null : rectOf(railElement)
   const avatar = avatarElement === null ? null : rectOf(avatarElement)
   const layout = detectAnchorLayout({ rail }, viewport)

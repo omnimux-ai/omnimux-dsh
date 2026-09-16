@@ -237,11 +237,14 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "enabled": true
     }
   ],
+  // H3 全系列按分组接入：两条线都是上游独立在售型号，`enable_groups` 均为
+  // `["default"]`，故两组的 wireGroup 同为 default，靠 `wireModel` 指向各自的上游型号。
+  // 标准版沿用模型契约（4–15 秒可选）；任务版自带契约（固定 15 秒、按其上游 operations 收窄）。
   "minimax-h3": [
     {
       "id": "standard",
       "label": "标准版",
-      "badge": "海螺 MiniMax 官方专线",
+      "badge": "海螺 MiniMax 官方专线 · 4–15 秒",
       "pricing": {
         "pointsEstimate": 1100,
         "discountRate": 1,
@@ -251,6 +254,41 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 99,
         "avgWaitTimeSec": 50
       },
+      "wireGroup": "default",
+      "enabled": true
+    },
+    {
+      // 上游 `minimax-h3-task`：固定 15 秒按次专线（$0.3781/次，标准版 $0.0714/次）。
+      // pointsEstimate 按同一价格比折算（1100 × 0.3781/0.0714 ≈ 5825），仅用于排序。
+      // 不声明 sla：上游未公布该线路的稳定率，排序走中性默认值，不对外声称。
+      "id": "task",
+      "label": "任务版",
+      "badge": "固定 15 秒 · 按次专线",
+      "pricing": {
+        "pointsEstimate": 5825,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "constraints": {
+        "operations": [
+          "text_to_video",
+          "first_frame",
+          "first_last_frame",
+          "video_multi_ref"
+        ],
+        "parameters": {
+          "duration": {
+            "fixed": 15
+          },
+          "resolution": {
+            "only": [
+              "768P",
+              "2K"
+            ]
+          }
+        }
+      },
+      "wireModel": "minimax-h3-task",
       "wireGroup": "default",
       "enabled": true
     }
@@ -606,7 +644,12 @@ export function resolveChannelPlan(modelId, options = {}) {
   const isAllowed = (group) => !allowed
     || allowed.has(String(group.id).toLowerCase())
     || (group.wireGroup ? allowed.has(String(group.wireGroup).toLowerCase()) : false)
-  const wireOf = (group) => `${canonicalModel}@${group.wireGroup || group.id}`
+  // A line may be served by a different upstream model than the product id
+  // (MiniMax H3 的固定 15 秒任务版是独立在售型号，不是同名分组）。The candidate's
+  // model part is what the execution layer sends as the request body model, so a
+  // group that names `wireModel` routes to that upstream model while still being
+  // selected as a group. Groups without `wireModel` keep the product id verbatim.
+  const wireOf = (group) => `${group.wireModel || canonicalModel}@${group.wireGroup || group.id}`
   const enabled = groups.filter((group) => group.enabled)
 
   if (requestedGroup) {
@@ -616,8 +659,12 @@ export function resolveChannelPlan(modelId, options = {}) {
     // to try the caller's excluded (often pricier) groups.
     const orderedTail = tail.filter(isAllowed).sort(comparatorFor(strategy))
     const unresolvedGroups = matched ? [] : [requestedGroup]
+    // The named line leads through the same builder as the tail: naming `task` on a
+    // product whose lines point at different upstream models must route to *that*
+    // line's model, not to the product id.
+    const head = matched ? wireOf(matched) : `${canonicalModel}@${requestedGroup}`
     return {
-      candidates: [...new Set([`${canonicalModel}@${matched ? (matched.wireGroup || matched.id) : requestedGroup}`, ...orderedTail.map(wireOf)])],
+      candidates: [...new Set([head, ...orderedTail.map(wireOf)])],
       unresolvedGroups,
     }
   }

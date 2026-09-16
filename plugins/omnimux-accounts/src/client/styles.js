@@ -12,8 +12,8 @@ export const STYLES = `
 .omx-stage-sticky {
   position: sticky;
   top: 0;
-  z-index: 3;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  z-index: 20;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;

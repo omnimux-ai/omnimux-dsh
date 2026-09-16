@@ -19,6 +19,8 @@ export interface CanvasIslandProps {
   locale?: 'zh' | 'en';
   /** 专属工作区/画布 ID */
   workspaceId?: string;
+  /** 「项目」页「AI应用」卡片「编辑」的目标工作流组 id（纯数据 prop）。 */
+  focusGroupId?: string;
 }
 
 interface RootEntry {
