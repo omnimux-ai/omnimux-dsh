@@ -280,14 +280,16 @@ html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [data-slot
   padding-top:var(--omnimux-topbar-toggle-top,4px)!important;
   box-sizing:border-box;
 }
-/* macOS desktop traffic lights safe inset for full-width stage/workbench page headers.
-   Inset the header box only when the left rail is collapsed (the right panel then spans
-   the full 100vw viewport and reaches the window's left edge under traffic lights).
-   With the left rail expanded the panel starts at var(--omnimux-sidebar-width, 280px),
-   well clear of the 84px traffic lights, so page headers keep their own 20px padding
-   regardless of whether the middle conversation column is collapsed. */
-html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] .dshUk-PageHeader-pageHeader {
-  padding-left: 84px !important;
+/* macOS traffic lights safe inset — product-stage overlays only.
+   A product stage is fixed to the conversation box, so with the left rail collapsed
+   it starts at the window's left edge and its page header sits in the traffic-light
+   band; it needs the gutter.
+   Workbench Tab pages must NOT get it: their panel always renders a 40px tab strip
+   above the page, and that strip already consumes the same gutter through
+   --omnimux-tabbar-pad-left / dockkit-strip. Insetting the page header there only drags
+   the title and subtitle 64px right of the page's own action row, tabs and card grid. */
+html[data-dsh-product-stage][data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] .dshUk-PageHeader-pageHeader {
+  padding-left: var(--omnimux-topbar-toggle-left, 84px) !important;
   box-sizing: border-box !important;
 }
 /* Blue dot on the injected toggle while left rail is collapsed. */
