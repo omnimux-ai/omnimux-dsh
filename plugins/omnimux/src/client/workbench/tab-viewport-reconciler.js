@@ -3,12 +3,17 @@
  *
  * 核心机制：
  * 1. 消除原生 DSH 右栏全屏与 Tab 状态脱节的问题，为每个 Tab 提供独立的视窗模式记忆；
- * 2. 默认行为：Tab 默认以全屏（WORKBENCH_FOCUS.gui）模式呈现；
- * 3. 用户在面板右上角手动切换全屏/分栏时，持久化记录当前 Tab 的选择；
- * 4. 切换激活 Tab 时，自动调和原生面板的模式：
+ * 2. 默认行为：页签默认以**分栏**（WORKBENCH_FOCUS.split）呈现。展开右侧栏是一次「并排」意图，
+ *    自动播种的默认值不构成用户意图，因此绝不自动占满整屏；
+ * 3. 用户在面板右上角手动切换全屏/分栏时，持久化记录当前 Tab 的选择并标记为显式意图（`explicit`）；
+ * 4. 切换激活 Tab 时，自动调和原生面板的模式 —— **只对用户显式选过的页签恢复其偏好**：
  *    - 目标 Tab 偏好为 split 且面板处于 fullscreen -> 调用 exitHostRightSidebarFullscreen()
  *    - 目标 Tab 偏好为 gui 且面板处于 push -> 调用 enterHostRightSidebarFullscreen()
+ *    面板由收起转为展开的那一次同步一律呈现分栏，显式全屏记录在此刻也不生效。
  * 5. 防护与高稳定性：切页判定优先，调和锁仅防误判手势，快速切换不丢状态。
+ *    判定只依赖面板自身的模式键与页签身份，绝不读取左侧会话列表的渲染事实 —— 曾经用作
+ *    兜底的 `[role="treeitem"][aria-selected="true"]` 会让右侧栏的呈现方式取决于左栏是否
+ *    展开、列表是否有选中行，与用户意图无关（Issue #2056）。
  */
 
 import {
@@ -141,6 +146,8 @@ export function createTabViewportReconciler(deps = {}) {
 
   let lastActiveTabId = null
   let lastMode = null
+  /** 上一轮观测时面板是否展开；`null` 表示尚未观测过（首轮不视为「刚刚展开」）。 */
+  let lastPanelOpen = null
   let isReconciling = false
   let unlockTimer = null
 
@@ -161,8 +168,14 @@ export function createTabViewportReconciler(deps = {}) {
     if (!panel) {
       lastActiveTabId = null
       lastMode = null
+      lastPanelOpen = false
       return
     }
+
+    // 收起 → 展开的那一次同步：展开是一次「并排」意图，本次一律呈现分栏，
+    // 即便该页签留有显式全屏记录也不在此刻占满整屏。
+    const justOpened = lastPanelOpen === false
+    lastPanelOpen = true
 
     const currentMode = isFullscreen() ? 'fullscreen' : 'push'
     const currentTab = getTabId()
@@ -170,21 +183,17 @@ export function createTabViewportReconciler(deps = {}) {
 
     // 1. 优先处理 Tab 切换：切 Tab 时无论调和锁如何，立即响应该 Tab 的独立视窗偏好
     if (currentTab && currentTab !== lastActiveTabId) {
-      const isInitialSync = lastActiveTabId === null
       lastActiveTabId = currentTab
       lastMode = currentMode
 
       // 仅对工作台相关的 Tab 实施视窗偏好调和
       if (isWorkbenchTab(currentTab)) {
         const record = getFocusRecord(sessionId, currentTab)
-        const targetMode = record?.mode || WORKBENCH_FOCUS.gui
-
-        // 仅在初次装配同步时，若当前会话处于选中展开态，保护会话不被误拉全屏覆盖
-        const sessionSelected = Boolean(doc.querySelector?.('[role="treeitem"][aria-selected="true"]'))
-        const convVisible = !doc.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed')
-        if (isInitialSync && sessionSelected && convVisible && targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
-          return
-        }
+        // 只有用户亲手选过视窗模式的页签才恢复其偏好。`focusRecordForTab` 会按
+        // `resolveDefaultFocus` 自动播种（工作台页签为 gui），那不是用户意图 —— 按分栏处理。
+        const targetMode = !justOpened && record?.explicit === true
+          ? record.mode
+          : WORKBENCH_FOCUS.split
 
         if (targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
           isReconciling = true
@@ -227,7 +236,8 @@ export function createTabViewportReconciler(deps = {}) {
       lastMode = currentMode
       if (isWorkbenchTab(currentTab)) {
         const newMode = currentMode === 'fullscreen' ? WORKBENCH_FOCUS.gui : WORKBENCH_FOCUS.split
-        persistFocus(sessionId, currentTab, { mode: newMode })
+        // `explicit: true` 是「这次是用户亲手选的」凭据：后续切回该页签才恢复其偏好。
+        persistFocus(sessionId, currentTab, { mode: newMode, explicit: true })
         if (newMode === WORKBENCH_FOCUS.split && doc?.documentElement) {
           doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
           doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
@@ -246,6 +256,7 @@ export function createTabViewportReconciler(deps = {}) {
     reset() {
       lastActiveTabId = null
       lastMode = null
+      lastPanelOpen = null
       isReconciling = false
       if (unlockTimer) {
         clearTimeout(unlockTimer)
