@@ -1,0 +1,15 @@
+{
+  "issue": 2112,
+  "when": "2026-09-16T23:37:46+08:00",
+  "target": "OmniMux Dev 45120 / CDP 9229",
+  "reproduce": {
+    "composerBottom": 974,
+    "spaceBelow": 20,
+    "menuRowTop": 620,
+    "elementFromPoint": "omnimux-trending-card-body",
+    "menuPointerEvents": "none",
+    "overlayPlacementLeftover": "bottom"
+  },
+  "fix": "沉底菜单强制可点并抬高层级，清掉不可点击残留",
+  "unitTests": "29/29"
+}
