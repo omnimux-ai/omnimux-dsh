@@ -16,7 +16,7 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ShieldCheck, Percent, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
 import { groupPickerCandidates, isPickerCandidate, type PickerCandidate } from './modelPickerCandidates';
 import {
@@ -108,8 +108,8 @@ const ChannelRow: React.FC<{
   group: ChannelGroupItem;
   checked: boolean;
   disabled?: boolean;
-  onToggle: () => void;
-}> = ({ group, checked, disabled = false, onToggle }) => {
+  onSelect: () => void;
+}> = ({ group, checked, disabled = false, onSelect }) => {
   const priceChip = formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate);
   const chipIsMarkup = typeof group.pricing?.priceRatio === 'number'
     ? group.pricing.priceRatio > 1
@@ -118,16 +118,16 @@ const ChannelRow: React.FC<{
 
   return (
     <div
-      role="menuitemcheckbox"
+      role="menuitemradio"
       aria-checked={checked}
       aria-disabled={disabled}
       tabIndex={disabled ? -1 : 0}
-      onClick={disabled ? undefined : onToggle}
+      onClick={disabled ? undefined : onSelect}
       onKeyDown={(event) => {
         if (disabled) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          onToggle();
+          onSelect();
         }
       }}
       className={`wf-cascade-row wf-cascade-channel-row ${checked && !disabled ? 'is-checked' : ''} ${disabled ? 'is-disabled' : ''}`}
@@ -164,7 +164,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const currentModelId = isPickerCandidate(options, canonicalModel) ? canonicalModel : '';
   const activeModelId = currentModelId;
   const activeBrandId = brandList.find((brand) => brand.rows.some((row) => row.id === activeModelId))?.id ?? '';
-  const [activeStrategy, setActiveStrategy] = useState<RouteStrategy>(routing?.strategy ?? 'stability_first');
   const [hoverBrandId, setHoverBrandId] = useState<string | null>(null);
   const [hoverModelId, setHoverModelId] = useState<string | null>(null);
 
@@ -176,7 +175,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const shownModels = modelsForBrand(shownBrandId);
 
   // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
-  // 渠道策略列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；
+  // 渠道列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；
   // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
   const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
   const channelModelId = hoverModelId ?? activeModelId;
@@ -186,10 +185,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const showChannelColumn = hasMultipleChannels && (hoveringOtherBrand ? hoverModelId !== null : true);
   const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId;
 
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
-    () => (routing?.allowedGroups ?? activeChannelGroups.map((group) => group.id))
-      .filter((id) => activeChannelGroups.some((group) => group.id === id)),
-  );
+  // 渠道单选收敛：仅选择一个分组并锁定契约
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(() => {
+    const candidate = routing?.allowedGroups?.[0];
+    if (candidate && activeChannelGroups.some((g) => g.id === candidate)) {
+      return [candidate];
+    }
+    return activeChannelGroups[0] ? [activeChannelGroups[0].id] : [];
+  });
 
   // 外部候选或选择变化后丢弃预览，选中态直接由合法持久值派生。
   useEffect(() => {
@@ -197,28 +200,30 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
   }, [currentModelId, options]);
 
-  useEffect(() => {
-    if (routing?.strategy) setActiveStrategy(routing.strategy);
-  }, [routing?.strategy]);
-
   const persistedGroups = routing?.allowedGroups;
   useEffect(() => {
-    setSelectedGroupIds((persistedGroups ?? activeChannelGroups.map((group) => group.id))
-      .filter((id) => activeChannelGroups.some((group) => group.id === id)));
+    const candidate = persistedGroups?.[0];
+    if (candidate && activeChannelGroups.some((g) => g.id === candidate)) {
+      setSelectedGroupIds([candidate]);
+    } else if (activeChannelGroups[0]) {
+      setSelectedGroupIds([activeChannelGroups[0].id]);
+    } else {
+      setSelectedGroupIds([]);
+    }
   }, [activeChannelGroups, persistedGroups]);
 
-  const emit = useCallback((modelId: string, strategy: RouteStrategy, groupIds: string[]) => {
+  const emit = useCallback((modelId: string, groupIds: string[]) => {
     if (!isPickerCandidate(options, modelId)) return;
     const groups = getModelChannelGroups(modelId);
     if (groupIds.some((id) => !groups.some((group) => group.id === id))) return;
     onSelect({
       modelId,
-      strategy,
+      strategy: 'auto',
       ...(groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
     });
   }, [onSelect, options]);
 
-  /** 悬停只切换预览；写入节点只发生在点击与渠道勾选。 */
+  /** 悬停只切换预览；写入节点只发生在点击与渠道单选。 */
   const handleBrandHover = useCallback((brandId: string) => {
     setHoverBrandId(brandId);
     setHoverModelId(null);
@@ -235,12 +240,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const handleSelectModel = useCallback((modelId: string) => {
     if (!isPickerCandidate(options, modelId)) return;
-    const groupIds = getModelChannelGroups(modelId).map((group) => group.id);
-    setSelectedGroupIds(groupIds);
+    const defaultGroup = getModelChannelGroups(modelId)[0]?.id;
+    const nextGroupIds = defaultGroup ? [defaultGroup] : [];
+    setSelectedGroupIds(nextGroupIds);
     setHoverBrandId(null);
     setHoverModelId(null);
-    emit(modelId, activeStrategy, groupIds);
-  }, [activeStrategy, options, emit]);
+    emit(modelId, nextGroupIds);
+  }, [options, emit]);
 
   /** 点击品牌只选择该分组的真实候选首项。 */
   const handleBrandClick = useCallback((brandId: string) => {
@@ -248,27 +254,12 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     if (targetModelId) handleSelectModel(targetModelId);
   }, [handleSelectModel, modelsForBrand]);
 
-  const handleStrategyChange = useCallback((strategy: RouteStrategy) => {
-    if (!isPickerCandidate(options, activeModelId)) return;
-    setActiveStrategy(strategy);
-    emit(activeModelId, strategy, selectedGroupIds);
-  }, [options, activeModelId, selectedGroupIds, emit]);
-
-  const toggleGroupSelection = useCallback((groupId: string) => {
+  const handleSelectGroup = useCallback((groupId: string) => {
     if (!isPickerCandidate(options, activeModelId) || !activeChannelGroups.some((group) => group.id === groupId)) return;
-    const prev = selectedGroupIds.filter((id) => activeChannelGroups.some((group) => group.id === id));
-    // 至少保留一个渠道；副作用不放进 React 状态更新函数。
-    if (prev.includes(groupId) && prev.length <= 1) return;
-    const next = prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId];
+    const next = [groupId];
     setSelectedGroupIds(next);
-    emit(activeModelId, activeStrategy, next);
-  }, [options, selectedGroupIds, activeChannelGroups, activeModelId, activeStrategy, emit]);
-
-  const applyGroupSelection = useCallback((groupIds: string[]) => {
-    if (!isPickerCandidate(options, activeModelId) || groupIds.some((id) => !activeChannelGroups.some((group) => group.id === id))) return;
-    setSelectedGroupIds(groupIds);
-    emit(activeModelId, activeStrategy, groupIds);
-  }, [options, activeChannelGroups, activeModelId, activeStrategy, emit]);
+    emit(activeModelId, next);
+  }, [options, activeChannelGroups, activeModelId, emit]);
 
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
   const [popoverSurface, setPopoverSurface] = useState<string>('var(--dsw-alias-bg-elevated)');
@@ -321,8 +312,8 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [isOpen]);
 
   const shortName = activeModelId ? resolveShortModelName(activeModelId, activeFamily) : '待重新选择';
-  const selectedCount = selectedGroupIds.length;
-  const strategyLabel = activeStrategy === 'cost_first' ? '低价优先' : '稳定性优先';
+  const selectedGroupId = selectedGroupIds[0];
+  const activeGroup = activeChannelGroups.find((g) => g.id === selectedGroupId);
 
   return (
     <>
@@ -334,18 +325,15 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         disabled={execBusy}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title={channelGroups.length > 0 ? `渠道策略：${strategyLabel}` : undefined}
+        title={activeGroup ? `已选版本：${activeGroup.label}` : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <ModelBrandIcon modelId={activeModelId} size={15} />
         <span className="wf-model-cascade-capsule__name">{shortName}</span>
 
-        {activeChannelGroups.length > 1 ? (
+        {activeGroup && activeChannelGroups.length > 1 ? (
           <span className="wf-model-cascade-capsule__badge">
-            {activeStrategy === 'cost_first'
-              ? <Percent size={11} strokeWidth={2.4} />
-              : <ShieldCheck size={11} strokeWidth={2.4} />}
-            <span>{selectedCount}</span>
+            <span>{activeGroup.label}</span>
           </span>
         ) : null}
 
@@ -421,97 +409,36 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 3：渠道策略（400px x 480px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {/* 栏 3：渠道分组单选（400px x 480px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
             {showChannelColumn ? (
               <div
                 role="group"
                 aria-label="选择渠道策略"
                 className="wf-loomi-col wf-loomi-col--channel"
               >
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px' }}>选择渠道策略</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px 10px' }}>选择版本</div>
 
                 {channelGroups.length === 0 ? (
                   <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px' }}>
                     该模型尚未配置渠道分组，请求将按模型默认通道执行。
                   </div>
                 ) : (
-                  <>
-                    <div className="wf-cascade-strategy-grid">
-                      {([
-                        { id: 'stability_first' as const, label: '稳定性优先', icon: <ShieldCheck size={16} /> },
-                        { id: 'cost_first' as const, label: '低价优先', icon: <Percent size={15} /> },
-                      ]).map((option) => {
-                        const isActive = activeStrategy === option.id;
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            role="menuitemradio"
-                            aria-checked={isActive}
-                            aria-disabled={isChannelPreview}
-                            disabled={isChannelPreview}
-                            onClick={() => handleStrategyChange(option.id)}
-                            className={`wf-cascade-strategy-btn ${isActive ? 'is-active' : ''}`}
-                          >
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ color: isActive ? 'rgb(0, 230, 118)' : 'var(--dsw-alias-label-secondary)', display: 'inline-flex' }}>
-                                {option.icon}
-                              </span>
-                              {option.label}
-                            </span>
-                            {isActive ? <Check size={14} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="wf-cascade-channel-list">
-                      {channelGroups.map((group) => (
+                  <div className="wf-cascade-channel-list">
+                    {channelGroups.map((group) => {
+                      const isChecked = isChannelPreview
+                        ? group.id === channelGroups[0]?.id
+                        : selectedGroupIds.includes(group.id);
+                      return (
                         <ChannelRow
                           key={group.id}
                           group={group}
-                          checked={isChannelPreview ? true : selectedGroupIds.includes(group.id)}
+                          checked={isChecked}
                           disabled={isChannelPreview}
-                          onToggle={() => toggleGroupSelection(group.id)}
+                          onSelect={() => handleSelectGroup(group.id)}
                         />
-                      ))}
-                    </div>
-
-                    {!isChannelPreview ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          paddingTop: 10,
-                          borderTop: '1px solid rgba(255, 255, 255, 0.10)',
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                          已选 {selectedCount}/{channelGroups.length} 个
-                        </div>
-                        <div style={{ display: 'flex', gap: 14 }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const firstGroup = channelGroups[0];
-                              if (firstGroup) applyGroupSelection([firstGroup.id]);
-                            }}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                          >
-                            清空
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                          >
-                            全选
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             ) : null}
