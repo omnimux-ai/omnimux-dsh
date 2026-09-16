@@ -15,6 +15,8 @@ import {
   pairingRequestAllowed,
 } from '../src/pairing.ts'
 import { isLoopbackAddress } from '../src/server.ts'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 /** Deterministic clock and code source; real crypto is covered by the probe. */
 function harness(codes: string[] = ['123456', '654321', '111111']): { sessions: PairingSessions; advance: (ms: number) => void } {
@@ -115,5 +117,15 @@ describe('pairing page (#2095)', () => {
     expect(html).not.toContain('ext-bridge-token')
     expect(html).toContain('45120')
     expect(html).toContain('输错 5 次即作废')
+  })
+})
+
+describe('settings persistence call sites (#2095)', () => {
+  it('never calls the undefined saveSettings helper', () => {
+    const background = readFileSync(resolve(import.meta.dirname, '../extension/src/background/index.ts'), 'utf8')
+    // `saveSettings` was never defined in this module; the instance switch threw
+    // ReferenceError on it, so the switch neither persisted nor reconnected.
+    expect(background).not.toMatch(/\bsaveSettings\s*\(/u)
+    expect(background).toMatch(/persistSettings\(/u)
   })
 })
