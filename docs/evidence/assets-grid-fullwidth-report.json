@@ -1,0 +1,16 @@
+{
+  "task": "assets-grid-fullwidth",
+  "issue": 2014,
+  "verified_at": "2026-09-16T02:49:25.689Z",
+  "measurements": {
+    "stageW": 1447.5,
+    "bodyW": 1439.5,
+    "mainW": 1439.5,
+    "cloudW": 1391.5,
+    "gridW": 1391.5,
+    "gridCols": 7,
+    "isFullWidth": true,
+    "noHugeGap": true
+  },
+  "screenshot": "docs/evidence/assets-grid-fullwidth.png"
+}
