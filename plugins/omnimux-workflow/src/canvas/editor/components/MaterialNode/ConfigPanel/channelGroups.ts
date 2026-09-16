@@ -274,9 +274,9 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "enabled": true
     }
   ],
-  // H3 全系列按分组接入：两条线都是上游独立在售型号，`enable_groups` 均为
-  // `["default"]`，故两组的 wireGroup 同为 default，靠 `wireModel` 指向各自的上游型号。
-  // 标准版沿用模型契约（4–15 秒可选）；任务版自带契约（固定 15 秒、按其上游 operations 收窄）。
+  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、以及15秒任务版。
+  // 各自通过 `wireModel` 绑定上游独立型号，并通过 `wireGroup` 挂载对应的官方或专属分组。
+  // 每个分组携带独立契约，实现完全隔离的参数与计费控制。
   "minimax-h3": [
     {
       "id": "standard",
@@ -295,9 +295,69 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "enabled": true
     },
     {
-      // 上游 `minimax-h3-task`：固定 15 秒按次专线（$0.3781/次，标准版 $0.0714/次）。
-      // pointsEstimate 按同一价格比折算（1100 × 0.3781/0.0714 ≈ 5825），仅用于排序。
-      // 不声明 sla：上游未公布该线路的稳定率，排序走中性默认值，不对外声称。
+      // 上游 `minimax-h3-turbo`（ID 172）：海螺 3.0 极速版视频生成，$0.035/次，出片提速 3 倍。
+      "id": "turbo",
+      "label": "极速版",
+      "badge": "海螺 3.0 极速版 · 3倍出片速度",
+      "pricing": {
+        "pointsEstimate": 540,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "wireModel": "minimax-h3-turbo",
+      "wireGroup": "default",
+      "enabled": true
+    },
+    {
+      // 上游 `minimax-h3-video`（ID 173）专属高速档分组 `minimax-h3-video-fast`：AutoDL 极速出片，0.9倍折算 $0.0225/次。
+      "id": "video_fast",
+      "label": "工作流·高速档",
+      "badge": "AutoDL 极速出片 · 极致低价专线",
+      "pricing": {
+        "pointsEstimate": 350,
+        "discountRate": 0.9,
+        "billingMode": "per_task"
+      },
+      "constraints": {
+        "parameters": {
+          "resolution": {
+            "only": [
+              "768P",
+              "2K"
+            ]
+          }
+        }
+      },
+      "wireModel": "minimax-h3-video",
+      "wireGroup": "minimax-h3-video-fast",
+      "enabled": true
+    },
+    {
+      // 上游 `minimax-h3-video`（ID 173）专属画质档分组 `minimax-h3-video-pro`：AutoDL 极限画质先行版，1.15倍折算 $0.02875/次。
+      "id": "video_pro",
+      "label": "工作流·画质档",
+      "badge": "AutoDL 极限画质先行版",
+      "pricing": {
+        "pointsEstimate": 440,
+        "discountRate": 1.15,
+        "billingMode": "per_task"
+      },
+      "constraints": {
+        "parameters": {
+          "resolution": {
+            "only": [
+              "768P",
+              "2K"
+            ]
+          }
+        }
+      },
+      "wireModel": "minimax-h3-video",
+      "wireGroup": "minimax-h3-video-pro",
+      "enabled": true
+    },
+    {
+      // 上游 `minimax-h3-task`（ID 166）：固定 15 秒按次专线（$0.3781/次）。
       "id": "task",
       "label": "任务版",
       "badge": "固定 15 秒 · 按次专线",

@@ -25,17 +25,16 @@ function fixture(panelMode) {
   return dom.window.document
 }
 
-test('resolveFullscreenCollapse：进入全屏收起、退出还原、不吞掉用户自己的收起偏好', () => {
+test('resolveFullscreenCollapse：进入全屏收起、退出恢复展开，杜绝死锁', () => {
   // 进入全屏：记下进入前的值并收起
   assert.deepEqual(resolveFullscreenCollapse(true, null, false), { collapsed: true, snapshot: false })
   assert.deepEqual(resolveFullscreenCollapse(true, null, true), { collapsed: true, snapshot: true })
   // 全屏中：快照保持，折叠态恒为收起
   assert.deepEqual(resolveFullscreenCollapse(true, false, true), { collapsed: true, snapshot: false })
-  // 退出全屏：还原进入前的值
+  // 退出全屏（分栏模式）：一律恢复展开，清空快照
   assert.deepEqual(resolveFullscreenCollapse(false, false, true), { collapsed: false, snapshot: null })
-  assert.deepEqual(resolveFullscreenCollapse(false, true, false), { collapsed: true, snapshot: null })
-  // 不在全屏驱动中：维持现状，不碰 DOM
-  assert.deepEqual(resolveFullscreenCollapse(false, null, true), { collapsed: true, snapshot: null })
+  assert.deepEqual(resolveFullscreenCollapse(false, true, false), { collapsed: false, snapshot: null })
+  assert.deepEqual(resolveFullscreenCollapse(false, null, true), { collapsed: false, snapshot: null })
   assert.deepEqual(resolveFullscreenCollapse(false, null, false), { collapsed: false, snapshot: null })
 })
 
@@ -64,19 +63,22 @@ test('宿主全屏即收起中间会话栏，退出后还原进入前的值', as
   uninstall()
 })
 
-test('用户自己收起的会话栏，进出全屏后仍然保持收起', async () => {
+test('进出全屏后恢复分栏展开，杜绝死锁在折叠态', async () => {
   const doc = fixture('push')
   const root = doc.documentElement
   const panel = doc.querySelector('[data-sidebar-right-panel]')
-  // 用户先手动收起会话栏
+  // 即使进入全屏前 DOM 上有折叠标记
   root.setAttribute(CONVERSATION_COLLAPSED_ATTR, '')
   const uninstall = installFullscreenCollapseSync(doc)
 
   panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
   await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '全屏下必须收起')
+
+  // 用户点击退出全屏（分栏）
   panel.setAttribute('data-sidebar-right-panel', 'push')
   await new Promise((r) => setTimeout(r, 30))
-  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '不得顶开用户手动收起的会话栏')
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '退出全屏进入分栏必须恢复展开')
 
   uninstall()
 })

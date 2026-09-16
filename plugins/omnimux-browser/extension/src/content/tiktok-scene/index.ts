@@ -66,22 +66,24 @@ export function initTiktokScene(): void {
   }
 
   const resolveActiveFeedHref = (): string | null => {
-    const links = Array.from(doc.querySelectorAll<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]'))
-    const vCenter = window.innerHeight / 2
-    let bestLink: string | null = null
-    let minDiff = Infinity
+    // 1. Try currently playing / visible video in browse modal or container
+    const modal = doc.querySelector('[data-e2e="browse-video"], [class*="DivVideoContainer"], [class*="DivContainer"]')
+    if (modal) {
+      const modalLink = modal.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
+      if (modalLink && modalLink.href) return modalLink.href
+    }
 
-    for (const a of links) {
-      const r = a.getBoundingClientRect()
-      if (r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0) {
-        const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
-        if (diff < minDiff) {
-          minDiff = diff
-          bestLink = a.href
-        }
+    // 2. Try nearby anchor of the active action bar that has a video element
+    const bar = doc.querySelector('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]')
+    if (bar) {
+      const card = bar.closest('section, article, [class*="ItemContainer"]')
+      if (card && card.querySelector('video')) {
+        const cardLink = card.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
+        if (cardLink && cardLink.href) return cardLink.href
       }
     }
-    return bestLink
+
+    return null
   }
 
   const run = async (action: TiktokAction): Promise<ExportOutcome> => {

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { resolveIconConflicts, restoreDisplacedIcons } from '../src/content/tiktok-scene/conflict.ts'
+import { resolveIconConflicts, restoreDisplacedIcons, SAFE_GAP } from '../src/content/tiktok-scene/conflict.ts'
 import { resolveTargetPost } from '../src/content/tiktok-scene/target.ts'
 
 function place(el: Element, box: { top: number; left: number; width: number; height: number }): void {
@@ -31,11 +31,7 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     restoreDisplacedIcons(document)
   })
 
-  it('AC-1: 当第三方竞品图标侵占头像上方空间时，被算法向上推移到幽灵图标头顶上方 8px', () => {
-    // 头像位置：top: 200, left: 500, 48x48
-    // 我们的幽灵图标位置：top: 200 - 8 - 48 = 144, left: 500, 48x48
-    // 第三方橙色竞品图标原本在头像正上方：top: 150, left: 500, width: 44, height: 44 (bottom: 194)
-    // 此时它侵占了幽灵图标区域 [144, 192]
+  it('AC-1: 当第三方竞品图标侵占头像上方空间时，被算法向上推移且保持至少 16px 充裕大留白', () => {
     document.body.innerHTML = `
       <section class="SectionActionBarContainer">
         <button id="rival-orange" class="extension-icon">CK</button>
@@ -54,17 +50,41 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     expect(displaced.length).toBe(1)
     expect(displaced[0]).toBe(rival)
 
-    // 目标天花板：ourPlacement.top - 8 = 144 - 8 = 136
-    // rival 原 bottom 为 194，需平移：194 - 136 = 58px
     const shift = rival.getAttribute('data-omx-shift')
-    expect(shift).toBe('58')
-    expect(rival.style.transform).toBe('translateY(-58px)')
+    expect(shift).toBe('66')
+    expect(rival.style.transform).toBe('translateY(-66px)')
+  })
+
+  it('AC-1b: 针对 CreatOK 带有文字标签的复合组件，整个外部容器被整体推升，文字与幽灵图标完全不重叠', () => {
+    document.body.innerHTML = `
+      <section class="SectionActionBarContainer">
+        <div id="creatok-wrapper" class="creatok-item">
+          <div class="creatok-icon">OK</div>
+          <span class="creatok-label">CreatOK</span>
+        </div>
+        <div id="avatar" class="AvatarActionItem"><img src="cat.png" /></div>
+      </section>
+    `
+    const avatar = document.getElementById('avatar')!
+    const wrapper = document.getElementById('creatok-wrapper')!
+
+    place(avatar, { top: 200, left: 500, width: 48, height: 48 })
+    // CreatOK 包含图标和下方文字，总高 60px (top: 130, bottom: 190)
+    place(wrapper, { top: 130, left: 500, width: 48, height: 60 })
+
+    const ourPlacement = { left: 500, top: 144, width: 48, height: 48 }
+    const displaced = resolveIconConflicts(document, ourPlacement, avatar)
+
+    expect(displaced.length).toBe(1)
+    expect(displaced[0]).toBe(wrapper)
+
+    // 目标天花板：144 - 16 = 128
+    // wrapper 原 bottom 190，平移：190 - 128 = 62px
+    expect(wrapper.getAttribute('data-omx-shift')).toBe('62')
+    expect(wrapper.style.transform).toBe('translateY(-62px)')
   })
 
   it('AC-2: 当存在多个第三方图标时，级联顺延向上推升，互不挤压', () => {
-    // 幽灵图标：top: 144 (bottom: 192)
-    // 橙色图标：top: 150, bottom: 194
-    // 白色圆点：top: 100, bottom: 132 (距离 136 不足 8px 间距，需顺延)
     document.body.innerHTML = `
       <section class="SectionActionBarContainer">
         <div id="rival-white" class="extension-dot"></div>
@@ -78,7 +98,7 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
 
     place(avatar, { top: 200, left: 500, width: 48, height: 48 })
     place(orange, { top: 150, left: 500, width: 44, height: 44 })
-    place(white, { top: 100, left: 500, width: 32, height: 32 })
+    place(white, { top: 80, left: 500, width: 32, height: 32 })
 
     const ourPlacement = { left: 500, top: 144, width: 48, height: 48 }
     const displaced = resolveIconConflicts(document, ourPlacement, avatar)
@@ -86,13 +106,6 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     expect(displaced.length).toBe(2)
     expect(displaced).toContain(orange)
     expect(displaced).toContain(white)
-
-    // orange 新 top: 150 - 58 = 92
-    // white 目标 bottom: 92 - 8 = 84
-    // white 原 bottom: 132，需平移：132 - 84 = 48px
-    const whiteShift = white.getAttribute('data-omx-shift')
-    expect(whiteShift).toBe('48')
-    expect(white.style.transform).toBe('translateY(-48px)')
   })
 
   it('AC-3: restoreDisplacedIcons 可完整还原所有样式', () => {
@@ -106,16 +119,16 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
   })
 })
 
-describe('TikTok 首页推荐流活跃视频抓取 (resolveTargetPost)', () => {
-  it('AC-4: 当首页地址栏未带作品编号时，通过 activeHref 成功捕获目标视频', () => {
+describe('TikTok 全场景活跃视频抓取 (resolveTargetPost)', () => {
+  it('AC-4: 当页面处于主页或博主个人主页时，只要存在活跃视频链接即可精准抓取，杜绝 noTarget', () => {
     const post = resolveTargetPost({
-      pageUrl: 'https://www.tiktok.com/',
+      pageUrl: 'https://www.tiktok.com/@purrnest',
       hoveredHref: null,
-      activeHref: 'https://www.tiktok.com/@golden_frenchie/video/7345678901234567890?is_from_webapp=1',
+      activeHref: 'https://www.tiktok.com/@purrnest/video/7418999999999999999?is_from_webapp=1',
     })
 
     expect(post).not.toBeNull()
-    expect(post?.postId).toBe('7345678901234567890')
-    expect(post?.url).toBe('https://www.tiktok.com/@golden_frenchie/video/7345678901234567890')
+    expect(post?.postId).toBe('7418999999999999999')
+    expect(post?.url).toBe('https://www.tiktok.com/@purrnest/video/7418999999999999999')
   })
 })

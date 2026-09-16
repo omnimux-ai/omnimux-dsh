@@ -27,6 +27,8 @@ export const FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR = 'data-omnimux-fullscreen-collap
 /**
  * 纯函数：根据「宿主是否全屏」与「进入前快照」算出本次应写入的折叠值。
  * 便于单测覆盖全部状态迁移，不依赖 DOM。
+ * 核心原则：退出全屏（进入分栏）时，用户意图为并排展示会话与右侧面板，
+ * 绝不能保留全屏下的折叠死锁，必须展开会话栏并清理快照。
  * @param {boolean} fullscreen 宿主右栏是否处于全屏。
  * @param {boolean | null} snapshot 进入全屏前的折叠值；`null` 表示不在全屏驱动中。
  * @param {boolean} currentDomValue 当前 DOM 上的折叠值。
@@ -38,9 +40,8 @@ export function resolveFullscreenCollapse(fullscreen, snapshot, currentDomValue)
     if (snapshot !== null) return { collapsed: true, snapshot }
     return { collapsed: true, snapshot: currentDomValue }
   }
-  // 退出全屏：有快照就还原，没有就维持现状（不是本模块造成的折叠，不碰）。
-  if (snapshot === null) return { collapsed: currentDomValue, snapshot: null }
-  return { collapsed: snapshot, snapshot: null }
+  // 退出全屏（进入分栏）：一律恢复会话栏展开（collapsed: false），清空全屏快照
+  return { collapsed: false, snapshot: null }
 }
 
 /**
