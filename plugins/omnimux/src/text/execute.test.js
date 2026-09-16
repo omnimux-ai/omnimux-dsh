@@ -280,54 +280,48 @@ describe('textComplete execute', () => {
     assert.match(part.image_url.url, /^data:video\/webm;base64,/)
   })
 
-  it('discovers local provider endpoint and adapts model when OMNIMUX_API_KEY is absent', async () => {
-    let capturedUrl = ''
-    let capturedBody = null
-    const fetcher = async (url, init) => {
-      capturedUrl = url
-      capturedBody = JSON.parse(init.body)
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ choices: [{ message: { content: 'video analyzed successfully' } }] }),
-      }
-    }
-    const result = await executeOmnimuxText({
-      prompt: 'describe video',
-      video: `data:video/mp4;base64,${MP4.toString('base64')}`,
-      model: 'gemini-3.8-flash',
-      env: {},
-      settings: {
-        get(key) {
-          if (key === 'llm-pi-ai') {
-            return {
-              providers: {
-                cpa: {
-                  api: 'openai-completions',
-                  baseURL: 'http://127.0.0.1:8317/v1',
-                  apiKeyEnv: 'CPA_API_KEY',
-                  models: [{ id: 'gemini-3.8-flash-high' }],
+  it('rejects video completion when hub credentials are absent even if CPA is configured', async () => {
+    let called = 0
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'describe video',
+        video: `data:video/mp4;base64,${MP4.toString('base64')}`,
+        model: 'gemini-3.8-flash',
+        env: {},
+        settings: {
+          get(key) {
+            if (key === 'llm-pi-ai') {
+              return {
+                providers: {
+                  cpa: {
+                    api: 'openai-completions',
+                    baseURL: 'http://127.0.0.1:8317/v1',
+                    apiKeyEnv: 'CPA_API_KEY',
+                    models: [{ id: 'gemini-3.8-flash-high' }],
+                  },
                 },
-              },
+              }
             }
-          }
-          return undefined
+            return undefined
+          },
         },
-      },
-      credentials: {
-        async resolve(ref) {
-          if (ref === 'CPA_API_KEY') return { value: 'cpa-secret-token' }
-          return undefined
+        credentials: {
+          async resolve(ref) {
+            if (ref === 'CPA_API_KEY') return { value: 'cpa-secret-token' }
+            return undefined
+          },
         },
-      },
-      fetcher,
-    })
-    assert.equal(capturedUrl, 'http://127.0.0.1:8317/v1/chat/completions')
-    assert.equal(capturedBody.model, 'gemini-3.8-flash-high')
-    assert.equal(result.text, 'video analyzed successfully')
+        fetcher: async () => {
+          called += 1
+          return { ok: true, status: 200, json: async () => ({}) }
+        },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+    assert.equal(called, 0, 'must not call any provider without hub credentials')
   })
 
-  it('uses hub key and default hub base when OMNIMUX_API_KEY is present alongside CPA', async () => {
+  it('uses hub key and default hub base when OMNIMUX_API_KEY is present', async () => {
     let capturedAuth = ''
     let capturedUrl = ''
     let capturedBody = null
@@ -438,7 +432,7 @@ describe('omnimux_text_complete tool', () => {
     )
   })
 
-  it('completeTextViaChat prefers hub when OMNIMUX_API_KEY exists even if CPA is configured', async () => {
+  it('completeTextViaChat uses hub only and ignores CPA settings when hub key exists', async () => {
     const { completeTextViaChat } = await import('./chat.js')
     let capturedRequest = null
     const fakeFetcher = async (url, opts) => {
@@ -492,54 +486,43 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(capturedRequest.body.model, 'gemini-3.8-flash')
   })
 
-  it('completeTextViaChat falls back to CPA only when hub credentials are absent', async () => {
+  it('completeTextViaChat does not fall back to CPA when hub credentials are absent', async () => {
     const { completeTextViaChat } = await import('./chat.js')
-    let capturedRequest = null
-    const fakeFetcher = async (url, opts) => {
-      capturedRequest = { url, opts }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          choices: [{ message: { content: 'local cpa completion result' } }]
-        })
-      }
-    }
-    const res = await completeTextViaChat({
-      prompt: 'test prompt',
-      model: 'gemini-3.8-flash',
-      maxTokens: 128,
-      mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } }],
-      env: {},
-      settings: {
-        get: (section) => {
-          if (section === 'llm-pi-ai') {
-            return {
-              providers: {
-                omnimux: {
-                  baseURL: 'https://api.omnimux.ai/v1',
-                  apiKeyEnv: 'OMNIMUX_API_KEY',
-                  models: [{ id: 'gemini-3.8-flash' }],
+    let called = 0
+    await assert.rejects(
+      () => completeTextViaChat({
+        prompt: 'test prompt',
+        model: 'gemini-3.8-flash',
+        maxTokens: 128,
+        mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } }],
+        env: {},
+        settings: {
+          get: (section) => {
+            if (section === 'llm-pi-ai') {
+              return {
+                providers: {
+                  cpa: {
+                    baseURL: 'http://127.0.0.1:8317/v1',
+                    apiKeyEnv: 'CPA_API_KEY',
+                    models: [{ id: 'gemini-3.8-flash-high' }],
+                  },
                 },
-                cpa: {
-                  baseURL: 'http://127.0.0.1:8317/v1',
-                  apiKeyEnv: 'CPA_API_KEY',
-                  models: [{ id: 'gemini-3.8-flash-high' }],
-                },
-              },
+              }
             }
-          }
-          return undefined
+            return undefined
+          },
         },
-      },
-      credentials: {
-        resolve: async (ref) => ref === 'CPA_API_KEY' ? { value: 'sk-cpa-test' } : undefined,
-      },
-      fetcher: fakeFetcher,
-    })
-    assert.equal(res.text, 'local cpa completion result')
-    assert.ok(String(capturedRequest.url).startsWith('http://127.0.0.1:8317/v1'))
-    assert.equal(capturedRequest.opts.headers.authorization, 'Bearer sk-cpa-test')
+        credentials: {
+          resolve: async (ref) => ref === 'CPA_API_KEY' ? { value: 'sk-cpa-test' } : undefined,
+        },
+        fetcher: async () => {
+          called += 1
+          return { ok: true, status: 200, json: async () => ({}) }
+        },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+    assert.equal(called, 0)
   })
 
   it('sends a routed text request through the direct chat path with the group attached', async () => {
