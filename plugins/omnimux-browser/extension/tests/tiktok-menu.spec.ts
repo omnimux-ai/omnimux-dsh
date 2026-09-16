@@ -158,7 +158,6 @@ describe('TikTok 场景工具栏 — 形态', () => {
     expect(body).toMatch(/top:\s*50%/)
     expect(body).toMatch(/transform:\s*translateY\(-50%\)/)
     expect(body).toMatch(/display:\s*flex/)
-    expect(body).toMatch(/flex-wrap:\s*wrap/)
     expect(body).toMatch(/left:\s*100%/)
     expect(body).toMatch(/padding:\s*6px/)
     expect(body).toMatch(/border-radius:\s*14px/)
@@ -180,13 +179,12 @@ describe('TikTok 场景工具栏 — 形态', () => {
     expect(rule('.omx-menu {')).toMatch(/transform-origin:\s*left center/)
   })
 
-  it('每项图标在上、文字在下，三项并排 (AC-304)', () => {
+  it('每项呈现左右横向排列（图标在左、文字在右） (AC-304)', () => {
     const body = rule('.omx-item {')
-    expect(body).toMatch(/flex-direction:\s*column/)
+    expect(body).toMatch(/flex-direction:\s*row/)
     expect(body).toMatch(/align-items:\s*center/)
-    expect(body).toMatch(/width:\s*68px/)
-    expect(body).toMatch(/text-align:\s*center/)
-    expect(rule('.omx-item svg {')).toMatch(/width:\s*18px/)
+    expect(body).toMatch(/white-space:\s*nowrap/)
+    expect(rule('.omx-item svg {')).toMatch(/width:\s*16px/)
     expect(rule('.omx-item-state {')).toMatch(/font-size:\s*10px/)
   })
 

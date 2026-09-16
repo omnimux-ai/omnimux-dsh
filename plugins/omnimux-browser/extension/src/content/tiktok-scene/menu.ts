@@ -143,7 +143,6 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   trigger.setAttribute('aria-haspopup', 'menu')
   trigger.setAttribute('aria-expanded', 'false')
   trigger.setAttribute('aria-label', copy.brand)
-  trigger.title = copy.brand
   trigger.innerHTML = brandIcon(27)
 
   const menu = doc.createElement('div')
