@@ -113,15 +113,9 @@ export function resolveTargetPost(input: TargetInput): PostTarget | null {
     const fromHover = matchPostTarget(input.hoveredHref)
     if (fromHover !== null) return fromHover
   }
-  try {
-    const pathname = new URL(input.pageUrl, 'https://www.tiktok.com').pathname
-    const isGridOrSearch = /^\/@[^/]+$/.test(pathname) || pathname.startsWith('/search') || pathname.startsWith('/explore')
-    if (!isGridOrSearch && input.activeHref) {
-      const fromActive = matchPostTarget(input.activeHref)
-      if (fromActive !== null) return fromActive
-    }
-  } catch {
-    // Ignore URL parse failure
+  if (input.activeHref) {
+    const fromActive = matchPostTarget(input.activeHref)
+    if (fromActive !== null) return fromActive
   }
   return null
 }
