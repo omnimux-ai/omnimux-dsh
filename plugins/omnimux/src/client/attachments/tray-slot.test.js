@@ -64,6 +64,12 @@ describe('composer inner attachment slot', () => {
     }
   })
 
+  it('renders library media chips with the official native attachment card', () => {
+    assert.match(traySource, /isMediaAttachment\(att\)/)
+    assert.match(traySource, /isVideoAttachment\(att\) \? 'video' : 'image'/)
+    assert.match(traySource, /<NativeAttachmentCard/)
+  })
+
   it('decomposes attachment tray into modular sub-components and hooks', () => {
     assert.match(traySource, /import \{ ensureStylesInjected \} from '\.\/trayStyles\.ts'/)
     assert.match(traySource, /import \{ insertNativeVideoChip \} from '\.\/nativeVideoChip\.ts'/)

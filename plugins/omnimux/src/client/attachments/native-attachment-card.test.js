@@ -97,6 +97,38 @@ describe('NativeAttachmentCard file attachment states', () => {
   });
 });
 
+describe('NativeAttachmentCard media chip', () => {
+  it('renders the official 44 media chip with preview image and remove button', () => {
+    const markup = renderToStaticMarkup(React.createElement(NativeAttachmentCard, {
+      attachment: {
+        id: 'att_lib_1',
+        kind: 'image',
+        previewUrl: '/omnimux/assets/library/preview?id=ast_1&file=fil_1',
+        title: '红发蓝眸女性',
+      },
+      onOpen: noop,
+      onRemove: noop,
+    }));
+    const doc = new JSDOM(`<div id="root">${markup}</div>`).window.document;
+    const card = doc.querySelector('.omx-att-card--media');
+    assert.ok(card);
+    assert.equal(card.getAttribute('data-omnimux-attachment-id'), 'att_lib_1');
+    assert.equal(card.querySelector('.omx-att-card__media-thumb').getAttribute('src'), '/omnimux/assets/library/preview?id=ast_1&file=fil_1');
+    assert.ok(card.querySelector('.omx-att-card__remove-btn--media'));
+    assert.equal(card.querySelector('.omx-att-card__play-icon'), null);
+  });
+
+  it('adds the play overlay for video chips', () => {
+    const markup = renderToStaticMarkup(React.createElement(NativeAttachmentCard, {
+      attachment: { id: 'att_vid_1', kind: 'video', previewUrl: '/cover.jpg', title: '爆款' },
+      onOpen: noop,
+      onRemove: noop,
+    }));
+    const doc = new JSDOM(`<div id="root">${markup}</div>`).window.document;
+    assert.ok(doc.querySelector('.omx-att-card__play-icon'));
+  });
+});
+
 describe('resolveRetryHandler', () => {
   it('wires the retry callback only for a failed upload', () => {
     const retryHandler = () => {};

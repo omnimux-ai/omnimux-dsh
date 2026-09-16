@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AttachmentCard } from './AttachmentCard.tsx';
+import { isMediaAttachment, isVideoAttachment } from './media-detector.ts';
 import { Button } from 'dsh-ui-kit';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
@@ -113,12 +114,29 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
   return (
     <div className="omx-attachment-tray" role="list" aria-label={label}>
       {omnimuxAttachments.map((att) => (
-        <AttachmentCard
-          key={att.id}
-          attachment={att}
-          onRemove={onRemoveOmnimux}
-          onOpen={att.previewUrl ? onOpenOmnimux : undefined}
-        />
+        isMediaAttachment(att) ? (
+          <NativeAttachmentCard
+            key={att.id}
+            attachment={{
+              id: att.id,
+              kind: isVideoAttachment(att) ? 'video' : 'image',
+              previewUrl: att.previewUrl,
+              title: att.title,
+            }}
+            onOpen={() => {
+              if (att.previewUrl) onOpenOmnimux(att);
+            }}
+            onRemove={onRemoveOmnimux}
+            removeAriaLabel={`移除 ${att.title}`}
+          />
+        ) : (
+          <AttachmentCard
+            key={att.id}
+            attachment={att}
+            onRemove={onRemoveOmnimux}
+            onOpen={att.previewUrl ? onOpenOmnimux : undefined}
+          />
+        )
       ))}
       {nativeAttachments.map((att) => {
         const draft = uploads?.[att.id];
