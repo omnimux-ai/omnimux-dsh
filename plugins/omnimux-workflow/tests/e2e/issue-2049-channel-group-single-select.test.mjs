@@ -39,7 +39,7 @@ test('Issue #2049 AC5: 单选分组唯一锁定 allowedGroups 并派发', () => 
   const expression = transformSync(`const emit = ${cascadeSrc.slice(start, end)};`, { loader: 'ts' }).code;
   const calls = [];
   const options = [{ id: 'seedance-2-0', label: 'Seedance 2.0' }];
-  const mockGroups = [{ id: 'cheap', label: '特惠版' }, { id: 'pro', label: '进阶版' }];
+  const mockGroups = [{ id: 'cheap', label: '经济版' }, { id: 'pro', label: '旗舰版' }];
   const isPickerCandidate = () => true;
   const getModelChannelGroups = () => mockGroups;
   const onSelect = (val) => calls.push(val);
@@ -49,7 +49,7 @@ test('Issue #2049 AC5: 单选分组唯一锁定 allowedGroups 并派发', () => 
     `${expression}; return emit;`
   )(options, isPickerCandidate, getModelChannelGroups, onSelect);
 
-  // 单选特惠版
+  // 单选经济版
   emit('seedance-2-0', ['cheap']);
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0], {
@@ -58,7 +58,7 @@ test('Issue #2049 AC5: 单选分组唯一锁定 allowedGroups 并派发', () => 
     allowedGroups: ['cheap'],
   });
 
-  // 单选进阶版
+  // 单选旗舰版
   emit('seedance-2-0', ['pro']);
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[1], {

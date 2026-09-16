@@ -53,8 +53,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
   "seedance-2-0": [
     {
       "id": "pro",
-      "label": "进阶版",
-      "badge": "按次高价专线 · Pidoi 满血",
+      "label": "旗舰版",
+      "badge": "满血出片 · 按次专线",
       "pricing": {
         "pointsEstimate": 3476,
         "discountRate": 3.333,
@@ -86,7 +86,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       "id": "preferred",
       "label": "优选版",
-      "badge": "官转专线 · 极稳高画质",
+      "badge": "精品专线 · 极稳高画质",
       "pricing": {
         "pointsEstimate": 1560,
         "discountRate": 1.178,
@@ -117,8 +117,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "cheap",
-      "label": "特惠版",
-      "badge": "限时特惠 · 按条计费",
+      "label": "经济版",
+      "badge": "经济走量 · 按条计费",
       "pricing": {
         "pointsEstimate": 800,
         "discountRate": 0.5,
@@ -151,8 +151,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "cheap",
-      "label": "特惠版",
-      "badge": "特惠走量 · 按条计费",
+      "label": "经济版",
+      "badge": "经济走量 · 按条计费",
       "pricing": {
         "pointsEstimate": 750,
         "discountRate": 0.5,
@@ -169,8 +169,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
   "seedance-2-5": [
     {
       "id": "pro",
-      "label": "进阶版",
-      "badge": "按次高价专线 · 满血出片",
+      "label": "旗舰版",
+      "badge": "满血出片 · 按次专线",
       "pricing": {
         "pointsEstimate": 4500,
         "discountRate": 3.333,
@@ -210,8 +210,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
   "claude-opus-4-6": [
     {
       "id": "claude-max-open",
-      "label": "顶配满血版",
-      "badge": "Claude Max 外接版",
+      "label": "旗舰版",
+      "badge": "官方订阅直连",
       "pricing": { "pointsEstimate": 2000, "discountRate": 1.0, "billingMode": "per_token" },
       "sla": { "stability24h": 100, "avgWaitTimeSec": 8 },
       "wireGroup": "claude-max-open",
@@ -219,8 +219,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "claude-plus",
-      "label": "进阶增强版",
-      "badge": "Claude Plus 精品专线",
+      "label": "优选版",
+      "badge": "精品专线 · 高品质输出",
       "pricing": { "pointsEstimate": 1000, "discountRate": 1.0, "billingMode": "per_token" },
       "sla": { "stability24h": 99, "avgWaitTimeSec": 10 },
       "wireGroup": "claude-plus",
@@ -239,8 +239,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
   "deepseek-v4-flash": [
     {
       "id": "deepseek-official",
-      "label": "官方直连版",
-      "badge": "官方满血直签",
+      "label": "官方版",
+      "badge": "官方原厂直签",
       "pricing": { "pointsEstimate": 100, "discountRate": 1.0, "billingMode": "per_token" },
       "sla": { "stability24h": 100, "avgWaitTimeSec": 4 },
       "wireGroup": "deepseek-official",
@@ -274,7 +274,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "enabled": true
     }
   ],
-  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、以及15秒任务版。
+  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、以及15秒长片版。
   // 各自通过 `wireModel` 绑定上游独立型号，并通过 `wireGroup` 挂载对应的官方或专属分组。
   // 每个分组携带独立契约，实现完全隔离的参数与计费控制。
   "minimax-h3": [
@@ -311,8 +311,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       // 上游 `minimax-h3-video`（ID 173）专属高速档分组 `minimax-h3-video-fast`：AutoDL 极速出片，0.9倍折算 $0.0225/次。
       "id": "video_fast",
-      "label": "工作流·高速档",
-      "badge": "AutoDL 极速出片 · 极致低价专线",
+      "label": "经济版",
+      "badge": "极速出片 · 极致低价专线",
       "pricing": {
         "pointsEstimate": 350,
         "discountRate": 0.9,
@@ -335,8 +335,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       // 上游 `minimax-h3-video`（ID 173）专属画质档分组 `minimax-h3-video-pro`：AutoDL 极限画质先行版，1.15倍折算 $0.02875/次。
       "id": "video_pro",
-      "label": "工作流·画质档",
-      "badge": "AutoDL 极限画质先行版",
+      "label": "高清版",
+      "badge": "极限画质 · 先行专线",
       "pricing": {
         "pointsEstimate": 440,
         "discountRate": 1.15,
@@ -359,7 +359,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       // 上游 `minimax-h3-task`（ID 166）：固定 15 秒按次专线（$0.3781/次）。
       "id": "task",
-      "label": "任务版",
+      "label": "长片版",
       "badge": "固定 15 秒 · 按次专线",
       "pricing": {
         "pointsEstimate": 5825,
@@ -405,8 +405,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "cheap",
-      "label": "特惠版",
-      "badge": "经济走量特惠池",
+      "label": "经济版",
+      "badge": "经济走量专线",
       "pricing": {
         "pointsEstimate": 80,
         "discountRate": 1.111,
@@ -491,8 +491,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "pro",
-      "label": "高价档",
-      "badge": "Evolink 全档高清专线",
+      "label": "高清版",
+      "badge": "全档高清专线",
       "pricing": {
         "pointsEstimate": 260,
         "discountRate": 1.714,
@@ -557,8 +557,8 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     },
     {
       "id": "pool",
-      "label": "号池版",
-      "badge": "自建号池 · 随心用",
+      "label": "经济版",
+      "badge": "极致低价 · 随取随用",
       "pricing": {
         "pointsEstimate": 450,
         "discountRate": 0.2857,

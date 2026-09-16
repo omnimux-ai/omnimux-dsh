@@ -1,0 +1,128 @@
+{
+  "startedAt": "2026-09-16T10:56:01.930Z",
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:64212"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 64219
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "onboarding-dismissed",
+      "pass": true
+    },
+    {
+      "name": "canvas-route-rendered",
+      "pass": false,
+      "probe": {
+        "url": "http://127.0.0.1:64212/",
+        "len": 217,
+        "wf": 0,
+        "canvas": 0
+      }
+    },
+    {
+      "name": "model-trigger-present",
+      "pass": false,
+      "detail": {
+        "found": false,
+        "classes": []
+      }
+    },
+    {
+      "name": "new-group-names-visible",
+      "pass": false,
+      "shown": []
+    },
+    {
+      "name": "legacy-vendor-words-absent",
+      "pass": true,
+      "leaked": []
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "bytes": 77595
+    }
+  ],
+  "errors": [],
+  "pass": false,
+  "dismissSteps": [
+    {
+      "clicked": "选择工作区"
+    },
+    {
+      "clicked": "继续"
+    },
+    {
+      "clicked": null,
+      "buttons": [
+        "OmniMux",
+        "新对话",
+        "账号Alpha",
+        "项目",
+        "技能/专家",
+        "发布Alpha",
+        "数据分析Alpha",
+        "资产库",
+        "灵感社区",
+        "自动化Alpha",
+        "设置",
+        "Agent"
+      ]
+    }
+  ],
+  "trace": [
+    {
+      "label": "open-projects",
+      "raw": "{\"clicked\":\"项目\"}",
+      "url": "http://127.0.0.1:64212/",
+      "len": 221,
+      "wf": 0,
+      "canvas": 0
+    },
+    {
+      "label": "open-workspace-card",
+      "raw": "{\"clicked\":\"Downloads\"}",
+      "url": "http://127.0.0.1:64212/",
+      "len": 217,
+      "wf": 0,
+      "canvas": 0
+    },
+    {
+      "label": "open-canvas-first-card",
+      "raw": "{\"clicked\":true,\"text\":\"创作画布AI 应用图像生成文件视频剪辑项目资产库视觉工坊产品库账号灵感社区任务表单发布文件变动数据分析自动化技能/专家任务管理侧边对话(beta)终端浏览器\"}",
+      "url": "http://127.0.0.1:64212/",
+      "len": 217,
+      "wf": 0,
+      "canvas": 0
+    }
+  ],
+  "probe": {
+    "url": "http://127.0.0.1:64212/",
+    "len": 217,
+    "wf": 0,
+    "canvas": 0
+  },
+  "textSample": "OmniMux\n新对话\n账号\nAlpha\n项目\n技能/专家\n发布\nAlpha\n数据分析\nAlpha\n资产库\n灵感社区\n自动化\nAlpha\n工作区\nDownloads\n设置\nDownloads\n社媒专家\n描述你想要构建的内容, / 调用指令, @ 文件或对话\n技能\n模型\n项目\n创作画布\n\n管理项目工程、查看创作页面与项目资产\n\n新建项目\n本地项目\n共创项目（即将上线）\nAI应用\n还没有工作流项目\n点击「创建项目」开始构建。\n创建项目\n",
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/channel-group-naming/docs/evidence/channel-group-naming-canvas.png",
+    "bytes": 77595
+  },
+  "cleanup": {
+    "cleaned": true
+  },
+  "completedAt": "2026-09-16T10:56:53.936Z"
+}
