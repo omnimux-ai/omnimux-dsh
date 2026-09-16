@@ -348,6 +348,29 @@ function readRightColumnPx(doc) {
 }
 
 /**
+ * Refresh the split baseline from the live frame, if it currently shows one.
+ * Called from the chrome sync loop and, critically, at collapse intent: the sync
+ * loop only re-runs on observed mutations, so a baseline learned while the right
+ * workspace was not yet mounted would otherwise stay stale right up to the very
+ * collapse that needs it.
+ * @param {Document | null | undefined} doc
+ * @returns {boolean} whether a new baseline was learned
+ */
+export function rememberConversationWidth(doc) {
+  if (readRightColumnPx(doc) < RIGHT_COLUMN_MIN_PX) return false
+  const center = doc?.querySelector?.('.dshDesktopConversationSurface, [class*="centerCol"], [data-slot="conversation"]')
+  if (!center) return false
+  try {
+    const cw = center.offsetWidth || Math.round(center.getBoundingClientRect().width) || 0
+    if (cw < CONVERSATION_WIDTH_FALLBACK_PX) return false
+    lastGoodConversationWidth = cw
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Conversation-column baseline for the collapsed-left-rail split layout.
  *
  * Only a genuine three-column frame teaches the baseline; everywhere else the
@@ -360,17 +383,7 @@ function readRightColumnPx(doc) {
  * @returns {number}
  */
 function resolveConversationWidth(doc, collapsed) {
-  if (!collapsed && readRightColumnPx(doc) >= RIGHT_COLUMN_MIN_PX) {
-    const center = doc?.querySelector?.('.dshDesktopConversationSurface, [class*="centerCol"], [data-slot="conversation"]')
-    if (center) {
-      try {
-        const cw = center.offsetWidth || Math.round(center.getBoundingClientRect().width) || 0
-        if (cw >= CONVERSATION_WIDTH_FALLBACK_PX) lastGoodConversationWidth = cw
-      } catch {
-        // keep the last trustworthy reading
-      }
-    }
-  }
+  if (!collapsed) rememberConversationWidth(doc)
   return lastGoodConversationWidth
 }
 
@@ -617,6 +630,11 @@ export function injectTopbarToggleButton(doc) {
       try { event.preventDefault() } catch { /* ignore */ }
       try { event.stopPropagation() } catch { /* ignore */ }
       const willCollapse = !isLeftSidebarCollapsed(doc)
+      // Snapshot the split proportion while the frame still shows it: the chrome
+      // sync loop only re-runs on observed mutations, so a baseline learned at
+      // load time (right workspace not yet mounted) would stay stale until the
+      // next mutation — and this collapse is that mutation.
+      if (willCollapse) rememberConversationWidth(doc)
       setExplicitLeftCollapseIntent(willCollapse)
       const official = findOfficialSidebarToggle(doc)
       if (official) triggerClick(official)
