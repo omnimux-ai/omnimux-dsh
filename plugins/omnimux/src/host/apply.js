@@ -5,6 +5,7 @@ import { registerWorkbenchHttpRoutes } from '../workbench/http-routes.js'
 import { mountWorkbenchTools } from '../workbench/tools.js'
 import { mountWorkbenchContextInjector } from '../workbench/context-injector.js'
 import { mountCanvasGenerationEvents } from '../workbench/generation-events.js'
+import { mountSurfaceFollow } from '../workbench/surface-follow.js'
 import { mountCommentInjector } from '../workbench/comment-injector.js'
 import { mountContractsPrompt } from '../agents/contracts-loader.js'
 import { executeOmnimuxAudio } from '../media/audio.js'
@@ -202,6 +203,13 @@ export function apply(ctx, config = {}) {
   })
   mountPresetsTools(ctx)
   mountCanvasGenerationEvents(ctx, { hubEvents })
+  mountSurfaceFollow(ctx, {
+    mailbox,
+    getSettings: () => {
+      const s = typeof ctx.get === 'function' ? ctx.get('settings') : null
+      return s && typeof s.get === 'function' ? s.get('omnimux') : null
+    },
+  })
   mountWorkbenchContextInjector(ctx, { mailbox })
   if (typeof ctx.on === 'function') mountCommentInjector(ctx)
   mountContractsPrompt(ctx)

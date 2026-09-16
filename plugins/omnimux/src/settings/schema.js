@@ -20,6 +20,7 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   /** Route default declared in cordis.patch.yml (reasoning: max). */
   defaultTextReasoning: 'max',
   allowAgentSwitchTab: true,
+  allowAutoSurfaceFollow: true,
 })
 
 const FIELD_META = Object.freeze({
@@ -30,6 +31,7 @@ const FIELD_META = Object.freeze({
   defaultImageOperation: '图片节点默认生成模式（auto 表示按目录推荐自动选择）',
   defaultVideoOperation: '视频节点默认生成模式（auto 表示按目录推荐自动选择）',
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
+  allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
 })
 
 function stringNode(key) {
