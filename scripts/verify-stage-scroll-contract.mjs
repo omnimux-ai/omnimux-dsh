@@ -27,7 +27,7 @@ export const STICKY_CLASS = 'omx-stage-sticky'
 export const SCROLL_CLASS = 'omx-stage-scroll'
 
 /** 契约声明的唯一真源（比较时归一化空白/分号）。 */
-export const CANONICAL_STICKY = 'position:sticky;top:0;z-index:3;background:var(--dsw-alias-bg-base, var(--dsw-bg));'
+export const CANONICAL_STICKY = 'position:sticky;top:0;z-index:20;background:var(--dsw-alias-bg-base, var(--dsw-bg, #111215));'
 export const CANONICAL_SCROLL = 'flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;'
 
 /** 登记的一级页（工作台 Tab 页）。新增一级页时必须在此登记。 */
@@ -55,6 +55,7 @@ export const STAGE_PAGES = [
     label: '创作灵感',
     styles: 'plugins/omnimux-inspiration/src/client/styles.js',
     pages: [
+      'plugins/omnimux-inspiration/src/client/InspirationStage.jsx',
       'plugins/omnimux-inspiration/src/client/InspirationSection.jsx',
     ],
   },

@@ -9,8 +9,8 @@ export const INSPIRATION_CSS = `
 .omx-stage-sticky {
   position: sticky;
   top: 0;
-  z-index: 3;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  z-index: 20;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;
@@ -35,11 +35,9 @@ export const INSPIRATION_CSS = `
   pointer-events: none;
 }
 .omnimux-inspiration-stage-body {
-  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -54,14 +52,12 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-root {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
   padding: 0 20px 24px;
   gap: 12px;
-  background: var(--dsw-alias-bg-primary, var(--dsw-bg));
+  background: var(--dsw-alias-bg-primary, var(--dsw-bg, #111215));
   color: var(--dsw-alias-label-primary, inherit);
   font-family: inherit;
 }
@@ -322,13 +318,16 @@ export const INSPIRATION_CSS = `
   animation: omni-shimmer 1.4s infinite;
 }
 
-/* 统一卡片网格 */
+/* 统一卡片网格：创建独立层叠上下文，杜绝卡片内定位元素（角标/多选框）溢出穿透到吸附栏上方 */
 .omnimux-inspiration-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
   max-width: 100%;
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
   animation: omni-fade-in 160ms ease;
 }
 @media (min-width: 1600px) {
