@@ -1,7 +1,7 @@
 {
-  "runId": "3d58fa53-47ae-402a-aebe-536b4ec90d86",
+  "runId": "c21dc08f-6fa8-4ed3-ac27-377a2823252f",
   "scenario": "three-column-collapse",
-  "startedAt": "2026-09-16T14:16:24.748Z",
+  "startedAt": "2026-09-16T14:38:06.884Z",
   "sourcePaths": [
     "plugins/omnimux/src/client/conversation-box.js",
     "plugins/omnimux/src/client/sidebar-toggle-topbar.js"
@@ -10,12 +10,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 64311
+      "port": 61786
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 64314
+      "port": 61795
     },
     {
       "name": "expanded-conversation-positive",
@@ -39,7 +39,7 @@
     {
       "name": "screenshot-captured",
       "pass": true,
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-snapshot-2074/docs/evidence/three-column-collapse-collapsed.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-width-derived/docs/evidence/three-column-collapse-collapsed.png",
       "width": 1920,
       "height": 993,
       "bytes": 7826
@@ -58,8 +58,8 @@
   },
   "errors": [],
   "pass": true,
-  "serverPort": 64311,
-  "cdpPort": 64314,
+  "serverPort": 61786,
+  "cdpPort": 61795,
   "expanded": {
     "viewport": 1920,
     "tracks": [
@@ -87,7 +87,7 @@
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-snapshot-2074/docs/evidence/three-column-collapse-collapsed.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-width-derived/docs/evidence/three-column-collapse-collapsed.png",
     "width": 1920,
     "height": 993,
     "bytes": 7826
@@ -105,5 +105,5 @@
     "conversationVar": "485px",
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
-  "completedAt": "2026-09-16T14:16:26.572Z"
+  "completedAt": "2026-09-16T14:38:08.885Z"
 }
