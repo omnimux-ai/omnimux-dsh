@@ -7,11 +7,13 @@ import { getSessionModel, setSessionModel, sessionModelStore } from '../../lib/l
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-describe('model picker client & session contracts (Issue #1167)', () => {
+describe('model picker client & session contracts (Issue #1167 / #2136)', () => {
   const modelPickerSrc = readFileSync(join(here, 'model-picker.js'), 'utf8')
   const cssSrc = readFileSync(join(here, 'css.js'), 'utf8')
   const applySrc = readFileSync(join(here, 'apply.js'), 'utf8')
   const hostSrc = readFileSync(join(here, '../host.ts'), 'utf8')
+  const bootSrc = readFileSync(join(here, 'boot.js'), 'utf8')
+  const catalogSrc = readFileSync(join(here, 'model-picker-catalog.js'), 'utf8')
 
   it('registers ModelPickerButton on conversation.input.left with order 20 (to the right of skill picker)', () => {
     assert.match(applySrc, /conversation\.input\.left/)
@@ -20,72 +22,34 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(applySrc, /ModelPickerButton/)
   })
 
-  it('model-picker fragment defines both video and image model catalogs matching screenshots', () => {
-    // 视频分类模型
-    assert.match(modelPickerSrc, /"seedance-2-5"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.5/)
-    assert.match(modelPickerSrc, /30秒视频生成，精准片段编辑/)
-
-    assert.match(modelPickerSrc, /"seedance-2-0-fast"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 Fast/)
-    assert.doesNotMatch(modelPickerSrc, /快速版/)
-    assert.match(modelPickerSrc, /高达43%折扣/)
-    assert.match(modelPickerSrc, /细节和质量提升，成本更低/)
-
-    assert.match(modelPickerSrc, /"seedance-2-0"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0/)
-    assert.match(modelPickerSrc, /更精准的参考，更真实，高达4K/)
-
-    assert.match(modelPickerSrc, /"seedance-2-0-mini-trial"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 Mini \(Trial\)/)
-    assert.doesNotMatch(modelPickerSrc, /试用版/)
-    assert.match(modelPickerSrc, /新增/)
-    assert.match(modelPickerSrc, /最适合快速生成，仅需7积分\/秒/)
-
-    assert.match(modelPickerSrc, /"seedance-2-0-mini"/)
-    assert.match(modelPickerSrc, /最高可享58折优惠/)
-    assert.match(modelPickerSrc, /轻量级推理，最具成本效益/)
-
-    // 图像分类模型：模型名称始终保持英文，不需要支持多语言
-    assert.match(modelPickerSrc, /"nanobanana-pro"/)
-    assert.match(modelPickerSrc, /Nano Banana Pro/)
-    assert.match(modelPickerSrc, /专业图像质量和文本布局/)
-
-    assert.match(modelPickerSrc, /"gpt-image-2\.5"/)
-    assert.match(modelPickerSrc, /GPT Image 2\.5/)
-    assert.doesNotMatch(modelPickerSrc, /GPT图像/)
-    assert.match(modelPickerSrc, /高精细节渲染与指令遵循/)
-
-    assert.match(modelPickerSrc, /"nanobanana"/)
-    assert.match(modelPickerSrc, /Nano Banana/)
-    assert.match(modelPickerSrc, /图像质量可靠，价格更实惠/)
-
-    assert.match(modelPickerSrc, /"seedream-5-0-pro"/)
-    assert.match(modelPickerSrc, /Seedream 5\.0 Pro/)
-    assert.match(modelPickerSrc, /更精确、更可控的编辑/)
-
-    assert.match(modelPickerSrc, /"seedream-5-0-lite"/)
-    assert.match(modelPickerSrc, /Seedream 5\.0 Lite/)
-    assert.match(modelPickerSrc, /卓越的提示遵循和推理能力/)
+  it('loads ModelPickerCatalog from boot and never ships a hardcoded DEFAULT_MODEL_CATALOG list', () => {
+    assert.match(bootSrc, /model-picker-catalog\.js/)
+    assert.match(bootSrc, /ModelPickerCatalog/)
+    assert.match(modelPickerSrc, /ModelPickerCatalog/)
+    assert.match(modelPickerSrc, /projectListedCatalog/)
+    assert.match(modelPickerSrc, /EMPTY_MODEL_CATALOG/)
+    assert.match(modelPickerSrc, /readCatalogCache/)
+    assert.match(modelPickerSrc, /writeCatalogCache/)
+    assert.match(modelPickerSrc, /omnimux:model-catalog-updated/)
+    assert.match(modelPickerSrc, /getModelCatalog/)
+    assert.match(modelPickerSrc, /\/omnimux\/model-catalog/)
+    assert.doesNotMatch(modelPickerSrc, /DEFAULT_MODEL_CATALOG/)
+    assert.doesNotMatch(modelPickerSrc, /mergeDynamicCatalog/)
+    assert.doesNotMatch(modelPickerSrc, /seedance-2-0-mini-trial/)
+    assert.doesNotMatch(modelPickerSrc, /nanobanana-pro/)
+    assert.match(catalogSrc, /projectListedCatalog/)
+    assert.match(catalogSrc, /MODEL_CATALOG_CACHE_KEY/)
   })
 
-  it('hardcoded fallback drops removed IDs and uses the renamed canonical IDs (Issue #1751)', () => {
-    // 移除：gpt-image-2 上游已明示旧 ID 不再接受，且不是兼容别名
-    assert.doesNotMatch(modelPickerSrc, /"gpt-image-2"/)
-    assert.doesNotMatch(modelPickerSrc, /"GPT Image 2"/)
-    assert.match(modelPickerSrc, /"gpt-image-2\.5"/)
-
-    // 改名：grok-imagine-image-2 → grok-imagine-image-2-0（旧写法进入 aliases，不再作为 canonical 出现在兜底列表）
-    assert.doesNotMatch(modelPickerSrc, /"grok-imagine-image-2"/)
-    assert.match(modelPickerSrc, /"grok-imagine-image-2-0"/)
-
-    // 其余已移除模型不得回流到兜底列表
-    for (const removed of ['minimax-h3-max', 'minimax-h3-max-turbo', 'kling-o1', 'veo-3.1', 'veo-3.1-fast', 'omni_flash', 'kling-avatar', 'seedream-4.5', 'midjourney', 'midjourney-7', 'midjourney-niji-7', 'seedance2.5-stable-max-720p']) {
-      assert.doesNotMatch(modelPickerSrc, new RegExp(`"${removed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`))
-    }
+  it('shows empty/loading/unavailable states instead of fake rows', () => {
+    assert.match(modelPickerSrc, /正在加载可用模型/)
+    assert.match(modelPickerSrc, /模型目录暂不可用/)
+    assert.match(modelPickerSrc, /data-omnimux-model-empty/)
+    assert.match(modelPickerSrc, /data-omnimux-catalog-status/)
+    assert.match(cssSrc, /\.sh-model-empty/)
   })
 
-  it('renders capsule button with model icon + name when model is chosen (Image 3)', () => {
+  it('renders capsule button with model icon + name when model is chosen', () => {
     assert.match(modelPickerSrc, /sh-model-capsule-btn/)
     assert.match(modelPickerSrc, /data-omnimux-model-capsule/)
     assert.match(modelPickerSrc, /selectedModel\.capsuleName \|\| selectedModel\.name/)
@@ -103,29 +67,25 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     const testSessionA = 'sess-test-a-' + Date.now()
     const testSessionB = 'sess-test-b-' + Date.now()
 
-    // 默认空/自动
     assert.equal(getSessionModel(testSessionA), undefined)
 
-    // 会话 A 选中 Seedance 2.0 Fast
     setSessionModel(testSessionA, {
       auto: false,
       selectedModel: {
-        id: 'seedance-2-0-fast',
-        name: 'Dreamina Seedance 2.0 Fast',
-        capsuleName: 'Dreamina Seedance 2.0 Fast',
+        id: 'seedance-2-5',
+        name: 'Dreamina Seedance 2.5',
+        capsuleName: 'Dreamina Seedance 2.5',
         type: 'video',
       },
     })
 
-    // 会话 B 保持独立
     assert.equal(getSessionModel(testSessionB), undefined)
 
     const selA = getSessionModel(testSessionA)
     assert.equal(selA?.auto, false)
-    assert.equal(selA?.selectedModel?.id, 'seedance-2-0-fast')
+    assert.equal(selA?.selectedModel?.id, 'seedance-2-5')
     assert.equal(selA?.selectedModel?.type, 'video')
 
-    // 清理
     sessionModelStore.delete(testSessionA)
     sessionModelStore.delete(testSessionB)
   })
@@ -136,67 +96,41 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(hostSrc, /session:selected-model/)
     assert.match(hostSrc, /getSessionModel/)
     assert.match(hostSrc, /【会话模型锁定】/)
+    assert.match(hostSrc, /modelCatalog/)
+    assert.match(hostSrc, /setModelCatalogResolver/)
   })
 
   it('reuses workflow brand icon system and conforms to visual design guidelines', () => {
-    // 品牌图标库复用
     assert.match(modelPickerSrc, /BRAND_SVGS/)
     assert.match(modelPickerSrc, /resolveModelBrand/)
     assert.match(modelPickerSrc, /renderBrandIcon/)
     assert.match(modelPickerSrc, /sh-model-brand-icon/)
     assert.match(modelPickerSrc, /dangerouslySetInnerHTML/)
 
-    // 视觉规范检查：浮层采用规范的深浅自适应背景 Token 与 12px 圆角，宽度拓宽至 480px 完整展示模型名
     assert.match(cssSrc, /\.sh-model-picker\{[^}]*width:480px/)
     assert.match(cssSrc, /\.sh-model-picker\{[^}]*background:var\(--dsw-alias-bg-layer-2/)
     assert.match(cssSrc, /\.sh-model-picker\{[^}]*border-radius:12px/)
     assert.match(cssSrc, /\.sh-model-tabs\{[^}]*background:var\(--dsw-alias-bg-base/)
     assert.match(cssSrc, /\.sh-model-tab\.active\{[^}]*background:var\(--dsw-alias-bg-layer-3/)
-    // 水晶切面钻石
     assert.match(modelPickerSrc, /polygon/)
     assert.match(modelPickerSrc, /sh-model-diamond/)
   })
 
-  it('dynamically merges active catalog visible in plugin environment', () => {
-    assert.match(modelPickerSrc, /mergeDynamicCatalog/)
-    assert.match(modelPickerSrc, /getModelCatalog/)
-    assert.match(hostSrc, /modelCatalog/)
-    assert.match(hostSrc, /setModelCatalogResolver/)
-  })
-
-  it('aligns Seedance and ByteDance models with canvas bytedance logo (Issue #1202)', () => {
-    // 验证所有 Seedance 系列模型在预设和默认目录中均采用 bytedance 图标
-    assert.match(modelPickerSrc, /"seedance-2-5"[\s\S]*?icon:\s*"bytedance"/)
-    assert.match(modelPickerSrc, /"seedance-2-0-fast"[\s\S]*?icon:\s*"bytedance"/)
-    assert.match(modelPickerSrc, /"seedance-2-0"[\s\S]*?icon:\s*"bytedance"/)
-    assert.match(modelPickerSrc, /"seedance-2-0-mini-trial"[\s\S]*?icon:\s*"bytedance"/)
-    assert.match(modelPickerSrc, /"seedance-2-0-mini"[\s\S]*?icon:\s*"bytedance"/)
-
-    // 验证品牌解析规则将 seed / seedance / seedream / doubao / 即梦 统一解析为 bytedance
-    assert.match(modelPickerSrc, /seedance/i)
-    assert.match(modelPickerSrc, /\(\^seed\|seedance\|seedream\|doubao\|豆包\|即梦\|dreamina\|bytedance\)/i)
-
-    // 验证 BRAND_SVGS 包含完整的字节跳动四柱波形图标
+  it('aligns Seedance brand resolution with canvas bytedance logo (Issue #1202)', () => {
+    assert.match(catalogSrc, /\(\^seed\|seedance\|seedream\|doubao\|豆包\|即梦\|dreamina\|bytedance\)/i)
     assert.match(modelPickerSrc, /bytedance:\s*`<svg[^>]*>[\s\S]*?22\.0004 4\.62844[\s\S]*?1\.99902 20\.1939[\s\S]*?16\.1213 9\.26561[\s\S]*?7\.49609 11\.582V20\.7336/)
   })
 
   it('unifies composer buttons style and compacts spacing (Issue #1211, #1220)', () => {
-    // 1. 验证工具栏紧凑间距与空容器塌陷
     assert.match(cssSrc, /div\[class\*="tools"\],\.Q7WfXG_tools\{gap:6px !important\}/)
     assert.match(cssSrc, /div\[class\*="modes"\]:empty,\.Q7WfXG_modes:empty\{display:none !important\}/)
     assert.match(cssSrc, /\[data-slot\*="conversation\.input\.left"\]/)
-
-    // 2. 验证未激活状态下按钮无背景（transparent），尺寸对齐右侧文本模型（高度 28px、圆角 24px）
     assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*height:28px/)
     assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*border-radius:24px/)
     assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*background:transparent/)
-
-    // 3. 验证图标大小对齐右侧文本模型（14px），交互 Hover/Active 对齐
     assert.match(cssSrc, /\.sh-picker-trigger svg\{[^}]*width:14px/)
     assert.match(cssSrc, /\.sh-picker-trigger:hover\{[^}]*background:var\(--dsw-alias-interactive-bg-hover\)/)
     assert.match(cssSrc, /\.sh-picker-trigger:focus-visible\{[^}]*box-shadow:0 0 0 2px var\(--dsw-alias-border-l3\)/)
-
-    // 4. 验证激活模型胶囊和技能 Chip
     assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*height:28px/)
     assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*height:28px/)
   })

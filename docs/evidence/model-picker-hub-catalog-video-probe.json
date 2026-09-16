@@ -1,0 +1,29 @@
+{
+  "issue": 2136,
+  "tab": "video",
+  "hubFixtureIds": [
+    "minimax-h3",
+    "seedance-2-0",
+    "seedance-2-5"
+  ],
+  "renderedIds": [
+    "minimax-h3",
+    "seedance-2-0",
+    "seedance-2-5"
+  ],
+  "renderedNames": [
+    "MiniMax H3",
+    "Dreamina Seedance 2.0",
+    "Dreamina Seedance 2.5"
+  ],
+  "geometry": {
+    "width": "480px",
+    "borderRadius": "12px"
+  },
+  "forbiddenAbsent": [
+    "seedance-2-0-fast",
+    "seedance-2-0-mini",
+    "seedance-2-0-mini-trial"
+  ],
+  "at": "2026-09-16T17:29:55.741Z"
+}

@@ -1,0 +1,34 @@
+{
+  "issue": 2136,
+  "kind": "live-chromium-preview",
+  "chrome": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "screenshot": "docs/evidence/model-picker-hub-catalog-live-preview.png",
+  "hubVideoIds": [
+    "minimax-h3",
+    "seedance-2-0",
+    "seedance-2-5"
+  ],
+  "renderedIds": [
+    "minimax-h3",
+    "seedance-2-0",
+    "seedance-2-5"
+  ],
+  "renderedNames": [
+    "MiniMax H3",
+    "Dreamina Seedance 2.0",
+    "Dreamina Seedance 2.5"
+  ],
+  "emptyStateText": "模型目录暂不可用，请稍后重试",
+  "geometry": {
+    "width": "480px",
+    "borderRadius": "12px"
+  },
+  "forbiddenAbsent": true,
+  "presetStillKnowsFast": true,
+  "emptyCatalogRows": {
+    "video": [],
+    "image": [],
+    "fingerprint": "|"
+  },
+  "at": "2026-09-16T17:28:52.030Z"
+}
