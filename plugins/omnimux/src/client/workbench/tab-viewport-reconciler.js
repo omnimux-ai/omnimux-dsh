@@ -170,6 +170,7 @@ export function createTabViewportReconciler(deps = {}) {
 
     // 1. 优先处理 Tab 切换：切 Tab 时无论调和锁如何，立即响应该 Tab 的独立视窗偏好
     if (currentTab && currentTab !== lastActiveTabId) {
+      const isInitialSync = lastActiveTabId === null
       lastActiveTabId = currentTab
       lastMode = currentMode
 
@@ -178,10 +179,10 @@ export function createTabViewportReconciler(deps = {}) {
         const record = getFocusRecord(sessionId, currentTab)
         const targetMode = record?.mode || WORKBENCH_FOCUS.gui
 
-        // 会话优先守卫：若当前会话栏可见且用户选中了会话行，会话拥有最高优先级，严禁反向推进全屏
+        // 仅在初次装配同步时，若当前会话处于选中展开态，保护会话不被误拉全屏覆盖
         const sessionSelected = Boolean(doc.querySelector?.('[role="treeitem"][aria-selected="true"]'))
         const convVisible = !doc.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed')
-        if (sessionSelected && convVisible && targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
+        if (isInitialSync && sessionSelected && convVisible && targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
           return
         }
 
