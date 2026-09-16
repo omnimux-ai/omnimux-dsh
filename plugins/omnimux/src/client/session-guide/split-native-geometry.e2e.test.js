@@ -30,7 +30,7 @@ describe('session-guide split native geometry preservation', () => {
       'composerHero must clear padding-bottom to avoid extra lift'
     )
 
-    // 4. Verify composerCard and heroWorkspaceRow max-width is cleared in split compact
+    // 4. Verify composerCard and heroWorkspaceRow max-width and centering in split compact
     assert.match(
       GUIDE_CSS,
       /html\[data-omnimux-split-compact\]\s*\[data-omnimux-starter-host\]\s*\[data-composer-card\][\s\S]*?width:\s*100%\s*!important/,
@@ -38,8 +38,8 @@ describe('session-guide split native geometry preservation', () => {
     )
     assert.match(
       GUIDE_CSS,
-      /html\[data-omnimux-split-compact\]\s*\[data-omnimux-starter-host\]\s*\[data-composer-card\][\s\S]*?margin-inline:\s*0\s*!important/,
-      'composerCard must clear margin-inline'
+      /html\[data-omnimux-split-compact\]\s*\[data-omnimux-starter-host\]\s*\[data-composer-card\][\s\S]*?margin-inline:\s*auto\s*!important/,
+      'composerCard must center with margin-inline: auto'
     )
   })
 })
