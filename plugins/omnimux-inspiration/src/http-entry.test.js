@@ -426,7 +426,13 @@ describe('HTTP entry: the existing inspiration endpoints are unchanged', () => {
     assert.equal(calls[0].media.path, mediaPath)
     assert.equal(calls[0].cover, null)
     assert.equal(calls[0].meta.title, '测试分享素材')
-    assert.equal(calls[0].meta.prompt, '把产品放在晨光里拍')
+    // The published prompt is the same-video generation prompt synthesized from
+    // the entry's own copy, not that copy verbatim (Issue #2047).
+    assert.match(calls[0].meta.prompt, /^把产品放在晨光里拍/)
+    assert.match(calls[0].meta.prompt, /电影级运镜与流畅主体动作演进/)
+    assert.equal(calls[0].meta.category, 'seedance 2.5')
+    assert.equal(calls[0].meta.model, 'seedance-2-5')
+    assert.equal(calls[0].meta.mediaType, 'video')
   })
 
   it('shows the stage the job is really in, not a timer', async () => {

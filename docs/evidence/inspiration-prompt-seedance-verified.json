@@ -1,0 +1,80 @@
+{
+  "task": "inspiration-prompt-seedance-verify",
+  "issue": 2047,
+  "origin": "http://127.0.0.1:60906",
+  "browser": "ego-browser (chromium)",
+  "startedAt": "2026-09-16T11:28:46.855Z",
+  "assertions": [
+    {
+      "name": "real-modal-mounted-with-real-copy",
+      "pass": true,
+      "detail": {
+        "modalTitle": "生成同款提示词验证"
+      }
+    },
+    {
+      "name": "share-trigger-visible",
+      "pass": true,
+      "detail": {
+        "width": 72,
+        "height": 32
+      }
+    },
+    {
+      "name": "publish-progress-renders-four-stages",
+      "pass": true,
+      "detail": {
+        "stepIds": [
+          "preparing",
+          "generating_prompt",
+          "uploading",
+          "publishing"
+        ]
+      }
+    },
+    {
+      "name": "prompt-step-is-the-active-one",
+      "pass": true,
+      "detail": {
+        "activeLabel": "生成Prompt",
+        "stepStates": [
+          "done",
+          "active",
+          "todo",
+          "todo"
+        ]
+      }
+    },
+    {
+      "name": "prompt-step-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "width": 250,
+        "height": 17
+      }
+    },
+    {
+      "name": "step-labels-are-chinese",
+      "pass": true,
+      "detail": {
+        "stepLabels": [
+          "准备素材",
+          "生成Prompt",
+          "上传素材",
+          "发布中"
+        ]
+      }
+    },
+    {
+      "name": "screenshot-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 34918
+      }
+    }
+  ],
+  "pass": true,
+  "errors": []
+}

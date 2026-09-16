@@ -13,8 +13,8 @@ import {
 
 describe('share lifecycle — source-aware stages', () => {
   it('walks a shorter sequence for a cloud entry, which has no upload leg', () => {
-    assert.deepEqual([...CLOUD_SHARE_STAGE_ORDER], [SHARE_STAGES.PREPARING, SHARE_STAGES.PUBLISHING])
-    assert.deepEqual([...SHARE_STAGE_ORDER], [SHARE_STAGES.PREPARING, SHARE_STAGES.UPLOADING, SHARE_STAGES.PUBLISHING])
+    assert.deepEqual([...CLOUD_SHARE_STAGE_ORDER], [SHARE_STAGES.PREPARING, SHARE_STAGES.GENERATING_PROMPT, SHARE_STAGES.PUBLISHING])
+    assert.deepEqual([...SHARE_STAGE_ORDER], [SHARE_STAGES.PREPARING, SHARE_STAGES.GENERATING_PROMPT, SHARE_STAGES.UPLOADING, SHARE_STAGES.PUBLISHING])
     assert.equal(shareStageOrderFor(SHARE_SOURCES.CLOUD), CLOUD_SHARE_STAGE_ORDER)
     assert.equal(shareStageOrderFor(SHARE_SOURCES.LOCAL), SHARE_STAGE_ORDER)
     // Anything unrecognised keeps the original local sequence.

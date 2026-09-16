@@ -375,8 +375,8 @@ async function main() {
     check('cloud-progress-has-positive-geometry',
       Boolean(progress.progressBox) && progress.progressBox.width > 100 && progress.progressBox.height > 20,
       progress.progressBox)
-    check('cloud-progress-renders-exactly-two-stages',
-      JSON.stringify(progress.stepIds) === JSON.stringify(['preparing', 'publishing']),
+    check('cloud-progress-renders-exactly-three-stages',
+      JSON.stringify(progress.stepIds) === JSON.stringify(['preparing', 'generating_prompt', 'publishing']),
       { stepIds: progress.stepIds, labels: progress.steps.map((step) => step.label) })
     check('cloud-progress-renders-no-uploading-step', progress.uploadingStepCount === 0, {
       uploadingStepCount: progress.uploadingStepCount,
@@ -427,8 +427,8 @@ async function main() {
     const localProgress = local.progress
     check('local-share-popover-opened-by-click', local.opened === true && local.popoverVisible === true)
     check('local-create-link-clicked', local.createClicked === true)
-    check('local-progress-still-walks-three-stages',
-      JSON.stringify(localProgress.stepIds) === JSON.stringify(['preparing', 'uploading', 'publishing']),
+    check('local-progress-walks-four-stages',
+      JSON.stringify(localProgress.stepIds) === JSON.stringify(['preparing', 'generating_prompt', 'uploading', 'publishing']),
       { stepIds: localProgress.stepIds, labels: localProgress.steps.map((step) => step.label) })
     check('local-progress-active-stage-is-uploading',
       local.reachedUploading === true &&

@@ -2,19 +2,19 @@
   "task": "inspiration-cloud-share-browser",
   "issue": 1996,
   "title": "云端灵感零上传分享 · 工作树内真实浏览器验收",
-  "branch": "agent/inspiration-cloud-share-issue-1996",
-  "headSha": "02c60f7087574c1066d94bab87a1bf4533b1e0ec",
-  "origin": "http://127.0.0.1:65532",
-  "port": 65532,
+  "branch": "feat/inspiration-prompt-seedance-issue-2047",
+  "headSha": "6029d28b0c456414691d4f3e2b48b2abc62fbecb",
+  "origin": "http://127.0.0.1:54075",
+  "port": 54075,
   "browser": "ego-browser (chromium, 真实浏览器实例)",
-  "startedAt": "2026-09-16T01:51:15.837Z",
+  "startedAt": "2026-09-16T12:48:49.379Z",
   "assertions": [
     {
       "name": "page-served-over-http-on-a-dynamic-port",
       "pass": true,
       "detail": {
-        "origin": "http://127.0.0.1:65532",
-        "port": 65532
+        "origin": "http://127.0.0.1:54075",
+        "port": 54075
       }
     },
     {
@@ -22,7 +22,7 @@
       "pass": true,
       "detail": {
         "modalTitle": "情绪共鸣型助眠歌单推广",
-        "styleTagCount": 27
+        "styleTagCount": 6
       }
     },
     {
@@ -38,21 +38,23 @@
       "pass": true,
       "detail": {
         "width": 250,
-        "height": 41,
-        "top": 210,
+        "height": 66,
+        "top": 201,
         "left": 1028
       }
     },
     {
-      "name": "cloud-progress-renders-exactly-two-stages",
+      "name": "cloud-progress-renders-exactly-three-stages",
       "pass": true,
       "detail": {
         "stepIds": [
           "preparing",
+          "generating_prompt",
           "publishing"
         ],
         "labels": [
           "准备素材",
+          "生成Prompt",
           "发布中"
         ]
       }
@@ -73,6 +75,11 @@
           "id": "preparing",
           "state": "done",
           "label": "准备素材"
+        },
+        {
+          "id": "generating_prompt",
+          "state": "done",
+          "label": "生成Prompt"
         },
         {
           "id": "publishing",
@@ -175,7 +182,7 @@
         "box": {
           "width": 250,
           "height": 37,
-          "top": 265,
+          "top": 256,
           "left": 1028
         },
         "style": {
@@ -202,13 +209,13 @@
         "resultBox": {
           "width": 250,
           "height": 92,
-          "top": 210,
+          "top": 201,
           "left": 1028
         },
         "linkBox": {
           "width": 250,
           "height": 32,
-          "top": 210,
+          "top": 201,
           "left": 1028
         }
       }
@@ -232,16 +239,18 @@
       "pass": true
     },
     {
-      "name": "local-progress-still-walks-three-stages",
+      "name": "local-progress-walks-four-stages",
       "pass": true,
       "detail": {
         "stepIds": [
           "preparing",
+          "generating_prompt",
           "uploading",
           "publishing"
         ],
         "labels": [
           "准备素材",
+          "生成Prompt",
           "上传素材",
           "发布中"
         ]
@@ -255,6 +264,11 @@
           "id": "preparing",
           "state": "done",
           "label": "准备素材"
+        },
+        {
+          "id": "generating_prompt",
+          "state": "done",
+          "label": "生成Prompt"
         },
         {
           "id": "uploading",
@@ -273,8 +287,8 @@
       "pass": true,
       "detail": {
         "width": 250,
-        "height": 66,
-        "top": 210,
+        "height": 90,
+        "top": 201,
         "left": 1028
       }
     },
@@ -298,7 +312,7 @@
       "name": "ego-browser-task-space-closed",
       "pass": true,
       "detail": {
-        "spaceId": 112,
+        "spaceId": 220,
         "finishError": null
       }
     },
@@ -306,9 +320,9 @@
       "name": "three-screenshots-captured",
       "pass": true,
       "detail": {
-        "cloudProgress": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
-        "cloudResult": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
-        "localRegression": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png"
+        "cloudProgress": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+        "cloudResult": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-result.png",
+        "localRegression": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-local-regression.png"
       }
     },
     {
@@ -317,24 +331,24 @@
       "detail": [
         {
           "name": "cloudProgress",
-          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-progress.png",
           "width": 1440,
           "height": 960,
-          "bytes": 80900
+          "bytes": 84767
         },
         {
           "name": "cloudResult",
-          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-result.png",
           "width": 1440,
           "height": 960,
-          "bytes": 90672
+          "bytes": 92523
         },
         {
           "name": "localRegression",
-          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-local-regression.png",
           "width": 1440,
           "height": 960,
-          "bytes": 79145
+          "bytes": 84538
         }
       ]
     }
@@ -342,24 +356,24 @@
   "screenshots": [
     {
       "name": "cloudProgress",
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-progress.png",
       "width": 1440,
       "height": 960,
-      "bytes": 80900
+      "bytes": 84767
     },
     {
       "name": "cloudResult",
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-cloud-result.png",
       "width": 1440,
       "height": 960,
-      "bytes": 90672
+      "bytes": 92523
     },
     {
       "name": "localRegression",
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-prompt-seedance/docs/evidence/inspiration-cloud-share-local-regression.png",
       "width": 1440,
       "height": 960,
-      "bytes": 79145
+      "bytes": 84538
     }
   ],
   "observations": {
@@ -373,6 +387,7 @@
       "progress": {
         "stepIds": [
           "preparing",
+          "generating_prompt",
           "publishing"
         ],
         "steps": [
@@ -380,6 +395,11 @@
             "id": "preparing",
             "state": "done",
             "label": "准备素材"
+          },
+          {
+            "id": "generating_prompt",
+            "state": "done",
+            "label": "生成Prompt"
           },
           {
             "id": "publishing",
@@ -400,7 +420,7 @@
         "modalTitle": "情绪共鸣型助眠歌单推广",
         "popoverBox": {
           "width": 280,
-          "height": 113,
+          "height": 128,
           "top": 155,
           "left": 1013
         },
@@ -412,8 +432,8 @@
         },
         "progressBox": {
           "width": 250,
-          "height": 41,
-          "top": 210,
+          "height": 66,
+          "top": 201,
           "left": 1028
         },
         "resultBox": null,
@@ -422,15 +442,15 @@
         "noticeStyle": null,
         "playerBoxBox": {
           "width": 363,
-          "height": 618,
-          "top": 173,
+          "height": 594,
+          "top": 198,
           "left": 143
         },
         "viewport": {
           "width": 1440,
           "height": 960
         },
-        "styleTagCount": 27,
+        "styleTagCount": 6,
         "calls": [
           {
             "method": "POST",
@@ -462,7 +482,7 @@
         "modalTitle": "情绪共鸣型助眠歌单推广",
         "popoverBox": {
           "width": 280,
-          "height": 172,
+          "height": 162,
           "top": 155,
           "left": 1013
         },
@@ -476,19 +496,19 @@
         "resultBox": {
           "width": 250,
           "height": 92,
-          "top": 210,
+          "top": 201,
           "left": 1028
         },
         "linkBoxBox": {
           "width": 250,
           "height": 32,
-          "top": 210,
+          "top": 201,
           "left": 1028
         },
         "noticeBox": {
           "width": 250,
           "height": 37,
-          "top": 265,
+          "top": 256,
           "left": 1028
         },
         "noticeStyle": {
@@ -499,15 +519,15 @@
         },
         "playerBoxBox": {
           "width": 363,
-          "height": 618,
-          "top": 173,
+          "height": 594,
+          "top": 198,
           "left": 143
         },
         "viewport": {
           "width": 1440,
           "height": 960
         },
-        "styleTagCount": 27,
+        "styleTagCount": 6,
         "calls": [
           {
             "method": "POST",
@@ -538,6 +558,7 @@
       "progress": {
         "stepIds": [
           "preparing",
+          "generating_prompt",
           "uploading",
           "publishing"
         ],
@@ -546,6 +567,11 @@
             "id": "preparing",
             "state": "done",
             "label": "准备素材"
+          },
+          {
+            "id": "generating_prompt",
+            "state": "done",
+            "label": "生成Prompt"
           },
           {
             "id": "uploading",
@@ -571,7 +597,7 @@
         "modalTitle": "本地街景复刻",
         "popoverBox": {
           "width": 280,
-          "height": 138,
+          "height": 153,
           "top": 155,
           "left": 1013
         },
@@ -583,8 +609,8 @@
         },
         "progressBox": {
           "width": 250,
-          "height": 66,
-          "top": 210,
+          "height": 90,
+          "top": 201,
           "left": 1028
         },
         "resultBox": null,
@@ -593,15 +619,15 @@
         "noticeStyle": null,
         "playerBoxBox": {
           "width": 363,
-          "height": 618,
-          "top": 173,
+          "height": 594,
+          "top": 198,
           "left": 143
         },
         "viewport": {
           "width": 1440,
           "height": 960
         },
-        "styleTagCount": 27,
+        "styleTagCount": 6,
         "calls": [
           {
             "method": "POST",
@@ -624,7 +650,7 @@
   "egoExitCode": 0,
   "egoStdoutTail": "",
   "egoStderrTail": "EGO_RAW_WRITTEN",
-  "taskSpaceId": 112,
+  "taskSpaceId": 220,
   "taskSpaceClosed": true,
-  "completedAt": "2026-09-16T01:51:54.080Z"
+  "completedAt": "2026-09-16T12:49:50.228Z"
 }

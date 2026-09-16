@@ -46,6 +46,7 @@ export const SHARE_SOURCES = Object.freeze({
 /** The only stage sequence a publish may walk, in order. */
 export const SHARE_STAGES = Object.freeze({
   PREPARING: 'preparing',
+  GENERATING_PROMPT: 'generating_prompt',
   UPLOADING: 'uploading',
   PUBLISHING: 'publishing',
 })
@@ -53,6 +54,7 @@ export const SHARE_STAGES = Object.freeze({
 /** Stage order, for a progress bar that marks what is already behind the job. */
 export const SHARE_STAGE_ORDER = Object.freeze([
   SHARE_STAGES.PREPARING,
+  SHARE_STAGES.GENERATING_PROMPT,
   SHARE_STAGES.UPLOADING,
   SHARE_STAGES.PUBLISHING,
 ])
@@ -64,6 +66,7 @@ export const SHARE_STAGE_ORDER = Object.freeze([
  */
 export const CLOUD_SHARE_STAGE_ORDER = Object.freeze([
   SHARE_STAGES.PREPARING,
+  SHARE_STAGES.GENERATING_PROMPT,
   SHARE_STAGES.PUBLISHING,
 ])
 

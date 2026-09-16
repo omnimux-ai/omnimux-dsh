@@ -28,6 +28,11 @@ import {
   shareRunningPatch,
   shareUploadLimitMessage,
 } from './share-status.js'
+import {
+  buildDirectGenerationPrompt,
+  defaultCategoryForMediaType,
+  defaultModelForMediaType,
+} from './prompt-generator.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
@@ -794,7 +799,8 @@ async function startLocalShare(ctx, item) {
   }
   const title = String(item.title || '').trim()
   if (!title) return fail(400, '标题为空，请先补全标题后再分享')
-  const prompt = sharePromptOf(item)
+  const mediaType = item?.type === 'image' ? 'image' : 'video'
+  const prompt = buildDirectGenerationPrompt(item, mediaType) || sharePromptOf(item)
   if (!prompt) return fail(400, '提示词为空：请先补全灵感内容或完成 AI 解构后再分享')
 
   for (const asset of [cover, media]) {
@@ -807,7 +813,7 @@ async function startLocalShare(ctx, item) {
 
   const claimed = store.update(String(id), shareRunningPatch(SHARE_STAGES.PREPARING))
   activeShares.add(String(id))
-  void runShareJob({ store, id: String(id), capability, cover, media, meta: shareMetaOf(item, { title, prompt }) })
+  void runShareJob({ store, id: String(id), capability, cover, media, meta: shareMetaOf(item, { title, prompt, mediaType }) })
     .finally(() => activeShares.delete(String(id)))
 
   return { status: 202, body: { data: claimed } }
@@ -868,16 +874,21 @@ function cloudShareRequest(ctx) {
   }
   const title = String(body.title || '').trim()
   const caption = String(body.caption || '').trim()
+  const mediaType = body.type === 'image' ? 'image' : 'video'
+  const defaultCategory = defaultCategoryForMediaType(mediaType)
+  const defaultModel = defaultModelForMediaType(mediaType)
+  const prompt = buildDirectGenerationPrompt(body, mediaType) || caption || title
   return {
     row,
     coverUrl: String(body.coverUrl || '').trim(),
     mediaUrl: String(mediaUrls.find((url) => typeof url === 'string' && url) || '').trim(),
     meta: {
-      category: String(body.category || '').trim() || 'other',
+      category: defaultCategory,
       title,
       description: caption.slice(0, 200),
-      prompt: caption || title,
-      mediaType: body.type === 'image' ? 'image' : 'video',
+      prompt,
+      model: defaultModel,
+      mediaType,
     },
   }
 }
@@ -893,6 +904,10 @@ async function runCloudShareJob(args) {
     const onStage = (stage) => {
       if (CLOUD_SHARE_STAGE_ORDER.includes(stage)) patchCloudShareJob(id, { share_stage: stage })
     }
+    onStage(SHARE_STAGES.GENERATING_PROMPT)
+    await new Promise((r) => setTimeout(r, 60))
+
+    onStage(SHARE_STAGES.PUBLISHING)
     const result = await args.capability.publishRemote({
       id,
       coverUrl: args.request.coverUrl,
@@ -986,14 +1001,22 @@ export function sharePromptOf(item) {
  * @param {Record<string, any>} item
  * @param {{ title: string, prompt: string, me: { path: string } | null }} resolved
  */
-export function shareMetaOf(item, resolved) {
-  const category = String(item?.category || item?.source_platform || item?.type || '').trim()
+export function shareMetaOf(item, resolved = {}) {
+  const mediaType = (resolved.mediaType || item?.type) === 'image' ? 'image' : 'video'
+  const defaultCategory = defaultCategoryForMediaType(mediaType)
+  const defaultModel = defaultModelForMediaType(mediaType)
+  const category = String(resolved.category || item?.category || defaultCategory).trim()
+  const title = String(resolved.title || item?.title || '').trim()
+  const prompt = String(resolved.prompt || buildDirectGenerationPrompt(item, mediaType) || sharePromptOf(item)).trim()
+  const model = String(resolved.model || item?.model || defaultModel).trim()
+
   return {
-    category: category || 'other',
-    title: resolved.title,
-    description: String(item?.content || '').trim().slice(0, 200),
-    prompt: resolved.prompt,
-    mediaType: item?.type === 'image' ? 'image' : 'video',
+    category: category || defaultCategory,
+    title,
+    description: String(item?.content || item?.caption || '').trim().slice(0, 200),
+    prompt,
+    model: model || defaultModel,
+    mediaType,
   }
 }
 
@@ -1007,6 +1030,11 @@ export function shareMetaOf(item, resolved) {
 async function runShareJob(args) {
   const { store, id } = args
   try {
+    if (SHARE_STAGE_ORDER.includes(SHARE_STAGES.GENERATING_PROMPT)) {
+      void safeUpdate(store, id, { share_stage: SHARE_STAGES.GENERATING_PROMPT })
+    }
+    await new Promise((r) => setTimeout(r, 60))
+
     const result = await args.capability.publishLocal({
       cover: args.cover,
       media: args.media,

@@ -125,13 +125,34 @@ describe('InspirationPreviewModal share popover', () => {
     const progress = document.querySelector('.omnimux-inspiration-share-progress')
     assert.ok(progress, '运行中必须渲染进度区')
     const steps = [...document.querySelectorAll('[data-share-step]')]
-    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-step')), ['preparing', 'uploading', 'publishing'])
-    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-state')), ['done', 'active', 'todo'])
-    assert.match(steps[1].textContent, /上传素材/)
-    assert.equal(steps[1].getAttribute('aria-current'), 'step')
+    assert.deepEqual(
+      steps.map((step) => step.getAttribute('data-share-step')),
+      ['preparing', 'generating_prompt', 'uploading', 'publishing'],
+    )
+    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-state')), ['done', 'done', 'active', 'todo'])
+    assert.match(steps[2].textContent, /上传素材/)
+    assert.equal(steps[2].getAttribute('aria-current'), 'step')
 
     assert.equal(document.querySelector('.omnimux-inspiration-share-input'), null, '运行中不得展示链接')
     assert.equal(document.querySelector('.omnimux-inspiration-share-submit-btn'), null, '运行中不再提供创建按钮')
+  })
+
+  it('renders the same-video prompt step while the job is generating it', async () => {
+    const { document } = await mountModal({
+      id: 'insp-prompt',
+      title: '生成同款提示词中',
+      share_status: 'running',
+      share_stage: 'generating_prompt',
+    })
+
+    const steps = [...document.querySelectorAll('[data-share-step]')]
+    assert.deepEqual(
+      steps.map((step) => step.getAttribute('data-share-step')),
+      ['preparing', 'generating_prompt', 'uploading', 'publishing'],
+    )
+    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-state')), ['done', 'active', 'todo', 'todo'])
+    assert.match(steps[1].textContent, /生成Prompt/)
+    assert.equal(steps[1].getAttribute('aria-current'), 'step')
   })
 
   it('renders the first step as active when the job has only just started', async () => {
@@ -143,7 +164,7 @@ describe('InspirationPreviewModal share popover', () => {
     })
 
     const steps = [...document.querySelectorAll('[data-share-step]')]
-    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-state')), ['active', 'todo', 'todo'])
+    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-state')), ['active', 'todo', 'todo', 'todo'])
     assert.match(steps[0].textContent, /准备素材/)
   })
 
