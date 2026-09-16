@@ -56,7 +56,7 @@ export const ASSETS_CSS = `
    one's so the two rows cannot drift apart. */
 .omnimux-assets-local-nav {
   flex: none;
-  padding: 8px 24px 10px;
+  padding: 12px 24px 14px;
 }
 .omnimux-assets-local-nav-row {
   display: flex;
@@ -889,6 +889,7 @@ export const ASSETS_CSS = `
   display: flex;  flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
+  padding: 12px 0 14px;
 }
 /* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
 .omnimux-assets-cloud-nav.omx-stage-sticky {
