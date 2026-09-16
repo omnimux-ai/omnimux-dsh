@@ -43,6 +43,9 @@ TikTok 的同一个地址会渲染两种真实布局，**用户头像的位置�
 
 ### 1.3 技术方案要点
 
+- **TikTok 推荐流作品操作栏识别（关键增强）**：
+  在 TikTok 推荐流（For You、Explore 等）中，作者头像并不在传统全局导航栏，而是随每个视频垂直卡片右侧的动作条（`section[class*="SectionActionBarContainer"]` 或含 `[data-e2e="like-icon"]` 的操作栏）一起呈现。
+  `findActiveFeedAvatar` 优先拾取当前视口内可见、距离视口中心最近的卡片操作栏内第一项（`[data-e2e="video-author-avatar"]`、`[class*="ActionItemPlaceHolder"]` 或头像图片），使 OmniMux 触发器精准坐落在作品右侧操作栏作者头像上方 8px，彻底消除掉落左下角兜底位置的缺陷。
 - `src/platform/registry.ts`：平台配置承载点保持不变（纯数据 + 纯函数，可被 background 导入）。TikTok 场景链改为**头像优先**，兜底按「是否认出了侧栏」分派。
 - `src/platform/anchor.ts`：删除沉浸式分支与视频基准；`AnchorLayout` 收敛为 `'side-rail' | 'unknown'`；新增侧栏几何谓词（**贴左缘或贴右缘**）+ 头像结构扫描。
 - `src/platform/video.ts`：**删除**（只服务于已删除的沉浸式分支）。
