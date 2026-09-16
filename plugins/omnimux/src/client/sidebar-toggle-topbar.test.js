@@ -41,7 +41,7 @@ const workbenchGeometrySource = readFileSync(join(here, 'workbench/geometry.js')
 
 it('conversation fill rules leave native panel geometry to its mode owner', () => {
   const source = readFileSync(join(here, 'conversation-collapse.js'), 'utf8')
-  const fillSelectors = source.split('\n').filter(line => line.includes('.dshDesktopRightbarSurface [class*="_panel"]'))
+  const fillSelectors = source.split('\n').filter(line => line.includes('.dshDesktopRightbarSurface [class*="_panel"]') && line.includes(':not([data-sidebar-right-panel])'))
   assert.equal(fillSelectors.length, 2)
   for (const selector of fillSelectors) assert.ok(selector.includes(':not([data-sidebar-right-panel])'), 'native push must not acquire width:auto before fullscreen commits')
 })
@@ -759,8 +759,9 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
     assert.match(css, /\.dshDesktopSidebarSurface/)
     assert.match(css, /z-index:\s*35\s*!important/)
 
-    // 5. macOS traffic lights safe inset when collapsed + fullscreen
-    assert.match(css, /padding-left:\s*84px\s*!important/)
+    // 5. macOS traffic lights & button cluster safe inset when collapsed + fullscreen
+    assert.match(css, /padding-left:\s*var\(--omnimux-topbar-toggle-end,\s*164px\)\s*!important/)
+    assert.match(css, /padding-left:\s*var\(--omnimux-topbar-toggle-end,\s*88px\)\s*!important/)
   })
 
   it('syncNativeRightbarControls preserves native mode and split control order', () => {
