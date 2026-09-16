@@ -841,7 +841,10 @@ describe('left rail width poisoning (issue #1618)', () => {
     assert.equal(computeChromeLayout(doc).leftRailW, 0)
   })
 
-  it('preserves the native folded rail while legacy collapsed layouts remain zero', () => {
+  it('collapses the rail to zero where the shell keeps a folded native track (issue #2077 supersedes #1618)', () => {
+    // 产品决策变更：收起即完全收起。宿主收起后仍会保留一条原生窄栏（真机 90px），
+    // 旧契约（#1618）要求如实镜像该窄栏，会让框架首列被右侧栏收起规则钉住，
+    // 屏左留下死带；现改为收起意图优先、一律镜像 0。
     const { doc } = setupRailFrame({ inlineTrack: '56px', railWidth: 56 })
     const frame = doc.querySelector('.dshDesktopFrame')
     frame.setAttribute('data-sidebar-collapsed', '')
@@ -853,12 +856,19 @@ describe('left rail width poisoning (issue #1618)', () => {
       for (const closed of ['true', 'false']) {
         frame.setAttribute('data-rightbar-collapsed', closed)
         applyTopbarToggleCssVars(doc)
-        assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '56px')
+        assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
       }
     }
     panel.remove()
     applyTopbarToggleCssVars(doc)
     assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
+  })
+
+  it('mirrors the shell rail width while the left rail is expanded (issue #2077 AC-3)', () => {
+    const { doc, col } = setupRailFrame({ inlineTrack: '300px', railWidth: 300 })
+    Object.defineProperty(col, 'offsetWidth', { value: 300, configurable: true })
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '300px')
   })
 
   it('defers ResizeObserver writes out of the delivery cycle', () => {
