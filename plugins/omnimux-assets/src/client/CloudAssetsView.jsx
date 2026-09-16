@@ -97,6 +97,13 @@ function CloudTileMedia(props) {
     element.load()
   }, [bareClip])
 
+  // 挂载时预加载视频首帧与元数据，确保鼠标移上去时能瞬时秒播而不卡顿
+  useEffect(() => {
+    const element = videoRef.current
+    if (!element || !showClip || element.readyState > 0) return
+    element.load()
+  }, [showClip])
+
   useEffect(() => { setCoverFailed(false) }, [asset.id])
 
   const Icon = TYPE_ICON[asset.mediaType] ?? DocIcon
@@ -204,6 +211,16 @@ export function CloudAssetCard(props) {
     if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
     addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
   }
+
+  // 悬停直接播放试听（音频/角色卡）
+  useEffect(() => {
+    if (!canPlay) return
+    if (hovering && !playing) {
+      onTogglePlay(asset)
+    } else if (!hovering && playing) {
+      onTogglePlay(asset)
+    }
+  }, [hovering, canPlay, playing, asset, onTogglePlay])
 
   // The control sits over the card's top-right corner, so it claims its own
   // pointer event: without that, using it would also open the preview behind it.
