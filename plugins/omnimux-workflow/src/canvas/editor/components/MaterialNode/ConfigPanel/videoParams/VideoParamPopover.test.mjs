@@ -291,3 +291,16 @@ test('高级参数与范围时长控件使用正式类名', () => {
     assert.ok(videoCssBlock.includes(selector), `应包含规则 ${selector}`);
   }
 });
+
+test('高级参数区块彻底不渲染（用户决策下架无效开关）', () => {
+  assert.doesNotMatch(
+    popoverSrc,
+    /data-testid="wf-video-advanced-parameters"/,
+    'VideoParamPopover 不得渲染高级参数区块',
+  );
+  assert.doesNotMatch(
+    popoverSrc,
+    /<h4[^>]*>高级参数<\/h4>/,
+    'VideoParamPopover 不得展示高级参数标题',
+  );
+});

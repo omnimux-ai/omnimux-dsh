@@ -32,15 +32,9 @@ function render(schema, values = {}) {
   return { nodes, changes, get: type => nodes.find(node => node.type === type) };
 }
 for (const field of ['outputFormat', 'referenceTaskType', 'generationType']) {
-  test(`unset singleton ${field} remains selectable`, () => {
+  test(`advanced field ${field} is hidden and does not render CustomSelect`, () => {
     const view = render({ [field]: { options: [{value: 'only', label: '唯一'}] } });
-    const select = view.get('CustomSelect');
-    assert.ok(select);
-    assert.notEqual(select.props.disabled, true);
-    assert.equal(select.props.value, undefined);
-    assert.equal(select.props.placeholder, '未设置');
-    select.props.onChange('only');
-    assert.deepEqual(view.changes, [[field, 'only']]);
+    assert.equal(view.get('CustomSelect'), undefined);
   });
 }
 test('unset range duration is not selected and offers an explicit minimum confirmation', () => {
