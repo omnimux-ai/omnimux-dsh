@@ -149,19 +149,23 @@ export function resolveIconConflicts(
     }
   }
 
-  // 2. Filter targets situated on the same vertical corridor above the avatar
+  // 2. Filter targets to the same vertical corridor, above the mark.
+  //
+  // The corridor's lower bound is the mark's own bottom edge, not the avatar's
+  // top: the avatar is found by heuristics and can land on the wrong picture,
+  // while the mark's own box is known exactly. An item that starts below the
+  // mark — the page's like, comment and share controls, which share the same
+  // column — is not in the corridor at all and is never touched; an item that
+  // overlaps it, or sits above it, is a rival.
   const corridorRivals: Array<{ el: HTMLElement; base: Box }> = []
-  const avatarTop = avatarElement ? getBaseRect(avatarElement as HTMLElement).top : ourBox.bottom + SAFE_GAP
 
   for (const [el, base] of targetMap.entries()) {
     // Horizontal alignment check: centers must be close or horizontally overlapping
     const xOverlap = base.left < ourBox.right + 30 && base.right > ourBox.left - 30
     if (!xOverlap) continue
+    if (base.top >= ourBox.bottom) continue
 
-    // Target must sit above the avatar
-    if (base.top < avatarTop) {
-      corridorRivals.push({ el, base })
-    }
+    corridorRivals.push({ el, base })
   }
 
   if (corridorRivals.length === 0) {

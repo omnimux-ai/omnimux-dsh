@@ -3,12 +3,17 @@
  * target post in step with what the user is looking at, and hands each shortcut
  * to the background worker.
  *
- * Two facts about TikTok's web app shape this module. First, it is a single-page
- * app: the address bar is rewritten as the user scrolls the For You feed, so the
- * watched post is read fresh from `location.href` on every shortcut instead of
- * being captured once at mount. Second, the rail can be re-rendered at any time,
- * so the trigger is re-measured on DOM changes rather than trusting its first
- * position.
+ * Three facts about TikTok's web app shape this module. First, it is a
+ * single-page app: the address bar is rewritten as the user scrolls the For You
+ * feed, and a click on a profile tile replaces the whole page without a
+ * navigation event, so the address is re-read rather than captured once at
+ * mount. Second, the rail can be re-rendered at any time, so the trigger is
+ * re-measured on DOM changes rather than trusting its first position. Third, the
+ * trigger belongs to the home feed and nowhere else: every other address —
+ * a profile, a single post, search, explore, messages, settings — renders
+ * avatars of its own, and a mark that followed them would sit on pictures the
+ * user never asked it to decorate. The gate is therefore part of the mount
+ * decision, and it is re-evaluated on the same mutations that move the trigger.
  *
  * @module
  */
@@ -18,6 +23,7 @@ import { mountTiktokScene } from './menu.ts'
 import { TIKTOK_TIMING } from './messages.ts'
 import { resolveTargetPost } from './target.ts'
 import { sendTiktokShortcut } from './transport.ts'
+import type { TiktokSceneHandle } from './menu.ts'
 import type { TiktokAction } from './copy.ts'
 import type { ExportOutcome } from '../../background/media-export.ts'
 
@@ -32,6 +38,23 @@ interface SceneMount {
 export function isTikTokHost(hostname: string): boolean {
   const host = hostname.toLowerCase()
   return host === 'tiktok.com' || host.endsWith('.tiktok.com')
+}
+
+/**
+ * Whether a TikTok address is the home feed, which is the only page that gets
+ * the trigger.
+ *
+ * The For You feed is served from the site root; the two tab addresses the app
+ * has used for it are accepted as well so a tab click does not make the trigger
+ * disappear. Everything else is deliberately not home — in particular a single
+ * post (`/@user/video/<id>`) and a profile (`/@user`), the two addresses where
+ * the page renders an avatar and the mark would otherwise look like it belongs
+ * to that picture.
+ * @param pathname the page's path, as read from the address bar
+ */
+export function isTikTokHomePath(pathname: string): boolean {
+  const path = pathname.toLowerCase()
+  return path === '' || path === '/' || path === '/foryou' || path === '/following'
 }
 
 /**
@@ -121,48 +144,81 @@ export function initTiktokScene(): void {
     return sendTiktokShortcut(action, target.url)
   }
 
-  const scene = mountTiktokScene({ doc, copy, run })
+  // The trigger exists only while the page is the home feed. `null` is the
+  // unmounted state, and the flag records the decision the current state was
+  // made for, so a burst of mutations on one address mounts and unmounts once.
+  let scene: TiktokSceneHandle | null = null
+  let mountedHome = false
 
-  doc.addEventListener('pointerover', onPointerOver, { passive: true })
+  const syncGate = (): void => {
+    const home = isTikTokHomePath(window.location.pathname)
+    if (home === mountedHome) return
+    mountedHome = home
+    if (home) {
+      scene = mountTiktokScene({ doc, copy, run })
+      return
+    }
+    scene?.dispose()
+    scene = null
+  }
 
-  // A throttled re-measure rather than a re-mount: the trigger stays put and only
-  // its anchor is refreshed, so an open menu is never torn down under the user’s
-  // pointer by a feed update. The first mutation re-measures at once; a burst
-  // after that collapses into one trailing re-measure.
+  // One throttled pass over the page, shared by the gate and the trigger's
+  // anchor: TikTok changes the address without a navigation event, so the gate
+  // is re-read on the same DOM mutations that move the trigger. A throttle, not
+  // a debounce — a debounce restarted by each mutation can be starved forever by
+  // a page that never goes quiet, leaving the trigger at a stale anchor. The
+  // first mutation is handled at once; a burst after that collapses into one
+  // trailing pass.
   let lastMeasure = 0
   let timer: ReturnType<typeof setTimeout> | null = null
-  const remeasure = (): void => {
+  const pass = (): void => {
     const wait = TIKTOK_TIMING.rescanThrottleMs - (Date.now() - lastMeasure)
     if (wait <= 0) {
       lastMeasure = Date.now()
-      scene.reposition()
+      syncGate()
+      scene?.reposition()
       return
     }
     if (timer !== null) return
     timer = setTimeout(() => {
       timer = null
       lastMeasure = Date.now()
-      scene.reposition()
+      syncGate()
+      scene?.reposition()
     }, wait)
   }
-  const observer = new MutationObserver(remeasure)
-  // Attribute changes count too: the rail hides or collapses itself by switching a
-  // class or an inline style, which inserts no node at all and would otherwise
+
+  doc.addEventListener('pointerover', onPointerOver, { passive: true })
+  // Attribute changes count too: the rail hides or collapses itself by switching
+  // a class or an inline style, which inserts no node at all and would otherwise
   // leave the trigger at the old anchor until something else mutated the tree.
-  // Throttling above is what keeps that affordable.
+  const observer = new MutationObserver(pass)
   observer.observe(doc.documentElement, {
     childList: true,
     subtree: true,
     attributes: true,
     attributeFilter: ['class', 'style'],
   })
+  // Back and forward do not mutate anything until the app re-renders, so the
+  // gate answers those directly instead of waiting for a mutation that may only
+  // arrive with the next feed update. The timer is the floor under both: a hard
+  // load of a post address commits on the feed and has the post's own path
+  // pushed in behind it, which leaves no mutation to re-check on.
+  doc.defaultView?.addEventListener('popstate', pass)
+  const urlWatch = doc.defaultView?.setInterval(syncGate, TIKTOK_TIMING.urlWatchMs) ?? null
+
+  syncGate()
 
   shell[SCENE_SLOT] = {
     dispose(): void {
       if (timer !== null) clearTimeout(timer)
       observer.disconnect()
       doc.removeEventListener('pointerover', onPointerOver)
-      scene.dispose()
+      doc.defaultView?.removeEventListener('popstate', pass)
+      if (urlWatch !== null) doc.defaultView?.clearInterval(urlWatch)
+      scene?.dispose()
+      scene = null
+      mountedHome = false
     },
   }
 }

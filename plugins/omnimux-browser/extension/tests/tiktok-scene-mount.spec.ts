@@ -4,19 +4,25 @@
  *
  * The target decision, the anchor and the menu each have their own unit tests;
  * this file covers the wiring between them — the layer that decides *which* post
- * a click acts on by reading the page. A bug here is a wrong download that no
- * unit test of a pure function can catch.
+ * a click acts on by reading the page, and the layer that decides *whether* the
+ * page gets a trigger at all. A bug in either is a wrong download, or a mark
+ * stuck to a stranger's avatar, that no unit test of a pure function can catch.
+ *
+ * The scene is home-feed only, so every case below states the address it stands
+ * on: the address is now part of the mount decision.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { initTiktokScene } from '../src/content/tiktok-scene/index.ts'
+import { initTiktokScene, isTikTokHomePath } from '../src/content/tiktok-scene/index.ts'
+import { TIKTOK_SCENE_HOST_ID, TIKTOK_TIMING } from '../src/content/tiktok-scene/messages.ts'
 import { tiktokCopy } from '../src/content/tiktok-scene/copy.ts'
-import { TIKTOK_SCENE_HOST_ID } from '../src/content/tiktok-scene/messages.ts'
 
+const HOME = 'https://www.tiktok.com/'
 const WATCH = 'https://www.tiktok.com/@cleanlife/video/7412345678901234567'
 const OTHER = 'https://www.tiktok.com/@cleanlife/video/7419999999999999999'
 const PROFILE = 'https://www.tiktok.com/@cleanlife'
 const SEARCH = 'https://www.tiktok.com/search?q=clean'
+const EXPLORE = 'https://www.tiktok.com/explore'
 
 let sent: Array<Record<string, unknown>> = []
 
@@ -31,6 +37,34 @@ function setLocation(href: string): void {
 
 function shadow(): ShadowRoot | null {
   return document.getElementById(TIKTOK_SCENE_HOST_ID)?.shadowRoot ?? null
+}
+
+/** jsdom has no layout; give one element the box the browser would report. */
+function place(el: Element, box: { top: number; left: number; width: number; height: number }): void {
+  const rect = {
+    x: box.left,
+    y: box.top,
+    top: box.top,
+    left: box.left,
+    right: box.left + box.width,
+    bottom: box.top + box.height,
+    width: box.width,
+    height: box.height,
+    toJSON: () => ({}),
+  } as DOMRect
+  el.getBoundingClientRect = () => rect
+}
+
+/**
+ * Let the mounted scene's throttled pass and its address re-check run, the way a
+ * live page's would.
+ *
+ * The gate is re-read both on DOM mutations and on a timer, and the mutation
+ * path deliberately collapses a burst into one trailing pass, so a case that
+ * changes the address waits out one budget before it asserts the new decision.
+ */
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, TIKTOK_TIMING.rescanThrottleMs + 80))
 }
 
 /**
@@ -52,7 +86,7 @@ async function clickRow(action: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
-/** Point the pointer at a post link the way a user hovering a grid tile would. */
+/** Point the pointer at a post link the way a user hovering a tile would. */
 function hover(anchor: HTMLAnchorElement): void {
   anchor.dispatchEvent(new Event('pointerover', { bubbles: true }))
 }
@@ -60,8 +94,8 @@ function hover(anchor: HTMLAnchorElement): void {
 beforeEach(() => {
   document.body.innerHTML = ''
   // `initTiktokScene` disposes its own previous mount before installing a new
-  // one, so each case releases the observers and pointer listeners of the last;
-  // this only clears the leftover host element.
+  // one, so each case releases the observers, the address watcher and the
+  // pointer listeners of the last; this only clears the leftover host element.
   for (const stale of Array.from(document.querySelectorAll(`#${TIKTOK_SCENE_HOST_ID}`))) stale.remove()
   sent = []
   vi.stubGlobal('chrome', {
@@ -85,23 +119,112 @@ describe('TikTok 场景挂载 — 页面范围', () => {
     expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
   })
 
-  it('作品页挂上入口', () => {
-    setLocation(WATCH)
+  it('首页信息流挂上入口', () => {
+    setLocation(HOME)
     initTiktokScene()
     expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
   })
 
-  it('重复注入只留一个宿主', () => {
+  it('首页的两个信息流地址同样挂上入口', () => {
+    setLocation('https://www.tiktok.com/foryou')
+    initTiktokScene()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
+  })
+
+  it('作品页不挂入口，避免贴在作者头像上', () => {
     setLocation(WATCH)
+    initTiktokScene()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+  })
+
+  it('博主主页不挂入口，避免每个头像都长出一个按钮', () => {
+    setLocation(PROFILE)
+    initTiktokScene()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+  })
+
+  it('搜索页与探索页都不挂入口', () => {
+    setLocation(SEARCH)
+    initTiktokScene()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+
+    setLocation(EXPLORE)
+    initTiktokScene()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+  })
+
+  it('重复注入只留一个宿主', () => {
+    setLocation(HOME)
     initTiktokScene()
     initTiktokScene()
     expect(document.querySelectorAll(`#${TIKTOK_SCENE_HOST_ID}`).length).toBe(1)
   })
+
+  it('首页判定只认信息流地址', () => {
+    expect(isTikTokHomePath('/')).toBe(true)
+    expect(isTikTokHomePath('/foryou')).toBe(true)
+    expect(isTikTokHomePath('/following')).toBe(true)
+    expect(isTikTokHomePath('/@cleanlife')).toBe(false)
+    expect(isTikTokHomePath('/@cleanlife/video/7412345678901234567')).toBe(false)
+    expect(isTikTokHomePath('/search')).toBe(false)
+    expect(isTikTokHomePath('/explore')).toBe(false)
+    expect(isTikTokHomePath('/messages')).toBe(false)
+  })
 })
 
-describe('TikTok 场景挂载 — 动作发往哪一条作品', () => {
-  it('作品页点下载，用当前页面的作品地址', async () => {
-    setLocation(`${WATCH}?is_from_webapp=1`)
+describe('TikTok 场景挂载 — 站内跳转', () => {
+  it('从首页点进作品页，入口自己撤掉', async () => {
+    setLocation(HOME)
+    initTiktokScene()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
+
+    setLocation(WATCH)
+    document.body.appendChild(document.createElement('main'))
+    await settle()
+
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+  })
+
+  it('从作品页退回首页，入口自己回来', async () => {
+    setLocation(WATCH)
+    initTiktokScene()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+
+    setLocation(HOME)
+    document.body.appendChild(document.createElement('main'))
+    await settle()
+
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
+  })
+
+  it('地址被改写但界面没有任何变化时，入口同样按新地址撤掉', async () => {
+    setLocation(HOME)
+    initTiktokScene()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
+
+    // Nothing in the DOM changes: only the address re-check can answer this.
+    setLocation(PROFILE)
+    await settle()
+    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+
+    setLocation(HOME)
+    await settle()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
+  })
+})
+
+describe('TikTok 场景挂载 — 首页动作发往哪一条作品', () => {
+  it('首页播放器容器里能读出作品编号，下载就发这一条', async () => {
+    setLocation(HOME)
+    document.body.innerHTML = `
+      <section data-e2e="feed-video">
+        <a href="https://www.tiktok.com/@cleanlife">author</a>
+        <div id="xgwrapper-0-7412345678901234567"></div>
+      </section>
+    `
+    const player = document.getElementById('xgwrapper-0-7412345678901234567') as HTMLElement
+    place(player, { top: 200, left: 500, width: 500, height: 600 })
+
     initTiktokScene()
     await clickRow('video')
 
@@ -109,21 +232,8 @@ describe('TikTok 场景挂载 — 动作发往哪一条作品', () => {
     expect((sent[0].payload as { url: string }).url).toBe(WATCH)
   })
 
-  it('博主主页点下载，用指针指向的那条', async () => {
-    setLocation(PROFILE)
-    document.body.innerHTML = `<a href="${OTHER}?lang=zh">tile</a>`
-    initTiktokScene()
-    hover(document.querySelector('a') as HTMLAnchorElement)
-    await clickRow('audio')
-
-    expect(sent).toHaveLength(1)
-    expect((sent[0].payload as { url: string }).url).toBe(OTHER)
-    expect((sent[0].payload as { kind: string }).kind).toBe('audio')
-  })
-
-  it('博主主页没有指向时报“没有可操作的作品”，并且什么也不发', async () => {
-    setLocation(PROFILE)
-    document.body.innerHTML = `<a href="${OTHER}">tile</a>`
+  it('首页没有正在播放的作品时报“没有可操作的作品”，并且什么也不发', async () => {
+    setLocation(HOME)
     initTiktokScene()
     await clickRow('video')
 
@@ -134,26 +244,31 @@ describe('TikTok 场景挂载 — 动作发往哪一条作品', () => {
     expect(shadow()?.querySelector('.omx-item-detail')?.textContent).toContain(tiktokCopy().noTarget)
   })
 
-  it('搜索页即使渲染了作品链接也不猜，宁可什么都不做', async () => {
-    setLocation(SEARCH)
-    document.body.innerHTML = `<a href="${WATCH}">result</a>`
+  it('首页指针指向某条作品时，用指针指向的那条', async () => {
+    setLocation(HOME)
+    document.body.innerHTML = `<a href="${OTHER}?lang=zh">tile</a>`
     initTiktokScene()
-    await clickRow('video')
+    hover(document.querySelector('a') as HTMLAnchorElement)
+    await clickRow('audio')
 
-    expect(sent).toHaveLength(0)
+    expect(sent).toHaveLength(1)
+    expect((sent[0].payload as { url: string }).url).toBe(OTHER)
+    expect((sent[0].payload as { kind: string }).kind).toBe('audio')
   })
 
   it('保存到灵感库走的是入库消息，不是下载消息', async () => {
-    setLocation(WATCH)
+    setLocation(HOME)
+    document.body.innerHTML = `<a href="${WATCH}">tile</a>`
     initTiktokScene()
+    hover(document.querySelector('a') as HTMLAnchorElement)
     await clickRow('save')
 
     expect(sent).toHaveLength(1)
     expect(sent[0].type).toBe('DSH_TIKTOK_SAVE_TO_INSPIRATION')
   })
 
-  it('博主主页指向图文作品时也照常发出去，让宿主如实回答能不能下', async () => {
-    setLocation(PROFILE)
+  it('首页指向图文作品时也照常发出去，让宿主如实回答能不能下', async () => {
+    setLocation(HOME)
     // A photo post has no stream, but it is still importable: the decision layer
     // accepts these addresses, so the hover scan must collect them instead of
     // answering "nothing to act on" for a post the user can see.

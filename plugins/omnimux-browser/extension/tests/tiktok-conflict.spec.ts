@@ -110,6 +110,30 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     expect(displaced).toContain(white)
   })
 
+  it('AC-2b: 入口下方的点赞、评论等原生按钮不在走廊内，绝不被推动', () => {
+    document.body.innerHTML = `
+      <section class="SectionActionBarContainer">
+        <button id="rival-orange" class="extension-icon">CK</button>
+        <div id="avatar" class="AvatarActionItem"><img src="dog.png" /></div>
+        <button id="like" class="action-button">like</button>
+      </section>
+    `
+    const avatar = document.getElementById('avatar')!
+    const rival = document.getElementById('rival-orange')!
+    const like = document.getElementById('like')!
+
+    place(avatar, { top: 200, left: 500, width: 48, height: 48 })
+    place(rival, { top: 150, left: 500, width: 44, height: 44 })
+    // The mark sits at top 144..192; the like control starts below it.
+    place(like, { top: 300, left: 500, width: 44, height: 44 })
+
+    const ourPlacement = { left: 500, top: 144, width: 48, height: 48 }
+    const displaced = resolveIconConflicts(document, ourPlacement, avatar)
+
+    expect(displaced).toEqual([rival])
+    expect(like.hasAttribute('data-omx-shift')).toBe(false)
+  })
+
   it('AC-3: restoreDisplacedIcons 可完整还原所有样式', () => {
     document.body.innerHTML = `
       <button id="rival" style="transform: scale(1.1);" data-omx-shift="50" data-omx-orig-transform="scale(1.1)">Rival</button>

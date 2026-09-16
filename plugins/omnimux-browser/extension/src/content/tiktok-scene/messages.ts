@@ -31,4 +31,16 @@ export const TIKTOK_TIMING = {
    * page that never goes quiet, leaving the trigger at a stale anchor.
    */
   rescanThrottleMs: 180,
+
+  /**
+   * How often the address is re-read while the page is a TikTok page.
+   *
+   * The address decides whether the page gets a trigger at all, and this app
+   * rewrites it without a navigation event: a hard load of a post address
+   * commits on the feed and then has the post's own path pushed in behind it,
+   * with no DOM mutation to hang a re-check on. Reading one string on a timer is
+   * what keeps that rewrite from leaving a stale decision behind; the observer
+   * stays the fast path, and this is the floor under it.
+   */
+  urlWatchMs: 400,
 } as const
