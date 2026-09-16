@@ -1,0 +1,49 @@
+{
+  "test": "media-hover-video-visibility",
+  "timestamp": "2026-09-16T03:39:55.673Z",
+  "status": "PASSED",
+  "evidence": [
+    "01-video-detected-collapsed.png",
+    "02-video-toolbar-fully-visible.png",
+    "03-video-toolbar-and-tooltip-coexist.png",
+    "04-video-controls-tolerance.png"
+  ],
+  "states": {
+    "initial": {
+      "visible": true,
+      "opacity": "1",
+      "collapsed": true,
+      "rect": {
+        "left": 123,
+        "top": 577,
+        "width": 24,
+        "height": 24
+      }
+    },
+    "expanded": {
+      "expanded": true,
+      "visibleClass": true,
+      "capsuleOpacity": "1",
+      "capsuleDisplay": "flex",
+      "actionsOpacity": "1",
+      "actionsVisibility": "visible",
+      "buttonsCount": 3,
+      "rect": {
+        "left": 123,
+        "top": 577,
+        "width": 64,
+        "height": 24
+      }
+    },
+    "coexisting": {
+      "capsuleVisible": true,
+      "tooltipVisible": true,
+      "tooltipText": "加入灵感库"
+    },
+    "controlsBarHover": {
+      "isMounted": true,
+      "isVisible": true,
+      "opacity": "1"
+    }
+  }
+}
