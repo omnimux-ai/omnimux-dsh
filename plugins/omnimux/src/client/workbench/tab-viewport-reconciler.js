@@ -17,6 +17,7 @@ import {
   activeTabId,
   currentSessionId,
   getWorkbenchSidebarRight,
+  getWorkbenchLayout,
 } from './host-adapter.js'
 import {
   focusRecordForTab,
@@ -35,6 +36,49 @@ import {
 const TITLE_TO_TAB_ID = new Map(
   Object.entries(WORKBENCH_TAB_TITLE_FALLBACKS).map(([tabId, title]) => [title, tabId])
 )
+
+/**
+ * 确保分栏状态下右侧工作台处于健康舒适的黄金比例宽度（≥450px，大屏约为视口的 45%），
+ * 防止桌面端 layout 曾经被误拖拽至 300px 极端窄缝，导致中间会话栏被强行拉扯出 500px 黑色空洞。
+ * @param {Document} [doc]
+ */
+export function ensureHealthySplitWidth(doc = hostDocument()) {
+  if (!doc) return
+  const win = doc.defaultView || globalThis.window
+  const viewport = win?.innerWidth || 1728
+  const targetHealthyWidth = Math.max(500, Math.round(viewport * 0.45))
+
+  const layout = getWorkbenchLayout()
+  if (layout && typeof layout.setRightbar === 'function') {
+    try {
+      const snap = layout.getSnapshot?.()
+      if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
+        layout.setRightbar(targetHealthyWidth, viewport)
+        return
+      }
+    } catch {}
+  }
+
+  // DOM React Fiber 兜底探测
+  try {
+    const frame = doc.querySelector?.('.dshDesktopFrame')
+    if (frame) {
+      const key = Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
+      let p = key ? frame[key] : null
+      while (p) {
+        if (p.memoizedProps?.layout && typeof p.memoizedProps.layout.setRightbar === 'function') {
+          const l = p.memoizedProps.layout
+          const snap = l.getSnapshot?.()
+          if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
+            l.setRightbar(targetHealthyWidth, viewport)
+          }
+          break
+        }
+        p = p.return
+      }
+    }
+  } catch {}
+}
 
 /**
  * 解析当前激活的 Tab 标识符。
@@ -159,10 +203,13 @@ export function createTabViewportReconciler(deps = {}) {
               doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
               doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
             }
+            ensureHealthySplitWidth(doc)
           } finally {
             scheduleUnlock()
           }
           return
+        } else if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'push') {
+          ensureHealthySplitWidth(doc)
         }
       }
       return
@@ -183,6 +230,7 @@ export function createTabViewportReconciler(deps = {}) {
         if (newMode === WORKBENCH_FOCUS.split && doc?.documentElement) {
           doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
           doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+          ensureHealthySplitWidth(doc)
         }
       }
       return
