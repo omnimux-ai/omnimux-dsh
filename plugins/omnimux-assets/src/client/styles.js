@@ -153,10 +153,14 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-state-error-primary);
 }
 .omnimux-assets-body {
+  width: 100%;
+  box-sizing: border-box;
   min-height: 0;
   display: flex;
 }
 .omnimux-assets-main {
+  width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -874,6 +878,8 @@ export const ASSETS_CSS = `
    reverse on the light one — never with a brand accent. */
 
 .omnimux-assets-cloud {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 0;
