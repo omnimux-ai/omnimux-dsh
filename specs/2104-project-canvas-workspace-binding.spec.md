@@ -28,6 +28,13 @@ Agent 通过 `workflow_create` 在当前会话所属工作区文件夹内创建�
 ### G4 打开失败的可用反馈
 `workbench_open_tab` 命中会话配额时返回面向用户的中文原因，不静默失败。
 
+### G5 工作区始终绑定项目（2026-09-16 用户确认，本项目新增的不变量）
+- **规则**：**作品库（库根）内的工作区永远有项目**。进入创作画布前若该项目缺失，自动登记（幂等），使用户永远走「项目 → 创作页」的正常流程，不出现没有项目的野生画布。
+- **边界**：库根**之外**的工作区**不写入** `.omnimux/`，保持自由画布语义（避免把项目元数据写进代码仓库等外部目录）。
+- **Agent 侧不做两步**：不需要「先创建项目、再创建创作页」；画布创建即登记（阶段一已实现），少一次模型调用与一个失败面。
+- **不做阻塞式弹窗**：`registered` 时给一句非阻塞提示（例：已把「XX」登记为项目），用户无需做只有一个合理答案的选择。
+- **实现**：`GET /omnimux-workflow/api/projects/session-binding?sessionId=` 返回 `source: existing | registered | outside-library | unknown-session` 与 `project{id,title,path,activePageId,canvasWorkspaceId,pages}`。
+
 ## 验收标准（可测）
 
 | 编号 | 场景 | 期望 | 判据 |
@@ -39,6 +46,8 @@ Agent 通过 `workflow_create` 在当前会话所属工作区文件夹内创建�
 | A5 | 登记过程抛错 | 画布创建不受影响 | `workflow_create` 仍返回 workspace |
 | A6 | 切换会话后画布页解析 | 目标是当前会话所属项目的当前创作页 | 客户端解析优先级含该结果 |
 | A7 | `workbench_open_tab` 命中配额 | 中文可读原因 | 返回值含用户可读文案，非仅 `quota-exceeded` |
+| A8 | 库内工作区首次进入创作画布 | 自动登记并进入项目/创作页流程 | `session-binding` 返回 `registered` 且 `project.canvasWorkspaceId` 非空 |
+| A9 | 库外工作区进入创作画布 | 提示自由画布、不写盘 | `session-binding` 返回 `outside-library`，目录内无 `.omnimux/project.json` |
 
 ## 非目标
 
