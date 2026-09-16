@@ -19,10 +19,19 @@ export const BRIDGE_PATH = '/ext/bridge'
 export const BRIDGE_CONFIG_PATH = '/ext/bridge-config'
 
 /**
- * Pairing endpoint: `GET` shows the host's live 6-digit code, `POST` redeems a
- * typed code for the bridge token. Loopback-only and closed to page Origins.
+ * Pairing page: the host's own surface, where the user clicks 「确认授权」.
+ * Loopback-only and closed to page Origins.
  */
 export const BRIDGE_PAIR_PATH = '/ext/pair'
+
+/** Pairing handshake: the extension opens a pending request here. */
+export const BRIDGE_PAIR_REQUEST_PATH = '/ext/pair/request'
+
+/** Pairing approval: accepted only from the host's own page origin. */
+export const BRIDGE_PAIR_APPROVE_PATH = '/ext/pair/approve'
+
+/** Pairing poll: the extension reads `pending | approved | expired | unknown`. */
+export const BRIDGE_PAIR_STATUS_PATH = '/ext/pair/status'
 
 /** Internal RPC used after an explicit tab handoff to seed the Agent's next step. */
 export const BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD = 'bridge.injectBrowserSnapshot'

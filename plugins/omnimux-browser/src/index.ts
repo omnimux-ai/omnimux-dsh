@@ -28,7 +28,6 @@ import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-session-persistence'
 import type { WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
-import type { IncomingMessage } from 'node:http'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import { BridgeServer, isLoopbackAddress } from './server.ts'
 import { BrowserContextInjector } from './browser-context.ts'
@@ -36,12 +35,11 @@ import { DRAFT_FORMAT_INSTRUCTIONS } from './draft.ts'
 import { registerBrowserTools } from './tools.ts'
 import {
   BRIDGE_CONFIG_PATH,
-  BRIDGE_PAIR_PATH,
   BRIDGE_PATH,
   DEFAULT_SNAPSHOT_MAX_CHARS,
   MIN_SNAPSHOT_MAX_CHARS,
 } from './protocol.ts'
-import { PairingSessions, pairingPageHtml, pairingRequestAllowed } from './pairing.ts'
+import { createPairingRoutes } from './pairing-routes.ts'
 import { withSessionDeferral } from './session-deferral.ts'
 import { withSessionWorkspace } from './session-workspace.ts'
 import { purgeSessionFiles, type SessionPurgeDeps } from './session-purge.ts'
@@ -132,35 +130,6 @@ export function resolveConfig(config: Config): ResolvedConfig {
   return resolved
 }
 
-/**
- * Read one pairing request body.
- *
- * The body carries a 6-digit code and nothing else, so it is capped hard: a
- * client that streams more than a kilobyte is not pairing, it is probing.
- *
- * @param req - the POST request stream.
- * @returns the trimmed code, or null when the body is unusable.
- */
-async function readPairingCode(req: IncomingMessage): Promise<string | null> {
-  const chunks: Buffer[] = []
-  let size = 0
-  try {
-    for await (const chunk of req) {
-      const buffer = Buffer.from(chunk as Buffer)
-      size += buffer.length
-      if (size > 1024) return null
-      chunks.push(buffer)
-    }
-  } catch {
-    return null
-  }
-  try {
-    const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { code?: unknown }
-    return typeof parsed.code === 'string' ? parsed.code.trim() : null
-  } catch {
-    return null
-  }
-}
 
 /**
  * Mount the bridge: resolve the token, register the upgrade route, the tool
@@ -364,57 +333,16 @@ function mountBridge(
   }
   ctx.effect(() => ctx.webServer.register(configRoute), 'bridge-browser: /ext/bridge-config route')
 
-  // Pairing: this host's own surface shows a 6-digit code, and the extension
-  // redeems it for the bridge token. The gate is loopback plus a non-page
-  // Origin — a page may send the request but can never read the answer, and
-  // the answer is returned without a CORS header for the same reason. Wrong
-  // codes burn the session, so guessing has five tries out of a million.
-  const pairing = new PairingSessions()
-  const pairingRoute: WebRoute = {
-    kind: 'exact',
-    path: BRIDGE_PAIR_PATH,
-    handler: (req, res) => {
-      const allowed = pairingRequestAllowed(req.socket.remoteAddress, req.headers.origin, isLoopbackAddress)
-      if (!allowed) {
-        res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
-        res.end('forbidden')
-        return
-      }
-      if (req.method === 'GET' || req.method === 'HEAD') {
-        const forced = new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('new') === '1'
-        const session = forced ? pairing.start() : (pairing.current() ?? pairing.start())
-        res.writeHead(200, {
-          'content-type': 'text/html; charset=utf-8',
-          'cache-control': 'no-store',
-        })
-        res.end(pairingPageHtml(session, ctx.webServer.port))
-        return
-      }
-      if (req.method !== 'POST') {
-        res.writeHead(405, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
-        res.end('method not allowed')
-        return
-      }
-      void readPairingCode(req).then((code) => {
-        const json = (status: number, body: unknown): void => {
-          res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
-          res.end(JSON.stringify(body))
-        }
-        if (code === null) {
-          json(400, { error: 'bad-request' })
-          return
-        }
-        const outcome = pairing.redeem(code)
-        if (outcome === 'ok') {
-          json(200, { token: tokenRes.token })
-          return
-        }
-        const status = outcome === 'mismatch' ? 401 : outcome === 'exhausted' ? 429 : 409
-        json(status, { error: outcome })
-      })
-    },
+  // Pairing: the host's own page approves a pending request, and the extension
+  // picks the token up from a loopback poll. Admission rules live in pairing.ts.
+  for (const route of createPairingRoutes({
+    port: () => ctx.webServer.port,
+    token: () => tokenRes.token,
+    isLoopback: isLoopbackAddress,
+  })) {
+    ctx.effect(() => ctx.webServer.register(route), `bridge-browser: ${route.path} route`)
   }
-  ctx.effect(() => ctx.webServer.register(pairingRoute), 'bridge-browser: /ext/pair route')
+
 
   ctx.effect(() => {
     const disposers = registerBrowserTools(ctx, server, {
