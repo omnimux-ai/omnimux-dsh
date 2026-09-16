@@ -1,7 +1,7 @@
 {
   "PreToolUse": [
     {
-      "matcher": "edit|write|bash",
+      "matcher": "edit|write|bash|glob|grep",
       "hooks": [
         {
           "type": "command",
