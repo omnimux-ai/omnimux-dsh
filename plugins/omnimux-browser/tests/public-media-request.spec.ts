@@ -78,4 +78,16 @@ describe('production media transport wiring', () => {
     expect((await fetchMediaBytes('https://cdn.example/image')).status).toBe('bad-request')
     expect(transport.lookups).toBe(1)
   })
+
+  it('downloads a lit media whose resolver answer is a proxy fake address', async () => {
+    // Measured shape of a machine behind a transparent proxy in enhanced mode:
+    // every public name answers out of the benchmarking range, and the proxy
+    // dials the real host from the fake address it handed out.
+    transport.addresses = [{ address: '198.18.35.226', family: 4 }]
+    expect((await fetchMediaBytes('https://scontent.cdninstagram.com/v/t51/example.jpg')).status).toBe('ok')
+    expect(transport.lookups).toBe(1)
+    // The socket still carries the real name (Host and HTTPS SNI), which is the
+    // only thing the proxy can map the fake address back with.
+    expect(transport.requests.map(({ url }) => url.hostname)).toEqual(['scontent.cdninstagram.com'])
+  })
 })

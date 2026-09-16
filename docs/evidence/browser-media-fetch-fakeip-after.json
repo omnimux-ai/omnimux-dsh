@@ -1,0 +1,32 @@
+{
+  "probe": "fake-IP 代理环境下宿主抓图（修复后）",
+  "issue": 2055,
+  "at": "2026-09-16T10:58:40.000Z",
+  "node": "v25.8.0",
+  "command": "node tmp/media-fetch-fakeip-probe.mts",
+  "dns": {
+    "www.baidu.com": "[{\"address\":\"198.18.33.96\",\"family\":4}]",
+    "pbs.twimg.com": "[{\"address\":\"198.18.35.226\",\"family\":4}]"
+  },
+  "guard": {
+    "isNonPublicAddress(\"198.18.39.41\")": true,
+    "isNonPublicAddress(\"127.0.0.1\")": true,
+    "isNonPublicAddress(\"8.8.8.8\")": false
+  },
+  "outcomes": [
+    {
+      "url": "https://www.baidu.com/img/flexible/logo/pc/result.png",
+      "status": "ok",
+      "contentType": "image/png",
+      "byteLength": 6617,
+      "sha256_prefix": "cca2ef55292662c7",
+      "magic": "89504e47"
+    },
+    {
+      "url": "https://pbs.twimg.com/media/GFx1234abcd.jpg",
+      "status": "http-error",
+      "detail": { "status": "http-error", "statusCode": 404 }
+    }
+  ],
+  "reading": "同一个 fake-IP 假地址（198.18.33.96）下：真实存在的公网图片返回 ok 且字节为真 PNG（魔数 89504e47，6617 字节，与不经守卫的直连一致）；不存在的地址返回真实 CDN 的 404，说明请求确实到达了真实互联网，而不是被守卫拦下。修复前两者都是 bad-request。"
+}

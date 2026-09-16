@@ -1,0 +1,33 @@
+{
+  "probe": "fake-IP 代理环境下宿主抓图复现（修复前）",
+  "issue": 2055,
+  "at": "2026-09-16T10:50:01.902Z",
+  "node": "v25.8.0",
+  "command": "node tmp/media-fetch-fakeip-probe.mts",
+  "dns": {
+    "www.baidu.com": "[{\"address\":\"198.18.33.96\",\"family\":4}]",
+    "pbs.twimg.com": "[{\"address\":\"198.18.35.226\",\"family\":4}]"
+  },
+  "guard": {
+    "isNonPublicAddress(\"198.18.39.41\")": true,
+    "isNonPublicAddress(\"127.0.0.1\")": true,
+    "isNonPublicAddress(\"8.8.8.8\")": false
+  },
+  "outcomes": [
+    {
+      "url": "https://www.baidu.com/img/flexible/logo/pc/result.png",
+      "status": "bad-request",
+      "detail": { "status": "bad-request", "message": "only public http(s) media addresses are fetched" }
+    },
+    {
+      "url": "https://pbs.twimg.com/media/GFx1234abcd.jpg",
+      "status": "bad-request",
+      "detail": { "status": "bad-request", "message": "only public http(s) media addresses are fetched" }
+    }
+  ],
+  "transportReachability": {
+    "note": "同一地址不经该守卫时链路正常，证明阻塞点只在地址判定",
+    "plainFetch": "200 image/png 6617 bytes 303ms",
+    "pinnedFakeIpLookup": "200 image/png 6617 bytes 238ms"
+  }
+}
