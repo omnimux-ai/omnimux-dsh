@@ -94,6 +94,53 @@ async function mountModal(row) {
   return { document: dom.window.document, window: dom.window }
 }
 
+/**
+ * Mount the modal so the test can hand it a *different* row afterwards — the
+ * shape a publish produces, where the Host's own row replaces the catalogue's.
+ * @param {Record<string, any>} row
+ */
+async function mountRerenderable(row) {
+  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
+    url: 'http://localhost:3000',
+  })
+  const previous = { window: globalThis.window, document: globalThis.document, fetch: globalThis.fetch }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  globalThis.fetch = async () => ({ ok: false, status: 500, json: async () => ({}) })
+
+  let root = null
+  pending.push(async () => {
+    if (root) {
+      const mounted = root
+      root = null
+      await React.act(async () => mounted.unmount())
+    }
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.fetch = previous.fetch
+    dom.window.close()
+  })
+
+  const render = async (next) => {
+    await React.act(async () => {
+      root.render(React.createElement(InspirationPreviewModal, {
+        row: next,
+        t: (key) => zh[key] || key,
+        onClose() {},
+      }))
+    })
+  }
+
+  root = createRoot(dom.window.document.getElementById('host'))
+  await render(row)
+  assert.ok(
+    dom.window.document.querySelector('.omnimux-inspiration-share-trigger-btn'),
+    '弹窗右上角必须存在分享按钮',
+  )
+  return { document: dom.window.document, window: dom.window, render }
+}
+
 describe('InspirationPreviewModal share popover', () => {
   it('renders the share button in header actions area', async () => {
     const { document } = await mountModal({ id: 'insp-1', title: '测试灵感分享素材' })
@@ -204,5 +251,58 @@ describe('InspirationPreviewModal share popover', () => {
     assert.match(alert.textContent, /网关密钥/)
     assert.equal(document.querySelector('.omnimux-inspiration-share-input'), null, '失败时不展示任何链接')
     assert.match(document.querySelector('.omnimux-inspiration-share-submit-btn').textContent, /重新创建链接/)
+  })
+
+  /*
+   * Issue #2075. A catalogue row numbers its entries (`2789`) and the Host's own
+   * row for the same entry answers the string form (`"2789"`), so starting a
+   * publish flips the id's type. Reading that flip as "a different entry" closed
+   * the popover and cleared the failure reason the instant the user clicked
+   * create — a click that appeared to do nothing at all.
+   */
+  it('keeps the popover open when the same entry answers its id as a string', async () => {
+    const { document, render } = await mountRerenderable({ id: 2789, is_local: false, title: '云端作品' })
+
+    const trigger = document.querySelector('.omnimux-inspiration-share-trigger-btn')
+    await React.act(async () => {
+      trigger.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    })
+    assert.ok(document.querySelector('.omnimux-inspiration-share-popover'), '分享浮层必须先能打开')
+
+    // A publish started and the Host's row replaced the catalogue's one.
+    await render({
+      id: '2789',
+      is_local: false,
+      title: '云端作品',
+      share_status: 'failed',
+      share_error: '云端素材地址缺失',
+    })
+
+    assert.ok(
+      document.querySelector('.omnimux-inspiration-share-popover'),
+      '同一条记录 id 形态翻转后，分享浮层必须保持打开',
+    )
+    const alert = document.querySelector('.omnimux-inspiration-share-tip.is-error')
+    assert.ok(alert, '失败原因不得被清除')
+    assert.match(alert.textContent, /云端素材地址缺失/)
+    assert.match(document.querySelector('.omnimux-inspiration-share-submit-btn').textContent, /重新创建链接/)
+  })
+
+  it('still resets the popover when the user opens a different entry', async () => {
+    const { document, render } = await mountRerenderable({ id: 2789, is_local: false, title: '第一条云端作品' })
+
+    const trigger = document.querySelector('.omnimux-inspiration-share-trigger-btn')
+    await React.act(async () => {
+      trigger.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    })
+    assert.ok(document.querySelector('.omnimux-inspiration-share-popover'))
+
+    await render({ id: 2690, is_local: false, title: '另一条云端作品' })
+
+    assert.equal(
+      document.querySelector('.omnimux-inspiration-share-popover'),
+      null,
+      '换成另一条记录时，浮层必须按既有语义复位',
+    )
   })
 })
