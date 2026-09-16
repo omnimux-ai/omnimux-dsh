@@ -35,6 +35,7 @@ export const INSPIRATION_CSS = `
   pointer-events: none;
 }
 .omnimux-inspiration-stage-body {
+  flex: none;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -50,6 +51,7 @@ export const INSPIRATION_CSS = `
 }
 
 .omnimux-inspiration-root {
+  flex: none;
   display: flex;
   flex-direction: column;
   min-height: 0;
