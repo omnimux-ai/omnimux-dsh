@@ -24,7 +24,12 @@ test('E2E: 资产库双层分类导航保持标准呼吸间距', () => {
 
   assert.ok(
     assetsStyles.includes('.omnimux-assets-local-nav {') &&
-    assetsStyles.includes('padding: 12px 24px 10px;'),
-    '资产库 local nav 保持标准 12px 留白'
+    assetsStyles.includes('padding: 12px 24px 14px;'),
+    '资产库 local nav 保持标准 12px/14px 留白'
+  );
+  assert.ok(
+    assetsStyles.includes('.omnimux-assets-cloud-nav {') &&
+    assetsStyles.includes('padding: 12px 0 14px;'),
+    '资产库 cloud nav 保持标准 12px/14px 留白'
   );
 });

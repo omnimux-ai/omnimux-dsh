@@ -15,6 +15,7 @@ import {
   validateDispositionsShape,
 } from './contract/dispositions.js'
 import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js'
+import { DEFAULT_OPERATION_AUTO } from '../settings/schema.js'
 
 export const CATALOG_KINDS = Object.freeze(['text', 'image', 'video', 'audio'])
 
@@ -39,6 +40,71 @@ export const SETTINGS_DEFAULT_KEYS = Object.freeze({
   video: 'defaultVideoModel',
   audio: 'defaultAudioModel',
 })
+
+/** Kinds whose default generation mode is configurable through settings. */
+export const SETTINGS_DEFAULT_OPERATION_KEYS = Object.freeze({
+  image: 'defaultImageOperation',
+  video: 'defaultVideoOperation',
+})
+
+/** Ordered models to try when the configured default model cannot publish the preferred mode. */
+const PREFERRED_OPERATION_MODELS = Object.freeze({
+  image: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
+  video: ['minimax-h3', 'seedance-2-0', 'seedance-2-5'],
+})
+
+/** The mode a kind starts in: it consumes upstream media, so a new node shows its slots. */
+const PREFERRED_OPERATION = Object.freeze({
+  image: 'multi_reference',
+  video: 'video_multi_ref',
+})
+
+/** Listed operation ids of one model for one output type, in contract order. */
+function listedOperationIds(models, modelId, kind) {
+  const model = (models ?? []).find((row) => row && row.id === modelId)
+  return (model?.operations ?? [])
+    .filter((op) => op && op.listed === true && op.output?.type === kind)
+    .map((op) => op.id)
+}
+
+/**
+ * Resolve the generation mode a new node of `kind` starts in.
+ *
+ * An explicit setting wins while some listed model publishes it; otherwise the
+ * configured default model keeps the preferred media-consuming mode, then the
+ * preferred-model chain is walked, then the model's own first listed mode.
+ *
+ * @param {{ kind: string, configured: unknown, modelId: string, ids: Set<string>, models: Array<object> }} input
+ * @returns {{ modelId: string, operationId: string, rule: string }}
+ */
+export function resolveDefaultOperation(input) {
+  const kind = input.kind
+  const preferred = PREFERRED_OPERATION[kind]
+  const chain = PREFERRED_OPERATION_MODELS[kind] ?? []
+  const configured = typeof input.configured === 'string' ? input.configured.trim() : ''
+  if (configured && configured !== DEFAULT_OPERATION_AUTO) {
+    if (listedOperationIds(input.models, input.modelId, kind).includes(configured)) {
+      return { modelId: input.modelId, operationId: configured, rule: 'configured' }
+    }
+    for (const candidate of chain) {
+      if (candidate === input.modelId || !input.ids.has(candidate)) continue
+      if (listedOperationIds(input.models, candidate, kind).includes(configured)) {
+        return { modelId: candidate, operationId: configured, rule: 'configured_chain' }
+      }
+    }
+  }
+  if (preferred && listedOperationIds(input.models, input.modelId, kind).includes(preferred)) {
+    return { modelId: input.modelId, operationId: preferred, rule: 'auto' }
+  }
+  for (const candidate of chain) {
+    if (candidate === input.modelId || !input.ids.has(candidate)) continue
+    if (preferred && listedOperationIds(input.models, candidate, kind).includes(preferred)) {
+      return { modelId: candidate, operationId: preferred, rule: 'auto_chain' }
+    }
+  }
+  const first = listedOperationIds(input.models, input.modelId, kind)[0]
+  return { modelId: input.modelId, operationId: first ?? '', rule: first ? 'first_operation' : 'none' }
+}
 
 /**
  * Catalog v1.1: the contract projection is the authority (models[] + four
@@ -121,6 +187,18 @@ export function buildModelCatalog(opts = {}) {
     })
   }
 
+  /** Per-kind generation mode a new node starts in (see resolveDefaultOperation). */
+  const defaultOperations = {}
+  for (const kind of Object.keys(SETTINGS_DEFAULT_OPERATION_KEYS)) {
+    defaultOperations[kind] = resolveDefaultOperation({
+      kind,
+      configured: settingsDefaults[SETTINGS_DEFAULT_OPERATION_KEYS[kind]],
+      modelId: defaults[kind],
+      ids: new Set(lists[kind].map((row) => row.id)),
+      models: dto.models,
+    })
+  }
+
   return {
     schemaVersion: CANONICAL_SCHEMA_VERSION,
     source: 'omnimux',
@@ -139,6 +217,7 @@ export function buildModelCatalog(opts = {}) {
     models: dto.models,
     defaults,
     defaultsByOperation: dto.defaultsByOperation,
+    defaultOperations,
     text: lists.text,
     image: lists.image,
     video: lists.video,

@@ -306,6 +306,12 @@ export interface CapabilityCatalog {
   models?: CatalogModelDto[];
   /** Per-operation default model id (hub catalog-defaults). */
   defaultsByOperation?: Record<string, string>;
+  /** Per-kind generation mode a new node starts in (hub catalog defaultOperations). */
+  defaultOperations?: Partial<Record<'text' | 'image' | 'video' | 'audio', {
+    modelId: string;
+    operationId: string;
+    rule: string;
+  }>>;
   text: Array<CapabilityModelItem>;
   image: Array<CapabilityModelItem>;
   video: Array<CapabilityModelItem>;
