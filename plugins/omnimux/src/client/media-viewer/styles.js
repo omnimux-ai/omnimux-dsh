@@ -32,13 +32,16 @@ export const MEDIA_VIEWER_CSS = `
 .omx-chat-media-tail--gallery {
   display: flex !important;
   flex-direction: row !important;
-  gap: 10px !important;
-  align-items: stretch !important;
+  align-items: flex-start !important;
+  position: relative !important;
+  box-sizing: border-box !important;
   width: fit-content !important;
   max-width: 100% !important;
   height: auto !important;
   max-height: min(440px, 50vh) !important;
-  min-height: 180px !important;
+  min-height: 0 !important;
+  padding-right: 106px !important;
+  overflow: hidden !important;
   outline: none !important;
 }
 
@@ -47,7 +50,7 @@ export const MEDIA_VIEWER_CSS = `
   flex: 0 1 auto !important;
   width: auto !important;
   min-width: 0;
-  height: 100%;
+  height: auto;
   max-height: min(440px, 50vh);
   border-radius: 12px;
   overflow: hidden;
@@ -59,16 +62,18 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-chat-media-tail__main-content {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
   position: relative;
   overflow: hidden;
 }
 
 .omx-chat-media-tail__main-content img,
 .omx-chat-media-tail__main-content video {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(440px, 50vh);
   object-fit: contain;
   background: transparent !important;
   border-radius: 10px;
@@ -79,12 +84,15 @@ export const MEDIA_VIEWER_CSS = `
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 0 0 96px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 96px;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
-  height: 100%;
+  height: auto;
   padding: 2px 3px 2px 3px;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
