@@ -144,6 +144,71 @@ export function normalizeCoverUrl(raw) {
   return `/omnimux/inspiration/media/${raw.replace(/^\/+/, '')}`
 }
 
+/**
+ * 视频路径归一：兼容本地库（/omnimux/inspiration/local/media/…）、
+ * 云目录（/omnimux/inspiration/media/… 或 /api/inspiration/v1/media/…）与标准 HTTP/HTTPS 直链。
+ * @param {unknown} raw
+ * @returns {string}
+ */
+export function normalizeVideoUrl(raw) {
+  if (typeof raw !== 'string' || raw === '') return ''
+  if (raw.includes('..')) return ''
+  if (/^https?:\/\//i.test(raw)) return raw
+  if (raw.startsWith('/omnimux/inspiration/local/media/')) return raw
+  if (raw.startsWith('/omnimux/inspiration/media/')) return raw
+  if (raw.startsWith('/api/inspiration/v1/media/')) {
+    return `/omnimux/inspiration/media/${raw.slice('/api/inspiration/v1/media/'.length)}`
+  }
+  return `/omnimux/inspiration/media/${raw.replace(/^\/+/, '')}`
+}
+
+/**
+ * 从灵感库行中提取视频播放地址。
+ * 优先级：media_urls / mediaUrls 列表项 → video_url / videoUrl / video / play_url 等直链。
+ * @param {object | null | undefined} row
+ * @returns {string}
+ */
+export function readVideoUrl(row) {
+  if (!row || typeof row !== 'object') return ''
+  const urls = Array.isArray(row.media_urls)
+    ? row.media_urls
+    : (Array.isArray(row.mediaUrls) ? row.mediaUrls : [])
+  const firstMedia = urls.find((u) => typeof u === 'string' && u.trim() !== '')
+  if (firstMedia) {
+    const normalized = normalizeVideoUrl(firstMedia)
+    if (normalized) return normalized
+  }
+  const candidate = [row.video_url, row.videoUrl, row.video, row.play_url, row.playUrl]
+    .find((u) => typeof u === 'string' && u.trim() !== '')
+  if (candidate) {
+    const normalized = normalizeVideoUrl(candidate)
+    if (normalized) return normalized
+  }
+  return ''
+}
+
+/**
+ * 从灵感库行中提取图集/多图图片列表。
+ * @param {object | null | undefined} row
+ * @returns {string[]}
+ */
+export function readImages(row) {
+  if (!row || typeof row !== 'object') return []
+  if (Array.isArray(row.images) && row.images.length > 0) {
+    return row.images.map(normalizeCoverUrl).filter(Boolean)
+  }
+  const urls = Array.isArray(row.media_urls)
+    ? row.media_urls
+    : (Array.isArray(row.mediaUrls) ? row.mediaUrls : [])
+  if (urls.length > 1) {
+    return urls.map(normalizeCoverUrl).filter(Boolean)
+  }
+  if (Array.isArray(row.slides) && row.slides.length > 0) {
+    return row.slides.map(normalizeCoverUrl).filter(Boolean)
+  }
+  return []
+}
+
 /** @param {unknown} value */
 function readFiniteNumber(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -291,6 +356,8 @@ export function mapSourceItem(row, nowMs = Date.now()) {
   const region = String(row.country_code || '').trim().toUpperCase()
   const industry = String(row.category || '').trim()
   const tags = Array.isArray(row.tags) ? row.tags.filter((tag) => typeof tag === 'string' && tag !== '') : []
+  const images = readImages(row)
+  const cover = normalizeCoverUrl(row.cover_url || row.cover_key) || images[0] || ''
   return {
     id,
     title: String(row.title || '').trim(),
@@ -300,7 +367,10 @@ export function mapSourceItem(row, nowMs = Date.now()) {
     views: readViews(row),
     engagement: readEngagement(row),
     days: readAgeDays(row.posted_at || row.published_at, nowMs),
-    cover: normalizeCoverUrl(row.cover_url || row.cover_key),
+    cover,
+    images,
+    isCarousel: images.length > 1,
+    videoUrl: readVideoUrl(row),
     sourceUrl: typeof row.source_url === 'string' ? row.source_url : '',
     structure: readStructure(row),
     product: '',

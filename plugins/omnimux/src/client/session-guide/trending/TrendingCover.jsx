@@ -112,42 +112,224 @@ const SCENE_MAP = {
   unboxing: UnboxingScene,
 }
 
+const ICON_CAROUSEL_PREV = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+)
+
+const ICON_CAROUSEL_NEXT = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+)
+
 /**
- * @param {{ item: { id: string, title?: string, archetype?: string, cover?: string } }} props
+ * @param {{
+ *   item: { id: string, title?: string, archetype?: string, cover?: string, images?: string[], videoUrl?: string },
+ *   isHovered?: boolean,
+ *   onPlaybackChange?: (playing: boolean) => void,
+ *   t?: (key: string, fallback?: string) => string,
+ * }} props
  */
-export const TrendingCover = React.memo(function TrendingCover({ item }) {
-  const [coverFailed, setCoverFailed] = useState(false)
+export const TrendingCover = React.memo(function TrendingCover({ item, isHovered = false, onPlaybackChange, t }) {
   const [coverLoaded, setCoverLoaded] = useState(false)
-  const cover = typeof item?.cover === 'string' ? item.cover.trim() : ''
-  if (cover && !coverFailed) {
+  const [failedImages, setFailedImages] = useState([])
+  const [videoFailed, setVideoFailed] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
+  const videoRef = React.useRef(null)
+
+  const rawImages = Array.isArray(item?.images)
+    ? item.images.filter((src) => typeof src === 'string' && src.trim() !== '')
+    : []
+  // 加载失败的图从图集里摘掉，而不是让卡片留一个破图位
+  const images = rawImages.filter((src) => !failedImages.includes(src))
+  const isCarousel = images.length > 1
+  const rawCover = typeof item?.cover === 'string' ? item.cover.trim() : ''
+  // 多图卡片一律以图集为准：封面字段只可能指向其中一张，拿它当基准会和翻图错位
+  const cover = isCarousel ? images[0] : (rawCover || images[0] || '')
+  const coverBroken = Boolean(cover) && failedImages.includes(cover) && !isCarousel
+  const videoUrl = typeof item?.videoUrl === 'string' ? item.videoUrl.trim() : ''
+
+  const activeIndex = isCarousel ? ((imageIndex % images.length) + images.length) % images.length : 0
+
+  // 换卡片时把翻图游标与加载态复位：否则下一张卡会承接上一张的图位
+  React.useEffect(() => {
+    setImageIndex(0)
+    setCoverLoaded(false)
+    setVideoFailed(false)
+  }, [item?.id])
+
+  // 多图卡片「翻图优先」：同一张卡上翻图与播片互斥，避免两种动作抢同一块画面
+  const canPlayVideo = Boolean(videoUrl && !isCarousel && !videoFailed && isHovered)
+
+  React.useEffect(() => {
+    if (!canPlayVideo) {
+      if (isPlaying) {
+        setIsPlaying(false)
+        onPlaybackChange?.(false)
+      }
+      if (videoRef.current) {
+        try {
+          videoRef.current.pause()
+          videoRef.current.currentTime = 0
+        } catch {}
+      }
+      return
+    }
+
+    const videoEl = videoRef.current
+    if (videoEl) {
+      try {
+        videoEl.currentTime = 0
+        const playPromise = videoEl.play()
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            // 安全捕获：在测试环境或特定浏览器静音播放策略异常时平滑降级
+          })
+        }
+      } catch {}
+    }
+  }, [canPlayVideo, isPlaying, onPlaybackChange])
+
+  const handleVideoPlaying = () => {
+    setIsPlaying(true)
+    onPlaybackChange?.(true)
+  }
+
+  const handleVideoError = () => {
+    setVideoFailed(true)
+    setIsPlaying(false)
+    onPlaybackChange?.(false)
+  }
+
+  const handleImageError = (src) => {
+    if (!src) return
+    setFailedImages((prev) => (prev.includes(src) ? prev : [...prev, src]))
+  }
+
+  const goPrev = () => setImageIndex((index) => (isCarousel ? (index - 1 + images.length) % images.length : 0))
+  const goNext = () => setImageIndex((index) => (isCarousel ? (index + 1) % images.length : 0))
+
+  /** 卡内翻图按钮绝不能连带触发卡片自身的点击/选择语义。 */
+  const isolateControl = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const renderBackground = () => {
+    // 多图卡片：整组图叠放，靠透明度切换。旧图在新图未绘出前仍然可见，
+    // 因此翻图是平滑交叉淡入，不会先黑一下再出图。
+    if (isCarousel) {
+      return images.map((src, index) => (
+        <img
+          key={`${src}#${index}`}
+          className={`omnimux-trending-cover-img is-carousel-layer${index === activeIndex ? ' is-loaded' : ''}`}
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          aria-hidden="true"
+          onError={() => handleImageError(src)}
+        />
+      ))
+    }
+
+    if (cover && !coverBroken) {
+      return (
+        <img
+          className={`omnimux-trending-cover-img${coverLoaded ? ' is-loaded' : ''}`}
+          src={cover}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          aria-hidden="true"
+          onLoad={() => setCoverLoaded(true)}
+          onError={() => handleImageError(cover)}
+        />
+      )
+    }
+
+    const archetype = ARCHETYPE_SET.has(item?.archetype) ? item.archetype : 'product-hero'
+    const Scene = SCENE_MAP[archetype]
     return (
-      <img
-        className={`omnimux-trending-cover-img${coverLoaded ? ' is-loaded' : ''}`}
-        src={cover}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
+      <svg
+        className="omnimux-trending-cover-svg"
+        data-archetype={archetype}
+        data-accent={accentIndex(item?.id)}
+        viewBox="0 0 90 160"
+        preserveAspectRatio="xMidYMid slice"
         aria-hidden="true"
-        onLoad={() => setCoverLoaded(true)}
-        onError={() => setCoverFailed(true)}
-      />
+        focusable="false"
+      >
+        <Scene />
+      </svg>
     )
   }
 
-  const archetype = ARCHETYPE_SET.has(item?.archetype) ? item.archetype : 'product-hero'
-  const Scene = SCENE_MAP[archetype]
   return (
-    <svg
-      className="omnimux-trending-cover-svg"
-      data-archetype={archetype}
-      data-accent={accentIndex(item?.id)}
-      viewBox="0 0 90 160"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <Scene />
-    </svg>
+    <>
+      {renderBackground()}
+      {canPlayVideo ? (
+        <video
+          ref={videoRef}
+          className={`omnimux-trending-cover-video${isPlaying ? ' is-playing' : ''}`}
+          src={videoUrl}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="metadata"
+          onPlaying={handleVideoPlaying}
+          onError={handleVideoError}
+          aria-hidden="true"
+          data-testid="trending-card-video"
+        />
+      ) : null}
+
+      {isCarousel ? (
+        <>
+          <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生卡片动作按钮 */
+            type="button"
+            className="omnimux-trending-card-carousel-nav is-prev"
+            aria-label={t?.('trending.carousel.prev') || '上一张'}
+            onClick={(e) => {
+              isolateControl(e)
+              goPrev()
+            }}
+            onMouseDown={isolateControl}
+            onPointerDown={isolateControl}
+          >
+            {ICON_CAROUSEL_PREV}
+          </button>
+
+          <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生卡片动作按钮 */
+            type="button"
+            className="omnimux-trending-card-carousel-nav is-next"
+            aria-label={t?.('trending.carousel.next') || '下一张'}
+            onClick={(e) => {
+              isolateControl(e)
+              goNext()
+            }}
+            onMouseDown={isolateControl}
+            onPointerDown={isolateControl}
+          >
+            {ICON_CAROUSEL_NEXT}
+          </button>
+
+          <span className="omnimux-trending-card-carousel-dots" aria-hidden="true">
+            {images.map((src, index) => (
+              <span
+                key={`dot-${src}#${index}`}
+                className={`omnimux-trending-carousel-dot${index === activeIndex ? ' is-active' : ''}`}
+              />
+            ))}
+          </span>
+        </>
+      ) : null}
+    </>
   )
 })

@@ -21,6 +21,23 @@ const ICON_INFO = (
   </svg>
 )
 
+const ICON_VIEW_GRID = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+)
+
+const ICON_VIEW_CAROUSEL = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="7" y="3" width="10" height="18" rx="2" />
+    <path d="M3 6v12" />
+    <path d="M21 6v12" />
+  </svg>
+)
+
 /**
  * 档位条目 → 选择器选项。
  * @param {Array<{value: string, label?: string, labelKey?: string}>} buckets
@@ -71,6 +88,8 @@ export const TrendingFilterBar = React.memo(function TrendingFilterBar({
   regionOptions = [],
   industryOptions = [],
   viewOptions = [],
+  layoutMode = 'grid',
+  onLayoutModeChange,
 }) {
   const set = (key) => (value) => onChange?.({ [key]: value })
 
@@ -160,6 +179,29 @@ export const TrendingFilterBar = React.memo(function TrendingFilterBar({
           className="omnimux-trending-select-field"
           options={toOptions(TRENDING_SORTS, t)}
         />
+
+        <div className="omnimux-trending-view-switch" role="group" aria-label={t('trending.layout.switch') || '浏览格式'}>
+          <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生卡片动作按钮 */
+            type="button"
+            className={`omnimux-trending-view-btn${layoutMode === 'grid' ? ' is-active' : ''}`}
+            aria-label={t('trending.layout.grid') || '网格视图'}
+            title={t('trending.layout.grid') || '网格视图'}
+            aria-pressed={layoutMode === 'grid' ? 'true' : 'false'}
+            onClick={() => onLayoutModeChange?.('grid')}
+          >
+            {ICON_VIEW_GRID}
+          </button>
+          <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生卡片动作按钮 */
+            type="button"
+            className={`omnimux-trending-view-btn${layoutMode === 'carousel' ? ' is-active' : ''}`}
+            aria-label={t('trending.layout.carousel') || '轮播视图'}
+            title={t('trending.layout.carousel') || '轮播视图'}
+            aria-pressed={layoutMode === 'carousel' ? 'true' : 'false'}
+            onClick={() => onLayoutModeChange?.('carousel')}
+          >
+            {ICON_VIEW_CAROUSEL}
+          </button>
+        </div>
       </div>
     </div>
   )

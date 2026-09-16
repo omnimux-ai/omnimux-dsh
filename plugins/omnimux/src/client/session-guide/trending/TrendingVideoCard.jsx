@@ -29,6 +29,11 @@ const ICON_REPLICATE = (
 export const TrendingVideoCard = React.memo(function TrendingVideoCard({ item, t, onRecreate, active = false }) {
   if (!item) return null
 
+  const [isHovered, setIsHovered] = React.useState(false)
+  const [isPlaying, setIsPlaying] = React.useState(false)
+  const hoverTimerRef = React.useRef(null)
+  const cardRef = React.useRef(null)
+
   const region = String(item.region || '').toUpperCase()
   const title = String(item.title || '')
   // 读数缺失显示 `—`，不显示 0：未知和「真的是 0」必须能分辨
@@ -36,21 +41,66 @@ export const TrendingVideoCard = React.memo(function TrendingVideoCard({ item, t
   const engagement = typeof item.engagement === 'number' && Number.isFinite(item.engagement) ? item.engagement : null
   const UNKNOWN = '—'
 
+  React.useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+
+    const handleEnter = () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = setTimeout(() => {
+        setIsHovered(true)
+      }, 150)
+    }
+
+    const handleLeave = () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
+        hoverTimerRef.current = null
+      }
+      setIsHovered(false)
+      setIsPlaying(false)
+    }
+
+    el.addEventListener('pointerenter', handleEnter)
+    el.addEventListener('pointerleave', handleLeave)
+    el.addEventListener('mouseenter', handleEnter)
+    el.addEventListener('mouseleave', handleLeave)
+
+    return () => {
+      el.removeEventListener('pointerenter', handleEnter)
+      el.removeEventListener('pointerleave', handleLeave)
+      el.removeEventListener('mouseenter', handleEnter)
+      el.removeEventListener('mouseleave', handleLeave)
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    }
+  }, [])
+
   return (
     <article
-      className={`omnimux-trending-card${active ? ' is-active' : ''}`}
+      ref={cardRef}
+      className={`omnimux-trending-card${active ? ' is-active' : ''}${isPlaying ? ' is-playing' : ''}`}
       data-trending-id={item.id}
       data-trending-active={active ? 'true' : 'false'}
+      data-trending-hover={isHovered ? 'true' : 'false'}
+      data-trending-playing={isPlaying ? 'true' : 'false'}
       aria-label={title}
     >
       <div className="omnimux-trending-card-media">
-        <TrendingCover item={item} />
+        <TrendingCover item={item} isHovered={isHovered} onPlaybackChange={setIsPlaying} t={t} />
       </div>
 
       <div className="omnimux-trending-card-topshade" aria-hidden="true" />
 
       {region ? (
         <span className="omnimux-trending-card-region">{region}</span>
+      ) : null}
+
+      {isPlaying ? (
+        <span className="omnimux-trending-card-playing-indicator" aria-hidden="true" title="正在播放预览">
+          <span className="omnimux-trending-playing-bar" />
+          <span className="omnimux-trending-playing-bar is-tall" />
+          <span className="omnimux-trending-playing-bar" />
+        </span>
       ) : null}
 
       <div className="omnimux-trending-card-shade" aria-hidden="true" />

@@ -17,11 +17,14 @@ import {
   mapSourceItem,
   mergeCapabilities,
   normalizeCoverUrl,
+  normalizeVideoUrl,
   normalizeTrendingPage,
   peekTrendingCache,
   readAgeDays,
   readEngagement,
+  readImages,
   readStructure,
+  readVideoUrl,
   readViews,
   setTrendingCache,
   unionOptions,
@@ -111,6 +114,9 @@ test('source: 入库行映射不补默认值（缺就是空）', () => {
     engagement: 12.5,
     days: 2,
     cover: '/omnimux/inspiration/local/media/covers/cover_abc.jpg',
+    images: [],
+    isCarousel: false,
+    videoUrl: '',
     sourceUrl: 'https://www.tiktok.com/@a/video/1',
     structure: '【钩子】开场 3 秒反差',
     product: '',
@@ -124,6 +130,7 @@ test('source: 入库行映射不补默认值（缺就是空）', () => {
   assert.equal(sparse.engagement, null)
   assert.equal(sparse.days, null)
   assert.equal(sparse.cover, '')
+  assert.equal(sparse.videoUrl, '')
   assert.equal(sparse.structure, '')
   assert.deepEqual(sparse.tags, [])
 
@@ -606,4 +613,66 @@ test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async ()
   assert.equal(res.items.length, 2)
   assert.equal(res.items[0].id, 'local_1')
   assert.equal(res.items[1].id, 'cloud_distinct_2')
+})
+
+test('source: 视频路径归一覆盖本地媒体 / 云目录 / 绝对 URL / 相对路径', () => {
+  assert.equal(normalizeVideoUrl('https://example.com/video.mp4'), 'https://example.com/video.mp4')
+  assert.equal(normalizeVideoUrl('/omnimux/inspiration/local/media/videos/v1.mp4'), '/omnimux/inspiration/local/media/videos/v1.mp4')
+  assert.equal(normalizeVideoUrl('/omnimux/inspiration/media/videos/v2.mp4'), '/omnimux/inspiration/media/videos/v2.mp4')
+  assert.equal(normalizeVideoUrl('/api/inspiration/v1/media/videos/v3.mp4'), '/omnimux/inspiration/media/videos/v3.mp4')
+  assert.equal(normalizeVideoUrl('videos/v4.mp4'), '/omnimux/inspiration/media/videos/v4.mp4')
+  assert.equal(normalizeVideoUrl('../evil.mp4'), '')
+  assert.equal(normalizeVideoUrl(''), '')
+  assert.equal(normalizeVideoUrl(null), '')
+})
+
+test('source: readVideoUrl 从行中精准提取视频并映射至卡片属性', () => {
+  assert.equal(
+    readVideoUrl({ media_urls: ['/omnimux/inspiration/local/media/videos/abc.mp4'] }),
+    '/omnimux/inspiration/local/media/videos/abc.mp4',
+  )
+  assert.equal(
+    readVideoUrl({ video_url: 'https://cdn.example.com/stream.mp4' }),
+    'https://cdn.example.com/stream.mp4',
+  )
+  assert.equal(
+    readVideoUrl({ videoUrl: 'https://cdn.example.com/stream2.mp4' }),
+    'https://cdn.example.com/stream2.mp4',
+  )
+  assert.equal(readVideoUrl({}), '')
+  assert.equal(readVideoUrl(null), '')
+
+  const mapped = mapSourceItem(makeRow({
+    media_urls: ['/omnimux/inspiration/local/media/videos/reel.mp4'],
+  }))
+  assert.equal(mapped.videoUrl, '/omnimux/inspiration/local/media/videos/reel.mp4')
+})
+
+test('source: 多图卡片从图集字段读出图片列表并标记为轮播卡', () => {
+  // 显式 images 数组：规范化为可直用的封面路径
+  assert.deepEqual(
+    readImages({ images: ['/omnimux/inspiration/local/media/covers/a.jpg', 'https://cdn.example.com/b.jpg'] }),
+    ['/omnimux/inspiration/local/media/covers/a.jpg', 'https://cdn.example.com/b.jpg'],
+  )
+  // media_urls 多于一张时同样构成图集
+  assert.equal(readImages({ media_urls: ['x.jpg', 'y.jpg', 'z.jpg'] }).length, 3)
+  // 单张图不算图集，也不得凭空造图
+  assert.deepEqual(readImages({ media_urls: ['only.mp4'] }), [])
+  assert.deepEqual(readImages({ images: [] }), [])
+  assert.deepEqual(readImages({}), [])
+  assert.deepEqual(readImages(null), [])
+
+  const multi = mapSourceItem(makeRow({
+    images: [
+      '/omnimux/inspiration/local/media/covers/cover_abc.jpg',
+      '/omnimux/inspiration/local/media/covers/cover_def.jpg',
+      '/omnimux/inspiration/local/media/covers/cover_ghi.jpg',
+    ],
+  }))
+  assert.equal(multi.images.length, 3)
+  assert.equal(multi.isCarousel, true, '多图卡片必须被标记为轮播卡')
+  assert.equal(multi.cover, '/omnimux/inspiration/local/media/covers/cover_abc.jpg')
+
+  const single = mapSourceItem(makeRow())
+  assert.equal(single.isCarousel, false, '单图卡片不得被误判为轮播卡')
 })

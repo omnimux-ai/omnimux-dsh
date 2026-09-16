@@ -404,6 +404,11 @@ export const guideZh = {
   "trending.library.unavailable": "暂时读不到灵感库。",
   "trending.library.unavailableHint": "灵感社区未就绪时这里不展示任何数据——不拿示例充数。",
   "trending.undock": "收起输入框",
+  "trending.layout.grid": "网格视图",
+  "trending.layout.carousel": "轮播视图",
+  "trending.layout.switch": "浏览格式",
+  "trending.carousel.prev": "向左滑动",
+  "trending.carousel.next": "向右滑动",
 
   // 精选 Skill 双语名称与描述
   "skills.locale": "zh",
@@ -883,6 +888,11 @@ export const guideEn = {
   "trending.library.unavailable": "The inspiration library is not reachable right now.",
   "trending.library.unavailableHint": "Nothing is shown while the library is unavailable — no sample data stands in for it.",
   "trending.undock": "Restore composer",
+  "trending.layout.grid": "Grid view",
+  "trending.layout.carousel": "Carousel view",
+  "trending.layout.switch": "View layout",
+  "trending.carousel.prev": "Previous slides",
+  "trending.carousel.next": "Next slides",
 
   // Featured Skills bilingual titles and summaries
   "skills.locale": "en",
