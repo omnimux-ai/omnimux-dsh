@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-16T11:44:32.376Z",
+  "chromeVersion": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "workflowInspection": {
+    "headerPaddingLeft": "20px",
+    "headerPaddingTop": "12px",
+    "titleLeft": 20,
+    "titleTop": 12,
+    "subLeft": 20,
+    "btnLeft": 20,
+    "tabLeft": 20
+  },
+  "marketInspection": {
+    "mktPaddingLeft": "20px",
+    "mktPaddingTop": "12px",
+    "titleLeft": 20,
+    "titleTop": 12,
+    "subLeft": 20,
+    "btnLeft": 20
+  },
+  "stageInspection": {
+    "stageHeaderPaddingLeft": "84px"
+  },
+  "screenshots": [
+    "docs/evidence/first-level-header-align-workflow-verified.png",
+    "docs/evidence/first-level-header-align-market-verified.png"
+  ],
+  "verdict": "PASS"
+}

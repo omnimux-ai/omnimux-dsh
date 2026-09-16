@@ -764,7 +764,7 @@ html[data-omnimux-left-collapsed] [class*="_panel"][data-sidebar-right-panel="fu
 }
 
 /* 5.4 macOS 桌面端在全屏且左侧收起时，给顶栏 strip 预留 84px 避让窗口交通灯 */
-body[data-dsh-desktop-platform="darwin"] html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
+html[data-omnimux-left-collapsed] body[data-dsh-desktop-platform="darwin"] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
 body[data-dsh-desktop-platform="darwin"] .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip] {
   padding-left: 84px !important;
 }

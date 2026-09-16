@@ -76,13 +76,14 @@ function findChrome() {
  * 渲染给定状态下的页头并读取几何。
  * 页面自测后把结果写进 <title>，由 --dump-dom 带回，测试里无需维护一套 CDP 客户端。
  */
-function measure({ darwin = false, leftCollapsed = false, conversationCollapsed = false } = {}) {
+function measure({ darwin = false, leftCollapsed = false, conversationCollapsed = false, productStage = null } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-header-e2e-'))
   try {
     const attrs = [
       darwin ? `document.body.setAttribute('data-dsh-desktop-platform','darwin');` : '',
       leftCollapsed ? `document.documentElement.setAttribute('data-omnimux-left-collapsed','');` : '',
       conversationCollapsed ? `document.documentElement.setAttribute('data-omnimux-conversation-collapsed','');` : '',
+      productStage ? `document.documentElement.setAttribute('data-dsh-product-stage','${productStage}');` : '',
     ].join('')
     const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>pending</title>
 <style>* { box-sizing: border-box; margin: 0; padding: 0; } body { width: 1600px; }</style>
@@ -121,10 +122,20 @@ test('页头安全区不在嵌套层级上累加，标题与描述保持左对�
   )
 })
 
-test('左栏收起时页头保留 84px 窗口按钮安全区', () => {
+test('工作台一级页在左栏收起态保持 20px 统一基线，标题与按钮对齐', () => {
   const leftCollapsed = measure({ darwin: true, leftCollapsed: true })
-  assert.equal(leftCollapsed.pageHeader.paddingLeft, '84px', '左栏收起时页头应避让窗口按钮')
+  assert.equal(leftCollapsed.pageHeader.paddingLeft, '20px', '工作台页签页在左栏收起时应保持 20px 标准内距')
   assert.equal(leftCollapsed.title.paddingLeft, '0px', '安全区仍不得命中标题')
+  assert.equal(leftCollapsed.title.offset, leftCollapsed.subtitle.offset, '标题与副标题必须对齐')
+  assert.ok(
+    Math.abs(leftCollapsed.title.offset - leftCollapsed.actionRow.offset) <= 24,
+    `标题应与「新建项目」按钮同左基线，实际 标题=${leftCollapsed.title.offset} 按钮=${leftCollapsed.actionRow.offset}`,
+  )
+})
+
+test('独立覆盖层（product stage）在左栏收起时正确避让窗口按钮 84px', () => {
+  const stageCollapsed = measure({ darwin: true, leftCollapsed: true, productStage: 'omnimux-apps' })
+  assert.equal(stageCollapsed.pageHeader.paddingLeft, '84px', '独立舞台覆盖层在左栏收起时需避让窗口红绿灯')
 })
 
 test('左栏展开且会话列收起时（工作台全屏常态），页头保持自身 20px 内边距不被安全区误伤', () => {
