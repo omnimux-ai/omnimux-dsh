@@ -107,26 +107,76 @@
       const onTabMine = () => setMainTab("mine");
       const onTabExperts = () => setMainTab("experts-market");
       const onInputKeyDown = (e) => { if (e.key === "Enter") onSearchSubmit(); };
-      return h("div", { className: "nav-bar" },
-        h("div", { className: "nav-tabs" },
-          // exempt-ui01 navigation tab button
-          h("button", { type: "button", "aria-pressed": mainTab === "discover", className: "nav-tab" + (mainTab === "discover" ? " active" : ""), onClick: onTabDiscover },
-            h("span", null, tr("workshop.tabSkill") || "Skill"),
+
+      const TabsComp = typeof Tabs !== "undefined" ? Tabs : null;
+      const SearchFieldComp = typeof SearchField !== "undefined" ? SearchField : null;
+
+      const tabItems = [
+        {
+          id: "discover",
+          label: h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } },
+            tr("workshop.tabSkill") || "Skill",
             h("svg", iconProps, h("circle", { cx: "12", cy: "12", r: "10" }), h("line", { x1: "12", y1: "16", x2: "12", y2: "12" }), h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" })),
           ),
-          // exempt-ui01 navigation tab button
-          h("button", { type: "button", "aria-pressed": mainTab === "mine", className: "nav-tab" + (mainTab === "mine" ? " active" : ""), onClick: onTabMine },
-            h("span", null, tr("workshop.tabMine") || "我的 Skill"),
-          ),
-          // exempt-ui01 navigation tab button
-          h("button", { type: "button", "aria-pressed": mainTab === "experts-market", className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""), onClick: onTabExperts },
-            h("span", null, tr("workshop.tabExpertsMarket") || defaultExpertTab),
-          ),
-        ),
-        h("div", { className: "search-box" },
-          h("svg", { className: "search-icon", viewBox: "0 0 24 24" }, h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 11.99 14 9.5 14z" })),
-          h("input", { type: "text", value: searchQuery, placeholder: placeholderText, onChange: (e) => setSearchQuery(e.target.value), onKeyDown: onInputKeyDown }),
-        ),
+        },
+        {
+          id: "mine",
+          label: tr("workshop.tabMine") || "我的 Skill",
+        },
+        {
+          id: "experts-market",
+          label: tr("workshop.tabExpertsMarket") || defaultExpertTab,
+        },
+      ];
+
+      const handleTabChange = (nextTab) => {
+        if (nextTab === "discover") onTabDiscover();
+        else if (nextTab === "mine") onTabMine();
+        else if (nextTab === "experts-market") onTabExperts();
+      };
+
+      const tabsNode = TabsComp
+        ? h(TabsComp, {
+            variant: "underline",
+            items: tabItems,
+            activeId: mainTab,
+            onChange: handleTabChange,
+            className: "sh-plaza-nav-tabs",
+          })
+        : h("div", { className: "nav-tabs" },
+            h("button", { type: "button", "aria-pressed": mainTab === "discover", className: "nav-tab" + (mainTab === "discover" ? " active" : ""), onClick: onTabDiscover },
+              h("span", null, tr("workshop.tabSkill") || "Skill"),
+              h("svg", iconProps, h("circle", { cx: "12", cy: "12", r: "10" }), h("line", { x1: "12", y1: "16", x2: "12", y2: "12" }), h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" })),
+            ),
+            h("button", { type: "button", "aria-pressed": mainTab === "mine", className: "nav-tab" + (mainTab === "mine" ? " active" : ""), onClick: onTabMine },
+              h("span", null, tr("workshop.tabMine") || "我的 Skill"),
+            ),
+            h("button", { type: "button", "aria-pressed": mainTab === "experts-market", className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""), onClick: onTabExperts },
+              h("span", null, tr("workshop.tabExpertsMarket") || defaultExpertTab),
+            ),
+          );
+
+      const searchNode = SearchFieldComp
+        ? h("div", { className: "search-box" },
+            h(SearchFieldComp, {
+              value: searchQuery,
+              placeholder: placeholderText,
+              "aria-label": placeholderText,
+              debounceMs: 0,
+              stretch: true,
+              onValueChange: (val) => setSearchQuery(val),
+              onKeyDown: onInputKeyDown,
+              onClear: () => setSearchQuery(""),
+            }),
+          )
+        : h("div", { className: "search-box" },
+            h("svg", { className: "search-icon", viewBox: "0 0 24 24" }, h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 11.99 14 9.5 14z" })),
+            h("input", { type: "text", value: searchQuery, placeholder: placeholderText, onChange: (e) => setSearchQuery(e.target.value), onKeyDown: onInputKeyDown }),
+          );
+
+      return h("div", { className: "nav-bar" },
+        tabsNode,
+        searchNode,
       );
     }
 

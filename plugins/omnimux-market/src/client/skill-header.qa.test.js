@@ -94,17 +94,17 @@ test('regression: installed featured identity survives tab/category reentry and 
   categories().children.find(n => n.props.key === '').props.onClick()
 
   // 切换到我的 Skill (mine)
-  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[1].props.onClick()
+  nodes(ui.render(), n => n.type === 'button' && (n.props.role === 'tab' || n.props.className?.startsWith('nav-tab')))[1].props.onClick()
   const cards = () => nodes(ui.render(), n => n.props.className === 'regular-card')
   assert.equal(cards().length, 2)
   assert.equal(nodes(ui.render(), n => n.props.className === 'category-bar').length, 0)
 
   // 切回 discover 发现页并切换到 featured
-  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[0].props.onClick()
+  nodes(ui.render(), n => n.type === 'button' && (n.props.role === 'tab' || n.props.className?.startsWith('nav-tab')))[0].props.onClick()
   categories().children.find(n => n.props.key === 'featured').props.onClick()
 
   // 再次切回 mine
-  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[1].props.onClick()
+  nodes(ui.render(), n => n.type === 'button' && (n.props.role === 'tab' || n.props.className?.startsWith('nav-tab')))[1].props.onClick()
   assert.equal(cards().length, 1)
   assert.equal(SkillShelf.isRecommendedInstalledSkill(unknown), false)
   assert.equal(SkillShelf.isRecommendedInstalledSkill({}), false)
