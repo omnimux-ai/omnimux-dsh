@@ -55,16 +55,22 @@ export function installFullscreenCollapseSync(doc = hostDocument()) {
   if (!doc?.documentElement) return () => {}
   const root = doc.documentElement
   let snapshot = root.hasAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR)
-    ? readConversationCollapsedFromDom(doc)
+    ? root.getAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR) === 'true'
     : null
 
   const sync = () => {
     const fullscreen = isHostRightSidebarFullscreen(doc)
+
+    // 若进入会话等外部手势清除了快照属性且已不在全屏中，强制同步清空内存快照
+    if (!root.hasAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR) && !fullscreen) {
+      snapshot = null
+    }
+
     const next = resolveFullscreenCollapse(fullscreen, snapshot, readConversationCollapsedFromDom(doc))
     if (next.snapshot !== snapshot) {
       snapshot = next.snapshot
       if (snapshot === null) root.removeAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR)
-      else root.setAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR, '')
+      else root.setAttribute(FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR, String(snapshot))
     }
     if (readConversationCollapsedFromDom(doc) !== next.collapsed) {
       applyConversationCollapsedAttr(next.collapsed, doc)
@@ -81,7 +87,12 @@ export function installFullscreenCollapseSync(doc = hostDocument()) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-rightbar-fullscreen'],
+    attributeFilter: [
+      'data-sidebar-right-panel',
+      'data-sidebar-right-open',
+      'data-rightbar-fullscreen',
+      FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR,
+    ],
   })
 
   return () => {
