@@ -641,6 +641,165 @@ describe('InspirationCoverCard render gate — running status', () => {
   })
 })
 
+describe('InspirationCoverCard render gate — cover fallback to the video frame', () => {
+  const COVER = '/omnimux/inspiration/local/media/covers/cover_10b758f2.mp4'
+  const VIDEO = '/omnimux/inspiration/local/media/videos/video_2831d0b6.mp4'
+
+  function props(row, extra = {}) {
+    return {
+      card: {
+        row,
+        t,
+        selected: false,
+        selecting: false,
+        replicateBusy: null,
+        onSelect() {},
+        onReplicate() {},
+        // The reveal animation gates the cover behind `is-loaded`, so a case that
+        // asserts the visible state has to run as a revealed card.
+        revealed: true,
+        ...extra,
+      },
+    }
+  }
+
+  /**
+   * A row whose stored cover name lies about its bytes: the file is an ISO-BMFF
+   * HEIC still named `.mp4`, the media route serves it as `video/mp4`, and every
+   * `<img>` fails on it. This is the reported empty card.
+   */
+  const brokenCoverRow = {
+    id: 'insp_heic',
+    title: 'clean',
+    is_local: true,
+    source_platform: 'tiktok',
+    cover_url: COVER,
+    media_urls: [VIDEO],
+  }
+
+  it('falls back to the video first frame when the cover image cannot load', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', props(brokenCoverRow), 'InspirationCoverCard')
+    try {
+      const img = mounted.container.querySelector('.omnimux-inspiration-cover-img')
+      assert.ok(img, 'the card starts from the cover image')
+
+      await React.act(async () => {
+        img.dispatchEvent(new mounted.window.Event('error', { bubbles: false }))
+      })
+
+      const video = mounted.container.querySelector('.omnimux-inspiration-cover-video')
+      assert.ok(video, 'an undecodable cover must fall back to the video first frame')
+      assert.equal(video.getAttribute('src'), VIDEO, 'the frame comes from the row own local video')
+      assert.equal(video.hasAttribute('controls'), false, 'a thumbnail must not expose player controls')
+      assert.equal(video.hasAttribute('playsinline'), true)
+      assert.equal(video.muted, true, 'an inline preview must stay silent')
+      assert.equal(
+        mounted.container.querySelector('.omnimux-inspiration-cover-fallback'),
+        null,
+        'the icon placeholder must not be used while a video frame is available',
+      )
+
+      await React.act(async () => {
+        video.dispatchEvent(new mounted.window.Event('loadeddata', { bubbles: false }))
+      })
+      assert.ok(
+        video.className.includes('is-loaded'),
+        'the frame must fade in once the first frame is ready',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('uses the video frame for a row that has no cover at all', async () => {
+    const { cover_url: _drop, ...withoutCover } = brokenCoverRow
+    const mounted = await mount('InspirationCoverCard.jsx', props(withoutCover), 'InspirationCoverCard')
+    try {
+      const video = mounted.container.querySelector('.omnimux-inspiration-cover-video')
+      assert.ok(video, 'a coverless row with a playable video must still preview it')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps the placeholder when the row has neither a cover nor a video', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', props({
+      id: 'insp_bare',
+      title: '纯文字推文',
+      is_local: true,
+      source_platform: 'x',
+    }), 'InspirationCoverCard')
+    try {
+      assert.ok(
+        mounted.container.querySelector('.omnimux-inspiration-cover-fallback'),
+        'nothing to preview must fall through to the placeholder',
+      )
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-video'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps rendering the cover image when it loads', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', props({
+      ...brokenCoverRow,
+      id: 'insp_jpeg',
+      cover_url: '/omnimux/inspiration/local/media/covers/cover_ab12.jpg',
+    }), 'InspirationCoverCard')
+    try {
+      const img = mounted.container.querySelector('.omnimux-inspiration-cover-img')
+      assert.ok(img, 'a normal cover stays an <img>')
+      assert.equal(img.getAttribute('src'), '/omnimux/inspiration/local/media/covers/cover_ab12.jpg')
+
+      // jsdom never decodes an image, so the intrinsic size the component reads
+      // has to be supplied before the load event it listens for.
+      Object.defineProperty(img, 'naturalWidth', { value: 720, configurable: true })
+      Object.defineProperty(img, 'naturalHeight', { value: 1280, configurable: true })
+      await React.act(async () => {
+        img.dispatchEvent(new mounted.window.Event('load', { bubbles: false }))
+      })
+
+      assert.ok(img.className.includes('is-loaded'), 'a usable cover must be revealed')
+      assert.equal(
+        mounted.container.querySelector('.omnimux-inspiration-cover-video'),
+        null,
+        'the video frame is a fallback, never a replacement',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('rejects a stub cover and previews the video instead', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', props({
+      ...brokenCoverRow,
+      id: 'insp_stub',
+      cover_url: '/omnimux/inspiration/local/media/covers/cover_stub.jpg',
+    }), 'InspirationCoverCard')
+    try {
+      const img = mounted.container.querySelector('.omnimux-inspiration-cover-img')
+      Object.defineProperty(img, 'naturalWidth', { value: 1, configurable: true })
+      Object.defineProperty(img, 'naturalHeight', { value: 1, configurable: true })
+      await React.act(async () => {
+        img.dispatchEvent(new mounted.window.Event('load', { bubbles: false }))
+      })
+
+      assert.ok(
+        mounted.container.querySelector('.omnimux-inspiration-cover-video'),
+        'a 1×1 gateway stub is not a cover, so the video frame takes over',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+})
+
 describe('InspirationInlineImportDialog render gate — background import hand-off', () => {
   /**
    * The verdict the dialog asks for before importing anything (E3). These cases

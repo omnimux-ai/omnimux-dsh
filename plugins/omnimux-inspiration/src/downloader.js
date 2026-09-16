@@ -1,4 +1,12 @@
-import { createWriteStream, existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { extname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Readable, Transform } from 'node:stream'
@@ -40,6 +48,108 @@ export function detectExt(url, defaultExt = '.mp4') {
     // fallback
   }
   return defaultExt
+}
+
+/**
+ * Image extensions an `<img>` can actually decode. HEIC is deliberately absent:
+ * Safari renders it, the Chromium shell this app runs in does not, so a HEIC
+ * cover can only ever produce a broken image.
+ */
+export const RENDERABLE_IMAGE_EXTS = new Set(['.jpg', '.png', '.webp', '.gif', '.avif'])
+
+/** ISO-BMFF brands that name a HEIF/HEIC still image rather than a video track. */
+const HEIF_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'])
+
+/**
+ * Extension implied by a payload's own leading bytes.
+ *
+ * `detectExt` above reads the *URL*, which is a guess: a CDN link with no
+ * suffix, a signed query and a `~tplv-` template path names nothing, and the
+ * caller's default then decides the stored name. A cover stored under a name its
+ * bytes do not match is not cosmetic — the media route derives `Content-Type`
+ * from the extension, so the wrong name also serves the wrong type, and the
+ * browser refuses the image.
+ *
+ * The returned value is `< 8` bytes of evidence, so an unknown payload answers
+ * `''` and the caller keeps whatever name it already had.
+ * @param {Buffer | Uint8Array} head leading bytes of the payload
+ * @returns {'.jpg' | '.png' | '.webp' | '.gif' | '.avif' | '.heic' | '.mp4' | '.webm' | ''}
+ */
+export function detectExtFromBytes(head) {
+  const buf = Buffer.isBuffer(head) ? head : Buffer.from(head || [])
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg'
+  if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return '.png'
+  }
+  if (buf.length >= 4 && buf.subarray(0, 4).toString('latin1') === 'GIF8') return '.gif'
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    buf.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
+    return '.webp'
+  }
+  if (buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return '.webm'
+  if (buf.length >= 12 && buf.subarray(4, 8).toString('latin1') === 'ftyp') {
+    const brand = buf.subarray(8, 12).toString('latin1').toLowerCase()
+    if (brand === 'avif' || brand === 'avis') return '.avif'
+    if (HEIF_BRANDS.has(brand)) return '.heic'
+    return '.mp4'
+  }
+  return ''
+}
+
+/** Leading bytes of a saved file, or an empty buffer when it cannot be read. */
+function readHead(filePath, length = 16) {
+  try {
+    return readFileSync(filePath).subarray(0, length)
+  } catch {
+    return Buffer.alloc(0)
+  }
+}
+
+/**
+ * Rename a downloaded file so its extension matches its own bytes.
+ *
+ * Only a *known* payload renames anything: an unrecognised one keeps the name
+ * the downloader gave it, so this can never strand a usable file under a name
+ * that says nothing about it. A rename failure is not fatal — the file is still
+ * on disk and the caller decides what it is worth.
+ * @param {string} filePath
+ * @returns {string} the path the file now lives at
+ */
+export function alignMediaExtension(filePath) {
+  const detected = detectExtFromBytes(readHead(filePath))
+  if (!detected) return filePath
+  const current = extname(filePath).toLowerCase()
+  // `.jpeg` and `.jpg` are the same bytes; renaming would only churn the name.
+  if (current === detected || (detected === '.jpg' && current === '.jpeg')) return filePath
+  const next = `${filePath.slice(0, filePath.length - current.length)}${detected}`
+  try {
+    renameSync(filePath, next)
+    return next
+  } catch {
+    return filePath
+  }
+}
+
+/**
+ * Whether a saved file is *known* not to be a raster image a browser can render.
+ *
+ * Only a positive identification counts. The alternative rule — "keep it only
+ * when the bytes are recognised as an image" — would drop covers served in any
+ * format this sniffer does not name, so an unrecognised payload keeps the
+ * pre-existing behaviour instead. The case this exists for is unambiguous:
+ * TikTok answers the poster request with an ISO-BMFF HEIC still, which no
+ * Chromium `<img>` can decode, and which used to be stored under a `.mp4` name
+ * and republished as a `video/mp4` cover.
+ * @param {string} filePath
+ * @returns {boolean}
+ */
+export function isKnownUnrenderableCover(filePath) {
+  const detected = detectExtFromBytes(readHead(filePath))
+  if (!detected) return false
+  return !RENDERABLE_IMAGE_EXTS.has(detected)
 }
 
 function formatMegabytes(bytes) {

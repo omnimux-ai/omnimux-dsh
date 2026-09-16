@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createLocalStore } from './local-store.js'
@@ -70,13 +70,13 @@ function makePaths(tmp) {
   }
 }
 
-async function importUrl({ socialFetcher, paths, url, body = {} }) {
+async function importUrl({ socialFetcher, paths, url, body = {}, fetcher = mockFetcher }) {
   const store = createLocalStore({ paths })
   const dispatcher = createLocalInspirationDispatcher({
     resolver: offlineResolver,
     localStore: store,
     socialFetcher,
-    fetcher: mockFetcher,
+    fetcher,
   })
   const res = await dispatcher.dispatch({
     method: 'POST',
@@ -677,5 +677,106 @@ describe('social import — upgrading a degraded record (P1-3)', () => {
     assert.notEqual(second.res.body.data.local_paths.video, previousVideo)
     assert.equal(existsSync(previousVideo), false)
     assert.equal(second.store.list().total, 1)
+  })
+})
+
+/**
+ * A published cover has to be one a browser can actually paint.
+ *
+ * The reported row stored a TikTok poster as `cover_10b758f2.mp4`: an ISO-BMFF
+ * HEIC still under a name the media route then served as `video/mp4`. Every
+ * consumer of `cover_url` — the grid card, the modal poster, the replicate
+ * attachment — received that same dead URL, so the guard belongs at the source:
+ * the stored name follows the bytes, and a payload that is positively not an
+ * image is never published at all.
+ */
+describe('social import — a cover no browser can render is not published', () => {
+  const HEIC_COVER = Buffer.from([0x00, 0x00, 0x00, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63])
+  const JPEG_COVER = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24)])
+  const VIDEO_BYTES = Buffer.concat([
+    Buffer.from([0x00, 0x00, 0x00, 0x18]),
+    Buffer.from('ftypisom'),
+    Buffer.alloc(32),
+  ])
+  const X_URL = 'https://x.com/creator/status/4242'
+
+  let tmp
+  let paths
+  /** Every directory this suite created, so none of them outlives the run. */
+  const tmps = []
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-cover-publish-'))
+    tmps.push(tmp)
+    paths = makePaths(tmp)
+  })
+
+  after(() => {
+    for (const created of tmps) rmSync(created, { recursive: true, force: true })
+  })
+
+  function responseFor(buffer, contentType) {
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': contentType }),
+      arrayBuffer: async () => buffer,
+    }
+  }
+
+  /** Poster requests answer with `coverBytes`; every other URL is the video. */
+  function fetcherServing(coverBytes) {
+    return async (url) => (String(url).includes('amplify_video_thumb')
+      ? responseFor(coverBytes, 'image/jpeg')
+      : responseFor(VIDEO_BYTES, 'video/mp4'))
+  }
+
+  it('drops a HEIC poster and publishes no cover instead of a dead URL', async () => {
+    const { res } = await importUrl({
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      paths,
+      url: X_URL,
+      fetcher: fetcherServing(HEIC_COVER),
+    })
+
+    assert.equal(res.status, 200)
+    assert.equal(res.body.data.type, 'video')
+    assert.equal(res.body.data.cover_url, '', 'an undecodable poster must not be published')
+    assert.equal(res.body.data.local_paths.cover, undefined)
+    assert.ok(res.body.data.local_paths.video, 'the video itself still lands')
+    const saved = existsSync(paths.coversDir) ? readdirSync(paths.coversDir) : []
+    assert.deepEqual(saved, [], 'the unusable poster must not be left in the covers directory')
+  })
+
+  it('keeps a poster whose bytes say JPEG, whatever the URL looked like', async () => {
+    const { res } = await importUrl({
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      paths,
+      url: X_URL,
+      fetcher: fetcherServing(JPEG_COVER),
+    })
+
+    assert.match(res.body.data.cover_url, /\.jpg$/, 'the stored name must follow the bytes')
+    assert.equal(existsSync(res.body.data.local_paths.cover), true)
+  })
+
+  it('still falls back to the remote poster when the download fails', async () => {
+    const failing = async (url) => {
+      if (String(url).includes('amplify_video_thumb')) throw new Error('fetch failed')
+      return responseFor(VIDEO_BYTES, 'video/mp4')
+    }
+    const { res } = await importUrl({
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      paths,
+      url: X_URL,
+      fetcher: failing,
+    })
+
+    assert.equal(res.status, 200)
+    assert.match(
+      res.body.data.cover_url,
+      /^https:\/\/pbs\.twimg\.com\//,
+      'a merely failed download keeps the remote poster — only a known-bad payload is refused',
+    )
   })
 })
