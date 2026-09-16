@@ -82,6 +82,52 @@ describe('prompt-generator (Issue #2047)', () => {
     assert.equal(buildDirectGenerationPrompt({}, 'video'), '')
   })
 
+  /*
+   * Issue #2088. A cloud catalogue entry keeps its whole scene account under
+   * `visual_breakdown` and has no `summary` of its own. Falling through to the
+   * entry's post copy produced a share whose prompt was that copy plus filler —
+   * the post, described by itself, rather than the footage.
+   */
+  it('takes the visual breakdown as the scene when the entry has no summary', () => {
+    const prompt = buildDirectGenerationPrompt({
+      caption: 'カメラロールの画像生成して、Minimax H3に… https://t.co/VSNSvH1IiM',
+      deconstruction: {
+        visual_breakdown: '低饱和高感光夜景，深夜建筑剪影与窗内暖黄灯光的远景构图',
+        hook: '手持啤酒罐的银发老人与年轻女孩侧脸献吻的强反差特写',
+      },
+    }, 'video')
+
+    assert.match(prompt, /低饱和高感光夜景/)
+    assert.match(prompt, /电影级运镜与流畅主体动作演进/)
+    assert.equal(prompt.includes('t.co/VSNSvH1IiM'), false, '原文案不得再充当画面描述')
+  })
+
+  it('never repeats the same text when it served as the scene', () => {
+    const breakdown = '深夜建筑剪影与窗内暖黄灯光的远景构图'
+    const prompt = buildDirectGenerationPrompt({ deconstruction: { visual_breakdown: breakdown } }, 'image')
+    assert.equal(prompt.split(breakdown).length - 1, 1, '同一段画面描述只出现一次')
+  })
+
+  it('keeps the entry summary ahead of the visual breakdown when both exist', () => {
+    const prompt = buildDirectGenerationPrompt({
+      deconstruction: {
+        summary: '潮酷银发老爷爷在夜店与家中反差叙事的幽默短片',
+        visual_breakdown: '手持啤酒罐、墨镜金链的特写定格',
+      },
+    }, 'video')
+    assert.match(prompt, /潮酷银发老爷爷在夜店与家中反差叙事的幽默短片/)
+    assert.match(prompt, /手持啤酒罐、墨镜金链的特写定格/)
+    assert.ok(
+      prompt.indexOf('潮酷银发老爷爷') < prompt.indexOf('手持啤酒罐'),
+      '拆解摘要必须排在画面描述之前',
+    )
+  })
+
+  it('falls back to the opening hook when there is no scene at all', () => {
+    const prompt = buildDirectGenerationPrompt({ deconstruction: { hook: '0-3 秒强反差特写抓停留' } }, 'video')
+    assert.match(prompt, /开场动态：0-3 秒强反差特写抓停留/)
+  })
+
   it('defaultCategoryForMediaType and defaultModelForMediaType align with requirements', () => {
     assert.equal(defaultCategoryForMediaType('video'), SEEDANCE_CATEGORY)
     assert.equal(defaultCategoryForMediaType('video'), 'seedance 2.5')

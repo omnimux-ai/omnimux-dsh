@@ -9,6 +9,7 @@ import {
   listLocalInspirations,
   quotaGuard,
   publishableMediaAddress,
+  shareDeconstructionOf,
   resolveCreatorProfileUrl,
   resolveTikTokEmbedUrl,
   shareRequestPayload,
@@ -446,5 +447,44 @@ describe('share request payload — what a cloud row hands to the Host', () => {
   it('sends nothing for a row that has no id-shaped object at all', () => {
     assert.equal(shareRequestPayload('cloud'), undefined)
     assert.equal(shareRequestPayload(42), undefined)
+  })
+
+  /*
+   * Issue #2088. The catalogue keeps the entry's account of the footage under
+   * `analysis`, and nothing used to carry it across: the publish side then had no
+   * breakdown and synthesized the share prompt out of the post copy, so every
+   * cloud share carried the original caption instead of a same-footage prompt.
+   */
+  it("hands the catalogue's own breakdown over with the publish request", () => {
+    const payload = shareRequestPayload({
+      id: 2789,
+      is_local: false,
+      type: 'image',
+      title: '情绪共鸣型助眠歌单推广',
+      content: 'Give it a try 🥺',
+      analysis: {
+        visual_breakdown: '低饱和高感光夜景，深夜建筑剪影与窗内暖黄灯光的远景构图',
+        hook_highlight: '手持啤酒罐的银发老人与年轻女孩侧脸献吻的强反差特写',
+        target_goal: '引导用户点击个人主页链接',
+        narrative_strategy: '共鸣钩子 → 亲测背书 → 资源展示',
+        replication_action: '可替换变量清单',
+      },
+    })
+
+    assert.deepEqual(payload.deconstruction, {
+      visual_breakdown: '低饱和高感光夜景，深夜建筑剪影与窗内暖黄灯光的远景构图',
+      hook: '手持啤酒罐的银发老人与年轻女孩侧脸献吻的强反差特写',
+    })
+    // The campaign fields describe the post, not the picture: forwarding them
+    // would put marketing copy into a visual prompt.
+    assert.equal('target_goal' in payload.deconstruction, false)
+    assert.equal('narrative_strategy' in payload.deconstruction, false)
+  })
+
+  it('omits the breakdown entirely when the row carries none', () => {
+    const payload = shareRequestPayload({ is_local: false, title: 't', media_keys: ['/omnimux/inspiration/media/x.jpg'] })
+    assert.equal('deconstruction' in payload, false)
+    assert.equal(shareDeconstructionOf({}), undefined)
+    assert.equal(shareDeconstructionOf({ analysis: {} }), undefined)
   })
 })

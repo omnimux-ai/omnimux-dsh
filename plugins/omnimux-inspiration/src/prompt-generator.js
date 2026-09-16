@@ -35,18 +35,18 @@ export function cleanMarkdownForPrompt(text) {
 
 /**
  * Synthesize a high-quality model generation prompt from an inspiration item.
- * @param {Record<string, any>} item
- * @param {'video' | 'image'} [mediaType='video']
- * @returns {string}
- */
-/**
- * Synthesize a high-quality model generation prompt from an inspiration item.
  *
  * The prompt is built from what the entry actually carries — the AI breakdown's
- * summary / hook / visual detail, or the copy the user typed. A bare title is
+ * summary / visual detail / hook, or the copy the user typed. A bare title is
  * never enough on its own: a share whose prompt would be nothing but its own
  * heading plus boilerplate is a share with nothing to publish, so this answers
  * `''` and the caller reports that instead of publishing filler.
+ *
+ * The visual breakdown doubles as the scene description when the entry has no
+ * summary of its own — a cloud catalogue entry keeps its whole scene account
+ * there and nowhere else, and without this the prompt would fall back to the
+ * entry's own post copy, which describes the post rather than the footage. It
+ * is never used twice: whatever served as the scene is not repeated.
  * @param {Record<string, any>} item
  * @param {'video' | 'image'} [mediaType='video']
  * @returns {string}
@@ -59,25 +59,26 @@ export function buildDirectGenerationPrompt(item, mediaType = 'video') {
   const decon = isObj ? /** @type {Record<string, any>} */ (deconstruction) : {}
   const rawText = typeof deconstruction === 'string' ? deconstruction : ''
 
-  const rawSummary = String(
-    decon.summary || rawText || item.content || item.caption || '',
-  ).trim()
-  const rawHook = String(decon.hook || decon.hook_highlight || '').trim()
-  const rawVisual = String(decon.visual_breakdown || decon.visual || '').trim()
+  const visual = cleanMarkdownForPrompt(String(decon.visual_breakdown || decon.visual || '').trim())
+  const hook = cleanMarkdownForPrompt(String(decon.hook || decon.hook_highlight || '').trim())
 
-  const summary = cleanMarkdownForPrompt(rawSummary)
-  const visual = cleanMarkdownForPrompt(rawVisual)
-  const hook = cleanMarkdownForPrompt(rawHook)
+  // The scene the prompt opens on. Ordered so the entry's own account of the
+  // footage outranks the post copy that happens to sit on the same row.
+  const scene =
+    cleanMarkdownForPrompt(String(decon.summary || rawText || '').trim()) ||
+    visual ||
+    cleanMarkdownForPrompt(String(item.content || '').trim()) ||
+    cleanMarkdownForPrompt(String(item.caption || '').trim())
 
   // Nothing to base a generation prompt on. Reporting it beats publishing a
   // prompt that describes nothing.
-  if (!summary && !visual && !hook) return ''
+  if (!scene && !visual && !hook) return ''
 
   const parts = []
-  if (summary) parts.push(summary)
-  if (visual) {
+  if (scene) parts.push(scene)
+  if (visual && visual !== scene) {
     parts.push(visual)
-  } else if (hook) {
+  } else if (!scene && hook) {
     parts.push(`开场动态：${hook}`)
   }
 
