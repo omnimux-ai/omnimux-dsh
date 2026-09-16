@@ -51,9 +51,11 @@ const TRIGGER_BOX_PX = 48
  * does not: the toolbar is hidden with `visibility`, never `display`, so it has
  * geometry even while it is shut. The value matches what the stylesheet renders —
  * three ~68px columns, their gaps, and the panel's padding — so a failed
- * measurement degrades to the shipped size rather than to a guess.
+ * measurement degrades to the shipped size rather than to a guess. That match is
+ * asserted in `tests/tiktok-menu.spec.ts` by summing the stylesheet's own
+ * numbers, so a column width change fails a test instead of drifting.
  */
-const MENU_FALLBACK_WIDTH_PX = 226
+export const MENU_FALLBACK_WIDTH_PX = 226
 
 /** The icon size every toolbar row draws at. */
 const ROW_ICON_PX = 18
@@ -269,15 +271,27 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     else iconSlot.innerHTML = actionIcon(action, ROW_ICON_PX)
   }
 
+  /**
+   * Report an outcome under the row of columns, then re-place the toolbar.
+   *
+   * The detail row is the only part of the toolbar with no width of its own: a
+   * saved file's name can be longer than the three columns put together, and the
+   * panel widens with it. The direction was decided against the width the panel
+   * had before this line, so it is decided again — `getBoundingClientRect` reads
+   * the box the new text already produced, which is why the write comes first.
+   */
   const showDetail = (text: string, tone: 'ok' | 'error'): void => {
     detail.textContent = text
     detail.classList.toggle('is-ok', tone === 'ok')
     detail.classList.add('is-visible')
+    reposition()
   }
 
+  /** Clear it, and re-place for the narrower panel that leaves. */
   const hideDetail = (): void => {
     detail.textContent = ''
     detail.classList.remove('is-visible', 'is-ok')
+    reposition()
   }
 
   const pending = new Set<TiktokAction>()

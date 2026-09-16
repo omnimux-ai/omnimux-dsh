@@ -311,10 +311,12 @@ const TWITTER_ENTRY: PlatformEntry = {
 /**
  * TikTok.
  *
- * The scene trigger has one target and one answer: directly above the signed-in
- * avatar. The chain is therefore the same in both layouts — the desktop page puts
- * that avatar at the foot of the left navigation rail, the portrait page puts it
- * in the right-hand action bar, and the anchor layer finds it either way.
+ * The scene trigger has one target and one answer: directly above the avatar the
+ * page renders in its rail. The chain is therefore the same in both layouts — the
+ * desktop page puts the account's own avatar at the foot of the left navigation
+ * rail, the portrait page puts the post author's in the right-hand action bar
+ * (with the follow badge that marks it as one), and the anchor layer finds the
+ * rail's avatar either way.
  *
  * What the layout key still decides is the fallback, and only that: a rail page
  * with no readable avatar parks where the avatar would have been, while a page

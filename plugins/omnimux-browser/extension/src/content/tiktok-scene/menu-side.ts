@@ -13,6 +13,12 @@
  * used, so the toolbar can only leave the viewport if the viewport is narrower
  * than the toolbar itself.
  *
+ * The trigger keeps its own room as well. Clamping can push the toolbar onto the
+ * button it belongs to — the button then sits under the panel, unclickable, and
+ * the panel stays open because the pointer is still inside the anchor. So a
+ * placement that lands on the trigger is only kept when the viewport leaves no
+ * alternative, and then it is the one that covers least of the button.
+ *
  * @module
  */
 
@@ -43,6 +49,33 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
+/** The other side. */
+function otherSide(side: MenuSide): MenuSide {
+  return side === 'right' ? 'left' : 'right'
+}
+
+/** How much of the trigger one toolbar placement sits on. */
+interface TriggerCover {
+  /** Width of the covered part, in CSS px; `0` means the trigger stays clear. */
+  readonly width: number
+  /** Whether the trigger's centre — where a click lands — is under the toolbar. */
+  readonly hidesCentre: boolean
+}
+
+/** The part of the trigger a toolbar occupying `[left, left + menuWidth]` covers. */
+function coverOf(left: number, menuWidth: number, buttonLeft: number, buttonBox: number): TriggerCover {
+  const buttonRight = buttonLeft + buttonBox
+  const width = Math.max(0, Math.min(left + menuWidth, buttonRight) - Math.max(left, buttonLeft))
+  const centre = buttonLeft + buttonBox / 2
+  return { width, hidesCentre: left < centre && left + menuWidth > centre }
+}
+
+/** Lower is better: clear of the trigger, then clear of its centre, then least covered. */
+function rankOf(cover: TriggerCover): number {
+  if (cover.width === 0) return 0
+  return cover.hidesCentre ? 2 : 1
+}
+
 /**
  * Place the toolbar beside the trigger.
  *
@@ -51,6 +84,17 @@ function clamp(value: number, min: number, max: number): number {
  * preference is then confirmed against the exact box the toolbar would occupy on
  * that side, and the other side is tried when it would not fit. The last clamp is
  * what makes "never wider than the viewport" true even when neither side fits.
+ *
+ * The clamp can move the toolbar onto the trigger, so the placement it produced
+ * is checked against the button: when it covers any of the button the other side
+ * is measured too, and the better of the two is returned. "Better" is the one
+ * clear of the button, and failing that the one that leaves the button's centre
+ * — the point a user aims at — uncovered, and failing that the one covering less
+ * of it. When both are clear the preferred side stands, so nothing about the
+ * ordinary case changes.
+ *
+ * `side` is the side the returned placement was computed from, which is the edge
+ * the toolbar grows from; it is never the side that was discarded.
  *
  * @param facts the measured trigger and toolbar
  */
@@ -68,8 +112,24 @@ export function resolveMenuSide(facts: MenuSideFacts): MenuSidePlacement {
     preferred === 'right'
       ? rightLeft + menuWidth <= viewportWidth
       : leftLeft >= 0
-  const side: MenuSide = fits ? preferred : preferred === 'right' ? 'left' : 'right'
+  const first: MenuSide = fits ? preferred : otherSide(preferred)
 
-  const raw = side === 'right' ? rightLeft : leftLeft
-  return { side, left: clamp(raw, 0, Math.max(0, viewportWidth - menuWidth)) }
+  // The upper bound is the same for both sides: it is what keeps the toolbar
+  // inside the viewport, and it is zero when the toolbar is wider than it.
+  const max = Math.max(0, viewportWidth - menuWidth)
+  const placementOf = (side: MenuSide): MenuSidePlacement => ({
+    side,
+    left: clamp(side === 'right' ? rightLeft : leftLeft, 0, max),
+  })
+
+  const chosen = placementOf(first)
+  const cover = coverOf(chosen.left, menuWidth, buttonLeft, buttonBox)
+  if (cover.width === 0) return chosen
+
+  const alternative = placementOf(otherSide(first))
+  const alternativeCover = coverOf(alternative.left, menuWidth, buttonLeft, buttonBox)
+  const rank = rankOf(cover)
+  const alternativeRank = rankOf(alternativeCover)
+  if (alternativeRank !== rank) return alternativeRank < rank ? alternative : chosen
+  return alternativeCover.width < cover.width ? alternative : chosen
 }

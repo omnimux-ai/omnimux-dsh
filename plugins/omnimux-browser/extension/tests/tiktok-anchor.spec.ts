@@ -112,15 +112,15 @@ describe('TikTok 图标定位 — 桌面左栏页', () => {
   })
 
   it('④ 侧栏内 96×96 的方形头像被认出，图标贴其上方（不落停车位）', () => {
-    page('<div id="rail"><img id="icon" /><img id="me" /></div>', {
+    page('<div id="rail"><img id="me" /><img id="promo" /></div>', {
       '#rail': { top: 0, left: 0, width: 232, height: 929 },
-      '#icon': { top: 40, left: 16, width: 32, height: 32 },
-      '#me': { top: 700, left: 68, width: 96, height: 96 },
+      '#me': { top: 40, left: 68, width: 96, height: 96 },
+      '#promo': { top: 700, left: 16, width: 48, height: 48 },
     })
     mountAt(DESKTOP)
 
     expect(placement().left).toBe(68)
-    expect(placement().bottom).toBe(DESKTOP.height - 700 + ANCHOR_GAP)
+    expect(placement().bottom).toBe(DESKTOP.height - 40 + ANCHOR_GAP)
     expect(placement()).not.toEqual({ left: 16, bottom: 96 })
   })
 
@@ -135,22 +135,26 @@ describe('TikTok 图标定位 — 桌面左栏页', () => {
 })
 
 describe('TikTok 图标定位 — 竖向布局', () => {
-  it('⑤ 右侧操作栏里的头像被认出，图标贴其上方，不掉回硬编码坐标 (AC-103)', () => {
-    // 实测 C：全部 hook 落空，`nav` 是 168×28 的顶部标签栏，头像只在右侧操作栏里。
+  it('⑤ 右侧操作栏顶部的头像被认出，图标贴其上方，不掉回硬编码坐标 (AC-103)', () => {
+    // 实测 C：全部 hook 落空，`nav` 是 168×28 的顶部标签栏，头像只在贴右缘的
+    // 操作栏里。栏内头像在顶部，其下紧跟着「+」关注按钮，再往下还有一张方图
+    // （DOM 序在头像之后，位置却在下方）——它不能被当成头像。
     page(
-      '<nav id="tabs"><img id="tab" /></nav><div id="bar"><img id="author" /></div><video id="feed"></video>',
+      '<nav id="tabs"><img id="tab" /></nav><div id="bar"><img id="author" /><span id="follow" /><img id="sticker" /></div><video id="feed"></video>',
       {
         '#tabs': { top: 8, left: 131, width: 168, height: 28 },
         '#tab': { top: 8, left: 140, width: 28, height: 28 },
         '#bar': { top: 60, left: 375, width: 55, height: 700 },
-        '#author': { top: 820, left: 379, width: 48, height: 48 },
+        '#author': { top: 68, left: 379, width: 48, height: 48 },
+        '#follow': { top: 124, left: 391, width: 24, height: 24 },
+        '#sticker': { top: 300, left: 379, width: 48, height: 48 },
         '#feed': { top: 0, left: 0, width: 430, height: 883 },
       },
     )
     mountAt(PORTRAIT)
 
     expect(placement().left).toBe(379)
-    expect(placement().bottom).toBe(PORTRAIT.height - 820 + ANCHOR_GAP)
+    expect(placement().bottom).toBe(PORTRAIT.height - 68 + ANCHOR_GAP)
     expect(placement()).not.toEqual({ left: 16, bottom: 96 })
     expect(placement()).not.toEqual({ left: 12, bottom: 88 })
   })

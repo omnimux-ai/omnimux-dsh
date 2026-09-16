@@ -219,11 +219,11 @@ describe('头像识别 — 具名 hook 优先', () => {
 })
 
 describe('头像识别 — 结构扫描限定在侧栏容器内', () => {
-  it('④ hook 全落空时取栏内最后一个近似方形图片（96×96 也算）', () => {
-    page('<div id="rail"><img id="icon" /><img id="me" /></div>', {
+  it('④ hook 全落空时取栏内最靠上的合法方图（96×96 也算，不取 DOM 序最后一张）', () => {
+    page('<div id="rail"><img id="me" /><img id="promo" /></div>', {
       '#rail': { top: 0, left: 0, width: 232, height: 929 },
-      '#icon': { top: 40, left: 16, width: 32, height: 32 },
-      '#me': { top: 700, left: 68, width: 96, height: 96 },
+      '#me': { top: 40, left: 68, width: 96, height: 96 },
+      '#promo': { top: 700, left: 16, width: 48, height: 48 },
     })
 
     expect(findAvatarElement(document, DESKTOP)?.id).toBe('me')
@@ -231,21 +231,65 @@ describe('头像识别 — 结构扫描限定在侧栏容器内', () => {
     const placement = resolvePlatformAnchor(platformById('tiktok'), 'scene', document, DESKTOP, { box: 48 })
     expect(placement.source).toBe('avatar-above')
     expect(placement.left).toBe(68)
-    expect(placement.bottom).toBe(DESKTOP.height - 700 + ANCHOR_GAP)
+    expect(placement.bottom).toBe(DESKTOP.height - 40 + ANCHOR_GAP)
   })
 
-  it('⑤ 竖向布局：右侧操作栏里的头像被认出', () => {
-    page('<nav id="tabs"><img id="tab" /></nav><div id="bar"><img id="author" /></div>', {
-      '#tabs': { top: 8, left: 131, width: 168, height: 28 },
-      '#tab': { top: 8, left: 140, width: 28, height: 28 },
+  it('⑤ 竖向布局：操作栏顶部的头像被认出，图标贴其上方 (AC-103)', () => {
+    // 实测 C 的形状：hook 全落空，`nav` 是 168×28 的顶部标签栏，头像在贴右缘的
+    // 操作栏里——栏内头像在顶部，其下紧跟着「+」关注按钮，再往下才是点赞/评论
+    // 那排图标（图形，不是照片）和一张运营方图。
+    page('<div id="bar"><img id="author" /><span id="follow" /><img id="sticker" /></div>', {
       '#bar': { top: 60, left: 375, width: 55, height: 700 },
-      '#author': { top: 820, left: 379, width: 48, height: 48 },
+      '#author': { top: 68, left: 379, width: 48, height: 48 },
+      '#follow': { top: 124, left: 391, width: 24, height: 24 },
+      '#sticker': { top: 300, left: 379, width: 48, height: 48 },
     })
+
+    expect(findAvatarElement(document, PORTRAIT)?.id).toBe('author')
 
     const placement = resolvePlatformAnchor(platformById('tiktok'), 'scene', document, PORTRAIT, { box: 48 })
     expect(placement.source).toBe('avatar-above')
     expect(placement.left).toBe(379)
-    expect(placement.bottom).toBe(PORTRAIT.height - 820 + ANCHOR_GAP)
+    expect(placement.bottom).toBe(PORTRAIT.height - 68 + ANCHOR_GAP)
+  })
+
+  it('栏内有多张方图时，带关注按钮的那张胜出（即使它不是最靠上的）', () => {
+    // 归属谓词优先于位置谓词，也优先于 DOM 序：方图里只有头像下面挂着关注
+    // 按钮，而那张运营方图在 DOM 里排在最后、视觉上却在最上面——取「最后一张」
+    // 或取「最靠上一张」都会选中它。
+    page('<div id="bar"><img id="author" /><span id="follow" /><img id="sticker" /></div>', {
+      '#bar': { top: 60, left: 375, width: 55, height: 700 },
+      '#author': { top: 300, left: 379, width: 48, height: 48 },
+      '#follow': { top: 356, left: 391, width: 24, height: 24 },
+      '#sticker': { top: 64, left: 379, width: 40, height: 40 },
+    })
+
+    expect(findAvatarElement(document, PORTRAIT)?.id).toBe('author')
+  })
+
+  it('关注按钮离得太远时不算归属证据，回到最靠上那张', () => {
+    // 头像 300..348，按钮 400 起：间距 52px 超出 8..24px 的窗口，不是这一张的按钮。
+    page('<div id="bar"><img id="author" /><img id="sticker" /><span id="follow" /></div>', {
+      '#bar': { top: 60, left: 375, width: 55, height: 700 },
+      '#author': { top: 300, left: 379, width: 48, height: 48 },
+      '#sticker': { top: 64, left: 379, width: 40, height: 40 },
+      '#follow': { top: 400, left: 391, width: 24, height: 24 },
+    })
+
+    expect(findAvatarElement(document, PORTRAIT)?.id).toBe('sticker')
+  })
+
+  it('头像下方的方图如果和头像差不多大，就不算关注按钮', () => {
+    // 关注按钮比头像小。一个 44×44 的元素挂在 48px 头像下面更像另一张图，
+    // 所以归属不成立，回到「最靠上」那条。
+    page('<div id="bar"><img id="author" /><div id="near" /><img id="sticker" /></div>', {
+      '#bar': { top: 60, left: 375, width: 55, height: 700 },
+      '#author': { top: 300, left: 379, width: 48, height: 48 },
+      '#near': { top: 356, left: 379, width: 44, height: 44 },
+      '#sticker': { top: 64, left: 379, width: 40, height: 40 },
+    })
+
+    expect(findAvatarElement(document, PORTRAIT)?.id).toBe('sticker')
   })
 
   it('② 顶部标签栏内的图片不算头像', () => {

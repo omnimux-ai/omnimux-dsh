@@ -109,6 +109,11 @@
   align-items: stretch;
   gap: 4px;
   padding: 6px;
+  /* The detail row under the columns carries a saved file's name, which has no
+     length bound; wrapping at the viewport's edge keeps a wide toolbar something
+     the direction decision can still place, instead of one that has to be clamped
+     onto the trigger. */
+  max-width: calc(100vw - 24px);
   border: 1px solid var(--omx-line);
   border-radius: 14px;
   background: var(--omx-panel);
@@ -237,7 +242,9 @@
 }
 
 /* The reason a shortcut failed can be a sentence, so it wraps under the row of
-   columns rather than inside one of them. */
+   columns rather than inside one of them. `anywhere` is what makes that true for
+   a file name too: a path with no spaces in it offers no break opportunity, and
+   without one it would widen the panel instead of wrapping. */
 .omx-item-detail {
   display: none;
   flex: 0 0 100%;
@@ -247,6 +254,7 @@
   font-weight: 500;
   line-height: 15px;
   white-space: normal;
+  overflow-wrap: anywhere;
   color: rgba(255, 157, 157, 0.9);
 }
 

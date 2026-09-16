@@ -7,12 +7,15 @@
  * an immersive page at 430px, so the assumption failed wholesale
  * (`evidence/live-probe.md`).
  *
- * There is exactly one target now: **directly above the signed-in avatar**,
- * wherever the page put it — the foot of the left navigation rail on the desktop
- * layout, the right-hand action bar in the portrait one. An earlier attempt
- * anchored the mark to the video's bottom-left corner instead; that branch is
- * gone, along with the video selection it needed, because the user's answer is
- * the avatar's column and not the frame.
+ * There is exactly one target now: **directly above the avatar the page renders
+ * in its rail** — the account's own at the foot of the left navigation rail on
+ * the desktop layout, the post author's in the right-hand action bar in the
+ * portrait one. Which person that is is the page's decision, not this module's;
+ * what this module promises is the rail's avatar rather than any square image
+ * that happens to be nearby. An earlier attempt anchored the mark to the video's
+ * bottom-left corner instead; that branch is gone, along with the video
+ * selection it needed, because the user's answer is the avatar's column and not
+ * the frame.
  *
  * Finding that avatar is the hard half, and the probe says why: every named hook
  * misses on at least one real layout (`nav-user-avatar` misses on both;
@@ -21,7 +24,10 @@
  * is a 168x28 top tab bar in the portrait one). So the hooks are tried first and
  * a structural scan covers the rest — and that scan is confined to containers
  * that pass {@link isSideRailRect}, because a scan over the whole document
- * happily returns a video cover or the author's avatar in the action bar.
+ * happily returns a video cover or a commenter's avatar. Inside the container
+ * the candidate is *attributed* rather than taken from either end of the DOM
+ * ({@link attributedAvatarIn}): a rail holds several square images, and the one
+ * the mark belongs on is the one the page marks as a person.
  *
  * Imports run one way at runtime — this module reads the platform table, the
  * table does not read this one — so the registry stays importable without DOM.
@@ -86,6 +92,31 @@ export const MAX_AVATAR_PX = 128
 
 /** How far from square an image may be and still read as an avatar. */
 export const SQUARE_TOLERANCE = 0.2
+
+/**
+ * Vertical range, in CSS px, in which a follow badge sits under the avatar it
+ * belongs to.
+ *
+ * The portrait action bar hangs a round `+` control directly below the author's
+ * avatar; the gap is the only thing separating "a control under this picture"
+ * from "the next item in the column", so it is bounded on both sides rather than
+ * tested one way.
+ */
+export const FOLLOW_BADGE_GAP_MIN_PX = 8
+
+/** Upper end of that range. */
+export const FOLLOW_BADGE_GAP_MAX_PX = 24
+
+/** Smallest box a follow badge may occupy: below this it is a dot, not a control. */
+export const MIN_FOLLOW_BADGE_PX = 12
+
+/**
+ * Largest a follow badge may be, as a share of the avatar's own width.
+ *
+ * A badge is drawn smaller than the picture it belongs to, which is what keeps
+ * the *next* square image in the column from being read as a badge of this one.
+ */
+const MAX_FOLLOW_BADGE_FRACTION = 0.75
 
 /** How many levels below the document element the structural walk descends. */
 const SCAN_DEPTH = 4
@@ -324,32 +355,80 @@ function isAvatarRect(rect: AnchorRect): boolean {
   return Math.abs(rect.width - rect.height) <= longer * SQUARE_TOLERANCE
 }
 
-/**
- * The last approximately-square image inside a rail, or `null`.
- *
- * The last one, not the first: an avatar sits at the foot of the column, while
- * everything above it is navigation chrome or content. Scanning the whole
- * document instead of the container would happily return a video cover from the
- * feed — the symptom this stage fixes.
- * @param rail the container, when one was identified
- */
-function lastAvatarImageIn(rail: Element | null): Element | null {
-  if (rail === null) return null
-  let candidate: Element | null = null
-  for (const img of Array.from(rail.querySelectorAll('img'))) {
-    if (isAvatarRect(rectOf(img))) candidate = img
-  }
-  return candidate
+/** Every image inside a rail whose box reads as an avatar, in DOM order. */
+function avatarCandidatesIn(rail: Element): Element[] {
+  return Array.from(rail.querySelectorAll('img')).filter((img) => isAvatarRect(rectOf(img)))
 }
 
 /**
- * The signed-in avatar, searched for through the page's own hooks first.
+ * Whether a small round control sits directly under an image.
+ *
+ * That control is the page's own statement of ownership: TikTok's action bar
+ * hangs a follow badge below the author's avatar and below nothing else, which
+ * is the one signal in the container that separates a person's picture from a
+ * promo tile or a sticker. Only the box is read — a circle occupies a square
+ * box, so squareness is the whole of the shape test — and images are not
+ * eligible, because the next picture in the column is not a badge.
+ *
+ * @param rail the container, which is the search space
+ * @param image the candidate the badge would belong to
+ */
+function hasFollowBadgeBelow(rail: Element, image: Element): boolean {
+  const box = rectOf(image)
+  for (const element of Array.from(rail.querySelectorAll('*'))) {
+    if (element.tagName.toLowerCase() === 'img') continue
+    const rect = rectOf(element)
+    const gap = rect.top - box.bottom
+    if (gap < FOLLOW_BADGE_GAP_MIN_PX || gap > FOLLOW_BADGE_GAP_MAX_PX) continue
+    if (rect.width < MIN_FOLLOW_BADGE_PX || rect.height < MIN_FOLLOW_BADGE_PX) continue
+    if (rect.width > box.width * MAX_FOLLOW_BADGE_FRACTION) continue
+    const longer = Math.max(rect.width, rect.height)
+    if (Math.abs(rect.width - rect.height) > longer * SQUARE_TOLERANCE) continue
+    const centre = rect.left + rect.width / 2
+    if (centre < box.left || centre > box.right) continue
+    return true
+  }
+  return false
+}
+
+/**
+ * The rail's avatar, chosen by attribution rather than by position.
+ *
+ * Three answers, in order of how much the page says about the picture:
+ *
+ * 1. the image with a follow badge under it — the action bar's own signature;
+ * 2. the highest image in the container — the avatar heads the column, and the
+ *    like/comment/share controls beside it are drawn as glyphs, not photographs;
+ * 3. a container holding exactly one candidate, which is the same answer as (2).
+ *
+ * DOM order decides nothing, in either direction. It is not visual order (a
+ * lazily inserted tile can land above one that is already painted), and a rail
+ * that renders several square images — author avatar, promo tile, sticker — has
+ * no "last" that means "person".
+ *
+ * @param rail the container, when one was identified
+ */
+function attributedAvatarIn(rail: Element | null): Element | null {
+  if (rail === null) return null
+  const candidates = avatarCandidatesIn(rail)
+  for (const image of candidates) {
+    if (hasFollowBadgeBelow(rail, image)) return image
+  }
+  let highest: Element | null = null
+  for (const image of candidates) {
+    if (highest === null || rectOf(image).top < rectOf(highest).top) highest = image
+  }
+  return highest
+}
+
+/**
+ * The rail's avatar, searched for through the page's own hooks first.
  *
  * @param doc the page
  * @param viewport the viewport box, needed by the structural arm
  */
 export function findAvatarElement(doc: Document, viewport: ViewportSize): Element | null {
-  return firstMeasurable(doc, AVATAR_SELECTORS) ?? lastAvatarImageIn(findSideRailElement(doc, viewport))
+  return firstMeasurable(doc, AVATAR_SELECTORS) ?? attributedAvatarIn(findSideRailElement(doc, viewport))
 }
 
 /**
@@ -362,7 +441,7 @@ export function findAvatarElement(doc: Document, viewport: ViewportSize): Elemen
  */
 export function measureAnchorFacts(doc: Document, viewport: ViewportSize): AnchorFacts {
   const railElement = findSideRailElement(doc, viewport)
-  const avatarElement = firstMeasurable(doc, AVATAR_SELECTORS) ?? lastAvatarImageIn(railElement)
+  const avatarElement = firstMeasurable(doc, AVATAR_SELECTORS) ?? attributedAvatarIn(railElement)
   const rail = railElement === null ? null : rectOf(railElement)
   const avatar = avatarElement === null ? null : rectOf(avatarElement)
   const layout = detectAnchorLayout({ rail }, viewport)

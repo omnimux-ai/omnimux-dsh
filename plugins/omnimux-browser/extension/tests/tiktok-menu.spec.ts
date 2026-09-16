@@ -20,6 +20,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  MENU_FALLBACK_WIDTH_PX,
   TIKTOK_SCENE_HOST_ID,
   mountTiktokScene,
 } from '../src/content/tiktok-scene/menu.ts'
@@ -99,6 +100,28 @@ function rule(selector: string): string {
   return inlineStyles.slice(open + 1, close)
 }
 
+/** One `px` declaration out of a block, so a missing or renamed one throws. */
+function px(body: string, property: string): number {
+  const found = new RegExp(`${property}:\\s*([\\d.]+)px`).exec(body)
+  if (found === null) throw new Error(`no ${property} in: ${body.slice(0, 60)}`)
+  return Number.parseFloat(found[1])
+}
+
+/**
+ * The width the stylesheet renders the toolbar at.
+ *
+ * Read from the stylesheet rather than repeated as a literal: the number the
+ * direction decision is measured against has to be the number the panel actually
+ * gets, and a copy of it in a test cannot tell when the two drift apart. Three
+ * columns in a row, one gap between each pair, and the panel's own padding and
+ * border on both sides.
+ */
+function renderedMenuWidth(): number {
+  const columns = px(rule('.omx-item {'), 'width')
+  const menu = rule('.omx-menu {')
+  return 3 * columns + 2 * px(menu, 'gap') + 2 * px(menu, 'padding') + 2 * px(menu, 'border')
+}
+
 beforeEach(() => {
   document.body.innerHTML = ''
 })
@@ -143,6 +166,11 @@ describe('TikTok 场景工具栏 — 形态', () => {
     // 展开态仍然保留 -50%：垂直居中是位置，不是入场动画的一部分。
     const open = rule('.omx-anchor:hover .omx-menu')
     expect(open).toMatch(/transform:\s*translateY\(-50%\)\s*scale\(1\)/)
+  })
+
+  it('详情行撑宽时面板在视口内换行，而不是长出去 (P1-2)', () => {
+    expect(rule('.omx-menu {')).toMatch(/max-width:\s*calc\(100vw - 24px\)/)
+    expect(rule('.omx-item-detail {')).toMatch(/overflow-wrap:\s*anywhere/)
   })
 
   it('翻左只是一侧的几何：从右缘生长、从右侧滑入', () => {
@@ -215,8 +243,12 @@ describe('TikTok 场景工具栏 — 结构', () => {
 })
 
 describe('TikTok 场景工具栏 — 方向自适应', () => {
-  /** The width a browser would report for the toolbar, which is what the decision measures. */
-  const MENU_W = 204
+  /**
+   * The width a browser would report for the toolbar, which is what the decision
+   * measures. Taken from the stylesheet, so a column width change moves this and
+   * the assertions below stay about direction rather than about a stale number.
+   */
+  const MENU_W = renderedMenuWidth()
 
   /** Lay out a page from markup, giving each selector the box the browser would report. */
   function page(markup: string, boxes: Record<string, { top: number; left: number; width: number; height: number }>): void {
@@ -233,15 +265,27 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
     }
   }
 
-  /** Mount against a viewport, with the toolbar reporting the width a browser would give it. */
-  function mountSized(width: number, height: number) {
+  /** The portrait action bar of the probe: avatar at the top, button at the right edge. */
+  function portraitPage(): void {
+    page('<div id="bar"><img id="author" /></div>', {
+      '#bar': { top: 60, left: 375, width: 55, height: 700 },
+      '#author': { top: 68, left: 379, width: 48, height: 48 },
+    })
+  }
+
+  /**
+   * Mount against a viewport, with the toolbar reporting the width a browser
+   * would give it. `widthOfMenu` is read on every reposition, so a test can make
+   * the panel grow the way a longer detail row makes it grow.
+   */
+  function mountSized(width: number, height: number, widthOfMenu: () => number = () => MENU_W) {
     window.innerWidth = width
     window.innerHeight = height
     const mounted = mount()
     const el = menu()
     el.getBoundingClientRect = () => ({
-      x: 0, y: 0, top: 0, left: 0, right: MENU_W, bottom: 70,
-      width: MENU_W, height: 70, toJSON: () => ({}),
+      x: 0, y: 0, top: 0, left: 0, right: widthOfMenu(), bottom: 70,
+      width: widthOfMenu(), height: 70, toJSON: () => ({}),
     } as DOMRect)
     mounted.handle.reposition()
     return { ...mounted, menu: el }
@@ -251,6 +295,12 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
   function menuLeft(): number {
     return Number.parseFloat(anchor().style.left) + Number.parseFloat(menu().style.left)
   }
+
+  it('兜底宽度就是样式渲染出来的宽度（列宽 + 间距 + 内边距 + 边框）(P2-1)', () => {
+    // 226：三个 68px 列 + 两个 4px 间距 + 两侧 6px 内边距 + 两侧 1px 边框。
+    expect(MENU_W).toBe(226)
+    expect(MENU_FALLBACK_WIDTH_PX).toBe(MENU_W)
+  })
 
   it('⑥ 桌面布局默认靠右：菜单左缘 = 按钮右缘 (AC-401)', () => {
     // 实测 A：头像在左栏 @left=20，按钮落在视口左侧，右侧空间充裕。
@@ -266,10 +316,7 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
 
   it('⑦ 按钮贴右缘、右侧放不下时翻左，且整块菜单不出屏 (AC-402 / AC-405)', () => {
     // 实测 C 的形态：头像只在右侧操作栏里，按钮因此贴着视口右缘。
-    page('<div id="bar"><img id="author" /></div>', {
-      '#bar': { top: 60, left: 375, width: 55, height: 700 },
-      '#author': { top: 820, left: 379, width: 48, height: 48 },
-    })
+    portraitPage()
     const { menu: el } = mountSized(430, 932)
 
     expect(el.classList.contains('is-left')).toBe(true)
@@ -277,14 +324,12 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
     expect(menuLeft()).toBe(379 - MENU_W)
     expect(menuLeft()).toBeGreaterThanOrEqual(0)
     expect(menuLeft() + MENU_W).toBeLessThanOrEqual(430)
+    // 翻左之后菜单右缘正好落在按钮左缘上：按钮没有被面板压住。
+    expect(menuLeft() + MENU_W).toBeLessThanOrEqual(379)
   })
 
   it('每次重新测量：翻左时的偏移跟着菜单实际宽度走 (AC-403)', () => {
-    // 实测 C 的形态：头像在贴右缘的操作栏里，按钮因此贴着视口右缘。
-    page('<div id="bar"><img id="author" /></div>', {
-      '#bar': { top: 60, left: 375, width: 55, height: 700 },
-      '#author': { top: 820, left: 379, width: 48, height: 48 },
-    })
+    portraitPage()
     const { handle } = mountSized(430, 932)
     expect(menuLeft()).toBe(379 - MENU_W)
 
@@ -299,6 +344,37 @@ describe('TikTok 场景工具栏 — 方向自适应', () => {
     expect(menu().classList.contains('is-left')).toBe(true)
     expect(menuLeft()).toBe(379 - narrow)
     expect(menuLeft() + narrow).toBeLessThanOrEqual(430)
+  })
+
+  it('⑧ 菜单变宽后重新判定方向：面板不再压住按钮 (P1-2)', async () => {
+    portraitPage()
+    // 详情行出现前 226 宽；出现后（长文件名撑开面板）变成 400。
+    let wide = false
+    const { menu: el } = mountSized(430, 932, () => (wide ? 400 : MENU_W))
+    expect(menuLeft()).toBe(379 - MENU_W)
+
+    wide = true
+    row('video').click()
+    await settle()
+
+    // 撑宽之后方向重跑：面板改从视口左缘起算，右缘 400 落在按钮中心 403 之前，
+    // 按钮仍然点得到；不重跑的话它会停在 153..553，既出屏又压住按钮。
+    expect(el.classList.contains('is-left')).toBe(true)
+    expect(menuLeft()).toBe(0)
+    expect(menuLeft() + 400).toBeLessThanOrEqual(430)
+    expect(menuLeft() + 400).toBeLessThanOrEqual(379 + 48 / 2)
+    expect(shadow().querySelector('.omx-item-detail')?.textContent).toContain('mp4')
+  })
+
+  it('⑨ 面板量不到宽度时用兜底宽度，方向仍按兜底宽度判 (P2-2)', () => {
+    portraitPage()
+    // 生产路径唯一能走到兜底的情形：元素报不出尺寸。
+    const { menu: el } = mountSized(430, 932, () => 0)
+
+    expect(el.classList.contains('is-left')).toBe(true)
+    expect(menuLeft()).toBe(379 - MENU_FALLBACK_WIDTH_PX)
+    expect(menuLeft()).toBeGreaterThanOrEqual(0)
+    expect(menuLeft() + MENU_FALLBACK_WIDTH_PX).toBeLessThanOrEqual(430)
   })
 })
 

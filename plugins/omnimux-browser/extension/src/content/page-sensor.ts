@@ -4,6 +4,8 @@
  * (Home, Profile, Status/Detail, Article).
  */
 
+import { platformForHost } from '../platform/registry.ts'
+
 export interface PageSceneContext {
   url: string
   title: string
@@ -17,14 +19,22 @@ export interface PageSceneContext {
   timestamp?: number
 }
 
+/**
+ * Which platform a page belongs to.
+ *
+ * The answer comes from the platform registry, which owns the host suffixes and
+ * matches them on a dot boundary. A second host table here would be a second
+ * answer: `host.includes('x.com')` reads `notx.com` as X, and a page reports
+ * `generic` from one of these two functions and `twitter` from the other — which
+ * is exactly the kind of disagreement the registry exists to remove. The caller
+ * that places the brand mark already resolves the platform that way, so a page
+ * cannot be X for the mark and something else for the panel.
+ *
+ * @param url the page's address, defaulting to the current one
+ */
 export function detectPlatform(url: string = window.location.href): PageSceneContext['platform'] {
   try {
-    const host = new URL(url).hostname.toLowerCase()
-    if (host.includes('x.com') || host.includes('twitter.com')) return 'twitter'
-    if (host.includes('tiktok.com')) return 'tiktok'
-    if (host.includes('zhihu.com')) return 'zhihu'
-    if (host.includes('weixin.qq.com') || host.includes('mp.weixin.qq.com')) return 'wechat'
-    return 'generic'
+    return platformForHost(new URL(url).hostname).id
   } catch {
     return 'generic'
   }
