@@ -584,9 +584,10 @@ export function buildFilteredModelOptions(args: {
 
   const seamForTool = args.tool ? CANVAS_CAPABILITY_TOOLS[args.tool] : undefined;
   const admitsModel = (modelId: string): boolean => {
-    if (!isCanvasCapabilityModel(catalog, modelId)) return true;
-    if (!seamForTool) return false;
-    return modelBindsSeam(catalog.models?.find((row) => row.id === modelId), seamForTool);
+    if (seamForTool) {
+      return modelBindsSeam(catalog.models?.find((row) => row.id === modelId), seamForTool);
+    }
+    return !isCanvasCapabilityModel(catalog, modelId);
   };
 
   const evaluation = evaluateCatalogCompat(catalog, args.fingerprint, {

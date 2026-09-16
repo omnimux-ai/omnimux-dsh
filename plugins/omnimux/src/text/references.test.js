@@ -32,13 +32,13 @@ describe('ordered text references', () => {
   it('rejects malformed references and legacy fields instead of dropping media', () => {
     for (const input of [
       { references: {} }, { references: [null] }, { references: [ref('')] },
-      { references: [ref('/clip', 'document')] }, { image: 2 }, { audioTrack: {} },
+      { references: [ref('/clip', 'unknown_media')] }, { image: 2 }, { audioTrack: {} },
     ]) assert.throws(() => normalizeTextReferences(input), { code: 'omnimux-invalid-request' })
   })
 
   it('sends every image in order, with no duplicate legacy image', async () => {
     const deps = fixture()
-    await executeOmnimuxText({ prompt: 'compare', model: 'claude-opus-4-6', operation: 'vision_chat', references: [ref(second), ref(first)], image: second, ...deps })
+    await executeOmnimuxText({ prompt: 'compare', model: 'gemini-3.8-flash', operation: 'vision_chat', references: [ref(second), ref(first)], image: second, ...deps })
     assert.equal(deps.saved.length, 2)
     assert.deepEqual([...deps.saved[0].data], [...Buffer.from(second.split(',')[1], 'base64')])
     assert.deepEqual(deps.calls[0].messages[0].content.slice(1).map((part) => part.attachment.attachmentId), ['image-1', 'image-2'])
@@ -49,10 +49,9 @@ describe('ordered text references', () => {
       Array.from({ length: 11 }, () => ref(first)),
       [ref(first), { ...ref(second), role: 'last_frame' }],
       [ref(first), { ...ref(second), targetSlot: 'not_a_slot' }],
-      [ref(first), ref('/audio.wav', 'audio')],
     ]) {
       const deps = fixture()
-      await assert.rejects(() => executeOmnimuxText({ prompt: 'compare', model: 'claude-opus-4-6', operation: 'vision_chat', references, ...deps }), { code: 'omnimux-invalid-request' })
+      await assert.rejects(() => executeOmnimuxText({ prompt: 'compare', model: 'gemini-3.8-flash', operation: 'vision_chat', references, ...deps }), { code: 'omnimux-invalid-request' })
       assert.equal(deps.saved.length, 0)
       assert.equal(deps.calls.length, 0)
     }
@@ -82,7 +81,7 @@ describe('ordered text references', () => {
     let tool
     let seam
     mountTextComplete({ tools: { register(value) { tool = value } }, provide(_name, value) { seam = value }, get(name) { return deps[name] } }, { text: parseTextConfig() }, {}, (error) => { throw error })
-    const input = { prompt: 'compare', model: 'claude-opus-4-6', operation: 'vision_chat', references: [ref(first), ref(second)], reason: 'user requested comparison' }
+    const input = { prompt: 'compare', model: 'gemini-3.8-flash', operation: 'vision_chat', references: [ref(first), ref(second)], reason: 'user requested comparison' }
     assert.ok(tool.parameters.properties.references)
     await tool.execute(input, {})
     await seam.execute(input)

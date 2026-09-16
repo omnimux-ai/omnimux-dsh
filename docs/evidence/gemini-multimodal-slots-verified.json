@@ -1,0 +1,52 @@
+{
+  "task": "Issue #2071 — 对齐上游 Gemini 3.8 Flash 全模态契约更新与本地适配",
+  "verificationKind": "worktree-isolated real-browser web verification",
+  "verifiedAt": "2026-09-16T22:02:00+08:00",
+  "environment": {
+    "runner": "scripts/test-env-bootstrap.mjs startTestEnvironment({ root })",
+    "mode": "ui",
+    "evidenceLevel": "full",
+    "port": "dynamic (OS-assigned, port 0)",
+    "origin": "http://127.0.0.1:<dynamic>",
+    "seededWorkspace": "ws_qa_media",
+    "browser": "ego-browser real Chromium via TaskSpace",
+    "selfCleaning": true
+  },
+  "journey": [
+    "同源登录（一次性 loginUrl，未落盘/未打印）",
+    "应用首屏加载并关闭 Internal Testing Notice",
+    "选择工作区（社媒专家）",
+    "展开侧栏 → 打开 Projects（Creative Canvas）",
+    "新建本地项目「Gemini Multimodal QA」并进入创作画布",
+    "画布工具栏 Add Node → Text 创建文本生成节点",
+    "读取节点与卡槽 DOM 取证并截图"
+  ],
+  "observations": {
+    "canvasPresent": true,
+    "nodeCount": 1,
+    "nodeText": "Text\nTry:\nWrite Draft\nScript Gen\nPlan Gen\nPrompt Gen\nT\n|\n0/7000\nGemini 3.8\n标准版",
+    "defaultModelBadge": "Gemini 3.8 标准版",
+    "slotWellsContainer": { "data-testid": "wf-slot-wells", "data-preset": "strip" },
+    "slots": [
+      { "slot": "reference_images", "label": "Pick Reference images", "preset": "strip", "state": "empty" }
+    ]
+  },
+  "interpretation": {
+    "confirmed": [
+      "文本节点默认绑定 Gemini 3.8，卡槽区在 strip 预设下正常渲染并给出素材装填入口",
+      "卡槽入口的 data-slot 为 reference_images，与契约 vision_chat 的首个参考槽一致"
+    ],
+    "designNote": "strip 预设的空态按设计只渲染尾部加号入口（layout.slots 中首个可加槽位）；图片/视频/音频/文档四类具名槽位在素材装填后依序呈现，位置上限由契约 allowedMimes 与 max 决定。",
+    "coveredByAutomated": [
+      "plugins/omnimux/src/text/gemini38.test.js — 契约声明 4 类输入槽位与真实数据打包",
+      "plugins/omnimux/src/text/gemini38-multimodal.test.js — 视频/音频/PDF 端到端投递与非法格式拦截",
+      "plugins/omnimux-workflow/tests/e2e/gemini-multimodal-slots.e2e.test.mjs — 4 类卡槽派生与文档槽位渲染支持",
+      "plugins/omnimux-workflow/src/shared/graph/feedSlot/feedSlotKernel.test.mjs — 音频/文档槽位别名派生"
+    ],
+    "notCovered": [
+      "本次实机未连接到真实图片/视频/音频/PDF 素材节点，故未在浏览器中呈现四类具名槽位的并排装填态",
+      "未发起对上游模型的真实请求（环境为 ui 模拟模式，realModelRequest=false）"
+    ]
+  },
+  "screenshot": "docs/evidence/gemini-multimodal-slots-verified.png"
+}

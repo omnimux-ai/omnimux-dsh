@@ -7,6 +7,8 @@ import { parseTextConfig, resolveTextRoute } from './catalog.js'
 import { completeTextViaChat } from './chat.js'
 import { probeTextImage, saveProbedTextImage, toImageUrlPart } from './image.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
+import { loadTextAudio, toAudioImageUrlPart } from './audio.js'
+import { loadTextDocument, toDocumentImageUrlPart } from './document.js'
 import { normalizeTextReferences } from './references.js'
 
 /**
@@ -25,6 +27,7 @@ import { normalizeTextReferences } from './references.js'
  *   image?: string,
  *   video?: string,
  *   audio?: string,
+ *   document?: string,
  *   audioTrack?: object,
  *   references?: import('./references.js').TextReference[],
  *   system?: string,
@@ -54,6 +57,9 @@ export async function executeOmnimuxText(input) {
   const references = normalizeTextReferences(input)
   const hasImage = references.some((asset) => asset.type === 'image')
   const hasVideo = references.some((asset) => asset.type === 'video')
+  const hasAudio = references.some((asset) => asset.type === 'audio')
+  const hasDocument = references.some((asset) => asset.type === 'document')
+  const hasComplexMedia = hasVideo || hasAudio || hasDocument
   const gate = input.gate ?? input.hub?.gate
   const route = resolveTextRoute({
     model: input.model,
@@ -75,7 +81,13 @@ export async function executeOmnimuxText(input) {
   for (const asset of references) {
     const media = asset.type === 'image'
       ? await probeTextImage(asset.pathOrUrl, { attachments: input.attachments, fetcher: input.fetcher, signal: input.signal })
-      : asset.type === 'video' ? await loadTextVideo(asset.pathOrUrl, { signal: input.signal, fetcher: input.fetcher }) : null
+      : asset.type === 'video'
+        ? await loadTextVideo(asset.pathOrUrl, { signal: input.signal, fetcher: input.fetcher })
+        : asset.type === 'audio'
+          ? await loadTextAudio(asset.pathOrUrl, { signal: input.signal, fetcher: input.fetcher })
+          : asset.type === 'document'
+            ? await loadTextDocument(asset.pathOrUrl, { signal: input.signal, fetcher: input.fetcher })
+            : null
     if (!media) {
       throw new OmnimuxError('omnimux-invalid-request', `text completion does not support ${asset.type} input`)
     }
@@ -114,7 +126,7 @@ export async function executeOmnimuxText(input) {
   // any request. Routing intent therefore uses the same direct chat path as a
   // video input, which carries the group and its failover candidates.
   const wantsChannels = route.routed && route.candidates.length > 0
-  if (hasVideo || wantsChannels) {
+  if (hasComplexMedia || wantsChannels) {
     const mediaParts = []
     for (const [index, asset] of references.entries()) {
       // `probed` mirrors `references` by index; the probed entries carry the
@@ -123,6 +135,8 @@ export async function executeOmnimuxText(input) {
       if (!media) continue
       if (asset.type === 'video') mediaParts.push(toVideoImageUrlPart(media))
       else if (asset.type === 'image') mediaParts.push(toImageUrlPart(media))
+      else if (asset.type === 'audio') mediaParts.push(toAudioImageUrlPart(media))
+      else if (asset.type === 'document') mediaParts.push(toDocumentImageUrlPart(media))
     }
     const result = await completeTextViaChat({
       model: route.modelId,

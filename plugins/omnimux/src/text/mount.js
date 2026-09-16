@@ -54,7 +54,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
   ctx.tools.register({
     name: 'omnimux_text_complete',
     description:
-      'Run one one-shot completion on an enabled OmniMux whitelist model. The expert receives no parent conversation or tools. Call only when the current model cannot do the work, or the user / contract names that model. Omit model to use the configured default. Pass ordered references for multiple images or a single video; the model contract must accept every reference. Current text routes reject audio and mixed image/video input. Legacy image and video fields remain accepted and do not duplicate matching references. Video bypasses the harness image store and packs as image_url(data:video). Do not use this to continue the conversation.',
+      'Run one one-shot completion on an enabled OmniMux whitelist model. The expert receives no parent conversation or tools. Call only when the current model cannot do the work, or the user / contract names that model. Omit model to use the configured default. Pass ordered references for multiple images, video, audio, or PDF documents; the model contract must accept every reference. Legacy image and video fields remain accepted and do not duplicate matching references. Video bypasses the harness image store and packs as image_url(data:video). Do not use this to continue the conversation.',
     parameters: objectParams({
       model: {
         type: 'string',
@@ -72,7 +72,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
         items: {
           type: 'object',
           properties: {
-            type: { type: 'string', enum: ['image', 'video', 'audio'] },
+            type: { type: 'string', enum: ['image', 'video', 'audio', 'document'] },
             pathOrUrl: { type: 'string' },
             role: { type: 'string' },
             targetSlot: { type: 'string' },
@@ -86,6 +86,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
       },
       image: { type: 'string', description: 'Absolute path, http(s) URL, or data URI. Model must accept image input. Mutually exclusive with video.' },
       video: { type: 'string', description: 'Absolute path (.mp4/.webm/.mov) or data:video URI. Model must accept video input. Mutually exclusive with image.' },
+      audio: { type: 'string', description: 'Absolute path (.mp3/.wav) or data:audio URI. Model must accept audio input.' },
+      document: { type: 'string', description: 'Absolute path (.pdf) or data:application/pdf URI. Model must accept document input.' },
       reason: { type: 'string', required: true, description: 'Which missing capability, or which user / contract line authorizes this call.' },
       system: { type: 'string', description: 'Optional system text for this one request only.' },
       max_tokens: { type: 'number', description: 'Optional output cap. Defaults to Config.text.maxTokens.' },
@@ -123,6 +125,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           references: args.references,
           image: args.image,
           video: args.video,
+          audio: args.audio,
+          document: args.document,
           system: args.system,
           maxTokens: args.max_tokens,
           strategy: args.strategy,

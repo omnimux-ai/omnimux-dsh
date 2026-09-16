@@ -318,6 +318,36 @@ test('reference_images and reference_videos aliases match expected variants', ()
     assert.equal(l.slots.length, 1);
     assert.equal(l.slots[0].slot, slotName);
   }
+
+  for (const slotName of ['reference_audio', 'audio_track', 'audio', 'reference', 'references']) {
+    const customCatalog = {
+      models: [{
+        id: 'text-audio',
+        operations: [
+          { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: [input(slotName, 'audio', 'reference', 0, 1)] },
+        ],
+      }],
+    };
+    const l = deriveSlotLayout(customCatalog, 'text-audio', 'vision_chat', 'text');
+    assert.equal(l.preset, 'strip');
+    assert.equal(l.slots.length, 1);
+    assert.equal(l.slots[0].slot, slotName);
+  }
+
+  for (const slotName of ['reference_document', 'document', 'pdf', 'reference', 'references']) {
+    const customCatalog = {
+      models: [{
+        id: 'text-document',
+        operations: [
+          { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: [input(slotName, 'document', 'reference', 0, 1)] },
+        ],
+      }],
+    };
+    const l = deriveSlotLayout(customCatalog, 'text-document', 'vision_chat', 'text');
+    assert.equal(l.preset, 'strip');
+    assert.equal(l.slots.length, 1);
+    assert.equal(l.slots[0].slot, slotName);
+  }
 });
 
 test('Issue #1104: 卡槽装填过滤 — 不支持格式与超量素材不进入卡槽，仅展示非空就绪素材', () => {

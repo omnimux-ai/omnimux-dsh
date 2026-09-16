@@ -138,11 +138,11 @@ export function mapLegacyOperation(raw: string | undefined | null): string {
 // Media type helpers
 // ============================================================================
 
-export const MEDIA_INPUT_TYPES = Object.freeze(['image', 'video', 'audio'] as const);
+export const MEDIA_INPUT_TYPES = Object.freeze(['image', 'video', 'audio', 'document'] as const);
 export type MediaInputType = (typeof MEDIA_INPUT_TYPES)[number];
 
 export function isMediaInputType(type: string | undefined | null): type is MediaInputType {
-  return type === 'image' || type === 'video' || type === 'audio';
+  return type === 'image' || type === 'video' || type === 'audio' || type === 'document';
 }
 
 const BYTES_PER_MB = 1024 * 1024;

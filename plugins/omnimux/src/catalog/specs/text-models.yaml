@@ -627,7 +627,7 @@ models:
           seam: "textComplete"
           notes: "未发起 Gemini 3.8 真实请求，不继承 3.7 执行证据"
       - id: "vision_chat"
-        label: "图文对话"
+        label: "多模态对话"
         output:
           type: "text"
         inputs:
@@ -643,32 +643,54 @@ models:
             source: "upstream_edge"
             min: 0
             max: 10
-            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            allowedMimes: ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"]
             maxSizeMb: 20
             limitSource:
-              kind: "policy_conservative"
-              note: "继承现有 3.7 产品保守限制；不是 3.8 官方数量或体积上限"
+              kind: "official_docs"
+              note: "上游 5e61dc3ce 与 Google 官方模型文档确认支持 PNG, JPEG, WEBP, HEIC, HEIF"
           - slot: "reference_videos"
             type: "video"
             role: "reference"
             source: "upstream_edge"
             min: 0
             max: 1
-            allowedMimes: ["video/mp4"]
+            allowedMimes: ["video/mp4", "video/mov", "video/mpeg", "video/avi", "video/wmv", "video/flv"]
             maxSizeMb: 50
             limitSource:
-              kind: "policy_conservative"
-              note: "继承现有 3.7 单视频与 50MB 产品保守限制；不是 3.8 独立实测"
+              kind: "official_docs"
+              note: "上游 5e61dc3ce 与 Google 官方模型文档确认支持 MP4, MOV, MPEG, AVI, WMV, FLV"
+          - slot: "reference_audios"
+            type: "audio"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["audio/mp3", "audio/wav", "audio/mpeg"]
+            maxSizeMb: 25
+            limitSource:
+              kind: "official_docs"
+              note: "上游 5e61dc3ce 与 Google 官方模型文档声明支持 MP3, WAV, MPEG"
+          - slot: "reference_documents"
+            type: "document"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["application/pdf"]
+            maxSizeMb: 50
+            limitSource:
+              kind: "official_docs"
+              note: "上游 5e61dc3ce 与 Google 官方模型文档声明支持 PDF 文档"
         research:
           status: "verified"
           docUrl: "docs/references/omnimux-gemini-3.8-contract-gap.md"
-          verifiedAt: "2026-09-06"
-          notes: "2026-09-06 用户确认与 Gemini 3.7 相同；复用现有输入合同，非独立官方发布声明"
+          verifiedAt: "2026-09-16"
+          notes: "2026-09-16 对齐上游 5e61dc3ce 全模态契约格式与 Google 官方多模态规范"
         implementation:
           status: "ready"
           profileId: "textComplete"
           seam: "textComplete"
-          notes: "复用 textComplete 的 Gemini 3.7 mapper；离线验证 Gemini 3.8 wire ID"
+          notes: "textComplete 支持图片、视频、音频与 PDF 数据打包；离线验证 Gemini 3.8 全模态"
         execution:
           status: "none"
           profileId: "textComplete"
