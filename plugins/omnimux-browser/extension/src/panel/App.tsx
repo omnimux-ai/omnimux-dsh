@@ -2469,11 +2469,15 @@ export function App(): React.JSX.Element {
         setSettingsSave({ kind: 'error', message: relayProblem })
         return
       }
-      await api.updateSettings(settings)
+      // A pasted pairing token arrives with whatever whitespace the user's
+      // clipboard carried; the bridge compares byte-exact, so a trailing
+      // newline would read as a wrong token and look like a broken address.
+      const next = { ...settings, token: settings.token.trim() }
+      await api.updateSettings(next)
       try {
         chrome.runtime?.sendMessage?.({
           type: 'SETTINGS_UPDATED',
-          payload: { bridgeUrl: settings.bridgeUrl, token: settings.token }
+          payload: { bridgeUrl: next.bridgeUrl, token: next.token }
         })
       } catch {}
       setSettingsSave({ kind: 'saved' })
@@ -2870,12 +2874,12 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Auth Token' : '鉴权 Token'}</span>
-            <small>{locale === 'en' ? 'Leave empty for local loopback; enter token only for protected remotes' : '本机回环免密连接请留空；仅受保护远程实例需要填写'}</small>
+            <small>{locale === 'en' ? 'Pairing token required by every instance, local included; copy it from the app' : '任何实例都需要配对令牌（本机同样需要）；在应用侧复制后粘贴到此处'}</small>
             <input
               type="password"
               value={settings.token}
               onChange={(e) => setSettings((prev) => ({ ...prev, token: e.target.value }))}
-              placeholder={locale === 'en' ? 'Optional token (leave empty for loopback)' : '可选 Token（本机回环留空即可免密连接）'}
+              placeholder={locale === 'en' ? 'Paste the pairing token' : '粘贴配对令牌'}
             />
           </label>
           <label>
@@ -3455,16 +3459,14 @@ export function App(): React.JSX.Element {
       {error !== null && <div className="error">{error}</div>}
       <footer className="composer">
         {detectedMedia.length > 0 && (
-          <div className="page-media-bar">
-            <MediaSnifferBar
-              items={detectedMedia}
-              locale={locale}
-              onActiveChange={setActiveMediaItems}
-              onSaveToInspiration={handleSaveToInspiration}
-              attachedIds={attachedMediaIds}
-              onAttachMedia={attachLitMedia}
-            />
-          </div>
+          <MediaSnifferBar
+            items={detectedMedia}
+            locale={locale}
+            onActiveChange={setActiveMediaItems}
+            onSaveToInspiration={handleSaveToInspiration}
+            attachedIds={attachedMediaIds}
+            onAttachMedia={attachLitMedia}
+          />
         )}
         <div className="composer-box clean-chat-box">
           {selection !== null && (

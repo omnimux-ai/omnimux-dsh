@@ -1367,7 +1367,16 @@ async function startBridge(): Promise<void> {
 /** Gateway RPC with a helpful error when the bridge is down. */
 async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
   if (rpc === null || bridge === null || !bridge.connected) {
-    throw new Error(getUiLocale() === 'zh'
+    const zh = getUiLocale() === 'zh'
+    // An unfilled pairing token is the dominant cause of a refused connection:
+    // every instance — loopback included — demands the token, so name that
+    // missing half instead of leaving the user to guess between two fields.
+    if (settings.token.trim() === '') {
+      throw new Error(zh
+        ? '未连接 dsh：还没有配对令牌，请在插件设置里粘贴本机应用的配对令牌'
+        : 'dsh is not connected: no pairing token yet — paste it in the extension settings')
+    }
+    throw new Error(zh
       ? '未连接 dsh（请检查设置中的地址与 token）'
       : 'dsh is not connected (check the bridge address and token in Settings)')
   }

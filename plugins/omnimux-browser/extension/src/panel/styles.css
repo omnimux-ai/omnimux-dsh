@@ -4751,14 +4751,10 @@ textarea:focus-visible {
   color: inherit;
 }
 
-/* Page media sensed by the content script, shown above the composer. */
-.page-media-bar {
-  flex: 0 0 auto;
-  margin: 0 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface);
+/* Page media sensed by the content script, shown above the composer. The shelf
+   stays bare — no wrapping card — so the thumbnails are the only visual. */
+.composer > .media-sniffer-shelf {
+  margin-bottom: 8px;
 }
 
 /* Media Sniffer Shelf & Sticky Top Bar (Pure Black & White Minimalist) */
