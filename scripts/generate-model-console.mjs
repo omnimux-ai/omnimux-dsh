@@ -14,21 +14,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const mod = (p) => path.join(rootDir, p);
-
-const { loadAll, DEFAULT_SPECS_DIR } = await import(mod('plugins/omnimux/src/catalog/contract/load.js'));
-const { MODEL_CHANNEL_GROUPS } = await import(mod('plugins/omnimux/src/catalog/serving/channel-groups.js'));
-const { resolveModelBrand } = await import(mod('plugins/omnimux/src/brand/model-brands.js'));
-
-const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
-const dispositionsDoc = JSON.parse(
-  fs.readFileSync(mod('plugins/omnimux/src/catalog/contract/dispositions.json'), 'utf8'),
-);
 
 /** 展示用文案常量（非数据真源）：管理分组 → 中文名。 */
 const GROUP_NAMES = {
@@ -47,7 +38,7 @@ const BRAND_NAMES = {
 };
 
 /** 品牌细化归类（与模型契约家族对齐，纯展示用）。 */
-function brandOf(model) {
+function brandOf(model, resolveModelBrand) {
   const id = model.id;
   const key = resolveModelBrand(id) || 'other';
   if (key === 'grok' || id.startsWith('grok-')) return 'xAI (Grok)';
@@ -95,48 +86,84 @@ function simplifyGroup(group) {
   };
 }
 
-const models = [];
-for (const m of index.all()) {
-  const operations = (m.operations || []).map((op) => ({
-    id: op.id,
-    label: op.label || op.id,
-    listed: !!op.listed,
-    inputs: (op.inputs || []).length,
-  }));
-  const listedCount = operations.filter((op) => op.listed).length;
-  const groups = (MODEL_CHANNEL_GROUPS[m.id] || []).map(simplifyGroup);
-  models.push({
-    id: m.id,
-    label: m.label || m.id,
-    subtitle: m.subtitle || '',
-    badge: m.badge || '',
-    family: m.family || '',
-    brand: brandOf(m),
-    groupKey: m.managementGroup || 'other',
-    groupName: GROUP_NAMES[m.managementGroup] || m.managementGroup || '未分类',
-    aliases: m.aliases || [],
-    operations,
-    listedCount,
-    operationCount: operations.length,
-    ready: listedCount > 0,
-    groups,
-  });
+/**
+ * 从三处真源现算面板数据。
+ *
+ * 每次调用都重新读取磁盘真源（`useCache: false`），因此实时服务在每次请求时调用本函数
+ * 即可拿到最新配置，不存在跨请求的陈旧缓存。
+ *
+ * @returns {Promise<{ models: Array<Record<string, unknown>>, stats: Record<string, unknown> }>}
+ */
+export async function collectConsoleData() {
+  // ESM 导入会被 Node 永久缓存，直接 `import()` 会让线路分组表与品牌表停在首次加载的版本。
+  // 每次采集都用时间戳做模块缓存穿透，保证读到的是磁盘上的当前内容；JSON 与 YAML 分别由
+  // `readFileSync` 和 `loadAll({ useCache: false })` 天然现读。
+  const bust = `?fresh=${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const fresh = (p) => `${pathToFileURL(mod(p)).href}${bust}`;
+
+  const { loadAll, DEFAULT_SPECS_DIR } = await import(fresh('plugins/omnimux/src/catalog/contract/load.js'));
+  const { MODEL_CHANNEL_GROUPS } = await import(fresh('plugins/omnimux/src/catalog/serving/channel-groups.js'));
+  const { resolveModelBrand } = await import(fresh('plugins/omnimux/src/brand/model-brands.js'));
+
+  const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
+  const dispositionsDoc = JSON.parse(
+    fs.readFileSync(mod('plugins/omnimux/src/catalog/contract/dispositions.json'), 'utf8'),
+  );
+
+  const models = [];
+  for (const m of index.all()) {
+    const operations = (m.operations || []).map((op) => ({
+      id: op.id,
+      label: op.label || op.id,
+      listed: !!op.listed,
+      inputs: (op.inputs || []).length,
+    }));
+    const listedCount = operations.filter((op) => op.listed).length;
+    const groups = (MODEL_CHANNEL_GROUPS[m.id] || []).map(simplifyGroup);
+    models.push({
+      id: m.id,
+      label: m.label || m.id,
+      subtitle: m.subtitle || '',
+      badge: m.badge || '',
+      family: m.family || '',
+      brand: brandOf(m, resolveModelBrand),
+      groupKey: m.managementGroup || 'other',
+      groupName: GROUP_NAMES[m.managementGroup] || m.managementGroup || '未分类',
+      aliases: m.aliases || [],
+      operations,
+      listedCount,
+      operationCount: operations.length,
+      ready: listedCount > 0,
+      groups,
+    });
+  }
+
+  const stats = {
+    models: models.length,
+    ready: models.filter((m) => m.ready).length,
+    notReady: models.filter((m) => !m.ready).length,
+    withGroups: models.filter((m) => m.groups.length > 0).length,
+    groups: models.reduce((total, m) => total + m.groups.length, 0),
+    operations: models.reduce((total, m) => total + m.listedCount, 0),
+    dispositions: Array.isArray(dispositionsDoc.dispositions) ? dispositionsDoc.dispositions.length : 0,
+  };
+
+  return { models, stats };
 }
 
-const stats = {
-  models: models.length,
-  ready: models.filter((m) => m.ready).length,
-  notReady: models.filter((m) => !m.ready).length,
-  withGroups: models.filter((m) => m.groups.length > 0).length,
-  groups: models.reduce((total, m) => total + m.groups.length, 0),
-  operations: models.reduce((total, m) => total + m.listedCount, 0),
-  dispositions: Array.isArray(dispositionsDoc.dispositions) ? dispositionsDoc.dispositions.length : 0,
-  generatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-};
-
-const payload = JSON.stringify({ models, stats }).replace(/</g, '\\u003c');
-
-const html = `<!DOCTYPE html>
+/**
+ * 渲染面板 HTML。
+ *
+ * @param {{ models: Array<Record<string, unknown>>, stats: Record<string, unknown> }} data
+ * @param {{ live?: boolean, renderedAt?: string }} [options] `live` 为真时页面标注「实时读取」
+ * @returns {string}
+ */
+export function renderConsoleHtml(data, options = {}) {
+  const live = options.live === true;
+  const renderedAt = options.renderedAt || new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const stats = { ...data.stats, renderedAt, live };
+  const payload = JSON.stringify({ models: data.models, stats }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -169,6 +196,10 @@ const html = `<!DOCTYPE html>
 
   header { margin-bottom: 28px; }
   h1 { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+  .live-badge { display: inline-block; margin-left: 10px; font-size: 11px; font-weight: 400;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 3px; letter-spacing: 0; }
+  .live-badge[data-live=true] { color: var(--ok); border: 1px solid rgba(74,222,128,0.35); background: rgba(74,222,128,0.08); }
+  .live-badge[data-live=false] { color: var(--text-faint); border: 1px solid var(--line); }
   .sub { color: var(--text-faint); font-size: 12px; margin-top: 6px; font-family: var(--mono); }
 
   .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--line);
@@ -244,7 +275,7 @@ const html = `<!DOCTYPE html>
 <body>
 <div class="wrap">
   <header>
-    <h1>中枢模型检索面板</h1>
+    <h1>中枢模型检索面板<span class="live-badge" id="liveBadge"></span></h1>
     <div class="sub" id="subtitle"></div>
   </header>
 
@@ -274,7 +305,11 @@ const html = `<!DOCTYPE html>
   };
 
   document.getElementById('subtitle').textContent =
-    '数据真源：模型契约 YAML + 线路分组表 + 上架处置规则　·　生成于 ' + STATS.generatedAt;
+    '数据真源：模型契约 YAML + 线路分组表 + 上架处置规则　·　'
+    + (STATS.live ? '本页数据在每次打开时实时读取' : '静态快照，生成于 ' + STATS.renderedAt);
+  var badge = document.getElementById('liveBadge');
+  badge.dataset.live = String(!!STATS.live);
+  badge.textContent = STATS.live ? '实时读取 · ' + STATS.renderedAt : '静态快照';
   document.getElementById('footer').textContent =
     '共 ' + STATS.models + ' 款模型　·　' + STATS.groups + ' 条线路分组　·　' + STATS.dispositions + ' 条上架处置规则';
 
@@ -410,12 +445,20 @@ const html = `<!DOCTYPE html>
 </body>
 </html>
 `;
+}
 
-const outPath = mod('docs/tools/model-console.html');
-fs.mkdirSync(path.dirname(outPath), { recursive: true });
-fs.writeFileSync(outPath, html, 'utf8');
+// CLI：生成静态产物（离线可用的快照）。
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const data = await collectConsoleData();
+  const html = renderConsoleHtml(data, { live: false });
+  const outPath = mod('docs/tools/model-console.html');
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, html, 'utf8');
 
-console.log('模型检索面板生成成功: docs/tools/model-console.html');
-console.log(`  模型 ${stats.models} 款（已就绪 ${stats.ready} / 未就绪 ${stats.notReady}）`);
-console.log(`  线路分组 ${stats.groups} 条（覆盖 ${stats.withGroups} 款模型）`);
-console.log(`  就绪操作 ${stats.operations} 个　·　上架处置规则 ${stats.dispositions} 条`);
+  const s = data.stats;
+  console.log('模型检索面板生成成功: docs/tools/model-console.html');
+  console.log(`  模型 ${s.models} 款（已就绪 ${s.ready} / 未就绪 ${s.notReady}）`);
+  console.log(`  线路分组 ${s.groups} 条（覆盖 ${s.withGroups} 款模型）`);
+  console.log(`  就绪操作 ${s.operations} 个　·　上架处置规则 ${s.dispositions} 条`);
+  console.log('  提示：如需「打开即实时」，请改用 pnpm models:console:serve');
+}

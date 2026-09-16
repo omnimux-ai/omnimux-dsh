@@ -86,6 +86,7 @@
     "verify:craft": "node scripts/verify-craft.mjs",
     "hub:interfaces": "node scripts/generate-hub-interfaces-html.mjs",
     "models:console": "node scripts/generate-model-console.mjs",
+    "models:console:serve": "node scripts/serve-model-console.mjs",
     "verify:app": "node scripts/worktree-app-qa.mjs"
   },
   "devDependencies": {
