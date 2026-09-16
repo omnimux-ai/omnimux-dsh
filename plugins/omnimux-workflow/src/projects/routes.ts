@@ -26,6 +26,7 @@ import { displayHomePath, ensureLibraryRoot, resolveVideosDir } from './library'
 import { ProjectPathError } from './paths';
 import { createProjectStore, ProjectStoreError } from './ProjectStore';
 import { ensureWorkspaceProjectBound } from './workspaceProjectBinding';
+import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId';
 import type { WorkspaceStore } from '../workflow/workspace/WorkspaceStore.ts';
 import { createProjectCoverService } from './ProjectCoverService.ts';
 
@@ -162,6 +163,9 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
             workspaceDir,
             sessionId,
             libraryRoot,
+            // 必须绑到这个会话自己的画布（= 客户端兜底用的散列 id），
+            // 否则项目首个创作页会指向一个并不存在的随机画布，画布页将显示空白。
+            canvasWorkspaceId: sessionToWorkspaceId(sessionId),
           });
         } catch {
           record = null;

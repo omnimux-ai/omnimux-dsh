@@ -187,6 +187,11 @@ describe('workspace project binding (#2104)', { concurrency: 1 }, () => {
     assert.equal(first.body.source, 'registered', '首次查询即完成登记');
     assert.equal(first.body.project.path, workspaceDir);
     assert.ok(first.body.project.canvasWorkspaceId, '返回当前创作页绑定的画布');
+    assert.equal(
+      first.body.project.canvasWorkspaceId,
+      host.sessionToWorkspaceId('session-afc2a612'),
+      '首个创作页必须绑到该会话自己的画布（客户端兜底用的散列 id），不能是随机画布 id',
+    );
     assert.equal(first.body.project.pages.length, 1);
     assert.ok(existsSync(projectFileOf(workspaceDir)), '登记后工作区文件夹内出现 project.json');
 
