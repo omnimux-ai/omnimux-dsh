@@ -505,3 +505,33 @@ describe('导入成功的气泡提示', () => {
     assert.match(iconCss, /var\(--dsw-alias-state-success-primary\)/)
   })
 })
+
+describe('灵感预览弹窗分享按钮激活态视觉规范', () => {
+  it('分享按钮激活态严禁纯白背景或裸品牌色，必须采用深色微透激活底与高亮边框', () => {
+    const activeCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-share-trigger-btn.is-active')
+    assert.match(
+      decl(activeCss, 'background'),
+      /var\(--dsw-alias-interactive-bg-active/,
+      '激活态必须采用次级激活背景 token，杜绝单色主题下映射为纯白色块',
+    )
+    assert.match(
+      decl(activeCss, 'border-color'),
+      /var\(--dsw-alias-border-l3/,
+      '激活态必须保留边框线以呼应弹出浮层',
+    )
+    assert.match(
+      decl(activeCss, 'color'),
+      /var\(--dsw-alias-label-primary/,
+      '文字必须保持高对比度主文本色',
+    )
+  })
+
+  it('灵感预览弹窗组件中分享按钮必须挂载 aria-expanded 属性反映浮层开闭状态', () => {
+    const modalSrc = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.match(
+      modalSrc,
+      /aria-expanded=\{showSharePopover\}/,
+      '分享按钮必须声明 aria-expanded 属性',
+    )
+  })
+})

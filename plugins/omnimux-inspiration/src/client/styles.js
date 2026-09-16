@@ -1807,9 +1807,9 @@ export const INSPIRATION_CSS = `
   border-color: var(--dsw-alias-border-l3, #383838);
 }
 .omnimux-inspiration-share-trigger-btn.is-active {
-  background: var(--dsw-alias-brand-primary, #4c8dff);
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.14));
   color: var(--dsw-alias-label-primary, #ffffff);
-  border-color: transparent;
+  border-color: var(--dsw-alias-border-l3, #383838);
 }
 .omnimux-inspiration-share-popover {
   position: absolute;

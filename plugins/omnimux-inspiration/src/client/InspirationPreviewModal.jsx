@@ -372,6 +372,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 onClick={() => setShowSharePopover((prev) => !prev)}
                 title={t('modal.share.btn') || '分享'}
                 aria-label={t('modal.share.btn') || '分享'}
+                aria-expanded={showSharePopover}
               >
                 {t('modal.share.btn') || '分享'}
               </Button>
