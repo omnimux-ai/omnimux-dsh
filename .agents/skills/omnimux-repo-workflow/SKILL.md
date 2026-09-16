@@ -18,6 +18,8 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 
 - State the documentation impact in one sentence (owning sources updated, or a concrete no-impact reason) and fulfill the [documentation governance contract](../../../docs/contracts/docs-governance-standard.md).
 
+- State the new-user baseline in the task spec: what this feature relies on for a brand-new user, and what error it shows when that is missing. Anything that exists only on a dev machine is not a default path — [product baseline](../../../docs/contracts/product-baseline.md), enforced by `pnpm verify:product-baseline`.
+
 - Select only relevant skills and references. Shared external symlinks are not repository-owned files. Read a skill's exact pause clause before treating it as a blocker; current user instructions take precedence over skill guidelines within system/platform bounds.
 - Delegate independent work with bounded inputs, paths, and completion criteria; use separate worktrees for concurrent edits. The coordinator integrates and accepts the result. Do not launch a fixed team for a simple edit.
 - Run the change-specific checks in AGENTS and required CI. Reuse successful evidence for unchanged code while it remains valid for the target revision/environment. Do not repeat broad tests after a documentation-only follow-up unless a dependency or evidence contract requires it.

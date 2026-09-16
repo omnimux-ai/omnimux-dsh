@@ -1,5 +1,7 @@
 # 链接导入大模型通道优先级与超时熔断规范
 
+> **历史记录（2026-09-17 起被取代）：** 本文记录当时的实现（本地 chat 桥列第一顺位）。其**通道优先级结论不再代表当前标准**——产品路径不得依赖开发机本地状态，通道顺序遗留整改见 Issue #2129 第二步。当前标准以 [产品基线合同](../docs/contracts/product-baseline.md) 为准。
+
 **文件：** `specs/products-text-channel-priority.spec.md` ｜ **优先级：** P0 ｜ **模块：** `plugins/omnimux-products`
 
 ## 1. 问题与目标

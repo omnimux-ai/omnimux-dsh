@@ -23,6 +23,7 @@ subsystem: "global"
 |---|---|---|---|---|---|
 | `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-14 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合；含契约单一真源与「新增契约前先查既有归属」治理条款。 |
 | `living` | [omnimux-baseline-contract.md](omnimux-baseline-contract.md) | OmniMux 通用底线与交互契约 (Baseline Contract) | `global` | 2026-09-11 | 资产物理路径不可变性、最多 3 次异参重试熔断与 `working_language` 级联裁决协议栈。 |
+| `living` | [product-baseline.md](product-baseline.md) | 产品基线：新用户环境是唯一参考 (Product Baseline) | `global` | 2026-09-17 | 开发机不是基线：产品运行时代码不得出现开发版身份、本机配置选通道、回环模型端点、业务插件读 provider 密钥、开发机绝对路径；机械门禁 `pnpm verify:product-baseline` 强制，豁免须带理由。 |
 | `living` | [omnimux-anti-loop-contract.md](omnimux-anti-loop-contract.md) | OmniMux 防死循环自检与 LoopGuard 契约 (Anti-Loop Contract) | `global` | 2026-09-11 | 调用前自查清单、典型死循环替代策略表与 Hub 底层 `LoopGuard` 5 步 3 击硬门禁熔断。 |
 | `living` | [omnimux-semantic-judgment-contract.md](omnimux-semantic-judgment-contract.md) | OmniMux 多模态语义分配与 Prompt 编译契约 (Semantic Judgment) | `global` | 2026-09-11 | 意图四级优先级、素材 5 维输入角色、五维决策（take/adapt/ignore/block/ask）与 Prompt 纯净度铁律。 |
 | `living` | [omnimux-timeline-discipline-contract.md](omnimux-timeline-discipline-contract.md) | OmniMux 分镜与时间线协同纪律契约 (Timeline & Storyboard Discipline) | `omnimux-clip` | 2026-09-11 | 媒体生成即资产自动入库、分镜与时间线局部 Hunk 增量修改（禁全量重写）与 Stage 阶段执行隔离。 |

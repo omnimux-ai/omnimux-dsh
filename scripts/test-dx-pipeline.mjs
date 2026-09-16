@@ -46,6 +46,7 @@ test('active hooks preserve worktree and UI guards without the removed guard', (
   assert.deepEqual(hooks.PreToolUse.flatMap(row => row.hooks.map(hook => hook.command)), [
     'node scripts/guard-worktree.mjs',
     'node scripts/guard-ui-design.mjs',
+    'node scripts/verify-product-baseline.mjs --hook',
     'node scripts/guard-quality-loop.mjs',
   ])
   const { scripts } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "_note": "产品基线门禁的豁免清单。每条必须给出可执行的理由；修好后必须删除条目，否则门禁报「僵尸豁免」。合同：docs/contracts/product-baseline.md",
+  "entries": [
+    {
+      "rule": "R1",
+      "path": "plugins/omnimux-browser/extension/src/panel/components/DshInstanceSelector.tsx",
+      "reason": "存量：宿主实例预设把开发版 omnimux-dev 标为 isRecommended。第二步改为正式版实例优先（Issue #2129）"
+    },
+    {
+      "rule": "R1",
+      "path": "plugins/omnimux-browser/extension/src/panel/components/WorkspaceSelector.tsx",
+      "reason": "存量：同上，且带开发机检出路径 defaultPath。第二步随实例预设一并整改（Issue #2129）"
+    },
+    {
+      "rule": "R5",
+      "path": "plugins/omnimux-browser/extension/src/panel/components/WorkspaceSelector.tsx",
+      "reason": "存量：defaultPath 写死 ~/Desktop/Project/dsh-plugin/product/omnimux-dsh。第二步删除（Issue #2129）"
+    },
+    {
+      "rule": "R1",
+      "path": "plugins/omnimux-browser/src/index.ts",
+      "reason": "存量：语言偏好探测的候选路径含 ~/.omnimux-dev，开发机上会优先命中。第二步收敛候选顺序（Issue #2129）"
+    },
+    {
+      "rule": "R1",
+      "path": "plugins/omnimux-market/src/local-api.ts",
+      "reason": "存量：技能探索候选目录含 ~/.omnimux-dev/skills。第二步删除该候选（Issue #2129）"
+    },
+    {
+      "rule": "R5",
+      "path": "plugins/omnimux-market/src/local-api.ts",
+      "reason": "存量：候选目录含开发机绝对路径（OmniMux-skills / OPC 资产库 / workbuddyskills）。第二步删除（Issue #2129）"
+    },
+    {
+      "rule": "R5",
+      "path": "plugins/omnimux-market/src/expert/catalog-provider.js",
+      "reason": "存量：专家目录候选含开发机绝对路径。第二步删除（Issue #2129）"
+    },
+    {
+      "rule": "R5",
+      "path": "plugins/omnimux-market/src/expert/install.js",
+      "reason": "存量：LOCAL_WB 与候选仓库根回落到开发机绝对路径。第二步改为只认环境变量（Issue #2129）"
+    },
+    {
+      "rule": "R5",
+      "path": "plugins/omnimux/src/client/presets/media-resolver.js",
+      "reason": "存量：LOCAL_ASSET_ROOT 指向开发机素材库。第二步改为缺失时回退产品内资源（Issue #2129）"
+    }
+  ]
+}
