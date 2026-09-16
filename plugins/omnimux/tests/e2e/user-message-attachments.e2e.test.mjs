@@ -17,6 +17,9 @@ describe('E2E: User Message Attachments Rail Display', () => {
           <div class="conversation-container" data-conversation-scroll="true">
             <div class="chat-row userRow">
               <div class="userStack">
+                <div class="attachmentRow" data-message-attachments>
+                  <img src="https://example.com/native-large.jpg" alt="native-large" width="240" height="240" />
+                </div>
                 <div class="bubble">解释下你看到的信息</div>
               </div>
             </div>
@@ -88,6 +91,12 @@ describe('E2E: User Message Attachments Rail Display', () => {
 
     // 检查气泡文字纯净度
     assert.equal(bubble.textContent?.trim(), '解释下你看到的信息', '用户气泡内绝对不能含有任何脏文本');
+
+    // 官方大图附件行必须被隐藏，避免与上方紧凑素材轨重复
+    const native = parent.querySelector('[data-message-attachments]');
+    assert.ok(native, '宿主仍保留官方附件节点（仅隐藏）');
+    assert.equal(native.getAttribute('data-omx-native-attachments-hidden'), 'true');
+    assert.equal(bubble.querySelectorAll('.omx-chat-media-tail').length, 0, '用户气泡内不得挂媒体尾卡');
 
     delete globalThis.window;
   });

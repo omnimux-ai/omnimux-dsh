@@ -87,12 +87,24 @@ export function extractFilename(raw: string | null | undefined): string | undefi
 }
 
 /**
+ * 是否属于用户消息行：用户附件图不是「生成结果」，不得扫入助手媒体尾卡。
+ */
+export function isUserMessageNode(el: Element | null | undefined): boolean {
+  if (!el || typeof (el as Element).closest !== 'function') return false;
+  if ((el as Element).closest('div[class*="userRow"], div[class*="userStack"]')) return true;
+  const className = typeof (el as Element).className === 'string' ? (el as Element).className : '';
+  return /userRow|userStack/.test(className);
+}
+
+/**
  * Scan an element or subtree for generated images or videos,
  * ignoring avatars, icons, and small UI glyphs.
  * Computes normalization features (filename, canonicalKey, priority score).
  */
 export function extractMediaFromElement(el: HTMLElement): DetectedMedia[] {
   const mediaList: DetectedMedia[] = [];
+  // 用户气泡/附件行里的图是输入素材，不是助手生成结果
+  if (isUserMessageNode(el)) return mediaList;
 
   // Context-level filename hint (e.g. from .dshview-path or toolview text)
   const pathElem = el.querySelector('.dshview-path');
@@ -102,6 +114,8 @@ export function extractMediaFromElement(el: HTMLElement): DetectedMedia[] {
   // 1. Check img tags
   const imgs = el.querySelectorAll<HTMLImageElement>('img');
   for (const img of imgs) {
+    // 跳过嵌套在用户行内的图片（整轮扫描时父节点可能是 turn 容器）
+    if (isUserMessageNode(img)) continue;
     const src = img.getAttribute('src');
     if (!src) continue;
     // Exclude SVG badges and micro avatars
@@ -146,6 +160,7 @@ export function extractMediaFromElement(el: HTMLElement): DetectedMedia[] {
   // 2. Check video tags
   const videos = el.querySelectorAll<HTMLVideoElement>('video');
   for (const vid of videos) {
+    if (isUserMessageNode(vid)) continue;
     const src = vid.getAttribute('src');
     if (!src) continue;
 
@@ -529,17 +544,21 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
 
   if (allMedia.length === 0) return false;
 
-  // 2. Locate the final assistant answer bubble in this turn
+  // 2. Locate the final assistant answer bubble in this turn（绝不挂到用户气泡）
   let targetBubble: HTMLElement | null = null;
   // Search backward from last node to first
   for (let i = turnNodes.length - 1; i >= 0; i--) {
     const node = turnNodes[i];
+    if (isUserMessageNode(node)) continue;
     // Candidate 1: standard bubble inside assistantRow or assistant-step
-    const bubble = node.querySelector<HTMLElement>('div[class*="bubble"]');
-    if (bubble) {
+    const bubbles = node.querySelectorAll<HTMLElement>('div[class*="bubble"]');
+    for (let j = bubbles.length - 1; j >= 0; j--) {
+      const bubble = bubbles[j];
+      if (isUserMessageNode(bubble)) continue;
       targetBubble = bubble;
       break;
     }
+    if (targetBubble) break;
     // Candidate 2: node itself is an assistant row or bubble
     if (node.classList.contains('bubble') || node.getAttribute('data-chat-flow-kind') === 'assistant-step') {
       targetBubble = node;
@@ -547,9 +566,9 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
     }
   }
 
-  if (!targetBubble) {
-    // Fallback: append to the last node of the turn
-    targetBubble = turnNodes[turnNodes.length - 1];
+  if (!targetBubble || isUserMessageNode(targetBubble)) {
+    // 尚无助手气泡时不挂尾卡，避免把大预览塞进用户消息
+    return false;
   }
 
   // 3. Register canonical media into Global Media Viewer Store

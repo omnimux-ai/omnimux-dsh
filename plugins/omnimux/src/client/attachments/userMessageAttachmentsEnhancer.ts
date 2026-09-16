@@ -10,6 +10,9 @@ const USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"], div[cl
 const RAIL_CONTAINER_CLASS = 'omx-user-attachments-rail';
 const ENHANCED_ATTR = 'data-omx-user-attachments';
 const STYLES_ID = 'omx-user-attachments-styles';
+/** 官方宿主在用户气泡上方渲染的大图/文件附件行（MessageItem.attachmentRow）。 */
+const NATIVE_ATTACHMENTS_SELECTOR = '[data-message-attachments]';
+const HIDDEN_NATIVE_ATTR = 'data-omx-native-attachments-hidden';
 
 const STYLES_CSS = `
 .${RAIL_CONTAINER_CLASS} {
@@ -22,6 +25,11 @@ const STYLES_CSS = `
   align-self: flex-start;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* OmniMux 已在上方挂紧凑素材轨时，隐藏官方大图附件行，避免同一份素材显示两次。 */
+${NATIVE_ATTACHMENTS_SELECTOR}[${HIDDEN_NATIVE_ATTR}="true"] {
+  display: none !important;
 }
 
 .omx-user-att-card {
@@ -189,6 +197,27 @@ export function createAttachmentCardElement(att: ConversationAttachment, doc: Do
 }
 
 /**
+ * 隐藏用户行内的官方大图附件行（与 OmniMux 紧凑素材轨重复）。
+ * 作用域限定在 userRow/userStack，不影响助手消息。
+ */
+export function hideNativeMessageAttachments(scope: Element | null): number {
+  if (!scope || typeof (scope as Element).querySelectorAll !== 'function') return 0;
+  const row = (scope as Element).closest?.('div[class*="userRow"], div[class*="userStack"]') || scope;
+  const natives = Array.from((row as Element).querySelectorAll<HTMLElement>(NATIVE_ATTACHMENTS_SELECTOR));
+  let hidden = 0;
+  for (const node of natives) {
+    if (node.getAttribute(HIDDEN_NATIVE_ATTR) === 'true') continue;
+    // 只隐藏真正的官方附件行，不碰 OmniMux 自己的 rail
+    if (node.classList.contains(RAIL_CONTAINER_CLASS) || node.getAttribute('data-omx-user-attachments-rail') === 'true') {
+      continue;
+    }
+    node.setAttribute(HIDDEN_NATIVE_ATTR, 'true');
+    hidden += 1;
+  }
+  return hidden;
+}
+
+/**
  * 扫描并增强会话流中的用户气泡
  */
 export function scanAndEnhanceUserAttachments(root: Element | Document = document): number {
@@ -203,7 +232,11 @@ export function scanAndEnhanceUserAttachments(root: Element | Document = documen
   let enhancedCount = 0;
 
   bubbles.forEach((bubble, index) => {
-    if (bubble.getAttribute(ENHANCED_ATTR) === 'true') return;
+    if (bubble.getAttribute(ENHANCED_ATTR) === 'true') {
+      // 已增强：仍要对账隐藏官方大图行（宿主可能晚于我们重绘）
+      hideNativeMessageAttachments(bubble.parentElement || bubble);
+      return;
+    }
 
     // 检查气泡文本
     const text = bubble.textContent || '';
@@ -224,6 +257,7 @@ export function scanAndEnhanceUserAttachments(root: Element | Document = documen
       if (parent) {
         parent.insertBefore(rail, bubble);
         bubble.setAttribute(ENHANCED_ATTR, 'true');
+        hideNativeMessageAttachments(parent);
         enhancedCount += 1;
       }
     }

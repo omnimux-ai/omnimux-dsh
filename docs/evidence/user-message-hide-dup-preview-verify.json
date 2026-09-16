@@ -1,0 +1,15 @@
+{
+  "feature": "user-message-hide-dup-preview",
+  "issue": 2122,
+  "timestamp": "2026-09-16T16:23:58.785Z",
+  "checks": {
+    "enhancedCount": 1,
+    "hasRail": true,
+    "railCards": 1,
+    "nativeHidden": true,
+    "userMediaExtracted": 0,
+    "enhanceTurnMountedTail": false,
+    "bubbleHasMediaTail": false
+  },
+  "pass": true
+}

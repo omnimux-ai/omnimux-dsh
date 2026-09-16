@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { JSDOM } from 'jsdom';
 import {
   createAttachmentCardElement,
+  hideNativeMessageAttachments,
   scanAndEnhanceUserAttachments,
 } from './userMessageAttachmentsEnhancer.ts';
 import { submittedAttachmentStore } from './submittedAttachmentStore.ts';
@@ -136,6 +137,58 @@ describe('userMessageAttachmentsEnhancer', () => {
     const secondCount = scanAndEnhanceUserAttachments(doc.body);
     assert.equal(secondCount, 0);
     assert.equal(parent.querySelectorAll('.omx-user-attachments-rail').length, 1);
+
+    delete (globalThis as any).window;
+  });
+
+  it('hides official data-message-attachments when OmniMux rail is mounted', () => {
+    const dom = new JSDOM(`
+      <div class="conversation">
+        <div class="userRow">
+          <div class="userStack">
+            <div class="attachmentRow" data-message-attachments>
+              <img src="https://example.com/native-large.jpg" alt="native" />
+            </div>
+            <div class="bubble">复刻这条爆款视频</div>
+          </div>
+        </div>
+      </div>
+    `);
+    const doc = dom.window.document;
+
+    submittedAttachmentStore.record('sess-hide', '复刻这条爆款视频', [
+      {
+        id: 'att-yuna',
+        fingerprint: 'fp-y',
+        sessionId: 'sess-hide',
+        sourcePlugin: 'omnimux-assets',
+        kind: 'image',
+        entityId: 'ast-yuna',
+        title: '科技Vlogger-粉衣女郎Yuna',
+        extension: 'JPG',
+        relativePath: 'data/files/yuna.jpg',
+        previewUrl: 'https://example.com/yuna.jpg',
+        status: 'ready',
+        createdAt: 100,
+      },
+    ]);
+
+    globalThis.window = dom.window as any;
+    (dom.window as any).__omnimuxWorkbench = {
+      getSnapshot: () => ({ sessionId: 'sess-hide' }),
+    };
+
+    const count = scanAndEnhanceUserAttachments(doc.body);
+    assert.equal(count, 1);
+
+    const native = doc.querySelector('[data-message-attachments]') as HTMLElement;
+    assert.ok(native);
+    assert.equal(native.getAttribute('data-omx-native-attachments-hidden'), 'true');
+    assert.ok(doc.querySelector('.omx-user-attachments-rail'));
+    assert.equal(doc.querySelectorAll('.omx-user-att-card').length, 1);
+
+    // 幂等：再次隐藏不重复副作用
+    assert.equal(hideNativeMessageAttachments(native.parentElement!), 0);
 
     delete (globalThis as any).window;
   });
