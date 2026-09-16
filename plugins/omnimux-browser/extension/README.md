@@ -108,7 +108,7 @@ The recommended zero-configuration command does not require Git or a local clone
 
    Loading or reloading the extension is passive: it does not probe local ports or open a WebSocket until the side panel is opened. A healthy connection established by the user may remain available for background approvals after the panel closes, but it will not reconnect without an open panel if it drops or another browser replaces it.
 
-3. **Use it**: open a normal `http://` or `https://` page and click the DeepSeek whale icon. Both builds auto-discover local dsh. Chrome loopback connections need no address or token; Firefox must be given the token from `~/.dsh/ext-bridge-token` because a `moz-extension://` UUID is not an add-on identity. Chat directly or click "Read page" first.
+3. **Use it**: open a normal `http://` or `https://` page and click the DeepSeek whale icon. Both builds auto-discover the local dsh address, but **both must be given the pairing token** — loopback included, since security scan BROWSER-01 removed the loopback exemption: paste the contents of `~/.dsh/ext-bridge-token` in Settings (dev builds use `~/.omnimux-dev/ext-bridge-token`). Chat directly or click "Read page" first.
 
 Pages that were already open before extension installation or reload are instrumented automatically on the first action, so they do not require a manual refresh. Browser-internal and protected pages such as `chrome://` and the Chrome Web Store expose only tab metadata and browser-level HTTP(S) navigation, back, forward, and reload; their DOM cannot be read or operated.
 

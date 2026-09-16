@@ -1,0 +1,68 @@
+{
+  "issue": 2078,
+  "ranAt": "2026-09-16T14:02:38.361Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-bridge-loopback-pairing/plugins/omnimux-browser/extension/dist",
+  "extensionId": "fjabeoiebidmcnfklifoijjlppakkjnj",
+  "chromium": "/Users/x/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "bridge": "ws://127.0.0.1:45120/ext/bridge",
+  "tokenLength": 64,
+  "tokenSource": "~/.omnimux-dev/ext-bridge-token",
+  "cases": [
+    {
+      "name": "empty token: bridge refuses and the panel names the missing pairing token",
+      "pass": true,
+      "expected": "错误文案含「还没有配对令牌」",
+      "observed": {
+        "status": "reconnecting",
+        "rpcReply": {
+          "type": "rpc.result",
+          "id": "verify-1789567350939",
+          "ok": false,
+          "error": {
+            "code": "bridge-unavailable",
+            "message": "未连接 dsh：还没有配对令牌，请在插件设置里粘贴本机应用的配对令牌"
+          }
+        },
+        "banner": "未连接 dsh：还没有配对令牌，请在插件设置里粘贴本机应用的配对令牌"
+      },
+      "evidence": [
+        "docs/evidence/browser-bridge-pairing-empty-token.png"
+      ]
+    },
+    {
+      "name": "real pairing token: the bridge accepts the extension",
+      "pass": true,
+      "expected": "status.state === 'connected'",
+      "observed": {
+        "status": "connected",
+        "rpcOk": false,
+        "rpcSettled": true
+      },
+      "evidence": [
+        "docs/evidence/browser-bridge-pairing-connected.png"
+      ]
+    },
+    {
+      "name": "media shelf renders bare, without the removed background card",
+      "pass": true,
+      "expected": "no .page-media-bar wrapper; .media-sniffer-shelf + chips present directly under footer.composer",
+      "observed": {
+        "legacyWrapperPresent": false,
+        "snifferPresent": true,
+        "chipPresent": true,
+        "chipCount": 1,
+        "shelfBackground": "rgba(0, 0, 0, 0)",
+        "shelfBorder": "0px none",
+        "composerChildren": [
+          "media-sniffer-shelf",
+          "composer-box clean-chat-box"
+        ]
+      },
+      "evidence": [
+        "docs/evidence/browser-bridge-pairing-media-shelf.png"
+      ]
+    }
+  ],
+  "passed": 3,
+  "total": 3
+}
