@@ -61,3 +61,11 @@ export {
   extractVideoBreakdown,
   BUNDLED_STRUCTURE_PROMPT,
 } from './breakdown/analyzerPipeline.js'
+
+export {
+  representativeShotTimeSeconds,
+  shotFrameFilename,
+  extractShotFrame,
+  attachShotFrames,
+  shotFramesDirectory,
+} from './breakdown/shotFrames.js'

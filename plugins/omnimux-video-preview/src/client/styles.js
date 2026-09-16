@@ -323,6 +323,33 @@ export const VIDEO_BREAKDOWN_CSS = `
   transition: all 0.15s ease;
 }
 
+.omnimux-video-breakdown-shot-card.has-thumb {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.omnimux-video-breakdown-shot-thumb {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.omnimux-video-breakdown-shot-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.omnimux-video-breakdown-shot-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .omnimux-video-breakdown-shot-card:hover {
   border-color: var(--dsw-alias-border-l3);
   background: var(--dsw-alias-bg-layer-2);

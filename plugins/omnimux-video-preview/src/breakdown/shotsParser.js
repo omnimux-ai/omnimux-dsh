@@ -29,9 +29,10 @@ export function formatShotsCopyText(shots = []) {
       const tagsLine = Array.isArray(shot.tags) && shot.tags.length > 0 ? `属性：${shot.tags.join(' | ')}` : ''
       const speechLine = shot.speech ? `台词：${shot.speech}` : ''
       const descLine = shot.description ? `描述：${shot.description}` : ''
+      const frameLine = shot.frame_path ? `画面：${shot.frame_path}` : ''
       const defaultTitle = `分镜 ${idx + 1}`
       const headerLine = `${timeStr} ${shot.title || defaultTitle}${stageStr}`
-      return [headerLine, tagsLine, speechLine, descLine].filter(Boolean).join('\n')
+      return [headerLine, tagsLine, speechLine, descLine, frameLine].filter(Boolean).join('\n')
     })
     .join('\n\n')
 }
