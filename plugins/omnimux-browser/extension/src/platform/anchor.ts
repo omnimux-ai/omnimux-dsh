@@ -142,10 +142,8 @@ const VIEWPORT_MARGIN = 10
 /**
  * Documented avatar hooks, most specific first.
  *
- * These are the page's own `data-e2e` test hooks, so they survive styling
- * changes. The probe measured exactly one of them hitting on a real page
- * (`[data-e2e="nav-profile"] img`, 32x32 at left=20, top=472 on the desktop
- * layout), which is why the structural scan below is not optional.
+ * Notice: `nav-profile` on TikTok desktop lives in the far-left navigation bar
+ * and must NEVER be used as the target avatar when the user is viewing video feeds.
  */
 export const AVATAR_SELECTORS: readonly string[] = [
   '[data-e2e="nav-user-avatar"]',
@@ -433,8 +431,10 @@ function attributedAvatarIn(rail: Element | null): Element | null {
 function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | null {
   const vCenter = viewport.height / 2
 
-  // 1. Explicit video-author-avatar hook in view
-  const namedAvatars = Array.from(doc.querySelectorAll('[data-e2e="video-author-avatar"]'))
+  // 1. Direct AvatarActionItem or video-author-avatar hook in view
+  const namedAvatars = Array.from(
+    doc.querySelectorAll('[class*="AvatarActionItem"], [data-e2e="video-author-avatar"]')
+  )
   let bestNamed: { element: Element; diff: number } | null = null
   for (const el of namedAvatars) {
     const r = rectOf(el)
@@ -448,7 +448,9 @@ function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | 
   if (bestNamed !== null) return bestNamed.element
 
   // 2. Active SectionActionBarContainer in the current card
-  const actionBars = Array.from(doc.querySelectorAll('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]'))
+  const actionBars = Array.from(
+    doc.querySelectorAll('section[class*="SectionActionBarContainer"], [class*="ActionBarContainer"]')
+  )
   let bestBar: Element | null = null
   let minBarDiff = Infinity
 
@@ -464,14 +466,19 @@ function findActiveFeedAvatar(doc: Document, viewport: ViewportSize): Element | 
   }
 
   if (bestBar !== null) {
+    const avatarEl = bestBar.querySelector('[class*="AvatarActionItem"], [data-e2e="video-author-avatar"], a[href*="/@"]')
+    if (avatarEl !== null) {
+      const img = avatarEl.querySelector('img')
+      return img ?? avatarEl
+    }
     const avatarImg = bestBar.querySelector('img')
     if (avatarImg !== null && isAvatarRect(rectOf(avatarImg))) return avatarImg
-    const avatarLink = bestBar.querySelector('[data-e2e="video-author-avatar"], a[href*="/@"]')
-    if (avatarLink !== null) return avatarLink
-    const firstItem = bestBar.firstElementChild
-    if (firstItem !== null) {
-      const fr = rectOf(firstItem)
-      if (fr.width > 0 && fr.height > 0) return firstItem
+    for (const child of Array.from(bestBar.children)) {
+      if (child.className && String(child.className).includes('extension-portal')) continue
+      const fr = rectOf(child)
+      if (fr.width >= 24 && fr.width <= 64 && fr.height >= 24 && fr.height <= 64) {
+        return child
+      }
     }
   }
 
