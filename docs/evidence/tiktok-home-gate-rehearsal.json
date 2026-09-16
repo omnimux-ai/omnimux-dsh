@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-09-16T11:10:29.806Z",
+  "task": "fix(browser): TikTok 场景入口仅在首页信息流显示",
+  "issue": 2035,
+  "spec": "specs/tiktok-robust-spacing.spec.md",
+  "bundle": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-tiktok-robust-spacing-2035/plugins/omnimux-browser/extension/dist/content.js",
+  "note": "Profile carries a previously installed build; its omnimux-* nodes were cleared before each injection. The corridor rule (rival pushed clear, native controls below the mark untouched) is not measurable here, because the installed copy resolves conflicts on the same elements concurrently; it is covered by tests/tiktok-conflict.spec.ts instead.",
+  "steps": [
+    {
+      "step": "home-feed",
+      "foreignNodesBeforeInject": [
+        "omnimux-companion-root",
+        "omnimux-media-hover-root",
+        "omnimux-tiktok-scene-root"
+      ],
+      "gateArmed": true,
+      "path": "/",
+      "triggerPresent": true,
+      "expected": "trigger present"
+    },
+    {
+      "step": "spa-to-profile",
+      "path": "/@cleanlife",
+      "triggerPresent": false,
+      "gateArmed": true,
+      "expected": "trigger absent"
+    },
+    {
+      "step": "spa-back-home",
+      "path": "/",
+      "triggerPresent": true,
+      "gateArmed": true,
+      "expected": "trigger present"
+    },
+    {
+      "step": "post-page-hard-load",
+      "foreignNodesBeforeInject": [
+        "omnimux-companion-root",
+        "omnimux-media-hover-root",
+        "omnimux-tiktok-scene-root"
+      ],
+      "gateArmed": true,
+      "path": "/@tiktok/video/7106594312292453678",
+      "triggerPresent": false,
+      "expected": "trigger absent"
+    }
+  ],
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-tiktok-robust-spacing-2035/docs/evidence/tiktok-home-gate-post-page.png",
+  "verdict": "PASSED"
+}
