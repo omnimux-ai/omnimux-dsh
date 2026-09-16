@@ -188,7 +188,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
   })
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒任务版。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒长片版。
   // 靠分组自带的 wireModel 指向各自的上游独立型号；每个分组携带独立契约。
   describe('MiniMax H3 series as groups', () => {
     it('declares all 5 lines, each with its own upstream model and contract', () => {

@@ -160,7 +160,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
 
   // #1818：线路约束是完整规格——可用生成方式、参数选项集与输入能力，不只是固定时长。
   it('resolves the full spec of the lines the node routes to', () => {
-    // 进阶版目前只固定了时长；标准版与自动路由都不施加约束
+    // 旗舰版目前只固定了时长；标准版与自动路由都不施加约束
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'pro' }), { parameters: { duration: { fixed: 30 } } });
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['standard'] }), {});
     assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});
@@ -180,7 +180,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒任务版。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒长片版。
   // 画布必须把各自的独立契约落到节点上。
   it('applies the H3 task line contract and leaves the standard line unconstrained', () => {
     const task = resolveLineConstraints('minimax-h3', { allowedGroups: ['task'] });
@@ -204,7 +204,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['standard'] }), {});
     assert.deepEqual(resolveLineConstraints('minimax-h3', undefined), {});
 
-    // 两组同选时取交集：任务版固定 15 秒会赢（标准版不施加时长约束）
+    // 两组同选时取交集：长片版固定 15 秒会赢（标准版不施加时长约束）
     const mixed = resolveLineConstraints('minimax-h3', { allowedGroups: ['standard', 'task'] });
     assert.deepEqual(mixed.parameters.duration, { fixed: 15 });
   });

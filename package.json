@@ -61,6 +61,7 @@
     "verify:models": "node scripts/verify-models.mjs",
     "verify:model-contracts": "node scripts/verify-model-contracts.mjs --strict",
     "verify:cross-plugin-models": "node scripts/verify-cross-plugin-model-alignment.mjs",
+    "verify:group-naming": "node scripts/verify-channel-group-naming.mjs",
     "verify:tools": "node scripts/verify-plugin-agent-tools.mjs",
     "test:agent-tools": "node scripts/test-agent-tools.mjs",
     "test:agent-tools:unit": "node --test scripts/test-agent-tools.test.mjs",
