@@ -37,8 +37,8 @@ export const HOST_FULLSCREEN_EXIT_SELECTORS = Object.freeze([
   `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="split"]`,
   'button[aria-label="退出全屏"]',
   'button[aria-label="Exit fullscreen"]',
-  'button[aria-label="分栏"]',
-  'button[aria-label="Split"]',
+  'button[aria-label="分栏"]:not([data-dockkit-split-button])',
+  'button[aria-label="Split"]:not([data-dockkit-split-button])',
 ])
 
 /** 无法在面板作用域内定位按钮时，仍可采信的官方稳定控件。 */
@@ -108,7 +108,7 @@ export function findHostFullscreenExitButton(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   let panel = null
   try {
-    panel = doc.querySelector(HOST_FULLSCREEN_PANEL_SELECTOR)
+    panel = doc.querySelector(HOST_FULLSCREEN_PANEL_SELECTOR) || doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}]`)
   } catch {
     panel = null
   }

@@ -64,7 +64,16 @@ export function resolveCurrentTabId(doc = hostDocument(), sidebarRight = getWork
         return TITLE_TO_TAB_ID.get(title)
       }
       const dockkitTab = activeTabEl?.getAttribute?.('data-dockkit-tab')
-      if (dockkitTab && isWorkbenchTab(dockkitTab)) return dockkitTab
+      if (dockkitTab) return dockkitTab
+    } catch {}
+  }
+
+  // 顶层通用兜底：查找 [role="tab"][aria-selected="true"] 上的标识
+  if (doc && typeof doc.querySelector === 'function') {
+    try {
+      const activeTabEl = doc.querySelector('[role="tab"][aria-selected="true"]')
+      const tabId = activeTabEl?.getAttribute?.('data-dockkit-tab')
+      if (tabId) return tabId
     } catch {}
   }
 
@@ -124,6 +133,13 @@ export function createTabViewportReconciler(deps = {}) {
       if (isWorkbenchTab(currentTab)) {
         const record = getFocusRecord(sessionId, currentTab)
         const targetMode = record?.mode || WORKBENCH_FOCUS.gui
+
+        // 会话优先守卫：若当前会话栏可见且用户选中了会话行，会话拥有最高优先级，严禁反向推进全屏
+        const sessionSelected = Boolean(doc.querySelector?.('[role="treeitem"][aria-selected="true"]'))
+        const convVisible = !doc.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed')
+        if (sessionSelected && convVisible && targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
+          return
+        }
 
         if (targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
           isReconciling = true
