@@ -9,15 +9,11 @@ import { exitHostRightSidebarFullscreen } from './host-fullscreen.js'
  *      `[data-sidebar-right-panel="fullscreen"]`，只有官方模式控件能退出；插件清折叠键动不了它，
  *      面板会继续 `position:fixed; width:100%` 盖住中间栏（用户看到的是「点了没反应」）。
  *
- * 只清第 2 层不够，只清第 1 层也不够；而且**全屏态下折叠键往往是 `false`**，所以
- * 「读到折叠键为 false 就跳过」的写法会让第 2 层永远不被尝试。这里把两层合到一处，
- * 供内核手势与对外全局 API 共用（避免两份实现漂移）。
- *
- * 只负责「让对话可见」：不关闭右侧面板、不清已开 Tab。
+ * 必须同时兼顾 DOM 属性与内存 API：全屏同步器写 DOM 时，内存读数可能为 false；
+ * 只要任一层存在折叠，即执行精准清除并退出全屏。本来就可见时保持纯 no-op。
  *
  * @param {Document} [doc]
- * @param {{ getConversationCollapsed?: () => boolean, setFocus?: (mode: string) => unknown }} [api]
- *   插件全局 API 子集；缺任一项都按缺失处理，绝不抛错。
+ * @param {{ getConversationCollapsed?: () => boolean, setConversationCollapsed?: (val: boolean) => unknown, setFocus?: (mode: string) => unknown }} [api]
  * @returns {{ hostFullscreenExited: boolean, collapseCleared: boolean }}
  */
 export function ensureConversationVisible(doc, api) {
@@ -28,22 +24,40 @@ export function ensureConversationVisible(doc, api) {
     hostFullscreenExited = false
   }
 
-  let collapsed = false
+  const domCollapsed = Boolean(doc?.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed'))
+  let apiCollapsed = false
   try {
-    collapsed = typeof api?.getConversationCollapsed === 'function'
+    apiCollapsed = typeof api?.getConversationCollapsed === 'function'
       ? Boolean(api.getConversationCollapsed())
       : false
   } catch {
-    collapsed = false
+    apiCollapsed = false
   }
 
+  const needsClear = domCollapsed || apiCollapsed
   let collapseCleared = false
-  if (collapsed && typeof api?.setFocus === 'function') {
-    try {
-      api.setFocus('split')
-      collapseCleared = true
-    } catch {
-      collapseCleared = false
+
+  if (needsClear) {
+    if (domCollapsed) {
+      try {
+        doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+        doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+        collapseCleared = true
+      } catch {}
+    }
+
+    if (typeof api?.setConversationCollapsed === 'function') {
+      try {
+        api.setConversationCollapsed(false)
+        collapseCleared = true
+      } catch {}
+    }
+
+    if (typeof api?.setFocus === 'function') {
+      try {
+        api.setFocus('split')
+        collapseCleared = true
+      } catch {}
     }
   }
 
