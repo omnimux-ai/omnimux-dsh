@@ -1,7 +1,7 @@
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, statSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { downloadMedia } from './downloader.js'
+import { alignMediaExtension, downloadMedia, isKnownUnrenderableCover } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
 import { EXPORT_KIND, exportMediaFile, resolveDownloadsDir } from './media-export.js'
 import {
@@ -1515,9 +1515,18 @@ function resolveImportType(meta, media) {
 function buildImportRecord(args, meta, media, analysis = {}) {
   const coverName = media.localCoverPath ? media.localCoverPath.split('/').pop() : ''
   const videoName = media.localVideoPath ? media.localVideoPath.split('/').pop() : ''
-  const cover_url = coverName
-    ? `/omnimux/inspiration/local/media/covers/${coverName}`
-    : meta.cover_url
+  // A cover that was downloaded but cannot be rendered (HEIC, say) is not a
+  // cover. Falling back to `meta.cover_url` there would re-publish the same
+  // undecodable bytes as a remote URL, and every consumer would mount an image
+  // that never paints — the card, the modal poster and the replicate attachment
+  // all read this field. Only a *failed* download (`null`) keeps the remote
+  // fallback, which is the pre-existing behaviour for a poster that has no local
+  // copy.
+  const cover_url = media.coverRenderable === false
+    ? ''
+    : coverName
+      ? `/omnimux/inspiration/local/media/covers/${coverName}`
+      : meta.cover_url
   return {
     title: meta.title || args.rawUrl,
     content: meta.text,
@@ -1583,7 +1592,6 @@ function checkResolvedDuplicate(args, meta) {
 async function downloadImportMedia(args, meta, rawVideoUrl) {
   const localPaths = {}
   let localVideoPath = ''
-  let localCoverPath = ''
   try {
     localVideoPath = await downloadMedia(rawVideoUrl, args.paths.videosDir, {
       prefix: 'video_',
@@ -1595,30 +1603,65 @@ async function downloadImportMedia(args, meta, rawVideoUrl) {
     const message = `视频素材下载落盘失败: ${args.formatErrorMessage(downErr)}`
     return { error: fail(502, message) }
   }
-  localCoverPath = await downloadCoverBestEffort(args, meta, localPaths)
-  return { localPaths, localVideoPath, localCoverPath }
+  const cover = await downloadCoverBestEffort(args, meta, localPaths)
+  return { localPaths, localVideoPath, localCoverPath: cover.path, coverRenderable: cover.renderable }
 }
 
+/** Drop a file that will never be served; a leftover is not worth failing an import over. */
+function removeQuietly(filePath) {
+  if (!filePath || !existsSync(filePath)) return
+  try {
+    unlinkSync(filePath)
+  } catch {
+    // Best effort: an unremovable temp file must not change the import outcome.
+  }
+}
+
+/**
+ * Cache the poster image of an imported item.
+ *
+ * `renderable` separates the three outcomes a caller has to tell apart, because
+ * two of them leave `path` empty:
+ * - `true`  — a file was saved and it is not known to be unrenderable (a raster
+ *   image, or a format the sniffer does not name).
+ * - `false` — the saved bytes are positively *not* renderable by a browser (a
+ *   HEIC cover is the case this exists for). The file is removed, and the caller
+ *   must not fall back to the remote `cover_url` either: it is the same
+ *   undecodable payload, so the only honest answer is "this item has no cover".
+ * - `null`  — nothing was saved at all (no URL, or the transfer failed). The
+ *   remote URL stays a legitimate fallback here.
+ * @param {Record<string, any>} args
+ * @param {Record<string, any>} meta
+ * @param {Record<string, string>} localPaths
+ * @returns {Promise<{ path: string, renderable: boolean | null }>}
+ */
 async function downloadCoverBestEffort(args, meta, localPaths) {
-  if (!meta.cover_url || !HTTP_URL_RE.test(meta.cover_url)) return ''
+  if (!meta.cover_url || !HTTP_URL_RE.test(meta.cover_url)) return { path: '', renderable: null }
   try {
     const saved = await downloadMedia(meta.cover_url, args.paths.coversDir, {
       prefix: 'cover_',
       fetcher: args.fetcher,
       resolver: args.resolver,
     })
-    localPaths.cover = saved
-    return saved
+    // The URL is only a hint; the bytes decide the stored name and whether any
+    // browser can use the file at all.
+    const aligned = alignMediaExtension(saved)
+    if (isKnownUnrenderableCover(aligned)) {
+      removeQuietly(aligned)
+      return { path: '', renderable: false }
+    }
+    localPaths.cover = aligned
+    return { path: aligned, renderable: true }
   } catch {
-    return ''
+    return { path: '', renderable: null }
   }
 }
 
 /** Degraded import: no video stream, so only the poster image is cached. */
 async function downloadImportCover(args, meta) {
   const localPaths = {}
-  const localCoverPath = await downloadCoverBestEffort(args, meta, localPaths)
-  return { localPaths, localVideoPath: '', localCoverPath }
+  const cover = await downloadCoverBestEffort(args, meta, localPaths)
+  return { localPaths, localVideoPath: '', localCoverPath: cover.path, coverRenderable: cover.renderable }
 }
 
 export async function handleAnalyze(ctx) {

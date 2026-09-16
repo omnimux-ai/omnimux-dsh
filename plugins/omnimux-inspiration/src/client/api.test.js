@@ -8,6 +8,7 @@ import {
   listInspirations,
   listLocalInspirations,
   quotaGuard,
+  publishableMediaAddress,
   resolveCreatorProfileUrl,
   resolveTikTokEmbedUrl,
   shareRequestPayload,
@@ -378,6 +379,61 @@ describe('share request payload — what a cloud row hands to the Host', () => {
   it('drops blank media entries instead of posting empty strings', () => {
     const payload = shareRequestPayload({ is_local: false, title: 't', mediaUrls: ['', '  ', 'a.jpg'] })
     assert.deepEqual(payload.mediaUrls, ['a.jpg'])
+  })
+
+  // Issue #2075: the catalogue answers `cover_key` / `media_keys` and hands over
+  // the Host's own media paths. Reading only the camelCase spellings left both
+  // addresses empty, so every cloud share was refused as having no media at all.
+  it("reads the catalogue's own key spelling and hands the cloud its publishable form", () => {
+    const payload = shareRequestPayload({
+      id: 2789,
+      is_local: false,
+      type: 'image',
+      title: '情绪共鸣型助眠歌单推广',
+      content: 'Give it a try 🥺',
+      category: 'Health & Wellness',
+      cover_key: '/omnimux/inspiration/media/inspiration-covers/2789',
+      media_keys: [
+        '/omnimux/inspiration/media/r2/publications/genviral/slideshows/s1/slide-1.jpg',
+        '/omnimux/inspiration/media/r2/publications/genviral/slideshows/s1/slide-2.jpg',
+      ],
+    })
+    assert.equal(payload.caption, 'Give it a try 🥺', 'the copy still comes off `content`')
+    assert.equal(payload.coverUrl, '/api/inspiration/v1/public/media/inspiration-covers/2789')
+    assert.deepEqual(payload.mediaUrls, [
+      '/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/s1/slide-1.jpg',
+      '/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/s1/slide-2.jpg',
+    ])
+  })
+
+  it('leaves an address that is already publishable, or absolute, exactly as it is', () => {
+    assert.equal(
+      publishableMediaAddress('/api/inspiration/v1/public/media/r2/publications/x/slide-1.jpg'),
+      '/api/inspiration/v1/public/media/r2/publications/x/slide-1.jpg',
+    )
+    assert.equal(
+      publishableMediaAddress('https://omnimux.ai/api/inspiration/v1/public/media/a.jpg'),
+      'https://omnimux.ai/api/inspiration/v1/public/media/a.jpg',
+    )
+  })
+
+  it('refuses a traversal segment rather than publishing a mangled address', () => {
+    assert.equal(publishableMediaAddress('/omnimux/inspiration/media/../../etc/passwd'), '')
+    assert.deepEqual(
+      shareRequestPayload({ is_local: false, title: 't', media_keys: ['/omnimux/inspiration/media/../secret'] }).mediaUrls,
+      [],
+    )
+  })
+
+  it('reads the mediaKeys camelCase spelling too', () => {
+    const payload = shareRequestPayload({
+      is_local: false,
+      title: 't',
+      coverKey: '/omnimux/inspiration/media/inspiration-covers/9',
+      mediaKeys: ['/omnimux/inspiration/media/r2/publications/x/slide-1.jpg'],
+    })
+    assert.equal(payload.coverUrl, '/api/inspiration/v1/public/media/inspiration-covers/9')
+    assert.deepEqual(payload.mediaUrls, ['/api/inspiration/v1/public/media/r2/publications/x/slide-1.jpg'])
   })
 
   it('sends nothing for a local row: the Host already holds the files', () => {
