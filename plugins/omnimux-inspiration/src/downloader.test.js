@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ReadableStream } from 'node:stream/web'
-import { DOWNLOAD_TIMEOUT_MS, MAX_DOWNLOAD_BYTES, detectExt, downloadMedia } from './downloader.js'
+import {
+  DOWNLOAD_TIMEOUT_MS,
+  MAX_DOWNLOAD_BYTES,
+  alignMediaExtension,
+  detectExt,
+  detectExtFromBytes,
+  downloadMedia,
+  isKnownUnrenderableCover,
+} from './downloader.js'
 
 const PUBLIC_MP4 = 'https://video.twimg.com/amplify_video/1/vid/1280x720/high.mp4'
 
@@ -354,5 +362,114 @@ describe('downloadMedia — non-media responses are rejected (P2-D regression)',
     const saved = await downloadForTest(PUBLIC_MP4, dir, { fetcher })
 
     assert.match(saved, /\.mp4$/)
+  })
+})
+
+/**
+ * A cover is stored under a name the *URL* suggests, but the media route derives
+ * `Content-Type` from that name — so a name the bytes do not match also serves the
+ * wrong type, and the card's `<img>` never paints. These cases pin the byte-level
+ * answer that fixes the name, and the classification the import path uses to
+ * decide whether the file is worth publishing at all.
+ *
+ * The HEIC fixture is the real bytes of the reported row: `cover_10b758f2.mp4`
+ * began with an ISO-BMFF `ftypheic` header while carrying a `.mp4` name.
+ */
+describe('cover bytes decide the stored name and whether it can be rendered', () => {
+  const HEIC = Buffer.from([0x00, 0x00, 0x00, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63])
+  const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(8)])
+  /** A TikTok-style CDN path: signed query, no extension the URL layer can use. */
+  const EXTENSIONLESS_COVER = 'https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/abc~tplv-photomode-image'
+
+  let dir
+  /** Every directory this suite created, so none of them outlives the run. */
+  const dirs = []
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'omnimux-cover-ext-'))
+    dirs.push(dir)
+  })
+
+  after(() => {
+    for (const created of dirs) rmSync(created, { recursive: true, force: true })
+  })
+
+  function write(name, bytes) {
+    const file = join(dir, name)
+    writeFileSync(file, bytes)
+    return file
+  }
+
+  it('names the payload from its own magic bytes', () => {
+    assert.equal(detectExtFromBytes(HEIC), '.heic')
+    assert.equal(detectExtFromBytes(Buffer.from([0xff, 0xd8, 0xff, 0xe1])), '.jpg')
+    assert.equal(detectExtFromBytes(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), '.png')
+    assert.equal(detectExtFromBytes(Buffer.from('GIF89a')), '.gif')
+    assert.equal(
+      detectExtFromBytes(Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP')])),
+      '.webp',
+    )
+    assert.equal(
+      detectExtFromBytes(Buffer.concat([Buffer.from([0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70]), Buffer.from('avif')])),
+      '.avif',
+    )
+    assert.equal(
+      detectExtFromBytes(Buffer.concat([Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70]), Buffer.from('mp42')])),
+      '.mp4',
+    )
+    assert.equal(detectExtFromBytes(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])), '.webm')
+  })
+
+  it('answers nothing for a payload it cannot name', () => {
+    // An unrecognised payload must not be renamed and must not be refused: the
+    // point of this sniffer is to correct a *known* mismatch, not to filter.
+    assert.equal(detectExtFromBytes(Buffer.from('fake-media-content')), '')
+    assert.equal(detectExtFromBytes(Buffer.alloc(0)), '')
+  })
+
+  it('renames a JPEG that was stored under a defaulted extension', () => {
+    const file = write('cover_ab12.mp4', JPEG)
+    const aligned = alignMediaExtension(file)
+
+    assert.equal(aligned, join(dir, 'cover_ab12.jpg'))
+    assert.equal(existsSync(aligned), true)
+    assert.equal(existsSync(file), false, 'the mislabelled name must not survive the rename')
+  })
+
+  it('leaves a name alone when the bytes already agree with it', () => {
+    const jpeg = write('cover_ab12.jpeg', JPEG)
+    assert.equal(alignMediaExtension(jpeg), jpeg, '.jpeg and .jpg are the same bytes — no churn')
+
+    const unknown = write('cover_cd34.mp4', Buffer.from('fake-media-content'))
+    assert.equal(alignMediaExtension(unknown), unknown, 'an unnamed payload keeps its name')
+  })
+
+  it('classifies a HEIC cover and a video file as unrenderable, and a JPEG as fine', () => {
+    assert.equal(isKnownUnrenderableCover(write('cover_heic.mp4', HEIC)), true)
+    assert.equal(
+      isKnownUnrenderableCover(write('cover_video.mp4', Buffer.concat([
+        Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]), Buffer.from('isom'),
+      ]))),
+      true,
+      'a video container must never be published as a cover',
+    )
+    assert.equal(isKnownUnrenderableCover(write('cover_ok.jpg', JPEG)), false)
+    assert.equal(
+      isKnownUnrenderableCover(write('cover_unknown.jpg', Buffer.from('fake-media-content'))),
+      false,
+      'an unidentifiable payload keeps the pre-existing behaviour',
+    )
+  })
+
+  it('stores an extensionless CDN cover under the name its bytes imply', async () => {
+    const fetcher = async () => streamResponse([HEIC], { 'content-type': 'image/heic' })
+
+    const saved = await downloadForTest(EXTENSIONLESS_COVER, dir, { fetcher })
+
+    assert.match(saved, /\.mp4$/, 'the downloader names it before the bytes are known')
+    const aligned = alignMediaExtension(saved)
+    assert.match(aligned, /\.heic$/)
+    assert.equal(isKnownUnrenderableCover(aligned), true)
+    assert.equal(readFileSync(aligned).subarray(4, 8).toString('latin1'), 'ftyp')
   })
 })

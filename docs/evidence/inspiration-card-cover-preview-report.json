@@ -1,0 +1,178 @@
+{
+  "task": "inspiration-card-cover-fallback-browser",
+  "issue": 2073,
+  "title": "灵感卡片封面不可渲染时回退视频首帧 · 真实浏览器验收",
+  "origin": "http://127.0.0.1:56875",
+  "port": 56875,
+  "browser": "ego-browser (chromium)",
+  "samples": {
+    "cover": "/Users/x/.omnimux/omnimux/inspirations/media/covers/cover_10b758f2.mp4",
+    "video": "/Users/x/.omnimux/omnimux/inspirations/media/videos/video_2831d0b6.mp4",
+    "coverBytes": 7714
+  },
+  "startedAt": "2026-09-16T13:57:31.259Z",
+  "assertions": [
+    {
+      "name": "stored-cover-is-undecodable-as-served",
+      "pass": true,
+      "detail": {
+        "src": "/covers/cover_10b758f2.mp4",
+        "ok": false,
+        "naturalWidth": 0,
+        "naturalHeight": 0
+      }
+    },
+    {
+      "name": "card-mounts-video-frame-layer",
+      "pass": true,
+      "detail": {
+        "hasImg": false,
+        "hasFallback": false,
+        "hasVideo": true,
+        "videoSrc": "/omnimux/inspiration/local/media/videos/video_2831d0b6.mp4",
+        "videoReadyState": 4,
+        "videoWidth": 576,
+        "videoHeight": 754,
+        "videoRect": {
+          "width": 300,
+          "height": 533.328125
+        },
+        "videoLoaded": true,
+        "videoMuted": true,
+        "videoControls": false,
+        "videoPointerEvents": "none"
+      }
+    },
+    {
+      "name": "video-frame-is-the-row-own-video",
+      "pass": true,
+      "detail": "/omnimux/inspiration/local/media/videos/video_2831d0b6.mp4"
+    },
+    {
+      "name": "video-frame-decoded-a-real-frame",
+      "pass": true,
+      "detail": {
+        "videoWidth": 576,
+        "videoHeight": 754,
+        "readyState": 4
+      }
+    },
+    {
+      "name": "video-frame-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "width": 300,
+        "height": 533.328125
+      }
+    },
+    {
+      "name": "video-frame-revealed-and-hidden-from-input",
+      "pass": true,
+      "detail": {
+        "loaded": true,
+        "pointerEvents": "none"
+      }
+    },
+    {
+      "name": "card-no-longer-shows-the-dead-placeholder",
+      "pass": true,
+      "detail": {
+        "hasImg": false,
+        "hasFallback": false,
+        "hasVideo": true,
+        "videoSrc": "/omnimux/inspiration/local/media/videos/video_2831d0b6.mp4",
+        "videoReadyState": 4,
+        "videoWidth": 576,
+        "videoHeight": 754,
+        "videoRect": {
+          "width": 300,
+          "height": 533.328125
+        },
+        "videoLoaded": true,
+        "videoMuted": true,
+        "videoControls": false,
+        "videoPointerEvents": "none"
+      }
+    },
+    {
+      "name": "video-frame-is-a-silent-thumbnail",
+      "pass": true,
+      "detail": {
+        "muted": true,
+        "controls": false
+      }
+    },
+    {
+      "name": "row-without-cover-or-video-keeps-the-placeholder",
+      "pass": true,
+      "detail": {
+        "hasFallback": true,
+        "fallbackRect": {
+          "width": 332,
+          "height": 565.328125
+        },
+        "hasVideo": false
+      }
+    },
+    {
+      "name": "screenshots-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "videoFrame": {
+          "width": 1280,
+          "height": 900,
+          "bytes": 102869
+        },
+        "placeholder": {
+          "width": 1280,
+          "height": 900,
+          "bytes": 38636
+        }
+      }
+    }
+  ],
+  "pass": true,
+  "errors": [],
+  "observations": {
+    "coverCodec": {
+      "asServed": {
+        "src": "/covers/cover_10b758f2.mp4",
+        "ok": false,
+        "naturalWidth": 0,
+        "naturalHeight": 0
+      },
+      "asHeic": {
+        "src": "/covers/cover_10b758f2.heic",
+        "ok": false,
+        "naturalWidth": 0,
+        "naturalHeight": 0
+      }
+    },
+    "card": {
+      "hasImg": false,
+      "hasFallback": false,
+      "hasVideo": true,
+      "videoSrc": "/omnimux/inspiration/local/media/videos/video_2831d0b6.mp4",
+      "videoReadyState": 4,
+      "videoWidth": 576,
+      "videoHeight": 754,
+      "videoRect": {
+        "width": 300,
+        "height": 533.328125
+      },
+      "videoLoaded": true,
+      "videoMuted": true,
+      "videoControls": false,
+      "videoPointerEvents": "none"
+    },
+    "placeholder": {
+      "hasFallback": true,
+      "fallbackRect": {
+        "width": 332,
+        "height": 565.328125
+      },
+      "hasVideo": false
+    },
+    "frameReady": true
+  }
+}

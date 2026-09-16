@@ -572,6 +572,22 @@ export const INSPIRATION_CSS = `
   opacity: 1;
 }
 
+/* 视频首帧封面：与封面图同尺寸同裁切，代替不可渲染的封面。
+   指针事件穿透，避免遮挡卡片点击与悬停浮层。 */
+.omnimux-inspiration-cover-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--dsw-alias-bg-layer-1, #181818);
+  opacity: 0;
+  transition: opacity 0.26s ease-out;
+  pointer-events: none;
+}
+.omnimux-inspiration-cover-video.is-loaded {
+  opacity: 1;
+}
+
 /* Fallback 占位卡片 */
 .omnimux-inspiration-cover-fallback {
   display: flex;

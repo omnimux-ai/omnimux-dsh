@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
-import { isUsableCoverSize, pickCoverSrc } from './api.js'
+import { isUsableCoverSize, pickCoverSrc, pickVideoSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isImportingRow } from './import-status.js'
 
@@ -36,19 +36,32 @@ export function InspirationCoverCard({ card }) {
   const { row, t, onSelect, onReplicate, selected, onToggleSelect, selecting, replicateBusy, revealed } = card
   const title = String(row.title || row.source_url || row.id)
   const cover = pickCoverSrc(row)
+  // Second source for the cover area, not a different card: an item whose cover
+  // is missing or undecodable still holds a playable video, and a first frame of
+  // that video is a real preview where the icon placeholder is not. Covers are
+  // routinely unusable through no fault of the row — a CDN poster served as HEIC,
+  // a stale local file, a 1×1 stub — and the detail modal, which mounts the video
+  // itself, has always shown these items fine.
+  const videoSrc = pickVideoSrc(row)
   const [broken, setBroken] = useState(!cover)
   const [loaded, setLoaded] = useState(false)
+  const [frameReady, setFrameReady] = useState(false)
   const isRevealed = revealed !== false
 
   useEffect(() => {
     setBroken(!cover)
     setLoaded(false)
-  }, [cover])
+    setFrameReady(false)
+  }, [cover, videoSrc])
 
   const platform = formatPlatformName(row.source_platform || (row.is_local ? 'local' : 'tiktok'), t)
   const isLocal = Boolean(row.is_local)
   const anyBusy = Boolean(replicateBusy)
-  const isShowCover = !broken && loaded && isRevealed
+  // The video frame is only a fallback, so it is reached exactly when the cover
+  // path has failed: `broken` alone decides which of the two representations the
+  // card is showing.
+  const usesVideoFrame = broken && Boolean(videoSrc)
+  const isShowCover = isRevealed && (usesVideoFrame ? frameReady : !broken && loaded)
   const importing = isImportingRow(row)
   const failed = isFailedRow(row)
   // Empty for a settled row on purpose: `ready` is the state of every item that
@@ -124,9 +137,10 @@ export function InspirationCoverCard({ card }) {
         {isLocal ? '本地' : platform}
       </Badge>
 
-      {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示 */}
+      {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示。
+          视频首帧回退时扫光要留到首帧就绪，否则会先闪一层空底再出画面。 */}
       <div
-        className={`omnimux-inspiration-card-shimmer ${isShowCover || broken ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
+        className={`omnimux-inspiration-card-shimmer ${isShowCover || (broken && !usesVideoFrame) ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
         aria-hidden="true"
       />
 
@@ -153,7 +167,19 @@ export function InspirationCoverCard({ card }) {
         </div>
       ) : null}
 
-      {broken ? (
+      {usesVideoFrame ? (
+        <video
+          className={`omnimux-inspiration-cover-video ${isShowCover ? 'is-loaded' : ''}`}
+          src={videoSrc}
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          tabIndex={-1}
+          onLoadedData={() => setFrameReady(true)}
+          onError={() => setFrameReady(false)}
+        />
+      ) : broken ? (
         <div className="omnimux-inspiration-cover-fallback" aria-hidden="true">
           <div className="omnimux-inspiration-fallback-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
