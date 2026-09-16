@@ -14,265 +14,33 @@
       grok: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M4.94 4.96a9.97 9.97 0 0 1 10.835-2.182a8.7 8.7 0 0 1 2.033 1.11l-3.006 1.39C12.003 4.101 8.797 4.9 6.84 6.86c-2.564 2.565-3.146 6.954-.36 9.922l.278.284L.124 23c1.875-1.973 3.771-4.427 2.636-7.19c-1.52-3.698-.635-8.03 2.18-10.85M23.9.1c-2.264 3.174-3.184 5.389-2.197 9.64l-.007-.007c.753 3.201-.052 6.75-2.653 9.355c-3.279 3.285-8.526 4.016-12.847 1.06L9.21 18.75c2.758 1.084 5.775.607 7.943-1.564c2.169-2.17 2.655-5.332 1.566-7.963c-.207-.5-.828-.625-1.263-.304L8.59 15.472l12.7-12.77v.01z"/></svg>`,
     };
 
+    // Catalog projection + cache live in ModelPickerCatalog (boot.js require).
+    // List truth = hub listed buckets only; presets never invent ids (Issue #2136).
     function resolveModelBrand(modelId) {
-      if (!modelId || typeof modelId !== "string") return "bytedance";
-      const id = modelId.trim().toLowerCase();
-      if (BRAND_SVGS[id]) return id;
-      if (/(^seed|seedance|seedream|doubao|豆包|即梦|dreamina|bytedance)/i.test(id)) return "bytedance";
-      if (/(^nanobanana|nano[- ]?banana)/i.test(id)) return "nanobanana";
-      if (/(^gpt|^openai)/i.test(id)) return "openai";
-      if (/(^google|^gemini)/i.test(id)) return "google";
-      if (/(^wan|\bwan\b|wanxiang|万相|通义|alibaba)/i.test(id)) return "alibaba";
-      if (/(^minimax|\bminimax\b|hailuo|海螺)/i.test(id)) return "minimax";
-      if (/(^grok|\bgrok\b|xai)/i.test(id)) return "grok";
-      return "bytedance";
+      if (BRAND_SVGS[modelId]) return modelId;
+      return ModelPickerCatalog.resolveModelBrand(modelId);
     }
 
-    const MODEL_METADATA_PRESETS = {
-      "seedance-2-5": {
-        name: "Dreamina Seedance 2.5",
-        capsuleName: "Dreamina Seedance 2.5",
-        subtitle: "30秒视频生成，精准片段编辑",
-        pro: true,
-        icon: "bytedance",
-      },
-      "seedance-2-0-fast": {
-        name: "Dreamina Seedance 2.0 Fast",
-        capsuleName: "Dreamina Seedance 2.0 Fast",
-        subtitle: "细节和质量提升，成本更低",
-        pro: true,
-        badge: { text: "高达43%折扣", type: "purple" },
-        icon: "bytedance",
-      },
-      "seedance-2-0": {
-        name: "Dreamina Seedance 2.0",
-        capsuleName: "Dreamina Seedance 2.0",
-        subtitle: "更精准的参考，更真实，高达4K",
-        pro: true,
-        icon: "bytedance",
-      },
-      "seedance-2-0-mini-trial": {
-        name: "Dreamina Seedance 2.0 Mini (Trial)",
-        capsuleName: "Dreamina Seedance 2.0 Mini",
-        subtitle: "最适合快速生成，仅需7积分/秒",
-        pro: true,
-        badge: { text: "新增", type: "green" },
-        icon: "bytedance",
-      },
-      "seedance-2-0-mini": {
-        name: "Dreamina Seedance 2.0 Mini",
-        capsuleName: "Dreamina Seedance 2.0 Mini",
-        subtitle: "轻量级推理，最具成本效益",
-        pro: true,
-        badge: { text: "最高可享58折优惠", type: "purple" },
-        icon: "bytedance",
-      },
-      "wan-3.0": {
-        name: "Wan 3.0",
-        capsuleName: "Wan 3.0",
-        subtitle: "通义万相电影级视效与长镜头生成",
-        pro: false,
-        icon: "alibaba",
-      },
-      "minimax-h3": {
-        name: "MiniMax H3",
-        capsuleName: "MiniMax H3",
-        subtitle: "电影感画质，原生高帧率动态生成",
-        pro: true,
-        icon: "minimax",
-      },
-      "grok-imagine-video-1-5": {
-        name: "Grok Imagine Video 1.5",
-        capsuleName: "Grok Video 1.5",
-        subtitle: "极速拟真运镜与多画幅自适应",
-        pro: false,
-        icon: "grok",
-      },
-      "nanobanana-pro": {
-        name: "Nano Banana Pro",
-        capsuleName: "Nano Banana Pro",
-        subtitle: "专业图像质量和文本布局",
-        pro: true,
-        icon: "nanobanana",
-      },
-      "nanobanana": {
-        name: "Nano Banana",
-        capsuleName: "Nano Banana",
-        subtitle: "图像质量可靠，价格更实惠",
-        pro: false,
-        icon: "nanobanana",
-      },
-      "seedream-5-0-pro": {
-        name: "Seedream 5.0 Pro",
-        capsuleName: "Seedream 5.0 Pro",
-        subtitle: "更精确、更可控的编辑",
-        pro: true,
-        icon: "seedream",
-      },
-      "seedream-5-0-lite": {
-        name: "Seedream 5.0 Lite",
-        capsuleName: "Seedream 5.0 Lite",
-        subtitle: "卓越的提示遵循和推理能力",
-        pro: false,
-        icon: "seedream",
-      },
-      "gpt-image-2.5": {
-        name: "GPT Image 2.5",
-        capsuleName: "GPT Image 2.5",
-        subtitle: "高精细节渲染与指令遵循",
-        pro: true,
-        icon: "openai",
-      },
-      "grok-imagine-image-2-0": {
-        name: "Grok Imagine Image 2",
-        capsuleName: "Grok Image 2",
-        subtitle: "极致写实摄影感与敏捷生图",
-        pro: false,
-        icon: "grok",
-      },
-    };
+    const {
+      EMPTY_MODEL_CATALOG,
+      projectListedCatalog,
+      catalogHasRows,
+      readCatalogCache: readCatalogCacheFromStorage,
+      writeCatalogCache: writeCatalogCacheToStorage,
+    } = ModelPickerCatalog;
 
-    const DEFAULT_MODEL_CATALOG = {
-      video: [
-        {
-          id: "seedance-2-5",
-          name: "Dreamina Seedance 2.5",
-          capsuleName: "Dreamina Seedance 2.5",
-          type: "video",
-          subtitle: "30秒视频生成，精准片段编辑",
-          pro: true,
-          badge: null,
-          icon: "bytedance",
-        },
-        {
-          id: "seedance-2-0-fast",
-          name: "Dreamina Seedance 2.0 Fast",
-          capsuleName: "Dreamina Seedance 2.0 Fast",
-          type: "video",
-          subtitle: "细节和质量提升，成本更低",
-          pro: true,
-          badge: { text: "高达43%折扣", type: "purple" },
-          icon: "bytedance",
-        },
-        {
-          id: "seedance-2-0",
-          name: "Dreamina Seedance 2.0",
-          capsuleName: "Dreamina Seedance 2.0",
-          type: "video",
-          subtitle: "更精准的参考，更真实，高达4K",
-          pro: true,
-          badge: null,
-          icon: "bytedance",
-        },
-        {
-          id: "seedance-2-0-mini-trial",
-          name: "Dreamina Seedance 2.0 Mini (Trial)",
-          capsuleName: "Dreamina Seedance 2.0 Mini",
-          type: "video",
-          subtitle: "最适合快速生成，仅需7积分/秒",
-          pro: true,
-          badge: { text: "新增", type: "green" },
-          icon: "bytedance",
-        },
-        {
-          id: "seedance-2-0-mini",
-          name: "Dreamina Seedance 2.0 Mini",
-          capsuleName: "Dreamina Seedance 2.0 Mini",
-          type: "video",
-          subtitle: "轻量级推理，最具成本效益",
-          pro: true,
-          badge: { text: "最高可享58折优惠", type: "purple" },
-          icon: "bytedance",
-        },
-      ],
-      image: [
-        {
-          id: "nanobanana-pro",
-          name: "Nano Banana Pro",
-          capsuleName: "Nano Banana Pro",
-          type: "image",
-          subtitle: "专业图像质量和文本布局",
-          pro: true,
-          badge: null,
-          icon: "nanobanana",
-        },
-        {
-          id: "gpt-image-2.5",
-          name: "GPT Image 2.5",
-          capsuleName: "GPT Image 2.5",
-          type: "image",
-          subtitle: "高精细节渲染与指令遵循",
-          pro: true,
-          badge: null,
-          icon: "openai",
-        },
-        {
-          id: "nanobanana",
-          name: "Nano Banana",
-          capsuleName: "Nano Banana",
-          type: "image",
-          subtitle: "图像质量可靠，价格更实惠",
-          pro: false,
-          badge: null,
-          icon: "nanobanana",
-        },
-        {
-          id: "seedream-5-0-pro",
-          name: "Seedream 5.0 Pro",
-          capsuleName: "Seedream 5.0 Pro",
-          type: "image",
-          subtitle: "更精确、更可控的编辑",
-          pro: true,
-          badge: null,
-          icon: "seedream",
-        },
-        {
-          id: "seedream-5-0-lite",
-          name: "Seedream 5.0 Lite",
-          capsuleName: "Seedream 5.0 Lite",
-          type: "image",
-          subtitle: "卓越的提示遵循和推理能力",
-          pro: false,
-          badge: null,
-          icon: "seedream",
-        },
-      ],
-    };
+    function readCatalogCache() {
+      try {
+        return readCatalogCacheFromStorage(window.localStorage);
+      } catch {
+        return null;
+      }
+    }
 
-    function mergeDynamicCatalog(baseCatalog, dynamicCatalog) {
-      if (!dynamicCatalog || typeof dynamicCatalog !== "object") return baseCatalog;
-      const next = {
-        video: [...(baseCatalog.video || [])],
-        image: [...(baseCatalog.image || [])],
-      };
-
-      const normalizeList = (dynList, type) => {
-        if (!Array.isArray(dynList) || dynList.length === 0) return;
-        dynList.forEach((row) => {
-          if (!row || !row.id) return;
-          const existingIdx = next[type].findIndex((m) => m.id === row.id);
-          const meta = MODEL_METADATA_PRESETS[row.id] || {};
-          const item = {
-            id: row.id,
-            name: meta.name || row.label || row.id,
-            capsuleName: meta.capsuleName || row.label || row.id,
-            type,
-            subtitle: meta.subtitle || row.subtitle || (type === "video" ? "多模态高质量视频生成" : "高精细节渲染"),
-            pro: typeof meta.pro === "boolean" ? meta.pro : Boolean(row.pro),
-            badge: meta.badge || (row.badge ? { text: row.badge, type: "purple" } : null),
-            icon: meta.icon || resolveModelBrand(row.id),
-          };
-          if (existingIdx >= 0) {
-            next[type][existingIdx] = { ...next[type][existingIdx], ...item };
-          } else {
-            next[type].push(item);
-          }
-        });
-      };
-
-      normalizeList(dynamicCatalog.video, "video");
-      normalizeList(dynamicCatalog.image, "image");
-      return next;
+    function writeCatalogCache(projected, hubPayload) {
+      try {
+        writeCatalogCacheToStorage(projected, hubPayload, window.localStorage);
+      } catch {}
     }
 
     function renderModelLayersIcon(size = 16) {
@@ -332,7 +100,7 @@
       });
     }
 
-    function ModelPickerPanel({ open, anchorRef, auto, selectedModel, modelsData, onToggleAuto, onSelectModel, onClose, t }) {
+    function ModelPickerPanel({ open, anchorRef, auto, selectedModel, modelsData, catalogStatus, onToggleAuto, onSelectModel, onClose, t }) {
       const tr = typeof t === "function" ? t : lookup;
       const panelRef = useRef(null);
       const [tab, setTab] = useState("video");
@@ -357,7 +125,7 @@
         place();
         window.addEventListener("resize", place);
         return () => window.removeEventListener("resize", place);
-      }, [open, tab, anchorRef]);
+      }, [open, tab, anchorRef, catalogStatus, modelsData]);
 
       useEffect(() => {
         if (!open) return undefined;
@@ -383,8 +151,15 @@
 
       if (!open) return null;
 
-      const currentCatalog = modelsData || DEFAULT_MODEL_CATALOG;
+      const currentCatalog = modelsData && typeof modelsData === "object" ? modelsData : EMPTY_MODEL_CATALOG;
       const items = currentCatalog[tab] || [];
+      const status = catalogStatus || "ready";
+      let emptyHint = "";
+      if (!items.length) {
+        if (status === "loading") emptyHint = tr("modelPicker.loading") || "正在加载可用模型…";
+        else if (status === "error") emptyHint = tr("modelPicker.unavailable") || "模型目录暂不可用，请稍后重试";
+        else emptyHint = tr("modelPicker.empty") || "当前没有已上架的可用模型";
+      }
 
       const node = h("div", {
         ref: panelRef,
@@ -392,6 +167,7 @@
         role: "dialog",
         "aria-label": tr("modelPicker.title") || "模型",
         "aria-modal": "true",
+        "data-omnimux-catalog-status": status,
         style: { left: pos.left + "px", top: pos.top + "px", width: pos.width + "px" },
       },
         h("div", { className: "sh-model-picker-header" },
@@ -427,33 +203,39 @@
         ),
         h("div", { className: "sh-model-section-title" }, tab === "video" ? (tr("modelPicker.tab.video") || "视频") : (tr("modelPicker.tab.image") || "图像")),
         h("div", { className: "sh-model-list", role: "listbox" },
-          items.map((model) => {
-            const isSelected = !auto && selectedModel && selectedModel.id === model.id;
-            return h("div", {
-              key: model.id,
-              className: "sh-model-row" + (isSelected ? " selected" : ""),
-              role: "option",
-              "aria-selected": isSelected ? "true" : "false",
-              onClick: () => onSelectModel(model),
-            },
-              h("div", { className: "sh-model-row-left" },
-                h("div", { className: "sh-model-icon-box" }, renderBrandIcon(model.icon || model.id, 20)),
-                h("div", { className: "sh-model-row-info" },
-                  h("div", { className: "sh-model-row-title-row" },
-                    h("span", { className: "sh-model-name" }, model.name),
-                    model.pro ? renderPurpleDiamond(14) : null,
-                    model.badge ? h("span", { className: "sh-model-badge " + (model.badge.type || "purple") }, model.badge.text) : null,
+          items.length
+            ? items.map((model) => {
+              const isSelected = !auto && selectedModel && selectedModel.id === model.id;
+              return h("div", {
+                key: model.id,
+                className: "sh-model-row" + (isSelected ? " selected" : ""),
+                role: "option",
+                "aria-selected": isSelected ? "true" : "false",
+                onClick: () => onSelectModel(model),
+              },
+                h("div", { className: "sh-model-row-left" },
+                  h("div", { className: "sh-model-icon-box" }, renderBrandIcon(model.icon || model.id, 20)),
+                  h("div", { className: "sh-model-row-info" },
+                    h("div", { className: "sh-model-row-title-row" },
+                      h("span", { className: "sh-model-name" }, model.name),
+                      model.pro ? renderPurpleDiamond(14) : null,
+                      model.badge ? h("span", { className: "sh-model-badge " + (model.badge.type || "purple") }, model.badge.text) : null,
+                    ),
+                    h("div", { className: "sh-model-row-desc" }, model.subtitle),
                   ),
-                  h("div", { className: "sh-model-row-desc" }, model.subtitle),
                 ),
-              ),
-              h("div", { className: "sh-model-row-right" },
-                h("div", { className: "sh-model-radio" + (isSelected ? " checked" : "") },
-                  isSelected ? h("span", { className: "sh-model-radio-dot" }) : null,
+                h("div", { className: "sh-model-row-right" },
+                  h("div", { className: "sh-model-radio" + (isSelected ? " checked" : "") },
+                    isSelected ? h("span", { className: "sh-model-radio-dot" }) : null,
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            })
+            : h("div", {
+              className: "sh-model-empty",
+              role: "status",
+              "data-omnimux-model-empty": status,
+            }, emptyHint),
         ),
       );
 
@@ -501,34 +283,89 @@
         return null;
       });
 
-      const [modelsData, setModelsData] = useState(() => DEFAULT_MODEL_CATALOG);
+      const initialCache = typeof window !== "undefined" ? readCatalogCache() : null;
+      const [modelsData, setModelsData] = useState(() => (
+        catalogHasRows(initialCache)
+          ? { video: initialCache.video, image: initialCache.image }
+          : EMPTY_MODEL_CATALOG
+      ));
+      const [catalogStatus, setCatalogStatus] = useState(() => (
+        catalogHasRows(initialCache) ? "ready" : "loading"
+      ));
+      const catalogFingerprintRef = useRef(initialCache?.fingerprint || "");
+      const hasRowsRef = useRef(catalogHasRows(initialCache));
+      const sessionIdRef = useRef(sessionId);
+      sessionIdRef.current = sessionId;
 
       useEffect(() => {
         let live = true;
+
+        const applyProjected = (projected, hubPayload, fromCache) => {
+          if (!live || !projected) return false;
+          if (!catalogHasRows(projected)) return false;
+          if (projected.fingerprint && projected.fingerprint === catalogFingerprintRef.current && hasRowsRef.current) {
+            setCatalogStatus("ready");
+            return true;
+          }
+          catalogFingerprintRef.current = projected.fingerprint || "";
+          hasRowsRef.current = true;
+          setModelsData({ video: projected.video, image: projected.image });
+          setCatalogStatus("ready");
+          if (!fromCache && hubPayload) writeCatalogCache(projected, hubPayload);
+          // Drop a previously locked selection that is no longer listed.
+          setSelectedModel((prev) => {
+            if (!prev || !prev.id) return prev;
+            const stillListed = [...(projected.video || []), ...(projected.image || [])]
+              .some((m) => m.id === prev.id);
+            if (stillListed) return prev;
+            const sid = sessionIdRef.current || "default";
+            try {
+              window.sessionStorage.setItem("omnimux:model:" + sid, JSON.stringify({
+                auto: true,
+                selectedModel: null,
+              }));
+              window.dispatchEvent(new CustomEvent("omnimux:model:changed", {
+                detail: { sessionId: sid, auto: true, selectedModel: null },
+              }));
+            } catch {}
+            setAuto(true);
+            return null;
+          });
+          return true;
+        };
+
         const loadModels = async () => {
+          if (!hasRowsRef.current) setCatalogStatus("loading");
+          let hubPayload = null;
           try {
             if (typeof api === "function") {
               const res = await api("getModelCatalog");
-              if (live && res && res.catalog) {
-                setModelsData((prev) => mergeDynamicCatalog(prev, res.catalog));
-                return;
-              }
+              if (res && res.catalog) hubPayload = res.catalog;
+              else if (res && (Array.isArray(res.video) || Array.isArray(res.image))) hubPayload = res;
             }
           } catch {}
-          if (typeof fetch === "function") {
+          if (!hubPayload && typeof fetch === "function") {
             try {
               const resp = await fetch("/omnimux/model-catalog");
-              if (resp.ok) {
-                const cat = await resp.json();
-                if (live && cat) {
-                  setModelsData((prev) => mergeDynamicCatalog(prev, cat));
-                }
-              }
+              if (resp.ok) hubPayload = await resp.json();
             } catch {}
           }
+          if (!live) return;
+          if (hubPayload && applyProjected(projectListedCatalog(hubPayload), hubPayload, false)) return;
+          if (applyProjected(readCatalogCache(), null, true)) return;
+          if (!hasRowsRef.current) {
+            setModelsData(EMPTY_MODEL_CATALOG);
+            setCatalogStatus("error");
+          }
         };
+
         loadModels();
-        return () => { live = false; };
+        const onCatalogUpdated = () => { loadModels(); };
+        window.addEventListener("omnimux:model-catalog-updated", onCatalogUpdated);
+        return () => {
+          live = false;
+          window.removeEventListener("omnimux:model-catalog-updated", onCatalogUpdated);
+        };
       }, []);
 
       useEffect(() => {
@@ -646,6 +483,7 @@
           auto,
           selectedModel,
           modelsData,
+          catalogStatus,
           onToggleAuto: handleToggleAuto,
           onSelectModel: handleSelectModel,
           onClose: () => setOpen(false),
@@ -653,3 +491,5 @@
         }),
       );
     }
+
+    
