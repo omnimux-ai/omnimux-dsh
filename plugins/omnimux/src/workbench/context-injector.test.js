@@ -153,4 +153,72 @@ describe('Workbench Context Injector', () => {
     assert.equal(decision.messages[1].source.kind, 'plugin')
     assert.equal(decision.messages[1].source.form, 'snapshot')
   })
+
+  it('carries the recommended action with the material when attached context has a unified reference', async () => {
+    const listeners = new Map()
+    const ctx = {
+      on: (ev, fn) => { listeners.set(ev, fn); return () => {} },
+    }
+    const attachedContextText = [
+      '### 会话关联上下文 (Attached Context):',
+      '- [视频] She really woke up and chose GTA-style chaos. (`MP4`): @inspiration/insp_ad704927.mp4',
+    ].join('\n')
+    const mailbox = {
+      getActiveView: (sessionId) => ({
+        ok: true,
+        sessionId,
+        uiContext: {
+          schemaVersion: 1,
+          ok: true,
+          capturedAt: Date.now(),
+          surface: { panelOpen: false },
+          attachedContextText,
+        },
+      }),
+    }
+
+    mountWorkbenchContextInjector(ctx, { mailbox })
+    const handler = listeners.get('agent/pre-step')
+
+    const userMsg = { role: 'user', content: [{ type: 'text', text: '/video-deconstruct 复刻这条爆款视频' }] }
+    const decision = await handler(
+      { agent: { session: { id: 'session-nav' } }, turn: 1, step: 1, signal: {} },
+      async () => ({ kind: 'enter', messages: [userMsg] }),
+    )
+
+    // 消息条数与用户气泡保持原状，导航只落在同一条上下文消息内
+    assert.equal(decision.messages.length, 2)
+    assert.equal(decision.messages[0], userMsg)
+    const injected = decision.messages[1].content[0].text
+    assert.ok(injected.startsWith(attachedContextText))
+    assert.match(injected, /<reference_navigation>/)
+    assert.match(injected, /@inspiration\/insp_ad704927\.mp4/)
+    assert.match(injected, /video_breakdown_analyze/)
+  })
+
+  it('leaves attached context without a unified reference byte-identical', async () => {
+    const listeners = new Map()
+    const ctx = {
+      on: (ev, fn) => { listeners.set(ev, fn); return () => {} },
+    }
+    const attachedContextText = '### 会话关联上下文 (Attached Context):\n- [产品] 降噪耳机 (@.omnimux/products/prod_1.json)'
+    const mailbox = {
+      getActiveView: (sessionId) => ({
+        ok: true,
+        sessionId,
+        uiContext: { schemaVersion: 1, ok: true, capturedAt: Date.now(), surface: { panelOpen: false }, attachedContextText },
+      }),
+    }
+
+    mountWorkbenchContextInjector(ctx, { mailbox })
+    const handler = listeners.get('agent/pre-step')
+
+    const decision = await handler(
+      { agent: { session: { id: 'session-plain' } }, turn: 1, step: 1, signal: {} },
+      async () => ({ kind: 'enter', messages: [] }),
+    )
+
+    assert.equal(decision.messages.length, 1)
+    assert.equal(decision.messages[0].content[0].text, attachedContextText)
+  })
 })

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { formatCompactContextBlock } from './contract.js'
+import { withReferenceNavigation } from './reference-navigation.js'
 
 /**
  * Creates a native DSH context UserMessage.
@@ -51,8 +52,9 @@ export function mountWorkbenchContextInjector(ctx, deps) {
     const messages = [...(decision.messages || [])]
 
     // 1. 原生 DSH 方式注入会话附件与场景上下文 (绝不污染用户输入框)
+    // 素材自带统一虚拟引用时，把推荐动作一并带上，避免 Agent 在首轮自行摸索工具。
     if (activeView.uiContext.attachedContextText) {
-      messages.push(createWorkbenchContextMessage(activeView.uiContext.attachedContextText))
+      messages.push(createWorkbenchContextMessage(withReferenceNavigation(activeView.uiContext.attachedContextText)))
     }
 
     // 2. 注入工作台面板视图快照 (面板展开时)
