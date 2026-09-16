@@ -1170,7 +1170,24 @@ export function App(): React.JSX.Element {
       } catch {
         // Ignore
       }
-      return () => window.removeEventListener('message', handleMessage)
+
+      // 浮动模式初态重试：应对单页应用(SPA)异步渲染推文与媒体，初次挂载后前 6 秒内轻量重查
+      const floatPollTimer = setInterval(() => {
+        try {
+          window.parent?.postMessage({ type: 'GET_PAGE_CONTEXT' }, '*')
+        } catch {
+          // Ignore
+        }
+      }, 1500)
+      const stopFloatTimer = setTimeout(() => {
+        clearInterval(floatPollTimer)
+      }, 6000)
+
+      return () => {
+        window.removeEventListener('message', handleMessage)
+        clearInterval(floatPollTimer)
+        clearTimeout(stopFloatTimer)
+      }
     } else {
       const updateContextFromTab = () => {
         chrome.tabs?.query({ active: true, currentWindow: true }).then(([tab]) => {
@@ -3436,20 +3453,14 @@ export function App(): React.JSX.Element {
         />
       )}
       {error !== null && <div className="error">{error}</div>}
-      <MediaSnifferBar
-        items={detectedMedia}
-        locale={locale}
-        onActiveChange={setActiveMediaItems}
-        onSaveToInspiration={handleSaveToInspiration}
-        attachedIds={attachedMediaIds}
-        onAttachMedia={attachLitMedia}
-      />
       <footer className="composer">
-        {detectedMedia.length > 0 && !isFloatMode && (
+        {detectedMedia.length > 0 && (
           <div className="page-media-bar">
             <MediaSnifferBar
               items={detectedMedia}
               locale={locale}
+              onActiveChange={setActiveMediaItems}
+              onSaveToInspiration={handleSaveToInspiration}
               attachedIds={attachedMediaIds}
               onAttachMedia={attachLitMedia}
             />
