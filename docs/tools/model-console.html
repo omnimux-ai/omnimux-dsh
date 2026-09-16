@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>中枢模型检索面板</title>
+<style>
+  :root {
+    --bg: #0C0F17;
+    --card: #151A26;
+    --card-hover: #1A2030;
+    --line: rgba(255,255,255,0.08);
+    --line-strong: rgba(255,255,255,0.16);
+    --text: #E8EAF0;
+    --text-dim: #9BA3B4;
+    --text-faint: #6B7280;
+    --ink: #FFFFFF;
+    --ok: #4ADE80;
+    --warn: #FBBF24;
+    --muted: rgba(255,255,255,0.05);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--sans);
+    font-size: 13px; line-height: 18px; -webkit-font-smoothing: antialiased;
+    padding: 40px 32px 64px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 28px; }
+  h1 { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+  .live-badge { display: inline-block; margin-left: 10px; font-size: 11px; font-weight: 400;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 3px; letter-spacing: 0; }
+  .live-badge[data-live=true] { color: var(--ok); border: 1px solid rgba(74,222,128,0.35); background: rgba(74,222,128,0.08); }
+  .live-badge[data-live=false] { color: var(--text-faint); border: 1px solid var(--line); }
+  .sub { color: var(--text-faint); font-size: 12px; margin-top: 6px; font-family: var(--mono); }
+
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--line);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+  .stat { background: var(--card); padding: 16px 18px; }
+  .stat b { display: block; font-size: 22px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--text-faint); font-size: 12px; }
+  .stat.accent b { color: var(--ok); }
+  .stat.warn b { color: var(--warn); }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  input[type=search] {
+    flex: 1; min-width: 240px; background: var(--muted); border: 1px solid var(--line);
+    border-radius: 10px; color: var(--text); padding: 9px 14px; font-size: 13px; font-family: var(--sans);
+    outline: none; transition: border-color .15s;
+  }
+  input[type=search]:focus { border-color: var(--line-strong); }
+  input[type=search]::placeholder { color: var(--text-faint); }
+  .chips { display: flex; gap: 6px; }
+  .chip {
+    background: var(--muted); border: 1px solid transparent; color: var(--text-dim);
+    border-radius: 8px; padding: 8px 13px; font-size: 12px; cursor: pointer; user-select: none;
+    transition: all .15s; font-family: var(--sans);
+  }
+  .chip:hover { color: var(--text); }
+  .chip[aria-pressed=true] { background: var(--ink); color: #0C0F17; font-weight: 500; }
+
+  .list { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+  .row { border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .head {
+    display: grid; grid-template-columns: 22px 1fr auto auto; gap: 14px; align-items: center;
+    padding: 14px 18px; cursor: pointer; transition: background .12s;
+  }
+  .head:hover { background: var(--card-hover); }
+  .caret { color: var(--text-faint); font-size: 10px; transition: transform .15s; }
+  .row[data-open=true] .caret { transform: rotate(90deg); }
+  .name { font-size: 14px; line-height: 20px; font-weight: 500; }
+  .meta { color: var(--text-faint); font-size: 12px; margin-top: 3px; font-family: var(--mono); }
+  .tags { display: flex; gap: 6px; align-items: center; }
+  .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--muted); color: var(--text-dim); white-space: nowrap; }
+  .tag.ok { color: var(--ok); }
+  .tag.warn { color: var(--warn); }
+  .tag.line { color: var(--text); border: 1px solid var(--line-strong); background: transparent; }
+
+  .detail { display: none; padding: 4px 18px 20px 54px; background: rgba(0,0,0,0.18); }
+  .row[data-open=true] .detail { display: block; }
+  .sec { margin-top: 16px; }
+  .sec h3 { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; letter-spacing: .02em; }
+  .gcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; background: var(--card); }
+  .gcard .grow { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .glabel { font-size: 13px; font-weight: 500; }
+  .gbadge { color: var(--text-faint); font-size: 12px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 18px; margin-top: 10px; }
+  .kv { font-size: 12px; }
+  .kv span { color: var(--text-faint); display: block; }
+  .kv b { font-weight: 400; font-family: var(--mono); color: var(--text); }
+  .ops { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op { font-size: 11px; padding: 4px 9px; border-radius: 6px; font-family: var(--mono);
+    background: var(--muted); color: var(--text-faint); }
+  .op.on { color: var(--text); background: rgba(255,255,255,0.10); }
+  .empty { padding: 40px 18px; text-align: center; color: var(--text-faint); }
+  footer { margin-top: 28px; color: var(--text-faint); font-size: 12px; font-family: var(--mono); text-align: center; }
+  @media (max-width: 900px) {
+    body { padding: 24px 16px 48px; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+    .head { grid-template-columns: 18px 1fr; }
+    .tags { grid-column: 2; }
+    .detail { padding-left: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>中枢模型检索面板<span class="live-badge" id="liveBadge"></span></h1>
+    <div class="sub" id="subtitle"></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="搜索型号名、标识或品牌…" autocomplete="off">
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script id="payload" type="application/json">{"models":[{"id":"claude-opus-4-6","label":"Claude Opus 4.6","subtitle":"","badge":"","family":"anthropic","brand":"Anthropic","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[{"id":"claude-max-open","label":"顶配满血版","badge":"Claude Max 外接版","enabled":true,"wireModel":null,"wireGroup":"claude-max-open","pricing":{"pointsEstimate":2000,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":100,"avgWaitTimeSec":8},"constraints":null},{"id":"claude-plus","label":"进阶增强版","badge":"Claude Plus 精品专线","enabled":true,"wireModel":null,"wireGroup":"claude-plus","pricing":{"pointsEstimate":1000,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":99,"avgWaitTimeSec":10},"constraints":null},{"id":"standard","label":"标准版","badge":"主流高品质专线","enabled":true,"wireModel":null,"wireGroup":"standard","pricing":{"pointsEstimate":500,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":98,"avgWaitTimeSec":12},"constraints":null}]},{"id":"claude-opus-5","label":"Claude Opus 5","subtitle":"","badge":"","family":"anthropic","brand":"Anthropic","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]},{"id":"deepseek-v4-flash","label":"DeepSeek V4 Flash","subtitle":"","badge":"","family":"deepseek","brand":"DeepSeek","groupKey":"text","groupName":"文本与对话","aliases":["deepseek-v4-flash-vision-exp"],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[{"id":"deepseek-official","label":"官方直连版","badge":"官方满血直签","enabled":true,"wireModel":null,"wireGroup":"deepseek-official","pricing":{"pointsEstimate":100,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":100,"avgWaitTimeSec":4},"constraints":null},{"id":"default","label":"标准版","badge":"DeepSeek 官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":50,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":99,"avgWaitTimeSec":5},"constraints":null}]},{"id":"deepseek-v4-pro","label":"DeepSeek V4 Pro","subtitle":"","badge":"","family":"deepseek","brand":"DeepSeek","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]},{"id":"doubao-asr-bigmodel","label":"豆包语音识别大模型 (Doubao-ASR)","subtitle":"豆包音频转写 · 文本 / SRT / VTT","badge":"语音识别","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"audio","groupName":"音频与语音","aliases":[],"operations":[{"id":"speech_to_text","label":"语音转文字","listed":true,"inputs":1}],"listedCount":1,"operationCount":1,"ready":true,"groups":[]},{"id":"gemini-3.1-pro-preview","label":"Gemini 3.1 Pro Preview","subtitle":"","badge":"","family":"google","brand":"Google","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"gemini-3.7-flash","label":"Gemini 3.7 Flash","subtitle":"","badge":"","family":"google","brand":"Google","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":3}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"gemini-3.8-flash","label":"Gemini 3.8 Flash","subtitle":"","badge":"","family":"google","brand":"Google","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":true,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":true,"inputs":3}],"listedCount":2,"operationCount":2,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"Google 官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":100,"discountRate":1,"billingMode":"per_token"},"sla":null,"constraints":null},{"id":"cheap","label":"特惠版","badge":"经济走量特惠池","enabled":true,"wireModel":null,"wireGroup":"gemini-cheap","pricing":{"pointsEstimate":80,"discountRate":1.111,"billingMode":"per_token"},"sla":null,"constraints":null}]},{"id":"glm-5.3","label":"GLM 5.3","subtitle":"","badge":"","family":"zhipu","brand":"智谱 AI (GLM)","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]},{"id":"gpt-4o-mini-tts","label":"GPT 4o Mini TTS","subtitle":"OpenAI 高清配音 · 6 种音色","badge":"语音合成","family":"openai","brand":"OpenAI","groupKey":"audio","groupName":"音频与语音","aliases":[],"operations":[{"id":"text_to_speech","label":"文本转语音","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]},{"id":"gpt-5.5","label":"GPT 5.5","subtitle":"","badge":"","family":"openai","brand":"OpenAI","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"OpenAI 官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":600,"discountRate":1,"billingMode":"per_token"},"sla":null,"constraints":null}]},{"id":"gpt-5.6-sol","label":"GPT 5.6 Sol","subtitle":"","badge":"","family":"openai","brand":"OpenAI","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"gpt-image-2.5","label":"GPT Image 2.5","subtitle":"1k-4k","badge":"新品","family":"openai","brand":"OpenAI","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":true,"inputs":1},{"id":"multi_reference","label":"垫图参考","listed":false,"inputs":2}],"listedCount":1,"operationCount":2,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"官方最新生图专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":200,"discountRate":1,"billingMode":"per_task"},"sla":null,"constraints":null}]},{"id":"gpt-image-2.5-flare","label":"GPT Image 2.5 极速版","subtitle":"快速迭代","badge":"极速","family":"openai","brand":"OpenAI","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":true,"inputs":1}],"listedCount":1,"operationCount":1,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"极速专线 · 快速迭代","enabled":true,"wireModel":null,"wireGroup":"gpt-image-2.5-flare-std","pricing":{"pointsEstimate":225,"discountRate":1.125,"billingMode":"per_task"},"sla":null,"constraints":null}]},{"id":"gpt-image-2.5-hd","label":"GPT Image 2.5 HD","subtitle":"高清 4K","badge":"","family":"openai","brand":"OpenAI","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"垫图参考","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"gpt-image-2.5-sunburst","label":"GPT Image 2.5 画质版","subtitle":"精细成品","badge":"高画质","family":"openai","brand":"OpenAI","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":true,"inputs":1}],"listedCount":1,"operationCount":1,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"画质专线 · 精细成品","enabled":true,"wireModel":null,"wireGroup":"gpt-image-2.5-sunburst-std","pricing":{"pointsEstimate":225,"discountRate":1.125,"billingMode":"per_task"},"sla":null,"constraints":null}]},{"id":"grok-4.6","label":"Grok 4.6","subtitle":"","badge":"","family":"xai","brand":"xAI (Grok)","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"grok-imagine-image-2-0","label":"Grok Imagine Image 2","subtitle":"xAI Grok 2","badge":"极速","family":"grok","brand":"xAI (Grok)","groupKey":"image","groupName":"图像生成","aliases":["grok-imagine-image-2","grok-imagine-image","grok-imagine-image-2.0"],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"grok-imagine-image-quality","label":"Grok Imagine Image Quality","subtitle":"xAI Grok HD","badge":"高画质","family":"grok","brand":"xAI (Grok)","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"grok-imagine-video-1-5","label":"Grok Imagine Video 1.5","subtitle":"480p–1080p · 1–15s","badge":"xAI 官方 1.5","family":"grok","brand":"xAI (Grok)","groupKey":"video","groupName":"视频生成","aliases":["grok-imagine-video-1.5"],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"video_multi_ref","label":"参考图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"xAI 官方视频专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":1500,"discountRate":1,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":30},"constraints":null},{"id":"pool","label":"号池版","badge":"自建号池 · 随心用","enabled":true,"wireModel":null,"wireGroup":"pool","pricing":{"pointsEstimate":450,"discountRate":0.2857,"billingMode":"per_task"},"sla":{"stability24h":88,"avgWaitTimeSec":90},"constraints":null}]},{"id":"jina-reader-v1","label":"Jina Reader 网页读取","subtitle":"","badge":"","family":"jina","brand":"Jina AI","groupKey":"reader","groupName":"网页提取","aliases":[],"operations":[{"id":"webpage_read","label":"网页读取","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]},{"id":"kimi-k3","label":"Kimi K3","subtitle":"","badge":"","family":"moonshot","brand":"月之暗面 (Kimi)","groupKey":"text","groupName":"文本与对话","aliases":[],"operations":[{"id":"chat","label":"文本对话","listed":false,"inputs":1},{"id":"vision_chat","label":"图文对话","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"kling-o3","label":"Kling O3","subtitle":"4K · ⏱ 3-15s · 🔊","badge":"","family":"kling","brand":"快手 (Kling)","groupKey":"video","groupName":"视频生成","aliases":[],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"kling-v2-6","label":"Kling V2.6","subtitle":"1080P · ⏱ 5-10s","badge":"","family":"kling","brand":"快手 (Kling)","groupKey":"video","groupName":"视频生成","aliases":[],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_frame","label":"首帧","listed":false,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3}],"listedCount":0,"operationCount":3,"ready":false,"groups":[]},{"id":"kling-v3","label":"Kling V3","subtitle":"1080P-4K · ⏱ 5-10s · 🔊","badge":"可灵 3.0","family":"kling","brand":"快手 (Kling)","groupKey":"video","groupName":"视频生成","aliases":[],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_frame","label":"首帧","listed":false,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3}],"listedCount":0,"operationCount":3,"ready":false,"groups":[]},{"id":"kling-v3-motion-control","label":"Kling V3 运镜控制","subtitle":"1080P · 运镜轨迹","badge":"运镜控制","family":"kling","brand":"快手 (Kling)","groupKey":"video","groupName":"视频生成","aliases":[],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"minimax-h3","label":"MiniMax H3","subtitle":"768P/2K · 4–15s","badge":"H3","family":"minimax","brand":"MiniMax (海螺)","groupKey":"video","groupName":"视频生成","aliases":["MiniMax-H3","minimax/h3-max","h3-max","minimax/h3-max-turbo","h3-max-turbo"],"operations":[{"id":"text_to_video","label":"文生视频","listed":true,"inputs":1},{"id":"first_frame","label":"首帧","listed":true,"inputs":2},{"id":"end_frame","label":"尾帧","listed":true,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":true,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":true,"inputs":4}],"listedCount":5,"operationCount":5,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"海螺 MiniMax 官方专线 · 4–15 秒","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":1100,"discountRate":1,"billingMode":"per_second"},"sla":{"stability24h":99,"avgWaitTimeSec":50},"constraints":null},{"id":"turbo","label":"极速版","badge":"海螺 3.0 极速版 · 3倍出片速度","enabled":true,"wireModel":"minimax-h3-turbo","wireGroup":"default","pricing":{"pointsEstimate":540,"discountRate":1,"billingMode":"per_task"},"sla":null,"constraints":null},{"id":"video_fast","label":"工作流·高速档","badge":"AutoDL 极速出片 · 极致低价专线","enabled":true,"wireModel":"minimax-h3-video","wireGroup":"minimax-h3-video-fast","pricing":{"pointsEstimate":350,"discountRate":0.9,"billingMode":"per_task"},"sla":null,"constraints":{"operations":null,"duration":null,"resolution":{"only":["768P","2K"]},"aspectRatio":null}},{"id":"video_pro","label":"工作流·画质档","badge":"AutoDL 极限画质先行版","enabled":true,"wireModel":"minimax-h3-video","wireGroup":"minimax-h3-video-pro","pricing":{"pointsEstimate":440,"discountRate":1.15,"billingMode":"per_task"},"sla":null,"constraints":{"operations":null,"duration":null,"resolution":{"only":["768P","2K"]},"aspectRatio":null}},{"id":"task","label":"任务版","badge":"固定 15 秒 · 按次专线","enabled":true,"wireModel":"minimax-h3-task","wireGroup":"default","pricing":{"pointsEstimate":5825,"discountRate":1,"billingMode":"per_task"},"sla":null,"constraints":{"operations":["text_to_video","first_frame","first_last_frame","video_multi_ref"],"duration":{"fixed":15},"resolution":{"only":["768P","2K"]},"aspectRatio":null}}]},{"id":"mj-v7","label":"Midjourney 7","subtitle":"1080P","badge":"","family":"midjourney","brand":"midjourney","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"mj-v8-1","label":"Midjourney 8.1","subtitle":"2K","badge":"Yearly 20% off","family":"midjourney","brand":"midjourney","groupKey":"image","groupName":"图像生成","aliases":[],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"nano-banana-2","label":"Nano Banana 2","subtitle":"Google Imagen","badge":"","family":"nanobanana","brand":"Google (NanoBanana)","groupKey":"image","groupName":"图像生成","aliases":["nano_banana_2","nanobanana-2"],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"Google 官方生图专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":150,"discountRate":1,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":15},"constraints":null},{"id":"pro","label":"高价档","badge":"Evolink 全档高清专线","enabled":true,"wireModel":null,"wireGroup":"nano-banana-2-pro","pricing":{"pointsEstimate":260,"discountRate":1.714,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":10},"constraints":null}]},{"id":"nano-banana-pro","label":"Nano Banana Pro","subtitle":"Google Imagen Pro","badge":"","family":"nanobanana","brand":"Google (NanoBanana)","groupKey":"image","groupName":"图像生成","aliases":["nano_banana_pro","nanobanana-pro"],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"seed-audio-1.0","label":"Seed Audio 1.0","subtitle":"火山引擎 / 豆包大模型语音合成 · 509+ 精品音色","badge":"语音合成","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"audio","groupName":"音频与语音","aliases":["doubao-seed-audio-1.0","seed-audio"],"operations":[{"id":"text_to_speech","label":"文本转语音","listed":true,"inputs":1}],"listedCount":1,"operationCount":1,"ready":true,"groups":[{"id":"standard","label":"标准版","badge":"豆包语音官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":50,"discountRate":1,"billingMode":"per_token"},"sla":{"stability24h":100,"avgWaitTimeSec":5},"constraints":null}]},{"id":"seedance-2-0","label":"Seedance 2.0","subtitle":"480p/720p/1080p/4k · 4–15s · 有声","badge":"","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"video","groupName":"视频生成","aliases":["seedance-2.0"],"operations":[{"id":"text_to_video","label":"文生视频","listed":true,"inputs":1},{"id":"first_frame","label":"首帧","listed":true,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":true,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":true,"inputs":4}],"listedCount":4,"operationCount":4,"ready":true,"groups":[{"id":"pro","label":"进阶版","badge":"按次高价专线 · Pidoi 满血","enabled":true,"wireModel":null,"wireGroup":"seedance-2-0-task-pro","pricing":{"pointsEstimate":3476,"discountRate":3.333,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":45},"constraints":null},{"id":"official","label":"官方版","badge":"官方原厂直签 · 极稳高画质","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":3568,"discountRate":1,"billingMode":"per_second"},"sla":{"stability24h":67,"avgWaitTimeSec":90},"constraints":null},{"id":"preferred","label":"优选版","badge":"官转专线 · 极稳高画质","enabled":true,"wireModel":null,"wireGroup":"seedance-standard","pricing":{"pointsEstimate":1560,"discountRate":1.178,"billingMode":"per_second"},"sla":{"stability24h":100,"avgWaitTimeSec":60},"constraints":null},{"id":"standard","label":"标准版","badge":"主流专线 · 官方原生","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":1040,"discountRate":1,"billingMode":"per_second"},"sla":{"stability24h":98,"avgWaitTimeSec":90},"constraints":null},{"id":"cheap","label":"特惠版","badge":"限时特惠 · 按条计费","enabled":true,"wireModel":null,"wireGroup":"cheap","pricing":{"pointsEstimate":800,"discountRate":0.5,"billingMode":"per_task"},"sla":{"stability24h":90,"avgWaitTimeSec":120},"constraints":null}]},{"id":"seedance-2-0-fast","label":"Seedance 2.0 Fast","subtitle":"480p/720p · 4–15s · 有声","badge":"快速","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"video","groupName":"视频生成","aliases":["seedance-2.0-fast"],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_frame","label":"首帧","listed":false,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":false,"inputs":4}],"listedCount":0,"operationCount":4,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"极速出片 · 官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":950,"discountRate":1,"billingMode":"per_second"},"sla":{"stability24h":100,"avgWaitTimeSec":30},"constraints":null},{"id":"cheap","label":"特惠版","badge":"特惠走量 · 按条计费","enabled":true,"wireModel":null,"wireGroup":"cheap","pricing":{"pointsEstimate":750,"discountRate":0.5,"billingMode":"per_task"},"sla":{"stability24h":90,"avgWaitTimeSec":120},"constraints":null}]},{"id":"seedance-2-0-mini","label":"Seedance 2.0 Mini","subtitle":"480p/720p · 4–15s · 有声","badge":"成本向","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"video","groupName":"视频生成","aliases":["seedance-2.0-mini"],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_frame","label":"首帧","listed":false,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":false,"inputs":4}],"listedCount":0,"operationCount":4,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"轻量视频官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":600,"discountRate":1,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":45},"constraints":null}]},{"id":"seedance-2-5","label":"Seedance 2.5","subtitle":"480p–1080p · 4–30s/自动 · 有声","badge":"旗舰","family":"bytedance","brand":"字节跳动 (Seed)","groupKey":"video","groupName":"视频生成","aliases":["seedance-2.5"],"operations":[{"id":"text_to_video","label":"文生视频","listed":true,"inputs":1},{"id":"first_frame","label":"首帧","listed":true,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":true,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":true,"inputs":4},{"id":"video_edit","label":"视频编辑","listed":true,"inputs":4},{"id":"video_extend","label":"视频延长","listed":true,"inputs":4}],"listedCount":6,"operationCount":6,"ready":true,"groups":[{"id":"pro","label":"进阶版","badge":"按次高价专线 · 满血出片","enabled":true,"wireModel":null,"wireGroup":"seedance-2-5-task-pro","pricing":{"pointsEstimate":4500,"discountRate":3.333,"billingMode":"per_task"},"sla":{"stability24h":100,"avgWaitTimeSec":45},"constraints":{"operations":null,"duration":{"fixed":30},"resolution":null,"aspectRatio":null}},{"id":"standard","label":"标准版","badge":"全新 2.5 旗舰 · 官方原生专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":1800,"discountRate":1,"billingMode":"per_second"},"sla":{"stability24h":100,"avgWaitTimeSec":60},"constraints":null}]},{"id":"seedasr-auc","label":"Seed ASR 2.0 语音识别","subtitle":"火山引擎 Seed ASR 2.0 · 录音文件识别标准模式","badge":"语音识别","family":"bytedance","brand":"字节跳动","groupKey":"audio","groupName":"音频与语音","aliases":[],"operations":[{"id":"speech_to_text","label":"语音转文字","listed":true,"inputs":1}],"listedCount":1,"operationCount":1,"ready":true,"groups":[]},{"id":"seedream-5-0-pro","label":"Seedream 5.0 Pro","subtitle":"1K-2K","badge":"","family":"seedream","brand":"字节跳动 (Seed)","groupKey":"image","groupName":"图像生成","aliases":["seedream-5.0-pro"],"operations":[{"id":"text_to_image","label":"文生图","listed":false,"inputs":1},{"id":"multi_reference","label":"多图垫图","listed":false,"inputs":2}],"listedCount":0,"operationCount":2,"ready":false,"groups":[]},{"id":"suno","label":"Suno Music","subtitle":"AI 歌曲 / 纯音乐 · ⏱ 30-120s","badge":"音乐创作","family":"suno","brand":"suno","groupKey":"audio","groupName":"音频与语音","aliases":[],"operations":[{"id":"text_to_music","label":"AI 音乐生成","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"Suno 音乐生成官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":800,"discountRate":1,"billingMode":"per_task"},"sla":null,"constraints":null}]},{"id":"wan-3.0","label":"Wan 3.0","subtitle":"480P–1080P · 2–30s/自动 · 有声","badge":"全模态参考","family":"wan","brand":"阿里通义 (Wan)","groupKey":"video","groupName":"视频生成","aliases":["wan3.0-video","wan-3.0-prime","wan-3.0-ref","wan-3.0-prime-ref"],"operations":[{"id":"text_to_video","label":"文生视频","listed":false,"inputs":1},{"id":"first_frame","label":"首帧","listed":false,"inputs":2},{"id":"first_last_frame","label":"首尾帧","listed":false,"inputs":3},{"id":"video_multi_ref","label":"全能参考","listed":false,"inputs":4},{"id":"document_to_video","label":"文档参考","listed":false,"inputs":2},{"id":"webpage_to_video","label":"网页参考","listed":false,"inputs":2}],"listedCount":0,"operationCount":6,"ready":false,"groups":[{"id":"standard","label":"标准版","badge":"Wan 官方专线","enabled":true,"wireModel":null,"wireGroup":"default","pricing":{"pointsEstimate":1000,"discountRate":1,"billingMode":"per_task"},"sla":null,"constraints":null}]},{"id":"whisper-1","label":"Whisper 1","subtitle":"OpenAI 语音转文字 / ASR","badge":"语音识别","family":"openai","brand":"OpenAI (Whisper)","groupKey":"audio","groupName":"音频与语音","aliases":[],"operations":[{"id":"speech_to_text","label":"语音识别","listed":false,"inputs":1}],"listedCount":0,"operationCount":1,"ready":false,"groups":[]}],"stats":{"models":41,"ready":10,"notReady":31,"withGroups":17,"groups":33,"operations":23,"dispositions":78,"renderedAt":"2026-09-16 10:52:57","live":false}}</script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('payload').textContent);
+  var MODELS = DATA.models, STATS = DATA.stats;
+  var state = { q: '', group: 'all', onlyReady: false, open: {} };
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  document.getElementById('subtitle').textContent =
+    '数据真源：模型契约 YAML + 线路分组表 + 上架处置规则　·　'
+    + (STATS.live ? '本页数据在每次打开时实时读取' : '静态快照，生成于 ' + STATS.renderedAt);
+  var badge = document.getElementById('liveBadge');
+  badge.dataset.live = String(!!STATS.live);
+  badge.textContent = STATS.live ? '实时读取 · ' + STATS.renderedAt : '静态快照';
+  document.getElementById('footer').textContent =
+    '共 ' + STATS.models + ' 款模型　·　' + STATS.groups + ' 条线路分组　·　' + STATS.dispositions + ' 条上架处置规则';
+
+  var statDefs = [
+    ['模型总数', STATS.models, ''],
+    ['已就绪', STATS.ready, 'accent'],
+    ['未就绪', STATS.notReady, STATS.notReady ? 'warn' : ''],
+    ['已配线路', STATS.withGroups, ''],
+    ['线路分组', STATS.groups, ''],
+    ['就绪操作', STATS.operations, '']
+  ];
+  document.getElementById('stats').innerHTML = statDefs.map(function (d) {
+    return '<div class="stat ' + d[2] + '"><b>' + d[1] + '</b><span>' + d[0] + '</span></div>';
+  }).join('');
+
+  var groupKeys = ['all'];
+  MODELS.forEach(function (m) { if (groupKeys.indexOf(m.groupKey) < 0) groupKeys.push(m.groupKey); });
+  var groupLabels = { all: '全部' };
+  MODELS.forEach(function (m) { groupLabels[m.groupKey] = m.groupName; });
+  var chips = document.getElementById('chips');
+  chips.innerHTML = groupKeys.map(function (k) {
+    return '<button class="chip" data-group="' + esc(k) + '" aria-pressed="' + (k === 'all') + '">' + esc(groupLabels[k] || k) + '</button>';
+  }).join('') + '<button class="chip" data-ready="1" aria-pressed="false">仅看已就绪</button>';
+
+  chips.addEventListener('click', function (e) {
+    var btn = e.target.closest('.chip'); if (!btn) return;
+    if (btn.dataset.ready) {
+      state.onlyReady = !state.onlyReady;
+      btn.setAttribute('aria-pressed', String(state.onlyReady));
+    } else {
+      state.group = btn.dataset.group;
+      [].forEach.call(chips.querySelectorAll('.chip[data-group]'), function (c) {
+        c.setAttribute('aria-pressed', String(c.dataset.group === state.group));
+      });
+    }
+    render();
+  });
+
+  document.getElementById('q').addEventListener('input', function (e) {
+    state.q = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  function match(m) {
+    if (state.group !== 'all' && m.groupKey !== state.group) return false;
+    if (state.onlyReady && !m.ready) return false;
+    if (!state.q) return true;
+    var hay = (m.id + ' ' + m.label + ' ' + m.brand + ' ' + m.family + ' ' + m.aliases.join(' ')).toLowerCase();
+    return hay.indexOf(state.q) >= 0;
+  }
+
+  function kv(label, value) {
+    return '<div class="kv"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
+  }
+
+  function renderGroup(g) {
+    var facts = [];
+    if (g.wireModel) facts.push(kv('上游型号', g.wireModel));
+    if (g.wireGroup) facts.push(kv('上游分组', g.wireGroup));
+    if (g.pricing && g.pricing.pointsEstimate != null) facts.push(kv('积分估算', g.pricing.pointsEstimate));
+    if (g.pricing && g.pricing.billingMode) facts.push(kv('计费方式', g.pricing.billingMode));
+    if (g.pricing && g.pricing.discountRate != null && g.pricing.discountRate !== 1) {
+      facts.push(kv('倍率', g.pricing.discountRate));
+    }
+    if (g.sla && g.sla.stability24h != null) facts.push(kv('24h 稳定性', g.sla.stability24h + '%'));
+    if (g.sla && g.sla.avgWaitTimeSec != null) facts.push(kv('平均等待', g.sla.avgWaitTimeSec + 's'));
+    if (g.constraints && g.constraints.duration) facts.push(kv('时长契约', JSON.stringify(g.constraints.duration)));
+    if (g.constraints && g.constraints.resolution) facts.push(kv('分辨率契约', JSON.stringify(g.constraints.resolution)));
+    if (g.constraints && g.constraints.aspectRatio) facts.push(kv('画幅契约', JSON.stringify(g.constraints.aspectRatio)));
+    if (g.constraints && g.constraints.operations) facts.push(kv('操作契约', g.constraints.operations.join(' / ')));
+
+    return '<div class="gcard">'
+      + '<div class="grow"><span class="glabel">' + esc(g.label) + '</span>'
+      + '<span class="gbadge">' + esc(g.badge) + '</span></div>'
+      + '<div class="grid2">' + facts.join('') + '</div>'
+      + '</div>';
+  }
+
+  function renderRow(m) {
+    var open = !!state.open[m.id];
+    var tags = '<span class="tag">' + esc(m.brand) + '</span>';
+    if (m.ready) tags += '<span class="tag ok">已就绪 ' + m.listedCount + '/' + m.operationCount + '</span>';
+    else tags += '<span class="tag warn">未就绪</span>';
+    if (m.groups.length) tags += '<span class="tag line">' + m.groups.length + ' 条线路</span>';
+    else tags += '<span class="tag">无线路</span>';
+
+    var ops = m.operations.map(function (op) {
+      return '<span class="op' + (op.listed ? ' on' : '') + '">' + esc(op.label) + '</span>';
+    }).join('');
+
+    var detail = '<div class="detail">';
+    if (m.aliases.length) {
+      detail += '<div class="sec"><h3>兼容标识</h3><div class="ops">'
+        + m.aliases.map(function (a) { return '<span class="op">' + esc(a) + '</span>'; }).join('')
+        + '</div></div>';
+    }
+    detail += '<div class="sec"><h3>生成操作（' + m.listedCount + '/' + m.operationCount + ' 已就绪）</h3>'
+      + '<div class="ops">' + ops + '</div></div>';
+    detail += '<div class="sec"><h3>线路分组（' + m.groups.length + '）</h3>'
+      + (m.groups.length ? m.groups.map(renderGroup).join('')
+        : '<div class="kv"><span>该模型未配置渠道线路分组，走网关注册候选</span></div>')
+      + '</div>';
+    detail += '</div>';
+
+    return '<div class="row" data-open="' + open + '" data-id="' + esc(m.id) + '">'
+      + '<div class="head">'
+      + '<span class="caret">▶</span>'
+      + '<div><div class="name">' + esc(m.label) + '</div>'
+      + '<div class="meta">' + esc(m.id) + (m.subtitle ? '　·　' + esc(m.subtitle) : '') + '</div></div>'
+      + '<div class="tags">' + tags + '</div>'
+      + '<div></div>'
+      + '</div>' + detail + '</div>';
+  }
+
+  function render() {
+    var rows = MODELS.filter(match);
+    var list = document.getElementById('list');
+    if (!rows.length) { list.innerHTML = '<div class="empty">没有匹配的模型</div>'; return; }
+    list.innerHTML = rows.map(renderRow).join('');
+  }
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var head = e.target.closest('.head'); if (!head) return;
+    var row = head.parentElement;
+    var id = row.dataset.id;
+    state.open[id] = !state.open[id];
+    row.dataset.open = String(!!state.open[id]);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
