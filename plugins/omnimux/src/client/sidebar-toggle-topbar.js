@@ -313,10 +313,66 @@ export const LEFT_RAIL_MIN_PX = 64
  */
 const CONVERSATION_COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
 
+/** Right column must be at least this wide before its frame counts as a split. */
+const RIGHT_COLUMN_MIN_PX = 200
+/** Baseline used before any trustworthy split measurement exists. */
+export const CONVERSATION_WIDTH_FALLBACK_PX = 420
+
 /** Last plausible expanded rail width; repairs a poisoned reading (see below). */
 let lastGoodLeftRailW = 0
-/** Last measured healthy conversation column width; keeps width proportion when sidebar collapses. */
-let lastGoodConversationWidth = 480
+/**
+ * Last conversation-column width measured while the frame really was in
+ * three-column split. Never learned from a single-column frame: with no right
+ * workspace the conversation legitimately owns the whole remainder, and that
+ * reading would later be replayed as the split baseline — collapsing the left
+ * rail would then pin the conversation far too wide and shrink the workspace.
+ */
+let lastGoodConversationWidth = CONVERSATION_WIDTH_FALLBACK_PX
+
+/**
+ * Live width of the right workspace column, or 0 when there is none.
+ * @param {Document | null | undefined} doc
+ * @returns {number}
+ */
+function readRightColumnPx(doc) {
+  const right = doc?.querySelector?.(
+    '.dshDesktopRightbarSurface, [data-rightbar-col], [class*="rightbarCol"], [class*="rightbarSurface"]',
+  )
+  if (!right) return 0
+  try {
+    const w = right.offsetWidth || Math.round(right.getBoundingClientRect().width) || 0
+    return Number.isFinite(w) && w > 0 ? w : 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Conversation-column baseline for the collapsed-left-rail split layout.
+ *
+ * Only a genuine three-column frame teaches the baseline; everywhere else the
+ * conversation column is *supposed* to absorb the freed space, so its width
+ * says nothing about the split proportion. A collapsed rail reuses the last
+ * trustworthy split reading (or the contract fallback) instead of measuring
+ * itself, which would be a self-confirming reading.
+ * @param {Document | null | undefined} doc
+ * @param {boolean} collapsed
+ * @returns {number}
+ */
+function resolveConversationWidth(doc, collapsed) {
+  if (!collapsed && readRightColumnPx(doc) >= RIGHT_COLUMN_MIN_PX) {
+    const center = doc?.querySelector?.('.dshDesktopConversationSurface, [class*="centerCol"], [data-slot="conversation"]')
+    if (center) {
+      try {
+        const cw = center.offsetWidth || Math.round(center.getBoundingClientRect().width) || 0
+        if (cw >= CONVERSATION_WIDTH_FALLBACK_PX) lastGoodConversationWidth = cw
+      } catch {
+        // keep the last trustworthy reading
+      }
+    }
+  }
+  return lastGoodConversationWidth
+}
 
 /**
  * The rail width the shell itself asked for, read from a source our own
@@ -414,24 +470,7 @@ export function computeChromeLayout(doc) {
     }
   }
   const tabPadLeft = panelLeft == null ? 0 : Math.max(0, toggleEnd - panelLeft)
-  let conversationWidth = null
-  if (!collapsed) {
-    const centerCol = doc?.querySelector?.('.dshDesktopConversationSurface, [class*="centerCol"], [data-slot="conversation"]')
-    if (centerCol) {
-      try {
-        const cw = centerCol.offsetWidth || Math.round(centerCol.getBoundingClientRect().width) || 0
-        if (cw >= 320 && cw < (doc?.defaultView?.innerWidth || 1920) - 200) {
-          conversationWidth = cw
-          lastGoodConversationWidth = cw
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-  if (!conversationWidth && lastGoodConversationWidth >= 320) {
-    conversationWidth = lastGoodConversationWidth
-  }
+  const conversationWidth = resolveConversationWidth(doc, collapsed)
   return { collapsed, leftRailW, toggleLeft, toggleEnd, newSessionLeft, panelLeft, tabPadLeft, conversationWidth }
 }
 
@@ -531,7 +570,7 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
     ? (readShellRailWidthPx(doc) ?? (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280)))
     : (layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280))
   root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
-  const convW = layout.conversationWidth ?? lastGoodConversationWidth ?? 480
+  const convW = layout.conversationWidth ?? lastGoodConversationWidth ?? CONVERSATION_WIDTH_FALLBACK_PX
   root.style.setProperty('--omnimux-conversation-width', `${convW}px`)
   syncTopbarTabClearance(doc)
   if (typeof newSessionLeft === 'number') {

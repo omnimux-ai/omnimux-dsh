@@ -225,7 +225,7 @@ html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="f
 html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]),
 html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]),
 html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]){
-  grid-template-columns: 0px var(--omnimux-conversation-width, 480px) minmax(0px, 1fr) !important;
+  grid-template-columns: 0px var(--omnimux-conversation-width, 420px) minmax(0px, 1fr) !important;
 }
 /* 当中间会话栏收起时（右侧全屏铺满状态）：
    必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！
