@@ -1,0 +1,70 @@
+{
+  "task": "inspiration-share-button-active-visual-verification",
+  "title": "灵感社区预览弹窗分享按钮激活态视觉规范 · 真实浏览器实机预演",
+  "startedAt": "2026-09-16T09:08:11.500Z",
+  "assertions": [
+    {
+      "name": "share-button-is-active",
+      "pass": true,
+      "detail": {
+        "isActive": true,
+        "ariaExpanded": "true",
+        "backgroundColor": "rgba(255, 255, 255, 0.14)",
+        "color": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(56, 56, 56)",
+        "borderTopWidth": "1px",
+        "width": 72,
+        "height": 32,
+        "visible": true
+      }
+    },
+    {
+      "name": "share-button-has-aria-expanded",
+      "pass": true,
+      "detail": {
+        "isActive": true,
+        "ariaExpanded": "true",
+        "backgroundColor": "rgba(255, 255, 255, 0.14)",
+        "color": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(56, 56, 56)",
+        "borderTopWidth": "1px",
+        "width": 72,
+        "height": 32,
+        "visible": true
+      }
+    },
+    {
+      "name": "share-button-positive-geometry",
+      "pass": true,
+      "detail": {
+        "isActive": true,
+        "ariaExpanded": "true",
+        "backgroundColor": "rgba(255, 255, 255, 0.14)",
+        "color": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(56, 56, 56)",
+        "borderTopWidth": "1px",
+        "width": 72,
+        "height": 32,
+        "visible": true
+      }
+    },
+    {
+      "name": "share-button-not-solid-white",
+      "pass": true,
+      "detail": {
+        "backgroundColor": "rgba(255, 255, 255, 0.14)"
+      }
+    },
+    {
+      "name": "screenshot-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "width": 1440,
+        "height": 960,
+        "bytes": 42825
+      }
+    }
+  ],
+  "pass": true,
+  "errors": []
+}
