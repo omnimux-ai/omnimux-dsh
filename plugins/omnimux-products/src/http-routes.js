@@ -262,12 +262,13 @@ export function createHubSeams(ctx, deps) {
   }
 
   /**
-   * Primary channel. The hub chat module resolves the provider this host already
-   * configured (`llm-pi-ai` in settings / credentials, e.g. CPA or
-   * `gemini-3.8-flash-high`), and unlike the seats behind `textComplete` it needs
-   * no `omnimux` provider seat and no session connection — so this is the channel
-   * that answers in a plain Electron App runtime. Keys stay in the host: this
-   * plugin reads a credential seat, never a key file.
+   * Primary channel. The hub chat module resolves the execution-hub provider from
+   * an explicit credential seat (`OMNIMUX_API_KEY` / `OMNIMUX_TOKEN`); it never
+   * discovers machine-local providers (contract: docs/contracts/product-baseline.md).
+   * Unlike the seats behind `textComplete` it needs no `omnimux` provider seat and
+   * no session connection — so this is the channel that answers in a plain Electron
+   * App runtime. Keys stay in the host: this plugin reads a credential seat, never
+   * a key file.
    *
    * @param {{ prompt: string, model?: string, system?: string, maxTokens?: number }} request
    * @returns {Promise<unknown>}

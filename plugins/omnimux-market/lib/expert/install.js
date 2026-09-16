@@ -68,15 +68,23 @@ export function installItem(opts) {
   }
 }
 
-const LOCAL_WB = process.env.WORKBUDDYSKILLS_ROOT || '/Users/x/Desktop/Project/Github/workbuddyskills'
+/**
+ * 本地仓库缓存根：仅在显式设置 WORKBUDDYSKILLS_ROOT 时启用（离线/开发便利）。
+ * 未设置时不解析本地仓库，直接走 fetchGitTree —— 产品路径不依赖开发机目录。
+ */
+const LOCAL_REPO_ROOT = (process.env.WORKBUDDYSKILLS_ROOT || '').trim().replace(/\/+$/, '')
 
 function resolveLocalRepo(repo) {
+  if (!LOCAL_REPO_ROOT) return ''
   const repoName = repo ? String(repo).split('/').pop() : ''
-  if (repoName) {
-    const candidate = join('/Users/x/Desktop/Project/Github', repoName)
+  const candidates = [
+    repoName ? join(dirname(LOCAL_REPO_ROOT), repoName) : '',
+    LOCAL_REPO_ROOT,
+  ].filter(Boolean)
+  for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate
   }
-  return LOCAL_WB
+  return ''
 }
 
 /**
@@ -90,8 +98,8 @@ export function installGitBundle(home, item) {
   if (existsSync(join(destDir, 'SKILL.md'))) return
   const sub = item.source.path
   const localBase = resolveLocalRepo(item.source.repo)
-  const local = join(localBase, sub)
-  const from = existsSync(local) ? local : fetchGitTree(home, item)
+  const local = localBase ? join(localBase, sub) : ''
+  const from = local && existsSync(local) ? local : fetchGitTree(home, item)
   if (!existsSync(from)) throw new Error(`git bundle missing: ${sub}`)
   mkdirSync(dirname(destDir), { recursive: true })
   if (statSync(from).isDirectory()) cpRecursive(from, destDir)
