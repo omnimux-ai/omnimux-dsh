@@ -35,6 +35,7 @@ import { JSDOM } from 'jsdom'
 import { apply } from '../../plugins/omnimux-inspiration/src/index.js'
 import { LOCAL_PREFIX } from '../../plugins/omnimux-inspiration/src/http-routes.js'
 import { createInspirationShareApi } from '../../plugins/omnimux/src/official/inspiration-share.js'
+import { shareRequestPayload } from '../../plugins/omnimux-inspiration/src/client/api.js'
 import { zh } from '../../plugins/omnimux-inspiration/src/client/locales.js'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
@@ -487,5 +488,62 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     })
     assert.equal(missing.status, 404)
     assert.equal(cloud.publishes.length, 0)
+  })
+
+  /*
+   * Issue #2075. The catalogue lists its entries with a numeric id and the
+   * `cover_key` / `media_keys` spelling, holding the Host's own media paths. The
+   * page used to hand over neither address, so the Host refused every cloud
+   * share as having no media. This runs the page's own payload builder — given
+   * the row exactly as the catalogue answers it — through the real publish route
+   * and the real hub capability, which is the only place the two halves meet.
+   */
+  it('发布的云端作品带着目录真源地址，并能被中枢接受', async () => {
+    const cloud = cloudStub()
+    const world = bootPlugin({ capability: capabilityFrom(cloud) })
+
+    // The row as the catalogue answers it: numeric id, key-form media fields.
+    const catalogueRow = {
+      id: 2789,
+      is_local: false,
+      type: 'image',
+      title: '情绪共鸣型助眠歌单推广',
+      content: 'Give it a try 🥺❤️🫵',
+      category: 'Health & Wellness',
+      cover_key: '/omnimux/inspiration/media/inspiration-covers/2789',
+      media_keys: [`/omnimux/inspiration/media/r2/publications/genviral/slideshows/s1/slide-1.jpg`],
+    }
+    const payload = shareRequestPayload(catalogueRow)
+    assert.equal(
+      payload.coverUrl,
+      '/api/inspiration/v1/public/media/inspiration-covers/2789',
+      '页面必须交出云端可发布形态的封面地址',
+    )
+    assert.deepEqual(payload.mediaUrls, [
+      '/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/s1/slide-1.jpg',
+    ])
+
+    const started = await http(world.route, {
+      method: 'POST',
+      url: `${LOCAL_PREFIX}/2789/share`,
+      body: payload,
+    })
+    assert.equal(started.status, 202, `POST 云端分享 → ${started.status} ${started.body}`)
+
+    const settled = await waitForShare(world.route, '2789', 'done')
+    assert.equal(settled.share_url, 'https://omnimux.ai/s/insp_cloud_e2e_7a31')
+
+    // The Host resolved the page's addresses against the cloud's own base, which
+    // is what proves they were in the form the publish route accepts.
+    assert.equal(cloud.publishes.length, 1)
+    assert.equal(
+      cloud.publishes[0].body.cover_url,
+      `${SITE}${COVER_PATH}2789`,
+    )
+    assert.equal(
+      cloud.publishes[0].body.media_url,
+      `${SITE}${PUBLICATION_PATH}genviral/slideshows/s1/slide-1.jpg`,
+    )
+    assert.equal(cloud.uploads.length, 0, '云端分享仍然零上传')
   })
 })
