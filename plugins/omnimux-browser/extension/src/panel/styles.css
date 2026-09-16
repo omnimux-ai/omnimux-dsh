@@ -6063,3 +6063,24 @@ textarea:focus-visible {
   font-size: calc(11.5px * var(--ui-scale));
   color: var(--muted);
 }
+
+/* Draft-media chips are the attachment, not the subject: smaller than before,
+   and the remove control only surfaces on hover or keyboard focus so a row of
+   lit media reads as content rather than as a toolbar. */
+.draft-image {
+  width: 44px;
+  height: 44px;
+}
+
+.draft-image > button {
+  top: -4px;
+  right: -4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.draft-image:hover > button,
+.draft-image:focus-within > button,
+.draft-image > button:focus-visible {
+  opacity: 1;
+}

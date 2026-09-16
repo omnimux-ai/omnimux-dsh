@@ -1,0 +1,36 @@
+{
+  "issue": 2114,
+  "at": "2026-09-16T16:48:38.142Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-media-lit-transition/plugins/omnimux-browser/extension/dist",
+  "cases": [
+    {
+      "name": "lighting through the capsule inserts a smaller composer chip",
+      "pass": false,
+      "observed": {
+        "shelf": 0,
+        "drafts": 0,
+        "chipWidth": null,
+        "buttonOpacity": null
+      },
+      "evidence": []
+    },
+    {
+      "name": "the lit media is hidden from the shelf",
+      "pass": false,
+      "observed": {
+        "shelfAfterLit": 0
+      },
+      "evidence": []
+    },
+    {
+      "name": "the remove control stays hidden until hover",
+      "pass": false,
+      "observed": {
+        "buttonOpacity": null
+      },
+      "evidence": []
+    }
+  ],
+  "passed": 0,
+  "total": 3
+}

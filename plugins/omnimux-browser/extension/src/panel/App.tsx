@@ -3486,9 +3486,9 @@ export function App(): React.JSX.Element {
       )}
       {error !== null && <div className="error">{error}</div>}
       <footer className="composer">
-        {detectedMedia.length > 0 && (
+        {detectedMedia.some((item) => !attachedMediaIds.has(item.id)) && (
           <MediaSnifferBar
-            items={detectedMedia}
+            items={detectedMedia.filter((item) => !attachedMediaIds.has(item.id))}
             locale={locale}
             onActiveChange={setActiveMediaItems}
             onSaveToInspiration={handleSaveToInspiration}
