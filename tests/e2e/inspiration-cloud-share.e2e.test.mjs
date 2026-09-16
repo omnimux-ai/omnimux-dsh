@@ -546,4 +546,56 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     )
     assert.equal(cloud.uploads.length, 0, '云端分享仍然零上传')
   })
+
+  /*
+   * Issue #2088. A catalogue entry carries its own account of the footage under
+   * `analysis`, and it used to stop at the page: the published prompt came out
+   * equal to the post copy, so the share told a viewer what the original author
+   * wrote, not how to shoot the same video.
+   */
+  it('发布的同款提示词来自目录拆解，而不是原文案', async () => {
+    const cloud = cloudStub()
+    const world = bootPlugin({ capability: capabilityFrom(cloud) })
+
+    const catalogueRow = {
+      id: 2690,
+      is_local: false,
+      type: 'video',
+      title: '现场通话录音',
+      content: 'Watch till the end 😳',
+      category: 'Entertainment',
+      cover_key: '/omnimux/inspiration/media/inspiration-covers/2690',
+      media_keys: ['/omnimux/inspiration/media/r2/publications/genviral/videos/2690/video.mp4'],
+      analysis: {
+        visual_breakdown: '竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控',
+        hook_highlight: '画外音突然说出第三者名字的瞬间停顿',
+        target_goal: '引导评论互动',
+      },
+    }
+
+    const payload = shareRequestPayload(catalogueRow)
+    assert.ok(payload.deconstruction, '页面必须把目录拆解一并交给发布端')
+
+    const started = await http(world.route, {
+      method: 'POST',
+      url: `${LOCAL_PREFIX}/2690/share`,
+      body: payload,
+    })
+    assert.equal(started.status, 202, `POST 云端分享 → ${started.status} ${started.body}`)
+
+    await waitForShare(world.route, '2690', 'done')
+
+    const published = cloud.publishes[0].body
+    assert.match(published.prompt, /竖屏手持自拍特写/, '提示词必须基于画面拆解')
+    assert.match(published.prompt, /电影级运镜与流畅主体动作演进/)
+    assert.equal(
+      published.prompt.includes('Watch till the end'),
+      false,
+      '原文案不得再充当同款提示词',
+    )
+    assert.equal(published.category, 'seedance 2.5')
+    assert.equal(published.model, 'seedance-2-5')
+    // The campaign field is not forwarded, so it cannot leak into the prompt.
+    assert.equal(published.prompt.includes('引导评论互动'), false)
+  })
 })

@@ -573,6 +573,7 @@ export function shareRequestPayload(row) {
           ? rec.media_urls
           : []
   const mediaUrls = mediaKeys.map(publishableMediaAddress).filter(Boolean)
+  const deconstruction = shareDeconstructionOf(rec)
   return {
     source: 'cloud',
     type: text(rec.type),
@@ -583,7 +584,35 @@ export function shareRequestPayload(row) {
     mediaUrls,
     embedUrl: text(rec.embedUrl ?? rec.embed_url),
     sourceUrl: text(rec.sourceUrl ?? rec.source_url),
+    ...(deconstruction ? { deconstruction } : {}),
   }
+}
+
+/**
+ * The breakdown a cloud row carries, in the shape the publish side reads.
+ *
+ * The catalogue keeps the entry's own account of the footage under `analysis` —
+ * `visual_breakdown` is the scene description (framing, light, composition) and
+ * `hook_highlight` is the opening hook. Without them the publish side has no
+ * breakdown to synthesize from and falls back to the entry's post copy, which
+ * describes the post rather than the footage: the share then carries the
+ * original caption instead of a same-footage generation prompt.
+ *
+ * Only the two fields that drive a visual prompt are forwarded. The catalogue's
+ * marketing fields (`target_goal`, `narrative_strategy`, `replication_action`)
+ * describe the campaign, not the picture, so they are deliberately left out.
+ * @param {Record<string, any>} rec
+ * @returns {{ visual_breakdown: string, hook: string } | undefined}
+ */
+export function shareDeconstructionOf(rec) {
+  const analysis = rec?.analysis
+  const source = analysis && typeof analysis === 'object' ? analysis : null
+  const own = rec?.deconstruction && typeof rec.deconstruction === 'object' ? rec.deconstruction : {}
+  const read = (value) => (typeof value === 'string' ? value.trim() : '')
+  const visualBreakdown = read(source?.visual_breakdown) || read(own.visual_breakdown)
+  const hook = read(source?.hook_highlight) || read(source?.hook) || read(own.hook)
+  if (!visualBreakdown && !hook) return undefined
+  return { visual_breakdown: visualBreakdown, hook }
 }
 
 /**

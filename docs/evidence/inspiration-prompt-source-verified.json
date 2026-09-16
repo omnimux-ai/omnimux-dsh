@@ -1,0 +1,126 @@
+{
+  "task": "inspiration-prompt-source-verify",
+  "issue": 2088,
+  "origin": "http://127.0.0.1:59592",
+  "browser": "ego-browser (chromium)",
+  "startedAt": "2026-09-16T14:09:18.704Z",
+  "assertions": [
+    {
+      "name": "share-popover-opened-by-click",
+      "pass": true
+    },
+    {
+      "name": "create-action-was-available",
+      "pass": true,
+      "detail": {
+        "popoverText": "分享灵感 链接与有效期由 OmniMux 云端返回，普通账号为 72 小时 创建链接"
+      }
+    },
+    {
+      "name": "create-link-was-clicked",
+      "pass": true
+    },
+    {
+      "name": "payload-carries-the-catalogue's-own-breakdown",
+      "pass": true,
+      "detail": {
+        "deconstruction": {
+          "visual_breakdown": "竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控",
+          "hook": "画外音突然说出第三者名字的瞬间停顿"
+        }
+      }
+    },
+    {
+      "name": "payload-does-not-forward-the-campaign-fields",
+      "pass": true,
+      "detail": {
+        "keys": [
+          "visual_breakdown",
+          "hook"
+        ]
+      }
+    },
+    {
+      "name": "derived-prompt-is-built-from-the-breakdown",
+      "pass": true,
+      "detail": {
+        "derivedPrompt": "竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控。电影级运镜与流畅主体动作演进，真实自然光影氛围，画质清晰细腻，4K超清质感"
+      }
+    },
+    {
+      "name": "derived-prompt-is-not-the-post-copy",
+      "pass": true,
+      "detail": {
+        "derivedPrompt": "竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控。电影级运镜与流畅主体动作演进，真实自然光影氛围，画质清晰细腻，4K超清质感"
+      }
+    },
+    {
+      "name": "derived-prompt-carries-the-video-style-tail",
+      "pass": true
+    },
+    {
+      "name": "derived-prompt-has-no-campaign-copy",
+      "pass": true
+    },
+    {
+      "name": "derived-prompt-is-not-empty",
+      "pass": true,
+      "detail": {
+        "length": 73
+      }
+    },
+    {
+      "name": "popover-stayed-open-through-publish",
+      "pass": true,
+      "detail": {
+        "popoverOpen": true
+      }
+    },
+    {
+      "name": "host-was-asked-about-the-job",
+      "pass": true,
+      "detail": {
+        "polls": 1
+      }
+    },
+    {
+      "name": "screenshot-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 72689
+      }
+    },
+    {
+      "name": "ego-browser-task-space-closed",
+      "pass": true,
+      "detail": {
+        "spaceId": 280,
+        "finishError": null
+      }
+    }
+  ],
+  "pass": true,
+  "errors": [],
+  "observed": {
+    "payload": {
+      "source": "cloud",
+      "type": "video",
+      "title": "发现自己是\"第三者\"的现场通话录音",
+      "caption": "Watch till the end 😳",
+      "category": "Entertainment",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2690",
+      "mediaUrls": [
+        "/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4"
+      ],
+      "embedUrl": "",
+      "sourceUrl": "",
+      "deconstruction": {
+        "visual_breakdown": "竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控",
+        "hook": "画外音突然说出第三者名字的瞬间停顿"
+      }
+    },
+    "derivedPrompt": "竖屏手持自拍特写，室内冷白光，面部占据画面三分之二，情绪由平静转为失控。电影级运镜与流畅主体动作演进，真实自然光影氛围，画质清晰细腻，4K超清质感"
+  }
+}
