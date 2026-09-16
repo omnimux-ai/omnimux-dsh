@@ -288,6 +288,9 @@ export async function finishMediaTask(capability, route, input) {
     taskId: input.taskId,
     capability,
     signal: input.signal,
+    // This is the reconcile entry a canvas node reports through, so it opts into
+    // the detail read that names a terminal failure's cause (Issue #2092).
+    resolveFailureReason: true,
     ...(input.submittedAt !== undefined ? { submittedAt: input.submittedAt } : {}),
     ...(input.deadlineMs !== undefined ? { deadlineMs: input.deadlineMs } : {}),
     ...(input.pollIntervalMs !== undefined ? { pollIntervalMs: input.pollIntervalMs } : {}),

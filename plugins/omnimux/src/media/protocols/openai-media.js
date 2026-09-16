@@ -8,7 +8,15 @@ import {
 import { OmnimuxError } from '../errors.js'
 import { classifyQuotaFailure } from '../../errors/quota-classifier.js'
 import { getJson } from '../job.js'
-import { pickMediaUrl, pickTaskId, pickTaskStatus, TASK_PATH } from '../vendors/omnimux.js'
+import {
+  describeTaskFailure,
+  pickMediaUrl,
+  pickTaskFailureReason,
+  pickTaskId,
+  pickTaskStatus,
+  TASK_PATH,
+  taskDetailUrl,
+} from '../vendors/omnimux.js'
 import {
   DEFAULT_POLL_INTERVAL_MS,
   DEFAULT_RETRY_BUDGET_MS,
@@ -49,6 +57,46 @@ async function pollOnceWithRetry(options, url, attemptBudgetMs) {
 }
 
 /**
+ * Upstream reason for a terminal task failure — best effort, never load-bearing.
+ *
+ * Issue #2092: the poll endpoint is the shallow façade and answered
+ * `data.error: null` for a `minimax-h3` video task whose detail record carried
+ * `error.message` ("reference_image_urls: Failed to download the file…"), so the
+ * user saw a bare "task failed" with no cause. One extra GET closes that gap.
+ *
+ * The reason is read from the poll body first, which costs nothing. The detail
+ * read is **opt-in** (`resolveFailureReason: true`): the default poll contract is
+ * one request per attempt (Issue #831), and only a caller that owns the
+ * user-facing error surface should spend the second one.
+ *
+ * Every failure mode here is swallowed on purpose: enriching a message must
+ * never replace the original failure with an unrelated one.
+ *
+ * @param {object} options Poll options (see `pollOpenAiMediaTask`).
+ * @param {unknown} json Terminal task body.
+ * @returns {Promise<string | undefined>}
+ */
+async function resolveFailureReason(options, json) {
+  const fromBody = pickTaskFailureReason(json)
+  if (fromBody) return fromBody
+  if (options.resolveFailureReason !== true) return undefined
+  const detailUrl = taskDetailUrl(json, {
+    capability: options.capability,
+    baseUrl: options.baseUrl,
+    taskId: options.taskId,
+  })
+  if (!detailUrl) return undefined
+  try {
+    const detail = await getJson(options.fetcher, detailUrl, options.apiKey, options.signal, {
+      requestTimeoutMs: options.requestTimeoutMs,
+    })
+    return pickTaskFailureReason(detail)
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Poll one openai-media task until it reaches a terminal state, or until the
  * poll deadline expires.
  *
@@ -78,6 +126,10 @@ async function pollOnceWithRetry(options, url, attemptBudgetMs) {
  * @param {number} [options.pollIntervalMs]
  * @param {number} [options.requestTimeoutMs]
  * @param {number} [options.retryBudgetMs]
+ * @param {boolean} [options.resolveFailureReason] Set `true` to read a terminal
+ *   failure's reason off the task detail record when the poll body carries none.
+ *   Off by default: the poll contract is one request per attempt (Issue #831),
+ *   so only a caller that renders the error to a user opts in.
  */
 export async function pollOpenAiMediaTask(options) {
   const interval = Number.isFinite(options.pollIntervalMs) && /** @type {number} */ (options.pollIntervalMs) > 0
@@ -127,7 +179,12 @@ export async function pollOpenAiMediaTask(options) {
         const classified = classifyQuotaFailure({ body: json })
         if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
         if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
-        throw new OmnimuxError('omnimux-failed', `${options.capability} task ${options.taskId} failed`)
+        const reason = await resolveFailureReason(options, json)
+        throw new OmnimuxError('omnimux-failed', describeTaskFailure({
+          capability: options.capability,
+          taskId: options.taskId,
+          ...(reason ? { reason } : {}),
+        }))
       }
     }
     // Never sleep past the deadline: the last wait must not overshoot it.
@@ -237,6 +294,9 @@ export function createOpenAiMediaRuntime(options) {
         taskId,
         capability,
         signal: context.signal,
+        // This runtime's caller is an execute path that renders the failure to a
+        // user, so it opts into the detail read that names the cause.
+        resolveFailureReason: true,
       })
       const url = pickMediaUrl(done)
       if (!url) {
