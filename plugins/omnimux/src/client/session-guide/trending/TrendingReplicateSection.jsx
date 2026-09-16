@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
+import { TrendingCarousel } from './TrendingCarousel.jsx'
 import { TrendingSkeletonGrid } from './TrendingSkeleton.jsx'
 import { TrendingSentinel } from './TrendingSentinel.jsx'
 import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
@@ -117,6 +118,21 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     setActiveTab(tab)
     try {
       sessionStorage.setItem('omnimux-guide-tab', tab)
+    } catch {}
+  }
+
+  const [layoutMode, setLayoutMode] = useState(() => {
+    try {
+      return localStorage.getItem('omnimux-trending-layout') || 'grid'
+    } catch {
+      return 'grid'
+    }
+  })
+
+  const handleLayoutModeChange = (mode) => {
+    setLayoutMode(mode)
+    try {
+      localStorage.setItem('omnimux-trending-layout', mode)
     } catch {}
   }
   const sectionRef = useRef(null)
@@ -530,6 +546,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
               regionOptions={regionOptions}
               industryOptions={industryOptions}
               viewOptions={viewOptions}
+              layoutMode={layoutMode}
+              onLayoutModeChange={handleLayoutModeChange}
             />
           </div>
         ) : null)}
@@ -553,17 +571,26 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
           ) : null}
 
           {showGrid ? (
-            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${feed.loading ? ' is-refreshing' : ''}`}>
-              {items.map((item) => (
-                <TrendingVideoCard
-                  key={item.id}
-                  item={item}
-                  t={t}
-                  active={dockedItem?.id === item.id}
-                  onRecreate={handleRecreate}
-                />
-              ))}
-            </div>
+            layoutMode === 'carousel' ? (
+              <TrendingCarousel
+                items={items}
+                t={t}
+                activeId={dockedItem?.id}
+                onRecreate={handleRecreate}
+              />
+            ) : (
+              <div className={`omnimux-trending-grid omnimux-trending-grid-enter${feed.loading ? ' is-refreshing' : ''}`}>
+                {items.map((item) => (
+                  <TrendingVideoCard
+                    key={item.id}
+                    item={item}
+                    t={t}
+                    active={dockedItem?.id === item.id}
+                    onRecreate={handleRecreate}
+                  />
+                ))}
+              </div>
+            )
           ) : null}
 
           {showSentinel ? (

@@ -2592,6 +2592,159 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   opacity:0.65;
   transition:opacity 180ms ease-out;
 }
+
+/* 卡内多图轮播：叠放交叉淡入 + 悬停浮现左右翻图按钮 */
+.omnimux-trending-cover-img.is-carousel-layer {
+  opacity:0;
+  z-index:1;
+}
+.omnimux-trending-cover-img.is-carousel-layer.is-loaded {
+  opacity:1;
+}
+.omnimux-trending-card-carousel-nav {
+  position:absolute; top:50%; z-index:4;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:999px;
+  border:1px solid var(--omnimux-trending-cover-line);
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 72%, transparent);
+  color:var(--dsw-static-neutral-00);
+  backdrop-filter:blur(10px);
+  cursor:pointer;
+  opacity:0; pointer-events:none;
+  transform:translateY(-50%) scale(0.9);
+  transition:opacity 200ms ease-out, transform 200ms ease-out, background-color 160ms ease-out;
+}
+.omnimux-trending-card-carousel-nav.is-prev { left:8px; }
+.omnimux-trending-card-carousel-nav.is-next { right:8px; }
+.omnimux-trending-card-carousel-nav > svg { width:16px; height:16px; }
+/* 悬停或键盘聚焦时按钮才浮现：静置的卡片保持零控件噪点 */
+.omnimux-trending-card:hover .omnimux-trending-card-carousel-nav,
+.omnimux-trending-card:focus-within .omnimux-trending-card-carousel-nav {
+  opacity:1; pointer-events:auto;
+  transform:translateY(-50%) scale(1);
+}
+.omnimux-trending-card-carousel-nav:hover {
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 88%, transparent);
+  transform:translateY(-50%) scale(1.08);
+}
+.omnimux-trending-card-carousel-dots {
+  position:absolute; left:50%; top:14px; z-index:3;
+  display:inline-flex; align-items:center; gap:4px;
+  transform:translateX(-50%);
+  opacity:0;
+  transition:opacity 200ms ease-out;
+  pointer-events:none;
+}
+.omnimux-trending-card:hover .omnimux-trending-card-carousel-dots,
+.omnimux-trending-card:focus-within .omnimux-trending-card-carousel-dots {
+  opacity:1;
+}
+.omnimux-trending-carousel-dot {
+  display:block; width:5px; height:5px; border-radius:999px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 40%, transparent);
+  transition:background-color 180ms ease-out, width 180ms ease-out;
+}
+.omnimux-trending-carousel-dot.is-active {
+  width:14px;
+  background:var(--dsw-static-neutral-00);
+}
+
+/* 爆款对标横向轮播视图 */
+.omnimux-trending-carousel-wrapper {
+  position:relative; width:100%; overflow:hidden;
+  border-radius:16px;
+  animation:omnimux-grid-fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.omnimux-trending-carousel-track {
+  display:flex; gap:16px; overflow-x:auto;
+  scroll-behavior:smooth;
+  scroll-snap-type:x mandatory;
+  padding:4px 2px 14px;
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.omnimux-trending-carousel-track::-webkit-scrollbar {
+  display:none;
+}
+.omnimux-trending-carousel-slide {
+  flex:0 0 calc((100% - 4 * 16px) / 5);
+  min-width:180px; max-width:280px;
+  scroll-snap-align:start;
+}
+@media (max-width: 1200px) {
+  .omnimux-trending-carousel-slide {
+    flex:0 0 calc((100% - 3 * 16px) / 4);
+  }
+}
+@media (max-width: 900px) {
+  .omnimux-trending-carousel-slide {
+    flex:0 0 calc((100% - 2 * 16px) / 3);
+  }
+}
+@media (max-width: 640px) {
+  .omnimux-trending-carousel-slide {
+    flex:0 0 calc((100% - 16px) / 2);
+  }
+}
+
+/* 轮播左右切换按钮：悬停浮现，圆形毛玻璃质感 */
+.omnimux-trending-carousel-nav {
+  position:absolute; top:50%; z-index:10;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:38px; height:38px; border-radius:999px;
+  border:1px solid var(--omnimux-trending-cover-line);
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 78%, transparent);
+  color:var(--dsw-static-neutral-00);
+  backdrop-filter:blur(12px);
+  cursor:pointer;
+  box-shadow:0 6px 20px var(--omnimux-trending-menu-shadow);
+  opacity:0; pointer-events:none;
+  transform:translateY(-50%) scale(0.88);
+  transition:opacity 220ms ease-out, transform 220ms ease-out, background-color 160ms ease-out;
+}
+.omnimux-trending-carousel-nav.is-prev { left:10px; }
+.omnimux-trending-carousel-nav.is-next { right:10px; }
+
+/* 鼠标悬停轮播区域时，可用按钮平滑显现 */
+.omnimux-trending-carousel-wrapper:hover .omnimux-trending-carousel-nav:not(:disabled) {
+  opacity:1; pointer-events:auto;
+  transform:translateY(-50%) scale(1);
+}
+.omnimux-trending-carousel-nav:hover {
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 90%, transparent);
+  transform:translateY(-50%) scale(1.06);
+}
+.omnimux-trending-carousel-nav:disabled {
+  opacity:0 !important; pointer-events:none !important;
+}
+.omnimux-trending-carousel-nav > svg {
+  width:20px; height:20px;
+}
+
+/* 视图格式切换胶囊 */
+.omnimux-trending-view-switch {
+  display:inline-flex; align-items:center; gap:2px;
+  padding:3px; border-radius:10px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 4%, transparent);
+  border:1px solid var(--omnimux-trending-cover-line);
+}
+.omnimux-trending-view-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:7px;
+  border:0; background:transparent; cursor:pointer;
+  color:var(--dsw-alias-label-tertiary);
+  transition:background-color 160ms ease-out, color 160ms ease-out;
+}
+.omnimux-trending-view-btn > svg {
+  width:14px; height:14px;
+}
+.omnimux-trending-view-btn:hover {
+  color:var(--dsw-alias-label-primary);
+  background:var(--dsw-alias-interactive-bg-hover);
+}
+.omnimux-trending-view-btn.is-active {
+  color:var(--dsw-alias-label-primary);
+  background:var(--dsw-alias-interactive-bg-active);
+}
 .omnimux-trending-card {
   position:relative; display:block; aspect-ratio:9/16; overflow:hidden;
   border-radius:16px; background:var(--omnimux-trending-cover-base);
@@ -2616,6 +2769,14 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   opacity:0; transition:opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-trending-cover-img.is-loaded {
+  opacity:1;
+}
+.omnimux-trending-cover-video {
+  position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:cover;
+  opacity:0; transition:opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events:none; z-index:1;
+}
+.omnimux-trending-cover-video.is-playing {
   opacity:1;
 }
 
@@ -2687,6 +2848,26 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   padding:3px 9px; border-radius:999px; font-size:11px; font-weight:500;
   color:var(--omnimux-trending-cover-text); background:var(--omnimux-trending-region-bg);
   border:1px solid var(--omnimux-trending-cover-line); backdrop-filter:blur(8px);
+}
+.omnimux-trending-card-playing-indicator {
+  position:absolute; right:12px; top:12px; z-index:2;
+  display:inline-flex; align-items:flex-end; justify-content:center; gap:2.5px;
+  width:24px; height:24px; padding-bottom:5px; box-sizing:border-box;
+  border-radius:999px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 65%, transparent);
+  backdrop-filter:blur(8px);
+  border:1px solid var(--omnimux-trending-cover-line);
+  pointer-events:none;
+}
+.omnimux-trending-playing-bar {
+  display:block; width:2px; height:6px; border-radius:1px;
+  background:var(--dsw-static-neutral-00);
+}
+.omnimux-trending-playing-bar.is-tall {
+  height:12px;
+}
+.omnimux-trending-playing-bar:last-child {
+  height:8px;
 }
 .omnimux-trending-card-body {
   position:absolute; inset-inline:0; bottom:0; padding:12px;

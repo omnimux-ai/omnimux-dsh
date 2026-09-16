@@ -1,0 +1,46 @@
+{
+  "task": "爆款对标视频：卡内多图轮播 + 鼠标悬停自动播放 + 整排横滑浏览格式",
+  "spec": "specs/trending-video-hover-autoplay.spec.md",
+  "verifiedAt": "2026-09-16T21:52+08:00",
+  "browser": "ego-browser (Chromium)",
+  "target": "本机真实素材驱动的交互原型（全部素材来自 ~/.omnimux-dev 灵感库真实对标视频）",
+  "screenshot": "docs/evidence/trending-hover-autoplay-hover-verified.png",
+  "results": {
+    "视频卡悬停自动播放": {
+      "method": "派发 mouseenter 后读取 HTMLMediaElement 状态",
+      "src": "./trending-demo-assets/clip-1.mp4",
+      "readyState": 4,
+      "paused": false,
+      "currentTimeSeconds": 1.039,
+      "cardClasses": ["is-playing"],
+      "conclusion": "本地 mp4 在悬停后确实开始播放，currentTime 真实递增"
+    },
+    "多图卡卡内翻图": {
+      "method": "点击右翻按钮后读取可见图层与分页圆点",
+      "before": { "activeLayerIndex": 0, "activeSrc": "album1-1.jpg" },
+      "afterOneClick": { "activeLayerIndex": 1, "activeSrc": "album1-2.jpg" },
+      "afterLoopingToEnd": { "activeLayerIndex": 0 },
+      "conclusion": "逐张切换生效且到底正确循环回第一张"
+    },
+    "页码序号移除": {
+      "method": "查询页码胶囊节点与卡片文本",
+      "countBadgeNodes": 0,
+      "anyNumericCountText": false,
+      "dotsOnAlbum": 5,
+      "navButtonsOnAlbum": 2,
+      "conclusion": "页码序号已彻底移除，翻图按钮与位置圆点保留"
+    },
+    "本地图片可用性": {
+      "method": "逐一读取 naturalWidth",
+      "total": 34,
+      "decoded": 34,
+      "failed": 0,
+      "conclusion": "全部图片真实解码成功，无破图"
+    },
+    "素材本地化": {
+      "files": 25,
+      "bytes": 2936013,
+      "conclusion": "全部素材落为本地文件，断网可用"
+    }
+  }
+}
