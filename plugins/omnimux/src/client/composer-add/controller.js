@@ -46,8 +46,11 @@ export function createComposerAddController(options) {
   const text = (key, vars) => t(key, vars).replace(/\{(\w+)\}/g, (match, name) => (
     vars?.[name] == null ? match : String(vars[name])
   ))
-  const visible = (operation) => !disposed && owner === operation
-    && getCurrentSessionId() === operation.sessionId
+  const visible = (operation) => {
+    if (disposed || owner !== operation) return false
+    const current = getCurrentSessionId()
+    return !usableSession(current) || current === operation.sessionId
+  }
   const rowsFor = (sessionId) => store.getSnapshot(sessionId)
   const entityIds = (sessionId) => new Set(rowsFor(sessionId).map(row => row.entityId).filter(Boolean))
 
@@ -82,25 +85,43 @@ export function createComposerAddController(options) {
     })
   }
 
-  function begin(sessionId) {
-    if (disposed) return null
-    if (!sessionId || sessionId === 'default') {
-      notify(text('composerAdd.needSession'))
+  function usableSession(id) {
+    return Boolean(id) && id !== 'default'
+  }
+
+  function resolveSessionId(sessionId) {
+    const current = getCurrentSessionId()
+    if (usableSession(sessionId)) {
+      if (!usableSession(current) || current === sessionId) return sessionId
       return null
     }
-    if (getCurrentSessionId() !== sessionId) return null
-    if (owner || importingSessions.has(sessionId)) {
+    return usableSession(current) ? current : null
+  }
+
+  function begin(sessionId) {
+    if (disposed) return null
+    const target = resolveSessionId(sessionId)
+    if (!target) {
+      if (!usableSession(getCurrentSessionId())) notify(text('composerAdd.needSession'))
+      return null
+    }
+    if (owner) {
+      if (owner.sessionId === target) return null
       notify(text('composerAdd.busy'))
       return null
     }
-    if (rowsFor(sessionId).length >= MAX_ATTACHMENTS) {
+    if (importingSessions.has(target)) {
+      notify(text('composerAdd.busy'))
+      return null
+    }
+    if (rowsFor(target).length >= MAX_ATTACHMENTS) {
       notify(text('composerAdd.toast.quota'))
       return null
     }
-    const operation = { id: ++revision, sessionId, kind: 'library', importing: false, selection: new AbortController() }
+    const operation = { id: ++revision, sessionId: target, kind: 'library', importing: false, selection: new AbortController() }
     owner = operation
     options.onBegin?.()
-    stopAttachments = store.subscribe(sessionId, () => render(operation))
+    stopAttachments = store.subscribe(target, () => render(operation))
     return operation
   }
 
@@ -171,7 +192,8 @@ export function createComposerAddController(options) {
   }
 
   const stopSession = options.subscribeCurrentSession(() => {
-    if (owner && getCurrentSessionId() !== owner.sessionId) close(owner)
+    const current = getCurrentSessionId()
+    if (owner && usableSession(current) && current !== owner.sessionId) close(owner)
   })
 
   return {

@@ -26,7 +26,7 @@ import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installWebSocketHmr } from '../hmr/client.js'
 import { injectUiContextStyle } from './composer-envelope.js'
 import { installComposerAddCapture } from './composer-add/install.js'
-import { listenComposerAddCommands } from './composer-add/commands.js'
+import { installComposerAddCommands } from './composer-add/commands.js'
 import { createAttachmentAdmission } from './composer-add/attachment-admission.js'
 import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.jsx'
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
@@ -269,7 +269,7 @@ export function apply(ctx) {
       guideSessions = inner.sessions
       inner.effect(() => {
         const controller = installComposerAddCapture(document, { t, store: attachmentStore, sessions: inner.sessions })
-        const stopCommands = listenComposerAddCommands(inner, controller)
+        const stopCommands = installComposerAddCommands(inner, controller)
         return () => {
           stopCommands()
           guideSessions = null

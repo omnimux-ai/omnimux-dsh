@@ -17,6 +17,8 @@ describe('composer add integration boundaries', () => {
   it('uses official command events without intercepting buttons or contributing a second menu', () => {
     assert.doesNotMatch(installSource, /MutationObserver|stopImmediatePropagation|omnimux:composer-add-(file|folder|library)/)
     assert.doesNotMatch(commandsSource, /popupSelect|commandUi\.register/)
+    assert.match(commandsSource, /commandUi\.decorate/)
+    assert.match(indexSource, /installComposerAddCommands/)
     assert.doesNotMatch(indexSource, /conversation\.input\.add-menu|onAddFolder/)
   })
 })

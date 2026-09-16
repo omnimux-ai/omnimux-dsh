@@ -109,6 +109,30 @@ describe('composer add controller', () => {
     f.controller.dispose()
   })
 
+  it('opens on the current session when the click carries no session id', () => {
+    const f = setup()
+    f.controller.openLibrary(undefined)
+    assert.ok(f.model)
+    f.controller.dispose()
+  })
+
+  it('opens on the click session when the listed current session is empty', () => {
+    const f = setup()
+    f.switchTo(undefined)
+    f.controller.openLibrary('a')
+    assert.ok(f.model)
+    f.controller.dispose()
+  })
+
+  it('notifies when neither the click nor the listed current session is usable', () => {
+    const f = setup()
+    f.switchTo('default')
+    f.controller.openLibrary(undefined)
+    assert.equal(f.model, null)
+    assert.equal(f.notices.at(-1), zh['composerAdd.needSession'])
+    f.controller.dispose()
+  })
+
   it('allows only one visible operation and ignores a closed modal confirmation', async () => {
     const f = setup()
     f.controller.openLibrary('a')

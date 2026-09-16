@@ -1,0 +1,19 @@
+{
+  "issue": 2102,
+  "feature": "composer-add-from-library-direct",
+  "verifiedAt": "2026-09-16T23:16:39+08:00",
+  "browser": "ego-browser",
+  "spaceId": 299,
+  "demo": "tmp/library-picker-direct-demo.html",
+  "interaction": "click 从资产库添加",
+  "result": {
+    "dialogLabel": "从资产库添加",
+    "width": 720,
+    "height": 520,
+    "hidden": false
+  },
+  "screenshots": [
+    "docs/evidence/library-picker-direct-menu.png",
+    "docs/evidence/library-picker-direct-open.png"
+  ]
+}
