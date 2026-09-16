@@ -11,6 +11,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { injectWorkflowStyles } from '../styles.js'
+import { appIdFromTabId, forgetOpenAppTab, registerOpenAppTab } from './appLibrary.js'
+import { getBetterSidebar } from './projectCanvas.js'
 
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
@@ -78,34 +80,49 @@ export function AppTab(props) {
   }, [])
 
   const seed = props?.seed || props?.tab || props
+  const tabId = typeof seed?.id === 'string' ? seed.id : ''
   const explicitManifest = seed?.extra?.manifest || props?.extra?.manifest || props?.manifest
-  const targetAppId = seed?.extra?.appId
-    || props?.extra?.appId
-    || seed?.id?.replace(/^app_/, '')
-    || props?.tab?.id?.replace(/^app_/, '')
+  // 标签页 id 里绑定的应用：只有插件自有面板布局才是 `app_<appId>`。
+  const tabBoundAppId = appIdFromTabId(seed?.id)
+  // 应用身份：宿主原生 surface 会丢掉 seed.id 与 extra，只把 `meta` 转给标签页，
+  // 所以 meta.appId 是那条布局下唯一的身份通道。
+  const seedAppId = (typeof seed?.meta?.appId === 'string' && seed.meta.appId)
+    || (typeof props?.meta?.appId === 'string' && props.meta.appId)
+    || tabBoundAppId
 
+  const [appId, setAppId] = useState(seedAppId)
   const [manifest, setManifest] = useState(() => {
-    return explicitManifest || readCachedManifest(targetAppId)
+    return explicitManifest || readCachedManifest(seedAppId)
   })
 
-  // Listen to manifest updates via custom event
+  // 标签页重挂载（宿主按新导航参数重建记录）时同步应用身份。
+  useEffect(() => {
+    if (!seedAppId) return
+    setAppId((prev) => (prev === seedAppId ? prev : seedAppId))
+  }, [seedAppId])
+
+  // 应用标签页打开事件：宿主对同一个 kind 只保留一个标签页，重复打开是
+  // 「聚焦已存在 + 刷新导航参数」——记录表在已存在时不会重写 meta，所以
+  // 标签页还挂着的时候必须靠这条事件换到被点应用。
+  // 自有面板布局里每个应用各自一个标签页，那种布局只认领自己绑定的应用。
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
     const onAppOpen = (e) => {
       const detail = e?.detail
-      if (detail?.manifest) {
-        if (!targetAppId || detail.id === targetAppId || detail.manifest?.appId === targetAppId) {
-          setManifest(detail.manifest)
-        }
-      }
+      const nextId = typeof detail?.appId === 'string' ? detail.appId : ''
+      if (!nextId) return
+      if (tabBoundAppId && tabBoundAppId !== nextId) return
+      setAppId(nextId)
+      const next = detail?.manifest || readCachedManifest(nextId)
+      if (next) setManifest(next)
     }
     window.addEventListener('omnimux-app-open', onAppOpen)
     return () => {
       window.removeEventListener('omnimux-app-open', onAppOpen)
     }
-  }, [targetAppId])
+  }, [tabBoundAppId])
 
-  // Sync if explicitManifest arrives later
+  // 应用身份变化（或显式 manifest 后到）时同步面板内容。
   useEffect(() => {
     if (explicitManifest) {
       setManifest((prev) => {
@@ -116,11 +133,35 @@ export function AppTab(props) {
         }
         return explicitManifest
       })
-    } else if (!manifest && targetAppId) {
-      const cached = readCachedManifest(targetAppId)
-      if (cached) setManifest(cached)
+      return
     }
-  }, [explicitManifest, targetAppId])
+    if (!appId) return
+    const cached = readCachedManifest(appId)
+    if (!cached) return
+    setManifest((prev) => (
+      prev && prev.appId === cached.appId && prev.version === cached.version && prev.updatedAt === cached.updatedAt
+        ? prev
+        : cached
+    ))
+  }, [explicitManifest, appId])
+
+  // 把 chip 标题改成应用名：宿主记录表首次铸造时不通知订阅者，不主动改名的话
+  // 标签页会一直停在描述符兜底名「AI 应用」（宿主文档化的自改名路径就是 updateTab）。
+  const manifestName = manifest?.metadata?.name
+  useEffect(() => {
+    if (!tabId || !manifestName) return
+    const service = getBetterSidebar(props?.ctx)
+    if (!service || typeof service.updateTab !== 'function') return
+    service.updateTab(tabId, { title: manifestName, meta: { appId } })
+  }, [tabId, appId, manifestName, props?.ctx])
+
+  // 登记「哪个标签页正开着哪个应用」：宿主给的标签页 id 只有这里读得到，
+  // 删除应用时按它关闭。卸载时**不**注销——删除操作发生时应用标签页通常正在
+  // 后台（库页在前台），注销会让关闭动作丢掉目标。
+  useEffect(() => {
+    if (!tabId) return
+    registerOpenAppTab(tabId, appId)
+  }, [tabId, appId])
 
   // Form schema and default values
   const properties = useMemo(() => manifest?.formSchema?.properties || EMPTY_PROPS, [manifest?.formSchema?.properties])

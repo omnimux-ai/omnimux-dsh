@@ -27,9 +27,11 @@ export interface CanvasAppProps {
   locale?: Locale;
   /** 专属工作区/画布 ID（实现各个项目与创作页之间 100% 独立的物理隔离） */
   workspaceId?: string;
+  /** 「项目」页「AI应用」卡片「编辑」的目标工作流组 id（纯数据 prop）。 */
+  focusGroupId?: string;
 }
 
-const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId }) => {
+const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, focusGroupId }) => {
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(propWorkspaceId);
 
   useEffect(() => {
@@ -141,6 +143,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId })
           <CanvasEditor
             catalog={catalog}
             workspaceId={workspace?.id ?? null}
+            focusGroupId={focusGroupId}
             onExecuteNodeIds={(nodeIds) => {
               // M4 组/子集执行入口（右键菜单）：subset 模式自动补传递上游闭包。
               void execution.startExecution({ mode: 'subset', nodeIds });
