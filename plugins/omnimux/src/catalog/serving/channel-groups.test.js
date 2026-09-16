@@ -187,4 +187,64 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.deepEqual(candidates, ['custom-unregistered-test-model'])
     })
   })
+
+  // H3 全系列按分组接入：两条线是上游独立在售型号（enable_groups 均为 default），
+  // 靠分组自带的 wireModel 指向各自的上游型号；每个分组携带自己的契约。
+  describe('MiniMax H3 series as groups', () => {
+    it('declares both lines, each with its own upstream model and contract', () => {
+      const groups = getModelChannelGroups('minimax-h3')
+      assert.equal(groups.length, 2)
+      const byId = new Map(groups.map((group) => [group.id, group]))
+
+      const standard = byId.get('standard')
+      assert.equal(standard.wireGroup, 'default')
+      // 标准版即产品本身，不需要型号覆盖
+      assert.equal(standard.wireModel, undefined)
+      // 标准版沿用模型契约，不额外施加分组约束
+      assert.equal(standard.constraints, undefined)
+
+      const task = byId.get('task')
+      assert.equal(task.wireModel, 'minimax-h3-task')
+      assert.equal(task.wireGroup, 'default')
+      assert.equal(task.pricing?.billingMode, 'per_task')
+      // 任务版的独立契约：固定 15 秒、按其上游 operations 收窄、分辨率随上游
+      assert.deepEqual(task.constraints.parameters.duration, { fixed: 15 })
+      assert.deepEqual(task.constraints.parameters.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(task.constraints.operations, [
+        'text_to_video',
+        'first_frame',
+        'first_last_frame',
+        'video_multi_ref',
+      ])
+      // 上游未公布该线路稳定率，不得编造 SLA
+      assert.equal(task.sla, undefined)
+    })
+
+    it('routes each line to its own upstream model', () => {
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['standard'] }).candidates,
+        ['minimax-h3@default'],
+      )
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['task'] }).candidates,
+        ['minimax-h3-task@default'],
+      )
+      // 显式点名分组同样走该线路自己的上游型号，而不是产品 id
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { group: 'task', allowedGroups: ['task'] }).candidates,
+        ['minimax-h3-task@default'],
+      )
+    })
+
+    it('prefers the cheaper, more stable standard line when both are allowed', () => {
+      const plan = resolveChannelPlan('minimax-h3', { allowedGroups: ['standard', 'task'] })
+      assert.deepEqual([...plan.candidates].sort(), ['minimax-h3-task@default', 'minimax-h3@default'].sort())
+      assert.equal(plan.candidates[0], 'minimax-h3@default')
+      // 低价优先同样落在标准版（任务版按次更贵）
+      assert.equal(
+        resolveChannelCandidates('minimax-h3', { strategy: 'cost_first' })[0],
+        'minimax-h3@default',
+      )
+    })
+  })
 })

@@ -179,4 +179,26 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     // 下架线路与仍在售的标准版混选时，只剩标准版（无约束）
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
+
+  // H3 全系列按分组接入：任务版是独立在售型号，走分组路由并自带契约；
+  // 画布必须把该契约落到节点上（时长锁 15 秒、分辨率随上游、生成方式收窄）。
+  it('applies the H3 task line contract and leaves the standard line unconstrained', () => {
+    const task = resolveLineConstraints('minimax-h3', { allowedGroups: ['task'] });
+    assert.deepEqual(task.parameters.duration, { fixed: 15 });
+    assert.deepEqual(task.parameters.resolution, { only: ['768P', '2K'] });
+    assert.deepEqual(task.operations, [
+      'text_to_video',
+      'first_frame',
+      'first_last_frame',
+      'video_multi_ref',
+    ]);
+
+    // 标准版沿用模型契约（4–15 秒可选），不施加分组约束
+    assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['standard'] }), {});
+    assert.deepEqual(resolveLineConstraints('minimax-h3', undefined), {});
+
+    // 两组同选时取交集：任务版固定 15 秒会赢（标准版不施加时长约束）
+    const mixed = resolveLineConstraints('minimax-h3', { allowedGroups: ['standard', 'task'] });
+    assert.deepEqual(mixed.parameters.duration, { fixed: 15 });
+  });
 });
