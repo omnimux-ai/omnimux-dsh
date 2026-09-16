@@ -80,18 +80,28 @@ export function shareErrorText(row) {
 /** Locale key per stage, in the order a publish walks them. */
 const STAGE_KEYS = Object.freeze({
   preparing: 'modal.share.preparing',
+  generating_prompt: 'modal.share.generatingPrompt',
   uploading: 'modal.share.uploading',
   publishing: 'modal.share.publishing',
 })
 
 /** Every stage of a publish, in order. */
-export const SHARE_STAGE_ORDER = Object.freeze(['preparing', 'uploading', 'publishing'])
+export const SHARE_STAGE_ORDER = Object.freeze([
+  'preparing',
+  'generating_prompt',
+  'uploading',
+  'publishing',
+])
 
 /**
  * The cloud publish path, which has no upload leg: the entry's media is already
  * in the cloud, so the job only probes it and publishes it.
  */
-export const CLOUD_SHARE_STAGE_ORDER = Object.freeze(['preparing', 'publishing'])
+export const CLOUD_SHARE_STAGE_ORDER = Object.freeze([
+  'preparing',
+  'generating_prompt',
+  'publishing',
+])
 
 /**
  * Which publish path a row belongs to.

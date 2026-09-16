@@ -35,6 +35,8 @@ export const SHARE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024
  * `onStage` as the work happens, so a caller can render real progress.
  */
 export const SHARE_STAGES = Object.freeze({
+  PREPARING: 'preparing',
+  GENERATING_PROMPT: 'generating_prompt',
   UPLOADING: 'uploading',
   PUBLISHING: 'publishing',
 })

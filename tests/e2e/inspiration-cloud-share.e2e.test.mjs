@@ -322,8 +322,10 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     assert.equal(body.media_url, `${SITE}${PUBLICATION_PATH}genviral/videos/2789/video.mp4`)
     assert.equal(body.media_type, 'video')
     assert.equal(body.title, row.title)
-    assert.equal(body.prompt, row.caption)
-    assert.equal(body.category, 'Health & Wellness')
+    assert.match(body.prompt, /^Give it a try 🥺/)
+    assert.match(body.prompt, /电影级运镜与流畅主体动作演进/)
+    assert.equal(body.category, 'seedance 2.5')
+    assert.equal(body.model, 'seedance-2-5')
 
     // 可读性探测走的是 GET + Range（该端点对 HEAD 一律 404）。
     assert.equal(cloud.probes.length, 2, '封面与视频各探测一次')
@@ -418,7 +420,7 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     const runningRow = { ...started.body.data, share_status: 'running', share_stage: 'publishing' }
     const document = await renderModal(runningRow)
     const steps = [...document.querySelectorAll('[data-share-step]')]
-    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-step')), ['preparing', 'publishing'])
+    assert.deepEqual(steps.map((step) => step.getAttribute('data-share-step')), ['preparing', 'generating_prompt', 'publishing'])
     assert.equal(
       document.querySelector('[data-share-step="uploading"]'),
       null,
@@ -469,8 +471,8 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     const steps = [...document.querySelectorAll('[data-share-step]')]
     assert.deepEqual(
       steps.map((step) => step.getAttribute('data-share-step')),
-      ['preparing', 'uploading', 'publishing'],
-      '本地链路必须保持三步进度',
+      ['preparing', 'generating_prompt', 'uploading', 'publishing'],
+      '本地链路必须保持四步进度',
     )
   })
 

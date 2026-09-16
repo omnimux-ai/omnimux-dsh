@@ -35,32 +35,43 @@ describe('share status — presentation contract', () => {
 
     assert.deepEqual(states({ share_status: 'running', share_stage: 'preparing' }), [
       'preparing:active',
+      'generating_prompt:todo',
+      'uploading:todo',
+      'publishing:todo',
+    ])
+    assert.deepEqual(states({ share_status: 'running', share_stage: 'generating_prompt' }), [
+      'preparing:done',
+      'generating_prompt:active',
       'uploading:todo',
       'publishing:todo',
     ])
     assert.deepEqual(states({ share_status: 'running', share_stage: 'uploading' }), [
       'preparing:done',
+      'generating_prompt:done',
       'uploading:active',
       'publishing:todo',
     ])
     assert.deepEqual(states({ share_status: 'running', share_stage: 'publishing' }), [
       'preparing:done',
+      'generating_prompt:done',
       'uploading:done',
       'publishing:active',
     ])
     // A running row with no usable stage still says something: the first step.
     assert.deepEqual(states({ share_status: 'running' }), [
       'preparing:active',
+      'generating_prompt:todo',
       'uploading:todo',
       'publishing:todo',
     ])
   })
 
   it('labels the steps in the page language', () => {
-    const row = { share_status: 'running', share_stage: 'uploading' }
-    assert.deepEqual(shareSteps(row, t).map((step) => step.label), ['准备素材', '上传素材', '发布中'])
+    const row = { share_status: 'running', share_stage: 'generating_prompt' }
+    assert.deepEqual(shareSteps(row, t).map((step) => step.label), ['准备素材', '生成Prompt', '上传素材', '发布中'])
     assert.deepEqual(shareSteps(row, (key) => t(key, en)).map((step) => step.label), [
       'Preparing assets',
+      'Generating prompt',
       'Uploading assets',
       'Publishing',
     ])
@@ -132,24 +143,24 @@ describe('share status — cloud entries never render an upload step', () => {
     assert.equal(shareSourceOf({ share_source: 'cloud', is_local: true }), 'cloud')
   })
 
-  it('lists two stages for a cloud publish and three for a local one', () => {
-    assert.deepEqual(shareStageOrderOf({ share_source: 'cloud' }), ['preparing', 'publishing'])
-    assert.deepEqual(shareStageOrderOf({ share_source: 'local' }), ['preparing', 'uploading', 'publishing'])
+  it('lists three stages for a cloud publish and four for a local one', () => {
+    assert.deepEqual(shareStageOrderOf({ share_source: 'cloud' }), ['preparing', 'generating_prompt', 'publishing'])
+    assert.deepEqual(shareStageOrderOf({ share_source: 'local' }), ['preparing', 'generating_prompt', 'uploading', 'publishing'])
 
     const cloudStates = (row) => shareSteps(row, t).map((step) => `${step.id}:${step.state}`)
     assert.deepEqual(
       cloudStates({ share_status: 'running', share_stage: 'publishing', share_source: 'cloud' }),
-      ['preparing:done', 'publishing:active'],
+      ['preparing:done', 'generating_prompt:done', 'publishing:active'],
     )
     // A cloud row that somehow reported `uploading` must not invent that step.
     assert.deepEqual(
       cloudStates({ share_status: 'running', share_stage: 'uploading', share_source: 'cloud' }),
-      ['preparing:active', 'publishing:todo'],
+      ['preparing:active', 'generating_prompt:todo', 'publishing:todo'],
     )
-    // The local path keeps all three, unchanged.
+    // The local path keeps all four, unchanged.
     assert.deepEqual(
       cloudStates({ share_status: 'running', share_stage: 'publishing', share_source: 'local' }),
-      ['preparing:done', 'uploading:done', 'publishing:active'],
+      ['preparing:done', 'generating_prompt:done', 'uploading:done', 'publishing:active'],
     )
   })
 
