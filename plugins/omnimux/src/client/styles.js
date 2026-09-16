@@ -216,9 +216,6 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   width: auto;
   margin-inline: 20px;
 }
-.omnimux-assets-stage > [role="separator"][aria-orientation="horizontal"] {
-  margin-inline: 24px;
-}
 .omnimux-analytics-stage > .omnimux-analytics-stage-filter {
   margin-inline: 20px;
   padding-inline: 0;

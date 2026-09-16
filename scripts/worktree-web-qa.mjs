@@ -843,7 +843,7 @@ export async function runSidebarChromeQa(options = {}) {
       await new Promise((r) => server.close(r));
       report.cleanup.httpServerClosed = !server.listening;
     }
-    rmSync(profileDir, { recursive: true, force: true });
+    rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     report.cleanup.profileRemoved = !existsSync(profileDir);
     report.cleanup.allReleased = Object.values(report.cleanup).every(Boolean);
     if (!report.cleanup.allReleased) {
@@ -1101,7 +1101,7 @@ export async function runRightbarSeatQa(options = {}) {
       await new Promise((r) => server.close(r));
       report.cleanup.httpServerClosed = !server.listening;
     }
-    rmSync(profileDir, { recursive: true, force: true });
+    rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     report.cleanup.profileRemoved = !existsSync(profileDir);
     report.cleanup.allReleased = Object.values(report.cleanup).every(Boolean);
     if (!report.cleanup.allReleased) {
