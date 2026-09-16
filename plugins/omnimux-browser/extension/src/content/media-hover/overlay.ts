@@ -20,6 +20,7 @@
 
 import { MediaActionBridge, browserTransport } from './actions.ts'
 import { MediaCapsule } from './capsule.ts'
+import { CardRegionProbe, boxContains } from './card-region.ts'
 import { hoverCopy, type HoverCopy } from './copy.ts'
 import { MediaDetector } from './detector.ts'
 import { CAPSULE_SPEC, OVERLAY_Z, TIMING, computeCapsuleGeometry, type CapsuleGeometry } from './messages.ts'
@@ -70,6 +71,8 @@ export class MediaOverlay {
   private anchorElement: Element | null = null
   /** Shared probe cache: one player is measured once, not once per frame. */
   private readonly videoProbe = new VideoAnchorProbe()
+  /** Shared card-region probe: enclosing card container is walked and cached. */
+  private readonly cardProbe = new CardRegionProbe()
 
   private lastPointerX = -1
   private lastPointerY = -1
@@ -224,7 +227,7 @@ export class MediaOverlay {
       return
     }
 
-    if (this.payload !== null && this.payload.id === candidate.payload.id) {
+    if (this.anchorElement === candidate.element && this.payload !== null && this.payload.id === candidate.payload.id) {
       this.repositionNow()
       return
     }
@@ -242,13 +245,52 @@ export class MediaOverlay {
     }, TIMING.enterDebounce)
   }
 
-  private handleInvalidate(reason: 'scroll' | 'resize' | 'detach'): void {
+  private handleInvalidate(reason: 'scroll' | 'resize' | 'detach' | 'leftmedia'): void {
     if (reason === 'detach') {
       if (this.isInsideOverlay(this.hoveredElement())) return
       this.hideNow(true)
       return
     }
+    if (reason === 'leftmedia') {
+      // The pointer moved off the media element itself, but might still be inside
+      // the enclosing card or controls bar. Check the card region before scheduling leave.
+      if (this.state.phase !== 'shown' && this.state.phase !== 'interactive') return
+      if (this.lastPointerX >= 0 && this.lastPointerY >= 0 && this.isPointerInsideCard(this.lastPointerX, this.lastPointerY)) {
+        this.cancelLeave()
+        this.resetIdleTimer()
+        return
+      }
+      this.scheduleLeaveGrace()
+      return
+    }
     this.scheduleReposition()
+  }
+
+  private scheduleLeaveGrace(): void {
+    if (this.leaveTimer !== null) return
+    this.leaveTimer = this.setTimer(() => {
+      this.leaveTimer = null
+      if (this.isInsideOverlay(this.hoveredElement())) return
+      if (this.lastPointerX >= 0 && this.lastPointerY >= 0 && this.isPointerInsideCard(this.lastPointerX, this.lastPointerY)) {
+        return
+      }
+      this.hideNow(true)
+    }, TIMING.leaveGrace)
+  }
+
+  /** Whether a coordinate falls inside the active media element's unified card region. */
+  private isPointerInsideCard(x: number, y: number): boolean {
+    const element = this.anchorElement
+    if (element === null || !element.isConnected) return false
+    const rect = element.getBoundingClientRect()
+    const kind = this.payload?.type ?? (element.localName === 'video' ? 'video' : 'image')
+    const region = this.cardProbe.region(
+      element,
+      kind,
+      rect,
+      this.capsule && this.capsule.visible ? this.capsule.element : null,
+    )
+    return boxContains(region, x, y)
   }
 
   private showNow(candidate: HoverCandidate): void {
@@ -373,7 +415,7 @@ export class MediaOverlay {
       this.scheduleCollapse()
     }
 
-    // Pending 阶段：鼠标正在防抖倒计时中，若滑出画面立即取消，绝不闪烁
+    // Pending 阶段：鼠标正在防抖倒计时中，若滑出卡片区域立即取消，绝不闪烁
     if (this.state.phase === 'pending' && this.anchorElement !== null) {
       if (!this.anchorElement.isConnected) {
         this.hideNow(true)
@@ -381,10 +423,7 @@ export class MediaOverlay {
       }
       const pEvent = event as PointerEvent
       if (typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number') {
-        const x = pEvent.clientX
-        const y = pEvent.clientY
-        const rect = this.anchorElement.getBoundingClientRect()
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+        if (!this.isPointerInsideCard(pEvent.clientX, pEvent.clientY)) {
           this.hideNow(true)
           return
         }
@@ -407,91 +446,34 @@ export class MediaOverlay {
           return
         }
 
-        if (!this.isPointNearAnchorOrCapsule(x, y)) {
-          const dist = this.distanceToAnchor(x, y)
-          if (dist > 24) {
-            this.hideNow(true)
-          } else if (this.leaveTimer === null) {
-            this.leaveTimer = this.setTimer(() => {
-              this.leaveTimer = null
-              if (this.isInsideOverlay(this.hoveredElement(), event)) return
-              this.hideNow(true)
-            }, TIMING.leaveGrace)
-          }
+        if (this.isPointerInsideCard(x, y)) {
+          this.cancelLeave()
+          this.resetIdleTimer()
           return
         }
 
-        this.cancelLeave()
-        this.resetIdleTimer()
+        // 光标离开卡片统一走平滑宽限期隐藏，杜绝因边界微动突兀闪隐
+        this.scheduleLeaveGrace()
       }
     }
-  }
-
-  private isPointNearAnchorOrCapsule(x: number, y: number): boolean {
-    if (this.anchorElement === null) return false
-    const rect = this.anchorElement.getBoundingClientRect()
-    // 为视频底部播放控制栏（含播放按钮、进度条、时间戳 0:04）提供 48px 容差，防止光标滑入控制栏时瞬间误杀
-    const padBottom = this.payload?.type === 'video' ? 48 : 8
-    const pad = 12
-    if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + padBottom) {
-      return true
-    }
-    if (this.capsule !== null) {
-      const cBox = this.capsule.element.getBoundingClientRect()
-      if (x >= cBox.left - 8 && x <= cBox.right + 8 && y >= cBox.top - 8 && y <= cBox.bottom + 8) {
-        return true
-      }
-    }
-    return false
-  }
-
-  private distanceToAnchor(x: number, y: number): number {
-    if (this.anchorElement === null) return 9999
-    const rect = this.anchorElement.getBoundingClientRect()
-    const padBottom = this.payload?.type === 'video' ? 48 : 0
-    const dx = Math.max(rect.left - x, 0, x - rect.right)
-    const dy = Math.max(rect.top - y, 0, y - (rect.bottom + padBottom))
-    return Math.hypot(dx, dy)
   }
 
   private readonly onPointerOut = (event: Event): void => {
     const related = (event as PointerEvent).relatedTarget
     if (this.isInsideOverlay(related, event)) return
 
-    if (related === null) {
-      this.hideNow(true)
+    if (this.state.phase !== 'shown' && this.state.phase !== 'interactive') return
+
+    // 光标坐标仍在卡片内部（例如移至控制条控件、子元素切换、或控制栏被隐藏重排导致 relatedTarget 为 null），绝不闪退
+    if (this.lastPointerX >= 0 && this.lastPointerY >= 0 &&
+        this.isPointerInsideCard(this.lastPointerX, this.lastPointerY)) {
+      this.cancelLeave()
+      this.resetIdleTimer()
       return
     }
 
-    if (this.state.phase !== 'shown' && this.state.phase !== 'interactive') return
-
     this.cancelLeave()
-    this.leaveTimer = this.setTimer(() => {
-      this.leaveTimer = null
-      if (this.isInsideOverlay(this.hoveredElement(), event)) return
-
-      // 防误杀保护：若光标物理坐标仍位于媒体画面或视频底部播放控制条附近，绝不销毁胶囊
-      if (this.lastPointerX >= 0 && this.lastPointerY >= 0 &&
-          this.isPointNearAnchorOrCapsule(this.lastPointerX, this.lastPointerY)) {
-        return
-      }
-
-      const hovered = this.hoveredElement()
-      if (hovered && this.anchorElement) {
-        if (hovered === this.anchorElement || this.anchorElement.contains(hovered) || hovered.contains(this.anchorElement)) {
-          return
-        }
-        const hRect = hovered.getBoundingClientRect()
-        const aRect = this.anchorElement.getBoundingClientRect()
-        const padBottom = this.payload?.type === 'video' ? 56 : 8
-        if (hRect.left >= aRect.left - 16 && hRect.right <= aRect.right + 16 &&
-            hRect.top >= aRect.top - 16 && hRect.bottom <= aRect.bottom + padBottom) {
-          return
-        }
-      }
-
-      this.hideNow(true)
-    }, TIMING.leaveGrace)
+    this.scheduleLeaveGrace()
   }
 
   private hoveredElement(): Element | null {
@@ -817,7 +799,13 @@ export class MediaOverlay {
     this.clearIdleTimer()
     this.idleTimer = this.setTimer(() => {
       this.idleTimer = null
-      if (this.state.phase === 'shown') {
+      if (this.state.phase === 'shown' || this.state.phase === 'interactive') {
+        // 光标停留在卡片区域内静止，仅折叠回第一阶段圆钮，保持可见，绝不闪烁消失
+        if (this.lastPointerX >= 0 && this.lastPointerY >= 0 &&
+            this.isPointerInsideCard(this.lastPointerX, this.lastPointerY)) {
+          this.collapseCapsule()
+          return
+        }
         this.hideNow(true)
       }
     }, TIMING.idleDismiss)

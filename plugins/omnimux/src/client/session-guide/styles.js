@@ -43,11 +43,18 @@ body[data-ds-dark-theme] {
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
 
-/* 输入框与工作区选择行独立收敛：优雅居中，760px~780px 舒适打字宽度，不与下方内容区生硬对齐两侧，形成清晰视觉层次 */
-[data-omnimux-starter-host] [data-composer-card],
+/* 宽度上限与居中一律交还原生 token（引导态与常规会话态同源）：
+   这里曾写死 max-width:min(780px, ...)，把原生 .card { max-width: var(--dsh-composer-card-max-width) } 压掉，
+   导致新会话欢迎页输入框比官方原生窄。
+   还原原生 token 后与常规会话页同源：卡片封顶 var(--dsh-composer-card-max-width, 952px)，工作区行跟随原生内容宽，并保持居中。 */
+[data-omnimux-starter-host] [data-composer-card] {
+  width:100%!important;
+  max-width:var(--dsh-composer-card-max-width, 952px)!important;
+  margin-inline:auto!important;
+}
 [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
-  max-width:min(780px, calc(100% - 24px))!important;
+  max-width:var(--dsh-chat-content-width, 920px)!important;
   margin-inline:auto!important;
 }
 

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频悬浮按钮卡片区域判定优化演示</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --card-bg: rgba(22, 25, 34, 0.85);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "PingFang SC", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 36px 20px;
+      user-select: none;
+    }
+    header {
+      text-align: center;
+      max-width: 760px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    p.desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .switch-pill {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      padding: 3px;
+      border-radius: 24px;
+    }
+    .pill-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .pill-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--accent-glow);
+    }
+    .action-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .dashboard-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 880px;
+      margin-bottom: 20px;
+    }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-align: left;
+    }
+    .metric-card .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .metric-card .val {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .val.bad { color: var(--danger); }
+    .val.good { color: var(--success); }
+
+    .card-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 880px;
+      padding: 24px;
+      background: #141721;
+      border-radius: 18px;
+      border: 2px dashed rgba(255, 255, 255, 0.12);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    .card-wrapper.hovered {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+    .card-tag {
+      position: absolute;
+      top: 8px;
+      left: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      height: 440px;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-canvas-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #0f172a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 15px;
+      gap: 10px;
+    }
+    .play-watermark {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .player-controls {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 54px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 2;
+    }
+    .ctrl-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .ctrl-btn:hover { background: rgba(255, 255, 255, 0.25); }
+    .time-readout {
+      font-size: 12px;
+      font-weight: 500;
+      color: #e2e8f0;
+      letter-spacing: 0.02em;
+    }
+    .progress-bar-wrap {
+      flex: 1;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.25);
+      position: relative;
+    }
+    .progress-fill {
+      width: 18%;
+      height: 100%;
+      background: #818cf8;
+      border-radius: 2px;
+    }
+    .progress-thumb {
+      position: absolute;
+      left: 18%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    }
+
+    /* 悬浮胶囊 */
+    .capsule-pill {
+      position: absolute;
+      left: 68px;
+      bottom: 12px;
+      height: 28px;
+      border-radius: 14px;
+      background: rgba(26, 29, 36, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      gap: 6px;
+      z-index: 10;
+      opacity: 0;
+      transform: scale(0.92);
+      transition: opacity 0.18s ease, transform 0.18s ease, width 0.22s ease;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .capsule-pill.is-visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .ghost-icon {
+      width: 16px;
+      height: 16px;
+      fill: #fff;
+    }
+    .capsule-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .action-icon-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 10px;
+    }
+    .action-icon-btn:hover {
+      background: var(--accent);
+    }
+
+    .trail-hint {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .trail-hint strong {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>视频悬浮按钮卡片区域判定优化演示</h1>
+    <p class="desc">
+      真实模拟视频素材播放场景：包含视频主体画面、底部控制栏（暂停、时间戳、进度条、设置）、以及外层素材卡片留白区。移动光标观察两种算法下的按钮稳定性。
+    </p>
+    <div class="controls-row">
+      <div class="switch-pill">
+        <button id="btnBefore" class="pill-btn" onclick="setMode('before')">修复前：启发式碎片判定（易闪烁）</button>
+        <button id="btnAfter" class="pill-btn active" onclick="setMode('after')">修复后：素材卡片统一锁定（始终可见）</button>
+      </div>
+      <button class="action-btn" onclick="resetStats()">重置统计</button>
+      <button class="action-btn" id="btnAutoTour" onclick="toggleAutoTour()">▶ 自动巡游演示</button>
+    </div>
+  </header>
+
+  <div class="dashboard-metrics">
+    <div class="metric-card">
+      <div class="label">当前算法</div>
+      <div class="val" id="valMode">修复后：卡片统一锁定</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">光标命中区域</div>
+      <div class="val" id="valArea">卡片外</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">悬浮按钮状态</div>
+      <div class="val" id="valVisible">隐藏</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">卡片内抖动闪退次数</div>
+      <div class="val good" id="valJitterCount">0 次</div>
+    </div>
+  </div>
+
+  <div class="card-wrapper" id="cardWrapper">
+    <span class="card-tag">素材卡片容器（.post-card）边界</span>
+    <div class="video-viewport" id="videoViewport">
+      <div class="video-canvas-bg">
+        <div class="play-watermark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+        <span>4K 视频素材流 · 播放中</span>
+      </div>
+
+      <!-- 悬浮胶囊 -->
+      <div class="capsule-pill" id="capsulePill">
+        <svg class="ghost-icon" viewBox="0 0 24 24">
+          <path d="M12 2C7.03 2 3 6.03 3 11v9c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1c.55 0 1-.45 1-1v-1c.55 0 1-.45 1-1v-1c.55 0 1-.45 1-1V9c0-2.21 1.79-4 4-4s4 1.79 4 4v6c0 .55.45 1 1 1v1c0 .55.45 1 1 1v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-9c0-4.97-4.03-9-9-9zM9 11c-.83 0-1.5-.67-1.5-1.5S8.17 8 9 8s1.5.67 1.5 1.5S9.83 11 9 11zm6 0c-.83 0-1.5-.67-1.5-1.5S14.17 8 15 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+        <div class="capsule-actions">
+          <button class="action-icon-btn" title="加入灵感库">★</button>
+          <button class="action-icon-btn" title="复制链接">⎘</button>
+          <button class="action-icon-btn" title="带入对话">💬</button>
+        </div>
+      </div>
+
+      <!-- 底部控制条 -->
+      <div class="player-controls" id="playerControls">
+        <button class="ctrl-btn" title="暂停/播放">❚❚</button>
+        <span class="time-readout">0:13 / 1:24</span>
+        <div class="progress-bar-wrap" id="progressBar">
+          <div class="progress-track">
+            <div class="progress-fill"></div>
+            <div class="progress-thumb"></div>
+          </div>
+        </div>
+        <button class="ctrl-btn" title="字幕">CC</button>
+        <button class="ctrl-btn" title="音量">🔊</button>
+        <button class="ctrl-btn" title="设置">⚙</button>
+        <button class="ctrl-btn" title="全屏">⛶</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="trail-hint">
+    💡 提示：在<strong>卡片留白内边距</strong>、<strong>进度条</strong>与<strong>底部按钮</strong>之间来回滑动鼠标。<br>
+    在「修复前」模式下，光标进入留白或离开画面瞬间，按钮会<strong>立刻闪烁隐藏</strong>；在「修复后」模式下，只要在素材卡片范围内，按钮<strong>始终稳定显现</strong>。
+  </div>
+
+  <script>
+    let mode = 'after';
+    let jitterCount = 0;
+    let isCapsuleVisible = false;
+    let tourTimer = null;
+    let leaveTimer = null;
+
+    const cardWrapper = document.getElementById('cardWrapper');
+    const videoViewport = document.getElementById('videoViewport');
+    const playerControls = document.getElementById('playerControls');
+    const capsulePill = document.getElementById('capsulePill');
+
+    const valMode = document.getElementById('valMode');
+    const valArea = document.getElementById('valArea');
+    const valVisible = document.getElementById('valVisible');
+    const valJitterCount = document.getElementById('valJitterCount');
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btnBefore').classList.toggle('active', m === 'before');
+      document.getElementById('btnAfter').classList.toggle('active', m === 'after');
+      valMode.textContent = m === 'before' ? '修复前：启发式碎片判定' : '修复后：卡片统一锁定';
+      resetStats();
+    }
+
+    function resetStats() {
+      jitterCount = 0;
+      updateMetrics();
+    }
+
+    function updateMetrics() {
+      valVisible.textContent = isCapsuleVisible ? '保持可见' : '已隐藏';
+      valVisible.className = 'val ' + (isCapsuleVisible ? 'good' : '');
+      valJitterCount.textContent = jitterCount + ' 次';
+      valJitterCount.className = 'val ' + (jitterCount > 0 ? 'bad' : 'good');
+    }
+
+    function setCapsuleVisibility(visible, reason) {
+      if (isCapsuleVisible === visible) return;
+      // If we are hiding while the cursor is strictly inside the cardWrapper, that counts as jitter!
+      if (!visible && lastInCard && reason === 'logic_hide') {
+        jitterCount++;
+      }
+      isCapsuleVisible = visible;
+      capsulePill.classList.toggle('is-visible', visible);
+      updateMetrics();
+    }
+
+    let lastInCard = false;
+
+    document.addEventListener('mousemove', (e) => {
+      handlePointerCoordinate(e.clientX, e.clientY);
+    });
+
+    function handlePointerCoordinate(x, y) {
+      const cardRect = cardWrapper.getBoundingClientRect();
+      const videoRect = videoViewport.getBoundingClientRect();
+      const ctrlRect = playerControls.getBoundingClientRect();
+
+      const inCard = x >= cardRect.left && x <= cardRect.right && y >= cardRect.top && y <= cardRect.bottom;
+      const inVideo = x >= videoRect.left && x <= videoRect.right && y >= videoRect.top && y <= videoRect.bottom;
+      const inControls = x >= ctrlRect.left && x <= ctrlRect.right && y >= ctrlRect.top && y <= ctrlRect.bottom;
+      const inPadding = inCard && !inVideo;
+
+      lastInCard = inCard;
+      cardWrapper.classList.toggle('hovered', inCard);
+
+      // Area naming
+      if (!inCard) {
+        valArea.textContent = '卡片外区域';
+      } else if (inControls) {
+        valArea.textContent = '视频底部控制栏';
+      } else if (inVideo) {
+        valArea.textContent = '视频画面主体';
+      } else {
+        valArea.textContent = '卡片边框留白区 (Padding)';
+      }
+
+      if (leaveTimer) {
+        clearTimeout(leaveTimer);
+        leaveTimer = null;
+      }
+
+      if (mode === 'before') {
+        // ---- 修复前逻辑（碎片化启发式）：
+        // 只有严格在画面内或底部 48px 控制栏内才保留；一旦落到卡片留白区（padding），或离开 video 矩形 > 24px，立即秒杀隐藏
+        if (inPadding) {
+          // 留白区直接判为离开媒体
+          setCapsuleVisibility(false, 'logic_hide');
+        } else if (inVideo) {
+          setCapsuleVisibility(true, 'show');
+        } else {
+          setCapsuleVisibility(false, 'exit');
+        }
+      } else {
+        // ---- 修复后逻辑（卡片区域统一锁定）：
+        // 只要在整个素材卡片区域内（包括留白区、控制条、画面），一律锁住可见，零闪退！
+        if (inCard) {
+          setCapsuleVisibility(true, 'show');
+        } else {
+          // 离开卡片后走 200ms 宽限期平滑隐藏
+          leaveTimer = setTimeout(() => {
+            setCapsuleVisibility(false, 'exit');
+          }, 200);
+        }
+      }
+    }
+
+    // 自动巡游演示
+    let tourStep = 0;
+    function toggleAutoTour() {
+      const btn = document.getElementById('btnAutoTour');
+      if (tourTimer) {
+        clearInterval(tourTimer);
+        tourTimer = null;
+        btn.textContent = '▶ 自动巡游演示';
+        return;
+      }
+      btn.textContent = '⏹ 停止巡游';
+      tourStep = 0;
+
+      const cardRect = cardWrapper.getBoundingClientRect();
+      const videoRect = videoViewport.getBoundingClientRect();
+      const ctrlRect = playerControls.getBoundingClientRect();
+
+      const waypoints = [
+        { x: videoRect.left + videoRect.width / 2, y: videoRect.top + 120 }, // 画面中心
+        { x: videoRect.right - 60, y: videoRect.top + 80 },                  // 画面右侧
+        { x: cardRect.right - 10, y: videoRect.top + 120 },                  // 卡片右侧留白
+        { x: ctrlRect.left + 150, y: ctrlRect.top + 20 },                    // 控制栏进度条
+        { x: cardRect.left + 10, y: videoRect.top + 120 },                   // 卡片左侧留白
+        { x: ctrlRect.left + 30, y: ctrlRect.top + 20 },                     // 播放按钮
+        { x: cardRect.left + cardRect.width / 2, y: cardRect.bottom - 10 },  // 卡片底部留白
+        { x: videoRect.left + videoRect.width / 2, y: videoRect.top + 180 }, // 回到画面
+      ];
+
+      tourTimer = setInterval(() => {
+        const pt = waypoints[tourStep % waypoints.length];
+        handlePointerCoordinate(pt.x, pt.y);
+        tourStep++;
+      }, 400);
+    }
+  </script>
+</body>
+</html>

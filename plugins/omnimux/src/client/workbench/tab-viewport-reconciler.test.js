@@ -1,13 +1,15 @@
 /**
  * 页面级视窗模式调和器单元测试（Tab Viewport Reconciler Tests）。
  *
- * 覆盖：
- * 1. 默认全屏机制：首次进入的工作台 Tab 默认期望全屏；若面板为 push 则自动触发进入全屏；
- * 2. 单页分栏手势记录：用户在 Tab A 退出全屏后，仅 Tab A 记为 split；
- * 3. 跨 Tab 调和：从 Tab A (split) 切换到 Tab B (默认全屏) 时自动切全屏；
- * 4. 记忆恢复：从 Tab B 切回 Tab A 时自动退出全屏恢复 split 并展开会话栏；
- * 5. 调和锁防反弹：由调和器触发的模式变更绝不反向污染 Tab 的记忆；
- * 6. 生命周期管理：install 与卸载清理。
+ * 覆盖（对应 specs/right-sidebar-open-split.spec.md 的 AC-1…AC-7）：
+ * 1. AC-1 未记录偏好的工作台页签 + push：不进入全屏；
+ * 2. AC-2 未记录偏好的工作台页签 + fullscreen：退出全屏并清掉会话折叠键与快照键；
+ * 3. AC-3 用户在同一页签切换模式：记录同时带上 `explicit: true`；
+ * 4. AC-4 面板已展开时切到「显式选过全屏」的页签：恢复全屏；
+ * 5. AC-5 面板收起：完全静默；
+ * 6. AC-6 收起 → 展开的那一次同步：呈分栏，显式全屏记录也不生效；
+ * 7. AC-7 是否存在左侧会话列表选中行，结果完全一致；
+ * 8. 生命周期：install 与卸载清理。
  */
 
 import assert from 'node:assert/strict'
@@ -40,9 +42,45 @@ function setupDom(body = '') {
   return dom.window.document
 }
 
+const OPEN_PANEL = '<div data-sidebar-right-panel="push" data-sidebar-right-open><button data-sidebar-right-mode="fullscreen" id="enter"></button></div>'
+const FULLSCREEN_PANEL = '<div data-sidebar-right-panel="fullscreen" data-sidebar-right-open></div>'
+
+/**
+ * 装配一个受控调和器：`storage` 就是焦点记录表，`state.isFs` 是宿主面板当前模式。
+ * @param {Document} doc
+ * @param {{ tab: string, isFs: boolean }} initial
+ */
+function harness(doc, initial) {
+  const state = { tab: initial.tab, isFs: initial.isFs }
+  const enters = []
+  const exits = []
+  const storage = {}
+  const reconciler = createTabViewportReconciler({
+    getDoc: () => doc,
+    getSessionId: () => 'sess-1',
+    getTabId: () => state.tab,
+    // 未显式选过的页签：`focusRecordForTab` 会按 resolveDefaultFocus 播种 gui，
+    // 但 `explicit` 为 false —— 这正是本 Issue 的回归现场。
+    getFocusRecord: (sess, tab) => storage[tab] || { mode: WORKBENCH_FOCUS.gui, explicit: false },
+    persistFocus: (sess, tab, patch) => {
+      storage[tab] = { ...(storage[tab] || { mode: WORKBENCH_FOCUS.gui, explicit: false }), ...patch }
+    },
+    isFullscreen: () => state.isFs,
+    enterFullscreen: () => {
+      enters.push(state.tab)
+      state.isFs = true
+    },
+    exitFullscreen: () => {
+      exits.push(state.tab)
+      state.isFs = false
+    },
+  })
+  return { state, enters, exits, storage, reconciler }
+}
+
 test('resolveCurrentTabId prioritizes sidebarRight active record, then snapshot, then DOM', () => {
   const doc = setupDom('<div role="tab" aria-selected="true" data-dockkit-tab="dom-tab"></div>')
-  
+
   // 1. DOM 兜底
   assert.equal(resolveCurrentTabId(doc, null), 'dom-tab')
 
@@ -53,105 +91,63 @@ test('resolveCurrentTabId prioritizes sidebarRight active record, then snapshot,
   assert.equal(resolveCurrentTabId(doc, mockSidebar), 'omnimux-assets:library')
 })
 
-test('tab-viewport-reconciler: 旅程 1 - 新 Tab 默认全屏，自动调和 push 为 fullscreen', () => {
-  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open><button data-sidebar-right-mode="fullscreen" id="enter"></button></div>')
-  let currentTab = 'omnimux-assets:library'
-  let isFs = false
-  const enters = []
-  const exits = []
-  const storage = {}
+test('AC-1 未记录偏好的工作台页签 + push：绝不自动进入全屏', () => {
+  const doc = setupDom(OPEN_PANEL)
+  const { enters, exits, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: false })
 
-  const reconciler = createTabViewportReconciler({
-    getDoc: () => doc,
-    getSessionId: () => 'sess-1',
-    getTabId: () => currentTab,
-    getFocusRecord: (sess, tab) => storage[tab] || { mode: WORKBENCH_FOCUS.gui },
-    persistFocus: (sess, tab, patch) => {
-      storage[tab] = { ...(storage[tab] || { mode: WORKBENCH_FOCUS.gui }), ...patch }
-    },
-    isFullscreen: () => isFs,
-    enterFullscreen: () => {
-      enters.push(currentTab)
-      isFs = true
-    },
-    exitFullscreen: () => {
-      exits.push(currentTab)
-      isFs = false
-    },
-  })
-
-  // 触发同步：当前面板为 push，而资产库默认期望全屏 (gui)
   reconciler.sync()
-  assert.equal(enters.length, 1)
-  assert.equal(enters[0], 'omnimux-assets:library')
-  assert.equal(exits.length, 0)
+
+  assert.deepEqual(enters, [], '自动播种的 gui 默认值不是用户意图，不得据此进入全屏')
+  assert.deepEqual(exits, [])
 })
 
-test('tab-viewport-reconciler: 旅程 2 & 3 & 4 - 用户退出全屏记忆为 split，切换 Tab 自动全屏，切回自动还原 split', async () => {
-  const doc = setupDom('<div data-sidebar-right-panel="fullscreen" data-sidebar-right-open></div>')
-  let currentTab = 'omnimux-assets:library'
-  let isFs = true
-  const enters = []
-  const exits = []
-  const storage = {}
+test('AC-2 未记录偏好的工作台页签 + fullscreen：调和回分栏并清掉折叠键', () => {
+  const doc = setupDom(FULLSCREEN_PANEL)
+  doc.documentElement.setAttribute('data-omnimux-conversation-collapsed', '')
+  doc.documentElement.setAttribute('data-omnimux-fullscreen-collapse-snapshot', 'false')
+  const { exits, state, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: true })
 
-  const reconciler = createTabViewportReconciler({
-    getDoc: () => doc,
-    getSessionId: () => 'sess-1',
-    getTabId: () => currentTab,
-    getFocusRecord: (sess, tab) => storage[tab] || { mode: WORKBENCH_FOCUS.gui },
-    persistFocus: (sess, tab, patch) => {
-      storage[tab] = { ...(storage[tab] || { mode: WORKBENCH_FOCUS.gui }), ...patch }
-    },
-    isFullscreen: () => isFs,
-    enterFullscreen: () => {
-      enters.push(currentTab)
-      isFs = true
-    },
-    exitFullscreen: () => {
-      exits.push(currentTab)
-      isFs = false
-    },
-  })
-
-  // 1. 资产库打开，当前为全屏
   reconciler.sync()
-  assert.equal(enters.length, 0)
-  assert.equal(exits.length, 0)
 
-  // 2. 用户在资产库点击右上角退出全屏，面板变为 push
-  isFs = false
-  reconciler.sync()
-  // 验证资产库的独立偏好被精准记录为 split
-  assert.equal(storage['omnimux-assets:library']?.mode, WORKBENCH_FOCUS.split)
+  assert.deepEqual(exits, ['omnimux-assets:library'])
+  assert.equal(state.isFs, false)
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), false)
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-fullscreen-collapse-snapshot'), false)
+})
 
-  // 3. 用户切换到灵感社区（未曾调整过，默认期望全屏 gui）
-  currentTab = 'omnimux-inspiration:library'
+test('AC-3 用户在同一页签切换模式：记录写入 explicit 标记', async () => {
+  const doc = setupDom(FULLSCREEN_PANEL)
+  const { state, storage, exits, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: true })
+
+  // 首轮同步：面板已是 fullscreen 且无显式记录，先被调和回分栏
   reconciler.sync()
-  // 验证自动触发进入全屏！
-  assert.equal(enters.length, 1)
-  assert.equal(enters[0], 'omnimux-inspiration:library')
-  assert.equal(isFs, true)
-  // 等待微任务锁释放
+  assert.deepEqual(exits, ['omnimux-assets:library'])
+  assert.equal(state.isFs, false)
   await new Promise((r) => setTimeout(r, 60))
 
-  // 4. 用户切回资产库（曾设为 split）
-  currentTab = 'omnimux-assets:library'
-  reconciler.sync()
-  // 验证自动触发退出全屏，恢复分栏展示会话栏！
-  assert.equal(exits.length, 1)
-  assert.equal(exits[0], 'omnimux-assets:library')
-  assert.equal(isFs, false)
-  await new Promise((r) => setTimeout(r, 60))
-
-  // 5. 用户在资产库重新点击全屏，面板变为 fullscreen
-  isFs = true
+  // 用户亲手切到全屏
+  state.isFs = true
   reconciler.sync()
   assert.equal(storage['omnimux-assets:library']?.mode, WORKBENCH_FOCUS.gui)
+  assert.equal(storage['omnimux-assets:library']?.explicit, true)
 })
 
-test('tab-viewport-reconciler: 面板收起时保持静默', () => {
-  // 没有 data-sidebar-right-open
+test('AC-4 面板已展开时切到显式选过全屏的页签：恢复全屏', async () => {
+  const doc = setupDom(OPEN_PANEL)
+  const { state, storage, enters, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: false })
+  storage['omnimux-workflow:library'] = { mode: WORKBENCH_FOCUS.gui, explicit: true }
+
+  reconciler.sync()
+  assert.deepEqual(enters, [], '首轮：未记录偏好的页签按分栏处理')
+
+  state.tab = 'omnimux-workflow:library'
+  reconciler.sync()
+  assert.deepEqual(enters, ['omnimux-workflow:library'], '显式记录过的页签恢复全屏')
+  assert.equal(state.isFs, true)
+  await new Promise((r) => setTimeout(r, 60))
+})
+
+test('AC-5 面板收起时保持静默', () => {
   const doc = setupDom('<div data-sidebar-right-panel="push"></div>')
   let triggered = 0
 
@@ -165,8 +161,49 @@ test('tab-viewport-reconciler: 面板收起时保持静默', () => {
   assert.equal(triggered, 0)
 })
 
+test('AC-6 收起 → 展开的那一次同步一律呈分栏，显式全屏记录不生效', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="push"></div>')
+  const { state, storage, enters, reconciler } = harness(doc, { tab: 'omnimux-workflow:library', isFs: false })
+  storage['omnimux-workflow:library'] = { mode: WORKBENCH_FOCUS.gui, explicit: true }
+
+  // 面板收起态先观测一轮
+  reconciler.sync()
+  assert.deepEqual(enters, [])
+
+  // 面板展开（收起 → 展开）
+  doc.body.innerHTML = OPEN_PANEL
+  reconciler.sync()
+  assert.deepEqual(enters, [], '展开右侧栏是「并排」意图，此刻不占满整屏')
+
+  // 切到另一个未记录偏好的页签：仍按分栏处理
+  state.tab = 'omnimux-assets:library'
+  reconciler.sync()
+  assert.deepEqual(enters, [], '未记录偏好的页签始终保持分栏')
+
+  // 切回显式选过全屏的页签：偏好恢复生效
+  state.tab = 'omnimux-workflow:library'
+  reconciler.sync()
+  assert.deepEqual(enters, ['omnimux-workflow:library'])
+  assert.equal(state.isFs, true)
+})
+
+test('AC-7 左侧会话列表有无选中行，调和结果完全一致', () => {
+  const outcomes = []
+  for (const withSelection of [false, true]) {
+    const body = withSelection
+      ? `${OPEN_PANEL}<div role="treeitem" aria-selected="true">会话 A</div>`
+      : OPEN_PANEL
+    const doc = setupDom(body)
+    const { state, enters, exits, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: true })
+    reconciler.sync()
+    outcomes.push({ enters: [...enters], exits: [...exits], isFs: state.isFs })
+  }
+  assert.deepEqual(outcomes[0], outcomes[1], '右侧栏呈现方式不得依赖左侧列表的渲染事实')
+  assert.equal(outcomes[0].isFs, false)
+})
+
 test('installTabViewportReconciler lifecycle: install and uninstall without leak', () => {
-  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open></div>')
+  const doc = setupDom(OPEN_PANEL)
   const unsub = installTabViewportReconciler(doc)
   assert.equal(typeof unsub, 'function')
   unsub()

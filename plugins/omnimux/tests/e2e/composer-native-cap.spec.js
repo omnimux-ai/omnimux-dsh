@@ -116,3 +116,38 @@ test('e2e: 源码里不再遗留把卡片上限写成 100% 的声明', () => {
   assert.equal(cardHasHundred, false, '卡片规则组内不得再有 max-width:100%!important')
   assert.ok(offenders.length >= 0)
 })
+
+test('e2e: 新会话欢迎页输入框与工作区行彻底消除 780px 人工收窄，回归原生上限', () => {
+  const cardBlocks = composerCardRules(GUIDE_CSS)
+  for (const rule of cardBlocks) {
+    assert.doesNotMatch(rule.body, /780px/, '卡片规则不得再人工收窄至 780px')
+  }
+
+  const doc = new JSDOM(`<!doctype html><html><body>
+    <div class="dshDesktopFrame">
+      <main class="dshDesktopConversationSurface">
+        <div data-omnimux-starter-host>
+          <div class="Q7WfXG_card" data-composer-card></div>
+          <div class="heroWorkspaceRow"></div>
+        </div>
+      </main>
+    </div>
+  </body></html>`, { url: 'http://127.0.0.1:45120/' }).window.document
+
+  const card = doc.querySelector('[data-composer-card]')
+  const row = doc.querySelector('.heroWorkspaceRow')
+
+  const cardHits = parseRules(GUIDE_CSS).filter(r => {
+    return r.selector.split(',').some(p => {
+      try { return card.matches(p.trim()) } catch { return false }
+    })
+  })
+  assert.ok(cardHits.some(r => r.body.includes(NATIVE_CAP_TOKEN)), '欢迎页卡片必须命中原生卡片上限 token')
+
+  const rowHits = parseRules(GUIDE_CSS).filter(r => {
+    return r.selector.split(',').some(p => {
+      try { return row.matches(p.trim()) } catch { return false }
+    })
+  })
+  assert.ok(rowHits.some(r => r.body.includes('var(--dsh-chat-content-width')), '欢迎页工作区行必须命中原生内容宽 token')
+})

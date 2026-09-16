@@ -253,14 +253,32 @@ describe('pointer loss and idle dismiss optimizations', () => {
     overlay.dispose()
   })
 
-  it('hides capsule immediately on pointerout when relatedTarget is null', () => {
+  it('hides capsule gracefully on pointerout when relatedTarget is null and outside card', () => {
+    vi.useFakeTimers()
     const { overlay, capsule } = mountedCapsule()
     overlay.setEnabled(true)
+
+    const img = document.createElement('img')
+    document.body.appendChild(img)
+    const candidate = {
+      element: img,
+      payload: {
+        id: 'test-media-out',
+        src: 'https://cdn.example.com/out.jpg',
+        type: 'image' as const,
+        title: 'test',
+        pageUrl: 'https://example.com',
+      },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showNow(candidate)
     expect(capsule.classList.contains('is-visible')).toBe(true)
 
     const event = new MouseEvent('pointerout')
     Object.defineProperty(event, 'relatedTarget', { value: null })
     document.dispatchEvent(event)
+    // Under unified card-region contract, pointerout without target triggers graceful leave
+    vi.advanceTimersByTime(TIMING.leaveGrace + 50)
     expect(capsule.classList.contains('is-visible')).toBe(false)
     overlay.dispose()
   })
@@ -291,7 +309,8 @@ describe('pointer loss and idle dismiss optimizations', () => {
     overlay.dispose()
   })
 
-  it('hides capsule immediately when pointer moves far away from media element', () => {
+  it('hides capsule gracefully when pointer moves far away from media element', () => {
+    vi.useFakeTimers()
     const { overlay, capsule } = mountedCapsule()
     overlay.setEnabled(true)
 
@@ -323,8 +342,10 @@ describe('pointer loss and idle dismiss optimizations', () => {
     ;(overlay as any).showNow(candidate)
     expect(capsule.classList.contains('is-visible')).toBe(true)
 
-    // Pointer moves far away from the image (e.g. clientX: 600, clientY: 600, distance > 24)
+    // Pointer moves far away from the image (e.g. clientX: 600, clientY: 600, outside card)
     document.dispatchEvent(new MouseEvent('pointermove', { clientX: 600, clientY: 600 }))
+    // Under card-region contract, leaving the card triggers smooth grace buffer instead of instant flicker
+    vi.advanceTimersByTime(TIMING.leaveGrace + 50)
     expect(capsule.classList.contains('is-visible')).toBe(false)
     overlay.dispose()
   })

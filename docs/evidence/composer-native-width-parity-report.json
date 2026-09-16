@@ -1,0 +1,11 @@
+{
+  "issue": 2062,
+  "topic": "composer-native-width-parity",
+  "date": "2026-09-16",
+  "welcomeCardCap": "var(--dsh-composer-card-max-width, 952px)",
+  "welcomeWorkspaceCap": "var(--dsh-chat-content-width, 920px)",
+  "guardDeletesValidPreference": false,
+  "unitTestsPassed": true,
+  "e2eTestsPassed": true,
+  "evidenceScreenshot": "docs/evidence/composer-native-width-parity-verified.png"
+}

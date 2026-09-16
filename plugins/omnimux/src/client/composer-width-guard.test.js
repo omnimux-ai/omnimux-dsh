@@ -19,15 +19,16 @@ test('resolveAdaptiveContentWidth 与原生公式逐点一致', () => {
   assert.equal(resolveAdaptiveContentWidth(4000), COMPOSER_ADAPTIVE_CEILING_PX, '超宽列封顶 920')
 })
 
-test('isStaleWidthPreference 只判越界，合法区间内的偏好必须保留', () => {
+test('isStaleWidthPreference 遵循用户决策：不再清除偏宽记录，任何有效正数均保留', () => {
   // 列宽 1200 → 自适应上限 768
   assert.equal(isStaleWidthPreference(null, 1200), false, '没有偏好不算越界')
   assert.equal(isStaleWidthPreference('', 1200), false)
   assert.equal(isStaleWidthPreference('640', 1200), false, '原生下限内保留')
   assert.equal(isStaleWidthPreference('768', 1200), false, '正好等于上限保留')
-  assert.equal(isStaleWidthPreference('920.6796875', 1200), true, '实测残留偏好必须判越界')
-  assert.equal(isStaleWidthPreference('abc', 1200), true, '写坏的值必须清掉')
-  assert.equal(isStaleWidthPreference('-5', 1200), true, '非法值必须清掉')
+  assert.equal(isStaleWidthPreference('920.6796875', 1200), false, '偏宽偏好坚决不清除')
+  assert.equal(isStaleWidthPreference('1200', 600), false, '更宽的偏好也不清除')
+  assert.equal(isStaleWidthPreference('abc', 1200), true, '写坏的非数值做兜底清理')
+  assert.equal(isStaleWidthPreference('-5', 1200), true, '非法负值做兜底清理')
 })
 
 /**
@@ -46,12 +47,11 @@ function fixture(stored, columnWidth) {
   return win
 }
 
-test('越界偏好被清除，让原生自适应复位', () => {
+test('用户保存的偏宽偏好完整保留，插件不得删除', () => {
   const win = fixture('920.6796875', 1200)
   const result = guardComposerWidthPreference(win)
-  assert.equal(result.cleared, true, '越界必须清除')
-  assert.equal(result.value, '920.6796875')
-  assert.equal(win.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), null, '键必须真的删掉')
+  assert.equal(result.cleared, false, '偏宽偏好不得删除')
+  assert.equal(win.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), '920.6796875', '用户偏好必须完整保留')
 })
 
 test('合法偏好一律不动，原生宽度手柄的调整必须保留', () => {
@@ -61,13 +61,24 @@ test('合法偏好一律不动，原生宽度手柄的调整必须保留', () =>
   assert.equal(win.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), '700')
 })
 
-test('列宽变宽后，原本合法的偏好若越界也会被纠正（防复发）', () => {
+test('列宽收窄后，原本偏宽的偏好依然完整保留（不得因列宽缩小而删档）', () => {
   // 宽列（上限 920）下 900 合法
   const wide = fixture('900', 2000)
   assert.equal(guardComposerWidthPreference(wide).cleared, false)
-  // 列收窄（1200 → 上限 768）后同一个值已越界
+  // 列收窄（1200 → 上限 768）后同一个值依然不删
   const narrow = fixture('900', 1200)
-  assert.equal(guardComposerWidthPreference(narrow).cleared, true, '列宽变化后必须复检')
+  assert.equal(guardComposerWidthPreference(narrow).cleared, false, '列宽变化也不得删档')
+  assert.equal(narrow.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), '900')
+})
+
+test('损坏或非法的偏好值才做安全清理', () => {
+  const nanWin = fixture('abc', 1200)
+  assert.equal(guardComposerWidthPreference(nanWin).cleared, true)
+  assert.equal(nanWin.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), null)
+
+  const negWin = fixture('-10', 1200)
+  assert.equal(guardComposerWidthPreference(negWin).cleared, true)
+  assert.equal(negWin.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), null)
 })
 
 test('量不到列宽时放弃判断，绝不误删用户偏好', () => {

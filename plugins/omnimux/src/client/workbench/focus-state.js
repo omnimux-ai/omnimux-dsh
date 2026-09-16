@@ -101,6 +101,9 @@ export function focusRecordForTab(sessionId = sessionKey(), tabId = undefined) {
     map[effectiveTabId] = {
       mode: resolveDefaultFocus(effectiveTabId),
       splitWidth: null,
+      // 是否由用户亲手选过视窗模式。自动播种的 `mode` 只是默认值，不是用户意图 ——
+      // 右侧栏的呈现方式只认 `explicit === true` 的记录（Issue #2056）。
+      explicit: false,
     }
   }
   return map[effectiveTabId]
