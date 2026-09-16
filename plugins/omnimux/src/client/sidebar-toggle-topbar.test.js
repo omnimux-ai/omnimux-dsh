@@ -1066,7 +1066,7 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     )
     assert.match(
       PRODUCT_STAGE_CHROME,
-      /grid-template-columns:\s*0px\s+var\(--omnimux-conversation-width,\s*480px\)\s+minmax\(0px,\s*1fr\)\s*!important/,
+      /grid-template-columns:\s*0px\s+var\(--omnimux-conversation-width,\s*420px\)\s+minmax\(0px,\s*1fr\)\s*!important/,
       '三分栏收起左侧栏时必须保持会话栏比例并将释放空间给右栏',
     )
     assert.match(
@@ -1084,20 +1084,44 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
         <aside class="dshDesktopRightbarSurface" style="width: 1155px;"></aside>
       </div>
     </body></html>`)
-    const main = doc.querySelector('.dshDesktopConversationSurface')
-    Object.defineProperty(main, 'offsetWidth', { value: 485, configurable: true })
-    Object.defineProperty(main, 'getBoundingClientRect', {
+    const center = doc.querySelector('.dshDesktopConversationSurface')
+    Object.defineProperty(center, 'offsetWidth', { value: 485, configurable: true })
+    Object.defineProperty(center, 'getBoundingClientRect', {
       value: () => ({ left: 280, top: 0, width: 485, height: 1000, right: 765 }),
       configurable: true,
     })
+    const right = doc.querySelector('.dshDesktopRightbarSurface')
+    Object.defineProperty(right, 'offsetWidth', { value: 1155, configurable: true })
 
     applyTopbarToggleCssVars(doc)
 
     assert.equal(
       doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
       '485px',
-      '展开态必须实测会话栏宽度并写入变量，作为收起后保持比例的基准',
+      '三分栏展开态必须实测会话栏宽度并写入变量，作为收起后保持比例的基准',
     )
+  })
+
+  it('never learns the baseline from a single-column frame (poisoned full-width reading)', () => {
+    const doc = setup(`<!doctype html><html><head></head><body>
+      <div class="dshDesktopFrame">
+        <aside class="dshDesktopSidebarSurface"></aside>
+        <main class="dshDesktopConversationSurface"></main>
+        <aside class="dshDesktopRightbarSurface"></aside>
+      </div>
+    </body></html>`)
+    const center = doc.querySelector('.dshDesktopConversationSurface')
+    // 没有右侧工作台时会话栏本来就该占满剩余宽度（1920−280=1640），这不是分栏基准。
+    Object.defineProperty(center, 'offsetWidth', { value: 1640, configurable: true })
+    const right = doc.querySelector('.dshDesktopRightbarSurface')
+    Object.defineProperty(right, 'offsetWidth', { value: 0, configurable: true })
+
+    applyTopbarToggleCssVars(doc)
+
+    const written = Number.parseFloat(
+      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+    )
+    assert.ok(written < 1000, `单栏读数不得被记成分栏基准，实际 ${written}`)
   })
 
   it('falls back to a healthy conversation width when the column cannot be measured', () => {
