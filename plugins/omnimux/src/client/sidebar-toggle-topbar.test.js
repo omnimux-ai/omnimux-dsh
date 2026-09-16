@@ -18,7 +18,10 @@ import {
   applyTopbarToggleCssVars,
   computeChromeLayout,
   computeTabBarPadLeft,
+  CONVERSATION_WIDTH_FALLBACK_PX,
+  CONVERSATION_WIDTH_MIN_PX,
   computeToggleLeftPx,
+  deriveConversationWidthPx,
   ensureSidebarToggleTopbar,
   findVisibleWorkbenchPanel,
   findOfficialNewSessionButton,
@@ -26,7 +29,7 @@ import {
   getExplicitLeftCollapseIntent,
   installSidebarToggleTopbar,
   isLeftSidebarCollapsed,
-  rememberConversationWidth,
+  readShellSplitPx,
   setExplicitLeftCollapseIntent,
   syncLeftCollapsedHtmlAttr,
   syncNativeRightbarControls,
@@ -1077,52 +1080,41 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     )
   })
 
-  it('sets --omnimux-conversation-width from live measurement or healthy fallback', () => {
+  it('derives --omnimux-conversation-width from the split the shell authored', () => {
     const doc = setup(`<!doctype html><html><head></head><body>
-      <div class="dshDesktopFrame">
+      <div class="dshDesktopFrame" style="grid-template-columns:280px minmax(0px, 1fr) 1155px">
         <aside class="dshDesktopSidebarSurface" style="width: 280px;"></aside>
-        <main class="dshDesktopConversationSurface" style="width: 485px;"></main>
-        <aside class="dshDesktopRightbarSurface" style="width: 1155px;"></aside>
+        <main class="dshDesktopConversationSurface"></main>
+        <aside class="dshDesktopRightbarSurface"></aside>
       </div>
     </body></html>`)
-    const center = doc.querySelector('.dshDesktopConversationSurface')
-    Object.defineProperty(center, 'offsetWidth', { value: 485, configurable: true })
-    Object.defineProperty(center, 'getBoundingClientRect', {
-      value: () => ({ left: 280, top: 0, width: 485, height: 1000, right: 765 }),
-      configurable: true,
-    })
-    const right = doc.querySelector('.dshDesktopRightbarSurface')
-    Object.defineProperty(right, 'offsetWidth', { value: 1155, configurable: true })
+    Object.defineProperty(doc.defaultView, 'innerWidth', { value: 1920, configurable: true })
 
     applyTopbarToggleCssVars(doc)
 
     assert.equal(
       doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
       '485px',
-      '三分栏展开态必须实测会话栏宽度并写入变量，作为收起后保持比例的基准',
+      '展开态发布的必须是「视口 − 左栏 − 外壳第三轨」的派生值（也是收起后保持的比例）',
     )
   })
 
-  it('never learns the baseline from a single-column frame (poisoned full-width reading)', () => {
+  it('never derives a split width from a frame without an authored right track', () => {
     const doc = setup(`<!doctype html><html><head></head><body>
-      <div class="dshDesktopFrame">
+      <div class="dshDesktopFrame" style="grid-template-columns:280px minmax(0px, 1fr) 0px">
         <aside class="dshDesktopSidebarSurface"></aside>
         <main class="dshDesktopConversationSurface"></main>
         <aside class="dshDesktopRightbarSurface"></aside>
       </div>
     </body></html>`)
-    const center = doc.querySelector('.dshDesktopConversationSurface')
-    // 没有右侧工作台时会话栏本来就该占满剩余宽度（1920−280=1640），这不是分栏基准。
-    Object.defineProperty(center, 'offsetWidth', { value: 1640, configurable: true })
-    const right = doc.querySelector('.dshDesktopRightbarSurface')
-    Object.defineProperty(right, 'offsetWidth', { value: 0, configurable: true })
+    Object.defineProperty(doc.defaultView, 'innerWidth', { value: 1920, configurable: true })
 
     applyTopbarToggleCssVars(doc)
 
     const written = Number.parseFloat(
       doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
     )
-    assert.ok(written < 1000, `单栏读数不得被记成分栏基准，实际 ${written}`)
+    assert.ok(written < 1000, `右栏第三轨为 0 时不得派生分栏宽度，实际 ${written}`)
   })
 
   it('falls back to a healthy conversation width when the column cannot be measured', () => {
@@ -1142,61 +1134,75 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
   })
 })
 
-describe('collapse-time baseline snapshot (issue #2074)', () => {
-  const splitDoc = ({ conversationPx, rightPx }) => {
-    const rect = (w) => ({ left: 0, top: 0, width: w, height: 1000, right: w })
-    const props = new Map()
-    return {
-      documentElement: {
-        style: {
-          setProperty: (k, v) => props.set(k, v),
-          getPropertyValue: (k) => props.get(k) ?? '',
-          removeProperty: (k) => props.delete(k),
-        },
-      },
-      querySelector(selector) {
-        const sel = String(selector)
-        if (sel.includes('rightbar')) {
-          return { offsetWidth: rightPx, getBoundingClientRect: () => rect(rightPx) }
-        }
-        if (sel.includes('ConversationSurface')) {
-          return { offsetWidth: conversationPx, getBoundingClientRect: () => rect(conversationPx) }
-        }
-        return null
-      },
-      body: null,
-    }
+describe('derived conversation width (issue #2074 续 3)', () => {
+  const framed = (grid) => {
+    const dom = new JSDOM(`<!doctype html><html><body><div class="dshDesktopFrame" style="grid-template-columns:${grid}"></div></body></html>`)
+    Object.defineProperty(dom.window, 'innerWidth', { value: 1920, configurable: true })
+    return dom.window.document
   }
 
-  it('learns the split width on demand even when the sync loop never re-ran', () => {
-    // 实时缺陷：启动时右栏未挂载（基准停在回退值），此后同步循环不再触发，
-    // 基准一直陈旧到用户点击收起那一刻 —— 点击前必须能按需补取样。
-    const doc = splitDoc({ conversationPx: 776, rightPx: 864 })
-    assert.equal(rememberConversationWidth(doc), true, '三分栏形态必须能按需取样')
-    applyTopbarToggleCssVars(doc)
+  it('carries no remembered baseline any more', () => {
+    assert.doesNotMatch(
+      moduleSource,
+      /lastGoodConversationWidth|rememberConversationWidth|RIGHT_COLUMN_MIN_PX/,
+      '宽度只能从外壳 authored 栅格派生，记忆式基准与取样阈值必须彻底移除',
+    )
+    assert.match(moduleSource, /export function deriveConversationWidthPx/, '必须导出派生函数')
+  })
+
+  it('reads the authored split from the shell inline grid, middle token included', () => {
+    assert.deepEqual(readShellSplitPx(framed('280px minmax(0px, 1fr) 864px')), { rail: 280, right: 864 })
+    assert.deepEqual(readShellSplitPx(framed('90px minmax(0px, 1fr) 0px')), { rail: 90, right: 0 })
+  })
+
+  it('derives the native remainder while the rail is expanded', () => {
+    assert.equal(deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 864px'), false, 280, 280), 776)
+  })
+
+  it('keeps that exact width once the rail is collapsed', () => {
+    const doc = framed('90px minmax(0px, 1fr) 864px')
     assert.equal(
-      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
-      '776px',
-      '按需取样后写入的基准必须是刚测到的真实分栏宽度',
+      deriveConversationWidthPx(doc, true, 0, 280),
+      776,
+      '收起左栏不得改变会话栏宽度，释放宽度全部交给工作台（AC-101 / AC-103 / AC-403）',
     )
   })
 
-  it('refuses to snapshot without a real right workspace column', () => {
-    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 1640, rightPx: 0 })), false)
-    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 485, rightPx: 120 })), false)
+  it('follows the native splitter while the rail is collapsed', () => {
+    // 收起草稿态下拖拽 260px 后，外壳第三轨 864 → 604；旧实现把它吞掉（会话栏纹丝不动）。
+    const doc = framed('90px minmax(0px, 1fr) 604px')
+    assert.equal(
+      deriveConversationWidthPx(doc, true, 0, 280),
+      1036,
+      '收起态拖动分界线必须改变会话栏宽度（AC-404）',
+    )
   })
 
-  it('refuses a sub-floor conversation reading', () => {
-    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 200, rightPx: 1200 })), false)
+  it('falls back to the contract width without an authored split', () => {
+    assert.equal(
+      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 0px'), true, 0, 280),
+      CONVERSATION_WIDTH_FALLBACK_PX,
+      '右栏收起（第三轨 0px）不得派生会话栏宽度',
+    )
+    const bare = new JSDOM('<!doctype html><html><body></body></html>').window.document
+    assert.equal(deriveConversationWidthPx(bare, false, 280, 0), CONVERSATION_WIDTH_FALLBACK_PX)
   })
 
-  it('snapshots before triggering the official collapse', () => {
-    const source = readFileSync(join(here, 'sidebar-toggle-topbar.js'), 'utf8')
-    const clickBody = source.slice(source.indexOf('btn.addEventListener'))
-    const snapshotAt = clickBody.indexOf('rememberConversationWidth(doc)')
-    const triggerAt = clickBody.indexOf('triggerClick(official)')
-    assert.ok(snapshotAt >= 0, '点击处理器必须做分栏快照')
-    assert.ok(triggerAt > snapshotAt, '快照必须发生在触发官方折叠之前')
+  it('never publishes below the conversation floor', () => {
+    assert.equal(
+      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1600px'), false, 280, 280),
+      CONVERSATION_WIDTH_MIN_PX,
+    )
+  })
+
+  it('observes the shell-authored grid so no pin can freeze the splitter', () => {
+    assert.match(moduleSource, /attributeFilter:\s*\['style'\]/, '必须观察外壳内联栅格改写（AC-405）')
+    assert.match(moduleSource, /bindFrameObserver\(\)/, '观察者必须挂进几何同步循环')
+    const clickBody = moduleSource.slice(moduleSource.indexOf('btn.addEventListener'))
+    assert.ok(
+      clickBody.indexOf('truthy-sentinel') < 0 && clickBody.indexOf('rememberConversationWidth') < 0,
+      '点击处理器不得再做分栏快照：派生值不依赖点击时序',
+    )
   })
 })
 

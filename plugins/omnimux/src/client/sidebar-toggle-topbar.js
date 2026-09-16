@@ -313,78 +313,82 @@ export const LEFT_RAIL_MIN_PX = 64
  */
 const CONVERSATION_COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
 
-/** Right column must be at least this wide before its frame counts as a split. */
-const RIGHT_COLUMN_MIN_PX = 200
-/** Baseline used before any trustworthy split measurement exists. */
+/** Published before the shell exposes an authored split; also the CSS fallback. */
 export const CONVERSATION_WIDTH_FALLBACK_PX = 420
+/** Never publish a conversation column narrower than this. */
+export const CONVERSATION_WIDTH_MIN_PX = 320
 
 /** Last plausible expanded rail width; repairs a poisoned reading (see below). */
 let lastGoodLeftRailW = 0
-/**
- * Last conversation-column width measured while the frame really was in
- * three-column split. Never learned from a single-column frame: with no right
- * workspace the conversation legitimately owns the whole remainder, and that
- * reading would later be replayed as the split baseline — collapsing the left
- * rail would then pin the conversation far too wide and shrink the workspace.
- */
-let lastGoodConversationWidth = CONVERSATION_WIDTH_FALLBACK_PX
 
 /**
- * Live width of the right workspace column, or 0 when there is none.
+ * The desktop shell's frame element — the grid host both of us write to.
  * @param {Document | null | undefined} doc
- * @returns {number}
+ * @returns {Element | null}
  */
-function readRightColumnPx(doc) {
-  const right = doc?.querySelector?.(
-    '.dshDesktopRightbarSurface, [data-rightbar-col], [class*="rightbarCol"], [class*="rightbarSurface"]',
-  )
-  if (!right) return 0
-  try {
-    const w = right.offsetWidth || Math.round(right.getBoundingClientRect().width) || 0
-    return Number.isFinite(w) && w > 0 ? w : 0
-  } catch {
-    return 0
-  }
+function readFrame(doc) {
+  return doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])')
+    || doc?.querySelector?.('.dshDesktopFrame')
+    || doc?.querySelector?.('[class*="frame"]')
+    || null
 }
 
 /**
- * Refresh the split baseline from the live frame, if it currently shows one.
- * Called from the chrome sync loop and, critically, at collapse intent: the sync
- * loop only re-runs on observed mutations, so a baseline learned while the right
- * workspace was not yet mounted would otherwise stay stale right up to the very
- * collapse that needs it.
- * @param {Document | null | undefined} doc
- * @returns {boolean} whether a new baseline was learned
- */
-export function rememberConversationWidth(doc) {
-  if (readRightColumnPx(doc) < RIGHT_COLUMN_MIN_PX) return false
-  const center = doc?.querySelector?.('.dshDesktopConversationSurface, [class*="centerCol"], [data-slot="conversation"]')
-  if (!center) return false
-  try {
-    const cw = center.offsetWidth || Math.round(center.getBoundingClientRect().width) || 0
-    if (cw < CONVERSATION_WIDTH_FALLBACK_PX) return false
-    lastGoodConversationWidth = cw
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Conversation-column baseline for the collapsed-left-rail split layout.
+ * The split the shell authored, as `{ rail, right }` px (null when absent).
  *
- * Only a genuine three-column frame teaches the baseline; everywhere else the
- * conversation column is *supposed* to absorb the freed space, so its width
- * says nothing about the split proportion. A collapsed rail reuses the last
- * trustworthy split reading (or the contract fallback) instead of measuring
- * itself, which would be a self-confirming reading.
+ * `conversation-box.js` pins the frame's rails with `!important`, so a *measured*
+ * column width is a function of the value we are about to write — a
+ * self-confirming reading. The inline `grid-template-columns` is authored by the
+ * shell and survives that override, which makes it the authoritative split
+ * input. The middle token may contain spaces (`minmax(0px, 1fr)`), so the third
+ * track is read from the end of the list.
+ * @param {Document | null | undefined} doc
+ * @returns {{ rail: number | null, right: number | null }}
+ */
+export function readShellSplitPx(doc) {
+  const grid = String(readFrame(doc)?.style?.gridTemplateColumns || '').trim()
+  if (!grid) return { rail: null, right: null }
+  const tokens = grid.split(/\s+/)
+  /** @param {string} token */
+  const toPx = (token) => {
+    const matched = /^(\d+(?:\.\d+)?)px$/.exec(token || '')
+    if (!matched) return null
+    const px = Math.round(Number(matched[1]))
+    return Number.isFinite(px) ? px : null
+  }
+  return {
+    rail: toPx(tokens[0]),
+    right: tokens.length >= 3 ? toPx(tokens[tokens.length - 1]) : null,
+  }
+}
+
+/**
+ * Conversation-column width, derived from the shell's authored split rather than
+ * remembered from a measurement.
+ *
+ * Collapsing the left rail keeps the conversation column at its pixel width and
+ * hands the released rail width to the workbench (spec
+ * `three-column-sidebar-collapse` AC-101/AC-102). Deriving that width keeps the
+ * two layouts in step by construction: the same expression yields the native
+ * remainder while the rail is expanded and the identical number once it is
+ * collapsed, so the toggle cannot move the column, and a native splitter drag
+ * (which rewrites the shell's third track) stays live in *both* rail states
+ * instead of being swallowed by a stale pinned value.
  * @param {Document | null | undefined} doc
  * @param {boolean} collapsed
+ * @param {number} leftRailW visible rail width (0 while collapsed)
+ * @param {number} [expandedRailW] last trustworthy expanded rail width
  * @returns {number}
  */
-function resolveConversationWidth(doc, collapsed) {
-  if (!collapsed) rememberConversationWidth(doc)
-  return lastGoodConversationWidth
+export function deriveConversationWidthPx(doc, collapsed, leftRailW, expandedRailW = 0) {
+  const { rail, right } = readShellSplitPx(doc)
+  const viewportW = Math.round(doc?.defaultView?.innerWidth || doc?.documentElement?.clientWidth || 0)
+  if (right === null || right <= 0 || viewportW <= 0) return CONVERSATION_WIDTH_FALLBACK_PX
+  // Collapsed: the visible rail is 0, so the width the shell would have given
+  // back to the rail has to be re-added here — it belongs to the workbench now.
+  const railW = collapsed ? 0 : (rail ?? leftRailW ?? 0)
+  const releasedRailW = collapsed ? (expandedRailW || 0) : 0
+  return Math.max(CONVERSATION_WIDTH_MIN_PX, viewportW - railW - right - releasedRailW)
 }
 
 /**
@@ -402,15 +406,7 @@ function resolveConversationWidth(doc, collapsed) {
  * @returns {number | null} rounded px, or null when the shell exposes none.
  */
 export function readShellRailWidthPx(doc) {
-  const frame = doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])') || doc?.querySelector?.('.dshDesktopFrame') || doc?.querySelector?.('[class*="frame"]')
-  if (!frame) return null
-  const inlineFirst = String(frame.style?.gridTemplateColumns || '').trim().split(/\s+/)[0] || ''
-  const fromInline = /^(\d+(?:\.\d+)?)px$/.exec(inlineFirst)
-  if (fromInline) {
-    const px = Math.round(Number(fromInline[1]))
-    return Number.isFinite(px) ? px : null
-  }
-  return null
+  return readShellSplitPx(doc).rail
 }
 
 /**
@@ -483,7 +479,7 @@ export function computeChromeLayout(doc) {
     }
   }
   const tabPadLeft = panelLeft == null ? 0 : Math.max(0, toggleEnd - panelLeft)
-  const conversationWidth = resolveConversationWidth(doc, collapsed)
+  const conversationWidth = deriveConversationWidthPx(doc, collapsed, leftRailW, lastGoodLeftRailW)
   return { collapsed, leftRailW, toggleLeft, toggleEnd, newSessionLeft, panelLeft, tabPadLeft, conversationWidth }
 }
 
@@ -587,7 +583,7 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
     ?? Math.max(0, layout.leftRailW || 280)
   const sidebarWidth = layout.collapsed ? 0 : expandedRailWidth
   root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
-  const convW = layout.conversationWidth ?? lastGoodConversationWidth ?? CONVERSATION_WIDTH_FALLBACK_PX
+  const convW = layout.conversationWidth ?? CONVERSATION_WIDTH_FALLBACK_PX
   root.style.setProperty('--omnimux-conversation-width', `${convW}px`)
   syncTopbarTabClearance(doc)
   if (typeof newSessionLeft === 'number') {
@@ -630,11 +626,6 @@ export function injectTopbarToggleButton(doc) {
       try { event.preventDefault() } catch { /* ignore */ }
       try { event.stopPropagation() } catch { /* ignore */ }
       const willCollapse = !isLeftSidebarCollapsed(doc)
-      // Snapshot the split proportion while the frame still shows it: the chrome
-      // sync loop only re-runs on observed mutations, so a baseline learned at
-      // load time (right workspace not yet mounted) would stay stale until the
-      // next mutation — and this collapse is that mutation.
-      if (willCollapse) rememberConversationWidth(doc)
       setExplicitLeftCollapseIntent(willCollapse)
       const official = findOfficialSidebarToggle(doc)
       if (official) triggerClick(official)
@@ -947,6 +938,8 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
   let anchorObserver = null
   /** @type {MutationObserver | null} */
   let desktopObserver = null
+  /** @type {MutationObserver | null} */
+  let frameObserver = null
   /** @type {ResizeObserver | null} */
   let widthObserver = null
   /** @type {((this: Window, ev: UIEvent) => void) | null} */
@@ -1094,10 +1087,37 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     }
   }
 
+  let observedFrame = null
+  /**
+   * The shell rewrites its authored grid on every splitter frame. Without this
+   * signal a collapsed-rail pin would freeze the drag itself: it holds the
+   * workbench box constant, so no ResizeObserver fires and the derived width
+   * would never follow the pointer (measured: zero writes during a whole drag).
+   */
+  const bindFrameObserver = () => {
+    if (!ObserverClass) return
+    const frame = readFrame(doc)
+    if (!frame || frame === observedFrame) return
+    if (frameObserver) {
+      try { frameObserver.disconnect() } catch { /* ignore */ }
+      frameObserver = null
+    }
+    observedFrame = frame
+    frameObserver = new ObserverClass(() => {
+      scheduleSync()
+    })
+    frameObserver.observe(frame, {
+      attributes: true,
+      attributeFilter: ['style'],
+      subtree: false,
+    })
+  }
+
   const rebindHostObservers = () => {
     bindCollapsedObserver()
     bindAnchorObserver()
     bindDesktopObserver()
+    bindFrameObserver()
   }
 
   rebindHostObservers()
@@ -1127,8 +1147,13 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
       try { desktopObserver.disconnect() } catch { /* ignore */ }
       desktopObserver = null
     }
+    if (frameObserver) {
+      try { frameObserver.disconnect() } catch { /* ignore */ }
+      frameObserver = null
+    }
     observedCollapsedHost = null
     observedAnchor = null
+    observedFrame = null
     if (widthObserver) {
       try { widthObserver.disconnect() } catch { /* ignore */ }
       widthObserver = null
