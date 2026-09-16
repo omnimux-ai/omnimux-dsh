@@ -1,56 +1,40 @@
 /**
- * Pairing sessions: a short-lived, human-typed code that hands the bridge token
- * to a loopback browser extension.
+ * One-click pairing: the host's own page approves a pending request, and the
+ * extension picks the token up from a loopback poll.
  *
- * The bridge token itself stays the only admission credential (BROWSER-01:
- * every client, loopback included, must present it). What made that credential
- * unusable for a fresh install was delivery, not strength — the user had to
- * copy 64 hex characters out of a dot-file. A pairing code moves the delivery
- * into a channel a web page cannot read: the code is shown in the host's own
- * surface, and redemption is accepted only from loopback without a page Origin.
+ * The bridge token stays the only admission credential (BROWSER-01). What this
+ * module replaces is the *delivery*: instead of a code the user retypes, the
+ * host serves a page with a single 「确认授权」 button. Only that page's own
+ * origin may approve — a different site cannot forge an Origin — so a hostile
+ * page can neither approve a request nor read the token.
  *
  * @module
  */
 
-import { randomInt, timingSafeEqual } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 
-/** Digits a user has to type. */
-export const PAIRING_CODE_DIGITS = 6
-
-/** How long one code stays redeemable. */
+/** How long one pending request stays approvable. */
 export const PAIRING_TTL_MS = 120_000
 
-/** Wrong-code attempts a single code survives before it is burned. */
-export const PAIRING_MAX_ATTEMPTS = 5
-
-/** Result of one redemption attempt. */
-export type RedeemOutcome = 'ok' | 'no-session' | 'expired' | 'mismatch' | 'exhausted'
-
-/** One live pairing code. */
-export interface PairingSession {
-  /** The digits the user types into the extension. */
-  readonly code: string
-  /** Epoch milliseconds after which the code is dead. */
+/** One pending authorization. */
+export interface PairingRequest {
+  readonly id: string
   readonly expiresAt: number
-  /** Wrong-code attempts still available. */
-  attemptsLeft: number
+  approved: boolean
+  consumed: boolean
 }
 
-/** Injectable clock and code source, so tests never depend on wall time. */
+/** Poll answer for the extension. */
+export type PairingPoll = 'pending' | 'approved' | 'expired' | 'unknown'
+
+/** Injectable clock and id source, so tests never depend on wall time. */
 export interface PairingDeps {
   now?: () => number
-  mint?: () => string
+  mintId?: () => string
 }
 
-/** Six cryptographically random digits, uniformly distributed. */
-function mintCode(): string {
-  let out = ''
-  for (let index = 0; index < PAIRING_CODE_DIGITS; index += 1) out += String(randomInt(0, 10))
-  return out
-}
-
-/** Constant-time equality for two equal-length digit strings. */
-function sameCode(expected: string, actual: string): boolean {
+/** Constant-time id comparison; ids are equal-length UUIDs. */
+function sameId(expected: string, actual: string): boolean {
   const left = Buffer.from(expected, 'utf8')
   const right = Buffer.from(actual, 'utf8')
   if (left.length !== right.length || left.length === 0) return false
@@ -58,89 +42,85 @@ function sameCode(expected: string, actual: string): boolean {
 }
 
 /**
- * The host's single live pairing session.
+ * The host's pending pairing requests.
  *
- * One session per host process: a fresh code supersedes the previous one, so a
- * user who regenerates cannot be paired by a stale glance at the screen.
+ * One live request at a time is enough — a new request supersedes the previous
+ * one — and each is single-use: an approval without a poll, or a poll without
+ * an approval, simply reads as `unknown`.
  */
-export class PairingSessions {
-  private session: PairingSession | null = null
+export class PairingRequests {
+  private current: PairingRequest | null = null
   private readonly now: () => number
-  private readonly mint: () => string
+  private readonly mintId: () => string
 
   constructor(deps: PairingDeps = {}) {
     this.now = deps.now ?? (() => Date.now())
-    this.mint = deps.mint ?? mintCode
+    this.mintId = deps.mintId ?? (() => randomUUID())
   }
 
-  /** Mint a fresh code, invalidating any previous one. */
-  start(): PairingSession {
-    this.session = {
-      code: this.mint(),
+  /** Open a fresh request, invalidating any previous one. */
+  create(): PairingRequest {
+    this.current = {
+      id: this.mintId(),
       expiresAt: this.now() + PAIRING_TTL_MS,
-      attemptsLeft: PAIRING_MAX_ATTEMPTS,
+      approved: false,
+      consumed: false,
     }
-    return this.session
+    return this.current
   }
 
-  /** The live session, or null when none was started or the last one expired. */
-  current(): PairingSession | null {
-    const session = this.session
-    if (session === null) return null
-    if (this.now() >= session.expiresAt) {
-      this.session = null
-      return null
-    }
-    return session
-  }
-
-  /** Forget the current code (used by tests and by an explicit reset). */
-  reset(): void {
-    this.session = null
+  /** The live request with this id, or null when unknown, expired or consumed. */
+  private live(id: string): PairingRequest | null {
+    const request = this.current
+    if (request === null || request.consumed) return null
+    if (!sameId(request.id, id)) return null
+    if (this.now() >= request.expiresAt) return null
+    return request
   }
 
   /**
-   * Redeem one typed code.
+   * Approve one request, as the host's own page does.
    *
-   * @param code - what the user typed, already trimmed.
-   * @returns the outcome; `'ok'` means the caller may hand over the token.
+   * @param id - the request id the page was opened with.
+   * @returns true when a live request was approved.
    */
-  redeem(code: string): RedeemOutcome {
-    const session = this.session
-    if (session === null) return 'no-session'
-    if (this.now() >= session.expiresAt) {
-      this.session = null
+  approve(id: string): boolean {
+    const request = this.live(id)
+    if (request === null) return false
+    request.approved = true
+    return true
+  }
+
+  /** Read the state the extension polls for. */
+  poll(id: string): PairingPoll {
+    const request = this.current
+    if (request !== null && !request.consumed && sameId(request.id, id) && this.now() >= request.expiresAt) {
       return 'expired'
     }
-    if (session.attemptsLeft <= 0) {
-      this.session = null
-      return 'exhausted'
-    }
-    if (sameCode(session.code, code)) {
-      this.session = null
-      return 'ok'
-    }
-    session.attemptsLeft -= 1
-    if (session.attemptsLeft <= 0) {
-      this.session = null
-      return 'exhausted'
-    }
-    return 'mismatch'
+    const live = this.live(id)
+    if (live === null) return 'unknown'
+    return live.approved ? 'approved' : 'pending'
+  }
+
+  /** Mark the token as delivered, so the id cannot be polled twice. */
+  consume(id: string): void {
+    const live = this.live(id)
+    if (live !== null) live.consumed = true
+  }
+
+  /** Forget the current request. */
+  reset(): void {
+    this.current = null
   }
 }
 
 /**
- * Whether a request may even attempt redemption.
+ * Whether an extension-side pairing call may proceed.
  *
- * A web page must never be able to read the token: WebSockets and fetches to
- * loopback are reachable from any site, and `Origin` is the one header a page
- * cannot forge. Loopback plus a non-page Origin (an extension context or a
- * non-browser local client) is the whole gate; the code itself is the secret.
- *
- * @param remoteAddress - socket peer address of the request.
- * @param origin - the request's `Origin` header, when present.
+ * @param remoteAddress - socket peer address.
+ * @param origin - the request's Origin header, when present.
  * @param isLoopback - loopback predicate (injected for tests).
- * @returns true when redemption is allowed to proceed.
+ * @returns true for loopback callers that are not web pages.
  */
 export function pairingRequestAllowed(
   remoteAddress: string | undefined,
@@ -153,18 +133,38 @@ export function pairingRequestAllowed(
 }
 
 /**
- * The host-side pairing page.
+ * Whether an approval may proceed: only the host's own page may approve.
  *
- * Deliberately a plain document with no scripts beyond the countdown: the code
- * is the whole payload, and the page must never carry the token it unlocks.
+ * That page is served from the host's loopback origin, so its `Origin` is
+ * exactly `http://127.0.0.1:<port>` or `http://localhost:<port>`. Any other
+ * site carries its own origin and is refused, and a page cannot forge this
+ * header; DNS-rebinding is covered for the same reason.
  *
- * @param session - the live session to display.
- * @param port - host port, used only for the "open the extension" hint.
+ * @param remoteAddress - socket peer address.
+ * @param origin - the request's Origin header.
+ * @param port - the host's own port.
+ * @param isLoopback - loopback predicate (injected for tests).
+ * @returns true when this is the host's own approval page.
+ */
+export function pairingApprovalAllowed(
+  remoteAddress: string | undefined,
+  origin: string | undefined,
+  port: number,
+  isLoopback: (address: string | undefined) => boolean,
+): boolean {
+  if (!isLoopback(remoteAddress)) return false
+  if (typeof origin !== 'string') return false
+  return origin === `http://127.0.0.1:${port}` || origin === `http://localhost:${port}`
+}
+
+/**
+ * The pairing page: one button, no numbers, no secrets.
+ *
+ * @param requestId - the request this page approves.
  * @returns a complete HTML document.
  */
-export function pairingPageHtml(session: PairingSession, port: number): string {
-  const digits = [...session.code].map((digit) => `<b>${digit}</b>`).join('')
-  const seconds = Math.max(0, Math.ceil((session.expiresAt - Date.now()) / 1000))
+export function pairingPageHtml(requestId: string): string {
+  const id = JSON.stringify(requestId)
   return `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -172,37 +172,32 @@ export function pairingPageHtml(session: PairingSession, port: number): string {
 <style>
  :root{color-scheme:dark}
  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-   background:#0b0b0d;color:#f2f2f4;font:15px/1.7 -apple-system,"PingFang SC",Arial,sans-serif}
- .card{width:min(520px,92vw);background:#141417;border:1px solid #26262b;border-radius:18px;padding:30px}
- h1{margin:0 0 6px;font-size:17px;font-weight:600}
- p{margin:0;color:#8b8b93;font-size:13px}
- .code{display:flex;gap:10px;justify-content:center;margin:22px 0 10px}
- .code b{width:52px;height:64px;display:flex;align-items:center;justify-content:center;
-   background:#1c1c20;border:1px solid #26262b;border-radius:12px;font-size:30px;font-weight:700}
- .meta{text-align:center;color:#8b8b93;font-size:12.5px;min-height:20px}
- .steps{margin-top:20px;padding-top:18px;border-top:1px solid #26262b}
- .steps li{margin:4px 0;color:#8b8b93;font-size:13px}
- a{color:#f2f2f4}
+   background:#0b0b0d;color:#f2f2f4;font:15px/1.6 -apple-system,"PingFang SC",Arial,sans-serif}
+ .card{text-align:center}
+ button{font:inherit;font-weight:600;font-size:15px;color:#000;background:#f2f2f4;border:0;
+   border-radius:11px;padding:14px 26px;cursor:pointer}
+ button:hover{transform:translateY(-1px)}
+ button:disabled{opacity:.4;cursor:default;transform:none}
 </style></head><body>
 <div class="card">
-  <h1>配对浏览器插件</h1>
-  <p>在浏览器插件面板里点「配对」，然后输入下面这 6 位数字。</p>
-  <div class="code">${digits}</div>
-  <div class="meta" id="m">剩余 <span id="s">${seconds}</span> 秒 · 输错 5 次即作废</div>
-  <div class="steps"><ol>
-    <li>保持这个页面打开（它只在本机可见，网页与其它扩展读不到）。</li>
-    <li>插件面板 → 配对 → 输入这 6 位数字。</li>
-    <li>配对成功后，以后每次打开都会自动连接，无需再输。</li>
-  </ol>
-  <p style="margin-top:14px"><a href="?new=1">重新生成配对码</a> · 本机端口 ${port}</p></div>
+  <div id="action"><button id="approve">确认授权</button></div>
+  <div id="done" hidden>&#10003; 已授权</div>
 </div>
 <script>
-  let left = ${seconds};
-  const s = document.getElementById('s');
-  const timer = setInterval(() => {
-    left -= 1; s.textContent = String(Math.max(0, left));
-    if (left <= 0) { clearInterval(timer); document.getElementById('m').textContent = '已过期，请重新生成配对码'; }
-  }, 1000);
+  const requestId = ${id};
+  document.getElementById('approve').addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try {
+      await fetch('/ext/pair/approve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ requestId: requestId })
+      });
+    } catch (error) { /* the extension still reads the answer from its poll */ }
+    document.getElementById('action').hidden = true;
+    document.getElementById('done').hidden = false;
+    setTimeout(function () { window.close() }, 300);
+  });
 </script>
 </body></html>`
 }

@@ -1399,33 +1399,37 @@ function currentHostPort(): number {
   return 45120
 }
 
+/** In-flight one-click pairing: the host's approval page and its poll. */
+let pairingAttempt: { requestId: string; tabId: number | null; timer: ReturnType<typeof setInterval> } | null = null
+
+/** Stop waiting for an approval that is no longer live. */
+function stopPairing(): void {
+  if (pairingAttempt !== null) clearInterval(pairingAttempt.timer)
+  pairingAttempt = null
+}
+
 /**
- * Redeem a pairing code for this host's bridge token.
+ * Open the host's approval page and pick the token up once it is approved.
  *
- * The code is typed by the user from the host's own pairing page; the host
- * accepts it only from loopback without a page Origin, so nothing a web page
- * can send is ever answered with the token. The token comes back to this
- * extension's own background (same trust domain as its storage) so the
- * settings view stays consistent instead of clearing on the next save.
+ * The user clicks exactly one button — on the host's own page, which is the
+ * only surface allowed to approve — and this side closes that tab again the
+ * moment the token arrives.
  *
- * @param code - the six digits the user typed.
- * @returns success plus the stored token, or the user-facing failure reason.
+ * @returns the opened approval URL, or the user-facing reason it failed.
  */
-async function pairWithCode(code: string): Promise<
-  { ok: true; port: number; token: string } | { ok: false; message: string }
-> {
+async function startPairing(): Promise<{ ok: true; approveUrl: string } | { ok: false; message: string }> {
   const zh = getUiLocale() === 'zh'
-  if (!/^\d{6}$/u.test(code)) {
-    return { ok: false, message: zh ? '请输入应用里显示的 6 位配对码' : 'Enter the 6-digit code shown in the app' }
-  }
   const port = currentHostPort()
-  let response: Response
+  stopPairing()
+
+  let requestId = ''
+  let approveUrl = ''
   try {
-    response = await fetch(`http://127.0.0.1:${port}/ext/pair`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code }),
-    })
+    const response = await fetch(`http://127.0.0.1:${port}/ext/pair/request`, { method: 'POST' })
+    if (!response.ok) throw new Error(String(response.status))
+    const body = await response.json() as { requestId?: unknown; approveUrl?: unknown }
+    requestId = typeof body.requestId === 'string' ? body.requestId : ''
+    approveUrl = typeof body.approveUrl === 'string' ? body.approveUrl : ''
   } catch {
     return {
       ok: false,
@@ -1434,36 +1438,64 @@ async function pairWithCode(code: string): Promise<
         : `Cannot reach the local instance on port ${port} — is the app running?`,
     }
   }
-  if (response.ok) {
-    const body = await response.json().catch(() => null) as { token?: unknown } | null
-    const token = typeof body?.token === 'string' ? body.token.trim() : ''
-    if (token === '') {
-      return { ok: false, message: zh ? '本机没有返回配对令牌' : 'The host returned no pairing token' }
-    }
-    settings.token = token
-    await persistSettings({ token }).catch(() => {})
-    startBridge()
-    return { ok: true, port, token }
+  if (requestId === '' || approveUrl === '') {
+    return { ok: false, message: zh ? '本机没有返回授权地址' : 'The host returned no approval page' }
   }
-  const byStatus: Record<number, string> = {
-    401: zh ? '配对码不正确，请核对应用里显示的 6 位数字' : 'Wrong code — check the 6 digits in the app',
-    409: zh ? '配对码已过期，请在应用里重新生成' : 'The code expired — generate a new one in the app',
-    429: zh ? '错误次数过多，配对码已作废，请在应用里重新生成' : 'Too many attempts — generate a new code in the app',
-    403: zh ? '本机实例只接受本机发起的配对' : 'The host only accepts pairing from this machine',
+
+  let tabId: number | null = null
+  try {
+    const tab = await chrome.tabs.create({ url: approveUrl })
+    tabId = typeof tab?.id === 'number' ? tab.id : null
+  } catch {
+    return { ok: false, message: zh ? '无法打开授权页' : 'The approval page could not be opened' }
   }
-  return {
-    ok: false,
-    message: byStatus[response.status]
-      ?? (zh ? `配对失败（${response.status}）` : `Pairing failed (${response.status})`),
+
+  const deadline = Date.now() + 120_000
+  pairingAttempt = {
+    requestId,
+    tabId,
+    timer: setInterval(() => {
+      void (async () => {
+        const attempt = pairingAttempt
+        if (attempt === null) return
+        if (Date.now() > deadline) {
+          stopPairing()
+          return
+        }
+        try {
+          const status = await fetch(
+            `http://127.0.0.1:${port}/ext/pair/status?request=${encodeURIComponent(attempt.requestId)}`,
+          )
+          const body = await status.json() as { state?: unknown; token?: unknown }
+          if (body.state !== 'approved') {
+            // Nothing to wait for once the request is gone.
+            if (body.state === 'unknown' || body.state === 'expired') stopPairing()
+            return
+          }
+          const token = typeof body.token === 'string' ? body.token.trim() : ''
+          if (token === '') {
+            stopPairing()
+            return
+          }
+          settings.token = token
+          await persistSettings({ token }).catch(() => {})
+          startBridge()
+          if (attempt.tabId !== null) await chrome.tabs.remove(attempt.tabId).catch(() => {})
+          stopPairing()
+        } catch {
+          // Keep waiting: the host may still be starting up.
+        }
+      })()
+    }, 1_000),
   }
+  return { ok: true, approveUrl }
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (typeof message !== 'object' || message === null) return
-  const msg = message as { type?: unknown; payload?: { code?: unknown } }
-  if (msg.type !== 'PAIR_WITH_CODE') return
-  const code = typeof msg.payload?.code === 'string' ? msg.payload.code.trim() : ''
-  void pairWithCode(code).then(sendResponse, () => sendResponse({ ok: false, message: getUiLocale() === 'zh' ? '配对失败，请重试' : 'Pairing failed — try again' }))
+  const msg = message as { type?: unknown }
+  if (msg.type !== 'PAIR_START') return
+  void startPairing().then(sendResponse, () => sendResponse({ ok: false, message: 'pairing failed' }))
   return true
 })
 

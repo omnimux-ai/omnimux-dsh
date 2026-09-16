@@ -1016,11 +1016,9 @@ export function App(): React.JSX.Element {
 
   const [pageScene, setPageScene] = useState<PageSceneInfo | null>(null)
   const [detectedMedia, setDetectedMedia] = useState<SniffedMediaItem[]>([])
-  /** Pairing card state: the typed code and its last outcome. */
-  const [pairCode, setPairCode] = useState('')
+  /** Pairing card state: the in-flight approval and its last outcome. */
   const [pairBusy, setPairBusy] = useState(false)
   const [pairMessage, setPairMessage] = useState<string | null>(null)
-  const [pairDone, setPairDone] = useState(false)
   const [attachedMediaIds, setAttachedMediaIds] = useState<Set<string>>(() => new Set())
   /** Draft images delivered by the page-media hover capsule, by media id. */
   const [litMediaIds, setLitMediaIds] = useState<Set<string>>(() => new Set())
@@ -3461,54 +3459,28 @@ export function App(): React.JSX.Element {
           onDismiss={() => { void dismissQuestion(question) }}
         />
       )}
-      {state !== 'connected' && !pairDone && (
+      {state !== 'connected' && (
         <div className="pair-card">
-          <div className="pair-head">
-            <strong>{locale === 'en' ? 'Pair with the local OmniMux' : '与本机 OmniMux 配对'}</strong>
-            <a
-              href={`http://127.0.0.1:${targetPort}/ext/pair`}
-              target="_blank"
-              rel="noreferrer"
-            >{locale === 'en' ? 'Open the pairing page' : '打开配对页面'}</a>
-          </div>
-          <p className="pair-hint">
-            {locale === 'en'
-              ? 'The app shows a 6-digit code — type it here once, and this browser stays connected.'
-              : '应用里会显示 6 位配对码，在这里输入一次，之后就一直连得上。'}
-          </p>
-          <div className="pair-row">
-            <input
-              value={pairCode}
-              onChange={(event) => setPairCode(event.target.value.replace(/\D/gu, '').slice(0, 6))}
-              onKeyDown={(event) => { if (event.key === 'Enter') (event.currentTarget.nextElementSibling as HTMLButtonElement | null)?.click() }}
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={6}
-              aria-label={locale === 'en' ? 'Pairing code' : '配对码'}
-              placeholder="000000"
-            />
-            <button
-              type="button"
-              disabled={pairBusy || pairCode.length !== 6}
-              onClick={() => {
-                if (pairBusy) return
-                setPairBusy(true)
-                setPairMessage(null)
-                void chrome.runtime?.sendMessage?.({ type: 'PAIR_WITH_CODE', payload: { code: pairCode.trim() } })
-                  .then((res: { ok?: boolean; message?: string } | undefined) => {
-                    if (res?.ok === true) {
-                      setPairDone(true)
-                      setPairCode('')
-                      setPairMessage(locale === 'en' ? 'Paired — connecting…' : '配对成功，正在连接…')
-                      return
-                    }
-                    setPairMessage(res?.message ?? (locale === 'en' ? 'Pairing failed' : '配对失败'))
-                  })
-                  .catch(() => setPairMessage(locale === 'en' ? 'Pairing failed' : '配对失败'))
-                  .finally(() => setPairBusy(false))
-              }}
-            >{pairBusy ? (locale === 'en' ? 'Pairing…' : '配对中…') : (locale === 'en' ? 'Pair' : '配对')}</button>
-          </div>
+          <button
+            type="button"
+            className="pair-button"
+            disabled={pairBusy}
+            onClick={() => {
+              if (pairBusy) return
+              setPairBusy(true)
+              setPairMessage(locale === 'en' ? 'Waiting for approval…' : '等待授权…')
+              void chrome.runtime?.sendMessage?.({ type: 'PAIR_START' })
+                .then((res: { ok?: boolean; message?: string } | undefined) => {
+                  if (res?.ok === true) return
+                  setPairBusy(false)
+                  setPairMessage(res?.message ?? (locale === 'en' ? 'Pairing failed' : '配对失败'))
+                })
+                .catch(() => {
+                  setPairBusy(false)
+                  setPairMessage(locale === 'en' ? 'Pairing failed' : '配对失败')
+                })
+            }}
+          >{locale === 'en' ? 'Connect to local OmniMux' : '连接本机 OmniMux'}</button>
           {pairMessage !== null && <div className="pair-message">{pairMessage}</div>}
         </div>
       )}

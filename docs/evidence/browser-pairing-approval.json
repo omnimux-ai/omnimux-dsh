@@ -1,0 +1,54 @@
+{
+  "issue": 2110,
+  "at": "2026-09-16T15:34:52.633Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-pairing-approve/plugins/omnimux-browser/extension/dist",
+  "chrome": "/Users/x/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "hostPort": 55625,
+  "tokenLength": 38,
+  "cases": [
+    {
+      "name": "panel offers one button and no code field",
+      "pass": true,
+      "observed": {
+        "buttonVisible": true,
+        "codeInput": 0
+      },
+      "evidence": []
+    },
+    {
+      "name": "approval page shows one button and no digits",
+      "pass": true,
+      "observed": {
+        "text": "确认授权"
+      },
+      "evidence": []
+    },
+    {
+      "name": "one click pairs the extension and stores the token",
+      "pass": true,
+      "observed": {
+        "state": "connected",
+        "storedTokenLength": 38
+      },
+      "evidence": []
+    },
+    {
+      "name": "the approval tab closes itself",
+      "pass": true,
+      "observed": {
+        "closed": true
+      },
+      "evidence": []
+    },
+    {
+      "name": "the pairing card disappears once connected",
+      "pass": true,
+      "observed": {
+        "cardGone": true
+      },
+      "evidence": []
+    }
+  ],
+  "passed": 5,
+  "total": 5
+}
