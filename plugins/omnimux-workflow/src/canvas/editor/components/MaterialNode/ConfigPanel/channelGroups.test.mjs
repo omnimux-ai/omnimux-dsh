@@ -180,8 +180,8 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
 
-  // H3 全系列按分组接入：任务版是独立在售型号，走分组路由并自带契约；
-  // 画布必须把该契约落到节点上（时长锁 15 秒、分辨率随上游、生成方式收窄）。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒任务版。
+  // 画布必须把各自的独立契约落到节点上。
   it('applies the H3 task line contract and leaves the standard line unconstrained', () => {
     const task = resolveLineConstraints('minimax-h3', { allowedGroups: ['task'] });
     assert.deepEqual(task.parameters.duration, { fixed: 15 });
@@ -193,7 +193,14 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       'video_multi_ref',
     ]);
 
-    // 标准版沿用模型契约（4–15 秒可选），不施加分组约束
+    // 工作流双档专线：约束分辨率 768P/2K
+    const videoFast = resolveLineConstraints('minimax-h3', { allowedGroups: ['video_fast'] });
+    assert.deepEqual(videoFast.parameters.resolution, { only: ['768P', '2K'] });
+    const videoPro = resolveLineConstraints('minimax-h3', { allowedGroups: ['video_pro'] });
+    assert.deepEqual(videoPro.parameters.resolution, { only: ['768P', '2K'] });
+
+    // 极速版与标准版沿用模型契约（4–15 秒可选），不额外施加分组时长约束
+    assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['turbo'] }), {});
     assert.deepEqual(resolveLineConstraints('minimax-h3', { allowedGroups: ['standard'] }), {});
     assert.deepEqual(resolveLineConstraints('minimax-h3', undefined), {});
 
