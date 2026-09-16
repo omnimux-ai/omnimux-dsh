@@ -43,7 +43,7 @@ export async function completeTextViaChat(input) {
     baseUrl = String(env.OMNIMUX_BASE_URL).trim()
   }
 
-  // 若未直接提供 key，尝试从 credentials 解析官方 key
+  // 若未直接提供 key，尝试从 credentials 解析官方中枢 key
   if (!apiKey && input.credentials && typeof input.credentials.resolve === 'function') {
     for (const ref of ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']) {
       try {
@@ -57,23 +57,24 @@ export async function completeTextViaChat(input) {
     }
   }
 
-  // 若仍缺少 key 或 baseUrl，自适应读取本地/中枢配置好的模型提供商 (如 cpa)
-  if (!apiKey || !baseUrl) {
-    const discovered = await discoverLocalChatProvider({
+  // Hub-first：已有执行中枢凭证时，固定中枢 base，禁止被本机 CPA 劫持
+  // （视频五维深拆等路径缺 OMNIMUX_BASE_URL 时，旧逻辑会 adopt 127.0.0.1:8317）。
+  if (apiKey && !baseUrl && !explicitBaseUrl) {
+    baseUrl = DEFAULT_CHAT_BASE
+  }
+
+  // 仅当中枢凭证仍不可用时，才回退发现本机/其它 provider（如 CPA）
+  if (!apiKey) {
+    const discovered = await discoverChatProviderFallback({
       env,
       credentials: input.credentials,
       settings: input.settings,
       model: targetModel,
     })
     if (discovered) {
-      const adoptedLocalBase = !explicitBaseUrl && Boolean(discovered.baseUrl)
-      if (adoptedLocalBase) baseUrl = discovered.baseUrl
-      // 关键修复：当 baseUrl 采用本地发现的提供商时，apiKey 必须配套使用该本地提供商的 key，
-      // 避免携带 credentials 中外部的 OMNIMUX_API_KEY 打到本地导致 401 Invalid API key。
-      if (adoptedLocalBase || !apiKey) {
-        if (!explicitInputKey && discovered.apiKey) apiKey = discovered.apiKey
-      }
-      if (discovered.model) {
+      if (!explicitBaseUrl && discovered.baseUrl) baseUrl = discovered.baseUrl
+      if (!explicitInputKey && discovered.apiKey) apiKey = discovered.apiKey
+      if (discovered.model && discovered.model !== input.model) {
         targetModel = discovered.model
         hasDiscoveredLocalModel = true
       }
@@ -232,8 +233,8 @@ function pickErrorMessage(json) {
 }
 
 /**
- * Discover a configured LLM provider from settings / credentials / disk
- * when OMNIMUX_API_KEY is not directly exported.
+ * Fallback provider discovery when the hub key is absent.
+ * Prefers the OmniMux hub route when present; otherwise local CPA / openai-completions.
  * @param {{
  *   env: Record<string, string | undefined>,
  *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
@@ -241,7 +242,7 @@ function pickErrorMessage(json) {
  *   model: string,
  * }} opts
  */
-async function discoverLocalChatProvider(opts) {
+async function discoverChatProviderFallback(opts) {
   const { env, credentials, settings, model } = opts
 
   let providers = undefined
@@ -280,73 +281,88 @@ async function discoverLocalChatProvider(opts) {
 
   if (!providers || typeof providers !== 'object') return undefined
 
-  let matchedProvider = undefined
-  let mappedModel = undefined
-
-  // 优先匹配本地端点 (如 cpa / localhost / 127.0.0.1)
+  // Hub-first among declared providers; local CPA only after hub miss.
   const entries = Object.entries(providers).sort(([aKey, a], [bKey, b]) => {
-    const aLocal = aKey === 'cpa' || /localhost|127\.0\.0\.1/.test(a?.baseURL || '') ? 1 : 0
-    const bLocal = bKey === 'cpa' || /localhost|127\.0\.0\.1/.test(b?.baseURL || '') ? 1 : 0
-    return bLocal - aLocal
+    const rank = (key, row) => {
+      if (key === 'omnimux' || /api\.omnimux\.ai/i.test(row?.baseURL || '')) return 0
+      if (key === 'cpa' || /localhost|127\.0\.0\.1/.test(row?.baseURL || '')) return 2
+      return 1
+    }
+    return rank(aKey, a) - rank(bKey, b)
   })
 
+  /** @type {Array<{ key: string, provider: any, mappedModel?: string, modelHit: boolean }>} */
+  const ranked = []
   for (const [key, p] of entries) {
     if (!p || typeof p !== 'object' || !p.baseURL) continue
     const models = Array.isArray(p.models) ? p.models : []
     const hit = models.find(m => m && (m.id === model || m.id === `${model}-high` || m.id?.startsWith(model)))
     if (hit) {
-      matchedProvider = p
-      mappedModel = hit.id
-      break
+      ranked.push({ key, provider: p, mappedModel: hit.id, modelHit: true })
+      continue
     }
-    if (key === 'cpa' || p.api === 'openai-completions') {
-      if (!matchedProvider) matchedProvider = p
+    if (key === 'omnimux' || key === 'cpa' || p.api === 'openai-completions') {
+      ranked.push({ key, provider: p, modelHit: false })
     }
   }
+  // Prefer exact model hits, keeping hub-before-local order within each tier.
+  ranked.sort((a, b) => Number(b.modelHit) - Number(a.modelHit))
 
-  if (!matchedProvider || !matchedProvider.baseURL) return undefined
+  for (const candidate of ranked) {
+    const matchedProvider = candidate.provider
+    const matchedKey = candidate.key
+    const apiKeyEnv = matchedProvider.apiKeyEnv
+      || (matchedKey === 'omnimux' || /api\.omnimux\.ai/i.test(String(matchedProvider.baseURL))
+        ? 'OMNIMUX_API_KEY'
+        : 'CPA_API_KEY')
+    let resolvedKey = String(env[apiKeyEnv] || '').trim()
 
-  const apiKeyEnv = matchedProvider.apiKeyEnv || 'CPA_API_KEY'
-  let resolvedKey = String(env[apiKeyEnv] || '').trim()
+    if (!resolvedKey && credentials && typeof credentials.resolve === 'function') {
+      try {
+        const hit = await credentials.resolve(apiKeyEnv)
+        if (hit && typeof hit.value === 'string') resolvedKey = hit.value.trim()
+      } catch {}
+    }
 
-  if (!resolvedKey && credentials && typeof credentials.resolve === 'function') {
-    try {
-      const hit = await credentials.resolve(apiKeyEnv)
-      if (hit && typeof hit.value === 'string') resolvedKey = hit.value.trim()
-    } catch {}
-  }
+    if (!resolvedKey && matchedProvider.apiKey) {
+      resolvedKey = String(matchedProvider.apiKey).trim()
+    }
 
-  if (!resolvedKey && matchedProvider.apiKey) {
-    resolvedKey = String(matchedProvider.apiKey).trim()
-  }
-
-  if (!resolvedKey) {
-    try {
-      const { readFileSync, existsSync } = await import('node:fs')
-      const { join } = await import('node:path')
-      const { homedir } = await import('node:os')
-      const { parse } = await import('yaml')
-      const candidates = [
-        env.DSH_HOME ? join(env.DSH_HOME, '.credentials.yaml') : '',
-        join(homedir(), '.omnimux-dev', '.credentials.yaml'),
-        join(homedir(), '.dsh', '.credentials.yaml'),
-      ].filter(Boolean)
-      for (const p of candidates) {
-        if (existsSync(p)) {
-          const doc = parse(readFileSync(p, 'utf8'))
-          const refVal = doc?.refs?.[apiKeyEnv] || doc?.refs?.OMNIMUX_API_KEY
-          if (typeof refVal === 'string' && refVal.trim()) {
-            resolvedKey = refVal.trim()
-            break
+    // Disk credential scan only when no credentials API was injected; otherwise
+    // tests and host-injected stores would be shadowed by ~/.omnimux-dev keys.
+    if (!resolvedKey && !(credentials && typeof credentials.resolve === 'function')) {
+      try {
+        const { readFileSync, existsSync } = await import('node:fs')
+        const { join } = await import('node:path')
+        const { homedir } = await import('node:os')
+        const { parse } = await import('yaml')
+        const candidates = [
+          env.DSH_HOME ? join(env.DSH_HOME, '.credentials.yaml') : '',
+          join(homedir(), '.omnimux-dev', '.credentials.yaml'),
+          join(homedir(), '.dsh', '.credentials.yaml'),
+        ].filter(Boolean)
+        for (const p of candidates) {
+          if (existsSync(p)) {
+            const doc = parse(readFileSync(p, 'utf8'))
+            const refVal = doc?.refs?.[apiKeyEnv]
+            if (typeof refVal === 'string' && refVal.trim()) {
+              resolvedKey = refVal.trim()
+              break
+            }
           }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+
+    // Skip providers with no usable key so hub-without-key yields to CPA.
+    if (!resolvedKey) continue
+
+    return {
+      baseUrl: String(matchedProvider.baseURL).trim(),
+      apiKey: resolvedKey,
+      model: candidate.mappedModel || model,
+    }
   }
 
-  return {
-    baseUrl: String(matchedProvider.baseURL).trim(),
-    apiKey: resolvedKey || 'local-key',
-    model: mappedModel || model,
-  }
+  return undefined
 }
