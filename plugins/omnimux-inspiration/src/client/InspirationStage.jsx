@@ -39,7 +39,7 @@ export function InspirationStage({ t, stage, store, visible = true }) {
       role="region"
       aria-label={t('title')}
       aria-hidden={visible ? undefined : 'true'}
-      className="omnimux-inspiration-stage"
+      className="omnimux-inspiration-stage omx-stage-scroll"
       data-visible={visible ? 'true' : 'false'}
       style={{
         display: visible ? 'flex' : 'none',
@@ -47,7 +47,8 @@ export function InspirationStage({ t, stage, store, visible = true }) {
         width: '100%',
         height: '100%',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}
     >
       <PageHeader
