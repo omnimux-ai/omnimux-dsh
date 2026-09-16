@@ -26,6 +26,7 @@ import {
   getExplicitLeftCollapseIntent,
   installSidebarToggleTopbar,
   isLeftSidebarCollapsed,
+  rememberConversationWidth,
   setExplicitLeftCollapseIntent,
   syncLeftCollapsedHtmlAttr,
   syncNativeRightbarControls,
@@ -1138,6 +1139,64 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     )
     assert.ok(Number.isFinite(written), '必须始终写入一个可用基准宽度')
     assert.ok(written >= 320, `基准宽度不得低于会话栏地板，实际 ${written}`)
+  })
+})
+
+describe('collapse-time baseline snapshot (issue #2074)', () => {
+  const splitDoc = ({ conversationPx, rightPx }) => {
+    const rect = (w) => ({ left: 0, top: 0, width: w, height: 1000, right: w })
+    const props = new Map()
+    return {
+      documentElement: {
+        style: {
+          setProperty: (k, v) => props.set(k, v),
+          getPropertyValue: (k) => props.get(k) ?? '',
+          removeProperty: (k) => props.delete(k),
+        },
+      },
+      querySelector(selector) {
+        const sel = String(selector)
+        if (sel.includes('rightbar')) {
+          return { offsetWidth: rightPx, getBoundingClientRect: () => rect(rightPx) }
+        }
+        if (sel.includes('ConversationSurface')) {
+          return { offsetWidth: conversationPx, getBoundingClientRect: () => rect(conversationPx) }
+        }
+        return null
+      },
+      body: null,
+    }
+  }
+
+  it('learns the split width on demand even when the sync loop never re-ran', () => {
+    // 实时缺陷：启动时右栏未挂载（基准停在回退值），此后同步循环不再触发，
+    // 基准一直陈旧到用户点击收起那一刻 —— 点击前必须能按需补取样。
+    const doc = splitDoc({ conversationPx: 776, rightPx: 864 })
+    assert.equal(rememberConversationWidth(doc), true, '三分栏形态必须能按需取样')
+    applyTopbarToggleCssVars(doc)
+    assert.equal(
+      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+      '776px',
+      '按需取样后写入的基准必须是刚测到的真实分栏宽度',
+    )
+  })
+
+  it('refuses to snapshot without a real right workspace column', () => {
+    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 1640, rightPx: 0 })), false)
+    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 485, rightPx: 120 })), false)
+  })
+
+  it('refuses a sub-floor conversation reading', () => {
+    assert.equal(rememberConversationWidth(splitDoc({ conversationPx: 200, rightPx: 1200 })), false)
+  })
+
+  it('snapshots before triggering the official collapse', () => {
+    const source = readFileSync(join(here, 'sidebar-toggle-topbar.js'), 'utf8')
+    const clickBody = source.slice(source.indexOf('btn.addEventListener'))
+    const snapshotAt = clickBody.indexOf('rememberConversationWidth(doc)')
+    const triggerAt = clickBody.indexOf('triggerClick(official)')
+    assert.ok(snapshotAt >= 0, '点击处理器必须做分栏快照')
+    assert.ok(triggerAt > snapshotAt, '快照必须发生在触发官方折叠之前')
   })
 })
 
