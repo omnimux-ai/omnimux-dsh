@@ -1,0 +1,87 @@
+{
+  "task": "inspiration-modal-header-fix-browser",
+  "issue": 2014,
+  "title": "会话栏收起态灵感弹窗顶栏与分享按钮可见性 · 真实浏览器验收",
+  "origin": "http://127.0.0.1:49235",
+  "port": 49235,
+  "browser": "ego-browser (chromium)",
+  "startedAt": "2026-09-16T02:47:18.775Z",
+  "assertions": [
+    {
+      "name": "header-display-flex-under-collapsed-state",
+      "pass": true,
+      "detail": {
+        "hasHeader": true,
+        "headerDisplay": "flex",
+        "headerHeight": 60,
+        "headerWidth": 1178,
+        "hasShareBtn": true,
+        "shareBtnDisplay": "flex",
+        "shareBtnVisibility": "visible",
+        "shareBtnWidth": 72,
+        "shareBtnHeight": 32,
+        "shareBtnText": "分享"
+      }
+    },
+    {
+      "name": "header-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "hasHeader": true,
+        "headerDisplay": "flex",
+        "headerHeight": 60,
+        "headerWidth": 1178,
+        "hasShareBtn": true,
+        "shareBtnDisplay": "flex",
+        "shareBtnVisibility": "visible",
+        "shareBtnWidth": 72,
+        "shareBtnHeight": 32,
+        "shareBtnText": "分享"
+      }
+    },
+    {
+      "name": "share-btn-visible-and-positive-geometry",
+      "pass": true,
+      "detail": {
+        "hasHeader": true,
+        "headerDisplay": "flex",
+        "headerHeight": 60,
+        "headerWidth": 1178,
+        "hasShareBtn": true,
+        "shareBtnDisplay": "flex",
+        "shareBtnVisibility": "visible",
+        "shareBtnWidth": 72,
+        "shareBtnHeight": 32,
+        "shareBtnText": "分享"
+      }
+    },
+    {
+      "name": "share-popover-opened-on-click",
+      "pass": true,
+      "detail": {
+        "visible": true,
+        "width": 280,
+        "height": 125.796875,
+        "title": "分享灵感"
+      }
+    },
+    {
+      "name": "screenshots-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "collapsedHeader": {
+          "width": 1440,
+          "height": 960,
+          "bytes": 68557
+        },
+        "sharePopover": {
+          "width": 1440,
+          "height": 960,
+          "bytes": 86284
+        }
+      }
+    }
+  ],
+  "pass": true,
+  "errors": []
+}

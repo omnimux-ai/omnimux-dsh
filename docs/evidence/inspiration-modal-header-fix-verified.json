@@ -1,0 +1,16 @@
+{
+  "task": "inspiration-modal-header-collapse-fix",
+  "issue": 2014,
+  "title": "修复会话栏折叠样式过度匹配导致灵感弹窗顶栏与分享按钮消失",
+  "branch": "fix/inspiration-modal-header-fix-issue-2014",
+  "timestamp": "2026-09-16T10:35:40.000Z",
+  "evidence": {
+    "liveAppProbePort": 9229,
+    "rootCause": "html[data-omnimux-conversation-collapsed]:not(:has([data-rightbar-collapsed=\"true\"])) header[class*=\"header\"] 设置了 display: none !important",
+    "fix": {
+      "conversationCollapse": "将 header[class*=\"header\"] 严格限定在 [data-slot^=\"conversation\"] 容器内",
+      "inspirationStyles": ".omnimux-inspiration-modal-container header.omnimux-inspiration-modal-header 增加 display: flex !important 双保险"
+    },
+    "verified": true
+  }
+}
