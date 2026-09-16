@@ -36,6 +36,11 @@ export interface WorkflowDispatcherDeps {
   projectStore?: ProjectStore;
   /** Lazy-bind a local project before media generate executions. */
   ensureProjectBound?: EnsureProjectBoundFn;
+  /**
+   * 会话 id → 工作区目录（宿主 `agents` 服务的会话 `header.cwd`）。
+   * 用于按会话解析/登记所属项目（Issue #2104）；不可用时路由降级为 unknown-session。
+   */
+  resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined;
 }
 
 export interface WorkflowDispatchRequest {

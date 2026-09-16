@@ -88,6 +88,12 @@ export {
 } from './projects/ProjectStore';
 export type { ProjectStore, ProjectRecord } from './projects/ProjectStore';
 export {
+  ensureWorkspaceProjectBound,
+  normalizeWorkspaceProjectTitle,
+  createWorkspaceProjectBinder,
+} from './projects/workspaceProjectBinding';
+export type { WorkspaceProjectBindingInput, BindWorkspaceProjectFn } from './projects/workspaceProjectBinding';
+export {
   PROJECT_ROUTE_PREFIX,
   PROJECT_LIBRARY_PATH,
   createProjectDispatcher,

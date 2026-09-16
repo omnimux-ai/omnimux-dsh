@@ -568,3 +568,42 @@ export async function activateProjectCanvas(ctx, opts = {}) {
   applyProjectCanvasRatio(service, sessionId, null, {}, true)
   return true
 }
+
+/**
+ * 画布 tab 的目标画布工作区 id 解析（Issue #2104）。
+ *
+ * 优先级：显式 scope（项目页点某个创作页进来）> 本会话内用户选中的创作页 >
+ * 本会话所属项目的当前创作页 > 会话散列兜底。
+ *
+ * 会话级的两项都按 `sessionId` 匹配：换工作区（=换会话）它们立刻失效，
+ * 于是画布跟着工作区切，而不是停在上次点过的别的项目的创作页上。
+ *
+ * @param {{
+ *   explicitWorkspaceId?: string | null,
+ *   pickedBySession?: { sessionId?: string | null, workspaceId?: string | null } | null,
+ *   sessionBinding?: { sessionId?: string | null, canvasWorkspaceId?: string | null } | null,
+ *   sessionId?: string | null,
+ *   fallbackWorkspaceId?: string | null,
+ * }} [input]
+ * @returns {string | undefined}
+ */
+export function resolveCanvasTargetWorkspaceId(input = {}) {
+  const { explicitWorkspaceId, pickedBySession, sessionBinding, sessionId, fallbackWorkspaceId } = input
+  const clean = (value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null)
+
+  const explicit = clean(explicitWorkspaceId)
+  if (explicit) return explicit
+
+  const hasSession = typeof sessionId === 'string' && sessionId !== ''
+  const belongsToSession = (entry) => Boolean(hasSession && entry && typeof entry === 'object' && entry.sessionId === sessionId)
+
+  if (belongsToSession(pickedBySession)) {
+    const picked = clean(pickedBySession.workspaceId)
+    if (picked) return picked
+  }
+  if (belongsToSession(sessionBinding)) {
+    const bound = clean(sessionBinding.canvasWorkspaceId)
+    if (bound) return bound
+  }
+  return clean(fallbackWorkspaceId) ?? undefined
+}

@@ -5,8 +5,9 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { resolveEffectiveWorkspaceId, sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
 import { CanvasBridge } from '../CanvasBridge.jsx'
+import { fetchSessionProjectBinding } from '../api.js'
 import { injectWorkflowStyles } from '../styles.js'
-import { applyProjectCanvasRatio, CANVAS_TAB_ID, getBetterSidebar } from './projectCanvas.js'
+import { applyProjectCanvasRatio, CANVAS_TAB_ID, getBetterSidebar, resolveCanvasTargetWorkspaceId } from './projectCanvas.js'
 
 /** Stable page id for UI Context Envelope (Agent workspace targeting). */
 export const CANVAS_PAGE_ID = 'workflow-canvas'
@@ -29,9 +30,13 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
     () => (locale ? locale.getLocale().active : 'zh'),
   )
   const sessionId = scope?.sessionId
-  const [activeOverride, setActiveOverride] = useState(() => {
+  // 「最近选中的创作页」按会话记账：换工作区（=换会话）即失效，画布才会跟着工作区走。
+  // 旧实现从 localStorage 直接取全局值，导致切工作区后画布停在别的项目的创作页（Issue #2104）。
+  const [pickedBySession, setPickedBySession] = useState(() => {
     try {
-      return typeof localStorage !== 'undefined' ? localStorage.getItem('omnimux:latest-active-canvas') : null
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('omnimux:latest-active-canvas') : null
+      // sessionId 未知：只作最低优先级兜底，不参与「本会话」匹配。
+      return raw ? { sessionId: null, workspaceId: raw } : null
     } catch {
       return null
     }
@@ -40,27 +45,56 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
   useEffect(() => {
     const handler = (e) => {
       const wsId = e?.detail?.workspaceId
-      if (wsId) {
-        setActiveOverride(wsId)
-        try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('omnimux:latest-active-canvas', wsId)
-          }
-        } catch {}
-      }
+      if (!wsId) return
+      setPickedBySession({ sessionId: sessionId ?? null, workspaceId: wsId })
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('omnimux:latest-active-canvas', wsId)
+        }
+      } catch {}
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('omnimux:active-canvas-changed', handler)
       return () => window.removeEventListener('omnimux:active-canvas-changed', handler)
     }
     return undefined
-  }, [])
+  }, [sessionId])
 
-  // 每个会话 / 项目拥有专属独立的画布工作区 ID，绝不串连其他项目的画布。
-  // 支持创作页就地切换 (activeOverride)、显式 scope 传入或继承映射，否则按 sessionId 散列派生。
-  // 确保同工作区新建会话时，画布稳定停留在当前激活的创作页上，不跳图、不重置。
-  const explicitWorkspaceId = scope?.canvasWorkspaceId || scope?.workspaceId
-  const targetWorkspaceId = activeOverride || explicitWorkspaceId || resolveEffectiveWorkspaceId(sessionId)
+  // 会话所属项目的当前创作页。宿主按「作品库内工作区始终有项目」解析，缺失即登记；
+  // 库外工作区返回 outside-library，此时退回会话散列画布。
+  const [sessionBinding, setSessionBinding] = useState(null)
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionBinding(null)
+      return undefined
+    }
+    let cancelled = false
+    fetchSessionProjectBinding(sessionId)
+      .then((result) => {
+        if (cancelled) return
+        const canvasWorkspaceId = result?.body?.project?.canvasWorkspaceId
+        setSessionBinding({
+          sessionId,
+          canvasWorkspaceId: typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId : null,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setSessionBinding({ sessionId, canvasWorkspaceId: null })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
+
+  // 优先级：显式 scope（从项目页点某创作页进来）> 本会话内用户选中的创作页 >
+  // 本会话所属项目的当前创作页 > 会话散列画布。换工作区时前两项均失效，画布随之切换。
+  const targetWorkspaceId = resolveCanvasTargetWorkspaceId({
+    explicitWorkspaceId: scope?.canvasWorkspaceId || scope?.workspaceId,
+    pickedBySession,
+    sessionBinding,
+    sessionId,
+    fallbackWorkspaceId: resolveEffectiveWorkspaceId(sessionId),
+  })
 
   // 「项目」页「AI应用」卡片「编辑」的目标工作流组：走 better-sidebar tab.meta
   // （契约字段，随布局持久化，可 live 更新）。画布 tab 是 single:true，

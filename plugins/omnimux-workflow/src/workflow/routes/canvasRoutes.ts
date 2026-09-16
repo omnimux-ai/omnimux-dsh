@@ -141,6 +141,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   });
   const projectDispatcher = createProjectDispatcher({ libraryRoot, workspaceStore: store,
     mediaRevision: createMediaRevision(mediaDir, (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath)),
+    resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
   });
   const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore);
   const executionRoutes = createExecutionRoutes({

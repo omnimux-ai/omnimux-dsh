@@ -6,6 +6,7 @@
 import { join } from 'node:path';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore';
 import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
+import type { BindWorkspaceProjectFn } from '../../projects/workspaceProjectBinding';
 import type {
   ExecutionManager,
   ExecutionSnapshot,
@@ -69,6 +70,11 @@ export interface WorkflowAgentDeps {
   resolveProjectFile?: import('../execution/executionMediaSource.ts').ResolveExecutionProjectFile;
   /** Same lazy-bind helper as POST /executions (media generate needs a project root). */
   ensureProjectBound?: EnsureProjectBoundFn;
+  /**
+   * 工作区里诞生的画布必须能被项目页看到（Issue #2104）：把会话所属的既有
+   * 工作区文件夹登记为项目，并把画布登记为它的一个创作页。best-effort。
+   */
+  bindWorkspaceProject?: BindWorkspaceProjectFn;
   /**
    * Optional last-known UI viewport (hub workbenchMailbox).
    * When present, tools may default workspace_id from view.extra.workspaceId.
@@ -277,6 +283,44 @@ export function readUiContextWorkspaceId(
     return trimmed;
   } catch {
     return undefined;
+  }
+}
+
+/** 从工作台信封取当前会话 id（画布登记要用它反查工作区目录）。 */
+export function readUiContextSessionId(
+  getActiveView?: WorkbenchMailboxSeat['getActiveView'],
+): string | undefined {
+  if (typeof getActiveView !== 'function') return undefined;
+  try {
+    const active = getActiveView();
+    const id = active?.uiContext?.sessionId ?? active?.sessionId;
+    if (typeof id !== 'string' || id.trim().length === 0) return undefined;
+    return id.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Issue #2104：画布一旦在工作区里诞生，就把它登记成该工作区项目的创作页。
+ * best-effort —— 登记不可用或失败都不得影响画布本身的操作结果。
+ */
+export async function bindCanvasWorkspaceProject(
+  deps: Pick<WorkflowAgentDeps, 'bindWorkspaceProject' | 'getActiveView'>,
+  workspaceId: string | undefined,
+  title?: string | null,
+): Promise<void> {
+  const bind = deps.bindWorkspaceProject;
+  if (typeof bind !== 'function') return;
+  if (typeof workspaceId !== 'string' || workspaceId.trim() === '') return;
+  try {
+    await bind({
+      canvasWorkspaceId: workspaceId.trim(),
+      sessionId: readUiContextSessionId(deps.getActiveView) ?? null,
+      title: title ?? null,
+    });
+  } catch {
+    // 登记是副作用，不是工具契约的一部分。
   }
 }
 
