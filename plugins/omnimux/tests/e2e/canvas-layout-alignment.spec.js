@@ -98,20 +98,49 @@ test('e2e: full canvas mode layout alignment and conversation collapse contracts
         /\[data-visible="true"\]/,
         'Projection must require the canvas stage to be the visible one'
       );
+      // 会话列不可见的两种成因都必须能投射（Issue #1998）：右栏全屏遮挡，或会话栏折叠且右栏未收起。
       assert.match(
         IMAGE_CANVAS_PROJECTION_SELECTOR,
         /\[data-rightbar-fullscreen="true"\]/,
-        'Projection must require the right panel to be fullscreen'
+        'Projection must keep the fullscreen branch: entering fullscreen sets the collapse flag asynchronously'
       );
-      assert.doesNotMatch(
+      assert.match(
         IMAGE_CANVAS_PROJECTION_SELECTOR,
-        /conversation-collapsed/,
-        'Projection must not depend on the conversation-collapse flag'
+        /html\[data-omnimux-conversation-collapsed\]/,
+        'Projection must also fire while the conversation column is collapsed'
+      );
+      // 右栏确证收起时会话列被强制占满（conversation-box.js），折叠键仍为真；此时投射会在同屏造出第二个输入框。
+      assert.match(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /html\[data-omnimux-conversation-collapsed\]:not\(:has\(\[data-rightbar-collapsed="true"\]\)\)/,
+        'The collapse branch must exclude the rightbar-collapsed state, where the conversation column is forced visible'
+      );
+      // 折叠支必须自带画布身份，否则任一插件页收起会话列都会浮出输入框（Issue #1821）。
+      const collapseBranch = IMAGE_CANVAS_PROJECTION_SELECTOR
+        .split(', ')
+        .find((part) => part.includes('conversation-collapsed'));
+      assert.ok(collapseBranch, 'Projection must carry a conversation-collapsed branch');
+      assert.match(
+        collapseBranch,
+        /\[data-omnimux-image-canvas\]\[data-visible="true"\]/,
+        'The collapse branch must carry the canvas identity and foreground flag'
+      );
+      // 该常量被当作前缀拼上 `[data-composer-seat]`：裸逗号并集会让第一条分支丢掉座席后代
+      // （展开成 `A, B [seat]`），把 position:fixed 打到画布外框上——实机预演抓到的真实缺陷。
+      assert.match(
+        IMAGE_CANVAS_PROJECTION_SELECTOR,
+        /^:is\(/,
+        'Projection must be wrapped in :is() so it stays a valid prefix for descendant selectors'
       );
       assert.match(
         CONVERSATION_COLLAPSE_CSS,
         /html\[data-omnimux-left-collapsed\]:has\(\[data-omnimux-image-canvas\]\[data-visible="true"\]\)[^{]*\[data-composer-seat\][^{]*\{[^}]*left:\s*0\s*!important/,
         'Left-collapsed rail must still anchor the projected composer at viewport left'
+      );
+      assert.match(
+        CONVERSATION_COLLAPSE_CSS,
+        /html\[data-omnimux-left-collapsed\]\[data-omnimux-conversation-collapsed\]:not\(:has\(\[data-rightbar-collapsed="true"\]\)\):has\(\[data-omnimux-image-canvas\]\[data-visible="true"\]\)[^{]*\[data-composer-seat\][^{]*\{[^}]*left:\s*0\s*!important/,
+        'Left-collapsed rail must anchor the conversation-collapsed branch too'
       );
       assert.doesNotMatch(
         CONVERSATION_COLLAPSE_CSS,

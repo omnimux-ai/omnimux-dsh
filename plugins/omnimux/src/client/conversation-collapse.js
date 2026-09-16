@@ -13,19 +13,40 @@ export const CONVERSATION_COLLAPSED_ATTR = 'data-omnimux-conversation-collapsed'
 export const CONVERSATION_COLLAPSE_STYLE_ID = 'omnimux-conversation-collapse-chrome'
 export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collapsed:v1:'
 
+/** 画布身份片段：媒体查看器正在展示单张大图且该舞台在前台（见 media-viewer/image-canvas-stage.js）。 */
+const IMAGE_CANVAS_VISIBLE = '[data-omnimux-image-canvas][data-visible="true"]'
+
 /**
- * 原生输入框投射规则的前缀：图像画布身份 + 右侧栏全屏铺满。
+ * 原生输入框投射规则的前缀：**图像画布身份 ∧ 会话列此刻真的不可见**。
  *
- * 会话列是否收起只表达布局意图，不能当作「当前是哪个画布」的判据：任一插件页
- * 全屏都会收起会话列，若以它为键，技能/专家、工作流画布等页面底部都会浮出输入框，
- * 而图像画布自身反而没有专属条件（Issue #1821）。身份标识由媒体查看器投影
- * （见 media-viewer/image-canvas-stage.js）。
+ * 判据既不是「当前是哪个画布」，也不是焦点模式：焦点模式在折叠键为真时直接报 `gui`
+ * （focus-state.js:139-141），是派生值，拿它反推会话列可见性会构成循环依赖。
+ *
+ * 会话列不可见只有两种成因，投射选择器因此是两支的并集：
+ *   1. 右栏全屏面板遮挡（壳层镜像键，只读接缝）；
+ *   2. 布局折叠且右栏未确证收起 —— 右栏收起时会话列被强制占满（conversation-box.js），
+ *      此时折叠键仍为真但会话列可见，必须排除，否则同屏会出现两个输入框。
+ *
+ * 身份片段不可省：任一插件页收起会话列都会命中成因 2，没有身份键时技能/专家、
+ * 工作流画布等页面底部也会浮出输入框（Issue #1821 的教训）。
+ *
+ * 保留成因 1 而不是只留成因 2：进入全屏由 fullscreen-collapse-sync 经 MutationObserver
+ * 异步置位折叠键，只留成因 2 会让输入框在过渡帧内闪没。
  *
  * 不排除左栏收起态：真机实测（1708×974）左栏收起时全屏面板铺满 100vw、座席
  * 左基准由既有左栏规则归零，投射后卡片仍居中于画布。
  */
-export const IMAGE_CANVAS_IDENTITY_SELECTOR = 'html:has([data-omnimux-image-canvas][data-visible="true"])'
-export const IMAGE_CANVAS_PROJECTION_SELECTOR = `${IMAGE_CANVAS_IDENTITY_SELECTOR} .dshDesktopFrame[data-rightbar-fullscreen="true"]`
+export const IMAGE_CANVAS_IDENTITY_SELECTOR = `html:has(${IMAGE_CANVAS_VISIBLE})`
+/** 会话列不可见 · 成因一：右栏全屏面板遮挡。 */
+export const IMAGE_CANVAS_FULLSCREEN_SELECTOR = `${IMAGE_CANVAS_IDENTITY_SELECTOR} .dshDesktopFrame[data-rightbar-fullscreen="true"]`
+/** 会话列不可见 · 成因二：布局折叠且右栏未确证收起。 */
+export const CONVERSATION_COLUMN_HIDDEN_SELECTOR = `html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])):has(${IMAGE_CANVAS_VISIBLE})`
+/**
+ * 投射规则的前缀。**必须用 `:is()` 包裹**：这个常量会被当作前缀拼上 `[data-composer-seat]`，
+ * 若直接写成逗号并集，展开后是 `A, B [data-composer-seat]`——第一条分支会丢掉座席后代，
+ * 变成「把 `position:fixed` 打在画布外框上」，全屏路径静默失效（实机预演抓到的真实缺陷）。
+ */
+export const IMAGE_CANVAS_PROJECTION_SELECTOR = `:is(${IMAGE_CANVAS_FULLSCREEN_SELECTOR}, ${CONVERSATION_COLUMN_HIDDEN_SELECTOR})`
 
 export const CONVERSATION_COLLAPSE_CSS = `
 /* Middle conversation column — collapse layout width while projecting native composer fixed to canvas bottom.
@@ -64,7 +85,9 @@ html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"]))
 html[${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])) [class*="widthHandle"]{
   display:none!important;
 }
-/* Native DSH composer floating dock — 仅图像画布 + 右侧栏全屏时投射到画布底端（紧凑靠底停靠） */
+/* Native DSH composer floating dock — 图像画布 + 会话列不可见（右栏全屏，或会话栏折叠且右栏未收起）
+   时投射到画布底端（紧凑靠底停靠）。展开会话栏即撤销投射：输入框本就在会话列里，
+   投射会在同屏造出第二个输入框。 */
 ${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-seat]{
   position:fixed!important;
   bottom:10px!important;
@@ -84,7 +107,8 @@ ${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-seat]{
    收起态由插件镜像到 html[data-omnimux-left-collapsed]；这里必须显式写完整选择器，
    不能把带 html 前缀的投射选择器再接在它后面——那会要求 html 是 html 的后代，
    整条规则永远不命中（聚合校验抓不到，只有真实浏览器会暴露）。 */
-html[data-omnimux-left-collapsed]:has([data-omnimux-image-canvas][data-visible="true"]) .dshDesktopFrame[data-rightbar-fullscreen="true"] [data-composer-seat]{
+html[data-omnimux-left-collapsed]:has([data-omnimux-image-canvas][data-visible="true"]) .dshDesktopFrame[data-rightbar-fullscreen="true"] [data-composer-seat],
+html[data-omnimux-left-collapsed][${CONVERSATION_COLLAPSED_ATTR}]:not(:has([data-rightbar-collapsed="true"])):has([data-omnimux-image-canvas][data-visible="true"]) [data-composer-seat]{
   left:0!important;
 }
 ${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-card]{
