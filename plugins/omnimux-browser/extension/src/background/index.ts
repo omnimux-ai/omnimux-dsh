@@ -1760,6 +1760,35 @@ async function saveMediaToHostInspiration(payload: HoveredMedia): Promise<boolea
   return false
 }
 
+/**
+ * Make sure one session has a live tab binding, binding it to the active tab
+ * when it has none.
+ *
+ * A session created before the extension was paired (or while the bridge was
+ * down) never passed through the `session.active` / `isNew` path, so it holds
+ * no binding — and `session.prompt` used to refuse it forever, which is how a
+ * user who had just paired successfully still could not send. Binding on
+ * demand keeps the guard's intent (a live tab) without the dead end.
+ *
+ * @param sessionId - the session about to be prompted.
+ * @returns true when the session is bound (or was just bound); false when no
+ *   active tab could be resolved, in which case no binding is left behind.
+ */
+async function ensureSessionTabBinding(sessionId: string): Promise<boolean> {
+  if (tabAffinity.getSessionTab(sessionId) !== undefined) return true
+  await Promise.all([affinityReady, pageSessionContexts.ready])
+  const tab = await syncActiveTab()
+  const summary = tab === undefined ? null : summarizeTab(tab)
+  if (summary === null) return false
+  tabAffinity.bindNewSession(sessionId, summary)
+  pageSessionContexts.bind(sessionId, { id: summary.tabId, ...summary })
+  resetTabSnapshot(summary.tabId)
+  persistTabAffinity()
+  broadcastTabAffinity()
+  await refreshSessionSnapshot(sessionId).catch(() => {})
+  return tabAffinity.getSessionTab(sessionId) !== undefined
+}
+
 // ---- Panel ports ----
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -1796,11 +1825,19 @@ chrome.runtime.onConnect.addListener((port) => {
         const prepare = rpcMsg.method === 'session.prompt'
           ? Promise.resolve().then(async () => {
               await refresh
-              return rpcSessionId === undefined || tabAffinity.getSessionTab(rpcSessionId) !== undefined
+              if (rpcSessionId === undefined) return true
+              return ensureSessionTabBinding(rpcSessionId)
             })
           : Promise.resolve(true)
         void prepare.then((ready) => {
-          if (!ready) throw new Error('This session is not bound to a live browser tab')
+          if (!ready) {
+            const zh = getUiLocale() === 'zh'
+            // A refusal must leave the user something to do: the previous
+            // English-only throw stranded anyone whose session predated pairing.
+            throw new Error(zh
+              ? '当前没有可绑定的网页标签页：请先切到要操作的网页，再发送'
+              : 'No live browser tab is available: open the page you want to act on, then send again')
+          }
           return gatewayRpc(rpcMsg.method, rpcMsg.payload)
         }).then(
           (result) => {

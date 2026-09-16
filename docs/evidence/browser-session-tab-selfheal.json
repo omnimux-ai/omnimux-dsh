@@ -1,0 +1,59 @@
+{
+  "issue": 2103,
+  "at": "2026-09-16T15:09:48.678Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-session-tab-selfheal/plugins/omnimux-browser/extension/dist",
+  "hostPort": 65169,
+  "tokenLength": 41,
+  "cases": [
+    {
+      "name": "paired before the prompt",
+      "pass": true,
+      "observed": {
+        "state": "connected"
+      },
+      "evidence": []
+    },
+    {
+      "name": "a session created before pairing can send (self-healed binding)",
+      "pass": true,
+      "observed": {
+        "reply": {
+          "type": "rpc.result",
+          "id": "selfheal-check",
+          "ok": true,
+          "result": {
+            "type": "server-response",
+            "rpcId": "d85f1713-45b9-42fa-89c1-0eab600a99df",
+            "result": {
+              "ok": true,
+              "value": null
+            }
+          }
+        }
+      },
+      "evidence": []
+    },
+    {
+      "name": "the binding persists for the next send",
+      "pass": true,
+      "observed": {
+        "second": {
+          "type": "rpc.result",
+          "id": "selfheal-second",
+          "ok": true,
+          "result": {
+            "type": "server-response",
+            "rpcId": "32065536-3df2-4015-988b-ff1afc7c56d3",
+            "result": {
+              "ok": true,
+              "value": null
+            }
+          }
+        }
+      },
+      "evidence": []
+    }
+  ],
+  "passed": 3,
+  "total": 3
+}
