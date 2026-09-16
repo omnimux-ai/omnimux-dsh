@@ -11,6 +11,7 @@ import {
   markAutoOpened,
   hasAutoOpened,
   resetAutoOpenedForTests,
+  isUserMessageNode,
 } from './assistantMessageMediaEnhancer.ts';
 import { getGlobalMediaViewerStore } from '../media-viewer/media-viewer-store.js';
 
@@ -46,6 +47,36 @@ test('assistantMessageMediaEnhancer: extractMediaFromElement extracts images and
   assert.equal(media[1].type, 'video');
   assert.equal(media[1].filename, 'b.mp4');
   assert.equal(media[1].canonicalKey, 'file:b.mp4');
+});
+
+test('assistantMessageMediaEnhancer: skips user message nodes so input attachments never become media tails', () => {
+  resetAutoOpenedForTests();
+  const dom = new JSDOM(`
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <div class="flowItem" data-chat-turn="9">
+          <div class="userRow">
+            <div class="userStack">
+              <div class="attachmentRow" data-message-attachments>
+                <img src="http://example.com/user-input.jpg" alt="科技Vlogger" />
+              </div>
+              <div class="bubble">复刻这条爆款视频</div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  const doc = dom.window.document;
+  const userRow = doc.querySelector('.userRow') as HTMLElement;
+  assert.equal(isUserMessageNode(userRow), true);
+  assert.equal(extractMediaFromElement(userRow).length, 0, '用户行内的图不得被扫成生成媒体');
+
+  const turnNode = doc.querySelector('[data-chat-turn="9"]') as HTMLElement;
+  // 整轮只有用户消息：不得挂尾卡
+  assert.equal(enhanceTurnMedia('9', [turnNode], doc), false);
+  assert.equal(doc.querySelectorAll('.omx-chat-media-tail').length, 0);
 });
 
 test('assistantMessageMediaEnhancer: deduplicateTurnMedia merges data URL and persistent URL of the same asset', () => {
