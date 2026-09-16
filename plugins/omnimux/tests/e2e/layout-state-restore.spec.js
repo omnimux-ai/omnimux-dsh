@@ -53,7 +53,7 @@ test('e2e: 点原生全屏按钮收起中间会话栏，退出后精确还原', 
   uninstall()
 })
 
-test('e2e: 用户自己收起的会话栏，进出全屏后不得被顶开', async () => {
+test('e2e: 进出全屏后恢复分栏展开，杜绝死锁在折叠态', async () => {
   const win = fixture('push')
   const doc = win.document
   const root = doc.documentElement
@@ -63,22 +63,23 @@ test('e2e: 用户自己收起的会话栏，进出全屏后不得被顶开', asy
 
   panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
   await new Promise((r) => setTimeout(r, 30))
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '全屏下必须收起')
+
   panel.setAttribute('data-sidebar-right-panel', 'push')
   await new Promise((r) => setTimeout(r, 30))
-  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), true, '折叠键是用户偏好，还原时不得不当清除')
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '退出全屏进入分栏必须恢复展开，杜绝死锁')
 
   uninstall()
 })
 
-test('e2e: 残留宽度偏好被清除后，输入框上限回到原生自适应值', () => {
-  // 实机现场：列宽 668、存档 920.6796875 → 卡片被钉在 672px
+test('e2e: 用户保存的宽度偏好在任何列宽下均完整保留，插件不得删除', () => {
+  // 实机现场：即使列宽收窄至 668px，用户保存的偏宽记录（如 920.6796875）也必须完整保留
   const stale = fixture('push', 668)
   stale.localStorage.setItem(COMPOSER_WIDTH_PREF_KEY, '920.6796875')
-  assert.equal(guardComposerWidthPreference(stale).cleared, true, '越界偏好必须清除')
-  assert.equal(stale.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), null)
-  // 清除后原生自适应 = max(680, min(668 × 0.64, 920)) = 680 → 卡片 712px
+  assert.equal(guardComposerWidthPreference(stale).cleared, false, '偏宽偏好不得被插件清除')
+  assert.equal(stale.localStorage.getItem(COMPOSER_WIDTH_PREF_KEY), '920.6796875', '用户偏好必须完整保留')
 
-  // 合法范围内的偏好必须保留（原生宽度手柄的调整不能被吞）
+  // 合法范围内的偏好更不得清除
   const keep = fixture('push', 2000)
   keep.localStorage.setItem(COMPOSER_WIDTH_PREF_KEY, '900')
   assert.equal(guardComposerWidthPreference(keep).cleared, false)

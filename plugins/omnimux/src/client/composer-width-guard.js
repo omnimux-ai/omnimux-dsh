@@ -9,11 +9,10 @@
  *     无偏好 → max(680, min(列宽 × 0.64, 920))
  *   输入框卡片上限 = 内容宽 + 32
  *
- * 问题：存档里残留一个 920.68px 的偏好后，输入框被钉在 `偏好 + 32` 上，
- * 原生自适应（随列宽按 0.64 收缩、上限 920）彻底失效 —— 宽列时顶到 952px。
- *
- * 护栏只做一件事：**偏好值超过当前列宽下的原生自适应上限时，删掉它**，让原生公式复位。
- * 不超过就不动，原生宽度拖拽手柄在合法范围内的调整必须保留。
+ * 规范（Issue #2062）：
+ * 插件不再清除用户保存的偏宽宽度记录。无论当前列宽多窄，用户拖拽保存的有效宽度
+ * 均完整保留于 localStorage；原生公式在列宽收窄时会自动进行动态安全钳制，无需也不得删档。
+ * 护栏仅对真正损坏/非法的值（非有限正数）做安全兜底。
  */
 
 import { hostWindow } from './workbench/host-adapter.js'
@@ -43,16 +42,19 @@ export function resolveAdaptiveContentWidth(columnWidth) {
 }
 
 /**
- * 判断偏好是否越界（超过当前列宽下的自适应上限）。
+ * 判断偏好是否损坏或非法。
+ * 遵循用户决策（Issue #2062）：插件不得清除用户保存的偏宽记录，任何合法有效数值均保留。
+ * 仅对损坏的非法值（非有限正数）返回 true。
  * @param {string | null} raw 存档原文。
- * @param {number} columnWidth 会话列宽度。
- * @returns {boolean} 越界应清除时为真。
+ * @param {number} [_columnWidth] 会话列宽度（保持兼容签名）。
+ * @returns {boolean}
  */
-export function isStaleWidthPreference(raw, columnWidth) {
+export function isStaleWidthPreference(raw, _columnWidth) {
   if (raw == null || raw === '') return false
   const value = Number(raw)
   if (!Number.isFinite(value) || value <= 0) return true
-  return value > resolveAdaptiveContentWidth(columnWidth) + 1
+  // 偏宽偏好（如 900、920.68 等）坚决不删，完整保留用户设置
+  return false
 }
 
 /**
