@@ -27,6 +27,8 @@ export interface TargetInput {
   pageUrl: string
   /** Post the pointer was last over, when the page is a profile grid. */
   hoveredHref?: string | null
+  /** Active post detected in the viewport center, for feeds where URL is not rewritten. */
+  activeHref?: string | null
 }
 
 /** `tiktok.com` and its subdomains; lookalike hosts must not match. */
@@ -107,6 +109,19 @@ export function resolveTargetPost(input: TargetInput): PostTarget | null {
   if (!isTikTokPage(input.pageUrl)) return null
   const fromPage = matchPostTarget(input.pageUrl)
   if (fromPage !== null) return fromPage
-  if (input.hoveredHref === undefined || input.hoveredHref === null) return null
-  return matchPostTarget(input.hoveredHref)
+  if (input.hoveredHref) {
+    const fromHover = matchPostTarget(input.hoveredHref)
+    if (fromHover !== null) return fromHover
+  }
+  try {
+    const pathname = new URL(input.pageUrl, 'https://www.tiktok.com').pathname
+    const isGridOrSearch = /^\/@[^/]+$/.test(pathname) || pathname.startsWith('/search') || pathname.startsWith('/explore')
+    if (!isGridOrSearch && input.activeHref) {
+      const fromActive = matchPostTarget(input.activeHref)
+      if (fromActive !== null) return fromActive
+    }
+  } catch {
+    // Ignore URL parse failure
+  }
+  return null
 }
