@@ -148,6 +148,9 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     assetsStore,
     projectStore,
     ensureProjectBound,
+    // Issue #2104：客户端打开创作画布前按会话问「这个工作区属于哪个项目」，
+    // 缺失即登记，保证工作区始终有项目。
+    resolveSessionWorkspaceDir: readSessionWorkspaceDir,
   });
 
   // Recovery pass (Gxgen ExecutionRecoveryService port): resume live runs

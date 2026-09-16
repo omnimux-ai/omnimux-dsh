@@ -3,6 +3,7 @@
  *
  *   GET    /omnimux-workflow/api/projects/library         默认库路径（host 解析 videos）
  *   GET    /omnimux-workflow/api/projects                 list（扫描默认库）
+ *   GET    /omnimux-workflow/api/projects/session-binding 会话所属工作区 → 项目（缺失即登记，Issue #2104）
  *   POST   /omnimux-workflow/api/projects                 seed { title, projectRoot, sessionId? }
  *   GET    /omnimux-workflow/api/projects/:id             get
  *   PATCH  /omnimux-workflow/api/projects/:id             rename/bindSession { title?, sessionId? }
@@ -24,6 +25,7 @@ import {
 import { displayHomePath, ensureLibraryRoot, resolveVideosDir } from './library';
 import { ProjectPathError } from './paths';
 import { createProjectStore, ProjectStoreError } from './ProjectStore';
+import { ensureWorkspaceProjectBound } from './workspaceProjectBinding';
 import type { WorkspaceStore } from '../workflow/workspace/WorkspaceStore.ts';
 import { createProjectCoverService } from './ProjectCoverService.ts';
 
@@ -87,11 +89,12 @@ export interface ProjectDispatcher {
 }
 
 /** 项目路由无状态：库根由 host 解析，不跟当前会话 cwd。 */
-export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceStore?: WorkspaceStore; mediaRevision?: (url: string) => string } = {}): ProjectDispatcher {
+export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceStore?: WorkspaceStore; mediaRevision?: (url: string) => string; resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined } = {}): ProjectDispatcher {
   const coverService = opts.workspaceStore ? createProjectCoverService(opts.workspaceStore, opts.mediaRevision) : undefined;
   const enrich = <T extends { pages?: Array<{ id: string; canvasWorkspaceId?: string }> }>(project: T) => coverService ? coverService(project) : project;
   const collectionRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}$`);
   const libraryRe = new RegExp(`^${PROJECT_LIBRARY_PATH}$`);
+  const sessionBindingRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/session-binding$`);
   const itemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)$`);
   const pagesRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages$`);
   const pageItemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages/([^/]+)$`);
@@ -128,6 +131,61 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
             libraryRoot,
             videosDir: resolveVideosDir(),
             displayPath: displayHomePath(libraryRoot),
+          },
+        };
+      }
+
+      if (sessionBindingRe.exec(path)) {
+        // Issue #2104：工作区必须有项目。客户端在打开创作画布前先问这里；
+        // 缺失就登记（幂等），让「工作区 → 项目 → 创作页」一步不缺。
+        if (method !== 'GET') {
+          return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+        }
+        const sessionId = (url.searchParams.get('sessionId') ?? '').trim();
+        const { libraryRoot, store } = scopedStore(opts.libraryRoot);
+        if (sessionId === '') {
+          return { status: 400, body: { error: 'session-required', message: 'sessionId is required' } };
+        }
+        let workspaceDir: string | undefined;
+        try {
+          workspaceDir = opts.resolveSessionWorkspaceDir?.(sessionId);
+        } catch {
+          workspaceDir = undefined;
+        }
+        if (typeof workspaceDir !== 'string' || workspaceDir.trim() === '') {
+          return { status: 200, body: { ok: true, source: 'unknown-session', libraryRoot, project: null } };
+        }
+        const existed = store.list().some((row) => resolve(row.path) === resolve(workspaceDir));
+        let record = null;
+        try {
+          record = ensureWorkspaceProjectBound(store, {
+            workspaceDir,
+            sessionId,
+            libraryRoot,
+          });
+        } catch {
+          record = null;
+        }
+        if (!record) {
+          // 库根之外的工作区不登记，也不当作错误：画布保持自由画布语义。
+          return { status: 200, body: { ok: true, source: 'outside-library', libraryRoot, project: null } };
+        }
+        const pages = record.pages ?? [];
+        const activePage = pages.find((page) => page.id === record.activePageId) ?? pages[0] ?? null;
+        return {
+          status: 200,
+          body: {
+            ok: true,
+            source: existed ? 'existing' : 'registered',
+            libraryRoot,
+            project: {
+              id: record.id,
+              title: record.title,
+              path: record.path,
+              activePageId: record.activePageId,
+              canvasWorkspaceId: activePage?.canvasWorkspaceId ?? record.canvasWorkspaceIds?.[0] ?? null,
+              pages,
+            },
           },
         };
       }

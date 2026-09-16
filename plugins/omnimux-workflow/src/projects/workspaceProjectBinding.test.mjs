@@ -169,4 +169,71 @@ describe('workspace project binding (#2104)', { concurrency: 1 }, () => {
     assert.deepEqual(record.canvasWorkspaceIds, ['ws_bound']);
     rmSync(libraryRoot, { recursive: true, force: true });
   });
+
+  test('A6：客户端打开画布前按会话查询 → 缺失即登记项目', async () => {
+    const libraryRoot = tmpDir();
+    const workspaceDir = join(libraryRoot, '测试画布');
+    mkdirSync(workspaceDir, { recursive: true });
+    const dispatcher = host.createProjectDispatcher({
+      libraryRoot,
+      resolveSessionWorkspaceDir: (sessionId) => (sessionId === 'session-afc2a612' ? workspaceDir : undefined),
+    });
+
+    const first = await dispatcher.dispatch({
+      method: 'GET',
+      url: `/omnimux-workflow/api/projects/session-binding?sessionId=session-afc2a612`,
+    });
+    assert.equal(first.status, 200);
+    assert.equal(first.body.source, 'registered', '首次查询即完成登记');
+    assert.equal(first.body.project.path, workspaceDir);
+    assert.ok(first.body.project.canvasWorkspaceId, '返回当前创作页绑定的画布');
+    assert.equal(first.body.project.pages.length, 1);
+    assert.ok(existsSync(projectFileOf(workspaceDir)), '登记后工作区文件夹内出现 project.json');
+
+    const second = await dispatcher.dispatch({
+      method: 'GET',
+      url: `/omnimux-workflow/api/projects/session-binding?sessionId=session-afc2a612`,
+    });
+    assert.equal(second.body.source, 'existing', '重复查询幂等，不重复登记');
+    assert.equal(second.body.project.id, first.body.project.id);
+    rmSync(libraryRoot, { recursive: true, force: true });
+  });
+
+  test('A7：会话不可解析 / 库外工作区 / 缺 sessionId 的降级语义', async () => {
+    const libraryRoot = tmpDir();
+    const outside = tmpDir('omnimux-outside-route-');
+    const dispatcher = host.createProjectDispatcher({
+      libraryRoot,
+      resolveSessionWorkspaceDir: (sessionId) => {
+        if (sessionId === 's-out') return outside;
+        throw new Error('agents service unavailable');
+      },
+    });
+
+    const unknown = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding?sessionId=s-unknown',
+    });
+    assert.equal(unknown.status, 200);
+    assert.equal(unknown.body.source, 'unknown-session');
+    assert.equal(unknown.body.project, null);
+
+    const out = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding?sessionId=s-out',
+    });
+    assert.equal(out.status, 200);
+    assert.equal(out.body.source, 'outside-library');
+    assert.equal(out.body.project, null);
+    assert.equal(existsSync(projectFileOf(outside)), false, '库外目录不得被写入');
+
+    const missing = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding',
+    });
+    assert.equal(missing.status, 400);
+    assert.equal(missing.body.error, 'session-required');
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
 });
