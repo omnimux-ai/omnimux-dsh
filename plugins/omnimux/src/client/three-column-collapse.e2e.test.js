@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
-import { applyTopbarToggleCssVars } from './sidebar-toggle-topbar.js'
+import { applyTopbarToggleCssVars, deriveConversationWidthPx } from './sidebar-toggle-topbar.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const chromeSource = readFileSync(join(here, 'conversation-box.js'), 'utf8')
@@ -100,4 +100,45 @@ describe('three-column sidebar collapse keeps conversation width (issue #2074)',
       '抽取到的生产样式必须包含会话栏宽度变量',
     )
   })
+
+  it('keeps the collapsed pin following the shell splitter instead of a stale baseline', () => {
+    // 收起态保宽曾把分界线拖拽整段吞掉：渲染被钉住、外壳第三轨照常变化，
+    // 两份状态分叉后再次展开就会跳变。派生值必须随外壳 authored 栅格变化。
+    const expanded = deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 864px'), false, 280, 280)
+    const afterDrag = deriveConversationWidthPx(shellDoc('90px minmax(0px, 1fr) 604px'), true, 0, 280)
+    assert.equal(expanded, 776, '展开态派生值必须等于原生剩余宽度')
+    assert.equal(
+      afterDrag,
+      expanded + 260,
+      '收起态拖动分界线 260px 后会话栏宽度必须同步变化（旧实现保持 776 不变）',
+    )
+  })
+
+  it('watches the shell-authored grid so the pin can never freeze the drag', () => {
+    assert.match(toggleSource, /attributeFilter:\s*\['style'\]/, '几何同步循环必须观察外壳内联栅格改写')
+    assert.doesNotMatch(
+      toggleSource,
+      /lastGoodConversationWidth|rememberConversationWidth/,
+      '记忆式基准必须彻底移除',
+    )
+  })
 })
+
+/** 最小外壳夹具：只有 frame 的内联栅格与视口宽度参与派生。 */
+function shellDoc(grid, viewportPx = 1920) {
+  const props = new Map()
+  return {
+    documentElement: {
+      style: {
+        setProperty: (k, v) => props.set(k, v),
+        getPropertyValue: (k) => props.get(k) ?? '',
+        removeProperty: (k) => props.delete(k),
+      },
+    },
+    defaultView: { innerWidth: viewportPx },
+    querySelector: (selector) => (String(selector).includes('frame')
+      ? { style: { gridTemplateColumns: grid } }
+      : null),
+    body: null,
+  }
+}
