@@ -190,6 +190,29 @@ export const VIDEO_ANCHOR_SPEC = {
   cacheMs: 1000,
 } as const
 
+/**
+ * Hover-region contract: the card area that keeps the capsule alive.
+ *
+ * Moving inside this region never hides the capsule; leaving it is the only
+ * pointer-driven hide signal.
+ */
+export const HOVER_REGION = {
+  /** Uniform breathing room around the media box, in CSS px. */
+  pad: 12,
+  /** Extra clearance added around the capsule while it is visible. */
+  capsulePad: 8,
+  /** Ancestor walk limit when resolving the card container. */
+  maxAncestorDepth: 6,
+  /** How far a candidate ancestor may exceed the media box on any side. */
+  ancestorSlackPx: 32,
+  /** Largest card/media ratio accepted on either axis. */
+  ancestorMaxScale: 1.5,
+  /** Constant term in the card-size bound. */
+  ancestorMaxExtraPx: 64,
+  /** Cache lifetime for a resolved region probe, in ms. */
+  cacheMs: 1000,
+} as const
+
 /** Timing budget. Values are rendered in the tooltip labels and copy. */
 export const TIMING = {
   /** Pointer must rest this long on a media element before the capsule shows. */
