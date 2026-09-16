@@ -990,15 +990,15 @@ export const WORKFLOW_CSS = `
   align-items: center;
 }
 
-/* 项目资产浏览器 */
-.omnimux-assets-action-row {
+/* 项目资产浏览器 (必须收敛至 .omnimux-assets-tab 容器下，严禁污染主资产库) */
+.omnimux-assets-tab .omnimux-assets-action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   padding: 16px 20px;
 }
 
-.omnimux-assets-action-card {
+.omnimux-assets-tab .omnimux-assets-action-card {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -1011,12 +1011,12 @@ export const WORKFLOW_CSS = `
   user-select: none;
 }
 
-.omnimux-assets-action-card:hover {
+.omnimux-assets-tab .omnimux-assets-action-card:hover {
   background: var(--dsw-alias-interactive-bg-hover);
   border-color: var(--dsw-alias-border-l2);
 }
 
-.omnimux-assets-card-icon-box {
+.omnimux-assets-tab .omnimux-assets-card-icon-box {
   width: 40px;
   height: 40px;
   border-radius: 8px;
@@ -1029,44 +1029,44 @@ export const WORKFLOW_CSS = `
   flex-shrink: 0;
 }
 
-.omnimux-assets-card-text {
+.omnimux-assets-tab .omnimux-assets-card-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.omnimux-assets-card-title {
+.omnimux-assets-tab .omnimux-assets-card-title {
   font-size: 13px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
 }
 
-.omnimux-assets-card-subtitle {
+.omnimux-assets-tab .omnimux-assets-card-subtitle {
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
 }
 
-.omnimux-assets-browser {
+.omnimux-assets-tab .omnimux-assets-browser {
   padding: 0 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.omnimux-assets-filter-line {
+.omnimux-assets-tab .omnimux-assets-filter-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
 }
 
-.omnimux-assets-table {
+.omnimux-assets-tab .omnimux-assets-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
 
-.omnimux-assets-table th {
+.omnimux-assets-tab .omnimux-assets-table th {
   text-align: left;
   padding: 8px 12px;
   color: var(--dsw-alias-label-tertiary);
@@ -1074,66 +1074,66 @@ export const WORKFLOW_CSS = `
   border-bottom: 1px solid var(--dsw-alias-border-l1);
 }
 
-.omnimux-assets-table td {
+.omnimux-assets-tab .omnimux-assets-table td {
   padding: 10px 12px;
   color: var(--dsw-alias-label-primary);
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   vertical-align: middle;
 }
 
-.omnimux-assets-table tr:hover td {
+.omnimux-assets-tab .omnimux-assets-table tr:hover td {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-.omnimux-file-name-cell {
+.omnimux-assets-tab .omnimux-file-name-cell {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
 }
 
-.omnimux-file-icon-folder {
+.omnimux-assets-tab .omnimux-file-icon-folder {
   color: var(--dsw-alias-brand-primary, #8b5cf6);
   flex-shrink: 0;
 }
 
-.omnimux-file-icon-media {
+.omnimux-assets-tab .omnimux-file-icon-media {
   color: var(--dsw-alias-label-secondary);
   flex-shrink: 0;
 }
 
-.omnimux-assets-search-cluster {
+.omnimux-assets-tab .omnimux-assets-search-cluster {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.omnimux-col-name {
+.omnimux-assets-tab .omnimux-col-name {
   width: 55%;
 }
 
-.omnimux-col-size {
+.omnimux-assets-tab .omnimux-col-size {
   width: 20%;
 }
 
-.omnimux-col-time {
+.omnimux-assets-tab .omnimux-col-time {
   width: 20%;
 }
 
-.omnimux-col-action {
+.omnimux-assets-tab .omnimux-col-action {
   width: 5%;
 }
 
-.omnimux-file-folder-name {
+.omnimux-assets-tab .omnimux-file-folder-name {
   font-weight: 500;
 }
 
-.omnimux-file-more-btn {
+.omnimux-assets-tab .omnimux-file-more-btn {
   opacity: 0.5;
   cursor: pointer;
 }
 
-.omnimux-assets-empty-cell {
+.omnimux-assets-tab .omnimux-assets-empty-cell {
   text-align: center;
   padding: 32px 0;
   color: var(--dsw-alias-label-tertiary);
