@@ -1,0 +1,107 @@
+{
+  "task": "inspiration-title-limit-verify",
+  "issue": 2121,
+  "origin": "http://127.0.0.1:62783",
+  "browser": "ego-browser (chromium)",
+  "startedAt": "2026-09-16T16:27:52.507Z",
+  "assertions": [
+    {
+      "name": "clamp: short title untouched",
+      "pass": true
+    },
+    {
+      "name": "clamp: exact limit kept",
+      "pass": true
+    },
+    {
+      "name": "clamp: over limit cut to 255",
+      "pass": true
+    },
+    {
+      "name": "clamp: no lone surrogate at the cut",
+      "pass": true
+    },
+    {
+      "name": "clamp: category limit is 128",
+      "pass": true
+    },
+    {
+      "name": "clamp: model limit is 128",
+      "pass": true
+    },
+    {
+      "name": "publish-was-accepted-by-the-column-bounded-gateway",
+      "pass": true,
+      "detail": {
+        "error": ""
+      }
+    },
+    {
+      "name": "gateway-refused-nothing",
+      "pass": true,
+      "detail": {
+        "refusals": []
+      }
+    },
+    {
+      "name": "published-title-fits-the-declared-column",
+      "pass": true,
+      "detail": {
+        "publishedTitleLength": 255
+      }
+    },
+    {
+      "name": "published-title-is-the-original-prefix",
+      "pass": true,
+      "detail": {
+        "originalTitleLength": 2239,
+        "clampedLength": 255
+      }
+    },
+    {
+      "name": "the-original-title-would-have-overshot",
+      "pass": false,
+      "detail": {
+        "originalTitleLength": 2239
+      }
+    },
+    {
+      "name": "category-and-model-are-bounded-too",
+      "pass": true,
+      "detail": {
+        "title": 255,
+        "category": 128,
+        "model": 128
+      }
+    },
+    {
+      "name": "screenshot-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "width": 1200,
+        "height": 800,
+        "bytes": 28480
+      }
+    },
+    {
+      "name": "ego-browser-task-space-closed",
+      "pass": true,
+      "detail": {
+        "spaceId": 304,
+        "finishError": null
+      }
+    }
+  ],
+  "pass": false,
+  "errors": [],
+  "observed": {
+    "originalTitleLength": 2239,
+    "publishedTitleLength": 255,
+    "refusals": [],
+    "limits": {
+      "title": 255,
+      "category": 128,
+      "model": 128
+    }
+  }
+}

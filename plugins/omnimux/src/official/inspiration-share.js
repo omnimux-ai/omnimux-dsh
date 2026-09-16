@@ -31,6 +31,47 @@ import { postInspirationShare, publishInspirationShare, toShareResult } from './
 export const SHARE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024
 
 /**
+ * How wide each bounded column of the cloud's share record is.
+ *
+ * The gateway stores a share in `inspiration_shares`
+ * (`model/inspiration_share.go` upstream), which declares `title` as
+ * `varchar(255)` and `category` / `model` as `varchar(128)`; `description` and
+ * `prompt` are `text` and have no such ceiling.
+ *
+ * This matters because an inspiration imported from a social post often carries
+ * the **whole post** as its title — the library holds titles of 1933 and 709
+ * characters. Sending one unshortened makes the gateway refuse the publish with
+ * `Error 1406 (22001): Data too long for column 'title'`, and a share that only
+ * needed a shortened title is lost outright.
+ */
+export const SHARE_COLUMN_LIMITS = Object.freeze({
+  title: 255,
+  category: 128,
+  model: 128,
+})
+
+/**
+ * A value the cloud's column can hold: the original when it fits, its own
+ * prefix when it does not.
+ *
+ * MySQL counts a `varchar(255)` in characters, while `.length` counts UTF-16
+ * code units, so measuring here can only ever be conservative. The one thing
+ * that must not happen is a cut through the middle of a surrogate pair: half a
+ * pair is not valid text, and the gateway would reject the payload for an
+ * entirely different reason than the one being fixed.
+ * @param {unknown} value
+ * @param {number} limit
+ * @returns {string}
+ */
+export function clampShareColumn(value, limit) {
+  const text = typeof value === 'string' ? value : String(value ?? '')
+  if (text.length <= limit) return text
+  const lastKept = text.charCodeAt(limit - 1)
+  const splitsSurrogatePair = lastKept >= 0xd800 && lastKept <= 0xdbff
+  return text.slice(0, splitsSurrogatePair ? limit - 1 : limit)
+}
+
+/**
  * Stages a publish actually walks, in order. They are reported through
  * `onStage` as the work happens, so a caller can render real progress.
  */
@@ -274,11 +315,11 @@ export function createInspirationShareApi(deps) {
 
         safeReport(() => args.onStage?.(SHARE_STAGES.PUBLISHING))
         const published = toShareResult(await publishInspirationShare(deps.client, {
-          category: String(meta.category || '').trim() || 'other',
-          title,
+          category: clampShareColumn(String(meta.category || '').trim() || 'other', SHARE_COLUMN_LIMITS.category),
+          title: clampShareColumn(title, SHARE_COLUMN_LIMITS.title),
           description: meta.description || '',
           prompt,
-          model: meta.model || '',
+          model: clampShareColumn(meta.model || '', SHARE_COLUMN_LIMITS.model),
           mediaType: shareMediaType(meta.mediaType, media),
           mediaUrl,
           coverUrl,
@@ -391,11 +432,11 @@ export function createInspirationShareApi(deps) {
         safeReport(() => args.onStage?.(SHARE_STAGES.PUBLISHING))
         const mediaType = shareMediaType(meta.mediaType, { path: mediaUrl })
         const published = toShareResult(await publishInspirationShare(deps.client, {
-          category: String(meta.category || '').trim() || 'other',
-          title,
+          category: clampShareColumn(String(meta.category || '').trim() || 'other', SHARE_COLUMN_LIMITS.category),
+          title: clampShareColumn(title, SHARE_COLUMN_LIMITS.title),
           description: meta.description || '',
           prompt,
-          model: meta.model || '',
+          model: clampShareColumn(meta.model || '', SHARE_COLUMN_LIMITS.model),
           mediaType,
           mediaUrl: mediaReadable ? mediaUrl : '',
           coverUrl: coverReadable ? coverUrl : '',

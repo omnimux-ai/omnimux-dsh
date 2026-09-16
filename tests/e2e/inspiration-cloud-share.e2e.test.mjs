@@ -599,3 +599,107 @@ describe('E2E: 云端灵感零上传分享 (#1996)', () => {
     assert.equal(published.prompt.includes('引导评论互动'), false)
   })
 })
+
+/*
+ * Issue #2121. The cloud stores a share in `inspiration_shares`, where `title`
+ * is `varchar(255)` and `category` / `model` are `varchar(128)`. An inspiration
+ * imported from a social post carries the whole post as its title — the library
+ * holds titles of 1933 and 709 characters — and the whole publish used to be
+ * refused with `Data too long for column 'title'`.
+ *
+ * The stub stands a column-bounded gateway in front of the real publish route,
+ * answering with the very error the cloud gave, so this fails for the same
+ * reason a real share would.
+ */
+describe('灵感分享：标题不超过云端列宽 (#2121)', () => {
+  /** The upstream table's own widths. */
+  const COLUMN_LIMITS = { title: 255, category: 128, model: 128 }
+
+  /** A gateway that enforces `inspiration_shares`' declared column widths. */
+  function columnBoundedGateway() {
+    const publishes = []
+    const refusals = []
+    return {
+      publishes,
+      refusals,
+      async withSkSite(path, options) {
+        const body = options?.body || {}
+        for (const [column, limit] of Object.entries(COLUMN_LIMITS)) {
+          const value = body[column]
+          if (typeof value === 'string' && value.length > limit) {
+            refusals.push({ column, length: value.length, limit })
+            const error = new Error(`Error 1406 (22001): Data too long for column '${column}' at row 1`)
+            error.code = 'omnimux-gateway-error'
+            throw error
+          }
+        }
+        publishes.push({ url: `${SITE}${path}`, body })
+        return {
+          success: true,
+          message: '灵感发布成功',
+          data: {
+            share_id: 'insp_e2e_2121',
+            share_url: 'https://omnimux.ai/s/insp_e2e_2121',
+            storage_bucket: 'omnimux-files',
+            is_admin: false,
+            expires_in: '72h',
+          },
+        }
+      },
+    }
+  }
+
+  const IMPORTED_TITLE = `She really woke up and chose GTA-style ${'x'.repeat(2200)}`
+
+  it('把超长导入标题截到列宽内，分享不再因超长而失败', async () => {
+    const cloud = cloudStub()
+    const gateway = columnBoundedGateway()
+    const capability = capabilityFrom({ ...cloud, client: gateway })
+    const world = bootPlugin({ capability })
+
+    const mediaPath = mediaFile(world.home, 'clip.mp4', 4096)
+    const created = await http(world.route, {
+      method: 'POST',
+      url: LOCAL_PREFIX,
+      body: { title: IMPORTED_TITLE, content: '本地素材仍按上传链路发布', local_paths: { video: mediaPath } },
+    })
+    assert.equal(created.status, 201)
+    const id = created.body.data.id
+
+    const started = await http(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    assert.equal(started.status, 202)
+
+    const settled = await waitForShare(world.route, id, 'done')
+    assert.equal(settled.share_status, 'done')
+    assert.equal(settled.share_url, 'https://omnimux.ai/s/insp_e2e_2121')
+
+    assert.deepEqual(gateway.refusals, [], '不得有任何一次因列宽被拒')
+    assert.equal(gateway.publishes.length, 1)
+    const published = gateway.publishes[0].body
+    assert.equal(published.title.length, COLUMN_LIMITS.title)
+    assert.ok(IMPORTED_TITLE.startsWith(published.title), '发出的是原标题的逐字前缀')
+    assert.ok(published.category.length <= COLUMN_LIMITS.category)
+    assert.ok(published.model.length <= COLUMN_LIMITS.model)
+  })
+
+  it('正常长度的标题逐字发出，不被改动', async () => {
+    const cloud = cloudStub()
+    const gateway = columnBoundedGateway()
+    const capability = capabilityFrom({ ...cloud, client: gateway })
+    const world = bootPlugin({ capability })
+
+    const mediaPath = mediaFile(world.home, 'clip.mp4', 4096)
+    const created = await http(world.route, {
+      method: 'POST',
+      url: LOCAL_PREFIX,
+      body: { title: '把产品放在晨光里拍', content: '产品实测', local_paths: { video: mediaPath } },
+    })
+    const id = created.body.data.id
+
+    await http(world.route, { method: 'POST', url: `${LOCAL_PREFIX}/${id}/share` })
+    await waitForShare(world.route, id, 'done')
+
+    assert.deepEqual(gateway.refusals, [])
+    assert.equal(gateway.publishes[0].body.title, '把产品放在晨光里拍')
+  })
+})

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { OmnimuxError } from '../media/errors.js'
-import { createInspirationShareApi, probeMediaReadable, readableShareError, resolveCloudMediaUrl, shareMediaType } from './inspiration-share.js'
+import { createInspirationShareApi, clampShareColumn, probeMediaReadable, readableShareError, resolveCloudMediaUrl, SHARE_COLUMN_LIMITS, shareMediaType } from './inspiration-share.js'
 
 const PUBLISH_OK = {
   success: true,
@@ -428,5 +428,87 @@ describe('inspiration share api — cloud entries (no upload)', () => {
       expire: 'forever',
     })
     assert.equal(result.shareId, 'insp_17d391a7eb0b4a82')
+  })
+})
+
+/*
+ * Issue #2121. The cloud stores a share in `inspiration_shares`, where `title` is
+ * `varchar(255)` and `category` / `model` are `varchar(128)`. An inspiration
+ * imported from a social post often carries the whole post as its title — the
+ * library holds titles of 1933 and 709 characters — and sending one unshortened
+ * made the gateway refuse the publish with `Data too long for column 'title'`.
+ */
+describe('share columns stay inside the cloud’s declared widths', () => {
+  const LONG_TITLE = `She really woke up and chose GTA-style ${'x'.repeat(2000)}`
+  const CLOUD_COVER = '/api/inspiration/v1/public/media/inspiration-covers/2789'
+
+  /** The cloud path, with the readability probe stubbed readable. */
+  function cloudApi() {
+    return api({ createOptions: { probeMedia: async () => true } })
+  }
+
+  it('returns a value that already fits exactly as it is', () => {
+    assert.equal(clampShareColumn('测试灵感', SHARE_COLUMN_LIMITS.title), '测试灵感')
+    assert.equal(clampShareColumn('', SHARE_COLUMN_LIMITS.title), '')
+    assert.equal(clampShareColumn(null, SHARE_COLUMN_LIMITS.title), '')
+    assert.equal(clampShareColumn(undefined, SHARE_COLUMN_LIMITS.model), '')
+  })
+
+  it('keeps the limit itself, and cuts only what is past it', () => {
+    const exact = 'x'.repeat(SHARE_COLUMN_LIMITS.title)
+    assert.equal(clampShareColumn(exact, SHARE_COLUMN_LIMITS.title), exact)
+
+    const clamped = clampShareColumn(LONG_TITLE, SHARE_COLUMN_LIMITS.title)
+    assert.equal(clamped.length, SHARE_COLUMN_LIMITS.title)
+    assert.ok(LONG_TITLE.startsWith(clamped), '截断后必须是原值的逐字前缀')
+  })
+
+  it('never leaves half of a surrogate pair at the cut', () => {
+    // An emoji straddling the limit: cutting one unit later would emit a lone
+    // surrogate, which is not valid text at all.
+    const withEmoji = `${'x'.repeat(SHARE_COLUMN_LIMITS.title - 1)}😀tail`
+    const clamped = clampShareColumn(withEmoji, SHARE_COLUMN_LIMITS.title)
+    const lastCode = clamped.charCodeAt(clamped.length - 1)
+    assert.equal(lastCode >= 0xd800 && lastCode <= 0xdbff, false, '不得以半个代理对结尾')
+    assert.equal(clamped, 'x'.repeat(SHARE_COLUMN_LIMITS.title - 1))
+  })
+
+  it('sends a long local title shortened, so the publish is not lost', async () => {
+    const { share, client } = api()
+
+    await share.publishLocal({
+      cover: { path: '/tmp/covers/c.png' },
+      meta: { ...META, title: LONG_TITLE, category: 'c'.repeat(300), model: 'm'.repeat(300) },
+    })
+
+    const body = client.calls[0].opts.body
+    assert.equal(body.title.length, SHARE_COLUMN_LIMITS.title)
+    assert.ok(LONG_TITLE.startsWith(body.title))
+    assert.equal(body.category.length, SHARE_COLUMN_LIMITS.category)
+    assert.equal(body.model.length, SHARE_COLUMN_LIMITS.model)
+  })
+
+  it('sends a long cloud title shortened too', async () => {
+    const { share, client } = cloudApi()
+
+    await share.publishRemote({
+      coverUrl: CLOUD_COVER,
+      meta: { ...META, title: LONG_TITLE, mediaType: 'video' },
+    })
+
+    const body = client.calls[0].opts.body
+    assert.equal(body.title.length, SHARE_COLUMN_LIMITS.title)
+    assert.ok(LONG_TITLE.startsWith(body.title))
+  })
+
+  it('leaves a normal title untouched on both paths', async () => {
+    const local = api()
+    await local.share.publishLocal({ cover: { path: '/tmp/covers/c.png' }, meta: META })
+    assert.equal(local.client.calls[0].opts.body.title, META.title)
+    assert.equal(local.client.calls[0].opts.body.category, META.category)
+
+    const cloud = cloudApi()
+    await cloud.share.publishRemote({ coverUrl: CLOUD_COVER, meta: { ...META, mediaType: 'video' } })
+    assert.equal(cloud.client.calls[0].opts.body.title, META.title)
   })
 })
