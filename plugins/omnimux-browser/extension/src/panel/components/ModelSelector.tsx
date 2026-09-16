@@ -161,7 +161,7 @@ export function getDefaultModelForInstance(port: number): string {
 
 export const ModelSelector = memo(function ModelSelector({
   locale = 'zh',
-  activePort = 45120,
+  activePort = 43128,
   hostDefaultModel,
   hostDefaultEffort,
   dynamicModels = [],

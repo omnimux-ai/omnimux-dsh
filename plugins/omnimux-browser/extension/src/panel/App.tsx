@@ -799,8 +799,8 @@ export function App(): React.JSX.Element {
   const copy = PANEL_COPY[locale]
   const [targetPort, setTargetPort] = useState<number>(() => {
     const saved = safeGetStorage('omnimux_target_port')
-    const num = saved ? parseInt(saved, 10) : 45120
-    return !isNaN(num) && num > 0 ? num : 45120
+    const num = saved ? parseInt(saved, 10) : 43128
+    return !isNaN(num) && num > 0 ? num : 43128
   })
 
   const [hostDefaultModel, setHostDefaultModel] = useState<string>('')

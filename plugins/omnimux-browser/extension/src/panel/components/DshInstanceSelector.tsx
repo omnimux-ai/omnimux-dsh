@@ -20,10 +20,10 @@ export interface InstanceHealth {
 
 export const PRESET_INSTANCES: DshInstance[] = [
   {
-    id: 'omnimux-dev',
-    nameZh: 'OmniMux Dev',
-    nameEn: 'OmniMux Dev',
-    port: 45120,
+    id: 'omnimux-prd',
+    nameZh: 'OmniMux PRD',
+    nameEn: 'OmniMux PRD',
+    port: 43128,
     isRecommended: true,
   },
   {
@@ -31,12 +31,6 @@ export const PRESET_INSTANCES: DshInstance[] = [
     nameZh: 'DSH Desktop',
     nameEn: 'DSH Desktop',
     port: 43120,
-  },
-  {
-    id: 'omnimux-prd',
-    nameZh: 'OmniMux PRD',
-    nameEn: 'OmniMux PRD',
-    port: 43128,
   },
 ]
 
@@ -94,7 +88,7 @@ export async function probeInstanceHealth(port: number): Promise<InstanceHealth>
 
 export const DshInstanceSelector = memo(function DshInstanceSelector({
   locale = 'zh',
-  activePort = 45120,
+  activePort = 43128,
   onSelectInstance,
 }: {
   locale?: 'zh' | 'en'

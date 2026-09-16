@@ -16,11 +16,32 @@ test('resolveMediaUrl: preserves absolute http/https URLs', () => {
   assert.equal(resolveMediaUrl(httpsUrl), httpsUrl)
 })
 
-test('resolveMediaUrl: resolves relative path to local-file stream fallback', () => {
+test('resolveMediaUrl: without an explicit asset root a relative path resolves to nothing', () => {
+  // 产品基线：不得猜测开发机素材库路径（docs/contracts/product-baseline.md）
+  assert.equal(resolveMediaUrl('hooks/eye-catching-visuals/01_crash.mp4'), '')
+})
+
+test('resolveMediaUrl: an explicitly configured asset root resolves to the local-file stream', () => {
   const rel = 'hooks/eye-catching-visuals/01_crash.mp4'
-  const resolved = resolveMediaUrl(rel)
-  assert.ok(resolved.startsWith('/omnimux-workflow/api/local-file?path='))
-  assert.ok(resolved.includes(encodeURIComponent('01_crash.mp4')))
+  globalThis.window = { __OMNIMUX_CONFIG__: { presetAssetRoot: '/tmp/preset-media/' } }
+  try {
+    const resolved = resolveMediaUrl(rel)
+    assert.ok(resolved.startsWith('/omnimux-workflow/api/local-file?path='))
+    assert.ok(resolved.includes(encodeURIComponent('/tmp/preset-media/hooks/eye-catching-visuals/01_crash.mp4')))
+  } finally {
+    delete globalThis.window
+  }
+})
+
+test('resolveMediaUrl: gateway origin wins over the local asset root', () => {
+  globalThis.window = {
+    __OMNIMUX_CONFIG__: { gatewayMediaOrigin: 'https://cdn.example.com/base/', presetAssetRoot: '/tmp/preset-media' },
+  }
+  try {
+    assert.equal(resolveMediaUrl('a/b.mp4'), 'https://cdn.example.com/base/a/b.mp4')
+  } finally {
+    delete globalThis.window
+  }
 })
 
 test('hasVideoPreview & hasPosterPreview accurately detects media presence', () => {

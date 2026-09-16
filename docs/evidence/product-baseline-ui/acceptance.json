@@ -1,0 +1,58 @@
+{
+  "task": "Issue #2129 产品基线界面整改 · 实机预演",
+  "url": {},
+  "locale": "zh",
+  "viewportWidth": 440,
+  "assertions": {
+    "noDevInstanceInPresets": true,
+    "recommendedIsProductInstance": true,
+    "productPortIs43128": true,
+    "noMachineCheckoutPath": true,
+    "workspaceListRendersProductInstance": true,
+    "selectorListRendersProductInstance": true,
+    "noDevEntryRendered": true
+  },
+  "pass": true,
+  "presets": {
+    "workspace": [
+      {
+        "id": "omnimux-prd",
+        "port": 43128,
+        "nameZh": "OmniMux PRD",
+        "nameEn": "OmniMux PRD",
+        "defaultPath": "~/.omnimux",
+        "isRecommended": true
+      },
+      {
+        "id": "dsh-desktop",
+        "port": 43120,
+        "nameZh": "DSH Desktop",
+        "nameEn": "DSH Desktop",
+        "defaultPath": "~/.dsh"
+      }
+    ],
+    "instance": [
+      {
+        "id": "omnimux-prd",
+        "nameZh": "OmniMux PRD",
+        "nameEn": "OmniMux PRD",
+        "port": 43128,
+        "isRecommended": true
+      },
+      {
+        "id": "dsh-desktop",
+        "nameZh": "DSH Desktop",
+        "nameEn": "DSH Desktop",
+        "port": 43120
+      }
+    ]
+  },
+  "renderedText": {
+    "workspaceSelector": "OmniMux PRD\n:43128",
+    "dshInstanceSelector": "OmniMux PRD\n43128\n▾\n本地 DSH / OmniMux 实例\nOmniMux PRD\n:43128\n推荐\n离线\nDSH Desktop\n:43120\n离线\n＋ 自定义端口..."
+  },
+  "screenshots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-product-baseline-ui-issue-2129/docs/evidence/product-baseline-ui/instances-workspace-open.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-product-baseline-ui-issue-2129/docs/evidence/product-baseline-ui/instances-selector-open.png"
+  ]
+}

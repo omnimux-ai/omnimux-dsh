@@ -1,26 +1,5 @@
 {
   "version": 1,
   "_note": "产品基线门禁的豁免清单。每条必须给出可执行的理由；修好后必须删除条目，否则门禁报「僵尸豁免」。合同：docs/contracts/product-baseline.md",
-  "entries": [
-    {
-      "rule": "R1",
-      "path": "plugins/omnimux-browser/extension/src/panel/components/DshInstanceSelector.tsx",
-      "reason": "存量：宿主实例预设把开发版 omnimux-dev 标为 isRecommended。整改在浏览器插件界面的独立 PR（先演示后合入，Issue #2129 第二步）"
-    },
-    {
-      "rule": "R1",
-      "path": "plugins/omnimux-browser/extension/src/panel/components/WorkspaceSelector.tsx",
-      "reason": "存量：同一份实例预设，含开发版标识。整改在浏览器插件界面的独立 PR（先演示后合入，Issue #2129 第二步）"
-    },
-    {
-      "rule": "R5",
-      "path": "plugins/omnimux-browser/extension/src/panel/components/WorkspaceSelector.tsx",
-      "reason": "存量：defaultPath 写死 ~/Desktop/Project/... 开发机检出路径。整改在浏览器插件界面的独立 PR（Issue #2129 第二步）"
-    },
-    {
-      "rule": "R5",
-      "path": "plugins/omnimux/src/client/presets/media-resolver.js",
-      "reason": "存量：素材解析回落到开发机素材库根目录。属界面代码，整改需真实浏览器验收与端到端测试，安排在界面整改 PR（先演示后合入）"
-    }
-  ]
+  "entries": []
 }
