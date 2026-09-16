@@ -1,3 +1,5 @@
+import { shareSourceOf } from './share-status.js'
+
 /**
  * @param {string} path
  * @param {{ method?: string, body?: unknown }} [opts]
@@ -500,16 +502,58 @@ export function resolveCreatorProfileUrl(creator, sourceUrl = '', platform = '')
 }
 
 /**
+ * The publish request a row needs, or `undefined` when the Host already holds
+ * everything it needs.
+ *
+ * A local row is the Host's own record: it has the files on disk, so the request
+ * carries nothing. A cloud row is not — the Host has never seen it, and the
+ * media it must republish is addressed by the cloud, so the page hands over the
+ * entry it is showing: the addresses the cloud already serves, and the copy that
+ * goes into the share. That is the whole difference between the two publish
+ * paths, and it is why a cloud share transfers no media at all.
+ *
+ * Both spellings of the cloud's own fields are read: the public catalogue
+ * answers camelCase (`coverUrl`, `mediaUrls`), and a row that came through a
+ * different seam may carry the snake_case form.
+ * @param {unknown} row
+ * @returns {Record<string, any> | undefined}
+ */
+export function shareRequestPayload(row) {
+  if (!row || typeof row !== 'object') return undefined
+  const rec = /** @type {Record<string, any>} */ (row)
+  if (shareSourceOf(rec) !== 'cloud') return undefined
+  const text = (value) => (typeof value === 'string' ? value.trim() : '')
+  const mediaUrls = (Array.isArray(rec.mediaUrls) ? rec.mediaUrls : Array.isArray(rec.media_urls) ? rec.media_urls : [])
+    .filter((url) => typeof url === 'string' && url.trim())
+  return {
+    source: 'cloud',
+    type: text(rec.type),
+    title: text(rec.title),
+    caption: text(rec.caption ?? rec.content),
+    category: text(rec.category),
+    coverUrl: text(rec.coverUrl ?? rec.cover_url),
+    mediaUrls,
+    embedUrl: text(rec.embedUrl ?? rec.embed_url),
+    sourceUrl: text(rec.sourceUrl ?? rec.source_url),
+  }
+}
+
+/**
  * Start a publish for an inspiration item.
  *
- * The Host owns the publish (it uploads the assets and calls the cloud), and it
+ * The Host owns the publish (it uploads the assets and calls the cloud, or — for
+ * a cloud entry — republishes the addresses the cloud already serves), and it
  * answers 202 with the row while the job runs — the caller then polls the row
  * for the real stages and the link the cloud returned. A failed request comes
  * back as a failure. Nothing here builds a link of its own: a caller that got
  * `ok` is holding what the cloud answered, and a caller that did not has
  * nothing to show.
  * @param {string} id
+ * @param {Record<string, any>} [payload] `shareRequestPayload(row)` for a cloud row
  */
-export async function createShareLink(id) {
-  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/share`, { method: 'POST' })
+export async function createShareLink(id, payload) {
+  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/share`, {
+    method: 'POST',
+    body: payload,
+  })
 }

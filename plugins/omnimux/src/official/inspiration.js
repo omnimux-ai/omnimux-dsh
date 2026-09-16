@@ -7,6 +7,7 @@ const API = '/api/inspiration/v1'
 const HOST_MEDIA = '/omnimux/inspiration/media/'
 const SITE_MEDIA = '/api/inspiration/v1/media/'
 const PUBLISH_API = '/api/inspiration/v1/publish'
+const SHARE_API = '/api/inspiration/v1/share'
 
 const LIST_KEYS = [
   'type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size',
@@ -131,17 +132,22 @@ export function createInspirationShare(client, args) {
 }
 
 /**
- * Publish an inspiration share.
+ * Post to the unified inspiration share entry (`POST /api/inspiration/v1/share`).
  *
- * Same gateway-key lane as the upload above: the publish route is a site route
- * behind `TokenOrUserAuth`. The server decides the link and its lifetime, so the
- * body carries content only — never an expiry the caller picked.
+ * Supports both:
+ * - cloud source: `{ source: 'cloud', id: '...' }` (zero uploads, permanent)
+ * - local source: `{ source: 'local', category, title, prompt, media_url, cover_url, expire }`
  * @param {{ withSkSite: Function }} client
- * @param {{
- *   category: string, title: string, prompt: string,
- *   description?: string, model?: string, mediaType?: string,
- *   mediaUrl?: string, coverUrl?: string,
- * }} input
+ * @param {Record<string, unknown>} input
+ */
+export function postInspirationShare(client, input) {
+  return client.withSkSite(SHARE_API, { method: 'POST', body: shareBody(input) })
+}
+
+/**
+ * Publish an inspiration share (compatibility alias using /publish).
+ * @param {{ withSkSite: Function }} client
+ * @param {Record<string, unknown>} input
  */
 export function publishInspirationShare(client, input) {
   return client.withSkSite(PUBLISH_API, { method: 'POST', body: publishBody(input) })
@@ -158,9 +164,35 @@ export function publishBody(input) {
     description: input.description,
     prompt: input.prompt,
     model: input.model,
-    media_type: input.mediaType,
-    media_url: input.mediaUrl,
-    cover_url: input.coverUrl,
+    media_type: input.mediaType ?? input.media_type,
+    media_url: input.mediaUrl ?? input.media_url,
+    cover_url: input.coverUrl ?? input.cover_url,
+    expire: input.expire,
+  }
+  for (const [key, value] of Object.entries(body)) {
+    if (value == null || value === '') delete body[key]
+  }
+  return body
+}
+
+/**
+ * Unified inspiration share body, snake_case, with empty optional fields omitted.
+ * @param {Record<string, unknown>} input
+ */
+export function shareBody(input) {
+  const body = {
+    source: input.source,
+    id: input.id ?? input.inspirationId ?? input.inspiration_id,
+    inspiration_id: input.inspirationId ?? input.inspiration_id,
+    category: input.category,
+    title: input.title,
+    description: input.description,
+    prompt: input.prompt,
+    model: input.model,
+    media_type: input.mediaType ?? input.media_type,
+    media_url: input.mediaUrl ?? input.media_url,
+    cover_url: input.coverUrl ?? input.cover_url,
+    expire: input.expire,
   }
   for (const [key, value] of Object.entries(body)) {
     if (value == null || value === '') delete body[key]
@@ -184,18 +216,22 @@ export function responseData(payload) {
 /**
  * Server-owned facts of a published share.
  * @param {unknown} payload
- * @returns {{ shareId: string, shareUrl: string, storageBucket: string, isAdmin: boolean, expiresAt: string, expiresIn: string }}
+ * @returns {{ shareId: string, shareUrl: string, storageBucket: string, isAdmin: boolean, expiresAt: string, expiresIn: string, source?: string, permanent?: boolean }}
  */
 export function toShareResult(payload) {
   const data = responseData(payload)
-  return {
-    shareId: typeof data.share_id === 'string' ? data.share_id : '',
+  const shareId = typeof data.share_id === 'string' && data.share_id ? data.share_id : (typeof data.id === 'string' ? data.id : '')
+  const result = {
+    shareId,
     shareUrl: typeof data.share_url === 'string' ? data.share_url : '',
     storageBucket: typeof data.storage_bucket === 'string' ? data.storage_bucket : '',
     isAdmin: data.is_admin === true,
     expiresAt: typeof data.expires_at === 'string' ? data.expires_at : '',
     expiresIn: typeof data.expires_in === 'string' ? data.expires_in : '',
   }
+  if (typeof data.source === 'string' && data.source) result.source = data.source
+  if (typeof data.permanent === 'boolean') result.permanent = data.permanent
+  return result
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   quotaGuard,
   resolveCreatorProfileUrl,
   resolveTikTokEmbedUrl,
+  shareRequestPayload,
   whenAuthReady,
 } from './api.js'
 
@@ -325,5 +326,69 @@ describe('listInspirations query params', () => {
     } finally {
       globalThis.fetch = originalFetch
     }
+  })
+})
+
+describe('share request payload — what a cloud row hands to the Host', () => {
+  const CLOUD_ROW = {
+    id: 2789,
+    is_local: false,
+    type: 'video',
+    title: '情绪共鸣型助眠歌单推广',
+    caption: 'Give it a try 🥺',
+    category: 'Health & Wellness',
+    coverUrl: '/api/inspiration/v1/public/media/inspiration-covers/2789',
+    mediaUrls: [
+      '/api/inspiration/v1/public/media/r2/publications/genviral/videos/2789/video.mp4',
+      '/api/inspiration/v1/public/media/r2/publications/genviral/videos/2789/video-2.mp4',
+    ],
+  }
+
+  it('carries the cloud entry the Host has never seen', () => {
+    assert.deepEqual(shareRequestPayload(CLOUD_ROW), {
+      source: 'cloud',
+      type: 'video',
+      title: '情绪共鸣型助眠歌单推广',
+      caption: 'Give it a try 🥺',
+      category: 'Health & Wellness',
+      coverUrl: '/api/inspiration/v1/public/media/inspiration-covers/2789',
+      mediaUrls: [
+        '/api/inspiration/v1/public/media/r2/publications/genviral/videos/2789/video.mp4',
+        '/api/inspiration/v1/public/media/r2/publications/genviral/videos/2789/video-2.mp4',
+      ],
+      embedUrl: '',
+      sourceUrl: '',
+    })
+  })
+
+  it('reads the snake_case spelling too, for a row that came through another seam', () => {
+    const payload = shareRequestPayload({
+      is_local: false,
+      type: 'image',
+      title: 't',
+      content: 'c',
+      cover_url: '/api/inspiration/v1/public/media/inspiration-covers/1',
+      media_urls: ['/api/inspiration/v1/public/media/r2/publications/x/slide-1.jpg'],
+    })
+    assert.equal(payload.caption, 'c')
+    assert.equal(payload.coverUrl, '/api/inspiration/v1/public/media/inspiration-covers/1')
+    assert.deepEqual(payload.mediaUrls, ['/api/inspiration/v1/public/media/r2/publications/x/slide-1.jpg'])
+  })
+
+  it('drops blank media entries instead of posting empty strings', () => {
+    const payload = shareRequestPayload({ is_local: false, title: 't', mediaUrls: ['', '  ', 'a.jpg'] })
+    assert.deepEqual(payload.mediaUrls, ['a.jpg'])
+  })
+
+  it('sends nothing for a local row: the Host already holds the files', () => {
+    assert.equal(shareRequestPayload({ id: 'insp_1', is_local: true }), undefined)
+    assert.equal(shareRequestPayload({ id: 'insp_1' }), undefined)
+    assert.equal(shareRequestPayload({ id: 'insp_1', share_source: 'local', is_local: false }), undefined)
+    assert.equal(shareRequestPayload(null), undefined)
+  })
+
+  it('sends nothing for a row that has no id-shaped object at all', () => {
+    assert.equal(shareRequestPayload('cloud'), undefined)
+    assert.equal(shareRequestPayload(42), undefined)
   })
 })
