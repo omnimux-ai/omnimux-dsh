@@ -91,8 +91,8 @@ export async function completeTextViaChat(input) {
   const mediaParts = Array.isArray(input.mediaParts) ? input.mediaParts : []
   for (const part of mediaParts) {
     const partUrl = part?.type === 'image_url' ? part.image_url?.url : undefined
-    if (typeof partUrl !== 'string' || !/^data:(?:image|video)\//.test(partUrl)) {
-      throw new OmnimuxError('omnimux-invalid-request', 'media part url must be a data:image or data:video URI')
+    if (typeof partUrl !== 'string' || !/^data:(?:image\/|video\/|audio\/|application\/pdf[;,])/.test(partUrl)) {
+      throw new OmnimuxError('omnimux-invalid-request', 'media part url must be a valid data URI (image, video, audio, or PDF)')
     }
   }
   const system = typeof input.system === 'string' ? input.system.trim() : ''

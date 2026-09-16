@@ -7,7 +7,7 @@ import { OmnimuxError } from '../media/errors.js'
  * Keep the canonical list ordered, including intentional repeated references.
  * Legacy fields only append media absent from that list, irrespective of role.
  * Invalid rows must fail instead of disappearing during generic normalization.
- * @param {{ references?: TextReference[], image?: string, video?: string, audio?: string, audioTrack?: object, assetMeta?: object }} input
+ * @param {{ references?: TextReference[], image?: string, video?: string, audio?: string, document?: string, audioTrack?: object, assetMeta?: object }} input
  * @returns {TextReference[]}
  */
 export function normalizeTextReferences(input) {
@@ -17,12 +17,12 @@ export function normalizeTextReferences(input) {
   const references = []
   for (const [index, row] of (input.references ?? []).entries()) {
     const assets = normalizeLogicalRequest({ references: [row], assetMeta: input.assetMeta }).assets
-    if (assets.length !== 1 || !['image', 'video', 'audio'].includes(assets[0].type)) {
-      throw new OmnimuxError('omnimux-invalid-request', `reference ${index + 1} requires image, video or audio and a pathOrUrl`)
+    if (assets.length !== 1 || !['image', 'video', 'audio', 'document'].includes(assets[0].type)) {
+      throw new OmnimuxError('omnimux-invalid-request', `reference ${index + 1} requires image, video, audio or document and a pathOrUrl`)
     }
     references.push(assets[0])
   }
-  for (const key of ['image', 'video', 'audio']) {
+  for (const key of ['image', 'video', 'audio', 'document']) {
     if (input[key] != null && typeof input[key] !== 'string') {
       throw new OmnimuxError('omnimux-invalid-request', `${key} must be a path or URL`)
     }
@@ -32,8 +32,12 @@ export function normalizeTextReferences(input) {
   }
   const legacy = normalizeLogicalRequest({
     image: input.image, audio: input.audio,
+    fileUrl: input.document,
     audioTrack: input.audioTrack, assetMeta: input.assetMeta,
-    references: input.video?.trim() ? [{ type: 'video', role: 'reference', pathOrUrl: input.video }] : [],
+    references: [
+      ...(input.video?.trim() ? [{ type: 'video', role: 'reference', pathOrUrl: input.video }] : []),
+      ...(input.document?.trim() ? [{ type: 'document', role: 'reference', pathOrUrl: input.document }] : []),
+    ],
   }).assets
   for (const asset of legacy) {
     if (!references.some((row) => row.type === asset.type && row.pathOrUrl === asset.pathOrUrl)) {
