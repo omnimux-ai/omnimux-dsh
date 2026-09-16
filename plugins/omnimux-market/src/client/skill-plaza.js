@@ -249,6 +249,7 @@
       });
       const isEn = tr("locale") === "en";
       const isExpertTab = state.mainTab === "experts-market";
+      const isDiscoverTab = state.mainTab === "discover";
       const { introHeading, introSubtitle, placeholderText } = resolveIntroTexts(state, tr, isEn, isExpertTab);
       const displayedExperts = filterDisplayedExperts(state.expertMarketItems, isExpertTab, state.searchQuery);
       const filteredMine = filterMineItems(state.installedItems, { category: state.category, presetBinding, mineCategory: state.mineCategory, mineSource: state.mineSource, searchQuery: state.searchQuery });
@@ -267,6 +268,7 @@
       };
       return {
         isExpertTab,
+        isDiscoverTab,
         introOpts: { introHeading, introSubtitle, isExpertTab, isEn, tr, onOpenInstall },
         navBarOpts: { mainTab: state.mainTab, setMainTab: state.setMainTab, setPage: state.setPage, searchQuery: state.searchQuery, setSearchQuery: state.setSearchQuery, placeholderText, onSearchSubmit, tr, isEn },
         categoryBarOpts: { category: state.category, setCategory: state.setCategory, setMineCategory: state.setMineCategory, setPage: state.setPage, workshopCategories, tr },
@@ -372,7 +374,7 @@
         renderWorkshopIntro(sections.introOpts),
         h("div", { className: "omx-stage-sticky", ref: setStickyNode },
           renderPlazaNavBar(sections.navBarOpts),
-          sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
+          sections.isDiscoverTab ? renderCategoryBar(sections.categoryBarOpts) : null,
         ),
         renderPlazaTabContent(sections.tabContentOpts),
         drawerNode,

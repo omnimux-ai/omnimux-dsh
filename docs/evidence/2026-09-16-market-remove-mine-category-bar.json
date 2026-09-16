@@ -1,0 +1,34 @@
+{
+  "task": "market-remove-mine-category-bar-issue-2019",
+  "issue": 2019,
+  "timestamp": "2026-09-16T10:56:00.000Z",
+  "feature": "技能工坊我的Skill标签页移除冗余分类胶囊栏",
+  "scenarios": [
+    {
+      "name": "discover_tab_renders_category_bar",
+      "mainTab": "discover",
+      "categoryBarRendered": true,
+      "categoriesCount": 12,
+      "firstCategories": ["", "套件", "featured", "短剧漫剧"],
+      "status": "PASS"
+    },
+    {
+      "name": "mine_tab_removes_category_bar",
+      "mainTab": "mine",
+      "categoryBarRendered": false,
+      "mineToolbarRendered": true,
+      "status": "PASS"
+    },
+    {
+      "name": "experts_market_tab_removes_category_bar",
+      "mainTab": "experts-market",
+      "categoryBarRendered": false,
+      "status": "PASS"
+    }
+  ],
+  "verification": {
+    "unitTestsPassed": 175,
+    "unitTestsFailed": 0,
+    "buildSuccess": true
+  }
+}

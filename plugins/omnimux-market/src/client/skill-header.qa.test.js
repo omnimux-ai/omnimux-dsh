@@ -44,16 +44,20 @@ test('QA: closed/open/closed installation modal retains identical hook sequence'
   }
 })
 
-test('QA: global category and search intersect in My Skills; All resets category', () => {
+test('QA: category-bar is removed in My Skills; discover tab keeps category-bar', () => {
   const ui = workshop({ 0: 'mine', 3: 'video', 10: [
     { slug: 'ad', name: 'video ad', tags: ['商业广告'] },
     { slug: 'music', name: 'video music', tags: ['音频音乐'] },
   ] })
+  // 验收标准：在我的 Skill (mine) 标签页下，彻底移除 category-bar 胶囊栏
+  assert.equal(nodes(ui.render(), n => n.props.className === 'category-bar').length, 0)
+  assert.ok(nodes(ui.render(), n => n.type?.name === 'MineToolbar').length >= 1, 'mine tab must render MineToolbar')
+
+  // 切换到 discover 发现页，category-bar 正常呈现
+  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[0].props.onClick()
   const category = nodes(ui.render(), n => n.props.className === 'category-bar')[0]
-  category.children.find(n => n.props.key === '商业广告').props.onClick()
-  assert.equal(nodes(ui.render(), n => n.props.className === 'regular-card').length, 1)
-  category.children.find(n => n.props.key === '').props.onClick()
-  assert.equal(nodes(ui.render(), n => n.props.className === 'regular-card').length, 2)
+  assert.ok(category, 'discover tab must render category-bar')
+  assert.ok(category.children.length > 0)
 })
 
 test('QA: featured My Skills retains a recommended skill returned by real listInstalled', async () => {
@@ -81,18 +85,30 @@ test('QA: rejected confirm install must not mark a skill installed or close conf
 test('regression: installed featured identity survives tab/category reentry and rejects unknown flags', () => {
   const clip = { slug: 'clip-export', name: 'Clip export', installed: true }
   const unknown = { slug: 'not-in-catalog', name: 'Unknown', recommended: true, tags: ['精选'] }
-  const ui = workshop({ 0: 'mine', 1: 'featured', 10: [clip, unknown] })
+  // 从 discover 发现页开始
+  const ui = workshop({ 0: 'discover', 1: 'featured', 10: [clip, unknown] })
+  const categories = () => nodes(ui.render(), n => n.props.className === 'category-bar')[0]
+  assert.ok(categories(), 'discover tab renders category-bar')
+
+  // 切换为全部分类
+  categories().children.find(n => n.props.key === '').props.onClick()
+
+  // 切换到我的 Skill (mine)
+  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[1].props.onClick()
   const cards = () => nodes(ui.render(), n => n.props.className === 'regular-card')
+  assert.equal(cards().length, 2)
+  assert.equal(nodes(ui.render(), n => n.props.className === 'category-bar').length, 0)
+
+  // 切回 discover 发现页并切换到 featured
+  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[0].props.onClick()
+  categories().children.find(n => n.props.key === 'featured').props.onClick()
+
+  // 再次切回 mine
+  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[1].props.onClick()
   assert.equal(cards().length, 1)
   assert.equal(SkillShelf.isRecommendedInstalledSkill(unknown), false)
   assert.equal(SkillShelf.isRecommendedInstalledSkill({}), false)
-  const categories = nodes(ui.render(), n => n.props.className === 'category-bar')[0]
-  categories.children.find(n => n.props.key === '').props.onClick()
-  assert.equal(cards().length, 2)
-  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[0].props.onClick()
-  categories.children.find(n => n.props.key === 'featured').props.onClick()
-  nodes(ui.render(), n => n.type === 'button' && n.props.className?.startsWith('nav-tab'))[1].props.onClick()
-  assert.equal(cards().length, 1)
+
   ui.state.set(10, [{ ...clip }]) // list refresh still has no recommendation flags
   assert.equal(cards().length, 1)
 })
