@@ -31,7 +31,7 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     restoreDisplacedIcons(document)
   })
 
-  it('AC-1: 当第三方竞品图标侵占头像上方空间时，被算法向上推移且保持至少 16px 充裕大留白', () => {
+  it('AC-1: 当第三方竞品图标侵占头像上方空间时，被算法向上推移且保持至少 24px 充裕大留白', () => {
     document.body.innerHTML = `
       <section class="SectionActionBarContainer">
         <button id="rival-orange" class="extension-icon">CK</button>
@@ -50,9 +50,11 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     expect(displaced.length).toBe(1)
     expect(displaced[0]).toBe(rival)
 
+    // 目标天花板：ourPlacement.top - 24 = 144 - 24 = 120
+    // rival 原 bottom 为 194，需平移：194 - 120 = 74px
     const shift = rival.getAttribute('data-omx-shift')
-    expect(shift).toBe('66')
-    expect(rival.style.transform).toBe('translateY(-66px)')
+    expect(shift).toBe('74')
+    expect(rival.style.transform).toBe('translateY(-74px)')
   })
 
   it('AC-1b: 针对 CreatOK 带有文字标签的复合组件，整个外部容器被整体推升，文字与幽灵图标完全不重叠', () => {
@@ -78,10 +80,10 @@ describe('TikTok 场景图标避让算法 (resolveIconConflicts)', () => {
     expect(displaced.length).toBe(1)
     expect(displaced[0]).toBe(wrapper)
 
-    // 目标天花板：144 - 16 = 128
-    // wrapper 原 bottom 190，平移：190 - 128 = 62px
-    expect(wrapper.getAttribute('data-omx-shift')).toBe('62')
-    expect(wrapper.style.transform).toBe('translateY(-62px)')
+    // 目标天花板：144 - 24 = 120
+    // wrapper 原 bottom 190，平移：190 - 120 = 70px
+    expect(wrapper.getAttribute('data-omx-shift')).toBe('70')
+    expect(wrapper.style.transform).toBe('translateY(-70px)')
   })
 
   it('AC-2: 当存在多个第三方图标时，级联顺延向上推升，互不挤压', () => {
@@ -130,5 +132,17 @@ describe('TikTok 全场景活跃视频抓取 (resolveTargetPost)', () => {
     expect(post).not.toBeNull()
     expect(post?.postId).toBe('7418999999999999999')
     expect(post?.url).toBe('https://www.tiktok.com/@purrnest/video/7418999999999999999')
+  })
+
+  it('AC-5: 当页面包含 xgwrapper 西瓜播放器时，成功解析真实视频 ID 并合成标准链接', () => {
+    const post = resolveTargetPost({
+      pageUrl: 'https://www.tiktok.com/',
+      hoveredHref: null,
+      activeHref: 'https://www.tiktok.com/@i/video/7681127662965886228',
+    })
+
+    expect(post).not.toBeNull()
+    expect(post?.postId).toBe('7681127662965886228')
+    expect(post?.url).toBe('https://www.tiktok.com/@i/video/7681127662965886228')
   })
 })
