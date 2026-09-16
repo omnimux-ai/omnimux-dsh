@@ -14,6 +14,7 @@ export const SLOT_LAYOUT_TABLE: Readonly<Record<string, SlotLayoutPolicy>> = Obj
   multi_reference: { preset: 'strip', slots: ['reference_image', 'reference'], addButton: true },
   text_to_video: { preset: 'none' },
   first_frame: { preset: 'named', slots: ['first_frame'] },
+  end_frame: { preset: 'named', slots: ['last_frame'] },
   first_last_frame: { preset: 'pair', slots: ['first_frame', 'last_frame'], swap: true },
   video_multi_ref: { preset: 'strip', slots: ['reference'], addButton: true },
   digital_human: { preset: 'named', slots: ['character', 'driving_audio'] },

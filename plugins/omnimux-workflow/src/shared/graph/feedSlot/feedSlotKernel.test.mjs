@@ -7,6 +7,7 @@ const input = (slot, type, role, min = 1, max = 1) => ({ slot, type, role, min, 
 const catalog = { models: [{ id: 'video', operations: [
   { id: 'text_to_video', inputs: [] },
   { id: 'first_frame', inputs: [input('first_frame', 'image', 'first_frame')] },
+  { id: 'end_frame', inputs: [input('last_frame', 'image', 'last_frame')] },
   { id: 'first_last_frame', inputs: [input('start_frame', 'image', 'first_frame'), input('end_frame', 'image', 'last_frame')] },
   { id: 'video_multi_ref', inputs: [input('reference', 'image', 'reference', 1, 1)] },
   { id: 'digital_human', inputs: [input('character', 'image', 'reference'), input('audio_track', 'audio', 'audio_track')] },
@@ -16,9 +17,17 @@ const feed = (id, type = 'image', extra = {}) => ({ edgeId: `e${id}`, sourceNode
 const occupant = (asset, pinned = true) => ({ edgeId: asset.edgeId, sourceNodeId: asset.sourceNodeId, outputId: asset.outputId, pinned });
 const assemble = (l, assets, bindings) => assembleEffectiveInputsFromSlots({ layout: l, bindings, feedAssets: assets, conflicts: [], nodeData: {}, incomingText: [] });
 
-for (const [id, preset] of [['text_to_video', 'none'], ['first_frame', 'named'], ['first_last_frame', 'pair'], ['video_multi_ref', 'strip'], ['digital_human', 'named']]) {
+for (const [id, preset] of [['text_to_video', 'none'], ['first_frame', 'named'], ['end_frame', 'named'], ['first_last_frame', 'pair'], ['video_multi_ref', 'strip'], ['digital_human', 'named']]) {
   test(`${id} derives ${preset} from catalog`, () => assert.equal(layout(id).preset, preset));
 }
+test('end_frame derives single named slot for last_frame without add button', () => {
+  const l = layout('end_frame');
+  assert.equal(l.preset, 'named');
+  assert.equal(l.slots.length, 1);
+  assert.equal(l.slots[0].slot, 'last_frame');
+  assert.equal(l.slots[0].role, 'last_frame');
+  assert.equal(l.addButton, false);
+});
 test('pair uses real catalog aliases, roles and swap', () => {
   assert.deepEqual(layout('first_last_frame').slots.map((slot) => slot.slot), ['start_frame', 'end_frame']);
   assert.equal(layout('first_last_frame').swap, true);
