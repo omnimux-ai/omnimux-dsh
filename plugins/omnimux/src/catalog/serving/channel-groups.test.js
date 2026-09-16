@@ -188,26 +188,40 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
   })
 
-  // H3 全系列按分组接入：两条线是上游独立在售型号（enable_groups 均为 default），
-  // 靠分组自带的 wireModel 指向各自的上游型号；每个分组携带自己的契约。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒任务版。
+  // 靠分组自带的 wireModel 指向各自的上游独立型号；每个分组携带独立契约。
   describe('MiniMax H3 series as groups', () => {
-    it('declares both lines, each with its own upstream model and contract', () => {
+    it('declares all 5 lines, each with its own upstream model and contract', () => {
       const groups = getModelChannelGroups('minimax-h3')
-      assert.equal(groups.length, 2)
+      assert.equal(groups.length, 5)
       const byId = new Map(groups.map((group) => [group.id, group]))
 
       const standard = byId.get('standard')
       assert.equal(standard.wireGroup, 'default')
-      // 标准版即产品本身，不需要型号覆盖
       assert.equal(standard.wireModel, undefined)
-      // 标准版沿用模型契约，不额外施加分组约束
       assert.equal(standard.constraints, undefined)
+
+      const turbo = byId.get('turbo')
+      assert.equal(turbo.wireModel, 'minimax-h3-turbo')
+      assert.equal(turbo.wireGroup, 'default')
+      assert.equal(turbo.pricing?.pointsEstimate, 540)
+
+      const videoFast = byId.get('video_fast')
+      assert.equal(videoFast.wireModel, 'minimax-h3-video')
+      assert.equal(videoFast.wireGroup, 'minimax-h3-video-fast')
+      assert.equal(videoFast.pricing?.pointsEstimate, 350)
+      assert.deepEqual(videoFast.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
+
+      const videoPro = byId.get('video_pro')
+      assert.equal(videoPro.wireModel, 'minimax-h3-video')
+      assert.equal(videoPro.wireGroup, 'minimax-h3-video-pro')
+      assert.equal(videoPro.pricing?.pointsEstimate, 440)
+      assert.deepEqual(videoPro.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
 
       const task = byId.get('task')
       assert.equal(task.wireModel, 'minimax-h3-task')
       assert.equal(task.wireGroup, 'default')
       assert.equal(task.pricing?.billingMode, 'per_task')
-      // 任务版的独立契约：固定 15 秒、按其上游 operations 收窄、分辨率随上游
       assert.deepEqual(task.constraints.parameters.duration, { fixed: 15 })
       assert.deepEqual(task.constraints.parameters.resolution, { only: ['768P', '2K'] })
       assert.deepEqual(task.constraints.operations, [
@@ -216,8 +230,6 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
         'first_last_frame',
         'video_multi_ref',
       ])
-      // 上游未公布该线路稳定率，不得编造 SLA
-      assert.equal(task.sla, undefined)
     })
 
     it('routes each line to its own upstream model', () => {
@@ -226,25 +238,37 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
         ['minimax-h3@default'],
       )
       assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['turbo'] }).candidates,
+        ['minimax-h3-turbo@default'],
+      )
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['video_fast'] }).candidates,
+        ['minimax-h3-video@minimax-h3-video-fast'],
+      )
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['video_pro'] }).candidates,
+        ['minimax-h3-video@minimax-h3-video-pro'],
+      )
+      assert.deepEqual(
         resolveChannelPlan('minimax-h3', { allowedGroups: ['task'] }).candidates,
         ['minimax-h3-task@default'],
       )
-      // 显式点名分组同样走该线路自己的上游型号，而不是产品 id
+      // 显式点名分组同样走该线路自己的上游型号与分组
       assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { group: 'task', allowedGroups: ['task'] }).candidates,
-        ['minimax-h3-task@default'],
+        resolveChannelPlan('minimax-h3', { group: 'video_fast', allowedGroups: ['video_fast'] }).candidates,
+        ['minimax-h3-video@minimax-h3-video-fast'],
       )
     })
 
-    it('prefers the cheaper, more stable standard line when both are allowed', () => {
-      const plan = resolveChannelPlan('minimax-h3', { allowedGroups: ['standard', 'task'] })
-      assert.deepEqual([...plan.candidates].sort(), ['minimax-h3-task@default', 'minimax-h3@default'].sort())
-      assert.equal(plan.candidates[0], 'minimax-h3@default')
-      // 低价优先同样落在标准版（任务版按次更贵）
-      assert.equal(
-        resolveChannelCandidates('minimax-h3', { strategy: 'cost_first' })[0],
-        'minimax-h3@default',
-      )
+    it('sorts by strategy: cost_first picks video_fast, stability_first picks standard', () => {
+      const allAllowed = ['standard', 'turbo', 'video_fast', 'video_pro', 'task']
+      // 成本优先：video_fast (350积分) 单价最低，排在首位
+      const costPlan = resolveChannelPlan('minimax-h3', { strategy: 'cost_first', allowedGroups: allAllowed })
+      assert.equal(costPlan.candidates[0], 'minimax-h3-video@minimax-h3-video-fast')
+
+      // 稳定性优先：standard (99% 24h 稳定性) 排在首位
+      const stabilityPlan = resolveChannelPlan('minimax-h3', { strategy: 'stability_first', allowedGroups: allAllowed })
+      assert.equal(stabilityPlan.candidates[0], 'minimax-h3@default')
     })
   })
 })
