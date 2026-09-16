@@ -57,6 +57,17 @@ export function listProjects() {
 }
 
 /**
+ * 按会话解析所属工作区的项目（缺失即登记，Issue #2104）。
+ * 返回体 `source`: existing | registered | outside-library | unknown-session。
+ * @param {string} sessionId
+ */
+export function fetchSessionProjectBinding(sessionId) {
+  const id = typeof sessionId === 'string' ? sessionId.trim() : ''
+  if (!id) return Promise.resolve({ ok: false, status: 400, body: { error: 'session-required' } })
+  return workflowRequest(`/omnimux-workflow/api/projects/session-binding?sessionId=${encodeURIComponent(id)}`)
+}
+
+/**
  * Host 在默认库 mkdir + 写 project.json。
  * 可选 projectRoot：已存在的作品包路径（打开已有文件夹时种子）。
  * @param {string} title
