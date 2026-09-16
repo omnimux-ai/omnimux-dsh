@@ -200,6 +200,8 @@ function resolveArtifactBasePath(customDest, options) {
 export function saveVideoBreakdownArtifacts(breakdownData, customDest, options = {}) {
   const basePath = resolveArtifactBasePath(customDest, options)
   const dataPath = `${basePath}.vbreakdown`
-  writeFileSync(dataPath, JSON.stringify(breakdownData, null, 2), 'utf8')
-  return { dataPath }
+  const payload = { ...breakdownData }
+  delete payload.local_video_path
+  writeFileSync(dataPath, JSON.stringify(payload, null, 2), 'utf8')
+  return { dataPath, basePath }
 }
