@@ -97,7 +97,7 @@
   fill: var(--omx-brand);
 }
 
-/* --- Toolbar: three columns beside the circle, vertically centred ---------- */
+/* --- Toolbar: three items in a horizontal row, vertically centred ---------- */
 .omx-menu {
   position: absolute;
   /* The right-hand side is the default; `menu-side.ts` writes the offset that
@@ -105,8 +105,9 @@
   left: 100%;
   top: 50%;
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 4px;
   padding: 6px;
   /* The detail row under the columns carries a saved file's name, which has no
@@ -160,11 +161,11 @@
    viewport (`menu-side.ts`), and the label wraps rather than widening it. */
 .omx-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   width: 68px;
-  padding: 9px 4px 8px;
+  padding: 8px 6px;
   margin: 0;
   border: 0;
   border-radius: 10px;
@@ -173,9 +174,9 @@
   font: inherit;
   font-size: 11px;
   font-weight: 600;
-  line-height: 13px;
-  text-align: center;
-  white-space: normal;
+  line-height: 14px;
+  text-align: left;
+  white-space: nowrap;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -193,8 +194,8 @@
 
 .omx-item svg {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   opacity: 0.92;
   pointer-events: none;
@@ -206,17 +207,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
 }
 
 .omx-item-label {
   flex: 1 1 auto;
+  white-space: nowrap;
 }
 
-/* The column's own progress line, under its words: a column is tall enough to
-   report in place, and the row must not reflow when one of them changes width. */
+/* The column's own progress line, under or beside its words */
 .omx-item-state {
   font-size: 10px;
   font-weight: 600;
