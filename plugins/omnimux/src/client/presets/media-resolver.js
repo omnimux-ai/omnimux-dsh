@@ -3,7 +3,15 @@
  * 负责将元数据中的相对路径解析为网关静态媒体流或本地开发直读流
  */
 
-const LOCAL_ASSET_ROOT = '/Users/x/Desktop/Project/OPC/资产库/素材库/gxgen-data/inspiration-library/video/media/pippit'
+/**
+ * 预设素材根目录：只认显式配置，不猜测本机路径。
+ * 产品基线合同 docs/contracts/product-baseline.md：开发机专有路径不得成为默认或回退。
+ */
+function presetAssetRoot() {
+  if (typeof window === 'undefined') return ''
+  const configured = window.__OMNIMUX_CONFIG__?.presetAssetRoot
+  return typeof configured === 'string' ? configured.replace(/\/+$/, '') : ''
+}
 
 /**
  * 解析媒体路径为可播放/可加载的 URL
@@ -33,8 +41,11 @@ export function resolveMediaUrl(relativePath) {
     return `${base}/${clean}`
   }
 
-  // 2. 本地开发 / 桌面端自洽直读方案：通过 omnimux-workflow 本地文件流路由（支持 Range 206 播放）
-  const absoluteLocalPath = `${LOCAL_ASSET_ROOT}/${clean}`
+  // 2. 显式配置了预设素材根目录时，走 omnimux-workflow 本地文件流路由（支持 Range 206 播放）
+  const assetRoot = presetAssetRoot()
+  if (!assetRoot) return ''
+
+  const absoluteLocalPath = `${assetRoot}/${clean}`
   return `/omnimux-workflow/api/local-file?path=${encodeURIComponent(absoluteLocalPath)}`
 }
 

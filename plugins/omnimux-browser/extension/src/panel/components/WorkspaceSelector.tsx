@@ -23,11 +23,11 @@ export interface InstanceHealth {
 
 export const PRESET_INSTANCES = [
   {
-    id: 'omnimux-dev',
-    port: 45120,
-    nameZh: 'OmniMux Dev',
-    nameEn: 'OmniMux Dev',
-    defaultPath: '~/Desktop/Project/dsh-plugin/product/omnimux-dsh',
+    id: 'omnimux-prd',
+    port: 43128,
+    nameZh: 'OmniMux PRD',
+    nameEn: 'OmniMux PRD',
+    defaultPath: '~/.omnimux',
     isRecommended: true,
   },
   {
@@ -36,13 +36,6 @@ export const PRESET_INSTANCES = [
     nameZh: 'DSH Desktop',
     nameEn: 'DSH Desktop',
     defaultPath: '~/.dsh',
-  },
-  {
-    id: 'omnimux-prd',
-    port: 43128,
-    nameZh: 'OmniMux PRD',
-    nameEn: 'OmniMux PRD',
-    defaultPath: '~/.omnimux',
   },
 ]
 
@@ -101,7 +94,7 @@ export async function probeInstanceHealth(port: number): Promise<InstanceHealth>
 export const WorkspaceSelector = memo(function WorkspaceSelector({
   bridgeConnected,
   locale = 'zh',
-  targetPort = 45120,
+  targetPort = 43128,
   onSelectWorkspace,
 }: {
   bridgeConnected: boolean
@@ -113,7 +106,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
   const [selectedPort, setSelectedPort] = useState<number>(() => {
     const saved = localStorage.getItem('omnimux_target_port')
     const p = saved ? parseInt(saved, 10) : targetPort
-    return !isNaN(p) && p > 0 ? p : 45120
+    return !isNaN(p) && p > 0 ? p : 43128
   })
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([])
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceItem | null>(null)
