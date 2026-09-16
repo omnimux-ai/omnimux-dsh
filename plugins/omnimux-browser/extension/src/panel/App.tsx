@@ -76,6 +76,7 @@ import {
   type ImageAttachmentLimits,
 } from './attachments.ts'
 import { imageErrorMessage } from './image-errors.ts'
+import { dockFloatToNativeSidePanel } from './float-dock.ts'
 import { AssistantStreamView } from './assistant-stream.ts'
 import {
   canAcceptImageSelection,
@@ -2365,6 +2366,10 @@ export function App(): React.JSX.Element {
     // busy state 是异步的：连续回车可能都通过 state 检查——用 ref 同步锁。
     if ((text === '' && submittedImages.length === 0 && submittedSelection === null)
       || busy || addingImagesRef.current || sendingRef.current) return
+    // 悬浮窗挂在网页 DOM 内：自动化一旦刷新/跳转会整页销毁会话 UI。
+    // sidePanel.open 必须落在用户手势内，因此在任何 await 之前同步打开原生边栏。
+    // 发送回合仍由当前悬浮面板完成：此处只收起、不立刻 unload，避免掐断本帧 prompt。
+    if (isFloatMode) dockFloatToNativeSidePanel(undefined, undefined, false)
     sendingRef.current = true
     const submittedDraft: ComposerDraft<DraftImage> = { text, images: submittedImages }
     if (textOverride === undefined) {
@@ -2393,6 +2398,9 @@ export function App(): React.JSX.Element {
             ...(selectedDefaultProvider ? { provider: selectedDefaultProvider } : {}),
           }).catch(() => {})
         }
+      } else if (isFloatMode) {
+        // 既有会话也重新广播，让刚打开的原生边栏吃到 resume-hint。
+        await api.setActiveSession(id).catch(() => {})
       }
       const clientTimeZone = browserTimeZone()
       // Only video still travels as a URL: an image that the attachment channel
@@ -2419,6 +2427,12 @@ export function App(): React.JSX.Element {
         void api.clearSelection(submittedSelection).then(() => {
           setSelection((current) => current?.capturedAt === submittedSelection.capturedAt ? null : current)
         }).catch(() => {})
+      }
+      // prompt 已入队：卸载悬浮 iframe，只留原生边栏承载后续刷新。
+      if (isFloatMode) {
+        try {
+          window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION', unload: true }, '*')
+        } catch { /* parent may be gone */ }
       }
     } catch (cause) {
       if (sessionRef.current === id) {
@@ -3237,12 +3251,7 @@ export function App(): React.JSX.Element {
               <button
                 type="button"
                 className="icon-button float-btn-icon"
-                onClick={() => {
-                  try {
-                    void chrome.sidePanel?.open?.({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch(() => {})
-                  } catch {}
-                  window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION' }, '*')
-                }}
+                onClick={() => { dockFloatToNativeSidePanel() }}
                 title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏并收起当前面板"}
                 aria-label={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏并收起当前面板"}
               >

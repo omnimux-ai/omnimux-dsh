@@ -282,8 +282,22 @@ export function initFabCompanion(): void {
 
   applyFabPosition(currentX, currentY)
 
+  function ensureWorkstationFrame(): void {
+    // Dock-to-side-panel may blank the iframe so only the native panel stays
+    // live; a later FAB click has to put the float document back.
+    if (!iframe) return
+    const current = iframe.getAttribute('src') ?? ''
+    if (current === panelUrl) return
+    try {
+      iframe.src = panelUrl
+    } catch {
+      // Ignore
+    }
+  }
+
   function openWorkstation() {
     if (isExpanded) return
+    ensureWorkstationFrame()
     isExpanded = true
     fab.classList.add('fab-hidden')
     workstation.classList.add('expanded')
@@ -295,6 +309,18 @@ export function initFabCompanion(): void {
     isExpanded = false
     workstation.classList.remove('expanded')
     fab.classList.remove('fab-hidden')
+  }
+
+  /** Hide the float shell and optionally drop its live panel document. */
+  function collapseWorkstationForDock(unload: boolean): void {
+    collapseWorkstation()
+    if (!unload || !iframe) return
+    try {
+      iframe.removeAttribute('src')
+      iframe.src = 'about:blank'
+    } catch {
+      // Ignore
+    }
   }
 
   function syncContextToIframe() {
@@ -480,7 +506,7 @@ export function initFabCompanion(): void {
     const { type, text } = e.data
 
     if (type === 'COLLAPSE_WORKSTATION') {
-      collapseWorkstation()
+      collapseWorkstationForDock(e.data?.unload === true)
       return
     }
 

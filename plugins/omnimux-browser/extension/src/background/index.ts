@@ -827,6 +827,18 @@ async function postResumeHint(port: chrome.runtime.Port, windowId: number): Prom
   } catch {
     // Without an exact live page the panel must start a new conversation.
   }
+  // 同窗口其它面板（例如刚 dock 过来前的悬浮窗）已激活的会话优先：
+  // 页面上下文可能尚未写完绑定时，新开的原生边栏仍能续上同一会话。
+  if (sessionId === null) {
+    for (const other of panelPresence.portsFor(panelPorts, windowId)) {
+      if (other === port) continue
+      const active = panelActiveSessions.get(other)
+      if (typeof active === 'string' && active.trim() !== '') {
+        sessionId = active
+        break
+      }
+    }
+  }
   if (!panelPorts.has(port) || panelPresence.windowOf(port) !== windowId) return
   try { port.postMessage({ type: 'session.resume-hint', sessionId }) } catch { /* port closed */ }
 }
@@ -1996,6 +2008,8 @@ chrome.runtime.onConnect.addListener((port) => {
               persistTabAffinity()
               broadcastTabAffinity()
               await refreshSessionSnapshot(sid)
+              // 悬浮窗切到原生边栏后，新开的边栏靠 resume-hint 接管同一会话。
+              refreshPanelResumeHints()
             }).catch(() => {})
             sessionSnapshotRefreshes.set(sid, bind)
             void bind.finally(() => {
@@ -2004,6 +2018,10 @@ chrome.runtime.onConnect.addListener((port) => {
           } else if (tabAffinity.focusSession(sid)) {
             persistTabAffinity()
             broadcastTabAffinity()
+            // 既有会话重新激活时同样刷新，供同窗口新开的原生边栏续接。
+            refreshPanelResumeHints()
+          } else {
+            refreshPanelResumeHints()
           }
         }
         break
