@@ -90,6 +90,16 @@ export function detectPageType(platform: PageSceneContext['platform'], url: stri
   }
 }
 
+function isGenericBrandImage(url: string | undefined): boolean {
+  if (!url) return true
+  const lower = url.toLowerCase()
+  if (lower.includes('abs.twimg.com')) return true
+  if (lower.includes('icon-default')) return true
+  if (lower.includes('default_profile_images')) return true
+  if (lower.includes('rweb/ssr/default')) return true
+  return false
+}
+
 export function extractHeroImage(platform: PageSceneContext['platform']): string | undefined {
   try {
     if (platform === 'twitter') {
@@ -106,14 +116,14 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
       if (isProfile) {
         if (handle) {
           const handleAvatar = mainCol.querySelector<HTMLImageElement>(`a[href*="/${handle}/photo"] img, a[href$="/photo"] img`)
-          if (handleAvatar?.src) {
+          if (handleAvatar?.src && !isGenericBrandImage(handleAvatar.src)) {
             return handleAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
           }
         }
         const profileAvatar = Array.from(mainCol.querySelectorAll<HTMLImageElement>('div[data-testid="UserAvatar-Container"] img')).find(
           (img) => !img.closest('[data-testid="SideNav_AccountSwitcher_Button"], header[role="banner"]')
         )
-        if (profileAvatar?.src) {
+        if (profileAvatar?.src && !isGenericBrandImage(profileAvatar.src)) {
           return profileAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
         }
       }
@@ -123,45 +133,47 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
         mainCol.querySelector('article[tabindex="-1"][data-testid="tweet"]') ||
         mainCol.querySelector('article[data-testid="tweet"]')
       if (tweetArticle) {
-        const photo = tweetArticle.querySelector<HTMLImageElement>('div[data-testid="tweetPhoto"] img, img[src*="media"]')
-        if (photo?.src) return photo.src
+        const photo = tweetArticle.querySelector<HTMLImageElement>(
+          'div[data-testid="tweetPhoto"] img, [data-testid*="card.layout"] img, img[src*="pbs.twimg.com/media"], img[src*="media"]'
+        )
+        if (photo?.src && !isGenericBrandImage(photo.src)) return photo.src
         const video = tweetArticle.querySelector<HTMLVideoElement>('video')
-        if (video?.poster) return video.poster
+        if (video?.poster && !isGenericBrandImage(video.poster)) return video.poster
         const tweetAvatar = tweetArticle.querySelector<HTMLImageElement>('div[data-testid="UserAvatar-Container"] img')
-        if (tweetAvatar?.src) {
+        if (tweetAvatar?.src && !isGenericBrandImage(tweetAvatar.src)) {
           return tweetAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
         }
       }
 
       // 3. 用户 Banner 背景图
       const bannerImg = mainCol.querySelector<HTMLImageElement>('a[href$="/header_photo"] img, img[src*="profile_banners"]')
-      if (bannerImg?.src) return bannerImg.src
+      if (bannerImg?.src && !isGenericBrandImage(bannerImg.src)) return bannerImg.src
 
       // 4. 主内容区头像兜底 (严格排除左侧导航栏与账号切换器)
       const anyMainAvatar = Array.from(mainCol.querySelectorAll<HTMLImageElement>('div[data-testid="UserAvatar-Container"] img')).find(
         (img) => !img.closest('[data-testid="SideNav_AccountSwitcher_Button"], header[role="banner"]')
       )
-      if (anyMainAvatar?.src) {
+      if (anyMainAvatar?.src && !isGenericBrandImage(anyMainAvatar.src)) {
         return anyMainAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
       }
     }
 
     if (platform === 'tiktok') {
       const poster = document.querySelector<HTMLVideoElement>('video')?.getAttribute('poster')
-      if (poster) return poster
+      if (poster && !isGenericBrandImage(poster)) return poster
       const avatar = document.querySelector<HTMLImageElement>('[data-e2e="user-avatar"] img, [data-e2e="browser-avatar"] img')
-      if (avatar?.src) return avatar.src
+      if (avatar?.src && !isGenericBrandImage(avatar.src)) return avatar.src
     }
 
-    // 5. OpenGraph / Twitter Card 元数据
+    // 5. OpenGraph / Twitter Card 元数据 (过滤平台通用占位图)
     const ogImg = document.querySelector<HTMLMetaElement>(
       'meta[property="og:image"], meta[name="twitter:image"], meta[name="twitter:image:src"]'
     )?.content
-    if (ogImg) return ogImg
+    if (ogImg && !isGenericBrandImage(ogImg)) return ogImg
 
-    // 6. 页面内首张有效大图 (限定在 main/article 内，排除小图标)
+    // 6. 页面内首张有效大图 (限定在 main/article 内，排除小图标与品牌占位)
     const firstImg = Array.from(document.querySelectorAll<HTMLImageElement>('main img, article img')).find(
-      (img) => (img.naturalWidth > 180 || img.width > 180) && (img.naturalHeight > 120 || img.height > 120) && !img.src.includes('svg')
+      (img) => (img.naturalWidth > 180 || img.width > 180) && (img.naturalHeight > 120 || img.height > 120) && !img.src.includes('svg') && !isGenericBrandImage(img.src)
     )
     if (firstImg?.src) return firstImg.src
   } catch {
