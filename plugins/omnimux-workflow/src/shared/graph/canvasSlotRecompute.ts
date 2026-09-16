@@ -18,7 +18,8 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const raw = buildCanvasUpstreamFingerprint(node.id, graph.nodes, graph.edges);
   const view = buildContractView(catalog);
   if (!params.model && catalog) {
-    const pick = planAutoAdaptation({ catalog, outputType, preferredModelId: context.preferredModels?.[outputType],
+    const recommended = catalog.defaultOperations?.[outputType];
+    const pick = planAutoAdaptation({ catalog, outputType, preferredModelId: context.preferredModels?.[outputType] ?? recommended?.modelId,
       currentOperationId: typeof params.operation === 'string' ? params.operation : undefined,
       fingerprint: buildUpstreamFingerprint({ ...raw, assets: raw.assets.filter((asset) => asset.type === 'text') }) });
     if (pick) { params.model = pick.modelId; params.operation ??= pick.operationId; }
@@ -26,7 +27,13 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const model = resolveModelView(view, typeof params.model === 'string' ? params.model : undefined);
   if (model) params.model = model.id;
   if ((!params.operation || (outputType === 'text' && params.operation === 'chat')) && model) {
-    params.operation = resolveSlotOperation(catalog, model.id, params.operation, outputType, raw);
+    // A node without a saved mode starts in the catalog's recommended one — the mode that
+    // consumes upstream media, so its slots exist from the first render. A saved mode, an
+    // explicit connection or a user pick is never replaced here.
+    const recommendedId = catalog?.defaultOperations?.[outputType]?.operationId;
+    const recommended = recommendedId && model.operations.some((op) => op.id === recommendedId && op.listed && op.output.type === outputType)
+      ? recommendedId : undefined;
+    params.operation = resolveSlotOperation(catalog, model.id, params.operation, outputType, raw) ?? recommended;
   }
   const operation = model?.operations.find((op) => op.id === params.operation && op.listed && op.output.type === outputType);
   const policy = catalog?.generationPolicy?.[outputType];

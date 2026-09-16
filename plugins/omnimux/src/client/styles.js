@@ -1166,7 +1166,60 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 .omnimux-models-card__body {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+/* 分组：标题 + 分组卡片（对齐自动化任务详情页的 block / group-card 规格） */
+.omnimux-models-card__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.omnimux-models-card__group-title {
+  margin: 0 0 0 2px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.omnimux-models-card__group-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
+  background: var(--dsw-alias-bg-layer-2);
+  overflow: hidden;
+}
+.omnimux-models-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+.omnimux-models-card__row:last-child {
+  border-bottom: 0;
+}
+.omnimux-models-card__row-label {
+  flex: 0 0 auto;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+.omnimux-models-card__row-body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.omnimux-models-card__row-body > * {
+  min-width: 150px;
+  max-width: 260px;
 }
 .omnimux-models-card__field {
   display: flex;

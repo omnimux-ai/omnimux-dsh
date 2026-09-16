@@ -1,12 +1,48 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, DropdownSelect } from 'dsh-ui-kit'
 
-const FIELDS = [
-  { key: 'defaultTextModel', labelKey: 'models.defaultText', hintKey: 'models.defaultTextHint', kind: 'text' },
-  { key: 'defaultImageModel', labelKey: 'models.defaultImage', hintKey: 'models.defaultImageHint', kind: 'image' },
-  { key: 'defaultVideoModel', labelKey: 'models.defaultVideo', hintKey: 'models.defaultVideoHint', kind: 'video' },
-  { key: 'defaultAudioModel', labelKey: 'models.defaultAudio', hintKey: 'models.defaultAudioHint', kind: 'audio' },
+/** Sentinel the hub stores for "no explicit choice"; the picker shows the resolved mode instead. */
+const DEFAULT_OPERATION_AUTO = 'auto'
+/** Route default declared in cordis.patch.yml; the picker offers the levels the model publishes. */
+const DEFAULT_REASONING = 'max'
+const REASONING_LEVELS = ['low', 'medium', 'high', 'max']
+
+/** Four type groups, each rendered as one card with one row per setting. */
+const GROUPS = [
+  {
+    kind: 'text',
+    titleKey: 'models.groupText',
+    rows: [
+      { key: 'defaultTextModel', labelKey: 'models.rowModel' },
+      { key: 'defaultTextReasoning', labelKey: 'models.rowReasoning', reasoning: true },
+    ],
+  },
+  {
+    kind: 'image',
+    titleKey: 'models.groupImage',
+    rows: [
+      { key: 'defaultImageModel', labelKey: 'models.rowModel' },
+      { key: 'defaultImageOperation', labelKey: 'models.rowMode', mode: true },
+    ],
+  },
+  {
+    kind: 'video',
+    titleKey: 'models.groupVideo',
+    rows: [
+      { key: 'defaultVideoModel', labelKey: 'models.rowModel' },
+      { key: 'defaultVideoOperation', labelKey: 'models.rowMode', mode: true },
+    ],
+  },
+  {
+    kind: 'audio',
+    titleKey: 'models.groupAudio',
+    rows: [
+      { key: 'defaultAudioModel', labelKey: 'models.rowModel' },
+    ],
+  },
 ]
+
+const cap = (kind) => `${kind[0].toUpperCase()}${kind.slice(1)}`
 
 /**
  * Compact defaults card for Settings → 插件 → 可配置.
@@ -58,13 +94,58 @@ export function ModelsSettingsCard({ t, scope }) {
   const writable = snapshot?.writable === true && snapshot?.status === 'ready'
   const available = snapshot?.status === 'ready'
 
-  const optionsFor = useCallback((kind) => {
-    const rows = Array.isArray(catalog?.[kind]) ? catalog[kind] : []
-    return rows.map((row) => ({
-      value: row.id,
-      label: row.label || row.id,
-    }))
+  /** Modes the given model publishes for the given output type, in contract order. */
+  const listedOperationsFor = useCallback((kind, modelId) => {
+    const model = (catalog?.models ?? []).find((row) => row && row.id === modelId)
+    return (model?.operations ?? [])
+      .filter((op) => op && op.listed === true && op.output?.type === kind)
   }, [catalog])
+
+  /** The model a kind's mode row follows: the configured one, else the catalog default. */
+  const currentModelIdFor = useCallback((kind) => {
+    const chosen = value[`default${cap(kind)}Model`]
+    return (typeof chosen === 'string' && chosen) || catalog?.defaults?.[kind] || ''
+  }, [value, catalog])
+
+  /**
+   * The mode actually in force: an explicit choice while the model still publishes it,
+   * else the catalog recommendation, else the model's first listed mode. The picker
+   * shows this value, so no "auto" concept reaches the user.
+   */
+  const effectiveOperationId = useCallback((kind) => {
+    const modelId = currentModelIdFor(kind)
+    const operations = listedOperationsFor(kind, modelId)
+    const configured = value[`default${cap(kind)}Operation`]
+    if (typeof configured === 'string' && configured && configured !== DEFAULT_OPERATION_AUTO
+      && operations.some((op) => op.id === configured)) {
+      return configured
+    }
+    const recommended = catalog?.defaultOperations?.[kind]
+    if (recommended && recommended.modelId === modelId
+      && operations.some((op) => op.id === recommended.operationId)) {
+      return recommended.operationId
+    }
+    return operations[0]?.id ?? ''
+  }, [catalog, currentModelIdFor, listedOperationsFor, value])
+
+  const optionsForRow = useCallback((group, row) => {
+    if (row.reasoning) {
+      return REASONING_LEVELS.map((level) => ({ value: level, label: t(`models.reasoning.${level}`) }))
+    }
+    if (row.mode) {
+      return listedOperationsFor(group.kind, currentModelIdFor(group.kind))
+        .map((op) => ({ value: op.id, label: op.label || op.id }))
+    }
+    const rows = Array.isArray(catalog?.[group.kind]) ? catalog[group.kind] : []
+    return rows.map((item) => ({ value: item.id, label: item.label || item.id }))
+  }, [catalog, currentModelIdFor, listedOperationsFor, t])
+
+  const currentValueForRow = useCallback((group, row, options) => {
+    const stored = typeof value[row.key] === 'string' && value[row.key] ? value[row.key] : ''
+    if (row.reasoning) return stored || DEFAULT_REASONING
+    if (row.mode) return effectiveOperationId(group.kind) || stored || ''
+    return stored || catalog?.defaults?.[group.kind] || options[0]?.value || ''
+  }, [catalog, effectiveOperationId, value])
 
   const onChange = useCallback(async (field, next) => {
     if (!scope || typeof scope.set !== 'function' || !writable || busy) return
@@ -107,44 +188,46 @@ export function ModelsSettingsCard({ t, scope }) {
         <p className="omnimux-models-card__desc">{t('models.description')}</p>
       </div>
       <div className="omnimux-models-card__body">
-        {FIELDS.map((field) => {
-          const options = optionsFor(field.kind)
-          const current = typeof value[field.key] === 'string' && value[field.key]
-            ? value[field.key]
-            : (catalog?.defaults?.[field.kind] || options[0]?.value || '')
-          const overridden = Object.prototype.hasOwnProperty.call(user, field.key)
-          return (
-            <div key={field.key} className="omnimux-models-card__field">
-              <div className="omnimux-models-card__field-head">
-                <label className="omnimux-models-card__label" htmlFor={`omnimux-${field.key}`}>
-                  {t(field.labelKey)}
-                </label>
-                {overridden ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="omnimux-models-card__reset"
-                    disabled={!writable || busy}
-                    onClick={() => { void onReset(field.key) }}
-                  >
-                    {t('models.reset')}
-                  </Button>
-                ) : null}
-              </div>
-              <DropdownSelect
-                id={`omnimux-${field.key}`}
-                aria-label={t(field.labelKey)}
-                value={current}
-                options={options}
-                disabled={!writable || busy || options.length === 0}
-                placeholder={t('models.loading')}
-                onChange={(next) => { void onChange(field.key, next) }}
-              />
-              <p className="omnimux-models-card__hint">{t(field.hintKey)}</p>
+        {GROUPS.map((group) => (
+          <div key={group.kind} className="omnimux-models-card__group">
+            <p className="omnimux-models-card__group-title">{t(group.titleKey)}</p>
+            <div className="omnimux-models-card__group-card">
+              {group.rows.map((row) => {
+                const options = optionsForRow(group, row)
+                const current = currentValueForRow(group, row, options)
+                const overridden = Object.prototype.hasOwnProperty.call(user, row.key)
+                return (
+                  <div key={row.key} className="omnimux-models-card__row">
+                    <span className="omnimux-models-card__row-label">{t(row.labelKey)}</span>
+                    <div className="omnimux-models-card__row-body">
+                      {overridden ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="omnimux-models-card__reset"
+                          disabled={!writable || busy}
+                          onClick={() => { void onReset(row.key) }}
+                        >
+                          {t('models.reset')}
+                        </Button>
+                      ) : null}
+                      <DropdownSelect
+                        id={`omnimux-${row.key}`}
+                        aria-label={`${t(group.titleKey)} ${t(row.labelKey)}`}
+                        value={current}
+                        options={options}
+                        disabled={!writable || busy || options.length === 0}
+                        placeholder={t('models.loading')}
+                        onChange={(next) => { void onChange(row.key, next) }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
       {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
     </div>
