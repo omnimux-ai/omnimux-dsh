@@ -82,6 +82,9 @@ async function buildHarness() {
     platform: 'browser',
     jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' },
+    alias: {
+      'dsh-ui-kit': join(clientDir, 'test-fixtures/ui-kit-shim.mjs'),
+    },
     outfile: out,
     logLevel: 'silent',
     // 真实 ui-kit 会拉一份 markdown 样式表与字体；页面跑在没有字体挂载的无头浏览器里，

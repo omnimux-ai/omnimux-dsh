@@ -1720,11 +1720,12 @@ export const INSPIRATION_CSS = `
   isolation: isolate;
   contain: paint;
 }
+.omnimux-inspiration-modal-container header.omnimux-inspiration-modal-header,
 .omnimux-inspiration-modal-header {
   height: 60px;
   min-height: 60px;
   flex: 0 0 60px;
-  display: flex;
+  display: flex !important;
   align-items: center;
   flex-wrap: nowrap;
   gap: 8px;
