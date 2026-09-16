@@ -199,4 +199,27 @@ describe('TikTok 图标定位 — 兜底', () => {
     // 固定在视口上，跟着视口走：头像位置变了图标就跟着变。
     expect(placement().bottom).toBe(929 - 300 + ANCHOR_GAP)
   })
+
+  it('推荐流作品卡片：优先锚定在当前视口内活跃卡片右侧操作栏的作者头像正上方', () => {
+    page(`
+      <section data-e2e="feed-video" id="card">
+        <section class="SectionActionBarContainer" id="bar">
+          <div class="ActionItemPlaceHolder" id="author-avatar"><img id="avatar-img" /></div>
+          <div data-e2e="like-icon" id="like"></div>
+        </section>
+      </section>
+    `, {
+      '#card': { top: 16, left: 130, width: 515, height: 897 },
+      '#bar': { top: 500, left: 656, width: 48, height: 350 },
+      '#author-avatar': { top: 520, left: 664, width: 32, height: 32 },
+      '#avatar-img': { top: 520, left: 664, width: 32, height: 32 },
+      '#like': { top: 560, left: 664, width: 32, height: 32 },
+    })
+    mountAt(DESKTOP)
+
+    expect(placement()).toEqual({
+      left: 664,
+      bottom: 929 - 520 + ANCHOR_GAP,
+    })
+  })
 })
