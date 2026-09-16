@@ -288,6 +288,8 @@ export class MediaOverlay {
     this.doc.addEventListener('pointerover', this.onPointerOver, true)
     this.doc.addEventListener('pointermove', this.onPointerMoveTarget, true)
     this.doc.addEventListener('pointerout', this.onPointerOut, true)
+    this.doc.addEventListener('mouseover', this.onPointerOver, true)
+    this.doc.addEventListener('mousemove', this.onPointerMoveTarget, true)
     this.doc.addEventListener('pointercancel', this.onPointerLost, true)
     this.doc.documentElement?.addEventListener('pointerleave', this.onDocumentLeave, true)
     this.doc.addEventListener('visibilitychange', this.onVisibilityChange)
@@ -301,6 +303,8 @@ export class MediaOverlay {
     this.doc.removeEventListener('pointerover', this.onPointerOver, true)
     this.doc.removeEventListener('pointermove', this.onPointerMoveTarget, true)
     this.doc.removeEventListener('pointerout', this.onPointerOut, true)
+    this.doc.removeEventListener('mouseover', this.onPointerOver, true)
+    this.doc.removeEventListener('mousemove', this.onPointerMoveTarget, true)
     this.doc.removeEventListener('pointercancel', this.onPointerLost, true)
     this.doc.documentElement?.removeEventListener('pointerleave', this.onDocumentLeave, true)
     this.doc.removeEventListener('visibilitychange', this.onVisibilityChange)
@@ -327,20 +331,30 @@ export class MediaOverlay {
   }
 
   private readonly onPointerOver = (event: Event): void => {
-    if (this.isInsideOverlay(event.target)) this.cancelLeave()
+    if (this.isInsideOverlay(event.target, event)) {
+      this.cancelLeave()
+      this.expandCapsule()
+    }
   }
 
   private readonly onPointerMoveTarget = (event: Event): void => {
-    if (this.isInsideOverlay(event.target)) {
+    const pEvent = event as PointerEvent
+    const hasCoords = typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number'
+    const isTargetInside = this.isInsideOverlay(event.target, event)
+    const isCoordInside = hasCoords && this.isPointInsideCapsule(pEvent.clientX, pEvent.clientY)
+
+    if (isTargetInside || isCoordInside) {
       this.cancelLeave()
       this.clearIdleTimer()
       this.state.phase = 'interactive'
       this.capsule?.setInteractive(true)
+      this.expandCapsule()
       return
     }
     if (this.state.phase === 'interactive') {
       this.state.phase = 'shown'
       this.capsule?.setInteractive(false)
+      this.scheduleCollapse()
     }
 
     // Pending 阶段：鼠标正在防抖倒计时中，若滑出画面立即取消，绝不闪烁
@@ -414,7 +428,7 @@ export class MediaOverlay {
 
   private readonly onPointerOut = (event: Event): void => {
     const related = (event as PointerEvent).relatedTarget
-    if (this.isInsideOverlay(related)) return
+    if (this.isInsideOverlay(related, event)) return
 
     if (related === null) {
       this.hideNow(true)
@@ -440,9 +454,16 @@ export class MediaOverlay {
   }
 
   /** Whether a node belongs to this overlay (shadow content included). */
-  private isInsideOverlay(node: unknown): boolean {
+  private isInsideOverlay(node: unknown, event?: Event): boolean {
     const host = this.host
-    if (host === null || !(node instanceof Node)) return false
+    if (host === null) return false
+    if (event && typeof event.composedPath === 'function') {
+      const path = event.composedPath()
+      if (path.includes(host) || (this.capsule && path.includes(this.capsule.element))) {
+        return true
+      }
+    }
+    if (!(node instanceof Node)) return false
     let cursor: Node | null = node
     for (let depth = 0; cursor !== null && depth < 64; depth += 1) {
       if (cursor === host) return true
@@ -450,6 +471,13 @@ export class MediaOverlay {
     }
     if (this.shadow !== null && this.shadow.contains(node)) return true
     return false
+  }
+
+  /** Physical bounding box check for hover safety gate fallback. */
+  private isPointInsideCapsule(x: number, y: number): boolean {
+    if (this.capsule === null || !this.capsule.visible) return false
+    const cBox = this.capsule.element.getBoundingClientRect()
+    return x >= cBox.left - 4 && x <= cBox.right + 4 && y >= cBox.top - 4 && y <= cBox.bottom + 4
   }
 
   // ---- Capsule interaction -----------------------------------------------
@@ -460,22 +488,41 @@ export class MediaOverlay {
 
     capsule.onAction(({ action }) => { void this.runAction(action) })
 
-    // Two-stage hover. Stage one is whatever the pointer rested on; reaching the
-    // capsule (with the pointer or with Tab) is what opens stage two, and leaving
-    // it folds back after a buffer so the trip between an icon and the brand
-    // circle never flickers.
-    capsule.element.addEventListener('pointerenter', this.onCapsuleEnter)
-    capsule.element.addEventListener('pointerleave', this.onCapsuleLeave)
-    capsule.element.addEventListener('focusin', this.onCapsuleEnter)
-    capsule.element.addEventListener('focusout', this.onCapsuleLeave)
+    const openCapsule = (): void => { this.expandCapsule() }
+    const closeCapsule = (): void => { this.scheduleCollapse() }
+
+    // Two-stage hover. Reaching the capsule with mouse/pointer or keyboard Tab opens
+    // stage two; leaving it folds back after a 320ms buffer so transit between icons
+    // and the brand circle never flickers.
+    capsule.element.addEventListener('pointerenter', openCapsule)
+    capsule.element.addEventListener('mouseenter', openCapsule)
+    capsule.element.addEventListener('mouseover', openCapsule)
+    capsule.element.addEventListener('pointerleave', closeCapsule)
+    capsule.element.addEventListener('mouseleave', closeCapsule)
+    capsule.element.addEventListener('focusin', openCapsule)
+    capsule.element.addEventListener('focusout', closeCapsule)
+
+    // Ensure hovering directly on the stage-one brand trigger triggers expansion
+    const brand = capsule.brandElement()
+    brand.addEventListener('pointerenter', openCapsule)
+    brand.addEventListener('mouseenter', openCapsule)
+    brand.addEventListener('mouseover', openCapsule)
+    brand.addEventListener('focus', openCapsule)
 
     for (const action of TOOLTIP_ACTIONS) {
       const button = capsule.buttonElement(action)
       if (button === null) continue
-      button.addEventListener('pointerenter', () => { this.showHint(action) })
-      button.addEventListener('focus', () => { this.showHint(action) })
-      button.addEventListener('pointerleave', () => { this.clearHint(action) })
-      button.addEventListener('blur', () => { this.clearHint(action) })
+      const show = (): void => {
+        this.expandCapsule()
+        this.showHint(action)
+      }
+      const clear = (): void => { this.clearHint(action) }
+      button.addEventListener('pointerenter', show)
+      button.addEventListener('mouseenter', show)
+      button.addEventListener('focus', show)
+      button.addEventListener('pointerleave', clear)
+      button.addEventListener('mouseleave', clear)
+      button.addEventListener('blur', clear)
     }
   }
 

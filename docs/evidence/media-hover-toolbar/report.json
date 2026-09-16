@@ -1,0 +1,44 @@
+{
+  "test": "media-hover-toolbar-expansion",
+  "timestamp": "2026-09-16T03:12:10.649Z",
+  "status": "PASSED",
+  "evidence": [
+    "01-media-detected-collapsed.png",
+    "02-hover-toolbar-expanded.png",
+    "03-hover-button-tooltip-revealed.png",
+    "04-pointer-leave-folded.png"
+  ],
+  "states": {
+    "initialCollapsed": {
+      "visible": true,
+      "collapsed": true,
+      "expanded": false,
+      "rect": {
+        "left": 153,
+        "top": 567,
+        "width": 24,
+        "height": 24
+      }
+    },
+    "hoverExpanded": {
+      "visible": true,
+      "collapsed": false,
+      "expanded": true,
+      "actionButtonsCount": 3,
+      "rect": {
+        "left": 153,
+        "top": 567,
+        "width": 64,
+        "height": 24
+      }
+    },
+    "tooltipRevealed": {
+      "tooltipVisible": true,
+      "tooltipText": "加入灵感库"
+    },
+    "leaveFolded": {
+      "collapsed": true,
+      "expanded": false
+    }
+  }
+}

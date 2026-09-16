@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浏览器插件视频图像检测悬停工具栏修复效果演示</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --card-bg: rgba(22, 25, 34, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "PingFang SC", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 24px;
+      overflow-x: hidden;
+    }
+    header {
+      text-align: center;
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    p.desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .mode-switch-wrap {
+      display: flex;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      padding: 3px;
+      border-radius: 20px;
+      margin: 16px auto 0;
+      width: fit-content;
+    }
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 6px 18px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .stage-container {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      height: 540px;
+      border-radius: 16px;
+      background: #151821;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 视频背景模拟 */
+    .video-mock {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 60% 40%, #2a2e3d 0%, #111319 75%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .scene-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      opacity: 0.85;
+    }
+    .scene-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #818cf8;
+    }
+    .scene-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+    .scene-sub {
+      font-size: 12px;
+      color: #64748b;
+    }
+    /* 底部播放进度条模拟 */
+    .player-dock {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      pointer-events: none;
+    }
+    .player-dock * { pointer-events: auto; }
+    .dock-time { font-size: 12px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+    .dock-track {
+      flex: 1;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      position: relative;
+    }
+    .dock-progress {
+      width: 35%;
+      height: 100%;
+      background: #818cf8;
+      border-radius: 2px;
+    }
+
+    /* 核心：与真实扩展完全一致的暗黑毛玻璃胶囊悬浮按钮 */
+    .omnimux-capsule-bar {
+      position: absolute;
+      left: 24px;
+      bottom: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      height: 24px;
+      padding: 0 4px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 12px;
+      background: rgba(30, 32, 38, 0.95);
+      box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(24px) saturate(140%);
+      -webkit-backdrop-filter: blur(24px) saturate(140%);
+      color: rgba(255, 255, 255, 0.94);
+      font-size: 11px;
+      line-height: 1;
+      pointer-events: auto;
+      user-select: none;
+      overflow: hidden;
+      width: 24px;
+      transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 180ms ease,
+                  transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      z-index: 100;
+    }
+    .omnimux-capsule-bar.is-interactive {
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.32), 0 3px 12px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+    .omnimux-capsule-bar.is-expanded {
+      width: 64px;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .omnimux-capsule-brand {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border: 0;
+      background: transparent;
+      color: #ffffff;
+      transition: opacity 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    }
+    .omnimux-capsule-bar.is-expanded .omnimux-capsule-brand {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.72);
+    }
+
+    .omnimux-capsule-actions {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .omnimux-capsule-bar.is-expanded .omnimux-capsule-actions {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .omnimux-capsule-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background-color 140ms ease, transform 140ms ease, color 140ms ease;
+    }
+    .omnimux-capsule-icon:hover {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      transform: scale(1.12);
+    }
+    .omnimux-capsule-icon:active {
+      transform: scale(0.92);
+    }
+
+    /* 纯白提示气泡 */
+    .white-tooltip {
+      position: absolute;
+      left: 24px;
+      bottom: 96px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #0a0a0b;
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 150ms ease, transform 150ms ease;
+      white-space: nowrap;
+      z-index: 101;
+    }
+    .white-tooltip.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .white-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 20px;
+      border: 4px solid transparent;
+      border-top-color: #ffffff;
+    }
+
+    /* 状态指示区 */
+    .dashboard {
+      margin-top: 24px;
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .dash-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dash-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dash-val {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .dash-badge {
+      display: inline-block;
+      width: fit-content;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>悬停检测按钮展开工具栏 · 实时交互验收</h1>
+    <p class="desc">还原真实网页中的视频图像检测浮标。您可将鼠标移入画面左下角的幽灵按钮亲身体验工具栏展开效果，并在不同模式下进行对比验证。</p>
+    <div class="mode-switch-wrap">
+      <button class="mode-btn active" id="btn-fix" onclick="setMode('fixed')">修复后（悬停即展开）</button>
+      <button class="mode-btn" id="btn-bug" onclick="setMode('buggy')">修复前（悬停无反应）</button>
+    </div>
+  </header>
+
+  <div class="stage-container" id="stage">
+    <div class="video-mock" id="video-area">
+      <div class="scene-placeholder">
+        <div class="scene-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <div class="scene-text">视频检测有效画面区域</div>
+        <div class="scene-sub">光标移动至左下角图标即可唤起三合一快捷工具栏</div>
+      </div>
+      <div class="player-dock">
+        <span class="dock-time">00:42 / 01:30</span>
+        <div class="dock-track"><div class="dock-progress"></div></div>
+      </div>
+    </div>
+
+    <!-- 纯白提示气泡 -->
+    <div class="white-tooltip" id="tooltip">加入灵感库</div>
+
+    <!-- 胶囊主节点 -->
+    <div class="omnimux-capsule-bar" id="capsule">
+      <!-- 阶段一：品牌幽灵图标 -->
+      <button class="omnimux-capsule-brand" id="brand-btn" title="OmniMux">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" fill-rule="evenodd">
+          <path d="M11.6666 0.0318c-0.3531 0.1143 -0.4928 0.4573 -0.3938 0.9653c0.1626 0.8155 -0.0813 1.5877 -0.6757 2.1618c-0.315 0.3023 -0.6325 0.4852 -1.448 0.8383c-1.697 0.7316 -2.8808 1.5979 -3.869 2.835c-0.9806 1.2219 -1.6233 2.6775 -1.8951 4.2907c-0.1067 0.6427 -0.1372 1.0924 -0.1194 1.8494c0.0178 0.8536 0.0457 1.0644 0.348 2.6953c0.2591 1.3972 0.2185 2.4845 -0.1219 3.2085c-0.1575 0.3379 -0.3023 0.5386 -0.6529 0.9069c-0.3226 0.3404 -0.4623 0.5208 -0.5716 0.7367c-0.2871 0.5614 -0.2108 1.1559 0.2032 1.608c0.1956 0.2134 0.4141 0.3556 0.6732 0.442c0.1753 0.0584 0.2464 0.0686 0.5208 0.0686c0.4725 0.0025 0.63 -0.0508 1.2854 -0.4319c0.3861 -0.2236 0.5284 -0.2718 0.7977 -0.2744c0.1905 -0.0025 0.2312 0.0076 0.3556 0.0711c0.2032 0.1067 0.4192 0.3429 0.6071 0.6656c0.4649 0.7977 0.7316 1.0593 1.2676 1.2499c0.1753 0.061 0.2312 0.0686 0.5386 0.0686c0.3709 -0.0025 0.4979 -0.0279 0.8078 -0.1677c0.282 -0.127 0.5157 -0.3048 0.9349 -0.7113c0.4395 -0.4242 0.63 -0.5767 0.9196 -0.7189c0.4801 -0.2413 1.0669 -0.2591 1.5725 -0.0483c0.2794 0.1194 0.5284 0.3074 0.9857 0.7443c0.4573 0.4369 0.7291 0.6376 1.0263 0.7621c0.3861 0.1575 0.8459 0.1981 1.1965 0.0991c0.5513 -0.1524 0.8764 -0.4598 1.3743 -1.3032c0.1981 -0.3379 0.3963 -0.5487 0.597 -0.6427c0.127 -0.0584 0.1829 -0.0686 0.3658 -0.0686c0.2591 0.0025 0.3887 0.0457 0.7367 0.254c0.7367 0.4395 1.1813 0.5462 1.7249 0.4166c0.2921 -0.0711 0.4903 -0.1804 0.7011 -0.3938c0.3633 -0.3633 0.5132 -0.8459 0.409 -1.3286c-0.0788 -0.3734 -0.2236 -0.6021 -0.6961 -1.1025c-0.1677 -0.1778 -0.3582 -0.3963 -0.4217 -0.4877c-0.1702 -0.2363 -0.3379 -0.6097 -0.4293 -0.9501c-0.0788 -0.2972 -0.0788 -0.2998 -0.0788 -0.9704c-0.0025 -0.7469 0.0229 -1.0111 0.1778 -1.8164c0.094 -0.4903 0.2134 -1.2499 0.2693 -1.702c0.0203 -0.1804 0.033 -0.5792 0.033 -1.1305c-0.0025 -0.9044 -0.0152 -1.0695 -0.155 -1.8291c-0.4928 -2.6979 -2.106 -4.974 -4.4532 -6.2899c-0.5843 -0.3277 -0.6808 -0.4623 -0.7926 -1.1203c-0.0737 -0.4344 -0.1524 -0.7062 -0.3023 -1.0187c-0.5055 -1.0593 -1.5471 -2.0323 -2.5531 -2.3803c-0.249 -0.0864 -0.6198 -0.1092 -0.8002 -0.0508ZM7.4242 11.5396A0.9526 0.9526 0 0 1 9.3295 11.5396L9.3295 14.0037A0.9526 0.9526 0 0 1 7.4242 14.0037ZM14.6388 11.5396A0.9526 0.9526 0 0 1 16.5441 11.5396L16.5441 14.0037A0.9526 0.9526 0 0 1 14.6388 14.0037Z"/>
+        </svg>
+      </button>
+
+      <!-- 阶段二：三合一快捷工具栏 -->
+      <div class="omnimux-capsule-actions">
+        <!-- 灵感库 -->
+        <button class="omnimux-capsule-icon" data-hint="加入灵感库" data-offset="16">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.77c.5.36.8.94.8 1.55V18h6v-2.18c0-.61.3-1.19.8-1.55A6.5 6.5 0 0 0 12 2.5Z"/>
+            <path d="M9 21.5h6"/>
+          </svg>
+        </button>
+        <!-- 复制 -->
+        <button class="omnimux-capsule-icon" data-hint="复制媒体素材" data-offset="36">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <!-- 发送到会话 -->
+        <button class="omnimux-capsule-icon" data-hint="发送到当前会话" data-offset="56">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="dash-card">
+      <div class="dash-title">当前运行机制</div>
+      <div class="dash-val" id="val-mode">修复后（多事件+坐标保底）</div>
+      <div class="dash-badge" id="val-badge">稳定展开保障</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">工具栏展示状态</div>
+      <div class="dash-val" id="val-status">收起态 (24px)</div>
+      <div class="dash-badge">品牌图标待命</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">交互事件触发记录</div>
+      <div class="dash-val" id="val-event">等待光标进入...</div>
+      <div class="dash-badge" id="val-timing">320ms 缓冲保护</div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'fixed';
+    const capsule = document.getElementById('capsule');
+    const brandBtn = document.getElementById('brand-btn');
+    const tooltip = document.getElementById('tooltip');
+    const valMode = document.getElementById('val-mode');
+    const valStatus = document.getElementById('val-status');
+    const valEvent = document.getElementById('val-event');
+    const valBadge = document.getElementById('val-badge');
+
+    let collapseTimer = null;
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btn-fix').classList.toggle('active', mode === 'fixed');
+      document.getElementById('btn-bug').classList.toggle('active', mode === 'buggy');
+      if (mode === 'fixed') {
+        valMode.textContent = '修复后（多事件+坐标保底）';
+        valBadge.textContent = '稳定展开保障';
+      } else {
+        valMode.textContent = '修复前（单一监听易丢失）';
+        valBadge.textContent = '悬停无响应复现';
+        collapseNow();
+      }
+    }
+
+    function expandNow(triggerName) {
+      if (currentMode === 'buggy') {
+        valEvent.textContent = '事件已拦截，工具栏未唤起';
+        return;
+      }
+      clearTimeout(collapseTimer);
+      capsule.classList.add('is-expanded', 'is-interactive');
+      valStatus.textContent = '已展开工具栏 (64px)';
+      valEvent.textContent = triggerName || '光标悬停进入';
+    }
+
+    function scheduleCollapse() {
+      if (currentMode === 'buggy') return;
+      clearTimeout(collapseTimer);
+      collapseTimer = setTimeout(() => {
+        collapseNow();
+      }, 320);
+    }
+
+    function collapseNow() {
+      capsule.classList.remove('is-expanded', 'is-interactive');
+      tooltip.classList.remove('is-visible');
+      valStatus.textContent = '收起态 (24px)';
+      valEvent.textContent = '光标移出平滑收回';
+    }
+
+    // 绑定多重监听
+    capsule.addEventListener('mouseenter', () => expandNow('mouseenter 触发'));
+    capsule.addEventListener('pointerenter', () => expandNow('pointerenter 触发'));
+    capsule.addEventListener('mouseleave', scheduleCollapse);
+    capsule.addEventListener('pointerleave', scheduleCollapse);
+
+    brandBtn.addEventListener('mouseenter', () => expandNow('图标按钮直接悬停'));
+    brandBtn.addEventListener('pointerenter', () => expandNow('图标按钮指针移入'));
+
+    // 工具按钮气泡
+    document.querySelectorAll('.omnimux-capsule-icon').forEach(btn => {
+      btn.addEventListener('mouseenter', (e) => {
+        if (currentMode === 'buggy') return;
+        const hint = btn.getAttribute('data-hint');
+        const offset = Number(btn.getAttribute('data-offset') || 20);
+        tooltip.textContent = hint;
+        tooltip.style.left = (24 + offset - 10) + 'px';
+        tooltip.classList.add('is-visible');
+        valEvent.textContent = '查看提示：' + hint;
+      });
+      btn.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('is-visible');
+      });
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        alert('已触发操作：' + btn.getAttribute('data-hint'));
+      });
+    });
+  </script>
+</body>
+</html>
