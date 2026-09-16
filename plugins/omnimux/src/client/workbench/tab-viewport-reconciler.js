@@ -8,7 +8,7 @@
  * 4. 切换激活 Tab 时，自动调和原生面板的模式：
  *    - 目标 Tab 偏好为 split 且面板处于 fullscreen -> 调用 exitHostRightSidebarFullscreen()
  *    - 目标 Tab 偏好为 gui 且面板处于 push -> 调用 enterHostRightSidebarFullscreen()
- * 5. 防护：调和执行期间置位 isReconciling 锁，杜绝程序切换触发的 DOM 变更被误判为用户手势。
+ * 5. 防护与高稳定性：切页判定优先，调和锁仅防误判手势，快速切换不丢状态。
  */
 
 import {
@@ -23,6 +23,7 @@ import {
   persistSessionFocus,
   WORKBENCH_FOCUS,
   isWorkbenchTab,
+  WORKBENCH_TAB_TITLE_FALLBACKS,
 } from './focus-state.js'
 import {
   enterHostRightSidebarFullscreen,
@@ -31,9 +32,13 @@ import {
   HOST_RIGHT_PANEL_ATTR,
 } from './host-fullscreen.js'
 
+const TITLE_TO_TAB_ID = new Map(
+  Object.entries(WORKBENCH_TAB_TITLE_FALLBACKS).map(([tabId, title]) => [title, tabId])
+)
+
 /**
  * 解析当前激活的 Tab 标识符。
- * 优先级：官方公开读面 ctx.sidebarRight.active() > better-sidebar 状态 snapshot.activeTabId > DOM 活跃 tab 节点属性。
+ * 优先级：官方公开读面 ctx.sidebarRight.active() > better-sidebar 状态 snapshot.activeTabId > DOM 活跃 tab 标题反查。
  * @param {Document} [doc]
  * @param {object} [sidebarRight]
  * @returns {string | undefined}
@@ -48,18 +53,22 @@ export function resolveCurrentTabId(doc = hostDocument(), sidebarRight = getWork
   }
   const snap = liveSnapshot()
   const fromSnap = activeTabId(snap?.state)
-  if (typeof fromSnap === 'string' && fromSnap) return fromSnap
+  if (typeof fromSnap === 'string' && fromSnap && isWorkbenchTab(fromSnap)) return fromSnap
 
-  // DOM 兜底：查找 [role="tab"][aria-selected="true"] 上的标识
+  // DOM 查找：检查 better-sidebar 活跃 Tab 或 dockkit tab
   if (doc && typeof doc.querySelector === 'function') {
     try {
-      const activeTabEl = doc.querySelector('[role="tab"][aria-selected="true"]')
-      const tabId = activeTabEl?.getAttribute?.('data-dockkit-tab')
-      if (typeof tabId === 'string' && tabId) return tabId
+      const activeTabEl = doc.querySelector('[data-dsh-better-sidebar] [class*="tabActive"], [class*="tabActive"]')
+      const title = activeTabEl?.getAttribute?.('title') || activeTabEl?.textContent?.trim()
+      if (title && TITLE_TO_TAB_ID.has(title)) {
+        return TITLE_TO_TAB_ID.get(title)
+      }
+      const dockkitTab = activeTabEl?.getAttribute?.('data-dockkit-tab')
+      if (dockkitTab && isWorkbenchTab(dockkitTab)) return dockkitTab
     } catch {}
   }
 
-  return undefined
+  return fromSnap || undefined
 }
 
 /**
@@ -80,6 +89,15 @@ export function createTabViewportReconciler(deps = {}) {
   let lastActiveTabId = null
   let lastMode = null
   let isReconciling = false
+  let unlockTimer = null
+
+  function scheduleUnlock() {
+    if (unlockTimer) clearTimeout(unlockTimer)
+    unlockTimer = setTimeout(() => {
+      isReconciling = false
+      unlockTimer = null
+    }, 40)
+  }
 
   function sync() {
     const doc = getDoc()
@@ -97,14 +115,7 @@ export function createTabViewportReconciler(deps = {}) {
     const currentTab = getTabId()
     const sessionId = getSessionId()
 
-    // 1. 如果正在执行自动化模式调和，只更新快照记录，不当作用户手势写入偏好
-    if (isReconciling) {
-      lastMode = currentMode
-      lastActiveTabId = currentTab
-      return
-    }
-
-    // 2. Tab 切换场景：当前激活 Tab 与上一次不同
+    // 1. 优先处理 Tab 切换：切 Tab 时无论调和锁如何，立即响应该 Tab 的独立视窗偏好
     if (currentTab && currentTab !== lastActiveTabId) {
       lastActiveTabId = currentTab
       lastMode = currentMode
@@ -120,7 +131,7 @@ export function createTabViewportReconciler(deps = {}) {
           try {
             enterFullscreen()
           } finally {
-            setTimeout(() => { isReconciling = false }, 50)
+            scheduleUnlock()
           }
           return
         } else if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'fullscreen') {
@@ -129,11 +140,17 @@ export function createTabViewportReconciler(deps = {}) {
           try {
             exitFullscreen()
           } finally {
-            setTimeout(() => { isReconciling = false }, 50)
+            scheduleUnlock()
           }
           return
         }
       }
+      return
+    }
+
+    // 2. 同一 Tab 下，如果正在自动化调和模式，不当作用户手势写入偏好
+    if (isReconciling) {
+      lastMode = currentMode
       return
     }
 
@@ -157,6 +174,10 @@ export function createTabViewportReconciler(deps = {}) {
       lastActiveTabId = null
       lastMode = null
       isReconciling = false
+      if (unlockTimer) {
+        clearTimeout(unlockTimer)
+        unlockTimer = null
+      }
     },
   }
 }
@@ -184,7 +205,7 @@ export function installTabViewportReconciler(doc = hostDocument()) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-dockkit-tab', 'aria-selected'],
+    attributeFilter: ['data-sidebar-right-panel', 'data-sidebar-right-open', 'data-dockkit-tab', 'aria-selected', 'class'],
   })
 
   // 监听点击事件辅助触发（确保用户点击 Tabbar 或模式按钮时立即触发调和）
