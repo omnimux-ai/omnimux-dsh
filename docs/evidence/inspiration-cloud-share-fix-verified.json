@@ -1,0 +1,122 @@
+{
+  "task": "inspiration-cloud-share-fix-verify",
+  "issue": 2075,
+  "origin": "http://127.0.0.1:58366",
+  "browser": "ego-browser (chromium)",
+  "startedAt": "2026-09-16T13:52:44.052Z",
+  "assertions": [
+    {
+      "name": "share-popover-opened-by-click",
+      "pass": true,
+      "detail": {
+        "shareOpened": true,
+        "popoverOpen": true
+      }
+    },
+    {
+      "name": "create-action-was-available",
+      "pass": true,
+      "detail": {
+        "submitText": "创建链接"
+      }
+    },
+    {
+      "name": "create-link-was-clicked",
+      "pass": true
+    },
+    {
+      "name": "payload-carries-the-cloud-cover-address",
+      "pass": true,
+      "detail": {
+        "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2789"
+      }
+    },
+    {
+      "name": "payload-carries-every-cloud-media-address",
+      "pass": true,
+      "detail": {
+        "mediaUrls": [
+          "/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/s1/slide-1.jpg",
+          "/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/s1/slide-2.jpg"
+        ]
+      }
+    },
+    {
+      "name": "payload-no-longer-hands-over-the-host-local-path",
+      "pass": true,
+      "detail": {
+        "containsHostPrefix": false
+      }
+    },
+    {
+      "name": "payload-still-carries-the-copy",
+      "pass": true,
+      "detail": {
+        "caption": "Give it a try 🥺❤️🫵"
+      }
+    },
+    {
+      "name": "popover-stays-open-after-create",
+      "pass": true,
+      "detail": {
+        "popoverOpen": true,
+        "popoverText": "分享灵感 链接与有效期由 OmniMux 云端返回，普通账号为 72 小时 该云端灵感没有可用的云端素材地址（封面与视频均为空），无法生成分享链接 重新创建链接"
+      }
+    },
+    {
+      "name": "popover-never-blanked-while-the-job-ran",
+      "pass": true,
+      "detail": {
+        "closedSamples": [],
+        "sampled": 10
+      }
+    },
+    {
+      "name": "refusal-reason-is-shown-in-the-popover",
+      "pass": true,
+      "detail": {
+        "errorText": "该云端灵感没有可用的云端素材地址（封面与视频均为空），无法生成分享链接"
+      }
+    },
+    {
+      "name": "button-offers-a-retry",
+      "pass": true,
+      "detail": {
+        "submitText": "重新创建链接"
+      }
+    },
+    {
+      "name": "no-link-is-invented",
+      "pass": true,
+      "detail": {
+        "linkValue": ""
+      }
+    },
+    {
+      "name": "the-host-was-asked-exactly-once",
+      "pass": true,
+      "detail": {
+        "polls": 1
+      }
+    },
+    {
+      "name": "screenshot-captured-and-valid",
+      "pass": true,
+      "detail": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 60765
+      }
+    },
+    {
+      "name": "ego-browser-task-space-closed",
+      "pass": true,
+      "detail": {
+        "spaceId": 262,
+        "finishError": null
+      }
+    }
+  ],
+  "pass": true,
+  "errors": []
+}

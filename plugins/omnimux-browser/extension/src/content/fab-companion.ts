@@ -48,7 +48,19 @@ function pendingAttachMap(): Map<string, PendingAttach> {
 export function initFabCompanion(): void {
   // Only inject in top window
   if (window !== window.top) return
-  if (document.getElementById('omnimux-companion-root')) return
+
+  // A replaceable content script disposes the previous instance before mounting.
+  const hostGlobal = window as unknown as { __omnimux_fab_unsubscribe?: () => void }
+  if (typeof hostGlobal.__omnimux_fab_unsubscribe === 'function') {
+    try {
+      hostGlobal.__omnimux_fab_unsubscribe()
+    } catch {
+      // Ignore
+    }
+  }
+  for (const stale of document.querySelectorAll('#omnimux-companion-root')) {
+    stale.remove()
+  }
 
   const host = document.createElement('div')
   host.id = 'omnimux-companion-root'
@@ -526,6 +538,35 @@ export function initFabCompanion(): void {
   // 实时感知算法：深度监听 SPA (Twitter/X, TikTok, etc.) 单页路由、标题及内容变动
   let lastTrackedUrl = window.location.href
   let lastTrackedTitle = document.title
+  let lastKnownHero = ''
+  let lastKnownMediaSummary = ''
+
+  // 5. 监听 DOM 内容变化，针对 SPA (如 Twitter/X, TikTok, 知乎等) 异步渲染推文与图片的场景自动刷新上下文
+  let domCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+  const checkContentUpdates = () => {
+    try {
+      const context = getFullContext()
+      const hero = context.heroImage || ''
+      const media = sniffViewportMedia()
+      const mediaSummary = media.map((m) => m.src).sort().join(';')
+      if (hero !== lastKnownHero || mediaSummary !== lastKnownMediaSummary) {
+        lastKnownHero = hero
+        lastKnownMediaSummary = mediaSummary
+        broadcastContextUpdate()
+      }
+    } catch {
+      // Ignore errors in observer
+    }
+  }
+
+  const throttledContentCheck = () => {
+    if (domCheckTimer !== null) return
+    domCheckTimer = setTimeout(() => {
+      domCheckTimer = null
+      checkContentUpdates()
+    }, 350)
+  }
 
   const checkAndNotifyPageChange = () => {
     const currentUrl = window.location.href
@@ -533,7 +574,13 @@ export function initFabCompanion(): void {
     if (currentUrl !== lastTrackedUrl || currentTitle !== lastTrackedTitle) {
       lastTrackedUrl = currentUrl
       lastTrackedTitle = currentTitle
+      lastKnownHero = ''
+      lastKnownMediaSummary = ''
       broadcastContextUpdate()
+      // SPA 路由跳转后正文通常异步渲染，调度阶段性重查
+      setTimeout(checkContentUpdates, 500)
+      setTimeout(checkContentUpdates, 1200)
+      setTimeout(checkContentUpdates, 2500)
     }
   }
 
@@ -571,11 +618,23 @@ export function initFabCompanion(): void {
   // 4. 定时轻量巡检兜底 (每 800ms 巡检一次 URL 与 Title 状态)
   const routePollTimer = setInterval(checkAndNotifyPageChange, 800)
 
+  // 5. 正文 DOM 变更监听：推文、评论或卡片异步挂载时自动捕获媒体与最新上下文
+  const contentObserver = new MutationObserver(throttledContentCheck)
+  const targetRoot = document.querySelector('main') || document.body || document.documentElement
+  contentObserver.observe(targetRoot, { childList: true, subtree: true })
+
+  // 页面初次加载时调度阶段性重查（应对推特/X 0.5s ~ 2.5s 内的异步图片加载）
+  setTimeout(checkContentUpdates, 600)
+  setTimeout(checkContentUpdates, 1500)
+  setTimeout(checkContentUpdates, 2800)
+
   // Unsubscribe and remove global event listeners
   const unsubscribe = () => {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('message', handleMessage)
     clearInterval(routePollTimer)
+    contentObserver.disconnect()
+    if (domCheckTimer !== null) clearTimeout(domCheckTimer)
     unsubscribeFlag()
   }
   (window as unknown as { __omnimux_fab_unsubscribe?: () => void }).__omnimux_fab_unsubscribe = unsubscribe

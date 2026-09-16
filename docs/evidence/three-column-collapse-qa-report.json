@@ -1,0 +1,109 @@
+{
+  "runId": "5f6e3d75-9fee-4d94-ad12-63477ae0d49a",
+  "scenario": "three-column-collapse",
+  "startedAt": "2026-09-16T13:46:44.072Z",
+  "sourcePaths": [
+    "plugins/omnimux/src/client/conversation-box.js",
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js"
+  ],
+  "assertions": [
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 56884
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 56885
+    },
+    {
+      "name": "expanded-conversation-positive",
+      "pass": true,
+      "conversation": 485
+    },
+    {
+      "name": "expanded-rightbar-positive",
+      "pass": true,
+      "rightbar": 1155
+    },
+    {
+      "name": "collapsed-keeps-conversation-width",
+      "pass": true,
+      "conversationBefore": 485,
+      "conversationAfter": 485,
+      "rightbarBefore": 1155,
+      "rightbarAfter": 1435,
+      "reasons": []
+    },
+    {
+      "name": "screenshot-captured",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-collapse-2074/docs/evidence/three-column-collapse-collapsed.png",
+      "width": 1920,
+      "height": 993,
+      "bytes": 7826
+    },
+    {
+      "name": "legacy-rule-reproduces-collapse",
+      "pass": true,
+      "rightbarAfter": 0,
+      "reasons": []
+    }
+  ],
+  "cleanup": {
+    "httpServerClosed": true,
+    "profileRemoved": true,
+    "allReleased": true
+  },
+  "errors": [],
+  "pass": true,
+  "serverPort": 56884,
+  "cdpPort": 56885,
+  "expanded": {
+    "viewport": 1920,
+    "tracks": [
+      280,
+      485,
+      1155
+    ],
+    "firstTrack": 280,
+    "conversation": 485,
+    "rightbar": 1155,
+    "conversationVar": "",
+    "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+  },
+  "collapsed": {
+    "viewport": 1920,
+    "tracks": [
+      0,
+      485,
+      1435
+    ],
+    "firstTrack": 0,
+    "conversation": 485,
+    "rightbar": 1435,
+    "conversationVar": "485px",
+    "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+  },
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-collapse-2074/docs/evidence/three-column-collapse-collapsed.png",
+    "width": 1920,
+    "height": 993,
+    "bytes": 7826
+  },
+  "legacyControl": {
+    "viewport": 1920,
+    "tracks": [
+      0,
+      1920,
+      0
+    ],
+    "firstTrack": 0,
+    "conversation": 1920,
+    "rightbar": 0,
+    "conversationVar": "485px",
+    "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+  },
+  "completedAt": "2026-09-16T13:46:45.647Z"
+}

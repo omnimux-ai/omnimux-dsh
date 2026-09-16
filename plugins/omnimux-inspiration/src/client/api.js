@@ -501,6 +501,44 @@ export function resolveCreatorProfileUrl(creator, sourceUrl = '', platform = '')
   return `https://www.tiktok.com/@${handle}`
 }
 
+/** The ordinary form of a media address the Host serves on our behalf. */
+const HOST_MEDIA_PREFIX = '/omnimux/inspiration/media/'
+/**
+ * The prefix the cloud's public catalogue serves the *same* bytes under. The hub
+ * accepts only this prefix on the publish route — its own guard against a page
+ * handing an arbitrary third-party URL to be published — so the address must be
+ * handed over in that form, not in the Host's local proxy form.
+ */
+const CLOUD_PUBLISH_MEDIA_PREFIX = '/api/inspiration/v1/public/media/'
+
+/**
+ * A media address in the form the publish route accepts.
+ *
+ * The catalogue's rows carry the Host's own media paths
+ * (`/omnimux/inspiration/media/…`), which is what the page renders; the publish
+ * route takes the cloud's public prefix for the same object. Only that one
+ * rewrite happens here: an address already in cloud form, or an absolute
+ * `http(s)` one, is handed over untouched, and whether the hub will accept it
+ * stays the hub's decision.
+ *
+ * Nothing else is rewritten. A value that is not a usable single path — empty,
+ * non-string, or carrying a traversal segment — becomes `''`, which the caller
+ * drops rather than publishing a mangled address.
+ * @param {unknown} raw
+ * @returns {string}
+ */
+export function publishableMediaAddress(raw) {
+  const value = typeof raw === 'string' ? raw.trim() : ''
+  if (!value) return ''
+  if (value.includes('..')) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  if (value.startsWith(CLOUD_PUBLISH_MEDIA_PREFIX)) return value
+  if (value.startsWith(HOST_MEDIA_PREFIX)) {
+    return `${CLOUD_PUBLISH_MEDIA_PREFIX}${value.slice(HOST_MEDIA_PREFIX.length)}`
+  }
+  return value
+}
+
 /**
  * The publish request a row needs, or `undefined` when the Host already holds
  * everything it needs.
@@ -512,9 +550,11 @@ export function resolveCreatorProfileUrl(creator, sourceUrl = '', platform = '')
  * goes into the share. That is the whole difference between the two publish
  * paths, and it is why a cloud share transfers no media at all.
  *
- * Both spellings of the cloud's own fields are read: the public catalogue
- * answers camelCase (`coverUrl`, `mediaUrls`), and a row that came through a
- * different seam may carry the snake_case form.
+ * Three spellings of the cloud's media fields are read, because the catalogue
+ * answers `cover_key` / `media_keys` while a row that came through a different
+ * seam may carry `coverUrl` / `mediaUrls` or the snake_case forms. Missing the
+ * catalogue's own spelling is not a cosmetic difference: the addresses would
+ * come out empty and the publish would be refused as having no media at all.
  * @param {unknown} row
  * @returns {Record<string, any> | undefined}
  */
@@ -523,15 +563,23 @@ export function shareRequestPayload(row) {
   const rec = /** @type {Record<string, any>} */ (row)
   if (shareSourceOf(rec) !== 'cloud') return undefined
   const text = (value) => (typeof value === 'string' ? value.trim() : '')
-  const mediaUrls = (Array.isArray(rec.mediaUrls) ? rec.mediaUrls : Array.isArray(rec.media_urls) ? rec.media_urls : [])
-    .filter((url) => typeof url === 'string' && url.trim())
+  const mediaKeys = Array.isArray(rec.media_keys)
+    ? rec.media_keys
+    : Array.isArray(rec.mediaKeys)
+      ? rec.mediaKeys
+      : Array.isArray(rec.mediaUrls)
+        ? rec.mediaUrls
+        : Array.isArray(rec.media_urls)
+          ? rec.media_urls
+          : []
+  const mediaUrls = mediaKeys.map(publishableMediaAddress).filter(Boolean)
   return {
     source: 'cloud',
     type: text(rec.type),
     title: text(rec.title),
     caption: text(rec.caption ?? rec.content),
     category: text(rec.category),
-    coverUrl: text(rec.coverUrl ?? rec.cover_url),
+    coverUrl: publishableMediaAddress(rec.cover_key ?? rec.coverKey ?? rec.coverUrl ?? rec.cover_url),
     mediaUrls,
     embedUrl: text(rec.embedUrl ?? rec.embed_url),
     sourceUrl: text(rec.sourceUrl ?? rec.source_url),

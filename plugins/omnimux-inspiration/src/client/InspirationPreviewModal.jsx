@@ -152,10 +152,22 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState(null)
 
+  /**
+   * The identity of the entry on screen, as text.
+   *
+   * A catalogue row numbers its entries (`2789`) while the Host's own row for
+   * the same entry answers the string form (`"2789"`), so the raw value flips
+   * type the moment a publish starts and the row is replaced. Comparing the
+   * text form keeps that flip from reading as "a different entry", which would
+   * close the popover and wipe the reason the publish failed — leaving the user
+   * with a click that appears to do nothing at all.
+   */
+  const itemKey = item?.id == null ? '' : String(item.id)
+
   useEffect(() => {
     setShowSharePopover(false)
     setShareError(null)
-  }, [item?.id])
+  }, [itemKey])
 
   const applyItemRef = useRef(() => {})
 

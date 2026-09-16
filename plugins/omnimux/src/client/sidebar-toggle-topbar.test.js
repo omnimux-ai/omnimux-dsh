@@ -841,7 +841,10 @@ describe('left rail width poisoning (issue #1618)', () => {
     assert.equal(computeChromeLayout(doc).leftRailW, 0)
   })
 
-  it('preserves the native folded rail while legacy collapsed layouts remain zero', () => {
+  it('collapses the rail to zero where the shell keeps a folded native track (issue #2077 supersedes #1618)', () => {
+    // 产品决策变更：收起即完全收起。宿主收起后仍会保留一条原生窄栏（真机 90px），
+    // 旧契约（#1618）要求如实镜像该窄栏，会让框架首列被右侧栏收起规则钉住，
+    // 屏左留下死带；现改为收起意图优先、一律镜像 0。
     const { doc } = setupRailFrame({ inlineTrack: '56px', railWidth: 56 })
     const frame = doc.querySelector('.dshDesktopFrame')
     frame.setAttribute('data-sidebar-collapsed', '')
@@ -853,12 +856,19 @@ describe('left rail width poisoning (issue #1618)', () => {
       for (const closed of ['true', 'false']) {
         frame.setAttribute('data-rightbar-collapsed', closed)
         applyTopbarToggleCssVars(doc)
-        assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '56px')
+        assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
       }
     }
     panel.remove()
     applyTopbarToggleCssVars(doc)
     assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
+  })
+
+  it('mirrors the shell rail width while the left rail is expanded (issue #2077 AC-3)', () => {
+    const { doc, col } = setupRailFrame({ inlineTrack: '300px', railWidth: 300 })
+    Object.defineProperty(col, 'offsetWidth', { value: 300, configurable: true })
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '300px')
   })
 
   it('defers ResizeObserver writes out of the delivery cycle', () => {
@@ -1044,6 +1054,66 @@ describe('rightbar toggle seating in the header row (issue #1664)', () => {
     const corner = doc.querySelector('[data-conversation-header-corner]')
     assert.equal(corner.querySelector('button'), null, '展开态不得在右上角留下控件')
     assert.ok(doc.querySelector('[data-dockkit-strip-chrome="true"] button[data-sidebar-right-toggle]'), '控件应回到原生容器')
+  })
+})
+
+describe('three-column sidebar collapse proportions (issue #2074)', () => {
+  it('eliminates auto track rule and allocates released space to rightbar while keeping conversation width', () => {
+    assert.doesNotMatch(
+      PRODUCT_STAGE_CHROME,
+      /grid-template-columns:\s*0px\s+minmax\(0px,\s*1fr\)\s+auto\s*!important/,
+      'auto 规则会导致右侧面板被压缩成 0px，必须彻底消除',
+    )
+    assert.match(
+      PRODUCT_STAGE_CHROME,
+      /grid-template-columns:\s*0px\s+var\(--omnimux-conversation-width,\s*480px\)\s+minmax\(0px,\s*1fr\)\s*!important/,
+      '三分栏收起左侧栏时必须保持会话栏比例并将释放空间给右栏',
+    )
+    assert.match(
+      PRODUCT_STAGE_CHROME,
+      /\[data-rightbar-collapsed="true"\][\s\S]*?grid-template-columns:\s*0px\s+minmax\(0px,\s*1fr\)\s+0px\s*!important/,
+      '右栏已收起时必须允许会话栏占满 100vw 全宽',
+    )
+  })
+
+  it('sets --omnimux-conversation-width from live measurement or healthy fallback', () => {
+    const doc = setup(`<!doctype html><html><head></head><body>
+      <div class="dshDesktopFrame">
+        <aside class="dshDesktopSidebarSurface" style="width: 280px;"></aside>
+        <main class="dshDesktopConversationSurface" style="width: 485px;"></main>
+        <aside class="dshDesktopRightbarSurface" style="width: 1155px;"></aside>
+      </div>
+    </body></html>`)
+    const main = doc.querySelector('.dshDesktopConversationSurface')
+    Object.defineProperty(main, 'offsetWidth', { value: 485, configurable: true })
+    Object.defineProperty(main, 'getBoundingClientRect', {
+      value: () => ({ left: 280, top: 0, width: 485, height: 1000, right: 765 }),
+      configurable: true,
+    })
+
+    applyTopbarToggleCssVars(doc)
+
+    assert.equal(
+      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+      '485px',
+      '展开态必须实测会话栏宽度并写入变量，作为收起后保持比例的基准',
+    )
+  })
+
+  it('falls back to a healthy conversation width when the column cannot be measured', () => {
+    const doc = setup(`<!doctype html><html><head></head><body>
+      <div class="dshDesktopFrame">
+        <main class="dshDesktopConversationSurface"></main>
+      </div>
+    </body></html>`)
+
+    applyTopbarToggleCssVars(doc)
+
+    const written = Number.parseFloat(
+      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+    )
+    assert.ok(Number.isFinite(written), '必须始终写入一个可用基准宽度')
+    assert.ok(written >= 320, `基准宽度不得低于会话栏地板，实际 ${written}`)
   })
 })
 

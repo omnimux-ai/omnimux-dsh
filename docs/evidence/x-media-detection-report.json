@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-09-16T13:14:29.135Z",
+  "task": "fix(browser): 彻底解决 X/Twitter 推文图片异步加载检测不到与封面占位图污染问题",
+  "issue": 2068,
+  "spec": "specs/x-media-detection-fix.spec.md",
+  "targetUrl": "https://x.com/liam_fallen/status/2100173136415088858",
+  "results": {
+    "heroImage": "https://pbs.twimg.com/media/HSVQSFmWkAAQOH6?format=jpg&name=medium",
+    "isRealTweetImage": true,
+    "isNotPlaceholder": true,
+    "mediaCount": 1,
+    "detectedMedia": [
+      {
+        "id": "img_1",
+        "type": "image",
+        "src": "https://pbs.twimg.com/media/HSVQSFmWkAAQOH6?format=jpg&name=medium",
+        "previewSrc": "https://pbs.twimg.com/media/HSVQSFmWkAAQOH6?format=jpg&name=medium",
+        "alt": "图像",
+        "width": 1199,
+        "height": 675
+      }
+    ]
+  },
+  "verdict": "PASSED"
+}
