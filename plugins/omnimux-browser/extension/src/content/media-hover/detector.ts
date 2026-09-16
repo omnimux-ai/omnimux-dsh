@@ -37,8 +37,8 @@ import type { AnchorRect, HoverCandidate, HoveredMedia } from './types.ts'
 /** Listener invoked when a pointer settles on an eligible media element. */
 export type CandidateListener = (candidate: HoverCandidate, rect: AnchorRect) => void
 
-/** Invalidation hook: the current candidate moved, resized or detached. */
-export type InvalidateListener = (reason: 'scroll' | 'resize' | 'detach') => void
+/** Invalidation hook: the current candidate moved, resized, detached or left. */
+export type InvalidateListener = (reason: 'scroll' | 'resize' | 'detach' | 'leftmedia') => void
 
 /** Options accepted by {@link MediaDetector}. */
 export interface MediaDetectorOptions {
@@ -224,7 +224,7 @@ export class MediaDetector {
     if (element === null) {
       if (this.current !== null) {
         this.current = null
-        this.options.onInvalidate?.('detach')
+        this.options.onInvalidate?.('leftmedia')
       }
       return
     }
@@ -232,7 +232,7 @@ export class MediaDetector {
     if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) {
       if (this.current !== null) {
         this.current = null
-        this.options.onInvalidate?.('detach')
+        this.options.onInvalidate?.('leftmedia')
       }
       return
     }
@@ -240,7 +240,7 @@ export class MediaDetector {
     if (candidate === null) {
       if (this.current !== null) {
         this.current = null
-        this.options.onInvalidate?.('detach')
+        this.options.onInvalidate?.('leftmedia')
       }
       return
     }
