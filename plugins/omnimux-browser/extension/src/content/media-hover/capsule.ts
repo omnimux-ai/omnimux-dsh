@@ -147,8 +147,9 @@ export class MediaCapsule {
     this.element.classList.toggle('is-interactive', interactive)
   }
 
-  /** Stage two: widens to the three action icons. Idempotent. */
+  /** Stage two: widens to the three action icons. Idempotent. Always ensures visibility. */
   expand(): void {
+    this.element.classList.add('is-visible')
     this.setStage('expanded')
   }
 

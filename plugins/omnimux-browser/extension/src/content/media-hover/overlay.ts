@@ -71,6 +71,9 @@ export class MediaOverlay {
   /** Shared probe cache: one player is measured once, not once per frame. */
   private readonly videoProbe = new VideoAnchorProbe()
 
+  private lastPointerX = -1
+  private lastPointerY = -1
+
   private enterTimer: number | null = null
   private leaveTimer: number | null = null
   private collapseTimer: number | null = null
@@ -325,6 +328,14 @@ export class MediaOverlay {
 
   private readonly onDocumentLeave = (event: Event): void => {
     const pEvent = event as PointerEvent
+    if (typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number') {
+      const vw = currentViewportWidth()
+      const vh = currentViewportHeight()
+      // 严格视口物理边界拦截：光标只要仍在浏览器视口内部，绝不误判为离开文档
+      if (pEvent.clientX > 0 && pEvent.clientX < vw && pEvent.clientY > 0 && pEvent.clientY < vh) {
+        return
+      }
+    }
     if (pEvent.relatedTarget === null || !this.isInsideOverlay(pEvent.relatedTarget)) {
       this.onPointerLost()
     }
@@ -340,6 +351,10 @@ export class MediaOverlay {
   private readonly onPointerMoveTarget = (event: Event): void => {
     const pEvent = event as PointerEvent
     const hasCoords = typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number'
+    if (hasCoords) {
+      this.lastPointerX = pEvent.clientX
+      this.lastPointerY = pEvent.clientY
+    }
     const isTargetInside = this.isInsideOverlay(event.target, event)
     const isCoordInside = hasCoords && this.isPointInsideCapsule(pEvent.clientX, pEvent.clientY)
 
@@ -347,6 +362,7 @@ export class MediaOverlay {
       this.cancelLeave()
       this.clearIdleTimer()
       this.state.phase = 'interactive'
+      this.capsule?.element.classList.add('is-visible')
       this.capsule?.setInteractive(true)
       this.expandCapsule()
       return
@@ -392,7 +408,16 @@ export class MediaOverlay {
         }
 
         if (!this.isPointNearAnchorOrCapsule(x, y)) {
-          this.hideNow(true)
+          const dist = this.distanceToAnchor(x, y)
+          if (dist > 24) {
+            this.hideNow(true)
+          } else if (this.leaveTimer === null) {
+            this.leaveTimer = this.setTimer(() => {
+              this.leaveTimer = null
+              if (this.isInsideOverlay(this.hoveredElement(), event)) return
+              this.hideNow(true)
+            }, TIMING.leaveGrace)
+          }
           return
         }
 
@@ -405,13 +430,15 @@ export class MediaOverlay {
   private isPointNearAnchorOrCapsule(x: number, y: number): boolean {
     if (this.anchorElement === null) return false
     const rect = this.anchorElement.getBoundingClientRect()
-    // 严格画面边界限制：只有光标在实际媒体画面内才视为有效
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+    // 为视频底部播放控制栏（含播放按钮、进度条、时间戳 0:04）提供 48px 容差，防止光标滑入控制栏时瞬间误杀
+    const padBottom = this.payload?.type === 'video' ? 48 : 8
+    const pad = 12
+    if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + padBottom) {
       return true
     }
     if (this.capsule !== null) {
       const cBox = this.capsule.element.getBoundingClientRect()
-      if (x >= cBox.left - 4 && x <= cBox.right + 4 && y >= cBox.top - 4 && y <= cBox.bottom + 4) {
+      if (x >= cBox.left - 8 && x <= cBox.right + 8 && y >= cBox.top - 8 && y <= cBox.bottom + 8) {
         return true
       }
     }
@@ -421,8 +448,9 @@ export class MediaOverlay {
   private distanceToAnchor(x: number, y: number): number {
     if (this.anchorElement === null) return 9999
     const rect = this.anchorElement.getBoundingClientRect()
+    const padBottom = this.payload?.type === 'video' ? 48 : 0
     const dx = Math.max(rect.left - x, 0, x - rect.right)
-    const dy = Math.max(rect.top - y, 0, y - rect.bottom)
+    const dy = Math.max(rect.top - y, 0, y - (rect.bottom + padBottom))
     return Math.hypot(dx, dy)
   }
 
@@ -440,7 +468,28 @@ export class MediaOverlay {
     this.cancelLeave()
     this.leaveTimer = this.setTimer(() => {
       this.leaveTimer = null
-      if (this.isInsideOverlay(this.hoveredElement())) return
+      if (this.isInsideOverlay(this.hoveredElement(), event)) return
+
+      // 防误杀保护：若光标物理坐标仍位于媒体画面或视频底部播放控制条附近，绝不销毁胶囊
+      if (this.lastPointerX >= 0 && this.lastPointerY >= 0 &&
+          this.isPointNearAnchorOrCapsule(this.lastPointerX, this.lastPointerY)) {
+        return
+      }
+
+      const hovered = this.hoveredElement()
+      if (hovered && this.anchorElement) {
+        if (hovered === this.anchorElement || this.anchorElement.contains(hovered) || hovered.contains(this.anchorElement)) {
+          return
+        }
+        const hRect = hovered.getBoundingClientRect()
+        const aRect = this.anchorElement.getBoundingClientRect()
+        const padBottom = this.payload?.type === 'video' ? 56 : 8
+        if (hRect.left >= aRect.left - 16 && hRect.right <= aRect.right + 16 &&
+            hRect.top >= aRect.top - 16 && hRect.bottom <= aRect.bottom + padBottom) {
+          return
+        }
+      }
+
       this.hideNow(true)
     }, TIMING.leaveGrace)
   }
@@ -526,9 +575,10 @@ export class MediaOverlay {
     }
   }
 
-  /** Stage two: the pointer or the keyboard reached the capsule. */
+  /** Stage two: the pointer or the keyboard reached the capsule. Always guarantees visibility. */
   private expandCapsule(): void {
     this.clearCollapseTimer()
+    this.capsule?.element.classList.add('is-visible')
     this.capsule?.expand()
     if (this.state.phase === 'shown') this.state.phase = 'interactive'
   }
