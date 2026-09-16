@@ -1,0 +1,36 @@
+✔ URL-level isNonPublicAddress unchanged for the whole table — 35 addresses identical
+✔ refuses resolver answer 127.0.0.1
+✔ refuses resolver answer 127.0.0.2
+✔ refuses resolver answer 10.0.0.1
+✔ refuses resolver answer 172.16.0.1
+✔ refuses resolver answer 192.168.1.1
+✔ refuses resolver answer 169.254.169.254
+✔ refuses resolver answer 100.64.0.1
+✔ refuses resolver answer 0.0.0.0
+✔ refuses resolver answer 224.0.0.1
+✔ refuses resolver answer 255.255.255.255
+✔ refuses resolver answer ::1
+✔ refuses resolver answer fd00::1
+✔ refuses resolver answer fe80::1
+✔ refuses resolver answer ::ffff:127.0.0.1
+✔ refuses mixed public + private answers
+✔ refuses fake address mixed with cloud metadata
+✔ refuses http://127.0.0.1:1/x.png — status=bad-request
+✔ refuses http://127.1.2.3/x.png — status=bad-request
+✔ refuses http://198.18.0.1/x.png — status=bad-request
+✔ refuses http://[::1]/x.png — status=bad-request
+✔ refuses http://localhost/x.png — status=bad-request
+✔ refuses http://router.local/x.png — status=bad-request
+✔ refuses http://svc.internal/x.png — status=bad-request
+✔ refuses http://169.254.169.254/latest/meta-data/ — status=bad-request
+✔ refuses file:///etc/passwd — status=bad-request
+✔ refuses data:image/png;base64,AAAA — status=bad-request
+✔ refuses blob:https://example.com/x — status=bad-request
+✔ refuses https://user:pw@cdn.example/x.png — status=bad-request
+✔ refuses a redirect onto 127.0.0.1 — status=bad-request
+✔ refuses a redirect onto the fake-IP range — status=bad-request
+✔ accepts the bytes of a public name on the fake-IP path — status=ok
+✔ downloads a real public image on this fake-IP machine — status=ok bytes=6617
+✔ reserved ranges are refused as a named URL and admitted as an answer — 198.18.0.1, 198.18.35.226, 203.0.113.1, 2001:db8::1
+
+ALL ADVERARIAL CASES PASSED
