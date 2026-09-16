@@ -6032,9 +6032,8 @@ textarea:focus-visible {
 }
 
 
-/* Pairing card: the one-time path to a working connection. Bare surface, no
-   decoration — it owns exactly two controls (the code field and the link out
-   to the host's page) and disappears once the bridge is up. */
+/* Pairing card: the one-time path to a working connection. One button, one
+   line of status — the approval page itself is opened by the background. */
 .pair-card {
   margin: 0 0 8px;
   padding: 10px 12px;
@@ -6043,71 +6042,24 @@ textarea:focus-visible {
   background: var(--surface);
 }
 
-.pair-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: calc(12.5px * var(--ui-scale));
-}
-
-.pair-head a {
-  color: var(--muted);
-  text-decoration: none;
-  border-bottom: 1px solid var(--line-strong);
-  font-size: calc(11.5px * var(--ui-scale));
-  white-space: nowrap;
-}
-
-.pair-head a:hover { color: var(--ink); }
-
-.pair-hint {
-  margin: 4px 0 8px;
-  color: var(--muted);
-  font-size: calc(11.5px * var(--ui-scale));
-  line-height: 1.5;
-}
-
-.pair-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.pair-row input {
-  flex: 1;
-  min-width: 0;
+.pair-button {
+  width: 100%;
   font: inherit;
-  font-size: calc(16px * var(--ui-scale));
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-align: center;
-  color: var(--ink);
-  background: var(--canvas-deep);
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  padding: 8px 6px 8px 12px;
-  outline: none;
-}
-
-.pair-row input:focus { border-color: var(--ink-strong); }
-
-.pair-row button {
-  flex: 0 0 auto;
-  font: inherit;
+  font-size: calc(13.5px * var(--ui-scale));
   font-weight: 600;
   color: var(--canvas);
   background: var(--ink-strong);
   border: 0;
-  border-radius: 9px;
-  padding: 9px 16px;
+  border-radius: 10px;
+  padding: 11px 16px;
   cursor: pointer;
 }
 
-.pair-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pair-button:disabled { opacity: 0.45; cursor: default; }
 
 .pair-message {
   margin-top: 8px;
+  text-align: center;
   font-size: calc(11.5px * var(--ui-scale));
   color: var(--muted);
 }
