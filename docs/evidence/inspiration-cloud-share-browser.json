@@ -1,0 +1,630 @@
+{
+  "task": "inspiration-cloud-share-browser",
+  "issue": 1996,
+  "title": "云端灵感零上传分享 · 工作树内真实浏览器验收",
+  "branch": "agent/inspiration-cloud-share-issue-1996",
+  "headSha": "02c60f7087574c1066d94bab87a1bf4533b1e0ec",
+  "origin": "http://127.0.0.1:65532",
+  "port": 65532,
+  "browser": "ego-browser (chromium, 真实浏览器实例)",
+  "startedAt": "2026-09-16T01:51:15.837Z",
+  "assertions": [
+    {
+      "name": "page-served-over-http-on-a-dynamic-port",
+      "pass": true,
+      "detail": {
+        "origin": "http://127.0.0.1:65532",
+        "port": 65532
+      }
+    },
+    {
+      "name": "real-react-modal-mounted-with-real-copy",
+      "pass": true,
+      "detail": {
+        "modalTitle": "情绪共鸣型助眠歌单推广",
+        "styleTagCount": 27
+      }
+    },
+    {
+      "name": "cloud-share-popover-opened-by-click",
+      "pass": true
+    },
+    {
+      "name": "cloud-create-link-clicked",
+      "pass": true
+    },
+    {
+      "name": "cloud-progress-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "width": 250,
+        "height": 41,
+        "top": 210,
+        "left": 1028
+      }
+    },
+    {
+      "name": "cloud-progress-renders-exactly-two-stages",
+      "pass": true,
+      "detail": {
+        "stepIds": [
+          "preparing",
+          "publishing"
+        ],
+        "labels": [
+          "准备素材",
+          "发布中"
+        ]
+      }
+    },
+    {
+      "name": "cloud-progress-renders-no-uploading-step",
+      "pass": true,
+      "detail": {
+        "uploadingStepCount": 0,
+        "uploadingLabelPresent": false
+      }
+    },
+    {
+      "name": "cloud-progress-follows-the-real-server-stage",
+      "pass": true,
+      "detail": [
+        {
+          "id": "preparing",
+          "state": "done",
+          "label": "准备素材"
+        },
+        {
+          "id": "publishing",
+          "state": "active",
+          "label": "发布中"
+        }
+      ]
+    },
+    {
+      "name": "cloud-progress-shows-no-link-while-running",
+      "pass": true,
+      "detail": {
+        "linkValue": ""
+      }
+    },
+    {
+      "name": "cloud-journey-issues-zero-upload-calls",
+      "pass": true,
+      "detail": {
+        "progressUploads": 0,
+        "totalUploads": 0,
+        "calls": [
+          {
+            "method": "POST",
+            "url": "/omnimux/inspiration/local/2690/share",
+            "upload": false,
+            "body": "{\"source\":\"cloud\",\"type\":\"video\",\"title\":\"情绪共鸣型助眠歌单推广\",\"caption\":\"Give it a try 🥺\",\"category\":\"Health & Wellness\",\"coverUrl\":\"/api/inspiration/v1/public/media/inspiration-covers/2690\",\"mediaUrls\":[\"/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4\"],\"embedUrl\":\"\",\"sourceUrl\":\"\"}"
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/2690",
+            "upload": false,
+            "body": ""
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/2690",
+            "upload": false,
+            "body": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "cloud-share-request-declares-cloud-source",
+      "pass": true,
+      "detail": {
+        "postCount": 1,
+        "body": {
+          "source": "cloud",
+          "type": "video",
+          "title": "情绪共鸣型助眠歌单推广",
+          "caption": "Give it a try 🥺",
+          "category": "Health & Wellness",
+          "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2690",
+          "mediaUrls": [
+            "/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4"
+          ],
+          "embedUrl": "",
+          "sourceUrl": ""
+        }
+      }
+    },
+    {
+      "name": "cloud-share-request-republishes-cloud-addresses-without-media-bytes",
+      "pass": true,
+      "detail": {
+        "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2690",
+        "mediaUrls": [
+          "/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4"
+        ]
+      }
+    },
+    {
+      "name": "cloud-done-shows-the-cloud-link",
+      "pass": true,
+      "detail": {
+        "linkValue": "https://omnimux.ai/s/insp_cloud_e2e_7a31"
+      }
+    },
+    {
+      "name": "cloud-done-shows-published-tag-and-validity",
+      "pass": true,
+      "detail": {
+        "doneTag": "已发布",
+        "metaText": "链接有效期 72 小时已发布"
+      }
+    },
+    {
+      "name": "cloud-done-shows-media-unavailable-notice",
+      "pass": true,
+      "detail": {
+        "noticeText": "云端视频素材当前不可访问（上游存储问题，工单 No. 257），本次仅分享封面与文案"
+      }
+    },
+    {
+      "name": "cloud-done-notice-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "box": {
+          "width": 250,
+          "height": 37,
+          "top": 265,
+          "left": 1028
+        },
+        "style": {
+          "position": "static",
+          "fontSize": "11px",
+          "background": "rgba(245, 158, 11, 0.12)",
+          "color": "rgb(245, 158, 11)"
+        }
+      }
+    },
+    {
+      "name": "cloud-done-page-has-no-video-element",
+      "pass": true,
+      "detail": {
+        "videoCount": 0,
+        "playerFrames": 0,
+        "playerNotice": ""
+      }
+    },
+    {
+      "name": "cloud-done-result-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "resultBox": {
+          "width": 250,
+          "height": 92,
+          "top": 210,
+          "left": 1028
+        },
+        "linkBox": {
+          "width": 250,
+          "height": 32,
+          "top": 210,
+          "left": 1028
+        }
+      }
+    },
+    {
+      "name": "cloud-popover-renders-with-the-real-plugin-stylesheet",
+      "pass": true,
+      "detail": {
+        "position": "absolute",
+        "fontSize": "16px",
+        "background": "rgb(24, 24, 24)",
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "name": "local-share-popover-opened-by-click",
+      "pass": true
+    },
+    {
+      "name": "local-create-link-clicked",
+      "pass": true
+    },
+    {
+      "name": "local-progress-still-walks-three-stages",
+      "pass": true,
+      "detail": {
+        "stepIds": [
+          "preparing",
+          "uploading",
+          "publishing"
+        ],
+        "labels": [
+          "准备素材",
+          "上传素材",
+          "发布中"
+        ]
+      }
+    },
+    {
+      "name": "local-progress-active-stage-is-uploading",
+      "pass": true,
+      "detail": [
+        {
+          "id": "preparing",
+          "state": "done",
+          "label": "准备素材"
+        },
+        {
+          "id": "uploading",
+          "state": "active",
+          "label": "上传素材"
+        },
+        {
+          "id": "publishing",
+          "state": "todo",
+          "label": "发布中"
+        }
+      ]
+    },
+    {
+      "name": "local-progress-has-positive-geometry",
+      "pass": true,
+      "detail": {
+        "width": 250,
+        "height": 66,
+        "top": 210,
+        "left": 1028
+      }
+    },
+    {
+      "name": "local-share-request-does-not-take-the-cloud-path",
+      "pass": true,
+      "detail": {
+        "postCount": 1,
+        "body": null,
+        "rawBody": ""
+      }
+    },
+    {
+      "name": "local-progress-shows-no-link-while-running",
+      "pass": true,
+      "detail": {
+        "linkValue": ""
+      }
+    },
+    {
+      "name": "ego-browser-task-space-closed",
+      "pass": true,
+      "detail": {
+        "spaceId": 112,
+        "finishError": null
+      }
+    },
+    {
+      "name": "three-screenshots-captured",
+      "pass": true,
+      "detail": {
+        "cloudProgress": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+        "cloudResult": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
+        "localRegression": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png"
+      }
+    },
+    {
+      "name": "screenshots-are-real-decodable-pngs",
+      "pass": true,
+      "detail": [
+        {
+          "name": "cloudProgress",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+          "width": 1440,
+          "height": 960,
+          "bytes": 80900
+        },
+        {
+          "name": "cloudResult",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
+          "width": 1440,
+          "height": 960,
+          "bytes": 90672
+        },
+        {
+          "name": "localRegression",
+          "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png",
+          "width": 1440,
+          "height": 960,
+          "bytes": 79145
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "cloudProgress",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-progress.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 80900
+    },
+    {
+      "name": "cloudResult",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-cloud-result.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 90672
+    },
+    {
+      "name": "localRegression",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-cloud-share/docs/evidence/inspiration-cloud-share-local-regression.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 79145
+    }
+  ],
+  "observations": {
+    "ready": true,
+    "cloud": {
+      "opened": true,
+      "popoverVisible": true,
+      "createClicked": true,
+      "reachedPublishing": true,
+      "settled": true,
+      "progress": {
+        "stepIds": [
+          "preparing",
+          "publishing"
+        ],
+        "steps": [
+          {
+            "id": "preparing",
+            "state": "done",
+            "label": "准备素材"
+          },
+          {
+            "id": "publishing",
+            "state": "active",
+            "label": "发布中"
+          }
+        ],
+        "uploadingStepCount": 0,
+        "linkValue": "",
+        "noticePresent": false,
+        "noticeText": "",
+        "doneTag": "",
+        "metaText": "",
+        "errorText": "",
+        "videoCount": 0,
+        "iframeCount": 0,
+        "playerNotice": "",
+        "modalTitle": "情绪共鸣型助眠歌单推广",
+        "popoverBox": {
+          "width": 280,
+          "height": 113,
+          "top": 155,
+          "left": 1013
+        },
+        "popoverStyle": {
+          "position": "absolute",
+          "fontSize": "16px",
+          "background": "rgb(24, 24, 24)",
+          "color": "rgb(255, 255, 255)"
+        },
+        "progressBox": {
+          "width": 250,
+          "height": 41,
+          "top": 210,
+          "left": 1028
+        },
+        "resultBox": null,
+        "linkBoxBox": null,
+        "noticeBox": null,
+        "noticeStyle": null,
+        "playerBoxBox": {
+          "width": 363,
+          "height": 618,
+          "top": 173,
+          "left": 143
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 960
+        },
+        "styleTagCount": 27,
+        "calls": [
+          {
+            "method": "POST",
+            "url": "/omnimux/inspiration/local/2690/share",
+            "upload": false,
+            "body": "{\"source\":\"cloud\",\"type\":\"video\",\"title\":\"情绪共鸣型助眠歌单推广\",\"caption\":\"Give it a try 🥺\",\"category\":\"Health & Wellness\",\"coverUrl\":\"/api/inspiration/v1/public/media/inspiration-covers/2690\",\"mediaUrls\":[\"/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4\"],\"embedUrl\":\"\",\"sourceUrl\":\"\"}"
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/2690",
+            "upload": false,
+            "body": ""
+          }
+        ]
+      },
+      "done": {
+        "stepIds": [],
+        "steps": [],
+        "uploadingStepCount": 0,
+        "linkValue": "https://omnimux.ai/s/insp_cloud_e2e_7a31",
+        "noticePresent": true,
+        "noticeText": "云端视频素材当前不可访问（上游存储问题，工单 No. 257），本次仅分享封面与文案",
+        "doneTag": "已发布",
+        "metaText": "链接有效期 72 小时已发布",
+        "errorText": "",
+        "videoCount": 0,
+        "iframeCount": 0,
+        "playerNotice": "",
+        "modalTitle": "情绪共鸣型助眠歌单推广",
+        "popoverBox": {
+          "width": 280,
+          "height": 172,
+          "top": 155,
+          "left": 1013
+        },
+        "popoverStyle": {
+          "position": "absolute",
+          "fontSize": "16px",
+          "background": "rgb(24, 24, 24)",
+          "color": "rgb(255, 255, 255)"
+        },
+        "progressBox": null,
+        "resultBox": {
+          "width": 250,
+          "height": 92,
+          "top": 210,
+          "left": 1028
+        },
+        "linkBoxBox": {
+          "width": 250,
+          "height": 32,
+          "top": 210,
+          "left": 1028
+        },
+        "noticeBox": {
+          "width": 250,
+          "height": 37,
+          "top": 265,
+          "left": 1028
+        },
+        "noticeStyle": {
+          "position": "static",
+          "fontSize": "11px",
+          "background": "rgba(245, 158, 11, 0.12)",
+          "color": "rgb(245, 158, 11)"
+        },
+        "playerBoxBox": {
+          "width": 363,
+          "height": 618,
+          "top": 173,
+          "left": 143
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 960
+        },
+        "styleTagCount": 27,
+        "calls": [
+          {
+            "method": "POST",
+            "url": "/omnimux/inspiration/local/2690/share",
+            "upload": false,
+            "body": "{\"source\":\"cloud\",\"type\":\"video\",\"title\":\"情绪共鸣型助眠歌单推广\",\"caption\":\"Give it a try 🥺\",\"category\":\"Health & Wellness\",\"coverUrl\":\"/api/inspiration/v1/public/media/inspiration-covers/2690\",\"mediaUrls\":[\"/api/inspiration/v1/public/media/r2/publications/genviral/videos/2690/video.mp4\"],\"embedUrl\":\"\",\"sourceUrl\":\"\"}"
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/2690",
+            "upload": false,
+            "body": ""
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/2690",
+            "upload": false,
+            "body": ""
+          }
+        ]
+      }
+    },
+    "local": {
+      "opened": true,
+      "popoverVisible": true,
+      "createClicked": true,
+      "reachedUploading": true,
+      "progress": {
+        "stepIds": [
+          "preparing",
+          "uploading",
+          "publishing"
+        ],
+        "steps": [
+          {
+            "id": "preparing",
+            "state": "done",
+            "label": "准备素材"
+          },
+          {
+            "id": "uploading",
+            "state": "active",
+            "label": "上传素材"
+          },
+          {
+            "id": "publishing",
+            "state": "todo",
+            "label": "发布中"
+          }
+        ],
+        "uploadingStepCount": 1,
+        "linkValue": "",
+        "noticePresent": false,
+        "noticeText": "",
+        "doneTag": "",
+        "metaText": "",
+        "errorText": "",
+        "videoCount": 0,
+        "iframeCount": 0,
+        "playerNotice": "",
+        "modalTitle": "本地街景复刻",
+        "popoverBox": {
+          "width": 280,
+          "height": 138,
+          "top": 155,
+          "left": 1013
+        },
+        "popoverStyle": {
+          "position": "absolute",
+          "fontSize": "16px",
+          "background": "rgb(24, 24, 24)",
+          "color": "rgb(255, 255, 255)"
+        },
+        "progressBox": {
+          "width": 250,
+          "height": 66,
+          "top": 210,
+          "left": 1028
+        },
+        "resultBox": null,
+        "linkBoxBox": null,
+        "noticeBox": null,
+        "noticeStyle": null,
+        "playerBoxBox": {
+          "width": 363,
+          "height": 618,
+          "top": 173,
+          "left": 143
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 960
+        },
+        "styleTagCount": 27,
+        "calls": [
+          {
+            "method": "POST",
+            "url": "/omnimux/inspiration/local/insp_e2e_local_4c1d/share",
+            "upload": false,
+            "body": ""
+          },
+          {
+            "method": "GET",
+            "url": "/omnimux/inspiration/local/insp_e2e_local_4c1d",
+            "upload": false,
+            "body": ""
+          }
+        ]
+      }
+    }
+  },
+  "pass": true,
+  "errors": [],
+  "egoExitCode": 0,
+  "egoStdoutTail": "",
+  "egoStderrTail": "EGO_RAW_WRITTEN",
+  "taskSpaceId": 112,
+  "taskSpaceClosed": true,
+  "completedAt": "2026-09-16T01:51:54.080Z"
+}

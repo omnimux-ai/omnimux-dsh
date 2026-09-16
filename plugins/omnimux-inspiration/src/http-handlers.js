@@ -18,8 +18,11 @@ import {
   staleImportPatch,
 } from './import-status.js'
 import {
+  CLOUD_SHARE_STAGE_ORDER,
+  SHARE_SOURCES,
   SHARE_STAGES,
   SHARE_STAGE_ORDER,
+  SHARE_STATUS_RUNNING,
   shareDonePatch,
   shareFailedPatch,
   shareRunningPatch,
@@ -706,7 +709,27 @@ export function handleList({ url, store }) {
 export const activeShares = new Set()
 
 /**
- * Publish the local item to the cloud and answer the *job*, not the result.
+ * Publish jobs for entries that are **not** in the local library, keyed by the
+ * cloud id the page asked about.
+ *
+ * A cloud entry has no local row to carry its progress: the local library only
+ * ever holds `insp_…` ids, and writing a placeholder into it would put a card in
+ * the user's own library for something that was never theirs. The job state
+ * therefore lives here, and `handleGetItem` answers a poll for one of these ids
+ * from this table — the page keeps the exact polling contract it already has.
+ *
+ * Process-local on purpose. A cloud publish has no upload leg, so it lives for
+ * seconds; there is nothing worth persisting, and a restart simply means the
+ * next click starts a fresh job instead of resuming a finished one.
+ * @type {Map<string, Record<string, any>>}
+ */
+export const cloudShareJobs = new Map()
+
+/** Cloud display fields a share row carries, so the page keeps rendering the entry it opened. */
+const CLOUD_ROW_KEYS = ['type', 'title', 'caption', 'category', 'coverUrl', 'mediaUrls', 'embedUrl', 'sourceUrl']
+
+/**
+ * Publish an inspiration to the cloud and answer the *job*, not the result.
  *
  * A publish is: upload assets → publish → return the server's link. The client
  * needs to see which of those is happening, and the answer only exists at the
@@ -718,15 +741,49 @@ export const activeShares = new Set()
  * The preflight below runs before the job starts, so the four cases the user can
  * fix — no material, a missing file, an oversized file, an empty title/prompt —
  * come back as an actionable 400 instead of a job that fails a second later.
+ *
+ * Two sources reach this handler, and they are told apart by where the entry
+ * lives rather than by what the request says about itself: a row the local
+ * library holds takes the upload path, and anything else — a cloud id, or a
+ * request the page marked `source: 'cloud'` — takes the no-upload path. That is
+ * what fixes the cloud card that used to answer `404 not found` here.
  * @param {Record<string, any>} ctx dispatcher context plus the parsed request
  * @returns {Promise<{ status: number, body: Record<string, any> }>}
  */
 export async function handleShare(ctx) {
   const { id, store } = ctx
   const item = store.get(id)
-  if (!item) return fail(404, 'not found')
+  if (item) return startLocalShare(ctx, item)
+  if (!isCloudShareRequest(ctx)) return fail(404, 'not found')
+  return startCloudShare(ctx)
+}
+
+/**
+ * Whether a request the library has no row for is about a cloud entry.
+ *
+ * Two independent signals, either of which is enough: the page marks the request
+ * (`source: 'cloud'`, read off the row's `is_local === false`), and a cloud id is
+ * the cloud's own numeric key while every local id is `insp_…`. The second one
+ * is what keeps the answer right for a caller that only has the id — an Agent,
+ * or a page that predates the marker — and it can never catch a local row,
+ * because those are all looked up before this runs.
+ * @param {Record<string, any>} ctx
+ * @returns {boolean}
+ */
+function isCloudShareRequest(ctx) {
+  if (ctx.req?.body?.source === 'cloud') return true
+  return /^\d+$/.test(String(ctx.id || ''))
+}
+
+/**
+ * The upload path: unchanged, and the only path that touches the user's files.
+ * @param {Record<string, any>} ctx
+ * @param {Record<string, any>} item
+ */
+async function startLocalShare(ctx, item) {
+  const { id, store } = ctx
   const capability = resolveShareCapability(ctx)
-  if (typeof capability?.publishLocal !== 'function') {
+  if (!capability) {
     return fail(503, '中枢未提供分享能力（inspirationShare）：请确认 omnimux 插件已加载并重启后再试')
   }
 
@@ -757,6 +814,111 @@ export async function handleShare(ctx) {
 }
 
 /**
+ * The no-upload path: republish a cloud entry from the addresses the cloud
+ * already serves for it.
+ *
+ * The page hands over the cloud row it is showing (its media addresses and its
+ * display fields) because the row it renders and the payload that gets published
+ * must be the same entry. Nothing about *how* those addresses become a share
+ * belongs here — the hub validates them, probes them and publishes them, and
+ * this handler only keeps the job's progress.
+ * @param {Record<string, any>} ctx
+ */
+async function startCloudShare(ctx) {
+  const id = String(ctx.id)
+  const capability = resolveShareCapability(ctx)
+  if (!capability || (typeof capability.publishRemote !== 'function' && typeof capability.publishCloud !== 'function')) {
+    return fail(503, '中枢未提供云端分享能力（inspirationShare）：请确认 omnimux 插件已加载并重启后再试')
+  }
+  const request = cloudShareRequest(ctx)
+  if (typeof capability.publishCloud !== 'function') {
+    if (!request.coverUrl && !request.mediaUrl) {
+      return fail(400, '该云端灵感没有可用的云端素材地址（封面与视频均为空），无法生成分享链接')
+    }
+    if (!request.meta.title) return fail(400, '标题为空，无法生成分享')
+    if (!request.meta.prompt) return fail(400, '文案为空，无法生成分享')
+  }
+
+  const running = cloudShareJobs.get(id)
+  if (running && running.share_status === SHARE_STATUS_RUNNING) {
+    return { status: 202, body: { data: { ...running } } }
+  }
+
+  const claimed = { id, is_local: false, ...request.row, ...shareRunningPatch(SHARE_STAGES.PREPARING, { source: SHARE_SOURCES.CLOUD }) }
+  cloudShareJobs.set(id, claimed)
+  // The job keeps its row when it finishes: the page re-reads it to render the
+  // link, and a second click on the same card therefore re-renders the link it
+  // already has instead of publishing a duplicate of it.
+  void runCloudShareJob({ id, capability, request })
+
+  return { status: 202, body: { data: { ...claimed } } }
+}
+
+/**
+ * The cloud entry a request is about: its own media addresses plus the content
+ * that gets published, read off the row the page is showing.
+ * @param {Record<string, any>} ctx
+ */
+function cloudShareRequest(ctx) {
+  const body = ctx.req?.body && typeof ctx.req.body === 'object' ? ctx.req.body : {}
+  const mediaUrls = Array.isArray(body.mediaUrls) ? body.mediaUrls : []
+  const row = {}
+  for (const key of CLOUD_ROW_KEYS) {
+    if (body[key] !== undefined) row[key] = body[key]
+  }
+  const title = String(body.title || '').trim()
+  const caption = String(body.caption || '').trim()
+  return {
+    row,
+    coverUrl: String(body.coverUrl || '').trim(),
+    mediaUrl: String(mediaUrls.find((url) => typeof url === 'string' && url) || '').trim(),
+    meta: {
+      category: String(body.category || '').trim() || 'other',
+      title,
+      description: caption.slice(0, 200),
+      prompt: caption || title,
+      mediaType: body.type === 'image' ? 'image' : 'video',
+    },
+  }
+}
+
+/**
+ * Job body for a cloud publish: walk the real stages, store the cloud's answer,
+ * report failures.
+ * @param {{ id: string, capability: { publishRemote: Function }, request: Record<string, any> }} args
+ */
+async function runCloudShareJob(args) {
+  const { id } = args
+  try {
+    const onStage = (stage) => {
+      if (CLOUD_SHARE_STAGE_ORDER.includes(stage)) patchCloudShareJob(id, { share_stage: stage })
+    }
+    const result = await args.capability.publishRemote({
+      id,
+      coverUrl: args.request.coverUrl,
+      mediaUrl: args.request.mediaUrl,
+      meta: args.request.meta,
+      onStage,
+    })
+    patchCloudShareJob(id, shareDonePatch(result))
+  } catch (error) {
+    patchCloudShareJob(id, shareFailedPatch(error instanceof Error ? error.message : String(error)))
+  }
+}
+
+/**
+ * @param {string} id
+ * @param {Record<string, any>} patch
+ */
+function patchCloudShareJob(id, patch) {
+  const current = cloudShareJobs.get(id)
+  if (!current) return null
+  const next = { ...current, ...patch }
+  cloudShareJobs.set(id, next)
+  return next
+}
+
+/**
  * The hub capability, resolved per request so a plugin loaded after this one is
  * still picked up. Absent means the official surface is unmounted — the handler
  * says so instead of silently pretending the share worked.
@@ -765,7 +927,7 @@ export async function handleShare(ctx) {
 function resolveShareCapability(ctx) {
   const source = ctx.inspirationShare
   const resolved = typeof source === 'function' ? source() : source
-  return resolved && typeof resolved.publishLocal === 'function' ? resolved : null
+  return resolved && (typeof resolved.publishLocal === 'function' || typeof resolved.publishCloud === 'function' || typeof resolved.publishRemote === 'function') ? resolved : null
 }
 
 /**
@@ -1577,8 +1739,13 @@ export function handleGetItem({ id, store }) {
   const failed = sweepStaleImports(store)
   if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
   const item = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
-  if (!item) return fail(404, 'not found')
-  return { status: 200, body: { data: item } }
+  if (item) return { status: 200, body: { data: item } }
+  // A cloud publish has no local row to read — its progress lives in the job
+  // table, and the page polls this very endpoint. Answering 404 here would tell
+  // the poller the row is gone and stop the progress on the first tick.
+  const cloudJob = cloudShareJobs.get(String(id))
+  if (cloudJob) return { status: 200, body: { data: { ...cloudJob } } }
+  return fail(404, 'not found')
 }
 
 export function handlePatchItem({ id, req, store }) {

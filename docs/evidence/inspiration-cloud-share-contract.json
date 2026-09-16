@@ -1,0 +1,93 @@
+{
+  "issue": 1996,
+  "title": "灵感分享：云端条目零上传分享路径",
+  "capturedAt": "2026-09-15T17:12:27.804Z",
+  "what": "上游云端公开库的真实探测结果：素材地址形态、可读性、HEAD 支持情况。这份数据是本任务「可读性前置探测」与「视频不可读明确标注」两条改造的直接依据。",
+  "endpoint": "https://omnimux.ai/api/inspiration/v1/public/inspirations?page=1&page_size=6",
+  "probeMethod": {
+    "readable": "GET + Range: bytes=0-0 → 206",
+    "notReadable": "GET + Range: bytes=0-0 → 404",
+    "head": "HEAD → 404（该端点不支持 HEAD，因此可读性探测必须用 GET）"
+  },
+  "fieldShape": [
+    "id", "type", "title", "caption", "country", "category", "duration",
+    "views", "trafficType", "postedAt", "coverUrl", "mediaUrls", "sourceUrl",
+    "embedUrl", "creator"
+  ],
+  "summary": {
+    "sampleSize": 6,
+    "coverReadableViaGetRange": 6,
+    "coverHeadNotSupported": 6,
+    "mediaUrlsPresent": 4,
+    "mediaUnreachable": 4
+  },
+  "conclusions": [
+    "云端条目编号为纯数字（如 2789），与本地库的 insp_xxxxxxxx 形态完全不同 —— 这正是分享链路第一步读本地库必然扑空、返回 404 not found 的原因。",
+    "coverUrl / mediaUrls 是相对路径，前缀为 /api/inspiration/v1/public/media/；发布前必须绝对化。",
+    "封面匿名可读（GET + Range → 206），可以照常带上分享。",
+    "视频/图集地址全部 404（上游存储缺陷，工单 laozhong86/OmniMux#257，本次不修），因此云端分享必须如实标注「仅分享封面与文案」，绝不静默给出打不开的播放器。",
+    "该端点对 HEAD 一律 404，可读性探测只能用 GET + Range。"
+  ],
+  "rows": [
+    {
+      "id": 2789,
+      "type": "image",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2789",
+      "mediaUrl": "/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/48118b70-ab77-45f5-9323-8ed5daffc8be/slide-1.jpg",
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": 404,
+      "mediaHead": 404
+    },
+    {
+      "id": 2690,
+      "type": "video",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/2690",
+      "mediaUrl": "/api/inspiration/v1/public/media/r2/publications/genviral/videos/01f3e752-d653-4a5f-bdf8-af784e52c9e6/video.mp4",
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": 404,
+      "mediaHead": 404
+    },
+    {
+      "id": 1683,
+      "type": "video",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/1683",
+      "mediaUrl": "/api/inspiration/v1/public/media/r2/publications/genviral/videos/a2250feb-c7b9-4b87-8fe8-66b36c0ccb1a/video.mp4",
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": 404,
+      "mediaHead": 404
+    },
+    {
+      "id": 148,
+      "type": "video",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/148",
+      "mediaUrl": null,
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": null,
+      "mediaHead": null
+    },
+    {
+      "id": 217,
+      "type": "video",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/217",
+      "mediaUrl": null,
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": null,
+      "mediaHead": null
+    },
+    {
+      "id": 1118,
+      "type": "image",
+      "coverUrl": "/api/inspiration/v1/public/media/inspiration-covers/1118",
+      "mediaUrl": "/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/01c70928-2f71-40b4-b48c-05653fe911ed/slide-1.jpg",
+      "coverGetRange": 206,
+      "coverHead": 404,
+      "mediaGetRange": 404,
+      "mediaHead": 404
+    }
+  ]
+}

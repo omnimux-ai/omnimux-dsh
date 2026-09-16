@@ -6,6 +6,7 @@ import {
   pickCoverSrc,
   pickVideoSrc,
   resolveTikTokEmbedUrl,
+  shareRequestPayload,
   triggerAnalyzeInspiration,
   translateInspiration,
 } from './api.js'
@@ -21,6 +22,7 @@ import {
   decideSharePollOutcome,
   isShareRunning,
   shareErrorText,
+  shareMediaNotice,
   shareSteps,
   shareUrlOf,
   shareValidityText,
@@ -198,7 +200,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
     setSharing(true)
     setShareError(null)
     try {
-      const response = await createShareLink(data.safeItem.id)
+      const response = await createShareLink(data.safeItem.id, shareRequestPayload(data.safeItem))
       const row = response.body?.data
       if (!response.ok) {
         // Shown in the popover, not as a full-screen error: the user asked for a
@@ -251,6 +253,9 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const shareStepsList = shareRunning ? shareSteps(data.safeItem, t) : []
   const shareFailure = shareError || shareErrorText(data.safeItem)
   const shareValidity = shareValidityText(data.safeItem, t)
+  // A cloud share that had to leave its video/image out still succeeds, so the
+  // warning belongs beside the link it applies to — never in place of it.
+  const shareMediaWarning = shareMediaNotice(data.safeItem, t)
   const dimensions = [
     ['hook', t('modal.deconstruction.hook'), data.hook],
     ['goal', t('modal.deconstruction.goal'), data.targetGoal],
@@ -410,6 +415,11 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         <span>{shareValidity}</span>
                         <span className="omnimux-inspiration-share-done">{t('modal.share.doneTag') || '已发布'}</span>
                       </div>
+                      {shareMediaWarning ? (
+                        <div className="omnimux-inspiration-share-tip" role="status" data-share-notice="media-unavailable">
+                          {shareMediaWarning}
+                        </div>
+                      ) : null}
                     </div>
                   ) : shareRunning ? (
                     <div className="omnimux-inspiration-share-progress" role="status" aria-live="polite" aria-label={t('modal.share.progress') || '发布进度'}>
