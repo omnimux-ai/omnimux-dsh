@@ -374,6 +374,13 @@ export function ensurePlacementStyles(doc) {
       bottom: auto !important;
       pointer-events: auto !important;
     }
+    /* 沉底输入框菜单开在上方时，仍必须可点，不能被后面的灵感卡片吃掉点击 */
+    [data-composer-card] [data-trigger-menu],
+    [data-composer-card] [class*="iRJKyq_menu"],
+    [data-composer-card] [class*="_1q_ULW_card"] {
+      pointer-events: auto !important;
+      z-index: 80 !important;
+    }
   `
   doc.head.appendChild(style)
 }
@@ -484,9 +491,10 @@ export function syncMenuPlacement(menu, doc) {
       delete menu.dataset.placement
       menu.style.bottom = ''
       menu.style.top = ''
-      menu.style.pointerEvents = ''
       menu.style.removeProperty('max-height')
     }
+    menu.style.pointerEvents = 'auto'
+    menu.style.zIndex = '80'
   }
 
   return placeBelow

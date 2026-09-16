@@ -336,6 +336,7 @@ test('ensurePlacementStyles injects idempotent placement CSS stylesheet into doc
   const style1 = doc.getElementById('dsh-omnimux-menu-placement')
   assert.ok(style1)
   assert.ok(style1.textContent.includes('data-menu-placement="bottom"'))
+  assert.ok(style1.textContent.includes('z-index: 80'))
 
   // Second run is idempotent
   ensurePlacementStyles(doc)
@@ -415,6 +416,37 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   assert.equal(menu.style.top, '')
   assert.equal(menu.style.bottom, '')
   assert.equal(menu.style.maxHeight, '')
+  assert.equal(menu.style.pointerEvents, 'auto')
+  assert.equal(menu.style.zIndex, '80')
+})
+
+test('bottom composer leftover overlay still leaves the menu clickable', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+    <div class="omnimux-trending-card-body" style="position:fixed;inset:0;"></div>
+    <div data-composer-card>
+      <div class="overlayAnchor" data-overlay-placement="bottom" style="pointer-events:none">
+        <div data-trigger-menu class="iRJKyq_menu" style="pointer-events:none">
+          <button role="option"><span class="iRJKyq_itemName">从资产库添加</span></button>
+        </div>
+      </div>
+    </div>
+  </body></html>`)
+  const doc = dom.window.document
+  const win = dom.window
+  win.innerHeight = 1000
+  const card = doc.querySelector('[data-composer-card]')
+  const menu = doc.querySelector('[data-trigger-menu]')
+  const option = doc.querySelector('button[role="option"]')
+  const behind = doc.querySelector('.omnimux-trending-card-body')
+  card.getBoundingClientRect = () => ({ top: 850, bottom: 950, height: 100 })
+  option.getBoundingClientRect = () => ({ top: 620, left: 100, width: 400, height: 40, x: 100, y: 620, right: 500, bottom: 660 })
+  behind.getBoundingClientRect = () => ({ top: 0, left: 0, width: 800, height: 1000, x: 0, y: 0, right: 800, bottom: 1000 })
+
+  ensurePlacementStyles(doc)
+  const placedBelow = syncMenuPlacement(menu, doc)
+  assert.equal(placedBelow, false)
+  assert.equal(menu.style.pointerEvents, 'auto')
+  assert.equal(doc.querySelector('.overlayAnchor').dataset.overlayPlacement, undefined)
 })
 
 test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
