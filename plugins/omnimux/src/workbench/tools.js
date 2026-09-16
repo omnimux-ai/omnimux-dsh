@@ -13,6 +13,27 @@ import { JSON_TOOL_OUTPUT } from '../tools/schema.js'
 export const MAX_TAB_SWITCHES_PER_SESSION = 3
 
 /**
+ * 面向用户的页签名（Issue #2104）。命中配额时只说人话，不回内部代号。
+ * 未登记的 tabId 原样回退，避免为了文案新增一张必须同步维护的表。
+ */
+const TAB_LABELS = {
+  'omnimux-workflow:canvas': '创作画布',
+  'omnimux-workflow:library': '项目',
+  'omnimux-assets:library': '资产库',
+  'omnimux-products:library': '产品库',
+  'omnimux-inspiration:library': '灵感社区',
+  'omnimux-clip:studio': '视频剪辑',
+  'omnimux-market:plaza': '技能广场',
+  'omnimux:media-viewer': '图像生成',
+}
+
+/** 命中切换配额时的可读说明：说明原因 + 给出下一步动作。 */
+export function tabSwitchQuotaNotice(tabId) {
+  const label = TAB_LABELS[tabId] || tabId
+  return `为避免频繁跳转，本会话自动切换工作台页面的次数（${MAX_TAB_SWITCHES_PER_SESSION} 次）已用完，这次没有再自动切到「${label}」。请手动打开右侧「${label}」查看结果；换一个会话后额度会重新计算。`
+}
+
+/**
  * @param {object} ctx
  * @param {{
  *   mailbox: { getActiveView: Function, sendRpc: Function },
@@ -25,7 +46,7 @@ The active workbench viewport is provided via native runtime context injection (
 When the block includes view: canvas and workspace: <id>, that workspace is the current canvas target — pass it as workspace_id to workflow_* tools; do not call workflow_list merely to rediscover it; do not ask the user which canvas to use.
 Call workbench_get_active_view only if the block is missing, stale, or contradictory.
 Call workbench_open_tab only when the user needs to see a result; always pass reason.
-If a tool returns applied=false, tell the user in one sentence; do not retry in a loop.
+If a tool returns applied=false, tell the user in one sentence — reuse the returned \`message\` verbatim when present; do not retry in a loop.
 Never claim an image/video was generated unless the media result mode is "live".`
 
 export const WORKBENCH_VIEWPORT_PROMPT_SECTION = {
@@ -137,7 +158,15 @@ export function mountWorkbenchTools(ctx, deps) {
       const sessionId = currentView?.uiContext?.sessionId || 'default'
       const switchCount = sessionSwitchCounts.get(sessionId) || 0
       if (!undoToken && switchCount >= MAX_TAB_SWITCHES_PER_SESSION) {
-        return { ok: true, applied: false, code: 'quota-exceeded' }
+        // Issue #2104：配额是「本会话累计」，同一会话内重试必然再失败，
+        // 因此不假装重试，改为给人话 + 可执行动作。
+        return {
+          ok: true,
+          applied: false,
+          code: 'quota-exceeded',
+          retryable: false,
+          message: tabSwitchQuotaNotice(tabId),
+        }
       }
 
       const requestId = `rpc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
