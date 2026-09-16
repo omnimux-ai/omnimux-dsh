@@ -65,8 +65,28 @@ export function initTiktokScene(): void {
     if (anchor instanceof HTMLAnchorElement) hoveredHref = anchor.href
   }
 
+  const resolveActiveFeedHref = (): string | null => {
+    const links = Array.from(doc.querySelectorAll<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]'))
+    const vCenter = window.innerHeight / 2
+    let bestLink: string | null = null
+    let minDiff = Infinity
+
+    for (const a of links) {
+      const r = a.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0 && r.top < window.innerHeight && r.bottom > 0) {
+        const diff = Math.abs((r.top + r.bottom) / 2 - vCenter)
+        if (diff < minDiff) {
+          minDiff = diff
+          bestLink = a.href
+        }
+      }
+    }
+    return bestLink
+  }
+
   const run = async (action: TiktokAction): Promise<ExportOutcome> => {
-    const target = resolveTargetPost({ pageUrl: window.location.href, hoveredHref })
+    const activeHref = resolveActiveFeedHref()
+    const target = resolveTargetPost({ pageUrl: window.location.href, hoveredHref, activeHref })
     if (target === null) return { ok: false, code: 'rejected', detail: copy.noTarget }
     return sendTiktokShortcut(action, target.url)
   }

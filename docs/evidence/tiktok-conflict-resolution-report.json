@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-09-16T03:47:53.909Z",
+  "task": "fix(browser): TikTok 场景图标冲突向上避让顶升与当前视频无水印提取",
+  "issue": 2035,
+  "spec": "specs/tiktok-conflict-resolution.spec.md",
+  "scenarios": [
+    {
+      "name": "单个对手竞品图标（橙色 CK 图标）侵占头像上方空间",
+      "geometry": {
+        "avatar": {
+          "top": 200,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "ghost": {
+          "top": 144,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "rival": {
+          "top": 150,
+          "left": 500,
+          "width": 44,
+          "height": 44,
+          "bottom": 194
+        }
+      },
+      "targetCeiling": 136,
+      "expectedShift": 58,
+      "newRivalTop": 92,
+      "result": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "多插件多图标（橙色图标 + 白色圆点）级联顺延推移",
+      "geometry": {
+        "avatar": {
+          "top": 200,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "ghost": {
+          "top": 144,
+          "left": 500,
+          "width": 48,
+          "height": 48
+        },
+        "orangeRival": {
+          "top": 150,
+          "left": 500,
+          "width": 44,
+          "height": 44,
+          "bottom": 194
+        },
+        "whiteRival": {
+          "top": 100,
+          "left": 500,
+          "width": 32,
+          "height": 32,
+          "bottom": 132
+        }
+      },
+      "expectedOrangeShift": 58,
+      "expectedWhiteShift": 48,
+      "result": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "首页推荐流未携带具体作品 ID 后缀时主动从活跃视频卡片抓取目标",
+      "activeHref": "https://www.tiktok.com/@golden_frenchie/video/7345678901234567890?is_from_webapp=1",
+      "resolvedPostId": "7345678901234567890",
+      "result": "PASSED",
+      "verified": true
+    }
+  ],
+  "conclusion": "所有场景与拓扑几何判定全部满足 AC-1 至 AC-4 规格要求，无水印视频提取支持从当前视口活跃视频无缝直出。"
+}

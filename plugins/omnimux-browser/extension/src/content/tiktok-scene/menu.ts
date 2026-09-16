@@ -28,8 +28,9 @@
  */
 
 import inlineStyles from './styles.css?inline'
-import { resolvePlatformAnchor } from '../../platform/anchor.ts'
+import { findAvatarElement, resolvePlatformAnchor } from '../../platform/anchor.ts'
 import { platformById } from '../../platform/registry.ts'
+import { resolveIconConflicts, restoreDisplacedIcons } from './conflict.ts'
 import { actionIcon, brandIcon, checkIcon } from './icons.ts'
 import { resolveMenuSide } from './menu-side.ts'
 import { TIKTOK_SCENE_HOST_ID } from './messages.ts'
@@ -236,6 +237,15 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     // the trigger rather than to the viewport.
     const menuOffset = side.left - placement.left
 
+    const avatarEl = findAvatarElement(doc, viewport)
+    const ourPlacement = {
+      left: placement.left,
+      top: viewport.height - placement.bottom - TRIGGER_BOX_PX,
+      width: TRIGGER_BOX_PX,
+      height: TRIGGER_BOX_PX,
+    }
+    resolveIconConflicts(doc, ourPlacement, avatarEl, TIKTOK_SCENE_HOST_ID)
+
     // Attribute observation makes this run on a busy page, and writing the same
     // values would force a style recalculation for no movement at all.
     if (
@@ -398,6 +408,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       doc.removeEventListener('keydown', onKeydown)
       doc.defaultView?.removeEventListener('resize', onResize)
       doc.defaultView?.removeEventListener('scroll', onScroll)
+      restoreDisplacedIcons(doc)
       host.remove()
     },
     reposition,
