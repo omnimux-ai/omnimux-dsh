@@ -34,11 +34,11 @@ export const ASSETS_CSS = `
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 24px 12px;
+  padding: 8px 20px 12px;
 }
 .omnimux-assets-stage-toolbar {
   flex: none;
-  padding: 0 24px;
+  padding: 0 20px;
   height: 48px;
 }
 .omnimux-assets-tools-cluster {
@@ -56,7 +56,7 @@ export const ASSETS_CSS = `
    one's so the two rows cannot drift apart. */
 .omnimux-assets-local-nav {
   flex: none;
-  padding: 12px 24px 14px;
+  padding: 12px 20px 14px;
 }
 .omnimux-assets-local-nav-row {
   display: flex;
@@ -137,7 +137,7 @@ export const ASSETS_CSS = `
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 24px;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
 .omnimux-assets-selection-actions {
@@ -148,7 +148,7 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-error {
   margin: 0;
-  padding: 6px 24px;
+  padding: 6px 20px;
   font-size: 12px;
   color: var(--dsw-alias-state-error-primary);
 }
@@ -165,7 +165,7 @@ export const ASSETS_CSS = `
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 16px 24px;
+  padding: 16px 20px;
 }
 .omnimux-assets-grid {
   display: grid;

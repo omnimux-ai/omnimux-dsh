@@ -1,0 +1,17 @@
+{
+  "rootWidth": 1448,
+  "titleLeft": 20,
+  "actionBtnLeft": 20,
+  "dividerLeft": 20,
+  "dividerRight": 20,
+  "tabLabelLeft": 20,
+  "chipLeft": 20,
+  "cardLeft": 20,
+  "titleAligned20": true,
+  "actionBtnAligned20": true,
+  "dividerAligned20": true,
+  "tabLabelAligned20": true,
+  "chipAligned20": true,
+  "cardAligned20": true,
+  "pass": true
+}
