@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url'
 import {
   decideBashCommand,
   decideMaterializationCommand,
+  decideSearchTarget,
   decideWrite,
   isDestructiveResetCommand,
   isEphemeralPath,
   isGitTracked,
   isMaterializationCommand,
+  isUnboundedScanRoot,
   isWorktreePath,
 } from './guard-worktree.mjs'
 
@@ -869,5 +871,130 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     })
     assert.equal(deniedExplicit.decision, 'deny')
     assert.equal(deniedExplicit.reason, 'forbidden-main-branch-commit')
+  })
+})
+
+describe('guard-worktree unbounded scan guard (全盘扫盘硬拦截)', () => {
+  const home = '/Users/x'
+  const project = '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh'
+
+  it('denies the incident command: find over the user home directory', () => {
+    const result = decideBashCommand({
+      command: 'find /Users/x -name "*insp_ad704927*" 2>/dev/null',
+      cwd: project,
+    })
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-unbounded-scan')
+    assert.equal(result.target, '/Users/x')
+    assert.equal(result.binary, 'find')
+  })
+
+  it('denies traversals rooted at /, /Users, /home, ~ and $HOME', () => {
+    for (const root of ['/', '/Users/', '/home', '/Volumes', '~', '$HOME', '${HOME}', '~/']) {
+      const result = decideBashCommand({ command: `find ${root} -name "*.mp4"`, cwd: home })
+      assert.equal(result.decision, 'deny', `expected deny for root ${root}`)
+      assert.equal(result.reason, 'forbidden-unbounded-scan')
+    }
+  })
+
+  it('denies recursive grep/rg/du/ls -R against a traversal root', () => {
+    const commands = [
+      'grep -r "TODO" /Users',
+      'rg --hidden foo /Users/x',
+      'du -sh /Users/x',
+      'ls -R /Users/x',
+      'find /Users/x -type f -name "*.mov"',
+    ]
+    for (const command of commands) {
+      const result = decideBashCommand({ command, cwd: home })
+      assert.equal(result.decision, 'deny', `expected deny for: ${command}`)
+      assert.equal(result.reason, 'forbidden-unbounded-scan')
+    }
+  })
+
+  it('denies `cd <home> && find .` where the sweep root is armed by the previous segment', () => {
+    const result = decideBashCommand({
+      command: 'cd /Users/x && find . -name "*insp*"',
+      cwd: home,
+    })
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-unbounded-scan')
+    assert.equal(result.target, '/Users/x')
+  })
+
+  it('allows bounded searches inside the project and scoped find depth', () => {
+    const commands = [
+      'find . -name "*.mjs"',
+      'find plugins -name "*.js"',
+      'find /Users/x/Desktop/Project/omnimux-dsh -name "*.md"',
+      'find /Users/x -maxdepth 2 -name "*.json"',
+      'find /Users/x -maxdepth=3 -type d',
+      'rg "TODO" plugins/scripts',
+      'grep -rn "guard" scripts/',
+      'ls -la plugins',
+      'cd /Users/x/Desktop/Project/omnimux-dsh && find . -name "*.md"',
+      'find ~/Movies -name "*.mov"',
+      'cd /Users/x && ls -la',
+    ]
+    for (const command of commands) {
+      const result = decideBashCommand({ command, cwd: project })
+      assert.equal(result.decision, 'allow', `expected allow for: ${command}`)
+    }
+  })
+
+  it('classifies scan roots without flagging project-internal paths', () => {
+    assert.equal(isUnboundedScanRoot('/Users/x'), true)
+    assert.equal(isUnboundedScanRoot('/'), true)
+    assert.equal(isUnboundedScanRoot('~'), true)
+    assert.equal(isUnboundedScanRoot('.'), false)
+    assert.equal(isUnboundedScanRoot('/Users/x/Desktop/Project/omnimux-dsh'), false)
+  })
+
+  it('guards the glob and grep tools when their path argument names a traversal root', () => {
+    const deniedGlob = decideSearchTarget({
+      toolName: 'glob',
+      toolInput: { pattern: '**/*insp_ad704927*', path: '/Users/x' },
+    })
+    assert.equal(deniedGlob.decision, 'deny')
+    assert.equal(deniedGlob.reason, 'forbidden-unbounded-scan')
+    assert.equal(deniedGlob.target, '/Users/x')
+
+    assert.equal(decideSearchTarget({ toolName: 'grep', toolInput: { pattern: 'TODO', path: '/' } }).decision, 'deny')
+
+    // An omitted path stays inside the session workspace.
+    assert.equal(decideSearchTarget({ toolName: 'glob', toolInput: {} }).decision, 'allow')
+    // A project-scoped path is untouched.
+    assert.equal(decideSearchTarget({ toolName: 'glob', toolInput: { path: project } }).decision, 'allow')
+    // Other tools are never matched by this guard.
+    assert.equal(decideSearchTarget({ toolName: 'read', toolInput: { path: '/' } }).decision, 'allow')
+  })
+
+  it('emits an actionable denial reason through the PreToolUse protocol', () => {
+    const payload = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'bash',
+      cwd: home,
+      tool_input: { command: 'find /Users/x -name "*insp*"' },
+    })
+    const result = spawnSync('node', [join(here, 'guard-worktree.mjs')], { input: payload, encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+    const parsed = JSON.parse(result.stdout)
+    assert.equal(parsed.hookSpecificOutput.hookEventName, 'PreToolUse')
+    assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny')
+    assert.match(parsed.hookSpecificOutput.permissionDecisionReason, /无界递归扫描/)
+    assert.match(parsed.hookSpecificOutput.permissionDecisionReason, /video_breakdown_analyze/)
+  })
+
+  it('denies glob tool calls routed through the hook dispatcher', () => {
+    const payload = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'default_api:glob',
+      cwd: home,
+      tool_input: { pattern: '**/*insp_ad704927*', path: '/Users/x' },
+    })
+    const result = spawnSync('node', [join(here, 'guard-worktree.mjs')], { input: payload, encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+    const parsed = JSON.parse(result.stdout)
+    assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny')
   })
 })

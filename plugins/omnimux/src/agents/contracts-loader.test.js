@@ -103,3 +103,16 @@ test('mountContractsPrompt - registers section when systemPrompt available', () 
   const executorContracts = helper.getContractsForAgent('executor')
   assert.ok(executorContracts.contracts.some((c) => c.name === 'semantic-judgment'))
 })
+
+test('loadActiveContracts - virtual-reference contract applies to wildcard agents and contains axiom', () => {
+  const { contracts, formatted } = loadActiveContracts({
+    contractsDir: DEFAULT_CONTRACTS_DIR,
+    agentName: 'any-custom-agent',
+  })
+
+  const names = contracts.map((c) => c.name)
+  assert.ok(names.includes('virtual-reference'), 'virtual-reference should be included for wildcard agents')
+  assert.ok(formatted.includes('<contract name="virtual-reference">'))
+  assert.ok(formatted.includes('Do NOT scan the local filesystem'))
+  assert.ok(formatted.includes('@inspiration/'))
+})

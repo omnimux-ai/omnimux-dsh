@@ -601,6 +601,168 @@ export function decideWorktreeAddCommand(command, cwd) {
   return { decision: 'allow' }
 }
 
+/**
+ * Roots whose unbounded recursive traversal stalls a session: the observed
+ * incident `find /Users/x -name "*insp_ad704927*"` ran to the 60s tool timeout
+ * before being killed, and the preceding `glob` on the same root failed outright.
+ */
+const UNBOUNDED_SCAN_ROOTS = Object.freeze([
+  '/',
+  '/users',
+  '/home',
+  '/volumes',
+  '/system',
+  '/private',
+  '/library',
+  '/applications',
+])
+
+/** Tree-walking binaries; `ls` joins them only with an explicit recursive flag. */
+const TREE_WALK_COMMANDS = new Set(['find', 'grep', 'egrep', 'rg', 'fd', 'fdfind', 'du'])
+
+/** `find -maxdepth N` with N at or below this bound is a scoped search, not a sweep. */
+const MAX_SCOPED_FIND_DEPTH = 4
+
+function homedirValue() {
+  return String(process.env.HOME || '').replace(/\/+$/, '')
+}
+
+/**
+ * Resolve the literal path a scan would start from: expands `~` / `$HOME`,
+ * trims trailing slashes. Returns '' for an empty token.
+ */
+export function normalizeScanTarget(rawPath, homeDir = homedirValue()) {
+  const raw = String(rawPath ?? '').trim()
+  if (!raw) return ''
+  const home = String(homeDir || '').replace(/\/+$/, '')
+  let value = raw
+  if (value === '~' || value === '$HOME' || value === '${HOME}') {
+    value = home || raw
+  } else if (/^~\//.test(value)) {
+    value = home ? `${home}${value.slice(1)}` : raw
+  } else if (/^\$\{?HOME\}?(\/|$)/.test(value)) {
+    value = home ? `${home}${value.replace(/^\$\{?HOME\}?/, '')}` : raw
+  }
+  const trimmed = value.replace(/\/+$/, '')
+  return trimmed || '/'
+}
+
+/**
+ * True when a path names a traversal root broad enough to stall the session:
+ * the filesystem root, a top-level system directory, or the user's home.
+ * Paths inside a project (`/Users/x/.../plugins`) stay allowed.
+ */
+export function isUnboundedScanRoot(rawPath, homeDir = homedirValue()) {
+  const target = normalizeScanTarget(rawPath, homeDir)
+  if (!target || target === '.') return false
+  const lower = target.toLowerCase()
+  if (UNBOUNDED_SCAN_ROOTS.includes(lower)) return true
+  const home = String(homeDir || '').replace(/\/+$/, '')
+  return Boolean(home) && lower === home.toLowerCase()
+}
+
+function commandBasename(token) {
+  return String(token || '').split('/').pop().toLowerCase()
+}
+
+function hasScopedFindDepth(tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (token === '-maxdepth' || token === '--maxdepth') {
+      const next = Number(tokens[i + 1])
+      if (Number.isFinite(next) && next <= MAX_SCOPED_FIND_DEPTH) return true
+    }
+    const inline = /^(?:-maxdepth|--maxdepth)=?(\d+)$/.exec(token)
+    if (inline && Number(inline[1]) <= MAX_SCOPED_FIND_DEPTH) return true
+  }
+  return false
+}
+
+/**
+ * Locate collection roots for one scan segment. Returns [] when the command is
+ * not a tree walk, or when it is bounded (relative path, or scoped find depth).
+ */
+function scanRootsForSegment(tokens) {
+  const binary = commandBasename(tokens[0])
+  if (binary === 'find') {
+    if (hasScopedFindDepth(tokens)) return []
+    // find requires its path before any expression; a leading flag means cwd.
+    const firstArg = tokens[1]
+    return firstArg && !firstArg.startsWith('-') ? [firstArg] : []
+  }
+  if (binary === 'ls') {
+    if (!tokens.some((t) => t === '-R' || t === '--recursive')) return []
+    return tokens.slice(1).filter((t) => !t.startsWith('-'))
+  }
+  if (TREE_WALK_COMMANDS.has(binary)) {
+    return tokens.slice(1).filter((t) => !t.startsWith('-'))
+  }
+  return []
+}
+
+/**
+ * Detect an unbounded sweep in a shell command, including the `cd <home> &&
+ * find .` shape where the root is armed by a preceding segment.
+ *
+ * @returns {{segment: string, binary: string, target: string} | null}
+ */
+export function findUnboundedScanSegment(command, homeDir = homedirValue()) {
+  if (!command || typeof command !== 'string') return null
+  let armedRoot = ''
+  for (const segment of commandSegments(command)) {
+    const tokens = tokenizeCommandLine(segment)
+    if (tokens.length === 0) continue
+    const binary = commandBasename(tokens[0])
+
+    if (binary === 'cd') {
+      const target = tokens[1]
+      armedRoot = target && isUnboundedScanRoot(target, homeDir) ? normalizeScanTarget(target, homeDir) : ''
+      continue
+    }
+
+    const roots = scanRootsForSegment(tokens)
+    const walksTree = binary === 'find' || binary === 'ls' || TREE_WALK_COMMANDS.has(binary)
+    if (!walksTree) {
+      armedRoot = ''
+      continue
+    }
+
+    // `find` without a path argument walks the current directory.
+    const effective = roots.length > 0 ? roots : (binary === 'find' ? ['.'] : [])
+
+    for (const candidate of effective) {
+      if (isUnboundedScanRoot(candidate, homeDir)) {
+        return { segment, binary, target: normalizeScanTarget(candidate, homeDir) }
+      }
+    }
+    // `cd <home> && find .` — the sweep root is the directory just entered.
+    if (armedRoot && effective.length > 0 && effective.every((root) => root === '.')) {
+      return { segment, binary, target: armedRoot }
+    }
+    armedRoot = ''
+  }
+  return null
+}
+
+/**
+ * Guard the dedicated `glob` / `grep` tools, whose `path` argument can name a
+ * traversal root just as a shell command can. An omitted path stays inside the
+ * session workspace and is always allowed.
+ */
+export function decideSearchTarget({ toolName, toolInput = {}, homeDir = homedirValue() } = {}) {
+  const name = String(toolName || '').toLowerCase()
+  if (name !== 'glob' && name !== 'grep') return { decision: 'allow' }
+  const rawPath = String(toolInput.path ?? '').trim()
+  if (!rawPath) return { decision: 'allow', reason: 'workspace-default' }
+  if (!isUnboundedScanRoot(rawPath, homeDir)) return { decision: 'allow' }
+  return {
+    decision: 'deny',
+    reason: 'forbidden-unbounded-scan',
+    target: normalizeScanTarget(rawPath, homeDir),
+    tool: name,
+  }
+}
+
 export function decideBashCommand({ command, cwd }) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
 
@@ -618,7 +780,19 @@ export function decideBashCommand({ command, cwd }) {
     return { decision: 'allow', reason: 'clean-upstream' }
   }
 
-  // 2. 检查试图通过命令行拷贝/写入/移动到主 checkout 受保护目录
+  // 2. 检查以家目录/根目录为起点的无界递归扫描（会造成 60s 超时假死）
+  const unboundedScan = findUnboundedScanSegment(command)
+  if (unboundedScan) {
+    return {
+      decision: 'deny',
+      reason: 'forbidden-unbounded-scan',
+      target: unboundedScan.target,
+      binary: unboundedScan.binary,
+      segment: unboundedScan.segment,
+    }
+  }
+
+  // 3. 检查试图通过命令行拷贝/写入/移动到主 checkout 受保护目录
   const targets = extractCommandWriteTargets(command)
   for (const target of targets) {
     if (isForbiddenMainCheckoutWriteTarget(target, cwd)) {
@@ -630,19 +804,19 @@ export function decideBashCommand({ command, cwd }) {
     }
   }
 
-  // 3. 检查在主仓本地 main 分支上执行 git merge 或 git commit
+  // 4. 检查在主仓本地 main 分支上执行 git merge 或 git commit
   const mainBranchOps = decideMainBranchGitOp(command, cwd)
   if (mainBranchOps.decision === 'deny') {
     return mainBranchOps
   }
 
-  // 4. 检查 git worktree add 是否显式绑定了 origin/main
+  // 5. 检查 git worktree add 是否显式绑定了 origin/main
   const wtAddDecision = decideWorktreeAddCommand(command, cwd)
   if (wtAddDecision.decision === 'deny') {
     return wtAddDecision
   }
 
-  // 5. 检查多 Agent 物化覆盖风险（防冲刷物理硬门禁）
+  // 6. 检查多 Agent 物化覆盖风险（防冲刷物理硬门禁）
   if (isMaterializationCommand(command)) {
     const matDecision = decideMaterializationCommand({ cwd })
     if (matDecision.decision === 'deny') {
@@ -719,6 +893,16 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。'
     } else if (reason === 'unresolved-target') {
       output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】目标路径无法安全解析；保守拒绝写入。请检查路径读取权限、符号链接及父目录。'
+    } else if (reason === 'forbidden-unbounded-scan') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 仓库 Hook】严禁以用户家目录或系统根目录为起点做无界递归扫描！',
+        `🎯 被拦截的目标：${extra.target || '未知路径'}${extra.binary ? `（${extra.binary}）` : ''}`,
+        '📌 事故背景：对 /Users/x 或 / 的全盘遍历会持续数十秒直至触发 60 秒工具超时被杀，界面表现为长时间“深度求索中”假死。',
+        '👉 正确做法：',
+        '  1. 灵感 / 资产引用：@inspiration/、@asset/ 是虚拟实体指针，原样传给 video_breakdown_analyze、video_analyze 等工具即可被中枢解析，不需要在本地磁盘查找物理文件；',
+        '  2. 查找本地文件：把范围收敛到当前项目工作区内的具体子目录，不要从家目录或根目录起扫；',
+        '  3. 确需限定深度时：find 请显式附加 -maxdepth（≤ 4）。',
+      ].join('\n')
     } else if (reason === 'forbidden-main-checkout-copy') {
       output.permissionDecisionReason = [
         `🚫【OmniMux 仓库 Hook】严禁通过命令行向主目录核心受保护路径（${extra.target || '目标路径'}）复制、移动或写入文件！`,
@@ -800,6 +984,11 @@ function handle(rawInput) {
     const workdir = typeof toolInput.workdir === 'string' && toolInput.workdir.trim()
       ? resolve(cwd, toolInput.workdir) : cwd
     const result = decideBashCommand({ command, cwd: workdir })
+    return decisionJson(hookEventName, result.decision, result.reason, result)
+  }
+
+  if (toolName === 'glob' || toolName === 'grep') {
+    const result = decideSearchTarget({ toolName, toolInput })
     return decisionJson(hookEventName, result.decision, result.reason, result)
   }
 
