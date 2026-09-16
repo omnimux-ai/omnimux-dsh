@@ -40,6 +40,14 @@ test('video breakdown viewer domain integrity & pure data utilities', async (t) 
     assert.equal(cleaned[1].id, 'shot-2')
   })
 
+  await t.test('cleanShots keeps frame_url on real shots', () => {
+    const cleaned = cleanShots([
+      { id: 'shot-1', title: '邻居窥视', stage: 'Hook', time_range: '0:00 - 0:03', start_seconds: 0, end_seconds: 3, frame_url: '/omnimux/video-preview/stream?grant=abc' },
+    ])
+    assert.equal(cleaned.length, 1)
+    assert.equal(cleaned[0].frame_url, '/omnimux/video-preview/stream?grant=abc')
+  })
+
   await t.test('cleanStructure repairs degenerate structure from shots and maps stages', () => {
     const shots = [
       { id: 's1', stage: '黄金钩子', title: '隐私暴露', speech: '天哪被看到了！', start_seconds: 0, end_seconds: 3 },

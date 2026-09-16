@@ -59,6 +59,21 @@ export function refreshBreakdownMedia(filePath, authorizedMediaPaths) {
       data.video[field] = createVideoStreamUrl(canonical)
       refreshed++
     }
+    if (Array.isArray(data.shots)) {
+      for (const shot of data.shots) {
+        if (!shot || typeof shot !== 'object') continue
+        const fromUrl = localStreamPath(shot.frame_url)
+        const fromPath = typeof shot.frame_path === 'string' && shot.frame_path ? shot.frame_path : null
+        const raw = fromUrl || fromPath
+        if (!raw) continue
+        const canonical = realpathSync(raw)
+        if (!allowed.has(canonical)) throw new Error('A referenced media path needs explicit authorization')
+        probeMedia(canonical)
+        shot.frame_path = canonical
+        shot.frame_url = createVideoStreamUrl(canonical)
+        refreshed++
+      }
+    }
     if (refreshed) {
       const bytes = Buffer.from(`${JSON.stringify(data, null, 2)}\n`)
       let offset = 0

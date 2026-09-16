@@ -61,6 +61,15 @@ function ShotSpeechContainer(props) {
   )
 }
 
+function ShotFrameThumb({ src, alt }) {
+  if (!src) return null
+  return (
+    <div className="omnimux-video-breakdown-shot-thumb">
+      <img src={src} alt={alt} />
+    </div>
+  )
+}
+
 function ShotCardHeader(props) {
   const showPlaying = props.isCurrent && props.isPlaying
   return (
@@ -84,24 +93,28 @@ export function ShotCard(props) {
   const timeRange = shot.time_range || '0:00 - 0:00'
   const stageName = shot.stage ? mapToCanonicalStage(shot.stage, index) : null
   const headerProps = { timeRange, title: shot.title || defaultTitle, isCurrent, isPlaying, isZh, stageName }
+  const frameUrl = typeof shot.frame_url === 'string' ? shot.frame_url : ''
 
   return (
     <div
       id={`omnimux-shot-card-${index}`}
-      className={`omnimux-video-breakdown-shot-card${isCurrent ? ' is-active' : ''}`}
+      className={`omnimux-video-breakdown-shot-card${isCurrent ? ' is-active' : ''}${frameUrl ? ' has-thumb' : ''}`}
       onClick={() => onSeekShot(shot.start_seconds || 0)}
       title={cardTitle}
     >
-      <ShotCardHeader {...headerProps} />
-      <ShotTagsRow tags={shot.tags} />
-      {shot.description ? <div className="omnimux-video-breakdown-shot-desc">{shot.description}</div> : null}
-      <ShotSpeechContainer
-        speech={shot.speech}
-        showTranslation={selectedLang !== 'original'}
-        translatedText={translatedSpeech}
-        isTranslating={isTranslating}
-        isZh={isZh}
-      />
+      <ShotFrameThumb src={frameUrl} alt={shot.title || defaultTitle} />
+      <div className="omnimux-video-breakdown-shot-body">
+        <ShotCardHeader {...headerProps} />
+        <ShotTagsRow tags={shot.tags} />
+        {shot.description ? <div className="omnimux-video-breakdown-shot-desc">{shot.description}</div> : null}
+        <ShotSpeechContainer
+          speech={shot.speech}
+          showTranslation={selectedLang !== 'original'}
+          translatedText={translatedSpeech}
+          isTranslating={isTranslating}
+          isZh={isZh}
+        />
+      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { createVideoStreamUrl } from './stream-capability.js'
 import { existsSync, statSync } from 'node:fs'
 import { extname, resolve } from 'node:path'
 import { handleVideoStream, getMimeType } from './stream.js'
-import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText } from './breakdown.js'
+import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText, attachShotFrames } from './breakdown.js'
 import { translateBreakdownShots, TRANSLATE_LANGUAGES } from './translate.js'
 
 export const name = 'omnimux-video-preview'
@@ -59,7 +59,7 @@ export function apply(ctx) {
   // 2. Register video breakdown & shots analysis tool
   ctx.tools?.register?.({
     name: 'video_breakdown_analyze',
-    description: 'Understand and deconstruct a video or video URL into granular shots (景别/机位/角度/动态/描述) and structural stages (Hook/Product Intro/Usage Detail/Demo Scene). Generates structured .vbreakdown data, and automatically opens the right sidebar preview.',
+    description: 'Understand and deconstruct a video or video URL into granular shots (景别/机位/角度/动态/描述) and structural stages (Hook/Product Intro/Usage Detail/Demo Scene). Saves one representative still per shot (frame_path / shot_frames) for visual analysis and replication, writes structured .vbreakdown data, and automatically opens the right sidebar preview.',
     parameters: {
       type: 'object',
       properties: {
@@ -84,7 +84,13 @@ export function apply(ctx) {
       const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx })
 
       // Step 2: Save native .vbreakdown artifact (prioritizing active workspace directory)
-      const { dataPath } = saveVideoBreakdownArtifacts(breakdownData, dest, { ctx, execCtx })
+      const { dataPath, basePath } = saveVideoBreakdownArtifacts(breakdownData, dest, { ctx, execCtx })
+
+      // Step 2b: Extract one still per shot next to the artifact (soft-fail per shot)
+      const framesAttached = await attachShotFrames(breakdownData, { dataPath, basePath, ctx })
+      if (framesAttached > 0) {
+        saveVideoBreakdownArtifacts(breakdownData, dataPath, { ctx, execCtx })
+      }
 
       // Step 3: Trigger sidebar preview automatically
       let previewOpened = false
@@ -104,14 +110,27 @@ export function apply(ctx) {
         }
       }
 
+      const shotFrames = (breakdownData.shots || [])
+        .filter((shot) => shot && shot.frame_path)
+        .map((shot) => ({
+          id: shot.id,
+          time_range: shot.time_range,
+          title: shot.title,
+          frame_path: shot.frame_path,
+          frame_url: shot.frame_url || '',
+        }))
+
       return {
         success: true,
         preview_opened: previewOpened,
         data_path: dataPath,
+        frames_dir: framesAttached > 0 ? `${basePath}.frames` : '',
+        frames_attached: framesAttached,
         video: breakdownData.video,
         pipeline: breakdownData.pipeline,
         shots_count: breakdownData.shots.length,
         shots: breakdownData.shots,
+        shot_frames: shotFrames,
         structure: breakdownData.structure,
         formatted_shots: formatShotsCopyText(breakdownData.shots),
       }

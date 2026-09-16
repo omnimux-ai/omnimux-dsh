@@ -629,5 +629,6 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     pipeline,
     shots,
     structure,
+    ...(localVideoPath ? { local_video_path: localVideoPath } : {}),
   }
 }
