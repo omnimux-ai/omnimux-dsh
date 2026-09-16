@@ -13,6 +13,8 @@ import {
   HOST_FULLSCREEN_PANEL_SELECTOR,
   exitHostRightSidebarFullscreen,
   findHostFullscreenExitButton,
+  enterHostRightSidebarFullscreen,
+  findHostFullscreenEnterButton,
   isHostRightSidebarFullscreen,
 } from './host-fullscreen.js'
 
@@ -130,3 +132,49 @@ test('exiting a non-fullscreen panel is a pure no-op', () => {
   assert.equal(exitHostRightSidebarFullscreen(undefined, { setFocus: () => modes.push('split') }), false)
   assert.deepEqual(modes, [])
 })
+
+test('the enter control is the official mode button inside the expanded push panel', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open><button data-sidebar-right-mode="fullscreen" id="enter"></button></div>')
+  const button = findHostFullscreenEnterButton(doc)
+  assert.equal(button?.id, 'enter')
+
+  const labelled = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open><button aria-label="全屏" id="label"></button></div>')
+  assert.equal(findHostFullscreenEnterButton(labelled)?.id, 'label')
+
+  const documentWide = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open></div><button data-sidebar-right-mode="fullscreen" id="outside"></button>')
+  assert.equal(findHostFullscreenEnterButton(documentWide)?.id, 'outside')
+
+  const none = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open></div>')
+  assert.equal(findHostFullscreenEnterButton(none), null)
+})
+
+test('the button that would exit fullscreen is never used as the enter control', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open><button data-sidebar-right-mode="push" id="exit"></button></div>')
+  assert.equal(findHostFullscreenEnterButton(doc), null)
+})
+
+test('entering fullscreen clicks the official control and reports the action', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open><button data-sidebar-right-mode="fullscreen" id="enter"></button></div>')
+  let clicked = 0
+  doc.getElementById('enter').addEventListener('click', () => { clicked += 1 })
+  assert.equal(enterHostRightSidebarFullscreen(doc), true)
+  assert.equal(clicked, 1)
+})
+
+test('entering falls back to the host gui focus when no control exists', () => {
+  const doc = setupDom('<div data-sidebar-right-panel="push" data-sidebar-right-open></div>')
+  const modes = []
+  assert.equal(enterHostRightSidebarFullscreen(doc, { setFocus: (mode) => modes.push(mode) }), true)
+  assert.deepEqual(modes, ['gui'])
+})
+
+test('entering an already fullscreen panel is a pure no-op', () => {
+  const doc = setupDom(fullscreenPanel('<button data-sidebar-right-mode="fullscreen" id="enter"></button>'))
+  let clicked = 0
+  doc.getElementById('enter').addEventListener('click', () => { clicked += 1 })
+  const modes = []
+  assert.equal(enterHostRightSidebarFullscreen(doc, { setFocus: (mode) => modes.push(mode) }), false)
+  assert.equal(clicked, 0)
+  assert.deepEqual(modes, [])
+})
+

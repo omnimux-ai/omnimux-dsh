@@ -22,6 +22,19 @@ describe('page-sensor suite', () => {
     expect(getPlatformLabel('generic')).toBe('Web')
   })
 
+  it('lookalike hosts are not platforms: the suffix match decides, not a substring', () => {
+    // `host.includes('x.com')` reads notx.com as X and nottiktok.com as TikTok,
+    // while the platform registry — which places the brand mark from the same
+    // answer — calls both generic. Two answers for one page is the disagreement
+    // the sensor now cannot produce.
+    expect(detectPlatform('https://notx.com/itsSaira_1')).toBe('generic')
+    expect(detectPlatform('https://nottiktok.com/@creator')).toBe('generic')
+    expect(detectPlatform('https://x.com.evil.example/itsSaira_1')).toBe('generic')
+    // The real hosts still answer, subdomains included.
+    expect(detectPlatform('https://www.x.com/home')).toBe('twitter')
+    expect(detectPlatform('https://www.tiktok.com/@creator')).toBe('tiktok')
+  })
+
   it('detects twitter profile pageType for user handle', () => {
     expect(detectPageType('twitter', 'https://x.com/itsSaira_1')).toBe('profile')
     expect(detectPageType('twitter', 'https://x.com/itsSaira_1/media')).toBe('profile')

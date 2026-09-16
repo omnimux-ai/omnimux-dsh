@@ -238,7 +238,7 @@ if [ "${#TARGET_PROFILES[@]}" -gt 0 ]; then
   python3 "$ROOT/scripts/managed-tarball-archive.py" pending "${TARGET_PROFILES[@]}" || exit 7
 fi
 
-DEFAULT_PLUGINS=(omnimux omnimux-forms omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-video-preview omnimux-analytics omnimux-publish omnimux-automation omnimux-browser omnimux-viewer)
+DEFAULT_PLUGINS=(omnimux omnimux-forms omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-video-preview omnimux-analytics omnimux-publish omnimux-automation omnimux-browser omnimux-viewer omnimux-apps)
 if [ ${#PLUGINS[@]} -eq 0 ]; then
   PLUGINS=("${DEFAULT_PLUGINS[@]}")
 fi
@@ -325,9 +325,24 @@ materialize_authoritative_dsh_ui_kit() {
     return 1
   fi
 
-  if ! rsync -a --delete --exclude 'node_modules/' "$DSH_UI_KIT_DIR/" "$temporary/"; then
+  # 受管 Profile 的启动校验拒绝任何软链，产物里出现一个就足以让应用起不来。开发目录
+  # （.worktrees/.git/.agent-backups）里常有 node_modules 软链，必须整体排除；排除规则
+  # 也不带尾斜杠——带尾斜杠只匹配目录，匹配不到同名软链。
+  if ! rsync -a --delete \
+    --exclude 'node_modules' \
+    --exclude '.worktrees/' \
+    --exclude '.git/' \
+    --exclude '.agent-backups/' \
+    "$DSH_UI_KIT_DIR/" "$temporary/"; then
     rm -rf "$temporary"
     echo "❌ 无法物化权威 dsh-ui-kit 到 ${managed_kit}。" >&2
+    return 1
+  fi
+  # 兜底门禁：rsync 的排除规则是「尽力而为」，这里对产物做一次硬检查，宁可物化失败，
+  # 也不要把一个带软链的快照留给下一次启动去踩。
+  if [ -n "$(find "$temporary" -type l -print -quit 2>/dev/null)" ]; then
+    rm -rf "$temporary"
+    echo "❌ 权威 dsh-ui-kit 的物化产物含软链，受管 Profile 拒绝加载，已中止物化。" >&2
     return 1
   fi
   if [ ! -f "$temporary/package.json" ] || [ ! -f "$temporary/lib/index.js" ]; then

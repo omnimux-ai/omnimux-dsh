@@ -88,10 +88,32 @@ function stubChrome(): void {
   vi.stubGlobal('chrome', chromeMock)
 }
 
+/**
+ * Point the page at a host, the way the browser reports it.
+ *
+ * The FAB's default position is now read off the platform table, so the drawer
+ * column is X's answer rather than every page's. jsdom's own host is `localhost`,
+ * which resolves to the generic entry — the cases that exercise X geometry have
+ * to say they are on X.
+ */
+function setHost(hostname: string): void {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: {
+      href: `https://${hostname}/home`,
+      hostname,
+      pathname: '/home',
+      origin: `https://${hostname}`,
+    },
+  })
+}
+
 describe('FAB 对标推特官方浮标规格与对齐停靠', () => {
   beforeEach(() => {
     stubLocalStorage()
     stubChrome()
+    setHost('localhost')
     document.body.innerHTML = ''
     document.getElementById('omnimux-companion-root')?.remove()
     localStorage.clear()
@@ -128,6 +150,7 @@ describe('FAB 对标推特官方浮标规格与对齐停靠', () => {
 
   it('在推特页面存在 Grok 浮动抽屉时，默认停靠在 Grok 按钮正上方并保持 12px 间距', () => {
     // 模拟推特右下角的 Grok 按钮 (55x55, right 20, bottom 79)
+    setHost('x.com')
     const grokBtn = document.createElement('button')
     grokBtn.setAttribute('data-testid', 'GrokDrawerHeader')
     grokBtn.getBoundingClientRect = () => ({
@@ -149,6 +172,35 @@ describe('FAB 对标推特官方浮标规格与对齐停靠', () => {
     // 水平对齐 Grok (left: 1845)
     expect(fab.style.left).toBe('1845px')
     // 垂直间距：795 - 12 - 55 = 728px
+    expect(fab.style.top).toBe('728px')
+  })
+
+  it('抽屉成列是 X 的答案：别的站点上同样的元素不改变浮标默认位', () => {
+    // 抽屉挪到 1700 处，这样「跟着抽屉走」与「回右下角」在横轴上就分得开。
+    // 停在 1845 的 Grok 上时两条分支的结果完全相同，那种夹具证明不了任何事。
+    const grokBtn = document.createElement('button')
+    grokBtn.setAttribute('data-testid', 'GrokDrawerHeader')
+    grokBtn.getBoundingClientRect = () => ({
+      x: 1700,
+      y: 795,
+      left: 1700,
+      top: 795,
+      right: 1755,
+      bottom: 850,
+      width: 55,
+      height: 55,
+      toJSON: () => {},
+    })
+    document.body.appendChild(grokBtn)
+
+    window.innerWidth = 1920
+    window.innerHeight = 929
+
+    initFabCompanion()
+    const fab = fabElement()
+
+    // 右下角兜底 (1920 − 20 − 55)，不是抽屉左缘的 1700。
+    expect(fab.style.left).toBe('1845px')
     expect(fab.style.top).toBe('728px')
   })
 

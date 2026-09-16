@@ -142,6 +142,7 @@ async function loadApply() {
   writeFileSync(join(dir, 'primitives.js'), `
     export function IconEditOutline16() { return null }
     export function IconTrashOutline16() { return null }
+    export function IconEllipsisOutline16() { return null }
     export function IconCloseOutline16() { return null }
     export function IconRefreshOutline16() { return null }
     export function IconPlusOutline16() { return null }

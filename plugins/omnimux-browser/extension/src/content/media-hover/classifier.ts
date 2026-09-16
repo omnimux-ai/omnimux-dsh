@@ -387,6 +387,12 @@ export function isPostOrWorkMedia(element: Element, host: string = currentHost()
   // This protects normal web browsing (news, documentation, search, e-commerce, work tools).
   if (!isSocialPlatformHost(host)) return false
   if (mediaKindOf(element) === null) return false
+  // TikTok has dedicated in-page shortcut triggers, suppress media hover capsule for TikTok videos
+  // to avoid dual implementation with the dedicated right-side action toolbar.
+  const normalized = normalizeHost(host)
+  if ((normalized === 'tiktok.com' || normalized.endsWith('.tiktok.com')) && mediaKindOf(element) === 'video') {
+    return false
+  }
   // The hard gate, ahead of every context rule below. No branch — status,
   // platform card, article — may admit media that is not laid out at post size,
   // so a 168x94 sidebar thumbnail inside a status's photo container is rejected

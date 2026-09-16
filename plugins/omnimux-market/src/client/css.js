@@ -1,6 +1,6 @@
     const CSS = `
 /* 全站一级页骨架契约类（Issue 1977）：整页唯一滚动区 + 导航栈到顶吸附，声明与其它插件逐字一致 */
-.omx-stage-sticky{position:sticky;top:0;z-index:3;background:var(--dsw-alias-bg-base,var(--dsw-bg))}
+.omx-stage-sticky{position:sticky;top:0;z-index:20;background:var(--dsw-alias-bg-base,var(--dsw-bg,#111215))}
 .omx-stage-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
 .sh-root{font-family:inherit;color:var(--dsw-alias-label-primary,inherit);max-width:920px}
 .sh-hint{color:var(--dsw-alias-label-caption,#6b7280);font-size:12px;line-height:18px;margin:0 0 10px}

@@ -165,6 +165,11 @@ interface CanvasEditorProps {
   onCancelExecution?: () => void;
   onResetExecution?: () => void;
   onSwitchWorkspaceId?: (newWorkspaceId: string) => void;
+  /**
+   * 「项目」页「AI应用」卡片「编辑」带过来的目标工作流组 id：
+   * 画布 hydrate 完成后聚焦该组（组中心 + 单选），组工具条随之可见。
+   */
+  focusGroupId?: string | null;
 }
 
 const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
@@ -176,6 +181,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   onCancelExecution,
   onResetExecution,
   onSwitchWorkspaceId,
+  focusGroupId,
 }) => {
   const t = useT();
   const importGuard = useAsyncInstanceGuard(workspaceId);
@@ -591,6 +597,23 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     [nodes, catalog, workspaceId],
   );
 
+  // 「项目」页「AI应用」卡片「编辑」的定位落点：等目标工作流组进入 nodes
+  // （hydrateGraph 是异步的）后聚焦一次。同一 focusGroupId 只处理一次；
+  // 目标组不在当前画布里时保持现状，不伪造定位成功。
+  const focusedGroupRef = useRef<string | null>(null);
+  useEffect(() => {
+    const targetGroupId = typeof focusGroupId === 'string' ? focusGroupId.trim() : '';
+    if (!targetGroupId || focusedGroupRef.current === targetGroupId) return;
+    if (!nodes.some((node) => node.id === targetGroupId)) return;
+    const focused = applyFocusCanvasNode({
+      nodes: flowNodes,
+      nodeId: targetGroupId,
+      setCenter,
+      setNodes,
+    });
+    if (focused) focusedGroupRef.current = targetGroupId;
+  }, [focusGroupId, nodes, flowNodes, setCenter, setNodes]);
+
   // 连线入口：store.onConnect 内部经 mutation gateway 校验
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -973,6 +996,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         nodes={targetGroupForPublish ? targetGroupForPublish.nodes : nodes}
         edges={targetGroupForPublish ? targetGroupForPublish.edges : edges}
         workflowName={targetGroupForPublish?.title}
+        groupId={targetGroupForPublish?.id}
         catalog={catalog}
         workspaceId={workspaceId}
       />

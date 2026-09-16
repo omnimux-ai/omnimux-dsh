@@ -9,14 +9,26 @@
  * Nothing here invents a link or a validity: a row with no server-issued
  * `share_url` renders no link at all.
  *
+ * A publish has two sources and they walk different stage lists, so the steps
+ * come from the row's own `share_source`: a cloud entry republishes media the
+ * cloud already holds and never uploads, so rendering an "uploading" step for it
+ * would be a stage the job never runs.
+ *
  * @typedef {'idle' | 'running' | 'done' | 'failed'} ShareStatus
  * @typedef {'preparing' | 'uploading' | 'publishing'} ShareStage
+ * @typedef {'local' | 'cloud'} ShareSource
  */
 
 export const SHARE_STATUS_IDLE = 'idle'
 export const SHARE_STATUS_RUNNING = 'running'
 export const SHARE_STATUS_DONE = 'done'
 export const SHARE_STATUS_FAILED = 'failed'
+
+/** The publish path a row was produced by. */
+export const SHARE_SOURCES = Object.freeze({
+  LOCAL: 'local',
+  CLOUD: 'cloud',
+})
 
 /** A row with no `share_status` was written before the field existed: never published. */
 export function shareStatusOf(row) {
@@ -76,6 +88,38 @@ const STAGE_KEYS = Object.freeze({
 export const SHARE_STAGE_ORDER = Object.freeze(['preparing', 'uploading', 'publishing'])
 
 /**
+ * The cloud publish path, which has no upload leg: the entry's media is already
+ * in the cloud, so the job only probes it and publishes it.
+ */
+export const CLOUD_SHARE_STAGE_ORDER = Object.freeze(['preparing', 'publishing'])
+
+/**
+ * Which publish path a row belongs to.
+ *
+ * `share_source` is written by the server on the row it hands back. A row that
+ * has not been published yet has none, so the feed's own `is_local` marker is
+ * the fallback — that is the flag `loadInspirationsAtomic` puts on a cloud row,
+ * and it is what makes the very first click take the no-upload path.
+ * @param {unknown} row
+ * @returns {ShareSource}
+ */
+export function shareSourceOf(row) {
+  const rec = row && typeof row === 'object' ? /** @type {Record<string, any>} */ (row) : {}
+  const source = typeof rec.share_source === 'string' ? rec.share_source.trim().toLowerCase() : ''
+  if (source === SHARE_SOURCES.CLOUD || source === SHARE_SOURCES.LOCAL) return source
+  return rec.is_local === false ? SHARE_SOURCES.CLOUD : SHARE_SOURCES.LOCAL
+}
+
+/**
+ * The stage list this row's publish walks.
+ * @param {unknown} row
+ * @returns {readonly string[]}
+ */
+export function shareStageOrderOf(row) {
+  return shareSourceOf(row) === SHARE_SOURCES.CLOUD ? CLOUD_SHARE_STAGE_ORDER : SHARE_STAGE_ORDER
+}
+
+/**
  * The stage a running publish has reached, or `''` when it is not running.
  * @param {unknown} row
  * @returns {string}
@@ -83,8 +127,9 @@ export const SHARE_STAGE_ORDER = Object.freeze(['preparing', 'uploading', 'publi
 export function shareStageOf(row) {
   const rec = row && typeof row === 'object' ? /** @type {Record<string, any>} */ (row) : {}
   if (!isShareRunning(rec)) return ''
+  const order = shareStageOrderOf(rec)
   const stage = typeof rec.share_stage === 'string' ? rec.share_stage.trim().toLowerCase() : ''
-  return SHARE_STAGE_ORDER.includes(stage) ? stage : SHARE_STAGE_ORDER[0]
+  return order.includes(stage) ? stage : order[0]
 }
 
 /**
@@ -97,14 +142,34 @@ export function shareStageOf(row) {
  * @returns {Array<{ id: string, label: string, state: 'done' | 'active' | 'todo' }>}
  */
 export function shareSteps(row, translate) {
+  const order = shareStageOrderOf(row)
   const current = shareStageOf(row)
   if (!current) return []
-  const currentIndex = SHARE_STAGE_ORDER.indexOf(current)
-  return SHARE_STAGE_ORDER.map((id, index) => ({
+  const currentIndex = order.indexOf(current)
+  return order.map((id, index) => ({
     id,
     label: translate(STAGE_KEYS[id]),
     state: index < currentIndex ? 'done' : index === currentIndex ? 'active' : 'todo',
   }))
+}
+
+/**
+ * What the result area must say about an asset the share had to leave out.
+ *
+ * The cloud's public media endpoint cannot serve a publication's video/image
+ * today (upstream storage defect laozhong86/OmniMux#257), and that is not
+ * something this side can fix — so a share that still succeeds without it says
+ * so, in the same place the link appears. Rendering the link silently would hand
+ * the user a share whose player opens onto nothing.
+ * @param {unknown} row
+ * @param {(key: string) => string} translate
+ * @returns {string}
+ */
+export function shareMediaNotice(row, translate) {
+  const rec = row && typeof row === 'object' ? /** @type {Record<string, any>} */ (row) : {}
+  const kind = typeof rec.share_media_skipped === 'string' ? rec.share_media_skipped.trim().toLowerCase() : ''
+  if (kind !== 'video' && kind !== 'image') return ''
+  return translate(`modal.share.mediaUnavailable.${kind}`)
 }
 
 /**
@@ -176,5 +241,7 @@ export function shareLocaleKeys() {
     'modal.share.hours',
     'modal.share.days',
     'modal.share.permanent',
+    'modal.share.mediaUnavailable.video',
+    'modal.share.mediaUnavailable.image',
   ]
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { OmnimuxError } from '../media/errors.js'
-import { createInspirationShareApi, readableShareError, shareMediaType } from './inspiration-share.js'
+import { createInspirationShareApi, probeMediaReadable, readableShareError, resolveCloudMediaUrl, shareMediaType } from './inspiration-share.js'
 
 const PUBLISH_OK = {
   success: true,
@@ -222,5 +222,211 @@ describe('inspiration share api (hub capability)', () => {
   it('passes a non-credential error through unchanged', () => {
     const original = new OmnimuxError('omnimux-request-failed', 'boom')
     assert.equal(readableShareError(original), original)
+  })
+})
+
+describe('inspiration share api — cloud entries (no upload)', () => {
+  const COVER = '/api/inspiration/v1/public/media/inspiration-covers/2789'
+  const CLIP = '/api/inspiration/v1/public/media/r2/publications/genviral/videos/2789/video.mp4'
+
+  /** Probe stub: answers readable for every address except the ones named dead. */
+  function stubProbe(unreadable = []) {
+    const probed = []
+    return {
+      probed,
+      probe: async (url) => {
+        probed.push(url)
+        return !unreadable.includes(url)
+      },
+    }
+  }
+
+  function remoteApi(overrides = {}) {
+    const built = api(overrides)
+    const probe = overrides.probe ?? stubProbe(overrides.unreadable)
+    const share = createInspirationShareApi({
+      client: overrides.client ?? built.client,
+      siteBaseUrl: 'https://omnimux.ai',
+      resolveApiKey: overrides.resolveApiKey ?? (() => 'sk-gateway'),
+      uploadMedia: (overrides.uploader ?? built.uploader).upload,
+      statFile: async () => ({ size: 1024 }),
+      probeMedia: probe.probe,
+      ...overrides.createOptions,
+    })
+    return { ...built, share, probe }
+  }
+
+  it('publishes the addresses the cloud already serves, uploading nothing', async () => {
+    const { share, client, uploader, probe } = remoteApi()
+    const stages = []
+
+    const result = await share.publishRemote({
+      coverUrl: COVER,
+      mediaUrl: CLIP,
+      meta: META,
+      onStage: (stage) => stages.push(stage),
+    })
+
+    // The whole point of this path: no upload leg, and no `uploading` stage.
+    assert.equal(uploader.uploads.length, 0)
+    assert.deepEqual(stages, ['publishing'])
+    assert.deepEqual(probe.probed, [`https://omnimux.ai${COVER}`, `https://omnimux.ai${CLIP}`])
+    assert.deepEqual(client.calls[0].opts.body, {
+      category: '美妆护肤',
+      title: '测试灵感',
+      prompt: '把产品放在晨光里拍',
+      media_type: 'video',
+      media_url: `https://omnimux.ai${CLIP}`,
+      cover_url: `https://omnimux.ai${COVER}`,
+    })
+    assert.equal(result.shareUrl, 'https://omnimux.ai/s/insp_17d391a7eb0b4a82')
+    assert.equal(result.mediaSkipped, '')
+  })
+
+  it('keeps the share when only the cover is readable, and says which asset was dropped', async () => {
+    const { share, client, uploader } = remoteApi({ unreadable: [`https://omnimux.ai${CLIP}`] })
+
+    const result = await share.publishRemote({ coverUrl: COVER, mediaUrl: CLIP, meta: META })
+
+    assert.equal(uploader.uploads.length, 0)
+    assert.equal(result.mediaSkipped, 'video')
+    const body = client.calls[0].opts.body
+    assert.equal('media_url' in body, false, 'an unreadable address must not reach the publish payload')
+    assert.equal(body.cover_url, `https://omnimux.ai${COVER}`)
+    assert.equal(body.media_type, 'video', 'the declared type survives even when the asset is dropped')
+  })
+
+  it('reports an image entry that could not be served as an image, not a video', async () => {
+    const slides = '/api/inspiration/v1/public/media/r2/publications/genviral/slideshows/2789/slide-1.jpg'
+    const { share, client } = remoteApi({ unreadable: [`https://omnimux.ai${slides}`] })
+
+    const result = await share.publishRemote({
+      coverUrl: COVER,
+      mediaUrl: slides,
+      meta: { ...META, mediaType: 'image' },
+    })
+
+    assert.equal(result.mediaSkipped, 'image')
+    assert.equal(client.calls[0].opts.body.media_type, 'image')
+    assert.equal('media_url' in client.calls[0].opts.body, false)
+  })
+
+  it('refuses to publish when neither asset can be served, and never calls publish', async () => {
+    const { share, client } = remoteApi({
+      unreadable: [`https://omnimux.ai${COVER}`, `https://omnimux.ai${CLIP}`],
+    })
+
+    await assert.rejects(
+      () => share.publishRemote({ coverUrl: COVER, mediaUrl: CLIP, meta: META }),
+      (error) => error instanceof OmnimuxError
+        && error.code === 'omnimux-share-cloud-media-unreachable'
+        && /不可访问/.test(error.message),
+    )
+    assert.equal(client.calls.length, 0)
+  })
+
+  it('refuses a page-supplied address that is not an OmniMux cloud media path', async () => {
+    const { share, client, uploader } = remoteApi()
+
+    await assert.rejects(
+      () => share.publishRemote({ mediaUrl: 'https://attacker.example/x.mp4', meta: META }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-share-no-cloud-asset',
+    )
+    assert.equal(client.calls.length, 0)
+    assert.equal(uploader.uploads.length, 0)
+  })
+
+  it('refuses to publish without a gateway key before probing anything', async () => {
+    const probe = stubProbe()
+    const { share } = remoteApi({ resolveApiKey: () => '', probe })
+
+    await assert.rejects(
+      () => share.publishRemote({ coverUrl: COVER, meta: META }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+    assert.equal(probe.probed.length, 0)
+  })
+
+  it('refuses an empty title or prompt, and a request with no address at all', async () => {
+    const { share } = remoteApi()
+
+    await assert.rejects(
+      () => share.publishRemote({ coverUrl: COVER, meta: { ...META, title: '' } }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-share-no-title',
+    )
+    await assert.rejects(
+      () => share.publishRemote({ coverUrl: COVER, meta: { ...META, prompt: '' } }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-share-no-prompt',
+    )
+    await assert.rejects(
+      () => share.publishRemote({ meta: META }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-share-no-cloud-asset',
+    )
+  })
+
+  it('accepts only this site and this media path', () => {
+    const base = 'https://omnimux.ai'
+    assert.equal(resolveCloudMediaUrl(COVER, base), `https://omnimux.ai${COVER}`)
+    assert.equal(resolveCloudMediaUrl(`https://www.omnimux.ai${COVER}`, base), `https://www.omnimux.ai${COVER}`)
+    // A look-alike path on someone else's host is not the cloud's own media.
+    assert.equal(resolveCloudMediaUrl(`https://attacker.example${COVER}`, base), '')
+    // Nor is a different path on the right host.
+    assert.equal(resolveCloudMediaUrl('/api/inspiration/v1/media/covers/a.jpg', base), '')
+    assert.equal(resolveCloudMediaUrl('https://omnimux.ai/api/inspiration/v1/media/covers/a.jpg', base), '')
+    assert.equal(resolveCloudMediaUrl('javascript:alert(1)', base), '')
+    assert.equal(resolveCloudMediaUrl('', base), '')
+    assert.equal(resolveCloudMediaUrl(COVER, ''), '')
+  })
+
+  it('probes with a ranged GET, because the endpoint answers 404 to HEAD', async () => {
+    const calls = []
+    const fetcher = async (url, options) => {
+      calls.push({ url, options })
+      return { status: 206, body: { cancel: async () => {} } }
+    }
+
+    assert.equal(await probeMediaReadable('https://omnimux.ai/x', { fetcher }), true)
+    assert.equal(calls[0].options.method, 'GET')
+    assert.equal(calls[0].options.headers.Range, 'bytes=0-0')
+
+    for (const status of [200, 206]) {
+      assert.equal(await probeMediaReadable('https://omnimux.ai/x', { fetcher: async () => ({ status }) }), true)
+    }
+    for (const status of [403, 404, 410, 500]) {
+      assert.equal(await probeMediaReadable('https://omnimux.ai/x', { fetcher: async () => ({ status }) }), false)
+    }
+    assert.equal(await probeMediaReadable('https://omnimux.ai/x', {
+      fetcher: async () => { throw new Error('ENOTFOUND') },
+    }), false)
+    assert.equal(await probeMediaReadable('', { fetcher }), false)
+  })
+
+  it('cancels the probe body so an ignored range cannot stream a whole video', async () => {
+    let cancelled = false
+    const fetcher = async () => ({ status: 200, body: { cancel: async () => { cancelled = true } } })
+
+    assert.equal(await probeMediaReadable('https://omnimux.ai/x', { fetcher }), true)
+    assert.equal(cancelled, true)
+  })
+
+  it('publishCloud posts to unified share endpoint with source=cloud without uploading', async () => {
+    const { share, client, uploader } = remoteApi()
+    const stages = []
+
+    const result = await share.publishCloud({
+      id: '2789',
+      expire: 'forever',
+      onStage: (stage) => stages.push(stage),
+    })
+
+    assert.equal(uploader.uploads.length, 0)
+    assert.deepEqual(stages, ['publishing'])
+    assert.equal(client.calls[0].path, '/api/inspiration/v1/share')
+    assert.deepEqual(client.calls[0].opts.body, {
+      source: 'cloud',
+      id: '2789',
+      expire: 'forever',
+    })
+    assert.equal(result.shareId, 'insp_17d391a7eb0b4a82')
   })
 })

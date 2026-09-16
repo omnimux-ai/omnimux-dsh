@@ -1,31 +1,74 @@
 /**
- * The trigger and menu the user actually touches on a TikTok page.
+ * The trigger and toolbar the user actually touches on a TikTok page.
  *
  * Everything renders inside one shadow root the page cannot reach: TikTok's
  * stylesheet has no rule that can reach in, and this feature owns no rule that
- * can leak out. The trigger is positioned from {@link resolveAnchorPlacement}
- * and never inserted into TikTok's own tree, so a re-render of the rail cannot
- * delete it.
+ * can leak out. The trigger is positioned from the platform anchor layer and
+ * never inserted into TikTok's own tree, so a re-render of the rail cannot delete
+ * it.
  *
- * The menu is a small state machine over three rows. A row reports its own
- * progress in place — waiting, done, or the host's reason for failing — because
- * the user pressed a menu item and is looking at it; a toast somewhere else
- * would make them look away from what they just touched.
+ * The trigger is a circle and it opens on hover. The circle carries no label to
+ * read and asks for no click to explain itself; keyboard users get the same
+ * toolbar from focus, and a tap still toggles it, because a touch screen has no
+ * hover to offer.
+ *
+ * The toolbar sits beside the circle, vertically centred on it, and opens to the
+ * right unless the viewport has no room there — then it opens to the left. That
+ * direction is measured per reposition (`menu-side.ts`), not configured: the
+ * trigger is anchored to the user's avatar, and in the portrait layout that
+ * avatar lives in the right-hand action bar, where a rightward toolbar would run
+ * off the screen.
+ *
+ * The toolbar is a small state machine over three columns. A column reports its
+ * own progress in place — waiting, done, or the host's reason for failing —
+ * because the user pressed a menu item and is looking at it; a toast somewhere
+ * else would make them look away from what they just touched.
  *
  * @module
  */
 
 import inlineStyles from './styles.css?inline'
-import { resolveAnchorPlacement } from './anchor.ts'
+import { resolvePlatformAnchor } from '../../platform/anchor.ts'
+import { platformById } from '../../platform/registry.ts'
 import { actionIcon, brandIcon, checkIcon } from './icons.ts'
+import { resolveMenuSide } from './menu-side.ts'
 import { TIKTOK_SCENE_HOST_ID } from './messages.ts'
 import type { TiktokAction, TiktokCopy } from './copy.ts'
 import type { ExportOutcome } from '../../background/media-export.ts'
 
 export { TIKTOK_SCENE_HOST_ID }
 
-/** Actions in the order the menu shows them. */
+/** Actions in the order the toolbar shows them. */
 const ACTION_ORDER: readonly TiktokAction[] = ['video', 'audio', 'save']
+
+/** The circle's size in CSS px, mirroring `.omx-trigger` in the stylesheet. */
+const TRIGGER_BOX_PX = 48
+
+/**
+ * Width assumed for the toolbar before it can be measured.
+ *
+ * Only reached if the element reports no box at all, which a laid-out element
+ * does not: the toolbar is hidden with `visibility`, never `display`, so it has
+ * geometry even while it is shut. The value matches what the stylesheet renders —
+ * three ~68px columns, their gaps, and the panel's padding — so a failed
+ * measurement degrades to the shipped size rather than to a guess. That match is
+ * asserted in `tests/tiktok-menu.spec.ts` by summing the stylesheet's own
+ * numbers, so a column width change fails a test instead of drifting.
+ */
+export const MENU_FALLBACK_WIDTH_PX = 226
+
+/** The icon size every toolbar row draws at. */
+const ROW_ICON_PX = 18
+
+/**
+ * The platform this scene belongs to.
+ *
+ * Named directly rather than resolved from the hostname: this module *is* the
+ * TikTok scene — its mount gate lives in `index.ts` and refuses every other host
+ * — and a hostname lookup here would make the trigger's position depend on a
+ * second copy of that decision. A scene for another platform is another module.
+ */
+const SCENE_PLATFORM = platformById('tiktok')
 
 /** Live handle over a mounted trigger. */
 export interface TiktokSceneHandle {
@@ -33,7 +76,7 @@ export interface TiktokSceneHandle {
   dispose(): void
   /** Re-measure the anchor and move the trigger. */
   reposition(): void
-  /** Whether the menu is currently showing. */
+  /** Whether the toolbar is currently showing. */
   isOpen(): boolean
 }
 
@@ -47,6 +90,19 @@ export interface TiktokSceneOptions {
 
 /** Per-row visual state. */
 type RowState = 'idle' | 'busy' | 'done' | 'error'
+
+/**
+ * Whether an event was produced by a pointer that can hover.
+ *
+ * A touch screen fires the enter/leave pair too — after the tap, and immediately
+ * before `click` — so treating those as hover would open the toolbar and shut it
+ * again inside one tap. Anything that is not explicitly a touch counts as
+ * hovering, so a plain `Event` in a test behaves like a mouse.
+ * @param event the pointer event
+ */
+function pointerCanHover(event: Event): boolean {
+  return (event as Partial<PointerEvent>).pointerType !== 'touch'
+}
 
 /**
  * Mount the OmniMux trigger into a TikTok page.
@@ -87,10 +143,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   trigger.setAttribute('aria-haspopup', 'menu')
   trigger.setAttribute('aria-expanded', 'false')
   trigger.setAttribute('aria-label', copy.brand)
-  trigger.title = copy.brand
-  trigger.innerHTML = `${brandIcon(20)}<span class="omx-trigger-label"></span>`
-  const triggerLabel = trigger.querySelector('.omx-trigger-label')
-  if (triggerLabel !== null) triggerLabel.textContent = copy.trigger
+  trigger.innerHTML = brandIcon(27)
 
   const menu = doc.createElement('div')
   menu.className = 'omx-menu'
@@ -110,7 +163,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
 
     const iconSlot = doc.createElement('span')
     iconSlot.className = 'omx-item-icon'
-    iconSlot.innerHTML = actionIcon(action, 19)
+    iconSlot.innerHTML = actionIcon(action, ROW_ICON_PX)
 
     const label = doc.createElement('span')
     label.className = 'omx-item-label'
@@ -136,6 +189,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   doc.documentElement.appendChild(host)
 
   let open = false
+  let hovering = false
 
   const setOpen = (next: boolean): void => {
     open = next
@@ -146,19 +200,60 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
 
   let placedLeft = -1
   let placedBottom = -1
+  let placedMenuLeft = Number.NaN
+  let placedMenuSide = ''
+
+  /**
+   * The toolbar's rendered width, or the shipped width when it reports none.
+   *
+   * Read from the element, never assumed: the direction decision is only worth
+   * anything if it is made against the panel the stylesheet actually produced.
+   */
+  const menuWidth = (): number => {
+    const width = menu.getBoundingClientRect().width
+    return Number.isFinite(width) && width > 0 ? width : MENU_FALLBACK_WIDTH_PX
+  }
 
   const reposition = (): void => {
-    const placement = resolveAnchorPlacement(doc, {
+    const viewport = {
       width: doc.defaultView?.innerWidth ?? 0,
       height: doc.defaultView?.innerHeight ?? 0,
+    }
+    const placement = resolvePlatformAnchor(
+      SCENE_PLATFORM,
+      'scene',
+      doc,
+      viewport,
+      { box: TRIGGER_BOX_PX },
+    )
+    const side = resolveMenuSide({
+      buttonLeft: placement.left,
+      buttonBox: TRIGGER_BOX_PX,
+      menuWidth: menuWidth(),
+      viewportWidth: viewport.width,
     })
+    // The toolbar is positioned inside the anchor, so its offset is relative to
+    // the trigger rather than to the viewport.
+    const menuOffset = side.left - placement.left
+
     // Attribute observation makes this run on a busy page, and writing the same
-    // two values would force a style recalculation for no movement at all.
-    if (placement.left === placedLeft && placement.bottom === placedBottom) return
+    // values would force a style recalculation for no movement at all.
+    if (
+      placement.left === placedLeft &&
+      placement.bottom === placedBottom &&
+      menuOffset === placedMenuLeft &&
+      side.side === placedMenuSide
+    ) {
+      return
+    }
     placedLeft = placement.left
     placedBottom = placement.bottom
+    placedMenuLeft = menuOffset
+    placedMenuSide = side.side
     anchor.style.left = `${placement.left}px`
     anchor.style.bottom = `${placement.bottom}px`
+    menu.style.left = `${menuOffset}px`
+    menu.classList.toggle('is-left', side.side === 'left')
   }
 
   const setRowState = (action: TiktokAction, state: RowState, text: string): void => {
@@ -171,19 +266,31 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     row.classList.toggle('is-error', state === 'error')
     stateLabel.textContent = text
     if (state === 'busy') iconSlot.innerHTML = '<span class="omx-spinner"></span>'
-    else if (state === 'done') iconSlot.innerHTML = checkIcon(19)
-    else iconSlot.innerHTML = actionIcon(action, 19)
+    else if (state === 'done') iconSlot.innerHTML = checkIcon(ROW_ICON_PX)
+    else iconSlot.innerHTML = actionIcon(action, ROW_ICON_PX)
   }
 
+  /**
+   * Report an outcome under the row of columns, then re-place the toolbar.
+   *
+   * The detail row is the only part of the toolbar with no width of its own: a
+   * saved file's name can be longer than the three columns put together, and the
+   * panel widens with it. The direction was decided against the width the panel
+   * had before this line, so it is decided again — `getBoundingClientRect` reads
+   * the box the new text already produced, which is why the write comes first.
+   */
   const showDetail = (text: string, tone: 'ok' | 'error'): void => {
     detail.textContent = text
     detail.classList.toggle('is-ok', tone === 'ok')
     detail.classList.add('is-visible')
+    reposition()
   }
 
+  /** Clear it, and re-place for the narrower panel that leaves. */
   const hideDetail = (): void => {
     detail.textContent = ''
     detail.classList.remove('is-visible', 'is-ok')
+    reposition()
   }
 
   const pending = new Set<TiktokAction>()
@@ -219,11 +326,35 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     row.addEventListener('click', () => { void perform(action) })
   }
 
+  const onAnchorPointerEnter = (event: Event): void => {
+    if (!pointerCanHover(event)) return
+    hovering = true
+    setOpen(true)
+  }
+
+  const onAnchorPointerLeave = (event: Event): void => {
+    if (!pointerCanHover(event)) return
+    hovering = false
+    setOpen(false)
+  }
+
   const onTriggerClick = (event: Event): void => {
-    // The document listener below closes the menu on any outside click; without
-    // stopping here the click that opened it would immediately close it again.
+    // The document listener below would also see this click and close what it
+    // just opened.
     event.stopPropagation()
+    // Under a hovering pointer the toolbar is already open; toggling here would
+    // shut it under the pointer that opened it. Touch never sets `hovering`, so a
+    // tap still toggles, and so does Enter on a focused trigger.
+    if (hovering) return
     setOpen(!open)
+  }
+
+  const onAnchorFocusIn = (): void => setOpen(true)
+
+  const onAnchorFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget
+    if (next instanceof Node && anchor.contains(next)) return
+    setOpen(false)
   }
 
   const onDocumentClick = (event: Event): void => {
@@ -238,12 +369,16 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
 
   // The anchor is viewport-relative, so a resize has to re-measure it: the rail
   // moves and the trigger would otherwise be left pointing at where the avatar
-  // used to be. That applies whether or not the menu is showing, because the
+  // used to be. That applies whether or not the toolbar is showing, because the
   // trigger itself is always visible. Scroll is different — the rail is pinned,
-  // so only an open menu (whose position the user is looking at) re-measures.
+  // so only an open toolbar (whose position the user is looking at) re-measures.
   const onResize = (): void => reposition()
   const onScroll = (): void => { if (open) reposition() }
 
+  anchor.addEventListener('pointerenter', onAnchorPointerEnter)
+  anchor.addEventListener('pointerleave', onAnchorPointerLeave)
+  anchor.addEventListener('focusin', onAnchorFocusIn)
+  anchor.addEventListener('focusout', onAnchorFocusOut)
   trigger.addEventListener('click', onTriggerClick)
   doc.addEventListener('click', onDocumentClick)
   doc.addEventListener('keydown', onKeydown)
@@ -254,6 +389,10 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
 
   return {
     dispose(): void {
+      anchor.removeEventListener('pointerenter', onAnchorPointerEnter)
+      anchor.removeEventListener('pointerleave', onAnchorPointerLeave)
+      anchor.removeEventListener('focusin', onAnchorFocusIn)
+      anchor.removeEventListener('focusout', onAnchorFocusOut)
       trigger.removeEventListener('click', onTriggerClick)
       doc.removeEventListener('click', onDocumentClick)
       doc.removeEventListener('keydown', onKeydown)

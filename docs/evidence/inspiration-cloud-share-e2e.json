@@ -1,0 +1,113 @@
+{
+  "issue": 1996,
+  "title": "灵感分享：云端条目零上传分享路径 — 验证证据",
+  "what": "本任务自动化验证的实测结果：端到端（含界面渲染）与两个包的单元测试。所有数字均为命令的真实输出。",
+  "e2e": {
+    "command": "node --test tests/e2e/inspiration-cloud-share.e2e.test.mjs",
+    "file": "tests/e2e/inspiration-cloud-share.e2e.test.mjs",
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "durationMs": 568,
+    "cases": [
+      {
+        "name": "AC1 云端条目零上传发布成功：探测封面与视频后直接发布现成地址",
+        "asserts": [
+          "POST /omnimux/inspiration/local/2789/share → 202，share_source=cloud，share_stage=preparing",
+          "最终 share_status=done 且 share_url=https://omnimux.ai/s/insp_cloud_e2e_7a31",
+          "上传调用次数 = 0（零上传，由 stub 证明从未被调用）",
+          "发布载荷 media_url / cover_url 为云端现成地址且已绝对化",
+          "可读性探测 = 2 次，均为 GET + Range: bytes=0-0"
+        ]
+      },
+      {
+        "name": "AC2 视频不可读时仍出链接，并明确标注只分享封面与文案",
+        "asserts": [
+          "share_status=done 且 share_url 存在（视频不可读不阻断分享）",
+          "share_media_skipped=video",
+          "发布载荷中不含 media_url（不可读地址绝不进入载荷）",
+          "界面展示链接，并出现 [data-share-notice=\"media-unavailable\"]，文案为「云端视频素材当前不可访问（上游存储问题，工单 #257），本次仅分享封面与文案」",
+          "界面中不存在 <video> 元素（绝不静默给出打不开的播放器）"
+        ]
+      },
+      {
+        "name": "AC3 封面与视频都不可读：失败且不产生链接",
+        "asserts": [
+          "share_status=failed，share_url=null",
+          "发布调用次数 = 0",
+          "界面不展示链接，错误提示包含「不可访问」"
+        ]
+      },
+      {
+        "name": "AC5/AC6 云端任务的进度可被轮询读到，且阶段列表不含「上传素材」",
+        "asserts": [
+          "GET /omnimux/inspiration/local/2789 → 200（云端任务行可轮询）",
+          "界面步骤为 [preparing, publishing]，不存在 uploading 步骤",
+          "运行中不展示链接，publishing 为 active"
+        ]
+      },
+      {
+        "name": "AC4 本地条目分享链路不受影响：仍走上传素材 → 发布",
+        "asserts": [
+          "share_source=local",
+          "上传顺序 = [cover, video]（本地链路仍先上传素材）",
+          "发布载荷为上传后的地址，不是云端现成地址",
+          "界面步骤仍为三步 [preparing, uploading, publishing]"
+        ]
+      },
+      {
+        "name": "未知 id 仍按原契约回答 404，不会被误判为云端条目",
+        "asserts": [
+          "POST /omnimux/inspiration/local/insp_00000000/share → 404",
+          "发布调用次数 = 0"
+        ]
+      }
+    ]
+  },
+  "unitTests": [
+    {
+      "command": "corepack pnpm --filter omnimux-inspiration test",
+      "tests": 814,
+      "pass": 812,
+      "fail": 0,
+      "skipped": 2
+    },
+    {
+      "command": "corepack pnpm --filter omnimux test",
+      "tests": 2160,
+      "pass": 2150,
+      "fail": 10,
+      "note": "10 例失败全部为既有失败，与本改动无关：9 例在 src/text/*（模型目录 research 状态判定，报错 guardCode=research_not_verified），1 例在 src/client/comment-native.e2e.test.js（浏览器可见性断言 page.click timed out，Send message 按钮 visibility: hidden）。本任务改动的 official/inspiration-share.test.js 单独运行为 23/23 全绿。"
+    }
+  ],
+  "targeted": [
+    {
+      "command": "node --test plugins/omnimux/src/official/inspiration-share.test.js",
+      "tests": 23,
+      "pass": 23,
+      "fail": 0
+    }
+  ],
+  "changedFiles": [
+    "plugins/omnimux/src/official/inspiration-share.js",
+    "plugins/omnimux/src/official/inspiration-share.test.js",
+    "plugins/omnimux-inspiration/src/share-status.js",
+    "plugins/omnimux-inspiration/src/share-status.test.js",
+    "plugins/omnimux-inspiration/src/http-handlers.js",
+    "plugins/omnimux-inspiration/src/client/share-status.js",
+    "plugins/omnimux-inspiration/src/client/share-status.test.js",
+    "plugins/omnimux-inspiration/src/client/api.js",
+    "plugins/omnimux-inspiration/src/client/api.test.js",
+    "plugins/omnimux-inspiration/src/client/InspirationPreviewModal.jsx",
+    "plugins/omnimux-inspiration/src/client/locales.js",
+    "tests/e2e/inspiration-cloud-share.e2e.test.mjs",
+    "specs/inspiration-cloud-share.spec.md",
+    "docs/evidence/inspiration-cloud-share-contract.json",
+    "docs/evidence/inspiration-cloud-share-e2e.json"
+  ],
+  "architectureCheck": {
+    "domainPluginImportsHubInternals": false,
+    "cloudCallsOnlyInHub": true,
+    "how": "云端地址校验、可读性探测、发布调用全部落在 plugins/omnimux/src/official/inspiration-share.js；域插件只通过 ctx.get('inspirationShare') 消费 publishRemote，未 import 中枢内部实现、未自带 provider 客户端、未保存密钥。"
+  }
+}

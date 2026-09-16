@@ -12,8 +12,20 @@
  * The result fields are copied from the cloud answer verbatim — this plugin
  * never builds a link of its own, and never decides how long one lives.
  *
+ * `share_source` says which of the two publish paths produced the row: `local`
+ * uploads the library's own files first, `cloud` republishes an entry that is
+ * already in the cloud from its existing addresses and never uploads anything.
+ * The two walk different stage sequences, so the field is what keeps the
+ * progress the page renders honest about the work actually being done.
+ *
+ * `share_media_skipped` records that the cloud could not serve the entry's
+ * video/image (`video`/`image`) and the share therefore carries only the cover
+ * and the copy. It is the marker the page turns into a visible warning; a share
+ * never ships a player nothing can open without saying so.
+ *
  * @typedef {'idle' | 'running' | 'done' | 'failed'} ShareStatus
  * @typedef {'preparing' | 'uploading' | 'publishing' | null} ShareStage
+ * @typedef {'local' | 'cloud'} ShareSource
  */
 
 /** No publish has been attempted for this row (also the legacy-row reading). */
@@ -24,6 +36,12 @@ export const SHARE_STATUS_RUNNING = 'running'
 export const SHARE_STATUS_DONE = 'done'
 /** The publish attempt failed; the row is kept, with `share_error` set. */
 export const SHARE_STATUS_FAILED = 'failed'
+
+/** The publish path that produced a row. */
+export const SHARE_SOURCES = Object.freeze({
+  LOCAL: 'local',
+  CLOUD: 'cloud',
+})
 
 /** The only stage sequence a publish may walk, in order. */
 export const SHARE_STAGES = Object.freeze({
@@ -38,6 +56,25 @@ export const SHARE_STAGE_ORDER = Object.freeze([
   SHARE_STAGES.UPLOADING,
   SHARE_STAGES.PUBLISHING,
 ])
+
+/**
+ * The cloud path has no upload leg — the assets are already in the cloud — so
+ * its sequence is shorter. Reporting `uploading` here would be a stage the job
+ * never reaches, which is exactly the fabricated progress this contract forbids.
+ */
+export const CLOUD_SHARE_STAGE_ORDER = Object.freeze([
+  SHARE_STAGES.PREPARING,
+  SHARE_STAGES.PUBLISHING,
+])
+
+/**
+ * The stage sequence a publish of this source walks.
+ * @param {unknown} source
+ * @returns {readonly string[]}
+ */
+export function shareStageOrderFor(source) {
+  return source === SHARE_SOURCES.CLOUD ? CLOUD_SHARE_STAGE_ORDER : SHARE_STAGE_ORDER
+}
 
 /**
  * @param {unknown} row
@@ -74,12 +111,13 @@ export function isShareFailed(row) {
  * attempt's link is cleared so a stale url can never be read as this attempt's
  * result.
  * @param {string} stage
- * @param {{ now?: string }} [options]
+ * @param {{ now?: string, source?: string }} [options]
  */
 export function shareRunningPatch(stage, options = {}) {
   return {
     share_status: SHARE_STATUS_RUNNING,
     share_stage: stage,
+    share_source: options.source === SHARE_SOURCES.CLOUD ? SHARE_SOURCES.CLOUD : SHARE_SOURCES.LOCAL,
     share_started_at: options.now || new Date().toISOString(),
     share_completed_at: null,
     share_error: null,
@@ -89,6 +127,7 @@ export function shareRunningPatch(stage, options = {}) {
     share_is_admin: null,
     share_expires_at: null,
     share_expires_in: null,
+    share_media_skipped: null,
   }
 }
 
@@ -97,6 +136,7 @@ export function shareRunningPatch(stage, options = {}) {
  * @param {{
  *   shareId?: string, shareUrl?: string, storageBucket?: string,
  *   isAdmin?: boolean, expiresAt?: string, expiresIn?: string,
+ *   mediaSkipped?: string,
  * }} result
  * @param {{ now?: string }} [options]
  */
@@ -112,6 +152,9 @@ export function shareDonePatch(result, options = {}) {
     share_is_admin: result?.isAdmin === true,
     share_expires_at: result?.expiresAt || null,
     share_expires_in: result?.expiresIn || null,
+    share_media_skipped: result?.mediaSkipped === 'video' || result?.mediaSkipped === 'image'
+      ? result.mediaSkipped
+      : null,
   }
 }
 
@@ -131,6 +174,7 @@ export function shareFailedPatch(reason, options = {}) {
     share_id: null,
     share_expires_at: null,
     share_expires_in: null,
+    share_media_skipped: null,
   }
 }
 

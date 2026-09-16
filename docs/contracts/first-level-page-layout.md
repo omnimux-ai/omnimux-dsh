@@ -195,7 +195,7 @@ export function StandardStage({ t, stage, ...props }) {
 
 | class | 归属 | 声明（唯一真源，禁止改写） |
 |---|---|---|
-| `.omx-stage-sticky` | 吸附栈：一级 Tab + 二级分类行（含其上的搜索/排序工具栏） | `position: sticky; top: 0; z-index: 3; background: var(--dsw-alias-bg-base, var(--dsw-bg));` |
+| `.omx-stage-sticky` | 吸附栈：一级 Tab + 二级分类行（含其上的搜索/排序工具栏） | `position: sticky; top: 0; z-index: 20; background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));` |
 | `.omx-stage-scroll` | 页面唯一滚动容器：Stage 根或页面根 | `flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;` |
 
 ```

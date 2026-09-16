@@ -5,8 +5,8 @@ export const ASSETS_CSS = `
 .omx-stage-sticky {
   position: sticky;
   top: 0;
-  z-index: 3;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  z-index: 20;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;
@@ -153,13 +153,14 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-state-error-primary);
 }
 .omnimux-assets-body {
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 0;
   display: flex;
-  overflow: hidden;
 }
 .omnimux-assets-main {
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -877,10 +878,11 @@ export const ASSETS_CSS = `
    reverse on the light one — never with a brand accent. */
 
 .omnimux-assets-cloud {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  flex: 1;
   gap: 10px;
 }
 .omnimux-assets-cloud-nav {
@@ -1159,6 +1161,17 @@ export const ASSETS_CSS = `
   background: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-label-primary-foreground);
   pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+/* 带封面的卡片（拟人角色/视频/立绘）：默认隐藏播放图标，鼠标悬停、键盘聚焦或正在播放时才显示 */
+.omnimux-assets-cloud-card--media .omnimux-assets-cloud-play {
+  opacity: 0;
+}
+.omnimux-assets-cloud-card--media:hover .omnimux-assets-cloud-play,
+.omnimux-assets-cloud-card--media:focus-within .omnimux-assets-cloud-play,
+.omnimux-assets-cloud-card--media [aria-pressed="true"] .omnimux-assets-cloud-play,
+.omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb[aria-pressed="true"] .omnimux-assets-cloud-play {
+  opacity: 1;
 }
 /* Top-right hover control: the one route out of a card, which mounts the asset
    into the conversation. A neutral plate that inverts to ink under the pointer;

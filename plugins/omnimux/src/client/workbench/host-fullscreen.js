@@ -46,6 +46,22 @@ const DOCUMENT_WIDE_EXIT_SELECTORS = Object.freeze([
   `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="push"]`,
 ])
 
+/**
+ * 进入全屏按钮候选：面板作用域内优先，其次是官方稳定的文档级 fullscreen 按钮。
+ */
+export const HOST_FULLSCREEN_ENTER_SELECTORS = Object.freeze([
+  `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="fullscreen"]`,
+  'button[aria-label="全屏"]',
+  'button[aria-label="全屏铺满"]',
+  'button[aria-label="To fullscreen"]',
+  'button[aria-label="Fullscreen"]',
+])
+
+/** 无法在面板作用域内定位按钮时，仍可采信的官方稳定控件。 */
+const DOCUMENT_WIDE_ENTER_SELECTORS = Object.freeze([
+  `button[${HOST_FULLSCREEN_MODE_BUTTON_ATTR}="fullscreen"]`,
+])
+
 /** 官方面板根节点（无论全屏与否都会渲染）。 */
 export function findHostRightPanel(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
@@ -147,3 +163,62 @@ export function exitHostRightSidebarFullscreen(doc, deps = {}) {
   }
   return false
 }
+
+/**
+ * 定位进入全屏的官方控件：先在已展开面板作用域内找，再退回文档级稳定控件。
+ * @param {Document} [doc]
+ * @returns {Element | null}
+ */
+export function findHostFullscreenEnterButton(doc) {
+  if (!doc || typeof doc.querySelector !== 'function') return null
+  let panel = null
+  try {
+    panel = doc.querySelector(`[${HOST_RIGHT_PANEL_ATTR}][data-sidebar-right-open]`)
+  } catch {
+    panel = null
+  }
+  if (panel && typeof panel.querySelector === 'function') {
+    for (const selector of HOST_FULLSCREEN_ENTER_SELECTORS) {
+      const found = panel.querySelector(selector)
+      if (found && typeof found.click === 'function') return found
+    }
+  }
+  for (const selector of DOCUMENT_WIDE_ENTER_SELECTORS) {
+    const found = doc.querySelector(selector)
+    if (found && typeof found.click === 'function') return found
+  }
+  return null
+}
+
+/**
+ * 进入宿主右侧侧栏全屏。已经是全屏时是纯 no-op（返回 `false`，不产生点击）。
+ *
+ * @param {Document} [doc]
+ * @param {{ setFocus?: (mode: string) => unknown }} [deps] 测试注入点：降级动作。
+ * @returns {boolean} 是否实际执行了一次进入全屏动作
+ */
+export function enterHostRightSidebarFullscreen(doc, deps = {}) {
+  if (isHostRightSidebarFullscreen(doc)) return false
+
+  const button = findHostFullscreenEnterButton(doc)
+  if (button) {
+    try {
+      button.click()
+      return true
+    } catch {
+      // 点击抛错时走下面的降级动作。
+    }
+  }
+
+  const setFocus = typeof deps.setFocus === 'function' ? deps.setFocus : resolveHostSetFocus()
+  if (typeof setFocus === 'function') {
+    try {
+      setFocus('gui')
+      return true
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
