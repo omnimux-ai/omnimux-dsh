@@ -18,6 +18,12 @@ export const BRIDGE_PATH = '/ext/bridge'
 /** Zero-config discovery endpoint: returns `{ wsUrl }` for the extension. */
 export const BRIDGE_CONFIG_PATH = '/ext/bridge-config'
 
+/**
+ * Pairing endpoint: `GET` shows the host's live 6-digit code, `POST` redeems a
+ * typed code for the bridge token. Loopback-only and closed to page Origins.
+ */
+export const BRIDGE_PAIR_PATH = '/ext/pair'
+
 /** Internal RPC used after an explicit tab handoff to seed the Agent's next step. */
 export const BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD = 'bridge.injectBrowserSnapshot'
 

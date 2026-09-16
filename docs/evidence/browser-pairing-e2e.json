@@ -1,0 +1,59 @@
+{
+  "issue": 2095,
+  "at": "2026-09-16T14:52:09.379Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-pairing-code/plugins/omnimux-browser/extension/dist",
+  "chrome": "/Users/x/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "hostPort": 50771,
+  "tokenLength": 37,
+  "cases": [
+    {
+      "name": "unpaired panel offers the pairing card",
+      "pass": true,
+      "observed": {
+        "cardVisible": true
+      },
+      "evidence": []
+    },
+    {
+      "name": "host page shows a 6-digit code",
+      "pass": true,
+      "observed": {
+        "codeLength": 6
+      },
+      "evidence": []
+    },
+    {
+      "name": "wrong code is refused and stays disconnected",
+      "pass": true,
+      "observed": {
+        "wrongMessage": "配对码不正确，请核对应用里显示的 6 位数字",
+        "stateAfterWrong": "reconnecting"
+      },
+      "evidence": []
+    },
+    {
+      "name": "pairing code connects the extension and persists the token",
+      "pass": true,
+      "observed": {
+        "connectedState": "connected",
+        "storedToken": {
+          "length": 37
+        },
+        "cardGone": true
+      },
+      "evidence": [
+        "docs/evidence/browser-pairing-e2e-connected.png"
+      ]
+    },
+    {
+      "name": "web page origin cannot redeem",
+      "pass": true,
+      "observed": {
+        "status": 403
+      },
+      "evidence": []
+    }
+  ],
+  "passed": 5,
+  "total": 5
+}

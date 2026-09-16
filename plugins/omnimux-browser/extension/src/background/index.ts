@@ -1385,6 +1385,88 @@ async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
 
 // ---- DSH instance / port switch listener ----
 
+/**
+ * The loopback port this extension is pointed at right now.
+ *
+ * Pairing must hit the instance the bridge would use: the configured address
+ * wins, then the last discovered one, then the OmniMux Dev default.
+ */
+function currentHostPort(): number {
+  for (const candidate of [settings.bridgeUrl, discoveredBridgeUrl]) {
+    const match = /^wss?:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)/u.exec(candidate)
+    if (match !== null) return Number.parseInt(match[1], 10)
+  }
+  return 45120
+}
+
+/**
+ * Redeem a pairing code for this host's bridge token.
+ *
+ * The code is typed by the user from the host's own pairing page; the host
+ * accepts it only from loopback without a page Origin, so nothing a web page
+ * can send is ever answered with the token. The token comes back to this
+ * extension's own background (same trust domain as its storage) so the
+ * settings view stays consistent instead of clearing on the next save.
+ *
+ * @param code - the six digits the user typed.
+ * @returns success plus the stored token, or the user-facing failure reason.
+ */
+async function pairWithCode(code: string): Promise<
+  { ok: true; port: number; token: string } | { ok: false; message: string }
+> {
+  const zh = getUiLocale() === 'zh'
+  if (!/^\d{6}$/u.test(code)) {
+    return { ok: false, message: zh ? '请输入应用里显示的 6 位配对码' : 'Enter the 6-digit code shown in the app' }
+  }
+  const port = currentHostPort()
+  let response: Response
+  try {
+    response = await fetch(`http://127.0.0.1:${port}/ext/pair`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+  } catch {
+    return {
+      ok: false,
+      message: zh
+        ? `连不上本机实例（端口 ${port}），请确认应用正在运行`
+        : `Cannot reach the local instance on port ${port} — is the app running?`,
+    }
+  }
+  if (response.ok) {
+    const body = await response.json().catch(() => null) as { token?: unknown } | null
+    const token = typeof body?.token === 'string' ? body.token.trim() : ''
+    if (token === '') {
+      return { ok: false, message: zh ? '本机没有返回配对令牌' : 'The host returned no pairing token' }
+    }
+    settings.token = token
+    await persistSettings({ token }).catch(() => {})
+    startBridge()
+    return { ok: true, port, token }
+  }
+  const byStatus: Record<number, string> = {
+    401: zh ? '配对码不正确，请核对应用里显示的 6 位数字' : 'Wrong code — check the 6 digits in the app',
+    409: zh ? '配对码已过期，请在应用里重新生成' : 'The code expired — generate a new one in the app',
+    429: zh ? '错误次数过多，配对码已作废，请在应用里重新生成' : 'Too many attempts — generate a new code in the app',
+    403: zh ? '本机实例只接受本机发起的配对' : 'The host only accepts pairing from this machine',
+  }
+  return {
+    ok: false,
+    message: byStatus[response.status]
+      ?? (zh ? `配对失败（${response.status}）` : `Pairing failed (${response.status})`),
+  }
+}
+
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  if (typeof message !== 'object' || message === null) return
+  const msg = message as { type?: unknown; payload?: { code?: unknown } }
+  if (msg.type !== 'PAIR_WITH_CODE') return
+  const code = typeof msg.payload?.code === 'string' ? msg.payload.code.trim() : ''
+  void pairWithCode(code).then(sendResponse, () => sendResponse({ ok: false, message: getUiLocale() === 'zh' ? '配对失败，请重试' : 'Pairing failed — try again' }))
+  return true
+})
+
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (typeof message !== 'object' || message === null) return
   const msg = message as { type?: unknown; payload?: { port?: number } }
@@ -1392,7 +1474,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     const port = msg.payload.port
     void chrome.storage.local.set({ omnimux_target_port: String(port) }).catch(() => {})
     settings.bridgeUrl = `ws://127.0.0.1:${port}/ext/bridge`
-    void saveSettings().catch(() => {})
+    void persistSettings({ bridgeUrl: settings.bridgeUrl }).catch(() => {})
     startBridge()
     sendResponse({ ok: true })
     return true
