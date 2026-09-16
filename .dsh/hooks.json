@@ -23,6 +23,17 @@
       ]
     },
     {
+      "matcher": "edit|write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node scripts/verify-product-baseline.mjs --hook",
+          "statusMessage": "🧭 检查产品基线硬门禁（产品路径不得依赖开发机私有状态）",
+          "timeout": 5
+        }
+      ]
+    },
+    {
       "matcher": "edit|write|bash",
       "hooks": [
         {

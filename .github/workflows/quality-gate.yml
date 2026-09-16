@@ -78,6 +78,7 @@ jobs:
           node --check scripts/check-tracked-artifacts.mjs
           node --check scripts/verify-model-contracts.mjs
           node --check scripts/verify-cross-plugin-model-alignment.mjs
+          node --check scripts/verify-product-baseline.mjs
           bash -n scripts/git-wt.sh
           node --check scripts/ego-live-qa.mjs
           node --check scripts/ego-browser-page.mjs
@@ -91,6 +92,12 @@ jobs:
 
       - name: Forbid tracked omnimux-workflow artifacts
         run: node scripts/check-tracked-artifacts.mjs
+
+      # 产品基线：产品路径不得依赖开发机私有状态（合同 docs/contracts/product-baseline.md）。
+      - name: Product baseline gate (no dev-machine state in product paths)
+        run: |
+          node scripts/verify-product-baseline.mjs
+          node --test scripts/verify-product-baseline.test.mjs
 
       - name: Run diff-aware L0 static QA
         run: |
