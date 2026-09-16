@@ -72,6 +72,7 @@ test('hideAttachedContextBlock：多节点渲染（宿主按 Markdown 分段）�
   assert.equal(bubble.textContent.replace(/\s+/g, ''), '复刻这条爆款视频', '数据块整段（含分隔线与后续节点）都必须消失')
   assert.equal(bubble.querySelectorAll('hr').length, 0, '数据块自带的分隔线也必须摘掉，不能留一条孤线')
   assert.equal(bubble.textContent.includes('Attached Context'), false, '数据块标题文字必须消失')
+  assert.equal(bubble.children.length, 1, '承载数据块的空壳元素（h3/ul/p）也必须摘掉，不能留着撑出空行')
 })
 
 test('hideAttachedContextBlock：重复执行是幂等的', () => {
@@ -117,4 +118,50 @@ test('hideAttachedContextBlock：用户正文里的分隔线不受影响', () =>
   assert.equal(hideAttachedContextBlock(bubble, env.document), true)
   // 用户自己写的分隔线留着（数据块前导的那条已被上一步一起收走）
   assert.equal(bubble.textContent, '第一段\n\n---\n\n第二段')
+})
+
+/**
+ * 真实气泡形态：宿主把 `@path` 渲染成「图标 + 文件名」的引用块（元素节点），
+ * 数据块文本与用户正文同处一个文本节点。历史缺陷就出在这里 ——
+ * 只摘 Text 节点会把被掏空的引用块留下，用户看到的就是「空行 + 孤立小图标」。
+ */
+function replicationBubbleHtml() {
+  return [
+    '<div id="bubble">',
+    '<span class="plainRun">/video-deconstruct 复刻这条爆款视频\n\n---\n### 会话关联上下文 (Attached Context):\n- [视频] US beauty hook (</span>',
+    '<span class="refChip"><svg class="refIcon"><path d="M1 1h2v2H1z" /></svg>us-beauty.mp4</span>',
+    '<span class="plainRun">)</span>',
+    '<span class="refChip"><svg class="refIcon"><path d="M1 1h2v2H1z" /></svg></span>',
+    '<span class="plainRun"></span>',
+    '</div>',
+  ].join('')
+}
+
+test('hideAttachedContextBlock：承载图标的引用块必须随数据块一起拆除', () => {
+  const env = withDom(replicationBubbleHtml())
+  const bubble = env.document.querySelector('#bubble')
+
+  assert.equal(hideAttachedContextBlock(bubble, env.document), true)
+
+  assert.equal(bubble.querySelectorAll('.refChip').length, 0, '被掏空的引用块不得留在气泡里')
+  assert.equal(bubble.querySelectorAll('svg').length, 0, '孤立图标正是空行的来源，必须一并摘掉')
+  assert.equal(bubble.children.length, 1, '气泡里只剩用户正文这一个节点')
+  assert.equal(bubble.textContent, '/video-deconstruct 复刻这条爆款视频')
+})
+
+test('hideAttachedContextBlock：用户自己写的引用块不受影响', () => {
+  const html = [
+    '<div id="bubble">',
+    '<span class="plainRun">看看这个 </span>',
+    '<span class="refChip"><svg class="refIcon"></svg>my-own.mp4</span>',
+    '<span class="plainRun"> 再说\n\n---\n### 会话关联上下文 (Attached Context):\n- [视频] hook: @inspiration/us-beauty.mp4</span>',
+    '</div>',
+  ].join('')
+  const env = withDom(html)
+  const bubble = env.document.querySelector('#bubble')
+
+  assert.equal(hideAttachedContextBlock(bubble, env.document), true)
+
+  assert.equal(bubble.querySelectorAll('.refChip').length, 1, '标记之前的引用块属于用户自己的正文')
+  assert.equal(bubble.textContent, '看看这个 my-own.mp4 再说')
 })

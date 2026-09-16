@@ -149,6 +149,29 @@ describe('event connection lifecycle', () => {
     client.disconnect()
   })
 
+  it('pushViewport 立刻推一次信封，不等下一个心跳周期', async () => {
+    const bodies = []
+    const client = createEventsClient({
+      getWorkbench: () => ({ getUiContext: () => ({ schemaVersion: 1, sessionId: 'sess-live' }) }),
+      fetch: async (url, opts) => {
+        bodies.push({ url: String(url), body: JSON.parse(opts.body) })
+        return { ok: true }
+      },
+    })
+
+    await client.pushViewport()
+
+    assert.equal(bodies.length, 1, '主动推送只发一次')
+    assert.equal(bodies[0].url, '/omnimux/workbench/viewport')
+    assert.equal(bodies[0].body.sessionId, 'sess-live')
+
+    const idle = createEventsClient({
+      getWorkbench: () => ({ getUiContext: () => ({ schemaVersion: 1, sessionId: 'default' }) }),
+      fetch: async () => { throw new Error('无真实会话时不得发送 viewport 心跳') },
+    })
+    await idle.pushViewport()
+  })
+
   it('does not acknowledge an old RPC after the owning client disconnects', async () => {
     let resolveOpen
     let posts = 0

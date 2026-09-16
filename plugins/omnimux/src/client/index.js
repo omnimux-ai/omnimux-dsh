@@ -160,12 +160,10 @@ export function apply(ctx) {
   }, SidebarUpdateAction))
 
   const guideStore = createGuideStore()
-  const attachmentDrafts = new Map()
   let guideSessions = null
   const guideFace = {
     store: guideStore,
     workbench: installWorkbenchGlobal(),
-    attachmentDrafts,
     getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
   }
   installGlobalReferenceApi()
@@ -188,11 +186,11 @@ export function apply(ctx) {
   // (lowest renders) instead of failing the client Loader.
   const attachmentStore = getGlobalAttachmentStore()
   mountFormsBridge(ctx, attachmentStore)
-  const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore, drafts: attachmentDrafts })
-  ctx.effect(() => () => { attachmentAdmission.dispose(); attachmentDrafts.clear() }, 'omnimux: attachment admission')
+  const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore })
+  ctx.effect(() => () => { attachmentAdmission.dispose() }, 'omnimux: attachment admission')
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
-    inject: () => ({ attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
+    inject: () => ({ attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
   }, AttachmentSubmitBridge))
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
   // 「复刻爆款视频」技能从底部药丸被移除时，复刻对象一并撤离附件栏。

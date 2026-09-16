@@ -1,5 +1,4 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
-import { buildAttachedContextBlock, assemblePromptWithAttachments } from '../attachments/prompt-assembly.ts'
 import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
 import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
@@ -7,24 +6,22 @@ import { compileCreativePrompt } from '../presets/compiler.js'
 import { getGlobalShadowContextStore } from '../reference/shadow-context.ts'
 import { submittedAttachmentStore } from '../attachments/submittedAttachmentStore.ts'
 
-/** Reconcile only the exact block this session wrote; preserve manual edits. */
-export function reconcileAttachmentDraft(draft, previous, attachments, sessionId) {
-  const block = buildAttachedContextBlock(attachments, sessionId)
-  if (previous) {
-    const index = draft.indexOf(previous)
-    const end = index + previous.length
-    if (index < 0 || index !== draft.lastIndexOf(previous)
-      || (end !== draft.length && draft.slice(end, end + 2) !== '\n\n')) {
-      return { status: 'edited', draft, block: previous }
-    }
-  }
-  if (!previous && draft.includes('### 会话关联上下文')) return { status: 'edited', draft, block: previous }
-  const next = previous ? draft.replace(previous, block) : draft + block
-  return { status: next === draft ? 'ready' : 'synced', draft: next, block }
+/**
+ * 立即把本会话的 viewport 信封推给宿主，不等 2s 心跳。
+ *
+ * 附件真源只经宿主原生 `agent/pre-step` 注入抵达模型（`getUiContext().attachedContextText`），
+ * 而信封按会话缓存：新建会话后在心跳到达前就发送时，宿主可能还没有该会话的信封。
+ * 发送这一刻补推一次，把「附件路径到不了模型」的窗口关掉。
+ */
+function pushViewportNow() {
+  try {
+    if (typeof window === 'undefined') return
+    window.__omnimuxHubEvents?.pushViewport?.()
+  } catch {}
 }
 
 /** Session-scoped owner actions keep attachment text in the official input snapshot. */
-export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId, t }) {
+export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, attachmentStore, attachmentAdmission, getCurrentSessionId, t }) {
   const input = useInput(value => value)
   const live = useRef(null)
   const anchor = useRef(null)
@@ -81,7 +78,6 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
     const check = () => {
       const { input: value, inputActions: actions } = live.current
       const attachments = attachmentStore.getSnapshot(sessionId)
-      const previous = attachmentDrafts.get(sessionId) || ''
       let draft = value.draft
 
       // Reconcile active skill gesture without polluting input UI
@@ -150,17 +146,10 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
 
       if (!draft.trim() && !attachments.length) return true
 
-      // 发送时一次性装配附件与场景上下文指针，确保模型 100% 获取文件路径与卖点
-      if (attachments && attachments.length > 0) {
-        const fullDraft = assemblePromptWithAttachments(draft, attachments, sessionId)
-        if (fullDraft !== draft) {
-          try {
-            actions?.setDraft?.(fullDraft)
-            live.current = { ...live.current, input: { ...value, draft: fullDraft } }
-            attachmentDrafts.set(sessionId, fullDraft)
-          } catch {}
-        }
-      }
+      // 附件上下文绝不写进用户草稿：它只该喂给模型，写进去就得靠事后擦 DOM 掩盖，
+      // 而擦除只能清文本、清不掉承载图标的引用块，气泡里就会留下空行与孤立小图标。
+      // 附件真源由宿主原生 `agent/pre-step` 注入，这里只把最新信封推给宿主。
+      if (attachments.length > 0) pushViewportNow()
 
       // 坚决不拦截发送，坚决不弹出阻断警告，回车立即顺畅发出
       setNotice(null)
@@ -180,7 +169,7 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         getGlobalShadowContextStore().consume(sessionId)
       } catch {}
       attachmentAdmission.arm(sessionId, live.current.input.draft,
-        attachmentStore.getSnapshot(sessionId), attachmentDrafts.get(sessionId))
+        attachmentStore.getSnapshot(sessionId))
     }
     const pointer = event => {
       if (!belongs(event.target) || !send(event.target)) return
@@ -209,6 +198,6 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       doc.removeEventListener('click', click, true)
       doc.removeEventListener('keydown', key, true)
     }
-  }, [sessionId, attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId])
+  }, [sessionId, attachmentStore, attachmentAdmission, getCurrentSessionId])
   return <div ref={anchor} style={notice ? undefined : { display: 'none' }}>{notice && <p role="status">{t(`attachments.submit.${notice}`)}</p>}</div>
 }

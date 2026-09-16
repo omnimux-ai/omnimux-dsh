@@ -595,7 +595,6 @@ test('复刻吸底：写入输入框不再弹「已填入」提示，回执由�
 
   const store = createGuideStore()
   const sessionId = 'sess-replicate-toast'
-  const attachmentDrafts = new Map()
   let draft = ''
   let writes = 0
   const workbenchSnapshot = { sessionId, state: { panelOpen: false } }
@@ -607,7 +606,6 @@ test('复刻吸底：写入输入框不再弹「已填入」提示，回执由�
     useInput: (selector) => selector({ draft, phase: 'plain' }),
     inputActions: { setDraft(value) { draft = value; writes++ } },
     getCurrentSessionId: () => sessionId,
-    attachmentDrafts,
     store,
     workbench,
     t: (key) => guideZh[key] || key,

@@ -1,10 +1,15 @@
 /**
  * 用户气泡清洁：会话关联上下文只喂给模型，不上屏。
  *
- * 提交时 `AttachmentSubmitBridge` 把 `### 会话关联上下文 (Attached Context):`
- * 数据块追加进草稿，模型因此拿得到附件真源；但那块结构化文本对用户是噪音，
- * 会随消息一起渲染进用户气泡。这里在气泡渲染后把该数据块从**可见节点**中剥离：
- * 只改界面，不动提交内容，也删不掉消息文本本身（供搜索 / 复制 / 重放的正确性）。
+ * 历史版本的提交桥接把 `### 会话关联上下文 (Attached Context):` 数据块追加进草稿，
+ * 模型因此拿得到附件真源；但那块结构化文本对用户是噪音，会随消息一起渲染进用户气泡。
+ * 提交侧已改为只走宿主原生 `agent/pre-step` 注入，本模块保留为**历史消息**的清洁通道：
+ * 早期落库的消息正文里仍带着数据块，渲染后必须在可见 DOM 里整块拆除。
+ *
+ * 关键约束：数据块在宿主气泡里既可能是纯文本，也可能是「图标 + 文件名」的引用块
+ * （`@path` 被 `projectUserText` 解析成元素节点）。只摘 Text 节点会把被掏空的引用块
+ * 留在气泡里 —— 那正是用户看到的「空行 + 孤立小图标」。因此这里按**结构**拆除：
+ * 标记之后的所有同级节点（含元素节点）连并变空的包装节点一起摘掉。
  */
 
 /** 附加数据块的起始标记，与 `prompt-assembly.ts` 的 `buildAttachedContextBlock` 同源。 */
@@ -48,11 +53,50 @@ function collectTextNodes(bubbleEl: Element, doc: Document): Text[] {
   return nodes;
 }
 
+/** 该节点是否还有可见文本（用于判断包装节点是否已经空掉）。 */
+function hasVisibleText(node: Node | null): boolean {
+  return Boolean(node && (node.textContent || '').trim());
+}
+
+/**
+ * 把「标记之后」的全部内容从可见 DOM 里摘掉。
+ *
+ * 数据块总在消息尾部，因此标记之后的可见顺序等价于数据块本身：
+ * 先逐级摘掉标记节点的同级后续节点（**含元素节点**，被掏空的引用块就在这一层），
+ * 再自下而上摘掉因此变空的包装节点（Markdown 渲染下的 `<h3>` 等）。
+ * 还留着用户正文的节点一律保留，气泡根本身绝不摘除。
+ *
+ * @param markerNode 数据块标记所在的文本节点
+ * @param bubbleEl 气泡根元素
+ */
+function dropTailBlock(markerNode: Text, bubbleEl: Element): void {
+  let node: Node | null = markerNode;
+  while (node && node !== bubbleEl) {
+    const parent: Node | null = node.parentNode;
+    if (!parent) break;
+    for (let sibling = node.nextSibling; sibling; ) {
+      const next = sibling.nextSibling;
+      (sibling as ChildNode).remove?.();
+      sibling = next;
+    }
+    if (parent === bubbleEl) break;
+    node = parent;
+  }
+
+  let wrapper: Node | null = markerNode.parentNode;
+  while (wrapper && wrapper !== bubbleEl) {
+    const outer: Node | null = wrapper.parentNode;
+    if (hasVisibleText(wrapper)) break;
+    (wrapper as ChildNode).remove?.();
+    wrapper = outer;
+  }
+}
+
 /**
  * 把附加数据块从气泡里摘下。
  *
  * 数据块总是落在消息尾部，因此先定位含标记的文本节点，截断它，
- * 再移除其后所有可见兄弟文本节点，最后清掉标记前残留的分隔线。
+ * 再按结构拆除其后的全部内容，最后清掉标记前残留的分隔线。
  *
  * @param bubbleEl 用户消息气泡
  * @param doc 宿主文档
@@ -78,12 +122,8 @@ export function hideAttachedContextBlock(bubbleEl: Element | null, doc: Document
   const markerNode = nodes[markerIndex];
   markerNode.nodeValue = (markerNode.nodeValue || '').slice(0, markerOffset).replace(LEADING_RULE, '');
 
-  // 2. 标记之后的所有可见文本节点同属数据块，整段摘除
-  for (let i = markerIndex + 1; i < nodes.length; i += 1) {
-    const node = nodes[i];
-    if (node.nodeValue) node.nodeValue = '';
-    node.remove?.();
-  }
+  // 2. 标记之后的可见内容同属数据块，按结构整段摘除
+  dropTailBlock(markerNode, bubbleEl as Element);
 
   // 3. 数据块可能自带一条独立的 `<hr>` 分隔线（宿主按 Markdown 渲染）：
   //    它自身不贡献任何文本，摘文本节点摘不掉，留着就是用户看得见的一条孤线。
