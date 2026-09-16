@@ -2,19 +2,24 @@
   "name": "omnimux-apps",
   "version": "1.0.0-alpha.1",
   "type": "module",
-  "main": "src/host/index.ts",
+  "main": "dist/index.js",
   "exports": {
-    ".": "./src/host/index.ts",
-    "./client": "./src/client/index.ts",
-    "./shared": "./src/shared/manifest.ts",
-    "./validator": "./src/shared/schemaValidator.ts",
-    "./storage": "./src/host/storage/appStorage.ts",
+    ".": "./dist/index.js",
+    "./client": "./lib/client.js",
+    "./shared": "./dist/shared/manifest.js",
+    "./validator": "./dist/shared/schemaValidator.js",
+    "./storage": "./dist/host/storage/appStorage.js",
     "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "dist",
+    "lib",
+    "src",
+    "scripts"
   ],
   "scripts": {
+    "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
+    "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "node --test 'src/**/*.test.mjs' 'src/**/*.test.ts'"
   },
@@ -25,6 +30,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "esbuild": "^0.28.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.4.0"
