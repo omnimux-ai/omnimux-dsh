@@ -135,10 +135,13 @@ export function createCloudCatalog(deps = {}) {
 
   function load() {
     if (loaded) return
-    loaded = true
     const parsedManifest = readJsonFile(join(catalogDir, 'manifest.json'))
     const parsedIndex = readJsonFile(join(catalogDir, 'index.json'))
+    // 读到有效目录之后才上锁。目录缺失、或正撞上物化脚本「删掉再整份拷回」的窗口时这里会
+    // 读空，那就保持「未加载」，让下一次请求重试——否则一次瞬时读空会把插件永久钉在
+    // 「目录未构建」上，只能靠重启应用恢复。
     if (!parsedManifest || !Array.isArray(parsedIndex)) return
+    loaded = true
     manifest = parsedManifest
     sourceRoot = typeof parsedManifest.sourceRoot === 'string' ? parsedManifest.sourceRoot : ''
     index = new Map()
