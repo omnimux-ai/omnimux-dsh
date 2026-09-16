@@ -469,6 +469,10 @@ build_one() {
       echo "→ build $name (host + client + canvas)"
       (cd "$dir" && node scripts/build-host.mjs && node scripts/build-client.mjs && node scripts/build-canvas.mjs)
       ;;
+    omnimux-apps)
+      echo "→ build $name (host + client)"
+      (cd "$dir" && node scripts/build-host.mjs && node scripts/build-client.mjs)
+      ;;
     omnimux-market)
       echo "→ build $name (tsc + concat-client)"
       (cd "$dir" && npm run build --silent)
@@ -477,7 +481,10 @@ build_one() {
       echo "· $name 无构建产物（源码直读），跳过 build"
       ;;
     *)
-      if [ -f "$dir/scripts/build-client.mjs" ]; then
+      if [ -f "$dir/scripts/build-host.mjs" ] && [ -f "$dir/scripts/build-client.mjs" ]; then
+        echo "→ build $name (host + client, 推断)"
+        (cd "$dir" && node scripts/build-host.mjs && node scripts/build-client.mjs)
+      elif [ -f "$dir/scripts/build-client.mjs" ]; then
         echo "→ build $name (client, 推断)"
         (cd "$dir" && node scripts/build-client.mjs)
       elif node --input-type=commonjs -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.exit(p.scripts&&p.scripts.build?0:1)" "$dir/package.json" >/dev/null 2>&1; then
