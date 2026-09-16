@@ -13,6 +13,8 @@ import { getFullContext, detectPlatform } from './page-sensor.ts'
 import { fillHostInput } from './dom-fill.ts'
 import { fillFormFields } from './form-draft.ts'
 import { sniffViewportMedia } from './media-sniffer.ts'
+import { resolvePlatformAnchor } from '../platform/anchor.ts'
+import { platformForHost } from '../platform/registry.ts'
 import { BRIDGE_MESSAGE, CONTENT_MESSAGE_SOURCE, TIMING } from './media-hover/messages.ts'
 import { BRAND_GHOST_PATH } from './media-hover/overlay-icons.ts'
 import type { HoveredMedia } from './media-hover/types.ts'
@@ -23,6 +25,15 @@ interface PendingAttach {
   resolve: (ok: boolean) => void
   timer: ReturnType<typeof setTimeout>
 }
+
+/**
+ * The FAB's own size in CSS px, mirroring `.omnimux-fab` in the shadow stylesheet.
+ *
+ * Declared rather than measured: the anchor layer needs the mark's height to turn
+ * a `top` back into a `bottom`, and measuring a value this file's own stylesheet
+ * already fixes only makes the result depend on when the measurement ran.
+ */
+const FAB_BOX_PX = 55
 
 /** Per-page registry of attach requests; a fresh injection clears the old one. */
 const HOST_SHELL = globalThis as typeof globalThis & {
@@ -220,33 +231,24 @@ export function initFabCompanion(): void {
     }
   })()
 
-  // 默认位置：对齐推特右下角抽屉浮标纵向成列布局
+  // 默认位置由平台锚点层决定：X 上对齐 Grok / Chat 抽屉成列，其余平台落在右下角。
   // 推特浮标基准：Chat (bottom 12px, right 20px, 55x55), Grok (bottom 79px, right 20px, 55x55), 间距 12px
   // OmniMux 位于 Grok 正上方 12px：bottom = 79 + 55 + 12 = 146px，right = 20px
   function computeDefaultPosition(): { x: number; y: number } {
-    const grokEl = document.querySelector('[data-testid="GrokDrawerHeader"]')
-    if (grokEl) {
-      const r = grokEl.getBoundingClientRect()
-      if (r.width > 0 && r.height > 0) {
-        return {
-          x: Math.round(r.left),
-          y: Math.max(10, Math.round(r.top - 12 - 55)),
-        }
-      }
-    }
-    const chatEl = document.querySelector('[data-testid="chat-drawer-main"]')
-    if (chatEl) {
-      const r = chatEl.getBoundingClientRect()
-      if (r.width > 0 && r.height > 0) {
-        return {
-          x: Math.round(r.left),
-          y: Math.max(10, Math.round(r.top - 12 - 55 - 12 - 55)),
-        }
-      }
-    }
+    const viewport = { width: window.innerWidth, height: window.innerHeight }
+    // 标记自己的尺寸走常量，不去量：锚点层需要它把 top 语义换算成 bottom，
+    // 而它就是 `.omnimux-fab` 声明的那 55px —— 量一个由自己样式决定的定值，
+    // 只会让位置随测量方式（布局未完成、被宿主页面缩放）漂移。
+    const placement = resolvePlatformAnchor(
+      platformForHost(window.location.hostname),
+      'brand',
+      document,
+      viewport,
+      { box: FAB_BOX_PX },
+    )
     return {
-      x: Math.max(10, window.innerWidth - 75), // 20px 右边距 (window.innerWidth - 20 - 55)
-      y: Math.max(10, window.innerHeight - 201), // 146px 底边距 (window.innerHeight - 146 - 55)
+      x: placement.left,
+      y: viewport.height - placement.bottom - FAB_BOX_PX,
     }
   }
 

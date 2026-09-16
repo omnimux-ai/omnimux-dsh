@@ -33,11 +33,21 @@ function shadow(): ShadowRoot | null {
   return document.getElementById(TIKTOK_SCENE_HOST_ID)?.shadowRoot ?? null
 }
 
-/** Click one menu row and let the mounted handler's promise chain settle. */
+/**
+ * Open the toolbar the way a user does — by pointing at the trigger — then click
+ * one menu row and let the mounted handler's promise chain settle.
+ *
+ * Opening matters even though the row's own handler is not gated on it: a row
+ * reached without the toolbar ever having shown is a row the user could not have
+ * pressed.
+ */
 async function clickRow(action: string): Promise<void> {
   const root = shadow()
   if (root === null) throw new Error('scene not mounted')
-  ;(root.querySelector('.omx-trigger') as HTMLElement).click()
+  const anchor = root.querySelector('.omx-anchor') as HTMLElement
+  const enter = new Event('pointerenter')
+  Object.defineProperty(enter, 'pointerType', { value: 'mouse' })
+  anchor.dispatchEvent(enter)
   ;(root.querySelector(`.omx-item[data-action="${action}"]`) as HTMLElement).click()
   await new Promise((resolve) => setTimeout(resolve, 0))
 }

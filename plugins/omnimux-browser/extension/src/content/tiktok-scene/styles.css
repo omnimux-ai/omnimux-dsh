@@ -1,14 +1,22 @@
 /*
  * Every style the TikTok scene trigger needs.
  *
- * A content script has no CSS file channel, so `styles.ts` imports this file
- * with `?inline` and injects the result into the shadow root — the same
- * mechanism the page-media hover overlay uses. Authoring it as real CSS keeps
- * syntax highlighting and lets the build minify it.
+ * A content script has no CSS file channel, so `menu.ts` imports this file with
+ * `?inline` and injects the result into the shadow root — the same mechanism the
+ * page-media hover overlay uses. Authoring it as real CSS keeps syntax
+ * highlighting and lets the build minify it.
  *
- * The visual language is deliberately the hover capsule's: same deep-black
- * frosted pill, same 1px white hairline, same 12–13px type. Two OmniMux
- * surfaces can appear on one page, and they must read as one product.
+ * The trigger is a 48px circle in the brand lavender with the ghost knocked out
+ * of it, and nothing else: the label that used to sit beside the mark is gone, so
+ * the trigger reads at a glance whatever the page's own chrome is doing behind
+ * it. Its toolbar is a horizontal row of three columns sitting beside the circle
+ * and vertically centred on it — icon on top, a couple of words underneath.
+ *
+ * Which side that row opens on is not a style decision and is not made here: the
+ * script measures the row and flips it to the left when the viewport has no room
+ * on the right (`menu-side.ts`), writing the exact offset inline. This file only
+ * carries the geometry of each side — where it grows from, and which way it
+ * slides in.
  *
  * Layer contract: `.omx-anchor` is a direct child of the shadow root with
  * `position: fixed`, so TikTok's own `overflow: hidden` and stacking rules
@@ -17,6 +25,14 @@
 
 :host {
   all: initial;
+
+  /* The brand pair, and the surface the toolbar paints on. */
+  --omx-brand: #b8b7ff;
+  --omx-brand-ink: #121213;
+  --omx-panel: rgba(24, 26, 31, 0.97);
+  --omx-line: rgba(255, 255, 255, 0.16);
+  --omx-fg: rgba(255, 255, 255, 0.94);
+
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
@@ -32,104 +48,134 @@
   pointer-events: auto;
 }
 
-/* --- Trigger: the brand pill under the avatar ------------------------------ */
+/* --- Trigger: the brand circle -------------------------------------------- */
 .omx-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px 0 9px;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
-  background: rgba(30, 32, 38, 0.95);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42), inset 0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  color: rgba(255, 255, 255, 0.94);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
+  border: 0;
+  border-radius: 50%;
+  background: var(--omx-brand);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--omx-brand-ink);
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
   user-select: none;
   -webkit-user-select: none;
-  transition: background-color 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 190ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
 }
 
 .omx-trigger:hover {
-  background: rgba(38, 40, 47, 0.97);
   transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .omx-trigger:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.96);
 }
 
 .omx-trigger:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.9);
-  outline-offset: 2px;
-}
-
-.omx-trigger[aria-expanded="true"] {
-  background: rgba(42, 44, 52, 0.98);
+  outline-offset: 3px;
 }
 
 .omx-trigger svg {
   display: block;
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
+  width: 27px;
+  height: 27px;
   pointer-events: none;
 }
 
-/* --- Menu: opens upward, away from the page's bottom edge ------------------ */
-.omx-menu {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 10px);
-  width: 224px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
-  background: rgba(24, 26, 31, 0.96);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(28px) saturate(150%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
-  transform-origin: bottom left;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(6px) scale(0.97);
-  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 200ms;
+/* The brand mark's eye capsules are knocked out of the silhouette, so they are
+   painted with the surface behind the mark: the circle's own lavender. */
+.omx-eye {
+  fill: var(--omx-brand);
 }
 
+/* --- Toolbar: three columns beside the circle, vertically centred ---------- */
+.omx-menu {
+  position: absolute;
+  /* The right-hand side is the default; `menu-side.ts` writes the offset that
+     replaces this as soon as the row has a measured width. */
+  left: 100%;
+  top: 50%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px;
+  /* The detail row under the columns carries a saved file's name, which has no
+     length bound; wrapping at the viewport's edge keeps a wide toolbar something
+     the direction decision can still place, instead of one that has to be clamped
+     onto the trigger. */
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--omx-line);
+  border-radius: 14px;
+  background: var(--omx-panel);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  transform-origin: left center;
+  opacity: 0;
+  visibility: hidden;
+  /* `-50%` is the vertical centring and is repeated in every state below; the
+     scale and the sideways nudge are the appearance. */
+  transform: translateY(-50%) translateX(-6px) scale(0.97);
+  transition: opacity 150ms ease, transform 190ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 190ms;
+}
+
+/* Flipped to the circle's other side, which only changes which edge the row
+   grows from and which way it slides in — the vertical centring is identical. */
+.omx-menu.is-left {
+  transform-origin: right center;
+  transform: translateY(-50%) translateX(6px) scale(0.97);
+}
+
+/* Three ways in, one appearance. Hover is the pointer's path and the only one a
+   mouse user ever notices; `:focus-within` keeps the toolbar reachable without a
+   pointer; `is-open` is the mounted state the script drives for touch and for
+   keyboard activation. Declaring all three in CSS means the toolbar cannot be
+   visible to the script and invisible to the compositor, or the reverse. */
+.omx-anchor:hover .omx-menu,
+.omx-anchor:focus-within .omx-menu,
 .omx-menu.is-open {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0) scale(1);
+  transform: translateY(-50%) scale(1);
   transition-delay: 0s;
 }
 
+/* `visibility: hidden` above is what makes the toolbar non-interactive while it
+   is shut: a transparent element still swallows clicks, and this one would sit
+   over the page's own controls. */
+
+/* One column of the row: the icon above, the words below. The fixed width is
+   what makes the row's rendered width predictable enough to measure against the
+   viewport (`menu-side.ts`), and the label wraps rather than widening it. */
 .omx-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 10px 11px;
+  gap: 5px;
+  width: 68px;
+  padding: 9px 4px 8px;
   margin: 0;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.94);
+  color: var(--omx-fg);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 11px;
   font-weight: 600;
-  text-align: left;
+  line-height: 13px;
+  text-align: center;
+  white-space: normal;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -147,8 +193,8 @@
 
 .omx-item svg {
   display: block;
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   opacity: 0.92;
   pointer-events: none;
@@ -160,24 +206,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
-}
-
-/* The brand mark's eye capsules are knocked out of the silhouette, so they are
-   painted with whatever sits behind the pill: the pill's own black. */
-.omx-eye {
-  fill: #1e2026;
 }
 
 .omx-item-label {
   flex: 1 1 auto;
 }
 
+/* The column's own progress line, under its words: a column is tall enough to
+   report in place, and the row must not reflow when one of them changes width. */
 .omx-item-state {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
+  line-height: 12px;
   color: rgba(255, 255, 255, 0.55);
 }
 
@@ -198,13 +241,20 @@
   color: #ff9d9d;
 }
 
-/* The reason a shortcut failed can be a sentence, so it wraps under the row. */
+/* The reason a shortcut failed can be a sentence, so it wraps under the row of
+   columns rather than inside one of them. `anywhere` is what makes that true for
+   a file name too: a path with no spaces in it offers no break opportunity, and
+   without one it would widen the panel instead of wrapping. */
 .omx-item-detail {
   display: none;
-  padding: 0 11px 8px;
-  font-size: 12px;
+  flex: 0 0 100%;
+  width: 100%;
+  padding: 4px 6px 2px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 15px;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: rgba(255, 157, 157, 0.9);
 }
 
@@ -238,6 +288,9 @@
   .omx-trigger,
   .omx-item {
     transition: none;
+  }
+  .omx-trigger:hover {
+    transform: none;
   }
   .omx-spinner {
     animation-duration: 2s;

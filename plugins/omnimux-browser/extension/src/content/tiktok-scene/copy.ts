@@ -26,10 +26,8 @@ export type TiktokAction = 'video' | 'audio' | 'save'
 
 /** Every user-facing string this feature renders. */
 export interface TiktokCopy {
-  /** Accessible name of the trigger. */
+  /** Accessible name of the trigger, and the name the toolbar announces itself with. */
   brand: string
-  /** Visible label on the trigger. */
-  trigger: string
   /** Menu row labels. */
   menu: Record<TiktokAction, string>
   /** Row label while the host works. */
@@ -37,11 +35,11 @@ export interface TiktokCopy {
   /** Row label once the host answered. */
   done: (action: TiktokAction, outcome: ExportOutcome) => string
   /**
-   * Fuller result line, shown under the rows.
+   * Fuller result line, shown under the columns.
    *
-   * The menu row is one line in a 224px panel, so the name of the file that
-   * was just written — the only thing that tells the user *which* post they
-   * got — belongs on its own line rather than squeezed into the label.
+   * A column carries an icon and a couple of words, so the name of the file that
+   * was just written — the only thing that tells the user *which* post they got —
+   * belongs on its own line rather than squeezed under an icon.
    */
   detail: (action: TiktokAction, outcome: ExportOutcome) => string
   /** Explanation shown under a failed row. */
@@ -52,11 +50,10 @@ export interface TiktokCopy {
 
 const ZH: TiktokCopy = {
   brand: 'OmniMux 快捷操作',
-  trigger: 'OmniMux',
   menu: {
-    video: '下载无水印视频',
-    audio: '下载原视频音频',
-    save: '保存到灵感库',
+    video: '下载视频',
+    audio: '保存原声',
+    save: '收藏到灵感库',
   },
   busy: {
     video: '解析下载中',
@@ -85,11 +82,10 @@ const ZH: TiktokCopy = {
 
 const EN: TiktokCopy = {
   brand: 'OmniMux shortcuts',
-  trigger: 'OmniMux',
   menu: {
-    video: 'Download without watermark',
-    audio: 'Download original audio',
-    save: 'Save to inspiration',
+    video: 'Download video',
+    audio: 'Save audio',
+    save: 'Save to library',
   },
   busy: {
     video: 'Resolving',
