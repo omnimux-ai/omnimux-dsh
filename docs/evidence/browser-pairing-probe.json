@@ -1,0 +1,73 @@
+{
+  "issue": 2095,
+  "at": "2026-09-16T14:41:58.809Z",
+  "module": "plugins/omnimux-browser/src/pairing.ts",
+  "cases": [
+    {
+      "name": "code is 6 digits",
+      "pass": true,
+      "observed": {
+        "codeLength": 6
+      }
+    },
+    {
+      "name": "correct code redeems once",
+      "pass": true,
+      "observed": {
+        "second": "no-session"
+      }
+    },
+    {
+      "name": "wrong codes burn the session after 5 tries",
+      "pass": true,
+      "observed": {
+        "outcomes": [
+          "mismatch",
+          "mismatch",
+          "mismatch",
+          "mismatch",
+          "exhausted"
+        ]
+      }
+    },
+    {
+      "name": "expired code is refused",
+      "pass": true,
+      "observed": {
+        "ttlMs": 120000
+      }
+    },
+    {
+      "name": "regenerating invalidates the previous code",
+      "pass": true,
+      "observed": {
+        "regenerated": true
+      }
+    },
+    {
+      "name": "loopback without page origin is allowed",
+      "pass": true,
+      "observed": {}
+    },
+    {
+      "name": "web page origin is refused",
+      "pass": true,
+      "observed": {}
+    },
+    {
+      "name": "non-loopback peer is refused",
+      "pass": true,
+      "observed": {}
+    },
+    {
+      "name": "page shows the code digit-by-digit and carries no secret",
+      "pass": true,
+      "observed": {
+        "shownMatchesCode": true,
+        "htmlBytes": 1832
+      }
+    }
+  ],
+  "passed": 9,
+  "total": 9
+}
