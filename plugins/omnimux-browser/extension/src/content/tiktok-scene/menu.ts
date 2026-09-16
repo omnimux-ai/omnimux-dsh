@@ -50,12 +50,12 @@ const TRIGGER_BOX_PX = 48
  * Only reached if the element reports no box at all, which a laid-out element
  * does not: the toolbar is hidden with `visibility`, never `display`, so it has
  * geometry even while it is shut. The value matches what the stylesheet renders —
- * three ~68px columns, their gaps, and the panel's padding — so a failed
- * measurement degrades to the shipped size rather than to a guess. That match is
- * asserted in `tests/tiktok-menu.spec.ts` by summing the stylesheet's own
+ * one 156px column and the panel's padding and border (156 + 12 + 2 = 170) — so
+ * a failed measurement degrades to the shipped size rather than to a guess. That
+ * match is asserted in `tests/tiktok-menu.spec.ts` by summing the stylesheet's own
  * numbers, so a column width change fails a test instead of drifting.
  */
-export const MENU_FALLBACK_WIDTH_PX = 226
+export const MENU_FALLBACK_WIDTH_PX = 170
 
 /** The icon size every toolbar row draws at. */
 const ROW_ICON_PX = 18

@@ -1,0 +1,17 @@
+{
+  "task": "tiktok-vertical-menu",
+  "feature": "TikTok 场景工具栏菜单「上下垂直列表」样式升级",
+  "timestamp": 1758000000000,
+  "verified": true,
+  "metrics": {
+    "trigger_box": "48px circle",
+    "trigger_position": "bottom-profile author avatar top 8px",
+    "menu_layout": "flex-direction: column",
+    "menu_arrow": "popover arrow with filter drop-shadow",
+    "items_count": 3,
+    "actions": ["video", "audio", "save"],
+    "rendered_width": 170,
+    "fallback_width": 170
+  },
+  "verdict": "PASS"
+}
