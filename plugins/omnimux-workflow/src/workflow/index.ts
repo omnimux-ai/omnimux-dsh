@@ -29,6 +29,7 @@ import { createGenerationPreferencesStore } from './workspace/GenerationPreferen
 import { createProjectAssetsStore } from './workspace/ProjectAssetsStore';
 import { createProjectStore } from '../projects/ProjectStore';
 import { bindEnsureProjectBound } from '../projects/ensureProjectBound';
+import { createWorkspaceProjectBinder } from '../projects/workspaceProjectBinding';
 import { ensureLibraryRoot } from '../projects/library';
 import { TemplateStore } from './templates/TemplateStore.ts';
 import type { GenerationGateway } from './seam/gateway';
@@ -84,6 +85,22 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
 
   const libraryRoot = opts.libraryRoot ?? ensureLibraryRoot();
   const projectStore = createProjectStore({ libraryRoot });
+  /**
+   * 会话 id → 工作区目录（会话 `header.cwd`）。宿主 `agents` 服务缺失、会话已结束时
+   * 返回 undefined，调用方按「不登记」降级（Issue #2104）；绝不抛错。
+   */
+  const readSessionWorkspaceDir = (sessionId: string): string | undefined => {
+    try {
+      const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined;
+      const agent = (agents as
+        | { get?: (id: string) => { session?: { header?: { cwd?: string } } } | undefined }
+        | undefined)?.get?.(sessionId);
+      const cwd = agent?.session?.header?.cwd;
+      return typeof cwd === 'string' && cwd.trim() !== '' ? cwd : undefined;
+    } catch {
+      return undefined;
+    }
+  };
   const ensureProjectBound = bindEnsureProjectBound(projectStore);
   const resolveProjectRoot = (workspaceId: string) => projectStore.findByCanvasWorkspaceId(workspaceId);
   const store = createWorkspaceStore({
@@ -208,6 +225,13 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
           executionManager,
           mediaDir: paths.mediaDir,
           ensureProjectBound,
+          // Issue #2104：会话所属工作区目录里的画布必须能被项目页看到。
+          // 目录从宿主 `agents` 服务反查（会话 header.cwd）；服务不可用时降级为 null。
+          bindWorkspaceProject: createWorkspaceProjectBinder({
+            projectStore,
+            libraryRoot,
+            resolveWorkspaceDir: readSessionWorkspaceDir,
+          }),
           getCatalog,
           getExecutionCatalog: () => gateway.capabilities(),
           getGenerationPreferences: () => generationPreferences.get().lastModelByType,

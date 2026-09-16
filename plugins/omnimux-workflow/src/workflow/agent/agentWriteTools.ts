@@ -26,6 +26,7 @@ import {
   withWorkspace,
   resolveTargetWorkspaceId,
   WORKSPACE_ID_PARAM_DESC,
+  bindCanvasWorkspaceProject,
 } from './agentToolShared.ts';
 
 /**
@@ -132,6 +133,8 @@ export function createWorkflowCreateTool(deps: WorkflowAgentDeps): AgentToolSpec
     async execute(args) {
       try {
         const workspace = store.create(readString(args, 'name'));
+        // Issue #2104：画布诞生即登记工作区项目，否则项目页看不到它。
+        await bindCanvasWorkspaceProject(deps, workspace.id, workspace.name);
         return { workspace };
       } catch (error) {
         return errorBody(
@@ -211,6 +214,8 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
 
         const result = mutateWorkspaceGraph(store, workspaceId, { addNodes: [node] }, mutationContext(deps));
         if (!result.ok) return errorBody(result.error, result.message);
+        // 会话默认画布上首次落内容时也要登记（Issue #2104）；副作用不阻塞写入回执。
+        void bindCanvasWorkspaceProject(deps, workspaceId, label ?? null);
         return { workspace: workspaceSummary(result.snapshot), node: result.snapshot.nodes.find((row) => row.id === node.id), workspaceSource: target.source };
       });
     },
