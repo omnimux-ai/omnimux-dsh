@@ -4,12 +4,13 @@ import { JSDOM } from 'jsdom'
 import {
   createTabViewportReconciler,
   installTabViewportReconciler,
+  ensureHealthySplitWidth,
 } from '../../src/client/workbench/tab-viewport-reconciler.js'
 import {
   installFullscreenCollapseSync,
   FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR,
 } from '../../src/client/workbench/fullscreen-collapse-sync.js'
-import { CONVERSATION_COLLAPSED_ATTR } from '../../src/client/conversation-collapse.js'
+import { CONVERSATION_COLLAPSED_ATTR, ensureConversationCollapseChrome } from '../../src/client/conversation-collapse.js'
 import { WORKBENCH_FOCUS } from '../../src/client/workbench/focus-state.js'
 
 function createDomFixture(panelMode = 'push') {
@@ -106,3 +107,27 @@ test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分
 
   reconciler.reset()
 })
+
+test('AC-4: 分栏面板 CSS 铺满保证与健康分栏宽度保底机制', async () => {
+  const doc = createDomFixture('push')
+  const styleEl = ensureConversationCollapseChrome(doc)
+  assert.match(styleEl.textContent, /\.dshDesktopRightbarSurface \[class\*="_panel"\]:not\(\[data-sidebar-right-panel="fullscreen"\]\)/)
+  assert.match(styleEl.textContent, /width:100%!important/)
+
+  // 测试健康宽度自愈：当 layout.rightbar 被极端压到 300px 时，自愈恢复到健康值（≥500px）
+  let currentRightbar = 300
+  const mockLayout = {
+    getSnapshot: () => ({ rightbar: currentRightbar }),
+    setRightbar: (w) => { currentRightbar = w },
+  }
+
+  // 挂载到 frame 的 __reactFiber 上模拟原生桌面端
+  const frame = doc.querySelector('.dshDesktopFrame')
+  frame.__reactFiber$test = {
+    memoizedProps: { layout: mockLayout },
+  }
+
+  ensureHealthySplitWidth(doc)
+  assert.ok(currentRightbar >= 500, `自愈后宽度必须恢复到健康黄金比例(>=500px)，实际: ${currentRightbar}`)
+})
+

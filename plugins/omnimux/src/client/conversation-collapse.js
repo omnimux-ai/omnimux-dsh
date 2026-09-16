@@ -121,6 +121,13 @@ ${IMAGE_CANVAS_PROJECTION_SELECTOR} [data-composer-card]{
   visibility:visible!important;
   opacity:1!important;
 }
+/* 分栏与普通展开态下，右侧面板必须 100% 铺满右侧网格容器，绝不因绝对定位 shrink-to-fit 产生左侧黑洞空隙 */
+.dshDesktopRightbarSurface [class*="_panel"]:not([data-sidebar-right-panel="fullscreen"]):not([class*="bottom"]):not([class*="Hidden"]){
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  max-width:none!important;
+}
 /* 收起后网格第三列会吃掉全部剩余宽度，而外壳的右栏面板是固定宽度 + 右对齐
    （left = 容器宽 − 面板宽）。不补这一条，面板左侧就会留下等宽黑空（实测 670px
    的「中间空白占位」）。这里的面板是 absolute、定位祖先是右栏容器本身——左栏可见时

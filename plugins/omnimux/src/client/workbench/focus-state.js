@@ -55,7 +55,9 @@ export function isWorkbenchTab(tabId) {
 }
 
 export function resolveDefaultFocus(tabId) {
-  // 保持契约默认态为 split（会话可见契约），真实 UI 视窗全屏由 tab-viewport-reconciler 调和与记忆
+  if (isWorkbenchTab(tabId)) {
+    return WORKBENCH_FOCUS.gui
+  }
   return WORKBENCH_FOCUS.split
 }
 
