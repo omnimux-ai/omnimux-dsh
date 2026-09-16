@@ -1,7 +1,7 @@
 /** Clear only the submitted attachment IDs after a matching Host admission. */
-export function createAttachmentAdmission({ getSessions, store, drafts }) {
+export function createAttachmentAdmission({ getSessions, store }) {
   const watching = new Map()
-  function arm(sessionId, text, attachments, block) {
+  function arm(sessionId, text, attachments) {
     if (!attachments.length) return
     const binding = getSessions()?.binding(sessionId)
     if (!binding) return
@@ -25,7 +25,6 @@ export function createAttachmentAdmission({ getSessions, store, drafts }) {
           if (!attempt.requestId || !admitted.has(attempt.requestId)) continue
           attempt.done = true
           for (const id of attempt.ids) store.removeAttachment(sessionId, id)
-          if (drafts.get(sessionId) === attempt.block) drafts.delete(sessionId)
         }
         watch.attempts = watch.attempts.filter(attempt => !attempt.done)
       }
@@ -33,7 +32,7 @@ export function createAttachmentAdmission({ getSessions, store, drafts }) {
     }
     // A new gesture supersedes an unbound gesture; in-flight requests retain identity.
     watch.attempts = watch.attempts.filter(attempt => attempt.requestId)
-    watch.attempts.push({ text: text.trim(), block, ids: attachments.map(item => item.id),
+    watch.attempts.push({ text: text.trim(), ids: attachments.map(item => item.id),
       baseline: new Set(binding.session.getSnapshot().pendingSubmissions.map(row => row.requestId)) })
   }
   function disposeSession(id) {

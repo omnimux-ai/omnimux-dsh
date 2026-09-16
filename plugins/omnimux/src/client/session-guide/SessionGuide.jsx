@@ -133,7 +133,6 @@ function BlankSessionGuide({
   store,
   t,
   getCurrentSessionId,
-  attachmentDrafts,
   isCompact = false,
 }) {
   const input = useInput((value) => value)
@@ -202,7 +201,6 @@ function BlankSessionGuide({
     }
     try {
       inputActions.setDraft(result.draft)
-      attachmentDrafts?.delete(sessionId)
       live.current = { ...live.current, state: result.state, input: { ...input, draft: result.draft } }
       store.set(sessionId, result.state)
       setNotice(null)
@@ -254,7 +252,6 @@ function BlankSessionGuide({
     }
     try {
       inputActions.setDraft(prompt)
-      attachmentDrafts?.delete(sessionId)
       live.current = { ...live.current, input: { ...input, draft: prompt } }
       if (copy) copyText(prompt)
       if (restoreNotice) setNotice(null)

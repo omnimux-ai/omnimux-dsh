@@ -195,6 +195,8 @@ export function createEventsClient(options = {}) {
     subscribe,
     isHealthy: () => healthy,
     getLastEventAt: () => lastEventAt,
+    /** 立刻推一次 viewport 信封，不等下一个心跳周期（在途请求已去重）。 */
+    pushViewport: () => sendViewportHeartbeat(),
     notifyMessageForTests: handleMessage,
   }
 }
@@ -205,6 +207,7 @@ export function installHubEventsGlobal(client, target = globalThis.window) {
     subscribe: (type, cb) => client.subscribe(type, cb),
     isHealthy: () => client.isHealthy(),
     getLastEventAt: () => client.getLastEventAt(),
+    pushViewport: () => { void client.pushViewport?.() },
   }
   target[HUB_EVENTS_GLOBAL_KEY] = facade
   return () => {

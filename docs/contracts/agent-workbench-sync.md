@@ -115,7 +115,7 @@ Commands and acknowledgements keep their authenticated HTTP routes. Hub transpor
 
 ### 3.3 Browser singleton
 
-Hub client opens **one** WebSocket per mounted client and exposes `window.__omnimuxHubEvents.subscribe(type, fn)`. Verticals MUST NOT open their own hub sockets. Disposal closes the socket, timers and pending HTTP requests, and removes only its own global facade.
+Hub client opens **one** WebSocket per mounted client and exposes `window.__omnimuxHubEvents.subscribe(type, fn)` plus `pushViewport()` (immediate one-shot viewport heartbeat, deduplicated while a request is in flight). Verticals MUST NOT open their own hub sockets. Disposal closes the socket, timers and pending HTTP requests, and removes only its own global facade.
 
 Any event (including heartbeat) resets a **5s** watchdog. Silence closes the socket and marks the feed unhealthy. Reconnect waits **3s** and carries the last replay id. Stale socket callbacks cannot affect the replacement connection. Assets use their existing **5s** poll while unhealthy and refresh on recovery.
 
