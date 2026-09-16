@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的 Skill 标签页界面调整对比演示</title>
+<style>
+  :root {
+    --bg-base: #111215;
+    --bg-card: #18191e;
+    --bg-active: rgba(255, 255, 255, 0.16);
+    --border-subtle: rgba(255, 255, 255, 0.12);
+    --text-primary: #ffffff;
+    --text-secondary: #84878f;
+    --text-muted: #5e616b;
+    --brand-accent: #6f59ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; }
+  body { background: var(--bg-base); color: var(--text-primary); padding: 32px; font-size: 13px; line-height: 1.5; }
+  .container { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+  
+  .header-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; }
+  .header-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .header-desc { color: var(--text-secondary); font-size: 13px; }
+
+  .comparison-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  .preview-box { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow: hidden; }
+  .badge-tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; margin-bottom: 16px; }
+  .badge-before { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .badge-after { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+  /* 模拟实际插件顶部 */
+  .mock-nav-bar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px; margin-bottom: 14px; }
+  .mock-tabs { display: flex; gap: 24px; }
+  .mock-tab { font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; padding-bottom: 6px; position: relative; }
+  .mock-tab.active { color: var(--text-primary); font-weight: 600; }
+  .mock-tab.active::after { content: ''; position: absolute; bottom: -13px; left: 0; right: 0; height: 2px; background: #fff; border-radius: 2px; }
+  .mock-search { background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 12px; font-size: 12px; color: var(--text-secondary); width: 220px; }
+
+  /* 模拟被移除的横向大分类栏 */
+  .mock-cat-bar { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding: 4px 0; }
+  .mock-cat-btn { height: 28px; padding: 0 14px; border-radius: 999px; border: 1px solid transparent; font-size: 13px; color: var(--text-secondary); background: transparent; display: inline-flex; align-items: center; }
+  .mock-cat-btn.active { background: var(--bg-active); color: var(--text-primary); border-color: rgba(255,255,255,0.28); font-weight: 700; }
+  .mock-highlight-red { border: 2px dashed #ef4444; border-radius: 8px; padding: 4px; position: relative; }
+  .mock-highlight-red::before { content: '【圈选移除的冗余大分类胶囊】'; position: absolute; top: -10px; right: 12px; background: #ef4444; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+
+  /* 模拟专属工具栏 */
+  .mock-mine-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .mock-pill-dropdown { height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-primary); font-size: 12px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .mock-auto-update { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+  .mock-switch { width: 34px; height: 18px; background: rgba(255,255,255,0.2); border-radius: 999px; position: relative; }
+  .mock-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; }
+
+  /* 模拟卡片网格 */
+  .mock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .mock-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .mock-card-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .mock-card-desc { font-size: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-card">
+    <div class="header-title">技能工坊 ·「我的 Skill」界面净化调整</div>
+    <div class="header-desc">按业务决策要求，在「我的 Skill」标签页移除顶层冗余的大分类胶囊栏，保留其专属的下拉筛选工具栏，恢复现代极简与舒适视觉呼吸。</div>
+  </div>
+
+  <div class="comparison-grid">
+    <!-- 修改前 -->
+    <div class="preview-box">
+      <span class="badge-tag badge-before">修改前（存在双层分类挤压）</span>
+      <div class="mock-nav-bar">
+        <div class="mock-tabs">
+          <div class="mock-tab">Skill ⓘ</div>
+          <div class="mock-tab active">我的 Skill</div>
+          <div class="mock-tab">专家市场</div>
+        </div>
+        <div class="mock-search">搜索我的 Skill...</div>
+      </div>
+      <div class="mock-highlight-red">
+        <div class="mock-cat-bar">
+          <button class="mock-cat-btn active">全部</button>
+          <button class="mock-cat-btn">选品</button>
+          <button class="mock-cat-btn">搜索爆款视频</button>
+          <button class="mock-cat-btn">创作视频</button>
+          <button class="mock-cat-btn">生成电商图</button>
+          <button class="mock-cat-btn">创作图片</button>
+          <button class="mock-cat-btn">数据分析</button>
+          <button class="mock-cat-btn">社媒营销</button>
+        </div>
+      </div>
+      <div class="mock-mine-toolbar" style="margin-top: 12px;">
+        <button class="mock-pill-dropdown">分类 ▾</button>
+        <button class="mock-pill-dropdown">来源 ▾</button>
+        <div class="mock-auto-update">自动更新 <div class="mock-switch"></div></div>
+      </div>
+      <div class="mock-grid">
+        <div class="mock-card">
+          <div><div class="mock-card-name">爆款视频结构拆解</div><div class="mock-card-desc">自动解析爆款视频脚本骨架与核心抓手</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+        <div class="mock-card">
+          <div><div class="mock-card-name">电商带货图生成</div><div class="mock-card-desc">支持批量生成高转化多平台商品场景图</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+        <div class="mock-card">
+          <div><div class="mock-card-name">选品趋势洞察</div><div class="mock-card-desc">智能扫描同类目热销商品并提炼卖点</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改后 -->
+    <div class="preview-box">
+      <span class="badge-tag badge-after">修改后（已移除冗余大胶囊，极简透气）</span>
+      <div class="mock-nav-bar">
+        <div class="mock-tabs">
+          <div class="mock-tab">Skill ⓘ</div>
+          <div class="mock-tab active">我的 Skill</div>
+          <div class="mock-tab">专家市场</div>
+        </div>
+        <div class="mock-search">搜索我的 Skill...</div>
+      </div>
+      <div class="mock-mine-toolbar">
+        <button class="mock-pill-dropdown">分类 ▾</button>
+        <button class="mock-pill-dropdown">来源 ▾</button>
+        <div class="mock-auto-update">自动更新 <div class="mock-switch"></div></div>
+      </div>
+      <div class="mock-grid">
+        <div class="mock-card">
+          <div><div class="mock-card-name">爆款视频结构拆解</div><div class="mock-card-desc">自动解析爆款视频脚本骨架与核心抓手</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+        <div class="mock-card">
+          <div><div class="mock-card-name">电商带货图生成</div><div class="mock-card-desc">支持批量生成高转化多平台商品场景图</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+        <div class="mock-card">
+          <div><div class="mock-card-name">选品趋势洞察</div><div class="mock-card-desc">智能扫描同类目热销商品并提炼卖点</div></div>
+          <div class="mock-switch" style="background: var(--brand-accent);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
