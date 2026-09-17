@@ -44,6 +44,31 @@ function renderFeaturedCover(coverSrc, item, title, hoverNode) {
   );
 }
 
+/** 紧凑宽度下文字标签退出布局后，按钮靠图标保持可辨识；图标同时是无障碍名称之外的视觉锚点。 */
+function renderHoverIcon(kind) {
+  const common = {
+    width: 14,
+    height: 14,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': 'true',
+    focusable: 'false',
+  }
+  if (kind === 'detail') {
+    return h('svg', common,
+      h('path', { d: 'M2.062 12.348a1 1 0 0 1 0-.696A10.75 10.75 0 0 1 21.938 12.348a1 1 0 0 1 0 .696A10.75 10.75 0 0 1 2.062 12.348' }),
+      h('circle', { cx: 12, cy: 12, r: 3 }),
+    )
+  }
+  return h('svg', common,
+    h('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }),
+  )
+}
+
 function renderFeaturedHoverActions(item, opts) {
   const { tr, onOpen, onTry } = opts;
   const onOpenClick = (e) => { e.stopPropagation(); onOpen && onOpen(item); };
@@ -53,11 +78,21 @@ function renderFeaturedHoverActions(item, opts) {
 
   return h('div', { className: 'featured-hover-actions' },
     // exempt-ui01 open detail hover button
-    h('button', { type: 'button', className: 'hover-btn hover-btn-detail', onClick: onOpenClick },
-      h('span', { className: 'hover-btn-label' }, detailTitle)),
+    h('button', {
+      type: 'button',
+      className: 'hover-btn hover-btn-detail',
+      onClick: onOpenClick,
+      'aria-label': detailTitle,
+      title: detailTitle,
+    }, renderHoverIcon('detail'), h('span', { className: 'hover-btn-label' }, detailTitle)),
     // exempt-ui01 try in session hover button
-    h('button', { type: 'button', className: 'hover-btn hover-btn-try', onClick: onTryClick },
-      h('span', { className: 'hover-btn-label' }, tryTitle)),
+    h('button', {
+      type: 'button',
+      className: 'hover-btn hover-btn-try',
+      onClick: onTryClick,
+      'aria-label': tryTitle,
+      title: tryTitle,
+    }, renderHoverIcon('try'), h('span', { className: 'hover-btn-label' }, tryTitle)),
   );
 }
 

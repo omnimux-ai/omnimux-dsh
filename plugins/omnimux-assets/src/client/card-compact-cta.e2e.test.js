@@ -98,10 +98,19 @@ test('资产库卡片：卡片自身宽度驱动 CTA 退化，紧凑只留图标
   }
 })
 
-test('资产库卡片：退化由具名容器查询判定，且声明落在卡片根节点上', () => {
-  assert.match(ASSETS_CSS, /\.omnimux-assets-card\s*\{[^}]*container-type:\s*inline-size/, '卡片根节点必须是 inline-size 容器')
+test('资产库卡片：退化由具名容器查询判定，且容器只落在带 CTA 浮层的卡片上', () => {
+  assert.match(
+    ASSETS_CSS,
+    /\.omnimux-assets-card:has\(\.omnimux-assets-card-overlay\)\s*\{[^}]*container-type:\s*inline-size/,
+    '容器必须限定在真正带 CTA 浮层的卡片，公共素材卡与生成物卡共用同一类名',
+  )
   assert.match(ASSETS_CSS, /container-name:\s*asset-card/, '容器必须有唯一名字，避免误命中祖先容器')
   assert.match(ASSETS_CSS, /@container asset-card \(max-width:\s*296px\)/, '退化规则必须由具名容器查询判定')
+  assert.match(
+    ASSETS_CSS,
+    /\.omnimux-assets-overlay-btn > \.dshUk-Button-label\s*\{\s*min-width:\s*0/,
+    '文字槽的收缩能力必须由本插件钉住，不依赖 UI 库内部默认值',
+  )
 })
 
 test('资产库卡片：文字标签由源码渲染，无障碍名称与交互保持原样', () => {
