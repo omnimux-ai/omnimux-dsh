@@ -22,6 +22,8 @@ describe('Hypit optional session-guide skill (issue 2160)', () => {
     assert.equal(item.kind, 'skill')
     assert.equal(item.tab, 'skills')
     assert.equal(item.skill, SLUG)
+    assert.equal(item.title, 'Hypit-克隆爆款视频')
+    assert.equal(item.titleZh, 'Hypit-克隆爆款视频')
     assert.equal(item.installFlow, 'session-guide')
     assert.equal(item.source?.type, 'bundled')
     assert.match(String(item.source?.path || ''), /catalog\/skills\/hypit-setup/)

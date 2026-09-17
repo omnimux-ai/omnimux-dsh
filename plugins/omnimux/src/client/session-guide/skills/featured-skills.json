@@ -5,8 +5,8 @@
   "skills": [
     {
       "id": "sk-omx-hypit-setup",
-      "title": "Hypit 官方能力接入",
-      "titleZh": "Hypit 官方能力接入",
+      "title": "Hypit-克隆爆款视频",
+      "titleZh": "Hypit-克隆爆款视频",
       "titleEn": "Hypit Official Setup Guide",
       "summary": "在会话中引导按 Hypit 官方渠道安装技能与程序；OmniMux 不捆绑其引擎。点安装后预填任务说明，由你确认发送。",
       "summaryZh": "会话内引导按官方渠道安装 Hypit；不捆绑引擎，需你确认后发送。",

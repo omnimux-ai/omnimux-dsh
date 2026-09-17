@@ -24,6 +24,8 @@ const skillMd = readFileSync(join(root, 'catalog/skills/hypit-setup/SKILL.md'), 
 
 test('E2E 发现：技能货架可按 hypit 命中官方引导卡，且为 session-guide', () => {
   assert.ok(item, 'catalog must list Hypit setup card')
+  assert.equal(item.title, 'Hypit-克隆爆款视频')
+  assert.equal(item.titleZh, 'Hypit-克隆爆款视频')
   assert.equal(item.installFlow, 'session-guide')
   assert.equal(item.skill, SLUG)
   assert.equal(item.source?.type, 'bundled')
