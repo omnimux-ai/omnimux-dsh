@@ -1,16 +1,16 @@
 {
-  "runId": "1a89be1b-63d1-4e98-be4b-7508c9833ce9",
+  "runId": "2deb9ed2-2a72-4947-a192-063890c8a5e9",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-project-canvas-registration",
-  "origin": "http://127.0.0.1:56534",
-  "appPort": 56534,
-  "cdpPort": 56545,
-  "startedAt": "2026-09-16T15:26:00.641Z",
-  "completedAt": "2026-09-16T15:26:09.661Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-skill-card-attribution",
+  "origin": "http://127.0.0.1:64340",
+  "appPort": 64340,
+  "cdpPort": 64347,
+  "startedAt": "2026-09-17T05:39:22.431Z",
+  "completedAt": "2026-09-17T05:39:44.431Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:56534",
+    "origin": "http://127.0.0.1:64340",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:56534",
+      "origin": "http://127.0.0.1:64340",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-1AwDIxwfGh6Rv0_FliGDPbEhMo8D12bKT80AmrIxWTI"
+      "cookieName": "dsh-auth-su6vrD9ppF8jYfc3-9u0bb9wdHwpGMiSgjGzhS7R_TM"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 56545
+      "port": 64347
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 132,
+        "visibleCount": 10,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 273
+        "bodyTextLength": 24
       }
     },
     {
@@ -63,7 +63,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 132
+      "visibleCount": 10
     },
     {
       "name": "screenshot-png-verified",
@@ -72,14 +72,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 80923
+      "bytes": 96138
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-workflow-project-canvas-registration/.workbuddy/evidence/app-qa/1a89be1b-63d1-4e98-be4b-7508c9833ce9/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-skill-card-attribution/.workbuddy/evidence/app-qa/2deb9ed2-2a72-4947-a192-063890c8a5e9/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 80923
+    "bytes": 96138
   },
   "errors": [],
   "cleanup": {
