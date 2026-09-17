@@ -92,6 +92,14 @@ export const PORT_DISCOVERY_MS = 10000
 /** Quiet window after `load` so the first paint has settled. */
 export const SETTLE_MS = 600
 
+/**
+ * Heuristics for blank/unrendered frame detection and retry mitigation.
+ */
+export const BLANK_FRAME_MIN_DIM = 300
+export const BLANK_FRAME_MAX_BYTES = 15000
+export const BLANK_FRAME_HEADER_FLOOR = 24
+export const RETRY_SETTLE_MS = 1000
+
 /** First screen only — never a full-page long shot. */
 export const CAPTURE_BEYOND_VIEWPORT = false
 

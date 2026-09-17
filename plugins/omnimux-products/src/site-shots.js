@@ -17,7 +17,11 @@
 import { launchBrowser, attachPage, defaultSleep, CdpError } from './cdp-client.js'
 import { locateBrowser } from './chrome-locator.js'
 import {
+  BLANK_FRAME_HEADER_FLOOR,
+  BLANK_FRAME_MAX_BYTES,
+  BLANK_FRAME_MIN_DIM,
   NAV_TIMEOUT_MS,
+  RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
   SETTLE_MS,
@@ -73,6 +77,7 @@ export async function captureSiteScreenshots(args = {}) {
   const budgetMs = Number.isFinite(args.budgetMs) ? Number(args.budgetMs) : SCREENSHOT_BUDGET_MS
   const navTimeoutMs = Number.isFinite(args.navTimeoutMs) ? Number(args.navTimeoutMs) : NAV_TIMEOUT_MS
   const settleMs = Number.isFinite(args.settleMs) ? Number(args.settleMs) : SETTLE_MS
+  const retrySettleMs = Number.isFinite(args.retrySettleMs) ? Number(args.retrySettleMs) : RETRY_SETTLE_MS
 
   /** @type {{ dispose?: () => Promise<void> } | null} */
   let handle = null
@@ -105,7 +110,7 @@ export async function captureSiteScreenshots(args = {}) {
       const settled = await Promise.allSettled(VIEWPORT_ORDER.map((key) => captureViewport(
         handle,
         VIEWPORTS[key],
-        { url, navTimeoutMs, settleMs, attach, sleep, attachOptions: args.attachOptions ?? {} },
+        { url, navTimeoutMs, settleMs, retrySettleMs, attach, sleep, attachOptions: args.attachOptions ?? {} },
       )))
 
       const outcomes = settled.map((row, index) => (row.status === 'fulfilled'
@@ -133,18 +138,11 @@ export async function captureSiteScreenshots(args = {}) {
  * @returns {boolean}
  */
 export function isSuspectedBlankFrame(buffer) {
-  if (!Buffer.isBuffer(buffer) || buffer.length < 24) return false
+  if (!Buffer.isBuffer(buffer) || buffer.length < BLANK_FRAME_HEADER_FLOOR) return false
   if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) return false
-  try {
-    const width = buffer.readUInt32BE(16)
-    const height = buffer.readUInt32BE(20)
-    if (width >= 300 && height >= 300 && buffer.length < 15000) {
-      return true
-    }
-  } catch {
-    return false
-  }
-  return false
+  const width = buffer.readUInt32BE(16)
+  const height = buffer.readUInt32BE(20)
+  return width >= BLANK_FRAME_MIN_DIM && height >= BLANK_FRAME_MIN_DIM && buffer.length < BLANK_FRAME_MAX_BYTES
 }
 
 /**
@@ -165,16 +163,16 @@ async function captureViewport(handle, spec, opts) {
     }
 
     if (isSuspectedBlankFrame(buffer)) {
-      const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : 1000
+      const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : RETRY_SETTLE_MS
       if (retryWaitMs > 0 && typeof opts.sleep === 'function') {
         await opts.sleep(retryWaitMs)
         try {
           const retriedBuffer = await page.capture()
-          if (retriedBuffer && retriedBuffer.length > buffer.length) {
+          if (retriedBuffer && (!isSuspectedBlankFrame(retriedBuffer) || retriedBuffer.length > buffer.length)) {
             buffer = retriedBuffer
           }
         } catch {
-          // Fall back to initial buffer if retry fails
+          // Keep the initial frame when retry capture fails
         }
       }
     }

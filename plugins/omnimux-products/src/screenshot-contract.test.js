@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  BLANK_FRAME_HEADER_FLOOR,
+  BLANK_FRAME_MAX_BYTES,
+  BLANK_FRAME_MIN_DIM,
   DESKTOP_VIEWPORT,
   HOST_SLUG_MAX,
   MEDIA_DIR_MODE,
   MEDIA_FILE_MODE,
   MOBILE_VIEWPORT,
   REQUIRED_ORDER,
+  RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
   SCREENSHOT_STATUS,
@@ -60,6 +64,10 @@ describe('website screenshots · viewport contract', () => {
     assert.equal(SETTLE_MS, 600)
     assert.equal(MEDIA_DIR_MODE, 0o700)
     assert.equal(MEDIA_FILE_MODE, 0o600)
+    assert.equal(BLANK_FRAME_MIN_DIM, 300)
+    assert.equal(BLANK_FRAME_MAX_BYTES, 15000)
+    assert.equal(BLANK_FRAME_HEADER_FLOOR, 24)
+    assert.equal(RETRY_SETTLE_MS, 1000)
   })
 
   it('enumerates exactly the documented status and reason codes', () => {
