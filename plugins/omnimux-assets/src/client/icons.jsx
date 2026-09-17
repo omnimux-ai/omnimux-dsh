@@ -179,6 +179,25 @@ export function ChevronRightIcon(props) {
 }
 
 /** @param {{ size?: number }} props */
+export function ChevronLeftIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </Icon>
+  )
+}
+
+/** @param {{ size?: number }} props */
+export function ArrowRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </Icon>
+  )
+}
+
+/** @param {{ size?: number }} props */
 export function ImageIcon(props) {
   return (
     <Icon {...props}>

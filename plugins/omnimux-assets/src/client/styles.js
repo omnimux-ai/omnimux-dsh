@@ -1288,6 +1288,137 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
+/* ---- cloud assets category rows layout (All category stream) ---- */
+.omnimux-assets-cloud-rows-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  padding: 12px 0 48px;
+}
+
+.omnimux-assets-cloud-row-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+.omnimux-assets-cloud-row-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px;
+}
+
+.omnimux-assets-cloud-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.omnimux-assets-cloud-row-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.omnimux-assets-cloud-row-title:hover {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omnimux-assets-cloud-row-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+  line-height: 1.4;
+}
+
+.omnimux-assets-cloud-row-view-all {
+  border-radius: 9999px !important;
+  font-size: 13px !important;
+  height: 30px !important;
+  padding: 0 14px !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  border: 1px solid var(--dsw-alias-border) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.omnimux-assets-cloud-row-view-all:hover:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--dsw-alias-label-primary) !important;
+  background: var(--dsw-alias-bg-layer-2) !important;
+  border-color: var(--dsw-alias-border-hover) !important;
+  transform: translateX(2px);
+}
+
+.omnimux-assets-cloud-row-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.omnimux-assets-cloud-row-cards {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 6px 4px 14px;
+}
+
+.omnimux-assets-cloud-row-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card {
+  flex: 0 0 200px;
+  width: 200px;
+  max-width: 200px;
+}
+
+.omnimux-assets-cloud-row-skeleton {
+  flex: 0 0 200px;
+  width: 200px;
+  height: 280px;
+}
+
+.omnimux-assets-cloud-row-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: var(--dsw-alias-bg-elevated) !important;
+  border: 1px solid var(--dsw-alias-border-l2) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  z-index: 5;
+  box-shadow: 0 4px 12px var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.omnimux-assets-cloud-row-arrow:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-bg-layer-3) !important;
+  border-color: var(--dsw-alias-border-hover) !important;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.omnimux-assets-cloud-row-arrow--left {
+  left: -12px;
+}
+
+.omnimux-assets-cloud-row-arrow--right {
+  right: -12px;
+}
+
 /* ---- integrated products tab view (1:1 aligned with omnimux-products) ---- */
 .omnimux-products-create-menu {
   position: relative;
