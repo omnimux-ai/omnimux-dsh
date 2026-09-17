@@ -103,6 +103,8 @@ test('more-menu items use the leadingIcon slot contract, never children/.label',
       assert.equal(slot.getAttribute('aria-hidden'), 'true')
     }
     assert.deepEqual(items.map(i => i.querySelector('.label').textContent), ['projects.rename', 'projects.delete'])
+    assert.equal(items[1].getAttribute('data-danger'), 'true', '解散项目必须标记 data-danger="true"')
+    assert.ok(items[1].classList.contains('omnimux-folder-menu-item--danger'), '解散项目必须包含危险类名')
   } finally { await act(async () => root.unmount()); dom.window.close() }
 })
 
@@ -168,4 +170,9 @@ test('more-menu panel geometry follows the design tokens and cannot collapse to 
   assert.match(p, /var\(--dsw-alias-bg-overlay\)/, '面板底色必须走官方设计令牌')
   assert.match(p, /var\(--dsw-alias-border-l2\)/, '面板描边必须走官方设计令牌')
   assert.match(p, /var\(--dsw-alias-bg-mask-1\)/, '面板阴影必须走官方设计令牌')
+  assert.match(p, /backdrop-filter:\s*blur\(16px\)/, '面板必须声明 16px 毛玻璃滤镜')
+  assert.match(i, /border-radius:\s*6px/, '子项圆角必须严格满足内切几何 10px - 4px = 6px')
+  assert.match(i, /height:\s*32px/, '子项高度必须遵循 32px 控件基准高')
+  assert.match(source, /omnimux-folder-menu-item--danger/, '必须包含危险项样式规则')
+  assert.match(source, /var\(--dsw-alias-state-error-primary\)/, '危险项必须使用官方错误语义状态色')
 })
