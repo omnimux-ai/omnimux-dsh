@@ -1511,12 +1511,6 @@ export const ASSETS_CSS = `
   align-items: center;
   justify-content: space-between;
 }
-.omnimux-products-card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 6px;
-}
 
 
 

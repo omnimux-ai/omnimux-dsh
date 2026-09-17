@@ -56,4 +56,12 @@ describe('Product library integration into Assets stage', () => {
     assert.match(ASSETS_CSS, /\.omnimux-products-grid/)
     assert.match(ASSETS_CSS, /\.omnimux-products-empty/)
   })
+
+  it('ProductsView cards omit copyCite actions row and keep only title and sub description', () => {
+    assert.doesNotMatch(productsViewJsx, /omnimux-products-card-actions/)
+    assert.doesNotMatch(productsViewJsx, /handleCopyCite/)
+    assert.doesNotMatch(productsViewJsx, /copiedId/)
+    assert.match(productsViewJsx, /className="omnimux-products-card-name"/)
+    assert.match(productsViewJsx, /className="omnimux-products-card-sub"/)
+  })
 })
