@@ -1,0 +1,18 @@
+display-name-zh: 火柴人视频导演
+version: 1.0.0
+tag-en: "Video Production / Stick-Figure Explainer"
+tag-cn: "视频创作 / 火柴人解说"
+complete-tags-en:
+  - "Video Production"
+  - "Content Strategy"
+complete-tags-cn:
+  - "视频创作"
+  - "内容创作"
+summary-en: "Turn copy into a one-minute stick-figure explainer: six-scene proposal, then six self-contained video prompts with narration and BGM locked across clips."
+summary-cn: "把一段文案做成约一分钟火柴人解说短片：先出六幕导演提案，再产出六条跨幕锁定旁白与配乐的独立视频提示词。"
+desc-en: "Stickman Video Director turns copy, notes, or a bare topic into a roughly one-minute stick-figure explainer. It gates on source material, aspect ratio, and visual style before doing anything, then produces a six-scene director's proposal for explicit approval. Only after that approval does it emit six self-contained video-generation prompts, each repeating the full lock set: ratio, style, character anchor, palette, narrator identity, three timed beats, transition state, and negative constraints. The dual-lock formula repeats the narrator description verbatim and mandates seamless BGM continuity from clip one, which is what keeps independently generated clips from drifting in voice, music, and drawing style. Includes the proposal template, the prompt contract, and a style catalog with three anchor designs."
+desc-cn: "火柴人视频导演把一段文案、笔记或一个主题做成约一分钟的火柴人线条解说短片。开工前先设卡：素材、画幅、画风三项缺一不发，绝不静默替用户选择；随后产出六幕导演提案并停下等待明确确认。只有在当前提案获确认后才产出六条自包含的视频生成提示词，每条都重复完整锁定条件——画幅、画风、角色锚定、配色、旁白身份、三个时间节拍、转场状态与负面约束。双锁定公式要求逐字重复旁白描述并强制从第一段延续配乐主题，这是让独立生成的六段片段不在声线、配乐与画风上漂移的关键。含导演提案模板、提示词契约与三套画风锚定方案。"
+cover: ""
+author-en: "OmniMux Team"
+author-cn: "OmniMux 团队"
+source: official

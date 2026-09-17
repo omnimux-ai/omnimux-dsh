@@ -9505,6 +9505,34 @@
         "path": "skills/rn-motion-replica",
         "ref": "main"
       }
+    },
+    {
+      "id": "sk-omx-stickman-video-director",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "火柴人视频导演",
+      "subtitle": "官方 · 文案直出解说短片",
+      "summary": "把一段文案做成约一分钟火柴人解说短片：先出六幕导演提案，再产出六条跨幕锁定旁白与配乐的独立视频提示词。",
+      "category": "sk-visual",
+      "tags": [
+        "视频创作",
+        "内容创作",
+        "视频生成",
+        "分镜",
+        "提示词",
+        "动画"
+      ],
+      "skill": "stickman-video-director",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/stickman-video-director"
+      },
+      "recommended": false,
+      "downloads": 0,
+      "titleZh": "火柴人视频导演",
+      "titleEn": "Stickman Video Director",
+      "summaryZh": "把一段文案做成约一分钟火柴人解说短片：先出六幕导演提案，再产出六条跨幕锁定旁白与配乐的独立视频提示词。",
+      "summaryEn": "Turn copy into a one-minute stick-figure explainer: a six-scene proposal first, then six self-contained video prompts with narration and BGM locked across clips."
     }
   ]
 }
