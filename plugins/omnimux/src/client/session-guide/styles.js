@@ -2497,20 +2497,9 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-skill-card-summary {
   font-size:12px; line-height:18px;
-  color:var(--dsw-alias-label-secondary); margin:0 0 10px 0;
+  color:var(--dsw-alias-label-secondary); margin:0;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   overflow:hidden; min-height:36px; flex:1;
-}
-.omnimux-skill-card-attribution {
-  display:flex; align-items:center; gap:4px; margin-top:auto;
-}
-.omnimux-skill-card-author {
-  font-size:11px; line-height:15px;
-  color:var(--dsw-alias-label-tertiary); font-weight:400;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.omnimux-skill-verified-icon {
-  display:inline-flex; width:12px; height:12px; color:var(--dsw-alias-brand-primary); flex-shrink:0;
 }
 
 /* 复合筛选工具栏 */

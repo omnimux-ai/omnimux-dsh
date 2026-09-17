@@ -257,7 +257,7 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     const actualTop8Titles = Array.from(cards).slice(0, 8).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
     assert.deepEqual(actualTop8Titles, expectedTop8Titles, '前 8 张卡片必须与图 4 官方精选爆款严格一致')
 
-    // 验证卡片内容规范（封面、H3 角标、hover 按钮、两行描述、认证底行）
+    // 验证卡片内容规范（封面、H3 角标、hover 按钮、两行描述；不含任何品牌署名行）
     const firstCard = cards[0]
     const coverImg = firstCard.querySelector('.omnimux-skill-card-cover-img')
     assert.ok(coverImg, '技能卡片必须渲染真实封面图片')
@@ -265,9 +265,10 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     const badge = firstCard.querySelector('.omnimux-skill-card-badge')
     assert.ok(badge, '技能卡片必须渲染左上角紫色角标')
     assert.equal(badge.textContent.trim(), 'H3', '角标文本必须为 H3')
-    const author = firstCard.querySelector('.omnimux-skill-card-author')
-    assert.equal(author?.textContent?.trim(), '@MiniMax Design官方', '底部署名必须为 @MiniMax Design官方')
-    assert.ok(firstCard.querySelector('.omnimux-skill-verified-icon'), '底行必须渲染官方认证打勾图标')
+    assert.equal(firstCard.querySelector('.omnimux-skill-card-attribution'), null, '卡片不得渲染署名行')
+    assert.equal(firstCard.querySelector('.omnimux-skill-card-author'), null, '卡片不得渲染署名文本')
+    assert.equal(firstCard.querySelector('.omnimux-skill-verified-icon'), null, '卡片不得渲染认证打勾图标')
+    assert.equal(host.textContent.includes('MiniMax'), false, '技能面板不得出现 MiniMax 字样')
 
     // 5. 点击分类胶囊筛选
     await click(chips[1]) // 第一个业务分类（电商变现）

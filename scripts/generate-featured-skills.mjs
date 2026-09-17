@@ -86,7 +86,6 @@ export function buildSnapshot(catalog) {
         cover: coverAsset,
         avatar: avatarAsset,
         badge: typeof item.badge === 'string' && item.badge ? item.badge : 'H3',
-        attribution: typeof item.attribution === 'string' && item.attribution ? item.attribution : '@MiniMax Design官方',
         skill: String(item.skill || ''),
         sourceRef: item.source && typeof item.source === 'object'
           ? { repo: String(item.source.repo || ''), path: String(item.source.path || '') }
