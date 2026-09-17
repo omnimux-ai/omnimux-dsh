@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import {
   IconPlusOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, ConfirmModal, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider, FilterBar, ModalDialog, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import {
   listProjects,
   getProject,
@@ -51,6 +51,65 @@ import {
 
 export const WORKFLOW_LIBRARY_TAB_ID = 'omnimux-workflow:library'
 
+function PromptModal({ open, title, placeholder, defaultValue = '', confirmLabel = '确定', cancelLabel = '取消', onClose, onConfirm }) {
+  const [value, setValue] = useState(defaultValue)
+  useEffect(() => {
+    if (open) setValue(defaultValue)
+  }, [open, defaultValue])
+
+  if (!open) return null
+
+  const handleSubmit = (e) => {
+    e?.preventDefault?.()
+    if (!value.trim()) return
+    onConfirm(value.trim())
+  }
+
+  return (
+    <ModalDialog
+      open={open}
+      onClose={onClose}
+      title={title}
+      size="sm"
+      closeLabel={cancelLabel}
+      footer={(
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', width: '100%' }}>
+          <Button variant="ghost" onClick={onClose}>{cancelLabel}</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!value.trim()}>{confirmLabel}</Button>
+        </div>
+      )}
+    >
+      <form onSubmit={handleSubmit} style={{ margin: '8px 0' }}>
+        <input
+          autoFocus
+          className="omnimux-prompt-input"
+          style={{
+            width: '100%',
+            height: '32px',
+            boxSizing: 'border-box',
+            padding: '0 10px',
+            borderRadius: '8px',
+            border: '1px solid var(--dsw-alias-border-l2)',
+            background: 'var(--dsw-alias-bg-layer-1)',
+            color: 'var(--dsw-alias-label-primary)',
+            fontSize: '13px',
+            outline: 'none',
+          }}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              onClose()
+            }
+          }}
+        />
+      </form>
+    </ModalDialog>
+  )
+}
+
 function errText(result, t) {
   const code = String(result?.body?.error ?? '')
   if (code === 'no-workspace') return t('projects.noWorkspace') || '工作区不可用'
@@ -78,7 +137,9 @@ export function ProjectLibraryPage(props) {
   const [busy, setBusy] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [pendingDeletePage, setPendingDeletePage] = useState(null)
   const [pendingAppDelete, setPendingAppDelete] = useState(null)
+  const [promptModal, setPromptModal] = useState(null)
   const [libraryTab, setLibraryTab] = useState('local')
   // 「AI应用」分类的独立数据源：localStorage['omnimux_apps_manifests']
   // （发布向导写的唯一真实落点），与顶层项目列表互不影响。
@@ -322,14 +383,41 @@ export function ProjectLibraryPage(props) {
     }
   }
 
-  // 6. 重命名创作页
-  const handleRenamePage = async (page) => {
+  // 6. 重命名创作页（对标规范：深色模态对话框）
+  const handleRenamePage = (page) => {
     if (!selectedProject) return
-    const next = window.prompt(t('projects.renamePrompt') || '请输入新名称：', page.title || '')
-    if (!next || !next.trim() || next.trim() === page.title) return
+    setPromptModal({
+      title: t('projects.renamePrompt') || '重命名创作页',
+      placeholder: t('projects.namePlaceholder') || '请输入新名称',
+      defaultValue: page.title || '',
+      confirmLabel: t('projects.save') || '保存',
+      onConfirm: async (next) => {
+        if (!next.trim() || next.trim() === page.title) return
+        setBusy(true)
+        try {
+          const res = await updateProjectPage(selectedProject.id, page.id, { title: next.trim() })
+          if (res.ok) void loadProjectDetail(selectedProject)
+          else setError(errText(res, t))
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
+  }
+
+  // 7. 删除创作页（对标规范：ConfirmModal 危险操作确认弹窗）
+  const handleDeletePage = (page) => {
+    if (!selectedProject) return
+    setPendingDeletePage(page)
+  }
+
+  const confirmDeletePage = async () => {
+    if (!selectedProject || !pendingDeletePage) return
+    const pageId = pendingDeletePage.id
+    setPendingDeletePage(null)
     setBusy(true)
     try {
-      const res = await updateProjectPage(selectedProject.id, page.id, { title: next.trim() })
+      const res = await deleteProjectPage(selectedProject.id, pageId)
       if (res.ok) void loadProjectDetail(selectedProject)
       else setError(errText(res, t))
     } finally {
@@ -337,38 +425,31 @@ export function ProjectLibraryPage(props) {
     }
   }
 
-  // 7. 删除创作页
-  const handleDeletePage = async (page) => {
+  // 8. 资产管理：新建文件夹 (对标规范：深色模态对话框)
+  const handleCreateFolder = () => {
     if (!selectedProject) return
-    if (!window.confirm(`确定要删除创作页「${page.title}」吗？`)) return
-    setBusy(true)
-    try {
-      const res = await deleteProjectPage(selectedProject.id, page.id)
-      if (res.ok) void loadProjectDetail(selectedProject)
-      else setError(errText(res, t))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // 8. 资产管理：新建文件夹 (物理工作区目录)
-  const handleCreateFolder = async () => {
-    if (!selectedProject) return
-    const name = window.prompt('请输入新建文件夹名称：', '新建文件夹')
-    if (!name || !name.trim()) return
-    setBusy(true)
-    try {
-      const res = await mkdirProjectFile(selectedProject.id, name.trim())
-      if (res.ok) {
-        void loadProjectDetail(selectedProject)
-      } else {
-        const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
-        await mkdirWorkspaceAsset(wsId, { name: name.trim() })
-        void loadProjectDetail(selectedProject)
-      }
-    } finally {
-      setBusy(false)
-    }
+    setPromptModal({
+      title: '新建文件夹',
+      placeholder: '请输入文件夹名称',
+      defaultValue: '新建文件夹',
+      confirmLabel: '创建',
+      onConfirm: async (name) => {
+        if (!name.trim()) return
+        setBusy(true)
+        try {
+          const res = await mkdirProjectFile(selectedProject.id, name.trim())
+          if (res.ok) {
+            void loadProjectDetail(selectedProject)
+          } else {
+            const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
+            await mkdirWorkspaceAsset(wsId, { name: name.trim() })
+            void loadProjectDetail(selectedProject)
+          }
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
   }
 
   // 9. 资产管理：上传文件 (物理工作区目录)
@@ -418,17 +499,24 @@ export function ProjectLibraryPage(props) {
     }
   }
 
-  const handleRenameProject = async (project) => {
-    const next = window.prompt(t('projects.renamePrompt') || '重命名项目', project.title || '')
-    if (next === null || next.trim() === '' || next.trim() === project.title) return
-    setBusy(true)
-    try {
-      const res = await renameProject(project.id, next.trim())
-      if (res.ok) void reload()
-      else setError(errText(res, t))
-    } finally {
-      setBusy(false)
-    }
+  const handleRenameProject = (project) => {
+    setPromptModal({
+      title: t('projects.renamePrompt') || '重命名项目',
+      placeholder: t('projects.namePlaceholder') || '请输入项目名称',
+      defaultValue: project.title || '',
+      confirmLabel: t('projects.save') || '保存',
+      onConfirm: async (next) => {
+        if (!next.trim() || next.trim() === project.title) return
+        setBusy(true)
+        try {
+          const res = await renameProject(project.id, next.trim())
+          if (res.ok) void reload()
+          else setError(errText(res, t))
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
   }
 
   const confirmDeleteProject = async () => {
@@ -713,6 +801,36 @@ export function ProjectLibraryPage(props) {
           cancelLabel={t('projects.dialog.cancel') || '取消'}
           confirmVariant="danger"
           onConfirm={confirmDeleteApp}
+        />
+      ) : null}
+
+      {pendingDeletePage ? (
+        <ConfirmModal
+          open
+          onClose={() => { setPendingDeletePage(null) }}
+          title={t('projects.deletePageTitle') || '删除创作页'}
+          message={(t('projects.deletePageConfirm') || '确定要删除创作页「{title}」吗？').replace('{title}', pendingDeletePage.title)}
+          confirmLabel={t('projects.delete') || '删除'}
+          cancelLabel={t('projects.dialog.cancel') || '取消'}
+          confirmVariant="danger"
+          onConfirm={() => { void confirmDeletePage() }}
+        />
+      ) : null}
+
+      {promptModal ? (
+        <PromptModal
+          open
+          title={promptModal.title}
+          placeholder={promptModal.placeholder}
+          defaultValue={promptModal.defaultValue}
+          confirmLabel={promptModal.confirmLabel}
+          cancelLabel={t('projects.dialog.cancel') || '取消'}
+          onClose={() => setPromptModal(null)}
+          onConfirm={(val) => {
+            const fn = promptModal.onConfirm
+            setPromptModal(null)
+            void fn(val)
+          }}
         />
       ) : null}
     </div>
