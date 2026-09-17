@@ -262,7 +262,7 @@ function runNative(command, args) {
  * }} deps
  */
 export function createAssetsDispatcher(deps) {
-  const { mappings, artifacts, library, cloud } = deps
+  const { mappings, artifacts, library, cloud, paths } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
 
   /**
@@ -712,6 +712,21 @@ export function createAssetsDispatcher(deps) {
         const artifact = artifacts.get(id)
         if (!artifact) throw new AssetsError('artifact-not-found', 'artifact not found')
         return { status: 200, body: { artifact } }
+      }
+
+      if (method === 'GET' && path === '/omnimux/assets/artifacts/preview') {
+        const id = url.searchParams.get('id') || ''
+        const artifact = artifacts.get(id)
+        if (!artifact) throw new AssetsError('artifact-not-found', 'artifact not found')
+        const absPath = paths?.dir ? resolve(paths.dir, artifact.content_ref) : ''
+        return {
+          status: 200,
+          stream: {
+            absolutePath: absPath,
+            mime: artifact.mime,
+            size: artifact.size,
+          },
+        }
       }
 
       return { status: 404, body: { error: 'not-found', message: 'unknown route' } }

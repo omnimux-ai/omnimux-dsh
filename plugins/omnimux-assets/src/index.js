@@ -59,7 +59,7 @@ export function apply(ctx) {
   const library = createLibraryStore({ paths })
   library.migrateMappings(mappings)
   const cloud = createCloudCatalog({ library })
-  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud })
+  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
