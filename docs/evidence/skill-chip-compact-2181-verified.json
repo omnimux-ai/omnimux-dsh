@@ -1,0 +1,42 @@
+{
+  "issue": 2181,
+  "verifiedAt": "2026-09-17T08:41:00.000Z",
+  "summary": "会话栏技能胶囊缩小自适应为仅图标与交互优化（方案 A）",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "缩小状态仅展示 28px 图标，隐藏文本与常驻叉号",
+      "result": "pass",
+      "evidence": "html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip 强制锁定 width:28px、padding:0、justify-content:center；.sh-chip-label 与 .sh-chip-close 设为 display:none !important"
+    },
+    {
+      "id": "AC-2",
+      "name": "悬停手感优化：图标平滑切换为红色清除叉号",
+      "result": "pass",
+      "evidence": "悬停时 .sh-chip-icon 隐藏、.sh-chip-icon-hover 显现，呈现 danger 色系与高亮背景，title 显示完整技能说明与点击移除提示"
+    },
+    {
+      "id": "AC-3",
+      "name": "紧凑模式胶囊点击直接执行移除",
+      "result": "pass",
+      "evidence": "skill-picker.js 在 density 为 icon 或 short 时，onClick 拦截冒泡并直接调用 clearActiveSkill()，支持一键移除"
+    },
+    {
+      "id": "AC-4",
+      "name": "宽屏模式超长名称防撑爆溢出防护",
+      "result": "pass",
+      "evidence": ".sh-chip-label 声明 max-width:130px; text-overflow:ellipsis; overflow:hidden; 彻底杜绝超长名挤压右侧模型切换与发送按钮"
+    },
+    {
+      "id": "AC-5",
+      "name": "自动化测试与客户端单测回归",
+      "result": "pass",
+      "evidence": "model-picker.test.js 针对 Issue #2181 断言通过；src/client/*.test.js 202/202 全量通过"
+    }
+  ],
+  "unit": {
+    "model-picker.test.js": "11/11",
+    "try-skill-session.test.js": "4/4",
+    "client-total": "202/202"
+  }
+}
