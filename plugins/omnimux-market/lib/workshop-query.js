@@ -3,7 +3,7 @@ import { catalogSkillChannel, catalogSkillSlug } from './skill-aggregate.js';
 import { checkSkillBilingual, isOfficialShelfItem } from './skill-bilingual.js';
 /** View order only. Membership and fallback matching remain owned by SkillShelf. */
 export const WORKSHOP_DOMAINS = Object.freeze([
-    '短剧漫剧', '专业影视', '动画', '商业广告', '电商', '教育', '创意实验', '音频音乐', '平台工具',
+    'AIGC 创作', '短剧漫剧', '专业影视', '动画', '商业广告', '电商', '教育', '创意实验', '音频音乐', '平台工具',
 ]);
 export const WORKSHOP_CATEGORIES = Object.freeze(['all', 'featured', ...WORKSHOP_DOMAINS]);
 export const WORKSHOP_ORIGINS = Object.freeze([

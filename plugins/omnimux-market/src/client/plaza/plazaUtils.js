@@ -129,6 +129,7 @@ export function WorkshopSwitch(props) {
 /** 套件域置首位：分类栏紧跟「全部」之后展示，「我的」下拉亦紧随「全部分类」。 */
 export const WORKSHOP_DOMAIN_ORDER = [
   '套件',
+  'AIGC 创作',
   '短剧漫剧',
   '专业影视',
   '动画',

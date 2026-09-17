@@ -8865,7 +8865,7 @@
         "AIGC",
         "海报",
         "Agentara",
-        "商业广告"
+        "AIGC 创作"
       ],
       "skill": "gunpla-poster",
       "source": {
@@ -8887,7 +8887,7 @@
         "AIGC",
         "提示词",
         "Agentara",
-        "创意实验"
+        "AIGC 创作"
       ],
       "skill": "portrait-clone",
       "source": {
@@ -8909,7 +8909,7 @@
         "AIGC",
         "演示",
         "Agentara",
-        "商业广告"
+        "AIGC 创作"
       ],
       "skill": "presentation-design",
       "source": {
@@ -8931,7 +8931,7 @@
         "AIGC",
         "插画",
         "Agentara",
-        "创意实验"
+        "AIGC 创作"
       ],
       "skill": "soviet-storybook-grotesque",
       "source": {
@@ -8953,7 +8953,7 @@
         "AIGC",
         "海报",
         "Agentara",
-        "商业广告"
+        "AIGC 创作"
       ],
       "skill": "torn-paper-collage-poster",
       "source": {
@@ -8975,7 +8975,7 @@
         "AIGC",
         "角色设定",
         "Agentara",
-        "专业影视"
+        "AIGC 创作"
       ],
       "skill": "video-character-design",
       "source": {
@@ -8997,7 +8997,7 @@
         "AIGC",
         "企划",
         "Agentara",
-        "专业影视"
+        "AIGC 创作"
       ],
       "skill": "video-plan",
       "source": {
@@ -9019,7 +9019,7 @@
         "AIGC",
         "海报",
         "Agentara",
-        "专业影视"
+        "AIGC 创作"
       ],
       "skill": "video-poster-design",
       "source": {
@@ -9041,13 +9041,409 @@
         "AIGC",
         "分镜",
         "Agentara",
-        "专业影视"
+        "AIGC 创作"
       ],
       "skill": "video-storyboard",
       "source": {
         "type": "git",
         "repo": "agentara/skills",
         "path": "skills/aigc/video-storyboard",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-ai-image-gen",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "AI 生图（文生图／图生图）",
+      "subtitle": "Easel",
+      "summary": "文生图、图生图与图像变体：按提示词或参考图生成新图，也能改图换图。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "生图",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "ai-image-gen",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/ai-image-gen",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-image-editing",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "图像处理与加水印",
+      "subtitle": "Easel",
+      "summary": "改尺寸、裁剪补边、格式转换、压缩到目标大小、加文字或图片水印、圆角与多图拼接。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "图像处理",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "image-editing",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/image-editing",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-image-enhance",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "图片增强与放大",
+      "subtitle": "Easel",
+      "summary": "高质量放大 2×／4×，去噪、锐化并自动调整对比与饱和度，改善偏糊、偏暗、噪点多的图片。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "图像增强",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "image-enhance",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/image-enhance",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-remove-bg",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "抠图与换背景",
+      "subtitle": "Easel",
+      "summary": "AI 语义分割把主体从背景抠出，输出透明 PNG，或换成纯色白底与新场景背景。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "抠图",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "remove-bg",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/remove-bg",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-ai-video-gen",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "AI 视频生成",
+      "subtitle": "Easel",
+      "summary": "文生视频与图生视频，可接通义万相、Seedance、可灵等通道异步生成。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "视频生成",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "ai-video-gen",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/ai-video-gen",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-easel-auto-short-video",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "一句话一键成片",
+      "subtitle": "Easel",
+      "summary": "给一个主题即串联文案、配图或 AI 视频、配音、字幕与背景音乐，产出一条完整短视频。源：ZJU-REAL/Easel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "短视频",
+        "Easel",
+        "AIGC 创作"
+      ],
+      "skill": "auto-short-video",
+      "source": {
+        "type": "git",
+        "repo": "ZJU-REAL/Easel",
+        "path": "skills/openclaw/auto-short-video",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-baoyu-image-gen",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "多通道 AI 生图",
+      "subtitle": "Baoyu",
+      "summary": "接入 GPT Image、Google、OpenRouter、DashScope 等多通道生成图片，可按场景选模型。源：JimLiu/baoyu-skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "生图",
+        "Baoyu",
+        "AIGC 创作"
+      ],
+      "skill": "baoyu-image-gen",
+      "source": {
+        "type": "git",
+        "repo": "JimLiu/baoyu-skills",
+        "path": "skills/baoyu-image-gen",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-baoyu-cover-image",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "文章封面图生成",
+      "subtitle": "Baoyu",
+      "summary": "按类型、配色、渲染方式、文字与情绪五个维度组合，生成文章与视频封面图。源：JimLiu/baoyu-skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "封面图",
+        "Baoyu",
+        "AIGC 创作"
+      ],
+      "skill": "baoyu-cover-image",
+      "source": {
+        "type": "git",
+        "repo": "JimLiu/baoyu-skills",
+        "path": "skills/baoyu-cover-image",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-baoyu-comic",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "知识漫画创作",
+      "subtitle": "Baoyu",
+      "summary": "把知识内容改编成多风格漫画，支持不同画风与叙事语气，产出原创解说漫画。源：JimLiu/baoyu-skills（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "漫画",
+        "Baoyu",
+        "AIGC 创作"
+      ],
+      "skill": "baoyu-comic",
+      "source": {
+        "type": "git",
+        "repo": "JimLiu/baoyu-skills",
+        "path": "skills/baoyu-comic",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-flux-best-practices",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "FLUX 生图实战",
+      "subtitle": "OpenMontage",
+      "summary": "FLUX 系列模型的提示词写法、文生图与图生图、结构化参数等实战要点合集。源：calesthio/OpenMontage（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "生图",
+        "OpenMontage",
+        "AIGC 创作"
+      ],
+      "skill": "flux-best-practices",
+      "source": {
+        "type": "git",
+        "repo": "calesthio/OpenMontage",
+        "path": ".claude/skills/flux-best-practices",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-ltx2",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "LTX 视频生成",
+      "subtitle": "OpenMontage",
+      "summary": "用 LTX 模型做文生视频与图生视频短片段，适合批量产出视频素材。源：calesthio/OpenMontage（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "视频生成",
+        "OpenMontage",
+        "AIGC 创作"
+      ],
+      "skill": "ltx2",
+      "source": {
+        "type": "git",
+        "repo": "calesthio/OpenMontage",
+        "path": ".claude/skills/ltx2",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-seedance-prompt",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Seedance 提示词工程",
+      "subtitle": "Seedance",
+      "summary": "面向 Seedance 视频模型的提示词结构与写法，覆盖多模态输入与常见坑。源：Emily2040/seedance-2.0（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "提示词",
+        "Seedance",
+        "AIGC 创作"
+      ],
+      "skill": "seedance-prompt",
+      "source": {
+        "type": "git",
+        "repo": "Emily2040/seedance-2.0",
+        "path": "skills/seedance-prompt",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-seedance-characters",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频角色一致性",
+      "subtitle": "Seedance",
+      "summary": "用角色标签锁定人物身份与形象，让同一角色在多条视频里保持一致。源：Emily2040/seedance-2.0（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "角色一致性",
+        "Seedance",
+        "AIGC 创作"
+      ],
+      "skill": "seedance-characters",
+      "source": {
+        "type": "git",
+        "repo": "Emily2040/seedance-2.0",
+        "path": "skills/seedance-characters",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-seedance-camera",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "AI 视频运镜",
+      "subtitle": "Seedance",
+      "summary": "镜头运动、景别与镜头感的提示词写法，让生成视频有明确运镜意图。源：Emily2040/seedance-2.0（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "运镜",
+        "Seedance",
+        "AIGC 创作"
+      ],
+      "skill": "seedance-camera",
+      "source": {
+        "type": "git",
+        "repo": "Emily2040/seedance-2.0",
+        "path": "skills/seedance-camera",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-seedance-examples-zh",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Seedance 中文范例",
+      "subtitle": "Seedance",
+      "summary": "中文提示词范例集，按场景给出可直接复制的视频生成提示词。源：Emily2040/seedance-2.0（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "范例",
+        "Seedance",
+        "AIGC 创作"
+      ],
+      "skill": "seedance-examples-zh",
+      "source": {
+        "type": "git",
+        "repo": "Emily2040/seedance-2.0",
+        "path": "skills/seedance-examples-zh",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-jimeng-seedance-zh",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "即梦 Seedance 中文提示词",
+      "subtitle": "即梦",
+      "summary": "为即梦 Seedance 撰写高质量中文提示词，覆盖引用语法、运镜复刻、特效模仿与视频延长。源：dexhunter/seedance2-skill（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "即梦",
+        "即梦",
+        "AIGC 创作"
+      ],
+      "skill": "seedance2-skill-zh",
+      "source": {
+        "type": "git",
+        "repo": "dexhunter/seedance2-skill",
+        "path": "zh",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-editorial-collage-motion",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "拼贴动效出片",
+      "subtitle": "rnskill",
+      "summary": "把参考图解码成半色调纸张拼贴规范，先生成静帧与透明图层，再合成逐件拼贴动效。源：Pluviobyte/rnskill（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "动效",
+        "rnskill",
+        "AIGC 创作"
+      ],
+      "skill": "editorial-collage-motion",
+      "source": {
+        "type": "git",
+        "repo": "Pluviobyte/rnskill",
+        "path": "skills/editorial-collage-motion",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-arcreel-generate-grid",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "宫格分镜生图",
+      "subtitle": "ArcReel",
+      "summary": "按分组自动选择宫格大小，生成带过渡帧的宫格联合图，再切分成各分镜的起始画面。源：ArcReel/ArcReel（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "分镜",
+        "ArcReel",
+        "AIGC 创作"
+      ],
+      "skill": "generate-grid",
+      "source": {
+        "type": "git",
+        "repo": "ArcReel/ArcReel",
+        "path": "agent_runtime_profile/.claude/skills/generate-grid",
         "ref": "main"
       }
     }

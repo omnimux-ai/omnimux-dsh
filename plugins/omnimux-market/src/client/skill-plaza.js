@@ -3,7 +3,7 @@
     // 结构契约：function InstallModal, drop-zone, req-section, btn-modal-install, function ConfirmInstallModal,
     //          function SuiteDetailModal, ws-suite-block, ws-suite-install-dialog, ws-suite-target-option
     // 样式契约：featured-cover-wrap, coverSrc ?, featured-hover-actions, hover-btn-detail, hover-btn-try, expert-market-grid, expert-card, expert-pill-btn, expertMarket.disabled
-    // 领域契约：套件, 短剧漫剧, 专业影视, 动画, 商业广告, 电商, 教育, 创意实验, 音频音乐, 平台工具
+    // 领域契约：套件, AIGC 创作, 短剧漫剧, 专业影视, 动画, 商业广告, 电商, 教育, 创意实验, 音频音乐, 平台工具
 
     const plazaUtils = require("./plaza/plazaUtils.js");
     const { InstallModal: PlazaInstallModal } = require("./plaza/InstallModal.jsx");

@@ -130,9 +130,9 @@ const suiteCard = (item) => ({
 
 test('A1 分类栏：套件紧跟「全部」，位于「精选」与各技能领域之前', () => {
   const categories = buildWorkshopCategories(null, tr)
-  assert.equal(categories.length, 12)
+  assert.equal(categories.length, 13)
   assert.deepEqual(categories.slice(0, 3).map((c) => c.id), ['', '套件', 'featured'])
-  assert.deepEqual(categories.slice(3, 5).map((c) => c.id), ['短剧漫剧', '专业影视'])
+  assert.deepEqual(categories.slice(3, 5).map((c) => c.id), ['AIGC 创作', '短剧漫剧'])
   assert.equal(categories.at(-1).id, '平台工具')
   // 预设绑定模式保持既有形态：不新增套件分类
   assert.deepEqual(buildWorkshopCategories({ categories: [{ id: '选品', name: '选品' }] }, tr).map((c) => c.id), ['', '选品'])
