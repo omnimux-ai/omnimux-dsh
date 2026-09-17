@@ -28,8 +28,10 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'model',
   },
   audio: {
-    // 仅保留火山官方直连配音主力模型
-    allowedModelIds: ['seed-audio-1.0'],
+    // 仅保留火山官方直连配音主力模型；index-tts 提供声音克隆（参考音 + 文稿）。
+    // 白名单只决定「可进入画布」，具体节点仍由输入兼容性过滤：只有文稿的节点看不到
+    // 需要参考音的 index-tts，只有参考音 + 文稿的克隆节点才看得到它。
+    allowedModelIds: ['seed-audio-1.0', 'index-tts'],
     defaultModelId: 'seed-audio-1.0',
     modeSelection: 'model',
   },
