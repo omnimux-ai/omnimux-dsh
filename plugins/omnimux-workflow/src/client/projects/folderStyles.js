@@ -29,6 +29,13 @@ export const FOLDER_STYLES = `
 .omnimux-page-open:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .omnimux-folder-open:focus-visible, .omnimux-folder-more:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
 .omnimux-folder:hover .omnimux-folder-back { border-color: var(--dsw-alias-border-l3); }
+.omnimux-page-card { position: relative; }
+.omnimux-page-card .omnimux-page-more { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-secondary); opacity: 0; transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease; z-index: 2; }
+.omnimux-page-card:hover .omnimux-page-more, .omnimux-page-card:focus-within .omnimux-page-more { opacity: 1; }
+@media (hover: none) { .omnimux-page-card .omnimux-page-more { opacity: 1; } }
+@media (pointer: coarse) { .omnimux-folder .omnimux-folder-more, .omnimux-folder-menu [role=menuitem], .omnimux-page-card .omnimux-page-more, .omnimux-page-card-actions button { min-width: 44px; min-height: 44px; } }
+.omnimux-page-card .omnimux-page-more:hover { border-color: var(--dsw-alias-border-hover); color: var(--dsw-alias-label-primary); }
+.omnimux-page-card .omnimux-folder-menu { bottom: 44px; right: 8px; }
 .omnimux-folder-menu { position: absolute; z-index: 4; bottom: 20%; right: 5%; display: flex; flex-direction: column; gap: 2px; min-width: 148px; padding: 4px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-overlay)); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1); animation: omnimux-menu-pop 120ms cubic-bezier(0.16, 1, 0.3, 1); transform-origin: bottom right; }
 @keyframes omnimux-menu-pop { from { opacity: 0; transform: translateY(4px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .omnimux-folder-menu [role=menuitem] { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 500; line-height: 18px; justify-content: flex-start; cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 80ms ease; }
