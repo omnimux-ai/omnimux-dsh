@@ -47,6 +47,7 @@ export const RULES = {
   R3: 'loopback-provider-endpoint',
   R4: 'plugin-provider-key',
   R5: 'dev-machine-path',
+  R6: 'shipped-asset-machine-path',
 }
 
 const RULE_LABEL = {
@@ -55,6 +56,7 @@ const RULE_LABEL = {
   R3: '回环地址被当作模型端点',
   R4: '业务插件读取 provider 密钥',
   R5: '开发机绝对路径进入产品运行时',
+  R6: '随产品分发的数据文件含开发机路径',
 }
 
 const DEV_IDENTITY_RE = /omnimux-dev/
@@ -63,6 +65,8 @@ const LOCAL_CONFIG_LITERAL_RE = /['"][^'"]*(?:settings\.yaml|\.credentials\.yaml
 const PROVIDER_MARKER_RE = /\bproviders\b|baseURL|baseUrl|apiKeyEnv|llm-pi-ai/
 const LOOPBACK_V1_RE = /https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?\/v1(?:\/|\b)/
 const DEV_MACHINE_PATH_RE = /\/Users\/[^/'"\s]+\/Desktop\/|~\/Desktop\/Project\//
+/** R6：随产品分发的 JSON（资产、目录清单、构建配置）不得携带任何绝对家目录路径。 */
+const SHIPPED_ASSET_PATH_RE = /\/Users\/[^/'"\s]+\//
 const PROVIDER_KEY_ENV_RE = /process\.env\.([A-Z][A-Z0-9_]*)/g
 const PROVIDER_KEY_EXEMPT_PREFIX = /^(?:OMNIMUX_|DSH_)/
 const HUB_SEAM_RE = /\bvideoGenerate\b|\bimageGenerate\b|\bvideoProcess\b|\bspeechToText\b|\btextComplete\b|\bmodelCatalog\b|omnimux_[a-z_]+|catalog-defaults/
@@ -107,6 +111,20 @@ export function isRuntimeSource(relPath) {
   return true
 }
 
+/**
+ * 随产品分发的 JSON：插件私有数据文件（资产、目录清单、构建配置）。
+ * 这些文件同样会被打包下发，因此与运行时代码同受门禁约束；测试、夹具、docs 不判。
+ */
+export function isShippedAsset(relPath) {
+  const rel = toPosix(relPath)
+  if (!/^plugins\/[^/]+\//.test(rel)) return false
+  if (!rel.endsWith('.json')) return false
+  if (VENDOR_PREFIXES.some((p) => rel.startsWith(p))) return false
+  const segments = rel.split('/')
+  if (segments.some((s) => TEST_SEGMENTS.has(s) || s === 'docs')) return false
+  return true
+}
+
 function walk(dir, acc, root) {
   let entries
   try {
@@ -121,7 +139,7 @@ function walk(dir, acc, root) {
       walk(full, acc, root)
     } else if (entry.isFile()) {
       const rel = toPosix(relative(root, full))
-      if (isRuntimeSource(rel)) acc.push(rel)
+      if (isRuntimeSource(rel) || isShippedAsset(rel)) acc.push(rel)
     }
   }
   return acc
@@ -165,8 +183,20 @@ function providerKeyHits(rel, content) {
  */
 export function scanContent(relPath, content) {
   const rel = toPosix(relPath)
-  if (!isRuntimeSource(rel)) return []
+  const runtime = isRuntimeSource(rel)
+  const asset = isShippedAsset(rel)
+  if (!runtime && !asset) return []
   const hits = []
+
+  if (asset && SHIPPED_ASSET_PATH_RE.test(content)) {
+    hits.push({
+      rule: 'R6',
+      line: firstLineMatching(content, SHIPPED_ASSET_PATH_RE),
+      detail: '随产品分发的 JSON 含开发机绝对路径',
+    })
+  }
+
+  if (!runtime) return hits
 
   if (DEV_IDENTITY_RE.test(content)) {
     hits.push({ rule: 'R1', line: firstLineMatching(content, DEV_IDENTITY_RE), detail: 'omnimux-dev' })

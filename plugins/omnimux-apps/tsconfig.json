@@ -12,11 +12,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true,
-    "typeRoots": [
-      "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/@types+react@19.2.18/node_modules/@types",
-      "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/@types+node@25.9.5/node_modules/@types"
-    ]
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

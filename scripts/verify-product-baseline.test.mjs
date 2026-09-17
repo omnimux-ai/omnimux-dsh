@@ -154,6 +154,41 @@ test('R5 反例：用户自己的桌面文件示例路径 → 不报', () => {
   assert.ok(!rulesOf(RUNTIME_FILE, content).includes('R5'))
 })
 
+/* ------------------------------------------------------------------ R6 */
+
+test('R6 正例：随产品分发的 JSON 含开发机路径 → 红灯', () => {
+  const asset = 'plugins/omnimux/assets/demo/cards.json'
+  const content = '{\n  "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/a"\n}\n'
+  assert.ok(rulesOf(asset, content).includes('R6'))
+})
+
+test('R6 正例：家目录下的绝对路径（非 Desktop）同样红灯', () => {
+  const asset = 'plugins/omnimux/assets/demo/cards.json'
+  assert.ok(rulesOf(asset, '{"sourcePath":"/Users/x/.dsh/plugins/images/a.png"}\n').includes('R6'))
+})
+
+test('R6 反例：测试、夹具、docs 下的 JSON → 不报', () => {
+  const content = '{"localPath":"/Users/x/Desktop/Project/OPC/资产库/skills/a"}\n'
+  for (const rel of [
+    'plugins/omnimux/src/tests/fixture.json',
+    'plugins/omnimux/src/fixtures/sample.json',
+    'plugins/omnimux/docs/report.json',
+    'scripts/product-baseline-allowlist.json',
+  ]) {
+    assert.deepEqual(scanContent(rel, content), [], `${rel} 不应被判定`)
+  }
+})
+
+test('R6 反例：相对路径与产品目录 → 不报', () => {
+  const asset = 'plugins/omnimux/assets/demo/cards.json'
+  assert.deepEqual(scanContent(asset, '{"assets/imported/a.png":1}\n'), [])
+})
+
+test('R6 覆盖：构建配置（tsconfig）与运行时代码同受约束', () => {
+  const ts = 'plugins/omnimux-apps/tsconfig.json'
+  assert.ok(rulesOf(ts, '{"typeRoots":["/Users/x/repo/node_modules/@types"]}\n').includes('R6'))
+})
+
 /* ------------------------------------------------------------------ 豁免 */
 
 test('豁免：命中被抑制，且记录在 allowed 中', () => {
@@ -253,7 +288,7 @@ test('集成：在真实仓库上全仓扫描通过（规则与豁免清单一�
 })
 
 test('集成：规则表与标签齐全（新增规则必须同步标签与文档）', () => {
-  assert.deepEqual(Object.keys(RULES), ['R1', 'R2', 'R3', 'R4', 'R5'])
+  assert.deepEqual(Object.keys(RULES), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'])
 })
 
 test('集成：main() 在仓库上返回 0', () => {

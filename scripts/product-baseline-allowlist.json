@@ -1,5 +1,11 @@
 {
   "version": 1,
   "_note": "产品基线门禁的豁免清单。每条必须给出可执行的理由；修好后必须删除条目，否则门禁报「僵尸豁免」。合同：docs/contracts/product-baseline.md",
-  "entries": []
+  "entries": [
+    {
+      "rule": "R6",
+      "path": "plugins/omnimux-market/catalog/covers/home/bggg-data-amazon.generation.json",
+      "reason": "历史生成记录（provenance）：response.sourcePath 记录当时生成本图的本机来源，属已发生事实的原样留存，不是产品可达路径（该封面本身已随 catalog 分发）。保留历史、不参与门禁判定"
+    }
+  ]
 }
