@@ -463,10 +463,21 @@ export function AssetsStage(props) {
     }
   }, [feed.filterType, feed.query, feed.sortKey, feed.selectedIds, feed.assets])
 
-  const handleOpenCreateProduct = useCallback((kind = 'physical') => {
+  const handleOpenCreateProduct = useCallback((kind = 'physical', productId) => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-    if (api && typeof api.openTab === 'function') {
-      api.openTab('omnimux-products:library')
+    const intent = productId ? { mode: 'edit', productId } : { mode: 'create', kind }
+    if (typeof window !== 'undefined') {
+      window.__omnimuxProductsIntent = intent
+      try {
+        window.dispatchEvent(new CustomEvent('omnimux-products:open', { detail: intent }))
+      } catch {}
+    }
+    if (api) {
+      if (typeof api.open === 'function') {
+        api.open({ tabId: 'omnimux-products:library' })
+      } else if (typeof api.openWorkbench === 'function') {
+        api.openWorkbench({ tabId: 'omnimux-products:library' })
+      }
     }
   }, [])
 

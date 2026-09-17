@@ -127,14 +127,14 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
-  const handleCreate = (kind) => {
+  const handleCreate = useCallback((kind) => {
     editRequest.current += 1
     setFormError('')
     setFormDirty(false)
     setView({ name: 'form', mode: 'create', kind: normalizedKind(kind), product: null })
-  }
+  }, [])
 
-  const handleOpenProduct = async (product) => {
+  const handleOpenProduct = useCallback(async (product) => {
     const request = ++editRequest.current
     setBusy(true)
     setError('')
@@ -162,7 +162,34 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     } finally {
       if (request === editRequest.current) setBusy(false)
     }
-  }
+  }, [t])
+
+  useEffect(() => {
+    const applyIntent = (intent) => {
+      if (!intent) return
+      if (intent.mode === 'create') {
+        handleCreate(intent.kind)
+      } else if (intent.mode === 'edit' && intent.productId) {
+        handleOpenProduct({ id: intent.productId })
+      }
+    }
+    if (typeof window !== 'undefined' && window.__omnimuxProductsIntent) {
+      const intent = window.__omnimuxProductsIntent
+      delete window.__omnimuxProductsIntent
+      applyIntent(intent)
+    }
+    const onIntentEvent = (e) => {
+      if (e?.detail) applyIntent(e.detail)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('omnimux-products:open', onIntentEvent)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('omnimux-products:open', onIntentEvent)
+      }
+    }
+  }, [handleCreate, handleOpenProduct])
 
   const leaveForm = useCallback(() => {
     editRequest.current += 1

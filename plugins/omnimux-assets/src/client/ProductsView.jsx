@@ -106,8 +106,8 @@ export function ProductsView(props) {
     return list
   }, [products, kindTab, query])
 
-  const handleCreate = (kind) => {
-    onOpenCreate?.(kind)
+  const handleCreate = (kind, productId) => {
+    onOpenCreate?.(kind, productId)
   }
 
   return (
@@ -137,7 +137,7 @@ export function ProductsView(props) {
                   key={product.id}
                   className="omnimux-products-card"
                   tabIndex={0}
-                  onClick={() => handleCreate(isDigital ? 'digital' : 'physical')}
+                  onClick={() => handleCreate(isDigital ? 'digital' : 'physical', product.id)}
                 >
                   <div className="omnimux-products-card-thumb">
                     {preview ? (
