@@ -132,7 +132,7 @@ test('AC-3 用户在同一页签切换模式：记录写入 explicit 标记', as
   assert.equal(storage['omnimux-assets:library']?.explicit, true)
 })
 
-test('AC-4 面板已展开时切到显式选过全屏的页签：恢复全屏', async () => {
+test('AC-4 面板处于分栏展开时切到曾选过全屏的页签：当前分栏状态优先，禁止自动进入全屏（Issue #2212）', async () => {
   const doc = setupDom(OPEN_PANEL)
   const { state, storage, enters, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: false })
   storage['omnimux-workflow:library'] = { mode: WORKBENCH_FOCUS.gui, explicit: true }
@@ -142,8 +142,8 @@ test('AC-4 面板已展开时切到显式选过全屏的页签：恢复全屏', 
 
   state.tab = 'omnimux-workflow:library'
   reconciler.sync()
-  assert.deepEqual(enters, ['omnimux-workflow:library'], '显式记录过的页签恢复全屏')
-  assert.equal(state.isFs, true)
+  assert.deepEqual(enters, [], '分栏状态优先：即便目标页签曾记录全屏偏好，切换时也绝不自动拉入全屏')
+  assert.equal(state.isFs, false, '面板必须保持分栏')
   await new Promise((r) => setTimeout(r, 60))
 })
 
@@ -161,7 +161,7 @@ test('AC-5 面板收起时保持静默', () => {
   assert.equal(triggered, 0)
 })
 
-test('AC-6 收起 → 展开的那一次同步一律呈分栏，显式全屏记录不生效', () => {
+test('AC-6 展开后切换任何页签均保持分栏，当前三栏状态优先于历史全屏偏好（Issue #2212）', () => {
   const doc = setupDom('<div data-sidebar-right-panel="push"></div>')
   const { state, storage, enters, reconciler } = harness(doc, { tab: 'omnimux-workflow:library', isFs: false })
   storage['omnimux-workflow:library'] = { mode: WORKBENCH_FOCUS.gui, explicit: true }
@@ -180,11 +180,11 @@ test('AC-6 收起 → 展开的那一次同步一律呈分栏，显式全屏记�
   reconciler.sync()
   assert.deepEqual(enters, [], '未记录偏好的页签始终保持分栏')
 
-  // 切回显式选过全屏的页签：偏好恢复生效
+  // 切到显式选过全屏的页签：用户当前分栏状态绝对优先，绝不触发全屏
   state.tab = 'omnimux-workflow:library'
   reconciler.sync()
-  assert.deepEqual(enters, ['omnimux-workflow:library'])
-  assert.equal(state.isFs, true)
+  assert.deepEqual(enters, [], '当前分栏状态优先，绝不自动拉入全屏')
+  assert.equal(state.isFs, false, '面板必须保持分栏')
 })
 
 test('AC-7 左侧会话列表有无选中行，调和结果完全一致', () => {

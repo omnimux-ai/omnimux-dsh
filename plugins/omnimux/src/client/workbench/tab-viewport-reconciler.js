@@ -188,6 +188,14 @@ export function createTabViewportReconciler(deps = {}) {
 
       // 仅对工作台相关的 Tab 实施视窗偏好调和
       if (isWorkbenchTab(currentTab)) {
+        // 用户当前工作流状态绝对优先（Issue #2212）：
+        // 若当前面板处于分栏模式（currentMode === 'push'，三栏并排状态），用户在右栏切换 Tab 仅仅是在分栏内切换浏览内容，
+        // 绝不因目标 Tab 的历史偏好而自动执行全屏拉伸覆盖中间会话。保持分栏并持续黄金宽度保底。
+        if (currentMode === 'push') {
+          ensureHealthySplitWidth(doc)
+          return
+        }
+
         const record = getFocusRecord(sessionId, currentTab)
         // 只有用户亲手选过视窗模式的页签才恢复其偏好。`focusRecordForTab` 会按
         // `resolveDefaultFocus` 自动播种（工作台页签为 gui），那不是用户意图 —— 按分栏处理。
@@ -195,16 +203,7 @@ export function createTabViewportReconciler(deps = {}) {
           ? record.mode
           : WORKBENCH_FOCUS.split
 
-        if (targetMode === WORKBENCH_FOCUS.gui && currentMode === 'push') {
-          isReconciling = true
-          lastMode = 'fullscreen'
-          try {
-            enterFullscreen()
-          } finally {
-            scheduleUnlock()
-          }
-          return
-        } else if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'fullscreen') {
+        if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'fullscreen') {
           isReconciling = true
           lastMode = 'push'
           try {
@@ -218,8 +217,6 @@ export function createTabViewportReconciler(deps = {}) {
             scheduleUnlock()
           }
           return
-        } else if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'push') {
-          ensureHealthySplitWidth(doc)
         }
       }
       return
