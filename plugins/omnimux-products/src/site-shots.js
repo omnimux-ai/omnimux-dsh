@@ -68,7 +68,9 @@ export async function captureSiteScreenshots(args = {}) {
   // Ensure the target URL carries an http(s) scheme for Chrome navigation, while
   // preserving the caller's full path, query, and hash parameters.
   let url = rawUrl
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+  if (url.startsWith('//')) {
+    url = `https:${url}`
+  } else if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
     url = `https://${url}`
   }
   // Reuse the importer's own SSRF guard: never a second copy of the rule. The
@@ -119,7 +121,7 @@ export async function captureSiteScreenshots(args = {}) {
       const settled = await Promise.allSettled(VIEWPORT_ORDER.map((key) => captureViewport(
         handle,
         VIEWPORTS[key],
-        { url, navTimeoutMs, settleMs, retrySettleMs, deadline, attach, sleep, attachOptions: args.attachOptions ?? {} },
+        { url, navTimeoutMs, settleMs, retrySettleMs, deadline, attach, sleep, log: args.log, attachOptions: args.attachOptions ?? {} },
       )))
 
       const outcomes = settled.map((row, index) => (row.status === 'fulfilled'
