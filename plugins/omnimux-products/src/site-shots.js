@@ -21,6 +21,8 @@ import {
   BLANK_FRAME_MAX_BYTES,
   BLANK_FRAME_MIN_DIM,
   NAV_TIMEOUT_MS,
+  PNG_IHDR_HEIGHT_OFFSET,
+  PNG_IHDR_WIDTH_OFFSET,
   RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
@@ -106,11 +108,12 @@ export async function captureSiteScreenshots(args = {}) {
 
     const attach = args.attach ?? attachPage
     const sleep = args.sleep ?? defaultSleep
+    const deadline = Date.now() + budgetMs
     try {
       const settled = await Promise.allSettled(VIEWPORT_ORDER.map((key) => captureViewport(
         handle,
         VIEWPORTS[key],
-        { url, navTimeoutMs, settleMs, retrySettleMs, attach, sleep, attachOptions: args.attachOptions ?? {} },
+        { url, navTimeoutMs, settleMs, retrySettleMs, deadline, attach, sleep, attachOptions: args.attachOptions ?? {} },
       )))
 
       const outcomes = settled.map((row, index) => (row.status === 'fulfilled'
@@ -140,15 +143,15 @@ export async function captureSiteScreenshots(args = {}) {
 export function isSuspectedBlankFrame(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < BLANK_FRAME_HEADER_FLOOR) return false
   if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) return false
-  const width = buffer.readUInt32BE(16)
-  const height = buffer.readUInt32BE(20)
+  const width = buffer.readUInt32BE(PNG_IHDR_WIDTH_OFFSET)
+  const height = buffer.readUInt32BE(PNG_IHDR_HEIGHT_OFFSET)
   return width >= BLANK_FRAME_MIN_DIM && height >= BLANK_FRAME_MIN_DIM && buffer.length < BLANK_FRAME_MAX_BYTES
 }
 
 /**
  * @param {{ webSocketDebuggerUrl?: string, port?: number }} handle
  * @param {{ kind: string, width: number, height: number, deviceScaleFactor: number, isMobile: boolean, hasTouch: boolean }} spec
- * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object, retrySettleMs?: number }} opts
+ * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object, retrySettleMs?: number, deadline?: number }} opts
  * @returns {Promise<object>}
  */
 async function captureViewport(handle, spec, opts) {
@@ -164,11 +167,12 @@ async function captureViewport(handle, spec, opts) {
 
     if (isSuspectedBlankFrame(buffer)) {
       const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : RETRY_SETTLE_MS
-      if (retryWaitMs > 0 && typeof opts.sleep === 'function') {
+      const remainingMs = Number.isFinite(opts.deadline) ? opts.deadline - Date.now() : Infinity
+      if (retryWaitMs > 0 && remainingMs > retryWaitMs + 1000 && typeof opts.sleep === 'function') {
         await opts.sleep(retryWaitMs)
         try {
           const retriedBuffer = await page.capture()
-          if (retriedBuffer && (!isSuspectedBlankFrame(retriedBuffer) || retriedBuffer.length > buffer.length)) {
+          if (retriedBuffer && !isSuspectedBlankFrame(retriedBuffer)) {
             buffer = retriedBuffer
           }
         } catch {
