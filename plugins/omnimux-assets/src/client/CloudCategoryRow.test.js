@@ -29,7 +29,8 @@ describe('Cloud category row layout and refresh shuffle cache contract', () => {
 
   it('CloudCategoryRow consumes globalShuffleCache to ensure randomized order with session cache', () => {
     assert.match(rowJsx, /globalShuffleCache\.get\(catId\)/)
-    assert.match(rowJsx, /globalShuffleCache\.getOrShuffle\(catId, rawRows\)/)
+    assert.match(rowJsx, /fetchCategoryRandomSample/)
+    assert.match(rowJsx, /globalShuffleCache\.set\(catId/)
   })
 
   it('CloudAssetsView mounts CloudCategoryRow in All category when search is inactive', () => {

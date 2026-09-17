@@ -3,7 +3,7 @@ import { Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { cloudPage } from './api.js'
 import { normalizeCloudAsset } from './cloud-feed-helpers.js'
-import { globalShuffleCache } from './category-shuffle-cache.js'
+import { fetchCategoryRandomSample, globalShuffleCache } from './category-shuffle-cache.js'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons.jsx'
 import { CloudAssetCard } from './CloudAssetsView.jsx'
 
@@ -48,13 +48,11 @@ export function CloudCategoryRow(props) {
     setLoading(true)
     void (async () => {
       try {
-        const result = await cloudPage(catId, 0)
+        const sampled = await fetchCategoryRandomSample(catId, cloudPage, normalizeCloudAsset, 24)
         if (cancelled) return
-        if (result.ok && Array.isArray(result.body?.items)) {
-          const rawRows = result.body.items.map(normalizeCloudAsset)
-          // 每次刷新随机显示，同时写入全局会话缓存
-          const shuffled = globalShuffleCache.getOrShuffle(catId, rawRows)
-          setItems(shuffled)
+        if (sampled && sampled.length > 0) {
+          globalShuffleCache.set(catId, sampled)
+          setItems(sampled)
         }
       } catch {
         // Silent fallback: row will simply be empty
