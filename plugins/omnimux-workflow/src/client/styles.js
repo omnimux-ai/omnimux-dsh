@@ -767,45 +767,23 @@ export const WORKFLOW_CSS = `
 
 .omnimux-tab-info-icon {
   font-size: 13px;
-  color: var(--dsw-alias-label-tertiary, #636366);
+  color: var(--dsw-alias-label-tertiary);
   opacity: 0.8;
   cursor: help;
   display: inline-flex;
   align-items: center;
   user-select: none;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+.omnimux-tab-info-icon:hover {
+  opacity: 1;
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omnimux-create-page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 18px;
+  height: 32px;
   margin-bottom: 6px;
-  background: var(--dsw-alias-interactive-bg-active, #e5e5ea);
-  color: var(--dsw-alias-label-inverse, #000000);
-  border: none;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-  transition: background-color 0.15s ease, transform 0.12s ease;
-}
-
-.omnimux-create-page-btn:hover {
-  background: var(--dsw-alias-interactive-primary, #ffffff);
-}
-
-.omnimux-create-page-btn:active {
-  transform: scale(0.97);
-}
-
-.omnimux-create-page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  border-radius: 8px;
 }
 
 .omnimux-pages-grid {
