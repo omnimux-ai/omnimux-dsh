@@ -10,7 +10,9 @@ import {
   audioExtractArgs,
   exportFilename,
   exportMediaFile,
+  extractVideoPoster,
   resolveDownloadsDir,
+  videoPosterArgs,
 } from './media-export.js'
 
 const PUBLIC_MP4 = 'https://v16-webapp.tiktokcdn.com/abc/video.mp4'
@@ -279,5 +281,38 @@ describe('exportMediaFile — rejected input', () => {
       }),
     )
     assert.equal(existsSync(downloads) ? readdirSync(downloads).length : 0, 0)
+  })
+})
+
+describe('extractVideoPoster — video thumbnail generation', () => {
+  it('generates ffmpeg args targeting a single frame at half-second mark', () => {
+    const args = videoPosterArgs('/path/to/video.mp4', '/path/to/poster.jpg')
+    assert.deepEqual(args, ['-y', '-ss', '00:00:00.500', '-i', '/path/to/video.mp4', '-vframes', '1', '-q:v', '2', '/path/to/poster.jpg'])
+  })
+
+  it('runs ffmpeg and extracts poster when video exists', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'omnimux-poster-test-'))
+    const mockVideo = join(tmp, 'input.mp4')
+    writeFileSync(mockVideo, 'mock mp4 stream')
+
+    let called = false
+    const mockRunner = async (inP, outP) => {
+      called = true
+      writeFileSync(outP, 'mock jpg poster')
+    }
+
+    const poster = await extractVideoPoster(mockVideo, tmp, { runFfmpeg: mockRunner })
+    assert.equal(called, true)
+    assert.ok(existsSync(poster))
+    assert.match(poster, /cover_[a-f0-9]+\.jpg$/)
+
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  it('rejects when the video file does not exist', async () => {
+    await assert.rejects(
+      extractVideoPoster('/nonexistent/video.mp4', tmpdir()),
+      /视频文件不存在/,
+    )
   })
 })

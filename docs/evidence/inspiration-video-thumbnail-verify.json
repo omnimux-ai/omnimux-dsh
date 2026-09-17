@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-09-17T15:17:48.230Z",
+  "results": [
+    {
+      "name": "ffmpeg args generation",
+      "status": "PASS"
+    },
+    {
+      "name": "video poster extraction",
+      "status": "PASS",
+      "path": "/tmp/omnimux-verify-thumbnail-1789658268229/cover_331546bb.jpg"
+    },
+    {
+      "name": "auto heal missing cover in item",
+      "status": "PASS"
+    }
+  ]
+}
