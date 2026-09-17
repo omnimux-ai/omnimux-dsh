@@ -167,10 +167,23 @@ export const ASSETS_CSS = `
   flex-direction: column;
   padding: 16px 20px;
 }
+/* 列数由容器的 data-columns 属性决定，见 grid-columns.js。
+   auto-fill 会随窗口无限加列（1560px 实测 7 列），所以列数改由脚本按容器宽度算好、
+   封顶 5 列后写在属性上；样式表只负责把属性翻译成轨道。默认两列是无脚本时的兜底，
+   不会出现一列拉满整屏。 */
 .omnimux-assets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.omnimux-assets-grid[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.omnimux-assets-grid[data-columns="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.omnimux-assets-grid[data-columns="5"] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .omnimux-assets-empty {
   border: 1px dashed var(--dsw-alias-border-l4);
@@ -1048,9 +1061,8 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-scroll {
   display: contents;
 }
-.omnimux-assets-cloud-grid {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-}
+/* 列数不再在这里覆盖：.omnimux-assets-grid 的 data-columns 规则是唯一来源，
+   本地货架与公共货架因此必然同列数（见 grid-columns.js）。 */
 /* One body per card kind (see cloudCardKind). A tile keeps a fixed height, so
    its box is reserved before the image arrives and paging never shifts the grid
    under the pointer. */
