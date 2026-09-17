@@ -14,6 +14,7 @@ import { DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import { runAction, ActionError } from './actions.ts'
 import { ElementIds } from './ids.ts'
 import { SelectionWatcher } from './selection.ts'
+import { detectPageType, detectPlatform } from './page-sensor.ts'
 import type { SnapshotBudget } from './snapshot.ts'
 
 /** Negotiated snapshot budgets, patched in from the background via message. */
@@ -147,6 +148,24 @@ import('./media-hover/overlay.ts').then(({ initMediaHoverOverlay, MEDIA_OVERLAY_
   for (const stale of document.querySelectorAll(`#${MEDIA_OVERLAY_HOST_ID}`)) stale.remove()
   const overlay = initMediaHoverOverlay(document)
   contentShell[MEDIA_OVERLAY_HANDLE] = overlay
+}).catch(() => {})
+
+// Mount the card trigger: the small mark that fades in on a work card under
+// the pointer and opens the shortcut toolbar when the pointer reaches it.
+// TikTok rewrites its address without a navigation event, so the page facts are
+// re-read on every scan instead of captured once here.
+import('./surfaces/media-trigger.ts').then(({ initMediaTrigger, MEDIA_TRIGGER_HOST_ID }) => {
+  const shell = globalThis as typeof globalThis & {
+    __dshMediaTrigger?: { dispose: () => void }
+  }
+  shell.__dshMediaTrigger?.dispose()
+  for (const stale of document.querySelectorAll(`#${MEDIA_TRIGGER_HOST_ID}`)) stale.remove()
+  const handle = initMediaTrigger(document, () => ({
+    platform: detectPlatform(),
+    pageType: detectPageType(detectPlatform()),
+    pathname: window.location.pathname,
+  }))
+  if (handle !== null) shell.__dshMediaTrigger = handle
 }).catch(() => {})
 
 // Mount the TikTok scene trigger: the avatar-anchored shortcut menu for

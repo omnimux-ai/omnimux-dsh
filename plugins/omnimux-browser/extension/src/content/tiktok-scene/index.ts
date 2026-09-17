@@ -23,6 +23,7 @@ import { mountTiktokScene } from './menu.ts'
 import { TIKTOK_TIMING } from './messages.ts'
 import { resolveTargetPost } from './target.ts'
 import { sendTiktokShortcut } from './transport.ts'
+import { sceneTriggerFor } from '../surfaces/registry.ts'
 import type { TiktokSceneHandle } from './menu.ts'
 import type { TiktokAction } from './copy.ts'
 import type { ExportOutcome } from '../../background/media-export.ts'
@@ -41,20 +42,19 @@ export function isTikTokHost(hostname: string): boolean {
 }
 
 /**
- * Whether a TikTok address is the home feed, which is the only page that gets
- * the trigger.
+ * Whether a TikTok address gets the scene trigger.
  *
- * The For You feed is served from the site root; the two tab addresses the app
- * has used for it are accepted as well so a tab click does not make the trigger
- * disappear. Everything else is deliberately not home — in particular a single
- * post (`/@user/video/<id>`) and a profile (`/@user`), the two addresses where
- * the page renders an avatar and the mark would otherwise look like it belongs
- * to that picture.
+ * The answer comes from the surface registry rather than from a pathname list
+ * kept here: a feed and a single post both ask "what am I watching?", while a
+ * profile or a search grid is a wall of other people's work — those pages render
+ * avatars of their own, and a mark that followed them would sit on pictures the
+ * user never asked it to decorate. They carry the card trigger instead
+ * (`surfaces/media-trigger.ts`).
+ *
  * @param pathname the page's path, as read from the address bar
  */
-export function isTikTokHomePath(pathname: string): boolean {
-  const path = pathname.toLowerCase()
-  return path === '' || path === '/' || path === '/foryou' || path === '/following'
+export function isTikTokScenePath(pathname: string): boolean {
+  return sceneTriggerFor({ platform: 'tiktok', pageType: 'unknown', pathname }) !== null
 }
 
 /**
@@ -144,17 +144,18 @@ export function initTiktokScene(): void {
     return sendTiktokShortcut(action, target.url)
   }
 
-  // The trigger exists only while the page is the home feed. `null` is the
-  // unmounted state, and the flag records the decision the current state was
-  // made for, so a burst of mutations on one address mounts and unmounts once.
+  // The trigger exists only while the page is one the registry grants it to.
+  // `null` is the unmounted state, and the flag records the decision the current
+  // state was made for, so a burst of mutations on one address mounts and
+  // unmounts once.
   let scene: TiktokSceneHandle | null = null
-  let mountedHome = false
+  let mounted = false
 
   const syncGate = (): void => {
-    const home = isTikTokHomePath(window.location.pathname)
-    if (home === mountedHome) return
-    mountedHome = home
-    if (home) {
+    const wanted = isTikTokScenePath(window.location.pathname)
+    if (wanted === mounted) return
+    mounted = wanted
+    if (wanted) {
       scene = mountTiktokScene({ doc, copy, run })
       return
     }
@@ -218,7 +219,7 @@ export function initTiktokScene(): void {
       if (urlWatch !== null) doc.defaultView?.clearInterval(urlWatch)
       scene?.dispose()
       scene = null
-      mountedHome = false
+      mounted = false
     },
   }
 }
