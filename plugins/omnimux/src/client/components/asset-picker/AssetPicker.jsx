@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { AssetPickerCard } from './AssetPickerCard.jsx';
+import { AssetPickerAddCard } from './AssetPickerAddCard.jsx';
+import { AssetAddModal, ASSET_TYPE_KEYS } from './AssetAddModal.jsx';
 import { ASSET_CATEGORIES, isAlreadyAdded, remainingQuota, toggleSelect } from './picker-model.js';
 import {
   PICKER_DIALOG_VARIANT_CLASS,
@@ -195,6 +197,49 @@ const CSS = `
 .omx-asset-pick__error {
   color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 24px 8px;
 }
+.omx-asset-pick-card--add .omx-asset-pick-card__thumb--add {
+  border: 1.5px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.omx-asset-pick-card--add:hover .omx-asset-pick-card__thumb--add {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-button-primary-fill);
+  transform: translateY(-2px);
+}
+.omx-asset-pick-card__add-icon {
+  display: flex; align-items: center; justify-content: center;
+  color: inherit;
+}
+.omx-asset-add-form { display: flex; flex-direction: column; gap: 12px; }
+.omx-asset-add-name-row { display: flex; align-items: center; gap: 8px; }
+.omx-asset-add-at { color: var(--dsw-alias-label-tertiary); font-size: 18px; }
+.omx-asset-add-name-field { flex: 1; min-width: 0; }
+.omx-asset-add-type-row { display: flex; align-items: center; gap: 8px; }
+.omx-asset-add-type-sep { color: var(--dsw-alias-border-l2); }
+.omx-asset-add-desc-field { flex: 1; min-width: 0; }
+.omx-asset-add-drop {
+  width: 100%; min-height: 128px; border: 1px dashed var(--dsw-alias-border-l4);
+  border-radius: 12px; background: transparent; color: var(--dsw-alias-label-tertiary);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; font-size: 13px; padding: 16px; box-sizing: border-box;
+}
+.omx-asset-add-drop-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.omx-asset-add-filelist {
+  margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px;
+}
+.omx-asset-add-filelist li {
+  display: flex; gap: 8px; font-size: 12px; color: var(--dsw-alias-label-secondary); align-items: center;
+}
+.omx-asset-add-filelist-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omx-asset-add-tags-wrap { margin-top: 8px; }
+.omx-asset-add-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.omx-asset-add-tag {
+  font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  background: var(--dsw-alias-bg-module-platform); display: inline-flex; align-items: center; gap: 4px;
+}
+.omx-asset-add-error { color: var(--dsw-alias-state-error-primary); font-size: 12px; margin-top: 4px; }
 `;
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
@@ -234,6 +279,20 @@ const DEFAULT_STRINGS = {
   'composerAdd.libraryTitle': '资产库',
   'composerAdd.alreadyAdded': '已在会话中',
   'composerAdd.missing': '素材缺失',
+  'composerAdd.addAsset': '添加资产',
+  'composerAdd.addAssetDesc': '本地素材入库',
+  'composerAdd.addAssetModalTitle': '添加资产',
+  'composerAdd.submitAdd': '添加资产',
+  'composerAdd.namePlaceholder': '资产名称',
+  'composerAdd.descPlaceholder': '输入资产特征描述，便于 Agent 精准检索与复用…',
+  'composerAdd.dropHint': '拖拽文件或文件夹至此，或点击浏览',
+  'composerAdd.pickFiles': '选择文件',
+  'composerAdd.pickFolders': '选择文件夹',
+  'composerAdd.folderBadge': '文件夹',
+  'composerAdd.removeFile': '移除',
+  'composerAdd.addTagsOptional': '添加标签 (可选)',
+  'composerAdd.removeTag': '删除标签',
+  'composerAdd.tagPlaceholder': '输入标签后按回车添加',
 };
 
 function defaultT(key, vars) {
@@ -267,6 +326,8 @@ async function defaultFetchAssets() {
  *   onConfirm: (assets: object[]) => void | Promise<void>,
  *   closeOnConfirm?: boolean,
  *   emptyAction?: { label: string, onClick: () => void },
+ *   onPick?: (kind: 'file' | 'directory') => Promise<string[]>,
+ *   onCreateAsset?: (payload: object) => Promise<object>,
  * }} props
  */
 export function AssetPicker({
@@ -282,6 +343,8 @@ export function AssetPicker({
   onConfirm,
   closeOnConfirm = true,
   emptyAction,
+  onPick,
+  onCreateAsset,
 }) {
   const tt = typeof t === 'function' ? t : defaultT;
   const [category, setCategory] = useState('all');
@@ -292,6 +355,8 @@ export function AssetPicker({
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [autoPick, setAutoPick] = useState(false);
   const requestRevision = useRef(0);
   const openRevision = useRef(0);
   const previousOpen = useRef(open);
@@ -308,6 +373,8 @@ export function AssetPicker({
     if (!open) {
       requestRevision.current += 1;
       setBusy(false);
+      setAddModalOpen(false);
+      setAutoPick(false);
       return undefined;
     }
     const revision = requestRevision.current + 1;
@@ -317,6 +384,8 @@ export function AssetPicker({
     setSearchQuery('');
     setSelected(new Set());
     setError('');
+    setAddModalOpen(false);
+    setAutoPick(false);
     setLoading(true);
     Promise.resolve()
       .then(() => (fetchAssets || defaultFetchAssets)())
@@ -400,6 +469,20 @@ export function AssetPicker({
     }
   };
 
+  const handleOpenAddModal = () => {
+    setAutoPick(true);
+    setAddModalOpen(true);
+  };
+
+  const handleAssetCreated = (createdAsset) => {
+    if (!createdAsset || !createdAsset.id) return;
+    setAssets((prev) => [createdAsset, ...prev.filter((item) => item.id !== createdAsset.id)]);
+    const currentQuota = remainingQuota({ occupied, selectedCount: selected.size, max });
+    if (currentQuota.remaining > 0) {
+      setSelected((prev) => new Set([...prev, createdAsset.id]));
+    }
+  };
+
   const metaKey = Number.isFinite(max) ? 'composerAdd.selectedMeta' : 'composerAdd.selectedMetaUnbounded';
 
   return (
@@ -474,37 +557,47 @@ export function AssetPicker({
         <div className="omx-asset-pick__scroll">
           {loading ? (
             <div className="omx-asset-pick__empty">{tt('composerAdd.loading')}</div>
+          ) : !searchQuery.trim() ? (
+            <div className="omx-asset-pick__grid">
+              <AssetPickerAddCard
+                label={tt('composerAdd.addAsset')}
+                desc={tt('composerAdd.addAssetDesc')}
+                onClick={handleOpenAddModal}
+              />
+              {filteredAssets.map((asset) => {
+                const already = isAlreadyAdded(alreadyIds || [], asset.id);
+                const isSelected = selected.has(asset.id);
+                const disableNew =
+                  !isSelected &&
+                  !already &&
+                  remainingQuota({ occupied, selectedCount: selected.size, max }).remaining === 0;
+                return (
+                  <AssetPickerCard
+                    key={asset.id}
+                    asset={asset}
+                    selected={isSelected}
+                    alreadyAdded={already}
+                    disabled={disableNew}
+                    typeLabel={tt(`composerAdd.cat.${asset.type || 'custom'}`)}
+                    alreadyLabel={tt('composerAdd.alreadyAdded')}
+                    missingLabel={tt('composerAdd.missing')}
+                    onToggle={(row) => {
+                      const next = toggleSelect({
+                        selected,
+                        id: row.id,
+                        occupied,
+                        alreadyIds,
+                        max,
+                      });
+                      setSelected(next.selected);
+                    }}
+                  />
+                );
+              })}
+            </div>
           ) : filteredAssets.length === 0 ? (
             <div className="omx-asset-pick__empty">
-              <p>
-                {searchQuery || activeTag !== 'all'
-                  ? tt('composerAdd.emptySearch')
-                  : tt('composerAdd.empty')}
-              </p>
-              {!searchQuery && activeTag === 'all' ? (
-                emptyAction ? (
-                  <Button variant="secondary" size="sm" onClick={emptyAction.onClick}>
-                    {emptyAction.label}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      try {
-                        window.__omnimuxWorkbench?.open?.({
-                          tabId: 'omnimux-assets:stage',
-                          title: tt('composerAdd.libraryTitle') || '资产库',
-                        });
-                      } catch {
-                        // ignore
-                      }
-                    }}
-                  >
-                    {tt('composerAdd.goLibrary') || '去资产库导入'}
-                  </Button>
-                )
-              ) : null}
+              <p>{tt('composerAdd.emptySearch')}</p>
             </div>
           ) : (
             <div className="omx-asset-pick__grid">
@@ -542,6 +635,20 @@ export function AssetPicker({
           )}
         </div>
       </div>
+
+      <AssetAddModal
+        open={addModalOpen}
+        presetType={category !== 'all' && ASSET_TYPE_KEYS.includes(category) ? category : 'character'}
+        autoPick={autoPick}
+        t={tt}
+        onClose={() => {
+          setAddModalOpen(false);
+          setAutoPick(false);
+        }}
+        onPick={onPick}
+        onSubmit={onCreateAsset}
+        onSuccess={handleAssetCreated}
+      />
     </ModalDialog>
   );
 }
