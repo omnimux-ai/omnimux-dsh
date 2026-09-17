@@ -1,0 +1,23 @@
+{
+  "task": "streaming-upload",
+  "issue": 2179,
+  "timestamp": "2026-09-17T08:35:49.632Z",
+  "checks": [
+    {
+      "name": "lazy-media-descriptor-without-buffering",
+      "pass": true,
+      "detail": "size=5242880, mime=video/mp4"
+    },
+    {
+      "name": "direct-upload-streams-body-to-r2",
+      "pass": true,
+      "detail": "isStream=true, duplex=half, length=5242880"
+    },
+    {
+      "name": "fallback-to-relay-route-supported",
+      "pass": true,
+      "detail": "fileUrl=https://cdn.example/photos/relayed.mp4"
+    }
+  ],
+  "allPassed": true
+}

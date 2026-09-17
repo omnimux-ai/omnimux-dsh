@@ -7,6 +7,7 @@ import {
   resolvePresignEndpoint,
   resolveConfirmEndpoint,
   uploadMediaToGateway,
+  resolveMediaDescriptor,
   clearGatewayUploadCache,
 } from './gateway-upload.js'
 
@@ -246,5 +247,49 @@ describe('gateway-upload: direct upload with relay fallback', () => {
     assert.equal(presignCalls, 2, 'direct upload should still be probed after transient confirm error')
     await unlink(tmpFile).catch(() => {})
     await unlink(nextFile).catch(() => {})
+  })
+
+  it('streams physical file body with duplex: half without pre-buffering', async () => {
+    let streamPutVerified = false
+    const fetcher = async (url, init) => {
+      if (url.endsWith('/files/upload/presign')) return directTicket()
+      if (url === 'https://bucket.r2.example/photos/file_direct_clip.png') {
+        assert.equal(init?.method, 'PUT')
+        assert.equal(init?.duplex, 'half', 'streaming uploads must declare duplex: half')
+        assert.ok(init?.body, 'PUT request must contain a body')
+        assert.equal(typeof init.body.getReader, 'function', 'body must be a readable stream')
+        assert.equal(init.headers['Content-Length'], String(PNG.length))
+        streamPutVerified = true
+        return new Response('', { status: 200 })
+      }
+      if (url.endsWith('/files/upload/confirm')) return confirmedFile()
+      throw new Error(`unexpected call: ${url}`)
+    }
+
+    const fileUrl = await uploadMediaToGateway(tmpFile, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test',
+      fetcher,
+    })
+
+    assert.equal(fileUrl, 'https://cdn.example/photos/file_direct_clip.png')
+    assert.equal(streamPutVerified, true, 'the PUT request was streamed directly to storage')
+    await unlink(tmpFile).catch(() => {})
+  })
+})
+
+describe('gateway-upload: lazy media descriptor', () => {
+  it('extracts metadata and creates stream without reading full file body', async () => {
+    const file = join(tmpdir(), `test-desc-${Date.now()}.png`)
+    await writeFile(file, PNG)
+    const desc = await resolveMediaDescriptor(file)
+    assert.equal(desc.kind, 'file')
+    assert.equal(desc.size, PNG.length)
+    assert.equal(desc.mimeType, 'image/png')
+    assert.equal(typeof desc.createStream, 'function')
+    const reader = desc.createStream().getReader()
+    const { value } = await reader.read()
+    assert.ok(value && value.length > 0)
+    await unlink(file).catch(() => {})
   })
 })

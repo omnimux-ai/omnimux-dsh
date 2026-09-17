@@ -1,7 +1,9 @@
-import { readFile, stat } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { open, readFile, stat } from 'node:fs/promises'
 import { isAbsolute, basename, extname, join, normalize, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
+import { Readable } from 'node:stream'
 import { OmnimuxError } from './errors.js'
 import { mediaFromMagic } from '../text/image.js'
 
@@ -182,11 +184,47 @@ function detectMimeType(filename, bytes) {
 }
 
 /**
- * Resolve a local source (path, data URI, local-file URL, asset://) into readable bytes.
- * @param {string} source
- * @returns {Promise<{ buffer: Buffer, mimeType: string, filename: string, filePath?: string, stat?: import('node:fs').Stats }>}
+ * Detect MIME type from file extension without buffering the whole file.
+ * Only reads the first 512 bytes for magic inspection when the extension is unrecognized.
+ * @param {string} filePath
+ * @param {string} filename
+ * @returns {Promise<string>}
  */
-export async function resolveMediaBytes(source) {
+async function sniffMimeType(filePath, filename) {
+  const ext = extname(filename).toLowerCase()
+  if (EXT_TO_MIME[ext]) return EXT_TO_MIME[ext]
+  try {
+    const handle = await open(filePath, 'r')
+    try {
+      const headerBuf = Buffer.alloc(512)
+      const { bytesRead } = await handle.read(headerBuf, 0, 512, 0)
+      if (bytesRead > 0) {
+        const fromMagic = mediaFromMagic(headerBuf.subarray(0, bytesRead))
+        if (fromMagic) return fromMagic
+      }
+    } finally {
+      await handle.close()
+    }
+  } catch {}
+  return 'application/octet-stream'
+}
+
+/**
+ * Resolve a local source into a lightweight streaming descriptor.
+ * Physical files are stat'd and MIME-sniffed without reading the full body into memory.
+ * @param {string} source
+ * @returns {Promise<{
+ *   kind: 'file' | 'data',
+ *   filename: string,
+ *   mimeType: string,
+ *   size: number,
+ *   filePath?: string,
+ *   stat?: import('node:fs').Stats,
+ *   createStream: () => ReadableStream,
+ *   readBuffer: () => Promise<Buffer>,
+ * }>}
+ */
+export async function resolveMediaDescriptor(source) {
   const parsedSource = parseMediaSource(source)
   const trimmed = parsedSource.value
   if (parsedSource.kind === 'remote' || parsedSource.kind === 'invalid') {
@@ -205,9 +243,12 @@ export async function resolveMediaBytes(source) {
     const buffer = Buffer.from(payload, isBase64 ? 'base64' : 'utf8')
     const ext = MIME_TO_EXT[declaredMime] || 'bin'
     return {
-      buffer,
-      mimeType: declaredMime,
+      kind: 'data',
       filename: `upload_${Date.now()}.${ext}`,
+      mimeType: declaredMime,
+      size: buffer.length,
+      createStream: () => Readable.toWeb(Readable.from([buffer])),
+      readBuffer: async () => buffer,
     }
   }
 
@@ -251,16 +292,37 @@ export async function resolveMediaBytes(source) {
     throw new OmnimuxError('omnimux-invalid-request', `素材路径不是普通文件: ${normPath}`)
   }
 
-  const buffer = await readFile(normPath)
   const filename = basename(normPath)
-  const mimeType = detectMimeType(filename, buffer)
+  const mimeType = await sniffMimeType(normPath, filename)
 
   return {
-    buffer,
-    mimeType,
+    kind: 'file',
     filename,
+    mimeType,
+    size: fileStat.size,
     filePath: normPath,
     stat: fileStat,
+    createStream: () => Readable.toWeb(createReadStream(normPath)),
+    readBuffer: async () => readFile(normPath),
+  }
+}
+
+/**
+ * Resolve a local source (path, data URI, local-file URL, asset://) into readable bytes.
+ * Retained for backwards-compatibility; buffers on demand.
+ * @param {string} source
+ * @returns {Promise<{ buffer: Buffer, mimeType: string, filename: string, filePath?: string, stat?: import('node:fs').Stats, createStream?: () => ReadableStream }>}
+ */
+export async function resolveMediaBytes(source) {
+  const desc = await resolveMediaDescriptor(source)
+  const buffer = await desc.readBuffer()
+  return {
+    buffer,
+    mimeType: desc.mimeType,
+    filename: desc.filename,
+    filePath: desc.filePath,
+    stat: desc.stat,
+    createStream: desc.createStream,
   }
 }
 
@@ -280,13 +342,14 @@ async function readUploadErrorMessage(response) {
 }
 
 /**
- * Upload one buffer straight to object storage with a gateway ticket and let the
- * gateway verify what actually arrived. Every failure throws, so the caller
- * keeps the relay route as its fallback.
- * @param {{ buffer: Uint8Array, mimeType: string, filename: string, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
+ * Upload one descriptor straight to object storage with a gateway ticket and let the
+ * gateway verify what actually arrived. Uses streaming body (duplex: 'half') when
+ * a readable stream is available, avoiding reading the whole file into memory.
+ * @param {{ descriptor: { filename: string, mimeType: string, size: number, createStream?: () => ReadableStream, readBuffer: () => Promise<Buffer> }, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
  * @returns {Promise<{ fileUrl: string, expiresAt: number }>}
  */
-async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal }) {
+async function uploadDirectToStorage({ descriptor, baseUrl, apiKey, fetcher, signal }) {
+  const { filename, mimeType, size, createStream, readBuffer } = descriptor
   const presignResponse = await fetcher(resolvePresignEndpoint(baseUrl), {
     method: 'POST',
     headers: {
@@ -296,7 +359,7 @@ async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiK
     body: JSON.stringify({
       file_name: filename,
       mime_type: mimeType,
-      file_size: buffer.length,
+      file_size: size,
       upload_path: determineUploadCategory(mimeType),
     }),
     signal,
@@ -313,15 +376,25 @@ async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiK
     throw new OmnimuxError('presign-unavailable', '直传凭证响应缺少上传地址或文件标识')
   }
 
-  const putResponse = await fetcher(ticket.upload_url, {
+  const putHeaders = {
+    ...(ticket.upload_headers || {}),
+    'Content-Type': mimeType,
+    'Content-Length': String(size),
+  }
+
+  const hasStream = typeof createStream === 'function'
+  const putBody = hasStream ? createStream() : new Blob([await readBuffer()], { type: mimeType })
+  const putOptions = {
     method: ticket.upload_method || 'PUT',
-    headers: {
-      ...(ticket.upload_headers || {}),
-      'Content-Type': mimeType,
-    },
-    body: new Blob([buffer], { type: mimeType }),
+    headers: putHeaders,
+    body: putBody,
     signal,
-  })
+  }
+  if (hasStream) {
+    putOptions.duplex = 'half'
+  }
+
+  const putResponse = await fetcher(ticket.upload_url, putOptions)
   if (!putResponse.ok) {
     throw new OmnimuxError('direct-upload-failed', `素材直传存储失败 (HTTP ${putResponse.status})`, {
       status: putResponse.status,
@@ -334,7 +407,7 @@ async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiK
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ file_id: ticket.file_id, file_size: buffer.length }),
+    body: JSON.stringify({ file_id: ticket.file_id, file_size: size }),
     signal,
   })
   if (!confirmResponse.ok) {
@@ -358,10 +431,13 @@ async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiK
 
 /**
  * Upload the bytes through the gateway, which relays them into object storage.
- * @param {{ buffer: Uint8Array, mimeType: string, filename: string, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
+ * Buffers on demand when falling back from direct upload.
+ * @param {{ descriptor: { filename: string, mimeType: string, readBuffer: () => Promise<Buffer> }, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
  * @returns {Promise<{ fileUrl: string, expiresAt: number }>}
  */
-async function uploadViaGateway({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal }) {
+async function uploadViaGateway({ descriptor, baseUrl, apiKey, fetcher, signal }) {
+  const { filename, mimeType, readBuffer } = descriptor
+  const buffer = await readBuffer()
   const formData = new FormData()
   formData.append('file', new Blob([buffer], { type: mimeType }), filename)
   formData.append('upload_path', determineUploadCategory(mimeType))
@@ -445,7 +521,7 @@ export async function uploadMediaToGateway(source, options) {
   }
 
   const uploadPromise = (async () => {
-    const { buffer, mimeType, filename, filePath, stat: fileStat } = await resolveMediaBytes(cacheKey)
+    const descriptor = await resolveMediaDescriptor(cacheKey)
 
     // Direct upload first: the bytes go straight to object storage and the
     // gateway only issues a ticket and verifies the result. A deployment that
@@ -453,7 +529,7 @@ export async function uploadMediaToGateway(source, options) {
     let uploaded = null
     if (!directUploadUnavailable.has(baseUrl)) {
       try {
-        uploaded = await uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal })
+        uploaded = await uploadDirectToStorage({ descriptor, baseUrl, apiKey, fetcher, signal })
       } catch (error) {
         if (signal?.aborted) throw error
         // Only mark the gateway deployment permanently unavailable for direct
@@ -467,15 +543,15 @@ export async function uploadMediaToGateway(source, options) {
       }
     }
     if (!uploaded) {
-      uploaded = await uploadViaGateway({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal })
+      uploaded = await uploadViaGateway({ descriptor, baseUrl, apiKey, fetcher, signal })
     }
 
     uploadCache.set(cacheKey, {
       fileUrl: uploaded.fileUrl,
       expiresAt: uploaded.expiresAt,
-      filePath,
-      mtimeMs: fileStat?.mtimeMs,
-      sizeBytes: fileStat?.size,
+      filePath: descriptor.filePath,
+      mtimeMs: descriptor.stat?.mtimeMs,
+      sizeBytes: descriptor.size,
     })
 
     return uploaded.fileUrl
