@@ -1,16 +1,16 @@
 {
-  "runId": "2deb9ed2-2a72-4947-a192-063890c8a5e9",
+  "runId": "bc4b241e-f0a2-4a5f-a6c4-7bb1f1f8e4f0",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-skill-card-attribution",
-  "origin": "http://127.0.0.1:64340",
-  "appPort": 64340,
-  "cdpPort": 64347,
-  "startedAt": "2026-09-17T05:39:22.431Z",
-  "completedAt": "2026-09-17T05:39:44.431Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-cascade-hover-jitter-2250",
+  "origin": "http://127.0.0.1:62995",
+  "appPort": 62995,
+  "cdpPort": 63003,
+  "startedAt": "2026-09-17T16:10:01.432Z",
+  "completedAt": "2026-09-17T16:10:09.667Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:64340",
+    "origin": "http://127.0.0.1:62995",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:64340",
+      "origin": "http://127.0.0.1:62995",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-su6vrD9ppF8jYfc3-9u0bb9wdHwpGMiSgjGzhS7R_TM"
+      "cookieName": "dsh-auth-h1Vl7Ke305nLrk41TELozdfweDeW46b1jdE4nGurmoY"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 64347
+      "port": 63003
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 10,
+        "visibleCount": 118,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 24
+        "bodyTextLength": 63
       }
     },
     {
@@ -63,7 +63,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 10
+      "visibleCount": 118
     },
     {
       "name": "screenshot-png-verified",
@@ -72,14 +72,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 96138
+      "bytes": 80653
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-skill-card-attribution/.workbuddy/evidence/app-qa/2deb9ed2-2a72-4947-a192-063890c8a5e9/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-cascade-hover-jitter-2250/.workbuddy/evidence/app-qa/bc4b241e-f0a2-4a5f-a6c4-7bb1f1f8e4f0/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 96138
+    "bytes": 80653
   },
   "errors": [],
   "cleanup": {

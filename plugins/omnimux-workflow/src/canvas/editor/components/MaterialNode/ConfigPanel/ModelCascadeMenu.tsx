@@ -14,11 +14,16 @@
  * 4. 预览态（悬停到非选中型号）的渠道列只读：勾选属于已提交型号，预览时不给假交互。
  */
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
-import { groupPickerCandidates, isPickerCandidate, type PickerCandidate } from './modelPickerCandidates';
+import {
+  groupPickerCandidates,
+  isPickerCandidate,
+  type PickerCandidate,
+  type PickerCandidateGroup,
+} from './modelPickerCandidates';
 import {
   formatBillingLabel,
   formatPriceChip,
@@ -108,6 +113,23 @@ const PANEL_STYLE: React.CSSProperties = {
   overflowY: 'auto',
 };
 
+/**
+ * 量尺宿主：离屏、不可见、不可交互。
+ *
+ * 里面的列与真实列共用同一批类名与子组件，只是不挂事件，量到的自然高度因此与
+ * 真实渲染逐像素一致（换行、图标、间距全同）。
+ */
+const PROBE_HOST_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  left: -99999,
+  top: 0,
+  visibility: 'hidden',
+  pointerEvents: 'none',
+};
+
+/** 量尺不参与选中，用同一个空数组避免每次渲染换新引用。 */
+const NO_GROUP_IDS: readonly string[] = [];
+
 const ChannelRow: React.FC<{
   group: ChannelGroupItem;
   checked: boolean;
@@ -152,6 +174,97 @@ const ChannelRow: React.FC<{
   );
 };
 
+/**
+ * 品牌项 / 型号项 / 渠道列内容：真实列与量尺列共用同一实现。
+ *
+ * 量尺量的是真实列的换行与间距，结构与类名一旦分叉就会量偏，所以只保留这一份实现；
+ * 量尺以 `interactive=false` 摘掉事件、测试标识与 tab 停靠，其余标记逐字相同。
+ */
+const CascadeBrandItem: React.FC<{
+  brand: PickerCandidateGroup;
+  isSelected: boolean;
+  isHovered?: boolean;
+  interactive?: boolean;
+  onHover?: () => void;
+  onSelect?: () => void;
+}> = ({ brand, isSelected, isHovered = false, interactive = true, onHover, onSelect }) => (
+  <button
+    type="button"
+    role={interactive ? 'menuitem' : undefined}
+    aria-current={interactive ? isSelected : undefined}
+    data-testid={interactive ? `wf-cascade-brand-${brand.id}` : undefined}
+    tabIndex={interactive ? undefined : -1}
+    onMouseEnter={interactive ? onHover : undefined}
+    onClick={interactive ? onSelect : undefined}
+    className={`wf-cascade-brand-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
+  >
+    <ModelBrandIcon modelId={brand.iconModelId} size={18} />
+    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</span>
+    {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
+  </button>
+);
+
+const CascadeModelItem: React.FC<{
+  item: PickerCandidate;
+  isSelected: boolean;
+  isHovered?: boolean;
+  interactive?: boolean;
+  onHover?: () => void;
+  onSelect?: () => void;
+}> = ({ item, isSelected, isHovered = false, interactive = true, onHover, onSelect }) => (
+  <button
+    type="button"
+    role={interactive ? 'menuitem' : undefined}
+    aria-current={interactive ? isSelected : undefined}
+    data-testid={interactive ? `wf-cascade-model-${item.id}` : undefined}
+    tabIndex={interactive ? undefined : -1}
+    onMouseEnter={interactive ? onHover : undefined}
+    onClick={interactive ? onSelect : undefined}
+    className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      <span className="wf-cascade-model-item__title">
+        {(item.label || item.id) || item.id}
+      </span>
+      {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
+    </div>
+    {item.subtitle ? (
+      <div className="wf-cascade-model-item__desc">
+        {item.subtitle}
+      </div>
+    ) : null}
+  </button>
+);
+
+const CascadeChannelColumn: React.FC<{
+  channelGroups: readonly ChannelGroupItem[];
+  checkedIds: readonly string[];
+  preview?: boolean;
+  onSelect?: (groupId: string) => void;
+}> = ({ channelGroups, checkedIds, preview = false, onSelect }) => (
+  <>
+    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px 10px' }}>选择版本</div>
+
+    {channelGroups.length === 0 ? (
+      <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px' }}>
+        该模型尚未配置渠道分组，请求将按模型默认通道执行。
+      </div>
+    ) : (
+      <div className="wf-cascade-channel-list">
+        {channelGroups.map((group) => (
+          <ChannelRow
+            key={group.id}
+            group={group}
+            checked={checkedIds.includes(group.id)}
+            disabled={preview}
+            onSelect={() => onSelect?.(group.id)}
+          />
+        ))}
+      </div>
+    )}
+  </>
+);
+
 export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   modelValue,
   routing,
@@ -161,7 +274,11 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 }) => {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const probeRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
+  /** place() 只在展开时注册一次，用 ref 读锁定高度，避免闭包读到展开那一刻的旧值。 */
+  const lockedHeightRef = useRef<number | null>(null);
 
   const brandList = useMemo(() => groupPickerCandidates(options), [options]);
   const { modelId: canonicalModel } = parseModelAndGroup(modelValue);
@@ -268,6 +385,61 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
   const [popoverSurface, setPopoverSurface] = useState<string>('var(--dsw-alias-bg-elevated)');
 
+  /**
+   * 展开期间锁定浮层高度（Issue #2250）。
+   *
+   * 浮层底边锚在触发器上、顶边由高度决定：只要悬停能改变高度，顶边就会位移，光标下的行
+   * 随之移走、悬停态翻转、内容再变——自我维持成整块浮层频闪抖动（#2195 引入的回归）。
+   * 量尺把当前候选集里所有可能出现的列（品牌列、每个品牌的型号列、每个型号的渠道列）
+   * 都离屏渲染一遍，取最大自然高度一次性锁定，于是悬停只换内容、不再动外框。
+   *
+   * 依赖只有展开状态与候选集，**绝不含 hoverBrandId / hoverModelId** —— 这是修复的支点。
+   * 用 useLayoutEffect 而非 useEffect，保证绘制前完成锁定，不出现「先按内容高度画一帧再跳变」。
+   */
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      lockedHeightRef.current = null;
+      setLockedHeight(null);
+      return;
+    }
+    const host = probeRef.current;
+    if (!host) return;
+    let tallest = POPOVER_MIN_HEIGHT;
+    for (const column of host.querySelectorAll<HTMLElement>('[data-cascade-probe-col]')) {
+      tallest = Math.max(tallest, column.getBoundingClientRect().height);
+    }
+    const locked = Math.min(POPOVER_MAX_HEIGHT, Math.max(POPOVER_MIN_HEIGHT, Math.round(tallest)));
+    lockedHeightRef.current = locked;
+    setLockedHeight((prev) => (prev === locked ? prev : locked));
+  }, [isOpen, brandList]);
+
+  /** 量尺内容只依赖候选集，悬停引发的重渲染在这棵子树上直接 bail out。 */
+  const probeColumns = useMemo(() => (
+    <>
+      <div className="wf-loomi-col wf-loomi-col--brand" data-cascade-probe-col="">
+        {brandList.map((brand) => (
+          <CascadeBrandItem key={brand.id} brand={brand} isSelected={false} interactive={false} />
+        ))}
+      </div>
+      {brandList.map((brand) => (
+        <div key={brand.id} className="wf-loomi-col wf-loomi-col--model" data-cascade-probe-col="">
+          {brand.rows.map((item) => (
+            <CascadeModelItem key={item.id} item={item} isSelected={false} interactive={false} />
+          ))}
+        </div>
+      ))}
+      {brandList.flatMap((brand) => brand.rows).map((item) => {
+        const groups = getModelChannelGroups(item.id);
+        if (groups.length <= 1) return null;
+        return (
+          <div key={item.id} className="wf-loomi-col wf-loomi-col--channel" data-cascade-probe-col="">
+            <CascadeChannelColumn channelGroups={groups} checkedIds={NO_GROUP_IDS} />
+          </div>
+        );
+      })}
+    </>
+  ), [brandList]);
+
   useEffect(() => {
     if (!isOpen) return;
     const place = () => {
@@ -275,7 +447,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
       if (!rect) return;
       setPopoverSurface(resolvePopoverSurface(triggerRef.current));
       setPopoverPos({
-        bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, Math.max(8, window.innerHeight - POPOVER_MAX_HEIGHT - 12))),
+        bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, Math.max(8, window.innerHeight - (lockedHeightRef.current ?? POPOVER_MAX_HEIGHT) - 12))),
         // 锚点按最大宽度钳制：三列出现/隐藏时浮层不得横向跳动，
         // 否则悬停展开第三列的瞬间菜单会从光标下移走。
         left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - POPOVER_MAX_WIDTH - 12))),
@@ -355,97 +527,66 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             style={{
               bottom: popoverPos.bottom,
               left: popoverPos.left,
+              // 锁定高度：悬停换列不再改变浮层外框，顶边因此纹丝不动。
+              ...(lockedHeight === null ? null : { height: lockedHeight }),
             }}
           >
-            {/* 栏 1：品牌（宽 168px，自适应 160px~400px 高，悬停即切换二级，点击固定当前列） */}
+            {/* 栏 1：品牌（宽 168px，悬停即切换二级，点击固定当前列；高度由锁定值统一决定） */}
             <div role="group" aria-label="选择品牌" className="wf-loomi-col wf-loomi-col--brand">
               {brandList.map((brand) => {
                 const isSelected = activeBrandId === brand.id;
                 const isHovered = shownBrandId === brand.id && hoverBrandId !== null;
                 return (
-                  <button
+                  <CascadeBrandItem
                     key={brand.id}
-                    type="button"
-                    role="menuitem"
-                    aria-current={isSelected}
-                    data-testid={`wf-cascade-brand-${brand.id}`}
-                    onMouseEnter={() => handleBrandHover(brand.id)}
-                    onClick={() => handleBrandClick(brand.id)}
-                    className={`wf-cascade-brand-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
-                  >
-                    <ModelBrandIcon modelId={brand.iconModelId} size={18} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</span>
-                    {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
-                  </button>
+                    brand={brand}
+                    isSelected={isSelected}
+                    isHovered={isHovered}
+                    onHover={() => handleBrandHover(brand.id)}
+                    onSelect={() => handleBrandClick(brand.id)}
+                  />
                 );
               })}
             </div>
 
-            {/* 栏 2：型号（宽 230px，自适应 160px~400px 高，悬停即预览三级） */}
+            {/* 栏 2：型号（宽 230px，悬停即预览三级；高度由锁定值统一决定） */}
             <div role="group" aria-label="选择模型版本" className="wf-loomi-col wf-loomi-col--model">
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
                 const isHovered = hoverModelId === item.id;
                 return (
-                  <button
+                  <CascadeModelItem
                     key={item.id}
-                    type="button"
-                    role="menuitem"
-                    aria-current={isSelected}
-                    data-testid={`wf-cascade-model-${item.id}`}
-                    onMouseEnter={() => handleModelHover(item.id)}
-                    onClick={() => handleSelectModel(item.id)}
-                    className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <span className="wf-cascade-model-item__title">
-                        {(item.label || item.id) || item.id}
-                      </span>
-                      {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
-                    </div>
-                    {item.subtitle ? (
-                      <div className="wf-cascade-model-item__desc">
-                        {item.subtitle}
-                      </div>
-                    ) : null}
-                  </button>
+                    item={item}
+                    isSelected={isSelected}
+                    isHovered={isHovered}
+                    onHover={() => handleModelHover(item.id)}
+                    onSelect={() => handleSelectModel(item.id)}
+                  />
                 );
               })}
             </div>
 
-            {/* 栏 3：渠道分组单选（宽 400px，自适应 160px~400px 高，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {/* 栏 3：渠道分组单选（宽 400px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
             {showChannelColumn ? (
               <div
                 role="group"
                 aria-label="选择渠道策略"
                 className="wf-loomi-col wf-loomi-col--channel"
               >
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px 10px' }}>选择版本</div>
-
-                {channelGroups.length === 0 ? (
-                  <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px' }}>
-                    该模型尚未配置渠道分组，请求将按模型默认通道执行。
-                  </div>
-                ) : (
-                  <div className="wf-cascade-channel-list">
-                    {channelGroups.map((group) => {
-                      const isChecked = isChannelPreview
-                        ? group.id === channelGroups[0]?.id
-                        : selectedGroupIds.includes(group.id);
-                      return (
-                        <ChannelRow
-                          key={group.id}
-                          group={group}
-                          checked={isChecked}
-                          disabled={isChannelPreview}
-                          onSelect={() => handleSelectGroup(group.id)}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
+                <CascadeChannelColumn
+                  channelGroups={channelGroups}
+                  checkedIds={isChannelPreview ? [channelGroups[0]?.id ?? ''] : selectedGroupIds}
+                  preview={isChannelPreview}
+                  onSelect={handleSelectGroup}
+                />
               </div>
             ) : null}
+
+            {/* 量尺：离屏渲染候选集里所有可能的列形态，只量高度，不进无障碍树、不可交互 */}
+            <div ref={probeRef} aria-hidden="true" style={PROBE_HOST_STYLE}>
+              {probeColumns}
+            </div>
           </div>,
           document.body,
         )
