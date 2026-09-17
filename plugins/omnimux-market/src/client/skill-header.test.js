@@ -48,11 +48,11 @@ test('install action opens existing modal and category row precedes content', ()
   walk(tree, (node) => node.props.className === 'btn-install').props.onClick()
   assert.ok(stateWrites.some(([, value]) => value === true))
   const categories = walk(tree, (node) => node.props.className === 'category-bar')
-  assert.equal(categories.children.length, 12)
+  assert.equal(categories.children.length, 13)
   // 「套件」紧跟「全部」，先于「精选」与各技能领域。
   assert.deepEqual(
-    categories.children.slice(0, 4).map((node) => node.props.key),
-    ['', '套件', 'featured', '短剧漫剧'],
+    categories.children.slice(0, 5).map((node) => node.props.key),
+    ['', '套件', 'featured', 'AIGC 创作', '短剧漫剧'],
   )
   // 骨架契约 §二·补：标题/动作行随页面滚走，一级/二级 Tab 行吸附在顶部。
   assert.equal(tree.children[0].props.className, 'workshop-intro')

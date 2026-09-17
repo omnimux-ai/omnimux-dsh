@@ -266,9 +266,10 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(skillPlazaSrc, /workshop\.tabMine/)
   })
 
-  it('category order conforms to PRD §6.1 / AC-05 (11 items)', () => {
+  it('category order conforms to PRD §6.1 / AC-05 (10 items)', () => {
     assert.match(skillPlazaSrc, /WORKSHOP_DOMAIN_ORDER/)
     const expected = [
+      'AIGC 创作',
       '短剧漫剧',
       '专业影视',
       '动画',

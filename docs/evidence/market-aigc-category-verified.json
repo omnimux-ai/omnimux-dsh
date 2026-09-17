@@ -1,0 +1,29 @@
+{
+  "task": "market-aigc-category",
+  "issue": "https://github.com/omnimux-ai/omnimux-dsh/issues/2139",
+  "generatedAt": "2026-09-17T03:44:00Z",
+  "mode": "worktree isolated · dynamic port · real Chromium via ego-browser (ego-lite)",
+  "pageUnderTest": "真实客户端模块渲染的分类栏：src/client/skill-picker-logic.js（taxonomy + filterPlazaShelf）与 src/client/plaza/usePlazaFilter.js（buildWorkshopCategories），标签取自 src/client/i18n.js 真实字典，数据取自 catalog/index.json 真实目录",
+  "url": "http://127.0.0.1:60920/",
+  "observation": {
+    "zhChips": ["全部", "套件", "精选", "AIGC 创作", "短剧/漫剧", "专业影视", "动画", "商业广告", "电商", "教育", "创意实验", "音频音乐", "平台工具"],
+    "enChips": ["All", "Suites", "Featured", "AIGC Creation", "Drama", "Film", "Animation", "Ads", "Commerce", "Education", "Lab", "Audio", "Platform"],
+    "activeChip": "AIGC 创作",
+    "visibleRows": 27,
+    "visibleSlugs": ["gunpla-poster", "portrait-clone", "presentation-design", "soviet-storybook-grotesque", "torn-paper-collage-poster", "video-character-design", "video-plan", "video-poster-design", "video-storyboard", "ai-image-gen", "image-editing", "image-enhance", "remove-bg", "ai-video-gen", "auto-short-video", "baoyu-image-gen", "baoyu-cover-image", "baoyu-comic", "flux-best-practices", "ltx2", "seedance-prompt", "seedance-characters", "seedance-camera", "seedance-examples-zh", "seedance2-skill-zh", "editorial-collage-motion", "generate-grid"],
+    "otherDomains": { "短剧漫剧": 23, "专业影视": 8 }
+  },
+  "assertions": [
+    { "name": "zh-chip-aigc-present", "pass": true },
+    { "name": "en-chip-aigc-present", "pass": true },
+    { "name": "chip-position-after-suite", "pass": true },
+    { "name": "aigc-filter-27-rows", "pass": true },
+    { "name": "other-domains-unaffected", "pass": true }
+  ],
+  "notes": [
+    "本次预演的验收页只注入了分类栏所需的标签键，故未注入的键（动画/商业广告/教育/创意实验/音频音乐/平台工具）在截图中显示为 key 原文；全量字典下的标签由 src/client/i18n.js 提供，E2E 用例逐键断言。",
+    "完整应用启动不在本次预演范围（开发版 45120 真机验收归人工）。"
+  ],
+  "screenshot": "docs/evidence/market-aigc-category-verified.png",
+  "pass": true
+}

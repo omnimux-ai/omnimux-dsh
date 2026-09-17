@@ -389,6 +389,9 @@ export function isLocalOnlyShelfTag(tag) {
  * 套件行只作 id / labelKey / 词表真源：套件的成员判定走 kind === 'suite'，不靠词表。
  */
 export const SKILL_SHELF_TAXONOMY = Object.freeze([
+    // AIGC 创作是归类型分类：词表只放分类名本身，成员一律靠条目 tags 显式声明，
+    // 禁止用「生图 / 视频 / 图像」等泛词做兜底匹配，否则会把无关技能吸进来。
+    { id: 'AIGC 创作', labelKey: 'picker.tab.aigc', keywords: Object.freeze(['AIGC 创作']) },
     { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商', '独立站', '跨境', 'shopify', '选品']) },
     { id: '商业广告', labelKey: 'picker.tab.ad', keywords: Object.freeze(['商业广告']) },
     { id: '短剧漫剧', labelKey: 'picker.tab.drama', keywords: Object.freeze(['短剧漫剧']) },

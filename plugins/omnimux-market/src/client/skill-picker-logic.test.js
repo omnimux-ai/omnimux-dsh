@@ -39,9 +39,9 @@ import {
 } from './skill-picker-logic.js'
 
 describe('skill shelf taxonomy', () => {
-  it('locks the shelf order: 电商 first, 套件 last', () => {
+  it('locks the shelf order: AIGC 创作 first, 套件 last', () => {
     assert.deepEqual([...SKILL_SHELF_TAGS], [
-      '电商', '商业广告', '短剧漫剧', '专业影视', '动画', '教育', '创意实验', '音频音乐', '平台工具', '套件',
+      'AIGC 创作', '电商', '商业广告', '短剧漫剧', '专业影视', '动画', '教育', '创意实验', '音频音乐', '平台工具', '套件',
     ])
   })
 
@@ -533,17 +533,18 @@ describe('agent preset skill bindings', () => {
     assert.ok(binding)
     assert.equal(binding.name, '内容创作')
     assert.equal(binding.useDefaultContentCatalog, true)
-    // 13 tabs: all, mine, featured, and 10 shelf categories
-    assert.equal(binding.tabs.length, 13)
+    // 14 tabs: all, mine, featured, and 11 shelf categories
+    assert.equal(binding.tabs.length, 14)
     assert.equal(binding.tabs[0].id, 'all')
     assert.equal(binding.tabs[1].id, 'mine')
     assert.equal(binding.tabs[2].id, 'featured')
-    assert.equal(binding.tabs[3].id, '电商')
-    assert.equal(binding.tabs[4].id, '商业广告')
-    assert.equal(binding.tabs[5].id, '短剧漫剧')
-    assert.equal(binding.tabs[6].id, '专业影视')
-    assert.equal(binding.tabs[7].id, '动画')
-    assert.equal(binding.tabs[12].id, '套件')
+    assert.equal(binding.tabs[3].id, 'AIGC 创作')
+    assert.equal(binding.tabs[4].id, '电商')
+    assert.equal(binding.tabs[5].id, '商业广告')
+    assert.equal(binding.tabs[6].id, '短剧漫剧')
+    assert.equal(binding.tabs[7].id, '专业影视')
+    assert.equal(binding.tabs[8].id, '动画')
+    assert.equal(binding.tabs[13].id, '套件')
 
     // Aliases also resolve to content-creation-team
     assert.equal(getPresetSkillBinding('content-creator-team')?.presetId, 'content-creation-team')

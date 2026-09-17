@@ -54,7 +54,7 @@ export interface CatalogDoc {
   items: CatalogSkillItem[]
 }
 
-export type WorkshopDomain = '短剧漫剧' | '专业影视' | '动画' | '商业广告' | '电商'
+export type WorkshopDomain = 'AIGC 创作' | '短剧漫剧' | '专业影视' | '动画' | '商业广告' | '电商'
   | '教育' | '创意实验' | '音频音乐' | '平台工具'
 export type InstallOrigin = 'omnimux' | 'workbuddy' | 'skillhub' | 'local' | 'unknown'
 export type SourceRef =
