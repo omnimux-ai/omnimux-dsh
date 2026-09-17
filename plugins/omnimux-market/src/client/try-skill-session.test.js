@@ -35,4 +35,12 @@ describe('try skill in current session without install (issue 2166)', () => {
   it('clearing the skill chip detaches the trial', () => {
     assert.match(pickerSrc, /tryDetach/)
   })
+
+  it('trySkillInSession ensures conversation is visible and focuses composer (issue 2201)', () => {
+    const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+    assert.match(tryFn, /ensureConversationVisible/)
+    assert.match(tryFn, /setFocus\?\.\(["']split["']\)/)
+    assert.match(tryFn, /findComposer\(\)/)
+    assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
+  })
 })

@@ -32,3 +32,11 @@ test('E2E 系统提示段会注入临时技能且引导安装路径仍在', () =
   assert.match(hostSrc, /renderAttachedTrialSection/)
   assert.match(sessionCreateSrc, /installFlow === ["']session-guide["']/)
 })
+
+test('E2E 试用后联动展开会话栏并聚焦输入框，消除无响应感 (Issue 2201)', () => {
+  const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+  assert.match(tryFn, /ensureConversationVisible/)
+  assert.match(tryFn, /setFocus\?\.\(["']split["']\)/)
+  assert.match(tryFn, /findComposer\(\)/)
+  assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
+})
