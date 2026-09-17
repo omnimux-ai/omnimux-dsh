@@ -2447,7 +2447,10 @@ export const INSPIRATION_CSS = `
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
 }
-.omnimux-inspiration-modal-mobile-tabs { display: none; }
+.omnimux-inspiration-modal-container .omnimux-inspiration-modal-mobile-tabs,
+.omnimux-inspiration-modal-mobile-tabs {
+  display: none !important;
+}
 .omnimux-inspiration-modal-footer {
   flex: 0 0 56px;
   display: flex;
@@ -2483,8 +2486,9 @@ export const INSPIRATION_CSS = `
   .omnimux-inspiration-modal-container { height: min(92vh, 760px); }
   .omnimux-inspiration-modal-header { gap: 8px; padding: 0 12px; }
   .omnimux-inspiration-modal-heading { max-width: calc(100% - 40px); }
+  .omnimux-inspiration-modal-container .omnimux-inspiration-modal-mobile-tabs,
   .omnimux-inspiration-modal-mobile-tabs {
-    display: flex;
+    display: flex !important;
     flex: 0 0 44px;
     align-items: center;
     gap: 4px;

@@ -1,0 +1,22 @@
+{
+  "task": "inspiration-remove-modal-tabs",
+  "verifiedAt": "2026-09-17T19:40:00Z",
+  "summary": "灵感社区素材预览弹窗桌面端移除多余切换标签栏验证通过",
+  "checks": [
+    {
+      "viewport": "1440x900",
+      "tabsSelector": ".omnimux-inspiration-modal-mobile-tabs",
+      "expectedDisplay": "none",
+      "actualDisplay": "none",
+      "status": "PASS"
+    },
+    {
+      "viewport": "390x900",
+      "tabsSelector": ".omnimux-inspiration-modal-mobile-tabs",
+      "expectedDisplay": "flex",
+      "actualDisplay": "flex",
+      "status": "PASS"
+    }
+  ],
+  "screenshot": "docs/evidence/inspiration-remove-modal-tabs-verified.png"
+}
