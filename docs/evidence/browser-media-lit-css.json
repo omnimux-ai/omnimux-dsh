@@ -1,0 +1,24 @@
+{
+  "issue": 2114,
+  "at": "2026-09-16T16:51:37.142Z",
+  "extensionDist": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-media-lit-transition/plugins/omnimux-browser/extension/dist",
+  "cases": [
+    {
+      "name": "the composer chip is 44px and its remove control is hidden",
+      "pass": true,
+      "observed": {
+        "width": 44,
+        "opacity": "0"
+      }
+    },
+    {
+      "name": "hovering the chip reveals the remove control",
+      "pass": true,
+      "observed": {
+        "opacity": "1"
+      }
+    }
+  ],
+  "passed": 2,
+  "total": 2
+}
