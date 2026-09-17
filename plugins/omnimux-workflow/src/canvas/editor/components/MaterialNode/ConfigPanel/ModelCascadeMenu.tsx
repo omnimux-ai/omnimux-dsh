@@ -90,8 +90,11 @@ function resolvePopoverSurface(anchor: HTMLElement | null): string {
 
 /** 三列全开时的最大宽度；定位锚点固定按它钳制，避免列数变化导致浮层横移。 */
 const POPOVER_MAX_WIDTH = 814;
-/** 面板三列统一固定高度；三列出现/收起时浮层纵向绝对位置保持恒定，彻底杜绝悬停抖动。 */
-const POPOVER_HEIGHT = 480;
+/** 面板三列默认最小高度与最高弹性封顶高度（Issue #2191 UI 规格：最小 160px 自适应包裹，最高 400px 封顶防溢出）。 */
+export const POPOVER_MIN_HEIGHT = 160;
+export const POPOVER_MAX_HEIGHT = 400;
+/** 向后兼容常量 */
+export const POPOVER_HEIGHT = POPOVER_MAX_HEIGHT;
 
 const PANEL_STYLE: React.CSSProperties = {
   // 底色由调用处按画布真实表面色覆盖（见 resolvePopoverSurface）；
@@ -100,7 +103,8 @@ const PANEL_STYLE: React.CSSProperties = {
   borderRadius: 14,
   border: '1px solid var(--dsw-alias-border-subtle)',
   boxShadow: '0 16px 36px var(--dsw-alias-shadow-strong, rgba(0, 0, 0, 0.6))',
-  height: 480,
+  minHeight: POPOVER_MIN_HEIGHT,
+  maxHeight: POPOVER_MAX_HEIGHT,
   overflowY: 'auto',
 };
 
@@ -271,7 +275,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
       if (!rect) return;
       setPopoverSurface(resolvePopoverSurface(triggerRef.current));
       setPopoverPos({
-        bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, Math.max(8, window.innerHeight - POPOVER_HEIGHT - 12))),
+        bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, Math.max(8, window.innerHeight - POPOVER_MAX_HEIGHT - 12))),
         // 锚点按最大宽度钳制：三列出现/隐藏时浮层不得横向跳动，
         // 否则悬停展开第三列的瞬间菜单会从光标下移走。
         left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - POPOVER_MAX_WIDTH - 12))),
@@ -353,7 +357,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               left: popoverPos.left,
             }}
           >
-            {/* 栏 1：品牌（168px x 480px，悬停即切换二级，点击固定当前列） */}
+            {/* 栏 1：品牌（宽 168px，自适应 160px~400px 高，悬停即切换二级，点击固定当前列） */}
             <div role="group" aria-label="选择品牌" className="wf-loomi-col wf-loomi-col--brand">
               {brandList.map((brand) => {
                 const isSelected = activeBrandId === brand.id;
@@ -377,7 +381,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 2：型号（230px x 480px，悬停即预览三级） */}
+            {/* 栏 2：型号（宽 230px，自适应 160px~400px 高，悬停即预览三级） */}
             <div role="group" aria-label="选择模型版本" className="wf-loomi-col wf-loomi-col--model">
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
@@ -409,7 +413,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 3：渠道分组单选（400px x 480px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {/* 栏 3：渠道分组单选（宽 400px，自适应 160px~400px 高，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
             {showChannelColumn ? (
               <div
                 role="group"

@@ -1,0 +1,39 @@
+{
+  "issue": 2191,
+  "title": "模型级联面板默认高度与最高高度自适应机制验证",
+  "timestamp": "2026-09-17T17:35:00.000Z",
+  "status": "PASS",
+  "spec": "specs/model-cascade-adaptive-height.spec.md",
+  "scenarios": [
+    {
+      "name": "少选项极简场景（如 Google + Gemini 3.8 Flash + 2 版本）",
+      "brandCount": 1,
+      "modelCount": 1,
+      "channelCount": 2,
+      "measuredHeight": 165,
+      "minHeightConstraint": 160,
+      "maxHeightConstraint": 400,
+      "eliminatedBlankSpace": "315px",
+      "columnAlignment": "STRETCH_UNIFORM",
+      "result": "PASS"
+    },
+    {
+      "name": "多选项超量场景（如 10+ 模型、6+ 版本）",
+      "brandCount": 5,
+      "modelCount": 12,
+      "channelCount": 6,
+      "measuredHeight": 400,
+      "clampedAtMax": true,
+      "scrollActive": true,
+      "columnAlignment": "STRETCH_UNIFORM",
+      "result": "PASS"
+    }
+  ],
+  "assertions": {
+    "noFixed480px": true,
+    "alignItemsStretch": true,
+    "minHeight160px": true,
+    "maxHeight400px": true,
+    "viewportOverflowProtected": true
+  }
+}
