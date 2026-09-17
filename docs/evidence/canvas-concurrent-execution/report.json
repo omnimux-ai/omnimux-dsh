@@ -1,13 +1,13 @@
 {
   "issue": 2255,
-  "harnessOrigin": "http://127.0.0.1:4914",
-  "chromeCdpPort": 57954,
+  "harnessOrigin": "http://127.0.0.1:4979",
+  "chromeCdpPort": 58464,
   "assertions": [
     {
       "name": "harness-serving",
       "pass": true,
       "detail": {
-        "origin": "http://127.0.0.1:4914"
+        "origin": "http://127.0.0.1:4979"
       }
     },
     {
@@ -20,6 +20,10 @@
       }
     },
     {
+      "name": "canvas-fitted",
+      "pass": true
+    },
+    {
       "name": "scenario-triggered",
       "pass": true
     },
@@ -27,10 +31,11 @@
       "name": "multiple-nodes-generating-at-once",
       "pass": true,
       "detail": {
-        "nodeCount": 3,
-        "generatingCount": 3,
+        "nodeCount": 4,
+        "generatingCount": 4,
         "generatingText": [
           "文案脚本 生成中…",
+          "分镜图片 生成中…",
           "成片视频 生成中…",
           "配乐音频 生成中…"
         ]
@@ -41,11 +46,11 @@
   "screenshots": {
     "before": {
       "file": "docs/evidence/canvas-concurrent-execution/canvas-idle.png",
-      "bytes": 54376
+      "bytes": 195350
     },
     "after": {
       "file": "docs/evidence/canvas-concurrent-execution/canvas-multi-generating.png",
-      "bytes": 54059
+      "bytes": 152082
     }
   },
   "note": "画布夹具（真实画布 bundle）驱动：点击夹具的运行场景让多个节点同时进入生成中。多执行控制器（多 SSE 订阅、按执行归属的终态收敛）由单元与契约测试覆盖。"
