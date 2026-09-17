@@ -425,14 +425,14 @@ test('T02-09：运行时门禁只告警不外抛，脏数据不得让市场不�
         console.warn = original;
     }
 });
-test('T02-10：真实目录下工坊 featured 达 69 条且门禁零拒绝（T02 验收证据）', () => {
+test('T02-10：真实目录下工坊 featured 达 70 条且门禁零拒绝（T02 验收证据）', () => {
     const catalog = loadCatalog();
     const data = input(catalog.items);
     data.catalogRevision = 'real-catalog';
     const { snapshot, result } = query(data);
-    assert.equal(snapshot.featured.length, 69);
+    assert.equal(snapshot.featured.length, 70);
     assert.deepEqual(snapshot.admission, { enforced: true, skippedCount: 0, skippedIds: [] });
-    assert.equal(result.featured.length, 69);
+    assert.equal(result.featured.length, 70);
     assert.ok(result.featured.some((s) => s.skillKey === 'video-generate-canvas'));
     assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-material-breakdown'));
     assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-script-creation'));
