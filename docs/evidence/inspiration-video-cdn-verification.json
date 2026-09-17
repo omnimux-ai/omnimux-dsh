@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-09-17T14:14:31.339Z",
+  "results": [
+    {
+      "name": "TikTok CDN Stream URL Resolution",
+      "status": "PASS",
+      "video_url": "https://v19.tiktokcdn-us.com/1187e4beb006c9d37d67b277b153c892/6aac45e6/video/tos/alisg/tos-alisg-pve-0037c001/oYibQEXvbAxibBYBhspSAQuHCaJEYuppIhyEA/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&mime_type=video_mp4"
+    },
+    {
+      "name": "MIME Parameter Video Stream",
+      "status": "PASS",
+      "video_url": "https://media-stream.example-public-cdn.com/stream/segment-live?mime_type=video/mp4"
+    },
+    {
+      "name": "HLS Manifest Rejection",
+      "status": "PASS",
+      "result": "blocked"
+    },
+    {
+      "name": "Generic Webpage Rejection",
+      "status": "PASS",
+      "result": "blocked"
+    }
+  ]
+}
