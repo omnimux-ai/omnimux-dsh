@@ -244,6 +244,14 @@
                       model.badge ? h("span", { className: "sh-model-badge " + (model.badge.type || "purple") }, model.badge.text) : null,
                     ),
                     h("div", { className: "sh-model-row-desc" }, model.subtitle),
+                    // Price comes from the hub's channel-group projection, so the
+                    // picker never re-declares what a line costs.
+                    model.priceLabel
+                      ? h("div", {
+                        className: "sh-model-row-price",
+                        "data-omnimux-model-price": model.priceLabel,
+                      }, model.priceLabel)
+                      : null,
                   ),
                 ),
                 h("div", { className: "sh-model-row-right" },

@@ -122,6 +122,51 @@ export function resolveModelBrand(modelId) {
   return 'bytedance'
 }
 
+/**
+ * Price label for one channel group, in the hub's own vocabulary.
+ *
+ * The hub projects `channelGroups` onto every catalog row precisely so a
+ * picker can show what a line costs without re-declaring prices. Three honest
+ * outcomes, never a fabricated number: a real points estimate, a bare price
+ * ratio when the gateway publishes no points scale, or an explicit "no quote"
+ * when neither exists.
+ *
+ * @param {{ pricing?: { pointsEstimate?: number|null, priceRatio?: number|null } }} group
+ * @returns {string}
+ */
+export function formatGroupPrice(group) {
+  const pricing = group && typeof group === 'object' ? group.pricing : null
+  const points = pricing?.pointsEstimate
+  if (typeof points === 'number' && Number.isFinite(points)) return `≈${points} 积分`
+  const ratio = pricing?.priceRatio
+  if (typeof ratio === 'number' && Number.isFinite(ratio)) return `×${ratio} 倍率`
+  return '暂无报价'
+}
+
+/**
+ * The cheapest enabled line's price label, or '' when the model has no pool.
+ * "Cheapest" follows the same numeric estimate the router's `cost_first`
+ * ordering uses, so the label never contradicts the routing plan.
+ *
+ * @param {{ channelGroups?: object[] }} row
+ * @returns {string}
+ */
+export function cheapestGroupPriceLabel(row) {
+  const groups = Array.isArray(row?.channelGroups) ? row.channelGroups : []
+  const priced = groups
+    .filter((group) => group && group.enabled !== false)
+    .map((group) => ({ group, points: group.pricing?.pointsEstimate }))
+    .filter((entry) => typeof entry.points === 'number' && Number.isFinite(entry.points))
+  if (priced.length === 0) {
+    // No numeric estimate anywhere: fall back to the first enabled line so a
+    // ratio-only pool still shows something truthful.
+    const first = groups.find((group) => group && group.enabled !== false)
+    return first ? formatGroupPrice(first) : ''
+  }
+  priced.sort((a, b) => a.points - b.points)
+  return formatGroupPrice(priced[0].group)
+}
+
 export function projectListedRow(row, type, presets = MODEL_METADATA_PRESETS) {
   if (!row || typeof row.id !== 'string' || !row.id.trim()) return null
   const id = row.id.trim()
@@ -138,6 +183,9 @@ export function projectListedRow(row, type, presets = MODEL_METADATA_PRESETS) {
     pro: typeof meta.pro === 'boolean' ? meta.pro : Boolean(row.pro),
     badge: meta.badge || hubBadge,
     icon: meta.icon || resolveModelBrand(id),
+    // Pricing travels with the row so the panel never has to fetch it again.
+    channelGroups: Array.isArray(row.channelGroups) ? row.channelGroups : [],
+    priceLabel: cheapestGroupPriceLabel(row),
   }
 }
 

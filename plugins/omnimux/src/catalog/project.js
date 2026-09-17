@@ -18,6 +18,7 @@ import { checkAdmission } from './contract/admission.js';
 import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js';
 import { resolveDisposition } from './contract/dispositions.js';
 import { resolveModelId } from './contract/index.js';
+import { getModelChannelGroups } from './serving/channel-groups.js';
 import { sortCatalogRows } from './sort.js';
 
 export { resolveModelId };
@@ -156,6 +157,9 @@ export function projectRow(model, ops) {
   if (model.parameters && typeof model.parameters === 'object') {
     row.parameters = structuredClone(model.parameters);
   }
+  // The composer's model picker reads these rows, so pricing has to travel
+  // with them — not only on the flat `models[]` DTO.
+  row.channelGroups = projectChannelGroups(model.id);
   return row;
 }
 
@@ -216,6 +220,39 @@ export function projectChatRows(index) {
 }
 
 /**
+ * The channel groups a model can be served on, with their pricing.
+ *
+ * `serving/channel-groups.js` is the single source of truth for what a line
+ * costs. Surfacing it here lets the composer's model picker and any later
+ * caller read one authority instead of re-declaring prices, which is how the
+ * canvas mirror drifted from the hub before.
+ *
+ * Only the fields a caller can act on are projected: the internal record may
+ * grow fields that are not part of this contract. The result is always an
+ * array — a model with no configured pool reports `[]` rather than a missing
+ * key, so callers never need both an optional-chain and a default.
+ *
+ * @param {string} modelId
+ * @returns {object[]}
+ */
+export function projectChannelGroups(modelId) {
+  return getModelChannelGroups(modelId).map((group) => ({
+    id: group.id,
+    label: group.label,
+    ...(typeof group.badge === 'string' ? { badge: group.badge } : {}),
+    wireGroup: group.wireGroup || group.id,
+    ...(group.pricing && typeof group.pricing === 'object'
+      ? { pricing: structuredClone(group.pricing) }
+      : {}),
+    ...(group.constraints && typeof group.constraints === 'object'
+      ? { constraints: structuredClone(group.constraints) }
+      : {}),
+    ...(group.sla && typeof group.sla === 'object' ? { sla: structuredClone(group.sla) } : {}),
+    enabled: group.enabled !== false,
+  }));
+}
+
+/**
  * Authoritative model DTO: contract passthrough + disposition governance.
  * @param {object} model
  * @param {object} dispositionsDoc
@@ -246,6 +283,7 @@ export function projectModelDto(model, dispositionsDoc) {
       : {}),
     listed: model.listed === true,
     listedOperations: [...(model.listedOperations ?? [])],
+    channelGroups: projectChannelGroups(model.id),
     disposition: typeof row?.disposition === 'string' ? row.disposition : 'draft',
   };
 }
