@@ -231,7 +231,16 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
     }
   }
 
-  useEffect(() => setItem(row), [row])
+  useEffect(() => {
+    setItem(row)
+    if (row?.id && row?.is_local && !row.deconstruction) {
+      getLocalInspiration(row.id).then((res) => {
+        if (res.ok && res.body?.data) {
+          setItem(res.body.data)
+        }
+      }).catch(() => {})
+    }
+  }, [row])
   // The media source of the row currently on screen. Declared before the reset
   // effect below because that effect keys off it.
   const videoSrc = pickVideoSrc(item)

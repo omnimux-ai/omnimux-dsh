@@ -18,11 +18,11 @@
  */
 
 import assert from 'node:assert/strict'
-import { Readable } from 'node:stream'
+import { PassThrough, Readable } from 'node:stream'
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test'
-import { mkdtempSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { apply } from './index.js'
 import { LOCAL_PREFIX } from './http-routes.js'
 import { resolveInspirationPaths } from './paths.js'
@@ -165,21 +165,24 @@ function makeReq({ method = 'GET', url, headers = {}, body }) {
 
 function makeRes() {
   const state = { status: 0, headers: null, body: '' }
-  return {
-    state,
-    writeHead(status, headers) {
-      state.status = status
-      state.headers = headers
-      return this
-    },
-    end(chunk) {
-      state.body += typeof chunk === 'string' ? chunk : (chunk ? Buffer.from(chunk).toString('utf8') : '')
-      return this
-    },
-    json() {
-      return state.body ? JSON.parse(state.body) : null
-    },
+  const pass = new PassThrough()
+  pass.state = state
+  pass.writeHead = function (status, headers) {
+    state.status = status
+    state.headers = headers ? Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v])) : {}
+    return this
   }
+  pass.json = function () {
+    try {
+      return state.body ? JSON.parse(state.body) : null
+    } catch {
+      return null
+    }
+  }
+  pass.on('data', (chunk) => {
+    state.body += chunk.toString('utf8')
+  })
+  return pass
 }
 
 /** Send one request through the prefix handler the plugin registered. */
@@ -187,6 +190,14 @@ async function httpCall(route, { method = 'GET', url, headers = {}, body } = {})
   const req = makeReq({ method, url, headers, body })
   const res = makeRes()
   await route.handler(req, res)
+  if (!res.writableEnded) {
+    await new Promise((resolve) => {
+      res.once('finish', resolve)
+      res.once('close', resolve)
+      // Safety timeout in test
+      setTimeout(resolve, 100)
+    })
+  }
   return { status: res.state.status, headers: res.state.headers, body: res.json(), raw: res.state.body }
 }
 
@@ -201,7 +212,11 @@ async function httpCall(route, { method = 'GET', url, headers = {}, body } = {})
  * @param {number} bytes
  */
 function writeMediaFile(world, name, bytes) {
-  const path = join(world.root, name)
+  const paths = resolveInspirationPaths({ homeDir: world.root })
+  const path = name.startsWith('covers/') || name.startsWith('videos/')
+    ? join(paths.mediaDir, name)
+    : join(world.root, name)
+  mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, '')
   truncateSync(path, bytes)
   return path
@@ -606,5 +621,40 @@ describe('HTTP entry: the media-export route is reachable through the registered
     // found` and look like a missing feature instead of a bad request.
     assert.equal(response.status, 400, `POST /fetch-media → ${response.raw}`)
     assert.match(response.body.error, /url/)
+  })
+
+  it('serves local media with Cache-Control, ETag and answers 304 for matching If-None-Match', async () => {
+    const world = bootPlugin()
+    const filePath = writeMediaFile(world, 'covers/cover_test.jpg', 1024)
+    assert.ok(filePath)
+
+    const res200 = await httpCall(world.route, { url: `${LOCAL_PREFIX}/media/covers/cover_test.jpg` })
+    assert.equal(res200.status, 200)
+    assert.equal(res200.headers['cache-control'], 'public, max-age=31536000, immutable')
+    assert.ok(res200.headers.etag, 'should have ETag')
+
+    const res304 = await httpCall(world.route, {
+      url: `${LOCAL_PREFIX}/media/covers/cover_test.jpg`,
+      headers: { 'if-none-match': res200.headers.etag },
+    })
+    assert.equal(res304.status, 304)
+    assert.equal(res304.headers['cache-control'], 'public, max-age=31536000, immutable')
+  })
+
+  it('supports projection=lean on GET /omnimux/inspiration/local to omit deconstruction', async () => {
+    const world = bootPlugin()
+    await createLocalItem(world, {
+      title: '具有完整分镜的素材',
+      content: '脚本正文',
+      deconstruction: { hook: '超强Hook', target_goal: '提高转化' },
+    })
+
+    const fullRes = await httpCall(world.route, { url: `${LOCAL_PREFIX}` })
+    assert.equal(fullRes.status, 200)
+    assert.ok(fullRes.body.data.items[0].deconstruction, 'full list should include deconstruction')
+
+    const leanRes = await httpCall(world.route, { url: `${LOCAL_PREFIX}?projection=lean` })
+    assert.equal(leanRes.status, 200)
+    assert.equal('deconstruction' in leanRes.body.data.items[0], false, 'lean list must omit deconstruction')
   })
 })
