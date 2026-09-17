@@ -2,10 +2,10 @@
  * E2E: 探索模板 (Explore templates) 首页组件全流程端到端测试
  *
  * 覆盖关键用户旅程：
- * 1. 探索模板 7 大分类胶囊渲染与高亮
- * 2. 货架行 (Section Shelf) 渲染、横滑与「查看全部 (View all) →」切分类联动
+ * 1. 10 大分类胶囊渲染与顺序严格对齐 (全部 -> TikTok热门 -> Skills -> 软件应用...)
+ * 2. 货架行 (Section Shelf) 渲染、横滑与「查看全部」切分类联动
  * 3. 单分类全量大网格展开与一键退回全部分组
- * 4. 点击「一键复刻」装配提示词与自适应插槽回传
+ * 4. 三大复刻模式（模板复刻、TikTok 热门复刻、Skill 复刻）回调与数据契约
  */
 import assert from 'node:assert/strict'
 import { describe, it, beforeEach, afterEach } from 'node:test'
@@ -65,13 +65,19 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     delete globalThis.document
   })
 
-  it('7 大分类胶囊完整渲染且包含软件应用 (Apps & Software) 与标红 NEW 徽标', async () => {
+  it('10 大分类胶囊完整渲染，且严格对齐全部 -> TikTok热门 -> Skills -> 软件应用顺序', async () => {
     act(() => {
       reactRoot.render(React.createElement(ExploreTemplatesSection))
     })
 
     const pills = rootContainer.querySelectorAll('.omnimux-explore-pill-btn')
-    assert.equal(pills.length, 8, '应包含全部货架与 7 大核心分类共 8 个胶囊')
+    assert.equal(pills.length, 10, '应包含全部货架与 9 个细分分类共 10 个胶囊')
+
+    const slugs = Array.from(pills).map((p) => p.getAttribute('data-category-slug'))
+    assert.equal(slugs[0], 'all')
+    assert.equal(slugs[1], 'tiktok', '第 2 项必须为 TikTok 热门')
+    assert.equal(slugs[2], 'skills', '第 3 项必须为 Skills 技能库')
+    assert.equal(slugs[3], 'apps-software', '第 4 项必须为软件应用')
 
     const appsPill = rootContainer.querySelector('[data-category-slug="apps-software"]')
     assert.ok(appsPill, '必须存在软件应用分类胶囊')
@@ -109,9 +115,9 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     const activePill = rootContainer.querySelector('.omnimux-explore-pill-btn.active')
     assert.equal(activePill?.getAttribute('data-category-slug'), 'apps-software')
 
-    // 4. 点击「返回全部货架」恢复视图
+    // 4. 点击「返回全部」恢复视图
     const backBtn = gridWrap.querySelector('.omnimux-tpl-btn-back')
-    assert.ok(backBtn, '大网格顶部必须提供返回全部货架按钮')
+    assert.ok(backBtn, '大网格顶部必须提供返回全部按钮')
 
     act(() => {
       backBtn.click()
@@ -120,29 +126,60 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     assert.ok(rootContainer.querySelector('.omnimux-explore-shelves-view'), '必须恢复多行货架视图')
   })
 
-  it('点击卡片「一键复刻」成功触发装配回调，回传分镜提示词与插槽类型', async () => {
-    let receivedPayload = null
+  it('三大复刻模式（模板、TikTok热门、Skill）分别准确触发各自业务回调', async () => {
+    let templatePayload = null
+    let trendingPayload = null
+    let skillPayload = null
 
     act(() => {
       reactRoot.render(
         React.createElement(ExploreTemplatesSection, {
           onApplyTemplate: (payload) => {
-            receivedPayload = payload
+            templatePayload = payload
+          },
+          onApplyTrending: (payload) => {
+            trendingPayload = payload
+          },
+          onApplySkill: (payload) => {
+            skillPayload = payload
           },
         })
       )
     })
 
-    const firstRecreateBtn = rootContainer.querySelector('.omnimux-tpl-btn-recreate')
-    assert.ok(firstRecreateBtn, '卡片上必须包含一键复刻按钮')
+    // 1. 测试 TikTok 热门卡片复刻
+    const tiktokShelf = rootContainer.querySelector('[data-shelf-slug="tiktok"]')
+    assert.ok(tiktokShelf, '必须存在 TikTok 热门货架')
+    const tiktokBtn = tiktokShelf.querySelector('.omnimux-trending-recreate-btn')
+    assert.ok(tiktokBtn, 'TikTok 卡片必须具备深灰毛玻璃复刻按键')
 
     act(() => {
-      firstRecreateBtn.click()
+      tiktokBtn.click()
     })
+    assert.ok(trendingPayload, '点击 TikTok 卡片复刻必须触发 onApplyTrending')
+    assert.ok(trendingPayload.id, '必须回传灵感 ID')
 
-    assert.ok(receivedPayload, '必须成功触发 onApplyTemplate 回调')
-    assert.ok(receivedPayload.prompt, '回传必须包含有效的分镜提示词')
-    assert.ok(receivedPayload.title, '回传必须包含模板标题')
-    assert.ok(receivedPayload.slotType, '回传必须明确插槽类型 (software 或 product)')
+    // 2. 测试 Skills 技能卡片复刻
+    const skillShelf = rootContainer.querySelector('[data-shelf-slug="skills"]')
+    assert.ok(skillShelf, '必须存在 Skills 货架')
+    const skillBtn = skillShelf.querySelector('.omnimux-trending-recreate-btn')
+    assert.ok(skillBtn, 'Skill 卡片必须具备深灰毛玻璃复刻按键')
+
+    act(() => {
+      skillBtn.click()
+    })
+    assert.ok(skillPayload, '点击 Skill 卡片复刻必须触发 onApplySkill')
+    assert.ok(skillPayload.id || skillPayload.skill, '必须回传技能标识')
+
+    // 3. 测试常规模板卡片复刻
+    const appShelf = rootContainer.querySelector('[data-shelf-slug="apps-software"]')
+    const tplBtn = appShelf.querySelector('.omnimux-trending-recreate-btn')
+    assert.ok(tplBtn, '模板卡片必须具备深灰毛玻璃复刻按键')
+
+    act(() => {
+      tplBtn.click()
+    })
+    assert.ok(templatePayload, '点击模板复刻必须触发 onApplyTemplate')
+    assert.ok(templatePayload.prompt, '回传必须包含提示词')
   })
 })

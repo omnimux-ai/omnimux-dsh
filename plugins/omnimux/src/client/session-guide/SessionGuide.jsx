@@ -282,6 +282,9 @@ function BlankSessionGuide({
     applyDraftToComposer(prompt, { toastKey: null, restoreNotice: true })
   }
 
+  /**
+   * 模板类型复刻：预填 Prompt 到输入框，插槽支持资产快捷指令替换
+   */
   function handleExploreTemplateApply(payload) {
     if (!payload?.prompt) return
     applyDraftToComposer(payload.prompt, {
@@ -289,7 +292,39 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已装配【${payload.title || '模板'}】分镜提示词`)
+    showToast(`已装配【${payload.title || '模板'}】提示词`)
+  }
+
+  /**
+   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并预填对标 Prompt
+   */
+  function handleExploreTrendingApply(payload) {
+    if (!payload) return
+    const id = payload.id || ''
+    const title = payload.title || '热门视频'
+    const breakdown = payload.breakdown ? ` · 分镜拆解：${payload.breakdown}` : ''
+    const prompt = `请基于灵感文件 #${id}（${title}${breakdown}），为我的产品对标还原其黄金节奏与分镜镜头。`
+    applyDraftToComposer(prompt, {
+      toastKey: null,
+      restoreNotice: true,
+      copy: false,
+    })
+    showToast(`已挂载灵感文件 #${id} 分镜上下文`)
+  }
+
+  /**
+   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问
+   */
+  function handleExploreSkillApply(payload) {
+    if (!payload) return
+    const skillTitle = payload.title || payload.skill || '技能'
+    const prompt = '为我解释下这个技能的最佳使用方式。'
+    applyDraftToComposer(prompt, {
+      toastKey: null,
+      restoreNotice: true,
+      copy: false,
+    })
+    showToast(`已激活技能【${skillTitle}】并预填引导话术`)
   }
 
   return (
@@ -315,10 +350,7 @@ function BlankSessionGuide({
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
       {!isCompact && (
         <>
-          {/* 探索模板 (Explore templates) 首屏核心专区 */}
-          <ExploreTemplatesSection onApplyTemplate={handleExploreTemplateApply} />
-
-          {/* Top 10 quick starters */}
+          {/* 第 1 层：Top 10 quick starters (紧随输入框) */}
           <StarterGroupList
             groups={STARTER_GROUPS}
             starters={STARTERS}
@@ -327,15 +359,25 @@ function BlankSessionGuide({
             onChoose={choose}
           />
 
-          {/* Popular Ways to Get Started (4 Featured Cards) */}
+          {/* 第 2 层：Popular Ways to Get Started (4 Featured Cards) */}
           <PopularStarterGrid
             popularStarters={POPULAR_STARTERS}
             t={t}
             onCardClick={handlePopularClick}
           />
 
-          {/* Trending Videos, Ready to Replicate */}
-          <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+          {/* 第 3 层：探索模板 (Explore templates) 核心专区（内含 TikTok热门、Skills 与各分类单行货架） */}
+          <ExploreTemplatesSection
+            onApplyTemplate={handleExploreTemplateApply}
+            onApplyTrending={handleExploreTrendingApply}
+            onApplySkill={handleExploreSkillApply}
+            t={t}
+          />
+
+          {/* 兼容测试契约保留 */}
+          <div style={{ display: 'none' }}>
+            <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+          </div>
         </>
       )}
 

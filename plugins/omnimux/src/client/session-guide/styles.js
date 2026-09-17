@@ -3022,8 +3022,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 
 /* Explore Templates Section & Shelves */
-.omnimux-explore-templates-root { display:flex; flex-direction:column; gap:24px; margin-top:28px; }
-.omnimux-explore-filter-bar { margin-bottom:12px; }
+.omnimux-explore-templates-root { display:flex; flex-direction:column; gap:20px; margin-top:28px; }
+.omnimux-explore-header-row { margin-bottom:8px; }
+.omnimux-explore-main-title { font-size:18px; font-weight:700; color:var(--dsw-alias-label-primary); margin:0; }
+.omnimux-explore-filter-bar { margin-bottom:8px; }
 .omnimux-explore-pills-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
 .omnimux-explore-pills-row::-webkit-scrollbar { display:none; }
 .omnimux-explore-pill-btn {
@@ -3056,7 +3058,6 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   padding:1px 5px;
   border-radius:4px;
 }
-.omnimux-explore-pill-en { font-size:10px; opacity:0.65; }
 
 /* Shelf Row */
 .omnimux-explore-shelves-view { display:flex; flex-direction:column; gap:36px; }
@@ -3186,8 +3187,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   bottom:0;
   left:0;
   right:0;
-  height:55%;
-  background:linear-gradient(180deg, transparent 0%, var(--dsw-alias-bg-base) 100%);
+  height:65%;
+  background:linear-gradient(180deg, transparent 0%, var(--omnimux-trending-cover-deep) 100%);
   z-index:2;
   pointer-events:none;
 }
@@ -3197,48 +3198,66 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   left:0;
   right:0;
   z-index:3;
-  padding:12px;
+  padding:14px;
   display:flex;
   flex-direction:column;
   gap:4px;
+  transform:translateY(0);
+  transition:transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-tpl-card:hover .omnimux-tpl-bottom-bar {
+  transform:translateY(-52px);
+}
+.omnimux-tpl-metrics-row {
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  margin-bottom:6px;
+  text-align:center;
+  border-bottom:1px solid var(--omnimux-trending-cover-line);
+  padding-bottom:6px;
+}
+.omnimux-tpl-metric-col { flex:1; }
+.omnimux-tpl-metric-value {
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:var(--omnimux-trending-cover-text);
+  line-height:1.2;
+}
+.omnimux-tpl-metric-label {
+  display:block;
+  font-size:9px;
+  color:var(--omnimux-trending-metric-muted);
+  margin-top:2px;
 }
 .omnimux-tpl-title {
   font-size:13px;
   font-weight:600;
-  color:var(--dsw-alias-label-primary);
-  white-space:nowrap;
+  color:var(--omnimux-trending-cover-text);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
   overflow:hidden;
-  text-overflow:ellipsis;
+  line-height:1.35;
+  text-shadow:0 1px 4px var(--dsw-alias-bg-base);
 }
-.omnimux-tpl-meta {
-  font-size:11px;
-  color:var(--dsw-alias-label-secondary);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+
+/* 悬停平滑浮现的毛玻璃复刻操作栏：默认隐藏，绝无蓝色 */
+.omnimux-tpl-hover-action {
+  position:absolute;
+  inset-inline:12px;
+  bottom:12px;
+  z-index:4;
+  opacity:0;
+  transform:translateY(12px);
+  pointer-events:none;
+  transition:opacity 280ms ease, transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.omnimux-tpl-meta-en { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
-.omnimux-tpl-btn-recreate {
-  margin-top:6px;
-  background:var(--dsw-alias-bg-layer-3);
-  backdrop-filter:blur(8px);
-  border:1px solid var(--dsw-alias-border-l3);
-  color:var(--dsw-alias-label-primary);
-  font-size:11px;
-  font-weight:600;
-  padding:6px 0;
-  border-radius:6px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  cursor:pointer;
-  transition:all 0.2s ease;
-}
-.omnimux-tpl-card:hover .omnimux-tpl-btn-recreate {
-  background:var(--dsw-alias-brand-primary);
-  border-color:var(--dsw-alias-brand-primary);
-  color:var(--dsw-alias-bg-base);
+.omnimux-tpl-card:hover .omnimux-tpl-hover-action {
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
 }
 
 /* Grid View */
