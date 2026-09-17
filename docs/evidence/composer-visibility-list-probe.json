@@ -1,0 +1,32 @@
+{
+  "issue": 2258,
+  "hubListedIds": [
+    "alpha",
+    "gamma",
+    "delta"
+  ],
+  "shippedIds": [
+    "alpha",
+    "beta",
+    "gamma"
+  ],
+  "hiddenIds": [
+    "gamma"
+  ],
+  "renderedIds": [
+    "alpha",
+    "gamma",
+    "delta"
+  ],
+  "checked": {
+    "alpha": "true",
+    "gamma": "false",
+    "delta": "true"
+  },
+  "geometry": {
+    "width": 1600,
+    "minHeight": 48
+  },
+  "unlistedAbsent": true,
+  "at": "2026-09-17T17:43:19.448Z"
+}

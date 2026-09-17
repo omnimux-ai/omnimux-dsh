@@ -21,6 +21,14 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   defaultTextReasoning: 'max',
   allowAgentSwitchTab: true,
   allowAutoSurfaceFollow: true,
+  /**
+   * Model ids the user keeps out of the composer's text-model list. Empty means
+   * "show every model the hub lists". This list can only ever subtract: the
+   * hub's listed set is the membership authority, so a hidden id the hub still
+   * serves stays hidden, and an id the hub dropped stays gone whatever this
+   * list says.
+   */
+  composerHiddenModels: Object.freeze([]),
 })
 
 const FIELD_META = Object.freeze({
@@ -32,6 +40,7 @@ const FIELD_META = Object.freeze({
   defaultVideoOperation: '视频节点默认生成模式（auto 表示按目录推荐自动选择）',
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
   allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
+  composerHiddenModels: '输入框模型列表中隐藏的模型',
 })
 
 function stringNode(key) {
@@ -46,14 +55,21 @@ function parseSettingsSection(value) {
   const input = value && typeof value === 'object' && !Array.isArray(value)
     ? /** @type {Record<string, unknown>} */ (value)
     : {}
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, unknown>} */
   const out = {}
   for (const key of Object.keys(SETTINGS_DEFAULTS)) {
     const raw = input[key]
-    if (typeof SETTINGS_DEFAULTS[key] === 'boolean') {
-      out[key] = typeof raw === 'boolean' ? raw : SETTINGS_DEFAULTS[key]
+    const fallback = SETTINGS_DEFAULTS[key]
+    if (Array.isArray(fallback)) {
+      // A list field keeps only usable entries; a malformed stored value falls
+      // back to the default instead of failing the whole namespace.
+      out[key] = Array.isArray(raw)
+        ? raw.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim())
+        : [...fallback]
+    } else if (typeof fallback === 'boolean') {
+      out[key] = typeof raw === 'boolean' ? raw : fallback
     } else {
-      out[key] = typeof raw === 'string' && raw.trim() ? raw.trim() : SETTINGS_DEFAULTS[key]
+      out[key] = typeof raw === 'string' && raw.trim() ? raw.trim() : fallback
     }
   }
   return out
@@ -61,7 +77,7 @@ function parseSettingsSection(value) {
 
 /**
  * @param {unknown} value
- * @returns {{ defaultTextModel: string, defaultImageModel: string, defaultVideoModel: string, defaultAudioModel: string, defaultImageOperation: string, defaultVideoOperation: string }}
+ * @returns {{ defaultTextModel: string, defaultImageModel: string, defaultVideoModel: string, defaultAudioModel: string, defaultImageOperation: string, defaultVideoOperation: string, defaultTextReasoning: string, allowAgentSwitchTab: boolean, allowAutoSurfaceFollow: boolean, composerHiddenModels: string[] }}
  */
 function SettingsConfig(value) {
   return parseSettingsSection(value)
