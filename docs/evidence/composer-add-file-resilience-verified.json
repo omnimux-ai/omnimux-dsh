@@ -1,0 +1,27 @@
+{
+  "task": "composer-add-file-frontend-resilience",
+  "issue": "#2188",
+  "title": "会话输入框「添加文件」前端自愈与免重启常驻实测证据",
+  "verifiedAt": "2026-09-17T18:11:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "description": "前端 candidates 管线主动补全 add-file 条目，确保在 Host 未重启场景下，刷新页面即可直接呈现「添加文件」，点击直达系统原生文件选择窗口",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "name": "Host 未重启场景自愈补全",
+      "result": "PASS",
+      "details": "当 Host 仅返回 add-from-library 与原生指令时，前端自动前置补齐 add-file，最终呈现「添加文件、从资产库添加、计划模式」3 项"
+    },
+    {
+      "id": "scenario-2",
+      "name": "分派拦截直接唤起原生文件选择器",
+      "result": "PASS",
+      "details": "无论 Host 是否具有 add-file 处理器，wrappedDispatch 拦截层直接唤起 DOM 中的 input[type=file]，实现点击直达"
+    }
+  ],
+  "testSuites": {
+    "composerCommandsI18nTests": "30/30 PASS",
+    "commandsSimplificationE2ETests": "5/5 PASS"
+  }
+}

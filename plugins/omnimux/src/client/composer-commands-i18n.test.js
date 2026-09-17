@@ -590,11 +590,13 @@ test('wrapCommandUi normalizes contributions registered after the wrapper (compo
   assert.equal(stored.description(), '快速模式')
 
   // The host's candidate synthesis must now complete instead of throwing, and
-  // non-whitelisted commands (like fast) are filtered out, keeping only allowed commands.
+  // non-whitelisted commands (like fast) are filtered out, keeping only allowed commands (add-file, add-from-library).
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
-  assert.equal(rows[0].rawName, 'add-from-library')
-  assert.equal(rows[0].description, '从统一资产库选择素材')
+  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
+  assert.equal(rows[0].rawName, 'add-file')
+  assert.equal(rows[0].description, '从本地选择文件或图片')
+  assert.equal(rows[1].rawName, 'add-from-library')
+  assert.equal(rows[1].description, '从统一资产库选择素材')
 
   // The contribution disposer still reaches the host registry
   release()
@@ -613,7 +615,7 @@ test('wrapCommandUi repairs a contribution registered before the wrapper (load-o
 
   const dispose = wrapCommandUi(commandUi, fakeZhLocale)
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
   assert.equal(typeof commandUi.live.contributions.get('fast').description, 'function')
   dispose()
 })
@@ -632,7 +634,7 @@ test('wrapCommandUi leaves compliant contributions and non-contract failures alo
   assert.equal(commandUi.live.contributions.get('model'), compliant)
 
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
 
   // An unrelated host failure must still surface through the same channel it
   // always did (the localized pass is attempted once, then the raw pass runs).
@@ -766,9 +768,9 @@ test('wrapCommandUi keeps the host receiver so dispatch resolves its own dotted 
   assert.equal(rows[0].rawName, 'add-from-library')
 
   // The candidate pass itself must run against the host receiver as well,
-  // and only whitelisted commands remain visible.
+  // and allowed commands (add-file, add-from-library) remain visible.
   const all = await instance.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(all.map((row) => row.name), ['从资产库添加'])
+  assert.deepEqual(all.map((row) => row.name), ['添加文件', '从资产库添加'])
 
   // Every wrapper forwards the host receiver — each host method still sees the service.
   seenReceivers.length = 0

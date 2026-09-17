@@ -75,6 +75,27 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     )
   })
 
+  it('当宿主尚未重启缺少 add-file 时，前端自愈补齐为添加文件、从资产库添加、计划模式 3 项', () => {
+    // 模拟底座 Host 尚未重启，宿主命令列表只有 add-from-library 与各类原生指令，缺少 add-file
+    const legacyHostRowsWithoutAddFile = [
+      { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+      { name: 'compact', description: '压缩历史' },
+      { name: 'plan', description: '开启或退出长任务计划模式' },
+      { name: 'fast', description: '切换 Codex 速度档' },
+      { name: 'model', description: '选择模型' },
+    ]
+
+    const zhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
+    const result = enhanceCommandCandidates(legacyHostRowsWithoutAddFile, { query: '' }, zhLocale)
+
+    assert.equal(result.length, 3, '即便宿主缺 add-file，前端自愈补齐后必须严格为 3 项')
+    assert.deepEqual(
+      result.map((r) => r.name),
+      ['添加文件', '从资产库添加', '计划模式']
+    )
+    assert.equal(result[0].icon, 'add-file')
+  })
+
   it('集成验证：installComposerAddCommands 同时注册添加文件与资产库两个动作并可调用', () => {
     const decorations = new Map()
     const ctx = {
