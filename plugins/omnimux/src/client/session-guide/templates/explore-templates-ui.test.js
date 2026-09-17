@@ -34,12 +34,12 @@ test('探索模板核心板块：初始静态标记渲染', () => {
     })
   )
 
-  // 1. 验证 10 大分类胶囊均已渲染且为纯中文显示，杜绝括号英文硬拼接
+  // 1. 验证 10 大分类胶囊均已渲染且为纯中文显示，杜绝括号英文硬拼接与任何角标干扰
   assert.ok(html.includes('omnimux-explore-pills-row'), '必须渲染分类胶囊栏')
   for (const cat of TEMPLATE_CATEGORIES) {
     assert.ok(html.includes(cat.nameZh), `胶囊栏必须包含 [${cat.nameZh}]`)
   }
-  assert.ok(html.includes('NEW'), '软件应用分类必须带有 NEW 徽标')
+  assert.ok(!html.includes('omnimux-explore-badge-new'), '所有分类胶囊必须保持纯净，不得出现右侧徽标')
   assert.ok(!html.includes('(Apps & Software)'), '严禁出现生硬的英文括号拼接')
 
   // 2. 验证默认全部状态下渲染多行货架

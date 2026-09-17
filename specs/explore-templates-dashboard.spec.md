@@ -27,7 +27,7 @@
 1. `all`: 全部 / All
 2. `tiktok`: TikTok热门 / TikTok Trending
 3. `skills`: Skills / Skills
-4. `apps-software`: 软件应用 / Apps & Software (标记红色 NEW)
+4. `apps-software`: 软件应用 / Apps & Software (保持纯净文本胶囊，无任何多余图标或徽标)
 5. `hook-intro`: 黄金开场 / Hook & Intro
 6. `ugc-review`: 真实种草 / UGC & Review
 7. `cinematic-vfx`: 视效大片 / Cinematic VFX

@@ -37,7 +37,6 @@ export const TEMPLATE_CATEGORIES = Object.freeze([
     nameZh: '软件应用',
     nameEn: 'Apps & Software',
     iconName: 'laptop',
-    badge: 'NEW',
     descZh: '专治软件出海与App推广：SaaS 界面穿屏、手机 App 交互动效',
   },
   {

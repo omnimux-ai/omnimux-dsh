@@ -82,7 +82,7 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     const appsPill = rootContainer.querySelector('[data-category-slug="apps-software"]')
     assert.ok(appsPill, '必须存在软件应用分类胶囊')
     assert.ok(appsPill.textContent.includes('软件应用'))
-    assert.ok(appsPill.textContent.includes('NEW'), '软件应用分类必须带有 NEW 徽标')
+    assert.equal(appsPill.querySelector('.omnimux-explore-badge-new'), null, '软件应用分类胶囊右侧不得带有任何角标或图标')
   })
 
   it('默认呈现多行货架视图，点击「查看全部」无缝切分类并展开全量大网格', async () => {

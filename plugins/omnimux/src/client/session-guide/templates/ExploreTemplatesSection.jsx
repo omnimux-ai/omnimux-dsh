@@ -225,7 +225,6 @@ export function ExploreTemplatesSection({
                 data-category-slug={cat.slug}
               >
                 <span>{displayName}</span>
-                {cat.badge && <span className="omnimux-explore-badge-new">{cat.badge}</span>}
               </button>
             )
           })}
