@@ -99,6 +99,7 @@ export const BLANK_FRAME_MIN_DIM = 300
 export const BLANK_FRAME_MAX_BYTES = 15000
 export const BLANK_FRAME_HEADER_FLOOR = 24
 export const RETRY_SETTLE_MS = 1000
+export const RETRY_CAPTURE_HEADROOM_MS = 1000
 export const PNG_IHDR_WIDTH_OFFSET = 16
 export const PNG_IHDR_HEIGHT_OFFSET = 20
 

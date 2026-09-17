@@ -298,7 +298,7 @@ describe('site shots · capture', () => {
     })
 
     assert.equal(result.report.status, SCREENSHOT_STATUS.CAPTURED)
-    assert.equal(navigatedUrl, 'https://www.omnimux.ai/')
+    assert.equal(navigatedUrl, 'https://www.omnimux.ai')
   })
 
   it('retries capture when initial frame is a suspected blank frame', async () => {

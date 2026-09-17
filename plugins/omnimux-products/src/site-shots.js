@@ -23,6 +23,7 @@ import {
   NAV_TIMEOUT_MS,
   PNG_IHDR_HEIGHT_OFFSET,
   PNG_IHDR_WIDTH_OFFSET,
+  RETRY_CAPTURE_HEADROOM_MS,
   RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
@@ -64,12 +65,17 @@ export async function captureSiteScreenshots(args = {}) {
   // L4 — a physical listing never enters this chain at all.
   if (kind !== 'digital') return degraded(SCREENSHOT_REASON.NOT_DIGITAL)
 
+  // Ensure the target URL carries an http(s) scheme for Chrome navigation, while
+  // preserving the caller's full path, query, and hash parameters.
+  let url = rawUrl
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+    url = `https://${url}`
+  }
   // Reuse the importer's own SSRF guard: never a second copy of the rule. The
   // guard rejects non-http(s) schemes, embedded credentials and every private
   // host, so no socket is opened for a link that cannot legally be captured.
-  let url = rawUrl
   try {
-    url = normalizeImportUrl(rawUrl)
+    normalizeImportUrl(url)
   } catch {
     return degraded(SCREENSHOT_REASON.UNSAFE_URL)
   }
@@ -168,15 +174,17 @@ async function captureViewport(handle, spec, opts) {
     if (isSuspectedBlankFrame(buffer)) {
       const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : RETRY_SETTLE_MS
       const remainingMs = Number.isFinite(opts.deadline) ? opts.deadline - Date.now() : Infinity
-      if (retryWaitMs > 0 && remainingMs > retryWaitMs + 1000 && typeof opts.sleep === 'function') {
+      if (retryWaitMs > 0 && remainingMs > retryWaitMs + RETRY_CAPTURE_HEADROOM_MS && typeof opts.sleep === 'function') {
         await opts.sleep(retryWaitMs)
         try {
           const retriedBuffer = await page.capture()
           if (retriedBuffer && !isSuspectedBlankFrame(retriedBuffer)) {
             buffer = retriedBuffer
           }
-        } catch {
-          // Keep the initial frame when retry capture fails
+        } catch (error) {
+          if (typeof opts.log === 'function') {
+            opts.log(`[site-shots] blank-frame retry capture failed: ${String(error?.message ?? error)}`)
+          }
         }
       }
     }

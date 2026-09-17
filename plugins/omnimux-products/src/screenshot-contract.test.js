@@ -9,7 +9,10 @@ import {
   MEDIA_DIR_MODE,
   MEDIA_FILE_MODE,
   MOBILE_VIEWPORT,
+  PNG_IHDR_HEIGHT_OFFSET,
+  PNG_IHDR_WIDTH_OFFSET,
   REQUIRED_ORDER,
+  RETRY_CAPTURE_HEADROOM_MS,
   RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
@@ -68,6 +71,7 @@ describe('website screenshots · viewport contract', () => {
     assert.equal(BLANK_FRAME_MAX_BYTES, 15000)
     assert.equal(BLANK_FRAME_HEADER_FLOOR, 24)
     assert.equal(RETRY_SETTLE_MS, 1000)
+    assert.equal(RETRY_CAPTURE_HEADROOM_MS, 1000)
   })
 
   it('enumerates exactly the documented status and reason codes', () => {
