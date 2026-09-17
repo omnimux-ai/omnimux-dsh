@@ -513,9 +513,201 @@ export const INSPIRATION_CSS = `
   opacity: 0;
   pointer-events: none;
 }
-/* 导入进行中的卡片保持扫光脉动，让“还没结束”在缩略图上也能看出来 */
+/* 导入进行中的卡片采用有机流体微光动效，关停旧扫光并屏蔽 Hover 浮层 */
 .omnimux-inspiration-card-shimmer.is-importing::after {
-  animation-duration: 1s;
+  display: none;
+}
+.omnimux-inspiration-card-pure.is-importing .omnimux-inspiration-card-overlay {
+  display: none;
+}
+
+@keyframes wf-organic-shimmer-sweep {
+  0% {
+    transform: translate3d(-69.697%, -69.697%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.omnimux-inspiration-stage {
+  --wf-shimmer-dur: 4000ms;
+  --wf-shimmer-ease: linear;
+  --wf-shimmer-direction: alternate;
+  --wf-shimmer-band-factor: 26%;
+  --wf-shimmer-band: calc(var(--wf-shimmer-band-factor) * 0.848);
+  --wf-shimmer-bg-opacity: 1;
+  --wf-shimmer-glow-blur: 20px;
+  --wf-shimmer-glow-opacity: 0.75;
+  --wf-shimmer-border-opacity: 1;
+  --wf-shimmer-stage-bg: var(--dsw-alias-bg-layer-1, #181818);
+  --wf-shimmer-stage-rgb: 24, 24, 24;
+  --wf-shimmer-svg-url: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22600%22%20viewBox%3D%220%200%20600%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22wf_shm_g%22%20gradientUnits%3D%22userSpaceOnUse%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%22600%22%3E%3Cstop%20offset%3D%220.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.3236%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.4008%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.4603%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%220.5397%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5992%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.6764%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%221.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3Cfilter%20id%3D%22wf_shm_w%22%20x%3D%22-10%25%22%20y%3D%22-10%25%22%20width%3D%22120%25%22%20height%3D%22120%25%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.009%200.015%22%20numOctaves%3D%222%22%20seed%3D%227%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22SourceGraphic%22%20in2%3D%22n%22%20scale%3D%2246%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3CfeGaussianBlur%20stdDeviation%3D%225%22%2F%3E%3C%2Ffilter%3E%3C%2Fdefs%3E%3Crect%20x%3D%22-70%22%20y%3D%22-70%22%20width%3D%22740%22%20height%3D%22740%22%20fill%3D%22url(%23wf_shm_g)%22%20filter%3D%22url(%23wf_shm_w)%22%2F%3E%3C%2Fsvg%3E");
+}
+
+.wf-organic-shimmer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--wf-shimmer-stage-bg, var(--dsw-alias-bg-module-platform, #141414));
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+}
+
+.wf-organic-shimmer[data-playing="false"] .wf-organic-shimmer__distortion,
+.wf-organic-shimmer[data-playing="false"] .wf-organic-shimmer__mask {
+  animation-play-state: paused !important;
+}
+
+.wf-organic-shimmer__canvas {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__field {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90px 70px at 20% 15%, rgba(40, 140, 255, 0.18), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(80px 60px at 65% 25%, rgba(255, 50, 100, 0.16), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(70px 80px at 30% 55%, rgba(50, 200, 80, 0.15), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(90px 70px at 75% 65%, rgba(180, 40, 240, 0.16), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(70px 60px at 45% 85%, rgba(255, 120, 40, 0.15), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(60px 60px at 10% 85%, rgba(30, 185, 170, 0.14), transparent), /* exempt-ui03 organic shimmer */
+    linear-gradient(rgba(90, 90, 100, 0.05), rgba(90, 90, 100, 0.05)); /* exempt-ui03 organic shimmer */
+  opacity: var(--wf-shimmer-bg-opacity, 1);
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__distortion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 330%;
+  height: 330%;
+  background-image: var(--wf-shimmer-svg-url);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform: translate3d(-69.697%, -69.697%, 0);
+  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4000ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-layer {
+  position: absolute;
+  inset: -20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-wrap {
+  position: absolute;
+  inset: 0;
+  opacity: var(--wf-shimmer-glow-opacity, 0.75);
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-deep,
+.wf-organic-shimmer__glow-mid,
+.wf-organic-shimmer__glow-border {
+  position: absolute;
+  inset: 20px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-deep {
+  background:
+    radial-gradient(55px 31px at 33% -7.4%, rgba(255, 50, 100, 0.4), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(47px 27px at 12% -5%, rgba(40, 140, 255, 0.34), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(31px 55px at 2.1% 68.3%, rgba(50, 200, 80, 0.38), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(140px 25px at 74.4% 100%, rgba(100, 70, 255, 0.4), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(66px 20px at 55% 100%, rgba(40, 140, 255, 0.35), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(58px 25px at 93.9% 0%, rgba(255, 120, 40, 0.44), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(40px 38px at 100% 27.1%, rgba(180, 40, 240, 0.38), transparent); /* exempt-ui03 organic shimmer */
+  box-shadow: inset 0 0 calc(var(--wf-shimmer-glow-blur, 20px) * 3) calc(var(--wf-shimmer-glow-blur, 20px) / 2) rgba(90, 90, 100, 0.1); /* exempt-ui03 organic shimmer */
+  filter: blur(var(--wf-shimmer-glow-blur, 20px));
+  mask-image:
+    linear-gradient(white, transparent 26px, transparent calc(100% - 26px), white),
+    linear-gradient(to right, white, transparent 26px, transparent calc(100% - 26px), white);
+  mask-composite: add;
+  -webkit-mask-composite: source-over;
+}
+
+.wf-organic-shimmer__glow-mid {
+  background:
+    radial-gradient(39px 21px at 33% -7.4%, rgba(255, 50, 100, 0.34), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(33px 18px at 12% -5%, rgba(40, 140, 255, 0.28), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(21px 39px at 2.1% 68.3%, rgba(50, 200, 80, 0.3), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(9px 18px at 2.1% 68.3%, rgba(30, 185, 170, 0.25), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(104px 17px at 74.4% 100%, rgba(100, 70, 255, 0.32), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(48px 13px at 55% 100%, rgba(40, 140, 255, 0.28), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(41px 17px at 93.9% 0%, rgba(255, 120, 40, 0.35), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(13px 23px at 100% 27.1%, rgba(240, 50, 180, 0.28), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(28px 26px at 100% 27.1%, rgba(180, 40, 240, 0.3), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 36px at 0% 0%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 36px at 100% 0%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 36px at 0% 100%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 36px at 100% 100%, rgba(90, 90, 100, 0.14), transparent 70%); /* exempt-ui03 organic shimmer */
+  box-shadow: rgba(90, 90, 100, 0.12) 0px 0px 14px 1px inset; /* exempt-ui03 organic shimmer */
+  filter: blur(2px);
+  mask-image:
+    linear-gradient(white, transparent 44px, transparent calc(100% - 44px), white),
+    linear-gradient(to right, white, transparent 44px, transparent calc(100% - 44px), white);
+  mask-composite: add;
+  -webkit-mask-composite: source-over;
+}
+
+.wf-organic-shimmer__glow-border {
+  padding: 1px;
+  opacity: var(--wf-shimmer-border-opacity, 1);
+  background:
+    radial-gradient(42px 24px at 33% -7.4%, rgba(255, 50, 100, 0.65), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 21px at 12% -5%, rgba(40, 140, 255, 0.52), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(24px 42px at 2.1% 68.3%, rgba(50, 200, 80, 0.6), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(12px 21px at 2.1% 68.3%, rgba(30, 185, 170, 0.48), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(108px 19px at 74.4% 100%, rgba(100, 70, 255, 0.62), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(51px 16px at 55% 100%, rgba(40, 140, 255, 0.55), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(44px 19px at 93.9% 0%, rgba(255, 120, 40, 0.7), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(16px 25px at 100% 27.1%, rgba(240, 50, 180, 0.55), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(31px 29px at 100% 27.1%, rgba(180, 40, 240, 0.6), transparent), /* exempt-ui03 organic shimmer */
+    linear-gradient(rgba(90, 90, 100, 0.25), rgba(90, 90, 100, 0.25)); /* exempt-ui03 organic shimmer */
+  mask:
+    linear-gradient(white 0 0) content-box exclude,
+    linear-gradient(white 0 0);
+  -webkit-mask:
+    linear-gradient(white 0 0) content-box,
+    linear-gradient(white 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.wf-organic-shimmer__mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 330%;
+  height: 330%;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) 0%, /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) calc(50% - var(--wf-shimmer-band, 22%) * 1.4), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.94) calc(50% - var(--wf-shimmer-band, 22%) * 1), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.82) calc(50% - var(--wf-shimmer-band, 22%) * 0.6), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.55) calc(50% - var(--wf-shimmer-band, 22%) * 0.25), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0) 50%, /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.5) calc(50% + var(--wf-shimmer-band, 22%) * 0.18), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) calc(50% + var(--wf-shimmer-band, 22%) * 0.35), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) 100% /* exempt-ui03 organic shimmer */
+  );
+  transform: translate3d(-69.697%, -69.697%, 0);
+  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4000ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
+  will-change: transform;
+  pointer-events: none;
 }
 .omnimux-inspiration-badge-status {
   position: absolute;

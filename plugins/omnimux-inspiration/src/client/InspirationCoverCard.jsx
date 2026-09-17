@@ -3,6 +3,7 @@ import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc, pickVideoSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isImportingRow } from './import-status.js'
+import { OrganicShimmerOverlay } from './OrganicShimmer.jsx'
 
 const ICON_EYE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -161,19 +162,21 @@ export function InspirationCoverCard({ card }) {
       </Badge>
 
       {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示。
-          视频首帧回退时扫光要留到首帧就绪，否则会先闪一层空底再出画面。 */}
+          导入生成中时全屏渲染创作画布同款流体微光折射动效（Organic Shimmer）。 */}
       <div
-        className={`omnimux-inspiration-card-shimmer ${isShowCover || (broken && !usesVideoFrame) ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
+        className={`omnimux-inspiration-card-shimmer ${isShowCover || (broken && !usesVideoFrame && !importing) ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
         aria-hidden="true"
-      />
+      >
+        {importing ? <OrganicShimmerOverlay /> : null}
+      </div>
 
-      {/* 运行状态胶囊：导入中显示阶段文案，失败显示红调提示；完成态不渲染 */}
-      {statusPill ? (
+      {/* 运行状态胶囊：仅在导入失败时显示红调提示；导入生成中已通过全屏流体微光呈现，中间移除文本按钮 */}
+      {failed && statusPill ? (
         <Badge
           size="sm"
           shape="capsule"
-          variant={failed ? 'danger' : 'brand'}
-          className={`omnimux-inspiration-badge-status ${importing ? 'is-importing' : ''} ${failed ? 'is-failed' : ''}`}
+          variant="danger"
+          className="omnimux-inspiration-badge-status is-failed"
           role="status"
         >
           {statusPill}
@@ -190,7 +193,7 @@ export function InspirationCoverCard({ card }) {
         </div>
       ) : null}
 
-      {usesVideoFrame ? (
+      {importing ? null : usesVideoFrame ? (
         <video
           className={`omnimux-inspiration-cover-video ${isShowCover ? 'is-loaded' : ''}`}
           src={videoSrc}
@@ -289,7 +292,7 @@ export function InspirationCoverCard({ card }) {
 
   return (
     <MediaCard
-      className="omnimux-inspiration-card-pure"
+      className={`omnimux-inspiration-card-pure ${importing ? 'is-importing' : ''}`}
       aspectRatio="9:16"
       selected={selected}
       onClick={handleClick}

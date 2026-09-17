@@ -467,7 +467,7 @@ describe('InspirationCoverCard render gate — running status', () => {
     }
   }
 
-  it('renders the stage pill while importing', async () => {
+  it('renders organic shimmer animation and removes center text/buttons while importing', async () => {
     const mounted = await mount('InspirationCoverCard.jsx', cardProps({
       id: 'insp_1',
       title: 'https://x.com/a/status/1',
@@ -477,9 +477,16 @@ describe('InspirationCoverCard render gate — running status', () => {
       import_stage: 'resolving',
     }), 'InspirationCoverCard')
     try {
+      // 1. 中间状态胶囊文本与按钮已移除
       const pill = mounted.container.querySelector('.omnimux-inspiration-badge-status')
-      assert.ok(pill, 'an importing card must show a status pill')
-      assert.equal(pill.textContent, zh['add.status.resolving'])
+      assert.equal(pill, null, 'an importing card must remove center text pill')
+      // 2. 中间占位播放图标与长链接已移除
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-fallback'), null)
+      // 3. 复用创作画布同款 Organic Shimmer 有机微光生成动效
+      assert.ok(mounted.container.querySelector('.wf-organic-shimmer'), 'must render organic shimmer')
+      assert.ok(mounted.container.querySelector('.wf-organic-shimmer__distortion'), 'must render svg distortion wave layer')
+      // 4. 右上角来源平台标识正常保留
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-platform')?.textContent?.trim(), '本地')
     } finally {
       await mounted.unmount()
       mounted.close()
