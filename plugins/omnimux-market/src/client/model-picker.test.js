@@ -134,4 +134,14 @@ describe('model picker client & session contracts (Issue #1167 / #2136)', () => 
     assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*height:28px/)
     assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*height:28px/)
   })
+
+  it('adapts skill chip to 28px icon button on compact/short density and optimizes hover interaction (Issue #2181)', () => {
+    assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*user-select:none/)
+    assert.match(cssSrc, /\.sh-active-skill-chip \.sh-chip-label\{max-width:130px/)
+    assert.match(cssSrc, /html:is\(\[data-omnimux-composer-density='short'\],\[data-omnimux-composer-density='icon'\]\) \.sh-active-skill-chip\{width:28px !important/)
+    assert.match(cssSrc, /html:is\(\[data-omnimux-composer-density='short'\],\[data-omnimux-composer-density='icon'\]\) \.sh-active-skill-chip \.sh-chip-label,[\s\S]*?display:none !important/)
+    assert.match(cssSrc, /html:is\(\[data-omnimux-composer-density='short'\],\[data-omnimux-composer-density='icon'\]\) \.sh-active-skill-chip:hover\{[^}]*var\(--dsw-alias-label-danger/)
+    assert.match(cssSrc, /html:is\(\[data-omnimux-composer-density='short'\],\[data-omnimux-composer-density='icon'\]\) \.sh-active-skill-chip:hover \.sh-chip-icon\{display:none !important\}/)
+    assert.match(cssSrc, /html:is\(\[data-omnimux-composer-density='short'\],\[data-omnimux-composer-density='icon'\]\) \.sh-active-skill-chip:hover \.sh-chip-icon-hover\{display:block !important\}/)
+  })
 })

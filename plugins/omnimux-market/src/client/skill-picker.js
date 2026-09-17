@@ -537,9 +537,20 @@
           ),
           activeSkill ? h("div", {
             className: "sh-active-skill-chip",
-            title: activeSkill.description || activeSkill.summary || "",
+            title: activeSkill.name || activeSkill.title || activeSkill.slug
+              ? `技能：${activeSkill.name || activeSkill.title || activeSkill.slug}${activeSkill.description || activeSkill.summary ? ` · ${activeSkill.description || activeSkill.summary}` : ""}（点击可移除）`
+              : (activeSkill.description || activeSkill.summary || "当前技能（点击可移除）"),
+            onClick: (e) => {
+              const doc = typeof document !== "undefined" ? document.documentElement : null;
+              const density = doc ? doc.getAttribute("data-omnimux-composer-density") : "";
+              if (density === "icon" || density === "short") {
+                e.stopPropagation();
+                clearActiveSkill();
+              }
+            },
           },
             h("svg", {
+              className: "sh-chip-icon",
               width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2,
               style: { flexShrink: 0 },
             },
@@ -547,7 +558,15 @@
               h("line", { x1: 3, y1: 12, x2: 15, y2: 12 }),
               h("line", { x1: 3, y1: 18, x2: 9, y2: 18 }),
             ),
-            h("span", null, activeSkill.name || activeSkill.title || activeSkill.slug),
+            h("svg", {
+              className: "sh-chip-icon-hover",
+              width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round",
+              style: { flexShrink: 0 },
+            },
+              h("line", { x1: 18, y1: 6, x2: 6, y2: 18 }),
+              h("line", { x1: 6, y1: 18, x2: 18, y2: 18 }),
+            ),
+            h("span", { className: "sh-chip-label" }, activeSkill.name || activeSkill.title || activeSkill.slug),
             h("button", {
               type: "button",
               className: "sh-chip-close",
