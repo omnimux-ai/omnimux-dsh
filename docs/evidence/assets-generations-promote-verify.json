@@ -1,0 +1,21 @@
+{
+  "task": "Issue #2210: 生成素材一键升格为正式资产与跨场景联动流转",
+  "timestamp": "2026-09-17T13:35:30.000Z",
+  "verifiedFlows": {
+    "promoteToAsset": {
+      "libraryAddTriggered": true,
+      "stateFeedbackSupported": true,
+      "safeErrorDefense": true
+    },
+    "conversationLink": {
+      "unhideChat": true,
+      "focusComposer": true,
+      "payloadStandardized": true
+    },
+    "workflowCanvasLink": {
+      "eventDispatched": "omnimux-workflow:add-media",
+      "payloadValid": true
+    }
+  },
+  "status": "PASSED"
+}

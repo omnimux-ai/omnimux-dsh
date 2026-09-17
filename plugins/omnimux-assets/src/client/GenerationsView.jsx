@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, EmptyState } from 'dsh-ui-kit'
-import { CheckIcon, CopyIcon, ChatIcon, PlayIcon, AudioIcon } from './icons.jsx'
-import { listArtifacts, artifactPreviewUrl } from './api.js'
+import { CheckIcon, CopyIcon, ChatIcon, PlayIcon, AudioIcon, PlusIcon, GridIcon } from './icons.jsx'
+import { listArtifacts, artifactPreviewUrl, createAsset } from './api.js'
 import { formatRelative, formatBytes } from './format.js'
 import { addMediaToConversation } from './add-to-chat.js'
 import {
@@ -90,7 +90,17 @@ export function GenerationsCategoryNav(props) {
  * 单个生成物卡片组件
  * 采用原生自适应比例瀑布流布局，带有沉浸式悬浮遮罩和快速工具栏。
  */
-export function GenerationCard({ artifact, t, onPreview, onCopied, isCopied }) {
+export function GenerationCard({
+  artifact,
+  t,
+  onPreview,
+  onCopied,
+  isCopied,
+  onPromote,
+  isPromoted,
+  onAddToCanvas,
+  isCanvasAdded,
+}) {
   const sourceKey = resolveArtifactSource(artifact)
   const sourceLabel = getSourceBadgeText(sourceKey, t)
   const preview = artifactPreviewUrl(artifact.id)
@@ -131,6 +141,10 @@ export function GenerationCard({ artifact, t, onPreview, onCopied, isCopied }) {
         mediaUrl: preview,
         size: artifact.size,
         source: artifact.source,
+        onPromote: () => onPromote?.(artifact),
+        isPromoted,
+        onAddToCanvas: () => onAddToCanvas?.(artifact),
+        isCanvasAdded,
       })
     }
   }
@@ -211,6 +225,30 @@ export function GenerationCard({ artifact, t, onPreview, onCopied, isCopied }) {
             >
               <ChatIcon />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="omnimux-generation-action-btn"
+              title={isPromoted ? (t('generations.promoted') || '已是资产') : (t('generations.promote') || '设为资产')}
+              onClick={(e) => {
+                e.stopPropagation()
+                onPromote?.(artifact)
+              }}
+            >
+              {isPromoted ? <CheckIcon /> : <PlusIcon />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="omnimux-generation-action-btn"
+              title={isCanvasAdded ? (t('generations.addedToCanvas') || '已发送至画布') : (t('generations.addToCanvas') || '放入画布')}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddToCanvas?.(artifact)
+              }}
+            >
+              <GridIcon />
+            </Button>
           </div>
         </div>
       </div>
@@ -245,6 +283,41 @@ export function GenerationsView(props) {
   const [artifacts, setArtifacts] = useState([])
   const [loading, setLoading] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+  const [promotedIds, setPromotedIds] = useState(() => new Set())
+  const [canvasAddedIds, setCanvasAddedIds] = useState(() => new Set())
+
+  const handlePromote = useCallback(async (artifact) => {
+    if (!artifact?.id || promotedIds.has(artifact.id)) return
+    try {
+      const res = await createAsset({
+        name: artifact.title || artifact.id,
+        type: artifact.type === 'video' ? 'material' : 'character',
+        description: artifact.title || '',
+        tags: [artifact.source?.model || 'generations'],
+        files: [],
+      })
+      if (res?.ok) {
+        setPromotedIds((prev) => new Set([...prev, artifact.id]))
+      }
+    } catch {
+      // ignore
+    }
+  }, [promotedIds])
+
+  const handleAddToCanvas = useCallback((artifact) => {
+    if (!artifact?.id) return
+    window.dispatchEvent(
+      new CustomEvent('omnimux-workflow:add-media', {
+        detail: {
+          id: artifact.id,
+          title: artifact.title,
+          url: artifactPreviewUrl(artifact.id),
+          type: artifact.type,
+        },
+      })
+    )
+    setCanvasAddedIds((prev) => new Set([...prev, artifact.id]))
+  }, [])
 
   const loadData = useCallback(async () => {
     try {
@@ -346,6 +419,10 @@ export function GenerationsView(props) {
             onPreview={onPreview}
             onCopied={handleCopied}
             isCopied={copiedId === artifact.id}
+            onPromote={handlePromote}
+            isPromoted={promotedIds.has(artifact.id)}
+            onAddToCanvas={handleAddToCanvas}
+            isCanvasAdded={canvasAddedIds.has(artifact.id)}
           />
         ))}
       </div>
