@@ -206,6 +206,18 @@ export function mapValidatedPlanToVendor(args) {
         vendor.audio_url = audioUrl
       }
     }
+  } else if (profileId === 'audioGenerate' && opId === 'voice_clone') {
+    // 网关文档（index-tts）：克隆参考音与朗读文稿都在 metadata.nodeInfoList 里，
+    // 节点 4/audio = 参考音、节点 7/text = 文稿。顶层 prompt 文档标注为「仅作标签」，
+    // 保留上游写入的 vendor.prompt 以满足媒体运行时的输入契约，真实内容以节点 7 为准。
+    const sampleUrl = audioTracks[0] || genericAudio[0] || sources[0]
+    const nodeInfoList = []
+    if (sampleUrl) nodeInfoList.push({ nodeId: '4', fieldName: 'audio', fieldValue: sampleUrl })
+    if (prompt) nodeInfoList.push({ nodeId: '7', fieldName: 'text', fieldValue: prompt })
+    vendor.metadata = { nodeInfoList }
+    if (sampleUrl) logical.voiceSample = sampleUrl
+    vendor.model = args.modelId
+    logical.model = args.modelId
   } else if (profileId === 'textComplete') {
     if (genericImages.length || references.length || firstFrames.length) {
       logical.image = firstFrames[0] || references[0] || genericImages[0]
@@ -330,7 +342,7 @@ export function mapValidatedPlanToVendor(args) {
         logical[key] = extras[key]
       }
     }
-  } else if (profileId === 'audioGenerate' || profileId === 'imageGenerate') {
+  } else if ((profileId === 'audioGenerate' && opId !== 'voice_clone') || profileId === 'imageGenerate') {
     if (args.modelId === 'suno' || opId === 'text_to_music') {
       for (const key of ['title', 'tags', 'style', 'duration']) {
         if (extras[key] !== undefined && extras[key] !== null && extras[key] !== '') {

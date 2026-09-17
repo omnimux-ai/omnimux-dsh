@@ -9,6 +9,25 @@ export const TASK_PATH = Object.freeze({
 /** Text-to-speech returns audio bytes synchronously, without a task handle. */
 export const SPEECH_PATH = 'audio/speech'
 
+/**
+ * Audio-capability models whose artifacts are produced by the shared video task
+ * endpoint. The channel documents these as GxgenAI tasks that reuse
+ * `/v1/video/generations` even though the artifact is audio, so the capability's
+ * default task path would address a route the model is not served on.
+ */
+export const AUDIO_VIDEO_TASK_MODEL_IDS = Object.freeze(['index-tts'])
+
+/**
+ * Task endpoint for one submit/poll, honouring the model override above.
+ * @param {string} capability
+ * @param {unknown} [modelId]
+ * @returns {string | undefined}
+ */
+export function taskPathFor(capability, modelId) {
+  if (modelId && AUDIO_VIDEO_TASK_MODEL_IDS.includes(String(modelId))) return TASK_PATH.video
+  return TASK_PATH[capability]
+}
+
 /** Speech-to-text is synchronous: one multipart POST, no task poll. */
 export const TRANSCRIPTION_PATH = 'audio/transcriptions'
 

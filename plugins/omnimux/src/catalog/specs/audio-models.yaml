@@ -120,6 +120,39 @@ models:
       seam: "audioGenerate"
       notes: "同步 POST /v1/audio/speech 管道"
 
+  # #2256：Index TTS 声音克隆。渠道官方文档只声明「参考音 + 文稿」两个必填节点，
+  # 且端点走视频任务通道（GxgenAI 任务共用 /v1/video/generations，即使产物是音频）。
+  # 本行的 prompt 槽承载「要朗读的文稿」，对应文档节点 7/text；文档中非必填的顶层
+  # `prompt`（"仅作标签"）不是本槽，登记时不发送。参考音对应节点 4/audio。
+  - id: "index-tts"
+    label: "Index TTS 声音克隆"
+    family: "gxgenai"
+    badge: "声音克隆"
+    subtitle: "Index TTS / GxgenAI · 参考音 + 文稿直出克隆音色"
+    operations:
+      - id: "voice_clone"
+        label: "声音克隆"
+        listed: true
+        output: { type: "audio" }
+        inputs:
+          - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
+          - { slot: "voice_sample", type: "audio", role: "audio_track", source: "upstream_edge", min: 1, max: 1 }
+    parameters: {}
+    research:
+      status: "verified"
+      docUrl: "https://docs.omnimux.ai/zh/api-reference/audio-series/models/index-tts"
+      verifiedAt: "2026-09-18"
+      notes: "渠道官方文档 docs/zh/api-reference/audio-series/models/index-tts.mdx（本机 OmniMux-docs 仓）；changelog 2026-08-16-index-tts-ltx-docs 记为已上架。文档硬约束：必填 metadata.nodeInfoList，节点 4/audio 为克隆参考音（服务端自动截取前约 15 秒）、节点 7/text 为朗读文字；参考音须公网 URL 或上游 fileName，不得传 data: URI；轮询用 GET /v1/video/generations/{task_id}，不得使用 *-async / *-query 模型名。输出格式与参考音时长上限文档未写，不推断。"
+    implementation:
+      status: "ready"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+    execution:
+      status: "stub"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+      notes: "本轮只做离线请求构造与轮询夹具验证，未发起真实模型调用；上线前按模型接口准据补真实执行证据。"
+
   - id: "suno"
     label: "Suno Music"
     family: "suno"

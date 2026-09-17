@@ -88,9 +88,13 @@
         "text_to_music": {
           "allow": ["model", "prompt", "title", "tags", "style", "instrumental", "duration"],
           "require": ["prompt"]
+        },
+        "voice_clone": {
+          "allow": ["model", "prompt", "metadata"],
+          "require": ["metadata"]
         }
       },
-      "notes": "同步语音使用 input/voice/speed/response_format；音乐保留异步任务载荷"
+      "notes": "同步语音使用 input/voice/speed/response_format；音乐保留异步任务载荷；声音克隆使用 metadata.nodeInfoList（参考音 + 文稿）走视频任务通道"
     },
     {
       "id": "speechToText",
