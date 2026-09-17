@@ -1,0 +1,20 @@
+{
+  "task": "Issue #2200 爆款对标地区与类目代码级中英文多语言双向适配",
+  "timestamp": "2026-09-17T18:55:00.000Z",
+  "evidencePath": "docs/evidence/trending-bilingual-filters-verify.png",
+  "verificationMode": "real-browser-headless-chrome",
+  "summary": {
+    "regionCodeLocalization": "PASSED: CA/DE/GB/TH/US 等转译为地道中英文国名",
+    "industryNormalization": "PASSED: digital/Fitness/电脑和办公设备等双向归一为规范商业术语",
+    "firstOptionConvergence": "PASSED: 下拉首项去除全部地区/全部类目定语，收敛为全部 (All)",
+    "nounAnchorTrigger": "PASSED: 未选时触发器展示纯实体名词 (地区/类目 / Region/Category)",
+    "networkCompatibility": "PASSED: 数据代码保持原始传参不变"
+  },
+  "tests": {
+    "trendingSuiteTotal": 129,
+    "trendingSuitePassed": 129,
+    "unitTestPassed": true,
+    "i18nLintPassed": true,
+    "productBaselinePassed": true
+  }
+}

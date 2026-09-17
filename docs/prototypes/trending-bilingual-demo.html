@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniMux 爆款对标筛选栏多语言改造效果演示</title>
+  <style>
+    :root {
+      --bg: #0d0e11;
+      --card-bg: #16171c;
+      --panel-bg: #1c1e24;
+      --border: #282a32;
+      --border-focus: #4f5264;
+      --text-main: #f0f2f5;
+      --text-muted: #8c90a0;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --tag-bg: #23252d;
+      --tag-border: #323540;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 32px 24px 60px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* 顶部标题与语言切换条 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .header-title h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+
+    .header-title p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .lang-switcher {
+      display: flex;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .lang-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* 对比网格 */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .column-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+    }
+
+    .column-card.after {
+      border-color: rgba(79, 70, 229, 0.4);
+      box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.15);
+    }
+
+    .badge-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    .badge-before {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .badge-after {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .column-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .column-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      min-height: 38px;
+    }
+
+    /* 筛选工具栏模拟 */
+    .toolbar-box {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    /* 下拉选择控件 */
+    .select-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .select-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #23252d;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s;
+    }
+
+    .select-trigger:hover {
+      border-color: var(--border-focus);
+    }
+
+    .select-trigger .caret {
+      width: 12px;
+      height: 12px;
+      opacity: 0.6;
+    }
+
+    /* 模拟展开菜单 */
+    .dropdown-mock {
+      background: #1e2027;
+      border: 1px solid var(--border-focus);
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      padding: 6px;
+      margin-top: 8px;
+    }
+
+    .menu-item {
+      padding: 7px 10px;
+      font-size: 13px;
+      border-radius: 4px;
+      color: #c9cdd4;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .menu-item:hover, .menu-item.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .menu-item.active::after {
+      content: "✓";
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .menu-item .raw-code {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    /* 标签提示 */
+    .flaw-tag {
+      font-size: 11px;
+      background: rgba(239, 68, 68, 0.12);
+      color: #fca5a5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    .good-tag {
+      font-size: 11px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #6ee7b7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    /* 说明面板 */
+    .summary-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .summary-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .feature-item {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .feature-item strong {
+      color: var(--text-main);
+      display: block;
+      margin-bottom: 2px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="header-title">
+        <h1>爆款对标筛选栏 · 代码级中英文双语适配演示</h1>
+        <p>支持一键切换宿主语言，直观核验国家地区名本地化、行业类目归一化与极简微文案规范</p>
+      </div>
+      <div class="lang-switcher">
+        <button class="lang-btn active" id="btnZh" onclick="setLocale('zh')">🇨🇳 简体中文</button>
+        <button class="lang-btn" id="btnEn" onclick="setLocale('en')">🇺🇸 English</button>
+      </div>
+    </div>
+
+    <div class="comparison-grid">
+      <!-- 左栏：优化前（截图中现状） -->
+      <div class="column-card">
+        <span class="badge-pill badge-before">改造前现状（截图中缺陷）</span>
+        <h2 class="column-title">原始代码暴露与中英混杂</h2>
+        <p class="column-desc">地区仅有原始二字码；类目中英混乱夹杂；菜单首项带有冗余“全部地区/全部类目”定语。</p>
+
+        <!-- 工具栏示例 -->
+        <div class="toolbar-box">
+          <div class="select-trigger" style="border-color: rgba(239, 68, 68, 0.4);">
+            <span>全部地区</span>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="select-trigger" style="border-color: rgba(239, 68, 68, 0.4);">
+            <span>全部类目</span>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <!-- 下拉菜单模拟 1: 地区 -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+            地区下拉展开效果 <span class="flaw-tag">二字代码裸露</span>
+          </div>
+          <div class="dropdown-mock">
+            <div class="menu-item active">全部地区 <span class="flaw-tag">首项定语冗余</span></div>
+            <div class="menu-item">CA <span class="raw-code">加拿大</span></div>
+            <div class="menu-item">DE <span class="raw-code">德国</span></div>
+            <div class="menu-item">GB <span class="raw-code">英国</span></div>
+            <div class="menu-item">LV <span class="raw-code">拉脱维亚</span></div>
+            <div class="menu-item">MD <span class="raw-code">摩尔多瓦</span></div>
+            <div class="menu-item">SE <span class="raw-code">瑞典</span></div>
+            <div class="menu-item">TH <span class="raw-code">泰国</span></div>
+            <div class="menu-item">US <span class="raw-code">美国</span></div>
+          </div>
+        </div>
+
+        <!-- 下拉菜单模拟 2: 类目 -->
+        <div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+            类目下拉展开效果 <span class="flaw-tag">中英文拼盘混杂</span>
+          </div>
+          <div class="dropdown-mock">
+            <div class="menu-item active">全部类目 <span class="flaw-tag">首项定语冗余</span></div>
+            <div class="menu-item">电脑和办公设备</div>
+            <div class="menu-item">家居装修</div>
+            <div class="menu-item">健康</div>
+            <div class="menu-item">女装和内衣</div>
+            <div class="menu-item" style="color: #fca5a5;">digital <span class="flaw-tag">未翻译英文</span></div>
+            <div class="menu-item" style="color: #fca5a5;">Education & Knowledge <span class="flaw-tag">未翻译英文</span></div>
+            <div class="menu-item" style="color: #fca5a5;">Fitness <span class="flaw-tag">未翻译英文</span></div>
+            <div class="menu-item" style="color: #fca5a5;">Food & Cooking <span class="flaw-tag">未翻译英文</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右栏：优化后（当前代码实现） -->
+      <div class="column-card after">
+        <span class="badge-pill badge-after">代码级双语适配后（SaaS 标准）</span>
+        <h2 class="column-title" id="afterTitle">标准专业术语与状态正交</h2>
+        <p class="column-desc" id="afterDesc">代码级转译国名与类目；中英自适应双向映射；首项统一为「全部 (All)」；未选时呈现纯实体名词。</p>
+
+        <!-- 工具栏示例 -->
+        <div class="toolbar-box">
+          <div class="select-trigger" id="regionTrigger" style="border-color: rgba(79, 70, 229, 0.5);">
+            <span id="regionTriggerText">地区</span>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="select-trigger" id="industryTrigger" style="border-color: rgba(79, 70, 229, 0.5);">
+            <span id="industryTriggerText">类目</span>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <!-- 下拉菜单模拟 1: 地区 -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;" id="regionMenuLabel">
+            地区下拉展开效果 <span class="good-tag">地道双语国名</span>
+          </div>
+          <div class="dropdown-mock" id="regionMenu">
+            <!-- 由 JS 动态渲染 -->
+          </div>
+        </div>
+
+        <!-- 下拉菜单模拟 2: 类目 -->
+        <div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;" id="industryMenuLabel">
+            类目下拉展开效果 <span class="good-tag">双向归一纯净词表</span>
+          </div>
+          <div class="dropdown-mock" id="industryMenu">
+            <!-- 由 JS 动态渲染 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案设计核心特性 -->
+    <div class="summary-card">
+      <h3>🚀 双语适配技术亮点与交付承诺</h3>
+      <div class="feature-list">
+        <div class="feature-item">
+          <strong>1. 代码级双向词典归一化</strong>
+          无论是上游返回的英文别名（digital、Fitness）还是中文别名（电脑和办公设备、家居装修），均能统一映射为纯正的当前语言标准术语。
+        </div>
+        <div class="feature-item">
+          <strong>2. 严格实体名词锚规范</strong>
+          遵守《OmniMux 全局 UI 命名规范》，首项全部收敛为「全部 (All)」，未选时触发器展示纯实体名词（地区/类目），告别啰嗦定语。
+        </div>
+        <div class="feature-item">
+          <strong>3. 服务端请求参数 100% 兼容</strong>
+          界面展现的虽然是本地化语言，但传递给真源过滤的内部键值（country=TH、category=digital）完全不变，确保网络查询与复刻链路 100% 稳定。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DATA = {
+      zh: {
+        afterTitle: "标准专业术语与状态正交",
+        afterDesc: "代码级转译国名与类目；中英自适应双向映射；首项统一为「全部」；未选时呈现纯实体名词。",
+        regionTrigger: "地区",
+        industryTrigger: "类目",
+        regionMenuLabel: "地区下拉展开效果 <span class='good-tag'>地道中文国名</span>",
+        industryMenuLabel: "类目下拉展开效果 <span class='good-tag'>双向归一纯净词表</span>",
+        regionAll: "全部",
+        industryAll: "全部",
+        regions: [
+          { name: "加拿大", code: "CA" },
+          { name: "德国", code: "DE" },
+          { name: "英国", code: "GB" },
+          { name: "拉脱维亚", code: "LV" },
+          { name: "摩尔多瓦", code: "MD" },
+          { name: "瑞典", code: "SE" },
+          { name: "泰国", code: "TH" },
+          { name: "美国", code: "US" }
+        ],
+        industries: [
+          "电脑办公", "家居生活", "医疗健康", "女装内衣", "数码家电", "教育培训", "运动健身", "食品饮料"
+        ]
+      },
+      en: {
+        afterTitle: "SaaS Industry Terms & Orthogonal States",
+        afterDesc: "Code-level country & category mapping; bi-directional dictionary; first option 'All'; noun anchors on triggers.",
+        regionTrigger: "Region",
+        industryTrigger: "Category",
+        regionMenuLabel: "Region Dropdown View <span class='good-tag'>Canonical Country Names</span>",
+        industryMenuLabel: "Category Dropdown View <span class='good-tag'>Normalized Clean Lexicon</span>",
+        regionAll: "All",
+        industryAll: "All",
+        regions: [
+          { name: "Canada", code: "CA" },
+          { name: "Germany", code: "DE" },
+          { name: "United Kingdom", code: "GB" },
+          { name: "Latvia", code: "LV" },
+          { name: "Moldova", code: "MD" },
+          { name: "Sweden", code: "SE" },
+          { name: "Thailand", code: "TH" },
+          { name: "United States", code: "US" }
+        ],
+        industries: [
+          "Computers & Office", "Home & Living", "Health & Wellness", "Women's Apparel", "Consumer Electronics", "Education & Learning", "Sports & Fitness", "Food & Beverage"
+        ]
+      }
+    };
+
+    let currentLocale = "zh";
+
+    function setLocale(loc) {
+      currentLocale = loc;
+      document.getElementById("btnZh").className = "lang-btn" + (loc === "zh" ? " active" : "");
+      document.getElementById("btnEn").className = "lang-btn" + (loc === "en" ? " active" : "");
+
+      const d = DATA[loc];
+      document.getElementById("afterTitle").textContent = d.afterTitle;
+      document.getElementById("afterDesc").textContent = d.afterDesc;
+      document.getElementById("regionTriggerText").textContent = d.regionTrigger;
+      document.getElementById("industryTriggerText").textContent = d.industryTrigger;
+      document.getElementById("regionMenuLabel").innerHTML = d.regionMenuLabel;
+      document.getElementById("industryMenuLabel").innerHTML = d.industryMenuLabel;
+
+      // 渲染地区下拉菜单
+      const rMenu = document.getElementById("regionMenu");
+      let rHtml = `<div class="menu-item active">${d.regionAll} <span class="good-tag">首项收敛</span></div>`;
+      for (const item of d.regions) {
+        rHtml += `<div class="menu-item">${item.name} <span class="raw-code">${item.code}</span></div>`;
+      }
+      rMenu.innerHTML = rHtml;
+
+      // 渲染类目下拉菜单
+      const iMenu = document.getElementById("industryMenu");
+      let iHtml = `<div class="menu-item active">${d.industryAll} <span class="good-tag">首项收敛</span></div>`;
+      for (const cat of d.industries) {
+        iHtml += `<div class="menu-item">${cat}</div>`;
+      }
+      iMenu.innerHTML = iHtml;
+    }
+
+    // 初始化
+    setLocale("zh");
+  </script>
+</body>
+</html>
