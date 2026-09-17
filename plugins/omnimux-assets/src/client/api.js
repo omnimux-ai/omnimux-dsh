@@ -175,6 +175,14 @@ export function artifactDetail(id) {
   return assetsRequest(`/omnimux/assets/artifacts/detail?id=${encodeURIComponent(id)}`)
 }
 
+/**
+ * Direct stream preview URL for a generated artifact.
+ * @param {string} id
+ */
+export function artifactPreviewUrl(id) {
+  return `/omnimux/assets/artifacts/preview?id=${encodeURIComponent(id)}`
+}
+
 // ---------------------------------------------------------------------------
 // cloud assets — a prebuilt static catalog: pages from the gateway, media and
 // writes through the local Host

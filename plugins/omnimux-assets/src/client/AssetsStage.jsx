@@ -15,6 +15,7 @@ import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
 import { ProductCategoryNav, ProductsView } from './ProductsView.jsx'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
+import { GenerationsCategoryNav, GenerationsView } from './GenerationsView.jsx'
 
 const TAB_ID = 'omnimux-assets:library'
 
@@ -31,6 +32,9 @@ function AssetsHeader(props) {
 
 function AssetsActionRow(props) {
   const { t, feed, sourceTab, onOpenCreateProduct } = props
+  if (sourceTab === 'generations') {
+    return null
+  }
   const onAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -154,6 +158,8 @@ function AssetsFilterBar(props) {
 
   const searchPlaceholder = sourceTab === 'product'
     ? (t('product.searchPlaceholder') || '搜索产品名称、卖点、品牌')
+    : sourceTab === 'generations'
+    ? (t('generations.searchPlaceholder') || '搜索生成提示词、模型、标题')
     : t('search.placeholder')
 
   return (
@@ -166,6 +172,7 @@ function AssetsFilterBar(props) {
             { id: 'local', label: t('source.local') },
             { id: 'cloud', label: t('source.cloud') },
             { id: 'product', label: t('source.product') || '产品库' },
+            { id: 'generations', label: t('source.generations') || '生成的' },
           ]}
           activeId={sourceTab}
           onChange={onSourceTabChange}
@@ -249,10 +256,28 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail, generationsSource, generationsType, onGenerationsCountsChange } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
+  }
+
+  if (sourceTab === 'generations') {
+    return (
+      <div className="omnimux-assets-body">
+        <div className="omnimux-assets-main">
+          <GenerationsView
+            t={t}
+            open={visible}
+            query={feed.query}
+            filterSource={generationsSource}
+            filterType={generationsType}
+            onPreview={onPreview}
+            onCountsChange={onGenerationsCountsChange}
+          />
+        </div>
+      </div>
+    )
   }
 
   if (sourceTab === 'cloud') {
@@ -390,6 +415,9 @@ export function AssetsStage(props) {
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
   const [productKindTab, setProductKindTab] = useState('all')
+  const [generationsSource, setGenerationsSource] = useState('all')
+  const [generationsType, setGenerationsType] = useState('all')
+  const [generationsCounts, setGenerationsCounts] = useState({ sources: {}, types: {} })
   const stageRootRef = useRef(null)
   const railRef = useRef(null)
 
@@ -409,7 +437,7 @@ export function AssetsStage(props) {
   useEffect(() => {
     const stage = stageRootRef.current
     if (stage) stage.scrollTop = 0
-  }, [sourceTab, feed.filterType, productKindTab])
+  }, [sourceTab, feed.filterType, productKindTab, generationsSource, generationsType])
 
   // A cloud row has no library record behind it, so opening its preview means
   // translating the catalog row first — and the translation remembers the row
@@ -498,6 +526,16 @@ export function AssetsStage(props) {
           onKindTabChange={setProductKindTab}
         />
       ) : null}
+      {sourceTab === 'generations' ? (
+        <GenerationsCategoryNav
+          t={t}
+          filterSource={generationsSource}
+          onSourceChange={setGenerationsSource}
+          filterType={generationsType}
+          onTypeChange={setGenerationsType}
+          counts={generationsCounts}
+        />
+      ) : null}
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}
@@ -514,6 +552,9 @@ export function AssetsStage(props) {
         productKindTab={productKindTab}
         onOpenCreateProduct={handleOpenCreateProduct}
         onEditDetail={() => setDetailModalOpen(true)}
+        generationsSource={generationsSource}
+        generationsType={generationsType}
+        onGenerationsCountsChange={setGenerationsCounts}
       />
       <AssetsDialogs
         t={t}

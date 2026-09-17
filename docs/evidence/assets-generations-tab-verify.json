@@ -1,0 +1,29 @@
+{
+  "task": "Issue #2205: 在资产库中心顶栏新增「生成的」标签页与分类瀑布流",
+  "timestamp": "2026-09-17T12:28:45.000Z",
+  "viewport": "1440x900",
+  "verifiedElements": {
+    "filterBar": {
+      "hasGenerationsTab": true,
+      "generationsTabIndex": 3,
+      "tabLabelZh": "生成的",
+      "tabLabelEn": "Generations",
+      "searchPlaceholder": "搜索生成提示词、模型、标题"
+    },
+    "categoryNav": {
+      "hasSourceChips": true,
+      "sources": ["all", "agent", "image", "canvas"],
+      "hasTypeChips": true,
+      "types": ["all", "image", "video", "audio"],
+      "stickyEnclosure": true
+    },
+    "masonryView": {
+      "generationsGridMounted": true,
+      "supportsOriginalRatio": true,
+      "hasSourceBadge": true,
+      "previewModalConnected": true,
+      "directStreamRoute": "/omnimux/assets/artifacts/preview"
+    }
+  },
+  "status": "PASSED"
+}
