@@ -1,0 +1,58 @@
+{
+  "task": "market-rnskill-motion-replica",
+  "issue": "https://github.com/omnimux-ai/omnimux-dsh/issues/2244",
+  "base": "e5fd9e91a54ddce0c91d5f42de273f80641237b8",
+  "change": "plugins/omnimux-market/catalog/index.json items += 1 (kind=skill, source=git Pluviobyte/rnskill skills/rn-motion-replica@main)",
+  "generatedAt": "2026-09-17T15:11:00Z",
+  "catalogRuntime": {
+    "checked": 1,
+    "itemsTotal": 386,
+    "failed": 0,
+    "rows": [
+      {
+        "id": "sk-omx-rn-motion-replica",
+        "slug": "rn-motion-replica",
+        "channel": "custom",
+        "catalogSlug": "rn-motion-replica",
+        "domains": [
+          "专业影视"
+        ],
+        "findById": "sk-omx-rn-motion-replica",
+        "findBySlug": "sk-omx-rn-motion-replica",
+        "source": {
+          "type": "git",
+          "repo": "Pluviobyte/rnskill",
+          "path": "skills/rn-motion-replica",
+          "ref": "main"
+        }
+      }
+    ]
+  },
+  "installEndToEnd": {
+    "checked": 1,
+    "failed": 0,
+    "rows": [
+      {
+        "slug": "rn-motion-replica",
+        "files": 13,
+        "installed": true,
+        "identicalToUpstream": true,
+        "mismatchedFiles": [],
+        "bytes": 6917,
+        "skillMdSha256": "2ce0a5d04ec41fdf3117b436f7a3c2362f2a67d52d7d506a1087eb435a6573cd"
+      }
+    ]
+  },
+  "upstreamProbe": {
+    "detail": "1/1 raw.githubusercontent.com Pluviobyte/rnskill main skills/rn-motion-replica/SKILL.md => HTTP 200；稀疏 clone（--filter=blob:none --sparse，全新用户路径）拉取 13/13 文件，与本地 clone 逐字节零差异"
+  },
+  "gates": {
+    "skillBilingual": "corepack pnpm verify:skill-bilingual => 70/70 官方货架技能双语齐备（通过）",
+    "pluginTests": "corepack pnpm --filter omnimux-market test => tests 874 / pass 871 / fail 3；失败项 host.test.js、workshop-request-guard.test.js（@deepseek-ai/dsh-llm 未导出 CallId）与 workshop-query.test.js AC-05（WORKSHOP_CATEGORIES 期望值未随「AIGC 创作」分类同步）均在基线 origin/main 主检出复现，与本次改动无关",
+    "diffCheck": "git diff --check => 通过"
+  },
+  "diff": {
+    "insertions": 22,
+    "deletions": 0
+  }
+}
