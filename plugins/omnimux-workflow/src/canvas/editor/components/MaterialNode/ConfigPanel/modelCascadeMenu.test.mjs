@@ -97,15 +97,21 @@ test('brand column removes redundant section title', () => {
   assert.doesNotMatch(cascadeSrc, /<div[^>]*>\s*选择模型\s*<\/div>/, 'Redundant title "选择模型" must be removed from popover');
 });
 
-test('cascade menu columns have uniform fixed height (480px) to prevent hover jitter', () => {
-  assert.match(cascadeSrc, /POPOVER_HEIGHT\s*=\s*480/, 'ModelCascadeMenu must define POPOVER_HEIGHT constant 480px');
-  assert.match(cascadeSrc, /POPOVER_HEIGHT\s*-\s*12/, 'ModelCascadeMenu place() must guard top overflow with POPOVER_HEIGHT');
+test('cascade menu columns have adaptive height with 160px min and 400px max (Issue #2191)', () => {
+  assert.match(cascadeSrc, /POPOVER_MIN_HEIGHT\s*=\s*160/, 'ModelCascadeMenu must define POPOVER_MIN_HEIGHT constant 160px');
+  assert.match(cascadeSrc, /POPOVER_MAX_HEIGHT\s*=\s*400/, 'ModelCascadeMenu must define POPOVER_MAX_HEIGHT constant 400px');
+  assert.match(cascadeSrc, /POPOVER_MAX_HEIGHT\s*-\s*12/, 'ModelCascadeMenu place() must guard top overflow with POPOVER_MAX_HEIGHT');
 
   const cssPath = new URL('../../../../theme/components.css', import.meta.url);
   const cssSrc = readFileSync(cssPath, 'utf8');
 
-  // 验证品牌列、型号列与渠道策略列高度统一为 480px，彻底消除高度跳变
-  assert.match(cssSrc, /\.wf-loomi-col--brand\s*\{[^}]*height:\s*480px;/s, 'Brand column must have height: 480px');
-  assert.match(cssSrc, /\.wf-loomi-col--model\s*\{[^}]*height:\s*480px;/s, 'Model column must have height: 480px');
-  assert.match(cssSrc, /\.wf-loomi-col--channel\s*\{[^}]*height:\s*480px;/s, 'Channel column must have height: 480px');
+  // 验证容器采用 stretch 对齐，三列具备 160px 最小自适应与 400px 最大封顶
+  assert.match(cssSrc, /\.wf-loomi-popover\s*\{[^}]*align-items:\s*stretch;/s, 'Popover container must stretch columns for uniform height');
+  assert.match(cssSrc, /\.wf-loomi-col\s*\{[^}]*min-height:\s*160px;/s, 'Columns must have min-height: 160px');
+  assert.match(cssSrc, /\.wf-loomi-col\s*\{[^}]*max-height:\s*min\(400px,\s*calc\(100vh\s*-\s*120px\)\);/s, 'Columns must clamp at 400px max-height');
+
+  // 验证三列已完全移除机械硬编码的 480px 高度
+  assert.doesNotMatch(cssSrc, /\.wf-loomi-col--brand\s*\{[^}]*height:\s*480px;/s, 'Brand column must not lock fixed 480px');
+  assert.doesNotMatch(cssSrc, /\.wf-loomi-col--model\s*\{[^}]*height:\s*480px;/s, 'Model column must not lock fixed 480px');
+  assert.doesNotMatch(cssSrc, /\.wf-loomi-col--channel\s*\{[^}]*height:\s*480px;/s, 'Channel column must not lock fixed 480px');
 });
