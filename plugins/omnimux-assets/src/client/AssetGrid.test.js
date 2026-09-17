@@ -79,8 +79,8 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.match(gridJsx, /<Table\b/)
     assert.doesNotMatch(gridJsx, /omnimux-assets-card-actions/)
     assert.doesNotMatch(gridJsx, /<button\b/)
-    // 4. Styles define thumb height 136px and overlay hover styling
-    assert.match(stylesJs, /\.omnimux-assets-card-thumb\s*\{[\s\S]*?height:\s*136px;/)
+    // 4. Overlay hover styling stays; thumb height follows cover ratio (Issue 2150)
+    assert.match(stylesJs, /\.omnimux-assets-card-thumb\s*\{[\s\S]*?min-height:\s*112px;/)
     assert.match(stylesJs, /\.omnimux-assets-card-overlay\s*\{[\s\S]*?background:\s*linear-gradient/)
     assert.match(stylesJs, /\.omnimux-assets-overlay-btn--secondary/)
     assert.match(stylesJs, /\.omnimux-assets-overlay-btn--primary/)

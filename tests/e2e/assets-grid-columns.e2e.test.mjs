@@ -47,17 +47,15 @@ test('E2E 契约三：样式表用 data-columns 属性表达列数，不再 auto
     /\.omnimux-assets-(?:grid|cloud-grid)\s*\{[^}]*auto-fill/,
     '资产网格仍存在 auto-fill 自动铺列，列数会随窗口无限膨胀',
   )
-  for (const columns of [3, 4, 5]) {
-    assert.match(
-      styles,
-      new RegExp(`\\.omnimux-assets-grid\\[data-columns="${columns}"\\]\\s*\\{[^}]*repeat\\(${columns},`),
-      `缺少 data-columns="${columns}" 的轨道规则`,
-    )
-  }
   assert.match(
     styles,
-    /\.omnimux-assets-grid\s*\{[^}]*repeat\(2,/,
-    '无脚本兜底必须停在两列，不能塌成一列拉满整屏',
+    /\.omnimux-assets-grid\s*\{[^}]*display:\s*flex/,
+    '瀑布流容器必须是横向 flex，列数由子列个数决定',
+  )
+  assert.match(
+    styles,
+    /\.omnimux-assets-masonry-col\s*\{[^}]*flex:\s*1 1 0/,
+    '缺少瀑布流子列规则',
   )
   assert.doesNotMatch(
     styles,
@@ -70,13 +68,13 @@ test('E2E 契约四：三个网格消费点都接入列数并写到 DOM 属性�
   for (const file of ['CloudAssetsView.jsx', 'AssetGrid.jsx', 'AssetBrowse.jsx']) {
     const source = fs.readFileSync(path.join(clientDir, file), 'utf8')
     assert.match(source, /useGridColumns\(\)/, `${file} 未接入列数 hook`)
-    assert.match(source, /data-columns=\{gridColumns\}/, `${file} 的网格容器未写 data-columns`)
+    assert.match(source, /columns=\{gridColumns\}/, `${file} 未把列数交给瀑布流容器`)
   }
 
   // 公共货架有两个网格节点（骨架 + 真实），两个都要带列数，否则骨架到真图会跳列。
   const cloud = fs.readFileSync(path.join(clientDir, 'CloudAssetsView.jsx'), 'utf8')
-  const wired = cloud.match(/data-columns=\{gridColumns\}/g) ?? []
-  assert.ok(wired.length >= 2, `公共货架只接了 ${wired.length} 个网格节点，骨架与真实网格都要接`)
+  const wired = cloud.match(/<MasonryGrid/g) ?? []
+  assert.ok(wired.length >= 2, `公共货架只接了 ${wired.length} 个瀑布流节点，骨架与真实网格都要接`)
 })
 
 test('E2E 契约五：列数 hook 在无 ResizeObserver 的环境里回落到默认值而不是抛错', () => {

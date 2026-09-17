@@ -241,12 +241,12 @@ describe('Cloud text card renders the text, not a placeholder plate', () => {
  * 图片类卡片（角色 / 场景 / 道具 / 素材 / 风格）：缩略图加一行标题，没有别的。
  */
 describe('Cloud picture card is a thumbnail and one line of title', () => {
-  it('fixes the media thumbnail at a 160-170px height', () => {
+  it('lets the media thumbnail follow the cover ratio instead of a fixed crop height', () => {
     const body = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb')
-    const height = Number(/height:\s*(\d+)px/.exec(body)?.[1])
-    assert.ok(Number.isFinite(height), 'the media thumbnail needs a pixel height')
-    assert.ok(height >= 160 && height <= 170, `expected a 160-170px thumbnail, got ${height}px`)
-    assert.equal(height, 164)
+    assert.match(body, /height:\s*auto/)
+    assert.doesNotMatch(body, /height:\s*164px/)
+    assert.match(ASSETS_CSS, /\.omnimux-assets-card-media\s*\{[^}]*height:\s*auto/)
+    assert.doesNotMatch(ASSETS_CSS, /\.omnimux-assets-card-media\s*\{[^}]*object-fit:\s*cover/)
   })
 
   it('keeps the picture title to one line', () => {

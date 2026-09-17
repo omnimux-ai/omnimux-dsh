@@ -167,23 +167,20 @@ export const ASSETS_CSS = `
   flex-direction: column;
   padding: 16px 20px;
 }
-/* 列数由容器的 data-columns 属性决定，见 grid-columns.js。
-   auto-fill 会随窗口无限加列（1560px 实测 7 列），所以列数改由脚本按容器宽度算好、
-   封顶 5 列后写在属性上；样式表只负责把属性翻译成轨道。默认两列是无脚本时的兜底，
-   不会出现一列拉满整屏。 */
+/* 列数由脚本按容器宽度算好、封顶 5 列后写在 data-columns 上（见 grid-columns.js），
+   容器本身改成横向 flex，每一列再纵向堆卡片——封面按原始比例，高度不齐，
+   不能再用齐行网格。列数等于子列个数，属性只作断言与无脚本时的文档。 */
 .omnimux-assets-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
-.omnimux-assets-grid[data-columns="3"] {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.omnimux-assets-grid[data-columns="4"] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.omnimux-assets-grid[data-columns="5"] {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+.omnimux-assets-masonry-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .omnimux-assets-empty {
   border: 1px dashed var(--dsw-alias-border-l4);
@@ -211,7 +208,7 @@ export const ASSETS_CSS = `
   border-color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-card-thumb {
-  height: 136px;
+  min-height: 112px;
   background: var(--dsw-alias-bg-module-platform);
   position: relative;
   display: flex;
@@ -220,7 +217,11 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-tertiary);
   overflow: hidden;
 }
-.omnimux-assets-card-thumb--tall { height: 148px; }
+.omnimux-assets-card-thumb:has(.omnimux-assets-card-media),
+.omnimux-assets-card-thumb:has(.omnimux-assets-card-video) {
+  min-height: 0;
+  display: block;
+}
 .omnimux-assets-card-overlay {
   position: absolute;
   inset: 0;
@@ -303,14 +304,12 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-card-media {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 .omnimux-assets-card-video {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
   background: var(--dsw-alias-bg-module-platform);
 }
@@ -1061,11 +1060,9 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-scroll {
   display: contents;
 }
-/* 列数不再在这里覆盖：.omnimux-assets-grid 的 data-columns 规则是唯一来源，
-   本地货架与公共货架因此必然同列数（见 grid-columns.js）。 */
-/* One body per card kind (see cloudCardKind). A tile keeps a fixed height, so
-   its box is reserved before the image arrives and paging never shifts the grid
-   under the pointer. */
+/* 列数由脚本写在 data-columns 上，本地货架与公共货架共用同一套瀑布流列
+   （见 grid-columns.js / masonry.js）。图片到达前用 HTML width/height 属性
+   按默认立绘比例占位，不再用固定像素高度裁切封面。 */
 /* Every part of the card opens the preview, so the pointer says so. A voice card
    overrides this on its own plate, which plays instead. */
 .omnimux-assets-cloud-card {
@@ -1075,19 +1072,21 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-card .omnimux-assets-cloud-thumb--action {
   cursor: pointer;
 }
-/* 图片/视频：164px 缩略图，下面一行标题。 */
+/* 图片/视频：封面按原始比例完整展示，下面一行标题。 */
 .omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb {
-  height: 164px;
+  height: auto;
+  min-height: 0;
+  display: block;
   aspect-ratio: auto;
 }
-/* 首次加载的骨架卡：占位几何与真卡片逐字对齐——同一个 164px 缩略图高度、同一行
-   标题高度，因此数据到达时卡片在原位换成真图，不产生任何高度跳动。
+/* 首次加载的骨架卡：按默认立绘比例占位，数据到达后换成真图。
    动效只用一次克制的透明度呼吸，跟随主题 token，深浅色下都读得清。 */
 .omnimux-assets-cloud-skeleton {
   pointer-events: none;
 }
 .omnimux-assets-cloud-skeleton-thumb {
-  height: 164px;
+  aspect-ratio: 9 / 16;
+  height: auto;
   border-radius: 10px;
   background-color: var(--dsw-alias-bg-elevated);
   animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
@@ -1143,7 +1142,7 @@ export const ASSETS_CSS = `
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   opacity: 0;
   transition: opacity 0.18s ease;
   pointer-events: none;
