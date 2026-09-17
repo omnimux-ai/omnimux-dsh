@@ -1,5 +1,6 @@
 {
   "featuredSkills": [
+    "sk-omx-hypit-setup",
     "sk-omx-3d-animation-short-generator",
     "sk-omx-asmr-ambient",
     "sk-omx-audiobook",
@@ -36,7 +37,6 @@
     "sk-omx-suspense-title-sequence-generator",
     "sk-omx-transcript-broll-planner",
     "sk-omx-video-deconstruct",
-    "sk-omx-hypit-setup",
     "sk-omx-video-deconstruct-analyzer",
     "sk-omx-vox-style-video-generator",
     "sk-omx-2d-animation-commentary-drama",
@@ -72,6 +72,7 @@
     "sk-tiktok-script-creation"
   ],
   "homeRecommendations": [
+    "sk-omx-hypit-setup",
     "sk-tiktok-market-trend-analysis",
     "sk-tiktok-product-selection",
     "sk-tiktok-material-breakdown",
@@ -90,7 +91,6 @@
     "sk-amazon-product-analysis",
     "sk-amazon-listing-optimization",
     "sk-amazon-keyword-traffic-analysis",
-    "sk-amazon-review-optimization",
-    "sk-amazon-trend-risk-monitor"
+    "sk-amazon-review-optimization"
   ]
 }

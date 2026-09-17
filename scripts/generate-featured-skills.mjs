@@ -28,6 +28,7 @@ export const SNAPSHOT_SCHEMA = 'omnimux.session-guide.featured-skills/v1'
  * 官方重磅精选置顶序列（严格对标首屏 4 列视觉网格与高品质出片流）
  */
 export const PINNED_TOP_SKILL_IDS = [
+  'sk-omx-hypit-setup',
   'sk-omx-3d-animation-short-generator',
   'sk-omx-brand-promo-video-generator',
   'sk-omx-minimalist-product-ad-generator',
