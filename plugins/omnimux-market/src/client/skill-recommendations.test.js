@@ -128,15 +128,15 @@ test('real search effect preserves full-library results, search heading and pagi
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
 })
 
-test('customOrder overrides default home recommendation order and puts TikTok skills at top by default', () => {
-  // 验证默认情况下，前 4 项均为 TikTok 相关 Skill
+test('customOrder overrides default home recommendation order and puts Hypit first by default', () => {
+  // 默认首页精选：Hypit 官方能力接入置顶，其后保留 TikTok 相关 Skill
   const home = SkillShelf.plazaDiscoverySections()
   const top4 = home.featured.slice(0, 4).map(it => it.id)
   assert.deepEqual(top4, [
+    'sk-omx-hypit-setup',
     'sk-tiktok-market-trend-analysis',
     'sk-tiktok-product-selection',
     'sk-tiktok-material-breakdown',
-    'sk-tiktok-script-creation',
   ])
 
   // 验证传入 customOrder 能够自由优先排序
