@@ -90,6 +90,11 @@ jobs:
           node --check scripts/generate-featured-skills.mjs
           node scripts/verify-plugin-agent-tools.mjs
 
+      # 三分栏收起布局契约门禁：列宽胜负取决于 CSS 层叠（重要性→特异性→顺序），
+      # 源码正则断言只证明规则存在、不证明规则胜出。契约：docs/contracts/three-column-layout.md。
+      - name: Three-column layout contract gate
+        run: node --test plugins/omnimux/src/client/three-column-layout-contract.test.js
+
       - name: Forbid tracked omnimux-workflow artifacts
         run: node scripts/check-tracked-artifacts.mjs
 

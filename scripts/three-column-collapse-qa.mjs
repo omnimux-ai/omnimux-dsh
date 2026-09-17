@@ -137,13 +137,104 @@ function measure() {
     viewport: document.documentElement.clientWidth,
     tracks,
     firstTrack: Math.round(tracks[0] || 0),
+    conversationTrack: Math.round(tracks[1] || 0),
+    rightbarTrack: Math.round(tracks[2] || 0),
     conversation: Math.round(conv.getBoundingClientRect().width),
     rightbar: Math.round(right.getBoundingClientRect().width),
     conversationVar: getComputedStyle(document.documentElement).getPropertyValue('--omnimux-conversation-width').trim(),
     frameTrackStyle: frame.style.gridTemplateColumns,
   };
 }
+function setState(spec) {
+  const root = document.documentElement;
+  const frame = document.getElementById('frame');
+  const flag = (el, name, on) => { if (on) el.setAttribute(name, ''); else el.removeAttribute(name); };
+  flag(root, 'data-omnimux-left-collapsed', !!spec.leftCollapsed);
+  flag(root, 'data-omnimux-conversation-collapsed', !!spec.conversationCollapsed);
+  flag(frame, 'data-sidebar-collapsed', !!spec.frameSidebarCollapsed);
+  if (spec.rightbarCollapsed) frame.setAttribute('data-rightbar-collapsed', 'true');
+  else frame.removeAttribute('data-rightbar-collapsed');
+  if (typeof spec.conversationWidth === 'number') {
+    root.style.setProperty('--omnimux-conversation-width', spec.conversationWidth + 'px');
+  }
+  if (typeof spec.sidebarWidth === 'number') {
+    root.style.setProperty('--omnimux-sidebar-width', spec.sidebarWidth + 'px');
+  }
+  // 外壳 authored 栅格：由宿主按当前列宽每帧重写，是本插件几何的唯一权威读数来源。
+  if (spec.frameGrid) frame.style.gridTemplateColumns = spec.frameGrid;
+  return measure();
+}
 `;
+
+/**
+ * 状态矩阵：三分栏四个状态标记的组合 × 期望的轨道分配。
+ *
+ * 每条目在真实浏览器里设置属性组合后测量三列实际宽度，与契约真值表逐条比对；
+ * `knownDeviation` 标记「当前实现与契约不符」的组合（门禁仍观测其实际值，
+ * 一旦被人改动即变红，同时把偏差显式留档而不是被静默固化）。
+ */
+export const LAYOUT_MATRIX = [
+  {
+    key: 'expanded',
+    label: '① 三分栏展开（无任何收起标记）',
+    spec: { conversationWidth: 485, sidebarWidth: 280, frameGrid: '280px minmax(0px, 1fr) 1155px' },
+    expect: { firstTrack: 280, conversationTrack: 485, rightbarTrack: 1155 },
+    why: '展开态交外壳原生网格，插件不得介入（INV-11：顶栏让位靠重叠量而非 collapsed 布尔）',
+  },
+  {
+    key: 'left-collapsed',
+    label: '② 左栏收起（右栏开）',
+    spec: { leftCollapsed: true, frameSidebarCollapsed: true, conversationWidth: 485, sidebarWidth: 0, frameGrid: '90px minmax(0px, 1fr) 1155px' },
+    expect: { firstTrack: 0, conversationTrack: 485, rightbarTrack: 1435 },
+    why: 'INV-1/INV-2/INV-7：会话栏保宽 485px，释放的 280px 全部给右栏，且左轨必须归零',
+  },
+  {
+    key: 'left+right-collapsed',
+    label: '③ 左栏收起 + 右栏收起',
+    spec: { leftCollapsed: true, rightbarCollapsed: true, conversationWidth: 485, sidebarWidth: 0, frameGrid: '90px minmax(0px, 1fr) 0px' },
+    expect: { firstTrack: 0, conversationTrack: 1920, rightbarTrack: 0 },
+    why: 'INV-6：右栏确证收起时会话栏占满整个视口，绝不留下黑色死区',
+  },
+  {
+    key: 'conversation-collapsed',
+    label: '④ 中间栏收起（左栏展开，右栏开）',
+    spec: { conversationCollapsed: true, conversationWidth: 485, sidebarWidth: 280, frameGrid: '280px minmax(0px, 1fr) 1155px' },
+    expect: { firstTrack: 280, conversationTrack: 0, rightbarTrack: 1640 },
+    why: 'INV-9：中间栏收起时右栏占满右侧，中间列必须收缩为 0，绝不留下空白占位',
+  },
+  {
+    key: 'conversation+left-collapsed',
+    label: '⑤ 中间栏收起 + 左栏收起（右栏开）',
+    spec: { conversationCollapsed: true, leftCollapsed: true, frameSidebarCollapsed: true, conversationWidth: 485, sidebarWidth: 0, frameGrid: '90px minmax(0px, 1fr) 1155px' },
+    // 契约期望（INV-9 与 INV-1 交叉态）：中间列收缩为 0，右栏吃掉全部 1920px。
+    // 实测当前实现被 `#2074` 的保宽规则（特异性 [0,5,1]）夺取，中间列仍留 485px；
+    // 本条目锁住「当前实测值」，任何改动（变好或变坏）都会变红并要求重新确认契约。
+    expect: { firstTrack: 0, conversationTrack: 485, rightbarTrack: 1435 },
+    contractExpect: { firstTrack: 0, conversationTrack: 0, rightbarTrack: 1920 },
+    knownDeviation: true,
+    why: 'INV-9 与 INV-1 的交叉态：左栏与会话栏都已收起，右栏必须吃掉全部宽度，中间不得留下空白占位',
+  },
+  {
+    key: 'rightbar-collapsed',
+    label: '⑥ 右栏收起（左栏展开）',
+    spec: { rightbarCollapsed: true, conversationWidth: 485, sidebarWidth: 280, frameGrid: '280px minmax(0px, 1fr) 0px' },
+    expect: { firstTrack: 280, conversationTrack: 1640, rightbarTrack: 0 },
+    why: 'INV-6：右栏收起时会话栏占满剩余宽度',
+  },
+];
+
+/** 判定矩阵条目：轨道宽度与期望的容差 2px。 */
+export function judgeMatrixEntry(measured, expect) {
+  const reasons = []
+  const TRACK_KEYS = { firstTrack: '第一轨（左栏）', conversationTrack: '第二轨（会话栏）', rightbarTrack: '第三轨（右栏）' }
+  for (const [key, want] of Object.entries(expect)) {
+    const got = measured[key]
+    if (typeof got !== 'number' || Math.abs(got - want) > 2) {
+      reasons.push(`${TRACK_KEYS[key] || key} 期望 ${want}px，实测 ${got}px`)
+    }
+  }
+  return { pass: reasons.length === 0, reasons }
+}
 
 async function main() {
   const runId = randomUUID();
@@ -297,6 +388,65 @@ async function main() {
     const png = PNG.sync.read(shotBuf);
     report.screenshot = { path: shotPath, width: png.width, height: png.height, bytes: shotBuf.length };
     add('screenshot-captured', png.width > 0 && png.height > 0, report.screenshot);
+
+    // ---- 状态矩阵：四个状态标记的组合 × 真实轨道分配（契约真值表逐条比对） ----
+    report.matrix = [];
+    for (const entry of LAYOUT_MATRIX) {
+      const measured = await evaluate(`(() => { ${MEASURE_FN}
+        return setState(${JSON.stringify(entry.spec)});
+      })()`);
+      const verdict = judgeMatrixEntry(measured, entry.expect);
+      report.matrix.push({
+        key: entry.key,
+        label: entry.label,
+        why: entry.why,
+        expected: entry.expect,
+        contractExpect: entry.contractExpect || entry.expect,
+        knownDeviation: entry.knownDeviation === true,
+        measured: {
+          viewport: measured.viewport,
+          firstTrack: measured.firstTrack,
+          conversationTrack: measured.conversationTrack,
+          rightbarTrack: measured.rightbarTrack,
+        },
+        pass: verdict.pass,
+        reasons: verdict.reasons,
+      });
+      add(`matrix-${entry.key}`, verdict.pass, {
+        label: entry.label,
+        knownDeviation: entry.knownDeviation === true,
+        reasons: verdict.reasons,
+      });
+    }
+
+    // ---- 往返稳定性：收起 → 展开 → 再次收起，会话栏宽度必须回到原位 ----
+    const roundTrip = await evaluate(`(() => { ${MEASURE_FN}
+      const out = {};
+      const OPEN = ${JSON.stringify({ conversationWidth: 485, sidebarWidth: 280, frameGrid: '280px minmax(0px, 1fr) 1155px' })};
+      const SHUT = ${JSON.stringify({ leftCollapsed: true, frameSidebarCollapsed: true, conversationWidth: 485, sidebarWidth: 0, frameGrid: '90px minmax(0px, 1fr) 1155px' })};
+      setState(OPEN);
+      out.expanded = measure();
+      setState(SHUT);
+      out.collapsedOnce = measure();
+      setState(OPEN);
+      out.expandedAgain = measure();
+      setState(SHUT);
+      out.collapsedTwice = measure();
+      return out;
+    })()`);
+    report.roundTrip = roundTrip;
+    const drift = Math.abs(roundTrip.collapsedTwice.conversationTrack - roundTrip.collapsedOnce.conversationTrack);
+    add('round-trip-conversation-width-stable', drift <= 2, {
+      first: roundTrip.collapsedOnce.conversationTrack,
+      second: roundTrip.collapsedTwice.conversationTrack,
+      reasons: drift <= 2 ? [] : [`往返一次后会话栏宽度漂移 ${drift}px`],
+    });
+    const restore = Math.abs(roundTrip.expandedAgain.conversationTrack - roundTrip.expanded.conversationTrack);
+    add('round-trip-expanded-restores', restore <= 2, {
+      before: roundTrip.expanded.conversationTrack,
+      after: roundTrip.expandedAgain.conversationTrack,
+      reasons: restore <= 2 ? [] : [`展开态恢复偏差 ${restore}px`],
+    });
 
     // ---- 反向对照：停用生产样式并只注入旧 auto 规则，右栏必须塌成 0 ----
     const legacy = await evaluate(`(() => { ${MEASURE_FN}

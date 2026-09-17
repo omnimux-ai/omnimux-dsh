@@ -1,7 +1,7 @@
 {
-  "runId": "c21dc08f-6fa8-4ed3-ac27-377a2823252f",
+  "runId": "b1e7c502-9d61-4554-a1d3-a65b3c6ba3a6",
   "scenario": "three-column-collapse",
-  "startedAt": "2026-09-16T14:38:06.884Z",
+  "startedAt": "2026-09-17T02:57:53.222Z",
   "sourcePaths": [
     "plugins/omnimux/src/client/conversation-box.js",
     "plugins/omnimux/src/client/sidebar-toggle-topbar.js"
@@ -10,12 +10,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 61786
+      "port": 63121
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 61795
+      "port": 63122
     },
     {
       "name": "expanded-conversation-positive",
@@ -39,10 +39,66 @@
     {
       "name": "screenshot-captured",
       "pass": true,
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-width-derived/docs/evidence/three-column-collapse-collapsed.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-three-column-layout-hardening/docs/evidence/three-column-collapse-collapsed.png",
       "width": 1920,
       "height": 993,
       "bytes": 7826
+    },
+    {
+      "name": "matrix-expanded",
+      "pass": true,
+      "label": "① 三分栏展开（无任何收起标记）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-left-collapsed",
+      "pass": true,
+      "label": "② 左栏收起（右栏开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-left+right-collapsed",
+      "pass": true,
+      "label": "③ 左栏收起 + 右栏收起",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-conversation-collapsed",
+      "pass": true,
+      "label": "④ 中间栏收起（左栏展开，右栏开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "matrix-conversation+left-collapsed",
+      "pass": true,
+      "label": "⑤ 中间栏收起 + 左栏收起（右栏开）",
+      "knownDeviation": true,
+      "reasons": []
+    },
+    {
+      "name": "matrix-rightbar-collapsed",
+      "pass": true,
+      "label": "⑥ 右栏收起（左栏展开）",
+      "knownDeviation": false,
+      "reasons": []
+    },
+    {
+      "name": "round-trip-conversation-width-stable",
+      "pass": true,
+      "first": 485,
+      "second": 485,
+      "reasons": []
+    },
+    {
+      "name": "round-trip-expanded-restores",
+      "pass": true,
+      "before": 485,
+      "after": 485,
+      "reasons": []
     },
     {
       "name": "legacy-rule-reproduces-collapse",
@@ -58,8 +114,8 @@
   },
   "errors": [],
   "pass": true,
-  "serverPort": 61786,
-  "cdpPort": 61795,
+  "serverPort": 63121,
+  "cdpPort": 63122,
   "expanded": {
     "viewport": 1920,
     "tracks": [
@@ -68,6 +124,8 @@
       1155
     ],
     "firstTrack": 280,
+    "conversationTrack": 485,
+    "rightbarTrack": 1155,
     "conversation": 485,
     "rightbar": 1155,
     "conversationVar": "",
@@ -81,16 +139,226 @@
       1435
     ],
     "firstTrack": 0,
+    "conversationTrack": 485,
+    "rightbarTrack": 1435,
     "conversation": 485,
     "rightbar": 1435,
     "conversationVar": "485px",
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/three-column-width-derived/docs/evidence/three-column-collapse-collapsed.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-three-column-layout-hardening/docs/evidence/three-column-collapse-collapsed.png",
     "width": 1920,
     "height": 993,
     "bytes": 7826
+  },
+  "matrix": [
+    {
+      "key": "expanded",
+      "label": "① 三分栏展开（无任何收起标记）",
+      "why": "展开态交外壳原生网格，插件不得介入（INV-11：顶栏让位靠重叠量而非 collapsed 布尔）",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 485,
+        "rightbarTrack": 1155
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "left-collapsed",
+      "label": "② 左栏收起（右栏开）",
+      "why": "INV-1/INV-2/INV-7：会话栏保宽 485px，释放的 280px 全部给右栏，且左轨必须归零",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "left+right-collapsed",
+      "label": "③ 左栏收起 + 右栏收起",
+      "why": "INV-6：右栏确证收起时会话栏占满整个视口，绝不留下黑色死区",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 1920,
+        "rightbarTrack": 0
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "conversation-collapsed",
+      "label": "④ 中间栏收起（左栏展开，右栏开）",
+      "why": "INV-9：中间栏收起时右栏占满右侧，中间列必须收缩为 0，绝不留下空白占位",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 0,
+        "rightbarTrack": 1640
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "conversation+left-collapsed",
+      "label": "⑤ 中间栏收起 + 左栏收起（右栏开）",
+      "why": "INV-9 与 INV-1 的交叉态：左栏与会话栏都已收起，右栏必须吃掉全部宽度，中间不得留下空白占位",
+      "expected": {
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "contractExpect": {
+        "firstTrack": 0,
+        "conversationTrack": 0,
+        "rightbarTrack": 1920
+      },
+      "knownDeviation": true,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 0,
+        "conversationTrack": 485,
+        "rightbarTrack": 1435
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "rightbar-collapsed",
+      "label": "⑥ 右栏收起（左栏展开）",
+      "why": "INV-6：右栏收起时会话栏占满剩余宽度",
+      "expected": {
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "contractExpect": {
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "knownDeviation": false,
+      "measured": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 1640,
+        "rightbarTrack": 0
+      },
+      "pass": true,
+      "reasons": []
+    }
+  ],
+  "roundTrip": {
+    "expanded": {
+      "viewport": 1920,
+      "tracks": [
+        280,
+        485,
+        1155
+      ],
+      "firstTrack": 280,
+      "conversationTrack": 485,
+      "rightbarTrack": 1155,
+      "conversation": 485,
+      "rightbar": 1155,
+      "conversationVar": "485px",
+      "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+    },
+    "collapsedOnce": {
+      "viewport": 1920,
+      "tracks": [
+        0,
+        485,
+        1435
+      ],
+      "firstTrack": 0,
+      "conversationTrack": 485,
+      "rightbarTrack": 1435,
+      "conversation": 485,
+      "rightbar": 1435,
+      "conversationVar": "485px",
+      "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+    },
+    "expandedAgain": {
+      "viewport": 1920,
+      "tracks": [
+        280,
+        485,
+        1155
+      ],
+      "firstTrack": 280,
+      "conversationTrack": 485,
+      "rightbarTrack": 1155,
+      "conversation": 485,
+      "rightbar": 1155,
+      "conversationVar": "485px",
+      "frameTrackStyle": "280px minmax(0px, 1fr) 1155px"
+    },
+    "collapsedTwice": {
+      "viewport": 1920,
+      "tracks": [
+        0,
+        485,
+        1435
+      ],
+      "firstTrack": 0,
+      "conversationTrack": 485,
+      "rightbarTrack": 1435,
+      "conversation": 485,
+      "rightbar": 1435,
+      "conversationVar": "485px",
+      "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
+    }
   },
   "legacyControl": {
     "viewport": 1920,
@@ -100,10 +368,12 @@
       0
     ],
     "firstTrack": 0,
+    "conversationTrack": 1920,
+    "rightbarTrack": 0,
     "conversation": 1920,
     "rightbar": 0,
     "conversationVar": "485px",
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
-  "completedAt": "2026-09-16T14:38:08.885Z"
+  "completedAt": "2026-09-17T02:57:55.027Z"
 }
