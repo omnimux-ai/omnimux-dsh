@@ -1612,12 +1612,45 @@ export const ASSETS_CSS = `
 .omnimux-products-badge {
   position: absolute;
   top: 8px;
-  left: 8px;
+  right: 8px;
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 6px;
   background: var(--dsw-alias-bg-mask-1);
   color: var(--dsw-alias-label-secondary);
+}
+.omnimux-products-card-thumb .omnimux-assets-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0;
+  transform: none;
+  transition: opacity 0.15s ease;
+  border: 1px solid var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  color: inherit;
+}
+.omnimux-products-card-thumb .omnimux-assets-check[data-selected="true"],
+.omnimux-products-card-thumb .omnimux-assets-check[data-selected="true"]:hover {
+  opacity: 1;
+  border: none;
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omnimux-products-card:hover .omnimux-assets-check,
+.omnimux-products-card:focus-within .omnimux-assets-check {
+  opacity: 1;
 }
 .omnimux-products-card-body {
   padding: 10px 12px;
