@@ -80,7 +80,7 @@ export function InspirationCoverCard({ card }) {
     if (usesVideoFrame && !frameReady) {
       const timer = setTimeout(() => {
         setFallbackTimeout(true)
-      }, 800)
+      }, 2500)
       return () => clearTimeout(timer)
     }
   }, [usesVideoFrame, frameReady])

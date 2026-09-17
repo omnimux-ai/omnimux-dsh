@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync, statSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -34,6 +35,7 @@ import {
   defaultModelForMediaType,
 } from './prompt-generator.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
+import { extractVideoPoster } from './media-export.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
   buildTranslatePrompt,
@@ -662,6 +664,38 @@ export function sweepStaleImports(store, liveIds = activeJobs) {
   return failed.size > 0 ? failed : null
 }
 
+export function maybeEnsureVideoCover(item, store, paths) {
+  if (!item || typeof item !== 'object' || item.type !== 'video') return item
+  const existingCover = item.cover_url
+  const localCover = item.local_paths?.cover
+  if (existingCover && (!localCover || existsSync(localCover))) return item
+  const videoPath = item.local_paths?.video
+  if (!videoPath || !existsSync(videoPath)) return item
+  const coversDir = paths?.coversDir || store?.paths?.coversDir
+  if (!coversDir) return item
+
+  try {
+    const coverName = `cover_${String(item.id).replace(/^insp_/, '')}.jpg`
+    const targetCoverPath = join(coversDir, coverName)
+    if (!existsSync(targetCoverPath)) {
+      spawnSync('ffmpeg', ['-y', '-ss', '00:00:00.500', '-i', videoPath, '-vframes', '1', '-q:v', '2', targetCoverPath], {
+        stdio: 'ignore',
+        timeout: 2500,
+      })
+    }
+    if (existsSync(targetCoverPath)) {
+      const coverUrl = `/omnimux/inspiration/local/media/covers/${coverName}`
+      const patch = {
+        cover_url: coverUrl,
+        local_paths: { ...(item.local_paths || {}), cover: targetCoverPath },
+      }
+      try { store?.update?.(item.id, patch) } catch {}
+      return { ...item, ...patch }
+    }
+  } catch {}
+  return item
+}
+
 export function handleList({ url, store }) {
   const failed = sweepStaleImports(store)
   const q = url.searchParams.get('q') || undefined
@@ -705,13 +739,14 @@ export function handleList({ url, store }) {
   const rawItems = failed
     ? result.items.map((row) => failed.get(String(row.id)) || row)
     : result.items
+  const resolvedItems = rawItems.map((row) => maybeEnsureVideoCover(row, store, store?.paths))
   const items = isLean
-    ? rawItems.map((row) => {
+    ? resolvedItems.map((row) => {
         if (!row || typeof row !== 'object' || !row.deconstruction) return row
         const { deconstruction, ...rest } = row
         return rest
       })
-    : rawItems
+    : resolvedItems
   return { status: 200, body: { data: { ...result, items, platforms } } }
 }
 
@@ -1615,8 +1650,31 @@ async function downloadImportMedia(args, meta, rawVideoUrl) {
     const message = `视频素材下载落盘失败: ${args.formatErrorMessage(downErr)}`
     return { error: fail(502, message) }
   }
-  const cover = await downloadCoverBestEffort(args, meta, localPaths)
+  let cover = await downloadCoverBestEffort(args, meta, localPaths)
+  if (!cover.path && localVideoPath) {
+    const poster = await extractVideoPosterBestEffort(args, localVideoPath, localPaths)
+    if (poster.path) cover = poster
+  }
   return { localPaths, localVideoPath, localCoverPath: cover.path, coverRenderable: cover.renderable }
+}
+
+async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
+  if (!localVideoPath || !existsSync(localVideoPath)) return { path: '', renderable: null }
+  try {
+    const coversDir = args.paths?.coversDir
+    if (!coversDir) return { path: '', renderable: null }
+    const poster = await extractVideoPoster(localVideoPath, coversDir, {
+      prefix: 'cover_',
+      runFfmpeg: args.runFfmpeg,
+    })
+    if (poster && existsSync(poster)) {
+      localPaths.cover = poster
+      return { path: poster, renderable: true }
+    }
+  } catch {
+    // Best-effort thumbnail extraction; fallback continues if ffmpeg fails
+  }
+  return { path: '', renderable: null }
 }
 
 /** Drop a file that will never be served; a leftover is not worth failing an import over. */
@@ -1821,7 +1879,8 @@ export function handleGetItem({ id, store }) {
   const snapshot = store.snapshotForRead ? store.snapshotForRead() : null
   const failed = sweepStaleImports(store)
   if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
-  const item = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
+  const rawItem = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
+  const item = rawItem ? maybeEnsureVideoCover(rawItem, store, store?.paths) : rawItem
   if (item) return { status: 200, body: { data: item } }
   // A cloud publish has no local row to read — its progress lives in the job
   // table, and the page polls this very endpoint. Answering 404 here would tell

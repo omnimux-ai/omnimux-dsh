@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -248,3 +249,35 @@ export async function exportMediaFile(args) {
   }
   return { kind, path: target, filename: basename(target), bytes: statSync(target).size }
 }
+
+/**
+ * Arguments for ffmpeg to grab a single high-quality frame from a video.
+ * @param {string} inputPath
+ * @param {string} outputPath
+ * @param {{ time?: string }} [opts]
+ * @returns {string[]}
+ */
+export function videoPosterArgs(inputPath, outputPath, opts = {}) {
+  const time = opts.time || '00:00:00.500'
+  return ['-y', '-ss', time, '-i', inputPath, '-vframes', '1', '-q:v', '2', outputPath]
+}
+
+/**
+ * Extract a poster thumbnail from a local video file using ffmpeg.
+ * @param {string} videoPath
+ * @param {string} destDir
+ * @param {{ time?: string, prefix?: string, runFfmpeg?: Function }} [opts]
+ * @returns {Promise<string>}
+ */
+export async function extractVideoPoster(videoPath, destDir, opts = {}) {
+  if (!videoPath || !existsSync(videoPath)) throw new Error('视频文件不存在')
+  if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+  const prefix = opts.prefix || 'cover_'
+  const filename = `${prefix}${randomUUID().slice(0, 8)}.jpg`
+  const targetPath = join(destDir, filename)
+  const ffmpeg = opts.runFfmpeg ?? runFfmpeg
+  const args = videoPosterArgs(videoPath, targetPath, opts)
+  await ffmpeg(videoPath, targetPath, args)
+  return targetPath
+}
+
