@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { CategoryShuffleCache, shuffleArray } from './category-shuffle-cache.js'
+import { CategoryShuffleCache, shuffleArray, fetchCategoryRandomSample } from './category-shuffle-cache.js'
 
 describe('shuffleArray', () => {
   it('handles empty and single-element arrays safely', () => {
@@ -58,3 +58,55 @@ describe('CategoryShuffleCache', () => {
     assert.equal(cache.has('c3'), true)
   })
 })
+
+describe('fetchCategoryRandomSample 跨页随机采样与混编洗牌算法', () => {
+  it('参数防守：分类为空或 fetchPageFn 缺失时返回空数组', async () => {
+    assert.deepEqual(await fetchCategoryRandomSample('', () => {}), [])
+    assert.deepEqual(await fetchCategoryRandomSample('character', null), [])
+  })
+
+  it('单页分类兼容：当 totalPages <= 1 时原地打乱并截取返回', async () => {
+    const mockPage = async () => ({
+      ok: true,
+      body: {
+        totalPages: 1,
+        items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+      },
+    })
+    const res = await fetchCategoryRandomSample('single_cat', mockPage)
+    assert.equal(res.length, 3)
+    assert.deepEqual(res.map((i) => i.id).sort(), ['a', 'b', 'c'])
+  })
+
+  it('多页分类随机抽样：当 totalPages > 1 时随机采样页码混编并去重截取', async () => {
+    const requestedPages = []
+    const mockPage = async (cat, page) => {
+      requestedPages.push(page)
+      return {
+        ok: true,
+        body: {
+          totalPages: 10,
+          items: Array.from({ length: 24 }, (_, i) => ({ id: `item_p${page}_${i}` })),
+        },
+      }
+    }
+    const res = await fetchCategoryRandomSample('multi_cat', mockPage, (x) => x, 24)
+    assert.equal(res.length, 24)
+    assert.ok(requestedPages.length >= 1, '必须至少请求过目标分页')
+  })
+
+  it('网络异常降级：某页加载报错时平滑容错不抛出', async () => {
+    let callCount = 0
+    const mockPage = async () => {
+      callCount += 1
+      if (callCount === 1) {
+        return { ok: true, body: { totalPages: 5, items: [{ id: 'fallback_1' }] } }
+      }
+      throw new Error('network failure')
+    }
+    const res = await fetchCategoryRandomSample('flaky_cat', mockPage)
+    assert.equal(res.length, 1)
+    assert.equal(res[0].id, 'fallback_1')
+  })
+})
+
