@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(omni-agent marketing-agent drama-agent standard daily-work cordis)
+KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
 
 if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
   echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
@@ -265,7 +265,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent
@@ -275,7 +275,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent

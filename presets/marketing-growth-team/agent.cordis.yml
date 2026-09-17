@@ -1,0 +1,332 @@
+# The `standard` agent preset: the full coding agent, mounted once per process.
+#
+# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+# standing scope; every session naming it joins by scope parentage, so the
+# tools and prompt sections registered here cover each joined agent while a
+# session's own state stays keyed per Session/Agent inside the plugins. The
+# host composition (`base.cordis.yml` + `web.cordis.yml`) keeps everything a
+# preset must not own: the registries themselves, the sandbox and approval
+# stack, persistence, and the model route.
+#
+# A service row here MUST sit inside a group carrying an `isolate` realm.
+# Without one it publishes into the root realm, where it is process-global —
+# another preset publishing the same name collides, and a host reader would
+# resolve one preset's instance for every session; `dsh-agent-presets` rejects
+# that at mount. `true` means an entry-local realm: this standing mount's own
+# private instance, apart from every other preset's. (A shared label does NOT
+# pool instances — `provide()` throws on the second registration under the
+# same realm symbol; labels join REALMS, and are not what this file needs.)
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      你是 OmniMux「增长专家团」主理人（首席营销策略师盛全局，fCMO 级全栈增长操盘手），工作目录 {{cwd}}。
+      你专注于 AARRR 全链路增长：获客、激活、留存、推荐与营收，覆盖转化率优化、搜索与内容、获客投放与 ROI 归因复盘。
+
+      【全能工具生态与动态自主感知】
+      你通过宿主工具总线动态继承当前工作区全部已激活的生产力插件工具：
+      1. 动态自适应路由：所有工具能力以实时 Tool Registry 为准，零手动维护；
+      2. 核心工具域覆盖：商品库（真实卖点提取）、创作画布（数据表与节点编排）、剪辑工坊（素材合成）、多渠道发布与数据监控。
+
+      【双轨路由与画布指引】
+      1. 直出链路（Direct Path）：增长咨询、漏斗诊断、单条文案与标题、渠道建议、指标口径澄清等轻量任务直接交付。
+      2. 画布工程链路（Canvas Workflow Path）：凡涉及「90 天增长计划」、「全渠道获客方案」、「多版本素材与落地页实验矩阵」、「归因看板」等复合交付，必须在创作画布（Creative Canvas）中创建项目并编排节点，以数据表节点承载方案与实验矩阵。
+
+      【增长标准作业程序（SOP）】
+      1. 上下文发现（Context Discovery）：先确认产品定位、目标客户（ICP）、核心痛点、竞品与差异化、品牌声线、当前指标与目标；缺失项明确标注为未知，不脑补；
+      2. 阶段诊断（AARRR Assessment）：按获客、激活、留存、推荐、营收五段评估现状，定位当前最该补的一段（早期重激活与获客，规模化期重留存、推荐与营收）；
+      3. 策略与实验设计：输出北极星指标与领先指标，给出最多 3 个可在两周内跑完的增长实验（每个写清假设、指标、成功线与止损线）；
+      4. 阶段门禁确认（Stage Gate）：向用户呈现诊断结论与实验方案，确认后再推进执行与素材生产；
+      5. 执行与归因复盘：按 AARRR 分派专家产出，整合为统一交付物，并以真实数据给出归因结论与下一步优化清单。
+
+      【多专家协同】
+      你可自行完成增长策略、计划编制、定价与发布策划；也可按需调用 4 位增长专家（转化率优化师专化率、搜索引擎与内容优化师索引擎、增长与获客负责人曾长洋、数据分析与营收运营负责人数据源）。仅当一个边界清晰的子任务能独立提升质量、速度或并行收益时委派；不要固定调用整队。成员的专业结论以成员产出为准，你只做编排、整合与优先级排序，不代替成员编写其专业交付物。派单需带目标、已有输入、约束与期望输出。
+
+      【底线与约束】
+      保持用户已授权目标；涉及外部发布、广告投放与批量触达严格授权门禁；严禁自动化刷量与规避平台风控；数据不足时声明不确定性，不依据样本不足给出绝对结论；以真实数据与文件收尾；保持「增长专家团」主理人定位。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+
+# `shell-env` stays in the HOST composition: `apps/cli/src/web.ts` injects it to
+# publish `DSH_WEB_URL`/`DSH_WEB_MODE`, and a host row that injects a service is
+# the criterion for host-plane ownership — injection resolves before any session
+# exists, so there is no agent to key by. Behind a preset realm those variables
+# never reached the model's shell at all. Both shell tools consume the host
+# registry from here; their executors (`bash-sandbox`/`pwsh-sandbox`) are
+# host-plane too.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+
+# Both register into the host `tools` registry and provide nothing, so
+# they need no realm. The `fs` service and its policy stay in the host.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── background jobs ────────────────────────────────────────────────────────
+
+# Only the model-facing controls. The task REGISTRY stays on the host plane:
+# its producers sit outside any realm this file could put it in — `tool-bash`
+# above resolves it with `ctx.get`, and an entry-local realm here is invisible
+# to every sibling row, so `run_in_background` would answer "background jobs
+# unavailable" while these controls sat in the catalog. The registry is keyed by
+# owning agent anyway, so one host instance serves every session. What a preset
+# chooses is whether its agent can collect and stop background work at all.
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+
+# The skill REGISTRY lives in the host composition and is layered per scope:
+# these rows register into THIS preset's layer of it, so they need no realm.
+# `skill-filesystem` contributes local-root discovery for agents on this preset, and
+# `tool-skill` gives them the catalog and loader; the merged catalog also
+# carries whatever the deployment registered globally (repository plugins).
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+
+# Only the model-facing tool. The goal SERVICE, its session driver, and the
+# `/goal` command stay on the host plane: the Gateway serves the goal domain as
+# Remote endpoints whose receiver comes from a generated descriptor, so it
+# resolves `goals` on the host and an entry-local realm here would hide it. The
+# registry is keyed by session anyway, so one host instance serves every
+# session. What a preset chooses is whether its agent can call the goal tool.
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+# Plan state is per-agent by nature, so an entry-local realm is not a
+# workaround here — it is the correct lifetime.
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+# ── compaction ──────────────────────────────────────────────────────────────
+
+# `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner must
+# share this realm rather than sit outside it.
+#
+# `tokenMeter` is deliberately NOT in this realm: the meter stays on the HOST
+# plane, and the rows here resolve that one instance. It takes no configuration,
+# keys every fold by Session, and owns the context-meter projection units the
+# browser reads for every session — behind a realm those units would come and go
+# with whichever presets happen to be mounted. What a preset chooses is whether
+# its agent compacts at all, which is `compaction-basic` below.
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024
+
+# ── delegation and workflows ────────────────────────────────────────────────
+
+# The `subagents` registry and its spawn/fork backends live in the HOST
+# composition: the registry is a process singleton whose cross-session queries
+# the api-proxy serves to the browser, and a provider name may only be
+# registered once. This preset contributes the delegation TOOLS, which resolve
+# that host registry.
+#
+# `workflows` is different — nothing outside an agent reads it — so every row
+# that reaches it shares one entry-local realm here, and a consumer left
+# outside would resolve a host registry this preset does not populate.
+#
+# `tool-subagent-report` is host-plane for the same reason as the registry,
+# not because a preset may not want it: it registers a CONTINUABLE SETUP on
+# that singleton rather than a tool this agent calls, and the setup list is
+# not scope-aware — one copy per mounted preset means every child gets
+# `report` registered once per live session, which throws on the second.
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: continuable
+
+    # ── OmniMux 全能增长专家工具 ────────────────────────────────────────
+    # 增长主理人仅在子任务边界清晰且独立有收益时委派，不固定调用整队。
+    - id: tool-subagent-expert-cro-specialist
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_cro_specialist
+        persona: |
+          你是转化率优化师专化率（CRO & Conversion Specialist），专注于落地页、注册流与付费墙的转化提升。
+          输入：目标页面或流程、受众画像与流量来源、现有转化数据、品牌调性与合规要求。
+          职责：
+          1. 按影响力顺序诊断转化问题：价值主张清晰度 → 标题有效性 → 页面结构与叙事 → 行动号召 → 信任信号；
+          2. 产出高转化文案（标题公式、正文、CTA）与页面结构调整建议，覆盖注册流、引导流程、弹窗与付费墙；
+          3. 设计 A/B 实验（假设、变体、样本量与成功线），并说明判定标准与停止条件。
+          输出：结构化转化审计报告、多版本文案组合与实验设计；不虚构未提供的流量与转化数据。
+
+    - id: tool-subagent-expert-seo-content-strategist
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_seo_content_strategist
+        persona: |
+          你是搜索引擎与内容优化师索引擎（SEO & Content Strategist），专注于搜索增长与内容策略。
+          输入：站点结构与 URL、目标关键词与受众、现有内容清单、竞品站点与资源约束。
+          职责：
+          1. 按优先级做技术 SEO 审计：可抓取与索引 → 技术基础 → 页面优化 → 内容质量 → 权威与外链；
+          2. 制定内容策略：内容支柱、主题簇与编辑日历，明确「做什么、给谁看、为什么有效、怎么分发」；
+          3. 覆盖 AI 搜索优化（AEO/GEO/LLMO）、程序化 SEO、结构化数据与应用商店优化。
+          输出：SEO 审计报告、内容策略与主题簇规划、结构化数据实施方案；排名与流量结论必须标注数据来源与时效。
+
+    - id: tool-subagent-expert-growth-engineer
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_growth_engineer
+        persona: |
+          你是增长与获客负责人曾长洋（Growth Engineer & Acquisition Lead），专注于获客渠道与增长循环。
+          输入：目标受众与业务阶段、预算与资源、现有渠道表现、产品定位与差异化。
+          职责：
+          1. 设计并落地获客渠道组合：付费投放（Google/Meta/LinkedIn/TikTok）、邮件序列与冷启动外呼、短信与社媒；
+          2. 设计推荐计划与病毒循环、免费工具获客、联合营销、社区增长与线索磁铁；
+          3. 输出可执行的触达节奏与转化路径，明确各渠道的衡量口径与迭代方式。
+          输出：渠道方案与执行清单、邮件与外呼序列、推荐机制设计；触达必须合规，严禁绕过平台风控或未经授权的批量外发。
+
+    - id: tool-subagent-expert-analytics-revops
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: expert_analytics_revops
+        persona: |
+          你是数据分析与营收运营负责人数据源（Analytics & Revenue Operations Lead），专注于埋点、归因与营收运营。
+          输入：业务目标与待回答的问题、现有埋点与工具栈、漏斗各环节数据、线索与营收现状。
+          职责：
+          1. 先定问题再定埋点：设计事件命名规范（对象-动作）与埋点实施方案（GA4/GTM/Mixpanel/Segment 等）；
+          2. 做归因建模（多触点、MMM、增量实验）与漏斗、队列分析，识别真正的增长杠杆；
+          3. 搭建营收运营与防流失机制：生命周期阶段、线索评分与分配、流失预警与挽回动作。
+          输出：埋点方案与事件表、归因分析报告、指标看板定义与优化行动清单；样本不足时必须声明不确定性，不给绝对结论。
+    # Production dsh does not install these optional providers. Install the
+    # matching Bundle in this Profile and restart the Host, then copy this
+    # preset and remove `disabled` from the matching tool row. Host availability
+    # alone grants no tool.
+    - id: tool-subagent-codex
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: codex
+        toolName: subagent_codex
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: tool-subagent-claude-code
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: claude-code
+        toolName: subagent_claude_code
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# The `web` service and its search provider stay in the host composition; only
+# the model-facing tool is per-session.
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: false
+    searchTimeoutMs: 60000

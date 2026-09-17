@@ -1,0 +1,56 @@
+{
+  "presetId": "marketing-growth-team",
+  "name": "增长专家团",
+  "description": "增长专家团专属技能与分类集",
+  "categories": [
+    { "id": "增长策略", "name": "增长策略" },
+    { "id": "搜索与内容", "name": "搜索与内容" },
+    { "id": "获客投放", "name": "获客投放" }
+  ],
+  "skills": [
+    {
+      "id": "sk-growth-hacker",
+      "slug": "growth-hacker",
+      "skill": "growth-hacker",
+      "name": "增长黑客",
+      "title": "增长黑客",
+      "category": "增长策略",
+      "description": "先画漏斗现状，再给最多 3 个两周内能跑完的增长实验，每个写清假设、指标与成功线。",
+      "summary": "先画漏斗现状，再给最多 3 个两周内能跑完的增长实验，每个写清假设、指标与成功线。",
+      "installed": true
+    },
+    {
+      "id": "sk-growth-content-strategy",
+      "slug": "content-strategy",
+      "skill": "content-strategy",
+      "name": "内容策略",
+      "title": "内容策略",
+      "category": "搜索与内容",
+      "description": "把业务、客户、竞品与搜索证据转成内容支柱、优先选题与主题簇，决定「该做什么内容、给谁看、凭什么有效」。",
+      "summary": "把业务、客户、竞品与搜索证据转成内容支柱、优先选题与主题簇，决定「该做什么内容、给谁看、凭什么有效」。",
+      "installed": true
+    },
+    {
+      "id": "sk-growth-ad-creative",
+      "slug": "ad-creative",
+      "skill": "ad-creative",
+      "name": "广告创意",
+      "title": "广告创意",
+      "category": "获客投放",
+      "description": "跨 Google / Meta / LinkedIn / TikTok / X 大规模生成与迭代广告文案，按购买动机组织并校验各平台字符上限。",
+      "summary": "跨 Google / Meta / LinkedIn / TikTok / X 大规模生成与迭代广告文案，按购买动机组织并校验各平台字符上限。",
+      "installed": true
+    },
+    {
+      "id": "sk-growth-social-caption",
+      "slug": "social-caption",
+      "skill": "social-caption",
+      "name": "社媒文案",
+      "title": "社媒文案",
+      "category": "获客投放",
+      "description": "为 FB、IG、TikTok、Pinterest、YouTube 写原生文案，按各平台规则组织 hook + payoff + CTA。",
+      "summary": "为 FB、IG、TikTok、Pinterest、YouTube 写原生文案，按各平台规则组织 hook + payoff + CTA。",
+      "installed": true
+    }
+  ]
+}
