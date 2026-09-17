@@ -1,0 +1,64 @@
+{
+  "pass": true,
+  "assertions": [
+    {
+      "name": "skill-cards-rendered",
+      "pass": true,
+      "cardCount": 69
+    },
+    {
+      "name": "card-geometry-positive",
+      "pass": true,
+      "size": {
+        "width": 290,
+        "height": 252
+      }
+    },
+    {
+      "name": "no-attribution-row",
+      "pass": true
+    },
+    {
+      "name": "no-author-node",
+      "pass": true
+    },
+    {
+      "name": "no-verified-icon",
+      "pass": true
+    },
+    {
+      "name": "no-minimax-text",
+      "pass": true,
+      "hits": 0
+    },
+    {
+      "name": "layout-intact",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "bytes": 809390
+    }
+  ],
+  "probe": {
+    "cardCount": 69,
+    "firstTitle": "3D动画短片",
+    "firstSize": {
+      "width": 290,
+      "height": 252
+    },
+    "attributionNodes": 0,
+    "authorNodes": 0,
+    "verifiedIconNodes": 0,
+    "minimaxHits": 0,
+    "hasBadge": true,
+    "hasSummary": true,
+    "hasBtn": true
+  },
+  "errors": [],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-skill-card-attribution/docs/evidence/skill-card-attribution-removal-verified.png",
+    "bytes": 809390
+  }
+}

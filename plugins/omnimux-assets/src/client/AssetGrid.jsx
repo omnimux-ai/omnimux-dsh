@@ -4,6 +4,7 @@ import { CheckIcon, FileIcon, EyeIcon, ChatIcon } from './icons.jsx'
 import { previewUrl } from './api.js'
 import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
 import { isFolderAsset, resolveAssetMediaPreview } from './asset-routing.js'
+import { useGridColumns } from './use-grid-columns.js'
 
 /**
  * @param {{
@@ -307,6 +308,9 @@ export function AssetGrid({
   onToggleSelect,
   viewMode = 'grid',
 }) {
+  // 与公共货架共用同一列数规则，两个货架在同一窗口下必须给出相同的列数。
+  const [gridRef, gridColumns] = useGridColumns()
+
   if (assets.length === 0) {
     return (
       <div className="omnimux-assets-empty">
@@ -359,7 +363,7 @@ export function AssetGrid({
   }
 
   return (
-    <div className="omnimux-assets-grid">
+    <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
       {assets.map((asset) => {
         const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
         const selected = selectedIds?.has(asset.id)

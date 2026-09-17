@@ -4,6 +4,7 @@ import { activateRowKeydown } from './a11y.js'
 import { EditIcon, FileIcon, FolderIcon, RevealLocationIcon } from './icons.jsx'
 import { listAssetFiles, previewUrl, revealAssetEntry } from './api.js'
 import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
+import { useGridColumns } from './use-grid-columns.js'
 
 export { isDirectoryRef }
 
@@ -36,6 +37,8 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  // 文件浏览的卡片墙与货架网格共用同一列数规则（封顶 5 列）。
+  const [gridRef, gridColumns] = useGridColumns()
 
   useEffect(() => {
     setStack(initialStack(asset))
@@ -152,7 +155,7 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
           {error ? <p className="omnimux-assets-error">{error}</p> : null}
           {!loading && !error && entries.length === 0 ? <p className="omnimux-assets-muted">{t('detail.emptyFolder')}</p> : null}
           {!loading && entries.length > 0 ? (
-            <div className="omnimux-assets-grid">
+            <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
               {entries.map((entry) => {
                 const folder = Boolean(entry.is_dir) || isDirectoryRef(entry)
                 const kind = detectMediaKind(entry)
@@ -185,7 +188,7 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
         files.length === 0
           ? <p className="omnimux-assets-muted">{t('browse.empty')}</p>
           : (
-            <div className="omnimux-assets-grid">
+            <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
               {files.map((file) => {
                 const folder = isDirectoryRef(file)
                 const kind = detectMediaKind(file)

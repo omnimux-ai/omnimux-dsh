@@ -7,12 +7,6 @@ const ICON_SPARKLES = (
   </svg>
 )
 
-const ICON_VERIFIED = (
-  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" width="12" height="12" className="omnimux-skill-verified-icon">
-    <path fillRule="evenodd" d="M8 0c4.418 0 8 3.582 8 8s-3.582 8-8 8-8-3.582-8-8 3.582-8 8-8zm3.707 5.293a1 1 0 00-1.414 0L7 8.586 5.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 000-1.414z" clipRule="evenodd" />
-  </svg>
-)
-
 function resolveSkillCover(cover) {
   if (!cover || typeof cover !== 'string') return ''
   const trimmed = cover.trim()
@@ -25,7 +19,7 @@ function resolveSkillCover(cover) {
 
 /**
  * 精选技能卡片（对标图 4 高质感设计）：
- * 16:9 画幅封面、左上角紫色渐变角标、hover「使用 Skill」胶囊按钮、加粗标题、两行描述与官方认证署名底行。
+ * 16:9 画幅封面、左上角紫色渐变角标、hover「使用 Skill」胶囊按钮、加粗标题与两行描述。
  *
  * @param {{
  *   skill: object,
@@ -44,7 +38,6 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
   const displaySummary = summary.replace(/^用途[：:]\s*|^Purpose[：:]\s*/i, '')
   const coverUrl = resolveSkillCover(skill.cover)
   const badge = skill.badge || 'H3'
-  const attribution = skill.attribution || '@MiniMax Design官方'
 
   return (
     <article
@@ -97,10 +90,6 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
           <h3 className="omnimux-skill-card-title" title={title}>{title}</h3>
         </div>
         <p className="omnimux-skill-card-summary" title={displaySummary}>{displaySummary}</p>
-        <div className="omnimux-skill-card-attribution">
-          <span className="omnimux-skill-card-author">{attribution}</span>
-          {ICON_VERIFIED}
-        </div>
       </div>
     </article>
   )

@@ -18,6 +18,7 @@ import { preloadMedia } from './media-cache.js'
 import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
+import { useGridColumns } from './use-grid-columns.js'
 
 /** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
@@ -517,6 +518,8 @@ export function CloudAssetsView(props) {
   const { t, open = true, onPreview } = props
   const feed = useCloudAssetsFeed({ t, open })
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
+  // 网格列数由容器宽度决定并封顶 5 列，写在容器的 data-columns 上（见 grid-columns.js）。
+  const [gridRef, gridColumns] = useGridColumns()
   const { loadMore, hasMore, loadingMore, items, audition } = feed
 
   // IntersectionObserver, not a scroll listener: paging costs one request per
@@ -564,7 +567,9 @@ export function CloudAssetsView(props) {
     body = (
       <div className="omnimux-assets-cloud-scroll">
         <div
+          ref={gridRef}
           className="omnimux-assets-grid omnimux-assets-cloud-grid"
+          data-columns={gridColumns}
           data-skeleton="true"
           aria-busy="true"
           aria-label={t('cloud.loading')}
@@ -583,7 +588,7 @@ export function CloudAssetsView(props) {
   } else {
     body = (
       <div className="omnimux-assets-cloud-scroll">
-        <div className="omnimux-assets-grid omnimux-assets-cloud-grid">
+        <div ref={gridRef} className="omnimux-assets-grid omnimux-assets-cloud-grid" data-columns={gridColumns}>
           {items.map((asset) => (
             <CloudAssetCard
               key={asset.id}
