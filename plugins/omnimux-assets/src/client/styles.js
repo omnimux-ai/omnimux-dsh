@@ -1434,15 +1434,123 @@ export const ASSETS_CSS = `
 }
 
 .omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card {
-  flex: 0 0 200px;
-  width: 200px;
-  max-width: 200px;
+  flex: 0 0 190px;
+  width: 190px;
+  max-width: 190px;
+  height: 338px;
+  aspect-ratio: 9 / 16;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 风格分类专用：固定 16:9 横版卡片 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card[data-aspect="horizontal"],
+.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-card {
+  flex: 0 0 300px;
+  width: 300px;
+  max-width: 300px;
+  height: 169px;
+  aspect-ratio: 16 / 9;
+}
+
+/* 满画幅自适应铺满卡片容器 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-card-media,
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 悬停暗化遮罩蒙层（对标图 3） */
+.omnimux-assets-cloud-card-mask {
+  position: absolute;
+  inset: 0;
+  background: var(--dsw-alias-bg-mask-1);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-card-mask {
+  opacity: 1;
+}
+
+/* 单行流卡片默认不显示标题，悬停时浮现大字标题（对标图 2 & 图 3） */
+.omnimux-assets-cloud-row-cards .omnimux-assets-card-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 14px 12px;
+  z-index: 3;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--dsw-alias-bg-mask-1) 0%, transparent 100%);
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card:hover .omnimux-assets-card-body {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-card-title {
+  color: var(--dsw-alias-label-primary) !important;
+  font-weight: 700 !important;
+  font-size: 14px;
+  text-shadow: 0 2px 6px var(--dsw-alias-bg-mask-1);
+  white-space: normal;
+  line-height: 1.3;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-desc {
+  color: var(--dsw-alias-label-secondary) !important;
+  font-size: 11px;
+  text-shadow: 0 1px 4px var(--dsw-alias-bg-mask-1);
+  margin: 2px 0 0;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-actions {
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-actions {
+  opacity: 1;
 }
 
 .omnimux-assets-cloud-row-skeleton {
-  flex: 0 0 200px;
-  width: 200px;
-  height: 280px;
+  flex: 0 0 190px;
+  width: 190px;
+  height: 338px;
+  aspect-ratio: 9 / 16;
+}
+
+.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-row-skeleton {
+  flex: 0 0 300px;
+  width: 300px;
+  height: 169px;
+  aspect-ratio: 16 / 9;
 }
 
 .omnimux-assets-cloud-row-arrow {

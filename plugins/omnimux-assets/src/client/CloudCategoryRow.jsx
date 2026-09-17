@@ -156,6 +156,7 @@ export function CloudCategoryRow(props) {
                 key={asset.id}
                 asset={asset}
                 t={t}
+                aspect={category.id === 'style' ? 'horizontal' : undefined}
                 playing={playingId === asset.id}
                 onTogglePlay={onTogglePlay}
                 onPreview={onPreview}
