@@ -12,9 +12,12 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 /** Request-body cap for JSON routes (M2 QA fix #2: bound memory usage). */
 export const MAX_JSON_BODY_BYTES = 1024 * 1024;
 
+/** Minimal prompt-privacy guard: refuse obvious API tokens without falsely matching task/model names. */
+export const SECRET_PATTERN = /(?:^|[^A-Za-z0-9])sk-(?:proj-)?[A-Za-z0-9]{8,}|access_token/;
+
 export function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body);
-  if (/access_token|sk-[A-Za-z0-9]/.test(text)) {
+  if (SECRET_PATTERN.test(text)) {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: 'refused to emit a secret' }));
     return;
