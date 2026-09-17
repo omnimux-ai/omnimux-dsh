@@ -672,9 +672,10 @@ describe('import landing — unchanged behaviour', () => {
       await click(button(mounted.container, L.submit))
       await settle(mounted.container, () => cardIds(mounted.container).includes('local-new-3'))
 
-      // The row is still importing, so the card must say so rather than look done.
+      // The row is still importing, so the card must display organic shimmer rather than look done.
       const card = mounted.container.querySelector('[data-inspiration-id="local-new-3"]')
-      assert.ok(card.textContent.includes(zh['add.status.resolving']) || card.textContent.includes(zh['add.status.downloading']), `the importing card must report its stage (got ${card.textContent})`)
+      assert.ok(card.querySelector('.wf-organic-shimmer'), 'the importing card must show organic shimmer animation')
+      assert.equal(card.querySelector('.omnimux-inspiration-badge-status'), null, 'center status pill is removed')
     } finally {
       await mounted.unmount()
       mounted.close()
