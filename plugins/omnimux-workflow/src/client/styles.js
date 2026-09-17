@@ -284,6 +284,29 @@ export const WORKFLOW_CSS = `
 .omnimux-workflow-canvas-tab[data-visible="false"] {
   visibility: hidden;
 }
+.omnimux-workflow-canvas-unprojected {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+.omnimux-workflow-unprojected-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin-bottom: 8px;
+}
+.omnimux-workflow-unprojected-sub {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  max-width: 380px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
 /* OmniMux AI App Tab Styles */
 .omx-apptab-root {
   display: flex;

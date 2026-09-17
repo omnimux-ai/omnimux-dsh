@@ -20,12 +20,13 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName.ts';
 import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId.ts';
 import {
   assertProjectInsideLibrary,
   assertProjectWriteSafe,
+  isInsideDir,
   resolveProjectPaths,
 } from './paths.ts';
 import {
@@ -141,20 +142,83 @@ function toSummary(project: Project, path: string): ProjectSummary {
 export function createProjectStore(opts: { libraryRoot: string }): ProjectStore {
   const { libraryRoot } = opts;
   mkdirSync(libraryRoot, { recursive: true });
+  const externalProjectsFile = join(libraryRoot, '.external-projects.json');
+
+  function loadExternalProjectDirs(): string[] {
+    const raw = readJsonFile(externalProjectsFile);
+    if (Array.isArray(raw)) {
+      return raw.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+    }
+    return [];
+  }
+
+  function saveExternalProjectDirs(dirs: string[]): void {
+    const unique = Array.from(new Set(dirs.map((d) => resolve(d))));
+    atomicWriteJson(externalProjectsFile, unique);
+  }
+
+  function registerExternalProjectDir(dir: string): void {
+    const root = resolve(dir);
+    if (isInsideDir(root, libraryRoot)) return;
+    const current = loadExternalProjectDirs();
+    if (!current.includes(root)) {
+      current.push(root);
+      saveExternalProjectDirs(current);
+    }
+  }
+
+  function unregisterExternalProjectDir(dir: string): void {
+    const root = resolve(dir);
+    const current = loadExternalProjectDirs();
+    const next = current.filter((d) => resolve(d) !== root);
+    if (next.length !== current.length) {
+      saveExternalProjectDirs(next);
+    }
+  }
 
   function scanEntries(): Array<{ dir: string; project: Project }> {
-    if (!existsSync(libraryRoot)) return [];
     const rows: Array<{ dir: string; project: Project }> = [];
-    for (const entry of readdirSync(libraryRoot, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const dir = join(libraryRoot, entry.name);
-      const file = join(dir, '.omnimux', 'project.json');
-      const raw = readJsonFile(file);
-      if (raw === undefined) continue;
-      const project = parseProject(raw);
-      if (!project) continue;
-      rows.push({ dir, project });
+    const seenDirs = new Set<string>();
+
+    if (existsSync(libraryRoot)) {
+      for (const entry of readdirSync(libraryRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const dir = resolve(join(libraryRoot, entry.name));
+        const file = join(dir, '.omnimux', 'project.json');
+        const raw = readJsonFile(file);
+        if (raw === undefined) continue;
+        const project = parseProject(raw);
+        if (!project) continue;
+        rows.push({ dir, project });
+        seenDirs.add(dir);
+      }
     }
+
+    const externalDirs = loadExternalProjectDirs();
+    let externalChanged = false;
+    const validExternalDirs: string[] = [];
+    for (const extDir of externalDirs) {
+      const dir = resolve(extDir);
+      if (seenDirs.has(dir)) continue;
+      const file = join(dir, '.omnimux', 'project.json');
+      if (!existsSync(file)) {
+        externalChanged = true;
+        continue;
+      }
+      const raw = readJsonFile(file);
+      const project = parseProject(raw);
+      if (!project) {
+        externalChanged = true;
+        continue;
+      }
+      rows.push({ dir, project });
+      seenDirs.add(dir);
+      validExternalDirs.push(dir);
+    }
+    if (externalChanged) {
+      saveExternalProjectDirs(validExternalDirs);
+    }
+
     rows.sort((a, b) => {
       if (a.project.updatedAt !== b.project.updatedAt) {
         return a.project.updatedAt < b.project.updatedAt ? 1 : -1;
@@ -173,7 +237,11 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
 
   function persistProject(dir: string, project: Project): ProjectRecord {
     const paths = resolveProjectPaths(dir);
-    assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
+    if (isInsideDir(paths.projectRoot, libraryRoot)) {
+      assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
+    } else {
+      registerExternalProjectDir(paths.projectRoot);
+    }
     assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
     atomicWriteJson(paths.projectFile, project);
     return { ...project, path: paths.projectRoot };
@@ -202,7 +270,11 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         ? givenRoot
         : allocateUniqueProjectFolder(libraryRoot, sanitizeFolderName(trimmed));
       const paths = resolveProjectPaths(projectRoot);
-      assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
+      if (isInsideDir(paths.projectRoot, libraryRoot)) {
+        assertProjectInsideLibrary(paths.projectRoot, libraryRoot);
+      } else {
+        registerExternalProjectDir(paths.projectRoot);
+      }
       if (existsSync(paths.projectFile)) {
         throw new ProjectStoreError('project-exists', `project already seeded at ${paths.projectRoot}`);
       }

@@ -604,6 +604,9 @@ export function resolveCanvasTargetWorkspaceId(input = {}) {
   if (belongsToSession(sessionBinding)) {
     const bound = clean(sessionBinding.canvasWorkspaceId)
     if (bound) return bound
+    if (sessionBinding.project === null) {
+      return undefined
+    }
   }
   return clean(fallbackWorkspaceId) ?? undefined
 }

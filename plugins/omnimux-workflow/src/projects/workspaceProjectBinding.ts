@@ -9,7 +9,8 @@
  * 红线：只在库根内的既有目录写元数据，绝不新建重复目录，绝不 rm 用户文件夹；
  * 登记失败不得影响画布创建（调用方 best-effort）。
  */
-import { basename, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import { assertProjectInsideLibrary } from './paths.ts';
 import type { ProjectRecord, ProjectStore } from './ProjectStore.ts';
 import { MAX_PROJECT_TITLE_LENGTH } from './schema.ts';
@@ -32,6 +33,8 @@ export interface WorkspaceProjectBindingInput {
   title?: string | null;
   /** 库根（默认 `~/Movies/OmniMux/Projects`）。 */
   libraryRoot: string;
+  /** 是否允许在库外工作区自动初始化项目（Agent 作业建画布时使用）。 */
+  allowCreateOutsideLibrary?: boolean;
 }
 
 /** 标题：显式标题优先，否则文件夹名，超长截断。 */
@@ -80,11 +83,6 @@ export function ensureWorkspaceProjectBound(
   const dir = typeof input.workspaceDir === 'string' ? input.workspaceDir.trim() : '';
   if (dir === '') return null;
   const root = resolve(dir);
-  try {
-    assertProjectInsideLibrary(root, input.libraryRoot);
-  } catch {
-    return null;
-  }
 
   const canvasId = normalizeCanvasId(input.canvasWorkspaceId);
   const title = normalizeWorkspaceProjectTitle(input.title, root);
@@ -93,6 +91,15 @@ export function ensureWorkspaceProjectBound(
   if (existing) {
     if (canvasId === null || canvasAlreadyBound(existing, canvasId)) return existing;
     return projectStore.addPage(existing.id, title, { canvasWorkspaceId: canvasId });
+  }
+
+  const projectFile = join(root, '.omnimux', 'project.json');
+  if (!existsSync(projectFile) && !input.allowCreateOutsideLibrary) {
+    try {
+      assertProjectInsideLibrary(root, input.libraryRoot);
+    } catch {
+      return null;
+    }
   }
 
   try {
@@ -134,6 +141,7 @@ export function createWorkspaceProjectBinder(deps: {
       sessionId,
       title: input.title,
       libraryRoot: deps.libraryRoot,
+      allowCreateOutsideLibrary: true,
     });
   };
 }

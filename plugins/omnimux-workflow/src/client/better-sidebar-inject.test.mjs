@@ -96,6 +96,11 @@ async function loadApply() {
     bundle: true,
     format: 'esm',
     platform: 'neutral',
+    mainFields: ['module', 'main'],
+    nodePaths: [
+      join(here, '..', '..', 'node_modules'),
+      join(here, '..', '..', '..', '..', 'node_modules'),
+    ],
     jsx: 'automatic',
     write: false,
     logLevel: 'silent',
@@ -123,10 +128,12 @@ async function loadApply() {
     export function useImperativeHandle() {}
     export function useSyncExternalStore(_sub, getSnapshot) { return getSnapshot() }
     export function forwardRef(fn) { return fn }
+    export function createContext() { return { Provider: () => null, Consumer: () => null } }
+    export function useContext() { return {} }
     export const Fragment = 'Fragment'
     export default {
       createElement, useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo,
-      useId, useImperativeHandle, useSyncExternalStore, forwardRef, Fragment,
+      useId, useImperativeHandle, useSyncExternalStore, forwardRef, createContext, useContext, Fragment,
     }
   `)
   writeFileSync(join(dir, 'jsx-runtime.js'), `
