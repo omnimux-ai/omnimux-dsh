@@ -2615,6 +2615,16 @@ button.wf-slot-well.wf-slot-well--append:hover {
 .wf-exec-bar__status--error { color: var(--wb-danger); }
 .wf-exec-bar__status--cancelled { color: var(--wb-text-muted); }
 
+/* #2255: how many runs the canvas is carrying at once. */
+.wf-exec-bar__concurrent {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--wb-surface-raised);
+  color: var(--wb-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .wf-exec-bar__progress {
   display: inline-flex;
   align-items: center;

@@ -1,0 +1,52 @@
+{
+  "issue": 2255,
+  "harnessOrigin": "http://127.0.0.1:4939",
+  "chromeCdpPort": 55303,
+  "assertions": [
+    {
+      "name": "harness-serving",
+      "pass": true,
+      "detail": {
+        "origin": "http://127.0.0.1:4939"
+      }
+    },
+    {
+      "name": "canvas-mounted",
+      "pass": true,
+      "detail": {
+        "nodeCount": 3,
+        "sizedNodes": 3,
+        "bodyText": "W4 harness\nlocale: zh\ndark: off\nmock running→completed\nmock error\nreset\n文案脚本\n试试:\n自己编写内容\n剧本生成\n策划案生成\n提示词生成\n成片视频\n配乐音频\nReact Flow\n创作页 1\n23%"
+      }
+    },
+    {
+      "name": "scenario-triggered",
+      "pass": true
+    },
+    {
+      "name": "multiple-nodes-generating-at-once",
+      "pass": true,
+      "detail": {
+        "nodeCount": 3,
+        "generatingCount": 3,
+        "generatingText": [
+          "文案脚本 生成中…",
+          "成片视频 生成中…",
+          "配乐音频 生成中…"
+        ]
+      }
+    }
+  ],
+  "pass": true,
+  "screenshots": {
+    "before": {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-canvas-concurrent-execution-issue-2255/docs/evidence/canvas-concurrent-execution/canvas-idle.png",
+      "bytes": 54376
+    },
+    "after": {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-canvas-concurrent-execution-issue-2255/docs/evidence/canvas-concurrent-execution/canvas-multi-generating.png",
+      "bytes": 53928
+    }
+  },
+  "note": "画布夹具（真实画布 bundle）驱动：点击夹具的运行场景让多个节点同时进入生成中。多执行控制器（多 SSE 订阅、按执行归属的终态收敛）由单元与契约测试覆盖。"
+}

@@ -146,7 +146,13 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   const { setNodes } = useReactFlow();
 
-  const execBusy = useExecutionStore((state) => state.status === 'pending' || state.status === 'running');
+  // #2255: busy is this node's own state, never the canvas's. Reading the
+  // canvas-wide status here disabled every node's generate button while any
+  // other run was live, which is what made the canvas feel single-task.
+  const execBusy = useExecutionStore((state) => {
+    const nodeStatus = state.nodeStatuses[id];
+    return nodeStatus === 'pending' || nodeStatus === 'running';
+  });
   const isMultiSelected = useIsMultiSelected();
 
   const nodeWidth = nodeData.nodeWidth ?? getDefaultNodeWidth(materialType);

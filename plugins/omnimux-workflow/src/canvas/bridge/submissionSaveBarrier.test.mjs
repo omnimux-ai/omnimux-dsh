@@ -23,7 +23,9 @@ const bundle = await build({
         export const useCallback = callback => callback;
         export const useEffect = effect => { const cleanup = effect(); if (cleanup) env.cleanups.push(cleanup); };`
       : path.endsWith('canvasStore') ? 'export const useCanvasStore = env.canvasStore;'
-      : path.endsWith('executionStore') ? 'export const useExecutionStore = env.executionStore;'
+      : path.endsWith('executionStore') ? `export const useExecutionStore = env.executionStore;
+        export const LOCAL_RUN_ID = '__local__';
+        export const isLiveExecutionStatus = status => status === 'pending' || status === 'running' || status === 'paused';`
       : path.endsWith('i18n') ? 'export const t = key => key;'
       : `export const saveWorkspace = (...args) => env.save(...args);
         export const getWorkspace = () => Promise.resolve({ ok: true, body: { workspace: env.remote } });
@@ -52,9 +54,34 @@ function setup({ legacy = false } = {}) {
     setNodes(update) { this.nodes = update(this.nodes); for (const fn of listeners) fn(); },
     hydrateGraph(nodes, edges) { this.nodes = nodes; this.edges = edges; },
   };
+  // #2255：控制器按执行 id 归属状态，所以替身也要有运行槽原语。
+  const liveStatuses = ['pending', 'running', 'paused'];
   const exec = { status: 'idle', nodeStatuses: {}, progress: {},
+    runs: [], focusExecutionId: null, activeRunCount: 0,
+    syncActive() {
+      this.activeRunCount = this.runs.filter(run => liveStatuses.includes(run.status)).length;
+    },
+    ensureRun(id) {
+      if (!this.runs.some(run => run.executionId === id)) {
+        this.runs.push({ executionId: id, status: 'pending', error: null, progress: {}, nodeStatuses: {} });
+      }
+      this.focusExecutionId = id; this.executionId = id; this.syncActive();
+    },
+    patchRun(id, patch) {
+      let run = this.runs.find(candidate => candidate.executionId === id);
+      if (!run) { run = { executionId: id, status: 'idle', error: null, progress: {}, nodeStatuses: {} }; this.runs.push(run); }
+      Object.assign(run, patch); this.syncActive();
+    },
+    setRunNodeStatus(id, nodeId, state) {
+      this.patchRun(id, {});
+      this.runs.find(run => run.executionId === id).nodeStatuses[nodeId] = state;
+    },
+    dropRun(id) { this.runs = this.runs.filter(run => run.executionId !== id); this.syncActive(); },
     setExecution(patch) { Object.assign(this, patch); },
-    resetExecution() { this.status = 'idle'; this.error = null; this.nodeStatuses = {}; },
+    resetExecution() {
+      this.status = 'idle'; this.error = null; this.nodeStatuses = {};
+      this.runs = []; this.focusExecutionId = null; this.activeRunCount = 0;
+    },
     setNodeStatus(id, state) { this.nodeStatuses[id] = state; },
     setStartNodeExecution() {},
   };
@@ -150,11 +177,18 @@ test('409 blocks this click even if conflict recovery adopts the same graph', as
   assert.match(h.exec.error, /版本冲突/);
 });
 
-test('existing live execution is preserved without saving or creating another run', async () => {
-  const h = setup(); h.exec.status = 'running'; h.exec.executionId = 'existing';
+test('#2255 a live execution no longer blocks a new submit', async () => {
+  // Before #2255 this returned early: the canvas held one execution slot, so a
+  // second submit was dropped silently. Now each submit owns its own run.
+  const h = setup();
+  h.exec.ensureRun('existing');
+  h.exec.patchRun('existing', { status: 'running' });
   await h.controller.startExecution();
-  assert.equal(h.env.saves.length, 0); assert.equal(h.env.creates.length, 0);
-  assert.equal(h.exec.status, 'running'); assert.equal(h.exec.executionId, 'existing');
+  assert.equal(h.env.saves.length, 0);
+  assert.equal(h.env.creates.length, 1, '第二条提交必须真的发起');
+  assert.equal(h.exec.runs.length, 2, '两条执行并存');
+  assert.equal(h.exec.focusExecutionId, 'run');
+  assert.equal(h.exec.runs.find(run => run.executionId === 'existing').status, 'running', '原有执行不受影响');
 });
 
 test('concurrent clicks share one preflight and one execution request', async () => {
@@ -163,6 +197,27 @@ test('concurrent clicks share one preflight and one execution request', async ()
   pending.resolve({ ok: true, body: { workspace: { ...h.env.remote, version: 8 } } });
   await Promise.all([first, second]);
   assert.equal(h.env.creates.length, 1);
+});
+
+test('#2255 clicks on different nodes each get their own run', async () => {
+  // The guard is per submission, not per canvas: repeating one submission is
+  // deduped, but a click on another node must reach the server.
+  const h = setup();
+  let created = 0;
+  h.env.create = async (id, payload) => {
+    h.env.creates.push({ id, payload });
+    return { ok: true, body: { execution: { id: `run_${++created}` } } };
+  };
+  await Promise.all([
+    h.controller.startExecution({ mode: 'single', nodeIds: ['n1'] }),
+    h.controller.startExecution({ mode: 'single', nodeIds: ['n2'] }),
+  ]);
+  assert.equal(h.env.creates.length, 2, '两次不同节点的提交都要发出去');
+  assert.equal(h.exec.activeRunCount, 2);
+  const ownerOf = nodeId => h.exec.runs.find(run => run.nodeStatuses[nodeId] === 'pending');
+  assert.ok(ownerOf('n1'), 'n1 应属于某条执行');
+  assert.ok(ownerOf('n2'), 'n2 应属于某条执行');
+  assert.notEqual(ownerOf('n1').executionId, ownerOf('n2').executionId);
 });
 
 test('unmount while saving prevents execution but retains the captured flush', async () => {
