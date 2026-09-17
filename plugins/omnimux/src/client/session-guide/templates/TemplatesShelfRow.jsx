@@ -8,13 +8,14 @@ const ICON_CHEVRON_RIGHT = (
 )
 
 /**
- * 创意模板货架横滑行组件
+ * 创意模板 / 热门 / 技能单行横滑货架行组件
  * @param {object} props
  * @param {object} props.shelf
  * @param {Array} props.items
  * @param {(template: object) => void} props.onSelectTemplate
  * @param {(template: object) => void} props.onOpenDetail
  * @param {(categorySlug: string) => void} props.onViewAll
+ * @param {Function} [props.t]
  */
 export function TemplatesShelfRow({
   shelf,
@@ -22,43 +23,50 @@ export function TemplatesShelfRow({
   onSelectTemplate,
   onOpenDetail,
   onViewAll,
+  t,
 }) {
   const trackRef = useRef(null)
 
   const handleScrollRight = () => {
     if (trackRef.current) {
-      trackRef.current.scrollBy({ left: 320, behavior: 'smooth' })
+      trackRef.current.scrollBy({ left: 420, behavior: 'smooth' })
     }
   }
 
   const handleViewAllClick = () => {
-    const target = shelf.targetCategory === 'all' ? 'apps-software' : shelf.targetCategory
+    const target = shelf.targetCategory || shelf.slug
     if (onViewAll) onViewAll(target)
   }
 
   if (!items || items.length === 0) return null
 
+  // 原生多语言：中文纯中文，英文纯英文
+  const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
+  const title = isEn ? (shelf.titleEn || shelf.titleZh) : (shelf.titleZh || shelf.titleEn)
+  const subtitle = isEn ? (shelf.subtitleEn || shelf.subtitleZh) : (shelf.subtitleZh || shelf.subtitleEn)
+  const viewAllText = isEn ? 'View all' : '查看全部'
+
   return (
     <section className="omnimux-shelf-section" data-shelf-slug={shelf.slug}>
       <div className="omnimux-shelf-header">
         <div className="omnimux-shelf-title-wrap">
-          <h3 className="omnimux-shelf-heading">{shelf.titleZh}</h3>
-          <span className="omnimux-shelf-subheading">{shelf.subtitleZh}</span>
+          <h3 className="omnimux-shelf-heading">{title}</h3>
+          {subtitle && <span className="omnimux-shelf-subheading">{subtitle}</span>}
         </div>
 
         <button /* exempt-ui01: shelf row view all button */
           type="button"
           className="omnimux-shelf-btn-view-all"
           onClick={handleViewAllClick}
-          aria-label={`查看全部 ${shelf.titleZh} 模板`}
+          aria-label={`${viewAllText} ${title}`}
         >
-          <span>查看全部 (View all)</span>
+          <span>{viewAllText}</span>
           <span className="omnimux-shelf-view-arrow">{ICON_CHEVRON_RIGHT}</span>
         </button>
       </div>
 
       <div className="omnimux-shelf-slider-container">
-        <div className="omnimux-shelf-track" ref={trackRef} tabIndex={0} aria-label={`${shelf.titleZh} 模板列表`}>
+        <div className="omnimux-shelf-track" ref={trackRef} tabIndex={0} aria-label={`${title} 列表`}>
           {items.map((template) => (
             <TemplateCardItem
               key={template.id}
@@ -73,7 +81,7 @@ export function TemplatesShelfRow({
           type="button"
           className="omnimux-shelf-arrow-btn"
           onClick={handleScrollRight}
-          aria-label="向右滑动查看更多模板"
+          aria-label={`向右滑动查看更多 ${title}`}
           title="向右滚动"
         >
           {ICON_CHEVRON_RIGHT}

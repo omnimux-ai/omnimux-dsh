@@ -20,9 +20,11 @@ test('模版总表规模与数据完整性验证', () => {
   }
 })
 
-test('7 大核心分类枚举完整性验证', () => {
+test('10 大核心分类枚举完整性与顺序验证', () => {
   const slugs = TEMPLATE_CATEGORIES.map((c) => c.slug)
   assert.ok(slugs.includes('all'))
+  assert.ok(slugs.includes('tiktok'), '必须包含融合的 TikTok热门分类')
+  assert.ok(slugs.includes('skills'), '必须包含融合的 Skills 技能库分类')
   assert.ok(slugs.includes('apps-software'), '必须包含新增的软件应用分类')
   assert.ok(slugs.includes('hook-intro'))
   assert.ok(slugs.includes('ugc-review'))
@@ -30,7 +32,13 @@ test('7 大核心分类枚举完整性验证', () => {
   assert.ok(slugs.includes('fashion-try-on'))
   assert.ok(slugs.includes('industry-packs'))
   assert.ok(slugs.includes('durability-test'))
-  assert.equal(TEMPLATE_CATEGORIES.length, 8, '包含 all 在内应恰好为 8 个分类项')
+  assert.equal(TEMPLATE_CATEGORIES.length, 10, '包含 all 在内应恰好为 10 个分类项')
+
+  // 严格校验用户指定的排列顺序：全部 -> TikTok热门 -> Skills -> 软件应用...
+  assert.equal(slugs[0], 'all')
+  assert.equal(slugs[1], 'tiktok')
+  assert.equal(slugs[2], 'skills')
+  assert.equal(slugs[3], 'apps-software')
 })
 
 test('分类筛选与 ID 检索功能验证', () => {
@@ -47,8 +55,6 @@ test('分类筛选与 ID 检索功能验证', () => {
 
 test('货架行配置与推荐数据分流验证', () => {
   assert.ok(SHELVES_CONFIG.length >= 5, '货架行配置数量不少于5组')
-  const trendingItems = selectShelfItems('trending', 5)
-  assert.equal(trendingItems.length, 5)
 
   const appItems = selectShelfItems('apps-software', 6)
   assert.ok(appItems.length > 0)

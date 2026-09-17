@@ -6,14 +6,31 @@
 import CREATIVE_TEMPLATES_RAW from './creative-templates.json' with { type: 'json' }
 
 /**
- * 7 大核心分类定义（纯净中英双语、Slug、矢量图标名称）
+ * 10 大核心分类定义（纯净中英双语、Slug、矢量图标名称）
+ * 顺序严格对齐用户指令：全部 -> TikTok热门 -> Skills -> 软件应用 -> 黄金开场 -> 真实种草 -> 视效大片 -> 模特试穿 -> 行业精选 -> 硬核评测
  */
 export const TEMPLATE_CATEGORIES = Object.freeze([
   {
     slug: 'all',
-    nameZh: '全部货架',
+    nameZh: '全部',
     nameEn: 'All',
     iconName: 'sparkles',
+  },
+  {
+    slug: 'tiktok',
+    nameZh: 'TikTok热门',
+    nameEn: 'TikTok Trending',
+    iconName: 'trending',
+    descZh: '社媒当周高互动、高播放原生爆款视频，像素级还原节奏',
+    isNonTemplate: true,
+  },
+  {
+    slug: 'skills',
+    nameZh: 'Skills',
+    nameEn: 'Skills',
+    iconName: 'zap',
+    descZh: '专业工作流技能：黄金Hook提取、分镜提示词生成、痛点逆向推导',
+    isNonTemplate: true,
   },
   {
     slug: 'apps-software',
@@ -69,14 +86,24 @@ export const TEMPLATE_CATEGORIES = Object.freeze([
 
 /**
  * 货架行配置（纯净标题，去除 Emoji 充当图标，对齐 UI04 规范）
+ * 同样按用户核心顺序排列
  */
 export const SHELVES_CONFIG = Object.freeze([
   {
-    slug: 'trending',
-    titleZh: '本周精选趋势',
-    titleEn: 'Trending',
-    subtitleZh: '完播率与转化率最高的海外爆款精选',
-    targetCategory: 'all',
+    slug: 'tiktok',
+    titleZh: 'TikTok 热门 (Trending)',
+    titleEn: 'TikTok Trending',
+    subtitleZh: '社媒当周高互动、高播放原生爆款视频 · 像素级还原节奏',
+    targetCategory: 'tiktok',
+    type: 'tiktok',
+  },
+  {
+    slug: 'skills',
+    titleZh: 'Skills 技能库',
+    titleEn: 'Skills Catalog',
+    subtitleZh: '专业工作流技能 · 提示词生成与分镜解构大师',
+    targetCategory: 'skills',
+    type: 'skills',
   },
   {
     slug: 'apps-software',
@@ -85,6 +112,7 @@ export const SHELVES_CONFIG = Object.freeze([
     subtitleZh: 'SaaS 界面穿屏与手机 App 交互流光 · 专为软件出海量身打造',
     targetCategory: 'apps-software',
     isNew: true,
+    type: 'template',
   },
   {
     slug: 'hook-intro',
@@ -92,13 +120,7 @@ export const SHELVES_CONFIG = Object.freeze([
     titleEn: 'Hooks',
     subtitleZh: '巨型产品跌落、穿屏破框与荒诞反差 · 专治前3秒滑走',
     targetCategory: 'hook-intro',
-  },
-  {
-    slug: 'cinematic-vfx',
-    titleZh: '电影级视效与运镜',
-    titleEn: 'Cinematic VFX',
-    subtitleZh: '裸眼3D大屏、全景子弹时间与超现实悬浮 · 营造高端电影质感',
-    targetCategory: 'cinematic-vfx',
+    type: 'template',
   },
   {
     slug: 'ugc-review',
@@ -106,6 +128,15 @@ export const SHELVES_CONFIG = Object.freeze([
     titleEn: 'UGC & Review',
     subtitleZh: '海外达人第一视角口播与手工草稿反转实物 · 降低买家防备心',
     targetCategory: 'ugc-review',
+    type: 'template',
+  },
+  {
+    slug: 'cinematic-vfx',
+    titleZh: '电影级视效与运镜',
+    titleEn: 'Cinematic VFX',
+    subtitleZh: '裸眼3D大屏、全景子弹时间与超现实悬浮 · 营造高端电影质感',
+    targetCategory: 'cinematic-vfx',
+    type: 'template',
   },
   {
     slug: 'fashion-try-on',
@@ -113,6 +144,7 @@ export const SHELVES_CONFIG = Object.freeze([
     titleEn: 'Fashion Try-On',
     subtitleZh: '街头走秀穿搭、动态变装与面料纹理细节 · 专攻服饰鞋包转化',
     targetCategory: 'fashion-try-on',
+    type: 'template',
   },
   {
     slug: 'durability-test',
@@ -120,6 +152,7 @@ export const SHELVES_CONFIG = Object.freeze([
     titleEn: 'Durability Test',
     subtitleZh: '暴力耐摔、强力防水与极限冲击实验 · 为产品坚实品质背书',
     targetCategory: 'durability-test',
+    type: 'template',
   },
 ])
 

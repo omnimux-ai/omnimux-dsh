@@ -9,13 +9,14 @@ const ICON_ARROW_LEFT = (
 )
 
 /**
- * 创意模板分类全量网格视图
+ * 创意模板 / 热门 / 技能全量分类网格视图
  * @param {object} props
  * @param {object} props.category
  * @param {Array} props.items
  * @param {() => void} props.onBackToAll
  * @param {(template: object) => void} props.onSelectTemplate
  * @param {(template: object) => void} props.onOpenDetail
+ * @param {Function} [props.t]
  */
 export function TemplatesGridView({
   category,
@@ -23,19 +24,25 @@ export function TemplatesGridView({
   onBackToAll,
   onSelectTemplate,
   onOpenDetail,
+  t,
 }) {
   const count = items.length
+
+  const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
+  const catTitle = isEn ? (category?.nameEn || category?.nameZh || 'Category') : (category?.nameZh || category?.nameEn || '分类')
+  const catDesc = isEn ? (category?.descEn || category?.descZh) : (category?.descZh || category?.descEn)
+  const backText = isEn ? 'Back to all' : '返回全部'
 
   return (
     <div className="omnimux-tpl-grid-view">
       <div className="omnimux-tpl-grid-header">
         <div className="omnimux-tpl-grid-title-wrap">
           <h3 className="omnimux-tpl-grid-heading">
-            <span>{category?.nameZh || '分类模板'}</span>
+            <span>{catTitle}</span>
             <span className="omnimux-tpl-grid-count">({count})</span>
           </h3>
-          {category?.descZh && (
-            <span className="omnimux-tpl-grid-desc">{category.descZh}</span>
+          {catDesc && (
+            <span className="omnimux-tpl-grid-desc">{catDesc}</span>
           )}
         </div>
 
@@ -43,10 +50,10 @@ export function TemplatesGridView({
           type="button"
           className="omnimux-tpl-btn-back"
           onClick={onBackToAll}
-          aria-label="返回全部分类货架列表"
+          aria-label={backText}
         >
           <span className="omnimux-tpl-back-icon">{ICON_ARROW_LEFT}</span>
-          <span>返回全部货架</span>
+          <span>{backText}</span>
         </button>
       </div>
 

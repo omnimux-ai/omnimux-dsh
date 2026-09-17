@@ -1,13 +1,36 @@
 import React, { useState } from 'react'
 
+const ICON_REPLICATE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="13" height="13">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+)
+
 const ICON_SPARKLES = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
   </svg>
 )
 
 /**
- * 统一创意模板卡片
+ * 格式化紧凑数字 (例如 5820000 -> 5.82M)
+ */
+function formatMetric(num) {
+  if (typeof num !== 'number' || !Number.isFinite(num) || num <= 0) return ''
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2).replace(/\.0+$/, '')}M`
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1).replace(/\.0+$/, '')}K`
+  return String(num)
+}
+
+/**
+ * 统一创意模板 / 热门 / 技能单张卡片
+ * 
+ * 1. 彻底移除模型名称标签、渠道来源平台标签、右上角声音波形图标；
+ * 2. Skills 卡片绝不展示任何虚假指标；仅当具有真实数据（如 TikTok 热门）时展示互动率与播放量；
+ * 3. 默认状态绝不展示复刻按钮，底端只靠底部显示两行纯白标题；
+ * 4. 鼠标悬停 (Hover) 时，标题平滑上移，底部升起 1:1 复用创作灵感官方深灰毛玻璃圆角按键「↺ 复刻」。
+ *
  * @param {object} props
  * @param {object} props.template
  * @param {(template: object) => void} props.onSelect
@@ -15,6 +38,8 @@ const ICON_SPARKLES = (
  */
 export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
   const [imgError, setImgError] = useState(false)
+
+  if (!template) return null
 
   const handleCardClick = () => {
     if (onOpenDetail) onOpenDetail(template)
@@ -25,17 +50,23 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
     if (onSelect) onSelect(template)
   }
 
-  const durationTag = template.duration || '15s 竖版'
-  const modelTag = template.modelTag || 'Seedance 2.5'
+  // 区分是否为带有真实指标的 TikTok 热门卡片
+  const isTikTok = template.type === 'tiktok' || template.categorySlug === 'tiktok' || (typeof template.views === 'number' && template.views > 0)
+  const viewsText = isTikTok ? formatMetric(template.views) : null
+  const engagementText = isTikTok && typeof template.engagement === 'number' ? `${(template.engagement * 100).toFixed(1)}%` : null
+
+  const title = template.title || template.titleZh || template.nameZh || template.name || ''
+  const coverUrl = template.thumbnailUrl || template.cover || template.img || ''
 
   return (
     <div
       className="omnimux-tpl-card"
       onClick={handleCardClick}
       data-template-id={template.id}
+      data-template-type={template.type || 'template'}
       role="button"
       tabIndex={0}
-      aria-label={`${template.title} (${template.titleEn})`}
+      aria-label={title}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -44,48 +75,60 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
       }}
     >
       <div className="omnimux-tpl-media-box">
-        {!imgError && template.thumbnailUrl ? (
+        {!imgError && coverUrl ? (
           <img
             className="omnimux-tpl-img"
-            src={template.thumbnailUrl}
-            alt={template.title}
+            src={coverUrl}
+            alt={title}
             loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
           <div className="omnimux-tpl-placeholder">
             <span className="omnimux-tpl-ph-icon">{ICON_SPARKLES}</span>
-            <span className="omnimux-tpl-ph-title">{template.title}</span>
+            <span className="omnimux-tpl-ph-title">{title}</span>
           </div>
         )}
 
-        <div className="omnimux-tpl-top-tag" aria-hidden="true">
-          <span>{modelTag}</span>
-        </div>
-
-        {template.sourcePlatform && (
-          <div className="omnimux-tpl-platform-tag" aria-hidden="true">
-            <span>{template.sourcePlatform}</span>
-          </div>
-        )}
-
+        {/* 底部暗黑渐变遮罩 */}
         <div className="omnimux-tpl-gradient-layer" aria-hidden="true" />
 
+        {/* 底部内容区：靠底部默认只显示标题或真实指标，Hover 平滑上移 */}
         <div className="omnimux-tpl-bottom-bar">
-          <div className="omnimux-tpl-title">{template.title}</div>
-          <div className="omnimux-tpl-meta">
-            <span className="omnimux-tpl-meta-en">{template.titleEn}</span>
-            <span className="omnimux-tpl-meta-dur">{durationTag}</span>
-          </div>
+          {isTikTok && (viewsText || engagementText) && (
+            <div className="omnimux-tpl-metrics-row">
+              {engagementText && (
+                <div className="omnimux-tpl-metric-col">
+                  <span className="omnimux-tpl-metric-value">{engagementText}</span>
+                  <span className="omnimux-tpl-metric-label">互动率</span>
+                </div>
+              )}
+              {viewsText && (
+                <div className="omnimux-tpl-metric-col">
+                  <span className="omnimux-tpl-metric-value">{viewsText}</span>
+                  <span className="omnimux-tpl-metric-label">播放量</span>
+                </div>
+              )}
+            </div>
+          )}
 
-          <button /* exempt-ui01: template card action button */
+          <div className="omnimux-tpl-title" title={title}>
+            {title}
+          </div>
+        </div>
+
+        {/* 悬停平滑浮现的毛玻璃圆角复刻按钮（1:1 直接复用创作灵感样式） */}
+        <div className="omnimux-tpl-hover-action">
+          <button /* exempt-ui01: session-guide card recreate button */
             type="button"
-            className="omnimux-tpl-btn-recreate"
+            className="omnimux-trending-recreate-btn"
             onClick={handleRecreateClick}
-            aria-label={`一键复刻 ${template.title}`}
+            aria-label={`复刻：${title}`}
           >
-            <span className="omnimux-tpl-icon">{ICON_SPARKLES}</span>
-            <span>一键复刻</span>
+            <span className="omnimux-trending-recreate-icon" aria-hidden="true">
+              {ICON_REPLICATE}
+            </span>
+            <span>复刻</span>
           </button>
         </div>
       </div>
