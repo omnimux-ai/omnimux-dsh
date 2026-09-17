@@ -159,23 +159,22 @@ test('resolveRawCommandName reverses Chinese name to canonical name', () => {
 
 test('enhanceCommandCandidates binds icons to every candidate', () => {
   const allRows = [
+    { name: 'add-file', description: '添加文件 / Add files' },
     { name: 'add-from-library', description: '从资产库添加 / Add from library' },
-    { name: 'compact', description: 'Compact older conversation history' },
     { name: 'plan', description: 'Enter or leave plan mode' },
+    { name: 'compact', description: 'Compact older conversation history' },
     { name: 'goal', description: 'set or view the goal' },
   ]
   const zhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
 
   const zhList = enhanceCommandCandidates(allRows, { query: '' }, zhLocale)
-  assert.equal(zhList.length, 4)
-  assert.equal(zhList[0].name, '从资产库添加')
-  assert.equal(zhList[0].icon, 'add-from-library')
-  assert.equal(zhList[1].name, '压缩历史')
-  assert.equal(zhList[1].icon, 'compact')
+  assert.equal(zhList.length, 3)
+  assert.equal(zhList[0].name, '添加文件')
+  assert.equal(zhList[0].icon, 'add-file')
+  assert.equal(zhList[1].name, '从资产库添加')
+  assert.equal(zhList[1].icon, 'add-from-library')
   assert.equal(zhList[2].name, '计划模式')
   assert.equal(zhList[2].icon, 'plan')
-  assert.equal(zhList[3].name, '任务目标')
-  assert.equal(zhList[3].icon, 'goal')
 })
 
 test('scoreCommandCandidate handles Chinese name, English rawName, prefix, keyword and fuzzy queries', () => {
@@ -203,6 +202,7 @@ test('scoreCommandCandidate handles Chinese name, English rawName, prefix, keywo
 
 test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwraps names', async () => {
   const rawRows = [
+    { name: 'add-file', description: '添加文件 / Add files' },
     { name: 'add-from-library', description: '从资产库添加 / Add from library' },
     { name: 'compact', description: 'Compact older conversation history' },
     { name: 'plan', description: 'Enter or leave plan mode' },
@@ -232,18 +232,28 @@ test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwra
 
   const dispose = wrapCommandUi(fakeCommandUi, fakeLocale)
 
-  // 1. Test candidates yield Chinese names on left and icons
+  // 1. Test candidates yield Chinese names on left and icons (only allowed: add-file, add-from-library, plan)
   const res = await fakeCommandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.equal(res[0].name, '从资产库添加')
-  assert.equal(res[0].rawName, 'add-from-library')
-  assert.equal(res[0].icon, 'add-from-library')
-  assert.equal(res[1].name, '压缩历史')
-  assert.equal(res[1].rawName, 'compact')
-  assert.equal(res[1].icon, 'compact')
+  assert.equal(res.length, 3)
+  assert.equal(res[0].name, '添加文件')
+  assert.equal(res[0].rawName, 'add-file')
+  assert.equal(res[0].icon, 'add-file')
+  assert.equal(res[1].name, '从资产库添加')
+  assert.equal(res[1].rawName, 'add-from-library')
+  assert.equal(res[1].icon, 'add-from-library')
+  assert.equal(res[2].name, '计划模式')
+  assert.equal(res[2].rawName, 'plan')
+  assert.equal(res[2].icon, 'plan')
 
   // 2. Test dispatch unwraps Chinese name to rawName
   fakeCommandUi.dispatch({
     candidate: res[0],
+    session: { sessionId: 's1' },
+  })
+  assert.equal(dispatchedPick.candidate.name, 'add-file')
+
+  fakeCommandUi.dispatch({
+    candidate: res[1],
     session: { sessionId: 's1' },
   })
   assert.equal(dispatchedPick.candidate.name, 'add-from-library')
@@ -580,12 +590,11 @@ test('wrapCommandUi normalizes contributions registered after the wrapper (compo
   assert.equal(stored.description(), '快速模式')
 
   // The host's candidate synthesis must now complete instead of throwing, and
-  // the enhanced rows keep the localized string shape the menu renders.
+  // non-whitelisted commands (like fast) are filtered out, keeping only allowed commands.
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'fast'])
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
   assert.equal(rows[0].rawName, 'add-from-library')
   assert.equal(rows[0].description, '从统一资产库选择素材')
-  assert.equal(typeof rows[1].description, 'string')
 
   // The contribution disposer still reaches the host registry
   release()
@@ -604,7 +613,7 @@ test('wrapCommandUi repairs a contribution registered before the wrapper (load-o
 
   const dispose = wrapCommandUi(commandUi, fakeZhLocale)
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'fast'])
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
   assert.equal(typeof commandUi.live.contributions.get('fast').description, 'function')
   dispose()
 })
@@ -623,8 +632,7 @@ test('wrapCommandUi leaves compliant contributions and non-contract failures alo
   assert.equal(commandUi.live.contributions.get('model'), compliant)
 
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'model'])
-  assert.equal(rows[1].description, '切换模型')
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
 
   // An unrelated host failure must still surface through the same channel it
   // always did (the localized pass is attempted once, then the raw pass runs).
@@ -757,9 +765,10 @@ test('wrapCommandUi keeps the host receiver so dispatch resolves its own dotted 
   assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
   assert.equal(rows[0].rawName, 'add-from-library')
 
-  // The candidate pass itself must run against the host receiver as well.
+  // The candidate pass itself must run against the host receiver as well,
+  // and only whitelisted commands remain visible.
   const all = await instance.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(all.map((row) => row.name), ['从资产库添加', '压缩历史'])
+  assert.deepEqual(all.map((row) => row.name), ['从资产库添加'])
 
   // Every wrapper forwards the host receiver — each host method still sees the service.
   seenReceivers.length = 0

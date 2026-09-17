@@ -1,0 +1,34 @@
+{
+  "task": "composer-commands-simplification",
+  "issue": "#2188",
+  "title": "会话输入框原生添加附件图标隐藏与指令菜单三项收敛实测证据",
+  "verifiedAt": "2026-09-17T17:39:00+08:00",
+  "verifiedBy": "delivery-director-qiaohuilin",
+  "status": "PASS",
+  "description": "会话输入框底栏原生回形针图标成功隐藏，添加文件功能无缝收纳至「+」号指令菜单中，菜单收敛至仅保留添加文件、从资产库添加、计划模式3项核心能力，原生底层指令全面隐藏",
+  "scenariosVerified": [
+    {
+      "id": "scenario-1",
+      "name": "隐藏原生回形针图标",
+      "result": "PASS",
+      "details": "DOM 中添加附件按钮通过 CSS display: none !important 精准隐藏，不再挤占底栏输入空间"
+    },
+    {
+      "id": "scenario-2",
+      "name": "指令菜单严格收敛为 3 项",
+      "result": "PASS",
+      "details": "输入框展开的指令菜单经白名单过滤，仅严格展示「添加文件」、「从资产库添加」、「计划模式」三项，其余原生指令（压缩历史、会话反馈、权限预设、fast、model等）全量隐藏"
+    },
+    {
+      "id": "scenario-3",
+      "name": "添加文件点击直达系统选择窗口",
+      "result": "PASS",
+      "details": "点击菜单中的「添加文件」直接触发 DOM 中原生的 input[type=file] 点击，零额外弹层唤起系统文件选择框"
+    }
+  ],
+  "testSuites": {
+    "composerCommandsI18nTests": "29/29 PASS",
+    "composerAddCommandsTests": "6/6 PASS",
+    "applyCommandsTests": "6/6 PASS"
+  }
+}
