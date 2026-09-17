@@ -20,6 +20,7 @@ import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
 import { MasonryGrid } from './masonry-grid.jsx'
+import { pageSizeFor } from './page-size.js'
 
 /** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
@@ -38,12 +39,8 @@ const PREVIEW_CLASS = 'omnimux-assets-cloud-preview'
 const BARE_PREVIEW_CLASS = `${PREVIEW_CLASS} omnimux-assets-cloud-preview--bare`
 
 /**
- * 首次加载铺多少张骨架卡。
- *
- * 取 12：宽屏下一屏正好铺满两三行，窄屏时多出的部分被裁掉也不浪费——骨架是纯占位，
- * 不像真卡片那样要拉图。少于 6 张会在宽屏上露出大片空白，等于没铺。
+ * 首次加载骨架卡张数随列数自适应（3 行，见 pageSizeFor），不再固定 12 张。
  */
-const CLOUD_SKELETON_COUNT = 12
 
 /**
  * Tile media.
@@ -526,10 +523,12 @@ function CloudCategoryNav(props) {
  */
 export function CloudAssetsView(props) {
   const { t, open = true, onPreview } = props
-  const feed = useCloudAssetsFeed({ t, open })
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   // 网格列数由容器宽度决定并封顶 5 列，写在容器的 data-columns 上（见 grid-columns.js）。
   const [gridRef, gridColumns] = useGridColumns()
+  // 每批加载/展示条数按当前列数推导（3 行），随视口自适应，首屏更快（见 page-size.js）。
+  const pageSize = pageSizeFor(gridColumns)
+  const feed = useCloudAssetsFeed({ t, open, pageSize })
   const { loadMore, hasMore, loadingMore, items, audition } = feed
 
   // IntersectionObserver, not a scroll listener: paging costs one request per
@@ -562,13 +561,15 @@ export function CloudAssetsView(props) {
     return { title: t('cloud.empty.title'), description: t('cloud.empty.desc') }
   }, [filtered, searchActive, t])
 
-  // 每加载出一批就把这批的封面提前解码：滚到下一屏时图已在内存里，不会先白一下。
+  // 视口封面优化（Issue 2151）：去掉整批封面全量预解码，依靠 img loading="lazy" 按视口懒加载；
+  // 仅在数据尾部保留下一屏条数的提前缓冲，避免滚到底时瞬时白块。
   useEffect(() => {
-    const covers = items
+    const trailing = items.slice(Math.max(0, items.length - pageSize))
+    const covers = trailing
       .filter((row) => row?.hasCover === true)
       .map((row) => cloudMediaUrl(row.id, 'cover'))
     preloadMedia(covers)
-  }, [items])
+  }, [items, pageSize])
 
   let body = null
   if (feed.loading) {
@@ -579,7 +580,7 @@ export function CloudAssetsView(props) {
         <MasonryGrid
           gridRef={gridRef}
           columns={gridColumns}
-          items={Array.from({ length: CLOUD_SKELETON_COUNT }, (_unused, index) => ({ id: `skeleton-${index}` }))}
+          items={Array.from({ length: pageSize }, (_unused, index) => ({ id: `skeleton-${index}` }))}
           className="omnimux-assets-grid omnimux-assets-cloud-grid"
           data-skeleton="true"
           aria-busy="true"

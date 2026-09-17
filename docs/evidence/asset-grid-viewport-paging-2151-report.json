@@ -1,0 +1,169 @@
+{
+ "issue": 2151,
+ "kind": "viewport-paging-real-render",
+ "origin": "http://127.0.0.1:61818",
+ "cases": [
+  {
+   "width": 1560,
+   "expectedCols": 5,
+   "expectedPageSize": 15,
+   "columns": 5,
+   "mountedSkeletons": 15,
+   "totalCards": 40,
+   "inViewportCount": 25,
+   "farBeyondCount": 15,
+   "overflowX": false
+  },
+  {
+   "width": 1280,
+   "expectedCols": 4,
+   "expectedPageSize": 12,
+   "columns": 4,
+   "mountedSkeletons": 12,
+   "totalCards": 40,
+   "inViewportCount": 16,
+   "farBeyondCount": 24,
+   "overflowX": false
+  },
+  {
+   "width": 1024,
+   "expectedCols": 3,
+   "expectedPageSize": 9,
+   "columns": 3,
+   "mountedSkeletons": 9,
+   "totalCards": 40,
+   "inViewportCount": 12,
+   "farBeyondCount": 28,
+   "overflowX": false
+  },
+  {
+   "width": 768,
+   "expectedCols": 2,
+   "expectedPageSize": 6,
+   "columns": 2,
+   "mountedSkeletons": 6,
+   "totalCards": 40,
+   "inViewportCount": 8,
+   "farBeyondCount": 32,
+   "overflowX": false
+  }
+ ],
+ "screenshots": [
+  {
+   "width": 1560,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/c-2151/docs/evidence/asset-grid-viewport-paging-2151-render-1560.png",
+   "bytes": 14186
+  },
+  {
+   "width": 1280,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/c-2151/docs/evidence/asset-grid-viewport-paging-2151-render-1280.png",
+   "bytes": 12859
+  },
+  {
+   "width": 1024,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/c-2151/docs/evidence/asset-grid-viewport-paging-2151-render-1024.png",
+   "bytes": 12661
+  },
+  {
+   "width": 768,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/c-2151/docs/evidence/asset-grid-viewport-paging-2151-render-768.png",
+   "bytes": 12040
+  }
+ ],
+ "errors": [],
+ "assertions": [
+  {
+   "name": "probe-page-ready",
+   "pass": true
+  },
+  {
+   "name": "columns@1560",
+   "pass": true
+  },
+  {
+   "name": "pageSize@1560",
+   "pass": true
+  },
+  {
+   "name": "skeletonCount@1560",
+   "pass": true
+  },
+  {
+   "name": "viewportDefer@1560",
+   "pass": true,
+   "inViewport": 25,
+   "farBeyond": 15
+  },
+  {
+   "name": "no-overflow@1560",
+   "pass": true
+  },
+  {
+   "name": "columns@1280",
+   "pass": true
+  },
+  {
+   "name": "pageSize@1280",
+   "pass": true
+  },
+  {
+   "name": "skeletonCount@1280",
+   "pass": true
+  },
+  {
+   "name": "viewportDefer@1280",
+   "pass": true,
+   "inViewport": 16,
+   "farBeyond": 24
+  },
+  {
+   "name": "no-overflow@1280",
+   "pass": true
+  },
+  {
+   "name": "columns@1024",
+   "pass": true
+  },
+  {
+   "name": "pageSize@1024",
+   "pass": true
+  },
+  {
+   "name": "skeletonCount@1024",
+   "pass": true
+  },
+  {
+   "name": "viewportDefer@1024",
+   "pass": true,
+   "inViewport": 12,
+   "farBeyond": 28
+  },
+  {
+   "name": "no-overflow@1024",
+   "pass": true
+  },
+  {
+   "name": "columns@768",
+   "pass": true
+  },
+  {
+   "name": "pageSize@768",
+   "pass": true
+  },
+  {
+   "name": "skeletonCount@768",
+   "pass": true
+  },
+  {
+   "name": "viewportDefer@768",
+   "pass": true,
+   "inViewport": 8,
+   "farBeyond": 32
+  },
+  {
+   "name": "no-overflow@768",
+   "pass": true
+  }
+ ],
+ "pass": true
+}
