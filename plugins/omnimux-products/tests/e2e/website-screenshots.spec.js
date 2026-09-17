@@ -377,4 +377,20 @@ describe('e2e · website screenshots · storage hygiene', () => {
     assert.equal(calls.length, 1, 'the capture still runs in parallel — it just never reaches the disk')
     assert.equal(existsSync(paths.mediaDir), false)
   })
+
+  it('case 20: bare hostname input normalizes and produces valid first-screen captures', async () => {
+    const { capture, calls } = stubCapture()
+    const { dispatcher } = vertical({ capture })
+
+    const response = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'platform.example.com/product/open-platform',
+      kind: 'digital',
+    }))
+    assert.equal(response.status, 200)
+    assert.equal(response.body.success, true)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].url, PAGE_URL)
+    assert.equal(response.body.data.media.length, 2)
+    assert.equal(response.body.data.screenshots.status, SCREENSHOT_STATUS.CAPTURED)
+  })
 })

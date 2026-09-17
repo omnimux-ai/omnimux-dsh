@@ -17,7 +17,14 @@
 import { launchBrowser, attachPage, defaultSleep, CdpError } from './cdp-client.js'
 import { locateBrowser } from './chrome-locator.js'
 import {
+  BLANK_FRAME_HEADER_FLOOR,
+  BLANK_FRAME_MAX_BYTES,
+  BLANK_FRAME_MIN_DIM,
   NAV_TIMEOUT_MS,
+  PNG_IHDR_HEIGHT_OFFSET,
+  PNG_IHDR_WIDTH_OFFSET,
+  RETRY_CAPTURE_HEADROOM_MS,
+  RETRY_SETTLE_MS,
   SCREENSHOT_BUDGET_MS,
   SCREENSHOT_REASON,
   SETTLE_MS,
@@ -52,12 +59,20 @@ import { normalizeImportUrl } from './link-importer.js'
  * @returns {Promise<CaptureResult>} never rejects
  */
 export async function captureSiteScreenshots(args = {}) {
-  const url = typeof args.url === 'string' ? args.url.trim() : ''
+  const rawUrl = typeof args.url === 'string' ? args.url.trim() : ''
   const kind = args.kind === 'digital' ? 'digital' : 'physical'
 
   // L4 — a physical listing never enters this chain at all.
   if (kind !== 'digital') return degraded(SCREENSHOT_REASON.NOT_DIGITAL)
 
+  // Ensure the target URL carries an http(s) scheme for Chrome navigation, while
+  // preserving the caller's full path, query, and hash parameters.
+  let url = rawUrl
+  if (url.startsWith('//')) {
+    url = `https:${url}`
+  } else if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+    url = `https://${url}`
+  }
   // Reuse the importer's own SSRF guard: never a second copy of the rule. The
   // guard rejects non-http(s) schemes, embedded credentials and every private
   // host, so no socket is opened for a link that cannot legally be captured.
@@ -72,6 +87,7 @@ export async function captureSiteScreenshots(args = {}) {
   const budgetMs = Number.isFinite(args.budgetMs) ? Number(args.budgetMs) : SCREENSHOT_BUDGET_MS
   const navTimeoutMs = Number.isFinite(args.navTimeoutMs) ? Number(args.navTimeoutMs) : NAV_TIMEOUT_MS
   const settleMs = Number.isFinite(args.settleMs) ? Number(args.settleMs) : SETTLE_MS
+  const retrySettleMs = Number.isFinite(args.retrySettleMs) ? Number(args.retrySettleMs) : RETRY_SETTLE_MS
 
   /** @type {{ dispose?: () => Promise<void> } | null} */
   let handle = null
@@ -100,11 +116,12 @@ export async function captureSiteScreenshots(args = {}) {
 
     const attach = args.attach ?? attachPage
     const sleep = args.sleep ?? defaultSleep
+    const deadline = Date.now() + budgetMs
     try {
       const settled = await Promise.allSettled(VIEWPORT_ORDER.map((key) => captureViewport(
         handle,
         VIEWPORTS[key],
-        { url, navTimeoutMs, settleMs, attach, sleep, attachOptions: args.attachOptions ?? {} },
+        { url, navTimeoutMs, settleMs, retrySettleMs, deadline, attach, sleep, log: args.log, attachOptions: args.attachOptions ?? {} },
       )))
 
       const outcomes = settled.map((row, index) => (row.status === 'fulfilled'
@@ -121,9 +138,28 @@ export async function captureSiteScreenshots(args = {}) {
 }
 
 /**
+ * Detect whether a captured frame looks like an unrendered or blank/solid-color placeholder.
+ *
+ * Full-viewport PNGs (1440×900 or 780×1688) with actual layout, text, and graphics
+ * are typically 25KB~300KB+. When a page has only rendered its dark/blank background
+ * layer, Deflate compression collapses it to under 15KB (e.g. 5KB~8KB pure black).
+ * Small test fixture buffers (<24 bytes) are ignored to avoid triggering in unit tests.
+ *
+ * @param {Buffer} buffer
+ * @returns {boolean}
+ */
+export function isSuspectedBlankFrame(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < BLANK_FRAME_HEADER_FLOOR) return false
+  if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) return false
+  const width = buffer.readUInt32BE(PNG_IHDR_WIDTH_OFFSET)
+  const height = buffer.readUInt32BE(PNG_IHDR_HEIGHT_OFFSET)
+  return width >= BLANK_FRAME_MIN_DIM && height >= BLANK_FRAME_MIN_DIM && buffer.length < BLANK_FRAME_MAX_BYTES
+}
+
+/**
  * @param {{ webSocketDebuggerUrl?: string, port?: number }} handle
  * @param {{ kind: string, width: number, height: number, deviceScaleFactor: number, isMobile: boolean, hasTouch: boolean }} spec
- * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object }} opts
+ * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object, retrySettleMs?: number, deadline?: number }} opts
  * @returns {Promise<object>}
  */
 async function captureViewport(handle, spec, opts) {
@@ -132,10 +168,29 @@ async function captureViewport(handle, spec, opts) {
     page = await opts.attach(handle, spec, { timeoutMs: opts.navTimeoutMs, ...opts.attachOptions })
     await page.navigate(opts.url, opts.navTimeoutMs)
     if (opts.settleMs > 0) await opts.sleep(opts.settleMs)
-    const buffer = await page.capture()
+    let buffer = await page.capture()
     if (!buffer || buffer.length === 0) {
       return outcomeOf(spec.kind, false, {}, 0, SCREENSHOT_REASON.CAPTURE_FAILED)
     }
+
+    if (isSuspectedBlankFrame(buffer)) {
+      const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : RETRY_SETTLE_MS
+      const remainingMs = Number.isFinite(opts.deadline) ? opts.deadline - Date.now() : Infinity
+      if (retryWaitMs > 0 && remainingMs > retryWaitMs + RETRY_CAPTURE_HEADROOM_MS && typeof opts.sleep === 'function') {
+        await opts.sleep(retryWaitMs)
+        try {
+          const retriedBuffer = await page.capture()
+          if (retriedBuffer && !isSuspectedBlankFrame(retriedBuffer)) {
+            buffer = retriedBuffer
+          }
+        } catch (error) {
+          if (typeof opts.log === 'function') {
+            opts.log(`[site-shots] blank-frame retry capture failed: ${String(error?.message ?? error)}`)
+          }
+        }
+      }
+    }
+
     return outcomeOf(spec.kind, true, { width: spec.width, height: spec.height }, buffer.length, null, buffer)
   } catch (error) {
     return outcomeOf(spec.kind, false, {}, 0, reasonOf(error, SCREENSHOT_REASON.NAV_FAILED))
