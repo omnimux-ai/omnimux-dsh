@@ -9483,6 +9483,28 @@
         "path": "agent_runtime_profile/.claude/skills/generate-grid",
         "ref": "main"
       }
+    },
+    {
+      "id": "sk-omx-rn-motion-replica",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "动效复刻",
+      "subtitle": "rnskill",
+      "summary": "拆解参考视频的布局、运动、时序与转场，重建为原创动效复刻并做成片质检。源：Pluviobyte/rnskill（git）。",
+      "category": "sk-visual",
+      "tags": [
+        "AIGC",
+        "动效",
+        "rnskill",
+        "专业影视"
+      ],
+      "skill": "rn-motion-replica",
+      "source": {
+        "type": "git",
+        "repo": "Pluviobyte/rnskill",
+        "path": "skills/rn-motion-replica",
+        "ref": "main"
+      }
     }
   ]
 }
