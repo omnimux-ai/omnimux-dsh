@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import { Button, DropdownSelect } from 'dsh-ui-kit'
+import { Button, DropdownSelect, SelectableTile } from 'dsh-ui-kit'
 
 /** Sentinel the hub stores for "no explicit choice"; the picker shows the resolved mode instead. */
 const DEFAULT_OPERATION_AUTO = 'auto'
@@ -179,6 +179,38 @@ export function ModelsSettingsCard({ t, scope }) {
     }
   }, [scope, writable, busy])
 
+  /** Hub-listed text models — the membership authority for the composer list. */
+  const composerModels = Array.isArray(catalog?.text) ? catalog.text : []
+  /** Ids the user keeps out of the composer list; a hub-unlisted id can never be added back. */
+  const hiddenModels = Array.isArray(value.composerHiddenModels) ? value.composerHiddenModels : []
+
+  /**
+   * Flip one model's visibility in the composer list.
+   *
+   * This records ids to subtract and nothing more: the hub's listed set stays the
+   * membership authority, so a model the hub stops listing leaves the list on its
+   * own and no local setting can put it back.
+   */
+  const onToggleComposerModel = useCallback(async (id, visible) => {
+    if (!scope || typeof scope.set !== 'function' || !writable || busy) return
+    const current = Array.isArray(value.composerHiddenModels) ? value.composerHiddenModels : []
+    const next = visible
+      ? current.filter((entry) => entry !== id)
+      : [...new Set([...current, id])]
+    setBusy(true)
+    setError('')
+    try {
+      await scope.set('composerHiddenModels', next)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setBusy(false)
+    }
+  }, [scope, writable, busy, value])
+
   if (!available) return null
 
   return (
@@ -228,6 +260,25 @@ export function ModelsSettingsCard({ t, scope }) {
             </div>
           </div>
         ))}
+        {composerModels.length > 0 ? (
+          <div className="omnimux-models-card__group">
+            <p className="omnimux-models-card__group-title">{t('models.composerTitle')}</p>
+            <p className="omnimux-models-card__desc">{t('models.composerHint')}</p>
+            <div className="omnimux-models-card__group-card">
+              {composerModels.map((model) => (
+                <SelectableTile
+                  key={model.id}
+                  id={`omnimux-composer-${model.id}`}
+                  selectionType="checkbox"
+                  selected={!hiddenModels.includes(model.id)}
+                  title={model.label || model.id}
+                  disabled={!writable || busy}
+                  onChange={(next) => { void onToggleComposerModel(model.id, next) }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
       {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
     </div>

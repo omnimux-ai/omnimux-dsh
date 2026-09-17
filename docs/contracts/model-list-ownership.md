@@ -23,7 +23,7 @@ related:
 
 # OmniMux model-list ownership
 
-The app's OmniMux model list has exactly one owner: `plugins/omnimux/cordis.patch.yml`.
+The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. Membership of the chat composer list is a separate, dynamic concern: at runtime the hub narrows the list to the models it currently lists, and the `composerHiddenModels` setting can subtract further. See [Composer list membership](#composer-list-membership).
 
 Model modes, input modalities, limits and wire parameters MUST follow the selected channel's official API documentation under [model API authority](model-api-authority.md). EvoLink and APIMart are the primary channels. Do not issue real model requests for research or contract acceptance. Historical measurements below do not define current channel support.
 
@@ -72,8 +72,10 @@ it that way: user layers set `agent-default-model` only.
   `Config.gate.models.textComplete.<id>` can hide a whitelist row from
   `omnimux_text_complete` without editing `cordis.patch.yml`. A model is
   callable iff `text.models[].enabled !== false` **and**
-  `gate.models.textComplete[id] !== false`. Phase-1 gate does **not** filter
-  the chat composer model list; that list remains owned solely by this patch.
+  `gate.models.textComplete[id] !== false`. The `Config.gate` layer does **not**
+  filter the chat composer model list — that list follows the hub's listed
+  directory instead, as [Composer list membership](#composer-list-membership)
+  describes.
 - Canvas / workflow generation catalogs are **not** this chat list. They are
   owned by the execution-hub directory seam `modelCatalog.list()`
   (`plugins/omnimux/src/catalog/list.js`). `GET /omnimux/model-catalog` is
@@ -115,12 +117,42 @@ it that way: user layers set `agent-default-model` only.
     （`cordis_unresolvable_model`），patch 内容本身不动。seam 载荷携带
     `operations[]`（string id + per-op status/listed metadata）。此后
     JS SPECS / workflow `BUILTIN_*` 不得再作为能力真源（绞杀时间盒见设计）。
-  - **聊天 composer 模型列表**仍唯一由本文件所述 `cordis.patch.yml` 拥有；
-    H1/H2 **不**把 canvas contract 投影写进 patch，也 **不**用 canvas 目录
-    替换 composer 列表。
+  - **聊天 composer 模型列表**的字段真源仍是本文件所述 `cordis.patch.yml`；
+    其**成员资格**由 hub 已上架目录 + `composerHiddenModels` 在运行时收窄
+    （见 [Composer list membership](#composer-list-membership)）。H1/H2 **不**把
+    canvas contract 投影写进 patch，也 **不**用 canvas 目录直接替换 composer 列表。
 - **Display labels** (UI aliases) are separate from routing ids. Labels MUST
   follow [model-display-label.md](./model-display-label.md): no `-` in the
   visible model name; brand casing preserved (`Claude Opus 4.6`, `GPT 5.5`).
+
+## Composer list membership
+
+The chat composer's model list is a settings surface of the `llm-pi-ai` provider
+route: `omnimux` is declared there as a configurable provider, and
+`providers.omnimux.models` is what the app's selectors render. Membership is
+maintained at runtime by `plugins/omnimux/src/catalog/composer-sync.js`, which
+writes the composed list once settings are ready and again whenever the
+visibility setting changes.
+
+- **Field truth** — the shipped `cordis.patch.yml` profile. A model's row is
+  copied verbatim from the composition `base` layer, so this sync never invents
+  wire parameters. A hub-listed model the profile does not describe is added with
+  its id and label only: no context window, modality, or reasoning level is
+  guessed, because a wrong one fails mid-conversation rather than at startup.
+- **Membership truth** — the hub's listed `text` bucket
+  (`plugins/omnimux/src/catalog/list.js`, the directory the canvas also
+  consumes). A model the hub does not list is never written, whatever local
+  configuration says.
+- **User subtraction** — the `composerHiddenModels` settings field. It removes
+  ids from the hub's set and can never add one, which is what makes an unlisted
+  model unrecoverable by configuration.
+- **Fail-closed** — an empty hub bucket, an absent namespace, or a refused write
+  leaves the last accepted list serving. No path empties the list.
+- **Idempotent** — a target equal to the stored list is not rewritten, so a sync
+  does not churn the settings document.
+- **Reversible** — the write is an ordinary settings user layer: removing it
+  restores the shipped list, and an id-matched `cordis.patch.yml` row still wins
+  on every field.
 
 ## Changing the list
 

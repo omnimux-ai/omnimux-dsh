@@ -31,6 +31,7 @@ import { mountSpeechToText } from '../media/stt-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
+import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { mountHubHttp } from './http.js'
 import { mountComposerCommands } from './composer-commands.js'
@@ -169,11 +170,33 @@ export function apply(ctx, config = {}) {
           defaultAudioModel: hub.media.providers.omnimux.models.audio,
         },
       })
+      // The composer's text-model list is a settings surface of the pi-ai
+      // provider route. Keep it in step with the hub: the hub decides which
+      // models are in play, the shipped profile describes them, and the
+      // visibility field below can only subtract from that set.
+      const composerSync = createComposerListSync({
+        settings,
+        log: (event, detail) => {
+          try {
+            ctx.logger?.info?.(`omnimux: ${event}`, detail ?? {})
+          } catch {
+            /* logging must never break the sync */
+          }
+        },
+      })
+      const syncComposerList = () => {
+        const current = scope && typeof scope.get === 'function' ? scope.get() : undefined
+        const hiddenIds = current && typeof current === 'object' ? current.composerHiddenModels : undefined
+        void composerSync.sync({ hubText: listCatalog().text, hiddenIds }).catch(() => {})
+      }
+
       if (scope && typeof scope.watch === 'function') {
         scope.watch(() => {
           ctx.emit?.('omnimux/model-catalog-updated')
+          syncComposerList()
         })
       }
+      syncComposerList()
     })
   }
 
