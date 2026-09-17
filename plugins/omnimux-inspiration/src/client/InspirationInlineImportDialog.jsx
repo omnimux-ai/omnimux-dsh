@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button, InputField, ModalDialog } from 'dsh-ui-kit'
 import { importLocalInspiration } from './api.js'
 import {
@@ -32,11 +32,11 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
   const [tags, setTags] = useState('')
   const [autoAnalyze, setAutoAnalyze] = useState(() => readAutoAnalyzePreference())
   const [loading, setLoading] = useState(false)
+  const [classifying, setClassifying] = useState(false)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [classified, setClassified] = useState(null)
-
-  if (!open) return null
+  const classifyReqRef = useRef(0)
 
   /**
    * Close the dialog from a control that is not submitting — the footer buttons
@@ -84,25 +84,73 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
   }
 
   /**
-   * Echo the verdict while the user is still deciding, so what the import is
-   * about to become is on screen before the button is pressed.
+   * Run the classification for a specific target URL and update state.
    */
-  const handleClassify = async () => {
-    const value = url.trim()
-    if (!value || loading) return
+  const runClassify = async (targetUrl) => {
+    const value = (targetUrl ?? url).trim()
+    if (!value || loading) {
+      setClassifying(false)
+      setClassified(null)
+      return null
+    }
+    const currentReqId = ++classifyReqRef.current
+    setClassifying(true)
     setError(null)
     const result = await classify(value)
+    if (classifyReqRef.current !== currentReqId) return null
+    setClassifying(false)
     if (!result.ok) {
       setClassified(null)
       setError(result.message)
-      return
+      return null
     }
     if (result.kind === 'unknown') {
       setClassified(null)
       setError(t('rivalAccounts.import.unrecognized'))
+      return null
+    }
+    const classifiedData = { ...result.data, kind: result.kind, _url: value }
+    setClassified(classifiedData)
+    return classifiedData
+  }
+
+  useEffect(() => {
+    if (!open) {
+      classifyReqRef.current += 1
+      setClassifying(false)
+      setClassified(null)
+      setError(null)
       return
     }
-    setClassified(result.data)
+    const trimmed = url.trim()
+    if (!trimmed) {
+      classifyReqRef.current += 1
+      setClassifying(false)
+      setClassified(null)
+      setError(null)
+      return
+    }
+    if (classified && classified._url === trimmed) {
+      return
+    }
+    setClassifying(true)
+    setClassified(null)
+    setError(null)
+    const timer = setTimeout(() => {
+      void runClassify(trimmed)
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [open, url])
+
+  if (!open) return null
+
+  const handleBlur = () => {
+    const trimmed = url.trim()
+    if (trimmed && (!classified || classified._url !== trimmed)) {
+      void runClassify(trimmed)
+    }
   }
 
   /**
@@ -116,7 +164,7 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
     try {
       // Classify before importing: an account URL must never reach the content
       // importer, and a link the Host cannot place must not become a row.
-      const resolved = classified
+      const resolved = (classified && classified._url === value)
         ? { ok: true, kind: classified.kind, data: classified }
         : await classify(value)
       if (!resolved.ok) {
@@ -204,6 +252,15 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
   const acknowledged = notice?.tone === 'degraded'
   const inputsDisabled = loading || Boolean(notice)
 
+  // Only permit importing once classification has succeeded for the exact URL
+  // currently in the field, and that URL classified as either content or account.
+  const isClassifiedValid = Boolean(
+    classified &&
+    classified._url === url.trim() &&
+    (classified.kind === 'content' || classified.kind === 'account')
+  )
+  const canSubmit = !loading && !classifying && isClassifiedValid
+
   // The echo reuses the rivalry workbench's account wording verbatim — one
   // sentence, one translation — and only the content verdict gets its own key,
   // because it names what this dialog is about to do.
@@ -231,7 +288,7 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
             <Button
               variant="primary"
               loading={loading}
-              disabled={loading || !url.trim()}
+              disabled={!canSubmit}
               onClick={handleSubmit}
             >
               {loading ? t('add.importing') : t('add.submit')}
@@ -266,12 +323,15 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported, on
           disabled={inputsDisabled}
           onChange={(e) => {
             setUrl(e.target.value)
-            // The verdict belongs to the URL it was made for.
             setClassified(null)
           }}
-          onBlur={handleClassify}
+          onBlur={handleBlur}
         />
-        {echo ? (
+        {classifying ? (
+          <div className="omnimux-inspiration-import-echo" role="status" data-status="analyzing">
+            {t('add.analyzingUrl')}
+          </div>
+        ) : echo ? (
           <div className="omnimux-inspiration-import-echo" role="status" data-kind={kind}>{echo}</div>
         ) : null}
         <CollapsibleTagsField
