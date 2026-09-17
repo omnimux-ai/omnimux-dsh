@@ -8,6 +8,8 @@
  * 纯函数：不读 DOM、不读 window，列数与比例由调用方传入。
  */
 
+import { coverRatioCache } from './ratio-cache.js'
+
 /** 目录没有宽高字段、图片也还没到达时的兜底：角色立绘主流是 9:16。 */
 export const MASONRY_DEFAULT_RATIO = 9 / 16
 
@@ -34,9 +36,13 @@ export const MASONRY_CHROME = 48 / 260
  */
 export function coverRatioOf(asset, known) {
   const id = asset?.id
-  if (id != null && known) {
-    const cached = Number(known[id])
-    if (Number.isFinite(cached) && cached > 0) return cached
+  if (id != null) {
+    if (known) {
+      const cached = Number(known[id])
+      if (Number.isFinite(cached) && cached > 0) return cached
+    }
+    const persisted = coverRatioCache.get(id)
+    if (Number.isFinite(persisted) && persisted > 0) return persisted
   }
   const width = Number(asset?.coverWidth ?? asset?.width)
   const height = Number(asset?.coverHeight ?? asset?.height)
