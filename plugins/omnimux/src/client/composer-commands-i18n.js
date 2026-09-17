@@ -906,6 +906,33 @@ export function scoreCommandCandidate(candidate, rawQuery, lang) {
 }
 
 /**
+ * Trigger the native file input element rendered in composer card.
+ * Throttled to avoid duplicate triggers across wrapper layers.
+ * @param {Document} [doc]
+ * @returns {boolean}
+ */
+let lastFileInputTriggerTime = 0
+export function triggerNativeFileInput(doc = typeof document !== 'undefined' ? document : null) {
+  if (!doc) return false
+  const now = Date.now()
+  if (now - lastFileInputTriggerTime < 300) return true
+  lastFileInputTriggerTime = now
+  const fileInput = doc.querySelector?.('[data-composer-card] input[type="file"]')
+  if (fileInput) {
+    fileInput.click()
+    return true
+  }
+  const attachBtn = doc.querySelector?.(
+    '[data-composer-card] button[aria-label="添加附件"], [data-composer-card] button[aria-label="Add attachment"]'
+  )
+  if (attachBtn) {
+    attachBtn.click()
+    return true
+  }
+  return false
+}
+
+/**
  * Whitelist of commands allowed in the composer "+" / slash menu.
  * Only 'add-file', 'add-from-library', and 'plan' are retained;
  * all other native host commands are concealed to keep the menu clean and focused.
@@ -927,13 +954,22 @@ export function enhanceCommandCandidates(allRows, req, locale) {
   if (!Array.isArray(allRows)) return []
   const lang = getActiveLang(locale)
 
-  // 0. Filter by allowed command whitelist
-  const allowedRows = allRows.filter((row) => {
+  // 0. Ensure 'add-file' exists even if Host has not restarted yet
+  const hasAddFile = allRows.some((row) => {
+    const raw = row.rawName || resolveRawCommandName(row.name) || row.name
+    return raw === 'add-file'
+  })
+  const baseRows = hasAddFile
+    ? allRows
+    : [{ name: 'add-file', description: '添加文件 / Add files' }, ...allRows]
+
+  // 1. Filter by allowed command whitelist
+  const allowedRows = baseRows.filter((row) => {
     const rawName = row.rawName || resolveRawCommandName(row.name) || row.name
     return ALLOWED_COMMAND_NAMES.has(rawName)
   })
 
-  // 1. Localize name, description and assign matching icon
+  // 2. Localize name, description and assign matching icon
   const localized = allowedRows.map((row) => {
     const rawName = row.rawName || resolveRawCommandName(row.name) || row.name
     const config = COMMAND_I18N[lang]?.[rawName]
@@ -1172,6 +1208,9 @@ export function wrapCommandUi(commandUi, locale) {
     const normalizedCandidate = {
       ...pick.candidate,
       name: rawName,
+    }
+    if (rawName === 'add-file') {
+      triggerNativeFileInput()
     }
     return originalDispatch.value.call(receiver, {
       ...pick,
