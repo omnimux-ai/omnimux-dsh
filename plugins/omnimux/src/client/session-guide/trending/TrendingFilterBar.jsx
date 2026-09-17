@@ -6,6 +6,7 @@ import {
   TRENDING_SORTS,
   TRENDING_VIEW_BUCKETS,
 } from './trending-data.js'
+import { formatRegionLabel, formatIndustryLabel } from './trending-i18n.js'
 
 const ICON_CALENDAR = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -42,12 +43,21 @@ const ICON_VIEW_CAROUSEL = (
  * 档位条目 → 选择器选项。
  * @param {Array<{value: string, label?: string, labelKey?: string}>} buckets
  * @param {(key: string) => string} t
+ * @param {'region' | 'industry' | 'views' | 'engagement' | 'range' | 'sort'} [dimension]
  */
-function toOptions(buckets, t) {
-  return buckets.map((bucket) => ({
-    value: bucket.value,
-    label: bucket.labelKey ? t(bucket.labelKey) : bucket.label,
-  }))
+function toOptions(buckets, t, dimension) {
+  return buckets.map((bucket) => {
+    let label = bucket.labelKey ? t(bucket.labelKey) : bucket.label
+    if (dimension === 'region' && bucket.value) {
+      label = formatRegionLabel(bucket.value, t)
+    } else if (dimension === 'industry' && bucket.value) {
+      label = formatIndustryLabel(bucket.value, t)
+    }
+    return {
+      value: bucket.value,
+      label,
+    }
+  })
 }
 
 function InfoMark({ label }) {
@@ -104,8 +114,8 @@ export const TrendingFilterBar = React.memo(function TrendingFilterBar({
             ariaLabel={t('trending.filter.region')}
             onChange={set('region')}
             className="omnimux-trending-select-field"
-            placeholder={t('trending.region.all')}
-            options={toOptions(regionOptions, t)}
+            placeholder={t('trending.filter.region')}
+            options={toOptions(regionOptions, t, 'region')}
           />
         ) : null}
 
@@ -115,8 +125,8 @@ export const TrendingFilterBar = React.memo(function TrendingFilterBar({
             ariaLabel={t('trending.filter.industry')}
             onChange={set('industry')}
             className="omnimux-trending-select-field"
-            placeholder={t('trending.industry.all')}
-            options={toOptions(industryOptions, t)}
+            placeholder={t('trending.filter.industry')}
+            options={toOptions(industryOptions, t, 'industry')}
           />
         ) : null}
 

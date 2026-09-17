@@ -108,7 +108,7 @@ async function chooseOption(host, ariaLabel, optionText) {
     trigger.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
   })
   const option = Array.from(document.querySelectorAll('.omnimux-trending-select-option'))
-    .find((el) => el.textContent.trim() === optionText)
+    .find((el) => el.textContent.trim() === optionText || el.getAttribute('data-value') === optionText)
   assert.ok(option, `下拉「${ariaLabel}」里没有选项「${optionText}」`)
   await act(async () => {
     option.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))

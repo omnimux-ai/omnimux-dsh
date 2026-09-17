@@ -51,7 +51,9 @@ export function TrendingSelect({
 
   const selectedIndex = options.findIndex((option) => option.value === value)
   const matched = selectedIndex >= 0 ? options[selectedIndex] : null
-  const label = matched?.label ?? placeholder ?? ''
+  const label = (value !== '' && value !== undefined && value !== null)
+    ? (matched?.label ?? placeholder ?? '')
+    : (placeholder ?? matched?.label ?? '')
 
   const close = useCallback(({ refocus = false } = {}) => {
     setOpen(false)
@@ -165,6 +167,7 @@ export function TrendingSelect({
                 ref={(node) => { optionRefs.current[index] = node }}
                 type="button"
                 role="option"
+                data-value={option.value}
                 tabIndex={index === activeIndex ? 0 : -1}
                 aria-selected={option.value === value ? 'true' : 'false'}
                 className={`omnimux-trending-select-option${option.value === value ? ' is-active' : ''}`}

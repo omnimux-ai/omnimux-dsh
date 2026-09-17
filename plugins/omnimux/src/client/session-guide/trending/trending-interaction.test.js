@@ -75,13 +75,13 @@ function triggerByAria(host, ariaLabel) {
   return host.querySelector(`.omnimux-trending-select-trigger[aria-label="${ariaLabel}"]`)
 }
 
-/** 打开某个筛选下拉并选中一项。 */
+/** 打开某个筛选下拉并选中一项。支持按显示文本或 data-value 匹配。 */
 async function chooseOption(host, ariaLabel, optionText) {
   const trigger = triggerByAria(host, ariaLabel)
   assert.ok(trigger, `找不到筛选下拉：${ariaLabel}`)
   await click(trigger)
   const option = Array.from(document.querySelectorAll('.omnimux-trending-select-option'))
-    .find((el) => el.textContent.trim() === optionText)
+    .find((el) => el.textContent.trim() === optionText || el.getAttribute('data-value') === optionText)
   assert.ok(option, `下拉「${ariaLabel}」里没有选项「${optionText}」`)
   await click(option)
   await flush()
@@ -313,20 +313,51 @@ test('trending 真源：卡片渲染真实封面与真实读数，工具栏不�
   }
 })
 
-test('trending 真源：地区与类目档位来自数据，不出现库里没有的档位', async () => {
+test('trending 真源：地区与类目档位来自数据，不出现库里没有的档位（中文模式）', async () => {
   const view = await renderSection()
   try {
     await click(triggerByAria(view.host, 'trending.filter.region'))
     const regions = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
-    assert.deepEqual(regions, ['trending.region.all', 'TH', 'US'], '档位必须只包含数据里真实存在的地区')
+    assert.deepEqual(regions, ['trending.region.all', '泰国', '美国'], '档位必须只包含数据里真实存在的地区（中文本地化）')
     await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
 
     await click(triggerByAria(view.host, 'trending.filter.industry'))
     const categories = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
-    assert.deepEqual(categories, ['trending.industry.all', 'beauty', 'home'], '类目档位必须是库里真实出现的类目')
+    assert.deepEqual(categories, ['trending.industry.all', '美妆个护', '家居生活'], '类目档位必须是库里真实出现的类目（中文本地化）')
     await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
   } finally {
     await view.teardown()
+  }
+})
+
+test('trending 真源：英文语言环境下地区与类目呈现标准英文名', async () => {
+  const { TrendingReplicateSection } = await loadComponent('./TrendingReplicateSection.jsx')
+  const env = withDom(SECTION_FIXTURE)
+  const host = document.querySelector('#root')
+  const stub = stubFetch(SOURCE_ROWS)
+  const root = createRoot(host.querySelector('#seat'))
+
+  // 模拟 DSH 英文环境 t 函数
+  const enT = (key) => (key === 'locale' ? 'en' : key)
+  await act(async () => {
+    root.render(React.createElement(TrendingReplicateSection, { t: enT, onApplyPrompt: () => {} }))
+  })
+  await flush()
+
+  try {
+    await click(triggerByAria(host, 'trending.filter.region'))
+    const regions = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
+    assert.deepEqual(regions, ['trending.region.all', 'Thailand', 'United States'], '英文环境下呈现标准英文国名')
+    await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
+
+    await click(triggerByAria(host, 'trending.filter.industry'))
+    const categories = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
+    assert.deepEqual(categories, ['trending.industry.all', 'Beauty & Personal Care', 'Home & Living'], '英文环境下呈现标准英文商业类目')
+    await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
+  } finally {
+    await act(async () => root.unmount())
+    stub.restore()
+    env.restore()
   }
 })
 
