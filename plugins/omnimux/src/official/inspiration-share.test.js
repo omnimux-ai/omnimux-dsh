@@ -96,6 +96,31 @@ describe('inspiration share api (hub capability)', () => {
     })
   })
 
+  it('uploads cover and media concurrently in parallel', async () => {
+    let activeUploads = 0
+    let maxConcurrent = 0
+    const uploadMedia = async (source) => {
+      activeUploads++
+      if (activeUploads > maxConcurrent) maxConcurrent = activeUploads
+      await new Promise((r) => setTimeout(r, 20))
+      activeUploads--
+      return `https://files.omnimux.ai/${String(source).split('/').pop()}`
+    }
+
+    const { share } = api({
+      createOptions: { uploadMedia },
+    })
+
+    const result = await share.publishLocal({
+      cover: { path: '/tmp/covers/c.png', fileName: 'c.png' },
+      media: { path: '/tmp/videos/v.mp4', fileName: 'v.mp4' },
+      meta: META,
+    })
+
+    assert.equal(maxConcurrent, 2, 'cover and media uploads must run concurrently')
+    assert.equal(result.shareId, 'insp_17d391a7eb0b4a82')
+  })
+
   it('publishes a cover-only item as an image instead of inventing a media url', async () => {
     const { share, client, uploader } = api()
 

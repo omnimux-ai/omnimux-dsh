@@ -308,10 +308,11 @@ export function createInspirationShareApi(deps) {
 
       try {
         safeReport(() => args.onStage?.(SHARE_STAGES.UPLOADING))
-        // Cover first: a publish that fails on the video still leaves the cover
-        // the page renders from the returned URL.
-        const coverUrl = cover ? await uploadAsset(cover, apiKey) : ''
-        const mediaUrl = media ? await uploadAsset(media, apiKey) : ''
+        // Upload cover and media in parallel to cut wait time.
+        const [coverUrl, mediaUrl] = await Promise.all([
+          cover ? uploadAsset(cover, apiKey) : Promise.resolve(''),
+          media ? uploadAsset(media, apiKey) : Promise.resolve(''),
+        ])
 
         safeReport(() => args.onStage?.(SHARE_STAGES.PUBLISHING))
         const published = toShareResult(await publishInspirationShare(deps.client, {

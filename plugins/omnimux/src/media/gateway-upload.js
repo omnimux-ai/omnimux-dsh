@@ -456,7 +456,14 @@ export async function uploadMediaToGateway(source, options) {
         uploaded = await uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal })
       } catch (error) {
         if (signal?.aborted) throw error
-        directUploadUnavailable.add(baseUrl)
+        // Only mark the gateway deployment permanently unavailable for direct
+        // upload if the presign endpoint explicitly reported it is not implemented
+        // or not found (e.g. 501 / 404 / 405). Transient failures (R2 put errors, confirm
+        // timeouts) fall back for this item but keep direct upload enabled for future files.
+        const status = error instanceof OmnimuxError ? error.status : error?.status
+        if ([404, 405, 501].includes(status)) {
+          directUploadUnavailable.add(baseUrl)
+        }
       }
     }
     if (!uploaded) {
