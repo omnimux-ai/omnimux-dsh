@@ -388,8 +388,8 @@
           const snapshot = typeof sessions.list?.getSnapshot === "function" ? sessions.list.getSnapshot() : null;
           const sessionAId = snapshot?.current;
 
-          // 2. 准备 skill-creator 目标
-          if (!opts.preset) {
+          // 2. 准备 skill-creator 目标（试用挂载跳过安装）
+          if (!opts.preset && !opts.skipInstall) {
             const targetSlug = opts.slug || "skill-creator";
             const targetCatalogId = opts.catalogId || "sk-omx-skill-creator";
             try {
@@ -576,29 +576,62 @@
       return `/${slug} `;
     }
 
+    function currentPlazaSessionId() {
+      const sessions = plazaSessions || (typeof window !== "undefined" ? window.__omnimuxSessions : undefined);
+      try {
+        const snap = sessions && sessions.list && typeof sessions.list.getSnapshot === "function"
+          ? sessions.list.getSnapshot()
+          : null;
+        return (snap && snap.current) || "";
+      } catch {
+        return "";
+      }
+    }
+
     /**
-     * 在新会话中试用特定技能（仅引用，禁止自动发送）。
-     * installFlow=session-guide：装 OmniMux 薄引导技能 + 预填官方安装任务 + 点亮共享工具；
-     * 绝不 auto-send，绝不 bundling 第三方引擎。
+     * 在当前会话试用技能：点亮输入框技能标识 + 临时加载指令，禁止安装、禁止自动发送。
+     * installFlow=session-guide：仍走引导安装 + 预填官方安装任务（Hypit 等）。
      */
     async function trySkillInSession(skill) {
       if (!skill) return { ok: false };
       const slug = skill.token || skill.slug || skill.skillKey || skill.skill || "";
       if (!slug) return { ok: false };
 
-      if (!skill.installed) {
-        try {
-          await api("install", { slug, catalogId: skill.catalogId || skill.id });
-        } catch {}
+      const guide = skill.installFlow === "session-guide";
+      if (guide) {
+        if (!skill.installed) {
+          try {
+            await api("install", { slug, catalogId: skill.catalogId || skill.id });
+          } catch {}
+        }
+        const text = sessionGuidePrefillText(skill, slug);
+        const result = await createSkillSession({
+          slug,
+          catalogId: skill.catalogId || skill.id,
+          text,
+        });
+        activateSharedToolSkill({ ...skill, slug, installed: true });
+        return result;
       }
 
-      const guide = skill.installFlow === "session-guide";
-      const text = guide ? sessionGuidePrefillText(skill, slug) : `/${slug} `;
-      const result = await createSkillSession({
-        slug,
-        catalogId: skill.catalogId || skill.id,
-        text,
-      });
-      if (guide) activateSharedToolSkill({ ...skill, slug, installed: true });
-      return result;
+      activateSharedToolSkill({ ...skill, slug });
+      let sessionId = currentPlazaSessionId();
+      if (!sessionId) {
+        const created = await createSkillSession({ skipInstall: true, text: "" });
+        sessionId = created && created.sessionId;
+      }
+      if (!sessionId) return { ok: false, attached: false };
+      try {
+        await api("tryAttach", {
+          sessionId,
+          slug,
+          catalogId: skill.catalogId || skill.id,
+          title: skill.name || skill.title || slug,
+        });
+      } catch {}
+      return { ok: true, sessionId, attached: true, installed: false };
+    }
+
+    if (typeof window !== "undefined") {
+      window.trySkillInSession = trySkillInSession;
     }

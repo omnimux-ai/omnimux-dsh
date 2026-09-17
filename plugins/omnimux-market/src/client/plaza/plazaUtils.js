@@ -181,17 +181,15 @@ export function resolveExpertAvatar(item, size = 96) {
 }
 
 export function safeTrySkillInSession(item) {
-  if (typeof trySkillInSession === 'function') {
-    trySkillInSession(item);
-    return;
-  }
-  if (typeof SkillShelf !== 'undefined' && typeof SkillShelf.trySkillInSession === 'function') {
-    SkillShelf.trySkillInSession(item);
-    return;
-  }
-  if (typeof window !== 'undefined' && typeof window.trySkillInSession === 'function') {
-    window.trySkillInSession(item);
-  }
+  const fromWindow = typeof window !== 'undefined' && typeof window.trySkillInSession === 'function'
+    ? window.trySkillInSession
+    : null;
+  const fromFactory = typeof trySkillInSession === 'function' ? trySkillInSession : null;
+  const fromShelf = typeof SkillShelf !== 'undefined' && typeof SkillShelf.trySkillInSession === 'function'
+    ? SkillShelf.trySkillInSession
+    : null;
+  const fn = fromWindow || fromFactory || fromShelf;
+  if (fn) return fn(item);
 }
 
 export const EXPERT_STATUS_CONFIG = {

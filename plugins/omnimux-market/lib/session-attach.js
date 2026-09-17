@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 const MAX_SKILL_CHARS = 24_000;
 /** 会话 id 只允许落盘安全字符，防止路径穿越。 */
@@ -106,4 +106,83 @@ export function sessionIdFromExec(exec) {
     const agent = exec?.agent;
     const raw = agent?.session?.header?.id ?? agent?.session?.id ?? agent?.id;
     return sanitizeSessionId(raw);
+}
+/** `$DSH_HOME/omnimux-market/sessions/<sessionId>.trial.json` */
+export function sessionTrialPath(home, sessionId) {
+    const id = sanitizeSessionId(sessionId);
+    if (!id)
+        return '';
+    return join(home, 'omnimux-market', 'sessions', `${id}.trial.json`);
+}
+export function readSessionTrial(home, sessionId) {
+    const path = sessionTrialPath(home, String(sessionId || ''));
+    if (!path || !existsSync(path))
+        return null;
+    try {
+        const raw = JSON.parse(readFileSync(path, 'utf8'));
+        const slug = String(raw.slug || '').trim();
+        if (!slug)
+            return null;
+        return {
+            slug,
+            title: String(raw.title || slug),
+            catalogId: String(raw.catalogId || ''),
+            body: String(raw.body || ''),
+            attachedAt: String(raw.attachedAt || ''),
+        };
+    }
+    catch {
+        return null;
+    }
+}
+export function writeSessionTrial(home, sessionId, trial) {
+    const path = sessionTrialPath(home, String(sessionId || ''));
+    if (!path)
+        throw new Error('invalid session id');
+    const body = String(trial.body || '');
+    const payload = {
+        slug: String(trial.slug).trim(),
+        title: String(trial.title || trial.slug).trim(),
+        catalogId: String(trial.catalogId || '').trim(),
+        body: body.length > MAX_SKILL_CHARS ? body.slice(0, MAX_SKILL_CHARS) : body,
+        attachedAt: trial.attachedAt || new Date().toISOString(),
+    };
+    if (!payload.slug)
+        throw new Error('trial requires slug');
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`);
+    return payload;
+}
+export function clearSessionTrial(home, sessionId) {
+    const path = sessionTrialPath(home, String(sessionId || ''));
+    if (!path || !existsSync(path))
+        return false;
+    try {
+        unlinkSync(path);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+/**
+ * 每步系统提示用的临时技能段。挂上后跨轮从落盘重读；不写入安装目录。
+ * 空串表示本会话未试用技能。
+ */
+export function renderAttachedTrialSection(home, sessionId) {
+    const trial = readSessionTrial(home, sessionId);
+    if (!trial)
+        return '';
+    const truncated = trial.body.length >= MAX_SKILL_CHARS;
+    const skillText = truncated
+        ? `${trial.body}\n\n…(instructions truncated)`
+        : trial.body;
+    const raw = [
+        `This session has a temporary trial skill 「${trial.title}」 (slug ${trial.slug}). It is NOT installed into the skill library.`,
+        'Follow these instructions for this session only. Do not treat this as a durable install. Do not recommend installing unless the user explicitly asks.',
+        skillText
+            ? `Follow these skill instructions:\n\n${skillText}`
+            : `Temporary skill "${trial.slug}" is selected, but its instruction body is unavailable. Continue with the skill name and the user's message; do not invent missing instructions.`,
+    ].join('\n');
+    return escapePromptVariables(raw);
 }

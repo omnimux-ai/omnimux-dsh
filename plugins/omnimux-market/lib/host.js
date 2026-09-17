@@ -22,7 +22,7 @@ import { listMarketplaceConnectors } from './marketplace-connectors.js';
 import { createPlazaTools, PLAZA_PROMPT_LINES } from './plaza-tools.js';
 import { PLUGIN_PROMPT_LINES, createPluginTools } from './plugin-tools.js';
 import { installMarketPlugin, isProtectedBundle, listPlugins, readInstalledPlugins, withPluginInstallLock, } from './plugin-market.js';
-import { renderAttachedExpertSection, sessionIdFromExec } from './session-attach.js';
+import { renderAttachedExpertSection, renderAttachedTrialSection, sessionIdFromExec } from './session-attach.js';
 export const name = 'omnimux-market';
 export const inject = ['tools', 'skills'];
 /** Public package seam. Host owns this binding; request payloads never choose scope or roots. */
@@ -350,6 +350,11 @@ export function apply(ctx, config) {
             name: 'plaza:attached-expert',
             order: 8,
             text: (assemble) => renderAttachedExpertSection(dshHome(), sessionIdFromExec(assemble)),
+        });
+        prompt.section({
+            name: 'plaza:trial-skill',
+            order: 9,
+            text: (assemble) => renderAttachedTrialSection(dshHome(), sessionIdFromExec(assemble)),
         });
         prompt.section({
             name: 'tool:skillhub',

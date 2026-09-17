@@ -473,6 +473,13 @@
             }));
           } catch {}
         }
+        try {
+          const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : (typeof window !== "undefined" ? window.__omnimuxSessions : null);
+          const sid = sessions && sessions.list && typeof sessions.list.getSnapshot === "function"
+            ? (sessions.list.getSnapshot() || {}).current
+            : "";
+          if (sid) api("tryDetach", { sessionId: sid }).catch(() => {});
+        } catch {}
       }, []);
 
       const applyItem = useCallback((item) => {

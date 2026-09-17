@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const sessionCreateSrc = readFileSync(join(here, 'session-create.js'), 'utf8')
+const plazaUtilsSrc = readFileSync(join(here, 'plaza/plazaUtils.js'), 'utf8')
+const pickerSrc = readFileSync(join(here, 'skill-picker.js'), 'utf8')
+
+describe('try skill in current session without install (issue 2166)', () => {
+  it('exports trySkillInSession on window so plaza hover can reach it', () => {
+    assert.match(sessionCreateSrc, /window\.trySkillInSession\s*=\s*trySkillInSession/)
+    assert.match(plazaUtilsSrc, /fromWindow/)
+    assert.match(plazaUtilsSrc, /window\.trySkillInSession/)
+  })
+
+  it('non-guide try attaches current session and never calls install', () => {
+    assert.match(sessionCreateSrc, /api\(["']tryAttach["']/)
+    assert.match(sessionCreateSrc, /currentPlazaSessionId/)
+    assert.match(sessionCreateSrc, /skipInstall/)
+    const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+    const nonGuide = tryFn.slice(tryFn.indexOf('activateSharedToolSkill({ ...skill, slug })'))
+    assert.doesNotMatch(nonGuide, /api\(["']install["']/)
+    assert.match(nonGuide, /installed:\s*false/)
+  })
+
+  it('session-guide still installs then prefills', () => {
+    assert.match(sessionCreateSrc, /installFlow === ["']session-guide["']/)
+    assert.match(sessionCreateSrc, /sessionGuidePrefillText/)
+    assert.match(sessionCreateSrc, /await api\(["']install["']/)
+  })
+
+  it('clearing the skill chip detaches the trial', () => {
+    assert.match(pickerSrc, /tryDetach/)
+  })
+})

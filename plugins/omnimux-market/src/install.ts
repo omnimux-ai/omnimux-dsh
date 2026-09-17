@@ -186,6 +186,16 @@ export async function installedSlugs(skillsDir: string): Promise<Set<string>> {
   return new Set((await listInstalled(skillsDir)).map((it) => it.slug))
 }
 
+/**
+ * Download a remote SkillHub zip in memory and return SKILL.md text.
+ * Never writes into the install directory.
+ */
+export async function peekSkillMarkdown(slug: string, cfg: PluginConfig, deps: InstallDeps = defaultDeps, signal?: AbortSignal): Promise<string> {
+  const files = await downloadSkillFiles(slug, cfg, deps, signal)
+  const buf = files['SKILL.md']
+  return buf ? buf.toString('utf8') : ''
+}
+
 export async function uninstallSkill(slug: string, skillsDir: string): Promise<{ slug: string; path: string }> {
   const id = parseSlug(slug)
   const target = skillDir(skillsDir, id)

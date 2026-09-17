@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { escapePromptVariables, readSessionExpert, renderAttachedExpertSection, sanitizeSessionId, sessionExpertPath, sessionIdFromExec, writeSessionExpert, } from '../session-attach.js';
+import { clearSessionTrial, escapePromptVariables, readSessionExpert, readSessionTrial, renderAttachedExpertSection, renderAttachedTrialSection, sanitizeSessionId, sessionExpertPath, sessionIdFromExec, writeSessionExpert, writeSessionTrial, } from '../session-attach.js';
 function home() {
     return mkdtempSync(join(tmpdir(), 'omx-attach-'));
 }
@@ -98,4 +98,23 @@ test('sessionIdFromExec reads header.id then agent.id (assemble path)', () => {
     assert.equal(sessionIdFromExec({ agent: { session: { header: { id: 'abc_1' } } } }), 'abc_1');
     assert.equal(sessionIdFromExec({ agent: { id: 'session-9' } }), 'session-9');
     assert.equal(sessionIdFromExec({}), '');
+});
+test('trial skill persists body without writing $HOME/skills', () => {
+    const h = home();
+    const saved = writeSessionTrial(h, 'chat-1', {
+        slug: 'tiktok-market-trend-analysis',
+        title: 'TikTok 市场趋势分析',
+        catalogId: 'sk-tiktok-market-trend-analysis',
+        body: '# 趋势分析\n\n先看品类再下结论。\n',
+    });
+    assert.equal(saved.slug, 'tiktok-market-trend-analysis');
+    const again = readSessionTrial(h, 'chat-1');
+    assert.deepEqual(again, saved);
+    const text = renderAttachedTrialSection(h, 'chat-1');
+    assert.match(text, /temporary trial skill/);
+    assert.match(text, /NOT installed/);
+    assert.match(text, /先看品类再下结论/);
+    assert.equal(renderAttachedTrialSection(h, 'other'), '');
+    assert.equal(clearSessionTrial(h, 'chat-1'), true);
+    assert.equal(readSessionTrial(h, 'chat-1'), null);
 });
