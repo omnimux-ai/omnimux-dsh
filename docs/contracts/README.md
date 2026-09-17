@@ -47,6 +47,7 @@ subsystem: "global"
 | `living` | [plugin-qa.md](plugin-qa.md) | plugin-qa — OmniMux 插件验收证据合同 | `omnimux` | 2026-09-09 | 合入前自动化/静态与独立评审；Agent 侧按需隔离 worktree 真实浏览器 Web 验收；CI 不证明 Dev 真机通过，Dev 真机验收归人工。 |
 | `archived` | [series.md](series.md) | series/ contract | `omnimux-workflow` | 2026-08-26 | Product store. Session logs are not this store. |
 | `living` | [settings-ui.md](settings-ui.md) | Settings UI placement | `omnimux-accounts` | 2026-08-26 | Normative seat for OmniMux plugin UI in the official Web Settings panel. Live slot names come from t |
+| `living` | [three-column-layout.md](three-column-layout.md) | three-column-layout — 三分栏收起布局契约 | `omnimux` | 2026-09-17 | 左栏/会话栏/右栏的收起行为由六条互相覆盖的 `grid-template-columns !important` 规则决定，胜负取决于层叠（重要性→特异性→顺序）；改这些规则前必须读本契约，并跑 `three-column-layout-contract.test.js`（CI 已接线）与 `scripts/three-column-collapse-qa.mjs`。 |
 | `living` | [workbench-split.md](workbench-split.md) | Workbench split — 对话可收、插件 GUI 常驻 | `omnimux` | 2026-08-31 | 工作台与一级库页统一使用 `dsh-better-sidebar` Tabs；焦点 = 右栏几何（split/gui/chat）；禁止 claim product-stage，合法 overlay 仅按合同限定。 |
 | `living` | [sidebar-extra-entries.md](sidebar-extra-entries.md) | Sidebar extra entries (under 新会话) | `omnimux-assets` | 2026-08-26 | Normative look for any extra row injected under the official **新会话** button. Official workspace sess |
 | `living` | [stage-guards.md](stage-guards.md) | stage-guards — 一级 Stage / 本地写闸 / 空态静态契约 | `omnimux-accounts` | 2026-08-26 | \| 规则 \| 判定 \| |
