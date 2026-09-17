@@ -320,5 +320,44 @@ describe('add-to-chat helpers', () => {
       assert.equal(res.ok, false)
       assert.equal(res.error, 'no-asset')
     })
+
+    it('builds payload and delivers unified reference for cloud assets with cover and media URLs', () => {
+      let deliveredRef = null
+      const fakeRefApi = {
+        deliver: (ref) => { deliveredRef = ref },
+      }
+      const cloudAsset = {
+        id: 'character-fantasy-genrex-2908f54b4d8c',
+        name: 'Angel Influencer',
+        category: 'character',
+        sub_category: 'fantasy-genrex',
+        cover_url: 'file:library/opc/free-ai-avatars/versions/v1/files/Fantasy_GenreX/Angel Influencer/Angel Influencer.png',
+        media_url: 'file:library/opc/free-ai-avatars/versions/v1/files/Fantasy_GenreX/Angel Influencer/089-angel-influencer.wav',
+        media_type: 'audio',
+        meta: {
+          source_cover_url: 'https://assets.omnimux.ai/avatars/free-ai-avatars/Fantasy_GenreX/Angel%20Influencer/Angel%20Influencer.png',
+          source_media_url: 'https://assets.omnimux.ai/avatars/free-ai-avatars/Fantasy_GenreX/Angel%20Influencer/089-angel-influencer.wav',
+        },
+      }
+
+      const res = addAssetToConversation(cloudAsset, {
+        window: {
+          __omnimuxReference: fakeRefApi,
+        },
+      })
+
+      assert.equal(res.ok, true)
+      assert.equal(res.payload.entityId, 'character-fantasy-genrex-2908f54b4d8c')
+      assert.equal(res.payload.title, 'Angel Influencer')
+      assert.equal(res.payload.metadata.is_cloud, true)
+      assert.equal(res.payload.metadata.source_cover_url, cloudAsset.meta.source_cover_url)
+      assert.equal(res.payload.metadata.source_media_url, cloudAsset.meta.source_media_url)
+      assert.ok(res.payload.previewUrl.includes('Angel%20Influencer.png'))
+
+      assert.ok(deliveredRef)
+      assert.equal(deliveredRef.id, 'character-fantasy-genrex-2908f54b4d8c')
+      assert.equal(deliveredRef.context.metadata.is_cloud, true)
+      assert.match(deliveredRef.context.summary, /公共素材: Angel Influencer/)
+    })
   })
 })

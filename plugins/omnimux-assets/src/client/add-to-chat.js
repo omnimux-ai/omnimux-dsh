@@ -93,12 +93,22 @@ export function inferAssetExtension(coverFile, fallbackTitle = '') {
 export function buildAssetPayload(asset) {
   if (!asset || !asset.id) return null
   const files = Array.isArray(asset.files) ? asset.files : []
+  const isCloud = Boolean(
+    asset.isCloud === true
+    || asset.category
+    || asset.cover_url
+    || asset.media_url
+    || asset.meta?.source_media_url
+    || asset.meta?.source_cover_url
+    || (typeof asset.id === 'string' && /^(character|scene|material|prop|style|audio)-/.test(asset.id))
+  )
+
   const isMultiFile = files.length > 1
   const isExplicitDir = asset.type === 'directory' || asset.is_dir === true
   const isDir = isExplicitDir || (files.length === 1 && isDirectoryFile(files[0]))
   const coverFile = pickCoverFile(asset) || (files.length > 0 ? files[0] : null)
-  const ext = inferAssetExtension(coverFile, asset.name)
-  const pUrl = coverFile?.id
+  let ext = inferAssetExtension(coverFile, asset.name)
+  let pUrl = coverFile?.id
     ? previewUrl(asset.id, coverFile.id)
     : (typeof coverFile?.preview_url === 'string' ? coverFile.preview_url : '')
 
@@ -108,6 +118,55 @@ export function buildAssetPayload(asset) {
       kind = 'image'
     } else if (isVideoFile(coverFile) || (ext && ext !== 'ASSET' && VIDEO_EXT.test(`.${ext}`))) {
       kind = 'video'
+    }
+  }
+
+  // 云端公共资产特殊补齐：透传云端直链与分类元数据
+  if (isCloud && files.length === 0) {
+    const cloudCover = asset.cover_url?.startsWith('http')
+      ? asset.cover_url
+      : (asset.meta?.source_cover_url || (asset.id ? `/omnimux/assets/cloud/media?id=${encodeURIComponent(asset.id)}&which=cover` : ''))
+    const cloudMedia = asset.media_url?.startsWith('http')
+      ? asset.media_url
+      : (asset.meta?.source_media_url || (asset.id ? `/omnimux/assets/cloud/media?id=${encodeURIComponent(asset.id)}&which=media` : ''))
+
+    if (!pUrl && cloudCover) {
+      pUrl = cloudCover
+    }
+    const mediaType = asset.mediaType || asset.media_type || (asset.category === 'audio' ? 'audio' : '')
+    if (mediaType === 'audio') {
+      kind = asset.hasCover === false && !cloudCover ? 'audio' : 'asset'
+      if (ext === 'ASSET') ext = 'AUDIO'
+    } else if (mediaType === 'video' || VIDEO_EXT.test(cloudMedia)) {
+      kind = 'video'
+      if (ext === 'ASSET') ext = 'VIDEO'
+    } else if (mediaType === 'image' || IMAGE_EXT.test(cloudCover) || IMAGE_EXT.test(cloudMedia)) {
+      kind = 'image'
+      if (ext === 'ASSET') ext = 'IMAGE'
+    }
+
+    return {
+      sourcePlugin: 'omnimux-assets',
+      kind,
+      entityId: String(asset.id),
+      title: asset.name || '资产',
+      extension: ext || 'ASSET',
+      relativePath: asset.meta?.dims?.name || asset.name || '',
+      previewUrl: pUrl,
+      metadata: {
+        asset_id: asset.id,
+        type: asset.type || asset.category || 'custom',
+        is_cloud: true,
+        category: asset.category || '',
+        sub_category: asset.sub_category || '',
+        cover_url: asset.cover_url || '',
+        media_url: asset.media_url || '',
+        source_cover_url: asset.meta?.source_cover_url || '',
+        source_media_url: asset.meta?.source_media_url || '',
+        media_type: mediaType,
+        tags: Array.isArray(asset.tags) ? asset.tags : [],
+        files: [],
+      },
     }
   }
 
@@ -201,6 +260,7 @@ function sendPayloadToConversation(payload, io = {}) {
   const refApi = win.__omnimuxReference
   if (refApi && typeof refApi.deliver === 'function') {
     try {
+      const isCloud = payload.metadata?.is_cloud === true
       const unifiedRef = {
         id: String(payload.entityId || ''),
         source: 'asset',
@@ -213,7 +273,9 @@ function sendPayloadToConversation(payload, io = {}) {
         },
         context: {
           scene: 'general',
-          summary: payload.title,
+          summary: isCloud
+            ? `公共素材: ${payload.title} (分类: ${payload.metadata?.category || '未分类'}, 云端编号: ${payload.entityId})`
+            : payload.title,
           metadata: payload.metadata,
         },
       }

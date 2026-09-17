@@ -124,7 +124,7 @@ export function createCloudCatalog(deps = {}) {
   const catalogDir = deps.catalogDir ?? DEFAULT_CATALOG_DIR
   const library = deps.library
   const env = deps.env ?? process.env
-  const fetchImpl = deps.fetchImpl ?? globalThis.fetch
+  const getFetch = () => deps.fetchImpl ?? globalThis.fetch
 
   /** @type {Record<string, unknown> | null} */
   let manifest = null
@@ -333,11 +333,29 @@ export function createCloudCatalog(deps = {}) {
   }
 
   /**
+   * Helper to resolve either a primary locator or a remote fallback locator.
+   * @param {string | undefined} primaryLocator
+   * @param {string | undefined} fallbackLocator
+   */
+  function resolveResource(primaryLocator, fallbackLocator) {
+    if (primaryLocator) {
+      const resolved = resolveMedia(primaryLocator)
+      if (resolved !== null) return resolved
+    }
+    if (fallbackLocator) {
+      const resolved = resolveMedia(fallbackLocator)
+      if (resolved !== null) return resolved
+    }
+    return null
+  }
+
+  /**
    * Copy (or download) one catalog row's media into the local asset library.
    *
-   * Returns the created library asset. A descriptor-only row — an official
-   * Volcengine voice, for instance — has no media at all and is saved as a
-   * description-only library record instead of failing.
+   * Downloads both cover (image) and media (audio/video/other) files into the
+   * local managed library vault, falling back to cloud remote URLs when local
+   * file locators are unavailable.
+   *
    * @param {string} id
    * @param {{ type?: string, name?: string }} [options]
    */
@@ -346,20 +364,65 @@ export function createCloudCatalog(deps = {}) {
     const row = getRow(id)
     if (!row) throw new AssetsError('catalog-not-found', 'cloud asset not found')
 
-    const resolved = resolveMedia(row.media_url)
-    const name = String(options.name ?? '').trim() || row.name
+    const baseName = String(options.name ?? '').trim() || row.name
+    // 若已存过该云端行且未指定重命名，直接复用返回现有资产
+    if (!options.name && typeof library.list === 'function') {
+      const existing = library.list().find((item) => item.source === `cloud:${row.id}`)
+      if (existing) return existing
+    }
+
+    let targetName = baseName
+    let nameSuffix = 2
+    while (typeof library.get === 'function' && library.get(targetName)) {
+      targetName = `${baseName} (${nameSuffix})`
+      nameSuffix += 1
+    }
+
     /** @type {{ real_path: string, original_name: string }[]} */
     const files = []
+    const seenPaths = new Set()
 
-    if (resolved?.kind === 'local') {
-      files.push({ real_path: resolved.absolutePath, original_name: basename(resolved.absolutePath) })
-    } else if (resolved?.kind === 'remote') {
-      const staged = await stageRemote(resolved.url, name)
-      if (staged) files.push({ real_path: staged, original_name: basename(staged) })
+    // 1. 优先解析并下载封面图片 (cover)
+    const coverPrimary = row.cover_url
+    const coverFallback = row.meta?.source_cover_url
+    if (coverPrimary || coverFallback) {
+      const resolvedCover = resolveResource(coverPrimary, coverFallback)
+      if (resolvedCover?.kind === 'local' && !seenPaths.has(resolvedCover.absolutePath)) {
+        files.push({ real_path: resolvedCover.absolutePath, original_name: basename(resolvedCover.absolutePath) })
+        seenPaths.add(resolvedCover.absolutePath)
+      } else if (resolvedCover?.kind === 'remote') {
+        const stagedCover = await stageRemote(resolvedCover.url, `${targetName}-cover`)
+        if (stagedCover && !seenPaths.has(stagedCover)) {
+          const ext = extensionFor(resolvedCover.url, '')
+          files.push({ real_path: stagedCover, original_name: `${targetName}-cover${ext}` })
+          seenPaths.add(stagedCover)
+        }
+      }
+    }
+
+    // 2. 解析并下载主媒体文件 (audio/video/other)
+    const mediaPrimary = row.media_url
+    const mediaFallback = row.meta?.source_media_url
+    if (mediaPrimary || mediaFallback) {
+      const isSameAsCover = (mediaPrimary && mediaPrimary === coverPrimary) || (mediaFallback && mediaFallback === coverFallback)
+      if (!isSameAsCover) {
+        const resolvedMedia = resolveResource(mediaPrimary, mediaFallback)
+        if (resolvedMedia?.kind === 'local' && !seenPaths.has(resolvedMedia.absolutePath)) {
+          files.push({ real_path: resolvedMedia.absolutePath, original_name: basename(resolvedMedia.absolutePath) })
+          seenPaths.add(resolvedMedia.absolutePath)
+        } else if (resolvedMedia?.kind === 'remote') {
+          const stagedMedia = await stageRemote(resolvedMedia.url, targetName)
+          if (stagedMedia && !seenPaths.has(stagedMedia)) {
+            const ext = extensionFor(resolvedMedia.url, '')
+            files.push({ real_path: stagedMedia, original_name: `${targetName}${ext}` })
+            seenPaths.add(stagedMedia)
+          }
+        }
+      }
     }
 
     return library.add({
-      name,
+      name: targetName,
       type: String(options.type ?? '') || typeForCategory(row.category),
       description: descriptionFor(row),
       tags: row.tags ?? [],
@@ -370,13 +433,14 @@ export function createCloudCatalog(deps = {}) {
 
   /** @param {string} url @param {string} name */
   async function stageRemote(url, name) {
-    if (typeof fetchImpl !== 'function') return null
+    const fetchFunc = getFetch()
+    if (typeof fetchFunc !== 'function') return null
     const staging = join(catalogDir, '.staging')
     mkdirSync(staging, { recursive: true, mode: 0o700 })
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS)
     try {
-      const response = await fetchImpl(url, { signal: controller.signal })
+      const response = await fetchFunc(url, { signal: controller.signal })
       if (!response.ok) return null
       const declared = Number(response.headers?.get?.('content-length') ?? 0)
       if (Number.isFinite(declared) && declared > MAX_REMOTE_SAVE_BYTES) {

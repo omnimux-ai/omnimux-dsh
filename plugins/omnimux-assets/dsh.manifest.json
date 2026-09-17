@@ -12,6 +12,7 @@
       { "name": "assets_list", "summary": "列出资产库中的所有资产对象", "category": "library", "isWriteOperation": false, "requiresAuth": false },
       { "name": "assets_get", "summary": "获取指定资产的详细信息与媒体引用路径", "category": "library", "isWriteOperation": false, "requiresAuth": false },
       { "name": "assets_search", "summary": "按分类/关键词检索资产库", "category": "library", "isWriteOperation": false, "requiresAuth": false },
+      { "name": "assets_cloud_save", "summary": "将公共/云端素材下载到本地并存入本地资产库", "category": "library", "isWriteOperation": true, "requiresAuth": false },
       { "name": "assets_upload", "summary": "导入或注册新的资产至资产库", "category": "library", "isWriteOperation": true, "requiresAuth": false }
     ],
     "seamsProvided": [],
