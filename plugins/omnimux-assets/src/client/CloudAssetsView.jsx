@@ -19,6 +19,7 @@ import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './charact
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
+import { MasonryGrid } from './masonry-grid.jsx'
 
 /** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
@@ -132,6 +133,15 @@ function CloudTileMedia(props) {
           className="omnimux-assets-card-media"
           alt=""
           loading="lazy"
+          width={9}
+          height={16}
+          onLoad={(event) => {
+            const image = event.currentTarget
+            if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+              image.setAttribute('width', String(image.naturalWidth))
+              image.setAttribute('height', String(image.naturalHeight))
+            }
+          }}
           onError={handleImageError}
         />
       )}
@@ -161,7 +171,7 @@ function CloudTileMedia(props) {
  * control on the card.
  *
  * The body follows the row (`cloudCardKind`):
- * - a picture or video gets a fixed 164px thumbnail with one line of title;
+ * - a picture or video gets a thumbnail at the cover's original ratio with one line of title;
  * - a voice gets a tinted colour plate that plays and stops it, with the title and
  *   one line of voice description underneath;
  * - a text row (a description-only document) gets no plate at all — a title over
@@ -566,21 +576,21 @@ export function CloudAssetsView(props) {
     // 换成真卡片，不做二次布局，观感上是从模糊到清晰而不是从空白到出现。
     body = (
       <div className="omnimux-assets-cloud-scroll">
-        <div
-          ref={gridRef}
+        <MasonryGrid
+          gridRef={gridRef}
+          columns={gridColumns}
+          items={Array.from({ length: CLOUD_SKELETON_COUNT }, (_unused, index) => ({ id: `skeleton-${index}` }))}
           className="omnimux-assets-grid omnimux-assets-cloud-grid"
-          data-columns={gridColumns}
           data-skeleton="true"
           aria-busy="true"
           aria-label={t('cloud.loading')}
-        >
-          {Array.from({ length: CLOUD_SKELETON_COUNT }, (_unused, index) => (
-            <div className="omnimux-assets-card omnimux-assets-cloud-skeleton" key={index}>
+          renderItem={(row) => (
+            <div className="omnimux-assets-card omnimux-assets-cloud-skeleton" key={row.id}>
               <div className="omnimux-assets-cloud-skeleton-thumb" />
               <div className="omnimux-assets-cloud-skeleton-line" />
             </div>
-          ))}
-        </div>
+          )}
+        />
       </div>
     )
   } else if (items.length === 0) {
@@ -588,8 +598,12 @@ export function CloudAssetsView(props) {
   } else {
     body = (
       <div className="omnimux-assets-cloud-scroll">
-        <div ref={gridRef} className="omnimux-assets-grid omnimux-assets-cloud-grid" data-columns={gridColumns}>
-          {items.map((asset) => (
+        <MasonryGrid
+          gridRef={gridRef}
+          columns={gridColumns}
+          items={items}
+          className="omnimux-assets-grid omnimux-assets-cloud-grid"
+          renderItem={(asset) => (
             <CloudAssetCard
               key={asset.id}
               asset={asset}
@@ -598,8 +612,8 @@ export function CloudAssetsView(props) {
               onTogglePlay={onTogglePlay}
               onPreview={onPreview}
             />
-          ))}
-        </div>
+          )}
+        />
         <div ref={sentinelRef} className="omnimux-assets-cloud-sentinel" aria-hidden="true" />
         {hasMore ? (
           <div className="omnimux-assets-cloud-more">

@@ -1,0 +1,900 @@
+{
+ "issue": 2150,
+ "kind": "component-level-real-render",
+ "origin": "http://127.0.0.1:51317",
+ "cases": [
+  {
+   "width": 1560,
+   "expected": 5,
+   "columns": 5,
+   "colCount": 5,
+   "cardCount": 24,
+   "attr": 5,
+   "display": "flex",
+   "ratios": [
+    {
+     "id": "c0",
+     "natural": 0.5625,
+     "rendered": 0.5625054497892749,
+     "error": 0.000009688514266414927,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c7",
+     "natural": 0.75,
+     "rendered": 0.75,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 403
+    },
+    {
+     "id": "c12",
+     "natural": 0.5625,
+     "rendered": 0.5625054497892749,
+     "error": 0.000009688514266414927,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c18",
+     "natural": 0.5625,
+     "rendered": 0.5625054497892749,
+     "error": 0.000009688514266414927,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c1",
+     "natural": 0.8195991091314031,
+     "rendered": 0.8196332528691822,
+     "error": 0.00004165907136635008,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 369
+    },
+    {
+     "id": "c5",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 302
+    },
+    {
+     "id": "c10",
+     "natural": 0.5625,
+     "rendered": 0.5625018164908303,
+     "error": 0.0000032293170316598384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c15",
+     "natural": 0.5625,
+     "rendered": 0.5625018164908303,
+     "error": 0.0000032293170316598384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c21",
+     "natural": 0.5633802816901409,
+     "rendered": 0.5633860215992781,
+     "error": 0.000010188338718555845,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 537
+    },
+    {
+     "id": "c2",
+     "natural": 0.5625,
+     "rendered": 0.5625054497892749,
+     "error": 0.000009688514266414927,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c8",
+     "natural": 0.8,
+     "rendered": 0.800008267537514,
+     "error": 0.000010334421892410628,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 378
+    },
+    {
+     "id": "c11",
+     "natural": 0.75,
+     "rendered": 0.75,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 403
+    },
+    {
+     "id": "c16",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654803646563815,
+     "error": 0.000007381708127334419,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 302,
+     "boxH": 535
+    },
+    {
+     "id": "c22",
+     "natural": 0.5625,
+     "rendered": 0.5625054497892749,
+     "error": 0.000009688514266414927,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c3",
+     "natural": 0.5625,
+     "rendered": 0.5625018164908303,
+     "error": 0.0000032293170316598384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c9",
+     "natural": 0.5633802816901409,
+     "rendered": 0.5633860215992781,
+     "error": 0.000010188338718555845,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 537
+    },
+    {
+     "id": "c14",
+     "natural": 0.5625,
+     "rendered": 0.5625018164908303,
+     "error": 0.0000032293170316598384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c19",
+     "natural": 0.75,
+     "rendered": 0.7500096880449525,
+     "error": 0.000012917393269991825,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 403
+    },
+    {
+     "id": "c23",
+     "natural": 0.75,
+     "rendered": 0.7500096880449525,
+     "error": 0.000012917393269991825,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 403
+    },
+    {
+     "id": "c4",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654765383042132,
+     "error": 6.151063980690191e-7,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 535
+    },
+    {
+     "id": "c6",
+     "natural": 0.5625,
+     "rendered": 0.5625018164908303,
+     "error": 0.0000032293170316598384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 538
+    },
+    {
+     "id": "c13",
+     "natural": 0.8195991091314031,
+     "rendered": 0.8196332528691822,
+     "error": 0.00004165907136635008,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 369
+    },
+    {
+     "id": "c17",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 302,
+     "boxH": 302
+    },
+    {
+     "id": "c20",
+     "natural": 0.8,
+     "rendered": 0.8000165343915344,
+     "error": 0.000020667989417966215,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 302,
+     "boxH": 378
+    }
+   ],
+   "colHeights": [
+    2332,
+    2681,
+    2789,
+    2816,
+    2520
+   ],
+   "heightSpread": 0.1720175978784903,
+   "overflowX": false,
+   "stable": true,
+   "coverRatioSample": 0.5625
+  },
+  {
+   "width": 1280,
+   "expected": 4,
+   "columns": 4,
+   "colCount": 4,
+   "cardCount": 24,
+   "attr": 4,
+   "display": "flex",
+   "ratios": [
+    {
+     "id": "c0",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c5",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 311
+    },
+    {
+     "id": "c8",
+     "natural": 0.8,
+     "rendered": 0.8,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 389
+    },
+    {
+     "id": "c12",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c16",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654866753792829,
+     "error": 0.000018541723363422368,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 550
+    },
+    {
+     "id": "c21",
+     "natural": 0.5633802816901409,
+     "rendered": 0.5633898496985479,
+     "error": 0.000016983214922447474,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 552
+    },
+    {
+     "id": "c1",
+     "natural": 0.8195991091314031,
+     "rendered": 0.8196005764875437,
+     "error": 0.0000017903339867576384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 379
+    },
+    {
+     "id": "c4",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654866753792829,
+     "error": 0.000018541723363422368,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 550
+    },
+    {
+     "id": "c9",
+     "natural": 0.5633802816901409,
+     "rendered": 0.5633898496985479,
+     "error": 0.000016983214922447474,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 552
+    },
+    {
+     "id": "c13",
+     "natural": 0.8195991091314031,
+     "rendered": 0.8196005764875437,
+     "error": 0.0000017903339867576384,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 379
+    },
+    {
+     "id": "c17",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 311
+    },
+    {
+     "id": "c20",
+     "natural": 0.8,
+     "rendered": 0.8,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 389
+    },
+    {
+     "id": "c23",
+     "natural": 0.75,
+     "rendered": 0.7500188409073781,
+     "error": 0.00002512120983751605,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 415
+    },
+    {
+     "id": "c2",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c6",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c11",
+     "natural": 0.75,
+     "rendered": 0.7500188409073781,
+     "error": 0.00002512120983751605,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 415
+    },
+    {
+     "id": "c14",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c18",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c3",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c7",
+     "natural": 0.75,
+     "rendered": 0.7500188409073781,
+     "error": 0.00002512120983751605,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 415
+    },
+    {
+     "id": "c10",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c15",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    },
+    {
+     "id": "c19",
+     "natural": 0.75,
+     "rendered": 0.7500188409073781,
+     "error": 0.00002512120983751605,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 311,
+     "boxH": 415
+    },
+    {
+     "id": "c22",
+     "natural": 0.5625,
+     "rendered": 0.5625141306805336,
+     "error": 0.00002512120983746671,
+     "objectFit": "fill",
+     "heightAuto": true,
+     "boxW": 311,
+     "boxH": 553
+    }
+   ],
+   "colHeights": [
+    3387,
+    3537,
+    3024,
+    3521
+   ],
+   "heightSpread": 0.1450657502418425,
+   "overflowX": false,
+   "stable": true,
+   "coverRatioSample": 0.5625
+  },
+  {
+   "width": 1024,
+   "expected": 3,
+   "columns": 3,
+   "colCount": 3,
+   "cardCount": 24,
+   "attr": 3,
+   "display": "flex",
+   "ratios": [
+    {
+     "id": "c0",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c4",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654870775347912,
+     "error": 0.000019252903630800606,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 589
+    },
+    {
+     "id": "c8",
+     "natural": 0.8,
+     "rendered": 0.8000075001875047,
+     "error": 0.000009375234380770703,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 417
+    },
+    {
+     "id": "c11",
+     "natural": 0.75,
+     "rendered": 0.75,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 444
+    },
+    {
+     "id": "c13",
+     "natural": 0.8195991091314031,
+     "rendered": 0.8196173351775011,
+     "error": 0.0000222377573315569,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 407
+    },
+    {
+     "id": "c15",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c19",
+     "natural": 0.75,
+     "rendered": 0.75,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 444
+    },
+    {
+     "id": "c21",
+     "natural": 0.5633802816901409,
+     "rendered": 0.5633813975598162,
+     "error": 0.0000019806686737067204,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 592
+    },
+    {
+     "id": "c1",
+     "natural": 0.8195991091314031,
+     "rendered": 0.819624265242614,
+     "error": 0.00003069319003721223,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 407
+    },
+    {
+     "id": "c3",
+     "natural": 0.5625,
+     "rendered": 0.5625016479025496,
+     "error": 0.000002929604532692704,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c7",
+     "natural": 0.75,
+     "rendered": 0.750008788890842,
+     "error": 0.00001171852112265744,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 444
+    },
+    {
+     "id": "c9",
+     "natural": 0.5633802816901409,
+     "rendered": 0.563392927879156,
+     "error": 0.00002244698550177837,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 592
+    },
+    {
+     "id": "c12",
+     "natural": 0.5625,
+     "rendered": 0.5625016479025496,
+     "error": 0.000002929604532692704,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c16",
+     "natural": 0.5654761904761905,
+     "rendered": 0.5654836059055849,
+     "error": 0.00001311360145539453,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 589
+    },
+    {
+     "id": "c20",
+     "natural": 0.8,
+     "rendered": 0.8000149998125023,
+     "error": 0.000018749765627879,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 417
+    },
+    {
+     "id": "c23",
+     "natural": 0.75,
+     "rendered": 0.750008788890842,
+     "error": 0.00001171852112265744,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 444
+    },
+    {
+     "id": "c2",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c5",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 333
+    },
+    {
+     "id": "c6",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c10",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c14",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c17",
+     "natural": 1,
+     "rendered": 1,
+     "error": 0,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 333
+    },
+    {
+     "id": "c18",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    },
+    {
+     "id": "c22",
+     "natural": 0.5625,
+     "rendered": 0.5625049439683586,
+     "error": 0.000008789277081946681,
+     "objectFit": "fill",
+     "heightAuto": false,
+     "boxW": 333,
+     "boxH": 593
+    }
+   ],
+   "colHeights": [
+    4722,
+    4723,
+    4866
+   ],
+   "heightSpread": 0.029518482365331757,
+   "overflowX": false,
+   "stable": true,
+   "coverRatioSample": 0.5625
+  }
+ ],
+ "screenshots": [
+  {
+   "width": 1560,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/b-2150/docs/evidence/asset-grid-masonry-2150-render-1560.png",
+   "bytes": 20411
+  },
+  {
+   "width": 1280,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/b-2150/docs/evidence/asset-grid-masonry-2150-render-1280.png",
+   "bytes": 18117
+  },
+  {
+   "width": 1024,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/b-2150/docs/evidence/asset-grid-masonry-2150-render-1024.png",
+   "bytes": 16796
+  }
+ ],
+ "errors": [],
+ "assertions": [
+  {
+   "name": "probe-page-ready",
+   "pass": true
+  },
+  {
+   "name": "real-stylesheet-loaded",
+   "pass": true
+  },
+  {
+   "name": "columns@1560",
+   "pass": true,
+   "colCount": 5
+  },
+  {
+   "name": "ratio<=1%@1560",
+   "pass": true,
+   "worst": 0.00004165907136635008
+  },
+  {
+   "name": "no-cover@1560",
+   "pass": true
+  },
+  {
+   "name": "spread<=20%@1560",
+   "pass": true,
+   "spread": 0.1720175978784903
+  },
+  {
+   "name": "append-stable@1560",
+   "pass": true
+  },
+  {
+   "name": "no-overflow@1560",
+   "pass": true
+  },
+  {
+   "name": "columns@1280",
+   "pass": true,
+   "colCount": 4
+  },
+  {
+   "name": "ratio<=1%@1280",
+   "pass": true,
+   "worst": 0.00002512120983751605
+  },
+  {
+   "name": "no-cover@1280",
+   "pass": true
+  },
+  {
+   "name": "spread<=20%@1280",
+   "pass": true,
+   "spread": 0.1450657502418425
+  },
+  {
+   "name": "append-stable@1280",
+   "pass": true
+  },
+  {
+   "name": "no-overflow@1280",
+   "pass": true
+  },
+  {
+   "name": "columns@1024",
+   "pass": true,
+   "colCount": 3
+  },
+  {
+   "name": "ratio<=1%@1024",
+   "pass": true,
+   "worst": 0.00003069319003721223
+  },
+  {
+   "name": "no-cover@1024",
+   "pass": true
+  },
+  {
+   "name": "spread<=20%@1024",
+   "pass": true,
+   "spread": 0.029518482365331757
+  },
+  {
+   "name": "append-stable@1024",
+   "pass": true
+  },
+  {
+   "name": "no-overflow@1024",
+   "pass": true
+  }
+ ],
+ "pass": true
+}

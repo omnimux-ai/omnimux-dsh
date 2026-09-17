@@ -5,6 +5,7 @@ import { previewUrl } from './api.js'
 import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
 import { isFolderAsset, resolveAssetMediaPreview } from './asset-routing.js'
 import { useGridColumns } from './use-grid-columns.js'
+import { MasonryGrid } from './masonry-grid.jsx'
 
 /**
  * @param {{
@@ -91,6 +92,15 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
           src={src}
           className="omnimux-assets-card-media"
           alt=""
+          width={9}
+          height={16}
+          onLoad={(event) => {
+            const image = event.currentTarget
+            if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+              image.setAttribute('width', String(image.naturalWidth))
+              image.setAttribute('height', String(image.naturalHeight))
+            }
+          }}
           onError={() => setBroken(true)}
         />
       ) : (
@@ -363,8 +373,11 @@ export function AssetGrid({
   }
 
   return (
-    <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
-      {assets.map((asset) => {
+    <MasonryGrid
+      gridRef={gridRef}
+      columns={gridColumns}
+      items={assets}
+      renderItem={(asset) => {
         const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
         const selected = selectedIds?.has(asset.id)
         return (
@@ -380,7 +393,7 @@ export function AssetGrid({
             missing={missing}
           />
         )
-      })}
-    </div>
+      }}
+    />
   )
 }

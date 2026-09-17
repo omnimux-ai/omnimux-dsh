@@ -5,6 +5,7 @@ import { EditIcon, FileIcon, FolderIcon, RevealLocationIcon } from './icons.jsx'
 import { listAssetFiles, previewUrl, revealAssetEntry } from './api.js'
 import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
 import { useGridColumns } from './use-grid-columns.js'
+import { MasonryGrid } from './masonry-grid.jsx'
 
 export { isDirectoryRef }
 
@@ -155,8 +156,11 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
           {error ? <p className="omnimux-assets-error">{error}</p> : null}
           {!loading && !error && entries.length === 0 ? <p className="omnimux-assets-muted">{t('detail.emptyFolder')}</p> : null}
           {!loading && entries.length > 0 ? (
-            <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
-              {entries.map((entry) => {
+            <MasonryGrid
+              gridRef={gridRef}
+              columns={gridColumns}
+              items={entries}
+              renderItem={(entry) => {
                 const folder = Boolean(entry.is_dir) || isDirectoryRef(entry)
                 const kind = detectMediaKind(entry)
                 const entryPath = entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/')
@@ -180,16 +184,19 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
                         }}
                   />
                 )
-              })}
-            </div>
+              }}
+            />
           ) : null}
         </>
       ) : (
         files.length === 0
           ? <p className="omnimux-assets-muted">{t('browse.empty')}</p>
           : (
-            <div ref={gridRef} className="omnimux-assets-grid" data-columns={gridColumns}>
-              {files.map((file) => {
+            <MasonryGrid
+              gridRef={gridRef}
+              columns={gridColumns}
+              items={files}
+              renderItem={(file) => {
                 const folder = isDirectoryRef(file)
                 const kind = detectMediaKind(file)
                 const src = folder ? '' : previewUrl(asset.id, file.id)
@@ -210,8 +217,8 @@ export function AssetBrowse({ t, asset, onBack, onPreview, onEdit }) {
                         }}
                   />
                 )
-              })}
-            </div>
+              }}
+            />
           )
       )}
     </div>
@@ -263,6 +270,15 @@ function MediaCard({ t, title, kind, src, onOpen, onReveal }) {
             src={src}
             alt=""
             className="omnimux-assets-card-media"
+            width={9}
+            height={16}
+            onLoad={(event) => {
+              const image = event.currentTarget
+              if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+                image.setAttribute('width', String(image.naturalWidth))
+                image.setAttribute('height', String(image.naturalHeight))
+              }
+            }}
             onError={() => { setBroken(true) }}
           />
         ) : null}
