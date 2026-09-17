@@ -3,6 +3,31 @@ import { OmnimuxError } from './errors.js'
 import { objectParams, rethrow } from '../tools/schema.js'
 
 /**
+ * The model a submit actually routes on.
+ *
+ * An explicit `model` always wins: the caller is the one who knows what the
+ * user asked for in this turn. Only when the caller passes none does the
+ * session's pin fill in — that pin is the composer picker's choice, which
+ * previously no generation path could see.
+ *
+ * @param {unknown} requested
+ * @param {{ agent?: { session?: { id?: string } } }} [exec]
+ * @returns {unknown}
+ */
+function resolveRequestedModel(requested, exec, sessionModel) {
+  if (typeof requested === 'string') {
+    // A blank string is "the caller sent nothing usable", not a model named "".
+    if (requested.trim()) return requested
+  } else if (requested !== undefined && requested !== null) {
+    // A non-string is not a model id this layer can judge; pass it through so
+    // the routing layer reports it rather than silently substituting a pin.
+    return requested
+  }
+  const pinned = sessionModel?.get?.(exec?.agent?.session?.id)
+  return pinned?.modelId || requested
+}
+
+/**
  * @param {{
  *   tools: { register: (tool: object) => unknown },
  *   provide?: (name: string, value: unknown) => void,
@@ -15,11 +40,12 @@ import { objectParams, rethrow } from '../tools/schema.js'
  *   gate?: object,
  *   hub?: { gate?: object },
  *   store?: { resolve: () => Promise<string | undefined> },
+ *   sessionModel?: { get: (sessionId?: unknown) => ({ modelId: string } | null) },
  *   jsonOut: object,
  * }} opts
  */
 export function mountMedia(ctx, opts) {
-  const { kind, execute, media, jsonOut, store } = opts
+  const { kind, execute, media, jsonOut, store, sessionModel } = opts
   const gate = opts.gate ?? opts.hub?.gate ?? ctx.get?.('gate')
 
   const api = {
@@ -138,7 +164,7 @@ export function mountMedia(ctx, opts) {
         return await api.execute({
           prompt: args.prompt,
           dest: args.dest,
-          model: args.model,
+          model: resolveRequestedModel(args.model, exec, sessionModel),
           operation: args.operation,
           duration: args.duration,
           image: args.image,

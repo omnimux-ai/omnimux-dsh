@@ -43,6 +43,28 @@
       } catch {}
     }
 
+    // The hub owns the session's model pin, so the agent's context injector and
+    // the media submit tools can both read it. Publishing is fire-and-forget:
+    // the local echo below already shows the selection, and a hub that is
+    // unreachable must not turn a picker click into an error.
+    function publishSessionModel(sessionId, auto, selectedModel) {
+      if (!sessionId) return;
+      const chosen = auto ? null : selectedModel;
+      try {
+        fetch("/omnimux/session-model", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            sessionId,
+            auto: !!auto,
+            modelId: chosen ? (chosen.id || "") : "",
+            label: chosen ? (chosen.name || chosen.id || "") : "",
+          }),
+        }).catch(() => {});
+      } catch {}
+    }
+
     function renderModelLayersIcon(size = 16) {
       const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 16;
       return h("svg", {
@@ -416,6 +438,7 @@
             detail: { sessionId, auto: nextAuto, selectedModel: nextAuto ? null : selectedModel },
           }));
         } catch {}
+        publishSessionModel(sessionId, nextAuto, nextAuto ? null : selectedModel);
         if (typeof api === "function") {
           api("setModelSelection", {
             sessionId,
@@ -437,6 +460,7 @@
             detail: { sessionId, auto: false, selectedModel: model },
           }));
         } catch {}
+        publishSessionModel(sessionId, false, model);
         if (typeof api === "function") {
           api("setModelSelection", {
             sessionId,

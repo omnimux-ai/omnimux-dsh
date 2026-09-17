@@ -24,6 +24,9 @@ import { mountReader } from '../reader/mount.js'
 import { createAvatarStore } from '../avatar/store.js'
 import { JSON_TOOL_OUTPUT, objectParams, rethrow } from '../tools/schema.js'
 import { mountMedia } from '../media/mount.js'
+import { createSessionModelPreference } from '../session/model-preference.js'
+import { registerSessionModelRoutes } from '../session/http.js'
+import { mountSessionModelInjector } from '../session/context-injector.js'
 import { mountSpeechToText } from '../media/stt-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
@@ -123,6 +126,10 @@ export function apply(ctx, config = {}) {
     getConnection: () => ctx.get?.('connection'),
   }
   mountComposerCommands(ctx)
+  // Session model pin: the composer's picker writes it here, the agent is told
+  // about it each turn, and the media tools fall back to it when `model` is
+  // omitted. Owned by the hub so both readers share one authority.
+  const sessionModelPreference = createSessionModelPreference()
   const mountHttp = (httpCtx) => mountHubHttp(httpCtx, httpDeps)
   if (typeof ctx.inject === 'function') {
     ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {
@@ -134,6 +141,7 @@ export function apply(ctx, config = {}) {
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')
       if (server && typeof server.register === 'function') {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
+        httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
       }
     })
     ctx.inject(['webServer', 'connection'], (streamCtx) => {
@@ -170,9 +178,10 @@ export function apply(ctx, config = {}) {
   }
 
   const jsonOut = JSON_TOOL_OUTPUT
-  mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, media: hub.media, gate: hub.gate, store, jsonOut })
-  mountMedia(ctx, { kind: 'image', execute: executeOmnimuxImage, media: hub.media, gate: hub.gate, store, jsonOut })
-  mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, media: hub.media, gate: hub.gate, store, jsonOut })
+  const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference }
+  mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, ...mediaDeps })
+  mountMedia(ctx, { kind: 'image', execute: executeOmnimuxImage, ...mediaDeps })
+  mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, ...mediaDeps })
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, media: hub.media, gate: hub.gate, store, jsonOut })
   mountTextComplete(ctx, hub, jsonOut, rethrow)
   mountOfficial(ctx, {
@@ -211,6 +220,7 @@ export function apply(ctx, config = {}) {
     },
   })
   mountWorkbenchContextInjector(ctx, { mailbox })
+  mountSessionModelInjector(ctx, { preference: sessionModelPreference })
   if (typeof ctx.on === 'function') mountCommentInjector(ctx)
   mountContractsPrompt(ctx)
   if (typeof ctx.provide === 'function') {
