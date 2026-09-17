@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from 'dsh-ui-kit'
-import { CheckIcon } from './icons.jsx'
 
 /**
  * @param {string} productId
@@ -64,7 +63,6 @@ export function ProductsView(props) {
   const { t, open = true, query = '', kindTab = 'all', onOpenCreate } = props
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
-  const [copiedId, setCopiedId] = useState(null)
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -108,18 +106,6 @@ export function ProductsView(props) {
     return list
   }, [products, kindTab, query])
 
-  const handleCopyCite = (product, e) => {
-    e.stopPropagation()
-    const cite = product.cite || `@产品/${product.name}`
-    try {
-      void navigator.clipboard?.writeText?.(cite)
-      setCopiedId(product.id)
-      setTimeout(() => setCopiedId(null), 1800)
-    } catch {
-      // clipboard fallback
-    }
-  }
-
   const handleCreate = (kind) => {
     onOpenCreate?.(kind)
   }
@@ -145,7 +131,6 @@ export function ProductsView(props) {
                 ? previewUrl(product.id, cover.id)
                 : ''
               const isDigital = product.kind === 'digital'
-              const copied = copiedId === product.id
 
               return (
                 <article
@@ -177,17 +162,6 @@ export function ProductsView(props) {
                       <span>{product.brand || (Array.isArray(product.selling_points) ? product.selling_points[0] : '') || '通用'}</span>
                       {product.price ? <span className="omnimux-products-card-price">¥{product.price}</span> : null}
                     </p>
-
-                    <div className="omnimux-products-card-actions">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={(e) => handleCopyCite(product, e)}
-                      >
-                        {copied ? <CheckIcon size={12} /> : null}
-                        <span>{copied ? (t('product.copied') || '已复制') : (t('product.copyCite') || '复制引用')}</span>
-                      </Button>
-                    </div>
                   </div>
                 </article>
               )
