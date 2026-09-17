@@ -112,17 +112,30 @@ function aggregateProgress(runs: readonly ExecutionRun[]): ExecutionProgressStat
     completed,
     running,
     pending,
-    percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+    // A run that never learned its node count (a `single` run whose
+    // `execution_start` never arrived) has `total === 0` while still reporting
+    // its own percentage; without the fallback the bar would read 0% on a run
+    // that actually finished.
+    percentage: total > 0
+      ? Math.round((completed / total) * 100)
+      : Math.max(0, ...runs.map((run) => run.progress.percentage)),
   };
 }
 
 /**
- * Merge node statuses across runs. Runs are in creation order, so a later run
- * wins for a node it also touched — the one the user is watching.
+ * Merge node statuses across runs.
+ *
+ * Two runs can legitimately touch the same node (submitting `[a]` then `[a,b]`
+ * are different submission keys). A run that is still live owns the node: its
+ * in-flight status must beat a terminal run's `completed`, otherwise the badge
+ * and edge animation would say 「已完成」 for a node that is still running.
+ * Among equally-live (or equally-terminal) runs the later one wins, which is
+ * the run the user just started watching.
  */
 function aggregateNodeStatuses(runs: readonly ExecutionRun[]): Record<string, NodeExecutionApiStatus> {
   const merged: Record<string, NodeExecutionApiStatus> = {};
-  for (const run of runs) {
+  const live = runs.filter((run) => LIVE_STATUS_SET.has(run.status));
+  for (const run of [...runs.filter((candidate) => !LIVE_STATUS_SET.has(candidate.status)), ...live]) {
     for (const [nodeId, status] of Object.entries(run.nodeStatuses)) {
       merged[nodeId] = status;
     }
@@ -165,17 +178,29 @@ function pruneRuns(runs: readonly ExecutionRun[]): ExecutionRun[] {
   return runs.filter((run) => !dropped.has(run.executionId));
 }
 
+/**
+ * Patch one run in place, creating it as a non-live placeholder when absent.
+ *
+ * The placeholder default matters on the SSE path: an event for an execution id
+ * the store never registered (a stale or duplicated stream) must not mint a
+ * *live* run with no stream and no submit behind it — that would inflate
+ * `activeRunCount` and make the reload guard refuse to converge stale in-flight
+ * markers forever.
+ *
+ * @returns The index of the patched run.
+ */
 function patchRunIn(
   runs: ExecutionRun[],
   executionId: string,
   patch: Partial<Omit<ExecutionRun, 'executionId'>>,
-): void {
+): number {
   const index = runs.findIndex((run) => run.executionId === executionId);
   if (index === -1) {
     runs.push({ ...createRun(executionId), ...patch });
-    return;
+    return runs.length - 1;
   }
   runs[index] = { ...runs[index]!, ...patch };
+  return index;
 }
 
 export interface ExecutionState extends ExecutionProjection {
@@ -191,9 +216,13 @@ export interface ExecutionState extends ExecutionProjection {
 
   /** Create the run if absent and focus it. */
   ensureRun: (executionId: string) => void;
-  /** Patch one run, creating it when absent; a patch cannot rename the id. */
+  /**
+   * Patch an already-registered run. A patch for an unknown id is ignored:
+   * `ensureRun` is the only creator, so an event for a stale or duplicated
+   * stream cannot mint a run with no submit and no stream behind it.
+   */
   patchRun: (executionId: string, patch: Partial<Omit<ExecutionRun, 'executionId'>>) => void;
-  /** Write one node's status inside a run (creating the run when absent). */
+  /** Write one node's status inside a run (creating a non-live run when absent). */
   setRunNodeStatus: (executionId: string, nodeId: string, status: NodeExecutionApiStatus) => void;
   /** Drop one run; its node statuses stop contributing to the projection. */
   dropRun: (executionId: string) => void;
@@ -201,9 +230,10 @@ export interface ExecutionState extends ExecutionProjection {
   /**
    * Run-scoped write without naming a run: targets the focused run, creating
    * the local placeholder when the canvas has none (mock/demo harnesses and
-   * headless tests drive the store this way).
+   * headless tests drive the store this way). `activeRunCount` is a projection
+   * aggregate with no run-scoped counterpart, so it is not accepted here.
    */
-  setExecution: (patch: Partial<ExecutionProjection>) => void;
+  setExecution: (patch: Partial<Omit<ExecutionProjection, 'activeRunCount'>>) => void;
   setNodeStatus: (nodeId: string, status: NodeExecutionApiStatus) => void;
   resetExecution: () => void;
 }
@@ -212,7 +242,13 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => {
   /** Commit a run-list mutation and refresh the flat projection in one set. */
   const commit = (runs: ExecutionRun[], focusExecutionId: string | null): void => {
     const next = pruneRuns(runs);
-    set({ runs: next, focusExecutionId, ...projectRuns(next, focusExecutionId) });
+    // Pruning can drop the focused run; keeping a dangling focus would make the
+    // flat projection report `executionId: null` while the store still points
+    // at it, and a later run-scoped write with no target would resurrect it.
+    const focus = focusExecutionId !== null && next.some((run) => run.executionId === focusExecutionId)
+      ? focusExecutionId
+      : null;
+    set({ runs: next, focusExecutionId: focus, ...projectRuns(next, focus) });
   };
 
   /** Mutate a copy of the run list, then commit. */
@@ -225,8 +261,7 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => {
   };
 
   const writeNodeStatus = (runs: ExecutionRun[], executionId: string, nodeId: string, status: NodeExecutionApiStatus): void => {
-    patchRunIn(runs, executionId, {});
-    const index = runs.findIndex((run) => run.executionId === executionId);
+    const index = patchRunIn(runs, executionId, {});
     const run = runs[index]!;
     runs[index] = { ...run, nodeStatuses: { ...run.nodeStatuses, [nodeId]: status } };
   };
@@ -251,7 +286,8 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => {
 
     patchRun: (executionId, patch) =>
       mutate((runs, focus) => {
-        patchRunIn(runs, executionId, patch);
+        const index = runs.findIndex((run) => run.executionId === executionId);
+        if (index !== -1) runs[index] = { ...runs[index]!, ...patch };
         return [runs, focus];
       }),
 

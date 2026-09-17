@@ -436,6 +436,12 @@ export function useExecutionController(
   const streamsRef = useRef(new Map<string, EventSource>());
   /** Submission keys whose create POST is in flight (double-submit guard). */
   const startingRef = useRef(new Set<string>());
+  /**
+   * Bumped by `reset()`. A create POST that resolves after the user cleared the
+   * canvas must not resurrect a run and open a stream nobody is watching, so
+   * every post-await write re-checks the generation it started under.
+   */
+  const generationRef = useRef(0);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -541,9 +547,12 @@ export function useExecutionController(
       // #2255: a submit is no longer refused while another run is live. Only a
       // repeat of the *same* submission is guarded, so double-clicking one node
       // cannot fire two runs while clicks on other nodes go straight through.
-      const submissionKey = `${opts.mode ?? 'full'}:${(opts.nodeIds ?? []).join(',')}`;
+      // Ids are sorted and NUL-joined: `['a','b']` and `['b','a']` are the same
+      // node set, and a comma inside an id must not forge another key.
+      const submissionKey = `${opts.mode ?? 'full'}:${[...(opts.nodeIds ?? [])].sort().join('\u0000')}`;
       if (startingRef.current.has(submissionKey)) return;
       startingRef.current.add(submissionKey);
+      const generation = generationRef.current;
       const graph = useCanvasStore.getState();
       const signature = signatureOf(graph.nodes, graph.edges, { workspaceId: workspace });
       try {
@@ -559,6 +568,7 @@ export function useExecutionController(
           ...(typeof expectedVersion === 'number' ? { expectedVersion } : {}),
         });
         if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
+        if (generationRef.current !== generation) return;
         if (!result.ok || !result.body.execution) {
           throw new Error(result.body.error === 'project-required'
             ? t('error.projectRequired')
@@ -602,9 +612,19 @@ export function useExecutionController(
         .getState()
         .runs.filter((run) => CONTROL_TARGET_STATUSES[action].has(run.status));
       await Promise.all(targets.map(async (run) => {
-        const result = await executionAction(workspace, run.executionId, action);
-        if (!result.ok && result.body.message) {
-          useExecutionStore.getState().patchRun(run.executionId, { error: result.body.message });
+        try {
+          const result = await executionAction(workspace, run.executionId, action);
+          if (!result.ok && result.body.message) {
+            useExecutionStore.getState().patchRun(run.executionId, { error: result.body.message });
+          }
+        } catch (error) {
+          // `executionAction` rejects on a transport failure rather than
+          // returning `{ ok: false }`. Without this the whole fan-out rejects,
+          // the caller's `void` call becomes an unhandled rejection, and the
+          // other runs' outcomes are lost.
+          useExecutionStore.getState().patchRun(run.executionId, {
+            error: error instanceof Error ? error.message : t('error.executionFailed'),
+          });
         }
       }));
     },
@@ -617,6 +637,10 @@ export function useExecutionController(
 
   const reset = useCallback(() => {
     closeStream();
+    // A create POST still in flight must not re-register its run afterwards;
+    // bumping the generation also releases the submission slots.
+    generationRef.current += 1;
+    startingRef.current.clear();
     useExecutionStore.getState().resetExecution();
   }, [closeStream]);
 
@@ -638,9 +662,15 @@ export function useExecutionController(
           if (shouldConvergeInFlightOnReload(startingRef.current.size > 0)) settleInFlightNodes('skipped');
           return;
         }
-        for (const row of live) {
-          const snapshot = await getExecution(workspaceId, row.id);
-          if (cancelled || !snapshot.ok || !snapshot.body.execution) continue;
+        // Independent, idempotent GETs: restore them together so the canvas
+        // does not wait one round trip per live run.
+        const snapshots = await Promise.all(live.map(async (row) => ({
+          row,
+          snapshot: await getExecution(workspaceId, row.id),
+        })));
+        if (cancelled) return;
+        for (const { row, snapshot } of snapshots) {
+          if (!snapshot.ok || !snapshot.body.execution) continue;
           applySnapshot(snapshot.body.execution);
           if (isLiveExecutionStatus(snapshot.body.execution.status)) subscribe(row.id);
         }

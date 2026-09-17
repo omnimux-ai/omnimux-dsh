@@ -8,6 +8,10 @@
  * 4. 节点的生成按钮忙碌态取自身执行状态，不是画布全局状态。
  * 5. 岛屿重载恢复该工作区**全部**存活执行。
  * 6. 工作流自动级联语义不变：DAG 仍按拓扑分层 + 并行度节流。
+ *
+ * 文件放在 `tests/`（而非 `tests/e2e/`）：插件自带的测试脚本按
+ * `tests/*.test.mjs` 收集，`tests/e2e/` 目前没有执行者。文件名保留
+ * `.e2e.test.` 后缀，质量门禁仍按端到端测试识别。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,13 +20,22 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const src = rel => readFileSync(join(here, '../../src', rel), 'utf8');
+const src = rel => readFileSync(join(here, '../src', rel), 'utf8');
 
 const storeSrc = src('canvas/store/executionStore.ts');
 const controllerSrc = src('canvas/hooks/useExecutionController.ts');
 const nodeSrc = src('canvas/editor/components/MaterialNode/index.tsx');
 const barSrc = src('canvas/editor/components/ExecutionBar.tsx');
 const schedulerSrc = src('workflow/execution/ExecutionScheduler.ts');
+
+/** 一个 `case '...'` 分支的正文（到下一个 case 为止），避免固定长度窗口。 */
+function switchBranch(source, caseName) {
+  const marker = `case '${caseName}'`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `源码中应存在 ${marker} 分支`);
+  const end = source.indexOf("case '", start + marker.length);
+  return source.slice(start, end === -1 ? undefined : end);
+}
 
 test('E2E: 执行状态存储以运行槽列表为真源并投影聚合视图 (#2255)', () => {
   assert.match(storeSrc, /export interface ExecutionRun\b/, '必须存在运行槽类型');
@@ -51,20 +64,20 @@ test('E2E: 控制器不再以画布全局状态拦截新提交 (#2255)', () => {
 test('E2E: 每个执行独立持有事件流与节点状态归属 (#2255)', () => {
   assert.match(controllerSrc, /streamsRef = useRef\(new Map<string, EventSource>\(\)\)/, '事件流必须按执行 id 分别持有');
   assert.match(controllerSrc, /const executionId = typeof data\.executionId === 'string'/, '事件必须按载荷中的执行 id 归属');
+  assert.match(controllerSrc, /executionId\?:\s*string/, '收敛函数必须声明可选的执行 id 参数');
   assert.match(
     controllerSrc,
-    /settleInFlightNodes\(\s*status,\s*error\?,\s*executionId\?/,
-    '收敛必须接受执行 id 参数',
+    /const ownedByOtherLiveRun = \(nodeId: string\): boolean =>/,
+    '必须存在「该节点仍被其它存活执行持有」的判定',
   );
   assert.match(
     controllerSrc,
-    /ownedByOtherLiveRun/,
-    '收敛必须跳过仍被其它存活执行持有的节点',
+    /run\.executionId !== executionId[\s\S]{0,160}isLiveExecutionStatus\(run\.status\)/,
+    '判定必须同时检查执行身份与存活状态',
   );
   for (const terminal of ['execution_complete', 'execution_error', 'execution_cancelled']) {
-    const branch = controllerSrc.slice(controllerSrc.indexOf(`case '${terminal}'`));
     assert.match(
-      branch.slice(0, 400),
+      switchBranch(controllerSrc, terminal),
       /settleInFlightNodes\([^)]*executionId\)/,
       `${terminal} 的收敛必须限定在本执行`,
     );
@@ -77,7 +90,7 @@ test('E2E: 重载恢复该工作区全部存活执行 (#2255)', () => {
     /const live = \(list\.body\.executions \?\? \[\]\)\.filter\(\(row\) => isLiveExecutionStatus\(row\.status\)\)/,
     '必须取出全部存活执行（旧实现只 find 第一条）',
   );
-  assert.match(controllerSrc, /for \(const row of live\)/, '必须逐条恢复订阅');
+  assert.match(controllerSrc, /for \(const \{ row, snapshot \} of snapshots\)/, '必须逐条恢复订阅');
 });
 
 test('E2E: 节点忙碌态取自身执行状态而非画布全局状态 (#2255)', () => {
