@@ -1,0 +1,64 @@
+{
+  "taskId": "issue-2227",
+  "taskName": "agent-preset-dedupe-unique",
+  "verifiedAt": "2026-09-17T13:17:00.000Z",
+  "target": "plugins/omnimux/src/client/agent-preset-enhancer.js",
+  "verificationType": "live-dom-dedupe-verification",
+  "summary": {
+    "totalMenuRows": 6,
+    "visibleUniqueCount": 5,
+    "hiddenDuplicateCount": 1,
+    "status": "VERIFIED_PASS"
+  },
+  "rows": [
+    {
+      "index": 0,
+      "name": "创建Agent",
+      "presetId": "cordis",
+      "duplicate": false,
+      "visible": true
+    },
+    {
+      "index": 1,
+      "name": "短剧专家",
+      "presetId": "drama-agent",
+      "duplicate": false,
+      "visible": true
+    },
+    {
+      "index": 2,
+      "name": "日常工作",
+      "presetId": "daily-work",
+      "duplicate": false,
+      "visible": true
+    },
+    {
+      "index": 3,
+      "name": "社媒专家",
+      "presetId": "omni-agent",
+      "duplicate": false,
+      "visible": true
+    },
+    {
+      "index": 4,
+      "name": "营销专家",
+      "presetId": "marketing-agent",
+      "duplicate": false,
+      "visible": true
+    },
+    {
+      "index": 5,
+      "name": "社媒专家",
+      "presetId": "omni-agent",
+      "duplicate": true,
+      "attribute": "data-omnimux-preset-duplicate=\"true\"",
+      "inlineStyle": "display: none !important",
+      "visible": false
+    }
+  ],
+  "cssEnforcement": {
+    "selector": "[data-omnimux-preset-duplicate], [data-omnimux-preset-item][data-omnimux-preset-duplicate]",
+    "rule": "display: none !important",
+    "verifiedInHubCss": true
+  }
+}
