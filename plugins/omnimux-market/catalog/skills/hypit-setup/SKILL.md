@@ -3,7 +3,7 @@ name: hypit-setup
 description: Guide the user to install official Hypit (skill + executable) from Hypit.AI sources. OmniMux only provides discovery and session guidance; it does not redistribute Hypit code or binaries. Keep Hypit name and copyright on any surfaced CLI/report output.
 ---
 
-# Hypit 官方能力接入（安装引导）
+# Hypit-克隆爆款视频（安装引导）
 
 本技能是 **OmniMux 自有的安装向导**，不是 Hypit 引擎本体。
 
@@ -13,7 +13,7 @@ description: Guide the user to install official Hypit (skill + executable) from 
 
 ## 何时使用
 
-用户在技能市场点了「Hypit 官方能力接入」的安装/试用，或明确说要启用 Hypit。
+用户在技能市场点了「Hypit-克隆爆款视频」的安装/试用，或明确说要启用 Hypit。
 
 ## 安装步骤（Agent 执行）
 
