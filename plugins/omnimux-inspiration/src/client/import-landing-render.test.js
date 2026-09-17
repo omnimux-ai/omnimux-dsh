@@ -437,10 +437,12 @@ describe('import landing — content URL', () => {
 
       const input = await openImportDialog(mounted)
       await typeInto(input, 'https://www.tiktok.com/@creator/video/123')
+      await blur(input)
+      await settle(mounted.container, () => !button(mounted.container, L.submit).disabled)
       await click(button(mounted.container, L.submit))
       await settle(mounted.container, () => firstCard(mounted.container)?.getAttribute('data-inspiration-id') === 'local-new-1')
 
-      assert.equal(mounted.requestsTo(`${RIVAL_PREFIX}/classify`).length, 1, 'submit classifies the pasted link itself')
+      assert.equal(mounted.requestsTo(`${RIVAL_PREFIX}/classify`).length, 1, 'analyzes the pasted link and enables submit')
       assert.equal(
         mounted.calls.filter((call) => call.method === 'POST' && call.path.includes(RIVAL_PREFIX) && !call.path.includes('classify')).length,
         0,
@@ -612,7 +614,6 @@ describe('import landing — link the Host cannot place', () => {
         null,
         'a refusal is not an echo',
       )
-      await click(button(mounted.container, L.submit))
       await settle(mounted.container, () => mounted.container.querySelector('.omnimux-inspiration-error-text'))
 
       assert.equal(
@@ -621,7 +622,8 @@ describe('import landing — link the Host cannot place', () => {
         'the message must come from the locale table, not from the Host payload',
       )
       assert.equal(mounted.requestsTo(IMPORT_URL_PATH).length, 0)
-      assert.equal(mounted.requestsTo(`${RIVAL_PREFIX}/classify`).length, 2, 'blur and submit each ask once')
+      assert.equal(mounted.requestsTo(`${RIVAL_PREFIX}/classify`).length, 1, 'analyzes once on blur and remains disabled on refusal')
+      assert.equal(button(mounted.container, L.submit).disabled, true, 'submit must remain disabled when url is unrecognized')
     } finally {
       await mounted.unmount()
       mounted.close()
