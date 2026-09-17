@@ -1,0 +1,34 @@
+{
+  "issue": 2192,
+  "verifiedAt": "2026-09-17T09:35:00.000Z",
+  "summary": "会话栏模型名称缩小自适应与底栏防换行优化",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "底栏工具行声明单行禁止换行，杜绝右侧按钮掉入第二行",
+      "result": "pass",
+      "evidence": "[data-composer-card] > [class*=\"row\"]:has(> [class*=\"trailing\"]) 强制声明 flex-wrap:nowrap!important; 消除折行现象"
+    },
+    {
+      "id": "AC-2",
+      "name": "模型选择按钮声明弹性收缩与最大宽度限制",
+      "result": "pass",
+      "evidence": "[data-composer-card] [class*=\"trailing\"] button[aria-haspopup='menu'] 声明 min-width:28px!important; max-width:220px; flex-shrink:1!important;"
+    },
+    {
+      "id": "AC-3",
+      "name": "模型名称标签自适应缩短与省略截断防护",
+      "result": "pass",
+      "evidence": "[class*=\"triggerLabel\"] 默认设置 max-width:120px; text-overflow:ellipsis; 并在 @media (max-width: 768px) 缩窄至 88px"
+    },
+    {
+      "id": "AC-4",
+      "name": "左侧工具栏弹性收拢与右侧常驻对齐",
+      "result": "pass",
+      "evidence": "[class*=\"tools\"] 声明 min-width:0; flex:1 1 auto; 右侧 [class*=\"trailing\"] 声明 flex-shrink:0; 保持单行两端齐平"
+    }
+  ],
+  "unit": {
+    "composer-compact.test.js": "11/11"
+  }
+}
