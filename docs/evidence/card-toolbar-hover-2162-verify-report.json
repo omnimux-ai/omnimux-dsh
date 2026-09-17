@@ -1,0 +1,235 @@
+{
+  "url": "http://127.0.0.1:55680/index.html",
+  "runs": [
+    {
+      "variant": "before",
+      "geometry": {
+        "mark": {
+          "x": 236.0399932861328,
+          "y": 93.04000091552734,
+          "w": 29.919998168945312,
+          "h": 29.919998168945312,
+          "cx": 250.99999237060547,
+          "cy": 108
+        },
+        "bar": {
+          "x": 140.6999969482422,
+          "y": 92.02000427246094,
+          "w": 84.59999084472656,
+          "h": 31.959991455078125,
+          "cx": 182.99999237060547,
+          "cy": 108
+        },
+        "gap": {
+          "x": 230.66999053955078,
+          "y": 108
+        }
+      },
+      "steps": [
+        {
+          "step": "pointer on card",
+          "revealed": true,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": []
+        },
+        {
+          "step": "pointer on mark",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-trigger",
+          "clicks": []
+        },
+        {
+          "step": "jumped to toolbar",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-action:copy",
+          "clicks": []
+        },
+        {
+          "step": "lingering in the gap",
+          "revealed": true,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": []
+        },
+        {
+          "step": "pointer on an action",
+          "revealed": true,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": []
+        },
+        {
+          "step": "clicked the action",
+          "revealed": null,
+          "open": null,
+          "toolbarVisibility": null,
+          "toolbarPointerEvents": null,
+          "hit": null,
+          "clicks": []
+        },
+        {
+          "step": "pointer away",
+          "revealed": null,
+          "open": null,
+          "toolbarVisibility": null,
+          "toolbarPointerEvents": null,
+          "hit": null,
+          "clicks": []
+        },
+        {
+          "step": "back on the card",
+          "revealed": null,
+          "open": null,
+          "toolbarVisibility": null,
+          "toolbarPointerEvents": null,
+          "hit": null,
+          "clicks": []
+        }
+      ]
+    },
+    {
+      "variant": "after",
+      "geometry": {
+        "mark": {
+          "x": 236.0399932861328,
+          "y": 93.04000091552734,
+          "w": 29.919998168945312,
+          "h": 29.919998168945312,
+          "cx": 250.99999237060547,
+          "cy": 108
+        },
+        "bar": {
+          "x": 140.6999969482422,
+          "y": 92.02000427246094,
+          "w": 84.59999084472656,
+          "h": 31.959991455078125,
+          "cx": 182.99999237060547,
+          "cy": 108
+        },
+        "gap": {
+          "x": 230.66999053955078,
+          "y": 108
+        }
+      },
+      "steps": [
+        {
+          "step": "pointer on card",
+          "revealed": true,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": []
+        },
+        {
+          "step": "pointer on mark",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-trigger",
+          "clicks": []
+        },
+        {
+          "step": "jumped to toolbar",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-action:copy",
+          "clicks": []
+        },
+        {
+          "step": "lingering in the gap",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-toolbar",
+          "clicks": []
+        },
+        {
+          "step": "pointer on an action",
+          "revealed": true,
+          "open": true,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "auto",
+          "hit": "omt-action:copy",
+          "clicks": []
+        },
+        {
+          "step": "clicked the action",
+          "revealed": false,
+          "open": false,
+          "toolbarVisibility": "visible",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": [
+            "copy"
+          ]
+        },
+        {
+          "step": "pointer away",
+          "revealed": false,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "grid",
+          "clicks": [
+            "copy"
+          ]
+        },
+        {
+          "step": "back on the card",
+          "revealed": true,
+          "open": false,
+          "toolbarVisibility": "hidden",
+          "toolbarPointerEvents": "none",
+          "hit": "IMG",
+          "clicks": [
+            "copy"
+          ]
+        }
+      ]
+    }
+  ],
+  "verdicts": [
+    {
+      "variant": "before",
+      "markShowsOnHover": true,
+      "toolbarOpensOnMark": true,
+      "toolbarSurvivesJumpToToolbar": true,
+      "toolbarHitTestableAtToolbar": true,
+      "toolbarSurvivesGap": false,
+      "clickReachesAction": false,
+      "clickedAction": null,
+      "bothCloseWhenAway": false,
+      "markReturnsOnCard": false
+    },
+    {
+      "variant": "after",
+      "markShowsOnHover": true,
+      "toolbarOpensOnMark": true,
+      "toolbarSurvivesJumpToToolbar": true,
+      "toolbarHitTestableAtToolbar": true,
+      "toolbarSurvivesGap": true,
+      "clickReachesAction": true,
+      "clickedAction": "copy",
+      "bothCloseWhenAway": true,
+      "markReturnsOnCard": true
+    }
+  ]
+}
