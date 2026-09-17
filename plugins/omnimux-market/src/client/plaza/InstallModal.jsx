@@ -6,23 +6,37 @@ function getH(props) {
   return React.createElement;
 }
 
-function renderModalHeader(onClose, trLookup, h) {
+function renderCloseButton(onClose, trLookup, h) {
   const closeLabel = trLookup ? trLookup('action.close') : 'Close';
+  // exempt-ui01 modal close icon button
+  return h('button', {
+    type: 'button',
+    className: 'omnimux-modal-close-btn is-external ws-detail-external-close',
+    'aria-label': closeLabel,
+    title: closeLabel,
+    onClick: onClose,
+  },
+    h('svg', {
+      width: '14',
+      height: '14',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: '2.2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('line', { x1: '18', y1: '6', x2: '6', y2: '18' }),
+      h('line', { x1: '6', y1: '6', x2: '18', y2: '18' }),
+    ),
+  );
+}
+
+function renderModalHeader(trLookup, h) {
   const title = trLookup ? (trLookup('workshop.installModalTitle') || '安装Skill') : '安装Skill';
   return h('div', { className: 'modal-header' },
     h('h3', { className: 'modal-title' }, title),
-    // exempt-ui01 modal close icon button
-    h('button', {
-      type: 'button',
-      className: 'modal-close-btn',
-      'aria-label': closeLabel,
-      onClick: onClose,
-    },
-      h('svg', { width: '18', height: '18', viewBox: '0 0 24 24' },
-        h('line', { x1: '18', y1: '6', x2: '6', y2: '18', stroke: 'currentColor', strokeWidth: '2' }),
-        h('line', { x1: '6', y1: '6', x2: '18', y2: '18', stroke: 'currentColor', strokeWidth: '2' }),
-      ),
-    ),
   );
 }
 
@@ -183,18 +197,21 @@ export function InstallModal(props) {
   const dropOpts = { file, fileInputRef, onFileChange: handleFileChange, onDrop: handleDrop, trLookup };
 
   return h(overlayComp, { onClose },
-    h('div', { className: 'modal-dialog', role: 'dialog', 'aria-modal': 'true' },
-      renderModalHeader(onClose, trLookup, h),
-      renderDropZone(dropOpts, h),
-      renderReqSection(trLookup, h),
-      error ? h('p', { className: 'sh-err' }, error) : null,
-      // exempt-ui01 modal submit action button
-      h('button', {
-        type: 'button',
-        className: 'btn-modal-install' + (file ? ' ready' : ''),
-        disabled: !file || uploading,
-        onClick: handleInstall,
-      }, submitLabel),
+    h('div', { className: 'ws-detail-wrapper', onClick: (e) => e.stopPropagation() },
+      renderCloseButton(onClose, trLookup, h),
+      h('div', { className: 'modal-dialog', role: 'dialog', 'aria-modal': 'true' },
+        renderModalHeader(trLookup, h),
+        renderDropZone(dropOpts, h),
+        renderReqSection(trLookup, h),
+        error ? h('p', { className: 'sh-err' }, error) : null,
+        // exempt-ui01 modal submit action button
+        h('button', {
+          type: 'button',
+          className: 'btn-modal-install' + (file ? ' ready' : ''),
+          disabled: !file || uploading,
+          onClick: handleInstall,
+        }, submitLabel),
+      ),
     ),
   );
 }

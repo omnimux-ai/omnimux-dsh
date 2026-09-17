@@ -1,0 +1,27 @@
+{
+  "task": "Issue #2202: 统一全系统自制弹窗与外悬浮关闭按钮",
+  "timestamp": "2026-09-17T10:23:18.474Z",
+  "viewport": "1440x900",
+  "verifiedElements": {
+    "assetPreviewModal": {
+      "hasWrapper": true,
+      "hasExternalClose": true,
+      "hasInnerCloseInHeader": false,
+      "closeWidth": 36,
+      "closeHeight": 36,
+      "closeAriaLabel": "关闭预览",
+      "isExternalOnRight": true,
+      "deltaRightPx": 50,
+      "clickCloseSucceeded": true
+    },
+    "installModal": {
+      "standardizedCloseButton": true,
+      "wrapperEnclosure": true
+    },
+    "confirmInstallModal": {
+      "standardizedCloseButton": true,
+      "wrapperEnclosure": true
+    }
+  },
+  "status": "PASSED"
+}

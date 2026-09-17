@@ -21,7 +21,7 @@
     "build": "node scripts/build-client.mjs",
     "build:cloud-catalog": "node scripts/build-cloud-assets-catalog.mjs",
     "prepare": "npm run build",
-    "test": "node --test src/*.test.js src/client/*.test.js"
+    "test": "node --test src/*.test.js src/client/*.test.js tests/e2e/*.spec.js"
   },
   "dsh": {
     "bundle": {
