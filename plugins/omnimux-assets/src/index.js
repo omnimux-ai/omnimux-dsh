@@ -14,6 +14,7 @@ export const inject = ['tools', 'systemPrompt']
 
 const ASSETS_PROMPT = `This workspace may use the OmniMux creative asset library (omnimux-assets).
 Prefer assets_list with scope "assets" (optional type: character/scene/style/prop/knowledge/custom) and assets_search by name/description/tags.
+For cloud/public assets added to conversation or referenced by cloud id, use assets_cloud_save to download them into the local creative asset library.
 Each asset is a reusable creative object (name + type + description + materialized files under the assets store). Cite it as @类型/名称 (example: @角色/林晓). Missing managed copies are omitted from files — do not invent them.
 assets_upload still reports produced files; it does not create a typed asset.
 Never modify, move, or delete the user's original desktop file; deleting an asset drops the library record and may remove the managed copy under omnimux/assets/data/files/.`
@@ -130,16 +131,66 @@ export function apply(ctx) {
   ctx.tools.register({
     name: 'assets_search',
     description:
-      'Search creative assets by name, description, handle, or tags. Optional type filter (character/scene/style/prop/knowledge/custom). Missing disk paths are omitted from files.',
+      'Search creative assets by name, description, handle, or tags. Searches local assets first; when local matches are empty or include_cloud=true, also searches the cloud/public asset catalog.',
     parameters: objectParams({
       query: { type: 'string', required: true, description: 'Case-insensitive substring' },
       type: { type: 'string', description: 'Optional asset type filter' },
+      include_cloud: { type: 'boolean', description: 'Whether to also search cloud assets (defaults to true when local search returns no matches)' },
     }),
     output: jsonOut,
     async execute(args) {
       const query = typeof args.query === 'string' ? args.query : ''
       const type = typeof args.type === 'string' && args.type.trim() !== '' ? args.type.trim() : ''
-      return { assets: library.list({ query, ...(type ? { type } : {}) }) }
+      const localAssets = library.list({ query, ...(type ? { type } : {}) })
+      let cloudAssets = []
+      if (args.include_cloud === true || (localAssets.length === 0 && typeof cloud?.search === 'function')) {
+        try {
+          const cloudRes = cloud.search({ q: query, category: type || undefined, limit: 10 })
+          cloudAssets = cloudRes?.items || []
+        } catch {
+          // ignore cloud search error
+        }
+      }
+      return { assets: localAssets, ...(cloudAssets.length > 0 ? { cloud_assets: cloudAssets } : {}) }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'assets_cloud_save',
+    description:
+      'Download a public/cloud asset by its catalog id and save it into the local creative asset library. Downloads both cover image and media files, and automatically registers the asset in local assets. Call this when the user asks to download or import a cloud asset into local assets.',
+    parameters: objectParams({
+      id: { type: 'string', required: true, description: 'Cloud asset id (e.g. character-fantasy-genrex-2908f54b4d8c)' },
+      name: { type: 'string', description: 'Optional custom name for the local asset' },
+      type: {
+        type: 'string',
+        enum: ['character', 'scene', 'style', 'prop', 'knowledge', 'custom'],
+        description: 'Optional asset category type; defaults to the cloud category',
+      },
+    }),
+    output: jsonOut,
+    async execute(args) {
+      const id = typeof args.id === 'string' ? args.id.trim() : ''
+      if (!id) throw new AssetsError('invalid-argument', 'id is required')
+      if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+      try {
+        const asset = await cloud.saveToLocal(id, { name: args.name, type: args.type })
+        const hubEvents = ctx.get?.('hubEvents')
+        hubEvents?.emit({
+          type: 'omnimux:assets:changed',
+          payload: {
+            lrev: library.revision(),
+            arev: artifacts.revision(),
+            op: 'create',
+            ids: [asset.id],
+            assetType: asset.type,
+            at: Date.now(),
+          },
+        })
+        return { ok: true, asset }
+      } finally {
+        cloud.clearStaging()
+      }
     },
   })
 

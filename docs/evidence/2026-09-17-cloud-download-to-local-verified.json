@@ -1,0 +1,42 @@
+{
+  "task": "assets-cloud-download-to-local",
+  "issue": 2230,
+  "timestamp": "2026-09-17T14:18:00.000Z",
+  "status": "PASS",
+  "verifications": {
+    "add_to_conversation": {
+      "asset_id": "character-fantasy-genrex-2908f54b4d8c",
+      "name": "Angel Influencer",
+      "is_cloud": true,
+      "preview_url_present": true,
+      "source_cover_url": "https://assets.omnimux.ai/avatars/free-ai-avatars/Fantasy_GenreX/Angel%20Influencer/Angel%20Influencer.png",
+      "source_media_url": "https://assets.omnimux.ai/avatars/free-ai-avatars/Fantasy_GenreX/Angel%20Influencer/089-angel-influencer.wav",
+      "unified_reference_delivered": true
+    },
+    "agent_tool": {
+      "tool_name": "assets_cloud_save",
+      "input": {
+        "id": "character-fantasy-genrex-2908f54b4d8c"
+      },
+      "execution_ok": true
+    },
+    "download_and_storage": {
+      "dual_resource_downloaded": true,
+      "cover_file": "Angel Influencer-cover.png",
+      "cover_size_bytes": 4416094,
+      "media_file": "Angel Influencer.wav",
+      "media_size_bytes": 330284,
+      "local_asset_id": "ast_3c91a3b1",
+      "managed_vault_written": true
+    },
+    "event_broadcast": {
+      "event_type": "omnimux:assets:changed",
+      "op": "create"
+    },
+    "local_library_listing": {
+      "asset_visible_in_local": true,
+      "files_count": 2,
+      "cover_bound": true
+    }
+  }
+}

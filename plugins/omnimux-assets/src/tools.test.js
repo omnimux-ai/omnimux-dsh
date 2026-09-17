@@ -35,6 +35,7 @@ test('omnimux-assets tools registration and execution', async (t) => {
   assert.ok(registered.has('assets_create'), 'assets_create registered')
   assert.ok(registered.has('assets_update'), 'assets_update registered')
   assert.ok(registered.has('assets_delete'), 'assets_delete registered')
+  assert.ok(registered.has('assets_cloud_save'), 'assets_cloud_save registered')
 
   // 1. Test assets_create
   const createTool = registered.get('assets_create')
@@ -90,4 +91,31 @@ test('omnimux-assets tools registration and execution', async (t) => {
     async () => getTool.execute({ id: assetId }),
     { message: /no asset/ }
   )
+
+  // 7. Test assets_cloud_save
+  const cloudSaveTool = registered.get('assets_cloud_save')
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url) => {
+    const isPng = String(url).includes('.png')
+    return {
+      ok: true,
+      headers: { get: () => (isPng ? 'image/png' : 'audio/wav') },
+      arrayBuffer: async () => new TextEncoder().encode(isPng ? 'mock-png' : 'mock-wav').buffer,
+    }
+  }
+
+  try {
+    const saveRes = await cloudSaveTool.execute({ id: 'character-fantasy-genrex-2908f54b4d8c' })
+    assert.equal(saveRes.ok, true)
+    assert.ok(saveRes.asset)
+    assert.equal(saveRes.asset.name, 'Angel Influencer')
+    assert.equal(saveRes.asset.source, 'cloud:character-fantasy-genrex-2908f54b4d8c')
+    assert.ok(saveRes.asset.files.length >= 2, 'should download both cover image and audio media')
+
+    // 8. Test assets_search with cloud fallback
+    const cloudSearchRes = await searchTool.execute({ query: 'Greaser' })
+    assert.ok(cloudSearchRes.cloud_assets?.length > 0, 'should return cloud matching assets when local has none')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })

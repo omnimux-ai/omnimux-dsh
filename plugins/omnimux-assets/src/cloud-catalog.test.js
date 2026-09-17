@@ -380,6 +380,48 @@ describe('createCloudCatalog: save to local', () => {
     assert.equal(library.list().length, 1)
   })
 
+  it('downloads both cover image and media files, falling back to meta.source_* URLs', async () => {
+    writeCatalog({
+      rows: [
+        {
+          id: 'character-fantasy-genrex-test',
+          category: 'character',
+          sub_category: 'fantasy-genrex',
+          name: 'Angel Influencer',
+          description: 'AI 角色测试',
+          media_type: 'audio',
+          media_url: 'file:library/non-existent-local/audio.wav',
+          cover_url: 'file:library/non-existent-local/cover.png',
+          tags: ['AI数字人'],
+          meta: {
+            source_cover_url: 'https://cdn.example.com/Angel%20Influencer.png',
+            source_media_url: 'https://cdn.example.com/Angel%20Influencer.wav',
+          },
+        },
+      ],
+    })
+    const { library } = makeStores()
+    const requested = []
+    const fetchImpl = async (url) => {
+      requested.push(url)
+      const isPng = url.endsWith('.png')
+      return {
+        ok: true,
+        headers: { get: (name) => (name === 'content-type' ? (isPng ? 'image/png' : 'audio/wav') : null) },
+        arrayBuffer: async () => new TextEncoder().encode(isPng ? 'png-content' : 'wav-content').buffer,
+      }
+    }
+    const cloud = makeCatalog({ library, fetchImpl })
+    const asset = await cloud.saveToLocal('character-fantasy-genrex-test')
+    assert.equal(requested.length, 2)
+    assert.ok(requested.includes('https://cdn.example.com/Angel%20Influencer.png'))
+    assert.ok(requested.includes('https://cdn.example.com/Angel%20Influencer.wav'))
+    assert.equal(asset.name, 'Angel Influencer')
+    assert.equal(asset.files.length, 2)
+    assert.ok(asset.files[0].original_name.includes('cover.png'))
+    assert.ok(asset.files[1].original_name.includes('.wav'))
+  })
+
   it('rejects an unknown id', async () => {
     writeCatalog()
     const { library } = makeStores()
