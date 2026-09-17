@@ -53,9 +53,11 @@ function renderFeaturedHoverActions(item, opts) {
 
   return h('div', { className: 'featured-hover-actions' },
     // exempt-ui01 open detail hover button
-    h('button', { type: 'button', className: 'hover-btn hover-btn-detail', onClick: onOpenClick }, detailTitle),
+    h('button', { type: 'button', className: 'hover-btn hover-btn-detail', onClick: onOpenClick },
+      h('span', { className: 'hover-btn-label' }, detailTitle)),
     // exempt-ui01 try in session hover button
-    h('button', { type: 'button', className: 'hover-btn hover-btn-try', onClick: onTryClick }, tryTitle),
+    h('button', { type: 'button', className: 'hover-btn hover-btn-try', onClick: onTryClick },
+      h('span', { className: 'hover-btn-label' }, tryTitle)),
   );
 }
 

@@ -203,6 +203,9 @@ export const ASSETS_CSS = `
   background: var(--dsw-alias-bg-base, var(--dsw-bg));
   display: flex;
   flex-direction: column;
+  /* 卡片自身宽度即容器查询基准：CTA 按卡片宽度退化，不随视口列数走 */
+  container-type: inline-size;
+  container-name: asset-card;
 }
 .omnimux-assets-card[aria-selected="true"] {
   border-color: var(--dsw-alias-label-primary);
@@ -297,6 +300,29 @@ export const ASSETS_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* CTA 文字标签：宽度充足时独占一格并收省略号，紧凑区间整块退出布局 */
+.omnimux-assets-overlay-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字不再参与布局。
+   阈值由实测反解：英文文案 "Add to Conversation" 需卡片约 290px 才完整容纳，
+   296px 留出余量，使任何语言下只要显示文字就一定放得下。 */
+@container asset-card (max-width: 296px) {
+  .omnimux-assets-card-overlay-actions {
+    justify-content: center;
+  }
+  .omnimux-assets-overlay-label {
+    display: none;
+  }
+  .omnimux-assets-overlay-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    padding: 0;
+  }
 }
 .omnimux-assets-overlay-btn svg {
   flex-shrink: 0;
