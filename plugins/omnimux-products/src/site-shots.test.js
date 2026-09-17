@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { captureSiteScreenshots } from './site-shots.js'
+import { captureSiteScreenshots, isSuspectedBlankFrame } from './site-shots.js'
 import { SCREENSHOT_REASON, SCREENSHOT_STATUS } from './screenshot-contract.js'
 
 const PAGE_URL = 'https://platform.example.com/'
@@ -267,5 +267,122 @@ describe('site shots · capture', () => {
     }).then((result) => {
       assert.equal(result.report.status, SCREENSHOT_STATUS.FAILED)
     }))
+  })
+
+  it('normalizes bare hostnames into https URL before navigation', async () => {
+    let navigatedUrl = null
+    const launch = async () => ({
+      child: null,
+      port: 9222,
+      webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/browser/abc',
+      userDataDir: '/tmp/omnimux-shots-double',
+      async dispose() {},
+    })
+    const attach = async (_handle, _viewport) => ({
+      async navigate(url) {
+        navigatedUrl = url
+      },
+      async capture() {
+        return PNG
+      },
+      async close() {},
+    })
+
+    const result = await captureSiteScreenshots({
+      url: 'www.omnimux.ai',
+      kind: 'digital',
+      locate: () => '/bin/chrome',
+      launch,
+      attach,
+      sleep: noSleep,
+    })
+
+    assert.equal(result.report.status, SCREENSHOT_STATUS.CAPTURED)
+    assert.equal(navigatedUrl, 'https://www.omnimux.ai/')
+  })
+
+  it('retries capture when initial frame is a suspected blank frame', async () => {
+    // 构造一个合法的 1440x900 PNG 头部，总体积小于 15KB，模拟全黑帧
+    const blankPng = Buffer.alloc(200)
+    blankPng[0] = 0x89
+    blankPng[1] = 0x50
+    blankPng[2] = 0x4e
+    blankPng[3] = 0x47
+    blankPng.writeUInt32BE(1440, 16)
+    blankPng.writeUInt32BE(900, 20)
+
+    const renderedPng = Buffer.alloc(30000)
+    renderedPng[0] = 0x89
+    renderedPng[1] = 0x50
+    renderedPng[2] = 0x4e
+    renderedPng[3] = 0x47
+    renderedPng.writeUInt32BE(1440, 16)
+    renderedPng.writeUInt32BE(900, 20)
+
+    let captureCount = 0
+    let sleptMs = 0
+    const launch = async () => ({
+      child: null,
+      port: 9222,
+      webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/browser/abc',
+      userDataDir: '/tmp/omnimux-shots-double',
+      async dispose() {},
+    })
+    const attach = async (_handle, _viewport) => ({
+      async navigate() {},
+      async capture() {
+        captureCount += 1
+        return captureCount === 1 ? blankPng : renderedPng
+      },
+      async close() {},
+    })
+
+    const result = await captureSiteScreenshots({
+      url: PAGE_URL,
+      kind: 'digital',
+      locate: () => '/bin/chrome',
+      launch,
+      attach,
+      sleep: async (ms) => {
+        sleptMs += ms
+      },
+      settleMs: 100,
+      retrySettleMs: 200,
+    })
+
+    assert.equal(result.report.status, SCREENSHOT_STATUS.CAPTURED)
+    // 触发了二次补拍，且采纳了更大的有效帧
+    assert.ok(captureCount > 1)
+    assert.equal(result.outcomes[0].bytes, renderedPng.length)
+    assert.ok(sleptMs >= 300)
+  })
+})
+
+describe('isSuspectedBlankFrame', () => {
+  it('identifies blank small-size large-resolution PNGs correctly', () => {
+    // 正常渲染帧：大尺寸且体积大
+    const fullPng = Buffer.alloc(40000)
+    fullPng[0] = 0x89
+    fullPng[1] = 0x50
+    fullPng[2] = 0x4e
+    fullPng[3] = 0x47
+    fullPng.writeUInt32BE(1440, 16)
+    fullPng.writeUInt32BE(900, 20)
+    assert.equal(isSuspectedBlankFrame(fullPng), false)
+
+    // 纯黑未就绪帧：1440x900 但体积仅 5KB
+    const blackPng = Buffer.alloc(5853)
+    blackPng[0] = 0x89
+    blackPng[1] = 0x50
+    blackPng[2] = 0x4e
+    blackPng[3] = 0x47
+    blackPng.writeUInt32BE(1440, 16)
+    blackPng.writeUInt32BE(900, 20)
+    assert.equal(isSuspectedBlankFrame(blackPng), true)
+
+    // 单测微小桩（< 24 字节）不误判
+    assert.equal(isSuspectedBlankFrame(PNG), false)
+    assert.equal(isSuspectedBlankFrame(Buffer.alloc(0)), false)
+    assert.equal(isSuspectedBlankFrame(null), false)
   })
 })

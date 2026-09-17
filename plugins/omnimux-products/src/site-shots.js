@@ -52,7 +52,7 @@ import { normalizeImportUrl } from './link-importer.js'
  * @returns {Promise<CaptureResult>} never rejects
  */
 export async function captureSiteScreenshots(args = {}) {
-  const url = typeof args.url === 'string' ? args.url.trim() : ''
+  const rawUrl = typeof args.url === 'string' ? args.url.trim() : ''
   const kind = args.kind === 'digital' ? 'digital' : 'physical'
 
   // L4 — a physical listing never enters this chain at all.
@@ -61,8 +61,9 @@ export async function captureSiteScreenshots(args = {}) {
   // Reuse the importer's own SSRF guard: never a second copy of the rule. The
   // guard rejects non-http(s) schemes, embedded credentials and every private
   // host, so no socket is opened for a link that cannot legally be captured.
+  let url = rawUrl
   try {
-    normalizeImportUrl(url)
+    url = normalizeImportUrl(rawUrl)
   } catch {
     return degraded(SCREENSHOT_REASON.UNSAFE_URL)
   }
@@ -121,9 +122,35 @@ export async function captureSiteScreenshots(args = {}) {
 }
 
 /**
+ * Detect whether a captured frame looks like an unrendered or blank/solid-color placeholder.
+ *
+ * Full-viewport PNGs (1440×900 or 780×1688) with actual layout, text, and graphics
+ * are typically 25KB~300KB+. When a page has only rendered its dark/blank background
+ * layer, Deflate compression collapses it to under 15KB (e.g. 5KB~8KB pure black).
+ * Small test fixture buffers (<24 bytes) are ignored to avoid triggering in unit tests.
+ *
+ * @param {Buffer} buffer
+ * @returns {boolean}
+ */
+export function isSuspectedBlankFrame(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 24) return false
+  if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) return false
+  try {
+    const width = buffer.readUInt32BE(16)
+    const height = buffer.readUInt32BE(20)
+    if (width >= 300 && height >= 300 && buffer.length < 15000) {
+      return true
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+/**
  * @param {{ webSocketDebuggerUrl?: string, port?: number }} handle
  * @param {{ kind: string, width: number, height: number, deviceScaleFactor: number, isMobile: boolean, hasTouch: boolean }} spec
- * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object }} opts
+ * @param {{ url: string, navTimeoutMs: number, settleMs: number, attach: Function, sleep: (ms: number) => Promise<void>, attachOptions: object, retrySettleMs?: number }} opts
  * @returns {Promise<object>}
  */
 async function captureViewport(handle, spec, opts) {
@@ -132,10 +159,26 @@ async function captureViewport(handle, spec, opts) {
     page = await opts.attach(handle, spec, { timeoutMs: opts.navTimeoutMs, ...opts.attachOptions })
     await page.navigate(opts.url, opts.navTimeoutMs)
     if (opts.settleMs > 0) await opts.sleep(opts.settleMs)
-    const buffer = await page.capture()
+    let buffer = await page.capture()
     if (!buffer || buffer.length === 0) {
       return outcomeOf(spec.kind, false, {}, 0, SCREENSHOT_REASON.CAPTURE_FAILED)
     }
+
+    if (isSuspectedBlankFrame(buffer)) {
+      const retryWaitMs = Number.isFinite(opts.retrySettleMs) ? Number(opts.retrySettleMs) : 1000
+      if (retryWaitMs > 0 && typeof opts.sleep === 'function') {
+        await opts.sleep(retryWaitMs)
+        try {
+          const retriedBuffer = await page.capture()
+          if (retriedBuffer && retriedBuffer.length > buffer.length) {
+            buffer = retriedBuffer
+          }
+        } catch {
+          // Fall back to initial buffer if retry fails
+        }
+      }
+    }
+
     return outcomeOf(spec.kind, true, { width: spec.width, height: spec.height }, buffer.length, null, buffer)
   } catch (error) {
     return outcomeOf(spec.kind, false, {}, 0, reasonOf(error, SCREENSHOT_REASON.NAV_FAILED))
