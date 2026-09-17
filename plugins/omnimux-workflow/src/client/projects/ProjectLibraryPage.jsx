@@ -12,6 +12,7 @@ import {
   IconPlusOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { Button, ConfirmModal, Divider, FilterBar, ModalDialog, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { Info } from 'lucide-react'
 import {
   listProjects,
   getProject,
@@ -592,7 +593,7 @@ export function ProjectLibraryPage(props) {
             </div>
           </div>
 
-          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs：创作页 ⓘ / 项目资产 ⓘ，右侧白色胶囊「+ 新建创作页」，严格对齐设计参考) */}
+          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs：创作页 + 矢量信息图标 / 项目资产 + 矢量信息图标，右侧规范 Button「+ 新建创作页」) */}
           <div className="omnimux-project-detail-tabs-bar">
             <Tabs
               variant="underline"
@@ -602,7 +603,7 @@ export function ProjectLibraryPage(props) {
                   label: (
                     <span className="omnimux-tab-label-wrap">
                       创作页
-                      <span className="omnimux-tab-info-icon" title="查看并管理项目的所有创作页">ⓘ</span>
+                      <Info size={13} className="omnimux-tab-info-icon" aria-label="查看并管理项目的所有创作页" />
                     </span>
                   ),
                 },
@@ -611,7 +612,7 @@ export function ProjectLibraryPage(props) {
                   label: (
                     <span className="omnimux-tab-label-wrap">
                       项目资产
-                      <span className="omnimux-tab-info-icon" title="查看并管理项目的所有资产文件">ⓘ</span>
+                      <Info size={13} className="omnimux-tab-info-icon" aria-label="查看并管理项目的所有资产文件" />
                     </span>
                   ),
                 },
@@ -620,15 +621,16 @@ export function ProjectLibraryPage(props) {
               onChange={setDetailTab}
             />
             {detailTab === 'pages' && (
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 className="omnimux-create-page-btn"
+                leadingIcon={<IconPlusOutline16 />}
                 disabled={busy}
                 onClick={handleCreatePageInProject}
                 title="新建创作页"
               >
                 + 新建创作页
-              </button>
+              </Button>
             )}
           </div>
 
