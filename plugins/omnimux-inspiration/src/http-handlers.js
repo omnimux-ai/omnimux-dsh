@@ -697,9 +697,17 @@ export function handleList({ url, store }) {
     posted_before,
   })
   const platforms = typeof store.platforms === 'function' ? store.platforms() : []
-  const items = failed
+  const isLean = url.searchParams.get('projection') === 'lean'
+  const rawItems = failed
     ? result.items.map((row) => failed.get(String(row.id)) || row)
     : result.items
+  const items = isLean
+    ? rawItems.map((row) => {
+        if (!row || typeof row !== 'object' || !row.deconstruction) return row
+        const { deconstruction, ...rest } = row
+        return rest
+      })
+    : rawItems
   return { status: 200, body: { data: { ...result, items, platforms } } }
 }
 

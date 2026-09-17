@@ -124,7 +124,7 @@ const CLOUD_FILTER_KEYS = [
 const LOCAL_FILTER_KEYS = [
   'type', 'tag', 'tags', 'q', 'platform', 'is_favorite', 'sort', 'page', 'page_size',
   'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
-  'traffic_type', 'posted_after', 'posted_before',
+  'traffic_type', 'posted_after', 'posted_before', 'projection',
 ]
 
 /**
@@ -199,6 +199,7 @@ export async function loadInspirationsAtomic(params) {
     posted_before: posted_before.trim() || undefined,
     page,
     page_size: pageSize,
+    projection: 'lean',
   }
 
   if (tab === 'local') {

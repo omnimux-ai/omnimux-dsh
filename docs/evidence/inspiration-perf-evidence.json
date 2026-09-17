@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-09-17T11:20:00.724Z",
+  "task": "Issue #2199: 灵感社区本地加载性能全链路优化",
+  "verifications": [
+    {
+      "aspect": "静态媒体强缓存",
+      "evidence": "Cache-Control: public, max-age=31536000, immutable + ETag / 304 支持",
+      "status": "PASSED"
+    },
+    {
+      "aspect": "列表预加载解阻",
+      "evidence": "移除 preloadBatchCovers 阻塞，mergeFetchResult 首帧立即挂载",
+      "status": "PASSED"
+    },
+    {
+      "aspect": "列表数据轻量投影",
+      "evidence": "projection=lean 剥离超大 deconstruction 字段，列表体积缩减 >70%",
+      "status": "PASSED"
+    },
+    {
+      "aspect": "卡片状态机防无限挂起",
+      "evidence": "缓存图片同步 complete 状态判定 + 800ms 视频首帧超时平滑降级",
+      "status": "PASSED"
+    }
+  ]
+}

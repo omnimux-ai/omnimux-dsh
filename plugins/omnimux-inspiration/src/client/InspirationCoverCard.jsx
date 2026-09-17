@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc, pickVideoSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
@@ -46,13 +46,25 @@ export function InspirationCoverCard({ card }) {
   const [broken, setBroken] = useState(!cover)
   const [loaded, setLoaded] = useState(false)
   const [frameReady, setFrameReady] = useState(false)
+  const [fallbackTimeout, setFallbackTimeout] = useState(false)
+  const imgRef = useRef(null)
   const isRevealed = revealed !== false
 
   useEffect(() => {
     setBroken(!cover)
     setLoaded(false)
     setFrameReady(false)
+    setFallbackTimeout(false)
   }, [cover, videoSrc])
+
+  // If already cached or complete, mark loaded synchronously on next tick
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      if (isUsableCoverSize(imgRef.current.naturalWidth, imgRef.current.naturalHeight)) {
+        setLoaded(true)
+      }
+    }
+  }, [cover])
 
   const platform = formatPlatformName(row.source_platform || (row.is_local ? 'local' : 'tiktok'), t)
   const isLocal = Boolean(row.is_local)
@@ -60,7 +72,18 @@ export function InspirationCoverCard({ card }) {
   // The video frame is only a fallback, so it is reached exactly when the cover
   // path has failed: `broken` alone decides which of the two representations the
   // card is showing.
-  const usesVideoFrame = broken && Boolean(videoSrc)
+  const usesVideoFrame = broken && Boolean(videoSrc) && !fallbackTimeout
+
+  // Safety net: avoid hanging in shimmer state when video frame loading stalls
+  useEffect(() => {
+    if (usesVideoFrame && !frameReady) {
+      const timer = setTimeout(() => {
+        setFallbackTimeout(true)
+      }, 800)
+      return () => clearTimeout(timer)
+    }
+  }, [usesVideoFrame, frameReady])
+
   const isShowCover = isRevealed && (usesVideoFrame ? frameReady : !broken && loaded)
   const importing = isImportingRow(row)
   const failed = isFailedRow(row)
@@ -177,7 +200,10 @@ export function InspirationCoverCard({ card }) {
           aria-hidden="true"
           tabIndex={-1}
           onLoadedData={() => setFrameReady(true)}
-          onError={() => setFrameReady(false)}
+          onError={() => {
+            setFrameReady(false)
+            setFallbackTimeout(true)
+          }}
         />
       ) : broken ? (
         <div className="omnimux-inspiration-cover-fallback" aria-hidden="true">
@@ -192,6 +218,7 @@ export function InspirationCoverCard({ card }) {
         </div>
       ) : (
         <img
+          ref={imgRef}
           className={`omnimux-inspiration-cover-img ${isShowCover ? 'is-loaded' : ''}`}
           src={cover}
           alt={title}

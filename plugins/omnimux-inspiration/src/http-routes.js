@@ -243,18 +243,34 @@ async function runRoute(name, args) {
 }
 
 function pipeMedia(req, res, filePath) {
-  const fileSize = statSync(filePath).size
+  const stat = statSync(filePath)
+  const fileSize = stat.size
+  const mtimeMs = Math.floor(stat.mtimeMs || (stat.mtime ? stat.mtime.getTime() : 0))
+  const etag = `W/"${fileSize.toString(16)}-${mtimeMs.toString(16)}"`
   const range = req.headers?.range || req.headers?.Range
   const ext = filePath.split('.').pop()?.toLowerCase() || ''
   const contentType = MEDIA_TYPES[ext] || 'application/octet-stream'
+
+  const ifNoneMatch = req.headers?.['if-none-match'] || req.headers?.['If-None-Match']
+  if (ifNoneMatch && ifNoneMatch === etag) {
+    res.writeHead(304, {
+      ETag: etag,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    })
+    res.end()
+    return
+  }
+
   if (typeof range === 'string') {
-    pipeRange({ res, filePath, fileSize, range, contentType })
+    pipeRange({ res, filePath, fileSize, range, contentType, etag })
     return
   }
   res.writeHead(200, {
     'Content-Length': fileSize,
     'Content-Type': contentType,
     'Accept-Ranges': 'bytes',
+    ETag: etag,
+    'Cache-Control': 'public, max-age=31536000, immutable',
   })
   createReadStream(filePath).pipe(res)
 }
@@ -264,12 +280,15 @@ function pipeRange(opts) {
   const start = parseInt(parts[0], 10)
   const end = parts[1] ? parseInt(parts[1], 10) : opts.fileSize - 1
   const file = createReadStream(opts.filePath, { start, end })
-  opts.res.writeHead(206, {
+  const headers = {
     'Content-Range': `bytes ${start}-${end}/${opts.fileSize}`,
     'Accept-Ranges': 'bytes',
     'Content-Length': (end - start) + 1,
     'Content-Type': opts.contentType,
-  })
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  }
+  if (opts.etag) headers.ETag = opts.etag
+  opts.res.writeHead(206, headers)
   file.pipe(opts.res)
 }
 

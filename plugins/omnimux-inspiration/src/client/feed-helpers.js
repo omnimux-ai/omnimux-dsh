@@ -280,9 +280,7 @@ export async function fetchAndMergeInspirations(params, options) {
     page: targetPage,
     pageSize: params.pageSize || 20,
   })
-  if (result?.items && result.items.length) {
-    await preloadBatchCovers(result.items, 600)
-  }
+  // 立即提交列表数据上屏，彻底消除阻塞卡顿
   mergeFetchResult({
     isNextPage,
     result,
@@ -290,6 +288,11 @@ export async function fetchAndMergeInspirations(params, options) {
     cacheKey,
     setters,
   })
+
+  // 后台非阻塞异步预热封面，不挡主流程渲染
+  if (result?.items && result.items.length) {
+    void preloadBatchCovers(result.items, 300)
+  }
 }
 
 export function checkCacheEarlyReturn(cacheKey, setters) {
