@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button, ConfirmModal, IconButton } from 'dsh-ui-kit'
+import { CheckIcon } from './icons.jsx'
 
 /**
  * @param {string} productId
@@ -63,6 +64,9 @@ export function ProductsView(props) {
   const { t, open = true, query = '', kindTab = 'all', onOpenCreate } = props
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [pendingRemove, setPendingRemove] = useState(null)
+  const [busy, setBusy] = useState(false)
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -106,12 +110,76 @@ export function ProductsView(props) {
     return list
   }, [products, kindTab, query])
 
+  const toggleSelect = useCallback((id, e) => {
+    e?.stopPropagation()
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleOpenBatchDelete = useCallback(() => {
+    const selectedProducts = products.filter((p) => selectedIds.has(p.id))
+    setPendingRemove({
+      ids: [...selectedIds],
+      names: selectedProducts.map((p) => p.name),
+    })
+  }, [products, selectedIds])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingRemove) return
+    try {
+      setBusy(true)
+      await Promise.all(
+        pendingRemove.ids.map((id) =>
+          fetch(`/omnimux/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+        )
+      )
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of pendingRemove.ids) next.delete(id)
+        return next
+      })
+      setPendingRemove(null)
+      await fetchProducts()
+    } catch {
+      // ignore network errors
+    } finally {
+      setBusy(false)
+    }
+  }, [pendingRemove, fetchProducts])
+
   const handleCreate = (kind, productId) => {
     onOpenCreate?.(kind, productId)
   }
 
   return (
     <div className="omnimux-products-list-view">
+      {selectedIds.size > 0 ? (
+        <div className="omnimux-assets-selection">
+          <span>{(t('select.count') || '已选 {n} 项').replace('{n}', String(selectedIds.size))}</span>
+          <div className="omnimux-assets-selection-actions">
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              {t('select.clear') || '取消选择'}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={busy}
+              onClick={handleOpenBatchDelete}
+            >
+              {(t('select.delete') || '移除 {n} 项').replace('{n}', String(selectedIds.size))}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* 1:1 对齐原产品库主体内容与居中虚线大空状态 */}
       <div className="omnimux-products-body">
         {visibleProducts.length === 0 ? (
@@ -131,15 +199,27 @@ export function ProductsView(props) {
                 ? previewUrl(product.id, cover.id)
                 : ''
               const isDigital = product.kind === 'digital'
+              const selected = selectedIds.has(product.id)
 
               return (
                 <article
                   key={product.id}
-                  className="omnimux-products-card"
+                  className="omnimux-products-card omnimux-assets-focusable"
                   tabIndex={0}
                   onClick={() => handleCreate(isDigital ? 'digital' : 'physical', product.id)}
                 >
                   <div className="omnimux-products-card-thumb">
+                    <IconButton
+                      variant="ghost"
+                      size="xs"
+                      className="omnimux-assets-check"
+                      data-selected={selected ? 'true' : 'false'}
+                      aria-label={t('select.toggle') || '选择产品'}
+                      aria-pressed={selected ? 'true' : 'false'}
+                      onClick={(e) => toggleSelect(product.id, e)}
+                    >
+                      {selected ? <CheckIcon size={12} /> : <span />}
+                    </IconButton>
                     {preview ? (
                       <img
                         src={preview}
@@ -169,6 +249,24 @@ export function ProductsView(props) {
           </div>
         )}
       </div>
+
+      {pendingRemove ? (
+        <ConfirmModal
+          open
+          onClose={() => setPendingRemove(null)}
+          title={
+            pendingRemove.ids.length > 1
+              ? (t('select.removeTitle') || '确认从产品库移除这 {n} 项？').replace('{n}', String(pendingRemove.ids.length))
+              : (t('product.removeTitle') || '确认从产品库移除「{name}」？').replace('{name}', String(pendingRemove.names[0] ?? ''))
+          }
+          message={t('product.removeHint') || '仅从产品库移除引用，本地磁盘源文件不受影响。'}
+          confirmLabel={t('remove.confirm') || t('mapping.removeConfirm') || '确认移除'}
+          cancelLabel={t('remove.cancel') || t('mapping.cancel') || '取消'}
+          confirmVariant="danger"
+          confirmLoading={busy}
+          onConfirm={handleConfirmDelete}
+        />
+      ) : null}
     </div>
   )
 }
