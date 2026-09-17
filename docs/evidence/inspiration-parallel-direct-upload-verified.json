@@ -1,0 +1,23 @@
+{
+  "task": "inspiration-parallel-direct-upload",
+  "issue": 2175,
+  "timestamp": "2026-09-17T07:42:20.955Z",
+  "checks": [
+    {
+      "name": "parallel-cover-and-media-upload",
+      "pass": true,
+      "detail": "maxConcurrent=2"
+    },
+    {
+      "name": "temporary-put-failure-does-not-blacklist-gateway",
+      "pass": true,
+      "detail": "presignCalls=2"
+    },
+    {
+      "name": "unsupported-501-correctly-blacklisted",
+      "pass": true,
+      "detail": "presignCalls=1"
+    }
+  ],
+  "allPassed": true
+}

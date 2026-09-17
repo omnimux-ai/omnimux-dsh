@@ -170,4 +170,81 @@ describe('gateway-upload: direct upload with relay fallback', () => {
     assert.equal(fileUrl, 'https://cdn.example/relayed.png')
     await unlink(tmpFile).catch(() => {})
   })
+
+  it('temporary PUT failure falls back to relay without permanently blacklisting direct upload', async () => {
+    let presignCalls = 0
+    const fetcher = async (url) => {
+      if (url.endsWith('/files/upload/presign')) {
+        presignCalls++
+        return directTicket({ upload_url: 'https://bucket.r2.example/temp-put-fail' })
+      }
+      if (url === 'https://bucket.r2.example/temp-put-fail') return new Response('', { status: 500 })
+      if (url.endsWith('/files/upload/stream')) {
+        return jsonResponse({ success: true, code: 200, data: { file_url: 'https://cdn.example/relayed-put-fail.png' } })
+      }
+      throw new Error(`unexpected call: ${url}`)
+    }
+
+    const first = await uploadMediaToGateway(tmpFile, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test',
+      fetcher,
+    })
+    assert.equal(first, 'https://cdn.example/relayed-put-fail.png')
+    assert.equal(presignCalls, 1)
+
+    // Next file upload to the same baseUrl must still attempt direct upload
+    fileSeq += 1
+    const nextFile = join(tmpdir(), `test-direct-next-${Date.now()}-${fileSeq}.png`)
+    await writeFile(nextFile, PNG)
+    const second = await uploadMediaToGateway(nextFile, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test',
+      fetcher,
+    })
+    assert.equal(second, 'https://cdn.example/relayed-put-fail.png')
+    assert.equal(presignCalls, 2, 'direct upload should still be probed after transient PUT error')
+    await unlink(tmpFile).catch(() => {})
+    await unlink(nextFile).catch(() => {})
+  })
+
+  it('temporary confirm failure falls back to relay without permanently blacklisting direct upload', async () => {
+    let presignCalls = 0
+    const fetcher = async (url) => {
+      if (url.endsWith('/files/upload/presign')) {
+        presignCalls++
+        return directTicket({ upload_url: 'https://bucket.r2.example/temp-confirm-fail' })
+      }
+      if (url === 'https://bucket.r2.example/temp-confirm-fail') return new Response('', { status: 200 })
+      if (url.endsWith('/files/upload/confirm')) {
+        return jsonResponse({ success: false, code: 500, msg: '临时内部错误' }, 500)
+      }
+      if (url.endsWith('/files/upload/stream')) {
+        return jsonResponse({ success: true, code: 200, data: { file_url: 'https://cdn.example/relayed-confirm-fail.png' } })
+      }
+      throw new Error(`unexpected call: ${url}`)
+    }
+
+    const first = await uploadMediaToGateway(tmpFile, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test',
+      fetcher,
+    })
+    assert.equal(first, 'https://cdn.example/relayed-confirm-fail.png')
+    assert.equal(presignCalls, 1)
+
+    // Next file upload to the same baseUrl must still attempt direct upload
+    fileSeq += 1
+    const nextFile = join(tmpdir(), `test-direct-next-conf-${Date.now()}-${fileSeq}.png`)
+    await writeFile(nextFile, PNG)
+    const second = await uploadMediaToGateway(nextFile, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test',
+      fetcher,
+    })
+    assert.equal(second, 'https://cdn.example/relayed-confirm-fail.png')
+    assert.equal(presignCalls, 2, 'direct upload should still be probed after transient confirm error')
+    await unlink(tmpFile).catch(() => {})
+    await unlink(nextFile).catch(() => {})
+  })
 })
