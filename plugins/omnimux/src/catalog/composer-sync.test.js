@@ -112,6 +112,15 @@ describe('createComposerListSync', () => {
     assert.equal(settings.writes.length, 0)
   })
 
+  it('refuses to write an empty list when the user hid every hub-listed model', async () => {
+    const settings = fakeSettings()
+    const sync = createComposerListSync({ settings })
+    const result = await sync.sync({ hubText: hub('alpha', 'beta'), hiddenIds: ['alpha', 'beta'] })
+    assert.equal(result.written, false)
+    assert.equal(result.reason, 'hidden-all')
+    assert.equal(settings.writes.length, 0)
+  })
+
   it('reports an absent namespace instead of inventing one', async () => {
     const settings = fakeSettings({ describe: () => [{ ns: 'other', revision: 1 }] })
     const sync = createComposerListSync({ settings })

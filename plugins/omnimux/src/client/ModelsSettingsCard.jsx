@@ -194,6 +194,13 @@ export function ModelsSettingsCard({ t, scope }) {
   const onToggleComposerModel = useCallback(async (id, visible) => {
     if (!scope || typeof scope.set !== 'function' || !writable || busy) return
     const current = Array.isArray(value.composerHiddenModels) ? value.composerHiddenModels : []
+    if (!visible && current.length + 1 >= composerModels.length) {
+      // Hiding the last visible model would leave the composer with nothing
+      // usable, and the sync refuses to write an empty list anyway. Say so
+      // rather than storing a choice that cannot take effect.
+      setError(t('models.composerKeepOne'))
+      return
+    }
     const next = visible
       ? current.filter((entry) => entry !== id)
       : [...new Set([...current, id])]
@@ -209,7 +216,7 @@ export function ModelsSettingsCard({ t, scope }) {
     } finally {
       setBusy(false)
     }
-  }, [scope, writable, busy, value])
+  }, [scope, writable, busy, value, composerModels, t])
 
   if (!available) return null
 

@@ -11,7 +11,7 @@
  */
 
 /** Trimmed, de-duplicated ids of catalog rows, in row order. */
-function catalogIds(rows) {
+export function catalogIds(rows) {
   const out = [];
   const seen = new Set();
   for (const row of Array.isArray(rows) ? rows : []) {

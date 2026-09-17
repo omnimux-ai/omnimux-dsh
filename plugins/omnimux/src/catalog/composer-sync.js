@@ -12,7 +12,7 @@
  * because the hub is unreachable, and never throws into plugin startup.
  */
 
-import { composeComposerModels, sameModelList } from './composer-list.js';
+import { catalogIds, composeComposerModels, sameModelList } from './composer-list.js';
 
 /** Settings namespace the pi-ai adapter registers its configurable providers under. */
 export const PI_AI_NAMESPACE = 'llm-pi-ai';
@@ -55,16 +55,6 @@ export function providerModels(layer, provider = OMNIMUX_PROVIDER) {
   return Array.isArray(profile?.models) ? /** @type {Array<Record<string, unknown>>} */ (profile.models) : [];
 }
 
-/** Hub-listed ids of a text bucket, in bucket order. */
-function hubIdsOf(hubText) {
-  const out = [];
-  for (const row of Array.isArray(hubText) ? hubText : []) {
-    const id = row && typeof row === 'object' && typeof row.id === 'string' ? row.id.trim() : '';
-    if (id) out.push(id);
-  }
-  return out;
-}
-
 /**
  * One sync attempt's outcome, for logging and tests. `reason` names the branch
  * that ran; only `written` means the document changed.
@@ -96,7 +86,7 @@ export function createComposerListSync(deps) {
       return { written: false, reason: 'settings-unavailable' };
     }
 
-    const hubIds = hubIdsOf(input?.hubText);
+    const hubIds = catalogIds(input?.hubText);
     // An empty hub bucket is "no information", not "the user wants nothing":
     // a cold hub, an unreadable contract, or a host that has not finished
     // loading must never empty a working list. Keep the last accepted one.
@@ -118,6 +108,11 @@ export function createComposerListSync(deps) {
         shippedModels: providerModels(descriptor.base),
         hiddenIds: input?.hiddenIds,
       });
+      // The hub lists models but the user hid every one of them. Writing an
+      // empty list would leave the composer with nothing usable, so keep the
+      // last accepted one and report the distinct reason instead.
+      if (target.length === 0) return { written: false, reason: 'hidden-all' };
+
       const current = providerModels(descriptor.user);
       if (sameModelList(current, target)) {
         return { written: false, reason: 'unchanged', modelIds: target.map((row) => String(row.id)) };
@@ -141,6 +136,8 @@ export function createComposerListSync(deps) {
       }
     }
 
+    // Unreachable: attempt 0 either returns or continues, and attempt 1 returns
+    // on every branch. Kept as a total function for the type checker.
     return { written: false, reason: 'conflict' };
   }
 
