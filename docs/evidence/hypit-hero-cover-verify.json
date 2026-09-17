@@ -1,0 +1,11 @@
+{
+  "source": "https://hypit.ai/ hero conveyor visual",
+  "process": "hide nav/h1/CTA, crop full composition to 1280x720, remove corner widget",
+  "width": 1280,
+  "height": 720,
+  "bytes": 354226,
+  "sha256": "5ccf4c8d13db2801f87534ed60c366037862e58cd115605fcafd789ed1afbd52",
+  "choice": "full composition (user selected)",
+  "previewEvidence": "docs/evidence/hypit-hero-cover-preview-verified.png",
+  "verifiedAt": "2026-09-17T15:22:55+0800"
+}
