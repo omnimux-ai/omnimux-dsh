@@ -4,9 +4,13 @@
  */
 export function mountComposerCommands(ctx) {
   ctx.inject?.(['commands'], (commandCtx) => {
-    // The official composer 📎 owns 添加文件 on dsh 0.1.5-rc.1, so this catalog
-    // keeps only the asset-library entry.
+    // Register add-file and add-from-library commands for the composer "+" menu.
     // commands.register owns its disposer in this injected Cordis scope.
+    commandCtx.commands.register({
+      name: 'add-file',
+      description: '添加文件 / Add files',
+      handler: () => ({ kind: 'success' }),
+    })
     commandCtx.commands.register({
       name: 'add-from-library',
       description: '从资产库添加 / Add from library',

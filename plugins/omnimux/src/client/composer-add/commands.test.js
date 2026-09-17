@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  decorateFileCommand,
   decorateLibraryCommand,
   installComposerAddCommands,
   listenComposerAddCommands,
+  FILE_COMMAND,
   LIBRARY_COMMAND,
 } from './commands.js'
 
@@ -18,6 +20,7 @@ function eventFixture() {
       return () => listeners.delete(listener)
     } },
     actions: {
+      openFile(id) { calls.push(['file', id]) },
       openLibrary(id) { calls.push(['library', id]) },
     },
     async emit(id, name, result) {
@@ -30,10 +33,11 @@ describe('composer command acknowledgment', () => {
   it('handles only successful owned commands with the event session', async () => {
     const f = eventFixture()
     const stop = listenComposerAddCommands(f.ctx, f.actions)
+    await f.emit('a', 'add-file', { kind: 'success' })
     await f.emit('b', 'add-from-library', { kind: 'success' })
     await f.emit('c', 'add-from-library', { kind: 'error', text: 'failed' })
     await f.emit('c', 'clear', { kind: 'success' })
-    assert.deepEqual(f.calls, [['library', 'b']])
+    assert.deepEqual(f.calls, [['file', 'a'], ['library', 'b']])
     stop()
   })
 
@@ -77,7 +81,7 @@ describe('composer library command decoration', () => {
   it('keeps the click-time decoration and the delayed acknowledgment together', () => {
     const calls = []
     const listeners = new Set()
-    let decoration
+    const decorations = new Map()
     const ctx = {
       on(event, listener) {
         listeners.add(listener)
@@ -85,28 +89,32 @@ describe('composer library command decoration', () => {
       },
       commandUi: {
         decorate(spec) {
-          decoration = spec
-          return () => { decoration = null }
+          decorations.set(spec.name, spec)
+          return () => { decorations.delete(spec.name) }
         },
       },
     }
     const stop = installComposerAddCommands(ctx, {
-      openLibrary(id) { calls.push(id) },
+      openLibrary(id) { calls.push(['library', id]) },
+      openFile(id) { calls.push(['file', id]) },
     })
     assert.equal(listeners.size, 1)
-    assert.equal(decoration.ui.kind, 'action')
-    decoration.ui.run({ sessionId: 's1' })
-    assert.deepEqual(calls, ['s1'])
+    assert.equal(decorations.get(LIBRARY_COMMAND).ui.kind, 'action')
+    assert.equal(decorations.get(FILE_COMMAND).ui.kind, 'action')
+    decorations.get(LIBRARY_COMMAND).ui.run({ sessionId: 's1' })
+    decorations.get(FILE_COMMAND).ui.run({ sessionId: 's2' })
+    assert.deepEqual(calls, [['library', 's1'], ['file', 's2']])
     stop()
     assert.equal(listeners.size, 0)
-    assert.equal(decoration, null)
+    assert.equal(decorations.size, 0)
   })
 
   it('falls back to the acknowledgment when the host cannot decorate', async () => {
     const f = eventFixture()
     const stop = installComposerAddCommands(f.ctx, f.actions)
     await f.emit('s1', LIBRARY_COMMAND, { kind: 'success' })
-    assert.deepEqual(f.calls, [['library', 's1']])
+    await f.emit('s2', FILE_COMMAND, { kind: 'success' })
+    assert.deepEqual(f.calls, [['library', 's1'], ['file', 's2']])
     stop()
   })
 })

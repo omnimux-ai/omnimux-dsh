@@ -35,6 +35,25 @@ import { createElement } from 'react'
 // 1. High-fidelity Vector Icon Renderers (Ref: Figure 1)
 // ==========================================
 
+export function renderPaperclipIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z',
+      fill: 'currentColor',
+    })
+  )
+}
+
 export function renderLibraryIcon(size = 16, className) {
   return createElement(
     'svg',
@@ -262,6 +281,8 @@ export function renderExportIcon(size = 16, className) {
 }
 
 export const COMMAND_ICONS = {
+  'add-file': renderPaperclipIcon,
+  'paperclip': renderPaperclipIcon,
   'add-from-library': renderLibraryIcon,
   'library': renderLibraryIcon,
   'compact': renderCompactIcon,
@@ -282,6 +303,9 @@ export const COMMAND_ICONS = {
 // ==========================================
 
 export const COMMAND_SVG_STRINGS = {
+  'add-file': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
+  '添加文件': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
+
   'add-from-library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   '从资产库添加': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 
@@ -380,6 +404,13 @@ export function ensurePlacementStyles(doc) {
     [data-composer-card] [class*="_1q_ULW_card"] {
       pointer-events: auto !important;
       z-index: 80 !important;
+    }
+    /* 隐藏原生添加文件（回形针）图标按钮，统一收纳至「+」指令菜单中 */
+    [data-composer-card] button[aria-label="添加附件"],
+    [data-composer-card] button[aria-label="Add attachment"],
+    [data-composer-card] button[aria-label*="attach"],
+    [data-composer-card] button[aria-label*="附件"] {
+      display: none !important;
     }
   `
   doc.head.appendChild(style)
@@ -632,6 +663,12 @@ export const installMenuIconsAutoSync = installMenuAutoSync
 
 export const COMMAND_I18N = {
   zh: {
+    'add-file': {
+      name: '添加文件',
+      icon: 'add-file',
+      description: '从本地选择文件或图片',
+      keywords: ['文件', '添加', 'wenjian', 'tianjia', 'file', 'upload', 'add-file', 'addfile', 'add'],
+    },
     'add-from-library': {
       name: '从资产库添加',
       icon: 'add-from-library',
@@ -676,6 +713,12 @@ export const COMMAND_I18N = {
     },
   },
   en: {
+    'add-file': {
+      name: 'add-file',
+      icon: 'add-file',
+      description: 'Add files',
+      keywords: ['file', 'upload', 'add'],
+    },
     'add-from-library': {
       name: 'add-from-library',
       icon: 'add-from-library',
@@ -863,6 +906,17 @@ export function scoreCommandCandidate(candidate, rawQuery, lang) {
 }
 
 /**
+ * Whitelist of commands allowed in the composer "+" / slash menu.
+ * Only 'add-file', 'add-from-library', and 'plan' are retained;
+ * all other native host commands are concealed to keep the menu clean and focused.
+ */
+export const ALLOWED_COMMAND_NAMES = Object.freeze(new Set([
+  'add-file',
+  'add-from-library',
+  'plan',
+]))
+
+/**
  * Enhance command candidates by localizing names, descriptions, and binding icons.
  * @param {Array<{ name: string, rawName?: string, icon?: string, description?: string, hint?: string }>} allRows
  * @param {{ query?: string }} req
@@ -873,9 +927,15 @@ export function enhanceCommandCandidates(allRows, req, locale) {
   if (!Array.isArray(allRows)) return []
   const lang = getActiveLang(locale)
 
+  // 0. Filter by allowed command whitelist
+  const allowedRows = allRows.filter((row) => {
+    const rawName = row.rawName || resolveRawCommandName(row.name) || row.name
+    return ALLOWED_COMMAND_NAMES.has(rawName)
+  })
+
   // 1. Localize name, description and assign matching icon
-  const localized = allRows.map((row) => {
-    const rawName = row.rawName || row.name
+  const localized = allowedRows.map((row) => {
+    const rawName = row.rawName || resolveRawCommandName(row.name) || row.name
     const config = COMMAND_I18N[lang]?.[rawName]
     const displayName = resolveCommandDisplayName(rawName, locale)
     const displayDesc = resolveCommandDescription(rawName, row.description, locale)
