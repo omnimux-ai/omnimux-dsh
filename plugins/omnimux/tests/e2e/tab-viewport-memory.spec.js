@@ -37,7 +37,7 @@ function fixture(panelMode = 'push', initialTab = 'omnimux-assets:library') {
   return win
 }
 
-test('e2e: 首次打开插件页面默认全屏展开，面板模式自动调和为 fullscreen', async () => {
+test('e2e: 打开插件页面默认分栏展开，绝不自动调和为全屏覆盖会话（Issue #2056 & #2212）', async () => {
   const win = fixture('push', 'omnimux-assets:library')
   const doc = win.document
   const panel = doc.querySelector('[data-sidebar-right-panel]')
@@ -62,16 +62,16 @@ test('e2e: 首次打开插件页面默认全屏展开，面板模式自动调和
 
   const uninstall = installTabViewportReconciler(doc)
 
-  // 默认期望全屏，宿主调和器检测到面板为 push，自动触发点击全屏按钮
+  // 默认期望分栏，宿主调和器检测到面板为 push，绝不自动触发全屏
   await new Promise((r) => setTimeout(r, 60))
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '首次打开插件页面必须自动全屏展开')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '打开插件页面默认分栏，绝不自动全屏')
 
   uninstall()
   bindWorkbenchDeps({ sidebarRight: null, sessions: null })
 })
 
-test('e2e: 用户收起全屏后精准记录分栏偏好，切其他页面全屏，切回自动还原分栏', async () => {
-  const win = fixture('fullscreen', 'omnimux-assets:library')
+test('e2e: 用户在分栏下切换页面当前状态优先保持分栏，主动全屏才进入全屏', async () => {
+  const win = fixture('push', 'omnimux-assets:library')
   const doc = win.document
   const panel = doc.querySelector('[data-sidebar-right-panel]')
   const button = doc.getElementById('mode-btn')
@@ -97,28 +97,26 @@ test('e2e: 用户收起全屏后精准记录分栏偏好，切其他页面全屏
   const uninstall = installTabViewportReconciler(doc)
   await new Promise((r) => setTimeout(r, 60))
 
-  // 1. 用户点击右上角收起全屏按钮（进入分栏）
-  button.click()
-  await new Promise((r) => setTimeout(r, 60))
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '点击后应进入分栏模式')
-  assert.equal(focusRecordForTab('session-e2e', 'omnimux-assets:library').mode, WORKBENCH_FOCUS.split, '资产库应被精准记录为分栏模式')
+  // 1. 初态为分栏
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push')
 
-  // 2. 用户切换到「灵感社区」（未调整过，默认期望全屏）
+  // 2. 用户在分栏状态下切换到「灵感社区」（当前状态优先，绝不触发全屏）
   activeTab = { kind: 'omnimux-inspiration:library' }
   const tabEl = doc.querySelector('[role="tab"]')
   tabEl.setAttribute('data-dockkit-tab', 'omnimux-inspiration:library')
   await new Promise((r) => setTimeout(r, 60))
 
-  // 验证灵感社区自动进入全屏
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '切换到新页面必须自动恢复为全屏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切换到新页面当前分栏状态优先，保持分栏')
 
-  // 3. 用户切回「资产库」（曾设为分栏）
-  activeTab = { kind: 'omnimux-assets:library' }
-  tabEl.setAttribute('data-dockkit-tab', 'omnimux-assets:library')
+  // 3. 用户主动点击全屏按钮，进入全屏
+  button.click()
   await new Promise((r) => setTimeout(r, 60))
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '用户主动点击全屏按钮进入全屏')
 
-  // 验证资产库自动恢复为分栏，展示会话栏
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切回曾分栏的页面必须自动还原为分栏并展示会话栏')
+  // 4. 用户点击退出全屏，回到分栏
+  button.click()
+  await new Promise((r) => setTimeout(r, 60))
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '用户主动退出全屏回到分栏')
 
   uninstall()
   bindWorkbenchDeps({ sidebarRight: null, sessions: null })

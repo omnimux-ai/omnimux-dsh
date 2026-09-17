@@ -95,16 +95,17 @@ test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分
   reconciler.sync()
   assert.equal(memoryStore.get('omnimux-workflow:library')?.mode, WORKBENCH_FOCUS.split, '应持久化记录 split')
 
-  // 3. 切换至资产库（显式配置全屏偏好时恢复全屏）
+  // 3. 切换至资产库（在分栏状态下切换，当前状态优先，绝不触发全屏）
   memoryStore.set('omnimux-assets:library', { mode: WORKBENCH_FOCUS.gui, explicit: true })
   currentTab = 'omnimux-assets:library'
   reconciler.sync()
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '资产库显式配置全屏时恢复全屏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '分栏状态优先：切换至资产库保持分栏')
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏必须展开')
 
-  // 4. 切回项目页（应自动恢复分栏，且会话栏展开）
+  // 4. 切回项目页（保持分栏，且会话栏展开）
   currentTab = 'omnimux-workflow:library'
   reconciler.sync()
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切回项目页应自动恢复分栏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切回项目页保持分栏')
   assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏必须展开')
 
   reconciler.reset()
@@ -133,7 +134,7 @@ test('AC-4: 分栏面板 CSS 铺满保证与健康分栏宽度保底机制', asy
   assert.ok(currentRightbar >= 500, `自愈后宽度必须恢复到健康黄金比例(>=500px)，实际: ${currentRightbar}`)
 })
 
-test('AC-5: 从分栏页面跨页面切回偏好全屏的页面，即便会话选中也必须确定性恢复全屏', async () => {
+test('AC-5: 从分栏页面跨页面切换标签，当前三栏分栏状态绝对优先，绝不触发全屏覆盖（Issue #2212）', async () => {
   const doc = createDomFixture('push')
   const root = doc.documentElement
   const panel = doc.querySelector('[data-sidebar-right-panel]')
@@ -169,12 +170,13 @@ test('AC-5: 从分栏页面跨页面切回偏好全屏的页面，即便会话�
   reconciler.sync()
   assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push')
 
-  // 2. 用户切换至资产库（明确跨 Tab 切换）
+  // 2. 用户切换至资产库（在分栏下切换）
   currentTab = 'omnimux-assets:library'
   reconciler.sync()
 
-  // 必须确定性调和进入全屏，不得被会话选中态误杀
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '切入偏好全屏页面时必须恢复全屏')
+  // 用户当前分栏状态绝对优先，绝不进入全屏
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切入资产库时用户当前分栏状态绝对优先，保持分栏')
+  assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏恒定展开，不被折叠')
 
   reconciler.reset()
 })
