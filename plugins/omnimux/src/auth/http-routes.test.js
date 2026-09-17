@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { apply } from '../index.js'
-import { createAuthDispatcher, sendJson } from './http-routes.js'
+import { createAuthDispatcher, sendJson, SECRET_PATTERN } from './http-routes.js'
 import { createPendingStore } from './pending.js'
 import { createTokenStore } from './store.js'
 
@@ -177,14 +177,14 @@ describe('auth http dispatcher', () => {
       assert.ok(Array.isArray(body.image))
       assert.ok(Array.isArray(body.video))
       assert.ok(Array.isArray(body.audio))
-      assert.equal(/access_token|sk-/.test(JSON.stringify(body)), false)
+      assert.equal(SECRET_PATTERN.test(JSON.stringify(body)), false)
     } finally {
       rmSync(homeDir, { recursive: true, force: true })
       rmSync(configDir, { recursive: true, force: true })
     }
   })
 
-  it('sendJson refuses a body that contains a token', () => {
+  it('sendJson refuses a body that contains a token and allows non-secret task names', () => {
     /** @type {{ status?: number, chunks: string[] }} */
     const seen = { chunks: [] }
     const res = {
@@ -198,6 +198,24 @@ describe('auth http dispatcher', () => {
     sendJson(res, 200, { access_token: 'pat-nope' })
     assert.equal(seen.status, 500)
     assert.equal(/pat-nope/.test(seen.chunks.join('')), false)
+
+    seen.chunks = []
+    seen.status = undefined
+    sendJson(res, 200, { key: 'sk-1234567890abcdef' })
+    assert.equal(seen.status, 500)
+    assert.equal(JSON.parse(seen.chunks.join('')).error, 'refused to emit a secret')
+
+    seen.chunks = []
+    seen.status = undefined
+    sendJson(res, 200, { key: 'sk-proj-1234567890abcdef' })
+    assert.equal(seen.status, 500)
+    assert.equal(JSON.parse(seen.chunks.join('')).error, 'refused to emit a secret')
+
+    seen.chunks = []
+    seen.status = undefined
+    sendJson(res, 200, { model: 'seedance-2-0-task-pro', flag: 'flask-app' })
+    assert.equal(seen.status, 200)
+    assert.deepEqual(JSON.parse(seen.chunks.join('')), { model: 'seedance-2-0-task-pro', flag: 'flask-app' })
   })
 
   it('apply mounts auth routes when webServer arrives through inject', async () => {
@@ -270,6 +288,7 @@ describe('auth http dispatcher', () => {
       // #453: workbench routes register via webServer.register in the same inject
       'exact:/omnimux/workbench/viewport',
       'exact:/omnimux/workbench/rpc/ack',
+      'exact:/omnimux/session-model',
     ])
     // #522 regression: drive a composer attachments request and prove the
     // injected sentinel is the sessionQuery the route dispatcher holds.

@@ -12,10 +12,13 @@ export const STATUS_BY_CODE = {
   'upload-failed': 502, 'aborted': 500,
 }
 
+/** Minimal prompt-privacy guard: refuse obvious API tokens without falsely matching task/model names. */
+export const SECRET_PATTERN = /(?:^|[^A-Za-z0-9])sk-(?:proj-)?[A-Za-z0-9]{8,}|access_token/
+
 /** @param {import('node:http').ServerResponse} res @param {number} status @param {unknown} body */
 export function sendJson(res, status, body) {
   const text = JSON.stringify(body)
-  if (/access_token|sk-[A-Za-z0-9]/.test(text)) {
+  if (SECRET_PATTERN.test(text)) {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: 'refused to emit a secret' }))
     return
