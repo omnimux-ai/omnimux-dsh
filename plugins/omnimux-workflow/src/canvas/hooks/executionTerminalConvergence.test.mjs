@@ -46,8 +46,14 @@ const {
   mapNodeToGenerationStatus,
 } = await import(pathToFileURL(bundle).href);
 
-/** 画布上放若干「执行中」节点，等价于 node_start 之后的节点数据。 */
-function arrangeCanvas(nodeIds, executionStatus = 'running') {
+/**
+ * 画布上放若干「执行中」节点，等价于 node_start 之后的节点数据。
+ *
+ * #2255：节点状态归属到具体执行。给 `executionId` 时状态写进该执行的运行槽
+ * （终态事件只会收敛自己这条执行的节点）；不给时写进画布级的本地占位槽，
+ * 对应「重载时从画布文档恢复的在飞标记」。
+ */
+function arrangeCanvas(nodeIds, executionStatus = 'running', executionId = null) {
   useExecutionStore.getState().resetExecution();
   useCanvasStore.setState({
     nodes: nodeIds.map((id) => ({
@@ -58,6 +64,13 @@ function arrangeCanvas(nodeIds, executionStatus = 'running') {
     })),
     edges: [],
   });
+  if (executionId) {
+    useExecutionStore.getState().ensureRun(executionId);
+    for (const id of nodeIds) {
+      useExecutionStore.getState().setRunNodeStatus(executionId, id, executionStatus);
+    }
+    return;
+  }
   for (const id of nodeIds) useExecutionStore.getState().setNodeStatus(id, executionStatus);
 }
 
@@ -68,7 +81,7 @@ function nodeData(nodeId) {
 }
 
 test('取消终态：execution_cancelled 收敛在飞节点，GSC 不再停留在 generating', () => {
-  arrangeCanvas(['n1', 'n2']);
+  arrangeCanvas(['n1', 'n2'], 'running', 'exec_1');
   useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_1' });
 
   // 缺陷态：executionStatus='running' 就是「生成中…」的来源。
@@ -99,7 +112,7 @@ test('取消终态：execution_cancelled 收敛在飞节点，GSC 不再停留�
 });
 
 test('失败终态：execution_error 收敛在飞节点为 error 并带上错误信息', () => {
-  arrangeCanvas(['n1', 'n2'], 'running');
+  arrangeCanvas(['n1', 'n2'], 'running', 'exec_2');
   useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_2' });
 
   dispatchExecutionEvent(
@@ -127,7 +140,7 @@ test('失败终态：execution_error 收敛在飞节点为 error 并带上错误
 });
 
 test('单节点模式：pending 标记同样随终态收敛', () => {
-  arrangeCanvas(['n3'], 'pending');
+  arrangeCanvas(['n3'], 'pending', 'exec_3');
 
   dispatchExecutionEvent(
     'execution_cancelled',
@@ -142,7 +155,7 @@ test('#1386 完成终态：execution_complete 同样收敛在飞节点（三个�
   // Before the fix only error / cancelled converged, so a node whose
   // `node_complete` was lost stayed 「生成中…」 on a run that had already
   // finished — the same permanent marker #1379 removed for the other two.
-  arrangeCanvas(['n6'], 'running');
+  arrangeCanvas(['n6'], 'running', 'exec_6');
   useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_6' });
 
   let closed = 0;
@@ -165,7 +178,7 @@ test('#1386 完成终态：execution_complete 同样收敛在飞节点（三个�
 });
 
 test('#1386 完成终态：已完成节点不被改写（收敛只碰在飞态）', () => {
-  arrangeCanvas(['n7'], 'completed');
+  arrangeCanvas(['n7'], 'completed', 'exec_7');
   useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_7' });
 
   dispatchExecutionEvent(

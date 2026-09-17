@@ -1,8 +1,13 @@
 /**
  * ExecutionBar — M3 execution control strip (Gxgen 执行控制条, island flavor).
  *
- * Full-graph run + pause/resume/cancel + live progress (completed/total),
- * driven by the executionStore. Rendered above the canvas in App.
+ * Pause/resume/cancel + live progress (completed/total), driven by the
+ * executionStore. Rendered above the canvas in App.
+ *
+ * #2255: the bar reports the canvas's concurrent runs — status and progress
+ * are aggregates over every run, and the count tells the user how many are
+ * live at once. Its control buttons act on all of them, which is what the
+ * single-run bar did implicitly.
  */
 
 import { memo } from 'react';
@@ -33,6 +38,7 @@ const ExecutionBar: React.FC<ExecutionBarProps> = ({ onStart, onPause, onResume,
   const status = useExecutionStore((state) => state.status);
   const progress = useExecutionStore((state) => state.progress);
   const error = useExecutionStore((state) => state.error);
+  const activeRunCount = useExecutionStore((state) => state.activeRunCount);
 
   const busy = status === 'pending' || status === 'running';
   const paused = status === 'paused';
@@ -44,6 +50,12 @@ const ExecutionBar: React.FC<ExecutionBarProps> = ({ onStart, onPause, onResume,
       <span className={`wf-exec-bar__status wf-exec-bar__status--${status}`}>
         {t(STATUS_LABEL_KEYS[status])}
       </span>
+
+      {activeRunCount > 1 ? (
+        <span className="wf-exec-bar__concurrent" data-testid="wf-exec-active-count">
+          {t('exec.activeCount').replace('{count}', String(activeRunCount))}
+        </span>
+      ) : null}
 
       {hasProgress ? (
         <span className="wf-exec-bar__progress">

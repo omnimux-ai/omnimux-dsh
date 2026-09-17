@@ -298,6 +298,7 @@ const zh = {
   'pills.storyboard': '分镜脚本',
   // 执行控制条（exec.*）
   'exec.ariaLabel': '执行控制',
+  'exec.activeCount': '{count} 条同时执行',
   'exec.status.idle': '未执行',
   'exec.status.pending': '启动中…',
   'exec.status.running': '执行中',

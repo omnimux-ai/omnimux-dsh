@@ -283,6 +283,7 @@ const en: Record<DictKey, string> = {
   'pills.promptExpand': 'Prompt Gen',
   'pills.storyboard': 'Storyboard',
   'exec.ariaLabel': 'Execution controls',
+  'exec.activeCount': '{count} running at once',
   'exec.status.idle': 'Idle',
   'exec.status.pending': 'Starting...',
   'exec.status.running': 'Running',

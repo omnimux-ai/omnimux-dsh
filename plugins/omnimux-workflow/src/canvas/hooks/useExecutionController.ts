@@ -3,14 +3,20 @@
  * `useExecutionSync` (island flavor).
  *
  * Owns the execution lifecycle for the canvas:
- *  - startExecution: POST create (full / subset) -> subscribe SSE
+ *  - startExecution: POST create (full / subset / single) -> subscribe SSE
  *  - pause / resume / cancel control calls
  *  - SSE event handling: control state -> executionStore; per-node states
  *    and mock results -> canvasStore node.data (only the changed node is
  *    updated — the Gxgen performance pattern; result writes also trigger
  *    the M2 autosave layer)
- *  - island reload: restore a still-live execution by executionId
+ *  - island reload: restore every still-live execution by executionId
  *    (GET list -> snapshot backfill -> re-subscribe)
+ *
+ * #2255 — every manual submit owns its own run: its own execution id, its own
+ * SSE stream, and its own node statuses. The canvas used to hold one execution
+ * slot, so a submit arriving while another run was live was dropped without a
+ * word. Events are attributed through the `executionId` every payload carries,
+ * which is what keeps concurrent runs from settling each other's nodes.
  *
  * Differences from Gxgen: EventSource instead of fetch-stream (the plugin
  * exposes a dedicated GET /events route), no auth token (local same-origin).
@@ -26,11 +32,15 @@ import {
   listExecutions,
 } from '../bridge/apiClient';
 import { useCanvasStore } from '../store/canvasStore';
-import { useExecutionStore, type ExecutionUiStatus } from '../store/executionStore';
+import {
+  useExecutionStore,
+  isLiveExecutionStatus,
+  LOCAL_RUN_ID,
+  type ExecutionUiStatus,
+} from '../store/executionStore';
 import { t } from '../i18n';
 import { signatureOf } from '../bridge/persistSanitize';
 
-const LIVE_STATUSES = new Set<ExecutionUiStatus>(['pending', 'running', 'paused']);
 const TERMINAL_STATUSES = new Set<ExecutionUiStatus>(['completed', 'error', 'cancelled']);
 
 interface SseEventData {
@@ -165,22 +175,46 @@ const IN_FLIGHT_STATUSES = new Set<NodeExecutionApiStatus>(['pending', 'running'
  * @param status Terminal node status: `skipped` for a cancelled run, `error`
  *   for a failed one, `completed` for one that finished.
  * @param error Error message recorded on the `error` convergence.
+ * @param executionId The run whose terminal event triggered the convergence.
+ *   Nodes still owned by a **different** live run are left untouched — that is
+ *   what stops one run's end from settling another run's in-flight nodes.
+ *   Omitted on the reload path, where the question is 「does any live run still
+ *   own this node」 rather than 「did this run finish」.
  * @returns The converged node ids (assertions / logging).
  */
-export function settleInFlightNodes(status: 'skipped' | 'error' | 'completed', error?: string): string[] {
+export function settleInFlightNodes(
+  status: 'skipped' | 'error' | 'completed',
+  error?: string,
+  executionId?: string,
+): string[] {
   const exec = useExecutionStore.getState();
+  const ownedByOtherLiveRun = (nodeId: string): boolean =>
+    exec.runs.some(
+      (run) =>
+        run.executionId !== executionId
+        && isLiveExecutionStatus(run.status)
+        && IN_FLIGHT_STATUSES.has(run.nodeStatuses[nodeId] as NodeExecutionApiStatus),
+    );
+
   const nodeIds = new Set<string>();
   for (const [nodeId, nodeStatus] of Object.entries(exec.nodeStatuses)) {
-    if (IN_FLIGHT_STATUSES.has(nodeStatus)) nodeIds.add(nodeId);
+    if (IN_FLIGHT_STATUSES.has(nodeStatus) && !ownedByOtherLiveRun(nodeId)) nodeIds.add(nodeId);
   }
   for (const node of useCanvasStore.getState().nodes) {
     const executionStatus = (node.data as { executionStatus?: NodeExecutionApiStatus }).executionStatus;
-    if (executionStatus !== undefined && IN_FLIGHT_STATUSES.has(executionStatus)) nodeIds.add(node.id);
+    if (
+      executionStatus !== undefined
+      && IN_FLIGHT_STATUSES.has(executionStatus)
+      && !ownedByOtherLiveRun(node.id)
+    ) {
+      nodeIds.add(node.id);
+    }
   }
 
   const settled = [...nodeIds];
   for (const nodeId of settled) {
-    exec.setNodeStatus(nodeId, status);
+    if (executionId !== undefined) exec.setRunNodeStatus(executionId, nodeId, status);
+    else exec.setNodeStatus(nodeId, status);
     writeNodeData(nodeId, {
       executionStatus: status,
       executionError: status === 'error' ? (error ?? t('error.nodeExecutionFailed')) : undefined,
@@ -194,31 +228,37 @@ export function settleInFlightNodes(status: 'skipped' | 'error' | 'completed', e
  * in-flight markers be converged now?
  *
  * The store status alone is not enough. `startExecution` awaits
- * `createExecution` while the store still reads `'idle'` (the `'pending'` write
- * happens only after the POST returns), so a list call that resolves inside
- * that window looks like 「no surviving run」 and would flash every pending node
- * to `'skipped'` until the SSE `node_start` corrects it.
+ * `createExecution` while its run is not registered yet (the run is created
+ * only after the POST returns), so a list call that resolves inside that window
+ * looks like 「no surviving run」 and would flash every pending node to
+ * `'skipped'` until the SSE `node_start` corrects it.
  *
- * @param startInFlight True while `startExecution` holds `startingRef.current`:
- *   from the save preflight onwards, across the create POST, until the store
- *   write and `subscribe` have both returned.
+ * @param startInFlight True while at least one `startExecution` holds a
+ *   submission slot: from the save preflight onwards, across the create POST,
+ *   until the run is registered and `subscribe` has returned.
  * @returns True when the caller may settle the in-flight nodes.
  */
 export function shouldConvergeInFlightOnReload(startInFlight: boolean): boolean {
   if (startInFlight) return false;
-  return useExecutionStore.getState().status === 'idle';
+  return useExecutionStore.getState().activeRunCount === 0;
 }
 
-/** Terminal execution state: no node is in flight any more. */
-function applyTerminalStatus(status: ExecutionUiStatus, error: string | null): void {
+/** Terminal state for one run: nothing is in flight in it any more. */
+function applyTerminalStatus(
+  executionId: string,
+  status: ExecutionUiStatus,
+  error: string | null,
+): void {
   const exec = useExecutionStore.getState();
-  exec.setExecution({
+  const run = exec.runs.find((candidate) => candidate.executionId === executionId);
+  const progress = run?.progress ?? { total: 0, completed: 0, running: 0, pending: 0, percentage: 0 };
+  exec.patchRun(executionId, {
     status,
     error,
     progress: {
-      ...exec.progress,
+      ...progress,
       running: 0,
-      percentage: status === 'completed' ? 100 : exec.progress.percentage,
+      percentage: status === 'completed' ? 100 : progress.percentage,
     },
   });
 }
@@ -227,7 +267,10 @@ function applyTerminalStatus(status: ExecutionUiStatus, error: string | null): v
  * Parse and apply one SSE execution event.
  *
  * Module-level (the hook only supplies the stream handle) so the island's event
- * handling is exercisable headlessly by tests.
+ * handling is exercisable headlessly by tests. The run an event belongs to is
+ * the `executionId` in its own payload — every server event carries one, which
+ * is what makes concurrent runs separable; payloads without one fall back to
+ * the focused run.
  */
 export function dispatchExecutionEvent(
   eventType: string,
@@ -241,10 +284,20 @@ export function dispatchExecutionEvent(
     return;
   }
   const exec = useExecutionStore.getState();
+  const executionId = typeof data.executionId === 'string' && data.executionId
+    ? data.executionId
+    : exec.focusExecutionId;
+  if (!executionId) return;
+
+  /** The run's own progress — never the canvas-wide projection. */
+  const runProgress = () => {
+    const run = useExecutionStore.getState().runs.find((c) => c.executionId === executionId);
+    return run?.progress ?? { total: 0, completed: 0, running: 0, pending: 0, percentage: 0 };
+  };
 
   switch (eventType) {
     case 'execution_start': {
-      exec.setExecution({
+      exec.patchRun(executionId, {
         status: 'running',
         error: null,
         progress: {
@@ -259,12 +312,13 @@ export function dispatchExecutionEvent(
     }
     case 'node_start': {
       if (!data.nodeId) break;
-      exec.setNodeStatus(data.nodeId, 'running');
-      exec.setExecution({
+      const progress = runProgress();
+      exec.setRunNodeStatus(executionId, data.nodeId, 'running');
+      exec.patchRun(executionId, {
         progress: {
-          ...exec.progress,
-          running: exec.progress.running + 1,
-          pending: Math.max(0, exec.progress.pending - 1),
+          ...progress,
+          running: progress.running + 1,
+          pending: Math.max(0, progress.pending - 1),
         },
       });
       writeNodeData(data.nodeId, { executionStatus: 'running', executionError: undefined });
@@ -272,28 +326,30 @@ export function dispatchExecutionEvent(
     }
     case 'node_complete': {
       if (!data.nodeId) break;
-      exec.setNodeStatus(data.nodeId, 'completed');
-      exec.setExecution({
+      const progress = runProgress();
+      exec.setRunNodeStatus(executionId, data.nodeId, 'completed');
+      exec.patchRun(executionId, {
         progress: {
-          ...exec.progress,
-          completed: exec.progress.completed + 1,
-          running: Math.max(0, exec.progress.running - 1),
-          percentage: data.progress ?? exec.progress.percentage,
+          ...progress,
+          completed: progress.completed + 1,
+          running: Math.max(0, progress.running - 1),
+          percentage: data.progress ?? progress.percentage,
         },
       });
       // Result backfill also marks the workspace dirty and triggers autosave.
       applyExecutionNodeOutput(data.nodeId, data.output ?? {}, {
         executionStatus: 'completed',
         executionError: undefined,
-        taskId: 'exec-' + (data.executionId ?? ''),
+        taskId: 'exec-' + executionId,
       });
       break;
     }
     case 'node_error': {
       if (!data.nodeId) break;
-      exec.setNodeStatus(data.nodeId, 'error');
-      exec.setExecution({
-        progress: { ...exec.progress, running: Math.max(0, exec.progress.running - 1) },
+      const progress = runProgress();
+      exec.setRunNodeStatus(executionId, data.nodeId, 'error');
+      exec.patchRun(executionId, {
+        progress: { ...progress, running: Math.max(0, progress.running - 1) },
       });
       writeNodeData(data.nodeId, {
         executionStatus: 'error',
@@ -303,7 +359,7 @@ export function dispatchExecutionEvent(
     }
     case 'node_skipped': {
       if (!data.nodeId) break;
-      exec.setNodeStatus(data.nodeId, 'skipped');
+      exec.setRunNodeStatus(executionId, data.nodeId, 'skipped');
       writeNodeData(data.nodeId, {
         executionStatus: 'skipped',
         executionError: undefined,
@@ -311,33 +367,33 @@ export function dispatchExecutionEvent(
       break;
     }
     case 'execution_paused': {
-      exec.setExecution({ status: 'paused' });
+      exec.patchRun(executionId, { status: 'paused' });
       break;
     }
     case 'execution_resumed': {
-      exec.setExecution({ status: 'running' });
+      exec.patchRun(executionId, { status: 'running' });
       break;
     }
     case 'execution_complete': {
-      applyTerminalStatus('completed', null);
+      applyTerminalStatus(executionId, 'completed', null);
       // #1386: symmetric with the error / cancelled branches. A node still marked
       // in flight when the run completed has no executor left (the run is over),
       // so leaving the marker is the same permanent 「生成中…」 those branches
       // already prevent — just through a narrower window (a lost `node_complete`).
-      settleInFlightNodes('completed');
+      settleInFlightNodes('completed', undefined, executionId);
       closeStream();
       break;
     }
     case 'execution_error': {
       const message = data.error ?? t('error.executionFailed');
-      applyTerminalStatus('error', message);
-      settleInFlightNodes('error', message);
+      applyTerminalStatus(executionId, 'error', message);
+      settleInFlightNodes('error', message, executionId);
       closeStream();
       break;
     }
     case 'execution_cancelled': {
-      applyTerminalStatus('cancelled', null);
-      settleInFlightNodes('skipped');
+      applyTerminalStatus(executionId, 'cancelled', null);
+      settleInFlightNodes('skipped', undefined, executionId);
       closeStream();
       break;
     }
@@ -359,12 +415,33 @@ export interface ExecutionController {
   reset: () => void;
 }
 
+type ControlAction = 'pause' | 'resume' | 'cancel';
+
+/**
+ * Which live runs a canvas-level control action applies to. Pause and resume
+ * only make sense for the matching backend state (`pause` rejects anything not
+ * RUNNING, `resume` anything not PAUSED), cancel takes every live run.
+ */
+const CONTROL_TARGET_STATUSES: Record<ControlAction, ReadonlySet<ExecutionUiStatus>> = {
+  pause: new Set<ExecutionUiStatus>(['running']),
+  resume: new Set<ExecutionUiStatus>(['paused']),
+  cancel: new Set<ExecutionUiStatus>(['pending', 'running', 'paused']),
+};
+
 export function useExecutionController(
   workspaceId: string | null,
   opts?: ExecutionControllerOptions,
 ): ExecutionController {
-  const eventSourceRef = useRef<EventSource | null>( null);
-  const startingRef = useRef(false);
+  /** executionId -> its own event stream (one stream per concurrent run). */
+  const streamsRef = useRef(new Map<string, EventSource>());
+  /** Submission keys whose create POST is in flight (double-submit guard). */
+  const startingRef = useRef(new Set<string>());
+  /**
+   * Bumped by `reset()`. A create POST that resolves after the user cleared the
+   * canvas must not resurrect a run and open a stream nobody is watching, so
+   * every post-await write re-checks the generation it started under.
+   */
+  const generationRef = useRef(0);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -375,26 +452,34 @@ export function useExecutionController(
   const onBeforeStartRef = useRef(opts?.onBeforeStart);
   onBeforeStartRef.current = opts?.onBeforeStart;
 
-  const closeStream = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+  /** Close one run's stream, or every stream when no id is given. */
+  const closeStream = useCallback((executionId?: string) => {
+    const streams = streamsRef.current;
+    if (executionId === undefined) {
+      for (const source of streams.values()) source.close();
+      streams.clear();
+      return;
+    }
+    const source = streams.get(executionId);
+    if (source) {
+      source.close();
+      streams.delete(executionId);
     }
   }, []);
 
-  const handleEvent = useCallback((eventType: string, raw: string) => {
-    dispatchExecutionEvent(eventType, raw, closeStream);
+  const handleEvent = useCallback((executionId: string, eventType: string, raw: string) => {
+    dispatchExecutionEvent(eventType, raw, () => closeStream(executionId));
   }, [closeStream]);
 
   const subscribe = useCallback((executionId: string) => {
-    closeStream();
+    closeStream(executionId);
     const workspace = workspaceIdRef.current;
     if (!workspace) return;
 
     const source = new EventSource(
       WORKFLOW_API_ROUTES.executionEvents(encodeURIComponent(workspace), encodeURIComponent(executionId)),
     );
-    eventSourceRef.current = source;
+    streamsRef.current.set(executionId, source);
 
     const events = [
       'execution_start',
@@ -411,24 +496,24 @@ export function useExecutionController(
     ];
     for (const event of events) {
       source.addEventListener(event, (message) => {
-        handleEvent(event, (message as MessageEvent<string>).data);
+        handleEvent(executionId, event, (message as MessageEvent<string>).data);
       });
     }
     // EventSource auto-reconnects on transient drops; on hard errors the
-    // status snapshot GET is the fallback (see restore()).
+    // status snapshot GET is the fallback (see the reload effect).
     source.onerror = () => {
-      const status = useExecutionStore.getState().status;
-      if (TERMINAL_STATUSES.has(status)) {
-        closeStream();
+      const run = useExecutionStore.getState().runs.find((c) => c.executionId === executionId);
+      if (!run || TERMINAL_STATUSES.has(run.status)) {
+        closeStream(executionId);
       }
     };
   }, [closeStream, handleEvent]);
 
-  /** Backfill node badges/results from a status snapshot (island reload). */
+  /** Backfill one run's node badges/results from a status snapshot. */
   const applySnapshot = useCallback((snapshot: ExecutionSnapshotDto) => {
     const exec = useExecutionStore.getState();
-    exec.setExecution({
-      executionId: snapshot.id,
+    exec.ensureRun(snapshot.id);
+    exec.patchRun(snapshot.id, {
       status: snapshot.status,
       error: snapshot.error,
       progress: {
@@ -440,7 +525,7 @@ export function useExecutionController(
       },
     });
     for (const [nodeId, state] of Object.entries(snapshot.nodeStates ?? {})) {
-      exec.setNodeStatus(nodeId, state.status);
+      exec.setRunNodeStatus(snapshot.id, nodeId, state.status);
       const patch: Record<string, unknown> = { executionStatus: state.status };
       if (state.status === 'error' && state.error) patch.executionError = state.error;
       const output = snapshot.nodeOutputs?.[nodeId] as ExecutionNodeOutput | undefined;
@@ -456,11 +541,18 @@ export function useExecutionController(
     async (opts: { mode?: 'full' | 'subset' | 'single'; nodeIds?: string[] } = {}) => {
       const workspace = workspaceIdRef.current;
       if (!workspace) return;
-      if (startingRef.current || LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
       if (opts.mode === 'full') {
         throw new Error('创作画布不支持全画布一键运行，请选择指定节点执行');
       }
-      startingRef.current = true;
+      // #2255: a submit is no longer refused while another run is live. Only a
+      // repeat of the *same* submission is guarded, so double-clicking one node
+      // cannot fire two runs while clicks on other nodes go straight through.
+      // Ids are sorted and NUL-joined: `['a','b']` and `['b','a']` are the same
+      // node set, and a comma inside an id must not forge another key.
+      const submissionKey = `${opts.mode ?? 'full'}:${[...(opts.nodeIds ?? [])].sort().join('\u0000')}`;
+      if (startingRef.current.has(submissionKey)) return;
+      startingRef.current.add(submissionKey);
+      const generation = generationRef.current;
       const graph = useCanvasStore.getState();
       const signature = signatureOf(graph.nodes, graph.edges, { workspaceId: workspace });
       try {
@@ -470,27 +562,22 @@ export function useExecutionController(
         if (signatureOf(current.nodes, current.edges, { workspaceId: workspace }) !== signature) {
           throw new Error('保存期间输入已变化，请确认内容后重新生成');
         }
-        // Restoring an existing execution can finish while persistence is saving.
-        if (LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
         const result = await createExecution(workspace, {
           mode: opts.mode ?? 'full',
           nodeIds: opts.nodeIds,
           ...(typeof expectedVersion === 'number' ? { expectedVersion } : {}),
         });
         if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
+        if (generationRef.current !== generation) return;
         if (!result.ok || !result.body.execution) {
           throw new Error(result.body.error === 'project-required'
             ? t('error.projectRequired')
             : (result.body.message ?? t('error.createExecutionFailed')));
         }
-        closeStream();
-        useExecutionStore.getState().resetExecution();
-        useExecutionStore.getState().setExecution({
-          executionId: result.body.execution.id,
-          status: 'pending',
-        });
+        const exec = useExecutionStore.getState();
+        exec.ensureRun(result.body.execution.id);
         if (opts.mode === 'single' && opts.nodeIds?.[0]) {
-          useExecutionStore.getState().setNodeStatus(opts.nodeIds[0], 'pending');
+          exec.setRunNodeStatus(result.body.execution.id, opts.nodeIds[0], 'pending');
           writeNodeData(opts.nodeIds[0], {
             executionStatus: 'pending',
             executionError: undefined,
@@ -499,28 +586,47 @@ export function useExecutionController(
         subscribe(result.body.execution.id);
       } catch (error) {
         if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
-        // Keep an active run and its stream intact if restore raced preflight.
-        if (LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
+        // A rejected submit belongs to the canvas, not to any live run: writing
+        // it onto the focused run would flip a healthy run to `error`.
         useExecutionStore.getState().setExecution({
+          executionId: LOCAL_RUN_ID,
           status: 'error',
           error: error instanceof Error ? error.message : t('error.createExecutionFailed'),
         });
       } finally {
-        startingRef.current = false;
+        startingRef.current.delete(submissionKey);
       }
     },
-    [closeStream, subscribe],
+    [subscribe],
   );
 
+  /**
+   * Canvas-level control: the bar's pause / resume / cancel apply to every run
+   * the action is valid for, which is what a single-run canvas did implicitly.
+   */
   const control = useCallback(
-    async (action: 'pause' | 'resume' | 'cancel') => {
+    async (action: ControlAction) => {
       const workspace = workspaceIdRef.current;
-      const { executionId } = useExecutionStore.getState();
-      if (!workspace || !executionId) return;
-      const result = await executionAction(workspace, executionId, action);
-      if (!result.ok && result.body.message) {
-        useExecutionStore.getState().setExecution({ error: result.body.message });
-      }
+      if (!workspace) return;
+      const targets = useExecutionStore
+        .getState()
+        .runs.filter((run) => CONTROL_TARGET_STATUSES[action].has(run.status));
+      await Promise.all(targets.map(async (run) => {
+        try {
+          const result = await executionAction(workspace, run.executionId, action);
+          if (!result.ok && result.body.message) {
+            useExecutionStore.getState().patchRun(run.executionId, { error: result.body.message });
+          }
+        } catch (error) {
+          // `executionAction` rejects on a transport failure rather than
+          // returning `{ ok: false }`. Without this the whole fan-out rejects,
+          // the caller's `void` call becomes an unhandled rejection, and the
+          // other runs' outcomes are lost.
+          useExecutionStore.getState().patchRun(run.executionId, {
+            error: error instanceof Error ? error.message : t('error.executionFailed'),
+          });
+        }
+      }));
     },
     [],
   );
@@ -531,10 +637,14 @@ export function useExecutionController(
 
   const reset = useCallback(() => {
     closeStream();
+    // A create POST still in flight must not re-register its run afterwards;
+    // bumping the generation also releases the submission slots.
+    generationRef.current += 1;
+    startingRef.current.clear();
     useExecutionStore.getState().resetExecution();
   }, [closeStream]);
 
-  /** Island reload: if an execution is still live, restore the subscription. */
+  /** Island reload: restore every execution still live in this workspace. */
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
@@ -542,21 +652,27 @@ export function useExecutionController(
       try {
         const list = await listExecutions(workspaceId);
         if (cancelled || !list.ok) return;
-        const live = (list.body.executions ?? []).find((row) => LIVE_STATUSES.has(row.status));
-        if (!live) {
+        const live = (list.body.executions ?? []).filter((row) => isLiveExecutionStatus(row.status));
+        if (live.length === 0) {
           // No live run for this workspace: the in-flight markers autosaved with
           // the canvas document belong to a run that ended while this island was
           // away, and nothing will ever correct them over SSE — converge them
           // here instead. A start that raced the list call stays untouched; see
           // `shouldConvergeInFlightOnReload` for the exact condition.
-          if (shouldConvergeInFlightOnReload(startingRef.current)) settleInFlightNodes('skipped');
+          if (shouldConvergeInFlightOnReload(startingRef.current.size > 0)) settleInFlightNodes('skipped');
           return;
         }
-        const snapshot = await getExecution(workspaceId, live.id);
-        if (cancelled || !snapshot.ok || !snapshot.body.execution) return;
-        applySnapshot(snapshot.body.execution);
-        if (LIVE_STATUSES.has(snapshot.body.execution.status)) {
-          subscribe(live.id);
+        // Independent, idempotent GETs: restore them together so the canvas
+        // does not wait one round trip per live run.
+        const snapshots = await Promise.all(live.map(async (row) => ({
+          row,
+          snapshot: await getExecution(workspaceId, row.id),
+        })));
+        if (cancelled) return;
+        for (const { row, snapshot } of snapshots) {
+          if (!snapshot.ok || !snapshot.body.execution) continue;
+          applySnapshot(snapshot.body.execution);
+          if (isLiveExecutionStatus(snapshot.body.execution.status)) subscribe(row.id);
         }
       } catch {
         // Offline / no backend: stay idle.
@@ -578,8 +694,8 @@ export function useExecutionController(
     };
   }, [startExecution]);
 
-  // Unmount: close the stream (execution keeps running host-side).
-  useEffect(() => closeStream, [closeStream]);
+  // Unmount: close every stream (executions keep running host-side).
+  useEffect(() => () => closeStream(), [closeStream]);
 
   return { startExecution, pause, resume, cancel, reset };
 }
