@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { initTiktokScene, isTikTokHomePath } from '../src/content/tiktok-scene/index.ts'
+import { initTiktokScene, isTikTokScenePath } from '../src/content/tiktok-scene/index.ts'
 import { TIKTOK_SCENE_HOST_ID, TIKTOK_TIMING } from '../src/content/tiktok-scene/messages.ts'
 import { tiktokCopy } from '../src/content/tiktok-scene/copy.ts'
 
@@ -131,10 +131,10 @@ describe('TikTok 场景挂载 — 页面范围', () => {
     expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
   })
 
-  it('作品页不挂入口，避免贴在作者头像上', () => {
+  it('作品页也挂入口：单条视频同样要能下载、取原声', () => {
     setLocation(WATCH)
     initTiktokScene()
-    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
   })
 
   it('博主主页不挂入口，避免每个头像都长出一个按钮', () => {
@@ -161,19 +161,20 @@ describe('TikTok 场景挂载 — 页面范围', () => {
   })
 
   it('首页判定只认信息流地址', () => {
-    expect(isTikTokHomePath('/')).toBe(true)
-    expect(isTikTokHomePath('/foryou')).toBe(true)
-    expect(isTikTokHomePath('/following')).toBe(true)
-    expect(isTikTokHomePath('/@cleanlife')).toBe(false)
-    expect(isTikTokHomePath('/@cleanlife/video/7412345678901234567')).toBe(false)
-    expect(isTikTokHomePath('/search')).toBe(false)
-    expect(isTikTokHomePath('/explore')).toBe(false)
-    expect(isTikTokHomePath('/messages')).toBe(false)
+    expect(isTikTokScenePath('/')).toBe(true)
+    expect(isTikTokScenePath('/foryou')).toBe(true)
+    expect(isTikTokScenePath('/following')).toBe(true)
+    expect(isTikTokScenePath('/@cleanlife')).toBe(false)
+    expect(isTikTokScenePath('/@cleanlife/video/7412345678901234567')).toBe(true)
+    expect(isTikTokScenePath('/@cleanlife/photo/7412345678901234567')).toBe(true)
+    expect(isTikTokScenePath('/search')).toBe(false)
+    expect(isTikTokScenePath('/explore')).toBe(false)
+    expect(isTikTokScenePath('/messages')).toBe(false)
   })
 })
 
 describe('TikTok 场景挂载 — 站内跳转', () => {
-  it('从首页点进作品页，入口自己撤掉', async () => {
+  it('从首页点进作品页，入口跟着保留', async () => {
     setLocation(HOME)
     initTiktokScene()
     expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
@@ -182,11 +183,11 @@ describe('TikTok 场景挂载 — 站内跳转', () => {
     document.body.appendChild(document.createElement('main'))
     await settle()
 
-    expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
+    expect(shadow()?.querySelector('.omx-trigger')).not.toBeNull()
   })
 
-  it('从作品页退回首页，入口自己回来', async () => {
-    setLocation(WATCH)
+  it('从博主主页切回信息流，入口自己回来', async () => {
+    setLocation(PROFILE)
     initTiktokScene()
     expect(document.getElementById(TIKTOK_SCENE_HOST_ID)).toBeNull()
 

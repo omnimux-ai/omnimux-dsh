@@ -387,10 +387,12 @@ export function isPostOrWorkMedia(element: Element, host: string = currentHost()
   // This protects normal web browsing (news, documentation, search, e-commerce, work tools).
   if (!isSocialPlatformHost(host)) return false
   if (mediaKindOf(element) === null) return false
-  // TikTok has dedicated in-page shortcut triggers, suppress media hover capsule for TikTok videos
-  // to avoid dual implementation with the dedicated right-side action toolbar.
+  // TikTok carries its own page surfaces and must not also grow the hover
+  // capsule: feeds have the scene trigger, and profile/search grids have the
+  // card trigger. A second affordance on the same picture would be two entries
+  // for one action.
   const normalized = normalizeHost(host)
-  if ((normalized === 'tiktok.com' || normalized.endsWith('.tiktok.com')) && mediaKindOf(element) === 'video') {
+  if (normalized === 'tiktok.com' || normalized.endsWith('.tiktok.com')) {
     return false
   }
   // The hard gate, ahead of every context rule below. No branch — status,
