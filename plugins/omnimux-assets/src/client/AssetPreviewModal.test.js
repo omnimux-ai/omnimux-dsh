@@ -17,14 +17,18 @@ describe('AssetPreviewModal component contract and tokens compliance', () => {
     assert.match(modalJsx, /aria-modal="true"/)
     assert.match(modalJsx, /onClick=\{onClose\}/)
 
+    // Wrapper and External Close Button
+    assert.match(modalJsx, /className="omnimux-assets-modal-wrapper"/)
+    assert.match(modalJsx, /className="omnimux-modal-close-btn is-external omnimux-assets-modal-close-external"/)
+    assert.match(modalJsx, /strokeWidth="2.2"/)
+
     // Container with stopPropagation
     assert.match(modalJsx, /className="omnimux-assets-modal-container"/)
-    assert.match(modalJsx, /event\.stopPropagation\(\)/)
 
-    // Header with title, extension badge, and CloseIcon
+    // Header with title and extension badge; old CloseIcon removed from header
     assert.match(modalJsx, /className="omnimux-assets-modal-header"/)
     assert.match(modalJsx, /className="omnimux-assets-modal-badge"/)
-    assert.match(modalJsx, /<CloseIcon\s+size=\{16\}\s*\/>/)
+    assert.doesNotMatch(modalJsx, /<CloseIcon\s+size=\{16\}\s*\/>/)
 
     // Body with media switch
     assert.match(modalJsx, /className="omnimux-assets-modal-body"/)

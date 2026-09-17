@@ -646,6 +646,63 @@ export const ASSETS_CSS = `
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
+.omnimux-assets-modal-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 860px;
+}
+.omnimux-assets-modal-close-external,
+.omnimux-modal-close-btn {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease, border-color 140ms ease;
+  z-index: 100002;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px var(--dsw-alias-bg-base);
+  box-sizing: border-box;
+  padding: 0;
+}
+.omnimux-assets-modal-close-external:hover,
+.omnimux-modal-close-btn:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l2);
+  transform: scale(1.08);
+}
+.omnimux-assets-modal-close-external:active,
+.omnimux-modal-close-btn:active {
+  transform: scale(0.96);
+}
+.omnimux-assets-modal-close-external svg,
+.omnimux-modal-close-btn svg {
+  pointer-events: none;
+  display: block;
+}
+.omnimux-assets-modal-close-external.is-external,
+.omnimux-modal-close-btn.is-external {
+  top: 0px;
+  right: -50px;
+}
+@media (max-width: 1280px) {
+  .omnimux-assets-modal-close-external.is-external,
+  .omnimux-modal-close-btn.is-external {
+    top: 14px;
+    right: 14px;
+    background: var(--dsw-alias-bg-layer-3);
+  }
+}
 .omnimux-assets-modal-container {
   position: relative;
   display: flex;

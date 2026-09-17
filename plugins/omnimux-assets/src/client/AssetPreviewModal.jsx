@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, IconButton } from 'dsh-ui-kit'
-import { ChatIcon, CheckIcon, CloseIcon, FileIcon, PlusIcon } from './icons.jsx'
+import { Button } from 'dsh-ui-kit'
+import { ChatIcon, CheckIcon, FileIcon, PlusIcon } from './icons.jsx'
 import { addMediaToConversation } from './add-to-chat.js'
 
 /**
@@ -105,30 +105,50 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation, saved
       aria-label={item.title || 'Preview'}
     >
       <div
-        className="omnimux-assets-modal-container"
+        className="omnimux-assets-modal-wrapper"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="omnimux-assets-modal-header">
-          <div className="omnimux-assets-modal-header-left">
-            <h3 className="omnimux-assets-modal-title" title={item.title}>
-              {item.title}
-            </h3>
-            {item.extension ? (
-              <span className="omnimux-assets-modal-badge">
-                {String(item.extension).toUpperCase()}
-              </span>
-            ) : null}
-          </div>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            className="omnimux-assets-modal-close"
-            aria-label={t('modal.close') || t('stage.close') || '关闭预览'}
-            onClick={onClose}
+        <button // exempt-ui01: modal close icon button
+          type="button"
+          className="omnimux-modal-close-btn is-external omnimux-assets-modal-close-external"
+          aria-label={t('modal.close') || t('stage.close') || '关闭预览'}
+          title={t('modal.close') || t('stage.close') || '关闭预览'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose?.()
+          }}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
           >
-            <CloseIcon size={16} />
-          </IconButton>
-        </header>
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div
+          className="omnimux-assets-modal-container"
+        >
+          <header className="omnimux-assets-modal-header">
+            <div className="omnimux-assets-modal-header-left">
+              <h3 className="omnimux-assets-modal-title" title={item.title}>
+                {item.title}
+              </h3>
+              {item.extension ? (
+                <span className="omnimux-assets-modal-badge">
+                  {String(item.extension).toUpperCase()}
+                </span>
+              ) : null}
+            </div>
+          </header>
 
         <main className="omnimux-assets-modal-body">
           {isImage ? (
@@ -219,6 +239,7 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation, saved
             ) : null}
           </div>
         </footer>
+      </div>
       </div>
     </div>
   )
