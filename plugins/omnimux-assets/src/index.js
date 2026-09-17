@@ -5,6 +5,7 @@ import { createLibraryStore } from './library.js'
 import { createMappingStore, AssetsError } from './mappings.js'
 import { resolveAssetsPaths } from './paths.js'
 import { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri } from './protocol.js'
+import { mountGenerationIngest } from './generation-ingest.js'
 
 export { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri }
 
@@ -60,6 +61,11 @@ export function apply(ctx) {
   library.migrateMappings(mappings)
   const cloud = createCloudCatalog({ library })
   const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
+
+  const unmountIngest = mountGenerationIngest(ctx, { artifacts })
+  if (typeof ctx.effect === 'function') {
+    ctx.effect(() => unmountIngest, 'omnimux-assets: generation ingest')
+  }
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
