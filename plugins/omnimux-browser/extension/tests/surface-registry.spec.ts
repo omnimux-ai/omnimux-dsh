@@ -77,9 +77,17 @@ describe('TikTok 消费矩阵', () => {
 
   it('卡片选择器只认 TikTok', () => {
     expect(workCardSelectorFor('www.tiktok.com')).toContain('user-post-item')
-    expect(workCardSelectorFor('tiktok.com')).toContain('search-card-container')
     expect(workCardSelectorFor('nottiktok.com')).toBeNull()
     expect(workCardSelectorFor('www.x.com')).toBeNull()
+  })
+
+  it('选择器覆盖三个页面各自的真实钩子', () => {
+    // 搜索与探索用的是与个人主页不同的钩子名；漏掉任意一个，对应页面的标记
+    // 就会静默消失——宿主建了，条目数为 0。
+    const selector = workCardSelectorFor('www.tiktok.com') ?? ''
+    for (const hook of ['user-post-item', 'search_top-item', 'explore-item']) {
+      expect(selector, hook).toContain(hook)
+    }
   })
 })
 

@@ -51,8 +51,16 @@ const MIN_CARD_PX = 96
  */
 export const WORK_CARD_SELECTORS: Readonly<Record<string, string>> = {
   'tiktok.com': [
+    // Profile grid.
     '[data-e2e="user-post-item"]',
-    '[data-e2e="search-card-container"]',
+    // Search results. The site names these differently from the profile grid —
+    // `search_top-item`, not `search-card-container` — and the card marks were
+    // silently absent on the page until this list carried the real hook.
+    '[data-e2e="search_top-item"]',
+    // Explore grid, likewise its own name.
+    '[data-e2e="explore-item"]',
+    // Feed cards. The feed is gated off for this surface, so this entry exists
+    // only so a future rule change does not need a second edit here.
     '[data-e2e="recommend-list-item-container"]',
   ].join(', '),
 }
