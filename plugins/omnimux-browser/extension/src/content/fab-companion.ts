@@ -74,7 +74,6 @@ export function initFabCompanion(): void {
   document.documentElement.appendChild(host)
 
   const shadow = host.attachShadow({ mode: 'open' })
-  const iconUrl = chrome.runtime.getURL('assets/icons/icon48.png')
   const panelUrl = chrome.runtime.getURL('panel/index.html?mode=float')
   const parsedPanelUrl = new URL(panelUrl)
   const panelOrigin = `${parsedPanelUrl.protocol}//${parsedPanelUrl.host}`
@@ -197,7 +196,7 @@ export function initFabCompanion(): void {
     </div>
 
     <div id="omnimux-workstation" class="omnimux-workstation-container" role="dialog" aria-label="OmniMux工作台">
-      <iframe id="omnimux-panel-iframe" class="omnimux-iframe" src="${panelUrl}" allow="clipboard-read; clipboard-write" allowtransparency="true"></iframe>
+      <iframe id="omnimux-panel-iframe" class="omnimux-iframe" src="about:blank" allow="clipboard-read; clipboard-write" allowtransparency="true"></iframe>
     </div>
   `
 
@@ -282,12 +281,17 @@ export function initFabCompanion(): void {
 
   applyFabPosition(currentX, currentY)
 
+  function isWorkstationFrameLoaded(): boolean {
+    if (!iframe) return false
+    const current = iframe.getAttribute('src') ?? ''
+    return current === panelUrl
+  }
+
   function ensureWorkstationFrame(): void {
     // Dock-to-side-panel may blank the iframe so only the native panel stays
     // live; a later FAB click has to put the float document back.
     if (!iframe) return
-    const current = iframe.getAttribute('src') ?? ''
-    if (current === panelUrl) return
+    if (isWorkstationFrameLoaded()) return
     try {
       iframe.src = panelUrl
     } catch {
@@ -333,8 +337,8 @@ export function initFabCompanion(): void {
       const media = sniffViewportMedia()
       const payload = { ...context, media }
 
-      // 1. 同步到浮动工作台 iframe
-      if (iframe?.contentWindow) {
+      // 1. 同步到浮动工作台 iframe（仅当工作台已装载真实地址时才同步）
+      if (iframe?.contentWindow && isWorkstationFrameLoaded()) {
         iframe.contentWindow.postMessage({
           source: 'omnimux-content-script',
           type: 'PAGE_CONTEXT_UPDATE',
@@ -561,6 +565,14 @@ export function initFabCompanion(): void {
   }
   window.addEventListener('message', handleMessage)
 
+  // 懒加载就绪侦听：首次动态载入真实插件地址后，若当前处于展开态，自动同步最新上下文
+  const handleIframeLoad = () => {
+    if (isWorkstationFrameLoaded() && isExpanded) {
+      syncContextToIframe()
+    }
+  }
+  iframe.addEventListener('load', handleIframeLoad)
+
   // 实时感知算法：深度监听 SPA (Twitter/X, TikTok, etc.) 单页路由、标题及内容变动
   let lastTrackedUrl = window.location.href
   let lastTrackedTitle = document.title
@@ -658,6 +670,7 @@ export function initFabCompanion(): void {
   const unsubscribe = () => {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('message', handleMessage)
+    iframe.removeEventListener('load', handleIframeLoad)
     clearInterval(routePollTimer)
     contentObserver.disconnect()
     if (domCheckTimer !== null) clearTimeout(domCheckTimer)
