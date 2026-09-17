@@ -6,6 +6,7 @@ import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
 import { isFolderAsset, resolveAssetMediaPreview } from './asset-routing.js'
 import { useGridColumns } from './use-grid-columns.js'
 import { MasonryGrid } from './masonry-grid.jsx'
+import { coverRatioCache } from './ratio-cache.js'
 
 /**
  * @param {{
@@ -99,6 +100,9 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
             if (image.naturalWidth > 0 && image.naturalHeight > 0) {
               image.setAttribute('width', String(image.naturalWidth))
               image.setAttribute('height', String(image.naturalHeight))
+              if (asset?.id) {
+                coverRatioCache.set(asset.id, image.naturalWidth / image.naturalHeight)
+              }
             }
           }}
           onError={() => setBroken(true)}

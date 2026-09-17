@@ -21,6 +21,7 @@ import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
 import { MasonryGrid } from './masonry-grid.jsx'
 import { pageSizeFor } from './page-size.js'
+import { coverRatioCache } from './ratio-cache.js'
 
 /** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
@@ -137,6 +138,9 @@ function CloudTileMedia(props) {
             if (image.naturalWidth > 0 && image.naturalHeight > 0) {
               image.setAttribute('width', String(image.naturalWidth))
               image.setAttribute('height', String(image.naturalHeight))
+              if (asset?.id) {
+                coverRatioCache.set(asset.id, image.naturalWidth / image.naturalHeight)
+              }
             }
           }}
           onError={handleImageError}

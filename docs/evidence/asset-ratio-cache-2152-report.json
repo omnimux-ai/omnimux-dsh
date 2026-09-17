@@ -1,0 +1,129 @@
+{
+ "issue": 2152,
+ "kind": "ratio-cache-zero-jitter-render",
+ "origin": "http://127.0.0.1:59747",
+ "cases": [
+  {
+   "width": 1560,
+   "expectedCols": 5,
+   "cachedSizeRound1": 4,
+   "results": [
+    {
+     "id": "item-avatar",
+     "originalRatio": 0.5625,
+     "initialAttrRatio": 0.5625,
+     "diff": 0
+    },
+    {
+     "id": "item-scene",
+     "originalRatio": 1.5,
+     "initialAttrRatio": 1.5,
+     "diff": 0
+    },
+    {
+     "id": "item-square",
+     "originalRatio": 1,
+     "initialAttrRatio": 1,
+     "diff": 0
+    },
+    {
+     "id": "item-tall",
+     "originalRatio": 0.5,
+     "initialAttrRatio": 0.5,
+     "diff": 0
+    }
+   ],
+   "allZeroJitter": true,
+   "overflowX": false
+  },
+  {
+   "width": 1280,
+   "expectedCols": 4,
+   "cachedSizeRound1": 4,
+   "results": [
+    {
+     "id": "item-avatar",
+     "originalRatio": 0.5625,
+     "initialAttrRatio": 0.5625,
+     "diff": 0
+    },
+    {
+     "id": "item-scene",
+     "originalRatio": 1.5,
+     "initialAttrRatio": 1.5,
+     "diff": 0
+    },
+    {
+     "id": "item-square",
+     "originalRatio": 1,
+     "initialAttrRatio": 1,
+     "diff": 0
+    },
+    {
+     "id": "item-tall",
+     "originalRatio": 0.5,
+     "initialAttrRatio": 0.5,
+     "diff": 0
+    }
+   ],
+   "allZeroJitter": true,
+   "overflowX": false
+  }
+ ],
+ "screenshots": [
+  {
+   "width": 1560,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/d-2152/docs/evidence/asset-ratio-cache-2152-render-1560.png",
+   "bytes": 15109
+  },
+  {
+   "width": 1280,
+   "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/d-2152/docs/evidence/asset-ratio-cache-2152-render-1280.png",
+   "bytes": 15378
+  }
+ ],
+ "errors": [],
+ "assertions": [
+  {
+   "name": "probe-page-ready",
+   "pass": true
+  },
+  {
+   "name": "cachedRound1@1560",
+   "pass": true
+  },
+  {
+   "name": "zeroJitterRound2@1560",
+   "pass": true,
+   "diffs": [
+    "item-avatar: diff 0",
+    "item-scene: diff 0",
+    "item-square: diff 0",
+    "item-tall: diff 0"
+   ]
+  },
+  {
+   "name": "no-overflow@1560",
+   "pass": true
+  },
+  {
+   "name": "cachedRound1@1280",
+   "pass": true
+  },
+  {
+   "name": "zeroJitterRound2@1280",
+   "pass": true,
+   "diffs": [
+    "item-avatar: diff 0",
+    "item-scene: diff 0",
+    "item-square: diff 0",
+    "item-tall: diff 0"
+   ]
+  },
+  {
+   "name": "no-overflow@1280",
+   "pass": true
+  }
+ ],
+ "pass": true
+}

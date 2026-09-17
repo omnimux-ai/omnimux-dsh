@@ -9,6 +9,7 @@
  * Media, search and save stay on the Host routes below.
  */
 import { cloudManifestUrl, cloudPageUrl, resolveCloudBase } from './cloud-source.js'
+import { defaultRequestCoalescer } from './request-coalescer.js'
 
 /**
  * @param {string} path
@@ -197,7 +198,8 @@ export async function cloudManifest(options = {}) {
  */
 export async function cloudPage(scope, page) {
   const base = await resolveCloudBase()
-  return assetsRequest(cloudPageUrl(base, scope, page))
+  const url = cloudPageUrl(base, scope, page)
+  return defaultRequestCoalescer.coalesce(url, () => assetsRequest(url))
 }
 
 /**
@@ -237,7 +239,8 @@ export function cloudFilter(query) {
   for (const token of query.tokens ?? []) params.append('dims', token)
   if (Number.isFinite(query.limit)) params.set('limit', String(query.limit))
   if (Number.isFinite(query.offset)) params.set('offset', String(query.offset))
-  return assetsRequest(`/omnimux/assets/cloud/filter?${params}`)
+  const url = `/omnimux/assets/cloud/filter?${params}`
+  return defaultRequestCoalescer.coalesce(url, () => assetsRequest(url))
 }
 
 /**
