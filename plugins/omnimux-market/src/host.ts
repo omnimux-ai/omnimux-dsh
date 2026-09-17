@@ -33,7 +33,7 @@ import {
   readInstalledPlugins,
   withPluginInstallLock,
 } from './plugin-market.js'
-import { renderAttachedExpertSection, sessionIdFromExec } from './session-attach.js'
+import { renderAttachedExpertSection, renderAttachedTrialSection, sessionIdFromExec } from './session-attach.js'
 import type { InstallResult, InstalledSkill, MarketToolSpec, PluginConfig, SearchResult, SortBy } from './types.js'
 
 export const name = 'omnimux-market'
@@ -396,6 +396,11 @@ export function apply(ctx: Context, config: Config): void {
       name: 'plaza:attached-expert',
       order: 8,
       text: (assemble?: unknown) => renderAttachedExpertSection(dshHome(), sessionIdFromExec(assemble)),
+    })
+    prompt.section({
+      name: 'plaza:trial-skill',
+      order: 9,
+      text: (assemble?: unknown) => renderAttachedTrialSection(dshHome(), sessionIdFromExec(assemble)),
     })
     prompt.section({
       name: 'tool:skillhub',

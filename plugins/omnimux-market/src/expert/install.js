@@ -88,6 +88,40 @@ function resolveLocalRepo(repo) {
 }
 
 /**
+ * Read SKILL.md from a catalog item without copying it into $DSH_HOME/skills.
+ * Bundled packs are read from the plugin package; git packs use the existing
+ * sparse cache under esc-gallery (not the install directory).
+ * @param {{ skill?: string, source?: { type?: string, path?: string, repo?: string, ref?: string } } | null | undefined} item
+ * @param {{ home: string, packageRoot: string }} roots
+ */
+export function readCatalogSkillMarkdown(item, roots) {
+  if (!item || !item.source) return ''
+  try {
+    if (item.source.type === 'bundled') {
+      const from = join(roots.packageRoot, item.source.path || '')
+      if (!existsSync(from)) return ''
+      if (statSync(from).isDirectory()) {
+        const md = join(from, 'SKILL.md')
+        return existsSync(md) ? readFileSync(md, 'utf8') : ''
+      }
+      return readFileSync(from, 'utf8')
+    }
+    if (item.source.type === 'git') {
+      const from = fetchGitTree(roots.home, item)
+      if (!from || !existsSync(from)) return ''
+      if (statSync(from).isDirectory()) {
+        const md = join(from, 'SKILL.md')
+        return existsSync(md) ? readFileSync(md, 'utf8') : ''
+      }
+      return readFileSync(from, 'utf8')
+    }
+  } catch {
+    return ''
+  }
+  return ''
+}
+
+/**
  * Copy one archive directory. Prefer local clone when present, otherwise fetch sparse git tree.
  * @param {string} home
  * @param {{ skill?: string, title?: string, summary?: string, source: { type: string, repo?: string, path?: string, ref?: string } }} item

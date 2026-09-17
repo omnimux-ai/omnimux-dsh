@@ -1,0 +1,49 @@
+{
+  "issue": 2166,
+  "verifiedAt": "2026-09-17T07:14:46.000Z",
+  "summary": "去对话中试试挂当前会话临时加载，不安装",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "当前会话点亮技能标识",
+      "result": "pass",
+      "evidence": "session-create.js trySkillInSession 非引导路径调用 activateSharedToolSkill + currentPlazaSessionId；window.trySkillInSession 导出供精选卡点击"
+    },
+    {
+      "id": "AC-2",
+      "name": "不写入安装目录",
+      "result": "pass",
+      "evidence": "lib/tests/try-attach.test.js：tryAttach hypit-setup 后 skills 目录为空，installed=false，hasBody=true"
+    },
+    {
+      "id": "AC-3",
+      "name": "本会话系统提示含技能正文",
+      "result": "pass",
+      "evidence": "session-attach trial 落盘 + renderAttachedTrialSection 含 NOT installed 与正文；host.ts plaza:trial-skill order 9"
+    },
+    {
+      "id": "AC-4",
+      "name": "已安装同样走临时挂载",
+      "result": "pass",
+      "evidence": "非 session-guide 路径不再调用 api install"
+    },
+    {
+      "id": "AC-5",
+      "name": "点击有可见反馈",
+      "result": "pass",
+      "evidence": "plazaUtils.safeTrySkillInSession 优先 window.trySkillInSession，不再静默空返回"
+    },
+    {
+      "id": "AC-6",
+      "name": "session-guide 安装语义不变",
+      "result": "pass",
+      "evidence": "hypit-setup-guide.test.js 5/5；引导路径仍 api install + sessionPrefill"
+    }
+  ],
+  "unit": {
+    "try-skill-session.test.js": "4/4",
+    "session-attach.test.js": "8/8",
+    "try-attach.test.js": "1/1",
+    "hypit-setup-guide.test.js": "5/5"
+  }
+}

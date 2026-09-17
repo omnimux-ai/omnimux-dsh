@@ -8,13 +8,13 @@ import { assignConfig, dshHome, publicConfig, sanitizePatch, sanitizeSortBy, wri
 import { configureHttpJsonCache } from './http.js';
 import { BOOT_ID, progress, publicInstallStatus } from './dsh-cli.js';
 import { decorateCatalog, loadCatalog } from './expert/catalog.js';
-import { findItem, installItem, removeMcpRow, withConnectorPatchLock } from './expert/install.js';
+import { findItem, installItem, readCatalogSkillMarkdown, removeMcpRow, withConnectorPatchLock } from './expert/install.js';
 import { packageRoot, profileDir } from './expert/paths.js';
 import { summonItem } from './expert/summon.js';
 import { installSuite, uninstallSuite, } from './suite-install.js';
-import { writeSessionExpert } from './session-attach.js';
+import { clearSessionTrial, loadSkillBody, writeSessionExpert, writeSessionTrial } from './session-attach.js';
 import { fetchBytes } from './http.js';
-import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js';
+import { installSkill, installedSlugs, listInstalled, peekSkillMarkdown, uninstallSkill } from './install.js';
 import { listMarketplaceConnectors, resolveMarketplaceIconFile } from './marketplace-connectors.js';
 import { installMarketPlugin, isPluginInstallBusy, listPluginCategories, listPlugins, withPluginInstallLock } from './plugin-market.js';
 import { scheduleRestart, servingPort, trustedRestartRequest } from './restart.js';
@@ -92,6 +92,8 @@ export const MUTATING_METHODS = new Set([
     'expertMarketInstall',
     'expertMarketDisable',
     'setModelSelection',
+    'tryAttach',
+    'tryDetach',
 ]);
 export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
 import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
@@ -158,6 +160,65 @@ async function handleSkillUninstall(ctx) {
         return sendJson(res, 400, { ok: false, error: '缺少 slug' });
     const result = await uninstallSkill(slug, cfg.skillsDir);
     return sendJson(res, 200, { ok: true, ...result });
+}
+async function handleTryAttach(ctx) {
+    const { req, res, body, url, cfg } = ctx;
+    if (!trustedRestartRequest(req))
+        return sendJson(res, 403, { ok: false, error: 'tryAttach is limited to same-origin requests' });
+    const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim();
+    const slugRaw = String(body.slug || url.searchParams.get('slug') || '').trim();
+    if (!sessionId)
+        return sendJson(res, 400, { ok: false, error: '缺少 sessionId' });
+    if (!slugRaw)
+        return sendJson(res, 400, { ok: false, error: '缺少 slug' });
+    let slug = slugRaw;
+    try {
+        slug = parseSlug(slugRaw);
+    }
+    catch {
+        slug = slugRaw.toLowerCase();
+    }
+    const catalogId = String(body.catalogId || url.searchParams.get('catalogId') || '').trim();
+    const title = String(body.title || body.name || slug).trim();
+    const roots = expertRoots();
+    let bodyText = loadSkillBody(roots.home, slug);
+    const catalogItem = findCatalogSkill(slug, catalogId || undefined);
+    if (!bodyText && catalogItem) {
+        bodyText = readCatalogSkillMarkdown(catalogItem, roots);
+    }
+    if (!bodyText) {
+        try {
+            bodyText = await peekSkillMarkdown(slug, cfg);
+        }
+        catch {
+            bodyText = '';
+        }
+    }
+    const saved = writeSessionTrial(roots.home, sessionId, {
+        slug,
+        title: title || catalogItem?.title || slug,
+        catalogId: catalogId || String(catalogItem?.id || ''),
+        body: bodyText,
+    });
+    return sendJson(res, 200, {
+        ok: true,
+        attached: true,
+        installed: false,
+        sessionId,
+        slug: saved.slug,
+        title: saved.title,
+        hasBody: Boolean(saved.body),
+    });
+}
+function handleTryDetach(ctx) {
+    const { req, res, body, url } = ctx;
+    if (!trustedRestartRequest(req))
+        return sendJson(res, 403, { ok: false, error: 'tryDetach is limited to same-origin requests' });
+    const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim();
+    if (!sessionId)
+        return sendJson(res, 400, { ok: false, error: '缺少 sessionId' });
+    const cleared = clearSessionTrial(expertRoots().home, sessionId);
+    return sendJson(res, 200, { ok: true, attached: false, sessionId, cleared });
 }
 async function handleConfigRoute(ctx) {
     const { req, res, body, cfg } = ctx;
@@ -571,6 +632,8 @@ const API_ROUTE_TABLE = {
     getModelCatalog: handleGetModelCatalog,
     getModelSelection: handleGetModelSelection,
     setModelSelection: handleSetModelSelection,
+    tryAttach: handleTryAttach,
+    tryDetach: handleTryDetach,
 };
 export async function handleApi(req, res, cfg) {
     try {
