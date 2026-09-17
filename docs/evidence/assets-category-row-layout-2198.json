@@ -1,0 +1,34 @@
+{
+  "issue": 2198,
+  "feature": "assets-category-row-layout-and-shuffle-cache",
+  "timestamp": "2026-09-17T10:23:33.164Z",
+  "assertions": [
+    {
+      "name": "shuffle-validity",
+      "pass": true,
+      "diffCount": 22
+    },
+    {
+      "name": "session-cache-stability",
+      "pass": true
+    },
+    {
+      "name": "refresh-cache-invalidation",
+      "pass": true
+    },
+    {
+      "name": "categories-covered",
+      "pass": true,
+      "count": 6,
+      "list": [
+        "character",
+        "scene",
+        "prop",
+        "material",
+        "style",
+        "audio"
+      ]
+    }
+  ],
+  "status": "PASS"
+}

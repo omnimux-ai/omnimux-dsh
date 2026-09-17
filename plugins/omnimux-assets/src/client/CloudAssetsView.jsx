@@ -17,11 +17,13 @@ import { cloudMediaUrl } from './api.js'
 import { preloadMedia } from './media-cache.js'
 import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
+import { CLOUD_ALL_CATEGORY } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
 import { MasonryGrid } from './masonry-grid.jsx'
 import { pageSizeFor } from './page-size.js'
 import { coverRatioCache } from './ratio-cache.js'
+import { CloudCategoryRow } from './CloudCategoryRow.jsx'
 
 /** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
@@ -551,6 +553,12 @@ export function CloudAssetsView(props) {
   const onTogglePlay = useCallback((asset) => { audition.toggle(asset) }, [audition])
   const searchActive = feed.query.trim() !== ''
   const filtered = feed.characterFilters.active > 0
+  const isAllCategory = feed.category === CLOUD_ALL_CATEGORY
+  const showRowLayout = isAllCategory && !searchActive && !filtered
+
+  const rowCategories = useMemo(() => {
+    return feed.categories.filter((cat) => cat.id !== CLOUD_ALL_CATEGORY)
+  }, [feed.categories])
 
   const emptyState = useMemo(() => {
     // A dimension combination that the catalog holds no rows for is the one
@@ -576,7 +584,24 @@ export function CloudAssetsView(props) {
   }, [items, pageSize])
 
   let body = null
-  if (feed.loading) {
+  if (showRowLayout) {
+    body = (
+      <div className="omnimux-assets-cloud-scroll omnimux-assets-cloud-rows-scroll">
+        {rowCategories.map((cat) => (
+          <CloudCategoryRow
+            key={cat.id}
+            category={cat}
+            t={t}
+            onSelectCategory={feed.selectCategory}
+            onTogglePlay={onTogglePlay}
+            onPreview={onPreview}
+            playingId={audition.playingId}
+            refreshKey={feed.refreshKey}
+          />
+        ))}
+      </div>
+    )
+  } else if (feed.loading) {
     // 首次加载铺骨架网格而不是一句「正在加载」：卡片位置先占住，数据到达时在原位
     // 换成真卡片，不做二次布局，观感上是从模糊到清晰而不是从空白到出现。
     body = (

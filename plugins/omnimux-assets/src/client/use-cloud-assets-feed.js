@@ -40,6 +40,7 @@ import {
 } from './cloud-feed-helpers.js'
 import { errText, messageOf } from './feed-helpers.js'
 import { useCloudManifest } from './use-cloud-manifest.js'
+import { globalShuffleCache } from './category-shuffle-cache.js'
 
 /** Debounce before a keystroke turns into a catalog-wide search request. */
 export const CLOUD_SEARCH_DEBOUNCE_MS = 280
@@ -168,6 +169,7 @@ export function useCloudAssetsFeed(options) {
   const [queryApplied, setQueryApplied] = useState('')
   const [searchResult, setSearchResult] = useState(/** @type {any} */ (null))
   const [searching, setSearching] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const audition = useCloudAudition()
   const { stop: stopAudition } = audition
@@ -416,6 +418,8 @@ export function useCloudAssetsFeed(options) {
   }, [])
 
   const refresh = useCallback(async () => {
+    globalShuffleCache.clear()
+    setRefreshKey((k) => k + 1)
     await reloadManifest(true)
     setItems([])
     setLoadedPages(0)
@@ -446,6 +450,7 @@ export function useCloudAssetsFeed(options) {
     resetDimensions,
     loadMore,
     refresh,
+    refreshKey,
     audition,
   }
 }
