@@ -65,7 +65,7 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
       }
     }}>
       <Button variant="ghost" role="menuitem" leadingIcon={<IconEditOutline16 size={16}/>} onClick={() => { closeMenu(); onRename(project) }}>{t('projects.rename')}</Button>
-      <Button variant="ghost" role="menuitem" leadingIcon={<IconTrashOutline16 size={16}/>} onClick={() => { closeMenu(); onDelete(project) }}>{t('projects.delete')}</Button>
+      <Button variant="ghost" role="menuitem" className="omnimux-folder-menu-item--danger" data-danger="true" leadingIcon={<IconTrashOutline16 size={16}/>} onClick={() => { closeMenu(); onDelete(project) }}>{t('projects.delete')}</Button>
     </div>}
   </article>
 }
