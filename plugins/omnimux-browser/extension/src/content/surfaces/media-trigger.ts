@@ -43,6 +43,37 @@ const RESCAN_THROTTLE_MS = 160
 const MIN_CARD_PX = 96
 
 /**
+ * Visual gap between the mark and its toolbar, in CSS px.
+ *
+ * The two are separate boxes: the toolbar is absolutely positioned, so the
+ * entry's own box stops at the mark and this gap belongs to neither of them.
+ * A pointer walking into it therefore *leaves* the entry — which is what used to
+ * shut the toolbar just as the user reached for it. It is kept as a visual gap
+ * and covered by {@link TOOLBAR_BRIDGE_PX}.
+ */
+const TOOLBAR_GAP_PX = 6
+
+/**
+ * Width of the invisible bridge laid across {@link TOOLBAR_GAP_PX}, in px.
+ *
+ * Wide enough to overlap the mark: while the toolbar animates open it is scaled
+ * down about its own centre, which pulls its inner edge a couple of pixels away
+ * from the mark. A bridge that only spanned the gap exactly would detach from
+ * the mark for the length of that animation.
+ */
+const TOOLBAR_BRIDGE_PX = 10
+
+/**
+ * How long the toolbar survives the pointer leaving the entry, in ms.
+ *
+ * A fast diagonal move can cross the whole entry between two pointer samples,
+ * so a leave is treated as intent rather than as fact: a pointer that reaches
+ * the toolbar inside this window cancels the close instead of finding it shut.
+ * Matches the hover capsule's own fold-back grace, for one feel across surfaces.
+ */
+const TOOLBAR_CLOSE_GRACE_MS = 220
+
+/**
  * Work-card selectors per host.
  *
  * Read from the platform's own `data-e2e` hooks rather than from class names:
@@ -80,8 +111,12 @@ interface TriggerEntry {
   readonly host: HTMLElement
   readonly trigger: HTMLButtonElement
   readonly toolbar: HTMLElement
-  revealed: boolean
+  /** Whether the pointer is on the card itself. */
+  cardHovered: boolean
+  /** Whether the mark's toolbar is open. */
   open: boolean
+  /** Pending close, so crossing the gap does not shut the toolbar. */
+  closeTimer: number | null
   readonly listeners: Array<() => void>
 }
 
@@ -136,8 +171,11 @@ function payloadFor(card: Element, doc: Document): HoveredMedia | null {
 function stylesheet(size: number, corner: string): string {
   const side = resolveToolbarSide(corner as never)
   const horizontal = side.horizontal === 'left'
-    ? 'right: calc(100% + 6px);'
-    : 'left: calc(100% + 6px);'
+    ? `right: calc(100% + ${TOOLBAR_GAP_PX}px);`
+    : `left: calc(100% + ${TOOLBAR_GAP_PX}px);`
+  // The bridge covers the gap on whichever side of the toolbar faces the mark:
+  // a toolbar opening leftwards reaches back to the right, and vice versa.
+  const bridge = side.horizontal === 'left' ? 'left: 100%;' : 'right: 100%;'
   return `
   :host { all: initial; }
   .omt-layer { position: fixed; inset: 0; pointer-events: none; z-index: ${HOST_Z}; }
@@ -199,6 +237,17 @@ function stylesheet(size: number, corner: string): string {
     transform: translateY(-50%) scale(1);
     pointer-events: auto;
     transition-delay: 0s;
+  }
+  /* The bridge makes the gap between mark and toolbar part of the toolbar for
+     hit-testing, so walking from one to the other never leaves the entry.
+     It inherits the toolbar's own pointer-events, so it is inert while shut. */
+  .omt-toolbar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: ${TOOLBAR_BRIDGE_PX}px;
+    ${bridge}
   }
   .omt-action {
     width: 26px;
@@ -330,27 +379,41 @@ export function initMediaTrigger(
     wrapper.append(trigger, toolbar)
     layer.appendChild(wrapper)
 
-    const entry: TriggerEntry = { card, host: wrapper, trigger, toolbar, revealed: false, open: false, listeners: [] }
+    const entry: TriggerEntry = {
+      card,
+      host: wrapper,
+      trigger,
+      toolbar,
+      cardHovered: false,
+      open: false,
+      closeTimer: null,
+      listeners: [],
+    }
     const entryPair = entry
 
-    const onCardEnter = (): void => setRevealed(entryPair, true)
+    const onCardEnter = (): void => {
+      entryPair.cardHovered = true
+      render(entryPair)
+    }
     const onCardLeave = (): void => {
-      // The mark stays while the pointer is on the toolbar: leaving the card
-      // through the mark is one gesture, not two.
-      if (entryPair.open) return
-      setRevealed(entryPair, false)
+      // The mark stays while the toolbar is open: the toolbar sits outside the
+      // card, so leaving the card through it is one gesture, not two.
+      entryPair.cardHovered = false
+      render(entryPair)
     }
-    const onTriggerEnter = (): void => setOpen(entryPair, true)
-    const onEntryLeave = (): void => {
-      setOpen(entryPair, false)
-      setRevealed(entryPair, false)
+    const onEntryEnter = (): void => {
+      cancelClose(entryPair)
+      openToolbar(entryPair)
     }
-    const onFocusIn = (): void => { setRevealed(entryPair, true); setOpen(entryPair, true) }
+    const onEntryLeave = (): void => closeToolbarSoon(entryPair)
+    const onFocusIn = (): void => {
+      cancelClose(entryPair)
+      openToolbar(entryPair)
+    }
     const onFocusOut = (event: FocusEvent): void => {
       const next = event.relatedTarget
       if (next instanceof Node && entryPair.host.contains(next)) return
-      setOpen(entryPair, false)
-      setRevealed(entryPair, false)
+      closeToolbar(entryPair)
     }
     const onToolbarClick = (event: Event): void => {
       const target = event.target
@@ -364,7 +427,7 @@ export function initMediaTrigger(
 
     card.addEventListener('pointerenter', onCardEnter)
     card.addEventListener('pointerleave', onCardLeave)
-    wrapper.addEventListener('pointerenter', onTriggerEnter)
+    wrapper.addEventListener('pointerenter', onEntryEnter)
     wrapper.addEventListener('pointerleave', onEntryLeave)
     wrapper.addEventListener('focusin', onFocusIn)
     wrapper.addEventListener('focusout', onFocusOut)
@@ -372,7 +435,7 @@ export function initMediaTrigger(
     entry.listeners.push(
       () => card.removeEventListener('pointerenter', onCardEnter),
       () => card.removeEventListener('pointerleave', onCardLeave),
-      () => wrapper.removeEventListener('pointerenter', onTriggerEnter),
+      () => wrapper.removeEventListener('pointerenter', onEntryEnter),
       () => wrapper.removeEventListener('pointerleave', onEntryLeave),
       () => wrapper.removeEventListener('focusin', onFocusIn),
       () => wrapper.removeEventListener('focusout', onFocusOut),
@@ -387,7 +450,7 @@ export function initMediaTrigger(
     if (action === 'inspiration') await bridge.saveToInspiration(payload)
     else if (action === 'copy') await bridge.copyToClipboard(payload)
     else if (action === 'attach') await bridge.attachToConversation(payload)
-    setOpen(entry, false)
+    closeToolbar(entry)
   }
 
   function placeEntry(entry: TriggerEntry): void {
@@ -408,6 +471,7 @@ export function initMediaTrigger(
 
   function clearEntries(): void {
     for (const entry of entries.values()) {
+      cancelClose(entry)
       for (const off of entry.listeners) off()
       entry.host.remove()
     }
@@ -425,6 +489,7 @@ export function initMediaTrigger(
     const live = new Set(cards)
     for (const [card, entry] of entries) {
       if (live.has(card) && card.isConnected) continue
+      cancelClose(entry)
       for (const off of entry.listeners) off()
       entry.host.remove()
       entries.delete(card)
@@ -482,17 +547,62 @@ const ACTION_LABEL: Readonly<Record<'inspiration' | 'copy' | 'attach', string>> 
   attach: '加入对话',
 }
 
-/** Reveal or hide one mark; the transition lives in CSS. */
-function setRevealed(entry: TriggerEntry, revealed: boolean): void {
-  entry.revealed = revealed
+/** Reveal or hide one mark from the two facts that drive it; transitions live in CSS. */
+function render(entry: TriggerEntry): void {
+  // Two independent facts, one visible result: the pointer is on the work, or it
+  // is on the buttons the work offers. Keeping them apart is what lets the
+  // toolbar shut while the mark stays, on the way back to the card.
+  const revealed = entry.cardHovered || entry.open
   entry.host.classList.toggle('is-revealed', revealed)
+  entry.host.classList.toggle('is-open', entry.open)
 }
 
-/** Open or shut one mark's toolbar. */
-function setOpen(entry: TriggerEntry, open: boolean): void {
-  entry.open = open
-  entry.host.classList.toggle('is-open', open)
-  if (open) setRevealed(entry, true)
+/** Open one mark's toolbar. */
+function openToolbar(entry: TriggerEntry): void {
+  entry.open = true
+  render(entry)
+}
+
+/** Shut one mark's toolbar now, dropping any pending close. */
+function closeToolbar(entry: TriggerEntry): void {
+  cancelClose(entry)
+  entry.open = false
+  render(entry)
+}
+
+/**
+ * Shut the toolbar once the pointer has been away from the entry for the grace
+ * period, unless it comes back first.
+ *
+ * The mark and the toolbar are two boxes with a gap between them. The bridge in
+ * the stylesheet covers that gap, but a fast move can still cross the whole
+ * entry between two pointer samples, and a leave that arrives a few pixels early
+ * must not be the end of the gesture: within the window the pointer that reaches
+ * the toolbar cancels this instead of finding the toolbar already shut.
+ */
+function closeToolbarSoon(entry: TriggerEntry): void {
+  cancelClose(entry)
+  if (!entry.open) {
+    render(entry)
+    return
+  }
+  const view = entry.host.ownerDocument.defaultView
+  if (view === null) {
+    closeToolbar(entry)
+    return
+  }
+  entry.closeTimer = view.setTimeout(() => {
+    entry.closeTimer = null
+    entry.open = false
+    render(entry)
+  }, TOOLBAR_CLOSE_GRACE_MS)
+}
+
+/** Drop a pending close, if one is waiting. */
+function cancelClose(entry: TriggerEntry): void {
+  if (entry.closeTimer === null) return
+  entry.host.ownerDocument.defaultView?.clearTimeout(entry.closeTimer)
+  entry.closeTimer = null
 }
 
 /** The descriptor a page's media trigger resolves to, or `null`. */

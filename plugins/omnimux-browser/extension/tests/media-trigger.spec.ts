@@ -10,9 +10,12 @@
  * testing the rule.
  *
  * The behaviour itself was observed in a real browser first; the retained
- * evidence is `.agent-reports/browser-surfaces-issue-2144/evidence/`.
+ * evidence for the original two-stage reveal is
+ * `.agent-reports/browser-surfaces-issue-2144/evidence/`. The hover-continuity
+ * fix (the gap between mark and toolbar used to shut the toolbar) was verified
+ * at `.agent-reports/card-toolbar-hover-issue-2162/evidence/`.
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   MEDIA_TRIGGER_HOST_ID,
   initMediaTrigger,
@@ -48,10 +51,17 @@ function fire(target: Element, type: string): void {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
   handle?.dispose()
   handle = null
   document.body.innerHTML = CARD
   for (const stale of document.querySelectorAll(`#${MEDIA_TRIGGER_HOST_ID}`)) stale.remove()
+})
+
+afterEach(() => {
+  handle?.dispose()
+  handle = null
+  vi.useRealTimers()
 })
 
 describe('卡片触发按钮', () => {
@@ -90,10 +100,57 @@ describe('卡片触发按钮', () => {
     expect(mark.classList.contains('is-open')).toBe(true)
     // A toolbar cannot be open on a mark the user cannot see.
     expect(mark.classList.contains('is-revealed')).toBe(true)
+  })
 
+  it('离开后缓冲期内再进入，工具栏不关', () => {
+    handle = mount(GRID)
+    const mark = entries()[0]!
+
+    fire(mark, 'pointerenter')
     fire(mark, 'pointerleave')
+    expect(mark.classList.contains('is-open')).toBe(true)
+
+    vi.advanceTimersByTime(100)
+    fire(mark, 'pointerenter')
+    vi.advanceTimersByTime(300)
+    expect(mark.classList.contains('is-open')).toBe(true)
+    expect(mark.classList.contains('is-revealed')).toBe(true)
+  })
+
+  it('离开超过缓冲期后工具栏才关', () => {
+    handle = mount(GRID)
+    const mark = entries()[0]!
+
+    fire(mark, 'pointerenter')
+    fire(mark, 'pointerleave')
+    vi.advanceTimersByTime(220)
     expect(mark.classList.contains('is-open')).toBe(false)
     expect(mark.classList.contains('is-revealed')).toBe(false)
+  })
+
+  it('从工具栏退回卡片时小图标还在', () => {
+    handle = mount(GRID)
+    const card = document.querySelector('[data-e2e="user-post-item"]')!
+    const mark = entries()[0]!
+
+    fire(card, 'pointerenter')
+    fire(mark, 'pointerenter')
+    expect(mark.classList.contains('is-open')).toBe(true)
+
+    fire(mark, 'pointerleave')
+    vi.advanceTimersByTime(220)
+    expect(mark.classList.contains('is-open')).toBe(false)
+    expect(mark.classList.contains('is-revealed')).toBe(true)
+  })
+
+  it('工具栏带桥接层，方向朝向小图标', () => {
+    handle = mount(GRID)
+    const host = document.getElementById(MEDIA_TRIGGER_HOST_ID)!
+    const css = host.shadowRoot!.querySelector('style')!.textContent ?? ''
+    expect(css).toContain('.omt-toolbar::after')
+    expect(css).toContain('width: 10px')
+    // Default corner is top-right, toolbar opens left, bridge reaches back right.
+    expect(css).toContain('left: 100%;')
   })
 
   it('工具栏里三个动作齐全', () => {
