@@ -198,7 +198,7 @@ function CloudTileMedia(props) {
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay, onPreview } = props
+  const { asset, t, playing, onTogglePlay, onPreview, aspect } = props
   const [broken, setBroken] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [added, setAdded] = useState(false)
@@ -255,6 +255,7 @@ export function CloudAssetCard(props) {
       data-kind={kind}
       data-media-type={asset.mediaType}
       data-theme={theme}
+      data-aspect={aspect}
       onMouseEnter={() => { setHovering(true) }}
       onMouseLeave={() => { setHovering(false) }}
       onClick={openPreview}
@@ -277,6 +278,8 @@ export function CloudAssetCard(props) {
           ) : null}
         </div>
       )}
+      {/* 悬停暗化遮罩蒙层（对标图 3） */}
+      <div className="omnimux-assets-cloud-card-mask" aria-hidden="true" />
       <div className="omnimux-assets-cloud-actions">
         <IconButton
           variant="ghost"
