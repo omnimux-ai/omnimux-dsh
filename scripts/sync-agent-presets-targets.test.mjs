@@ -86,4 +86,14 @@ test('sync-agent-presets keeps preset directories it does not own', () => {
   assert.equal(existsSync(join(destination, 'standard', 'preset.yml')), true)
   assert.notEqual(readFileSync(join(destination, 'standard', 'preset.yml'), 'utf8'), 'name: stale\n')
   assert.equal(existsSync(join(destination, 'omni-agent')), true)
+  // 新增出厂预设必须随 KEEP 一起物化，且三个文件齐备。
+  const growthDir = join(destination, 'marketing-growth-team')
+  assert.equal(existsSync(join(growthDir, 'preset.yml')), true)
+  assert.equal(existsSync(join(growthDir, 'agent.cordis.yml')), true)
+  assert.equal(existsSync(join(growthDir, 'skills.json')), true)
+  assert.match(readFileSync(join(growthDir, 'preset.yml'), 'utf8'), /name:\s*增长专家团/)
+  assert.match(readFileSync(join(growthDir, 'preset.yml'), 'utf8'), /order:\s*6/)
+  // 同一份产物也必须落到 profile 级 shipped 目录（应用读取位）。
+  const shipped = join(profile, 'agent-presets-shipped')
+  assert.equal(existsSync(join(shipped, 'marketing-growth-team', 'agent.cordis.yml')), true)
 })

@@ -43,6 +43,13 @@ const DRAMA = [
   'expert_drama_globalization',
 ]
 
+const GROWTH = [
+  'expert_cro_specialist',
+  'expert_seo_content_strategist',
+  'expert_growth_engineer',
+  'expert_analytics_revops',
+]
+
 const FORK_END = [
   '    - id: tool-subagent-fork',
   "      name: '@deepseek-ai/dsh-tool-subagent'",
@@ -155,6 +162,25 @@ test('drama-agent agent.cordis.yml is structurally valid and mounts all 6 drama 
   ok(rows >= 8, `drama-agent parsed ${rows} top-level rows`)
 })
 
+test('marketing-growth-team agent.cordis.yml is structurally valid and mounts all 4 growth experts', () => {
+  const rel = 'presets/marketing-growth-team/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const text = read(rel)
+  ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
+  ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
+  deepEqual(toolNames(text), GROWTH)
+  ok(text.includes('增长专家团'))
+  ok(text.includes('盛全局'), '主理人必须是首席营销策略师盛全局')
+  ok(text.includes('不固定调用整队') || text.includes('不强行委派'))
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `marketing-growth-team parsed ${rows} top-level rows`)
+})
+
+test('growth-experts fragment lists exactly the 4 growth experts', () => {
+  const fragment = read('presets/fragments/growth-experts.cordis.yml')
+  deepEqual(toolNames(fragment), GROWTH)
+})
+
 test('standard agent.cordis.yml is structurally valid code development agent', () => {
   const rel = 'presets/standard/agent.cordis.yml'
   ok(existsSync(join(root, rel)), rel)
@@ -222,11 +248,16 @@ test('preset.yml metadata matches requirements for shipped presets', () => {
 
   const standardPreset = read('presets/standard/preset.yml')
   ok(standardPreset.includes('name: 代码开发'))
+
+  // 拼音首字母 Z，排在「营销专家」(Y) 之后；既有 5 个预设的 order 不受影响。
+  const growthPreset = read('presets/marketing-growth-team/preset.yml')
+  ok(growthPreset.includes('name: 增长专家团'))
+  ok(growthPreset.includes('order: 6'))
 })
 
 test('sync-agent-presets.sh maintains presets in KEEP array', () => {
   const syncScript = read('scripts/sync-agent-presets.sh')
-  ok(syncScript.includes('KEEP=(omni-agent marketing-agent drama-agent standard daily-work cordis)'))
+  ok(syncScript.includes('KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)'))
 })
 
 test('omni-agent persona positions as universal social lead and forbids forced spawn', () => {
@@ -239,6 +270,7 @@ test('omni-agent persona positions as universal social lead and forbids forced s
 test('build-agent-presets is idempotent', () => {
   const beforeOmni = read('presets/omni-agent/agent.cordis.yml')
   const beforeMarketing = read('presets/marketing-agent/agent.cordis.yml')
+  const beforeGrowth = read('presets/marketing-growth-team/agent.cordis.yml')
   const beforeDrama = read('presets/drama-agent/agent.cordis.yml')
   const res = spawnSync('node', [join(root, 'scripts/build-agent-presets.mjs')], {
     cwd: root,
@@ -247,9 +279,11 @@ test('build-agent-presets is idempotent', () => {
   equal(res.status, 0, res.stderr || res.stdout)
   const afterOmni = read('presets/omni-agent/agent.cordis.yml')
   const afterMarketing = read('presets/marketing-agent/agent.cordis.yml')
+  const afterGrowth = read('presets/marketing-growth-team/agent.cordis.yml')
   const afterDrama = read('presets/drama-agent/agent.cordis.yml')
   equal(afterOmni, beforeOmni)
   equal(afterMarketing, beforeMarketing)
+  equal(afterGrowth, beforeGrowth)
   equal(afterDrama, beforeDrama)
 })
 
@@ -261,6 +295,7 @@ test('every shipped preset persona row uses the persona plugin key `prefix`, nev
   const shipped = [
     'presets/omni-agent/agent.cordis.yml',
     'presets/marketing-agent/agent.cordis.yml',
+    'presets/marketing-growth-team/agent.cordis.yml',
     'presets/drama-agent/agent.cordis.yml',
     'presets/standard/agent.cordis.yml',
     'presets/daily-work/agent.cordis.yml',
