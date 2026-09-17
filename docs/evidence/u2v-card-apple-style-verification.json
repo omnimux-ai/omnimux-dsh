@@ -1,0 +1,29 @@
+{
+  "feature": "u2v-card-apple-style",
+  "verifiedAt": "2026-09-17T18:42:30.000Z",
+  "verificationTarget": "plugins/omnimux/src/client/session-guide/UrlToVideoModal.jsx",
+  "environment": "worktree-isolated",
+  "checks": [
+    {
+      "name": "full-bleed-media-geometry",
+      "status": "PASS",
+      "detail": "媒体容器采用绝对定位 inset: 0 满版铺满，彻底消除由于固定高度分割产生的上下黑边"
+    },
+    {
+      "name": "title-only-and-remove-desc",
+      "status": "PASS",
+      "detail": "成功剔除 omnimux-u2v-card-desc 痛点描述行，仅保留单行标题，单行省略号截断"
+    },
+    {
+      "name": "apple-style-title-text-shadow",
+      "status": "PASS",
+      "detail": "标题文字为纯白 var(--dsw-static-neutral-00)，配备两层细腻柔和微阴影，底部衬以透明至微暗色渐变浮层"
+    },
+    {
+      "name": "frosted-glass-pill-badge",
+      "status": "PASS",
+      "detail": "左上角示例徽标升级为高斯模糊磨砂胶囊微标签 backdrop-filter: blur(16px)"
+    }
+  ],
+  "result": "ALL_VERIFIED"
+}

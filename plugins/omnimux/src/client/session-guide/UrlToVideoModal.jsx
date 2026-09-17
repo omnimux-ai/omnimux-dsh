@@ -128,7 +128,6 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               </div>
               <div className="omnimux-u2v-card-info">
                 <div className="omnimux-u2v-card-title">{ex.title}</div>
-                <div className="omnimux-u2v-card-desc">{ex.desc}</div>
               </div>
             </div>
           )

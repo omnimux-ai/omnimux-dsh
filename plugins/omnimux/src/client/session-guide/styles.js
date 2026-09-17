@@ -829,57 +829,63 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   position: absolute;
   width: 210px;
   height: 360px;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  background: var(--omnimux-surface-dialog);
-  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 320ms ease, box-shadow 320ms ease;
-  display: flex;
-  flex-direction: column;
+  background: var(--dsw-static-neutral-1000);
+  transition: transform 340ms cubic-bezier(0.33, 1, 0.68, 1), opacity 340ms ease, box-shadow 340ms ease;
+  display: block;
   box-sizing: border-box;
 }
 .omnimux-u2v-card[data-pos="center"] {
   transform: translateX(0) scale(1) rotateY(0deg);
   z-index: 3;
-  box-shadow: 0 16px 40px var(--dsw-alias-bg-base);
-  border: 1.5px solid var(--dsw-alias-brand-primary);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--dsw-static-neutral-1000) 70%, transparent), 0 0 0 1.5px color-mix(in srgb, var(--dsw-static-neutral-00) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dsw-static-neutral-00) 25%, transparent);
   opacity: 1;
 }
 .omnimux-u2v-card[data-pos="left"] {
   transform: translateX(-70px) scale(0.85) rotateY(16deg);
   z-index: 2;
-  opacity: 0.55;
+  opacity: 0.52;
   pointer-events: none;
   border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--dsw-static-neutral-1000) 50%, transparent);
 }
 .omnimux-u2v-card[data-pos="right"] {
   transform: translateX(70px) scale(0.85) rotateY(-16deg);
   z-index: 2;
-  opacity: 0.55;
+  opacity: 0.52;
   pointer-events: none;
   border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--dsw-static-neutral-1000) 50%, transparent);
 }
 .omnimux-u2v-card-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--dsw-alias-bg-layer-3);
-  color: var(--dsw-alias-label-primary);
+  top: 12px;
+  left: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-static-neutral-1000) 42%, transparent);
+  color: color-mix(in srgb, var(--dsw-static-neutral-00) 95%, transparent);
   font-size: 11px;
   font-weight: 500;
+  letter-spacing: 0.02em;
   z-index: 5;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid color-mix(in srgb, var(--dsw-static-neutral-00) 22%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--dsw-static-neutral-1000) 25%, transparent);
 }
 .omnimux-u2v-card-media {
-  flex: 1;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  background: var(--dsw-alias-bg-layer-2);
+  height: 100%;
+  background: var(--dsw-static-neutral-1000);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  position: relative;
 }
 .omnimux-u2v-card-media svg,
 .omnimux-u2v-cover-img {
@@ -889,26 +895,30 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   display: block;
 }
 .omnimux-u2v-card-info {
-  padding: 10px 12px;
-  background: var(--omnimux-surface-dialog);
-  border-top: 1px solid var(--dsw-alias-border-l1);
-  flex: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 38px 14px 14px;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--dsw-static-neutral-1000) 40%, transparent) 45%, color-mix(in srgb, var(--dsw-static-neutral-1000) 82%, transparent) 100%);
+  border-top: none;
+  z-index: 4;
+  pointer-events: none;
 }
 .omnimux-u2v-card-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--dsw-alias-label-primary);
-  margin-bottom: 2px;
+  color: var(--dsw-static-neutral-00);
+  letter-spacing: -0.015em;
+  line-height: 1.38;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--dsw-static-neutral-1000) 85%, transparent), 0 2px 8px color-mix(in srgb, var(--dsw-static-neutral-1000) 50%, transparent);
 }
 .omnimux-u2v-card-desc {
-  font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 .omnimux-u2v-nav-btn {
   position: absolute;
