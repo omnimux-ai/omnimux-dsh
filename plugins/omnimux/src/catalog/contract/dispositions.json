@@ -349,6 +349,12 @@
       "reason": "命中 runtime；H1 已有契约；无 dated 证据保持 draft"
     },
     {
+      "id": "index-tts",
+      "disposition": "canonical",
+      "reason": "2026-09-18 #2256 登记：渠道官方文档 docs/zh/api-reference/audio-series/models/index-tts.mdx 声明 index-tts 为 Index TTS 声音克隆（POST /v1/video/generations + metadata.nodeInfoList 节点 4/audio、7/text），changelog 2026-08-16-index-tts-ltx-docs 记为已上架",
+      "notes": "文档证据充分故 listed；execution 保持 stub，未取得真实执行证据前不声明 live"
+    },
+    {
       "id": "gpt-image-2.5-hd",
       "disposition": "canonical",
       "reason": "契约行更名承接：公开文档已公告的更名后高清型号；因无 dated live 证据不上架（op 保持 draft/none）"

@@ -123,6 +123,9 @@ async function resolveFailureReason(options, json) {
  * @param {(ms: number) => Promise<void>} [options.sleep]
  * @param {number} [options.deadlineMs] Poll window; defaults to DEFAULT_TASK_DEADLINE_MS.
  * @param {number} [options.submittedAt] Anchor for the deadline (reconcile path).
+ * @param {string} [options.taskPath] Explicit task endpoint, overriding the
+ *   capability default. Audio models served on the shared video task route
+ *   (see `taskPathFor`) pass it so submit and poll address the same path.
  * @param {number} [options.pollIntervalMs]
  * @param {number} [options.requestTimeoutMs]
  * @param {number} [options.retryBudgetMs]
@@ -137,7 +140,7 @@ export async function pollOpenAiMediaTask(options) {
     : DEFAULT_POLL_INTERVAL_MS
   const sleep = options.sleep
     ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
-  const path = TASK_PATH[options.capability]
+  const path = options.taskPath ?? TASK_PATH[options.capability]
   if (!path) {
     throw new OmnimuxError('unknown-protocol', `openai-media has no task path for ${options.capability}`)
   }
@@ -209,7 +212,7 @@ export function createOpenAiMediaRuntime(options) {
   const fetcher = options.fetcher ?? fetch
   const capability = options.capability
   const routing = withRoutingGroup(fetcher, options.group)
-  const endpoint = TASK_PATH[capability]
+  const endpoint = options.taskPath ?? TASK_PATH[capability]
   if (!endpoint) {
     throw new OmnimuxError('unknown-protocol', `openai-media has no endpoint for ${capability}`)
   }
@@ -293,6 +296,7 @@ export function createOpenAiMediaRuntime(options) {
         apiKey: options.apiKey,
         taskId,
         capability,
+        taskPath: options.taskPath,
         signal: context.signal,
         // This runtime's caller is an execute path that renders the failure to a
         // user, so it opts into the detail read that names the cause.
