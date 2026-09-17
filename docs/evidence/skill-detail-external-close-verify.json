@@ -1,0 +1,20 @@
+{
+  "test": "skill-detail-external-close",
+  "issue": 2180,
+  "timestamp": "2026-09-17T09:11:21.439Z",
+  "status": "PASSED",
+  "checks": {
+    "hasWrapper": true,
+    "hasExternalClose": true,
+    "hasInnerHeaderClose": false,
+    "closeButtonGeometry": {
+      "width": 36,
+      "height": 36,
+      "isExternalOnRight": true,
+      "deltaRight": 50
+    },
+    "closeAriaLabel": "关闭",
+    "interactiveClickClosesModal": true
+  },
+  "evidencePng": "docs/evidence/skill-detail-external-close-verified.png"
+}

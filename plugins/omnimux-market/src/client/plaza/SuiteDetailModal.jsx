@@ -121,13 +121,24 @@ function renderCloseButton(h, tr, onClose) {
   // exempt-ui01 modal close icon button
   return h('button', {
     type: 'button',
-    className: 'modal-close-btn',
+    className: 'omnimux-modal-close-btn is-external ws-detail-external-close',
     'aria-label': t(tr, 'action.close', '关闭'),
+    title: t(tr, 'action.close', '关闭'),
     onClick: onClose,
   },
-    h('svg', { width: '18', height: '18', viewBox: '0 0 24 24', 'aria-hidden': 'true' },
-      h('line', { x1: '18', y1: '6', x2: '6', y2: '18', stroke: 'currentColor', strokeWidth: '2' }),
-      h('line', { x1: '6', y1: '6', x2: '18', y2: '18', stroke: 'currentColor', strokeWidth: '2' }),
+    h('svg', {
+      width: '14',
+      height: '14',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: '2.2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('line', { x1: '18', y1: '6', x2: '6', y2: '18' }),
+      h('line', { x1: '6', y1: '6', x2: '18', y2: '18' }),
     ),
   );
 }
@@ -325,7 +336,6 @@ export function SuiteDetailModal(opts) {
           disabled: installing || uninstalling,
           onClick: installed ? openUninstallConfirm : openConfirm,
         }, actionButtonText()),
-        renderCloseButton(h, tr, onClose),
       ),
     ),
     h('div', { className: 'ws-detail-source' },
@@ -376,8 +386,13 @@ export function SuiteDetailModal(opts) {
     ),
   ) : null;
 
+  const detailWrapped = h('div', { className: 'ws-detail-wrapper', onClick: (e) => e && e.stopPropagation && e.stopPropagation() },
+    renderCloseButton(h, tr, onClose),
+    detail,
+  );
+
   return [
-    h(overlayComp, { key: 'suite-detail', onClose }, detail),
+    h(overlayComp, { key: 'suite-detail', onClose }, detailWrapped),
     confirm ? h(overlayComp, { key: 'suite-install-confirm', onClose: closeConfirm }, confirm) : null,
     confirmUninstall ? h(overlayComp, { key: 'suite-uninstall-confirm', onClose: closeUninstallConfirm }, confirmUninstall) : null,
   ];
