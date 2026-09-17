@@ -35,6 +35,7 @@ import {
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
 import { createProjectSession, dismissProductStage, runNewProject } from './newProject.js'
+import { resolveCurrentCwd } from './cwd.js'
 import { activateProjectCanvas, closeAppTab, openAppTab } from './projectCanvas.js'
 import { ProjectFolderCard } from './ProjectFolderCard.jsx'
 import { ProjectPagesTab } from './ProjectPagesTab.jsx'
@@ -265,7 +266,7 @@ export function ProjectLibraryPage(props) {
     let sessionId = selectedProject.sessionId
     if (!sessionId && sessions && typeof sessions.create === 'function') {
       try {
-        const created = await createProjectSession(sessions, workspaces, selectedProject.title)
+        const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
         sessionId = created?.id
         if (sessionId) {
           void bindProjectSession(selectedProject.id, sessionId)
@@ -321,7 +322,7 @@ export function ProjectLibraryPage(props) {
     let sessionId = project?.sessionId
     if (!sessionId && project && sessions && typeof sessions.create === 'function') {
       try {
-        const created = await createProjectSession(sessions, workspaces, project.title)
+        const created = await createProjectSession(sessions, workspaces, project.path || project.title)
         sessionId = created?.id
         if (sessionId) void bindProjectSession(project.id, sessionId)
       } catch (e) {
@@ -770,6 +771,8 @@ export function ProjectLibraryPage(props) {
           t={t}
           busy={busy}
           error={error}
+          initialPath={resolveCurrentCwd(sessions, workspaces) || ''}
+          initialTitle=""
           onCancel={() => { if (!busy) setDialogOpen(false) }}
           onSubmit={(payload) => { void handleDialogSubmit(payload) }}
         />

@@ -3,10 +3,13 @@
  * 第三方 tab 只给 DOM 容器；双 React 树边界仍是 CanvasBridge 的硬规则。
  */
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { Button } from 'dsh-ui-kit'
 import { resolveEffectiveWorkspaceId, sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
 import { CanvasBridge } from '../CanvasBridge.jsx'
 import { fetchSessionProjectBinding } from '../api.js'
 import { injectWorkflowStyles } from '../styles.js'
+import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
+import { runNewProject } from './newProject.js'
 import { applyProjectCanvasRatio, CANVAS_TAB_ID, getBetterSidebar, resolveCanvasTargetWorkspaceId } from './projectCanvas.js'
 
 /** Stable page id for UI Context Envelope (Agent workspace targeting). */
@@ -76,15 +79,30 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
         setSessionBinding({
           sessionId,
           canvasWorkspaceId: typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId : null,
+          project: result?.body?.project ?? null,
+          workspaceDir: typeof result?.body?.workspaceDir === 'string' ? result.body.workspaceDir : null,
         })
       })
       .catch(() => {
-        if (!cancelled) setSessionBinding({ sessionId, canvasWorkspaceId: null })
+        if (!cancelled) setSessionBinding({ sessionId, canvasWorkspaceId: null, project: null })
       })
     return () => {
       cancelled = true
     }
   }, [sessionId])
+
+  const isUnprojected = Boolean(sessionId && sessionBinding && sessionBinding.project === null)
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [autoPromptedSession, setAutoPromptedSession] = useState(null)
+
+  useEffect(() => {
+    if (visible && isUnprojected && autoPromptedSession !== sessionId) {
+      setAutoPromptedSession(sessionId)
+      setProjectDialogOpen(true)
+    }
+  }, [visible, isUnprojected, autoPromptedSession, sessionId])
 
   // 优先级：显式 scope（从项目页点某创作页进来）> 本会话内用户选中的创作页 >
   // 本会话所属项目的当前创作页 > 会话散列画布。换工作区时前两项均失效，画布随之切换。
@@ -206,7 +224,22 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
       data-visible={visible ? 'true' : 'false'}
     >
       <div className="omnimux-workflow-canvas-body">
-        {targetWorkspaceId ? (
+        {isUnprojected ? (
+          <div className="omnimux-workflow-canvas-unprojected">
+            <div className="omnimux-workflow-unprojected-title">
+              {t('canvas.unprojectedTitle') || '当前工作区尚未创建项目'}
+            </div>
+            <div className="omnimux-workflow-unprojected-sub">
+              {t('canvas.unprojectedSub') || '在一个工作区开启创作画布，需要先创建项目档案并生成初始创作页。'}
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => { setProjectDialogOpen(true) }}
+            >
+              {t('projects.newButton') || '新建项目'}
+            </Button>
+          </div>
+        ) : targetWorkspaceId ? (
           <CanvasBridge onClose={onClose} t={t} locale={activeLocale} workspaceId={targetWorkspaceId} focusGroupId={focusGroupId} />
         ) : (
           <div className="omnimux-workflow-canvas-status">
@@ -214,6 +247,54 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
           </div>
         )}
       </div>
+
+      {projectDialogOpen ? (
+        <NewLocalProjectDialog
+          t={t}
+          busy={busy}
+          error={createError}
+          initialPath={sessionBinding?.workspaceDir || ''}
+          initialTitle=""
+          onCancel={() => {
+            if (!busy) setProjectDialogOpen(false)
+          }}
+          onSubmit={async ({ title, projectRoot }) => {
+            setBusy(true)
+            setCreateError('')
+            try {
+              const res = await runNewProject(
+                {
+                  sessions: ctx?.sessions,
+                  workspaces: ctx?.workspaces,
+                  layout: ctx?.layout,
+                  betterSidebar: ctx?.betterSidebar,
+                  t,
+                },
+                { title, projectRoot }
+              )
+              if (!res?.ok) {
+                setCreateError(res?.error || t('projects.genericError') || '创建失败')
+                return
+              }
+              setProjectDialogOpen(false)
+              if (sessionId) {
+                const updated = await fetchSessionProjectBinding(sessionId)
+                const canvasWorkspaceId = updated?.body?.project?.canvasWorkspaceId
+                setSessionBinding({
+                  sessionId,
+                  canvasWorkspaceId: typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId : null,
+                  project: updated?.body?.project ?? null,
+                  workspaceDir: updated?.body?.workspaceDir,
+                })
+              }
+            } catch (err) {
+              setCreateError(err instanceof Error ? err.message : String(err))
+            } finally {
+              setBusy(false)
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }

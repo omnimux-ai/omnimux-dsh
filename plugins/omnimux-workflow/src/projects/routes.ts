@@ -172,7 +172,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         }
         if (!record) {
           // 库根之外的工作区不登记，也不当作错误：画布保持自由画布语义。
-          return { status: 200, body: { ok: true, source: 'outside-library', libraryRoot, project: null } };
+          return { status: 200, body: { ok: true, source: 'outside-library', workspaceDir, libraryRoot, project: null } };
         }
         const pages = record.pages ?? [];
         const activePage = pages.find((page) => page.id === record.activePageId) ?? pages[0] ?? null;

@@ -2,22 +2,41 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, InputField, ModalDialog } from 'dsh-ui-kit'
 import { MAX_PROJECT_TITLE_LENGTH } from './limits.js'
 
+function extractFolderName(p) {
+  if (typeof p !== 'string' || !p.trim()) return ''
+  const clean = p.trim().replace(/[/\\]+$/, '')
+  const idx = Math.max(clean.lastIndexOf('/'), clean.lastIndexOf('\\'))
+  return idx >= 0 ? clean.slice(idx + 1) : clean
+}
+
 /**
  * 「新建本地项目」overlay。token 走 --dsw-alias-*（消费 dsh-ui-kit）。
  * P0 只收名称；目录路径为可选，留空则 Host 写入默认项目库。
+ * 支持传入 initialPath（当前会话物理工作区路径）与 initialTitle 自动预填。
  *
  * @param {{
  *   t: (key: string) => string,
  *   busy?: boolean,
  *   error?: string,
+ *   initialPath?: string,
+ *   initialTitle?: string,
  *   onCancel: () => void,
  *   onSubmit: (payload: { title: string, projectRoot?: string }) => void,
  * }} props
  */
-export function NewLocalProjectDialog({ t, busy = false, error, onCancel, onSubmit }) {
+export function NewLocalProjectDialog({
+  t,
+  busy = false,
+  error,
+  initialPath = '',
+  initialTitle = '',
+  onCancel,
+  onSubmit,
+}) {
   const nameRef = useRef(null)
-  const [name, setName] = useState('')
-  const [path, setPath] = useState('')
+  const defaultTitle = initialTitle || extractFolderName(initialPath)
+  const [name, setName] = useState(defaultTitle)
+  const [path, setPath] = useState(initialPath || '')
 
   useEffect(() => {
     nameRef.current?.focus()
