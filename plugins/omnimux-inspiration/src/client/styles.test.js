@@ -535,3 +535,19 @@ describe('灵感预览弹窗分享按钮激活态视觉规范', () => {
     )
   })
 })
+
+describe('灵感预览弹窗桌面端移除多余切换标签栏规范', () => {
+  it('桌面端宽屏下强制隐藏移动端切换标签栏，窄屏下维持弹性展示', () => {
+    assert.match(
+      INSPIRATION_CSS,
+      /\.omnimux-inspiration-modal-container \.omnimux-inspiration-modal-mobile-tabs[\s\S]*?display:\s*none !important;/,
+      '桌面端必须声明复合选择器与 display: none !important 以防被外部组件库样式覆盖',
+    )
+    assert.match(
+      INSPIRATION_CSS,
+      /@media\s*\(max-width:\s*860px\)[\s\S]*?display:\s*flex !important;/,
+      '窄屏响应式下必须声明 display: flex !important 保障可用性',
+    )
+  })
+})
+
