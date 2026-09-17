@@ -77,8 +77,6 @@ export function AppsStage({ t, apps, useSessions }) {
     >
       <PageHeader
         title={t('plugins.title')}
-        onClose={() => { apps.set(false) }}
-        closeTitle={t('plugins.close')}
       />
       <div className="omnimux-apps-stage-body">
         <PluginsSection t={t} />

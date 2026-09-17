@@ -287,8 +287,6 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
         <PageHeader
           title={t('title')}
           subtitle={t('subtitle')}
-          onClose={onClose}
-          closeTitle={t('close')}
         />
       )}
       <div className="omnimux-accounts-action-row">

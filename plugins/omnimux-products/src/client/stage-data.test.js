@@ -85,8 +85,9 @@ function mount(dispatcher) {
       const result = await dispatcher.dispatch({ method: opts.method, url, body: opts.body ? JSON.parse(opts.body) : undefined })
       return { ok: result.status >= 200 && result.status < 300, status: result.status, json: async () => result.body }
     },
-    setInterval: () => 1, clearInterval() {}, setTimeout, URLSearchParams,
+    setInterval: fn => { intervalCallback = fn; return 1 }, clearInterval() {}, setTimeout, URLSearchParams,
   }
+  let intervalCallback = null
   runInNewContext(bundle.outputFiles[0].text, context)
   const render = () => {
     index = 0
@@ -99,6 +100,7 @@ function mount(dispatcher) {
   return {
     render,
     flush: () => new Promise(resolve => setImmediate(resolve)),
+    refresh: () => intervalCallback?.(),
     unmount: () => { for (const cleanup of cleanups) cleanup() },
   }
 }
@@ -207,7 +209,7 @@ test('empty response clears cards and exposes the grid create action', async () 
     const mounted = mount(dispatcher)
     await mounted.flush()
     library.remove(product.id)
-    find(mounted.render(), node => node.type === 'PageHeader').props.onRefresh()
+    mounted.refresh()
     await mounted.flush()
     const grid = find(mounted.render(), component('ProductGrid'))
     assert.equal(grid.props.products.length, 0)
@@ -364,8 +366,7 @@ for (const action of ['close', 'unmount']) {
       await mounted.flush()
       const opened = find(mounted.render(), component('ProductFormPage'))
       assert.equal(opened.props.initial.id, b.id)
-      if (action === 'close') find(mounted.render(), node => node.type === 'PageHeader').props.onClose()
-      else mounted.unmount()
+      mounted.unmount()
       pending[0].resolve()
       await mounted.flush()
       const after = find(mounted.render(), component('ProductFormPage'))
