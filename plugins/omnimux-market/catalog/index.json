@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-09-17T06:11:45Z",
+  "generated_at": "2026-09-17T06:57:14Z",
   "tabs": [
     "experts",
     "skills",
@@ -2390,6 +2390,43 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/zhihu-strategist",
         "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-hypit-setup",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Hypit 官方能力接入",
+      "subtitle": "第三方 · 官方安装引导",
+      "summary": "在会话中引导按 Hypit 官方渠道安装技能与程序；OmniMux 不捆绑其引擎。点安装后预填任务说明，由你确认发送。",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "商业广告",
+        "平台工具",
+        "精选",
+        "第三方"
+      ],
+      "skill": "hypit-setup",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/hypit-setup"
+      },
+      "recommended": true,
+      "downloads": 0,
+      "cover": {
+        "asset": "catalog/covers/hypit-setup.png",
+        "alt": "Hypit 官方能力接入"
+      },
+      "titleZh": "Hypit 官方能力接入",
+      "titleEn": "Hypit Official Setup Guide",
+      "summaryZh": "会话内引导按官方渠道安装 Hypit；不捆绑引擎，需你确认后发送。",
+      "summaryEn": "Session guide to install official Hypit from Hypit.AI; OmniMux does not bundle the engine.",
+      "installFlow": "session-guide",
+      "sessionPrefill": "/hypit-setup\n请按官方渠道帮我接入 Hypit（第三方，版权归 Hypit.AI）：\n1) 说明这是官方安装，OmniMux 不内置其引擎；\n2) 执行：npx skills add hypit-ai/hypit -g；\n3) 再执行：npm install --global @hypit/hypit（或按我的选择用项目内依赖）；\n4) 用 hypit --version / hypit paths 验收并汇报；\n5) 失败时给出原始错误，不要从 OmniMux 包里解压 Hypit。\n装好后保留 Hypit 名称与版权信息，再教我如何用它做视频复刻。",
+      "homeCover": {
+        "asset": "catalog/covers/hypit-setup.png",
+        "alt": "Hypit 官方能力接入"
       }
     },
     {
@@ -6157,39 +6194,6 @@
       "titleEn": "Video Deconstruction & Replication",
       "summaryZh": "拆解爆款视频镜头、运镜、声音并编译为可复刻的最终 Prompt 与制作计划。",
       "summaryEn": "Reverse-engineer reference videos into shot-by-shot prompt recipes and reproducible editing blueprints."
-    },
-    {
-      "id": "sk-omx-hypit-setup",
-      "tab": "skills",
-      "kind": "skill",
-      "title": "Hypit 官方能力接入",
-      "subtitle": "第三方 · 官方安装引导",
-      "summary": "在会话中引导按 Hypit 官方渠道安装技能与程序；OmniMux 不捆绑其引擎。点安装后预填任务说明，由你确认发送。",
-      "category": "sk-visual",
-      "tags": [
-        "短剧漫剧",
-        "商业广告",
-        "平台工具",
-        "精选",
-        "第三方"
-      ],
-      "skill": "hypit-setup",
-      "source": {
-        "type": "bundled",
-        "path": "catalog/skills/hypit-setup"
-      },
-      "recommended": true,
-      "downloads": 0,
-      "cover": {
-        "asset": "catalog/covers/replicate-viral-video.png",
-        "alt": "Hypit 官方能力接入"
-      },
-      "titleZh": "Hypit 官方能力接入",
-      "titleEn": "Hypit Official Setup Guide",
-      "summaryZh": "会话内引导按官方渠道安装 Hypit；不捆绑引擎，需你确认后发送。",
-      "summaryEn": "Session guide to install official Hypit from Hypit.AI; OmniMux does not bundle the engine.",
-      "installFlow": "session-guide",
-      "sessionPrefill": "/hypit-setup\n请按官方渠道帮我接入 Hypit（第三方，版权归 Hypit.AI）：\n1) 说明这是官方安装，OmniMux 不内置其引擎；\n2) 执行：npx skills add hypit-ai/hypit -g；\n3) 再执行：npm install --global @hypit/hypit（或按我的选择用项目内依赖）；\n4) 用 hypit --version / hypit paths 验收并汇报；\n5) 失败时给出原始错误，不要从 OmniMux 包里解压 Hypit。\n装好后保留 Hypit 名称与版权信息，再教我如何用它做视频复刻。"
     },
     {
       "id": "sk-omx-video-deconstruct-analyzer",
