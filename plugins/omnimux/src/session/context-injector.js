@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { describeModelBilling } from '../catalog/pricing-calculator.js'
 
 /**
  * Native DSH context UserMessage carrying the session's model pin.
@@ -55,11 +56,15 @@ export function mountSessionModelInjector(ctx, deps) {
       ? `${choice.label}（${choice.modelId}）`
       : choice.modelId
 
+    const billingText = describeModelBilling(choice.modelId)
+    const billingLine = billingText ? `\n计费标准：${billingText}。` : ''
+
     const messages = [...(decision.messages || [])]
     messages.push(createSessionModelMessage(
-      `【本会话模型指定】用户已在输入框的模型面板为本会话选定模型：${label}。\n`
+      `【本会话模型指定与计费】用户已在输入框的模型面板为本会话选定模型：${label}。${billingLine}\n`
       + '调用生成工具（omnimux_video_submit / omnimux_image_submit / omnimux_audio_submit）时，'
       + '`model` 参数必须使用该模型，不要自行改用其它模型。\n'
+      + '若用户询问出片费用（例如一条 5 秒视频的消耗）或在方案规划出片前，请依据上述标准直接计算并向用户明确汇报预计费用。\n'
       + '该指定来自用户界面选择，优先级高于你自己的判断；'
       + '若用户在本轮消息中另行指定了模型，以用户本轮消息为准。',
     ))

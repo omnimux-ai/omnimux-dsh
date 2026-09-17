@@ -135,7 +135,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "旗舰版",
       "badge": "满血出片 · 按次专线",
       "pricing": {
-        "pointsEstimate": 4500,
+        "pointsEstimate": 19,
         "discountRate": 3.333,
         "billingMode": "per_task"
       },
@@ -151,14 +151,14 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         }
       },
       "wireGroup": "seedance-2-5-task-pro",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "standard",
       "label": "标准版",
       "badge": "全新 2.5 旗舰 · 官方原生专线",
       "pricing": {
-        "pointsEstimate": 1800,
+        "pointsEstimate": 16,
         "discountRate": 1,
         "billingMode": "per_second"
       },
