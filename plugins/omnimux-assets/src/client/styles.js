@@ -222,6 +222,30 @@ export const ASSETS_CSS = `
   min-height: 0;
   display: block;
 }
+/* 本地资产库 3:4 黄金竖版卡片与图片等比居中自适应缩放（Issue 2229） */
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-media),
+.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-video) {
+  min-height: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .omnimux-assets-card-overlay {
   position: absolute;
   inset: 0;

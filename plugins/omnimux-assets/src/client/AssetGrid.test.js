@@ -85,4 +85,17 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.match(stylesJs, /\.omnimux-assets-overlay-btn--secondary/)
     assert.match(stylesJs, /\.omnimux-assets-overlay-btn--primary/)
   })
+
+  it('conforms to 3:4 vertical card ratio and relative time subtitle contract (Issue 2229)', () => {
+    // 1. Imports formatTimeAgo from ./format.js
+    assert.match(gridJsx, /import\s+.*formatTimeAgo.*from '\.\/format\.js'/)
+    // 2. Uses aspectRatio="3:4" on MediaCard
+    assert.match(gridJsx, /<MediaCard[\s\S]*?aspectRatio="3:4"/)
+    // 3. Replaces description subtitle with relative time from created_at/updated_at
+    assert.match(gridJsx, /const timeText = formatTimeAgo\(asset\.created_at \|\| asset\.createdAt \|\| asset\.updated_at\)/)
+    assert.match(gridJsx, /subtitle=\{timeText \|\| '—'\}/)
+    // 4. Stylesheet declares 3:4 aspect-ratio and object-fit cover for local cards
+    assert.match(stylesJs, /\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\[class\*="coverWrapper"\],\s*\n\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-thumb\s*\{[\s\S]*?aspect-ratio:\s*3\s*\/\s*4;/)
+    assert.match(stylesJs, /\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-media[\s\S]*?object-fit:\s*cover;/)
+  })
 })

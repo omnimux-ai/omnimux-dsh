@@ -39,6 +39,71 @@ export function formatRelative(iso, now = Date.now()) {
 }
 
 /**
+ * 健壮可靠的相对时间格式化（“多少时间前”）：
+ * - 支持 ISO 字符串、时间戳毫秒数字、Date 实例
+ * - 容忍客户端/服务端微小时钟正负偏差（< 60 秒均归为“刚刚”）
+ * - 纯净可靠的相对时间阶梯（Time Ago 规范）：
+ *   - < 60秒：刚刚
+ *   - < 60分钟：N分钟前
+ *   - < 24小时：N小时前
+ *   - < 30天：N天前（包含 1天前）
+ *   - < 12个月：N个月前
+ *   - >= 1年：N年前
+ * - 支持 options.showYesterday: true 时，将 24~48 小时间隔特别转为“昨天”
+ * - 非法值（null, undefined, NaN, 非法字符串）安全防御回退为空字符串，绝不抛错
+ *
+ * @param {string | number | Date | null | undefined} input
+ * @param {number | { now?: number, showYesterday?: boolean }} [opts] 可选自定义基准时间或配置选项
+ * @returns {string}
+ */
+export function formatTimeAgo(input, opts) {
+  if (input == null || input === '') return ''
+  let time = 0
+  if (typeof input === 'number') {
+    time = input
+  } else if (input instanceof Date) {
+    time = input.getTime()
+  } else {
+    time = Date.parse(String(input))
+  }
+  if (!Number.isFinite(time)) return ''
+
+  const now = typeof opts === 'number' ? opts : (opts?.now ?? Date.now())
+  const showYesterday = typeof opts === 'object' ? Boolean(opts?.showYesterday) : false
+  const diffSec = Math.floor((now - time) / 1000)
+
+  // 容忍未来 10 秒内的微小时钟偏差
+  if (diffSec < 60) {
+    return '刚刚'
+  }
+  if (diffSec < 3600) {
+    const mins = Math.max(1, Math.floor(diffSec / 60))
+    return `${mins}分钟前`
+  }
+  if (diffSec < 86400) {
+    const hours = Math.max(1, Math.floor(diffSec / 3600))
+    return `${hours}小时前`
+  }
+
+  const days = Math.max(1, Math.floor(diffSec / 86400))
+  if (showYesterday && days === 1) {
+    return '昨天'
+  }
+
+  if (days < 30) {
+    return `${days}天前`
+  }
+
+  const months = Math.floor(days / 30)
+  if (months < 12) {
+    return `${Math.max(1, months)}个月前`
+  }
+
+  const years = Math.floor(days / 365)
+  return `${Math.max(1, years)}年前`
+}
+
+/**
  * Locale-aware absolute date-time.
  * @param {string} iso
  */

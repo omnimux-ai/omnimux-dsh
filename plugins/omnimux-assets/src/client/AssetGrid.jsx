@@ -7,6 +7,7 @@ import { isFolderAsset, resolveAssetMediaPreview } from './asset-routing.js'
 import { useGridColumns } from './use-grid-columns.js'
 import { MasonryGrid } from './masonry-grid.jsx'
 import { coverRatioCache } from './ratio-cache.js'
+import { formatTimeAgo } from './format.js'
 
 /**
  * @param {{
@@ -162,14 +163,17 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
     </div>
   )
 
+  const timeText = formatTimeAgo(asset.created_at || asset.createdAt || asset.updated_at)
+
   return (
     <MediaCard
       className="omnimux-assets-focusable omnimux-assets-card"
       selected={selected}
       onClick={handleTriggerAction}
+      aspectRatio="3:4"
       coverNode={coverNode}
       title={asset.name}
-      subtitle={asset.description || '—'}
+      subtitle={timeText || '—'}
     />
   )
 }
