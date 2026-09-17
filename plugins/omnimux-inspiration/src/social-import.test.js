@@ -779,4 +779,31 @@ describe('social import — a cover no browser can render is not published', () 
       'a merely failed download keeps the remote poster — only a known-bad payload is refused',
     )
   })
+
+  it('imports a TikTok video whose CDN stream URL carries no file extension', async () => {
+    const TIKTOK_STREAM_URL = 'https://v19.tiktokcdn-us.com/video/tos/alisg/stream-hash-12345/?a=1233&mime_type=video_mp4'
+    const TIKTOK_PAYLOAD = {
+      platform: 'tiktok',
+      capability: 'video',
+      data: {
+        title: 'TikTok Claude 视频',
+        text: 'Claude 讓我賺翻了',
+        play: TIKTOK_STREAM_URL,
+        cover: 'https://p16-sign.tiktokcdn-us.com/tos-no1a-p/cover.jpg',
+      },
+    }
+
+    const { res } = await importUrl({
+      socialFetcher: async () => TIKTOK_PAYLOAD,
+      paths,
+      url: 'https://www.tiktok.com/t/ZP83cP5Re',
+    })
+
+    assert.equal(res.status, 200)
+    assert.equal(res.body.data.type, 'video')
+    assert.equal(res.body.data.source_platform, 'tiktok')
+    assert.ok(res.body.data.local_paths.video, 'the TikTok video stream must be downloaded and landed')
+    assert.equal(res.body.data.media_urls.length, 1)
+    assert.equal(res.body.media_degraded, undefined)
+  })
 })

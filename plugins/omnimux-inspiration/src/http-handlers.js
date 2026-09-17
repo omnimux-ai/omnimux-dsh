@@ -67,7 +67,7 @@ const MEDIA_CONTAINER_RE = /\.(mp4|m4v|webm|mov)$/i
 /** Manifest and page containers that are never a downloadable video file. */
 const NON_MEDIA_CONTAINER_RE = /\.(m3u8|mpd|html?)$/i
 /** Video CDNs whose stream URL carries no media file extension. */
-const VIDEO_CDN_HOST_RE = /(^|\.)googlevideo\.com$/i
+const VIDEO_CDN_HOST_RE = /(^|\.)(googlevideo\.com|tiktokcdn(-[a-z0-9]+)?\.com|byteoversea\.com|ibytedtos\.com|musical\.ly|snssdk\.com|cdninstagram\.com|fbcdn\.net|twimg\.com)$/i
 
 /** Cloud `capability` pair per platform (`omnimux_social_data` contract). */
 export const CAPABILITY = { x: 'tweet', instagram: 'post', youtube: 'video', tiktok: 'video' }
@@ -339,7 +339,11 @@ function mediaLikeUrl(value) {
   if (NON_MEDIA_CONTAINER_RE.test(pathname)) return ''
   if (MEDIA_CONTAINER_RE.test(pathname)) return url
   try {
-    return VIDEO_CDN_HOST_RE.test(new URL(url).hostname) ? url : ''
+    const parsed = new URL(url)
+    if (VIDEO_CDN_HOST_RE.test(parsed.hostname)) return url
+    const mime = parsed.searchParams.get('mime_type')
+    if (mime && /^video[/_](mp4|webm|quicktime)/i.test(mime)) return url
+    return ''
   } catch {
     return ''
   }
