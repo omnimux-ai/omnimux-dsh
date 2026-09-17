@@ -31,8 +31,7 @@
           "skillSlug": "rap-avatar-mv",
           "skillLocalBinding": {
             "slug": "rap-avatar-mv",
-            "dirName": "OmniMux-skills-rap-avatar-mv",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-rap-avatar-mv"
+            "dirName": "OmniMux-skills-rap-avatar-mv"
           },
           "prefilledPrompt": "我想制作一个 Rap MV，主题【我的冠军时刻】。严格按照 skill 的流程执行，每个步骤主动询问用户，使用卡片弹窗形式询问，不许遗漏步骤，不许擅自发挥。",
           "prefilledPromptEn": "I want to create a Rap MV with the theme “My Championship Moment.” Follow the Skill workflow exactly. Proactively ask the user for input at every step using pop-up cards. Do not skip any steps or make any decisions on your own.",
@@ -55,8 +54,7 @@
           "skillSlug": "short-drama-series-writer",
           "skillLocalBinding": {
             "slug": "short-drama-series-writer",
-            "dirName": "OmniMux-skills-short-drama-series-writer",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-short-drama-series-writer"
+            "dirName": "OmniMux-skills-short-drama-series-writer"
           },
           "prefilledPrompt": "帮我做一个短剧，主题【总裁夫人不好当】。严格按照 skill 的流程执行，每个步骤主动询问用户，使用卡片弹窗形式询问，不许遗漏步骤，不许擅自发挥。",
           "prefilledPromptEn": "me create a short drama with the theme “Being the CEO’s Wife Isn’t Easy.” Follow the Skill workflow exactly. Proactively ask the user for input at every step using pop-up cards. Do not skip any steps or make any decisions on your own.",
@@ -79,8 +77,7 @@
           "skillSlug": "chinese-style-short-drama-generator",
           "skillLocalBinding": {
             "slug": "chinese-style-short-drama-generator",
-            "dirName": "OmniMux-skills-chinese-style-short-drama-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-chinese-style-short-drama-generator"
+            "dirName": "OmniMux-skills-chinese-style-short-drama-generator"
           },
           "prefilledPrompt": "帮我做一部国风短剧，主题是【重生后我成为宗门第一剑修】。严格按照 skill 的流程执行，每个步骤主动询问用户，使用卡片弹窗形式询问，不许遗漏步骤，不许擅自发挥。",
           "prefilledPromptEn": "Help me create a Chinese-style short drama with the theme “After Rebirth, I Became the Sect’s Number One Sword Cultivator.” Follow the Skill workflow exactly. Proactively ask the user for input at every step using pop-up cards. Do not skip any steps or make any decisions on your own.",
@@ -780,8 +777,7 @@
           "skillSlug": "3d-animation-short-generator",
           "skillLocalBinding": {
             "slug": "3d-animation-short-generator",
-            "dirName": "OmniMux-skills-3d-animation-short-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-3d-animation-short-generator"
+            "dirName": "OmniMux-skills-3d-animation-short-generator"
           },
           "prefilledPrompt": "帮我制作3D动画短片。请严格按照 skill 的流程执行，每个步骤主动询问用户，不许遗漏步骤，不许擅自发挥。",
           "model": "MiniMax-H3"
@@ -801,8 +797,7 @@
           "skillSlug": "brand-promo-video-generator",
           "skillLocalBinding": {
             "slug": "brand-promo-video-generator",
-            "dirName": "OmniMux-skills-brand-promo-video-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-brand-promo-video-generator"
+            "dirName": "OmniMux-skills-brand-promo-video-generator"
           },
           "prefilledPrompt": "帮我制作品牌宣传短片生成器。请严格按照 skill 的流程执行，每个步骤主动询问用户，不许遗漏步骤，不许擅自发挥。",
           "model": "MiniMax-H3"
@@ -822,8 +817,7 @@
           "skillSlug": "paper-collage-explainer-generator",
           "skillLocalBinding": {
             "slug": "paper-collage-explainer-generator",
-            "dirName": "OmniMux-skills-paper-collage-explainer-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-paper-collage-explainer-generator"
+            "dirName": "OmniMux-skills-paper-collage-explainer-generator"
           },
           "prefilledPrompt": "帮我制作纸拼贴讲解动画。请严格按照 skill 的流程执行，每个步骤主动询问用户，不许遗漏步骤，不许擅自发挥。",
           "model": "MiniMax-H3"
@@ -843,8 +837,7 @@
           "skillSlug": "music-video-subtitle-generator",
           "skillLocalBinding": {
             "slug": "music-video-subtitle-generator",
-            "dirName": "OmniMux-skills-music-video-subtitle-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-music-video-subtitle-generator"
+            "dirName": "OmniMux-skills-music-video-subtitle-generator"
           },
           "prefilledPrompt": "帮我制作音乐MV动态字幕生成器。请严格按照 skill 的流程执行，每个步骤主动询问用户，不许遗漏步骤，不许擅自发挥。",
           "model": "MiniMax-H3"
@@ -864,8 +857,7 @@
           "skillSlug": "minimalist-product-ad-generator",
           "skillLocalBinding": {
             "slug": "minimalist-product-ad-generator",
-            "dirName": "OmniMux-skills-minimalist-product-ad-generator",
-            "localPath": "/Users/x/Desktop/Project/OPC/资产库/skills/OmniMux-skills-minimalist-product-ad-generator"
+            "dirName": "OmniMux-skills-minimalist-product-ad-generator"
           },
           "prefilledPrompt": "帮我制作极简产品广告生成器。请严格按照 skill 的流程执行，每个步骤主动询问用户，不许遗漏步骤，不许擅自发挥。",
           "model": "MiniMax-H3"
