@@ -54,7 +54,7 @@ test('E2E: 创作页卡片操作菜单全链路遵循 design.md 设计规范契�
   )
   assert.match(
     stylesSrc,
-    /\.omnimux-page-card\s+\.omnimux-folder-menu\s*\{[^}]*bottom:\s*44px;/,
+    /\.omnimux-page-card\s+\.omnimux-page-card-menu\s*\{[^}]*bottom:\s*44px;/,
     '创作页卡片菜单必须位于三点按钮正上方对齐',
   )
 })
