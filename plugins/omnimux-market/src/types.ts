@@ -28,6 +28,13 @@ export interface CatalogSkillItem {
   titleEn?: string
   summaryZh?: string
   summaryEn?: string
+  /**
+   * 安装交互：默认静默装包；`session-guide` = 只装 OmniMux 薄引导技能，
+   * 再开会话预填提示（不自动发送），由用户确认后让 Agent 走官方渠道。
+   */
+  installFlow?: string
+  /** `installFlow=session-guide` 时写入输入框的完整提示（禁止 auto-send）。 */
+  sessionPrefill?: string
 }
 
 /**
@@ -79,6 +86,8 @@ export interface WorkshopSkill extends BilingualSkillFields {
   publishedAt: string | null
   installed: boolean
   enabled: boolean | null
+  installFlow?: string
+  sessionPrefill?: string
 }
 
 /** Supplied by an independently verified inventory adapter, never derived from search. */
@@ -240,6 +249,8 @@ export interface SkillCard extends BilingualSkillFields {
   tags?: string[]
   recommended?: boolean
   cover?: { asset: string; alt?: string }
+  installFlow?: string
+  sessionPrefill?: string
 }
 
 export interface SearchResult {

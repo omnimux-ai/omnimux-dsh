@@ -541,11 +541,49 @@
     }
 
     /**
-     * 在新会话中试用特定技能（仅引用，禁止自动发送）
+     * 点亮输入框底部共享工具的技能药丸（跨插件全局通道）。
+     * 不读取市场私有模块：只写 window.__omnimuxActiveSkill 并广播。
+     */
+    function activateSharedToolSkill(skill) {
+      if (!skill || typeof window === "undefined") return;
+      const slug = skill.token || skill.slug || skill.skillKey || skill.skill || "";
+      const identity = {
+        id: skill.catalogId || skill.id || "",
+        slug,
+        skill: skill.skill || slug,
+        name: skill.name || skill.title || slug,
+        title: skill.title || skill.name || slug,
+        description: skill.description || skill.summary || "",
+        summary: skill.summary || skill.description || "",
+        category: skill.category || "",
+        installFlow: skill.installFlow,
+      };
+      window.__omnimuxActiveSkill = identity;
+      try {
+        window.dispatchEvent(new CustomEvent("omnimux:skill:changed", {
+          detail: {
+            skill: identity,
+            category: identity.category || "",
+          },
+        }));
+      } catch {}
+    }
+
+    /** 目录/卡片声明的会话引导预填文案；缺省时回落为 /slug。 */
+    function sessionGuidePrefillText(skill, slug) {
+      const raw = typeof skill.sessionPrefill === "string" ? skill.sessionPrefill.trim() : "";
+      if (raw) return raw;
+      return `/${slug} `;
+    }
+
+    /**
+     * 在新会话中试用特定技能（仅引用，禁止自动发送）。
+     * installFlow=session-guide：装 OmniMux 薄引导技能 + 预填官方安装任务 + 点亮共享工具；
+     * 绝不 auto-send，绝不 bundling 第三方引擎。
      */
     async function trySkillInSession(skill) {
       if (!skill) return { ok: false };
-      const slug = skill.token || skill.slug || skill.skillKey || "";
+      const slug = skill.token || skill.slug || skill.skillKey || skill.skill || "";
       if (!slug) return { ok: false };
 
       if (!skill.installed) {
@@ -554,9 +592,13 @@
         } catch {}
       }
 
-      return createSkillSession({
+      const guide = skill.installFlow === "session-guide";
+      const text = guide ? sessionGuidePrefillText(skill, slug) : `/${slug} `;
+      const result = await createSkillSession({
         slug,
         catalogId: skill.catalogId || skill.id,
-        text: `/${slug} `,
+        text,
       });
+      if (guide) activateSharedToolSkill({ ...skill, slug, installed: true });
+      return result;
     }

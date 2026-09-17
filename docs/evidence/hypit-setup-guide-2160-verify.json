@@ -1,0 +1,18 @@
+{
+  "task": "hypit-optional-guide-skill-issue-2160",
+  "issue": 2160,
+  "verifiedAt": "2026-09-17T06:21:02.487Z",
+  "ac": {
+    "discoverable": true,
+    "installFlow": "session-guide",
+    "hasPrefill": true,
+    "bundledOnlyGuide": true,
+    "noAutoSendContract": true
+  },
+  "card": {
+    "id": "sk-omx-hypit-setup",
+    "slug": "hypit-setup",
+    "title": "Hypit 官方能力接入",
+    "installFlow": "session-guide"
+  }
+}

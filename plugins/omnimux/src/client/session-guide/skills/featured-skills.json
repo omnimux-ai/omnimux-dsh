@@ -1,6 +1,6 @@
 {
   "schema": "omnimux.session-guide.featured-skills/v1",
-  "catalogGeneratedAt": "2026-09-02T13:24:03.000Z",
+  "catalogGeneratedAt": "2026-09-17T06:11:45Z",
   "source": "plugins/omnimux-market/catalog/index.json",
   "skills": [
     {
@@ -895,6 +895,31 @@
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/handdrawn-live-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-hypit-setup",
+      "title": "Hypit 官方能力接入",
+      "titleZh": "Hypit 官方能力接入",
+      "titleEn": "Hypit Official Setup Guide",
+      "summary": "在会话中引导按 Hypit 官方渠道安装技能与程序；OmniMux 不捆绑其引擎。点安装后预填任务说明，由你确认发送。",
+      "summaryZh": "会话内引导按官方渠道安装 Hypit；不捆绑引擎，需你确认后发送。",
+      "summaryEn": "Session guide to install official Hypit from Hypit.AI; OmniMux does not bundle the engine.",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "商业广告",
+        "平台工具",
+        "精选",
+        "第三方"
+      ],
+      "cover": "catalog/covers/replicate-viral-video.png",
+      "avatar": "",
+      "badge": "H3",
+      "skill": "hypit-setup",
+      "sourceRef": {
+        "repo": "",
+        "path": "catalog/skills/hypit-setup"
       }
     },
     {

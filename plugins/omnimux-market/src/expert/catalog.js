@@ -174,6 +174,11 @@ function parseItem(raw) {
   if (kind === 'suite') item.suite = parseSuiteManifest(row.suite, id)
   // Skill-only metadata; expert/team fields and top-level featured retain their contract.
   if (kind === 'skill' && tab === 'skills') {
+    /** @type {'session-guide' | undefined} */
+    const installFlow = row.installFlow === 'session-guide' ? 'session-guide' : undefined
+    const sessionPrefill = typeof row.sessionPrefill === 'string' && row.sessionPrefill.trim()
+      ? row.sessionPrefill.trim().slice(0, 4000)
+      : undefined
     return {
       ...item,
       ...parseBilingual(row),
@@ -184,6 +189,8 @@ function parseItem(raw) {
       version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
       updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
       publishedAt: typeof row.publishedAt === 'string' ? row.publishedAt : null,
+      ...(installFlow ? { installFlow: /** @type {'session-guide'} */ ('session-guide') } : {}),
+      ...(sessionPrefill ? { sessionPrefill } : {}),
     }
   }
   return item

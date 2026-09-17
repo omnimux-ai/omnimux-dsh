@@ -315,12 +315,12 @@ test('T03-03：空白串同样视为缺失，绝不把 title 回填进英文字�
   assert.equal('titleEn' in card ? card.titleEn : 'absent', 'absent')
 })
 
-test('T03-04：真实目录 69 项官方货架技能投影出的卡片全部携带双语', () => {
+test('T03-04：真实目录 70 项官方货架技能投影出的卡片全部携带双语', () => {
   const doc = loadCatalog()
   const cards = (doc.items as unknown as CatalogSkillItem[])
     .filter((item) => item.kind === 'skill' && item.tab === 'skills' && item.recommended === true)
     .map((item) => catalogItemToCard(item, 'custom', cfg()))
-  assert.equal(cards.length, 69)
+  assert.equal(cards.length, 70)
   const missing = cards
     .filter((card) => !card.titleZh || !card.titleEn || !card.summaryZh || !card.summaryEn)
     .map((card) => card.slug)

@@ -362,7 +362,27 @@
       const handleInstall = async () => {
         setWorking("install");
         const slug = item.slug || item.token || item.skillKey || item.skill || "";
+        const guide = view.installFlow === "session-guide" || item.installFlow === "session-guide";
         try {
+          if (guide) {
+            // 会话引导：装薄引导技能 + 预填提示 + 共享工具；不自动发送
+            await trySkillInSession({
+              ...view,
+              ...item,
+              slug,
+              token: slug,
+              catalogId: item.catalogId || item.id,
+              installFlow: "session-guide",
+              sessionPrefill: view.sessionPrefill || item.sessionPrefill,
+              installed: false,
+            });
+            setView((cur) => ({ ...cur, installed: true, enabled: true }));
+            item.installed = true;
+            item.enabled = true;
+            onInstalled?.(item);
+            onClose?.();
+            return;
+          }
           await api("install", { slug, catalogId: item.catalogId || item.id });
           setView((cur) => ({ ...cur, installed: true, enabled: true }));
           item.installed = true;

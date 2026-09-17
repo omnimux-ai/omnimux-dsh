@@ -370,6 +370,29 @@ export async function handleConfirmInstall(item, state, mark, apiFn) {
     return;
   }
   try {
+    // session-guide：确认安装也走会话预填，不静默 bundling 第三方引擎
+    if (item.installFlow === 'session-guide') {
+      const tryFn = (typeof trySkillInSession === 'function')
+        ? trySkillInSession
+        : (typeof SkillShelf !== 'undefined' && typeof SkillShelf.trySkillInSession === 'function')
+          ? SkillShelf.trySkillInSession
+          : (typeof window !== 'undefined' && typeof window.trySkillInSession === 'function')
+            ? window.trySkillInSession
+            : null;
+      if (tryFn) {
+        await tryFn({
+          ...item,
+          slug,
+          token: slug,
+          catalogId: item.catalogId || item.id,
+          installFlow: 'session-guide',
+          installed: false,
+        });
+        mark(item, true);
+        state.setConfirmInstallItem(null);
+        return;
+      }
+    }
     await runApi('install', { slug, catalogId: item.catalogId || item.id });
     mark(item, true);
     state.setConfirmInstallItem(null);
