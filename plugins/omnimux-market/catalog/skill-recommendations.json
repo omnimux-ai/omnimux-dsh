@@ -91,7 +91,6 @@
     "sk-amazon-product-analysis",
     "sk-amazon-listing-optimization",
     "sk-amazon-keyword-traffic-analysis",
-    "sk-amazon-review-optimization",
-    "sk-amazon-trend-risk-monitor"
+    "sk-amazon-review-optimization"
   ]
 }
