@@ -497,7 +497,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
         data-omnimux-trending-sticky=""
       >
         <div className="omnimux-trending-head">
-          <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
+          {/* 用户拍板：彻底移除创作灵感与 Skill 双 Tab，避免首屏过重 */}
+          <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')} style={{ display: 'none' }}>
             <button /* exempt-ui01: session-guide 导航双 Tab */
               type="button"
               role="tab"

@@ -315,6 +315,9 @@ function BlankSessionGuide({
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
       {!isCompact && (
         <>
+          {/* 探索模板 (Explore templates) 首屏核心专区 */}
+          <ExploreTemplatesSection onApplyTemplate={handleExploreTemplateApply} />
+
           {/* Top 10 quick starters */}
           <StarterGroupList
             groups={STARTER_GROUPS}
@@ -333,9 +336,6 @@ function BlankSessionGuide({
 
           {/* Trending Videos, Ready to Replicate */}
           <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
-
-          {/* Explore Templates (7 大分类货架与探索模板) */}
-          <ExploreTemplatesSection onApplyTemplate={handleExploreTemplateApply} />
         </>
       )}
 
