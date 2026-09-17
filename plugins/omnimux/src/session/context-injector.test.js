@@ -35,9 +35,12 @@ describe('session model context injector', () => {
     assert.equal(decision.messages.length, 1)
 
     const text = decision.messages[0].content[0].text
-    assert.match(text, /本会话模型指定/)
+    assert.match(text, /本会话模型指定与计费/)
     assert.match(text, /Seedance 2\.5/)
     assert.match(text, /seedance-2-5/)
+    assert.match(text, /计费标准：按秒计费/)
+    assert.match(text, /5 秒约 16 积分/)
+    assert.match(text, /30 秒约 94 积分/)
     assert.equal(decision.messages[0].source.plugin, 'omnimux')
   })
 
