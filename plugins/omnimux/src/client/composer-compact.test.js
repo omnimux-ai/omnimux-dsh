@@ -398,3 +398,16 @@ test('resetComposerCompactForTests removes the style tag and the attr', () => {
   assert.equal(doc.getElementById(COMPOSER_COMPACT_STYLE_ID), null)
   assert.equal(doc.documentElement.hasAttribute(COMPOSER_COMPACT_ATTR), false)
 })
+
+test('model name adapts with max-width and single-row lock prevents toolbar wrapping (Issue 2192)', () => {
+  const { doc } = setupDoc()
+  const style = ensureComposerCompactChrome(doc)
+  const css = style.textContent
+
+  assert.match(css, /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]\{[^}]*max-width:220px/)
+  assert.match(css, /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="triggerLabel"\]\{[^}]*max-width:120px/)
+  assert.match(css, /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="triggerLabel"\]\{[^}]*text-overflow:ellipsis/)
+  assert.match(css, /@media \(max-width: 768px\)\{\s*\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="triggerLabel"\]\{[^}]*max-width:88px/)
+  assert.match(css, /\[data-composer-card\] > \[class\*="row"\]:has\(> \[class\*="trailing"\]\)\{\s*flex-wrap:nowrap!important;\s*\}/)
+  assert.match(css, /\[data-composer-card\] \[class\*="tools"\]\{\s*min-width:0;\s*flex:1 1 auto;\s*\}/)
+})
