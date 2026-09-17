@@ -144,11 +144,6 @@ export function PublishStage(props) {
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle')}
-        onRefresh={feed.loadList}
-        refreshing={feed.listLoading}
-        refreshTitle={t('records.refresh')}
-        onClose={handleClose}
-        closeTitle={t('close')}
       />
       {/* 吸附栈：三 Tab 账本切换行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
       <div className="omx-stage-sticky">

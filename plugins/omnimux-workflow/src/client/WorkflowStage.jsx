@@ -77,8 +77,6 @@ export function WorkflowStage({ t, stage, locale }) {
     >
       <PageHeader
         title={t('stage.title')}
-        onClose={handleClose}
-        closeTitle={t('stage.close')}
       />
       <div className="omnimux-workflow-canvas-body">
         <CanvasBridge onClose={handleClose} t={t} locale={activeLocale} />

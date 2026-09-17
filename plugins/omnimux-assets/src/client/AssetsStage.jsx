@@ -19,29 +19,12 @@ import { CreateProductMenu } from './CreateProductMenu.jsx'
 const TAB_ID = 'omnimux-assets:library'
 
 function AssetsHeader(props) {
-  const { t, stage, busy, refreshState, setBusy } = props
-  const onRefresh = () => {
-    setBusy(true)
-    void refreshState(true).finally(() => setBusy(false))
-  }
-  const onClose = () => {
-    const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-    if (api && typeof api.closeTab === 'function') {
-      api.closeTab(TAB_ID)
-    } else {
-      stage?.set?.(false)
-    }
-  }
+  const { t } = props
 
   return (
     <PageHeader
       title={t('stage.title')}
       subtitle={t('stage.subtitle')}
-      onRefresh={onRefresh}
-      refreshing={busy}
-      refreshTitle={t('stage.refresh')}
-      onClose={onClose}
-      closeTitle={t('stage.close')}
     />
   )
 }
@@ -480,7 +463,7 @@ export function AssetsStage(props) {
       data-visible={visible ? 'true' : 'false'}
       style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
-      <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} sourceTab={sourceTab} />
+      <AssetsHeader t={t} />
       <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
       <Divider />
       {/* 吸附栈：一级 Tab + 二级分类行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}

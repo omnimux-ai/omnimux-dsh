@@ -333,14 +333,6 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         <PageHeader
           title={t('stage.title')}
           subtitle={t('stage.subtitle')}
-          onRefresh={() => {
-            setBusy(true)
-            void refreshState(true).finally(() => { setBusy(false) })
-          }}
-          refreshing={busy}
-          refreshTitle={t('stage.refresh')}
-          onClose={handleCloseTab}
-          closeTitle={t('stage.close')}
         />
 
         <div className="omnimux-products-action-row">

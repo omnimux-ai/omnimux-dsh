@@ -668,11 +668,6 @@ export function ProjectLibraryPage(props) {
           <PageHeader
             title={t('workflow.pageTitle') || '项目'}
             subtitle="管理项目工程、查看创作页面与项目资产"
-            onRefresh={() => { void reload() }}
-            refreshing={busy}
-            refreshTitle={t('projects.refresh')}
-            onClose={handleClose}
-            closeTitle={t('projects.close')}
           />
 
           <div className="omnimux-workflow-library-action-row">

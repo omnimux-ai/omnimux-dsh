@@ -53,8 +53,6 @@ export function AccountsStage({ t, stage, store, visible = true }) {
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle')}
-        onClose={handleClose}
-        closeTitle={t('close')}
       />
       <div className="omnimux-accounts-stage-body omx-stage-scroll">
         <AccountsSection t={t} active={visible} />

@@ -54,8 +54,6 @@ export function InspirationStage({ t, stage, store, visible = true }) {
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle')}
-        onClose={handleClose}
-        closeTitle={t('close')}
       />
       <div className="omnimux-inspiration-stage-body">
         <InspirationSection t={t} active={visible} />

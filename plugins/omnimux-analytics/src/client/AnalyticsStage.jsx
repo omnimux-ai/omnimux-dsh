@@ -138,11 +138,6 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
             <IconDownloadOutline16 />
           </IconButton>
         )}
-        onRefresh={() => { void analyticsStore.refresh() }}
-        refreshing={analyticsStore.phase === 'loading'}
-        refreshTitle={t('refresh')}
-        onClose={handleClose}
-        closeTitle={t('close')}
       />
       <Divider />
       {/* 吸附栈：一级 Tab + 筛选工具栏，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
