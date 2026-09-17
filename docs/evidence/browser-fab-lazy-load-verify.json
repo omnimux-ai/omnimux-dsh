@@ -1,0 +1,39 @@
+{
+  "feature": "browser-fab-lazy-load",
+  "timestamp": "2026-09-17T08:10:28.861Z",
+  "target": "plugins/omnimux-browser/extension/src/content/fab-companion.ts",
+  "checks": [
+    {
+      "step": 1,
+      "name": "initial_mount_lazy_placeholder",
+      "passed": true,
+      "details": {
+        "fabMounted": true,
+        "iframeMounted": true,
+        "iframeSrc": "about:blank",
+        "hasExtensionUrl": false
+      }
+    },
+    {
+      "step": 2,
+      "name": "expand_on_demand_loads_real_panel_url",
+      "passed": true,
+      "details": {
+        "isExpanded": true,
+        "expandedIframeSrc": "chrome-extension://omnimux-browser-id/panel/index.html?mode=float",
+        "expectedUrl": "chrome-extension://omnimux-browser-id/panel/index.html?mode=float"
+      }
+    },
+    {
+      "step": 3,
+      "name": "collapse_retains_and_dock_unloads_and_reloads",
+      "passed": true,
+      "details": {
+        "collapsedSrc": "chrome-extension://omnimux-browser-id/panel/index.html?mode=float",
+        "dockedSrc": "about:blank",
+        "reloadedSrc": "chrome-extension://omnimux-browser-id/panel/index.html?mode=float"
+      }
+    }
+  ],
+  "allPassed": true
+}
