@@ -9,6 +9,7 @@ import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
+import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
@@ -281,6 +282,16 @@ function BlankSessionGuide({
     applyDraftToComposer(prompt, { toastKey: null, restoreNotice: true })
   }
 
+  function handleExploreTemplateApply(payload) {
+    if (!payload?.prompt) return
+    applyDraftToComposer(payload.prompt, {
+      toastKey: null,
+      restoreNotice: true,
+      copy: false,
+    })
+    showToast(`已装配【${payload.title || '模板'}】分镜提示词`)
+  }
+
   return (
     <section
       ref={guideRef}
@@ -322,6 +333,9 @@ function BlankSessionGuide({
 
           {/* Trending Videos, Ready to Replicate */}
           <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+
+          {/* Explore Templates (7 大分类货架与探索模板) */}
+          <ExploreTemplatesSection onApplyTemplate={handleExploreTemplateApply} />
         </>
       )}
 
