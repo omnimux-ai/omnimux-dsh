@@ -268,7 +268,11 @@ describe('hover overlay CTA', () => {
     assert.equal(decl(btn, 'height'), '28px')
     assert.equal(decl(btn, 'padding'), '0 6px')
     assert.equal(decl(btn, 'border-radius'), '9999px')
-    assert.equal(decl(btn, 'font'), '550 12px/16px inherit')
+    // 长写而非 font 简写：简写里的 inherit 不是合法 font-family，整条声明会被浏览器丢弃
+    assert.equal(decl(btn, 'font-size'), '12px')
+    assert.equal(decl(btn, 'font-weight'), '550')
+    assert.equal(decl(btn, 'line-height'), '16px')
+    assert.doesNotMatch(btn, /font\s*:/)
     assert.doesNotMatch(INSPIRATION_CSS, /👁|💬/)
   })
 

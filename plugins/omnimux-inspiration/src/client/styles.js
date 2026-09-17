@@ -418,6 +418,9 @@ export const INSPIRATION_CSS = `
   position: relative;
   width: 100%;
   aspect-ratio: 9 / 16;
+  /* 卡片自身宽度即容器查询基准：CTA 按卡片宽度退化，不随视口列数走 */
+  container-type: inline-size;
+  container-name: inspiration-card;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -913,7 +916,11 @@ export const INSPIRATION_CSS = `
   padding: 0 6px;
   border-radius: 9999px;
   border: 1px solid transparent;
-  font: 550 12px/16px inherit;
+  /* 长写而非 font 简写：简写里的 inherit 不是合法 font-family，整条声明会被丢弃，
+     按钮字号会退回继承父级，文字宽度因此超出预期。 */
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 16px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -925,6 +932,30 @@ export const INSPIRATION_CSS = `
   width: 14px;
   height: 14px;
   flex: none;
+}
+/* CTA 文字标签独占一格，溢出时收成省略号——紧凑区间的硬裁防线之外再兜一层，
+   保证任何文案长度都不会出现被切断的半截字。 */
+.omnimux-inspiration-overlay-cta-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字整块退出布局。
+   阈值由实测反解：英文文案 "Replicate now" 需卡片约 280px 才完整容纳，
+   288px 留出余量，使任何语言下只要显示文字就一定放得下。 */
+@container inspiration-card (max-width: 288px) {
+  .omnimux-inspiration-overlay-cta {
+    justify-content: center;
+  }
+  .omnimux-inspiration-overlay-cta-label {
+    display: none;
+  }
+  .omnimux-inspiration-overlay-cta-btn {
+    flex: 0 0 auto;
+    width: 28px;
+    padding: 0;
+  }
 }
 .omnimux-inspiration-overlay-cta-btn.secondary {
   background: var(--dsw-alias-bg-mask-1);

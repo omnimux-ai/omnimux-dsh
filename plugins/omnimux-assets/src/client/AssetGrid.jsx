@@ -135,7 +135,7 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
               }
             }}
           >
-            {t('card.view')}
+            <span className="omnimux-assets-overlay-label">{t('card.view')}</span>
           </Button>
           <Button
             type="button"
@@ -156,7 +156,9 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
               }
             }}
           >
-            {added ? t('card.addedToConversation') : t('card.addToConversation')}
+            <span className="omnimux-assets-overlay-label">
+              {added ? t('card.addedToConversation') : t('card.addToConversation')}
+            </span>
           </Button>
         </div>
       </div>

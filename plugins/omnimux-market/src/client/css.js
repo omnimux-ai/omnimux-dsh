@@ -380,7 +380,7 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 @media (max-width:1200px){.featured-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:860px){.featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:540px){.featured-grid{grid-template-columns:1fr}}
-.featured-card{background:var(--dsw-alias-bg-layer-2,#121316);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.08));border-radius:10px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:background .15s,border-color .15s;position:relative}
+.featured-card{background:var(--dsw-alias-bg-layer-2,#121316);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.08));border-radius:10px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:background .15s,border-color .15s;position:relative;container-type:inline-size;container-name:market-featured-card}
 .featured-card:hover{background:var(--dsw-alias-interactive-bg-hover,#17181c);border-color:var(--dsw-alias-border-l1,rgba(255,255,255,.16))}
 .featured-cover-wrap{width:100%;aspect-ratio:16/9;background:var(--dsw-alias-bg-elevated,#1c1d22);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .featured-cover-wrap svg,.featured-cover-wrap img{width:100%;height:100%;object-fit:cover;display:block}
@@ -388,6 +388,9 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .featured-card:hover .featured-hover-actions{opacity:1;transform:translateY(0);pointer-events:auto}
 .hover-btn{flex:1;height:34px;border-radius:8px;border:0;display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;padding:0 6px;transition:filter .15s ease}
 .hover-btn:hover{filter:brightness(1.1)}
+.hover-btn svg{flex:none;width:14px;height:14px}
+.hover-btn-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+@container market-featured-card (max-width:288px){.featured-hover-actions{justify-content:center}.hover-btn-label{display:none}.hover-btn{flex:0 0 auto;width:34px;padding:0}}
 .hover-btn-detail{background:var(--dsw-alias-bg-surface,rgba(45,48,56,.85));backdrop-filter:blur(8px);color:var(--dsw-alias-label-primary,#fff);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.14))}
 .hover-btn-pin{background:var(--dsw-alias-bg-layer-2,rgba(37,39,46,.85));backdrop-filter:blur(8px);color:var(--dsw-alias-label-secondary,#cbd5e1);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12))}
 .hover-btn-pin:hover{color:var(--dsw-alias-label-primary,#ffffff);background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.1))}

@@ -204,6 +204,12 @@ export const ASSETS_CSS = `
   display: flex;
   flex-direction: column;
 }
+/* 容器只落在真正带 CTA 浮层的卡片上：公共素材卡、生成物卡与骨架屏共用
+   .omnimux-assets-card，不应该跟着获得 containment 语义。 */
+.omnimux-assets-card:has(.omnimux-assets-card-overlay) {
+  container-type: inline-size;
+  container-name: asset-card;
+}
 .omnimux-assets-card[aria-selected="true"] {
   border-color: var(--dsw-alias-label-primary);
 }
@@ -297,6 +303,36 @@ export const ASSETS_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* CTA 文字标签：宽度充足时独占一格并收省略号，紧凑区间整块退出布局 */
+.omnimux-assets-overlay-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Button 的文字槽是它自己的 flex 项，能否收缩由外层槽位决定；显式钉住，
+   不依赖 UI 库内部默认值。 */
+.omnimux-assets-overlay-btn > .dshUk-Button-label {
+  min-width: 0;
+}
+/* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字不再参与布局。
+   阈值由实测反解：英文文案 "Add to Conversation" 需卡片约 290px 才完整容纳，
+   296px 留出余量，使任何语言下只要显示文字就一定放得下。
+   flex-wrap 是极窄卡片的兜底：图标不可收缩，宁可换行也不让图标被裁。 */
+@container asset-card (max-width: 296px) {
+  .omnimux-assets-card-overlay-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .omnimux-assets-overlay-label {
+    display: none;
+  }
+  .omnimux-assets-overlay-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    padding: 0;
+  }
 }
 .omnimux-assets-overlay-btn svg {
   flex-shrink: 0;

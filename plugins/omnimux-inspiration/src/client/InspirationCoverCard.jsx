@@ -262,7 +262,7 @@ export function InspirationCoverCard({ card }) {
               if (e.key === 'Enter' || e.key === ' ') handleDetail(e)
             }}
           >
-            {t('card.cta.detail')}
+            <span className="omnimux-inspiration-overlay-cta-label">{t('card.cta.detail')}</span>
           </Button>
           <Button
             type="button"
@@ -280,7 +280,7 @@ export function InspirationCoverCard({ card }) {
               if (e.key === 'Enter' || e.key === ' ') handleReplicate(e)
             }}
           >
-            {t('card.cta.try')}
+            <span className="omnimux-inspiration-overlay-cta-label">{t('card.cta.try')}</span>
           </Button>
         </div>
         <div className="omnimux-inspiration-overlay-footer">
