@@ -16,10 +16,13 @@ import {
   buildProductFields,
   cleanTitle,
   decodeEntities,
+  extractEcommerceGalleryImages,
+  extractMarkdownImages,
   extractMetaTags,
   extractPrice,
   importProductFromUrl,
   isNavigationText,
+  isNoiseImageUrl,
   isPrivateHost,
   isUsableImport,
   normalizeHostname,
@@ -1084,5 +1087,71 @@ describe('link importer · website screenshots', () => {
     for (const key of IMPORT_SCREENSHOT_KEYS) {
       assert.equal(IMPORT_DRAFT_EXTRA_KEYS.includes(key), true, key)
     }
+  })
+})
+
+describe('link importer · ecommerce product images', () => {
+  it('extracts hiRes and dynamic images from Amazon-style HTML', () => {
+    const html = `
+      <div id="imageBlock">
+        <img id="landingImage" src="https://m.media-amazon.com/images/I/default.jpg"
+             data-old-hires="https://m.media-amazon.com/images/I/61Ga90juB1L._AC_SL1500_.jpg"
+             data-a-dynamic-image="{&quot;https://m.media-amazon.com/images/I/61Ga90juB1L._AC_SX679_.jpg&quot;:[679,679]}" />
+      </div>
+      <script>
+        P.register('colorImages', function() {
+          return {
+            'colorImages': { 'initial': A.$.parseJSON('[{"hiRes":"https://m.media-amazon.com/images/I/71LLv0gL8JL._AC_SL1500_.jpg","thumb":"...","large":"https://m.media-amazon.com/images/I/71LLv0gL8JL._AC_.jpg"}]') }
+          };
+        });
+      </script>
+    `
+    const images = extractEcommerceGalleryImages(html)
+    assert.ok(images.includes('https://m.media-amazon.com/images/I/71LLv0gL8JL._AC_SL1500_.jpg'))
+    assert.ok(images.includes('https://m.media-amazon.com/images/I/61Ga90juB1L._AC_SL1500_.jpg'))
+    assert.ok(images.includes('https://m.media-amazon.com/images/I/61Ga90juB1L._AC_SX679_.jpg'))
+  })
+
+  it('filters noise, sprite, and tracking images from candidate pool', () => {
+    assert.equal(isNoiseImageUrl('https://m.media-amazon.com/images/G/09/gno/sprites/nav-sprite-global.png'), true)
+    assert.equal(isNoiseImageUrl('https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/transparent-pixel.gif'), true)
+    assert.equal(isNoiseImageUrl('https://fls-fe.amazon.co.jp/1/batch/1/OP/$uedata=s'), true)
+    assert.equal(isNoiseImageUrl('https://m.media-amazon.com/images/I/61Ga90juB1L._AC_SL1500_.jpg'), false)
+  })
+
+  it('extracts images from markdown text in hub fallback read', () => {
+    const md = `
+      # Product Overview
+      ![Main Shot](https://cdn.example.com/products/hero-1.jpg)
+      Some description text.
+      <img src="https://cdn.example.com/products/detail-2.jpg" alt="Detail" />
+    `
+    const images = extractMarkdownImages(md)
+    assert.deepEqual(images, [
+      'https://cdn.example.com/products/hero-1.jpg',
+      'https://cdn.example.com/products/detail-2.jpg',
+    ])
+  })
+
+  it('prioritizes high resolution product gallery images ahead of generic tags', () => {
+    const html = `
+      <head><title>Test Vitamins | Amazon</title></head>
+      <body>
+        <!-- Header icons -->
+        <img src="https://m.media-amazon.com/images/G/09/sprites.png" />
+        <img src="https://images-na.ssl-images-amazon.com/images/G/01/transparent-pixel.gif" />
+        <img src="https://fls-fe.amazon.co.jp/batch/uedata" />
+        <!-- Product block -->
+        <img id="landingImage" data-old-hires="https://m.media-amazon.com/images/I/main-hires.jpg" src="https://m.media-amazon.com/images/I/main-low.jpg" />
+        <script>
+          'colorImages': { 'initial': A.$.parseJSON('[{"hiRes":"https://m.media-amazon.com/images/I/gallery-hires-2.jpg"}]') }
+        </script>
+      </body>
+    `
+    const page = parseHtmlDocument(html, 'https://www.amazon.co.jp/dp/123')
+    const fields = buildProductFields({ url: 'https://www.amazon.co.jp/dp/123', kind: 'physical', page })
+    assert.equal(fields.images[0], 'https://m.media-amazon.com/images/I/gallery-hires-2.jpg')
+    assert.ok(fields.images.includes('https://m.media-amazon.com/images/I/main-hires.jpg'))
+    assert.equal(fields.images.some(u => isNoiseImageUrl(u)), false)
   })
 })

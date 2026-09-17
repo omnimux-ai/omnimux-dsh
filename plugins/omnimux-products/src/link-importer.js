@@ -687,12 +687,108 @@ function extractListItems(html) {
 }
 
 /**
+ * 从页面中提取电商专属高清商品画廊图片（支持 Amazon colorImages、data-old-hires、data-a-dynamic-image 等）。
+ * @param {string} html
+ * @returns {string[]}
+ */
+export function extractEcommerceGalleryImages(html) {
+  const source = String(html ?? '')
+  const urls = []
+
+  // 1. Amazon colorImages: { 'initial': A.$.parseJSON('...') }
+  const colorMatch = source.match(/colorImages['"]?\s*:\s*\{[\s\S]*?parseJSON\(\s*['"](\[[\s\S]*?\])['"]\s*\)/i)
+  if (colorMatch) {
+    try {
+      const list = JSON.parse(colorMatch[1])
+      for (const item of Array.isArray(list) ? list : []) {
+        const best = item?.hiRes || item?.large || (item?.main && typeof item.main === 'object' ? Object.keys(item.main)[0] : null)
+        if (typeof best === 'string' && best.trim()) urls.push(best.trim())
+      }
+    } catch {}
+  }
+
+  // 2. data-old-hires: 主图超清原图属性（如 1500px）
+  const hiresMatches = source.matchAll(/data-old-hires\s*=\s*["']([^"']+)["']/gi)
+  for (const m of hiresMatches) {
+    if (m[1] && m[1].trim()) urls.push(m[1].trim())
+  }
+
+  // 3. data-a-dynamic-image: 动态响应式大图字典（键为图片 URL，值为 [w, h]）
+  const dynMatches = source.matchAll(/data-a-dynamic-image\s*=\s*["']([^"']+)["']/gi)
+  for (const m of dynMatches) {
+    try {
+      const rawJson = m[1].replace(/&quot;/g, '"')
+      const parsed = JSON.parse(rawJson)
+      if (parsed && typeof parsed === 'object') {
+        urls.push(...Object.keys(parsed))
+      }
+    } catch {}
+  }
+
+  return urls
+}
+
+/**
+ * 从 Markdown 文本中提取图片直链。
+ * @param {string} markdown
+ * @returns {string[]}
+ */
+export function extractMarkdownImages(markdown) {
+  const text = String(markdown ?? '')
+  const urls = []
+  const mdMatches = text.matchAll(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/gi)
+  for (const m of mdMatches) {
+    if (m[1]) urls.push(m[1].trim())
+  }
+  const imgMatches = text.matchAll(/<img\b[^>]+src\s*=\s*["'](https?:\/\/[^"']+)["']/gi)
+  for (const m of imgMatches) {
+    if (m[1]) urls.push(m[1].trim())
+  }
+  return urls
+}
+
+/**
+ * 判定一个图片 URL 是否为网站通用 UI 噪点（如导航雪碧图、小图标、打点统计、1x1 透明像素等）。
+ * @param {string} url
+ * @returns {boolean}
+ */
+export function isNoiseImageUrl(url) {
+  const text = String(url ?? '').toLowerCase()
+  if (!text) return true
+  if (text.startsWith('data:')) return true
+  if (text.includes('transparent-pixel') || text.includes('pixel.gif') || text.includes('1x1.')) return true
+  if (text.includes('nav-sprite') || text.includes('sprites') || text.includes('sprite.')) return true
+  if (text.includes('$uedata') || text.includes('/batch/') || text.includes('/beacon')) return true
+  if (text.includes('flyout_') || text.includes('cart-icon') || text.includes('loading')) return true
+  if (text.includes('/images/g/')) return true
+  return false
+}
+
+/**
  * @param {string} html
  * @returns {string[]}
  */
 function extractImgTags(html) {
-  const tags = String(html ?? '').match(/<img\b[^>]*>/gi) ?? []
-  return tags.map((tag) => attrOf(tag, 'src') || attrOf(tag, 'data-src')).filter(Boolean)
+  const source = String(html ?? '')
+  const gallery = extractEcommerceGalleryImages(source)
+  const tags = source.match(/<img\b[^>]*>/gi) ?? []
+  const regular = tags.map((tag) => (
+    attrOf(tag, 'data-old-hires') ||
+    attrOf(tag, 'data-src') ||
+    attrOf(tag, 'src')
+  )).filter(Boolean)
+
+  const combined = [...gallery, ...regular]
+  const cleaned = []
+  const seen = new Set()
+  for (const item of combined) {
+    const url = typeof item === 'string' ? item.trim() : ''
+    if (!url || seen.has(url)) continue
+    seen.add(url)
+    if (isNoiseImageUrl(url)) continue
+    cleaned.push(url)
+  }
+  return cleaned
 }
 
 /**
@@ -1003,7 +1099,8 @@ export function buildProductFields(input) {
       ...(page?.images ?? []),
     ]
       .map((row) => absoluteUrl(row, url))
-      .filter((row) => /^https?:\/\//i.test(row)),
+      .filter((row) => /^https?:\/\//i.test(row))
+      .filter((row) => !isNoiseImageUrl(row)),
   ).slice(0, IMAGES_MAX)
 
   return {
@@ -1374,14 +1471,17 @@ async function readPageDocument(input) {
  * @returns {ParsedPage}
  */
 function pageFromMarkdown(hubPage) {
+  const text = cleanText(hubPage.pageContent)
+  const rawImages = extractMarkdownImages(hubPage.pageContent)
+  const images = rawImages.filter((row) => !isNoiseImageUrl(row))
   return {
     title: cleanText(hubPage.title),
     canonical: '',
     meta: {},
     nodes: [],
-    images: [],
+    images,
     bullets: [],
-    text: cleanText(hubPage.pageContent),
+    text,
   }
 }
 

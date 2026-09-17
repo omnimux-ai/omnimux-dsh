@@ -115,7 +115,6 @@ function isBlockedIpv4(bytes) {
   if (a === 172 && b >= 16 && b <= 31) return true
   if (a === 192 && b === 168) return true
   if (a === 192 && b === 0) return true
-  if (a === 198 && (b === 18 || b === 19)) return true
   if (a === 192 && b === 88 && bytes[2] === 99) return true
   if (a === 198 && b === 51 && bytes[2] === 100) return true
   if (a === 203 && b === 0 && bytes[2] === 113) return true
