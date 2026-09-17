@@ -629,6 +629,17 @@
           title: skill.name || skill.title || slug,
         });
       } catch {}
+
+      // 确保中间会话栏完全显露并聚焦输入框，消除用户视觉上的无响应感
+      const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
+      try { wb?.ensureConversationVisible?.(); } catch {}
+      try { wb?.setFocus?.("split"); } catch {}
+      try { wb?.setConversationCollapsed?.(false, { sessionId }); } catch {}
+      try {
+        const composer = findComposer();
+        composer?.focus?.();
+      } catch {}
+
       return { ok: true, sessionId, attached: true, installed: false };
     }
 

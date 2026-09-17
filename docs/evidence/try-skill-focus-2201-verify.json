@@ -1,0 +1,25 @@
+{
+  "issue": 2201,
+  "verifiedAt": "2026-09-17T17:28:00.000Z",
+  "summary": "技能卡片点击「去对话中试试」后自动显露会话栏并聚焦输入框",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "显露会话",
+      "result": "pass",
+      "evidence": "trySkillInSession 触发 ensureConversationVisible 与 setFocus('split')，消除全屏工作台对会话栏的遮挡"
+    },
+    {
+      "id": "AC-2",
+      "name": "聚焦输入框",
+      "result": "pass",
+      "evidence": "调用 findComposer()?.focus?.()，光标聚焦输入框，底部清晰展示激活的技能药丸"
+    },
+    {
+      "id": "AC-3",
+      "name": "CDP 实机验证",
+      "result": "pass",
+      "evidence": "docs/evidence/try-skill-focus-2201.jpg 实机截图证实左侧输入框已显露，底部药丸正确反映所选技能"
+    }
+  ]
+}
