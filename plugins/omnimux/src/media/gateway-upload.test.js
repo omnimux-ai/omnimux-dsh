@@ -87,6 +87,9 @@ describe('gateway-upload: upload execution and caching', () => {
 
     const mockFetcher = async (url, init) => {
       fetchCalls += 1
+      if (String(url).endsWith('/files/upload/presign')) {
+        return new Response(JSON.stringify({ success: false, code: 501, msg: '当前存储后端不支持直传' }), { status: 501 })
+      }
       lastUrl = url
       lastHeaders = init.headers
       lastFormData = init.body
@@ -109,20 +112,22 @@ describe('gateway-upload: upload execution and caching', () => {
     })
 
     assert.equal(fileUrl, 'https://api.omnimux.ai/api/v1/files/download/file_mock_123')
-    assert.equal(fetchCalls, 1)
+    // One ticket probe that the gateway refused, then the relay upload.
+    assert.equal(fetchCalls, 2)
     assert.equal(lastUrl, 'https://api.omnimux.ai/v1/files/upload/stream')
     assert.equal(lastHeaders.Authorization, 'Bearer sk-test-key-123')
     assert.ok(lastFormData instanceof FormData)
     assert.equal(lastFormData.get('upload_path'), 'photos')
 
     // Second call should hit cache without network
+    const callsBeforeCacheHit = fetchCalls
     const cachedUrl = await uploadMediaToGateway(tmpFile, {
       baseUrl: 'https://api.omnimux.ai/v1',
       apiKey: 'sk-test-key-123',
       fetcher: mockFetcher,
     })
     assert.equal(cachedUrl, 'https://api.omnimux.ai/api/v1/files/download/file_mock_123')
-    assert.equal(fetchCalls, 1, 'Cache hit must not invoke fetcher a second time')
+    assert.equal(fetchCalls, callsBeforeCacheHit, 'Cache hit must not invoke fetcher a second time')
 
     await unlink(tmpFile).catch(() => {})
   })
@@ -131,8 +136,13 @@ describe('gateway-upload: upload execution and caching', () => {
     let fetchCalls = 0
     const dataUri = `data:image/png;base64,${PNG_BYTES.toString('base64')}`
 
-    const mockFetcher = async () => {
+    // A gateway without direct-upload tickets answers the probe with 501, so the
+    // upload falls back to the relay route: one probe call plus one upload.
+    const mockFetcher = async (url) => {
       fetchCalls += 1
+      if (String(url).endsWith('/files/upload/presign')) {
+        return new Response(JSON.stringify({ success: false, code: 501, msg: '当前存储后端不支持直传' }), { status: 501 })
+      }
       return new Response(JSON.stringify({
         success: true,
         code: 200,
@@ -150,7 +160,7 @@ describe('gateway-upload: upload execution and caching', () => {
     })
 
     assert.equal(fileUrl, 'https://api.omnimux.ai/api/v1/files/download/file_data_uri_456')
-    assert.equal(fetchCalls, 1)
+    assert.equal(fetchCalls, 2)
   })
 
   it('throws typed asset-not-found when local file does not exist', async () => {
