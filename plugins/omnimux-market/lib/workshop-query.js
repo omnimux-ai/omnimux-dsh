@@ -141,6 +141,9 @@ function collectWorkshopDiscovery(input, includeRemote) {
             const domains = workshopDomains(item);
             // 范围外条目「尽力携带」双语：不判不拦，但字段缺失时保持空串。
             const bilingual = checkSkillBilingual(item);
+            const guidePrefill = typeof item.sessionPrefill === 'string'
+                ? String(item.sessionPrefill).trim()
+                : '';
             winners.set(token, {
                 skillKey: token, token, title: item.title || token, description: item.summary || '', domains,
                 titleZh: bilingual.titleZh, titleEn: bilingual.titleEn,
@@ -151,6 +154,9 @@ function collectWorkshopDiscovery(input, includeRemote) {
                 cover: item.cover && /^catalog\/covers\/[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(item.cover.asset) ? { ...item.cover } : undefined,
                 downloads: knownCount(item.downloads), updatedAt: workshopDate(item.updatedAt), publishedAt: workshopDate(item.publishedAt),
                 installed: !!installed, enabled: installed && typeof installed.enabled === 'boolean' ? installed.enabled : null,
+                ...(item.installFlow === 'session-guide'
+                    ? { installFlow: 'session-guide', ...(guidePrefill ? { sessionPrefill: guidePrefill } : {}) }
+                    : {}),
             });
         }
     }

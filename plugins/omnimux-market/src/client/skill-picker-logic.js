@@ -235,8 +235,23 @@ export function resolveSkillRecommendations(ids = [], entries = catalog.items) {
   return [...new Set(ids)].flatMap(id => {
     const item = byId.get(id)
     if (!item || item.kind !== 'skill' || item.recommended !== true) return []
-    return [{ ...item, catalogId: item.id, slug: item.skill, name: item.title,
-      description: item.summary, installBackend: 'catalog', installed: false }]
+    return [{
+      ...item,
+      catalogId: item.id,
+      slug: item.skill,
+      name: item.title,
+      description: item.summary,
+      installBackend: 'catalog',
+      installed: false,
+      ...(item.installFlow === 'session-guide'
+        ? {
+            installFlow: 'session-guide',
+            ...(typeof item.sessionPrefill === 'string' && item.sessionPrefill.trim()
+              ? { sessionPrefill: item.sessionPrefill.trim() }
+              : {}),
+          }
+        : {}),
+    }]
   })
 }
 

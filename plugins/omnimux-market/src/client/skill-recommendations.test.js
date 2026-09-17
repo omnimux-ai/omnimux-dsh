@@ -16,7 +16,7 @@ const ids = items => items.map(item => item.id)
 
 test('shipped configuration adds the admitted collector while preserving all 48 existing recommendations', () => {
   assert.deepEqual(SkillShelf.validateSkillRecommendations(), [])
-  assert.equal(config.featuredSkills.length, 69)
+  assert.equal(config.featuredSkills.length, 70)
   assert.deepEqual(config.featuredSkills, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.id))
   assert.equal(config.homeRecommendations.length, 20)
   const home = SkillShelf.plazaDiscoverySections()
@@ -107,7 +107,7 @@ test('real workshop shows one admitted homepage card and retains all 49 on Featu
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
   assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 20)
   ui.state.set(1, 'featured')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 69)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 70)
 })
 
 test('real search effect preserves full-library results, search heading and pagination payload', async () => {

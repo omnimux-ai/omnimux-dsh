@@ -25,7 +25,7 @@ import { listMarketplaceConnectors, resolveMarketplaceIconFile } from './marketp
 import { installMarketPlugin, isPluginInstallBusy, listPluginCategories, listPlugins, withPluginInstallLock } from './plugin-market.js'
 import { scheduleRestart, servingPort, trustedRestartRequest } from './restart.js'
 import { fetchEvalScore, fetchSkillTab } from './skill-detail.js'
-import { aggregateSkillSearch } from './skill-aggregate.js'
+import { aggregateSkillSearch, catalogItemToCard, findCatalogSkill } from './skill-aggregate.js'
 import type { PluginConfig, SkillCard, WorkshopQueryRequest } from './types.js'
 import { RequestGuard, WORKSHOP_READ_METHODS } from './workshop-request-guard.js'
 import type { WorkshopReadAuthorization, WorkshopReadMethod } from './workshop-request-guard.js'
@@ -300,7 +300,14 @@ async function handleSkillDetail(ctx: ApiContext): Promise<void> {
   const { body, url, cfg, res } = ctx
   const slug = parseSlug(String(body.slug || url.searchParams.get('slug') || ''))
   const installed = await installedSlugs(cfg.skillsDir)
-  const card = await fetchSkillCard(slug, cfg, installed)
+  let card = await fetchSkillCard(slug, cfg, installed)
+  // 官方 catalog 条目（含 session-guide）优先合并本地字段，避免远程详情冲掉安装分流标记
+  const catalogId = body.catalogId ? String(body.catalogId) : undefined
+  const catalogItem = findCatalogSkill(slug, catalogId)
+  if (catalogItem) {
+    const local = catalogItemToCard(catalogItem, 'custom', cfg, installed)
+    card = card ? { ...card, ...local, installed: installed.has(local.slug) || card.installed } : local
+  }
   const tab = String(body.tab || url.searchParams.get('tab') || 'readme')
   const content = await fetchSkillTab(slug, tab, cfg)
   return sendJson(res, 200, { ok: true, card, tab, content })

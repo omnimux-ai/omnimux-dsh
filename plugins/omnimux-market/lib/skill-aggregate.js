@@ -268,6 +268,12 @@ export function catalogItemToCard(item, channel, cfg, installed) {
     };
     if (avatar)
         card.iconUrl = avatar;
+    if (item.installFlow === 'session-guide') {
+        card.installFlow = 'session-guide';
+        const prefill = typeof item.sessionPrefill === 'string' ? item.sessionPrefill.trim() : '';
+        if (prefill)
+            card.sessionPrefill = prefill;
+    }
     // 双语只在门禁通过时携带：半截数据不得流向卡片与下游渲染层（缺失即保持无字段）。
     const bilingual = checkSkillBilingual(item);
     if (bilingual.ok) {
