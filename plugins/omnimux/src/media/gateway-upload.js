@@ -55,9 +55,17 @@ const MIME_TO_EXT = Object.freeze({
 const uploadCache = new Map()
 const inFlightUploads = new Map()
 
+/**
+ * Deployment routes that could not hand out a ticket. Remembered so later
+ * uploads go straight to the relay route instead of paying for a failed probe
+ * on every file.
+ */
+const directUploadUnavailable = new Set()
+
 export function clearGatewayUploadCache() {
   uploadCache.clear()
   inFlightUploads.clear()
+  directUploadUnavailable.clear()
 }
 
 /**
@@ -105,16 +113,44 @@ export function isRemoteGateway(baseUrl) {
 }
 
 /**
+ * Resolve a gateway file route from the route baseUrl the caller already uses.
+ * @param {string} baseUrl
+ * @param {string} route
+ * @returns {string}
+ */
+function resolveFileRoute(baseUrl, route) {
+  const clean = String(baseUrl || '').replace(/\/+$/, '')
+  if (clean.endsWith('/v1')) {
+    return `${clean}/files/${route}`
+  }
+  return `${clean}/v1/files/${route}`
+}
+
+/**
  * Resolve the gateway file upload URL from route baseUrl.
  * @param {string} baseUrl
  * @returns {string}
  */
 export function resolveUploadEndpoint(baseUrl) {
-  const clean = String(baseUrl || '').replace(/\/+$/, '')
-  if (clean.endsWith('/v1')) {
-    return `${clean}/files/upload/stream`
-  }
-  return `${clean}/v1/files/upload/stream`
+  return resolveFileRoute(baseUrl, 'upload/stream')
+}
+
+/**
+ * Direct-upload ticket route; the bytes never pass through the gateway.
+ * @param {string} baseUrl
+ * @returns {string}
+ */
+export function resolvePresignEndpoint(baseUrl) {
+  return resolveFileRoute(baseUrl, 'upload/presign')
+}
+
+/**
+ * Direct-upload verification route.
+ * @param {string} baseUrl
+ * @returns {string}
+ */
+export function resolveConfirmEndpoint(baseUrl) {
+  return resolveFileRoute(baseUrl, 'upload/confirm')
 }
 
 /**
@@ -229,6 +265,142 @@ export async function resolveMediaBytes(source) {
 }
 
 /**
+ * Read the gateway's complaint out of a failed response, without letting a
+ * non-JSON body hide it.
+ * @param {Response} response
+ * @returns {Promise<string>}
+ */
+async function readUploadErrorMessage(response) {
+  try {
+    const json = await response.json()
+    return json?.msg || json?.error?.message || JSON.stringify(json)
+  } catch {
+    return await response.text().catch(() => '')
+  }
+}
+
+/**
+ * Upload one buffer straight to object storage with a gateway ticket and let the
+ * gateway verify what actually arrived. Every failure throws, so the caller
+ * keeps the relay route as its fallback.
+ * @param {{ buffer: Uint8Array, mimeType: string, filename: string, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
+ * @returns {Promise<{ fileUrl: string, expiresAt: number }>}
+ */
+async function uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal }) {
+  const presignResponse = await fetcher(resolvePresignEndpoint(baseUrl), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      file_name: filename,
+      mime_type: mimeType,
+      file_size: buffer.length,
+      upload_path: determineUploadCategory(mimeType),
+    }),
+    signal,
+  })
+  if (!presignResponse.ok) {
+    const detail = await readUploadErrorMessage(presignResponse)
+    throw new OmnimuxError('presign-unavailable', `网关未提供直传凭证 (HTTP ${presignResponse.status}): ${detail}`, {
+      status: presignResponse.status,
+    })
+  }
+
+  const ticket = (await presignResponse.json())?.data
+  if (!ticket?.upload_url || !ticket?.file_id) {
+    throw new OmnimuxError('presign-unavailable', '直传凭证响应缺少上传地址或文件标识')
+  }
+
+  const putResponse = await fetcher(ticket.upload_url, {
+    method: ticket.upload_method || 'PUT',
+    headers: {
+      ...(ticket.upload_headers || {}),
+      'Content-Type': mimeType,
+    },
+    body: new Blob([buffer], { type: mimeType }),
+    signal,
+  })
+  if (!putResponse.ok) {
+    throw new OmnimuxError('direct-upload-failed', `素材直传存储失败 (HTTP ${putResponse.status})`, {
+      status: putResponse.status,
+    })
+  }
+
+  const confirmResponse = await fetcher(resolveConfirmEndpoint(baseUrl), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ file_id: ticket.file_id, file_size: buffer.length }),
+    signal,
+  })
+  if (!confirmResponse.ok) {
+    const detail = await readUploadErrorMessage(confirmResponse)
+    throw new OmnimuxError('direct-upload-failed', `素材直传登记失败 (HTTP ${confirmResponse.status}): ${detail}`, {
+      status: confirmResponse.status,
+    })
+  }
+
+  const confirmed = (await confirmResponse.json())?.data
+  const fileUrl = confirmed?.file_url || confirmed?.download_url || ticket.resource_url
+  if (!fileUrl) {
+    throw new OmnimuxError('direct-upload-failed', '直传登记未返回文件地址')
+  }
+  const parsedExpiry = Date.parse(confirmed?.expires_at || '')
+  return {
+    fileUrl,
+    expiresAt: Number.isFinite(parsedExpiry) ? parsedExpiry : Date.now() + 24 * 3600 * 1000,
+  }
+}
+
+/**
+ * Upload the bytes through the gateway, which relays them into object storage.
+ * @param {{ buffer: Uint8Array, mimeType: string, filename: string, baseUrl: string, apiKey: string, fetcher: Function, signal?: AbortSignal }} input
+ * @returns {Promise<{ fileUrl: string, expiresAt: number }>}
+ */
+async function uploadViaGateway({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal }) {
+  const formData = new FormData()
+  formData.append('file', new Blob([buffer], { type: mimeType }), filename)
+  formData.append('upload_path', determineUploadCategory(mimeType))
+
+  const response = await fetcher(resolveUploadEndpoint(baseUrl), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: formData,
+    signal,
+  })
+
+  if (!response.ok) {
+    const errText = await readUploadErrorMessage(response)
+    throw new OmnimuxError('upload-failed', `素材上传至网关失败 (HTTP ${response.status}): ${errText}`, {
+      status: response.status,
+    })
+  }
+
+  const json = await response.json()
+  const fileUrl = json?.data?.file_url || json?.data?.download_url || json?.data?.url
+  if (!fileUrl) {
+    throw new OmnimuxError('upload-failed', `网关未返回有效的文件地址: ${json?.msg || '未知响应'}`)
+  }
+
+  // Default expiry: parse from response or 24 hours
+  let expiresAt = Date.now() + 24 * 3600 * 1000
+  if (json?.data?.expires_at) {
+    const parsedExp = Date.parse(json.data.expires_at)
+    if (Number.isFinite(parsedExp) && parsedExp > Date.now()) {
+      expiresAt = parsedExp
+    }
+  }
+
+  return { fileUrl, expiresAt }
+}
+
+/**
  * Upload a single local media asset to OmniMux Gateway and return its public URL.
  * @param {string} source
  * @param {{
@@ -274,60 +446,32 @@ export async function uploadMediaToGateway(source, options) {
 
   const uploadPromise = (async () => {
     const { buffer, mimeType, filename, filePath, stat: fileStat } = await resolveMediaBytes(cacheKey)
-    const category = determineUploadCategory(mimeType)
-    const uploadUrl = resolveUploadEndpoint(baseUrl)
 
-    const formData = new FormData()
-    const blob = new Blob([buffer], { type: mimeType })
-    formData.append('file', blob, filename)
-    formData.append('upload_path', category)
-
-    const response = await fetcher(uploadUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: formData,
-      signal,
-    })
-
-    if (!response.ok) {
-      let errText = ''
+    // Direct upload first: the bytes go straight to object storage and the
+    // gateway only issues a ticket and verifies the result. A deployment that
+    // cannot do this falls back to the relay route below, once.
+    let uploaded = null
+    if (!directUploadUnavailable.has(baseUrl)) {
       try {
-        const errJson = await response.json()
-        errText = errJson?.msg || errJson?.error?.message || JSON.stringify(errJson)
-      } catch {
-        errText = await response.text().catch(() => '')
+        uploaded = await uploadDirectToStorage({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal })
+      } catch (error) {
+        if (signal?.aborted) throw error
+        directUploadUnavailable.add(baseUrl)
       }
-      throw new OmnimuxError('upload-failed', `素材上传至网关失败 (HTTP ${response.status}): ${errText}`, {
-        status: response.status,
-      })
     }
-
-    const json = await response.json()
-    const fileUrl = json?.data?.file_url || json?.data?.download_url || json?.data?.url
-    if (!fileUrl) {
-      throw new OmnimuxError('upload-failed', `网关未返回有效的文件地址: ${json?.msg || '未知响应'}`)
-    }
-
-    // Default expiry: parse from response or 24 hours
-    let expiresAt = Date.now() + 24 * 3600 * 1000
-    if (json?.data?.expires_at) {
-      const parsedExp = Date.parse(json.data.expires_at)
-      if (Number.isFinite(parsedExp) && parsedExp > Date.now()) {
-        expiresAt = parsedExp
-      }
+    if (!uploaded) {
+      uploaded = await uploadViaGateway({ buffer, mimeType, filename, baseUrl, apiKey, fetcher, signal })
     }
 
     uploadCache.set(cacheKey, {
-      fileUrl,
-      expiresAt,
+      fileUrl: uploaded.fileUrl,
+      expiresAt: uploaded.expiresAt,
       filePath,
       mtimeMs: fileStat?.mtimeMs,
       sizeBytes: fileStat?.size,
     })
 
-    return fileUrl
+    return uploaded.fileUrl
   })()
 
   inFlightUploads.set(cacheKey, uploadPromise)
