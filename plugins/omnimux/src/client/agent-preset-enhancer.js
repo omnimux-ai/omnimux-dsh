@@ -35,6 +35,8 @@ export const PRESET_MENU_ATTR = 'data-omnimux-preset-menu'
 export const PRESET_ITEM_ATTR = 'data-omnimux-preset-item'
 /** Marks a description node for hiding, for hosts whose CSS module renamed it. */
 export const PRESET_DESC_ATTR = 'data-omnimux-preset-desc'
+/** Marks a duplicate preset row that should be hidden from the picker menu. */
+export const PRESET_DUPLICATE_ATTR = 'data-omnimux-preset-duplicate'
 /** Marks the seat chip itself, so other chrome can find it without a class hash. */
 export const PRESET_SEAT_ATTR = 'data-omnimux-preset-seat'
 /** Marks the fixed outline glyph the avatar replaces. */
@@ -500,8 +502,21 @@ export function syncMenuAvatars(doc = globalThis.document) {
       const resolvedId = decorateMenuItem(doc, item)
       if (resolvedId) {
         if (seenIds.has(resolvedId)) {
-          item.style.display = 'none'
+          if (!item.hasAttribute(PRESET_DUPLICATE_ATTR)) {
+            item.setAttribute(PRESET_DUPLICATE_ATTR, 'true')
+          }
+          if (typeof item.style?.setProperty === 'function') {
+            item.style.setProperty('display', 'none', 'important')
+          } else if (item.style) {
+            item.style.display = 'none'
+          }
           continue
+        }
+        if (item.hasAttribute(PRESET_DUPLICATE_ATTR)) {
+          item.removeAttribute(PRESET_DUPLICATE_ATTR)
+        }
+        if (typeof item.style?.removeProperty === 'function') {
+          item.style.removeProperty('display')
         }
         seenIds.add(resolvedId)
         count += 1
@@ -857,7 +872,7 @@ export function clearInjectedAvatars(doc = globalThis.document) {
   for (const node of doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}, img.${PRESET_MENU_AVATAR_CLASS}`)) {
     node.remove()
   }
-  const sweep = `[${PRESET_SEAT_ATTR}],[${PRESET_MENU_ATTR}],[${PRESET_ITEM_ATTR}],[${PRESET_DESC_ATTR}],[${PRESET_ICON_HIDDEN_ATTR}]`
+  const sweep = `[${PRESET_SEAT_ATTR}],[${PRESET_MENU_ATTR}],[${PRESET_ITEM_ATTR}],[${PRESET_DESC_ATTR}],[${PRESET_ICON_HIDDEN_ATTR}],[${PRESET_DUPLICATE_ATTR}]`
   for (const el of doc.querySelectorAll(sweep)) {
     for (const attr of [
       PRESET_SEAT_ATTR,
@@ -865,8 +880,12 @@ export function clearInjectedAvatars(doc = globalThis.document) {
       PRESET_ITEM_ATTR,
       PRESET_DESC_ATTR,
       PRESET_ICON_HIDDEN_ATTR,
+      PRESET_DUPLICATE_ATTR,
     ]) {
       if (typeof el.removeAttribute === 'function') el.removeAttribute(attr)
+    }
+    if (typeof el.style?.removeProperty === 'function') {
+      el.style.removeProperty('display')
     }
   }
 }
@@ -919,6 +938,12 @@ export const AGENT_PRESET_AVATAR_CSS = `
   max-width: 280px !important;
   padding: 8px 10px !important;
   box-sizing: border-box !important;
+}
+
+/* Duplicate preset options are hidden completely, overriding row layout rules. */
+[data-omnimux-preset-duplicate],
+[data-omnimux-preset-item][data-omnimux-preset-duplicate] {
+  display: none !important;
 }
 
 /* One line per expert: the name truncates instead of wrapping. */

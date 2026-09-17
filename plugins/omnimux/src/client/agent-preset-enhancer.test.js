@@ -18,6 +18,7 @@ import {
   MENU_ITEM_MIN_HEIGHT_PX,
   PRESET_AVATAR_HOST_KEY,
   PRESET_DESC_ATTR,
+  PRESET_DUPLICATE_ATTR,
   PRESET_ICON_HIDDEN_ATTR,
   PRESET_ITEM_ATTR,
   PRESET_ID_ATTR,
@@ -301,6 +302,45 @@ describe('agent preset avatars', () => {
     assert.equal(menu.querySelectorAll(`img.${PRESET_MENU_AVATAR_CLASS}`).length, 3, 'a re-pass must not duplicate row avatars')
   })
 
+  it('hides duplicate preset options (such as legacy tiktok-agent and omni-agent) with high priority', async () => {
+    const { doc } = setup()
+    installAgentPresetAvatarEnhancer(doc)
+
+    const menu = doc.createElement('div')
+    menu.setAttribute('role', 'menu')
+    menu.setAttribute('class', 'Qw9kLm_list Qw9kLm_portal')
+    menu.innerHTML = `
+      <div class="Qw9kLm_viewport" role="presentation">
+        ${presetRow({ name: '创建Agent', description: '自主构建业务智能体。' })}
+        ${presetRow({ name: '短剧专家', description: '微短剧工业化编剧与分镜。' })}
+        ${presetRow({ name: '日常工作', description: '日常助理。' })}
+        ${presetRow({ name: '社媒专家', description: '全域社媒爆款创作与矩阵运营增长。', selected: true })}
+        ${presetRow({ name: '营销专家', description: '全域获客与创意投放。' })}
+        ${presetRow({ name: '社媒专家', description: '全域社媒爆款创作（旧别名通道）。' })}
+      </div>`
+    doc.body.appendChild(menu)
+    await flush()
+
+    const rows = [...menu.querySelectorAll('[role="menuitem"]')]
+    assert.equal(rows.length, 6, 'raw menu contains 6 items including duplicate')
+
+    // 1st social lead row (index 3) is kept
+    const firstSocial = rows[3]
+    assert.equal(firstSocial.getAttribute(PRESET_ITEM_ATTR), 'omni-agent')
+    assert.equal(firstSocial.hasAttribute(PRESET_DUPLICATE_ATTR), false)
+    assert.notEqual(firstSocial.style.display, 'none')
+
+    // 2nd social lead row (index 5) is marked duplicate and hidden
+    const secondSocial = rows[5]
+    assert.equal(secondSocial.getAttribute(PRESET_ITEM_ATTR), 'omni-agent')
+    assert.equal(secondSocial.getAttribute(PRESET_DUPLICATE_ATTR), 'true')
+    assert.equal(secondSocial.style.display, 'none')
+    assert.equal(secondSocial.style.getPropertyPriority('display'), 'important')
+
+    // CSS must enforce display: none !important on duplicate attribute
+    assert.match(AGENT_PRESET_AVATAR_CSS, /\[data-omnimux-preset-duplicate\][\s\S]*?display:\s*none\s*!important/)
+  })
+
   it('leaves the slash/trigger candidate menu alone', async () => {
     const { doc } = setup()
     installAgentPresetAvatarEnhancer(doc)
@@ -326,6 +366,7 @@ describe('agent preset avatars', () => {
     assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}, img.${PRESET_MENU_AVATAR_CLASS}`).length, 0)
     assert.equal(doc.querySelectorAll(`[${PRESET_ITEM_ATTR}]`).length, 0)
     assert.equal(doc.querySelectorAll(`[${PRESET_DESC_ATTR}]`).length, 0)
+    assert.equal(doc.querySelectorAll(`[${PRESET_DUPLICATE_ATTR}]`).length, 0)
     assert.equal(doc.querySelectorAll(`[${PRESET_MENU_ATTR}]`).length, 0)
     assert.equal(doc.querySelectorAll(`[${PRESET_SEAT_ATTR}]`).length, 0)
     assert.equal(doc.querySelectorAll(`[${PRESET_ICON_HIDDEN_ATTR}]`).length, 0)

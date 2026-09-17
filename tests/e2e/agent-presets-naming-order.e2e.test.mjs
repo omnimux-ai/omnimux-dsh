@@ -47,3 +47,10 @@ test('E2E: 出厂保留 tiktok-agent 向后兼容别名，且名称对齐社媒�
   const tiktokPreset = fs.readFileSync(path.join(presetsDir, 'tiktok-agent/preset.yml'), 'utf8');
   assert.match(tiktokPreset, /name:\s*社媒专家/, 'tiktok-agent 兼容别名名称必须对齐社媒专家');
 });
+
+test('E2E: 前端预设装饰器强制去重并隐藏重复预设项保证单选唯一性', () => {
+  const enhancerSource = fs.readFileSync(path.join(root, 'plugins/omnimux/src/client/agent-preset-enhancer.js'), 'utf8');
+  assert.match(enhancerSource, /export const PRESET_DUPLICATE_ATTR = ['"]data-omnimux-preset-duplicate['"]/, '必须导出 PRESET_DUPLICATE_ATTR 标记');
+  assert.match(enhancerSource, /item\.setAttribute\(PRESET_DUPLICATE_ATTR,\s*['"]true['"]\)/, '重复项必须设置 duplicate 属性');
+  assert.match(enhancerSource, /\[data-omnimux-preset-duplicate\][\s\S]*?display:\s*none\s*!important/, 'CSS 规则中 duplicate 属性必须具备 !important 隐藏规则');
+});
