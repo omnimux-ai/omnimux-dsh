@@ -166,7 +166,7 @@ materialize_into() {
     done
     if [ "$keep" -eq 0 ]; then
       if [ "$base" = "tiktok-agent" ]; then
-        rm -rf "$child"
+        echo "  · kept legacy alias $base"
       else
         echo "  · kept $base"
       fi
@@ -192,9 +192,11 @@ for home_dir in "${TARGET_HOMES[@]}"; do
   if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
     mkdir -p "$home_dir/agent-presets-shipped"
     materialize_into "$home_dir/agent-presets-shipped"
-    if [ -d "$home_dir/.agent-presets/tiktok-agent" ]; then
-      mkdir -p "$home_dir/.agent-presets/.retired"
-      mv "$home_dir/.agent-presets/tiktok-agent" "$home_dir/.agent-presets/.retired/" 2>/dev/null || rm -rf "$home_dir/.agent-presets/tiktok-agent"
+    mkdir -p "$home_dir/.agent-presets/tiktok-agent"
+    if [ -d "$SRC/tiktok-agent" ]; then
+      cp -R "$SRC/tiktok-agent/." "$home_dir/.agent-presets/tiktok-agent/"
+    elif [ -d "$SRC/omni-agent" ]; then
+      cp -R "$SRC/omni-agent/." "$home_dir/.agent-presets/tiktok-agent/"
     fi
   fi
 
@@ -224,7 +226,9 @@ if [ "$HAS_DEV" -eq 1 ]; then
   materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
   materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
   materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  if [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+  if [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
+  elif [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
     patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
   elif [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets" ]; then
     patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
@@ -235,7 +239,9 @@ if [ "$HAS_PROD" -eq 1 ]; then
   materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
   materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
   materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
-  if [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+  if [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets"
+  elif [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
     patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
   elif [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets" ]; then
     patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"

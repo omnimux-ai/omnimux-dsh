@@ -38,18 +38,28 @@ import {
 const require = createRequire(import.meta.url)
 
 export function loadAsar() {
-  const npxDisk = join(process.env.HOME || '', '.npm/_npx/8b3f11f22d4db0c9/node_modules/asar/lib/disk.js')
-  const npxPickle = join(process.env.HOME || '', '.npm/_npx/8b3f11f22d4db0c9/node_modules/chromium-pickle-js')
-  try {
-    return { disk: require(npxDisk), pickle: require(npxPickle) }
-  } catch {
-    try {
-      return { disk: require('asar/lib/disk.js'), pickle: require('chromium-pickle-js') }
-    } catch (error) {
-      console.error('asar modules not found:', error.message)
-      process.exit(2)
+  const candidateDisks = [
+    join(process.env.HOME || '', '.npm/_npx/8b3f11f22d4db0c9/node_modules/asar/lib/disk.js'),
+    '/Users/x/Desktop/Project/omnimux-desktop-fork/dsh-plugin-desktop/node_modules/@electron/asar/lib/disk.js',
+  ]
+  const candidatePickles = [
+    join(process.env.HOME || '', '.npm/_npx/8b3f11f22d4db0c9/node_modules/chromium-pickle-js'),
+    '/Users/x/Desktop/Project/omnimux-desktop-fork/dsh-plugin-desktop/node_modules/chromium-pickle-js',
+  ]
+  for (let i = 0; i < candidateDisks.length; i++) {
+    if (existsSync(candidateDisks[i]) && existsSync(candidatePickles[i])) {
+      try {
+        return { disk: require(candidateDisks[i]), pickle: require(candidatePickles[i]) }
+      } catch {}
     }
   }
+  for (const mod of ['@electron/asar/lib/disk.js', 'asar/lib/disk.js']) {
+    try {
+      return { disk: require(mod), pickle: require('chromium-pickle-js') }
+    } catch {}
+  }
+  console.error('asar modules not found')
+  process.exit(2)
 }
 
 export function sha256(buf) {
@@ -99,9 +109,12 @@ export function patchAsarPresets(asarPath, presetsDir, opts = {}) {
   const { header, headerSize, headerString } = disk.readArchiveHeaderSync(asarPath)
   const cfg = header.files?.node_modules?.files?.['@deepseek-ai']?.files?.dsh?.files?.config?.files
   const dshAgentPresetsPkg = header.files?.node_modules?.files?.['@deepseek-ai']?.files?.['dsh-agent-presets']?.files
+  const presetAgentPresets = header.files?.preset?.files?.['agent-presets']
 
   let targetNode = null
-  if (dshAgentPresetsPkg?.presets) {
+  if (presetAgentPresets) {
+    targetNode = presetAgentPresets
+  } else if (dshAgentPresetsPkg?.presets) {
     targetNode = dshAgentPresetsPkg.presets
   } else if (cfg?.['agent-presets']) {
     targetNode = cfg['agent-presets']

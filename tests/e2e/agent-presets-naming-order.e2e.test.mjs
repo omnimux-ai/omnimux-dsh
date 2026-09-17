@@ -46,6 +46,13 @@ test('E2E: 出厂保留 tiktok-agent 向后兼容别名，且名称对齐社媒�
   const presetsDir = path.join(root, 'presets');
   const tiktokPreset = fs.readFileSync(path.join(presetsDir, 'tiktok-agent/preset.yml'), 'utf8');
   assert.match(tiktokPreset, /name:\s*社媒专家/, 'tiktok-agent 兼容别名名称必须对齐社媒专家');
+
+  const syncScript = fs.readFileSync(path.join(root, 'scripts/sync-agent-presets.sh'), 'utf8');
+  assert.doesNotMatch(syncScript, /mv.*tiktok-agent.*\.retired/, '同步脚本严禁将 tiktok-agent 兼容预设移入 .retired');
+  assert.match(syncScript, /\.agent-presets\/tiktok-agent/, '同步脚本必须保障用户根目录同步 tiktok-agent 兼容别名');
+
+  const patchScript = fs.readFileSync(path.join(root, 'scripts/patch-asar-agent-presets.mjs'), 'utf8');
+  assert.match(patchScript, /presetAgentPresets/, 'Asar patch 脚本必须支持 preset/agent-presets 节点挂载');
 });
 
 test('E2E: 前端预设装饰器强制去重并隐藏重复预设项保证单选唯一性', () => {
