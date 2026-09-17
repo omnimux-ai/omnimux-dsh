@@ -481,7 +481,7 @@ describe('Cloud card opens the preview', () => {
 
   it('hands the preview handler down from the view to every card', () => {
     assert.match(viewJsx, /const \{ t, open = true, onPreview \} = props/)
-    assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open \}\)/)
+    assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open/)
     assert.match(viewJsx, /onPreview=\{onPreview\}/)
   })
 })

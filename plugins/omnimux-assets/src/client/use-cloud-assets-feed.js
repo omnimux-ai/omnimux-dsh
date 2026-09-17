@@ -142,6 +142,8 @@ const pageCache = new LruCache(240)
  */
 export function useCloudAssetsFeed(options) {
   const { t, open, defaultCategory = CLOUD_ALL_CATEGORY } = options
+  const pageSize = options?.pageSize
+  const batchSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : CLOUD_PAGE_SIZE
   const { manifest, loading: manifestLoading, error: manifestError, reload: reloadManifest } = useCloudManifest({ enabled: open })
 
   // 全部 leads the nav and spans the whole catalog; it is synthesized here rather
@@ -238,10 +240,10 @@ export function useCloudAssetsFeed(options) {
     try {
       // 命中分页缓存就直接用，来回切分类不会二次请求；键含筛选条件，不同
       // 筛选组合不会互相污染。错误结果不入缓存（见下方各失败分支）。
-      const cacheKey = LruCache.keyOf(scope, filtering ? filterTokens : '', page)
+      const cacheKey = LruCache.keyOf(scope, filtering ? filterTokens : '', page, batchSize)
       const cached = pageCache.get(cacheKey)
       const result = cached ?? (filtering
-        ? await cloudFilter({ tokens: filterTokens, limit: CLOUD_PAGE_SIZE, offset: page * CLOUD_PAGE_SIZE })
+        ? await cloudFilter({ tokens: filterTokens, limit: batchSize, offset: page * batchSize })
         : await cloudPage(scope, page))
       if (cached === undefined && result.ok === true) pageCache.set(cacheKey, result)
       if (requestRef.current !== token) return
@@ -270,7 +272,7 @@ export function useCloudAssetsFeed(options) {
     } finally {
       if (requestRef.current === token) setLoadingPage(false)
     }
-  }, [category, subCategory, filtering, filterTokens, t])
+  }, [category, subCategory, filtering, filterTokens, t, batchSize])
 
   // Scope change — a category, a sub-category or a dimension combination: stop
   // any audition, drop the old rows, and fetch page 0 of the new scope.
@@ -315,7 +317,7 @@ export function useCloudAssetsFeed(options) {
           // after picking 女性 answered with male rows, because the request
           // carried the needle and the category but not the selection.
           dims: filterTokens,
-          limit: CLOUD_PAGE_SIZE,
+          limit: batchSize,
           offset: 0,
         })
         if (cancelled) return
@@ -361,7 +363,7 @@ export function useCloudAssetsFeed(options) {
             // A second search page carries the same selection as the first, or
             // the appended rows would come from a wider scope than page one.
             dims: filterTokens,
-            limit: CLOUD_PAGE_SIZE,
+            limit: batchSize,
             offset: searchResult.items.length,
           })
           if (!result.ok) return

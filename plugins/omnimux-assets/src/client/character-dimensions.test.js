@@ -259,7 +259,7 @@ describe('The filter bar is wired to the feed, not to a local counter', () => {
   })
 
   it('asks the Host to filter the index instead of filtering the loaded rows', () => {
-    assert.match(feed, /\? await cloudFilter\(\{ tokens: filterTokens, limit: CLOUD_PAGE_SIZE, offset: page \* CLOUD_PAGE_SIZE \}\)/)
+    assert.match(feed, /\? await cloudFilter\(\{ tokens: filterTokens, limit: (?:batchSize|CLOUD_PAGE_SIZE), offset:/)
     assert.doesNotMatch(feed, /characterRowMatches/)
   })
 
