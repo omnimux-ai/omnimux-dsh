@@ -1,0 +1,11 @@
+{
+  "task": "video-breakdown-priority-exclusivity",
+  "timestamp": "2026-09-18T14:07:06.705Z",
+  "verifiedFeatures": [
+    "isBreakdownOrAnalysisTurn detects breakdown indicators accurately",
+    "exclusivity gate blocks auto-open on breakdown turns to protect breakdown workbench",
+    "MediaViewerTab video element does not autoPlay (autoPlay attribute removed)"
+  ],
+  "evidenceScreenshot": "docs/evidence/video-breakdown-priority-verified.png",
+  "testStatus": "PASS (11 unit tests passed, 4 E2E tests passed)"
+}

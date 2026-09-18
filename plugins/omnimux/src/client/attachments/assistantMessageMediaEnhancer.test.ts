@@ -12,6 +12,7 @@ import {
   hasAutoOpened,
   resetAutoOpenedForTests,
   isUserMessageNode,
+  isBreakdownOrAnalysisTurn,
 } from './assistantMessageMediaEnhancer.ts';
 import { getGlobalMediaViewerStore } from '../media-viewer/media-viewer-store.js';
 
@@ -328,3 +329,51 @@ test('assistantMessageMediaEnhancer: multi-item gallery structure, selection, vi
   assert.ok(mainImg, 'Main stage must now render third image');
   assert.equal(mainImg?.getAttribute('src'), 'http://example.com/face2.png');
 });
+
+test('assistantMessageMediaEnhancer: isBreakdownOrAnalysisTurn detects breakdown indicators accurately', () => {
+  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="t1">普通文本</div><div id="t2"><p>四、爆款短视频复刻与落地建议</p><p>各分镜关键帧截图及详细标签属性</p></div><div id="t3"><a href="/path/to/demo.vbreakdown">查看</a></div><div id="t4"><div class="vbreakdown-viewer">内容</div></div></body></html>');
+  const doc = dom.window.document;
+
+  assert.equal(isBreakdownOrAnalysisTurn(doc.getElementById('t1')), false);
+  assert.equal(isBreakdownOrAnalysisTurn(doc.getElementById('t2')), true);
+  assert.equal(isBreakdownOrAnalysisTurn(doc.getElementById('t3')), true);
+  assert.equal(isBreakdownOrAnalysisTurn(doc.getElementById('t4')), true);
+});
+
+test('assistantMessageMediaEnhancer: exclusivity gate blocks auto-open on breakdown turns to protect breakdown workbench', () => {
+  resetAutoOpenedForTests();
+  let workbenchOpenedTabId: string | null = null;
+  const dom = new JSDOM(`
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <div class="flowItem" data-chat-turn="breakdown-1" data-chat-flow-kind="tool">
+          <video src="http://example.com/analyzed-video.mp4" title="TikTok样片"></video>
+        </div>
+        <div class="flowItem" data-chat-turn="breakdown-1" data-chat-flow-kind="assistant-step">
+          <div class="bubble">
+            <h3>四、爆款短视频复刻与落地建议</h3>
+            <p>分镜关键帧已拆解完毕，保存为 video-analysis-123.vbreakdown</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  const doc = dom.window.document;
+  const win = dom.window as any;
+  win.__omnimuxWorkbench = {
+    openWorkbench: ({ tabId }: { tabId: string }) => {
+      workbenchOpenedTabId = tabId;
+      return true;
+    },
+  };
+
+  const turnNodes = Array.from(doc.querySelectorAll('[data-chat-turn="breakdown-1"]')) as HTMLElement[];
+  const enhanced = enhanceTurnMedia('breakdown-1', turnNodes, doc);
+
+  assert.equal(enhanced, true, 'Turn media should still be registered and tail mounted');
+  assert.equal(workbenchOpenedTabId, null, 'Workbench auto-open must be suppressed by exclusivity gate to prioritize breakdown workbench');
+  // Verify tail is created
+  assert.ok(doc.querySelector('.omx-chat-media-tail'), 'Media tail element should still be present');
+});
+
