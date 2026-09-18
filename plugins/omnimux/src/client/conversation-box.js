@@ -1,6 +1,7 @@
 import { isRightSidebarExpanded } from './split-compact-layout.js'
 import { ensureConversationVisible as ensureConversationVisibleShared } from './workbench/ensure-conversation-visible.js'
 import { requestRailActivationSync } from './workbench/sidebar-activation.js'
+import { loadConversationCollapsed } from './conversation-collapse.js'
 
 /**
  * @param {unknown} node
@@ -447,6 +448,20 @@ function handleSessionEnterIntent(target) {
   return sessionRowPlainClick(target) || workspaceNewSessionButton(target) || newSessionMenuPick(target)
 }
 
+function extractSessionIdFromTarget(target) {
+  if (!(target instanceof Element)) return undefined
+  const row = target.closest('[data-session-id], [data-tree-item-session-id], [role="treeitem"]')
+  const idAttr = row?.getAttribute('data-session-id') || row?.getAttribute('data-tree-item-session-id') || row?.id
+  return idAttr || undefined
+}
+
+function shouldPreserveFullscreenForSession(target) {
+  if (!(target instanceof Element)) return false
+  const sid = extractSessionIdFromTarget(target)
+  if (sid && loadConversationCollapsed(sid)) return true
+  return false
+}
+
 /**
  * 任意工作区会话行离开产品页；已选中行官方 no-op 也要关。
  * 「新会话」官方会复用空白会话（看起来像没点），一级页必须自己关 overlay。
@@ -459,9 +474,14 @@ function watchSelectedSessionClick() {
   document.addEventListener('click', (event) => {
     const target = event.target
     if (!handleSessionEnterIntent(target)) return
-    if (document.documentElement.dataset.dshProductStage) leaveProductStage()
-    ensureConversationVisible()
-    if (isNewSessionIntent(target)) reconcileWorkbenchPanel()
+    const inProductStage = Boolean(document.documentElement.dataset.dshProductStage)
+    if (inProductStage) leaveProductStage()
+    if (isNewSessionIntent(target)) {
+      ensureConversationVisible()
+      reconcileWorkbenchPanel()
+    } else if (inProductStage || !shouldPreserveFullscreenForSession(target)) {
+      ensureConversationVisible()
+    }
   }, true)
   document.addEventListener('click', (event) => {
     const target = event.target

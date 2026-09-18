@@ -21,12 +21,14 @@ import {
   installTabViewportReconciler,
   resolveCurrentTabId,
 } from './tab-viewport-reconciler.js'
+import { resetConversationCollapseForTests } from '../conversation-collapse.js'
 
 let dom
 const previousWindow = globalThis.window
 const previousDocument = globalThis.document
 
 afterEach(() => {
+  resetConversationCollapseForTests()
   dom?.window.close()
   dom = undefined
   if (previousWindow === undefined) delete globalThis.window
@@ -200,6 +202,83 @@ test('AC-7 左侧会话列表有无选中行，调和结果完全一致', () => 
   }
   assert.deepEqual(outcomes[0], outcomes[1], '右侧栏呈现方式不得依赖左侧列表的渲染事实')
   assert.equal(outcomes[0].isFs, false)
+})
+
+test('AC-8 同一会话内全屏后切换任意页签，视窗模式绝对锁定全屏，绝不跳变或自动退出', () => {
+  const doc = setupDom(OPEN_PANEL)
+  const { state, storage, enters, exits, reconciler } = harness(doc, { tab: 'omnimux-workflow:library', isFs: false })
+
+  // 1. 初态分栏
+  reconciler.sync()
+  assert.equal(state.isFs, false)
+
+  // 2. 用户在当前会话主动点击全屏
+  state.isFs = true
+  reconciler.sync()
+  assert.equal(state.isFs, true)
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, '会话栏被折叠')
+
+  // 3. 在同一会话内连续切换到其他未记录全屏的页签（资产库、技能/专家）
+  state.tab = 'omnimux-assets:library'
+  reconciler.sync()
+  assert.equal(state.isFs, true, '切换至资产库必须保持全屏')
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, '会话栏继续保持折叠')
+  assert.deepEqual(exits, [], '绝不得触发任何退出全屏')
+
+  state.tab = 'omnimux-market:plaza'
+  reconciler.sync()
+  assert.equal(state.isFs, true, '切换至技能专家必须保持全屏')
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, '会话栏继续保持折叠')
+  assert.deepEqual(exits, [], '绝不得触发任何退出全屏')
+
+  // 4. 切回最初的项目页签
+  state.tab = 'omnimux-workflow:library'
+  reconciler.sync()
+  assert.equal(state.isFs, true, '切回项目必须保持全屏')
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, '会话栏继续保持折叠')
+})
+
+test('AC-9 跨会话视窗记忆严格隔离与平滑精准还原', () => {
+  const doc = setupDom(OPEN_PANEL)
+  let currentSession = 'session-A'
+  const state = { tab: 'omnimux-workflow:library', isFs: false }
+  const enters = []
+  const exits = []
+
+  const reconciler = createTabViewportReconciler({
+    getDoc: () => doc,
+    getSessionId: () => currentSession,
+    getTabId: () => state.tab,
+    isFullscreen: () => state.isFs,
+    enterFullscreen: () => {
+      enters.push(currentSession)
+      state.isFs = true
+    },
+    exitFullscreen: () => {
+      exits.push(currentSession)
+      state.isFs = false
+    },
+  })
+
+  // 1. 在 session-A 中，初始分栏，用户点击全屏
+  reconciler.sync()
+  state.isFs = true
+  reconciler.sync()
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, 'session-A 为全屏')
+
+  // 2. 切换至 session-B（新会话/默认分栏会话）
+  currentSession = 'session-B'
+  reconciler.sync()
+  assert.equal(state.isFs, false, 'session-B 自动还原为分栏')
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), false, 'session-B 会话栏展开')
+  assert.deepEqual(exits, ['session-B'], '对 session-B 执行了一次平滑退出全屏')
+
+  // 3. 切换回 session-A
+  currentSession = 'session-A'
+  reconciler.sync()
+  assert.equal(state.isFs, true, 'session-A 自动精准还原为全屏')
+  assert.equal(doc.documentElement.hasAttribute('data-omnimux-conversation-collapsed'), true, 'session-A 会话栏自动恢复折叠')
+  assert.deepEqual(enters, ['session-A'], '对 session-A 执行了一次平滑进入全屏')
 })
 
 test('installTabViewportReconciler lifecycle: install and uninstall without leak', () => {

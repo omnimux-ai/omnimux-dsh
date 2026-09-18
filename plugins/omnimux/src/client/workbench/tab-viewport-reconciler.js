@@ -37,6 +37,11 @@ import {
   isHostRightSidebarFullscreen,
   HOST_RIGHT_PANEL_ATTR,
 } from './host-fullscreen.js'
+import {
+  applyConversationCollapsedAttr,
+  loadConversationCollapsed,
+  persistConversationCollapsed,
+} from '../conversation-collapse.js'
 
 const TITLE_TO_TAB_ID = new Map(
   Object.entries(WORKBENCH_TAB_TITLE_FALLBACKS).map(([tabId, title]) => [title, tabId])
@@ -143,10 +148,14 @@ export function createTabViewportReconciler(deps = {}) {
   const isFullscreen = deps.isFullscreen || (() => isHostRightSidebarFullscreen(getDoc()))
   const enterFullscreen = deps.enterFullscreen || (() => enterHostRightSidebarFullscreen(getDoc()))
   const exitFullscreen = deps.exitFullscreen || (() => exitHostRightSidebarFullscreen(getDoc()))
+  const loadCollapsed = deps.loadConversationCollapsed || loadConversationCollapsed
+  const persistCollapsed = deps.persistConversationCollapsed || persistConversationCollapsed
+  const applyCollapsedAttr = deps.applyConversationCollapsedAttr || applyConversationCollapsedAttr
 
   let lastActiveTabId = null
   let lastMode = null
-  /** 上一轮观测时面板是否展开；`null` 表示尚未观测过（首轮不视为「刚刚展开」）。 */
+  let lastSessionId = null
+  /** 上一轮观测时面板是否展开；`null` 表示尚未观测过。 */
   let lastPanelOpen = null
   let isReconciling = false
   let unlockTimer = null
@@ -172,74 +181,84 @@ export function createTabViewportReconciler(deps = {}) {
       return
     }
 
-    // 收起 → 展开的那一次同步：展开是一次「并排」意图，本次一律呈现分栏，
-    // 即便该页签留有显式全屏记录也不在此刻占满整屏。
-    const justOpened = lastPanelOpen === false
     lastPanelOpen = true
 
     const currentMode = isFullscreen() ? 'fullscreen' : 'push'
     const currentTab = getTabId()
     const sessionId = getSessionId()
 
-    // 1. 优先处理 Tab 切换：切 Tab 时无论调和锁如何，立即响应该 Tab 的独立视窗偏好
-    if (currentTab && currentTab !== lastActiveTabId) {
+    // 1. 会话切换场景（Session Switch）：读取并恢复目标会话自身的视窗开闭偏好
+    if (sessionId && sessionId !== lastSessionId) {
+      lastSessionId = sessionId
       lastActiveTabId = currentTab
       lastMode = currentMode
 
-      // 仅对工作台相关的 Tab 实施视窗偏好调和
-      if (isWorkbenchTab(currentTab)) {
-        // 用户当前工作流状态绝对优先（Issue #2212）：
-        // 若当前面板处于分栏模式（currentMode === 'push'，三栏并排状态），用户在右栏切换 Tab 仅仅是在分栏内切换浏览内容，
-        // 绝不因目标 Tab 的历史偏好而自动执行全屏拉伸覆盖中间会话。保持分栏并持续黄金宽度保底。
-        if (currentMode === 'push') {
-          ensureHealthySplitWidth(doc)
-          return
+      const sessionCollapsed = loadCollapsed(sessionId)
+      if (sessionCollapsed && currentMode !== 'fullscreen') {
+        isReconciling = true
+        lastMode = 'fullscreen'
+        try {
+          enterFullscreen()
+          applyCollapsedAttr(true, doc)
+        } finally {
+          scheduleUnlock()
         }
-
-        const record = getFocusRecord(sessionId, currentTab)
-        // 只有用户亲手选过视窗模式的页签才恢复其偏好。`focusRecordForTab` 会按
-        // `resolveDefaultFocus` 自动播种（工作台页签为 gui），那不是用户意图 —— 按分栏处理。
-        const targetMode = !justOpened && record?.explicit === true
-          ? record.mode
-          : WORKBENCH_FOCUS.split
-
-        if (targetMode === WORKBENCH_FOCUS.split && currentMode === 'fullscreen') {
-          isReconciling = true
-          lastMode = 'push'
-          try {
-            exitFullscreen()
-            if (doc?.documentElement) {
-              doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
-              doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
-            }
-            ensureHealthySplitWidth(doc)
-          } finally {
-            scheduleUnlock()
+        return
+      } else if (!sessionCollapsed && currentMode === 'fullscreen') {
+        isReconciling = true
+        lastMode = 'push'
+        try {
+          exitFullscreen()
+          applyCollapsedAttr(false, doc)
+          if (doc?.documentElement) {
+            doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
           }
-          return
+          ensureHealthySplitWidth(doc)
+        } finally {
+          scheduleUnlock()
         }
+        return
       }
       return
     }
 
-    // 2. 同一 Tab 下，如果正在自动化调和模式，不当作用户手势写入偏好
+    // 2. Tab 切换场景：在同一个会话记录内，切换右侧 Tab 绝对锁定当前全屏/分栏模式，绝不弹开展开！
+    if (currentTab && currentTab !== lastActiveTabId) {
+      lastActiveTabId = currentTab
+      lastMode = currentMode
+      if (currentMode === 'push') {
+        ensureHealthySplitWidth(doc)
+      }
+      return
+    }
+
+    // 3. 正在自动化调和模式，不当作用户手势写入偏好
     if (isReconciling) {
       lastMode = currentMode
       return
     }
 
-    // 3. 用户手势场景：在同一个 Tab 下，面板模式发生了改变
-    if (currentTab && lastActiveTabId === currentTab && lastMode && currentMode !== lastMode) {
+    // 4. 用户手势场景：在同一个会话内，用户手动点击模式按钮改变了模式
+    if (lastMode && currentMode !== lastMode) {
       lastMode = currentMode
-      if (isWorkbenchTab(currentTab)) {
-        const newMode = currentMode === 'fullscreen' ? WORKBENCH_FOCUS.gui : WORKBENCH_FOCUS.split
-        // `explicit: true` 是「这次是用户亲手选的」凭据：后续切回该页签才恢复其偏好。
-        persistFocus(sessionId, currentTab, { mode: newMode, explicit: true })
-        if (newMode === WORKBENCH_FOCUS.split && doc?.documentElement) {
-          doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
-          doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
-          ensureHealthySplitWidth(doc)
+      const isFs = currentMode === 'fullscreen'
+      if (sessionId) {
+        persistCollapsed(isFs, sessionId)
+        if (currentTab && isWorkbenchTab(currentTab)) {
+          persistFocus(sessionId, currentTab, {
+            mode: isFs ? WORKBENCH_FOCUS.gui : WORKBENCH_FOCUS.split,
+            explicit: true,
+          })
         }
+      }
+      if (isFs) {
+        applyCollapsedAttr(true, doc)
+      } else {
+        applyCollapsedAttr(false, doc)
+        if (doc?.documentElement) {
+          doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+        }
+        ensureHealthySplitWidth(doc)
       }
       return
     }
@@ -253,6 +272,7 @@ export function createTabViewportReconciler(deps = {}) {
     reset() {
       lastActiveTabId = null
       lastMode = null
+      lastSessionId = null
       lastPanelOpen = null
       isReconciling = false
       if (unlockTimer) {
