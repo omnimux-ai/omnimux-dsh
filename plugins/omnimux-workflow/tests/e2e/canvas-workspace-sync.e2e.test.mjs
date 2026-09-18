@@ -80,4 +80,23 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
     /t\('canvas\.unprojectedTitle'\)/,
     'CanvasTab 必须通过多语言函数读取未建项标题',
   )
+
+  // 4. 侧边栏画布注册显式注入工作流服务，防御 Context 未注入异常 (#2382)
+  const indexClientPath = join(here, '../../src/client/index.js')
+  const indexClientSrc = readFileSync(indexClientPath, 'utf8')
+  assert.match(
+    indexClientSrc,
+    /registerCanvas\s*=\s*\(sidebar\)\s*=>[\s\S]*?createElement\(CanvasTab,\s*\{[\s\S]*?workspaces:\s*ctx\.workspaces[\s\S]*?\}\)/,
+    'registerCanvas 必须显式将工作流已 inject 的 workspaces 服务透传给 CanvasTab',
+  )
+  assert.match(
+    canvasTabSrc,
+    /workspaces:\s*propWorkspaces/,
+    'CanvasTab 必须声明接收并优先使用 props 传入的 workspaces 服务',
+  )
+  assert.match(
+    canvasTabSrc,
+    /safeGetService\(ctx,\s*'workspaces'\)/,
+    'CanvasTab 必须对 ctx 进行安全服务属性读取防护，防御未注入 Context 崩溃',
+  )
 })

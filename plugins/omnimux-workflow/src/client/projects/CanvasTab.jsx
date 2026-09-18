@@ -15,6 +15,15 @@ import { applyProjectCanvasRatio, CANVAS_TAB_ID, getBetterSidebar, resolveCanvas
 /** Stable page id for UI Context Envelope (Agent workspace targeting). */
 export const CANVAS_PAGE_ID = 'workflow-canvas'
 
+function safeGetService(target, prop) {
+  if (!target || typeof target !== 'object') return undefined
+  try {
+    return target[prop]
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * @param {{
  *   ctx: { locale?: { subscribe: Function, getLocale: Function }, betterSidebar?: object },
@@ -23,9 +32,24 @@ export const CANVAS_PAGE_ID = 'workflow-canvas'
  *   store?: { reduce?: Function, getSnapshot?: Function, getPrefs?: Function },
  *   scope?: { sessionId?: string },
  *   tab?: { id?: string, meta?: { focusGroupId?: unknown } },
+ *   sessions?: object,
+ *   workspaces?: object,
+ *   layout?: object,
+ *   betterSidebar?: object,
  * }} props
  */
-export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
+export function CanvasTab({
+  ctx,
+  t,
+  visible,
+  store,
+  scope,
+  tab,
+  sessions: propSessions,
+  workspaces: propWorkspaces,
+  layout: propLayout,
+  betterSidebar: propBetterSidebar,
+}) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const locale = ctx?.locale
   const activeLocale = useSyncExternalStore(
@@ -182,7 +206,8 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
         return
       }
       // 没有 tab store.reduce 时 apply 只写盘，返回 undefined，必须继续等。
-      const result = applyProjectCanvasRatio(getBetterSidebar(ctx), sessionId, store, {}, force)
+      const activeSidebar = propBetterSidebar || getBetterSidebar(ctx)
+      const result = applyProjectCanvasRatio(activeSidebar, sessionId, store, {}, force)
       if (result === undefined && attempts < 80) {
         attempts += 1
         timer = window.setTimeout(() => tick(force), 50)
@@ -234,7 +259,7 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
         window.removeEventListener('resize', onResize)
       }
     }
-  }, [visible, sessionId, store, ctx])
+  }, [visible, sessionId, store, ctx, propBetterSidebar])
 
   // 关闭走面板自己的 × / tab 关闭，不调 layout.closeDetails。
   // 必须稳定引用：CanvasBridge 虽已不再因 onClose 卸岛，但仍走 updateCanvas。
@@ -291,12 +316,24 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
             setBusy(true)
             setCreateError('')
             try {
+              const effectiveSessions = propSessions
+                || safeGetService(ctx, 'sessions')
+                || (typeof window !== 'undefined' ? window.__omnimuxWorkflow?.sessions || window.__omnimuxSessions : undefined)
+              const effectiveWorkspaces = propWorkspaces
+                || safeGetService(ctx, 'workspaces')
+                || (typeof window !== 'undefined' ? window.__omnimuxWorkflow?.workspaces || window.__omnimuxWorkspaces : undefined)
+              const effectiveLayout = propLayout
+                || safeGetService(ctx, 'layout')
+                || (typeof window !== 'undefined' ? window.__omnimuxWorkflow?.layout : undefined)
+              const effectiveSidebar = propBetterSidebar
+                || getBetterSidebar(ctx)
+
               const res = await runNewProject(
                 {
-                  sessions: ctx?.sessions,
-                  workspaces: ctx?.workspaces,
-                  layout: ctx?.layout,
-                  betterSidebar: ctx?.betterSidebar,
+                  sessions: effectiveSessions,
+                  workspaces: effectiveWorkspaces,
+                  layout: effectiveLayout,
+                  betterSidebar: effectiveSidebar,
                   t,
                 },
                 { title, projectRoot }
