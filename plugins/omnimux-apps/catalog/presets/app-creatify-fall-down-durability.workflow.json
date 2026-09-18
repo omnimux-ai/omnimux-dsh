@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 3,
+  "id": "ws-app-creatify-fall-down-durability",
+  "name": "高空跌落耐用防摔与折扣实测",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "node-slot-product-image",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "image",
+        "tool": "import-image",
+        "label": "商品主图槽位 (Product Image)",
+        "slotRole": "product_image",
+        "isSlot": true,
+        "mediaUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp",
+        "params": {
+          "aspectRatio": "9:16"
+        }
+      }
+    },
+    {
+      "id": "node-slot-copywriting",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 350
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "核心文案槽位 (Copywriting)",
+        "slotRole": "copywriting",
+        "isSlot": true,
+        "content": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale.",
+        "prompt": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
+      }
+    },
+    {
+      "id": "node-video-generation-core",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 200
+      },
+      "data": {
+        "type": "video",
+        "tool": "omnimux_video_submit",
+        "label": "高空跌落耐用防摔与折扣实测 视频生成内核",
+        "model": "seedance-2.0",
+        "params": {
+          "aspectRatio": "9:16",
+          "duration": 5,
+          "mode": "first_frame"
+        },
+        "upstreamBindings": {
+          "image": "node-slot-product-image",
+          "prompt": "node-slot-copywriting"
+        }
+      }
+    },
+    {
+      "id": "node-slot-voice-tts",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 450
+      },
+      "data": {
+        "type": "audio",
+        "tool": "omnimux_audio_submit",
+        "label": "旁白解说与音色 (Voice TTS)",
+        "slotRole": "voice_tts",
+        "isSlot": true,
+        "params": {
+          "voice": "zh_female_energetic",
+          "speed": 1
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-img-to-video",
+      "source": "node-slot-product-image",
+      "target": "node-video-generation-core",
+      "targetHandle": "image",
+      "label": "商品图输入"
+    },
+    {
+      "id": "edge-text-to-video",
+      "source": "node-slot-copywriting",
+      "target": "node-video-generation-core",
+      "targetHandle": "prompt",
+      "label": "分镜文案"
+    }
+  ],
+  "settings": {
+    "maxParallel": 2,
+    "failStrategy": "fail-fast"
+  },
+  "metadata": {
+    "createdAt": "2026-09-18T04:01:07.929Z",
+    "updatedAt": "2026-09-18T04:01:07.930Z",
+    "nodeCount": 4,
+    "sourceWorkflowId": "73b5fb39-bcb1-48bc-a382-6de753fcb740"
+  }
+}

@@ -283,9 +283,13 @@ function BlankSessionGuide({
   }
 
   /**
-   * 模板类型复刻：预填 Prompt 到输入框，插槽支持资产快捷指令替换
+   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt
    */
   function handleExploreTemplateApply(payload) {
+    if (payload?.appId) {
+      showToast(`已为您打开【${payload.title || 'AI 应用'}】`)
+      return
+    }
     if (!payload?.prompt) return
     applyDraftToComposer(payload.prompt, {
       toastKey: null,

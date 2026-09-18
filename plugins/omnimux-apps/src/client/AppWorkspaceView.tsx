@@ -28,6 +28,7 @@ import type {
   ShowcaseItem,
 } from '../shared/manifest.ts';
 import type { AppIndexEntry, TaskRecord } from '../host/storage/appStorage.ts';
+import BUILTIN_APPS_RAW from '../../catalog/builtin-apps.json';
 import { APP_OPEN_EVENT, TABS_CHANGED_EVENT } from './stage.ts';
 import { AppFormPanel } from './AppFormPanel.tsx';
 import './apps.css';
@@ -102,21 +103,35 @@ export const AppWorkspaceView: React.FC<AppWorkspaceViewProps> = memo(({
       try {
         if (typeof window !== 'undefined') {
           const stored = window.localStorage?.getItem('omnimux_apps_manifests');
+          let manifestsMap: Record<string, ApplicationManifest> = {};
           if (stored) {
-            const manifestsMap: Record<string, ApplicationManifest> = JSON.parse(stored);
-            const entries: AppIndexEntry[] = Object.values(manifestsMap).map((m) => ({
-              appId: m.appId,
-              name: m.metadata.name,
-              category: m.metadata.category,
-              description: m.metadata.description,
-              iconSvg: m.metadata.iconSvg,
-              coverUrl: m.metadata.coverUrl,
-              latestVersion: m.version,
-              versions: [m.version],
-              createdAt: m.createdAt,
-              updatedAt: m.createdAt,
-            }));
-            setAppsList(entries);
+            try {
+              manifestsMap = JSON.parse(stored);
+            } catch {}
+          }
+          if (Array.isArray(BUILTIN_APPS_RAW)) {
+            for (const b of BUILTIN_APPS_RAW as unknown as ApplicationManifest[]) {
+              if (!manifestsMap[b.appId]) {
+                manifestsMap[b.appId] = b;
+              }
+            }
+          }
+          const entries: AppIndexEntry[] = Object.values(manifestsMap).map((m) => ({
+            appId: m.appId,
+            name: m.metadata.name,
+            category: m.metadata.category,
+            description: m.metadata.description,
+            iconSvg: (m.metadata as any).iconSvg || '',
+            coverUrl: (m.metadata as any).coverUrl || m.showcase?.items?.[0]?.posterUrl || '',
+            latestVersion: m.version,
+            versions: [m.version],
+            createdAt: (m as any).createdAt || new Date().toISOString(),
+            updatedAt: (m as any).updatedAt || new Date().toISOString(),
+          }));
+          setAppsList(entries);
+          if (!currentAppId && entries.length > 0) {
+            setCurrentAppId(entries[0].appId);
+            setCurrentManifest(manifestsMap[entries[0].appId]);
           }
         }
       } catch {
@@ -149,13 +164,21 @@ export const AppWorkspaceView: React.FC<AppWorkspaceViewProps> = memo(({
     try {
       if (typeof window !== 'undefined') {
         const stored = window.localStorage?.getItem('omnimux_apps_manifests');
+        let manifestsMap: Record<string, ApplicationManifest> = {};
         if (stored) {
-          const manifestsMap: Record<string, ApplicationManifest> = JSON.parse(stored);
-          const matched = manifestsMap[currentAppId];
-          if (matched) {
-            setCurrentManifest(matched);
-            return;
-          }
+          try {
+            manifestsMap = JSON.parse(stored);
+          } catch {}
+        }
+        let matched = manifestsMap[currentAppId];
+        if (!matched && Array.isArray(BUILTIN_APPS_RAW)) {
+          matched = (BUILTIN_APPS_RAW as unknown as ApplicationManifest[]).find(
+            (a) => a.appId === currentAppId
+          );
+        }
+        if (matched) {
+          setCurrentManifest(matched);
+          return;
         }
       }
     } catch {
