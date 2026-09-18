@@ -160,19 +160,21 @@ const CSS = `
 }
 .omx-product-pick-card__thumbs-row {
   position: absolute; left: 8px; bottom: 8px; z-index: 2;
-  display: flex; align-items: center; gap: 4px; pointer-events: none;
+  display: flex; align-items: center; gap: 6px; pointer-events: none;
 }
 .omx-product-pick-card__sub-thumb {
-  width: 22px; height: 22px; border-radius: 4px; object-fit: cover;
-  border: 1px solid var(--dsw-alias-border-l4);
+  width: 28px; height: 28px; border-radius: 5px; object-fit: cover;
+  border: 1.5px solid var(--dsw-alias-border-solid, #ffffff); /* exempt-ui03 对标参考图高对比度白描边防背景融合 */
   background: var(--dsw-alias-bg-layer-2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); /* exempt-ui03 立体悬浮投影防背景吞噬 */
   display: block; flex-shrink: 0;
 }
 .omx-product-pick-card__sub-badge {
-  min-width: 22px; height: 22px; padding: 0 4px; border-radius: 4px;
-  background: var(--dsw-alias-bg-layer-3);
-  border: 1px solid var(--dsw-alias-border-l2);
-  color: var(--dsw-alias-label-primary); font-size: 10px; font-weight: 600; line-height: 20px;
+  min-width: 28px; height: 28px; padding: 0 5px; border-radius: 5px;
+  background: var(--dsw-alias-backdrop-overlay, rgba(0, 0, 0, 0.75)); /* exempt-ui03 半透黑色底 */
+  border: 1.5px solid var(--dsw-alias-border-solid, #ffffff); /* exempt-ui03 对标参考图高对比度白描边 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); /* exempt-ui03 悬浮投影 */
+  color: var(--dsw-alias-label-primary-foreground, #ffffff); font-size: 11px; font-weight: 600; line-height: 25px;
   text-align: center; display: inline-flex; align-items: center; justify-content: center;
   box-sizing: border-box; flex-shrink: 0;
 }
