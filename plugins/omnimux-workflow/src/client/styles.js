@@ -348,16 +348,20 @@ export const WORKFLOW_CSS = `
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-1);
   flex-shrink: 0;
+  gap: 16px;
 }
 .omx-apptab-header-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 .omx-apptab-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
+  flex-shrink: 0;
 }
 .omx-apptab-badge {
   padding: 2px 8px;
@@ -367,18 +371,77 @@ export const WORKFLOW_CSS = `
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   border: 1px solid var(--dsw-alias-border-l1);
+  flex-shrink: 0;
 }
 .omx-apptab-version {
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
+  flex-shrink: 0;
 }
 .omx-apptab-desc {
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
-  max-width: 300px;
+  margin-left: 6px;
+  max-width: 520px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.omx-apptab-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.omx-apptab-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.omx-apptab-edit-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: var(--dsw-alias-border-l1);
+}
+.omx-apptab-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.omx-apptab-edit-icon {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+}
+.omx-apptab-notice {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.omx-apptab-notice--info {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-brand-primary);
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+.omx-apptab-notice--success {
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-primary);
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-apptab-notice--error {
+  background: var(--dsw-alias-interactive-bg-hover-danger);
+  color: var(--dsw-alias-state-error-primary);
+  border: 1px solid var(--dsw-alias-border-l1);
 }
 .omx-apptab-body {
   display: flex;

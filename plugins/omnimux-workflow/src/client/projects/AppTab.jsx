@@ -11,8 +11,18 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { injectWorkflowStyles } from '../styles.js'
-import { appIdFromTabId, forgetOpenAppTab, registerOpenAppTab } from './appLibrary.js'
-import { getBetterSidebar } from './projectCanvas.js'
+import {
+  appIdFromTabId,
+  forgetOpenAppTab,
+  registerOpenAppTab,
+  isAppOwnedByUser,
+  createProjectForkFromManifest,
+  resolveAppEditTarget,
+  resolveOwningProject,
+  toPublishedAppEntry,
+} from './appLibrary.js'
+import { listProjects } from '../api.js'
+import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
@@ -456,6 +466,87 @@ export function AppTab(props) {
     setErrors({})
   }, [])
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [editNotice, setEditNotice] = useState(null)
+
+  // 点击「编辑应用」：根据应用归属自适应分诊
+  // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方应用则创建副本工程并跳转
+  const handleEditApp = useCallback(async () => {
+    if (!manifest || isEditing) return
+    setIsEditing(true)
+    setEditNotice({ type: 'info', text: '正在检查应用源工程...' })
+
+    try {
+      const projectsRes = await listProjects().catch(() => ({ ok: false }))
+      const projects = (projectsRes.ok && Array.isArray(projectsRes.body?.projects))
+        ? projectsRes.body.projects
+        : []
+
+      const isOwner = isAppOwnedByUser(manifest, projects)
+
+      if (isOwner) {
+        // 1. 同一个用户的应用：直接跳转定位到原工程画布
+        const target = resolveAppEditTarget(toPublishedAppEntry(manifest) || {
+          projectId: manifest.workflowBinding?.projectId,
+          workspaceId: manifest.workflowBinding?.workspaceId,
+          groupId: manifest.workflowBinding?.sourceGroupId,
+        })
+        const project = resolveOwningProject(projects, target)
+        const canvasWorkspaceId = target.workspaceId || project?.canvasWorkspaceIds?.[0]
+
+        if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
+          localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
+        }
+        if (canvasWorkspaceId && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+            detail: { workspaceId: canvasWorkspaceId },
+          }))
+        }
+
+        const opened = await activateProjectCanvas(
+          { betterSidebar: getBetterSidebar(props?.ctx) },
+          { sessionId: project?.sessionId, focusGroupId: target.groupId },
+        )
+        if (opened) {
+          setEditNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
+        } else {
+          setEditNotice({ type: 'error', text: '打开画布失败，请重试。' })
+        }
+      } else {
+        // 2. 不同用户的应用：创建副本工程，并将工作流节点包装为工作流组
+        setEditNotice({ type: 'info', text: '正在为此应用生成独立工程副本...' })
+        const { project, workspaceId, groupId } = await createProjectForkFromManifest(manifest)
+
+        if (workspaceId && typeof localStorage !== 'undefined') {
+          localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
+        }
+        if (workspaceId && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+            detail: { workspaceId },
+          }))
+        }
+
+        const opened = await activateProjectCanvas(
+          { betterSidebar: getBetterSidebar(props?.ctx) },
+          { sessionId: project?.sessionId, focusGroupId: groupId },
+        )
+        if (opened) {
+          setEditNotice({
+            type: 'success',
+            text: `已为你创建「${manifest.metadata?.name || '应用'}」的副本工程，编辑后可随时重新打包发布。`,
+          })
+        } else {
+          setEditNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
+        }
+      }
+    } catch (err) {
+      setEditNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
+    } finally {
+      setIsEditing(false)
+      setTimeout(() => setEditNotice(null), 3500)
+    }
+  }, [manifest, isEditing, props?.ctx])
+
   if (!manifest) {
     return (
       <div className="omx-apptab-empty">
@@ -490,12 +581,42 @@ export function AppTab(props) {
           <span className="omx-apptab-version">
             v{manifest.version || '1.0.0'}
           </span>
+          {manifest.metadata?.description && (
+            <div className="omx-apptab-desc" title={manifest.metadata.description}>
+              {manifest.metadata.description}
+            </div>
+          )}
         </div>
-        {manifest.metadata?.description && (
-          <div className="omx-apptab-desc">
-            {manifest.metadata.description}
-          </div>
-        )}
+        <div className="omx-apptab-header-right">
+          {editNotice && (
+            <span className={`omx-apptab-notice omx-apptab-notice--${editNotice.type}`}>
+              {editNotice.text}
+            </span>
+          )}
+          <button // exempt-ui01 ai-app-ui-spec 右上角编辑应用按钮
+            type="button"
+            className="omx-apptab-edit-btn"
+            onClick={handleEditApp}
+            disabled={isEditing}
+            title="编辑应用画布与工作流"
+          >
+            <svg
+              className="omx-apptab-edit-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>{isEditing ? '处理中...' : '编辑应用'}</span>
+          </button>
+        </div>
       </div>
 
       {/* 工作台核心双栏分区卡片 */}
