@@ -165,8 +165,9 @@ function currentSessionId() {
   return '__none__'
 }
 
-/** @type {boolean | null} */
-let memoryCollapsed = null
+/** In-memory session collapse cache: sessionId -> boolean */
+const memoryCollapsedBySession = new Map()
+let lastActiveCollapsed = false
 
 export function ensureConversationCollapseChrome(doc = hostDocument()) {
   if (!doc?.head) return null
@@ -193,23 +194,40 @@ export function readConversationCollapsedFromDom(doc = hostDocument()) {
 }
 
 export function loadConversationCollapsed(sessionId = currentSessionId()) {
-  if (memoryCollapsed != null && sessionId === currentSessionId()) return memoryCollapsed
+  const sid = sessionId || currentSessionId()
+  if (!sid || sid === '__none__') {
+    return lastActiveCollapsed
+  }
+  if (memoryCollapsedBySession.has(sid)) return memoryCollapsedBySession.get(sid)
   try {
-    const raw = hostWindow()?.localStorage?.getItem?.(CONVERSATION_COLLAPSE_STORAGE_PREFIX + sessionId)
-    if (raw === '1') return true
-    if (raw === '0') return false
+    const raw = hostWindow()?.localStorage?.getItem?.(CONVERSATION_COLLAPSE_STORAGE_PREFIX + sid)
+    if (raw === '1') {
+      memoryCollapsedBySession.set(sid, true)
+      lastActiveCollapsed = true
+      return true
+    }
+    if (raw === '0') {
+      memoryCollapsedBySession.set(sid, false)
+      lastActiveCollapsed = false
+      return false
+    }
   } catch { /* ignore */ }
   return false
 }
 
 export function persistConversationCollapsed(collapsed, sessionId = currentSessionId()) {
-  memoryCollapsed = Boolean(collapsed)
-  try {
-    hostWindow()?.localStorage?.setItem?.(
-      CONVERSATION_COLLAPSE_STORAGE_PREFIX + sessionId,
-      collapsed ? '1' : '0',
-    )
-  } catch { /* ignore */ }
+  const sid = sessionId || currentSessionId()
+  const val = Boolean(collapsed)
+  lastActiveCollapsed = val
+  if (sid && sid !== '__none__') {
+    memoryCollapsedBySession.set(sid, val)
+    try {
+      hostWindow()?.localStorage?.setItem?.(
+        CONVERSATION_COLLAPSE_STORAGE_PREFIX + sid,
+        val ? '1' : '0',
+      )
+    } catch { /* ignore */ }
+  }
 }
 
 /**
@@ -222,27 +240,41 @@ export function setConversationCollapsed(collapsed, opts = {}) {
   const doc = opts.doc || hostDocument()
   applyConversationCollapsedAttr(next, doc)
   if (opts.persist !== false) persistConversationCollapsed(next, sessionId)
-  memoryCollapsed = next
+  else {
+    lastActiveCollapsed = next
+    if (sessionId && sessionId !== '__none__') {
+      memoryCollapsedBySession.set(sessionId, next)
+    }
+  }
   return next
 }
 
 export function getConversationCollapsed(opts = {}) {
-  if (memoryCollapsed != null) return memoryCollapsed
   const doc = opts.doc || hostDocument()
   if (readConversationCollapsedFromDom(doc)) return true
-  return loadConversationCollapsed(opts.sessionId || currentSessionId())
+  const sid = opts.sessionId || currentSessionId()
+  if (sid && sid !== '__none__') {
+    if (memoryCollapsedBySession.has(sid)) return memoryCollapsedBySession.get(sid)
+    return loadConversationCollapsed(sid)
+  }
+  return lastActiveCollapsed
 }
 
 /** Hydrate DOM from storage (call on chrome install / session attach). */
 export function hydrateConversationCollapsed(sessionId = currentSessionId(), doc = hostDocument()) {
-  const collapsed = loadConversationCollapsed(sessionId)
+  const sid = sessionId || currentSessionId()
+  const collapsed = loadConversationCollapsed(sid)
   applyConversationCollapsedAttr(collapsed, doc)
-  memoryCollapsed = collapsed
+  if (sid && sid !== '__none__') {
+    memoryCollapsedBySession.set(sid, collapsed)
+  }
+  lastActiveCollapsed = collapsed
   return collapsed
 }
 
 export function resetConversationCollapseForTests() {
-  memoryCollapsed = null
+  memoryCollapsedBySession.clear()
+  lastActiveCollapsed = false
   const doc = hostDocument()
   const root = doc?.documentElement
   if (root && typeof root.removeAttribute === 'function') {

@@ -10,7 +10,12 @@ import {
   installFullscreenCollapseSync,
   FULLSCREEN_COLLAPSE_SNAPSHOT_ATTR,
 } from '../../src/client/workbench/fullscreen-collapse-sync.js'
-import { CONVERSATION_COLLAPSED_ATTR, ensureConversationCollapseChrome } from '../../src/client/conversation-collapse.js'
+import {
+  CONVERSATION_COLLAPSED_ATTR,
+  ensureConversationCollapseChrome,
+  persistConversationCollapsed,
+  resetConversationCollapseForTests,
+} from '../../src/client/conversation-collapse.js'
 import { WORKBENCH_FOCUS } from '../../src/client/workbench/focus-state.js'
 
 function createDomFixture(panelMode = 'push') {
@@ -60,6 +65,8 @@ test('AC-1 & AC-2: 工作台默认全屏，手动点击退出全屏后会话栏�
 })
 
 test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分栏且会话栏展开', async () => {
+  resetConversationCollapseForTests()
+  persistConversationCollapsed(true, 'sess-1')
   const doc = createDomFixture('fullscreen')
   const root = doc.documentElement
   const panel = doc.querySelector('[data-sidebar-right-panel]')
@@ -109,6 +116,7 @@ test('AC-3: 用户退出全屏偏好被记住，跨 Tab 切换后切回保持分
   assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏必须展开')
 
   reconciler.reset()
+  resetConversationCollapseForTests()
 })
 
 test('AC-4: 分栏面板 CSS 铺满保证与健康分栏宽度保底机制', async () => {
