@@ -50,7 +50,6 @@ export const SHELVES_CONFIG = Object.freeze([
     slug: 'explore-templates',
     titleZh: '探索模板',
     titleEn: 'Explore Templates',
-    subtitleZh: '精选 7 大分类王牌爆款短视频应用 · 传图一键出片',
     targetCategory: 'all',
     type: 'app',
   },

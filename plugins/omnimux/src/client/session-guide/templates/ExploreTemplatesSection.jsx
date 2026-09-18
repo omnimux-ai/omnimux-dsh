@@ -76,15 +76,14 @@ export function ExploreTemplatesSection({ onApplyTemplate, t }) {
     }
   };
 
+  const handleViewAll = () => {
+    if (items.length > 0) {
+      handleItemSelect(items[0]);
+    }
+  };
+
   return (
     <div className="omnimux-explore-templates-root" data-omnimux-explore-section="">
-      {/* 专区标题 */}
-      <div className="omnimux-explore-header-row">
-        <h2 className="omnimux-explore-main-title">
-          {isEn ? 'Explore Templates' : '探索模板'}
-        </h2>
-      </div>
-
       {/* 单一精简货架流：呈现 7 大王牌应用大卡片 */}
       <div className="omnimux-explore-shelves-view">
         <TemplatesShelfRow
@@ -92,7 +91,7 @@ export function ExploreTemplatesSection({ onApplyTemplate, t }) {
           items={items}
           onSelectTemplate={handleItemSelect}
           onOpenDetail={handleItemSelect}
-          onViewAll={() => {}}
+          onViewAll={handleViewAll}
           t={t}
         />
       </div>

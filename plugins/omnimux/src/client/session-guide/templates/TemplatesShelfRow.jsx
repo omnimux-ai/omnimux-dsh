@@ -43,16 +43,12 @@ export function TemplatesShelfRow({
   // 原生多语言：中文纯中文，英文纯英文
   const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
   const title = isEn ? (shelf.titleEn || shelf.titleZh) : (shelf.titleZh || shelf.titleEn)
-  const subtitle = isEn ? (shelf.subtitleEn || shelf.subtitleZh) : (shelf.subtitleZh || shelf.subtitleEn)
-  const viewAllText = isEn ? 'View all' : '查看全部'
+  const viewAllText = isEn ? 'Explore all' : '探索全部'
 
   return (
     <section className="omnimux-shelf-section" data-shelf-slug={shelf.slug}>
       <div className="omnimux-shelf-header">
-        <div className="omnimux-shelf-title-wrap">
-          <h3 className="omnimux-shelf-heading">{title}</h3>
-          {subtitle && <span className="omnimux-shelf-subheading">{subtitle}</span>}
-        </div>
+        <h3 className="omnimux-shelf-heading">{title}</h3>
 
         <button /* exempt-ui01: shelf row view all button */
           type="button"
