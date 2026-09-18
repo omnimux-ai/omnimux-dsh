@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>媒体查看器 · 移除生成状态占位卡片对比演示（Issue #2339）</title>
+  <style>
+    :root {
+      --bg-base: #121316;
+      --bg-layer-1: #1a1b1e;
+      --bg-layer-2: #24252a;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #f0f0f3;
+      --text-secondary: #9aa0a6;
+      --accent: #4f8bf9;
+      --accent-glow: rgba(79, 139, 249, 0.25);
+      --danger: #f87171;
+      --success: #34d399;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .header {
+      text-align: center;
+      max-width: 800px;
+      margin-bottom: 28px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 10px;
+    }
+    .header p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .toggle-bar {
+      display: flex;
+      background: var(--bg-layer-1);
+      border: 1px solid var(--border-color);
+      border-radius: 9999px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+    .toggle-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-btn.active {
+      background: var(--bg-layer-2);
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .preview-container {
+      width: 100%;
+      max-width: 1080px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .card-wrap {
+      background: var(--bg-layer-1);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .badge--danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+    .badge--success {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    .viewer-mock {
+      height: 600px;
+      background: #151619;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Toolbar */
+    .viewer-toolbar {
+      height: 48px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .capsule-group {
+      display: flex;
+      gap: 6px;
+    }
+    .capsule-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--bg-layer-2);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 11px;
+    }
+    /* Stage */
+    .stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      overflow: hidden;
+    }
+    .stage--has-generation {
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    /* Generating card (Before) */
+    .generating-card {
+      width: min(92%, 460px);
+      margin: 16px auto;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: #18191c;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .generating-label {
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .generating-box {
+      height: 200px;
+      background: #131417;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pill-tag {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #24252a;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    /* Image display */
+    .image-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px;
+      min-height: 0;
+    }
+    .stage--has-generation .image-stage {
+      flex: 0 0 auto;
+      height: 300px;
+      padding: 10px;
+    }
+    .product-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    }
+    .thumbnails-rail {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+    .thumbnail-item {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      overflow: hidden;
+      background: var(--bg-layer-2);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+    .thumbnail-item.active {
+      border-color: var(--accent);
+    }
+    .thumbnail-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .footer-desc {
+      padding: 14px 18px;
+      background: var(--bg-layer-2);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+    }
+    .footer-desc strong {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>图像与媒体查看器 · 移除未完成生成状态占位卡片对比演示</h1>
+    <p>优化前：当后台有生成请求时，媒体查看器视口顶部被巨大的黑色占位卡片挤占，原图被强行下推且压缩变形。<br>优化后：彻底移除黑色占位卡片，大图展示区恢复全屏居中、纯净优雅的视觉体验，生成状态统一在左侧主对话流呈现。</p>
+  </div>
+
+  <div class="preview-container">
+    <!-- 优化前 -->
+    <div class="card-wrap">
+      <div class="card-header">
+        <span>🔴 优化前（原交互）</span>
+        <span class="badge badge--danger">顶部被黑色大卡片霸占，压扁大图</span>
+      </div>
+      <div class="viewer-mock">
+        <div class="viewer-toolbar">
+          <div class="capsule-group">
+            <span class="capsule-btn">大图浏览模式</span>
+            <span class="capsule-btn">四宫格时间线</span>
+          </div>
+          <span>缩放: 71%</span>
+        </div>
+        <div class="stage stage--has-generation">
+          <!-- 黑色大占位卡片 -->
+          <div class="generating-card">
+            <div class="generating-label">提交状态待确认，请查看对话中的发送提示</div>
+            <div class="generating-box">
+              <div class="pill-tag">
+                <span class="dot"></span>
+                <span>提交状态待确认，请查看对话中的发送提示</span>
+              </div>
+            </div>
+          </div>
+          <!-- 被压扁的图片 -->
+          <div class="image-stage">
+            <div class="thumbnails-rail">
+              <div class="thumbnail-item active">
+                <img src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=120&auto=format&fit=crop&q=80" alt="thumb">
+              </div>
+              <div class="thumbnail-item">
+                <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=120&auto=format&fit=crop&q=80" alt="thumb">
+              </div>
+            </div>
+            <img class="product-img" src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=800&auto=format&fit=crop&q=80" alt="product">
+          </div>
+        </div>
+      </div>
+      <div class="footer-desc">
+        <strong>缺陷痛点</strong>：视口被 <code>flex-direction: column</code> 强制纵向排列，上方死死卡住一个无有效信息的黑块，破坏了大图沉浸式缩放拖拽。
+      </div>
+    </div>
+
+    <!-- 优化后 -->
+    <div class="card-wrap">
+      <div class="card-header">
+        <span>🟢 优化后（本次交付效果）</span>
+        <span class="badge badge--success">纯净居中，全屏沉浸大图展示</span>
+      </div>
+      <div class="viewer-mock">
+        <div class="viewer-toolbar">
+          <div class="capsule-group">
+            <span class="capsule-btn">大图浏览模式</span>
+            <span class="capsule-btn">四宫格时间线</span>
+          </div>
+          <span>缩放: 100%</span>
+        </div>
+        <div class="stage">
+          <!-- 没有黑色卡片，直接全屏居中大图 -->
+          <div class="image-stage">
+            <div class="thumbnails-rail">
+              <div class="thumbnail-item active">
+                <img src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=120&auto=format&fit=crop&q=80" alt="thumb">
+              </div>
+              <div class="thumbnail-item">
+                <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=120&auto=format&fit=crop&q=80" alt="thumb">
+              </div>
+            </div>
+            <img class="product-img" src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=800&auto=format&fit=crop&q=80" alt="product">
+          </div>
+        </div>
+      </div>
+      <div class="footer-desc">
+        <strong>优化效果</strong>：彻底移除了黑色占位卡片，大图展示区恢复 100% 全屏视口居中，平移、缩放与画廊切换体验丝滑无干扰！
+      </div>
+    </div>
+  </div>
+</body>
+</html>

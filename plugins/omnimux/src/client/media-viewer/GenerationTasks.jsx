@@ -74,11 +74,16 @@ export function GenerationTasks({ tasks, imageUrl, readFile }) {
     try { await navigator.clipboard.writeText(task.prompt); setCopyStatus('已复制，请检查参考素材后粘贴发送'); }
     catch { setCopyStatus('未能复制，请从对话中复制原请求'); }
   }
+  // 过滤未就绪状态：pending / running 且无媒体产出时不渲染黑色占位卡片，保持视口干净
+  const actionableTasks = (tasks || []).filter(
+    (task) => (task.media && task.media.length > 0) || ['failure', 'cancelled', 'unresolved'].includes(task.status)
+  );
+  if (!actionableTasks.length) return null;
   return <div className="omx-mv-generation-tasks" aria-live="polite">
-    {tasks.map((task) => <section key={JSON.stringify([task.sessionId, task.requestId])} className="omx-mv-generation-task" data-generation-request={task.requestId} data-generation-status={task.status}>
+    {actionableTasks.map((task) => <section key={JSON.stringify([task.sessionId, task.requestId])} className="omx-mv-generation-task" data-generation-request={task.requestId} data-generation-status={task.status}>
       <div className="omx-mv-generation-task__label" role="status">{task.message || labels[task.status]}</div>
       {task.status === 'pending' || task.status === 'running'
-        ? <GeneratingStateCard statusText={task.message || labels[task.status]} status={task.status} />
+        ? null
         : task.media?.map((item) => <GenerationMedia key={item.attachment?.attachmentId || item.url || item.path} item={item} sessionId={task.sessionId} imageUrl={imageUrl} readFile={readFile} />)}
       {task.prompt && ['failure', 'cancelled', 'unresolved'].includes(task.status) && <Button onClick={() => copyPrompt(task)}>复制原请求</Button>}
     </section>)}
