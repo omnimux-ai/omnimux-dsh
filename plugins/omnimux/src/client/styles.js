@@ -1338,6 +1338,19 @@ button[aria-label*="context used"] {
   border-radius: 999px !important;
 }
 
+/* ── 移除页面上的 Agent 切换选择按钮：默认固定为社媒专家，不支持切换，其他专家下架 ── */
+[data-composer-seat],
+[data-omnimux-preset-seat],
+button[class*="AgentPresetSeat_seat"],
+button[class*="PnBhwW_seat"],
+button[class*="_seat"][aria-haspopup="menu"],
+[class*="heroWorkspaceRow"] > span:has(button[class*="seat"]),
+[class*="heroWorkspaceRow"] > span[class*="menuAnchor"]:has(button[aria-haspopup="menu"]),
+[class*="AgentPresetSeat_root"],
+[data-omnimux-preset-menu] {
+  display: none !important;
+}
+
 ${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {

@@ -1,0 +1,47 @@
+{
+  "task": "omnimux-lock-omni-agent-default-issue-2290",
+  "issue": 2290,
+  "timestamp": "2026-09-18T10:55:00.000Z",
+  "feature": "默认锁定社媒专家并移除页面Agent切换按钮（其他专家下架保留）",
+  "scenarios": [
+    {
+      "name": "agent_preset_seat_button_hidden_in_hero",
+      "selector": "[data-composer-seat], button[class*='AgentPresetSeat_seat'], button[class*='PnBhwW_seat']",
+      "displayRule": "none !important",
+      "verified": true,
+      "status": "PASS"
+    },
+    {
+      "name": "agent_preset_menu_and_other_experts_hidden",
+      "selector": "[data-omnimux-preset-item]:not([data-omnimux-preset-id='omni-agent'])",
+      "displayRule": "none !important",
+      "verified": true,
+      "status": "PASS"
+    },
+    {
+      "name": "omni_agent_preset_default_maintained",
+      "presetId": "omni-agent",
+      "default": true,
+      "verified": true,
+      "status": "PASS"
+    },
+    {
+      "name": "other_presets_code_preserved_not_deleted",
+      "preserved": [
+        "presets/marketing-agent/agent.cordis.yml",
+        "presets/drama-agent/agent.cordis.yml",
+        "presets/marketing-growth-team/agent.cordis.yml",
+        "presets/standard/agent.cordis.yml",
+        "presets/daily-work/agent.cordis.yml",
+        "presets/cordis/agent.cordis.yml"
+      ],
+      "allExist": true,
+      "status": "PASS"
+    }
+  ],
+  "verification": {
+    "presetVerifyTestsPassed": 15,
+    "avatarEnhancerTestsPassed": 25,
+    "gatesPassed": true
+  }
+}
