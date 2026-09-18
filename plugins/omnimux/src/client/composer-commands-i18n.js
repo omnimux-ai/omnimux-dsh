@@ -388,22 +388,33 @@ export function ensurePlacementStyles(doc) {
       height: 100% !important;
       pointer-events: none !important;
     }
-    [data-menu-placement="bottom"] [data-trigger-menu],
-    [data-menu-placement="bottom"] [class*="iRJKyq_menu"],
+    /* 仅底选弹窗菜单（如+号命令卡片）在特定条件下方展开 */
     [data-menu-placement="bottom"] [class*="_1q_ULW_card"],
-    [data-trigger-menu][data-placement="bottom"],
-    [class*="iRJKyq_menu"][data-placement="bottom"],
     [class*="_1q_ULW_card"][data-placement="bottom"] {
       top: calc(100% + 4px) !important;
       bottom: auto !important;
       pointer-events: auto !important;
+      z-index: 1000 !important;
     }
-    /* 沉底输入框菜单开在上方时，仍必须可点，不能被后面的灵感卡片吃掉点击 */
+    /* 技能列表菜单（Trigger Menu）专用于即时触发联想，固定显示在输入框上方（上一层），图层严格置顶避免遮挡 */
     [data-composer-card] [data-trigger-menu],
     [data-composer-card] [class*="iRJKyq_menu"],
-    [data-composer-card] [class*="_1q_ULW_card"] {
+    [data-trigger-menu],
+    [class*="iRJKyq_menu"] {
+      top: auto !important;
+      bottom: calc(100% + 4px) !important;
       pointer-events: auto !important;
-      z-index: 80 !important;
+      z-index: 1000 !important;
+    }
+    /* 所有输入框菜单均赋予最高层级（z-index: 1000），彻底杜绝被页面内胶囊栏（120）或卡片遮挡 */
+    [data-composer-card] [data-trigger-menu],
+    [data-composer-card] [class*="iRJKyq_menu"],
+    [data-composer-card] [class*="_1q_ULW_card"],
+    [data-trigger-menu],
+    [class*="iRJKyq_menu"],
+    [class*="_1q_ULW_card"] {
+      pointer-events: auto !important;
+      z-index: 1000 !important;
     }
     /* 隐藏原生添加文件（回形针）图标按钮，统一收纳至「+」指令菜单中 */
     [data-composer-card] button[aria-label="添加附件"],
@@ -419,11 +430,13 @@ export function ensurePlacementStyles(doc) {
 /**
  * Determine whether the candidate menu should be placed below the input box.
  * Rule:
- * 1. If the input box is near the bottom of the page (spaceBelow < 220px),
+ * 1. Skill/slash trigger menus (data-trigger-menu / iRJKyq_menu) MUST always be placed
+ *    above the input box (never below) so they never clash with pills/cards below.
+ * 2. If the input box is near the bottom of the page (spaceBelow < 220px),
  *    keep the original behavior (place above).
- * 2. If in Hero/centered/full-stage mode with sufficient space below (spaceBelow >= 220px),
+ * 3. If in Hero/centered/full-stage mode with sufficient space below (spaceBelow >= 220px),
  *    place below so it doesn't obstruct headers and feels natural.
- * 3. Fallback geometric check: if spaceBelow >= 280px and spaceBelow > spaceAbove,
+ * 4. Fallback geometric check: if spaceBelow >= 280px and spaceBelow > spaceAbove,
  *    place below.
  * @param {HTMLElement|null} card - The [data-composer-card] element
  * @param {HTMLElement|null} menu - The candidate menu element
@@ -432,6 +445,11 @@ export function ensurePlacementStyles(doc) {
  */
 export function shouldPlaceMenuBelow(card, menu, windowObj = (typeof window !== 'undefined' ? window : null)) {
   if (!card || !windowObj) return false
+
+  // 技能列表联想菜单（Trigger Menu）专用于即时触发，固定显示在输入框上方（上一层），绝不置于下方
+  if (menu && (menu.hasAttribute?.('data-trigger-menu') || menu.classList?.contains?.('iRJKyq_menu') || menu.matches?.('[data-trigger-menu], [class*="iRJKyq_menu"]'))) {
+    return false
+  }
 
   const cardRect = typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null
   if (!cardRect) return false
@@ -497,6 +515,7 @@ export function syncMenuPlacement(menu, doc) {
     menu.style.bottom = 'auto'
     menu.style.top = 'calc(100% + 4px)'
     menu.style.pointerEvents = 'auto'
+    menu.style.zIndex = '1000'
 
     // Compute and constrain max-height based on available viewport space below card
     if (win && card) {
@@ -525,7 +544,7 @@ export function syncMenuPlacement(menu, doc) {
       menu.style.removeProperty('max-height')
     }
     menu.style.pointerEvents = 'auto'
-    menu.style.zIndex = '80'
+    menu.style.zIndex = '1000'
   }
 
   return placeBelow
