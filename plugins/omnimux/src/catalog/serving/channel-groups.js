@@ -19,7 +19,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "旗舰版",
       "badge": "满血出片 · 按次专线",
       "pricing": {
-        "pointsEstimate": 3476,
+        "pointsEstimate": 9.8,
         "discountRate": 3.333,
         "billingMode": "per_task"
       },
@@ -35,7 +35,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "官方版",
       "badge": "官方原厂直签 · 极稳高画质",
       "pricing": {
-        "pointsEstimate": 3568,
+        "pointsEstimate": 4.9,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -51,7 +51,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "优选版",
       "badge": "精品专线 · 极稳高画质",
       "pricing": {
-        "pointsEstimate": 1560,
+        "pointsEstimate": 5.7,
         "discountRate": 1.178,
         "billingMode": "per_second"
       },
@@ -67,7 +67,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "主流专线 · 官方原生",
       "pricing": {
-        "pointsEstimate": 1040,
+        "pointsEstimate": 4.9,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -83,7 +83,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "经济版",
       "badge": "经济走量 · 按条计费",
       "pricing": {
-        "pointsEstimate": 800,
+        "pointsEstimate": 1.5,
         "discountRate": 0.5,
         "billingMode": "per_task"
       },
@@ -399,7 +399,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "官方最新生图专线",
       "pricing": {
-        "pointsEstimate": 200,
+        "pointsEstimate": 0.1,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -416,7 +416,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "极速专线 · 快速迭代",
       "pricing": {
-        "pointsEstimate": 225,
+        "pointsEstimate": 0.2,
         "discountRate": 1.125,
         "billingMode": "per_task"
       },
@@ -431,7 +431,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "画质专线 · 精细成品",
       "pricing": {
-        "pointsEstimate": 225,
+        "pointsEstimate": 0.2,
         "discountRate": 1.125,
         "billingMode": "per_task"
       },
