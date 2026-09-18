@@ -1,0 +1,31 @@
+{
+  "task": "tighten-pills-and-popover-spacing",
+  "issue": 2348,
+  "verifiedAt": "2026-09-18T11:49:33.089Z",
+  "environment": {
+    "browser": "Google Chrome 153",
+    "viewportDefault": "1280x800",
+    "viewportActive": "1280x880"
+  },
+  "evidence": {
+    "defaultScreenshot": "docs/evidence/pills-spacing-default-tight.png",
+    "activeScreenshot": "docs/evidence/pills-spacing-active-compact.png",
+    "demoHtml": "docs/evidence/pills-spacing-demo.html"
+  },
+  "metrics": {
+    "defaultState": {
+      "description": "输入框底边至胶囊按钮顶部的垂直间距",
+      "previousGap": "~24px-32px (过度松散)",
+      "currentGap": "10.0px",
+      "visualFeedback": "明显向上提拉，紧凑依附输入框"
+    },
+    "activeState": {
+      "description": "输入框底边至列表面板顶部的紧贴间距（参考图2）",
+      "targetGap": "4px - 6px",
+      "measuredGap": "4.7px",
+      "horizontalAlignmentDelta": "0.0px (左右两端严格对齐)",
+      "backdropOpacity": "100% (完全实底遮盖，不透下方卡片)"
+    }
+  },
+  "conclusion": "PASSED: 按钮组已明显上移缩小上下间距，激活列表面板菜单精准复刻图2紧凑贴合间距与对齐效果"
+}

@@ -43,18 +43,20 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     assert.ok(bar, '必须存在按钮组容器');
     assert.equal(bar.style.justifyContent, 'center', '按钮组必须相对输入框水平居中');
     assert.equal(bar.style.width, '100%', '按钮组容器应铺满输入框同宽基准');
+    assert.match(bar.style.margin, /6px auto 16px/, '默认态胶囊条外边距必须向上收敛为 6px auto 16px');
 
     const pills = document.querySelectorAll('.omnimux-pill-btn');
     assert.equal(pills.length, 4, '必须渲染 4 个胶囊');
 
     // 1. 点击 Video ads
     await act(async () => { pills[1].click(); });
+    assert.match(bar.style.margin, /4px auto 16px/, '激活态胶囊条外边距必须进一步收敛为 4px auto 16px 紧贴输入框');
     const videoPopover = document.querySelector('.omnimux-subprompt-popover');
     assert.ok(videoPopover, 'Video ads 弹窗必须展开');
     assert.equal(videoPopover.style.width, '100%', '弹窗必须撑满宽度基准');
     assert.equal(videoPopover.style.left, '0px', '弹窗左边缘必须贴齐基准');
     assert.equal(videoPopover.style.right, '0px', '弹窗右边缘必须贴齐基准');
-    assert.match(videoPopover.style.background, /#18191c/, '弹窗必须采用不透明纯深色背景');
+    assert.match(videoPopover.style.background, /dsw-alias-bg-elevated/, '弹窗必须采用设计系统标准提升背景色');
     assert.ok(!videoPopover.style.backdropFilter, '弹窗禁止使用毛玻璃透底滤镜');
     
     // 点击第一项子提示词
@@ -69,7 +71,7 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     assert.equal(skillsPopover.style.width, '100%', '技能弹窗宽度必须100%');
     assert.equal(skillsPopover.style.left, '0px', '技能弹窗左边必须对齐');
     assert.equal(skillsPopover.style.right, '0px', '技能弹窗右边必须对齐');
-    assert.match(skillsPopover.style.background, /#18191c/, '技能弹窗必须采用不透明纯深色背景');
+    assert.match(skillsPopover.style.background, /dsw-alias-bg-elevated/, '技能弹窗必须采用设计系统标准提升背景色');
     assert.ok(!skillsPopover.style.backdropFilter, '技能弹窗禁止使用毛玻璃透底滤镜');
 
     root.unmount();
