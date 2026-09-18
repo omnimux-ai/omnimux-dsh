@@ -1070,7 +1070,7 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     )
     assert.match(
       PRODUCT_STAGE_CHROME,
-      /grid-template-columns:\s*0px\s+var\(--omnimux-conversation-width,\s*420px\)\s+minmax\(0px,\s*1fr\)\s*!important/,
+      /grid-template-columns:\s*0px\s+var\(--omnimux-conversation-width,\s*380px\)\s+minmax\(0px,\s*1fr\)\s*!important/,
       '三分栏收起左侧栏时必须保持会话栏比例并将释放空间给右栏',
     )
     assert.match(

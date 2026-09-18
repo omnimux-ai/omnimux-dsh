@@ -225,7 +225,15 @@ html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [class*="f
 html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] .dshDesktopFrame:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]),
 html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]),
 html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]){
-  grid-template-columns: 0px var(--omnimux-conversation-width, 420px) minmax(0px, 1fr) !important;
+  grid-template-columns: 0px var(--omnimux-conversation-width, 380px) minmax(0px, 1fr) !important;
+}
+/* 三分栏同时展开态（左栏 280px，中间会话栏定宽 380px，右侧创作舞台弹性铺满，Issue 2316）：
+   确保大屏下多出的所有空间全部反哺给右侧主舞台，中间保持 380px 紧凑控制台！ */
+html:not([data-omnimux-conversation-collapsed]):not([data-omnimux-left-collapsed]) .dshDesktopFrame:not([data-sidebar-collapsed]):not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]),
+html:not([data-omnimux-conversation-collapsed]):not([data-omnimux-left-collapsed]) [class*="frame"]:not([data-sidebar-collapsed]):not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]),
+html[data-omnimux-sidebar-toggle-topbar]:not([data-omnimux-left-collapsed]) .dshDesktopFrame:not([data-sidebar-collapsed]):not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]),
+html[data-omnimux-sidebar-toggle-topbar]:not([data-omnimux-left-collapsed]) [class*="frame"]:not([data-sidebar-collapsed]):not([data-rightbar-collapsed="true"]):not([data-details-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]) {
+  grid-template-columns: var(--omnimux-sidebar-width, 280px) var(--omnimux-conversation-width, 380px) minmax(0px, 1fr) !important;
 }
 /* 当中间会话栏收起时（右侧全屏铺满状态）：
    必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！

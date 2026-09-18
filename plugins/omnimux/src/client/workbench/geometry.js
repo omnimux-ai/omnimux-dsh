@@ -12,7 +12,7 @@ import { activeTabId, hostDocument, hostWindow, liveSnapshot } from './host-adap
 import { focusRecordForTab } from './focus-state.js'
 
 export const WORKBENCH_PANEL_MIN_PX = 280
-export const WORKBENCH_CONVERSATION_TARGET_PX = 420
+export const WORKBENCH_CONVERSATION_TARGET_PX = 380
 /** Visible split conversation floor. CSS and live drag clamp share this value. */
 export const WORKBENCH_CONVERSATION_MIN_PX = 360
 export const WORKBENCH_SPLIT_MAX_CSS_VAR = '--omnimux-split-max'
@@ -309,7 +309,7 @@ export function workbenchUsableWidthPx(state, env = {}) {
 }
 
 /**
- * Default GUI width: keep ~420px for the conversation column, give the rest
+ * Default GUI width: keep ~380px for the conversation column, give the rest
  * to the right panel (same ruler as the project canvas 15:85).
  */
 export function workbenchDefaultWidthPx(state, env = {}) {
