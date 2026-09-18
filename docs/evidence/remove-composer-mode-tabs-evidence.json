@@ -1,0 +1,32 @@
+{
+  "task": "omnimux-remove-composer-mode-tabs-issue-2288",
+  "issue": 2288,
+  "timestamp": "2026-09-18T10:37:00.000Z",
+  "feature": "移除新建会话顶部 Agent / 营销 / 短剧 三个模式切换胶囊栏",
+  "scenarios": [
+    {
+      "name": "new_session_hero_mode_tabs_removed",
+      "phase": "hero",
+      "rendered": false,
+      "modeTabsWrapPresent": false,
+      "anchorPresent": false,
+      "status": "PASS"
+    },
+    {
+      "name": "active_conversation_mode_tabs_removed",
+      "phase": "active",
+      "rendered": false,
+      "status": "PASS"
+    },
+    {
+      "name": "anchor_cleanup_executed",
+      "cleanedAnchor": true,
+      "status": "PASS"
+    }
+  ],
+  "verification": {
+    "unitTestsPassed": 4,
+    "e2eTestsPassed": 1,
+    "gatesPassed": true
+  }
+}
