@@ -1,6 +1,10 @@
 import { isPrivateHost } from './public-host.js'
 export { isPrivateHost, normalizeHostname } from './public-host.js'
 import { publicFetch } from './public-fetch.js'
+import {
+  fetchTikTokShopProductViaHub,
+  isTikTokShopProductUrl,
+} from './tiktok-shop-import.js'
 /**
  * Link importer: one landing-page URL in, one canonical product draft out.
  *
@@ -1720,6 +1724,62 @@ export async function importProductFromUrl(args) {
   const fetcher = args?.fetcher ?? publicFetch
   const timeoutMs = Number.isFinite(args?.timeoutMs) ? Number(args.timeoutMs) : DEFAULT_TIMEOUT_MS
   const hub = normalizeHub(args?.hub)
+
+  // TikTok Shop physical listings: prefer official social-data models over HTML/Jina.
+  if (requestedKind === 'physical' && isTikTokShopProductUrl(url) && hub && typeof hub.socialData === 'function') {
+    try {
+      const shop = await fetchTikTokShopProductViaHub({ url, socialData: hub.socialData })
+      const fields = buildProductFields({
+        url,
+        kind: 'physical',
+        page: {
+          title: shop.fields.title || shop.fields.name || '',
+          canonical: url,
+          meta: {},
+          nodes: [],
+          images: Array.isArray(shop.fields.images) ? shop.fields.images : [],
+          bullets: String(shop.fields.selling_points || '')
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          text: shop.fields.text || shop.fields.name || '',
+        },
+      })
+      // Overlay structured shop fields (price/brand/sku/promotion/images).
+      for (const key of ['name', 'brand', 'price', 'sku', 'promotion', 'selling_points', 'features']) {
+        const v = typeof shop.fields[key] === 'string' ? shop.fields[key].trim() : ''
+        if (v) fields[key] = v
+      }
+      if (Array.isArray(shop.fields.images) && shop.fields.images.length) fields.images = shop.fields.images.slice(0, IMAGES_MAX)
+      if (Array.isArray(shop.fields.categories) && shop.fields.categories.length) {
+        fields.categories = shop.fields.categories.slice(0, CATEGORIES_MAX)
+      }
+      fields.link = url
+      const analysis = {
+        mode: ANALYSIS_MODES.MODEL,
+        model: shop.model || 'tiktok-shop-product-v3',
+        reason: 'tiktok-shop-social-data',
+        kind: 'physical',
+        brand_strategy: null,
+        fields: null,
+      }
+      const draft = mergeAnalysisDraft(fields, analysis, { url, kind: 'physical' })
+      if (!isUsableImport(draft)) {
+        throw new LinkImportError('link-import-empty', 'no product information was found on the page')
+      }
+      const paths = args?.paths ?? null
+      const gallery = await assembleProductImageDraft(draft.images, {
+        url,
+        paths,
+        fetcher,
+        persist: args?.persistProductImages,
+      })
+      return { ...draft, ...gallery }
+    } catch (error) {
+      if (error instanceof LinkImportError) throw error
+      // Fall through to generic page read when shop seam fails.
+    }
+  }
 
   const source = await readPageSource({ url, fetcher, timeoutMs, hub })
   // A page that advertises no goods at all is a brand / software site, even when

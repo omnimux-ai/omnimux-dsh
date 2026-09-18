@@ -268,11 +268,13 @@ function digitalHost(value) {
  */
 export function normalizeHub(value) {
   if (!value || typeof value !== 'object') return null
-  const hub = /** @type {{ textComplete?: unknown, pageFetch?: unknown }} */ (value)
+  const row = /** @type {Record<string, unknown>} */ (value)
+  /** @type {Record<string, unknown>} */
   const out = {}
-  if (typeof hub.textComplete === 'function') out.textComplete = hub.textComplete
-  if (typeof hub.pageFetch === 'function') out.pageFetch = hub.pageFetch
-  return Object.keys(out).length > 0 ? out : null
+  if (typeof row.textComplete === 'function') out.textComplete = row.textComplete
+  if (typeof row.pageFetch === 'function') out.pageFetch = row.pageFetch
+  if (typeof row.socialData === 'function') out.socialData = row.socialData
+  return Object.keys(out).length ? out : null
 }
 
 /**

@@ -3,7 +3,9 @@ import { describe, it } from 'node:test'
 import { OmnimuxError } from '../media/errors.js'
 import {
   extractTweetId,
+  extractTikTokShopProductId,
   fetchSocialData,
+  normalizeShopShareLink,
   pickSocialPayload,
   resolveSocialDataModel,
 } from './social-data.js'
@@ -111,3 +113,47 @@ describe('social data catalog', () => {
     assert.equal(payload.text, 't')
   })
 })
+
+
+  it('resolves TikTok Shop product models and region extras', () => {
+    const v3 = resolveSocialDataModel({
+      platform: 'tiktok',
+      capability: 'shop_product',
+      url: 'https://shop.tiktok.com/sg/pdp/1733226176534972037',
+    })
+    assert.equal(v3.model, 'tiktok-shop-product-v3')
+    assert.equal(v3.field, 'product_id')
+    assert.equal(v3.value, '1733226176534972037')
+    assert.equal(v3.extras.region, 'SG')
+
+    const link = resolveSocialDataModel({
+      platform: 'tiktok',
+      capability: 'shop_product_link',
+      url: 'https://shop.tiktok.com/sg/pdp/1733226176534972037',
+    })
+    assert.equal(link.model, 'tiktok-shop-product-link')
+    assert.equal(link.field, 'share_link')
+    assert.match(link.value, /view\/product\/1733226176534972037/)
+    assert.equal(extractTikTokShopProductId('https://shop.tiktok.com/view/product/1733226176534972037'), '1733226176534972037')
+    assert.match(
+      normalizeShopShareLink('https://shop.tiktok.com/sg/pdp/1733226176534972037'),
+      /view\/product\/1733226176534972037/,
+    )
+  })
+
+  it('posts product_id and region for shop_product', async () => {
+    const seen = []
+    await fetchSocialData({
+      async withSk(path, opts) {
+        seen.push({ path, opts })
+        return { code: 200, data: { ok: true } }
+      },
+    }, {
+      platform: 'tiktok',
+      capability: 'shop_product',
+      url: 'https://shop.tiktok.com/sg/pdp/1733226176534972037',
+    })
+    assert.equal(seen[0].opts.body.model, 'tiktok-shop-product-v3')
+    assert.equal(seen[0].opts.body.product_id, '1733226176534972037')
+    assert.equal(seen[0].opts.body.region, 'SG')
+  })
