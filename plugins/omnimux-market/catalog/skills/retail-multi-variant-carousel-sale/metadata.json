@@ -3,109 +3,109 @@
   "name": "retail-multi-variant-carousel-sale",
   "category": "Product Showcase",
   "description": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants, combining per-variant feature carousels with a unified sale carousel. The pattern uses a dual-carousel structure: one carousel per variant (lifestyle hero → feature deep-dives → CTA checklist) and one master sales carousel (per-variant price cards with red sale badging + shared interior/feature proof cards). Trigger this skill whenever a user has a physical product in 2+ colour or SKU ",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/a8e03cdd52.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/a8e03cdd52.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/63be2bd048.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/63be2bd048.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/394b8886a6.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/394b8886a6.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/4bfbceb60e.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/4bfbceb60e.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/a2b8a54159.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/a2b8a54159.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/b9d9213af9.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/b9d9213af9.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/16514d126d.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/16514d126d.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/13c9724f0e.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/13c9724f0e.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/98bcd33362.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/98bcd33362.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/c6ad0efa55.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/c6ad0efa55.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/855a46b856.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/855a46b856.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/1b76e2bcac.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/1b76e2bcac.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/7e4f7eefb7.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/7e4f7eefb7.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/62f3bae2bb.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/62f3bae2bb.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/529bdf0a92.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/529bdf0a92.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/303a1e52fe.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/303a1e52fe.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/56ee720f08.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/56ee720f08.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/bc2c13398e.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/bc2c13398e.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/aa77790c8a.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/aa77790c8a.png",
       "caption": "Owala",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/45a03034-b911-475b-b397-bc17037d8081/ce7af3b7e4.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/45a03034-b911-475b-b397-bc17037d8081/ce7af3b7e4.png",
       "caption": "Owala",
       "media_type": "image"
     }

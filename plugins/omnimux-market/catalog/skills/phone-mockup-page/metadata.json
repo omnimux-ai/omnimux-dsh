@@ -3,7 +3,7 @@
   "name": "phone-mockup-page",
   "category": "Product Showcase",
   "description": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a phone\" composites for paid-social ad templates. Trigger this whenever a user uploads one or more app, SaaS, or dashboard screenshots and wants them rebranded, the persona name/bio changed, numbers or value ranges swapped, multiple data variants generated, or a wide desktop UI \"consolidated / centered / fit to the phone with no runoff.\" Use it for UGC product-screen inserts, fit-tests ont",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

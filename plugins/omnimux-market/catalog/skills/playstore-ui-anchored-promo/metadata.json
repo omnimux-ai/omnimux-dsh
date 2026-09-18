@@ -3,34 +3,34 @@
   "name": "playstore-ui-anchored-promo",
   "category": "Product Showcase",
   "description": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshots — vertical 9:16 screenshot promo cards and/or a horizontal 1024×500 feature graphic. Trigger eagerly on phrases like \"play store screenshots\", \"app store screenshots\", \"feature graphic\", \"store listing creative\", or when the user uploads phone screenshots with brand colors and an app name. The creative pattern is \"UI anchored, minimal copy\" — solid brand-primary background with a subtl",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/150f0ed3c6.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/150f0ed3c6.png",
       "caption": "Notion",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/a1e5aae563.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/a1e5aae563.png",
       "caption": "Notion",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/b61dfe31cf.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/b61dfe31cf.png",
       "caption": "Notion",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/00e6d8290b.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/00e6d8290b.png",
       "caption": "Notion",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/caa9fe9441.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/9b8dd9ac-b8b5-4886-9efb-62a30e62e656/caa9fe9441.png",
       "caption": "Notion",
       "media_type": "image"
     }

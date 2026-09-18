@@ -3,7 +3,7 @@
   "name": "podcast",
   "category": "Video Ads",
   "description": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, founder talk, sit-down podcast, investigative deep-dive, any content that should feel like a clip from a longer sit-down podcast.  Generates a 16x9 seated composite of host + guest, generates B&W 4-panel shot-grammar storyboards (Patterns A/B/C/E), writes per-chunk Seedance prompts with verbatim camera-state-tagged dialog (on-camera / voice-over / continuing / silent), generates each 8 to 15 second chunk, splits + transcribes audio, assembles the final video. Requires host + guest personas pre-registered via setup_persona.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 3,
   "app_scope": "orchestrator",
   "usage_count": 16,

@@ -3,29 +3,29 @@
   "name": "real-estate-multiformat-static-ad",
   "category": "Image & Static Ads",
   "description": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing, ready for Facebook and Instagram ad sets. Each format gets a distinct hook targeting a specific buyer persona (first-time buyer, investor, lifestyle), a bespoke layout pattern suited to that canvas, and full brokerage branding baked into the image. Trigger this skill whenever a real estate agent or team needs multi-format social ads for a listing — even if the user only asks for \"a Fac",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/a62906c969.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/a62906c969.png",
       "caption": "Zillow",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/6fdb6a8c98.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/6fdb6a8c98.png",
       "caption": "Zillow",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/788d7445a2.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/788d7445a2.png",
       "caption": "Zillow",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/521f277c33.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/521f277c33.png",
       "caption": "Zillow",
       "media_type": "image"
     }

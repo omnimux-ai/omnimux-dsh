@@ -3,64 +3,64 @@
   "name": "landing-page-dr-skill",
   "category": "Image & Static Ads",
   "description": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-on-delivery (COD / contraentrega) model. Produces 11 vertical 9:16 images following a proven conversion funnel: Above the Fold → Antes/Después → Beneficios → Ingredientes → Comparación → Doctor → Testimonio → Prueba Social → Ofertas → FAQs → Cierre CTA. Each image follows a cohesive visual design system (deep navy + warm amber palette, bold condensed typography, alternating dark/light sec",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/6f8641bd51.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/6f8641bd51.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/08b12c558c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/08b12c558c.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/5eeedd61ef.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/5eeedd61ef.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/3ef4ce51b0.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/3ef4ce51b0.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/cd54391c44.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/cd54391c44.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/9149c8dd4c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/9149c8dd4c.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/65d83470df.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/65d83470df.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/be9ad1c38a.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/be9ad1c38a.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/faad5ef02f.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/faad5ef02f.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/e01f636826.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/e01f636826.png",
       "caption": "Squarespace",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/09a22e606c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/09a22e606c.png",
       "caption": "Squarespace",
       "media_type": "image"
     }

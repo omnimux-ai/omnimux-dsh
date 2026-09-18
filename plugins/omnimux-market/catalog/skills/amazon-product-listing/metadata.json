@@ -3,49 +3,49 @@
   "name": "amazon-product-listing",
   "category": "Product Showcase",
   "description": "Use when the user wants Amazon marketplace images from a product photo or product URL — a compliant main image on pure white, the 5 secondary images (infographic, multi-angle, detail, lifestyle, whats-in-the-box), and the 7 A+ Brand Content modules. Trigger whenever the user mentions Amazon listings, main image, secondary images, A+ content, Suppressed Listing, Amazon compliance, or supplies a product image or URL and asks for Amazon-ready visuals.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 10,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/14ceaa5645.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/14ceaa5645.png",
       "caption": "Amazon listing image set #1",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/6727548694.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/6727548694.png",
       "caption": "Amazon listing image set #2",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/8f56c0dc35.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/8f56c0dc35.png",
       "caption": "Amazon listing image set #3",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/83c0cfb58c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/83c0cfb58c.png",
       "caption": "Amazon listing image set #4",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/e233f7bef0.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/e233f7bef0.png",
       "caption": "Amazon listing image set #5",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/52801661fe.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/52801661fe.png",
       "caption": "Amazon listing image set #6",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/1aa45c0132.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/1aa45c0132.png",
       "caption": "Amazon listing image set #7",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/ae86bcf72c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/6b9603cd-dc6b-40cf-b9a5-422a00d17f36/ae86bcf72c.png",
       "caption": "Amazon listing image set #8",
       "media_type": "image"
     }

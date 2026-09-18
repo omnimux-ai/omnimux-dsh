@@ -3,7 +3,7 @@
   "name": "ugc-walkthrough",
   "category": "UGC & Testimonial",
   "description": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each cut is ONE chronological step of using the product, with a `Step N — Heading` typography caption baked onto each slot of the storyboard, optionally chained into multi-board long-form tutorials with globally numbered steps. Trigger whenever the user mentions a tutorial ad, how-to ad, \"how I use this\" video, step-by-step walkthrough, application tutorial, routine breakdown (\"my morning skincare routine\"), instructional creator video, or asks for a UGC tutorial / demo with on-screen step labels. Produces 21:9 storyboard sheet(s) with rendered Step captions and the 9:16 clip(s) end-to-end, returning the final assembled video.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 2,
   "app_scope": "orchestrator",
   "usage_count": 42,

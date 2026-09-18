@@ -3,14 +3,14 @@
   "name": "editorial-apparel-static",
   "category": "Image & Static Ads",
   "description": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from an uploaded reference photo of a model plus a product brief — especially for intimates, underwear, swimwear, loungewear, denim, knitwear or any high-end editorial register. Encodes the creative move \"preserve the reference model, swap the garment to the briefed product, bake editorial typography into the image, finish in studio light.\" Trigger it any time a brief says \"make a print ad / s",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 1,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/user/3330063/20260625/89f769cd.jpeg",
+      "url": "https://assets.omnimux.ai/samples/user/3330063/20260625/89f769cd.jpeg",
       "caption": "Mejuri",
       "media_type": "image"
     }

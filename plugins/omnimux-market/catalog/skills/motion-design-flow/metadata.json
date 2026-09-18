@@ -3,7 +3,7 @@
   "name": "motion-design-flow",
   "category": "Video Ads",
   "description": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typography, infographic reels, or generic motion-design ads (keyframes via generate_image, then video via generate_scene_video). NOT for UGC creator reviews, scripted dialogue scenes, narrative cinematic shorts, or talking-head ads. Trigger whenever the brief says motion design, motion reel, motion graphics ad, brand reel, kinetic brand reel, product reel, product reveal, kinetic typography, typography reel, logo reveal, infographic reel, data viz reel, metric reveal, Behance or Dribbble style motion, AE-style motion, or 2026 motion.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 4,

@@ -3,7 +3,7 @@
   "name": "ugc-advisor-numbered-points-reel",
   "category": "UGC & Testimonial",
   "description": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks through a numbered-points argument structure (typically three points) anchored by a contrast-hook open (\"Not all X are the same\"), an animated point-counter overlay system (01/02/03), a stat split-zone graphic, and a warm CTA close. Trigger this skill whenever the brief calls for an educational or comparative product pitch delivered by a credible peer-like narrator, especially for high-conside",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

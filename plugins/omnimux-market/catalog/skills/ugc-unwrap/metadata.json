@@ -3,7 +3,7 @@
   "name": "ugc-unwrap",
   "category": "UGC & Testimonial",
   "description": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL → PRODUCT-FOCUS → SATISFACTION arc, optionally chained into multi-board long-form unboxing videos. Trigger whenever the user mentions an unboxing ad, package reveal ad, \"open the box\" creative, delivery reveal, product unwrapping, or asks for a UGC unboxing video. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 5,
   "app_scope": "orchestrator",
   "usage_count": 81,

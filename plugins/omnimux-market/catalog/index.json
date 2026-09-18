@@ -114,8 +114,7 @@
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价",
-        "热门精选",
-        "Creatify"
+        "热门精选"
       ],
       "skill": "ugc-confessional",
       "source": {
@@ -125,7 +124,7 @@
       "recommended": true,
       "downloads": 441,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC 告白"
       },
       "titleZh": "UGC 告白",
@@ -140,9 +139,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-confessional\n请运行 UGC 告白 (UGC Confessional) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC 告白"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic",
@@ -154,8 +154,7 @@
       "category": "video-ads",
       "tags": [
         "视频广告",
-        "热门精选",
-        "Creatify"
+        "热门精选"
       ],
       "skill": "cinematic",
       "source": {
@@ -165,7 +164,7 @@
       "recommended": true,
       "downloads": 160,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "电影级"
       },
       "titleZh": "电影级",
@@ -180,9 +179,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic\n请运行 电影级 (Cinematic) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "电影级"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-showcase",
@@ -194,8 +194,7 @@
       "category": "product-showcase",
       "tags": [
         "产品展示",
-        "热门精选",
-        "Creatify"
+        "热门精选"
       ],
       "skill": "ugc-showcase",
       "source": {
@@ -205,7 +204,7 @@
       "recommended": true,
       "downloads": 138,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC展示"
       },
       "titleZh": "UGC展示",
@@ -220,9 +219,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-showcase\n请运行 UGC展示 (UGC Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC展示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ecommerce",
@@ -234,8 +234,7 @@
       "category": "product-showcase",
       "tags": [
         "产品展示",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "ecommerce",
       "source": {
@@ -245,7 +244,7 @@
       "recommended": true,
       "downloads": 130,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "电子商务"
       },
       "titleZh": "电子商务",
@@ -260,9 +259,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ecommerce\n请运行 电子商务 (Ecommerce) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "电子商务"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-static-image",
@@ -274,8 +274,7 @@
       "category": "image-static",
       "tags": [
         "图片和静态广告",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "static-image",
       "source": {
@@ -285,7 +284,7 @@
       "recommended": true,
       "downloads": 40,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "静态图片"
       },
       "titleZh": "静态图片",
@@ -300,9 +299,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/static-image\n请运行 静态图片 (Static Image) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "静态图片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-carousel",
@@ -314,8 +314,7 @@
       "category": "image-static",
       "tags": [
         "图片和静态广告",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "carousel",
       "source": {
@@ -325,7 +324,7 @@
       "recommended": true,
       "downloads": 29,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "轮播"
       },
       "titleZh": "轮播",
@@ -340,9 +339,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/carousel\n请运行 轮播 (Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "轮播"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-course-to-short-video",
@@ -350,12 +350,11 @@
       "kind": "skill",
       "title": "课程转短视频",
       "subtitle": "视频广告",
-      "summary": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing, using the Creatify Creative Agent. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
+      "summary": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing with AI automated workflow. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
       "category": "video-ads",
       "tags": [
         "视频广告",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "course-to-short-video",
       "source": {
@@ -365,13 +364,13 @@
       "recommended": true,
       "downloads": 10,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "课程转短视频"
       },
       "titleZh": "课程转短视频",
       "titleEn": "Course To Short Video",
-      "summaryZh": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing, using the Creatify Creative Agent. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
-      "summaryEn": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing, using the Creatify Creative Agent. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
+      "summaryZh": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing with AI automated workflow. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
+      "summaryEn": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing with AI automated workflow. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 2,
@@ -380,9 +379,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/course-to-short-video\n请运行 课程转短视频 (Course To Short Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "课程转短视频"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-fit-check",
@@ -394,8 +394,7 @@
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "ugc-fit-check",
       "source": {
@@ -405,7 +404,7 @@
       "recommended": true,
       "downloads": 63,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC穿搭检查"
       },
       "titleZh": "UGC穿搭检查",
@@ -420,9 +419,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-fit-check\n请运行 UGC穿搭检查 (UGC Fit Check) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC穿搭检查"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-youth-sports-hype-reel",
@@ -434,8 +434,7 @@
       "category": "video-ads",
       "tags": [
         "视频广告",
-        "新品上市",
-        "Creatify"
+        "新品上市"
       ],
       "skill": "youth-sports-hype-reel",
       "source": {
@@ -445,7 +444,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "青少年体育宣传片"
       },
       "titleZh": "青少年体育宣传片",
@@ -460,9 +459,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/youth-sports-hype-reel\n请运行 青少年体育宣传片 (Youth Sports Hype Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "青少年体育宣传片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-script-to-video",
@@ -473,8 +473,7 @@
       "summary": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Time / Visual / VO (or Audio) / On-screen-Text columns, scene rows, or numbered beats. The creative work is already done; the job is faithful execution. Trigger eagerly on any pasted script-shaped block (timed table, scene list, shotlist, \"0:00–0:08 …\" timeline, or a Visual + Voiceover two-column layout). Follow the script verbatim — do not invent new beats, do not rewrite VO, do not reord",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "script-to-video",
       "source": {
@@ -484,7 +483,7 @@
       "recommended": true,
       "downloads": 109,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "脚本转视频"
       },
       "titleZh": "脚本转视频",
@@ -499,9 +498,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/script-to-video\n请运行 脚本转视频 (Script To Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "脚本转视频"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-service",
@@ -512,8 +512,7 @@
       "summary": "Use when the product is a service business — agencies, contractors, lawyers, dentists, med-spas, coaches, consultants, cleaners, lawn care, plumbers, real-estate, financial advisors, fitness trainers, salons, tutoring, home services, B2B services. Produces a Service Creative Brief — ranked hook concepts, scroll-stop frame spec, operator/founder persona, trust posture, result-portrait inventory, footage QA (result B-roll / process / interview / location), enhancement opportunities, and asset gaps. Trigger before scriptwriting whenever the brief mentions a service business, agency, local business, \"near me\" search intent, lead-gen ad, booking ad, consultation ad, or any non-physical-product offering. The producer should run this skill first so its output feeds ads-scriptwriter-skill (or ads-fast-skill). For physical products use ads-ecommerce-skill; for games use ads-games-skill; for UGC creator format use ads-ugc-skill.",
       "category": "other",
       "tags": [
-        "其他",
-        "Creatify"
+        "其他"
       ],
       "skill": "service",
       "source": {
@@ -523,7 +522,7 @@
       "recommended": true,
       "downloads": 92,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "本地生活服务广告"
       },
       "titleZh": "本地生活服务广告",
@@ -538,9 +537,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/service\n请运行 本地生活服务广告 (Service) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "本地生活服务广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-unwrap",
@@ -551,8 +551,7 @@
       "summary": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL → PRODUCT-FOCUS → SATISFACTION arc, optionally chained into multi-board long-form unboxing videos. Trigger whenever the user mentions an unboxing ad, package reveal ad, \"open the box\" creative, delivery reveal, product unwrapping, or asks for a UGC unboxing video. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-unwrap",
       "source": {
@@ -562,7 +561,7 @@
       "recommended": true,
       "downloads": 81,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 开箱"
       },
       "titleZh": "UGC 开箱",
@@ -577,9 +576,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-unwrap\n请运行 UGC 开箱 (UGC Unwrap) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 开箱"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-animated-storymode",
@@ -590,8 +590,7 @@
       "summary": "Use when the ad format is animated / cartoon storytelling for any general industry — explainer animations, animated UGC, cartoon mascots, illustrated narratives, AI-animated ads, motion-graphic stories, doodle ads, 2D-vector ads. Produces an Animated Story Creative Brief — ranked hook concepts, scroll-stop frame spec, art-style direction, character cast, story arc, voiceover/sound spec, asset readiness QA, enhancement opportunities, and asset gaps. Trigger before scriptwriting whenever the brief mentions animation, cartoon, illustrated, motion graphics, explainer video, animated story, AI-animated ad, Pixar-style, doodle ad, or \"make it a cartoon.\" The producer should run this skill first so its output feeds ads-scriptwriter-skill (or ads-fast-skill). For game products use ads-games-skill (which already covers animated mascots inside game ads); for live-action UGC use ads-ugc-skill.",
       "category": "storytelling-script",
       "tags": [
-        "故事讲述和脚本",
-        "Creatify"
+        "故事讲述和脚本"
       ],
       "skill": "animated-storymode",
       "source": {
@@ -601,7 +600,7 @@
       "recommended": true,
       "downloads": 48,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动画故事模式"
       },
       "titleZh": "动画故事模式",
@@ -616,9 +615,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/animated-storymode\n请运行 动画故事模式 (Animated Storymode) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动画故事模式"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-walkthrough",
@@ -629,8 +629,7 @@
       "summary": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each cut is ONE chronological step of using the product, with a `Step N — Heading` typography caption baked onto each slot of the storyboard, optionally chained into multi-board long-form tutorials with globally numbered steps. Trigger whenever the user mentions a tutorial ad, how-to ad, \"how I use this\" video, step-by-step walkthrough, application tutorial, routine breakdown (\"my morning skincare routine\"), instructional creator video, or asks for a UGC tutorial / demo with on-screen step labels. Produces 21:9 storyboard sheet(s) with rendered Step captions and the 9:16 clip(s) end-to-end, returning the final assembled video.",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-walkthrough",
       "source": {
@@ -640,7 +639,7 @@
       "recommended": true,
       "downloads": 42,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "UGC 演练演示"
       },
       "titleZh": "UGC 演练演示",
@@ -655,9 +654,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-walkthrough\n请运行 UGC 演练演示 (UGC Walkthrough) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "UGC 演练演示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-games",
@@ -668,8 +668,7 @@
       "summary": "Use when the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hyper-casual, sim, simulator, app-game). Produces a Game Creative Brief — gameplay-footage QA, mascot/character inventory, listing-page review pull-quotes, mood/dimension candidates, and a ranked list of hook concepts tuned for game ads. Trigger before scriptwriting whenever the brief mentions a game, app store / Play Store / Steam / itch.io listing, gameplay video, or a game studio. The producer should run this skill first so its output feeds ads-scriptwriter-skill (or ads-fast-skill).",
       "category": "other",
       "tags": [
-        "竞争对手研究",
-        "Creatify"
+        "竞争对手研究"
       ],
       "skill": "games",
       "source": {
@@ -679,7 +678,7 @@
       "recommended": true,
       "downloads": 32,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "手游与电竞广告"
       },
       "titleZh": "手游与电竞广告",
@@ -694,9 +693,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/games\n请运行 手游与电竞广告 (Games) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "手游与电竞广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ctv",
@@ -707,8 +707,7 @@
       "summary": "Use when producing a Connected TV (CTV / OTT / streaming TV) video ad — Hulu, Disney+, Roku, Samsung TV Plus, YouTube TV, Peacock, Paramount+, Pluto, Tubi. Trigger whenever the user mentions CTV, OTT, streaming TV, connected TV, living-room ad, smart TV ad, Hulu/Roku/Disney+ ad, or any ad meant to play on a television rather than a phone. This skill produces a format brief that the scriptwriter, storyboard, and director stages consume before writing.",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "ctv",
       "source": {
@@ -718,7 +717,7 @@
       "recommended": true,
       "downloads": 21,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "联网电视大屏广告"
       },
       "titleZh": "联网电视大屏广告",
@@ -733,9 +732,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ctv\n请运行 联网电视大屏广告 (Ctv) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "联网电视大屏广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-street-interview",
@@ -746,8 +746,7 @@
       "summary": "Use when producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers in public with a branded mic, asks a hook question, and edits the most surprising reactions into a fast-moving montage that climaxes in a product reveal or recommendation. Trigger for \"street interview,\" \"we asked X people,\" \"blind test,\" \"asking strangers,\" vox-pop, public reaction ads, or any ad whose persuasion comes from real-stranger reactions rather than a single creator's testimonial.",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "street-interview",
       "source": {
@@ -757,7 +756,7 @@
       "recommended": true,
       "downloads": 18,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "街头随机采访"
       },
       "titleZh": "街头随机采访",
@@ -772,9 +771,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/street-interview\n请运行 街头随机采访 (Street Interview) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "街头随机采访"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-podcast",
@@ -785,8 +785,7 @@
       "summary": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, founder talk, sit-down podcast, investigative deep-dive, any content that should feel like a clip from a longer sit-down podcast.  Generates a 16x9 seated composite of host + guest, generates B&W 4-panel shot-grammar storyboards (Patterns A/B/C/E), writes per-chunk Seedance prompts with verbatim camera-state-tagged dialog (on-camera / voice-over / continuing / silent), generates each 8 to 15 second chunk, splits + transcribes audio, assembles the final video. Requires host + guest personas pre-registered via setup_persona.",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "podcast",
       "source": {
@@ -796,7 +795,7 @@
       "recommended": true,
       "downloads": 16,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "播客精彩切片"
       },
       "titleZh": "播客精彩切片",
@@ -811,9 +810,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/podcast\n请运行 播客精彩切片 (Podcast) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "播客精彩切片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-audio-generation",
@@ -824,8 +824,7 @@
       "summary": "Use when the user wants any audio work on a video — generating a text-to-speech voiceover or narration, cloning a voice from a sample, transcribing speech to text wit\r\n        +h word-level timing, dubbing / translating a video into another language, or laying a background-music bed. Maps each task to the right tool (generate_tts, create_voice, split_audi\r\n        +o, transcribe_audio, music_generate), explains the ElevenLabs inline delivery tags for emotion and accent, and gives the transcribe → translate → re-voice chain for dubbing. Trigge\r\n        +r whenever the user mentions voiceover, narration, TTS, reading a script aloud, voice cloning, dubbing, translating the audio, caption / subtitle timing, or background music — even\r\n        + if they do not say \"audio\".",
       "category": "other",
       "tags": [
-        "画外音与音频",
-        "Creatify"
+        "画外音与音频"
       ],
       "skill": "audio-generation",
       "source": {
@@ -835,7 +834,7 @@
       "recommended": true,
       "downloads": 15,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "音频与音效生成"
       },
       "titleZh": "音频与音效生成",
@@ -850,9 +849,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/audio-generation\n请运行 音频与音效生成 (Audio Generation) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "音频与音效生成"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-meme",
@@ -863,8 +863,7 @@
       "summary": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reactions, expanding-brain, distracted-boyfriend-style template, screenshot-stitch, fake-text-thread, fake-comment-callout, Twitter/X-screenshot ad, \"this isn't an ad\" disruption, ironic native-feed posts. Produces a Meme Creative Brief — ranked meme-format concepts, scroll-stop spec, cultural-reference fit, irony posture, brand-subtlety dial, copyright/staleness risk audit, generation prompts, and asset gaps. Trigger before image generation/copy whenever the brief mentions meme, meme ad, ironic, \"this isn't an ad\", template ad, image macro, native disruption, Reddit-style, X/Twitter screenshot, fake DM, or \"make it look like a meme\". The producer should run this skill first so its output feeds image-gen + copy. For polished single image use ads-static-image-skill; for swipe use ads-carousel-skill; for video use ads-ugc-skill / ads-animated-storymode-skill.",
       "category": "meme-native",
       "tags": [
-        "模因与原生",
-        "Creatify"
+        "模因与原生"
       ],
       "skill": "meme",
       "source": {
@@ -874,7 +873,7 @@
       "recommended": true,
       "downloads": 10,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "网络模因与梗图广告"
       },
       "titleZh": "网络模因与梗图广告",
@@ -889,9 +888,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/meme\n请运行 网络模因与梗图广告 (Meme) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "网络模因与梗图广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-amazon-product-listing",
@@ -902,8 +902,7 @@
       "summary": "Use when the user wants Amazon marketplace images from a product photo or product URL — a compliant main image on pure white, the 5 secondary images (infographic, multi-angle, detail, lifestyle, whats-in-the-box), and the 7 A+ Brand Content modules. Trigger whenever the user mentions Amazon listings, main image, secondary images, A+ content, Suppressed Listing, Amazon compliance, or supplies a product image or URL and asks for Amazon-ready visuals.",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "amazon-product-listing",
       "source": {
@@ -913,7 +912,7 @@
       "recommended": true,
       "downloads": 10,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "亚马逊商详图设计"
       },
       "titleZh": "亚马逊商详图设计",
@@ -928,9 +927,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/amazon-product-listing\n请运行 亚马逊商详图设计 (Amazon Product Listing) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "亚马逊商详图设计"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ads-static-image-from-reference",
@@ -941,8 +941,7 @@
       "summary": "Use this skill whenever the user uploads a reference image of a static product ad (a competitor's poster, a Pinterest find, an existing creative they like) AND asks you to make a new static image ad for their own product in the same visual style or layout. Trigger eagerly — any phrasing like \"make this for my product\", \"same style as this\", \"using this reference\", \"like this ad but with X\", or providing a reference image alongside their own product photos should activate this skill. The skill en",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "ads-static-image-from-reference",
       "source": {
@@ -952,7 +951,7 @@
       "recommended": true,
       "downloads": 8,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "参考图生成静态广告"
       },
       "titleZh": "参考图生成静态广告",
@@ -967,9 +966,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/static-image-from-reference\n请运行 参考图生成静态广告 (Static Image From Reference) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "参考图生成静态广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-dark-luxury-food-reveal",
@@ -980,8 +980,7 @@
       "summary": "A high-production cinematic food or restaurant commercial pattern built around macro ingredient beauty shots, slow-motion assembly sequences, a hero turntable reveal, and a silent brand-card close. Anchored by warm amber-gold-on-charcoal color grammar, anamorphic lens flares, a deep calm-authoritative narrator, and an editorial-serif caption style. Trigger this skill whenever a premium food or beverage brand needs a 25-35 second platform-agnostic luxury commercial that prioritizes product crafts",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-dark-luxury-food-reveal",
       "source": {
@@ -991,7 +990,7 @@
       "recommended": true,
       "downloads": 7,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "电影感暗调奢华美食"
       },
       "titleZh": "电影感暗调奢华美食",
@@ -1006,9 +1005,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-dark-luxury-food-reveal\n请运行 电影感暗调奢华美食 (Cinematic Dark Luxury Food Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "电影感暗调奢华美食"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-mobile-app-chaos-to-calm-confessional",
@@ -1019,8 +1019,7 @@
       "summary": "A two-archetype creative pattern for mobile app social video ads (TikTok/Reels/Shorts) that opens with relatable chaos or deadpan confession, delivers the product as the calm/clever resolution, and closes on a warm branded CTA card. Encode two proven hook styles — \"Chaos Spiral\" (panicked energy flips to relief) and \"Confessional Deadpan\" (self-deprecating stat + genuine warmth) — with fast-cut problem beats, sequential UI reveal, and a shared App Store/Google Play end card. Trigger this skill w",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "mobile-app-chaos-to-calm-confessional",
       "source": {
@@ -1030,7 +1029,7 @@
       "recommended": true,
       "downloads": 7,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "从混乱到宁静App告白"
       },
       "titleZh": "从混乱到宁静App告白",
@@ -1045,9 +1044,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/mobile-app-chaos-to-calm-confessional\n请运行 从混乱到宁静App告白 (Mobile App Chaos To Calm Confessional) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "从混乱到宁静App告白"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-home-services-multicity-arc",
@@ -1058,8 +1058,7 @@
       "summary": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic markets. The pattern opens on a \"pain state\" establishing shot (dated or broken space), moves through a proof-of-work montage, crescendos on a luxury reveal hero shot, and closes with a city-specific CTA card that swaps only the city name while keeping all visuals and voiceover shared. Trigger this skill whenever a home services, home improvement, real estate, or renovation brand needs a",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-home-services-multicity-arc",
       "source": {
@@ -1069,7 +1068,7 @@
       "recommended": true,
       "downloads": 6,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "家政服务多城市电影叙事"
       },
       "titleZh": "家政服务多城市电影叙事",
@@ -1084,9 +1083,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-home-services-multicity-arc\n请运行 家政服务多城市电影叙事 (Cinematic Home Services Multicity Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "家政服务多城市电影叙事"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-curated-lifestyle-brand-video",
@@ -1097,8 +1097,7 @@
       "summary": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence, wry minimalism, and the \"real not styled\" aesthetic. Videos open with a calm declarative hook (statement of taste, wry observation, or quiet invitation), unfold through an intimate hands-only visual grammar with amber or daylight warmth, and close with a soft spoken CTA anchored by a terracotta pill. Trigger this skill whenever producing video content in this curated-lifestyle register —",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "curated-lifestyle-brand-video",
       "source": {
@@ -1108,7 +1107,7 @@
       "recommended": true,
       "downloads": 6,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "格调生活品牌宣传片"
       },
       "titleZh": "格调生活品牌宣传片",
@@ -1123,9 +1122,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/curated-lifestyle-brand-video\n请运行 格调生活品牌宣传片 (Curated Lifestyle Brand Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "格调生活品牌宣传片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-b2b-saas-dark-cinematic-exec-arc",
@@ -1136,8 +1136,7 @@
       "summary": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives (fintech, banking, compliance, risk). The creative move: open with a sharp regulatory/operational tension hook spoken by an authoritative narrator-only voice, escalate through a chaos→order visual contrast, let the product UI do the heavy proof work in the long middle beat, and close with a clean logo end card and a single low-friction pilot/demo CTA. Trigger this skill whenever the prod",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "b2b-saas-dark-cinematic-exec-arc",
       "source": {
@@ -1147,7 +1146,7 @@
       "recommended": true,
       "downloads": 5,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "B2B高管暗黑商业短片"
       },
       "titleZh": "B2B高管暗黑商业短片",
@@ -1162,9 +1161,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/b2b-saas-dark-cinematic-exec-arc\n请运行 B2B高管暗黑商业短片 (B2B Saas Dark Cinematic Exec Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "B2B高管暗黑商业短片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-script-planner",
@@ -1175,8 +1175,7 @@
       "summary": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation plan in the exact format used by the ads director: a source-ref breakdown table, an 8-beat narrative arc (auto-collapsed for shorter durations), a scene plan table with VO word-count targets, a full verbatim VO script, casting + location anchors, captions / music / CTA spec, a production pipeline summary, and open questions. Trigger this skill whenever a user asks to \"plan\", \"script\", or",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-script-planner",
       "source": {
@@ -1186,7 +1185,7 @@
       "recommended": true,
       "downloads": 5,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 脚本全流程策划"
       },
       "titleZh": "UGC 脚本全流程策划",
@@ -1201,9 +1200,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-script-planner\n请运行 UGC 脚本全流程策划 (UGC Script Planner) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 脚本全流程策划"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-motion-design-flow",
@@ -1214,8 +1214,7 @@
       "summary": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typography, infographic reels, or generic motion-design ads (keyframes via generate_image, then video via generate_scene_video). NOT for UGC creator reviews, scripted dialogue scenes, narrative cinematic shorts, or talking-head ads. Trigger whenever the brief says motion design, motion reel, motion graphics ad, brand reel, kinetic brand reel, product reel, product reveal, kinetic typography, typography reel, logo reveal, infographic reel, data viz reel, metric reveal, Behance or Dribbble style motion, AE-style motion, or 2026 motion.",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "motion-design-flow",
       "source": {
@@ -1225,7 +1224,7 @@
       "recommended": true,
       "downloads": 4,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动态图形运镜设计"
       },
       "titleZh": "动态图形运镜设计",
@@ -1240,9 +1239,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/motion-design-flow\n请运行 动态图形运镜设计 (Motion Design Flow) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动态图形运镜设计"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-animated-character-ad-plan",
@@ -1253,8 +1253,7 @@
       "summary": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an animated short-form ad with an animal or creature cast, or a text-only ad blueprint they can hand to image and video generators later. Produces a complete TEXT plan only (concept logic, cast bible, scene-by-scene script and direction, Nano Banana 2 start-frame prompts, Seedance image-to-video motion prompts, and assembly/CTA notes) and fires no production tools, so it is free-trial-safe. U",
       "category": "storytelling-script",
       "tags": [
-        "故事讲述和脚本",
-        "Creatify"
+        "故事讲述和脚本"
       ],
       "skill": "animated-character-ad-plan",
       "source": {
@@ -1264,7 +1263,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "动画IP角色广告企划"
       },
       "titleZh": "动画IP角色广告企划",
@@ -1279,9 +1278,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/animated-character-ad-plan\n请运行 动画IP角色广告企划 (Animated Character Ad Plan) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "动画IP角色广告企划"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-anime-episodic-serial-hook",
@@ -1292,8 +1292,7 @@
       "summary": "Produces a cinematic dark-fantasy anime-style episodic serial for short-form vertical video (TikTok / Instagram Reels). The pattern encodes a specific creative DNA: an established recurring protagonist with a deeply visual persona, non-English (or localized-language) voiceover narration delivered in terse literary lines, a chiaroscuro indigo-black color palette, anamorphic shallow-DoF cinematography, and a quiet-dread narrative arc that ends each episode on an unresolved tension beat to drive se",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-anime-episodic-serial-hook",
       "source": {
@@ -1303,7 +1302,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "日漫连载黄金开头Hook"
       },
       "titleZh": "日漫连载黄金开头Hook",
@@ -1318,9 +1317,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-anime-episodic-serial-hook\n请运行 日漫连载黄金开头Hook (Cinematic Anime Episodic Serial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "日漫连载黄金开头Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-dark-saas-ui-hero",
@@ -1331,8 +1331,7 @@
       "summary": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical 9x16 product-hero ad with no voiceover — TikTok, Reels, or Shorts brand-spot tone, dark cinematic startup aesthetic (Linear, Vercel, Arc, Raycast energy), music plus on-screen captions only, ending on a wordmark sign-off. Trigger aggressively whenever the hero is UI screenshots and the user says dashboard, screens, feature tour, product demo, SaaS ad, show the app, AI tool ad, Notion-st",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "dark-saas-ui-hero",
       "source": {
@@ -1342,7 +1341,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "暗色软件UI主图演示"
       },
       "titleZh": "暗色软件UI主图演示",
@@ -1357,9 +1356,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/dark-saas-ui-hero\n请运行 暗色软件UI主图演示 (Dark Saas Ui Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "暗色软件UI主图演示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-fashion-mood-video-skill",
@@ -1370,8 +1370,7 @@
       "summary": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturally in a different outfit, matched to an emotional progression. The pattern encodes a frame-approval gate before any animation credit is spent, mood-matched non-white backgrounds, a varied movement palette so no two scenes look the same, and a clean end card whose brand text is added only via text overlays (never baked into generated images). Trigger this skill whenever a user wants to pro",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "fashion-mood-video-skill",
       "source": {
@@ -1381,7 +1380,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "时尚情绪氛围短片"
       },
       "titleZh": "时尚情绪氛围短片",
@@ -1396,9 +1395,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/fashion-mood-video\n请运行 时尚情绪氛围短片 (Fashion Mood Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "时尚情绪氛围短片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-meme-merch-multi-format-tiktok",
@@ -1409,8 +1409,7 @@
       "summary": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty/meme apparel products, all anchored by a single recurring creator persona. The creative move is persona-locked brand cohesion across formats: same face, same voice, same room, three tonally distinct executions. Trigger this skill whenever a meme/novelty merch brand needs a multi-format TikTok drop from one shoot-day's worth of content, or when a client wants UGC warmth and cinematic pol",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "meme-merch-multi-format-tiktok",
       "source": {
@@ -1420,7 +1419,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "梗图文创多格式短视频"
       },
       "titleZh": "梗图文创多格式短视频",
@@ -1435,9 +1434,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/meme-merch-multi-format-tiktok\n请运行 梗图文创多格式短视频 (Meme Merch Multi Format Tiktok) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "梗图文创多格式短视频"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-inherited-burden-testimonial",
@@ -1448,8 +1448,7 @@
       "summary": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expense, unexpected obligation) that the product resolves quickly and cleanly. The hook opens in first-person with a specific, emotionally resonant situation the viewer has likely shared or feared (\"I just inherited a house I never expected\"), escalates through a pain beat listing real logistical burdens, pivots to a silent b-roll cutaway that makes the object of conversation tangible, then",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-inherited-burden-testimonial",
       "source": {
@@ -1459,7 +1458,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "痛点共鸣用户真实自述"
       },
       "titleZh": "痛点共鸣用户真实自述",
@@ -1474,9 +1473,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-inherited-burden-testimonial\n请运行 痛点共鸣用户真实自述 (UGC Inherited Burden Testimonial) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "痛点共鸣用户真实自述"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-video-recreate-skill",
@@ -1487,8 +1487,7 @@
       "summary": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation. Trigger when the user pastes or uploads a reference video and says \"recreate\", \"remake\", \"make me an ad like this\", \"ad like this video\", \"clone this\", or asks for \"just the ad plan\", \"analyze this and write the plan\", \"text plan for paid\", or asks to execute a single step in isolation (\"generate the images from the plan\", \"make the scene videos\", \"assemble the final\"). Runs a fixed 5-step pipeline with per-st",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "video-recreate-skill",
       "source": {
@@ -1498,7 +1497,7 @@
       "recommended": true,
       "downloads": 3,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "爆款视频智能复刻"
       },
       "titleZh": "爆款视频智能复刻",
@@ -1513,9 +1512,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/video-recreate\n请运行 爆款视频智能复刻 (Video Recreate) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "爆款视频智能复刻"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-animated-mascot-problem-solution",
@@ -1526,8 +1526,7 @@
       "summary": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suffering in a problem environment (Scene 1), then celebrates relief in the hero product environment (Scene 2). The character speaks directly to camera in first person, making the product's value proposition visceral and personal. Trigger this skill when the product is a specialty storage, care, or protection product; when the target audience has a \"hidden damage\" anxiety they may not consci",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "animated-mascot-problem-solution",
       "source": {
@@ -1537,7 +1536,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "吉祥物问题解决型广告"
       },
       "titleZh": "吉祥物问题解决型广告",
@@ -1552,9 +1551,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/animated-mascot-problem-solution\n请运行 吉祥物问题解决型广告 (Animated Mascot Problem Solution) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "吉祥物问题解决型广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cartoon-mascot-narrator-shorts",
@@ -1565,8 +1565,7 @@
       "summary": "Encodes the \"cartoon mascot narrator\" creative pattern for YouTube Shorts (9:16) ads: a branded, studio-quality 3D-animated anthropomorphic animal avatar delivers a warm, conversational narration over expressive motion video, with a punchy hook overlay, auto-captions, and a URL-pill CTA. The mascot is a fixed visual identity anchor — only the product, script, hook text, and destination URL change per run. Trigger this skill whenever a brand wants a non-human, character-driven spokesperson for sh",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cartoon-mascot-narrator-shorts",
       "source": {
@@ -1576,7 +1575,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "卡通吉祥物旁白短视频"
       },
       "titleZh": "卡通吉祥物旁白短视频",
@@ -1591,9 +1590,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cartoon-mascot-narrator-shorts\n请运行 卡通吉祥物旁白短视频 (Cartoon Mascot Narrator Shorts) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "卡通吉祥物旁白短视频"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-casino-streamer-split-screen-reaction",
@@ -1604,8 +1604,7 @@
       "summary": "Produces a vertical 9:16 split-screen reaction ad (15–20s) where the top half shows a webcam-style creator reacting to an outcome and the bottom half shows the app/product screen where that outcome unfolds, escalating through stacking increments and climaxing in a peak-reward burst. The creative move is \"vicarious euphoria through split-screen witness\" — the viewer simultaneously watches the creator's face explode with joy AND sees the exact on-screen event that caused it, collapsing emotional a",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "casino-streamer-split-screen-reaction",
       "source": {
@@ -1615,7 +1614,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "双屏互动实时反应广告"
       },
       "titleZh": "双屏互动实时反应广告",
@@ -1630,9 +1629,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/casino-streamer-split-screen-reaction\n请运行 双屏互动实时反应广告 (Casino Streamer Split Screen Reaction) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "双屏互动实时反应广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-dual-persona-dark-luxury-ad",
@@ -1643,8 +1643,7 @@
       "summary": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero personas (male + female), anamorphic dark-neon urban aesthetics, silence-only (no voiceover), hard-cut multi-scene pacing, and bold all-caps kinetic text overlays. Trigger this skill whenever a brand needs a premium athletic, streetwear, or lifestyle product ad that must feel blockbuster and aspirational — especially when a physical product image is available and the brief calls for \"cin",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-dual-persona-dark-luxury-ad",
       "source": {
@@ -1654,7 +1653,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "双重人格暗调轻奢大片"
       },
       "titleZh": "双重人格暗调轻奢大片",
@@ -1669,9 +1668,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-dual-persona-dark-luxury-ad\n请运行 双重人格暗调轻奢大片 (Cinematic Dual Persona Dark Luxury Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "双重人格暗调轻奢大片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-editorial-luxury-reveal",
@@ -1682,8 +1682,7 @@
       "summary": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting women 25–40. The pattern opens with a silent product macro hero shot paired with a typographic hook overlay, transitions through an on-camera persona presentation and a multi-variant color showcase (voice-over), and closes on a dark shimmer end card with spoken and on-screen CTA. The visual grammar is 85mm shallow-DoF warm champagne/charcoal palette, serif display typography, and editorial-c",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "cinematic-editorial-luxury-reveal",
       "source": {
@@ -1693,7 +1692,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "杂志级奢品震撼登场"
       },
       "titleZh": "杂志级奢品震撼登场",
@@ -1708,9 +1707,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-editorial-luxury-reveal\n请运行 杂志级奢品震撼登场 (Cinematic Editorial Luxury Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "杂志级奢品震撼登场"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-led-product-reveal",
@@ -1721,8 +1721,7 @@
       "summary": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dramatic LED or bioluminescent product lighting across a slow-motion reveal, closing on a floating hero shot with wordmark fade-in. Best triggered when a brand wants an Apple-meets-K-drama luxury launch feel — premium tech gadgets, glowing wearables, high-end cosmetics, or any product whose core value is visual spectacle and distinctive illumination. Trigger this skill whenever the brief i",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "cinematic-led-product-reveal",
       "source": {
@@ -1732,7 +1731,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "光影科技产品高光亮相"
       },
       "titleZh": "光影科技产品高光亮相",
@@ -1747,9 +1746,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-led-product-reveal\n请运行 光影科技产品高光亮相 (Cinematic Led Product Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "光影科技产品高光亮相"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-dtc-multi-format-ad-playbook",
@@ -1760,8 +1760,7 @@
       "summary": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on mobile in-game interstitial / rewarded-video ad inventory — i.e. the buyer mentions in-game ads, mobile interstitial, rewarded video, or a cross-border / 跨境 / 独立站 brand targeting the US through an in-game ad network. Trigger even when the brief only says \"TikTok-style\" or \"UGC\", because in-game interstitial inventory inverts the Meta/TikTok playbook (build 30–45s, never front-load the of",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "dtc-multi-format-ad-playbook",
       "source": {
@@ -1771,7 +1770,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "DTC出海多渠道投放宝典"
       },
       "titleZh": "DTC出海多渠道投放宝典",
@@ -1786,9 +1785,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/dtc-multi-format-ad-playbook\n请运行 DTC出海多渠道投放宝典 (Dtc Multi Format Ad Playbook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "DTC出海多渠道投放宝典"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-avatar-broll-splice-ad",
@@ -1799,8 +1799,7 @@
       "summary": "Use this whenever a user wants a UGC-style talking-head ad where an AI avatar carries the voiceover and the user's OWN screen recordings or product B-roll get layered into the middle — avatar on camera for the hook and CTA, the user's footage covering the product-demo beats while the avatar VO keeps running underneath. Trigger aggressively for any \"talking head plus my screen recordings\", \"avatar reads my script over my app demo\", or \"captioned UGC ad with B-roll\" request, especially for SaaS or",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-avatar-broll-splice-ad",
       "source": {
@@ -1810,7 +1809,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "数字人与空镜拼接广告"
       },
       "titleZh": "数字人与空镜拼接广告",
@@ -1825,9 +1824,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-avatar-broll-splice-ad\n请运行 数字人与空镜拼接广告 (UGC Avatar Broll Splice Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "数字人与空镜拼接广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-curiosity-hook",
@@ -1838,8 +1838,7 @@
       "summary": "A 30-second UGC talking-head creative pattern for mobile app ads on TikTok/Instagram Reels. Opens with a conspiratorial direct-to-camera curiosity question (\"Why does no one talk about this app?\"), moves through a relatable-pain-agitation beat with physical gesture mime, pivots to a phone-hold product reveal with a punchy one-word resolution (\"Instantly.\"), and closes with a warm-laugh soft sign-off plus spoken App Store CTA. Best triggered when the product is a mobile utility app with a clear \"",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-curiosity-hook",
       "source": {
@@ -1849,7 +1848,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "好奇心驱动神级开场"
       },
       "titleZh": "好奇心驱动神级开场",
@@ -1864,9 +1863,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-curiosity-hook\n请运行 好奇心驱动神级开场 (UGC Curiosity Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "好奇心驱动神级开场"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-voiceover-app-screen-showcase",
@@ -1877,8 +1877,7 @@
       "summary": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs. Opens with a sharp problem-framing hook overlaid on a key product screen, moves into a rapid multi-cut feature showcase with warm-authoritative voiceover, and closes on a brand-colored CTA card with a direct download prompt. Best triggered when the brand has a wellness, self-improvement, health-tech, or lifestyle-utility app with strong visual UI assets and a clear \"you didn't know it was this easy\" value pro",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "ugc-voiceover-app-screen-showcase",
       "source": {
@@ -1888,7 +1887,7 @@
       "recommended": true,
       "downloads": 2,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "画外音旁白App录屏展示"
       },
       "titleZh": "画外音旁白App录屏展示",
@@ -1903,9 +1902,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-voiceover-app-screen-showcase\n请运行 画外音旁白App录屏展示 (UGC Voiceover App Screen Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "画外音旁白App录屏展示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ad-layout-mirror-image",
@@ -1916,8 +1916,7 @@
       "summary": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old version of their own ad, a screenshot they admire) and asks for a new static image ad in that same composition but featuring a different product. Strongly prefer triggering this skill any time the brief sounds like \"make me an ad that looks like this, but with my product\" — even if the user does not say \"layout\" or \"mirror\" or \"recreate\" out loud. The creative move is to treat the referenc",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "ad-layout-mirror-image",
       "source": {
@@ -1927,7 +1926,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "镜像构图广告排版"
       },
       "titleZh": "镜像构图广告排版",
@@ -1942,9 +1941,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ad-layout-mirror-image\n请运行 镜像构图广告排版 (Ad Layout Mirror Image) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "镜像构图广告排版"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-bridal-macro-editorial-hook",
@@ -1955,8 +1955,7 @@
       "summary": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically bridal, couture, or occasion-wear — that uses extreme macro close-up product shots (no model, no persona) as the sole visual language, paired with a warm culturally-resonant music bed, elegant serif captions, and a soft aspirational VO that names the craft before the brand. Trigger this skill whenever the brief involves: handmade or artisan fashion items (embroidery, embellishment, jewel",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "bridal-macro-editorial-hook",
       "source": {
@@ -1966,7 +1965,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "婚纱微距高级感Hook"
       },
       "titleZh": "婚纱微距高级感Hook",
@@ -1981,9 +1980,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/bridal-macro-editorial-hook\n请运行 婚纱微距高级感Hook (Bridal Macro Editorial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "婚纱微距高级感Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-service-brand-reveal",
@@ -1994,8 +1994,7 @@
       "summary": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 28-33s). Opens with an aspirational slow-reveal hook — a calm declarative naming the viewer's latent desire (\"Your space deserves to be transformed\"). Pivots to a credibility beat with professionals at work and a services checklist overlay in brand accent color. Closes on a static brand card with location tag, phone number, and soft CTA button. Arc shape: aspiration → credibility → access",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-service-brand-reveal",
       "source": {
@@ -2005,7 +2004,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "高端服务品牌视觉大片"
       },
       "titleZh": "高端服务品牌视觉大片",
@@ -2020,9 +2019,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-service-brand-reveal\n请运行 高端服务品牌视觉大片 (Cinematic Service Brand Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "高端服务品牌视觉大片"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-clinical-ugc-3d-tech-insert-arc",
@@ -2033,8 +2033,7 @@
       "summary": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/mechanism animation inserts to validate a wellness-adjacent product. The hook is a direct pain-confession POV question that calls out the audience's daily physical suffering; the arc moves from raw problem → proof interlude → before/after contrast → product mechanism → lifestyle payoff → CTA. Use this pattern for any body-wellness, support, relief, or ergonomic product whose audience has",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "clinical-ugc-3d-tech-insert-arc",
       "source": {
@@ -2044,7 +2043,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "医疗科技3D透视叙事"
       },
       "titleZh": "医疗科技3D透视叙事",
@@ -2059,9 +2058,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/clinical-ugc-3d-tech-insert-arc\n请运行 医疗科技3D透视叙事 (Clinical UGC 3D Tech Insert Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "医疗科技3D透视叙事"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-comedy-character-bookend-saas-demo",
@@ -2072,8 +2072,7 @@
       "summary": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s) broadcast-style TV commercials. The hook is a broad physical-comedy character reveal (ECU → dolly-back) that disarms the viewer before a narrator-driven SaaS product walkthrough, then pays off the character's setup gag in a closing scene. Trigger this skill whenever a B2B or prosumer SaaS brand wants a memorable, shareable TV or pre-roll spot that balances legitimacy (authoritative nar",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "comedy-character-bookend-saas-demo",
       "source": {
@@ -2083,7 +2082,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "喜剧角色首尾呼应演示"
       },
       "titleZh": "喜剧角色首尾呼应演示",
@@ -2098,9 +2097,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/comedy-character-bookend-saas-demo\n请运行 喜剧角色首尾呼应演示 (Comedy Character Bookend Saas Demo) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "喜剧角色首尾呼应演示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-editorial-apparel-static",
@@ -2111,8 +2111,7 @@
       "summary": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from an uploaded reference photo of a model plus a product brief — especially for intimates, underwear, swimwear, loungewear, denim, knitwear or any high-end editorial register. Encodes the creative move \"preserve the reference model, swap the garment to the briefed product, bake editorial typography into the image, finish in studio light.\" Trigger it any time a brief says \"make a print ad / s",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "editorial-apparel-static",
       "source": {
@@ -2122,7 +2121,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "高定时装静态画报"
       },
       "titleZh": "高定时装静态画报",
@@ -2137,9 +2136,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/editorial-apparel-static\n请运行 高定时装静态画报 (Editorial Apparel Static) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "高定时装静态画报"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-editorial-magazine-lifestyle-ad",
@@ -2150,8 +2150,7 @@
       "summary": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ultra-light serif headline, restrained dot-separated spec lines (no pill badges), warm cinematic grade, and a vertical brand spine element. Trigger this skill whenever a user uploads lifestyle product photography and wants premium aspirational static ads across multiple formats (9:16, 4:1, square) that feel editorial rather than promotional. Particularly strong for bedding, home goods, line",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "editorial-magazine-lifestyle-ad",
       "source": {
@@ -2161,7 +2160,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "生活方式杂志画报广告"
       },
       "titleZh": "生活方式杂志画报广告",
@@ -2176,9 +2175,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/editorial-magazine-lifestyle-ad\n请运行 生活方式杂志画报广告 (Editorial Magazine Lifestyle Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "生活方式杂志画报广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-luxury-product-reveal",
@@ -2189,8 +2189,7 @@
       "summary": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, watches — where no human persona is needed and the product itself is the hero. Uses warm golden-hour lighting, shallow depth of field, slow graceful camera movement, and richly saturated natural environments to create a fragrance-commercial aesthetic that reads as high-end editorial. Hook is a slow atmospheric immersion reveal (product nestled in nature) rather than a verbal or text-drive",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "luxury-product-reveal",
       "source": {
@@ -2200,7 +2199,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "奢侈品级高定登场"
       },
       "titleZh": "奢侈品级高定登场",
@@ -2215,9 +2214,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/luxury-product-reveal\n请运行 奢侈品级高定登场 (Luxury Product Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "奢侈品级高定登场"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-product-photoshoot",
@@ -2228,8 +2228,7 @@
       "summary": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle scenes, hero banners, Pinterest pins, social carousels, ad creative packs, virtual model try-ons, conceptual CGI product art, or aesthetic restyles. Produces lighting-controlled, brand-aware product imagery end-to-end via generate_image. Trigger whenever the brief mentions a product photoshoot, product photo, studio shot, packshot, catalog shot, white-background product photo, seamless background, or any of the related brand-imagery modes above.",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "product-photoshoot",
       "source": {
@@ -2239,7 +2238,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "影棚级商业产品静物摄影"
       },
       "titleZh": "影棚级商业产品静物摄影",
@@ -2254,9 +2253,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/product-photoshoot\n请运行 影棚级商业产品静物摄影 (Product Photoshoot) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "影棚级商业产品静物摄影"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-street-interview-blind-test-ad",
@@ -2267,8 +2267,7 @@
       "summary": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels. A host approaches strangers on a busy urban sidewalk with a plain unbranded mic, poses the same Hook Question to each as a blind taste-test, and closes by asking the final stranger a follow-up that names the product for the first time. The hook archetype is \"blind-test social proof\" — real people answer before the brand is revealed, so the reveal lands as earned validation rather than a pitch. Trigger thi",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "street-interview-blind-test-ad",
       "source": {
@@ -2278,7 +2277,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "街头盲测对比实测广告"
       },
       "titleZh": "街头盲测对比实测广告",
@@ -2293,9 +2292,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/street-interview-blind-test-ad\n请运行 街头盲测对比实测广告 (Street Interview Blind Test Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "街头盲测对比实测广告"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-mom-discovery-hook-kids-product",
@@ -2306,8 +2306,7 @@
       "summary": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational items) aimed at parents — especially moms — on TikTok and Instagram Reels. The creative move is a \"POV discovery\" hook that positions the parent as the finder of a great product, followed by a rapid three-benefit parade ending in a confident TikTok Shop CTA. Trigger this skill whenever the product is aimed at kids aged 2–12, the brand wants an authentic/organic feel over a polished ad feel,",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-mom-discovery-hook-kids-product",
       "source": {
@@ -2317,7 +2316,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "宝妈育儿好物发现Hook"
       },
       "titleZh": "宝妈育儿好物发现Hook",
@@ -2332,9 +2331,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-mom-discovery-hook-kids-product\n请运行 宝妈育儿好物发现Hook (UGC Mom Discovery Hook Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "宝妈育儿好物发现Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-skeptic-convert",
@@ -2345,8 +2345,7 @@
       "summary": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare, or supplement product where the creative move is a single-take peer-reviewer selfie that OPENS on doubt (\"I thought this was BS…\") and PIVOTS mid-clip into a genuine product reveal and endorsement. Trigger this skill aggressively whenever the brief calls for \"UGC\", \"authentic review\", \"selfie ad\", \"TikTok-style\", or any DTC oral-care / skincare / haircare / wellness product with a clean",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-skeptic-convert",
       "source": {
@@ -2356,7 +2355,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "从质疑到真香心路历程"
       },
       "titleZh": "从质疑到真香心路历程",
@@ -2371,9 +2370,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-skeptic-convert\n请运行 从质疑到真香心路历程 (UGC Skeptic Convert) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "从质疑到真香心路历程"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-two-character-comedy-skit-hook",
@@ -2384,8 +2384,7 @@
       "summary": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle pain point and a theatrical foil (expert, character, or mascot) dramatically swoops in to roast, school, and convert them. The structural move is *shock reaction → dramatic intervention → roast-to-persuasion → reluctant concession → CTA*. Best triggered when a brand has a strong contrarian or character-driven identity, the product solves a well-known frustration (insurance, debt, subscr",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-two-character-comedy-skit-hook",
       "source": {
@@ -2395,7 +2394,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "双人爆笑短剧冲突开场"
       },
       "titleZh": "双人爆笑短剧冲突开场",
@@ -2410,9 +2409,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-two-character-comedy-skit-hook\n请运行 双人爆笑短剧冲突开场 (UGC Two Character Comedy Skit Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "双人爆笑短剧冲突开场"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-vox-paper-cutout-explainer",
@@ -2423,8 +2423,7 @@
       "summary": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphics, paper collage animation, layered-paper diorama, or any short-form (Reels/TikTok/Shorts) conceptual/informational explainer in the visual language of documentary explainer videos. Trigger eagerly on phrases like \"explainer-video style\", \"paper motion graphics\", \"paper cutout\", \"explainer in a documentary style\", \"newspaper-clipping animation\", or whenever the user wants conceptual moti",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "vox-paper-cutout-explainer",
       "source": {
@@ -2434,7 +2433,7 @@
       "recommended": true,
       "downloads": 1,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Vox拼贴剪纸深度解说"
       },
       "titleZh": "Vox拼贴剪纸深度解说",
@@ -2449,9 +2448,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/vox-paper-cutout-explainer\n请运行 Vox拼贴剪纸深度解说 (Vox Paper Cutout Explainer) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Vox拼贴剪纸深度解说"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-anthropomorphic-dark-comedy-telenovela",
@@ -2462,8 +2462,7 @@
       "summary": "Encodes the over-the-top dark-comedy telenovela arc with anthropomorphic characters (human body + literal object/animal/food head with embedded human facial features). The pattern drives engagement through absurd premise collision — recognizable soap-opera drama played completely straight by characters with inherently ridiculous appearances. Deploy this skill whenever a product, food item, brand mascot, or concept can be personified into a feuding couple; the built-in tension between dignified m",
       "category": "storytelling-script",
       "tags": [
-        "故事讲述和脚本",
-        "Creatify"
+        "故事讲述和脚本"
       ],
       "skill": "anthropomorphic-dark-comedy-telenovela",
       "source": {
@@ -2473,7 +2472,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Anthropomorphic Dark Comedy Telenovela"
       },
       "titleZh": "Anthropomorphic Dark Comedy Telenovela",
@@ -2488,9 +2487,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/anthropomorphic-dark-comedy-telenovela\n请运行 Anthropomorphic Dark Comedy Telenovela (Anthropomorphic Dark Comedy Telenovela) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Anthropomorphic Dark Comedy Telenovela"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-dual-persona-cultural-identity-arc",
@@ -2501,8 +2501,7 @@
       "summary": "A luxury video ad pattern that establishes deep cultural identity through two contrasting on-camera personas (female + male) speaking directly to camera in a shared mother tongue, anchored by a contemplative cinematic aesthetic and closed by a brand-voice voiceover end card. Trigger this skill whenever a brand's core value proposition is rooted in cultural heritage, craftsmanship, or origin story — especially luxury fashion, artisan goods, or diaspora brands targeting prestige audiences on verti",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-dual-persona-cultural-identity-arc",
       "source": {
@@ -2512,7 +2511,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Cinematic Dual Persona Cultural Identity Arc"
       },
       "titleZh": "Cinematic Dual Persona Cultural Identity Arc",
@@ -2527,9 +2526,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-dual-persona-cultural-identity-arc\n请运行 Cinematic Dual Persona Cultural Identity Arc (Cinematic Dual Persona Cultural Identity Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Cinematic Dual Persona Cultural Identity Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-pharma-parody-arc",
@@ -2540,8 +2540,7 @@
       "summary": "Encodes the \"pharmaceutical-style parody\" creative pattern: a slow-burn cinematic opener with a silver-tongued VO diagnosing an absurd corporate \"disorder\", a hard mid-pivot to euphoric product payoff, and a blistering rapid-fire disclaimer close. Trigger this skill whenever the brief calls for satirical parody of a real ad genre (pharma, insurance, luxury car, finance) applied to a B2B or culture-war product, especially when the comedic engine is deadpan clinical language colliding with ridicul",
       "category": "storytelling-script",
       "tags": [
-        "故事讲述和脚本",
-        "Creatify"
+        "故事讲述和脚本"
       ],
       "skill": "cinematic-pharma-parody-arc",
       "source": {
@@ -2551,7 +2550,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Cinematic Pharma Parody Arc"
       },
       "titleZh": "Cinematic Pharma Parody Arc",
@@ -2566,9 +2565,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-pharma-parody-arc\n请运行 Cinematic Pharma Parody Arc (Cinematic Pharma Parody Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Cinematic Pharma Parody Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-saas-character-arc",
@@ -2579,8 +2579,7 @@
       "summary": "A cinematic commercial pattern for B2B SaaS brands that uses a single consistent professional persona following a 3-act arc (field to product to close). Apple-commercial meets documentary aesthetic — anamorphic film look, Kodak Portra color science, shallow DoF, and a calm-authoritative narrator. Best triggered when a client wants a premium brand film (not a demo), has a clear professional end-user (contractor, nurse, agent, field worker, etc.), and needs product UI shown faithfully in-context o",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-saas-character-arc",
       "source": {
@@ -2590,7 +2589,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Cinematic Saas Character Arc"
       },
       "titleZh": "Cinematic Saas Character Arc",
@@ -2605,9 +2604,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-saas-character-arc\n请运行 Cinematic Saas Character Arc (Cinematic Saas Character Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Cinematic Saas Character Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-stat-shock-local-pride",
@@ -2618,8 +2618,7 @@
       "summary": "A silent, music-driven cinematic vertical ad that opens with a bold two-line \"knowledge gap\" hook — stating something widely believed (\"EVERYONE KNOWS THE STORY.\") then immediately subverting it (\"FEW KNOW THE SOURCE.\") — before delivering the product as the physical embodiment of the correct answer. The arc moves from aerial authority to human warmth to product proof to identity payoff, closing with the product's own slogan as the CTA card. Deploy this pattern whenever the product exists becaus",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-stat-shock-local-pride",
       "source": {
@@ -2629,7 +2628,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Cinematic Stat Shock Local Pride"
       },
       "titleZh": "Cinematic Stat Shock Local Pride",
@@ -2644,9 +2643,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-stat-shock-local-pride\n请运行 Cinematic Stat Shock Local Pride (Cinematic Stat Shock Local Pride) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Cinematic Stat Shock Local Pride"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-thriller-book-multi-format-campaign",
@@ -2657,8 +2657,7 @@
       "summary": "A premium cinematic ad campaign pattern for thriller, crime, mystery, horror, and paranormal fiction ebooks and audiobooks sold direct-to-author (bypassing retail platforms). Encodes atmospheric tension-build hooks, a literary serif caption style, a gift-curse duality question archetype, and a direct-purchase CTA that uses author-store savings as the conversion lever. Produces both image ads (three distinct hook angles: philosophical-question, environmental-split-composition, and premium-promo-b",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "cinematic-thriller-book-multi-format-campaign",
       "source": {
@@ -2668,7 +2667,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Cinematic Thriller Book Multi Format Campaign"
       },
       "titleZh": "Cinematic Thriller Book Multi Format Campaign",
@@ -2683,9 +2682,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-thriller-book-multi-format-campaign\n请运行 Cinematic Thriller Book Multi Format Campaign (Cinematic Thriller Book Multi Format Campaign) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Cinematic Thriller Book Multi Format Campaign"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-cinematic-warmtodark-safety-arc",
@@ -2696,8 +2696,7 @@
       "summary": "A cinematic anamorphic ad pattern built for personal-safety, security, and emergency-response products targeting women 18-40, parents, and high-exposure workers in dense urban markets. The creative move is a warm-to-dark lighting arc — spots of domestic warmth (golden hour, kitchen light, bedroom glow) deliberately drain into cold blue-lit crisis situations, then resolve back to warmth once the product intervenes. The hook is a covert-action POV reveal: the audience sees the product's gesture or",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "cinematic-warmtodark-safety-arc",
       "source": {
@@ -2707,7 +2706,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Cinematic Warmtodark Safety Arc"
       },
       "titleZh": "Cinematic Warmtodark Safety Arc",
@@ -2722,9 +2721,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/cinematic-warmtodark-safety-arc\n请运行 Cinematic Warmtodark Safety Arc (Cinematic Warmtodark Safety Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Cinematic Warmtodark Safety Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-client-process-guide-builder",
@@ -2735,8 +2735,7 @@
       "summary": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demystifies how they produce something — pipeline guides, \"how we make your X\" decks, process transparency reports, white-glove onboarding collateral, behind-the-scenes documentation. Produces a three-format deliverable bundle (canonical Markdown, modern minimalist dark-theme self-contained HTML, branded reportlab PDF with cover + inner page templates) in one pass. Be eager to trigger this o",
       "category": "other",
       "tags": [
-        "其他",
-        "Creatify"
+        "其他"
       ],
       "skill": "client-process-guide-builder",
       "source": {
@@ -2746,7 +2745,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Client Process Guide Builder"
       },
       "titleZh": "Client Process Guide Builder",
@@ -2761,9 +2760,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/client-process-guide-builder\n请运行 Client Process Guide Builder (Client Process Guide Builder) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Client Process Guide Builder"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-color-spec-sheet",
@@ -2774,8 +2774,7 @@
       "summary": "Generates a Pantone-style color specification sheet from any uploaded product or character design image. The output is a pixel-perfect 3300×1350px PNG that mirrors a measured reference template, with color swatches, PMS C codes, finish labels, deco group boxes, leader lines, and a companion PMS table. No AI image model is ever used — the uploaded image is placed unchanged via Python/PIL. Trigger this skill whenever a user says \"color spec\", \"color extraction\", \"PMS sheet\", \"Pantone spec\", \"extra",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "color-spec-sheet",
       "source": {
@@ -2785,7 +2784,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Color Spec Sheet"
       },
       "titleZh": "Color Spec Sheet",
@@ -2800,9 +2799,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/color-spec-sheet\n请运行 Color Spec Sheet (Color Spec Sheet) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Color Spec Sheet"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-dark-athletic-carousel",
@@ -2813,8 +2813,7 @@
       "summary": "Multi-slide 9:16 or 1:1 carousel ad set for premium athletic / sports-equipment brands (training gear, performance footwear, gym equipment, home-gym hardware). Trigger aggressively any time the request mentions \"carousel,\" \"ad set,\" \"multiple slides,\" \"one image per headline,\" or shows a reference with a lower-third headline plus a dark bottom banner containing a logo and a colored pill CTA, and any time the user provides a layout reference + brand logo + lifestyle/product photo pack + a numbere",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "dark-athletic-carousel",
       "source": {
@@ -2824,7 +2823,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Dark Athletic Carousel"
       },
       "titleZh": "Dark Athletic Carousel",
@@ -2839,9 +2838,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/dark-athletic-carousel\n请运行 Dark Athletic Carousel (Dark Athletic Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Dark Athletic Carousel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-editorial-luxury-ig-carousel",
@@ -2852,8 +2852,7 @@
       "summary": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a premium creative studio, luxury brand, design agency, photographer, architect, fashion label, jewelry house, or any \"high-end / editorial / cinematic / stop-scrolling\" business. Trigger it eagerly — if the brief mentions \"carousel,\" \"IG post,\" \"stop scrolling,\" \"premium,\" \"luxury,\" \"editorial,\" \"magazine-style,\" \"cinematic,\" or names a creative/visual studio, this is the right skill. It enco",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "editorial-luxury-ig-carousel",
       "source": {
@@ -2863,7 +2862,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
       },
       "titleZh": "Editorial Luxury Ig Carousel",
@@ -2878,9 +2877,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/editorial-luxury-ig-carousel\n请运行 Editorial Luxury Ig Carousel (Editorial Luxury Ig Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-educational-deficiency-carousel",
@@ -2891,8 +2891,7 @@
       "summary": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual sequence: deep-tone definition slide → light impact/symptoms slide → warm-tone solution slide. Each slide has its own background palette, typography hierarchy, and a faint ghost-texture motif. The style channels premium editorial magazine meets botanical/documentary archive — ultra-realistic, documentary, no product packaging, no sales language. Trigger this skill whenever a brand needs an",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "educational-deficiency-carousel",
       "source": {
@@ -2902,7 +2901,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
       },
       "titleZh": "Educational Deficiency Carousel",
@@ -2917,9 +2916,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/educational-deficiency-carousel\n请运行 Educational Deficiency Carousel (Educational Deficiency Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-fashion-silent-multishot-showcase",
@@ -2930,8 +2930,7 @@
       "summary": "A timeless, visually-led fashion ad pattern built on editorial silence: multiple locked-off camera angles of a model wearing the product, cut to upbeat instrumental music, with zero text, zero voiceover, and zero captions. The 360° Reveal arc (front pose → back turn → detail close-up → walking → smile close-up) communicates fit, quality, and confidence without words. Every session MUST produce exactly 3 complete ad variants — Standard Fit, Plus Size, and Creative Director's Choice — each featuri",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "fashion-silent-multishot-showcase",
       "source": {
@@ -2941,7 +2940,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
       },
       "titleZh": "Fashion Silent Multishot Showcase",
@@ -2956,9 +2955,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/fashion-silent-multishot-showcase\n请运行 Fashion Silent Multishot Showcase (Fashion Silent Multishot Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-gulf-recruitment-cinematic-arc",
@@ -2969,8 +2969,7 @@
       "summary": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeking Gulf/Middle East employment. Opens with a cinematic aerial establishing shot of the destination city at golden hour, moves through an authoritative professional-office scene with services checklist overlay, transitions to aspirational success/arrival proof, and closes on a silent branded end card with trust signals. The hook is a bold block-text declaration (\"YOUR GATEWAY TO [DESTINAT",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "gulf-recruitment-cinematic-arc",
       "source": {
@@ -2980,7 +2979,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
       },
       "titleZh": "Gulf Recruitment Cinematic Arc",
@@ -2995,9 +2994,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/gulf-recruitment-cinematic-arc\n请运行 Gulf Recruitment Cinematic Arc (Gulf Recruitment Cinematic Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-guofeng-palace-drama-single-call",
@@ -3008,8 +3008,7 @@
       "summary": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call — not a multi-scene stitched assembly. Trigger aggressively when the user uploads ≥3 character or location reference images and wants a single short cinematic video (10–15s, 16:9) using exactly those refs; when the brief mentions Seedance omni-reference, 全能参考, 国风, palace or period drama, interrogation or confrontation with flashbacks, or says do not generate new images; or when the user",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "guofeng-palace-drama-single-call",
       "source": {
@@ -3019,7 +3018,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Guofeng Palace Drama Single Call"
       },
       "titleZh": "Guofeng Palace Drama Single Call",
@@ -3034,9 +3033,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/guofeng-palace-drama-single-call\n请运行 Guofeng Palace Drama Single Call (Guofeng Palace Drama Single Call) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Guofeng Palace Drama Single Call"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-hinglish-before-after-saas-hook",
@@ -3047,8 +3047,7 @@
       "summary": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting urban Indian professionals. The hook opens with a hyper-relatable late-night struggle moment spoken in Hinglish, cuts to a dramatic VS split card, then reveals the product solving the pain in seconds — closing with a soft spoken CTA plus an on-screen pill button. Trigger this skill whenever the brief involves an Indian professional audience (CAs, lawyers, HR managers, doctors, fintech us",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "hinglish-before-after-saas-hook",
       "source": {
@@ -3058,7 +3057,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
       },
       "titleZh": "Hinglish Before After Saas Hook",
@@ -3073,9 +3072,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/hinglish-before-after-saas-hook\n请运行 Hinglish Before After Saas Hook (Hinglish Before After Saas Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-home-service-lead-gen-static-meta",
@@ -3086,8 +3086,7 @@
       "summary": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home service business owners (painters, plumbers, electricians, landscapers, etc.). The creative move is signal-layer targeting - each ad is crafted as a signal to a specific psychographic slice of the ICP (identity, struggle, aspiration, relief) rather than a generic product pitch. Ads span four distinct visual registers in parallel - dark-mode typography, lifestyle photography with overlays, docu",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "home-service-lead-gen-static-meta",
       "source": {
@@ -3097,7 +3096,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Home Service Lead Gen Static Meta"
       },
       "titleZh": "Home Service Lead Gen Static Meta",
@@ -3112,9 +3111,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/home-service-lead-gen-static-meta\n请运行 Home Service Lead Gen Static Meta (Home Service Lead Gen Static Meta) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Home Service Lead Gen Static Meta"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-illustrated-world-map-builder",
@@ -3125,8 +3125,7 @@
       "summary": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited with a character roster panel. Trigger this skill whenever the user asks to generate, update, or extend the campus map, add new campus buildings, create individual room interior illustrations, or assemble the final world-map composite deliverables. Also trigger when the user references \"the academy map,\" \"the campus illustration,\" or asks to \"add a building to the map.\" This skill encode",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "illustrated-world-map-builder",
       "source": {
@@ -3136,7 +3135,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Illustrated World Map Builder"
       },
       "titleZh": "Illustrated World Map Builder",
@@ -3151,9 +3150,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/illustrated-world-map-builder\n请运行 Illustrated World Map Builder (Illustrated World Map Builder) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Illustrated World Map Builder"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-kannada-bus-poster-dark-gold",
@@ -3164,8 +3164,7 @@
       "summary": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies using Python/PIL. The creative pattern is a dark navy / starfield background with gold glowing typography, a full-width atmospheric bus photo, a two-column facilities-vs-route-stops content block, and a bold booking CTA strip. Trigger this skill whenever a user asks for a printed or digital bus/travel advertisement in Kannada, or any regional-language transport poster that needs a premiu",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "kannada-bus-poster-dark-gold",
       "source": {
@@ -3175,7 +3174,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Kannada Bus Poster Dark Gold"
       },
       "titleZh": "Kannada Bus Poster Dark Gold",
@@ -3190,9 +3189,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/kannada-bus-poster-dark-gold\n请运行 Kannada Bus Poster Dark Gold (Kannada Bus Poster Dark Gold) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Kannada Bus Poster Dark Gold"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-kit-produto-mecanismo-reveal-ptbr",
@@ -3203,8 +3203,7 @@
       "summary": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modularity, or interactive mechanism IS the key selling point (removable capes, detachable hoods, magnetic patches, modular bags, snap-button accessories, etc.). Opens with a cinematic hero push-in on the garment/product, cuts to an extreme macro of the attachment mechanism, then dramatically reveals the snap/attach moment in motion, closes with the fully-assembled kit hero shot and urgency CT",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "kit-produto-mecanismo-reveal-ptbr",
       "source": {
@@ -3214,7 +3213,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Kit Produto Mecanismo Reveal Ptbr"
       },
       "titleZh": "Kit Produto Mecanismo Reveal Ptbr",
@@ -3229,9 +3228,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/kit-produto-mecanismo-reveal-ptbr\n请运行 Kit Produto Mecanismo Reveal Ptbr (Kit Produto Mecanismo Reveal Ptbr) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Kit Produto Mecanismo Reveal Ptbr"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-landing-page-dr-skill",
@@ -3242,8 +3242,7 @@
       "summary": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-on-delivery (COD / contraentrega) model. Produces 11 vertical 9:16 images following a proven conversion funnel: Above the Fold → Antes/Después → Beneficios → Ingredientes → Comparación → Doctor → Testimonio → Prueba Social → Ofertas → FAQs → Cierre CTA. Each image follows a cohesive visual design system (deep navy + warm amber palette, bold condensed typography, alternating dark/light sec",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "landing-page-dr-skill",
       "source": {
@@ -3253,7 +3252,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Landing Page Dr"
       },
       "titleZh": "Landing Page Dr",
@@ -3268,9 +3267,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/landing-page-dr\n请运行 Landing Page Dr (Landing Page Dr) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Landing Page Dr"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-latam-marketplace-mixed-ugc-skill",
@@ -3281,8 +3281,7 @@
       "summary": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category e-commerce marketplace or local retailer — Chilean / Mexican / Colombian / Argentine sites whose brief is in Spanish and mentions \"atributos esenciales\", category breadth (ropa, hogar, tech, mascotas), or \"compra de todo sin salir de casa\". Trigger eagerly whenever brief is Spanish + names a LatAm marketplace + site shows multiple categories, even if user did not say \"UGC\". Encodes a thr",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "latam-marketplace-mixed-ugc-skill",
       "source": {
@@ -3292,7 +3291,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
       },
       "titleZh": "Latam Marketplace Mixed UGC",
@@ -3307,9 +3306,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/latam-marketplace-mixed-ugc\n请运行 Latam Marketplace Mixed UGC (Latam Marketplace Mixed UGC) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-listing-cinematic-silent-spec-reveal",
@@ -3320,8 +3320,7 @@
       "summary": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res photography) into a 15-second cinematic 9:16 social ad using only listing photos — no stock footage, no voiceover. The creative pattern is a three-scene \"silent spec reveal\": each scene pairs one hero photo (animated with a slow Ken Burns motion) with kinetic text overlays that surface a single compelling spec tier, culminating in a CTA price pill in the brand accent color. All communic",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "listing-cinematic-silent-spec-reveal",
       "source": {
@@ -3331,7 +3330,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
       },
       "titleZh": "Listing Cinematic Silent Spec Reveal",
@@ -3346,9 +3345,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/listing-cinematic-silent-spec-reveal\n请运行 Listing Cinematic Silent Spec Reveal (Listing Cinematic Silent Spec Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-local-service-static-batch-blitz",
@@ -3359,8 +3359,7 @@
       "summary": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel dispatch. Each ad rotates across a distinct layout archetype (full-bleed gradient, split panel, diagonal band, typography-led, caution stripe, three-pillar badge row, etc.) and a distinct copy angle (slogan hero, convenience, speed, size selection, pricing transparency, family-owned authority, local credibility, urgency, homeowner, contractor, use-case proof, trust signals, same-day, brand p",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "local-service-static-batch-blitz",
       "source": {
@@ -3370,7 +3369,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Local Service Static Batch Blitz"
       },
       "titleZh": "Local Service Static Batch Blitz",
@@ -3385,9 +3384,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/local-service-static-batch-blitz\n请运行 Local Service Static Batch Blitz (Local Service Static Batch Blitz) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Local Service Static Batch Blitz"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-luxury-brand-photo-reel",
@@ -3398,8 +3398,7 @@
       "summary": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos. The creative pattern uses a static-image slideshow format (no motion graphics, no voiceover) with editorial-clean text overlays, warm-gold-on-dark typography, and a low-volume luxury instrumental track to create a high-end \"lookbook\" feel. Trigger this skill whenever a brand or business uploads still photos and wants a ready-to-post reel for LinkedIn, Instagram, or Facebook — especially",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "luxury-brand-photo-reel",
       "source": {
@@ -3409,7 +3408,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
       },
       "titleZh": "Luxury Brand Photo Reel",
@@ -3424,9 +3423,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/luxury-brand-photo-reel\n请运行 Luxury Brand Photo Reel (Luxury Brand Photo Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-luxury-dark-carousel-5slide",
@@ -3437,8 +3437,7 @@
       "summary": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage greens and matte blacks, metallic gold accents, hand-drawn doodle overlays (sparkles, stars, arrows, circles, checkmarks), 3D floating elements (rings, orbs, product cards, workflow icons), and cinematic spotlight / depth-of-field lighting. Slide 1 (Cover) and Slide 5 (CTA) composite the user-uploaded subject image; Slides 2–4 are pure design. Narrative arc: Cover → Why (benefit grid) → What",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "luxury-dark-carousel-5slide",
       "source": {
@@ -3448,7 +3447,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
       },
       "titleZh": "Luxury Dark Carousel 5slide",
@@ -3463,9 +3462,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/luxury-dark-carousel-5slide\n请运行 Luxury Dark Carousel 5slide (Luxury Dark Carousel 5slide) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-luxury-editorial-app-reveal",
@@ -3476,8 +3476,7 @@
       "summary": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events, travel, gifting, real estate, new parenthood. The creative move: open on real people in their emotional world with a poetic one-line hook (\"as effortless as your wanderlust\"), transition through rapid tactile macro UI cuts that each showcase one killer feature, then close on a still aspirational headline card with a soft invitation-style CTA. Style register is editorial luxury — analog",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "luxury-editorial-app-reveal",
       "source": {
@@ -3487,7 +3486,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
       },
       "titleZh": "Luxury Editorial App Reveal",
@@ -3502,9 +3501,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/luxury-editorial-app-reveal\n请运行 Luxury Editorial App Reveal (Luxury Editorial App Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-mirror-tryon-haul-beat-cut",
@@ -3515,8 +3515,7 @@
       "summary": "Use this skill whenever the user wants to produce a TikTok-style mirror try-on haul ad — the format where a single creator stands in front of a mirror, holds up outfits on hangers, then cuts to wearing each one, all beat-synced over a music bed with no voice-over. Trigger eagerly on phrases like \"mirror try-on haul\", \"try-on haul with these outfits\", \"make a haul video like ref:N\", or any prompt that anchors on a haul-style reference AND uploads multiple outfit images. The creative DNA is one co",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "mirror-tryon-haul-beat-cut",
       "source": {
@@ -3526,7 +3525,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Mirror Tryon Haul Beat Cut"
       },
       "titleZh": "Mirror Tryon Haul Beat Cut",
@@ -3541,9 +3540,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/mirror-tryon-haul-beat-cut\n请运行 Mirror Tryon Haul Beat Cut (Mirror Tryon Haul Beat Cut) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Mirror Tryon Haul Beat Cut"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-motif-mirror-product-reel",
@@ -3554,8 +3554,7 @@
       "summary": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles, totes, framed prints — anything with a printed motif) and wants a silent, music-only, multi-scene vertical product-highlight reel where the REAL-WORLD version of each printed motif appears alongside the product (real fresh flowers next to a floral-printed mug, real coffee beans by a coffee-print tumbler, real lavender by a lavender candle). This is the go-to creative for \"show my varian",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "motif-mirror-product-reel",
       "source": {
@@ -3565,7 +3564,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
       },
       "titleZh": "Motif Mirror Product Reel",
@@ -3580,9 +3579,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/motif-mirror-product-reel\n请运行 Motif Mirror Product Reel (Motif Mirror Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-paperfold-diorama-journey-arc",
@@ -3593,8 +3593,7 @@
       "summary": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character, environment, and prop rendered as folded paper with geometric origami-style facets, photographed like a studio paper sculpture. The narrative arc follows a relatable life-journey (problem → blocked aspiration → discovery → resolution → CTA), delivered via warm VO-only narration over gently animated paper-craft stills. Trigger this skill whenever a brand wants emotionally resonant storyt",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "paperfold-diorama-journey-arc",
       "source": {
@@ -3604,7 +3603,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Paperfold Diorama Journey Arc"
       },
       "titleZh": "Paperfold Diorama Journey Arc",
@@ -3619,9 +3618,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/paperfold-diorama-journey-arc\n请运行 Paperfold Diorama Journey Arc (Paperfold Diorama Journey Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Paperfold Diorama Journey Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-pedestal-product-hero",
@@ -3632,8 +3632,7 @@
       "summary": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood pedestal, the product bag/jar/box centered on top, a small natural spillage of the product's own contents at the base, and a long soft warm side-cast shadow. Trigger eagerly whenever the user asks for a clean editorial / minimalist still-life image ad for a packaged consumer product (supplement, nutrition, snack, pantry, cosmetic) — especially when they provide a clean still-life reference,",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "pedestal-product-hero",
       "source": {
@@ -3643,7 +3642,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
       },
       "titleZh": "Pedestal Product Hero",
@@ -3658,9 +3657,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/pedestal-product-hero\n请运行 Pedestal Product Hero (Pedestal Product Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-phone-mockup-page",
@@ -3671,8 +3671,7 @@
       "summary": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a phone\" composites for paid-social ad templates. Trigger this whenever a user uploads one or more app, SaaS, or dashboard screenshots and wants them rebranded, the persona name/bio changed, numbers or value ranges swapped, multiple data variants generated, or a wide desktop UI \"consolidated / centered / fit to the phone with no runoff.\" Use it for UGC product-screen inserts, fit-tests ont",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "phone-mockup-page",
       "source": {
@@ -3682,7 +3681,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Phone Mockup Page"
       },
       "titleZh": "Phone Mockup Page",
@@ -3697,9 +3696,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/phone-mockup-page\n请运行 Phone Mockup Page (Phone Mockup Page) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Phone Mockup Page"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-pil-print-flyer-photo-grid",
@@ -3710,8 +3710,7 @@
       "summary": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user-uploaded real photos, web-scraped product/service images, a QR code, branded copy, social handles, and a structured contact/footer block. The pattern: dark-header → real-photo strip → price badge → bullet-grid body → product-series strip → add-ons → CTA bar → branded footer with QR. Trigger this skill whenever a user needs a polished, multi-section print or digital flyer that combines r",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "pil-print-flyer-photo-grid",
       "source": {
@@ -3721,7 +3720,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Pil Print Flyer Photo Grid"
       },
       "titleZh": "Pil Print Flyer Photo Grid",
@@ -3736,9 +3735,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/pil-print-flyer-photo-grid\n请运行 Pil Print Flyer Photo Grid (Pil Print Flyer Photo Grid) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Pil Print Flyer Photo Grid"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-playstore-ui-anchored-promo",
@@ -3749,8 +3749,7 @@
       "summary": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshots — vertical 9:16 screenshot promo cards and/or a horizontal 1024×500 feature graphic. Trigger eagerly on phrases like \"play store screenshots\", \"app store screenshots\", \"feature graphic\", \"store listing creative\", or when the user uploads phone screenshots with brand colors and an app name. The creative pattern is \"UI anchored, minimal copy\" — solid brand-primary background with a subtl",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "playstore-ui-anchored-promo",
       "source": {
@@ -3760,7 +3759,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
       },
       "titleZh": "Playstore Ui Anchored Promo",
@@ -3775,9 +3774,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/playstore-ui-anchored-promo\n请运行 Playstore Ui Anchored Promo (Playstore Ui Anchored Promo) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-pregnancy-subscription-warmblush-static-ad",
@@ -3788,8 +3788,7 @@
       "summary": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box static ads on Meta/Instagram. Applies a dual-audience strategy (the person living the milestone + gift-givers), pairs clean bold sans-serif headlines with hand-drawn sticker offer badges, and anchors every ad in an emotional celebration frame rather than a functional delivery pitch. Trigger this skill whenever a subscription-box or gift-product ad needs to hit Meta 1:1 feed placements with a",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "pregnancy-subscription-warmblush-static-ad",
       "source": {
@@ -3799,7 +3798,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
       },
       "titleZh": "Pregnancy Subscription Warmblush Static Ad",
@@ -3814,9 +3813,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/pregnancy-subscription-warmblush-static-ad\n请运行 Pregnancy Subscription Warmblush Static Ad (Pregnancy Subscription Warmblush Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-real-estate-multiformat-static-ad",
@@ -3827,8 +3827,7 @@
       "summary": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing, ready for Facebook and Instagram ad sets. Each format gets a distinct hook targeting a specific buyer persona (first-time buyer, investor, lifestyle), a bespoke layout pattern suited to that canvas, and full brokerage branding baked into the image. Trigger this skill whenever a real estate agent or team needs multi-format social ads for a listing — even if the user only asks for \"a Fac",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "real-estate-multiformat-static-ad",
       "source": {
@@ -3838,7 +3837,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
       },
       "titleZh": "Real Estate Multiformat Static Ad",
@@ -3853,9 +3852,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/real-estate-multiformat-static-ad\n请运行 Real Estate Multiformat Static Ad (Real Estate Multiformat Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-refurb-tech-product-reel",
@@ -3866,8 +3866,7 @@
       "summary": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL. Fetch the PDP, extract product name, specs, and pricing automatically, then build a 5-scene 9:16 video in the brand's colours with no voiceover — all messaging delivered via bold on-screen text overlays. Trigger this skill whenever a user says \"make a product ad\", \"monthly ad\", or \"product reel\" for a specific product page URL. This skill is the canonical way to produce text-led product ads an",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "refurb-tech-product-reel",
       "source": {
@@ -3877,7 +3876,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
       },
       "titleZh": "Refurb Tech Product Reel",
@@ -3892,9 +3891,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/refurb-tech-product-reel\n请运行 Refurb Tech Product Reel (Refurb Tech Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-regulated-claims-static-ad-matrix",
@@ -3905,8 +3905,7 @@
       "summary": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated legal/compliance disclaimer on every creative, targeting Meta cold audiences. Triggers when a user needs to build a high-volume batch of static Facebook/Instagram ads for a service whose category requires a fixed regulatory disclaimer baked into the image itself. Produces a creative matrix across multiple ad types, visual formats, and persuasion angles — all with the verbatim compliance d",
       "category": "image-static",
       "tags": [
-        "图片和静态广告",
-        "Creatify"
+        "图片和静态广告"
       ],
       "skill": "regulated-claims-static-ad-matrix",
       "source": {
@@ -3916,7 +3915,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
       },
       "titleZh": "Regulated Claims Static Ad Matrix",
@@ -3931,9 +3930,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/regulated-claims-static-ad-matrix\n请运行 Regulated Claims Static Ad Matrix (Regulated Claims Static Ad Matrix) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-retail-multi-variant-carousel-sale",
@@ -3944,8 +3944,7 @@
       "summary": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants, combining per-variant feature carousels with a unified sale carousel. The pattern uses a dual-carousel structure: one carousel per variant (lifestyle hero → feature deep-dives → CTA checklist) and one master sales carousel (per-variant price cards with red sale badging + shared interior/feature proof cards). Trigger this skill whenever a user has a physical product in 2+ colour or SKU",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "retail-multi-variant-carousel-sale",
       "source": {
@@ -3955,7 +3954,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
       },
       "titleZh": "Retail Multi Variant Carousel Sale",
@@ -3970,9 +3969,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/retail-multi-variant-carousel-sale\n请运行 Retail Multi Variant Carousel Sale (Retail Multi Variant Carousel Sale) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-revenue-transformation-arc",
@@ -3983,8 +3983,7 @@
       "summary": "Encodes a dark-grid motion-graphic ad pattern for local-business and food-service brands: a compressed before/after revenue transformation hook (e.g. a before-number cutting to an after-number over a stated time window) anchors a 12-block narrative that moves through pain → context → solution → service pillars → social proof → CTA, all rendered in a strict dark charcoal grid (#0d0d0d) with a color-coded impact syntax (red = current pain, neon green = money/results, white = captions, yellow = ser",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "revenue-transformation-arc",
       "source": {
@@ -3994,7 +3993,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Revenue Transformation Arc"
       },
       "titleZh": "Revenue Transformation Arc",
@@ -4009,9 +4008,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/revenue-transformation-arc\n请运行 Revenue Transformation Arc (Revenue Transformation Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Revenue Transformation Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-spanish-ugc-community-spokesperson-hook",
@@ -4022,8 +4022,7 @@
       "summary": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-50s professional woman who opens with a direct rhetorical question that forces the viewer to confront a personal fear (a costly future event, debt, family burden), then transitions through empathy, solution, and a phone-call CTA. Deploy this skill whenever the target audience is Spanish-speaking, the product is a high-trust service in a considered-purchase category, the platform is TikTo",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "spanish-ugc-community-spokesperson-hook",
       "source": {
@@ -4033,7 +4032,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
       },
       "titleZh": "Spanish UGC Community Spokesperson Hook",
@@ -4048,9 +4047,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/spanish-ugc-community-spokesperson-hook\n请运行 Spanish UGC Community Spokesperson Hook (Spanish UGC Community Spokesperson Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-split-screen-dialogue",
@@ -4061,8 +4061,7 @@
       "summary": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skeptic, etc.) into a finished 9:16 vertical ad shot as a clean selfie-call split-screen — woman top half, man bottom half, single thin white horizontal divider at exact center, ZERO video-call UI chrome (no icons, status pill, buttons, bars, text, or posters anywhere in frame). Each scene lipsyncs only the active speaker while the listener gives a small reaction beat. UGC selfie aesthetic by",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "split-screen-dialogue",
       "source": {
@@ -4072,7 +4071,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Split Screen Dialogue"
       },
       "titleZh": "Split Screen Dialogue",
@@ -4087,9 +4086,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/split-screen-dialogue\n请运行 Split Screen Dialogue (Split Screen Dialogue) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Split Screen Dialogue"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-two-mascot-comedy-commercial",
@@ -4100,8 +4100,7 @@
       "summary": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Character A (an anthropomorphic everyman with a relatable role) and Character B (an anthropomorphic deadpan product authority). The creative pattern is a bumbling-everyman / deadpan-expert comedic duo arc: Character A panics at a relatable problem, Character B coolly delivers the product pitch and a data proof point, and the episode closes with a punchline exchange and a branded end card. Tri",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "two-mascot-comedy-commercial",
       "source": {
@@ -4111,7 +4110,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Two Mascot Comedy Commercial"
       },
       "titleZh": "Two Mascot Comedy Commercial",
@@ -4126,9 +4125,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/two-mascot-comedy-commercial\n请运行 Two Mascot Comedy Commercial (Two Mascot Comedy Commercial) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Two Mascot Comedy Commercial"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-advisor-numbered-points-reel",
@@ -4139,8 +4139,7 @@
       "summary": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks through a numbered-points argument structure (typically three points) anchored by a contrast-hook open (\"Not all X are the same\"), an animated point-counter overlay system (01/02/03), a stat split-zone graphic, and a warm CTA close. Trigger this skill whenever the brief calls for an educational or comparative product pitch delivered by a credible peer-like narrator, especially for high-conside",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-advisor-numbered-points-reel",
       "source": {
@@ -4150,7 +4149,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC Advisor Numbered Points Reel"
       },
       "titleZh": "UGC Advisor Numbered Points Reel",
@@ -4165,9 +4164,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-advisor-numbered-points-reel\n请运行 UGC Advisor Numbered Points Reel (UGC Advisor Numbered Points Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC Advisor Numbered Points Reel"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-diaspora-direct-address-hook",
@@ -4178,8 +4178,7 @@
       "summary": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audience that shares a native language and cultural identity) with a warm, peer-to-peer direct-address hook in their native language, a problem-agitation-benefit-promo-CTA arc, a relatable on-location persona, and sequential benefit badge reveals capped by an inbox/DM CTA. Trigger this skill whenever the brief calls for a native-language UGC ad aimed at an overseas diaspora audience using a",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-diaspora-direct-address-hook",
       "source": {
@@ -4189,7 +4188,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
       },
       "titleZh": "UGC Diaspora Direct Address Hook",
@@ -4204,9 +4203,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-diaspora-direct-address-hook\n请运行 UGC Diaspora Direct Address Hook (UGC Diaspora Direct Address Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-4.webp",
+        "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-female-creator-product-confession-arc",
@@ -4217,8 +4217,7 @@
       "summary": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product visible), followed by a personal-discovery reveal, ingredient/benefit breakdown with held product, seated results testimony, and a label-forward CTA close with \"Link in BIO.\" Optimised for supplement, wellness, beauty, and DTC products targeting women 25–40 on TikTok/Instagram Reels. Trigger this skill whenever a brief wants a female-presenter UGC ad that feels organic, peer-recommended, an",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-female-creator-product-confession-arc",
       "source": {
@@ -4228,7 +4227,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
       },
       "titleZh": "UGC Female Creator Product Confession Arc",
@@ -4243,9 +4242,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-female-creator-product-confession-arc\n请运行 UGC Female Creator Product Confession Arc (UGC Female Creator Product Confession Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-5.webp",
+        "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-homeowner-testimonial-problem-payoff",
@@ -4256,8 +4256,7 @@
       "summary": "A UGC-style direct-to-camera testimonial arc built around a relatable homeowner persona who opens with a visceral environmental problem (heat, bugs, sun, noise), reveals the product as the effortless fix, delivers a lifestyle payoff beat, and closes with a spoken + on-screen CTA backed by a branded end card. Trigger this skill whenever a home-improvement, outdoor-living, smart-home, or comfort product targets middle-aged homeowners on Meta/IG/TikTok and the goal is conversion-first creative with",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-homeowner-testimonial-problem-payoff",
       "source": {
@@ -4267,7 +4266,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
       },
       "titleZh": "UGC Homeowner Testimonial Problem Payoff",
@@ -4282,9 +4281,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-homeowner-testimonial-problem-payoff\n请运行 UGC Homeowner Testimonial Problem Payoff (UGC Homeowner Testimonial Problem Payoff) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-6.webp",
+        "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-personal-reveal-ad",
@@ -4295,8 +4295,7 @@
       "summary": "Modular UGC-style video ad generator with full creative governance. Generates short-form social ads (6s–45s) in a warm, conversational UGC creator voice across 10 format presets. V3 adds immutable brand-lock constants, an 8-point session-start drift check, creative versioning with lineage tracking (FORMAT-SEQ-VARIANT IDs), performance snapshot logging, and intelligent rollback. The optimization layer (hooks, avatars, offers, CTAs) self-improves from performance data while the frozen layer (typog",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-personal-reveal-ad",
       "source": {
@@ -4306,7 +4305,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
       },
       "titleZh": "UGC Personal Reveal Ad",
@@ -4321,9 +4320,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-personal-reveal-ad\n请运行 UGC Personal Reveal Ad (UGC Personal Reveal Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-7.webp",
+        "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-ugc-street-interview-nightlife-hook",
@@ -4334,8 +4334,7 @@
       "summary": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an eye-candy persona plays the role of an enthusiastic insider being \"caught on camera\" outside the venue. The hook drops an interviewer question as a white rounded-pill text overlay while the persona delivers a conspiratorial, feature-by-feature pitch counting on fingers, intercut with silent brand-cut scenes showing product UI with punchy feature callout overlays. Closes with a confident si",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "ugc-street-interview-nightlife-hook",
       "source": {
@@ -4345,7 +4344,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
       },
       "titleZh": "UGC Street Interview Nightlife Hook",
@@ -4360,9 +4359,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-street-interview-nightlife-hook\n请运行 UGC Street Interview Nightlife Hook (UGC Street Interview Nightlife Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-9.webp",
+        "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-video-adapt",
@@ -4373,8 +4373,7 @@
       "summary": "Use when a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adapt intent — analyze the source scene by scene, build reference keyframes and a composition storyboard, regenerate every scene, and assemble the adapted video end to end. Trigger whenever the request contains a source video URL plus recreate, reproduce, or mode=adapt intent.",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "Creatify"
+        "视频广告"
       ],
       "skill": "video-adapt",
       "source": {
@@ -4384,7 +4383,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "多画幅跨平台自适应"
       },
       "titleZh": "多画幅跨平台自适应",
@@ -4399,9 +4398,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/video-adapt\n请运行 多画幅跨平台自适应 (Video Adapt) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-10.webp",
+        "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "多画幅跨平台自适应"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-white-bg-feature-callout-product-overview",
@@ -4412,8 +4412,7 @@
       "summary": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgrounds, feature-callout pill overlays, and a branded end card with the seller's logo. The pattern is: Hero Reveal scene (hook overlay) → Feature Parade scenes (accent + dark pill callouts, one feature per scene) → Branded End Card (PIL-composited, white background, seller logo only, floating product image). Every scene is generated without voiceover or captions; instrumental background music",
       "category": "product-showcase",
       "tags": [
-        "产品展示",
-        "Creatify"
+        "产品展示"
       ],
       "skill": "white-bg-feature-callout-product-overview",
       "source": {
@@ -4423,7 +4422,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "纯白背景卖点标注展示"
       },
       "titleZh": "纯白背景卖点标注展示",
@@ -4438,9 +4437,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/white-bg-feature-callout-product-overview\n请运行 纯白背景卖点标注展示 (White Bg Feature Callout Product Overview) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-2.webp",
+        "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "纯白背景卖点标注展示"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "sk-omx-wise-elder-ugc-kids-product",
@@ -4451,8 +4451,7 @@
       "summary": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmotherly-peer voice avatar delivers a 30-second vertical video in three acts (discovery hook → stacked benefits → dual-CTA close) using the seller's real recorded voice over product-only visuals, playful kinetic captions, and TikTok Shop-compliant CTAs. Trigger this skill whenever a user wants a UGC-style short-form ad for a children's product sold on TikTok Shop or Amazon, especially when the",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价",
-        "Creatify"
+        "UGC 和用户评价"
       ],
       "skill": "wise-elder-ugc-kids-product",
       "source": {
@@ -4462,7 +4461,7 @@
       "recommended": true,
       "downloads": 50,
       "cover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
       },
       "titleZh": "Wise Elder UGC Kids Product",
@@ -4477,9 +4476,10 @@
       "installFlow": "session-guide",
       "sessionPrefill": "/wise-elder-ugc-kids-product\n请运行 Wise Elder UGC Kids Product (Wise Elder UGC Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
-        "asset": "catalog/covers/creatify/skill-card-3.webp",
+        "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
-      }
+      },
+      "author": "Official"
     },
     {
       "id": "exp-ad-creative-strategist",

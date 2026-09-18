@@ -3,34 +3,34 @@
   "name": "dark-athletic-carousel",
   "category": "Image & Static Ads",
   "description": "Multi-slide 9:16 or 1:1 carousel ad set for premium athletic / sports-equipment brands (training gear, performance footwear, gym equipment, home-gym hardware). Trigger aggressively any time the request mentions \"carousel,\" \"ad set,\" \"multiple slides,\" \"one image per headline,\" or shows a reference with a lower-third headline plus a dark bottom banner containing a logo and a colored pill CTA, and any time the user provides a layout reference + brand logo + lifestyle/product photo pack + a numbere",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/df025091de.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/df025091de.png",
       "caption": "Gymshark",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/5f63ee1406.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/5f63ee1406.png",
       "caption": "Gymshark",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/132d25734c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/132d25734c.png",
       "caption": "Gymshark",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/89c94bd197.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/51ea5adb-64a3-4ab3-a42c-b999077e0c3a/89c94bd197.png",
       "caption": "Gymshark",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/user/3330063/20260625/7b9d4335.jpeg",
+      "url": "https://assets.omnimux.ai/samples/user/3330063/20260625/7b9d4335.jpeg",
       "caption": "Gymshark",
       "media_type": "image"
     }

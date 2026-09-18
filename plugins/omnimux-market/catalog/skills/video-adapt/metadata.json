@@ -3,7 +3,7 @@
   "name": "video-adapt",
   "category": "Video Ads",
   "description": "Use when a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adapt intent — analyze the source scene by scene, build reference keyframes and a composition storyboard, regenerate every scene, and assemble the adapted video end to end. Trigger whenever the request contains a source video URL plus recreate, reproduce, or mode=adapt intent.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

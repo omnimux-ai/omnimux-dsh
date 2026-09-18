@@ -3,34 +3,34 @@
   "name": "pregnancy-subscription-warmblush-static-ad",
   "category": "Image & Static Ads",
   "description": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box static ads on Meta/Instagram. Applies a dual-audience strategy (the person living the milestone + gift-givers), pairs clean bold sans-serif headlines with hand-drawn sticker offer badges, and anchors every ad in an emotional celebration frame rather than a functional delivery pitch. Trigger this skill whenever a subscription-box or gift-product ad needs to hit Meta 1:1 feed placements with a",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/88201347bd.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/88201347bd.png",
       "caption": "Bobbie",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/755b0db8fe.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/755b0db8fe.png",
       "caption": "Bobbie",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/9ebacfc355.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/9ebacfc355.png",
       "caption": "Bobbie",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/9336a47e88.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/9336a47e88.png",
       "caption": "Bobbie",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/15b629c99e.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f993b462-49d3-4f8b-85f3-f7992953c0c6/15b629c99e.png",
       "caption": "Bobbie",
       "media_type": "image"
     }

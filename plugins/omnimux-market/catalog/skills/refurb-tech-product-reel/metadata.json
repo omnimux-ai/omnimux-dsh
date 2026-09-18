@@ -3,7 +3,7 @@
   "name": "refurb-tech-product-reel",
   "category": "Product Showcase",
   "description": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL. Fetch the PDP, extract product name, specs, and pricing automatically, then build a 5-scene 9:16 video in the brand's colours with no voiceover — all messaging delivered via bold on-screen text overlays. Trigger this skill whenever a user says \"make a product ad\", \"monthly ad\", or \"product reel\" for a specific product page URL. This skill is the canonical way to produce text-led product ads an",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

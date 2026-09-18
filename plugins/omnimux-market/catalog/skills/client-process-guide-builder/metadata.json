@@ -3,7 +3,7 @@
   "name": "client-process-guide-builder",
   "category": "Other",
   "description": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demystifies how they produce something — pipeline guides, \"how we make your X\" decks, process transparency reports, white-glove onboarding collateral, behind-the-scenes documentation. Produces a three-format deliverable bundle (canonical Markdown, modern minimalist dark-theme self-contained HTML, branded reportlab PDF with cover + inner page templates) in one pass. Be eager to trigger this o",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

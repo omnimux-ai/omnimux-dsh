@@ -3,7 +3,7 @@
   "name": "video-recreate-skill",
   "category": "Video Ads",
   "description": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation. Trigger when the user pastes or uploads a reference video and says \"recreate\", \"remake\", \"make me an ad like this\", \"ad like this video\", \"clone this\", or asks for \"just the ad plan\", \"analyze this and write the plan\", \"text plan for paid\", or asks to execute a single step in isolation (\"generate the images from the plan\", \"make the scene videos\", \"assemble the final\"). Runs a fixed 5-step pipeline with per-st",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 3,

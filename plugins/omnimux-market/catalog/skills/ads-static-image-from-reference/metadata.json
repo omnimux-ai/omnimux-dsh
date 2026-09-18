@@ -3,14 +3,14 @@
   "name": "ads-static-image-from-reference",
   "category": "Image & Static Ads",
   "description": "Use this skill whenever the user uploads a reference image of a static product ad (a competitor's poster, a Pinterest find, an existing creative they like) AND asks you to make a new static image ad for their own product in the same visual style or layout. Trigger eagerly — any phrasing like \"make this for my product\", \"same style as this\", \"using this reference\", \"like this ad but with X\", or providing a reference image alongside their own product photos should activate this skill. The skill en",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 8,
   "favorite_count": 1,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/c09bcc4c-0912-454a-8390-549b913c95cb/eda3a44d41.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/c09bcc4c-0912-454a-8390-549b913c95cb/eda3a44d41.png",
       "caption": "Squarespace",
       "media_type": "image"
     }
