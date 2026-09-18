@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatPrice } from './picker-model.js';
+import { resolveThumbnails } from './picker-model.js';
 
 /**
  * 纯矢量商品占位图标 (零 Emoji)
@@ -25,7 +25,7 @@ function ProductPlaceholderIcon({ size = 28 }) {
 }
 
 /**
- * 产品选择卡片（对齐参考稿：方形缩略图 + 左上勾选框 + 左下价格胶囊 + 卡下名称，保持简洁）
+ * 产品选择卡片（对齐参考图 1：方形缩略图 + 左上勾选框 + 左下多图微标队列 + 卡下名称与分类，移除价格标签）
  * @param {{
  *   product: any,
  *   selected?: boolean,
@@ -45,10 +45,15 @@ export function ProductPickerCard({
   const preview =
     cover?.kind === 'image' && cover.id
       ? `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(cover.id)}`
-      : '';
+      : (product.cover_url || product.image || '');
 
-  const priceText = formatPrice(product.price);
   const glyph = (product.name || '?').trim().slice(0, 1).toUpperCase();
+
+  const thumbnails = resolveThumbnails(product);
+  const totalCount = Math.max(product.media_count || 0, thumbnails.length);
+  const visibleThumbs = thumbnails.slice(0, 3);
+  const overflowCount = totalCount > 3 ? totalCount - 3 : 0;
+  const showThumbsRow = visibleThumbs.length > 1 || overflowCount > 0;
 
   return (
     <article
@@ -105,7 +110,28 @@ export function ProductPickerCard({
           </div>
         )}
 
-        {priceText ? <span className="omx-product-pick-card__badge">{priceText}</span> : null}
+        {showThumbsRow ? (
+          <div
+            className="omx-product-pick-card__thumbs-row"
+            aria-label={`素材共 ${totalCount} 张`}
+            data-testid="product-picker-thumbs-row"
+          >
+            {visibleThumbs.map((thumbUrl, idx) => (
+              <img
+                key={idx}
+                src={thumbUrl}
+                alt=""
+                className="omx-product-pick-card__sub-thumb"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ))}
+            {overflowCount > 0 ? (
+              <span className="omx-product-pick-card__sub-badge">+{overflowCount}</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="omx-product-pick-card__body">

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>产品选择器卡片视觉重构 · 交互验收演示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #121214;
+      --card-bg: #18181b;
+      --border: rgba(255, 255, 255, 0.12);
+      --border-l2: rgba(255, 255, 255, 0.16);
+      --border-l3: rgba(255, 255, 255, 0.22);
+      --border-l4: rgba(255, 255, 255, 0.35);
+      --label-primary: #f3f4f6;
+      --label-secondary: rgba(255, 255, 255, 0.72);
+      --label-tertiary: rgba(255, 255, 255, 0.45);
+      --layer-2: rgba(255, 255, 255, 0.05);
+      --layer-3: rgba(255, 255, 255, 0.08);
+      --primary: #ffffff;
+      --primary-fg: #111827;
+      --mask: rgba(0, 0, 0, 0.65);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--label-primary);
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      padding: 32px 24px 60px;
+    }
+    .header-banner {
+      width: min(960px, 100%);
+      margin-bottom: 24px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .header-banner h1 {
+      font-size: 20px; font-weight: 600; margin: 0 0 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header-banner p {
+      font-size: 13px; color: var(--label-secondary); margin: 0;
+    }
+    .tag-badge {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; background: rgba(59, 130, 246, 0.2); color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* 弹窗主体 */
+    .dialog {
+      width: min(960px, 100%);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+      display: flex; flex-direction: column;
+      overflow: hidden; position: relative;
+    }
+
+    /* 顶部主 Tab */
+    .tabs {
+      display: flex; align-items: center; gap: 24px;
+      padding: 18px 24px 0; border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      appearance: none; background: transparent; border: none; cursor: pointer;
+      font: inherit; font-size: 15px; font-weight: 500; color: var(--label-tertiary);
+      padding: 4px 0 12px; position: relative; transition: color 0.15s ease;
+    }
+    .tab:hover, .tab[data-active="true"] { color: var(--label-primary); }
+    .tab[data-active="true"] { font-weight: 600; }
+    .tab[data-active="true"]::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+      background: var(--label-primary); border-radius: 2px;
+    }
+
+    /* 工具栏：次级分类胶囊 + 搜索框 */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 24px 12px;
+    }
+    .pills-scroll {
+      display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    }
+    .pills-scroll::-webkit-scrollbar { display: none; }
+    .pill {
+      appearance: none; background: var(--layer-2);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 4px 14px; font-size: 12px; line-height: 18px;
+      color: var(--label-secondary); cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .pill:hover {
+      background: rgba(255, 255, 255, 0.1); color: var(--label-primary);
+    }
+    .pill[data-active="true"] {
+      background: #ffffff; border-color: #ffffff; color: #111827; font-weight: 600;
+    }
+    .search-box {
+      position: relative; display: flex; align-items: center; width: 230px; flex-shrink: 0;
+    }
+    .search-icon {
+      position: absolute; left: 12px; color: var(--label-tertiary); pointer-events: none;
+      display: flex; align-items: center;
+    }
+    .search-input {
+      width: 100%; height: 32px; border-radius: 999px;
+      border: 1px solid var(--border); background: transparent;
+      padding: 0 14px 0 34px; font-size: 13px; color: var(--label-primary);
+      outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .search-input:focus {
+      border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    /* 卡片网格：6 列，等高顶部对齐 */
+    .grid {
+      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px;
+      padding: 12px 24px 24px; overflow-y: auto; max-height: 480px; align-items: start;
+    }
+
+    /* 1. 「创建产品」1:1 正方形卡片（对标图 1/图 3） */
+    .card-add {
+      aspect-ratio: 1 / 1; width: 100%;
+      border: 1.5px dashed var(--border-l3); border-radius: 14px;
+      background: var(--layer-2); color: var(--label-secondary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s ease; user-select: none;
+      align-self: start;
+    }
+    .card-add:hover {
+      border-color: var(--primary); background: rgba(255, 255, 255, 0.09);
+      color: var(--primary); transform: translateY(-2px);
+    }
+    .card-add__inner {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    }
+    .card-add__icon {
+      display: flex; align-items: center; justify-content: center; color: inherit;
+    }
+    .card-add__label {
+      font-size: 13px; font-weight: 500; color: inherit;
+    }
+
+    /* 2. 商品卡片 */
+    .card {
+      display: flex; flex-direction: column; width: 100%;
+      background: transparent; border: none; padding: 0; text-align: left;
+      cursor: pointer; user-select: none;
+    }
+    .card__thumb {
+      position: relative; width: 100%; aspect-ratio: 1 / 1;
+      border-radius: 14px; overflow: hidden; background: #27272a;
+      border: 1.5px solid transparent; transition: all 0.15s ease;
+    }
+    .card:hover .card__thumb { transform: translateY(-2px); }
+    .card[data-selected="true"] .card__thumb {
+      border-color: var(--primary);
+    }
+    .card__img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    /* 单选勾选框 */
+    .card__check {
+      position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid var(--border-l4); background: rgba(0, 0, 0, 0.4);
+      display: flex; align-items: center; justify-content: center; z-index: 2;
+      transition: all 0.15s ease;
+    }
+    .card[data-selected="true"] .card__check {
+      border-color: var(--primary); background: var(--primary); color: var(--primary-fg);
+    }
+    /* 多图缩略条（左下角） */
+    .card__thumbs-row {
+      position: absolute; left: 8px; bottom: 8px; z-index: 2;
+      display: flex; align-items: center; gap: 4px; pointer-events: none;
+    }
+    .card__sub-thumb {
+      width: 22px; height: 22px; border-radius: 4px; object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); display: block; flex-shrink: 0;
+    }
+    .card__sub-badge {
+      min-width: 22px; height: 22px; padding: 0 4px; border-radius: 4px;
+      background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.35); color: #ffffff;
+      font-size: 10px; font-weight: 600; line-height: 20px; text-align: center;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-sizing: border-box; flex-shrink: 0;
+    }
+    /* 标题与分类 */
+    .card__body {
+      display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 0 2px;
+    }
+    .card__title {
+      font-size: 13px; font-weight: 600; line-height: 18px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; color: var(--label-primary);
+    }
+    .card__meta {
+      font-size: 11px; color: var(--label-tertiary); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* 底部操作栏 */
+    .footer {
+      display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+      padding: 14px 24px; border-top: 1px solid var(--border);
+      background: var(--card-bg);
+    }
+    .footer-hint {
+      margin-right: auto; font-size: 13px; color: var(--label-secondary);
+    }
+    .btn {
+      height: 32px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--label-primary); font-size: 13px;
+      padding: 0 16px; cursor: pointer; font-weight: 500; transition: all 0.15s ease;
+    }
+    .btn:hover { background: var(--layer-2); }
+    .btn-primary {
+      background: #ffffff; border-color: transparent; color: #111827; font-weight: 600;
+    }
+    .btn-primary:disabled {
+      opacity: 0.4; cursor: not-allowed;
+    }
+
+    /* 模拟链接创建弹窗 */
+    .modal-mask {
+      position: fixed; inset: 0; background: var(--mask);
+      display: none; align-items: center; justify-content: center; z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+    .modal-mask[data-open="true"] { display: flex; }
+    .modal {
+      width: min(460px, 90vw); background: #1c1c1f; border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+    .modal h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+    .modal p { margin: 0 0 16px; font-size: 13px; color: var(--label-secondary); line-height: 1.5; }
+    .modal-input {
+      width: 100%; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04); color: var(--label-primary);
+      padding: 0 12px; font-size: 13px; outline: none; margin-bottom: 20px;
+    }
+    .modal-input:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="header-banner">
+    <div>
+      <h1>
+        产品选择器卡片视觉重构
+        <span class="tag-badge">对标参考图 1</span>
+      </h1>
+      <p>1. 创建产品按钮做大 1:1 ｜ 2. 多图缩略（最多3个+超量计数） ｜ 3. 彻底移除价格标签</p>
+    </div>
+  </div>
+
+  <div class="dialog">
+    <!-- 顶部主 Tab -->
+    <div class="tabs">
+      <button class="tab" data-active="true" onclick="setMainTab(this, 'all')">全部</button>
+      <button class="tab" data-active="false" onclick="setMainTab(this, 'physical')">实体商品</button>
+      <button class="tab" data-active="false" onclick="setMainTab(this, 'digital')">数字产品</button>
+    </div>
+
+    <!-- 次级分类工具栏 -->
+    <div class="toolbar">
+      <div class="pills-scroll">
+        <button class="pill" data-active="true" onclick="setPill(this)">全部</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">女士香水</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">美妆个护</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">日常通勤</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">买一送一</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">TikTok热卖</button>
+        <button class="pill" data-active="false" onclick="setPill(this)">女士内衣</button>
+      </div>
+
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input type="text" class="search-input" placeholder="搜索产品名称、描述、SKU" />
+      </div>
+    </div>
+
+    <!-- 卡片网格 -->
+    <div class="grid" id="productGrid">
+      <!-- 1. 创建产品 1:1 卡片（参考图 1/图 3） -->
+      <div class="card-add" id="cardAddBtn" title="创建产品" onclick="openCreateModal()">
+        <div class="card-add__inner">
+          <div class="card-add__icon">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 6 18V6z" />
+              <path d="M9 9a3 3 0 0 0 6 0" />
+            </svg>
+          </div>
+          <div class="card-add__label">创建产品</div>
+        </div>
+      </div>
+
+      <!-- 2. 商品卡片 1：女士香水（3张图） -->
+      <article class="card" data-id="p1" data-selected="false" onclick="toggleSelect(this)">
+        <div class="card__thumb">
+          <span class="card__check"></span>
+          <img class="card__img" src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=500&auto=format&fit=crop&q=80" alt="" />
+          <!-- 多图缩略条：3 张小图 -->
+          <div class="card__thumbs-row">
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=100&auto=format&fit=crop&q=80" alt="" />
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="card__title" title="女士高级淡香水 50ml 礼盒装">女士高级淡香水 50ml ...</div>
+          <div class="card__meta">女士香水</div>
+        </div>
+      </article>
+
+      <!-- 3. 商品卡片 2：女士内衣（14张图，超量显示 +11） -->
+      <article class="card" data-id="p2" data-selected="true" onclick="toggleSelect(this)">
+        <div class="card__thumb">
+          <span class="card__check">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+          <img class="card__img" src="https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500&auto=format&fit=crop&q=80" alt="" />
+          <!-- 多图缩略条：3 张小图 + 超量徽标 +11 -->
+          <div class="card__thumbs-row">
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1583209814683-c023dd293cc6?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1518444065439-e933c06ce9cd?w=100&auto=format&fit=crop&q=80" alt="" />
+            <span class="card__sub-badge">+11</span>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="card__title" title="中老年纯棉前扣无钢圈透气内衣">中老年纯棉前扣无钢圈...</div>
+          <div class="card__meta">女士内衣</div>
+        </div>
+      </article>
+
+      <!-- 4. 商品卡片 3：迷你香水喷雾（4张图，超量显示 +1） -->
+      <article class="card" data-id="p3" data-selected="false" onclick="toggleSelect(this)">
+        <div class="card__thumb">
+          <span class="card__check"></span>
+          <img class="card__img" src="https://images.unsplash.com/photo-1594035910387-fea47794261f?w=500&auto=format&fit=crop&q=80" alt="" />
+          <!-- 多图缩略条：3 张小图 + 超量徽标 +1 -->
+          <div class="card__thumbs-row">
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1594035910387-fea47794261f?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1528740561666-dc2479dc08ab?w=100&auto=format&fit=crop&q=80" alt="" />
+            <span class="card__sub-badge">+1</span>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="card__title" title="5ml 便携迷你香水喷雾瓶">5ml 便携迷你香水喷雾...</div>
+          <div class="card__meta">美妆个护</div>
+        </div>
+      </article>
+
+      <!-- 5. 商品卡片 4：OmniMux 数字产品（单图，不显示缩略图） -->
+      <article class="card" data-id="p4" data-selected="false" onclick="toggleSelect(this)">
+        <div class="card__thumb">
+          <span class="card__check"></span>
+          <img class="card__img" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80" alt="" />
+        </div>
+        <div class="card__body">
+          <div class="card__title" title="OmniMux AI 营销工作流">OmniMux 爆款引擎</div>
+          <div class="card__meta">数字产品</div>
+        </div>
+      </article>
+
+      <!-- 6. 商品卡片 5：男士多维复合营养素（8张图，超量显示 +5） -->
+      <article class="card" data-id="p5" data-selected="false" onclick="toggleSelect(this)">
+        <div class="card__thumb">
+          <span class="card__check"></span>
+          <img class="card__img" src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80" alt="" />
+          <div class="card__thumbs-row">
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=100&auto=format&fit=crop&q=80" alt="" />
+            <img class="card__sub-thumb" src="https://images.unsplash.com/photo-1577401239170-897942555fb3?w=100&auto=format&fit=crop&q=80" alt="" />
+            <span class="card__sub-badge">+5</span>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="card__title" title="Ambeak Men's Multivitamin 复合营养片">Ambeak Men's Vitamin...</div>
+          <div class="card__meta">日常保健</div>
+        </div>
+      </article>
+    </div>
+
+    <!-- 底部确认栏 -->
+    <div class="footer">
+      <div class="footer-hint" id="selectedHint">已选择：中老年纯棉前扣无钢圈透气内衣</div>
+      <button class="btn" onclick="alert('已取消')">取消</button>
+      <button class="btn btn-primary" id="confirmBtn" onclick="confirmProduct()">确认选择</button>
+    </div>
+  </div>
+
+  <!-- 创建产品链接弹窗 -->
+  <div class="modal-mask" id="createModal" onclick="closeCreateModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>粘贴商品链接自动解析</h3>
+      <p>支持淘宝、天猫、京东、Shopee、Lazada、TikTok Shop、Amazon 等主流电商平台商品主图与素材解析。</p>
+      <input type="text" class="modal-input" placeholder="https://..." id="productUrlInput" />
+      <div class="modal-actions">
+        <button class="btn" onclick="closeCreateModal()">取消</button>
+        <button class="btn btn-primary" onclick="simulateCreate()">解析并创建</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedId = 'p2';
+
+    function toggleSelect(card) {
+      document.querySelectorAll('.card').forEach(c => {
+        c.setAttribute('data-selected', 'false');
+        c.querySelector('.card__check').innerHTML = '';
+      });
+      card.setAttribute('data-selected', 'true');
+      card.querySelector('.card__check').innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      `;
+      selectedId = card.getAttribute('data-id');
+      const title = card.querySelector('.card__title').getAttribute('title');
+      document.getElementById('selectedHint').textContent = '已选择：' + title;
+      document.getElementById('confirmBtn').disabled = false;
+    }
+
+    function setMainTab(btn, tab) {
+      document.querySelectorAll('.tab').forEach(t => t.setAttribute('data-active', 'false'));
+      btn.setAttribute('data-active', 'true');
+    }
+
+    function setPill(btn) {
+      document.querySelectorAll('.pill').forEach(p => p.setAttribute('data-active', 'false'));
+      btn.setAttribute('data-active', 'true');
+    }
+
+    function openCreateModal() {
+      document.getElementById('createModal').setAttribute('data-open', 'true');
+      document.getElementById('productUrlInput').focus();
+    }
+
+    function closeCreateModal(e) {
+      document.getElementById('createModal').setAttribute('data-open', 'false');
+    }
+
+    function simulateCreate() {
+      const url = document.getElementById('productUrlInput').value.trim();
+      if (!url) {
+        alert('请输入商品链接');
+        return;
+      }
+      alert('已模拟解析并创建产品！');
+      closeCreateModal();
+    }
+
+    function confirmProduct() {
+      alert('确认选择产品 ID: ' + selectedId);
+    }
+  </script>
+</body>
+</html>

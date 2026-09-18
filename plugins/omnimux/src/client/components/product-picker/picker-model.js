@@ -164,3 +164,50 @@ export function createSafeT(customT) {
     return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
   };
 }
+
+/**
+ * 提取商品卡片的多图缩略列表（优先 media / thumbnails / images）
+ * @param {any} product
+ * @returns {string[]}
+ */
+export function resolveThumbnails(product) {
+  if (!product) return [];
+  const list = [];
+  const add = (url) => {
+    if (url && typeof url === 'string' && !list.includes(url)) {
+      list.push(url);
+    }
+  };
+
+  const resolveItem = (item) => {
+    if (!item) return;
+    if (typeof item === 'string') {
+      add(item);
+      return;
+    }
+    if (typeof item === 'object') {
+      if (item.kind && item.kind !== 'image') return;
+      if (item.id && product.id) {
+        add(`/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(item.id)}`);
+      } else if (item.url) {
+        add(item.url);
+      } else if (item.src) {
+        add(item.src);
+      } else if (item.preview) {
+        add(item.preview);
+      }
+    }
+  };
+
+  if (Array.isArray(product.media)) {
+    product.media.forEach(resolveItem);
+  }
+  if (Array.isArray(product.thumbnails)) {
+    product.thumbnails.forEach(resolveItem);
+  }
+  if (Array.isArray(product.images)) {
+    product.images.forEach(resolveItem);
+  }
+
+  return list;
+}

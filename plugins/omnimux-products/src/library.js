@@ -347,6 +347,7 @@ function viewOf(product, fs) {
  * @param {ReturnType<typeof viewOf>} view
  */
 export function listViewOf(view) {
+  const visibleImages = (view.media || []).filter((m) => m.kind === 'image')
   return {
     id: view.id,
     name: view.name,
@@ -366,6 +367,7 @@ export function listViewOf(view) {
     link: view.link,
     cover_media_id: view.cover_media_id,
     cover: view.cover,
+    thumbnails: visibleImages.slice(0, 10).map((m) => ({ id: m.id, kind: m.kind })),
     media_count: view.media.length,
     missing_media_count: view.missing_media_count,
     brand_strategy: view.brand_strategy,
