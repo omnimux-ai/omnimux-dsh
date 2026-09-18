@@ -20,7 +20,11 @@
         "mediaUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp",
         "params": {
           "aspectRatio": "9:16"
-        }
+        },
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "image"
       }
     },
     {
@@ -37,7 +41,11 @@
         "slotRole": "copywriting",
         "isSlot": true,
         "content": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product.",
-        "prompt": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
+        "prompt": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product.",
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "text"
       }
     },
     {
@@ -79,7 +87,11 @@
         "params": {
           "voice": "zh_female_energetic",
           "speed": 1
-        }
+        },
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "audio"
       }
     }
   ],

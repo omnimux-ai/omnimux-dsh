@@ -996,7 +996,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1013,7 +1017,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation.",
-          "prompt": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation."
+          "prompt": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1055,7 +1063,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1108,7 +1120,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1125,7 +1141,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best.",
-          "prompt": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best."
+          "prompt": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1167,7 +1187,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1220,7 +1244,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1237,7 +1265,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "Multiple angle and scene photos of clothing models. Upload your product to experience it.",
-          "prompt": "Multiple angle and scene photos of clothing models. Upload your product to experience it."
+          "prompt": "Multiple angle and scene photos of clothing models. Upload your product to experience it.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1279,7 +1311,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1332,7 +1368,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1349,7 +1389,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products.",
-          "prompt": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
+          "prompt": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1391,7 +1435,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1444,7 +1492,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1461,7 +1513,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale.",
-          "prompt": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
+          "prompt": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1503,7 +1559,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1556,7 +1616,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1573,7 +1637,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product.",
-          "prompt": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
+          "prompt": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1615,7 +1683,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
@@ -1668,7 +1740,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "mediaUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp",
           "params": {
             "aspectRatio": "9:16"
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "image"
         }
       },
       {
@@ -1685,7 +1761,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "slotRole": "copywriting",
           "isSlot": true,
           "content": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out.",
-          "prompt": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
+          "prompt": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out.",
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "text"
         }
       },
       {
@@ -1727,7 +1807,11 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "params": {
             "voice": "zh_female_energetic",
             "speed": 1
-          }
+          },
+          "nodeKind": "import",
+          "selectedTool": "import",
+          "status": "completed",
+          "materialType": "audio"
         }
       }
     ],
