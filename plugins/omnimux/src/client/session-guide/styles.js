@@ -3062,7 +3062,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 /* Shelf Row */
 .omnimux-explore-shelves-view { display:flex; flex-direction:column; gap:36px; }
 .omnimux-shelf-section { display:flex; flex-direction:column; position:relative; }
-.omnimux-shelf-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+.omnimux-shelf-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .omnimux-shelf-title-wrap { display:flex; align-items:baseline; gap:12px; }
 .omnimux-shelf-heading { font-size:16px; font-weight:600; color:var(--dsw-alias-label-primary); margin:0; }
 .omnimux-shelf-subheading { font-size:12px; color:var(--dsw-alias-label-tertiary); }

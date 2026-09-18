@@ -34,8 +34,10 @@ test('探索模板核心板块：单分组与 7 大精选应用卡片静态标�
     })
   );
 
-  // 1. 验证主标题
+  // 1. 验证主标题与探索全部按钮在单行内呈现
   assert.ok(html.includes('探索模板'), '必须包含专区主标题');
+  assert.ok(html.includes('探索全部'), '必须包含探索全部操作按钮');
+  assert.ok(!html.includes('精选 7 大分类王牌爆款短视频应用'), '必须彻底移除冗余副标题文字');
 
   // 2. 验证单分组单行货架
   assert.ok(html.includes('omnimux-explore-shelves-view'), '必须渲染单分组货架容器');
