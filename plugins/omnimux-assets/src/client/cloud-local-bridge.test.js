@@ -51,7 +51,7 @@ describe('cloud -> local bridge', () => {
 
   it('keeps one save controller on the stage, serving the cloud preview modal', () => {
     assert.match(stageJsx, /const cloudSave = useCloudSave\(\{ t \}\)/)
-    assert.match(stageJsx, /<CloudAssetsView t=\{t\} open=\{visible\} onPreview=\{onCloudPreview\} \/>/)
+    assert.match(stageJsx, /<CloudAssetsView t=\{t\} open=\{visible\} onPreview=\{onCloudPreview\}(?: query=\{feed\.query\})? \/>/)
     assert.doesNotMatch(stageJsx, /<CloudAssetsView[^>]*save=\{cloudSave\}/)
     assert.match(stageJsx, /saved=\{previewCloudId !== '' && cloudSave\.savedIds\.has\(previewCloudId\)\}/)
     assert.match(stageJsx, /saving=\{previewCloudId !== '' && cloudSave\.savingId === previewCloudId\}/)

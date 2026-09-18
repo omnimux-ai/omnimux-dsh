@@ -1,0 +1,30 @@
+{
+  "task": "assets-search-input-issue-2268",
+  "issue": 2268,
+  "timestamp": "2026-09-18T01:15:26.653Z",
+  "status": "PASS",
+  "checks": {
+    "search_field_on_value_change": {
+      "passed": true,
+      "detail": "SearchField must be wired with onValueChange={feed.setQuery}"
+    },
+    "no_wrong_on_change": {
+      "passed": true,
+      "detail": "SearchField must not be wired with onChange={feed.setQuery}"
+    },
+    "cloud_view_query_pass": {
+      "passed": true,
+      "detail": "CloudAssetsView must receive query={feed.query}"
+    },
+    "cloud_feed_external_query_sync": {
+      "passed": true,
+      "detail": "useCloudAssetsFeed must accept and sync external query"
+    }
+  },
+  "live_probe": {
+    "input_selector": "input.dshUk-SearchField-input",
+    "expected_event": "onValueChange",
+    "typing_unlocked": true,
+    "controlled_reset_fixed": true
+  }
+}
