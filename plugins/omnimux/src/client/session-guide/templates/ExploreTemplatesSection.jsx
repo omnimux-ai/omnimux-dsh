@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { SHELVES_CONFIG, selectShelfItems } from './templates-data.js';
 import { TemplatesShelfRow } from './TemplatesShelfRow.jsx';
+import { claimProductStage } from '../../conversation-box.js';
 
 /**
  * 探索模板 (Explore Templates) 核心大专区
@@ -38,20 +39,27 @@ export function ExploreTemplatesSection({ onApplyTemplate, t }) {
         // ignore storage error
       }
 
-      // 2. 优先通过宿主更好侧栏打开 AI 应用 Tab
-      const sidebar = window.__OMNIMUX_BETTER_SIDEBAR__ || window.parent?.__OMNIMUX_BETTER_SIDEBAR__;
-      if (sidebar && typeof sidebar.openTab === 'function') {
-        sidebar.openTab({
-          type: 'omnimux_app',
-          id: `app_${item.appId}`,
-          title: item.titleZh || item.title || 'AI 应用',
-          path: `app://${item.appId}`,
-          meta: { appId: item.appId },
-          extra: { manifest: item.manifest, appId: item.appId },
-        });
-      }
+      // 2. 切换中央舞台至 AI 应用详情页 (omnimux-apps)
+      try {
+        claimProductStage('omnimux-apps');
+      } catch {}
 
-      // 3. 全局广播官方应用打开事件（唤醒已有 AppWorkspaceView 或主界面视图）
+      // 3. 优先通过宿主更好侧栏打开 AI 应用 Tab（如果侧栏可用）
+      try {
+        const sidebar = window.__OMNIMUX_BETTER_SIDEBAR__ || window.parent?.__OMNIMUX_BETTER_SIDEBAR__;
+        if (sidebar && typeof sidebar.openTab === 'function') {
+          sidebar.openTab({
+            type: 'omnimux_app',
+            id: `app_${item.appId}`,
+            title: item.titleZh || item.title || 'AI 应用',
+            path: `app://${item.appId}`,
+            meta: { appId: item.appId },
+            extra: { manifest: item.manifest, appId: item.appId },
+          });
+        }
+      } catch {}
+
+      // 4. 全局广播官方应用打开事件（唤醒已有 AppWorkspaceView 或主界面视图）
       window.dispatchEvent(
         new CustomEvent('omnimux-app-open', {
           detail: {
