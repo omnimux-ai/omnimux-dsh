@@ -15,8 +15,15 @@
     "dist",
     "lib",
     "src",
-    "scripts"
+    "scripts",
+    "catalog",
+    "cordis.patch.yml"
   ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "scripts": {
     "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
     "prepare": "npm run build",

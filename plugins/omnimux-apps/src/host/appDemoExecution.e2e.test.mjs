@@ -10,15 +10,18 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAppsRoutes } from './routes.ts';
 import { createAppsService } from './index.ts';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('E2E: 独立应用真实调度与状态对账闭环', () => {
   test('E01: AppTab.jsx 源码与渲染契约中彻底清除 exempt-ui04 注释泄漏', () => {
-    const appTabPath = resolve(
-      process.cwd(),
-      'plugins/omnimux-workflow/src/client/projects/AppTab.jsx',
-    );
+    const candidatePaths = [
+      resolve(import.meta.dirname, '../../../../plugins/omnimux-workflow/src/client/projects/AppTab.jsx'),
+      resolve(import.meta.dirname, '../../../omnimux-workflow/src/client/projects/AppTab.jsx'),
+      resolve(process.cwd(), 'plugins/omnimux-workflow/src/client/projects/AppTab.jsx'),
+      resolve(process.cwd(), '../omnimux-workflow/src/client/projects/AppTab.jsx'),
+    ];
+    const appTabPath = candidatePaths.find((p) => existsSync(p)) || candidatePaths[0];
     const code = readFileSync(appTabPath, 'utf-8');
     assert.doesNotMatch(code, /exempt-ui04/, 'AppTab 严禁包含 exempt-ui04');
     assert.match(code, /IconSpinner/, '必须使用矢量 SVG Spinner 图标');
