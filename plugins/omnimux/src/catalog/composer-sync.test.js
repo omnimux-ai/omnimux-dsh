@@ -211,4 +211,37 @@ describe('createComposerListSync', () => {
     await createComposerListSync({ settings: fakeSettings(), log: (event) => events.push(event) }).sync({ hubText: [] })
     assert.deepEqual(events, [])
   })
+
+  it('supports retry recovery when llm-pi-ai registration is lagged/deferred', async () => {
+    let callCount = 0
+    const settings = {
+      describe: () => {
+        callCount += 1
+        if (callCount === 1) {
+          // First attempt: pi-ai not yet registered
+          return [{ ns: 'other', revision: 1 }]
+        }
+        return [{
+          ns: PI_AI_NAMESPACE,
+          base: baseLayer([{ id: 'alpha', name: 'Alpha' }]),
+          revision: 2,
+          value: {},
+        }]
+      },
+      update: async (ns, patch, revision) => {
+        assert.equal(ns, PI_AI_NAMESPACE)
+        assert.equal(revision, 2)
+      },
+    }
+    const sync = createComposerListSync({ settings })
+    const res1 = await sync.sync({ hubText: hub('alpha') })
+    assert.equal(res1.written, false)
+    assert.equal(res1.reason, 'namespace-absent')
+
+    // Second attempt (simulating retry after deferral/event): succeeds
+    const res2 = await sync.sync({ hubText: hub('alpha') })
+    assert.equal(res2.written, true)
+    assert.equal(res2.reason, 'written')
+    assert.deepEqual(res2.modelIds, ['alpha'])
+  })
 })
