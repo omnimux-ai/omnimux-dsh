@@ -27,6 +27,7 @@ import {
   resolveTargetWorkspaceId,
   WORKSPACE_ID_PARAM_DESC,
   bindCanvasWorkspaceProject,
+  extractSessionContext,
 } from './agentToolShared.ts';
 
 /**
@@ -130,11 +131,12 @@ export function createWorkflowCreateTool(deps: WorkflowAgentDeps): AgentToolSpec
       },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       try {
         const workspace = store.create(readString(args, 'name'));
         // Issue #2104：画布诞生即登记工作区项目，否则项目页看不到它。
-        await bindCanvasWorkspaceProject(deps, workspace.id, workspace.name);
+        const sessionContext = extractSessionContext(exec);
+        await bindCanvasWorkspaceProject(deps, workspace.id, workspace.name, sessionContext);
         return { workspace };
       } catch (error) {
         return errorBody(

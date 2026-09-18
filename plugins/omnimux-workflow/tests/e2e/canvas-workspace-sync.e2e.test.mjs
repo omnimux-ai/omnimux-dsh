@@ -47,8 +47,13 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
   // 3. 画布标签页前置未建项拦截与就地项目化
   assert.match(
     canvasTabSrc,
-    /isUnprojected\s*=\s*Boolean\s*\(\s*sessionId\s*&&\s*sessionBinding\s*&&\s*sessionBinding\.project\s*===\s*null\s*\)/,
-    'CanvasTab 必须识别当前工作区是否尚未创建项目',
+    /isUnprojected\s*=\s*Boolean\s*\(\s*sessionId\s*&&\s*sessionBinding\s*&&\s*sessionBinding\.project\s*===\s*null\s*&&\s*!hasExplicitCanvas\s*\)/,
+    'CanvasTab 必须识别当前工作区是否尚未创建项目且无显式画布',
+  )
+  assert.match(
+    canvasTabSrc,
+    /hasExplicitCanvas\s*=\s*Boolean\s*\(/,
+    'CanvasTab 必须检测是否已有显式画布目标以避免误拦截',
   )
   assert.match(
     canvasTabSrc,
@@ -64,5 +69,10 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
     canvasTabSrc,
     /<NewLocalProjectDialog[\s\S]*?initialPath=\{\s*sessionBinding\?\.workspaceDir\s*\|\|\s*''\s*\}/,
     'CanvasTab 呼出的新建项目弹窗必须自动预填当前工作区物理路径',
+  )
+  assert.match(
+    canvasTabSrc,
+    /t\('canvas\.unprojectedTitle'\)/,
+    'CanvasTab 必须通过多语言函数读取未建项标题',
   )
 })

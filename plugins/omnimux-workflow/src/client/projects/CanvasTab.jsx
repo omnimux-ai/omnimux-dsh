@@ -72,26 +72,57 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
       return undefined
     }
     let cancelled = false
-    fetchSessionProjectBinding(sessionId)
-      .then((result) => {
-        if (cancelled) return
-        const canvasWorkspaceId = result?.body?.project?.canvasWorkspaceId
-        setSessionBinding({
-          sessionId,
-          canvasWorkspaceId: typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId : null,
-          project: result?.body?.project ?? null,
-          workspaceDir: typeof result?.body?.workspaceDir === 'string' ? result.body.workspaceDir : null,
+    const refreshBinding = () => {
+      fetchSessionProjectBinding(sessionId)
+        .then((result) => {
+          if (cancelled) return
+          const canvasWorkspaceId = result?.body?.project?.canvasWorkspaceId
+          setSessionBinding({
+            sessionId,
+            canvasWorkspaceId: typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId : null,
+            project: result?.body?.project ?? null,
+            workspaceDir: typeof result?.body?.workspaceDir === 'string' ? result.body.workspaceDir : null,
+          })
         })
-      })
-      .catch(() => {
-        if (!cancelled) setSessionBinding({ sessionId, canvasWorkspaceId: null, project: null })
-      })
+        .catch(() => {
+          if (!cancelled) setSessionBinding({ sessionId, canvasWorkspaceId: null, project: null })
+        })
+    }
+
+    refreshBinding()
+
+    const onCanvasChanged = () => {
+      if (!cancelled) refreshBinding()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('omnimux:active-canvas-changed', onCanvasChanged)
+    }
+
     return () => {
       cancelled = true
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('omnimux:active-canvas-changed', onCanvasChanged)
+      }
     }
-  }, [sessionId])
+  }, [sessionId, visible])
 
-  const isUnprojected = Boolean(sessionId && sessionBinding && sessionBinding.project === null)
+  // 优先级：显式 scope（从项目页点某创作页进来）> 本会话内用户选中的创作页 >
+  // 本会话所属项目的当前创作页 > 会话散列画布。换工作区时前两项均失效，画布随之切换。
+  const targetWorkspaceId = resolveCanvasTargetWorkspaceId({
+    explicitWorkspaceId: scope?.canvasWorkspaceId || scope?.workspaceId,
+    pickedBySession,
+    sessionBinding,
+    sessionId,
+    fallbackWorkspaceId: resolveEffectiveWorkspaceId(sessionId),
+  })
+
+  const hasExplicitCanvas = Boolean(
+    scope?.canvasWorkspaceId ||
+    scope?.workspaceId ||
+    pickedBySession?.workspaceId ||
+    sessionBinding?.canvasWorkspaceId
+  )
+  const isUnprojected = Boolean(sessionId && sessionBinding && sessionBinding.project === null && !hasExplicitCanvas)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [createError, setCreateError] = useState('')
@@ -103,16 +134,6 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
       setProjectDialogOpen(true)
     }
   }, [visible, isUnprojected, autoPromptedSession, sessionId])
-
-  // 优先级：显式 scope（从项目页点某创作页进来）> 本会话内用户选中的创作页 >
-  // 本会话所属项目的当前创作页 > 会话散列画布。换工作区时前两项均失效，画布随之切换。
-  const targetWorkspaceId = resolveCanvasTargetWorkspaceId({
-    explicitWorkspaceId: scope?.canvasWorkspaceId || scope?.workspaceId,
-    pickedBySession,
-    sessionBinding,
-    sessionId,
-    fallbackWorkspaceId: resolveEffectiveWorkspaceId(sessionId),
-  })
 
   // 「项目」页「AI应用」卡片「编辑」的目标工作流组：走 better-sidebar tab.meta
   // （契约字段，随布局持久化，可 live 更新）。画布 tab 是 single:true，
@@ -227,10 +248,16 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
         {isUnprojected ? (
           <div className="omnimux-workflow-canvas-unprojected">
             <div className="omnimux-workflow-unprojected-title">
-              {t('canvas.unprojectedTitle') || '当前工作区尚未创建项目'}
+              {(() => {
+                const val = t('canvas.unprojectedTitle');
+                return !val || val === 'canvas.unprojectedTitle' ? '当前工作区尚未创建项目' : val;
+              })()}
             </div>
             <div className="omnimux-workflow-unprojected-sub">
-              {t('canvas.unprojectedSub') || '在一个工作区开启创作画布，需要先创建项目档案并生成初始创作页。'}
+              {(() => {
+                const val = t('canvas.unprojectedSub');
+                return !val || val === 'canvas.unprojectedSub' ? '在一个工作区开启创作画布，需要先创建项目档案并生成初始创作页。' : val;
+              })()}
             </div>
             <Button
               variant="primary"

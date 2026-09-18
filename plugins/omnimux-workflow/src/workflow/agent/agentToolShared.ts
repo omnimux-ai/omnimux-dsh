@@ -27,7 +27,7 @@ export interface AgentToolSpec {
     schema: Record<string, unknown>;
     render: (args: unknown, value: unknown) => Array<{ type: string; text: string }>;
   };
-  execute: (args: Record<string, unknown>) => Promise<unknown>;
+  execute: (args: Record<string, unknown>, exec?: unknown) => Promise<unknown>;
 }
 
 export interface ToolsSeat {
@@ -301,6 +301,38 @@ export function readUiContextSessionId(
   }
 }
 
+/** 从工具执行上下文 (exec) 中安全解析当前会话与工作区物理目录 */
+export function extractSessionContext(exec: unknown): {
+  sessionId?: string;
+  workspaceDir?: string;
+} {
+  if (!exec || typeof exec !== 'object') return {};
+  const e = exec as {
+    agent?: {
+      id?: string;
+      session?: {
+        id?: string;
+        header?: { cwd?: string };
+      };
+    };
+    session?: {
+      id?: string;
+      header?: { cwd?: string };
+    };
+  };
+  const sessionId =
+    e.agent?.session?.id ||
+    (typeof e.agent?.id === 'string' && !e.agent.id.startsWith('agent-') ? e.agent.id : undefined) ||
+    e.session?.id;
+  const workspaceDir =
+    e.agent?.session?.header?.cwd ||
+    e.session?.header?.cwd;
+  return {
+    sessionId: typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : undefined,
+    workspaceDir: typeof workspaceDir === 'string' && workspaceDir.trim() ? workspaceDir.trim() : undefined,
+  };
+}
+
 /**
  * Issue #2104：画布一旦在工作区里诞生，就把它登记成该工作区项目的创作页。
  * best-effort —— 登记不可用或失败都不得影响画布本身的操作结果。
@@ -309,14 +341,18 @@ export async function bindCanvasWorkspaceProject(
   deps: Pick<WorkflowAgentDeps, 'bindWorkspaceProject' | 'getActiveView'>,
   workspaceId: string | undefined,
   title?: string | null,
+  context?: { sessionId?: string; workspaceDir?: string },
 ): Promise<void> {
   const bind = deps.bindWorkspaceProject;
   if (typeof bind !== 'function') return;
   if (typeof workspaceId !== 'string' || workspaceId.trim() === '') return;
+  const sessionId = context?.sessionId || readUiContextSessionId(deps.getActiveView) || null;
+  const workspaceDir = context?.workspaceDir || null;
   try {
     await bind({
       canvasWorkspaceId: workspaceId.trim(),
-      sessionId: readUiContextSessionId(deps.getActiveView) ?? null,
+      sessionId,
+      workspaceDir,
       title: title ?? null,
     });
   } catch {
