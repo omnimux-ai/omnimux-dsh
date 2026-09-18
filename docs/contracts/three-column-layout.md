@@ -44,7 +44,7 @@ subsystem: "client"
 | 条款 | 状态组合 | 期望列宽 |
 | --- | --- | --- |
 | INV-11 | 无收起标记（展开态） | 插件不介入，交外壳原生网格 |
-| INV-1 / INV-2 | 左栏收起（或壳层收起）∧ 右栏开 | `0px var(--omnimux-conversation-width,420px) minmax(0px,1fr)` |
+| INV-1 / INV-2 | 左栏收起（或壳层收起）∧ 右栏开 | `0px var(--omnimux-conversation-width,380px) minmax(0px,1fr)` |
 | INV-6 | 左栏收起 ∧ 右栏确证收起 | `0px minmax(0px,1fr) 0px`（会话栏占满视口） |
 | INV-8 | 收起意图为真 | 意图优先于壳层读数，抵抗官方 1024px 自动展开 |
 | INV-9 | 中间栏收起 ∧ 右栏开 | `var(--omnimux-sidebar-width,280px) 0px minmax(0px,1fr)` |
@@ -69,7 +69,7 @@ subsystem: "client"
 | INV-10 | 第三轨严禁 `auto`、严禁写死像素 | 保宽规则 |
 | INV-11 | 顶栏标签让位量 = 按钮与可见面板的重叠量（不是 collapsed 布尔） | `computeChromeLayout.tabPadLeft` |
 | INV-12 | 写布局必须经 rAF 合并；必须观察外壳内联栅格 | `scheduleSync` |
-| INV-13 | 会话栏宽度地板 320px；无 authored 栅格时回退 420px | `CONVERSATION_WIDTH_MIN_PX` / `_FALLBACK_PX` |
+| INV-13 | 会话栏宽度地板 320px；无 authored 栅格时回退 380px | `CONVERSATION_WIDTH_MIN_PX` / `_FALLBACK_PX` |
 | INV-14 | 状态组合的胜出规则不得被静默夺取 | 本文件 + 契约门禁 |
 
 ## 四、禁改清单

@@ -184,9 +184,9 @@ test('default focus matrix: canvas and all libraries default to gui (Issue #2006
   assert.equal(WORKBENCH_OCCUPANTS.length, 12)
 })
 
-test('workbenchDefaultWidthPx keeps ~420px for conversation', () => {
-  assert.equal(workbenchDefaultWidthPx(makeState([], 780), { viewportWidth: 1200 }), 780)
-  assert.equal(workbenchDefaultWidthPx(makeState([], 780), { viewportWidth: 600 }), 280)
+test('workbenchDefaultWidthPx keeps ~380px for conversation', () => {
+  assert.equal(workbenchDefaultWidthPx(makeState([], 820), { viewportWidth: 1200 }), 820)
+  assert.equal(workbenchDefaultWidthPx(makeState([], 820), { viewportWidth: 600 }), 280)
 })
 
 test('releaseCurrentProductStage drops a library overlay without claiming', () => {
@@ -525,8 +525,8 @@ test('applyDefaultWidth writes via store.reduce and skips a second write', () =>
     reduce: (fn) => { state = fn(state) },
   }
   const applied1 = applyDefaultWidth(null, 's1', store, { viewportWidth: 1200 })
-  assert.equal(applied1, 780)
-  assert.equal(state.width, 780)
+  assert.equal(applied1, 820)
+  assert.equal(state.width, 820)
 
   state.width = 600
   const applied2 = applyDefaultWidth(null, 's1', store, { viewportWidth: 1200 })
@@ -1045,7 +1045,7 @@ test('inferWorkbenchFocus maps collapsed / full / split geometry', () => {
 test('setWorkbenchFocus chat/gui/split writes panel geometry and restores split width', () => {
   setupWindow()
   const env = { viewportWidth: 1200, officialSidebarWidth: 0 }
-  let state = makeState([{ id: 'omnimux-assets:library', type: 'omnimux-assets:library' }], 780, true)
+  let state = makeState([{ id: 'omnimux-assets:library', type: 'omnimux-assets:library' }], 820, true)
   const store = {
     getSnapshot: () => ({ sessionId: 's1', state }),
     reduce: (fn) => { state = fn(state) },
@@ -1056,7 +1056,7 @@ test('setWorkbenchFocus chat/gui/split writes panel geometry and restores split 
 
   setWorkbenchFocus(WORKBENCH_FOCUS.split, store, env)
   assert.equal(state.panelOpen, true)
-  assert.equal(state.width, 780)
+  assert.equal(state.width, 820)
 
   state.width = 650
   setWorkbenchFocus(WORKBENCH_FOCUS.gui, store, env)

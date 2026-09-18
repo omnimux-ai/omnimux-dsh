@@ -164,7 +164,7 @@ const MATRIX = [
     id: 'INV-1+INV-2',
     label: '② 左栏收起（右栏开）',
     state: { htmlAttrs: `${TOGGLE_ATTR} ${LEFT_COLLAPSED}` },
-    contractGrid: '0px var(--omnimux-conversation-width, 420px) minmax(0px, 1fr)',
+    contractGrid: '0px var(--omnimux-conversation-width, 380px) minmax(0px, 1fr)',
     note: '会话栏保持像素宽度，释放的 280px 全部交给右栏',
   },
   {
@@ -178,7 +178,7 @@ const MATRIX = [
     id: 'INV-1',
     label: '④ 官方左栏收起（frame 标记，无 html 镜像）',
     state: { htmlAttrs: TOGGLE_ATTR, frameAttrs: 'data-sidebar-collapsed' },
-    contractGrid: '0px var(--omnimux-conversation-width, 420px) minmax(0px, 1fr)',
+    contractGrid: '0px var(--omnimux-conversation-width, 380px) minmax(0px, 1fr)',
     note: '壳层自身收起左栏时同样保宽（html 镜像与 frame 标记必须行为一致）',
   },
   {
@@ -196,7 +196,7 @@ const MATRIX = [
     // 实测当前由 `#2074` 的保宽规则夺取，中间列仍留一行会话栏宽度（真实浏览器实测 485px，
     // 见 docs/evidence/three-column-collapse-qa-report.json 的 matrix 段）。
     contractGrid: 'var(--omnimux-sidebar-width, 0px) 0px minmax(0px, 1fr)',
-    observedGrid: '0px var(--omnimux-conversation-width, 420px) minmax(0px, 1fr)',
+    observedGrid: '0px var(--omnimux-conversation-width, 380px) minmax(0px, 1fr)',
     knownDeviation: 'K-1',
     note: '已知偏差 K-1：保宽规则特异性更高，既有的中间栏收缩规则被覆盖',
   },

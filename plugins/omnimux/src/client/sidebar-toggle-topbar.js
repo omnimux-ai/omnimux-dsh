@@ -314,7 +314,7 @@ export const LEFT_RAIL_MIN_PX = 64
 const CONVERSATION_COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
 
 /** Published before the shell exposes an authored split; also the CSS fallback. */
-export const CONVERSATION_WIDTH_FALLBACK_PX = 420
+export const CONVERSATION_WIDTH_FALLBACK_PX = 380
 /** Never publish a conversation column narrower than this. */
 export const CONVERSATION_WIDTH_MIN_PX = 320
 
