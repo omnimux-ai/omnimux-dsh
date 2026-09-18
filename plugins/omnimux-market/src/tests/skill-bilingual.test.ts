@@ -172,10 +172,10 @@ test('T01-11：目录解析层不得静默截断标签（领域标签必须存�
   assert.deepEqual(truncated, [])
 })
 
-test('T01-10：真实目录的 70 项官方货架技能全部通过判据（T01 验收证据）', () => {
+test('T01-10：真实目录的 65 项官方货架技能全部通过判据（T01 验收证据）', () => {
   const catalog = loadCatalog()
   const shelf = catalog.items.filter((item: unknown) => isOfficialShelfItem(item))
-  assert.equal(shelf.length, 70)
+  assert.equal(shelf.length, 65)
   const failed = shelf
     .map((item) => ({ id: String(item.id), check: checkSkillBilingual(item) }))
     .filter((row) => !row.check.ok)

@@ -40,11 +40,11 @@ function query(data, change = {}, pageSize = 48) {
     return { req, snapshot, result: pageWorkshopSnapshot(snapshot, req, versions(data), 0) };
 }
 test('AC-05: view order differs without replacing shared domain membership', () => {
-    assert.deepEqual(WORKSHOP_CATEGORIES, ['all', 'featured', '短剧漫剧', '专业影视', '动画', '商业广告', '电商', '教育', '创意实验', '音频音乐', '平台工具']);
+    assert.deepEqual(WORKSHOP_CATEGORIES, ['all', 'featured', 'AIGC 创作', '短剧漫剧', '专业影视', '动画', '商业广告', '电商', '教育', '创意实验', '音频音乐', '平台工具']);
     assert.deepEqual(workshopDomains({ tags: ['动画', '动画'], description: '音频音乐' }), ['动画']);
     assert.deepEqual(workshopDomains({ description: 'SHOPIFY 独立站' }), ['电商']);
     assert.deepEqual(workshopDomains({ description: 'ad music administration' }), []);
-    assert.equal(WORKSHOP_DOMAINS.length, 9);
+    assert.equal(WORKSHOP_DOMAINS.length, 10);
 });
 test('AC-06–11: strict controlled recommendation, 0/1/multiple domains, no demo creation', () => {
     for (const recommended of [undefined, false, 'true', 1, {}, []]) {
@@ -425,14 +425,15 @@ test('T02-09：运行时门禁只告警不外抛，脏数据不得让市场不�
         console.warn = original;
     }
 });
-test('T02-10：真实目录下工坊 featured 达 70 条且门禁零拒绝（T02 验收证据）', () => {
+test('T02-10：真实目录下工坊 featured 达 65 条且门禁零拒绝（T02 验收证据）', () => {
     const catalog = loadCatalog();
     const data = input(catalog.items);
     data.catalogRevision = 'real-catalog';
     const { snapshot, result } = query(data);
-    assert.equal(snapshot.featured.length, 70);
+    assert.equal(snapshot.featured.length, 65);
     assert.deepEqual(snapshot.admission, { enforced: true, skippedCount: 0, skippedIds: [] });
-    assert.equal(result.featured.length, 70);
+    assert.equal(result.featured.length, 65);
+    assert.ok(!result.featured.some((s) => s.skillKey.startsWith('shopee-')), 'Shopee 系列技能已从精选下架');
     assert.ok(result.featured.some((s) => s.skillKey === 'video-generate-canvas'));
     assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-material-breakdown'));
     assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-script-creation'));

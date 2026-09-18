@@ -16,13 +16,13 @@ const ids = items => items.map(item => item.id)
 
 test('shipped configuration adds the admitted collector while preserving all 48 existing recommendations', () => {
   assert.deepEqual(SkillShelf.validateSkillRecommendations(), [])
-  assert.equal(config.featuredSkills.length, 70)
+  assert.equal(config.featuredSkills.length, 65)
   assert.deepEqual(config.featuredSkills, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.id))
-  assert.equal(config.homeRecommendations.length, 20)
+  assert.equal(config.homeRecommendations.length, 15)
   const home = SkillShelf.plazaDiscoverySections()
   assert.deepEqual(ids(home.featured), config.homeRecommendations)
-  // 货架本地卡片 = 全部技能 + 全部套件，再扣掉 20 条首页精选。
-  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 20)
+  // 货架本地卡片 = 全部技能 + 全部套件，再扣掉 15 条首页精选。
+  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 15)
   const collector = catalog.items.find(item => item.id === 'sk-bggg-data-amazon')
   assert.equal(collector.cover, undefined)
   const featuredBggg = SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.find(item => item.id === 'sk-bggg-data-amazon')
@@ -104,10 +104,10 @@ function workshop(initial = {}, response = { items: [] }) {
 test('real workshop shows one admitted homepage card and retains all 49 on Featured', () => {
   const ui = workshop({ 14: 'ready' })
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 1)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 20)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 15)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 15)
   ui.state.set(1, 'featured')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 70)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 65)
 })
 
 test('real search effect preserves full-library results, search heading and pagination payload', async () => {
@@ -125,7 +125,7 @@ test('real search effect preserves full-library results, search heading and pagi
   await new Promise(resolve => setImmediate(resolve))
   assert.equal(ui.calls.filter(call => call.action === 'search').at(-1).payload.offset, 80)
   ui.state.set(4, '')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 15)
 })
 
 test('customOrder overrides default home recommendation order and puts Hypit first by default', () => {
@@ -144,5 +144,5 @@ test('customOrder overrides default home recommendation order and puts Hypit fir
   const customHome = SkillShelf.plazaDiscoverySections([], { customOrder })
   assert.equal(customHome.featured[0].id, 'sk-video-generate-canvas')
   assert.equal(customHome.featured[1].id, 'sk-amazon-market-analysis')
-  assert.equal(customHome.featured.length, 20)
+  assert.equal(customHome.featured.length, 15)
 })

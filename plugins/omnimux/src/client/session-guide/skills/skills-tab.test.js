@@ -107,7 +107,7 @@ test('featured-skills-data: 快照文件格式与约束', () => {
   assert.equal(snapshot.schema, 'omnimux.session-guide.featured-skills/v1')
   assert.ok(Array.isArray(snapshot.skills))
   assert.ok(Array.isArray(snapshot.categories))
-  assert.equal(snapshot.skills.length, 69, '精选技能必须有 69 条（来自 recommended: true）')
+  assert.equal(snapshot.skills.length, 65, '精选技能必须有 65 条（来自 recommended: true）')
   assert.equal(snapshot.categories.length, 5, '在册分类必须为 5 个')
   for (const s of snapshot.skills) {
     assert.ok(s.id && s.title, '技能条目必须包含 id 与 title')
@@ -241,10 +241,11 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
 
     // 4. 验证技能卡片渲染与图 4 规范对齐
     const cards = host.querySelectorAll('.omnimux-skill-card')
-    assert.equal(cards.length, 69, '全部分类下展示 69 张精选卡片')
+    assert.equal(cards.length, 65, '全部分类下展示 65 张精选卡片')
 
     // 验证前 8 张重磅置顶官方视频 Skill 顺序与图 4 像素级一致
     const expectedTop8Titles = [
+      'Hypit-克隆爆款视频',
       '3D动画短片',
       '品牌宣传短片生成器',
       '极简产品广告生成器',
@@ -252,29 +253,28 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
       '纸拼贴讲解动画',
       '第一视角 FPV 穿越生成',
       '第一视角短片生成',
-      '悬疑电影片头生成',
     ]
     const actualTop8Titles = Array.from(cards).slice(0, 8).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
     assert.deepEqual(actualTop8Titles, expectedTop8Titles, '前 8 张卡片必须与图 4 官方精选爆款严格一致')
 
     // 验证卡片内容规范（封面、H3 角标、hover 按钮、两行描述；不含任何品牌署名行）
-    const firstCard = cards[0]
-    const coverImg = firstCard.querySelector('.omnimux-skill-card-cover-img')
+    const animCard = cards[1]
+    const coverImg = animCard.querySelector('.omnimux-skill-card-cover-img')
     assert.ok(coverImg, '技能卡片必须渲染真实封面图片')
     assert.ok(coverImg.getAttribute('src').includes('3d-animation-short-generator.png'), '封面 src 必须正确指向对应资源')
-    const badge = firstCard.querySelector('.omnimux-skill-card-badge')
+    const badge = animCard.querySelector('.omnimux-skill-card-badge')
     assert.ok(badge, '技能卡片必须渲染左上角紫色角标')
     assert.equal(badge.textContent.trim(), 'H3', '角标文本必须为 H3')
-    assert.equal(firstCard.querySelector('.omnimux-skill-card-attribution'), null, '卡片不得渲染署名行')
-    assert.equal(firstCard.querySelector('.omnimux-skill-card-author'), null, '卡片不得渲染署名文本')
-    assert.equal(firstCard.querySelector('.omnimux-skill-verified-icon'), null, '卡片不得渲染认证打勾图标')
+    assert.equal(animCard.querySelector('.omnimux-skill-card-attribution'), null, '卡片不得渲染署名行')
+    assert.equal(animCard.querySelector('.omnimux-skill-card-author'), null, '卡片不得渲染署名文本')
+    assert.equal(animCard.querySelector('.omnimux-skill-verified-icon'), null, '卡片不得渲染认证打勾图标')
     assert.equal(host.textContent.includes('MiniMax'), false, '技能面板不得出现 MiniMax 字样')
 
     // 5. 点击分类胶囊筛选
     await click(chips[1]) // 第一个业务分类（电商变现）
     await flush()
     const filteredCards = host.querySelectorAll('.omnimux-skill-card')
-    assert.ok(filteredCards.length > 0 && filteredCards.length < 69, '点击分类胶囊后数量减少')
+    assert.ok(filteredCards.length > 0 && filteredCards.length < 65, '点击分类胶囊后数量减少')
 
     // 6. 点击卡片触发指令预填与激活态
     const useBtn = filteredCards[0].querySelector('.omnimux-skill-card-btn')
@@ -331,17 +331,19 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
     const cardsZh = host.querySelectorAll('.omnimux-skill-card')
     const titlesZh = Array.from(cardsZh).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
 
-    // 验证中文环境下原英文标题成功适配为中文标题
-    assert.ok(titlesZh.includes('Shopee 关键词分析'), '中文环境下必须显示 "Shopee 关键词分析"')
-    assert.ok(titlesZh.includes('Shopee 市场分析'), '中文环境下必须显示 "Shopee 市场分析"')
-    assert.ok(titlesZh.includes('Shopee 商品分析'), '中文环境下必须显示 "Shopee 商品分析"')
+    // 验证中文环境下原英文标题成功适配为中文标题，且 Shopee 系列已从精选下架
+    assert.ok(titlesZh.includes('亚马逊关键词流量分析'), '中文环境下必须显示 "亚马逊关键词流量分析"')
+    assert.ok(titlesZh.includes('亚马逊市场分析'), '中文环境下必须显示 "亚马逊市场分析"')
+    assert.ok(titlesZh.includes('亚马逊产品分析'), '中文环境下必须显示 "亚马逊产品分析"')
     assert.ok(titlesZh.includes('TikTok 市场趋势分析'), '中文环境下必须显示 "TikTok 市场趋势分析"')
+    assert.ok(!titlesZh.includes('Shopee 关键词分析'), 'Shopee 关键词分析已从精选中下架')
+    assert.ok(!titlesZh.includes('Shopee 市场分析'), 'Shopee 市场分析已从精选中下架')
 
     // 点击卡片并验证指令预填为中文
-    const shopeeCard = Array.from(cardsZh).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'Shopee 关键词分析')
-    await click(shopeeCard.querySelector('.omnimux-skill-card-btn'))
+    const amazonCard = Array.from(cardsZh).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === '亚马逊关键词流量分析')
+    await click(amazonCard.querySelector('.omnimux-skill-card-btn'))
     await flush()
-    assert.ok(appliedPrompt.includes('使用技能「Shopee 关键词分析」'), '中文环境下预填指令必须包含中文技能名')
+    assert.ok(appliedPrompt.includes('使用技能「亚马逊关键词流量分析」'), '中文环境下预填指令必须包含中文技能名')
 
     // 2. 英文语言环境（t 使用 guideEn）
     const tEn = (key) => guideEn[key] || key
@@ -358,15 +360,17 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
     const titlesEn = Array.from(cardsEn).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
 
     // 验证英文环境下显示英文标题
-    assert.ok(titlesEn.includes('Shopee Keyword Analysis'), '英文环境下必须显示 "Shopee Keyword Analysis"')
-    assert.ok(titlesEn.includes('Shopee Market Analysis'), '英文环境下必须显示 "Shopee Market Analysis"')
+    assert.ok(titlesEn.includes('Amazon Keyword Traffic Analysis'), '英文环境下必须显示 "Amazon Keyword Traffic Analysis"')
+    assert.ok(titlesEn.includes('Amazon Market Analysis'), '英文环境下必须显示 "Amazon Market Analysis"')
     assert.ok(titlesEn.includes('TikTok Market Trend Analysis'), '英文环境下必须显示 "TikTok Market Trend Analysis"')
+    assert.ok(!titlesEn.includes('Shopee Keyword Analysis'), 'Shopee Keyword Analysis 已从精选中下架')
+    assert.ok(!titlesEn.includes('Shopee Market Analysis'), 'Shopee Market Analysis 已从精选中下架')
 
     // 点击卡片并验证指令预填为英文
-    const marketCardEn = Array.from(cardsEn).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'Shopee Market Analysis')
+    const marketCardEn = Array.from(cardsEn).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'Amazon Market Analysis')
     await click(marketCardEn.querySelector('.omnimux-skill-card-btn'))
     await flush()
-    assert.ok(appliedPrompt.includes('Use skill "Shopee Market Analysis"'), '英文环境下预填指令必须包含英文技能名')
+    assert.ok(appliedPrompt.includes('Use skill "Amazon Market Analysis"'), '英文环境下预填指令必须包含英文技能名')
 
     await act(async () => root.unmount())
   } finally {
