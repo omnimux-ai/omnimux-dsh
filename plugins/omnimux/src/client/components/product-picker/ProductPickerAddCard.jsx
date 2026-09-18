@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * 产品选择器列表首位「创建产品」卡片（虚线缩略图 + 加号 + 标题描述）。
+ * 产品选择器列表首位「创建产品」1:1 正方形卡片（参考图 1/图 3：虚线大卡 + 购物袋图标 + 居中标题）。
  * @param {{
  *   label?: string,
  *   desc?: string,
@@ -10,7 +10,6 @@ import React from 'react';
  */
 export function ProductPickerAddCard({
   label = '创建产品',
-  desc = '粘贴商品链接自动解析',
   onClick,
 }) {
   return (
@@ -28,29 +27,24 @@ export function ProductPickerAddCard({
         }
       }}
     >
-      <div className="omx-product-pick-card__thumb omx-product-pick-card__thumb--add">
+      <div className="omx-product-pick-card__add-inner">
         <div className="omx-product-pick-card__add-icon">
           <svg
-            width="28"
-            height="28"
+            width="34"
+            height="34"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+            <path d="M6 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 6 18V6z" />
+            <path d="M9 9a3 3 0 0 0 6 0" />
           </svg>
         </div>
-      </div>
-      <div className="omx-product-pick-card__body">
-        <div className="omx-product-pick-card__title">{label}</div>
-        <div className="omx-product-pick-card__meta">
-          <span className="omx-product-pick-card__sku">{desc}</span>
-        </div>
+        <div className="omx-product-pick-card__add-label">{label}</div>
       </div>
     </article>
   );

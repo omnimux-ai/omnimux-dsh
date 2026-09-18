@@ -110,6 +110,7 @@ const CSS = `
 }
 .omx-product-pick__grid {
   display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px;
+  align-items: start;
 }
 .omx-product-pick__empty {
   border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 200px;
@@ -157,11 +158,23 @@ const CSS = `
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
-.omx-product-pick-card__badge {
+.omx-product-pick-card__thumbs-row {
   position: absolute; left: 8px; bottom: 8px; z-index: 2;
-  font-size: 11px; line-height: 16px; font-weight: 600; padding: 2px 8px;
-  border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary);
+  display: flex; align-items: center; gap: 4px; pointer-events: none;
+}
+.omx-product-pick-card__sub-thumb {
+  width: 22px; height: 22px; border-radius: 4px; object-fit: cover;
+  border: 1px solid var(--dsw-alias-border-l4);
+  background: var(--dsw-alias-bg-layer-2);
+  display: block; flex-shrink: 0;
+}
+.omx-product-pick-card__sub-badge {
+  min-width: 22px; height: 22px; padding: 0 4px; border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary); font-size: 10px; font-weight: 600; line-height: 20px;
+  text-align: center; display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; flex-shrink: 0;
 }
 .omx-product-pick-card__body {
   display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 0 2px; min-width: 0;
@@ -177,21 +190,32 @@ const CSS = `
   font-size: 11px; color: var(--dsw-alias-label-tertiary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.omx-product-pick-card--add .omx-product-pick-card__thumb--add {
+.omx-product-pick-card--add {
+  aspect-ratio: 1 / 1; width: 100%;
   border: 1.5px dashed var(--dsw-alias-border-l3);
+  border-radius: 14px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
+  display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; cursor: pointer;
+  align-self: start;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, color 0.15s ease;
 }
-.omx-product-pick-card--add:hover .omx-product-pick-card__thumb--add {
+.omx-product-pick-card--add:hover {
   border-color: var(--dsw-alias-button-primary-fill);
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-button-primary-fill);
   transform: translateY(-2px);
 }
+.omx-product-pick-card__add-inner {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
 .omx-product-pick-card__add-icon {
   display: flex; align-items: center; justify-content: center;
   color: inherit;
+}
+.omx-product-pick-card__add-label {
+  font-size: 13px; font-weight: 500; color: inherit; line-height: 18px;
 }
 /* 页脚恒为「按钮右下对齐」：左侧提示是条件渲染的，用 space-between 时单子项会被推到行首（真机实测按钮挤在左下） */
 .omx-product-pick__footer {

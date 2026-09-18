@@ -70,11 +70,15 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.doesNotMatch(pickerSource, /🔍/, 'contains no search emoji');
 });
 
-test('ProductPickerCard: 参考稿样式（方形缩略图 + 勾选 + 价格胶囊 + 卡下名称）', () => {
+test('ProductPickerCard: 参考图 1 样式（方形缩略图 + 勾选 + 多图缩略队列与超量徽标 + 移除价格标签）', () => {
   assert.ok(cardSource.includes('omx-product-pick-card'), 'has card class name');
   assert.ok(cardSource.includes('omx-product-pick-card__check'), 'has checkmark container');
-  assert.ok(cardSource.includes('omx-product-pick-card__badge'), 'has price badge');
-  assert.ok(cardSource.includes('formatPrice'), 'displays formatted price');
+  assert.ok(!cardSource.includes('omx-product-pick-card__badge'), 'drops price badge');
+  assert.ok(!cardSource.includes('formatPrice'), 'drops price formatting');
+  assert.ok(cardSource.includes('omx-product-pick-card__thumbs-row'), 'has sub thumbnails row');
+  assert.ok(cardSource.includes('omx-product-pick-card__sub-thumb'), 'has sub thumbnail item');
+  assert.ok(cardSource.includes('omx-product-pick-card__sub-badge'), 'has overflow badge (+xx)');
+  assert.ok(cardSource.includes('resolveThumbnails'), 'resolves multi-thumbnails for card');
   assert.ok(cardSource.includes('omx-product-pick-card__title'), 'shows product name below the thumb');
   assert.ok(cardSource.includes('ProductPlaceholderIcon'), 'uses SVG vector placeholder icon');
   assert.ok(cardSource.includes('role="radio"'), 'declares radio role for single-select');
@@ -116,6 +120,10 @@ test('ProductPicker: 列表首位创建产品 + 链接弹窗回流契约', () =>
 
   assert.ok(addCard.includes('role="button"'), '创建卡可键盘激活');
   assert.ok(addCard.includes('omx-product-pick-card--add'), '创建卡变体类');
+  assert.ok(addCard.includes('omx-product-pick-card__add-inner'), '创建卡采用居中布局');
+  assert.ok(addCard.includes('omx-product-pick-card__add-icon'), '创建卡包含袋子图标');
+  assert.ok(addCard.includes('omx-product-pick-card__add-label'), '创建卡包含标题');
+  assert.ok(!addCard.includes('omx-product-pick-card__body'), '创建卡移除底部独立body');
   assert.ok(createModal.includes('/omnimux/products/import-from-link') || api.includes('/omnimux/products/import-from-link'), '复用公开解析路由');
   assert.ok(api.includes("method: 'POST', body") && api.includes("'/omnimux/products'"), '保存走公开 POST /omnimux/products');
   assert.ok(api.includes('stage: \'stale\''), '关闭竞态作废过期请求');
@@ -130,4 +138,32 @@ test('ProductPicker: 列表首位创建产品 + 链接弹窗回流契约', () =>
   assert.ok(createModal.includes('omx-pcl__primary'), '居中主 CTA');
   assert.ok(createModal.includes('omx-pcl__manual'), '手动创建次链');
   assert.equal(safeT('productPicker.create.invalidUrl'), '请输入合法的网页链接');
+});
+
+test('ProductPickerCard: resolveThumbnails handles media, thumbnails, images and overflow calculations', async () => {
+  const { resolveThumbnails } = await import('./picker-model.js');
+  const mockProduct = {
+    id: 'prd_test',
+    media: [
+      { id: 'img1', kind: 'image' },
+      { id: 'img2', kind: 'image' },
+      { id: 'vid1', kind: 'video' },
+      { id: 'img3', kind: 'image' },
+      { id: 'img4', kind: 'image' },
+    ],
+    media_count: 14,
+  };
+  const list = resolveThumbnails(mockProduct);
+  assert.equal(list.length, 4, 'filters out video, keeps 4 images');
+  assert.equal(list[0], '/omnimux/products/prd_test?preview=img1');
+  assert.equal(list[1], '/omnimux/products/prd_test?preview=img2');
+  assert.equal(list[2], '/omnimux/products/prd_test?preview=img3');
+  assert.equal(list[3], '/omnimux/products/prd_test?preview=img4');
+
+  // 计算：最多展示 3 个缩略图，超量计数为 14 - 3 = 11
+  const visible = list.slice(0, 3);
+  const total = Math.max(mockProduct.media_count, list.length);
+  const overflow = total > 3 ? total - 3 : 0;
+  assert.equal(visible.length, 3);
+  assert.equal(overflow, 11);
 });
