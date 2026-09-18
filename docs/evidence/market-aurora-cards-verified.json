@@ -1,0 +1,25 @@
+{
+  "task": "market-colorful-gradient-cards",
+  "issue": 2389,
+  "verifiedAt": "2026-09-18T17:52:00.000Z",
+  "status": "PASS",
+  "summary": "技能卡片全面接入极光流光色彩光学算法，实现 14 套精调方案与色相环均匀散列，彻底告别单调纯黑底色",
+  "evidence": {
+    "specFile": "specs/market-colorful-gradient-cards.spec.md",
+    "auroraModule": "plugins/omnimux-market/src/client/plaza/auroraGradients.js",
+    "cardComponent": "plugins/omnimux-market/src/client/plaza/FeaturedCard.jsx",
+    "cssFile": "plugins/omnimux-market/src/client/css.js",
+    "testsPassed": [
+      "AURORA_PRESETS contains 14 high-saturation fine-tuned presets",
+      "hashSeed produces deterministic positive integers",
+      "resolveSkillAuroraStyle distributes different skills across distinct presets",
+      "handles null/undefined/empty skill objects gracefully without crashing"
+    ],
+    "features": [
+      "地平线椭圆径向渐变算法 (ellipse 115% 82% at 50% 120%)",
+      "覆盖 14 种黄金配色（紫粉、群青、湛蓝、琥珀、深海紫、翡翠绿、珊瑚红、赛博霓虹等）",
+      "14px 微孔点阵网格覆盖与霓虹光晕悬停阴影",
+      "零网络 WebP 图片依赖，彻底杜绝 404 破图黑屏问题"
+    ]
+  }
+}
