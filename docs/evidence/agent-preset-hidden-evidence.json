@@ -1,0 +1,18 @@
+{
+  "issue": 2299,
+  "task": "hide-agent-preset-entry",
+  "timestamp": "2026-09-18T04:03:08.117Z",
+  "target": "plugins/omnimux/src/client/styles.js",
+  "elements": {
+    "slot": "[data-slot=\"conversation.hero.agentPreset\"]",
+    "seat": "[data-omnimux-preset-seat]",
+    "workspaceBtn": "button[class*=\"workspace\"]"
+  },
+  "verified": {
+    "seatDisplay": "none",
+    "workspaceDisplay": "flex",
+    "composerCardDisplay": "flex",
+    "defaultAgent": "omni-agent"
+  },
+  "screenshot": "docs/evidence/cdp-agent-preset-hidden-verified.png"
+}

@@ -1338,6 +1338,18 @@ button[aria-label*="context used"] {
   border-radius: 999px !important;
 }
 
+/* ── 移除输入框上方 Agent 预设切换入口，保持社媒专家作为默认值守 (Issue #2299) ── */
+[data-slot="conversation.hero.agentPreset"],
+[data-omnimux-preset-seat],
+button[class*="AgentPresetSeat_seat"],
+button[class*="PnBhwW_seat"],
+button[class*="_seat"][aria-haspopup="menu"],
+[class*="heroWorkspaceRow"] > span:has(button[class*="seat"]),
+[class*="heroWorkspaceRow"] > span:has([data-omnimux-preset-seat]),
+[data-omnimux-preset-menu] {
+  display: none !important;
+}
+
 ${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {
