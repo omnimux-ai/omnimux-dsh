@@ -417,12 +417,17 @@ async function querySocialTool(socialTool, platform, url) {
 /**
  * Resolve social data tool from execution context.
  * @param {object} ctx
+ * @param {string} [platform]
  * @returns {object|null}
  */
-function resolveSocialToolFromContext(ctx) {
+function resolveSocialToolFromContext(ctx, platform = '') {
   if (!ctx) return null
   const toolMap = ctx.tools || (typeof ctx.get === 'function' ? ctx.get('tools') : null)
   if (toolMap && typeof toolMap.get === 'function') {
+    if (platform === 'youtube') {
+      const ytTool = toolMap.get('omnimux_youtube_video')
+      if (ytTool) return ytTool
+    }
     return toolMap.get('omnimux_social_data')
   }
   return null
@@ -436,7 +441,39 @@ function resolveSocialToolFromContext(ctx) {
  */
 export async function fetchRealSocialMetadata(url, ctx = {}) {
   const platform = detectSocialPlatform(url)
-  const socialTool = resolveSocialToolFromContext(ctx)
+
+  // 1. Prefer direct seam injection from host context (ctx.get('youtube') / ctx.get('socialData'))
+  if (typeof ctx?.get === 'function') {
+    if (platform === 'youtube') {
+      const ytService = ctx.get('youtube')
+      if (ytService && typeof ytService.getVideo === 'function') {
+        try {
+          const res = await ytService.getVideo(url)
+          if (res && res.data) {
+            const normalized = normalizeSocialMetadata(res.data, url)
+            if (normalized && (normalized.video_url || normalized.title !== '短视频分析')) {
+              return normalized
+            }
+          }
+        } catch {}
+      }
+    }
+    const socialService = ctx.get('socialData')
+    if (socialService && typeof socialService.fetch === 'function') {
+      try {
+        const res = await socialService.fetch({ platform, capability: 'video', url })
+        if (res && res.data) {
+          const normalized = normalizeSocialMetadata(res.data, url)
+          if (normalized && (normalized.video_url || normalized.title !== '短视频分析')) {
+            return normalized
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Fall back to tool call from context
+  const socialTool = resolveSocialToolFromContext(ctx, platform)
 
   if (socialTool && typeof socialTool.execute === 'function') {
     const toolResult = await querySocialTool(socialTool, platform, url)

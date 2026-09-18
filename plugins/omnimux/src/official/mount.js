@@ -74,6 +74,33 @@ export function mountOfficial(ctx, deps) {
       siteBaseUrl: deps.siteBaseUrl,
       resolveApiKey: deps.resolveApiKey ?? (() => env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN),
     }))
+    ctx.provide('socialData', {
+      fetch: (args) => fetchSocialData(client, args),
+    })
+    ctx.provide('youtube', {
+      getVideo: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') || args.includes('.') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.video_id || args?.id }
+        return fetchSocialData(client, { platform: 'youtube', capability: 'video', ...payload })
+      },
+      getChannel: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.channel_id || args?.id }
+        return fetchSocialData(client, { platform: 'youtube', capability: 'user', ...payload })
+      },
+      getPosts: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.channel_id || args?.id, query: args?.continuation_token }
+        return fetchSocialData(client, { platform: 'youtube', capability: 'posts', ...payload })
+      },
+      search: (args) => {
+        const query = typeof args === 'string' ? args : args?.query
+        return fetchSocialData(client, { platform: 'youtube', capability: 'search', query })
+      },
+    })
   }
 
   /**
@@ -138,6 +165,66 @@ export function mountOfficial(ctx, deps) {
       region: { type: 'string' },
     },
     (args) => fetchSocialData(client, args),
+  )
+
+  tool(
+    'omnimux_youtube_video',
+    'Fetch YouTube video details (title, description, duration, author/channel, thumbnails, metrics, and media stream variants if available) by URL or video ID.',
+    {
+      url: { type: 'string', description: 'YouTube video URL (watch, youtu.be, or shorts link)' },
+      video_id: { type: 'string', description: 'YouTube video ID' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'youtube',
+      capability: 'video',
+      url: args.url,
+      id: args.video_id,
+    }),
+  )
+
+  tool(
+    'omnimux_youtube_channel',
+    'Fetch YouTube channel profile and statistics by channel ID, custom URL, or handle URL.',
+    {
+      url: { type: 'string', description: 'YouTube channel URL (e.g. https://www.youtube.com/@handle or /channel/UC...)' },
+      channel_id: { type: 'string', description: 'YouTube channel ID (UC...) or handle (@...)' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'youtube',
+      capability: 'user',
+      url: args.url,
+      id: args.channel_id,
+    }),
+  )
+
+  tool(
+    'omnimux_youtube_posts',
+    'Fetch public videos/posts list from a YouTube channel by channel ID or channel URL with optional pagination token.',
+    {
+      url: { type: 'string', description: 'YouTube channel URL' },
+      channel_id: { type: 'string', description: 'YouTube channel ID or handle' },
+      continuation_token: { type: 'string', description: 'Pagination token for next page of videos' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'youtube',
+      capability: 'posts',
+      url: args.url,
+      id: args.channel_id,
+      query: args.continuation_token,
+    }),
+  )
+
+  tool(
+    'omnimux_youtube_search',
+    'Search public YouTube videos by keyword query.',
+    {
+      query: { type: 'string', required: true, description: 'Search keyword query' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'youtube',
+      capability: 'search',
+      query: args.query,
+    }),
   )
 
   tool(

@@ -4,6 +4,8 @@ import { OmnimuxError } from '../media/errors.js'
 import {
   extractTweetId,
   extractTikTokShopProductId,
+  extractYouTubeVideoId,
+  extractYouTubeChannelId,
   fetchSocialData,
   normalizeShopShareLink,
   pickSocialPayload,
@@ -47,6 +49,30 @@ describe('social data catalog', () => {
     )
     assert.equal(extractTweetId('https://twitter.com/u/status/1'), '1')
     assert.equal(extractTweetId('https://x.com/home'), '')
+  })
+
+  it('extracts youtube video and channel ids from various URL formats', () => {
+    assert.equal(extractYouTubeVideoId('dQw4w9WgXcQ'), 'dQw4w9WgXcQ')
+    assert.equal(extractYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), 'dQw4w9WgXcQ')
+    assert.equal(extractYouTubeVideoId('https://youtu.be/dQw4w9WgXcQ'), 'dQw4w9WgXcQ')
+    assert.equal(extractYouTubeVideoId('https://www.youtube.com/shorts/dQw4w9WgXcQ'), 'dQw4w9WgXcQ')
+    assert.equal(extractYouTubeVideoId('https://www.youtube.com/embed/dQw4w9WgXcQ'), 'dQw4w9WgXcQ')
+
+    assert.equal(extractYouTubeChannelId('UCBJycsmduvYEL83R_U4JriQ'), 'UCBJycsmduvYEL83R_U4JriQ')
+    assert.equal(extractYouTubeChannelId('@mkbhd'), '@mkbhd')
+    assert.equal(extractYouTubeChannelId('https://www.youtube.com/channel/UCBJycsmduvYEL83R_U4JriQ'), 'UCBJycsmduvYEL83R_U4JriQ')
+    assert.equal(extractYouTubeChannelId('https://www.youtube.com/@mkbhd'), '@mkbhd')
+    assert.equal(extractYouTubeChannelId('https://www.youtube.com/c/mkbhd'), '@mkbhd')
+
+    const userModel = resolveSocialDataModel({ platform: 'youtube', capability: 'user', url: 'https://www.youtube.com/@mkbhd' })
+    assert.equal(userModel.model, 'youtube-user')
+    assert.equal(userModel.field, 'channel_id')
+    assert.equal(userModel.value, '@mkbhd')
+
+    const postsModel = resolveSocialDataModel({ platform: 'youtube', capability: 'posts', url: 'https://www.youtube.com/channel/UCBJycsmduvYEL83R_U4JriQ' })
+    assert.equal(postsModel.model, 'youtube-posts')
+    assert.equal(postsModel.field, 'channel_id')
+    assert.equal(postsModel.value, 'UCBJycsmduvYEL83R_U4JriQ')
   })
 
   it('rejects an unknown pair before HTTP', () => {
