@@ -111,7 +111,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     it('sorts by cost_first (lowest points estimate first)', () => {
       const candidates = resolveChannelCandidates('seedance-2-0', { strategy: 'cost_first' })
       assert.ok(candidates.length >= 4)
-      // cheap (800) -> standard (1040, wireGroup: default) -> preferred (1560) -> pro (3476)
+      // cheap (1.5) -> standard (4.9, wireGroup: default) -> preferred (5.7) -> pro (9.8)
       assert.equal(candidates[0], 'seedance-2-0@cheap')
       assert.equal(candidates[1], 'seedance-2-0@default')
     })
