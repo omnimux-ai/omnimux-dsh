@@ -1,0 +1,21 @@
+{
+  "taskId": "restore-agent-preset-seat",
+  "verifiedAt": "2026-09-18T21:52:10+08:00",
+  "feature": "恢复会话上方原生切换 Agent 预设按钮",
+  "stylesCleaned": [
+    "plugins/omnimux/src/client/styles.js: 移除对 [data-slot='conversation.hero.agentPreset']、[data-omnimux-preset-seat]、button.PnBhwW_seat 的隐藏规则"
+  ],
+  "verifiedSelectorsVisible": [
+    "[data-slot='conversation.hero.agentPreset']",
+    "[data-omnimux-preset-seat]",
+    "button[class*='AgentPresetSeat_seat']",
+    "button[class*='PnBhwW_seat']",
+    "[data-omnimux-preset-menu]"
+  ],
+  "testResults": {
+    "agentPresetEnhancer": "24 passed",
+    "omniAgentPresetsE2E": "1 passed",
+    "total": "25 passed, 0 failed"
+  },
+  "status": "PASS"
+}
