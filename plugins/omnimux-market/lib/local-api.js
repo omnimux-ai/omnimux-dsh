@@ -675,7 +675,7 @@ function resolveLocalCoverOrAvatar(target) {
     // 1. 本地 catalog 封面图与专家头像 catalog/covers/<filename>
     if (target.startsWith('catalog/covers/')) {
         const fileName = target.slice('catalog/covers/'.length);
-        if (/^(?:home\/)?[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
+        if (/^(?:home\/|skills\/)?[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
             const coverPath = join(packageRoot(), 'catalog', 'covers', fileName);
             if (existsSync(coverPath)) {
                 return { path: coverPath, contentType: detectImageContentType(fileName) };

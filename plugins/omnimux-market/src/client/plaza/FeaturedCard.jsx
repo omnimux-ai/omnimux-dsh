@@ -6,6 +6,7 @@ import {
   resolveItemTitle,
   safeTrySkillInSession,
 } from './plazaUtils.js';
+import { resolveSkillAuroraStyle } from './auroraGradients.js';
 
 const h = React.createElement;
 
@@ -167,13 +168,8 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
   const title = resolveItemTitle(item, tr);
   const desc = resolveItemDesc(item, tr) || '暂无描述';
 
-  // 1:1 视觉流光渐变与真实 WebP 封面生成算法（优先覆盖 item.homeCover / item.cover 及 featured-cover-svg 回退）
-  // 优先采用显式列表索引 cardIndex 或 coverIndex，确保与官方序列完全一致
-  const targetIndex = typeof cardIndex === 'number'
-    ? cardIndex
-    : (typeof item.coverIndex === 'number' ? item.coverIndex : item);
-  const visual = getCardVisual(targetIndex);
-  const coverSrc = visual.coverData || `/omnimux/assets/skill-card-covers/skill-card-${visual.num}.webp`;
+  // 极光色彩光学算法：每个技能卡片计算一套高颜值流光
+  const aurora = resolveSkillAuroraStyle(item);
 
   const isHot = Boolean(item.isHot || item.tags?.includes('热门精选'));
   const isNew = Boolean(item.isNew || item.tags?.includes('新品上市'));
@@ -191,14 +187,20 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     className: 'featured-card omnimux-creatify-card',
     onClick: onCardClick,
     title,
-    style: { background: visual.gradient },
+    style: {
+      background: aurora.bg,
+    },
   },
-    // 1. 渐变大封面图
-    h('img', {
-      src: coverSrc,
-      alt: title,
+    // 1. 动态极光流光背景层（纯算法渲染，零破图风险）
+    h('div', {
       className: 'omnimux-creatify-card-bg-img',
-      loading: 'lazy',
+      style: {
+        background: aurora.bg,
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+      },
+      'aria-hidden': 'true',
     }),
     // 2. 点阵纹理 Overlay
     h('div', { className: 'omnimux-creatify-dot-overlay', 'aria-hidden': 'true' }),
@@ -261,7 +263,7 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
               pointerEvents: 'auto',
             },
             onClick: onTryClick,
-          }, '在会话中使用'),
+          }, typeof tr === 'function' ? (tr('workshop.try') || '去对话中试试') : '去对话中试试'),
         ),
       ),
     ),

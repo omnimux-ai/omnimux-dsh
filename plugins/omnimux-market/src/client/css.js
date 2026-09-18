@@ -597,8 +597,8 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 }
 .omnimux-creatify-dot-overlay {
   position:absolute; inset:0;
-  background-image:radial-gradient(circle, var(--dsw-static-white-38, rgba(255, 255, 255, 0.38)) 0.7px, transparent 1px); /* exempt-ui03: 1:1复刻点阵纹理覆盖 */
-  background-size:8px 8px; mix-blend-mode:overlay; pointer-events:none;
+  background-image:radial-gradient(circle, var(--dsw-static-white-38, rgba(255, 255, 255, 0.24)) 1.2px, transparent 1.2px); /* exempt-ui03: 1:1复刻点阵微孔光栅 */
+  background-size:14px 14px; mix-blend-mode:overlay; pointer-events:none; opacity:0.9;
 }
 .omnimux-creatify-card-top-left {
   position:absolute; top:12px; left:12px; z-index:5;
@@ -677,6 +677,17 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   display:flex; align-items:center; gap:4px; font-size:11px;
   color:var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65));
 }
+
+/* 8 套高饱和度炫彩渐变卡片底色 (对标 Creatify 官方炫彩视觉) */
+.omnimux-creatify-card-grad-0 { background: linear-gradient(135deg, #103b22 0%, #1e6b3f 38%, #5ec278 100%) !important; } /* exempt-ui03: 极光翡翠绿 */
+.omnimux-creatify-card-grad-1 { background: linear-gradient(135deg, #451b03 0%, #854d0e 40%, #fbbf24 100%) !important; } /* exempt-ui03: 晨曦琥珀金 */
+.omnimux-creatify-card-grad-2 { background: linear-gradient(135deg, #2e1065 0%, #581c87 38%, #a855f7 100%) !important; } /* exempt-ui03: 霓虹极光紫 */
+.omnimux-creatify-card-grad-3 { background: linear-gradient(135deg, #4c0519 0%, #9f1239 40%, #f43f5e 100%) !important; } /* exempt-ui03: 暮色炽热红 */
+.omnimux-creatify-card-grad-4 { background: linear-gradient(135deg, #0c2b5e 0%, #1d4ed8 40%, #38bdf8 100%) !important; } /* exempt-ui03: 赛博深邃蓝 */
+.omnimux-creatify-card-grad-5 { background: linear-gradient(135deg, #3b0764 0%, #701a75 38%, #ec4899 100%) !important; } /* exempt-ui03: 幻彩落樱粉 */
+.omnimux-creatify-card-grad-6 { background: linear-gradient(135deg, #431407 0%, #c2410c 45%, #fb923c 100%) !important; } /* exempt-ui03: 烈焰赤阳橙 */
+.omnimux-creatify-card-grad-7 { background: linear-gradient(135deg, #042f2e 0%, #0f766e 40%, #2dd4bf 100%) !important; } /* exempt-ui03: 冰晶碧海青 */
+
 
 `;
 
