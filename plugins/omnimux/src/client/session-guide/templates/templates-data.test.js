@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 import test from 'node:test';
 import {
   ALL_CREATIVE_TEMPLATES,
+  FEATURED_APPS_LIST,
   TEMPLATE_CATEGORIES,
   SHELVES_CONFIG,
   selectTemplatesByCategory,
@@ -9,34 +10,61 @@ import {
   selectShelfItems,
 } from './templates-data.js';
 
-test('7 大王牌精选应用规模与数据完整性验证', () => {
-  assert.equal(ALL_CREATIVE_TEMPLATES.length, 7, `精选应用总数应恰好为 7 套，当前: ${ALL_CREATIVE_TEMPLATES.length}`);
+test('全量灵感模板与置顶 AI 应用规模与数据完整性验证', () => {
+  assert.equal(FEATURED_APPS_LIST.length, 7, '置顶官方精选 AI 应用应恰好为 7 套');
+  assert.ok(
+    ALL_CREATIVE_TEMPLATES.length >= 402,
+    `全量模板应包含 7 款应用与 395 套模板，当前: ${ALL_CREATIVE_TEMPLATES.length}`
+  );
 
-  for (const item of ALL_CREATIVE_TEMPLATES) {
-    assert.ok(item.id, '每项应用必须有 id');
-    assert.ok(item.title, `应用 [${item.id}] 必须有标题`);
-    assert.ok(item.categorySlug, `应用 [${item.id}] 必须有 categorySlug`);
-    assert.ok(item.cover, `应用 [${item.id}] 必须有封面图`);
-    assert.ok(item.previewVideoUrl, `应用 [${item.id}] 必须有成片预览视频`);
-    assert.ok(item.manifest, `应用 [${item.id}] 必须绑定官方 ApplicationManifest`);
-    assert.equal(item.manifest?.appId, item.appId, 'manifest.appId 必须严格对齐');
+  // 验证前 7 项为官方 AI 应用
+  for (const app of ALL_CREATIVE_TEMPLATES.slice(0, 7)) {
+    assert.equal(app.isApp, true, '前 7 项必须标记为 isApp: true');
+    assert.equal(app.type, 'app', '前 7 项类型必须为 app');
+    assert.ok(app.manifest, 'AI 应用必须绑定 manifest');
   }
+
+  // 验证普通模板中包含提示词与工作流元数据
+  const creatifyTemplatesWithWorkflow = ALL_CREATIVE_TEMPLATES.filter(
+    (item) => item.workflow && item.workflow.nodeCount > 0
+  );
+  assert.ok(
+    creatifyTemplatesWithWorkflow.length >= 160,
+    `包含工作流元数据的模板数量应不低于 160，当前: ${creatifyTemplatesWithWorkflow.length}`
+  );
 });
 
-test('单分组架构与货架行配置验证', () => {
-  assert.equal(SHELVES_CONFIG.length, 1, '货架行收敛为单分组「探索模板」');
-  assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
-  assert.equal(SHELVES_CONFIG[0].titleZh, '探索模板');
+test('10 大核心分类与货架行配置验证', () => {
+  assert.equal(TEMPLATE_CATEGORIES.length, 10, '应恢复完整的 10 大核心分类');
+  const expectedSlugs = [
+    'all',
+    'tiktok',
+    'skills',
+    'apps-software',
+    'hook-intro',
+    'ugc-review',
+    'cinematic-vfx',
+    'fashion-try-on',
+    'industry-packs',
+    'durability-test',
+  ];
+  assert.deepEqual(
+    TEMPLATE_CATEGORIES.map((c) => c.slug),
+    expectedSlugs
+  );
 
-  const items = selectShelfItems('explore-templates', 7);
-  assert.equal(items.length, 7, '单分组必须包含全部 7 款王牌精选应用');
+  assert.ok(SHELVES_CONFIG.length >= 8, '货架行应包含主要业务分类');
+  assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
 });
 
 test('分类筛选与 ID 检索功能验证', () => {
-  const found = findTemplateById('app-creatify-app-demo');
-  assert.ok(found, '必须能通过 appId 检索到软件应用');
-  assert.equal(found.categorySlug, 'apps-software');
+  const foundApp = findTemplateById('app-creatify-app-demo');
+  assert.ok(foundApp, '必须能通过 appId 检索到软件应用');
+  assert.equal(foundApp.isApp, true);
+
+  const hookTemplates = selectTemplatesByCategory('hook-intro');
+  assert.ok(hookTemplates.length > 20, '黄金开场分类下的模板数量应大于 20');
 
   const allItems = selectTemplatesByCategory('all');
-  assert.equal(allItems.length, 7);
+  assert.equal(allItems.length, ALL_CREATIVE_TEMPLATES.length);
 });

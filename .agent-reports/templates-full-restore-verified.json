@@ -1,0 +1,32 @@
+{
+  "task": "feat(templates): 灵感模板全量恢复、智能体上下文参考工具与附件挂载闭环",
+  "verifiedAt": "2026-09-18T13:30:05.680Z",
+  "issues": [
+    "#2362"
+  ],
+  "categoriesTotal": 10,
+  "categories": [
+    "all",
+    "tiktok",
+    "skills",
+    "apps-software",
+    "hook-intro",
+    "ugc-review",
+    "cinematic-vfx",
+    "fashion-try-on",
+    "industry-packs",
+    "durability-test"
+  ],
+  "totalTemplatesCount": 402,
+  "featuredAppsCount": 7,
+  "regularTemplatesCount": 395,
+  "shelvesCount": 9,
+  "agentTools": {
+    "searchAvailable": true,
+    "getAvailable": true,
+    "sampleSearchReturned": 5,
+    "sampleDetailLoaded": true,
+    "sampleDetailHasWorkflow": false
+  },
+  "status": "VERIFIED_PASSED"
+}
