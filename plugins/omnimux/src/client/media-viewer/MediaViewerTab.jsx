@@ -507,7 +507,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                 }}
               >
                 {activeItem?.type === 'video' ? (
-                  <video src={activeItem.url} controls autoPlay playsInline />
+                  <video src={activeItem.url} controls playsInline />
                 ) : activeItem?.url ? (
                   <img
                     ref={imageRef}

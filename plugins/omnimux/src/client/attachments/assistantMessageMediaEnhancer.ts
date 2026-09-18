@@ -97,6 +97,48 @@ export function isUserMessageNode(el: Element | null | undefined): boolean {
 }
 
 /**
+ * 判定当前 turn 或消息节点是否属于视频分镜拆解或视频分析场景。
+ * 视频分镜分析（.vbreakdown）属于专业高优先级工作台，在此场景下应屏蔽底层媒体嗅探器的强制抢占弹窗，
+ * 保证右侧栏优先由「视频分析工作台」接管，普通视频素材只静默收录至全局媒体库供画廊使用，绝不横向抢焦。
+ */
+export function isBreakdownOrAnalysisTurn(nodesOrElement: readonly HTMLElement[] | Element | null | undefined): boolean {
+  if (!nodesOrElement) return false;
+  const nodes = Array.isArray(nodesOrElement) ? nodesOrElement : [nodesOrElement as HTMLElement];
+
+  for (const node of nodes) {
+    if (!node) continue;
+    // 1. 检查是否存在 .vbreakdown 或相关属性/链接/类名工件标记
+    if (
+      node.querySelector?.(
+        '[data-is-breakdown="true"], [data-breakdown-path], [class*="breakdown"], [class*="vbreakdown"], a[href*=".vbreakdown"], a[href*="vbreakdown"]'
+      )
+    ) {
+      return true;
+    }
+
+    // 2. 检查节点内文本是否包含视频分镜分析的核心特征
+    const text = node.textContent || '';
+    if (
+      text.includes('.vbreakdown') ||
+      text.includes('video_breakdown_analyze') ||
+      text.includes('Video Breakdown') ||
+      (text.includes('分镜') && (text.includes('关键帧') || text.includes('镜头语言') || text.includes('落地建议') || text.includes('复刻与落地'))) ||
+      (text.includes('视频分析') && (text.includes('时间轴') || text.includes('拆解') || text.includes('分镜清单') || text.includes('工作台')))
+    ) {
+      return true;
+    }
+
+    // 3. 检查类名或工具调用标记
+    const className = typeof node.className === 'string' ? node.className : '';
+    if (className.includes('breakdown') || className.includes('vbreakdown')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Scan an element or subtree for generated images or videos,
  * ignoring avatars, icons, and small UI glyphs.
  * Computes normalization features (filename, canonicalKey, priority score).
@@ -606,7 +648,11 @@ export function enhanceTurnMedia(turnId: string, turnNodes: readonly HTMLElement
   targetBubble.setAttribute(ENHANCED_ATTR, 'true');
 
   // 5. Autonomous business logic: automatically trigger right sidebar open!
-  if (shouldAutoOpen) {
+  // 排他性门禁：当检测到当前 turn 属于视频分镜拆解或视频分析场景时，
+  // 必须把右侧工作台留给高优先级的「视频分析工作台」（.vbreakdown），
+  // 严格阻止底层媒体嗅探器强制抢占焦点，避免把分析工作台顶掉。
+  const isBreakdownScene = isBreakdownOrAnalysisTurn(turnNodes);
+  if (shouldAutoOpen && !isBreakdownScene) {
     try {
       const win = doc.defaultView || (typeof window !== 'undefined' ? window : null);
       const wb = (win as any)?.__omnimuxWorkbench;
