@@ -5,11 +5,12 @@
 | id | 显示名（中 / 英） | order | 说明 |
 |---|---|---|---|
 | `cordis` | 创建Agent / Create Agent | 1 | 插件实验开发、运行时检查与团队搭建。 |
-| `drama-agent` | 短剧专家 / Short Drama Showrunner | 2 | 微短剧工业化编剧、分镜运镜、多角色配音、剪辑成片与出海译配。 |
-| `daily-work` | 日常工作 / WorkAssistant | 3 | 日常办公协同、文档拟定与事务闭环。 |
-| `omni-agent` | 社媒专家 / Social Media Lead | 4 | 全域社媒爆款创作与矩阵运营增长（默认值守主力 Agent）。 |
-| `marketing-agent` | 营销专家 / Marketing Lead | 5 | 全域获客、创意策划、全渠道投放与ROI数据归因。 |
-| `marketing-growth-team` | 增长专家团 / Growth Team Lead | 6 | 全栈营销增长操盘：转化率优化、搜索与内容、获客投放与 ROI 归因复盘。 |
+| `tiktok-agent` | TikTok运营专家团 / TikTok Ops Team | 2 | 全链路爆款视频创作、带货选品、互动截流与投流增长。 |
+| `drama-agent` | 短剧专家 / Short Drama Showrunner | 3 | 微短剧工业化编剧、分镜运镜、多角色配音、剪辑成片与出海译配。 |
+| `daily-work` | 日常工作 / WorkAssistant | 4 | 日常办公协同、文档拟定与事务闭环。 |
+| `omni-agent` | 社媒专家 / Social Media Lead | 5 | 全域社媒爆款创作与矩阵运营增长（默认值守主力 Agent）。 |
+| `marketing-agent` | 营销专家 / Marketing Lead | 6 | 全域获客、创意策划、全渠道投放与ROI数据归因。 |
+| `marketing-growth-team` | 增长专家团 / Growth Team Lead | 7 | 全栈营销增长操盘：转化率优化、搜索与内容、获客投放与 ROI 归因复盘。 |
 
 ## 产品化机制
 
@@ -31,6 +32,7 @@
 
 ## 专家团与组建团队机制
 
+- **TikTok运营专家团 `tiktok-agent`**：TikTok 全生态运营操盘手主理人，下辖 13 位专业专家（短视频文案、解说配音、视觉设计、分镜视频、卡点音效、多轨剪辑、合规互动、评论运营、商机挖掘、品牌监控、广告创意、投放增长、数据归因），面向选品、创作、互动与投放全链路。
 - **默认主力预设 `omni-agent`（社媒专家）**：主会话定位为「社媒专家」主理人，内置完整社媒全网爆款运营能力，并挂载 10 个具名 expert_* 社媒专家工具。
 - **营销专家 `marketing-agent`**：营销战役全案总监，下辖 6 位营销增长专家。
 - **增长专家团 `marketing-growth-team`**：首席营销策略师主理人，下辖 4 位增长专家（转化率优化、搜索与内容、获客、数据归因），面向 AARRR 全链路增长。

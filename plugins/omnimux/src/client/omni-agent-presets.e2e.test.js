@@ -63,4 +63,9 @@ test('E2E: omni-agent, marketing-agent, drama-agent 预设头像与本地化文�
   assert.equal(drmZh.name, '短剧专家')
   assert.equal(drmEn.name, 'Short Drama Showrunner')
 
+  const tkZh = getPresetFallbackCopy('tiktok-agent', 'zh')
+  const tkEn = getPresetFallbackCopy('tiktok-agent', 'en')
+  assert.equal(tkZh.name, 'TikTok运营专家团')
+  assert.equal(tkEn.name, 'TikTok Ops Team')
+
 })

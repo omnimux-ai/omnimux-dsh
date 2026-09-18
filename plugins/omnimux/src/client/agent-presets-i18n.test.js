@@ -62,9 +62,16 @@ test('getPresetFallbackCopy returns localized fallback copy for all presets', ()
   const enCordis = getPresetFallbackCopy('cordis', 'en')
   assert.equal(enCordis.name, 'Create Agent')
 
-  const zhSocial = getPresetFallbackCopy('tiktok-agent', 'zh')
+  const zhSocial = getPresetFallbackCopy('omni-agent', 'zh')
   assert.equal(zhSocial.name, '社媒专家')
   assert.ok(zhSocial.description.includes('矩阵运营增长'))
+
+  const zhTikTok = getPresetFallbackCopy('tiktok-agent', 'zh')
+  assert.equal(zhTikTok.name, 'TikTok运营专家团')
+  assert.ok(zhTikTok.description.includes('全链路爆款视频创作'))
+
+  const enTikTok = getPresetFallbackCopy('tiktok-agent', 'en')
+  assert.equal(enTikTok.name, 'TikTok Ops Team')
 
   assert.equal(getPresetFallbackCopy('unknown-preset', 'zh'), null)
 })

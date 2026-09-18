@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
+KEEP=(omni-agent tiktok-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
 
 if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
   echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
