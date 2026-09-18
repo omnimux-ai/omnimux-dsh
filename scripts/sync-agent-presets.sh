@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(omni-agent tiktok-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
+KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
 
-if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
-  echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
+if [ ! -d "$SRC/omni-agent" ]; then
+  echo "❌ presets/ 缺少出厂预设 (omni-agent)" >&2
   exit 1
 fi
 
@@ -166,7 +166,8 @@ materialize_into() {
     done
     if [ "$keep" -eq 0 ]; then
       if [ "$base" = "tiktok-agent" ]; then
-        echo "  · kept legacy alias $base"
+        rm -rf "$child"
+        echo "  - removed duplicate legacy alias $base"
       else
         echo "  · kept $base"
       fi
@@ -178,12 +179,7 @@ materialize_into() {
     cp -R "$SRC/$k/." "$dest/$k/"
     echo "  + synced $k"
   done
-  if [ -d "$SRC/tiktok-agent" ]; then
-    rm -rf "$dest/tiktok-agent"
-    mkdir -p "$dest/tiktok-agent"
-    cp -R "$SRC/tiktok-agent/." "$dest/tiktok-agent/"
-    echo "  + synced alias tiktok-agent"
-  fi
+  rm -rf "$dest/tiktok-agent"
 }
 
 # 1) profiles under target homes that vendor @deepseek-ai/dsh
@@ -192,11 +188,10 @@ for home_dir in "${TARGET_HOMES[@]}"; do
   if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
     mkdir -p "$home_dir/agent-presets-shipped"
     materialize_into "$home_dir/agent-presets-shipped"
-    mkdir -p "$home_dir/.agent-presets/tiktok-agent"
-    if [ -d "$SRC/tiktok-agent" ]; then
-      cp -R "$SRC/tiktok-agent/." "$home_dir/.agent-presets/tiktok-agent/"
-    elif [ -d "$SRC/omni-agent" ]; then
-      cp -R "$SRC/omni-agent/." "$home_dir/.agent-presets/tiktok-agent/"
+    if [ -d "$home_dir/.agent-presets/tiktok-agent" ]; then
+      mkdir -p "$home_dir/.agent-presets/.retired"
+      mv "$home_dir/.agent-presets/tiktok-agent" "$home_dir/.agent-presets/.retired/" 2>/dev/null || rm -rf "$home_dir/.agent-presets/tiktok-agent"
+      echo "  - retired legacy .agent-presets/tiktok-agent"
     fi
   fi
 

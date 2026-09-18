@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-09-18T13:29:41.163Z",
+  "task": "remove-duplicate-agent-preset",
+  "presetsTotal": 7,
+  "presetsList": [
+    "cordis",
+    "daily-work",
+    "drama-agent",
+    "marketing-agent",
+    "marketing-growth-team",
+    "omni-agent",
+    "standard"
+  ],
+  "tiktokAgentRemovedFromPresets": true,
+  "syncScriptCleansLegacyTiktok": true,
+  "promptTemplatesSingleSourceOmni": true,
+  "status": "VERIFIED"
+}
