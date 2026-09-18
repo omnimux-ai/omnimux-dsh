@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>从链接创建产品 · UI 演示</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #111113;
+      --dsw-alias-bg-layer-1: #1a1b1f;
+      --dsw-alias-bg-layer-2: #23242a;
+      --dsw-alias-label-primary: #f3f4f6;
+      --dsw-alias-label-secondary: #a1a1aa;
+      --dsw-alias-label-tertiary: #71717a;
+      --dsw-alias-label-primary-inverted: #111827;
+      --dsw-alias-border-l2: rgba(255,255,255,0.12);
+      --dsw-alias-brand-primary: #60a5fa;
+      --dsw-alias-state-error-primary: #f87171;
+      --dsw-alias-state-business-tertiary: rgba(96,165,250,0.25);
+      --dsw-alias-button-primary-fill: #f3f4f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: radial-gradient(1200px 600px at 50% 0%, #1c1f2a, var(--dsw-alias-bg-base));
+      color: var(--dsw-alias-label-primary); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    .stage { width: min(720px, 94vw); }
+    .card {
+      position: relative;
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2);
+      border-radius: 16px; padding: 8px 18px 22px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    }
+    .close {
+      position: absolute; right: 12px; top: 12px; width: 32px; height: 32px; border-radius: 999px;
+      border: 1px solid var(--dsw-alias-border-l2); background: transparent; color: var(--dsw-alias-label-secondary);
+      cursor: pointer;
+    }
+    .omx-pcl { display:flex; flex-direction:column; align-items:center; gap:22px; padding:18px 8px 10px; text-align:center; }
+    .omx-pcl__title { margin:8px 0 0; font-size:22px; line-height:30px; font-weight:650; max-width:520px; }
+    .omx-pcl__title-em { color: var(--dsw-alias-brand-primary); font-weight:700; }
+    .omx-pcl__supports { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .omx-pcl__supports-label { margin:0; font-size:12px; color:var(--dsw-alias-label-tertiary); }
+    .omx-pcl__logos { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .omx-pcl__logo { width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);font-size:11px;font-weight:700;color:var(--dsw-alias-label-secondary); }
+    .omx-pcl__logo[data-more]{ background:transparent; border-style:dashed; }
+    .omx-pcl__field { width:100%; max-width:560px; }
+    .omx-pcl__input { width:100%; height:48px; border-radius:999px; border:1px solid var(--dsw-alias-border-l2); background:transparent; padding:0 18px; font-size:14px; color:var(--dsw-alias-label-primary); outline:none; }
+    .omx-pcl__input:focus { border-color: var(--dsw-alias-brand-primary); box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary); }
+    .omx-pcl__status { margin:-8px 0 0; min-height:18px; font-size:12px; color:var(--dsw-alias-label-secondary); }
+    .omx-pcl__status[data-tone=error]{ color: var(--dsw-alias-state-error-primary); }
+    .omx-pcl__actions { display:flex; flex-direction:column; align-items:center; gap:14px; }
+    .btn {
+      min-width:168px; height:40px; border-radius:999px; border:0; cursor:pointer;
+      background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-inverted);
+      font-size:14px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+    .spin { width:14px;height:14px;border-radius:50%; border:2px solid rgba(17,24,39,.25); border-top-color:#111827; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg);} }
+    .manual { border:0; background:transparent; color:var(--dsw-alias-label-secondary); cursor:pointer; font-size:13px; }
+    .manual em { color: var(--dsw-alias-brand-primary); font-style:normal; font-weight:600; }
+    .note { margin-top: 18px; text-align:center; color: var(--dsw-alias-label-tertiary); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" data-testid="product-create-link-modal">
+      <button class="close" aria-label="关闭">×</button>
+      <div class="omx-pcl">
+        <h2 class="omx-pcl__title">粘贴<span class="omx-pcl__title-em">商品链接</span>获取商品信息</h2>
+        <div class="omx-pcl__supports">
+          <p class="omx-pcl__supports-label">支持主流电商与建站平台</p>
+          <div class="omx-pcl__logos">
+            <span class="omx-pcl__logo">a</span><span class="omx-pcl__logo">S</span><span class="omx-pcl__logo">E</span>
+            <span class="omx-pcl__logo">eb</span><span class="omx-pcl__logo">A</span><span class="omx-pcl__logo">G</span>
+            <span class="omx-pcl__logo">W</span><span class="omx-pcl__logo">w</span><span class="omx-pcl__logo" data-more>…</span>
+          </div>
+        </div>
+        <div class="omx-pcl__field">
+          <input id="url" class="omx-pcl__input" placeholder="https://… 粘贴商品链接" value="https://shop.tiktok.com/sg/pdp/1730433539599533786" />
+        </div>
+        <p id="status" class="omx-pcl__status">&nbsp;</p>
+        <div class="omx-pcl__actions">
+          <button id="analyze" class="btn">分析链接</button>
+          <button class="manual">或 <em>手动创建</em></button>
+        </div>
+      </div>
+    </div>
+    <p class="note">演示页 · Issue #2340 · 对标参考图交互（加载/错误可点）</p>
+  </div>
+  <script>
+    const btn = document.getElementById('analyze');
+    const status = document.getElementById('status');
+    const input = document.getElementById('url');
+    let busy = false;
+    btn.onclick = async () => {
+      if (busy) return;
+      if (!/^https?:\/\//i.test(input.value.trim())) {
+        status.dataset.tone = 'error';
+        status.textContent = '请输入合法的网页链接';
+        return;
+      }
+      busy = true; btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>分析中';
+      status.dataset.tone = '';
+      status.textContent = '正在分析链接…';
+      await new Promise(r => setTimeout(r, 1200));
+      busy = false; btn.disabled = false; btn.textContent = '分析链接';
+      status.textContent = '演示完成（真实环境会解析并保存产品）';
+    };
+  </script>
+</body>
+</html>

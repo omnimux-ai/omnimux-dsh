@@ -124,6 +124,10 @@ test('ProductPicker: 列表首位创建产品 + 链接弹窗回流契约', () =>
 
   const safeT = createSafeT(undefined);
   assert.equal(safeT('productPicker.createCard'), '创建产品');
-  assert.equal(safeT('productPicker.create.submit'), '解析并创建');
+  assert.equal(safeT('productPicker.create.submit'), '分析链接');
+  assert.equal(safeT('productPicker.create.heroEm'), '商品链接');
+  assert.ok(createModal.includes('omx-pcl__title'), '居中大标题布局');
+  assert.ok(createModal.includes('omx-pcl__primary'), '居中主 CTA');
+  assert.ok(createModal.includes('omx-pcl__manual'), '手动创建次链');
   assert.equal(safeT('productPicker.create.invalidUrl'), '请输入合法的网页链接');
 });
