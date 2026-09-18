@@ -576,6 +576,112 @@
       return `/${slug} `;
     }
 
+    /**
+     * 将技能指令 /slug 写入当前激活的输入框（带重试等待与光标聚焦）。
+     * 1. 若当前为空，填入 /slug ；
+     * 2. 若已有内容包含 /slug，则保持并聚焦；
+     * 3. 若以其他 /xxx 开头，则替换开头的指令为 /slug ；
+     * 4. 若已有其他普通文本，则前置插入 /slug ；
+     * 5. 聚焦输入框并将光标移至末尾，严禁自动发送。
+     */
+    async function applySkillPrefillToComposer(slug, maxWait = 3000) {
+      if (!slug || typeof document === "undefined") return false;
+      const targetToken = `/${slug} `;
+      const start = Date.now();
+
+      while (Date.now() - start < maxWait) {
+        const composer = findComposer();
+        if (composer) {
+          const isContentEditable = Boolean(
+            composer.isContentEditable ||
+            (typeof composer.getAttribute === "function" && composer.getAttribute("contenteditable") === "true")
+          );
+          const current = (composer.value && composer.value.trim().length > 0)
+            ? composer.value
+            : (isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || ""));
+
+          const trimmed = (current || "").trim();
+          // 已包含目标指令（例如首个 Token 为 /slug），无需重复追加
+          const firstToken = trimmed.split(/\s+/)[0];
+          if (firstToken === `/${slug}`) {
+            composer.focus?.();
+            return true;
+          }
+
+          let nextText = targetToken;
+          if (trimmed.length > 0) {
+            if (trimmed.startsWith("/")) {
+              const rest = trimmed.replace(/^\S+\s*/, "").trimStart();
+              nextText = rest ? `${targetToken}${rest}` : targetToken;
+            } else {
+              nextText = `${targetToken}${trimmed}`;
+            }
+          }
+
+          // 写入内容
+          if (isContentEditable) {
+            try {
+              composer.focus?.();
+              if (typeof window !== "undefined" && window.getSelection && document.createRange) {
+                const sel = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(composer);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+              const success = typeof document.execCommand === "function"
+                ? document.execCommand("insertText", false, nextText)
+                : false;
+              if (!success) {
+                composer.textContent = nextText;
+              }
+            } catch {
+              composer.textContent = nextText;
+            }
+          } else {
+            const proto = typeof HTMLTextAreaElement === "function" && composer instanceof HTMLTextAreaElement
+              ? HTMLTextAreaElement.prototype
+              : typeof HTMLInputElement === "function" && composer instanceof HTMLInputElement
+                ? HTMLInputElement.prototype
+                : Object.getPrototypeOf(composer);
+            const setter = proto ? Object.getOwnPropertyDescriptor(proto, "value")?.set : undefined;
+            try {
+              if (setter) setter.call(composer, nextText);
+              else composer.value = nextText;
+            } catch {
+              composer.value = nextText;
+            }
+          }
+
+          const Input = typeof InputEvent === "function"
+            ? InputEvent
+            : (typeof Event === "function" ? Event : function(type, opts) { this.type = type; Object.assign(this, opts); });
+          composer.dispatchEvent(new Input("input", { bubbles: true, inputType: "insertText", data: nextText }));
+          composer.focus?.();
+
+          // 光标移至末尾
+          if (isContentEditable && typeof window !== "undefined" && window.getSelection && document.createRange) {
+            try {
+              const sel = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(composer);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            } catch {}
+          } else if (typeof composer.setSelectionRange === "function") {
+            try {
+              composer.setSelectionRange(nextText.length, nextText.length);
+            } catch {}
+          }
+
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return false;
+    }
+
     function currentPlazaSessionId() {
       const sessions = plazaSessions || (typeof window !== "undefined" ? window.__omnimuxSessions : undefined);
       try {
@@ -589,7 +695,7 @@
     }
 
     /**
-     * 在当前会话试用技能：点亮输入框技能标识 + 临时加载指令，禁止安装、禁止自动发送。
+     * 在当前会话试用技能：点亮输入框技能标识 + 临时加载指令，并在输入框预填 /slug，禁止安装、禁止自动发送。
      * installFlow=session-guide：仍走引导安装 + 预填官方安装任务（Hypit 等）。
      */
     async function trySkillInSession(skill) {
@@ -616,8 +722,9 @@
 
       activateSharedToolSkill({ ...skill, slug });
       let sessionId = currentPlazaSessionId();
+      const prefillText = `/${slug} `;
       if (!sessionId) {
-        const created = await createSkillSession({ skipInstall: true, text: "" });
+        const created = await createSkillSession({ skipInstall: true, text: prefillText });
         sessionId = created && created.sessionId;
       }
       if (!sessionId) return { ok: false, attached: false };
@@ -638,6 +745,7 @@
       try {
         const composer = findComposer();
         composer?.focus?.();
+        await applySkillPrefillToComposer(slug);
       } catch {}
 
       return { ok: true, sessionId, attached: true, installed: false };

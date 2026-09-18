@@ -40,3 +40,10 @@ test('E2E 试用后联动展开会话栏并聚焦输入框，消除无响应感 
   assert.match(tryFn, /findComposer\(\)/)
   assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
 })
+
+test('E2E 技能试用在输入框自动预填技能指令，支持无损续写', () => {
+  assert.match(sessionCreateSrc, /function applySkillPrefillToComposer/)
+  assert.match(sessionCreateSrc, /targetToken\s*=\s*`\/\${slug}\s*`/)
+  const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+  assert.match(tryFn, /applySkillPrefillToComposer\(slug\)/)
+})
