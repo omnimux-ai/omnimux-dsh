@@ -102,17 +102,17 @@ function mapPresetCategory(c) {
 }
 
 export function buildWorkshopCategories(presetBinding, tr) {
-  const allLabel = tr ? (tr('workshop.catAll') || '全部') : '全部';
-  if (presetBinding) {
-    const presetCategories = presetBinding.categories.map(mapPresetCategory);
-    return [{ id: '', label: allLabel }, ...presetCategories];
-  }
-  const featLabel = tr ? (tr('workshop.catFeatured') || '精选') : '精选';
-  const domainCategories = WORKSHOP_DOMAIN_ORDER.map((id) => mapDomainTaxonomy(id, tr));
-  // 套件紧跟「全部」之后，先于「精选」与各技能领域展示。
-  const suiteCategories = domainCategories.filter((c) => isLocalOnlyCategory(c.id));
-  const skillCategories = domainCategories.filter((c) => !isLocalOnlyCategory(c.id));
-  return [{ id: '', label: allLabel }, ...suiteCategories, { id: 'featured', label: featLabel }, ...skillCategories];
+  const isZh = !tr || tr('locale') === 'zh' || tr('locale') !== 'en';
+  return [
+    { id: '', label: isZh ? '全部' : 'All' },
+    { id: 'ugc-testimonial', label: isZh ? 'UGC 和用户评价' : 'UGC & Testimonial' },
+    { id: 'storytelling-script', label: isZh ? '故事讲述和脚本' : 'Storytelling & Script' },
+    { id: 'image-static', label: isZh ? '图片和静态广告' : 'Image & Static Ads' },
+    { id: 'video-ads', label: isZh ? '视频广告' : 'Video Ads' },
+    { id: 'product-showcase', label: isZh ? '产品展示' : 'Product Showcase' },
+    { id: 'meme-native', label: isZh ? '模因与原生' : 'Meme & Native' },
+    { id: 'other', label: isZh ? '其它营销分类' : 'Other' }
+  ];
 }
 
 function updateItemsWithRatings(cur, ratings) {
