@@ -56,7 +56,7 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.equal(zh['card.actions'], '操作')
 
     assert.equal(en['card.view'], 'View Details')
-    assert.equal(en['card.addToConversation'], 'Add to Conversation')
+    assert.equal(en['card.addToConversation'], 'Add to Chat')
     assert.equal(en['card.addedToConversation'], 'Added')
     assert.equal(en['card.actions'], 'Actions')
   })
