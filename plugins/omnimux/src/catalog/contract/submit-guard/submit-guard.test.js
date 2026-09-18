@@ -104,6 +104,11 @@ describe('SubmitGuard admission', () => {
     assert.equal(hit.ok, true)
     assert.equal(hit.modelId, sample.id)
     assert.equal(hit.aliased, true)
+
+    const ttsHit = admitModel(index, 'tts')
+    assert.equal(ttsHit.ok, true)
+    assert.equal(ttsHit.modelId, 'seed-audio-1.0')
+    assert.equal(ttsHit.aliased, true)
   })
 
   it('rejects unknown models', () => {

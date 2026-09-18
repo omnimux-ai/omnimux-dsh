@@ -302,21 +302,21 @@
         <span id="themeLabel">深色</span>
       </button>
       <dl class="meta-list">
-        <div><dt>生成时间</dt><dd>2026/9/15 22:43:16</dd></div>
-        <div><dt>契约指纹</dt><dd>ac1acf911a</dd></div>
+        <div><dt>生成时间</dt><dd>2026/9/18 09:55:25</dd></div>
+        <div><dt>契约指纹</dt><dd>391c423955</dd></div>
       </dl>
     </div>
   </header>
 
   <section class="stats" aria-label="接口概览统计">
-    <article class="stat" data-stat="models" data-count="41">
+    <article class="stat" data-stat="models" data-count="42">
       <div class="stat-label">模型能力接口</div>
-      <div class="stat-value">41<span class="stat-unit">款</span></div>
-      <div class="stat-note">已就绪 10 · 已登记 31 · 处置规则 78 条</div>
+      <div class="stat-value">42<span class="stat-unit">款</span></div>
+      <div class="stat-note">已就绪 11 · 已登记 31 · 处置规则 80 条</div>
     </article>
-    <article class="stat" data-stat="tools" data-count="116">
+    <article class="stat" data-stat="tools" data-count="117">
       <div class="stat-label">智能体工具接口</div>
-      <div class="stat-value">116<span class="stat-unit">个</span></div>
+      <div class="stat-value">117<span class="stat-unit">个</span></div>
       <div class="stat-note">跨 14 个插件（扫描 19 个）</div>
     </article>
     <article class="stat" data-stat="platforms" data-count="8">
@@ -338,13 +338,13 @@
     </div>
     <div class="filters" id="filters" role="group" aria-label="接口分类过滤">
       <button type="button" class="chip is-active" data-filter="all">全部接口</button>
-      <button type="button" class="chip" data-filter="models">模型能力 <span class="n">41</span></button>
-      <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">116</span></button>
+      <button type="button" class="chip" data-filter="models">模型能力 <span class="n">42</span></button>
+      <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">117</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">8</span></button>
       <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">13</span></button>
       <span class="chip-sep" aria-hidden="true"></span>
       <button type="button" class="chip is-active" data-status-filter="all">全部状态</button>
-      <button type="button" class="chip" data-status-filter="listed">已就绪 <span class="n">10</span></button>
+      <button type="button" class="chip" data-status-filter="listed">已就绪 <span class="n">11</span></button>
       <button type="button" class="chip" data-status-filter="draft">已登记 <span class="n">31</span></button>
     </div>
   </div>
@@ -357,7 +357,7 @@
           <h2 class="block-title">模型能力接口</h2>
           <p class="block-desc">执行中枢的模型契约：按模态分组的可调用模型与操作；「已就绪」表示存在 listed 操作。</p>
         </div>
-        <span class="block-count" data-block-count>41</span>
+        <span class="block-count" data-block-count>42</span>
       </div>
 
       <div class="group" data-group>
@@ -445,7 +445,7 @@
             </ul>
             <p class="card-foot mono">0/2 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-status="listed" data-search="gemini-3.8-flash gemini 3.8 flash google google 文本对话 图文对话">
+          <article class="card item" data-cat="models" data-status="listed" data-search="gemini-3.8-flash gemini 3.8 flash google google 文本对话 多模态对话">
             <div class="card-head">
               <span class="card-kicker">Google</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -454,7 +454,7 @@
             <button type="button" class="copy mono" data-copy="gemini-3.8-flash" title="点击复制标识">gemini-3.8-flash</button>
 
             <ul class="tags">
-              <li class="tag tag-listed">文本对话</li><li class="tag tag-listed">图文对话</li>
+              <li class="tag tag-listed">文本对话</li><li class="tag tag-listed">多模态对话</li>
             </ul>
             <p class="card-foot mono">2/2 个操作已就绪</p>
           </article>
@@ -832,7 +832,7 @@
       <div class="group" data-group>
         <div class="group-head">
           <h3 class="group-title">音频与语音合成 (Audio)</h3>
-          <span class="group-count mono" data-group-count>6</span>
+          <span class="group-count mono" data-group-count>7</span>
         </div>
         <div class="grid grid-model">
 
@@ -862,14 +862,27 @@
             </ul>
             <p class="card-foot mono">0/1 个操作已就绪</p>
           </article>
-          <article class="card item" data-cat="models" data-status="listed" data-search="seed-audio-1.0 seed audio 1.0 字节跳动 (doubao/seed) bytedance doubao-seed-audio-1.0 seed-audio 文本转语音">
+          <article class="card item" data-cat="models" data-status="listed" data-search="index-tts index tts 声音克隆 other gxgenai 声音克隆">
+            <div class="card-head">
+              <span class="card-kicker">other</span>
+              <span class="chip chip-status-ok">已就绪</span>
+            </div>
+            <h4 class="card-title">Index TTS 声音克隆</h4>
+            <button type="button" class="copy mono" data-copy="index-tts" title="点击复制标识">index-tts</button>
+
+            <ul class="tags">
+              <li class="tag tag-listed">声音克隆</li>
+            </ul>
+            <p class="card-foot mono">1/1 个操作已就绪</p>
+          </article>
+          <article class="card item" data-cat="models" data-status="listed" data-search="seed-audio-1.0 seed audio 1.0 字节跳动 (doubao/seed) bytedance doubao-seed-audio-1.0 seed-audio tts 文本转语音">
             <div class="card-head">
               <span class="card-kicker">字节跳动 (Doubao/Seed)</span>
               <span class="chip chip-status-ok">已就绪</span>
             </div>
             <h4 class="card-title">Seed Audio 1.0</h4>
             <button type="button" class="copy mono" data-copy="seed-audio-1.0" title="点击复制标识">seed-audio-1.0</button>
-            <p class="card-meta mono" title="doubao-seed-audio-1.0, seed-audio">别名 doubao-seed-audio-1.0 / seed-audio</p>
+            <p class="card-meta mono" title="doubao-seed-audio-1.0, seed-audio, tts">别名 doubao-seed-audio-1.0 / seed-audio / tts</p>
             <ul class="tags">
               <li class="tag tag-listed">文本转语音</li>
             </ul>
@@ -938,7 +951,7 @@
           </article>
         </div>
       </div>
-      <p class="block-source">来源：plugins/omnimux/src/catalog/specs/*.yaml（loadAll 实时加载）· plugins/omnimux/src/catalog/contract/dispositions.json（78 条处置规则）· 品牌归类 plugins/omnimux/src/brand/model-brands.js</p>
+      <p class="block-source">来源：plugins/omnimux/src/catalog/specs/*.yaml（loadAll 实时加载）· plugins/omnimux/src/catalog/contract/dispositions.json（80 条处置规则）· 品牌归类 plugins/omnimux/src/brand/model-brands.js</p>
       <div class="empty" data-empty hidden>
         <div class="empty-title">未找到匹配的模型</div>
         <p class="empty-desc">换一个关键词，或清空搜索条件后重试。</p>
@@ -951,7 +964,7 @@
           <h2 class="block-title">智能体工具接口</h2>
           <p class="block-desc">执行中枢 ctx.tools 注册的智能体工具，按插件分组；与治理门禁静态扫描同源（同一脚本、同一次运行）。</p>
         </div>
-        <span class="block-count" data-block-count>116</span>
+        <span class="block-count" data-block-count>117</span>
       </div>
 
       <div class="group" data-group>
@@ -984,10 +997,10 @@
       <div class="group" data-group>
         <div class="group-head">
           <h3 class="group-title mono">omnimux-assets</h3>
-          <span class="group-count mono" data-group-count>7</span>
+          <span class="group-count mono" data-group-count>8</span>
         </div>
         <div class="grid grid-tool">
-          <button type="button" class="tool item mono" data-cat="tools" data-copy="assets_list" data-search="assets_list omnimux-assets" title="点击复制工具名">assets_list</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_search" data-search="assets_search omnimux-assets" title="点击复制工具名">assets_search</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_get" data-search="assets_get omnimux-assets" title="点击复制工具名">assets_get</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_create" data-search="assets_create omnimux-assets" title="点击复制工具名">assets_create</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_update" data-search="assets_update omnimux-assets" title="点击复制工具名">assets_update</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_delete" data-search="assets_delete omnimux-assets" title="点击复制工具名">assets_delete</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_upload" data-search="assets_upload omnimux-assets" title="点击复制工具名">assets_upload</button>
+          <button type="button" class="tool item mono" data-cat="tools" data-copy="assets_list" data-search="assets_list omnimux-assets" title="点击复制工具名">assets_list</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_search" data-search="assets_search omnimux-assets" title="点击复制工具名">assets_search</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_cloud_save" data-search="assets_cloud_save omnimux-assets" title="点击复制工具名">assets_cloud_save</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_get" data-search="assets_get omnimux-assets" title="点击复制工具名">assets_get</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_create" data-search="assets_create omnimux-assets" title="点击复制工具名">assets_create</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_update" data-search="assets_update omnimux-assets" title="点击复制工具名">assets_update</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_delete" data-search="assets_delete omnimux-assets" title="点击复制工具名">assets_delete</button><button type="button" class="tool item mono" data-cat="tools" data-copy="assets_upload" data-search="assets_upload omnimux-assets" title="点击复制工具名">assets_upload</button>
         </div>
       </div>
       <div class="group" data-group>
@@ -1357,7 +1370,7 @@
       </div>
       <div>
         <div class="source-title">智能体工具接口</div>
-        <div class="source-path">scripts/verify-plugin-agent-tools.mjs（治理门禁同源静态扫描，实测 116 个）</div>
+        <div class="source-path">scripts/verify-plugin-agent-tools.mjs（治理门禁同源静态扫描，实测 117 个）</div>
       </div>
       <div>
         <div class="source-title">账号接入平台</div>
@@ -1368,11 +1381,11 @@
         <div class="source-path">plugins/omnimux-publish/src/config.js · plugins/omnimux-publish/src/account-policy.js · plugins/omnimux-publish/src/submit-media.js + src/hubtools.js · plugins/omnimux/src/official/provider.js</div>
       </div>
     </div>
-    <p class="footer-note">生成时间 2026/9/15 22:43:16 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 ac1acf911a · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
+    <p class="footer-note">生成时间 2026/9/18 09:55:25 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 391c423955 · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
   </footer>
 </div>
 
-<script id="hub-data" type="application/json">{"generatedAt":"2026/9/15 22:43:16","fingerprint":"ac1acf911a","stats":{"models":{"total":41,"listed":10,"draft":31,"dispositions":78},"tools":{"total":116,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":7},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"listed":10,"draft":31,"models":41,"tools":116,"platforms":8,"channels":13}}</script>
+<script id="hub-data" type="application/json">{"generatedAt":"2026/9/18 09:55:25","fingerprint":"391c423955","stats":{"models":{"total":42,"listed":11,"draft":31,"dispositions":80},"tools":{"total":117,"plugins":14,"pluginsWithTools":[{"plugin":"omnimux","count":27},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":8},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":6},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"listed":11,"draft":31,"models":42,"tools":117,"platforms":8,"channels":13}}</script>
 <script>
 (function () {
   var root = document.documentElement;
