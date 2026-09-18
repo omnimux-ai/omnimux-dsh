@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import featuredSkillsData from './skills/featured-skills.json';
 
 // 纯矢量 SVG 图标，严格遵从 design.md UI04 硬门禁，零 Emoji 零字符替代
 function ZapIcon({ size = 15 }) {
@@ -45,6 +46,34 @@ function ArrowUpIcon({ size = 13 }) {
   );
 }
 
+function UserIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function BoxIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
+
+function ClockIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
 // 真实采集数据源
 const SUBPROMPTS_DATA = {
   'video-ads': [
@@ -83,6 +112,8 @@ const FEATURED_SKILLS = [
     bestFor: ["TikTok UGC", "Instagram Reels ads", "selfie testimonial", "POV creator ads"],
     style: ["vertical 9:16", "creator-to-camera", "fast cuts", "iPhone texture"],
     slash: "/ugc-confessional",
+    iconType: "user",
+    isRecent: true,
   },
   {
     id: "ugc-fit-check",
@@ -93,6 +124,7 @@ const FEATURED_SKILLS = [
     bestFor: ["UGC try-on ads", "fit check videos", "OOTD reveals", "fashion hauls"],
     style: ["single-take 4-cut", "texture closeups", "vertical video"],
     slash: "/ugc-fit-check",
+    iconType: "user",
   },
   {
     id: "ugc-unwrap",
@@ -103,6 +135,7 @@ const FEATURED_SKILLS = [
     bestFor: ["UGC unboxing ads", "package reveals", "product unwrapping"],
     style: ["first-person POV", "close-up unpack", "satisfying reveal"],
     slash: "/ugc-unwrap",
+    iconType: "user",
   },
   {
     id: "ugc-showcase",
@@ -113,6 +146,7 @@ const FEATURED_SKILLS = [
     bestFor: ["product hero demo", "how it works", "hardware reviews"],
     style: ["product-centric", "voiceover narration", "feature highlight"],
     slash: "/ugc-showcase",
+    iconType: "box",
   },
   {
     id: "ugc-walkthrough",
@@ -123,12 +157,29 @@ const FEATURED_SKILLS = [
     bestFor: ["tutorial ads", "routine breakdown", "step-by-step"],
     style: ["numbered steps", "instructional", "clear demo"],
     slash: "/ugc-walkthrough",
+    iconType: "user",
   }
 ];
 
+// 技能列表数据源：来自技能市场真实精选技能（65+ 项全量数据）
+const MARKET_SKILLS = Array.isArray(featuredSkillsData?.skills) && featuredSkillsData.skills.length > 0
+  ? featuredSkillsData.skills.map((item, idx) => ({
+      id: item.id || item.skill,
+      titleZh: item.titleZh || item.title || item.skill,
+      titleEn: item.titleEn || item.title || item.skill,
+      descZh: item.summaryZh || item.summary || '',
+      descEn: item.summaryEn || item.summary || '',
+      slash: item.skill ? `/${item.skill}` : `/${item.id}`,
+      iconType: item.category === 'sk-visual' ? 'box' : 'user',
+      isRecent: idx === 0,
+      bestFor: item.tags || [],
+      style: item.tags || [],
+    }))
+  : FEATURED_SKILLS;
+
 export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
   const [activeMenu, setActiveMenu] = useState(null); // null | 'skills' | 'video-ads' | 'image-ads' | 'competitor'
-  const [hoverSkill, setHoverSkill] = useState(FEATURED_SKILLS[0]);
+  const [hoverSkill, setHoverSkill] = useState(MARKET_SKILLS[0]);
   const [searchKey, setSearchKey] = useState('');
   const containerRef = useRef(null);
 
@@ -190,12 +241,15 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
   }, [handleClose]);
 
   const filteredSkills = useMemo(() => {
-    if (!searchKey) return FEATURED_SKILLS;
+    const list = MARKET_SKILLS;
+    if (!searchKey) return list;
     const q = searchKey.toLowerCase().trim();
-    return FEATURED_SKILLS.filter(s => 
+    return list.filter(s =>
       s.titleZh.toLowerCase().includes(q) ||
       s.titleEn.toLowerCase().includes(q) ||
-      s.slash.includes(q)
+      s.descZh.toLowerCase().includes(q) ||
+      s.descEn.toLowerCase().includes(q) ||
+      s.slash.toLowerCase().includes(q)
     );
   }, [searchKey]);
 
@@ -337,12 +391,12 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px 6px' }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '8px', height: '34px', padding: '0 10px' }}>
               <SearchIcon size={14} />
               <input
                 type="text"
-                placeholder={isZh ? "搜索技能..." : "Search skills..."}
+                placeholder={isZh ? "搜索技能..." : "Search skills"}
                 value={searchKey}
                 onChange={(e) => setSearchKey(e.target.value)}
                 style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: '13px' }}
@@ -350,21 +404,24 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             </div>
             <button /* exempt-ui01: 浏览全部按钮 */
               type="button"
-              style={{ height: '34px', padding: '0 14px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-3)', border: '1px solid var(--dsw-alias-border)', color: 'var(--dsw-alias-label-primary)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+              style={{
+                height: '34px',
+                padding: '0 16px',
+                borderRadius: '8px',
+                background: 'var(--dsw-alias-interactive-bg-subtle, rgba(97, 97, 255, 0.16))',
+                border: 'none',
+                color: 'var(--dsw-alias-accent, rgb(165, 160, 255))',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
             >
               {isZh ? "浏览全部" : "Browse all"}
             </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label={isZh ? "关闭" : "Close"}
-              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '18px', cursor: 'pointer' }}
-            >
-              &times;
-            </button>
           </div>
 
-          <div style={{ maxHeight: '260px', overflowY: 'auto', padding: '4px 8px 10px' }}>
+          <div style={{ maxHeight: '280px', overflowY: 'auto', padding: '4px 6px 8px' }}>
             {filteredSkills.length === 0 ? (
               <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--dsw-alias-label-tertiary)', fontSize: '13px' }}>
                 {isZh ? "暂无匹配的技能" : "No skills available."}
@@ -373,22 +430,38 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
               filteredSkills.map((skill) => (
                 <div
                   key={skill.id}
-                  onMouseEnter={() => setHoverSkill(skill)}
                   onClick={() => handleSelectSkill(skill)}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '10px',
-                    padding: '8px 12px',
+                    gap: '12px',
+                    padding: '9px 12px',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    background: hoverSkill?.id === skill.id ? 'var(--dsw-alias-interactive-bg-hover)' : 'transparent',
+                    transition: 'background-color 0.1s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--dsw-alias-interactive-bg-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div style={{ marginTop: '2px', color: 'var(--dsw-alias-label-secondary)' }}><ZapIcon size={14} /></div>
+                  <div style={{ marginTop: '2px', color: 'var(--dsw-alias-label-secondary)', flexShrink: 0 }}>
+                    {skill.iconType === 'box' ? <BoxIcon size={16} /> : <UserIcon size={16} />}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>{isZh ? skill.titleZh : skill.titleEn}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isZh ? skill.descZh : skill.descEn}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
+                      {skill.isRecent && (
+                        <span style={{ color: 'var(--dsw-alias-label-tertiary)', display: 'inline-flex', alignItems: 'center' }}>
+                          <ClockIcon size={12} />
+                        </span>
+                      )}
+                      <span>{isZh ? skill.titleZh : skill.titleEn}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px', lineHeight: '1.4' }}>
+                      {isZh ? skill.descZh : skill.descEn}
+                    </div>
                   </div>
                 </div>
               ))
@@ -439,20 +512,12 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             boxSizing: 'border-box',
           }}
         >
-          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px', borderBottom: '1px solid var(--dsw-alias-border)', marginBottom: '6px' }}>
+          <header style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 8px', borderBottom: '1px solid var(--dsw-alias-border)', marginBottom: '6px' }}>
             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
               {activeMenu === 'video-ads' ? (isZh ? '视频广告推荐提示词' : 'Video Ads Prompts') :
                activeMenu === 'image-ads' ? (isZh ? '图片广告推荐提示词' : 'Image Ads Prompts') :
                (isZh ? '竞争对手研究推荐' : 'Competitor Research')}
             </span>
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label={isZh ? "关闭" : "Close"}
-              style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '16px', cursor: 'pointer' }}
-            >
-              &times;
-            </button>
           </header>
           {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => (
             <div
