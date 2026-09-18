@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniMux 侧边栏精简与聚焦工作流演示</title>
+  <style>
+    :root {
+      --bg-base: #0f0f11;
+      --bg-surface: #18181b;
+      --bg-card: #202024;
+      --bg-hover: rgba(255, 255, 255, 0.06);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-green: #34d399;
+      --accent-blue: #38bdf8;
+      --accent-amber: #fbbf24;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 顶栏控制 */
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      flex: none;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-title h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .badge-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--accent-green);
+      font-weight: 500;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+
+    .mode-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 主舞台双栏/单栏体验 */
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 模拟侧边栏 */
+    .sidebar-mock {
+      width: 240px;
+      background: #141416;
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 10px;
+      gap: 6px;
+      flex: none;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 4px;
+    }
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      transition: background 0.12s;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-btn.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-icon {
+      width: 14px;
+      height: 14px;
+      opacity: 0.8;
+    }
+
+    .tag-alpha {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(251, 191, 36, 0.12);
+      color: var(--accent-amber);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .tag-highlight {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+
+    .item-removed {
+      opacity: 0.35;
+      text-decoration: line-through;
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    /* 右侧工作区视窗 */
+    .workspace-view {
+      flex: 1;
+      padding: 36px 48px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(32, 32, 36, 0.8), rgba(20, 20, 24, 0.9));
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hero-card h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .hero-card p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 640px;
+    }
+
+    .focus-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .focus-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .focus-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .focus-card-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .focus-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .status-summary {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px 20px;
+      background: rgba(52, 211, 153, 0.05);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      border-radius: 8px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .check-icon {
+      color: var(--accent-green);
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>OmniMux 导航栏布局与核心聚焦演练</h1>
+      <span class="badge-pill">专注工作流 · 应用模板</span>
+    </div>
+    <div class="mode-tabs">
+      <button class="tab-btn active" id="btn-after" onclick="switchMode('after')">优化后：聚焦工作流与应用</button>
+      <button class="tab-btn" id="btn-before" onclick="switchMode('before')">历史状态：含探索性灵感社区</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 左侧导航模拟 -->
+    <div class="sidebar-mock">
+      <div class="brand-row">
+        <div class="brand-dot"></div>
+        <span>OmniMux</span>
+      </div>
+
+      <button class="nav-btn">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>新建对话</span>
+        </div>
+      </button>
+
+      <button class="nav-btn active">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>应用与模板</span>
+        </div>
+        <span class="tag-highlight">核心</span>
+      </button>
+
+      <button class="nav-btn">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>创作工作流 (项目)</span>
+        </div>
+        <span class="tag-highlight">核心</span>
+      </button>
+
+      <button class="nav-btn">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <span>资产库</span>
+        </div>
+      </button>
+
+      <button class="nav-btn">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span>产品库</span>
+        </div>
+      </button>
+
+      <!-- 灵感社区条目（根据模式切换） -->
+      <button class="nav-btn" id="inspiration-row" style="display: none;">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>灵感社区</span>
+        </div>
+        <span class="tag-alpha">内测版</span>
+      </button>
+
+      <button class="nav-btn">
+        <div class="nav-left">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>任务看板</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- 右侧内容展示 -->
+    <div class="workspace-view">
+      <div class="hero-card">
+        <h2 id="view-title">左侧导航已净化：聚焦工作流与应用模板</h2>
+        <p id="view-desc">
+          灵感社区已从左侧核心侧边栏安全移除并收敛为「内测版」，左侧主导航彻底回归高频生产力动线。工作流与 AI 应用模板成为最直观的入口，大幅降低视觉噪音。
+        </p>
+      </div>
+
+      <div class="focus-grid">
+        <div class="focus-card">
+          <div class="focus-card-header">
+            <div class="brand-dot" style="background: var(--accent-green);"></div>
+            <h3>工作流（项目创作）</h3>
+          </div>
+          <p>
+            支持多镜头分镜拆解、爆款脚本生成、视频拓扑编排与一键多端渲染出片。作为最核心的主生产力矩阵长期驻留左侧导航。
+          </p>
+        </div>
+
+        <div class="focus-card">
+          <div class="focus-card-header">
+            <div class="brand-dot" style="background: var(--accent-blue);"></div>
+            <h3>应用与模板中心</h3>
+          </div>
+          <p>
+            汇聚 7 大爆款 AI 视频应用与开箱即用的工作流模板，一键套用热门构图、文案与视听节奏，直通高转化视频交付。
+          </p>
+        </div>
+      </div>
+
+      <div class="status-summary">
+        <div class="status-item">
+          <span class="check-icon">✔</span>
+          <span>侧栏入口：已移除不显示</span>
+        </div>
+        <div class="status-item">
+          <span class="check-icon">✔</span>
+          <span>生命周期：已标记为内测版 (Alpha)</span>
+        </div>
+        <div class="status-item">
+          <span class="check-icon">✔</span>
+          <span>底层能力：代码与数据接口 100% 完整保留</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function switchMode(mode) {
+      const row = document.getElementById('inspiration-row');
+      const btnAfter = document.getElementById('btn-after');
+      const btnBefore = document.getElementById('btn-before');
+      const title = document.getElementById('view-title');
+      const desc = document.getElementById('view-desc');
+
+      if (mode === 'after') {
+        row.style.display = 'none';
+        btnAfter.classList.add('active');
+        btnBefore.classList.remove('active');
+        title.innerText = '左侧导航已净化：聚焦工作流与应用模板';
+        desc.innerText = '灵感社区已从左侧核心侧边栏安全移除并收敛为「内测版」，左侧主导航彻底回归高频生产力动线。工作流与 AI 应用模板成为最直观的入口，大幅降低视觉噪音。';
+      } else {
+        row.style.display = 'flex';
+        row.classList.add('item-removed');
+        btnBefore.classList.add('active');
+        btnAfter.classList.remove('active');
+        title.innerText = '历史状态：侧边栏包含仍在探索中的灵感社区';
+        desc.innerText = '之前在左侧主导航直接展示「灵感社区」，分散了用户对工作流项目和爆款应用模板的核心注意力。';
+      }
+    }
+  </script>
+</body>
+</html>
