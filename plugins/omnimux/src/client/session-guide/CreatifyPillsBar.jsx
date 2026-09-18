@@ -209,7 +209,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         justifyContent: 'center',
         gap: '10px',
         flexWrap: 'wrap',
-        margin: activeMenu ? '8px auto 16px' : '12px auto 16px',
+        margin: activeMenu ? '4px auto 16px' : '6px auto 16px',
         position: 'relative',
         zIndex: 120,
         boxSizing: 'border-box',
@@ -328,7 +328,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             right: '0',
             width: '100%',
             maxWidth: '100%',
-            background: 'var(--omnimux-surface-dialog, #18191c)',
+            background: 'var(--dsw-alias-bg-elevated)',
             border: '1px solid var(--dsw-alias-border)',
             borderRadius: '16px',
             boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
@@ -429,7 +429,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             right: '0',
             width: '100%',
             maxWidth: '100%',
-            background: 'var(--omnimux-surface-dialog, #18191c)',
+            background: 'var(--dsw-alias-bg-elevated)',
             border: '1px solid var(--dsw-alias-border)',
             borderRadius: '16px',
             boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */

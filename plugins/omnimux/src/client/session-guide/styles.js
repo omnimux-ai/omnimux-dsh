@@ -138,7 +138,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   line-height:1.5;
   container-type:inline-size;
   container-name:starter-guide;
-  padding-top:12px;
+  padding-top:4px;
 }
 .omnimux-starter-groups { display:flex; justify-content:center; flex-wrap:wrap; row-gap:20px; width:100%; max-width:100%; margin-inline:auto; }
 .omnimux-starter-group { position:relative; min-width:0; padding-inline:24px; }
