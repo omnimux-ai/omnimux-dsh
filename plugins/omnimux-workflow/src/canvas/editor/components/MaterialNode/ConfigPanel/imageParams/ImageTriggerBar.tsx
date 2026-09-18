@@ -51,12 +51,15 @@ export function ImageTriggerBar({
       });
     };
 
-    if (showMode) {
-      push('mode', summary.modeText, undefined, 'hide');
-    }
     push('ratio', summary.ratioText, <AspectRatioIcon ratio={params.aspectRatio} size={14} />, 'icon-only');
     if (summary.resolutionText) {
       push('resolution', summary.resolutionText, undefined, 'hide');
+    }
+    if (summary.qualityText) {
+      push('quality', summary.qualityText, undefined, 'hide');
+    }
+    if (showMode) {
+      push('mode', summary.modeText, undefined, 'hide');
     }
     list.push({
       id: 'chevron',

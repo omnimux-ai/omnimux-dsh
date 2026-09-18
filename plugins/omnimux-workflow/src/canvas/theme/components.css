@@ -7692,12 +7692,13 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-cfg-summary-bar__slot + .wf-cfg-summary-bar__slot::before,
 .wf-video-trigger-bar__slot + .wf-video-trigger-bar__slot::before {
-  content: '';
-  width: 1px;
-  height: 12px;
-  margin-right: 2px;
+  content: '·';
+  display: inline-block;
+  font-size: 13px;
+  line-height: 1;
+  margin: 0 1px 0 0;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   flex-shrink: 0;
-  background: var(--dsw-alias-border-l2, var(--wb-border));
 }
 
 /* Mode 类别降权：tertiary / 400；参数值 primary / 500 */

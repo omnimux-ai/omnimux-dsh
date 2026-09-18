@@ -29,9 +29,10 @@ export const DEFAULT_COLLAPSE_ORDER: readonly CfgSummarySlotId[] = [
 /** 向后兼容别名：现网视频单测以 COLLAPSE_ORDER 锁定默认顺序 */
 export const COLLAPSE_ORDER: readonly CfgSummarySlotId[] = DEFAULT_COLLAPSE_ORDER;
 
-/** 图像折叠优先级：mode 整段 → ratio 文字 → resolution 整段 */
+/** 图像折叠优先级：mode 整段 → quality 整段 → ratio 文字 → resolution 整段（无 quality 时自动跳过） */
 export const IMAGE_COLLAPSE_ORDER: readonly CfgSummarySlotId[] = [
   'mode',
+  'quality',
   'ratio',
   'resolution',
 ];

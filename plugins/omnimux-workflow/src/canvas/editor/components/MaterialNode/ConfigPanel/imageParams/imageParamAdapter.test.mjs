@@ -205,6 +205,40 @@ describe('formatImageSummary - 摘要格式化', () => {
     assert.equal(summary.resolutionText, null);
     assert.equal(summary.fullText, '1:1');
   });
+
+  it('含 quality 时正常格式化 qualityText（hd 映射为「高」、standard 映射为「标准」）', () => {
+    const hd = resolveEffectiveImageParams({
+      params: { model: 'img-prompt-only', aspectRatio: '1:1', resolution: '1K', quality: 'hd' },
+      schema: {
+        ...IMAGE_SCHEMA,
+        quality: { options: [{ value: 'hd', label: '高清 HD' }, { value: 'standard', label: '标准' }], defaultValue: 'standard' },
+      },
+      modelItem: { id: 'img-prompt-only', label: 'img-prompt-only' },
+      catalog,
+      upstreams: [],
+      prompt: '',
+    });
+    const hdSummary = formatImageSummary(hd);
+    assert.equal(hdSummary.qualityText, '高');
+    assert.equal(hdSummary.ratioText, '1:1');
+    assert.equal(hdSummary.resolutionText, '1K');
+    assert.equal(hdSummary.fullText, '1:1 1K 高');
+
+    const std = resolveEffectiveImageParams({
+      params: { model: 'img-prompt-only', aspectRatio: '16:9', quality: 'standard' },
+      schema: {
+        ...IMAGE_SCHEMA,
+        quality: { options: [{ value: 'standard', label: '标准' }], defaultValue: 'standard' },
+      },
+      modelItem: { id: 'img-prompt-only', label: 'img-prompt-only' },
+      catalog,
+      upstreams: [],
+      prompt: '',
+    });
+    const stdSummary = formatImageSummary(std);
+    assert.equal(stdSummary.qualityText, '标准');
+    assert.ok(stdSummary.fullText.includes('标准'));
+  });
 });
 
 describe('assertImageParamWriteKey - 写入白名单防御', () => {

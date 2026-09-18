@@ -26,6 +26,7 @@ export type CfgSummarySlotId =
   | 'mode'
   | 'ratio'
   | 'resolution'
+  | 'quality'
   | 'duration'
   | 'sound'
   | 'voice'

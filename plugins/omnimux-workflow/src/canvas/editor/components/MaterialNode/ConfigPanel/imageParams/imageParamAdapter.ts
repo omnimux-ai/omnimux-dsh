@@ -151,15 +151,38 @@ export function formatImageSummary(params: EffectiveImageParams): ImageSummaryFo
     : (params.aspectRatio.trim() || DEFAULT_IMAGE_ASPECT_RATIO);
   const resolutionText = params.resolution ? params.resolution.trim().toUpperCase() : null;
 
+  let qualityText: string | null = null;
+  if (params.quality) {
+    const option = params.schema.quality?.options?.find((opt) => opt.value === params.quality);
+    if (option?.label) {
+      const raw = option.label.trim();
+      if (/高清|hd/i.test(raw)) {
+        qualityText = '高';
+      } else if (/标准|standard/i.test(raw)) {
+        qualityText = '标准';
+      } else {
+        qualityText = raw;
+      }
+    } else if (params.quality === 'hd') {
+      qualityText = '高';
+    } else if (params.quality === 'standard') {
+      qualityText = '标准';
+    } else {
+      qualityText = params.quality;
+    }
+  }
+
   const segments: string[] = [];
-  if (modeText) segments.push(modeText);
   if (ratioText) segments.push(ratioText);
   if (resolutionText) segments.push(resolutionText);
+  if (qualityText) segments.push(qualityText);
+  if (modeText) segments.push(modeText);
 
   return {
     modeText,
     ratioText,
     resolutionText,
+    qualityText,
     fullText: segments.join(' '),
   };
 }
