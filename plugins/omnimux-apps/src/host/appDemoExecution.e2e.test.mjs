@@ -161,4 +161,55 @@ describe('E2E: 独立应用真实调度与状态对账闭环', () => {
       'https://cdn.example.com/rendered-video-1080p.mp4',
     );
   });
+
+  test('E03: 静态内联数据在零文件依赖下完成任务调度与参数透传', async () => {
+    const service = createAppsService();
+    let invoked = false;
+    const fakeSeam = {
+      async executeHeadless(params) {
+        invoked = true;
+        assert.equal(params.workspaceId, 'ws-app-creatify-app-demo');
+        assert.ok(params.snapshot?.nodes?.length >= 4);
+        return {
+          executionId: 'exec_inline_999',
+          jobId: 'exec_inline_999',
+          workspaceId: params.workspaceId,
+          status: 'QUEUED',
+          rawStatus: 'QUEUED',
+          createdAt: new Date().toISOString(),
+          streamUrl: '/stream',
+          eventsUrl: '/events',
+          pollUrl: '/poll',
+        };
+      },
+      async getJobStatus() { return null; },
+      async cancelJob() { return { success: true, canceledAt: '' }; },
+    };
+
+    const routes = createAppsRoutes({
+      service,
+      getHeadlessSeam: () => fakeSeam,
+    });
+
+    let status = 0;
+    const res = {
+      writeHead(s) { status = s; },
+      end() {},
+    };
+
+    const handled = await routes.handle({
+      url: '/omnimux-apps/api/apps/app-creatify-app-demo/executions',
+      method: 'POST',
+      body: {
+        inputs: {
+          product_image: 'https://example.com/item.png',
+          copywriting: '静态内联商品文案测试',
+        },
+      },
+    }, res);
+
+    assert.equal(handled, true);
+    assert.equal(status, 200);
+    assert.equal(invoked, true);
+  });
 });

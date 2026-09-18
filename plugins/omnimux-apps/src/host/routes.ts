@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { OmnimuxAppsService } from './index.ts';
 import type { HeadlessExecutionSeam } from './executionBridge.ts';
+import { BUILTIN_MANIFESTS } from '../shared/builtinCatalogData.ts';
 
 const PREFIX = '/omnimux-apps/api/apps';
 const EXECUTION_POST_RE = new RegExp(`^${PREFIX}/([^/]+)/executions$`);
@@ -19,9 +20,14 @@ const EXECUTION_ITEM_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)$`);
 const EXECUTION_CANCEL_RE = new RegExp(`^${PREFIX}/([^/]+)/executions/([^/]+)/cancel$`);
 
 function loadBuiltinApps(): any[] {
+  if (Array.isArray(BUILTIN_MANIFESTS) && BUILTIN_MANIFESTS.length > 0) {
+    return BUILTIN_MANIFESTS as any[];
+  }
+
   try {
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
     const candidatePaths = [
+      path.resolve(currentDir, '../catalog/builtin-apps.json'),
       path.resolve(currentDir, '../../catalog/builtin-apps.json'),
       path.resolve(currentDir, '../../../catalog/builtin-apps.json'),
       path.resolve(process.cwd(), 'plugins/omnimux-apps/catalog/builtin-apps.json'),
@@ -86,6 +92,9 @@ export function createAppsRoutes(deps: {
         if (!manifest) {
           const builtins = loadBuiltinApps();
           manifest = builtins.find((a) => a.appId === appId) || null;
+        }
+        if (!manifest && body.manifest && body.manifest.appId === appId) {
+          manifest = body.manifest;
         }
 
         if (!manifest) {

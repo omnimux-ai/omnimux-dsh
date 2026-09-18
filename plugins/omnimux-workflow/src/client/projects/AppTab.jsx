@@ -354,6 +354,7 @@ export function AppTab(props) {
           body: JSON.stringify({
             version: manifest.version,
             inputs: formValues,
+            manifest,
           }),
         }).catch(() => null)
 
