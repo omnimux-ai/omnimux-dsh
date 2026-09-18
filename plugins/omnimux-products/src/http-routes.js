@@ -389,6 +389,10 @@ function parseProductPath(pathname) {
   const rest = pathname.slice(`${PREFIX}/`.length)
   const draft = rest.match(/^draft-media\/(.+)$/)
   if (draft) return { kind: 'draft-media', id: decodeURIComponent(draft[1]) }
+  const mediaItem = rest.match(/^([^/]+)\/media\/([^/]+)$/)
+  if (mediaItem) {
+    return { kind: 'media-item', id: decodeURIComponent(mediaItem[1]), mediaId: decodeURIComponent(mediaItem[2]) }
+  }
   const media = rest.match(/^([^/]+)\/media$/)
   if (media) return { kind: 'media', id: decodeURIComponent(media[1]) }
   if (!rest.includes('/')) return { kind: 'item', id: decodeURIComponent(rest) }
@@ -538,6 +542,11 @@ export function createProductsDispatcher(deps) {
         const product = library.getView(parsed.id)
         if (!product) throw new ProductsError('product-not-found', 'product not found')
         return { status: 200, body: { product, media: product.media } }
+      }
+
+      if (method === 'GET' && parsed.kind === 'media-item') {
+        const stream = library.resolvePreview(parsed.id, parsed.mediaId)
+        return { status: 200, stream }
       }
 
       /**

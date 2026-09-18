@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>资产中心 · 产品库商品封面图加载与路径兼容演示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111113;
+      --surface: #18191c;
+      --elevated: #202124;
+      --border: rgba(255,255,255,0.10);
+      --border-hover: rgba(255,255,255,0.20);
+      --label: #f3f4f6;
+      --secondary: rgba(255,255,255,0.65);
+      --tertiary: rgba(255,255,255,0.40);
+      --layer: rgba(255,255,255,0.06);
+      --primary: #ffffff;
+      --primary-fg: #111827;
+      --success: #34d399;
+      --badge-bg: rgba(0,0,0,0.65);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--label); padding: 32px 24px;
+    }
+    .header { max-width: 1080px; margin: 0 auto 24px; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+    p.sub { font-size: 13px; color: var(--secondary); margin: 0; line-height: 1.5; }
+    
+    .status-bar {
+      display: flex; gap: 16px; margin: 20px 0; padding: 12px 16px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      font-size: 13px; align-items: center;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-weight: 600;
+    }
+    .status-badge::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+    }
+
+    .container {
+      max-width: 1080px; margin: 0 auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+    }
+
+    /* 模拟资产中心产品库布局 */
+    .filter-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+    .filter-tab { font-size: 14px; color: var(--secondary); cursor: pointer; padding: 4px 0; }
+    .filter-tab[data-active="true"] { color: var(--label); font-weight: 600; border-bottom: 2px solid var(--label); }
+
+    .sub-nav { display: flex; gap: 8px; margin-bottom: 20px; }
+    .nav-chip {
+      height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--layer); color: var(--secondary); font-size: 12px; cursor: pointer;
+    }
+    .nav-chip[data-active="true"] { background: rgba(255,255,255,0.15); color: var(--label); border-color: transparent; }
+
+    .products-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+    }
+
+    .product-card {
+      background: var(--elevated); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease;
+      position: relative; display: flex; flex-direction: column;
+    }
+    .product-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+
+    .card-thumb {
+      width: 100%; height: 140px; background: rgba(0,0,0,0.25); position: relative;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .card-media {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .card-glyph {
+      font-size: 40px; font-weight: 700; color: rgba(255,255,255,0.12);
+      position: absolute; user-select: none;
+    }
+    .card-badge {
+      position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px;
+      background: var(--badge-bg); backdrop-filter: blur(8px);
+      font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85); z-index: 2;
+    }
+    .card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .card-title {
+      font-size: 13px; font-weight: 600; margin: 0 0 6px; line-height: 1.4;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-sub {
+      font-size: 12px; color: var(--secondary); margin: 0; display: flex; justify-content: space-between;
+    }
+    .card-price { color: #facc15; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>资产中心 · 产品库商品主图与路径对齐验证</h1>
+    <p class="sub">沉淀可复用的角色、场景、风格包、道具与商品标品，在新的创作空间中快速调用。</p>
+    
+    <div class="status-bar">
+      <span class="status-badge">路径对齐与服务端兼容生效</span>
+      <span style="color: var(--tertiary);">|</span>
+      <span>前端请求：<code>/omnimux/products/{id}?preview={mediaId}</code></span>
+      <span style="color: var(--tertiary);">|</span>
+      <span>兼容支持：<code>/omnimux/products/{id}/media/{mediaId}</code></span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="filter-tabs">
+      <div class="filter-tab">本地</div>
+      <div class="filter-tab">公共</div>
+      <div class="filter-tab" data-active="true">产品库</div>
+      <div class="filter-tab">生成的</div>
+    </div>
+
+    <div class="sub-nav">
+      <button class="nav-chip" data-active="true">全部</button>
+      <button class="nav-chip">实物产品</button>
+      <button class="nav-chip">数字产品</button>
+    </div>
+
+    <div class="products-grid" id="product-grid">
+      <!-- 渲染 3 个实际商品卡片 -->
+      <article class="product-card" data-testid="card-1">
+        <div class="card-thumb">
+          <!-- 模拟正常加载出的高质量商品封面 -->
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%232a2438'/><circle cx='200' cy='120' r='60' fill='%23ec4899'/><rect x='185' y='40' width='30' height='40' fill='%23f472b6'/><text x='200' y='195' font-size='16' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>5ml 迷你香水喷雾瓶</text></svg>"
+            alt="5ml便携迷你香水喷雾瓶 (买二送一)"
+            class="card-media"
+          />
+          <span class="card-glyph">5</span>
+          <span class="card-badge">实物产品</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">5ml便携迷你香水喷雾瓶 (买二送一)</h3>
+          <p class="card-sub">
+            <span>Comfort Bay</span>
+            <span class="card-price">¥S$2.00 (原价 S$4.00)</span>
+          </p>
+        </div>
+      </article>
+
+      <article class="product-card" data-testid="card-2">
+        <div class="card-thumb">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%231f2937'/><rect x='160' y='60' width='80' height='120' rx='12' fill='%233b82f6'/><circle cx='200' cy='100' r='20' fill='%2360a5fa'/><text x='200' y='210' font-size='16' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>便携香水分装瓶</text></svg>"
+            alt="便携式5ml迷你香水喷雾分装瓶"
+            class="card-media"
+          />
+          <span class="card-glyph">便</span>
+          <span class="card-badge">实物产品</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">便携式5ml迷你香水喷雾分装瓶</h3>
+          <p class="card-sub">
+            <span>TikTok Shop</span>
+            <span class="card-price">¥S$3.20</span>
+          </p>
+        </div>
+      </article>
+
+      <article class="product-card" data-testid="card-3">
+        <div class="card-thumb">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%230f172a'/><path d='M160 80 L240 80 L200 150 Z' fill='%2310b981'/><text x='200' y='180' font-size='18' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>OmniMux</text></svg>"
+            alt="OmniMux"
+            class="card-media"
+          />
+          <span class="card-glyph">O</span>
+          <span class="card-badge">数字产品</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">OmniMux</h3>
+          <p class="card-sub">
+            <span>OmniMux</span>
+            <span class="card-price">免费</span>
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</body>
+</html>

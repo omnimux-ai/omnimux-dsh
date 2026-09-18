@@ -703,5 +703,12 @@ describe('products routes · draft media read-only preview', () => {
     })
     assert.equal(preview.status, 200)
     assert.ok(preview.stream)
+
+    const restMedia = await dispatcher.dispatch({
+      method: 'GET',
+      url: `/omnimux/products/${product.id}/media/${product.media[0].id}`,
+    })
+    assert.equal(restMedia.status, 200)
+    assert.ok(restMedia.stream)
   })
 })
