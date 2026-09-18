@@ -206,6 +206,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
       style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '10px',
         flexWrap: 'wrap',
         margin: '12px 0 16px',
