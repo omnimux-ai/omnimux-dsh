@@ -254,8 +254,10 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="trigger
  * (dialog) and left-side Permission/Plan chips stay untouched.
  * title/aria-label remain on the button for hover + a11y.
  */
-/* Model seat (conversation.input.model) 3D 立体模型层图标数据源，声明于卡片根部以供所有子级继承 */
+/* Model seat (conversation.input.model) 3D 立体模型层图标数据源，声明于卡片根部以供所有子级继承；同时声明容器查询上下文（Issue #2302） */
 [data-composer-card]{
+  container-type:inline-size;
+  container-name:composer-card;
   --omnimux-model-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M12.92 2.26L19.43 5.77C20.19 6.18 20.19 7.35 19.43 7.76L12.92 11.27C12.34 11.58 11.66 11.58 11.08 11.27L4.57 7.76C3.81 7.35 3.81 6.18 4.57 5.77L11.08 2.26C11.66 1.95 12.34 1.95 12.92 2.26Z' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M3.61 10.13L9.66 13.16C10.41 13.54 10.89 14.31 10.89 15.15V20.87C10.89 21.7 10.02 22.23 9.28 21.86L3.23 18.83C2.48 18.45 2 17.68 2 16.84V11.12C2 10.29 2.87 9.76 3.61 10.13Z' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M20.39 10.13L14.34 13.16C13.59 13.54 13.11 14.31 13.11 15.15V20.87C13.11 21.7 13.98 22.23 14.72 21.86L20.77 18.83C21.52 18.45 22 17.68 22 16.84V11.12C22 10.29 21.13 9.76 20.39 10.13Z' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 /* 模型选择按钮默认无背景底块，hover 时提供柔和反馈；自适应缩短名称防止折行（Issue #2192） */
@@ -377,10 +379,55 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   min-width:0;
   flex:1 1 auto;
 }
+[data-composer-card] [class*="tools"]{
+  overflow:hidden;
+}
+[data-composer-card] [class*="tools"] [data-slot="conversation.input.left"]{
+  min-width:0;
+  display:inline-flex;
+  align-items:center;
+  flex-shrink:1;
+}
 [data-composer-card] [class*="trailing"]{
   flex-shrink:0;
   display:inline-flex;
   align-items:center;
+}
+
+/* 纯 CSS 容器查询自适应兜底：当卡片宽度变窄时原生即时收敛（Issue #2302） */
+@container composer-card (max-width: 559px){
+  [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerLabel"]{
+    max-width:88px;
+  }
+  [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerEffort"]{
+    display:none!important;
+  }
+}
+@container composer-card (max-width: 459px){
+  [class*="trailing"] button[aria-haspopup='menu']{
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    max-width:28px!important;
+    padding:0!important;
+    justify-content:center!important;
+    gap:0!important;
+  }
+  [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerLabel"],
+  [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerEffort"],
+  [class*="trailing"] button[aria-haspopup='menu'] [class*="chevron"]{
+    display:none!important;
+  }
+  [class*="tools"] .sh-picker-trigger{
+    width:28px!important;
+    min-width:28px!important;
+    max-width:28px!important;
+    padding:0!important;
+    justify-content:center!important;
+  }
+  [class*="tools"] .sh-picker-trigger-label{
+    display:none!important;
+  }
 }
 `
 
@@ -507,16 +554,16 @@ export function ensureComposerCompactChrome(doc = hostDocument()) {
 }
 
 function observeComposerTarget(doc, target) {
+  if (observedTarget === target && composerResizeObserver) return
+  if (composerResizeObserver) {
+    try { composerResizeObserver.disconnect() } catch { /* ignore */ }
+    composerResizeObserver = null
+  }
   observedTarget = target
   const RO = globalThis.ResizeObserver
-  if (typeof RO === 'function') {
+  if (typeof RO === 'function' && target) {
     composerResizeObserver = new RO(() => { scheduleComposerDensity(doc) })
     composerResizeObserver.observe(target)
-  } else {
-    // jsdom / browsers without ResizeObserver: measure once + re-measure on resize.
-    composerResizeListener = () => { applyComposerDensity(doc) }
-    const win = hostWindow()
-    if (win?.addEventListener) win.addEventListener('resize', composerResizeListener)
   }
 }
 
@@ -564,8 +611,8 @@ function cancelScheduledComposerDensity() {
 
 /**
  * Start observing the composer width and keep `data-omnimux-composer-density`
- * fresh. A light MutationObserver re-binds once when the card mounts late
- * (never polls). Returns a disposer.
+ * fresh. A continuous MutationObserver re-binds whenever the card mounts, unmounts,
+ * or gets re-created by React (Issue #2302). Returns a disposer.
  * @param {Document | undefined} [doc]
  * @returns {() => void}
  */
@@ -580,19 +627,31 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   const target = findComposerTarget(doc)
   if (target) {
     observeComposerTarget(doc, target)
-  } else if (typeof MutationObserver !== 'undefined') {
+  }
+
+  // 持续监听挂载变动：无论切换会话还是 React 重新渲染 Card，保持自愈重新绑定（Issue #2302）
+  if (typeof MutationObserver !== 'undefined') {
     composerMountObserver = new MutationObserver(() => {
       const next = findComposerTarget(doc)
-      if (next && observedTarget !== next) {
-        if (composerMountObserver) {
-          try { composerMountObserver.disconnect() } catch { /* ignore */ }
-          composerMountObserver = null
-        }
+      if (next && (next !== observedTarget || !observedTarget?.isConnected)) {
         observeComposerTarget(doc, next)
+        scheduleComposerDensity(doc)
+      } else if (!next && observedTarget) {
+        observedTarget = null
+        scheduleComposerDensity(doc)
       }
     })
     const root = doc.body || doc.documentElement
     if (root) composerMountObserver.observe(root, { childList: true, subtree: true })
+  }
+
+  // 视口 resize 监听常驻作为兜底保障（包括无 RO 环境或视口跳变）
+  if (!composerResizeListener) {
+    composerResizeListener = () => { applyComposerDensity(doc) }
+    const win = hostWindow()
+    if (win?.addEventListener) {
+      win.addEventListener('resize', composerResizeListener)
+    }
   }
 
   applyComposerDensity(doc)

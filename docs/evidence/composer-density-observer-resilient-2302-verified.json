@@ -1,0 +1,35 @@
+{
+  "issue": 2302,
+  "verifiedAt": "2026-09-18T12:35:00.000Z",
+  "summary": "修复输入框尺寸监听器重挂失活与会话栏模型名称重叠回归",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "重挂感知自愈：DOM 节点卸载重建后 MutationObserver 保持持续监听并自愈绑定新卡片",
+      "result": "pass",
+      "evidence": "installComposerCompactObserver 保留常驻 MutationObserver，当节点替换或重绘时自动重新绑定 ResizeObserver 并即时重新调度密度计算"
+    },
+    {
+      "id": "AC-2",
+      "name": "纯 CSS 容器查询原生自适应兜底",
+      "result": "pass",
+      "evidence": "[data-composer-card] 声明 container-type: inline-size 与 container-name: composer-card；在 @container composer-card (max-width: 459px) 下原生立即收敛为 28px 纯图标态，隐藏文本与下拉箭头"
+    },
+    {
+      "id": "AC-3",
+      "name": "底栏工具行与多模态插槽弹性防溢出",
+      "result": "pass",
+      "evidence": "[class*=\"tools\"] 声明 overflow: hidden; 内部 [data-slot=\"conversation.input.left\"] 声明 min-width: 0; flex-shrink: 1; 杜绝向右越界覆盖模型选择按钮"
+    },
+    {
+      "id": "AC-4",
+      "name": "单元测试与回归套件全绿",
+      "result": "pass",
+      "evidence": "plugins/omnimux/src/client/composer-compact.test.js 与 plugins/omnimux/tests/e2e/model-name-compact.spec.js 共计 17 项测试 100% 通过"
+    }
+  ],
+  "unit": {
+    "composer-compact.test.js": "13/13",
+    "model-name-compact.spec.js": "4/4"
+  }
+}

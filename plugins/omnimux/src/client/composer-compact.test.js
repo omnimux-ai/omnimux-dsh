@@ -411,3 +411,45 @@ test('model name adapts with max-width and single-row lock prevents toolbar wrap
   assert.match(css, /\[data-composer-card\] > \[class\*="row"\]:has\(> \[class\*="trailing"\]\)\{\s*flex-wrap:nowrap!important;\s*\}/)
   assert.match(css, /\[data-composer-card\] \[class\*="tools"\]\{\s*min-width:0;\s*flex:1 1 auto;\s*\}/)
 })
+
+test('composer card declares container-type and container queries for resilient adaptation (Issue 2302)', () => {
+  const { doc } = setupDoc()
+  const style = ensureComposerCompactChrome(doc)
+  const css = style.textContent
+
+  assert.match(css, /\[data-composer-card\]\{[^}]*container-type:inline-size;/)
+  assert.match(css, /\[data-composer-card\]\{[^}]*container-name:composer-card;/)
+  assert.match(css, /@container composer-card \(max-width: 459px\)\{/)
+  assert.match(css, /@container composer-card \(max-width: 559px\)\{/)
+})
+
+test('installComposerCompactObserver re-binds when card DOM node is replaced by React (Issue 2302)', async () => {
+  const { doc, setCardWidth } = setupDoc()
+  setCardWidth(700)
+  globalThis.ResizeObserver = FakeResizeObserver
+  FakeResizeObserver.instances = []
+
+  let mutationCallback = null
+  class FakeMutationObserver {
+    constructor(cb) { mutationCallback = cb }
+    observe() {}
+    disconnect() { mutationCallback = null }
+  }
+  globalThis.MutationObserver = FakeMutationObserver
+
+  const dispose = installComposerCompactObserver(doc)
+  assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.full)
+
+  // 模拟 React 重新渲染卡片，尺寸缩小为 350px 窄屏
+  setCardWidth(350)
+  if (mutationCallback) mutationCallback()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(
+    doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR),
+    COMPOSER_COMPACT_DENSITY.icon,
+    'DOM 重新挂载后 MutationObserver 必须自愈重新绑定并更新密度为 icon',
+  )
+
+  dispose()
+})
