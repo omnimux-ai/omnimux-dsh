@@ -1,0 +1,46 @@
+{
+  "id": "3b7346c5-9412-43f7-8df2-f63c4c35ec0b",
+  "name": "guofeng-palace-drama-single-call",
+  "category": "Video Ads",
+  "description": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call — not a multi-scene stitched assembly. Trigger aggressively when the user uploads ≥3 character or location reference images and wants a single short cinematic video (10–15s, 16:9) using exactly those refs; when the brief mentions Seedance omni-reference, 全能参考, 国风, palace or period drama, interrogation or confrontation with flashbacks, or says do not generate new images; or when the user",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260625/565f1144.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic 3D guofeng",
+      "palace / period-drama tone",
+      "single continuous video call",
+      "16:9 short format"
+    ],
+    "best_for": [
+      "Seedance omni-reference videos",
+      "Chinese palace drama shorts",
+      "reference-based character scenes",
+      "10–15s cinematic clips"
+    ]
+  },
+  "tags": [
+    "guofeng",
+    "palace",
+    "seedance",
+    "cinematic",
+    "period",
+    "reference"
+  ],
+  "reference_files": [
+    "references/dispatch-recipe.md",
+    "references/hook-and-flashback-fragments.md"
+  ],
+  "created_at": "2026-06-24T23:46:26.767745-07:00",
+  "updated_at": "2026-06-25T15:04:02.575948-07:00"
+}

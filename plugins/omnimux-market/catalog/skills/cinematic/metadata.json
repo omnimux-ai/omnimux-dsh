@@ -1,0 +1,6 @@
+{
+  "id": "sk-creatify-cinematic",
+  "name": "cinematic",
+  "category": "Video Ads",
+  "description": "Style-anchors reference for any ad scene rendered in the cinematic visual_style (the counterpart to ugc). Provides the camera/lens vocabulary, lighting recipe, color grade, composition rules, pacing, and audio profile that the director appends to its I2I and I2V prompts. Trigger whenever visual_style is \"cinematic\" — also when the user asks for \"film look,\" \"production-grade,\" \"premium,\" \"anamorphic,\" \"documentary cinematic,\" or names a film/director as a reference. Does NOT replace ads-scriptwriter-skill / ads-storyboard-skill / ads-ctv-skill — it provides the *look*, not the narrative or platform spec."
+}

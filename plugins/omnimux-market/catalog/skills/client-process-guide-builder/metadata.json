@@ -1,0 +1,39 @@
+{
+  "id": "c360ce21-a217-4a9a-ab06-5cabf1713c71",
+  "name": "client-process-guide-builder",
+  "category": "Other",
+  "description": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demystifies how they produce something — pipeline guides, \"how we make your X\" decks, process transparency reports, white-glove onboarding collateral, behind-the-scenes documentation. Produces a three-format deliverable bundle (canonical Markdown, modern minimalist dark-theme self-contained HTML, branded reportlab PDF with cover + inner page templates) in one pass. Be eager to trigger this o",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "modern minimalist",
+      "dark-theme HTML",
+      "branded PDF templates",
+      "clear process documentation"
+    ],
+    "best_for": [
+      "client-facing process guides",
+      "agency onboarding collateral",
+      "pipeline explainer decks",
+      "behind-the-scenes reports"
+    ]
+  },
+  "tags": [
+    "process",
+    "onboarding",
+    "agency",
+    "guides",
+    "reports"
+  ],
+  "reference_files": [
+    "references/palettes.md",
+    "references/structure-checklist.md"
+  ],
+  "created_at": "2026-06-24T23:46:22.955801-07:00",
+  "updated_at": "2026-06-24T23:46:25.989495-07:00"
+}

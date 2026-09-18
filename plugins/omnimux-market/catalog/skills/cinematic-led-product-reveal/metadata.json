@@ -1,0 +1,43 @@
+{
+  "id": "9298b15b-a624-42f1-bd22-e5fc83746394",
+  "name": "cinematic-led-product-reveal",
+  "category": "Product Showcase",
+  "description": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dramatic LED or bioluminescent product lighting across a slow-motion reveal, closing on a floating hero shot with wordmark fade-in. Best triggered when a brand wants an Apple-meets-K-drama luxury launch feel — premium tech gadgets, glowing wearables, high-end cosmetics, or any product whose core value is visual spectacle and distinctive illumination. Trigger this skill whenever the brief i",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/gm9w1up19p/output.mp4",
+      "caption": "Anker",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "16:9 cinematic",
+      "dark atmospheric opening",
+      "dramatic LED lighting",
+      "slow-motion premium reveal"
+    ],
+    "best_for": [
+      "luxury product launches",
+      "premium tech gadgets",
+      "glowing wearables",
+      "high-end cosmetics",
+      "hero reveal videos"
+    ]
+  },
+  "tags": [
+    "cinematic",
+    "luxury",
+    "led",
+    "reveal",
+    "product"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:20.447103-07:00",
+  "updated_at": "2026-06-25T15:03:54.941048-07:00"
+}

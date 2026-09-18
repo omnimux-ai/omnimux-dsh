@@ -1,0 +1,43 @@
+{
+  "id": "bbb34042-3ca6-494f-a239-148b1bd22485",
+  "name": "b2b-saas-dark-cinematic-exec-arc",
+  "category": "Video Ads",
+  "description": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives (fintech, banking, compliance, risk). The creative move: open with a sharp regulatory/operational tension hook spoken by an authoritative narrator-only voice, escalate through a chaos→order visual contrast, let the product UI do the heavy proof work in the long middle beat, and close with a clean logo end card and a single low-friction pilot/demo CTA. Trigger this skill whenever the prod",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 5,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/sv6j5msxm7/output.mp4",
+      "caption": "Notion",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "dark cinematic",
+      "authoritative narrator-only voice",
+      "chaos-to-order contrast",
+      "UI-led proof"
+    ],
+    "best_for": [
+      "B2B SaaS video ads",
+      "regulated-industry executives",
+      "fintech and banking demos",
+      "compliance/risk product ads"
+    ]
+  },
+  "tags": [
+    "b2b",
+    "saas",
+    "fintech",
+    "compliance",
+    "executive",
+    "cinematic"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:17.079545-07:00",
+  "updated_at": "2026-06-25T15:03:50.221357-07:00"
+}

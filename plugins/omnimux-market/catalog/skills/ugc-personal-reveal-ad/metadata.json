@@ -1,0 +1,42 @@
+{
+  "id": "6e428ba4-dffd-4fa9-a0e6-630f6bb8af7e",
+  "name": "ugc-personal-reveal-ad",
+  "category": "UGC & Testimonial",
+  "description": "Modular UGC-style video ad generator with full creative governance. Generates short-form social ads (6s–45s) in a warm, conversational UGC creator voice across 10 format presets. V3 adds immutable brand-lock constants, an 8-point session-start drift check, creative versioning with lineage tracking (FORMAT-SEQ-VARIANT IDs), performance snapshot logging, and intelligent rollback. The optimization layer (hooks, avatars, offers, CTAs) self-improves from performance data while the frozen layer (typog",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/gtxrlf38y5/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm conversational voice",
+      "modular UGC presets",
+      "performance-informed iterations"
+    ],
+    "best_for": [
+      "short-form social ads",
+      "UGC creator ads",
+      "hook and CTA testing",
+      "brand-governed ad variants"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "social",
+    "video",
+    "hooks",
+    "variants",
+    "governance"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:39.098458-07:00",
+  "updated_at": "2026-06-25T15:04:29.550577-07:00"
+}

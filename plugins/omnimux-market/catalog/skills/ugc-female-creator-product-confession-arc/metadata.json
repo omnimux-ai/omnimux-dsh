@@ -1,0 +1,43 @@
+{
+  "id": "142a8b57-06b3-4826-9708-8e0da3c87805",
+  "name": "ugc-female-creator-product-confession-arc",
+  "category": "UGC & Testimonial",
+  "description": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product visible), followed by a personal-discovery reveal, ingredient/benefit breakdown with held product, seated results testimony, and a label-forward CTA close with \"Link in BIO.\" Optimised for supplement, wellness, beauty, and DTC products targeting women 25–40 on TikTok/Instagram Reels. Trigger this skill whenever a brief wants a female-presenter UGC ad that feels organic, peer-recommended, an",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/ts530f08xk/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "talking-head confession hook",
+      "organic peer recommendation",
+      "product-held benefit breakdown",
+      "label-forward CTA"
+    ],
+    "best_for": [
+      "TikTok/Reels UGC",
+      "female-presenter ads",
+      "wellness supplements",
+      "beauty/DTC testimonials"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "female",
+    "wellness",
+    "beauty",
+    "testimonial",
+    "reels"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:37.693320-07:00",
+  "updated_at": "2026-06-25T15:04:27.810187-07:00"
+}

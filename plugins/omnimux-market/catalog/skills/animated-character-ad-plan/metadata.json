@@ -1,0 +1,39 @@
+{
+  "id": "adbb7b40-d08c-421e-a59c-1689f3add8f5",
+  "name": "animated-character-ad-plan",
+  "category": "Storytelling & Script",
+  "description": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an animated short-form ad with an animal or creature cast, or a text-only ad blueprint they can hand to image and video generators later. Produces a complete TEXT plan only (concept logic, cast bible, scene-by-scene script and direction, Nano Banana 2 start-frame prompts, Seedance image-to-video motion prompts, and assembly/CTA notes) and fires no production tools, so it is free-trial-safe. U",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "high-end 3D animation planning",
+      "character-comedy concepts",
+      "scene-by-scene direction",
+      "generator-ready prompts"
+    ],
+    "best_for": [
+      "3D animated character ads",
+      "cute mascot spots",
+      "animal/creature comedy ads",
+      "text-only production blueprints"
+    ]
+  },
+  "tags": [
+    "animated",
+    "mascot",
+    "characters",
+    "comedy",
+    "script",
+    "prompts"
+  ],
+  "reference_files": [
+    "references/arc-library.md"
+  ],
+  "created_at": "2026-06-24T23:46:15.990610-07:00",
+  "updated_at": "2026-06-24T23:46:20.234766-07:00"
+}

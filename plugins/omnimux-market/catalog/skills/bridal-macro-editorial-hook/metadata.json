@@ -1,0 +1,43 @@
+{
+  "id": "94b6afdd-f1c7-4a27-9db1-5d3b979d703f",
+  "name": "bridal-macro-editorial-hook",
+  "category": "Product Showcase",
+  "description": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically bridal, couture, or occasion-wear — that uses extreme macro close-up product shots (no model, no persona) as the sole visual language, paired with a warm culturally-resonant music bed, elegant serif captions, and a soft aspirational VO that names the craft before the brand. Trigger this skill whenever the brief involves: handmade or artisan fashion items (embroidery, embellishment, jewel",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/00619ylnf6/output.mp4",
+      "caption": "Brilliant Earth",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic macro close-ups",
+      "elegant editorial tone",
+      "warm aspirational VO",
+      "serif caption overlays"
+    ],
+    "best_for": [
+      "bridal couture ads",
+      "artisan fashion reels",
+      "luxury craft showcase",
+      "occasion-wear TikTok"
+    ]
+  },
+  "tags": [
+    "bridal",
+    "couture",
+    "artisan",
+    "macro",
+    "luxury",
+    "fashion"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:17.361158-07:00",
+  "updated_at": "2026-06-25T15:03:50.592328-07:00"
+}

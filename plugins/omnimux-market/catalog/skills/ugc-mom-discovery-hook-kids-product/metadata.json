@@ -1,0 +1,43 @@
+{
+  "id": "63f3cf2a-60a3-4503-8089-6746322c851a",
+  "name": "ugc-mom-discovery-hook-kids-product",
+  "category": "UGC & Testimonial",
+  "description": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational items) aimed at parents — especially moms — on TikTok and Instagram Reels. The creative move is a \"POV discovery\" hook that positions the parent as the finder of a great product, followed by a rapid three-benefit parade ending in a confident TikTok Shop CTA. Trigger this skill whenever the product is aimed at kids aged 2–12, the brand wants an authentic/organic feel over a polished ad feel,",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/ulpnfv89dd/output.mp4",
+      "caption": "Bobbie",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm relatable UGC",
+      "POV discovery hook",
+      "rapid benefit parade",
+      "organic mom-to-parent tone"
+    ],
+    "best_for": [
+      "TikTok Shop kids products",
+      "Instagram Reels for parents",
+      "toy and game discovery ads",
+      "educational product promos"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "mom",
+    "kids",
+    "toys",
+    "reels",
+    "tiktok"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:38.713683-07:00",
+  "updated_at": "2026-06-25T15:04:28.930919-07:00"
+}

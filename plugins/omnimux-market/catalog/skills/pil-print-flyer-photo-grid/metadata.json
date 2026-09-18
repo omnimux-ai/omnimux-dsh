@@ -1,0 +1,37 @@
+{
+  "id": "f375060c-b67c-4c96-9db4-b832d59a5a7c",
+  "name": "pil-print-flyer-photo-grid",
+  "category": "Image & Static Ads",
+  "description": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user-uploaded real photos, web-scraped product/service images, a QR code, branded copy, social handles, and a structured contact/footer block. The pattern: dark-header → real-photo strip → price badge → bullet-grid body → product-series strip → add-ons → CTA bar → branded footer with QR. Trigger this skill whenever a user needs a polished, multi-section print or digital flyer that combines r",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "photo-grid layout",
+      "dark branded header",
+      "multi-section structured design",
+      "CTA and QR footer"
+    ],
+    "best_for": [
+      "business flyers",
+      "print-ready promos",
+      "service menus",
+      "product offer sheets"
+    ]
+  },
+  "tags": [
+    "flyer",
+    "print",
+    "photo",
+    "qr",
+    "promo",
+    "pil"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:32.805948-07:00",
+  "updated_at": "2026-06-24T23:46:35.748981-07:00"
+}

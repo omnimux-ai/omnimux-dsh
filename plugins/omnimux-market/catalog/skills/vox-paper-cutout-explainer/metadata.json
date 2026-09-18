@@ -1,0 +1,45 @@
+{
+  "id": "7a295865-0142-48b3-9c6f-45feea601ab2",
+  "name": "vox-paper-cutout-explainer",
+  "category": "Video Ads",
+  "description": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphics, paper collage animation, layered-paper diorama, or any short-form (Reels/TikTok/Shorts) conceptual/informational explainer in the visual language of documentary explainer videos. Trigger eagerly on phrases like \"explainer-video style\", \"paper motion graphics\", \"paper cutout\", \"explainer in a documentary style\", \"newspaper-clipping animation\", or whenever the user wants conceptual moti",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/6yhb8zq9z0/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "layered paper collage",
+      "documentary explainer look",
+      "motion graphic animation",
+      "newspaper-clipping feel"
+    ],
+    "best_for": [
+      "explainer videos",
+      "paper cutout motion graphics",
+      "documentary-style shorts",
+      "conceptual information ads"
+    ]
+  },
+  "tags": [
+    "explainer",
+    "paper",
+    "motion",
+    "documentary",
+    "collage"
+  ],
+  "reference_files": [
+    "references/director-payload-template.md",
+    "references/visual-archetypes.md"
+  ],
+  "created_at": "2026-06-24T23:46:41.336978-07:00",
+  "updated_at": "2026-06-25T15:04:32.360180-07:00"
+}

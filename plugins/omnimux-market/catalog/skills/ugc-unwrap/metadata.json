@@ -1,0 +1,70 @@
+{
+  "id": "7acd725e-265f-41db-b4ca-dd981c60bcc9",
+  "name": "ugc-unwrap",
+  "category": "UGC & Testimonial",
+  "description": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL → PRODUCT-FOCUS → SATISFACTION arc, optionally chained into multi-board long-form unboxing videos. Trigger whenever the user mentions an unboxing ad, package reveal ad, \"open the box\" creative, delivery reveal, product unwrapping, or asks for a UGC unboxing video. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
+  "author": "Creatify",
+  "version": 5,
+  "app_scope": "orchestrator",
+  "usage_count": 81,
+  "favorite_count": 3,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/m0ccls0cuz/output.mp4",
+      "caption": "Stanley 1913 — auto-generated demo #1",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/mdpxulo4of/output.mp4",
+      "caption": "Stanley 1913 — auto-generated demo #3",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/79xnmt0k9z/output.mp4",
+      "caption": "Stanley 1913 — auto-generated demo #4",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/wzcy9yx2wv/output.mp4",
+      "caption": "",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/er5fzu9l47/output.mp4",
+      "caption": "",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/nopwgy04nc/output.mp4",
+      "caption": "",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "single-take 4-cut arc",
+      "PACKED to satisfaction storyline",
+      "9:16 video with storyboard sheets"
+    ],
+    "best_for": [
+      "UGC unboxing ads",
+      "package reveal videos",
+      "delivery reveal creative",
+      "product unwrapping clips"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "unboxing",
+    "reveal",
+    "package",
+    "video",
+    "storyboard"
+  ],
+  "reference_files": [
+    "references/board-prompt-guide.md",
+    "references/clip-prompt-guide.md"
+  ],
+  "created_at": "2026-05-16T15:11:01.605144-07:00",
+  "updated_at": "2026-06-19T15:56:30.546607-07:00"
+}

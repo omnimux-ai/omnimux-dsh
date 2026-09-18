@@ -1,0 +1,43 @@
+{
+  "id": "99077fc6-8e50-4246-b780-55019973cafc",
+  "name": "cinematic-thriller-book-multi-format-campaign",
+  "category": "Image & Static Ads",
+  "description": "A premium cinematic ad campaign pattern for thriller, crime, mystery, horror, and paranormal fiction ebooks and audiobooks sold direct-to-author (bypassing retail platforms). Encodes atmospheric tension-build hooks, a literary serif caption style, a gift-curse duality question archetype, and a direct-purchase CTA that uses author-store savings as the conversion lever. Produces both image ads (three distinct hook angles: philosophical-question, environmental-split-composition, and premium-promo-b",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/mw8fbn75cw/output.mp4",
+      "caption": "Audible",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic tension",
+      "literary serif captions",
+      "dark atmospheric visuals",
+      "premium promo tone"
+    ],
+    "best_for": [
+      "thriller book ads",
+      "crime/mystery fiction",
+      "horror/paranormal ebooks",
+      "direct author-store promos"
+    ]
+  },
+  "tags": [
+    "thriller",
+    "books",
+    "fiction",
+    "cinematic",
+    "horror",
+    "direct"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:22.296083-07:00",
+  "updated_at": "2026-06-25T15:03:56.499084-07:00"
+}

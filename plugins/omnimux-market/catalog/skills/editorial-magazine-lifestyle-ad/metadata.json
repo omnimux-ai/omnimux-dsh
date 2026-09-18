@@ -1,0 +1,52 @@
+{
+  "id": "e71a1389-ad91-49b7-8198-1a1c552071be",
+  "name": "editorial-magazine-lifestyle-ad",
+  "category": "Image & Static Ads",
+  "description": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ultra-light serif headline, restrained dot-separated spec lines (no pill badges), warm cinematic grade, and a vertical brand spine element. Trigger this skill whenever a user uploads lifestyle product photography and wants premium aspirational static ads across multiple formats (9:16, 4:1, square) that feel editorial rather than promotional. Particularly strong for bedding, home goods, line",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/765ee1d8ed.png",
+      "caption": "Mejuri",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/736dc85360.png",
+      "caption": "Mejuri",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/c2c128aaa4.png",
+      "caption": "Mejuri",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "editorial magazine layout",
+      "warm cinematic grade",
+      "minimal serif typography",
+      "aspirational, non-promotional"
+    ],
+    "best_for": [
+      "premium static ads",
+      "lifestyle product photography",
+      "bedding and home goods",
+      "multi-format display"
+    ]
+  },
+  "tags": [
+    "editorial",
+    "lifestyle",
+    "premium",
+    "static",
+    "home"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:25.116831-07:00",
+  "updated_at": "2026-06-25T15:04:00.674500-07:00"
+}

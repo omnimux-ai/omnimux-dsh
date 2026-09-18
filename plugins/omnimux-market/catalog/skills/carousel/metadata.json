@@ -1,0 +1,6 @@
+{
+  "id": "sk-creatify-carousel",
+  "name": "carousel",
+  "category": "Image & Static Ads",
+  "description": "Use when the ad format is a multi-frame swipe carousel — Meta carousel ads (2–10 cards), Instagram carousel posts, LinkedIn document/carousel ads, TikTok image carousel, Pinterest idea pins. Produces a Carousel Creative Brief — cover-card hook concepts, scroll-stop frame spec, per-card sequencing with a job per card, narrative arc, copy-per-card, palette continuity, image-asset QA, generation prompts, and asset gaps. Trigger before scriptwriting/design whenever the brief mentions a carousel, swipe ad, multi-image post, \"10 reasons\" listicle ad, multi-card creative, or Meta carousel placement. The producer should run this skill first so its output feeds image-gen + copy. For single-image use ads-static-image-skill; for video use ads-ugc-skill / ads-animated-storymode-skill; for meme-format use ads-meme-skill."
+}

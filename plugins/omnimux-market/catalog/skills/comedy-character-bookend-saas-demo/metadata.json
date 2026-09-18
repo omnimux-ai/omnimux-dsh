@@ -1,0 +1,43 @@
+{
+  "id": "ef203934-d49d-46ae-baed-4d5b1db19a9e",
+  "name": "comedy-character-bookend-saas-demo",
+  "category": "Video Ads",
+  "description": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s) broadcast-style TV commercials. The hook is a broad physical-comedy character reveal (ECU → dolly-back) that disarms the viewer before a narrator-driven SaaS product walkthrough, then pays off the character's setup gag in a closing scene. Trigger this skill whenever a B2B or prosumer SaaS brand wants a memorable, shareable TV or pre-roll spot that balances legitimacy (authoritative nar",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260625/c23e8167.mp4",
+      "caption": "Audible",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "broadcast-style comedy",
+      "physical gag bookends",
+      "narrator-driven walkthrough",
+      "authoritative but shareable"
+    ],
+    "best_for": [
+      "B2B SaaS TV spots",
+      "prosumer SaaS pre-roll",
+      "long-form product demos",
+      "memorable demo reels"
+    ]
+  },
+  "tags": [
+    "saas",
+    "comedy",
+    "demo",
+    "tv",
+    "preroll",
+    "b2b"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:23.770791-07:00",
+  "updated_at": "2026-06-25T15:03:57.984449-07:00"
+}

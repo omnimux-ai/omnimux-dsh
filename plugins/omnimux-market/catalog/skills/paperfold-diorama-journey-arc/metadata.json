@@ -1,0 +1,45 @@
+{
+  "id": "d89b30e2-7365-4328-8b50-24bcdf58f0b1",
+  "name": "paperfold-diorama-journey-arc",
+  "category": "Video Ads",
+  "description": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character, environment, and prop rendered as folded paper with geometric origami-style facets, photographed like a studio paper sculpture. The narrative arc follows a relatable life-journey (problem → blocked aspiration → discovery → resolution → CTA), delivered via warm VO-only narration over gently animated paper-craft stills. Trigger this skill whenever a brand wants emotionally resonant storyt",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/4vt7zxcb9a/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "paperfold origami diorama",
+      "cinematic studio sculpture look",
+      "warm VO-only narration",
+      "gentle animated stills"
+    ],
+    "best_for": [
+      "9:16 video ads",
+      "emotional brand stories",
+      "life-journey narratives",
+      "CTA-driven campaigns"
+    ]
+  },
+  "tags": [
+    "origami",
+    "diorama",
+    "cinematic",
+    "emotional",
+    "journey",
+    "voiceover"
+  ],
+  "reference_files": [
+    "references/scene-prompt-templates.md"
+  ],
+  "created_at": "2026-06-24T23:46:32.287966-07:00",
+  "updated_at": "2026-06-25T15:04:13.138207-07:00"
+}

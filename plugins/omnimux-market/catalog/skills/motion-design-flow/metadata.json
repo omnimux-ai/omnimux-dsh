@@ -1,0 +1,65 @@
+{
+  "id": "70516ef4-46dd-4634-9b62-973f0b78c412",
+  "name": "motion-design-flow",
+  "category": "Video Ads",
+  "description": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typography, infographic reels, or generic motion-design ads (keyframes via generate_image, then video via generate_scene_video). NOT for UGC creator reviews, scripted dialogue scenes, narrative cinematic shorts, or talking-head ads. Trigger whenever the brief says motion design, motion reel, motion graphics ad, brand reel, kinetic brand reel, product reel, product reveal, kinetic typography, typography reel, logo reveal, infographic reel, data viz reel, metric reveal, Behance or Dribbble style motion, AE-style motion, or 2026 motion.",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 4,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/0mugunpohv/output.mp4",
+      "caption": "Motion-design ad #1",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/fdq6ni1yg7/output.mp4",
+      "caption": "Motion-design ad #2",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "motion graphics",
+      "AE-style keyframed animation",
+      "polished brand visuals",
+      "data/metric reveals"
+    ],
+    "best_for": [
+      "brand reels",
+      "product reveals",
+      "kinetic typography",
+      "infographic reels",
+      "logo reveals"
+    ]
+  },
+  "tags": [
+    "motion",
+    "reels",
+    "typography",
+    "product",
+    "infographic",
+    "brand"
+  ],
+  "reference_files": [
+    "references/camera-vocabulary.md",
+    "references/motion-design-cases.md",
+    "references/pre-write-checklist.md",
+    "references/production-keyframes-pipeline.md",
+    "references/r-type-vocabulary.md",
+    "references/reference-tier-matrix.md",
+    "references/refusal-precedents.md",
+    "references/routing-matrix.md",
+    "references/successful-patterns.md",
+    "references/track-b-product-commercial.md",
+    "references/trigger-phrases.md",
+    "references/troubleshooting.md",
+    "references/validated-failures.md",
+    "references/visual-world-lock.md",
+    "references/voice-over-patterns.md"
+  ],
+  "created_at": "2026-06-23T15:42:38.935980-07:00",
+  "updated_at": "2026-06-23T16:09:22.371249-07:00"
+}

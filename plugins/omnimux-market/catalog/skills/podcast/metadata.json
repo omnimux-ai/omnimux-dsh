@@ -1,0 +1,59 @@
+{
+  "id": "8433af91-059b-492f-bc6f-d713a427141f",
+  "name": "podcast",
+  "category": "Video Ads",
+  "description": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, founder talk, sit-down podcast, investigative deep-dive, any content that should feel like a clip from a longer sit-down podcast.  Generates a 16x9 seated composite of host + guest, generates B&W 4-panel shot-grammar storyboards (Patterns A/B/C/E), writes per-chunk Seedance prompts with verbatim camera-state-tagged dialog (on-camera / voice-over / continuing / silent), generates each 8 to 15 second chunk, splits + transcribes audio, assembles the final video. Requires host + guest personas pre-registered via setup_persona.",
+  "author": "Creatify",
+  "version": 3,
+  "app_scope": "orchestrator",
+  "usage_count": 16,
+  "favorite_count": 3,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/mvd0wedvbz/output.mp4",
+      "caption": "Squarespace — auto-generated demo #2",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/pks249qfmi/output.mp4",
+      "caption": "Squarespace — auto-generated demo #3",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/rvmuqtnddh/output.mp4",
+      "caption": "Squarespace — auto-generated demo #4",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "16x9 seated host + guest",
+      "sit-down podcast feel",
+      "B&W storyboard planning",
+      "camera-state-tagged dialogue"
+    ],
+    "best_for": [
+      "podcast-style clips",
+      "founder interviews",
+      "two-host conversations",
+      "investigative deep-dives"
+    ]
+  },
+  "tags": [
+    "podcast",
+    "interview",
+    "founder",
+    "conversation",
+    "video",
+    "storyboard"
+  ],
+  "reference_files": [
+    "references/podcast-clip-prompt-guide.md",
+    "references/podcast-composite-prompt-guide.md",
+    "references/podcast-patterns.md",
+    "references/podcast-storyboard-prompt-guide.md",
+    "references/podcast-troubleshooting.md"
+  ],
+  "created_at": "2026-05-18T01:13:56.664914-07:00",
+  "updated_at": "2026-06-23T14:09:02.996905-07:00"
+}

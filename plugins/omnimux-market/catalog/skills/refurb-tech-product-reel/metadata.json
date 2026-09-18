@@ -1,0 +1,43 @@
+{
+  "id": "9a89da64-5abc-411f-81ae-183d80b4318e",
+  "name": "refurb-tech-product-reel",
+  "category": "Product Showcase",
+  "description": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL. Fetch the PDP, extract product name, specs, and pricing automatically, then build a 5-scene 9:16 video in the brand's colours with no voiceover — all messaging delivered via bold on-screen text overlays. Trigger this skill whenever a user says \"make a product ad\", \"monthly ad\", or \"product reel\" for a specific product page URL. This skill is the canonical way to produce text-led product ads an",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/xxzmtj8pkv/output.mp4",
+      "caption": "Anker",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "text-led 9:16 video",
+      "bold on-screen overlays",
+      "brand-colour visuals",
+      "no voiceover"
+    ],
+    "best_for": [
+      "product Reels",
+      "Instagram Stories",
+      "monthly product ads",
+      "PDP-to-video"
+    ]
+  },
+  "tags": [
+    "reels",
+    "stories",
+    "product",
+    "pdp",
+    "text",
+    "monthly"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:34.124706-07:00",
+  "updated_at": "2026-06-25T15:04:22.157114-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "98c5f748-4d1c-460d-891f-56b0fbadbb86",
+  "name": "gulf-recruitment-cinematic-arc",
+  "category": "Video Ads",
+  "description": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeking Gulf/Middle East employment. Opens with a cinematic aerial establishing shot of the destination city at golden hour, moves through an authoritative professional-office scene with services checklist overlay, transitions to aspirational success/arrival proof, and closes on a silent branded end card with trust signals. The hook is a bold block-text declaration (\"YOUR GATEWAY TO [DESTINAT",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/jm4krmxfqg/output.mp4",
+      "caption": "LinkedIn",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic golden-hour visuals",
+      "premium corporate tone",
+      "aspirational success arc",
+      "branded end card"
+    ],
+    "best_for": [
+      "overseas recruitment ads",
+      "visa-processing promos",
+      "Gulf jobseeker campaigns",
+      "corporate trust ads"
+    ]
+  },
+  "tags": [
+    "recruitment",
+    "visa",
+    "gulf",
+    "corporate",
+    "cinematic",
+    "jobseekers"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:26.505711-07:00",
+  "updated_at": "2026-06-25T15:04:02.087225-07:00"
+}

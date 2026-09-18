@@ -1,0 +1,43 @@
+{
+  "id": "62ed5d4b-299a-43c6-b050-83c78f1d5ceb",
+  "name": "luxury-editorial-app-reveal",
+  "category": "Video Ads",
+  "description": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events, travel, gifting, real estate, new parenthood. The creative move: open on real people in their emotional world with a poetic one-line hook (\"as effortless as your wanderlust\"), transition through rapid tactile macro UI cuts that each showcase one killer feature, then close on a still aspirational headline card with a soft invitation-style CTA. Style register is editorial luxury — analog",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/xa74lfyaqq/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic editorial luxury",
+      "emotional people-first opening",
+      "rapid tactile UI macro cuts",
+      "aspirational headline close"
+    ],
+    "best_for": [
+      "premium app launches",
+      "lifestyle milestone ads",
+      "travel and gifting apps",
+      "real estate or parenting apps"
+    ]
+  },
+  "tags": [
+    "luxury",
+    "editorial",
+    "apps",
+    "cinematic",
+    "lifestyle",
+    "reveal"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:30.681076-07:00",
+  "updated_at": "2026-06-25T15:04:10.318875-07:00"
+}

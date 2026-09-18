@@ -1,0 +1,43 @@
+{
+  "id": "78b734b6-8266-44cf-8dc3-4224d1038715",
+  "name": "ugc-street-interview-nightlife-hook",
+  "category": "UGC & Testimonial",
+  "description": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an eye-candy persona plays the role of an enthusiastic insider being \"caught on camera\" outside the venue. The hook drops an interviewer question as a white rounded-pill text overlay while the persona delivers a conspiratorial, feature-by-feature pitch counting on fingers, intercut with silent brand-cut scenes showing product UI with punchy feature callout overlays. Closes with a confident si",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/e504nbglkt/output.mp4",
+      "caption": "Red Bull",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "caught-on-camera interview",
+      "conspiratorial insider tone",
+      "finger-counted feature breakdown",
+      "punchy text overlays"
+    ],
+    "best_for": [
+      "nightlife venue street interviews",
+      "UGC hook ads",
+      "app or product feature pitches",
+      "brand cutaway UI demos"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "street",
+    "nightlife",
+    "hook",
+    "interview",
+    "ui"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:39.675490-07:00",
+  "updated_at": "2026-06-25T15:04:30.840674-07:00"
+}

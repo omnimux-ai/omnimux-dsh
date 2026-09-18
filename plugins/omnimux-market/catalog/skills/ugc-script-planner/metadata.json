@@ -1,0 +1,43 @@
+{
+  "id": "b467ed73-3b79-42fd-b864-3aa94f57b86d",
+  "name": "ugc-script-planner",
+  "category": "UGC & Testimonial",
+  "description": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation plan in the exact format used by the ads director: a source-ref breakdown table, an 8-beat narrative arc (auto-collapsed for shorter durations), a scene plan table with VO word-count targets, a full verbatim VO script, casting + location anchors, captions / music / CTA spec, a production pipeline summary, and open questions. Trigger this skill whenever a user asks to \"plan\", \"script\", or",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 5,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/rgr4c9xud3/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "structured implementation plan",
+      "8-beat narrative arc",
+      "verbatim voiceover",
+      "director-ready format"
+    ],
+    "best_for": [
+      "talking-head UGC ads",
+      "15–60s video scripts",
+      "creator ad planning",
+      "production briefs"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "script",
+    "planning",
+    "voiceover",
+    "creator",
+    "video"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:39.379494-07:00",
+  "updated_at": "2026-06-25T15:04:29.866703-07:00"
+}

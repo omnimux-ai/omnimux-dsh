@@ -1,0 +1,43 @@
+{
+  "id": "14a7d4e0-2d5e-41aa-9b3e-03e3f49b95ec",
+  "name": "color-spec-sheet",
+  "category": "Product Showcase",
+  "description": "Generates a Pantone-style color specification sheet from any uploaded product or character design image. The output is a pixel-perfect 3300×1350px PNG that mirrors a measured reference template, with color swatches, PMS C codes, finish labels, deco group boxes, leader lines, and a companion PMS table. No AI image model is ever used — the uploaded image is placed unchanged via Python/PIL. Trigger this skill whenever a user says \"color spec\", \"color extraction\", \"PMS sheet\", \"Pantone spec\", \"extra",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/lv0klpa94y/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "template-matched layout",
+      "technical specification",
+      "pixel-perfect PNG",
+      "unchanged source image"
+    ],
+    "best_for": [
+      "Pantone color specs",
+      "product color extraction",
+      "character design handoff",
+      "print/vendor reference sheets"
+    ]
+  },
+  "tags": [
+    "color",
+    "pantone",
+    "spec",
+    "pms",
+    "swatches",
+    "print"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T22:55:02.416971-07:00",
+  "updated_at": "2026-06-25T15:03:57.756476-07:00"
+}

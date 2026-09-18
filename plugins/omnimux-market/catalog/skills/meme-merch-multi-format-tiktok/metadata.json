@@ -1,0 +1,44 @@
+{
+  "id": "a11f08f9-d483-4cc6-9ad9-b0a1b1c9983b",
+  "name": "meme-merch-multi-format-tiktok",
+  "category": "Video Ads",
+  "description": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty/meme apparel products, all anchored by a single recurring creator persona. The creative move is persona-locked brand cohesion across formats: same face, same voice, same room, three tonally distinct executions. Trigger this skill whenever a meme/novelty merch brand needs a multi-format TikTok drop from one shoot-day's worth of content, or when a client wants UGC warmth and cinematic pol",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/8tcwcgwi6r/output.mp4",
+      "caption": "Liquid Death",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "recurring creator persona",
+      "same room and voice",
+      "UGC warmth",
+      "cinematic polish"
+    ],
+    "best_for": [
+      "TikTok merch drops",
+      "meme apparel ads",
+      "UGC fit-checks",
+      "unboxing videos",
+      "multi-format campaigns"
+    ]
+  },
+  "tags": [
+    "tiktok",
+    "meme",
+    "merch",
+    "apparel",
+    "ugc",
+    "unboxing"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:30.940060-07:00",
+  "updated_at": "2026-06-25T15:04:11.506044-07:00"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "b254350e-c141-4949-87e9-9e6b6e60c37d",
+  "name": "split-screen-dialogue",
+  "category": "UGC & Testimonial",
+  "description": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skeptic, etc.) into a finished 9:16 vertical ad shot as a clean selfie-call split-screen — woman top half, man bottom half, single thin white horizontal divider at exact center, ZERO video-call UI chrome (no icons, status pill, buttons, bars, text, or posters anywhere in frame). Each scene lipsyncs only the active speaker while the listener gives a small reaction beat. UGC selfie aesthetic by",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/5yadbcbheg/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "9:16 split-screen selfie",
+      "woman top, man bottom",
+      "clean no-UI frame",
+      "active-speaker lipsync"
+    ],
+    "best_for": [
+      "two-person dialogue ads",
+      "coach/student scripts",
+      "expert vs skeptic demos",
+      "relationship-style UGC"
+    ]
+  },
+  "tags": [
+    "dialogue",
+    "split",
+    "selfie",
+    "ugc",
+    "lipsync",
+    "vertical"
+  ],
+  "reference_files": [
+    "references/caption-overrides.md",
+    "references/hook-library.md",
+    "references/style-overrides.md"
+  ],
+  "created_at": "2026-06-24T22:54:58.756740-07:00",
+  "updated_at": "2026-06-25T15:04:24.202812-07:00"
+}

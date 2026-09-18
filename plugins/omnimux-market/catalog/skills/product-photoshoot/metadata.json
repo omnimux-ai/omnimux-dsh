@@ -1,0 +1,95 @@
+{
+  "id": "ac9c03df-5518-47f5-a7d5-7f138c537d44",
+  "name": "product-photoshoot",
+  "category": "Product Showcase",
+  "description": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle scenes, hero banners, Pinterest pins, social carousels, ad creative packs, virtual model try-ons, conceptual CGI product art, or aesthetic restyles. Produces lighting-controlled, brand-aware product imagery end-to-end via generate_image. Trigger whenever the brief mentions a product photoshoot, product photo, studio shot, packshot, catalog shot, white-background product photo, seamless background, or any of the related brand-imagery modes above.",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/b6b67b64.jpeg",
+      "caption": "Product photoshoot #1",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/2635425c.jpeg",
+      "caption": "Product photoshoot #2",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/846aa638.jpeg",
+      "caption": "Product photoshoot #3",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/a17df675.jpeg",
+      "caption": "Product photoshoot #4",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/384ad852.jpeg",
+      "caption": "Product photoshoot #5",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/92129628.jpeg",
+      "caption": "Product photoshoot #6",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/199be9f1.jpeg",
+      "caption": "Product photoshoot #7",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260623/dfa80bdb.jpeg",
+      "caption": "Product photoshoot #8",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "lighting-controlled product imagery",
+      "brand-aware visuals",
+      "studio or seamless backgrounds",
+      "aesthetic restyles"
+    ],
+    "best_for": [
+      "studio packshots",
+      "e-commerce catalog shots",
+      "lifestyle product scenes",
+      "hero banners",
+      "social ad creatives"
+    ]
+  },
+  "tags": [
+    "product",
+    "photoshoot",
+    "ecommerce",
+    "packshot",
+    "catalog",
+    "lifestyle"
+  ],
+  "reference_files": [
+    "references/ad-creative-pack.md",
+    "references/closeup-product-with-person.md",
+    "references/conceptual-product.md",
+    "references/hero-banner.md",
+    "references/lifestyle-scene.md",
+    "references/negative-prompts.md",
+    "references/photographer-references.md",
+    "references/photography-vocabulary.md",
+    "references/pinterest-pin.md",
+    "references/product-shot.md",
+    "references/refinement-pass.md",
+    "references/restyle.md",
+    "references/social-carousel.md",
+    "references/typography.md",
+    "references/virtual-model-tryout.md"
+  ],
+  "created_at": "2026-06-23T15:40:30.594751-07:00",
+  "updated_at": "2026-06-23T16:08:10.896941-07:00"
+}

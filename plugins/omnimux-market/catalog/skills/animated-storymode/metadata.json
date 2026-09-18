@@ -1,0 +1,6 @@
+{
+  "id": "sk-creatify-animated-storymode",
+  "name": "animated-storymode",
+  "category": "Storytelling & Script",
+  "description": "Use when the ad format is animated / cartoon storytelling for any general industry — explainer animations, animated UGC, cartoon mascots, illustrated narratives, AI-animated ads, motion-graphic stories, doodle ads, 2D-vector ads. Produces an Animated Story Creative Brief — ranked hook concepts, scroll-stop frame spec, art-style direction, character cast, story arc, voiceover/sound spec, asset readiness QA, enhancement opportunities, and asset gaps. Trigger before scriptwriting whenever the brief mentions animation, cartoon, illustrated, motion graphics, explainer video, animated story, AI-animated ad, Pixar-style, doodle ad, or \"make it a cartoon.\" The producer should run this skill first so its output feeds ads-scriptwriter-skill (or ads-fast-skill). For game products use ads-games-skill (which already covers animated mascots inside game ads); for live-action UGC use ads-ugc-skill."
+}

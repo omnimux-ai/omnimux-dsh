@@ -1,0 +1,45 @@
+{
+  "id": "39200d1e-b08a-4186-9d7e-8a922721ac21",
+  "name": "motif-mirror-product-reel",
+  "category": "Product Showcase",
+  "description": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles, totes, framed prints — anything with a printed motif) and wants a silent, music-only, multi-scene vertical product-highlight reel where the REAL-WORLD version of each printed motif appears alongside the product (real fresh flowers next to a floral-printed mug, real coffee beans by a coffee-print tumbler, real lavender by a lavender candle). This is the go-to creative for \"show my varian",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/08t08oodr1/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "silent, music-only",
+      "multi-scene vertical reel",
+      "real motif props beside product",
+      "clean product-highlight shots"
+    ],
+    "best_for": [
+      "personalized gift products",
+      "custom-print product reels",
+      "variant showcase videos",
+      "vertical social ads"
+    ]
+  },
+  "tags": [
+    "personalized",
+    "gifts",
+    "reel",
+    "motif",
+    "variants",
+    "vertical"
+  ],
+  "reference_files": [
+    "references/visual-lock-template.md"
+  ],
+  "created_at": "2026-06-24T23:46:31.968052-07:00",
+  "updated_at": "2026-06-25T15:04:12.533708-07:00"
+}

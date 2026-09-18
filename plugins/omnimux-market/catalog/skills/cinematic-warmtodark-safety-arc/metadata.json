@@ -1,0 +1,43 @@
+{
+  "id": "f47c1abb-c4e3-4d41-bcb4-9ea432b9da81",
+  "name": "cinematic-warmtodark-safety-arc",
+  "category": "Video Ads",
+  "description": "A cinematic anamorphic ad pattern built for personal-safety, security, and emergency-response products targeting women 18-40, parents, and high-exposure workers in dense urban markets. The creative move is a warm-to-dark lighting arc — spots of domestic warmth (golden hour, kitchen light, bedroom glow) deliberately drain into cold blue-lit crisis situations, then resolve back to warmth once the product intervenes. The hook is a covert-action POV reveal: the audience sees the product's gesture or",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/ava1023qrs/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic anamorphic",
+      "warm-to-cold lighting arc",
+      "covert-action POV reveal",
+      "crisis-to-relief narrative"
+    ],
+    "best_for": [
+      "personal-safety products",
+      "security apps/devices",
+      "emergency-response products",
+      "urban safety ads"
+    ]
+  },
+  "tags": [
+    "safety",
+    "security",
+    "cinematic",
+    "urban",
+    "emergency",
+    "women"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:22.558398-07:00",
+  "updated_at": "2026-06-25T15:03:56.757741-07:00"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "fff55073-66b2-4a09-b4b9-15154cf25221",
+  "name": "youth-sports-hype-reel",
+  "category": "Video Ads",
+  "description": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team logo and asks for a cinematic hype reel, highlight video, sports trailer, broadcast-style cut, championship trailer, sneaker-commercial-style edit, or any maximalist youth-sports edit. Trigger eagerly — if the brief mentions slow-mo, team colors, \"make it epic\", a kid's team name, a tournament, \"hype my kid up\", or anything in that orbit, this is the right skill. It encodes a 30-40s vert",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/0ytbcdvsi9/output.mp4",
+      "caption": "Gymshark",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic, maximalist",
+      "slow-motion highlights",
+      "team-color branding",
+      "broadcast-style energy"
+    ],
+    "best_for": [
+      "youth sports hype reels",
+      "highlight videos",
+      "sports trailers",
+      "championship edits",
+      "team promo videos"
+    ]
+  },
+  "tags": [
+    "sports",
+    "hype",
+    "youth",
+    "highlights",
+    "trailer",
+    "team"
+  ],
+  "reference_files": [
+    "references/grade_recipes.md",
+    "references/text_flashes.md"
+  ],
+  "created_at": "2026-06-24T23:46:42.256289-07:00",
+  "updated_at": "2026-06-25T15:04:33.885959-07:00"
+}

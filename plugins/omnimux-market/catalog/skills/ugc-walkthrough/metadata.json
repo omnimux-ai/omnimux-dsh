@@ -1,0 +1,60 @@
+{
+  "id": "d493163e-4e7b-42f6-b4a2-bd9baa05a0a3",
+  "name": "ugc-walkthrough",
+  "category": "UGC & Testimonial",
+  "description": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each cut is ONE chronological step of using the product, with a `Step N — Heading` typography caption baked onto each slot of the storyboard, optionally chained into multi-board long-form tutorials with globally numbered steps. Trigger whenever the user mentions a tutorial ad, how-to ad, \"how I use this\" video, step-by-step walkthrough, application tutorial, routine breakdown (\"my morning skincare routine\"), instructional creator video, or asks for a UGC tutorial / demo with on-screen step labels. Produces 21:9 storyboard sheet(s) with rendered Step captions and the 9:16 clip(s) end-to-end, returning the final assembled video.",
+  "author": "Creatify",
+  "version": 2,
+  "app_scope": "orchestrator",
+  "usage_count": 42,
+  "favorite_count": 2,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/14ozfjygoe/output.mp4",
+      "caption": "Notion — auto-generated demo #1",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/tjlgtv50a6/output.mp4",
+      "caption": "Notion — auto-generated demo #2",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/nb4wcel5tv/output.mp4",
+      "caption": "Notion — auto-generated demo #3",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/kat3qdrctr/output.mp4",
+      "caption": "Notion — auto-generated demo #4",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "single-take 4-cut structure",
+      "chronological step captions",
+      "creator-led instructional"
+    ],
+    "best_for": [
+      "UGC tutorial ads",
+      "how-to product demos",
+      "step-by-step walkthroughs",
+      "routine breakdown videos"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "tutorial",
+    "howto",
+    "walkthrough",
+    "demo",
+    "routine"
+  ],
+  "reference_files": [
+    "references/board-prompt-guide.md",
+    "references/clip-prompt-guide.md"
+  ],
+  "created_at": "2026-05-16T18:25:42.557374-07:00",
+  "updated_at": "2026-06-15T15:56:35.150474-07:00"
+}

@@ -1,0 +1,46 @@
+{
+  "id": "35ba6f9d-dcec-428f-9d1e-4148be0307f6",
+  "name": "dark-saas-ui-hero",
+  "category": "Product Showcase",
+  "description": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical 9x16 product-hero ad with no voiceover — TikTok, Reels, or Shorts brand-spot tone, dark cinematic startup aesthetic (Linear, Vercel, Arc, Raycast energy), music plus on-screen captions only, ending on a wordmark sign-off. Trigger aggressively whenever the hero is UI screenshots and the user says dashboard, screens, feature tour, product demo, SaaS ad, show the app, AI tool ad, Notion-st",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/w3l4gybfvw/output.mp4",
+      "caption": "Notion",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "dark cinematic startup aesthetic",
+      "music and on-screen captions",
+      "no voiceover",
+      "wordmark sign-off"
+    ],
+    "best_for": [
+      "SaaS dashboard ads",
+      "vertical product hero",
+      "UI feature tours",
+      "TikTok/Reels/Shorts"
+    ]
+  },
+  "tags": [
+    "saas",
+    "dashboard",
+    "ui",
+    "vertical",
+    "cinematic",
+    "captions"
+  ],
+  "reference_files": [
+    "references/caption_library.md",
+    "references/render_recipes.md"
+  ],
+  "created_at": "2026-06-24T22:55:00.299769-07:00",
+  "updated_at": "2026-06-25T15:03:59.336387-07:00"
+}

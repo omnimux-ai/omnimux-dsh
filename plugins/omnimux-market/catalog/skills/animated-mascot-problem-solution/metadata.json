@@ -1,0 +1,42 @@
+{
+  "id": "467e0c07-f802-410f-8d7f-69769ab905c9",
+  "name": "animated-mascot-problem-solution",
+  "category": "Video Ads",
+  "description": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suffering in a problem environment (Scene 1), then celebrates relief in the hero product environment (Scene 2). The character speaks directly to camera in first person, making the product's value proposition visceral and personal. Trigger this skill when the product is a specialty storage, care, or protection product; when the target audience has a \"hidden damage\" anxiety they may not consci",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/uxiyky2l8j/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "stylized 3D mascot",
+      "first-person direct-to-camera",
+      "problem then relief arc"
+    ],
+    "best_for": [
+      "15-second animated ads",
+      "storage and protection products",
+      "product care problem-solution",
+      "hidden damage anxiety"
+    ]
+  },
+  "tags": [
+    "animated",
+    "mascot",
+    "storage",
+    "protection",
+    "problem",
+    "solution"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:16.454803-07:00",
+  "updated_at": "2026-06-25T15:03:48.896047-07:00"
+}

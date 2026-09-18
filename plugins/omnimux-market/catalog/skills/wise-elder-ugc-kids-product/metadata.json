@@ -1,0 +1,44 @@
+{
+  "id": "c6e8d0b0-4f6a-4783-b1d7-b6b3790bfa76",
+  "name": "wise-elder-ugc-kids-product",
+  "category": "UGC & Testimonial",
+  "description": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmotherly-peer voice avatar delivers a 30-second vertical video in three acts (discovery hook → stacked benefits → dual-CTA close) using the seller's real recorded voice over product-only visuals, playful kinetic captions, and TikTok Shop-compliant CTAs. Trigger this skill whenever a user wants a UGC-style short-form ad for a children's product sold on TikTok Shop or Amazon, especially when the",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/i4k3y1ho4b/output.mp4",
+      "caption": "Bobbie",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm grandmotherly voice",
+      "product-only visuals",
+      "playful kinetic captions",
+      "three-act ad structure"
+    ],
+    "best_for": [
+      "children's product ads",
+      "TikTok Shop UGC",
+      "Amazon product promos",
+      "30-second vertical videos",
+      "trust-building benefit pitches"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "kids",
+    "tiktok",
+    "amazon",
+    "captions",
+    "trust"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:42.001190-07:00",
+  "updated_at": "2026-06-25T15:04:33.505581-07:00"
+}

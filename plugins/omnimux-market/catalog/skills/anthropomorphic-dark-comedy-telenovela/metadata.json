@@ -1,0 +1,43 @@
+{
+  "id": "6fcef103-d3e3-48ab-8ca1-c54b592f1af0",
+  "name": "anthropomorphic-dark-comedy-telenovela",
+  "category": "Storytelling & Script",
+  "description": "Encodes the over-the-top dark-comedy telenovela arc with anthropomorphic characters (human body + literal object/animal/food head with embedded human facial features). The pattern drives engagement through absurd premise collision — recognizable soap-opera drama played completely straight by characters with inherently ridiculous appearances. Deploy this skill whenever a product, food item, brand mascot, or concept can be personified into a feuding couple; the built-in tension between dignified m",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/sv5zf32a9k/output.mp4",
+      "caption": "Audible",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "dark comedy",
+      "over-the-top melodrama",
+      "anthropomorphic characters",
+      "played-straight absurdism"
+    ],
+    "best_for": [
+      "absurd brand mascots",
+      "product personification",
+      "feuding-couple skits",
+      "soap-opera parody"
+    ]
+  },
+  "tags": [
+    "telenovela",
+    "absurd",
+    "mascot",
+    "comedy",
+    "drama",
+    "personify"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:16.755443-07:00",
+  "updated_at": "2026-06-25T15:03:49.313971-07:00"
+}

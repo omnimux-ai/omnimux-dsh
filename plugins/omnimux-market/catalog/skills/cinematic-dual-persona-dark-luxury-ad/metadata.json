@@ -1,0 +1,43 @@
+{
+  "id": "27e19b71-9fb5-40f8-ad93-28e48fc2dc57",
+  "name": "cinematic-dual-persona-dark-luxury-ad",
+  "category": "Video Ads",
+  "description": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero personas (male + female), anamorphic dark-neon urban aesthetics, silence-only (no voiceover), hard-cut multi-scene pacing, and bold all-caps kinetic text overlays. Trigger this skill whenever a brand needs a premium athletic, streetwear, or lifestyle product ad that must feel blockbuster and aspirational — especially when a physical product image is available and the brief calls for \"cin",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/km7io4ng7t/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "dark-neon urban",
+      "music-driven, no voiceover",
+      "hard-cut multi-scene pacing",
+      "bold kinetic text overlays"
+    ],
+    "best_for": [
+      "luxury sportswear ads",
+      "premium streetwear launches",
+      "aspirational lifestyle product ads",
+      "cinematic product promos"
+    ]
+  },
+  "tags": [
+    "cinematic",
+    "luxury",
+    "sportswear",
+    "streetwear",
+    "neon",
+    "aspirational"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:19.461048-07:00",
+  "updated_at": "2026-06-25T15:03:53.836770-07:00"
+}

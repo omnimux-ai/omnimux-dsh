@@ -1,0 +1,47 @@
+{
+  "id": "ef939731-5d81-48ec-8991-7b339584e486",
+  "name": "pedestal-product-hero",
+  "category": "Product Showcase",
+  "description": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood pedestal, the product bag/jar/box centered on top, a small natural spillage of the product's own contents at the base, and a long soft warm side-cast shadow. Trigger eagerly whenever the user asks for a clean editorial / minimalist still-life image ad for a packaged consumer product (supplement, nutrition, snack, pantry, cosmetic) — especially when they provide a clean still-life reference,",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260625/1d002a5b.jpeg",
+      "caption": "Stanley 1913",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "clean editorial still-life",
+      "warm beige backdrop",
+      "wood pedestal composition",
+      "soft side-cast shadow"
+    ],
+    "best_for": [
+      "minimalist product hero",
+      "packaged consumer products",
+      "supplement or snack ads",
+      "cosmetic still-life"
+    ]
+  },
+  "tags": [
+    "pedestal",
+    "minimal",
+    "editorial",
+    "packaged",
+    "stilllife",
+    "beige"
+  ],
+  "reference_files": [
+    "references/headline-styling.md",
+    "references/prompt-skeleton.md",
+    "references/spillage-rules.md"
+  ],
+  "created_at": "2026-06-24T22:55:00.730340-07:00",
+  "updated_at": "2026-06-25T15:04:15.662197-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "2f3321f9-5a50-4aae-a7be-b8101fa1d2e9",
+  "name": "hinglish-before-after-saas-hook",
+  "category": "Video Ads",
+  "description": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting urban Indian professionals. The hook opens with a hyper-relatable late-night struggle moment spoken in Hinglish, cuts to a dramatic VS split card, then reveals the product solving the pain in seconds — closing with a soft spoken CTA plus an on-screen pill button. Trigger this skill whenever the brief involves an Indian professional audience (CAs, lawyers, HR managers, doctors, fintech us",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/wpmrjfdxsh/output.mp4",
+      "caption": "Notion",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "Hinglish spoken hook",
+      "dramatic VS split card",
+      "relatable late-night struggle",
+      "soft CTA with pill button"
+    ],
+    "best_for": [
+      "Indian B2B/SaaS vertical ads",
+      "before-after hooks",
+      "Hinglish pain-point ads",
+      "professional workflow tools"
+    ]
+  },
+  "tags": [
+    "hinglish",
+    "saas",
+    "india",
+    "beforeafter",
+    "b2b",
+    "vertical"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:27.131942-07:00",
+  "updated_at": "2026-06-25T15:04:03.227761-07:00"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "7c79c7f1-97aa-4784-ab43-d54a3c978e19",
+  "name": "video-recreate-skill",
+  "category": "Video Ads",
+  "description": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation. Trigger when the user pastes or uploads a reference video and says \"recreate\", \"remake\", \"make me an ad like this\", \"ad like this video\", \"clone this\", or asks for \"just the ad plan\", \"analyze this and write the plan\", \"text plan for paid\", or asks to execute a single step in isolation (\"generate the images from the plan\", \"make the scene videos\", \"assemble the final\"). Runs a fixed 5-step pipeline with per-st",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "reference-matched structure",
+      "pipeline-based production",
+      "scene-by-scene planning"
+    ],
+    "best_for": [
+      "reference video recreations",
+      "paid social ad plans",
+      "scene-by-scene remakes",
+      "video ad assembly"
+    ]
+  },
+  "tags": [
+    "recreate",
+    "remake",
+    "reference",
+    "video",
+    "paid",
+    "pipeline"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:41.075659-07:00",
+  "updated_at": "2026-06-24T23:46:46.494076-07:00"
+}
