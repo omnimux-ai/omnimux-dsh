@@ -1,6 +1,6 @@
 /**
- * E2E: 灵感模板 7 大王牌 AI 应用与首页单分组直通出片全链路验证
- * 对应 Issue #2278 / #2279 / #2283
+ * E2E: 灵感模板全量恢复、智能体上下文参考工具与附件挂载闭环全链路验证
+ * 对应 Issue #2278 / #2279 / #2283 / #2362
  */
 
 import test from 'node:test';
@@ -9,9 +9,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ALL_CREATIVE_TEMPLATES,
+  FEATURED_APPS_LIST,
   SHELVES_CONFIG,
+  TEMPLATE_CATEGORIES,
   selectShelfItems,
+  selectTemplatesByCategory,
 } from '../../src/client/session-guide/templates/templates-data.js';
+import {
+  queryCreativeTemplates,
+  getCreativeTemplateDetail,
+} from '../../src/templates/tools.js';
 
 test('E2E: 7 大王牌爆款工作流工程与应用清单完整性', () => {
   const builtinAppsPath = path.resolve('plugins/omnimux-apps/catalog/builtin-apps.json');
@@ -49,18 +56,48 @@ test('E2E: 7 大王牌爆款工作流工程与应用清单完整性', () => {
   }
 });
 
-test('E2E: 首页「探索模板」收敛为单分组且完美对齐 7 大应用', () => {
-  assert.equal(SHELVES_CONFIG.length, 1, '首页货架必须仅保留 1 个核心分组');
+test('E2E: 首页「探索模板」包含置顶王牌应用货架与全量 395 套灵感模板', () => {
+  // 1. 验证 10 大核心分类齐全
+  assert.equal(TEMPLATE_CATEGORIES.length, 10, '首页必须恢复 10 大核心分类');
+
+  // 2. 验证货架行配置
+  assert.ok(SHELVES_CONFIG.length >= 8, '首页货架行必须包含各大业务分类');
   assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
-  assert.equal(SHELVES_CONFIG[0].titleZh, '探索模板');
+  assert.equal(SHELVES_CONFIG[0].type, 'app');
 
-  const items = selectShelfItems('explore-templates', 10);
-  assert.equal(items.length, 7, '探索模板货架行必须展示且仅展示 7 款王牌大卡片');
+  // 3. 验证王牌应用置顶且数量为 7
+  const featuredApps = selectShelfItems('explore-templates', 10);
+  assert.equal(featuredApps.length, 7, '王牌应用货架行必须展示 7 款王牌大卡片');
 
-  for (const item of ALL_CREATIVE_TEMPLATES) {
-    assert.ok(item.appId, '卡片必须关联 appId');
-    assert.ok(item.coverUrl, '卡片必须包含封面');
-    assert.ok(item.previewVideoUrl, '卡片必须包含预览视频');
-    assert.ok(item.manifest, '卡片必须挂载完整的 ApplicationManifest 供直通出片消费');
+  // 4. 验证全量模板规模（402 = 7 款官方应用 + 395 套全量灵感模板）
+  assert.ok(ALL_CREATIVE_TEMPLATES.length >= 402, '全量模板数应包含全部 395 套模板与置顶应用');
+
+  // 5. 验证分类过滤可用性
+  const hookTemplates = selectTemplatesByCategory('hook-intro');
+  assert.ok(hookTemplates.length > 20, '黄金开场分类应包含丰富的模板');
+});
+
+test('E2E: 智能体（Agent）只读工具查询与提示词工作流上下文感知', async () => {
+  // 1. 模糊搜索工具验证
+  const searchResult = queryCreativeTemplates({
+    category: 'hook-intro',
+    limit: 5,
+  });
+  assert.ok(searchResult.total > 0, '搜索应返回结果');
+  assert.equal(searchResult.items.length, 5);
+  for (const item of searchResult.items) {
+    assert.ok(item.id, '每项必须有 ID');
+    assert.ok(item.title, '每项必须有标题');
+    assert.ok(item.promptSummary !== undefined, '每项必须有提示词摘要');
   }
+
+  // 2. 详情工具调阅验证（获取完整 prompt 与 workflow）
+  const detail = getCreativeTemplateDetail(searchResult.items[0].id);
+  assert.ok(detail, '必须成功获取模板详情');
+  assert.ok(detail.prompt && detail.prompt.length > 0, '必须包含完整分镜提示词');
+
+  // 3. 平台来源检索测试
+  const pippitRes = queryCreativeTemplates({ platform: 'pippit', limit: 10 });
+  assert.ok(pippitRes.items.length > 0);
+  assert.equal(pippitRes.items[0].sourcePlatform, 'pippit');
 });

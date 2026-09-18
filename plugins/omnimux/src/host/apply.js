@@ -39,6 +39,7 @@ import { mountComposerCommands } from './composer-commands.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
 import { mountWebSocketHmr } from '../hmr/host.js'
 import { mountPresetsTools } from '../presets/tools.js'
+import { mountTemplatesTools } from '../templates/tools.js'
 
 /**
  * @param {{
@@ -289,6 +290,7 @@ export function apply(ctx, config = {}) {
     jsonOut,
   })
   mountPresetsTools(ctx)
+  mountTemplatesTools(ctx)
   mountCanvasGenerationEvents(ctx, { hubEvents })
   mountSurfaceFollow(ctx, {
     mailbox,

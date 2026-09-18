@@ -61,7 +61,7 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
   // 区分是否为带有真实指标的 TikTok 热门卡片与 AI 应用
   const isTikTok = template.type === 'tiktok' || template.categorySlug === 'tiktok' || (typeof template.views === 'number' && template.views > 0)
   const isSkill = template.type === 'skill' || template.categorySlug === 'skills'
-  const isApp = template.type === 'app' || !!template.appId || !!template.manifest
+  const isApp = template.isApp === true || (template.type === 'app' && !!template.manifest)
   const actionText = isApp ? '打开应用' : (isSkill ? '使用' : '复刻')
   const actionIcon = isApp ? ICON_OPEN_APP : ICON_REPLICATE
   const viewsText = isTikTok ? formatMetric(template.views) : null
