@@ -26,6 +26,7 @@ export * from '../shared/manifest.ts';
 export * from '../shared/schemaValidator.ts';
 export * from './storage/appStorage.ts';
 export * from './executionBridge.ts';
+export * from './routes.ts';
 
 import {
   executeAppWorkflow,
@@ -33,6 +34,7 @@ import {
   cancelAppExecution,
   prepareAndInjectWorkflowSnapshot,
 } from './executionBridge.ts';
+import { registerAppsApiRoutes } from './routes.ts';
 import type {
   ExecutionBridgeResult,
   PreparedWorkflowSnapshot,
@@ -92,6 +94,26 @@ export function apply(ctx: any): void {
     ctx.provide('omnimux-apps', service);
   }
   ctx['omnimux-apps'] = service;
+
+  const getHeadlessSeam = (): HeadlessExecutionSeam | null => {
+    return (
+      (typeof ctx.get === 'function' ? ctx.get('omnimux-workflow') : null) ??
+      ctx['omnimux-workflow'] ??
+      null
+    );
+  };
+
+  const mount = (webServerCtx: any) => {
+    const webServer = webServerCtx?.webServer ?? ctx.webServer;
+    if (!webServer) return;
+    registerAppsApiRoutes(webServer, { service, getHeadlessSeam });
+  };
+
+  if (typeof ctx.inject === 'function') {
+    ctx.inject(['webServer'], (inner: any) => mount(inner));
+  } else if (ctx.webServer) {
+    mount(ctx);
+  }
 }
 
 export default {

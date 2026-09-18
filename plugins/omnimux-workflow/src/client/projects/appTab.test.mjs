@@ -26,8 +26,11 @@ describe('AppTab and AI App Workflow integration', () => {
     assert.match(src, /任务记录/)
     assert.match(src, /示例演示/)
     assert.match(src, /mediaUrl/)
-    // 调用执行接口
+    // 严禁残留 exempt-ui04 文本泄漏
+    assert.doesNotMatch(src, /exempt-ui04/, 'AppTab 严禁残留 exempt-ui04 注释泄漏')
+    // 调用执行接口与异步轮询
     assert.match(src, /__OMNIMUX_APPS_EXECUTE__|\/executions/)
+    assert.match(src, /pollStatus|__OMNIMUX_APPS_POLL__/, '必须包含真实任务轮询机制')
   })
 
   it('index.js: 源码契约向 betterSidebar 注册 APP_TAB_ID', () => {
