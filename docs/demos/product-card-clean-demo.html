@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>产品库卡片视觉纯净优化演示 · 隐藏类型徽章与价格</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111113;
+      --surface: #18191c;
+      --elevated: #202124;
+      --border: rgba(255,255,255,0.10);
+      --border-hover: rgba(255,255,255,0.20);
+      --label: #f3f4f6;
+      --secondary: rgba(255,255,255,0.65);
+      --tertiary: rgba(255,255,255,0.40);
+      --layer: rgba(255,255,255,0.06);
+      --primary: #ffffff;
+      --primary-fg: #111827;
+      --success: #34d399;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--label); padding: 32px 24px;
+    }
+    .header { max-width: 1080px; margin: 0 auto 24px; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+    p.sub { font-size: 13px; color: var(--secondary); margin: 0; line-height: 1.5; }
+    
+    .status-bar {
+      display: flex; gap: 16px; margin: 20px 0; padding: 12px 16px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      font-size: 13px; align-items: center;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-weight: 600;
+    }
+    .status-badge::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+    }
+
+    .container {
+      max-width: 1080px; margin: 0 auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+    }
+
+    .sub-nav { display: flex; gap: 8px; margin-bottom: 20px; }
+    .nav-chip {
+      height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--layer); color: var(--secondary); font-size: 12px; cursor: pointer;
+    }
+    .nav-chip[data-active="true"] { background: rgba(255,255,255,0.15); color: var(--label); border-color: transparent; }
+
+    .products-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+    }
+
+    .product-card {
+      background: var(--elevated); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease;
+      position: relative; display: flex; flex-direction: column;
+    }
+    .product-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+
+    .card-thumb {
+      width: 100%; height: 140px; background: rgba(0,0,0,0.25); position: relative;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .card-media {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .card-glyph {
+      font-size: 40px; font-weight: 700; color: rgba(255,255,255,0.12);
+      position: absolute; user-select: none;
+    }
+    /* 彻底移除右上角类型徽章与右下角价格 */
+
+    .card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .card-title {
+      font-size: 13px; font-weight: 600; margin: 0 0 6px; line-height: 1.4;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-sub {
+      font-size: 12px; color: var(--secondary); margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>产品库卡片纯净优化 · 移除类型标签与价格</h1>
+    <p class="sub">依用户视觉优化要求：缩略图右上角不显示类型标签，底部不显示价格标签。</p>
+    
+    <div class="status-bar">
+      <span class="status-badge">视觉精简已生效</span>
+      <span style="color: var(--tertiary);">|</span>
+      <span>右上角类型徽章已彻底移除</span>
+      <span style="color: var(--tertiary);">|</span>
+      <span>底部价格标签已彻底移除</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="sub-nav">
+      <button class="nav-chip" data-active="true">全部</button>
+      <button class="nav-chip">实物产品</button>
+      <button class="nav-chip">数字产品</button>
+    </div>
+
+    <div class="products-grid" id="product-grid">
+      <article class="product-card" data-testid="card-1">
+        <div class="card-thumb">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%232a2438'/><circle cx='200' cy='120' r='60' fill='%23ec4899'/><rect x='185' y='40' width='30' height='40' fill='%23f472b6'/><text x='200' y='195' font-size='16' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>5ml 迷你香水喷雾瓶</text></svg>"
+            alt="5ml便携迷你香水喷雾瓶 (买二送一)"
+            class="card-media"
+          />
+          <span class="card-glyph">5</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">5ml便携迷你香水喷雾瓶 (买二送一)</h3>
+          <p class="card-sub">
+            <span>Comfort Bay</span>
+          </p>
+        </div>
+      </article>
+
+      <article class="product-card" data-testid="card-2">
+        <div class="card-thumb">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%231f2937'/><rect x='160' y='60' width='80' height='120' rx='12' fill='%233b82f6'/><circle cx='200' cy='100' r='20' fill='%2360a5fa'/><text x='200' y='210' font-size='16' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>便携香水分装瓶</text></svg>"
+            alt="便携式5ml迷你香水喷雾分装瓶"
+            class="card-media"
+          />
+          <span class="card-glyph">便</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">便携式5ml迷你香水喷雾分装瓶</h3>
+          <p class="card-sub">
+            <span>TikTok Shop</span>
+          </p>
+        </div>
+      </article>
+
+      <article class="product-card" data-testid="card-3">
+        <div class="card-thumb">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='240' viewBox='0 0 400 240'><rect width='400' height='240' fill='%230f172a'/><path d='M160 80 L240 80 L200 150 Z' fill='%2310b981'/><text x='200' y='180' font-size='18' fill='%23ffffff' text-anchor='middle' font-family='sans-serif' font-weight='bold'>OmniMux</text></svg>"
+            alt="OmniMux"
+            class="card-media"
+          />
+          <span class="card-glyph">O</span>
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">OmniMux</h3>
+          <p class="card-sub">
+            <span>OmniMux</span>
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</body>
+</html>
