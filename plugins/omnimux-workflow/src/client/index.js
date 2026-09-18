@@ -90,7 +90,14 @@ export function apply(ctx) {
       order: 5,
       hidden: false,
       single: true,
-      component: (props) => createElement(CanvasTab, { ...props, t }),
+      component: (props) => createElement(CanvasTab, {
+        ...props,
+        t,
+        sessions: ctx.sessions,
+        workspaces: ctx.workspaces,
+        layout: ctx.layout,
+        betterSidebar: sidebar,
+      }),
     })
   }
 
@@ -103,7 +110,14 @@ export function apply(ctx) {
       order: 6,
       hidden: false,
       single: false,
-      component: (props) => createElement(AppTab, { ...props, t }),
+      component: (props) => createElement(AppTab, {
+        ...props,
+        t,
+        sessions: ctx.sessions,
+        workspaces: ctx.workspaces,
+        layout: ctx.layout,
+        betterSidebar: sidebar,
+      }),
     })
   }
 

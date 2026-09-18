@@ -84,6 +84,9 @@ export function installWorkflowGlobal(target, deps) {
   }
   const api = {
     version: WORKFLOW_GLOBAL_VERSION,
+    sessions: deps?.sessions,
+    workspaces: deps?.workspaces,
+    layout: deps?.layout,
     startReplicationProject(input) {
       return startReplicationProject(deps, input)
     },
