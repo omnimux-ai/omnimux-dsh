@@ -1,0 +1,15 @@
+{
+  "issue": 2352,
+  "description": "修复会话切换时工作台视口模式误判折叠导致中间会话栏空白死区缺陷",
+  "verification": "PASS",
+  "timestamp": "2026-09-18T12:17:26.481Z",
+  "metrics": {
+    "sidebarWidth": 260,
+    "conversationVisible": true,
+    "composerVisible": true,
+    "rightbarPanelMode": "push",
+    "conversationCollapsedAttr": false,
+    "deadGapDetected": false
+  },
+  "screenshot": "docs/evidence/session-switch-split-viewport-verified.png"
+}

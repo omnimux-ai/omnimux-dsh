@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>OmniMux 会话切换分栏视窗验证</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #141414;
+      --dsw-alias-bg-surface: #1e1e1e;
+      --dsw-alias-border-l3: #2a2a2a;
+      --dsw-alias-label-primary: #ffffff;
+      --dsw-alias-label-secondary: #a0a0a0;
+      --dsw-alias-label-tertiary: #666666;
+      --omnimux-sidebar-width: 260px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--dsw-alias-bg-base);
+      color: var(--dsw-alias-label-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .dshDesktopFrame {
+      display: grid;
+      grid-template-columns: var(--omnimux-sidebar-width) minmax(0px, 1fr) 778px;
+      height: 100vh;
+      width: 100vw;
+    }
+    /* 左侧侧边栏 */
+    .dshDesktopSidebarSurface {
+      background: #181818;
+      border-right: 1px solid var(--dsw-alias-border-l3);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .windowControls {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .newChatBtn {
+      background: #282828;
+      border: 1px solid #383838;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .navSection {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--dsw-alias-label-tertiary);
+    }
+    .sessionRow {
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--dsw-alias-label-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .sessionRow.selected {
+      background: #2a2a2a;
+      color: #fff;
+      font-weight: 500;
+    }
+    .statusDot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #888;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    /* 中间会话栏 */
+    .dshDesktopConversationSurface {
+      background: var(--dsw-alias-bg-base);
+      border-right: 1px solid var(--dsw-alias-border-l3);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+    .convHeader {
+      height: 52px;
+      border-bottom: 1px solid var(--dsw-alias-border-l3);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary);
+    }
+    .chatFlow {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .userBubble {
+      align-self: flex-end;
+      background: #2a2a2a;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px 12px 2px 12px;
+      font-size: 13px;
+      max-width: 80%;
+      line-height: 1.5;
+    }
+    .composerSeat {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--dsw-alias-border-l3);
+      background: var(--dsw-alias-bg-base);
+    }
+    .composerCard {
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .composerInput {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      resize: none;
+      height: 36px;
+    }
+    .composerActions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--dsw-alias-label-tertiary);
+    }
+
+    /* 右侧工作台：图像生成 */
+    .dshDesktopRightbarSurface {
+      background: var(--dsw-alias-bg-surface);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .tabStrip {
+      height: 40px;
+      border-bottom: 1px solid var(--dsw-alias-border-l3);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      background: #161616;
+    }
+    .tabItem {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #fff;
+      background: #242424;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .emptyState {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--dsw-alias-label-tertiary);
+    }
+    .emptyIcon {
+      width: 48px;
+      height: 48px;
+      border: 1px dashed #444;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .badgeSuccess {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #1b4d2e;
+      color: #4ade80;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="dshDesktopFrame" data-desktop-mode="advanced" data-rightbar-collapsed="false">
+    <!-- 左侧侧边栏 -->
+    <aside class="dshDesktopSidebarSurface">
+      <div class="windowControls">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+      </div>
+      <button class="newChatBtn">＋ 新对话</button>
+      <div class="navSection">工作区</div>
+      <div class="sessionRow selected" role="treeitem" aria-selected="true">
+        <span><span class="statusDot"></span>香水喷雾瓶带货视频制作</span>
+        <span style="font-size:11px;color:#888;">3分钟</span>
+      </div>
+      <div class="sessionRow" role="treeitem" aria-selected="false">
+        <span><span class="statusDot" style="background:#f59e0b;"></span>TikTok 商店相关视频分析</span>
+        <span style="font-size:11px;color:#888;">6分钟</span>
+      </div>
+      <div class="sessionRow" role="treeitem" aria-selected="false">
+        <span><span class="statusDot"></span>帮我使用这个接口提取产品信</span>
+        <span style="font-size:11px;color:#888;">1小时</span>
+      </div>
+    </aside>
+
+    <!-- 中间会话栏：验证正常展开并带有输入框 -->
+    <main class="dshDesktopConversationSurface" id="conversationSurface">
+      <header class="convHeader">香水喷雾瓶带货视频制作</header>
+      <div class="chatFlow" data-chat-flow="">
+        <div class="userBubble">请帮我制作一组优雅轻奢风格的女士香水喷雾瓶带货视频分镜与素材</div>
+      </div>
+      <div class="composerSeat" data-composer-seat="">
+        <div class="composerCard" data-composer-card="">
+          <textarea class="composerInput" placeholder="输入消息，或输入 / 使用技能..."></textarea>
+          <div class="composerActions">
+            <span>支持多模态与参考图</span>
+            <span style="color:#60a5fa;">回车发送</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧工作台：图像生成正常并排分栏 -->
+    <aside class="dshDesktopRightbarSurface" data-sidebar-right-panel="push" data-sidebar-right-open="true">
+      <div class="tabStrip">
+        <div class="tabItem" data-dockkit-tab="omnimux:media-viewer">
+          <span>图像生成</span>
+          <span style="font-size:12px;opacity:0.6;">✕</span>
+        </div>
+      </div>
+      <div class="emptyState">
+        <div class="emptyIcon">🖼️</div>
+        <span>当前会话暂无生成的图片或视频</span>
+      </div>
+      <div class="badgeSuccess">✔ 会话切换分栏健康展开（无黑洞）</div>
+    </aside>
+  </div>
+</body>
+</html>
