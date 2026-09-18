@@ -2747,16 +2747,15 @@ export const INSPIRATION_CSS = `
   }
 }
 
-/* 双栏视听工作台布局与分镜卡片视觉 (Scheme A - Issue #2297) */
+/* 三栏视听拉片工作台布局与分镜卡片视觉 (Issue #2315) */
+.omnimux-inspiration-modal-body.is-workbench.is-triptych,
 .omnimux-inspiration-modal-body.is-workbench {
-  display: flex !important;
-  flex-direction: row;
+  display: grid !important;
+  grid-template-columns: minmax(320px, 360px) minmax(380px, 1.25fr) minmax(340px, 1fr) !important;
+  overflow: hidden !important;
+  height: 100% !important;
 }
 .omnimux-inspiration-workbench-left {
-  flex: 0 0 380px !important;
-  width: 380px !important;
-  min-width: 320px !important;
-  max-width: 400px !important;
   border-right: 1px solid var(--dsw-alias-border-l2) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2766,6 +2765,24 @@ export const INSPIRATION_CSS = `
   overflow-y: auto !important;
   box-sizing: border-box !important;
   gap: 14px;
+}
+.omnimux-inspiration-workbench-center {
+  border-right: 1px solid var(--dsw-alias-border-l2) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px 18px !important;
+  overflow-y: auto !important;
+  background: var(--dsw-alias-bg-base, #111111) !important;
+  box-sizing: border-box !important;
+}
+.omnimux-inspiration-workbench-right {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px 18px !important;
+  overflow-y: auto !important;
+  background: var(--dsw-alias-bg-base, #111111) !important;
+  border-right: none !important;
+  box-sizing: border-box !important;
 }
 .omnimux-inspiration-workbench-left .omnimux-inspiration-modal-player-box {
   width: 100%;
@@ -2809,71 +2826,6 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-player-duration {
   font-family: var(--dsw-font-mono, monospace);
   color: var(--dsw-alias-label-tertiary, #71717a);
-}
-.omnimux-inspiration-workbench-right {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 0 !important;
-  background: var(--dsw-alias-bg-base, #111111) !important;
-  border-right: none !important;
-}
-.omnimux-inspiration-segmented-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 20px 8px;
-  background: var(--dsw-alias-bg-base, #111111);
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.04));
-}
-.omnimux-inspiration-segmented-container {
-  display: flex;
-  width: 100%;
-  max-width: 380px;
-  background: var(--dsw-alias-bg-layer-1, #18181b);
-  border-radius: 8px;
-  padding: 3px;
-  gap: 4px;
-}
-.omnimux-inspiration-segmented-btn {
-  flex: 1;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, #a1a1aa);
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease;
-}
-.omnimux-inspiration-segmented-btn:hover {
-  color: var(--dsw-alias-label-primary, #ffffff);
-}
-.omnimux-inspiration-segmented-btn.is-active {
-  background: var(--dsw-alias-bg-layer-3, #27272a);
-  color: var(--dsw-alias-label-primary, #ffffff);
-  font-weight: 600;
-  box-shadow: 0 1px 3px var(--dsw-alias-border-focus, rgba(0, 0, 0, 0.2));
-}
-.omnimux-inspiration-workbench-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px 24px;
-  box-sizing: border-box;
-}
-.omnimux-inspiration-shots-view.is-hidden,
-.omnimux-inspiration-structure-view.is-hidden {
-  display: none !important;
-}
-.omnimux-inspiration-shots-view.is-active,
-.omnimux-inspiration-structure-view.is-active {
-  display: block;
 }
 .omnimux-inspiration-shots-container {
   display: flex;
