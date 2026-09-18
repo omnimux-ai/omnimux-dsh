@@ -7,6 +7,12 @@ export const SOCIAL_DATA_CATALOG = Object.freeze({
     user: 'tiktok-user',
     posts: 'tiktok-posts',
     search: 'tiktok-search',
+    shop_product_link: 'tiktok-shop-product-link',
+    shop_product: 'tiktok-shop-product-v3',
+    shop_product_v1: 'tiktok-shop-product',
+    shop_search: 'tiktok-shop-search',
+    shop_seller_products: 'tiktok-shop-seller-products',
+    shop_reviews: 'tiktok-shop-reviews',
   }),
   instagram: Object.freeze({
     post: 'instagram-post',
@@ -31,12 +37,21 @@ export const SOCIAL_DATA_CATALOG = Object.freeze({
 /**
  * Official docs put business params as top-level Chat Completions body fields
  * (not inside `messages`). Values come from tool `url` / `id` / `query`.
+ *
+ * Shop product detail needs both product_id and region — see
+ * SOCIAL_DATA_EXTRA_FIELDS.
  */
 export const SOCIAL_DATA_BUSINESS_FIELDS = Object.freeze({
   'tiktok/video': 'aweme_id',
   'tiktok/user': 'uniqueId',
   'tiktok/posts': 'unique_id',
   'tiktok/search': 'keyword',
+  'tiktok/shop_product_link': 'share_link',
+  'tiktok/shop_product': 'product_id',
+  'tiktok/shop_product_v1': 'product_id',
+  'tiktok/shop_search': 'search_word',
+  'tiktok/shop_seller_products': 'seller_id',
+  'tiktok/shop_reviews': 'product_id',
   'instagram/post': 'url',
   'instagram/user': 'username',
   'instagram/posts': 'username',
@@ -51,8 +66,19 @@ export const SOCIAL_DATA_BUSINESS_FIELDS = Object.freeze({
   'x/search': 'keyword',
 })
 
+/** Optional extra top-level body fields beyond the primary business field. */
+export const SOCIAL_DATA_EXTRA_FIELDS = Object.freeze({
+  'tiktok/shop_product': Object.freeze(['region']),
+  'tiktok/shop_product_v1': Object.freeze(['region']),
+  'tiktok/shop_search': Object.freeze(['region']),
+  'tiktok/shop_seller_products': Object.freeze(['region']),
+  'tiktok/shop_reviews': Object.freeze(['region']),
+})
+
+const DEFAULT_SHOP_REGION = 'SG'
+
 /**
- * @param {{ platform?: string, capability?: string, id?: string, url?: string, query?: string }} args
+ * @param {{ platform?: string, capability?: string, id?: string, url?: string, query?: string, region?: string }} args
  */
 export function resolveSocialDataModel(args) {
   const platform = String(args.platform || '').trim()
@@ -78,7 +104,8 @@ export function resolveSocialDataModel(args) {
       `url, id, or query is required for ${platform}/${capability} (maps to ${field})`,
     )
   }
-  return { model, platform, capability, field, value }
+  const extras = resolveExtraFields({ platform, capability, args, value })
+  return { model, platform, capability, field, value, extras }
 }
 
 /**
@@ -86,7 +113,7 @@ export function resolveSocialDataModel(args) {
  *   platform: string,
  *   capability: string,
  *   field: string,
- *   args: { id?: string, url?: string, query?: string },
+ *   args: { id?: string, url?: string, query?: string, region?: string },
  * }} input
  */
 export function resolveBusinessValue(input) {
@@ -96,7 +123,8 @@ export function resolveBusinessValue(input) {
   const { platform, capability, field } = input
 
   if (field === 'url') return url || id || ''
-  if (field === 'query' || field === 'keyword' || field === 'search_query') {
+  if (field === 'share_link') return normalizeShopShareLink(url || id || query || '')
+  if (field === 'query' || field === 'keyword' || field === 'search_query' || field === 'search_word') {
     return query || id || url || ''
   }
 
@@ -109,9 +137,101 @@ export function resolveBusinessValue(input) {
   if (platform === 'youtube' && capability === 'video') {
     return extractYouTubeVideoId(id) || extractYouTubeVideoId(url) || id || ''
   }
+  if (platform === 'tiktok' && (capability === 'shop_product' || capability === 'shop_product_v1' || capability === 'shop_reviews')) {
+    return extractDigitsId(id) || extractTikTokShopProductId(url) || extractDigitsId(query) || ''
+  }
 
-  // profile / channel style fields prefer bare id, then url/query fallback
+  // profile / channel / seller style fields prefer bare id, then url/query fallback
   return id || query || url || ''
+}
+
+/**
+ * @param {{
+ *   platform: string,
+ *   capability: string,
+ *   args: { id?: string, url?: string, query?: string, region?: string },
+ *   value: string,
+ * }} input
+ * @returns {Record<string, string>}
+ */
+export function resolveExtraFields(input) {
+  const keys = SOCIAL_DATA_EXTRA_FIELDS[`${input.platform}/${input.capability}`] || []
+  /** @type {Record<string, string>} */
+  const out = {}
+  for (const key of keys) {
+    if (key === 'region') {
+      const region = resolveShopRegion(input.args)
+      if (region) out.region = region
+    }
+  }
+  return out
+}
+
+/**
+ * @param {{ id?: string, url?: string, query?: string, region?: string }} args
+ */
+export function resolveShopRegion(args) {
+  const explicit = String(args.region || '').trim().toUpperCase()
+  if (/^[A-Z]{2}$/.test(explicit)) return explicit
+  const fromUrl = extractShopRegion(String(args.url || args.id || args.query || ''))
+  if (fromUrl) return fromUrl
+  return DEFAULT_SHOP_REGION
+}
+
+/**
+ * Prefer a view/product link for the gateway product-link model: plain sg/pdp
+ * share links often 400 upstream.
+ * @param {string} value
+ */
+export function normalizeShopShareLink(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const productId = extractTikTokShopProductId(raw)
+  if (!productId) return raw
+  if (/shop\.tiktok\.com\/view\/product\//i.test(raw)) return raw
+  const region = (extractShopRegion(raw) || DEFAULT_SHOP_REGION).toLowerCase()
+  return `https://shop.tiktok.com/view/product/${productId}?region=${region}&locale=en`
+}
+
+/**
+ * @param {string} value
+ */
+export function extractTikTokShopProductId(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (/^\d{5,}$/.test(raw)) return raw
+  const match = raw.match(/\/(?:pdp|product)\/(\d{5,})/i)
+  return match?.[1] || ''
+}
+
+/**
+ * @param {string} value
+ */
+export function extractShopRegion(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  try {
+    const u = new URL(raw.includes('://') ? raw : `https://${raw}`)
+    const q = u.searchParams.get('region')
+    if (q && /^[a-zA-Z]{2}$/.test(q)) return q.toUpperCase()
+    const hostPath = u.pathname
+    const m = hostPath.match(/^\/([a-z]{2})\//i)
+    if (m) return m[1].toUpperCase()
+    // shop.tiktok.com/sg/pdp/...
+    const hostSeg = u.hostname
+    if (/shop\.tiktok\.com$/i.test(hostSeg)) {
+      const parts = u.pathname.split('/').filter(Boolean)
+      if (parts[0] && /^[a-z]{2}$/i.test(parts[0]) && (parts[1] === 'pdp' || parts[1] === 'view')) {
+        return parts[0].toUpperCase()
+      }
+    }
+  } catch {
+    const m = raw.match(/[?&]region=([a-zA-Z]{2})\b/)
+    if (m) return m[1].toUpperCase()
+    const p = raw.match(/shop\.tiktok\.com\/([a-z]{2})\//i)
+    if (p) return p[1].toUpperCase()
+  }
+  return ''
 }
 
 /**
@@ -169,16 +289,17 @@ function extractDigitsId(value) {
 
 /**
  * @param {{ withSk: Function }} client
- * @param {{ platform?: string, capability?: string, id?: string, url?: string, query?: string }} args
+ * @param {{ platform?: string, capability?: string, id?: string, url?: string, query?: string, region?: string }} args
  */
 export async function fetchSocialData(client, args) {
-  const { model, platform, capability, field, value } = resolveSocialDataModel(args)
+  const { model, platform, capability, field, value, extras } = resolveSocialDataModel(args)
   const raw = await client.withSk('/v1/chat/completions', {
     method: 'POST',
     body: {
       model,
       messages: [{ role: 'user', content: '.' }],
       [field]: value,
+      ...(extras && typeof extras === 'object' ? extras : {}),
     },
   })
   return {
@@ -187,6 +308,7 @@ export async function fetchSocialData(client, args) {
     model,
     field,
     value,
+    extras: extras || {},
     data: pickSocialPayload(raw),
   }
 }

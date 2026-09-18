@@ -223,11 +223,11 @@ async function loadHubChatComplete() {
  * - `textComplete` — the hub chat bridge first, then the hub's one-shot model
  *   seam (the provided service, else the official `omnimux_text_complete` tool),
  *   with every channel under a hard time cap;
- * - `pageFetch` — the official `omnimux_page_fetch` tool (OmniMux Jina Reader).
+ * - `pageFetch` — the official `omnimux_page_fetch` tool (OmniMux Jina Reader).\n  * - `socialData` — the official `omnimux_social_data` tool (incl. TikTok Shop).
  *
  * @param {unknown} ctx
  * @param {{ chatComplete?: Function, channelTimeoutMs?: number }} [deps] test seams: the chat bridge, and the per-channel time cap
- * @returns {{ textComplete: Function, pageFetch: Function } | null}
+ * @returns {{ textComplete: Function, pageFetch: Function, socialData: Function } | null}
  */
 export function createHubSeams(ctx, deps) {
   if (!ctx || typeof ctx !== 'object') return null
@@ -359,6 +359,19 @@ export function createHubSeams(ctx, deps) {
         throw new Error('omnimux_page_fetch unavailable: hub is not loaded or the reader is disabled')
       }
       return tool.execute({ url })
+    },
+
+    /**
+     * Official social / shop data via `omnimux_social_data` (TikTok Shop models included).
+     * @param {Record<string, unknown>} args
+     */
+    async socialData(args) {
+      const tools = toolRegistry(ctx)
+      const tool = tools && typeof tools.get === 'function' ? tools.get('omnimux_social_data') : null
+      if (!tool || typeof tool.execute !== 'function') {
+        throw new Error('omnimux_social_data unavailable: hub is not loaded or the tool is disabled')
+      }
+      return tool.execute(args)
     },
   }
   return seams
