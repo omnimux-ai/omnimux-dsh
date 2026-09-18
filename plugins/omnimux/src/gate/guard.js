@@ -59,6 +59,7 @@ export function isToolEnabled(gate, toolName) {
   if (toolName === 'omnimux_video_submit') return isMediaEnabled(gate, 'video')
   if (toolName === 'omnimux_image_submit') return isMediaEnabled(gate, 'image')
   if (toolName === 'omnimux_audio_submit') return isMediaEnabled(gate, 'audio')
+  if (toolName === 'omnimux_audio_voices') return isMediaEnabled(gate, 'audio')
   return true
 }
 

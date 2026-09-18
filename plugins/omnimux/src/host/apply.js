@@ -28,6 +28,7 @@ import { createSessionModelPreference } from '../session/model-preference.js'
 import { registerSessionModelRoutes } from '../session/http.js'
 import { mountSessionModelInjector } from '../session/context-injector.js'
 import { mountSpeechToText } from '../media/stt-mount.js'
+import { mountAudioVoices } from '../media/voices-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
@@ -258,6 +259,7 @@ export function apply(ctx, config = {}) {
   mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, ...mediaDeps })
   mountMedia(ctx, { kind: 'image', execute: executeOmnimuxImage, ...mediaDeps })
   mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, ...mediaDeps })
+  mountAudioVoices(ctx, { gate: hub.gate, jsonOut })
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, media: hub.media, gate: hub.gate, store, jsonOut })
   mountTextComplete(ctx, hub, jsonOut, rethrow)
   mountOfficial(ctx, {
