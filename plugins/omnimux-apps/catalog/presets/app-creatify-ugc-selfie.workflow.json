@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 3,
+  "id": "ws-app-creatify-ugc-selfie",
+  "name": "海外达人自拍第一视角口播评测",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "node-slot-product-image",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "image",
+        "tool": "import-image",
+        "label": "商品主图槽位 (Product Image)",
+        "slotRole": "product_image",
+        "isSlot": true,
+        "mediaUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp",
+        "params": {
+          "aspectRatio": "9:16"
+        }
+      }
+    },
+    {
+      "id": "node-slot-copywriting",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 350
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "核心文案槽位 (Copywriting)",
+        "slotRole": "copywriting",
+        "isSlot": true,
+        "content": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out.",
+        "prompt": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
+      }
+    },
+    {
+      "id": "node-video-generation-core",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 200
+      },
+      "data": {
+        "type": "video",
+        "tool": "omnimux_video_submit",
+        "label": "海外达人自拍第一视角口播评测 视频生成内核",
+        "model": "seedance-2.0",
+        "params": {
+          "aspectRatio": "9:16",
+          "duration": 5,
+          "mode": "first_frame"
+        },
+        "upstreamBindings": {
+          "image": "node-slot-product-image",
+          "prompt": "node-slot-copywriting"
+        }
+      }
+    },
+    {
+      "id": "node-slot-voice-tts",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 450
+      },
+      "data": {
+        "type": "audio",
+        "tool": "omnimux_audio_submit",
+        "label": "旁白解说与音色 (Voice TTS)",
+        "slotRole": "voice_tts",
+        "isSlot": true,
+        "params": {
+          "voice": "zh_female_energetic",
+          "speed": 1
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-img-to-video",
+      "source": "node-slot-product-image",
+      "target": "node-video-generation-core",
+      "targetHandle": "image",
+      "label": "商品图输入"
+    },
+    {
+      "id": "edge-text-to-video",
+      "source": "node-slot-copywriting",
+      "target": "node-video-generation-core",
+      "targetHandle": "prompt",
+      "label": "分镜文案"
+    }
+  ],
+  "settings": {
+    "maxParallel": 2,
+    "failStrategy": "fail-fast"
+  },
+  "metadata": {
+    "createdAt": "2026-09-18T04:01:07.919Z",
+    "updatedAt": "2026-09-18T04:01:07.919Z",
+    "nodeCount": 4,
+    "sourceWorkflowId": "decc9021-4f2a-4d0c-8493-df845635716d"
+  }
+}

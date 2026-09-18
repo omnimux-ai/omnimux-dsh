@@ -1,5 +1,5 @@
-import { strict as assert } from 'node:assert'
-import test from 'node:test'
+import { strict as assert } from 'node:assert';
+import test from 'node:test';
 import {
   ALL_CREATIVE_TEMPLATES,
   TEMPLATE_CATEGORIES,
@@ -7,58 +7,36 @@ import {
   selectTemplatesByCategory,
   findTemplateById,
   selectShelfItems,
-} from './templates-data.js'
+} from './templates-data.js';
 
-test('模版总表规模与数据完整性验证', () => {
-  assert.ok(ALL_CREATIVE_TEMPLATES.length >= 390, `模版总数应不少于390套，当前: ${ALL_CREATIVE_TEMPLATES.length}`)
+test('7 大王牌精选应用规模与数据完整性验证', () => {
+  assert.equal(ALL_CREATIVE_TEMPLATES.length, 7, `精选应用总数应恰好为 7 套，当前: ${ALL_CREATIVE_TEMPLATES.length}`);
 
   for (const item of ALL_CREATIVE_TEMPLATES) {
-    assert.ok(item.id, '每项模版必须有 id')
-    assert.ok(item.title, `模版 [${item.id}] 必须有标题`)
-    assert.ok(item.categorySlug, `模版 [${item.id}] 必须有 categorySlug`)
-    assert.ok(typeof item.prompt === 'string' && item.prompt.trim().length > 0, `模版 [${item.id}] 必须有有效提示词`)
+    assert.ok(item.id, '每项应用必须有 id');
+    assert.ok(item.title, `应用 [${item.id}] 必须有标题`);
+    assert.ok(item.categorySlug, `应用 [${item.id}] 必须有 categorySlug`);
+    assert.ok(item.cover, `应用 [${item.id}] 必须有封面图`);
+    assert.ok(item.previewVideoUrl, `应用 [${item.id}] 必须有成片预览视频`);
+    assert.ok(item.manifest, `应用 [${item.id}] 必须绑定官方 ApplicationManifest`);
+    assert.equal(item.manifest?.appId, item.appId, 'manifest.appId 必须严格对齐');
   }
-})
+});
 
-test('10 大核心分类枚举完整性与顺序验证', () => {
-  const slugs = TEMPLATE_CATEGORIES.map((c) => c.slug)
-  assert.ok(slugs.includes('all'))
-  assert.ok(slugs.includes('tiktok'), '必须包含融合的 TikTok热门分类')
-  assert.ok(slugs.includes('skills'), '必须包含融合的 Skills 技能库分类')
-  assert.ok(slugs.includes('apps-software'), '必须包含新增的软件应用分类')
-  assert.ok(slugs.includes('hook-intro'))
-  assert.ok(slugs.includes('ugc-review'))
-  assert.ok(slugs.includes('cinematic-vfx'))
-  assert.ok(slugs.includes('fashion-try-on'))
-  assert.ok(slugs.includes('industry-packs'))
-  assert.ok(slugs.includes('durability-test'))
-  assert.equal(TEMPLATE_CATEGORIES.length, 10, '包含 all 在内应恰好为 10 个分类项')
+test('单分组架构与货架行配置验证', () => {
+  assert.equal(SHELVES_CONFIG.length, 1, '货架行收敛为单分组「探索模板」');
+  assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
+  assert.equal(SHELVES_CONFIG[0].titleZh, '探索模板');
 
-  // 严格校验用户指定的排列顺序：全部 -> TikTok热门 -> Skills -> 软件应用...
-  assert.equal(slugs[0], 'all')
-  assert.equal(slugs[1], 'tiktok')
-  assert.equal(slugs[2], 'skills')
-  assert.equal(slugs[3], 'apps-software')
-})
+  const items = selectShelfItems('explore-templates', 7);
+  assert.equal(items.length, 7, '单分组必须包含全部 7 款王牌精选应用');
+});
 
 test('分类筛选与 ID 检索功能验证', () => {
-  const apps = selectTemplatesByCategory('apps-software')
-  assert.ok(apps.length >= 15, `软件应用分类模版数应不少于15套，当前: ${apps.length}`)
+  const found = findTemplateById('app-creatify-app-demo');
+  assert.ok(found, '必须能通过 appId 检索到软件应用');
+  assert.equal(found.categorySlug, 'apps-software');
 
-  const first = apps[0]
-  const found = findTemplateById(first.id)
-  assert.equal(found?.id, first.id)
-
-  const allItems = selectTemplatesByCategory('all')
-  assert.equal(allItems.length, ALL_CREATIVE_TEMPLATES.length)
-})
-
-test('货架行配置与推荐数据分流验证', () => {
-  assert.ok(SHELVES_CONFIG.length >= 5, '货架行配置数量不少于5组')
-
-  const appItems = selectShelfItems('apps-software', 6)
-  assert.ok(appItems.length > 0)
-  for (const it of appItems) {
-    assert.equal(it.categorySlug, 'apps-software')
-  }
-})
+  const allItems = selectTemplatesByCategory('all');
+  assert.equal(allItems.length, 7);
+});
