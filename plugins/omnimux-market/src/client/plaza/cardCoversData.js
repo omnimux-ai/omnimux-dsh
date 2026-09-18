@@ -2,14 +2,14 @@
 export const COVER_NUMS = [4, 5, 6, 7, 9, 10, 2, 3];
 
 export const CARD_GRADIENTS = {
-  "2": "linear-gradient(145deg, #051a11 0%, #0e3b26 40%, #1b6c45 75%, #3cb574 100%)",
-  "3": "linear-gradient(145deg, #261605 0%, #54330a 40%, #9e6411 75%, #e0a92b 100%)",
-  "4": "linear-gradient(145deg, #1b0c38 0%, #461460 35%, #931e82 70%, #db5088 100%)",
-  "5": "linear-gradient(145deg, #090e38 0%, #17247a 40%, #3525a8 75%, #6e4de6 100%)",
-  "6": "linear-gradient(145deg, #071c4a 0%, #11418e 40%, #1e7bd6 75%, #56c2f5 100%)",
-  "7": "linear-gradient(145deg, #320d1c 0%, #751a27 40%, #c44e21 75%, #f2a638 100%)",
-  "9": "linear-gradient(145deg, #061c24 0%, #0d444c 40%, #197c7e 75%, #46d1ba 100%)",
-  "10": "linear-gradient(145deg, #160826 0%, #3e0b38 40%, #70145f 75%, #b1338e 100%)"
+  "2": "linear-gradient(145deg, #051a11 0%, #0e3b26 40%, #1b6c45 75%, #3cb574 100%)", // exempt-ui03: --dsw-cover-gradient 2号封面渐变
+  "3": "linear-gradient(145deg, #261605 0%, #54330a 40%, #9e6411 75%, #e0a92b 100%)", // exempt-ui03: --dsw-cover-gradient 3号封面渐变
+  "4": "linear-gradient(145deg, #1b0c38 0%, #461460 35%, #931e82 70%, #db5088 100%)", // exempt-ui03: --dsw-cover-gradient 4号封面渐变
+  "5": "linear-gradient(145deg, #090e38 0%, #17247a 40%, #3525a8 75%, #6e4de6 100%)", // exempt-ui03: --dsw-cover-gradient 5号封面渐变
+  "6": "linear-gradient(145deg, #071c4a 0%, #11418e 40%, #1e7bd6 75%, #56c2f5 100%)", // exempt-ui03: --dsw-cover-gradient 6号封面渐变
+  "7": "linear-gradient(145deg, #320d1c 0%, #751a27 40%, #c44e21 75%, #f2a638 100%)", // exempt-ui03: --dsw-cover-gradient 7号封面渐变
+  "9": "linear-gradient(145deg, #061c24 0%, #0d444c 40%, #197c7e 75%, #46d1ba 100%)", // exempt-ui03: --dsw-cover-gradient 9号封面渐变
+  "10": "linear-gradient(145deg, #160826 0%, #3e0b38 40%, #70145f 75%, #b1338e 100%)", // exempt-ui03: --dsw-cover-gradient 10号封面渐变
 };
 
 export const CARD_WEBP_COVERS = {
