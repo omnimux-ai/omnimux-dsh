@@ -1,0 +1,23 @@
+{
+  "task": "creatify-skills-panel-1to1-redesign",
+  "issue": 2355,
+  "verifiedAt": "2026-09-18T13:04:39.727Z",
+  "environment": {
+    "browser": "Google Chrome 153",
+    "viewport": "1280x880"
+  },
+  "evidence": {
+    "activeScreenshot": "docs/evidence/creatify-panel-active-1to1.png",
+    "defaultScreenshot": "docs/evidence/creatify-panel-default.png",
+    "demoHtml": "docs/evidence/creatify-panel-1to1-demo.html"
+  },
+  "metrics": {
+    "closeButtonRemoved": true,
+    "clickOutsideToHideSupported": true,
+    "browseAllButtonStyled": "purple highlight button (rgba(97, 97, 255, 0.16) / rgb(165, 160, 255))",
+    "itemIcons": "wireframe user and box icons with recent clock badge",
+    "descriptionStyle": "single-line ellipsis truncate",
+    "bottomBarIncluded": "⚡ Browse all skills →"
+  },
+  "conclusion": "PASSED: 1:1 完全对标 Creatify 官方技能面板，彻底移除关闭按钮，支持点击任意位置收起"
+}

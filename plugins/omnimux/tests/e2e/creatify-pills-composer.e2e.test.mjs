@@ -53,6 +53,7 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     assert.match(bar.style.margin, /4px auto 16px/, '激活态胶囊条外边距必须进一步收敛为 4px auto 16px 紧贴输入框');
     const videoPopover = document.querySelector('.omnimux-subprompt-popover');
     assert.ok(videoPopover, 'Video ads 弹窗必须展开');
+    assert.ok(!videoPopover.querySelector('button[aria-label*="关闭"], button[aria-label*="Close"]'), '视频弹窗严禁包含关闭按钮');
     assert.equal(videoPopover.style.width, '100%', '弹窗必须撑满宽度基准');
     assert.equal(videoPopover.style.left, '0px', '弹窗左边缘必须贴齐基准');
     assert.equal(videoPopover.style.right, '0px', '弹窗右边缘必须贴齐基准');
@@ -68,6 +69,7 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     await act(async () => { pills[0].click(); });
     const skillsPopover = document.querySelector('.omnimux-skills-popover');
     assert.ok(skillsPopover, 'Skills 技能弹窗必须展开');
+    assert.ok(!skillsPopover.querySelector('button[aria-label*="关闭"], button[aria-label*="Close"]'), '技能弹窗严禁包含关闭按钮，必须支持点击外部任意位置收起');
     assert.equal(skillsPopover.style.width, '100%', '技能弹窗宽度必须100%');
     assert.equal(skillsPopover.style.left, '0px', '技能弹窗左边必须对齐');
     assert.equal(skillsPopover.style.right, '0px', '技能弹窗右边必须对齐');

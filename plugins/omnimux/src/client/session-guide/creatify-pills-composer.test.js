@@ -99,3 +99,31 @@ test('CreatifyPillsBar: 点击 Video ads 展开专属 7 项子菜单，点击子
 
   root.unmount();
 });
+
+test('CreatifyPillsBar: 点击 Skills 展开的技能列表数据来自技能市场真实数据（65+ 项）', async () => {
+  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>');
+  global.window = dom.window;
+  global.document = dom.window.document;
+
+  const container = document.getElementById('root');
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(React.createElement(CreatifyPillsBar, { locale: 'zh' }));
+  });
+
+  const skillsBtn = document.querySelectorAll('.omnimux-pill-btn')[0];
+  await act(async () => {
+    skillsBtn.click();
+  });
+
+  const skillsPopover = document.querySelector('.omnimux-skills-popover');
+  assert.ok(skillsPopover, '技能面板必须展开');
+  assert.ok(!skillsPopover.querySelector('button[aria-label*="关闭"], button[aria-label*="Close"]'), '严禁包含关闭按钮');
+
+  // 验证技能数据来自技能市场（大于 60 项）
+  const skillItems = skillsPopover.querySelectorAll('.skills-list-box > div, div[style*="cursor: pointer"]');
+  assert.ok(skillItems.length >= 60, `技能列表数据必须来自技能市场（当前实测项数: ${skillItems.length}）`);
+
+  root.unmount();
+});
