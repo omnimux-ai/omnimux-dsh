@@ -54,28 +54,6 @@
         { name: "settings.plugin.item", key: "omnimux-market", locale: "omnimux-market" },
         ConfigCard,
       ));
-      slots.inject("conversation.input.left", () => registerSlot(
-        slots,
-        {
-          name: "conversation.input.left",
-          id: "omnimux-market-skill-picker",
-          order: 10,
-          label: () => lookup("picker.title") || "Skill",
-          locale: "omnimux-market",
-        },
-        SkillPickerButton,
-      ));
-      slots.inject("conversation.input.left", () => registerSlot(
-        slots,
-        {
-          name: "conversation.input.left",
-          id: "omnimux-market-model-picker",
-          order: 20,
-          label: () => lookup("modelPicker.title") || "Model",
-          locale: "omnimux-market",
-        },
-        ModelPickerButton,
-      ));
 
       function mountSidebarEntry() {
         const SIDEBAR_ENTRY_STYLES = `

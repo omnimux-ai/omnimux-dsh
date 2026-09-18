@@ -10,6 +10,7 @@ import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
+import { CreatifyPillsBar } from './CreatifyPillsBar.jsx'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
@@ -354,13 +355,11 @@ function BlankSessionGuide({
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
       {!isCompact && (
         <>
-          {/* 第 1 层：Top 10 quick starters (紧随输入框) */}
-          <StarterGroupList
-            groups={STARTER_GROUPS}
-            starters={STARTERS}
-            selectedId={state.selectedId}
+          {/* 第 1 层：Creatify 1:1 4大核心胶囊按钮与全套专属下拉弹窗 */}
+          <CreatifyPillsBar
+            onApplyPrompt={handleTrendingApply}
             t={t}
-            onChoose={choose}
+            locale="zh"
           />
 
           {/* 第 2 层：Popular Ways to Get Started (4 Featured Cards) */}

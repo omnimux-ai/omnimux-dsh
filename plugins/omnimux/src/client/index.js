@@ -32,6 +32,7 @@ import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.js
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
+import { ProductPickerButton } from './components/product-picker/index.js'
 import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
@@ -78,6 +79,13 @@ export function apply(ctx) {
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+    name: 'conversation.input.left',
+    id: 'omnimux-composer-product-picker-button',
+    order: 15,
+    locale: NS,
+    inject: () => ({ t }),
+  }, ProductPickerButton))
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
     name: 'conversation.input.left',
     id: 'omnimux-creative-presets-triggers',
