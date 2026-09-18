@@ -19,6 +19,7 @@ import { MAX_PROJECT_TITLE_LENGTH } from './schema.ts';
 export type BindWorkspaceProjectFn = (input: {
   canvasWorkspaceId: string;
   sessionId?: string | null;
+  workspaceDir?: string | null;
   title?: string | null;
 }) => Promise<ProjectRecord | null>;
 
@@ -127,18 +128,19 @@ export function createWorkspaceProjectBinder(deps: {
 }): BindWorkspaceProjectFn {
   return async (input) => {
     const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
-    if (sessionId === '' || typeof deps.resolveWorkspaceDir !== 'function') return null;
-    let workspaceDir: string | undefined;
-    try {
-      workspaceDir = deps.resolveWorkspaceDir(sessionId);
-    } catch {
-      return null; // 宿主服务抖动不该冒泡成工具失败
+    let workspaceDir: string | undefined = typeof input.workspaceDir === 'string' && input.workspaceDir.trim() ? input.workspaceDir.trim() : undefined;
+    if (!workspaceDir && sessionId && typeof deps.resolveWorkspaceDir === 'function') {
+      try {
+        workspaceDir = deps.resolveWorkspaceDir(sessionId);
+      } catch {
+        return null; // 宿主服务抖动不该冒泡成工具失败
+      }
     }
     if (typeof workspaceDir !== 'string' || workspaceDir.trim() === '') return null;
     return ensureWorkspaceProjectBound(deps.projectStore, {
       workspaceDir,
       canvasWorkspaceId: input.canvasWorkspaceId,
-      sessionId,
+      sessionId: sessionId || undefined,
       title: input.title,
       libraryRoot: deps.libraryRoot,
       allowCreateOutsideLibrary: true,

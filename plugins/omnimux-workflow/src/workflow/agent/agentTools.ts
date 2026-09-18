@@ -106,8 +106,8 @@ export function registerWorkflowAgentSeats(
       const origExecute = spec.execute;
       const wrappedSpec: AgentToolSpec = {
         ...spec,
-        async execute(args: Record<string, unknown>) {
-          const result = await origExecute(args);
+        async execute(args: Record<string, unknown>, exec?: unknown) {
+          const result = await origExecute(args, exec);
           return sanitizeLosslessJson(result);
         },
       };

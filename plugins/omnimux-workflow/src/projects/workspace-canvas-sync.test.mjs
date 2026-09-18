@@ -93,4 +93,52 @@ describe('创作画布与工作区同频流转契约 (#2224)', () => {
 
     assert.equal(target, undefined, '未建项时不得回退到散列空画布');
   });
+
+  it('智能助手建画布时从 exec 提取上下文并就地建项 (#2299)', async () => {
+    const libraryRoot = mkdtempSync(join(tmpdir(), 'omnimux-lib-agent-exec-'));
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'omnimux-ws-agent-exec-'));
+    const store = host.createProjectStore({ libraryRoot });
+
+    const binder = host.createWorkspaceProjectBinder({
+      projectStore: store,
+      libraryRoot,
+      resolveWorkspaceDir: (sid) => (sid === 's_active' ? workspaceDir : undefined),
+    });
+
+    const toolShared = await import('../workflow/agent/agentToolShared.ts');
+    const execCtx = toolShared.extractSessionContext({
+      agent: {
+        session: {
+          id: 's_active',
+          header: { cwd: workspaceDir },
+        },
+      },
+    });
+
+    assert.equal(execCtx.sessionId, 's_active');
+    assert.equal(execCtx.workspaceDir, workspaceDir);
+
+    await binder({
+      canvasWorkspaceId: 'ws_test_created',
+      sessionId: execCtx.sessionId,
+      workspaceDir: execCtx.workspaceDir,
+      title: '文生图创作画布',
+    });
+
+    assert.ok(existsSync(join(workspaceDir, '.omnimux', 'project.json')), '项目档案必须就地成功生成');
+    const project = store.list().find((p) => p.path === workspaceDir);
+    assert.ok(project, '项目中心必须能够找到该外部工作区项目');
+    assert.equal(project.pages[0]?.canvasWorkspaceId, 'ws_test_created', '创作页画布编号必须绑定一致');
+
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('多语言中英文必须包含未建项文案且键名完整', async () => {
+    const { zh, en } = await import('../client/locales.js');
+    assert.equal(zh['canvas.unprojectedTitle'], '当前工作区尚未创建项目');
+    assert.equal(en['canvas.unprojectedTitle'], 'No Project in Current Workspace');
+    assert.ok(zh['canvas.unprojectedSub']);
+    assert.ok(en['canvas.unprojectedSub']);
+  });
 });
