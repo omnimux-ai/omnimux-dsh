@@ -116,3 +116,45 @@ export function describeModelBilling(modelId, channelGroup) {
 
   return '按量计费'
 }
+
+/**
+ * 依据网关真实单价与分组声明，推导该分组的权威真实预估积分。
+ * 单轨真源核心推导器：杜绝任何手工填写失真数字。
+ *
+ * @param {string} modelId 产品模型 ID
+ * @param {object} group 分组配置对象
+ * @returns {number|null} 预估积分（遵循统一四舍五入：>=10 取整，<10 保留 1 位小数；无法推导返回 null）
+ */
+export function resolveGroupEstimatedPoints(modelId, group) {
+  if (!modelId || !group) return null
+  let wireModel = group.wireModel || modelId
+  const base0 = MODEL_BASE_PRICING[wireModel] || MODEL_BASE_PRICING[modelId]
+  if (!base0) return null
+
+  const mode = group.pricing?.billingMode || base0.billingMode || 'per_task'
+  // 若按次计费但未显式声明 task 后缀，自动关联 task 路线独立定价
+  if (mode === 'per_task' && !wireModel.endsWith('-task') && MODEL_BASE_PRICING[`${wireModel}-task`]) {
+    wireModel = `${wireModel}-task`
+  }
+
+  const base = MODEL_BASE_PRICING[wireModel] || base0
+  const ratio = typeof group.pricing?.discountRate === 'number'
+    ? group.pricing.discountRate
+    : (typeof group.pricing?.priceRatio === 'number' ? group.pricing.priceRatio : 1)
+  
+  const duration = group.constraints?.parameters?.duration?.fixed ?? base.defaultDuration ?? 5
+
+  const res = calculatePoints({
+    modelId: wireModel,
+    billingMode: mode,
+    groupRatio: ratio,
+    duration,
+  })
+
+  if (typeof res.points !== 'number' || !Number.isFinite(res.points)) return null
+
+  if (res.points >= 10) {
+    return Math.round(res.points)
+  }
+  return Math.round(res.points * 10) / 10
+}

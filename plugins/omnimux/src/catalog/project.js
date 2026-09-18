@@ -19,6 +19,7 @@ import { CANONICAL_SCHEMA_VERSION } from './contract/schema.js';
 import { resolveDisposition } from './contract/dispositions.js';
 import { resolveModelId } from './contract/index.js';
 import { getModelChannelGroups } from './serving/channel-groups.js';
+import { resolveGroupEstimatedPoints } from './pricing-calculator.js';
 import { sortCatalogRows } from './sort.js';
 
 export { resolveModelId };
@@ -236,20 +237,29 @@ export function projectChatRows(index) {
  * @returns {object[]}
  */
 export function projectChannelGroups(modelId) {
-  return getModelChannelGroups(modelId).map((group) => ({
-    id: group.id,
-    label: group.label,
-    ...(typeof group.badge === 'string' ? { badge: group.badge } : {}),
-    wireGroup: group.wireGroup || group.id,
-    ...(group.pricing && typeof group.pricing === 'object'
-      ? { pricing: structuredClone(group.pricing) }
-      : {}),
-    ...(group.constraints && typeof group.constraints === 'object'
-      ? { constraints: structuredClone(group.constraints) }
-      : {}),
-    ...(group.sla && typeof group.sla === 'object' ? { sla: structuredClone(group.sla) } : {}),
-    enabled: group.enabled !== false,
-  }));
+  return getModelChannelGroups(modelId).map((group) => {
+    const pricing = group.pricing && typeof group.pricing === 'object'
+      ? structuredClone(group.pricing)
+      : null;
+    if (pricing && pricing.pointsEstimate == null) {
+      const autoPoints = resolveGroupEstimatedPoints(modelId, group);
+      if (typeof autoPoints === 'number') {
+        pricing.pointsEstimate = autoPoints;
+      }
+    }
+    return {
+      id: group.id,
+      label: group.label,
+      ...(typeof group.badge === 'string' ? { badge: group.badge } : {}),
+      wireGroup: group.wireGroup || group.id,
+      ...(pricing ? { pricing } : {}),
+      ...(group.constraints && typeof group.constraints === 'object'
+        ? { constraints: structuredClone(group.constraints) }
+        : {}),
+      ...(group.sla && typeof group.sla === 'object' ? { sla: structuredClone(group.sla) } : {}),
+      enabled: group.enabled !== false,
+    };
+  });
 }
 
 /**

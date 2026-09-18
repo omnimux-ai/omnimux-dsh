@@ -22,6 +22,8 @@ export interface ChannelGroupItem {
   pricing?: {
     /** Numeric estimate; `null` when the parameter set has no published price. */
     pointsEstimate: number | null;
+    /** 支柱三：内部排序打分权重，彻底解耦面向用户的 pointsEstimate。 */
+    sortWeight?: number;
     discountRate?: number;
     /** 网关真实分组倍率（相对官方组的相对价），SLA 缺失时的价格口径。 */
     priceRatio?: number | null;
@@ -138,7 +140,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "极速出片 · 官方专线",
       "pricing": {
-        "pointsEstimate": 950,
+        "pointsEstimate": 4.9,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -154,7 +156,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "经济版",
       "badge": "经济走量 · 按条计费",
       "pricing": {
-        "pointsEstimate": 750,
+        "pointsEstimate": 1.5,
         "discountRate": 0.5,
         "billingMode": "per_task"
       },
@@ -262,7 +264,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "可灵商业专线",
       "pricing": {
-        "pointsEstimate": 1200,
+        "pointsEstimate": 4,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -478,7 +480,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "Google 官方生图专线",
       "pricing": {
-        "pointsEstimate": 150,
+        "pointsEstimate": 0.2,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -494,7 +496,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "高清版",
       "badge": "全档高清专线",
       "pricing": {
-        "pointsEstimate": 260,
+        "pointsEstimate": 0.3,
         "discountRate": 1.714,
         "billingMode": "per_task"
       },
@@ -512,7 +514,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "轻量视频官方专线",
       "pricing": {
-        "pointsEstimate": 600,
+        "pointsEstimate": 1.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -530,7 +532,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "Wan 官方专线",
       "pricing": {
-        "pointsEstimate": 1000,
+        "pointsEstimate": 2.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -544,7 +546,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "xAI 官方视频专线",
       "pricing": {
-        "pointsEstimate": 1500,
+        "pointsEstimate": 2,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -560,7 +562,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "经济版",
       "badge": "极致低价 · 随取随用",
       "pricing": {
-        "pointsEstimate": 450,
+        "pointsEstimate": 0.6,
         "discountRate": 0.2857,
         "billingMode": "per_task"
       },
@@ -596,7 +598,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "Suno 音乐生成官方专线",
       "pricing": {
-        "pointsEstimate": 800,
+        "pointsEstimate": 0.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
