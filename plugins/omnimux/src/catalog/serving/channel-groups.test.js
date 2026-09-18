@@ -204,18 +204,18 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       const turbo = byId.get('turbo')
       assert.equal(turbo.wireModel, 'minimax-h3-turbo')
       assert.equal(turbo.wireGroup, 'default')
-      assert.equal(turbo.pricing?.pointsEstimate, 540)
+      assert.equal(turbo.pricing?.pointsEstimate, 0.4)
 
       const videoFast = byId.get('video_fast')
       assert.equal(videoFast.wireModel, 'minimax-h3-video')
       assert.equal(videoFast.wireGroup, 'minimax-h3-video-fast')
-      assert.equal(videoFast.pricing?.pointsEstimate, 350)
+      assert.equal(videoFast.pricing?.pointsEstimate, 0.2)
       assert.deepEqual(videoFast.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
 
       const videoPro = byId.get('video_pro')
       assert.equal(videoPro.wireModel, 'minimax-h3-video')
       assert.equal(videoPro.wireGroup, 'minimax-h3-video-pro')
-      assert.equal(videoPro.pricing?.pointsEstimate, 440)
+      assert.equal(videoPro.pricing?.pointsEstimate, 0.3)
       assert.deepEqual(videoPro.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
 
       const task = byId.get('task')
@@ -262,7 +262,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
 
     it('sorts by strategy: cost_first picks video_fast, stability_first picks standard', () => {
       const allAllowed = ['standard', 'turbo', 'video_fast', 'video_pro', 'task']
-      // 成本优先：video_fast (350积分) 单价最低，排在首位
+      // 成本优先：video_fast (0.2积分) 单价最低，排在首位
       const costPlan = resolveChannelPlan('minimax-h3', { strategy: 'cost_first', allowedGroups: allAllowed })
       assert.equal(costPlan.candidates[0], 'minimax-h3-video@minimax-h3-video-fast')
 

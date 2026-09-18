@@ -283,7 +283,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "标准版",
       "badge": "海螺 MiniMax 官方专线 · 4–15 秒",
       "pricing": {
-        "pointsEstimate": 1100,
+        "pointsEstimate": 3.6,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -300,7 +300,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "极速版",
       "badge": "海螺 3.0 极速版 · 3倍出片速度",
       "pricing": {
-        "pointsEstimate": 540,
+        "pointsEstimate": 0.4,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -314,7 +314,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "经济版",
       "badge": "极速出片 · 极致低价专线",
       "pricing": {
-        "pointsEstimate": 350,
+        "pointsEstimate": 0.2,
         "discountRate": 0.9,
         "billingMode": "per_task"
       },
@@ -338,7 +338,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "高清版",
       "badge": "极限画质 · 先行专线",
       "pricing": {
-        "pointsEstimate": 440,
+        "pointsEstimate": 0.3,
         "discountRate": 1.15,
         "billingMode": "per_task"
       },
@@ -362,7 +362,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "label": "长片版",
       "badge": "固定 15 秒 · 按次专线",
       "pricing": {
-        "pointsEstimate": 5825,
+        "pointsEstimate": 3.8,
         "discountRate": 1,
         "billingMode": "per_task"
       },
