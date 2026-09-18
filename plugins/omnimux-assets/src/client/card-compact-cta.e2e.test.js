@@ -73,11 +73,11 @@ function probeWidths(view, add, widths) {
 test('资产库卡片：卡片自身宽度驱动 CTA 退化，紧凑只留图标、充足显示文字且永不裁切', () => {
   for (const [locale, view, add] of [
     ['zh', '查看详情', '添加到会话'],
-    ['en', 'View Details', 'Add to Conversation'],
+    ['en', 'View Details', 'Add to Chat'],
   ]) {
-    const rows = probeWidths(view, add, [140, 200, 260, 290, 302, 340, 420])
-    const compact = rows.filter((r) => r.cardWidth <= 290)
-    const roomy = rows.filter((r) => r.cardWidth >= 302)
+    const rows = probeWidths(view, add, [140, 180, 215, 230, 260, 302, 340, 420])
+    const compact = rows.filter((r) => r.cardWidth <= 215)
+    const roomy = rows.filter((r) => r.cardWidth >= 230)
 
     assert.equal(compact.length > 0 && roomy.length > 0, true, `${locale}: 宽度分组必须同时覆盖紧凑与充足区间`)
 
@@ -105,7 +105,7 @@ test('资产库卡片：退化由具名容器查询判定，且容器只落在�
     '容器必须限定在真正带 CTA 浮层的卡片，公共素材卡与生成物卡共用同一类名',
   )
   assert.match(ASSETS_CSS, /container-name:\s*asset-card/, '容器必须有唯一名字，避免误命中祖先容器')
-  assert.match(ASSETS_CSS, /@container asset-card \(max-width:\s*296px\)/, '退化规则必须由具名容器查询判定')
+  assert.match(ASSETS_CSS, /@container asset-card \(max-width:\s*220px\)/, '退化规则必须由具名容器查询判定')
   assert.match(
     ASSETS_CSS,
     /\.omnimux-assets-overlay-btn > \.dshUk-Button-label\s*\{\s*min-width:\s*0/,

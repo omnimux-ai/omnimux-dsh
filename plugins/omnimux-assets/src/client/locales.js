@@ -484,7 +484,7 @@ export const en = {
   'card.open': 'Reveal Original',
   'card.actions': 'Actions',
   'card.view': 'View Details',
-  'card.addToConversation': 'Add to Conversation',
+  'card.addToConversation': 'Add to Chat',
   'card.addedToConversation': 'Added',
   'modal.addToConversation': 'Add to Conversation',
   'modal.addedToConversation': 'Added',

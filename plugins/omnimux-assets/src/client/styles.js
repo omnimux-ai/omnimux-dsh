@@ -317,10 +317,10 @@ export const ASSETS_CSS = `
   min-width: 0;
 }
 /* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字不再参与布局。
-   阈值由实测反解：英文文案 "Add to Conversation" 需卡片约 290px 才完整容纳，
-   296px 留出余量，使任何语言下只要显示文字就一定放得下。
+   阈值校准：正常网格列宽（>= 260px）稳定展示「图标+名称」，
+   仅在极限紧凑窄卡（<= 220px）时才退化为纯图标，文字退出布局。
    flex-wrap 是极窄卡片的兜底：图标不可收缩，宁可换行也不让图标被裁。 */
-@container asset-card (max-width: 296px) {
+@container asset-card (max-width: 220px) {
   .omnimux-assets-card-overlay-actions {
     justify-content: center;
     flex-wrap: wrap;
