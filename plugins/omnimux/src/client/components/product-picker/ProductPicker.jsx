@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
+import { ProductPickerAddCard } from './ProductPickerAddCard.jsx';
+import { ProductCreateLinkModal } from './ProductCreateLinkModal.jsx';
 import { collectCategories, filterProducts, createSafeT } from './picker-model.js';
 import {
   PICKER_DIALOG_VARIANT_CLASS,
@@ -114,6 +116,9 @@ const CSS = `
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   color: var(--dsw-alias-label-tertiary); font-size: 13px; padding: 24px; text-align: center;
 }
+.omx-product-pick__empty--span {
+  grid-column: 1 / -1;
+}
 .omx-product-pick-card {
   display: flex; flex-direction: column; width: 100%;
   background: transparent; border: none; padding: 0; text-align: left;
@@ -171,6 +176,22 @@ const CSS = `
 .omx-product-pick-card__sku {
   font-size: 11px; color: var(--dsw-alias-label-tertiary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-product-pick-card--add .omx-product-pick-card__thumb--add {
+  border: 1.5px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.omx-product-pick-card--add:hover .omx-product-pick-card__thumb--add {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-button-primary-fill);
+  transform: translateY(-2px);
+}
+.omx-product-pick-card__add-icon {
+  display: flex; align-items: center; justify-content: center;
+  color: inherit;
 }
 /* 页脚恒为「按钮右下对齐」：左侧提示是条件渲染的，用 space-between 时单子项会被推到行首（真机实测按钮挤在左下） */
 .omx-product-pick__footer {
@@ -241,13 +262,17 @@ export function ProductPicker({
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeTag, setActiveTag] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     ensureStyles();
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setCreateOpen(false);
+      return undefined;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -310,6 +335,28 @@ export function ProductPicker({
     if (!target) return;
     onConfirm(target);
     onClose();
+  };
+
+  const handleOpenCreate = () => {
+    setCreateOpen(true);
+  };
+
+  const handleCreated = (product) => {
+    if (!product || typeof product !== 'object') return;
+    setCreateOpen(false);
+    // 清筛选，确保新卡一定可见。
+    setActiveCategory('all');
+    setActiveTag('all');
+    setSearchQuery('');
+    setProducts((prev) => {
+      const list = Array.isArray(prev) ? prev.slice() : [];
+      const idx = list.findIndex((row) => row?.id === product.id);
+      if (idx >= 0) list[idx] = product;
+      else list.unshift(product);
+      return list;
+    });
+    setSelectedProduct(product);
+    // 不自动触发外层确认；用户仍需点「确认选择」。
   };
 
   if (!open) return null;
@@ -413,71 +460,86 @@ export function ProductPicker({
         <div className="omx-product-pick__scroll">
           {loading ? (
             <div className="omx-product-pick__empty">{safeT('productPicker.loading')}</div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="omx-product-pick__empty">
-              <p>
-                {searchQuery || activeTag !== 'all'
-                  ? safeT('productPicker.emptySearch')
-                  : safeT('productPicker.empty')}
-              </p>
-              {searchQuery.trim() ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    handleConfirm({
-                      id: `custom-${Date.now()}`,
-                      name: searchQuery.trim(),
-                      title: searchQuery.trim(),
-                    });
-                  }}
-                >
-                  {safeT('productPicker.useCustom', { name: searchQuery.trim() })}
-                </Button>
-              ) : null}
-              {!searchQuery && activeTag === 'all' ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    try {
-                      window.__omnimuxWorkbench?.open?.({
-                        tabId: 'omnimux-products:stage',
-                        title: '产品库',
-                      });
-                    } catch {
-                      // ignore
-                    }
-                  }}
-                >
-                  {safeT('productPicker.goLibrary')}
-                </Button>
-              ) : null}
-            </div>
           ) : (
             <div className="omx-product-pick__grid">
-              {filteredProducts.map((product) => {
-                const firstCategory = Array.isArray(product.categories) && product.categories[0];
-                const typeLabel = firstCategory || (
-                  product.kind === 'digital'
-                    ? safeT('productPicker.cat.digital')
-                    : safeT('productPicker.cat.physical')
-                );
-                return (
-                  <ProductPickerCard
-                    key={product.id}
-                    product={product}
-                    selected={selectedProduct?.id === product.id}
-                    typeLabel={typeLabel}
-                    onSelect={handleSelect}
-                    onConfirmSelect={handleConfirm}
-                  />
-                );
-              })}
+              <ProductPickerAddCard
+                label={safeT('productPicker.createCard')}
+                desc={safeT('productPicker.createCardDesc')}
+                onClick={handleOpenCreate}
+              />
+              {filteredProducts.length === 0 ? (
+                <div className="omx-product-pick__empty omx-product-pick__empty--span">
+                  <p>
+                    {searchQuery || activeTag !== 'all'
+                      ? safeT('productPicker.emptySearch')
+                      : safeT('productPicker.empty')}
+                  </p>
+                  {searchQuery.trim() ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        handleConfirm({
+                          id: `custom-${Date.now()}`,
+                          name: searchQuery.trim(),
+                          title: searchQuery.trim(),
+                        });
+                      }}
+                    >
+                      {safeT('productPicker.useCustom', { name: searchQuery.trim() })}
+                    </Button>
+                  ) : null}
+                  {!searchQuery && activeTag === 'all' ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        try {
+                          window.__omnimuxWorkbench?.open?.({
+                            tabId: 'omnimux-products:stage',
+                            title: '产品库',
+                          });
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      {safeT('productPicker.goLibrary')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                filteredProducts.map((product) => {
+                  const firstCategory = Array.isArray(product.categories) && product.categories[0];
+                  const typeLabel = firstCategory || (
+                    product.kind === 'digital'
+                      ? safeT('productPicker.cat.digital')
+                      : safeT('productPicker.cat.physical')
+                  );
+                  return (
+                    <ProductPickerCard
+                      key={product.id}
+                      product={product}
+                      selected={selectedProduct?.id === product.id}
+                      typeLabel={typeLabel}
+                      onSelect={handleSelect}
+                      onConfirmSelect={handleConfirm}
+                    />
+                  );
+                })
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <ProductCreateLinkModal
+        open={createOpen}
+        preferredKind={activeCategory}
+        t={safeT}
+        onClose={() => setCreateOpen(false)}
+        onCreated={handleCreated}
+      />
     </ModalDialog>
   );
 }
