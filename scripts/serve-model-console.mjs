@@ -15,7 +15,7 @@
 
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { collectConsoleData, renderConsoleHtml } from './generate-model-console.mjs';
 
@@ -34,6 +34,52 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
     res.end('ok');
+    return;
+  }
+
+  // 在线测试接口：处理 POST /api/test-model
+  if (req.method === 'POST' && url.pathname === '/api/test-model') {
+    let bodyText = '';
+    req.on('data', (chunk) => {
+      bodyText += chunk;
+    });
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(bodyText || '{}');
+        const bust = `?fresh=${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const testModuleUrl = `${pathToFileURL(path.join(rootDir, 'scripts/model-test-sample.mjs')).href}${bust}`;
+        const { executeModelTest } = await import(testModuleUrl);
+
+        const result = await executeModelTest(payload);
+        res.writeHead(200, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store, no-cache',
+          'access-control-allow-origin': '*',
+        });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        console.error(`[${stamp()}] 测试处理异常:`, err);
+        res.writeHead(500, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        });
+        res.end(JSON.stringify({
+          ok: false,
+          error: `失败错误原因：服务处理异常（${err instanceof Error ? err.message : String(err)}）`,
+        }));
+      }
+    });
+    return;
+  }
+
+  // 跨域预检
+  if (req.method === 'OPTIONS' && url.pathname === '/api/test-model') {
+    res.writeHead(204, {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    });
+    res.end();
     return;
   }
 
