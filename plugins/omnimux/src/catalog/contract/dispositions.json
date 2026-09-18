@@ -323,7 +323,8 @@
       "disposition": "canonical",
       "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",
       "evidence": [
-        "docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md"
+        "docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md",
+        "docs/evidence/2026-09-18-model-seed-audio-1-0-text_to_speech-live.md"
       ]
     },
     {
@@ -337,6 +338,12 @@
       "disposition": "alias",
       "target": "seed-audio-1.0",
       "reason": "Seed Audio 1.0 产品简称，统一使用 canonical 模型标识"
+    },
+    {
+      "id": "tts",
+      "disposition": "alias",
+      "target": "seed-audio-1.0",
+      "reason": "TTS 通用别名，映射至主力语音合成模型 seed-audio-1.0"
     },
     {
       "id": "suno",

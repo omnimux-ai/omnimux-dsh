@@ -5,8 +5,8 @@ import { catalogFor, operation, slot } from '../seam/submissionFixtures.mjs';
 
 const voice = 'zh_female_linxiao_uranus_bigtts';
 const audio = (name) => ({ mediaAssets: [{ type: 'audio', url: `https://example.test/${name}.mp3`, mimeType: 'audio/mpeg' }] });
-function setup(id = 'text_to_speech', slots = []) {
-  const catalog = catalogFor('audio', 'test-speech', [operation(id, 'audio', slots)]);
+function setup(id = 'text_to_speech', slots = [], aliases = []) {
+  const catalog = catalogFor('audio', 'test-speech', [operation(id, 'audio', slots)], aliases);
   const requests = [];
   const gateway = { capabilities: async () => catalog,
     submit: async (req) => { requests.push(req); return { taskId: 'speech', mode: 'submitted' }; },
@@ -89,4 +89,14 @@ test('speech cleanup does not bypass missing text or unknown operation rejection
   await assert.rejects(executor.execute(node({}, ''), context([{ sourceNodeId: 'reference', output: audio('reference') }])));
   await assert.rejects(executor.execute(node({ operation: 'voice_clone' }), context()));
   assert.equal(requests.length, 0);
+});
+
+test('speech execution admits tts alias and routes to canonical speech model', async () => {
+  const { executor, requests } = setup('text_to_speech', [], ['tts']);
+  const input = node({ model: 'tts', operation: 'text_to_speech' }, '朗读别名测试正文');
+  const output = await executor.execute(input, context());
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].model, 'test-speech');
+  assert.equal(requests[0].prompt, '朗读别名测试正文');
+  assert.equal(output.mediaAssets[0].type, 'audio');
 });

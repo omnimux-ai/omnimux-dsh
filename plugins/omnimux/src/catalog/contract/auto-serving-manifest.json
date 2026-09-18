@@ -178,7 +178,8 @@
       "gatewayIds": [
         "seed-audio-1.0",
         "doubao-seed-audio-1.0",
-        "seed-audio"
+        "seed-audio",
+        "tts"
       ],
       "requiredInAuto": true
     },

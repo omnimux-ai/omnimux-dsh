@@ -7,8 +7,8 @@ export function operation(id, type, inputs = [], promptRequired = true) {
     { slot: 'prompt', role: 'prompt', type: 'text', source: 'node_field', min: promptRequired ? 1 : 0, max: 1 }, ...inputs,
   ] };
 }
-export function catalogFor(type = 'text', id = 'test-model', operations = [operation('generate', type)]) {
+export function catalogFor(type = 'text', id = 'test-model', operations = [operation('generate', type)], aliases = []) {
   return { source: 'static-stub', schemaVersion: '1.1', defaults: { [type]: id },
     text: [], image: [], video: [], audio: [], [type]: [{ id, label: id }],
-    models: [{ id, label: id, listed: true, operations }] };
+    models: [{ id, label: id, aliases, listed: true, operations }] };
 }

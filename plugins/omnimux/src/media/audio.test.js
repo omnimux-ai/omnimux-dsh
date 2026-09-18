@@ -17,6 +17,14 @@ describe('omnimux audio helpers', () => {
     assert.equal(route.protocol, 'openai-media')
   })
 
+  it('resolves tts alias to canonical seed-audio-1.0', () => {
+    const route = resolveMediaRoute('audio', { model: 'tts' }, parseMediaConfig(undefined), {
+      OMNIMUX_API_KEY: 'sk-test',
+    })
+    assert.equal(route.providerId, 'omnimux')
+    assert.equal(route.modelId, 'seed-audio-1.0')
+  })
+
   it('overlays OMNIMUX_AUDIO_MODEL', () => {
     const route = resolveMediaRoute('audio', {}, parseMediaConfig(undefined), {
       OMNIMUX_API_KEY: 'sk-test',
