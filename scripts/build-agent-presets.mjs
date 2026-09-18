@@ -245,18 +245,12 @@ const omniFrag = `${contentFrag}\n${engagementFrag}`
 const marketingFrag = loadFragment('marketing-experts.cordis.yml')
 const growthFrag = loadFragment('growth-experts.cordis.yml')
 const dramaFrag = loadFragment('drama-experts.cordis.yml')
-const tiktokFrag = loadFragment('tiktok-experts.cordis.yml')
 
 const targets = [
   {
     file: 'presets/omni-agent/agent.cordis.yml',
     fragment: omniFrag,
     persona: OMNI_AGENT_PERSONA,
-  },
-  {
-    file: 'presets/tiktok-agent/agent.cordis.yml',
-    fragment: tiktokFrag,
-    persona: TIKTOK_AGENT_PERSONA,
   },
   {
     file: 'presets/marketing-agent/agent.cordis.yml',

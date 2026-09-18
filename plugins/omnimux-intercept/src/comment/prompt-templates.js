@@ -1,7 +1,7 @@
 /**
  * @file SoPilot 提示词模板读取 + 内置离线兜底模板。
  *
- * **单一真源原则**：SoPilot 提示词只从 `presets/tiktok-agent/skills/sopilot-social-agents/`
+ * **单一真源原则**：SoPilot 提示词只从 `presets/omni-agent/skills/sopilot-social-agents/`
  * 运行时按路径读取，**绝不复制进插件**。读不到时回退内置精简模板并写 `TEMPLATE_FALLBACK`，
  * **不抛错**（「功能不断链」是本层的硬要求）。
  */
@@ -17,7 +17,7 @@ export const PROJECT_ROOT = path.resolve(CURRENT_DIR, '../../../..')
 
 /** SoPilot 提示词仓库内相对路径。 */
 export const SOPILOT_SKILL_ROOT =
-  'presets/tiktok-agent/skills/sopilot-social-agents'
+  'presets/omni-agent/skills/sopilot-social-agents'
 
 /**
  * 模板种类 → SoPilot 提示词文件名。

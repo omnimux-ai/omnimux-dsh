@@ -91,7 +91,7 @@ node plugins/omnimux-intercept/src/cli.js scan --format genui
 
 任一级失败都会**降级并留痕**（写 `warnings`），不会让整条链路失败。
 
-提示词单一真源在 `presets/tiktok-agent/skills/sopilot-social-agents/`，本插件**不复制**它的提示词，
+提示词单一真源在 `presets/omni-agent/skills/sopilot-social-agents/`，本插件**不复制**它的提示词，
 只在运行时按路径读取；读不到时用内置精简模板并写 `TEMPLATE_FALLBACK`。
 
 ## 安全与合规

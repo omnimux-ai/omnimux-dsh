@@ -13,7 +13,7 @@ related:
   - "plugins/omnimux-intercept/src/core/algorithm.js"
   - "plugins/omnimux-intercept/src/collect/opencli-source.js"
   - "plugins/omnimux-intercept/src/comment/comment-service.js"
-  - "presets/tiktok-agent/skills/sopilot-social-agents/SKILL.md"
+  - "presets/omni-agent/skills/sopilot-social-agents/SKILL.md"
   - "docs/contracts/hub.md"
   - "design.md"
 ---
