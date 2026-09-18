@@ -52,6 +52,11 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
   )
   assert.match(
     canvasTabSrc,
+    /isPickedForSession\s*=\s*Boolean\s*\(/,
+    'CanvasTab 必须严格校验 pickedBySession 属于当前会话，防御跨会话缓存污染',
+  )
+  assert.match(
+    canvasTabSrc,
     /hasExplicitCanvas\s*=\s*Boolean\s*\(/,
     'CanvasTab 必须检测是否已有显式画布目标以避免误拦截',
   )

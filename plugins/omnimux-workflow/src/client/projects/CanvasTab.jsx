@@ -116,10 +116,12 @@ export function CanvasTab({ ctx, t, visible, store, scope, tab }) {
     fallbackWorkspaceId: resolveEffectiveWorkspaceId(sessionId),
   })
 
+  const hasSession = typeof sessionId === 'string' && sessionId !== ''
+  const isPickedForSession = Boolean(hasSession && pickedBySession && pickedBySession.sessionId === sessionId && pickedBySession.workspaceId)
   const hasExplicitCanvas = Boolean(
     scope?.canvasWorkspaceId ||
     scope?.workspaceId ||
-    pickedBySession?.workspaceId ||
+    isPickedForSession ||
     sessionBinding?.canvasWorkspaceId
   )
   const isUnprojected = Boolean(sessionId && sessionBinding && sessionBinding.project === null && !hasExplicitCanvas)
