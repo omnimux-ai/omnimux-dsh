@@ -122,6 +122,17 @@ export const DEFAULT_STRINGS = Object.freeze({
   'productPicker.selectedMeta': '已选择：',
   'productPicker.unselectedHint': '请选择一件商品',
   'productPicker.useCustom': '使用自定义产品："{name}"',
+  'productPicker.createCard': '创建产品',
+  'productPicker.createCardDesc': '粘贴商品链接自动解析',
+  'productPicker.create.title': '从链接创建产品',
+  'productPicker.create.hint': '粘贴商品或品牌落地页链接，系统会自动解析并保存到产品库。',
+  'productPicker.create.linkLabel': '商品链接',
+  'productPicker.create.placeholder': 'https://… 粘贴商品链接',
+  'productPicker.create.submit': '解析并创建',
+  'productPicker.create.loading': '正在解析并创建…',
+  'productPicker.create.invalidUrl': '请输入合法的网页链接',
+  'productPicker.create.failed': '创建失败，请检查链接后重试',
+  'productPicker.create.empty': '未能提取到有效商品信息，请检查链接后重试',
 });
 
 /**

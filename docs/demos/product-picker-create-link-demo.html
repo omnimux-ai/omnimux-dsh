@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>产品选择 · 链接创建演示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111113;
+      --elevated: #1c1c1f;
+      --border: rgba(255,255,255,0.12);
+      --label: #f3f4f6;
+      --secondary: rgba(255,255,255,0.72);
+      --tertiary: rgba(255,255,255,0.40);
+      --layer: rgba(255,255,255,0.06);
+      --primary: #ffffff;
+      --primary-fg: #111827;
+      --error: #f87171;
+      --mask: rgba(0,0,0,0.55);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--label);
+      display: flex; align-items: center; justify-content: center; padding: 32px;
+    }
+    .stage { width: min(1080px, 100%); }
+    .open-btn {
+      height: 32px; border-radius: 8px; border: none; padding: 0 14px;
+      background: var(--primary); color: var(--primary-fg); font-weight: 600; cursor: pointer;
+    }
+    .mask {
+      position: fixed; inset: 0; background: var(--mask);
+      display: none; align-items: center; justify-content: center; padding: 24px; z-index: 20;
+    }
+    .mask[data-open="true"] { display: flex; }
+    .dialog {
+      width: min(920px, 100%); background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+      display: flex; flex-direction: column; max-height: min(720px, 90vh); position: relative;
+    }
+    .tabs { display: flex; gap: 24px; padding: 16px 24px 0; }
+    .tab {
+      appearance: none; background: transparent; border: none; color: var(--tertiary);
+      font-size: 16px; font-weight: 500; padding: 4px 0 10px; position: relative; cursor: pointer;
+    }
+    .tab[data-active="true"] { color: var(--label); font-weight: 600; }
+    .tab[data-active="true"]::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+      background: var(--label); border-radius: 2px;
+    }
+    .toolbar { display: flex; justify-content: space-between; gap: 16px; padding: 14px 24px 12px; align-items: center; }
+    .pill {
+      height: 28px; border-radius: 999px; border: 1px solid var(--border); background: var(--layer);
+      color: var(--secondary); padding: 0 12px; font-size: 13px;
+    }
+    .search {
+      width: 220px; height: 32px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--label); padding: 0 14px; font-size: 13px;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px;
+      padding: 0 24px 16px; overflow: auto; min-height: 280px;
+    }
+    .card { background: transparent; border: none; padding: 0; text-align: left; cursor: pointer; color: inherit; }
+    .thumb {
+      position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 12px;
+      border: 1.5px solid transparent; background: var(--layer);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .card[data-selected="true"] .thumb { border-color: var(--primary); }
+    .card--add .thumb {
+      border: 1.5px dashed rgba(255,255,255,0.22); background: rgba(255,255,255,0.06); color: var(--secondary);
+    }
+    .card--add:hover .thumb { border-color: #fff; color: #fff; transform: translateY(-2px); }
+    .plus { font-size: 28px; line-height: 1; font-weight: 300; }
+    .title { margin-top: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meta { font-size: 11px; color: var(--tertiary); margin-top: 2px; }
+    .check {
+      position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid rgba(255,255,255,0.32); background: rgba(0,0,0,0.35);
+      display: none; align-items: center; justify-content: center; font-size: 11px;
+    }
+    .card[data-selected="true"] .check { display: inline-flex; background: #fff; color: #111; border-color: #fff; }
+    .footer {
+      display: flex; justify-content: flex-end; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn {
+      height: 32px; border-radius: 8px; border: 1px solid var(--border); padding: 0 14px;
+      background: transparent; color: var(--label); cursor: pointer; font-size: 13px;
+    }
+    .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #fff; color: #111; border-color: transparent; font-weight: 600; }
+    .meta-left { margin-right: auto; color: var(--secondary); font-size: 13px; align-self: center; }
+    .submask {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+      display: none; align-items: center; justify-content: center; z-index: 5;
+    }
+    .submask[data-open="true"] { display: flex; }
+    .subdialog {
+      width: min(440px, 92vw); background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 18px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .subdialog h3 { margin: 0 0 8px; font-size: 16px; }
+    .subdialog p { margin: 0 0 12px; color: var(--secondary); font-size: 13px; line-height: 1.5; }
+    .field-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .input {
+      width: 100%; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--label); padding: 0 12px; font-size: 13px; outline: none;
+    }
+    .status { min-height: 18px; margin: 10px 0 0; font-size: 12px; color: var(--secondary); }
+    .status.error { color: var(--error); }
+    .sub-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .note { margin-top: 16px; color: var(--tertiary); font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <button class="open-btn" id="openPicker">打开产品选择弹窗</button>
+    <p class="note">演示路径：列表首位「创建产品」→ 粘贴链接 → 解析并创建 → 回到列表并选中新产品（不自动确认）。本页使用模拟解析，正式代码走真实产品库接口。</p>
+  </div>
+
+  <div class="mask" id="pickerMask" data-open="false">
+    <div class="dialog" id="pickerDialog">
+      <div class="tabs">
+        <button class="tab" data-active="true">全部</button>
+        <button class="tab">实体商品</button>
+        <button class="tab">数字产品</button>
+      </div>
+      <div class="toolbar">
+        <button class="pill">全部</button>
+        <input class="search" placeholder="搜索产品名称、描述、SKU、标签…" />
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="footer">
+        <div class="meta-left" id="selectedMeta"></div>
+        <button class="btn" id="cancelPicker">取消</button>
+        <button class="btn btn-primary" id="confirmPicker" disabled>确认选择</button>
+      </div>
+
+      <div class="submask" id="createMask" data-open="false">
+        <div class="subdialog">
+          <h3>从链接创建产品</h3>
+          <p>粘贴商品或品牌落地页链接，系统会自动解析并保存到产品库。</p>
+          <div class="field-label">商品链接</div>
+          <input class="input" id="linkInput" placeholder="https://… 粘贴商品链接" />
+          <p class="status" id="createStatus"></p>
+          <div class="sub-actions">
+            <button class="btn" id="cancelCreate">取消</button>
+            <button class="btn btn-primary" id="submitCreate">解析并创建</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const products = [{ id: 'p1', name: 'OmniMux', kind: '数字产品' }];
+    let selectedId = null;
+    const grid = document.getElementById('grid');
+    const selectedMeta = document.getElementById('selectedMeta');
+    const confirmPicker = document.getElementById('confirmPicker');
+    const createStatus = document.getElementById('createStatus');
+    const linkInput = document.getElementById('linkInput');
+
+    function render() {
+      grid.innerHTML = '';
+      const add = document.createElement('button');
+      add.className = 'card card--add';
+      add.setAttribute('data-testid', 'product-picker-add-card');
+      add.innerHTML = '<div class="thumb"><span class="plus">+</span></div><div class="title">创建产品</div><div class="meta">粘贴商品链接自动解析</div>';
+      add.onclick = () => {
+        createStatus.textContent = '';
+        createStatus.className = 'status';
+        linkInput.value = '';
+        document.getElementById('createMask').dataset.open = 'true';
+        setTimeout(() => linkInput.focus(), 20);
+      };
+      grid.appendChild(add);
+
+      for (const p of products) {
+        const card = document.createElement('button');
+        card.className = 'card';
+        card.dataset.selected = selectedId === p.id ? 'true' : 'false';
+        card.innerHTML = '<div class="thumb"><span class="check">✓</span><span>' + (p.name || '?').slice(0,1) + '</span></div><div class="title">' + p.name + '</div><div class="meta">' + p.kind + '</div>';
+        card.onclick = () => {
+          selectedId = selectedId === p.id ? null : p.id;
+          render();
+        };
+        grid.appendChild(card);
+      }
+      const selected = products.find((p) => p.id === selectedId);
+      selectedMeta.textContent = selected ? ('已选择：' + selected.name) : '';
+      confirmPicker.disabled = !selected;
+    }
+
+    document.getElementById('openPicker').onclick = () => {
+      document.getElementById('pickerMask').dataset.open = 'true';
+      render();
+    };
+    document.getElementById('cancelPicker').onclick = () => {
+      document.getElementById('pickerMask').dataset.open = 'false';
+      document.getElementById('createMask').dataset.open = 'false';
+    };
+    document.getElementById('cancelCreate').onclick = () => {
+      document.getElementById('createMask').dataset.open = 'false';
+    };
+    document.getElementById('submitCreate').onclick = async () => {
+      const url = linkInput.value.trim();
+      if (!url || (!/^https?:\/\//i.test(url) && !/^[a-z0-9.-]+\.[a-z]{2,}/i.test(url))) {
+        createStatus.className = 'status error';
+        createStatus.textContent = '请输入合法的网页链接';
+        return;
+      }
+      createStatus.className = 'status';
+      createStatus.textContent = '正在解析并创建…';
+      document.getElementById('submitCreate').disabled = true;
+      await new Promise((r) => setTimeout(r, 700));
+      const name = '新解析商品 ' + products.length;
+      const product = { id: 'p' + Date.now(), name, kind: '实体商品' };
+      products.unshift(product);
+      selectedId = product.id;
+      document.getElementById('createMask').dataset.open = 'false';
+      document.getElementById('submitCreate').disabled = false;
+      render();
+    };
+    document.getElementById('confirmPicker').onclick = () => {
+      const selected = products.find((p) => p.id === selectedId);
+      alert(selected ? ('已确认选择：' + selected.name + '（创建流程不会自动到这一步）') : '未选择');
+      document.getElementById('pickerMask').dataset.open = 'false';
+    };
+    render();
+  </script>
+</body>
+</html>

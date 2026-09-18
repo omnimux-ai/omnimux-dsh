@@ -94,3 +94,36 @@ test('ProductPicker: supports custom product name fallback when search query is 
   const safeT = createSafeT(undefined);
   assert.equal(safeT('productPicker.useCustom', { name: '便携小风扇' }), '使用自定义产品："便携小风扇"');
 });
+
+test('ProductPicker: 列表首位创建产品 + 链接弹窗回流契约', () => {
+  const source = readFileSync(join(here, 'ProductPicker.jsx'), 'utf8');
+  const addCard = readFileSync(join(here, 'ProductPickerAddCard.jsx'), 'utf8');
+  const createModal = readFileSync(join(here, 'ProductCreateLinkModal.jsx'), 'utf8');
+  const api = readFileSync(join(here, 'product-create-api.js'), 'utf8');
+  const indexSource = readFileSync(join(here, 'index.js'), 'utf8');
+
+  assert.ok(source.includes('<ProductPickerAddCard'), '网格注入创建卡片');
+  assert.ok(source.includes('<ProductCreateLinkModal'), '挂载链接创建弹窗');
+  assert.ok(source.includes('handleCreated'), '创建成功回流处理');
+  assert.ok(source.includes("setActiveCategory('all')"), '创建成功后重置分类筛选');
+  assert.ok(source.includes("setSearchQuery('')"), '创建成功后清空搜索');
+  assert.ok(source.includes('list.unshift(product)'), '新产品插入列表首位');
+  assert.ok(source.includes('setSelectedProduct(product)'), '创建成功后选中新产品');
+  assert.ok(!/onConfirm\(result\.product\)/.test(source), '创建成功不得自动确认外层');
+  assert.ok(source.includes('omx-product-pick-card--add'), '创建卡虚线样式');
+  assert.ok(source.includes('omx-product-pick__empty--span'), '空态跨列用 class 而非内联 style');
+  assert.doesNotMatch(source, /style=\{\{\s*gridColumn/, '禁止空态内联 gridColumn');
+
+  assert.ok(addCard.includes('role="button"'), '创建卡可键盘激活');
+  assert.ok(addCard.includes('omx-product-pick-card--add'), '创建卡变体类');
+  assert.ok(createModal.includes('/omnimux/products/import-from-link') || api.includes('/omnimux/products/import-from-link'), '复用公开解析路由');
+  assert.ok(api.includes("method: 'POST', body") && api.includes("'/omnimux/products'"), '保存走公开 POST /omnimux/products');
+  assert.ok(api.includes('stage: \'stale\''), '关闭竞态作废过期请求');
+  assert.ok(indexSource.includes('ProductPickerAddCard'), 'index 导出创建卡');
+  assert.ok(indexSource.includes('ProductCreateLinkModal'), 'index 导出创建弹窗');
+
+  const safeT = createSafeT(undefined);
+  assert.equal(safeT('productPicker.createCard'), '创建产品');
+  assert.equal(safeT('productPicker.create.submit'), '解析并创建');
+  assert.equal(safeT('productPicker.create.invalidUrl'), '请输入合法的网页链接');
+});
