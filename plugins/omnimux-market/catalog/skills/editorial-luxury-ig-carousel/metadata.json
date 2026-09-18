@@ -3,34 +3,34 @@
   "name": "editorial-luxury-ig-carousel",
   "category": "Image & Static Ads",
   "description": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a premium creative studio, luxury brand, design agency, photographer, architect, fashion label, jewelry house, or any \"high-end / editorial / cinematic / stop-scrolling\" business. Trigger it eagerly — if the brief mentions \"carousel,\" \"IG post,\" \"stop scrolling,\" \"premium,\" \"luxury,\" \"editorial,\" \"magazine-style,\" \"cinematic,\" or names a creative/visual studio, this is the right skill. It enco",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/6ecdae003d.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/6ecdae003d.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/248dd126e9.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/248dd126e9.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/user/3330063/20260625/eb8c6ee8.jpeg",
+      "url": "https://assets.omnimux.ai/samples/user/3330063/20260625/eb8c6ee8.jpeg",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/99e44156b8.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/99e44156b8.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/5a73eef1ad.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc481e68-e5b0-43a2-9886-abbe6a82f8d1/5a73eef1ad.png",
       "caption": "Mejuri",
       "media_type": "image"
     }

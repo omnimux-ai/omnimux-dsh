@@ -3,7 +3,7 @@
   "name": "ugc-script-planner",
   "category": "UGC & Testimonial",
   "description": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation plan in the exact format used by the ads director: a source-ref breakdown table, an 8-beat narrative arc (auto-collapsed for shorter durations), a scene plan table with VO word-count targets, a full verbatim VO script, casting + location anchors, captions / music / CTA spec, a production pipeline summary, and open questions. Trigger this skill whenever a user asks to \"plan\", \"script\", or",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 5,

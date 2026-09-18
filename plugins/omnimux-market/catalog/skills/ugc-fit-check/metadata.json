@@ -3,7 +3,7 @@
   "name": "ugc-fit-check",
   "category": "UGC & Testimonial",
   "description": "Use when creating UGC try-on / haul / \"fit check\" video ads — single-take 4-cut Seedance clips with the canonical PRE_WEAR → WEARING → TEXTURE_CLOSEUP → STYLE_POSE arc, optionally chained into multi-board long-form try-on videos. Trigger whenever the user mentions a try-on ad, \"trying this on\", outfit reveal, fit check, OOTD reveal, haul, clothing/accessory reveal, fashion drop, or asks for a UGC try-on video. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 4,
   "app_scope": "orchestrator",
   "usage_count": 63,

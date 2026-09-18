@@ -3,7 +3,7 @@
   "name": "ad-layout-mirror-image",
   "category": "Image & Static Ads",
   "description": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old version of their own ad, a screenshot they admire) and asks for a new static image ad in that same composition but featuring a different product. Strongly prefer triggering this skill any time the brief sounds like \"make me an ad that looks like this, but with my product\" — even if the user does not say \"layout\" or \"mirror\" or \"recreate\" out loud. The creative move is to treat the referenc",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 1,

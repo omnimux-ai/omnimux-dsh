@@ -3,7 +3,7 @@
   "name": "audio-generation",
   "category": "Voiceover & Audio",
   "description": "Use when the user wants any audio work on a video — generating a text-to-speech voiceover or narration, cloning a voice from a sample, transcribing speech to text wit\r\n        +h word-level timing, dubbing / translating a video into another language, or laying a background-music bed. Maps each task to the right tool (generate_tts, create_voice, split_audi\r\n        +o, transcribe_audio, music_generate), explains the ElevenLabs inline delivery tags for emotion and accent, and gives the transcribe → translate → re-voice chain for dubbing. Trigge\r\n        +r whenever the user mentions voiceover, narration, TTS, reading a script aloud, voice cloning, dubbing, translating the audio, caption / subtitle timing, or background music — even\r\n        + if they do not say \"audio\".",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 15,

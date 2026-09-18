@@ -1,6 +1,8 @@
 {
-  "id": "sk-creatify-meme",
+  "id": "sk-omx-meme",
   "name": "meme",
   "category": "Meme & Native",
-  "description": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reactions, expanding-brain, distracted-boyfriend-style template, screenshot-stitch, fake-text-thread, fake-comment-callout, Twitter/X-screenshot ad, \"this isn't an ad\" disruption, ironic native-feed posts. Produces a Meme Creative Brief — ranked meme-format concepts, scroll-stop spec, cultural-reference fit, irony posture, brand-subtlety dial, copyright/staleness risk audit, generation prompts, and asset gaps. Trigger before image generation/copy whenever the brief mentions meme, meme ad, ironic, \"this isn't an ad\", template ad, image macro, native disruption, Reddit-style, X/Twitter screenshot, fake DM, or \"make it look like a meme\". The producer should run this skill first so its output feeds image-gen + copy. For polished single image use ads-static-image-skill; for swipe use ads-carousel-skill; for video use ads-ugc-skill / ads-animated-storymode-skill."
+  "description": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reactions, expanding-brain, distracted-boyfriend-style template, screenshot-stitch, fake-text-thread, fake-comment-callout, Twitter/X-screenshot ad, \"this isn't an ad\" disruption, ironic native-feed posts. Produces a Meme Creative Brief — ranked meme-format concepts, scroll-stop spec, cultural-reference fit, irony posture, brand-subtlety dial, copyright/staleness risk audit, generation prompts, and asset gaps. Trigger before image generation/copy whenever the brief mentions meme, meme ad, ironic, \"this isn't an ad\", template ad, image macro, native disruption, Reddit-style, X/Twitter screenshot, fake DM, or \"make it look like a meme\". The producer should run this skill first so its output feeds image-gen + copy. For polished single image use ads-static-image-skill; for swipe use ads-carousel-skill; for video use ads-ugc-skill / ads-animated-storymode-skill.",
+  "author": "Official",
+  "tags": []
 }

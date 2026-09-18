@@ -3,7 +3,7 @@
   "name": "white-bg-feature-callout-product-overview",
   "category": "Product Showcase",
   "description": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgrounds, feature-callout pill overlays, and a branded end card with the seller's logo. The pattern is: Hero Reveal scene (hook overlay) → Feature Parade scenes (accent + dark pill callouts, one feature per scene) → Branded End Card (PIL-composited, white background, seller logo only, floating product image). Every scene is generated without voiceover or captions; instrumental background music",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

@@ -9,7 +9,7 @@ param silently drops it — the turn records `assets: []` and the pipeline dies 
 on its own line at the TOP of the `message` text and refer to it ("Source video:", "End-card
 image (STS logo) to use..."). The agent registers them (`input:video-1`, `input:image-...`).
 
-## 2. Uploading a local file to Creatify (presigned → PUT → cdn_url)
+## 2. Uploading a local file to AI Engine (presigned → PUT → cdn_url)
 The agent needs a URL, so local files must be uploaded first:
 1. `upload_file(filename=..., content_type="video/mp4")` with NO `base64_content` → returns
    `{upload_url, cdn_url, ...}`. (Omit base64 for anything but tiny blobs; video/logo are too big.)
@@ -62,8 +62,8 @@ frames), and re-send if it came back as a hard cut.
 ## 7. What is and isn't "generated" (for honest originality answers)
 - **Footage: 100% the source.** Every clip is cut from the uploaded video and reframed to 9:16 by
   center-crop — no AI b-roll, no invented scenes, no outpainting/fill.
-- **Music: AI-generated** by Creatify ("Generating music" step) — NOT from the source. If the user
-  needs zero generated elements, ask Creatify to drop the music (his voice only) or leave room for a
+- **Music: AI-generated** by AI Engine ("Generating music" step) — NOT from the source. If the user
+  needs zero generated elements, ask AI Engine to drop the music (his voice only) or leave room for a
   licensed track.
 - **End card: a composited graphic** (the real STS logo + the exact text) — not filmed footage, but
   not AI-invented imagery either.

@@ -3,24 +3,24 @@
   "name": "editorial-magazine-lifestyle-ad",
   "category": "Image & Static Ads",
   "description": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ultra-light serif headline, restrained dot-separated spec lines (no pill badges), warm cinematic grade, and a vertical brand spine element. Trigger this skill whenever a user uploads lifestyle product photography and wants premium aspirational static ads across multiple formats (9:16, 4:1, square) that feel editorial rather than promotional. Particularly strong for bedding, home goods, line",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 1,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/765ee1d8ed.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/765ee1d8ed.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/736dc85360.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/736dc85360.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/c2c128aaa4.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/75cca7b8-fc76-467e-abaf-de56ed76a275/c2c128aaa4.png",
       "caption": "Mejuri",
       "media_type": "image"
     }

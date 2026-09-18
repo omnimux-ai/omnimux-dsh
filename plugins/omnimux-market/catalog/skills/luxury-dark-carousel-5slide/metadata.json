@@ -3,34 +3,34 @@
   "name": "luxury-dark-carousel-5slide",
   "category": "Image & Static Ads",
   "description": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage greens and matte blacks, metallic gold accents, hand-drawn doodle overlays (sparkles, stars, arrows, circles, checkmarks), 3D floating elements (rings, orbs, product cards, workflow icons), and cinematic spotlight / depth-of-field lighting. Slide 1 (Cover) and Slide 5 (CTA) composite the user-uploaded subject image; Slides 2–4 are pure design. Narrative arc: Cover → Why (benefit grid) → What",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/8bc698acd4.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/8bc698acd4.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/c641cb152c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/c641cb152c.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/b8cbaf241c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/b8cbaf241c.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/c8e3b30757.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/c8e3b30757.png",
       "caption": "Mejuri",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/03598e782c.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/09e83cdf-fda1-46be-bac6-2bfc176c16ef/03598e782c.png",
       "caption": "Mejuri",
       "media_type": "image"
     }

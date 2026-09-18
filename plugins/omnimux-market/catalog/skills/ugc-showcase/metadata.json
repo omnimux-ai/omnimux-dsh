@@ -3,7 +3,7 @@
   "name": "ugc-showcase",
   "category": "Product Showcase",
   "description": "Use when creating product-hero UGC video ads — single-take 4-cut Seedance clips where the PRODUCT is the focal subject of every cut (intro → demo-A → demo-B → result) with off-screen VOICE-OVER narration, and any visible person is auxiliary (cropped, hands-only, first-person POV). Trigger whenever the user asks for a product demo, \"how it works\" video, appliance/tool/device demo, before/after with the product as the hero, voiceover product ad, faceless product video, or any UGC ad where the product (not the creator) carries the story. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
-  "author": "Creatify",
+  "author": "Official",
   "version": 5,
   "app_scope": "both",
   "usage_count": 138,

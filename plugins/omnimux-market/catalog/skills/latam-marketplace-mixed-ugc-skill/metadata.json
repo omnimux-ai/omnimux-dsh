@@ -3,7 +3,7 @@
   "name": "latam-marketplace-mixed-ugc-skill",
   "category": "UGC & Testimonial",
   "description": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category e-commerce marketplace or local retailer — Chilean / Mexican / Colombian / Argentine sites whose brief is in Spanish and mentions \"atributos esenciales\", category breadth (ropa, hogar, tech, mascotas), or \"compra de todo sin salir de casa\". Trigger eagerly whenever brief is Spanish + names a LatAm marketplace + site shows multiple categories, even if user did not say \"UGC\". Encodes a thr",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

@@ -3,7 +3,7 @@
   "name": "color-spec-sheet",
   "category": "Product Showcase",
   "description": "Generates a Pantone-style color specification sheet from any uploaded product or character design image. The output is a pixel-perfect 3300×1350px PNG that mirrors a measured reference template, with color swatches, PMS C codes, finish labels, deco group boxes, leader lines, and a companion PMS table. No AI image model is ever used — the uploaded image is placed unchanged via Python/PIL. Trigger this skill whenever a user says \"color spec\", \"color extraction\", \"PMS sheet\", \"Pantone spec\", \"extra",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,

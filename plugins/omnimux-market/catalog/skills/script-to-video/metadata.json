@@ -1,6 +1,8 @@
 {
-  "id": "sk-creatify-script-to-video",
+  "id": "sk-omx-script-to-video",
   "name": "script-to-video",
   "category": "Video Ads",
-  "description": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Time / Visual / VO (or Audio) / On-screen-Text columns, scene rows, or numbered beats. The creative work is already done; the job is faithful execution. Trigger eagerly on any pasted script-shaped block (timed table, scene list, shotlist, \"0:00–0:08 …\" timeline, or a Visual + Voiceover two-column layout). Follow the script verbatim — do not invent new beats, do not rewrite VO, do not reord"
+  "description": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Time / Visual / VO (or Audio) / On-screen-Text columns, scene rows, or numbered beats. The creative work is already done; the job is faithful execution. Trigger eagerly on any pasted script-shaped block (timed table, scene list, shotlist, \"0:00–0:08 …\" timeline, or a Visual + Voiceover two-column layout). Follow the script verbatim — do not invent new beats, do not rewrite VO, do not reord",
+  "author": "Official",
+  "tags": []
 }

@@ -3,14 +3,14 @@
   "name": "guofeng-palace-drama-single-call",
   "category": "Video Ads",
   "description": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call — not a multi-scene stitched assembly. Trigger aggressively when the user uploads ≥3 character or location reference images and wants a single short cinematic video (10–15s, 16:9) using exactly those refs; when the brief mentions Seedance omni-reference, 全能参考, 国风, palace or period drama, interrogation or confrontation with flashbacks, or says do not generate new images; or when the user",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/user/3330063/20260625/565f1144.mp4",
+      "url": "https://assets.omnimux.ai/samples/user/3330063/20260625/565f1144.mp4",
       "caption": "Stanley 1913",
       "media_type": "video"
     }

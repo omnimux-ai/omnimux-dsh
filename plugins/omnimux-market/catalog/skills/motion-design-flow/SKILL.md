@@ -35,7 +35,7 @@ When the user asks META questions about the skill — `"what can you do"` / `"ч
 
 ---
 
-Skill for writing production-ready prompts for AI motion design via the Creatify orchestrator tools. Pipeline: brief → storyboard keyframe (`generate_image`) → video (`generate_scene_video`, `backend="seedance"` default / `backend="kling"` when source requires it).
+Skill for writing production-ready prompts for AI motion design via AI motion design & video generation tools. Pipeline: brief → storyboard keyframe (`generate_image`) → video (`generate_scene_video`, `backend="seedance"` default / `backend="kling"` when source requires it).
 
 **Main rule:** the scene-video backend is cinematic AI video, not After Effects. It excels at animating environment / camera / light / particles around static text. It struggles with morphing letterforms or reconstructing letters mid-clip.
 

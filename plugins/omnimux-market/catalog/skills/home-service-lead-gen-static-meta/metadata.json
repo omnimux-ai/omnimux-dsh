@@ -3,29 +3,29 @@
   "name": "home-service-lead-gen-static-meta",
   "category": "Image & Static Ads",
   "description": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home service business owners (painters, plumbers, electricians, landscapers, etc.). The creative move is signal-layer targeting - each ad is crafted as a signal to a specific psychographic slice of the ICP (identity, struggle, aspiration, relief) rather than a generic product pitch. Ads span four distinct visual registers in parallel - dark-mode typography, lifestyle photography with overlays, docu",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/51e60a5d1a.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/51e60a5d1a.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/b30a244a53.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/b30a244a53.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/c6ce5ddc8a.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/c6ce5ddc8a.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/1b0bd869ec.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/e9441109-4be1-49bf-ad2d-ff4a5bb79361/1b0bd869ec.png",
       "caption": "Angi",
       "media_type": "image"
     }

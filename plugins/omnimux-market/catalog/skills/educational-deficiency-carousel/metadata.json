@@ -3,24 +3,24 @@
   "name": "educational-deficiency-carousel",
   "category": "Image & Static Ads",
   "description": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual sequence: deep-tone definition slide → light impact/symptoms slide → warm-tone solution slide. Each slide has its own background palette, typography hierarchy, and a faint ghost-texture motif. The style channels premium editorial magazine meets botanical/documentary archive — ultra-realistic, documentary, no product packaging, no sales language. Trigger this skill whenever a brand needs an ",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 0,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/d1e0b07c97.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/d1e0b07c97.png",
       "caption": "Ritual",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/19feb243b1.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/19feb243b1.png",
       "caption": "Ritual",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/58b24c81b2.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/dc0054ec-dbf5-4b58-8b59-e7346d57f27e/58b24c81b2.png",
       "caption": "Ritual",
       "media_type": "image"
     }

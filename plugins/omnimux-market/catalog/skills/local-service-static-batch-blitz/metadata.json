@@ -3,84 +3,84 @@
   "name": "local-service-static-batch-blitz",
   "category": "Image & Static Ads",
   "description": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel dispatch. Each ad rotates across a distinct layout archetype (full-bleed gradient, split panel, diagonal band, typography-led, caution stripe, three-pillar badge row, etc.) and a distinct copy angle (slogan hero, convenience, speed, size selection, pricing transparency, family-owned authority, local credibility, urgency, homeowner, contractor, use-case proof, trust signals, same-day, brand p",
-  "author": "Creatify",
+  "author": "Official",
   "version": 1,
   "app_scope": "orchestrator",
   "usage_count": 0,
   "favorite_count": 1,
   "examples": [
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/68f568744e.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/68f568744e.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/caaf50b7d6.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/caaf50b7d6.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/8dc9da48bb.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/8dc9da48bb.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/ca582b6023.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/ca582b6023.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/9876642fd3.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/9876642fd3.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/6a39560041.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/6a39560041.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/fbadb41613.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/fbadb41613.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/f1dfb44d14.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/f1dfb44d14.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/f937256be0.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/f937256be0.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/29fed29790.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/29fed29790.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/d211e5a784.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/d211e5a784.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/99a8b0cd94.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/99a8b0cd94.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/809e0c99dd.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/809e0c99dd.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/7cf9325990.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/7cf9325990.png",
       "caption": "Angi",
       "media_type": "image"
     },
     {
-      "url": "https://cdn.creatify.ai/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/a309a0f664.png",
+      "url": "https://assets.omnimux.ai/samples/agent/ads/f7b010c0-a923-45e0-af76-3f185478487b/a309a0f664.png",
       "caption": "Angi",
       "media_type": "image"
     }
