@@ -1,0 +1,33 @@
+{
+  "task": "market-search-inner-border-fix",
+  "timestamp": "2026-09-18T18:13:30.000Z",
+  "verification": {
+    "target": "plugins/omnimux-market/src/client/css.js",
+    "selectorChanges": [
+      {
+        "selector": ".search-box .dshUk-SearchField-root, .search-box .dshUk-SearchField-stretch, .search-box [class*=\"SearchField-root\"]",
+        "styles": {
+          "width": "100%",
+          "max-width": "none"
+        }
+      },
+      {
+        "selector": ".search-box [class*=\"SearchField-root\"] input, .search-box .dshUk-SearchField-root input",
+        "styles": {
+          "border": "none !important",
+          "background": "transparent !important",
+          "border-radius": "0 !important",
+          "padding": "0 !important",
+          "height": "100% !important",
+          "outline": "none !important",
+          "box-shadow": "none !important"
+        }
+      },
+      {
+        "selector": ".search-box > input",
+        "description": "Scoped strictly to direct child input for fallback mode to prevent leakage into SearchField"
+      }
+    ],
+    "outcome": "PASS"
+  }
+}
