@@ -1,0 +1,43 @@
+{
+  "id": "647b8dff-2865-4691-8d92-c4d01fc5aa91",
+  "name": "ugc-voiceover-app-screen-showcase",
+  "category": "Video Ads",
+  "description": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs. Opens with a sharp problem-framing hook overlaid on a key product screen, moves into a rapid multi-cut feature showcase with warm-authoritative voiceover, and closes on a brand-colored CTA card with a direct download prompt. Best triggered when the brand has a wellness, self-improvement, health-tech, or lifestyle-utility app with strong visual UI assets and a clear \"you didn't know it was this easy\" value pro",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/9afocdry9t/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "voice-only narration",
+      "rapid multi-cut UI showcase",
+      "warm authoritative tone",
+      "problem-solution framing"
+    ],
+    "best_for": [
+      "TikTok/Reels app ads",
+      "screenshot walkthroughs",
+      "download CTAs",
+      "wellness and utility apps"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "app",
+    "voiceover",
+    "screenshots",
+    "tiktok",
+    "wellness"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:40.563166-07:00",
+  "updated_at": "2026-06-25T15:04:31.834112-07:00"
+}

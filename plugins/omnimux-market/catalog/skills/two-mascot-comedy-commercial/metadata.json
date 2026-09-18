@@ -1,0 +1,43 @@
+{
+  "id": "e4cf4571-e380-4ca2-b8fb-68d91721ff2a",
+  "name": "two-mascot-comedy-commercial",
+  "category": "Video Ads",
+  "description": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Character A (an anthropomorphic everyman with a relatable role) and Character B (an anthropomorphic deadpan product authority). The creative pattern is a bumbling-everyman / deadpan-expert comedic duo arc: Character A panics at a relatable problem, Character B coolly delivers the product pitch and a data proof point, and the episode closes with a punchline exchange and a branded end card. Tri",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/sbcifkyyjv/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "two-character mascot duo",
+      "bumbling everyman vs deadpan expert",
+      "problem-solution punchline arc",
+      "animated comedy"
+    ],
+    "best_for": [
+      "16:9 broadcast commercials",
+      "animated mascot ads",
+      "comedic product pitches",
+      "brand end cards"
+    ]
+  },
+  "tags": [
+    "animated",
+    "mascot",
+    "comedy",
+    "broadcast",
+    "product",
+    "duo"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:36.208667-07:00",
+  "updated_at": "2026-06-25T15:04:25.595715-07:00"
+}

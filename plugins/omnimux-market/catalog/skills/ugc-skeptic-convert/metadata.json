@@ -1,0 +1,46 @@
+{
+  "id": "dc87c230-1f21-49b3-a6de-5685c1d1a39f",
+  "name": "ugc-skeptic-convert",
+  "category": "UGC & Testimonial",
+  "description": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare, or supplement product where the creative move is a single-take peer-reviewer selfie that OPENS on doubt (\"I thought this was BS…\") and PIVOTS mid-clip into a genuine product reveal and endorsement. Trigger this skill aggressively whenever the brief calls for \"UGC\", \"authentic review\", \"selfie ad\", \"TikTok-style\", or any DTC oral-care / skincare / haircare / wellness product with a clean ",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/mxuwimoi9l/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "single-take selfie",
+      "opens with doubt",
+      "authentic peer-review tone",
+      "quick product reveal"
+    ],
+    "best_for": [
+      "TikTok-style UGC",
+      "skeptic-to-believer reviews",
+      "DTC wellness products",
+      "oral-care/skincare ads"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "selfie",
+    "review",
+    "tiktok",
+    "wellness",
+    "dtc"
+  ],
+  "reference_files": [
+    "references/hook_library.md",
+    "references/word_budget_table.md"
+  ],
+  "created_at": "2026-06-24T22:54:59.156371-07:00",
+  "updated_at": "2026-06-25T15:04:30.387492-07:00"
+}

@@ -1,0 +1,46 @@
+{
+  "id": "82d96a94-c756-475e-8449-0d8decaec9bd",
+  "name": "ugc-diaspora-direct-address-hook",
+  "category": "UGC & Testimonial",
+  "description": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audience that shares a native language and cultural identity) with a warm, peer-to-peer direct-address hook in their native language, a problem-agitation-benefit-promo-CTA arc, a relatable on-location persona, and sequential benefit badge reveals capped by an inbox/DM CTA. Trigger this skill whenever the brief calls for a native-language UGC ad aimed at an overseas diaspora audience using a ",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/5w4mk21kyh/output.mp4",
+      "caption": "LinkedIn",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm peer-to-peer",
+      "direct-address hook",
+      "on-location persona",
+      "benefit badge reveals"
+    ],
+    "best_for": [
+      "native-language UGC",
+      "diaspora audiences",
+      "expat community ads",
+      "short-form video"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "diaspora",
+    "expat",
+    "native",
+    "community",
+    "cta"
+  ],
+  "reference_files": [
+    "references/id-safe-words.md",
+    "references/overlay-spec.md"
+  ],
+  "created_at": "2026-06-24T23:46:37.302872-07:00",
+  "updated_at": "2026-06-25T15:04:27.280229-07:00"
+}

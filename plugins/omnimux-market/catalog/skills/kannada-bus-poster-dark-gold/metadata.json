@@ -1,0 +1,37 @@
+{
+  "id": "8e4b4bff-bee8-4ad9-b01c-d2527b6fc7b1",
+  "name": "kannada-bus-poster-dark-gold",
+  "category": "Image & Static Ads",
+  "description": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies using Python/PIL. The creative pattern is a dark navy / starfield background with gold glowing typography, a full-width atmospheric bus photo, a two-column facilities-vs-route-stops content block, and a bold booking CTA strip. Trigger this skill whenever a user asks for a printed or digital bus/travel advertisement in Kannada, or any regional-language transport poster that needs a premiu",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "dark navy starfield",
+      "gold glowing typography",
+      "premium poster layout",
+      "atmospheric bus imagery"
+    ],
+    "best_for": [
+      "Kannada bus posters",
+      "travel company ads",
+      "A4 print creatives",
+      "regional transport promotions"
+    ]
+  },
+  "tags": [
+    "kannada",
+    "bus",
+    "travel",
+    "poster",
+    "premium",
+    "regional"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:28.102524-07:00",
+  "updated_at": "2026-06-25T00:14:36.707051-07:00"
+}

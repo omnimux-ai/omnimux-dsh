@@ -1,0 +1,45 @@
+{
+  "id": "3adc20fe-3f44-44cf-9d24-fc85453ede69",
+  "name": "course-to-short-video",
+  "category": "Video Ads",
+  "description": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing, using the Creatify Creative Agent. It finds the strongest sections, cuts on complete thoughts, adds clean word-by-word subtitles, smooth crossfades, and a light music bed, then appends a branded end card built from the logo + the course/instructor. Use this whenever someone hands over a course video (a link OR a local .mp4) and wants a short, organic clip.",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 10,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/api_uploads/17f4b7e6-a26e-4f6d-b748-b7ad37ebc4f3/faa3038de2344671a15bbed77fb4664e/sts-back-to-eden-short-example.mp4",
+      "caption": "Back to Eden Gardening course video cut into a ~30s vertical share clip with branded end card",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "9:16 vertical",
+      "clean subtitles",
+      "smooth crossfades",
+      "light music bed"
+    ],
+    "best_for": [
+      "organic social clips",
+      "course highlights",
+      "lesson teasers",
+      "vertical short videos"
+    ]
+  },
+  "tags": [
+    "social",
+    "vertical",
+    "courses",
+    "subtitles",
+    "branded"
+  ],
+  "reference_files": [
+    "references/creatify-brief.md",
+    "references/gotchas.md"
+  ],
+  "created_at": "2026-07-15T23:38:40.820675-07:00",
+  "updated_at": "2026-07-28T12:52:06.421692-07:00"
+}

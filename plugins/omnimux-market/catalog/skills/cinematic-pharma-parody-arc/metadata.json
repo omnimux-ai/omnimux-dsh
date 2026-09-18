@@ -1,0 +1,45 @@
+{
+  "id": "57dd1435-1efb-495d-a6ab-fdf9932d3bab",
+  "name": "cinematic-pharma-parody-arc",
+  "category": "Storytelling & Script",
+  "description": "Encodes the \"pharmaceutical-style parody\" creative pattern: a slow-burn cinematic opener with a silver-tongued VO diagnosing an absurd corporate \"disorder\", a hard mid-pivot to euphoric product payoff, and a blistering rapid-fire disclaimer close. Trigger this skill whenever the brief calls for satirical parody of a real ad genre (pharma, insurance, luxury car, finance) applied to a B2B or culture-war product, especially when the comedic engine is deadpan clinical language colliding with ridicul",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/isorffqghr/output.mp4",
+      "caption": "Ritual",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "slow-burn cinematic opener",
+      "clinical deadpan humor",
+      "euphoric mid-ad pivot",
+      "rapid-fire disclaimer close"
+    ],
+    "best_for": [
+      "satirical B2B ads",
+      "pharma-style parody",
+      "culture-war product spots",
+      "deadpan VO scripts"
+    ]
+  },
+  "tags": [
+    "parody",
+    "pharma",
+    "satire",
+    "b2b",
+    "voiceover",
+    "disclaimer"
+  ],
+  "reference_files": [
+    "references/tts-phonetics.md"
+  ],
+  "created_at": "2026-06-24T23:46:20.809008-07:00",
+  "updated_at": "2026-06-25T15:03:55.227261-07:00"
+}

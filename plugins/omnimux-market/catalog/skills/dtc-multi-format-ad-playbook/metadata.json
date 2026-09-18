@@ -1,0 +1,47 @@
+{
+  "id": "7ff536ba-9482-4d80-81b0-03702853e0e3",
+  "name": "dtc-multi-format-ad-playbook",
+  "category": "Video Ads",
+  "description": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on mobile in-game interstitial / rewarded-video ad inventory — i.e. the buyer mentions in-game ads, mobile interstitial, rewarded video, or a cross-border / 跨境 / 独立站 brand targeting the US through an in-game ad network. Trigger even when the brief only says \"TikTok-style\" or \"UGC\", because in-game interstitial inventory inverts the Meta/TikTok playbook (build 30–45s, never front-load the of",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/oer1h5c3ht/output.mp4",
+      "caption": "Audible",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "mobile-first vertical",
+      "30–45s ad structure",
+      "DTC product-led",
+      "adapted for in-game networks"
+    ],
+    "best_for": [
+      "9:16 mobile video ads",
+      "in-game interstitial ads",
+      "rewarded-video inventory",
+      "cross-border DTC brands",
+      "US market acquisition"
+    ]
+  },
+  "tags": [
+    "dtc",
+    "mobile",
+    "ingame",
+    "vertical",
+    "crossborder",
+    "rewarded"
+  ],
+  "reference_files": [
+    "references/caption-presets.md",
+    "references/concept-angles.md"
+  ],
+  "created_at": "2026-06-24T23:46:24.379913-07:00",
+  "updated_at": "2026-06-25T15:03:59.679525-07:00"
+}

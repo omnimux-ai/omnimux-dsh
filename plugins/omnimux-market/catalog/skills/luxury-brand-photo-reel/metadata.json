@@ -1,0 +1,43 @@
+{
+  "id": "a6e9d0ee-c6f5-4138-9432-280b081caf65",
+  "name": "luxury-brand-photo-reel",
+  "category": "Product Showcase",
+  "description": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos. The creative pattern uses a static-image slideshow format (no motion graphics, no voiceover) with editorial-clean text overlays, warm-gold-on-dark typography, and a low-volume luxury instrumental track to create a high-end \"lookbook\" feel. Trigger this skill whenever a brand or business uploads still photos and wants a ready-to-post reel for LinkedIn, Instagram, or Facebook — especially ",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/varl1vdmuy/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "polished static-photo slideshow",
+      "editorial clean text overlays",
+      "warm gold-on-dark typography",
+      "low-volume luxury instrumental"
+    ],
+    "best_for": [
+      "luxury product reels",
+      "showroom photo slideshows",
+      "Instagram/Facebook lookbook posts",
+      "LinkedIn brand videos"
+    ]
+  },
+  "tags": [
+    "luxury",
+    "reel",
+    "lookbook",
+    "slideshow",
+    "product",
+    "social"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:30.128540-07:00",
+  "updated_at": "2026-06-25T15:04:09.323947-07:00"
+}

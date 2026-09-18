@@ -1,0 +1,46 @@
+{
+  "id": "a3f3f373-87a5-4519-a819-2f530baf82cc",
+  "name": "mirror-tryon-haul-beat-cut",
+  "category": "Product Showcase",
+  "description": "Use this skill whenever the user wants to produce a TikTok-style mirror try-on haul ad — the format where a single creator stands in front of a mirror, holds up outfits on hangers, then cuts to wearing each one, all beat-synced over a music bed with no voice-over. Trigger eagerly on phrases like \"mirror try-on haul\", \"try-on haul with these outfits\", \"make a haul video like ref:N\", or any prompt that anchors on a haul-style reference AND uploads multiple outfit images. The creative DNA is one co",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/9q7vfm7uzp/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "mirror-shot creator format",
+      "outfit hanger-to-worn cuts",
+      "music bed, no voice-over",
+      "beat-synced transitions"
+    ],
+    "best_for": [
+      "TikTok mirror try-on hauls",
+      "fashion outfit ads",
+      "multi-look apparel showcases",
+      "beat-synced haul videos"
+    ]
+  },
+  "tags": [
+    "fashion",
+    "tryon",
+    "haul",
+    "tiktok",
+    "outfits",
+    "music"
+  ],
+  "reference_files": [
+    "references/director-prompt-fragments.md",
+    "references/hook-library.md"
+  ],
+  "created_at": "2026-06-24T23:46:31.245521-07:00",
+  "updated_at": "2026-06-25T15:04:11.862788-07:00"
+}

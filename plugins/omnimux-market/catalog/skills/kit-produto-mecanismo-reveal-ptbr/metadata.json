@@ -1,0 +1,45 @@
+{
+  "id": "c5223126-9487-4212-892c-77f9f382f034",
+  "name": "kit-produto-mecanismo-reveal-ptbr",
+  "category": "Product Showcase",
+  "description": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modularity, or interactive mechanism IS the key selling point (removable capes, detachable hoods, magnetic patches, modular bags, snap-button accessories, etc.). Opens with a cinematic hero push-in on the garment/product, cuts to an extreme macro of the attachment mechanism, then dramatically reveals the snap/attach moment in motion, closes with the fully-assembled kit hero shot and urgency CT",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/dea7lm2cmw/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic hero push-in",
+      "extreme macro detail",
+      "dramatic snap/attach motion",
+      "urgency CTA"
+    ],
+    "best_for": [
+      "Brazilian e-commerce kits",
+      "modular product demos",
+      "attachment mechanism reveals",
+      "fashion/accessory video ads"
+    ]
+  },
+  "tags": [
+    "ptbr",
+    "ecommerce",
+    "modular",
+    "fashion",
+    "macro",
+    "reveal"
+  ],
+  "reference_files": [
+    "references/ptbr-script-hooks.md"
+  ],
+  "created_at": "2026-06-24T23:46:28.382760-07:00",
+  "updated_at": "2026-06-25T15:04:05.196422-07:00"
+}

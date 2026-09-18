@@ -1,0 +1,43 @@
+{
+  "id": "501f3a85-6296-4b73-afdb-42e2338dc138",
+  "name": "ugc-two-character-comedy-skit-hook",
+  "category": "UGC & Testimonial",
+  "description": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle pain point and a theatrical foil (expert, character, or mascot) dramatically swoops in to roast, school, and convert them. The structural move is *shock reaction → dramatic intervention → roast-to-persuasion → reluctant concession → CTA*. Best triggered when a brand has a strong contrarian or character-driven identity, the product solves a well-known frustration (insurance, debt, subscr",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/tj2ylam04m/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "relatable everyman setup",
+      "theatrical foil intervention",
+      "roast-to-persuasion comedy",
+      "CTA-driven skit structure"
+    ],
+    "best_for": [
+      "two-character UGC skits",
+      "comedy hook ads",
+      "financial pain-point offers",
+      "contrarian brand personas"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "comedy",
+    "skit",
+    "finance",
+    "hooks",
+    "persona"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:40.077394-07:00",
+  "updated_at": "2026-06-25T15:04:31.259813-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "50afa5cf-ea5f-474a-92c8-166df3bad6de",
+  "name": "curated-lifestyle-brand-video",
+  "category": "Video Ads",
+  "description": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence, wry minimalism, and the \"real not styled\" aesthetic. Videos open with a calm declarative hook (statement of taste, wry observation, or quiet invitation), unfold through an intimate hands-only visual grammar with amber or daylight warmth, and close with a soft spoken CTA anchored by a terracotta pill. Trigger this skill whenever producing video content in this curated-lifestyle register —",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 6,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/2b6mewrhak/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm, elevated minimalism",
+      "hands-only intimate visuals",
+      "real not styled aesthetic",
+      "calm declarative hooks"
+    ],
+    "best_for": [
+      "lifestyle brand videos",
+      "hands-only product demos",
+      "warm social video ads",
+      "soft CTA clips"
+    ]
+  },
+  "tags": [
+    "lifestyle",
+    "minimal",
+    "warm",
+    "hands",
+    "curated",
+    "video"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:24.031566-07:00",
+  "updated_at": "2026-06-25T15:03:58.482976-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "af14984a-72d6-4539-8b08-5325022de1fd",
+  "name": "luxury-product-reveal",
+  "category": "Product Showcase",
+  "description": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, watches — where no human persona is needed and the product itself is the hero. Uses warm golden-hour lighting, shallow depth of field, slow graceful camera movement, and richly saturated natural environments to create a fragrance-commercial aesthetic that reads as high-end editorial. Hook is a slow atmospheric immersion reveal (product nestled in nature) rather than a verbal or text-drive",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/g1luotrl6h/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic editorial",
+      "golden-hour lighting",
+      "slow graceful camera",
+      "shallow depth of field"
+    ],
+    "best_for": [
+      "premium product reveals",
+      "fragrance-style ads",
+      "jewelry and watches",
+      "skincare or spirits showcases"
+    ]
+  },
+  "tags": [
+    "luxury",
+    "cinematic",
+    "product",
+    "premium",
+    "editorial",
+    "reveal"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T22:54:59.928841-07:00",
+  "updated_at": "2026-06-25T15:04:10.781162-07:00"
+}

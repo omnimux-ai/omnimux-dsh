@@ -1,0 +1,44 @@
+{
+  "id": "5bb81836-1ec0-4c70-8090-23cca7093bd5",
+  "name": "cinematic-stat-shock-local-pride",
+  "category": "Video Ads",
+  "description": "A silent, music-driven cinematic vertical ad that opens with a bold two-line \"knowledge gap\" hook — stating something widely believed (\"EVERYONE KNOWS THE STORY.\") then immediately subverting it (\"FEW KNOW THE SOURCE.\") — before delivering the product as the physical embodiment of the correct answer. The arc moves from aerial authority to human warmth to product proof to identity payoff, closing with the product's own slogan as the CTA card. Deploy this pattern whenever the product exists becaus",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/i3mtejtf9e/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "silent, music-driven",
+      "bold text hook",
+      "aerial-to-human warmth",
+      "identity payoff"
+    ],
+    "best_for": [
+      "vertical product ads",
+      "local pride campaigns",
+      "heritage-driven brands",
+      "cinematic awareness ads"
+    ]
+  },
+  "tags": [
+    "cinematic",
+    "local",
+    "heritage",
+    "vertical",
+    "slogan"
+  ],
+  "reference_files": [
+    "references/hook-library.md"
+  ],
+  "created_at": "2026-06-24T23:46:21.797512-07:00",
+  "updated_at": "2026-06-25T15:03:56.249291-07:00"
+}

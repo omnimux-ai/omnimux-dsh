@@ -1,0 +1,43 @@
+{
+  "id": "1818ef3e-59b1-4551-b4e4-3791cf00071d",
+  "name": "ugc-advisor-numbered-points-reel",
+  "category": "UGC & Testimonial",
+  "description": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks through a numbered-points argument structure (typically three points) anchored by a contrast-hook open (\"Not all X are the same\"), an animated point-counter overlay system (01/02/03), a stat split-zone graphic, and a warm CTA close. Trigger this skill whenever the brief calls for an educational or comparative product pitch delivered by a credible peer-like narrator, especially for high-conside",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/oqn5kwrz7x/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "vertical short-form video",
+      "single on-camera narrator",
+      "numbered points structure",
+      "warm CTA close"
+    ],
+    "best_for": [
+      "UGC advisor reels",
+      "educational product pitches",
+      "comparative product explainers",
+      "high-consideration offers"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "reel",
+    "advisor",
+    "educational",
+    "comparison",
+    "numbered"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:36.523878-07:00",
+  "updated_at": "2026-06-25T15:04:26.212850-07:00"
+}

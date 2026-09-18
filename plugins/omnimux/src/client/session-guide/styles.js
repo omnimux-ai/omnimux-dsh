@@ -2395,6 +2395,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-radius:999px; padding:5px 14px;
   font-size:12px; line-height:16px; cursor:pointer;
   transition:all 160ms ease; font-family:inherit;
+  display:inline-flex; align-items:center; gap:6px;
 }
 .omnimux-skills-chip:hover {
   border-color:var(--dsw-alias-border-l2);
@@ -2405,6 +2406,139 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-color:var(--dsw-alias-border-l2);
   color:var(--dsw-alias-label-primary);
   font-weight:600;
+}
+
+/* 技能专区分组容器与标题行 (1:1 对标 Creatify) */
+.omnimux-creatify-sections-wrap {
+  display:flex; flex-direction:column; gap:28px; width:100%;
+}
+.omnimux-creatify-section {
+  display:flex; flex-direction:column; gap:12px; width:100%;
+}
+.omnimux-creatify-section-header {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.omnimux-creatify-section-title {
+  font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--dsw-alias-label-tertiary, rgba(255,255,255,0.55));
+}
+.omnimux-creatify-see-all-btn {
+  display:inline-flex; align-items:center; gap:4px; font-size:12px;
+  color:var(--dsw-alias-label-secondary, rgba(255,255,255,0.7));
+  background:transparent; border:none; cursor:pointer;
+  transition:color 150ms ease;
+}
+.omnimux-creatify-see-all-btn:hover {
+  color:#EDA921;
+}
+
+/* 1:1 复刻 Creatify 3:2 技能卡片 */
+.omnimux-creatify-card {
+  position:relative; width:100%; aspect-ratio:3 / 2;
+  border-radius:16px; overflow:hidden; background:#131414;
+  border:1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor:pointer; user-select:none;
+  transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+.omnimux-creatify-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 12px 28px rgba(0, 0, 0, 0.5);
+  border-color:rgba(255, 255, 255, 0.22);
+}
+.omnimux-creatify-card.is-active {
+  border-color:#EDA921;
+}
+.omnimux-creatify-card-bg-img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  transform:scale(1.05); transition:transform 400ms ease; display:block;
+}
+.omnimux-creatify-card:hover .omnimux-creatify-card-bg-img {
+  transform:scale(1.12);
+}
+.omnimux-creatify-card-bg-fallback {
+  position:absolute; inset:0;
+  background:linear-gradient(135deg, #2A1F4A 0%, #152438 100%);
+}
+.omnimux-creatify-dot-overlay {
+  position:absolute; inset:0;
+  background-image:radial-gradient(circle, rgba(255, 255, 255, 0.38) 0.7px, transparent 1px);
+  background-size:8px 8px; mix-blend-mode:overlay; pointer-events:none;
+}
+.omnimux-creatify-card-top-left {
+  position:absolute; top:12px; left:12px; z-index:5;
+  display:flex; align-items:center; gap:6px;
+}
+.omnimux-creatify-badge-hot {
+  display:flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:8px;
+  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px);
+  color:#EDA921;
+}
+.omnimux-creatify-badge-new {
+  display:flex; align-items:center; justify-content:center;
+  height:28px; padding:0 9px; border-radius:8px;
+  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px);
+  color:#EDA921; font-size:11px; font-weight:600;
+}
+.omnimux-creatify-pill-cat {
+  display:flex; align-items:center; gap:5px;
+  height:28px; padding:0 10px; border-radius:999px;
+  background:rgba(255, 255, 255, 0.08); backdrop-filter:blur(12px);
+  border:1px solid rgba(255, 255, 255, 0.06);
+  font-size:11px; font-weight:500; color:rgba(255, 255, 255, 0.92);
+}
+.omnimux-creatify-star-btn {
+  position:absolute; top:12px; right:12px; z-index:5;
+  width:28px; height:28px; border-radius:8px;
+  background:rgba(255, 255, 255, 0.08); backdrop-filter:blur(12px);
+  border:1px solid rgba(255, 255, 255, 0.06);
+  display:flex; align-items:center; justify-content:center;
+  color:rgba(255, 255, 255, 0.7); cursor:pointer;
+  transition:all 150ms ease;
+}
+.omnimux-creatify-star-btn:hover {
+  background:rgba(255, 255, 255, 0.16); color:#FFFFFF;
+}
+.omnimux-creatify-star-btn.active {
+  color:#EDA921; background:rgba(237, 169, 33, 0.18); border-color:rgba(237, 169, 33, 0.3);
+}
+.omnimux-creatify-card-center {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  padding:0 16px; pointer-events:none;
+}
+.omnimux-creatify-center-title {
+  font-size:20px; font-weight:600; color:#FFFFFF; text-align:center;
+  letter-spacing:-0.01em; text-shadow:0 2px 8px rgba(0, 0, 0, 0.45);
+  display:inline-flex; align-items:center; gap:6px; margin:0; line-height:1.3;
+}
+.omnimux-creatify-card-hover-drawer {
+  position:absolute; inset-x:0; bottom:0; pointer-events:none;
+}
+.omnimux-creatify-drawer-bg {
+  position:absolute; inset:0;
+  background:linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 65%, transparent 100%);
+  opacity:0; transition:opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-creatify-card:hover .omnimux-creatify-drawer-bg {
+  opacity:1;
+}
+.omnimux-creatify-drawer-content {
+  position:relative; display:flex; flex-direction:column; gap:6px;
+  padding:30px 14px 12px; transform:translateY(18px); opacity:0;
+  transition:all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-creatify-card:hover .omnimux-creatify-drawer-content {
+  transform:translateY(0); opacity:1;
+}
+.omnimux-creatify-drawer-desc {
+  font-size:11.5px; line-height:1.45; color:rgba(255, 255, 255, 0.92);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; margin:0;
+}
+.omnimux-creatify-drawer-uses {
+  display:flex; align-items:center; gap:4px; font-size:11px;
+  color:rgba(255, 255, 255, 0.65);
 }
 
 /* 技能卡片网格：基准 4 列，响应式折叠，对齐图 4 视觉规范 */

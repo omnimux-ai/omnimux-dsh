@@ -1,0 +1,43 @@
+{
+  "id": "4eed5cc8-5038-4e04-bb1c-c95b1e56f5a8",
+  "name": "cinematic-editorial-luxury-reveal",
+  "category": "Product Showcase",
+  "description": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting women 25–40. The pattern opens with a silent product macro hero shot paired with a typographic hook overlay, transitions through an on-camera persona presentation and a multi-variant color showcase (voice-over), and closes on a dark shimmer end card with spoken and on-screen CTA. The visual grammar is 85mm shallow-DoF warm champagne/charcoal palette, serif display typography, and editorial-c",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 2,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/kq435upqhr/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic editorial",
+      "85mm shallow-DoF",
+      "warm champagne/charcoal palette",
+      "serif typography"
+    ],
+    "best_for": [
+      "luxury accessory reveals",
+      "fashion product videos",
+      "premium lifestyle ads",
+      "color variant showcases"
+    ]
+  },
+  "tags": [
+    "luxury",
+    "fashion",
+    "reveal",
+    "cinematic",
+    "accessories",
+    "premium"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:19.735776-07:00",
+  "updated_at": "2026-06-25T15:03:54.208292-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "455d1747-3538-4040-be57-59d1ffb5c984",
+  "name": "ugc-inherited-burden-testimonial",
+  "category": "UGC & Testimonial",
+  "description": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expense, unexpected obligation) that the product resolves quickly and cleanly. The hook opens in first-person with a specific, emotionally resonant situation the viewer has likely shared or feared (\"I just inherited a house I never expected\"), escalates through a pain beat listing real logistical burdens, pivots to a silent b-roll cutaway that makes the object of conversation tangible, then ",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/syl66e1lag/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "first-person emotional hook",
+      "relatable burden escalation",
+      "silent b-roll cutaway",
+      "quick clean resolution arc"
+    ],
+    "best_for": [
+      "UGC talking-head testimonials",
+      "life-event problem/solution ads",
+      "home services or financial relief offers",
+      "short-form social video"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "testimonial",
+    "hook",
+    "burden",
+    "property",
+    "broll"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:38.450089-07:00",
+  "updated_at": "2026-06-25T15:04:28.485646-07:00"
+}

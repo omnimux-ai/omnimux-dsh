@@ -1,0 +1,44 @@
+{
+  "id": "57ba3144-689a-4b17-9c45-7636b6e8da3a",
+  "name": "clinical-ugc-3d-tech-insert-arc",
+  "category": "UGC & Testimonial",
+  "description": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/mechanism animation inserts to validate a wellness-adjacent product. The hook is a direct pain-confession POV question that calls out the audience's daily physical suffering; the arc moves from raw problem → proof interlude → before/after contrast → product mechanism → lifestyle payoff → CTA. Use this pattern for any body-wellness, support, relief, or ergonomic product whose audience has ",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/jpbt117ckn/output.mp4",
+      "caption": "Ritual",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "raw, unretouched POV",
+      "clinical 3D tech inserts",
+      "problem-to-payoff arc"
+    ],
+    "best_for": [
+      "wellness product UGC",
+      "pain-relief ads",
+      "ergonomic support products",
+      "mechanism explainer inserts"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "wellness",
+    "relief",
+    "ergonomic",
+    "3d",
+    "proof"
+  ],
+  "reference_files": [
+    "references/hook-library.md"
+  ],
+  "created_at": "2026-06-24T23:46:23.370158-07:00",
+  "updated_at": "2026-06-25T15:03:57.293629-07:00"
+}

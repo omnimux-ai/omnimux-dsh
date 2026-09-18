@@ -1,0 +1,43 @@
+{
+  "id": "d7de08c7-dcfd-42c6-bc92-c5a25d522bf5",
+  "name": "cinematic-home-services-multicity-arc",
+  "category": "Video Ads",
+  "description": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic markets. The pattern opens on a \"pain state\" establishing shot (dated or broken space), moves through a proof-of-work montage, crescendos on a luxury reveal hero shot, and closes with a city-specific CTA card that swaps only the city name while keeping all visuals and voiceover shared. Trigger this skill whenever a home services, home improvement, real estate, or renovation brand needs a",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 6,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/r9drnadoob/output.mp4",
+      "caption": "Angi",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic arc",
+      "pain-to-luxury reveal",
+      "proof-of-work montage",
+      "city-specific CTA"
+    ],
+    "best_for": [
+      "home services ads",
+      "renovation transformations",
+      "multi-city campaigns",
+      "before-after videos"
+    ]
+  },
+  "tags": [
+    "home",
+    "renovation",
+    "multicity",
+    "cinematic",
+    "transformation",
+    "cta"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:20.151930-07:00",
+  "updated_at": "2026-06-25T15:03:54.591147-07:00"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "c69d54b3-c59d-409e-95a7-6c3799fa814a",
+  "name": "spanish-ugc-community-spokesperson-hook",
+  "category": "UGC & Testimonial",
+  "description": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-50s professional woman who opens with a direct rhetorical question that forces the viewer to confront a personal fear (a costly future event, debt, family burden), then transitions through empathy, solution, and a phone-call CTA. Deploy this skill whenever the target audience is Spanish-speaking, the product is a high-trust service in a considered-purchase category, the platform is TikTo",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/bmvy6pt66b/output.mp4",
+      "caption": "CeraVe",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "warm spokesperson",
+      "community-insider tone",
+      "fear-based hook",
+      "empathetic CTA"
+    ],
+    "best_for": [
+      "Spanish UGC ads",
+      "high-trust services",
+      "considered purchases",
+      "TikTok lead generation"
+    ]
+  },
+  "tags": [
+    "spanish",
+    "ugc",
+    "trust",
+    "tiktok",
+    "service",
+    "cta"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:35.455468-07:00",
+  "updated_at": "2026-06-25T15:04:23.919685-07:00"
+}

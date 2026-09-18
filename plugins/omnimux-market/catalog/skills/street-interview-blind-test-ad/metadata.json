@@ -1,0 +1,43 @@
+{
+  "id": "5d1ad3ed-ea1d-4fcd-9101-e009e82a7a44",
+  "name": "street-interview-blind-test-ad",
+  "category": "UGC & Testimonial",
+  "description": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels. A host approaches strangers on a busy urban sidewalk with a plain unbranded mic, poses the same Hook Question to each as a blind taste-test, and closes by asking the final stranger a follow-up that names the product for the first time. The hook archetype is \"blind-test social proof\" — real people answer before the brand is revealed, so the reveal lands as earned validation rather than a pitch. Trigger thi",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/w51svclnd1/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "street-interview vox-pop",
+      "busy urban sidewalk",
+      "unbranded mic",
+      "brand reveal ending"
+    ],
+    "best_for": [
+      "TikTok Reels",
+      "Instagram Reels",
+      "blind taste-test ads",
+      "social proof videos"
+    ]
+  },
+  "tags": [
+    "street",
+    "voxpop",
+    "blindtest",
+    "tiktok",
+    "reels",
+    "social"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:35.912143-07:00",
+  "updated_at": "2026-06-25T15:04:24.762679-07:00"
+}

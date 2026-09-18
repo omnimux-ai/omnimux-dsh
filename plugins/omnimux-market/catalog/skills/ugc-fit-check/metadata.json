@@ -1,0 +1,52 @@
+{
+  "id": "6077b240-9a5f-4eae-8fd5-81e011c299c8",
+  "name": "ugc-fit-check",
+  "category": "UGC & Testimonial",
+  "description": "Use when creating UGC try-on / haul / \"fit check\" video ads — single-take 4-cut Seedance clips with the canonical PRE_WEAR → WEARING → TEXTURE_CLOSEUP → STYLE_POSE arc, optionally chained into multi-board long-form try-on videos. Trigger whenever the user mentions a try-on ad, \"trying this on\", outfit reveal, fit check, OOTD reveal, haul, clothing/accessory reveal, fashion drop, or asks for a UGC try-on video. Produces 21:9 storyboard sheet(s) and the 9:16 clip(s) end-to-end, returning the final assembled video.",
+  "author": "Creatify",
+  "version": 4,
+  "app_scope": "orchestrator",
+  "usage_count": 63,
+  "favorite_count": 1,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/2hy4arecmb/output.mp4",
+      "caption": "Lululemon — auto-generated demo #2",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/r2smrzg8ed/output.mp4",
+      "caption": "Lululemon — auto-generated demo #4",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "single-take 4-cut arc",
+      "PRE_WEAR to STYLE_POSE",
+      "texture closeups",
+      "vertical video"
+    ],
+    "best_for": [
+      "UGC try-on ads",
+      "fit check videos",
+      "OOTD reveals",
+      "fashion hauls",
+      "clothing/accessory reveals"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "tryon",
+    "fashion",
+    "haul",
+    "ootd",
+    "fitcheck"
+  ],
+  "reference_files": [
+    "references/board-prompt-guide.md",
+    "references/clip-prompt-guide.md"
+  ],
+  "created_at": "2026-05-16T16:28:57.720733-07:00",
+  "updated_at": "2026-06-29T22:04:38.374043-07:00"
+}

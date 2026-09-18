@@ -1,0 +1,43 @@
+{
+  "id": "b45dac60-4978-419b-a4ff-7193f4cefab1",
+  "name": "fashion-mood-video-skill",
+  "category": "Video Ads",
+  "description": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturally in a different outfit, matched to an emotional progression. The pattern encodes a frame-approval gate before any animation credit is spent, mood-matched non-white backgrounds, a varied movement palette so no two scenes look the same, and a clean end card whose brand text is added only via text overlays (never baked into generated images). Trigger this skill whenever a user wants to pro",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 3,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/jldfkthmd9/output.mp4",
+      "caption": "Mejuri",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "fashion editorial",
+      "natural movement",
+      "emotional progression",
+      "clean branded end card"
+    ],
+    "best_for": [
+      "Pinterest-style fashion ads",
+      "vertical editorial video",
+      "outfit showcase",
+      "mood-based lookbook"
+    ]
+  },
+  "tags": [
+    "fashion",
+    "lookbook",
+    "pinterest",
+    "vertical",
+    "editorial",
+    "outfits"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:25.945011-07:00",
+  "updated_at": "2026-06-25T15:04:01.406062-07:00"
+}

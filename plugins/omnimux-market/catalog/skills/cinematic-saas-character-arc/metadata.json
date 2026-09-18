@@ -1,0 +1,43 @@
+{
+  "id": "7accd4b3-9ae0-412f-82e5-2fb23fc793eb",
+  "name": "cinematic-saas-character-arc",
+  "category": "Video Ads",
+  "description": "A cinematic commercial pattern for B2B SaaS brands that uses a single consistent professional persona following a 3-act arc (field to product to close). Apple-commercial meets documentary aesthetic — anamorphic film look, Kodak Portra color science, shallow DoF, and a calm-authoritative narrator. Best triggered when a client wants a premium brand film (not a demo), has a clear professional end-user (contractor, nurse, agent, field worker, etc.), and needs product UI shown faithfully in-context o",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/f84azkthae/output.mp4",
+      "caption": "Duolingo",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic documentary",
+      "Apple-style premium",
+      "anamorphic shallow DoF",
+      "calm authoritative narration"
+    ],
+    "best_for": [
+      "B2B SaaS brand films",
+      "premium commercial spots",
+      "professional end-user stories",
+      "in-context product UI"
+    ]
+  },
+  "tags": [
+    "saas",
+    "b2b",
+    "cinematic",
+    "documentary",
+    "professional",
+    "ui"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:21.189252-07:00",
+  "updated_at": "2026-06-25T15:03:55.607169-07:00"
+}

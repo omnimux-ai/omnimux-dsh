@@ -1,0 +1,47 @@
+{
+  "id": "35e0f271-9654-438c-b3c2-6997c80be19b",
+  "name": "editorial-apparel-static",
+  "category": "Image & Static Ads",
+  "description": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from an uploaded reference photo of a model plus a product brief — especially for intimates, underwear, swimwear, loungewear, denim, knitwear or any high-end editorial register. Encodes the creative move \"preserve the reference model, swap the garment to the briefed product, bake editorial typography into the image, finish in studio light.\" Trigger it any time a brief says \"make a print ad / s",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/user/3330063/20260625/89f769cd.jpeg",
+      "caption": "Mejuri",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "magazine-grade editorial",
+      "studio lighting",
+      "built-in typography",
+      "high-end fashion look"
+    ],
+    "best_for": [
+      "premium fashion static ads",
+      "print-style apparel ads",
+      "model reference garment swaps",
+      "intimates and swimwear",
+      "editorial social placements"
+    ]
+  },
+  "tags": [
+    "fashion",
+    "apparel",
+    "editorial",
+    "static",
+    "luxury",
+    "studio"
+  ],
+  "reference_files": [
+    "references/prompt-template.md",
+    "references/spelling-guard-library.md"
+  ],
+  "created_at": "2026-06-24T22:55:01.693541-07:00",
+  "updated_at": "2026-06-25T15:04:00.050803-07:00"
+}

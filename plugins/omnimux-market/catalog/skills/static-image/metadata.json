@@ -1,0 +1,6 @@
+{
+  "id": "sk-creatify-static-image",
+  "name": "static-image",
+  "category": "Image & Static Ads",
+  "description": "Use when the ad format is a single static image — Meta feed, Instagram feed, Pinterest, Reddit, Google Display, programmatic banners, LinkedIn single-image, X/Twitter image post. Produces a Static Image Creative Brief — ranked composition concepts, scroll-stop frame spec, focal-point + copy hierarchy, color/contrast direction, image-asset QA, per-platform size matrix, generation prompts, and asset gaps. Trigger before scriptwriting/design whenever the brief mentions a static ad, image ad, banner, single-image creative, \"make a poster\", Meta image post, Pinterest pin, or Display creative. The producer should run this skill first so its output feeds the image-generator (Flux / Nano-Banana / Recraft / Imagen) and copywriter. For video formats use ads-ugc-skill / ads-animated-storymode-skill; for swipe-format use ads-carousel-skill; for meme-format use ads-meme-skill."
+}

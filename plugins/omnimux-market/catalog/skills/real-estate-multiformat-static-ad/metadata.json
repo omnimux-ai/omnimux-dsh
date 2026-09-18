@@ -1,0 +1,56 @@
+{
+  "id": "c137c862-33ac-4b2a-9336-bcc7f5bd5bd9",
+  "name": "real-estate-multiformat-static-ad",
+  "category": "Image & Static Ads",
+  "description": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing, ready for Facebook and Instagram ad sets. Each format gets a distinct hook targeting a specific buyer persona (first-time buyer, investor, lifestyle), a bespoke layout pattern suited to that canvas, and full brokerage branding baked into the image. Trigger this skill whenever a real estate agent or team needs multi-format social ads for a listing — even if the user only asks for \"a Fac",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/a62906c969.png",
+      "caption": "Zillow",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/6fdb6a8c98.png",
+      "caption": "Zillow",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/788d7445a2.png",
+      "caption": "Zillow",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/83dc2d66-5d99-4dff-b8a9-99df3b47bab4/521f277c33.png",
+      "caption": "Zillow",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "branded static layouts",
+      "persona-specific hooks",
+      "platform-ready aspect ratios"
+    ],
+    "best_for": [
+      "real estate listing ads",
+      "Facebook and Instagram placements",
+      "multi-format static creatives",
+      "brokerage branded campaigns"
+    ]
+  },
+  "tags": [
+    "realestate",
+    "listings",
+    "static",
+    "social",
+    "brokerage"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:33.836404-07:00",
+  "updated_at": "2026-06-25T15:04:21.526696-07:00"
+}

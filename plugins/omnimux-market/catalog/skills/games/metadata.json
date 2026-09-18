@@ -1,0 +1,6 @@
+{
+  "id": "sk-creatify-games",
+  "name": "games",
+  "category": "Competitor Research",
+  "description": "Use when the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hyper-casual, sim, simulator, app-game). Produces a Game Creative Brief — gameplay-footage QA, mascot/character inventory, listing-page review pull-quotes, mood/dimension candidates, and a ranked list of hook concepts tuned for game ads. Trigger before scriptwriting whenever the brief mentions a game, app store / Play Store / Steam / itch.io listing, gameplay video, or a game studio. The producer should run this skill first so its output feeds ads-scriptwriter-skill (or ads-fast-skill)."
+}

@@ -1,0 +1,48 @@
+{
+  "id": "60022788-6341-4e7c-9cee-90834ddd5969",
+  "name": "illustrated-world-map-builder",
+  "category": "Image & Static Ads",
+  "description": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited with a character roster panel. Trigger this skill whenever the user asks to generate, update, or extend the campus map, add new campus buildings, create individual room interior illustrations, or assemble the final world-map composite deliverables. Also trigger when the user references \"the academy map,\" \"the campus illustration,\" or asks to \"add a building to the map.\" This skill encode",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/be545f77-5781-4f3e-8f6b-b1eee858c6f9/bc78b210a1.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/be545f77-5781-4f3e-8f6b-b1eee858c6f9/9d15c92163.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "illustrated isometric",
+      "16:9 layout",
+      "campus-map composition",
+      "character roster panel"
+    ],
+    "best_for": [
+      "brand universe maps",
+      "campus illustrations",
+      "world-map composites",
+      "room interior illustrations"
+    ]
+  },
+  "tags": [
+    "map",
+    "isometric",
+    "campus",
+    "illustration",
+    "brand",
+    "characters"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:27.753357-07:00",
+  "updated_at": "2026-06-25T15:04:04.497317-07:00"
+}

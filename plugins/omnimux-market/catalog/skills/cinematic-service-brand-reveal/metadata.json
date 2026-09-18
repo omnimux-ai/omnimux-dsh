@@ -1,0 +1,43 @@
+{
+  "id": "a2546d49-2801-4351-bb0f-53e052b2e80c",
+  "name": "cinematic-service-brand-reveal",
+  "category": "Video Ads",
+  "description": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 28-33s). Opens with an aspirational slow-reveal hook — a calm declarative naming the viewer's latent desire (\"Your space deserves to be transformed\"). Pivots to a credibility beat with professionals at work and a services checklist overlay in brand accent color. Closes on a static brand card with location tag, phone number, and soft CTA button. Arc shape: aspiration → credibility → access",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/v46kkzymqs/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic three-act arc",
+      "aspirational slow reveal",
+      "professional credibility beat",
+      "static branded CTA card"
+    ],
+    "best_for": [
+      "Instagram Reels",
+      "TikTok service ads",
+      "local business brand reveals",
+      "premium service promos"
+    ]
+  },
+  "tags": [
+    "cinematic",
+    "services",
+    "local",
+    "reels",
+    "tiktok",
+    "branding"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:21.470487-07:00",
+  "updated_at": "2026-06-25T15:03:55.863353-07:00"
+}

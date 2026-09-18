@@ -1,0 +1,43 @@
+{
+  "id": "b072a60a-0493-4459-99a1-25bff7fc1df8",
+  "name": "listing-cinematic-silent-spec-reveal",
+  "category": "Product Showcase",
+  "description": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res photography) into a 15-second cinematic 9:16 social ad using only listing photos — no stock footage, no voiceover. The creative pattern is a three-scene \"silent spec reveal\": each scene pairs one hero photo (animated with a slow Ken Burns motion) with kinetic text overlays that surface a single compelling spec tier, culminating in a CTA price pill in the brand accent color. All communic",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/bisvkpaodr/output.mp4",
+      "caption": "Owala",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic 9:16 video",
+      "silent with kinetic text",
+      "Ken Burns photo motion",
+      "premium spec reveal"
+    ],
+    "best_for": [
+      "luxury asset listings",
+      "automotive ads",
+      "real estate reels",
+      "aircraft or marine promos"
+    ]
+  },
+  "tags": [
+    "listing",
+    "luxury",
+    "cinematic",
+    "specs",
+    "silent",
+    "vertical"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:29.539472-07:00",
+  "updated_at": "2026-06-25T15:04:07.284732-07:00"
+}

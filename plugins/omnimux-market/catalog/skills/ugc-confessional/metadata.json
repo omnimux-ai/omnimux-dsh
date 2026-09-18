@@ -1,0 +1,56 @@
+{
+  "id": "5ad79605-256c-4396-9c03-c4a61be9c914",
+  "name": "ugc-confessional",
+  "category": "UGC & Testimonial",
+  "description": "Use when producing a UGC (user-generated-content) style video ad — vertical 9:16, creator-to-camera, selfie POV, fast cuts, authentic iPhone texture, burned-in captions. Runs on TikTok, Instagram Reels, YouTube Shorts, Snapchat Spotlight, and Facebook Reels. Trigger whenever the user mentions UGC, creator ad, TikTok ad, Reels ad, Shorts UGC, selfie-style video, testimonial video, POV video, influencer-style ad, or wants a scrappy creator-feel video (not a polished brand film). This skill produces a format brief that downstream stages consume before writing.",
+  "author": "Creatify",
+  "version": 14,
+  "app_scope": "both",
+  "usage_count": 441,
+  "favorite_count": 8,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/30frgr9hcm/output.mp4",
+      "caption": "AG1 — auto-generated demo #1",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/ykwew0pf1e/output.mp4",
+      "caption": "AG1 — auto-generated demo #3",
+      "media_type": "video"
+    },
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/8esvt8sv1w/output.mp4",
+      "caption": "AG1 — auto-generated demo #4",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "vertical 9:16",
+      "creator-to-camera",
+      "fast cuts",
+      "authentic iPhone texture"
+    ],
+    "best_for": [
+      "TikTok UGC",
+      "Instagram Reels ads",
+      "selfie testimonial videos",
+      "POV creator ads"
+    ]
+  },
+  "tags": [
+    "ugc",
+    "tiktok",
+    "reels",
+    "selfie",
+    "testimonial",
+    "pov"
+  ],
+  "reference_files": [
+    "references/board-prompt-guide.md",
+    "references/clip-prompt-guide.md"
+  ],
+  "created_at": "2026-04-21T19:22:42.708658-07:00",
+  "updated_at": "2026-09-11T04:24:10.750671-07:00"
+}

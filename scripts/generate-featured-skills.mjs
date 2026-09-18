@@ -25,18 +25,18 @@ export const SNAPSHOT_PATH = join(ROOT, 'plugins/omnimux/src/client/session-guid
 export const SNAPSHOT_SCHEMA = 'omnimux.session-guide.featured-skills/v1'
 
 /**
- * 官方重磅精选置顶序列（严格对标首屏 4 列视觉网格与高品质出片流）
+ * 官方重磅精选置顶序列：热门精选 3 套 + 新品上市 6 套置顶
  */
 export const PINNED_TOP_SKILL_IDS = [
-  'sk-omx-hypit-setup',
-  'sk-omx-3d-animation-short-generator',
-  'sk-omx-brand-promo-video-generator',
-  'sk-omx-minimalist-product-ad-generator',
-  'sk-omx-music-video-subtitle-generator',
-  'sk-omx-paper-collage-explainer-generator',
-  'sk-omx-fpv-tour-video-generator',
-  'sk-omx-pov-short-film-generator',
-  'sk-omx-suspense-title-sequence-generator',
+  'sk-omx-ugc-confessional',
+  'sk-omx-cinematic',
+  'sk-omx-ugc-showcase',
+  'sk-omx-ecommerce',
+  'sk-omx-static-image',
+  'sk-omx-carousel',
+  'sk-omx-course-to-short-video',
+  'sk-omx-ugc-fit-check',
+  'sk-omx-youth-sports-hype-reel',
 ]
 
 /** 快照双语字段域：与 `plugins/omnimux-market/src/skill-bilingual.ts` 的判据同域。 */
@@ -86,8 +86,13 @@ export function buildSnapshot(catalog) {
         tags: Array.isArray(item.tags) ? item.tags.filter((tag) => typeof tag === 'string' && tag !== '') : [],
         cover: coverAsset,
         avatar: avatarAsset,
-        badge: typeof item.badge === 'string' && item.badge ? item.badge : 'H3',
+        badge: typeof item.badge === 'string' && item.badge ? item.badge : '',
         skill: String(item.skill || ''),
+        isHot: !!item.isHot,
+        isNew: !!item.isNew,
+        coverIndex: typeof item.coverIndex === 'number' ? item.coverIndex : 0,
+        coverFile: typeof item.coverFile === 'string' ? item.coverFile : '',
+        downloads: typeof item.downloads === 'number' ? item.downloads : 100,
         sourceRef: item.source && typeof item.source === 'object'
           ? { repo: String(item.source.repo || ''), path: String(item.source.path || '') }
           : null,

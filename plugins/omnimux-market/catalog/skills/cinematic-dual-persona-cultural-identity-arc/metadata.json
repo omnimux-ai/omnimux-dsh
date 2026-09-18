@@ -1,0 +1,44 @@
+{
+  "id": "b100f1c8-69e6-47f8-bab1-40b8dd95def7",
+  "name": "cinematic-dual-persona-cultural-identity-arc",
+  "category": "Video Ads",
+  "description": "A luxury video ad pattern that establishes deep cultural identity through two contrasting on-camera personas (female + male) speaking directly to camera in a shared mother tongue, anchored by a contemplative cinematic aesthetic and closed by a brand-voice voiceover end card. Trigger this skill whenever a brand's core value proposition is rooted in cultural heritage, craftsmanship, or origin story — especially luxury fashion, artisan goods, or diaspora brands targeting prestige audiences on verti",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://s3.us-west-2.amazonaws.com/remotionlambda-uswest2-30tewi8y5c/renders/pobnumyzs0/output.mp4",
+      "caption": "Stanley 1913",
+      "media_type": "video"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cinematic and contemplative",
+      "dual persona direct-to-camera",
+      "mother-tongue dialogue",
+      "prestige brand voiceover"
+    ],
+    "best_for": [
+      "luxury video ads",
+      "heritage brand storytelling",
+      "artisan goods",
+      "diaspora audiences",
+      "fashion origin stories"
+    ]
+  },
+  "tags": [
+    "luxury",
+    "heritage",
+    "culture",
+    "fashion",
+    "artisan",
+    "cinematic"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:19.185991-07:00",
+  "updated_at": "2026-06-25T15:03:53.256517-07:00"
+}

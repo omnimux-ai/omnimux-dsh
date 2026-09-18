@@ -1,0 +1,94 @@
+{
+  "id": "cad90a64-5e9e-496c-bf7c-a18c12cb1809",
+  "name": "landing-page-dr-skill",
+  "category": "Image & Static Ads",
+  "description": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-on-delivery (COD / contraentrega) model. Produces 11 vertical 9:16 images following a proven conversion funnel: Above the Fold → Antes/Después → Beneficios → Ingredientes → Comparación → Doctor → Testimonio → Prueba Social → Ofertas → FAQs → Cierre CTA. Each image follows a cohesive visual design system (deep navy + warm amber palette, bold condensed typography, alternating dark/light sec",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/6f8641bd51.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/08b12c558c.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/5eeedd61ef.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/3ef4ce51b0.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/cd54391c44.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/9149c8dd4c.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/65d83470df.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/be9ad1c38a.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/faad5ef02f.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/e01f636826.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/7dd1f08b-0ad8-424c-af08-1b50ecd93602/09a22e606c.png",
+      "caption": "Squarespace",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "cohesive navy/amber design",
+      "bold condensed typography",
+      "conversion-focused sections"
+    ],
+    "best_for": [
+      "COD landing pages",
+      "e-commerce product funnels",
+      "mobile 9:16 page sections",
+      "direct-response image sets"
+    ]
+  },
+  "tags": [
+    "landing",
+    "cod",
+    "ecommerce",
+    "funnel",
+    "static",
+    "spanish"
+  ],
+  "reference_files": [
+    "references/model-selection.md"
+  ],
+  "created_at": "2026-06-24T23:46:28.704443-07:00",
+  "updated_at": "2026-06-25T15:04:05.572119-07:00"
+}

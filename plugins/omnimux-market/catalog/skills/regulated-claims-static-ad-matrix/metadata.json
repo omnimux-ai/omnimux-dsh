@@ -1,0 +1,89 @@
+{
+  "id": "950d2692-d237-47c9-9ebc-f02c0da0e9cd",
+  "name": "regulated-claims-static-ad-matrix",
+  "category": "Image & Static Ads",
+  "description": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated legal/compliance disclaimer on every creative, targeting Meta cold audiences. Triggers when a user needs to build a high-volume batch of static Facebook/Instagram ads for a service whose category requires a fixed regulatory disclaimer baked into the image itself. Produces a creative matrix across multiple ad types, visual formats, and persuasion angles — all with the verbatim compliance d",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 0,
+  "favorite_count": 0,
+  "examples": [
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/235cc1529f.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/2ce0e5acca.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/4af462d305.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/056863d951.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/6cc430c91e.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/5795809e08.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/1b1adba123.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/a0ae5d3ae8.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/ca297cbcbc.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    },
+    {
+      "url": "https://cdn.creatify.ai/agent/ads/b7a2cefc-f7af-4f0b-b942-a7b2832d0a32/9aa50a6bbc.png",
+      "caption": "Ritual",
+      "media_type": "image"
+    }
+  ],
+  "insights": {
+    "style": [
+      "static image ad matrix",
+      "multiple persuasion angles",
+      "compliance disclaimer baked in",
+      "format and ad-type variations"
+    ],
+    "best_for": [
+      "regulated service ads",
+      "Meta cold audiences",
+      "high-volume static batches",
+      "disclaimer-required creatives",
+      "Facebook/Instagram image ads"
+    ]
+  },
+  "tags": [
+    "regulated",
+    "compliance",
+    "static",
+    "meta",
+    "matrix",
+    "disclaimer"
+  ],
+  "reference_files": [],
+  "created_at": "2026-06-24T23:46:34.445324-07:00",
+  "updated_at": "2026-06-25T15:04:22.656373-07:00"
+}

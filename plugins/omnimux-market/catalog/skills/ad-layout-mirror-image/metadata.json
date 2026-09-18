@@ -1,0 +1,39 @@
+{
+  "id": "1276adcc-ce1a-4d98-8836-7e8ec8e48280",
+  "name": "ad-layout-mirror-image",
+  "category": "Image & Static Ads",
+  "description": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old version of their own ad, a screenshot they admire) and asks for a new static image ad in that same composition but featuring a different product. Strongly prefer triggering this skill any time the brief sounds like \"make me an ad that looks like this, but with my product\" — even if the user does not say \"layout\" or \"mirror\" or \"recreate\" out loud. The creative move is to treat the referenc",
+  "author": "Creatify",
+  "version": 1,
+  "app_scope": "orchestrator",
+  "usage_count": 1,
+  "favorite_count": 0,
+  "examples": [],
+  "insights": {
+    "style": [
+      "same composition as reference",
+      "layout-matched",
+      "static visual ad"
+    ],
+    "best_for": [
+      "reference-based static ads",
+      "competitor ad recreation",
+      "product swap layouts",
+      "mockup-to-ad variations"
+    ]
+  },
+  "tags": [
+    "layout",
+    "mirror",
+    "reference",
+    "static",
+    "product",
+    "recreate"
+  ],
+  "reference_files": [
+    "references/handoff-template.md",
+    "references/slot-vocabulary.md"
+  ],
+  "created_at": "2026-06-24T23:46:14.536990-07:00",
+  "updated_at": "2026-06-24T23:46:17.266685-07:00"
+}
