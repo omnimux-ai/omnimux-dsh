@@ -1,0 +1,29 @@
+{
+  "feature": "indextts2-brand-rename",
+  "verifiedAt": "2026-09-18T10:45:00.000Z",
+  "summary": "模型级联选择器将 gxgenai 内部标识规范重命名为 Index TTS2",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "级联选择器左侧品牌分类栏显示 Index TTS2，彻底消除 gxgenai 裸词",
+      "result": "pass",
+      "evidence": "groupPickerCandidates 映射命中 ['indextts', 'Index TTS2', ['gxgenai', 'index-tts', 'indextts']]，分类名称输出为 Index TTS2"
+    },
+    {
+      "id": "AC-2",
+      "name": "声音克隆模型标题与副标题更新为 Index TTS2",
+      "result": "pass",
+      "evidence": "audio-models.yaml 更新 label 为 Index TTS2 声音克隆，subtitle 调整为 Index TTS2 · 参考音 + 文稿直出克隆音色"
+    },
+    {
+      "id": "AC-3",
+      "name": "品牌图标组件挂载 indextts 专属紫色波形矢量图标",
+      "result": "pass",
+      "evidence": "ModelBrandIcon.tsx 增加 indextts SVG 资产与正则匹配规则，杜绝 fallback 纯字母"
+    }
+  ],
+  "unit": {
+    "modelPickerCandidates.test.mjs": "5/5 pass",
+    "voiceCloneCanvasPolicy.test.mjs": "2/2 pass"
+  }
+}

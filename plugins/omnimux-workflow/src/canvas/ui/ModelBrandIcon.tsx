@@ -22,9 +22,11 @@ export const BRAND_SVGS: Record<string, string> = {
   elevenlabs: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#000"/><rect x="7" y="6" width="2" height="12" fill="white"/><rect x="11" y="6" width="2" height="12" fill="white"/><rect x="15" y="6" width="2" height="12" fill="white"/></svg>`,
   stability: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#7C3AED"/><path d="M12 6L18 12L12 18L6 12L12 6Z" fill="white"/></svg>`,
   suno: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#FF3366"/><path d="M12 6v8.5a2.5 2.5 0 1 1-2-2.45V8h5v4.5a2.5 2.5 0 1 1-2-2.45V6h-1z" fill="white"/></svg>`,
+  indextts: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#9460EF"/><path d="M12 5V19M8 9V15M16 8V16M4 11V13M20 10V14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
 const RULES: Array<{ brand: string; regex: RegExp }> = [
+  { brand: 'indextts', regex: /(^index|^indextts|gxgenai)/i },
   { brand: 'suno', regex: /(^suno|\bsuno\b)/i },
   { brand: 'veo', regex: /(^veo|\bveo\b|omni[- ]?flash)/i },
   { brand: 'google', regex: /(^gemini|\bgemini\b|google|nano[- ]?banana)/i },

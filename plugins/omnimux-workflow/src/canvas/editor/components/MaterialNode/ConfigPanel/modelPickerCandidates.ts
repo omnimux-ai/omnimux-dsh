@@ -25,6 +25,7 @@ const BRANDS: readonly [string, string, readonly string[]][] = [
   ['google', 'Google', ['google', 'gemini', 'nano-banana', 'nanobanana', 'imagen', 'veo']],
   ['midjourney', 'Midjourney', ['midjourney', 'mj']],
   ['xai', 'xAI', ['xai', 'grok']],
+  ['indextts', 'Index TTS2', ['gxgenai', 'index-tts', 'indextts', 'indextts-2', 'index']],
 ];
 
 export function isPickerCandidate(options: readonly PickerCandidate[], modelId: string): boolean {

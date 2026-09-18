@@ -10,7 +10,7 @@ const speech = {
   operations: [{ id: 'text_to_speech', label: '文本转语音', listed: true, output: { type: 'audio' }, inputs: [prompt] }],
 };
 const clone = {
-  id: 'index-tts', label: 'Index TTS 声音克隆', family: 'gxgenai',
+  id: 'index-tts', label: 'Index TTS2 声音克隆', family: 'indextts',
   operations: [{
     id: 'voice_clone', label: '声音克隆', listed: true, output: { type: 'audio' },
     inputs: [prompt, { slot: 'voice_sample', type: 'audio', role: 'audio_track', source: 'upstream_edge', min: 1, max: 1 }],
