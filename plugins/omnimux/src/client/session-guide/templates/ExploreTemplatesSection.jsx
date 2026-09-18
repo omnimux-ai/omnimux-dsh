@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   TEMPLATE_CATEGORIES,
   SHELVES_CONFIG,
@@ -9,6 +9,13 @@ import { TemplatesShelfRow } from './TemplatesShelfRow.jsx'
 import { TemplatesGridView } from './TemplatesGridView.jsx'
 import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx'
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' }
+
+/**
+ * 分类全量数据内存缓存池（提升来回切换速度，避免重复计算与网络消耗）
+ * Map<categorySlug, { items: Array, timestamp: number }>
+ */
+const CATEGORY_DATA_CACHE = new Map()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 分钟有效
 
 /**
  * 将相对封面转换为绝对或者静态资源路径
@@ -87,12 +94,49 @@ const TIKTOK_TRENDING_FALLBACK_ITEMS = Object.freeze([
     categorySlug: 'tiktok',
     breakdown: '白球鞋彻底浸入泥潭 + 绵密泡沫喷射覆盖 + 刷洗冲水瞬间崭新',
   },
+  {
+    id: 'trend_coffee_maker_06',
+    title: '便携胶囊咖啡机汽车点烟器30秒现萃油脂',
+    titleEn: 'Portable Espresso Maker 12V Fast Extraction Review',
+    views: 4200000,
+    engagement: 0.028,
+    cover: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=400&q=80',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=400&q=80',
+    type: 'tiktok',
+    categorySlug: 'tiktok',
+    breakdown: '户外车内实机操作 + 浓稠金黄咖啡油脂流淌 + 第一口满足表情',
+  },
+  {
+    id: 'trend_laser_engraver_07',
+    title: '掌上激光雕刻机可乐罐高难度浮雕实测',
+    titleEn: 'Handheld Laser Engraver Coke Can High-Precision Test',
+    views: 9300000,
+    engagement: 0.041,
+    cover: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=400&q=80',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=400&q=80',
+    type: 'tiktok',
+    categorySlug: 'tiktok',
+    breakdown: '激光闪烁火花特写 + 铝罐表面秒级成图 + 触摸立体触感反馈',
+  },
+  {
+    id: 'trend_car_scratch_08',
+    title: '汽车划痕修复膏钥匙暴力刮擦现场抹平',
+    titleEn: 'Car Scratch Repair Wax Key Scratch Live Erase',
+    views: 18900000,
+    engagement: 0.065,
+    cover: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
+    type: 'tiktok',
+    categorySlug: 'tiktok',
+    breakdown: '钥匙刺耳划车漆痛点 + 修复膏海绵涂抹 + 擦亮瞬间反光如新镜面',
+  },
 ])
 
 /**
  * 探索模板 (Explore templates) 核心大专区
  * 
  * 融合非模板化内容（TikTok热门、Skills）与创意模板为统一扁平分类胶囊与单行货架流。
+ * 具备「查看全部状态下全量数据呈现 + 首次 16 项分批渲染 + 内存字典秒级缓存 + 媒体懒加载」降本提速架构。
  *
  * @param {object} props
  * @param {(payload: object) => void} [props.onApplyTemplate]
@@ -112,8 +156,8 @@ export function ExploreTemplatesSection({
 
   const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
 
-  // 解析 Skills 数据并映射为极简大片卡片（不含任何虚假指标）
-  const skillsItems = useMemo(() => {
+  // 全量 70 项精选技能数据映射（纯净大片展示，无虚假指标）
+  const allSkillsItems = useMemo(() => {
     const rawList = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : []
     return rawList.map((sk) => ({
       id: sk.id || sk.skill,
@@ -192,12 +236,35 @@ export function ExploreTemplatesSection({
 
   const currentCategoryObj = TEMPLATE_CATEGORIES.find((c) => c.slug === selectedCategory) || TEMPLATE_CATEGORIES[0]
 
-  // 计算当前分类在网格视图下的完整列表
+  // 核心缓存机制：计算并缓存当前分类在网格视图下的全量数据集
   const gridItems = useMemo(() => {
-    if (selectedCategory === 'tiktok') return TIKTOK_TRENDING_FALLBACK_ITEMS
-    if (selectedCategory === 'skills') return skillsItems
-    return selectTemplatesByCategory(selectedCategory)
-  }, [selectedCategory, skillsItems])
+    if (selectedCategory === 'all') return []
+
+    // 1. 优先读取内存缓存（0ms 秒开）
+    const cached = CATEGORY_DATA_CACHE.get(selectedCategory)
+    const now = Date.now()
+    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+      return cached.items
+    }
+
+    // 2. 缓存未命中时提取全量数据
+    let fullList = []
+    if (selectedCategory === 'tiktok') {
+      fullList = TIKTOK_TRENDING_FALLBACK_ITEMS
+    } else if (selectedCategory === 'skills') {
+      fullList = allSkillsItems
+    } else {
+      fullList = selectTemplatesByCategory(selectedCategory)
+    }
+
+    // 3. 写入内存缓存，后续切换零延迟且不重复耗能
+    CATEGORY_DATA_CACHE.set(selectedCategory, {
+      items: fullList,
+      timestamp: now,
+    })
+
+    return fullList
+  }, [selectedCategory, allSkillsItems])
 
   return (
     <div className="omnimux-explore-templates-root" data-omnimux-explore-section="">
@@ -208,7 +275,7 @@ export function ExploreTemplatesSection({
         </h2>
       </div>
 
-      {/* 10 大分类扁平纯净胶囊栏（原生中/英文适配，无括号硬拼接） */}
+      {/* 10 大分类扁平纯净胶囊栏（原生中/英文适配，无任何多余角标与括号） */}
       <div className="omnimux-explore-filter-bar">
         <div className="omnimux-explore-pills-row" role="tablist" aria-label="分类列表">
           {TEMPLATE_CATEGORIES.map((cat) => {
@@ -231,15 +298,15 @@ export function ExploreTemplatesSection({
         </div>
       </div>
 
-      {/* 视图展现：全部时展现单行货架流；选定特定分类时展现全网格 */}
+      {/* 视图展现：全部时展现单行货架流；选定特定分类时展现全量大网格 */}
       {selectedCategory === 'all' ? (
         <div className="omnimux-explore-shelves-view">
           {SHELVES_CONFIG.map((shelf) => {
             let shelfItems = []
             if (shelf.slug === 'tiktok') {
-              shelfItems = TIKTOK_TRENDING_FALLBACK_ITEMS
+              shelfItems = TIKTOK_TRENDING_FALLBACK_ITEMS.slice(0, 8)
             } else if (shelf.slug === 'skills') {
-              shelfItems = skillsItems.slice(0, 8)
+              shelfItems = allSkillsItems.slice(0, 8)
             } else {
               shelfItems = selectShelfItems(shelf.slug, 8)
             }

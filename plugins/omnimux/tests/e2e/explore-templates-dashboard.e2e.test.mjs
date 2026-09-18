@@ -182,4 +182,36 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     assert.ok(templatePayload, '点击模板复刻必须触发 onApplyTemplate')
     assert.ok(templatePayload.prompt, '回传必须包含提示词')
   })
+
+  it('点击查看全部进入全量网格：首批渲染 16 项，触底追加加载直至全部展示', async () => {
+    act(() => {
+      reactRoot.render(React.createElement(ExploreTemplatesSection))
+    })
+
+    // 点击进入「视效大片」分类（包含 139 套全量模板）
+    const vfxPill = rootContainer.querySelector('[data-category-slug="cinematic-vfx"]')
+    assert.ok(vfxPill, '必须存在视效大片分类胶囊')
+
+    act(() => {
+      vfxPill.click()
+    })
+
+    const grid = rootContainer.querySelector('.omnimux-tpl-full-grid')
+    assert.ok(grid, '必须展开大网格视图')
+
+    // 验证首批只切片渲染 16 项（避免首屏 139 个卡片 DOM 并发卡死）
+    const cardsFirstBatch = grid.querySelectorAll('.omnimux-tpl-card')
+    assert.equal(cardsFirstBatch.length, 16, '首批切片必须精准渲染 16 张卡片')
+
+    // 验证底部加载更多按键存在并模拟点击追加
+    const loadMoreBtn = rootContainer.querySelector('.omnimux-tpl-btn-loadmore')
+    assert.ok(loadMoreBtn, '项目未全部加载时必须存在加载更多按键')
+
+    act(() => {
+      loadMoreBtn.click()
+    })
+
+    const cardsSecondBatch = grid.querySelectorAll('.omnimux-tpl-card')
+    assert.equal(cardsSecondBatch.length, 32, '追加后必须平滑扩充至 32 张卡片')
+  })
 })

@@ -3286,6 +3286,19 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
   gap:18px;
 }
+.omnimux-tpl-grid-footer { display:flex; justify-content:center; align-items:center; padding:24px 0 12px; }
+.omnimux-tpl-btn-loadmore {
+  background:var(--dsw-alias-bg-layer-1);
+  border:1px solid var(--dsw-alias-border-l2);
+  color:var(--dsw-alias-label-secondary);
+  font-size:12px;
+  padding:8px 24px;
+  border-radius:20px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.omnimux-tpl-btn-loadmore:hover { color:var(--dsw-alias-label-primary); border-color:var(--dsw-alias-border-l3); }
+.omnimux-tpl-grid-all-loaded { font-size:12px; color:var(--dsw-alias-label-tertiary); }
 
 /* Drawer Detail */
 .omnimux-tpl-drawer-overlay {
