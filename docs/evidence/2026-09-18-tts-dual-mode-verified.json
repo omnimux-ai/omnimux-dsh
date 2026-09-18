@@ -1,0 +1,35 @@
+{
+  "feature": "tts-dual-mode",
+  "verifiedAt": "2026-09-18T12:35:00.000Z",
+  "summary": "TTS 双模式架构落地：参考音频克隆 vs 内置音色库联动与互斥防呆",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "智能模式识别：无连线默认为内置音色模式，连入上游音频自动进入参考音频模式",
+      "result": "pass",
+      "evidence": "ConfigPanel 基于 useUpstreamMedia 派生 hasUpstreamAudio，自动锁定音色复刻模式"
+    },
+    {
+      "id": "AC-2",
+      "name": "强互斥防呆：连入上游音频时内置音色选择禁用置灰，提示需先断开上游输入，消除逻辑冲突",
+      "result": "pass",
+      "evidence": "wf-voice-trigger 在 hasUpstreamAudio 时设为 disabled 并展示锁定 Tooltip 与参考音频模式标签"
+    },
+    {
+      "id": "AC-3",
+      "name": "提交防线守卫：克隆模式下若上游无有效输入，生成按钮物理禁用",
+      "result": "pass",
+      "evidence": "blockGenerate 绑定 cloneMissingAudio 检查，按钮置灰且禁用原因明确为需先连接上游音频输入"
+    },
+    {
+      "id": "AC-4",
+      "name": "底层发包通道打通：携带参考音频时完整透传 references，经网关实测 200 成功复刻出片",
+      "result": "pass",
+      "evidence": "mapOmnimuxInput 规范构造 references: [{ audio_url }]，网关真实返回 43,437 字节有效 MP3"
+    }
+  ],
+  "unit": {
+    "materialSpeechSubmission.test.mjs": "8/8 pass",
+    "tts-dual-mode.e2e.test.mjs": "1/1 pass"
+  }
+}

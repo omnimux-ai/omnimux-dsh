@@ -312,11 +312,20 @@ export function mapOmnimuxInput(capability, request) {
     return fromGuard
   }
 
-  if (capability === 'audio' && (request.operation === 'text_to_speech' || request.model === 'seed-audio-1.0')) {
+  if (capability === 'audio' && (request.operation === 'text_to_speech' || request.operation === 'voice_clone' || request.model === 'seed-audio-1.0')) {
     const speech = { input: request.prompt }
     if (request.voice !== undefined) speech.voice = request.voice
     if (request.speed !== undefined) speech.speed = request.speed
     if (request.format !== undefined) speech.response_format = request.format
+
+    const references = Array.isArray(request.references) ? request.references : []
+    const audioRef = references.find((r) => r && r.type === 'audio' && typeof r.pathOrUrl === 'string' && r.pathOrUrl)
+      ?? (request.audioTrack && typeof request.audioTrack.pathOrUrl === 'string' && request.audioTrack.pathOrUrl ? request.audioTrack : undefined)
+    const audioUrl = audioRef?.pathOrUrl ?? (typeof request.audio === 'string' && request.audio ? request.audio : undefined)
+    if (audioUrl) {
+      speech.references = [{ audio_url: audioUrl }]
+      speech.audio_url = audioUrl
+    }
     return speech
   }
 

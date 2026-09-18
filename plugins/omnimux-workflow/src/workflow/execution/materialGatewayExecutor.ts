@@ -288,13 +288,17 @@ export function createMaterialGatewayExecutor(opts: {
         signal: ctx.signal,
         mockFail: readMockFail(data),
       };
-      // Synchronous speech consumes text and voice parameters, not reference media.
+      // Synchronous speech preserves reference audio when supplied (reference audio clone mode).
       if (capability === 'audio' && upstream.operationId === 'text_to_speech') {
-        delete request.references;
-        delete request.audio;
-        delete request.audioTrack;
         delete request.image;
         delete request.interleavedParts;
+        const hasReferenceAudio = (Array.isArray(request.references) && request.references.some((r) => r && r.type === 'audio'))
+          || Boolean(request.audioTrack?.pathOrUrl) || Boolean(request.audio);
+        if (!hasReferenceAudio) {
+          delete request.references;
+          delete request.audio;
+          delete request.audioTrack;
+        }
       }
       const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);

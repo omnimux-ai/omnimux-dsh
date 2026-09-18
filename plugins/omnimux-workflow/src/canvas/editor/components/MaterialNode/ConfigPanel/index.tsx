@@ -416,6 +416,16 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       : []),
     [materialType, isAsrTool, audioEffectiveParams],
   );
+
+  // TTS 双模式状态机：判断是否存在有效上游音频连线
+  const hasUpstreamAudio = useMemo(() => {
+    return upstreams.some((u) => u.materialType === 'audio' && (u.hasMedia || u.hasContent));
+  }, [upstreams]);
+
+  const isCloneMode = (nodeData.tool === 'voice-clone')
+    || opsState.selectedOperationId === 'voice_clone'
+    || params.operation === 'voice_clone';
+  const cloneMissingAudio = isCloneMode && !hasUpstreamAudio;
   // Issue #763：时长由文本长度决定，底栏不再有音频参数浮层；
   // 只要 schema 提供音色选项，底栏即常驻 VoiceTrigger + VoicePickerDialog。
   const showVoicePicker = voiceCatalogOptions.length > 0;
@@ -626,11 +636,13 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     || videoValidationErrors.length > 0
     || Boolean(audioPromptGate?.exceeded)
     || missingRequiredSlots.length > 0
+    || cloneMissingAudio
     || execBusy;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
-    (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
+    (cloneMissingAudio ? '参考音频模式需先连接上游音频输入' : undefined)
+    || (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
     || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || videoValidationErrors[0]
     || slotShortageReason;
@@ -791,15 +803,23 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           {showVoicePicker ? (
             <button
               type="button"
-              className="wf-voice-trigger"
+              className={`wf-voice-trigger ${hasUpstreamAudio ? 'is-locked-by-upstream' : ''}`}
               data-testid="wf-voice-trigger"
-              disabled={execBusy}
-              title={selectedVoiceOption ? `音色：${resolveVoiceLabel(selectedVoiceOption)}` : '选择音色'}
-              onClick={() => setVoicePickerOpen(true)}
+              disabled={execBusy || hasUpstreamAudio}
+              title={
+                hasUpstreamAudio
+                  ? '已关联上游参考音频（音色复刻模式）；如需挑选内置音色库，请先移除上游输入连线'
+                  : (selectedVoiceOption ? `音色：${resolveVoiceLabel(selectedVoiceOption)}` : '选择音色')
+              }
+              onClick={() => {
+                if (!hasUpstreamAudio) setVoicePickerOpen(true);
+              }}
             >
               <AudioLines size={14} strokeWidth={1.75} aria-hidden="true" />
               <span className="wf-voice-trigger__label">
-                {selectedVoiceOption ? resolveVoiceLabel(selectedVoiceOption) : '选择音色'}
+                {hasUpstreamAudio
+                  ? '参考音频模式'
+                  : (selectedVoiceOption ? resolveVoiceLabel(selectedVoiceOption) : '选择音色')}
               </span>
             </button>
           ) : null}
