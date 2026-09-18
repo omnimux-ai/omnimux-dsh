@@ -212,4 +212,32 @@ describe('E2E: 独立应用真实调度与状态对账闭环', () => {
     assert.equal(status, 200);
     assert.equal(invoked, true);
   });
+
+  test('E04: 验证注入后快照通过工作流真实就绪度检查（绝不误报 prompt_required）', async () => {
+    const service = createAppsService();
+    const manifest = {
+      schemaVersion: '1.0.0',
+      appId: 'app-creatify-app-demo',
+      version: '1.0.0',
+      workflowBinding: { workspaceId: 'ws-app-creatify-app-demo' },
+      metadata: { name: '手机与网页交互实机演示', category: 'video' },
+      fieldMappings: {
+        product_image: { nodeId: 'node-slot-product-image', targetField: 'mediaUrl', mappingType: 'media', required: true },
+        copywriting: { nodeId: 'node-slot-copywriting', targetField: 'prompt', mappingType: 'prompt', required: true },
+      },
+    };
+
+    const snapshot = service.prepareSnapshot(manifest, {
+      product_image: 'https://example.com/test.png',
+      copywriting: '我的测试商品卖点',
+    });
+
+    const slotImage = snapshot.nodes.find((n) => n.id === 'node-slot-product-image');
+    assert.equal(slotImage?.data?.nodeKind, 'import', '图片插槽必须是 import 节点');
+    assert.equal(slotImage?.data?.status, 'completed', '图片插槽状态必须是 completed');
+
+    const slotText = snapshot.nodes.find((n) => n.id === 'node-slot-copywriting');
+    assert.equal(slotText?.data?.nodeKind, 'import', '文案插槽必须是 import 节点');
+    assert.equal(slotText?.data?.status, 'completed', '文案插槽状态必须是 completed');
+  });
 });

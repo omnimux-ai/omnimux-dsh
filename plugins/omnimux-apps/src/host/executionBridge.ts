@@ -238,6 +238,26 @@ export function prepareAndInjectWorkflowSnapshot(
     throw new ExecutionBridgeError('validation_failed', 'Workflow snapshot contains no nodes');
   }
 
+  // Step 1.5: 强制规范所有插槽节点 (isSlot, slotRole, node-slot-*) 为 import 节点，杜绝被调度内核误判为生成节点
+  for (const node of nodes) {
+    const d = node.data || {};
+    if (
+      d.isSlot ||
+      d.slotRole ||
+      node.id.startsWith('node-slot-') ||
+      d.tool === 'import-image' ||
+      d.tool === 'prompt-template'
+    ) {
+      node.data = node.data || {};
+      node.data.nodeKind = 'import';
+      node.data.selectedTool = 'import';
+      node.data.status = 'completed';
+      if (d.type && !node.data.materialType) {
+        node.data.materialType = d.type;
+      }
+    }
+  }
+
   // Step 2: Traverse fieldMappings and inject formValues
   const fieldMappings = manifest.fieldMappings || {};
 
@@ -357,6 +377,8 @@ export function prepareAndInjectWorkflowSnapshot(
         data: {
           label: mapping.label || fieldKey,
           materialType: mediaType,
+          nodeKind: 'import',
+          selectedTool: 'import',
           mediaUrl,
           mediaAssets: [
             {
