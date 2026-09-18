@@ -159,16 +159,17 @@ describe('E2E: 探索模板 (Explore templates) 首页交互与全流程', () =>
     assert.ok(trendingPayload, '点击 TikTok 卡片复刻必须触发 onApplyTrending')
     assert.ok(trendingPayload.id, '必须回传灵感 ID')
 
-    // 2. 测试 Skills 技能卡片复刻
+    // 2. 测试 Skills 技能卡片复刻/使用
     const skillShelf = rootContainer.querySelector('[data-shelf-slug="skills"]')
     assert.ok(skillShelf, '必须存在 Skills 货架')
     const skillBtn = skillShelf.querySelector('.omnimux-trending-recreate-btn')
-    assert.ok(skillBtn, 'Skill 卡片必须具备深灰毛玻璃复刻按键')
+    assert.ok(skillBtn, 'Skill 卡片必须具备深灰毛玻璃操作按键')
+    assert.equal(skillBtn.textContent.trim(), '使用', 'Skill 卡片操作按钮文案必须为「使用」')
 
     act(() => {
       skillBtn.click()
     })
-    assert.ok(skillPayload, '点击 Skill 卡片复刻必须触发 onApplySkill')
+    assert.ok(skillPayload, '点击 Skill 卡片必须触发 onApplySkill')
     assert.ok(skillPayload.id || skillPayload.skill, '必须回传技能标识')
 
     // 3. 测试常规模板卡片复刻
