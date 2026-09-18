@@ -52,6 +52,8 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
 
   // 区分是否为带有真实指标的 TikTok 热门卡片
   const isTikTok = template.type === 'tiktok' || template.categorySlug === 'tiktok' || (typeof template.views === 'number' && template.views > 0)
+  const isSkill = template.type === 'skill' || template.categorySlug === 'skills'
+  const actionText = isSkill ? '使用' : '复刻'
   const viewsText = isTikTok ? formatMetric(template.views) : null
   const engagementText = isTikTok && typeof template.engagement === 'number' ? `${(template.engagement * 100).toFixed(1)}%` : null
 
@@ -117,18 +119,18 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
           </div>
         </div>
 
-        {/* 悬停平滑浮现的毛玻璃圆角复刻按钮（1:1 直接复用创作灵感样式） */}
+        {/* 悬停平滑浮现的毛玻璃圆角按键（直接复用创作灵感样式） */}
         <div className="omnimux-tpl-hover-action">
           <button /* exempt-ui01: session-guide card recreate button */
             type="button"
             className="omnimux-trending-recreate-btn"
             onClick={handleRecreateClick}
-            aria-label={`复刻：${title}`}
+            aria-label={`${actionText}：${title}`}
           >
             <span className="omnimux-trending-recreate-icon" aria-hidden="true">
               {ICON_REPLICATE}
             </span>
-            <span>复刻</span>
+            <span>{actionText}</span>
           </button>
         </div>
       </div>
