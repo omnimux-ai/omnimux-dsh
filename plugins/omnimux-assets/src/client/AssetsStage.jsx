@@ -184,7 +184,7 @@ function AssetsFilterBar(props) {
             <SearchField
               placeholder={searchPlaceholder}
               value={feed.query}
-              onChange={feed.setQuery}
+              onValueChange={feed.setQuery}
               onClear={() => feed.setQuery('')}
             />
           </div>
@@ -288,7 +288,7 @@ function AssetsBody(props) {
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} />
+          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} query={feed.query} />
         </div>
       </div>
     )

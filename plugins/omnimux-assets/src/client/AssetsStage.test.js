@@ -102,3 +102,15 @@ describe('Local library category row', () => {
     assert.doesNotMatch(chip, /accent|brand|primary-/)
   })
 })
+
+describe('Assets search field contract and cloud integration', () => {
+  it('wires onValueChange to feed.setQuery instead of unsupported onChange', () => {
+    assert.match(filterBar, /<SearchField\b[^>]*onValueChange=\{feed\.setQuery\}/)
+    assert.doesNotMatch(filterBar, /<SearchField\b[^>]*onChange=\{feed\.setQuery\}/)
+    assert.match(filterBar, /onClear=\{\(\) => feed\.setQuery\(''\)\}/)
+  })
+
+  it('routes query to CloudAssetsView for cloud search integration', () => {
+    assert.match(stageJsx, /<CloudAssetsView\b[^>]*query=\{feed\.query\}/)
+  })
+})

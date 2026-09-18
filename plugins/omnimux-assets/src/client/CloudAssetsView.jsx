@@ -532,12 +532,13 @@ function CloudCategoryNav(props) {
  */
 export function CloudAssetsView(props) {
   const { t, open = true, onPreview } = props
+  const query = props.query ?? ''
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   // 网格列数由容器宽度决定并封顶 5 列，写在容器的 data-columns 上（见 grid-columns.js）。
   const [gridRef, gridColumns] = useGridColumns()
   // 每批加载/展示条数按当前列数推导（3 行），随视口自适应，首屏更快（见 page-size.js）。
   const pageSize = pageSizeFor(gridColumns)
-  const feed = useCloudAssetsFeed({ t, open, pageSize })
+  const feed = useCloudAssetsFeed({ t, open, pageSize, query })
   const { loadMore, hasMore, loadingMore, items, audition } = feed
 
   // IntersectionObserver, not a scroll listener: paging costs one request per

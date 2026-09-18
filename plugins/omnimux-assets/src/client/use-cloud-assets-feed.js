@@ -143,6 +143,7 @@ const pageCache = new LruCache(240)
  */
 export function useCloudAssetsFeed(options) {
   const { t, open, defaultCategory = CLOUD_ALL_CATEGORY } = options
+  const externalQuery = options?.query
   const pageSize = options?.pageSize
   const batchSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : CLOUD_PAGE_SIZE
   const { manifest, loading: manifestLoading, error: manifestError, reload: reloadManifest } = useCloudManifest({ enabled: open })
@@ -165,11 +166,17 @@ export function useCloudAssetsFeed(options) {
   const [scopedPages, setScopedPages] = useState(/** @type {number | null} */ (null))
   const [pageError, setPageError] = useState('')
   const [loadingPage, setLoadingPage] = useState(false)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(typeof externalQuery === 'string' ? externalQuery : '')
   const [queryApplied, setQueryApplied] = useState('')
   const [searchResult, setSearchResult] = useState(/** @type {any} */ (null))
   const [searching, setSearching] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (typeof externalQuery === 'string') {
+      setQuery(externalQuery)
+    }
+  }, [externalQuery])
 
   const audition = useCloudAudition()
   const { stop: stopAudition } = audition
