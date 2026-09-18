@@ -1045,4 +1045,82 @@ Hook → Product Intro → Usage Detail → Proof Effect → Cta
 
     unlinkSync(dummyVideo)
   })
+
+  it('executes video_breakdown_analyze with textComplete producing high-fidelity shots, speech, and ai_labeled true', async () => {
+    const dummyVideo = join(tmpdir(), `sample-multimodal-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'fake video buffer')
+
+    const mockModelReport = `## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Proof Effect → Cta
+
+## 2. 结构阶段解构 (Stage Breakdown)
+
+### Hook
+> Big perfume bottle so heavy!
+直击大瓶正装香水出行沉重痛点，前 2 秒瞬间抓住眼球。
+
+### Product Intro
+> Use this mini atomizer instead.
+引出便携迷你分装瓶，建立轻量出行预期。
+
+### Usage Detail
+> Just pump to refill.
+底部直冲秒充，解决繁琐漏斗灌装门槛。
+
+### Proof Effect
+> Look at the fine mist. Perfect for small bags.
+展示极细水雾和收纳进随身手袋的便携性。
+
+### Cta
+> Get yours and smell good all day!
+全天保持精致香气，激发即时下单冲动。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:02 | 笨重大瓶痛点 | Hook | 特写, 固定机位, 平视, 固定镜头 | 双手吃力手持厚重大玻璃香水瓶晃动 | Big perfume bottle so heavy! |
+| 0:02 - 0:03 | 迷你分装亮相 | Product Intro | 特写, 固定机位, 平视, 固定镜头 | 亮出粉白小巧便携香水分装瓶 | Use this mini atomizer instead. |
+| 0:03 - 0:05 | 底部极简充液 | Usage Detail | 特写, 智能手机手持, 俯视, 固定机位 | 底部孔位对准大香水管口快速按压加液 | Just pump to refill. |
+| 0:05 - 0:08 | 细腻水雾与小包收纳 | Proof Effect | 特写, 智能手机手持, 平视, 手持微动 | 喷出细腻水雾并顺滑放入随身手袋中 | Look at the fine mist. Perfect for small bags. |
+| 0:08 - 0:10 | 随身补香促单 | Cta | 中景, 智能手机手持, 平视, 跟随镜头 | 优雅从容补香并号召立即下单 | Get yours and smell good all day! |`
+
+    let textCompleteCalled = false
+    const mockCtx = {
+      tools: {
+        register: () => {},
+        get: () => null,
+      },
+      textComplete: {
+        execute: async (params) => {
+          textCompleteCalled = true
+          assert.equal(params.reason, 'video_breakdown_structure_analyze')
+          assert.ok(params.video)
+          return {
+            mode: 'live',
+            model: 'gemini-3.8-flash',
+            text: mockModelReport,
+          }
+        },
+      },
+      get: (name) => {
+        if (name === 'textComplete') return mockCtx.textComplete
+        return null
+      },
+      inject: (deps, cb) => cb({ betterSidebar: null, textComplete: mockCtx.textComplete }),
+    }
+
+    const { extractVideoBreakdown } = await import('../src/breakdown/analyzerPipeline.js')
+    const result = await extractVideoBreakdown(dummyVideo, { ctx: mockCtx })
+
+    assert.equal(textCompleteCalled, true)
+    assert.equal(result.video.ai_labeled, true)
+    assert.equal(result.video.title, '笨重大瓶痛点')
+    assert.equal(result.shots.length, 5)
+    assert.equal(result.shots[0].stage, 'Hook')
+    assert.equal(result.shots[0].speech, "Big perfume bottle so heavy!")
+    assert.equal(result.shots[2].speech, 'Just pump to refill.')
+    assert.deepEqual(result.pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Proof Effect', 'Cta'])
+
+    rmSync(dummyVideo, { force: true })
+  })
 })

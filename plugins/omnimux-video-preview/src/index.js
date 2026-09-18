@@ -9,7 +9,7 @@ import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText
 import { translateBreakdownShots, TRANSLATE_LANGUAGES } from './translate.js'
 
 export const name = 'omnimux-video-preview'
-export const inject = ['tools']
+export const inject = ['tools', 'textComplete']
 
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
@@ -23,9 +23,13 @@ const jsonOut = {
  */
 export function apply(ctx) {
   let sidebarService = null
+  let textCompleteService = null
   if (typeof ctx.inject === 'function') {
     ctx.inject(['betterSidebar'], (inner) => {
       sidebarService = inner.betterSidebar ?? inner.get?.('betterSidebar')
+    })
+    ctx.inject(['textComplete'], (inner) => {
+      textCompleteService = inner.textComplete ?? inner.get?.('textComplete')
     })
   }
 
@@ -80,8 +84,9 @@ export function apply(ctx) {
     },
     output: jsonOut,
     execute: async ({ url, dest, auto_open = true }, execCtx) => {
+      const resolvedTextComplete = textCompleteService ?? ctx.textComplete ?? (typeof ctx.get === 'function' ? ctx.get('textComplete') : null)
       // Step 1: Extract high-fidelity shots and structural breakdown using real social data / multimodal analysis
-      const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx })
+      const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx, textComplete: resolvedTextComplete })
 
       // Step 2: Save native .vbreakdown artifact (prioritizing active workspace directory)
       const { dataPath, basePath } = saveVideoBreakdownArtifacts(breakdownData, dest, { ctx, execCtx })

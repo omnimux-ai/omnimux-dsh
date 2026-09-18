@@ -33,14 +33,19 @@ function loadStructurePrompt() {
 }
 
 /**
- * Query textComplete service directly from ctx.
+ * Query textComplete service directly from ctx or explicit options.
  * @param {object} ctx
+ * @param {object} [options]
  * @returns {object|null}
  */
-function queryDirectTextComplete(ctx) {
-  if (ctx && typeof ctx.get === 'function') {
-    const direct = ctx.get('textComplete')
-    if (direct) return direct
+function queryDirectTextComplete(ctx, options = {}) {
+  if (options && options.textComplete) return options.textComplete
+  if (ctx) {
+    if (ctx.textComplete) return ctx.textComplete
+    if (typeof ctx.get === 'function') {
+      const direct = ctx.get('textComplete')
+      if (direct) return direct
+    }
   }
   return null
 }
@@ -66,10 +71,11 @@ function queryToolsTextComplete(ctx) {
 /**
  * Resolve Hub textComplete capability from context.
  * @param {object} ctx
+ * @param {object} [options]
  * @returns {object|null}
  */
-function resolveTextCompleteService(ctx) {
-  const direct = queryDirectTextComplete(ctx)
+function resolveTextCompleteService(ctx, options = {}) {
+  const direct = queryDirectTextComplete(ctx, options)
   if (direct) return direct
   return queryToolsTextComplete(ctx)
 }
@@ -80,7 +86,7 @@ function resolveTextCompleteService(ctx) {
  * @returns {string}
  */
 function buildStructureInstruction(systemPrompt) {
-  return `${systemPrompt}\n\n---\n【思维链 (CoT) 深度拉片任务执行指令（严格遵守）】：\n请在内心严格执行 5 步思维链（音画全景扫描与台词完整转写 -> 商业漏斗五阶段对齐 -> 核心台词原声锚定 -> 操盘手心理学与转化策略深度解构 -> 逐镜头 4 维正交分镜表征），严格按照上述格式规范输出：\n1. 【叙事结构链路】：带货好物类视频标准五阶段严格为：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头，且标头下方必须包含一条以 > 开头的英文原声核心完整台词引用（严禁截取半句、严禁只写环境音！），随后紧跟一段 40~80 字专业中文策略意图与爆款心理机制解析！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：中景, 智能手机手持, 平视, 手持微晃），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“卫生间偷窥情景”、“窗外视角无法透视”、“产品展开介绍”），严禁出现 Shot 1、全景等机械词！`
+  return `${systemPrompt}\n\n---\n【思维链 (CoT) 深度拉片任务执行指令（严格遵守）】：\n请在内心严格执行 5 步思维链（音画全景扫描与台词完整转写 -> 商业漏斗五阶段对齐 -> 核心台词原声锚定 -> 操盘手心理学与转化策略深度解构 -> 逐镜头 4 维正交分镜表征），严格按照上述格式规范输出：\n1. 【叙事结构链路】：带货好物类视频标准五阶段严格为：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头，且标头下方必须包含一条以 > 开头的英文原声核心完整台词引用（严禁截取半句、严禁只写环境音！），随后紧跟一段 40~80 字专业中文策略意图与爆款心理机制解析！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：中景, 智能手机手持, 平视, 手持微晃），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“卫生间偷窥情景”、“窗外视角无法透视”、“产品展开介绍”），严禁出现 Shot 1、全景等机械词！\n6. 【直接输出规范】：请直接从“## 1. 叙事结构链路 (Narrative Pipeline)”作为首行开始输出，严禁输出任何开场白、英文思考草稿或前置客套话！`
 }
 
 /**
@@ -120,7 +126,7 @@ export async function executeDedicatedStructureAnalyze(options) {
   if (!videoPath || !existsSync(videoPath)) return ''
 
   const systemPrompt = loadStructurePrompt()
-  const textComplete = resolveTextCompleteService(ctx)
+  const textComplete = resolveTextCompleteService(ctx, options)
   if (!textComplete || typeof textComplete.execute !== 'function') {
     return ''
   }
@@ -366,15 +372,16 @@ function isStructureResultDegenerate(structure) {
 /**
  * Resolve shots, structure and pipeline via multimodal LLM or adaptive fallback.
  * @param {object} params
- * @returns {Promise<{ shots: Array<object>, structure: Array<object>, pipeline: Array<string> }>}
+ * @returns {Promise<{ shots: Array<object>, structure: Array<object>, pipeline: Array<string>, isModelGenerated: boolean }>}
  */
 async function resolveBreakdownData(params) {
-  const { analysisVideoPath, ctx, signal, totalDuration, caption, platform, physicalScenes } = params
+  const { analysisVideoPath, ctx, options, signal, totalDuration, caption, platform, physicalScenes } = params
   let analyzeReportText = ''
   if (analysisVideoPath) {
     analyzeReportText = await executeDedicatedStructureAnalyze({
       videoPath: analysisVideoPath,
       ctx,
+      options,
       signal,
       physicalScenes,
     })
@@ -387,6 +394,8 @@ async function resolveBreakdownData(params) {
 
   alignPhysicalScenesToShots(shots, physicalScenes)
 
+  const isModelGenerated = shots.length > 0 && !isStructureResultDegenerate(structure)
+
   if (shots.length === 0 || isStructureResultDegenerate(structure)) {
     const adaptive = generateAdaptiveShotsAndStructure(totalDuration, caption, platform)
     if (shots.length === 0) shots = adaptive.shots
@@ -396,7 +405,7 @@ async function resolveBreakdownData(params) {
     }
   }
 
-  return { shots, structure, pipeline }
+  return { shots, structure, pipeline, isModelGenerated }
 }
 
 /**
@@ -547,15 +556,24 @@ function buildVideoPayload(config) {
   const {
     authorInfo, platform, isHttp, trimmed, videoPlayUrl,
     localVideoPath, localCoverPath, coverUrl, durationSeconds,
-    shots, stats, realMeta,
+    shots, stats, realMeta, isModelGenerated,
   } = config
 
+  let displayTitle = authorInfo.title
+  let displayCaption = authorInfo.caption
+  if (isModelGenerated && (!displayTitle || displayTitle === '短视频分析') && shots[0] && shots[0].title) {
+    displayTitle = shots[0].title
+    if (!displayCaption || displayCaption === '短视频分析') {
+      displayCaption = shots[0].description ? `${shots[0].title}：${shots[0].description}` : shots[0].title
+    }
+  }
+
   return {
-    title: authorInfo.title,
+    title: displayTitle,
     author_name: authorInfo.authorName,
     author_handle: authorInfo.authorHandle,
     author_avatar: authorInfo.authorAvatar,
-    caption: authorInfo.caption,
+    caption: displayCaption,
     platform,
     source_url: isHttp ? trimmed : '',
     video_url: videoPlayUrl,
@@ -568,7 +586,7 @@ function buildVideoPayload(config) {
     likes: stats.likes,
     comments: stats.comments,
     shares: stats.shares,
-    ai_labeled: Boolean(realMeta),
+    ai_labeled: Boolean(realMeta || isModelGenerated),
   }
 }
 
@@ -601,9 +619,10 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const analysisVideoPath = prepareAnalysisSampleVideo(localVideoPath)
   const physicalScenes = await tryDetectPhysicalScenes(localVideoPath, ctx)
 
-  const { shots, structure, pipeline } = await resolveBreakdownData({
+  const { shots, structure, pipeline, isModelGenerated } = await resolveBreakdownData({
     analysisVideoPath,
     ctx,
+    options,
     signal: options.signal,
     totalDuration,
     caption: authorInfo.caption,
@@ -618,7 +637,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const video = buildVideoPayload({
     authorInfo, platform, isHttp, trimmed, videoPlayUrl,
     localVideoPath, localCoverPath, coverUrl, durationSeconds,
-    shots, stats, realMeta,
+    shots, stats, realMeta, isModelGenerated,
   })
 
   return {
