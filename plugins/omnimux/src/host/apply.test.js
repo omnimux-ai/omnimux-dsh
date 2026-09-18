@@ -41,6 +41,7 @@ describe('hub apply composition', () => {
       'omnimux_video_submit',
       'omnimux_image_submit',
       'omnimux_audio_submit',
+      'omnimux_audio_voices',
       'omnimux_speech_to_text',
       'omnimux_text_complete',
       'workbench_get_active_view',
@@ -73,7 +74,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 32 tools and 9 seams by default', () => {
+  it('registers all 33 tools and 9 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -82,10 +83,11 @@ describe('hub apply composition', () => {
       get() { return undefined },
     })
 
-    assert.equal(names.length, 32)
+    assert.equal(names.length, 33)
     assert.ok(names.includes('omnimux_video_submit'))
     assert.ok(names.includes('omnimux_image_submit'))
     assert.ok(names.includes('omnimux_audio_submit'))
+    assert.ok(names.includes('omnimux_audio_voices'))
     assert.ok(names.includes('omnimux_speech_to_text'))
     assert.ok(names.includes('omnimux_text_complete'))
     assert.ok(names.includes('omnimux_page_fetch'))
@@ -130,6 +132,7 @@ describe('hub apply composition', () => {
     assert.equal(tools.omnimux_video_submit, undefined)
     assert.ok(tools.omnimux_image_submit)
     assert.ok(tools.omnimux_audio_submit)
+    assert.ok(tools.omnimux_audio_voices)
     assert.equal(tools.omnimux_social_data, undefined)
     assert.ok(tools.omnimux_page_fetch)
     assert.ok(tools.omnimux_accounts_list)

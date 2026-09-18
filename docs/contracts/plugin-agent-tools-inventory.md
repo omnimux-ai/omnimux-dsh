@@ -49,10 +49,10 @@ related:
 | 统计指标 | 数值 | 说明 |
 |---|---|---|
 | **体检插件总数** | 12 个 | 覆盖 `plugins/` 下全部生产插件 |
-| **已注册 Agent 工具总数** | 88 个 | 源码中实装并可在会话中调用的工具 (28+4+6+3+9+12+6+15+0+0+4+1)。Hub 规划 +2 `workbench_*`（`Planned`，见 [agent-workbench-sync.md](agent-workbench-sync.md)）落地后改此行。 |
+| **已注册 Agent 工具总数** | 89 个 | 源码中实装并可在会话中调用的工具 (29+4+6+3+9+12+6+15+0+0+4+1)。Hub 规划 +2 `workbench_*`（`Planned`，见 [agent-workbench-sync.md](agent-workbench-sync.md)）落地后改此行。 |
 | **双面齐备标杆插件 (A+)** | 3 个 | `omnimux-workflow` (12 tools), `omnimux-publish` (9 tools), `omnimux-market` (15 tools) |
 | **需补齐写操作工具插件 (B)** | 4 个 | `omnimux-assets`, `omnimux-products`, `omnimux-inspiration`, `omnimux-accounts` |
-| **纯后端/纯中枢/纯视图插件** | 5 个 | `omnimux` (中枢 28 tools), `omnimux-video` (4 tools), `omnimux-video-preview` (2 tools), `omnimux-analytics` (0 tools), `omnimux-clip` (6 tools) |
+| **纯后端/纯中枢/纯视图插件** | 5 个 | `omnimux` (中枢 29 tools), `omnimux-video` (4 tools), `omnimux-video-preview` (2 tools), `omnimux-analytics` (0 tools), `omnimux-clip` (6 tools) |
 
 ---
 
@@ -60,7 +60,7 @@ related:
 
 ### 3.1 `omnimux`（执行中枢 Hub）
 - **功能域**：中枢官方服务、品牌/设置、社媒路由、模型调用、官方 Seams。
-- **状态**：双面就绪 (已实装 28 个核心官方工具 + 规划 2 个工作台视口工具)。
+- **状态**：双面就绪 (已实装 29 个核心官方工具 + 规划 2 个工作台视口工具)。
 
 | 业务功能描述 | 对应 UI 交互 / HTTP 路由 | Agent 工具名称 (`Tool Name`) | 分级 | 状态 | 破坏性 confirm |
 |---|---|---|---|---|---|
@@ -82,6 +82,7 @@ related:
 | 提交视频生成任务 | 工作流视频生成节点 | `omnimux_video_submit` | L1 | `Implemented` | 否 |
 | 提交图片生成任务 | 工作流生图节点 | `omnimux_image_submit` | L1 | `Implemented` | 否 |
 | 提交音频生成任务 | 工作流生音频节点 | `omnimux_audio_submit` | L1 | `Implemented` | 否 |
+| 查询音频模型可用音色库 | 属性面板音色选择器 | `omnimux_audio_voices` | L1 | `Implemented` | 否 |
 | 查询社媒多维日频核心指标 | 分析看板概览 | `omnimux_analytics_daily_metrics` | L2 | `Implemented` | 否 |
 | 分析账号最佳发帖时间热力图 | 最佳发帖时间卡片 | `omnimux_analytics_best_time` | L2 | `Implemented` | 否 |
 | 分析发帖频次与效果关系 | 频次分析组件 | `omnimux_analytics_frequency` | L2 | `Implemented` | 否 |
