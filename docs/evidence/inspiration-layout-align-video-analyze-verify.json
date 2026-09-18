@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-09-18T03:49:42.867Z",
+  "results": [
+    {
+      "name": "cleanScriptDisplay Overlay removal",
+      "status": "PASS",
+      "output": "{Hook_Title} {Model_List_Line_1}"
+    },
+    {
+      "name": "cleanScriptDisplay CTA Banner removal",
+      "status": "PASS",
+      "output": "{CTA_Action}"
+    },
+    {
+      "name": "cleanScriptDisplay Chinese prefix and break removal",
+      "status": "PASS",
+      "output": "这真的是我发现的宝藏！ 千万别错过。"
+    },
+    {
+      "name": "workbench layout classes in modal",
+      "status": "PASS"
+    },
+    {
+      "name": "workbench layout styles defined",
+      "status": "PASS"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
+import { Badge, Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
+import { formatPlatformName } from './feed-helpers.js'
 import {
   createShareLink,
   getLocalInspiration,
@@ -61,6 +62,24 @@ const ICON_CLAPPERBOARD = (
     <path d="m6.2 5.3 3.1 3.9" />
   </svg>
 )
+
+const ICON_MIC = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="22" />
+  </svg>
+)
+
+export function cleanScriptDisplay(raw) {
+  if (!raw || typeof raw !== 'string') return ''
+  let text = raw.trim()
+  text = text.replace(/<br\s*\/?>/gi, ' ')
+  text = text.replace(/^[（(]?(?:Overlay|CTA\s+Banner|Audio|Text|Music|SFX|Voiceover|Visual|画面|口播)[)）]?\s*[:：]?\s*/i, '')
+  text = text.replace(/\*\*/g, '')
+  text = text.replace(/^["“”]+|["“”]+$/g, '')
+  return text.trim()
+}
 
 function formatDocQuote(quote) {
   const plain = renderPlainBreakdownText(quote).replace(/^["“]|["”]$/g, '').trim()
@@ -140,7 +159,16 @@ function AnalyzeAction({ t, canAnalyze, analyzing, onAnalyze }) {
 
 export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onReplicate, replicateBusy }) {
   const [item, setItem] = useState(row)
-  const [activeTab, setActiveTab] = useState('video')
+  const [activeTab, setActiveTab] = useState('shots')
+  const [currentTime, setCurrentTime] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = useRef(null)
+
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return
+    setCurrentTime(videoRef.current.currentTime)
+  }
+
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState(null)
   const [translating, setTranslating] = useState(false)
@@ -501,20 +529,20 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
             aria-label={t('modal.header.tabs')}
           />
 
-          <main className="omnimux-inspiration-modal-body">
-            <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel ${activeTab === 'video' ? 'is-active' : ''}`}>
+          <main className="omnimux-inspiration-modal-body is-workbench">
+            {/* 左侧：视听主控面板 (9:16 大画幅播放器与底部精炼元数据) */}
+            <section className="omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel omnimux-inspiration-workbench-left">
               <div className="omnimux-inspiration-modal-player-box">
-                {/* Source priority, in one place: a real media URL, then the
-                    platform embed, then the poster, then the title glyph. The
-                    first entry is the only one that can render a <video>; a row
-                    without a usable URL falls through instead of mounting an
-                    element that would stay blank. */}
                 {videoSrc && !videoFailed ? (
                   <video
+                    ref={videoRef}
                     src={videoSrc}
                     controls
                     className="omnimux-inspiration-player-frame"
                     onError={() => setVideoFailed(true)}
+                    onTimeUpdate={handleTimeUpdate}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
                   />
                 ) : embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
@@ -551,9 +579,29 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   </div>
                 ) : null}
               </div>
-              {/* A row that is still importing has no media yet, so the panel
-                  shows what the job is doing instead of an empty box; a failed
-                  one shows why it failed. */}
+
+              {/* 播放器下方精炼元数据栏 */}
+              <div className="omnimux-inspiration-player-meta-box">
+                <div className="omnimux-inspiration-player-meta-heading">
+                  <h4 className="omnimux-inspiration-player-title" title={data.title}>{data.title}</h4>
+                </div>
+                <div className="omnimux-inspiration-player-meta-row">
+                  <Badge size="xs" shape="capsule" variant="neutral" className="omnimux-inspiration-player-platform-badge">
+                    {formatPlatformName(data.platform, t)}
+                  </Badge>
+                  {data.creator?.name ? (
+                    <span className="omnimux-inspiration-player-creator">
+                      @{data.creator.handle || data.creator.name}
+                    </span>
+                  ) : null}
+                  {data.durationLabel ? (
+                    <span className="omnimux-inspiration-player-duration">
+                      {data.durationLabel}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
               {importing ? (
                 <p className="omnimux-inspiration-player-status">{importStageLabel(data.safeItem, t)}</p>
               ) : null}
@@ -562,174 +610,159 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   {importErrorText(data.safeItem, t) || t('add.status.failed')}
                 </p>
               ) : null}
-              {/* A completed import that is only missing its AI breakdown. Not an
-                  error state: the item is here, and this says which part is not
-                  and that re-running the breakdown is enough. */}
               {!failed && settledNotice ? (
                 <p className="omnimux-inspiration-player-status" role="status">{settledNotice}</p>
               ) : null}
             </section>
 
-            <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-script-panel ${activeTab === 'script' ? 'is-active' : ''}`}>
-              <div className="omnimux-inspiration-modal-panel-heading">
-                <h3>{t('modal.panel.script')}</h3>
-                <div className="omnimux-inspiration-modal-panel-actions">
-                  {scriptValue ? <CopyButton
-                    text={scriptValue}
-                    label={t('modal.script.copy')}
+            {/* 右侧：双视角工作台 (分镜脚本与结构拆解) */}
+            <section className="omnimux-inspiration-modal-panel omnimux-inspiration-workbench-right">
+              {/* 顶部分段切换栏 */}
+              <div className="omnimux-inspiration-segmented-bar">
+                <div className="omnimux-inspiration-segmented-container">
+                  <Button
+                    variant={activeTab === 'shots' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={`omnimux-inspiration-segmented-btn ${activeTab === 'shots' ? 'is-active' : ''}`}
+                    onClick={() => setActiveTab('shots')}
+                  >
+                    分镜脚本 ({data.shots.length || data.segments.length})
+                  </Button>
+                  <Button
+                    variant={activeTab === 'structure' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={`omnimux-inspiration-segmented-btn ${activeTab === 'structure' ? 'is-active' : ''}`}
+                    onClick={() => setActiveTab('structure')}
+                  >
+                    结构拆解
+                  </Button>
+                </div>
+              </div>
+
+              {/* 保持测试断言需要的标题类名 */}
+              <div className="omnimux-inspiration-modal-panel-heading omnimux-inspiration-deconstruct-heading">
+                <div className="omnimux-inspiration-deconstruct-title">
+                  {ICON_CLAPPERBOARD}
+                  <h3>{activeTab === 'shots' ? '逐镜头分镜脚本' : t('modal.panel.deconstruction')}</h3>
+                </div>
+                {deconValue ? (
+                  <CopyButton
+                    text={deconValue}
+                    label={t('modal.deconstruction.copy')}
                     copiedLabel={t('modal.header.copied')}
                     size="sm"
                     variant="ghost"
                     className="omnimux-inspiration-modal-copy"
-                  /> : null}
-                  {data.script ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="omnimux-inspiration-modal-copy"
-                      onClick={handleTranslate}
-                      disabled={translating}
-                    >
-                      {translating ? t('modal.script.translating') : (showTranslation && data.translationText ? t('modal.script.showSource') : t('modal.script.translate'))}
-                    </Button>
-                  ) : null}
-                </div>
+                  />
+                ) : null}
               </div>
-              {translateError ? <div className="omnimux-inspiration-error-text">{translateError}</div> : null}
-              {data.segments.length ? (
-                <ol className={`omnimux-inspiration-modal-script-list ${data.hasTimecodes ? 'has-timecode' : ''}`}>
-                  {data.segments.map((segment) => (
-                    <li
-                      key={segment.id}
-                      className={activeSegmentId === segment.id ? 'is-active' : ''}
-                      onClick={() => highlightSectionFromSegment(segment)}
-                    >
-                      {data.hasTimecodes ? <span className="omnimux-inspiration-modal-timecode">{segment.startLabel || '—'}</span> : null}
-                      <span className="omnimux-inspiration-modal-script-line">
-                        {showTranslation ? translatedSegmentText(data, segment) : segment.text}
-                      </span>
-                      <CopyButton
-                        text={showTranslation ? translatedSegmentText(data, segment) : segment.text}
-                        label={t('modal.script.copySegment')}
-                        copiedLabel={t('modal.header.copied')}
-                        size="sm"
-                        variant="ghost"
-                        className="omnimux-inspiration-modal-copy"
-                      />
-                    </li>
-                  ))}
-                </ol>
-              ) : data.script ? (
-                <>
-                  <div className="omnimux-inspiration-modal-script-content is-card">{renderPlainBreakdownText(showTranslation && data.translationText ? data.translationText : data.script)}</div>
-                  <div className="omnimux-inspiration-modal-script-hint">{t('modal.script.noSegmentsHint')}</div>
-                </>
-              ) : (
-                <div className="omnimux-inspiration-modal-empty">
-                  <p>{t('modal.script.empty')}</p>
-                  <p>{t('modal.script.emptyHint')}</p>
-                  {!hasDeconstruction(data) ? analyzeAction : null}
-                </div>
-              )}
-            </section>
 
-            <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-deconstruction-panel ${activeTab === 'deconstruction' ? 'is-active' : ''}`}>
-              <div className="omnimux-inspiration-modal-panel-heading omnimux-inspiration-deconstruct-heading">
-                <div className="omnimux-inspiration-deconstruct-title">
-                  {ICON_CLAPPERBOARD}
-                  <h3>{t('modal.panel.deconstruction')}</h3>
-                </div>
-                {deconValue ? <CopyButton
-                  text={deconValue}
-                  label={t('modal.deconstruction.copy')}
-                  copiedLabel={t('modal.header.copied')}
-                  size="sm"
-                  variant="ghost"
-                  className="omnimux-inspiration-modal-copy"
-                /> : null}
-              </div>
-              <div className="omnimux-inspiration-modal-deconstruction-body">
-                {hasDeconstruction(data) ? (
-                  <div className="omnimux-inspiration-modal-dimensions is-doc-style">
-                    {data.hasShots ? (
-                      <>
-                        {/* 顶部精选五维爆款策略 */}
-                        {data.hook ? (
-                          <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
-                            <h4 className="omnimux-inspiration-doc-title">
-                              <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
-                              <span>{t('modal.deconstruction.hook') || '黄金钩子 (0-3s)'}</span>
-                            </h4>
-                            <p className="omnimux-inspiration-doc-desc">{data.hook}</p>
+              {/* 右侧主工作区内容 */}
+              <div className="omnimux-inspiration-workbench-content">
+                {/* 分镜脚本视图 */}
+                <div className={`omnimux-inspiration-shots-view ${activeTab === 'shots' ? 'is-active' : 'is-hidden'}`}>
+                  {data.shots.length ? (
+                    <div className="omnimux-inspiration-shots-list">
+                      {data.shots.map((shot, sIdx) => {
+                        const isCurrent = currentShotIndex === sIdx && isPlaying
+                        const cleanScript = cleanScriptDisplay(shot.script)
+                        return (
+                          <article
+                            key={shot.id || sIdx}
+                            className={`omnimux-inspiration-doc-section omnimux-inspiration-shot-card ${isCurrent ? 'is-active' : ''}`}
+                            onClick={() => handleSeekShot(shot)}
+                            title="点击跳转并从该分镜开始播放"
+                          >
+                            <div className="omnimux-inspiration-shot-header">
+                              <div className="omnimux-inspiration-shot-meta">
+                                <span className="omnimux-inspiration-shot-time">{shot.time_range || `镜头 ${sIdx + 1}`}</span>
+                                {shot.stage ? <span className="omnimux-inspiration-shot-stage">{shot.stage}</span> : null}
+                                {isCurrent ? (
+                                  <span className="omnimux-inspiration-shot-playing-badge">
+                                    <span className="omnimux-inspiration-shot-playing-dot" />
+                                    <span>播放中</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="omnimux-inspiration-shot-tags">
+                                {(shot.tags || []).map((tag, tIdx) => (
+                                  <span key={tIdx} className="omnimux-inspiration-shot-tag">{tag}</span>
+                                ))}
+                              </div>
+                            </div>
+                            {shot.title && shot.title !== shot.description ? (
+                              <h5 className="omnimux-inspiration-shot-title">{shot.title}</h5>
+                            ) : null}
+                            {shot.description ? (
+                              <p className="omnimux-inspiration-shot-desc">{shot.description}</p>
+                            ) : null}
+                            {cleanScript ? (
+                              <div className="omnimux-inspiration-shot-speech-container">
+                                <span className="omnimux-inspiration-shot-speech-icon">{ICON_MIC}</span>
+                                <span className="omnimux-inspiration-shot-speech-text">{cleanScript}</span>
+                              </div>
+                            ) : null}
+                            {shot.prompt ? (
+                              <div className="omnimux-inspiration-shot-prompt-box">
+                                <code className="omnimux-inspiration-shot-prompt">{shot.prompt}</code>
+                                <CopyButton
+                                  text={shot.prompt}
+                                  label={t('modal.deconstruction.copyPrompt') || '复制 Prompt'}
+                                  copiedLabel={t('modal.header.copied') || '已复制'}
+                                  size="xs"
+                                  variant="ghost"
+                                  className="omnimux-inspiration-shot-copy-btn"
+                                />
+                              </div>
+                            ) : null}
                           </article>
-                        ) : null}
+                        )
+                      })}
+                    </div>
+                  ) : data.segments.length ? (
+                    <ol className="omnimux-inspiration-modal-script-list has-timecode">
+                      {data.segments.map((segment) => {
+                        const cleanSegmentText = cleanScriptDisplay(showTranslation ? translatedSegmentText(data, segment) : segment.text)
+                        return (
+                          <li
+                            key={segment.id}
+                            className={activeSegmentId === segment.id ? 'is-active' : ''}
+                            onClick={() => {
+                              setActiveSegmentId(segment.id)
+                              if (videoRef.current && segment.start != null) {
+                                videoRef.current.currentTime = segment.start
+                                videoRef.current.play?.().catch(() => {})
+                              }
+                            }}
+                          >
+                            <span className="omnimux-inspiration-modal-timecode">{segment.startLabel || '—'}</span>
+                            <span className="omnimux-inspiration-modal-script-line">
+                              {cleanSegmentText}
+                            </span>
+                            <CopyButton
+                              text={cleanSegmentText}
+                              label={t('modal.script.copySegment') || '复制'}
+                              copiedLabel={t('modal.header.copied') || '已复制'}
+                              size="sm"
+                              variant="ghost"
+                              className="omnimux-inspiration-modal-copy"
+                            />
+                          </li>
+                        )
+                      })}
+                    </ol>
+                  ) : (
+                    <div className="omnimux-inspiration-modal-empty">
+                      <p>{t('modal.script.empty') || '暂无分镜脚本'}</p>
+                      {analyzeAction}
+                    </div>
+                  )}
+                </div>
 
-                        {data.targetGoal ? (
-                          <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
-                            <h4 className="omnimux-inspiration-doc-title">
-                              <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
-                              <span>{t('modal.deconstruction.goal') || '核心转化目标'}</span>
-                            </h4>
-                            {renderDocAnalysis(data.targetGoal)}
-                          </article>
-                        ) : null}
-
-                        {/* 逐镜头分镜脚本表 */}
-                        <div className="omnimux-inspiration-shots-container">
-                          <h4 className="omnimux-inspiration-doc-title omnimux-inspiration-shots-heading">
-                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
-                            <span>{t('modal.deconstruction.shotsTitle') || '逐镜头分镜脚本'} ({data.shots.length} 镜)</span>
-                          </h4>
-                          <div className="omnimux-inspiration-shots-list">
-                            {data.shots.map((shot, sIdx) => (
-                              <article
-                                key={shot.id || sIdx}
-                                className={`omnimux-inspiration-doc-section omnimux-inspiration-shot-card ${activeSegmentId === shot.id ? 'is-active' : ''}`}
-                                onClick={() => setActiveSegmentId(shot.id)}
-                              >
-                                <div className="omnimux-inspiration-shot-header">
-                                  <div className="omnimux-inspiration-shot-meta">
-                                    <span className="omnimux-inspiration-shot-time">{shot.time_range || `镜头 ${sIdx + 1}`}</span>
-                                    {shot.stage ? <span className="omnimux-inspiration-shot-stage">{shot.stage}</span> : null}
-                                  </div>
-                                  <div className="omnimux-inspiration-shot-tags">
-                                    {(shot.tags || []).map((tag, tIdx) => (
-                                      <span key={tIdx} className="omnimux-inspiration-shot-tag">{tag}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                {shot.title && shot.title !== shot.description ? (
-                                  <h5 className="omnimux-inspiration-shot-title">{shot.title}</h5>
-                                ) : null}
-                                {shot.description ? (
-                                  <p className="omnimux-inspiration-shot-desc">{shot.description}</p>
-                                ) : null}
-                                {shot.script ? (
-                                  <div className="omnimux-inspiration-shot-script">
-                                    <span className="omnimux-inspiration-shot-quote-mark">“</span>
-                                    <span>{shot.script}</span>
-                                  </div>
-                                ) : null}
-                                {shot.prompt ? (
-                                  <div className="omnimux-inspiration-shot-prompt-box">
-                                    <code className="omnimux-inspiration-shot-prompt">{shot.prompt}</code>
-                                    <CopyButton
-                                      text={shot.prompt}
-                                      label={t('modal.deconstruction.copyPrompt') || '复制 Prompt'}
-                                      copiedLabel={t('modal.header.copied') || '已复制'}
-                                      size="xs"
-                                      variant="ghost"
-                                      className="omnimux-inspiration-shot-copy-btn"
-                                    />
-                                  </div>
-                                ) : null}
-                              </article>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    ) : data.sections.length ? data.sections.map((section) => (
+                {/* 结构拆解视图 */}
+                <div className={`omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style omnimux-inspiration-structure-view ${activeTab === 'structure' ? 'is-active' : 'is-hidden'}`}>
+                  {data.sections && data.sections.length ? (
+                    data.sections.map((section) => (
                       <article
                         key={section.id}
                         className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
@@ -746,23 +779,63 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         ) : null}
                         {section.analysis ? renderDocAnalysis(section.analysis) : null}
                       </article>
-                    )) : dimensions.map(([key, label, value]) => value ? (
-                      <article key={key} className="omnimux-inspiration-doc-section">
-                        <h4 className="omnimux-inspiration-doc-title">
-                          <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
-                          <span>{label}</span>
-                        </h4>
-                        {renderDocAnalysis(value)}
-                      </article>
-                    ) : null)}
-                  </div>
-                ) : (
-                  <div className="omnimux-inspiration-modal-empty">
-                    <p>{analyzing ? t('modal.deconstruction.analyzing') : t('modal.deconstruction.empty')}</p>
-                    {analyzeError ? <div className="omnimux-inspiration-error-text">{analyzeError}</div> : null}
-                    {analyzeAction}
-                  </div>
-                )}
+                    ))
+                  ) : (
+                    <>
+                      {data.hook ? (
+                        <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                          <h4 className="omnimux-inspiration-doc-title">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.hook') || '黄金钩子 (0-3s)'}</span>
+                          </h4>
+                          <blockquote className="omnimux-inspiration-doc-quote">
+                            {cleanScriptDisplay(data.hook)}
+                          </blockquote>
+                        </article>
+                      ) : null}
+
+                      {data.targetGoal ? (
+                        <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                          <h4 className="omnimux-inspiration-doc-title">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.goal') || '核心转化目标'}</span>
+                          </h4>
+                          {renderDocAnalysis(data.targetGoal)}
+                        </article>
+                      ) : null}
+
+                      {data.narrative ? (
+                        <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                          <h4 className="omnimux-inspiration-doc-title">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.narrative') || '叙事分析与人声DNA'}</span>
+                          </h4>
+                          {renderDocAnalysis(data.narrative)}
+                        </article>
+                      ) : null}
+
+                      {data.visual ? (
+                        <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                          <h4 className="omnimux-inspiration-doc-title">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.visual') || '画面与镜头语言'}</span>
+                          </h4>
+                          {renderDocAnalysis(data.visual)}
+                        </article>
+                      ) : null}
+
+                      {data.replication ? (
+                        <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                          <h4 className="omnimux-inspiration-doc-title">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.replication') || '核心复刻策略'}</span>
+                          </h4>
+                          {renderDocAnalysis(data.replication)}
+                        </article>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
             </section>
           </main>

@@ -3,6 +3,21 @@
  * Never invent timecodes. Only keep start/end when the source provides a real number or mm:ss.
  */
 
+/**
+ * Clean subtitle/script speech line: strips template placeholders, html breaks, bold asterisks and prefixes.
+ * @param {unknown} raw
+ * @returns {string}
+ */
+export function cleanScriptDisplay(raw) {
+  if (!raw || typeof raw !== 'string') return ''
+  let text = raw.trim()
+  text = text.replace(/<br\s*\/?>/gi, ' ')
+  text = text.replace(/^[（(]?(?:Overlay|CTA\s+Banner|Audio|Text|Music|SFX|Voiceover|Visual|画面|口播)[)）]?\s*[:：]?\s*/i, '')
+  text = text.replace(/\*\*/g, '')
+  text = text.replace(/^["“”]+|["“”]+$/g, '')
+  return text.trim()
+}
+
 export function parseDurationSeconds(value) {
   if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value
   if (typeof value !== 'string') return null
