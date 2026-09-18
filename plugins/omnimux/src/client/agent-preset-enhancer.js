@@ -909,6 +909,24 @@ export function resetAgentPresetEnhancerForTests() {
  * every row of this menu instead.
  */
 export const AGENT_PRESET_AVATAR_CSS = `
+/* ── 移除页面上的 Agent 切换选择按钮：默认固定为社媒专家，不支持切换，其他专家下架 ── */
+[data-composer-seat],
+[data-omnimux-preset-seat],
+button[class*="AgentPresetSeat_seat"],
+button[class*="PnBhwW_seat"],
+button[class*="_seat"][aria-haspopup="menu"],
+[class*="heroWorkspaceRow"] > span:has(button[class*="seat"]),
+[class*="heroWorkspaceRow"] > span[class*="menuAnchor"]:has(button[aria-haspopup="menu"]),
+[class*="AgentPresetSeat_root"],
+[data-omnimux-preset-menu] {
+  display: none !important;
+}
+
+[data-omnimux-preset-item]:not([data-omnimux-preset-id="omni-agent"]),
+[class*="AgentPresetSeat_item"]:not([data-omnimux-preset-id="omni-agent"]) {
+  display: none !important;
+}
+
 /* ── Agent preset seat: expert avatar, single-line picker rows, no descriptions ── */
 [class*="AgentPresetSeat_itemDesc"],
 [data-omnimux-preset-desc],
