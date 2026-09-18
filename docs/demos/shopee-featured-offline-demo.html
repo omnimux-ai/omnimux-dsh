@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopee 系列技能精选下架效果演示</title>
+  <style>
+    :root {
+      --bg-primary: #0d0e11;
+      --bg-card: #16171b;
+      --bg-card-hover: #1e1f25;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #ffffff;
+      --text-secondary: #9da1ab;
+      --text-muted: #6b707d;
+      --accent-purple: #7c3aed;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 32px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .summary-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 600; }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 28px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .card.removed {
+      border: 1px dashed var(--accent-red);
+      opacity: 0.55;
+    }
+    .removed-tag {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      z-index: 2;
+    }
+    .cover-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #1f2127;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cover-placeholder {
+      font-size: 28px;
+      opacity: 0.7;
+    }
+    .content {
+      padding: 12px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .tag-list {
+      margin-top: 6px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+    }
+    .tag.highlight {
+      background: rgba(124, 58, 237, 0.2);
+      color: #c4b5fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h1>Shopee 系列技能精选下架验收效果</h1>
+        <span class="badge-status">✔ 已完成本地验证待合入</span>
+      </div>
+      <p>下架名单：Shopee 市场分析、Shopee 商品分析、Shopee 店铺分析、Shopee 品牌分析、Shopee 关键词分析。</p>
+    </div>
+
+    <div class="summary-box">
+      <div>
+        <div class="metric-label">精选技能总数变化</div>
+        <div class="metric-value">70 → 65 项 (-5)</div>
+      </div>
+      <div>
+        <div class="metric-label">首页推荐技能数量</div>
+        <div class="metric-value">20 → 15 项 (-5)</div>
+      </div>
+      <div>
+        <div class="metric-label">普通分类索引状态</div>
+        <div class="metric-value" style="color: #34d399;">保留电商分类索引</div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>✨ 调整后界面效果（当前精选卡片无缝衔接）</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="cover-wrap"><span class="cover-placeholder">🎬</span></div>
+        <div class="content">
+          <div class="title">TikTok 脚本创作</div>
+          <div class="desc">TikTok UGC 口播、达人种草、品牌广告与直播带货脚本生成。</div>
+          <div class="tag-list"><span class="tag">电商</span><span class="tag">商业广告</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cover-wrap"><span class="cover-placeholder">📊</span></div>
+        <div class="content">
+          <div class="title">HTML 报表模板</div>
+          <div class="desc">用于 html-writer 的复制即用 HTML 报表与仪表盘模板。</div>
+          <div class="tag-list"><span class="tag">报表</span><span class="tag">模板</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cover-wrap"><span class="cover-placeholder">🎨</span></div>
+        <div class="content">
+          <div class="title">视频生成画布</div>
+          <div class="desc">当用户表达任何视频创作意图时触发此技能，如在画布中生成或编辑视频。</div>
+          <div class="tag-list"><span class="tag">AIGC</span><span class="tag">视频</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cover-wrap"><span class="cover-placeholder">🧭</span></div>
+        <div class="content">
+          <div class="title">电商路由策略</div>
+          <div class="desc">电商出海跨站点运营与商品流量分发规则策略推荐。</div>
+          <div class="tag-list"><span class="tag">电商</span><span class="tag">策略</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="color: var(--text-muted); font-size: 15px; margin-top: 40px;">
+      <span>对比参考：下架前的 5 个 Shopee 精选卡片（已成功移除）</span>
+    </div>
+    <div class="grid">
+      <div class="card removed">
+        <span class="removed-tag">已下架</span>
+        <div class="cover-wrap"><span class="cover-placeholder">🛍️</span></div>
+        <div class="content">
+          <div class="title">Shopee 市场分析</div>
+          <div class="desc">使用 shopee-mcp 进行 Shopee 站点与品类市场机会分析。</div>
+        </div>
+      </div>
+      <div class="card removed">
+        <span class="removed-tag">已下架</span>
+        <div class="cover-wrap"><span class="cover-placeholder">📦</span></div>
+        <div class="content">
+          <div class="title">Shopee 商品分析</div>
+          <div class="desc">使用 shopee-mcp 进行 Shopee 商品排行、详情、趋势与热词分析。</div>
+        </div>
+      </div>
+      <div class="card removed">
+        <span class="removed-tag">已下架</span>
+        <div class="cover-wrap"><span class="cover-placeholder">🏪</span></div>
+        <div class="content">
+          <div class="title">Shopee 店铺分析</div>
+          <div class="desc">使用 shopee-mcp 进行 Shopee 店铺排行、详情、趋势、选品与品牌组合分析。</div>
+        </div>
+      </div>
+      <div class="card removed">
+        <span class="removed-tag">已下架</span>
+        <div class="cover-wrap"><span class="cover-placeholder">🏆</span></div>
+        <div class="content">
+          <div class="title">Shopee 品牌分析</div>
+          <div class="desc">使用 shopee-mcp 分析 Shopee 品牌排名、详情、趋势、商品组合及站点/类别分布。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

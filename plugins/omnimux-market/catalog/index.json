@@ -6809,8 +6809,7 @@
       "tags": [
         "电商",
         "Shopee",
-        "市场分析",
-        "精选"
+        "市场分析"
       ],
       "skill": "shopee-market-analysis",
       "source": {
@@ -6819,7 +6818,7 @@
         "path": "skills/shopee-market-analysis",
         "ref": "main"
       },
-      "recommended": true,
+      "recommended": false,
       "cover": {
         "asset": "catalog/covers/ecommerce-design.png",
         "alt": "Shopee Market Analysis"
@@ -6844,8 +6843,7 @@
       "tags": [
         "电商",
         "Shopee",
-        "商品分析",
-        "精选"
+        "商品分析"
       ],
       "skill": "shopee-product-analysis",
       "source": {
@@ -6854,7 +6852,7 @@
         "path": "skills/shopee-product-analysis",
         "ref": "main"
       },
-      "recommended": true,
+      "recommended": false,
       "cover": {
         "asset": "catalog/covers/ecommerce-image.png",
         "alt": "Shopee Product Analysis"
@@ -6879,8 +6877,7 @@
       "tags": [
         "电商",
         "Shopee",
-        "店铺分析",
-        "精选"
+        "店铺分析"
       ],
       "skill": "shopee-shop-analysis",
       "source": {
@@ -6889,7 +6886,7 @@
         "path": "skills/shopee-shop-analysis",
         "ref": "main"
       },
-      "recommended": true,
+      "recommended": false,
       "cover": {
         "asset": "catalog/covers/ecommerce-design.png",
         "alt": "Shopee Shop Analysis"
@@ -6914,8 +6911,7 @@
       "tags": [
         "电商",
         "Shopee",
-        "品牌分析",
-        "精选"
+        "品牌分析"
       ],
       "skill": "shopee-brand-analysis",
       "source": {
@@ -6924,7 +6920,7 @@
         "path": "skills/shopee-brand-analysis",
         "ref": "main"
       },
-      "recommended": true,
+      "recommended": false,
       "cover": {
         "asset": "catalog/covers/ecommerce-image.png",
         "alt": "Shopee Brand Analysis"
@@ -6949,8 +6945,7 @@
       "tags": [
         "电商",
         "Shopee",
-        "关键词分析",
-        "精选"
+        "关键词分析"
       ],
       "skill": "shopee-keyword-analysis",
       "source": {
@@ -6959,7 +6954,7 @@
         "path": "skills/shopee-keyword-analysis",
         "ref": "main"
       },
-      "recommended": true,
+      "recommended": false,
       "cover": {
         "asset": "catalog/covers/ecommerce-design.png",
         "alt": "Shopee Keyword Analysis"
