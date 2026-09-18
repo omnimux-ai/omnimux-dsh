@@ -350,9 +350,11 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .nav-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--dsw-alias-label-primary,#ffffff);border-radius:1px}
 .tab-info-icon{width:14px;height:14px;flex-shrink:0;color:currentColor}
 .search-box{position:relative;flex:1 1 200px;min-width:140px;max-width:260px;display:flex;align-items:center;justify-content:flex-end}
-.search-box input{width:100%;height:32px;box-sizing:border-box;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:0 12px 0 32px;color:var(--dsw-alias-label-primary);font-size:13px;outline:none}
-.search-box input::placeholder{color:var(--dsw-alias-label-caption,var(--dsw-alias-text-muted,#555861))}
-.search-box input:focus{border-color:var(--dsw-alias-border-focus,var(--dsw-alias-border-l1,rgba(255,255,255,.3)))}
+.search-box .dshUk-SearchField-root,.search-box .dshUk-SearchField-stretch,.search-box [class*="SearchField-root"]{width:100%;max-width:none}
+.search-box [class*="SearchField-root"] input,.search-box .dshUk-SearchField-root input{border:none !important;background:transparent !important;border-radius:0 !important;padding:0 !important;height:100% !important;outline:none !important;box-shadow:none !important}
+.search-box > input{width:100%;height:32px;box-sizing:border-box;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:0 12px 0 32px;color:var(--dsw-alias-label-primary);font-size:13px;outline:none}
+.search-box > input::placeholder{color:var(--dsw-alias-label-caption,var(--dsw-alias-text-muted,#555861))}
+.search-box > input:focus{border-color:var(--dsw-alias-border-focus,var(--dsw-alias-border-l1,rgba(255,255,255,.3)))}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;fill:var(--dsw-alias-label-caption,var(--dsw-alias-text-muted,#686b74));pointer-events:none}
 .mine-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .mine-dropdown-wrap{position:relative;display:inline-flex}
