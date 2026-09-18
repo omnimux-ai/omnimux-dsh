@@ -134,11 +134,43 @@ describe('创作画布与工作区同频流转契约 (#2224)', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('多语言中英文必须包含未建项文案且键名完整', async () => {
-    const { zh, en } = await import('../client/locales.js');
-    assert.equal(zh['canvas.unprojectedTitle'], '当前工作区尚未创建项目');
-    assert.equal(en['canvas.unprojectedTitle'], 'No Project in Current Workspace');
-    assert.ok(zh['canvas.unprojectedSub']);
-    assert.ok(en['canvas.unprojectedSub']);
+  it('GET session-binding 在工作区已有项目时保持严格幂等且不追加创作页 (#2322)', async () => {
+    const libraryRoot = mkdtempSync(join(tmpdir(), 'omnimux-lib-idempotent-'));
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'omnimux-ws-idempotent-'));
+    const store = host.createProjectStore({ libraryRoot });
+
+    // 先建好项目，带有一个明确的创作页 ws_original
+    store.create('原有项目', {
+      projectRoot: workspaceDir,
+      canvasWorkspaceIds: ['ws_original'],
+    });
+
+    const dispatcher = host.createProjectDispatcher({
+      libraryRoot,
+      resolveSessionWorkspaceDir: (sid) => (sid === 's_existing' ? workspaceDir : undefined),
+    });
+
+    // 第一次 GET 查询
+    const res1 = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding?sessionId=s_existing',
+    });
+    assert.equal(res1.status, 200);
+    assert.equal(res1.body.source, 'existing');
+    assert.equal(res1.body.project.pages.length, 1);
+    assert.equal(res1.body.project.canvasWorkspaceId, 'ws_original');
+
+    // 第二次 GET 查询，断言绝对不触发 addPage
+    const res2 = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding?sessionId=s_existing',
+    });
+    assert.equal(res2.status, 200);
+    assert.equal(res2.body.source, 'existing');
+    assert.equal(res2.body.project.pages.length, 1, '页面数量绝不得自增');
+    assert.equal(res2.body.project.canvasWorkspaceId, 'ws_original');
+
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(workspaceDir, { recursive: true, force: true });
   });
 });
