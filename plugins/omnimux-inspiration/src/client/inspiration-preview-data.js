@@ -4,6 +4,7 @@ import {
   parseDurationSeconds,
   segmentsFromTimecodeLines,
 } from '../structure-script.js'
+import { parseShotsFromMarkdownTable } from '../analyzer.js'
 
 function text(value) {
   return typeof value === 'string' ? value : ''
@@ -182,6 +183,24 @@ function analysisOf(item) {
   return {}
 }
 
+export function collectShots(analysis, item) {
+  const safeAnalysis = analysis && typeof analysis === 'object' ? analysis : {}
+  const safeItem = item && typeof item === 'object' ? item : {}
+  if (Array.isArray(safeAnalysis.shots) && safeAnalysis.shots.length) {
+    return safeAnalysis.shots
+  }
+  if (Array.isArray(safeItem.shots) && safeItem.shots.length) {
+    return safeItem.shots
+  }
+  if (typeof safeAnalysis.raw_markdown === 'string' && safeAnalysis.raw_markdown.includes('|')) {
+    return parseShotsFromMarkdownTable(safeAnalysis.raw_markdown)
+  }
+  if (typeof safeAnalysis.markdown === 'string' && safeAnalysis.markdown.includes('|')) {
+    return parseShotsFromMarkdownTable(safeAnalysis.markdown)
+  }
+  return []
+}
+
 function collectSegments(item, analysis, script) {
   const raw = Array.isArray(analysis.segments) ? analysis.segments : (Array.isArray(item.segments) ? item.segments : [])
   const normalized = raw
@@ -202,6 +221,25 @@ function collectSegments(item, analysis, script) {
     })
     .filter(Boolean)
   if (normalized.length) return normalized
+
+  // Try extracting from structured shots if segments are missing
+  const shots = collectShots(analysis, item)
+  if (shots.length) {
+    const fromShots = shots.map((s, index) => {
+      const line = text(s.script) || text(s.description) || text(s.title)
+      if (!line) return null
+      return {
+        id: text(s.id) || `seg_${index + 1}`,
+        start: s.start_seconds ?? null,
+        end: s.end_seconds ?? null,
+        text: line,
+        section: text(s.stage) || 'Body',
+        startLabel: s.time_range || (s.start_seconds != null ? formatTimecode(s.start_seconds) : ''),
+      }
+    }).filter(Boolean)
+    if (fromShots.length) return fromShots
+  }
+
   return segmentsFromTimecodeLines(script).map((row) => ({
     ...row,
     startLabel: row.start == null ? '' : formatTimecode(row.start),
@@ -245,6 +283,7 @@ export function getInspirationPreviewData(item = {}) {
     ?? parseDurationSeconds(analysis.duration)
     ?? parseDurationSeconds(stats.duration)
     ?? parseDurationSeconds(stats.video_duration)
+  const shots = collectShots(analysis, safeItem)
   const segments = collectSegments(safeItem, analysis, script)
   const translation = safeItem.script_translation && typeof safeItem.script_translation === 'object'
     ? safeItem.script_translation
@@ -271,6 +310,8 @@ export function getInspirationPreviewData(item = {}) {
     replication: text(analysis.replication_action) || text(analysis.replication_guide),
     rawMarkdown: text(analysis.markdown) || text(analysis.raw_markdown) || (typeof safeItem.deconstruction === 'string' ? safeItem.deconstruction : ''),
     tags: Array.isArray(safeItem.tags) ? safeItem.tags : [],
+    shots,
+    hasShots: Boolean(shots.length),
     segments,
     hasTimecodes: segments.some((row) => row.start != null),
     segmentCount: segments.length,
@@ -290,6 +331,7 @@ export function hasDeconstruction(data) {
     || data.visual
     || data.replication
     || data.rawMarkdown
+    || (data.shots && data.shots.length)
     || (data.sections && data.sections.length)
   ))
 }

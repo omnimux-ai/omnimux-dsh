@@ -83,6 +83,9 @@ export function pickReplicationPreviewUrl(row) {
  */
 export function buildInspirationPayload(row) {
   const id = row?.id
+  const decon = row?.deconstruction && typeof row.deconstruction === 'object' ? row.deconstruction : {}
+  const shots = Array.isArray(decon.shots) ? decon.shots : (Array.isArray(row?.shots) ? row.shots : [])
+  const structure = Array.isArray(decon.structure) ? decon.structure : []
   return {
     sourcePlugin: 'omnimux-inspiration',
     kind: 'inspiration',
@@ -95,6 +98,10 @@ export function buildInspirationPayload(row) {
       inspiration_id: id,
       source_url: row?.source_url,
       source_platform: row?.source_platform,
+      hook: decon.hook || decon.hook_highlight || '',
+      summary: decon.summary || '',
+      shots,
+      structure,
     },
   }
 }

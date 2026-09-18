@@ -652,7 +652,84 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <div className="omnimux-inspiration-modal-deconstruction-body">
                 {hasDeconstruction(data) ? (
                   <div className="omnimux-inspiration-modal-dimensions is-doc-style">
-                    {data.sections.length ? data.sections.map((section) => (
+                    {data.hasShots ? (
+                      <>
+                        {/* 顶部精选五维爆款策略 */}
+                        {data.hook ? (
+                          <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                            <h4 className="omnimux-inspiration-doc-title">
+                              <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                              <span>{t('modal.deconstruction.hook') || '黄金钩子 (0-3s)'}</span>
+                            </h4>
+                            <p className="omnimux-inspiration-doc-desc">{data.hook}</p>
+                          </article>
+                        ) : null}
+
+                        {data.targetGoal ? (
+                          <article className="omnimux-inspiration-doc-section omnimux-inspiration-strategy-card">
+                            <h4 className="omnimux-inspiration-doc-title">
+                              <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                              <span>{t('modal.deconstruction.goal') || '核心转化目标'}</span>
+                            </h4>
+                            {renderDocAnalysis(data.targetGoal)}
+                          </article>
+                        ) : null}
+
+                        {/* 逐镜头分镜脚本表 */}
+                        <div className="omnimux-inspiration-shots-container">
+                          <h4 className="omnimux-inspiration-doc-title omnimux-inspiration-shots-heading">
+                            <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                            <span>{t('modal.deconstruction.shotsTitle') || '逐镜头分镜脚本'} ({data.shots.length} 镜)</span>
+                          </h4>
+                          <div className="omnimux-inspiration-shots-list">
+                            {data.shots.map((shot, sIdx) => (
+                              <article
+                                key={shot.id || sIdx}
+                                className={`omnimux-inspiration-doc-section omnimux-inspiration-shot-card ${activeSegmentId === shot.id ? 'is-active' : ''}`}
+                                onClick={() => setActiveSegmentId(shot.id)}
+                              >
+                                <div className="omnimux-inspiration-shot-header">
+                                  <div className="omnimux-inspiration-shot-meta">
+                                    <span className="omnimux-inspiration-shot-time">{shot.time_range || `镜头 ${sIdx + 1}`}</span>
+                                    {shot.stage ? <span className="omnimux-inspiration-shot-stage">{shot.stage}</span> : null}
+                                  </div>
+                                  <div className="omnimux-inspiration-shot-tags">
+                                    {(shot.tags || []).map((tag, tIdx) => (
+                                      <span key={tIdx} className="omnimux-inspiration-shot-tag">{tag}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                                {shot.title && shot.title !== shot.description ? (
+                                  <h5 className="omnimux-inspiration-shot-title">{shot.title}</h5>
+                                ) : null}
+                                {shot.description ? (
+                                  <p className="omnimux-inspiration-shot-desc">{shot.description}</p>
+                                ) : null}
+                                {shot.script ? (
+                                  <div className="omnimux-inspiration-shot-script">
+                                    <span className="omnimux-inspiration-shot-quote-mark">“</span>
+                                    <span>{shot.script}</span>
+                                  </div>
+                                ) : null}
+                                {shot.prompt ? (
+                                  <div className="omnimux-inspiration-shot-prompt-box">
+                                    <code className="omnimux-inspiration-shot-prompt">{shot.prompt}</code>
+                                    <CopyButton
+                                      text={shot.prompt}
+                                      label={t('modal.deconstruction.copyPrompt') || '复制 Prompt'}
+                                      copiedLabel={t('modal.header.copied') || '已复制'}
+                                      size="xs"
+                                      variant="ghost"
+                                      className="omnimux-inspiration-shot-copy-btn"
+                                    />
+                                  </div>
+                                ) : null}
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : data.sections.length ? data.sections.map((section) => (
                       <article
                         key={section.id}
                         className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
