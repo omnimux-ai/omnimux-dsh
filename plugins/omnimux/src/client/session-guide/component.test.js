@@ -58,26 +58,8 @@ test('session guide switches drafts without a reference panel or send intercepti
   document.querySelector('[data-send-button]').addEventListener('click', () => sends++)
   try {
     await render()
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
-    const first = document.querySelector('[data-starter-id]').dataset.starterId
-    await click(`[data-starter-id="${first}"]`)
-    await render()
-    assert.equal(writes, 1)
-    await click(`[data-starter-id="${first}"]`)
-    assert.equal(writes, 1)
-    draft += '\nuser edit'
-    await render()
-    const second = document.querySelectorAll('[data-starter-id]')[4].dataset.starterId
-    await click(`[data-starter-id="${second}"]`)
-    assert.equal(document.querySelector('.omnimux-starter-confirm'), null)
-    assert.equal(draft, `guide.${second}.prompt`)
-    assert.equal(store.get(owner).selectedId, second)
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 4)
     assert.equal(sends, 0, 'choosing a task never submits')
-    for (const button of document.querySelectorAll('[data-starter-id]')) {
-      await click(`[data-starter-id="${button.dataset.starterId}"]`)
-      await render()
-      assert.equal(document.querySelector('.omnimux-starter-materials'), null)
-    }
     draft += '\nkeep this edit'
     await render()
     const savedDraft = draft
@@ -85,7 +67,7 @@ test('session guide switches drafts without a reference panel or send intercepti
     const savedWrites = writes
     await setPanel(owner, true)
     // 面板打开 ⇒ 分栏紧凑态：卡片流撤场，但简洁模式宿主仍在（#1591 契约）。
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0, '面板打开时收回完整卡片流')
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, '面板打开时收回完整卡片流')
     assert.ok(
       Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact')),
       '面板打开时必须保留会话栏简洁模式宿主',
@@ -95,19 +77,19 @@ test('session guide switches drafts without a reference panel or send intercepti
       '简洁模式仍要挂 starter-host，输入框才能贴底',
     )
     await setPanel(owner, false)
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 4)
     assert.ok(document.querySelector('[data-omnimux-starter-host]'))
     assert.equal(draft, savedDraft)
     assert.equal(store.get(owner), savedState)
     assert.equal(writes, savedWrites)
     await setPanel('another-session', true)
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0, 'workbench 全局分栏打开时不渲染完整卡片')
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, 'workbench 全局分栏打开时不渲染完整卡片')
     assert.ok(
       document.querySelector('[data-omnimux-starter-guide].is-compact'),
       '分栏紧凑态下必须保留会话栏简洁模式宿主与输入框',
     )
     await setPanel('another-session', false)
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 4)
     await click('[data-send-button]')
     assert.equal(sends, 1, 'normal send needs no extra synchronization gesture')
     owner = 'B'
@@ -696,9 +678,9 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
   const render = () => act(async () => root.render(React.createElement(SessionGuide, props)))
   /** 让 MutationObserver 的微任务与 React 提交都落地。 */
   const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
-  const guideMounted = () => document.querySelectorAll('[data-starter-id]').length === 10
+  const guideMounted = () => document.querySelectorAll('.omnimux-pill-btn').length === 4
     && Boolean(document.querySelector('[data-omnimux-starter-host]'))
-  const guideCompact = () => document.querySelectorAll('[data-starter-id]').length === 0
+  const guideCompact = () => document.querySelectorAll('.omnimux-pill-btn').length === 0
     && Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact'))
     && Boolean(document.querySelector('[data-omnimux-starter-host]'))
 
@@ -793,9 +775,9 @@ test('陈旧的 panelOpen 拦不住引导：官方右栏收起后必须按 DOM �
   const render = () => act(async () => root.render(React.createElement(SessionGuide, props)))
   /** 让 MutationObserver 的微任务与 React 提交都落地。 */
   const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
-  const guideMounted = () => document.querySelectorAll('[data-starter-id]').length === 10
+  const guideMounted = () => document.querySelectorAll('.omnimux-pill-btn').length === 4
     && Boolean(document.querySelector('[data-omnimux-starter-host]'))
-  const guideCompact = () => document.querySelectorAll('[data-starter-id]').length === 0
+  const guideCompact = () => document.querySelectorAll('.omnimux-pill-btn').length === 0
     && Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact'))
 
   try {

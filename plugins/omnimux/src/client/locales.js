@@ -1,4 +1,9 @@
 export const zh = {
+  'composer.product': '产品',
+  'composer.pill.skills': '技能',
+  'composer.pill.videoAds': '视频广告',
+  'composer.pill.imageAds': '图片广告',
+  'composer.pill.competitor': '竞争对手研究',
   'profile.nav': '个人资料',
   'profile.title': '个人资料',
   'profile.signedOut': '未登录',
@@ -184,6 +189,11 @@ export const zh = {
 }
 
 export const en = {
+  'composer.product': 'Product',
+  'composer.pill.skills': 'Skills',
+  'composer.pill.videoAds': 'Video ads',
+  'composer.pill.imageAds': 'Image ads',
+  'composer.pill.competitor': 'Competitor research',
   'profile.nav': 'Profile',
   'profile.title': 'Profile',
   'profile.signedOut': 'Not signed in',
