@@ -39,6 +39,11 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
       }));
     });
 
+    const bar = document.querySelector('.omnimux-creatify-pills-bar');
+    assert.ok(bar, '必须存在按钮组容器');
+    assert.equal(bar.style.justifyContent, 'center', '按钮组必须相对输入框水平居中');
+    assert.equal(bar.style.width, '100%', '按钮组容器应铺满输入框同宽基准');
+
     const pills = document.querySelectorAll('.omnimux-pill-btn');
     assert.equal(pills.length, 4, '必须渲染 4 个胶囊');
 

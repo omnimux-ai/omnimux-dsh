@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-09-18T09:39:30.746Z",
+  "sourceStyle": "CreatifyPillsBar.jsx justifyContent:center",
+  "demoPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-pills-center/docs/evidence/pills-center-demo.html",
+  "cases": [
+    {
+      "label": "demo-desktop",
+      "width": 1280,
+      "height": 900,
+      "measure": {
+        "vw": 1280,
+        "vh": 900,
+        "composerCenter": 640,
+        "pillsCenter": 640,
+        "centerDeltaPx": 0,
+        "buttonCount": 4,
+        "overflowX": false,
+        "pass": true
+      },
+      "screenshotPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-pills-center/.workbuddy/evidence/pills-center/demo-desktop.png",
+      "bytes": 32839,
+      "pass": true
+    },
+    {
+      "label": "demo-narrow",
+      "width": 420,
+      "height": 900,
+      "measure": {
+        "vw": 420,
+        "vh": 900,
+        "composerCenter": 210,
+        "pillsCenter": 210,
+        "centerDeltaPx": 0,
+        "buttonCount": 4,
+        "overflowX": false,
+        "pass": true
+      },
+      "screenshotPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-pills-center/.workbuddy/evidence/pills-center/demo-narrow.png",
+      "bytes": 28233,
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "completedAt": "2026-09-18T09:39:30.747Z"
+}

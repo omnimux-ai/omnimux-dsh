@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>快捷按钮居中演示</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #111113;
+      --dsw-alias-bg-layer-1: rgba(255,255,255,0.04);
+      --dsw-alias-bg-layer-2: rgba(255,255,255,0.06);
+      --dsw-alias-border: rgba(255,255,255,0.12);
+      --dsw-alias-label-primary: #f3f4f6;
+      --dsw-alias-label-tertiary: rgba(255,255,255,0.40);
+      --dsw-alias-interactive-bg-active: rgba(255,255,255,0.14);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--dsw-alias-bg-base);
+      color: var(--dsw-alias-label-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 24px 16px 48px;
+    }
+    .stage {
+      width: min(720px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .composer {
+      width: 100%;
+      min-height: 112px;
+      border-radius: 18px;
+      border: 1px solid var(--dsw-alias-border);
+      background: rgba(255,255,255,0.03);
+      padding: 14px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .composer-placeholder {
+      color: var(--dsw-alias-label-tertiary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .composer-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+    .chip, .send {
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--dsw-alias-border);
+      background: var(--dsw-alias-bg-layer-1);
+      color: var(--dsw-alias-label-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+    .send {
+      width: 28px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    /* 与 CreatifyPillsBar.jsx 一致的容器样式 */
+    .omnimux-creatify-pills-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0 16px;
+      position: relative;
+      z-index: 120;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .omnimux-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 18px;
+      border-radius: 9999px;
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border);
+      color: var(--dsw-alias-label-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .metric {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--dsw-alias-label-tertiary);
+      text-align: center;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="composer" id="composer">
+      <div class="composer-placeholder">描述你想要构建的内容，/ 调用指令，@ 文件或对话</div>
+      <div class="composer-footer">
+        <span class="chip">+  产品</span>
+        <span class="send">↑</span>
+      </div>
+    </div>
+    <div class="omnimux-creatify-pills-bar" id="pills">
+      <button type="button" class="omnimux-pill-btn">⚡ 技能</button>
+      <button type="button" class="omnimux-pill-btn">▶ 视频广告</button>
+      <button type="button" class="omnimux-pill-btn">🖼 图片广告</button>
+      <button type="button" class="omnimux-pill-btn">🔍 竞争对手研究</button>
+    </div>
+    <div class="metric" id="metric">测量中…</div>
+  </div>
+  <script>
+    function measure() {
+      const composer = document.getElementById('composer').getBoundingClientRect();
+      const pills = document.getElementById('pills');
+      const buttons = Array.from(pills.querySelectorAll('button'));
+      let left = Infinity, right = -Infinity;
+      for (const b of buttons) {
+        const r = b.getBoundingClientRect();
+        left = Math.min(left, r.left);
+        right = Math.max(right, r.right);
+      }
+      const composerCenter = composer.left + composer.width / 2;
+      const pillsCenter = (left + right) / 2;
+      const delta = Math.abs(composerCenter - pillsCenter);
+      const overflowX = document.documentElement.scrollWidth > document.documentElement.clientWidth + 1;
+      const result = {
+        vw: innerWidth,
+        vh: innerHeight,
+        composerCenter,
+        pillsCenter,
+        centerDeltaPx: delta,
+        buttonCount: buttons.length,
+        overflowX,
+        pass: delta <= 1.5 && buttons.length === 4 && !overflowX,
+      };
+      document.getElementById('metric').textContent =
+        `视口 ${result.vw}×${result.vh}\n输入框中心 ${composerCenter.toFixed(2)} | 按钮组中心 ${pillsCenter.toFixed(2)}\n中心差 ${delta.toFixed(3)} px | 溢出 ${overflowX} | ${result.pass ? '通过' : '未通过'}`;
+      document.title = `pills-center|${JSON.stringify(result)}`;
+      window.__PILLS_CENTER__ = result;
+      return result;
+    }
+    measure();
+    addEventListener('resize', measure);
+  </script>
+</body>
+</html>
