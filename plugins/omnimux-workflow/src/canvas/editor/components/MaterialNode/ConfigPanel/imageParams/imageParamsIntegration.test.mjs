@@ -28,10 +28,11 @@ test('ImageTriggerBar 消费 CfgSummaryBar 与 IMAGE_COLLAPSE_ORDER，槽位契�
   assert.match(triggerSrc, /formatImageSummary/);
   assert.match(triggerSrc, /AspectRatioIcon\s+ratio=\{params\.aspectRatio\}\s+size=\{14\}/);
   assert.match(triggerSrc, /ChevronDown\s+size=\{14\}/);
-  // 图像槽位：mode → ratio → resolution → chevron；无 duration / sound
+  // 图像槽位：ratio → resolution → quality → mode → chevron；无 duration / sound
   assert.match(triggerSrc, /push\('mode'/);
   assert.match(triggerSrc, /push\('ratio'/);
   assert.match(triggerSrc, /push\('resolution'/);
+  assert.match(triggerSrc, /push\('quality'/);
   assert.doesNotMatch(triggerSrc, /push\('duration'/);
   assert.doesNotMatch(triggerSrc, /push\('sound'/);
   assert.match(triggerSrc, /dropPolicy: 'never'/);

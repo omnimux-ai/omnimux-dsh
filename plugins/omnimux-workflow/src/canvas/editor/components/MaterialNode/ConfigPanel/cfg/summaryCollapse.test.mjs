@@ -144,8 +144,8 @@ describe('cfg/summaryCollapse - 视频序（默认，向后兼容）', () => {
 });
 
 describe('cfg/summaryCollapse - 图像序（IMAGE_COLLAPSE_ORDER）', () => {
-  it('图像折叠顺序锁定为 mode → ratio → resolution', () => {
-    assert.deepEqual([...IMAGE_COLLAPSE_ORDER], ['mode', 'ratio', 'resolution']);
+  it('图像折叠顺序锁定为 mode → quality → ratio → resolution', () => {
+    assert.deepEqual([...IMAGE_COLLAPSE_ORDER], ['mode', 'quality', 'ratio', 'resolution']);
   });
 
   it('宽度充裕（≥164）→ 全部可见', () => {

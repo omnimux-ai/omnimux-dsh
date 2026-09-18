@@ -92,16 +92,37 @@ export function CfgSummaryBar({
       return;
     }
     const apply = (): void => {
-      // 内容区可用宽 ≈ clientWidth − 左右 padding（10 + 8）
-      const available = Math.max(0, el.clientWidth - 18);
-      setVisible(collapseSummary(slots, available, collapseOrder));
+      // 优先从外部容器推导最大可用宽度，消除自身内容缩减导致 clientWidth 循环收缩的死锁
+      const group = el.closest<HTMLElement>('.wf-config-panel__params-group');
+      let available = 0;
+      if (group && group.clientWidth > 0) {
+        let siblingsWidth = 0;
+        const wrap = el.closest<HTMLElement>('.wf-cfg-summary-bar__wrap')
+          || el.closest<HTMLElement>('.wf-video-trigger-bar__wrap')
+          || el;
+        for (const child of Array.from(group.children)) {
+          if (child !== wrap && child instanceof HTMLElement) {
+            siblingsWidth += child.offsetWidth + 6;
+          }
+        }
+        available = Math.max(0, group.clientWidth - siblingsWidth - 18);
+      } else if (el.parentElement && el.parentElement.clientWidth > 0) {
+        available = Math.max(0, el.parentElement.clientWidth - 18);
+      } else {
+        available = Math.max(0, el.clientWidth - 18);
+      }
+
+      if (available > 0) {
+        setVisible(collapseSummary(slots, available, collapseOrder));
+      }
     };
     apply();
     if (typeof ResizeObserver === 'undefined') {
       return;
     }
+    const observeTarget = el.closest('.wf-config-panel__params-group') || el.parentElement || el;
     const observer = new ResizeObserver(apply);
-    observer.observe(el);
+    observer.observe(observeTarget);
     return () => observer.disconnect();
   }, [slots, collapseOrder]);
 

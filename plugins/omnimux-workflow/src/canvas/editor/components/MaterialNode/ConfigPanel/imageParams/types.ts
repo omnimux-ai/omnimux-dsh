@@ -50,7 +50,9 @@ export interface ImageSummaryFormatResult {
   ratioText: string;
   /** 清晰度文案，如 '2K'、'1K'；无分辨率选项时为 null */
   resolutionText: string | null;
-  /** 由空格分隔的紧凑完整文本（a11y 用；视觉分隔由 CSS 竖线承担，禁止中点 `·`） */
+  /** 画质文案，如 '高'、'标准'；无画质选项时为 null */
+  qualityText: string | null;
+  /** 由空格分隔的紧凑完整文本（a11y 用） */
   fullText: string;
 }
 
