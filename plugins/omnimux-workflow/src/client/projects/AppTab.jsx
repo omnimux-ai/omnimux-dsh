@@ -17,6 +17,66 @@ import { getBetterSidebar } from './projectCanvas.js'
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
 
+function IconCheck({ size = 12, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M3.5 8.5l3 3 6-7" />
+    </svg>
+  )
+}
+
+function IconClose({ size = 12, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  )
+}
+
+function IconSpinner({ size = 12, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`omx-apptab-spin ${className}`} aria-hidden="true">
+      <path d="M8 2a6 6 0 1 0 6 6" />
+    </svg>
+  )
+}
+
+function IconAlert({ size = 14, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M8 2.5l5.5 10.5H2.5L8 2.5zM8 6.5v3.5M8 12v.5" />
+    </svg>
+  )
+}
+
+function IconSparkle({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+    </svg>
+  )
+}
+
+function IconRocket({ size = 36, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6.05 11a22.35 22.35 0 0 1-3.95 2zM9 9l3 3M15 9l-3 3" />
+    </svg>
+  )
+}
+
+function IconPalette({ size = 32, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.21-.64-1.67-.39-.45-.61-1.02-.61-1.64 0-1.38 1.12-2.5 2.5-2.5H17c2.76 0 5-2.24 5-5 0-4.42-4.03-8.69-10-8.69z" />
+    </svg>
+  )
+}
+
 /**
  * Reads manifest from localStorage cache by appId or gets the newest manifest.
  * @param {string} [appId]
@@ -249,6 +309,22 @@ export function AppTab(props) {
     writeCachedTasks(manifest.appId, updatedTasks)
     setActiveRightTab('tasks')
 
+    const markTaskTerminal = (tId, status, extra = {}) => {
+      setTasks((prev) => {
+        const next = prev.map((t) => {
+          if (t.taskId !== tId) return t
+          return {
+            ...t,
+            status,
+            updatedAt: new Date().toISOString(),
+            ...extra,
+          }
+        })
+        writeCachedTasks(manifest.appId, next)
+        return next
+      })
+    }
+
     try {
       let executionId = ''
       let artifacts = []
@@ -261,7 +337,7 @@ export function AppTab(props) {
         if (res.artifacts) artifacts = res.artifacts
         if (res.mediaUrl) mediaUrl = res.mediaUrl
       } else {
-        // Fallback to HTTP endpoint
+        // HTTP endpoint
         const response = await fetch(`/omnimux-apps/api/apps/${encodeURIComponent(manifest.appId)}/executions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -271,43 +347,102 @@ export function AppTab(props) {
           }),
         }).catch(() => null)
 
-        if (response && response.ok) {
-          const data = await response.json().catch(() => ({}))
-          executionId = data.executionId || data.jobId || ''
-          if (data.artifacts) artifacts = data.artifacts
-          if (data.mediaUrl) mediaUrl = data.mediaUrl
+        if (!response || !response.ok) {
+          const errData = await response?.json?.().catch(() => ({}))
+          throw new Error(errData?.message || `生成任务启动失败 (HTTP ${response?.status || '503'})`)
         }
+
+        const data = await response.json().catch(() => ({}))
+        executionId = data.executionId || data.jobId || ''
+        if (data.artifacts) artifacts = data.artifacts
+        if (data.mediaUrl) mediaUrl = data.mediaUrl
       }
 
-      // If execution returns immediately or is mock, complete it
-      const finalMediaUrl = mediaUrl || artifacts[0]?.url || manifest.showcase?.items?.[0]?.mediaUrl || manifest.metadata?.coverUrl || ''
-      const completedTask = {
-        ...newTask,
-        executionId: executionId || `exec_${Date.now()}`,
-        status: 'completed',
-        updatedAt: new Date().toISOString(),
-        outputs: {
-          mediaUrl: finalMediaUrl,
-          artifacts,
-        },
+      if (executionId) {
+        setTasks((prev) => {
+          const next = prev.map((t) => (t.taskId === taskId ? { ...t, executionId } : t))
+          writeCachedTasks(manifest.appId, next)
+          return next
+        })
       }
 
-      setTasks((prev) => {
-        const next = prev.map((t) => (t.taskId === taskId ? completedTask : t))
-        writeCachedTasks(manifest.appId, next)
-        return next
-      })
+      const instantMediaUrl = mediaUrl || (Array.isArray(artifacts) && artifacts[0]?.url)
+      if (instantMediaUrl) {
+        markTaskTerminal(taskId, 'completed', {
+          outputs: { mediaUrl: instantMediaUrl, artifacts },
+        })
+        return
+      }
+
+      if (executionId) {
+        const pollInterval = 1000
+        const maxAttempts = 120
+        let attempts = 0
+
+        const pollStatus = async () => {
+          attempts++
+          try {
+            let statusResult = null
+            if (win && typeof win.__OMNIMUX_APPS_POLL__ === 'function') {
+              statusResult = await win.__OMNIMUX_APPS_POLL__(executionId)
+            } else {
+              const res = await fetch(
+                `/omnimux-apps/api/apps/${encodeURIComponent(manifest.appId)}/executions/${encodeURIComponent(executionId)}`,
+              ).catch(() => null)
+              if (res && res.ok) {
+                statusResult = await res.json().catch(() => null)
+              }
+            }
+
+            if (!statusResult) {
+              if (attempts < maxAttempts) {
+                setTimeout(pollStatus, pollInterval)
+              } else {
+                markTaskTerminal(taskId, 'failed', { error: '轮询对账超时' })
+              }
+              return
+            }
+
+            const currentStatus = String(statusResult.status || '').toUpperCase()
+            if (currentStatus === 'COMPLETED') {
+              const finalMediaUrl =
+                statusResult.mediaUrl ||
+                statusResult.artifacts?.[0]?.url ||
+                statusResult.outputs?.mediaUrl ||
+                ''
+              markTaskTerminal(taskId, 'completed', {
+                outputs: {
+                  mediaUrl: finalMediaUrl,
+                  artifacts: statusResult.artifacts || [],
+                },
+              })
+            } else if (currentStatus === 'FAILED' || currentStatus === 'CANCELED') {
+              markTaskTerminal(taskId, 'failed', {
+                error: statusResult.error || '任务执行中断或失败',
+              })
+            } else {
+              if (attempts < maxAttempts) {
+                setTimeout(pollStatus, pollInterval)
+              } else {
+                markTaskTerminal(taskId, 'failed', { error: '任务执行超时，请稍后刷新查看' })
+              }
+            }
+          } catch (pollErr) {
+            if (attempts < maxAttempts) {
+              setTimeout(pollStatus, pollInterval)
+            } else {
+              markTaskTerminal(taskId, 'failed', { error: '网络轮询异常中断' })
+            }
+          }
+        }
+
+        setTimeout(pollStatus, 500)
+      } else {
+        markTaskTerminal(taskId, 'failed', { error: '未返回有效的任务执行标识' })
+      }
     } catch (err) {
-      const failedTask = {
-        ...newTask,
-        status: 'failed',
-        updatedAt: new Date().toISOString(),
+      markTaskTerminal(taskId, 'failed', {
         error: err?.message || '生成失败，请重试',
-      }
-      setTasks((prev) => {
-        const next = prev.map((t) => (t.taskId === taskId ? failedTask : t))
-        writeCachedTasks(manifest.appId, next)
-        return next
       })
     } finally {
       setIsSubmitting(false)
@@ -324,7 +459,9 @@ export function AppTab(props) {
   if (!manifest) {
     return (
       <div className="omx-apptab-empty">
-        <div className="omx-apptab-empty-icon">🚀</div> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+        <div className="omx-apptab-empty-icon">
+          <IconRocket size={36} />
+        </div>
         <div className="omx-apptab-empty-title">
           暂无已加载的 AI 应用
         </div>
@@ -443,7 +580,8 @@ export function AppTab(props) {
 
                     {error && (
                       <div className="omx-apptab-error-text">
-                        ⚠️ {error} // exempt-ui04: 历史存量待迁移为矢量SVG
+                        <IconAlert size={14} />
+                        <span>{error}</span>
                       </div>
                     )}
                   </div>
@@ -460,12 +598,12 @@ export function AppTab(props) {
               >
                 {isSubmitting ? (
                   <>
-                    <span>⏳</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+                    <IconSpinner size={16} />
                     <span>正在发起生成...</span>
                   </>
                 ) : (
                   <>
-                    <span>✨</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+                    <IconSparkle size={16} />
                     <span>立即生成</span>
                   </>
                 )}
@@ -499,7 +637,9 @@ export function AppTab(props) {
             {activeRightTab === 'tasks' ? (
               tasks.length === 0 ? (
                 <div className="omx-apptab-tasks-empty">
-                  <div className="omx-apptab-tasks-empty-icon">🎨</div> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
+                  <div className="omx-apptab-tasks-empty-icon">
+                    <IconPalette size={32} />
+                  </div>
                   <div className="omx-apptab-tasks-empty-title">
                     暂无生成记录
                   </div>
@@ -517,7 +657,22 @@ export function AppTab(props) {
                       <div className="omx-apptab-task-header">
                         <div className="omx-apptab-task-meta">
                           <span className={`omx-apptab-status-badge ${task.status === 'completed' ? 'is-completed' : task.status === 'failed' ? 'is-failed' : ''}`}>
-                            {task.status === 'completed' ? '✓ 生成成功' : task.status === 'failed' ? '✕ 生成失败' : '⏳ 正在生成...'} // exempt-ui04: 历史存量待迁移为矢量SVG
+                            {task.status === 'completed' ? (
+                              <>
+                                <IconCheck size={12} />
+                                <span>生成成功</span>
+                              </>
+                            ) : task.status === 'failed' ? (
+                              <>
+                                <IconClose size={12} />
+                                <span>生成失败</span>
+                              </>
+                            ) : (
+                              <>
+                                <IconSpinner size={12} />
+                                <span>正在生成...</span>
+                              </>
+                            )}
                           </span>
                           <span className="omx-apptab-task-time">
                             {new Date(task.createdAt).toLocaleTimeString()}

@@ -14,7 +14,31 @@
  * Architecture SSOT: docs/contracts/workflow-app-boundary.md (Section 4 & 6)
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ApplicationManifest, FieldMappingEntry } from '../shared/manifest.ts';
+
+function resolvePresetSnapshot(appId: string): any | null {
+  try {
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const candidatePaths = [
+      path.resolve(currentDir, '../../catalog/presets', `${appId}.workflow.json`),
+      path.resolve(currentDir, '../../../catalog/presets', `${appId}.workflow.json`),
+      path.resolve(process.cwd(), 'plugins/omnimux-apps/catalog/presets', `${appId}.workflow.json`),
+      path.resolve(process.cwd(), 'catalog/presets', `${appId}.workflow.json`),
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, 'utf-8');
+        return JSON.parse(raw);
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 export type TaskStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
 
@@ -187,12 +211,18 @@ export function prepareAndInjectWorkflowSnapshot(
   if (!manifest || typeof manifest !== 'object') {
     throw new ExecutionBridgeError('validation_failed', 'ApplicationManifest must be a valid object');
   }
-  if (!manifest.workflowBinding || !manifest.workflowBinding.snapshot) {
-    throw new ExecutionBridgeError('validation_failed', 'ApplicationManifest is missing workflowBinding.snapshot');
+  let rawSnapshot = manifest.workflowBinding?.snapshot;
+  if (!rawSnapshot && manifest.appId) {
+    rawSnapshot = resolvePresetSnapshot(manifest.appId);
+  }
+  if (!rawSnapshot) {
+    throw new ExecutionBridgeError(
+      'validation_failed',
+      `ApplicationManifest is missing workflowBinding.snapshot and no preset snapshot found for appId: ${manifest.appId}`,
+    );
   }
 
   // Step 1: Deep clone snapshot to enforce strict immutability of the manifest
-  const rawSnapshot = manifest.workflowBinding.snapshot;
   const snapshotCopy = structuredClone(rawSnapshot);
   const nodes = (Array.isArray(snapshotCopy.nodes) ? snapshotCopy.nodes : []) as InjectedWorkflowNode[];
   const edges = (Array.isArray(snapshotCopy.edges) ? snapshotCopy.edges : []) as InjectedWorkflowEdge[];
