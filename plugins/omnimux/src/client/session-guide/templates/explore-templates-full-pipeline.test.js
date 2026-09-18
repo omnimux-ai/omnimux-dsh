@@ -46,6 +46,10 @@ test('ExploreTemplatesSection: 10 大分类胶囊与多货架流完整渲染', (
   assert.ok(html.includes('王牌短视频应用'), '必须展示王牌应用货架');
   assert.ok(html.includes('软件应用与 SaaS'), '必须展示软件应用货架');
   assert.ok(html.includes('黄金开场 Hook'), '必须展示黄金开场货架');
+
+  // 4. 验证已彻底下架 tiktok，绝不出现 tiktok 货架与胶囊
+  assert.ok(!html.includes('data-category-slug="tiktok"'), '绝对不得渲染 tiktok 分类胶囊');
+  assert.ok(!html.includes('data-shelf-slug="tiktok"'), '绝对不得渲染 tiktok 货架行');
 });
 
 test('attachTemplateToConversation: 点击复刻自动挂载为会话附件并聚焦输入框', () => {

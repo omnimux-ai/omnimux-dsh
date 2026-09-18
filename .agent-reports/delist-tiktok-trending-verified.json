@@ -1,0 +1,34 @@
+{
+  "task": "fix(templates): 彻底下架首页 TikTok 热门货架与分类，消除超宽屏留白缺陷",
+  "verifiedAt": "2026-09-18T14:46:48.340Z",
+  "issues": [
+    "#2373"
+  ],
+  "categoriesTotal": 9,
+  "categories": [
+    "all",
+    "skills",
+    "apps-software",
+    "hook-intro",
+    "ugc-review",
+    "cinematic-vfx",
+    "fashion-try-on",
+    "industry-packs",
+    "durability-test"
+  ],
+  "hasTikTokCategory": false,
+  "hasTikTokShelf": false,
+  "shelves": [
+    "explore-templates",
+    "skills",
+    "apps-software",
+    "hook-intro",
+    "ugc-review",
+    "cinematic-vfx",
+    "fashion-try-on",
+    "durability-test"
+  ],
+  "totalTemplatesCount": 402,
+  "featuredAppsCount": 7,
+  "status": "VERIFIED_PASSED"
+}
