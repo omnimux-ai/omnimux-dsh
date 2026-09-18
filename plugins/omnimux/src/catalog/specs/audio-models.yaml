@@ -125,10 +125,10 @@ models:
   # 本行的 prompt 槽承载「要朗读的文稿」，对应文档节点 7/text；文档中非必填的顶层
   # `prompt`（"仅作标签"）不是本槽，登记时不发送。参考音对应节点 4/audio。
   - id: "index-tts"
-    label: "Index TTS 声音克隆"
-    family: "gxgenai"
+    label: "Index TTS2 声音克隆"
+    family: "indextts"
     badge: "声音克隆"
-    subtitle: "Index TTS / GxgenAI · 参考音 + 文稿直出克隆音色"
+    subtitle: "Index TTS2 · 参考音 + 文稿直出克隆音色"
     operations:
       - id: "voice_clone"
         label: "声音克隆"

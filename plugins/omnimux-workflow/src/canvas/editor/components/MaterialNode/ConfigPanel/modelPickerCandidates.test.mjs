@@ -27,3 +27,12 @@ test('candidate replacement immediately invalidates the old selection without mu
   assert.equal(isPickerCandidate(rows, 'gemini-3.8-flash'), false);
   assert.deepEqual(groups[0].rows, rows);
 });
+test('maps gxgenai and index-tts families to Index TTS2 brand', () => {
+  const rows = [
+    { id: 'index-tts', label: 'Index TTS2 声音克隆', family: 'gxgenai' },
+    { id: 'seed-audio-1.0', label: 'Seed Audio 1.0', family: 'bytedance' },
+  ];
+  const groups = groupPickerCandidates(rows);
+  assert.deepEqual(groups.map(g => g.name), ['Index TTS2', 'Seedance']);
+  assert.equal(groups[0].id, 'indextts');
+});
