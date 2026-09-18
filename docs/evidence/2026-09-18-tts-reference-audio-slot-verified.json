@@ -1,0 +1,25 @@
+{
+  "feature": "tts-reference-audio-slot",
+  "verifiedAt": "2026-09-18T13:30:00.000Z",
+  "summary": "seed-audio-1.0 契约补充可选 reference_audio 槽位与 references 发包通道打通实机验证",
+  "checks": [
+    {
+      "id": "AC-1",
+      "name": "契约槽位补充：audio-models.yaml 为 seed-audio-1.0 补充可选 reference_audio (min: 0, max: 1)",
+      "result": "pass",
+      "evidence": "SubmitGuard 判定带参考音频请求 ok: true，消除 no slot with role reference 拦截"
+    },
+    {
+      "id": "AC-2",
+      "name": "白名单形状放行：adapter-profiles.json 为 text_to_speech 放行 references 字段",
+      "result": "pass",
+      "evidence": "SubmitGuard 消除 vendor_field_forbidden 拦截，允许 references 构造进入 vendorPayload"
+    },
+    {
+      "id": "AC-3",
+      "name": "真实网关出片验证：携带真实参考音频调用网关生成成功出片",
+      "result": "pass",
+      "evidence": "POST /v1/audio/speech 真实返回 200，耗时 6.733s，成功产出 54,957 字节 MP3 音频文件"
+    }
+  ]
+}

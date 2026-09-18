@@ -82,7 +82,7 @@
       "unknownFieldPolicy": "reject",
       "operationVendorShapes": {
         "text_to_speech": {
-          "allow": ["model", "input", "voice", "speed", "response_format", "format"],
+          "allow": ["model", "input", "voice", "speed", "response_format", "format", "references"],
           "require": ["input"]
         },
         "text_to_music": {

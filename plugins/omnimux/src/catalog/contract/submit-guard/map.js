@@ -342,6 +342,11 @@ export function mapValidatedPlanToVendor(args) {
         logical[key] = extras[key]
       }
     }
+    const audioUrl = referenceAudios[0] ?? genericAudio[0] ?? audioTracks[0]?.url
+    if (audioUrl) {
+      vendor.references = [{ audio_url: audioUrl }]
+      logical.references = [{ audio_url: audioUrl }]
+    }
   } else if ((profileId === 'audioGenerate' && opId !== 'voice_clone') || profileId === 'imageGenerate') {
     if (args.modelId === 'suno' || opId === 'text_to_music') {
       for (const key of ['title', 'tags', 'style', 'duration']) {
