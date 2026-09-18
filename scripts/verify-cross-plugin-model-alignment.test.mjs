@@ -178,3 +178,10 @@ test('strict model-contract CLI combines cross-plugin failure in report issues',
   }
 });
 
+test('all channel groups pass pricing points integrity verification (Three Defenses)', async () => {
+  const { execSync } = await import('node:child_process');
+  assert.doesNotThrow(() => {
+    execSync('node scripts/verify-pricing-points-integrity.test.mjs', { stdio: 'pipe' });
+  });
+});
+

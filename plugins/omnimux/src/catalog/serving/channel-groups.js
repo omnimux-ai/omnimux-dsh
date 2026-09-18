@@ -5,6 +5,7 @@
  */
 
 import { gatewayCandidates, toProductId } from './id-universe.js'
+import { resolveGroupEstimatedPoints } from '../pricing-calculator.js'
 
 export const ROUTING_STRATEGIES = Object.freeze(['auto', 'stability_first', 'cost_first'])
 
@@ -101,7 +102,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "极速出片 · 官方专线",
       "pricing": {
-        "pointsEstimate": 950,
+        "pointsEstimate": 4.9,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -117,7 +118,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "经济版",
       "badge": "经济走量 · 按条计费",
       "pricing": {
-        "pointsEstimate": 750,
+        "pointsEstimate": 1.5,
         "discountRate": 0.5,
         "billingMode": "per_task"
       },
@@ -225,7 +226,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "可灵商业专线",
       "pricing": {
-        "pointsEstimate": 1200,
+        "pointsEstimate": 4,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -446,7 +447,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "Google 官方生图专线",
       "pricing": {
-        "pointsEstimate": 150,
+        "pointsEstimate": 0.2,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -462,7 +463,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "高清版",
       "badge": "全档高清专线",
       "pricing": {
-        "pointsEstimate": 260,
+        "pointsEstimate": 0.3,
         "discountRate": 1.714,
         "billingMode": "per_task"
       },
@@ -480,7 +481,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "轻量视频官方专线",
       "pricing": {
-        "pointsEstimate": 600,
+        "pointsEstimate": 1.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -498,7 +499,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "Wan 官方专线",
       "pricing": {
-        "pointsEstimate": 1000,
+        "pointsEstimate": 2.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -512,7 +513,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "xAI 官方视频专线",
       "pricing": {
-        "pointsEstimate": 1500,
+        "pointsEstimate": 2,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -528,7 +529,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "经济版",
       "badge": "极致低价 · 随取随用",
       "pricing": {
-        "pointsEstimate": 450,
+        "pointsEstimate": 0.6,
         "discountRate": 0.2857,
         "billingMode": "per_task"
       },
@@ -564,7 +565,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "Suno 音乐生成官方专线",
       "pricing": {
-        "pointsEstimate": 800,
+        "pointsEstimate": 0.5,
         "discountRate": 1,
         "billingMode": "per_task"
       },
@@ -612,12 +613,24 @@ const UNPRICED_RANKING_POINTS = 1000
 /**
  * Numeric point estimate only. Display-only notes (`当前参数不支持报价`) never
  * participate in ranking, so a note can never reorder the failover plan.
- * @param {{ pricing?: { pointsEstimate?: number | string } }} group
+ * 支柱三：若声明内部排序权重 sortWeight 则优先用于排序，彻底解耦面向用户的 pointsEstimate。
+ * 支柱一：若 pointsEstimate 未显式配置，自动依据定价引擎推导客观预估积分。
+ * @param {{ pricing?: { pointsEstimate?: number | string, sortWeight?: number } }} group
+ * @param {string} [modelId]
  * @returns {number | null}
  */
-function pointsOf(group) {
+function pointsOf(group, modelId) {
+  const weight = group.pricing?.sortWeight
+  if (typeof weight === 'number' && Number.isFinite(weight)) return weight
+
   const points = group.pricing?.pointsEstimate
   if (typeof points === 'number' && Number.isFinite(points)) return points
+
+  if (modelId) {
+    const derived = resolveGroupEstimatedPoints(modelId, group)
+    if (typeof derived === 'number' && Number.isFinite(derived)) return derived
+  }
+
   // 网关不给积分口径时，用真实分组倍率折算排序权重（仅用于排序，不当作积分展示）。
   const ratio = group.pricing?.priceRatio
   return typeof ratio === 'number' && Number.isFinite(ratio) ? ratio * UNPRICED_RANKING_POINTS : null
