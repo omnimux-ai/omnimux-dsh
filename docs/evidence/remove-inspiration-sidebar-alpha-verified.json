@@ -1,0 +1,24 @@
+{
+  "task": "remove-inspiration-sidebar-alpha",
+  "verifiedAt": "2026-09-18T06:24:14.019Z",
+  "status": "passed",
+  "summary": "验证灵感社区插件已正式收敛标记为内测版（Alpha），并从左侧侧边栏入口彻底移除不显示，侧栏聚焦于工作流与应用模板。",
+  "results": {
+    "lifecycleStage": "alpha",
+    "toolPrefixes": [
+      "omnimux_inspiration_",
+      "inspiration_"
+    ],
+    "sidebarIntercepted": true,
+    "injectedToDom": false,
+    "preservedSource": true,
+    "focusedEntries": [
+      "应用（应用模板）",
+      "任务看板",
+      "工作流（项目）",
+      "新建项目",
+      "资产库",
+      "产品库"
+    ]
+  }
+}

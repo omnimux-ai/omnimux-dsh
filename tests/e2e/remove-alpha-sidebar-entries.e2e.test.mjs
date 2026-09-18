@@ -36,7 +36,8 @@ test('E2E: 验证左侧侧边栏内测版入口彻底移除不显示且源码完
     .filter(([_, conf]) => conf.stage === 'alpha')
     .map(([name]) => name);
 
-  assert.ok(alphaPlugins.length >= 4, '必须覆盖 accounts, publish, analytics, automation 等内测插件');
+  assert.ok(alphaPlugins.length >= 5, '必须覆盖 accounts, publish, analytics, automation, inspiration 等内测插件');
+  assert.ok(alphaPlugins.includes('omnimux-inspiration'), '灵感社区必须已标记为内测插件');
   for (const pluginName of alphaPlugins) {
     const pluginDir = path.join(root, 'plugins', pluginName);
     assert.ok(fs.existsSync(pluginDir), `插件源码必须完整保留: ${pluginName}`);
