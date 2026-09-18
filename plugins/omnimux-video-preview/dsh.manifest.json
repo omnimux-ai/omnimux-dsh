@@ -39,7 +39,8 @@
     ],
     "seamsConsumed": [
       "webServer",
-      "betterSidebar"
+      "betterSidebar",
+      "textComplete"
     ],
     "slots": [
       {
