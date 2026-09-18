@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok出海广告本地化专家 - 内置技能演示</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card-bg: #181b21;
+      --card-border: #262a34;
+      --text-main: #f0f2f5;
+      --text-muted: #8b949e;
+      --accent: #ff0050;
+      --accent-gradient: linear-gradient(135deg, #ff0050 0%, #00f2fe 100%);
+      --tag-bg: #222731;
+      --tag-border: #303644;
+      --green: #2ea043;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      padding: 40px 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .header-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .avatar-wrap {
+      width: 88px;
+      height: 88px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #1e222b;
+      flex-shrink: 0;
+      border: 2px solid #2d3340;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .header-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header-badges {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--tag-bg);
+      border: 1px solid var(--tag-border);
+      color: var(--text-muted);
+    }
+    .badge.official {
+      background: rgba(255, 0, 80, 0.15);
+      border-color: rgba(255, 0, 80, 0.3);
+      color: #ff3366;
+    }
+    .badge.installed {
+      background: rgba(46, 160, 67, 0.15);
+      border-color: rgba(46, 160, 67, 0.3);
+      color: #3fb950;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .desc {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #c9d1d9;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title svg {
+      width: 16px;
+      height: 16px;
+      color: #ff3366;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feature-list li {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #8b949e;
+      padding-left: 16px;
+      position: relative;
+    }
+    .feature-list li::before {
+      content: "•";
+      color: #ff3366;
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    .skill-card {
+      grid-column: span 2;
+      background: #14171d;
+      border: 1px dashed #303644;
+    }
+    .prompt-box {
+      background: #0b0c0e;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #8b949e;
+      line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #ff0050;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--tag-bg);
+      color: var(--text-main);
+      border: 1px solid var(--tag-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-card">
+      <div class="avatar-wrap">
+        <img src="../evidence/kling-ad-localizer/expert.png" alt="TikTok出海广告本地化专家" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'88\' height=\'88\' viewBox=\'0 0 88 88\' fill=\'%23ff0050\'><rect width=\'88\' height=\'88\' rx=\'20\' fill=\'%231e222b\'/><text x=\'50%25\' y=\'55%25\' font-size=\'32\' text-anchor=\'middle\' fill=\'%23ff3366\' font-family=\'sans-serif\'>🎬</text></svg>'" />
+      </div>
+      <div class="header-info">
+        <div class="header-badges">
+          <span class="badge official">官方内置专家</span>
+          <span class="badge installed">已就绪入库</span>
+          <span class="badge">TikTok / 亚马逊 / 跨境电商</span>
+        </div>
+        <h1>TikTok出海广告本地化专家</h1>
+        <div class="subtitle">跨境电商多语言视频营销师 · 可灵 AI 官方认证套件</div>
+        <div class="desc">面向 TikTok、亚马逊和独立站跨境电商，将已通过验证的原版广告深度扩展为涵盖不同国家、语言、文化受众与平台语境的高转化出海视频矩阵，严格锁定商品与品牌核心资产。</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm1 12H7V7h2v5zm0-6H7V4h2v2z"/></svg>
+          导演级四栏适配矩阵
+        </div>
+        <ul class="feature-list">
+          <li><strong>全球核心锁定</strong>：原版商品外观、包装比例、品牌色、核心卖点严密锁定。</li>
+          <li><strong>目标市场本地化</strong>：调整人物模特气质、生活场景、礼仪文化与审美调性。</li>
+          <li><strong>平台安全区规整</strong>：适配 TikTok 9:16 沉浸坚屏与亚马逊主图视频标准。</li>
+          <li><strong>法律与风俗合规</strong>：隔离敏感符号、宗教禁忌，分离本地翻译待审项。</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14 1a1 1 0 011 1v12a1 1 0 01-1 1H2a1 1 0 01-1-1V2a1 1 0 011-1h12zM2 0a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V2a2 2 0 00-2-2H2z"/></svg>
+          专属运行技能：kling-generation-runtime
+        </div>
+        <ul class="feature-list">
+          <li><strong>连接门禁预检</strong>：先执行实时能力与可用模型探测，不盲目盲跑。</li>
+          <li><strong>批量预算防漂移</strong>：默认单条小样试看，明确固定预算后一键批量扩展。</li>
+          <li><strong>任务幂等与恢复</strong>：具备独立任务追踪标识，断网或重开可快速恢复进度。</li>
+          <li><strong>素材角色锁定</strong>：清晰绑定首帧、尾帧、商品参考图，防止画面崩坏。</li>
+        </ul>
+      </div>
+
+      <div class="card skill-card">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 2A2.5 2.5 0 002 4.5v7A2.5 2.5 0 004.5 14h7a2.5 2.5 0 002.5-2.5v-7A2.5 2.5 0 0011.5 2h-7z"/></svg>
+          开箱即用体验用例
+        </div>
+        <div class="prompt-box">
+          “我想做出海广告本地化：这是我们国内热卖的电动美睫仪，请分别规划东南亚（印尼、泰国）和欧美（美国、英国）两套市场的模特人设、生活场景、镜头节奏与开场开门见山钩子。”
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="alert('已在技能库就绪，点击即可一键召唤！')">在会话中启用此专家</button>
+          <button class="btn btn-secondary" onclick="alert('查看可灵生成运行契约详情')">查看契约规范</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

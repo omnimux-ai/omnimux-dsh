@@ -1,0 +1,22 @@
+display-name-zh: TikTok出海广告本地化
+version: 1.0.0
+tag-en: "Video Production / Global Ads Localization"
+tag-cn: "视频创作 / 出海广告本地化"
+complete-tags-en:
+  - "Video Production"
+  - "Global Ads"
+  - "TikTok Marketing"
+  - "Cross-Border Ecommerce"
+complete-tags-cn:
+  - "视频创作"
+  - "出海广告"
+  - "TikTok营销"
+  - "跨境电商"
+summary-en: "Localizes video ads for TikTok, Amazon, and cross-border ecommerce into culturally adapted multilingual video matrices following Kling AI runtime contracts."
+summary-cn: "面向TikTok、亚马逊和跨境电商，针对不同国家、语言、受众与平台，制作符合当地语境的出海广告视频与多语言矩阵。"
+desc-en: "TikTok Global Ad Localizer adapts validated product video ads into multicultural multilingual matrices for international markets. It breaks campaigns into global locked assets, localized audience adaptations, and legal compliance checks, while strictly adhering to the Kling AI generation runtime contract for asset locking, single-sample review, and idempotent batch expansion."
+desc-cn: "TikTok出海广告本地化技能负责把经过市场验证的国内/原版爆款广告素材，扩展为覆盖不同国家、语言、受众与平台语境的高转化出海视频矩阵。通过四栏本地化拆解锁定核心品牌与商品资产，重塑当地人设与场景，并深度协同可灵AI生成运行契约，支持单条小样验证与批量幂等扩展。"
+cover: ""
+author-en: "KLING AI & OmniMux Team"
+author-cn: "可灵 AI & OmniMux 团队"
+source: official

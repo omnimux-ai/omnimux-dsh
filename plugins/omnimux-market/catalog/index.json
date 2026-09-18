@@ -9528,6 +9528,33 @@
       "titleEn": "Stickman Video Director",
       "summaryZh": "把一段文案做成约一分钟火柴人解说短片：先出六幕导演提案，再产出六条跨幕锁定旁白与配乐的独立视频提示词。",
       "summaryEn": "Turn copy into a one-minute stick-figure explainer: a six-scene proposal first, then six self-contained video prompts with narration and BGM locked across clips."
+    },
+    {
+      "id": "sk-omx-kling-global-ad-localizer",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "TikTok出海广告本地化",
+      "subtitle": "官方 · 跨境电商多语言视频矩阵",
+      "summary": "面向TikTok、亚马逊和跨境电商，针对不同国家、语言、受众与平台，制作符合当地语境的出海广告视频与多语言矩阵。",
+      "category": "sk-visual",
+      "tags": [
+        "出海广告",
+        "TikTok营销",
+        "跨境电商",
+        "可灵AI",
+        "视频生成"
+      ],
+      "skill": "kling-global-ad-localizer",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/kling-global-ad-localizer"
+      },
+      "recommended": false,
+      "downloads": 0,
+      "titleZh": "TikTok出海广告本地化",
+      "titleEn": "TikTok Global Ad Localization",
+      "summaryZh": "面向TikTok、亚马逊和跨境电商，针对不同国家、语言、受众与平台，制作符合当地语境的出海广告视频与多语言矩阵。",
+      "summaryEn": "Localizes video ads for TikTok, Amazon, and cross-border ecommerce across markets, languages, audiences, and platforms."
     }
   ]
 }
