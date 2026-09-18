@@ -663,7 +663,7 @@ export const PRODUCTS_CSS = `
   border: 1px solid var(--dsw-alias-border-l3);
   border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); // exempt-ui03 悬停预览浮层大投影
+  box-shadow: 0 16px 36px var(--dsw-alias-shadow-elevated, rgba(0, 0, 0, 0.45));
   transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
               visibility 0.18s;
@@ -723,7 +723,7 @@ export const PRODUCTS_CSS = `
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--dsw-alias-border-l3);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75); // exempt-ui03 全屏灯箱图片深投影
+  box-shadow: 0 24px 64px var(--dsw-alias-shadow-elevated, rgba(0, 0, 0, 0.75));
   display: block;
 }
 .omnimux-products-lightbox-caption {
