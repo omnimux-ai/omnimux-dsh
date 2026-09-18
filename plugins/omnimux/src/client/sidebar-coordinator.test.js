@@ -322,7 +322,7 @@ test('openCollapsedNewMenuAt uses topbar anchor rect not hidden rail', async () 
 })
 
 
-test('Alpha entries retain activation and labels across placement and remount', async () => {
+test('Alpha entries are excluded from sidebar placement while retaining source registers', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL, getPlaceCountForTests } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -330,39 +330,32 @@ test('Alpha entries retain activation and labels across placement and remount', 
   let clicks = 0
   const rows = ['accounts', 'workflow', 'publish', 'analytics', 'forms', 'inspiration', 'automation'].map((name, rank) => {
     const element = document.createElement('button')
-    element.innerHTML = '<span class="omnimux-sidebar-nav-entry-label">功能</span>'
-    element.setAttribute('aria-label', '功能')
+    element.innerHTML = `<span class="omnimux-sidebar-nav-entry-label">${name}</span>`
+    element.setAttribute('aria-label', name)
     element.addEventListener('click', () => { clicks += 1 })
     const row = { id: `omnimux-${name}-entry`, rank: rank + 3, create: () => element }
     return { name, element, row, dispose: api.register(row) }
   })
+
+  // 处于内测阶段（Alpha）的插件入口不挂入侧边栏 DOM，仅正式版条目插入
   for (const { name, element } of rows) {
-    element.click()
-    assert.equal(element.disabled, false)
-    assert.equal(element.getAttribute('aria-label'), '功能')
     if (name === 'inspiration' || name === 'workflow') {
-      assert.equal(element.querySelector('.omnimux-sidebar-alpha-badge'), null)
-      assert.equal(element.hasAttribute('data-release-stage'), false)
+      assert.ok(element.parentElement !== null, `${name} 必须挂入 DOM`)
     } else {
-      assert.equal(element.dataset.releaseStage, 'alpha')
-      assert.equal(element.querySelector('.omnimux-sidebar-alpha-badge').textContent, 'Alpha')
-      assert.match(element.getAttribute('aria-description'), /内测.*优先.*非 Alpha.*正式版/)
-      element.querySelector('.omnimux-sidebar-nav-entry-label').textContent = 'Accounts'
-      element.setAttribute('aria-label', 'Accounts')
-      assert.match(element.title, /内测/)
+      assert.equal(element.parentElement, null, `${name} 内测版不得挂入侧栏 DOM`)
     }
   }
-  assert.equal(clicks, 7)
-  for (const { dispose } of rows) dispose()
-  const again = rows.filter(({ name }) => name !== 'workflow' && name !== 'inspiration').map(({ row }) => api.register(row))
+
+  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
+  assert.equal(document.querySelectorAll('[data-release-stage="alpha"]').length, 0)
+
+  // 触发 place() 后依然不渲染内测入口
   api.place()
   await new Promise(resolve => setTimeout(resolve, 20))
-  const settled = getPlaceCountForTests()
-  await new Promise(resolve => setTimeout(resolve, 20))
-  assert.equal(getPlaceCountForTests(), settled, 'badge placement must not cause an observer loop')
-  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 5)
-  for (const dispose of again) dispose()
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
+
+  // 释放 disposer 正常安全
+  for (const { dispose } of rows) dispose()
 })
 
 test('品牌按钮不得抢占新对话锚点，below 行紧挨新对话且不抛', async () => {
