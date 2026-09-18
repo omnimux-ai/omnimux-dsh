@@ -1,0 +1,17 @@
+{
+  "issue": 2360,
+  "task": "AI 应用详情页标题描述移至右侧、右上角新增编辑应用及自适应副本创建打通",
+  "timestamp": "2026-09-18T12:47:31.344Z",
+  "verification": "PASS",
+  "evidenceFiles": [
+    "docs/evidence/app-edit-and-fork-flow-demo.html",
+    "docs/evidence/app-edit-and-fork-flow-verified.png"
+  ],
+  "featuresVerified": {
+    "descriptionPlacement": "标题描述紧跟在标题、分类徽标与版本号右侧展示，不再孤立推挤至最右端",
+    "editButtonPresence": "右上角新增高质感极简「编辑应用」按钮并配备矢量编辑图标",
+    "adaptiveOwnershipRouting": "自适应分诊：同用户直达原工程画布与工作流组；不同用户自动创建副本工程并打组包装",
+    "presetWorkflowSupport": "内置手机与网页交互实机演示等 7 个预置应用的工作流拓扑解析",
+    "republishVisibility": "副本画布编辑后点击组顶栏「发布应用」，新应用实时呈现在项目库「AI 应用」中"
+  }
+}

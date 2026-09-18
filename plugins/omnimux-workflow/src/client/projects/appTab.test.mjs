@@ -31,6 +31,16 @@ describe('AppTab and AI App Workflow integration', () => {
     // 调用执行接口与异步轮询
     assert.match(src, /__OMNIMUX_APPS_EXECUTE__|\/executions/)
     assert.match(src, /pollStatus|__OMNIMUX_APPS_POLL__/, '必须包含真实任务轮询机制')
+    // 标题描述位于左侧容器（紧跟标题、分类徽标与版本）
+    assert.match(src, /omx-apptab-header-left[\s\S]*?omx-apptab-title[\s\S]*?omx-apptab-badge[\s\S]*?omx-apptab-version[\s\S]*?omx-apptab-desc/)
+    // 右上角新增「编辑应用」按钮与处理状态反馈
+    assert.match(src, /omx-apptab-header-right/)
+    assert.match(src, /omx-apptab-edit-btn/)
+    assert.match(src, /编辑应用/)
+    assert.match(src, /handleEditApp/)
+    assert.match(src, /isAppOwnedByUser/)
+    assert.match(src, /createProjectForkFromManifest/)
+    assert.match(stylesSrc, /\.omx-apptab-edit-btn\s*\{/)
   })
 
   it('index.js: 源码契约向 betterSidebar 注册 APP_TAB_ID', () => {

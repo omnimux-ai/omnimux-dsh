@@ -10,6 +10,9 @@
  * 本模块只做纯数据变换 + 存储读写，不依赖 React，便于单测。
  */
 
+import { PRESET_WORKFLOW_MAP } from './presetWorkflows.js'
+import { createProject, workflowRequest } from '../api.js'
+
 /** 发布向导写入的存储键（与 AppTab / 向导保持一致，改名即破坏读回）。 */
 export const APP_MANIFESTS_STORAGE_KEY = 'omnimux_apps_manifests'
 
@@ -274,3 +277,206 @@ export function forgetOpenAppTab(tabId) {
 export function resetOpenAppTabs() {
   openAppTabs.clear()
 }
+
+/**
+ * 判断某个应用是否属于当前用户拥有的应用（拥有源工程可直接编辑）。
+ *
+ * 判定规则：
+ * 1. 官方预置应用（OmniMux Official 或以 app-creatify- 开头等）为公共应用，不属于当前用户；
+ * 2. 清单里记录的 projectId 或 workspaceId 必须在本地项目列表（projects）中存在；
+ * 3. 满足上述条件时判定为当前用户的应用，否则判定为不同用户/模板应用。
+ *
+ * @param {object | null | undefined} manifest
+ * @param {Array<object>} [projects]
+ * @returns {boolean}
+ */
+export function isAppOwnedByUser(manifest, projects = []) {
+  if (!manifest || typeof manifest !== 'object') return false
+  const author = textOf(manifest.metadata?.author)
+  if (author === 'OmniMux Official' || manifest.metadata?.isBuiltin) return false
+  const appId = textOf(manifest.appId)
+  if (appId.startsWith('app-creatify-')) return false
+
+  const target = resolveAppEditTarget(toPublishedAppEntry(manifest) || {
+    projectId: manifest.workflowBinding?.projectId,
+    workspaceId: manifest.workflowBinding?.workspaceId,
+    groupId: manifest.workflowBinding?.sourceGroupId,
+  })
+  const project = resolveOwningProject(projects, target)
+  return Boolean(project)
+}
+
+/**
+ * 获取预置官方应用的工作流拓扑（节点与连线）。
+ * @param {string} appId
+ * @returns {{ name: string, nodes: Array<object>, edges: Array<object> } | null}
+ */
+export function getPresetWorkflowSnapshot(appId) {
+  const id = textOf(appId)
+  if (!id) return null
+  return PRESET_WORKFLOW_MAP[id] || null
+}
+
+/**
+ * 将一组节点和边封装在工作流组（GroupNode）容器内部。
+ * 每一个工作流打组都是一个独立可执行、可打包发布的应用单元。
+ *
+ * @param {Array<object>} nodes
+ * @param {Array<object>} edges
+ * @param {string} [title]
+ * @returns {{ groupId: string, nodes: Array<object>, edges: Array<object> }}
+ */
+export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副本)') {
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return { groupId: '', nodes: [], edges: Array.isArray(edges) ? edges : [] }
+  }
+
+  // 1. 如果已有顶层 GroupNode，更新标题并重用
+  const existingGroup = nodes.find((n) => n && n.type === 'group')
+  if (existingGroup) {
+    const updatedNodes = nodes.map((n) => (n.id === existingGroup.id ? {
+      ...n,
+      data: { ...(n.data || {}), title },
+    } : n))
+    return {
+      groupId: existingGroup.id,
+      nodes: updatedNodes,
+      edges: Array.isArray(edges) ? [...edges] : [],
+    }
+  }
+
+  // 2. 否则根据子节点几何范围计算包围盒
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const node of nodes) {
+    if (!node) continue
+    const x = typeof node.position?.x === 'number' ? node.position.x : 0
+    const y = typeof node.position?.y === 'number' ? node.position.y : 0
+    const w = node.width || (node.style?.width ? Number(node.style.width) : 240) || 240
+    const h = node.height || (node.style?.height ? Number(node.style.height) : 180) || 180
+    if (x < minX) minX = x
+    if (y < minY) minY = y
+    if (x + w > maxX) maxX = x + w
+    if (y + h > maxY) maxY = y + h
+  }
+
+  const padding = 36
+  const groupX = Math.max(0, minX - padding)
+  const groupY = Math.max(0, minY - padding)
+  const groupWidth = Math.max(680, (maxX - minX) + padding * 2)
+  const groupHeight = Math.max(380, (maxY - minY) + padding * 2)
+  const groupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+  const groupNode = {
+    id: groupId,
+    type: 'group',
+    position: { x: groupX, y: groupY },
+    width: groupWidth,
+    height: groupHeight,
+    selected: true,
+    style: {
+      width: groupWidth,
+      height: groupHeight,
+      zIndex: 0,
+    },
+    data: {
+      title,
+      color: '',
+      isCollapsed: false,
+      expandedBounds: { width: groupWidth, height: groupHeight },
+      minWidth: 260,
+      minHeight: 120,
+      padding: 32,
+      nodeIds: nodes.map((n) => n.id),
+    },
+  }
+
+  const childNodes = nodes.map((node) => {
+    const absX = typeof node.position?.x === 'number' ? node.position.x : 0
+    const absY = typeof node.position?.y === 'number' ? node.position.y : 0
+    return {
+      ...node,
+      parentId: groupId,
+      position: {
+        x: Math.max(16, absX - groupX),
+        y: Math.max(48, absY - groupY),
+      },
+      extent: 'parent',
+      selected: false,
+    }
+  })
+
+  return {
+    groupId,
+    nodes: [groupNode, ...childNodes],
+    edges: Array.isArray(edges) ? [...edges] : [],
+  }
+}
+
+/**
+ * 根据应用清单创建一个全新的项目工程副本，并将应用工作流节点打组保存至新画布。
+ *
+ * @param {object} manifest
+ * @param {{
+ *   createProjectFn?: Function,
+ *   requestFn?: Function,
+ * }} [deps]
+ * @returns {Promise<{ project: object, workspaceId: string, groupId: string }>}
+ */
+export async function createProjectForkFromManifest(manifest, deps = {}) {
+  const appName = textOf(manifest?.metadata?.name) || 'AI 应用'
+  const projectTitle = `${appName} (副本)`
+
+  // 1. 获取工作流节点与连线拓扑
+  let rawNodes = manifest?.workflowBinding?.snapshot?.nodes
+  let rawEdges = manifest?.workflowBinding?.snapshot?.edges
+
+  if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+    const preset = getPresetWorkflowSnapshot(manifest?.appId)
+    if (preset) {
+      rawNodes = preset.nodes
+      rawEdges = preset.edges
+    }
+  }
+  if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+    rawNodes = []
+    rawEdges = []
+  }
+
+  // 2. 将节点包装进工作流组
+  const groupTitle = `${appName} (副本)`
+  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, groupTitle)
+
+  // 3. 创建新项目
+  const doCreateProject = deps.createProjectFn || createProject
+  const createRes = await doCreateProject(projectTitle)
+  if (!createRes || !createRes.ok || !createRes.body?.project) {
+    throw new Error(createRes?.body?.error || createRes?.body?.message || '创建项目工程副本失败')
+  }
+
+  const newProject = createRes.body.project
+  const workspaceId = Array.isArray(newProject.canvasWorkspaceIds) ? newProject.canvasWorkspaceIds[0] : ''
+  if (!workspaceId) {
+    throw new Error('未能为副本分配画布工作区')
+  }
+
+  // 4. 将打包好的节点与边保存到新画布工作区
+  const doRequest = deps.requestFn || workflowRequest
+  await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
+    method: 'PUT',
+    body: {
+      nodes,
+      edges,
+    },
+  }).catch(() => {})
+
+  return {
+    project: newProject,
+    workspaceId,
+    groupId,
+  }
+}
+
