@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>快捷菜单面板不透明度与输入框宽度对齐验证演示</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #111113;
+      --dsw-alias-bg-layer-1: rgba(255,255,255,0.04);
+      --dsw-alias-bg-layer-2: rgba(255,255,255,0.06);
+      --dsw-alias-bg-layer-3: rgba(255,255,255,0.08);
+      --dsw-alias-border: rgba(255,255,255,0.12);
+      --dsw-alias-label-primary: #f3f4f6;
+      --dsw-alias-label-secondary: rgba(255,255,255,0.70);
+      --dsw-alias-label-tertiary: rgba(255,255,255,0.40);
+      --dsw-alias-interactive-bg-active: rgba(255,255,255,0.14);
+      --dsw-alias-interactive-bg-hover: rgba(255,255,255,0.08);
+      --dsh-composer-card-max-width: 952px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--dsw-alias-bg-base);
+      color: var(--dsw-alias-label-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px 60px;
+    }
+    .stage {
+      width: min(952px, 100%);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .composer {
+      width: 100%;
+      min-height: 110px;
+      border-radius: 18px;
+      border: 1px solid var(--dsw-alias-border);
+      background: rgba(255,255,255,0.03);
+      padding: 14px 18px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .composer-placeholder {
+      color: var(--dsw-alias-label-tertiary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .composer-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+    .chip {
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--dsw-alias-border);
+      background: var(--dsw-alias-bg-layer-1);
+      color: var(--dsw-alias-label-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+    .send {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--dsw-alias-border);
+      background: var(--dsw-alias-bg-layer-2);
+      color: var(--dsw-alias-label-primary);
+    }
+    /* 与 CreatifyPillsBar.jsx 一致的容器样式 */
+    .omnimux-creatify-pills-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px auto 16px;
+      position: relative;
+      z-index: 120;
+      box-sizing: border-box;
+      width: 100%;
+      max-width: var(--dsh-composer-card-max-width, 952px);
+    }
+    .omnimux-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 18px;
+      border-radius: 9999px;
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border);
+      color: var(--dsw-alias-label-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .omnimux-pill-btn.active {
+      background: var(--dsw-alias-interactive-bg-active);
+    }
+    /* 弹出菜单面板：不透明且与输入框两侧对齐 */
+    .omnimux-skills-popover {
+      position: absolute;
+      top: 48px;
+      left: 0;
+      right: 0;
+      width: 100%;
+      max-width: 100%;
+      background: #18191c;
+      border: 1px solid var(--dsw-alias-border);
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--dsw-alias-border);
+      z-index: 130;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    /* 底层卡片：模拟图1中原本透出来的背景卡片，用于验证实色不透明遮挡效果 */
+    .background-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 10px;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .mock-card {
+      height: 180px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(135deg, #2b1f4d 0%, #1f2747 100%);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      color: #fff;
+    }
+    .mock-card h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+    .mock-card p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    .metric {
+      margin-top: 24px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      line-height: 1.6;
+      color: #9ca3af;
+      width: min(952px, 100%);
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <!-- 输入框 -->
+    <div class="composer" id="composer">
+      <div class="composer-placeholder">描述你想要构建的内容，/ 调用指令，@ 文件或对话</div>
+      <div class="composer-footer">
+        <span class="chip">+ 产品</span>
+        <span class="send">↑</span>
+      </div>
+    </div>
+
+    <!-- 4 大胶囊按钮条 -->
+    <div class="omnimux-creatify-pills-bar" id="pills">
+      <button type="button" class="omnimux-pill-btn active" id="btn-skills">⚡ 技能</button>
+      <button type="button" class="omnimux-pill-btn" id="btn-video">▶ 视频广告</button>
+      <button type="button" class="omnimux-pill-btn" id="btn-image">🖼 图片广告</button>
+      <button type="button" class="omnimux-pill-btn" id="btn-competitor">🔍 竞争对手研究</button>
+
+      <!-- 展开的技能菜单面板 -->
+      <div class="omnimux-skills-popover" id="popover">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px;">
+          <div style="flex: 1; display: flex; align-items: center; gap: 8px; background: var(--dsw-alias-bg-layer-2); border: 1px solid var(--dsw-alias-border); border-radius: 8px; height: 34px; padding: 0 10px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="skill-search" placeholder="搜索技能..." style="flex: 1; background: transparent; border: none; outline: none; color: var(--dsw-alias-label-primary); font-size: 13px;" />
+          </div>
+          <button type="button" style="height: 34px; padding: 0 14px; border-radius: 8px; background: var(--dsw-alias-bg-layer-3); border: 1px solid var(--dsw-alias-border); color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 500; cursor: pointer;">浏览全部</button>
+        </div>
+
+        <div style="max-height: 260px; overflow-y: auto; padding: 4px 8px 10px;" id="skill-list">
+          <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">
+            <span style="color: #a78bfa; margin-top: 2px;">⚡</span>
+            <div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary);">UGC 忏悔室</div>
+              <div style="font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-top: 2px;">用于制作UGC（用户生成内容）风格的视频广告——竖屏9:16，创作者对镜头，自拍视角，快速剪辑，真实的iPhone质感。</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">
+            <span style="color: #a78bfa; margin-top: 2px;">⚡</span>
+            <div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary);">UGC 穿搭检查</div>
+              <div style="font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-top: 2px;">用于创建UGC试穿/购物分享/“穿搭检查”视频广告——单次拍摄的四段式Seedance片段，遵循经典的“穿前→穿着中→材质特写→造型展示”弧线。</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">
+            <span style="color: #a78bfa; margin-top: 2px;">⚡</span>
+            <div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary);">UGC 开箱</div>
+              <div style="font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-top: 2px;">用于创建UGC开箱视频广告——单次拍摄的四段式Seedance片段，遵循经典的“包装→揭示→产品聚焦→满意”弧线。</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--dsw-alias-border); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 500; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>⚡</span>
+            <span>浏览全部技能</span>
+          </div>
+          <span>&rarr;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底层卡片（被面板完全遮盖） -->
+    <div class="background-cards">
+      <div class="mock-card">
+        <h3>RECREATE VIRAL ADS</h3>
+        <p>基于爆款素材批量复刻并生成高转化视频变体</p>
+      </div>
+      <div class="mock-card">
+        <h3>批量创建视频</h3>
+        <p>多场景智能分镜与极简批量出片工作台</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric" id="metric">测量中…</div>
+
+  <script>
+    function measure() {
+      const composer = document.getElementById('composer').getBoundingClientRect();
+      const popover = document.getElementById('popover').getBoundingClientRect();
+      
+      const leftDelta = Math.abs(composer.left - popover.left);
+      const rightDelta = Math.abs(composer.right - popover.right);
+      const widthDelta = Math.abs(composer.width - popover.width);
+
+      const pass = leftDelta <= 1.0 && rightDelta <= 1.0 && widthDelta <= 1.0;
+
+      const result = {
+        composerLeft: composer.left,
+        composerRight: composer.right,
+        composerWidth: composer.width,
+        popoverLeft: popover.left,
+        popoverRight: popover.right,
+        popoverWidth: popover.width,
+        leftDelta,
+        rightDelta,
+        widthDelta,
+        solidBackground: window.getComputedStyle(document.getElementById('popover')).backgroundColor,
+        backdropFilter: window.getComputedStyle(document.getElementById('popover')).backdropFilter,
+        pass,
+      };
+
+      document.getElementById('metric').textContent =
+        `【几何对齐与不透明度实测】\n` +
+        `输入框边界: 左 ${composer.left.toFixed(2)}px | 右 ${composer.right.toFixed(2)}px | 宽 ${composer.width.toFixed(2)}px\n` +
+        `菜单面板边界: 左 ${popover.left.toFixed(2)}px | 右 ${popover.right.toFixed(2)}px | 宽 ${popover.width.toFixed(2)}px\n` +
+        `对齐误差: 左边缘差 ${leftDelta.toFixed(3)}px | 右边缘差 ${rightDelta.toFixed(3)}px | 宽度差 ${widthDelta.toFixed(3)}px\n` +
+        `背景材质: ${result.solidBackground}（实色不透明遮挡） | 滤镜: ${result.backdropFilter}\n` +
+        `验收判定: ${pass ? '✔ 两侧严格对齐且不透明度达标（通过）' : '✘ 未通过'}`;
+
+      document.title = `pills-popover|${JSON.stringify(result)}`;
+      window.__POPOVER_ALIGN__ = result;
+      return result;
+    }
+    measure();
+    window.addEventListener('resize', measure);
+  </script>
+</body>
+</html>

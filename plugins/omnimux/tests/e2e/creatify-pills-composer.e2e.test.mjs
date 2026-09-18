@@ -51,11 +51,26 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     await act(async () => { pills[1].click(); });
     const videoPopover = document.querySelector('.omnimux-subprompt-popover');
     assert.ok(videoPopover, 'Video ads 弹窗必须展开');
+    assert.equal(videoPopover.style.width, '100%', '弹窗必须撑满宽度基准');
+    assert.equal(videoPopover.style.left, '0px', '弹窗左边缘必须贴齐基准');
+    assert.equal(videoPopover.style.right, '0px', '弹窗右边缘必须贴齐基准');
+    assert.match(videoPopover.style.background, /#18191c/, '弹窗必须采用不透明纯深色背景');
+    assert.ok(!videoPopover.style.backdropFilter, '弹窗禁止使用毛玻璃透底滤镜');
     
     // 点击第一项子提示词
     const firstOption = videoPopover.querySelector('div');
     await act(async () => { firstOption.click(); });
     assert.ok(capturedPrompt.length > 0, '提示词注入成功');
+
+    // 2. 点击 Skills 按钮验证技能菜单面板两端对齐与不透明
+    await act(async () => { pills[0].click(); });
+    const skillsPopover = document.querySelector('.omnimux-skills-popover');
+    assert.ok(skillsPopover, 'Skills 技能弹窗必须展开');
+    assert.equal(skillsPopover.style.width, '100%', '技能弹窗宽度必须100%');
+    assert.equal(skillsPopover.style.left, '0px', '技能弹窗左边必须对齐');
+    assert.equal(skillsPopover.style.right, '0px', '技能弹窗右边必须对齐');
+    assert.match(skillsPopover.style.background, /#18191c/, '技能弹窗必须采用不透明纯深色背景');
+    assert.ok(!skillsPopover.style.backdropFilter, '技能弹窗禁止使用毛玻璃透底滤镜');
 
     root.unmount();
   });
