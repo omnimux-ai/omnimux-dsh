@@ -101,3 +101,12 @@ test('E2E: 智能体（Agent）只读工具查询与提示词工作流上下文�
   assert.ok(pippitRes.items.length > 0);
   assert.equal(pippitRes.items[0].sourcePlatform, 'pippit');
 });
+
+test('E2E: 跨包解耦验证：FEATURED_APPS_LIST 包含内联自包含 Manifest 且无外部文件依赖', () => {
+  assert.equal(FEATURED_APPS_LIST.length, 7);
+  for (const app of FEATURED_APPS_LIST) {
+    assert.ok(app.manifest, `应用 [${app.id}] 必须自包含 manifest`);
+    assert.equal(app.manifest.appId, app.appId);
+    assert.ok(app.manifest.formSchema);
+  }
+});

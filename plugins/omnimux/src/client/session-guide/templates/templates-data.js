@@ -5,16 +5,12 @@
 
 import { FEATURED_APPS_CARDS } from './featured-apps-data.js';
 import CREATIVE_TEMPLATES_RAW from './creative-templates.json' with { type: 'json' };
-import BUILTIN_APPS_RAW from '../../../../../omnimux-apps/catalog/builtin-apps.json' with { type: 'json' };
-
-const BUILTIN_APPS_MAP = new Map(BUILTIN_APPS_RAW.map((app) => [app.appId, app]));
 
 /**
  * 7 大精选应用卡片（包含对应 ApplicationManifest 与直通跳转参数）
  */
 export const FEATURED_APPS_LIST = Object.freeze(
   FEATURED_APPS_CARDS.map((card) => {
-    const manifest = BUILTIN_APPS_MAP.get(card.appId) || null;
     return {
       ...card,
       id: card.appId,
@@ -28,7 +24,7 @@ export const FEATURED_APPS_LIST = Object.freeze(
       categorySlug: card.categoryKey,
       type: 'app',
       isApp: true,
-      manifest,
+      manifest: card.manifest || null,
     };
   })
 );
