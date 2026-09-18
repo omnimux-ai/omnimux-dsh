@@ -372,7 +372,10 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       {/* 主舞台区 */}
       <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
         {/* 视口展示区 */}
-        <div className="omx-mv-viewport" data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId) || undefined}>
+        <div
+          className="omx-mv-viewport"
+          data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) || undefined}
+        >
           <GenerationTasks tasks={state.generationTasks.filter((task) => task.sessionId === sessionId)} imageUrl={imageUrl} readFile={readFile} />
           {subViewMode === 'grid' ? (
             /* 时间线瀑布流：同一时间线下多图横排 */
@@ -511,7 +514,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     src={activeItem?.url}
                     alt={activeItem?.title || '预览'}
                   />
-                ) : !state.generationTasks.some((task) => task.sessionId === sessionId) ? (
+                ) : !state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) ? (
                   <div className="omx-mv-empty-state">
                     <svg className="omx-mv-empty-state__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
