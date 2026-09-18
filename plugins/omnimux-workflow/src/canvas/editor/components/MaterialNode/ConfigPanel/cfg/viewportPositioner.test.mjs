@@ -28,7 +28,7 @@ import {
 } from './aspectRatioGeometry.ts';
 
 describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
-  it('场景 1: 正常视口居中位置 -> 上方弹出，限高 480px，bottom 坐标正确，left 对齐正确', () => {
+  it('场景 1: 正常视口居中位置 -> 上方弹出，限高 580px，bottom 坐标正确，left 对齐正确', () => {
     const viewport = { width: 1200, height: 800 };
     const triggerRect = {
       top: 600,
@@ -43,12 +43,12 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
 
     // 校验基本规格
     assert.equal(pos.width, PANEL_WIDTH);
-    assert.equal(pos.width, 420);
+    assert.equal(pos.width, 500);
 
     // 校验向上弹出判定与限高
     assert.equal(pos.placement, 'top');
     assert.equal(pos.maxHeight, PANEL_DEFAULT_MAX_HEIGHT);
-    assert.equal(pos.maxHeight, 480);
+    assert.equal(pos.maxHeight, 580);
 
     // 校验坐标：bottom = viewport.height - triggerRect.top + GAP = 800 - 600 + 8 = 208
     assert.equal(pos.bottom, 208);
@@ -101,9 +101,9 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
     const pos = calculatePopoverPosition(triggerRect, viewport);
 
     assert.equal(pos.placement, 'bottom');
-    // 下方空间充裕 (698px)，限高为默认最大高度 480px
+    // 下方空间充裕 (698px)，限高为默认最大高度 580px
     assert.equal(pos.maxHeight, PANEL_DEFAULT_MAX_HEIGHT);
-    assert.equal(pos.maxHeight, 480);
+    assert.equal(pos.maxHeight, 580);
     // top = triggerRect.bottom + GAP = 82 + 8 = 90
     assert.equal(pos.top, 90);
     assert.equal(pos.bottom, undefined);
@@ -113,8 +113,8 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
   it('场景 4: 靠视口右边缘位置 -> left 坐标向左推移，确保 left + width 不超出 viewport - VIEWPORT_PADDING', () => {
     const viewport = { width: 1000, height: 800 };
     // triggerRect.left = 850
-    // left + width = 850 + 420 = 1270 > 1000 - 12 (988)
-    // expectedLeft = 1000 - 12 - 420 = 568
+    // left + width = 850 + 500 = 1350 > 1000 - 12 (988)
+    // expectedLeft = 1000 - 12 - 500 = 488
     const triggerRect = {
       top: 600,
       bottom: 632,
@@ -126,16 +126,16 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
 
     const pos = calculatePopoverPosition(triggerRect, viewport);
 
-    assert.equal(pos.left, 568);
+    assert.equal(pos.left, 488);
     assert.equal(pos.left + pos.width, viewport.width - VIEWPORT_PADDING);
     assert.equal(pos.left + pos.width, 988);
   });
 
-  it('场景 4b: 窄视口宽度夹紧 -> width = min(420, viewport-24)，left + width 不超出 viewport - 12', () => {
-    // viewport.width = 320 → width = 320 - 24 = 296（宽视口为 420）
-    assert.equal(resolvePanelWidth(1200), 420);
+  it('场景 4b: 窄视口宽度夹紧 -> width = min(500, viewport-24)，left + width 不超出 viewport - 12', () => {
+    // viewport.width = 320 → width = 320 - 24 = 296（宽视口为 500）
+    assert.equal(resolvePanelWidth(1200), 500);
     assert.equal(resolvePanelWidth(320), 296);
-    assert.equal(resolvePanelWidth(450), 420);
+    assert.equal(resolvePanelWidth(450), 426);
 
     const viewport = { width: 320, height: 800 };
     const triggerRect = {

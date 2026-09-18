@@ -58,8 +58,8 @@ export function ImageTriggerBar({
     if (summary.qualityText) {
       push('quality', summary.qualityText, undefined, 'hide');
     }
-    if (showMode) {
-      push('mode', summary.modeText, undefined, 'hide');
+    if (summary.modeText) {
+      push('mode', summary.modeText, undefined, 'never');
     }
     list.push({
       id: 'chevron',

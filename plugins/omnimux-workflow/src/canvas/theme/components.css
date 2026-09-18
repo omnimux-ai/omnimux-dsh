@@ -7769,7 +7769,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   flex-shrink: 0;
 }
 
-/* ---- 浮层外壳 (Popover)：宽 min(420, 100vw-24)，入场位移随 placement 同向 ---- */
+/* ---- 浮层外壳 (Popover)：宽 min(500, 100vw-24)，入场位移随 placement 同向 ---- */
 .wf-cfg-popover,
 .wf-video-param-popover {
 
@@ -7779,6 +7779,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   border-radius: 12px;
   padding: 12px 16px;
   z-index: 9999;
+  width: 500px;
   max-width: calc(100vw - 24px);
   background: var(--dsw-alias-bg-elevated);
   border: 1px solid var(--dsw-alias-border-l2);

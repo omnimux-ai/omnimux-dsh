@@ -74,7 +74,7 @@ function normalizeDuration(duration: number | string | undefined): string {
 
 /**
  * Resolve mode text from EffectiveVideoParams.
- * Only non-empty when showModeUi === true (effectiveOps ≥ 2).
+ * 支持模式外显必显需求：优先取 operationLabel，退回 operation；为空时兜底常规识别
  */
 function resolveModeText(params: EffectiveVideoParams): string {
   if (!params.showModeUi) return '';
@@ -82,7 +82,12 @@ function resolveModeText(params: EffectiveVideoParams): string {
     return params.operationLabel.trim();
   }
   if (params.operation && params.operation.trim()) {
-    return params.operation.trim();
+    const raw = params.operation.trim();
+    if (raw === 'text_to_video') return '文生视频';
+    if (raw === 'first_frame') return '首帧';
+    if (raw === 'first_last_frame') return '首尾帧';
+    if (raw === 'video_multi_ref' || raw === 'multi_reference') return '全能参考';
+    return raw;
   }
   return '';
 }
