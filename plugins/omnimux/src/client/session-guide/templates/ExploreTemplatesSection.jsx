@@ -17,12 +17,19 @@ import { claimProductStage } from '../../conversation-box.js';
 const CATEGORY_DATA_CACHE = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-function resolveSkillCover(cover) {
+function resolveSkillCover(cover, coverIndex) {
+  if (typeof coverIndex === 'number' && Number.isFinite(coverIndex)) {
+    return `/omnimux/assets/skill-card-covers/skill-card-${coverIndex}.webp`;
+  }
   if (!cover || typeof cover !== 'string') return '';
   const trimmed = cover.trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
+  }
+  const match = trimmed.match(/skill-card-(\d+)\.webp/);
+  if (match) {
+    return `/omnimux/assets/skill-card-covers/skill-card-${match[1]}.webp`;
   }
   return `/omnimux-market/icon?url=${encodeURIComponent(trimmed)}`;
 }
@@ -113,7 +120,7 @@ export function ExploreTemplatesSection({
       title: isEn ? (sk.titleEn || sk.title || sk.nameEn || sk.skill) : (sk.titleZh || sk.title || sk.nameZh || sk.skill),
       titleEn: sk.titleEn || sk.title || '',
       summary: isEn ? (sk.summaryEn || sk.summary) : (sk.summaryZh || sk.summary),
-      thumbnailUrl: resolveSkillCover(sk.cover),
+      thumbnailUrl: resolveSkillCover(sk.cover, sk.coverIndex),
       type: 'skill',
       categorySlug: 'skills',
     }));
