@@ -1,0 +1,298 @@
+{
+  "source": "sopilot",
+  "listUrl": "https://sopilot.net/zh/ai-agent",
+  "scrapedAt": "2026-09-03T02:12:58.410870+00:00",
+  "count": 14,
+  "agents": [
+    {
+      "slug": "ai-blog-comment",
+      "name": "AI博客评论助手",
+      "opType": "genForm",
+      "accessType": "system",
+      "sysPromptLen": 436,
+      "userPromptLen": 253,
+      "websites": [],
+      "ok": true
+    },
+    {
+      "slug": "ai-submitdir",
+      "name": "AI提交目录助手",
+      "opType": "genForm",
+      "accessType": "system",
+      "sysPromptLen": 432,
+      "userPromptLen": 794,
+      "websites": [],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-reply-follow",
+      "name": "推特中文互关评论",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 454,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*",
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-threads",
+      "name": "推文改写为推文串",
+      "opType": "chat",
+      "accessType": "system",
+      "sysPromptLen": 611,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-retweet",
+      "name": "Twitter 中文引用转帖",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 312,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "twitter-reply-en",
+      "name": "推特英文评论",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 376,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*",
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-reply-high",
+      "name": "Twitter生成高赞评论",
+      "opType": "chat",
+      "accessType": "system",
+      "sysPromptLen": 2540,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*",
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-comment",
+      "name": "Twitter 生成高质量评论",
+      "opType": "chat",
+      "accessType": "system",
+      "sysPromptLen": 554,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*",
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-twitter-dm",
+      "name": "Twitter生成私信",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 690,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/i/chat/*"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-imitation",
+      "name": "Twitter生成热点推文",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 1370,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/home"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-hot-tweets",
+      "name": "推特改写爆款推文",
+      "opType": "chat",
+      "accessType": "system",
+      "sysPromptLen": 1211,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-reply",
+      "name": "推特简短评论",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 2530,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*",
+        "x.com/compose/post"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "ai-tweet-translate",
+      "name": "Twitter翻译英推Threads",
+      "opType": "chat",
+      "accessType": "system",
+      "sysPromptLen": 710,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*"
+      ],
+      "ok": true
+    },
+    {
+      "slug": "cmqolx85u000x1fbggacvllkj",
+      "name": "Twitter回怼助手(带图)",
+      "opType": "genContent",
+      "accessType": "system",
+      "sysPromptLen": 1086,
+      "userPromptLen": 0,
+      "websites": [
+        "x.com/*/status/*"
+      ],
+      "ok": true
+    }
+  ],
+  "problems": [],
+  "fieldSchema": [
+    {
+      "key": "name",
+      "label": "名称"
+    },
+    {
+      "key": "slug",
+      "label": "标识"
+    },
+    {
+      "key": "description",
+      "label": "智能体描述（欢迎语）"
+    },
+    {
+      "key": "accessType",
+      "label": "访问类型"
+    },
+    {
+      "key": "opType",
+      "label": "操作类型"
+    },
+    {
+      "key": "opDom",
+      "label": "操作DOM"
+    },
+    {
+      "key": "insertButton",
+      "label": "注入按钮"
+    },
+    {
+      "key": "websites",
+      "label": "支持的网站"
+    },
+    {
+      "key": "sysPrompt",
+      "label": "系统提示词"
+    },
+    {
+      "key": "userPlaceHolder",
+      "label": "用户提示词占位符"
+    },
+    {
+      "key": "userPrompt",
+      "label": "用户自定义提示词"
+    },
+    {
+      "key": "textCardStyle",
+      "label": "生成图文卡片"
+    },
+    {
+      "key": "videoStyle",
+      "label": "生成动画视频"
+    },
+    {
+      "key": "environment",
+      "label": "运行环境"
+    },
+    {
+      "key": "input1",
+      "label": "自定义输入1"
+    },
+    {
+      "key": "input2",
+      "label": "自定义输入2"
+    },
+    {
+      "key": "input3",
+      "label": "自定义输入3"
+    },
+    {
+      "key": "testInput",
+      "label": "测试输入"
+    },
+    {
+      "key": "category",
+      "label": "分类"
+    },
+    {
+      "key": "status",
+      "label": "状态"
+    },
+    {
+      "key": "avatar",
+      "label": "头像"
+    },
+    {
+      "key": "uses",
+      "label": "使用次数"
+    },
+    {
+      "key": "rating",
+      "label": "评分"
+    },
+    {
+      "key": "authorId",
+      "label": "作者ID"
+    },
+    {
+      "key": "author",
+      "label": "作者"
+    },
+    {
+      "key": "createdAt",
+      "label": "创建时间"
+    },
+    {
+      "key": "updatedAt",
+      "label": "更新时间"
+    },
+    {
+      "key": "id",
+      "label": "内部ID"
+    }
+  ],
+  "notes": [
+    "RSC ref id 为十六进制：$3e → 3e:T<hexlen>,body",
+    "T body 可能与下一条 ref 粘连，已按边界截断",
+    "详情页浏览器 502 时用 serverFetch",
+    "原始 HTML：资产库/tmp/sopilot-ai-agents/"
+  ]
+}

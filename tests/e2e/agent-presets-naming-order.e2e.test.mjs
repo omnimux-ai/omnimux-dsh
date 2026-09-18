@@ -42,13 +42,14 @@ test('E2E: 确保社媒专家锁定为默认值守 Agent', () => {
   assert.match(syncScript, /default:\s*omni-agent/, '同步脚本必须配置默认预设为 omni-agent (社媒专家)');
 });
 
-test('E2E: 出厂严格去重，移除冗余 tiktok-agent 预设并自动清理历史残留', () => {
+test('E2E: 出厂保留 tiktok-agent 专家团，且名称对齐 TikTok运营专家团', () => {
   const presetsDir = path.join(root, 'presets');
-  assert.equal(fs.existsSync(path.join(presetsDir, 'tiktok-agent')), false, 'presets 源码目录严禁残留 tiktok-agent 冗余预设');
+  const tiktokPreset = fs.readFileSync(path.join(presetsDir, 'tiktok-agent/preset.yml'), 'utf8');
+  assert.match(tiktokPreset, /name:\s*TikTok运营专家团/, 'tiktok-agent 预设名称必须对齐 TikTok运营专家团');
 
   const syncScript = fs.readFileSync(path.join(root, 'scripts/sync-agent-presets.sh'), 'utf8');
-  assert.match(syncScript, /retired legacy \.agent-presets\/tiktok-agent/, '同步脚本必须自动清理并归档历史残留 tiktok-agent');
-  assert.doesNotMatch(syncScript, /cp.*tiktok-agent/, '同步脚本严禁再向用户预设或应用目录拷贝 tiktok-agent');
+  assert.doesNotMatch(syncScript, /mv.*tiktok-agent.*\.retired/, '同步脚本严禁将 tiktok-agent 移入 .retired');
+  assert.match(syncScript, /\.agent-presets\/tiktok-agent/, '同步脚本必须保障用户根目录同步 tiktok-agent');
 
   const patchScript = fs.readFileSync(path.join(root, 'scripts/patch-asar-agent-presets.mjs'), 'utf8');
   assert.match(patchScript, /presetAgentPresets/, 'Asar patch 脚本必须支持 preset/agent-presets 节点挂载');

@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
+KEEP=(omni-agent tiktok-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
 
-if [ ! -d "$SRC/omni-agent" ]; then
-  echo "❌ presets/ 缺少出厂预设 (omni-agent)" >&2
+if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
+  echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
   exit 1
 fi
 
@@ -165,12 +165,7 @@ materialize_into() {
       if [ "$base" = "$k" ]; then keep=1; break; fi
     done
     if [ "$keep" -eq 0 ]; then
-      if [ "$base" = "tiktok-agent" ]; then
-        rm -rf "$child"
-        echo "  - removed duplicate legacy alias $base"
-      else
-        echo "  · kept $base"
-      fi
+      echo "  · kept $base"
     fi
   done
   for k in "${KEEP[@]}"; do
@@ -179,7 +174,6 @@ materialize_into() {
     cp -R "$SRC/$k/." "$dest/$k/"
     echo "  + synced $k"
   done
-  rm -rf "$dest/tiktok-agent"
 }
 
 # 1) profiles under target homes that vendor @deepseek-ai/dsh
@@ -188,10 +182,11 @@ for home_dir in "${TARGET_HOMES[@]}"; do
   if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
     mkdir -p "$home_dir/agent-presets-shipped"
     materialize_into "$home_dir/agent-presets-shipped"
-    if [ -d "$home_dir/.agent-presets/tiktok-agent" ]; then
-      mkdir -p "$home_dir/.agent-presets/.retired"
-      mv "$home_dir/.agent-presets/tiktok-agent" "$home_dir/.agent-presets/.retired/" 2>/dev/null || rm -rf "$home_dir/.agent-presets/tiktok-agent"
-      echo "  - retired legacy .agent-presets/tiktok-agent"
+    mkdir -p "$home_dir/.agent-presets/tiktok-agent"
+    if [ -d "$SRC/tiktok-agent" ]; then
+      cp -R "$SRC/tiktok-agent/." "$home_dir/.agent-presets/tiktok-agent/"
+    elif [ -d "$SRC/omni-agent" ]; then
+      cp -R "$SRC/omni-agent/." "$home_dir/.agent-presets/tiktok-agent/"
     fi
   fi
 
@@ -260,7 +255,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + tiktok-agent (TikTok运营专家团) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent
@@ -270,7 +265,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：omni-agent (社媒专家) + tiktok-agent (TikTok运营专家团) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
 - id: agent-presets
   config:
     default: omni-agent

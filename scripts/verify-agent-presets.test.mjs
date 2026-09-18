@@ -257,7 +257,7 @@ test('preset.yml metadata matches requirements for shipped presets', () => {
 
 test('sync-agent-presets.sh maintains presets in KEEP array', () => {
   const syncScript = read('scripts/sync-agent-presets.sh')
-  ok(syncScript.includes('KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)'))
+  ok(syncScript.includes('KEEP=(omni-agent tiktok-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)') || syncScript.includes('KEEP=(omni-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)'))
 })
 
 test('omni-agent persona positions as universal social lead and forbids forced spawn', () => {
@@ -294,6 +294,7 @@ test('build-agent-presets is idempotent', () => {
 test('every shipped preset persona row uses the persona plugin key `prefix`, never `text`', () => {
   const shipped = [
     'presets/omni-agent/agent.cordis.yml',
+    'presets/tiktok-agent/agent.cordis.yml',
     'presets/marketing-agent/agent.cordis.yml',
     'presets/marketing-growth-team/agent.cordis.yml',
     'presets/drama-agent/agent.cordis.yml',
