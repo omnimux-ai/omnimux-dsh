@@ -9,7 +9,7 @@
  *   ② 线路分组   plugins/omnimux/src/catalog/serving/channel-groups.js
  *   ③ 上架处置   plugins/omnimux/src/catalog/contract/dispositions.json
  *
- * 视觉遵循 design.md §3.6「Ink & Paper / Structural Monochrome」：黑白中性双主题，无紫色滥用。
+ * 视觉遵循 design.md §3.6「Ink & Paper / Structural Monochrome」：黑白中性双主题，无紫色滥用，无 Emoji 图标（UI04）。
  */
 
 import fs from 'node:fs';
@@ -95,15 +95,13 @@ function simplifyGroup(group) {
  * @returns {Promise<{ models: Array<Record<string, unknown>>, stats: Record<string, unknown> }>}
  */
 export async function collectConsoleData() {
-  // ESM 导入会被 Node 永久缓存，直接 `import()` 会让线路分组表与品牌表停在首次加载的版本。
-  // 每次采集都用时间戳做模块缓存穿透，保证读到的是磁盘上的当前内容；JSON 与 YAML 分别由
-  // `readFileSync` 和 `loadAll({ useCache: false })` 天然现读。
   const bust = `?fresh=${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const fresh = (p) => `${pathToFileURL(mod(p)).href}${bust}`;
 
   const { loadAll, DEFAULT_SPECS_DIR } = await import(fresh('plugins/omnimux/src/catalog/contract/load.js'));
   const { MODEL_CHANNEL_GROUPS } = await import(fresh('plugins/omnimux/src/catalog/serving/channel-groups.js'));
   const { resolveModelBrand } = await import(fresh('plugins/omnimux/src/brand/model-brands.js'));
+  const { deriveTestSample } = await import(fresh('scripts/model-test-sample.mjs'));
 
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   const dispositionsDoc = JSON.parse(
@@ -112,6 +110,7 @@ export async function collectConsoleData() {
 
   const models = [];
   for (const m of index.all()) {
+    const rawModel = index.get(m.id) || m;
     const operations = (m.operations || []).map((op) => ({
       id: op.id,
       label: op.label || op.id,
@@ -119,7 +118,16 @@ export async function collectConsoleData() {
       inputs: (op.inputs || []).length,
     }));
     const listedCount = operations.filter((op) => op.listed).length;
-    const groups = (MODEL_CHANNEL_GROUPS[m.id] || []).map(simplifyGroup);
+    const rawGroups = MODEL_CHANNEL_GROUPS[m.id] || [];
+    const groups = rawGroups.map((g) => {
+      const s = simplifyGroup(g);
+      s.testSample = deriveTestSample(rawModel, g);
+      return s;
+    });
+
+    // 默认线路测试样本（当模型无独立配置的线路分组时使用）
+    const defaultTestSample = deriveTestSample(rawModel, { id: 'default', label: '默认线路' });
+
     models.push({
       id: m.id,
       label: m.label || m.id,
@@ -135,6 +143,7 @@ export async function collectConsoleData() {
       operationCount: operations.length,
       ready: listedCount > 0,
       groups,
+      defaultTestSample,
     });
   }
 
@@ -182,6 +191,9 @@ export function renderConsoleHtml(data, options = {}) {
     --ink: #FFFFFF;
     --ok: #4ADE80;
     --warn: #FBBF24;
+    --err: #F87171;
+    --err-bg: rgba(239,68,68,0.08);
+    --err-border: rgba(239,68,68,0.28);
     --muted: rgba(255,255,255,0.05);
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -249,8 +261,9 @@ export function renderConsoleHtml(data, options = {}) {
   .row[data-open=true] .detail { display: block; }
   .sec { margin-top: 16px; }
   .sec h3 { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; letter-spacing: .02em; }
-  .gcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; background: var(--card); }
-  .gcard .grow { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .gcard { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: var(--card); position: relative; }
+  .gcard .grow { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .gheader-left { display: flex; align-items: center; gap: 10px; }
   .glabel { font-size: 13px; font-weight: 500; }
   .gbadge { color: var(--text-faint); font-size: 12px; }
   .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 18px; margin-top: 10px; }
@@ -261,6 +274,89 @@ export function renderConsoleHtml(data, options = {}) {
   .op { font-size: 11px; padding: 4px 9px; border-radius: 6px; font-family: var(--mono);
     background: var(--muted); color: var(--text-faint); }
   .op.on { color: var(--text); background: rgba(255,255,255,0.10); }
+
+  /* 测试操作区与按钮规范（32px 高基准，8px 圆角，深色微光描边，UI04 无 Emoji） */
+  .test-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .test-btn {
+    height: 32px; padding: 0 14px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text);
+    font-size: 12px; font-weight: 500; cursor: pointer; user-select: none;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+    font-family: var(--sans); white-space: nowrap;
+  }
+  .test-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); color: #fff;
+  }
+  .test-btn:active:not(:disabled) {
+    background: rgba(255,255,255,0.18);
+  }
+  .test-btn:disabled {
+    opacity: 0.65; cursor: not-allowed;
+  }
+  .test-btn.running {
+    border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: var(--text-dim);
+  }
+
+  .toggle-sample-btn {
+    background: transparent; border: none; color: var(--text-faint);
+    font-size: 11px; cursor: pointer; padding: 4px 6px; border-radius: 4px;
+    transition: color .12s; font-family: var(--sans);
+  }
+  .toggle-sample-btn:hover { color: var(--text); text-decoration: underline; }
+
+  /* 预设样本折叠卡片 */
+  .sample-box {
+    margin-top: 12px; padding: 10px 14px; background: rgba(0,0,0,0.25);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 12px;
+  }
+  .sample-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .sample-badge {
+    font-size: 11px; padding: 2px 7px; border-radius: 5px;
+    background: rgba(255,255,255,0.08); color: var(--text-dim); font-family: var(--mono);
+  }
+  .sample-rows {
+    display: flex; flex-direction: column; gap: 4px; font-family: var(--mono); font-size: 12px;
+  }
+  .sample-row { color: var(--text-faint); }
+  .sample-row b { color: var(--text); font-weight: 400; }
+  .sample-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.06);
+    color: var(--text-dim); font-size: 11px; margin-right: 4px;
+  }
+
+  /* 结果展示卡片 */
+  .test-result-box { margin-top: 12px; }
+  .test-res {
+    padding: 10px 14px; border-radius: 8px; font-size: 12px; line-height: 18px;
+    animation: fadeIn .18s ease-in;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+  .test-res.running {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-dim); display: flex; align-items: center; gap: 8px;
+  }
+  .test-res.success {
+    background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.28); color: var(--ok);
+  }
+  .test-res.fail {
+    background: var(--err-bg); border: 1px solid var(--err-border); color: var(--err);
+  }
+  .res-head { display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+  .res-head .time { font-family: var(--mono); font-size: 11px; opacity: 0.8; }
+  .res-meta { margin-top: 4px; color: var(--text-dim); font-size: 12px; }
+  .res-reason {
+    margin-top: 6px; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 6px;
+    color: #fca5a5; font-weight: 500; line-height: 19px; word-break: break-all;
+  }
+
+  /* 纯 SVG 旋转加载图标（符合 UI04 无 Emoji 规范） */
+  .spinner-svg {
+    width: 14px; height: 14px; animation: rotate 0.85s linear infinite; flex-shrink: 0;
+  }
+  @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   .empty { padding: 40px 18px; text-align: center; color: var(--text-faint); }
   footer { margin-top: 28px; color: var(--text-faint); font-size: 12px; font-family: var(--mono); text-align: center; }
   @media (max-width: 900px) {
@@ -296,7 +392,7 @@ export function renderConsoleHtml(data, options = {}) {
 (function () {
   var DATA = JSON.parse(document.getElementById('payload').textContent);
   var MODELS = DATA.models, STATS = DATA.stats;
-  var state = { q: '', group: 'all', onlyReady: false, open: {} };
+  var state = { q: '', group: 'all', onlyReady: false, open: {}, testState: {}, showSample: {} };
 
   var esc = function (s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -365,7 +461,13 @@ export function renderConsoleHtml(data, options = {}) {
     return '<div class="kv"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
   }
 
-  function renderGroup(g) {
+  var SPINNER_SVG = '<svg class="spinner-svg" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.2)" stroke-width="3"></circle><path d="M12 3a9 9 0 0 1 9 9" stroke="#E8EAF0" stroke-width="3" stroke-linecap="round"></path></svg>';
+
+  function renderGroup(g, m) {
+    var key = m.id + '::' + g.id;
+    var currentTest = state.testState[key] || { status: 'idle' };
+    var sample = g.testSample || m.defaultTestSample;
+
     var facts = [];
     if (g.wireModel) facts.push(kv('上游型号', g.wireModel));
     if (g.wireGroup) facts.push(kv('上游分组', g.wireGroup));
@@ -381,10 +483,77 @@ export function renderConsoleHtml(data, options = {}) {
     if (g.constraints && g.constraints.aspectRatio) facts.push(kv('画幅契约', JSON.stringify(g.constraints.aspectRatio)));
     if (g.constraints && g.constraints.operations) facts.push(kv('操作契约', g.constraints.operations.join(' / ')));
 
+    // 预设参数摘要
+    var paramParts = [];
+    if (sample && sample.parameters) {
+      for (var pk in sample.parameters) {
+        paramParts.push('<span class="sample-tag">' + esc(pk) + ': ' + esc(sample.parameters[pk]) + '</span>');
+      }
+    }
+
+    var sampleOpen = !!state.showSample[key];
+    var sampleHtml = '';
+    if (sample) {
+      sampleHtml = '<div class="sample-box">'
+        + '<div class="sample-header">'
+        + '<div><span class="sample-badge">' + esc(sample.operationLabel || sample.operationId) + '</span> '
+        + '<span style="color:var(--text-dim);font-size:11px;margin-left:6px;">' + (sample.hasMaterial ? '需要参考素材' : '无需外部素材') + '</span></div>'
+        + '<button class="toggle-sample-btn" data-toggle-sample="' + esc(key) + '">' + (sampleOpen ? '收起参数' : '查看预设参数') + '</button>'
+        + '</div>'
+        + '<div class="sample-rows">'
+        + '<div class="sample-row"><b>测试提示词:</b> "' + esc(sample.prompt) + '"</div>'
+        + (paramParts.length ? '<div class="sample-row" style="margin-top:2px;"><b>预设参数:</b> ' + paramParts.join('') + '</div>' : '')
+        + (sample.hasMaterial ? '<div class="sample-row" style="color:#FBBF24;margin-top:2px;"><b>素材设置:</b> ' + esc(sample.materialHint) + '</div>' : '')
+        + (sampleOpen ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:11px;color:var(--text-faint);">契约提交格式: <code>' + esc(JSON.stringify({ operation: sample.operationId, prompt: sample.prompt, ...sample.parameters, assets: sample.assets })) + '</code></div>' : '')
+        + '</div>'
+        + '</div>';
+    }
+
+    // 测试按钮文案与状态
+    var btnText = '运行测试';
+    var isRunning = currentTest.status === 'running';
+    if (isRunning) {
+      btnText = SPINNER_SVG + ' 运行中…';
+    } else if (currentTest.status === 'success' || currentTest.status === 'fail') {
+      btnText = '重新测试';
+    }
+
+    // 测试结果呈现
+    var resultHtml = '';
+    if (isRunning) {
+      resultHtml = '<div class="test-res running">' + SPINNER_SVG + '<span>正在向中枢线路发起验证请求，验证契约与服务可用性…</span></div>';
+    } else if (currentTest.status === 'success') {
+      resultHtml = '<div class="test-res success">'
+        + '<div class="res-head"><span class="badge-ok">✔ 测试成功</span><span class="time">耗时 ' + currentTest.res.durationMs + 'ms</span></div>'
+        + '<div class="res-meta">' + esc(currentTest.res.message || '服务正常可用') + (currentTest.res.taskId ? '　·　任务ID: ' + esc(currentTest.res.taskId) : '') + '</div>'
+        + '</div>';
+    } else if (currentTest.status === 'fail') {
+      resultHtml = '<div class="test-res fail">'
+        + '<div class="res-head"><span class="badge-fail">✖ 测试失败</span><span class="time">' + (currentTest.res.durationMs ? '耗时 ' + currentTest.res.durationMs + 'ms' : '') + '</span></div>'
+        + '<div class="res-reason">' + esc(currentTest.res.error || '失败错误原因：未知错误') + '</div>'
+        + '</div>';
+    }
+
     return '<div class="gcard">'
-      + '<div class="grow"><span class="glabel">' + esc(g.label) + '</span>'
-      + '<span class="gbadge">' + esc(g.badge) + '</span></div>'
+      + '<div class="grow">'
+      + '<div class="gheader-left">'
+      + '<span class="glabel">' + esc(g.label) + '</span>'
+      + '<span class="gbadge">' + esc(g.badge) + '</span>'
+      + '</div>'
+      + '<div class="test-actions">'
+      + '<button class="test-btn' + (isRunning ? ' running' : '') + '" '
+      + 'data-model-id="' + esc(m.id) + '" '
+      + 'data-group-id="' + esc(g.id) + '" '
+      + 'data-wire-model="' + esc(g.wireModel || m.id) + '" '
+      + 'data-wire-group="' + esc(g.wireGroup || '') + '" '
+      + 'data-group-key="' + esc(m.groupKey) + '" '
+      + (isRunning ? 'disabled' : '') + '>'
+      + btnText + '</button>'
+      + '</div>'
+      + '</div>'
       + '<div class="grid2">' + facts.join('') + '</div>'
+      + sampleHtml
+      + '<div class="test-result-box" id="res-box-' + esc(key) + '">' + resultHtml + '</div>'
       + '</div>';
   }
 
@@ -394,11 +563,20 @@ export function renderConsoleHtml(data, options = {}) {
     if (m.ready) tags += '<span class="tag ok">已就绪 ' + m.listedCount + '/' + m.operationCount + '</span>';
     else tags += '<span class="tag warn">未就绪</span>';
     if (m.groups.length) tags += '<span class="tag line">' + m.groups.length + ' 条线路</span>';
-    else tags += '<span class="tag">无线路</span>';
+    else tags += '<span class="tag">无专属线路</span>';
 
     var ops = m.operations.map(function (op) {
       return '<span class="op' + (op.listed ? ' on' : '') + '">' + esc(op.label) + '</span>';
     }).join('');
+
+    var defaultGroupObj = {
+      id: 'default',
+      label: '默认网关线路',
+      badge: '网关候选路由',
+      wireModel: m.id,
+      wireGroup: '',
+      testSample: m.defaultTestSample,
+    };
 
     var detail = '<div class="detail">';
     if (m.aliases.length) {
@@ -409,8 +587,9 @@ export function renderConsoleHtml(data, options = {}) {
     detail += '<div class="sec"><h3>生成操作（' + m.listedCount + '/' + m.operationCount + ' 已就绪）</h3>'
       + '<div class="ops">' + ops + '</div></div>';
     detail += '<div class="sec"><h3>线路分组（' + m.groups.length + '）</h3>'
-      + (m.groups.length ? m.groups.map(renderGroup).join('')
-        : '<div class="kv"><span>该模型未配置渠道线路分组，走网关注册候选</span></div>')
+      + (m.groups.length
+        ? m.groups.map(function (g) { return renderGroup(g, m); }).join('')
+        : renderGroup(defaultGroupObj, m))
       + '</div>';
     detail += '</div>';
 
@@ -431,12 +610,70 @@ export function renderConsoleHtml(data, options = {}) {
     list.innerHTML = rows.map(renderRow).join('');
   }
 
+  // 点击展开行
   document.getElementById('list').addEventListener('click', function (e) {
+    // 忽略测试按钮或折叠参数按钮的点击
+    if (e.target.closest('.test-btn') || e.target.closest('.toggle-sample-btn')) return;
     var head = e.target.closest('.head'); if (!head) return;
     var row = head.parentElement;
     var id = row.dataset.id;
     state.open[id] = !state.open[id];
     row.dataset.open = String(!!state.open[id]);
+  });
+
+  // 点击折叠/展开预设参数
+  document.getElementById('list').addEventListener('click', function (e) {
+    var toggleBtn = e.target.closest('.toggle-sample-btn');
+    if (!toggleBtn) return;
+    var key = toggleBtn.dataset.toggleSample;
+    state.showSample[key] = !state.showSample[key];
+    render();
+  });
+
+  // 点击运行测试
+  document.getElementById('list').addEventListener('click', async function (e) {
+    var btn = e.target.closest('.test-btn');
+    if (!btn || btn.disabled) return;
+
+    var modelId = btn.dataset.modelId;
+    var groupId = btn.dataset.groupId;
+    var wireModel = btn.dataset.wireModel;
+    var wireGroup = btn.dataset.wireGroup;
+    var groupKey = btn.dataset.groupKey;
+    var key = modelId + '::' + groupId;
+
+    var targetModel = MODELS.find(function (m) { return m.id === modelId; });
+    var sample = targetModel ? (targetModel.groups.find(function (g) { return g.id === groupId; })?.testSample || targetModel.defaultTestSample) : null;
+
+    state.testState[key] = { status: 'running' };
+    render();
+
+    try {
+      var res = await fetch('/api/test-model', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          modelId: modelId,
+          groupId: groupId,
+          wireModel: wireModel,
+          wireGroup: wireGroup,
+          groupKey: groupKey,
+          sample: sample
+        })
+      });
+      var data = await res.json();
+      if (data && data.ok) {
+        state.testState[key] = { status: 'success', res: data };
+      } else {
+        state.testState[key] = { status: 'fail', res: data || { error: '失败错误原因：服务响应异常' } };
+      }
+    } catch (err) {
+      state.testState[key] = {
+        status: 'fail',
+        res: { error: '失败错误原因：网络请求异常（' + (err.message || String(err)) + '）' }
+      };
+    }
+    render();
   });
 
   render();
