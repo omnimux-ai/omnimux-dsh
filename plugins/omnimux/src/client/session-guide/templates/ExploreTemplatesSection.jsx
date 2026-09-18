@@ -39,17 +39,22 @@ export function ExploreTemplatesSection({ onApplyTemplate, t }) {
         // ignore storage error
       }
 
-      // 2. 切换中央舞台至 AI 应用详情页 (omnimux-apps)
+      // 2. 优先通过全局权威 openAppTab 唤起侧边栏独立工作台 (omnimux-workflow:app)
       try {
-        claimProductStage('omnimux-apps');
+        if (typeof window.__omnimuxOpenAppTab === 'function') {
+          window.__omnimuxOpenAppTab(item.manifest, {
+            appId: item.appId,
+            title: item.titleZh || item.title || 'AI 应用',
+          });
+        }
       } catch {}
 
-      // 3. 优先通过宿主更好侧栏打开 AI 应用 Tab（如果侧栏可用）
+      // 3. 兜底尝试通过更好侧栏服务打开合规标签页
       try {
-        const sidebar = window.__OMNIMUX_BETTER_SIDEBAR__ || window.parent?.__OMNIMUX_BETTER_SIDEBAR__;
+        const sidebar = window.__OMNIMUX_BETTER_SIDEBAR__ || window.parent?.__OMNIMUX_BETTER_SIDEBAR__ || window.__omnimuxBetterSidebar;
         if (sidebar && typeof sidebar.openTab === 'function') {
           sidebar.openTab({
-            type: 'omnimux_app',
+            type: 'omnimux-workflow:app',
             id: `app_${item.appId}`,
             title: item.titleZh || item.title || 'AI 应用',
             path: `app://${item.appId}`,
