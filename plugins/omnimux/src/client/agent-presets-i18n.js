@@ -81,7 +81,16 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
           : '多模态创意策划、脚本分镜与视听制作。',
     }
   }
-  if (presetId === 'omni-agent' || presetId === 'tiktok-agent' || presetId === 'tiktokagent' || presetId === '全能社媒操盘手' || presetId === '社媒专家') {
+  if (presetId === 'tiktok-agent' || presetId === 'tiktokagent' || presetId === 'tiktok-ops-team' || presetId === 'TikTok运营专家团') {
+    return {
+      name: lang === 'en' ? 'TikTok Ops Team' : 'TikTok运营专家团',
+      description:
+        lang === 'en'
+          ? 'TikTok end-to-end viral video creation, shop ops, and growth matrix.'
+          : '全链路爆款视频创作、带货选品、互动截流与投流增长。',
+    }
+  }
+  if (presetId === 'omni-agent' || presetId === '全能社媒操盘手' || presetId === '社媒专家') {
     return {
       name: lang === 'en' ? 'Social Media Lead' : '社媒专家',
       description:

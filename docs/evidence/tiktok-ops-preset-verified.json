@@ -1,0 +1,37 @@
+{
+  "taskId": "tiktok-ops-team-preset",
+  "verifiedAt": "2026-09-18T21:28:30+08:00",
+  "presetId": "tiktok-agent",
+  "presetName": "TikTok运营专家团",
+  "presetNameEn": "TikTok Ops Team",
+  "expertsCount": 13,
+  "experts": [
+    "expert_content_copywriter",
+    "expert_speech",
+    "expert_image",
+    "expert_video",
+    "expert_music",
+    "expert_editing",
+    "expert_interaction_automator",
+    "expert_ai_comment",
+    "expert_signal_miner",
+    "expert_brand_monitor",
+    "expert_ad_creative",
+    "expert_traffic_growth",
+    "expert_data_attribution"
+  ],
+  "materializedTargets": [
+    "/Users/x/.omnimux-dev/agent-presets-shipped/tiktok-agent",
+    "/Users/x/.omnimux-dev/profiles/omnimux/agent-presets-shipped/tiktok-agent",
+    "/Users/x/.omnimux/agent-presets-shipped/tiktok-agent",
+    "/Users/x/.omnimux/profiles/omnimux/agent-presets-shipped/tiktok-agent",
+    "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/preset/agent-presets/tiktok-agent",
+    "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/preset/agent-presets/tiktok-agent"
+  ],
+  "status": "PASS",
+  "verification": {
+    "specDriven": true,
+    "asarIntegrityUpdated": true,
+    "i18nRegistered": true
+  }
+}
