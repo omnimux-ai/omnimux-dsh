@@ -44,32 +44,8 @@ function normalizeCardArgs(arg1, arg2, arg3) {
 }
 
 export function renderRegularCard(item, ...args) {
-  const { tr, onOpen, onToggle, h: customH } = normalizeCardArgs(...args);
-  const h = customH || getH();
-  const { title, desc } = resolveCardMeta(item, tr);
-  const isInstalledOrPre = Boolean(item.installed || item.preinstalled);
-  const isChecked = Boolean(isInstalledOrPre && item.enabled !== false);
-  const isSuite = item.kind === 'suite';
-  const onCardClick = () => { if (onOpen) onOpen(item); };
-  const onSwitchChange = () => {
-    if (isSuite) {
-      if (onOpen) onOpen({ ...item, initialAction: isInstalledOrPre ? 'uninstall' : 'install' });
-      return;
-    }
-    if (onToggle) onToggle(item);
-  };
-
-  return h('div', { key: item.slug || item.id, className: 'regular-card', onClick: onCardClick },
-    h('div', { className: 'regular-card-info' },
-      h('div', { className: 'regular-card-top' },
-        h('div', { className: 'regular-card-title', title }, title),
-        item.downloads ? h('span', { className: 'regular-card-dl' }, getFmt(item.downloads, tr)) : null,
-      ),
-      isSuite ? h('div', { className: 'regular-card-composition' }, suiteCompositionText(item, tr)) : null,
-      h('div', { className: 'regular-card-desc' }, desc),
-    ),
-    h(WorkshopSwitch, { checked: isChecked, onChange: onSwitchChange }),
-  );
+  const { tr, onOpen } = normalizeCardArgs(...args);
+  return renderFeaturedCard(item, { tr, onOpen, onTry: safeTrySkillInSession });
 }
 
 export function renderMineCard(item, ...args) {
@@ -92,17 +68,8 @@ export function renderMineCard(item, ...args) {
 }
 
 export function renderFeaturedSection(opts) {
-  const h = getH(opts);
-  const { featuredItems, tr, setOpen } = opts;
-  if (!featuredItems || !(featuredItems.length > 0)) return null;
-  return h('section', { className: 'featured-section' },
-    h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' } },
-      h('h2', { className: 'featured-title', style: { margin: 0 } }, tr('workshop.featuredTitle') || '官方精选'),
-    ),
-    h('div', { className: 'featured-grid' },
-      featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession })),
-    ),
-  );
+  // 置顶逻辑已统一收敛至 renderRegularSection 内部的三大专区中，此处返回 null 避免顶部重复渲染
+  return null;
 }
 
 export function renderRegularStatus(statusOpts, tr) {
@@ -117,25 +84,68 @@ export function renderRegularStatus(statusOpts, tr) {
 export function renderRegularSection(opts) {
   const h = getH(opts);
   const { hasQuery, regularItems, uninstalledOnly, setUninstalledOnly, status, page, err, tr, setOpen, onToggle } = opts;
-  const titleKey = hasQuery ? 'workshop.searchResults' : 'workshop.otherTitle';
   const statusNode = renderRegularStatus({ status, page, err, count: regularItems.length }, tr);
-  const onFilterClick = () => setUninstalledOnly(!uninstalledOnly);
-  return h('section', { className: 'regular-section' },
-    h('div', { className: 'regular-header' },
-      h('div', { className: 'regular-title-row' },
-        h('span', null, tr(titleKey)),
-        h('span', { className: 'regular-title-count' }, ' · ' + regularItems.length),
-      ),
-      h('div', { className: 'regular-controls' },
-        h('div', { className: 'filter-item' + (uninstalledOnly ? ' checked' : ''), onClick: onFilterClick },
-          h('div', { className: 'filter-circle' }),
-          h('span', null, tr('workshop.onlyUninstalled') || '仅显示未安装'),
+
+  // 搜索态：展示全量搜索结果大网格
+  if (hasQuery) {
+    const titleKey = 'workshop.searchResults';
+    return h('section', { className: 'regular-section' },
+      h('div', { className: 'regular-header' },
+        h('div', { className: 'regular-title-row' },
+          h('span', null, tr(titleKey) || '搜索结果'),
+          h('span', { className: 'regular-title-count' }, ' · ' + regularItems.length),
         ),
-        h('div', { className: 'sort-btn' }, h('span', null, tr('workshop.sortRecent') || '排序: 最近')),
+      ),
+      statusNode,
+      regularItems.length ? h('div', { className: 'featured-grid cards-grid' }, regularItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession }))) : null,
+    );
+  }
+
+  // 默认全部分类状态：按用户要求置顶「热门精选」、「新品上市」，其余展示在「探索更多」
+  const hotPicks = regularItems.filter((i) => i.isHot || i.tags?.includes('热门精选'));
+  const newArrivals = regularItems.filter((i) => i.isNew || i.tags?.includes('新品上市'));
+  const exploreMore = regularItems.filter((i) => !i.isHot && !i.isNew && !i.tags?.includes('热门精选') && !i.tags?.includes('新品上市'));
+
+  return h('div', { className: 'omnimux-creatify-sections-wrap', style: { display: 'flex', flexDirection: 'column', gap: '28px', width: '100%' } },
+    statusNode,
+    // 1. 热门精选（置顶首屏）
+    hotPicks.length > 0 ? h('section', { className: 'featured-section', 'aria-label': '热门精选' },
+      h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
+        h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em' } }, '热门精选'),
+      ),
+      h('div', { className: 'featured-grid cards-grid' },
+        hotPicks.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession })),
+      ),
+    ) : null,
+
+    // 2. 新品上市（置顶次屏）
+    newArrivals.length > 0 ? h('section', { className: 'featured-section', 'aria-label': '新品上市' },
+      h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
+        h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em' } }, '新品上市'),
+        h('button', {
+          type: 'button',
+          className: 'see-all-btn',
+          style: { background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-caption, #686b74)', cursor: 'pointer', fontSize: '12px' },
+          onClick: () => { setOpen && setOpen(newArrivals[0]); },
+        }, '查看全部 >'),
+      ),
+      h('div', { className: 'featured-grid cards-grid' },
+        newArrivals.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession })),
+      ),
+    ) : null,
+
+    // 3. 探索更多
+    h('section', { className: 'regular-section', 'aria-label': '探索更多' },
+      h('div', { className: 'regular-header', style: { marginBottom: '14px' } },
+        h('div', { className: 'regular-title-row' },
+          h('span', { style: { fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' } }, '探索更多'),
+          h('span', { className: 'regular-title-count' }, ' · ' + (exploreMore.length || regularItems.length)),
+        ),
+      ),
+      h('div', { className: 'featured-grid cards-grid' },
+        (exploreMore.length > 0 ? exploreMore : regularItems).map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession })),
       ),
     ),
-    statusNode,
-    regularItems.length ? h('div', { className: 'regular-grid' }, regularItems.map((item) => renderRegularCard(item, tr, setOpen, onToggle))) : null,
   );
 }
 

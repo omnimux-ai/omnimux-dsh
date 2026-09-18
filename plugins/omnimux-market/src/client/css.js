@@ -565,6 +565,119 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   display: none !important;
 }
 
+/* 1:1 复刻 3:2 营销技能卡片与置顶网格 */
+.cards-grid, .featured-grid {
+  display:grid !important; grid-template-columns:repeat(3, minmax(0, 1fr)) !important; gap:16px !important;
+}
+@media (max-width:1100px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
+@media (max-width:680px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
+
+.omnimux-creatify-card {
+  position:relative; width:100%; aspect-ratio:3 / 2;
+  border-radius:16px; overflow:hidden; background:var(--dsw-alias-bg-layer-1, #131414);
+  border:1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  box-shadow:0 1px 3px var(--dsw-alias-shadow-color, rgba(0, 0, 0, 0.35));
+  cursor:pointer; user-select:none;
+  transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+.omnimux-creatify-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 12px 28px var(--dsw-alias-shadow-color, rgba(0, 0, 0, 0.5));
+  border-color:var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.22));
+}
+.omnimux-creatify-card.is-active {
+  border-color:var(--dsw-alias-brand-primary, #EDA921);
+}
+.omnimux-creatify-card-bg-img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  transform:scale(1.05); transition:transform 400ms ease; display:block;
+}
+.omnimux-creatify-card:hover .omnimux-creatify-card-bg-img {
+  transform:scale(1.12);
+}
+.omnimux-creatify-dot-overlay {
+  position:absolute; inset:0;
+  background-image:radial-gradient(circle, rgba(255, 255, 255, 0.38) 0.7px, transparent 1px); // exempt-ui03: 1:1复刻点阵纹理覆盖
+  background-size:8px 8px; mix-blend-mode:overlay; pointer-events:none;
+}
+.omnimux-creatify-card-top-left {
+  position:absolute; top:12px; left:12px; z-index:5;
+  display:flex; align-items:center; gap:6px;
+}
+.omnimux-creatify-badge-hot {
+  display:flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:8px;
+  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px); // exempt-ui03: 热门火苗金色微光底色
+  color:var(--dsw-alias-brand-primary, #EDA921);
+}
+.omnimux-creatify-badge-new {
+  display:flex; align-items:center; justify-content:center;
+  height:28px; padding:0 9px; border-radius:8px;
+  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px); // exempt-ui03: 新品微标金色微光底色
+  color:var(--dsw-alias-brand-primary, #EDA921); font-size:11px; font-weight:600;
+}
+.omnimux-creatify-pill-cat {
+  display:flex; align-items:center; gap:5px;
+  height:28px; padding:0 10px; border-radius:999px;
+  background:var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08)); backdrop-filter:blur(12px);
+  border:1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+  font-size:11px; font-weight:500; color:var(--dsw-alias-label-primary, #FFFFFF);
+}
+.omnimux-creatify-star-btn {
+  position:absolute; top:12px; right:12px; z-index:5;
+  width:28px; height:28px; border-radius:8px;
+  background:var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08)); backdrop-filter:blur(12px);
+  border:1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.7)); cursor:pointer;
+  transition:all 150ms ease;
+}
+.omnimux-creatify-star-btn:hover {
+  background:var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.16)); color:var(--dsw-alias-label-primary, #FFFFFF);
+}
+.omnimux-creatify-star-btn.active {
+  color:var(--dsw-alias-brand-primary, #EDA921);
+  background:rgba(237, 169, 33, 0.18); // exempt-ui03: 收藏高亮微光
+  border-color:rgba(237, 169, 33, 0.3); // exempt-ui03: 收藏高亮边框
+}
+.omnimux-creatify-card-center {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  padding:0 16px; pointer-events:none;
+}
+.omnimux-creatify-center-title {
+  font-size:20px; font-weight:600; color:var(--dsw-alias-label-primary, #FFFFFF); text-align:center;
+  letter-spacing:-0.01em; text-shadow:0 2px 8px var(--dsw-alias-shadow-color, rgba(0, 0, 0, 0.45));
+  display:inline-flex; align-items:center; gap:6px; margin:0; line-height:1.3;
+}
+.omnimux-creatify-card-hover-drawer {
+  position:absolute; inset-x:0; bottom:0; pointer-events:none;
+}
+.omnimux-creatify-drawer-bg {
+  position:absolute; inset:0;
+  background:linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 65%, transparent 100%); // exempt-ui03: 悬停抽屉渐变遮罩
+  opacity:0; transition:opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-creatify-card:hover .omnimux-creatify-drawer-bg {
+  opacity:1;
+}
+.omnimux-creatify-drawer-content {
+  position:relative; display:flex; flex-direction:column; gap:6px;
+  padding:30px 14px 12px; transform:translateY(18px); opacity:0;
+  transition:all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-creatify-card:hover .omnimux-creatify-drawer-content {
+  transform:translateY(0); opacity:1;
+}
+.omnimux-creatify-drawer-desc {
+  font-size:12px; line-height:1.45; color:var(--dsw-alias-label-primary, #FFFFFF);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; margin:0;
+}
+.omnimux-creatify-drawer-uses {
+  display:flex; align-items:center; gap:4px; font-size:11px;
+  color:var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65));
+}
+
 `;
 
     const CSS_ID = "omnimux-market-style";

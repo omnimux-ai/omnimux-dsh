@@ -8,120 +8,207 @@ import {
 
 const h = React.createElement;
 
-function renderFeaturedCoverSvg(item, isHidden) {
-  const letters = (item.name || item.title || 'SK').slice(0, 4);
+const COVER_NUMS = [4, 5, 6, 7, 9, 10, 2, 3];
+
+// 纯矢量认证打勾徽章
+function renderVerifiedSvg() {
   return h('svg', {
-    className: 'featured-cover-svg',
-    viewBox: '0 0 320 180',
-    width: '100%',
-    height: '100%',
+    width: 18,
+    height: 18,
+    viewBox: '0 0 20 20',
     fill: 'none',
-    xmlns: 'http://www.w3.org/2000/svg',
-    style: isHidden ? { display: 'none' } : undefined,
-  },
-    h('rect', { width: '320', height: '180', fill: 'var(--dsw-alias-bg-layer-1, #1a1c24)' }),
-    h('circle', { cx: '160', cy: '90', r: '36', fill: 'var(--dsw-alias-bg-layer-2, #272a38)' }),
-    h('text', { x: '160', y: '96', textAnchor: 'middle', fill: 'var(--dsw-alias-brand-primary, #6f59ff)', fontSize: '16', fontWeight: '600' }, letters),
-  );
-}
-
-function renderFeaturedCover(coverSrc, item, title, hoverNode) {
-  const altText = item.cover?.alt || item.homeCover?.alt || title || 'Cover';
-  const onCoverErr = (e) => {
-    e.currentTarget.style.display = 'none';
-    const n = e.currentTarget.nextElementSibling;
-    if (n && n.classList && n.classList.contains('featured-cover-svg')) {
-      n.style.display = 'block';
-    }
-  };
-  return h('div', { className: 'featured-cover-wrap' },
-    coverSrc ? h('img', {
-      src: coverSrc, alt: altText, loading: 'lazy', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
-      onError: onCoverErr,
-    }) : null,
-    renderFeaturedCoverSvg(item, Boolean(coverSrc)),
-    hoverNode,
-  );
-}
-
-/** 紧凑宽度下文字标签退出布局后，按钮靠图标保持可辨识；图标同时是无障碍名称之外的视觉锚点。 */
-function renderHoverIcon(kind) {
-  const common = {
-    width: 14,
-    height: 14,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2,
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round',
+    className: 'creatify-card-verified-svg',
+    style: { flexShrink: 0 },
     'aria-hidden': 'true',
-    focusable: 'false',
-  }
-  if (kind === 'detail') {
-    return h('svg', common,
-      h('path', { d: 'M2.062 12.348a1 1 0 0 1 0-.696A10.75 10.75 0 0 1 21.938 12.348a1 1 0 0 1 0 .696A10.75 10.75 0 0 1 2.062 12.348' }),
-      h('circle', { cx: 12, cy: 12, r: 3 }),
-    )
-  }
-  return h('svg', common,
-    h('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }),
-  )
-}
-
-function renderFeaturedHoverActions(item, opts) {
-  const { tr, onOpen, onTry } = opts;
-  const onOpenClick = (e) => { e.stopPropagation(); onOpen && onOpen(item); };
-  const onTryClick = (e) => { e.stopPropagation(); (onTry || safeTrySkillInSession)(item); };
-  const detailTitle = tr ? (tr('workshop.detail') || '查看详情') : '查看详情';
-  const tryTitle = tr ? (tr('workshop.try') || '去对话中试试') : '去对话中试试';
-
-  return h('div', { className: 'featured-hover-actions' },
-    // exempt-ui01 open detail hover button
-    h('button', {
-      type: 'button',
-      className: 'hover-btn hover-btn-detail',
-      onClick: onOpenClick,
-      'aria-label': detailTitle,
-      title: detailTitle,
-    }, renderHoverIcon('detail'), h('span', { className: 'hover-btn-label' }, detailTitle)),
-    // exempt-ui01 try in session hover button
-    h('button', {
-      type: 'button',
-      className: 'hover-btn hover-btn-try',
-      onClick: onTryClick,
-      'aria-label': tryTitle,
-      title: tryTitle,
-    }, renderHoverIcon('try'), h('span', { className: 'hover-btn-label' }, tryTitle)),
+  },
+    h('path', {
+      d: 'M8.2 2.5a2.2 2.2 0 0 1 3.6 0l.7.9a2.2 2.2 0 0 0 1.9.9h1.1a2.2 2.2 0 0 1 2.2 2.2v1.1c0 .8.4 1.5 1 1.9l.8.7a2.2 2.2 0 0 1 0 3.6l-.8.7a2.2 2.2 0 0 0-1 1.9v1.1a2.2 2.2 0 0 1-2.2 2.2h-1.1a2.2 2.2 0 0 0-1.9 1l-.7.8a2.2 2.2 0 0 1-3.6 0l-.7-.8a2.2 2.2 0 0 0-1.9-1H4.5A2.2 2.2 0 0 1 2.3 16v-1.1a2.2 2.2 0 0 0-1-1.9l-.8-.7a2.2 2.2 0 0 1 0-3.6l.8-.7a2.2 2.2 0 0 0 1-1.9V5a2.2 2.2 0 0 1 2.2-2.2h1.1a2.2 2.2 0 0 0 1.9-1l.7-.8z',
+      fill: 'var(--dsw-static-neutral-00, #ffffff)', /* exempt-ui03: 认证图标底色 */
+    }),
+    h('path', {
+      d: 'M6.5 10l2.5 2.5L14 7.5',
+      stroke: 'var(--dsw-static-neutral-1000, #000000)', /* exempt-ui03: 对勾线条色 */
+      strokeWidth: '1.8',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    }),
   );
 }
 
+// 纯矢量火苗 (Hot)
+function renderFireSvg() {
+  return h('svg', {
+    width: 15,
+    height: 15,
+    viewBox: '0 0 24 24',
+    fill: 'currentColor',
+    'aria-hidden': 'true',
+  },
+    h('path', {
+      d: 'M12 2c-.6 1.8-1.5 3.3-2.6 4.7C8.1 8.2 6.8 9.9 6.8 12c0 3.3 2.7 6 6 6s6-2.7 6-6c0-1.8-1.1-4-2.8-5.7-1.1-1.1-2.1-2.4-2.7-4.3z',
+    }),
+  );
+}
+
+// 分类图标
+function renderCatIcon(category) {
+  const cat = String(category || '').toLowerCase();
+  if (cat.includes('ugc')) {
+    return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+      h('path', { d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' }),
+      h('circle', { cx: 12, cy: 7, r: 4 }),
+    );
+  }
+  if (cat.includes('story') || cat.includes('script')) {
+    return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+      h('path', { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' }),
+      h('path', { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' }),
+    );
+  }
+  if (cat.includes('image') || cat.includes('static')) {
+    return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+      h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }),
+      h('circle', { cx: 8.5, cy: 8.5, r: 1.5 }),
+      h('polyline', { points: '21 15 16 10 5 21' }),
+    );
+  }
+  if (cat.includes('video')) {
+    return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+      h('polygon', { points: '5 3 19 12 5 21 5 3' }),
+    );
+  }
+  if (cat.includes('product')) {
+    return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+      h('path', { d: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' }),
+      h('polyline', { points: '3.27 6.96 12 12.01 20.73 6.96' }),
+      h('line', { x1: 12, y1: 22.08, x2: 12, y2: 12 }),
+    );
+  }
+  return h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+    h('circle', { cx: 12, cy: 12, r: 10 }),
+    h('line', { x1: 12, y1: 8, x2: 12, y2: 12 }),
+    h('line', { x1: 12, y1: 16, x2: 12.01, y2: 16 }),
+  );
+}
+
+const CATEGORY_NAMES = {
+  'ugc-testimonial': 'UGC 和用户评价',
+  'storytelling-script': '故事讲述和脚本',
+  'image-static': '图片和静态广告',
+  'video-ads': '视频广告',
+  'product-showcase': '产品展示',
+  'meme-native': '模因与原生',
+  'other': '其它营销分类',
+};
+
+/**
+ * 1:1 复刻 Creatify 官方 3:2 质感卡片
+ */
 export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
   let safeOpts = {};
   if (typeof opts === 'function') {
-    // 兼容历史调用签名 (item, tr, onOpen, onPin, onTry) 或 (item, tr, onOpen, onTry)
     const onTry = typeof onPinArg === 'function' && typeof onTryArg === 'function' ? onTryArg : onPinArg;
     safeOpts = { tr: opts, onOpen: onOpenArg, onTry };
   } else if (opts && typeof opts === 'object') {
     safeOpts = opts;
   }
-  const { tr, onOpen } = safeOpts;
-  const iconSrcFn = typeof safeOpts.iconSrc === 'function'
-    ? safeOpts.iconSrc
-    : (typeof iconSrc === 'function' ? iconSrc : resolveIconSrc);
-  const coverAsset = item.homeCover?.asset || item.cover?.asset || (typeof item.cover === 'string' ? item.cover : '');
-  const coverSrc = coverAsset ? iconSrcFn(coverAsset) : (item.coverUrl || item.avatarUrl || '');
+  const { tr, onOpen, onTry } = safeOpts;
   const title = resolveItemTitle(item, tr);
   const desc = resolveItemDesc(item, tr) || '暂无描述';
 
-  const hoverNode = renderFeaturedHoverActions(item, safeOpts);
-  const coverNode = renderFeaturedCover(coverSrc, item, title, hoverNode);
+  // 计算循环封面索引
+  const idx = Math.abs(String(item.id || item.slug).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0));
+  const coverIndex = typeof item.coverIndex === 'number' ? item.coverIndex : COVER_NUMS[idx % COVER_NUMS.length];
+  const coverSrc = `/omnimux/assets/skill-card-covers/skill-card-${coverIndex}.webp`;
 
-  return h('div', { key: item.slug || item.id, className: 'featured-card', onClick: () => onOpen && onOpen(item) },
-    coverNode,
-    h('div', { className: 'featured-content' },
-      h('div', { className: 'featured-card-name', title }, title),
-      h('div', { className: 'featured-card-desc' }, desc),
+  const isHot = Boolean(item.isHot || item.tags?.includes('热门精选'));
+  const isNew = Boolean(item.isNew || item.tags?.includes('新品上市'));
+  const categoryLabel = CATEGORY_NAMES[item.category] || item.category || '营销技能';
+  const usesText = item.downloads ? `${item.downloads} uses` : '100+ uses';
+
+  const onCardClick = () => { if (onOpen) onOpen(item); };
+  const onTryClick = (e) => {
+    e.stopPropagation();
+    (onTry || safeTrySkillInSession)(item);
+  };
+
+  return h('div', {
+    key: item.slug || item.id,
+    className: 'featured-card omnimux-creatify-card',
+    onClick: onCardClick,
+    title,
+  },
+    // 1. 渐变大封面图
+    h('img', {
+      src: coverSrc,
+      alt: title,
+      className: 'omnimux-creatify-card-bg-img',
+      loading: 'lazy',
+    }),
+    // 2. 点阵纹理 Overlay
+    h('div', { className: 'omnimux-creatify-dot-overlay', 'aria-hidden': 'true' }),
+    // 3. 左上角徽标 + 分类胶囊
+    h('div', { className: 'omnimux-creatify-card-top-left' },
+      isHot ? h('span', { className: 'omnimux-creatify-badge-hot', title: '热门精选' }, renderFireSvg()) : null,
+      isNew ? h('span', { className: 'omnimux-creatify-badge-new' }, '新') : null,
+      h('div', { className: 'omnimux-creatify-pill-cat' },
+        renderCatIcon(item.category),
+        h('span', null, categoryLabel),
+      ),
+    ),
+    // 4. 右上角收藏星标
+    h('button', {
+      type: 'button',
+      className: 'omnimux-creatify-star-btn',
+      'aria-label': '收藏',
+      onClick: (e) => {
+        e.stopPropagation();
+        e.currentTarget.classList.toggle('active');
+      },
+    },
+      h('svg', { width: 14, height: 14, viewBox: '0 0 24 24' },
+        h('polygon', { points: '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' }),
+      ),
+    ),
+    // 5. 居中白色加粗大标题与认证微标
+    h('div', { className: 'omnimux-creatify-card-center' },
+      h('h3', { className: 'omnimux-creatify-center-title' },
+        h('span', null, title),
+        renderVerifiedSvg(),
+      ),
+    ),
+    // 6. 悬停浮层：滑出双行描述 + 使用量 + 快捷调用
+    h('div', { className: 'omnimux-creatify-card-hover-drawer' },
+      h('div', { className: 'omnimux-creatify-drawer-bg' }),
+      h('div', { className: 'omnimux-creatify-drawer-content' },
+        h('p', { className: 'omnimux-creatify-drawer-desc', title: desc }, desc),
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: '4px' } },
+          h('div', { className: 'omnimux-creatify-drawer-uses' },
+            h('svg', { width: 12, height: 12, viewBox: '0 0 24 24' },
+              h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
+              h('polyline', { points: '7 10 12 15 17 10' }),
+              h('line', { x1: 12, y1: 15, x2: 12, y2: 3 }),
+            ),
+            h('span', null, usesText),
+          ),
+          h('button', {
+            type: 'button',
+            className: 'omnimux-creatify-quick-try-btn',
+            style: {
+              background: 'var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.16))', /* exempt-ui03: 悬停按钮底色 */
+              border: '1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.2))', /* exempt-ui03: 悬停按钮边框 */
+              borderRadius: '999px',
+              padding: '2px 10px',
+              fontSize: '11px',
+              fontWeight: 500,
+              color: 'var(--dsw-static-neutral-00, #ffffff)', /* exempt-ui03: 按钮文本纯白色 */
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+            },
+            onClick: onTryClick,
+          }, '在会话中使用'),
+        ),
+      ),
     ),
   );
 }
