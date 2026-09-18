@@ -47,7 +47,7 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     const pills = document.querySelectorAll('.omnimux-pill-btn');
     assert.equal(pills.length, 4, '必须渲染 4 个胶囊');
 
-    // 1. 点击 Video ads
+    // 1. 点击 Video ads，验证切换展开紧贴依附在输入框下方的面板
     await act(async () => { pills[1].click(); });
     const videoPopover = document.querySelector('.omnimux-subprompt-popover');
     assert.ok(videoPopover, 'Video ads 弹窗必须展开');
