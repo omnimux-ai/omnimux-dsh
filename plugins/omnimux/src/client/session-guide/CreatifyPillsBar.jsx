@@ -209,7 +209,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         justifyContent: 'center',
         gap: '10px',
         flexWrap: 'wrap',
-        margin: '12px auto 16px',
+        margin: activeMenu ? '8px auto 16px' : '12px auto 16px',
         position: 'relative',
         zIndex: 120,
         boxSizing: 'border-box',
@@ -217,13 +217,13 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         maxWidth: 'var(--dsh-composer-card-max-width, 952px)',
       }}
     >
-      {/* 4 个 1:1 大胶囊按钮 */}
+      {/* 4 个 1:1 大胶囊按钮：激活面板时隐退，将空间直接让位给依附于输入框下方的面板 */}
       <button /* exempt-ui01: 4大胶囊按钮之Skills */
         type="button"
         className={`omnimux-pill-btn ${activeMenu === 'skills' ? 'active' : ''}`}
         onClick={() => toggleMenu('skills')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -248,7 +248,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'video-ads' ? 'active' : ''}`}
         onClick={() => toggleMenu('video-ads')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -273,7 +273,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'image-ads' ? 'active' : ''}`}
         onClick={() => toggleMenu('image-ads')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -298,7 +298,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'competitor' ? 'active' : ''}`}
         onClick={() => toggleMenu('competitor')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -318,13 +318,12 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         <span>{isZh ? '竞争对手研究' : 'Competitor research'}</span>
       </button>
 
-      {/* Skills 专属弹窗 */}
+      {/* Skills 专属列表面板：直接依附在输入框正下方 */}
       {activeMenu === 'skills' && (
         <div
           className="omnimux-skills-popover"
           style={{
-            position: 'absolute',
-            top: '48px',
+            position: 'relative',
             left: '0',
             right: '0',
             width: '100%',
@@ -354,6 +353,14 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
               style={{ height: '34px', padding: '0 14px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-3)', border: '1px solid var(--dsw-alias-border)', color: 'var(--dsw-alias-label-primary)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
             >
               {isZh ? "浏览全部" : "Browse all"}
+            </button>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={isZh ? "关闭" : "Close"}
+              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '18px', cursor: 'pointer' }}
+            >
+              &times;
             </button>
           </div>
 
@@ -412,27 +419,41 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         </div>
       )}
 
-      {/* 视频/图片/竞品 下拉子提示词菜单 */}
+      {/* 视频/图片/竞品 下拉子提示词菜单：直接依附在输入框正下方 */}
       {activeMenu && activeMenu !== 'skills' && (
         <div
           className="omnimux-subprompt-popover"
           style={{
-            position: 'absolute',
-            top: '48px',
+            position: 'relative',
             left: '0',
             right: '0',
             width: '100%',
             maxWidth: '100%',
             background: 'var(--dsw-alias-bg-elevated-solid, #18191c)',
             border: '1px solid var(--dsw-alias-border)',
-            borderRadius: '14px',
+            borderRadius: '16px',
             boxShadow: '0 20px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--dsw-alias-border)',
             zIndex: 130,
             overflow: 'hidden',
-            padding: '6px',
+            padding: '8px 10px',
             boxSizing: 'border-box',
           }}
         >
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px', borderBottom: '1px solid var(--dsw-alias-border)', marginBottom: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
+              {activeMenu === 'video-ads' ? (isZh ? '视频广告推荐提示词' : 'Video Ads Prompts') :
+               activeMenu === 'image-ads' ? (isZh ? '图片广告推荐提示词' : 'Image Ads Prompts') :
+               (isZh ? '竞争对手研究推荐' : 'Competitor Research')}
+            </span>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={isZh ? "关闭" : "Close"}
+              style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '16px', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+          </header>
           {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => (
             <div
               key={idx}

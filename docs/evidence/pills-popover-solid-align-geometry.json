@@ -1,6 +1,6 @@
 {
-  "startedAt": "2026-09-18T10:14:52.198Z",
-  "target": "CreatifyPillsBar.jsx: 菜单面板不透明实底遮罩与宽度两侧对齐输入框",
+  "startedAt": "2026-09-18T10:35:55.541Z",
+  "target": "CreatifyPillsBar.jsx: 点击按钮切换列表面板，紧贴依附于输入框正下方",
   "demoPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-pills-popover-2332/docs/evidence/pills-popover-solid-align-demo.html",
   "cases": [
     {
@@ -15,6 +15,7 @@
         "popoverLeft": 164,
         "popoverRight": 1116,
         "popoverWidth": 952,
+        "topGap": 8,
         "leftDelta": 0,
         "rightDelta": 0,
         "widthDelta": 0,
@@ -35,6 +36,7 @@
         "popoverLeft": 24,
         "popoverRight": 776,
         "popoverWidth": 752,
+        "topGap": 8,
         "leftDelta": 0,
         "rightDelta": 0,
         "widthDelta": 0,
