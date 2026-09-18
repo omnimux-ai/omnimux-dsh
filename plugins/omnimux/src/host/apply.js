@@ -195,7 +195,12 @@ export function apply(ctx, config = {}) {
           ? settingsService.get('omnimux')
           : undefined
       }
-      const syncComposerList = () => {
+      let retryTimer = null
+      const syncComposerList = async (retryStep = 0) => {
+        if (retryTimer) {
+          clearTimeout(retryTimer)
+          retryTimer = null
+        }
         const current = readOmnimuxSettings()
         const hiddenIds = current && typeof current === 'object' ? current.composerHiddenModels : undefined
         let hubText
@@ -210,16 +215,41 @@ export function apply(ctx, config = {}) {
           })
           return
         }
-        void composerSync.sync({ hubText, hiddenIds }).catch(() => {})
+        try {
+          const res = await composerSync.sync({ hubText, hiddenIds })
+          // If llm-pi-ai settings namespace registration lagged behind in
+          // Cordis startup order, back off and retry up to 3 times so the list
+          // converges without waiting for an external settings change.
+          if (res && res.reason === 'namespace-absent' && retryStep < 3) {
+            const delays = [300, 1000, 2500]
+            retryTimer = setTimeout(() => {
+              retryTimer = null
+              void syncComposerList(retryStep + 1)
+            }, delays[retryStep])
+          }
+        } catch {
+          /* fail-closed: unhandled error must not propagate */
+        }
       }
 
       if (scope && typeof scope.watch === 'function') {
         scope.watch(() => {
           ctx.emit?.('omnimux/model-catalog-updated')
-          syncComposerList()
+          void syncComposerList(0)
         })
       }
-      syncComposerList()
+
+      // Re-sync on adapter mount/update so lagging provider registrations converge.
+      if (typeof ctx.on === 'function') {
+        ctx.on('llm/adapters-updated', () => {
+          void syncComposerList(0)
+        })
+        ctx.on('omnimux/model-catalog-updated', () => {
+          void syncComposerList(0)
+        })
+      }
+
+      void syncComposerList(0)
     })
   }
 
