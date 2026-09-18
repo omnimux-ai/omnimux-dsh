@@ -1,0 +1,23 @@
+{
+  "task": "fix-skill-menu-placement-and-zindex-top",
+  "issue": 2336,
+  "verifiedAt": "2026-09-18T10:27:03.851Z",
+  "environment": {
+    "browser": "Google Chrome 153",
+    "os": "Darwin arm64",
+    "mode": "headless"
+  },
+  "evidence": {
+    "beforeScreenshot": "docs/evidence/skill-menu-placement-before-overlap.png",
+    "afterScreenshot": "docs/evidence/skill-menu-placement-after-top.png",
+    "interactiveDemoHtml": "docs/evidence/skill-menu-placement-demo.html"
+  },
+  "metrics": {
+    "menuPlacement": "top (bottom: calc(100% + 4px))",
+    "menuZIndex": 1000,
+    "pillsBarZIndex": 120,
+    "overlapFixed": true,
+    "layerHierarchyValid": true
+  },
+  "conclusion": "PASSED: 技能列表菜单已稳定置于输入框上方，z-index 提升至 1000，彻底根除层级压制与位置重叠"
+}

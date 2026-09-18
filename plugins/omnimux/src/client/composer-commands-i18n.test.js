@@ -346,7 +346,7 @@ test('ensurePlacementStyles injects idempotent placement CSS stylesheet into doc
   const style1 = doc.getElementById('dsh-omnimux-menu-placement')
   assert.ok(style1)
   assert.ok(style1.textContent.includes('data-menu-placement="bottom"'))
-  assert.ok(style1.textContent.includes('z-index: 80'))
+  assert.ok(style1.textContent.includes('z-index: 1000'))
 
   // Second run is idempotent
   ensurePlacementStyles(doc)
@@ -391,7 +391,7 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
     <div class="Q7WfXG_hero">
       <div data-composer-card>
         <div class="overlayAnchor">
-          <div data-trigger-menu class="iRJKyq_menu"></div>
+          <div class="_1q_ULW_card"></div>
         </div>
       </div>
     </div>
@@ -402,7 +402,7 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
 
   const card = doc.querySelector('[data-composer-card]')
   const anchor = doc.querySelector('.overlayAnchor')
-  const menu = doc.querySelector('[data-trigger-menu]')
+  const menu = doc.querySelector('._1q_ULW_card')
 
   // A. Hero mode with plenty of room below
   card.getBoundingClientRect = () => ({ top: 300, bottom: 420, height: 120 })
@@ -414,6 +414,7 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   assert.equal(menu.style.top, 'calc(100% + 4px)')
   assert.equal(menu.style.bottom, 'auto')
   assert.equal(menu.style.maxHeight, '320px')
+  assert.equal(menu.style.zIndex, '1000')
 
   // B. Switch card to bottom mode (e.g. user scrolled or session with messages)
   card.getBoundingClientRect = () => ({ top: 880, bottom: 980, height: 100 })
@@ -427,7 +428,36 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   assert.equal(menu.style.bottom, '')
   assert.equal(menu.style.maxHeight, '')
   assert.equal(menu.style.pointerEvents, 'auto')
-  assert.equal(menu.style.zIndex, '80')
+  assert.equal(menu.style.zIndex, '1000')
+})
+
+test('syncMenuPlacement keeps skill trigger menu above input box even in hero mode (#2336)', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><body>
+    <div class="Q7WfXG_hero">
+      <div data-composer-card>
+        <div class="overlayAnchor">
+          <div data-trigger-menu class="iRJKyq_menu"></div>
+        </div>
+      </div>
+    </div>
+  </body></html>`)
+  const doc = dom.window.document
+  const win = dom.window
+  win.innerHeight = 1000
+
+  const card = doc.querySelector('[data-composer-card]')
+  const anchor = doc.querySelector('.overlayAnchor')
+  const menu = doc.querySelector('[data-trigger-menu]')
+
+  // Even with ample space below in hero mode, skill trigger menu stays on top
+  card.getBoundingClientRect = () => ({ top: 300, bottom: 420, height: 120 })
+  const result = syncMenuPlacement(menu, doc)
+  assert.equal(result, false)
+  assert.equal(menu.dataset.placement, undefined)
+  assert.equal(menu.style.bottom, '')
+  assert.equal(menu.style.top, '')
+  assert.equal(menu.style.pointerEvents, 'auto')
+  assert.equal(menu.style.zIndex, '1000')
 })
 
 test('bottom composer leftover overlay still leaves the menu clickable', () => {
@@ -464,11 +494,12 @@ test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
     <div class="Q7WfXG_hero">
       <div data-composer-card>
         <div class="overlayAnchor">
-          <div data-trigger-menu>
+          <div class="_1q_ULW_card">
             <button role="option">
               <span class="iRJKyq_itemName">从资产库添加</span>
             </button>
           </div>
+          <div data-trigger-menu class="iRJKyq_menu"></div>
         </div>
       </div>
     </div>
@@ -482,6 +513,8 @@ test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
   assert.equal(res.patchedIcons, 1)
   assert.equal(res.placedBelowCount, 1)
   assert.equal(card.dataset.menuPlacement, 'bottom')
+  const skillMenu = doc.querySelector('[data-trigger-menu]')
+  assert.equal(skillMenu.dataset.placement, undefined)
 })
 
 test('installMenuAutoSync handles pointerdown on add button and cleans up', () => {

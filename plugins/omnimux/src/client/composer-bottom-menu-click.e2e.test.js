@@ -30,6 +30,6 @@ describe('e2e: 首页沉底指令菜单可点', () => {
     assert.equal(doc.querySelector('.overlayAnchor').dataset.overlayPlacement, undefined)
     option.click()
     assert.equal(clicked, true)
-    assert.match(doc.getElementById('dsh-omnimux-menu-placement').textContent, /z-index: 80/)
+    assert.match(doc.getElementById('dsh-omnimux-menu-placement').textContent, /z-index: 1000/)
   })
 })
