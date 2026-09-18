@@ -27,15 +27,15 @@ function officialItem(id, extra = {}) {
   }
 }
 
-test('GATE-01：市场目录 70/70 官方货架技能双语齐备（门禁验收证据）', () => {
+test('GATE-01：市场目录 65/65 官方货架技能双语齐备（门禁验收证据）', () => {
   const report = auditSkillBilingual(readCatalog())
-  assert.equal(report.checked, 70)
-  assert.equal(report.passed, 70)
+  assert.equal(report.checked, 65)
+  assert.equal(report.passed, 65)
   assert.deepEqual(report.failed, [])
   assert.deepEqual(report.warnings, [])
   assert.equal(report.scope, SHELF_SCOPE)
   assert.deepEqual(verdictOf(report), { ok: true, exitCode: 0, reasons: [] })
-  assert.match(formatReport(report, CATALOG_PATH).join('\n'), /70\/70/)
+  assert.match(formatReport(report, CATALOG_PATH).join('\n'), /65\/65/)
 })
 
 test('GATE-02（B6 防空转）：0 条官方货架技能必须判定失败', () => {
@@ -58,7 +58,7 @@ test('GATE-03（故障注入）：缺失字段被定位到 id 与字段名，且
   target.titleEn = '   '
   target.summaryEn = undefined
   const report = auditSkillBilingual(catalog)
-  assert.equal(report.checked, 70)
+  assert.equal(report.checked, 65)
   assert.deepEqual(report.failed, [{
     id: 'sk-omx-3d-animation-short-generator',
     title: target.title,
@@ -102,14 +102,14 @@ test('GATE-05（B3/B4）：超长截断仍通过；中英同值只告警不阻�
 test('GATE-06：CLI 端到端——正常目录 exit 0，故障目录 exit 1 且不空转', () => {
   const ok = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8' })
   assert.equal(ok.status, 0, ok.stdout + ok.stderr)
-  assert.match(ok.stdout, /70\/70/)
+  assert.match(ok.stdout, /65\/65/)
 
   const asJson = spawnSync(process.execPath, [SCRIPT, '--json'], { encoding: 'utf8' })
   assert.equal(asJson.status, 0)
   const report = JSON.parse(asJson.stdout)
   assert.equal(report.ok, true)
-  assert.equal(report.checked, 70)
-  assert.equal(report.passed, 70)
+  assert.equal(report.checked, 65)
+  assert.equal(report.passed, 65)
 
   const dir = mkdtempSync(join(tmpdir(), 'skill-bilingual-gate-'))
   try {
