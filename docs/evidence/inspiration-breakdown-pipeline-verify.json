@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-18T02:47:45.114Z",
+  "results": [
+    {
+      "name": "shot breakdown table extraction",
+      "status": "PASS",
+      "shot_count": 4
+    },
+    {
+      "name": "semantic fallback with standard shots",
+      "status": "PASS",
+      "shot_count": 4
+    },
+    {
+      "name": "previewData integration with shots and segments",
+      "status": "PASS"
+    },
+    {
+      "name": "replication payload metadata shots attachment",
+      "status": "PASS"
+    }
+  ]
+}
