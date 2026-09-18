@@ -18,11 +18,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ApplicationManifest, FieldMappingEntry } from '../shared/manifest.ts';
+import { PRESET_WORKFLOW_SNAPSHOTS } from '../shared/builtinCatalogData.ts';
 
 function resolvePresetSnapshot(appId: string): any | null {
+  if (PRESET_WORKFLOW_SNAPSHOTS && PRESET_WORKFLOW_SNAPSHOTS[appId]) {
+    return PRESET_WORKFLOW_SNAPSHOTS[appId];
+  }
+
   try {
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
     const candidatePaths = [
+      path.resolve(currentDir, '../catalog/presets', `${appId}.workflow.json`),
       path.resolve(currentDir, '../../catalog/presets', `${appId}.workflow.json`),
       path.resolve(currentDir, '../../../catalog/presets', `${appId}.workflow.json`),
       path.resolve(process.cwd(), 'plugins/omnimux-apps/catalog/presets', `${appId}.workflow.json`),
