@@ -11,7 +11,15 @@
     const { SuiteDetailModal: PlazaSuiteDetailModal } = require("./plaza/SuiteDetailModal.jsx");
     const { renderExpertCard, ExpertCard } = require("./plaza/ExpertCard.jsx");
     const { renderFeaturedCard, FeaturedCard } = require("./plaza/FeaturedCard.jsx");
-    const { renderRegularCard, renderMineCard, MineToolbar, renderMineToolbar: plazaRenderMineToolbar, PlazaCardGrid } = require("./plaza/PlazaCardGrid.jsx");
+    const {
+      renderRegularCard,
+      renderMineCard,
+      MineToolbar,
+      renderMineToolbar: plazaRenderMineToolbar,
+      renderFeaturedSection: plazaRenderFeaturedSection,
+      renderRegularSection: plazaRenderRegularSection,
+      PlazaCardGrid,
+    } = require("./plaza/PlazaCardGrid.jsx");
     const {
       updateInstalledItemsList,
       filterMineItems,
@@ -202,16 +210,7 @@
     }
 
     function renderFeaturedSection(opts) {
-      const { featuredItems, tr, setOpen } = opts;
-      if (!featuredItems || !(featuredItems.length > 0)) return null;
-      return h("section", { className: "featured-section" },
-        h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
-          h("h2", { className: "featured-title", style: { margin: 0 } }, tr("workshop.featuredTitle") || "官方精选"),
-        ),
-        h("div", { className: "featured-grid" },
-          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, iconSrc, h })),
-        ),
-      );
+      return plazaRenderFeaturedSection({ ...opts, h });
     }
 
     function renderRegularStatus(statusOpts, tr) {
@@ -223,27 +222,7 @@
     }
 
     function renderRegularSection(opts) {
-      const { hasQuery, regularItems, uninstalledOnly, setUninstalledOnly, status, page, err, tr, setOpen, onToggle } = opts;
-      const titleKey = hasQuery ? "workshop.searchResults" : "workshop.otherTitle";
-      const statusNode = renderRegularStatus({ status, page, err, count: regularItems.length }, tr);
-      const onFilterClick = () => setUninstalledOnly(!uninstalledOnly);
-      return h("section", { className: "regular-section" },
-        h("div", { className: "regular-header" },
-          h("div", { className: "regular-title-row" },
-            h("span", null, tr(titleKey)),
-            h("span", { className: "regular-title-count" }, " · " + regularItems.length),
-          ),
-          h("div", { className: "regular-controls" },
-            h("div", { className: "filter-item" + (uninstalledOnly ? " checked" : ""), onClick: onFilterClick },
-              h("div", { className: "filter-circle" }),
-              h("span", null, tr("workshop.onlyUninstalled") || "仅显示未安装"),
-            ),
-            h("div", { className: "sort-btn" }, h("span", null, tr("workshop.sortRecent") || "排序: 最近")),
-          ),
-        ),
-        statusNode,
-        regularItems.length ? h("div", { className: "regular-grid" }, regularItems.map((item) => renderRegularCard(item, { tr, onOpen: setOpen, onToggle, h }))) : null,
-      );
+      return plazaRenderRegularSection({ ...opts, h });
     }
 
     function renderExpertsTab(opts) {
@@ -314,7 +293,7 @@
         featuredItems,
         mineToolbarOpts: { mineCategory: state.mineCategory, setMineCategory: state.setMineCategory, mineSource: state.mineSource, setMineSource: state.setMineSource, availableSources, autoUpdate: state.autoUpdate, setAutoUpdate: state.setAutoUpdate, tr },
         featuredSectionOpts: { featuredItems, tr, setOpen: state.setOpen },
-        regularSectionOpts: { hasQuery, regularItems, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
+        regularSectionOpts: { category: state.category, hasQuery, regularItems, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
       };
       return {
         isExpertTab,

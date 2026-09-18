@@ -1,0 +1,20 @@
+{
+  "task": "creatify-card-3cols-gradient",
+  "timestamp": "2026-09-18T17:00:28.335Z",
+  "verified": true,
+  "metrics": {
+    "totalSkills": 112,
+    "columns": 3,
+    "aspectRatio": "3:2",
+    "hasHotPicks": true,
+    "hasNewArrivals": true,
+    "hasExploreMore": true,
+    "coversType": "WebP Base64 Data URI + CSS Multi-layer Gradient",
+    "overlay": "mix-blend-mode: overlay dot matrix",
+    "badge": "Official Verified Svg Checkmark"
+  },
+  "evidence": {
+    "screenshot": "./docs/evidence/creatify-card-3cols-gradient-verified.png",
+    "html": "/tmp/creatify_cards_verify.html"
+  }
+}

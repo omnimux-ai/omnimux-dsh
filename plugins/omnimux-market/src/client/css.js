@@ -565,12 +565,12 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   display: none !important;
 }
 
-/* 1:1 复刻 3:2 营销技能卡片与置顶网格 */
+/* 1:1 复刻 3:2 营销技能卡片与置顶网格（严格一行三个） */
 .cards-grid, .featured-grid {
   display:grid !important; grid-template-columns:repeat(3, minmax(0, 1fr)) !important; gap:16px !important;
 }
-@media (max-width:1100px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
-@media (max-width:680px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
+@media (max-width:640px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
+@media (max-width:440px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
 
 .omnimux-creatify-card {
   position:relative; width:100%; aspect-ratio:3 / 2;
@@ -597,7 +597,7 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 }
 .omnimux-creatify-dot-overlay {
   position:absolute; inset:0;
-  background-image:radial-gradient(circle, rgba(255, 255, 255, 0.38) 0.7px, transparent 1px); // exempt-ui03: 1:1复刻点阵纹理覆盖
+  background-image:radial-gradient(circle, var(--dsw-static-white-38, rgba(255, 255, 255, 0.38)) 0.7px, transparent 1px); /* exempt-ui03: 1:1复刻点阵纹理覆盖 */
   background-size:8px 8px; mix-blend-mode:overlay; pointer-events:none;
 }
 .omnimux-creatify-card-top-left {
@@ -607,13 +607,13 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .omnimux-creatify-badge-hot {
   display:flex; align-items:center; justify-content:center;
   width:28px; height:28px; border-radius:8px;
-  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px); // exempt-ui03: 热门火苗金色微光底色
+  background:var(--dsw-alias-brand-bg, rgba(228, 152, 0, 0.18)); backdrop-filter:blur(12px); /* exempt-ui03: 热门火苗金色微光底色 */
   color:var(--dsw-alias-brand-primary, #EDA921);
 }
 .omnimux-creatify-badge-new {
   display:flex; align-items:center; justify-content:center;
   height:28px; padding:0 9px; border-radius:8px;
-  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px); // exempt-ui03: 新品微标金色微光底色
+  background:var(--dsw-alias-brand-bg, rgba(228, 152, 0, 0.18)); backdrop-filter:blur(12px); /* exempt-ui03: 新品微标金色微光底色 */
   color:var(--dsw-alias-brand-primary, #EDA921); font-size:11px; font-weight:600;
 }
 .omnimux-creatify-pill-cat {
@@ -637,8 +637,8 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 }
 .omnimux-creatify-star-btn.active {
   color:var(--dsw-alias-brand-primary, #EDA921);
-  background:rgba(237, 169, 33, 0.18); // exempt-ui03: 收藏高亮微光
-  border-color:rgba(237, 169, 33, 0.3); // exempt-ui03: 收藏高亮边框
+  background:var(--dsw-alias-brand-bg, rgba(237, 169, 33, 0.18)); /* exempt-ui03: 收藏高亮微光 */
+  border-color:var(--dsw-alias-brand-border, rgba(237, 169, 33, 0.3)); /* exempt-ui03: 收藏高亮边框 */
 }
 .omnimux-creatify-card-center {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -654,7 +654,7 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 }
 .omnimux-creatify-drawer-bg {
   position:absolute; inset:0;
-  background:linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 65%, transparent 100%); // exempt-ui03: 悬停抽屉渐变遮罩
+  background:linear-gradient(to top, var(--dsw-alias-mask-92, rgba(0, 0, 0, 0.92)) 0%, var(--dsw-alias-mask-55, rgba(0, 0, 0, 0.55)) 65%, transparent 100%); /* exempt-ui03: 悬停抽屉渐变遮罩 */
   opacity:0; transition:opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-creatify-card:hover .omnimux-creatify-drawer-bg {
