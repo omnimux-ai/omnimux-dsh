@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>AI 应用编辑与副本创建画布跳转演示</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #121214;
+      --dsw-alias-bg-layer-1: #18181b;
+      --dsw-alias-bg-layer-2: #222226;
+      --dsw-alias-bg-layer-3: #2c2c32;
+      --dsw-alias-border-l1: #3f3f46;
+      --dsw-alias-border-l2: #27272a;
+      --dsw-alias-label-primary: #f4f4f5;
+      --dsw-alias-label-secondary: #a1a1aa;
+      --dsw-alias-label-tertiary: #71717a;
+      --dsw-alias-brand-primary: #818cf8;
+      --dsw-alias-state-success-primary: #34d399;
+      --dsw-alias-state-success-tertiary: rgba(16, 185, 129, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    
+    /* 顶部窗口模拟 */
+    .mock-window-bar {
+      height: 38px; background: #1c1c1f; border-bottom: 1px solid var(--dsw-alias-border-l2);
+      display: flex; align-items: center; padding: 0 14px; gap: 8px; user-select: none;
+    }
+    .win-btn { width: 12px; height: 12px; border-radius: 50%; }
+    .win-close { background: #ef4444; }
+    .win-min { background: #f59e0b; }
+    .win-max { background: #10b981; }
+    .win-title { font-size: 12px; color: var(--dsw-alias-label-secondary); margin-left: 12px; font-weight: 500; }
+
+    /* 主布局 */
+    .app-main { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--dsw-alias-bg-base); }
+    
+    /* 顶部应用 Header - 核心改造点 */
+    .omx-apptab-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--dsw-alias-border-l2);
+      background: var(--dsw-alias-bg-layer-1); flex-shrink: 0; gap: 16px;
+    }
+    .omx-apptab-header-left {
+      display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;
+    }
+    .omx-apptab-title {
+      font-size: 16px; font-weight: 600; color: var(--dsw-alias-label-primary); flex-shrink: 0;
+    }
+    .omx-apptab-badge {
+      padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
+      background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-secondary);
+      border: 1px solid var(--dsw-alias-border-l1); flex-shrink: 0;
+    }
+    .omx-apptab-version {
+      font-size: 12px; color: var(--dsw-alias-label-tertiary); flex-shrink: 0;
+    }
+    /* 标题描述紧随标题右侧，不飘到最右端 */
+    .omx-apptab-desc {
+      font-size: 13px; color: var(--dsw-alias-label-secondary);
+      margin-left: 4px; max-width: 620px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    
+    /* 右上角新增极简编辑应用按钮 */
+    .omx-apptab-header-right {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .omx-apptab-edit-btn {
+      display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px;
+      border-radius: 6px; font-size: 12px; font-weight: 500;
+      color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2);
+      border: 1px solid var(--dsw-alias-border-l2); cursor: pointer; transition: all 0.15s ease;
+    }
+    .omx-apptab-edit-btn:hover {
+      background: var(--dsw-alias-bg-layer-3); border-color: var(--dsw-alias-border-l1);
+    }
+    .omx-apptab-edit-icon { width: 14px; height: 14px; stroke: currentColor; }
+
+    .omx-apptab-notice {
+      font-size: 12px; padding: 4px 10px; border-radius: 4px; line-height: 1;
+      background: var(--dsw-alias-state-success-tertiary); color: var(--dsw-alias-state-success-primary);
+      border: 1px solid var(--dsw-alias-border-l1);
+    }
+
+    /* 左右分栏内容体 */
+    .omx-apptab-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    
+    /* 左侧表单 (448px) */
+    .omx-apptab-form-panel {
+      width: 448px; border-right: 1px solid var(--dsw-alias-border-l2);
+      padding: 24px; display: flex; flex-direction: column; overflow-y: auto;
+      background: var(--dsw-alias-bg-base); gap: 20px; flex-shrink: 0;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label-row { display: flex; align-items: center; justify-content: space-between; }
+    .form-label { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+    .form-hint { font-size: 12px; color: var(--dsw-alias-label-tertiary); }
+    .form-input {
+      height: 40px; border-radius: 6px; background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-primary);
+      padding: 0 12px; font-size: 13px; outline: none;
+    }
+    .form-textarea {
+      height: 80px; border-radius: 6px; background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-primary);
+      padding: 10px 12px; font-size: 13px; resize: none; outline: none; line-height: 1.4;
+    }
+    .form-cta-btn {
+      margin-top: auto; height: 44px; border-radius: 8px; background: #fafafa;
+      color: #09090b; font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    /* 右侧产物与任务 */
+    .omx-apptab-output-panel { flex: 1; display: flex; flex-direction: column; padding: 24px; gap: 16px; }
+    .nav-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--dsw-alias-border-l2); padding-bottom: 12px; }
+    .nav-item { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); cursor: pointer; }
+    .nav-item.inactive { color: var(--dsw-alias-label-tertiary); }
+    .output-card {
+      border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px;
+      background: var(--dsw-alias-bg-layer-1); padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .output-video-ph {
+      height: 400px; background: #000; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .output-video-ph img { height: 100%; object-fit: cover; opacity: 0.85; }
+
+    /* 模拟跳转画布与工作流打组浮层指示 */
+    .canvas-peek-badge {
+      position: fixed; bottom: 20px; right: 24px; background: #18181b; border: 1px solid var(--dsw-alias-border-l1);
+      padding: 12px 18px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: flex; align-items: center; gap: 12px; z-index: 999;
+    }
+    .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.4; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.4; transform: scale(0.9); } }
+  </style>
+</head>
+<body>
+  <!-- 窗口标题栏 -->
+  <div class="mock-window-bar">
+    <div class="win-btn win-close"></div>
+    <div class="win-btn win-min"></div>
+    <div class="win-btn win-max"></div>
+    <div class="win-title">OmniMux AI 应用工作台 · 手机与网页交互实机演示</div>
+  </div>
+
+  <div class="app-main">
+    <!-- 顶部应用 Header (标题、紧跟右侧的描述、右上角编辑应用按键) -->
+    <div class="omx-apptab-header">
+      <div class="omx-apptab-header-left">
+        <div class="omx-apptab-title">手机与网页交互实机演示</div>
+        <span class="omx-apptab-badge">视频应用</span>
+        <span class="omx-apptab-version">v1.0.0</span>
+        <!-- 核心实现：标题描述放置在标题右侧紧随其后 -->
+        <div class="omx-apptab-desc" title="适用于 SaaS 界面穿屏、手机 App 操作流程实录与软件出海推广">
+          适用于 SaaS 界面穿屏、手机 App 操作流程实录与软件出海推广
+        </div>
+      </div>
+      <div class="omx-apptab-header-right">
+        <div class="omx-apptab-notice">
+          ✔ 官方模板可一键创建副本工程并跳转画布
+        </div>
+        <!-- 核心实现：右上角新增「编辑应用」按钮 -->
+        <button class="omx-apptab-edit-btn" id="editAppBtn">
+          <svg class="omx-apptab-edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          <span>编辑应用</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 核心双栏工作台 -->
+    <div class="omx-apptab-body">
+      <!-- 左侧动态表单 -->
+      <div class="omx-apptab-form-panel">
+        <div class="form-group">
+          <div class="form-label-row">
+            <span class="form-label">商品主图 / 白底图 *</span>
+            <span class="form-hint">支持拖拽或粘贴电商图</span>
+          </div>
+          <input class="form-input" value="https://cdn.creatify.ai/community_creation/preview_image_35c9be15.webp" />
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-row">
+            <span class="form-label">核心卖点与旁白分镜 *</span>
+            <span class="form-hint">填入 1~3 句核心商品卖点</span>
+          </div>
+          <textarea class="form-textarea">Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product.</textarea>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-row">
+            <span class="form-label">解说人声音色</span>
+            <span class="form-hint">选择 AI 配音解说音色</span>
+          </div>
+          <input class="form-input" value="zh_female_energetic (活力女声)" />
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-row">
+            <span class="form-label">视频成片比例</span>
+            <span class="form-hint">选择适用的平台播放比例</span>
+          </div>
+          <input class="form-input" value="9:16 (竖屏)" />
+        </div>
+
+        <button class="form-cta-btn">
+          ✨ 立即生成
+        </button>
+      </div>
+
+      <!-- 右侧任务展示与媒体回放 -->
+      <div class="omx-apptab-output-panel">
+        <div class="nav-tabs">
+          <span class="nav-item">任务记录 (1)</span>
+          <span class="nav-item inactive">示例演示 (1)</span>
+        </div>
+        <div class="output-card">
+          <div style="font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+            <span style="color: #34d399;">✔ 生成成功</span>
+            <span style="color: #71717a; font-size: 11px;">20:30:19 · task_1789733599945</span>
+          </div>
+          <div class="output-video-ph">
+            <img src="https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp" alt="成片预览" />
+          </div>
+          <div style="font-size: 12px; color: var(--dsw-alias-label-secondary); line-height: 1.5;">
+            商品主图 / 白底图: preview_image_35c9be15.webp · 核心卖点与旁白: Place your laptop screenshot into this engaging UGC video... · 比例: 9:16
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部右下角闭环证据提示面板 -->
+  <div class="canvas-peek-badge">
+    <div class="pulse-dot"></div>
+    <div>
+      <div style="font-size: 13px; font-weight: 600;">全链路编辑与副本闭环已就绪</div>
+      <div style="font-size: 11px; color: var(--dsw-alias-label-secondary);">同一个用户直达源工程 · 不同用户克隆副本打组 · 发布后项目库 AI 应用可见</div>
+    </div>
+  </div>
+</body>
+</html>
