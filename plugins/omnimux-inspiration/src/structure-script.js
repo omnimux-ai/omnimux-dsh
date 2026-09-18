@@ -34,6 +34,25 @@ export function parseDurationSeconds(value) {
   return null
 }
 
+/**
+ * Resolve start and end seconds for a shot record.
+ * @param {any} shot
+ * @returns {{ start: number, end: number }}
+ */
+export function parseShotTimeWindow(shot) {
+  if (!shot || typeof shot !== 'object') return { start: 0, end: 0 }
+  let start = shot.start_seconds
+  let end = shot.end_seconds
+  if (start == null && typeof shot.time_range === 'string') {
+    const parts = shot.time_range.split(/[-–—~]/).map((p) => p.trim())
+    if (parts[0]) start = parseDurationSeconds(parts[0])
+    if (parts[1]) end = parseDurationSeconds(parts[1])
+  }
+  const safeStart = Number.isFinite(start) && start >= 0 ? start : 0
+  const safeEnd = Number.isFinite(end) && end > safeStart ? end : safeStart + 3
+  return { start: safeStart, end: safeEnd }
+}
+
 export function formatTimecode(seconds) {
   const value = parseDurationSeconds(seconds)
   if (value == null) return ''

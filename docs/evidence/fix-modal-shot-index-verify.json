@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-09-18T05:12:33.028Z",
+  "results": [
+    {
+      "name": "parseShotTimeWindow from seconds",
+      "status": "PASS"
+    },
+    {
+      "name": "parseShotTimeWindow from time_range",
+      "status": "PASS"
+    },
+    {
+      "name": "parseShotTimeWindow safe fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "currentShotIndex and handleSeekShot definitions",
+      "status": "PASS"
+    }
+  ]
+}
