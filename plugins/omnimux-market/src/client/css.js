@@ -565,12 +565,12 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   display: none !important;
 }
 
-/* 1:1 复刻 3:2 营销技能卡片与置顶网格 */
+/* 1:1 复刻 3:2 营销技能卡片与置顶网格（严格一行三个） */
 .cards-grid, .featured-grid {
   display:grid !important; grid-template-columns:repeat(3, minmax(0, 1fr)) !important; gap:16px !important;
 }
-@media (max-width:1100px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
-@media (max-width:680px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
+@media (max-width:640px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
+@media (max-width:440px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
 
 .omnimux-creatify-card {
   position:relative; width:100%; aspect-ratio:3 / 2;

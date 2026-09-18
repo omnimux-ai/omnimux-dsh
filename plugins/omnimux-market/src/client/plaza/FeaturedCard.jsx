@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCardVisual } from './cardCoversData.js';
 import {
   resolveIconSrc,
   resolveItemDesc,
@@ -9,6 +10,56 @@ import {
 const h = React.createElement;
 
 const COVER_NUMS = [4, 5, 6, 7, 9, 10, 2, 3];
+
+/** 紧凑宽度下文字标签退出布局后，按钮靠图标保持可辨识；图标同时是无障碍名称之外的视觉锚点。 */
+export function renderHoverIcon(kind) {
+  const common = {
+    width: 14,
+    height: 14,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': 'true',
+    focusable: 'false',
+  };
+  if (kind === 'detail') {
+    return h('svg', common,
+      h('path', { d: 'M2.062 12.348a1 1 0 0 1 0-.696A10.75 10.75 0 0 1 21.938 12.348a1 1 0 0 1 0 .696A10.75 10.75 0 0 1 2.062 12.348' }),
+      h('circle', { cx: 12, cy: 12, r: 3 }),
+    );
+  }
+  return h('svg', common,
+    h('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }),
+  );
+}
+
+export function renderFeaturedHoverActions(item, opts) {
+  const { tr, onOpen, onTry } = opts || {};
+  const onOpenClick = (e) => { e && e.stopPropagation(); onOpen && onOpen(item); };
+  const onTryClick = (e) => { e && e.stopPropagation(); (onTry || safeTrySkillInSession)(item); };
+  const detailTitle = tr ? (tr('workshop.detail') || '查看详情') : '查看详情';
+  const tryTitle = tr ? (tr('workshop.try') || '去对话中试试') : '去对话中试试';
+
+  return h('div', { className: 'featured-hover-actions' },
+    h('button', {
+      type: 'button',
+      className: 'hover-btn hover-btn-detail',
+      onClick: onOpenClick,
+      'aria-label': detailTitle,
+      title: detailTitle,
+    }, renderHoverIcon('detail'), h('span', { className: 'hover-btn-label' }, detailTitle)),
+    h('button', {
+      type: 'button',
+      className: 'hover-btn hover-btn-try',
+      onClick: onTryClick,
+      'aria-label': tryTitle,
+      title: tryTitle,
+    }, renderHoverIcon('try'), h('span', { className: 'hover-btn-label' }, tryTitle)),
+  );
+}
 
 // 纯矢量认证打勾徽章
 function renderVerifiedSvg() {
@@ -112,14 +163,17 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
   } else if (opts && typeof opts === 'object') {
     safeOpts = opts;
   }
-  const { tr, onOpen, onTry } = safeOpts;
+  const { tr, onOpen, onTry, cardIndex } = safeOpts;
   const title = resolveItemTitle(item, tr);
   const desc = resolveItemDesc(item, tr) || '暂无描述';
 
-  // 计算循环封面索引
-  const idx = Math.abs(String(item.id || item.slug).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0));
-  const coverIndex = typeof item.coverIndex === 'number' ? item.coverIndex : COVER_NUMS[idx % COVER_NUMS.length];
-  const coverSrc = `/omnimux/assets/skill-card-covers/skill-card-${coverIndex}.webp`;
+  // 1:1 视觉流光渐变与真实 WebP 封面生成算法（优先覆盖 item.homeCover / item.cover 及 featured-cover-svg 回退）
+  // 优先采用显式列表索引 cardIndex 或 coverIndex，确保与官方序列完全一致
+  const targetIndex = typeof cardIndex === 'number'
+    ? cardIndex
+    : (typeof item.coverIndex === 'number' ? item.coverIndex : item);
+  const visual = getCardVisual(targetIndex);
+  const coverSrc = visual.coverData || `/omnimux/assets/skill-card-covers/skill-card-${visual.num}.webp`;
 
   const isHot = Boolean(item.isHot || item.tags?.includes('热门精选'));
   const isNew = Boolean(item.isNew || item.tags?.includes('新品上市'));
@@ -137,6 +191,7 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     className: 'featured-card omnimux-creatify-card',
     onClick: onCardClick,
     title,
+    style: { background: visual.gradient },
   },
     // 1. 渐变大封面图
     h('img', {
