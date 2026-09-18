@@ -329,7 +329,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             background: 'var(--dsw-alias-bg-elevated)',
             border: '1px solid var(--dsw-alias-border)',
             borderRadius: '16px',
-            boxShadow: '0 20px 48px rgba(0, 0, 0, 0.65)',
+            boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
             backdropFilter: 'blur(20px)',
             zIndex: 130,
             overflow: 'hidden',
@@ -391,7 +391,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
                 border: '1px solid var(--dsw-alias-border)',
                 borderRadius: '16px',
                 padding: '16px',
-                boxShadow: '0 24px 48px rgba(0, 0, 0, 0.7)',
+                boxShadow: '0 24px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.7))', /* exempt-ui03: 建议卡片阴影 */
                 backdropFilter: 'blur(20px)',
               }}
             >
@@ -428,7 +428,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             background: 'var(--dsw-alias-bg-elevated)',
             border: '1px solid var(--dsw-alias-border)',
             borderRadius: '14px',
-            boxShadow: '0 20px 48px rgba(0, 0, 0, 0.65)',
+            boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
             backdropFilter: 'blur(20px)',
             zIndex: 130,
             overflow: 'hidden',
