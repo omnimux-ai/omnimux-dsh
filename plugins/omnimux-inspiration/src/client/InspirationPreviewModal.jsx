@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge, Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
 import { formatPlatformName } from './feed-helpers.js'
+import { cleanScriptDisplay, parseShotTimeWindow } from '../structure-script.js'
 import {
   createShareLink,
   getLocalInspiration,
@@ -71,15 +72,7 @@ const ICON_MIC = (
   </svg>
 )
 
-export function cleanScriptDisplay(raw) {
-  if (!raw || typeof raw !== 'string') return ''
-  let text = raw.trim()
-  text = text.replace(/<br\s*\/?>/gi, ' ')
-  text = text.replace(/^[（(]?(?:Overlay|CTA\s+Banner|Audio|Text|Music|SFX|Voiceover|Visual|画面|口播)[)）]?\s*[:：]?\s*/i, '')
-  text = text.replace(/\*\*/g, '')
-  text = text.replace(/^["“”]+|["“”]+$/g, '')
-  return text.trim()
-}
+export { cleanScriptDisplay } from '../structure-script.js'
 
 function formatDocQuote(quote) {
   const plain = renderPlainBreakdownText(quote).replace(/^["“]|["”]$/g, '').trim()
@@ -284,6 +277,24 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const data = useMemo(() => getInspirationPreviewData(item), [item])
   if (!row) return null
+
+  const currentShotIndex = useMemo(() => {
+    if (!data?.shots?.length) return -1
+    return data.shots.findIndex((shot) => {
+      const { start, end } = parseShotTimeWindow(shot)
+      return currentTime >= start && currentTime < end
+    })
+  }, [data?.shots, currentTime])
+
+  const handleSeekShot = (shot) => {
+    if (!shot) return
+    const { start } = parseShotTimeWindow(shot)
+    if (videoRef.current) {
+      videoRef.current.currentTime = start
+      videoRef.current.play?.().catch(() => {})
+      setIsPlaying(true)
+    }
+  }
 
   const sourceUrl = data.safeItem.source_url
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
