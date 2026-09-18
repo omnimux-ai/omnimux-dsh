@@ -208,9 +208,9 @@ function closeDetails() {
 
 function resolveTargetFocusMode(sessionId, tabId) {
   const map = loadSessionFocusMap(sessionId)
-  const explicitMode = map[tabId]?.mode
-  if (explicitMode === WORKBENCH_FOCUS.gui || explicitMode === WORKBENCH_FOCUS.split) {
-    return explicitMode
+  const record = map[tabId]
+  if (record?.explicit === true && (record.mode === WORKBENCH_FOCUS.gui || record.mode === WORKBENCH_FOCUS.split)) {
+    return record.mode
   }
   return resolveDefaultFocus(tabId)
 }

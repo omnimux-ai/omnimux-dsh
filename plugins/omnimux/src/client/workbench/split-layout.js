@@ -367,7 +367,8 @@ function updateFocusRecord(mode, sessionId, effectiveTabId) {
   const record = focusRecordForTab(sessionId, effectiveTabId)
   if (mode !== WORKBENCH_FOCUS.chat && sessionId && effectiveTabId) {
     record.mode = mode
-    persistSessionFocus(sessionId, effectiveTabId, { mode })
+    record.explicit = true
+    persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: true })
   }
   return record
 }

@@ -140,7 +140,7 @@ function syncAttachedPanelFocus(store, sessionId, tabId, state) {
   const record = focusRecordForTab(sessionId, tabId)
   persistClampedSplitWidth({ state, record, sessionId, tabId })
 
-  if (record.mode === WORKBENCH_FOCUS.gui) {
+  if (record.explicit === true && record.mode === WORKBENCH_FOCUS.gui) {
     setWorkbenchFocus(record.mode, store)
     return
   }
