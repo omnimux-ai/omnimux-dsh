@@ -613,6 +613,30 @@ export const PRODUCTS_CSS = `
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
+.omnimux-products-thumb-wrap {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-products-thumb-button {
+  all: unset;
+  display: block;
+  cursor: zoom-in;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+  line-height: 0;
+}
+.omnimux-products-thumb-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+}
+.omnimux-products-thumb-button:focus-visible {
+  outline: 2px solid var(--dsw-alias-button-primary-fill);
+  outline-offset: 2px;
+}
 .omnimux-products-media-thumb {
   flex: none;
   width: 40px;
@@ -620,6 +644,116 @@ export const PRODUCTS_CSS = `
   border-radius: 8px;
   object-fit: cover;
   background: var(--dsw-alias-bg-module-platform);
+  display: block;
+}
+.omnimux-products-thumb-popover {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.95);
+  z-index: 120;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-bg-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 16px 36px var(--dsw-alias-shadow-elevated, rgba(0, 0, 0, 0.45));
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.18s;
+  width: 190px;
+  box-sizing: border-box;
+}
+.omnimux-products-thumb-wrap:hover .omnimux-products-thumb-popover,
+.omnimux-products-thumb-button:focus-visible + .omnimux-products-thumb-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) scale(1);
+}
+.omnimux-products-popover-image {
+  width: 100%;
+  height: 174px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-module-platform);
+  display: block;
+}
+.omnimux-products-popover-footer {
+  margin-top: 6px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-products-popover-hint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 24px;
+  box-sizing: border-box;
+  animation: omnimux-products-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-products-lightbox-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.omnimux-products-lightbox-image {
+  max-width: 90vw;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  box-shadow: 0 24px 64px var(--dsw-alias-shadow-elevated, rgba(0, 0, 0, 0.75));
+  display: block;
+}
+.omnimux-products-lightbox-caption {
+  margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-products-lightbox-close {
+  position: absolute !important;
+  top: 20px;
+  right: 20px;
+  background: var(--dsw-alias-bg-elevated) !important;
+  border: 1px solid var(--dsw-alias-border-l2) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  border-radius: 50% !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+.omnimux-products-lightbox-close:hover {
+  background: var(--dsw-alias-bg-layer-3) !important;
+  transform: scale(1.08);
 }
 .omnimux-products-filelist-name {
   flex: 1;

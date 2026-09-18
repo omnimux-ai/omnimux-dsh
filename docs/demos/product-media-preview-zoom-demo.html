@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>产品库详情 · 缩略图悬停放大与点击查看大图演示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --dsw-alias-bg-base: #111113;
+      --dsw-alias-bg-layer-1: rgba(255, 255, 255, 0.04);
+      --dsw-alias-bg-layer-2: rgba(255, 255, 255, 0.06);
+      --dsw-alias-bg-layer-3: rgba(255, 255, 255, 0.08);
+      --dsw-alias-bg-elevated: #1c1c1f;
+      --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.82);
+      --dsw-alias-bg-module-platform: #18181b;
+      --dsw-alias-label-primary: #ffffff;
+      --dsw-alias-label-secondary: rgba(255, 255, 255, 0.72);
+      --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.40);
+      --dsw-alias-label-primary-foreground: #ffffff;
+      --dsw-alias-border-l1: rgba(255, 255, 255, 0.06);
+      --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+      --dsw-alias-border-l3: rgba(255, 255, 255, 0.22);
+      --dsw-alias-button-primary-fill: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--dsw-alias-bg-base);
+      color: var(--dsw-alias-label-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .demo-header {
+      width: min(840px, 100%);
+      margin-bottom: 24px;
+    }
+    .demo-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .demo-tag {
+      font-size: 12px;
+      font-weight: normal;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .demo-desc {
+      font-size: 13px;
+      color: var(--dsw-alias-label-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+    .card-panel {
+      width: min(840px, 100%);
+      background: var(--dsw-alias-bg-elevated);
+      border: 1px solid var(--dsw-alias-border-l2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--dsw-alias-label-secondary);
+    }
+    .omnimux-products-filelist {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .omnimux-products-filelist-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border-left: 2px solid transparent;
+      background: rgba(255, 255, 255, 0.02);
+      transition: background 0.15s ease;
+    }
+    .omnimux-products-filelist-row:hover {
+      background: var(--dsw-alias-bg-layer-2);
+    }
+    .omnimux-products-filelist-row.is-cover {
+      background: var(--dsw-alias-bg-layer-2);
+      border-left-color: var(--dsw-alias-button-primary-fill);
+    }
+    .omnimux-products-thumb-wrap {
+      position: relative;
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .omnimux-products-thumb-button {
+      all: unset;
+      display: block;
+      cursor: zoom-in;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+      line-height: 0;
+    }
+    .omnimux-products-thumb-button:hover {
+      transform: scale(1.06);
+      box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+    }
+    .omnimux-products-media-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--dsw-alias-bg-module-platform);
+      display: block;
+    }
+    .omnimux-products-thumb-popover {
+      position: absolute;
+      left: calc(100% + 14px);
+      top: 50%;
+      transform: translateY(-50%) scale(0.95);
+      z-index: 120;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--dsw-alias-bg-elevated);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--dsw-alias-border-l3);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+      transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                  visibility 0.18s;
+      width: 190px;
+      box-sizing: border-box;
+    }
+    .omnimux-products-thumb-wrap:hover .omnimux-products-thumb-popover {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-50%) scale(1);
+    }
+    .omnimux-products-popover-image {
+      width: 100%;
+      height: 174px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: var(--dsw-alias-bg-module-platform);
+      display: block;
+    }
+    .omnimux-products-popover-footer {
+      margin-top: 6px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .omnimux-products-popover-hint {
+      font-size: 11px;
+      color: var(--dsw-alias-label-tertiary);
+    }
+    .omnimux-products-filelist-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--dsw-alias-label-primary);
+    }
+    .omnimux-products-cover-badge {
+      flex: none;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--dsw-alias-button-primary-fill);
+      color: var(--dsw-alias-label-primary-foreground);
+    }
+    .btn-action {
+      all: unset;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--dsw-alias-label-secondary);
+      border: 1px solid var(--dsw-alias-border-l2);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .btn-action:hover {
+      background: var(--dsw-alias-bg-layer-3);
+      color: var(--dsw-alias-label-primary);
+    }
+    .btn-close {
+      all: unset;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--dsw-alias-label-tertiary);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .btn-close:hover {
+      background: var(--dsw-alias-bg-layer-3);
+      color: var(--dsw-alias-label-primary);
+    }
+    .omnimux-products-lightbox-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: var(--dsw-alias-bg-mask-1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 24px;
+      box-sizing: border-box;
+      animation: omnimux-products-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .omnimux-products-lightbox-backdrop.active {
+      display: flex;
+    }
+    @keyframes omnimux-products-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .omnimux-products-lightbox-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    .omnimux-products-lightbox-image {
+      max-width: 90vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid var(--dsw-alias-border-l3);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+      display: block;
+    }
+    .omnimux-products-lightbox-caption {
+      margin-top: 12px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: var(--dsw-alias-bg-layer-3);
+      border: 1px solid var(--dsw-alias-border-l2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--dsw-alias-label-primary);
+      font-size: 13px;
+      max-width: 80vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .omnimux-products-lightbox-close {
+      all: unset;
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--dsw-alias-bg-elevated);
+      border: 1px solid var(--dsw-alias-border-l2);
+      color: var(--dsw-alias-label-primary);
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .omnimux-products-lightbox-close:hover {
+      background: var(--dsw-alias-bg-layer-3);
+      transform: scale(1.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-header">
+    <h1 class="demo-title">
+      产品库详情 · 素材缩略图交互演示
+      <span class="demo-tag">交互就绪</span>
+    </h1>
+    <p class="demo-desc">
+      1. <strong>鼠标悬停</strong>左侧缩略图：平滑展开中等尺寸高清预览浮窗，扫视无需点击；<br />
+      2. <strong>点击缩略图</strong>：立即打开全屏高清大图灯箱，支持点击背景、右上角关闭或按 ESC 退出。
+    </p>
+  </div>
+
+  <div class="card-panel">
+    <div class="section-title">媒体素材列表（共 9 张）</div>
+    <ul class="omnimux-products-filelist" id="fileList"></ul>
+  </div>
+
+  <!-- 全屏大图灯箱 -->
+  <div class="omnimux-products-lightbox-backdrop" id="lightbox" role="dialog" aria-modal="true">
+    <div class="omnimux-products-lightbox-container">
+      <img class="omnimux-products-lightbox-image" id="lightboxImg" src="" alt="大图预览" />
+      <div class="omnimux-products-lightbox-caption">
+        <span id="lightboxName"></span>
+      </div>
+    </div>
+    <button type="button" class="omnimux-products-lightbox-close" id="lightboxClose" title="关闭大图预览 (Esc)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6 6 18"></path>
+        <path d="m6 6 12 12"></path>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    function createPerfumeSvg(index, title, color) {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+          <defs>
+            <linearGradient id="g${index}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${color.top}" />
+              <stop offset="100%" stop-color="${color.bot}" />
+            </linearGradient>
+            <filter id="f${index}" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="rgba(0,0,0,0.4)"/>
+            </filter>
+          </defs>
+          <rect width="100%" height="100%" fill="#1a1a1e"/>
+          <g filter="url(#f${index})">
+            <rect x="135" y="60" width="30" height="25" rx="4" fill="#d4af37"/>
+            <rect x="142" y="50" width="16" height="12" rx="2" fill="#e5c158"/>
+            <rect x="130" y="85" width="40" height="20" rx="4" fill="#a1a1aa"/>
+            <rect x="75" y="105" width="150" height="230" rx="36" fill="url(#g${index})"/>
+            <rect x="95" y="170" width="110" height="90" rx="10" fill="rgba(255,255,255,0.92)"/>
+            <text x="150" y="205" font-size="14" font-weight="bold" fill="#18181b" text-anchor="middle" font-family="sans-serif">PERFUME</text>
+            <text x="150" y="225" font-size="11" fill="#71717a" text-anchor="middle" font-family="sans-serif">No. 0${index + 1} LUXE</text>
+            <text x="150" y="245" font-size="9" fill="#a1a1aa" text-anchor="middle" font-family="sans-serif">100ml / 3.4 FL.OZ</text>
+          </g>
+          <ellipse cx="150" cy="360" rx="70" ry="10" fill="rgba(0,0,0,0.3)"/>
+        </svg>
+      `;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    const colors = [
+      { top: '#fb7185', bot: '#e11d48' },
+      { top: '#fdba74', bot: '#ea580c' },
+      { top: '#f472b6', bot: '#db2777' },
+      { top: '#c084fc', bot: '#9333ea' },
+      { top: '#f87171', bot: '#dc2626' },
+      { top: '#38bdf8', bot: '#0284c7' },
+      { top: '#4ade80', bot: '#16a34a' },
+      { top: '#818cf8', bot: '#4f46e5' },
+      { top: '#fbbf24', bot: '#d97706' },
+    ];
+
+    const items = Array.from({ length: 9 }, (_, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      const filename = `perfume-bottle-1733226176534972037-${num}.webp`;
+      return {
+        id: `med_${i + 1}`,
+        filename,
+        isCover: i === 0,
+        src: createPerfumeSvg(i, filename, colors[i % colors.length]),
+      };
+    });
+
+    const fileListEl = document.getElementById('fileList');
+    const lightboxEl = document.getElementById('lightbox');
+    const lightboxImgEl = document.getElementById('lightboxImg');
+    const lightboxNameEl = document.getElementById('lightboxName');
+    const lightboxCloseEl = document.getElementById('lightboxClose');
+
+    function openLightbox(src, name) {
+      lightboxImgEl.src = src;
+      lightboxNameEl.textContent = name;
+      lightboxEl.classList.add('active');
+    }
+
+    function closeLightbox() {
+      lightboxEl.classList.remove('active');
+      lightboxImgEl.src = '';
+    }
+
+    lightboxCloseEl.addEventListener('click', closeLightbox);
+    lightboxEl.addEventListener('click', (e) => {
+      if (e.target === lightboxEl) closeLightbox();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && lightboxEl.classList.contains('active')) {
+        closeLightbox();
+      }
+    });
+
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.className = item.isCover ? 'omnimux-products-filelist-row is-cover' : 'omnimux-products-filelist-row';
+
+      li.innerHTML = `
+        <div class="omnimux-products-thumb-wrap">
+          <div role="button" tabindex="0" class="omnimux-products-thumb-button" title="点击查看大图">
+            <img class="omnimux-products-media-thumb" src="${item.src}" alt="${item.filename}" />
+          </div>
+          <div class="omnimux-products-thumb-popover">
+            <img class="omnimux-products-popover-image" src="${item.src}" alt="${item.filename}" />
+            <div class="omnimux-products-popover-footer">
+              <span class="omnimux-products-popover-hint">点击查看大图</span>
+            </div>
+          </div>
+        </div>
+        <span class="omnimux-products-filelist-name">${item.filename}</span>
+        ${item.isCover ? '<span class="omnimux-products-cover-badge">主封面</span>' : ''}
+        <button type="button" class="btn-action">${item.isCover ? '主图' : '主图'}</button>
+        <button type="button" class="btn-close" title="移除素材">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      `;
+
+      const thumbBtn = li.querySelector('.omnimux-products-thumb-button');
+      thumbBtn.addEventListener('click', () => openLightbox(item.src, item.filename));
+      thumbBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openLightbox(item.src, item.filename);
+        }
+      });
+
+      fileListEl.appendChild(li);
+    });
+  </script>
+</body>
+</html>
