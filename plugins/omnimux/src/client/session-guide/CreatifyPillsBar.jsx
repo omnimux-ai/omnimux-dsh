@@ -209,20 +209,21 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         justifyContent: 'center',
         gap: '10px',
         flexWrap: 'wrap',
-        margin: '12px 0 16px',
+        margin: activeMenu ? '8px auto 16px' : '12px auto 16px',
         position: 'relative',
         zIndex: 120,
         boxSizing: 'border-box',
         width: '100%',
+        maxWidth: 'var(--dsh-composer-card-max-width, 952px)',
       }}
     >
-      {/* 4 个 1:1 大胶囊按钮 */}
+      {/* 4 个 1:1 大胶囊按钮：激活面板时隐退，将空间直接让位给依附于输入框下方的面板 */}
       <button /* exempt-ui01: 4大胶囊按钮之Skills */
         type="button"
         className={`omnimux-pill-btn ${activeMenu === 'skills' ? 'active' : ''}`}
         onClick={() => toggleMenu('skills')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -247,7 +248,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'video-ads' ? 'active' : ''}`}
         onClick={() => toggleMenu('video-ads')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -272,7 +273,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'image-ads' ? 'active' : ''}`}
         onClick={() => toggleMenu('image-ads')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -297,7 +298,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         className={`omnimux-pill-btn ${activeMenu === 'competitor' ? 'active' : ''}`}
         onClick={() => toggleMenu('competitor')}
         style={{
-          display: 'inline-flex',
+          display: activeMenu ? 'none' : 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           height: '38px',
@@ -317,27 +318,27 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
         <span>{isZh ? '竞争对手研究' : 'Competitor research'}</span>
       </button>
 
-      {/* Skills 专属弹窗 */}
+      {/* Skills 专属列表面板：直接依附在输入框正下方 */}
       {activeMenu === 'skills' && (
         <div
           className="omnimux-skills-popover"
           style={{
-            position: 'absolute',
-            top: '48px',
+            position: 'relative',
             left: '0',
+            right: '0',
             width: '100%',
-            maxWidth: '680px',
-            background: 'var(--dsw-alias-bg-elevated)',
+            maxWidth: '100%',
+            background: 'var(--omnimux-surface-dialog, #18191c)',
             border: '1px solid var(--dsw-alias-border)',
             borderRadius: '16px',
             boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
-            backdropFilter: 'blur(20px)',
             zIndex: 130,
             overflow: 'hidden',
+            boxSizing: 'border-box',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px 8px' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '8px', height: '32px', padding: '0 10px' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '8px', height: '34px', padding: '0 10px' }}>
               <SearchIcon size={14} />
               <input
                 type="text"
@@ -349,93 +350,110 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
             </div>
             <button /* exempt-ui01: 浏览全部按钮 */
               type="button"
-              style={{ height: '32px', padding: '0 12px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-3)', border: '1px solid var(--dsw-alias-border)', color: 'var(--dsw-alias-label-primary)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+              style={{ height: '34px', padding: '0 14px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-3)', border: '1px solid var(--dsw-alias-border)', color: 'var(--dsw-alias-label-primary)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
             >
               {isZh ? "浏览全部" : "Browse all"}
             </button>
-          </div>
-
-          <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 8px 10px' }}>
-            {filteredSkills.map((skill) => (
-              <div
-                key={skill.id}
-                onMouseEnter={() => setHoverSkill(skill)}
-                onClick={() => handleSelectSkill(skill)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '10px',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  background: hoverSkill?.id === skill.id ? 'var(--dsw-alias-interactive-bg-hover)' : 'transparent',
-                }}
-              >
-                <div style={{ marginTop: '2px', color: 'var(--dsw-alias-label-secondary)' }}><ZapIcon size={14} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>{isZh ? skill.titleZh : skill.titleEn}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isZh ? skill.descZh : skill.descEn}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 右侧悬停建议卡片 */}
-          {hoverSkill && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 'calc(100% + 12px)',
-                width: '300px',
-                background: 'var(--dsw-alias-bg-elevated)',
-                border: '1px solid var(--dsw-alias-border)',
-                borderRadius: '16px',
-                padding: '16px',
-                boxShadow: '0 24px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.7))', /* exempt-ui03: 建议卡片阴影 */
-                backdropFilter: 'blur(20px)',
-              }}
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={isZh ? "关闭" : "Close"}
+              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '18px', cursor: 'pointer' }}
             >
-              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>{isZh ? hoverSkill.titleZh : hoverSkill.titleEn}</div>
-              <div style={{ fontSize: '12px', lineHeight: '1.5', color: 'var(--dsw-alias-label-secondary)', marginTop: '8px' }}>{isZh ? hoverSkill.descZh : hoverSkill.descEn}</div>
-              <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', marginTop: '12px', fontWeight: '500' }}>{isZh ? '最佳适用场景' : 'Best for'}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                {hoverSkill.bestFor.map(b => (
-                  <span key={b} style={{ background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', color: 'var(--dsw-alias-label-primary)' }}>{b}</span>
-                ))}
+              &times;
+            </button>
+          </div>
+
+          <div style={{ maxHeight: '260px', overflowY: 'auto', padding: '4px 8px 10px' }}>
+            {filteredSkills.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--dsw-alias-label-tertiary)', fontSize: '13px' }}>
+                {isZh ? "暂无匹配的技能" : "No skills available."}
               </div>
-              <div
-                onClick={() => handleSelectSkill(hoverSkill)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '8px', padding: '6px 10px', marginTop: '14px', cursor: 'pointer' }}
-              >
-                <span style={{ fontSize: '12px', color: 'var(--dsw-alias-label-primary)', fontFamily: 'ui-monospace, monospace' }}>{hoverSkill.slash}</span>
-                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--dsw-alias-label-primary)', color: 'var(--dsw-alias-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ArrowUpIcon size={12} /></span>
-              </div>
+            ) : (
+              filteredSkills.map((skill) => (
+                <div
+                  key={skill.id}
+                  onMouseEnter={() => setHoverSkill(skill)}
+                  onClick={() => handleSelectSkill(skill)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: hoverSkill?.id === skill.id ? 'var(--dsw-alias-interactive-bg-hover)' : 'transparent',
+                  }}
+                >
+                  <div style={{ marginTop: '2px', color: 'var(--dsw-alias-label-secondary)' }}><ZapIcon size={14} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>{isZh ? skill.titleZh : skill.titleEn}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isZh ? skill.descZh : skill.descEn}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* 底部浏览全部横条，与图 2 一致 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderTop: '1px solid var(--dsw-alias-border)',
+              background: 'var(--dsw-alias-bg-layer-1)',
+              color: 'var(--dsw-alias-label-primary)',
+              fontSize: '12px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ZapIcon size={14} />
+              <span>{isZh ? "浏览全部技能" : "Browse all skills"}</span>
             </div>
-          )}
+            <span style={{ fontSize: '14px', opacity: 0.7 }}>&rarr;</span>
+          </div>
         </div>
       )}
 
-      {/* 视频/图片/竞品 下拉子提示词菜单 */}
+      {/* 视频/图片/竞品 下拉子提示词菜单：直接依附在输入框正下方 */}
       {activeMenu && activeMenu !== 'skills' && (
         <div
           className="omnimux-subprompt-popover"
           style={{
-            position: 'absolute',
-            top: '48px',
+            position: 'relative',
             left: '0',
+            right: '0',
             width: '100%',
-            maxWidth: '560px',
-            background: 'var(--dsw-alias-bg-elevated)',
+            maxWidth: '100%',
+            background: 'var(--omnimux-surface-dialog, #18191c)',
             border: '1px solid var(--dsw-alias-border)',
-            borderRadius: '14px',
+            borderRadius: '16px',
             boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
-            backdropFilter: 'blur(20px)',
             zIndex: 130,
             overflow: 'hidden',
-            padding: '6px',
+            padding: '8px 10px',
+            boxSizing: 'border-box',
           }}
         >
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px', borderBottom: '1px solid var(--dsw-alias-border)', marginBottom: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
+              {activeMenu === 'video-ads' ? (isZh ? '视频广告推荐提示词' : 'Video Ads Prompts') :
+               activeMenu === 'image-ads' ? (isZh ? '图片广告推荐提示词' : 'Image Ads Prompts') :
+               (isZh ? '竞争对手研究推荐' : 'Competitor Research')}
+            </span>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={isZh ? "关闭" : "Close"}
+              style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-tertiary)', fontSize: '16px', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+          </header>
           {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => (
             <div
               key={idx}

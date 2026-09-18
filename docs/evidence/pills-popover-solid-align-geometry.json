@@ -1,0 +1,50 @@
+{
+  "startedAt": "2026-09-18T10:35:55.541Z",
+  "target": "CreatifyPillsBar.jsx: 点击按钮切换列表面板，紧贴依附于输入框正下方",
+  "demoPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-pills-popover-2332/docs/evidence/pills-popover-solid-align-demo.html",
+  "cases": [
+    {
+      "label": "desktop-1280",
+      "width": 1280,
+      "height": 900,
+      "screenshot": "pills-popover-solid-align-desktop.png",
+      "measure": {
+        "composerLeft": 164,
+        "composerRight": 1116,
+        "composerWidth": 952,
+        "popoverLeft": 164,
+        "popoverRight": 1116,
+        "popoverWidth": 952,
+        "topGap": 8,
+        "leftDelta": 0,
+        "rightDelta": 0,
+        "widthDelta": 0,
+        "solidBackground": "rgb(24, 25, 28)",
+        "backdropFilter": "none",
+        "pass": true
+      }
+    },
+    {
+      "label": "medium-800",
+      "width": 800,
+      "height": 900,
+      "screenshot": "pills-popover-solid-align-medium.png",
+      "measure": {
+        "composerLeft": 24,
+        "composerRight": 776,
+        "composerWidth": 752,
+        "popoverLeft": 24,
+        "popoverRight": 776,
+        "popoverWidth": 752,
+        "topGap": 8,
+        "leftDelta": 0,
+        "rightDelta": 0,
+        "widthDelta": 0,
+        "solidBackground": "rgb(24, 25, 28)",
+        "backdropFilter": "none",
+        "pass": true
+      }
+    }
+  ],
+  "pass": true
+}
