@@ -156,19 +156,21 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         if (typeof workspaceDir !== 'string' || workspaceDir.trim() === '') {
           return { status: 200, body: { ok: true, source: 'unknown-session', libraryRoot, project: null } };
         }
-        const existed = store.list().some((row) => resolve(row.path) === resolve(workspaceDir));
-        let record = null;
-        try {
-          record = ensureWorkspaceProjectBound(store, {
-            workspaceDir,
-            sessionId,
-            libraryRoot,
-            // 必须绑到这个会话自己的画布（= 客户端兜底用的散列 id），
-            // 否则项目首个创作页会指向一个并不存在的随机画布，画布页将显示空白。
-            canvasWorkspaceId: sessionToWorkspaceId(sessionId),
-          });
-        } catch {
-          record = null;
+        const existingSummary = store.list().find((row) => resolve(row.path) === resolve(workspaceDir));
+        let record = existingSummary ? store.get(existingSummary.id) : null;
+        if (!record) {
+          try {
+            record = ensureWorkspaceProjectBound(store, {
+              workspaceDir,
+              sessionId,
+              libraryRoot,
+              // 必须绑到这个会话自己的画布（= 客户端兜底用的散列 id），
+              // 否则项目首个创作页会指向一个并不存在的随机画布，画布页将显示空白。
+              canvasWorkspaceId: sessionToWorkspaceId(sessionId),
+            });
+          } catch {
+            record = null;
+          }
         }
         if (!record) {
           // 库根之外的工作区不登记，也不当作错误：画布保持自由画布语义。
@@ -180,7 +182,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           status: 200,
           body: {
             ok: true,
-            source: existed ? 'existing' : 'registered',
+            source: existingSummary ? 'existing' : 'registered',
             libraryRoot,
             project: {
               id: record.id,
