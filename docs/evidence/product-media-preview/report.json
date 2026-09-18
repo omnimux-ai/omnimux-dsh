@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-09-18T10:49:12.821Z",
+  "feature": "fix(assets): 修复资产中心产品库商品封面图加载路径对齐与服务端兼容",
+  "issue": 2338,
+  "url": "file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-product-media-preview-fix-2338/docs/demos/product-media-preview-demo.html",
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-product-media-preview-fix-2338/docs/evidence/product-media-preview/product-media-verified.png",
+  "checks": [
+    {
+      "name": "ProductsView previewUrl uses query param ?preview=",
+      "passed": true
+    },
+    {
+      "name": "Server http-routes parses and resolves /media/{mediaId}",
+      "passed": true
+    },
+    {
+      "name": "Product cards cover images rendered with natural dimensions",
+      "passed": true
+    },
+    {
+      "name": "Fallback glyph hidden behind loaded images",
+      "passed": true
+    }
+  ],
+  "summary": "Verified product media preview alignment and backward-compatibility stream resolving."
+}

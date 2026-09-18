@@ -7,7 +7,7 @@ import { CheckIcon } from './icons.jsx'
  * @param {string} mediaId
  */
 function previewUrl(productId, mediaId) {
-  return `/omnimux/products/${encodeURIComponent(productId)}/media/${encodeURIComponent(mediaId)}`
+  return `/omnimux/products/${encodeURIComponent(productId)}?preview=${encodeURIComponent(mediaId)}`
 }
 
 /**
