@@ -229,9 +229,6 @@ export function ProductsView(props) {
                       />
                     ) : null}
                     <span className="omnimux-products-glyph">{glyph}</span>
-                    <span className="omnimux-products-badge">
-                      {isDigital ? (t('product.digital') || '数字产品') : (t('product.physical') || '实物产品')}
-                    </span>
                   </div>
 
                   <div className="omnimux-products-card-body">
@@ -240,7 +237,6 @@ export function ProductsView(props) {
                     </h3>
                     <p className="omnimux-products-card-sub">
                       <span>{product.brand || (Array.isArray(product.selling_points) ? product.selling_points[0] : '') || '通用'}</span>
-                      {product.price ? <span className="omnimux-products-card-price">¥{product.price}</span> : null}
                     </p>
                   </div>
                 </article>

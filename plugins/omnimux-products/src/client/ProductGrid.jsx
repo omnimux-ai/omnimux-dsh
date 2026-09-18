@@ -69,9 +69,6 @@ export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, emptyAc
                 />
               ) : null}
               <span className="omnimux-products-glyph">{glyph}</span>
-              <span className="omnimux-products-badge">
-                {product.kind === 'digital' ? t('kind.digital') : t('kind.physical')}
-              </span>
               {onToggleSelect ? (
                 <IconButton
                   variant="ghost"

@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-09-18T11:32:38.450Z",
+  "feature": "fix(assets,products): 产品库微卡移除右上角类型标签与右下角价格",
+  "issue": 2347,
+  "url": "file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-product-card-clean-2347/docs/demos/product-card-clean-demo.html",
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-product-card-clean-2347/docs/evidence/product-card-clean/product-card-clean-verified.png",
+  "checks": [
+    {
+      "name": "ProductsView omits omnimux-products-badge completely",
+      "passed": true
+    },
+    {
+      "name": "ProductsView omits omnimux-products-card-price completely",
+      "passed": true
+    },
+    {
+      "name": "ProductGrid omits omnimux-products-badge completely",
+      "passed": true
+    },
+    {
+      "name": "Visual cleanliness verified in real browser without layout deformation",
+      "passed": true
+    }
+  ],
+  "summary": "Successfully removed kind badge and price label from product cards."
+}

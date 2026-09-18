@@ -28,4 +28,16 @@ test('资产中心产品库商品微卡封面图预览路径规范与图片渲�
     /<img\s+src=\{preview\}\s+alt=\{product\.name\}\s+className="omnimux-products-card-media"/,
     '必须渲染带有 omnimux-products-card-media 的商品封面图片'
   )
+
+  // 4. 验证依用户指示彻底移除右上角类型徽章与右下角价格标签 (Issue #2347)
+  assert.doesNotMatch(
+    productsViewJsx,
+    /omnimux-products-badge/,
+    '必须移除缩略图右上角类型徽章以保持纯粹视觉'
+  )
+  assert.doesNotMatch(
+    productsViewJsx,
+    /omnimux-products-card-price/,
+    '必须移除副标题右下角的价格标签'
+  )
 })
