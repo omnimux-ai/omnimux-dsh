@@ -112,67 +112,20 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     'AttachmentSubmitBridge 必须仅在 marketing 模式下拼装预设上下文'
   )
 
-  // 5. 验证全屏规则：当处于分屏紧凑状态 (short/icon 密度) 或 panelOpen 为 true 时隐藏
+  // 5. 验证新建会话与对话全阶段彻底移除模式切换 Tab 胶囊栏 (Agent / 营销 / 短剧)
   const tabsPath = path.resolve(import.meta.dirname, './ComposerModeTabs.jsx')
   const tabsContent = fs.readFileSync(tabsPath, 'utf-8')
   assert.ok(
-    tabsContent.includes('if (isPanelOpen)'),
-    'ComposerModeTabs 必须在分屏/侧边栏打开 (isPanelOpen) 时返回 null'
+    tabsContent.includes('return null'),
+    'ComposerModeTabs 必须始终返回 null 彻底从新建会话中移除'
+  )
+  assert.ok(
+    tabsContent.includes('omnimux-composer-mode-anchor'),
+    'ComposerModeTabs 必须清理残留 DOM 锚点'
   )
 
   const stylesPath = path.resolve(import.meta.dirname, './styles.js')
   const stylesContent = fs.readFileSync(stylesPath, 'utf-8')
-  assert.ok(
-    stylesContent.includes("html[data-omnimux-composer-density='short'] .omnimux-composer-mode-wrap"),
-    'styles.js 必须包含非全屏模式下的 CSS 隐藏规则'
-  )
-
-  // 6. 验证 Hero 阶段位置重定向至大标题正下方、heroWorkspaceRow 上方
-  assert.ok(
-    tabsContent.includes('heroWorkspaceRow'),
-    'ComposerModeTabs 必须包含 heroWorkspaceRow 锚点探测'
-  )
-  assert.ok(
-    tabsContent.includes('createPortal'),
-    'ComposerModeTabs 必须使用 createPortal 实现大标题正下方精准定位'
-  )
-  assert.ok(
-    stylesContent.includes('#omnimux-composer-mode-anchor'),
-    'styles.js 必须包含 #omnimux-composer-mode-anchor 样式声明'
-  )
-
-  // 7. 验证视觉微调：Tab 按钮适当调大 (height: 32px, padding: 0 18px, font-size: 14px)
-  assert.ok(stylesContent.includes('height: 32px;'), 'Tab 按钮高度必须调大为 32px')
-  assert.ok(stylesContent.includes('padding: 0 18px;'), 'Tab 按钮水平 padding 必须调大为 18px')
-  assert.ok(stylesContent.includes('font-size: 14px;'), 'Tab 按钮字号必须调大为 14px')
-
-  // 8. 验证输入框重启与状态隔离恢复机制
-  assert.ok(
-    tabsContent.includes('switchMode'),
-    'ComposerModeTabs 必须调用 store.switchMode 原子切换'
-  )
-  assert.ok(
-    tabsContent.includes('setComposerDraft'),
-    'ComposerModeTabs 必须包含 setComposerDraft 输入框重启设值能力'
-  )
-  assert.ok(
-    tabsContent.includes('setAllPresets'),
-    'ComposerModeTabs 必须使用 setAllPresets 恢复营销预设状态'
-  )
-
-  // 9. 验证营销模式下隐藏技能按钮 (SkillPicker) 联动契约
-  assert.ok(
-    stylesContent.includes("html[data-omnimux-composer-mode='marketing']"),
-    'styles.js 必须包含营销模式专属选择器'
-  )
-  assert.ok(
-    stylesContent.includes('[data-omnimux-skill-picker]'),
-    'styles.js 必须声明针对技能按钮的隐藏规则'
-  )
-  assert.ok(
-    tabsContent.includes("document.documentElement.setAttribute('data-omnimux-composer-mode'"),
-    'ComposerModeTabs 必须同步根节点 data-omnimux-composer-mode 属性'
-  )
 
   const marketSkillPickerPath = path.resolve(
     import.meta.dirname,
