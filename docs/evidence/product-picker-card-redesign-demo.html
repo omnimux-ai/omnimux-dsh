@@ -175,18 +175,19 @@
     /* 多图缩略条（左下角） */
     .card__thumbs-row {
       position: absolute; left: 8px; bottom: 8px; z-index: 2;
-      display: flex; align-items: center; gap: 4px; pointer-events: none;
+      display: flex; align-items: center; gap: 6px; pointer-events: none;
     }
     .card__sub-thumb {
-      width: 22px; height: 22px; border-radius: 4px; object-fit: cover;
-      border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(0, 0, 0, 0.5);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); display: block; flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: 5px; object-fit: cover;
+      border: 1.5px solid rgba(255, 255, 255, 0.9); background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); display: block; flex-shrink: 0;
     }
     .card__sub-badge {
-      min-width: 22px; height: 22px; padding: 0 4px; border-radius: 4px;
-      background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.35); color: #ffffff;
-      font-size: 10px; font-weight: 600; line-height: 20px; text-align: center;
+      min-width: 28px; height: 28px; padding: 0 5px; border-radius: 5px;
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+      border: 1.5px solid rgba(255, 255, 255, 0.9); color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      font-size: 11px; font-weight: 600; line-height: 25px; text-align: center;
       display: inline-flex; align-items: center; justify-content: center;
       box-sizing: border-box; flex-shrink: 0;
     }

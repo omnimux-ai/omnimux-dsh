@@ -122,4 +122,18 @@ describe('ProductPickerCard & ProductPickerAddCard 视觉重构端到端全链�
     assert.ok(card.querySelector('.omx-product-pick-card__thumbs-row'), '微缩图队列保留');
     assert.equal(card.querySelector('.omx-product-pick-card__title')?.textContent, '女士高级淡香水');
   });
+
+  it('E2E-4: 样式注入包含对标参考图的 28px 尺寸、高对比度白色描边与防背景吞噬投影', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join, dirname } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const pickerSource = readFileSync(
+      join(here, '../../plugins/omnimux/src/client/components/product-picker/ProductPicker.jsx'),
+      'utf8'
+    );
+    assert.ok(pickerSource.includes('width: 28px; height: 28px;'), '缩略小图尺寸放大至 28px 对标参考图');
+    assert.ok(pickerSource.includes('box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);'), '缩略小图具备防吞立体投影');
+    assert.ok(pickerSource.includes('--dsw-alias-border-solid'), '缩略小图与超量徽标具备高对比度白色描边');
+  });
 });
