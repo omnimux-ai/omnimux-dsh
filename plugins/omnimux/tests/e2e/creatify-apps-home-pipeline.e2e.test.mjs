@@ -57,13 +57,21 @@ test('E2E: 7 大王牌爆款工作流工程与应用清单完整性', () => {
 });
 
 test('E2E: 首页「探索模板」包含置顶王牌应用货架与全量 395 套灵感模板', () => {
-  // 1. 验证 10 大核心分类齐全
-  assert.equal(TEMPLATE_CATEGORIES.length, 10, '首页必须恢复 10 大核心分类');
+  // 1. 验证核心业务分类齐全（排除已下架的 tiktok）
+  assert.equal(TEMPLATE_CATEGORIES.length, 9, '首页必须包含 9 大核心分类');
+  assert.ok(
+    !TEMPLATE_CATEGORIES.some((c) => c.slug === 'tiktok'),
+    '分类绝对不得包含已下架的 tiktok'
+  );
 
   // 2. 验证货架行配置
-  assert.ok(SHELVES_CONFIG.length >= 8, '首页货架行必须包含各大业务分类');
+  assert.ok(SHELVES_CONFIG.length >= 7, '首页货架行必须包含各大业务分类');
   assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
   assert.equal(SHELVES_CONFIG[0].type, 'app');
+  assert.ok(
+    !SHELVES_CONFIG.some((s) => s.slug === 'tiktok'),
+    '货架行绝对不得包含已下架的 tiktok'
+  );
 
   // 3. 验证王牌应用置顶且数量为 7
   const featuredApps = selectShelfItems('explore-templates', 10);

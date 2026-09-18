@@ -53,14 +53,6 @@ export const TEMPLATE_CATEGORIES = Object.freeze([
     iconName: 'sparkles',
   },
   {
-    slug: 'tiktok',
-    nameZh: 'TikTok热门',
-    nameEn: 'TikTok Trending',
-    iconName: 'trending',
-    descZh: '社媒当周高互动、高播放原生爆款视频，像素级还原节奏',
-    isNonTemplate: true,
-  },
-  {
     slug: 'skills',
     nameZh: 'Skills',
     nameEn: 'Skills',
@@ -130,14 +122,6 @@ export const SHELVES_CONFIG = Object.freeze([
     subtitleZh: '精选 7 大分类官方 AI 短视频出片应用 · 传图即可出片',
     targetCategory: 'all',
     type: 'app',
-  },
-  {
-    slug: 'tiktok',
-    titleZh: 'TikTok 热门 (Trending)',
-    titleEn: 'TikTok Trending',
-    subtitleZh: '社媒当周高互动、高播放原生爆款视频 · 像素级还原节奏',
-    targetCategory: 'tiktok',
-    type: 'tiktok',
   },
   {
     slug: 'skills',

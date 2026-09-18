@@ -27,57 +27,6 @@ function resolveSkillCover(cover) {
   return `/omnimux-market/icon?url=${encodeURIComponent(trimmed)}`;
 }
 
-const TIKTOK_TRENDING_FALLBACK_ITEMS = Object.freeze([
-  {
-    id: 'trend_hair_straighten_01',
-    title: '理发沙龙现场：高温夹板拉直柔顺喷雾对半强对比',
-    titleEn: 'Salon Live: Heat Press Hair Straightening Half-Split Contrast',
-    views: 5820000,
-    engagement: 0.021,
-    cover: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80',
-    type: 'tiktok',
-    categorySlug: 'tiktok',
-    breakdown: '前2秒高温蒸汽抓眼球 + 中间分屏对半强对比 + 结尾手触反光顺滑',
-  },
-  {
-    id: 'trend_foundation_redness_02',
-    title: '无暇粉底液半脸涂抹测评：瞬间遮盖红血丝',
-    titleEn: 'Flawless Foundation Half-Face Review: Instant Redness Eraser',
-    views: 8150000,
-    engagement: 0.034,
-    cover: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=400&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=400&q=80',
-    type: 'tiktok',
-    categorySlug: 'tiktok',
-    breakdown: '微距镜头直怼毛孔瑕疵 + 刷子一抹即净 + 自然日光无滤镜对比',
-  },
-  {
-    id: 'trend_scalp_scrub_03',
-    title: '头皮深度去角质清洁前后微观毛囊放大镜对比',
-    titleEn: 'Scalp Deep Exfoliation Microscopic Follicle Contrast',
-    views: 12400000,
-    engagement: 0.048,
-    cover: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=400&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=400&q=80',
-    type: 'tiktok',
-    categorySlug: 'tiktok',
-    breakdown: '放大镜特写油脂角质 + 清洁啫喱起泡冲洗 + 干净通透毛囊特写',
-  },
-  {
-    id: 'trend_car_scratch_08',
-    title: '汽车划痕修复膏钥匙暴力刮擦现场抹平',
-    titleEn: 'Car Scratch Repair Wax Key Scratch Live Erase',
-    views: 18900000,
-    engagement: 0.065,
-    cover: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
-    type: 'tiktok',
-    categorySlug: 'tiktok',
-    breakdown: '钥匙刺耳划车漆痛点 + 修复膏海绵涂抹 + 擦亮瞬间反光如新镜面',
-  },
-]);
-
 /**
  * 将模板作为附件挂载到会话输入框上方
  */
@@ -264,21 +213,7 @@ export function ExploreTemplatesSection({
       return;
     }
 
-    // 2. TikTok 热门
-    if (item.type === 'tiktok') {
-      if (onApplyTrending) {
-        onApplyTrending({
-          id: item.id,
-          title: item.title,
-          titleEn: item.titleEn,
-          breakdown: item.breakdown,
-          item,
-        });
-      }
-      return;
-    }
-
-    // 3. Skill 技能
+    // 2. Skill 技能
     if (item.type === 'skill') {
       if (onApplySkill) {
         onApplySkill({
@@ -291,7 +226,7 @@ export function ExploreTemplatesSection({
       return;
     }
 
-    // 4. 普通灵感模板：自动挂载为附件到输入框上方并聚焦！
+    // 3. 普通灵感模板：自动挂载为附件到输入框上方并聚焦！
     attachTemplateToConversation(item);
 
     if (onApplyTemplate) {
@@ -326,9 +261,7 @@ export function ExploreTemplatesSection({
     }
 
     let fullList = [];
-    if (selectedCategory === 'tiktok') {
-      fullList = TIKTOK_TRENDING_FALLBACK_ITEMS;
-    } else if (selectedCategory === 'skills') {
+    if (selectedCategory === 'skills') {
       fullList = allSkillsItems;
     } else {
       fullList = selectTemplatesByCategory(selectedCategory);
@@ -379,9 +312,7 @@ export function ExploreTemplatesSection({
         <div className="omnimux-explore-shelves-view">
           {SHELVES_CONFIG.map((shelf) => {
             let shelfItems = [];
-            if (shelf.slug === 'tiktok') {
-              shelfItems = TIKTOK_TRENDING_FALLBACK_ITEMS.slice(0, 8);
-            } else if (shelf.slug === 'skills') {
+            if (shelf.slug === 'skills') {
               shelfItems = allSkillsItems.slice(0, 8);
             } else {
               shelfItems = selectShelfItems(shelf.slug, 8);

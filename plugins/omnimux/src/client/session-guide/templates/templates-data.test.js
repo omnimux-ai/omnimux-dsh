@@ -34,11 +34,10 @@ test('全量灵感模板与置顶 AI 应用规模与数据完整性验证', () =
   );
 });
 
-test('10 大核心分类与货架行配置验证', () => {
-  assert.equal(TEMPLATE_CATEGORIES.length, 10, '应恢复完整的 10 大核心分类');
+test('核心分类与货架行配置验证', () => {
+  assert.equal(TEMPLATE_CATEGORIES.length, 9, '应包含 9 大核心业务分类（全部、Skills 及 7 大业务分类）');
   const expectedSlugs = [
     'all',
-    'tiktok',
     'skills',
     'apps-software',
     'hook-intro',
@@ -53,8 +52,12 @@ test('10 大核心分类与货架行配置验证', () => {
     expectedSlugs
   );
 
-  assert.ok(SHELVES_CONFIG.length >= 8, '货架行应包含主要业务分类');
+  assert.ok(SHELVES_CONFIG.length >= 7, '货架行应包含主要业务分类');
   assert.equal(SHELVES_CONFIG[0].slug, 'explore-templates');
+  assert.ok(
+    !SHELVES_CONFIG.some((s) => s.slug === 'tiktok'),
+    '货架行绝对不得包含已下架的 tiktok'
+  );
 });
 
 test('分类筛选与 ID 检索功能验证', () => {
