@@ -14,8 +14,8 @@
 
 import type { PopoverPlacement, PopoverPosition, RectLike, ViewportSize } from './types.ts';
 
-export const PANEL_WIDTH = 420;
-export const PANEL_DEFAULT_MAX_HEIGHT = 480;
+export const PANEL_WIDTH = 500;
+export const PANEL_DEFAULT_MAX_HEIGHT = 580;
 export const PANEL_MIN_HEIGHT = 200;
 export const GAP = 8;
 export const VIEWPORT_PADDING = 12;

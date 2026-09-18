@@ -72,7 +72,7 @@ export function VideoTriggerBar({
     };
 
     if (showMode) {
-      push('mode', summary.modeText, undefined, 'hide', 'wf-video-trigger-bar__slot wf-video-trigger-bar__mode');
+      push('mode', summary.modeText, undefined, 'never', 'wf-video-trigger-bar__slot wf-video-trigger-bar__mode');
     }
     push(
       'ratio',

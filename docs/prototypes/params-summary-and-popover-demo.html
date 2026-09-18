@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生成模式必显与浮层面板调宽效果演示</title>
+  <style>
+    :root {
+      --bg-base: #141414;
+      --bg-panel: #1e1e1e;
+      --bg-capsule: #2a2a2a;
+      --bg-capsule-hover: #333333;
+      --bg-capsule-active: #3a3a3a;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #ffffff;
+      --text-primary: #ffffff;
+      --text-secondary: #999999;
+      --text-muted: #666666;
+      --brand-primary: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px;
+      gap: 28px;
+    }
+
+    .demo-header {
+      text-align: center;
+      max-width: 720px;
+    }
+
+    .demo-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .demo-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* 容器控制 */
+    .composer-container {
+      width: 100%;
+      max-width: 680px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 18px 20px;
+      position: relative;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    .composer-textarea {
+      width: 100%;
+      height: 64px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      resize: none;
+      line-height: 1.6;
+    }
+
+    .composer-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .composer-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 8px;
+    }
+
+    .params-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .capsule-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--bg-capsule);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      position: relative;
+    }
+
+    .capsule-btn:hover {
+      background: var(--bg-capsule-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .capsule-btn.open {
+      background: var(--bg-capsule-active);
+      border-color: #ffffff;
+    }
+
+    .divider {
+      width: 1px;
+      height: 14px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .summary-slot {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .summary-slot + .summary-slot::before {
+      content: '·';
+      display: inline-block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .mode-highlight {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .chevron {
+      color: var(--text-secondary);
+      transition: transform 0.2s ease;
+      margin-left: 2px;
+    }
+
+    .capsule-btn.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    /* 右侧控制 */
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .counter {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* 调宽至 500px 的浮层面板 */
+    .popover-panel {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      width: 500px;
+      background: #1c1c1c;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 100;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .popover-panel.active {
+      display: flex;
+    }
+
+    .popover-section-title {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    /* 生成模式 4 个按钮 */
+    .mode-segment {
+      display: flex;
+      background: #141414;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .mode-item {
+      flex: 1;
+      text-align: center;
+      padding: 7px 0;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .mode-item:hover {
+      color: var(--text-primary);
+    }
+
+    .mode-item.active {
+      background: var(--bg-capsule-active);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 7 个画幅比例卡片舒展排布 */
+    .aspect-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .aspect-card {
+      background: #141414;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 2px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .aspect-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      color: var(--text-primary);
+    }
+
+    .aspect-card.active {
+      border-color: #ffffff;
+      background: var(--bg-capsule-active);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .aspect-box {
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+    }
+
+    .box-16-9 { width: 18px; height: 10px; }
+    .box-9-16 { width: 10px; height: 18px; }
+    .box-1-1 { width: 14px; height: 14px; }
+    .box-4-3 { width: 16px; height: 12px; }
+    .box-3-4 { width: 12px; height: 16px; }
+    .box-21-9 { width: 20px; height: 9px; }
+    .box-auto { width: 14px; height: 14px; border-style: dashed; }
+
+    /* 清晰度与有声并排区域（宽敞舒适） */
+    .quality-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .quality-col-left {
+      flex: 3;
+    }
+
+    .quality-col-right {
+      flex: 2;
+    }
+
+    .segment-group {
+      display: flex;
+      background: #141414;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .segment-item {
+      flex: 1;
+      text-align: center;
+      padding: 6px 0;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.12s ease;
+    }
+
+    .segment-item:hover {
+      color: var(--text-primary);
+    }
+
+    .segment-item.active {
+      background: var(--bg-capsule-active);
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    /* 时长滑块 */
+    .duration-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    .slider-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-input {
+      width: 100%;
+      accent-color: #ffffff;
+      cursor: pointer;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* 说明便签 */
+    .note-card {
+      max-width: 680px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .note-card strong {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-header">
+    <h1 class="demo-title">生成模式必显与浮层面板调宽效果演示</h1>
+    <p class="demo-subtitle">选中的生成模式（如「全能参考」）在胶囊按钮中锁定必显；默认面板宽度已升级调宽至 500px，高度调高至 580px，空间宽敞舒展，彻底告别 UI 变形。</p>
+  </div>
+
+  <div class="composer-container">
+    <textarea class="composer-textarea" placeholder="描述你要生成的内容"></textarea>
+    
+    <div class="composer-bottom-bar">
+      <div class="params-group">
+        <!-- 模型选择器 -->
+        <button type="button" class="capsule-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Seedance 2.0 旗舰版</span>
+          <span class="chevron">∨</span>
+        </button>
+
+        <span class="divider"></span>
+
+        <!-- 视频参数摘要胶囊（生成模式必显） -->
+        <div style="position: relative;">
+          <button type="button" class="capsule-btn" id="paramTrigger" onclick="togglePopover()">
+            <span class="summary-slot mode-highlight" id="triggerMode">全能参考</span>
+            <span class="summary-slot" id="triggerRatioWrap">
+              <span class="aspect-box box-16-9" id="triggerAspectIcon"></span>
+              <span id="triggerRatio">16:9</span>
+            </span>
+            <span class="summary-slot" id="triggerResolution">720P</span>
+            <span class="summary-slot" id="triggerDurationWrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="triggerDuration">5s</span>
+            </span>
+            <span class="chevron">∨</span>
+          </button>
+
+          <!-- 调宽至 500px 的浮层面板（图 2 对齐） -->
+          <div class="popover-panel" id="popoverPanel">
+            <!-- 1. 生成模式（4个按钮完整平铺） -->
+            <div>
+              <div class="popover-section-title">生成模式</div>
+              <div class="mode-segment">
+                <div class="mode-item" onclick="setMode('文生视频', this)">文生视频</div>
+                <div class="mode-item" onclick="setMode('首帧', this)">首帧</div>
+                <div class="mode-item" onclick="setMode('首尾帧', this)">首尾帧</div>
+                <div class="mode-item active" onclick="setMode('全能参考', this)">全能参考</div>
+              </div>
+            </div>
+
+            <!-- 2. 比例（7个卡片一排舒展排开，绝无折行挤压） -->
+            <div>
+              <div class="popover-section-title">画幅比例</div>
+              <div class="aspect-grid">
+                <div class="aspect-card active" onclick="setRatio('16:9', 'box-16-9', this)">
+                  <span class="aspect-box box-16-9"></span>
+                  <span>16:9</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('9:16', 'box-9-16', this)">
+                  <span class="aspect-box box-9-16"></span>
+                  <span>9:16</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('1:1', 'box-1-1', this)">
+                  <span class="aspect-box box-1-1"></span>
+                  <span>1:1</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('4:3', 'box-4-3', this)">
+                  <span class="aspect-box box-4-3"></span>
+                  <span>4:3</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('3:4', 'box-3-4', this)">
+                  <span class="aspect-box box-3-4"></span>
+                  <span>3:4</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('21:9', 'box-21-9', this)">
+                  <span class="aspect-box box-21-9"></span>
+                  <span>21:9</span>
+                </div>
+                <div class="aspect-card" onclick="setRatio('自适应', 'box-auto', this)">
+                  <span class="aspect-box box-auto"></span>
+                  <span>自适应</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. 清晰度与有声并排（宽裕无挤压） -->
+            <div class="quality-row">
+              <div class="quality-col-left">
+                <div class="popover-section-title">清晰度</div>
+                <div class="segment-group">
+                  <div class="segment-item" onclick="setResolution('480p', this)">480p</div>
+                  <div class="segment-item active" onclick="setResolution('720P', this)">720p</div>
+                  <div class="segment-item" onclick="setResolution('1080P', this)">1080p</div>
+                  <div class="segment-item" onclick="setResolution('4K', this)">4k</div>
+                </div>
+              </div>
+              <div class="quality-col-right">
+                <div class="popover-section-title">有声开关</div>
+                <div class="segment-group">
+                  <div class="segment-item active">有声</div>
+                  <div class="segment-item">无声</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. 时长滑块 -->
+            <div>
+              <div class="duration-header">
+                <span>生成时长</span>
+                <strong id="durationValueDisplay">5s</strong>
+              </div>
+              <div class="slider-wrap">
+                <input type="range" class="slider-input" min="4" max="15" value="5" oninput="setDuration(this.value)">
+                <div class="slider-labels">
+                  <span>4s</span>
+                  <span>15s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧计数与生成 -->
+      <div class="action-group">
+        <span class="counter">0/7000</span>
+        <button type="button" class="send-btn" title="立即生成">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-card">
+    <strong>💡 验收核心点验证说明：</strong><br>
+    1. <strong>生成模式必显</strong>：外层按钮标签锁定呈现当前模式（当前为「全能参考」），点击任意模式（如文生视频、首帧等），标签实时同步。<br>
+    2. <strong>面板宽度由 420px 调宽至 500px</strong>：您可观察到 7 个比例卡片在一排舒展对齐，清晰度与有声不再挤压变形，排版极具呼吸感。<br>
+    3. <strong>纵向空间加高至 580px</strong>：整体高度充足，各分区之间有舒适留白，彻底消除短促局促感。
+  </div>
+
+  <script>
+    let state = {
+      mode: '全能参考',
+      ratio: '16:9',
+      aspectClass: 'box-16-9',
+      resolution: '720P',
+      duration: '5s',
+      isOpen: false
+    };
+
+    function updateDisplay() {
+      document.getElementById('triggerMode').textContent = state.mode;
+      document.getElementById('triggerRatio').textContent = state.ratio;
+      document.getElementById('triggerResolution').textContent = state.resolution;
+      document.getElementById('triggerDuration').textContent = state.duration;
+      document.getElementById('durationValueDisplay').textContent = state.duration;
+
+      const icon = document.getElementById('triggerAspectIcon');
+      icon.className = 'aspect-box ' + state.aspectClass;
+    }
+
+    function togglePopover() {
+      state.isOpen = !state.isOpen;
+      const panel = document.getElementById('popoverPanel');
+      const trigger = document.getElementById('paramTrigger');
+      if (state.isOpen) {
+        panel.classList.add('active');
+        trigger.classList.add('open');
+      } else {
+        panel.classList.remove('active');
+        trigger.classList.remove('open');
+      }
+    }
+
+    function setMode(val, el) {
+      state.mode = val;
+      el.parentElement.querySelectorAll('.mode-item').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      updateDisplay();
+    }
+
+    function setRatio(val, cls, el) {
+      state.ratio = val;
+      state.aspectClass = cls;
+      el.parentElement.querySelectorAll('.aspect-card').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      updateDisplay();
+    }
+
+    function setResolution(val, el) {
+      state.resolution = val;
+      el.parentElement.querySelectorAll('.segment-item').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      updateDisplay();
+    }
+
+    function setDuration(val) {
+      state.duration = val + 's';
+      updateDisplay();
+    }
+
+    // 点击外部收起
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('popoverPanel');
+      const trigger = document.getElementById('paramTrigger');
+      if (state.isOpen && !panel.contains(e.target) && !trigger.contains(e.target)) {
+        togglePopover();
+      }
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
