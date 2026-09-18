@@ -47,6 +47,8 @@ describe('hub apply composition', () => {
       'workbench_get_active_view',
       'workbench_open_tab',
       'omnimux_marketing_presets_search',
+      'omnimux_creative_templates_search',
+      'omnimux_creative_template_get',
     ])
   })
 
@@ -74,7 +76,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 33 tools and 9 seams by default', () => {
+  it('registers all 39 tools and 11 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -83,7 +85,7 @@ describe('hub apply composition', () => {
       get() { return undefined },
     })
 
-    assert.equal(names.length, 33)
+    assert.equal(names.length, 39)
     assert.ok(names.includes('omnimux_video_submit'))
     assert.ok(names.includes('omnimux_image_submit'))
     assert.ok(names.includes('omnimux_audio_submit'))
@@ -92,12 +94,16 @@ describe('hub apply composition', () => {
     assert.ok(names.includes('omnimux_text_complete'))
     assert.ok(names.includes('omnimux_page_fetch'))
     assert.ok(names.includes('omnimux_social_data'))
+    assert.ok(names.includes('omnimux_youtube_video'))
+    assert.ok(names.includes('omnimux_youtube_channel'))
+    assert.ok(names.includes('omnimux_youtube_posts'))
+    assert.ok(names.includes('omnimux_youtube_search'))
     assert.ok(names.includes('omnimux_accounts_list'))
     assert.ok(names.includes('workbench_get_active_view'))
     assert.ok(names.includes('workbench_open_tab'))
     assert.ok(names.includes('omnimux_marketing_presets_search'))
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
   })
 
   it('disables all gated capabilities when gate.enabled is false', () => {
@@ -109,9 +115,9 @@ describe('hub apply composition', () => {
       get() { return undefined },
     }, { gate: { enabled: false } })
 
-    // workbench tools are ungated core facilities, marketing presets search is ungated
-    assert.equal(names.length, 3)
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'inspirationShare', 'modelCatalog'])
+    // workbench tools are ungated core facilities, marketing presets and creative templates are ungated
+    assert.equal(names.length, 5)
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
   })
 
   it('fine-grained disables media, text models, and official tools via gate', () => {
@@ -134,10 +140,11 @@ describe('hub apply composition', () => {
     assert.ok(tools.omnimux_audio_submit)
     assert.ok(tools.omnimux_audio_voices)
     assert.equal(tools.omnimux_social_data, undefined)
+    assert.ok(tools.omnimux_youtube_video)
     assert.ok(tools.omnimux_page_fetch)
     assert.ok(tools.omnimux_accounts_list)
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
 
     // grok-4.6 excluded from enum
     const textEnum = tools.omnimux_text_complete.parameters.properties.model.enum

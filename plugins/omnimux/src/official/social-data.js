@@ -137,6 +137,9 @@ export function resolveBusinessValue(input) {
   if (platform === 'youtube' && capability === 'video') {
     return extractYouTubeVideoId(id) || extractYouTubeVideoId(url) || id || ''
   }
+  if (platform === 'youtube' && (capability === 'user' || capability === 'posts')) {
+    return extractYouTubeChannelId(id) || extractYouTubeChannelId(url) || id || url || ''
+  }
   if (platform === 'tiktok' && (capability === 'shop_product' || capability === 'shop_product_v1' || capability === 'shop_reviews')) {
     return extractDigitsId(id) || extractTikTokShopProductId(url) || extractDigitsId(query) || ''
   }
@@ -277,6 +280,31 @@ export function extractYouTubeVideoId(value) {
     return ''
   }
   return ''
+}
+
+/**
+ * Extract channel ID or handle from YouTube channel URL or bare id.
+ * @param {string} value
+ */
+export function extractYouTubeChannelId(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (/^(UC[\w-]{20,}|@[\w.-]+)$/.test(raw) && !raw.includes('://')) return raw
+  try {
+    const u = new URL(raw.includes('://') ? raw : `https://${raw}`)
+    const segments = u.pathname.split('/').filter(Boolean)
+    if (segments[0] === 'channel' && segments[1]) return segments[1]
+    if (segments[0]?.startsWith('@')) return segments[0]
+    if ((segments[0] === 'c' || segments[0] === 'user') && segments[1]) return `@${segments[1]}`
+    if (
+      segments.length === 1 &&
+      u.hostname.toLowerCase().endsWith('youtube.com') &&
+      !['feed', 'watch', 'shorts', 'live', 'results', 'playlist'].includes(segments[0])
+    ) {
+      return `@${segments[0]}`
+    }
+  } catch {}
+  return raw
 }
 
 /**
