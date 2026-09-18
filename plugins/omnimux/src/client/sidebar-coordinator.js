@@ -33,7 +33,13 @@ const ALPHA_STYLES = `
   white-space: nowrap;
 }
 [data-sidebar-collapsed] .omnimux-sidebar-alpha-badge { display: none; }
+[data-release-stage="alpha"] { display: none !important; }
 `
+
+export function isAlphaEntry(id) {
+  const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
+  return pluginLifecycle[pluginId]?.stage === 'alpha'
+}
 
 /**
  * Annotate the existing entry without changing its activation or auth handlers.
@@ -536,6 +542,12 @@ function createApi() {
       const id = row.id
       if (seen.has(id)) return () => {}
       seen.add(id)
+      // 内测版从左侧侧边栏入口移除，不予显示；保留插件源码与内部能力
+      if (isAlphaEntry(id)) {
+        return () => {
+          seen.delete(id)
+        }
+      }
       if (row.styles) injectStyles(row.styles, row.styleId)
       const element = row.create()
       markAlphaEntry(id, element)

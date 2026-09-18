@@ -1,0 +1,25 @@
+{
+  "task": "remove-alpha-sidebar-entries",
+  "verifiedAt": "2026-09-18T12:38:00+08:00",
+  "status": "passed",
+  "summary": "Verified that Alpha entries (accounts, publish, analytics, forms, automation) are excluded from the sidebar DOM while keeping plugin source intact.",
+  "results": {
+    "sidebarCoordinatorTests": "12/12 passed",
+    "slotContracts": "0 violations",
+    "agentToolsSuite": "57/57 passed",
+    "excludedEntries": [
+      "omnimux-accounts-entry",
+      "omnimux-publish-entry",
+      "omnimux-analytics-entry",
+      "omnimux-forms-entry",
+      "omnimux-automation-entry"
+    ],
+    "preservedPlugins": [
+      "omnimux-accounts",
+      "omnimux-publish",
+      "omnimux-analytics",
+      "omnimux-forms",
+      "omnimux-automation"
+    ]
+  }
+}
