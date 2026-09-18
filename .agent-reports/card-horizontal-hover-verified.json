@@ -1,0 +1,30 @@
+{
+  "task": "fix(templates): 模板卡片横版化(16:10)、悬停顶部防裁切与按钮高亮背景修复",
+  "verifiedAt": "2026-09-18T17:03:15.837Z",
+  "issues": [
+    "#2381"
+  ],
+  "optimizations": [
+    {
+      "target": ".omnimux-shelf-track",
+      "change": "padding-top: 10px; margin-top: -10px; padding-bottom: 14px; margin-bottom: -6px",
+      "impact": "卡片 hover 向上浮动 4px 时，外边框与顶部圆角完整展示，彻底解决顶部被遮挡问题"
+    },
+    {
+      "target": ".omnimux-tpl-hover-action .omnimux-trending-recreate-btn",
+      "change": "采用高对比度深色磨砂半透明实体背景，hover 激活时转为纯白实体高亮背景与反色黑字",
+      "impact": "彻底解决使用/复刻按钮背景不可见、缺乏点击质感的问题"
+    },
+    {
+      "target": ".omnimux-tpl-card",
+      "change": "flex: 0 0 240px; aspect-ratio: 16 / 10;",
+      "impact": "由细长竖版(9:16)升级为大气舒适的现代横版(16:10)，卡片高约 150px，信息紧凑美观"
+    },
+    {
+      "target": "resolveSkillCover",
+      "change": "支持解析 coverIndex 映射至 /omnimux/assets/skill-card-covers/ 静态目录",
+      "impact": "技能卡片展示官方炫彩点阵渐变封面，清除占位符中的重复标题"
+    }
+  ],
+  "status": "VERIFIED_PASSED"
+}

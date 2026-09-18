@@ -76,6 +76,7 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
       onClick={handleCardClick}
       data-template-id={template.id}
       data-template-type={template.type || 'template'}
+      data-is-app={isApp ? 'true' : 'false'}
       role="button"
       tabIndex={0}
       aria-label={title}
@@ -98,7 +99,6 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
         ) : (
           <div className="omnimux-tpl-placeholder">
             <span className="omnimux-tpl-ph-icon">{ICON_SPARKLES}</span>
-            <span className="omnimux-tpl-ph-title">{title}</span>
           </div>
         )}
 

@@ -3224,7 +3224,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   gap:16px;
   overflow-x:auto;
   scroll-behavior:smooth;
-  padding-bottom:8px;
+  padding-top:10px;
+  margin-top:-10px;
+  padding-bottom:14px;
+  margin-bottom:-6px;
   scrollbar-width:none;
 }
 .omnimux-shelf-track::-webkit-scrollbar { display:none; }
@@ -3250,10 +3253,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-shelf-arrow-btn:hover { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-brand-primary); transform:translateY(-50%) scale(1.08); }
 
-/* Template Card */
+/* Template Card - 现代化横版卡片 (16:10 黄金比例) */
 .omnimux-tpl-card {
-  flex:0 0 200px;
-  aspect-ratio:9 / 16;
+  flex:0 0 240px;
+  aspect-ratio:16 / 10;
   background:var(--dsw-alias-bg-layer-2);
   border:1px solid var(--dsw-alias-border-l2);
   border-radius:12px;
@@ -3268,7 +3271,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-card:hover {
   transform:translateY(-4px);
   border-color:var(--dsw-alias-brand-primary);
-  box-shadow:0 12px 28px var(--dsw-alias-bg-base);
+  box-shadow:0 8px 24px var(--dsw-alias-bg-base);
 }
 .omnimux-tpl-media-box { position:relative; width:100%; height:100%; overflow:hidden; }
 .omnimux-tpl-img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease; }
@@ -3340,7 +3343,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   transition:transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-tpl-card:hover .omnimux-tpl-bottom-bar {
-  transform:translateY(-52px);
+  transform:translateY(-44px);
 }
 .omnimux-tpl-metrics-row {
   display:flex;
@@ -3377,21 +3380,57 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   text-shadow:0 1px 4px var(--dsw-alias-bg-base);
 }
 
-/* 悬停平滑浮现的毛玻璃复刻操作栏：默认隐藏，绝无蓝色 */
+/* 悬停平滑浮现的毛玻璃复刻操作栏：默认隐藏，强对比度高光背景 */
 .omnimux-tpl-hover-action {
   position:absolute;
   inset-inline:12px;
-  bottom:12px;
+  bottom:10px;
   z-index:4;
   opacity:0;
-  transform:translateY(12px);
+  transform:translateY(10px);
   pointer-events:none;
-  transition:opacity 280ms ease, transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:opacity 240ms ease, transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-tpl-card:hover .omnimux-tpl-hover-action {
   opacity:1;
   transform:translateY(0);
   pointer-events:auto;
+}
+.omnimux-tpl-hover-action .omnimux-trending-recreate-btn {
+  width:100%;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  box-sizing:border-box;
+  cursor:pointer;
+  border-radius:9999px;
+  font:inherit;
+  font-size:12px;
+  font-weight:600;
+  color:var(--dsw-static-neutral-00);
+  background:var(--dsw-alias-bg-mask-1);
+  border:1px solid var(--dsw-alias-border-l3);
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 12px var(--dsw-alias-bg-base);
+  transition:background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.omnimux-tpl-hover-action .omnimux-trending-recreate-btn:hover:not(:disabled) {
+  background:var(--dsw-static-neutral-00) !important;
+  color:var(--dsw-static-neutral-1000) !important;
+  border-color:var(--dsw-static-neutral-00) !important;
+  box-shadow:0 6px 18px var(--dsw-alias-bg-base);
+  transform:scale(1.02);
+}
+.omnimux-tpl-card[data-template-type="app"] .omnimux-tpl-hover-action .omnimux-trending-recreate-btn {
+  background:var(--dsw-alias-brand-primary);
+  border-color:var(--dsw-alias-border-l3);
+}
+.omnimux-tpl-card[data-template-type="app"] .omnimux-tpl-hover-action .omnimux-trending-recreate-btn:hover:not(:disabled) {
+  background:var(--dsw-static-neutral-00) !important;
+  color:var(--dsw-alias-brand-primary) !important;
+  border-color:var(--dsw-static-neutral-00) !important;
 }
 
 /* Grid View */
@@ -3417,7 +3456,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-btn-back:hover { color:var(--dsw-alias-label-primary); border-color:var(--dsw-alias-border-l3); }
 .omnimux-tpl-full-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
   gap:18px;
 }
 .omnimux-tpl-grid-footer { display:flex; justify-content:center; align-items:center; padding:24px 0 12px; }
