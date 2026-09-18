@@ -1,0 +1,16 @@
+{
+  "task": "omnimux-revert-lock-omni-agent-issue-2296",
+  "issue": 2296,
+  "timestamp": "2026-09-18T11:30:00.000Z",
+  "feature": "回退新建会话Agent预设按钮移除与修改 (Revert PR #2294)",
+  "scenarios": [
+    {
+      "name": "revert_pr_2294_executed",
+      "revertedCommit": "289a75f22",
+      "status": "PASS"
+    }
+  ],
+  "verification": {
+    "gatesPassed": true
+  }
+}
