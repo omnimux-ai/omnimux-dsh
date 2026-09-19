@@ -149,6 +149,14 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
       }
     }
 
+    // 7. 防跳动核心测试：页面偏下位置点击卡片，视口必须 0 像素位移保持完全静止
+    scroller.scrollTop = 420
+    await act(async () => {
+      useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+    })
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true)
+    assert.equal(scroller.scrollTop, 420, '偏下位置点击卡片视口必须保持 420px 原地不动，绝不跳顶')
+
     await act(async () => root.unmount())
   })
 })

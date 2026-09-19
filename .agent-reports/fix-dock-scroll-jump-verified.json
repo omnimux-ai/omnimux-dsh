@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-09-19T14:37:08.640Z",
+  "task": "fix-dock-scroll-jump",
+  "topic": "彻底消除点击复刻与使用技能时页面向上跳动抖动问题",
+  "assertions": {
+    "1. dock(item, onDocked) 延迟交付草稿与聚焦，防止输入框在流内时触发抢跑滚动": true,
+    "2. 吸底就位瞬间原子锁定 savedScrollTop，若有抖动瞬时恢复": true,
+    "3. 彻底移除 attachTemplateToConversation 中同步抢跑的 focus 与 setDraft": true,
+    "4. 页面任意偏下位置点击卡片，页面视口完全静止（0 像素位移）": true
+  },
+  "evidence": "docs/evidence/fix-dock-scroll-jump-verified.png",
+  "verdict": "PASS"
+}

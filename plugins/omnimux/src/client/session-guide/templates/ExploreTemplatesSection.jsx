@@ -68,32 +68,14 @@ export function attachTemplateToConversation(item, customWin) {
     win.dispatchEvent?.(new CustomEvent('omnimux:add-to-conversation', { detail: payload }));
   }
 
-  // 1. 触发附件呼吸高亮与可见性通知
+  // 触发附件呼吸高亮与可见性通知
   win.dispatchEvent?.(
     new CustomEvent('omnimux:attachments:reveal', {
       detail: { sessionId: activeSessionId },
     })
   );
-
-  // 2. 填入引导复刻提示词草稿
-  const promptText = `请基于挂载的【${item.title || '灵感模板'}】模板，为我的商品定制视频复刻方案与分镜脚本。`;
   const composer = win.__omnimuxComposerActions;
-  if (composer && typeof composer.setDraft === 'function') {
-    if (!composer.getDraft?.()) {
-      composer.setDraft(promptText);
-    }
-    composer.revealAttachments?.();
-  } else {
-    win.dispatchEvent?.(
-      new CustomEvent('omnimux:composer:set-draft', {
-        detail: { sessionId: activeSessionId, draft: promptText },
-      })
-    );
-  }
-
-  // 3. 聚焦输入框
-  const inputEl = win.document?.querySelector?.('[data-composer-input="true"]');
-  inputEl?.focus?.({ preventScroll: true });
+  composer?.revealAttachments?.();
 }
 
 /**

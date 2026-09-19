@@ -295,57 +295,53 @@ function BlankSessionGuide({
   }
 
   /**
-   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt 并吸底输入框（零弹窗干扰）
+   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则吸底就位后延迟预填 Prompt（零弹窗、零跳动）
    */
   function handleExploreTemplateApply(payload) {
     if (payload?.appId) {
       return
     }
     if (!payload?.prompt) return
-    const docked = dock(payload)
+    const docked = dock(payload, () => {
+      applyDraftToComposer(payload.prompt, {
+        toastKey: null,
+        restoreNotice: true,
+        copy: false,
+      })
+    })
     if (!docked) {
       // 再次点击同一卡片反悔：清空草稿
       applyDraftToComposer('', { toastKey: null, restoreNotice: true })
-      return
     }
-    applyDraftToComposer(payload.prompt, {
-      toastKey: null,
-      restoreNotice: true,
-      copy: false,
-    })
   }
 
   /**
-   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并吸底预填对标 Prompt（零弹窗干扰）
+   * TikTok 热门复刻：挂载灵感文件附件上下文，吸底就位后延迟预填对标 Prompt（零弹窗、零跳动）
    */
   function handleExploreTrendingApply(payload) {
     if (!payload) return
-    const docked = dock(payload)
-    if (!docked) {
-      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
-      return
-    }
     const id = payload.id || ''
     const title = payload.title || '热门视频'
     const breakdown = payload.breakdown ? ` · 分镜拆解：${payload.breakdown}` : ''
     const prompt = `请基于灵感文件 #${id}（${title}${breakdown}），为我的产品对标还原其黄金节奏与分镜镜头。`
-    applyDraftToComposer(prompt, {
-      toastKey: null,
-      restoreNotice: true,
-      copy: false,
+
+    const docked = dock(payload, () => {
+      applyDraftToComposer(prompt, {
+        toastKey: null,
+        restoreNotice: true,
+        copy: false,
+      })
     })
+    if (!docked) {
+      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+    }
   }
 
   /**
-   * Skill 复刻：加载到技能槽并吸底，预填官方标准使用说明提问（以 /<slug> 指令开头，静默聚焦零弹窗干扰）
+   * Skill 复刻：加载到技能槽并吸底，吸底就位后预填官方标准使用说明提问（以 /<slug> 指令开头，零跳动、零弹窗）
    */
   function handleExploreSkillApply(payload) {
     if (!payload) return
-    const docked = dock(payload)
-    if (!docked) {
-      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
-      return
-    }
     const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
     const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
     const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
@@ -353,11 +349,17 @@ function BlankSessionGuide({
     const prompt = isEn
       ? `${skillPrefix}Please explain the best way to use this skill.`
       : `${skillPrefix}为我解释下这个技能的最佳使用方式。`
-    applyDraftToComposer(prompt, {
-      toastKey: null,
-      restoreNotice: true,
-      copy: false,
+
+    const docked = dock(payload, () => {
+      applyDraftToComposer(prompt, {
+        toastKey: null,
+        restoreNotice: true,
+        copy: false,
+      })
     })
+    if (!docked) {
+      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+    }
   }
 
   return (
