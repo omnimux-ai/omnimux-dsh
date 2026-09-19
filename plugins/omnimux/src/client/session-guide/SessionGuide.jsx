@@ -318,11 +318,10 @@ function BlankSessionGuide({
   }
 
   /**
-   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问（以 /<slug> 指令开头）
+   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问（以 /<slug> 指令开头，静默聚焦零弹窗干扰）
    */
   function handleExploreSkillApply(payload) {
     if (!payload) return
-    const skillTitle = payload.title || payload.skill || '技能'
     const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
     const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
     const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
@@ -335,7 +334,6 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已激活技能【${skillTitle}】并预填引导话术`)
   }
 
   return (

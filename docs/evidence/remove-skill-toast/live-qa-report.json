@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-09-19T13:30:14.016Z",
+  "task": "remove-skill-toast",
+  "topic": "彻底移除点击使用 Skill 后的遮挡提示弹窗 (Toast)",
+  "assertions": {
+    "1. handleExploreSkillApply 移除 showToast 弹窗": true,
+    "2. 预填 /<slug> 话术与聚焦逻辑丝滑保留": true,
+    "3. 彻底消除界面中央浮层遮挡": true
+  },
+  "evidence": "docs/evidence/remove-skill-toast-verified.png",
+  "verdict": "PASS"
+}
