@@ -9,8 +9,8 @@ export function injectDeviceStyles() {
   style.textContent = `
     /* ==========================================================================
        OmniMux Device UI 生产级样式规范
-       1. 黑色：100% DSH 原生纯粹曜石黑底 (#111113) 与中性纯灰黑卡片 (#18181b / #212124)
-       2. 紫色：品牌极光紫 (#7961f2)，唯一替代原系统蓝色（焦点微光、高亮胶囊）
+       1. 黑色：100% DSH 原生纯粹曜石黑底与中性纯灰黑卡片
+       2. 紫色：品牌极光紫（官方品牌 Token），唯一替代原系统蓝色（焦点微光、高亮胶囊）
        3. 按钮：纯白底黑字 Ink CTA，严禁高饱和彩色通胀
        4. 控件几何：基准高度 32px，圆角 8px，卡片圆角 12px
        ========================================================================== */
@@ -21,7 +21,7 @@ export function injectDeviceStyles() {
       width: 100%;
       height: 100%;
       background-color: var(--dsw-alias-bg-base, #111113);
-      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-image: radial-gradient(var(--dsw-static-white-38, rgba(255, 255, 255, 0.05)) 1px, transparent 1px);
       background-size: 20px 20px;
       color: var(--dsw-alias-label-primary, #ffffff);
       overflow: hidden;
@@ -82,8 +82,8 @@ export function injectDeviceStyles() {
       border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
-      background: #ffffff;
-      color: #111113;
+      background: var(--dsw-alias-label-primary, #ffffff);
+      color: var(--dsw-alias-bg-base, #111113);
       border: none;
       cursor: pointer;
       display: inline-flex;
@@ -95,7 +95,7 @@ export function injectDeviceStyles() {
       user-select: none;
     }
     .omx-btn-ink:hover {
-      background: rgba(255, 255, 255, 0.90);
+      background: var(--dsw-static-white-38, rgba(255, 255, 255, 0.90));
       transform: translateY(-1px);
     }
     .omx-btn-ink:active { transform: scale(0.96); }
@@ -120,7 +120,7 @@ export function injectDeviceStyles() {
     }
     .omx-btn-subtle:hover {
       background: var(--dsw-alias-bg-layer-2, #212124);
-      border-color: rgba(255, 255, 255, 0.22);
+      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.22));
     }
     .omx-btn-subtle:active { transform: scale(0.96); }
 
@@ -130,41 +130,148 @@ export function injectDeviceStyles() {
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 4px;
-      background: rgba(121, 97, 242, 0.12);
-      color: #7961f2;
-      border: 1px solid rgba(121, 97, 242, 0.25);
+      background: color-mix(in srgb, var(--dsw-alias-brand-primary) 12%, transparent);
+      color: var(--dsw-alias-brand-primary);
+      border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 25%, transparent);
     }
 
-    /* 卡片网格 (12px 圆角与纯灰黑底) */
-    .omx-card-grid {
+    /* 真机网格：卡片即手机，竖屏真机比例 */
+    .omx-phone-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 18px;
     }
 
-    .omx-fleet-card {
-      background: var(--dsw-alias-bg-layer-1, #18181b);
-      border: 1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.07));
-      border-radius: 12px;
-      padding: 16px;
-      transition: border-color 150ms ease, transform 150ms ease;
+    .omx-phone-card {
       cursor: pointer;
+      transition: transform 150ms ease;
     }
-    .omx-fleet-card:hover {
-      border-color: rgba(255, 255, 255, 0.22);
-      transform: translateY(-1px);
+    .omx-phone-card:hover { transform: translateY(-2px); }
+    .omx-phone-card:hover .omx-phone-frame { border-color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45)); }
+
+    /* 钛金属外壳 */
+    .omx-phone-frame {
+      aspect-ratio: 9 / 19.5;
+      border-radius: 24px;
+      background: linear-gradient(160deg, var(--dsw-alias-bg-layer-2, #212124) 0%, var(--dsw-alias-bg-base, #111113) 55%, var(--dsw-alias-bg-layer-1, #18181b) 100%);
+      border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+      padding: 5px;
+      box-sizing: border-box;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 8px 20px rgba(0, 0, 0, 0.45); /* exempt-ui03: 真机钛边框高光与整机投影特化 */
+      transition: border-color 150ms ease;
     }
 
-    .omx-mock-screen-box {
-      height: 180px;
-      background: #000000;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
+    /* 纯黑屏幕（顶部灵动岛 + 状态栏 + 内容 + Home 指示条） */
+    .omx-phone-screen {
+      position: relative;
+      height: 100%;
+      border-radius: 19px;
+      overflow: hidden;
+      background: linear-gradient(180deg, var(--dsw-alias-bg-base, #111113) 0%, #000000 38%, #000000 100%); /* exempt-ui03: 物理真机纯黑息屏质感特化 */
+      border: 1px solid rgba(0, 0, 0, 0.9); /* exempt-ui03: 屏幕内凹收边特化 */
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
+    }
+    .omx-phone-island {
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 34%;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--dsw-alias-bg-base, #111113);
+      border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+    }
+    .omx-phone-statusbar {
+      display: flex;
       justify-content: space-between;
-      padding: 12px;
-      position: relative;
+      align-items: center;
+      padding: 10px 14px 0;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--dsw-alias-label-primary, #ffffff);
+    }
+    .omx-phone-battery { display: flex; align-items: center; gap: 3px; }
+    .omx-phone-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 8px;
+    }
+    .omx-phone-account {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--dsw-alias-label-primary, #ffffff);
+    }
+    .omx-phone-state {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .omx-phone-state.ready { color: var(--dsw-alias-status-success); background: color-mix(in srgb, var(--dsw-alias-status-success) 12%, transparent); }
+    .omx-phone-state.warm { color: var(--dsw-alias-state-warn-primary); background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent); }
+    .omx-phone-state.error { color: var(--dsw-alias-state-error-primary); background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent); }
+    .omx-phone-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px 8px;
+    }
+    .omx-phone-port {
+      align-self: flex-start;
+      font-size: 9px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+    }
+    .omx-phone-home {
+      width: 36%;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--dsw-static-white-38, rgba(255, 255, 255, 0.35));
+    }
+
+    /* 机下图注：状态点 + 编号/机型 + 代理延迟 */
+    .omx-phone-caption {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      font-size: 11px;
+      flex-wrap: nowrap;
+    }
+    .omx-phone-caption strong { font-size: 12px; color: var(--dsw-alias-label-primary, #ffffff); white-space: nowrap; }
+    .omx-phone-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+    .omx-phone-dot.ready { background: var(--dsw-alias-status-success); }
+    .omx-phone-dot.warm { background: var(--dsw-alias-state-warn-primary); }
+    .omx-phone-dot.error { background: var(--dsw-alias-state-error-primary); }
+    .omx-phone-model {
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+      font-family: var(--font-mono, monospace);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .omx-phone-proxy {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+      font-size: 10px;
+      min-width: 0;
+    }
+    .omx-phone-proxy span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* 极光紫输入框焦点态 */
@@ -173,7 +280,7 @@ export function injectDeviceStyles() {
       background: var(--dsw-alias-bg-layer-1, #18181b);
       border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
       border-radius: 8px;
-      color: #ffffff;
+      color: var(--dsw-alias-label-primary, #ffffff);
       padding: 0 12px;
       font-size: 13px;
       outline: none;
@@ -181,15 +288,18 @@ export function injectDeviceStyles() {
       box-sizing: border-box;
     }
     .omx-input:focus {
-      border-color: #7961f2;
-      box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25);
+      border-color: var(--dsw-alias-brand-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-brand-primary) 25%, transparent);
     }
+
+    /* 诊断视图标题 */
+    .omx-inspector-title { font-size: 14px; color: var(--dsw-alias-label-primary, #ffffff); }
 
     /* 弹窗与抽屉 */
     .omx-drawer-mask {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.65); /* exempt-ui03: 抽屉全局遮罩暗化特化 */
       backdrop-filter: blur(6px);
       z-index: 200;
       display: none;

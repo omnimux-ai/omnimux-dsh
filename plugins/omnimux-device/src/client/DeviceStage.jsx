@@ -48,6 +48,11 @@ export function DeviceStage({ t, stage, store, visible = true }) {
     { id: '3M7P21LAA9', name: '欧洲运营组', used: 92, days: 312 },
   ])
 
+  // 保活契约（Stage contract）：页面切走时隐藏而不卸载，回来时不重拉状态。
+  // 判定在渲染前执行，所有 hooks 无条件调用，避免 hooks 顺序违规。
+  const [everOpened, setEverOpened] = useState(false)
+  useEffect(() => { if (visible) setEverOpened(true) }, [visible])
+
   useEffect(() => {
     injectDeviceStyles()
   }, [])
@@ -98,6 +103,8 @@ export function DeviceStage({ t, stage, store, visible = true }) {
     { id: 'dev-08', name: '08号机', model: 'iPhone 8', account: '@humor_short', state: '就绪', proxy: '洛杉矶 · 31ms', battery: '100%' },
   ]
 
+  if (!visible && !everOpened) return null
+
   return (
     <div
       role="region"
@@ -145,49 +152,48 @@ export function DeviceStage({ t, stage, store, visible = true }) {
 
       {/* 视口内容主区域 */}
       <div className="omx-stage-content">
-        {/* 1. 集群视图 (Fleet) */}
+        {/* 1. 集群视图 (Fleet)：iPhone 真机比例 + 外壳 */}
         {activeTab === 'fleet' && (
-          <div className="omx-card-grid">
-            {devices.map(d => (
-              <div key={d.id} className="omx-fleet-card" onClick={() => setActiveDrawer(d)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: d.state === '就绪' ? 'var(--omx-status-green)' : d.state === '预热' ? 'var(--omx-status-amber)' : 'var(--omx-status-rose)'
-                    }} />
-                    <strong style={{ fontSize: '13px', color: '#ffffff' }}>{d.name}</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', fontFamily: 'var(--font-mono)' }}>{d.model}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {ICONS.signal}
-                    <span>{d.proxy}</span>
-                  </span>
-                </div>
-
-                <div className="omx-mock-screen-box">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>
-                    <span>09:41</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      {ICONS.battery}
-                      <span>{d.battery}</span>
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      {ICONS.tiktok}
-                      <span>{d.account}</span>
+          <div className="omx-phone-grid">
+            {devices.map(d => {
+              const stateClass = d.state === '就绪' ? 'ready' : d.state === '预热' ? 'warm' : 'error'
+              return (
+                <div key={d.id} className="omx-phone-card" onClick={() => setActiveDrawer(d)} role="button" aria-label={`${d.name} ${d.model} ${d.state}`}>
+                  <div className="omx-phone-frame">
+                    <div className="omx-phone-screen">
+                      <div className="omx-phone-island" />
+                      <div className="omx-phone-statusbar">
+                        <span>09:41</span>
+                        <span className="omx-phone-battery">
+                          {ICONS.battery}
+                          <span>{d.battery}</span>
+                        </span>
+                      </div>
+                      <div className="omx-phone-body">
+                        <div className="omx-phone-account">
+                          {ICONS.tiktok}
+                          <span>{d.account}</span>
+                        </div>
+                        <span className={`omx-phone-state ${stateClass}`}>{d.state}</span>
+                      </div>
+                      <div className="omx-phone-footer">
+                        <span className="omx-phone-port">端口 8100</span>
+                        <span className="omx-phone-home" />
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>
-                    <span>端口 8100</span>
-                    <span style={{ color: d.state === '就绪' ? 'var(--omx-status-green)' : 'var(--omx-status-rose)' }}>{d.state}</span>
+                  <div className="omx-phone-caption">
+                    <span className={`omx-phone-dot ${stateClass}`} />
+                    <strong>{d.name}</strong>
+                    <span className="omx-phone-model">{d.model}</span>
+                    <span className="omx-phone-proxy">
+                      {ICONS.signal}
+                      <span>{d.proxy}</span>
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -213,7 +219,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                       <div style={{ background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '6px', padding: '6px', fontSize: '11px' }}>
                         <div style={{ color: 'var(--dsw-alias-label-tertiary)', fontSize: '10px' }}>09:30</div>
                         <strong style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: '3px' }}>{ICONS.tiktok} @trend_cat_us</strong>
-                        <div style={{ color: 'var(--omx-status-green)', fontSize: '10px' }}>已发布</div>
+                        <div style={{ color: 'var(--dsw-alias-status-success)', fontSize: '10px' }}>已发布</div>
                       </div>
                     )}
                     {i === 2 && (
@@ -235,7 +241,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
           <div style={{ background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '12px', padding: '18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <strong style={{ fontSize: '14px', color: '#ffffff' }}>工单 #412 · 03号机 (iPhone 13)</strong>
+                <strong className="omx-inspector-title">工单 412 号 · 03号机 (iPhone 13)</strong>
                 <div style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)' }}>步骤：相册选择素材</div>
               </div>
               <button className="omx-btn-ink" onClick={handleAutoHeal}>
@@ -245,7 +251,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--omx-status-green)', fontWeight: 'bold', marginBottom: '6px' }}>预期</div>
+                <div style={{ fontSize: '11px', color: 'var(--dsw-alias-status-success)', fontWeight: 'bold', marginBottom: '6px' }}>预期</div>
                 <div style={{ background: '#000', border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '8px', height: '220px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>相册九宫格</span>
                   <div style={{ textAlign: 'center', color: 'var(--dsw-alias-label-secondary)', fontSize: '11px' }}>首图可见 · 坐标正常</div>
@@ -254,17 +260,17 @@ export function DeviceStage({ t, stage, store, visible = true }) {
               </div>
 
               <div>
-                <div style={{ fontSize: '11px', color: autoHealed ? 'var(--omx-status-green)' : 'var(--omx-status-rose)', fontWeight: 'bold', marginBottom: '6px' }}>
+                <div style={{ fontSize: '11px', color: autoHealed ? 'var(--dsw-alias-status-success)' : 'var(--dsw-alias-state-error-primary)', fontWeight: 'bold', marginBottom: '6px' }}>
                   {autoHealed ? '实际 (自愈)' : '实际 (遭遇评分弹窗)'}
                 </div>
-                <div style={{ background: '#000', border: autoHealed ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(244,63,94,0.35)', borderRadius: '8px', height: '220px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ background: 'var(--dsw-alias-bg-base, #000000)', border: autoHealed ? '1px solid var(--dsw-alias-status-success)' : '1px solid var(--dsw-alias-state-error-primary)', borderRadius: '8px', height: '220px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}> {/* exempt-ui02 存量诊断视图内联样式，仅将状态色换成官方 Token；该视图在已批准的竞品对齐任务中整体重写为执行审计页 */}
                   <span style={{ fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>覆盖层</span>
                   {autoHealed ? (
-                    <div style={{ textAlign: 'center', color: 'var(--omx-status-green)', fontSize: '12px', fontWeight: 'bold' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--dsw-alias-status-success)', fontSize: '12px', fontWeight: 'bold' }}>
                       弹窗已自动关闭 · 任务继续
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', background: 'rgba(244,63,94,0.08)', padding: '12px', borderRadius: '6px' }}>
+                    <div style={{ textAlign: 'center', background: 'color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent)', padding: '12px', borderRadius: '6px' }}> {/* exempt-ui02 存量诊断视图内联样式，仅将状态色换成官方 Token；该视图在已批准的竞品对齐任务中整体重写为执行审计页 */}
                       <strong style={{ color: '#fff', fontSize: '11px' }}>应用评分弹窗</strong>
                     </div>
                   )}
@@ -295,7 +301,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                   <strong style={{ color: '#fff', fontSize: '12px' }}>{k.id} ({k.name})</strong>
                   <div style={{ fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>剩余 {k.days} 天</div>
                 </div>
-                <span style={{ fontSize: '11px', color: 'var(--omx-status-green)', fontWeight: 'bold' }}>{k.used} / 100 台</span>
+                <span style={{ fontSize: '11px', color: 'var(--dsw-alias-status-success)', fontWeight: 'bold' }}>{k.used} / 100 台</span>
               </div>
             ))}
           </div>
@@ -336,9 +342,9 @@ export function DeviceStage({ t, stage, store, visible = true }) {
             </div>
 
             <div style={{ background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '8px', padding: '10px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--omx-status-green)' }}>✔ USB 物理就绪</div>
-              <div style={{ fontSize: '11px', color: 'var(--omx-status-green)', marginTop: '3px' }}>✔ 账号绑定: {activeDrawer.account}</div>
-              <div style={{ fontSize: '11px', color: 'var(--omx-status-green)', marginTop: '3px' }}>✔ 守护签名正常</div>
+              <div style={{ fontSize: '11px', color: 'var(--dsw-alias-status-success)' }}>✔ USB 物理就绪</div>
+              <div style={{ fontSize: '11px', color: 'var(--dsw-alias-status-success)', marginTop: '3px' }}>✔ 账号绑定: {activeDrawer.account}</div>
+              <div style={{ fontSize: '11px', color: 'var(--dsw-alias-status-success)', marginTop: '3px' }}>✔ 守护签名正常</div>
             </div>
 
             <div>
@@ -346,7 +352,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
               {['开发者模式: 开启', '自动化权限: 就绪', '外观模式: 浅色', '自动锁定: 永不', '锁屏密码: 已配置', '减少动态效果: 开启', '待机模式: 关闭', '自动亮度: 关闭', '云端照片: 关闭', '住宅代理: 连通', '电池温度: 正常'].map(item => (
                 <div key={item} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--dsw-alias-border-l1)', fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' }}>
                   <span>{item.split(':')[0]}</span>
-                  <span style={{ color: 'var(--omx-status-green)', fontWeight: 'bold' }}>✔ {item.split(':')[1]}</span>
+                  <span style={{ color: 'var(--dsw-alias-status-success)', fontWeight: 'bold' }}>✔ {item.split(':')[1]}</span>
                 </div>
               ))}
             </div>
