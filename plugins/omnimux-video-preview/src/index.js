@@ -63,13 +63,13 @@ export function apply(ctx) {
   // 2. Register video breakdown & shots analysis tool
   ctx.tools?.register?.({
     name: 'video_breakdown_analyze',
-    description: 'Understand and deconstruct a video or video URL into granular shots (景别/机位/角度/动态/描述) and structural stages (Hook/Product Intro/Usage Detail/Demo Scene). Saves one representative still per shot (frame_path / shot_frames) for visual analysis and replication, writes structured .vbreakdown data, and automatically opens the right sidebar preview.',
+    description: 'Understand and deconstruct a video into granular shots (景别/机位/角度/动态/描述) and structural stages via multimodal AI. For non-direct stream platforms (e.g. YouTube, X), download the video to local workspace first. Only opens sidebar preview upon verified analysis success.',
     parameters: {
       type: 'object',
       properties: {
         url: {
           type: 'string',
-          description: 'Video URL (TikTok, Douyin, YouTube Shorts, Instagram Reels, Xiaohongshu, Bilibili), local file path, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx).',
+          description: 'Video direct URL, local file path, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx). For non-direct stream videos (YouTube, X), provide the downloaded local file path.',
         },
         dest: {
           type: 'string',
@@ -77,7 +77,7 @@ export function apply(ctx) {
         },
         auto_open: {
           type: 'boolean',
-          description: 'Whether to automatically open the generated preview in the right sidebar (default true).',
+          description: 'Whether to automatically open the generated preview in the right sidebar upon success (default true).',
         },
       },
       required: ['url'],
@@ -87,6 +87,10 @@ export function apply(ctx) {
       const resolvedTextComplete = textCompleteService ?? ctx.textComplete ?? (typeof ctx.get === 'function' ? ctx.get('textComplete') : null)
       // Step 1: Extract high-fidelity shots and structural breakdown using real social data / multimodal analysis
       const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx, textComplete: resolvedTextComplete })
+
+      if (!breakdownData || !Array.isArray(breakdownData.shots) || breakdownData.shots.length === 0) {
+        throw new Error('视频拆解未能产出有效分镜，拒绝展示空白或无效页面。')
+      }
 
       // Step 2: Save native .vbreakdown artifact (prioritizing active workspace directory)
       const { dataPath, basePath } = saveVideoBreakdownArtifacts(breakdownData, dest, { ctx, execCtx })

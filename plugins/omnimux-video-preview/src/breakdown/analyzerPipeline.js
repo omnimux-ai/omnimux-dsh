@@ -13,7 +13,6 @@ import { detectPhysicalScenes } from '../scene-detect.js'
 import { formatTime } from './timeUtils.js'
 import { parsePipelineAndStructureFromMarkdown } from './structureParser.js'
 import { detectSocialPlatform, fetchRealSocialMetadata } from './socialMetadata.js'
-import { generateAdaptiveShotsAndStructure } from './adaptiveGenerator.js'
 import { resolveWorkspaceDirectory } from './artifactStorage.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -370,12 +369,34 @@ function isStructureResultDegenerate(structure) {
 }
 
 /**
- * Resolve shots, structure and pipeline via multimodal LLM or adaptive fallback.
+ * Derive structure cards directly from real parsed shots when dedicated structure is degenerate.
+ * @param {Array<object>} shots
+ * @returns {Array<object>}
+ */
+function deriveStructureFromShots(shots) {
+  if (!Array.isArray(shots) || shots.length === 0) return []
+  const stageMap = new Map()
+  for (const shot of shots) {
+    const stage = shot.stage || 'Hook'
+    if (!stageMap.has(stage)) {
+      stageMap.set(stage, {
+        stage,
+        title: shot.title || stage,
+        description: shot.description || '',
+      })
+    }
+  }
+  return Array.from(stageMap.values())
+}
+
+/**
+ * Resolve shots, structure and pipeline via multimodal LLM.
+ * Strictly throws upon analysis failure instead of generating fake fallback data.
  * @param {object} params
  * @returns {Promise<{ shots: Array<object>, structure: Array<object>, pipeline: Array<string>, isModelGenerated: boolean }>}
  */
 async function resolveBreakdownData(params) {
-  const { analysisVideoPath, ctx, options, signal, totalDuration, caption, platform, physicalScenes } = params
+  const { analysisVideoPath, ctx, options, signal, physicalScenes } = params
   let analyzeReportText = ''
   if (analysisVideoPath) {
     analyzeReportText = await executeDedicatedStructureAnalyze({
@@ -394,16 +415,16 @@ async function resolveBreakdownData(params) {
 
   alignPhysicalScenesToShots(shots, physicalScenes)
 
-  const isModelGenerated = shots.length > 0 && !isStructureResultDegenerate(structure)
-
-  if (shots.length === 0 || isStructureResultDegenerate(structure)) {
-    const adaptive = generateAdaptiveShotsAndStructure(totalDuration, caption, platform)
-    if (shots.length === 0) shots = adaptive.shots
-    if (isStructureResultDegenerate(structure)) {
-      structure = adaptive.structure
-      pipeline = adaptive.pipeline
-    }
+  if (shots.length === 0) {
+    throw new Error('视频视听拆解失败：多模态模型未解析出有效分镜，请检查模型服务可用性或视频内容。')
   }
+
+  if (isStructureResultDegenerate(structure)) {
+    structure = deriveStructureFromShots(shots)
+    pipeline = structure.map((s) => s.stage)
+  }
+
+  const isModelGenerated = true
 
   return { shots, structure, pipeline, isModelGenerated }
 }
@@ -510,7 +531,8 @@ function resolveDisplayStats(realStats, meta) {
  * @param {object} options
  * @returns {Promise<string|null>}
  */
-async function resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options) {
+async function resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options = {}) {
+  if (options.localVideoPath && existsSync(options.localVideoPath)) return resolve(options.localVideoPath)
   if (isLocalFile) return resolve(trimmed)
   if (videoPlayUrl && isDirectVideoUrl(videoPlayUrl)) {
     return downloadVideoToWorkspaceCache(videoPlayUrl, options)
@@ -615,6 +637,11 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const totalDuration = resolveTotalDuration(realMeta, meta)
 
   const localVideoPath = await resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options)
+  if (!localVideoPath || !existsSync(localVideoPath)) {
+    throw new Error(
+      `无法获取或下载可供分析的视频文件：${trimmed}。对于长视频或受限平台的视频，请先将视频下载到本地工作区，再传入本地文件路径进行拆解。`
+    )
+  }
   const localCoverPath = extractVideoCoverFrame(localVideoPath)
   const analysisVideoPath = prepareAnalysisSampleVideo(localVideoPath)
   const physicalScenes = await tryDetectPhysicalScenes(localVideoPath, ctx)
