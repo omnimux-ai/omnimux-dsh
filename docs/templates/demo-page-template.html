@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OmniMux 标准独立演示页面模板</title>
+  <title>OmniMux 标准演示模板 (DSH 原生纯黑 + 极光紫规范)</title>
   <style>
     /* ==========================================================================
-       OmniMux 标准设计系统变量 (严格黑白中性底 + 极光紫设计规范)
-       规范契约：design.md (L1), docs/contracts/ui-design-guidelines.md
+       OmniMux UI 设计与视觉基座规范
+       1. 黑色：100% 使用 DeepSeek Harness 原生纯粹中性黑 (#111113 / #18181b / #1c1c1f)，杜绝任何偏蓝暗色！
+       2. 紫色：OmniMux 品牌专属新增颜色 (#7961f2)，唯一替代原系统的所有蓝色功能（焦点微光、AI能量流、品牌标签）。
+       3. 蓝色：已彻底废除并全面收敛为黑白中性主题（主按钮 Ink CTA 纯黑白），界面中不再存在任何蓝色元素。
+       契约依据：design.md (L1), docs/contracts/ui-design-guidelines.md
        ========================================================================== */
     :root {
-      /* 极光紫 (AI 能量流、焦点微光、品牌图腾专属，严禁主按钮滥用) */
+      /* 品牌极光紫 (替代原科技蓝的唯一品牌色) */
       --omx-violet-primary: #7961f2;
-      --omx-violet-glow: rgba(121, 97, 242, 0.22);
+      --omx-violet-glow: rgba(121, 97, 242, 0.25);
       --omx-violet-soft: rgba(121, 97, 242, 0.12);
       --omx-violet-gradient: linear-gradient(135deg, #6757e7, #7961f2);
 
-      /* 控件几何基准 */
+      /* 统一几何基准 */
       --omx-control-height: 32px;
       --omx-radius-base: 8px;
       --omx-radius-card: 12px;
@@ -25,31 +28,31 @@
       --omx-mono-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
     }
 
-    /* Dark 主题 (默认沉浸式暗房) */
+    /* Dark 主题：DSH 原生纯粹中性黑体系（无任何偏蓝偏青成分） */
     html[data-theme="dark"] {
-      --dsw-alias-bg-base: #0c0f17;
-      --dsw-alias-bg-layer-1: #151a26;
-      --dsw-alias-bg-layer-2: #1c2233;
-      --dsw-alias-bg-elevated: #161b26;
-      --dsw-alias-border-l1: rgba(255, 255, 255, 0.06);
+      --dsw-alias-bg-base: #111113;        /* DSH 原生纯粹曜石黑底 */
+      --dsw-alias-bg-layer-1: #18181b;     /* 中性纯灰黑卡片容器 (Neutral Zinc 900) */
+      --dsw-alias-bg-layer-2: #212124;     /* 中性纯灰黑次级容器 */
+      --dsw-alias-bg-elevated: #1c1c1f;    /* DSH 原生 Popover 菜单与浮层底色 */
+      --dsw-alias-border-l1: rgba(255, 255, 255, 0.07);
       --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
       --dsw-alias-border-hover: rgba(255, 255, 255, 0.22);
       --dsw-alias-label-primary: #ffffff;
-      --dsw-alias-label-secondary: rgba(255, 255, 255, 0.72);
-      --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.40);
-      --dsw-dot-grid: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      --dsw-alias-label-secondary: rgba(255, 255, 255, 0.70);
+      --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.38);
+      --dsw-dot-grid: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
       
       /* 主行动按钮 (Dark: 纯白实心底 + 纯黑字 Ink CTA，对比度 > 18:1) */
       --dsw-btn-primary-bg: #ffffff;
-      --dsw-btn-primary-text: #0c0f17;
+      --dsw-btn-primary-text: #111113;
       --dsw-btn-primary-hover: rgba(255, 255, 255, 0.90);
     }
 
-    /* Light 主题 (极简纯净纸白) */
+    /* Light 主题：极简纯净纸白体系 */
     html[data-theme="light"] {
       --dsw-alias-bg-base: #ffffff;
-      --dsw-alias-bg-layer-1: #f8f8fa;
-      --dsw-alias-bg-layer-2: #f0f1f4;
+      --dsw-alias-bg-layer-1: #f7f7f8;
+      --dsw-alias-bg-layer-2: #efeff1;
       --dsw-alias-bg-elevated: #ffffff;
       --dsw-alias-border-l1: rgba(0, 0, 0, 0.06);
       --dsw-alias-border-l2: rgba(0, 0, 0, 0.10);
@@ -109,7 +112,7 @@
     .brand-badge {
       font-size: 11px;
       font-weight: 600;
-      padding: 2px 6px;
+      padding: 2px 8px;
       border-radius: 4px;
       background: var(--omx-violet-soft);
       color: var(--omx-violet-primary);
@@ -194,6 +197,7 @@
       transition: border-color 120ms ease, box-shadow 120ms ease;
     }
 
+    /* 焦点态：使用极光紫替代原来的系统蓝色 */
     .search-input:focus {
       border-color: var(--omx-violet-primary);
       box-shadow: 0 0 0 2px var(--omx-violet-glow);
@@ -202,14 +206,14 @@
     .search-icon {
       position: absolute;
       left: 10px;
-      top: 8px;
+      top: 9px;
       width: 14px;
       height: 14px;
       color: var(--dsw-alias-label-tertiary);
       pointer-events: none;
     }
 
-    /* 按钮规范 (Ink CTA 与 次级按钮) */
+    /* 按钮体系：标准 32px 控件高基准与 8px 圆角 */
     .btn {
       height: var(--omx-control-height);
       padding: 0 14px;
@@ -229,7 +233,7 @@
       transform: scale(0.96);
     }
 
-    /* 主行动按钮：高对比墨水色 (严禁紫色、严禁科技蓝) */
+    /* 主行动按钮：纯黑白 Ink CTA (严禁使用紫色与蓝色) */
     .btn-primary {
       background: var(--dsw-btn-primary-bg);
       color: var(--dsw-btn-primary-text);
@@ -239,7 +243,7 @@
       background: var(--dsw-btn-primary-hover);
     }
 
-    /* 次级按钮：中性浅底微描边 */
+    /* 次级按钮：中性纯灰黑底 + 浅描边 */
     .btn-secondary {
       background: var(--dsw-alias-bg-layer-1);
       border: 1px solid var(--dsw-alias-border-l2);
@@ -250,7 +254,7 @@
       border-color: var(--dsw-alias-border-hover);
     }
 
-    /* 品牌特权胶囊：极光紫渐变 */
+    /* 品牌展示胶囊：极光紫专属场景 */
     .btn-brand-capsule {
       background: var(--omx-violet-gradient);
       color: #ffffff;
@@ -258,7 +262,7 @@
       box-shadow: 0 4px 12px var(--omx-violet-glow);
     }
 
-    /* 卡片容器 */
+    /* 卡片容器：DSH 原生中性纯黑灰 */
     .card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -290,14 +294,15 @@
     .card-meta {
       font-size: 12px;
       color: var(--dsw-alias-label-secondary);
+      line-height: 1.6;
     }
 
-    /* AI 能量流微光演示条 */
+    /* AI 能量流微光演示条 (极光紫专属舞台) */
     .ai-energy-beam {
       height: 2px;
       background: linear-gradient(90deg, transparent, var(--omx-violet-primary), transparent);
       border-radius: 1px;
-      box-shadow: 0 0 8px var(--omx-violet-primary);
+      box-shadow: 0 0 10px var(--omx-violet-primary);
     }
   </style>
 </head>
@@ -311,7 +316,7 @@
         <polyline points="2 12 12 17 22 12"></polyline>
       </svg>
       <span style="font-weight: 600; font-size: 14px;">OmniMux Preview</span>
-      <span class="brand-badge">极光紫规范</span>
+      <span class="brand-badge">DSH 原生纯黑 + 极光紫</span>
     </div>
     <button class="theme-toggle-btn" id="themeToggle">
       <span id="themeLabel">切换主题</span>
@@ -322,7 +327,7 @@
   <main>
     <div class="page-header">
       <h1 class="page-title">标准黑白底色 + 极光紫演示模板</h1>
-      <p class="page-desc">所有独立演示页面、网页原型必须基于此模板构建，杜绝外部科技蓝与非标样式。</p>
+      <p class="page-desc">100% 采用 DSH 原生纯粹中性黑底色，用极光紫替代原系统蓝色，主行动按钮收敛为高对比纯黑白。</p>
     </div>
 
     <!-- AI 能量流专属舞台 -->
@@ -335,7 +340,7 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" class="search-input" placeholder="搜索组件或功能...">
+        <input type="text" class="search-input" placeholder="搜索功能或组件...">
       </div>
       <button class="btn btn-secondary">重置筛选</button>
       <button class="btn btn-brand-capsule">✨ 智能流</button>
@@ -345,19 +350,19 @@
     <!-- 演示卡片网格 -->
     <div class="card-grid">
       <div class="card">
-        <h3 class="card-title">主执行按钮 (Ink CTA)</h3>
-        <p class="card-meta">Dark 模式纯白底黑字，Light 模式纯黑底白字。严禁主按钮使用紫色或亮蓝色。</p>
+        <h3 class="card-title">1. DSH 原生纯黑体系</h3>
+        <p class="card-meta">底色采用 DSH 原生中性曜石纯黑（#111113），卡片采用纯灰黑（#18181b），彻底去除偏蓝偏青的暗夜蓝杂色。</p>
+        <button class="btn btn-secondary" style="margin-top: 8px;">纯黑灰面板</button>
+      </div>
+      <div class="card">
+        <h3 class="card-title">2. 极光紫替代原有蓝色</h3>
+        <p class="card-meta">极光紫（#7961f2）是新增的唯一品牌色，全面替代原本的焦点高光、选中态与智能流，保持克制与高级感。</p>
+        <button class="btn btn-brand-capsule" style="margin-top: 8px;">极光紫专属标</button>
+      </div>
+      <div class="card">
+        <h3 class="card-title">3. 原蓝色替代为黑白主题</h3>
+        <p class="card-meta">原本的蓝色主操作按钮已彻底废除，全面收敛为主行动按钮 Ink CTA（Dark 纯白底黑字 / Light 纯黑底白字）。</p>
         <button class="btn btn-primary" style="margin-top: 8px;">主要操作</button>
-      </div>
-      <div class="card">
-        <h3 class="card-title">焦点微光 (Focus Ring)</h3>
-        <p class="card-meta">输入框获取焦点时呈现极光紫微光晕（rgba(121, 97, 242, 0.22)），绝不用原生蓝光晕。</p>
-        <button class="btn btn-secondary" style="margin-top: 8px;">次级操作</button>
-      </div>
-      <div class="card">
-        <h3 class="card-title">AI 专属特权与能量流</h3>
-        <p class="card-meta">极光紫专用于贝塞尔连线粒子流、算力套餐标签与 AI 态，保持克制与高贵质感。</p>
-        <button class="btn btn-brand-capsule" style="margin-top: 8px;">开通特权</button>
       </div>
     </div>
   </main>
