@@ -1,0 +1,26 @@
+{
+  "task": "device-sidebar-tab-registration",
+  "issue": 2429,
+  "verifiedAt": "2026-09-20T03:00:35+08:00",
+  "method": "ego-browser 真实 Chrome 内核驱动验证台（tmp/device-tab-harness.html）：Cordis 运行时语义 apply 插件后真实点击侧边栏入口，对照当前 Dev 物化副本（未注册标签）",
+  "results": [
+    {
+      "label": "old-no-tab-registration（当前 Dev 物化副本）",
+      "ok": true,
+      "tabRegistered": 0,
+      "note": "复现根因：apply 未注册任何工作台标签，生产环境 openWorkbench 的 waitForTab 因此超时、点击静默无效"
+    },
+    {
+      "label": "new-with-tab-registration（本工作树修复后产物）",
+      "ok": true,
+      "effects": ["omnimux-device: dictionaries", "omnimux-device: sidebar entry", "omnimux-device: library tab"],
+      "tabRegistered": 1,
+      "registeredTabId": "omnimux-device:library",
+      "clickOpenedTabs": 1,
+      "openedTabId": "omnimux-device:library",
+      "tabIdMatches": true
+    }
+  ],
+  "screenshot": "docs/evidence/device-sidebar-tab-registration-verified.png",
+  "conclusion": "修复后 apply 注册与 stageStore 同 id 的工作台标签，真实点击入口命中该标签完成打开；对照组确认缺失注册即根因"
+}
