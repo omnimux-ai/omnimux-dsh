@@ -71,10 +71,10 @@ describe('E2E: Creatify 技能卡片 1:1 视觉复刻、一行三列与流光渐
     assert.ok(v2.gradient.includes('#071c4a'));
   });
 
-  it('css.js 确保网格布局为严格一行三个 (repeat(3, minmax(0, 1fr)))', () => {
+  it('css.js 确保网格布局为严格一行五个 (repeat(5, minmax(0, 1fr)))', () => {
     const cssPath = new URL('../../src/client/css.js', import.meta.url).pathname;
     const cssContent = readFileSync(cssPath, 'utf8');
-    assert.match(cssContent, /\.cards-grid,\s*\.featured-grid\s*\{[^}]*grid-template-columns:repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/);
+    assert.match(cssContent, /\.cards-grid,\s*\.featured-grid\s*\{[^}]*grid-template-columns:repeat\(5,\s*minmax\(0,\s*1fr\)\)\s*!important/);
     assert.match(cssContent, /\.omnimux-creatify-dot-overlay\s*\{[^}]*mix-blend-mode:overlay/);
     assert.match(cssContent, /\.omnimux-creatify-card\s*\{[^}]*aspect-ratio:3\s*\/\s*2/);
   });
