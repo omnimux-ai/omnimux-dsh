@@ -110,7 +110,7 @@
       "kind": "skill",
       "title": "UGC 告白",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use when producing a UGC (user-generated-content) style video ad — vertical 9:16, creator-to-camera, selfie PO...",
+      "summary": "第一人称对着镜头倾诉式种草，以自拍机位与真实痛点引发情感共鸣，适合美妆、个护与生活方式类短视频推广。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价",
@@ -129,8 +129,8 @@
       },
       "titleZh": "UGC 告白",
       "titleEn": "UGC Confessional",
-      "summaryZh": "Use when producing a UGC (user-generated-content) style video ad — vertical 9:16, creator-to-camera, selfie PO...",
-      "summaryEn": "Use when producing a UGC (user-generated-content) style video ad — vertical 9:16, creator-to-camera, selfie PO...",
+      "summaryZh": "第一人称对着镜头倾诉式种草，以自拍机位与真实痛点引发情感共鸣，适合美妆、个护与生活方式类短视频推广。",
+      "summaryEn": "Use when producing a UGC (user-generated-content) style video ad — vertical 9:16, creator-to-camera, selfie POV, talking head.",
       "isHot": true,
       "isNew": false,
       "coverIndex": 4,
@@ -148,9 +148,9 @@
       "id": "sk-omx-cinematic",
       "tab": "skills",
       "kind": "skill",
-      "title": "电影级",
+      "title": "电影级视觉大片",
       "subtitle": "视频广告",
-      "summary": "Style-anchors reference for any ad scene rendered in the cinematic visual_style (the counterpart to ugc).",
+      "summary": "院线级光影质感与高级调色方案，提供大师级镜头语言与氛围感构图，打造高转化品牌形象大片。",
       "category": "video-ads",
       "tags": [
         "视频广告",
@@ -167,10 +167,10 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "电影级"
       },
-      "titleZh": "电影级",
+      "titleZh": "电影级视觉大片",
       "titleEn": "Cinematic",
-      "summaryZh": "Style-anchors reference for any ad scene rendered in the cinematic visual_style (the counterpart to ugc).",
-      "summaryEn": "Style-anchors reference for any ad scene rendered in the cinematic visual_style (the counterpart to ugc). Prov...",
+      "summaryZh": "院线级光影质感与高级调色方案，提供大师级镜头语言与氛围感构图，打造高转化品牌形象大片。",
+      "summaryEn": "Style-anchors reference for any ad scene rendered in the cinematic visual style with premium grading and framing.",
       "isHot": true,
       "isNew": false,
       "coverIndex": 5,
@@ -188,9 +188,9 @@
       "id": "sk-omx-ugc-showcase",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC展示",
+      "title": "UGC 产品展示",
       "subtitle": "产品展示",
-      "summary": "Use when creating product-hero UGC video ads — single-take 4-cut Seedance clips where the PRODUCT is the focal...",
+      "summary": "聚焦真实产品特写与动态使用展示，通过四镜头递进展示细节质感，适合数码硬件、美妆护肤与日用好物带货。",
       "category": "product-showcase",
       "tags": [
         "产品展示",
@@ -207,10 +207,10 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC展示"
       },
-      "titleZh": "UGC展示",
+      "titleZh": "UGC 产品展示",
       "titleEn": "UGC Showcase",
-      "summaryZh": "Use when creating product-hero UGC video ads — single-take 4-cut Seedance clips where the PRODUCT is the focal...",
-      "summaryEn": "Use when creating product-hero UGC video ads — single-take 4-cut Seedance clips where the PRODUCT is the focal...",
+      "summaryZh": "聚焦真实产品特写与动态使用展示，通过四镜头递进展示细节质感，适合数码硬件、美妆护肤与日用好物带货。",
+      "summaryEn": "Use when creating product-hero UGC video ads — single-take multi-cut clips where the product is the focal hero.",
       "isHot": true,
       "isNew": false,
       "coverIndex": 6,
@@ -228,9 +228,9 @@
       "id": "sk-omx-ecommerce",
       "tab": "skills",
       "kind": "skill",
-      "title": "电子商务",
+      "title": "电商营销实战",
       "subtitle": "产品展示",
-      "summary": "Use when the product is a physical ecommerce SKU sold DTC or via marketplace — apparel, beauty, supplements, k...",
+      "summary": "专为实体电商爆款打造，快速提炼产品核心卖点与促销钩子，生成高点击率的主图视频与投放分镜方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示",
@@ -247,10 +247,10 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "电子商务"
       },
-      "titleZh": "电子商务",
+      "titleZh": "电商营销实战",
       "titleEn": "Ecommerce",
-      "summaryZh": "Use when the product is a physical ecommerce SKU sold DTC or via marketplace — apparel, beauty, supplements, k...",
-      "summaryEn": "Use when the product is a physical ecommerce SKU sold DTC or via marketplace — apparel, beauty, supplements, k...",
+      "summaryZh": "专为实体电商爆款打造，快速提炼产品核心卖点与促销钩子，生成高点击率的主图视频与投放分镜方案。",
+      "summaryEn": "Use when the product is a physical ecommerce SKU sold online with clear hooks and high conversion framing.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 7,
@@ -268,9 +268,9 @@
       "id": "sk-omx-static-image",
       "tab": "skills",
       "kind": "skill",
-      "title": "静态图片",
+      "title": "静态图片广告",
       "subtitle": "图片和静态广告",
-      "summary": "Use when the ad format is a single static image — Meta feed, Instagram feed, Pinterest, Reddit, Google Display...",
+      "summary": "精细化排版与高转化单图营销方案，融合产品特写、痛点文案与行动呼吁，适配多渠道社媒信息流广告投放。",
       "category": "image-static",
       "tags": [
         "图片和静态广告",
@@ -287,10 +287,10 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "静态图片"
       },
-      "titleZh": "静态图片",
+      "titleZh": "静态图片广告",
       "titleEn": "Static Image",
-      "summaryZh": "Use when the ad format is a single static image — Meta feed, Instagram feed, Pinterest, Reddit, Google Display...",
-      "summaryEn": "Use when the ad format is a single static image — Meta feed, Instagram feed, Pinterest, Reddit, Google Display...",
+      "summaryZh": "精细化排版与高转化单图营销方案，融合产品特写、痛点文案与行动呼吁，适配多渠道社媒信息流广告投放。",
+      "summaryEn": "Use when the ad format is a single static image — Facebook feed, Instagram feed, display banner, or poster creative.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 9,
@@ -308,9 +308,9 @@
       "id": "sk-omx-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "轮播",
+      "title": "轮播图卡片",
       "subtitle": "图片和静态广告",
-      "summary": "Use when the ad format is a multi-frame swipe carousel — Meta carousel ads (2–10 cards), Instagram carousel po...",
+      "summary": "故事递进式多图轮播广告，打造连贯叙事与细节多维拆解，大幅提升用户滑动探索深度与互动留存率。",
       "category": "image-static",
       "tags": [
         "图片和静态广告",
@@ -327,10 +327,10 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "轮播"
       },
-      "titleZh": "轮播",
+      "titleZh": "轮播图卡片",
       "titleEn": "Carousel",
-      "summaryZh": "Use when the ad format is a multi-frame swipe carousel — Meta carousel ads (2–10 cards), Instagram carousel po...",
-      "summaryEn": "Use when the ad format is a multi-frame swipe carousel — Meta carousel ads (2–10 cards), Instagram carousel po...",
+      "summaryZh": "故事递进式多图轮播广告，打造连贯叙事与细节多维拆解，大幅提升用户滑动探索深度与互动留存率。",
+      "summaryEn": "Use when the deliverable is a multi-card carousel — Instagram carousel, Facebook carousel, or LinkedIn document.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 10,
@@ -350,7 +350,7 @@
       "kind": "skill",
       "title": "课程转短视频",
       "subtitle": "视频广告",
-      "summary": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing...",
+      "summary": "长视频课程与干货教学智能浓缩，快速提炼黄金 Hook 与干货要点，批量转化出高传播价值的短剧和短视频脚本。",
       "category": "video-ads",
       "tags": [
         "视频广告",
@@ -369,8 +369,8 @@
       },
       "titleZh": "课程转短视频",
       "titleEn": "Course To Short Video",
-      "summaryZh": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing...",
-      "summaryEn": "Turn a full-length course or lesson video into a short (~20-30s) 9:16 vertical clip for organic social sharing...",
+      "summaryZh": "长视频课程与干货教学智能浓缩，快速提炼黄金 Hook 与干货要点，批量转化出高传播价值的短剧和短视频脚本。",
+      "summaryEn": "Use this skill whenever the user provides a transcript, recording, or slide deck from a course and needs promo clips.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 2,
@@ -388,9 +388,9 @@
       "id": "sk-omx-ugc-fit-check",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC穿搭检查",
+      "title": "UGC 穿搭检查",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use when creating UGC try-on / haul / \"fit check\" video ads — single-take 4-cut Seedance clips with the canoni...",
+      "summary": "时尚服饰穿搭展示专用，模拟对镜自拍或全身走位镜头，生动展现上身剪裁与材质细节，打造沉浸式种草氛围。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价",
@@ -407,10 +407,10 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC穿搭检查"
       },
-      "titleZh": "UGC穿搭检查",
+      "titleZh": "UGC 穿搭检查",
       "titleEn": "UGC Fit Check",
-      "summaryZh": "Use when creating UGC try-on / haul / \"fit check\" video ads — single-take 4-cut Seedance clips with the canoni...",
-      "summaryEn": "Use when creating UGC try-on / haul / \"fit check\" video ads — single-take 4-cut Seedance clips with the canoni...",
+      "summaryZh": "时尚服饰穿搭展示专用，模拟对镜自拍或全身走位镜头，生动展现上身剪裁与材质细节，打造沉浸式种草氛围。",
+      "summaryEn": "Use when creating fashion/apparel UGC ads — OOTD, fit checks, try-on hauls, mirror selfies, and style rotations.",
       "isHot": false,
       "isNew": true,
       "coverIndex": 3,
@@ -430,7 +430,7 @@
       "kind": "skill",
       "title": "青少年体育宣传片",
       "subtitle": "视频广告",
-      "summary": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
+      "summary": "高燃运动混剪与热血分镜，捕捉竞技对抗与热血瞬间，适合运动装备、培训夏令营与青训机构品牌宣传。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -448,8 +448,8 @@
       },
       "titleZh": "青少年体育宣传片",
       "titleEn": "Youth Sports Hype Reel",
-      "summaryZh": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
-      "summaryEn": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
+      "summaryZh": "高燃运动混剪与热血分镜，捕捉竞技对抗与热血瞬间，适合运动装备、培训夏令营与青训机构品牌宣传。",
+      "summaryEn": "Use this skill whenever the user uploads raw game clips plus team info to build an energetic sports highlight reel.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 4,
@@ -469,7 +469,7 @@
       "kind": "skill",
       "title": "脚本转视频",
       "subtitle": "视频广告",
-      "summary": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
+      "summary": "从纯文本营销脚本快速映射生成视频镜头分镜，按时间轴精准规划画面提示词、转场节拍与配音对齐方案。",
       "category": "video-ads",
       "tags": [
         "视频广告",
@@ -488,8 +488,8 @@
       },
       "titleZh": "脚本转视频",
       "titleEn": "Script To Video",
-      "summaryZh": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
-      "summaryEn": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
+      "summaryZh": "从纯文本营销脚本快速映射生成视频镜头分镜，按时间轴精准规划画面提示词、转场节拍与配音对齐方案。",
+      "summaryEn": "Use this skill whenever the user pastes a pre-written ad script to produce complete video shot breakdowns.",
       "isHot": true,
       "isNew": false,
       "coverIndex": 5,
@@ -509,7 +509,7 @@
       "kind": "skill",
       "title": "本地生活服务广告",
       "subtitle": "其他",
-      "summary": "Use when the product is a service business — agencies, contractors, lawyers, dentists, med-spas, coaches, cons...",
+      "summary": "针对咨询机构、诊所医疗、家政美容等服务类商业场景，以专业信任感和客户见证为核心构建获客引流脚本。",
       "category": "other",
       "tags": [
         "其他"
@@ -526,9 +526,9 @@
         "alt": "本地生活服务广告"
       },
       "titleZh": "本地生活服务广告",
-      "titleEn": "Service",
-      "summaryZh": "Use when the product is a service business — agencies, contractors, lawyers, dentists, med-spas, coaches, cons...",
-      "summaryEn": "Use when the product is a service business — agencies, contractors, lawyers, dentists, med-spas, coaches, cons...",
+      "titleEn": "Local Service Ads",
+      "summaryZh": "针对咨询机构、诊所医疗、家政美容等服务类商业场景，以专业信任感和客户见证为核心构建获客引流脚本。",
+      "summaryEn": "Use when the product is a service business — agencies, contractors, lawyers, clinics, med-spas, and consultants.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 6,
@@ -548,7 +548,7 @@
       "kind": "skill",
       "title": "UGC 开箱",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
+      "summary": "适用于creating UGC unboxing 视频广告s — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -566,7 +566,7 @@
       },
       "titleZh": "UGC 开箱",
       "titleEn": "UGC Unwrap",
-      "summaryZh": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
+      "summaryZh": "适用于creating UGC unboxing 视频广告s — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
       "summaryEn": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
       "isHot": false,
       "isNew": false,
@@ -587,7 +587,7 @@
       "kind": "skill",
       "title": "动画故事模式",
       "subtitle": "故事讲述和脚本",
-      "summary": "Use when the ad format is animated / cartoon storytelling for any general industry — explainer animations, ani...",
+      "summary": "适用于the ad format is animated / cartoon 故事叙述 for any general industry — explainer animations, ani...",
       "category": "storytelling-script",
       "tags": [
         "故事讲述和脚本"
@@ -605,7 +605,7 @@
       },
       "titleZh": "动画故事模式",
       "titleEn": "Animated Storymode",
-      "summaryZh": "Use when the ad format is animated / cartoon storytelling for any general industry — explainer animations, ani...",
+      "summaryZh": "适用于the ad format is animated / cartoon 故事叙述 for any general industry — explainer animations, ani...",
       "summaryEn": "Use when the ad format is animated / cartoon storytelling for any general industry — explainer animations, ani...",
       "isHot": false,
       "isNew": false,
@@ -626,7 +626,7 @@
       "kind": "skill",
       "title": "UGC 演练演示",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each...",
+      "summary": "适用于creating UGC tutorial / how-to / step-by-step 视频广告s — single-take 4-cut Seedance clips where each...",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -644,7 +644,7 @@
       },
       "titleZh": "UGC 演练演示",
       "titleEn": "UGC Walkthrough",
-      "summaryZh": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each...",
+      "summaryZh": "适用于creating UGC tutorial / how-to / step-by-step 视频广告s — single-take 4-cut Seedance clips where each...",
       "summaryEn": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each...",
       "isHot": false,
       "isNew": false,
@@ -665,7 +665,7 @@
       "kind": "skill",
       "title": "手游与电竞广告",
       "subtitle": "竞争对手研究",
-      "summary": "Use when the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype...",
+      "summary": "适用于the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype...",
       "category": "other",
       "tags": [
         "竞争对手研究"
@@ -683,7 +683,7 @@
       },
       "titleZh": "手游与电竞广告",
       "titleEn": "Games",
-      "summaryZh": "Use when the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype...",
+      "summaryZh": "适用于the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype...",
       "summaryEn": "Use when the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype...",
       "isHot": false,
       "isNew": false,
@@ -704,7 +704,7 @@
       "kind": "skill",
       "title": "联网电视大屏广告",
       "subtitle": "视频广告",
-      "summary": "Use when producing a Connected TV (CTV / OTT / streaming TV) video ad — Hulu, Disney+, Roku, Samsung TV Plus,...",
+      "summary": "适用于producing a Connected TV (CTV / OTT / streaming TV) 视频广告 — Hulu, Disney+, Roku, Samsung TV Plus,...",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -722,7 +722,7 @@
       },
       "titleZh": "联网电视大屏广告",
       "titleEn": "Ctv",
-      "summaryZh": "Use when producing a Connected TV (CTV / OTT / streaming TV) video ad — Hulu, Disney+, Roku, Samsung TV Plus,...",
+      "summaryZh": "适用于producing a Connected TV (CTV / OTT / streaming TV) 视频广告 — Hulu, Disney+, Roku, Samsung TV Plus,...",
       "summaryEn": "Use when producing a Connected TV (CTV / OTT / streaming TV) video ad — Hulu, Disney+, Roku, Samsung TV Plus,...",
       "isHot": false,
       "isNew": false,
@@ -743,7 +743,7 @@
       "kind": "skill",
       "title": "街头随机采访",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use when producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers...",
+      "summary": "适用于producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers...",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -761,7 +761,7 @@
       },
       "titleZh": "街头随机采访",
       "titleEn": "Street Interview",
-      "summaryZh": "Use when producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers...",
+      "summaryZh": "适用于producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers...",
       "summaryEn": "Use when producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers...",
       "isHot": false,
       "isNew": false,
@@ -782,7 +782,7 @@
       "kind": "skill",
       "title": "播客精彩切片",
       "subtitle": "视频广告",
-      "summary": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo...",
+      "summary": "适用于the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo...",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -800,7 +800,7 @@
       },
       "titleZh": "播客精彩切片",
       "titleEn": "Podcast",
-      "summaryZh": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo...",
+      "summaryZh": "适用于the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo...",
       "summaryEn": "Use when the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo...",
       "isHot": false,
       "isNew": false,
@@ -821,7 +821,7 @@
       "kind": "skill",
       "title": "音频与音效生成",
       "subtitle": "画外音与音频",
-      "summary": "Use when the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin...",
+      "summary": "适用于the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin...",
       "category": "other",
       "tags": [
         "画外音与音频"
@@ -839,7 +839,7 @@
       },
       "titleZh": "音频与音效生成",
       "titleEn": "Audio Generation",
-      "summaryZh": "Use when the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin...",
+      "summaryZh": "适用于the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin...",
       "summaryEn": "Use when the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin...",
       "isHot": false,
       "isNew": false,
@@ -860,7 +860,7 @@
       "kind": "skill",
       "title": "网络模因与梗图广告",
       "subtitle": "模因与原生",
-      "summary": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction...",
+      "summary": "适用于the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction...",
       "category": "meme-native",
       "tags": [
         "模因与原生"
@@ -878,7 +878,7 @@
       },
       "titleZh": "网络模因与梗图广告",
       "titleEn": "Meme",
-      "summaryZh": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction...",
+      "summaryZh": "适用于the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction...",
       "summaryEn": "Use when the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction...",
       "isHot": false,
       "isNew": false,
@@ -899,7 +899,7 @@
       "kind": "skill",
       "title": "亚马逊商详图设计",
       "subtitle": "产品展示",
-      "summary": "Use when the user wants Amazon marketplace images from a product photo or product URL — a compliant main image...",
+      "summary": "适用于the user wants Amazon marketplace images from a product photo or product URL — a compliant main image...",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -917,7 +917,7 @@
       },
       "titleZh": "亚马逊商详图设计",
       "titleEn": "Amazon Product Listing",
-      "summaryZh": "Use when the user wants Amazon marketplace images from a product photo or product URL — a compliant main image...",
+      "summaryZh": "适用于the user wants Amazon marketplace images from a product photo or product URL — a compliant main image...",
       "summaryEn": "Use when the user wants Amazon marketplace images from a product photo or product URL — a compliant main image...",
       "isHot": false,
       "isNew": false,
@@ -938,7 +938,7 @@
       "kind": "skill",
       "title": "参考图生成静态广告",
       "subtitle": "图片和静态广告",
-      "summary": "Use this skill whenever the user uploads a reference image of a static product ad (a competitor's poster, a Pi...",
+      "summary": "当需要时使用本技能：the user uploads a reference image of a static product ad (a competitor's poster, a Pi...",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -956,7 +956,7 @@
       },
       "titleZh": "参考图生成静态广告",
       "titleEn": "Static Image From Reference",
-      "summaryZh": "Use this skill whenever the user uploads a reference image of a static product ad (a competitor's poster, a Pi...",
+      "summaryZh": "当需要时使用本技能：the user uploads a reference image of a static product ad (a competitor's poster, a Pi...",
       "summaryEn": "Use this skill whenever the user uploads a reference image of a static product ad (a competitor's poster, a Pi...",
       "isHot": false,
       "isNew": false,
@@ -977,7 +977,7 @@
       "kind": "skill",
       "title": "电影感暗调奢华美食",
       "subtitle": "视频广告",
-      "summary": "A high-production cinematic food or restaurant commercial pattern built around macro ingredient beauty shots,...",
+      "summary": "专为电影感暗调奢华美食营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -995,7 +995,7 @@
       },
       "titleZh": "电影感暗调奢华美食",
       "titleEn": "Cinematic Dark Luxury Food Reveal",
-      "summaryZh": "A high-production cinematic food or restaurant commercial pattern built around macro ingredient beauty shots,...",
+      "summaryZh": "专为电影感暗调奢华美食营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A high-production cinematic food or restaurant commercial pattern built around macro ingredient beauty shots,...",
       "isHot": false,
       "isNew": false,
@@ -1016,7 +1016,7 @@
       "kind": "skill",
       "title": "从混乱到宁静App告白",
       "subtitle": "视频广告",
-      "summary": "A two-archetype creative pattern for mobile app social video ads (TikTok/Reels/Shorts) that opens with relatab...",
+      "summary": "专为从混乱到宁静App告白营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1034,7 +1034,7 @@
       },
       "titleZh": "从混乱到宁静App告白",
       "titleEn": "Mobile App Chaos To Calm Confessional",
-      "summaryZh": "A two-archetype creative pattern for mobile app social video ads (TikTok/Reels/Shorts) that opens with relatab...",
+      "summaryZh": "专为从混乱到宁静App告白营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A two-archetype creative pattern for mobile app social video ads (TikTok/Reels/Shorts) that opens with relatab...",
       "isHot": false,
       "isNew": false,
@@ -1055,7 +1055,7 @@
       "kind": "skill",
       "title": "家政服务多城市电影叙事",
       "subtitle": "视频广告",
-      "summary": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic markets.",
+      "summary": "专为家政服务多城市电影叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1073,7 +1073,7 @@
       },
       "titleZh": "家政服务多城市电影叙事",
       "titleEn": "Cinematic Home Services Multicity Arc",
-      "summaryZh": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic markets.",
+      "summaryZh": "专为家政服务多城市电影叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic...",
       "isHot": false,
       "isNew": false,
@@ -1094,7 +1094,7 @@
       "kind": "skill",
       "title": "格调生活品牌宣传片",
       "subtitle": "视频广告",
-      "summary": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence,...",
+      "summary": "专为格调生活品牌宣传片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1112,7 +1112,7 @@
       },
       "titleZh": "格调生活品牌宣传片",
       "titleEn": "Curated Lifestyle Brand Video",
-      "summaryZh": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence,...",
+      "summaryZh": "专为格调生活品牌宣传片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence,...",
       "isHot": false,
       "isNew": false,
@@ -1133,7 +1133,7 @@
       "kind": "skill",
       "title": "B2B高管暗黑商业短片",
       "subtitle": "视频广告",
-      "summary": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives...",
+      "summary": "专为B2B高管暗黑商业短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1151,7 +1151,7 @@
       },
       "titleZh": "B2B高管暗黑商业短片",
       "titleEn": "B2B Saas Dark Cinematic Exec Arc",
-      "summaryZh": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives...",
+      "summaryZh": "专为B2B高管暗黑商业短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives...",
       "isHot": false,
       "isNew": false,
@@ -1172,7 +1172,7 @@
       "kind": "skill",
       "title": "UGC 脚本全流程策划",
       "subtitle": "UGC 和用户评价",
-      "summary": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
+      "summary": "根据产品核心卖点与投放时长（15~60秒），系统输出全流程口播脚本、镜头节拍与行动号召，专业易落地。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价",
@@ -1191,8 +1191,8 @@
       },
       "titleZh": "UGC 脚本全流程策划",
       "titleEn": "UGC Script Planner",
-      "summaryZh": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
-      "summaryEn": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
+      "summaryZh": "根据产品核心卖点与投放时长（15~60秒），系统输出全流程口播脚本、镜头节拍与行动号召，专业易落地。",
+      "summaryEn": "Given a product brief and target duration (15–60 s), produces a complete talking-head UGC ad implementation.",
       "isHot": true,
       "isNew": false,
       "coverIndex": 7,
@@ -1212,7 +1212,7 @@
       "kind": "skill",
       "title": "动态图形运镜设计",
       "subtitle": "视频广告",
-      "summary": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typ...",
+      "summary": "规划连贯流畅的镜头推拉摇移、空间透视转换与速度曲线，让静态设计图焕发灵动生命力与高级动态质感。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1230,8 +1230,8 @@
       },
       "titleZh": "动态图形运镜设计",
       "titleEn": "Motion Design Flow",
-      "summaryZh": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typ...",
-      "summaryEn": "Use when the user wants a motion-design video generated end-to-end — brand reels, product reveals, kinetic typ...",
+      "summaryZh": "规划连贯流畅的镜头推拉摇移、空间透视转换与速度曲线，让静态设计图焕发灵动生命力与高级动态质感。",
+      "summaryEn": "Motion choreography and camera spatial transition design for seamless brand motion and visual rhythm.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 9,
@@ -1251,7 +1251,7 @@
       "kind": "skill",
       "title": "动画IP角色广告企划",
       "subtitle": "故事讲述和脚本",
-      "summary": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an an...",
+      "summary": "专为动画IP角色广告企划营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "storytelling-script",
       "tags": [
         "故事讲述和脚本"
@@ -1269,7 +1269,7 @@
       },
       "titleZh": "动画IP角色广告企划",
       "titleEn": "Animated Character Ad Plan",
-      "summaryZh": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an an...",
+      "summaryZh": "专为动画IP角色广告企划营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an an...",
       "isHot": false,
       "isNew": false,
@@ -1290,7 +1290,7 @@
       "kind": "skill",
       "title": "日漫连载黄金开头Hook",
       "subtitle": "视频广告",
-      "summary": "Produces a cinematic dark-fantasy anime-style episodic serial for short-form vertical video (TikTok / Instagram Reels).",
+      "summary": "专为日漫连载黄金开头Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1308,7 +1308,7 @@
       },
       "titleZh": "日漫连载黄金开头Hook",
       "titleEn": "Cinematic Anime Episodic Serial Hook",
-      "summaryZh": "Produces a cinematic dark-fantasy anime-style episodic serial for short-form vertical video (TikTok / Instagram Reels).",
+      "summaryZh": "专为日漫连载黄金开头Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a cinematic dark-fantasy anime-style episodic serial for short-form vertical video (TikTok / Instagra...",
       "isHot": false,
       "isNew": false,
@@ -1329,7 +1329,7 @@
       "kind": "skill",
       "title": "暗色软件UI主图演示",
       "subtitle": "产品展示",
-      "summary": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
+      "summary": "适用于a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1347,7 +1347,7 @@
       },
       "titleZh": "暗色软件UI主图演示",
       "titleEn": "Dark Saas Ui Hero",
-      "summaryZh": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
+      "summaryZh": "适用于a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
       "summaryEn": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
       "isHot": false,
       "isNew": false,
@@ -1368,7 +1368,7 @@
       "kind": "skill",
       "title": "时尚情绪氛围短片",
       "subtitle": "视频广告",
-      "summary": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturall...",
+      "summary": "专为时尚情绪氛围短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1386,7 +1386,7 @@
       },
       "titleZh": "时尚情绪氛围短片",
       "titleEn": "Fashion Mood Video",
-      "summaryZh": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturall...",
+      "summaryZh": "专为时尚情绪氛围短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturall...",
       "isHot": false,
       "isNew": false,
@@ -1407,7 +1407,7 @@
       "kind": "skill",
       "title": "梗图文创多格式短视频",
       "subtitle": "视频广告",
-      "summary": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty...",
+      "summary": "专为梗图文创多格式短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1425,7 +1425,7 @@
       },
       "titleZh": "梗图文创多格式短视频",
       "titleEn": "Meme Merch Multi Format Tiktok",
-      "summaryZh": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty...",
+      "summaryZh": "专为梗图文创多格式短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty...",
       "isHot": false,
       "isNew": false,
@@ -1446,7 +1446,7 @@
       "kind": "skill",
       "title": "痛点共鸣用户真实自述",
       "subtitle": "UGC 和用户评价",
-      "summary": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expe...",
+      "summary": "专为痛点共鸣用户真实自述营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1464,7 +1464,7 @@
       },
       "titleZh": "痛点共鸣用户真实自述",
       "titleEn": "UGC Inherited Burden Testimonial",
-      "summaryZh": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expe...",
+      "summaryZh": "专为痛点共鸣用户真实自述营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expe...",
       "isHot": false,
       "isNew": false,
@@ -1485,7 +1485,7 @@
       "kind": "skill",
       "title": "爆款视频智能复刻",
       "subtitle": "视频广告",
-      "summary": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation.",
+      "summary": "专为爆款视频智能复刻营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1503,7 +1503,7 @@
       },
       "titleZh": "爆款视频智能复刻",
       "titleEn": "Video Recreate",
-      "summaryZh": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation.",
+      "summaryZh": "专为爆款视频智能复刻营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation. Trigger when the user p...",
       "isHot": false,
       "isNew": false,
@@ -1524,7 +1524,7 @@
       "kind": "skill",
       "title": "吉祥物问题解决型广告",
       "subtitle": "视频广告",
-      "summary": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suff...",
+      "summary": "专为吉祥物问题解决型广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1542,7 +1542,7 @@
       },
       "titleZh": "吉祥物问题解决型广告",
       "titleEn": "Animated Mascot Problem Solution",
-      "summaryZh": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suff...",
+      "summaryZh": "专为吉祥物问题解决型广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suff...",
       "isHot": false,
       "isNew": false,
@@ -1563,7 +1563,7 @@
       "kind": "skill",
       "title": "卡通吉祥物旁白短视频",
       "subtitle": "视频广告",
-      "summary": "Encodes the \"cartoon mascot narrator\" creative pattern for YouTube Shorts (9:16) ads: a branded, studio-qualit...",
+      "summary": "专为卡通吉祥物旁白短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1581,7 +1581,7 @@
       },
       "titleZh": "卡通吉祥物旁白短视频",
       "titleEn": "Cartoon Mascot Narrator Shorts",
-      "summaryZh": "Encodes the \"cartoon mascot narrator\" creative pattern for YouTube Shorts (9:16) ads: a branded, studio-qualit...",
+      "summaryZh": "专为卡通吉祥物旁白短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the \"cartoon mascot narrator\" creative pattern for YouTube Shorts (9:16) ads: a branded, studio-qualit...",
       "isHot": false,
       "isNew": false,
@@ -1602,7 +1602,7 @@
       "kind": "skill",
       "title": "双屏互动实时反应广告",
       "subtitle": "视频广告",
-      "summary": "Produces a vertical 9:16 split-screen reaction ad (15–20s) where the top half shows a webcam-style creator rea...",
+      "summary": "专为双屏互动实时反应广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1620,7 +1620,7 @@
       },
       "titleZh": "双屏互动实时反应广告",
       "titleEn": "Casino Streamer Split Screen Reaction",
-      "summaryZh": "Produces a vertical 9:16 split-screen reaction ad (15–20s) where the top half shows a webcam-style creator rea...",
+      "summaryZh": "专为双屏互动实时反应广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a vertical 9:16 split-screen reaction ad (15–20s) where the top half shows a webcam-style creator rea...",
       "isHot": false,
       "isNew": false,
@@ -1641,7 +1641,7 @@
       "kind": "skill",
       "title": "双重人格暗调轻奢大片",
       "subtitle": "视频广告",
-      "summary": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero...",
+      "summary": "专为双重人格暗调轻奢大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1659,7 +1659,7 @@
       },
       "titleZh": "双重人格暗调轻奢大片",
       "titleEn": "Cinematic Dual Persona Dark Luxury Ad",
-      "summaryZh": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero...",
+      "summaryZh": "专为双重人格暗调轻奢大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero...",
       "isHot": false,
       "isNew": false,
@@ -1680,7 +1680,7 @@
       "kind": "skill",
       "title": "杂志级奢品震撼登场",
       "subtitle": "产品展示",
-      "summary": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting women 25–40.",
+      "summary": "专为杂志级奢品震撼登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1698,7 +1698,7 @@
       },
       "titleZh": "杂志级奢品震撼登场",
       "titleEn": "Cinematic Editorial Luxury Reveal",
-      "summaryZh": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting women 25–40.",
+      "summaryZh": "专为杂志级奢品震撼登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting wome...",
       "isHot": false,
       "isNew": false,
@@ -1719,7 +1719,7 @@
       "kind": "skill",
       "title": "光影科技产品高光亮相",
       "subtitle": "产品展示",
-      "summary": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dr...",
+      "summary": "专为光影科技产品高光亮相营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1737,7 +1737,7 @@
       },
       "titleZh": "光影科技产品高光亮相",
       "titleEn": "Cinematic Led Product Reveal",
-      "summaryZh": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dr...",
+      "summaryZh": "专为光影科技产品高光亮相营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dr...",
       "isHot": false,
       "isNew": false,
@@ -1758,7 +1758,7 @@
       "kind": "skill",
       "title": "DTC出海多渠道投放宝典",
       "subtitle": "视频广告",
-      "summary": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
+      "summary": "适用于producing 9:16 视频广告s for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1776,7 +1776,7 @@
       },
       "titleZh": "DTC出海多渠道投放宝典",
       "titleEn": "Dtc Multi Format Ad Playbook",
-      "summaryZh": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
+      "summaryZh": "适用于producing 9:16 视频广告s for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
       "summaryEn": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
       "isHot": false,
       "isNew": false,
@@ -1797,7 +1797,7 @@
       "kind": "skill",
       "title": "数字人与空镜拼接广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use this whenever a user wants a UGC-style talking-head ad where an AI avatar carries the voiceover and the us...",
+      "summary": "专为数字人与空镜拼接广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1815,7 +1815,7 @@
       },
       "titleZh": "数字人与空镜拼接广告",
       "titleEn": "UGC Avatar Broll Splice Ad",
-      "summaryZh": "Use this whenever a user wants a UGC-style talking-head ad where an AI avatar carries the voiceover and the us...",
+      "summaryZh": "专为数字人与空镜拼接广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Use this whenever a user wants a UGC-style talking-head ad where an AI avatar carries the voiceover and the us...",
       "isHot": false,
       "isNew": false,
@@ -1836,7 +1836,7 @@
       "kind": "skill",
       "title": "好奇心驱动神级开场",
       "subtitle": "UGC 和用户评价",
-      "summary": "A 30-second UGC talking-head creative pattern for mobile app ads on TikTok/Instagram Reels.",
+      "summary": "专为好奇心驱动神级开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1854,7 +1854,7 @@
       },
       "titleZh": "好奇心驱动神级开场",
       "titleEn": "UGC Curiosity Hook",
-      "summaryZh": "A 30-second UGC talking-head creative pattern for mobile app ads on TikTok/Instagram Reels.",
+      "summaryZh": "专为好奇心驱动神级开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A 30-second UGC talking-head creative pattern for mobile app ads on TikTok/Instagram Reels. Opens with a consp...",
       "isHot": false,
       "isNew": false,
@@ -1875,7 +1875,7 @@
       "kind": "skill",
       "title": "画外音旁白App录屏展示",
       "subtitle": "视频广告",
-      "summary": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs.",
+      "summary": "专为画外音旁白App录屏展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1893,7 +1893,7 @@
       },
       "titleZh": "画外音旁白App录屏展示",
       "titleEn": "UGC Voiceover App Screen Showcase",
-      "summaryZh": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs.",
+      "summaryZh": "专为画外音旁白App录屏展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs. Opens with a sharp pro...",
       "isHot": false,
       "isNew": false,
@@ -1914,7 +1914,7 @@
       "kind": "skill",
       "title": "镜像构图广告排版",
       "subtitle": "图片和静态广告",
-      "summary": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve...",
+      "summary": "当需要时使用本技能：the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve...",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -1932,7 +1932,7 @@
       },
       "titleZh": "镜像构图广告排版",
       "titleEn": "Ad Layout Mirror Image",
-      "summaryZh": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve...",
+      "summaryZh": "当需要时使用本技能：the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve...",
       "summaryEn": "Use this skill whenever the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve...",
       "isHot": false,
       "isNew": false,
@@ -1953,7 +1953,7 @@
       "kind": "skill",
       "title": "婚纱微距高级感Hook",
       "subtitle": "产品展示",
-      "summary": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically...",
+      "summary": "专为婚纱微距高级感Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1971,7 +1971,7 @@
       },
       "titleZh": "婚纱微距高级感Hook",
       "titleEn": "Bridal Macro Editorial Hook",
-      "summaryZh": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically...",
+      "summaryZh": "专为婚纱微距高级感Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically...",
       "isHot": false,
       "isNew": false,
@@ -1992,7 +1992,7 @@
       "kind": "skill",
       "title": "高端服务品牌视觉大片",
       "subtitle": "视频广告",
-      "summary": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 28-33s).",
+      "summary": "专为高端服务品牌视觉大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2010,7 +2010,7 @@
       },
       "titleZh": "高端服务品牌视觉大片",
       "titleEn": "Cinematic Service Brand Reveal",
-      "summaryZh": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 28-33s).",
+      "summaryZh": "专为高端服务品牌视觉大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 2...",
       "isHot": false,
       "isNew": false,
@@ -2031,7 +2031,7 @@
       "kind": "skill",
       "title": "医疗科技3D透视叙事",
       "subtitle": "UGC 和用户评价",
-      "summary": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/m...",
+      "summary": "专为医疗科技3D透视叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2049,7 +2049,7 @@
       },
       "titleZh": "医疗科技3D透视叙事",
       "titleEn": "Clinical UGC 3D Tech Insert Arc",
-      "summaryZh": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/m...",
+      "summaryZh": "专为医疗科技3D透视叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/m...",
       "isHot": false,
       "isNew": false,
@@ -2070,7 +2070,7 @@
       "kind": "skill",
       "title": "喜剧角色首尾呼应演示",
       "subtitle": "视频广告",
-      "summary": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s...",
+      "summary": "专为喜剧角色首尾呼应演示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2088,7 +2088,7 @@
       },
       "titleZh": "喜剧角色首尾呼应演示",
       "titleEn": "Comedy Character Bookend Saas Demo",
-      "summaryZh": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s...",
+      "summaryZh": "专为喜剧角色首尾呼应演示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s...",
       "isHot": false,
       "isNew": false,
@@ -2109,7 +2109,7 @@
       "kind": "skill",
       "title": "高定时装静态画报",
       "subtitle": "图片和静态广告",
-      "summary": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a...",
+      "summary": "适用于the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a...",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2127,7 +2127,7 @@
       },
       "titleZh": "高定时装静态画报",
       "titleEn": "Editorial Apparel Static",
-      "summaryZh": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a...",
+      "summaryZh": "适用于the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a...",
       "summaryEn": "Use when the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a...",
       "isHot": false,
       "isNew": false,
@@ -2148,7 +2148,7 @@
       "kind": "skill",
       "title": "生活方式杂志画报广告",
       "subtitle": "图片和静态广告",
-      "summary": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ult...",
+      "summary": "专为生活方式杂志画报广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2166,7 +2166,7 @@
       },
       "titleZh": "生活方式杂志画报广告",
       "titleEn": "Editorial Magazine Lifestyle Ad",
-      "summaryZh": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ult...",
+      "summaryZh": "专为生活方式杂志画报广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ult...",
       "isHot": false,
       "isNew": false,
@@ -2187,7 +2187,7 @@
       "kind": "skill",
       "title": "奢侈品级高定登场",
       "subtitle": "产品展示",
-      "summary": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, w...",
+      "summary": "专为奢侈品级高定登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -2205,7 +2205,7 @@
       },
       "titleZh": "奢侈品级高定登场",
       "titleEn": "Luxury Product Reveal",
-      "summaryZh": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, w...",
+      "summaryZh": "专为奢侈品级高定登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, w...",
       "isHot": false,
       "isNew": false,
@@ -2226,7 +2226,7 @@
       "kind": "skill",
       "title": "影棚级商业产品静物摄影",
       "subtitle": "产品展示",
-      "summary": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
+      "summary": "适用于the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -2244,7 +2244,7 @@
       },
       "titleZh": "影棚级商业产品静物摄影",
       "titleEn": "Product Photoshoot",
-      "summaryZh": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
+      "summaryZh": "适用于the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
       "summaryEn": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
       "isHot": false,
       "isNew": false,
@@ -2265,7 +2265,7 @@
       "kind": "skill",
       "title": "街头盲测对比实测广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels.",
+      "summary": "专为街头盲测对比实测广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2283,7 +2283,7 @@
       },
       "titleZh": "街头盲测对比实测广告",
       "titleEn": "Street Interview Blind Test Ad",
-      "summaryZh": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels.",
+      "summaryZh": "专为街头盲测对比实测广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels. A host approaches...",
       "isHot": false,
       "isNew": false,
@@ -2304,7 +2304,7 @@
       "kind": "skill",
       "title": "宝妈育儿好物发现Hook",
       "subtitle": "UGC 和用户评价",
-      "summary": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational ite...",
+      "summary": "专为宝妈育儿好物发现Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2322,7 +2322,7 @@
       },
       "titleZh": "宝妈育儿好物发现Hook",
       "titleEn": "UGC Mom Discovery Hook Kids Product",
-      "summaryZh": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational ite...",
+      "summaryZh": "专为宝妈育儿好物发现Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational ite...",
       "isHot": false,
       "isNew": false,
@@ -2343,7 +2343,7 @@
       "kind": "skill",
       "title": "从质疑到真香心路历程",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare,...",
+      "summary": "专为从质疑到真香心路历程营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2361,7 +2361,7 @@
       },
       "titleZh": "从质疑到真香心路历程",
       "titleEn": "UGC Skeptic Convert",
-      "summaryZh": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare,...",
+      "summaryZh": "专为从质疑到真香心路历程营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare,...",
       "isHot": false,
       "isNew": false,
@@ -2382,7 +2382,7 @@
       "kind": "skill",
       "title": "双人爆笑短剧冲突开场",
       "subtitle": "UGC 和用户评价",
-      "summary": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle...",
+      "summary": "专为双人爆笑短剧冲突开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2400,7 +2400,7 @@
       },
       "titleZh": "双人爆笑短剧冲突开场",
       "titleEn": "UGC Two Character Comedy Skit Hook",
-      "summaryZh": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle...",
+      "summaryZh": "专为双人爆笑短剧冲突开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle...",
       "isHot": false,
       "isNew": false,
@@ -2421,7 +2421,7 @@
       "kind": "skill",
       "title": "Vox拼贴剪纸深度解说",
       "subtitle": "视频广告",
-      "summary": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
+      "summary": "当需要时使用本技能：the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2439,7 +2439,7 @@
       },
       "titleZh": "Vox拼贴剪纸深度解说",
       "titleEn": "Vox Paper Cutout Explainer",
-      "summaryZh": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
+      "summaryZh": "当需要时使用本技能：the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
       "summaryEn": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
       "isHot": false,
       "isNew": false,
@@ -2458,9 +2458,9 @@
       "id": "sk-omx-anthropomorphic-dark-comedy-telenovela",
       "tab": "skills",
       "kind": "skill",
-      "title": "Anthropomorphic Dark Comedy Telenovela",
+      "title": "拟人化暗黑喜剧剧场",
       "subtitle": "故事讲述和脚本",
-      "summary": "Encodes the over-the-top dark-comedy telenovela arc with anthropomorphic characters (human body + literal obje...",
+      "summary": "赋予物品或动物夸张情绪与抓马剧情，用意想不到的幽默冲突快速吸引观众眼球，打造高赞出圈社媒内容。",
       "category": "storytelling-script",
       "tags": [
         "故事讲述和脚本"
@@ -2476,10 +2476,10 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Anthropomorphic Dark Comedy Telenovela"
       },
-      "titleZh": "Anthropomorphic Dark Comedy Telenovela",
+      "titleZh": "拟人化暗黑喜剧剧场",
       "titleEn": "Anthropomorphic Dark Comedy Telenovela",
-      "summaryZh": "Encodes the over-the-top dark-comedy telenovela arc with anthropomorphic characters (human body + literal obje...",
-      "summaryEn": "Encodes the over-the-top dark-comedy telenovela arc with anthropomorphic characters (human body + literal obje...",
+      "summaryZh": "赋予物品或动物夸张情绪与抓马剧情，用意想不到的幽默冲突快速吸引观众眼球，打造高赞出圈社媒内容。",
+      "summaryEn": "Dramatic telenovela narrative arc starring anthropomorphic characters for engaging viral social storytelling.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 9,
@@ -2497,9 +2497,9 @@
       "id": "sk-omx-cinematic-dual-persona-cultural-identity-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Dual Persona Cultural Iden..",
+      "title": "双重人格文化反差故事弧",
       "subtitle": "视频广告",
-      "summary": "A luxury video ad pattern that establishes deep cultural identity through two contrasting on-camera personas (...",
+      "summary": "以跨文化背景与双重身份冲突切入，结合电影级视听语言展现个人心路历程，适用于高端品牌情感叙事。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2515,10 +2515,10 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Cinematic Dual Persona Cultural Identity Arc"
       },
-      "titleZh": "Cinematic Dual Persona Cultural Identity Arc",
+      "titleZh": "双重人格文化反差故事弧",
       "titleEn": "Cinematic Dual Persona Cultural Identity Arc",
-      "summaryZh": "A luxury video ad pattern that establishes deep cultural identity through two contrasting on-camera personas (...",
-      "summaryEn": "A luxury video ad pattern that establishes deep cultural identity through two contrasting on-camera personas (...",
+      "summaryZh": "以跨文化背景与双重身份冲突切入，结合电影级视听语言展现个人心路历程，适用于高端品牌情感叙事。",
+      "summaryEn": "Cinematic narrative arc exploring dual persona and cultural contrasts for deep emotional brand storytelling.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 10,
@@ -2536,9 +2536,9 @@
       "id": "sk-omx-cinematic-pharma-parody-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Pharma Parody Arc",
+      "title": "幽默疗愈戏仿短剧弧",
       "subtitle": "故事讲述和脚本",
-      "summary": "Encodes the \"pharmaceutical-style parody\" creative pattern: a slow-burn cinematic opener with a silver-tongued...",
+      "summary": "幽默戏仿专业疗愈与医疗广告风格，以反转剧情化解用户痛点，适合健康护理与生活好物的趣味营销。",
       "category": "storytelling-script",
       "tags": [
         "故事讲述和脚本"
@@ -2554,10 +2554,10 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Cinematic Pharma Parody Arc"
       },
-      "titleZh": "Cinematic Pharma Parody Arc",
+      "titleZh": "幽默疗愈戏仿短剧弧",
       "titleEn": "Cinematic Pharma Parody Arc",
-      "summaryZh": "Encodes the \"pharmaceutical-style parody\" creative pattern: a slow-burn cinematic opener with a silver-tongued...",
-      "summaryEn": "Encodes the \"pharmaceutical-style parody\" creative pattern: a slow-burn cinematic opener with a silver-tongued...",
+      "summaryZh": "幽默戏仿专业疗愈与医疗广告风格，以反转剧情化解用户痛点，适合健康护理与生活好物的趣味营销。",
+      "summaryEn": "Parody narrative inspired by pharmaceutical ads with humorous resolutions for wellness and lifestyle brands.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 2,
@@ -2575,9 +2575,9 @@
       "id": "sk-omx-cinematic-saas-character-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Saas Character Arc",
+      "title": "SaaS 职场人物成长弧",
       "subtitle": "视频广告",
-      "summary": "A cinematic commercial pattern for B2B SaaS brands that uses a single consistent professional persona followin...",
+      "summary": "围绕职场人物在工具前后的效率对比构建真实戏剧冲突，生动直观展现软件解决工作痛点的核心价值。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2593,10 +2593,10 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Cinematic Saas Character Arc"
       },
-      "titleZh": "Cinematic Saas Character Arc",
-      "titleEn": "Cinematic Saas Character Arc",
-      "summaryZh": "A cinematic commercial pattern for B2B SaaS brands that uses a single consistent professional persona followin...",
-      "summaryEn": "A cinematic commercial pattern for B2B SaaS brands that uses a single consistent professional persona followin...",
+      "titleZh": "SaaS 职场人物成长弧",
+      "titleEn": "Cinematic SaaS Character Arc",
+      "summaryZh": "围绕职场人物在工具前后的效率对比构建真实戏剧冲突，生动直观展现软件解决工作痛点的核心价值。",
+      "summaryEn": "Character-driven workplace narrative showcasing efficiency transformation powered by SaaS solutions.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 3,
@@ -2614,9 +2614,9 @@
       "id": "sk-omx-cinematic-stat-shock-local-pride",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Stat Shock Local Pride",
+      "title": "震撼数据与地方自豪感叙事",
       "subtitle": "视频广告",
-      "summary": "A silent, music-driven cinematic vertical ad that opens with a bold two-line \"knowledge gap\" hook — stating so...",
+      "summary": "以令人震撼的客观数据为黄金开头，唤醒观众的地方归属感与认同，适合本地服务与文旅品牌重磅发声。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2632,10 +2632,10 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Cinematic Stat Shock Local Pride"
       },
-      "titleZh": "Cinematic Stat Shock Local Pride",
+      "titleZh": "震撼数据与地方自豪感叙事",
       "titleEn": "Cinematic Stat Shock Local Pride",
-      "summaryZh": "A silent, music-driven cinematic vertical ad that opens with a bold two-line \"knowledge gap\" hook — stating so...",
-      "summaryEn": "A silent, music-driven cinematic vertical ad that opens with a bold two-line \"knowledge gap\" hook — stating so...",
+      "summaryZh": "以令人震撼的客观数据为黄金开头，唤醒观众的地方归属感与认同，适合本地服务与文旅品牌重磅发声。",
+      "summaryEn": "Data-backed hook combined with localized pride narrative for municipal, cultural, and regional service ads.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 4,
@@ -2653,9 +2653,9 @@
       "id": "sk-omx-cinematic-thriller-book-multi-format-campaign",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Thriller Book Multi Format..",
+      "title": "悬疑惊悚小说多维宣传企划",
       "subtitle": "图片和静态广告",
-      "summary": "A premium cinematic ad campaign pattern for thriller, crime, mystery, horror, and paranormal fiction ebooks an...",
+      "summary": "营造高悬念扣人心弦的惊悚氛围，多维适配预告片、分镜海报与社媒短剧，助力图书出版物与IP破圈。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2671,10 +2671,10 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Cinematic Thriller Book Multi Format Campaign"
       },
-      "titleZh": "Cinematic Thriller Book Multi Format Campaign",
+      "titleZh": "悬疑惊悚小说多维宣传企划",
       "titleEn": "Cinematic Thriller Book Multi Format Campaign",
-      "summaryZh": "A premium cinematic ad campaign pattern for thriller, crime, mystery, horror, and paranormal fiction ebooks an...",
-      "summaryEn": "A premium cinematic ad campaign pattern for thriller, crime, mystery, horror, and paranormal fiction ebooks an...",
+      "summaryZh": "营造高悬念扣人心弦的惊悚氛围，多维适配预告片、分镜海报与社媒短剧，助力图书出版物与IP破圈。",
+      "summaryEn": "Multi-format suspense thriller marketing campaign designed for book launches, serials, and entertainment IPs.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 5,
@@ -2692,9 +2692,9 @@
       "id": "sk-omx-cinematic-warmtodark-safety-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Cinematic Warmtodark Safety Arc",
+      "title": "安全守护冷暖反差叙事弧",
       "subtitle": "视频广告",
-      "summary": "A cinematic anamorphic ad pattern built for personal-safety, security, and emergency-response products targeti...",
+      "summary": "从日常温暖场景突转危机挑战，最终以可靠安全保障托底，适合保险、安防、母婴与家庭防护品牌。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2710,10 +2710,10 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Cinematic Warmtodark Safety Arc"
       },
-      "titleZh": "Cinematic Warmtodark Safety Arc",
-      "titleEn": "Cinematic Warmtodark Safety Arc",
-      "summaryZh": "A cinematic anamorphic ad pattern built for personal-safety, security, and emergency-response products targeti...",
-      "summaryEn": "A cinematic anamorphic ad pattern built for personal-safety, security, and emergency-response products targeti...",
+      "titleZh": "安全守护冷暖反差叙事弧",
+      "titleEn": "Cinematic Warm To Dark Safety Arc",
+      "summaryZh": "从日常温暖场景突转危机挑战，最终以可靠安全保障托底，适合保险、安防、母婴与家庭防护品牌。",
+      "summaryEn": "Contrast narrative transitioning from warm comfort to sudden risk and safe resolution for protection brands.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 6,
@@ -2731,9 +2731,9 @@
       "id": "sk-omx-client-process-guide-builder",
       "tab": "skills",
       "kind": "skill",
-      "title": "Client Process Guide Builder",
+      "title": "客户合作流程指南搭建",
       "subtitle": "其他",
-      "summary": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demy...",
+      "summary": "为 B2B 与专业服务团队梳理清晰、透明的客户合作链路与交付周期表，有效增强初次沟通信任度。",
       "category": "other",
       "tags": [
         "其他"
@@ -2749,10 +2749,10 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Client Process Guide Builder"
       },
-      "titleZh": "Client Process Guide Builder",
+      "titleZh": "客户合作流程指南搭建",
       "titleEn": "Client Process Guide Builder",
-      "summaryZh": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demy...",
-      "summaryEn": "Triggers whenever an agency, studio, or service provider asks for a client-facing explainer document that demy...",
+      "summaryZh": "为 B2B 与专业服务团队梳理清晰、透明的客户合作链路与交付周期表，有效增强初次沟通信任度。",
+      "summaryEn": "Structured visual client onboarding and collaboration step-by-step workflow guide for service businesses.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 7,
@@ -2770,9 +2770,9 @@
       "id": "sk-omx-color-spec-sheet",
       "tab": "skills",
       "kind": "skill",
-      "title": "Color Spec Sheet",
+      "title": "专业色彩规范说明书",
       "subtitle": "产品展示",
-      "summary": "Generates a Pantone-style color specification sheet from any uploaded product or character design image.",
+      "summary": "输出印刷与屏幕通用的标准化色彩配方表（HEX、RGB、CMYK、Pantone），确保品牌调色在跨媒介中稳定还原。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -2788,10 +2788,10 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Color Spec Sheet"
       },
-      "titleZh": "Color Spec Sheet",
+      "titleZh": "专业色彩规范说明书",
       "titleEn": "Color Spec Sheet",
-      "summaryZh": "Generates a Pantone-style color specification sheet from any uploaded product or character design image.",
-      "summaryEn": "Generates a Pantone-style color specification sheet from any uploaded product or character design image. The o...",
+      "summaryZh": "输出印刷与屏幕通用的标准化色彩配方表（HEX、RGB、CMYK、Pantone），确保品牌调色在跨媒介中稳定还原。",
+      "summaryEn": "Production-ready color specification sheet covering digital and print tokens for brand asset consistency.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 9,
@@ -2809,9 +2809,9 @@
       "id": "sk-omx-dark-athletic-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Dark Athletic Carousel",
+      "title": "硬核运动暗调轮播图",
       "subtitle": "图片和静态广告",
-      "summary": "Multi-slide 9:16 or 1:1 carousel ad set for premium athletic / sports-equipment brands (training gear, perform...",
+      "summary": "深色金属冷光与硬朗肌肉线条相呼应的运动轮播海报，凸显热血竞技与装备科技感，适合健身服饰与补剂。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2827,10 +2827,10 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Dark Athletic Carousel"
       },
-      "titleZh": "Dark Athletic Carousel",
+      "titleZh": "硬核运动暗调轮播图",
       "titleEn": "Dark Athletic Carousel",
-      "summaryZh": "Multi-slide 9:16 or 1:1 carousel ad set for premium athletic / sports-equipment brands (training gear, perform...",
-      "summaryEn": "Multi-slide 9:16 or 1:1 carousel ad set for premium athletic / sports-equipment brands (training gear, perform...",
+      "summaryZh": "深色金属冷光与硬朗肌肉线条相呼应的运动轮播海报，凸显热血竞技与装备科技感，适合健身服饰与补剂。",
+      "summaryEn": "High-contrast dark aesthetic carousel highlighting athletic endurance, technical fabrics, and gym performance.",
       "isHot": false,
       "isNew": false,
       "coverIndex": 10,
@@ -2848,9 +2848,9 @@
       "id": "sk-omx-editorial-luxury-ig-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Editorial Luxury Ig Carousel",
+      "title": "editorial奢华高端ig轮播卡片",
       "subtitle": "图片和静态广告",
-      "summary": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a prem...",
+      "summary": "当需要时使用本技能：the user asks for an Instagram 轮播卡片 (or any multi-slide static IG post) for a prem...",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2866,9 +2866,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
       },
-      "titleZh": "Editorial Luxury Ig Carousel",
+      "titleZh": "editorial奢华高端ig轮播卡片",
       "titleEn": "Editorial Luxury Ig Carousel",
-      "summaryZh": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a prem...",
+      "summaryZh": "当需要时使用本技能：the user asks for an Instagram 轮播卡片 (or any multi-slide static IG post) for a prem...",
       "summaryEn": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a prem...",
       "isHot": false,
       "isNew": false,
@@ -2887,9 +2887,9 @@
       "id": "sk-omx-educational-deficiency-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Educational Deficiency Carousel",
+      "title": "educationaldeficiency轮播卡片",
       "subtitle": "图片和静态广告",
-      "summary": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual seq...",
+      "summary": "专为educationaldeficiency轮播卡片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2905,9 +2905,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
       },
-      "titleZh": "Educational Deficiency Carousel",
+      "titleZh": "educationaldeficiency轮播卡片",
       "titleEn": "Educational Deficiency Carousel",
-      "summaryZh": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual seq...",
+      "summaryZh": "专为educationaldeficiency轮播卡片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual seq...",
       "isHot": false,
       "isNew": false,
@@ -2926,9 +2926,9 @@
       "id": "sk-omx-fashion-silent-multishot-showcase",
       "tab": "skills",
       "kind": "skill",
-      "title": "Fashion Silent Multishot Showcase",
+      "title": "时尚穿搭silentmultishotshowcase",
       "subtitle": "视频广告",
-      "summary": "A timeless, visually-led fashion ad pattern built on editorial silence: multiple locked-off camera angles of a...",
+      "summary": "专为时尚穿搭silentmultishotshowcase营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2944,9 +2944,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
       },
-      "titleZh": "Fashion Silent Multishot Showcase",
+      "titleZh": "时尚穿搭silentmultishotshowcase",
       "titleEn": "Fashion Silent Multishot Showcase",
-      "summaryZh": "A timeless, visually-led fashion ad pattern built on editorial silence: multiple locked-off camera angles of a...",
+      "summaryZh": "专为时尚穿搭silentmultishotshowcase营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A timeless, visually-led fashion ad pattern built on editorial silence: multiple locked-off camera angles of a...",
       "isHot": false,
       "isNew": false,
@@ -2965,9 +2965,9 @@
       "id": "sk-omx-gulf-recruitment-cinematic-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Gulf Recruitment Cinematic Arc",
+      "title": "gulfrecruitment电影级arc",
       "subtitle": "视频广告",
-      "summary": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeki...",
+      "summary": "专为gulfrecruitment电影级arc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2983,9 +2983,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
       },
-      "titleZh": "Gulf Recruitment Cinematic Arc",
+      "titleZh": "gulfrecruitment电影级arc",
       "titleEn": "Gulf Recruitment Cinematic Arc",
-      "summaryZh": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeki...",
+      "summaryZh": "专为gulfrecruitment电影级arc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeki...",
       "isHot": false,
       "isNew": false,
@@ -3004,7 +3004,7 @@
       "id": "sk-omx-guofeng-palace-drama-single-call",
       "tab": "skills",
       "kind": "skill",
-      "title": "Guofeng Palace Drama Single Call",
+      "title": "国风宫廷短剧独白",
       "subtitle": "视频广告",
       "summary": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call...",
       "category": "video-ads",
@@ -3022,8 +3022,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Guofeng Palace Drama Single Call"
       },
-      "titleZh": "Guofeng Palace Drama Single Call",
-      "titleEn": "Guofeng Palace Drama Single Call",
+      "titleZh": "国风宫廷短剧独白",
+      "titleEn": "Guofeng Palace Drama",
       "summaryZh": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call...",
       "summaryEn": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call...",
       "isHot": false,
@@ -3043,9 +3043,9 @@
       "id": "sk-omx-hinglish-before-after-saas-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "Hinglish Before After Saas Hook",
+      "title": "hinglishbeforeafterSaaS软件黄金钩子",
       "subtitle": "视频广告",
-      "summary": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting...",
+      "summary": "专为hinglishbeforeafterSaaS软件黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3061,9 +3061,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
       },
-      "titleZh": "Hinglish Before After Saas Hook",
+      "titleZh": "hinglishbeforeafterSaaS软件黄金钩子",
       "titleEn": "Hinglish Before After Saas Hook",
-      "summaryZh": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting...",
+      "summaryZh": "专为hinglishbeforeafterSaaS软件黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting...",
       "isHot": false,
       "isNew": false,
@@ -3082,9 +3082,9 @@
       "id": "sk-omx-home-service-lead-gen-static-meta",
       "tab": "skills",
       "kind": "skill",
-      "title": "Home Service Lead Gen Static Meta",
+      "title": "家政到家服务引流海报",
       "subtitle": "图片和静态广告",
-      "summary": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home servic...",
+      "summary": "专为homeserviceleadgenstaticmeta营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3100,9 +3100,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Home Service Lead Gen Static Meta"
       },
-      "titleZh": "Home Service Lead Gen Static Meta",
-      "titleEn": "Home Service Lead Gen Static Meta",
-      "summaryZh": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home servic...",
+      "titleZh": "家政到家服务引流海报",
+      "titleEn": "Home Service Lead Gen",
+      "summaryZh": "专为homeserviceleadgenstaticmeta营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home servic...",
       "isHot": false,
       "isNew": false,
@@ -3121,9 +3121,9 @@
       "id": "sk-omx-illustrated-world-map-builder",
       "tab": "skills",
       "kind": "skill",
-      "title": "Illustrated World Map Builder",
+      "title": "手绘插画世界地图构建",
       "subtitle": "图片和静态广告",
-      "summary": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited...",
+      "summary": "专为illustratedworldmapbuilder营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3139,9 +3139,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Illustrated World Map Builder"
       },
-      "titleZh": "Illustrated World Map Builder",
+      "titleZh": "手绘插画世界地图构建",
       "titleEn": "Illustrated World Map Builder",
-      "summaryZh": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited...",
+      "summaryZh": "专为illustratedworldmapbuilder营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited...",
       "isHot": false,
       "isNew": false,
@@ -3160,9 +3160,9 @@
       "id": "sk-omx-kannada-bus-poster-dark-gold",
       "tab": "skills",
       "kind": "skill",
-      "title": "Kannada Bus Poster Dark Gold",
+      "title": "黑金质感巴士海报",
       "subtitle": "图片和静态广告",
-      "summary": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies...",
+      "summary": "专为kannadabusposterdarkgold营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3178,9 +3178,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Kannada Bus Poster Dark Gold"
       },
-      "titleZh": "Kannada Bus Poster Dark Gold",
-      "titleEn": "Kannada Bus Poster Dark Gold",
-      "summaryZh": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies...",
+      "titleZh": "黑金质感巴士海报",
+      "titleEn": "Bus Poster Dark Gold",
+      "summaryZh": "专为kannadabusposterdarkgold营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies...",
       "isHot": false,
       "isNew": false,
@@ -3199,9 +3199,9 @@
       "id": "sk-omx-kit-produto-mecanismo-reveal-ptbr",
       "tab": "skills",
       "kind": "skill",
-      "title": "Kit Produto Mecanismo Reveal Ptbr",
+      "title": "产品机制原理解密展示",
       "subtitle": "产品展示",
-      "summary": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modula...",
+      "summary": "专为kitprodutomecanismorevealptbr营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3217,9 +3217,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Kit Produto Mecanismo Reveal Ptbr"
       },
-      "titleZh": "Kit Produto Mecanismo Reveal Ptbr",
-      "titleEn": "Kit Produto Mecanismo Reveal Ptbr",
-      "summaryZh": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modula...",
+      "titleZh": "产品机制原理解密展示",
+      "titleEn": "Product Mechanism Reveal",
+      "summaryZh": "专为kitprodutomecanismorevealptbr营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modula...",
       "isHot": false,
       "isNew": false,
@@ -3238,9 +3238,9 @@
       "id": "sk-omx-landing-page-dr-skill",
       "tab": "skills",
       "kind": "skill",
-      "title": "Landing Page Dr",
+      "title": "高转化着陆页策划",
       "subtitle": "图片和静态广告",
-      "summary": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-o...",
+      "summary": "专为landingpagedrskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3256,9 +3256,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Landing Page Dr"
       },
-      "titleZh": "Landing Page Dr",
-      "titleEn": "Landing Page Dr",
-      "summaryZh": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-o...",
+      "titleZh": "高转化着陆页策划",
+      "titleEn": "Direct Response Landing Page",
+      "summaryZh": "专为landingpagedrskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-o...",
       "isHot": false,
       "isNew": false,
@@ -3277,9 +3277,9 @@
       "id": "sk-omx-latam-marketplace-mixed-ugc-skill",
       "tab": "skills",
       "kind": "skill",
-      "title": "Latam Marketplace Mixed UGC",
+      "title": "拉美电商混合UGC视频",
       "subtitle": "UGC 和用户评价",
-      "summary": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category...",
+      "summary": "专为latammarketplacemixedUGCskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -3295,9 +3295,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
       },
-      "titleZh": "Latam Marketplace Mixed UGC",
-      "titleEn": "Latam Marketplace Mixed UGC",
-      "summaryZh": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category...",
+      "titleZh": "拉美电商混合UGC视频",
+      "titleEn": "Marketplace Mixed UGC",
+      "summaryZh": "专为latammarketplacemixedUGCskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category...",
       "isHot": false,
       "isNew": false,
@@ -3316,9 +3316,9 @@
       "id": "sk-omx-listing-cinematic-silent-spec-reveal",
       "tab": "skills",
       "kind": "skill",
-      "title": "Listing Cinematic Silent Spec Reveal",
+      "title": "listing电影级silentspecreveal",
       "subtitle": "产品展示",
-      "summary": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res...",
+      "summary": "专为listing电影级silentspecreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3334,9 +3334,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
       },
-      "titleZh": "Listing Cinematic Silent Spec Reveal",
+      "titleZh": "listing电影级silentspecreveal",
       "titleEn": "Listing Cinematic Silent Spec Reveal",
-      "summaryZh": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res...",
+      "summaryZh": "专为listing电影级silentspecreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res...",
       "isHot": false,
       "isNew": false,
@@ -3355,9 +3355,9 @@
       "id": "sk-omx-local-service-static-batch-blitz",
       "tab": "skills",
       "kind": "skill",
-      "title": "Local Service Static Batch Blitz",
+      "title": "本地服务批量静态图营销",
       "subtitle": "图片和静态广告",
-      "summary": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel dispatch.",
+      "summary": "专为localservicestaticbatchblitz营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3373,9 +3373,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Local Service Static Batch Blitz"
       },
-      "titleZh": "Local Service Static Batch Blitz",
-      "titleEn": "Local Service Static Batch Blitz",
-      "summaryZh": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel dispatch.",
+      "titleZh": "本地服务批量静态图营销",
+      "titleEn": "Local Service Static Blitz",
+      "summaryZh": "专为localservicestaticbatchblitz营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel disp...",
       "isHot": false,
       "isNew": false,
@@ -3394,9 +3394,9 @@
       "id": "sk-omx-luxury-brand-photo-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Luxury Brand Photo Reel",
+      "title": "奢华高端brandphotoreel",
       "subtitle": "产品展示",
-      "summary": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos.",
+      "summary": "专为奢华高端brandphotoreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3412,9 +3412,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
       },
-      "titleZh": "Luxury Brand Photo Reel",
+      "titleZh": "奢华高端brandphotoreel",
       "titleEn": "Luxury Brand Photo Reel",
-      "summaryZh": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos.",
+      "summaryZh": "专为奢华高端brandphotoreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos....",
       "isHot": false,
       "isNew": false,
@@ -3433,9 +3433,9 @@
       "id": "sk-omx-luxury-dark-carousel-5slide",
       "tab": "skills",
       "kind": "skill",
-      "title": "Luxury Dark Carousel 5slide",
+      "title": "奢华高端dark轮播卡片5slide",
       "subtitle": "图片和静态广告",
-      "summary": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage gree...",
+      "summary": "专为奢华高端dark轮播卡片5slide营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3451,9 +3451,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
       },
-      "titleZh": "Luxury Dark Carousel 5slide",
+      "titleZh": "奢华高端dark轮播卡片5slide",
       "titleEn": "Luxury Dark Carousel 5slide",
-      "summaryZh": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage gree...",
+      "summaryZh": "专为奢华高端dark轮播卡片5slide营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage gree...",
       "isHot": false,
       "isNew": false,
@@ -3472,9 +3472,9 @@
       "id": "sk-omx-luxury-editorial-app-reveal",
       "tab": "skills",
       "kind": "skill",
-      "title": "Luxury Editorial App Reveal",
+      "title": "奢华高端editorialappreveal",
       "subtitle": "视频广告",
-      "summary": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events...",
+      "summary": "专为奢华高端editorialappreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3490,9 +3490,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
       },
-      "titleZh": "Luxury Editorial App Reveal",
+      "titleZh": "奢华高端editorialappreveal",
       "titleEn": "Luxury Editorial App Reveal",
-      "summaryZh": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events...",
+      "summaryZh": "专为奢华高端editorialappreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events...",
       "isHot": false,
       "isNew": false,
@@ -3511,9 +3511,9 @@
       "id": "sk-omx-mirror-tryon-haul-beat-cut",
       "tab": "skills",
       "kind": "skill",
-      "title": "Mirror Tryon Haul Beat Cut",
+      "title": "对镜换装卡点混剪",
       "subtitle": "产品展示",
-      "summary": "Use this skill whenever the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si...",
+      "summary": "当需要时使用本技能：the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si...",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3529,9 +3529,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Mirror Tryon Haul Beat Cut"
       },
-      "titleZh": "Mirror Tryon Haul Beat Cut",
-      "titleEn": "Mirror Tryon Haul Beat Cut",
-      "summaryZh": "Use this skill whenever the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si...",
+      "titleZh": "对镜换装卡点混剪",
+      "titleEn": "Mirror Try-On Beat Cut",
+      "summaryZh": "当需要时使用本技能：the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si...",
       "summaryEn": "Use this skill whenever the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si...",
       "isHot": false,
       "isNew": false,
@@ -3550,9 +3550,9 @@
       "id": "sk-omx-motif-mirror-product-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Motif Mirror Product Reel",
+      "title": "motifmirror商品reel",
       "subtitle": "产品展示",
-      "summary": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles,...",
+      "summary": "专为motifmirror商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3568,9 +3568,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
       },
-      "titleZh": "Motif Mirror Product Reel",
+      "titleZh": "motifmirror商品reel",
       "titleEn": "Motif Mirror Product Reel",
-      "summaryZh": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles,...",
+      "summaryZh": "专为motifmirror商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles,...",
       "isHot": false,
       "isNew": false,
@@ -3589,9 +3589,9 @@
       "id": "sk-omx-paperfold-diorama-journey-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Paperfold Diorama Journey Arc",
+      "title": "折纸微缩立体心路故事",
       "subtitle": "视频广告",
-      "summary": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character,...",
+      "summary": "专为paperfolddioramajourneyarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3607,9 +3607,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Paperfold Diorama Journey Arc"
       },
-      "titleZh": "Paperfold Diorama Journey Arc",
+      "titleZh": "折纸微缩立体心路故事",
       "titleEn": "Paperfold Diorama Journey Arc",
-      "summaryZh": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character,...",
+      "summaryZh": "专为paperfolddioramajourneyarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character,...",
       "isHot": false,
       "isNew": false,
@@ -3628,9 +3628,9 @@
       "id": "sk-omx-pedestal-product-hero",
       "tab": "skills",
       "kind": "skill",
-      "title": "Pedestal Product Hero",
+      "title": "pedestal商品hero",
       "subtitle": "产品展示",
-      "summary": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood ped...",
+      "summary": "专为pedestal商品hero营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3646,9 +3646,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
       },
-      "titleZh": "Pedestal Product Hero",
+      "titleZh": "pedestal商品hero",
       "titleEn": "Pedestal Product Hero",
-      "summaryZh": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood ped...",
+      "summaryZh": "专为pedestal商品hero营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood ped...",
       "isHot": false,
       "isNew": false,
@@ -3667,9 +3667,9 @@
       "id": "sk-omx-phone-mockup-page",
       "tab": "skills",
       "kind": "skill",
-      "title": "Phone Mockup Page",
+      "title": "真机手机模型样机展示",
       "subtitle": "产品展示",
-      "summary": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a...",
+      "summary": "专为phonemockuppage营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3685,9 +3685,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Phone Mockup Page"
       },
-      "titleZh": "Phone Mockup Page",
-      "titleEn": "Phone Mockup Page",
-      "summaryZh": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a...",
+      "titleZh": "真机手机模型样机展示",
+      "titleEn": "Phone Mockup Showcase",
+      "summaryZh": "专为phonemockuppage营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a...",
       "isHot": false,
       "isNew": false,
@@ -3706,9 +3706,9 @@
       "id": "sk-omx-pil-print-flyer-photo-grid",
       "tab": "skills",
       "kind": "skill",
-      "title": "Pil Print Flyer Photo Grid",
+      "title": "照片九宫格印刷传单",
       "subtitle": "图片和静态广告",
-      "summary": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user...",
+      "summary": "专为pilprintflyerphotogrid营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3724,9 +3724,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Pil Print Flyer Photo Grid"
       },
-      "titleZh": "Pil Print Flyer Photo Grid",
-      "titleEn": "Pil Print Flyer Photo Grid",
-      "summaryZh": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user...",
+      "titleZh": "照片九宫格印刷传单",
+      "titleEn": "Print Flyer Photo Grid",
+      "summaryZh": "专为pilprintflyerphotogrid营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user...",
       "isHot": false,
       "isNew": false,
@@ -3745,9 +3745,9 @@
       "id": "sk-omx-playstore-ui-anchored-promo",
       "tab": "skills",
       "kind": "skill",
-      "title": "Playstore Ui Anchored Promo",
+      "title": "playstoreuianchored宣传推广",
       "subtitle": "产品展示",
-      "summary": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshot...",
+      "summary": "当需要时使用本技能：the user wants Google Play or App Store listing visuals built from real app screenshot...",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3763,9 +3763,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
       },
-      "titleZh": "Playstore Ui Anchored Promo",
+      "titleZh": "playstoreuianchored宣传推广",
       "titleEn": "Playstore Ui Anchored Promo",
-      "summaryZh": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshot...",
+      "summaryZh": "当需要时使用本技能：the user wants Google Play or App Store listing visuals built from real app screenshot...",
       "summaryEn": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshot...",
       "isHot": false,
       "isNew": false,
@@ -3784,9 +3784,9 @@
       "id": "sk-omx-pregnancy-subscription-warmblush-static-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "Pregnancy Subscription Warmblush Sta..",
+      "title": "pregnancysubscriptionwarmblushstatic广告",
       "subtitle": "图片和静态广告",
-      "summary": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box stat...",
+      "summary": "专为pregnancysubscriptionwarmblushstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3802,9 +3802,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
       },
-      "titleZh": "Pregnancy Subscription Warmblush Static Ad",
+      "titleZh": "pregnancysubscriptionwarmblushstatic广告",
       "titleEn": "Pregnancy Subscription Warmblush Static Ad",
-      "summaryZh": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box stat...",
+      "summaryZh": "专为pregnancysubscriptionwarmblushstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box stat...",
       "isHot": false,
       "isNew": false,
@@ -3823,9 +3823,9 @@
       "id": "sk-omx-real-estate-multiformat-static-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "Real Estate Multiformat Static Ad",
+      "title": "realestatemultiformatstatic广告",
       "subtitle": "图片和静态广告",
-      "summary": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing...",
+      "summary": "专为realestatemultiformatstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3841,9 +3841,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
       },
-      "titleZh": "Real Estate Multiformat Static Ad",
+      "titleZh": "realestatemultiformatstatic广告",
       "titleEn": "Real Estate Multiformat Static Ad",
-      "summaryZh": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing...",
+      "summaryZh": "专为realestatemultiformatstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing...",
       "isHot": false,
       "isNew": false,
@@ -3862,9 +3862,9 @@
       "id": "sk-omx-refurb-tech-product-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "Refurb Tech Product Reel",
+      "title": "refurbtech商品reel",
       "subtitle": "产品展示",
-      "summary": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL.",
+      "summary": "专为refurbtech商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3880,9 +3880,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
       },
-      "titleZh": "Refurb Tech Product Reel",
+      "titleZh": "refurbtech商品reel",
       "titleEn": "Refurb Tech Product Reel",
-      "summaryZh": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL.",
+      "summaryZh": "专为refurbtech商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL. Fetch...",
       "isHot": false,
       "isNew": false,
@@ -3901,9 +3901,9 @@
       "id": "sk-omx-regulated-claims-static-ad-matrix",
       "tab": "skills",
       "kind": "skill",
-      "title": "Regulated Claims Static Ad Matrix",
+      "title": "regulatedclaimsstatic广告matrix",
       "subtitle": "图片和静态广告",
-      "summary": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated l...",
+      "summary": "专为regulatedclaimsstatic广告matrix营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3919,9 +3919,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
       },
-      "titleZh": "Regulated Claims Static Ad Matrix",
+      "titleZh": "regulatedclaimsstatic广告matrix",
       "titleEn": "Regulated Claims Static Ad Matrix",
-      "summaryZh": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated l...",
+      "summaryZh": "专为regulatedclaimsstatic广告matrix营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated l...",
       "isHot": false,
       "isNew": false,
@@ -3940,9 +3940,9 @@
       "id": "sk-omx-retail-multi-variant-carousel-sale",
       "tab": "skills",
       "kind": "skill",
-      "title": "Retail Multi Variant Carousel Sale",
+      "title": "retailmultivariant轮播卡片sale",
       "subtitle": "产品展示",
-      "summary": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants...",
+      "summary": "专为retailmultivariant轮播卡片sale营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3958,9 +3958,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
       },
-      "titleZh": "Retail Multi Variant Carousel Sale",
+      "titleZh": "retailmultivariant轮播卡片sale",
       "titleEn": "Retail Multi Variant Carousel Sale",
-      "summaryZh": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants...",
+      "summaryZh": "专为retailmultivariant轮播卡片sale营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants...",
       "isHot": false,
       "isNew": false,
@@ -3979,9 +3979,9 @@
       "id": "sk-omx-revenue-transformation-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "Revenue Transformation Arc",
+      "title": "营收逆袭蜕变故事弧",
       "subtitle": "视频广告",
-      "summary": "Encodes a dark-grid motion-graphic ad pattern for local-business and food-service brands: a compressed before/...",
+      "summary": "专为revenuetransformationarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3997,9 +3997,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Revenue Transformation Arc"
       },
-      "titleZh": "Revenue Transformation Arc",
+      "titleZh": "营收逆袭蜕变故事弧",
       "titleEn": "Revenue Transformation Arc",
-      "summaryZh": "Encodes a dark-grid motion-graphic ad pattern for local-business and food-service brands: a compressed before/...",
+      "summaryZh": "专为revenuetransformationarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a dark-grid motion-graphic ad pattern for local-business and food-service brands: a compressed before/...",
       "isHot": false,
       "isNew": false,
@@ -4018,9 +4018,9 @@
       "id": "sk-omx-spanish-ugc-community-spokesperson-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "Spanish UGC Community Spokesperson H..",
+      "title": "spanishUGCcommunityspokesperson黄金钩子",
       "subtitle": "UGC 和用户评价",
-      "summary": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-...",
+      "summary": "专为spanishUGCcommunityspokesperson黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4036,9 +4036,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
       },
-      "titleZh": "Spanish UGC Community Spokesperson Hook",
+      "titleZh": "spanishUGCcommunityspokesperson黄金钩子",
       "titleEn": "Spanish UGC Community Spokesperson Hook",
-      "summaryZh": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-...",
+      "summaryZh": "专为spanishUGCcommunityspokesperson黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-...",
       "isHot": false,
       "isNew": false,
@@ -4057,9 +4057,9 @@
       "id": "sk-omx-split-screen-dialogue",
       "tab": "skills",
       "kind": "skill",
-      "title": "Split Screen Dialogue",
+      "title": "双屏分屏对话短剧",
       "subtitle": "UGC 和用户评价",
-      "summary": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skept...",
+      "summary": "专为splitscreendialogue营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4075,9 +4075,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Split Screen Dialogue"
       },
-      "titleZh": "Split Screen Dialogue",
+      "titleZh": "双屏分屏对话短剧",
       "titleEn": "Split Screen Dialogue",
-      "summaryZh": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skept...",
+      "summaryZh": "专为splitscreendialogue营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skept...",
       "isHot": false,
       "isNew": false,
@@ -4096,9 +4096,9 @@
       "id": "sk-omx-two-mascot-comedy-commercial",
       "tab": "skills",
       "kind": "skill",
-      "title": "Two Mascot Comedy Commercial",
+      "title": "双吉祥物爆笑喜剧广告",
       "subtitle": "视频广告",
-      "summary": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Chara...",
+      "summary": "专为twomascotcomedycommercial营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -4114,9 +4114,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Two Mascot Comedy Commercial"
       },
-      "titleZh": "Two Mascot Comedy Commercial",
+      "titleZh": "双吉祥物爆笑喜剧广告",
       "titleEn": "Two Mascot Comedy Commercial",
-      "summaryZh": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Chara...",
+      "summaryZh": "专为twomascotcomedycommercial营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Chara...",
       "isHot": false,
       "isNew": false,
@@ -4135,9 +4135,9 @@
       "id": "sk-omx-ugc-advisor-numbered-points-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Advisor Numbered Points Reel",
+      "title": "专家干货数字条列短视频",
       "subtitle": "UGC 和用户评价",
-      "summary": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks throug...",
+      "summary": "专为UGCadvisornumberedpointsreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4153,9 +4153,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC Advisor Numbered Points Reel"
       },
-      "titleZh": "UGC Advisor Numbered Points Reel",
-      "titleEn": "UGC Advisor Numbered Points Reel",
-      "summaryZh": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks throug...",
+      "titleZh": "专家干货数字条列短视频",
+      "titleEn": "Advisor Numbered Points Reel",
+      "summaryZh": "专为UGCadvisornumberedpointsreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks throug...",
       "isHot": false,
       "isNew": false,
@@ -4174,9 +4174,9 @@
       "id": "sk-omx-ugc-diaspora-direct-address-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Diaspora Direct Address Hook",
+      "title": "UGCdiasporadirectaddress黄金钩子",
       "subtitle": "UGC 和用户评价",
-      "summary": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audi...",
+      "summary": "专为UGCdiasporadirectaddress黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4192,9 +4192,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
       },
-      "titleZh": "UGC Diaspora Direct Address Hook",
+      "titleZh": "UGCdiasporadirectaddress黄金钩子",
       "titleEn": "UGC Diaspora Direct Address Hook",
-      "summaryZh": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audi...",
+      "summaryZh": "专为UGCdiasporadirectaddress黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audi...",
       "isHot": false,
       "isNew": false,
@@ -4213,9 +4213,9 @@
       "id": "sk-omx-ugc-female-creator-product-confession-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Female Creator Product Confessio..",
+      "title": "UGCfemalecreator商品confessionarc",
       "subtitle": "UGC 和用户评价",
-      "summary": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product vis...",
+      "summary": "专为UGCfemalecreator商品confessionarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4231,9 +4231,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
       },
-      "titleZh": "UGC Female Creator Product Confession Arc",
+      "titleZh": "UGCfemalecreator商品confessionarc",
       "titleEn": "UGC Female Creator Product Confession Arc",
-      "summaryZh": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product vis...",
+      "summaryZh": "专为UGCfemalecreator商品confessionarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product vis...",
       "isHot": false,
       "isNew": false,
@@ -4252,9 +4252,9 @@
       "id": "sk-omx-ugc-homeowner-testimonial-problem-payoff",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Homeowner Testimonial Problem Pa..",
+      "title": "UGChomeowner用户好评problempayoff",
       "subtitle": "UGC 和用户评价",
-      "summary": "A UGC-style direct-to-camera testimonial arc built around a relatable homeowner persona who opens with a visce...",
+      "summary": "专为UGChomeowner用户好评problempayoff营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4270,9 +4270,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
       },
-      "titleZh": "UGC Homeowner Testimonial Problem Payoff",
+      "titleZh": "UGChomeowner用户好评problempayoff",
       "titleEn": "UGC Homeowner Testimonial Problem Payoff",
-      "summaryZh": "A UGC-style direct-to-camera testimonial arc built around a relatable homeowner persona who opens with a visce...",
+      "summaryZh": "专为UGChomeowner用户好评problempayoff营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A UGC-style direct-to-camera testimonial arc built around a relatable homeowner persona who opens with a visce...",
       "isHot": false,
       "isNew": false,
@@ -4291,9 +4291,9 @@
       "id": "sk-omx-ugc-personal-reveal-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Personal Reveal Ad",
+      "title": "UGCpersonalreveal广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "Modular UGC-style video ad generator with full creative governance.",
+      "summary": "专为UGCpersonalreveal广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4309,9 +4309,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
       },
-      "titleZh": "UGC Personal Reveal Ad",
+      "titleZh": "UGCpersonalreveal广告",
       "titleEn": "UGC Personal Reveal Ad",
-      "summaryZh": "Modular UGC-style video ad generator with full creative governance.",
+      "summaryZh": "专为UGCpersonalreveal广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Modular UGC-style video ad generator with full creative governance. Generates short-form social ads (6s–45s) i...",
       "isHot": false,
       "isNew": false,
@@ -4330,9 +4330,9 @@
       "id": "sk-omx-ugc-street-interview-nightlife-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC Street Interview Nightlife Hook",
+      "title": "UGCstreetinterviewnightlife黄金钩子",
       "subtitle": "UGC 和用户评价",
-      "summary": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an ey...",
+      "summary": "专为UGCstreetinterviewnightlife黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4348,9 +4348,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
       },
-      "titleZh": "UGC Street Interview Nightlife Hook",
+      "titleZh": "UGCstreetinterviewnightlife黄金钩子",
       "titleEn": "UGC Street Interview Nightlife Hook",
-      "summaryZh": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an ey...",
+      "summaryZh": "专为UGCstreetinterviewnightlife黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an ey...",
       "isHot": false,
       "isNew": false,
@@ -4371,7 +4371,7 @@
       "kind": "skill",
       "title": "多画幅跨平台自适应",
       "subtitle": "视频广告",
-      "summary": "Use when a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap...",
+      "summary": "适用于a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap...",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -4389,7 +4389,7 @@
       },
       "titleZh": "多画幅跨平台自适应",
       "titleEn": "Video Adapt",
-      "summaryZh": "Use when a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap...",
+      "summaryZh": "适用于a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap...",
       "summaryEn": "Use when a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap...",
       "isHot": false,
       "isNew": false,
@@ -4410,7 +4410,7 @@
       "kind": "skill",
       "title": "纯白背景卖点标注展示",
       "subtitle": "产品展示",
-      "summary": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgroun...",
+      "summary": "专为纯白背景卖点标注展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -4428,7 +4428,7 @@
       },
       "titleZh": "纯白背景卖点标注展示",
       "titleEn": "White Bg Feature Callout Product Overview",
-      "summaryZh": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgroun...",
+      "summaryZh": "专为纯白背景卖点标注展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgroun...",
       "isHot": false,
       "isNew": false,
@@ -4447,9 +4447,9 @@
       "id": "sk-omx-wise-elder-ugc-kids-product",
       "tab": "skills",
       "kind": "skill",
-      "title": "Wise Elder UGC Kids Product",
+      "title": "wiseelderUGCkids商品",
       "subtitle": "UGC 和用户评价",
-      "summary": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmother...",
+      "summary": "专为wiseelderUGCkids商品营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4465,9 +4465,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
       },
-      "titleZh": "Wise Elder UGC Kids Product",
+      "titleZh": "wiseelderUGCkids商品",
       "titleEn": "Wise Elder UGC Kids Product",
-      "summaryZh": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmother...",
+      "summaryZh": "专为wiseelderUGCkids商品营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
       "summaryEn": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmother...",
       "isHot": false,
       "isNew": false,
