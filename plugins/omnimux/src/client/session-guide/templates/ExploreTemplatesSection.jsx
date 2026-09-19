@@ -115,6 +115,7 @@ export function ExploreTemplatesSection({
   const allSkillsItems = useMemo(() => {
     const rawList = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : [];
     return rawList.map((sk) => ({
+      ...sk,
       id: sk.id || sk.skill,
       skill: sk.skill || sk.id,
       title: isEn ? (sk.titleEn || sk.title || sk.nameEn || sk.skill) : (sk.titleZh || sk.title || sk.nameZh || sk.skill),
