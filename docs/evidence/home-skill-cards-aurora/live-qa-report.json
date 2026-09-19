@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-09-19T12:21:00.856Z",
+  "task": "home-skill-cards-aurora",
+  "topic": "首页 Skills 技能库卡片全面对齐技能插件高饱和度极光流光样式",
+  "assertions": {
+    "1. Skills 货架行呈现 14 套精选极光色彩流光": true,
+    "2. 细致半透明点阵网格完整覆盖": true,
+    "3. 左上角业务分类胶囊与火苗徽标正常渲染": true,
+    "4. 右上角半透明收藏星标支持交互高亮": true,
+    "5. 居中白色加粗大标题与纯矢量认证对勾徽标对齐图 2": true,
+    "6. 鼠标悬停抽屉平滑滑出展示简介、使用量与使用按钮": true,
+    "7. 单元测试与端到端测试 100% 绿灯通过": true
+  },
+  "evidence": "docs/evidence/home-skill-cards-aurora-verified.png",
+  "verdict": "PASS"
+}

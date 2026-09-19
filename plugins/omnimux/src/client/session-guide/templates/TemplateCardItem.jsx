@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { resolveSkillAuroraStyle } from '../skills/auroraGradients.js'
+import { ICON_VERIFIED, ICON_FIRE, CategoryIcon, CATEGORY_NAMES } from '../skills/SkillCard.jsx'
 
 const ICON_REPLICATE = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="13" height="13">
@@ -46,6 +48,7 @@ function formatMetric(num) {
  */
 export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
   const [imgError, setImgError] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
 
   if (!template) return null
 
@@ -69,6 +72,124 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
 
   const title = template.title || template.titleZh || template.nameZh || template.name || ''
   const coverUrl = template.thumbnailUrl || template.cover || template.img || ''
+
+  // 技能卡片：1:1 对标技能插件高饱和度极光流光样式（图 2 标杆视觉）
+  if (isSkill) {
+    const aurora = resolveSkillAuroraStyle(template)
+    const isHot = Boolean(template.isHot || template.tags?.includes('热门精选'))
+    const isNew = Boolean(template.isNew || template.tags?.includes('新品上市'))
+    const catLabel = CATEGORY_NAMES[template.category] || (Array.isArray(template.tags) ? template.tags[0] : '') || '营销技能'
+    const usesText = template.downloads ? `${template.downloads} uses` : '100+ uses'
+    const desc = template.summary || template.desc || template.description || '专业营销脚本与分镜方案'
+
+    return (
+      <div
+        className="omnimux-tpl-card is-skill-card omnimux-creatify-card omnimux-skill-card"
+        onClick={handleCardClick}
+        data-template-id={template.id}
+        data-template-type="skill"
+        data-skill-id={template.id}
+        data-is-app="false"
+        role="button"
+        tabIndex={0}
+        aria-label={title}
+        style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleCardClick()
+          }
+        }}
+      >
+        {/* 1. 动态极光流光背景层 */}
+        <div
+          className="omnimux-creatify-card-bg-img omnimux-skill-card-cover-img"
+          style={{
+            background: aurora.bg, /* exempt-ui02: 极光算法动态流光背景 */
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+          }}
+          aria-hidden="true"
+        />
+
+        {/* 2. 点阵纹理 Overlay (Dot Matrix) */}
+        <div className="omnimux-creatify-dot-overlay" aria-hidden="true" />
+
+        {/* 3. 左上角徽章组合 (热门火苗 / 新品微标 + 分类胶囊) */}
+        <div className="omnimux-creatify-card-top-left">
+          {isHot ? (
+            <span className="omnimux-creatify-badge-hot" title="热门精选">
+              {ICON_FIRE}
+            </span>
+          ) : isNew ? (
+            <span className="omnimux-creatify-badge-new">新</span>
+          ) : null}
+
+          {catLabel ? (
+            <div className="omnimux-creatify-pill-cat">
+              <CategoryIcon category={template.category} />
+              <span>{catLabel}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* 4. 右上角收藏星标 */}
+        <button /* exempt-ui01: 收藏按钮 */
+          type="button"
+          className={`omnimux-creatify-star-btn ${isFavorite ? 'active' : ''}`}
+          aria-label="收藏技能"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsFavorite(!isFavorite)
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </button>
+
+        {/* 5. 居中白色加粗大标题与认证徽章 */}
+        <div className="omnimux-creatify-card-center">
+          <h3 className="omnimux-creatify-center-title omnimux-skill-card-title omnimux-tpl-title" title={title}>
+            <span>{title}</span>
+            {ICON_VERIFIED}
+          </h3>
+        </div>
+
+        {/* 6. 悬停浮层：深色平滑渐变底 + 简介 + 使用量 + 快捷使用入口 */}
+        <div className="omnimux-creatify-card-hover-drawer">
+          <div className="omnimux-creatify-drawer-bg" />
+          <div className="omnimux-creatify-drawer-content">
+            <p className="omnimux-creatify-drawer-desc omnimux-skill-card-summary" title={desc}>
+              {desc}
+            </p>
+            <div className="omnimux-creatify-drawer-footer">
+              <div className="omnimux-creatify-drawer-uses">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>{usesText}</span>
+              </div>
+              <button /* exempt-ui01: session-guide card recreate button */
+                type="button"
+                className="omnimux-trending-recreate-btn omnimux-skill-card-btn"
+                onClick={handleRecreateClick}
+                aria-label={`${actionText}：${title}`}
+              >
+                <span className="omnimux-trending-recreate-icon" aria-hidden="true">
+                  {actionIcon}
+                </span>
+                <span>{actionText}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
