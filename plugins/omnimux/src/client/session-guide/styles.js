@@ -2538,7 +2538,27 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-creatify-drawer-uses {
   display:flex; align-items:center; gap:4px; font-size:11px;
-  color:rgba(255, 255, 255, 0.65);
+  color:var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65)); /* exempt-ui03: 悬停抽屉次级文字 */
+}
+.omnimux-creatify-drawer-footer {
+  display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; margin-top:2px;
+}
+.omnimux-tpl-card.is-skill-card {
+  aspect-ratio:16 / 10;
+  border-radius:14px;
+}
+.omnimux-tpl-card.is-skill-card .omnimux-creatify-card-hover-drawer {
+  pointer-events:auto;
+}
+.omnimux-tpl-card.is-skill-card .omnimux-trending-recreate-btn {
+  padding:3px 10px;
+  font-size:11px;
+  height:24px;
+  gap:4px;
+  border-radius:999px;
+}
+.omnimux-tpl-card.is-skill-card .omnimux-creatify-center-title {
+  font-size:18px;
 }
 
 /* 技能卡片网格：基准 4 列，响应式折叠，对齐图 4 视觉规范 */

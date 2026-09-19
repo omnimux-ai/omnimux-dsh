@@ -1,26 +1,37 @@
 import React, { useState } from 'react'
 import { resolveSkillTitle, resolveSkillSummary } from './featured-skills-data.js'
+import { resolveSkillAuroraStyle } from './auroraGradients.js'
 
 // 纯矢量 SVG 认证徽章 (Verified Badge 1:1 对标)
-const ICON_VERIFIED = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+export const ICON_VERIFIED = (
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="creatify-card-verified-svg">
     <path
       d="M8.2 2.5a2.2 2.2 0 0 1 3.6 0l.7.9a2.2 2.2 0 0 0 1.9.9h1.1a2.2 2.2 0 0 1 2.2 2.2v1.1c0 .8.4 1.5 1 1.9l.8.7a2.2 2.2 0 0 1 0 3.6l-.8.7a2.2 2.2 0 0 0-1 1.9v1.1a2.2 2.2 0 0 1-2.2 2.2h-1.1a2.2 2.2 0 0 0-1.9 1l-.7.8a2.2 2.2 0 0 1-3.6 0l-.7-.8a2.2 2.2 0 0 0-1.9-1H4.5A2.2 2.2 0 0 1 2.3 16v-1.1a2.2 2.2 0 0 0-1-1.9l-.8-.7a2.2 2.2 0 0 1 0-3.6l.8-.7a2.2 2.2 0 0 0 1-1.9V5a2.2 2.2 0 0 1 2.2-2.2h1.1a2.2 2.2 0 0 0 1.9-1l.7-.8z"
-      fill="#FFFFFF"
+      fill="var(--dsw-static-neutral-00, #ffffff)" /* exempt-ui03: 认证图标底色 */
     />
-    <path d="M6.5 10l2.5 2.5L14 7.5" stroke="#000000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6.5 10l2.5 2.5L14 7.5" stroke="var(--dsw-static-neutral-1000, #000000)" /* exempt-ui03: 对勾线条色 */ strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
 // 纯矢量 SVG 火苗 (Hot Picks)
-const ICON_FIRE = (
+export const ICON_FIRE = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 2c-.6 1.8-1.5 3.3-2.6 4.7C8.1 8.2 6.8 9.9 6.8 12c0 3.3 2.7 6 6 6s6-2.7 6-6c0-1.8-1.1-4-2.8-5.7-1.1-1.1-2.1-2.4-2.7-4.3z" />
   </svg>
 )
 
+export const CATEGORY_NAMES = {
+  'ugc-testimonial': 'UGC 和用户评价',
+  'storytelling-script': '故事讲述和脚本',
+  'image-static': '图片和静态广告',
+  'video-ads': '视频广告',
+  'product-showcase': '产品展示',
+  'meme-native': '模因与原生',
+  'other': '其它营销分类',
+}
+
 // 分类矢量图标
-function CategoryIcon({ category }) {
+export function CategoryIcon({ category }) {
   const cat = String(category || '').toLowerCase()
   if (cat.includes('ugc')) {
     return (
@@ -101,8 +112,10 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
   const coverIndex = typeof skill.coverIndex === 'number' ? skill.coverIndex : COVER_NUMS[index % COVER_NUMS.length]
   const coverUrl = skill.cover || `/omnimux/assets/skill-card-covers/skill-card-${coverIndex}.webp`
 
-  const isHot = !!skill.isHot
-  const isNew = !!skill.isNew
+  const aurora = resolveSkillAuroraStyle(skill)
+  const isHot = Boolean(skill.isHot || skill.tags?.includes('热门精选'))
+  const isNew = Boolean(skill.isNew || skill.tags?.includes('新品上市'))
+  const catLabel = categoryTitle || CATEGORY_NAMES[skill.category] || (Array.isArray(skill.tags) ? skill.tags[0] : '') || '营销技能'
   const usesText = skill.downloads ? `${skill.downloads} uses` : '100+ uses'
 
   return (
@@ -112,18 +125,23 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
       data-skill-active={active ? 'true' : 'false'}
       aria-label={title}
       onClick={() => onSelect?.(skill)}
+      style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
     >
-      {/* 1. 动态渐变大封面 */}
+      {/* 1. 动态极光流光大封面 */}
       {!imgBroken ? (
         <img
           src={coverUrl}
           alt={title}
           className="omnimux-creatify-card-bg-img omnimux-skill-card-cover-img"
           loading="lazy"
+          style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
           onError={() => setImgBroken(true)}
         />
       ) : (
-        <div className="omnimux-creatify-card-bg-fallback omnimux-skill-card-cover-fallback" />
+        <div
+          className="omnimux-creatify-card-bg-img omnimux-skill-card-cover-img omnimux-skill-card-cover-fallback"
+          style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
+        />
       )}
 
       {/* 2. 点阵纹理 Overlay (Dot Matrix) */}
@@ -141,10 +159,10 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
           </span>
         ) : null}
 
-        {categoryTitle ? (
+        {catLabel ? (
           <div className="omnimux-creatify-pill-cat">
             <CategoryIcon category={skill.category} />
-            <span>{categoryTitle}</span>
+            <span>{catLabel}</span>
           </div>
         ) : null}
       </div>
