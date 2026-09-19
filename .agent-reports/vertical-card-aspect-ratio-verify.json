@@ -1,0 +1,24 @@
+{
+  "task": "vertical-card-aspect-ratio",
+  "spec": "specs/vertical-card-aspect-ratio.spec.md",
+  "timestamp": "2026-09-20T04:13:00Z",
+  "verified": true,
+  "summary": "已完成卡片画幅自适应调整：Skills 技能库卡片保持 16:10 横版比例 (240px)，其他短视频应用与创意模板卡片全面调整为 9:16 标准竖版短视频画幅 (170px)。",
+  "checks": [
+    {
+      "name": "Skills 技能库卡片画幅",
+      "expected": "aspect-ratio: 16 / 10, flex: 0 0 240px",
+      "result": "PASS"
+    },
+    {
+      "name": "普通模板与短视频应用卡片画幅",
+      "expected": "aspect-ratio: 9 / 16, flex: 0 0 170px",
+      "result": "PASS"
+    },
+    {
+      "name": "网格视图列宽自适应",
+      "expected": "普通 minmax(170px, 1fr)，技能分类 minmax(240px, 1fr)",
+      "result": "PASS"
+    }
+  ]
+}

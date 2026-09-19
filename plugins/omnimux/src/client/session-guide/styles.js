@@ -2544,6 +2544,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; margin-top:2px;
 }
 .omnimux-tpl-card.is-skill-card {
+  flex:0 0 240px;
   aspect-ratio:16 / 10;
   border-radius:14px;
 }
@@ -3273,10 +3274,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-shelf-arrow-btn:hover { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-brand-primary); transform:translateY(-50%) scale(1.08); }
 
-/* Template Card - 现代化横版卡片 (16:10 黄金比例) */
+/* Template Card - 现代化竖版短视频卡片 (9:16 短视频黄金比例) */
 .omnimux-tpl-card {
-  flex:0 0 240px;
-  aspect-ratio:16 / 10;
+  flex:0 0 170px;
+  aspect-ratio:9 / 16;
   background:var(--dsw-alias-bg-layer-2);
   border:1px solid var(--dsw-alias-border-l2);
   border-radius:12px;
@@ -3477,8 +3478,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-btn-back:hover { color:var(--dsw-alias-label-primary); border-color:var(--dsw-alias-border-l3); }
 .omnimux-tpl-full-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
   gap:18px;
+}
+.omnimux-tpl-grid-view[data-category="skills"] .omnimux-tpl-full-grid {
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
 }
 .omnimux-tpl-grid-footer { display:flex; justify-content:center; align-items:center; padding:24px 0 12px; }
 .omnimux-tpl-btn-loadmore {
