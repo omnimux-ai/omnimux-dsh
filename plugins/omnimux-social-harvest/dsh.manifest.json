@@ -1,0 +1,31 @@
+{
+  "id": "omnimux-social-harvest",
+  "name": "omnimux-social-harvest",
+  "version": "0.1.0",
+  "tier": "tier-1-app",
+  "entrypoint": "src/index.js",
+  "status": "active",
+  "description": "OmniMux 社媒采集：封装本机 OpenCLI 官方内置社媒适配器（TikTok/Instagram/Facebook/Pinterest/X/YouTube/小红书/抖音/LinkedIn，只读），服务爆款视频复刻的发现与解构环节。复用浏览器登录态，产品不接触账号密码。",
+  "tags": ["social-media", "harvest", "opencli", "discovery", "deconstruction"],
+  "capabilities": {
+    "tools": [
+      { "name": "harvest_tiktok_search", "summary": "按关键词搜索 TikTok 视频（爆款发现）", "category": "harvest" },
+      { "name": "harvest_tiktok_user", "summary": "获取 TikTok 创作者近期视频列表", "category": "harvest" },
+      { "name": "harvest_pinterest_pins", "summary": "搜索 Pinterest 图钉（免登录可用）", "category": "harvest" },
+      { "name": "harvest_pinterest_download", "summary": "下载 Pinterest 图钉原图到本地", "category": "harvest" },
+      { "name": "harvest_sites_status", "summary": "查询各社媒平台登录态（whoami 自检）", "category": "harvest" },
+      { "name": "harvest_site_login", "summary": "打开指定平台的浏览器登录页并等待人工完成登录", "category": "harvest" }
+    ],
+    "seamsProvided": [],
+    "seamsConsumed": [],
+    "slots": [
+      { "target": "sidebar.extra", "componentPath": "src/client/sidebar-entry.js" },
+      { "target": "shell.overlay", "componentPath": "src/client/HarvestStage.jsx" }
+    ],
+    "storageDomains": ["$DSH_HOME/omnimux-social-harvest/"]
+  },
+  "dependencies": {
+    "requiredPlugins": ["omnimux"],
+    "systemBinaries": ["opencli"]
+  }
+}

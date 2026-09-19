@@ -1,0 +1,54 @@
+{
+  "name": "omnimux-social-harvest",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib/client.js",
+    "scripts/build-client.mjs",
+    "cordis.patch.yml",
+    "dsh.manifest.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "prepare": "npm run build",
+    "test": "node --test src/*.test.js src/core/*.test.js src/collect/*.test.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "license": "Apache-2.0",
+  "description": "OmniMux 社媒采集：封装本机 OpenCLI 官方内置社媒适配器（只读），工作台选平台、点工具、弹窗表单执行，结果服务爆款复刻发现与解构。"
+}
