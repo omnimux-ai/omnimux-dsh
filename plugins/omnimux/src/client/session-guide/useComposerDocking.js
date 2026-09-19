@@ -1,0 +1,253 @@
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+/** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
+export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
+
+/** 停靠后输入框距会话视口底边的距离（px）。 */
+export const DOCK_BOTTOM = 20
+
+/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
+export const DOCK_MAX_WIDTH = 780
+
+/** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
+export const SCROLLER_SELECTOR = '[class*="scrollBody"]'
+
+/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。 */
+export const READ_TOP_MAX = 10
+
+/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。 */
+export const DOCK_LEAVE_MAX = 20
+
+export const ICON_CHEVRON_DOWN = React.createElement(
+  'svg',
+  {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': 'true',
+  },
+  React.createElement('path', { d: 'm6 9 6 6 6-6' })
+)
+
+/** rAF 在无布局环境（JSDOM / SSR）可能不存在，退化成宏任务即可。 */
+export const scheduleFrame = typeof requestAnimationFrame === 'function'
+  ? requestAnimationFrame
+  : (fn) => setTimeout(fn, 0)
+export const cancelFrame = typeof cancelAnimationFrame === 'function'
+  ? cancelAnimationFrame
+  : (id) => clearTimeout(id)
+
+/**
+ * 读取页面真实的滚动位置：宿主用 `scrollBody` 容器滚动，整页滚动则是 window / documentElement。
+ * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部，
+ * 输入框就该留在底部，而不是被一次空读数顶回页首。
+ *
+ * @param {Element | null} scroller 滚动容器（可能不存在）
+ * @returns {number} 已滚动的像素数；无布局信息时为 0
+ */
+export function readPageScrollTop(scroller) {
+  const scrollerTop = Number(scroller?.scrollTop)
+  const windowTop = Number(window?.scrollY ?? window?.pageYOffset)
+  const documentTop = Number(document?.documentElement?.scrollTop)
+  return [scrollerTop, windowTop, documentTop]
+    .filter((value) => Number.isFinite(value))
+    .reduce((max, value) => Math.max(max, value), 0)
+}
+
+function isSameItem(a, b) {
+  if (!a || !b) return false
+  if (a === b) return true
+  const aId = a.id || a.skill || a.slug || a.template?.id || a.item?.id || a.item?.skill
+  const bId = b.id || b.skill || b.slug || b.template?.id || b.item?.id || b.item?.skill
+  if (aId && bId && aId === bId) return true
+  return false
+}
+
+/**
+ * 首页引导会话输入框吸底控制器 Hook
+ *
+ * 当用户在首页选用技能（点击「使用」）或复刻模板/爆款视频（点击「复刻」）时：
+ * 1. 原生输入框通过 FLIP 动画平滑固定停靠在视口底部；
+ * 2. 原 Hero 槽位由占位高度（min-height）撑住，防止页面布局坍塌；
+ * 3. 输入框右上方渲染收起气泡按钮（.omnimux-trending-undock），点击解除吸底；
+ * 4. 滚动迟滞联动：向下浏览保持吸底，向上滑回最顶部（<=10px）自动切回原位；
+ * 5. 再次点击同一张卡片触发反悔，解除吸底。
+ */
+export function useComposerDocking({ hostRef, onUndock } = {}) {
+  const [dockedItem, setDockedItem] = useState(null)
+  const [placement, setPlacement] = useState('inline')
+  const dockHostRef = useRef(null)
+
+  const undock = useCallback(() => {
+    setDockedItem(null)
+    setPlacement('inline')
+    onUndock?.()
+  }, [onUndock])
+
+  const dock = useCallback((item) => {
+    if (!item) return false
+    // 再次点击同一张卡片：作为反悔动作解除吸底
+    if (dockedItem && isSameItem(dockedItem, item)) {
+      undock()
+      return false
+    }
+    setPlacement('docked')
+    setDockedItem(item)
+    return true
+  }, [dockedItem, undock])
+
+  // 1. 吸底几何适配、占位高度防塌陷与 FLIP 位移动画
+  useLayoutEffect(() => {
+    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') || hostRef?.current?.closest?.('[data-phase]')
+    if (!root) return undefined
+    dockHostRef.current = root
+
+    const card = root.querySelector?.('[data-composer-card]')
+    const band = card?.parentElement || root
+
+    const writeGeometry = () => {
+      const rect = band?.getBoundingClientRect?.()
+      if (!rect || rect.width <= 0) return
+      const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, rect.width - 24))
+      const left = rect.left + (rect.width - width) / 2
+      root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
+      root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)
+      root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
+      const height = card?.getBoundingClientRect?.().height
+      if (height) root.style.setProperty('--omnimux-dock-card-height', `${Math.round(height)}px`)
+    }
+
+    const from = card?.getBoundingClientRect?.()
+    const fromBand = band?.getBoundingClientRect?.()
+
+    const shouldDock = Boolean(dockedItem && placement === 'docked')
+    const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
+
+    if (shouldDock) {
+      writeGeometry()
+      const reserved = Math.round(fromBand?.height || from?.height || 0)
+      if (band && reserved > 0) band.style.minHeight = `${reserved}px`
+      root.setAttribute(DOCK_OPEN_ATTR, '')
+    } else {
+      if (band) band.style.minHeight = ''
+      root.removeAttribute(DOCK_OPEN_ATTR)
+    }
+
+    let cancelAnim = null
+    if (currentlyDocked !== shouldDock && card && from && from.width > 0 && from.height > 0) {
+      const to = card.getBoundingClientRect?.()
+      if (to && to.width > 0 && to.height > 0) {
+        const dx = Math.round(from.left - to.left)
+        const dy = Math.round(from.top - to.top)
+        if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
+          card.style.transition = 'none'
+          card.style.transform = `translate(${dx}px, ${dy}px)`
+          card.style.opacity = '0.92'
+          const raf = scheduleFrame(() => {
+            card.style.transition = 'transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease-out'
+            card.style.transform = ''
+            card.style.opacity = ''
+          })
+          const timer = setTimeout(() => {
+            if (card) {
+              card.style.transition = ''
+              card.style.transform = ''
+              card.style.opacity = ''
+            }
+          }, 420)
+          cancelAnim = () => {
+            cancelFrame(raf)
+            clearTimeout(timer)
+            if (card) {
+              card.style.transition = ''
+              card.style.transform = ''
+              card.style.opacity = ''
+            }
+          }
+        }
+      }
+    }
+
+    if (!dockedItem) {
+      return () => {
+        cancelAnim?.()
+      }
+    }
+
+    const observer = typeof window.ResizeObserver === 'function'
+      ? new window.ResizeObserver(writeGeometry)
+      : null
+    observer?.observe(root)
+    if (card) observer?.observe(card)
+    window.addEventListener('resize', writeGeometry)
+    return () => {
+      cancelAnim?.()
+      observer?.disconnect()
+      window.removeEventListener('resize', writeGeometry)
+    }
+  }, [dockedItem, placement, hostRef])
+
+  // 2. 页面滚动迟滞判定：滑回最顶部自动归还原位，滑离顶部恢复吸底
+  useEffect(() => {
+    if (!dockedItem) return undefined
+    const root = dockHostRef.current
+    const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
+    let frame = 0
+    let leftTop = readPageScrollTop(scroller) > DOCK_LEAVE_MAX
+
+    const evaluate = () => {
+      frame = 0
+      const scrollTop = readPageScrollTop(scroller)
+      if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
+      setPlacement((prev) => {
+        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
+        if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
+        return prev
+      })
+    }
+
+    const onScroll = () => {
+      if (frame) return
+      frame = scheduleFrame(evaluate)
+    }
+
+    const targets = [scroller, window].filter(Boolean)
+    for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      if (frame) cancelFrame(frame)
+      for (const target of targets) target.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [dockedItem])
+
+  // 3. 卸载或会话切换时清理宿主样式与标记
+  useEffect(() => () => {
+    const root = dockHostRef.current
+    if (!root) return
+    root.removeAttribute(DOCK_OPEN_ATTR)
+    root.style.removeProperty('--omnimux-dock-left')
+    root.style.removeProperty('--omnimux-dock-width')
+    root.style.removeProperty('--omnimux-dock-bottom')
+    root.style.removeProperty('--omnimux-dock-card-height')
+    const band = root.querySelector?.('[data-composer-card]')?.parentElement
+    if (band) band.style.minHeight = ''
+    const card = root.querySelector?.('[data-composer-card]')
+    if (card) {
+      card.style.transform = ''
+      card.style.transition = ''
+      card.style.opacity = ''
+    }
+  }, [])
+
+  return {
+    dockedItem,
+    placement,
+    dock,
+    undock,
+    isDocked: Boolean(dockedItem && placement === 'docked'),
+  }
+}

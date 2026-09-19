@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-19T13:50:04.068Z",
+  "task": "restore-dock-composer",
+  "topic": "恢复使用技能与复刻按钮触发输入框吸底与完整交互逻辑",
+  "assertions": {
+    "1. 点击技能使用按钮吸底并触发 data-omnimux-dock-open": true,
+    "2. 底部浮现 .omnimux-trending-undock 收起归还按钮": true,
+    "3. 点击收起按钮解除吸底并平滑归还原位": true,
+    "4. 滚动迟滞：向下浏览保持吸底，向上滑回最顶部自动归还": true,
+    "5. 点击模板复刻同样触发吸底联动": true
+  },
+  "evidence": "docs/evidence/restore-dock-composer-verified.png",
+  "verdict": "PASS"
+}
