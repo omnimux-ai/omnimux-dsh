@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-19T14:02:56.048Z",
+  "task": "optimize-card-button-bg",
+  "topic": "优化卡片悬停操作按钮背景颜色为高级深灰半透明毛玻璃质感",
+  "assertions": {
+    "1. 彻底剔除 .omnimux-tpl-card[data-template-type=app] 的突兀纯白高光实底": true,
+    "2. 统一使用深灰半透明毛玻璃背景 var(--dsw-alias-bg-mask-2)": true,
+    "3. 鼠标悬停激活态采用优雅微亮毛玻璃 var(--dsw-alias-bg-mask-1)": true,
+    "4. 按钮文字与图标恒定保持高对比纯白 var(--dsw-static-neutral-00)": true,
+    "5. 彻底解决白底白字、惨白反光刺眼问题": true
+  },
+  "evidence": "docs/evidence/optimize-card-button-bg-verified.png",
+  "verdict": "PASS"
+}
