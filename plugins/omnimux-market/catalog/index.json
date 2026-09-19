@@ -433,8 +433,7 @@
       "summary": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "新品上市"
+        "视频广告"
       ],
       "skill": "youth-sports-hype-reel",
       "source": {
@@ -452,10 +451,10 @@
       "summaryZh": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
       "summaryEn": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
       "isHot": false,
-      "isNew": true,
+      "isNew": false,
       "coverIndex": 4,
       "coverFile": "skill-card-4.webp",
-      "badge": "NEW",
+      "badge": "",
       "installFlow": "session-guide",
       "sessionPrefill": "/youth-sports-hype-reel\n请运行 青少年体育宣传片 (Youth Sports Hype Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
@@ -473,7 +472,8 @@
       "summary": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
       "category": "video-ads",
       "tags": [
-        "视频广告"
+        "视频广告",
+        "热门精选"
       ],
       "skill": "script-to-video",
       "source": {
@@ -490,11 +490,11 @@
       "titleEn": "Script To Video",
       "summaryZh": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
       "summaryEn": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
-      "isHot": false,
+      "isHot": true,
       "isNew": false,
       "coverIndex": 5,
       "coverFile": "skill-card-5.webp",
-      "badge": "",
+      "badge": "HOT",
       "installFlow": "session-guide",
       "sessionPrefill": "/script-to-video\n请运行 脚本转视频 (Script To Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
@@ -1175,7 +1175,8 @@
       "summary": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价"
+        "UGC 和用户评价",
+        "热门精选"
       ],
       "skill": "ugc-script-planner",
       "source": {
@@ -1192,11 +1193,11 @@
       "titleEn": "UGC Script Planner",
       "summaryZh": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
       "summaryEn": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
-      "isHot": false,
+      "isHot": true,
       "isNew": false,
       "coverIndex": 7,
       "coverFile": "skill-card-7.webp",
-      "badge": "",
+      "badge": "HOT",
       "installFlow": "session-guide",
       "sessionPrefill": "/ugc-script-planner\n请运行 UGC 脚本全流程策划 (UGC Script Planner) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
