@@ -80,29 +80,47 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const [dockedItem, setDockedItem] = useState(null)
   const [placement, setPlacement] = useState('inline')
   const dockHostRef = useRef(null)
+  const pendingApplyRef = useRef(null)
+  const savedScrollRef = useRef(null)
 
   const undock = useCallback(() => {
     setDockedItem(null)
     setPlacement('inline')
+    pendingApplyRef.current = null
+    savedScrollRef.current = null
     onUndock?.()
   }, [onUndock])
 
-  const dock = useCallback((item) => {
+  const dock = useCallback((item, onDocked) => {
     if (!item) return false
     // 再次点击同一张卡片：作为反悔动作解除吸底
     if (dockedItem && isSameItem(dockedItem, item)) {
       undock()
       return false
     }
+    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') || hostRef?.current?.closest?.('[data-phase]')
+    const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
+    // 记录用户触发点击当帧的绝对真实滚动位置
+    savedScrollRef.current = readPageScrollTop(scroller)
+    pendingApplyRef.current = typeof onDocked === 'function' ? onDocked : null
     setPlacement('docked')
     setDockedItem(item)
     return true
-  }, [dockedItem, undock])
+  }, [dockedItem, undock, hostRef])
 
   // 1. 吸底几何适配、占位高度防塌陷与 FLIP 位移动画
   useLayoutEffect(() => {
-    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') || hostRef?.current?.closest?.('[data-phase]')
-    if (!root) return undefined
+    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') ||
+      hostRef?.current?.closest?.('[data-phase]') ||
+      hostRef?.current
+    if (!root) {
+      if (pendingApplyRef.current) {
+        const applyFn = pendingApplyRef.current
+        pendingApplyRef.current = null
+        applyFn()
+      }
+      return undefined
+    }
     dockHostRef.current = root
 
     const card = root.querySelector?.('[data-composer-card]')
@@ -131,6 +149,36 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       const reserved = Math.round(fromBand?.height || from?.height || 0)
       if (band && reserved > 0) band.style.minHeight = `${reserved}px`
       root.setAttribute(DOCK_OPEN_ATTR, '')
+
+      // 视口滚动条锁定：防止脱离文档流瞬间视口发生位移
+      const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
+      if (savedScrollRef.current != null) {
+        const currentScroll = readPageScrollTop(scroller)
+        if (Math.abs(currentScroll - savedScrollRef.current) > 0.5) {
+          if (scroller) scroller.scrollTop = savedScrollRef.current
+          if (typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
+            window.scrollTo(window.scrollX || 0, savedScrollRef.current)
+          }
+        }
+      }
+
+      // 意图延迟交付：输入框物理上已经在底部 fixed 就位后，才执行草稿注入与聚焦
+      if (pendingApplyRef.current) {
+        const applyFn = pendingApplyRef.current
+        pendingApplyRef.current = null
+        applyFn()
+
+        // 注入后再次核验锁定，彻底消除外部 setDraft/focus 触发的意外滚顶
+        if (savedScrollRef.current != null) {
+          const currentAfter = readPageScrollTop(scroller)
+          if (Math.abs(currentAfter - savedScrollRef.current) > 0.5) {
+            if (scroller) scroller.scrollTop = savedScrollRef.current
+            if (typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
+              window.scrollTo(window.scrollX || 0, savedScrollRef.current)
+            }
+          }
+        }
+      }
     } else {
       if (band) band.style.minHeight = ''
       root.removeAttribute(DOCK_OPEN_ATTR)
