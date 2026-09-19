@@ -143,7 +143,7 @@ function renderCatIcon(category) {
   );
 }
 
-const CATEGORY_NAMES = {
+const CATEGORY_NAMES_ZH = {
   'ugc-testimonial': 'UGC 和用户评价',
   'storytelling-script': '故事讲述和脚本',
   'image-static': '图片和静态广告',
@@ -152,6 +152,28 @@ const CATEGORY_NAMES = {
   'meme-native': '模因与原生',
   'other': '其它营销分类',
 };
+
+const CATEGORY_NAMES_EN = {
+  'ugc-testimonial': 'UGC & Testimonial',
+  'storytelling-script': 'Storytelling & Script',
+  'image-static': 'Image & Static Ads',
+  'video-ads': 'Video Ads',
+  'product-showcase': 'Product Showcase',
+  'meme-native': 'Meme & Native',
+  'other': 'Other',
+};
+
+function resolveCategoryLabel(category, isEn, tr) {
+  if (category) {
+    if (typeof tr === 'function') {
+      const trVal = tr('cat.' + category);
+      if (trVal && trVal !== 'cat.' + category) return trVal;
+    }
+    const dict = isEn ? CATEGORY_NAMES_EN : CATEGORY_NAMES_ZH;
+    if (dict[category]) return dict[category];
+  }
+  return category || (isEn ? 'Marketing' : '营销技能');
+}
 
 /**
  * 1:1 复刻 Creatify 官方 3:2 质感卡片
@@ -165,16 +187,32 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     safeOpts = opts;
   }
   const { tr, onOpen, onTry, cardIndex } = safeOpts;
+  const isEn = typeof tr === 'function' ? (tr('locale') === 'en') : (typeof document !== 'undefined' && document.documentElement.lang && /^en\b/i.test(document.documentElement.lang));
+
+  const safeTr = (key, params, fallback) => {
+    if (typeof tr === 'function') {
+      const res = tr(key, params);
+      if (res && res !== key) return res;
+    }
+    return fallback;
+  };
+
   const title = resolveItemTitle(item, tr);
-  const desc = resolveItemDesc(item, tr) || '暂无描述';
+  const desc = resolveItemDesc(item, tr) || (isEn ? 'No description' : '暂无描述');
 
   // 极光色彩光学算法：每个技能卡片计算一套高颜值流光
   const aurora = resolveSkillAuroraStyle(item);
 
   const isHot = Boolean(item.isHot || item.tags?.includes('热门精选'));
   const isNew = Boolean(item.isNew || item.tags?.includes('新品上市'));
-  const categoryLabel = CATEGORY_NAMES[item.category] || item.category || '营销技能';
-  const usesText = item.downloads ? `${item.downloads} uses` : '100+ uses';
+  const categoryLabel = resolveCategoryLabel(item.category, isEn, tr);
+  const usesText = item.downloads
+    ? safeTr('workshop.uses', { n: item.downloads }, `${item.downloads} ${isEn ? 'uses' : '次使用'}`)
+    : safeTr('workshop.usesDefault', undefined, isEn ? '100+ uses' : '100+ 次使用');
+  const bookmarkText = safeTr('workshop.bookmark', undefined, isEn ? 'Bookmark' : '收藏');
+  const newBadgeText = safeTr('workshop.badgeNew', undefined, isEn ? 'NEW' : '新');
+  const hotBadgeTitle = safeTr('workshop.hotPicks', undefined, isEn ? 'HOT PICKS' : '热门精选');
+  const tryButtonText = safeTr('workshop.try', undefined, isEn ? 'Try in Chat' : '去对话中试试');
 
   const onCardClick = () => { if (onOpen) onOpen(item); };
   const onTryClick = (e) => {
@@ -206,8 +244,8 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     h('div', { className: 'omnimux-creatify-dot-overlay', 'aria-hidden': 'true' }),
     // 3. 左上角徽标 + 分类胶囊
     h('div', { className: 'omnimux-creatify-card-top-left' },
-      isHot ? h('span', { className: 'omnimux-creatify-badge-hot', title: '热门精选' }, renderFireSvg()) : null,
-      isNew ? h('span', { className: 'omnimux-creatify-badge-new' }, '新') : null,
+      isHot ? h('span', { className: 'omnimux-creatify-badge-hot', title: hotBadgeTitle }, renderFireSvg()) : null,
+      isNew ? h('span', { className: 'omnimux-creatify-badge-new' }, newBadgeText) : null,
       h('div', { className: 'omnimux-creatify-pill-cat' },
         renderCatIcon(item.category),
         h('span', null, categoryLabel),
@@ -217,7 +255,8 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     h('button', {
       type: 'button',
       className: 'omnimux-creatify-star-btn',
-      'aria-label': '收藏',
+      'aria-label': bookmarkText,
+      title: bookmarkText,
       onClick: (e) => {
         e.stopPropagation();
         e.currentTarget.classList.toggle('active');
@@ -263,7 +302,7 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
               pointerEvents: 'auto',
             },
             onClick: onTryClick,
-          }, typeof tr === 'function' ? (tr('workshop.try') || '去对话中试试') : '去对话中试试'),
+          }, tryButtonText),
         ),
       ),
     ),

@@ -102,6 +102,20 @@ export function renderRegularSection(opts) {
   }
 
   const isAllCategory = !category || category === 'all' || category === '全部';
+  const isEn = typeof tr === 'function' ? (tr('locale') === 'en') : (typeof document !== 'undefined' && document.documentElement.lang && /^en\b/i.test(document.documentElement.lang));
+
+  const safeTr = (key, fallback) => {
+    if (typeof tr === 'function') {
+      const res = tr(key);
+      if (res && res !== key) return res;
+    }
+    return fallback;
+  };
+
+  const hotPicksTitle = safeTr('workshop.hotPicks', isEn ? 'HOT PICKS' : '热门精选');
+  const newArrivalsTitle = safeTr('workshop.newArrivals', isEn ? 'NEW ARRIVALS' : '新品上市');
+  const exploreMoreTitle = safeTr('workshop.exploreMore', isEn ? 'EXPLORE MORE' : '探索更多');
+  const viewAllText = safeTr('workshop.viewAll', isEn ? 'View All >' : '查看全部 >');
 
   // 默认「全部」分类状态：按用户要求置顶「热门精选」、「新品上市」，其余展示在「探索更多」
   if (isAllCategory) {
@@ -112,9 +126,9 @@ export function renderRegularSection(opts) {
     return h('div', { className: 'omnimux-creatify-sections-wrap', style: { display: 'flex', flexDirection: 'column', gap: '28px', width: '100%' } },
       statusNode,
       // 1. 热门精选（置顶首屏 1:1 对齐 HOT PICKS）
-      hotPicks.length > 0 ? h('section', { className: 'featured-section', 'aria-label': '热门精选' },
+      hotPicks.length > 0 ? h('section', { className: 'featured-section', 'aria-label': hotPicksTitle },
         h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
-          h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, 'HOT PICKS'),
+          h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, hotPicksTitle),
         ),
         h('div', { className: 'featured-grid cards-grid' },
           hotPicks.map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: idx })),
@@ -122,15 +136,15 @@ export function renderRegularSection(opts) {
       ) : null,
 
       // 2. 新品上市（置顶次屏 1:1 对齐 NEW ARRIVALS）
-      newArrivals.length > 0 ? h('section', { className: 'featured-section', 'aria-label': '新品上市' },
+      newArrivals.length > 0 ? h('section', { className: 'featured-section', 'aria-label': newArrivalsTitle },
         h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
-          h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, 'NEW ARRIVALS / 新品上市'),
+          h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, newArrivalsTitle),
           h('button', {
             type: 'button',
             className: 'see-all-btn',
             style: { background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))', cursor: 'pointer', fontSize: '12px' },
             onClick: () => { setOpen && setOpen(newArrivals[0]); },
-          }, '查看全部 >'),
+          }, viewAllText),
         ),
         h('div', { className: 'featured-grid cards-grid' },
           newArrivals.map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: 3 + idx })),
@@ -138,10 +152,10 @@ export function renderRegularSection(opts) {
       ) : null,
 
       // 3. 探索更多
-      h('section', { className: 'regular-section', 'aria-label': '探索更多' },
+      h('section', { className: 'regular-section', 'aria-label': exploreMoreTitle },
         h('div', { className: 'regular-header', style: { marginBottom: '14px' } },
           h('div', { className: 'regular-title-row' },
-            h('span', { style: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, 'EXPLORE MORE / 探索更多'),
+            h('span', { style: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, exploreMoreTitle),
             h('span', { className: 'regular-title-count' }, ' · ' + (exploreMore.length || regularItems.length)),
           ),
         ),
@@ -153,10 +167,11 @@ export function renderRegularSection(opts) {
   }
 
   // 特定单分类状态：平铺展示该分类下的一行三列卡片
-  return h('section', { className: 'regular-section', 'aria-label': category },
+  const singleCategoryTitle = safeTr('cat.' + category, String(category).toUpperCase());
+  return h('section', { className: 'regular-section', 'aria-label': singleCategoryTitle },
     h('div', { className: 'regular-header', style: { marginBottom: '14px' } },
       h('div', { className: 'regular-title-row' },
-        h('span', { style: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, String(category).toUpperCase()),
+        h('span', { style: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, singleCategoryTitle),
         h('span', { className: 'regular-title-count' }, ' · ' + regularItems.length),
       ),
     ),

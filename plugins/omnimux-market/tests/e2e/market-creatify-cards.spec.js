@@ -117,4 +117,85 @@ describe('E2E: Creatify 技能卡片 1:1 视觉复刻、一行三列与流光渐
     const exploreMoreSection = children.find(c => c && c.props && c.props['aria-label'] === '探索更多');
     assert.ok(exploreMoreSection, '必须包含探索更多专区');
   });
+
+  it('多语言原生适配：在中文与英文环境下独立呈现原生文案，彻底消除斜杠双语拼接', () => {
+    const catalog = loadCatalog();
+    const skills = catalog.items.filter(i => i.kind === 'skill');
+
+    const zhDict = {
+      locale: 'zh',
+      'workshop.hotPicks': '热门精选',
+      'workshop.newArrivals': '新品上市',
+      'workshop.exploreMore': '探索更多',
+      'workshop.viewAll': '查看全部 >',
+      'workshop.badgeNew': '新',
+      'workshop.bookmark': '收藏',
+      'cat.ugc-testimonial': 'UGC 和用户评价',
+      'cat.product-showcase': '产品展示',
+    };
+
+    const enDict = {
+      locale: 'en',
+      'workshop.hotPicks': 'HOT PICKS',
+      'workshop.newArrivals': 'NEW ARRIVALS',
+      'workshop.exploreMore': 'EXPLORE MORE',
+      'workshop.viewAll': 'View All >',
+      'workshop.badgeNew': 'NEW',
+      'workshop.bookmark': 'Bookmark',
+      'cat.ugc-testimonial': 'UGC & Testimonial',
+      'cat.product-showcase': 'Product Showcase',
+    };
+
+    const trZh = (k) => zhDict[k] || k;
+    const trEn = (k) => enDict[k] || k;
+
+    // 1. 中文环境下渲染验证
+    const vnodeZh = renderRegularSection({
+      category: '',
+      hasQuery: false,
+      regularItems: skills,
+      tr: trZh,
+      setOpen: () => {},
+    });
+
+    const jsonZh = JSON.stringify(vnodeZh);
+    assert.ok(!jsonZh.includes('/ 新品上市'), '中文环境下不得出现斜杠双语拼接');
+    assert.ok(!jsonZh.includes('/ 探索更多'), '中文环境下不得出现斜杠双语拼接');
+    assert.ok(!jsonZh.includes('NEW ARRIVALS /'), '中文环境下不得出现斜杠双语拼接');
+    assert.ok(!jsonZh.includes('EXPLORE MORE /'), '中文环境下不得出现斜杠双语拼接');
+
+    const zhChildren = vnodeZh.props.children;
+    const zhHot = zhChildren.find(c => c && c.props && c.props['aria-label'] === '热门精选');
+    const zhNew = zhChildren.find(c => c && c.props && c.props['aria-label'] === '新品上市');
+    const zhMore = zhChildren.find(c => c && c.props && c.props['aria-label'] === '探索更多');
+    assert.ok(zhHot && zhNew && zhMore, '中文专区标题完整映射为原生中文');
+
+    // 2. 英文环境下渲染验证
+    const vnodeEn = renderRegularSection({
+      category: '',
+      hasQuery: false,
+      regularItems: skills,
+      tr: trEn,
+      setOpen: () => {},
+    });
+
+    const jsonEn = JSON.stringify(vnodeEn);
+    assert.ok(!jsonEn.includes('/ 新品上市'), '英文环境下不得出现斜杠双语拼接');
+    assert.ok(!jsonEn.includes('/ 探索更多'), '英文环境下不得出现斜杠双语拼接');
+    assert.ok(!jsonEn.includes('热门精选'), '英文环境下专区标题不得残留中文');
+
+    const enChildren = vnodeEn.props.children;
+    const enHot = enChildren.find(c => c && c.props && c.props['aria-label'] === 'HOT PICKS');
+    const enNew = enChildren.find(c => c && c.props && c.props['aria-label'] === 'NEW ARRIVALS');
+    const enMore = enChildren.find(c => c && c.props && c.props['aria-label'] === 'EXPLORE MORE');
+    assert.ok(enHot && enNew && enMore, '英文专区标题完整映射为原生英文');
+
+    // 3. 分类栏 buildWorkshopCategories 双语对齐
+    const catsZh = buildWorkshopCategories(null, trZh);
+    const catsEn = buildWorkshopCategories(null, trEn);
+    assert.equal(catsZh[1].label, 'UGC 和用户评价');
+    assert.equal(catsEn[1].label, 'UGC & Testimonial');
+    assert.equal(catsZh[5].label, '产品展示');
+    assert.equal(catsEn[5].label, 'Product Showcase');
+  });
 });

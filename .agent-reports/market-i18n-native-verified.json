@@ -1,0 +1,27 @@
+{
+  "task": "fix(omnimux-market): 技能市场分区与卡片接入 DSH 原生多语言适配彻底消除双语拼接",
+  "issue": "#2394",
+  "verifiedAt": "2026-09-19T12:11:18.069Z",
+  "specMtime": 1789819559900.435,
+  "status": "VERIFIED_PASSED",
+  "evidence": {
+    "bilingualSlashRemoved": true,
+    "zhTitles": [
+      "热门精选",
+      "新品上市",
+      "探索更多"
+    ],
+    "enTitles": [
+      "HOT PICKS",
+      "NEW ARRIVALS",
+      "EXPLORE MORE"
+    ],
+    "zhBadgeNew": "新",
+    "enBadgeNew": "NEW",
+    "zhUses": "100+ 次使用",
+    "enUses": "100+ uses",
+    "zhViewAll": "查看全部 >",
+    "enViewAll": "View All >",
+    "catI18nSupported": true
+  }
+}
