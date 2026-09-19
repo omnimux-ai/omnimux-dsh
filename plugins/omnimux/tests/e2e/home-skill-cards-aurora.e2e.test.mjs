@@ -57,19 +57,10 @@ describe('E2E: 首页 Skills 技能库货架卡片高饱和度极光样式端到
     const dotOverlay = firstCard.querySelector('.omnimux-creatify-dot-overlay')
     assert.ok(dotOverlay, '卡片必须覆盖细腻点阵纹理')
 
-    // 验证左上角徽标与分类胶囊
-    assert.ok(firstCard.querySelector('.omnimux-creatify-badge-hot'), '热门技能必须展示火苗徽标')
-    const pillCat = firstCard.querySelector('.omnimux-creatify-pill-cat')
-    assert.ok(pillCat, '必须展示业务分类胶囊')
-    assert.match(pillCat.textContent, /UGC 和用户评价/, '首张卡片分类应为 UGC 和用户评价')
-
-    // 验证右上角收藏星标与点击交互
-    const starBtn = firstCard.querySelector('.omnimux-creatify-star-btn')
-    assert.ok(starBtn, '右上角必须具备收藏星标按钮')
-    await act(async () => {
-      starBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
-    })
-    assert.ok(starBtn.classList.contains('active'), '点击收藏按钮后必须点亮激活态')
+    // 验证彻底移除冗余装饰元素（水滴/分类胶囊/收藏星标/文字抽屉）
+    assert.equal(firstCard.querySelector('.omnimux-creatify-card-top-left'), null, '必须移除左上角徽标与胶囊')
+    assert.equal(firstCard.querySelector('.omnimux-creatify-star-btn'), null, '必须移除右上角收藏星标')
+    assert.equal(firstCard.querySelector('.omnimux-creatify-card-hover-drawer'), null, '必须移除覆盖大标题的文字抽屉')
 
     // 验证居中大标题与纯矢量认证对勾
     const centerTitle = firstCard.querySelector('.omnimux-creatify-center-title')
@@ -77,7 +68,7 @@ describe('E2E: 首页 Skills 技能库货架卡片高饱和度极光样式端到
     assert.match(centerTitle.textContent, /UGC 告白/)
     assert.ok(centerTitle.querySelector('.creatify-card-verified-svg'), '居中标题必须携带纯矢量认证打勾徽章')
 
-    // 验证悬停抽屉与使用按钮点击
+    // 验证悬停使用按钮点击
     const useBtn = firstCard.querySelector('.omnimux-skill-card-btn')
     assert.ok(useBtn, '卡片内必须具备使用按钮')
     await act(async () => {
