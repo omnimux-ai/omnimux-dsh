@@ -246,8 +246,8 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     // 验证前 3 张置顶热门精选与前 6 张置顶新品上市
     const expectedTop3Titles = [
       'UGC 告白',
-      '电影级',
-      'UGC展示',
+      '电影级视觉大片',
+      'UGC 产品展示',
     ]
     const actualTop3Titles = Array.from(cards).slice(0, 3).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
     assert.deepEqual(actualTop3Titles, expectedTop3Titles, '前 3 张卡片必须为热门精选')
@@ -327,7 +327,7 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
     // 验证中文环境下成功适配为中文标题，且旧技能已全部从精选下架
     assert.ok(titlesZh.includes('UGC 告白'), '中文环境下必须显示 "UGC 告白"')
     assert.ok(titlesZh.includes('UGC 开箱'), '中文环境下必须显示 "UGC 开箱"')
-    assert.ok(titlesZh.includes('UGC穿搭检查'), '中文环境下必须显示 "UGC穿搭检查"')
+    assert.ok(titlesZh.includes('UGC 穿搭检查'), '中文环境下必须显示 "UGC 穿搭检查"')
     assert.ok(!titlesZh.includes('Shopee 关键词分析'), '旧版 Shopee 关键词分析已下架')
     assert.ok(!titlesZh.includes('亚马逊关键词流量分析'), '旧版 亚马逊关键词流量分析已下架')
 

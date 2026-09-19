@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-09-19T13:11:18.932Z",
+  "task": "skill-prefill-slug",
+  "topic": "首页 Skill 点击使用在输入框自动预填 /<skill-slug> 指令话术",
+  "assertions": {
+    "1. 点击 Skill 卡片自动提取对应英文标识 slug": true,
+    "2. 输入框草稿自动拼接 /<slug> 并在后方紧跟引导话术": true,
+    "3. 自动聚焦输入框供用户随时查看与发送": true
+  },
+  "evidence": "docs/evidence/skill-prefill-slug-verified.png",
+  "verdict": "PASS"
+}

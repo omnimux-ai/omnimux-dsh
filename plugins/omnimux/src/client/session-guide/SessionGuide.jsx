@@ -318,12 +318,18 @@ function BlankSessionGuide({
   }
 
   /**
-   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问
+   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问（以 /<slug> 指令开头）
    */
   function handleExploreSkillApply(payload) {
     if (!payload) return
     const skillTitle = payload.title || payload.skill || '技能'
-    const prompt = '为我解释下这个技能的最佳使用方式。'
+    const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
+    const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
+    const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
+    const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
+    const prompt = isEn
+      ? `${skillPrefix}Please explain the best way to use this skill.`
+      : `${skillPrefix}为我解释下这个技能的最佳使用方式。`
     applyDraftToComposer(prompt, {
       toastKey: null,
       restoreNotice: true,
