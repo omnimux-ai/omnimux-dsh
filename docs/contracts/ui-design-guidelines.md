@@ -115,7 +115,7 @@ subsystem: "omnimux-accounts"
 
 | Token | 推荐值 | 用途 |
 |---|---|---|
-| `--dsw-alias-bg-primary` | `#111113` / `#16181d` | 页面主体底色 |
+| `--dsw-alias-bg-primary` | `#111113` / `#141416` | 页面主体底色（DSH 原生中性纯黑，绝无偏蓝暗色） |
 | `--dsw-alias-bg-secondary` | `rgba(255,255,255,0.04)` | 输入框、次级卡片底色 |
 | `--dsw-alias-bg-elevated` | `#1c1c1f` | 浮层菜单、Dialog、Popover |
 | `--dsw-alias-border` | `rgba(255,255,255,0.12)` | 常规描边 |
