@@ -106,45 +106,88 @@ describe('video breakdown & shots analysis engine', () => {
     assert.match(hook.description, /开场特写/)
   })
 
-  it('extracts structured video breakdown from URL with real metadata support', async () => {
-    const data = await extractVideoBreakdown('https://www.tiktok.com/@creator/video/123456789', {
-      meta: {
-        authorName: 'TestCreator',
-        authorHandle: '@testcreator',
-        title: 'Real TikTok Drama',
-        caption: 'Full drama breakdown and analysis',
-        likes: '10K',
-        views: '500K',
-      },
-    })
-    assert.equal(data.is_video_breakdown, true)
-    assert.equal(data.schema_version, '1.0.0')
-    assert.ok(data.video)
-    assert.equal(data.video.author_name, 'TestCreator')
-    assert.equal(data.video.author_handle, '@testcreator')
-    assert.equal(data.video.caption, 'Full drama breakdown and analysis')
-    assert.deepEqual(data.pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
-    assert.ok(Array.isArray(data.shots) && data.shots.length >= 4)
-    assert.ok(Array.isArray(data.structure) && data.structure.length >= 4)
+  it('throws error when video is not downloaded locally and cannot be resolved', async () => {
+    await assert.rejects(
+      () => extractVideoBreakdown('https://www.tiktok.com/@creator/video/123456789'),
+      /无法获取或下载可供分析的视频文件/
+    )
   })
 
-  it('saves native .vbreakdown artifact without HTML sandbox', async () => {
-    const data = await extractVideoBreakdown('https://example.com/test.mp4')
-    const destPrefix = join(tmpdir(), `test-breakdown-${Date.now()}`)
+  it('throws error when multimodal model produces no shots', async () => {
+    const dummyVideo = join(tmpdir(), `test-empty-shots-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'dummy video data')
 
-    const { dataPath } = saveVideoBreakdownArtifacts(data, destPrefix)
-    assert.ok(existsSync(dataPath))
-    assert.ok(dataPath.endsWith('.vbreakdown'))
+    const mockCtx = {
+      textComplete: {
+        execute: async () => ({ mode: 'live', text: 'no valid structure or shots table' }),
+      },
+      get: (n) => (n === 'textComplete' ? mockCtx.textComplete : null),
+    }
 
-    const parsedJson = JSON.parse(readFileSync(dataPath, 'utf8'))
-    assert.equal(parsedJson.is_video_breakdown, true)
-    assert.ok(Array.isArray(parsedJson.shots))
+    await assert.rejects(
+      () => extractVideoBreakdown(dummyVideo, { ctx: mockCtx }),
+      /多模态模型未解析出有效分镜/
+    )
 
-    // Cleanup
-    rmSync(dataPath, { force: true })
+    rmSync(dummyVideo, { force: true })
+  })
+
+  it('does not open sidebar and throws when video analysis fails', async () => {
+    let sidebarCalled = false
+    const toolHarness = createTestToolContext()
+    const mockCtx = {
+      tools: {
+        register: (t) => toolHarness.ctx.tools.register(t),
+        get: (n) => {
+          if (n === 'sidebar_open') {
+            return {
+              execute: async () => {
+                sidebarCalled = true
+                return { delivered: true }
+              },
+            }
+          }
+          return toolHarness.ctx.tools.get(n)
+        },
+      },
+    }
+    apply(mockCtx)
+    const tool = toolHarness.tools.get('video_breakdown_analyze')
+    await assert.rejects(
+      () => tool.execute({ url: 'https://www.youtube.com/watch?v=invalid-direct-stream' }),
+      /无法获取或下载可供分析的视频文件/
+    )
+    assert.equal(sidebarCalled, false, 'sidebar_open must not be called upon failure')
   })
 
   it('registers and executes video_breakdown_analyze tool with native preview', async () => {
+    const dummyVideo = join(tmpdir(), `test-tool-video-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'dummy')
+
+    const mockModelReport = `## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Demo Scene
+
+## 2. 结构阶段解构 (Stage Breakdown)
+### Hook
+开场高反差抓住眼球。
+
+### Product Intro
+细节质感呈现。
+
+### Usage Detail
+演示使用过程与效果。
+
+### Demo Scene
+场景化呈现驱动下单。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:03 | 痛点切入 | Hook | 特写, 智能手机手持, 俯视, 手持微动 | 开场通过高反差视觉与痛点切入抓取眼球 |
+| 0:03 - 0:07 | 亮点展示 | Product Intro | 特写, 智能手机手持, 平视, 手持微动 | 镜头聚焦主体展示细节 |
+| 0:07 - 0:12 | 操作演示 | Usage Detail | 中景, 智能手机手持, 平视, 手持移动 | 第一视角动态演示使用过程 |
+| 0:12 - 0:16 | 转化场景 | Demo Scene | 中景, 智能手机手持, 俯视, 手持移动 | 切换至日常生活场景引发共鸣 |`
+
     let sidebarOpenedWith = null
     const toolHarness = createTestToolContext()
 
@@ -163,6 +206,16 @@ describe('video breakdown & shots analysis engine', () => {
           return toolHarness.ctx.tools.get(name)
         },
       },
+      textComplete: {
+        execute: async () => ({
+          mode: 'live',
+          text: mockModelReport,
+        }),
+      },
+      get: (name) => {
+        if (name === 'textComplete') return mockCtx.textComplete
+        return null
+      },
       inject: (deps, callback) => {
         callback({
           betterSidebar: {
@@ -170,6 +223,7 @@ describe('video breakdown & shots analysis engine', () => {
               sidebarOpenedWith = tab
             },
           },
+          textComplete: mockCtx.textComplete,
         })
       },
     }
@@ -188,7 +242,7 @@ describe('video breakdown & shots analysis engine', () => {
 
     const outPrefix = join(tmpdir(), `test-tool-run-${Date.now()}`)
     const result = await tool.execute({
-      url: 'https://www.tiktok.com/@test/video/1',
+      url: dummyVideo,
       dest: outPrefix,
       auto_open: true,
     })
@@ -197,12 +251,14 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(result.preview_opened, true)
     assert.ok(result.data_path.endsWith('.vbreakdown'))
     assert.ok(Array.isArray(result.shots))
+    assert.ok(result.shots.length >= 4)
     assert.ok(result.formatted_shots.length > 0)
     assert.ok(sidebarOpenedWith)
     assert.equal(sidebarOpenedWith.target, result.data_path)
 
     // Cleanup
     rmSync(result.data_path, { force: true })
+    rmSync(dummyVideo, { force: true })
   })
 
   it('normalizes TikTok aweme_detail structure into unified metadata', () => {
@@ -272,6 +328,33 @@ describe('video breakdown & shots analysis engine', () => {
       },
     }
 
+    const dummyVideo = join(tmpdir(), `test-aweme-vid-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'fake')
+
+    const mockReport = `## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Demo Scene
+
+## 2. 结构阶段解构 (Stage Breakdown)
+### Hook
+开场展示 Viral Product Showcase。
+
+### Product Intro
+全方位产品展示。
+
+### Usage Detail
+实操细节演示。
+
+### Demo Scene
+场景化氛围展示。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:04 | 精彩开场 | Hook | 特写, 智能手机手持, 俯视, 手持微动 | 快速切入 Viral Product Showcase |
+| 0:04 - 0:09 | 核心亮点 | Product Intro | 特写, 智能手机手持, 平视, 手持微动 | 核心细节与质感 |
+| 0:09 - 0:15 | 深度演示 | Usage Detail | 中景, 智能手机手持, 平视, 手持移动 | 动态演示使用全过程 |
+| 0:15 - 0:20 | 场景促单 | Demo Scene | 中景, 智能手机手持, 俯视, 手持移动 | 真实场景与互动 |`
+
     const mockCtx = {
       tools: {
         get: (name) => {
@@ -287,10 +370,15 @@ describe('video breakdown & shots analysis engine', () => {
           return null
         },
       },
+      textComplete: {
+        execute: async () => ({ mode: 'live', text: mockReport }),
+      },
+      get: (n) => (n === 'textComplete' ? mockCtx.textComplete : null),
     }
 
     const result = await extractVideoBreakdown('https://www.tiktok.com/@tech_reviewer/video/789', {
       ctx: mockCtx,
+      localVideoPath: dummyVideo,
     })
 
     assert.equal(result.is_video_breakdown, true)
@@ -303,6 +391,7 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(result.video.duration_text, '0:20')
     assert.ok(result.shots.length >= 4)
     assert.match(result.shots[0].description, /Viral Product Showcase/)
+    rmSync(dummyVideo, { force: true })
   })
 
   it('saves breakdown artifact to workspace directory when workspace context exists', () => {
@@ -409,12 +498,42 @@ describe('video breakdown & shots analysis engine', () => {
   it('does not throw "cannot get property sessions without inject" when called with un-injected context', async () => {
     const toolHarness = createTestToolContext()
 
+    const dummyVideo = join(tmpdir(), `test-inject-vid-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'fake')
+    const mockReport = `## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Demo Scene
+
+## 2. 结构阶段解构 (Stage Breakdown)
+### Hook
+开场展示。
+
+### Product Intro
+产品细节。
+
+### Usage Detail
+实操演示。
+
+### Demo Scene
+场景展示。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:04 | 精彩开场 | Hook | 特写, 智能手机手持, 俯视, 手持微动 | 快速切入 |
+| 0:04 - 0:09 | 核心亮点 | Product Intro | 特写, 智能手机手持, 平视, 手持微动 | 细节质感 |
+| 0:09 - 0:15 | 深度演示 | Usage Detail | 中景, 智能手机手持, 平视, 手持移动 | 动态演示 |
+| 0:15 - 0:20 | 场景促单 | Demo Scene | 中景, 智能手机手持, 俯视, 手持移动 | 真实场景 |`
+
     // Create a strict Cordis-like proxy that throws when accessing un-injected properties
     const strictCtx = new Proxy(
       {
         tools: toolHarness.ctx.tools,
+        textComplete: {
+          execute: async () => ({ mode: 'live', text: mockReport }),
+        },
         get: (name) => {
           if (name === 'tools') return toolHarness.ctx.tools
+          if (name === 'textComplete') return strictCtx.textComplete
           return null
         },
       },
@@ -449,7 +568,7 @@ describe('video breakdown & shots analysis engine', () => {
     // Must execute successfully without throwing cannot get property "sessions" without inject
     const result = await tool.execute(
       {
-        url: 'https://www.tiktok.com/@test/video/1',
+        url: dummyVideo,
         dest: outPrefix,
         auto_open: false,
       },
@@ -459,6 +578,7 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(result.success, true)
     assert.ok(existsSync(result.data_path))
     rmSync(result.data_path, { force: true })
+    rmSync(dummyVideo, { force: true })
   })
 
   it('generates 4 shots for short videos (<= 60s)', () => {
