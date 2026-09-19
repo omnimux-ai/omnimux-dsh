@@ -1,0 +1,270 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { JSDOM } from 'jsdom'
+import React, { act, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
+import {
+  useComposerDocking,
+  DOCK_OPEN_ATTR,
+  DOCK_BOTTOM,
+  DOCK_MAX_WIDTH,
+  readPageScrollTop,
+} from './useComposerDocking.js'
+
+function withDom(html = '<div id="root"><div data-phase="conversation" data-omnimux-starter-host=""><div class="hero-band"><div data-composer-card="" style="height: 120px;"></div></div><div class="scrollBody" style="height: 600px; overflow-y: auto;"></div><div id="seat"></div></div></div>') {
+  const dom = new JSDOM(html, { url: 'http://localhost/' })
+  dom.window.Element.prototype.getBoundingClientRect = function stub() {
+    return {
+      x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
+      right: 1594, bottom: 266, toJSON() { return this },
+    }
+  }
+  const previous = {
+    window: globalThis.window,
+    document: globalThis.document,
+    act: globalThis.IS_REACT_ACT_ENVIRONMENT,
+  }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  return {
+    dom,
+    restore() {
+      globalThis.window = previous.window
+      globalThis.document = previous.document
+      globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+      dom.window.close()
+    },
+  }
+}
+
+function flush() {
+  return act(async () => {
+    await Promise.resolve()
+  })
+}
+
+test('useComposerDocking: 初始状态为 inline，且宿主未打上 dock-open 标记', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'inline')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false)
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 调用 dock(item) 后宿主被打上 dock-open 标记，且设置几何变量', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    await act(async () => {
+      const res = hookApi.dock({ id: 'sk-test-skill', title: '测试技能' })
+      assert.equal(res, true)
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '调用 dock 后宿主必须打上停靠标记')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), `${DOCK_BOTTOM}px`)
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 调用 undock() 解除吸底并清除标记', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    await act(async () => {
+      hookApi.dock({ id: 'sk-test-skill', title: '测试技能' })
+    })
+    await flush()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+
+    await act(async () => {
+      hookApi.undock()
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'inline')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, 'undock 必须移除停靠标记')
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 再次点击同一卡片触发反悔收起', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    // 第一次点击：吸底
+    await act(async () => {
+      const res = hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
+      assert.equal(res, true)
+    })
+    await flush()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+
+    // 第二次点击同一卡片：反悔解除吸底
+    await act(async () => {
+      const res = hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
+      assert.equal(res, false, '再次点击同一卡片应返回 false')
+    })
+    await flush()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '反悔后必须解除停靠')
+    assert.equal(hookApi.isDocked, false)
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 滚动迟滞判定：滑离顶部吸底，滑回最顶部自动归还原位', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    await act(async () => {
+      hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
+    })
+    await flush()
+    assert.equal(hookApi.placement, 'docked')
+
+    // 模拟向下滚动离开顶部 (>20px)
+    scroller.scrollTop = 120
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+    assert.equal(hookApi.placement, 'docked')
+
+    // 模拟向上滚动滑回最顶部 (<=10px)
+    scroller.scrollTop = 0
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+    assert.equal(hookApi.placement, 'inline', '滑回页面顶部必须自动切回 inline 归还原位')
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('useComposerDocking: 组件卸载时安全清理所有宿主样式与标记', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    await act(async () => {
+      hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
+    })
+    await flush()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+
+    // 卸载组件
+    await act(async () => {
+      root.unmount()
+    })
+    await flush()
+
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '卸载后停靠标记必须清除')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
+  } finally {
+    env.restore()
+  }
+})
