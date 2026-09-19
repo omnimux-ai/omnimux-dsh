@@ -338,14 +338,32 @@ function injectDeviceStyles() {
 // src/client/DeviceStage.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var TAB_ID = "omnimux-device:library";
+var ICONS = {
+  refresh: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" }) }),
+  plus: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "5", x2: "12", y2: "19" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "5", y1: "12", x2: "19", y2: "12" })
+  ] }),
+  battery: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", { x: "2", y: "7", width: "16", height: "10", rx: "2", ry: "2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "22", y1: "11", x2: "22", y2: "13" })
+  ] }),
+  signal: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M5 12.55a11 11 0 0 1 14.08 0" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M1.42 9a16 16 0 0 1 21.16 0" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M8.53 16.11a6 6 0 0 1 6.95 0" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "20", x2: "12.01", y2: "20" })
+  ] }),
+  tiktok: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" }) })
+};
 function DeviceStage({ t, stage, store, visible = true }) {
   const [activeTab, setActiveTab] = (0, import_react.useState)("fleet");
   const [toastMsg, setToastMsg] = (0, import_react.useState)("");
   const [activeDrawer, setActiveDrawer] = (0, import_react.useState)(null);
   const [autoHealed, setAutoHealed] = (0, import_react.useState)(false);
   const [teamKeys, setTeamKeys] = (0, import_react.useState)([
-    { id: "8K2N94XYZ1", name: "\u7F8E\u533A\u77E9\u9635\u8FD0\u8425\u56E2\u961F", used: 85, days: 294 },
-    { id: "3M7P21LAA9", name: "\u6B27\u6D32\u77ED\u89C6\u9891\u77E9\u9635\u56E2\u961F", used: 92, days: 312 }
+    { id: "8K2N94XYZ1", name: "\u7F8E\u533A\u8FD0\u8425\u7EC4", used: 85, days: 294 },
+    { id: "3M7P21LAA9", name: "\u6B27\u6D32\u8FD0\u8425\u7EC4", used: 92, days: 312 }
   ]);
   (0, import_react.useEffect)(() => {
     injectDeviceStyles();
@@ -371,25 +389,25 @@ function DeviceStage({ t, stage, store, visible = true }) {
     setTimeout(() => setToastMsg(""), 2200);
   };
   const handleAutoHeal = () => {
-    showToast("\u51B3\u7B56\u5F15\u64CE\u5DF2\u5728 112 \u6BEB\u79D2\u5185\u8BC6\u522B\u8BE5\u7CFB\u7EDF\u5F39\u7A97\uFF0C\u5E76\u81EA\u52A8\u70B9\u51FB\u300C\u7A0D\u540E\u518D\u8BF4\u300D\uFF0C\u9875\u9762\u5DF2\u6062\u590D\uFF01");
+    showToast("\u51B3\u7B56\u5F15\u64CE\u5DF2\u4E8E 112 \u6BEB\u79D2\u5185\u81EA\u52A8\u8BC6\u522B\u5E76\u5173\u95ED\u5F39\u7A97");
     setAutoHealed(true);
   };
   const handleAddCert = () => {
     const nextId = "9Q1B44WW" + Math.floor(Math.random() * 89 + 10);
-    setTeamKeys((prev) => [...prev, { id: nextId, name: "\u65B0\u589E\u5F00\u53D1\u8005\u8D26\u53F7", used: 0, days: 365 }]);
-    showToast(`\u65B0\u56E2\u961F\u5BC6\u94A5 ${nextId} \u5F55\u5165\u6210\u529F\uFF0C\u5DF2\u6269\u5BB9 100 \u53F0\u4E00\u5E74\u671F\u6388\u6743\u914D\u989D\uFF01`);
+    setTeamKeys((prev) => [...prev, { id: nextId, name: "\u65B0\u5F00\u53D1\u8005\u8D26\u53F7", used: 0, days: 365 }]);
+    showToast(`\u65B0\u56E2\u961F\u5BC6\u94A5 ${nextId} \u5F55\u5165\u6210\u529F (+100\u53F0)`);
   };
-  const title = typeof t === "function" ? t("title") : "\u79FB\u52A8\u771F\u673A\u77E9\u9635\u4E0E\u8BBE\u5907\u667A\u80FD\u4F53\u4E2D\u67A2";
-  const subtitle = typeof t === "function" ? t("subtitle") : "\u672C\u5730\u7269\u7406\u771F\u673A\u9635\u5217\u7EB3\u7BA1\uFF0C11\u9879\u5E95\u5C42\u5065\u5EB7\u81EA\u68C0\u4E0E\u53CC\u8111\u51B3\u7B56\u63A7\u5236\u56DE\u8DEF";
+  const title = typeof t === "function" ? t("title") : "\u624B\u673A\u7BA1\u7406";
+  const subtitle = typeof t === "function" ? t("subtitle") : "\u7269\u7406\u96C6\u7FA4 \xB7 15\u53F0\u5C31\u7EEA";
   const devices = [
-    { id: "dev-01", name: "01\u53F7\u673A", model: "iPhone 13", account: "@trend_cat_us", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 22\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-02", name: "02\u53F7\u673A", model: "iPhone 13", account: "@beauty_tips_us", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 25\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-03", name: "03\u53F7\u673A", model: "iPhone 13", account: "@pet_care_uk", state: "\u9700\u4EBA\u5DE5\u5173\u6CE8", proxy: "\u82F1\u56FD\u4F26\u6566 \xB7 32\u6BEB\u79D2", battery: "96%" },
-    { id: "dev-04", name: "04\u53F7\u673A", model: "iPhone 12", account: "@ootd_us", state: "\u9884\u70ED\u4E2D", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 21\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-05", name: "05\u53F7\u673A", model: "iPhone 11", account: "@daily_viral", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 28\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-06", name: "06\u53F7\u673A", model: "iPhone 11", account: "@gadget_zone", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 26\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-07", name: "07\u53F7\u673A", model: "iPhone 8", account: "@recipe_master", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 30\u6BEB\u79D2", battery: "100%" },
-    { id: "dev-08", name: "08\u53F7\u673A", model: "iPhone 8", account: "@humor_short", state: "\u5C31\u7EEA", proxy: "\u7F8E\u56FD\u6D1B\u6749\u77F6 \xB7 31\u6BEB\u79D2", battery: "100%" }
+    { id: "dev-01", name: "01\u53F7\u673A", model: "iPhone 13", account: "@trend_cat_us", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 22ms", battery: "100%" },
+    { id: "dev-02", name: "02\u53F7\u673A", model: "iPhone 13", account: "@beauty_tips_us", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 25ms", battery: "100%" },
+    { id: "dev-03", name: "03\u53F7\u673A", model: "iPhone 13", account: "@pet_care_uk", state: "\u5F02\u5E38", proxy: "\u4F26\u6566 \xB7 32ms", battery: "96%" },
+    { id: "dev-04", name: "04\u53F7\u673A", model: "iPhone 12", account: "@ootd_us", state: "\u9884\u70ED", proxy: "\u6D1B\u6749\u77F6 \xB7 21ms", battery: "100%" },
+    { id: "dev-05", name: "05\u53F7\u673A", model: "iPhone 11", account: "@daily_viral", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 28ms", battery: "100%" },
+    { id: "dev-06", name: "06\u53F7\u673A", model: "iPhone 11", account: "@gadget_zone", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 26ms", battery: "100%" },
+    { id: "dev-07", name: "07\u53F7\u673A", model: "iPhone 8", account: "@recipe_master", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 30ms", battery: "100%" },
+    { id: "dev-08", name: "08\u53F7\u673A", model: "iPhone 8", account: "@humor_short", state: "\u5C31\u7EEA", proxy: "\u6D1B\u6749\u77F6 \xB7 31ms", battery: "100%" }
   ];
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "div",
@@ -407,211 +425,165 @@ function DeviceStage({ t, stage, store, visible = true }) {
             subtitle,
             onClose: handleClose,
             actionSlot: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", gap: "8px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-subtle", onClick: () => showToast("\u5DF2\u5BF9\u5168\u90E8\u8BBE\u5907\u91CD\u65B0\u6267\u884C 11 \u9879\u5065\u5EB7\u81EA\u68C0\uFF0C\u5168\u90E8\u6307\u6807\u6B63\u5E38"), children: "\u5168\u91CF\u91CD\u65B0\u4F53\u68C0" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", onClick: () => showToast("\u8BF7\u901A\u8FC7 USB \u6570\u636E\u7EBF\u5C06 iPhone \u63A5\u5165\u5F53\u524D Mac \u5E76\u5728\u624B\u673A\u4E0A\u70B9\u51FB\u4FE1\u4EFB"), children: "+ \u63A5\u5165\u65B0\u624B\u673A" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "omx-btn-subtle", onClick: () => showToast("\u5DF2\u5B8C\u6210\u5168\u91CF\u8BBE\u5907 11 \u9879\u6307\u6807\u5065\u5EB7\u81EA\u68C0"), children: [
+                ICONS.refresh,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u5237\u65B0\u4F53\u68C0" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "omx-btn-ink", onClick: () => showToast("\u8BF7\u5C06 iPhone \u63A5\u5165 USB \u5E76\u70B9\u51FB\u624B\u673A\u4FE1\u4EFB"), children: [
+                ICONS.plus,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u63A5\u5165\u8BBE\u5907" })
+              ] })
             ] })
           }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-stage-tabs", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: `omx-stage-tab-btn ${activeTab === "fleet" ? "active" : ""}`,
-              onClick: () => setActiveTab("fleet"),
-              children: "\u771F\u673A\u5927\u5C4F\u4E0E\u4F53\u68C0"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: `omx-stage-tab-btn ${activeTab === "schedules" ? "active" : ""}`,
-              onClick: () => setActiveTab("schedules"),
-              children: "\u5468\u6392\u671F\u53D1\u5E03\u65E5\u5386"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: `omx-stage-tab-btn ${activeTab === "inspector" ? "active" : ""}`,
-              onClick: () => setActiveTab("inspector"),
-              children: "\u6545\u969C\u65AD\u70B9\u5BF9\u6BD4\u5668"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: `omx-stage-tab-btn ${activeTab === "signing" ? "active" : ""}`,
-              onClick: () => setActiveTab("signing"),
-              children: "\u82F9\u679C\u5F00\u53D1\u8005\u8BC1\u4E66"
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: `omx-stage-tab-btn ${activeTab === "warmup" ? "active" : ""}`,
-              onClick: () => setActiveTab("warmup"),
-              children: "\u81EA\u52A8\u5316\u517B\u53F7\u7B56\u7565"
-            }
-          )
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: `omx-stage-tab-btn ${activeTab === "fleet" ? "active" : ""}`, onClick: () => setActiveTab("fleet"), children: "\u96C6\u7FA4" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: `omx-stage-tab-btn ${activeTab === "schedules" ? "active" : ""}`, onClick: () => setActiveTab("schedules"), children: "\u6392\u671F" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: `omx-stage-tab-btn ${activeTab === "inspector" ? "active" : ""}`, onClick: () => setActiveTab("inspector"), children: "\u8BCA\u65AD" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: `omx-stage-tab-btn ${activeTab === "signing" ? "active" : ""}`, onClick: () => setActiveTab("signing"), children: "\u8BC1\u4E66" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: `omx-stage-tab-btn ${activeTab === "warmup" ? "active" : ""}`, onClick: () => setActiveTab("warmup"), children: "\u517B\u53F7" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-stage-content", children: [
-          activeTab === "fleet" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "15px", color: "#fff" }, children: "\u672C\u5730\u673A\u67B6\u786C\u4EF6\u603B\u89C8 (15 \u53F0\u5728\u7EBF\u5E76\u53D1)" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u6BCF\u53F0\u624B\u673A\u7ECF\u7531 11 \u9879\u5E95\u5C42\u786C\u6027\u6307\u6807\u4E25\u683C\u4F53\u68C0\u8BA4\u8BC1\uFF0C\u5355\u673A\u72EC\u7ACB Worker \u8FDB\u7A0B\u5B89\u5168\u9694\u79BB" })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "omx-badge-violet", children: "\u6781\u5149\u7D2B\u72B6\u6001\u63A2\u9488\u6B63\u5E38" })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "omx-card-grid", children: devices.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-fleet-card", onClick: () => setActiveDrawer(d), children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: "10px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "13px", color: "#ffffff" }, children: d.name }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)", fontFamily: "var(--font-mono)" }, children: [
-                    d.model,
-                    " \xB7 ",
-                    d.proxy
-                  ] })
-                ] }),
+          activeTab === "fleet" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "omx-card-grid", children: devices.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-fleet-card", onClick: () => setActiveDrawer(d), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: "6px" }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: {
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  padding: "2px 7px",
-                  borderRadius: "9999px",
-                  background: d.state === "\u5C31\u7EEA" ? "rgba(16,185,129,0.12)" : d.state === "\u9884\u70ED\u4E2D" ? "rgba(245,158,11,0.12)" : "rgba(244,63,94,0.12)",
-                  color: d.state === "\u5C31\u7EEA" ? "var(--omx-status-green)" : d.state === "\u9884\u70ED\u4E2D" ? "var(--omx-status-amber)" : "var(--omx-status-rose)"
-                }, children: d.state })
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: d.state === "\u5C31\u7EEA" ? "var(--omx-status-green)" : d.state === "\u9884\u70ED" ? "var(--omx-status-amber)" : "var(--omx-status-rose)"
+                } }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "13px", color: "#ffffff" }, children: d.name }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)", fontFamily: "var(--font-mono)" }, children: d.model })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-mock-screen-box", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#fff" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "09:41" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
-                    d.battery,
-                    " \u6EE1\u7535"
-                  ] })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { textAlign: "center" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "12px", fontWeight: "bold", color: "#ffffff" }, children: d.account }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u4F1A\u8BDD\u6D3B\u8DC3 \xB7 11 \u9879\u4F53\u68C0\u5168\u90E8\u8FBE\u6807" })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--dsw-alias-label-tertiary)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u72EC\u7ACB\u5DE5\u4F5C\u8FDB\u7A0B" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--omx-status-green)" }, children: "\u25CF \u63A7\u5236\u7AEF\u53E3 8100" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)", display: "flex", alignItems: "center", gap: "4px" }, children: [
+                ICONS.signal,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: d.proxy })
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-mock-screen-box", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "09:41" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { display: "flex", alignItems: "center", gap: "3px" }, children: [
+                  ICONS.battery,
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: d.battery })
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { marginTop: "10px", display: "flex", gap: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontSize: "11px", background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "2px 8px", color: "var(--dsw-alias-label-secondary)" }, children: [
-                "\u6D77\u5916\u6296\u97F3 ",
-                d.account
-              ] }) })
-            ] }, d.id)) })
-          ] }),
-          activeTab === "schedules" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "20px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "15px", color: "#fff" }, children: "\u77ED\u89C6\u9891\u77E9\u9635\u5468\u6392\u671F\u65E5\u5386" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u7EDF\u4E00\u7F16\u6392\u6D77\u5916\u6296\u97F3\u4E0E\u7167\u7247\u5899\u53D1\u5E03\u65F6\u6BB5\uFF0C\u81EA\u52A8\u5BF9\u9F50\u76EE\u6807\u8D26\u53F7\u6240\u5728\u56FD\u5BB6\u65F6\u533A" })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", onClick: () => showToast("\u5DF2\u62C9\u8D77\u6279\u91CF\u53D1\u5E03\u6392\u671F\u4EFB\u52A1\u7A97\u53E3"), children: "+ \u65B0\u589E\u53D1\u5E03\u6392\u671F" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { textAlign: "center" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "12px", fontWeight: "bold", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }, children: [
+                ICONS.tiktok,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: d.account })
+              ] }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u7AEF\u53E3 8100" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: d.state === "\u5C31\u7EEA" ? "var(--omx-status-green)" : "var(--omx-status-rose)" }, children: d.state })
+              ] })
+            ] })
+          ] }, d.id)) }),
+          activeTab === "schedules" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "12px", padding: "16px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "14px", color: "#fff" }, children: "\u672C\u5468\u6392\u671F (\u5468\u4E00\u81F3\u5468\u65E5)" }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "omx-btn-ink", onClick: () => showToast("\u5DF2\u6253\u5F00\u6392\u671F\u521B\u5EFA\u5F39\u7A97"), children: [
+                ICONS.plus,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u65B0\u5EFA\u6392\u671F" })
+              ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", overflow: "hidden" }, children: ["\u5468\u4E00 (9/15)", "\u5468\u4E8C (9/16)", "\u5468\u4E09 (\u4ECA\u65E5)", "\u5468\u56DB (9/18)", "\u5468\u4E94 (9/19)", "\u5468\u516D (9/20)", "\u5468\u65E5 (9/21)"].map((day, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { borderRight: i === 6 ? "none" : "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-base)", minHeight: "340px", display: "flex", flexDirection: "column" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { padding: "10px", textAlign: "center", borderBottom: "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-layer-2)" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "11px", fontWeight: "bold", color: i === 2 ? "#ffffff" : "var(--dsw-alias-label-tertiary)" }, children: day }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { padding: "8px", display: "flex", flexDirection: "column", gap: "8px", flex: 1 }, children: [
-                i === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "8px", fontSize: "11px" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "10px" }, children: "09:30 \u4E0A\u5348" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { color: "#fff" }, children: "@trend_cat_us" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "var(--omx-status-green)", fontSize: "10px" }, children: "\u5DF2\u6210\u529F\u53D1\u5E03" })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", overflow: "hidden" }, children: ["\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D", "\u65E5"].map((day, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { borderRight: i === 6 ? "none" : "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-base)", minHeight: "300px", display: "flex", flexDirection: "column" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { padding: "8px", textAlign: "center", borderBottom: "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-layer-2)" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontSize: "11px", fontWeight: "bold", color: i === 2 ? "#ffffff" : "var(--dsw-alias-label-tertiary)" }, children: [
+                "\u5468",
+                day
+              ] }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { padding: "6px", display: "flex", flexDirection: "column", gap: "6px", flex: 1 }, children: [
+                i === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "6px", fontSize: "11px" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "10px" }, children: "09:30" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { style: { color: "#fff", display: "flex", alignItems: "center", gap: "3px" }, children: [
+                    ICONS.tiktok,
+                    " @trend_cat_us"
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "var(--omx-status-green)", fontSize: "10px" }, children: "\u5DF2\u53D1\u5E03" })
                 ] }),
-                i === 2 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-3)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", padding: "8px", fontSize: "11px" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "#ffffff", fontSize: "10px", fontWeight: "bold" }, children: "18:00 (\u7F8E\u4E1C)" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { color: "#fff" }, children: "@trend_cat_us" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "#ffffff", fontSize: "10px" }, children: "\u6392\u961F\u4E2D \xB7 1\u53F7\u69FD\u4F4D" })
+                i === 2 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: "6px", padding: "6px", fontSize: "11px" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "#ffffff", fontSize: "10px", fontWeight: "bold" }, children: "18:00" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { style: { color: "#fff", display: "flex", alignItems: "center", gap: "3px" }, children: [
+                    ICONS.tiktok,
+                    " @trend_cat_us"
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { color: "#ffffff", fontSize: "10px" }, children: "\u6392\u961F\u4E2D \xB7 1\u53F7\u69FD" })
                 ] })
               ] })
             ] }, day)) })
           ] }),
-          activeTab === "inspector" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "22px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }, children: [
+          activeTab === "inspector" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "12px", padding: "18px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "15px", color: "#fff" }, children: "\u6545\u969C\u65AD\u70B9\u5BF9\u6BD4\u5668 (\u6BCF\u6B21\u5F02\u5E38\u7686\u6709\u660E\u786E\u5F52\u56E0)" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u62D2\u7EDD\u65E0\u54CD\u5E94\u5047\u6B7B\u3002\u7CFB\u7EDF\u51C6\u786E\u6307\u51FA\u9884\u671F\u770B\u5230\u7684\u754C\u9762\u7ED3\u6784\uFF0C\u4EE5\u53CA\u5B9E\u9645\u906D\u9047\u7684\u5F02\u5E38\u5E72\u6270\u5C42" })
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "14px", color: "#ffffff" }, children: "\u5DE5\u5355 #412 \xB7 03\u53F7\u673A (iPhone 13)" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u6B65\u9AA4\uFF1A\u76F8\u518C\u9009\u62E9\u7D20\u6750" })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", onClick: handleAutoHeal, children: "\u6267\u884C\u51B3\u7B56\u5F15\u64CE\u667A\u80FD\u81EA\u6108" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", onClick: handleAutoHeal, children: "\u51B3\u7B56\u81EA\u6108" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "11px", color: "var(--omx-status-green)", fontWeight: "bold" }, children: "\u9884\u671F\u754C\u9762\u7ED3\u6784\uFF1A\u7CFB\u7EDF\u76F8\u518C\u4E5D\u5BAB\u683C" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "#000", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", height: "260px", padding: "14px", marginTop: "8px", display: "flex", flexDirection: "column", justifyContent: "space-between" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u76F8\u518C\u6700\u8FD1\u9879\u76EE" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { textAlign: "center", color: "var(--dsw-alias-label-secondary)", fontSize: "12px" }, children: "[\u89C6\u9891\u9996\u56FE\u6B63\u5E38\u53EF\u89C1 \xB7 \u70B9\u51FB\u5C31\u7EEA]" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", textAlign: "right", color: "var(--dsw-alias-label-tertiary)" }, children: "\u4E0B\u4E00\u6B65\u6309\u94AE [\u53EF\u7528]" })
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "11px", color: "var(--omx-status-green)", fontWeight: "bold", marginBottom: "6px" }, children: "\u9884\u671F" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "#000", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", height: "220px", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u76F8\u518C\u4E5D\u5BAB\u683C" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { textAlign: "center", color: "var(--dsw-alias-label-secondary)", fontSize: "11px" }, children: "\u9996\u56FE\u53EF\u89C1 \xB7 \u5750\u6807\u6B63\u5E38" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", textAlign: "right", color: "var(--dsw-alias-label-tertiary)" }, children: "\u4E0B\u4E00\u6B65" })
                 ] })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "11px", color: autoHealed ? "var(--omx-status-green)" : "var(--omx-status-rose)", fontWeight: "bold" }, children: autoHealed ? "\u5B9E\u9645\u753B\u9762\u68C0\u6D4B\uFF1A\u5F39\u7A97\u5DF2\u81EA\u6108\u5173\u95ED" : "\u5B9E\u9645\u753B\u9762\u68C0\u6D4B\uFF1A\u906D\u9047\u7B2C\u4E09\u65B9\u5E94\u7528\u8BC4\u5206\u5F39\u7A97" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "#000", border: autoHealed ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(244,63,94,0.3)", borderRadius: "8px", height: "260px", padding: "14px", marginTop: "8px", display: "flex", flexDirection: "column", justifyContent: "space-between" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u7CFB\u7EDF\u8986\u76D6\u5C42" }),
-                  autoHealed ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { textAlign: "center", color: "var(--omx-status-green)", fontSize: "12px", fontWeight: "bold" }, children: [
-                    "\u2714 \u5F39\u7A97\u5DF2\u7531\u51B3\u7B56\u5F15\u64CE\u81EA\u52A8\u5173\u95ED",
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "#fff", fontSize: "11px", fontWeight: "normal" }, children: "\u5DF2\u81EA\u52A8\u63A8\u8FDB\u81F3\u300C\u4E0B\u4E00\u6B65\u300D\u5B8C\u6210\u77ED\u89C6\u9891\u53D1\u5E03" })
-                  ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { textAlign: "center", background: "rgba(244,63,94,0.08)", padding: "14px", borderRadius: "6px" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { color: "#fff", fontSize: "12px" }, children: "\u559C\u6B22\u8FD9\u6B3E\u5E94\u7528\u5417\uFF1F" }),
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-secondary)", fontSize: "11px" }, children: "\u8BF7\u524D\u5F80\u5E94\u7528\u5546\u5E97\u4E3A\u6211\u4EEC\u8BC4\u5206" })
-                  ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--dsw-alias-label-secondary)" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--omx-status-amber)" }, children: "\u7A0D\u540E\u518D\u8BF4" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "11px", color: autoHealed ? "var(--omx-status-green)" : "var(--omx-status-rose)", fontWeight: "bold", marginBottom: "6px" }, children: autoHealed ? "\u5B9E\u9645 (\u81EA\u6108)" : "\u5B9E\u9645 (\u906D\u9047\u8BC4\u5206\u5F39\u7A97)" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "#000", border: autoHealed ? "1px solid rgba(16,185,129,0.35)" : "1px solid rgba(244,63,94,0.35)", borderRadius: "8px", height: "220px", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u8986\u76D6\u5C42" }),
+                  autoHealed ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { textAlign: "center", color: "var(--omx-status-green)", fontSize: "12px", fontWeight: "bold" }, children: "\u5F39\u7A97\u5DF2\u81EA\u52A8\u5173\u95ED \xB7 \u4EFB\u52A1\u7EE7\u7EED" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { textAlign: "center", background: "rgba(244,63,94,0.08)", padding: "12px", borderRadius: "6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { color: "#fff", fontSize: "11px" }, children: "\u5E94\u7528\u8BC4\u5206\u5F39\u7A97" }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u7A0D\u540E\u518D\u8BF4" }),
                     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u63D0\u4EA4" })
                   ] })
                 ] })
               ] })
             ] })
           ] }),
-          activeTab === "signing" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "20px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "15px", color: "#fff" }, children: "\u82F9\u679C\u5F00\u53D1\u8005\u8BC1\u4E66\u6C60\u7BA1\u7406" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)" }, children: "\u7269\u7406\u771F\u673A\u5FC5\u987B\u7B7E\u540D\u65B9\u53EF\u8FD0\u884C\u63A7\u5236\u7A0B\u5E8F\u3002\u901A\u8FC7\u591A\u8BC1\u4E66\u5BC6\u94A5\u6C60\u6A2A\u5411\u6269\u5C55\uFF0C\u8F7B\u677E\u7EB3\u7BA1\u6570\u767E\u53F0 iPhone" })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", onClick: handleAddCert, children: "+ \u5BFC\u5165\u65B0\u56E2\u961F\u5BC6\u94A5 (.p8)" })
+          activeTab === "signing" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "12px", padding: "18px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "14px", color: "#fff" }, children: "\u5F00\u53D1\u8005\u8BC1\u4E66\u6C60" }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "omx-btn-ink", onClick: handleAddCert, children: [
+                ICONS.plus,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u5BFC\u5165\u5BC6\u94A5 (.p8)" })
+              ] })
             ] }),
-            teamKeys.map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", padding: "14px", marginBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+            teamKeys.map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", padding: "12px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { style: { color: "#fff", fontSize: "13px" }, children: [
-                  "\u56E2\u961F\u7F16\u53F7: ",
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { style: { color: "#fff", fontSize: "12px" }, children: [
                   k.id,
                   " (",
                   k.name,
                   ")"
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)" }, children: [
-                  "Apple Development \u8BC1\u4E66 \xB7 \u5269\u4F59 ",
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: [
+                  "\u5269\u4F59 ",
                   k.days,
                   " \u5929"
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontSize: "12px", color: "var(--omx-status-green)", fontWeight: "bold" }, children: [
-                "\u5DF2\u4F7F\u7528 ",
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontSize: "11px", color: "var(--omx-status-green)", fontWeight: "bold" }, children: [
                 k.used,
-                " / 100 \u53F0\u8BBE\u5907"
+                " / 100 \u53F0"
               ] })
             ] }, k.id))
           ] }),
-          activeTab === "warmup" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "20px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "15px", color: "#fff" }, children: "\u5168\u81EA\u4E3B\u667A\u80FD\u517B\u53F7\u7B56\u7565" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)", marginBottom: "16px" }, children: "\u4E00\u6B21\u8BBE\u5B9A\uFF0C\u5168\u5929\u5019\u7531 Mac \u672C\u5730\u5F15\u64CE\u81EA\u52A8\u6267\u884C\uFF0C\u652F\u6301 21 \u5929\u6E10\u8FDB\u5F0F\u63D0\u9891\u66F2\u7EBF\u4E0E\u771F\u4EBA\u4F5C\u606F\u7A97\u53E3\u3002" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "16px", borderRadius: "8px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "12px" }, children: "\u5355\u65E5\u8BBF\u95EE\u9891\u6B21" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "18px", fontWeight: "bold", color: "#ffffff", marginTop: "4px" }, children: "6 ~ 10 \u8F6E\u968F\u673A\u5DE1\u68C0" })
+          activeTab === "warmup" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "12px", padding: "18px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "14px", color: "#fff" }, children: "\u81EA\u4E3B\u517B\u53F7\u7B56\u7565" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginTop: "12px" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "12px", borderRadius: "8px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px" }, children: "\u5355\u65E5\u9891\u6B21" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "15px", fontWeight: "bold", color: "#fff", marginTop: "3px" }, children: "6 ~ 10 \u6B21" })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "16px", borderRadius: "8px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "12px" }, children: "\u65B0\u53F7\u6743\u91CD\u722C\u5761\u671F" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "18px", fontWeight: "bold", color: "#ffffff", marginTop: "4px" }, children: "21 \u5929\u9632\u98CE\u63A7\u6E10\u8FDB\u66F2\u7EBF" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "12px", borderRadius: "8px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px" }, children: "\u722C\u5761\u5468\u671F" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "15px", fontWeight: "bold", color: "#fff", marginTop: "3px" }, children: "21 \u5929" })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "16px", borderRadius: "8px" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "12px" }, children: "\u5355\u65E5\u6D3B\u8DC3\u65F6\u95F4\u7A97" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "18px", fontWeight: "bold", color: "#ffffff", marginTop: "4px" }, children: "14 ~ 18 \u5C0F\u65F6\u771F\u4EBA\u4F5C\u606F" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l1)", padding: "12px", borderRadius: "8px" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px" }, children: "\u6D3B\u8DC3\u65F6\u95F4" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "15px", fontWeight: "bold", color: "#fff", marginTop: "3px" }, children: "14 ~ 18 \u5C0F\u65F6" })
               ] })
             ] })
           ] })
@@ -619,30 +591,27 @@ function DeviceStage({ t, stage, store, visible = true }) {
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `omx-drawer-mask ${activeDrawer ? "active" : ""}`, onClick: () => setActiveDrawer(null), children: activeDrawer && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "omx-drawer-panel", onClick: (e) => e.stopPropagation(), children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { style: { fontSize: "15px", fontWeight: "600", color: "#ffffff" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { style: { fontSize: "14px", color: "#fff" }, children: [
                 activeDrawer.name,
                 " (",
                 activeDrawer.model,
                 ")"
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)", fontFamily: "var(--font-mono)" }, children: activeDrawer.proxy })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "10px", color: "var(--dsw-alias-label-tertiary)" }, children: activeDrawer.proxy })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-subtle", style: { height: "26px", padding: "0 8px" }, onClick: () => setActiveDrawer(null), children: "\u5173\u95ED" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", padding: "12px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "12px", color: "#fff" }, children: "\u521D\u59CB\u5316\u6B65\u5E8F\u68C0\u67E5" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "12px", color: "var(--omx-status-green)", marginTop: "6px" }, children: "\u2714 \u7269\u7406\u8BBE\u5907 USB \u8FDE\u63A5\u5C31\u7EEA" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "12px", color: "var(--omx-status-green)", marginTop: "4px" }, children: [
-              "\u2714 \u5DF2\u5206\u914D\u4E13\u5C5E\u793E\u5A92\u8D26\u53F7 (",
-              activeDrawer.account,
-              ")"
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", padding: "10px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "11px", color: "var(--omx-status-green)" }, children: "\u2714 USB \u7269\u7406\u5C31\u7EEA" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "11px", color: "var(--omx-status-green)", marginTop: "3px" }, children: [
+              "\u2714 \u8D26\u53F7\u7ED1\u5B9A: ",
+              activeDrawer.account
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "12px", color: "var(--omx-status-green)", marginTop: "4px" }, children: "\u2714 \u63A7\u5236\u5B88\u62A4\u7A0B\u5E8F\u5DF2\u5B8C\u6210\u8BC1\u4E66\u7B7E\u540D" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "12px", color: "var(--omx-status-green)", marginTop: "4px" }, children: "\u2714 \u81EA\u52A8\u517B\u53F7\u5DE1\u68C0\u961F\u5217\u5DF2\u5C31\u7EEA" })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { fontSize: "11px", color: "var(--omx-status-green)", marginTop: "3px" }, children: "\u2714 \u5B88\u62A4\u7B7E\u540D\u6B63\u5E38" })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "12px", color: "#fff", display: "block", marginBottom: "8px" }, children: "11 \u9879\u5E95\u5C42\u786C\u6027\u6307\u6807\u5065\u5EB7\u4F53\u68C0" }),
-            ["\u5F00\u53D1\u8005\u6A21\u5F0F\u72B6\u6001: \u5DF2\u5F00\u542F", "\u754C\u9762\u81EA\u52A8\u5316\u6743\u9650: \u5DF2\u5C31\u7EEA", "\u7CFB\u7EDF\u6D45\u8272\u5916\u89C2: \u7B26\u5408\u6807\u51C6", "\u5C4F\u5E55\u81EA\u52A8\u9501\u5B9A: \u6C38\u4E0D\u9501\u5C4F", "\u9501\u5C4F\u5BC6\u7801\u72B6\u6001: \u81EA\u52A8\u89E3\u9501\u5DF2\u914D\u7F6E", "\u51CF\u5C11\u52A8\u6001\u6548\u679C: \u5DF2\u542F\u7528", "\u5F85\u673A\u663E\u793A\u6A21\u5F0F: \u5DF2\u5173\u95ED", "\u81EA\u52A8\u4EAE\u5EA6\u8C03\u8282: \u5DF2\u5173\u95ED", "\u4E91\u7AEF\u7167\u7247\u540C\u6B65: \u5DF2\u5173\u95ED (\u9632\u5173\u8054)", "\u72EC\u5360\u4F4F\u5B85\u9759\u6001\u4EE3\u7406: \u8FDE\u901A\u6B63\u5E38", "\u7535\u6C60\u7535\u91CF\u4E0E\u673A\u8EAB\u6E29\u5EA6: 100% \xB7 31.5\xB0C \u6B63\u5E38"].map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--dsw-alias-border-l1)", fontSize: "12px", color: "var(--dsw-alias-label-secondary)" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary)", display: "block", marginBottom: "6px" }, children: "11 \u9879\u4F53\u68C0\u72B6\u6001" }),
+            ["\u5F00\u53D1\u8005\u6A21\u5F0F: \u5F00\u542F", "\u81EA\u52A8\u5316\u6743\u9650: \u5C31\u7EEA", "\u5916\u89C2\u6A21\u5F0F: \u6D45\u8272", "\u81EA\u52A8\u9501\u5B9A: \u6C38\u4E0D", "\u9501\u5C4F\u5BC6\u7801: \u5DF2\u914D\u7F6E", "\u51CF\u5C11\u52A8\u6001\u6548\u679C: \u5F00\u542F", "\u5F85\u673A\u6A21\u5F0F: \u5173\u95ED", "\u81EA\u52A8\u4EAE\u5EA6: \u5173\u95ED", "\u4E91\u7AEF\u7167\u7247: \u5173\u95ED", "\u4F4F\u5B85\u4EE3\u7406: \u8FDE\u901A", "\u7535\u6C60\u6E29\u5EA6: \u6B63\u5E38"].map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--dsw-alias-border-l1)", fontSize: "11px", color: "var(--dsw-alias-label-secondary)" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.split(":")[0] }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { color: "var(--omx-status-green)", fontWeight: "bold" }, children: [
                 "\u2714 ",
@@ -650,12 +619,12 @@ function DeviceStage({ t, stage, store, visible = true }) {
               ] })
             ] }, item))
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", gap: "8px", marginTop: "12px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-subtle", style: { flex: 1 }, onClick: () => showToast("\u5DF2\u5BF9\u8BE5 iPhone \u91CD\u65B0\u6267\u884C 11 \u9879\u4F53\u68C0"), children: "\u91CD\u65B0\u4F53\u68C0\u8BE5\u8BBE\u5907" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", style: { flex: 1 }, onClick: () => showToast("\u5DF2\u5411\u624B\u673A\u53D1\u9001\u70B9\u6309\u52A0\u53F7\u6307\u4EE4"), children: "\u6A21\u62DF\u70B9\u51FB\u52A0\u53F7" })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", gap: "8px", marginTop: "10px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-subtle", style: { flex: 1 }, onClick: () => showToast("\u4F53\u68C0\u590D\u6838\u5B8C\u6210"), children: "\u91CD\u65B0\u4F53\u68C0" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "omx-btn-ink", style: { flex: 1 }, onClick: () => showToast("\u5DF2\u6A21\u62DF\u70B9\u51FB\u52A0\u53F7"), children: "\u6A21\u62DF\u70B9\u6309" })
           ] })
         ] }) }),
-        toastMsg && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { position: "fixed", bottom: "24px", right: "24px", background: "var(--dsw-alias-bg-elevated)", border: "1px solid var(--dsw-alias-border-l3)", padding: "10px 16px", borderRadius: "8px", fontSize: "13px", color: "#fff", zIndex: 1e3, boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }, children: toastMsg })
+        toastMsg && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { position: "fixed", bottom: "24px", right: "24px", background: "var(--dsw-alias-bg-elevated)", border: "1px solid var(--dsw-alias-border-l2)", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", color: "#fff", zIndex: 1e3 }, children: toastMsg })
       ]
     }
   );
@@ -666,25 +635,25 @@ var locales = {
   "zh-CN": {
     nav: "\u624B\u673A\u7BA1\u7406",
     title: "\u624B\u673A\u7BA1\u7406",
-    subtitle: "\u672C\u5730\u7269\u7406\u771F\u673A\u9635\u5217\u7EB3\u7BA1\uFF0C11\u9879\u5E95\u5C42\u5065\u5EB7\u81EA\u68C0\u4E0E\u53CC\u8111\u51B3\u7B56\u63A7\u5236\u56DE\u8DEF",
-    refresh: "\u5168\u91CF\u4F53\u68C0",
-    addDevice: "\u63A5\u5165\u65B0\u624B\u673A",
-    tabFleet: "\u771F\u673A\u5927\u5C4F",
-    tabSchedules: "\u5468\u5386\u6392\u671F",
-    tabInspector: "\u65AD\u70B9\u5BF9\u6BD4\u5668",
-    tabSigning: "\u5F00\u53D1\u8005\u8BC1\u4E66",
-    tabWarmup: "\u81EA\u52A8\u517B\u53F7"
+    subtitle: "\u7269\u7406\u96C6\u7FA4 \xB7 15\u53F0\u5C31\u7EEA",
+    refresh: "\u5237\u65B0\u4F53\u68C0",
+    addDevice: "\u63A5\u5165\u8BBE\u5907",
+    tabFleet: "\u96C6\u7FA4",
+    tabSchedules: "\u6392\u671F",
+    tabInspector: "\u8BCA\u65AD",
+    tabSigning: "\u8BC1\u4E66",
+    tabWarmup: "\u517B\u53F7"
   },
   "en-US": {
     nav: "Devices",
-    title: "Device Management",
-    subtitle: "Local iPhone fleet management with 11 health checks & dual-brain decision loop",
-    refresh: "Recheck All",
-    addDevice: "Add iPhone",
+    title: "Devices",
+    subtitle: "Fleet \xB7 15 Ready",
+    refresh: "Recheck",
+    addDevice: "Add Device",
     tabFleet: "Fleet",
     tabSchedules: "Schedules",
     tabInspector: "Inspector",
-    tabSigning: "Apple Signing",
+    tabSigning: "Signing",
     tabWarmup: "Warmup"
   }
 };

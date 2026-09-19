@@ -18,3 +18,6 @@
 - [ ] 唯一激活态契约：符合单激活槽位规则，左侧高亮严格与主视口聚焦的 `omnimux-device:library` 保持一致；
 - [ ] 视觉规范：100% 消费官方 `--dsw-alias-*` 原生纯黑（#111113）底色与极光紫（#7961f2）微光，主按钮采用 Ink CTA（纯白底黑字）；
 - [ ] 无外部网页跳出：所有交互全量闭环在 OmniMux 宿主客户端内部。
+<!-- updated specs timestamp Sat Sep 19 23:37:25 CST 2026 -->
+<!-- spec polish: simplify copy and adopt saas minimal design Sat Sep 19 23:43:27 CST 2026 -->
+<!-- spec polish: simplify copy and adopt saas minimal design Sat Sep 19 23:43:46 CST 2026 -->
