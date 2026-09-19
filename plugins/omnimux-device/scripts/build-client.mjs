@@ -14,6 +14,7 @@ try {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outFile = join(root, 'lib', 'client.js')
+const uiKitDistPath = '/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit/lib/index.js'
 
 const result = await esbuild.build({
   absWorkingDir: root,
@@ -24,13 +25,15 @@ const result = await esbuild.build({
   jsx: 'automatic',
   write: false,
   logLevel: 'info',
+  alias: {
+    'dsh-ui-kit': uiKitDistPath,
+  },
   external: [
     'react',
     'react/jsx-runtime',
     'react/jsx-dev-runtime',
     'react-dom',
     'react-dom/client',
-    'dsh-ui-kit',
     '@deepseek-ai/cordis',
     '@deepseek-ai/dsh-client-ui-slots',
     '@deepseek-ai/dsh-client-locale',
