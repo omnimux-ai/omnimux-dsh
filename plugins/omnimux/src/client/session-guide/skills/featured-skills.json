@@ -229,15 +229,14 @@
       "summaryEn": "Use this skill whenever the user uploads 3-6 raw game clips (any phone-shot mix of 16:9 and 9:16) plus a team...",
       "category": "video-ads",
       "tags": [
-        "视频广告",
-        "新品上市"
+        "视频广告"
       ],
       "cover": "catalog/covers/skills/skill-card-4.webp",
       "avatar": "",
-      "badge": "NEW",
+      "badge": "",
       "skill": "youth-sports-hype-reel",
       "isHot": false,
-      "isNew": true,
+      "isNew": false,
       "coverIndex": 4,
       "coverFile": "skill-card-4.webp",
       "downloads": 50,
@@ -2206,13 +2205,14 @@
       "summaryEn": "Use this skill whenever the user pastes a pre-written ad script — especially a structured one with explicit Ti...",
       "category": "video-ads",
       "tags": [
-        "视频广告"
+        "视频广告",
+        "热门精选"
       ],
       "cover": "catalog/covers/skills/skill-card-5.webp",
       "avatar": "",
-      "badge": "",
+      "badge": "HOT",
       "skill": "script-to-video",
-      "isHot": false,
+      "isHot": true,
       "isNew": false,
       "coverIndex": 5,
       "coverFile": "skill-card-5.webp",
@@ -2622,13 +2622,14 @@
       "summaryEn": "Given a product brief and a target duration (15–60 s), produces a complete talking-head UGC ad implementation...",
       "category": "ugc-testimonial",
       "tags": [
-        "UGC 和用户评价"
+        "UGC 和用户评价",
+        "热门精选"
       ],
       "cover": "catalog/covers/skills/skill-card-7.webp",
       "avatar": "",
-      "badge": "",
+      "badge": "HOT",
       "skill": "ugc-script-planner",
-      "isHot": false,
+      "isHot": true,
       "isNew": false,
       "coverIndex": 7,
       "coverFile": "skill-card-7.webp",
