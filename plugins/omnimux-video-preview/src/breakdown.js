@@ -59,6 +59,8 @@ export {
 export {
   executeDedicatedStructureAnalyze,
   extractVideoBreakdown,
+  detectCompanionSubtitle,
+  buildBreakdownFailureGuidance,
   BUNDLED_STRUCTURE_PROMPT,
 } from './breakdown/analyzerPipeline.js'
 

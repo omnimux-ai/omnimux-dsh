@@ -23,6 +23,8 @@ import {
   extractVideoBreakdown,
   saveVideoBreakdownArtifacts,
   generateAdaptiveShotsAndStructure,
+  detectCompanionSubtitle,
+  buildBreakdownFailureGuidance,
 } from '../src/breakdown.js'
 import { apply } from '../src/index.js'
 import { createTestToolContext } from '../../omnimux/src/test-support/tool-harness.js'
@@ -130,6 +132,72 @@ describe('video breakdown & shots analysis engine', () => {
     )
 
     rmSync(dummyVideo, { force: true })
+  })
+
+  it('detects companion subtitles in directory', () => {
+    const testDir = mkdtempSync(join(tmpdir(), 'test-sub-dir-'))
+    const videoPath = join(testDir, 'interview_sample.mp4')
+    const subPath = join(testDir, 'interview_sample.en.srt')
+    writeFileSync(videoPath, 'video content')
+    writeFileSync(subPath, '1\n00:00:01,000 --> 00:00:02,000\nHello world\n\n2\n00:00:02,000 --> 00:00:04,000\nWelcome')
+
+    const found = detectCompanionSubtitle(videoPath)
+    assert.ok(found)
+    assert.equal(found.filename, 'interview_sample.en.srt')
+    assert.equal(found.linesCount, 7)
+
+    const noSub = detectCompanionSubtitle(join(tmpdir(), 'non-existent-sub-video.mp4'))
+    assert.equal(noSub, null)
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  it('builds breakdown failure guidance with companion subtitle and ask_user_question directives', () => {
+    const testDir = mkdtempSync(join(tmpdir(), 'test-guidance-dir-'))
+    const videoPath = join(testDir, 'Instinct_AI_Greg_Isenberg.mp4')
+    const subPath = join(testDir, 'Instinct_AI_Greg_Isenberg.en.srt')
+    writeFileSync(videoPath, 'video')
+    writeFileSync(subPath, '1\n00:00:01,000 --> 00:00:02,000\nSub line')
+
+    const guidanceWithSub = buildBreakdownFailureGuidance(videoPath)
+    assert.match(guidanceWithSub, /Instinct_AI_Greg_Isenberg\.en\.srt/)
+    assert.match(guidanceWithSub, /使用字幕快速提炼 \(Recommended\)/)
+    assert.match(guidanceWithSub, /ask_user_question/)
+    assert.match(guidanceWithSub, /截取前 2 分钟切片拆解/)
+    assert.match(guidanceWithSub, /检查模型服务后重试/)
+
+    const guidanceWithoutSub = buildBreakdownFailureGuidance(join(tmpdir(), 'isolated_no_sub.mp4'))
+    assert.match(guidanceWithoutSub, /未在同目录检测到伴生字幕文件/)
+    assert.match(guidanceWithoutSub, /ask_user_question/)
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  it('injects full guidance and ask_user_question options when extractVideoBreakdown fails with companion subtitle', async () => {
+    const testDir = mkdtempSync(join(tmpdir(), 'test-breakdown-sub-'))
+    const videoPath = join(testDir, 'podcast_long.mp4')
+    const subPath = join(testDir, 'podcast_long.en.srt')
+    writeFileSync(videoPath, 'fake video')
+    writeFileSync(subPath, '1\n00:00:00,000 --> 00:00:02,000\nHello')
+
+    const mockCtx = {
+      textComplete: {
+        execute: async () => ({ mode: 'live', text: 'no valid structure table' }),
+      },
+      get: (n) => (n === 'textComplete' ? mockCtx.textComplete : null),
+    }
+
+    try {
+      await extractVideoBreakdown(videoPath, { ctx: mockCtx })
+      assert.fail('should throw error')
+    } catch (err) {
+      assert.match(err.message, /多模态模型未解析出有效分镜/)
+      assert.match(err.message, /podcast_long\.en\.srt/)
+      assert.match(err.message, /ask_user_question/)
+      assert.match(err.message, /使用字幕快速提炼 \(Recommended\)/)
+    } finally {
+      rmSync(testDir, { recursive: true, force: true })
+    }
   })
 
   it('does not open sidebar and throws when video analysis fails', async () => {

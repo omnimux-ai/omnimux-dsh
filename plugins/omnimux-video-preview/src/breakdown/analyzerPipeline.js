@@ -4,8 +4,8 @@ import { createVideoStreamUrl } from '../stream-capability.js'
  * Video breakdown multimodal analysis pipeline and artifact extraction.
  */
 
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { basename, dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { downloadMedia } from '../download-helper.js'
@@ -390,13 +390,77 @@ function deriveStructureFromShots(shots) {
 }
 
 /**
+ * Detect companion subtitle file (.srt, .vtt) in the same directory as the target video.
+ * @param {string} videoPath
+ * @returns {{ path: string, filename: string, linesCount: number }|null}
+ */
+export function detectCompanionSubtitle(videoPath) {
+  if (!videoPath || typeof videoPath !== 'string') return null
+  try {
+    const dir = dirname(videoPath)
+    const ext = extname(videoPath)
+    const baseName = basename(videoPath, ext)
+    if (existsSync(dir)) {
+      const files = readdirSync(dir)
+      const prefixMatch = files.find((f) => {
+        const lower = f.toLowerCase()
+        return (lower.endsWith('.srt') || lower.endsWith('.vtt')) && f.startsWith(baseName)
+      })
+      const candidate = prefixMatch || files.find((f) => {
+        const lower = f.toLowerCase()
+        return lower.endsWith('.srt') || lower.endsWith('.vtt')
+      })
+      if (candidate) {
+        const subPath = join(dir, candidate)
+        const content = readFileSync(subPath, 'utf8')
+        const linesCount = content.split('\n').length
+        return { path: subPath, filename: candidate, linesCount }
+      }
+    }
+  } catch {}
+  return null
+}
+
+/**
+ * Build structured breakdown failure guidance message with companion awareness and DSH prompt directives.
+ * @param {string} videoPath
+ * @returns {string}
+ */
+export function buildBreakdownFailureGuidance(videoPath) {
+  const subtitle = detectCompanionSubtitle(videoPath)
+  const subtitleNotice = subtitle
+    ? `【系统感知】：已在同目录检测到配套字幕文件「${subtitle.filename}」（共 ${subtitle.linesCount.toLocaleString()} 行）。`
+    : `【系统感知】：未在同目录检测到伴生字幕文件。`
+
+  const subtitleOptionLabel = subtitle
+    ? '使用字幕快速提炼 (Recommended)'
+    : '使用字幕快速提炼'
+  const subtitleOptionDesc = subtitle
+    ? `跳过逐镜头视觉拆解，直接根据全片字幕（${subtitle.filename}）提炼对话核心观点与大纲`
+    : '跳过逐镜头视觉拆解，若有字幕文件可直接提炼对话核心观点与大纲'
+
+  return [
+    '视频视听拆解失败：多模态模型未解析出有效分镜（当前视频时长或内容结构超出短视频逐镜头拉片规格，如访谈播客或长视频）。',
+    subtitleNotice,
+    '【智能体行动准则（强制遵守）】：',
+    '1. 严禁私自直接调用读取工具读取成千上万行的超长大文件（避免对话上下文被撑爆与巨额 Token 浪费）！',
+    '2. 严禁擅自替用户做降级决定！',
+    '3. 你必须立即调用原生交互工具 `ask_user_question` 向用户呈现单选决策卡片，交由用户拍板后继续：',
+    `   - 选项 1：label: "${subtitleOptionLabel}", description: "${subtitleOptionDesc}"`,
+    '   - 选项 2：label: "截取前 2 分钟切片拆解", description: "提取片头精华短视频切片，重新发起逐镜头画面拉片与分镜分析"',
+    '   - 选项 3：label: "检查模型服务后重试", description: "若原片本身即为短视频，请确认视觉大模型服务连通性后重试"',
+    '等待用户在界面点击选择后，严格根据用户的决策分支执行后续操作。',
+  ].join('\n')
+}
+
+/**
  * Resolve shots, structure and pipeline via multimodal LLM.
  * Strictly throws upon analysis failure instead of generating fake fallback data.
  * @param {object} params
  * @returns {Promise<{ shots: Array<object>, structure: Array<object>, pipeline: Array<string>, isModelGenerated: boolean }>}
  */
 async function resolveBreakdownData(params) {
-  const { analysisVideoPath, ctx, options, signal, physicalScenes } = params
+  const { analysisVideoPath, localVideoPath, ctx, options, signal, physicalScenes } = params
   let analyzeReportText = ''
   if (analysisVideoPath) {
     analyzeReportText = await executeDedicatedStructureAnalyze({
@@ -416,7 +480,8 @@ async function resolveBreakdownData(params) {
   alignPhysicalScenesToShots(shots, physicalScenes)
 
   if (shots.length === 0) {
-    throw new Error('视频视听拆解失败：多模态模型未解析出有效分镜，请检查模型服务可用性或视频内容。')
+    const guidance = buildBreakdownFailureGuidance(localVideoPath || analysisVideoPath)
+    throw new Error(guidance)
   }
 
   if (isStructureResultDegenerate(structure)) {
@@ -648,6 +713,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
 
   const { shots, structure, pipeline, isModelGenerated } = await resolveBreakdownData({
     analysisVideoPath,
+    localVideoPath,
     ctx,
     options,
     signal: options.signal,
