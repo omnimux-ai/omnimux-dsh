@@ -1,0 +1,28 @@
+{
+  "task": "market-hot-picks-new-arrivals-5",
+  "issue": 2397,
+  "verifiedAt": "2026-09-19T12:26:00.000Z",
+  "status": "PASS",
+  "summary": "技能市场 HOT PICKS 扩充为 5 个，NEW ARRIVALS 严格收敛为 5 个，双专区完美排满一行 5 列",
+  "evidence": {
+    "specFile": "specs/market-hot-picks-new-arrivals-5.spec.md",
+    "catalogFile": "plugins/omnimux-market/catalog/index.json",
+    "gridComponent": "plugins/omnimux-market/src/client/plaza/PlazaCardGrid.jsx",
+    "hotPicksCount": 5,
+    "newArrivalsCount": 5,
+    "hotPicksList": [
+      "sk-omx-ugc-confessional (UGC 告白)",
+      "sk-omx-cinematic (电影级)",
+      "sk-omx-ugc-showcase (UGC展示)",
+      "sk-omx-script-to-video (脚本转视频)",
+      "sk-omx-ugc-script-planner (UGC 脚本全流程策划)"
+    ],
+    "newArrivalsList": [
+      "sk-omx-ecommerce (电子商务)",
+      "sk-omx-static-image (静态图片)",
+      "sk-omx-carousel (轮播)",
+      "sk-omx-course-to-short-video (课程转短视频)",
+      "sk-omx-ugc-fit-check (UGC 穿搭检查)"
+    ]
+  }
+}

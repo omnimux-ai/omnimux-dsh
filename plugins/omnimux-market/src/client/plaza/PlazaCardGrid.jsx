@@ -117,15 +117,15 @@ export function renderRegularSection(opts) {
   const exploreMoreTitle = safeTr('workshop.exploreMore', isEn ? 'EXPLORE MORE' : '探索更多');
   const viewAllText = safeTr('workshop.viewAll', isEn ? 'View All >' : '查看全部 >');
 
-  // 默认「全部」分类状态：按用户要求置顶「热门精选」、「新品上市」，其余展示在「探索更多」
+  // 默认「全部」分类状态：按用户要求置顶「热门精选」、「新品上市」（各保持 5 个），其余展示在「探索更多」
   if (isAllCategory) {
-    const hotPicks = regularItems.filter((i) => i.isHot || i.tags?.includes('热门精选'));
-    const newArrivals = regularItems.filter((i) => i.isNew || i.tags?.includes('新品上市'));
-    const exploreMore = regularItems.filter((i) => !i.isHot && !i.isNew && !i.tags?.includes('热门精选') && !i.tags?.includes('新品上市'));
+    const hotPicks = regularItems.filter((i) => i.isHot || i.tags?.includes('热门精选')).slice(0, 5);
+    const newArrivals = regularItems.filter((i) => i.isNew || i.tags?.includes('新品上市')).slice(0, 5);
+    const exploreMore = regularItems.filter((i) => !hotPicks.some((h) => (h.id || h.slug) === (i.id || i.slug)) && !newArrivals.some((n) => (n.id || n.slug) === (i.id || i.slug)));
 
     return h('div', { className: 'omnimux-creatify-sections-wrap', style: { display: 'flex', flexDirection: 'column', gap: '28px', width: '100%' } },
       statusNode,
-      // 1. 热门精选（置顶首屏 1:1 对齐 HOT PICKS）
+      // 1. 热门精选（置顶首屏 1:1 对齐 HOT PICKS，保持 5 个排满一行）
       hotPicks.length > 0 ? h('section', { className: 'featured-section', 'aria-label': hotPicksTitle },
         h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
           h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, hotPicksTitle),
@@ -135,7 +135,7 @@ export function renderRegularSection(opts) {
         ),
       ) : null,
 
-      // 2. 新品上市（置顶次屏 1:1 对齐 NEW ARRIVALS）
+      // 2. 新品上市（置顶次屏 1:1 对齐 NEW ARRIVALS，只显示前 5 个排满一行）
       newArrivals.length > 0 ? h('section', { className: 'featured-section', 'aria-label': newArrivalsTitle },
         h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' } },
           h('h2', { className: 'featured-title', style: { margin: 0, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--dsw-alias-label-caption, rgba(255,255,255,0.45))' } }, newArrivalsTitle),
@@ -147,7 +147,7 @@ export function renderRegularSection(opts) {
           }, viewAllText),
         ),
         h('div', { className: 'featured-grid cards-grid' },
-          newArrivals.map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: 3 + idx })),
+          newArrivals.map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: 5 + idx })),
         ),
       ) : null,
 
@@ -160,7 +160,7 @@ export function renderRegularSection(opts) {
           ),
         ),
         h('div', { className: 'featured-grid cards-grid' },
-          (exploreMore.length > 0 ? exploreMore : regularItems).map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: 9 + idx })),
+          (exploreMore.length > 0 ? exploreMore : regularItems).map((item, idx) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, cardIndex: 10 + idx })),
         ),
       ),
     );
