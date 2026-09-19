@@ -484,9 +484,13 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .ws-markdown-body p{margin:0 0 12px;color:var(--dsw-alias-label-secondary,#d1d5db)}
 .ws-markdown-body ul{margin:0 0 12px;padding-left:20px}
 .ws-markdown-body li{margin-bottom:4px;color:var(--dsw-alias-label-secondary,#d1d5db)}
-.ws-detail-footer{height:56px;display:flex;align-items:center;justify-content:space-between;padding-top:12px}
-.ws-footer-status{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dsw-alias-label-primary,#ffffff)}
-.ws-footer-actions{display:flex;align-items:center;gap:8px}
+.ws-detail-footer{height:56px;display:flex;align-items:center;justify-content:space-between;padding-top:12px;flex-shrink:0}
+.ws-footer-status{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dsw-alias-label-primary,#ffffff);flex-shrink:0}
+.ws-footer-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ws-footer-btn{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;flex-shrink:0}
+.ws-footer-actions .dshUk-Button-label{display:inline;white-space:nowrap}
+.ws-footer-actions .dshUk-Button-slot{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.ws-footer-actions svg{flex-shrink:0}
 .ws-more-menu-wrap{position:relative}
 .ws-more-menu{position:absolute;bottom:calc(100% + 6px);right:0;background:var(--dsw-alias-bg-elevated,#1c1c1f);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.1));border-radius:8px;padding:4px;min-width:120px;box-shadow:var(--dsw-alias-shadow-overlay,0 8px 24px var(--dsw-alias-shadow-color,rgba(0,0,0,.5)));z-index:2147483010}
 .ws-more-item{width:100%;text-align:left;background:transparent;border:0;padding:8px 12px;font-size:12px;color:var(--dsw-alias-label-primary,#ffffff);border-radius:4px;cursor:pointer;transition:background .15s}

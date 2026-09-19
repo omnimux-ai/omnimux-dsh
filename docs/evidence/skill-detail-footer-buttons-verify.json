@@ -1,0 +1,25 @@
+{
+  "test": "skill-detail-footer-buttons-layout",
+  "issue": 2418,
+  "timestamp": "2026-09-19T12:07:23.217Z",
+  "status": "PASSED",
+  "checks": {
+    "shareBtnHorizontal": true,
+    "shareBtnGeometry": {
+      "width": 68,
+      "height": 28
+    },
+    "installBtnHorizontal": true,
+    "installBtnGeometry": {
+      "width": 68,
+      "height": 28
+    },
+    "moreBtnGeometry": {
+      "width": 28,
+      "height": 28
+    },
+    "heightsUniform": true,
+    "moreAriaLabel": "更多操作"
+  },
+  "evidencePng": "docs/evidence/skill-detail-footer-buttons-verified.png"
+}
