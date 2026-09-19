@@ -2429,25 +2429,25 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   transition:color 150ms ease;
 }
 .omnimux-creatify-see-all-btn:hover {
-  color:#EDA921;
+  color:var(--dsw-alias-brand-primary);
 }
 
 /* 1:1 复刻 Creatify 3:2 技能卡片 */
 .omnimux-creatify-card {
   position:relative; width:100%; aspect-ratio:3 / 2;
-  border-radius:16px; overflow:hidden; background:#131414;
-  border:1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:0 1px 3px rgba(0, 0, 0, 0.35);
+  border-radius:16px; overflow:hidden; background:var(--dsw-alias-bg-layer-1);
+  border:1px solid var(--dsw-alias-border-l1);
+  box-shadow:0 1px 3px var(--dsw-alias-bg-base);
   cursor:pointer; user-select:none;
   transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
 }
 .omnimux-creatify-card:hover {
   transform:translateY(-4px);
-  box-shadow:0 12px 28px rgba(0, 0, 0, 0.5);
-  border-color:rgba(255, 255, 255, 0.22);
+  box-shadow:0 12px 28px var(--dsw-alias-bg-base);
+  border-color:var(--dsw-alias-border-hover);
 }
 .omnimux-creatify-card.is-active {
-  border-color:#EDA921;
+  border-color:var(--dsw-alias-brand-primary);
 }
 .omnimux-creatify-card-bg-img {
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
@@ -2458,11 +2458,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-creatify-card-bg-fallback {
   position:absolute; inset:0;
-  background:linear-gradient(135deg, #2A1F4A 0%, #152438 100%);
+  background:linear-gradient(135deg, var(--dsw-alias-bg-layer-2) 0%, var(--dsw-alias-bg-layer-1) 100%);
 }
 .omnimux-creatify-dot-overlay {
   position:absolute; inset:0;
-  background-image:radial-gradient(circle, rgba(255, 255, 255, 0.38) 0.7px, transparent 1px);
+  background-image:radial-gradient(circle, var(--dsw-alias-border-hover) 0.7px, transparent 1px);
   background-size:8px 8px; mix-blend-mode:overlay; pointer-events:none;
 }
 .omnimux-creatify-card-top-left {
@@ -2472,44 +2472,44 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-creatify-badge-hot {
   display:flex; align-items:center; justify-content:center;
   width:28px; height:28px; border-radius:8px;
-  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px);
-  color:#EDA921;
+  background:var(--dsw-alias-bg-mask-2); backdrop-filter:blur(12px);
+  color:var(--dsw-alias-brand-primary);
 }
 .omnimux-creatify-badge-new {
   display:flex; align-items:center; justify-content:center;
   height:28px; padding:0 9px; border-radius:8px;
-  background:rgba(228, 152, 0, 0.18); backdrop-filter:blur(12px);
-  color:#EDA921; font-size:11px; font-weight:600;
+  background:var(--dsw-alias-bg-mask-2); backdrop-filter:blur(12px);
+  color:var(--dsw-alias-brand-primary); font-size:11px; font-weight:600;
 }
 .omnimux-creatify-pill-cat {
   display:flex; align-items:center; gap:5px;
   height:28px; padding:0 10px; border-radius:999px;
-  background:rgba(255, 255, 255, 0.08); backdrop-filter:blur(12px);
-  border:1px solid rgba(255, 255, 255, 0.06);
-  font-size:11px; font-weight:500; color:rgba(255, 255, 255, 0.92);
+  background:var(--dsw-alias-bg-mask-1); backdrop-filter:blur(12px);
+  border:1px solid var(--dsw-alias-border-l1);
+  font-size:11px; font-weight:500; color:var(--dsw-alias-label-primary);
 }
 .omnimux-creatify-star-btn {
   position:absolute; top:12px; right:12px; z-index:5;
   width:28px; height:28px; border-radius:8px;
-  background:rgba(255, 255, 255, 0.08); backdrop-filter:blur(12px);
-  border:1px solid rgba(255, 255, 255, 0.06);
+  background:var(--dsw-alias-bg-mask-1); backdrop-filter:blur(12px);
+  border:1px solid var(--dsw-alias-border-l1);
   display:flex; align-items:center; justify-content:center;
-  color:rgba(255, 255, 255, 0.7); cursor:pointer;
+  color:var(--dsw-alias-label-secondary); cursor:pointer;
   transition:all 150ms ease;
 }
 .omnimux-creatify-star-btn:hover {
-  background:rgba(255, 255, 255, 0.16); color:#FFFFFF;
+  background:var(--dsw-alias-bg-mask-2); color:var(--dsw-alias-label-primary);
 }
 .omnimux-creatify-star-btn.active {
-  color:#EDA921; background:rgba(237, 169, 33, 0.18); border-color:rgba(237, 169, 33, 0.3);
+  color:var(--dsw-alias-brand-primary); background:var(--dsw-alias-bg-mask-2); border-color:var(--dsw-alias-border-l2);
 }
 .omnimux-creatify-card-center {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   padding:0 16px; pointer-events:none;
 }
 .omnimux-creatify-center-title {
-  font-size:20px; font-weight:600; color:#FFFFFF; text-align:center;
-  letter-spacing:-0.01em; text-shadow:0 2px 8px rgba(0, 0, 0, 0.45);
+  font-size:20px; font-weight:600; color:var(--dsw-alias-label-primary); text-align:center;
+  letter-spacing:-0.01em; text-shadow:0 2px 8px var(--dsw-alias-bg-base);
   display:inline-flex; align-items:center; gap:6px; margin:0; line-height:1.3;
 }
 .omnimux-creatify-card-hover-drawer {
@@ -2517,7 +2517,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-creatify-drawer-bg {
   position:absolute; inset:0;
-  background:linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 65%, transparent 100%);
+  background:linear-gradient(to top, var(--dsw-alias-bg-base) 0%, transparent 100%);
   opacity:0; transition:opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-creatify-card:hover .omnimux-creatify-drawer-bg {
@@ -2532,7 +2532,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   transform:translateY(0); opacity:1;
 }
 .omnimux-creatify-drawer-desc {
-  font-size:11.5px; line-height:1.45; color:rgba(255, 255, 255, 0.92);
+  font-size:11px; line-height:1.45; color:var(--dsw-alias-label-primary);
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   overflow:hidden; margin:0;
 }
@@ -2544,6 +2544,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; margin-top:2px;
 }
 .omnimux-tpl-card.is-skill-card {
+  flex:0 0 240px;
   aspect-ratio:16 / 10;
   border-radius:14px;
 }
@@ -3273,10 +3274,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-shelf-arrow-btn:hover { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-brand-primary); transform:translateY(-50%) scale(1.08); }
 
-/* Template Card - 现代化横版卡片 (16:10 黄金比例) */
+/* Template Card - 现代化竖版短视频卡片 (9:16 短视频黄金比例) */
 .omnimux-tpl-card {
-  flex:0 0 240px;
-  aspect-ratio:16 / 10;
+  flex:0 0 170px;
+  aspect-ratio:9 / 16;
   background:var(--dsw-alias-bg-layer-2);
   border:1px solid var(--dsw-alias-border-l2);
   border-radius:12px;
@@ -3477,8 +3478,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-btn-back:hover { color:var(--dsw-alias-label-primary); border-color:var(--dsw-alias-border-l3); }
 .omnimux-tpl-full-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
   gap:18px;
+}
+.omnimux-tpl-grid-view[data-category="skills"] .omnimux-tpl-full-grid {
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
 }
 .omnimux-tpl-grid-footer { display:flex; justify-content:center; align-items:center; padding:24px 0 12px; }
 .omnimux-tpl-btn-loadmore {

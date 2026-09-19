@@ -83,7 +83,7 @@ export function TemplatesGridView({
   const loadMoreText = isEn ? 'Load more' : '加载更多'
 
   return (
-    <div className="omnimux-tpl-grid-view">
+    <div className="omnimux-tpl-grid-view" data-category={category?.slug}>
       <div className="omnimux-tpl-grid-header">
         <div className="omnimux-tpl-grid-title-wrap">
           <h3 className="omnimux-tpl-grid-heading">
