@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-09-19T14:09:49.495Z",
+  "task": "remove-template-toasts",
+  "topic": "彻底移除模板与热门卡片复刻触发的遮挡提示弹窗 (Toast)",
+  "assertions": {
+    "1. handleExploreTemplateApply 彻底移除已装配提示词 showToast": true,
+    "2. handleExploreTrendingApply 彻底移除已挂载分镜 showToast": true,
+    "3. 点击应用卡片彻底移除打开应用 showToast": true,
+    "4. 界面中央零浮层遮挡，输入框平滑吸底预填": true
+  },
+  "evidence": "docs/evidence/remove-template-toasts-verified.png",
+  "verdict": "PASS"
+}

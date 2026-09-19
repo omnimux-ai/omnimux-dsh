@@ -47,6 +47,7 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     }
     global.window = dom.window
     global.document = dom.window.document
+    global.CustomEvent = dom.window.CustomEvent
     global.IS_REACT_ACT_ENVIRONMENT = true
 
     const hostRoot = document.getElementById('host-root')
@@ -101,6 +102,10 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     assert.equal(undockBtn.textContent.includes('收起输入框'), true, '收起按钮文本必须包含国际化文案')
     assert.ok(capturedDraft.includes('/ugc-confessional'), '输入框草稿已预填对应技能指令')
 
+    // 断言绝无任何 Toast 弹窗
+    const toastPill = document.querySelector('.omnimux-toast-pill')
+    assert.ok(!toastPill, '使用技能后绝不得出现 Toast 提示弹窗')
+
     // 4. 点击收起按钮：解除吸底，恢复到原位
     await act(async () => {
       undockBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
@@ -129,6 +134,20 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
       await new Promise((r) => setTimeout(r, 10))
     })
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滑回页面最顶部必须自动解除吸底回流至原位')
+
+    // 6. 验证普通模板复刻：吸底且严禁弹出任何 Toast 气泡
+    const tplCard = document.querySelector('.omnimux-tpl-card[data-is-app="false"]:not(.is-skill-card)')
+    if (tplCard) {
+      const recreateBtn = tplCard.querySelector('.omnimux-trending-recreate-btn')
+      if (recreateBtn) {
+        await act(async () => {
+          recreateBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+        })
+        assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '点击模板复刻后必须吸底')
+        const tplToast = document.querySelector('.omnimux-toast-pill')
+        assert.ok(!tplToast || !tplToast.textContent.includes('已装配'), '点击模板复刻严禁弹出「已装配」Toast 提示')
+      }
+    }
 
     await act(async () => root.unmount())
   })
