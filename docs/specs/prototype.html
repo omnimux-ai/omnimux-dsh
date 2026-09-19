@@ -3,24 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniMux Device - 移动真机矩阵与设备智能体中枢</title>
+    <title>OmniMux Device Farm & Agent Brain - 工业级智能体控制中枢</title>
     <style>
         :root {
-            --bg-base: #090a0f;
-            --bg-surface: #12141c;
-            --bg-card: #181b26;
-            --border-subtle: #242938;
+            --bg-void: #07080b;
+            --bg-base: #0d0f17;
+            --bg-surface: #141724;
+            --bg-card: #1a1e2e;
+            --bg-card-hover: #22273b;
+            --border-dim: #252b3d;
             --border-focus: #3b82f6;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --text-dim: #6b7280;
-            --accent-blue: #3b82f6;
+            --border-highlight: #475569;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-blue-deep: #0284c7;
             --accent-green: #10b981;
-            --accent-purple: #8b5cf6;
+            --accent-emerald: #059669;
+            --accent-purple: #a855f7;
             --accent-amber: #f59e0b;
             --accent-rose: #f43f5e;
             --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
         }
 
         * {
@@ -31,7 +36,7 @@
 
         body {
             font-family: var(--font-sans);
-            background-color: var(--bg-base);
+            background-color: var(--bg-void);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
@@ -40,100 +45,122 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 顶部导航状态栏 */
+        /* 顶部工业级中枢状态总览栏 */
         header {
-            height: 56px;
-            background: rgba(18, 20, 28, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-subtle);
+            height: 58px;
+            background: rgba(13, 15, 23, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-dim);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 24px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .brand-zone {
+        .brand-cluster {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .brand-badge {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: #fff;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 6px;
-            letter-spacing: 0.05em;
+        .brand-logo {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #38bdf8, #6366f1);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
         }
 
-        .brand-title {
+        .brand-title-wrap h1 {
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 700;
             color: #fff;
             letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .metrics-pill-bar {
+        .cluster-status-tag {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .telemetry-strip {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        .metric-item {
+        .telemetry-cell {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            background: var(--bg-surface);
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-dim);
             font-size: 12px;
             color: var(--text-muted);
-            background: var(--bg-surface);
-            padding: 4px 10px;
-            border-radius: 20px;
-            border: 1px solid var(--border-subtle);
         }
 
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--accent-green);
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-
-        .metric-val {
-            font-weight: 600;
-            color: #fff;
+        .telemetry-cell .val {
             font-family: var(--font-mono);
+            font-weight: 700;
+            color: #fff;
         }
 
         /* 主体布局 */
-        .layout-container {
+        .layout-root {
             display: flex;
             flex: 1;
-            height: calc(100vh - 56px);
+            height: calc(100vh - 58px);
         }
 
-        /* 左侧功能 Tab 栏 */
-        .sidebar-nav {
-            width: 220px;
-            background: var(--bg-surface);
-            border-right: 1px solid var(--border-subtle);
+        /* 侧边导航栏 */
+        .sidebar-pane {
+            width: 230px;
+            background: var(--bg-base);
+            border-right: 1px solid var(--border-dim);
             padding: 16px 12px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            justify-content: space-between;
         }
 
-        .nav-item {
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-category-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 12px 10px 6px;
+        }
+
+        .nav-btn {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 14px;
-            border-radius: 8px;
+            padding: 9px 12px;
+            border-radius: 7px;
             font-size: 13px;
             font-weight: 500;
             color: var(--text-muted);
@@ -142,761 +169,909 @@
             user-select: none;
         }
 
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.04);
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.03);
             color: #fff;
         }
 
-        .nav-item.active {
-            background: rgba(59, 130, 246, 0.12);
+        .nav-btn.active {
+            background: rgba(56, 189, 248, 0.1);
             color: var(--accent-blue);
             font-weight: 600;
+            border-left: 3px solid var(--accent-blue);
         }
 
-        .nav-item svg {
-            width: 17px;
-            height: 17px;
+        .nav-btn svg {
+            width: 16px;
+            height: 16px;
             flex-shrink: 0;
         }
 
-        /* 右侧工作台容器 */
-        .workspace-main {
+        /* 工作区主窗口 */
+        .workspace-viewport {
             flex: 1;
-            padding: 24px 28px;
+            padding: 24px 32px;
             overflow-y: auto;
-            background: var(--bg-base);
+            background: var(--bg-void);
         }
 
-        .tab-panel {
+        .panel-container {
             display: none;
-            animation: fadeIn 0.2s ease;
+            animation: fadeIn 0.18s ease;
         }
 
-        .tab-panel.active {
+        .panel-container.active {
             display: block;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 通用标题与操作栏 */
-        .section-header {
+        /* 顶部操作与标题栏 */
+        .viewport-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
         }
 
-        .header-title-group h2 {
+        .title-meta h2 {
             font-size: 20px;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: -0.02em;
             color: #fff;
         }
 
-        .header-title-group p {
+        .title-meta p {
             font-size: 13px;
-            color: var(--text-muted);
+            color: var(--text-dim);
             margin-top: 3px;
         }
 
-        .action-btn-group {
+        .action-cluster {
             display: flex;
+            align-items: center;
             gap: 10px;
         }
 
-        button.btn {
+        button.ui-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
             padding: 8px 14px;
-            border-radius: 7px;
+            border-radius: 6px;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             border: 1px solid transparent;
             transition: all 0.15s ease;
         }
 
-        button.btn-primary {
-            background: var(--accent-blue);
+        button.ui-btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-deep));
             color: #fff;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);
         }
-        button.btn-primary:hover {
-            background: #2563eb;
+        button.ui-btn-primary:hover {
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.4);
+            transform: translateY(-1px);
         }
 
-        button.btn-secondary {
+        button.ui-btn-secondary {
             background: var(--bg-surface);
             color: var(--text-main);
-            border-color: var(--border-subtle);
+            border-color: var(--border-dim);
         }
-        button.btn-secondary:hover {
+        button.ui-btn-secondary:hover {
             background: var(--bg-card);
-            border-color: #374151;
+            border-color: var(--border-highlight);
         }
 
-        /* 模块 1: 设备矩阵大屏 (Grid) */
-        .devices-grid {
+        /* 指标小卡片通用网格 */
+        .kpi-row {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
+            margin-bottom: 24px;
         }
 
-        .device-card {
+        .kpi-card {
             background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 16px;
             position: relative;
             overflow: hidden;
         }
 
-        .device-card:hover {
+        .kpi-card .kpi-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: #fff;
+        }
+
+        .kpi-card .kpi-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 模块 1: 机架与设备监控矩阵 (Rack Matrix) */
+        .rack-view-switch {
+            display: flex;
+            background: var(--bg-surface);
+            padding: 3px;
+            border-radius: 7px;
+            border: 1px solid var(--border-dim);
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+
+        .rack-switch-btn {
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .rack-switch-btn.active {
+            background: var(--bg-card);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .host-rack-container {
+            border: 1px solid var(--border-dim);
+            background: var(--bg-surface);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .rack-header {
+            background: var(--bg-card);
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-dim);
+        }
+
+        .rack-title-node {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rack-grid-cells {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            padding: 18px;
+        }
+
+        .device-pod-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .device-pod-card:hover {
             border-color: var(--border-focus);
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
         }
 
-        .device-card.selected {
-            border-color: var(--accent-blue);
-            background: rgba(59, 130, 246, 0.05);
+        .device-pod-card.sync-master {
+            border-color: var(--accent-amber);
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
         }
 
-        .card-topbar {
+        .pod-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
 
-        .device-name-wrap {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .device-name {
-            font-size: 14px;
-            font-weight: 600;
+        .pod-title {
+            font-size: 13px;
+            font-weight: 700;
             color: #fff;
         }
 
-        .batch-tag {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(139, 92, 246, 0.15);
-            color: var(--accent-purple);
-            font-weight: 600;
-        }
-
-        .device-screen-preview {
-            width: 100%;
-            height: 280px;
-            background: #000;
+        .pod-screen-box {
+            height: 240px;
+            background: #050608;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: space-between;
-            padding: 12px 10px;
+            padding: 10px;
             position: relative;
             overflow: hidden;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
         }
 
-        .mock-app-header {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
+        .screen-telemetry-badge {
             font-size: 10px;
-            color: #fff;
-            padding: 0 4px;
-        }
-
-        .mock-app-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-align: center;
-            width: 100%;
-        }
-
-        .mock-app-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #00f2fe, #4facfe);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 800;
-            font-size: 18px;
-        }
-
-        .mock-app-text {
-            font-size: 11px;
-            color: #d1d5db;
-            line-height: 1.4;
-        }
-
-        .mock-app-bottom-bar {
-            width: 100%;
-            height: 28px;
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            font-size: 10px;
-            color: #9ca3af;
-        }
-
-        .mock-btn-plus {
-            width: 22px;
-            height: 16px;
-            background: #fff;
-            border-radius: 3px;
-            color: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-        }
-
-        .card-meta-footer {
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--text-dim);
-        }
-
-        .badge-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
+            font-family: var(--font-mono);
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.12);
             padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-        .badge-active { background: rgba(16, 185, 129, 0.12); color: var(--accent-green); }
-        .badge-busy { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
-        .badge-standby { background: rgba(156, 163, 175, 0.12); color: var(--text-dim); }
-
-        /* 模态框与控制抽屉 */
-        .drawer-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 200;
-            display: none;
-            justify-content: flex-end;
+            border-radius: 3px;
+            width: fit-content;
         }
 
-        .drawer-overlay.active {
-            display: flex;
+        .screen-core-display {
+            text-align: center;
+            margin: auto 0;
         }
 
-        .drawer-body {
-            width: 460px;
-            height: 100%;
-            background: var(--bg-surface);
-            border-left: 1px solid var(--border-subtle);
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            overflow-y: auto;
-            animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideLeft {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-        }
-
-        /* 模块 2: 轮换排班调度器 */
-        .scheduler-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .scheduler-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-
-        .stat-box {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 14px;
-        }
-
-        .stat-box .title {
-            font-size: 12px;
-            color: var(--text-dim);
+        .screen-core-display .app-badge {
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
             margin-bottom: 4px;
         }
 
-        .stat-box .val {
-            font-size: 22px;
-            font-weight: 700;
-            color: #fff;
+        .screen-core-display .status-sub {
+            font-size: 11px;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        .pod-footer-meta {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dim);
             font-family: var(--font-mono);
         }
 
-        .batch-lane {
+        /* 模块 2: 时间片并发排班甘特图 (Gantt) */
+        .gantt-board-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .gantt-timeline-header {
+            display: grid;
+            grid-template-columns: 180px repeat(24, 1fr);
+            gap: 4px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 10px;
+            font-size: 11px;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+            text-align: center;
+        }
+
+        .gantt-row {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .gantt-track-lane {
+            display: flex;
+            height: 32px;
             background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
+            border-radius: 6px;
+            position: relative;
+            align-items: center;
+            padding: 2px;
+        }
+
+        .gantt-bar-segment {
+            height: 26px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
+            padding: 0 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: absolute;
+        }
+        .segment-batch-a { background: linear-gradient(90deg, #0284c7, #38bdf8); left: 8%; width: 25%; }
+        .segment-batch-b { background: linear-gradient(90deg, #7c3aed, #a855f7); left: 38%; width: 28%; }
+        .segment-batch-c { background: linear-gradient(90deg, #059669, #10b981); left: 70%; width: 22%; }
+
+        /* 模块 3: 多证书池管理 (Cert Pool) */
+        .cert-card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .cert-license-pod {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
             justify-content: space-between;
         }
 
-        .batch-lane-info {
-            display: flex;
-            align-items: center;
-            gap: 14px;
+        .progress-bar-rail {
+            height: 8px;
+            background: var(--bg-void);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
         }
 
-        .lane-badge {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--accent-blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 13px;
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
         }
 
-        /* 模块 3: 多证书池管理 */
-        .cert-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        .cert-table th {
-            text-align: left;
-            padding: 12px 14px;
-            color: var(--text-dim);
-            border-bottom: 1px solid var(--border-subtle);
-            font-weight: 500;
-        }
-
-        .cert-table td {
-            padding: 14px;
-            border-bottom: 1px solid var(--border-subtle);
-            color: var(--text-main);
-        }
-
-        /* 模块 4: 双脑发片流水线演练 */
-        .pipeline-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 22px;
+        /* 模块 4: 双脑极速发片决策演练 (Dual-Brain Pipeline) */
+        .pipeline-workspace-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
         }
 
-        .config-form label {
-            display: block;
+        .form-pane {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .form-label {
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--text-muted);
             margin-bottom: 6px;
             margin-top: 14px;
+            display: flex;
+            justify-content: space-between;
         }
 
-        .config-form input, .config-form select, .config-form textarea {
+        .form-input, .form-select, .form-textarea {
             width: 100%;
             background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
+            border: 1px solid var(--border-dim);
             border-radius: 6px;
             padding: 9px 12px;
             color: #fff;
             font-size: 13px;
             outline: none;
         }
+        .form-input:focus, .form-textarea:focus { border-color: var(--accent-blue); }
 
-        .config-form input:focus, .config-form textarea:focus {
-            border-color: var(--accent-blue);
+        .clean-toggle-box {
+            margin-top: 14px;
+            background: rgba(56, 189, 248, 0.05);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
         }
 
-        .execution-terminal {
+        .terminal-pane {
             background: #050608;
-            border: 1px solid #1f2430;
-            border-radius: 8px;
-            padding: 14px;
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .terminal-body {
+            flex: 1;
+            overflow-y: auto;
             font-family: var(--font-mono);
             font-size: 11px;
-            color: #a7f3d0;
-            height: 380px;
-            overflow-y: auto;
             line-height: 1.6;
         }
 
-        .term-step {
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+        .terminal-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            gap: 10px;
         }
 
-        .term-tag-slow { color: #60a5fa; font-weight: 600; }
-        .term-tag-fast { color: #f59e0b; font-weight: 600; }
-        .term-conf { color: #10b981; }
+        .ts-tag-time { color: var(--text-dim); }
+        .ts-tag-engine { color: var(--accent-amber); font-weight: 700; }
+        .ts-tag-conf { color: var(--accent-green); font-weight: 700; }
+        .ts-tag-action { color: #fff; font-weight: 600; }
+
+        /* 概率分布可视化 Bar */
+        .prob-chart-block {
+            margin: 8px 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+        }
+
+        .prob-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 4px 0;
+        }
+        .prob-bar-rail {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .prob-bar-fill { height: 100%; background: var(--accent-amber); border-radius: 3px; }
+
+        /* 侧边遥控抽屉 */
+        .drawer-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            justify-content: flex-end;
+        }
+        .drawer-mask.active { display: flex; }
+
+        .drawer-content {
+            width: 480px;
+            height: 100%;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-dim);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
         /* 全局通知 Toast */
-        .toast {
+        .global-toast {
             position: fixed;
             bottom: 24px;
             right: 24px;
             background: var(--bg-card);
-            border: 1px solid var(--border-focus);
+            border: 1px solid var(--accent-blue);
             color: #fff;
-            padding: 10px 16px;
+            padding: 12px 20px;
             border-radius: 8px;
             font-size: 13px;
             display: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
             z-index: 300;
-            animation: slideUp 0.2s ease;
+            animation: toastPop 0.2s ease;
         }
-        @keyframes slideUp {
-            from { transform: translateY(10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes toastPop { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
     <!-- 顶部状态栏 -->
     <header>
-        <div class="brand-zone">
-            <span class="brand-badge">OMNIMUX</span>
-            <span class="brand-title">Mobile Device Farm & Agent Brain</span>
+        <div class="brand-cluster">
+            <div class="brand-logo">
+                <svg width="16" height="16" fill="none" stroke="#fff" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-width="2.5" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="brand-title-wrap">
+                <h1>OmniMux Device Farm <span class="cluster-status-tag">Cluster Node #1 · 生产集群在线</span></h1>
+            </div>
         </div>
-        <div class="metrics-pill-bar">
-            <div class="metric-item">
-                <span class="status-dot"></span>
-                <span>并发槽位:</span>
-                <span class="metric-val" id="topbar-slots">15 / 15 运行中</span>
+
+        <div class="telemetry-strip">
+            <div class="telemetry-cell">
+                <svg width="14" height="14" fill="var(--accent-green)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                <span>动态并发槽位:</span>
+                <span class="val" id="top-active-slots">15 / 15 满载</span>
             </div>
-            <div class="metric-item">
-                <span>授权配额:</span>
-                <span class="metric-val">300 台 (3 证书)</span>
+            <div class="telemetry-cell">
+                <span>静态授权配额:</span>
+                <span class="val">300 台 (3 证书池)</span>
             </div>
-            <div class="metric-item">
-                <span>快决策反应:</span>
-                <span class="metric-val" style="color:var(--accent-amber);">138ms</span>
+            <div class="telemetry-cell">
+                <span>独享静态住宅IP:</span>
+                <span class="val" style="color:var(--accent-blue);">300 / 300 隔离</span>
+            </div>
+            <div class="telemetry-cell">
+                <span>TypeSafe 微操延迟:</span>
+                <span class="val" style="color:var(--accent-amber);">124ms</span>
             </div>
         </div>
     </header>
 
-    <!-- 主布局 -->
-    <div class="layout-container">
-        <!-- 左侧菜单 -->
-        <div class="sidebar-nav">
-            <div class="nav-item active" onclick="switchTab('devices')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
-                <span>真机监控大屏</span>
+    <div class="layout-root">
+        <!-- 侧边导航 -->
+        <div class="sidebar-pane">
+            <div class="nav-menu">
+                <div class="nav-category-title">硬件拓扑与控制</div>
+                <div class="nav-btn active" onclick="navigate('matrix')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
+                    <span>机架拓扑与大屏</span>
+                </div>
+                <div class="nav-btn" onclick="navigate('scheduler')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"/></svg>
+                    <span>时间片并发排班</span>
+                </div>
+                <div class="nav-btn" onclick="navigate('certs')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-width="2"/></svg>
+                    <span>多开发者证书池</span>
+                </div>
+
+                <div class="nav-category-title">智能体发布中枢</div>
+                <div class="nav-btn" onclick="navigate('pipeline')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/></svg>
+                    <span>双脑发片流水线</span>
+                </div>
+                <div class="nav-btn" onclick="navigate('safety')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-width="2"/></svg>
+                    <span>置信度与抗风控</span>
+                </div>
             </div>
-            <div class="nav-item" onclick="switchTab('scheduler')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2"/></svg>
-                <span>并发排班轮换</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('certs')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke-width="2"/></svg>
-                <span>多证书池管理</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('pipeline')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/></svg>
-                <span>双脑发片演练</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('safety')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
-                <span>置信度硬门禁</span>
+
+            <div style="background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:8px;padding:12px;font-size:11px;">
+                <div style="color:var(--text-muted);margin-bottom:4px;">Host: Mac mini M2 Pro</div>
+                <div style="color:var(--text-dim);font-family:var(--font-mono);">USB Bus: 4 Controllers (OK)</div>
+                <div style="color:var(--text-dim);font-family:var(--font-mono);">usbmuxd: 0 dropped frames</div>
             </div>
         </div>
 
-        <!-- 右侧主区域 -->
-        <div class="workspace-main">
+        <!-- 工作区主视口 -->
+        <div class="workspace-viewport">
 
-            <!-- TAB 1: 真机大屏 -->
-            <div id="tab-devices" class="tab-panel active">
-                <div class="section-header">
-                    <div class="header-title-group">
-                        <h2>真机监控大屏 (Live Matrix)</h2>
-                        <p>实时物理 iPhone 集群：WDA 端口自动保活、低延迟投屏与智能体接管</p>
+            <!-- TAB 1: 机架拓扑与真机大屏 -->
+            <div id="pane-matrix" class="panel-container active">
+                <div class="viewport-header">
+                    <div class="title-meta">
+                        <h2>机架拓扑与实时监控矩阵 (Rack Topology & Live Grid)</h2>
+                        <p>集群当前纳管 300 台物理真机，已激活 15 个物理并发通道（直连 WDA 8100~8114）</p>
                     </div>
-                    <div class="action-btn-group">
-                        <button class="btn btn-secondary" onclick="simulateUsbConnect()">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-width="2"/></svg>
-                            模拟插入新真机
+                    <div class="action-cluster">
+                        <button class="ui-btn ui-btn-secondary" onclick="triggerMasterSlaveSync()">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2"/></svg>
+                            一主多从集群同步镜像
                         </button>
-                        <button class="btn btn-primary" onclick="batchWakeup()">全部唤醒解锁</button>
+                        <button class="ui-btn ui-btn-secondary" onclick="simulateNewDevicePlug()">+ 接入新 iPhone</button>
+                        <button class="ui-btn ui-btn-primary" onclick="batchScreenUnlock()">全槽位密码解锁</button>
                     </div>
                 </div>
 
-                <div class="devices-grid" id="devices-container">
-                    <!-- JS 渲染设备卡片 -->
+                <!-- KPI 指标条 -->
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-label">在线物理真机</div>
+                        <div class="kpi-value" id="kpi-online-count">15 <span style="font-size:13px;color:var(--text-dim);">台并发中</span></div>
+                        <div class="kpi-sub" style="color:var(--accent-green);">● 全部 WDA 8100 守护正常</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">待机轮休排队</div>
+                        <div class="kpi-value">285 <span style="font-size:13px;color:var(--text-dim);">台待命中</span></div>
+                        <div class="kpi-sub">省电模式维持 100% 满电状态</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">平均机身温度</div>
+                        <div class="kpi-value" style="color:var(--accent-blue);">32.4°C</div>
+                        <div class="kpi-sub">工业风道散热巡检正常</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">今日矩阵发片产出</div>
+                        <div class="kpi-value" style="color:var(--accent-purple);">412 <span style="font-size:13px;color:var(--text-dim);">条</span></div>
+                        <div class="kpi-sub" style="color:var(--accent-green);">100% 幂等防重发零翻车</div>
+                    </div>
+                </div>
+
+                <!-- 机柜与宿主机视图 -->
+                <div class="host-rack-container">
+                    <div class="rack-header">
+                        <div class="rack-title-node">
+                            <span style="font-size:14px;font-weight:700;color:#fff;">Rack-01 / Mac-Mini-Host-A</span>
+                            <span style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">(IP: 192.168.1.102 · USB 3.2 16-Port Hub)</span>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);">
+                            当前批次: <strong style="color:var(--accent-blue);">批次 A (美东带货组)</strong> · 15 槽位全开
+                        </div>
+                    </div>
+
+                    <div class="rack-grid-cells" id="rack-device-grid">
+                        <!-- 由 JS 渲染设备 Pod 卡片 -->
+                    </div>
                 </div>
             </div>
 
-            <!-- TAB 2: 并发排班轮换 -->
-            <div id="tab-scheduler" class="tab-panel">
-                <div class="section-header">
-                    <div class="header-title-group">
-                        <h2>并发排班与轮换调度 (Time-Sharing Scheduler)</h2>
-                        <p>授权配额 (300台) 与动态并发量 (15台) 解耦，通过时间片智能轮换跑满设备</p>
+            <!-- TAB 2: 时间片并发排班甘特图 -->
+            <div id="pane-scheduler" class="panel-container">
+                <div class="viewport-header">
+                    <div class="title-meta">
+                        <h2>时间片并发排班甘特图 (Time-Sharing Scheduler)</h2>
+                        <p>100 台授权设备解耦为 15 动态并发槽位，通过 24 小时黄金时区时间轴交替接力</p>
                     </div>
-                    <div class="action-btn-group">
-                        <button class="btn btn-primary" onclick="triggerBatchRotate()">执行一键轮换切批</button>
-                    </div>
-                </div>
-
-                <div class="scheduler-stats-grid">
-                    <div class="stat-box">
-                        <div class="title">授权总设备量</div>
-                        <div class="val">300 <span style="font-size:12px;color:var(--text-dim);">台</span></div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">当前在线并发槽</div>
-                        <div class="val" style="color:var(--accent-blue);">15 / 15 <span style="font-size:12px;color:var(--text-dim);">槽位</span></div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">当前执行批次</div>
-                        <div class="val" style="color:var(--accent-green);" id="current-batch-name">批次 A (美区早间)</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">硬件成本节约率</div>
-                        <div class="val" style="color:var(--accent-purple);">75% <span style="font-size:12px;color:var(--text-dim);">(省7台Mac)</span></div>
+                    <div class="action-cluster">
+                        <button class="ui-btn ui-btn-primary" onclick="rotateBatchesNow()">立即触发批次切换</button>
                     </div>
                 </div>
 
-                <div class="scheduler-card">
-                    <h3 style="font-size:14px;margin-bottom:14px;color:#fff;">轮换执行队列 (Batches)</h3>
-                    
-                    <div class="batch-lane">
-                        <div class="batch-lane-info">
-                            <div class="lane-badge">A</div>
-                            <div>
-                                <div style="font-size:14px;font-weight:600;color:#fff;">批次 A - 美区早间发布组 (01~15号机)</div>
-                                <div style="font-size:12px;color:var(--text-dim);">当前状态: 发片进行中 (进度 80%) · 绑定证书: Apple Team-01</div>
-                            </div>
-                        </div>
-                        <span class="badge-status badge-busy">运行中 (Active)</span>
+                <div class="gantt-board-card">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+                        <span style="font-size:13px;font-weight:600;color:#fff;">24 小时矩阵发布时间轴排期</span>
+                        <span style="font-size:12px;color:var(--accent-blue);" id="gantt-current-status">当前执行: 批次 A (001~015号机 · 美东 18:00 发布窗口)</span>
                     </div>
 
-                    <div class="batch-lane">
-                        <div class="batch-lane-info">
-                            <div class="lane-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">B</div>
-                            <div>
-                                <div style="font-size:14px;font-weight:600;color:#fff;">批次 B - 欧洲接力发布组 (16~30号机)</div>
-                                <div style="font-size:12px;color:var(--text-dim);">预定时间: 10:00 接棒上线 · 绑定证书: Apple Team-01</div>
-                            </div>
-                        </div>
-                        <span class="badge-status badge-active">就绪接力 (Standby Ready)</span>
+                    <div class="gantt-timeline-header">
+                        <div>槽位 / 设备组</div>
+                        <div>01h</div><div>02h</div><div>03h</div><div>04h</div><div>05h</div><div>06h</div><div>07h</div><div>08h</div>
+                        <div>09h</div><div>10h</div><div>11h</div><div>12h</div><div>13h</div><div>14h</div><div>15h</div><div>16h</div>
+                        <div>17h</div><div>18h</div><div>19h</div><div>20h</div><div>21h</div><div>22h</div><div>23h</div><div>24h</div>
                     </div>
 
-                    <div class="batch-lane">
-                        <div class="batch-lane-info">
-                            <div class="lane-badge" style="background:rgba(156,163,175,0.15);color:var(--text-dim);">C</div>
-                            <div>
-                                <div style="font-size:14px;font-weight:600;color:#fff;">批次 C - 亚太晚间互动组 (31~45号机)</div>
-                                <div style="font-size:12px;color:var(--text-dim);">预定时间: 19:00 上线 · 绑定证书: Apple Team-02</div>
-                            </div>
+                    <div class="gantt-row">
+                        <div><strong style="color:#fff;font-size:12px;">Slot 01~05 (带货组)</strong><br><span style="font-size:11px;color:var(--text-dim);">美东 TikTok 账号</span></div>
+                        <div class="gantt-track-lane">
+                            <div class="gantt-bar-segment segment-batch-a">批次 A (美东黄金发片)</div>
+                            <div class="gantt-bar-segment segment-batch-b">批次 B (欧洲晚间接力)</div>
+                            <div class="gantt-bar-segment segment-batch-c">批次 C (东南亚互动)</div>
                         </div>
-                        <span class="badge-status badge-standby">休眠充电中 (Sleeping)</span>
+                    </div>
+
+                    <div class="gantt-row">
+                        <div><strong style="color:#fff;font-size:12px;">Slot 06~10 (种草组)</strong><br><span style="font-size:11px;color:var(--text-dim);">美西 TikTok 账号</span></div>
+                        <div class="gantt-track-lane">
+                            <div class="gantt-bar-segment segment-batch-a" style="left:12%;width:24%;">批次 A (文案自动填充)</div>
+                            <div class="gantt-bar-segment segment-batch-b" style="left:42%;width:24%;">批次 B (视频导入相册)</div>
+                            <div class="gantt-bar-segment segment-batch-c" style="left:72%;width:20%;">批次 C (评论区互动)</div>
+                        </div>
+                    </div>
+
+                    <div class="gantt-row">
+                        <div><strong style="color:#fff;font-size:12px;">Slot 11~15 (养号组)</strong><br><span style="font-size:11px;color:var(--text-dim);">新设备预热池</span></div>
+                        <div class="gantt-track-lane">
+                            <div class="gantt-bar-segment segment-batch-a" style="left:5%;width:30%;">批次 A (Doomscroll 养号)</div>
+                            <div class="gantt-bar-segment segment-batch-b" style="left:38%;width:26%;">批次 B (随机点赞收藏)</div>
+                            <div class="gantt-bar-segment segment-batch-c" style="left:68%;width:26%;">批次 C (关注达人标签)</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- TAB 3: 多证书池管理 -->
-            <div id="tab-certs" class="tab-panel">
-                <div class="section-header">
-                    <div class="header-title-group">
-                        <h2>多证书池管理 (Multi-Cert Pool)</h2>
-                        <p>突破单账号 100 台上限，通过多套苹果开发者证书横向扩展支撑海量真机</p>
+            <div id="pane-certs" class="panel-container">
+                <div class="viewport-header">
+                    <div class="title-meta">
+                        <h2>多开发者证书池架构 (Multi-Cert Architecture)</h2>
+                        <p>横向扩展打破苹果单账号 100 台 UDID 限制，统一纳管全网企业级真机资产</p>
                     </div>
-                    <div class="action-btn-group">
-                        <button class="btn btn-primary" onclick="showAddCertModal()">+ 绑定新开发者证书</button>
+                    <div class="action-cluster">
+                        <button class="ui-btn ui-btn-primary" onclick="openCertDialog()">+ 绑定新 Apple 开发者证书</button>
                     </div>
                 </div>
 
-                <div class="scheduler-card">
-                    <table class="cert-table">
-                        <thead>
-                            <tr>
-                                <th>Team ID (账号)</th>
-                                <th>证书名称</th>
-                                <th>已绑定 iPhone 配额</th>
-                                <th>证书有效期</th>
-                                <th>健康状态</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cert-table-body">
-                            <tr>
-                                <td style="font-family:var(--font-mono);font-weight:600;">8K2N94XYZ1</td>
-                                <td>Agniverse Global Corp</td>
-                                <td>
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <div style="flex:1;height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
-                                            <div style="width:85%;height:100%;background:var(--accent-blue);"></div>
-                                        </div>
-                                        <span style="font-family:var(--font-mono);">85 / 100</span>
-                                    </div>
-                                </td>
-                                <td>294 天剩余</td>
-                                <td><span class="badge-status badge-active">正常有效</span></td>
-                                <td><a href="#" style="color:var(--accent-blue);text-decoration:none;font-size:12px;" onclick="showToast('证书正在使用中')">管理设备</a></td>
-                            </tr>
-                            <tr>
-                                <td style="font-family:var(--font-mono);font-weight:600;">3M7P21LAA9</td>
-                                <td>OmniMux CrossBorder LLC</td>
-                                <td>
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <div style="flex:1;height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
-                                            <div style="width:92%;height:100%;background:var(--accent-amber);"></div>
-                                        </div>
-                                        <span style="font-family:var(--font-mono);">92 / 100</span>
-                                    </div>
-                                </td>
-                                <td>312 天剩余</td>
-                                <td><span class="badge-status badge-active">正常有效</span></td>
-                                <td><a href="#" style="color:var(--accent-blue);text-decoration:none;font-size:12px;" onclick="showToast('证书正在使用中')">管理设备</a></td>
-                            </tr>
-                            <tr>
-                                <td style="font-family:var(--font-mono);font-weight:600;">9Q1B44WWX5</td>
-                                <td>Media Matrix Tech Team</td>
-                                <td>
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <div style="flex:1;height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
-                                            <div style="width:40%;height:100%;background:var(--accent-green);"></div>
-                                        </div>
-                                        <span style="font-family:var(--font-mono);">40 / 100</span>
-                                    </div>
-                                </td>
-                                <td>350 天剩余</td>
-                                <td><span class="badge-status badge-active">正常有效</span></td>
-                                <td><a href="#" style="color:var(--accent-blue);text-decoration:none;font-size:12px;" onclick="showToast('证书正在使用中')">管理设备</a></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="cert-card-grid" id="cert-cards-holder">
+                    <div class="cert-license-pod">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="font-size:14px;font-weight:700;color:#fff;">US Operations Corp</span>
+                                <span class="cluster-status-tag">Team ID: 8K2N94XYZ1</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-dim);">证书类型: Apple Development · 到期还剩 294 天</div>
+                            <div class="progress-bar-rail"><div class="progress-fill" style="width:85%;"></div></div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">
+                                <span>已用配额: 85 台</span>
+                                <span>剩余配额: 15 台</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;display:flex;gap:10px;">
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('已下载该证书 WDA 预编译包')">导出安装包</button>
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('UDID 自动同步正常')">同步设备库</button>
+                        </div>
+                    </div>
+
+                    <div class="cert-license-pod">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="font-size:14px;font-weight:700;color:#fff;">UK Matrix Ltd</span>
+                                <span class="cluster-status-tag">Team ID: 3M7P21LAA9</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-dim);">证书类型: Apple Development · 到期还剩 312 天</div>
+                            <div class="progress-bar-rail"><div class="progress-fill" style="width:92%;background:var(--accent-amber);"></div></div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">
+                                <span>已用配额: 92 台</span>
+                                <span>剩余配额: 8 台 (即将耗尽)</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;display:flex;gap:10px;">
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('已下载该证书 WDA 预编译包')">导出安装包</button>
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('UDID 自动同步正常')">同步设备库</button>
+                        </div>
+                    </div>
+
+                    <div class="cert-license-pod">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="font-size:14px;font-weight:700;color:#fff;">SEA Media Team</span>
+                                <span class="cluster-status-tag">Team ID: 9Q1B44WWX5</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-dim);">证书类型: Apple Development · 到期还剩 350 天</div>
+                            <div class="progress-bar-rail"><div class="progress-fill" style="width:40%;background:var(--accent-green);"></div></div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">
+                                <span>已用配额: 40 台</span>
+                                <span>剩余配额: 60 台 (充裕)</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;display:flex;gap:10px;">
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('已下载该证书 WDA 预编译包')">导出安装包</button>
+                            <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;" onclick="popToast('UDID 自动同步正常')">同步设备库</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- TAB 4: 双脑发片演练 -->
-            <div id="tab-pipeline" class="tab-panel">
-                <div class="section-header">
-                    <div class="header-title-group">
-                        <h2>双脑驱动发片演练 (Dual-Brain Pipeline)</h2>
-                        <p>顶层 DeepSeek-V3 制定全局策略，底层 TypeSafe Jev 执行 100ms 微操判定与抗风控拦截</p>
+            <!-- TAB 4: 双脑极速发片决策演练 -->
+            <div id="pane-pipeline" class="panel-container">
+                <div class="viewport-header">
+                    <div class="title-meta">
+                        <h2>双脑驱动短视频流水线 (Dual-Brain Pipeline Studio)</h2>
+                        <p>顶层 DeepSeek 长程意图规划 + 底层 TypeSafe Jev 毫秒级快决策闭环</p>
                     </div>
                 </div>
 
-                <div class="pipeline-card">
-                    <!-- 左侧：参数配置 -->
-                    <div class="config-form">
-                        <h3 style="font-size:14px;color:#fff;margin-bottom:8px;">任务参数配置</h3>
-                        <label>目标设备组</label>
-                        <select id="pipeline-device-target">
-                            <option>批次 A 全部设备 (01~04 号机并发)</option>
-                            <option>单机调试: iPhone 13 (#01 - 美区 TikTok)</option>
+                <div class="pipeline-workspace-layout">
+                    <!-- 左侧：参数与预设表单 -->
+                    <div class="form-pane">
+                        <h3 style="font-size:14px;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                            <svg width="16" height="16" fill="var(--accent-blue)" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            工业级发布参数流水线
+                        </h3>
+
+                        <div class="form-label"><span>目标分发批次</span></div>
+                        <select class="form-select" id="pipe-batch-select">
+                            <option>批次 A 全部设备 (01~04 号机并发分发)</option>
+                            <option>单机靶机调试: iPhone 13 (01号机 - 美区)</option>
                         </select>
 
-                        <label>短视频素材</label>
-                        <input type="text" value="clips/cat_summer_viral_01.mp4" readonly>
+                        <div class="form-label"><span>待分发短视频源</span></div>
+                        <input class="form-input" type="text" value="series/viral_cat_2026/render_01_final.mp4" readonly>
 
-                        <label>生成文案与标签</label>
-                        <textarea rows="3" id="pipeline-caption">My adorable kitty enjoying the afternoon sunshine 🐱☀️ #catlover #viral #fyp</textarea>
+                        <div class="clean-toggle-box">
+                            <div>
+                                <strong style="color:#fff;">视频元数据与去重指纹清洗</strong><br>
+                                <span style="color:var(--text-dim);font-size:11px;">自动重构 EXIF、音频微降噪、抗平台查重</span>
+                            </div>
+                            <input type="checkbox" checked style="accent-color:var(--accent-blue);width:18px;height:18px;">
+                        </div>
 
-                        <label>微操决策引擎</label>
-                        <input type="text" value="TypeSafe Jev Latest (System One · ~typesafe/jev-latest)" readonly style="color:var(--accent-amber);">
+                        <div class="form-label"><span>生成标题与标签 (带多语言支持)</span></div>
+                        <textarea class="form-textarea" rows="3">Watch this cutie basking in the warm golden hour 🐱✨ Would you pet him? #catlover #viral #fyp #pets</textarea>
 
-                        <div style="margin-top:20px;">
-                            <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="runPipelineSimulation()">
+                        <div class="form-label"><span>微操快决策神经</span></div>
+                        <input class="form-input" type="text" value="TypeSafe Jev (~typesafe/jev-latest · 100ms反射弧)" readonly style="color:var(--accent-amber);">
+
+                        <div style="margin-top:24px;">
+                            <button class="ui-btn ui-btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="executeIndustrialPipeline()">
                                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                启动 Agent 双脑真机全自动发片
+                                启动双脑真机全自动发布
                             </button>
                         </div>
                     </div>
 
-                    <!-- 右侧：实时决策终端日志 -->
-                    <div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                            <h3 style="font-size:14px;color:#fff;">Agent 执行决策终端</h3>
-                            <span style="font-size:11px;color:var(--text-dim);" id="term-status">空闲待命</span>
+                    <!-- 右侧：工业终端与概率分布审计器 -->
+                    <div class="terminal-pane">
+                        <div class="terminal-header">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);"></div>
+                                <span style="font-size:13px;font-weight:700;color:#fff;">Agent 实时决策与概率审计终端</span>
+                            </div>
+                            <span style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);" id="stream-ticker">STANDBY</span>
                         </div>
-                        <div class="execution-terminal" id="terminal-stream">
-                            <div style="color:var(--text-dim);">[System] 终端已连接 WDA 守护服务与 TypeSafe 决策中枢...</div>
-                            <div style="color:var(--text-dim);">[Ready] 点击左侧按钮开始模拟双脑真实发片交互</div>
+
+                        <div class="terminal-body" id="term-logs-scroll">
+                            <div class="terminal-line">
+                                <span class="ts-tag-time">[21:40:02.100]</span>
+                                <span class="ts-tag-engine">[System]</span>
+                                <span style="color:var(--text-dim);">WDA-Service 进程池已挂载 15 物理端口，TypeSafe Jev 模型就绪</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="ts-tag-time">[21:40:02.120]</span>
+                                <span class="ts-tag-engine">[Ready]</span>
+                                <span style="color:var(--text-dim);">等待点击左侧按钮下发工业级真实微操链路...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 5: 置信度硬门禁 -->
-            <div id="tab-safety" class="tab-panel">
-                <div class="section-header">
-                    <div class="header-title-group">
-                        <h2>抗风控与置信度硬门禁 (Safety Gate)</h2>
-                        <p>经过概率校准的 TypeSafe 动作置信度门禁，低于 0.85 拒绝盲点，有效杜绝封号</p>
+            <!-- TAB 5: 置信度与抗风控白皮书 -->
+            <div id="pane-safety" class="panel-container">
+                <div class="viewport-header">
+                    <div class="title-meta">
+                        <h2>抗风控与置信度硬门禁 (Safety & Anti-Ban Architecture)</h2>
+                        <p>基于概率校准的 TypeSafe 动作置信度红线：拒绝盲点，100% 杜绝封号与误操作</p>
                     </div>
                 </div>
 
-                <div class="scheduler-stats-grid">
-                    <div class="stat-box">
-                        <div class="title">累计安全决策动作</div>
-                        <div class="val">14,291 <span style="font-size:12px;color:var(--text-dim);">次</span></div>
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-label">累计安全微操判定</div>
+                        <div class="kpi-value">48,912 <span style="font-size:12px;color:var(--text-dim);">次</span></div>
+                        <div class="kpi-sub" style="color:var(--accent-green);">● 零误操作事故</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="title">平均决策置信度</div>
-                        <div class="val" style="color:var(--accent-green);">98.4%</div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">日常动作门禁线</div>
+                        <div class="kpi-value" style="color:var(--accent-amber);">≥ 0.85</div>
+                        <div class="kpi-sub">低于阈值拒绝盲点并重检</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="title">自动拦截异常弹窗</div>
-                        <div class="val" style="color:var(--accent-amber);">182 <span style="font-size:12px;color:var(--text-dim);">次</span></div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">高危不可逆动作门禁</div>
+                        <div class="kpi-value" style="color:var(--accent-rose);">≥ 0.95</div>
+                        <div class="kpi-sub">发布/删除双重交叉验证</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="title">不可逆动作误触发</div>
-                        <div class="val" style="color:var(--accent-green);">0 <span style="font-size:12px;color:var(--text-dim);">次</span></div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">异常弹窗自愈率</div>
+                        <div class="kpi-value" style="color:var(--accent-green);">100%</div>
+                        <div class="kpi-sub">自动识别评分/更新弹窗并关闭</div>
                     </div>
                 </div>
 
-                <div class="scheduler-card">
-                    <h3 style="font-size:14px;margin-bottom:14px;color:#fff;">置信度策略白皮书规则</h3>
-                    <div style="font-size:13px;color:var(--text-muted);line-height:1.7;">
-                        <p>✔ <strong>日常微操动作 (Tap / Scroll / Type)</strong>：置信度必须 ≥ <strong>0.85</strong>。若出现未知干扰弹窗，系统在 100ms 内评估 choices，自动点选“关闭”或“稍后”。</p>
-                        <p>✔ <strong>高危不可逆动作 (Publish / Delete / Pay)</strong>：置信度必须 ≥ <strong>0.95</strong>，且必须通过无障碍树（AXe）与本地 Vision OCR 双重交叉核验。</p>
-                        <p>✔ <strong>防封抖动算法</strong>：所有点击坐标自动附加 ±8~15px 随机高斯偏置，滑动轨迹模拟真人手势阻尼加速度曲线。</p>
+                <div class="gantt-board-card">
+                    <h3 style="font-size:14px;color:#fff;margin-bottom:12px;">三大工业级防风控安全策略</h3>
+                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;">
+                        <div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:14px;border-radius:8px;">
+                            <strong style="color:#fff;font-size:13px;">1. 拟人化高斯微扰动</strong>
+                            <p style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">点击坐标不落在死板中心点，强制引入高斯分布 $(\mu=0, \sigma=6px)$ 随机随机偏置；滑动轨迹模拟人类肌肉阻尼。</p>
+                        </div>
+                        <div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:14px;border-radius:8px;">
+                            <strong style="color:#fff;font-size:13px;">2. 一机一独立住宅网络</strong>
+                            <p style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">每台设备独占专用的固定家庭宽带静态代理 IP，严格与目标 TikTok 账号物理地理对齐，严禁跨地区漂移。</p>
+                        </div>
+                        <div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:14px;border-radius:8px;">
+                            <strong style="color:#fff;font-size:13px;">3. 人机协同熔断接管</strong>
+                            <p style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">遭遇人机拼图验证码（CAPTCHA）时，系统自动挂起并高亮报警，支持人工在侧边栏用鼠标在 30 秒内秒级完成滑块。</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -904,286 +1079,324 @@
         </div>
     </div>
 
-    <!-- 侧边单机遥控抽屉 (Live Console Drawer) -->
-    <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer(event)">
-        <div class="drawer-body" onclick="event.stopPropagation()">
+    <!-- 侧边单机/集群控制抽屉 -->
+    <div class="drawer-mask" id="drawer-device-mask" onclick="dismissDrawer(event)">
+        <div class="drawer-content" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="font-size:16px;font-weight:600;color:#fff;" id="drawer-device-title">1号机 (iPhone 13)</h3>
-                <button class="btn btn-secondary" style="padding:4px 8px;" onclick="closeDrawerNow()">✕ 关闭</button>
+                <div>
+                    <h3 style="font-size:16px;font-weight:700;color:#fff;" id="dr-title">01号机 - 实时终端</h3>
+                    <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);" id="dr-subtitle">iPhone 13 · UDID: 00008120-000954513A60C01E</div>
+                </div>
+                <button class="ui-btn ui-btn-secondary" style="padding:4px 8px;" onclick="closeDrawerDirectly()">✕</button>
             </div>
 
-            <!-- 手机投屏画面 -->
-            <div class="device-screen-preview" style="height:360px;" id="drawer-screen">
-                <div class="mock-app-header">
-                    <span>9:41</span>
-                    <span>📶 5G 100%</span>
+            <!-- 手机实时屏幕投影视窗 -->
+            <div class="pod-screen-box" style="height:380px;">
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#fff;">
+                    <span>09:41</span>
+                    <span style="color:var(--accent-green);">● WDA 8100 连接良好</span>
+                    <span>100% ⚡</span>
                 </div>
-                <div class="mock-app-content">
-                    <div class="mock-app-icon" id="drawer-app-icon">TK</div>
-                    <div class="mock-app-text" id="drawer-screen-text">
-                        <strong>TikTok 首页</strong><br>
-                        前台活跃中 · 坐标正常
+                <div class="screen-core-display">
+                    <div class="app-badge" id="dr-app-display">TikTok 前台活跃</div>
+                    <div class="status-sub" id="dr-status-sub">
+                        Proxy: 142.251.46.206 (US Los Angeles · 24ms)<br>
+                        账号: @trend_cat_us (粉丝数: 142.8k)
                     </div>
                 </div>
-                <div class="mock-app-bottom-bar">
-                    <span>首页</span>
-                    <span>朋友</span>
-                    <div class="mock-btn-plus" onclick="triggerDrawerTap('+')">+</div>
+                <div style="display:flex;justify-content:space-around;font-size:11px;color:var(--text-dim);border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;">
+                    <span>主页</span>
+                    <span>搜索</span>
+                    <div style="width:20px;height:16px;background:#fff;border-radius:3px;color:#000;font-weight:bold;text-align:center;line-height:16px;" onclick="tapPlusMock()">+</div>
                     <span>消息</span>
                     <span>我</span>
                 </div>
             </div>
 
-            <!-- 控制按钮群 -->
+            <!-- 远程控制操作矩阵 -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <button class="btn btn-secondary" onclick="simulateAction('点亮并自动输入密码解锁')">🔓 一键自动解锁</button>
-                <button class="btn btn-secondary" onclick="simulateAction('重启 WDA 守护')">🔄 重启 WDA</button>
-                <button class="btn btn-secondary" onclick="simulateAction('模拟向上划动视频')">👆 模拟下滑视频</button>
-                <button class="btn btn-secondary" onclick="simulateAction('截取当前屏幕并OCR')">📸 本地 OCR 核验</button>
+                <button class="ui-btn ui-btn-secondary" onclick="triggerDeviceCtrl('点亮屏幕并自动输入锁屏密码')">🔓 自动输入密码解锁</button>
+                <button class="ui-btn ui-btn-secondary" onclick="triggerDeviceCtrl('重启 WDA 8100 守护进程')">🔄 强杀并重启 WDA</button>
+                <button class="ui-btn ui-btn-secondary" onclick="triggerDeviceCtrl('向上划动视频流 (贝塞尔拟人阻尼)')">👆 划动视频流</button>
+                <button class="ui-btn ui-btn-secondary" onclick="triggerDeviceCtrl('Vision 本地 OCR 文字提取')">👁 提取前台文字词表</button>
             </div>
 
-            <!-- TypeSafe 实测操作 -->
-            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:8px;padding:12px;">
-                <div style="font-size:12px;font-weight:600;color:var(--accent-amber);margin-bottom:6px;">TypeSafe 实时决策探针</div>
-                <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);" id="drawer-probe">
-                    [Probe] 当前页面探测到 5 个无障碍元素，首选动作: tap_create (置信度: 0.99)
+            <!-- 决策探针状态 -->
+            <div style="background:var(--bg-card);border:1px solid var(--border-dim);border-radius:8px;padding:12px;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent-amber);margin-bottom:6px;">TypeSafe Jev 探针实时状态</div>
+                <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);" id="dr-probe-log">
+                    [Probe 124ms] 提取到 5 个 AXe 可点击语义控件；Top-1 建议: tap_create (置信度: 0.992)
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 模态框: 绑定证书 -->
-    <div class="drawer-overlay" id="cert-modal-overlay" style="align-items:center;justify-content:center;" onclick="closeCertModal(event)">
-        <div class="drawer-body" style="width:420px;height:auto;border-radius:12px;" onclick="event.stopPropagation()">
-            <h3 style="font-size:16px;font-weight:600;color:#fff;">绑定新苹果开发者证书</h3>
-            <p style="font-size:12px;color:var(--text-dim);">录入新的 Team ID，即可为真机集群增加 100 台一年期授权配额</p>
-            <div class="config-form">
-                <label>Apple Team ID (10位代码)</label>
-                <input type="text" placeholder="例如: 7K9A22XXZ8" id="modal-team-id">
-                <label>开发者账号备注</label>
-                <input type="text" placeholder="例如: US Matrix Operations Team" id="modal-team-name">
-                <label>Bundle ID 前缀</label>
-                <input type="text" value="com.omnimux.wda.runner" readonly>
-                <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
-                    <button class="btn btn-secondary" onclick="closeCertModalNow()">取消</button>
-                    <button class="btn btn-primary" onclick="confirmAddCert()">确认添加 (+100台配额)</button>
+    <!-- 弹窗: 添加开发者证书 -->
+    <div class="drawer-mask" id="cert-dialog-mask" style="align-items:center;justify-content:center;" onclick="dismissCertDialog(event)">
+        <div class="drawer-content" style="width:440px;height:auto;border-radius:12px;" onclick="event.stopPropagation()">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;">绑定新 Apple 开发者证书</h3>
+            <p style="font-size:12px;color:var(--text-dim);margin-top:2px;">录入新的 Apple Team ID，为当前物理集群增加 100 台一年期签名配额</p>
+            
+            <div style="margin-top:14px;">
+                <div class="form-label"><span>Apple Team ID (10位字符)</span></div>
+                <input class="form-input" type="text" placeholder="例如: 9Q1B44WWX5" id="new-team-id">
+
+                <div class="form-label"><span>账号组织名称</span></div>
+                <input class="form-input" type="text" placeholder="例如: Europe TikTok Matrix Team" id="new-team-name">
+
+                <div class="form-label"><span>证书类型</span></div>
+                <input class="form-input" type="text" value="Apple Development (一年免重签)" readonly>
+
+                <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;">
+                    <button class="ui-btn ui-btn-secondary" onclick="closeCertDialogDirectly()">取消</button>
+                    <button class="ui-btn ui-btn-primary" onclick="submitNewCert()">确认录入并扩容 (+100台)</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 吐司通知 -->
-    <div class="toast" id="toast-notify">操作已成功执行</div>
+    <!-- 全局轻提示 Toast -->
+    <div class="global-toast" id="system-toast">操作指令已执行完成</div>
 
     <script>
-        // 初始假数据
-        const devices = [
-            { id: 'dev-01', name: '01号机 (iPhone 13)', account: '@trend_cat_us', batch: 'A', status: 'active', app: 'TikTok 首页', icon: 'TK' },
-            { id: 'dev-02', name: '02号机 (iPhone 13)', account: '@beauty_tips_us', batch: 'A', status: 'active', app: 'TikTok 编辑页', icon: 'TK' },
-            { id: 'dev-03', name: '03号机 (iPhone SE3)', account: '@pet_daily_uk', batch: 'A', status: 'busy', app: '发布任务执行中', icon: '⚡' },
-            { id: 'dev-04', name: '04号机 (iPhone 12)', account: '@ootd_style_us', batch: 'A', status: 'active', app: '相册选择中', icon: '📷' },
-            { id: 'dev-05', name: '05号机 (iPhone 11)', account: '@gadget_review_us', batch: 'B', status: 'standby', app: '待机接力', icon: '💤' },
-            { id: 'dev-06', name: '06号机 (iPhone 11)', account: '@game_clips_us', batch: 'B', status: 'standby', app: '待机接力', icon: '💤' },
-            { id: 'dev-07', name: '07号机 (iPhone 8)', account: '@viral_humor_sea', batch: 'C', status: 'standby', app: '休眠充电', icon: '🔋' },
-            { id: 'dev-08', name: '08号机 (iPhone 8)', account: '@cook_recipes_us', batch: 'C', status: 'standby', app: '休眠充电', icon: '🔋' },
+        // 工业级集群设备全集
+        const clusterDevices = [
+            { id: 'dev-01', name: '01号机 (iPhone 13)', account: '@trend_cat_us', ip: '142.251.46.206 (US/LA)', wdaPort: '8100', temp: '31.8°C', battery: '100%', status: 'active', app: 'TikTok 首页', batch: 'A' },
+            { id: 'dev-02', name: '02号机 (iPhone 13)', account: '@beauty_tips_us', ip: '142.251.46.208 (US/LA)', wdaPort: '8101', temp: '32.1°C', battery: '100%', status: 'active', app: '相册选择中', batch: 'A' },
+            { id: 'dev-03', name: '03号机 (iPhone SE3)', account: '@pet_daily_uk', ip: '212.58.244.71 (UK/LDN)', wdaPort: '8102', temp: '33.0°C', battery: '98%', status: 'busy', app: '双脑发片执行中', batch: 'A' },
+            { id: 'dev-04', name: '04号机 (iPhone 12)', account: '@ootd_fashion_us', ip: '142.251.46.210 (US/LA)', wdaPort: '8103', temp: '31.5°C', battery: '100%', status: 'active', app: 'TikTok 编辑页', batch: 'A' },
+            { id: 'dev-05', name: '05号机 (iPhone 11)', account: '@gadget_review_us', ip: '142.251.46.212 (US/LA)', wdaPort: '8104', temp: '32.4°C', battery: '100%', status: 'active', app: 'TikTok 首页', batch: 'A' },
+            { id: 'dev-06', name: '06号机 (iPhone 11)', account: '@game_clips_us', ip: '142.251.46.215 (US/LA)', wdaPort: '8105', temp: '32.0°C', battery: '100%', status: 'active', app: 'TikTok 首页', batch: 'A' },
+            { id: 'dev-07', name: '07号机 (iPhone 8)', account: '@viral_humor_uk', ip: '212.58.244.75 (UK/LDN)', wdaPort: '8106', temp: '29.8°C', battery: '100%', status: 'active', app: '待机接力', batch: 'A' },
+            { id: 'dev-08', name: '08号机 (iPhone 8)', account: '@food_recipes_us', ip: '142.251.46.220 (US/LA)', wdaPort: '8107', temp: '30.2°C', battery: '100%', status: 'active', app: '待机接力', batch: 'A' },
         ];
 
-        // 渲染设备网格
-        function renderDevices() {
-            const container = document.getElementById('devices-container');
-            container.innerHTML = devices.map(d => `
-                <div class="device-card" onclick="openDrawer('${d.id}')">
-                    <div class="card-topbar">
-                        <div class="device-name-wrap">
-                            <span class="device-name">${d.name}</span>
-                            <span class="batch-tag">批次 ${d.batch}</span>
+        // 渲染机架与 Pod 卡片
+        function renderRackCards() {
+            const container = document.getElementById('rack-device-grid');
+            container.innerHTML = clusterDevices.map(d => `
+                <div class="device-pod-card ${d.isMaster ? 'sync-master' : ''}" onclick="inspectDevice('${d.id}')">
+                    <div class="pod-top">
+                        <div>
+                            <span class="pod-title">${d.name}</span>
+                            <span style="font-size:10px;color:var(--accent-purple);font-family:var(--font-mono);margin-left:4px;">[${d.batch}组]</span>
                         </div>
-                        <span class="badge-status ${d.status === 'active' ? 'badge-active' : d.status === 'busy' ? 'badge-busy' : 'badge-standby'}">
-                            ${d.status === 'active' ? '● 活跃' : d.status === 'busy' ? '⚡ 执行中' : '○ 待机'}
+                        <span class="cluster-status-tag" style="${d.status === 'busy' ? 'background:rgba(56,189,248,0.15);color:var(--accent-blue);border-color:var(--accent-blue);' : ''}">
+                            ${d.status === 'busy' ? '⚡ 任务中' : '● 在线'}
                         </span>
                     </div>
-                    <div class="device-screen-preview">
-                        <div class="mock-app-header">
-                            <span>9:41</span>
-                            <span>📶 100%</span>
+
+                    <div class="pod-screen-box">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span class="screen-telemetry-badge">:${d.wdaPort}</span>
+                            <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);">${d.temp} · ${d.battery}</span>
                         </div>
-                        <div class="mock-app-content">
-                            <div class="mock-app-icon">${d.icon}</div>
-                            <div class="mock-app-text">
-                                <strong>${d.app}</strong><br>
-                                <span style="color:#9ca3af;font-size:10px;">${d.account}</span>
-                            </div>
+
+                        <div class="screen-core-display">
+                            <div class="app-badge">${d.app}</div>
+                            <div class="status-sub">${d.account}</div>
                         </div>
-                        <div class="mock-app-bottom-bar">
-                            <span>首页</span>
-                            <span>朋友</span>
-                            <div class="mock-btn-plus">+</div>
-                            <span>消息</span>
-                            <span>我</span>
+
+                        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:4px;">
+                            <span>独享代理</span>
+                            <span style="color:#cbd5e1;">${d.ip.split(' ')[0]}</span>
                         </div>
                     </div>
-                    <div class="card-meta-footer">
-                        <span>WDA 端口: 810${d.id.slice(-1)}</span>
-                        <span>电量: 100% ⚡</span>
+
+                    <div class="pod-footer-meta">
+                        <span>WDA 延迟: 18ms</span>
+                        <span>抗风控抖动: ±8px</span>
                     </div>
                 </div>
             `).join('');
+            document.getElementById('kpi-online-count').innerHTML = `${clusterDevices.length} <span style="font-size:13px;color:var(--text-dim);">台并发中</span>`;
         }
 
-        // Tab 切换
-        function switchTab(tabId) {
-            document.querySelectorAll('.nav-item').forEach((item, index) => {
-                const tabs = ['devices', 'scheduler', 'certs', 'pipeline', 'safety'];
-                item.classList.toggle('active', tabs[index] === tabId);
+        // 导航切换
+        function navigate(tabKey) {
+            const keys = ['matrix', 'scheduler', 'certs', 'pipeline', 'safety'];
+            document.querySelectorAll('.nav-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', keys[idx] === tabKey);
             });
-            document.querySelectorAll('.tab-panel').forEach(panel => {
-                panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+            document.querySelectorAll('.panel-container').forEach(panel => {
+                panel.classList.toggle('active', panel.id === `pane-${tabKey}`);
             });
         }
 
-        // 提示框
-        function showToast(msg) {
-            const toast = document.getElementById('toast-notify');
-            toast.textContent = msg;
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2200);
+        // 提示弹窗
+        function popToast(msg) {
+            const t = document.getElementById('system-toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2400);
         }
 
-        // 抽屉开闭
-        let currentActiveDeviceId = null;
-        function openDrawer(devId) {
-            currentActiveDeviceId = devId;
-            const dev = devices.find(d => d.id === devId);
+        // 设备抽屉
+        let selectedDevId = null;
+        function inspectDevice(devId) {
+            selectedDevId = devId;
+            const dev = clusterDevices.find(x => x.id === devId);
             if (!dev) return;
-            document.getElementById('drawer-device-title').textContent = `${dev.name} - 实时控制台`;
-            document.getElementById('drawer-app-icon').textContent = dev.icon;
-            document.getElementById('drawer-screen-text').innerHTML = `<strong>${dev.app}</strong><br>${dev.account}`;
-            document.getElementById('drawer-overlay').classList.add('active');
+            document.getElementById('dr-title').textContent = `${dev.name} - 实时控制台`;
+            document.getElementById('dr-subtitle').textContent = `UDID: 00008120-${devId.replace('-','')}A60C · WDA 端口: ${dev.wdaPort}`;
+            document.getElementById('dr-app-display').textContent = dev.app;
+            document.getElementById('dr-status-sub').innerHTML = `Proxy: ${dev.ip}<br>社媒账号: ${dev.account}`;
+            document.getElementById('drawer-device-mask').classList.add('active');
         }
 
-        function closeDrawer(e) {
-            document.getElementById('drawer-overlay').classList.remove('active');
-        }
-        function closeDrawerNow() {
-            document.getElementById('drawer-overlay').classList.remove('active');
+        function dismissDrawer(e) { document.getElementById('drawer-device-mask').classList.remove('active'); }
+        function closeDrawerDirectly() { document.getElementById('drawer-device-mask').classList.remove('active'); }
+
+        function triggerDeviceCtrl(actionName) {
+            popToast(`已下发指令: ${actionName}`);
+            document.getElementById('dr-probe-log').textContent = `[Action] ${actionName} 已由 WDA 原生协议下发至物理硬件，执行耗时 128ms`;
         }
 
-        function triggerDrawerTap(symbol) {
-            showToast(`已在真实屏幕点击: "${symbol}" 按钮`);
-            document.getElementById('drawer-screen-text').innerHTML = `<strong>已进入发布素材选择</strong><br>TypeSafe 120ms 判定加号点按成功`;
+        function tapPlusMock() {
+            popToast('已在设备屏幕点击加号创建按钮');
+            document.getElementById('dr-app-display').textContent = '进入媒体相册选择页';
+            document.getElementById('dr-probe-log').textContent = '[TypeSafe 108ms] 识别加号点按成功，已检测到相册首条视频元素';
         }
 
-        function simulateAction(actName) {
-            showToast(`正在对设备下发: ${actName}`);
-            document.getElementById('drawer-probe').textContent = `[Action] ${actName} 已下发并经 WDA 校验执行完成 (延时 142ms)`;
+        // 批量解锁
+        function batchScreenUnlock() {
+            popToast('已向当前 15 台已连接 iPhone 发送自动 Passcode 密码点亮解锁指令');
         }
 
         // 模拟插入新真机
-        function simulateUsbConnect() {
-            const newId = `dev-0${devices.length + 1}`;
-            devices.push({
-                id: newId,
-                name: `0${devices.length + 1}号机 (iPhone 13)`,
-                account: `@matrix_new_${devices.length + 1}`,
-                batch: 'B',
+        function simulateNewDevicePlug() {
+            const nextIdx = clusterDevices.length + 1;
+            clusterDevices.push({
+                id: `dev-${nextIdx < 10 ? '0' + nextIdx : nextIdx}`,
+                name: `${nextIdx < 10 ? '0' + nextIdx : nextIdx}号机 (iPhone 13)`,
+                account: `@new_tiktok_brand_${nextIdx}`,
+                ip: `142.251.46.${200 + nextIdx} (US/LA)`,
+                wdaPort: `810${nextIdx}`,
+                temp: '30.5°C',
+                battery: '100%',
                 status: 'active',
-                app: 'WDA 已自动激活',
-                icon: '🍎'
+                app: 'WDA 守护已就绪',
+                batch: 'A'
             });
-            renderDevices();
-            showToast('🎉 检测到 USB 插入新 iPhone，已自动绑定证书 8K2N94XYZ1 并启动 WDA 端口！');
+            renderRackCards();
+            popToast(`🎉 检测到 USB 插入新 iPhone！已自动绑定 Team ID: 8K2N94XYZ1 并激活 WDA`);
         }
 
-        // 唤醒全部
-        function batchWakeup() {
-            showToast('已向全部 15 个并发槽位下发自动密码点亮与解锁指令！');
-        }
-
-        // 轮换切批
-        function triggerBatchRotate() {
-            const batchNameEl = document.getElementById('current-batch-name');
-            if (batchNameEl.textContent.includes('批次 A')) {
-                batchNameEl.textContent = '批次 B (欧洲接力)';
-                showToast('已切换至【批次 B】：批次 A 手机进入省电待机，批次 B 15 台手机自动唤醒接棒！');
+        // 一主多从同步镜像
+        let isSyncing = false;
+        function triggerMasterSlaveSync() {
+            isSyncing = !isSyncing;
+            clusterDevices[0].isMaster = isSyncing;
+            renderRackCards();
+            if (isSyncing) {
+                popToast('⚡ 已开启【一主多从集群同步镜像】！对 01 号机的任何点击滑动，其余设备将带有 ±8px 高斯抖动同步跟点');
             } else {
-                batchNameEl.textContent = '批次 A (美区早间)';
-                showToast('已切换至【批次 A】：手机集群重新轮换上线！');
+                popToast('已关闭同步镜像控制');
             }
         }
 
-        // 模态框: 添加证书
-        function showAddCertModal() {
-            document.getElementById('cert-modal-overlay').classList.add('active');
+        // 时间片轮换切批
+        function rotateBatchesNow() {
+            const statusEl = document.getElementById('gantt-current-status');
+            if (statusEl.textContent.includes('批次 A')) {
+                statusEl.textContent = '当前执行: 批次 B (016~030号机 · 欧洲晚间发布窗口)';
+                popToast('已切换至【批次 B】：批次 A 设备进入省电待机，批次 B 设备经由智能 Hub 自动通电唤醒！');
+            } else {
+                statusEl.textContent = '当前执行: 批次 A (001~015号机 · 美东 18:00 发布窗口)';
+                popToast('已重新接力切换至【批次 A】');
+            }
         }
-        function closeCertModal() {
-            document.getElementById('cert-modal-overlay').classList.remove('active');
-        }
-        function closeCertModalNow() {
-            document.getElementById('cert-modal-overlay').classList.remove('active');
-        }
-        function confirmAddCert() {
-            const teamId = document.getElementById('modal-team-id').value.trim() || '4T8K11MMP2';
-            const teamName = document.getElementById('modal-team-name').value.trim() || 'Europe Matrix Corp';
-            const tbody = document.getElementById('cert-table-body');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-family:var(--font-mono);font-weight:600;">${teamId}</td>
-                <td>${teamName}</td>
-                <td>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <div style="flex:1;height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
-                            <div style="width:0%;height:100%;background:var(--accent-blue);"></div>
-                        </div>
-                        <span style="font-family:var(--font-mono);">0 / 100</span>
+
+        // 证书弹窗
+        function openCertDialog() { document.getElementById('cert-dialog-mask').classList.add('active'); }
+        function dismissCertDialog(e) { document.getElementById('cert-dialog-mask').classList.remove('active'); }
+        function closeCertDialogDirectly() { document.getElementById('cert-dialog-mask').classList.remove('active'); }
+
+        function submitNewCert() {
+            const teamId = document.getElementById('new-team-id').value.trim() || '4T8K11MMP2';
+            const teamName = document.getElementById('new-team-name').value.trim() || 'Global Expansion LLC';
+            const holder = document.getElementById('cert-cards-holder');
+            const pod = document.createElement('div');
+            pod.className = 'cert-license-pod';
+            pod.innerHTML = `
+                <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-size:14px;font-weight:700;color:#fff;">${teamName}</span>
+                        <span class="cluster-status-tag">Team ID: ${teamId}</span>
                     </div>
-                </td>
-                <td>365 天剩余</td>
-                <td><span class="badge-status badge-active">新激活</span></td>
-                <td><a href="#" style="color:var(--accent-blue);text-decoration:none;font-size:12px;">配置设备</a></td>
+                    <div style="font-size:12px;color:var(--text-dim);">证书类型: Apple Development · 到期还剩 365 天</div>
+                    <div class="progress-bar-rail"><div class="progress-fill" style="width:0%;"></div></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">
+                        <span>已用配额: 0 台</span>
+                        <span>剩余配额: 100 台 (新就绪)</span>
+                    </div>
+                </div>
+                <div style="margin-top:16px;display:flex;gap:10px;">
+                    <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;">导出安装包</button>
+                    <button class="ui-btn ui-btn-secondary" style="flex:1;font-size:11px;">同步设备库</button>
+                </div>
             `;
-            tbody.appendChild(tr);
-            closeCertModalNow();
-            showToast(`🎉 开发者证书 ${teamId} 绑定成功！真机集群配额成功增加 100 台！`);
+            holder.appendChild(pod);
+            closeCertDialogDirectly();
+            popToast(`🎉 开发者证书 ${teamId} 录入成功！集群已新增 100 台合法真机签名配额`);
         }
 
-        // 双脑发片演练模拟
-        function runPipelineSimulation() {
-            const term = document.getElementById('terminal-stream');
-            const statusEl = document.getElementById('term-status');
-            term.innerHTML = '';
-            statusEl.textContent = '运行中...';
-            statusEl.style.color = 'var(--accent-amber)';
+        // 工业级双脑流水线推演
+        function executeIndustrialPipeline() {
+            const terminal = document.getElementById('term-logs-scroll');
+            const ticker = document.getElementById('stream-ticker');
+            terminal.innerHTML = '';
+            ticker.textContent = 'RUNNING (PARALLEL)';
+            ticker.style.color = 'var(--accent-amber)';
 
-            const steps = [
-                { delay: 400, text: '<span class="term-tag-slow">[DeepSeek-V3 规划]</span> 意图解析完成：向 4 台美区 iPhone 并发分发 clips/cat_summer_viral_01.mp4' },
-                { delay: 900, text: '<span class="term-tag-slow">[DeepSeek-V3 规划]</span> 生成文案与标签注入完毕，开始调用底层 TypeSafe 反射神经进行真机微操' },
-                { delay: 1400, text: '<span class="term-tag-fast">[TypeSafe Jev (112ms)]</span> 识别前台主页 -> Choices: [tap_create, dismiss_ad, scroll] -> 决策: <strong>tap_create</strong> <span class="term-conf">(置信度: 0.992)</span> -> WDA 点按加号' },
-                { delay: 2000, text: '<span class="term-tag-fast">[TypeSafe Jev (128ms)]</span> 进入媒体相册 -> Choices: [select_first_media, cancel] -> 决策: <strong>select_first_media</strong> <span class="term-conf">(置信度: 0.985)</span> -> 选中第一条视频' },
-                { delay: 2600, text: '<span class="term-tag-fast">[TypeSafe Jev (140ms)]</span> 遭遇“App评分提示”干扰层 -> Choices: [dismiss_dialog, wait] -> 决策: <strong>dismiss_dialog</strong> <span class="term-conf">(置信度: 0.963)</span> -> 智能点击关闭自愈' },
-                { delay: 3200, text: '<span class="term-tag-fast">[TypeSafe Jev (105ms)]</span> 进入发布配置页 -> 自动填充文案 -> Choices: [tap_publish, edit_caption] -> 决策: <strong>tap_publish</strong> <span class="term-conf">(置信度: 0.996)</span>' },
-                { delay: 3800, text: '<span class="term-conf">[WDA Execution]</span> 点击最终发布按钮，抓取到作品直链: https://tiktok.com/@trend_cat_us/video/741928371928' },
-                { delay: 4200, text: '<span style="color:#fff;font-weight:bold;">[交付成功]</span> 4 台 iPhone 发布任务 100% 成功交付闭环！耗时仅 4.2 秒 (传统视觉大模型需 40 秒)' }
+            const logs = [
+                { delay: 300, html: `<span class="ts-tag-time">[STEP 0]</span> <span class="ts-tag-engine">[DeepSeek-V3 司令官]</span> 解析发片战略：目标 4 台美区 iPhone 并发，锁定视频指纹清洗流` },
+                { delay: 800, html: `<span class="ts-tag-time">[STEP 1]</span> <span class="ts-tag-engine">[Media Pipeline]</span> 视频 EXIF 脱敏清洗完成，注入微音频防重指纹 -> 通过 WDA 写入 4 台手机相册` },
+                { delay: 1400, html: `
+                    <div class="terminal-line"><span class="ts-tag-time">[STEP 2]</span> <span class="ts-tag-engine">[TypeSafe Jev (114ms)]</span> 识别前台 TikTok 首页 -> 决策加号点按</div>
+                    <div class="prob-chart-block">
+                        <div><strong>Choices 决策概率分布 (Top-3):</strong></div>
+                        <div class="prob-bar-row"><span>tap_create</span><div class="prob-bar-rail"><div class="prob-bar-fill" style="width:99%;"></div></div><span class="ts-tag-conf">0.992</span></div>
+                        <div class="prob-bar-row"><span>dismiss_popup</span><div class="prob-bar-rail"><div class="prob-bar-fill" style="width:1%;"></div></div><span>0.005</span></div>
+                        <div class="prob-bar-row"><span>scroll_down</span><div class="prob-bar-rail"><div class="prob-bar-fill" style="width:0%;"></div></div><span>0.003</span></div>
+                    </div>
+                ` },
+                { delay: 2200, html: `<span class="ts-tag-time">[STEP 3]</span> <span class="ts-tag-engine">[TypeSafe Jev (125ms)]</span> 进入相册 -> 识别首条视频并下发高斯拟人点击 (偏置 x:+4px, y:-3px) <span class="ts-tag-conf">[置信度: 0.988]</span>` },
+                { delay: 3000, html: `
+                    <div class="terminal-line"><span class="ts-tag-time">[STEP 4]</span> <span style="color:var(--accent-rose);font-weight:700;">[风控自愈]</span> 03号机检测到“App评分提示”干扰层 -> TypeSafe 118ms 自动决策 <strong>dismiss_dialog</strong> 并点选关闭</div>
+                ` },
+                { delay: 3800, html: `<span class="ts-tag-time">[STEP 5]</span> <span class="ts-tag-engine">[TypeSafe Jev (102ms)]</span> 进入发布页 -> 自动填充多语言文案与标签 -> 识别发布按钮 <span class="ts-tag-conf">[置信度: 0.996 ≥ 0.95门禁]</span> -> WDA 点按` },
+                { delay: 4600, html: `
+                    <div class="terminal-line"><span class="ts-tag-time">[STEP 6]</span> <span style="color:#fff;font-weight:bold;">[执行回执闭环]</span> 4 台 iPhone 全并发发布 100% 成功！平均微操耗时 121ms</div>
+                    <div style="color:var(--accent-blue);font-size:10px;margin-top:4px;">
+                        • 01号机: https://tiktok.com/@trend_cat_us/video/74291827491<br>
+                        • 02号机: https://tiktok.com/@beauty_tips_us/video/74291827492<br>
+                        • 03号机: https://tiktok.com/@pet_daily_uk/video/74291827493<br>
+                        • 04号机: https://tiktok.com/@ootd_fashion_us/video/74291827494
+                    </div>
+                ` }
             ];
 
-            steps.forEach(step => {
+            logs.forEach(item => {
                 setTimeout(() => {
                     const row = document.createElement('div');
-                    row.className = 'term-step';
-                    row.innerHTML = step.text;
-                    term.appendChild(row);
-                    term.scrollTop = term.scrollHeight;
-                }, step.delay);
+                    row.className = 'terminal-line';
+                    row.style.flexDirection = 'column';
+                    row.innerHTML = item.html;
+                    terminal.appendChild(row);
+                    terminal.scrollTop = terminal.scrollHeight;
+                }, item.delay);
             });
 
             setTimeout(() => {
-                statusEl.textContent = '执行成功';
-                statusEl.style.color = 'var(--accent-green)';
-                showToast('🎉 双脑真机发片全流程模拟圆满成功！');
-            }, 4400);
+                ticker.textContent = 'COMPLETED (100%)';
+                ticker.style.color = 'var(--accent-green)';
+                popToast('🎉 双脑真机发片流水线全流程模拟演练圆满完成！');
+            }, 4900);
         }
 
-        // 初始化
-        renderDevices();
+        // 初始化渲染
+        renderRackCards();
     </script>
 </body>
 </html>
