@@ -101,12 +101,12 @@
 
 | CSS Token | 语义与用途 | Dark 模式参考值 | Light 模式参考值 |
 |---|---|---|---|
-| `--dsw-alias-brand-primary` | 品牌强调色、焦点环、选中项高亮 | `#3b82f6` / `#60a5fa` | `#2563eb` |
+| `--dsw-alias-brand-primary` | 品牌强调色、极光紫微光、特权标（严禁使用宿主科技蓝 #3b82f6） | `#7961f2` / `#9a88fa` | `#6757e7` / `#5644d6` |
 | `--dsw-alias-interactive-bg-hover` | 列表项/导航项/次级按钮 Hover 背景 | `rgba(255,255,255,0.08)` | `rgba(0,0,0,0.05)` |
 | `--dsw-alias-interactive-bg-active` | 列表项选中/按压背景、当前激活项 | `rgba(255,255,255,0.14)` | `rgba(0,0,0,0.09)` |
-| `--dsw-alias-button-primary-fill` | 主行动按钮实心填充底色 | `var(--dsw-alias-brand-primary)` | `var(--dsw-alias-brand-primary)` |
-| `--dsw-alias-button-primary-hover` | 主行动按钮 Hover 底色 | `#2563eb` / `#3b82f6` | `#1d4ed8` |
-| `--dsw-alias-state-business-tertiary` | Focus 状态外发光光晕 (`box-shadow`) | `rgba(59, 130, 246, 0.22)` | `rgba(37, 99, 235, 0.20)` |
+| `--dsw-alias-button-primary-fill` | 主行动按钮实心填充底色（墨水色 Ink CTA） | `var(--dsw-alias-label-primary)` (纯白) | `var(--dsw-alias-label-primary)` (纯黑) |
+| `--dsw-alias-button-primary-hover` | 主行动按钮 Hover 底色 | `rgba(255,255,255,0.88)` | `rgba(0,0,0,0.85)` |
+| `--dsw-alias-state-business-tertiary` | Focus 状态外发光微光晕 (`box-shadow`) | `rgba(121, 97, 242, 0.22)` | `rgba(103, 87, 231, 0.20)` |
 
 ### 3.5 状态与语义层 Token（Semantic Status）
 
