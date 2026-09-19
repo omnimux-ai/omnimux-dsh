@@ -198,4 +198,25 @@ describe('E2E: Creatify 技能卡片 1:1 视觉复刻、一行三列与流光渐
     assert.equal(catsZh[5].label, '产品展示');
     assert.equal(catsEn[5].label, 'Product Showcase');
   });
+
+  it('技能卡片极简重构：彻底移除分类胶囊 (.omnimux-creatify-pill-cat) 与收藏星标 (.omnimux-creatify-star-btn)', () => {
+    const catalog = loadCatalog();
+    const skills = catalog.items.filter(i => i.kind === 'skill');
+
+    const vnode = renderRegularSection({
+      category: '',
+      hasQuery: false,
+      regularItems: skills,
+      tr: (k) => k,
+      setOpen: () => {},
+    });
+
+    const renderedHtml = JSON.stringify(vnode);
+    assert.ok(!renderedHtml.includes('omnimux-creatify-pill-cat'), '卡片中不得再包含分类胶囊节点');
+    assert.ok(!renderedHtml.includes('omnimux-creatify-star-btn'), '卡片中不得再包含收藏星标按钮');
+
+    // 同时验证热门火苗或新品角标依然健康存在
+    assert.ok(renderedHtml.includes('omnimux-creatify-badge-hot'), '热门卡片应保留热门徽标');
+    assert.ok(renderedHtml.includes('omnimux-creatify-badge-new'), '新品卡片应保留新品角标');
+  });
 });

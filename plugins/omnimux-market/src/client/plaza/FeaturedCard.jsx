@@ -245,31 +245,12 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     }),
     // 2. 点阵纹理 Overlay
     h('div', { className: 'omnimux-creatify-dot-overlay', 'aria-hidden': 'true' }),
-    // 3. 左上角徽标 + 分类胶囊
-    h('div', { className: 'omnimux-creatify-card-top-left' },
+    // 3. 左上角徽标（热门/新品，移除冗余拥挤的分类胶囊）
+    (isHot || isNew) ? h('div', { className: 'omnimux-creatify-card-top-left' },
       isHot ? h('span', { className: 'omnimux-creatify-badge-hot', title: hotBadgeTitle }, renderFireSvg()) : null,
       isNew ? h('span', { className: 'omnimux-creatify-badge-new' }, newBadgeText) : null,
-      h('div', { className: 'omnimux-creatify-pill-cat' },
-        renderCatIcon(item.category),
-        h('span', null, categoryLabel),
-      ),
-    ),
-    // 4. 右上角收藏星标
-    h('button', {
-      type: 'button',
-      className: 'omnimux-creatify-star-btn',
-      'aria-label': bookmarkText,
-      title: bookmarkText,
-      onClick: (e) => {
-        e.stopPropagation();
-        e.currentTarget.classList.toggle('active');
-      },
-    },
-      h('svg', { width: 14, height: 14, viewBox: '0 0 24 24' },
-        h('polygon', { points: '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' }),
-      ),
-    ),
-    // 5. 居中白色加粗大标题与认证微标
+    ) : null,
+    // 4. 居中白色加粗大标题与认证微标
     h('div', { className: 'omnimux-creatify-card-center' },
       h('h3', { className: 'omnimux-creatify-center-title' },
         h('span', null, title),
