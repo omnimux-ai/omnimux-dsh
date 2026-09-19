@@ -145,49 +145,48 @@ export function DeviceStage({ t, stage, store, visible = true }) {
 
       {/* 视口内容主区域 */}
       <div className="omx-stage-content">
-        {/* 1. 集群视图 (Fleet) */}
+        {/* 1. 集群视图 (Fleet)：iPhone 真机比例 + 外壳 */}
         {activeTab === 'fleet' && (
-          <div className="omx-card-grid">
-            {devices.map(d => (
-              <div key={d.id} className="omx-fleet-card" onClick={() => setActiveDrawer(d)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: d.state === '就绪' ? 'var(--omx-status-green)' : d.state === '预热' ? 'var(--omx-status-amber)' : 'var(--omx-status-rose)'
-                    }} />
-                    <strong style={{ fontSize: '13px', color: '#ffffff' }}>{d.name}</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', fontFamily: 'var(--font-mono)' }}>{d.model}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {ICONS.signal}
-                    <span>{d.proxy}</span>
-                  </span>
-                </div>
-
-                <div className="omx-mock-screen-box">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>
-                    <span>09:41</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      {ICONS.battery}
-                      <span>{d.battery}</span>
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      {ICONS.tiktok}
-                      <span>{d.account}</span>
+          <div className="omx-phone-grid">
+            {devices.map(d => {
+              const stateClass = d.state === '就绪' ? 'ready' : d.state === '预热' ? 'warm' : 'error'
+              return (
+                <div key={d.id} className="omx-phone-card" onClick={() => setActiveDrawer(d)} role="button" aria-label={`${d.name} ${d.model} ${d.state}`}>
+                  <div className="omx-phone-frame">
+                    <div className="omx-phone-screen">
+                      <div className="omx-phone-island" />
+                      <div className="omx-phone-statusbar">
+                        <span>09:41</span>
+                        <span className="omx-phone-battery">
+                          {ICONS.battery}
+                          <span>{d.battery}</span>
+                        </span>
+                      </div>
+                      <div className="omx-phone-body">
+                        <div className="omx-phone-account">
+                          {ICONS.tiktok}
+                          <span>{d.account}</span>
+                        </div>
+                        <span className={`omx-phone-state ${stateClass}`}>{d.state}</span>
+                      </div>
+                      <div className="omx-phone-footer">
+                        <span className="omx-phone-port">端口 8100</span>
+                        <span className="omx-phone-home" />
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--dsw-alias-label-tertiary)' }}>
-                    <span>端口 8100</span>
-                    <span style={{ color: d.state === '就绪' ? 'var(--omx-status-green)' : 'var(--omx-status-rose)' }}>{d.state}</span>
+                  <div className="omx-phone-caption">
+                    <span className={`omx-phone-dot ${stateClass}`} />
+                    <strong>{d.name}</strong>
+                    <span className="omx-phone-model">{d.model}</span>
+                    <span className="omx-phone-proxy">
+                      {ICONS.signal}
+                      <span>{d.proxy}</span>
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

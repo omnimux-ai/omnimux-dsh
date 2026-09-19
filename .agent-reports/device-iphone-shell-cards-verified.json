@@ -1,0 +1,21 @@
+{
+  "task": "device-iphone-shell-cards",
+  "issue": 2432,
+  "verifiedAt": "2026-09-20T03:30:39+08:00",
+  "method": "ego-browser 真实 Chrome 内核驱动演示页（tmp/device-iphone-cards-demo.html）：本地 node_modules 载入真实 React 生产构建（迷你 CJS 加载器），渲染本工作树打包产物 lib/client.js 的 DeviceStage 集群视图，等待样式稳定后结构断言 + 截图",
+  "results": {
+    "phoneCount": 8,
+    "islandCount": 8,
+    "homeIndicatorCount": 8,
+    "captionCount": 8,
+    "stateBadgeCount": 8,
+    "firstPhone": { "width": 161, "height": 348, "ratio": 2.17, "expectedRatio": 2.17 },
+    "legacyMockBox": 0,
+    "accountSample": "@trend_cat_us",
+    "stateSample": "就绪",
+    "tabStyles": "选项卡样式复测正常（active #212124 / 默认透明 70% 白），早前一次截图的白色异常为样式注入竞态瞬时态"
+  },
+  "designGate": "guard-ui-design 全量通过：零内联业务样式、裸色均经 var(--dsw-*) 封装，3 处真机硬件质感特化色带 exempt-ui03 理由；顺带补齐 --omx-status-* 语义色定义（此前 JSX 引用但从未定义的存量缺陷）",
+  "screenshot": "docs/evidence/device-iphone-shell-cards-verified.png",
+  "conclusion": "集群卡片以 iPhone 真机比例（9:19.5）与外壳（钛边框/灵动岛/状态栏/Home 指示条）渲染，8 台设备结构件齐备，旧版 mock-screen-box 已移除"
+}

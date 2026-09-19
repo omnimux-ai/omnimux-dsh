@@ -163,3 +163,16 @@ test('E2E 点击旅程（Issue #2429）：入口点击打开已注册的手机�
   boot.created[0].dispatch('click')
   assert.deepEqual(boot.openedTabs, [DEVICE_TAB_ID], '点击入口必须打开手机管理工作台标签')
 })
+
+test('E2E 真机卡片（Issue #2432）：集群视图采用 iPhone 真机比例与外壳结构', () => {
+  const bundle = readFileSync(join(root, 'lib', 'client.js'), 'utf8')
+  // 真机外壳结构件必须存在于打包产物
+  for (const marker of ['omx-phone-grid', 'omx-phone-frame', 'omx-phone-screen', 'omx-phone-island', 'omx-phone-statusbar', 'omx-phone-home', 'omx-phone-caption', 'omx-phone-state']) {
+    assert.ok(bundle.includes(marker), `打包产物缺少真机结构件 ${marker}`)
+  }
+  // 真机比例样式（9:19.5）必须存在于样式表
+  assert.ok(bundle.includes('aspect-ratio: 9 / 19.5'), '真机比例样式缺失')
+  // 旧版通用黑色矩形必须彻底移除
+  assert.ok(!bundle.includes('omx-mock-screen-box'), '旧版 mock-screen-box 必须移除')
+  assert.ok(!bundle.includes('omx-fleet-card'), '旧版 fleet-card 必须移除')
+})
