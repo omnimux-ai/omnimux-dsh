@@ -103,15 +103,26 @@ function mapPresetCategory(c) {
 
 export function buildWorkshopCategories(presetBinding, tr) {
   const isZh = !tr || tr('locale') === 'zh' || tr('locale') !== 'en';
+  const getCatLabel = (id, fallbackZh, fallbackEn) => {
+    if (typeof tr === 'function') {
+      const res = tr('cat.' + id);
+      if (res && res !== 'cat.' + id) return res;
+    }
+    return isZh ? fallbackZh : fallbackEn;
+  };
+  const allLabel = (typeof tr === 'function' && tr('workshop.catAll') && tr('workshop.catAll') !== 'workshop.catAll')
+    ? tr('workshop.catAll')
+    : (isZh ? '全部' : 'All');
+
   return [
-    { id: '', label: isZh ? '全部' : 'All' },
-    { id: 'ugc-testimonial', label: isZh ? 'UGC 和用户评价' : 'UGC & Testimonial' },
-    { id: 'storytelling-script', label: isZh ? '故事讲述和脚本' : 'Storytelling & Script' },
-    { id: 'image-static', label: isZh ? '图片和静态广告' : 'Image & Static Ads' },
-    { id: 'video-ads', label: isZh ? '视频广告' : 'Video Ads' },
-    { id: 'product-showcase', label: isZh ? '产品展示' : 'Product Showcase' },
-    { id: 'meme-native', label: isZh ? '模因与原生' : 'Meme & Native' },
-    { id: 'other', label: isZh ? '其它营销分类' : 'Other' }
+    { id: '', label: allLabel },
+    { id: 'ugc-testimonial', label: getCatLabel('ugc-testimonial', 'UGC 和用户评价', 'UGC & Testimonial') },
+    { id: 'storytelling-script', label: getCatLabel('storytelling-script', '故事讲述和脚本', 'Storytelling & Script') },
+    { id: 'image-static', label: getCatLabel('image-static', '图片和静态广告', 'Image & Static Ads') },
+    { id: 'video-ads', label: getCatLabel('video-ads', '视频广告', 'Video Ads') },
+    { id: 'product-showcase', label: getCatLabel('product-showcase', '产品展示', 'Product Showcase') },
+    { id: 'meme-native', label: getCatLabel('meme-native', '模因与原生', 'Meme & Native') },
+    { id: 'other', label: getCatLabel('other', '其它营销分类', 'Other') }
   ];
 }
 
