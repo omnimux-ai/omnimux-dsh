@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalSto
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { GenerationTasks } from './GenerationTasks.jsx';
+import { MediaViewerComposer } from './MediaViewerComposer.jsx';
 import { currentSessionId } from '../workbench/host-adapter.js';
 import { injectMediaViewerStyles } from './styles.js';
 import { syncImageCanvasStage } from './image-canvas-stage.js';
@@ -53,6 +54,41 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const viewerRootRef = useRef(null);
   const stageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
+
+  const handleDirectSubmit = async ({ prompt, kind, model, channel, params }) => {
+    store.setGenerating(true, { prompt, model, status: 'running' });
+    try {
+      const resp = await fetch('/omnimux/api/media/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          kind,
+          model,
+          channel,
+          aspectRatio: params?.aspectRatio,
+          resolution: params?.resolution,
+          duration: params?.duration,
+          sessionId,
+        }),
+      });
+      const data = await resp.json();
+      if (data.ok && (data.url || data.dest)) {
+        const newItem = store.addMedia({
+          sessionId,
+          type: kind === 'video' ? 'video' : 'image',
+          url: data.url || `file://${data.dest}`,
+          title: prompt.slice(0, 30),
+          timestamp: Date.now(),
+        });
+        store.setActiveId(newItem.id);
+      }
+    } catch (err) {
+      console.error('[MediaViewer] Direct generate failed:', err);
+    } finally {
+      store.setGenerating(false);
+    }
+  };
 
   // 缩放平移与跨图记忆锁定引擎
   const [zoomScale, setZoomScale] = useState(1.0);
@@ -594,6 +630,9 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               </div>
             </div>
           )}
+          {subViewMode === 'single' ? (
+            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={isGenerating} />
+          ) : null}
         </div>
       </div>
 

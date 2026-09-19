@@ -268,3 +268,44 @@ test('useComposerDocking: 组件卸载时安全清理所有宿主样式与标记
     env.restore()
   }
 })
+
+test('useComposerDocking: dock(item, onDocked) 延迟交付回调且锁定视口滚动位置保持 0 位移', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    // 用户滚动到偏下位置 (例如 380px)
+    scroller.scrollTop = 380
+    let callbackExecuted = false
+
+    await act(async () => {
+      hookApi.dock({ id: 'sk-skill-scroll-test', title: '防跳动测试' }, () => {
+        callbackExecuted = true
+      })
+    })
+    await flush()
+
+    assert.equal(callbackExecuted, true, 'onDocked 回调必须在吸底就位后被执行')
+    assert.equal(hookApi.placement, 'docked')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+    // 关键断言：滚动条位置必须纹丝不动地停在 380px
+    assert.equal(scroller.scrollTop, 380, '点击吸底后视口必须保持 0 位移，严禁跳动')
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
