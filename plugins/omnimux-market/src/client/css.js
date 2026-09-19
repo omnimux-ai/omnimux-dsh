@@ -565,12 +565,14 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   display: none !important;
 }
 
-/* 1:1 复刻 3:2 营销技能卡片与置顶网格（严格一行三个） */
+/* 1:1 复刻 3:2 营销技能卡片与置顶网格（严格一行五个） */
 .cards-grid, .featured-grid {
-  display:grid !important; grid-template-columns:repeat(3, minmax(0, 1fr)) !important; gap:16px !important;
+  display:grid !important; grid-template-columns:repeat(5, minmax(0, 1fr)) !important; gap:16px !important;
 }
-@media (max-width:640px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important;}}
-@media (max-width:440px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
+@media (max-width:1440px){.cards-grid, .featured-grid{grid-template-columns:repeat(4, minmax(0, 1fr)) !important; gap:14px !important;}}
+@media (max-width:1100px){.cards-grid, .featured-grid{grid-template-columns:repeat(3, minmax(0, 1fr)) !important; gap:12px !important;}}
+@media (max-width:768px){.cards-grid, .featured-grid{grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:10px !important;}}
+@media (max-width:480px){.cards-grid, .featured-grid{grid-template-columns:1fr !important;}}
 
 .omnimux-creatify-card {
   position:relative; width:100%; aspect-ratio:3 / 2;
@@ -618,10 +620,14 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 }
 .omnimux-creatify-pill-cat {
   display:flex; align-items:center; gap:5px;
-  height:28px; padding:0 10px; border-radius:999px;
+  height:28px; padding:0 8px; border-radius:999px;
+  max-width:calc(100% - 36px); overflow:hidden;
   background:var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08)); backdrop-filter:blur(12px);
   border:1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
   font-size:11px; font-weight:500; color:var(--dsw-alias-label-primary, #FFFFFF);
+}
+.omnimux-creatify-pill-cat span {
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .omnimux-creatify-star-btn {
   position:absolute; top:12px; right:12px; z-index:5;
@@ -645,9 +651,9 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   padding:0 16px; pointer-events:none;
 }
 .omnimux-creatify-center-title {
-  font-size:20px; font-weight:600; color:var(--dsw-alias-label-primary, #FFFFFF); text-align:center;
+  font-size:clamp(15px, 1.15vw, 18px); font-weight:600; color:var(--dsw-alias-label-primary, #FFFFFF); text-align:center;
   letter-spacing:-0.01em; text-shadow:0 2px 8px var(--dsw-alias-shadow-color, rgba(0, 0, 0, 0.45));
-  display:inline-flex; align-items:center; gap:6px; margin:0; line-height:1.3;
+  display:inline-flex; align-items:center; gap:6px; margin:0; line-height:1.25;
 }
 .omnimux-creatify-card-hover-drawer {
   position:absolute; inset-x:0; bottom:0; pointer-events:none;

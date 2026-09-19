@@ -170,6 +170,9 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
 
   // 极光色彩光学算法：每个技能卡片计算一套高颜值流光
   const aurora = resolveSkillAuroraStyle(item);
+  // 兼容自定义封面与历史契约 (支持 item.homeCover / item.cover 及 featured-cover-svg 标记)
+  const customCover = item.homeCover || item.cover;
+  const coverSvgFallback = !customCover && item.icon ? 'featured-cover-svg' : '';
 
   const isHot = Boolean(item.isHot || item.tags?.includes('热门精选'));
   const isNew = Boolean(item.isNew || item.tags?.includes('新品上市'));
