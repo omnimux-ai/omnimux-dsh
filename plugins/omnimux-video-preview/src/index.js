@@ -5,7 +5,7 @@ import { createVideoStreamUrl } from './stream-capability.js'
 import { existsSync, statSync } from 'node:fs'
 import { extname, resolve } from 'node:path'
 import { handleVideoStream, getMimeType } from './stream.js'
-import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText, attachShotFrames } from './breakdown.js'
+import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText, attachShotFrames, buildBreakdownFailureGuidance } from './breakdown.js'
 import { translateBreakdownShots, TRANSLATE_LANGUAGES } from './translate.js'
 
 export const name = 'omnimux-video-preview'
@@ -63,7 +63,7 @@ export function apply(ctx) {
   // 2. Register video breakdown & shots analysis tool
   ctx.tools?.register?.({
     name: 'video_breakdown_analyze',
-    description: 'Understand and deconstruct a video into granular shots (景别/机位/角度/动态/描述) and structural stages via multimodal AI. For non-direct stream platforms (e.g. YouTube, X), download the video to local workspace first. Only opens sidebar preview upon verified analysis success.',
+    description: 'Understand and deconstruct a video into granular shots (景别/机位/角度/动态/描述) and structural stages via multimodal AI. For non-direct stream platforms (e.g. YouTube, X), download the video to local workspace first. If breakdown produces no shots (e.g. long videos/podcasts), returns structured recovery guidance to trigger native ask_user_question choices. Only opens sidebar preview upon verified analysis success.',
     parameters: {
       type: 'object',
       properties: {
@@ -89,7 +89,7 @@ export function apply(ctx) {
       const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx, textComplete: resolvedTextComplete })
 
       if (!breakdownData || !Array.isArray(breakdownData.shots) || breakdownData.shots.length === 0) {
-        throw new Error('视频拆解未能产出有效分镜，拒绝展示空白或无效页面。')
+        throw new Error(buildBreakdownFailureGuidance(url))
       }
 
       // Step 2: Save native .vbreakdown artifact (prioritizing active workspace directory)
