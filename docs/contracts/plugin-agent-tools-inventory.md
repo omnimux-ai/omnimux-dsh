@@ -93,6 +93,7 @@ related:
 | 查询分析中心收件箱与系统通知 | 通知抽屉 | `omnimux_analytics_inbox` | L2 | `Implemented` | 否 |
 | 抓取网页并解析 Markdown | 灵感/知识库采集 | `omnimux_page_fetch` | L2 | `Implemented` | 否 |
 | 统一多模型文本与结构化生成 | 文本节点与大模型中继 | `omnimux_text_complete` | L2 | `Implemented` | 否 |
+| TypeSafe Jev 结构化决策与量化评估 | 智能体决策路由器与评估门禁 | `omnimux_jev_decision` | L2 | `Implemented` | 否 |
 | 读取当前工作台视口（Tab / Chip / 选中） | 右侧 better-sidebar 快照 | `workbench_get_active_view` | L2 | `Planned` | 否 |
 | 打开或切换 Occupant Tab（可撤销、防打扰） | 左栏 / Tab 条 / 对话内「打开」 | `workbench_open_tab` | L1 | `Planned` | 否（打扰性，走配额+撤销，非 confirm） |
 

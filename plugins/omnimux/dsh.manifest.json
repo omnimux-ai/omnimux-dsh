@@ -10,12 +10,14 @@
   "capabilities": {
     "tools": [
       { "name": "omnimux_page_fetch", "summary": "抓取网页并提取为干净 Markdown", "category": "reader", "isWriteOperation": false, "requiresAuth": false },
-      { "name": "omnimux_text_complete", "summary": "调用 Hub 统一大模型文本生成接口", "category": "text", "isWriteOperation": false, "requiresAuth": true }
+      { "name": "omnimux_text_complete", "summary": "调用 Hub 统一大模型文本生成接口", "category": "text", "isWriteOperation": false, "requiresAuth": true },
+      { "name": "omnimux_jev_decision", "summary": "调用 TypeSafe Jev 决策模型执行结构化决策与评分", "category": "decision", "isWriteOperation": false, "requiresAuth": true }
     ],
     "seamsProvided": [
       { "name": "identity", "interfaceDoc": "ctx.get('identity').status / .require()" },
       { "name": "textComplete", "interfaceDoc": "ctx.get('textComplete').generate(params)" },
-      { "name": "modelCatalog", "interfaceDoc": "ctx.get('modelCatalog').list() → { source, fingerprint, defaults, text, image, video, audio }" }
+      { "name": "modelCatalog", "interfaceDoc": "ctx.get('modelCatalog').list() → { source, fingerprint, defaults, text, image, video, audio }" },
+      { "name": "decisions", "interfaceDoc": "ctx.get('decisions').evaluate(params)" }
     ],
     "seamsConsumed": [],
     "slots": [
