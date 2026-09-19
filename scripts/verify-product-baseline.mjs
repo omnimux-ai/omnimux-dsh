@@ -59,7 +59,7 @@ const RULE_LABEL = {
   R6: '随产品分发的数据文件含开发机路径',
 }
 
-const DEV_IDENTITY_RE = /omnimux-dev/
+const DEV_IDENTITY_RE = /omnimux-dev\b/
 /** 只认引号字面量（路径拼接/读取的形态）；文档注释里提到文件名不算违规。 */
 const LOCAL_CONFIG_LITERAL_RE = /['"][^'"]*(?:settings\.yaml|\.credentials\.yaml)['"]/
 const PROVIDER_MARKER_RE = /\bproviders\b|baseURL|baseUrl|apiKeyEnv|llm-pi-ai/
