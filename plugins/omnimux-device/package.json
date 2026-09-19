@@ -1,0 +1,46 @@
+{
+  "name": "omnimux-device",
+  "version": "0.1.0",
+  "description": "OmniMux 移动真机矩阵与设备智能体中枢：支持 iOS 真机集群池化管理、无障碍语义树感知、本地 Vision OCR 与 TypeSafe 毫秒级快决策操作",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib/client.js",
+    "scripts/build-client.mjs",
+    "cordis.patch.yml",
+    "dsh.manifest.json",
+    "README.md",
+    "PRD.md",
+    "ARCHITECTURE.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "prepare": "npm run build",
+    "test": "node --test src/*.test.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit"
+  },
+  "peerDependencies": {
+    "cordis": "^3.18.1"
+  }
+}

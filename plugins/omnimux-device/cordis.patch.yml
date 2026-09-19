@@ -1,0 +1,3 @@
+plugins:
+  omnimux-device:
+    package: ./package.json
