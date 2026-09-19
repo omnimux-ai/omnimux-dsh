@@ -24,6 +24,7 @@ export const ACTIVE_STAGE_STORAGE_KEY = 'omnimux_active_product_stage'
  */
 export const STAGE_CSS_CLASS_MAP = {
   'omnimux-accounts': 'omnimux-accounts-stage',
+  'omnimux-device': 'omnimux-device-stage',
   'omnimux-assets': 'omnimux-assets-stage',
   'omnimux-analytics': 'omnimux-analytics-stage',
   'omnimux-products': 'omnimux-products-stage',

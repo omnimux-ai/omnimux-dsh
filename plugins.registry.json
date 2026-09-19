@@ -189,6 +189,58 @@
       "path": "plugins/omnimux-accounts"
     },
     {
+      "id": "omnimux-device",
+      "name": "omnimux-device",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "OmniMux 官方应用：手机管理、真机机群大屏、排期发布日历与故障断点自愈",
+      "tags": [
+        "device",
+        "ios",
+        "automation",
+        "phone-farm",
+        "mobile-agent"
+      ],
+      "capabilities": {
+        "tools": [
+          { "name": "device_list", "summary": "列出当前连接的所有物理 iPhone 及其在线状态与电量", "category": "device" },
+          { "name": "device_get_screen", "summary": "获取指定手机当前的界面语义树（AXe）与 OCR 文本列表", "category": "device" },
+          { "name": "device_execute_action", "summary": "在指定手机上执行原子操作（点击元素/找字点击/划动/输入文案）", "category": "device" },
+          { "name": "device_publish_flow", "summary": "调用 TypeSafe 快决策引擎自动完成短视频导入、选择与发布全流程", "category": "device" }
+        ],
+        "seamsProvided": [
+          "device"
+        ],
+        "seamsConsumed": [
+          "decisions",
+          "identity",
+          "publish"
+        ],
+        "slots": [
+          {
+            "target": "sidebar.extra",
+            "componentPath": "src/client/sidebar-entry.js"
+          },
+          {
+            "target": "shell.overlay",
+            "componentPath": "src/client/DeviceStage.jsx"
+          }
+        ],
+        "storageDomains": [
+          "$DSH_HOME/omnimux/devices/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": []
+      },
+      "path": "plugins/omnimux-device"
+    },
+    {
       "id": "omnimux-assets",
       "name": "omnimux-assets",
       "version": "0.2.0",

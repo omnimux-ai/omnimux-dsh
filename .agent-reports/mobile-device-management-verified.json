@@ -1,0 +1,18 @@
+{
+  "task": "mobile-device-management",
+  "verifiedAt": "2026-09-19T23:12:00.000Z",
+  "domChecks": {
+    "sidebarEntry": true,
+    "entrySelector": "[data-omnimux-device-entry]",
+    "label": "手机管理",
+    "rank": 3.5,
+    "tabId": "omnimux-device:library",
+    "stageComponent": "DeviceStage",
+    "styleTokens": {
+      "bgBase": "#111113",
+      "accentViolet": "#7961f2",
+      "inkCta": "#ffffff"
+    }
+  },
+  "interactivePass": true
+}
