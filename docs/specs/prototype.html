@@ -3,24 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniMux Fleet · 物理 iPhone 社交自动化本地中枢</title>
+    <title>OmniMux 移动真机矩阵与设备智能体中枢</title>
     <style>
+        /* 遵循 OmniMux design.md L1 官方原生 UI 规范体系 */
         :root {
-            --bg-canvas: #090a0f;
-            --bg-sidebar: #0f1118;
-            --bg-card: #151822;
-            --bg-card-hover: #1c202d;
-            --border-subtle: rgba(255, 255, 255, 0.07);
-            --border-focus: rgba(255, 255, 255, 0.18);
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-tertiary: #64748b;
-            --accent-blue: #38bdf8;
-            --accent-green: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-rose: #f43f5e;
-            --accent-purple: #a855f7;
-            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            --dsw-alias-bg-base: #111113;
+            --dsw-alias-bg-primary: #16181d;
+            --dsw-alias-bg-layer-1: rgba(255, 255, 255, 0.04);
+            --dsw-alias-bg-layer-2: rgba(255, 255, 255, 0.06);
+            --dsw-alias-bg-layer-3: rgba(255, 255, 255, 0.08);
+            --dsw-alias-bg-elevated: #1c1c1f;
+            --dsw-alias-bg-mask: rgba(0, 0, 0, 0.65);
+
+            --dsw-alias-label-primary: #ffffff;
+            --dsw-alias-label-secondary: rgba(255, 255, 255, 0.72);
+            --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.40);
+            --dsw-alias-label-dimmed: rgba(255, 255, 255, 0.28);
+
+            --dsw-alias-border-l1: rgba(255, 255, 255, 0.06);
+            --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+            --dsw-alias-border-l3: rgba(255, 255, 255, 0.22);
+            --dsw-alias-border-focus: #3b82f6;
+
+            --dsw-accent-blue: #3b82f6;
+            --dsw-accent-green: #10b981;
+            --dsw-accent-amber: #f59e0b;
+            --dsw-accent-rose: #f43f5e;
+            --dsw-accent-purple: #8b5cf6;
+
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", Roboto, sans-serif;
             --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
         }
 
@@ -32,8 +43,8 @@
 
         body {
             font-family: var(--font-sans);
-            background-color: var(--bg-canvas);
-            color: var(--text-primary);
+            background-color: var(--dsw-alias-bg-base);
+            color: var(--dsw-alias-label-primary);
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -41,11 +52,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 顶部干净克制的本地状态栏 (纯工具属性，零 SaaS 痕迹) */
-        header {
+        /* 顶部导航状态栏 (32px 基准与单行流) */
+        header.omx-topbar {
             height: 52px;
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-subtle);
+            background: var(--dsw-alias-bg-primary);
+            border-bottom: 1px solid var(--dsw-alias-border-l2);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -53,308 +64,316 @@
             flex-shrink: 0;
         }
 
-        .header-left {
+        .omx-brand-area {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
         }
 
-        .tame-mark {
-            width: 24px;
-            height: 24px;
-            background: #fff;
+        .omx-brand-logo {
+            width: 26px;
+            height: 26px;
+            background: linear-gradient(135deg, var(--dsw-accent-blue), var(--dsw-accent-purple));
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #000;
-            font-weight: 800;
-            font-size: 14px;
         }
 
-        .workspace-name {
+        .omx-brand-title {
             font-size: 14px;
             font-weight: 600;
-            color: #fff;
+            color: var(--dsw-alias-label-primary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .local-badge {
-            font-size: 10px;
+        .omx-badge-pill {
+            font-size: 11px;
             font-weight: 600;
-            padding: 1px 6px;
-            border-radius: 4px;
+            padding: 2px 8px;
+            border-radius: 9999px;
             background: rgba(16, 185, 129, 0.12);
-            color: var(--accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.25);
-            font-family: var(--font-mono);
+            color: var(--dsw-accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.28);
         }
 
-        .header-stats {
+        .omx-header-stats {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             font-size: 12px;
-            color: var(--text-secondary);
+            color: var(--dsw-alias-label-secondary);
         }
 
-        .stat-pill {
+        .omx-stat-box {
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-subtle);
+            background: var(--dsw-alias-bg-layer-1);
+            border: 1px solid var(--dsw-alias-border-l1);
             padding: 4px 10px;
             border-radius: 6px;
+            height: 28px;
         }
 
-        .dot-pulse {
+        .omx-dot-alive {
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: var(--accent-green);
-            box-shadow: 0 0 6px var(--accent-green);
+            background: var(--dsw-accent-green);
+            box-shadow: 0 0 6px var(--dsw-accent-green);
         }
 
-        /* 布局主体 */
-        .layout-body {
+        /* 布局框架 */
+        .omx-layout-frame {
             display: flex;
             flex: 1;
             overflow: hidden;
         }
 
-        /* 左侧对标 Tame 的精炼菜单 */
-        nav.nav-bar {
-            width: 200px;
-            background: var(--bg-sidebar);
-            border-right: 1px solid var(--border-subtle);
+        /* 左侧功能导航 (严格 8px 圆角与标准行高) */
+        nav.omx-nav-column {
+            width: 210px;
+            background: var(--dsw-alias-bg-primary);
+            border-right: 1px solid var(--dsw-alias-border-l2);
             padding: 14px 8px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
             flex-shrink: 0;
         }
 
-        .nav-link {
+        .omx-nav-category {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--dsw-alias-label-tertiary);
+            padding: 10px 12px 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .omx-nav-item {
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 13px;
             font-weight: 500;
-            color: var(--text-secondary);
+            color: var(--dsw-alias-label-secondary);
             cursor: pointer;
             transition: all 0.12s ease;
             user-select: none;
+            height: 34px;
         }
 
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.04);
-            color: #fff;
+        .omx-nav-item:hover {
+            background: var(--dsw-alias-bg-layer-2);
+            color: var(--dsw-alias-label-primary);
         }
 
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
+        .omx-nav-item.active {
+            background: var(--dsw-alias-bg-layer-3);
+            color: var(--dsw-alias-label-primary);
             font-weight: 600;
+            border-left: 3px solid var(--dsw-accent-blue);
         }
 
-        .nav-link svg {
-            width: 15px;
-            height: 15px;
-            opacity: 0.8;
+        .omx-nav-item svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
         }
 
-        /* 主视口工作台 */
-        main.main-viewport {
+        /* 主工作视口 */
+        main.omx-viewport {
             flex: 1;
             overflow-y: auto;
-            background: var(--bg-canvas);
+            background: var(--dsw-alias-bg-base);
             padding: 24px 28px;
         }
 
-        .view-section {
+        .omx-section {
             display: none;
-            animation: viewFade 0.15s ease;
+            animation: fadeIn 0.15s ease;
         }
-        .view-section.active { display: block; }
-        @keyframes viewFade { from { opacity: 0; } to { opacity: 1; } }
+        .omx-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 顶部标题与操作 */
-        .view-title-row {
+        /* 视口顶部标题栏 */
+        .omx-view-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
 
-        .title-block h2 {
+        .omx-title-meta h2 {
             font-size: 18px;
             font-weight: 600;
             letter-spacing: -0.01em;
-            color: #fff;
+            color: var(--dsw-alias-label-primary);
         }
-        .title-block p {
+        .omx-title-meta p {
             font-size: 12px;
-            color: var(--text-tertiary);
-            margin-top: 2px;
+            color: var(--dsw-alias-label-tertiary);
+            margin-top: 3px;
         }
 
-        .btn-group {
+        .omx-actions-row {
             display: flex;
+            align-items: center;
             gap: 8px;
         }
 
-        button.tame-btn {
+        /* 控件基准: 高度 32px, 8px 圆角 (符合 design.md 2.1 与 2.2) */
+        button.omx-btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
-            padding: 7px 12px;
-            border-radius: 6px;
-            font-size: 12px;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 8px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
             border: 1px solid transparent;
-            transition: all 0.12s;
-        }
-        button.tame-btn-primary {
-            background: #fff;
-            color: #000;
-            font-weight: 600;
-        }
-        button.tame-btn-primary:hover { background: #e2e8f0; }
-
-        button.tame-btn-secondary {
-            background: var(--bg-card);
-            color: var(--text-primary);
-            border-color: var(--border-subtle);
-        }
-        button.tame-btn-secondary:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--border-focus);
+            transition: all 0.12s ease;
+            box-sizing: border-box;
+            user-select: none;
         }
 
-        /* ================= 视图 1: FLEET 机群与体检 ================= */
-        .fleet-grid {
+        button.omx-btn-primary {
+            background: var(--dsw-accent-blue);
+            color: #ffffff;
+        }
+        button.omx-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        button.omx-btn-secondary {
+            background: var(--dsw-alias-bg-layer-1);
+            color: var(--dsw-alias-label-primary);
+            border-color: var(--dsw-alias-border-l2);
+        }
+        button.omx-btn-secondary:hover {
+            background: var(--dsw-alias-bg-layer-2);
+            border-color: var(--dsw-alias-border-l3);
+        }
+
+        /* ================= 模块 1: 真机大屏与健康体检 ================= */
+        .omx-card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 14px;
+            gap: 16px;
         }
 
-        .fleet-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
+        .omx-device-card {
+            background: var(--dsw-alias-bg-layer-1);
+            border: 1px solid var(--dsw-alias-border-l2);
+            border-radius: 12px;
             padding: 14px;
             cursor: pointer;
             transition: all 0.15s ease;
             position: relative;
         }
-        .fleet-card:hover {
-            border-color: var(--border-focus);
-            background: var(--bg-card-hover);
+        .omx-device-card:hover {
+            border-color: var(--dsw-alias-border-l3);
+            background: var(--dsw-alias-bg-layer-2);
+            transform: translateY(-1px);
         }
 
-        .card-header-bar {
+        .omx-card-topbar {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
         }
 
-        .device-identity {
+        .omx-dev-name {
             font-size: 13px;
             font-weight: 600;
-            color: #fff;
+            color: var(--dsw-alias-label-primary);
         }
-        .device-sub {
+        .omx-dev-sub {
             font-size: 11px;
-            color: var(--text-tertiary);
+            color: var(--dsw-alias-label-tertiary);
             font-family: var(--font-mono);
-            margin-top: 1px;
+            margin-top: 2px;
         }
 
-        .state-tag {
+        .omx-status-chip {
             font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 2px 7px;
+            border-radius: 9999px;
             font-weight: 600;
-            font-family: var(--font-mono);
         }
-        .state-ready { background: rgba(16, 185, 129, 0.12); color: var(--accent-green); }
-        .state-warming { background: rgba(245, 158, 11, 0.12); color: var(--accent-amber); }
-        .state-needs-attention { background: rgba(244, 63, 94, 0.12); color: var(--accent-rose); }
+        .chip-ready { background: rgba(16, 185, 129, 0.12); color: var(--dsw-accent-green); }
+        .chip-warming { background: rgba(245, 158, 11, 0.12); color: var(--dsw-accent-amber); }
+        .chip-alert { background: rgba(244, 63, 94, 0.12); color: var(--dsw-accent-rose); }
 
-        /* Tame 特色：设备屏幕 + 账号胶囊展示 */
-        .fleet-mock-screen {
-            height: 160px;
-            background: #000;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .omx-mock-screen {
+            height: 180px;
+            background: #000000;
+            border-radius: 8px;
+            border: 1px solid var(--dsw-alias-border-l1);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 8px;
+            padding: 10px;
             position: relative;
         }
 
-        .account-chip-row {
+        .omx-account-tags {
             margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
         }
 
-        .account-pill {
+        .omx-account-chip {
             font-size: 11px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-subtle);
-            border-radius: 4px;
-            padding: 3px 6px;
+            background: var(--dsw-alias-bg-layer-2);
+            border: 1px solid var(--dsw-alias-border-l1);
+            border-radius: 6px;
+            padding: 3px 8px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            color: var(--text-secondary);
+            gap: 6px;
+            color: var(--dsw-alias-label-secondary);
         }
 
-        .platform-icon {
-            width: 12px;
-            height: 12px;
-        }
-
-        /* ================= 视图 2: SCHEDULES 周排期日历 ================= */
-        .calendar-week-grid {
+        /* ================= 模块 2: 周排期发布日历 (Schedules) ================= */
+        .omx-calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
+            border: 1px solid var(--dsw-alias-border-l2);
+            border-radius: 12px;
             overflow: hidden;
-            background: var(--bg-card);
+            background: var(--dsw-alias-bg-layer-1);
         }
 
-        .calendar-day-col {
-            border-right: 1px solid var(--border-subtle);
+        .omx-calendar-col {
+            border-right: 1px solid var(--dsw-alias-border-l1);
             display: flex;
             flex-direction: column;
             min-height: 520px;
         }
-        .calendar-day-col:last-child { border-right: none; }
+        .omx-calendar-col:last-child { border-right: none; }
 
-        .day-header {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-subtle);
-            background: rgba(255, 255, 255, 0.02);
-            font-size: 12px;
+        .omx-col-header {
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--dsw-alias-border-l2);
+            background: var(--dsw-alias-bg-layer-2);
             text-align: center;
         }
-        .day-name { color: var(--text-tertiary); font-weight: 500; }
-        .day-num { font-weight: 700; color: #fff; margin-top: 2px; }
-        .day-today .day-num { color: var(--accent-blue); }
+        .omx-col-day { font-size: 11px; color: var(--dsw-alias-label-tertiary); font-weight: 500; }
+        .omx-col-date { font-size: 13px; font-weight: 700; color: var(--dsw-alias-label-primary); margin-top: 2px; }
+        .omx-col-today .omx-col-date { color: var(--dsw-accent-blue); }
 
-        .calendar-task-slot {
+        .omx-task-lane {
             padding: 8px;
             display: flex;
             flex-direction: column;
@@ -362,111 +381,107 @@
             flex: 1;
         }
 
-        .post-task-ticket {
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border-subtle);
-            border-radius: 5px;
-            padding: 8px;
+        .omx-task-ticket {
+            background: var(--dsw-alias-bg-elevated);
+            border: 1px solid var(--dsw-alias-border-l1);
+            border-radius: 8px;
+            padding: 10px;
             cursor: pointer;
-            transition: all 0.12s;
+            transition: all 0.12s ease;
             font-size: 11px;
         }
-        .post-task-ticket:hover {
-            border-color: var(--border-focus);
-            background: rgba(255, 255, 255, 0.06);
+        .omx-task-ticket:hover {
+            border-color: var(--dsw-alias-border-l3);
+            background: var(--dsw-alias-bg-layer-3);
         }
 
-        .ticket-time { font-family: var(--font-mono); color: var(--accent-blue); font-size: 10px; font-weight: 600; }
-        .ticket-account { color: #fff; font-weight: 600; margin: 3px 0; display: flex; align-items: center; gap: 4px; }
-        .ticket-status { font-size: 10px; color: var(--text-tertiary); }
+        .omx-ticket-time { font-family: var(--font-mono); color: var(--dsw-accent-blue); font-weight: 600; font-size: 10px; }
+        .omx-ticket-title { color: var(--dsw-alias-label-primary); font-weight: 600; margin: 4px 0; display: flex; align-items: center; gap: 5px; }
+        .omx-ticket-status { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
 
-        /* ================= 视图 3: INSPECTOR 断点失败分析器 (Every failure has a name) ================= */
-        .inspector-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 20px;
+        /* ================= 模块 3: 故障断点对比器 (Failure Inspector) ================= */
+        .omx-inspector-card {
+            background: var(--dsw-alias-bg-layer-1);
+            border: 1px solid var(--dsw-alias-border-l2);
+            border-radius: 12px;
+            padding: 22px;
         }
 
-        .comparison-layout {
+        .omx-comparison-stage {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            gap: 20px;
             margin-top: 16px;
         }
 
-        .screen-compare-box {
-            background: #000;
-            border-radius: 8px;
-            border: 1px solid var(--border-subtle);
+        .omx-compare-box {
+            background: #000000;
+            border-radius: 10px;
+            border: 1px solid var(--dsw-alias-border-l2);
             height: 340px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 14px;
+            padding: 16px;
             position: relative;
         }
 
-        .box-title-tag {
+        .omx-compare-label {
             font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
-        .tag-expected { color: var(--accent-green); }
-        .tag-observed { color: var(--accent-rose); }
+        .label-expected { color: var(--dsw-accent-green); }
+        .label-observed { color: var(--dsw-accent-rose); }
 
-        .diff-callout {
+        .omx-diff-banner {
             background: rgba(244, 63, 94, 0.08);
-            border: 1px solid rgba(244, 63, 94, 0.2);
-            border-radius: 6px;
-            padding: 12px 14px;
-            margin-top: 16px;
+            border: 1px solid rgba(244, 63, 94, 0.25);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-top: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        /* ================= 视图 4: APPLE SIGNING 证书管理 ================= */
-        .settings-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
+        /* ================= 模块 4: 苹果开发者证书配置 ================= */
+        .omx-settings-card {
+            background: var(--dsw-alias-bg-layer-1);
+            border: 1px solid var(--dsw-alias-border-l2);
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 16px;
         }
 
-        .step-num-bubble {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            display: inline-flex;
+        .omx-cert-row {
+            border: 1px solid var(--dsw-alias-border-l1);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 700;
-            margin-right: 6px;
+            background: var(--dsw-alias-bg-layer-2);
         }
 
-        /* 抽屉细节 (设备 11 项体检 Checklist) */
-        .drawer-overlay {
+        /* 侧边 11 项体检抽屉 (Drawer) */
+        .omx-drawer-mask {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: var(--dsw-alias-bg-mask);
             backdrop-filter: blur(4px);
             z-index: 200;
             display: none;
             justify-content: flex-end;
         }
-        .drawer-overlay.active { display: flex; }
+        .omx-drawer-mask.active { display: flex; }
 
-        .drawer-window {
+        .omx-drawer-body {
             width: 440px;
             height: 100%;
-            background: var(--bg-sidebar);
-            border-left: 1px solid var(--border-subtle);
+            background: var(--dsw-alias-bg-elevated);
+            border-left: 1px solid var(--dsw-alias-border-l2);
             padding: 24px;
             overflow-y: auto;
             display: flex;
@@ -474,353 +489,372 @@
             gap: 16px;
         }
 
-        .checklist-item {
+        .omx-check-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 9px 0;
+            border-bottom: 1px solid var(--dsw-alias-border-l1);
             font-size: 12px;
+            color: var(--dsw-alias-label-secondary);
         }
-        .check-passed { color: var(--accent-green); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .omx-check-ok { color: var(--dsw-accent-green); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 
-        /* 全局通知 Toast */
-        .toast-bubble {
+        /* 全局轻提示 Toast */
+        .omx-toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--bg-card);
-            border: 1px solid #fff;
-            color: #fff;
+            bottom: 24px;
+            right: 24px;
+            background: var(--dsw-alias-bg-elevated);
+            border: 1px solid var(--dsw-alias-border-l3);
+            color: #ffffff;
             padding: 10px 16px;
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius: 8px;
+            font-size: 13px;
             display: none;
             z-index: 300;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
 
     <!-- 顶部状态栏 -->
-    <header>
-        <div class="header-left">
-            <div class="tame-mark">T</div>
-            <div class="workspace-name">
-                <span>Fleet Workspace</span>
-                <span class="local-badge">Local Mac Engine</span>
+    <header class="omx-topbar">
+        <div class="omx-brand-area">
+            <div class="omx-brand-logo">
+                <svg width="15" height="15" fill="none" stroke="#ffffff" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-width="2.5" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="omx-brand-title">
+                <span>OmniMux 移动真机矩阵</span>
+                <span class="omx-badge-pill">本机执行引擎 · 私有隔离</span>
             </div>
         </div>
 
-        <div class="header-stats">
-            <div class="stat-pill">
-                <span class="dot-pulse"></span>
-                <span>Active Rack:</span>
-                <strong style="color:#fff;font-family:var(--font-mono);">15 Devices (100% Ready)</strong>
+        <div class="omx-header-stats">
+            <div class="omx-stat-box">
+                <span class="omx-dot-alive"></span>
+                <span>活动机架:</span>
+                <strong style="color:#ffffff;font-family:var(--font-mono);">15 台在线 (100% 就绪)</strong>
             </div>
-            <div class="stat-pill">
-                <span>Schedules Today:</span>
-                <strong style="color:var(--accent-blue);font-family:var(--font-mono);">24 Posts</strong>
+            <div class="omx-stat-box">
+                <span>今日排期任务:</span>
+                <strong style="color:var(--dsw-accent-blue);font-family:var(--font-mono);">24 条短视频</strong>
             </div>
-            <div class="stat-pill">
-                <span>Certificates:</span>
-                <strong style="color:#fff;font-family:var(--font-mono);">2 Team Keys (Valid)</strong>
+            <div class="omx-stat-box">
+                <span>证书密钥:</span>
+                <strong style="color:#ffffff;font-family:var(--font-mono);">2 套有效签名</strong>
             </div>
         </div>
     </header>
 
-    <!-- 主布局 -->
-    <div class="layout-body">
-        <!-- 左侧菜单 (对标 Tame 核心结构) -->
-        <nav class="nav-bar">
-            <div class="nav-link active" onclick="switchSection('fleet')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke-width="2"/><path d="M12 18h.01" stroke-width="2"/></svg>
-                <span>Fleet (设备矩阵)</span>
+    <div class="omx-layout-frame">
+        <!-- 左侧导航 -->
+        <nav class="omx-nav-column">
+            <div class="omx-nav-category">矩阵控制</div>
+            <div class="omx-nav-item active" onclick="showPane('fleet')">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+                <span>真机大屏与体检</span>
             </div>
-            <div class="nav-link" onclick="switchSection('schedules')">
+            <div class="omx-nav-item" onclick="showPane('schedules')">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-width="2"/></svg>
-                <span>Schedules (周历排期)</span>
+                <span>周排期发布日历</span>
             </div>
-            <div class="nav-link" onclick="switchSection('inspector')">
+            <div class="omx-nav-item" onclick="showPane('inspector')">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke-width="2"/></svg>
-                <span>Failure Inspector</span>
+                <span>故障断点对比器</span>
             </div>
-            <div class="nav-link" onclick="switchSection('signing')">
+
+            <div class="omx-nav-category">系统设置</div>
+            <div class="omx-nav-item" onclick="showPane('signing')">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
-                <span>Apple signing (证书)</span>
+                <span>苹果开发者证书</span>
             </div>
-            <div class="nav-link" onclick="switchSection('warmup')">
+            <div class="omx-nav-item" onclick="showPane('warmup')">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/></svg>
-                <span>Warmup (养号策略)</span>
+                <span>自动化养号策略</span>
             </div>
         </nav>
 
-        <!-- 视口区域 -->
-        <main class="main-viewport">
+        <!-- 主视口工作台 -->
+        <main class="omx-viewport">
 
-            <!-- 1. FLEET 机群页面 (对标 Tame Fleet 布局) -->
-            <section id="sec-fleet" class="view-section active">
-                <div class="view-title-row">
-                    <div class="title-block">
-                        <h2>Fleet</h2>
-                        <p>Your hardware. One clear view. 11 conditions verified per device.</p>
+            <!-- 1. 真机大屏与健康体检 (对标 Tame Fleet) -->
+            <section id="pane-fleet" class="omx-section active">
+                <div class="omx-view-header">
+                    <div class="omx-title-meta">
+                        <h2>真机机群大屏</h2>
+                        <p>本地物理硬件矩阵总览，每台设备经由 11 项底层硬性指标严格体检认证</p>
                     </div>
-                    <div class="btn-group">
-                        <button class="tame-btn tame-btn-secondary" onclick="runHealthCheckAll()">Verify All 11 Conditions</button>
-                        <button class="tame-btn tame-btn-primary" onclick="openProvisionModal()">+ Add iPhone</button>
+                    <div class="omx-actions-row">
+                        <button class="omx-btn omx-btn-secondary" onclick="toast('已完成全量设备 11 项健康自检，全部指标正常')">全量重新体检</button>
+                        <button class="omx-btn omx-btn-primary" onclick="toast('请通过 USB 数据线将 iPhone 接入当前 Mac 并在手机上点击信任')">+ 接入新手机</button>
                     </div>
                 </div>
 
-                <div class="fleet-grid" id="fleet-list-container">
-                    <!-- 由 JS 渲染真实 Tame 风格设备卡片 -->
+                <div class="omx-card-grid" id="fleet-devices-list">
+                    <!-- 由 JS 渲染设备卡片 -->
                 </div>
             </section>
 
-            <!-- 2. SCHEDULES 周历排期页面 (对标 Tame Schedule Hero 布局) -->
-            <section id="sec-schedules" class="view-section">
-                <div class="view-title-row">
-                    <div class="title-block">
-                        <h2>Schedules</h2>
-                        <p>Plan Posts across Instagram and TikTok in one calendar. Times are local to each Account.</p>
+            <!-- 2. 周排期发布日历 (对标 Tame Schedules) -->
+            <section id="pane-schedules" class="omx-section">
+                <div class="omx-view-header">
+                    <div class="omx-title-meta">
+                        <h2>周排期发布日历</h2>
+                        <p>统一编排海外抖音（TikTok）与照片墙（Instagram）发布时段，自动对齐目标账号所在国家时区</p>
                     </div>
-                    <div class="btn-group">
-                        <button class="tame-btn tame-btn-secondary" onclick="alertToast('已按各账号时区自动对齐时间窗')">Timezone Auto-Align</button>
-                        <button class="tame-btn tame-btn-primary" onclick="alertToast('已打开成片批量排期抽屉')">+ Schedule Post</button>
+                    <div class="omx-actions-row">
+                        <button class="omx-btn omx-btn-secondary" onclick="toast('已按美东、美西及欧洲时区智能校准时间窗口')">时区自动对齐</button>
+                        <button class="omx-btn omx-btn-primary" onclick="toast('已拉起短视频批量分发排期弹窗')">+ 新增排期任务</button>
                     </div>
                 </div>
 
-                <div class="calendar-week-grid">
+                <div class="omx-calendar-grid">
                     <!-- 周一 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">MON</div><div class="day-num">Sep 15</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" onclick="showTicketDetail('09:30 AM', '@trend_cat_us', 'Completed')">
-                                <div class="ticket-time">09:30 AM</div>
-                                <div class="ticket-account">🎵 @trend_cat_us</div>
-                                <div class="ticket-status">✓ Published (TikTok)</div>
-                            </div>
-                            <div class="post-task-ticket" onclick="showTicketDetail('02:15 PM', '@daily_fashion', 'Completed')">
-                                <div class="ticket-time">02:15 PM</div>
-                                <div class="ticket-account">📷 @daily_fashion</div>
-                                <div class="ticket-status">✓ Published (IG Reel)</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周一</div><div class="omx-col-date">9月15日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" onclick="toast('任务详情：上午 9:30 · 账号 @trend_cat_us · 状态：已成功发布')">
+                                <div class="omx-ticket-time">09:30 上午</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@trend_cat_us</span>
+                                </div>
+                                <div class="omx-ticket-status">已成功发布 (海外抖音)</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 周二 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">TUE</div><div class="day-num">Sep 16</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" onclick="showTicketDetail('11:00 AM', '@pet_care_uk', 'Completed')">
-                                <div class="ticket-time">11:00 AM</div>
-                                <div class="ticket-account">🎵 @pet_care_uk</div>
-                                <div class="ticket-status">✓ Published (TikTok)</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周二</div><div class="omx-col-date">9月16日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" onclick="toast('任务详情：上午 11:00 · 账号 @pet_care_uk · 状态：已成功发布')">
+                                <div class="omx-ticket-time">11:00 上午</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@pet_care_uk</span>
+                                </div>
+                                <div class="omx-ticket-status">已成功发布 (海外抖音)</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 周三 (Today) -->
-                    <div class="calendar-day-col">
-                        <div class="day-header day-today"><div class="day-name" style="color:var(--accent-blue);">WED (TODAY)</div><div class="day-num">Sep 17</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" style="border-color:var(--accent-blue);" onclick="showTicketDetail('06:00 PM', '@trend_cat_us', 'In Queue')">
-                                <div class="ticket-time">06:00 PM (Due)</div>
-                                <div class="ticket-account">🎵 @trend_cat_us</div>
-                                <div class="ticket-status" style="color:var(--accent-blue);">● Queued for Slot #1</div>
+                    <!-- 周三 (今日) -->
+                    <div class="omx-calendar-col omx-col-today">
+                        <div class="omx-col-header"><div class="omx-col-day" style="color:var(--dsw-accent-blue);">周三 (今日)</div><div class="omx-col-date">9月17日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" style="border-color:var(--dsw-accent-blue);" onclick="toast('当前槽位任务：下午 6:00 到期 · 目标设备 01号机')">
+                                <div class="omx-ticket-time">18:00 下午 (即将执行)</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="var(--dsw-accent-blue)" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@trend_cat_us</span>
+                                </div>
+                                <div class="omx-ticket-status" style="color:var(--dsw-accent-blue);">排队中 · 分配至 1号槽位</div>
                             </div>
-                            <div class="post-task-ticket" style="border-color:var(--accent-amber);" onclick="showTicketDetail('08:30 PM', '@viral_clips_us', 'Warming up')">
-                                <div class="ticket-time">08:30 PM</div>
-                                <div class="ticket-account">🎵 @viral_clips_us</div>
-                                <div class="ticket-status" style="color:var(--accent-amber);">⚡ Warming ramp</div>
+                            <div class="omx-task-ticket" style="border-color:var(--dsw-accent-amber);" onclick="toast('养号任务：晚间 8:30 · 随机浏览短视频模拟真人')">
+                                <div class="omx-ticket-time">20:30 晚间</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="var(--dsw-accent-amber)" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@viral_clips_us</span>
+                                </div>
+                                <div class="omx-ticket-status" style="color:var(--dsw-accent-amber);">智能预热养号流程中</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 周四 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">THU</div><div class="day-num">Sep 18</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" onclick="showTicketDetail('10:30 AM', '@daily_fashion', 'Scheduled')">
-                                <div class="ticket-time">10:30 AM</div>
-                                <div class="ticket-account">📷 @daily_fashion</div>
-                                <div class="ticket-status">Scheduled</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周四</div><div class="omx-col-date">9月18日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" onclick="toast('已排班：上午 10:30 · 账号 @daily_fashion')">
+                                <div class="omx-ticket-time">10:30 上午</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@daily_fashion</span>
+                                </div>
+                                <div class="omx-ticket-status">已排班 (照片墙视频)</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 周五 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">FRI</div><div class="day-num">Sep 19</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" onclick="showTicketDetail('07:00 PM', '@trend_cat_us', 'Scheduled')">
-                                <div class="ticket-time">07:00 PM</div>
-                                <div class="ticket-account">🎵 @trend_cat_us</div>
-                                <div class="ticket-status">Scheduled</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周五</div><div class="omx-col-date">9月19日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" onclick="toast('已排班：晚间 7:00 · 账号 @trend_cat_us')">
+                                <div class="omx-ticket-time">19:00 晚间</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@trend_cat_us</span>
+                                </div>
+                                <div class="omx-ticket-status">已排班 (周末流量高峰档)</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 周六 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">SAT</div><div class="day-num">Sep 20</div></div>
-                        <div class="calendar-task-slot">
-                            <div class="post-task-ticket" onclick="showTicketDetail('03:00 PM', '@pet_care_uk', 'Scheduled')">
-                                <div class="ticket-time">03:00 PM</div>
-                                <div class="ticket-account">🎵 @pet_care_uk</div>
-                                <div class="ticket-status">Scheduled</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周六</div><div class="omx-col-date">9月20日</div></div>
+                        <div class="omx-task-lane">
+                            <div class="omx-task-ticket" onclick="toast('已排班：下午 3:00 · 账号 @pet_care_uk')">
+                                <div class="omx-ticket-time">15:00 下午</div>
+                                <div class="omx-ticket-title">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z"/></svg>
+                                    <span>@pet_care_uk</span>
+                                </div>
+                                <div class="omx-ticket-status">已排班 (海外抖音)</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 周日 -->
-                    <div class="calendar-day-col">
-                        <div class="day-header"><div class="day-name">SUN</div><div class="day-num">Sep 21</div></div>
-                        <div class="calendar-task-slot">
-                            <div style="font-size:11px;color:var(--text-tertiary);text-align:center;padding-top:40px;">No posts scheduled</div>
+                    <div class="omx-calendar-col">
+                        <div class="omx-col-header"><div class="omx-col-day">周日</div><div class="omx-col-date">9月21日</div></div>
+                        <div class="omx-task-lane">
+                            <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);text-align:center;padding-top:40px;">暂无排期任务</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- 3. FAILURE INSPECTOR 视图 (对标 Tame 招牌: Every failure has a name) -->
-            <section id="sec-inspector" class="view-section">
-                <div class="view-title-row">
-                    <div class="title-block">
-                        <h2>Every failure has a name</h2>
-                        <p>Not a stall. Tame says which screen it expected and what it saw instead.</p>
+            <!-- 3. 故障断点对比器 (Failure Inspector - Every failure has a name) -->
+            <section id="pane-inspector" class="omx-section">
+                <div class="omx-view-header">
+                    <div class="omx-title-meta">
+                        <h2>故障断点对比器 (每次异常皆有明确归因)</h2>
+                        <p>拒绝无响应假死。系统准确指出预期看到的界面结构，以及实际遭遇的异常干扰层</p>
                     </div>
-                    <div class="btn-group">
-                        <button class="tame-btn tame-btn-primary" onclick="runTypeSafeAutoHeal()">⚡ OmniMux TypeSafe 一键自愈</button>
+                    <div class="omx-actions-row">
+                        <button class="omx-btn omx-btn-primary" onclick="execAutoHeal()">调用决策引擎一键自愈</button>
                     </div>
                 </div>
 
-                <div class="inspector-panel">
+                <div class="omx-inspector-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div>
-                            <span style="font-size:14px;font-weight:600;color:#fff;">Incident #412 · Device 03 (iPhone 13)</span>
-                            <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">Task: Post Video · Step: Select Media from Grid</div>
+                            <span style="font-size:14px;font-weight:600;color:#ffffff;">异常工单 #412 · 03号机 (iPhone 13)</span>
+                            <div style="font-size:12px;color:var(--dsw-alias-label-tertiary);margin-top:2px;">流水线阶段：视频发布 · 当前步骤：从系统相册选取素材首图</div>
                         </div>
-                        <span class="state-tag state-needs-attention">Needs attention</span>
+                        <span class="omx-status-chip chip-alert">需人工关注</span>
                     </div>
 
-                    <!-- 左右屏幕比对 (Tame 原汁原味设计) -->
-                    <div class="comparison-layout">
-                        <!-- 预期画面 -->
+                    <!-- 左右屏幕对比视图 (Expected vs Observed) -->
+                    <div class="omx-comparison-stage">
                         <div>
-                            <div style="font-size:12px;margin-bottom:8px;" class="box-title-tag tag-expected">✓ Expected Screen: MediaPickerGrid</div>
-                            <div class="screen-compare-box">
-                                <div style="font-size:10px;color:var(--text-secondary);">Recents (All Photos)</div>
-                                <div style="text-align:center;color:var(--text-tertiary);font-size:12px;">
-                                    [相册九宫格缩略图]<br>
-                                    <span style="color:var(--accent-green);">首图可见 · 坐标正常</span>
+                            <div class="omx-compare-label label-expected">预期界面结构：系统相册九宫格</div>
+                            <div class="omx-compare-box" style="margin-top:8px;">
+                                <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);">相册最近项目</div>
+                                <div style="text-align:center;color:var(--dsw-alias-label-secondary);font-size:12px;margin:auto;">
+                                    [相册视频素材列表]<br>
+                                    <span style="color:var(--dsw-accent-green);">首图无障碍属性正常 · 点击位就绪</span>
                                 </div>
-                                <div style="font-size:10px;text-align:right;color:var(--text-secondary);">Next Button [Enabled]</div>
+                                <div style="font-size:11px;text-align:right;color:var(--dsw-alias-label-tertiary);">下一步按钮 [可用]</div>
                             </div>
                         </div>
 
-                        <!-- 实际画面 -->
                         <div>
-                            <div style="font-size:12px;margin-bottom:8px;" class="box-title-tag tag-observed">✕ Observed Screen: RatingPromptDialog</div>
-                            <div class="screen-compare-box" style="border-color:rgba(244,63,94,0.4);" id="observed-screen-box">
-                                <div style="font-size:10px;color:var(--text-secondary);">System Overlay</div>
-                                <div style="text-align:center;background:rgba(244,63,94,0.1);padding:14px;border-radius:6px;margin:auto 10px;">
-                                    <strong style="color:#fff;font-size:12px;">Enjoying TikTok?</strong><br>
-                                    <span style="color:var(--text-secondary);font-size:11px;">Tap a star to rate it on the App Store</span>
+                            <div class="omx-compare-label label-observed">实际画面检测：遭遇第三方应用评分弹窗</div>
+                            <div class="omx-compare-box" style="margin-top:8px;border-color:rgba(244,63,94,0.35);" id="observed-box">
+                                <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);">系统顶层覆盖层</div>
+                                <div style="text-align:center;background:rgba(244,63,94,0.08);padding:16px;border-radius:8px;margin:auto 10px;">
+                                    <strong style="color:#ffffff;font-size:13px;">喜欢这款应用吗？</strong><br>
+                                    <span style="color:var(--dsw-alias-label-secondary);font-size:11px;display:block;margin-top:4px;">请前往应用商店为我们评分</span>
                                 </div>
-                                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-secondary);">
-                                    <span id="dismiss-btn-hint" style="color:var(--accent-amber);">Not Now</span>
-                                    <span>Submit</span>
+                                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dsw-alias-label-secondary);">
+                                    <span style="color:var(--dsw-accent-amber);" id="not-now-label">稍后再说</span>
+                                    <span>提交</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="diff-callout" id="inspector-callout">
+                    <div class="omx-diff-banner" id="inspector-banner">
                         <div>
-                            <strong style="color:#fff;font-size:13px;">Tame 原生判定：界面阻断停机</strong>
-                            <p style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
-                                实际屏幕遭遇未预期的 “App评分弹窗”，阻断了原定点击 Next 脚本。Tame 已安全挂起该设备以防盲按点错。
+                            <strong style="color:#ffffff;font-size:13px;">传统群控阻断停机</strong>
+                            <p style="font-size:12px;color:var(--dsw-alias-label-secondary);margin-top:2px;">
+                                实际屏幕遭遇未预期的系统评价弹窗，遮挡了原定的点击区域。传统系统只能停机报错等人工处理。
                             </p>
                         </div>
-                        <button class="tame-btn tame-btn-primary" onclick="runTypeSafeAutoHeal()">执行 TypeSafe 100ms 智能自愈</button>
+                        <button class="omx-btn omx-btn-primary" onclick="execAutoHeal()">执行决策引擎智能自愈</button>
                     </div>
                 </div>
             </section>
 
-            <!-- 4. APPLE SIGNING 证书设置 (对标 Tame Quickstart Step 2) -->
-            <section id="sec-signing" class="view-section">
-                <div class="view-title-row">
-                    <div class="title-block">
-                        <h2>Apple Signing</h2>
-                        <p>Apple requires the runtime on the phone to be signed. Configure your Team Keys here.</p>
+            <!-- 4. 苹果开发者证书配置 (Apple Signing) -->
+            <section id="pane-signing" class="omx-section">
+                <div class="omx-view-header">
+                    <div class="omx-title-meta">
+                        <h2>苹果开发者证书池管理</h2>
+                        <p>物理真机必须签名方可运行控制程序。通过多证书密钥池横向扩展，轻松纳管数百台 iPhone</p>
                     </div>
-                    <div class="btn-group">
-                        <button class="tame-btn tame-btn-primary" onclick="openCertAddSheet()">+ Add Team Key (.p8)</button>
+                    <div class="omx-actions-row">
+                        <button class="omx-btn omx-btn-primary" onclick="toast('请将苹果开发者后台下载的 Team Key (.p8 文件) 拖入导入')">+ 导入新团队密钥 (.p8)</button>
                     </div>
                 </div>
 
-                <div class="settings-card">
-                    <h3 style="font-size:14px;color:#fff;margin-bottom:12px;">Active Signing Identifiers</h3>
-                    
-                    <div style="border:1px solid var(--border-subtle);border-radius:6px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                <div class="omx-settings-card">
+                    <h3 style="font-size:14px;color:#ffffff;margin-bottom:14px;">当前已挂载签名团队</h3>
+
+                    <div class="omx-cert-row">
                         <div>
-                            <div style="font-size:13px;font-weight:600;color:#fff;">Team Key: 8K2N94XYZ1 (US Operations Corp)</div>
-                            <div style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);margin-top:3px;">
-                                Key ID: 2N8XP91A · Issuer ID: 69a6de70-… · Type: App Manager
+                            <div style="font-size:13px;font-weight:600;color:#ffffff;">团队编号: 8K2N94XYZ1 (美区矩阵运营主体)</div>
+                            <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);font-family:var(--font-mono);margin-top:3px;">
+                                密钥标识: 2N8XP91A · 签发机构: 69a6de70-… · 权限: 组织管理员
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="state-tag state-ready">85 / 100 Phones Used</span>
-                            <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Expires in 294 days</div>
+                            <span class="omx-status-chip chip-ready">已使用 85 / 100 台设备</span>
+                            <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);margin-top:4px;">证书剩余有效期: 294 天</div>
                         </div>
                     </div>
 
-                    <div style="border:1px solid var(--border-subtle);border-radius:6px;padding:14px;display:flex;justify-content:space-between;align-items:center;">
+                    <div class="omx-cert-row">
                         <div>
-                            <div style="font-size:13px;font-weight:600;color:#fff;">Team Key: 3M7P21LAA9 (UK Media Matrix)</div>
-                            <div style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);margin-top:3px;">
-                                Key ID: 7M3KL99B · Issuer ID: 81c2fe90-… · Type: Admin
+                            <div style="font-size:13px;font-weight:600;color:#ffffff;">团队编号: 3M7P21LAA9 (英国与欧洲运营主体)</div>
+                            <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);font-family:var(--font-mono);margin-top:3px;">
+                                密钥标识: 7M3KL99B · 签发机构: 81c2fe90-… · 权限: 组织管理员
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="state-tag state-ready">92 / 100 Phones Used</span>
-                            <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Expires in 312 days</div>
+                            <span class="omx-status-chip chip-ready">已使用 92 / 100 台设备</span>
+                            <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);margin-top:4px;">证书剩余有效期: 312 天</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- 5. WARMUP 养号策略设置 (对标 Tame Step 7) -->
-            <section id="sec-warmup" class="view-section">
-                <div class="view-title-row">
-                    <div class="title-block">
-                        <h2>Warm on their own</h2>
-                        <p>Set Warmup once. Let your Mac handle the daily routine. Standard 21-day ramp.</p>
+            <!-- 5. 自动化养号策略设置 (Warmup) -->
+            <section id="pane-warmup" class="omx-section">
+                <div class="omx-view-header">
+                    <div class="omx-title-meta">
+                        <h2>全自主智能养号策略</h2>
+                        <p>一次设定，全天候由 Mac 本地引擎自动执行，支持 21 天渐进式提频曲线与真人作息窗口</p>
                     </div>
                 </div>
 
-                <div class="settings-card">
+                <div class="omx-settings-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                         <div>
-                            <strong style="color:#fff;font-size:14px;">Autonomous Warmup Loop</strong>
-                            <p style="font-size:12px;color:var(--text-tertiary);">Up to 10 visits a day, inside 06:00 to 00:00 waking envelope.</p>
+                            <strong style="color:#ffffff;font-size:14px;">自动养号守护循环</strong>
+                            <p style="font-size:12px;color:var(--dsw-alias-label-tertiary);">每日随机 6~10 次巡检，严格限制在早上 6 点至午夜的活跃窗口。</p>
                         </div>
-                        <input type="checkbox" checked style="width:20px;height:20px;accent-color:var(--accent-blue);">
+                        <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--dsw-accent-blue);">
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;font-size:12px;">
-                        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);padding:12px;border-radius:6px;">
-                            <span style="color:var(--text-tertiary);">Daily Visits</span>
-                            <div style="font-size:16px;font-weight:700;color:#fff;margin-top:4px;">6 ~ 10 sessions</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;">
+                        <div style="background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);padding:14px;border-radius:8px;">
+                            <span style="color:var(--dsw-alias-label-tertiary);">单日访问频次</span>
+                            <div style="font-size:16px;font-weight:700;color:#ffffff;margin-top:4px;">6 ~ 10 轮随机巡检</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);padding:12px;border-radius:6px;">
-                            <span style="color:var(--text-tertiary);">Ramp Schedule</span>
-                            <div style="font-size:16px;font-weight:700;color:#fff;margin-top:4px;">21 days curve</div>
+                        <div style="background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);padding:14px;border-radius:8px;">
+                            <span style="color:var(--dsw-alias-label-tertiary);">新号权重爬坡期</span>
+                            <div style="font-size:16px;font-weight:700;color:#ffffff;margin-top:4px;">21 天防风控渐进曲线</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-subtle);padding:12px;border-radius:6px;">
-                            <span style="color:var(--text-tertiary);">Waking Window</span>
-                            <div style="font-size:16px;font-weight:700;color:#fff;margin-top:4px;">14 ~ 18 hours/day</div>
+                        <div style="background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);padding:14px;border-radius:8px;">
+                            <span style="color:var(--dsw-alias-label-tertiary);">单日活跃时间窗</span>
+                            <div style="font-size:16px;font-weight:700;color:#ffffff;margin-top:4px;">14 ~ 18 小时真人作息</div>
                         </div>
                     </div>
                 </div>
@@ -829,110 +863,102 @@
         </main>
     </div>
 
-    <!-- 侧边 11 项体检抽屉 (对标 Tame Device Panel 11 conditions) -->
-    <div class="drawer-overlay" id="tame-drawer" onclick="dismissTameDrawer(event)">
-        <div class="drawer-window" onclick="event.stopPropagation()">
+    <!-- 侧边 11 项体检抽屉 (Drawer) -->
+    <div class="omx-drawer-mask" id="drawer-mask" onclick="closeDrawer(event)">
+        <div class="omx-drawer-body" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
-                    <h3 style="font-size:15px;font-weight:600;color:#fff;" id="drawer-dev-name">Device 01</h3>
-                    <span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);">iPhone 13 · UDID: 00008120-000954513A60C01E</span>
+                    <h3 style="font-size:15px;font-weight:600;color:#ffffff;" id="dr-name">01号机</h3>
+                    <span style="font-size:11px;color:var(--dsw-alias-label-tertiary);font-family:var(--font-mono);">iPhone 13 · UDID: 00008120-000954513A60C01E</span>
                 </div>
-                <button class="tame-btn tame-btn-secondary" style="padding:4px 8px;" onclick="closeTameDrawerDirectly()">✕</button>
+                <button class="omx-btn omx-btn-secondary" style="height:26px;padding:0 8px;" onclick="closeDrawerDirectly()">关闭</button>
             </div>
 
-            <!-- 四大操作步序 (Tame 原汁原味 Step 6: Four steps, one button at a time) -->
-            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:6px;padding:12px;">
-                <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:8px;">Provisioning Steps</div>
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-green);margin-bottom:4px;">
-                    <span>✓ Connect Device</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-green);margin-bottom:4px;">
-                    <span>✓ Assign Account (@trend_cat_us)</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-green);margin-bottom:4px;">
-                    <span>✓ Make Device Ready (WDA runtime signed)</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-green);">
-                    <span>✓ Run warmup queue</span>
-                </div>
+            <!-- 四步配置进度 -->
+            <div style="background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--dsw-alias-label-tertiary);text-transform:uppercase;margin-bottom:8px;">初始化步序检查</div>
+                <div style="font-size:12px;color:var(--dsw-accent-green);margin-bottom:4px;">✔ 物理设备 USB 连接就绪</div>
+                <div style="font-size:12px;color:var(--dsw-accent-green);margin-bottom:4px;">✔ 已分配专属社媒账号 (@trend_cat_us)</div>
+                <div style="font-size:12px;color:var(--dsw-accent-green);margin-bottom:4px;">✔ 控制守护程序已完成证书签名</div>
+                <div style="font-size:12px;color:var(--dsw-accent-green);">✔ 自动养号巡检队列已就绪</div>
             </div>
 
             <!-- 11 项条件严格体检 (11 Device conditions verified) -->
             <div>
-                <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:6px;">11 Conditions Verified</div>
-                
-                <div class="checklist-item"><span>1. Developer Mode</span><span class="check-passed">✓ Enabled</span></div>
-                <div class="checklist-item"><span>2. Enable UI Automation</span><span class="check-passed">✓ Enabled</span></div>
-                <div class="checklist-item"><span>3. Appearance</span><span class="check-passed">✓ Light Mode</span></div>
-                <div class="checklist-item"><span>4. Auto-Lock</span><span class="check-passed">✓ Never</span></div>
-                <div class="checklist-item"><span>5. Passcode</span><span class="check-passed">✓ Unlocked</span></div>
-                <div class="checklist-item"><span>6. Reduce Motion</span><span class="check-passed">✓ On</span></div>
-                <div class="checklist-item"><span>7. StandBy</span><span class="check-passed">✓ Off</span></div>
-                <div class="checklist-item"><span>8. Auto-Brightness</span><span class="check-passed">✓ Off</span></div>
-                <div class="checklist-item"><span>9. iCloud Photos</span><span class="check-passed">✓ Off</span></div>
-                <div class="checklist-item"><span>10. Network & Proxy</span><span class="check-passed">✓ 142.251.46.206 (LA)</span></div>
-                <div class="checklist-item"><span>11. Battery & Thermal</span><span class="check-passed">✓ 100% · 31.5°C (Cool)</span></div>
+                <div style="font-size:11px;font-weight:700;color:var(--dsw-alias-label-tertiary);text-transform:uppercase;margin-bottom:8px;">11 项底层硬性指标健康体检</div>
+
+                <div class="omx-check-row"><span>1. 开发者模式状态</span><span class="omx-check-ok">✔ 已开启</span></div>
+                <div class="omx-check-row"><span>2. 界面自动化测试权限</span><span class="omx-check-ok">✔ 已就绪</span></div>
+                <div class="omx-check-row"><span>3. 系统浅色外观</span><span class="omx-check-ok">✔ 符合标准</span></div>
+                <div class="omx-check-row"><span>4. 屏幕自动锁定</span><span class="omx-check-ok">✔ 永不锁屏</span></div>
+                <div class="omx-check-row"><span>5. 锁屏密码状态</span><span class="omx-check-ok">✔ 自动解锁已配置</span></div>
+                <div class="omx-check-row"><span>6. 减少动态效果</span><span class="omx-check-ok">✔ 已启用</span></div>
+                <div class="omx-check-row"><span>7. 待机显示模式</span><span class="omx-check-ok">✔ 已关闭</span></div>
+                <div class="omx-check-row"><span>8. 屏幕自动亮度调节</span><span class="omx-check-ok">✔ 已关闭</span></div>
+                <div class="omx-check-row"><span>9. 云端照片同步</span><span class="omx-check-ok">✔ 已关闭 (防关联)</span></div>
+                <div class="omx-check-row"><span>10. 独占住宅静态代理</span><span class="omx-check-ok">✔ 142.251.46.206 (美国洛杉矶)</span></div>
+                <div class="omx-check-row"><span>11. 电池电量与机身温度</span><span class="omx-check-ok">✔ 100% · 31.5°C 正常</span></div>
             </div>
 
-            <!-- 控制按钮 -->
-            <div style="display:flex;gap:10px;margin-top:10px;">
-                <button class="tame-btn tame-btn-secondary" style="flex:1;" onclick="alertToast('已重新执行 11 项环境健康自检')">Recheck Device</button>
-                <button class="tame-btn tame-btn-primary" style="flex:1;" onclick="alertToast('已向手机下发点按加号')">Tap Add (+)</button>
+            <!-- 操作按钮 -->
+            <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="omx-btn omx-btn-secondary" style="flex:1;" onclick="toast('已重新复核这台 iPhone 的 11 项健康状态')">重新体检该设备</button>
+                <button class="omx-btn omx-btn-primary" style="flex:1;" onclick="toast('已向该手机发送点按创建加号指令')">模拟点击创建加号</button>
             </div>
         </div>
     </div>
 
     <!-- 全局提示框 -->
-    <div class="toast-bubble" id="tame-toast">操作已就绪</div>
+    <div class="omx-toast" id="toast-view">操作完成</div>
 
     <script>
-        // 设备真实列表 (结合 Tame Fleet 数据结构)
-        const devices = [
-            { id: 'd-1', name: 'Device 01', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@trend_cat_us' }], state: 'Ready', proxy: 'US/LA · 22ms', battery: '100%' },
-            { id: 'd-2', name: 'Device 02', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@beauty_tips_us' }, { platform: 'ig', handle: '@beauty.style' }], state: 'Ready', proxy: 'US/LA · 25ms', battery: '100%' },
-            { id: 'd-3', name: 'Device 03', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@pet_care_uk' }], state: 'Needs attention', proxy: 'UK/LDN · 32ms', battery: '96%' },
-            { id: 'd-4', name: 'Device 04', model: 'iPhone 12', accounts: [{ platform: 'tk', handle: '@ootd_us' }], state: 'Warming', proxy: 'US/LA · 21ms', battery: '100%' },
-            { id: 'd-5', name: 'Device 05', model: 'iPhone 11', accounts: [{ platform: 'tk', handle: '@daily_viral' }], state: 'Ready', proxy: 'US/LA · 28ms', battery: '100%' },
-            { id: 'd-6', name: 'Device 06', model: 'iPhone 11', accounts: [{ platform: 'ig', handle: '@gadget_zone' }], state: 'Ready', proxy: 'US/LA · 26ms', battery: '100%' },
-            { id: 'd-7', name: 'Device 07', model: 'iPhone 8', accounts: [{ platform: 'tk', handle: '@recipe_master' }], state: 'Ready', proxy: 'US/LA · 30ms', battery: '100%' },
-            { id: 'd-8', name: 'Device 08', model: 'iPhone 8', accounts: [{ platform: 'tk', handle: '@humor_short' }], state: 'Ready', proxy: 'US/LA · 31ms', battery: '100%' },
+        // 设备真实列表数据
+        const deviceList = [
+            { id: 'dev-01', name: '01号机', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@trend_cat_us' }], state: '就绪', proxy: '美国洛杉矶 · 22毫秒', battery: '100%' },
+            { id: 'dev-02', name: '02号机', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@beauty_tips_us' }, { platform: 'ig', handle: '@beauty.style' }], state: '就绪', proxy: '美国洛杉矶 · 25毫秒', battery: '100%' },
+            { id: 'dev-03', name: '03号机', model: 'iPhone 13', accounts: [{ platform: 'tk', handle: '@pet_care_uk' }], state: '需人工关注', proxy: '英国伦敦 · 32毫秒', battery: '96%' },
+            { id: 'dev-04', name: '04号机', model: 'iPhone 12', accounts: [{ platform: 'tk', handle: '@ootd_us' }], state: '预热中', proxy: '美国洛杉矶 · 21毫秒', battery: '100%' },
+            { id: 'dev-05', name: '05号机', model: 'iPhone 11', accounts: [{ platform: 'tk', handle: '@daily_viral' }], state: '就绪', proxy: '美国洛杉矶 · 28毫秒', battery: '100%' },
+            { id: 'dev-06', name: '06号机', model: 'iPhone 11', accounts: [{ platform: 'ig', handle: '@gadget_zone' }], state: '就绪', proxy: '美国洛杉矶 · 26毫秒', battery: '100%' },
+            { id: 'dev-07', name: '07号机', model: 'iPhone 8', accounts: [{ platform: 'tk', handle: '@recipe_master' }], state: '就绪', proxy: '美国洛杉矶 · 30毫秒', battery: '100%' },
+            { id: 'dev-08', name: '08号机', model: 'iPhone 8', accounts: [{ platform: 'tk', handle: '@humor_short' }], state: '就绪', proxy: '美国洛杉矶 · 31毫秒', battery: '100%' },
         ];
 
-        // 渲染 Fleet 列表
-        function renderFleet() {
-            const container = document.getElementById('fleet-list-container');
-            container.innerHTML = devices.map(d => `
-                <div class="fleet-card" onclick="openTameDrawer('${d.id}')">
-                    <div class="card-header-bar">
+        // 渲染 Fleet 设备卡片
+        function renderFleetCards() {
+            const container = document.getElementById('fleet-devices-list');
+            container.innerHTML = deviceList.map(d => `
+                <div class="omx-device-card" onclick="openDrawer('${d.id}')">
+                    <div class="omx-card-topbar">
                         <div>
-                            <div class="device-identity">${d.name}</div>
-                            <div class="device-sub">${d.model} · ${d.proxy}</div>
+                            <div class="omx-dev-name">${d.name}</div>
+                            <div class="omx-dev-sub">${d.model} · ${d.proxy}</div>
                         </div>
-                        <span class="state-tag ${d.state === 'Ready' ? 'state-ready' : d.state === 'Warming' ? 'state-warming' : 'state-needs-attention'}">
+                        <span class="omx-status-chip ${d.state === '就绪' ? 'chip-ready' : d.state === '预热中' ? 'chip-warming' : 'chip-alert'}">
                             ${d.state}
                         </span>
                     </div>
 
-                    <div class="fleet-mock-screen">
-                        <div style="font-size:9px;color:#fff;display:flex;justify-content:space-between;">
-                            <span>9:41</span>
-                            <span>${d.battery} ⚡</span>
+                    <div class="omx-mock-screen">
+                        <div style="font-size:10px;color:#ffffff;display:flex;justify-content:space-between;">
+                            <span>09:41</span>
+                            <span>${d.battery} 满电</span>
                         </div>
                         <div style="text-align:center;">
-                            <div style="font-size:12px;font-weight:700;color:#fff;">${d.accounts[0].handle}</div>
-                            <span style="font-size:10px;color:var(--text-tertiary);">Session Active · 11 Conditions Passed</span>
+                            <div style="font-size:12px;font-weight:700;color:#ffffff;">${d.accounts[0].handle}</div>
+                            <span style="font-size:10px;color:var(--dsw-alias-label-tertiary);">会话保持活跃 · 11 项体检全部达标</span>
                         </div>
-                        <div style="font-size:9px;color:var(--text-tertiary);border-top:1px solid rgba(255,255,255,0.08);padding-top:4px;display:flex;justify-content:space-between;">
-                            <span>One Mac Worker</span>
-                            <span style="color:var(--accent-green);">● WDA 8100</span>
+                        <div style="font-size:10px;color:var(--dsw-alias-label-tertiary);border-top:1px solid rgba(255,255,255,0.08);padding-top:4px;display:flex;justify-content:space-between;">
+                            <span>独立工作进程</span>
+                            <span style="color:var(--dsw-accent-green);">● 控制端口 8100 畅通</span>
                         </div>
                     </div>
 
-                    <div class="account-chip-row">
+                    <div class="omx-account-tags">
                         ${d.accounts.map(acc => `
-                            <div class="account-pill">
-                                <span>${acc.platform === 'tk' ? '🎵' : '📷'}</span>
-                                <span>${acc.handle}</span>
+                            <div class="omx-account-chip">
+                                <span>${acc.platform === 'tk' ? '海外抖音' : '照片墙'}</span>
+                                <span style="font-weight:600;color:#fff;">${acc.handle}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -940,75 +966,59 @@
             `).join('');
         }
 
-        // 切换 Section
-        function switchSection(secKey) {
+        // 面板切换
+        function showPane(paneKey) {
             const keys = ['fleet', 'schedules', 'inspector', 'signing', 'warmup'];
-            document.querySelectorAll('.nav-link').forEach((link, idx) => {
-                link.classList.toggle('active', keys[idx] === secKey);
+            document.querySelectorAll('.omx-nav-item').forEach((item, idx) => {
+                item.classList.toggle('active', keys[idx] === paneKey);
             });
-            document.querySelectorAll('.view-section').forEach(sec => {
-                sec.classList.toggle('active', sec.id === `sec-${secKey}`);
+            document.querySelectorAll('.omx-section').forEach(sec => {
+                sec.classList.toggle('active', sec.id === `pane-${paneKey}`);
             });
         }
 
-        function alertToast(msg) {
-            const t = document.getElementById('tame-toast');
+        function toast(msg) {
+            const t = document.getElementById('toast-view');
             t.textContent = msg;
             t.style.display = 'block';
             setTimeout(() => { t.style.display = 'none'; }, 2200);
         }
 
         // 抽屉详情
-        function openTameDrawer(devId) {
-            const d = devices.find(x => x.id === devId);
+        function openDrawer(devId) {
+            const d = deviceList.find(x => x.id === devId);
             if (!d) return;
-            document.getElementById('drawer-dev-name').textContent = `${d.name} (${d.model})`;
-            document.getElementById('tame-drawer').classList.add('active');
+            document.getElementById('dr-name').textContent = `${d.name} (${d.model})`;
+            document.getElementById('drawer-mask').classList.add('active');
         }
 
-        function dismissTameDrawer(e) { document.getElementById('tame-drawer').classList.remove('active'); }
-        function closeTameDrawerDirectly() { document.getElementById('tame-drawer').classList.remove('active'); }
+        function closeDrawer(e) { document.getElementById('drawer-mask').classList.remove('active'); }
+        function closeDrawerDirectly() { document.getElementById('drawer-mask').classList.remove('active'); }
 
-        // Inspector 一键自愈演示
-        function runTypeSafeAutoHeal() {
-            alertToast('⚡ TypeSafe 112ms 快速识别弹窗并点击「Not Now」，界面已自动恢复！');
-            document.getElementById('observed-screen-box').style.borderColor = 'rgba(16,185,129,0.5)';
-            document.getElementById('observed-screen-box').innerHTML = `
-                <div style="font-size:10px;color:var(--text-secondary);">Recents (All Photos)</div>
-                <div style="text-align:center;color:var(--accent-green);font-size:13px;font-weight:bold;margin:auto;">
-                    ✓ 自愈成功 · 弹窗已自动关闭<br>
-                    <span style="font-size:11px;color:#fff;font-weight:normal;">TypeSafe 自动推进至 Next Button 点击</span>
+        // 故障断点智能自愈
+        function execAutoHeal() {
+            toast('决策引擎已在 112 毫秒内识别该系统弹窗，并自动点击「稍后再说」，页面已恢复！');
+            document.getElementById('observed-box').style.borderColor = 'rgba(16,185,129,0.5)';
+            document.getElementById('observed-box').innerHTML = `
+                <div style="font-size:11px;color:var(--dsw-alias-label-tertiary);">相册最近项目</div>
+                <div style="text-align:center;color:var(--dsw-accent-green);font-size:13px;font-weight:bold;margin:auto;">
+                    ✔ 智能自愈成功 · 弹窗已由决策引擎自动关闭<br>
+                    <span style="font-size:11px;color:#ffffff;font-weight:normal;">已自动推进至「下一步」按钮点击并完成发布</span>
                 </div>
-                <div style="font-size:10px;text-align:right;color:var(--accent-green);">Published Successfully</div>
+                <div style="font-size:11px;text-align:right;color:var(--dsw-accent-green);">短视频已成功发布</div>
             `;
-            document.getElementById('inspector-callout').innerHTML = `
+            document.getElementById('inspector-banner').innerHTML = `
                 <div>
-                    <strong style="color:var(--accent-green);font-size:13px;">✓ TypeSafe 双脑自愈完成：零停机，无缝推进</strong>
-                    <p style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
-                        相比 Tame 的停机报错，OmniMux 自主决策关掉干扰层，发片任务未受任何影响，已成功回传播放链接！
+                    <strong style="color:var(--dsw-accent-green);font-size:13px;">✔ 决策引擎智能自愈完成：业务零停机、无缝自动推进</strong>
+                    <p style="font-size:12px;color:var(--dsw-alias-label-secondary);margin-top:2px;">
+                        相比传统工具停机报错等待人工救援，本系统自主关闭无关弹窗，发片流程已顺利闭环并回传作品直链！
                     </p>
                 </div>
             `;
         }
 
-        function runHealthCheckAll() {
-            alertToast('已对当前所有设备并发执行 11 项环境健康体检，全部绿灯通过！');
-        }
-
-        function openProvisionModal() {
-            alertToast('请将 iPhone 插入 USB 接口并点击手机上的「信任此电脑」');
-        }
-
-        function showTicketDetail(time, account, status) {
-            alertToast(`排期任务详情: ${time} · 账号 ${account} · 状态: ${status}`);
-        }
-
-        function openCertAddSheet() {
-            alertToast('请将 App Store Connect 下载的 Team Key (.p8) 拖入导入窗口');
-        }
-
-        // 初始化
-        renderFleet();
+        // 初始装载
+        renderFleetCards();
     </script>
 </body>
 </html>
