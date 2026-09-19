@@ -1,0 +1,21 @@
+{
+  "task": "fix(omnimux): 彻底移除卡片复刻与点击触发的遮挡提示弹窗",
+  "verifiedAt": "2026-09-19T14:14:44.141Z",
+  "issues": [
+    "#2413"
+  ],
+  "optimizations": [
+    {
+      "target": "handleExploreTemplateApply",
+      "change": "彻底移除 showToast 已装配提示词 与 打开应用",
+      "impact": "点击模板复刻输入框静默吸底预填，零遮挡气泡"
+    },
+    {
+      "target": "handleExploreTrendingApply",
+      "change": "彻底移除 showToast 已挂载分镜",
+      "impact": "点击热门复刻输入框静默吸底预填，零遮挡气泡"
+    }
+  ],
+  "evidence": "docs/evidence/remove-template-toasts-verified.png",
+  "status": "VERIFIED_PASSED"
+}

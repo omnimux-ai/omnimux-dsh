@@ -295,11 +295,10 @@ function BlankSessionGuide({
   }
 
   /**
-   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt 并吸底输入框
+   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt 并吸底输入框（零弹窗干扰）
    */
   function handleExploreTemplateApply(payload) {
     if (payload?.appId) {
-      showToast(`已为您打开【${payload.title || 'AI 应用'}】`)
       return
     }
     if (!payload?.prompt) return
@@ -314,11 +313,10 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已装配【${payload.title || '模板'}】提示词`)
   }
 
   /**
-   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并吸底预填对标 Prompt
+   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并吸底预填对标 Prompt（零弹窗干扰）
    */
   function handleExploreTrendingApply(payload) {
     if (!payload) return
@@ -336,7 +334,6 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已挂载灵感文件 #${id} 分镜上下文`)
   }
 
   /**
