@@ -253,7 +253,13 @@ function CommandModal({ site, command, t, onClose }) {
   )
 }
 
-export function HarvestStage({ t }) {
+export function HarvestStage({ t, visible = true }) {
+  // 保活契约（auto-qa-scan guards）：页面切走时隐藏而不卸载，回来时不重拉状态。
+  // 注意：判定在渲染前执行，所有 hooks 无条件调用，避免 hooks 顺序违规。
+  const [everOpened, setEverOpened] = useState(false)
+  useEffect(() => { if (visible) setEverOpened(true) }, [visible])
+  const hidden = !visible
+
   const [status, setStatus] = useState(null) // { enabled, env, sites }
   const [selectedSite, setSelectedSite] = useState('tiktok')
   const [loginStates, setLoginStates] = useState({}) // siteId → 'on' | 'off' | 'checking'
@@ -318,8 +324,10 @@ export function HarvestStage({ t }) {
     return st === 'on' ? t('state.connected') : t('state.off')
   }
 
+  if (!visible && !everOpened) return null
+
   return (
-    <div className="sh-root">
+    <div className="sh-root" style={hidden ? { display: 'none' } : undefined}>
       <style>{STYLES}</style>
       <div className="sh-head">
         <div className="sh-brand"><span className="sh-brand-badge">OmniMux</span>{t('nav')}</div>
