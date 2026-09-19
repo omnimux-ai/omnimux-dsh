@@ -1,0 +1,77 @@
+{
+  "task": "Issue #2426",
+  "total": 14,
+  "failed": 0,
+  "assertions": [
+    {
+      "name": "平台列表渲染 9 个站点",
+      "pass": true,
+      "detail": "actual=9"
+    },
+    {
+      "name": "Pinterest 免登录徽章",
+      "pass": true
+    },
+    {
+      "name": "环境就绪胶囊",
+      "pass": true
+    },
+    {
+      "name": "TikTok 徽章已连接",
+      "pass": true,
+      "detail": "TTikTok6 tools已连接"
+    },
+    {
+      "name": "TikTok 工具集渲染",
+      "pass": true,
+      "detail": "actual=6"
+    },
+    {
+      "name": "点击工具行弹窗打开",
+      "pass": true
+    },
+    {
+      "name": "表单含关键词输入框",
+      "pass": true
+    },
+    {
+      "name": "弹窗标题含站点与命令",
+      "pass": true,
+      "detail": "TikTok · search按关键词搜索视频关键词数量上限取消执行"
+    },
+    {
+      "name": "空关键词时执行禁用",
+      "pass": true
+    },
+    {
+      "name": "填写后执行解锁",
+      "pass": true
+    },
+    {
+      "name": "弹窗内回显 2 条结果",
+      "pass": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "结果含标题与指标",
+      "pass": true
+    },
+    {
+      "name": "AUTH 错误码展示",
+      "pass": true,
+      "detail": "HARVEST_AUTH TikTok 登录态无效或已过期先在浏览器登录 TikTok，再用「去登录」重新连接后重试"
+    },
+    {
+      "name": "错误 hint 可执行",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "screenshot": "docs/evidence/social-harvest-stage-qa.png",
+  "screenshotBytes": 76461,
+  "url": "http://127.0.0.1:50085/",
+  "chrome": "Google Chrome 153.0.8010.52",
+  "bundleSha256": "2730ed4db04972dbba3f19ece3c130f10cf65ffcc96cb573c07fad61ba30219d",
+  "baseSha": "3b12bf59dee9d3fee97f28a4d5da68a18a2023a4",
+  "ranAt": "2026-09-19T19:03:02.406Z"
+}
