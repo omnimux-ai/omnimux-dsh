@@ -1,0 +1,24 @@
+{
+  "task": "device-client-plugin-shape",
+  "issue": 2427,
+  "verifiedAt": "2026-09-20T02:43:48+08:00",
+  "method": "ego-browser 真实 Chrome 内核驱动验证台（tmp/device-client-harness.html），按 Cordis 运行时语义 unwrapExports → resolve → apply 完整装载打包产物，新旧产物同页对照",
+  "results": [
+    {
+      "label": "old-materialized（Dev profile 未修复物化副本）",
+      "ok": false,
+      "error": "invalid plugin, expect function or object with an \"apply\" method, received object",
+      "note": "与生产故障报错逐字一致，复现 PR #2417 引入的启动拦截根因"
+    },
+    {
+      "label": "new-worktree（本工作树修复后构建产物）",
+      "ok": true,
+      "effects": ["omnimux-device: dictionaries", "omnimux-device: sidebar entry"],
+      "sidebarRegistered": ["omnimux-device-entry"],
+      "entryMounted": true,
+      "entryLabel": "手机管理"
+    }
+  ],
+  "screenshot": "docs/evidence/device-client-plugin-shape-verified.png",
+  "conclusion": "修复后的客户端入口通过 Web 运行时插件形态校验并成功挂载「手机管理」侧边栏入口；旧产物复现原始崩溃，对照成立"
+}
