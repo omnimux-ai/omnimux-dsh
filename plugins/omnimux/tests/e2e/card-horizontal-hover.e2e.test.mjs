@@ -22,9 +22,9 @@ test('E2E: 模板与技能卡片横版化(16:10)及货架轨道防截断配置',
   assert.ok(code.includes('margin-top:-10px'), '轨道必须包含 -10px 顶部负 margin 抵消');
   assert.ok(code.includes('padding-bottom:14px'), '轨道必须包含 14px 底部 padding');
 
-  // 3. 验证悬停操作按钮具备高对比实体背景及 hover 纯白高亮
+  // 3. 验证悬停操作按钮具备专属深灰半透明毛玻璃底色与纯白文字
   assert.ok(code.includes('.omnimux-tpl-hover-action .omnimux-trending-recreate-btn'), '必须单独定义悬停按钮样式');
-  assert.ok(code.includes('background:var(--dsw-static-neutral-00) !important'), '按钮 hover 必须为纯白高亮背景');
+  assert.ok(code.includes('background:var(--dsw-alias-bg-mask-2)'), '按钮必须具备高级深色半透明毛玻璃背景');
 });
 
 test('E2E: 技能卡片封面动态解析与无封面占位排版', () => {

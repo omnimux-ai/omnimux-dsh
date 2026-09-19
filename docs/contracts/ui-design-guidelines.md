@@ -104,7 +104,7 @@ subsystem: "omnimux-accounts"
 - 高度：`32px`，内边距：`0 12px`
 - 背景：`rgba(255,255,255,0.04)`，边框 `rgba(255,255,255,0.12)`，圆角 `8px`
 - Hover 态：边框提亮 `rgba(255,255,255,0.22)`
-- Focus 态：`outline: none; border-color: var(--dsw-alias-brand-primary, #3b82f6); box-shadow: 0 0 0 2px rgba(59,130,246,0.22);`
+- Focus 态：`outline: none; border-color: var(--dsw-alias-brand-primary, #7961f2); box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.22);`
 - 占位符颜色：`rgba(255,255,255,0.38)`
 
 ---
@@ -115,12 +115,12 @@ subsystem: "omnimux-accounts"
 
 | Token | 推荐值 | 用途 |
 |---|---|---|
-| `--dsw-alias-bg-primary` | `#111113` / `#16181d` | 页面主体底色 |
+| `--dsw-alias-bg-primary` | `#111113` / `#141416` | 页面主体底色（DSH 原生中性纯黑，绝无偏蓝暗色） |
 | `--dsw-alias-bg-secondary` | `rgba(255,255,255,0.04)` | 输入框、次级卡片底色 |
 | `--dsw-alias-bg-elevated` | `#1c1c1f` | 浮层菜单、Dialog、Popover |
 | `--dsw-alias-border` | `rgba(255,255,255,0.12)` | 常规描边 |
 | `--dsw-alias-border-hover` | `rgba(255,255,255,0.22)` | 悬浮高亮描边 |
-| `--dsw-alias-brand-primary` | `#3b82f6` / `#60a5fa` | 选中项、激活态、焦点光晕 |
+| `--dsw-alias-brand-primary` | `#7961f2` / `#9a88fa` | 品牌强调色、极光紫激活态、焦点微光（严禁使用原生科技蓝 #3b82f6） |
 | `--dsw-alias-label-primary` | `#ffffff` / `#f3f4f6` | 一级文字、高亮图标 |
 | `--dsw-alias-label-secondary` | `rgba(255,255,255,0.72)` | 二级文字、常规图标 |
 | `--dsw-alias-label-tertiary` | `rgba(255,255,255,0.40)` | 占位文字、辅助说明 |
@@ -135,7 +135,7 @@ subsystem: "omnimux-accounts"
 - [ ] **无原生 select**：点击下拉选项时，弹出的是暗黑毛玻璃浮层，而非系统原生蓝白菜单。
 - [ ] **无文字图标**：排序箭头、网格切换、关闭等均使用精确的 SVG 图标。
 - [ ] **外部关闭**：所有浮层和下拉菜单均支持点击外部及 `Esc` 键关闭。
-- [ ] **微动效与反馈**：所有交互元素具备平滑的 `transition`（100~150ms）、Hover 高亮、Focus 蓝光晕以及 Active 按压缩放。
+- [ ] **微动效与反馈**：所有交互元素具备平滑的 `transition`（100~150ms）、Hover 高亮、Focus 极光紫微光（严禁原生宿主蓝光晕）以及 Active 按压缩放。
 - [ ] **分阶段验证**：隔离 worktree 完成相关自动化/静态检查与独立评审，并在自身隔离工作树内用 ego-browser 或 worktree 隔离 Web QA 运行器（动态端口、自清理，保留截图/结构化报告）完成真实浏览器 Web 验收。Dev 物化按[开发环境合同](dev-pipeline.md)仅为按需保留给人工查看；Dev 45120 真机验收归人工，不作为 Agent 交付卡点。仅平台/壳层行为追加 Electron 证据；不将未合并源码送入 Dev/Prod，不默认重启或写生产。
 
 ---

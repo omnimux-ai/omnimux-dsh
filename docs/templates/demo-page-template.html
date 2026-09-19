@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniMux 标准演示模板 (DSH 原生纯黑 + 极光紫规范)</title>
+  <style>
+    /* ==========================================================================
+       OmniMux UI 设计与视觉基座规范
+       1. 黑色：100% 使用 DeepSeek Harness 原生纯粹中性黑 (#111113 / #18181b / #1c1c1f)，杜绝任何偏蓝暗色！
+       2. 紫色：OmniMux 品牌专属新增颜色 (#7961f2)，唯一替代原系统的所有蓝色功能（焦点微光、AI能量流、品牌标签）。
+       3. 蓝色：已彻底废除并全面收敛为黑白中性主题（主按钮 Ink CTA 纯黑白），界面中不再存在任何蓝色元素。
+       契约依据：design.md (L1), docs/contracts/ui-design-guidelines.md
+       ========================================================================== */
+    :root {
+      /* 品牌极光紫 (替代原科技蓝的唯一品牌色) */
+      --omx-violet-primary: #7961f2;
+      --omx-violet-glow: rgba(121, 97, 242, 0.25);
+      --omx-violet-soft: rgba(121, 97, 242, 0.12);
+      --omx-violet-gradient: linear-gradient(135deg, #6757e7, #7961f2);
+
+      /* 统一几何基准 */
+      --omx-control-height: 32px;
+      --omx-radius-base: 8px;
+      --omx-radius-card: 12px;
+      --omx-radius-dialog: 16px;
+      --omx-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --omx-mono-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Dark 主题：DSH 原生纯粹中性黑体系（无任何偏蓝偏青成分） */
+    html[data-theme="dark"] {
+      --dsw-alias-bg-base: #111113;        /* DSH 原生纯粹曜石黑底 */
+      --dsw-alias-bg-layer-1: #18181b;     /* 中性纯灰黑卡片容器 (Neutral Zinc 900) */
+      --dsw-alias-bg-layer-2: #212124;     /* 中性纯灰黑次级容器 */
+      --dsw-alias-bg-elevated: #1c1c1f;    /* DSH 原生 Popover 菜单与浮层底色 */
+      --dsw-alias-border-l1: rgba(255, 255, 255, 0.07);
+      --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+      --dsw-alias-border-hover: rgba(255, 255, 255, 0.22);
+      --dsw-alias-label-primary: #ffffff;
+      --dsw-alias-label-secondary: rgba(255, 255, 255, 0.70);
+      --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.38);
+      --dsw-dot-grid: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      
+      /* 主行动按钮 (Dark: 纯白实心底 + 纯黑字 Ink CTA，对比度 > 18:1) */
+      --dsw-btn-primary-bg: #ffffff;
+      --dsw-btn-primary-text: #111113;
+      --dsw-btn-primary-hover: rgba(255, 255, 255, 0.90);
+    }
+
+    /* Light 主题：极简纯净纸白体系 */
+    html[data-theme="light"] {
+      --dsw-alias-bg-base: #ffffff;
+      --dsw-alias-bg-layer-1: #f7f7f8;
+      --dsw-alias-bg-layer-2: #efeff1;
+      --dsw-alias-bg-elevated: #ffffff;
+      --dsw-alias-border-l1: rgba(0, 0, 0, 0.06);
+      --dsw-alias-border-l2: rgba(0, 0, 0, 0.10);
+      --dsw-alias-border-hover: rgba(0, 0, 0, 0.20);
+      --dsw-alias-label-primary: #111827;
+      --dsw-alias-label-secondary: #4b5563;
+      --dsw-alias-label-tertiary: #9ca3af;
+      --dsw-dot-grid: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+      
+      /* 主行动按钮 (Light: 纯黑实心底 + 纯白字 Ink CTA) */
+      --dsw-btn-primary-bg: #111827;
+      --dsw-btn-primary-text: #ffffff;
+      --dsw-btn-primary-hover: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--omx-font-family);
+      background-color: var(--dsw-alias-bg-base);
+      background-image: var(--dsw-dot-grid);
+      background-size: 20px 20px;
+      color: var(--dsw-alias-label-primary);
+      line-height: 1.5;
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 顶部导航栏 */
+    header {
+      height: 48px;
+      border-bottom: 1px solid var(--dsw-alias-border-l1);
+      background: var(--dsw-alias-bg-base);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--omx-violet-soft);
+      color: var(--omx-violet-primary);
+      border: 1px solid var(--omx-violet-glow);
+    }
+
+    .theme-toggle-btn {
+      height: var(--omx-control-height);
+      padding: 0 12px;
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2);
+      border-radius: var(--omx-radius-base);
+      color: var(--dsw-alias-label-primary);
+      cursor: pointer;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 120ms ease;
+    }
+
+    .theme-toggle-btn:hover {
+      border-color: var(--dsw-alias-border-hover);
+    }
+
+    /* 主视口容器 */
+    main {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* 标题区域 */
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .page-desc {
+      font-size: 13px;
+      color: var(--dsw-alias-label-secondary);
+    }
+
+    /* 工具栏 (单行流规范) */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+
+    .search-box {
+      flex: 1 1 200px;
+      min-width: 140px;
+      max-width: 280px;
+      height: var(--omx-control-height);
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 100%;
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2);
+      border-radius: var(--omx-radius-base);
+      color: var(--dsw-alias-label-primary);
+      padding: 0 10px 0 32px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    /* 焦点态：使用极光紫替代原来的系统蓝色 */
+    .search-input:focus {
+      border-color: var(--omx-violet-primary);
+      box-shadow: 0 0 0 2px var(--omx-violet-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 9px;
+      width: 14px;
+      height: 14px;
+      color: var(--dsw-alias-label-tertiary);
+      pointer-events: none;
+    }
+
+    /* 按钮体系：标准 32px 控件高基准与 8px 圆角 */
+    .btn {
+      height: var(--omx-control-height);
+      padding: 0 14px;
+      border-radius: var(--omx-radius-base);
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      border: none;
+      transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background 120ms ease, border-color 120ms ease;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    /* 主行动按钮：纯黑白 Ink CTA (严禁使用紫色与蓝色) */
+    .btn-primary {
+      background: var(--dsw-btn-primary-bg);
+      color: var(--dsw-btn-primary-text);
+    }
+
+    .btn-primary:hover {
+      background: var(--dsw-btn-primary-hover);
+    }
+
+    /* 次级按钮：中性纯灰黑底 + 浅描边 */
+    .btn-secondary {
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l2);
+      color: var(--dsw-alias-label-primary);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--dsw-alias-border-hover);
+    }
+
+    /* 品牌展示胶囊：极光紫专属场景 */
+    .btn-brand-capsule {
+      background: var(--omx-violet-gradient);
+      color: #ffffff;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px var(--omx-violet-glow);
+    }
+
+    /* 卡片容器：DSH 原生中性纯黑灰 */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l1);
+      border-radius: var(--omx-radius-card);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      transition: border-color 150ms ease, transform 150ms ease;
+    }
+
+    .card:hover {
+      border-color: var(--dsw-alias-border-hover);
+      transform: translateY(-1px);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--dsw-alias-label-secondary);
+      line-height: 1.6;
+    }
+
+    /* AI 能量流微光演示条 (极光紫专属舞台) */
+    .ai-energy-beam {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--omx-violet-primary), transparent);
+      border-radius: 1px;
+      box-shadow: 0 0 10px var(--omx-violet-primary);
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header>
+    <div class="brand-group">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+        <polyline points="2 17 12 22 22 17"></polyline>
+        <polyline points="2 12 12 17 22 12"></polyline>
+      </svg>
+      <span style="font-weight: 600; font-size: 14px;">OmniMux Preview</span>
+      <span class="brand-badge">DSH 原生纯黑 + 极光紫</span>
+    </div>
+    <button class="theme-toggle-btn" id="themeToggle">
+      <span id="themeLabel">切换主题</span>
+    </button>
+  </header>
+
+  <!-- 主内容区 -->
+  <main>
+    <div class="page-header">
+      <h1 class="page-title">标准黑白底色 + 极光紫演示模板</h1>
+      <p class="page-desc">100% 采用 DSH 原生纯粹中性黑底色，用极光紫替代原系统蓝色，主行动按钮收敛为高对比纯黑白。</p>
+    </div>
+
+    <!-- AI 能量流专属舞台 -->
+    <div class="ai-energy-beam"></div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="search-input" placeholder="搜索功能或组件...">
+      </div>
+      <button class="btn btn-secondary">重置筛选</button>
+      <button class="btn btn-brand-capsule">✨ 智能流</button>
+      <button class="btn btn-primary" style="margin-left: auto;">+ 确认执行</button>
+    </div>
+
+    <!-- 演示卡片网格 -->
+    <div class="card-grid">
+      <div class="card">
+        <h3 class="card-title">1. DSH 原生纯黑体系</h3>
+        <p class="card-meta">底色采用 DSH 原生中性曜石纯黑（#111113），卡片采用纯灰黑（#18181b），彻底去除偏蓝偏青的暗夜蓝杂色。</p>
+        <button class="btn btn-secondary" style="margin-top: 8px;">纯黑灰面板</button>
+      </div>
+      <div class="card">
+        <h3 class="card-title">2. 极光紫替代原有蓝色</h3>
+        <p class="card-meta">极光紫（#7961f2）是新增的唯一品牌色，全面替代原本的焦点高光、选中态与智能流，保持克制与高级感。</p>
+        <button class="btn btn-brand-capsule" style="margin-top: 8px;">极光紫专属标</button>
+      </div>
+      <div class="card">
+        <h3 class="card-title">3. 原蓝色替代为黑白主题</h3>
+        <p class="card-meta">原本的蓝色主操作按钮已彻底废除，全面收敛为主行动按钮 Ink CTA（Dark 纯白底黑字 / Light 纯黑底白字）。</p>
+        <button class="btn btn-primary" style="margin-top: 8px;">主要操作</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 双主题无缝切换
+    const toggleBtn = document.getElementById('themeToggle');
+    const htmlEl = document.documentElement;
+
+    toggleBtn.addEventListener('click', () => {
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', nextTheme);
+    });
+  </script>
+</body>
+</html>

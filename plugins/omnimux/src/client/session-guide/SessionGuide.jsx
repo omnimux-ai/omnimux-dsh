@@ -11,6 +11,7 @@ import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
 import { CreatifyPillsBar } from './CreatifyPillsBar.jsx'
+import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
@@ -156,6 +157,16 @@ function BlankSessionGuide({
   const mounted = useRef(true)
   live.current = { input, state }
 
+  const {
+    dockedItem,
+    placement,
+    dock,
+    undock,
+    isDocked,
+  } = useComposerDocking({
+    hostRef: guideRef,
+  })
+
   const isSessionActive = () => {
     if (!mounted.current) return false
     if (!sessionId || sessionId === 'default') return false
@@ -284,27 +295,36 @@ function BlankSessionGuide({
   }
 
   /**
-   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt
+   * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则预填 Prompt 并吸底输入框（零弹窗干扰）
    */
   function handleExploreTemplateApply(payload) {
     if (payload?.appId) {
-      showToast(`已为您打开【${payload.title || 'AI 应用'}】`)
       return
     }
     if (!payload?.prompt) return
+    const docked = dock(payload)
+    if (!docked) {
+      // 再次点击同一卡片反悔：清空草稿
+      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      return
+    }
     applyDraftToComposer(payload.prompt, {
       toastKey: null,
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已装配【${payload.title || '模板'}】提示词`)
   }
 
   /**
-   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并预填对标 Prompt
+   * TikTok 热门复刻：挂载灵感文件附件上下文（含灵感 ID 与分镜拆解）并吸底预填对标 Prompt（零弹窗干扰）
    */
   function handleExploreTrendingApply(payload) {
     if (!payload) return
+    const docked = dock(payload)
+    if (!docked) {
+      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      return
+    }
     const id = payload.id || ''
     const title = payload.title || '热门视频'
     const breakdown = payload.breakdown ? ` · 分镜拆解：${payload.breakdown}` : ''
@@ -314,15 +334,18 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已挂载灵感文件 #${id} 分镜上下文`)
   }
 
   /**
-   * Skill 复刻：加载到技能槽，并预填官方标准使用说明提问（以 /<slug> 指令开头）
+   * Skill 复刻：加载到技能槽并吸底，预填官方标准使用说明提问（以 /<slug> 指令开头，静默聚焦零弹窗干扰）
    */
   function handleExploreSkillApply(payload) {
     if (!payload) return
-    const skillTitle = payload.title || payload.skill || '技能'
+    const docked = dock(payload)
+    if (!docked) {
+      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      return
+    }
     const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
     const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
     const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
@@ -335,7 +358,6 @@ function BlankSessionGuide({
       restoreNotice: true,
       copy: false,
     })
-    showToast(`已激活技能【${skillTitle}】并预填引导话术`)
   }
 
   return (
@@ -429,6 +451,21 @@ function BlankSessionGuide({
         t={t}
         onSubmitDraft={handleSubmitDraft}
       />
+
+      {/* 吸底时浮现的收起/归还按钮 */}
+      {isDocked && (
+        <button /* exempt-ui01: 归还原生输入框属于轻量文本动作，非标准控件位 */
+          type="button"
+          className="omnimux-trending-undock"
+          onClick={undock}
+          aria-label={typeof t === 'function' ? (t('trending.undock') || '收起输入框') : '收起输入框'}
+        >
+          <span className="omnimux-trending-undock-icon" aria-hidden="true">
+            {ICON_CHEVRON_DOWN}
+          </span>
+          {typeof t === 'function' ? (t('trending.undock') || '收起输入框') : '收起输入框'}
+        </button>
+      )}
 
       {/* Centered Toast Feedback */}
       {toastText && (

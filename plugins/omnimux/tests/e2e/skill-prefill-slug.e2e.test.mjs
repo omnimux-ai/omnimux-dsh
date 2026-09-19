@@ -73,5 +73,9 @@ describe('E2E: 首页 Skill 点击使用在输入框自动预填 /<skill-slug> �
     // 4. 断言输入框预填内容以 /<slug> 开头
     assert.ok(capturedDraft.startsWith('/'), '预填内容必须以斜杠指令开头')
     assert.match(capturedDraft, /^\/ugc-confessional\s+为我解释下这个技能的最佳使用方式。$/, 'UGC 告白必须预填 /ugc-confessional 指令')
+
+    // 5. 断言绝不弹出「已激活技能」Toast 浮层
+    const toastPill = document.querySelector('.omnimux-toast-pill')
+    assert.ok(!toastPill || !toastPill.textContent.includes('已激活技能'), '点击使用技能后严禁弹出「已激活技能」提示框')
   })
 })
