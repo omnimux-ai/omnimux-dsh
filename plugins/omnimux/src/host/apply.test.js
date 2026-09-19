@@ -76,7 +76,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 39 tools and 11 seams by default', () => {
+  it('registers all 53 tools and 14 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -85,7 +85,7 @@ describe('hub apply composition', () => {
       get() { return undefined },
     })
 
-    assert.equal(names.length, 39)
+    assert.equal(names.length, 53)
     assert.ok(names.includes('omnimux_video_submit'))
     assert.ok(names.includes('omnimux_image_submit'))
     assert.ok(names.includes('omnimux_audio_submit'))
@@ -98,12 +98,26 @@ describe('hub apply composition', () => {
     assert.ok(names.includes('omnimux_youtube_channel'))
     assert.ok(names.includes('omnimux_youtube_posts'))
     assert.ok(names.includes('omnimux_youtube_search'))
+    assert.ok(names.includes('omnimux_tiktok_video'))
+    assert.ok(names.includes('omnimux_tiktok_user'))
+    assert.ok(names.includes('omnimux_tiktok_posts'))
+    assert.ok(names.includes('omnimux_tiktok_search'))
+    assert.ok(names.includes('omnimux_tiktok_shop_search'))
+    assert.ok(names.includes('omnimux_tiktok_shop_product'))
+    assert.ok(names.includes('omnimux_instagram_post'))
+    assert.ok(names.includes('omnimux_instagram_user'))
+    assert.ok(names.includes('omnimux_instagram_posts'))
+    assert.ok(names.includes('omnimux_instagram_search'))
+    assert.ok(names.includes('omnimux_x_tweet'))
+    assert.ok(names.includes('omnimux_x_user'))
+    assert.ok(names.includes('omnimux_x_posts'))
+    assert.ok(names.includes('omnimux_x_search'))
     assert.ok(names.includes('omnimux_accounts_list'))
     assert.ok(names.includes('workbench_get_active_view'))
     assert.ok(names.includes('workbench_open_tab'))
     assert.ok(names.includes('omnimux_marketing_presets_search'))
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'tiktok', 'instagram', 'x', 'modelCatalog'])
   })
 
   it('disables all gated capabilities when gate.enabled is false', () => {
@@ -117,7 +131,7 @@ describe('hub apply composition', () => {
 
     // workbench tools are ungated core facilities, marketing presets and creative templates are ungated
     assert.equal(names.length, 5)
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'inspirationShare', 'socialData', 'youtube', 'tiktok', 'instagram', 'x', 'modelCatalog'])
   })
 
   it('fine-grained disables media, text models, and official tools via gate', () => {
@@ -141,10 +155,13 @@ describe('hub apply composition', () => {
     assert.ok(tools.omnimux_audio_voices)
     assert.equal(tools.omnimux_social_data, undefined)
     assert.ok(tools.omnimux_youtube_video)
+    assert.ok(tools.omnimux_tiktok_video)
+    assert.ok(tools.omnimux_instagram_post)
+    assert.ok(tools.omnimux_x_tweet)
     assert.ok(tools.omnimux_page_fetch)
     assert.ok(tools.omnimux_accounts_list)
 
-    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'modelCatalog'])
+    assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'inspirationShare', 'socialData', 'youtube', 'tiktok', 'instagram', 'x', 'modelCatalog'])
 
     // grok-4.6 excluded from enum
     const textEnum = tools.omnimux_text_complete.parameters.properties.model.enum

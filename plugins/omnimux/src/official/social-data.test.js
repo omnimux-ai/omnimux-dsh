@@ -183,3 +183,33 @@ describe('social data catalog', () => {
     assert.equal(seen[0].opts.body.product_id, '1733226176534972037')
     assert.equal(seen[0].opts.body.region, 'SG')
   })
+
+  it('resolves all 16 advanced TikTok Shop and creator models', () => {
+    // Shop & link
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_shop_link', url: 'https://shop.tiktok.com/s/foo' }).model, 'tiktok-shop-shop-link')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_reviews_v2', id: '123' }).model, 'tiktok-shop-reviews-v2')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_categories', region: 'US' }).model, 'tiktok-shop-categories')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_categories', region: 'US' }).field, 'region')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_category_products', id: 'cat_1', region: 'US' }).model, 'tiktok-shop-category-products')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_category_products', id: 'cat_1', region: 'US' }).extras.region, 'US')
+    
+    // Live
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'live_room_id', url: 'https://www.tiktok.com/@live/live' }).model, 'tiktok-live-room-id')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_live_products', id: 'room_123', author_id: 'auth_456' }).model, 'tiktok-shop-live-products')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_live_products', id: 'room_123', author_id: 'auth_456' }).extras.author_id, 'auth_456')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_live_products_v2', id: 'room_123' }).model, 'tiktok-shop-live-products-v2')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_live_products_v2', id: 'room_123' }).extras.author_id, '0')
+
+    // Search & Sellers
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_creator', id: 'uid_123' }).model, 'tiktok-shop-creator')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_search_v2', query: 'dress', region: 'GB' }).model, 'tiktok-shop-search-v2')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_search_suggest', query: 'bag' }).model, 'tiktok-shop-search-suggest')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'shop_seller_products_v2', id: 'seller_123' }).model, 'tiktok-shop-seller-products-v2')
+
+    // Creator insights
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'creator_milestones', id: 'user_123' }).model, 'tiktok-creator-milestones')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'creator_search_insights', query: 'tech' }).model, 'tiktok-creator-search-insights')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'creator_search_detail', id: 'qid_123' }).model, 'tiktok-creator-search-detail')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'creator_search_trend', id: 'qid_123' }).model, 'tiktok-creator-search-trend')
+    assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'creator_search_videos', query: 'fitness' }).model, 'tiktok-creator-search-videos')
+  })

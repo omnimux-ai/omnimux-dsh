@@ -13,6 +13,22 @@ export const SOCIAL_DATA_CATALOG = Object.freeze({
     shop_search: 'tiktok-shop-search',
     shop_seller_products: 'tiktok-shop-seller-products',
     shop_reviews: 'tiktok-shop-reviews',
+    shop_shop_link: 'tiktok-shop-shop-link',
+    shop_reviews_v2: 'tiktok-shop-reviews-v2',
+    shop_categories: 'tiktok-shop-categories',
+    shop_category_products: 'tiktok-shop-category-products',
+    shop_live_products: 'tiktok-shop-live-products',
+    shop_live_products_v2: 'tiktok-shop-live-products-v2',
+    shop_creator: 'tiktok-shop-creator',
+    live_room_id: 'tiktok-live-room-id',
+    shop_search_v2: 'tiktok-shop-search-v2',
+    shop_search_suggest: 'tiktok-shop-search-suggest',
+    shop_seller_products_v2: 'tiktok-shop-seller-products-v2',
+    creator_milestones: 'tiktok-creator-milestones',
+    creator_search_insights: 'tiktok-creator-search-insights',
+    creator_search_detail: 'tiktok-creator-search-detail',
+    creator_search_trend: 'tiktok-creator-search-trend',
+    creator_search_videos: 'tiktok-creator-search-videos',
   }),
   instagram: Object.freeze({
     post: 'instagram-post',
@@ -52,6 +68,22 @@ export const SOCIAL_DATA_BUSINESS_FIELDS = Object.freeze({
   'tiktok/shop_search': 'search_word',
   'tiktok/shop_seller_products': 'seller_id',
   'tiktok/shop_reviews': 'product_id',
+  'tiktok/shop_shop_link': 'share_link',
+  'tiktok/shop_reviews_v2': 'product_id',
+  'tiktok/shop_categories': 'region',
+  'tiktok/shop_category_products': 'category_id',
+  'tiktok/shop_live_products': 'room_id',
+  'tiktok/shop_live_products_v2': 'room_id',
+  'tiktok/shop_creator': 'creator_uid',
+  'tiktok/live_room_id': 'live_room_url',
+  'tiktok/shop_search_v2': 'search_word',
+  'tiktok/shop_search_suggest': 'search_word',
+  'tiktok/shop_seller_products_v2': 'seller_id',
+  'tiktok/creator_milestones': 'user_id',
+  'tiktok/creator_search_insights': 'keyword',
+  'tiktok/creator_search_detail': 'query_id_str',
+  'tiktok/creator_search_trend': 'query_id_str',
+  'tiktok/creator_search_videos': 'keyword',
   'instagram/post': 'url',
   'instagram/user': 'username',
   'instagram/posts': 'username',
@@ -73,6 +105,13 @@ export const SOCIAL_DATA_EXTRA_FIELDS = Object.freeze({
   'tiktok/shop_search': Object.freeze(['region']),
   'tiktok/shop_seller_products': Object.freeze(['region']),
   'tiktok/shop_reviews': Object.freeze(['region']),
+  'tiktok/shop_reviews_v2': Object.freeze(['region']),
+  'tiktok/shop_search_v2': Object.freeze(['region']),
+  'tiktok/shop_search_suggest': Object.freeze(['region']),
+  'tiktok/shop_seller_products_v2': Object.freeze(['region']),
+  'tiktok/shop_category_products': Object.freeze(['region']),
+  'tiktok/shop_live_products': Object.freeze(['author_id']),
+  'tiktok/shop_live_products_v2': Object.freeze(['author_id']),
 })
 
 const DEFAULT_SHOP_REGION = 'SG'
@@ -124,6 +163,8 @@ export function resolveBusinessValue(input) {
 
   if (field === 'url') return url || id || ''
   if (field === 'share_link') return normalizeShopShareLink(url || id || query || '')
+  if (field === 'region') return resolveShopRegion(input.args) || id || query || url || DEFAULT_SHOP_REGION
+  if (field === 'live_room_url') return url || id || query || ''
   if (field === 'query' || field === 'keyword' || field === 'search_query' || field === 'search_word') {
     return query || id || url || ''
   }
@@ -140,8 +181,13 @@ export function resolveBusinessValue(input) {
   if (platform === 'youtube' && (capability === 'user' || capability === 'posts')) {
     return extractYouTubeChannelId(id) || extractYouTubeChannelId(url) || id || url || ''
   }
-  if (platform === 'tiktok' && (capability === 'shop_product' || capability === 'shop_product_v1' || capability === 'shop_reviews')) {
-    return extractDigitsId(id) || extractTikTokShopProductId(url) || extractDigitsId(query) || ''
+  if (platform === 'tiktok' && (
+    capability === 'shop_product' ||
+    capability === 'shop_product_v1' ||
+    capability === 'shop_reviews' ||
+    capability === 'shop_reviews_v2'
+  )) {
+    return extractDigitsId(id) || extractTikTokShopProductId(url) || extractDigitsId(query) || id || ''
   }
 
   // profile / channel / seller style fields prefer bare id, then url/query fallback
@@ -152,7 +198,7 @@ export function resolveBusinessValue(input) {
  * @param {{
  *   platform: string,
  *   capability: string,
- *   args: { id?: string, url?: string, query?: string, region?: string },
+ *   args: { id?: string, url?: string, query?: string, region?: string, author_id?: string, authorId?: string },
  *   value: string,
  * }} input
  * @returns {Record<string, string>}
@@ -165,6 +211,9 @@ export function resolveExtraFields(input) {
     if (key === 'region') {
       const region = resolveShopRegion(input.args)
       if (region) out.region = region
+    }
+    if (key === 'author_id') {
+      out.author_id = String(input.args?.author_id ?? input.args?.authorId ?? '0').trim()
     }
   }
   return out

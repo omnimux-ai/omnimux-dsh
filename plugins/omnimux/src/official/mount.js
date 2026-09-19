@@ -101,6 +101,89 @@ export function mountOfficial(ctx, deps) {
         return fetchSocialData(client, { platform: 'youtube', capability: 'search', query })
       },
     })
+    ctx.provide('tiktok', {
+      getVideo: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.aweme_id || args?.id }
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'video', ...payload })
+      },
+      getUser: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.unique_id || args?.uniqueId || args?.id }
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'user', ...payload })
+      },
+      getPosts: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.unique_id || args?.uniqueId || args?.id, query: args?.cursor }
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'posts', ...payload })
+      },
+      search: (args) => {
+        const query = typeof args === 'string' ? args : args?.query || args?.keyword
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'search', query })
+      },
+      searchShop: (args) => {
+        const query = typeof args === 'string' ? args : args?.query || args?.search_word || args?.keyword
+        const region = typeof args === 'object' ? args?.region : undefined
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'shop_search_v2', query, region })
+      },
+      getProduct: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.product_id || args?.id, region: args?.region }
+        return fetchSocialData(client, { platform: 'tiktok', capability: 'shop_product', ...payload })
+      },
+    })
+    ctx.provide('instagram', {
+      getPost: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.media_id || args?.id }
+        return fetchSocialData(client, { platform: 'instagram', capability: 'post', ...payload })
+      },
+      getUser: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.username || args?.id }
+        return fetchSocialData(client, { platform: 'instagram', capability: 'user', ...payload })
+      },
+      getPosts: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.username || args?.id }
+        return fetchSocialData(client, { platform: 'instagram', capability: 'posts', ...payload })
+      },
+      search: (args) => {
+        const query = typeof args === 'string' ? args : args?.query
+        return fetchSocialData(client, { platform: 'instagram', capability: 'search', query })
+      },
+    })
+    ctx.provide('x', {
+      getTweet: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.tweet_id || args?.id }
+        return fetchSocialData(client, { platform: 'x', capability: 'tweet', ...payload })
+      },
+      getUser: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.screen_name || args?.username || args?.id }
+        return fetchSocialData(client, { platform: 'x', capability: 'user', ...payload })
+      },
+      getPosts: (args) => {
+        const payload = typeof args === 'string'
+          ? (args.includes('://') ? { url: args } : { id: args })
+          : { url: args?.url, id: args?.screen_name || args?.username || args?.id }
+        return fetchSocialData(client, { platform: 'x', capability: 'posts', ...payload })
+      },
+      search: (args) => {
+        const query = typeof args === 'string' ? args : args?.query || args?.keyword
+        return fetchSocialData(client, { platform: 'x', capability: 'search', query })
+      },
+    })
   }
 
   /**
@@ -157,14 +240,230 @@ export function mountOfficial(ctx, deps) {
           'video', 'user', 'post', 'posts', 'tweet', 'search',
           'shop_product_link', 'shop_product', 'shop_product_v1',
           'shop_search', 'shop_seller_products', 'shop_reviews',
+          'shop_shop_link', 'shop_reviews_v2', 'shop_categories',
+          'shop_category_products', 'shop_live_products', 'shop_live_products_v2',
+          'shop_creator', 'live_room_id', 'shop_search_v2', 'shop_search_suggest',
+          'shop_seller_products_v2', 'creator_milestones', 'creator_search_insights',
+          'creator_search_detail', 'creator_search_trend', 'creator_search_videos',
         ],
       },
       url: { type: 'string' },
       id: { type: 'string' },
       query: { type: 'string' },
       region: { type: 'string' },
+      author_id: { type: 'string' },
     },
     (args) => fetchSocialData(client, args),
+  )
+
+  tool(
+    'omnimux_tiktok_video',
+    'Fetch TikTok video public metadata and direct media download URL by video URL or aweme ID.',
+    {
+      url: { type: 'string', description: 'TikTok video URL' },
+      aweme_id: { type: 'string', description: 'TikTok aweme/video numeric ID' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'video',
+      url: args.url,
+      id: args.aweme_id,
+    }),
+  )
+
+  tool(
+    'omnimux_tiktok_user',
+    'Fetch TikTok creator public profile metadata by unique handle or secUid.',
+    {
+      url: { type: 'string', description: 'TikTok creator profile URL' },
+      unique_id: { type: 'string', description: 'TikTok username/unique handle (@...)' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'user',
+      url: args.url,
+      id: args.unique_id,
+    }),
+  )
+
+  tool(
+    'omnimux_tiktok_posts',
+    'Fetch TikTok creator recent post video list by unique handle or secUid with optional pagination cursor.',
+    {
+      url: { type: 'string', description: 'TikTok creator profile URL' },
+      unique_id: { type: 'string', description: 'TikTok username/unique handle' },
+      cursor: { type: 'string', description: 'Pagination cursor for next page' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'posts',
+      url: args.url,
+      id: args.unique_id,
+      query: args.cursor,
+    }),
+  )
+
+  tool(
+    'omnimux_tiktok_search',
+    'Search TikTok public videos by keyword query.',
+    {
+      query: { type: 'string', required: true, description: 'Search keyword query' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'search',
+      query: args.query,
+    }),
+  )
+
+  tool(
+    'omnimux_tiktok_shop_search',
+    'Search TikTok Shop products by keyword and region.',
+    {
+      query: { type: 'string', required: true, description: 'Product search keyword' },
+      region: { type: 'string', description: 'Country/region code (e.g. US, SG, GB, ID, MY, TH, VN, PH). Defaults to SG' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'shop_search_v2',
+      query: args.query,
+      region: args.region,
+    }),
+  )
+
+  tool(
+    'omnimux_tiktok_shop_product',
+    'Fetch TikTok Shop product details and pricing by product ID or product share link.',
+    {
+      url: { type: 'string', description: 'TikTok Shop product link or share URL' },
+      product_id: { type: 'string', description: 'TikTok Shop product numeric ID' },
+      region: { type: 'string', description: 'Country/region code (e.g. US, SG). Auto-detected if URL has region' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'tiktok',
+      capability: 'shop_product',
+      url: args.url,
+      id: args.product_id,
+      region: args.region,
+    }),
+  )
+
+  tool(
+    'omnimux_instagram_post',
+    'Fetch Instagram post or reel details by post URL or media ID.',
+    {
+      url: { type: 'string', description: 'Instagram post/reel URL (https://www.instagram.com/p/... or /reel/...)' },
+      media_id: { type: 'string', description: 'Instagram media ID' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'instagram',
+      capability: 'post',
+      url: args.url,
+      id: args.media_id,
+    }),
+  )
+
+  tool(
+    'omnimux_instagram_user',
+    'Fetch Instagram user public profile metadata by username or profile URL.',
+    {
+      url: { type: 'string', description: 'Instagram profile URL' },
+      username: { type: 'string', description: 'Instagram username' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'instagram',
+      capability: 'user',
+      url: args.url,
+      id: args.username,
+    }),
+  )
+
+  tool(
+    'omnimux_instagram_posts',
+    'Fetch Instagram user recent posts list by username with optional pagination token.',
+    {
+      url: { type: 'string', description: 'Instagram profile URL' },
+      username: { type: 'string', description: 'Instagram username' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'instagram',
+      capability: 'posts',
+      url: args.url,
+      id: args.username,
+    }),
+  )
+
+  tool(
+    'omnimux_instagram_search',
+    'Search Instagram public accounts, hashtags, and places by keyword query.',
+    {
+      query: { type: 'string', required: true, description: 'Search keyword query' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'instagram',
+      capability: 'search',
+      query: args.query,
+    }),
+  )
+
+  tool(
+    'omnimux_x_tweet',
+    'Fetch X (Twitter) tweet details, engagement stats, and media attachments by tweet URL or tweet ID.',
+    {
+      url: { type: 'string', description: 'X / Twitter tweet URL (https://x.com/.../status/...)' },
+      tweet_id: { type: 'string', description: 'Numeric tweet ID' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'x',
+      capability: 'tweet',
+      url: args.url,
+      id: args.tweet_id,
+    }),
+  )
+
+  tool(
+    'omnimux_x_user',
+    'Fetch X (Twitter) user profile and follower statistics by username (@screen_name) or profile URL.',
+    {
+      url: { type: 'string', description: 'X / Twitter profile URL' },
+      screen_name: { type: 'string', description: 'X / Twitter username without @' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'x',
+      capability: 'user',
+      url: args.url,
+      id: args.screen_name,
+    }),
+  )
+
+  tool(
+    'omnimux_x_posts',
+    'Fetch X (Twitter) user recent tweets/posts timeline by username or user ID.',
+    {
+      url: { type: 'string', description: 'X / Twitter profile URL' },
+      screen_name: { type: 'string', description: 'X / Twitter username' },
+      cursor: { type: 'string', description: 'Pagination cursor for next page' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'x',
+      capability: 'posts',
+      url: args.url,
+      id: args.screen_name,
+      query: args.cursor,
+    }),
+  )
+
+  tool(
+    'omnimux_x_search',
+    'Search X (Twitter) timeline by keyword query.',
+    {
+      query: { type: 'string', required: true, description: 'Search keyword query' },
+    },
+    (args) => fetchSocialData(client, {
+      platform: 'x',
+      capability: 'search',
+      query: args.query,
+    }),
   )
 
   tool(
