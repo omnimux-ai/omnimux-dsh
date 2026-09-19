@@ -1,0 +1,13 @@
+{
+  "task": "fix(market): 移除技能卡片顶部的分类胶囊与右上角收藏星标按钮",
+  "issue": "#2403",
+  "verifiedAt": "2026-09-19T12:43:33.362Z",
+  "specMtime": 1789821767792.3752,
+  "status": "VERIFIED_PASSED",
+  "evidence": {
+    "categoryPillRemoved": true,
+    "starButtonRemoved": true,
+    "hotBadgePreserved": true,
+    "newBadgePreserved": true
+  }
+}
