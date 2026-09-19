@@ -26,6 +26,7 @@ import { JSON_TOOL_OUTPUT, objectParams, rethrow } from '../tools/schema.js'
 import { mountMedia } from '../media/mount.js'
 import { createSessionModelPreference } from '../session/model-preference.js'
 import { registerSessionModelRoutes } from '../session/http.js'
+import { registerDirectMediaRoutes } from '../media/direct-http.js'
 import { mountSessionModelInjector } from '../session/context-injector.js'
 import { mountSpeechToText } from '../media/stt-mount.js'
 import { mountAudioVoices } from '../media/voices-mount.js'
@@ -146,6 +147,10 @@ export function apply(ctx, config = {}) {
       if (server && typeof server.register === 'function') {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
+        httpCtx.effect(() => registerDirectMediaRoutes(server, {
+          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials') }),
+          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials') }),
+        }), 'omnimux: direct media generate HTTP')
       }
     })
     ctx.inject(['webServer', 'connection'], (streamCtx) => {
