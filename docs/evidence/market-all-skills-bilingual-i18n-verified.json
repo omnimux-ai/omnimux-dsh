@@ -1,0 +1,17 @@
+{
+  "task": "market-all-skills-bilingual-i18n",
+  "issue": 2402,
+  "verifiedAt": "2026-09-19T12:47:00.000Z",
+  "status": "PASS",
+  "summary": "技能市场全量 112 款 Skill 名称与描述完成 DSH 系统原生中英文多语言深度适配支持",
+  "evidence": {
+    "specFile": "specs/market-all-skills-bilingual-i18n.spec.md",
+    "catalogFile": "plugins/omnimux-market/catalog/index.json",
+    "i18nFile": "plugins/omnimux-market/src/client/i18n.js",
+    "totalSkills": 112,
+    "chineseTitleCoverage": "100%",
+    "chineseSummaryCoverage": "100%",
+    "englishTitleCoverage": "100%",
+    "englishSummaryCoverage": "100%"
+  }
+}
