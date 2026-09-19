@@ -6,6 +6,7 @@
  */
 
 export const name = 'omnimux-device'
+export const inject = ['tools']
 
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
