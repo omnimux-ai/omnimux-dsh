@@ -114,17 +114,47 @@ describe('video breakdown shot frames', () => {
     writeFileSync(videoPath, 'fake-video')
     const destPrefix = join(dir, 'out')
     const toolHarness = createTestToolContext()
+
+    const mockReport = `## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro
+
+## 2. 结构阶段解构 (Stage Breakdown)
+### Hook
+开场展示
+
+### Product Intro
+核心展示
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:02 | 开场 | Hook | 特写, 平视 | 动作展示 |
+| 0:02 - 0:04 | 展示 | Product Intro | 特写, 平视 | 细节展示 |`
+
     const mockCtx = {
       tools: {
         register: (tool) => toolHarness.ctx.tools.register(tool),
         get: () => null,
+      },
+      textComplete: {
+        execute: async () => ({ mode: 'live', text: mockReport }),
+      },
+      get: (name) => {
+        if (name === 'textComplete') return mockCtx.textComplete
+        return null
+      },
+      inject: (deps, callback) => {
+        callback({
+          betterSidebar: null,
+          textComplete: mockCtx.textComplete,
+        })
       },
     }
     apply(mockCtx)
     const tool = toolHarness.tools.get('video_breakdown_analyze')
 
     const result = await tool.execute({
-      url: 'https://www.tiktok.com/@test/video/1',
+      url: videoPath,
       dest: destPrefix,
       auto_open: false,
     })
