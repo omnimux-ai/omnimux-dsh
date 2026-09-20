@@ -2118,6 +2118,80 @@ models:
               - value: "9:16"
                 label: "9:16"
             defaultValue: adaptive
+      # 口型版分组（lipsync）唯一生成方式：人像图片 + 驱动音频 → 唇形对齐视频。
+      # 上游为网关渠道 44 的独立公开型号 minimax-h3-lip-sync（fal.ai 官方直连，
+      # minimax/h3-max/lip-sync/image-to-video），经渠道分组 wireModel 路由，不改动本模型既有操作的路由。
+      - id: digital_human
+        label: 数字人/对口型
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: character
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+            maxSizeMb: 30
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/fal-ai/minimax/h3-max/lip-sync/image-to-video
+          - slot: driving_audio
+            type: audio
+            role: audio_track
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - audio/wav
+              - audio/mp3
+            maxSizeMb: 15
+            maxDurationSec: 15
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/fal-ai/minimax/h3-max/lip-sync/image-to-video
+        parameters:
+          duration:
+            range:
+              min: 5
+              max: 15
+              step: 1
+            defaultValue: 5
+            unit: s
+          resolution:
+            options:
+              - value: 480P
+                label: 480P
+              - value: 768P
+                label: 768P
+              - value: 1080P
+                label: 1080P
+              - value: 2K
+                label: 2K
+            defaultValue: 768P
+        research:
+          status: verified
+          docUrl: https://fal.ai/models/fal-ai/minimax/h3-max/lip-sync/image-to-video
+          verifiedAt: 2026-09-20
+          notes: 能力与约束取 fal.ai 官方对口型图生视频模型页与网关生产配置基线（渠道 44，image_url + audio_url 必填、无需 prompt）
+        implementation:
+          status: ready
+          profileId: videoDigitalHuman
+          seam: videoGenerate
+          verifiedAt: 2026-09-20
+          notes: 复用既有 videoDigitalHuman 适配档案（image + audioTrack 必填）；按官方文档离线合同验证
+        execution:
+          status: stub
+          profileId: videoDigitalHuman
+          seam: videoGenerate
+          notes: 网关侧已生产上架（渠道 44 minimax-h3-lip-sync）；本仓未新增真实生成请求
     parameters:
       prompt:
         minLength: 1

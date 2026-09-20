@@ -529,6 +529,25 @@ describe('mapOmnimuxInput digital_human audioTrack passthrough (#538)', () => {
     assert.equal('audioTrack' in input, false)
   })
 
+  it('keeps audioTrack for minimax-h3 only on the digital_human operation (口型版分组)', () => {
+    // H3 家族以产品 id minimax-h3 进入映射（线路候选 minimax-h3-lip-sync 在更下游替换），
+    // 透传由操作 id 判定：对口型放行驱动音频，普通 H3 视频操作仍严禁携带（#429）。
+    const kept = mapOmnimuxInput('video', {
+      model: 'minimax-h3',
+      operation: 'digital_human',
+      image: 'https://example.com/face.png',
+      audioTrack: { role: 'audio_track', type: 'audio', pathOrUrl: '/local/track.mp3' },
+    })
+    assert.deepEqual(kept.audioTrack, { role: 'audio_track', type: 'audio', pathOrUrl: '/local/track.mp3' })
+    const dropped = mapOmnimuxInput('video', {
+      prompt: 'talk',
+      model: 'minimax-h3',
+      operation: 'first_frame',
+      audioTrack: { role: 'audio_track', type: 'audio', pathOrUrl: '/local/track.mp3' },
+    })
+    assert.equal('audioTrack' in dropped, false)
+  })
+
   it('drops an audioTrack without pathOrUrl even for digital-human models', () => {
     const input = mapOmnimuxInput('video', {
       prompt: 'talk',

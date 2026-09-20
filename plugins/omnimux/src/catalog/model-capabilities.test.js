@@ -16,7 +16,7 @@ const SPECS_DIR = join(__dirname, 'specs');
 const PHASE_ONE_VIDEO_OPERATIONS = {
   'seedance-2-0': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   'seedance-2-5': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref', 'video_edit', 'video_extend'],
-  'minimax-h3': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
+  'minimax-h3': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref', 'digital_human'],
 };
 
 test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loader）', () => {
@@ -36,13 +36,13 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   }
 });
 
-test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => {
+test('H2: 处置表 80 行 + implementation-ready 集合与处置一致', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 78);
+  assert.equal(doc.dispositions.length, 80);
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
   // #1751：12 款撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
@@ -65,7 +65,7 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 23);
+  assert.equal(index.listedOperations.length, 25);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
@@ -91,7 +91,7 @@ test('H2: 处置表 78 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 78);
+  assert.equal(report.dispositions.total, 80);
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 

@@ -166,6 +166,11 @@ const ChannelRow: React.FC<{
         {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
         {group.badge ? <Chip>{group.badge}</Chip> : null}
         {billing ? <Chip>{billing}</Chip> : null}
+        {group.description ? (
+          <div style={{ width: '100%', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', marginTop: 2, lineHeight: 1.4 }}>
+            {group.description}
+          </div>
+        ) : null}
       </div>
       <div style={{ paddingLeft: 10 }}>
         {checked && !disabled ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}

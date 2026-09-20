@@ -41,7 +41,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 24);
+  assert.equal(index.listedOperations.length, 25);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #2256: the voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('index-tts#voice_clone'));

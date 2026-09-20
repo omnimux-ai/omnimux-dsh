@@ -34,11 +34,11 @@ test('e2e: 画布镜像的分组文案与中枢逐字一致', () => {
   assert.deepEqual(checkMirror(MODEL_CHANNEL_GROUPS, mirrorText), [])
 })
 
-test('e2e: MiniMax H3 五档使用统一价值语义命名', () => {
+test('e2e: MiniMax H3 六档使用统一价值语义命名', () => {
   const labels = MODEL_CHANNEL_GROUPS['minimax-h3']
     .filter((g) => g.enabled !== false)
     .map((g) => g.label)
-  assert.deepEqual(labels, ['标准版', '极速版', '经济版', '高清版', '长片版'])
+  assert.deepEqual(labels, ['标准版', '极速版', '经济版', '高清版', '长片版', '口型版'])
 })
 
 test('e2e: 面向用户的分组文案不再出现供应商名与采购层黑话', () => {

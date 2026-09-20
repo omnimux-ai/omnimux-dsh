@@ -188,12 +188,12 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
   })
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒长片版。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
   // 靠分组自带的 wireModel 指向各自的上游独立型号；每个分组携带独立契约。
   describe('MiniMax H3 series as groups', () => {
-    it('declares all 5 lines, each with its own upstream model and contract', () => {
+    it('declares all 6 lines, each with its own upstream model and contract', () => {
       const groups = getModelChannelGroups('minimax-h3')
-      assert.equal(groups.length, 5)
+      assert.equal(groups.length, 6)
       const byId = new Map(groups.map((group) => [group.id, group]))
 
       const standard = byId.get('standard')
@@ -230,6 +230,15 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
         'first_last_frame',
         'video_multi_ref',
       ])
+
+      const lipsync = byId.get('lipsync')
+      assert.equal(lipsync.wireModel, 'minimax-h3-lip-sync')
+      assert.equal(lipsync.wireGroup, 'default')
+      assert.equal(lipsync.pricing?.pointsEstimate, 6.3)
+      assert.equal(lipsync.pricing?.billingMode, 'per_second')
+      assert.deepEqual(lipsync.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(lipsync.constraints?.operations, ['digital_human'])
+      assert.equal(lipsync.description, '专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。')
     })
 
     it('routes each line to its own upstream model', () => {
@@ -253,6 +262,10 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
         resolveChannelPlan('minimax-h3', { allowedGroups: ['task'] }).candidates,
         ['minimax-h3-task@default'],
       )
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['lipsync'] }).candidates,
+        ['minimax-h3-lip-sync@default'],
+      )
       // 显式点名分组同样走该线路自己的上游型号与分组
       assert.deepEqual(
         resolveChannelPlan('minimax-h3', { group: 'video_fast', allowedGroups: ['video_fast'] }).candidates,
@@ -261,7 +274,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('sorts by strategy: cost_first picks video_fast, stability_first picks standard', () => {
-      const allAllowed = ['standard', 'turbo', 'video_fast', 'video_pro', 'task']
+      const allAllowed = ['standard', 'turbo', 'video_fast', 'video_pro', 'task', 'lipsync']
       // 成本优先：video_fast (0.2积分) 单价最低，排在首位
       const costPlan = resolveChannelPlan('minimax-h3', { strategy: 'cost_first', allowedGroups: allAllowed })
       assert.equal(costPlan.candidates[0], 'minimax-h3-video@minimax-h3-video-fast')
