@@ -24,7 +24,12 @@ export function sendJson(res, status, body) {
     res.end(JSON.stringify({ error: 'refused to emit a secret' }))
     return
   }
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+  })
   res.end(text)
 }
 
