@@ -62,31 +62,6 @@ export function renderFeaturedHoverActions(item, opts) {
   );
 }
 
-// 纯矢量认证打勾徽章
-function renderVerifiedSvg() {
-  return h('svg', {
-    width: 18,
-    height: 18,
-    viewBox: '0 0 20 20',
-    fill: 'none',
-    className: 'creatify-card-verified-svg',
-    style: { flexShrink: 0 },
-    'aria-hidden': 'true',
-  },
-    h('path', {
-      d: 'M8.2 2.5a2.2 2.2 0 0 1 3.6 0l.7.9a2.2 2.2 0 0 0 1.9.9h1.1a2.2 2.2 0 0 1 2.2 2.2v1.1c0 .8.4 1.5 1 1.9l.8.7a2.2 2.2 0 0 1 0 3.6l-.8.7a2.2 2.2 0 0 0-1 1.9v1.1a2.2 2.2 0 0 1-2.2 2.2h-1.1a2.2 2.2 0 0 0-1.9 1l-.7.8a2.2 2.2 0 0 1-3.6 0l-.7-.8a2.2 2.2 0 0 0-1.9-1H4.5A2.2 2.2 0 0 1 2.3 16v-1.1a2.2 2.2 0 0 0-1-1.9l-.8-.7a2.2 2.2 0 0 1 0-3.6l.8-.7a2.2 2.2 0 0 0 1-1.9V5a2.2 2.2 0 0 1 2.2-2.2h1.1a2.2 2.2 0 0 0 1.9-1l.7-.8z',
-      fill: 'var(--dsw-static-neutral-00, #ffffff)', /* exempt-ui03: 认证图标底色 */
-    }),
-    h('path', {
-      d: 'M6.5 10l2.5 2.5L14 7.5',
-      stroke: 'var(--dsw-static-neutral-1000, #000000)', /* exempt-ui03: 对勾线条色 */
-      strokeWidth: '1.8',
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-    }),
-  );
-}
-
 // 纯矢量火苗 (Hot)
 function renderFireSvg() {
   return h('svg', {
@@ -249,11 +224,10 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
       isHot ? h('span', { className: 'omnimux-creatify-badge-hot', title: hotBadgeTitle }, renderFireSvg()) : null,
       isNew ? h('span', { className: 'omnimux-creatify-badge-new' }, newBadgeText) : null,
     ) : null,
-    // 4. 居中白色加粗大标题与认证微标
+    // 4. 居中白色加粗大标题
     h('div', { className: 'omnimux-creatify-card-center' },
       h('h3', { className: 'omnimux-creatify-center-title' },
         h('span', null, title),
-        renderVerifiedSvg(),
       ),
     ),
     // 6. 悬停浮层：滑出双行描述 + 使用量 + 快捷调用

@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { resolveSkillAuroraStyle } from '../skills/auroraGradients.js'
-import { ICON_VERIFIED } from '../skills/SkillCard.jsx'
 
 const ICON_REPLICATE = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="13" height="13">
@@ -111,11 +110,10 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
         {/* 2. 点阵纹理 Overlay (Dot Matrix) */}
         <div className="omnimux-creatify-dot-overlay" aria-hidden="true" />
 
-        {/* 3. 居中白色加粗大标题与认证徽章 */}
+        {/* 3. 居中白色加粗大标题 */}
         <div className="omnimux-creatify-card-center">
           <h3 className="omnimux-creatify-center-title omnimux-skill-card-title omnimux-tpl-title" title={title}>
             <span>{title}</span>
-            {ICON_VERIFIED}
           </h3>
         </div>
 

@@ -2,17 +2,6 @@ import React, { useState } from 'react'
 import { resolveSkillTitle, resolveSkillSummary } from './featured-skills-data.js'
 import { resolveSkillAuroraStyle } from './auroraGradients.js'
 
-// 纯矢量 SVG 认证徽章 (Verified Badge 1:1 对标)
-export const ICON_VERIFIED = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="creatify-card-verified-svg">
-    <path
-      d="M8.2 2.5a2.2 2.2 0 0 1 3.6 0l.7.9a2.2 2.2 0 0 0 1.9.9h1.1a2.2 2.2 0 0 1 2.2 2.2v1.1c0 .8.4 1.5 1 1.9l.8.7a2.2 2.2 0 0 1 0 3.6l-.8.7a2.2 2.2 0 0 0-1 1.9v1.1a2.2 2.2 0 0 1-2.2 2.2h-1.1a2.2 2.2 0 0 0-1.9 1l-.7.8a2.2 2.2 0 0 1-3.6 0l-.7-.8a2.2 2.2 0 0 0-1.9-1H4.5A2.2 2.2 0 0 1 2.3 16v-1.1a2.2 2.2 0 0 0-1-1.9l-.8-.7a2.2 2.2 0 0 1 0-3.6l.8-.7a2.2 2.2 0 0 0 1-1.9V5a2.2 2.2 0 0 1 2.2-2.2h1.1a2.2 2.2 0 0 0 1.9-1l.7-.8z"
-      fill="var(--dsw-static-neutral-00, #ffffff)" /* exempt-ui03: 认证图标底色 */
-    />
-    <path d="M6.5 10l2.5 2.5L14 7.5" stroke="var(--dsw-static-neutral-1000, #000000)" /* exempt-ui03: 对勾线条色 */ strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-
 // 纯矢量 SVG 火苗 (Hot Picks)
 export const ICON_FIRE = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -182,11 +171,10 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
         </svg>
       </button>
 
-      {/* 5. 居中白色加粗大标题与认证徽章 */}
+      {/* 5. 居中白色加粗大标题 */}
       <div className="omnimux-creatify-card-center">
         <h3 className="omnimux-creatify-center-title omnimux-skill-card-title" title={title}>
           <span>{title}</span>
-          {ICON_VERIFIED}
         </h3>
       </div>
 

@@ -1,16 +1,16 @@
 {
-  "runId": "bc4b241e-f0a2-4a5f-a6c4-7bb1f1f8e4f0",
+  "runId": "daf94c28-7c84-4f4a-8dac-e676e6ecf52d",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-cascade-hover-jitter-2250",
-  "origin": "http://127.0.0.1:62995",
-  "appPort": 62995,
-  "cdpPort": 63003,
-  "startedAt": "2026-09-17T16:10:01.432Z",
-  "completedAt": "2026-09-17T16:10:09.667Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-remove-verified-badge",
+  "origin": "http://127.0.0.1:51590",
+  "appPort": 51590,
+  "cdpPort": 51598,
+  "startedAt": "2026-09-20T08:07:18.675Z",
+  "completedAt": "2026-09-20T08:07:27.348Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:62995",
+    "origin": "http://127.0.0.1:51590",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:62995",
+      "origin": "http://127.0.0.1:51590",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-h1Vl7Ke305nLrk41TELozdfweDeW46b1jdE4nGurmoY"
+      "cookieName": "dsh-auth-pnAHdxb-LZRjFE5jO7CTebZRlXLGvyDiJiosGWxGWww"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 63003
+      "port": 51598
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 118,
+        "visibleCount": 98,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 63
+        "bodyTextLength": 52
       }
     },
     {
@@ -63,7 +63,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 118
+      "visibleCount": 98
     },
     {
       "name": "screenshot-png-verified",
@@ -72,14 +72,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 80653
+      "bytes": 79479
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-cascade-hover-jitter-2250/.workbuddy/evidence/app-qa/bc4b241e-f0a2-4a5f-a6c4-7bb1f1f8e4f0/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-remove-verified-badge/.workbuddy/evidence/app-qa/daf94c28-7c84-4f4a-8dac-e676e6ecf52d/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 80653
+    "bytes": 79479
   },
   "errors": [],
   "cleanup": {

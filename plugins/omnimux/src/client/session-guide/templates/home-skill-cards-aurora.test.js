@@ -59,9 +59,9 @@ test('首页 Skills 技能库货架卡片：100% 对齐图 2 技能插件高颜�
   assert.ok(!html.includes('omnimux-creatify-card-hover-drawer'), '技能卡片严禁渲染遮挡标题的简介文字抽屉');
   assert.ok(!html.includes('omnimux-creatify-drawer-uses'), '技能卡片严禁展示使用量统计');
 
-  // 4. 验证居中大标题与纯矢量认证对勾徽章（极简核心资产）
+  // 4. 验证居中大标题（极简核心资产，认证对勾徽标已按用户要求移除）
   assert.ok(html.includes('omnimux-creatify-center-title'), '必须包含居中加粗大标题');
-  assert.ok(html.includes('creatify-card-verified-svg'), '居中标题必须携带纯矢量认证打勾徽章');
+  assert.ok(!html.includes('creatify-card-verified-svg'), '居中标题严禁携带认证打勾徽标');
   assert.ok(html.includes('UGC 告白'), '必须正确渲染前置核心技能 UGC 告白');
   assert.ok(html.includes('电影级'), '必须正确渲染核心技能 电影级');
 
