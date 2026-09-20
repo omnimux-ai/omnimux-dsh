@@ -1,12 +1,18 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..');
 
-const inputJsonPath = join(REPO, 'deliverables', 'omnimux-batch-shoot-run-20260920', 'scripts-12.json');
-const scriptsData = JSON.parse(readFileSync(inputJsonPath, 'utf8'));
+let inputJsonPath = join(REPO, 'deliverables', 'omnimux-batch-shoot-run-20260920', 'scripts-12.json');
+if (!existsSync(inputJsonPath)) {
+  const fallback = '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/deliverables/omnimux-batch-shoot-run-20260920/scripts-12.json';
+  if (existsSync(fallback)) inputJsonPath = fallback;
+}
+const scriptsData = existsSync(inputJsonPath)
+  ? JSON.parse(readFileSync(inputJsonPath, 'utf8'))
+  : { product: '护发精油', total: 0, scripts: [] };
 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -627,7 +633,7 @@ const html = `<!DOCTYPE html>
           '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">' +
             '<h2 style="font-size:15px; font-weight:600">脚本 #' + (currentIndex + 1) + ' · ' + s.identity + '</h2>' +
             '<span class="card-fp">配方指纹: ' + s.fingerprint + '</span>' +
-          </div>' +
+          '</div>' +
           '<div class="detail-grid">' +
             '<div class="grid-cell"><span class="label">垂类品类</span><div class="val">' + s.vertical + '</div></div>' +
             '<div class="grid-cell"><span class="label">广告手法</span><div class="val">' + s.method + '</div></div>' +
