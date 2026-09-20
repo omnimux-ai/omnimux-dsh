@@ -309,3 +309,50 @@ test('useComposerDocking: dock(item, onDocked) 延迟交付回调且锁定视口
     env.restore()
   }
 })
+
+test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 DOM，不等渲染周期', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    scroller.scrollTop = 560
+
+    // 不包 act、不等 flush：模拟真实点击当帧，验证停靠 DOM 已同步落地。
+    // 这正是附件挂载提醒（scrollIntoView 强制滚动定位）随后落在 fixed 输入框上
+    // 即天然失效的机制保证——先手必须在渲染周期之前。
+    hookApi.dock({ id: 'sk-prime-test', title: '先手测试' }, () => {})
+
+    assert.equal(
+      host.hasAttribute(DOCK_OPEN_ATTR),
+      true,
+      'dock() 返回时停靠标记必须已经同步写入宿主，绝不等渲染周期',
+    )
+    assert.equal(
+      host.style.getPropertyValue('--omnimux-dock-bottom'),
+      '20px',
+      'dock() 返回时停靠几何必须已经同步写入',
+    )
+    assert.equal(scroller.scrollTop, 560, '吸底先手不得改动视口位置')
+
+    await flush()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+    assert.equal(scroller.scrollTop, 560)
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})

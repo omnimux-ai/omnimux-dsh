@@ -216,9 +216,9 @@ export function ExploreTemplatesSection({
       return;
     }
 
-    // 3. 普通灵感模板：自动挂载为附件到输入框上方并聚焦！
-    attachTemplateToConversation(item);
-
+    // 3. 普通灵感模板：先触发吸底（同一帧同步写入停靠态），再挂载附件。
+    //    附件挂载提醒的强制滚动定位晚于吸底先手执行，落在已 fixed 到底部的
+    //    输入框上即天然失效，页面保持原地不动。
     if (onApplyTemplate) {
       onApplyTemplate({
         template: item,
@@ -227,6 +227,8 @@ export function ExploreTemplatesSection({
         titleEn: item.titleEn,
       });
     }
+
+    attachTemplateToConversation(item);
   };
 
   const handleViewAllFromShelf = (targetCat) => {
