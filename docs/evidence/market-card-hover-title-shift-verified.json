@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-20T03:52:01.079Z",
+  "checks": {
+    "marketCssShift": true,
+    "marketCssTransition": true,
+    "guideStylesShift": true,
+    "guideStylesTransition": true,
+    "rootTooltipRemoved": true
+  },
+  "geometrySimulation": {
+    "cardHeight": 150,
+    "twoLineTitleHeight": 40,
+    "drawerTopAtHover": 75,
+    "shiftDistance": 28,
+    "before": {
+      "titleCenter": 75,
+      "titleBottom": 95,
+      "overlapWithDrawer": 20,
+      "collides": true
+    },
+    "after": {
+      "titleTop": 27,
+      "titleCenter": 47,
+      "titleBottom": 67,
+      "verticalGapWithDrawer": 8,
+      "collides": false
+    }
+  }
+}

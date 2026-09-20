@@ -2506,6 +2506,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-creatify-card-center {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   padding:0 16px; pointer-events:none;
+  transition:transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change:transform;
+}
+.omnimux-creatify-card:hover .omnimux-creatify-card-center {
+  transform:translateY(-28px);
 }
 .omnimux-creatify-center-title {
   font-size:20px; font-weight:600; color:var(--dsw-alias-label-primary); text-align:center;
