@@ -19,7 +19,7 @@ import { loadConfig, saveConfig } from './store.js'
 import { checkGates, registerHarvestTools } from './tools.js'
 
 export const name = 'omnimux-social-harvest'
-export const inject = ['tools']
+export const inject = ['tools', 'webServer']
 
 const PREFIX = '/api/omnimux/social-harvest'
 
