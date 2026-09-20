@@ -36,7 +36,7 @@ class ClipErrorBoundary extends Component {
           </pre>
           <button /* exempt-ui01: 错误边界重试按钮 */
             type="button"
-            style={{ marginTop: 12, padding: '8px 16px', background: 'var(--dsw-alias-accent-primary)', color: 'var(--dsw-alias-on-accent, #fff)', border: 'none', borderRadius: 8, cursor: 'pointer' }} /* exempt-ui02 */
+            style={{ marginTop: 12, padding: '8px 16px', background: 'var(--dsw-alias-button-primary-fill, #ffffff)', color: 'var(--dsw-alias-label-primary-foreground, #111113)', border: 'none', borderRadius: 8, cursor: 'pointer' }} /* exempt-ui02 */
             onClick={() => this.setState({ hasError: false, error: null })}
           >
             重试加载
