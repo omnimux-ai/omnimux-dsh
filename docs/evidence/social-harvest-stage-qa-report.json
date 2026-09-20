@@ -73,9 +73,9 @@
   "pass": true,
   "screenshot": "docs/evidence/social-harvest-stage-qa.png",
   "screenshotBytes": 80134,
-  "url": "http://127.0.0.1:50757/",
+  "url": "http://127.0.0.1:55024/",
   "chrome": "Google Chrome 153.0.8010.52",
   "bundleSha256": "26dffa3ee9c2befbdf8265933c32ba6f850d26b5979578274da2fc07c2f75eef",
-  "baseSha": "9eef959c94c25544c65dec303385a956a43dd5c4",
-  "ranAt": "2026-09-20T08:04:44.974Z"
+  "baseSha": "30228bb3f25722a12bb7bfaaa250e03f07b06bfd",
+  "ranAt": "2026-09-20T08:20:02.887Z"
 }

@@ -30,9 +30,9 @@ test('社媒采集工作台：真实浏览器旅程 14 项断言全过', { timeo
   assert.ok(report.screenshotBytes > 10_000, '截图证据过小，疑似空图');
 });
 
-test('社媒采集侧边栏入口导出合规性：包含 mountSidebarEntry 与 HARVEST_TAB_ID', async () => {
-  const mod = await import(join(ROOT, 'plugins/omnimux-social-harvest/src/client/sidebar-entry.js'));
-  assert.equal(typeof mod.mountSidebarEntry, 'function', 'mountSidebarEntry 必须导出');
-  assert.equal(mod.HARVEST_TAB_ID, 'omnimux-social-harvest:library');
-  assert.equal(mod.ENTRY_SELECTOR, '[data-omnimux-social-harvest-entry]');
+test('社媒采集侧边栏入口下架合规性：client 入口不再自动挂载 mountSidebarEntry', () => {
+  const content = readFileSync(join(ROOT, 'plugins/omnimux-social-harvest/src/client/index.js'), 'utf8');
+  assert.ok(!content.includes('mountSidebarEntry'), 'src/client/index.js 不得包含 mountSidebarEntry 调用');
+  const bundle = readFileSync(join(ROOT, 'plugins/omnimux-social-harvest/lib/client.js'), 'utf8');
+  assert.ok(!bundle.includes('mountSidebarEntry'), 'lib/client.js 打包产物中不得包含 mountSidebarEntry');
 });
