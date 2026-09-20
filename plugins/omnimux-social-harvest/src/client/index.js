@@ -7,12 +7,15 @@ import { createElement } from 'react'
 
 import { HarvestStage } from './HarvestStage.jsx'
 import { SettingsCard } from './settings-card.jsx'
+import { mountSidebarEntry } from './sidebar-entry.js'
 import { NS, en, zh } from './locales.js'
 
 export const name = 'omnimux-social-harvest'
 export const inject = ['slots', 'locale']
 
 export const HARVEST_TAB_ID = 'omnimux-social-harvest:library'
+
+export { mountSidebarEntry }
 
 function renderHarvestIcon(size = 16) {
   return createElement('svg', {
@@ -32,6 +35,8 @@ function renderHarvestIcon(size = 16) {
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-social-harvest: dictionaries')
   const t = ctx.locale.bind(NS)
+
+  ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-social-harvest: sidebar entry')
 
   const registerTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
