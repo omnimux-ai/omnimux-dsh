@@ -6,7 +6,7 @@
 //
 // 用法：node scripts/workflows/verify-batch-shoot.mjs
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -277,6 +277,14 @@ check(
   !/(?:^|[^.\w])agent\s*\([^)]*\)\s*[,;]?\s*\{?[^}]*\bname\s*:/.test(v1body) &&
     /\blabel\s*:/.test(v1body),
 );
+check(
+  'v1 buildPrompt 明确要求 visual 为全英文提示词（防止生图模型无法消费）',
+  /English visual prompt/i.test(v1body) && /严禁使用任何中文字符/.test(v1body),
+);
+check(
+  'v1 buildPrompt 具备防手法 ID 泄露指令（手法代号仅为结构参考，绝不进 visual）',
+  /代号仅作为分镜叙事结构/.test(v1body) && /绝不出现手法代码/.test(v1body),
+);
 
 async function runV1(args) {
   const runtime = makeRuntime();
@@ -331,6 +339,20 @@ try {
   caughtDup = /指纹重复/.test(e.message);
 }
 check('v1 配方指纹重复时 fail loud（否则归因失真）', caughtDup);
+
+// ---------------------------------------------------------------- 运行期产物校验
+console.log('\n[8] 参数生成器与 dry-run 产物');
+const outArgsPath = join(HERE, 'out', 'args.json');
+const outDryPath = join(HERE, 'out', 'args-dry.json');
+let dryRunArtifactOk = false;
+if (existsSync(outArgsPath) && existsSync(outDryPath)) {
+  try {
+    const a = JSON.parse(readFileSync(outArgsPath, 'utf8'));
+    const d = JSON.parse(readFileSync(outDryPath, 'utf8'));
+    dryRunArtifactOk = d.dryRun === true && a.dryRun !== true;
+  } catch {}
+}
+check('dry-run 产物显式包含 dryRun:true 且与 args.json 互斥', dryRunArtifactOk);
 
 // ---------------------------------------------------------------- 汇总
 const passed = results.filter((r) => r.ok).length;

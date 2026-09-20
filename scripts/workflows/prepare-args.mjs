@@ -215,6 +215,16 @@ mkdirSync(dirname(outPath), { recursive: true });
 const payload = JSON.stringify(args, null, 1);
 writeFileSync(outPath, payload, 'utf8');
 
+// 同时自动生成对应的 dryRun 参数文件（内置 dryRun: true），供执行侧无缝试跑
+const dryPath = opt.outDry
+  ? resolve(process.cwd(), String(opt.outDry))
+  : join(dirname(outPath), 'args-dry.json');
+const argsDry = {
+  ...args,
+  dryRun: true,
+};
+writeFileSync(dryPath, JSON.stringify(argsDry, null, 1), 'utf8');
+
 // ---------------------------------------------------------------- 摘要
 // 按显示宽度对齐：中文/全角字符占 2 格，padEnd 按字符数算会导致表格错位
 function displayWidth(s) {
@@ -263,6 +273,7 @@ const dupRole = Object.entries(byRole).filter(
 
 console.log(`\n自检：指纹唯一 ${fps.size === result.recipes.length ? '✓' : '✗'} · 同角色内不重样 ${dupRole.length === 0 ? '✓' : '✗ ' + JSON.stringify(dupRole)}`);
 console.log(`\nargs 已写入：${outPath}`);
+console.log(`args (dry-run) 已写入：${dryPath}`);
 console.log(`体积：${Buffer.byteLength(payload, 'utf8')} 字节（可直接作为 workflow 工具的 args 提交）\n`);
 console.log('下一步：在 OmniMux 会话里读这个文件 + batch-shoot.v1.js.txt 的脚本体，提交 workflow 工具。\n');
 

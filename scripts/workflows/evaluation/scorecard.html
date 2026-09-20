@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第一关 · 分镜脚本验收与八维度打分台</title>
+  <style>
+    :root {
+      --bg-base: #111113;
+      --bg-surface: #18181b;
+      --bg-card: #1f1f23;
+      --bg-elevated: #27272b;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: #7961f2;
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --brand-purple: #7961f2;
+      --brand-glow: rgba(121, 97, 242, 0.25);
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.12);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --warning: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left h1 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(121, 97, 242, 0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(121, 97, 242, 0.3);
+    }
+    .header-left p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-ink {
+      background: #ffffff;
+      color: #000000;
+      border: none;
+    }
+    .btn-ink:hover {
+      background: #e4e4e7;
+    }
+    .btn-ghost {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .metrics-bar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 24px;
+      display: flex;
+      gap: 28px;
+      flex-shrink: 0;
+    }
+    .metric-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .metric-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 340px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .script-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .script-card {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .script-card:hover {
+      background: var(--bg-elevated);
+    }
+    .script-card.active {
+      background: var(--bg-elevated);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .card-index {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .card-fp {
+      font-family: monospace;
+      font-size: 11px;
+      color: #a78bfa;
+    }
+    .card-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .badge-pass {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+    .badge-fail {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+    .badge-pending {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+    .card-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-hook {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .content-area {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .script-detail {
+      flex: 1.2;
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .detail-hero {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .grid-cell .label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .grid-cell .val {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .hook-quote {
+      background: rgba(121, 97, 242, 0.08);
+      border-left: 3px solid var(--brand-purple);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #ddd6fe;
+      margin-top: 8px;
+    }
+    .shots-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .shots-table th {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+    }
+    .shots-table td {
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+    .shots-table tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.015);
+    }
+    .prompt-text {
+      color: #93c5fd;
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .voiceover-text {
+      color: #fef08a;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .onscreen-text {
+      color: #a7f3d0;
+      font-size: 11px;
+      background: rgba(16, 185, 129, 0.1);
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+    .grading-panel {
+      width: 440px;
+      overflow-y: auto;
+      padding: 20px 24px;
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .score-summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .score-summary-card.pass {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .score-summary-card.veto {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .current-score-num {
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .rubric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .rubric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .rubric-name {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rubric-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .scale-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .scale-btn {
+      flex: 1;
+      padding: 6px 0;
+      text-align: center;
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    .scale-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+    .scale-btn.active {
+      background: var(--brand-purple);
+      color: #ffffff;
+      border-color: var(--brand-purple);
+      box-shadow: 0 0 10px var(--brand-glow);
+    }
+    .veto-box {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .veto-box input[type="checkbox"] {
+      margin-top: 3px;
+      accent-color: var(--danger);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .veto-content {
+      font-size: 12px;
+    }
+    .veto-title {
+      font-weight: 600;
+      color: #f87171;
+    }
+    .veto-desc {
+      color: #fca5a5;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>
+        第一关 · 分镜脚本业务验收打分台
+        <span class="tag">PRD §8.2 标准</span>
+      </h1>
+      <p>电商批量测品工作流 · 12 条配方分镜脚本八维度深度评审（G1–G8）</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-ghost" onclick="batchPrefill(4)">⚡ 一键预填 4 分</button>
+      <button class="btn-ghost" onclick="exportMarkdown()">📄 复制 Markdown 报告</button>
+      <button class="btn-ink" onclick="exportJSON()">💾 导出评分 JSON</button>
+    </div>
+  </header>
+
+  <div class="metrics-bar">
+    <div class="metric-item">
+      <span class="metric-label">评审样本数</span>
+      <span class="metric-val" id="metric-total">12</span>
+      <span class="metric-sub">条配方</span>
+    </div>
+    <div class="metric-item">
+      <span class="metric-label">全批次均分</span>
+      <span class="metric-val" id="metric-avg">0.0</span>
+      <span class="metric-sub">分 (目标 ≥ 3.5)</span>
+    </div>
+    <div class="metric-item">
+      <span class="metric-label">合格通过率</span>
+      <span class="metric-val" id="metric-passrate">0%</span>
+      <span class="metric-sub" id="metric-passcount">0/12 通过</span>
+    </div>
+    <div class="metric-item">
+      <span class="metric-label">合规否决数</span>
+      <span class="metric-val" id="metric-veto" style="color: var(--danger)">0</span>
+      <span class="metric-sub">条违规</span>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span>脚本候选清单 (12 条)</span>
+        <span id="progress-text">已评 0/12</span>
+      </div>
+      <div class="script-list" id="script-list"></div>
+    </aside>
+
+    <main class="content-area">
+      <div class="script-detail" id="script-detail"></div>
+
+      <div class="grading-panel">
+        <div class="score-summary-card" id="score-summary-card">
+          <div>
+            <div class="section-title" style="margin-bottom:2px">当前条目评分</div>
+            <div style="font-size:12px; color:var(--text-muted)" id="current-verdict">待完成所有维度打分</div>
+          </div>
+          <div class="current-score-num" id="current-avg-num">--</div>
+        </div>
+
+        <div class="veto-box">
+          <input type="checkbox" id="veto-checkbox" onchange="toggleVeto(this.checked)">
+          <div class="veto-content">
+            <div class="veto-title">G7 平台合规（一票否决项）</div>
+            <div class="veto-desc">勾选此项判定该脚本含有绝对化用语或疗效虚假承诺，直接否决该条，不计入均分。</div>
+          </div>
+        </div>
+
+        <div id="rubrics-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const rawData = {"mode":"full","seed":20260920,"product":"护发精油","total":12,"failed":0,"index":[{"fingerprint":"be1117de","vertical":"美妆个护","identity":"测评博主","method":"color-spec-sheet","hook":"街头采访","format":"text_to_image","hookLine":"在街头随机问了10个染烫烂发尾的姐妹，9个天天抹精油，结果8个全踩雷！","shotCount":6,"cta":"点击左下角小黄车，立享染烫受损专研护发精油","parseError":null},{"fingerprint":"9ac65c67","vertical":"美妆个护","identity":"测评博主","method":"mirror-tryon-haul-beat-cut","hook":"价格反差","format":"text_to_video","hookLine":"两位数搞定炸毛沙发的护发精油？刚看到这价格我还以为看错了！","shotCount":5,"cta":"左下角小黄车活动随时下架，烫染受损发质直接囤！","parseError":null},{"fingerprint":"2f05925f","vertical":"美妆个护","identity":"测评博主","method":"luxury-product-reveal","hook":"误区破除","format":"first_frame","hookLine":"一直以为头发炸毛就得拼命抹厚油，其实根本不是！","shotCount":6,"cta":"染烫毛躁星人别再盲目交学费了，戳左下角抢先锁定量贩活动装！","parseError":null},{"fingerprint":"b239968f","vertical":"美妆个护","identity":"测评博主","method":"ugc-unwrap","hook":"盲测挑战","format":"image_to_image","hookLine":"今天把三款热门护发精油标签全撕了，抓了五个天天烫染的同事盲测，结果全票选出来的居然不是大牌！","shotCount":6,"cta":"经常烫染受损、发尾枯干断发的姐妹，戳左下角抢官方体验装，带运费险放心试！","parseError":null},{"fingerprint":"86831420","vertical":"美妆个护","identity":"测评博主","method":"ugc-confessional","hook":"冲突开场","format":"first_last_frame","hookLine":"别再跟风买那些死贵、抹完全头糊油的护发精油了！","shotCount":6,"cta":"戳左下角小黄车立即体验，拍一瓶送试用装，烫染干枯毛躁直接闭眼入！","parseError":null},{"fingerprint":"8da9e685","vertical":"美妆个护","identity":"测评博主","method":"kit-produto-mecanismo-reveal-ptbr","hook":"问题演示","format":"multi_reference","hookLine":"别瞎买精油了！先看你烫染后的烂发尾，到底是怎么“坏”成枯草的！","shotCount":6,"cta":"左下角现货组合装速抢，重度染烫受损闭眼入，实测不好用直接退！","parseError":null},{"fingerprint":"7c422b1b","vertical":"家居日用","identity":"宝妈","method":"ctv","hook":"街头采访","format":"first_last_frame","hookLine":"随机问了10个染烫炸毛的宝妈，原来大家最怕踩坑的都是糊头油腻！","shotCount":6,"cta":"点击左下角小黄车，拍两瓶立享大促特惠，趁现货速抢！","parseError":null},{"fingerprint":"178e6bc3","vertical":"家居日用","identity":"宝妈","method":"cinematic-stat-shock-local-pride","hook":"痛点反问","format":"first_frame","hookLine":"你是不是也跟我一样，染烫几回后头发枯得像稻草，每次梳头掉一把，想保养又怕劣质成分蹭到怀里的宝宝？","shotCount":5,"cta":"戳左下方小黄车，给染烫受损发一份踏实安心的垂顺守护！","parseError":null},{"fingerprint":"6fecbb36","vertical":"家居日用","identity":"宝妈","method":"curated-lifestyle-brand-video","hook":"问题演示","format":"multi_reference","hookLine":"先看它怎么坏的，染烫过后发尾炸成枯草，梳头一卡就断半截。","shotCount":6,"cta":"跟我一样怕油腻、怕踩雷的姐妹，戳左下角带回家，给头发一份踏实的安全感。","parseError":null},{"fingerprint":"8ea12adf","vertical":"家居日用","identity":"宝妈","method":"phone-mockup-page","hook":"开箱即时","format":"text_to_video","hookLine":"刚到手，直接开！当妈后染烫枯草发怕踩雷，成分我做足了功课才敢入！","shotCount":6,"cta":"怕油腻怕踩坑的染烫姐妹，戳左下角小黄车带走同款安心护发精油！","parseError":null},{"fingerprint":"9ddb19a1","vertical":"家居日用","identity":"宝妈","method":"guofeng-palace-drama-single-call","hook":"盲测挑战","format":"image_to_image","hookLine":"把标签撕掉让他们选！当妈后我买啥都怕踩坑，今天咱们直接闭眼盲测！","shotCount":6,"cta":"染烫受损、怕油掉发的小姐妹，戳下方小黄车带走同款，头发丝顺到会反光！","parseError":null},{"fingerprint":"b05bf224","vertical":"家居日用","identity":"宝妈","method":"cinematic-led-product-reveal","hook":"冲突开场","format":"text_to_image","hookLine":"别再乱买那些糊一头油的精油了！","shotCount":5,"cta":"现在有专属宝妈尝鲜福利，戳左下角小黄车带走，给头发一份看得见的安全感！","parseError":null}],"scripts":[{"fingerprint":"be1117de","vertical":"美妆个护","identity":"测评博主","method":"color-spec-sheet","hook":"街头采访","format":"text_to_image","script":{"hookLine":"在街头随机问了10个染烫烂发尾的姐妹，9个天天抹精油，结果8个全踩雷！","shots":[{"idx":1,"durationSec":3,"visual":"A commercial street interview scene, a 28-year-old female host holding a microphone against a softly blurred urban backdrop, styled with a minimalist industrial color-spec-sheet layout, featuring Pantone color extraction chips, CMYK values, and technical specification annotations on the right margin, crisp high-definition photography.","voiceover":"在街头随机问了10个染烫烂发尾的姐妹，9个天天抹精油，结果8个全踩雷！","onScreenText":"街头随机采访：精油踩雷盲区"},{"idx":2,"durationSec":4,"visual":"A technical specification layout with a clean off-white lab background, showing a split comparison of damaged frizzy hair fibers under microscopic magnification on the left with assigned Pantone color spec chips, precise technical grid lines, alignment rulers, and typography spec callouts, pixel-perfect layout.","voiceover":"大家最怕啥？抹完头发直接变成油条，毛躁没抚平，头皮先闷得大把掉发。","onScreenText":"痛点实测：假滑油头 vs 真正抚平"},{"idx":3,"durationSec":5,"visual":"A Pantone color-spec-sheet layout, centering an amber glass dropper bottle of hair essential oil, surrounded by extracted palette swatches, HEX color codes, fluid viscosity metrics, and light refraction charts printed on vendor reference sheet template, studio lighting, hyper-detailed product showcase.","voiceover":"直接看实测数据：这款精油挤出来是水感质地，流动性极强，不掺一滴增稠假滑剂。","onScreenText":"质地拆解：轻薄水感微分子"},{"idx":4,"durationSec":6,"visual":"A technical specification comparison sheet, side-by-side macro shots of bleach-damaged blonde hair strands before and after application, with Pantone color extraction badges showing gloss saturation delta, oil-blotting paper test showing zero residue, engineering alignment marks, crisp typography overlay.","voiceover":"你看这缕反复漂染枯成杂草的干发，抹上半泵，毛鳞片瞬间吸饱闭合，但用吸油纸一按——干干净净，完全不粘。","onScreenText":"压测对比：毛躁瞬间抚平 · 0油腻感"},{"idx":5,"durationSec":5,"visual":"A professional product evaluation summary sheet layout, displaying hair follicle absorption rate diagrams, damage repair grade charts, and Pantone hair health swatches against a dark slate technical background, product bottle presented with precise callouts, commercial aesthetic.","voiceover":"给各位做个取舍：发尾严重碳化开叉的直接剪掉，但只要是烫染受损、想要顺滑蓬松还不扯断掉发的，闭眼选它。","onScreenText":"测评结论：有取舍 · 认准受损修护"},{"idx":6,"durationSec":4,"visual":"A Pantone print vendor reference sheet layout showcasing the hair essential oil package, complete with CMYK registration marks, official laboratory seal, batch serial numbers, and pure amber hero bottle in center, clean seamless commercial lighting.","voiceover":"染烫受损的姐妹别再瞎跟风乱买了，趁现在有现货好价，左下角赶紧备上一瓶！","onScreenText":"左下角立抢 | 染烫受损专研修护"}],"cta":"点击左下角小黄车，立享染烫受损专研护发精油","caption":"随机问了10个染烫女生，终于搞懂为什么越抹精油头发越干枯还狂掉！对比实测给你讲透，顺毛躁不黏腻的护发精油到底怎么挑。#护发精油 #美妆测评 #染烫受损修护 #防毛躁 #好物推荐"},"parseError":null},{"fingerprint":"9ac65c67","vertical":"美妆个护","identity":"测评博主","method":"mirror-tryon-haul-beat-cut","hook":"价格反差","format":"text_to_video","script":{"hookLine":"两位数搞定炸毛沙发的护发精油？刚看到这价格我还以为看错了！","shots":[{"idx":1,"durationSec":3,"visual":"28岁东亚女性测评博主站在明亮暖光浴室镜前，手持透明琥珀色护发精油正对镜子，露出难以置信的惊讶挑眉表情，中景对镜自拍机位，真实室内光效，镜头轻微自然呼吸感。","voiceover":"两位数搞定炸毛沙发的护发精油？刚看到这价格我还以为看错了！","onScreenText":"这价格我以为看错了？！"},{"idx":2,"durationSec":4,"visual":"浴室对镜特写机位，博主用手指撩起左侧受损漂染浅金发尾，发丝干枯毛躁、分叉打结严重，博主对着镜子无奈摇头，发丝细节清晰逼真。","voiceover":"像我这种半年漂染三次的稻草头，本来以为又是个便宜的工业糖精。","onScreenText":"漂染3次 稻草头翻车现场⚠️"},{"idx":3,"durationSec":4,"visual":"快速卡点切镜头，手部近景特写：博主按压两泵清澈透明水感精油于掌心，双手轻搓后顺着发丝抹匀，手心吸收极快，没有丝毫黏腻反光。","voiceover":"结果一上手就打脸，水感质地秒吸收，抹完手心完全不粘不糊。","onScreenText":"水感秒吸收 绝不糊手"},{"idx":4,"durationSec":6,"visual":"中景镜面镜头，博主手持气垫梳从发根一梳直达发尾，右侧涂抹过的头发顺滑如丝缎般垂直垂落，发丝带有自然柔光，展示梳齿上干干净净没有卡扯掉发。","voiceover":"你们看，密齿梳直接一顺到底！毛糙全给压下去了，还没扯掉半根头发。缺点是香味比较淡，但成分和肤感确实挑不出毛病。","onScreenText":"一梳到底！0扯发顺毛躁"},{"idx":5,"durationSec":4,"visual":"博主对镜侧身轻甩顺滑飘逸的长发，神态自信，随后微笑着将护发精油瓶推向镜头特写，背景浴室干净通透。","voiceover":"烫染受损、预算有限的姐妹别犹豫，趁现在破价机制直接冲！","onScreenText":"受损发质 闭眼抄作业！"}],"cta":"左下角小黄车活动随时下架，烫染受损发质直接囤！","caption":"漂染受损发质真实实测！以为便宜没好货，结果顺毛躁还一点不油，这波测评我真香了！#护发精油 #受损发质自救 #美妆个护测评 #好物分享"},"parseError":null},{"fingerprint":"2f05925f","vertical":"美妆个护","identity":"测评博主","method":"luxury-product-reveal","hook":"误区破除","format":"first_frame","script":{"hookLine":"一直以为头发炸毛就得拼命抹厚油，其实根本不是！","shots":[{"idx":1,"durationSec":3,"visual":"Cinematic editorial close-up, first frame anchor. An amber glass essential oil bottle rests on warm travertine stone, drenched in soft golden-hour sunlight casting long shadows. In the soft-focus background, bleached frizzy hair strands catch warm rim lighting. Shallow depth of field, 85mm lens, 4k.","voiceover":"一直以为头发炸毛就得拼命抹厚油，其实根本不是！难怪你头发越护越油还掉发。","onScreenText":"一直以为越油越护发？大错特错！"},{"idx":2,"durationSec":4,"visual":"Slow graceful camera tracking shot. Beauty tester holds two contrasting hair oil bottles under warm golden studio lighting. Background in extreme creamy bokeh. Professional studio setup with subtle sun flares reflecting off the glass pipettes.","voiceover":"实测了市面上二十多款，直接给结论：大部分要么假滑浮在表面，要么第二天头顶直接塌成大油田。","onScreenText":"20+款实测直给结论：别再乱花冤枉钱"},{"idx":3,"durationSec":5,"visual":"Macro close-up, cinematic slow motion at 60fps. A clear golden oil droplet falls from a sleek glass dropper onto a dry, dyed blonde hair strand. The oil instantly penetrates and absorbs into the hair shaft with zero greasy residue. Golden-hour backlighting illuminates the hair texture.","voiceover":"想要抚平毛躁还不贴头皮，全看吸收速度。这瓶是真水感质地，一抹直接被发丝吃进去，手心完全不发黏。","onScreenText":"秒吸收的水感质地 / 清爽不油手"},{"idx":4,"durationSec":5,"visual":"Split-screen comparison test with slow pan. Left side shows dull, frizzy damaged ends; right side shows silky, lustrous brown hair with a glossy light halo under warm editorial lighting. A wide-tooth comb glides effortlessly through the smooth side to the very end without catching any shed hairs.","voiceover":"漂染受损最严重的这半边，抹完一梳到底，没有任何拉扯感，梳子上连一根掉发都见不着。","onScreenText":"实测对比：一梳到底 / 强韧不扯发"},{"idx":5,"durationSec":5,"visual":"Luxury product reveal camera movement. Slow 360-degree orbiting camera around the premium amber bottle, golden sunset light filtering through sheer silk curtains, elegant warm tones, soft atmospheric haze, luxury editorial commercial aesthetic.","voiceover":"客观做个取舍：它调香是偏木质调的清冷香，喜欢浓郁甜花香的可能不感冒；但冲这清爽度和修护力，染烫星人闭眼入。","onScreenText":"客观取舍：高级木质香 / 染烫修护天花板"},{"idx":6,"durationSec":4,"visual":"Medium close-up slow push-in. Model turns her head gracefully, glossy smooth hair floating in slow motion, healthy golden shine reflecting off each strand. The product bottle sits cleanly in the lower foreground with subtle depth of field.","voiceover":"经常烫染、发尾干枯炸毛还怕油腻的姐妹，趁这波优惠直接冲，别犹豫。","onScreenText":"烫染受损星人必囤 / 戳左下角直达"}],"cta":"染烫毛躁星人别再盲目交学费了，戳左下角抢先锁定量贩活动装！","caption":"烫染受损发质真实测评！一直以为头发干就得用厚重发油？大错特错！实测这瓶护发精油，水感清爽不油腻，一抹抚平毛躁，梳头都不带掉发的！#护发精油 #美妆测评 #好物推荐 #染烫修护 #发质逆袭"},"parseError":null},{"fingerprint":"b239968f","vertical":"美妆个护","identity":"测评博主","method":"ugc-unwrap","hook":"盲测挑战","format":"image_to_image","script":{"hookLine":"今天把三款热门护发精油标签全撕了，抓了五个天天烫染的同事盲测，结果全票选出来的居然不是大牌！","shots":[{"idx":1,"durationSec":3,"visual":"9:16竖屏特写，美妆博主在明亮梳妆台前，桌上并排摆放着三瓶被牛皮纸包裹住的撕标精油，旁边散落着撕下的白色标签纸屑，博主手持中间一瓶指向镜头，景深微虚化。","voiceover":"今天把三款热门护发精油标签全撕了，抓了五个天天烫染的同事盲测，结果全票选出来的居然不是大牌！","onScreenText":"撕掉标签盲测！谁在割韭菜？"},{"idx":2,"durationSec":6,"visual":"9:16俯拍微距开箱画面，博主双手利落撕开瓦楞快递纸盒红色拉链封条，取出一瓶琥珀色透明玻璃瓶精油，随后滴两滴在蓝色吸油纸上，质地清透如水迅速化开，纸面无厚重油圈。","voiceover":"很多姐妹烫完头发干得像稻草，但买精油最怕抹完全头贴头皮。你们看这瓶，水感质地一抹化水，在吸油纸上根本挂不住油！","onScreenText":"水感质地 / 0秒吸收不糊手"},{"idx":3,"durationSec":6,"visual":"9:16中景对比分屏，左侧是染烫后泛黄炸毛的干枯卷发，右侧博主按压两泵精油于掌心揉搓后轻抚发丝，受损毛鳞片瞬间平整贴合，发尾呈现丝缎般光泽与垂顺坠感。","voiceover":"直接上半边头给你们看！左边是刚洗完炸毛的枯草，右边顺着发尾抹两下，毛躁瞬间压下去，光泽感直接拉满！","onScreenText":"干枯炸毛秒服帖 / 顺滑丝缎光"},{"idx":4,"durationSec":6,"visual":"9:16特写微距，一把浅灰色气垫梳从发根一顺到底顺畅滑落，毫无卡顿拉扯，随后特写展示梳齿表面干净仅留一根发丝，对比旁边缠满脱落断发的旧梳子。","voiceover":"再看拉扯测试！以前梳头发总是咔咔扯断一整把，抹完这个一梳到底毫无阻力，掉发断发直接少了一大半！","onScreenText":"一梳到底 / 告别拉扯断发"},{"idx":5,"durationSec":4,"visual":"9:16博主近景特写，手持揭去封套的精油正装瓶展示，神态中肯真诚，旁边两个大牌精油剪影被打上灰色叉号，突出性价比。","voiceover":"说句掏心窝的取舍，它留香确实比不上五百块的高级沙龙香，但论修护毛躁、轻盈不油腻和防断发，几十块真没对手！","onScreenText":"真实取舍：留香普通，修护封神"},{"idx":6,"durationSec":3,"visual":"9:16特写展示精油正装搭配原厂减震盒与赠送的便携旅行装，博主手指引导指向屏幕左下方购物车动态浮标。","voiceover":"经常烫染、发尾干枯一扯就掉的姐妹，赶紧去左下角试试，不好用还有运费险！","onScreenText":"戳左下角拍1发2 / 赠运费险"}],"cta":"经常烫染受损、发尾枯干断发的姐妹，戳左下角抢官方体验装，带运费险放心试！","caption":"把标签全撕了才敢说真话！盲测5个烫染受损同事全票通过的护发精油，干枯毛躁瞬间抚平还不糊手，几十块真没必要去当大牌冤大头！#护发精油 #烫染受损修护 #好物测评 #不油腻护发 #告别枯草发"},"parseError":null},{"fingerprint":"86831420","vertical":"美妆个护","identity":"测评博主","method":"ugc-confessional","hook":"冲突开场","format":"first_last_frame","script":{"hookLine":"别再跟风买那些死贵、抹完全头糊油的护发精油了！","shots":[{"idx":1,"durationSec":3,"visual":"Vertical 9:16, iPhone front-camera selfie POV, authentic bathroom daylight. A 28-year-old Asian female creator with bleach-damaged frizzy blonde-brown hair looks directly into the lens with an exasperated, direct-to-camera confessional expression, gesturing with her hands.","voiceover":"别再跟风买那些死贵、抹完全头糊油的护发精油了！","onScreenText":"别再乱买护发精油了！"},{"idx":2,"durationSec":5,"visual":"Vertical 9:16, handheld smartphone close-up, fast cut. The creator turns her head showing split ends and static frizz on bleached hair, then tries to run fingers through her hair, getting stuck and showing snapped loose hair strands on her palm with genuine frustration.","voiceover":"很多姐妹越抹头越油，头皮闷出痘，发尾照样炸毛卡梳子，梳一下掉一大把！","onScreenText":"越抹越油？发尾照样炸！"},{"idx":3,"durationSec":6,"visual":"Vertical 9:16, close-up top-down angle on marble counter. Creator pumps two drops of clear lightweight hair oil onto palm, rubs hands together as the oil instantly thins out like water, then presses a clean oil-blotting paper flat against her palm to show zero residue.","voiceover":"实测这瓶真不油！上手两泵一搓直接化水，吸油纸按上去清清爽爽，一点油腻假滑感都没有。","onScreenText":"实测：化水不油腻 / 吸油纸无残留"},{"idx":4,"durationSec":6,"visual":"Vertical 9:16, creator-to-camera medium shot. Creator sections her dry, static-charged frizzy hair and smooths the oil down the strands. The hair visibly transforms from dull straw to glossy liquid silk in seconds. She glides a fine-tooth comb from crown to tip in one effortless stroke with zero snagging.","voiceover":"顺毛躁有多快？抹两下发尾炸毛瞬间抚平，细齿梳一拉到底，不扯头皮、梳上不挂一根断发！","onScreenText":"炸毛秒服帖｜一梳到底不掉发"},{"idx":5,"durationSec":5,"visual":"Vertical 9:16, creator sitting upright in natural light, holding the minimalist hair oil bottle next to her face, adopting an objective reviewer tone with clear pros and cons badges appearing beside the product.","voiceover":"客观给结论：25岁以上经常烫染受损、细软塌怕扁塌的姐妹闭眼入；但要是你追求那种厚重油膜包裹感的，绕道别买。","onScreenText":"测评结论：烫染细软塌必入 / 追求厚重油膜者绕道"},{"idx":6,"durationSec":4,"visual":"Vertical 9:16, iPhone selfie framing matching Shot 1 exact camera position, focal length and lighting for seamless first_last_frame loop transition. The creator displays ultra-glossy, soft, volumized hair, flips her hair with a confident smile, and points down toward the bottom-left cart.","voiceover":"想花几十块搞定沙龙级顺滑还蓬松的，左下角活动直接冲，不好用随时退！","onScreenText":"戳左下角小黄车 体验沙龙级柔顺"}],"cta":"戳左下角小黄车立即体验，拍一瓶送试用装，烫染干枯毛躁直接闭眼入！","caption":"烫染受损发质赶紧看过来！别再花大几百买糊头皮的假顺滑了😭 实测这瓶质地化水不油腻，炸毛两秒被驯服，梳头完全不扯发不卡梳！细软塌受损星人直接抄作业，左下角活动速囤👉 #护发精油 #美妆测评 #烫染修复 #改善毛躁 #好物推荐"},"parseError":null},{"fingerprint":"8da9e685","vertical":"美妆个护","identity":"测评博主","method":"kit-produto-mecanismo-reveal-ptbr","hook":"问题演示","format":"multi_reference","script":{"hookLine":"别瞎买精油了！先看你烫染后的烂发尾，到底是怎么“坏”成枯草的！","shots":[{"idx":1,"durationSec":3,"visual":"Extreme close-up macro of severely bleached, split-end frizzy hair shafts under clinical cool-toned studio lighting, fibers visibly fraying and snapping like dry brittle straw. multi_reference consistency.","voiceover":"别瞎买精油了！先看你烫染后的烂发尾，到底是怎么“坏”成枯草的！","onScreenText":"先看发丝怎么“坏”掉的！"},{"idx":2,"durationSec":4,"visual":"Comparative test split composition: left palm coated in thick sticky competitor oil adhering dust and blotting paper; right palm showing rapid absorption test. Dynamic camera zoom-in.","voiceover":"市面很多精油纯靠厚重矿物油糊弄，不仅假滑，抹完手心黏得能粘纸，这种我直接劝退！","onScreenText":"厚重糊头？直接避坑！"},{"idx":3,"durationSec":5,"visual":"Cinematic hero push-in shot sweeping across an amber luxury glass serum dispenser resting on a textured concrete base, golden water-light essence flowing smoothly without viscosity. multi_reference product identity.","voiceover":"实测对比几十款，留下这瓶。水感精粹质地，上手揉开一秒化水，真正做到零油脂残留。","onScreenText":"水感渗透｜真正不油腻"},{"idx":4,"durationSec":5,"visual":"Extreme macro detail with dramatic snap/attach motion: glowing micro-repair molecules snapping into damaged hair cuticle fissures, latching tightly and sealing porous gaps with magnetic precision.","voiceover":"核心就看这个锁扣机制！微分子像磁铁一样咔哒咬合受损毛鳞片，哪里干枯锁哪里，炸毛瞬间抚平！","onScreenText":"靶向咬合｜抚平受损毛鳞片"},{"idx":5,"durationSec":5,"visual":"Medium studio tracking shot: a dense wooden comb smoothly gliding through bleached hair from roots to ends without catching or tugging, comb teeth clean with zero shed hair. multi_reference hair flow.","voiceover":"看结论：吹干后一梳到底，完全不拉扯头皮，梳齿上干干净净，断发掉发直接少一大半！","onScreenText":"一梳到底｜顺毛躁·不掉发"},{"idx":6,"durationSec":4,"visual":"Fast dramatic forward push-in toward the complete product kit bundle with glowing urgency graphic, bold limited-stock badge flashing, high-contrast dynamic e-commerce motion.","voiceover":"25岁以上经常烫染折腾的，别等枯草彻底报废，左下角现货组合装手慢无，冲！","onScreenText":"烫染急救｜限时现货抢"}],"cta":"左下角现货组合装速抢，重度染烫受损闭眼入，实测不好用直接退！","caption":"染烫炸毛星人真实测评！别再用厚重硅油堵毛囊了。实测不油腻、一梳到底还不扯断掉发，核心修复机制一目了然！#护发精油 #美妆测评 #染烫修护 #顺毛躁 #好物推荐"},"parseError":null},{"fingerprint":"7c422b1b","vertical":"家居日用","identity":"宝妈","method":"ctv","hook":"街头采访","format":"first_last_frame","script":{"hookLine":"随机问了10个染烫炸毛的宝妈，原来大家最怕踩坑的都是糊头油腻！","shots":[{"idx":1,"durationSec":3,"visual":"首帧为阳光明媚的街头人行道，身穿米白风衣的30岁年轻宝妈正脸中景特写；尾帧为采访话筒快速自右侧递至受访者面前，背景人流景深虚化，自然日光侧光照明。","voiceover":"随机问了10个染烫炸毛的宝妈，原来大家最怕踩坑的都是糊头油腻！","onScreenText":"街头实测：随机问10个染烫宝妈"},{"idx":2,"durationSec":5,"visual":"首帧为室内梳妆镜前受访宝妈手抓枯黄毛躁的发尾，神态苦恼；尾帧为特写木梳卡在打结发丝中强行拉扯落下一团断发在手背，微距浅景深，冷白漫射光。","voiceover":"当妈后频繁染烫，头发干得像稻草，最怕买到假滑油腻的，糊满枕头还狂掉头发！","onScreenText":"频繁染烫炸毛！最怕假滑又脱发"},{"idx":3,"durationSec":6,"visual":"首帧为透明玻璃滴管将两滴清透精油滴入掌心；尾帧为双手抹开后用吸油面纸重重按压手心，吸油纸提起源无任何油渍渗透痕迹，4K微距顶光与柔光箱照明。","voiceover":"平时给娃挑东西挑剔惯了，成分不干净我绝不用。这瓶像水一样清爽，抹开瞬间吸收，一点都不糊手！","onScreenText":"宝妈严选成分！水感质地秒吸收 0油感"},{"idx":4,"durationSec":6,"visual":"首帧为双手自上而下抚过蓬乱无光的干枯发丝；尾帧为发丝顺指缝滑落后呈现柔顺垂坠状态、表面反射细腻丝缎光泽，中景侧逆光平滑推进镜头。","voiceover":"一抹毛躁直接被抚平，头发软软糯糯又顺滑，连焦枯分叉的发尾都像喝饱水一样救回来了。","onScreenText":"抚平干枯毛躁！一抹顺滑丝缎光"},{"idx":5,"durationSec":5,"visual":"首帧为一把气垫梳搭在头顶发根处；尾帧为木梳一顺到底垂直滑落至发尾，梳齿间无任何缠绕打结的脱落断发，暖调柔光慢动作特写。","voiceover":"以前梳头掉一把，现在从头到尾一梳到底不卡齿，发根明显强韧多了，这安全感真的没谁了！","onScreenText":"一梳到底！发丝强韧不挂断发"},{"idx":6,"durationSec":4,"visual":"首帧为洗手台上立着琥珀色磨砂玻璃精油瓶特写；尾帧为年轻妈妈在镜前从容轻撩蓬松轻盈的秀发并面带微笑，暖色居家环境柔和逆光。","voiceover":"跟我一样怕踩雷、染烫受损爱断发的姐妹，趁着今天好价赶紧囤两瓶，闭眼入不后悔！","onScreenText":"染烫受损必备！怕踩坑闭眼入"}],"cta":"点击左下角小黄车，拍两瓶立享大促特惠，趁现货速抢！","caption":"当妈后天天为全家挑挑拣拣，最怕交智商税踩坑！染烫受损严重、头发干枯炸毛还爱断发的姐妹看过来，这瓶水感护发精油清爽不油腻、一抹顺毛躁，头发强韧了地漏再也不堵，安心感满满！#护发精油 #防脱强韧 #毛躁星人救星 #宝妈好物分享 #染烫受损发质"},"parseError":null},{"fingerprint":"178e6bc3","vertical":"家居日用","identity":"宝妈","method":"cinematic-stat-shock-local-pride","hook":"痛点反问","format":"first_frame","script":{"hookLine":"你是不是也跟我一样，染烫几回后头发枯得像稻草，每次梳头掉一把，想保养又怕劣质成分蹭到怀里的宝宝？","shots":[{"idx":1,"durationSec":4,"visual":"首帧驱动画面：从暖调主卧全景缓慢俯拍下推，晨光从百叶窗洒入，聚焦梳妆台前30岁年轻母亲的微焦背影与发丝特写，逆光勾勒出发尾明显的干枯分叉与几根脱落的发丝，电影级4K写实镜头，空气中可见微尘光斑，质感温暖而真实。","voiceover":"你是不是也跟我一样，染烫几回后头发枯得像稻草，每次梳头掉一把，想保养又怕劣质成分蹭到怀里的宝宝？","onScreenText":"【你是不是也怕】染烫枯草×满地掉发？"},{"idx":2,"durationSec":5,"visual":"电影级微距特写镜头平移：桌面上展示权威质检报告特写与植物纯萃成分印章，紧接着快速切入毛鳞片修护对比微距视角，背景音效伴随重音节拍，光影通透纯净，呈现严苛的实验室安全感与品质感。","voiceover":"当妈后我买东西比做实验还较真，成分表杂乱的我碰都不碰。这款国货检测报告足足几十页，0矿物油0硅油，安全感直接拉满。","onScreenText":"【硬核质检】0矿物油0重金属·接触宝宝更踏实"},{"idx":3,"durationSec":5,"visual":"特写到中景平滑推进：妈妈将一泵清透水感的精油滴在手心轻揉，质地瞬间化水如丝，掌心迅速揉涂在毛躁发尾，发丝瞬间吸收顺滑并散发水光绸缎感，随后拿吸油纸用力按压发丝，吸油纸毫无油渍透明残留，指尖干爽不腻。","voiceover":"挤一滴在手上秒化水，往发尾一抹，原本炸毛的碎发立马垂顺下来，摸上去清清爽爽，一点都不糊手，抱娃贴贴完全不担心蹭到脸上。","onScreenText":"【一抹化水】毛躁秒抚平·完全不粘手"},{"idx":4,"durationSec":5,"visual":"暖光中景升格镜头：母亲手持气垫木梳从发根一顺到底，梳齿顺畅滑下无任何拉扯脱发，梳齿干干净净。两岁幼儿从一旁笑着跑来扑入妈妈怀中，小脸贴在妈妈柔顺乌黑的发丝上，母子相视微笑，暖色调光晕洋溢着家庭温馨与自信。","voiceover":"坚持用它强韧发丝，梳头再也不卡顿、不一抓一大把。咱们中国自己的好配方，把温和安全和修护力做得这么扎实，真是挑不出毛病。","onScreenText":"【强韧发根】一梳到底不脱落·国货安心之选"},{"idx":5,"durationSec":4,"visual":"低角度静物特写结合景深虚化：琥珀色质感精油瓶身静置在木质托盘上，背景虚化中母亲温柔拥着孩子，画面右侧弹出权威检验报告标识与限时福利动效，柔和日光逐渐收尾。","voiceover":"咱自己省心、孩子贴身也放心，染烫受损的姐妹，趁着活动赶紧给头发来份踏踏实实的守护吧！","onScreenText":"【踏实安心】染烫枯草闭眼入·戳下方"}],"cta":"戳左下方小黄车，给染烫受损发一份踏实安心的垂顺守护！","caption":"当妈后怕踩坑更怕成分不安全！染烫炸毛、一梳掉一把的姐妹看过来，这款0硅油清爽不腻的护发精油，一抹秒顺毛躁，抱娃贴贴超踏实～ #护发精油 #宝妈好物 #染烫受损修护 #防毛躁 #国货护肤"},"parseError":null},{"fingerprint":"6fecbb36","vertical":"家居日用","identity":"宝妈","method":"curated-lifestyle-brand-video","hook":"问题演示","format":"multi_reference","script":{"hookLine":"先看它怎么坏的，染烫过后发尾炸成枯草，梳头一卡就断半截。","shots":[{"idx":1,"durationSec":3,"visual":"暖调晨光下的微距特写，真实无修饰生活质感。一双素净主妇的手捏起一缕染烫后焦黄干枯的发尾，指尖轻慢挑动，发丝分叉杂乱，木梳齿梳入时卡顿拉扯，掉落两根脆弱断发，背景为原木桌面与暖色漫反射柔光。","voiceover":"先看它怎么坏的，染烫过后发尾炸成枯草，梳头一卡就断半截。","onScreenText":"发尾干枯分叉 梳头总断发"},{"idx":2,"durationSec":4,"visual":"俯拍微距镜头，原木案台上放着一把浅色榉木气垫梳，素手正轻轻摘除梳齿上缠结的细碎断发，晨曦从窗边斜照，画面干净极简，充满居家真实感与克制的生活气息。","voiceover":"当妈后买东西最怕踩坑，更受不了满地断发，抓一把都心疼。","onScreenText":"怕踩坑 · 更怕伤发断发"},{"idx":3,"durationSec":5,"visual":"近景手部微距特写，素手轻压透明极简玻璃瓶泵头，一滴如水般透明流动、无粘稠厚重感的精油滴在掌心。双手对搓两下，精油快速化开，手心呈现清爽温润微光、毫无浮油和粘腻膜感。","voiceover":"我给家里挑东西就图个踏实，这瓶挤出来像水一样清透，抹开完全不糊手。","onScreenText":"水感质地 · 清爽不油腻"},{"idx":4,"durationSec":5,"visual":"中特写跟镜头，双手自上而下轻柔顺抚受损的棕色波浪卷发尾，原本毛躁飞翘的发丝在手心抚过瞬间被抚平收拢，泛起柔润自然的绸缎光泽，动作温和舒缓。","voiceover":"顺着发尾捋一捋，原本炸开的毛躁立马服帖下去，摸着特别软。","onScreenText":"抚平毛躁 · 瞬间顺滑"},{"idx":5,"durationSec":4,"visual":"近景手部操作，一把木梳从发中轻缓滑至发尾，一路顺畅无阻一梳到底，梳齿干净无残留断发。背景虚焦中是温暖米白色的亚麻抱枕与温馨居家角落，光线柔和恬静。","voiceover":"一梳到底都不带扯头发的，成分温和没有怪香精味，抱娃凑近闻也踏实。","onScreenText":"一梳到底 · 强韧不掉发"},{"idx":6,"durationSec":3,"visual":"静物特写，素手将琥珀色精油瓶轻轻放回亚麻布衬底的收纳托盘中，手指干爽洁净，晨光在瓶身折射出柔和微光，极简优雅。","voiceover":"跟我一样怕油、怕踩雷的姐妹，直接带这瓶，用着省心。","onScreenText":"染烫受损修护 · 放心入"}],"cta":"跟我一样怕油腻、怕踩雷的姐妹，戳左下角带回家，给头发一份踏实的安全感。","caption":"当妈后买日用品最挑剔，更怕踩坑！染烫漂坏的干枯毛躁发质不用去理发店花大钱，这瓶水感护发精油清爽不油腻，顺毛躁还不扯断发，成分温和无刺激，平时抱娃也安心～#护发精油 #受损发质修护 #宝妈好物分享 #毛躁救星 #居家好物"},"parseError":null},{"fingerprint":"8ea12adf","vertical":"家居日用","identity":"宝妈","method":"phone-mockup-page","hook":"开箱即时","format":"text_to_video","script":{"hookLine":"刚到手，直接开！当妈后染烫枯草发怕踩雷，成分我做足了功课才敢入！","shots":[{"idx":1,"durationSec":3,"visual":"手持智能手机近景特写，手机屏幕呈现清晰的电商下单即时页面，随后镜头俯推到桌面刚拆封的快递包装盒，一只女性的手直接撕开气泡膜取出晶莹剔透的护发精油瓶身。","voiceover":"刚到手，直接开！当妈后染烫枯草发怕踩雷，成分我做足了功课才敢入！","onScreenText":"刚到手！直接开箱实拆"},{"idx":2,"durationSec":4,"visual":"极简浅色背景下呈现精致的手持手机模型界面（phone-mockup-page），屏幕中快速滑动展示质检安全检测报告与植物提取成分表，无有害化学添加标记高亮放大显示。","voiceover":"平时给宝宝挑东西较真惯了，抹头上的更要安全感。无酒精零刺激，贴着孩子脸蛋抱抱也踏实。","onScreenText":"质检全绿标 妈妈级安全感"},{"idx":3,"durationSec":5,"visual":"分屏UI手机展示构图，左侧为产品质地微距详情页，右侧实拍手心按压两泵水感精油，质地轻盈如水，双手对搓后按压在干燥吸油纸上，吸油纸完全无油渍渗透。","voiceover":"最怕那种糊一手猪油感的，这支挤出来是清透水感，抹完手心清清爽爽，完全不油腻！","onScreenText":"轻盈水感 吸收不沾手"},{"idx":4,"durationSec":5,"visual":"手机屏幕UI展示染烫受损发质前后对比图，实景镜头切换为一把气垫梳从杂乱干枯的染烫发梢顺畅滑下一梳到底，毛躁发丝瞬间服帖并散发自然光泽感。","voiceover":"之前频繁烫染炸毛得像干稻草，顺着发尾抹两下，毛躁秒被抚平，头发又软又亮。","onScreenText":"抚平染烫毛躁 一梳到底"},{"idx":5,"durationSec":4,"visual":"手机界面切换至真实用户回购评分流，镜头平移展示洗护梳头后的白色洗手台与梳齿，梳齿上干净整洁，仅见极少脱落发丝，发根清爽蓬松。","voiceover":"生完娃头发脆弱总大把掉，现在发丝韧劲上来了，梳头洗头不再掉一地，真的省心。","onScreenText":"强韧发丝 告别断发烦恼"},{"idx":6,"durationSec":4,"visual":"手持智能手机置于柔和居家光线下，屏幕展示限时现货商详页结算按钮微动效，旁边斜立着高质感护发精油瓶，母指轻点屏幕完成交互指引。","voiceover":"跟我一样怕踩雷、发质受损的姐妹，趁着官方现货还在，赶紧给头发备上一瓶！","onScreenText":"染烫受损救星 戳左下角抢现货"}],"cta":"怕油腻怕踩坑的染烫姐妹，戳左下角小黄车带走同款安心护发精油！","caption":"刚到手直接开！当妈后给头发挑精油跟给娃挑奶粉一样严谨✨不油不腻还能抚平染烫枯草毛躁，梳头断发都少多了，安全感拉满！#护发精油 #染烫受损修护 #宝妈好物分享 #拒绝毛躁 #居家日常"},"parseError":null},{"fingerprint":"9ddb19a1","vertical":"家居日用","identity":"宝妈","method":"guofeng-palace-drama-single-call","hook":"盲测挑战","format":"image_to_image","script":{"hookLine":"把标签撕掉让他们选！当妈后我买啥都怕踩坑，今天咱们直接闭眼盲测！","shots":[{"idx":1,"durationSec":3,"visual":"16:9画幅，cinematic 3D guofeng风格，单人第一人称视频通话视角（single continuous video call framing），图生图（operation: image_to_image）。华美古风宫殿暖光室内，3D国风年轻母亲形象，头戴精致珠翠步摇，身着淡粉色刺绣宫装，手持两瓶撕去标签的精油瓶身直面镜头，神态自信挑剔，画面边缘附带轻微视讯通话UI边框与柔和宫灯光影，发丝细节清晰自然。","voiceover":"把标签撕掉让他们选！当妈后我买啥都怕踩坑，今天咱们直接闭眼盲测！","onScreenText":"【撕掉标签】闭眼盲测挑战！"},{"idx":2,"durationSec":4,"visual":"16:9画幅，cinematic 3D guofeng风格，视频通话近景微距，图生图保持同角色一致性。3D国风女子将镜头对准自己发尾，展示一缕染烫受损、干枯毛躁的分叉发丝，眉头微蹙，脸部神情流露当妈后对成分不安全与掉发的担忧，背景为虚化的红木雕花屏风与宫廷烛火。","voiceover":"生完娃又总爱折腾染烫，头发干枯炸毛像稻草，梳一下掉一把，成分不放心的我碰都不敢碰！","onScreenText":"染烫枯草头 × 梳头掉发心慌"},{"idx":3,"durationSec":5,"visual":"16:9画幅，cinematic 3D guofeng风格，视频通话手部与发丝特写，图生图画面。女子掌心按压出晶莹水润的护发精油，双手揉开清透无拉丝感，随即均匀抹在毛躁发尾上，原本炸毛的发丝瞬间垂顺服帖、泛起丝缎般光泽，随后女子展示双手掌心干爽无油光残留。","voiceover":"结果盲测这瓶直接封神！倒在手上像水一样清爽，发尾一抹瞬间抚平毛躁，关键手上一点不黏腻！","onScreenText":"一抹抚平毛躁 手心0油感"},{"idx":4,"durationSec":5,"visual":"16:9画幅，cinematic 3D guofeng风格，视频通话中景镜头，图生图画面。3D国风女子手持一把雕花玉梳，从头顶顺畅无阻地一梳到底，动作轻柔丝滑，梳子抬起正对视频镜头，梳齿间干干净净毫无落发缠绕，女子展露安心舒展的笑容。","voiceover":"平时给孩子挑东西养成的毛病，就图个安全感！拿玉梳一顺到底，梳齿上一根断发都没挂住，太安心了！","onScreenText":"一梳到底 稳固发根不掉发"},{"idx":5,"durationSec":4,"visual":"16:9画幅，cinematic 3D guofeng风格，视频通话第一人称视角，图生图画面。3D国风女子侧身展示一头乌黑柔亮、随身姿轻盈律动的瀑布长发，手托着精油小金瓶对准镜头，后景宫灯柔光映衬，整个人容光焕发，尽显宫廷精致气场。","voiceover":"连后宫姐妹跟我视频都追着要链接，几十块钱能有这质感，谁还去外面花大几百做护理啊！","onScreenText":"后宫同款实测 几十块拯救烂发质"},{"idx":6,"durationSec":4,"visual":"16:9画幅，cinematic 3D guofeng风格，视频通话定格与推近画面，图生图画面。3D国风女子微笑着将护发精油置于镜头前黄金焦点，另一只手轻点屏幕下方交互区域，右上角带有绿色的视频通话计时角标，全屏充满高级3D国风电影光影氛围。","voiceover":"跟我一样经常染烫、怕油又怕掉发的小姐妹，听当妈的劝，下方小黄车赶紧抢，发质直接逆袭！","onScreenText":"点击下方小黄车 抢宝妈私藏好物"}],"cta":"染烫受损、怕油掉发的小姐妹，戳下方小黄车带走同款，头发丝顺到会反光！","caption":"当妈后买啥都死磕成分安全！把标签撕掉直接盲测，这瓶护发精油真的封神了✨染烫枯草一抹柔顺，清爽不油腻还不掉发，几十块get沙龙级顺滑！#护发精油 #宝妈好物推荐 #染烫受损救星 #防毛躁护发 #好物分享"},"parseError":null},{"fingerprint":"b05bf224","vertical":"家居日用","identity":"宝妈","method":"cinematic-led-product-reveal","hook":"冲突开场","format":"text_to_image","script":{"hookLine":"别再乱买那些糊一头油的精油了！","shots":[{"idx":1,"durationSec":3,"visual":"16:9 电影级宽画幅，深邃漆黑暗调极简空间，单道冷白色线性 LED 光束从顶部切破黑暗，精准打在黑色镜面亚克力展台上，缓缓勾勒出一瓶流线型琥珀色护发精油瓶身的轮廓边缘，周围带有微弱的大气体积光，极具神秘与悬念感。","voiceover":"别再乱买那些糊一头油的精油了！","onScreenText":"别再盲目跟风踩坑了！"},{"idx":2,"durationSec":4,"visual":"超近景微距特写摄影，高对比度暗调背景，戏剧性高亮 LED 背光穿透高纯度透明玻璃滴管，管口悬挂着一滴晶莹剔透的水感金色精油液滴，边缘折射出清澈纯净的光芒，光斑细腻通透，纤尘不染。","voiceover":"当妈之后我挑东西比谁都怕踩坑，成分不放心的我连碰都不敢碰，生怕抱宝宝时蹭在他嫩皮上。","onScreenText":"当妈后最怕成分踩坑"},{"idx":3,"durationSec":5,"visual":"电影质感双色 LED 轮廓光照明，一侧为科技冷蓝光，另一侧为高级暖金光，光束沿着磨砂金色按压泵头与晶莹的琥珀玻璃瓶身缓慢水平扫过，倒影清晰倒映在底部黑色镜面基座上，展现工业设计细节与轻奢质感。","voiceover":"我这头发染烫得厉害又生了娃，以前梳头掉一地碎发，出门炸毛得跟枯草一样，看着特别显老。","onScreenText":"染烫受损·毛躁易断"},{"idx":4,"durationSec":5,"visual":"微距分屏对比质感画面，侧向聚光 LED 光线投射在顺滑的发丝上，发丝如黑色丝缎般垂坠，表面流动着健康自然的柔和高光，毫无黏腻成缕的厚重油光感，背景保持暗雅景深虚化。","voiceover":"这瓶抹上手一抹化水，两下就被头发吃进去了，手心完全不发黏，毛躁瞬间被抚平，梳头都顺溜溜的。","onScreenText":"一抹吸收不油手·一梳到底"},{"idx":5,"durationSec":4,"visual":"终极 Hero Reveal 揭幕全景，中央环形 LED 环光全部点亮，暖白光晕柔和笼罩整瓶护发精油，哑光黑石基底，空气中漂浮着微微发光的金色纳米光尘粒子，16:9 画幅中央构图，尽显殿堂级安全感与高奢气场。","voiceover":"自己用着踏实，抱宝宝贴脸闻着也安心。跟我一样头发受损又怕踩坑的姐妹，赶紧试试它。","onScreenText":"染烫受损救星·当妈的安心之选"}],"cta":"现在有专属宝妈尝鲜福利，戳左下角小黄车带走，给头发一份看得见的安全感！","caption":"当妈后买东西有多挑剔？不仅怕成分踩坑，更图个安心！染烫后又枯又爱掉发的姐妹看过来，这瓶水感护发精油真的一秒抚平毛躁，清清爽爽完全不粘手，抱娃贴贴超踏实～ #护发精油 #宝妈好物分享 #染烫受损发质 #顺毛躁神器"},"parseError":null}]};
+    const scripts = rawData.scripts || [];
+
+    const RUBRICS = [
+      { id: "g1", name: "G1 Hook 强度", desc: "前 3 秒能否拦住划走（5分: 强烈冲突/悬念/数字; 1分: 泛泛开场介绍）" },
+      { id: "g2", name: "G2 卖点落地", desc: "卖点是否转成可感知表述（5分: 场景化比对; 1分: 枯燥形容词堆砌）" },
+      { id: "g3", name: "G3 手法贴合", desc: "是否切实采用指定手法结构（5分: 镜头节奏清晰可辨; 1分: 仅贴标签）" },
+      { id: "g4", name: "G4 口播自然度", desc: "口播语气像不像真人（5分: 自然口语带呼吸感; 1分: 机械说明书腔）" },
+      { id: "g5", name: "G5 画面可执行", desc: "visual 能否直接喂生图模型（5分: 英文提示词、主体光影细节丰富; 1分: 抽象中文）" },
+      { id: "g6", name: "G6 结构完整", desc: "时长 15-45 秒、4-8 分镜、有起伏、有明确 CTA" },
+      { id: "g8", name: "G8 批次差异化", desc: "与本批次其他脚本是否肉眼可辨差异（5分: 视角结构迥异; 1分: 换皮同构）" }
+    ];
+
+    let scores = {};
+    let currentIndex = 0;
+
+    const cache = localStorage.getItem("omnimux_batch_scorecard_scores");
+    if (cache) {
+      try { scores = JSON.parse(cache); } catch(e) {}
+    }
+    scripts.forEach(s => {
+      if (!scores[s.fingerprint]) {
+        scores[s.fingerprint] = { g1: 0, g2: 0, g3: 0, g4: 0, g5: 0, g6: 0, g8: 0, veto: false };
+      }
+    });
+
+    function saveScores() {
+      localStorage.setItem("omnimux_batch_scorecard_scores", JSON.stringify(scores));
+      updateMetrics();
+      renderSidebar();
+    }
+
+    function renderSidebar() {
+      const list = document.getElementById("script-list");
+      list.innerHTML = "";
+      let completedCount = 0;
+
+      scripts.forEach((s, idx) => {
+        const sc = scores[s.fingerprint] || {};
+        const { avg, pass, completed, veto } = evaluateScript(sc);
+        if (completed) completedCount++;
+
+        const card = document.createElement("div");
+        card.className = "script-card" + (idx === currentIndex ? " active" : "");
+        card.onclick = () => selectScript(idx);
+
+        let badgeHtml = '<span class="card-badge badge-pending">待评</span>';
+        if (veto) {
+          badgeHtml = '<span class="card-badge badge-fail">违规否决</span>';
+        } else if (completed) {
+          badgeHtml = pass
+            ? '<span class="card-badge badge-pass">' + avg.toFixed(1) + '分 通过</span>'
+            : '<span class="card-badge badge-fail">' + avg.toFixed(1) + '分 未达标</span>';
+        }
+
+        card.innerHTML = 
+          '<div class="card-top">' +
+            '<span class="card-index">#' + (idx + 1) + ' ' + (s.identity || "") + '</span>' +
+            badgeHtml +
+          '</div>' +
+          '<div class="card-meta">' + s.vertical + ' · ' + s.method + ' · ' + s.hook + '</div>' +
+          '<div class="card-hook">' + ((s.script && s.script.hookLine) || "无开场白") + '</div>';
+        list.appendChild(card);
+      });
+
+      document.getElementById("progress-text").innerText = '已评 ' + completedCount + '/' + scripts.length;
+    }
+
+    function evaluateScript(sc) {
+      if (sc.veto) return { avg: 0, pass: false, completed: true, veto: true };
+      const keys = ["g1", "g2", "g3", "g4", "g5", "g6", "g8"];
+      const vals = keys.map(k => sc[k] || 0);
+      const isAllFilled = vals.every(v => v > 0);
+      if (!isAllFilled) return { avg: 0, pass: false, completed: false, veto: false };
+      
+      const sum = vals.reduce((a, b) => a + b, 0);
+      const avg = sum / vals.length;
+      const noItemBelowTwo = vals.every(v => v > 2);
+      const pass = (avg >= 3.5) && noItemBelowTwo;
+      return { avg, pass, completed: true, veto: false };
+    }
+
+    function selectScript(idx) {
+      currentIndex = idx;
+      renderSidebar();
+      renderDetail();
+      renderGrading();
+    }
+
+    function renderDetail() {
+      const s = scripts[currentIndex];
+      const detail = document.getElementById("script-detail");
+      if (!s) return;
+
+      const sc = s.script || {};
+      const shots = sc.shots || [];
+
+      let shotsHtml = "";
+      shots.forEach(shot => {
+        shotsHtml += 
+          '<tr>' +
+            '<td style="text-align:center; font-weight:600">' + shot.idx + '</td>' +
+            '<td style="text-align:center; color:var(--text-muted)">' + shot.durationSec + 's</td>' +
+            '<td><div class="prompt-text">' + escapeHtml(shot.visual || "") + '</div></td>' +
+            '<td>' +
+              '<div class="voiceover-text">' + escapeHtml(shot.voiceover || "") + '</div>' +
+              (shot.onScreenText ? '<span class="onscreen-text">' + escapeHtml(shot.onScreenText) + '</span>' : '') +
+            '</td>' +
+          '</tr>';
+      });
+
+      detail.innerHTML = 
+        '<div class="detail-hero">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">' +
+            '<h2 style="font-size:15px; font-weight:600">脚本 #' + (currentIndex + 1) + ' · ' + s.identity + '</h2>' +
+            '<span class="card-fp">配方指纹: ' + s.fingerprint + '</span>' +
+          </div>' +
+          '<div class="detail-grid">' +
+            '<div class="grid-cell"><span class="label">垂类品类</span><div class="val">' + s.vertical + '</div></div>' +
+            '<div class="grid-cell"><span class="label">广告手法</span><div class="val">' + s.method + '</div></div>' +
+            '<div class="grid-cell"><span class="label">前3秒 Hook</span><div class="val">' + s.hook + '</div></div>' +
+            '<div class="grid-cell"><span class="label">画面形态</span><div class="val">' + s.format + '</div></div>' +
+            '<div class="grid-cell"><span class="label">分镜总数</span><div class="val">' + shots.length + ' 镜</div></div>' +
+            '<div class="grid-cell"><span class="label">行动号召 (CTA)</span><div class="val" style="color:#a78bfa">' + escapeHtml(sc.cta || "") + '</div></div>' +
+          '</div>' +
+          '<div class="hook-quote"><strong>前 3 秒黄金口播：</strong>' + escapeHtml(sc.hookLine || "") + '</div>' +
+          '<div style="margin-top:8px; font-size:11px; color:var(--text-muted)"><strong>发布文案：</strong>' + escapeHtml(sc.caption || "") + '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="section-title">分镜镜头明细 (' + shots.length + ' 镜)</div>' +
+          '<table class="shots-table">' +
+            '<thead>' +
+              '<tr>' +
+                '<th style="width:40px; text-align:center">镜</th>' +
+                '<th style="width:50px; text-align:center">时长</th>' +
+                '<th>画面视觉提示词 (Visual Prompt)</th>' +
+                '<th>口播与花字 (Voiceover & Text)</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + shotsHtml + '</tbody>' +
+          '</table>' +
+        '</div>';
+    }
+
+    function renderGrading() {
+      const s = scripts[currentIndex];
+      const sc = scores[s.fingerprint] || {};
+      const container = document.getElementById("rubrics-container");
+      container.innerHTML = "";
+
+      const evalRes = evaluateScript(sc);
+      const summaryCard = document.getElementById("score-summary-card");
+      const verdict = document.getElementById("current-verdict");
+      const avgNum = document.getElementById("current-avg-num");
+
+      summaryCard.className = "score-summary-card" + (evalRes.veto ? " veto" : (evalRes.pass ? " pass" : ""));
+      if (evalRes.veto) {
+        verdict.innerText = "已判定合规违规（一票否决不通过）";
+        verdict.style.color = "var(--danger)";
+        avgNum.innerText = "VETO";
+        avgNum.style.color = "var(--danger)";
+      } else if (evalRes.completed) {
+        verdict.innerText = evalRes.pass ? "符合要求，通过第一关验收" : "均分未达3.5或单项≤2分，未达标";
+        verdict.style.color = evalRes.pass ? "var(--success)" : "var(--danger)";
+        avgNum.innerText = evalRes.avg.toFixed(1);
+        avgNum.style.color = evalRes.pass ? "var(--success)" : "var(--text-primary)";
+      } else {
+        verdict.innerText = "打分未完成";
+        verdict.style.color = "var(--text-muted)";
+        avgNum.innerText = "--";
+        avgNum.style.color = "var(--text-primary)";
+      }
+
+      document.getElementById("veto-checkbox").checked = !!sc.veto;
+
+      RUBRICS.forEach(r => {
+        const card = document.createElement("div");
+        card.className = "rubric-card";
+        const val = sc[r.id] || 0;
+
+        let btnsHtml = "";
+        for (let i = 1; i <= 5; i++) {
+          btnsHtml += '<button class="scale-btn' + (val === i ? " active" : "") + '" onclick="setScore(\'' + r.id + '\', ' + i + ')">' + i + '分</button>';
+        }
+
+        card.innerHTML = 
+          '<div class="rubric-header">' +
+            '<span class="rubric-name">' + r.name + '</span>' +
+            '<span style="font-size:12px; font-weight:700; color:' + (val > 0 ? "var(--brand-purple)" : "var(--text-muted)") + '">' + (val > 0 ? val + " 分" : "未评") + '</span>' +
+          '</div>' +
+          '<div class="rubric-desc">' + r.desc + '</div>' +
+          '<div class="scale-buttons">' + btnsHtml + '</div>';
+        container.appendChild(card);
+      });
+    }
+
+    function setScore(rubricId, val) {
+      const s = scripts[currentIndex];
+      scores[s.fingerprint][rubricId] = val;
+      saveScores();
+      renderGrading();
+    }
+
+    function toggleVeto(isVeto) {
+      const s = scripts[currentIndex];
+      scores[s.fingerprint].veto = isVeto;
+      saveScores();
+      renderGrading();
+    }
+
+    function batchPrefill(defaultScore) {
+      scripts.forEach(s => {
+        const sc = scores[s.fingerprint];
+        RUBRICS.forEach(r => {
+          if (!sc[r.id] || sc[r.id] === 0) {
+            sc[r.id] = defaultScore;
+          }
+        });
+      });
+      saveScores();
+      renderGrading();
+    }
+
+    function updateMetrics() {
+      let totalPassed = 0;
+      let totalVeto = 0;
+      let sumAvg = 0;
+      let completedCount = 0;
+
+      scripts.forEach(s => {
+        const sc = scores[s.fingerprint] || {};
+        const { avg, pass, completed, veto } = evaluateScript(sc);
+        if (veto) totalVeto++;
+        if (completed && !veto) {
+          sumAvg += avg;
+          completedCount++;
+        }
+        if (pass) totalPassed++;
+      });
+
+      const batchAvg = completedCount > 0 ? (sumAvg / completedCount).toFixed(2) : "0.0";
+      const passRate = scripts.length > 0 ? Math.round((totalPassed / scripts.length) * 100) : 0;
+
+      document.getElementById("metric-total").innerText = scripts.length;
+      document.getElementById("metric-avg").innerText = batchAvg;
+      document.getElementById("metric-passrate").innerText = passRate + "%";
+      document.getElementById("metric-passcount").innerText = totalPassed + "/" + scripts.length + " 通过";
+      document.getElementById("metric-veto").innerText = totalVeto;
+    }
+
+    function exportJSON() {
+      const payload = {
+        evaluatedAt: new Date().toISOString(),
+        product: rawData.product,
+        seed: rawData.seed,
+        total: scripts.length,
+        scores: scores
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = 'scorecard-batch-' + (rawData.seed || "run") + '.json';
+      a.click();
+    }
+
+    function exportMarkdown() {
+      let md = "# 第一关 · 分镜脚本八维度验收报告\n\n";
+      md += '| 评审时间 | ' + new Date().toLocaleString() + ' |\n';
+      md += '| 测试商品 | ' + (rawData.product || "未指定") + ' |\n';
+      md += '| 样本批次 | seed=' + rawData.seed + ' · 12 条 |\n\n';
+      md += "## 评审明细表\n\n";
+      md += "| # | 指纹 | 角色 | 手法 | Hook | G1 | G2 | G3 | G4 | G5 | G6 | G8 | 均分 | 结论 |\n";
+      md += "| ---: | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |\n";
+
+      scripts.forEach((s, idx) => {
+        const sc = scores[s.fingerprint] || {};
+        const { avg, pass, veto } = evaluateScript(sc);
+        const verdict = veto ? "**违规否决**" : (pass ? "✅ 通过" : "❌ 不达标");
+        md += '| ' + (idx + 1) + ' | `' + s.fingerprint + '` | ' + s.identity + ' | ' + s.method + ' | ' + s.hook + ' | ' + (sc.g1||0) + ' | ' + (sc.g2||0) + ' | ' + (sc.g3||0) + ' | ' + (sc.g4||0) + ' | ' + (sc.g5||0) + ' | ' + (sc.g6||0) + ' | ' + (sc.g8||0) + ' | ' + (veto ? "--" : avg.toFixed(1)) + ' | ' + verdict + ' |\n';
+      });
+
+      navigator.clipboard.writeText(md).then(() => {
+        alert("Markdown 报告已成功复制到剪贴板！");
+      }).catch(err => {
+        prompt("请手动复制 Markdown 报告：", md);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    selectScript(0);
+    updateMetrics();
+  </script>
+</body>
+</html>
