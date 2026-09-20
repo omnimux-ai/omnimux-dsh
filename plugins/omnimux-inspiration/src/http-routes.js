@@ -13,6 +13,7 @@ import {
   handleShare,
   handleTranslate,
 } from './http-handlers.js'
+import { handleRadarKeywords, handleRadarMatch } from './radar/radar-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
 
 export { detectPlatformFromUrl } from './url-normalizer.js'
@@ -44,6 +45,8 @@ const ROUTE_HANDLERS = {
   translate: handleTranslate,
   share: handleShare,
   'batch-delete': handleBatchDelete,
+  'radar-keywords': handleRadarKeywords,
+  'radar-match': handleRadarMatch,
   get: handleGetItem,
   patch: handlePatchItem,
   delete: handleDeleteItem,
@@ -153,6 +156,8 @@ const SPECIAL_PATHS = {
   [`${LOCAL_PREFIX}/import-url`]: { POST: 'import-url' },
   [`${LOCAL_PREFIX}/fetch-media`]: { POST: 'fetch-media' },
   [`${LOCAL_PREFIX}/batch-delete`]: { POST: 'batch-delete', DELETE: 'batch-delete' },
+  [`${LOCAL_PREFIX}/radar/keywords`]: { POST: 'radar-keywords' },
+  [`${LOCAL_PREFIX}/radar/match`]: { POST: 'radar-match' },
 }
 
 function matchAnalyze(method, path) {
