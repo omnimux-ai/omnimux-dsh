@@ -238,7 +238,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "enabled": true
     }
   ],
-  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、以及15秒长片版。
+  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
   // 各自通过 `wireModel` 绑定上游独立型号，并通过 `wireGroup` 挂载对应的官方或专属分组。
   // 每个分组携带独立契约，实现完全隔离的参数与计费控制。
   "minimax-h3": [
@@ -350,6 +350,39 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         }
       },
       "wireModel": "minimax-h3-task",
+      "wireGroup": "default",
+      "enabled": true
+    },
+    {
+      // 上游 `minimax-h3-lip-sync`（网关渠道 44 fal.ai 官方直连，model_mapping 至 minimax/h3-max/lip-sync/image-to-video）：
+      // 对口型图生视频，人像图片 + 驱动音频 → 唇形对齐视频；按秒计费 $0.125/秒（1.25 积分/秒）。
+      "id": "lipsync",
+      "label": "口型版",
+      "badge": "音频驱动唇形对齐 · 适合人像口播对白",
+      "description": "专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。",
+      "pricing": {
+        "pointsEstimate": 6.3,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 98,
+        "avgWaitTimeSec": 45
+      },
+      "constraints": {
+        "operations": [
+          "digital_human"
+        ],
+        "parameters": {
+          "resolution": {
+            "only": [
+              "768P",
+              "2K"
+            ]
+          }
+        }
+      },
+      "wireModel": "minimax-h3-lip-sync",
       "wireGroup": "default",
       "enabled": true
     }

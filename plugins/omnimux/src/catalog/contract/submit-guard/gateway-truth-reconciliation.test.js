@@ -172,6 +172,7 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       assert.ok(opIds.includes('first_last_frame'), 'minimax-h3 has first_last_frame')
       assert.ok(opIds.includes('end_frame'), 'minimax-h3 has end_frame')
       assert.deepEqual(contract.listedOperations, [
+        'minimax-h3#digital_human',
         'minimax-h3#end_frame',
         'minimax-h3#first_frame',
         'minimax-h3#first_last_frame',

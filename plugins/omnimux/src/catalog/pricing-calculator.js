@@ -19,6 +19,7 @@ export const MODEL_BASE_PRICING = Object.freeze({
   'minimax-h3': { unitPrice: 0.0714, billingMode: 'per_second', defaultDuration: 5 },
   'minimax-h3-turbo': { unitPrice: 0.035, billingMode: 'per_second', defaultDuration: 5 },
   'minimax-h3-video': { unitPrice: 0.025, billingMode: 'per_second', defaultDuration: 5 },
+  'minimax-h3-lip-sync': { unitPrice: 0.125, billingMode: 'per_second', defaultDuration: 5 },
   
   // Video - Per Task (Fixed duration packages)
   'seedance-2-5-task': { unitPrice: 0.558824, billingMode: 'per_task', defaultDuration: 30 },

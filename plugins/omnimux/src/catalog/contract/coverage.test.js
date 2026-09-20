@@ -107,7 +107,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 24, 'H2 lists evidence-backed ops');
+  assert.equal(cov.listedOperationCount, 25, 'H2 lists evidence-backed ops');
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
   assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
@@ -157,7 +157,7 @@ test('verifyContracts: audit ok; strict ok once 80 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 80);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 24);
+  assert.equal(strict.listedOperations.length, 25);
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {
@@ -177,13 +177,14 @@ test('whisper-1 not listed in real specs; the removed kling-avatar has left the 
   assert.equal(w.operations[0].execution.status, 'none');
 
   // #1751: kling-avatar was removed upstream, so it is no longer a contract at all. Its
-  // digital_human operation retired with it — no contracted model declares digital_human now.
+  // digital_human operation retired with it; 2026-09-20 起由 minimax-h3（口型版分组 →
+  // 网关 minimax-h3-lip-sync 专线）重新承载 digital_human。
   assert.equal(index.get('kling-avatar'), undefined);
   assert.deepEqual(
     index
       .all()
       .filter((m) => (m.operations ?? []).some((o) => o.id === 'digital_human'))
       .map((m) => m.id),
-    [],
+    ['minimax-h3'],
   );
 });

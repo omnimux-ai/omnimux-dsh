@@ -40,6 +40,7 @@ export const ALLOWED_LABELS = Object.freeze([
   '极速版',
   '高清版',
   '长片版',
+  '口型版',
 ])
 
 /** 同一模型族内至多出现一次的档位词。 */
@@ -165,10 +166,29 @@ export function checkMirror(catalog, mirrorText) {
       .filter((g) => g.enabled !== false)
       .map((g) => String(g[key] ?? ''))
 
+  let parsed = null
+  try {
+    const start = mirrorText.indexOf('export const MODEL_CHANNEL_GROUPS')
+    if (start >= 0) {
+      const objStart = mirrorText.indexOf('{', start)
+      const objEnd = mirrorText.indexOf('\n};', objStart)
+      if (objStart >= 0 && objEnd > objStart) {
+        parsed = new Function('return (' + mirrorText.slice(objStart, objEnd) + '})')()
+      }
+    }
+  } catch (_e) {
+    parsed = null
+  }
+
   const result = []
   for (const key of ['label', 'badge']) {
     const hub = pick(key)
-    const mirror = [...mirrorText.matchAll(new RegExp(`"${key}": "([^"]*)"`, 'g'))].map((m) => m[1])
+    const mirror = parsed
+      ? Object.values(parsed)
+          .flat()
+          .filter((g) => g.enabled !== false)
+          .map((g) => String(g[key] ?? ''))
+      : [...mirrorText.matchAll(new RegExp(`"${key}": "([^"]*)"`, 'g'))].map((m) => m[1])
     const hubCount = [...hub].sort().join('\u0001')
     const mirrorCount = [...mirror].sort().join('\u0001')
     if (hubCount !== mirrorCount) {

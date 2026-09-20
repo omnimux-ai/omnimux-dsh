@@ -20,6 +20,7 @@ export const PRODUCT_ID_ALIASES = Object.freeze({
   'seedance-2-5-task': 'seedance-2-5',
   'seedance-2-0-fast-task': 'seedance-2-0-fast',
   'minimax-h3-task': 'minimax-h3',
+  'minimax-h3-lip-sync': 'minimax-h3',
   'grok-imagine-video-1-5-task': 'grok-imagine-video-1-5',
 })
 const registrations = new Map(manifest.models.map((row) => [row.productId, row.gatewayIds]))

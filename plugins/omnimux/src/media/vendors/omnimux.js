@@ -375,10 +375,12 @@ export function mapOmnimuxInput(capability, request) {
     } else if (request.image) {
       input.image = request.image
     }
-    // digital_human（如 kling-avatar）：audioTrack 是驱动音频，属于该模型契约的
-    // 已知字段，必须透传（#538）。普通 video 模型仍严禁携带 audioTrack（#429），
-    // 网关 Go 结构体 DisallowUnknownFields 会 400。
-    if (isDigitalHumanModel(request.model) && request.audioTrack && request.audioTrack.pathOrUrl) {
+    // digital_human（如 kling-avatar、minimax-h3 口型版分组）：audioTrack 是驱动音频，
+    // 属于该模型契约的已知字段，必须透传（#538）。普通 video 模型仍严禁携带
+    // audioTrack（#429），网关 Go 结构体 DisallowUnknownFields 会 400。
+    // H3 家族按产品 id minimax-h3 进入本函数（线路候选在更下游才替换），
+    // 故以操作 id 判定，避免给普通 H3 视频操作开口子。
+    if ((isDigitalHumanModel(request.model) || request.operation === 'digital_human') && request.audioTrack && request.audioTrack.pathOrUrl) {
       input.audioTrack = request.audioTrack
     }
     // 严禁向 video 注入 images/references/metadata（#429/#432）。

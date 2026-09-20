@@ -180,7 +180,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), {});
   });
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线以及15秒长片版。
+  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
   // 画布必须把各自的独立契约落到节点上。
   it('applies the H3 task line contract and leaves the standard line unconstrained', () => {
     const task = resolveLineConstraints('minimax-h3', { allowedGroups: ['task'] });
@@ -192,6 +192,11 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
       'first_last_frame',
       'video_multi_ref',
     ]);
+
+    // 口型同步专线：约束分辨率 768P/2K，生成方式仅 digital_human（对口型）
+    const lipsync = resolveLineConstraints('minimax-h3', { allowedGroups: ['lipsync'] });
+    assert.deepEqual(lipsync.parameters.resolution, { only: ['768P', '2K'] });
+    assert.deepEqual(lipsync.operations, ['digital_human']);
 
     // 工作流双档专线：约束分辨率 768P/2K
     const videoFast = resolveLineConstraints('minimax-h3', { allowedGroups: ['video_fast'] });
