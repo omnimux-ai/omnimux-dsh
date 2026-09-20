@@ -117,6 +117,16 @@ const CATEGORY_PAGE_SIZE = 100
 const CATEGORY_CONCURRENCY = 5
 /** Aggregated categories are served from memory for this long (SWR). */
 const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000
+/**
+ * Hard cap on catalogue pages walked for one aggregate.
+ * `page_size=100` × 50 ≈ 5000 rows; a poisoned `total` must not schedule more.
+ */
+export const CATEGORY_MAX_PAGES = 50
+/**
+ * Whole-walk deadline. A timeout fails the walk so the route can
+ * stale-while-revalidate degrade to `200 { data: [] }`.
+ */
+export const CATEGORY_TIMEOUT_MS = 15_000
 
 /**
  * Run `worker` over every item with at most `limit` calls in flight.
@@ -153,45 +163,112 @@ function categoryNameOf(item) {
   return typeof name === 'string' ? name.trim() : ''
 }
 
+/** @param {Map<string, number>} counts */
+function sortedCategoryRows(counts) {
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+}
+
 /**
- * Page through the whole cloud catalogue and aggregate its `category` field
- * into `{ name, count }` rows, sorted by count desc (name asc on ties).
+ * Settle `work` or reject when `timeoutMs` elapses. The loser is ignored so a
+ * late walk rejection cannot surface as unhandled; in-flight `withPat` calls
+ * are not aborted (the official client has no AbortController).
+ * @param {Promise<T>} work
+ * @param {number} timeoutMs
+ * @param {string} message
+ * @returns {Promise<T>}
+ * @template T
+ */
+function withDeadline(work, timeoutMs, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(message))
+    }, timeoutMs)
+    work.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
+/**
+ * Page through the cloud catalogue and aggregate its `category` field into
+ * `{ name, count }` rows, sorted by count desc (name asc on ties).
  *
  * The cloud has no category aggregation endpoint, so this walks the list with
- * `page_size=100`, `concurrency` pages in flight (~30 pages at the time of
- * writing). Callers wrap this in a cache; it is too heavy to run per request.
+ * `page_size=100` and `concurrency` pages in flight. Bounds:
+ * - at most `maxPages` (default 50);
+ * - a page shorter than `pageSize` ends the walk;
+ * - a `timeoutMs` (default 15s) deadline fails the whole walk so callers can
+ *   SWR-degrade;
+ * - only a page-1 failure fails the walk; later pages are skipped.
+ *
+ * Callers wrap this in a cache; it is too heavy to run per request.
  * @param {{ withPat: Function }} client
- * @param {{ pageSize?: number, concurrency?: number }} [opts]
+ * @param {{ pageSize?: number, concurrency?: number, maxPages?: number, timeoutMs?: number }} [opts]
  * @returns {Promise<Array<{ name: string, count: number }>>}
  */
 export async function collectCategoryCounts(client, opts = {}) {
   const pageSize = Math.max(1, Number(opts.pageSize) || CATEGORY_PAGE_SIZE)
   const concurrency = Math.max(1, Number(opts.concurrency) || CATEGORY_CONCURRENCY)
-  /** @type {Map<string, number>} */
-  const counts = new Map()
-  const absorb = (payload) => {
-    const items = responseData(payload).items
-    if (!Array.isArray(items)) return 0
-    for (const item of items) {
-      const name = categoryNameOf(item)
-      if (name) counts.set(name, (counts.get(name) || 0) + 1)
+  const maxPages = Math.max(1, Number(opts.maxPages) || CATEGORY_MAX_PAGES)
+  const timeoutMs = Math.max(1, Number(opts.timeoutMs) || CATEGORY_TIMEOUT_MS)
+
+  const walk = async () => {
+    /** @type {Map<string, number>} */
+    const counts = new Map()
+    const absorb = (payload) => {
+      const items = responseData(payload).items
+      if (!Array.isArray(items)) return 0
+      for (const item of items) {
+        const name = categoryNameOf(item)
+        if (name) counts.set(name, (counts.get(name) || 0) + 1)
+      }
+      return items.length
     }
-    return items.length
+
+    const first = await client.withPat(`${API}/inspirations?page=1&page_size=${pageSize}`)
+    const firstCount = absorb(first)
+    if (firstCount < pageSize) return sortedCategoryRows(counts)
+
+    const rawTotal = Number(responseData(first).total)
+    const hasTotal = Number.isFinite(rawTotal) && rawTotal >= 0
+    const pageCount = Math.min(
+      maxPages,
+      hasTotal ? Math.max(1, Math.ceil(rawTotal / pageSize)) : maxPages,
+    )
+    if (pageCount <= 1) return sortedCategoryRows(counts)
+
+    // Walk remaining pages in concurrent batches. A short page ends the
+    // walk after the current batch so later batches are never scheduled.
+    for (let page = 2; page <= pageCount; ) {
+      const batch = []
+      while (batch.length < concurrency && page <= pageCount) {
+        batch.push(page)
+        page += 1
+      }
+      let short = false
+      await mapWithConcurrency(batch, concurrency, async (target) => {
+        try {
+          const count = absorb(await client.withPat(`${API}/inspirations?page=${target}&page_size=${pageSize}`))
+          if (count < pageSize) short = true
+        } catch {
+          // Later pages are best-effort: one failed page must not wipe page 1.
+        }
+      })
+      if (short) break
+    }
+    return sortedCategoryRows(counts)
   }
 
-  const first = await client.withPat(`${API}/inspirations?page=1&page_size=${pageSize}`)
-  const firstCount = absorb(first)
-  const total = Number(responseData(first).total) || firstCount
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  if (pageCount > 1) {
-    const pages = Array.from({ length: pageCount - 1 }, (_, index) => index + 2)
-    await mapWithConcurrency(pages, concurrency, async (page) => {
-      absorb(await client.withPat(`${API}/inspirations?page=${page}&page_size=${pageSize}`))
-    })
-  }
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+  return withDeadline(walk(), timeoutMs, 'category aggregation timed out')
 }
 
 /**

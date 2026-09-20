@@ -189,7 +189,9 @@ export async function loadInspirationsAtomic(params) {
     sort: sort || undefined,
     is_favorite: favorite === '1' ? '1' : undefined,
     country: country.trim() || undefined,
-    category: category.trim() || undefined,
+    // Local rows are not tagged with the cloud's free-text categories, so a
+    // leftover `digital` selection must not ride onto `/local` (Issue #2497 H1).
+    category: tab === 'local' ? undefined : (category.trim() || undefined),
     duration_min: duration_min !== '' && duration_min != null ? duration_min : undefined,
     duration_max: duration_max !== '' && duration_max != null ? duration_max : undefined,
     views_min: views_min !== '' && views_min != null ? views_min : undefined,

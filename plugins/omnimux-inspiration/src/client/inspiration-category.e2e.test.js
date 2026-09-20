@@ -241,4 +241,49 @@ describe('InspirationSection render gate — dynamic category dropdown', () => {
       mounted.close()
     }
   })
+
+  it('clears cloud categories on 本地 so the dropdown is 全部-only and local queries drop category', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection({
+      categories: { ok: true, body: { data: [{ name: 'digital', count: 1178 }] } },
+      onFetch: (url) => fetched.push(url),
+    })
+    try {
+      await mounted.waitFor(() => fetched.some((url) => url.includes('/categories')))
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      const labelsBefore = await openCategoryOptions(mounted)
+      assert.ok(labelsBefore.includes('digital'), `expected digital before the tab switch: ${JSON.stringify(labelsBefore)}`)
+      const digital = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === 'digital')
+      assert.ok(digital, 'the digital option must be clickable on 全部')
+      await act(async () => {
+        digital.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const localTab = mounted.container.querySelector('[data-tab="local"]')
+      assert.ok(localTab, 'the 本地 tab must render')
+      const beforeSwitch = fetched.length
+      await act(async () => {
+        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.slice(beforeSwitch).some((url) => url.includes('/omnimux/inspiration/local')))
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40))
+      })
+      const labels = await openCategoryOptions(mounted)
+      assert.deepEqual(labels, [ALL_LABEL], 'the 本地 tab must degrade the dropdown to exactly 全部')
+      const localUrls = fetched.slice(beforeSwitch).filter((url) => url.includes('/omnimux/inspiration/local'))
+      assert.ok(localUrls.length > 0, 'switching to 本地 must query the local library')
+      assert.equal(
+        localUrls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `local queries after the tab switch must not forward a cloud category: ${JSON.stringify(localUrls)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 })

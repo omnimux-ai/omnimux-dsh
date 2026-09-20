@@ -422,6 +422,55 @@ describe('useInspirationFeed lifecycle', () => {
     }
   })
 
+  it('drops a leftover cloud category when leaving 全部/云端', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const previous = {
+      window: globalThis.window,
+      document: globalThis.document,
+      fetch: globalThis.fetch,
+      IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    }
+    Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
+    const requests = []
+    let feed
+    invalidateInspirationCache()
+    globalThis.fetch = async (input) => {
+      const url = new URL(String(input), dom.window.location.href)
+      requests.push({ path: url.pathname, category: url.searchParams.get('category') })
+      return jsonResponse(200, { data: { items: [], total: 0 } })
+    }
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return null
+    }
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => root.render(React.createElement(Harness)))
+      await act(async () => feed.setCategory('digital'))
+      assert.equal(feed.category, 'digital')
+      const beforeSwitch = requests.length
+      await act(async () => feed.setTab('local'))
+      assert.equal(feed.category, '', 'leaving 全部 must reset category so local is not filtered empty')
+      const localCalls = requests.slice(beforeSwitch).filter((row) => row.path === '/omnimux/inspiration/local')
+      assert.ok(localCalls.length > 0, 'the 本地 tab must query the local library')
+      assert.equal(
+        localCalls.some((row) => row.category),
+        false,
+        `local queries after the tab switch must not forward digital: ${JSON.stringify(localCalls)}`,
+      )
+      await act(async () => feed.setTab('public'))
+      await act(async () => feed.setCategory('Health & Wellness'))
+      assert.equal(feed.category, 'Health & Wellness')
+      await act(async () => feed.setTab('rivals'))
+      assert.equal(feed.category, '', 'leaving 云端 for 账号监控 must also drop the cloud category')
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      Object.assign(globalThis, previous)
+    }
+  })
+
   it('keeps appended pages, stops at the end, and resets filters to page one', async () => {
     const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
     const originalWindow = globalThis.window

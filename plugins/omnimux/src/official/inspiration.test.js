@@ -240,6 +240,126 @@ describe('collectCategoryCounts', () => {
       { name: 'a', count: 1 },
     ])
   })
+
+  it('caps the walk at maxPages even when total is poisoned', async () => {
+    /** @type {string[]} */
+    const requested = []
+    const client = catalogueClient({
+      total: 1e12,
+      names: ['digital'],
+      onRequest: (path) => requested.push(path),
+    })
+    await collectCategoryCounts(client, { pageSize: 2, maxPages: 3, concurrency: 2 })
+    const pages = requested.map((path) => new URL(path, 'http://127.0.0.1').searchParams.get('page')).sort()
+    assert.deepEqual(pages, ['1', '2', '3'], `poisoned total must still stop at maxPages, saw ${JSON.stringify(requested)}`)
+  })
+
+  it('stops after a short page even when total claims more', async () => {
+    /** @type {number[]} */
+    const pages = []
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        pages.push(page)
+        if (page === 1) {
+          return { success: true, data: { total: 500, items: [{ id: '1', category: 'digital' }, { id: '2', category: 'digital' }] } }
+        }
+        return { success: true, data: { total: 500, items: [{ id: '3', category: 'digital' }] } }
+      },
+    }
+    const data = await collectCategoryCounts(client, { pageSize: 2, maxPages: 20, concurrency: 1 })
+    assert.deepEqual(pages, [1, 2])
+    assert.deepEqual(data, [{ name: 'digital', count: 3 }])
+  })
+
+  it('keeps paging to the cap when total is missing and the first page is full', async () => {
+    /** @type {number[]} */
+    const pages = []
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        pages.push(page)
+        return {
+          success: true,
+          data: {
+            items: [
+              { id: `${page}-a`, category: 'digital' },
+              { id: `${page}-b`, category: 'digital' },
+            ],
+          },
+        }
+      },
+    }
+    const data = await collectCategoryCounts(client, { pageSize: 2, maxPages: 3, concurrency: 1 })
+    assert.deepEqual(pages, [1, 2, 3])
+    assert.deepEqual(data, [{ name: 'digital', count: 6 }])
+  })
+
+  it('treats a finite total of 0 as empty instead of collapsing it', async () => {
+    /** @type {string[]} */
+    const requested = []
+    const client = {
+      async withPat(path) {
+        requested.push(path)
+        return { success: true, data: { total: 0, items: [] } }
+      },
+    }
+    assert.deepEqual(await collectCategoryCounts(client, { pageSize: 100 }), [])
+    assert.equal(requested.length, 1)
+  })
+
+  it('keeps page-1 rows when a later page throws', async () => {
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        if (page === 1) {
+          return {
+            success: true,
+            data: {
+              total: 4,
+              items: [
+                { id: '1', category: 'digital' },
+                { id: '2', category: 'digital' },
+              ],
+            },
+          }
+        }
+        throw new Error(`page ${page} down`)
+      },
+    }
+    assert.deepEqual(
+      await collectCategoryCounts(client, { pageSize: 2, maxPages: 5, concurrency: 2 }),
+      [{ name: 'digital', count: 2 }],
+    )
+  })
+
+  it('fails the walk when page 1 throws', async () => {
+    const client = {
+      async withPat() {
+        throw new Error('cloud unreachable')
+      },
+    }
+    await assert.rejects(
+      () => collectCategoryCounts(client, { timeoutMs: 1000 }),
+      /cloud unreachable/,
+    )
+  })
+
+  it('times out a hung walk so callers can SWR-degrade', async () => {
+    const client = {
+      async withPat() {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        return { success: true, data: { total: 1, items: [{ id: '1', category: 'digital' }] } }
+      },
+    }
+    await assert.rejects(
+      () => collectCategoryCounts(client, { timeoutMs: 20 }),
+      /category aggregation timed out/,
+    )
+  })
 })
 
 describe('createCategoryCache', () => {

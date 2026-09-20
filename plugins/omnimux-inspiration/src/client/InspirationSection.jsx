@@ -222,9 +222,16 @@ export function InspirationSection({ t, active }) {
       cancelled = true
     }
   }, [cloudCategoryTab, active])
+  // Local / rivals must not reuse the cloud aggregate: leftover `digital`
+  // would keep filtering the local list empty. Pass an empty list (and no
+  // selected value) so the dropdown degrades to the fixed 全部 entry.
   const categoryOptions = useMemo(
-    () => buildCategoryFilterOptions(cloudCategories, t, category),
-    [cloudCategories, t, category],
+    () => buildCategoryFilterOptions(
+      cloudCategoryTab ? cloudCategories : [],
+      t,
+      cloudCategoryTab ? category : '',
+    ),
+    [cloudCategoryTab, cloudCategories, t, category],
   )
 
   // The row the last import produced is pinned above the list while it is
@@ -391,7 +398,7 @@ export function InspirationSection({ t, active }) {
               ]}
             />
             <DropdownSelect
-              value={category}
+              value={cloudCategoryTab ? category : ''}
               aria-label={t('filter.category')}
               onChange={setCategory}
               className="omnimux-inspiration-subfilter-select"
