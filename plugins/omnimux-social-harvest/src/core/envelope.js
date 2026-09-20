@@ -75,6 +75,10 @@ export function parseEnvelope(text) {
       const candidate = envelope[key]
       if (Array.isArray(candidate)) return { kind: 'array', items: candidate }
     }
+    // whoami 登录探针或单对象实体响应
+    if (envelope.logged_in !== undefined) {
+      return { kind: 'array', items: [envelope] }
+    }
   }
 
   return { kind: 'invalid', reason: 'stdout 是 JSON，但不是数组也不含数组字段' }
