@@ -542,7 +542,14 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                   cursor: isDragging ? 'grabbing' : (zoomScale > 1.05 ? 'grab' : 'default'),
                 }}
               >
-                {activeItem?.type === 'video' ? (
+                {isGenerating ? (
+                  <div className="omx-mv-generating-overlay">
+                    <GeneratingStateCard
+                      statusText={state.generatingTask?.model ? `${state.generatingTask.model} · 正在生成中…` : '正在向模型引擎直接派发运算…'}
+                      status="running"
+                    />
+                  </div>
+                ) : activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls playsInline />
                 ) : activeItem?.url ? (
                   <img

@@ -61,8 +61,26 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
     tabSource.includes('/omnimux/api/media/generate'),
     'handleDirectSubmit 必须直投后端 /omnimux/api/media/generate 生成路由'
   );
+  assert.ok(
+    tabSource.includes('GeneratingStateCard') && tabSource.includes('omx-mv-generating-overlay'),
+    '大画布中央在生成时必须挂载 GeneratingStateCard 炫彩流光动画'
+  );
 
-  // 4. 验证媒体查看器 Store 状态流转与直连产物自动入库
+  // 4. 验证 Issue #2419 真实中枢数据与零死数据契约
+  assert.ok(
+    composerSource.includes("useState('')"),
+    'Prompt 输入框初始值必须为空字符串，严禁预置任何死数据'
+  );
+  assert.ok(
+    composerSource.includes('/omnimux/model-catalog'),
+    '必须动态请求执行中枢模型目录 /omnimux/model-catalog'
+  );
+  assert.ok(
+    composerSource.includes('refThumbnails && refThumbnails.length > 0'),
+    '无真实参考图时严禁渲染任何静态人像占位'
+  );
+
+  // 5. 验证媒体查看器 Store 状态流转与直连产物自动入库
   const store = createMediaViewerStore();
   assert.equal(store.getSnapshot().isGenerating, false);
 
