@@ -12,7 +12,8 @@ import { packageRoot, profileDir } from './expert/paths.js';
 import { configureHttpJsonCache } from './http.js';
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js';
 import { aggregateSkillSearch } from './skill-aggregate.js';
-import { getSessionModel, setModelCatalogResolver, handleApi, handleIcon, handleWorkshopApi } from './local-api.js';
+import { getSessionModel, setAgentPresetsNotify, setModelCatalogResolver, handleApi, handleIcon, handleWorkshopApi } from './local-api.js';
+import { materializeEnabledMarketExperts } from './expert-market.js';
 import { InventoryService } from './workshop-inventory.js';
 import { QueryService, createWorkshopSources } from './workshop-sources.js';
 import { RequestGuard, canonicalWorkshopOrigin, WORKSHOP_READ_METHODS } from './workshop-request-guard.js';
@@ -407,6 +408,29 @@ export function apply(ctx, config) {
         settings.register('omnimux-market', Config, { base: config });
     });
     registerCatalogSkillProvider(ctx);
+    // Agent 预设列表变更广播：官方预设菜单只在页面挂载或收到
+    // settings/document-updated（ns=agent-presets，官方转发白名单内事件）时重读列表；
+    // 市场安装/禁用/启动物化后借此免重启即时刷新。事件参数与官方一致：(ns, revision)，
+    // 客户端只消费 ns；revision 无真实来源时给单调递增占位值。
+    let agentPresetsNotifyRevision = 0;
+    setAgentPresetsNotify(() => {
+        try {
+            ctx.emit('settings/document-updated', 'agent-presets', ++agentPresetsNotifyRevision);
+        }
+        catch { }
+    });
+    // 启动物化：把「已入职」初值但从未落盘的市场专家补写进 $DSH_HOME/.agent-presets/，
+    // 让卡片状态与 Agent 预设列表真实一致。幂等、尊重用户禁用、失败静默不阻塞激活。
+    try {
+        const materialized = materializeEnabledMarketExperts(dshHome());
+        if (materialized.length > 0) {
+            try {
+                ctx.emit('settings/document-updated', 'agent-presets', ++agentPresetsNotifyRevision);
+            }
+            catch { }
+        }
+    }
+    catch { }
 }
 function registerMarketTools(ctx, specs) {
     for (const tool of specs) {

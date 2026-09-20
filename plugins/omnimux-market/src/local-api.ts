@@ -122,6 +122,7 @@ export {
   getMarketExpertStatus,
   installMarketExpertPreset,
   disableMarketExpertPreset,
+  materializeEnabledMarketExperts,
 } from './expert-market.js'
 
 import {
@@ -131,6 +132,24 @@ import {
   installMarketExpertPreset,
   disableMarketExpertPreset,
 } from './expert-market.js'
+
+/**
+ * Agent 预设列表变更通知钩子：官方预设菜单只在页面挂载或收到
+ * `settings/document-updated`（命名空间 agent-presets）时重读列表，
+ * 市场安装/禁用/启动物化后由 host 注入此钩子广播一次，免重启即时可见。
+ * 同 setModelCatalogResolver 的模块级注入先例。
+ */
+let agentPresetsNotify: (() => void) | null = null
+
+export function setAgentPresetsNotify(fn: (() => void) | null): void {
+  agentPresetsNotify = typeof fn === 'function' ? fn : null
+}
+
+function notifyAgentPresetsChanged(): void {
+  try {
+    agentPresetsNotify?.()
+  } catch {}
+}
 
 interface ApiContext {
   req: IncomingMessage
@@ -465,6 +484,7 @@ function handleExpertMarketInstall(ctx: ApiContext): void {
   if (!exp) return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` })
   const home = expertRoots().home
   installMarketExpertPreset(home, exp)
+  notifyAgentPresetsChanged()
   return sendJson(res, 200, { ok: true, id, status: 'enabled' })
 }
 
@@ -474,6 +494,7 @@ function handleExpertMarketDisable(ctx: ApiContext): void {
   if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
   const home = expertRoots().home
   disableMarketExpertPreset(home, id)
+  notifyAgentPresetsChanged()
   return sendJson(res, 200, { ok: true, id, status: 'disabled' })
 }
 

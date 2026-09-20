@@ -149,6 +149,30 @@ export function installMarketExpertPreset(home: string, exp: MarketExpertItem): 
   }
 }
 
+/**
+ * 启动物化：把初始状态为「已入职」（initialStatus === 'enabled'）但尚未落盘的
+ * 市场专家补写进 `<home>/.agent-presets/`，让卡片状态与 Agent 预设列表真实一致。
+ *
+ * 幂等：preset.yml 已存在则跳过；尊重用户禁用：.retired 中有标记的不复活；
+ * 单个专家写盘失败静默跳过，绝不阻塞插件激活。
+ *
+ * @returns 本次真正补写的专家 id 列表。
+ */
+export function materializeEnabledMarketExperts(home: string): string[] {
+  const installed: string[] = []
+  for (const exp of DEFAULT_MARKET_EXPERTS) {
+    if (exp.initialStatus !== 'enabled') continue
+    const presetDir = join(home, '.agent-presets', exp.id)
+    if (existsSync(join(presetDir, 'preset.yml'))) continue
+    if (getMarketExpertStatus(home, exp) !== 'enabled') continue
+    try {
+      installMarketExpertPreset(home, exp)
+      installed.push(exp.id)
+    } catch {}
+  }
+  return installed
+}
+
 export function disableMarketExpertPreset(home: string, id: string): void {
   const dir = join(home, '.agent-presets', id)
   const retiredDir = join(home, '.agent-presets', '.retired')
