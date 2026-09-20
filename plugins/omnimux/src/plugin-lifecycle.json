@@ -18,9 +18,5 @@
   "omnimux-automation": {
     "stage": "alpha",
     "toolPrefixes": ["automation_"]
-  },
-  "omnimux-inspiration": {
-    "stage": "alpha",
-    "toolPrefixes": ["omnimux_inspiration_", "inspiration_"]
   }
 }

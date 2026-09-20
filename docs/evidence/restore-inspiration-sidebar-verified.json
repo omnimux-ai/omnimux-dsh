@@ -1,0 +1,21 @@
+{
+  "task": "restore-inspiration-sidebar",
+  "verifiedAt": "2026-09-20T08:12:45.461Z",
+  "status": "passed",
+  "summary": "验证灵感社区插件已移出内测名单，正式恢复为一级功能导航项并成功挂入左侧侧边栏展示与使用。",
+  "results": {
+    "lifecycleStage": "production",
+    "sidebarIntercepted": false,
+    "injectedToDom": true,
+    "preservedSource": true,
+    "activeEntries": [
+      "应用（应用模板）",
+      "任务看板",
+      "工作流（项目）",
+      "新建项目",
+      "资产中心",
+      "灵感社区",
+      "产品库"
+    ]
+  }
+}

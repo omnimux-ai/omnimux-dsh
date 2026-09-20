@@ -339,7 +339,7 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
 
   // 处于内测阶段（Alpha）的插件入口不挂入侧边栏 DOM，仅正式版条目插入
   for (const { name, element } of rows) {
-    if (name === 'workflow') {
+    if (name === 'inspiration' || name === 'workflow') {
       assert.ok(element.parentElement !== null, `${name} 必须挂入 DOM`)
     } else {
       assert.equal(element.parentElement, null, `${name} 内测版不得挂入侧栏 DOM`)
