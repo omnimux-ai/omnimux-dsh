@@ -22,15 +22,19 @@ describe('detectEnvironment', () => {
     assert.equal(doctorCalled, false)
   })
 
-  it('已安装 + doctor 通过 → bridgeOk: true', async () => {
+  it('已安装 + doctor 通过 → bridgeOk: true，且 doctor 参数不带 -f', async () => {
+    let doctorArgv = null
     const r = await detectEnvironment({ nowMs: 1 }, {
-      run: async (argv) => argv[0] === '--version'
-        ? { stdout: '1.8.8\n', stderr: '', code: 0 }
-        : { stdout: '{"ok":true}', stderr: '', code: 0 },
+      run: async (argv) => {
+        if (argv[0] === '--version') return { stdout: '1.8.8\n', stderr: '', code: 0 }
+        doctorArgv = argv
+        return { stdout: 'Everything looks good!\n', stderr: '', code: 0 }
+      },
     })
     assert.equal(r.installed, true)
     assert.equal(r.version, '1.8.8')
     assert.equal(r.bridgeOk, true)
+    assert.deepEqual(doctorArgv, ['doctor'])
   })
 
   it('doctor 失败 → bridgeOk: false 且带诊断', async () => {
