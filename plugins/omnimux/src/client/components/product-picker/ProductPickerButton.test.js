@@ -100,7 +100,7 @@ test('ProductPickerButton: 选中态契约（缩略图 + 名称省略 + 悬停�
 
   // 4. 换选时先移除旧 Chip 再插入新 Chip（验收 5）
   assert.ok(
-    buttonSource.includes('removeChip(previous.id)'),
+    buttonSource.includes('removeChip(selectedProduct.id)'),
     '换选时必须移除旧商品 Chip',
   );
 

@@ -65,7 +65,7 @@ test('E2E: 悬停显示移除按钮且点击不触发弹窗、同步移除 Chip 
 })
 
 test('E2E: 换选先移除旧 Chip 再插入新 Chip', () => {
-  assert.ok(buttonSource.includes('removeChip(previous.id)'), '换选时必须移除旧商品 Chip')
+  assert.ok(buttonSource.includes('removeChip(selectedProduct.id)'), '换选时必须移除旧商品 Chip')
   assert.ok(buttonSource.includes('insertChip(product)'), '换选后必须插入新商品 Chip')
 })
 
