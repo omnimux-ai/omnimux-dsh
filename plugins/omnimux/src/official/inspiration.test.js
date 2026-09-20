@@ -336,6 +336,36 @@ describe('collectCategoryCounts', () => {
     )
   })
 
+  it('stops paging after a later page fails instead of walking to maxPages', async () => {
+    /** @type {number[]} */
+    const pages = []
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        pages.push(page)
+        if (page === 1) {
+          return {
+            success: true,
+            data: {
+              total: 20,
+              items: [
+                { id: '1', category: 'digital' },
+                { id: '2', category: 'digital' },
+              ],
+            },
+          }
+        }
+        throw new Error(`page ${page} down`)
+      },
+    }
+    assert.deepEqual(
+      await collectCategoryCounts(client, { pageSize: 2, maxPages: 8, concurrency: 1 }),
+      [{ name: 'digital', count: 2 }],
+    )
+    assert.deepEqual(pages, [1, 2], `later-page failure must end the walk, saw ${JSON.stringify(pages)}`)
+  })
+
   it('fails the walk when page 1 throws', async () => {
     const client = {
       async withPat() {
@@ -359,6 +389,96 @@ describe('collectCategoryCounts', () => {
       () => collectCategoryCounts(client, { timeoutMs: 20 }),
       /category aggregation timed out/,
     )
+  })
+
+  it('stops scheduling further batches after the deadline', async () => {
+    /** @type {number[]} */
+    const pages = []
+    /** @type {() => void} */
+    let releaseHang = () => {}
+    const hang = new Promise((resolve) => {
+      releaseHang = resolve
+    })
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        pages.push(page)
+        if (page === 1) {
+          return {
+            success: true,
+            data: {
+              total: 40,
+              items: [
+                { id: '1', category: 'digital' },
+                { id: '2', category: 'digital' },
+              ],
+            },
+          }
+        }
+        await hang
+        return {
+          success: true,
+          data: {
+            total: 40,
+            items: [
+              { id: String(page), category: 'digital' },
+              { id: `${page}-b`, category: 'digital' },
+            ],
+          },
+        }
+      },
+    }
+    try {
+      await assert.rejects(
+        () => collectCategoryCounts(client, { pageSize: 2, maxPages: 10, concurrency: 1, timeoutMs: 30 }),
+        /category aggregation timed out/,
+      )
+      await new Promise((resolve) => setTimeout(resolve, 40))
+      assert.deepEqual(pages, [1, 2], `deadline must not open another batch, saw ${JSON.stringify(pages)}`)
+    } finally {
+      releaseHang()
+    }
+  })
+
+  it('absorbs the rest of the current batch after a short page, then stops', async () => {
+    /** @type {number[]} */
+    const pages = []
+    const client = {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        pages.push(page)
+        if (page === 1) {
+          return {
+            success: true,
+            data: {
+              total: 20,
+              items: [
+                { id: '1', category: 'digital' },
+                { id: '2', category: 'digital' },
+              ],
+            },
+          }
+        }
+        if (page === 2) {
+          return { success: true, data: { total: 20, items: [{ id: '3', category: 'digital' }] } }
+        }
+        return {
+          success: true,
+          data: {
+            total: 20,
+            items: [
+              { id: `${page}-a`, category: 'digital' },
+              { id: `${page}-b`, category: 'digital' },
+            ],
+          },
+        }
+      },
+    }
+    const data = await collectCategoryCounts(client, { pageSize: 2, maxPages: 10, concurrency: 2 })
+    assert.deepEqual(pages.slice().sort((a, b) => a - b), [1, 2, 3])
+    assert.deepEqual(data, [{ name: 'digital', count: 5 }])
   })
 })
 
@@ -391,6 +511,60 @@ describe('createCategoryCache', () => {
     ])
     assert.equal(loads, 1)
     assert.deepEqual(a, b)
+  })
+
+  it('holds inflight until a timed-out walk settles so a retry cannot overlap', async () => {
+    let walks = 0
+    /** @type {number[]} */
+    const pages = []
+    /** @type {() => void} */
+    let releaseHang = () => {}
+    const hang = new Promise((resolve) => {
+      releaseHang = resolve
+    })
+    const cache = createCategoryCache()
+    const loader = () => {
+      walks += 1
+      return collectCategoryCounts({
+        async withPat(path) {
+          const url = new URL(path, 'http://127.0.0.1')
+          const page = Number(url.searchParams.get('page')) || 1
+          pages.push(page)
+          if (page === 1) {
+            return {
+              success: true,
+              data: {
+                total: 40,
+                items: [
+                  { id: '1', category: 'digital' },
+                  { id: '2', category: 'digital' },
+                ],
+              },
+            }
+          }
+          await hang
+          return {
+            success: true,
+            data: {
+              total: 40,
+              items: [
+                { id: String(page), category: 'digital' },
+                { id: `${page}-b`, category: 'digital' },
+              ],
+            },
+          }
+        },
+      }, { pageSize: 2, maxPages: 10, concurrency: 1, timeoutMs: 30 })
+    }
+    await assert.rejects(() => cache.refresh(loader), /category aggregation timed out/)
+    const walksAtTimeout = walks
+    await assert.rejects(() => cache.refresh(loader), /category aggregation timed out/)
+    assert.equal(walks, walksAtTimeout, 'retry must share inflight until the walk settles')
+    assert.deepEqual(pages, [1, 2], `timed-out walk must not keep paging, saw ${JSON.stringify(pages)}`)
+    releaseHang()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    const recovered = await cache.refresh(async () => [{ name: 'digital', count: 1 }])
+    assert.deepEqual(recovered, [{ name: 'digital', count: 1 }])
   })
 
   it('keeps the stale value after a failed refresh and retries next time', async () => {

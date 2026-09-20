@@ -170,27 +170,40 @@ function sortedCategoryRows(counts) {
     .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
 }
 
+/** Walk promise attached to a deadline-raced collect so cache inflight can wait it out. */
+const CATEGORY_WALK_SETTLE = Symbol('categoryWalkSettle')
+
 /**
  * Settle `work` or reject when `timeoutMs` elapses. The loser is ignored so a
  * late walk rejection cannot surface as unhandled; in-flight `withPat` calls
- * are not aborted (the official client has no AbortController).
+ * are not aborted (the official client has no AbortController). `onTimeout`
+ * lets the walk stop scheduling further batches.
  * @param {Promise<T>} work
  * @param {number} timeoutMs
  * @param {string} message
+ * @param {() => void} [onTimeout]
  * @returns {Promise<T>}
  * @template T
  */
-function withDeadline(work, timeoutMs, message) {
+function withDeadline(work, timeoutMs, message, onTimeout) {
   return new Promise((resolve, reject) => {
+    let settled = false
     const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      onTimeout?.()
       reject(new Error(message))
     }, timeoutMs)
     work.then(
       (value) => {
+        if (settled) return
+        settled = true
         clearTimeout(timer)
         resolve(value)
       },
       (error) => {
+        if (settled) return
+        settled = true
         clearTimeout(timer)
         reject(error)
       },
@@ -206,21 +219,24 @@ function withDeadline(work, timeoutMs, message) {
  * `page_size=100` and `concurrency` pages in flight. Bounds:
  * - at most `maxPages` (default 50);
  * - a page shorter than `pageSize` ends the walk;
- * - a `timeoutMs` (default 15s) deadline fails the whole walk so callers can
- *   SWR-degrade;
- * - only a page-1 failure fails the walk; later pages are skipped.
+ * - a `timeoutMs` (default 15s) deadline fails the caller so they can
+ *   SWR-degrade; the walk stops scheduling further batches (`withPat` cannot
+ *   abort, so the current batch still settles);
+ * - only a page-1 failure fails the walk; a later short page or later page
+ *   failure ends the walk after the current batch is absorbed.
  *
  * Callers wrap this in a cache; it is too heavy to run per request.
  * @param {{ withPat: Function }} client
  * @param {{ pageSize?: number, concurrency?: number, maxPages?: number, timeoutMs?: number }} [opts]
  * @returns {Promise<Array<{ name: string, count: number }>>}
  */
-export async function collectCategoryCounts(client, opts = {}) {
+export function collectCategoryCounts(client, opts = {}) {
   const pageSize = Math.max(1, Number(opts.pageSize) || CATEGORY_PAGE_SIZE)
   const concurrency = Math.max(1, Number(opts.concurrency) || CATEGORY_CONCURRENCY)
   const maxPages = Math.max(1, Number(opts.maxPages) || CATEGORY_MAX_PAGES)
   const timeoutMs = Math.max(1, Number(opts.timeoutMs) || CATEGORY_TIMEOUT_MS)
 
+  let aborted = false
   const walk = async () => {
     /** @type {Map<string, number>} */
     const counts = new Map()
@@ -235,6 +251,7 @@ export async function collectCategoryCounts(client, opts = {}) {
     }
 
     const first = await client.withPat(`${API}/inspirations?page=1&page_size=${pageSize}`)
+    if (aborted) return sortedCategoryRows(counts)
     const firstCount = absorb(first)
     if (firstCount < pageSize) return sortedCategoryRows(counts)
 
@@ -246,9 +263,11 @@ export async function collectCategoryCounts(client, opts = {}) {
     )
     if (pageCount <= 1) return sortedCategoryRows(counts)
 
-    // Walk remaining pages in concurrent batches. A short page ends the
-    // walk after the current batch so later batches are never scheduled.
+    // Walk remaining pages in concurrent batches. A short page, a later
+    // page failure, or the deadline ends the walk after this batch so
+    // later batches are never scheduled.
     for (let page = 2; page <= pageCount; ) {
+      if (aborted) break
       const batch = []
       while (batch.length < concurrency && page <= pageCount) {
         batch.push(page)
@@ -256,19 +275,28 @@ export async function collectCategoryCounts(client, opts = {}) {
       }
       let short = false
       await mapWithConcurrency(batch, concurrency, async (target) => {
+        if (aborted) return
         try {
           const count = absorb(await client.withPat(`${API}/inspirations?page=${target}&page_size=${pageSize}`))
           if (count < pageSize) short = true
         } catch {
-          // Later pages are best-effort: one failed page must not wipe page 1.
+          // Later pages are best-effort: one failed page must not wipe page 1,
+          // but it must stop further paging after this batch is absorbed.
+          short = true
         }
       })
-      if (short) break
+      if (short || aborted) break
     }
     return sortedCategoryRows(counts)
   }
 
-  return withDeadline(walk(), timeoutMs, 'category aggregation timed out')
+  const walkPromise = walk()
+  walkPromise.catch(() => {})
+  const result = withDeadline(walkPromise, timeoutMs, 'category aggregation timed out', () => {
+    aborted = true
+  })
+  result[CATEGORY_WALK_SETTLE] = walkPromise
+  return result
 }
 
 /**
@@ -300,18 +328,35 @@ export function createCategoryCache(opts = {}) {
      * @param {() => Promise<Array<{ name: string, count: number }>>} loader
      */
     refresh(loader) {
-      if (!inflight) {
-        inflight = Promise.resolve()
-          .then(loader)
-          .then((data) => {
-            entry = { data, at: now() }
-            return data
-          })
-          .finally(() => {
+      if (inflight) return inflight
+      let walkSettle = null
+      const visible = Promise.resolve()
+        .then(() => {
+          const result = loader()
+          if (result && typeof result.then === 'function' && result[CATEGORY_WALK_SETTLE]) {
+            walkSettle = result[CATEGORY_WALK_SETTLE]
+          }
+          return result
+        })
+        .then((data) => {
+          entry = { data, at: now() }
+          return data
+        })
+        .then(
+          (data) => {
             inflight = null
-          })
-      }
-      return inflight
+            return data
+          },
+          (error) => {
+            const held = inflight
+            const done = () => { if (inflight === held) inflight = null }
+            if (walkSettle) walkSettle.then(done, done)
+            else done()
+            throw error
+          },
+        )
+      inflight = visible
+      return visible
     },
   }
 }

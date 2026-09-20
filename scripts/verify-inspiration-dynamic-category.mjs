@@ -13,7 +13,7 @@
  *   2. 其后的选项来自聚合端点（digital / Health & Wellness / 女装和内衣），
  *      不再是写死的 9 个中文电商类目；
  *   3. 聚合端点生产失败路径 `200 { data: [] }` 时下拉降级为仅「全部」，页面无报错；
- *   4. 切到「本地」后选项恰为 ['全部']，且不把云端分类值转发给本地查询；
+ *   4. 切到「本地」后选项恰为 ['全部']；选中 digital 后等云端 category=digital 落地再切 tab，切后本地切片非空且任意一条都不得含 category=；
  *   5. 截图证据落盘 docs/evidence/inspiration-dynamic-category-filter-verified.png。
  */
 
@@ -116,7 +116,7 @@ function harnessHtml(bundledJs) {
 
 /**
  * Host 扮演服务：页面与桩 API 同源，fetch('/omnimux/...') 直接命中。
- * @param {{ emptyCategories?: boolean, logLocal?: string[] }} options
+ * @param {{ emptyCategories?: boolean, logLocal?: string[], logCloud?: string[] }} options
  */
 function startServer(html, options = {}) {
   const server = http.createServer((req, res) => {
@@ -141,6 +141,7 @@ function startServer(html, options = {}) {
       return;
     }
     if (url.pathname === '/omnimux/inspiration') {
+      if (Array.isArray(options.logCloud)) options.logCloud.push(url.search);
       json(200, { success: true, data: { items: CLOUD_ITEMS, total: CLOUD_ITEMS.length } });
       return;
     }
@@ -343,7 +344,8 @@ async function scenarioDegradeOnFailure(bundledJs, report) {
 
 async function scenarioLocalTabDropsCloudCategory(bundledJs, report) {
   const logLocal = [];
-  const server = await startServer(harnessHtml(bundledJs), { logLocal });
+  const logCloud = [];
+  const server = await startServer(harnessHtml(bundledJs), { logLocal, logCloud });
   const { proc, cdpPort } = await launchChrome();
   let client = null;
   try {
@@ -359,15 +361,25 @@ async function scenarioLocalTabDropsCloudCategory(bundledJs, report) {
       return options.includes('digital') ? options : null;
     })()`);
     assert.ok(cloudLabels, '切本地前必须先看到云端分类');
-    await evaluate(`([...document.querySelectorAll('[role="option"], [role="menuitem"]')].find((node) => node.textContent.trim() === 'digital') || { click() {} }).click()`);
-    // 全部 tab 的 loadData 身份变化会打两次本地库；先让它们落地再切 tab。
+    const digitalClicked = await evaluate(`(function() {
+      const node = [...document.querySelectorAll('[role="option"], [role="menuitem"]')].find((item) => item.textContent.trim() === 'digital');
+      if (!node) return false;
+      node.click();
+      return true;
+    })()`);
+    assert.ok(digitalClicked, `分类下拉缺少 digital 选项，无法选中。实际: ${JSON.stringify(cloudLabels)}`);
+
     const selectStarted = Date.now();
+    let digitalLanded = false;
     while (Date.now() - selectStarted < 5000) {
-      const withDigital = logLocal.filter((search) => /(?:^|[?&])category=digital(?:&|$)/.test(search));
-      if (withDigital.length >= 1) break;
+      digitalLanded = logCloud.some((search) => /(?:^|[?&])category=digital(?:&|$)/.test(search));
+      if (digitalLanded) break;
       await new Promise((resolveWait) => setTimeout(resolveWait, 50));
     }
-    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+    assert.ok(
+      digitalLanded,
+      `选中 digital 后必须等到云端请求携带 category=digital 再切 tab。cloud: ${JSON.stringify(logCloud)} local: ${JSON.stringify(logLocal)}`,
+    );
 
     const beforeSwitch = logLocal.length;
     const localClicked = await evaluate(`(function() {
@@ -380,18 +392,23 @@ async function scenarioLocalTabDropsCloudCategory(bundledJs, report) {
     assert.ok(localClicked, '未找到「本地」tab');
 
     const localStarted = Date.now();
-    let localTabQueries = [];
+    let afterSwitch = [];
     while (Date.now() - localStarted < 6000) {
-      localTabQueries = logLocal.slice(beforeSwitch).filter((search) => (
-        /(?:^|[?&])sort=new(?:&|$)/.test(search) && !/(?:^|[?&])category=/.test(search)
-      ));
-      if (localTabQueries.length > 0) break;
+      afterSwitch = logLocal.slice(beforeSwitch);
+      if (afterSwitch.length > 0) break;
       await new Promise((resolveWait) => setTimeout(resolveWait, 50));
     }
     assert.ok(
-      localTabQueries.length > 0,
-      `切到本地后未见无分类的 sort=new 查询。切后: ${JSON.stringify(logLocal.slice(beforeSwitch))} 全量: ${JSON.stringify(logLocal)}`,
+      afterSwitch.length > 0,
+      `切到本地后本地查询切片为空。全量: ${JSON.stringify(logLocal)}`,
     );
+    const leaked = afterSwitch.filter((search) => /(?:^|[?&])category=/.test(search));
+    assert.equal(
+      leaked.length,
+      0,
+      `切到本地后任意一条本地查询都不得含 category=。切片: ${JSON.stringify(afterSwitch)}`,
+    );
+    const localTabQueries = afterSwitch;
 
     await evaluate(`document.querySelector('${CATEGORY_TRIGGER}').click()`);
     const labels = await waitFor(evaluate, `(function() {
