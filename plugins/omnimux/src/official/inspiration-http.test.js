@@ -249,4 +249,48 @@ describe('registerInspirationRoutes', () => {
     }, createInspirationDispatcher({ official: { mount: true }, client: clientWith(async () => ({})) }))
     assert.deepEqual(routes, ['prefix:/omnimux/inspiration'])
   })
+
+  function mockRes() {
+    return {
+      status: 0,
+      headers: {},
+      bodyText: '',
+      writeHead(status, headers) {
+        this.status = status
+        this.headers = headers || {}
+      },
+      end(text) {
+        this.bodyText = text || ''
+      },
+    }
+  }
+
+  it('emits CORS headers on the gateway list response so cross-origin pages can fetch', async () => {
+    let handler = null
+    registerInspirationRoutes({
+      register(route) {
+        handler = route.handler
+        return () => {}
+      },
+    }, createInspirationDispatcher({ official: { mount: true }, client: clientWith(async () => ({ data: { items: [], total: 0 } })) }))
+    const res = mockRes()
+    await handler({ method: 'GET', url: '/omnimux/inspiration?page=1' }, res)
+    assert.equal(res.headers['Access-Control-Allow-Origin'], '*')
+    assert.equal(res.headers['Access-Control-Allow-Headers'], '*')
+    assert.match(String(res.headers['Access-Control-Allow-Methods']), /GET/)
+  })
+
+  it('answers OPTIONS preflight with 204 and CORS headers', async () => {
+    let handler = null
+    registerInspirationRoutes({
+      register(route) {
+        handler = route.handler
+        return () => {}
+      },
+    }, createInspirationDispatcher({ official: { mount: true }, client: clientWith(async () => ({})) }))
+    const res = mockRes()
+    await handler({ method: 'OPTIONS', url: '/omnimux/inspiration' }, res)
+    assert.equal(res.status, 204)
+    assert.equal(res.headers['Access-Control-Allow-Origin'], '*')
+  })
 })

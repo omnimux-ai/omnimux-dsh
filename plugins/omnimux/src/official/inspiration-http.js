@@ -250,6 +250,10 @@ export function registerInspirationRoutes(webServer, dispatcher) {
     path: PREFIX,
     async handler(req, res) {
       try {
+        if ((req.method || '').toUpperCase() === 'OPTIONS') {
+          sendJson(res, 204, {})
+          return
+        }
         const url = new URL(req.url || PREFIX, 'http://127.0.0.1')
         if (url.pathname.startsWith(`${PREFIX}/media/`)) {
           await dispatcher.streamMedia(req, res)
