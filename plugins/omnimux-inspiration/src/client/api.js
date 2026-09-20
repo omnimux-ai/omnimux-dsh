@@ -635,3 +635,25 @@ export async function createShareLink(id, payload) {
     body: payload,
   })
 }
+
+/**
+ * 基于商品生成 10 维结构化关键词雷达
+ * @param {object} product
+ */
+export async function generateRadarKeywordsApi(product) {
+  return inspirationRequest('/omnimux/inspiration/local/radar/keywords', {
+    method: 'POST',
+    body: { product },
+  })
+}
+
+/**
+ * 调用 Jev 决策模型执行毫秒级灵感匹配与深度数据分析
+ * @param {{ keywords: string[], product?: object, region?: string, limit?: number }} params
+ */
+export async function matchRadarInspirationsApi(params) {
+  return inspirationRequest('/omnimux/inspiration/local/radar/match', {
+    method: 'POST',
+    body: params,
+  })
+}
