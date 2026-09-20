@@ -4,7 +4,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeAgentPreset } from './expert-presets.js';
+import { healInstalledAgentPresets, writeAgentPreset } from './expert-presets.js';
 import { generatePixelAvatarDataUrl } from './expert/pixel-avatar.js';
 export const DEFAULT_MARKET_EXPERTS = [
     {
@@ -146,6 +146,7 @@ export function installMarketExpertPreset(home, exp) {
  * @returns 本次真正补写的专家 id 列表。
  */
 export function materializeEnabledMarketExperts(home) {
+    healInstalledAgentPresets(home);
     const installed = [];
     for (const exp of DEFAULT_MARKET_EXPERTS) {
         if (exp.initialStatus !== 'enabled')

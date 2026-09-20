@@ -116,7 +116,7 @@ export const MUTATING_METHODS = new Set([
   'tryDetach',
 ])
 
-export {
+import {
   type MarketExpertItem,
   DEFAULT_MARKET_EXPERTS,
   getMarketExpertStatus,
@@ -126,12 +126,24 @@ export {
 } from './expert-market.js'
 
 import {
+  agentPresetCordis,
+  healAgentPresetCordis,
+  healInstalledAgentPresets,
+  writeAgentPreset,
+} from './expert-presets.js'
+
+export {
   type MarketExpertItem,
   DEFAULT_MARKET_EXPERTS,
   getMarketExpertStatus,
   installMarketExpertPreset,
   disableMarketExpertPreset,
-} from './expert-market.js'
+  materializeEnabledMarketExperts,
+  agentPresetCordis,
+  healAgentPresetCordis,
+  healInstalledAgentPresets,
+  writeAgentPreset,
+}
 
 /**
  * Agent 预设列表变更通知钩子：官方预设菜单只在页面挂载或收到
