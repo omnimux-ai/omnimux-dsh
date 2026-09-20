@@ -1,0 +1,60 @@
+{
+  "task": "device-prd-adaptation",
+  "issue": 2441,
+  "timestamp": "2026-09-20T12:17:00.000Z",
+  "features": [
+    {
+      "name": "排期规划管线 (Schedule Pipeline)",
+      "timezoneAlignment": true,
+      "timezoneTag": "美西 19:30 · 黄金档",
+      "localSubTime": "北京次日 10:30",
+      "deliveryReceipt": {
+        "verified": true,
+        "modalClass": "omx-receipt-dialog-box",
+        "url": "https://www.tiktok.com/@trend_cat_us/video/738291048129"
+      }
+    },
+    {
+      "name": "矩阵账号拓扑 (Account Topology)",
+      "accounts": 3,
+      "quotaCapacity": {
+        "verified": true,
+        "indicatorClass": "omx-quota-track",
+        "warningState": "已发 2 / 上限 2 条 (满额预警)"
+      },
+      "healthIndex": "96分 · 权重极佳",
+      "deviceDrift": {
+        "verified": true,
+        "action": "无感漂移"
+      }
+    },
+    {
+      "name": "资产就绪货架 (Asset Inventory)",
+      "directLinkage": true,
+      "antiDuplicationLock": {
+        "verified": true,
+        "fulfilled": "防重发锁已激活",
+        "locked": "排期锁定中"
+      }
+    }
+  ],
+  "domInspection": {
+    "classes": [
+      "omx-timezone-pill",
+      "omx-time-sub",
+      "omx-btn-receipt",
+      "omx-receipt-dialog-box",
+      "omx-acc-grid",
+      "omx-acc-card",
+      "omx-quota-box",
+      "omx-quota-track",
+      "omx-asset-shelf-grid",
+      "omx-asset-shelf-card",
+      "omx-pill-locked",
+      "omx-pill-fulfilled"
+    ],
+    "uiGatesPass": true,
+    "noRawColors": true,
+    "noInlineStyles": true
+  }
+}

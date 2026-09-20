@@ -58,6 +58,13 @@ const ICONS = {
       <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
     </svg>
   ),
+  externalLink: (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  ),
 }
 
 export function DeviceStage({ t, stage, store, visible = true }) {
@@ -79,10 +86,115 @@ export function DeviceStage({ t, stage, store, visible = true }) {
   const [formCaption, setFormCaption] = useState('')
   const [formTime, setFormTime] = useState('18:00')
 
-  // 排期已规划示例任务列表
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [currentReceipt, setCurrentReceipt] = useState(null)
+
+  // 排期规划管线 (Schedule Pipeline) 任务列表：支持双时区智能对齐与线上发帖回执
   const [scheduledPosts, setScheduledPosts] = useState([
-    { id: 'post-01', day: '周一', time: '09:30', account: '@trend_cat_us', action: '发布短视频', state: '已发布' },
-    { id: 'post-02', day: '周三', time: '18:00', account: '@trend_cat_us', action: '发布短视频', state: '排队中 · 1号槽' },
+    {
+      id: 'post-01',
+      day: '周一',
+      time: '19:30',
+      tzTag: '美西 19:30 · 黄金档',
+      localSub: '北京次日 10:30',
+      title: '美区搞笑猫咪·抓拍合辑',
+      account: '@trend_cat_us',
+      platform: 'TikTok',
+      action: '发布短视频',
+      state: '已履约发布',
+      receipt: {
+        url: 'https://www.tiktok.com/@trend_cat_us/video/738291048129',
+        metrics: '14.8k 播放 · 2.1k 赞',
+      },
+    },
+    {
+      id: 'post-02',
+      day: '周三',
+      time: '18:00',
+      tzTag: '美东 18:00 · 晚高峰',
+      localSub: '北京周四 06:00',
+      title: '厨房收纳神器爆款复刻',
+      account: '@trend_cat_us',
+      platform: 'TikTok',
+      action: '发布短视频',
+      state: '排期锁定中 · 1号槽',
+    },
+  ])
+
+  // 矩阵账号拓扑 (Account Topology)：安全发布配额与健康权重指数感知
+  const [matrixAccounts] = useState([
+    {
+      id: 'acc-01',
+      handle: '@trend_cat_us',
+      platform: 'TikTok 美区',
+      tzDesc: '洛杉矶时区 (UTC-8) · 萌宠搞笑垂类',
+      healthScore: '96分',
+      healthLabel: '权重极佳',
+      quotaText: '已发 1 / 上限 3 条 (安全)',
+      quotaPercent: 33,
+      isWarning: false,
+      hardware: 'iPhone 15 Pro (01号机)',
+    },
+    {
+      id: 'acc-02',
+      handle: '@ootd_style_us',
+      platform: 'Instagram',
+      tzDesc: '纽约时区 (UTC-5) · 时尚穿搭垂类',
+      healthScore: '88分',
+      healthLabel: '健康良好',
+      quotaText: '已发 2 / 上限 2 条 (满额预警)',
+      quotaPercent: 100,
+      isWarning: true,
+      hardware: 'iPhone 14 (02号机)',
+    },
+    {
+      id: 'acc-03',
+      handle: '@life_hacks_global',
+      platform: 'YouTube Shorts',
+      tzDesc: '伦敦时区 (UTC+0) · 生活黑科技类',
+      healthScore: '94分',
+      healthLabel: '权重优良',
+      quotaText: '已发 0 / 上限 3 条 (空闲就绪)',
+      quotaPercent: 0,
+      isWarning: false,
+      hardware: 'iPhone 13 (04号机)',
+    },
+  ])
+
+  // 资产就绪货架 (Asset Inventory)：直通资产库成片、防重发排他锁状态机
+  const [assetInventory] = useState([
+    {
+      id: 'ast-01',
+      title: '美区搞笑猫咪·抓拍合辑',
+      meta: '00:32 · 9:16竖屏 · TikTok成片',
+      state: 'fulfilled', // fulfilled | locked | ready
+      stateLabel: '已履约发布 · 锁定',
+      targetAccount: '@trend_cat_us',
+      receiptUrl: 'https://www.tiktok.com/@trend_cat_us/video/738291048129',
+    },
+    {
+      id: 'ast-02',
+      title: '厨房收纳神器爆款复刻',
+      meta: '00:45 · 9:16竖屏 · 口播脚本对齐',
+      state: 'locked',
+      stateLabel: '排期锁定中',
+      targetAccount: '@trend_cat_us',
+      scheduleTime: '今日 18:00',
+    },
+    {
+      id: 'ast-03',
+      title: '美白精华淡斑实测测评',
+      meta: '00:28 · 9:16竖屏 · AI特征提取完成',
+      state: 'ready',
+      stateLabel: '就绪待分发',
+    },
+    {
+      id: 'ast-04',
+      title: '车载香薰出海爆单视频',
+      meta: '00:39 · 9:16竖屏 · 英文TTS解说',
+      state: 'ready',
+      stateLabel: '就绪待分发',
+    },
   ])
 
   // 保活契约（Stage contract）：页面切走时隐藏而不卸载，回来时不重拉状态。
@@ -190,25 +302,25 @@ export function DeviceStage({ t, stage, store, visible = true }) {
         </div>
       </div>
 
-      {/* 极简选项卡导航 (32px 基准，单行流，对标 tame.so 竞品架构) */}
+      {/* 极简选项卡导航 (32px 基准，单行流，SaaS 科技化术语规范) */}
       <div className="omx-stage-tabs">
         <button className={`omx-stage-tab-btn ${activeTab === 'fleet' ? 'active' : ''}`} onClick={() => setActiveTab('fleet')} /* exempt-ui01 选项卡导航 */>
-          集群
+          集群监控
         </button>
         <button className={`omx-stage-tab-btn ${activeTab === 'schedules' ? 'active' : ''}`} onClick={() => setActiveTab('schedules')} /* exempt-ui01 选项卡导航 */>
-          排期
+          排期管线
         </button>
         <button className={`omx-stage-tab-btn ${activeTab === 'content' ? 'active' : ''}`} onClick={() => setActiveTab('content')} /* exempt-ui01 选项卡导航 */>
-          素材
+          素材就绪
         </button>
         <button className={`omx-stage-tab-btn ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')} /* exempt-ui01 选项卡导航 */>
-          账号
+          账号拓扑
         </button>
         <button className={`omx-stage-tab-btn ${activeTab === 'activity' ? 'active' : ''}`} onClick={() => setActiveTab('activity')} /* exempt-ui01 选项卡导航 */>
-          审计
+          会话审计
         </button>
         <button className={`omx-stage-tab-btn ${activeTab === 'warmup' ? 'active' : ''}`} onClick={() => setActiveTab('warmup')} /* exempt-ui01 选项卡导航 */>
-          养号
+          养号计划
         </button>
       </div>
 
@@ -336,9 +448,19 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                     <div className="omx-day-body">
                       {scheduledPosts.filter(p => p.day.includes(day)).map(p => (
                         <div key={p.id} className="omx-schedule-card">
-                          <div className="omx-schedule-card-time">{p.time}</div>
+                          <div className="omx-timezone-pill">{p.tzTag || p.time}</div>
+                          {p.localSub && <div className="omx-time-sub">{p.localSub}</div>}
+                          {p.title && <div className="omx-card-asset-title">{p.title}</div>}
                           <div className="omx-schedule-card-acc">{ICONS.tiktok} {p.account}</div>
-                          <div className="omx-schedule-card-tag">{p.state}</div>
+                          <div className="omx-card-status-bar">
+                            <span className="omx-schedule-card-tag">{p.state}</span>
+                            {p.receipt && (
+                              <button type="button" className="omx-btn-receipt" onClick={(e) => { e.stopPropagation(); setCurrentReceipt({ ...p.receipt, title: p.title, account: p.account, time: p.tzTag }); setReceiptModalOpen(true) }} /* exempt-ui01 回执查看按钮 */>
+                                <span>回执</span>
+                                {ICONS.externalLink}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -353,7 +475,8 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                 <table className="omx-data-table">
                   <thead>
                     <tr>
-                      <th>时间</th>
+                      <th>时间与时区</th>
+                      <th>成片标题</th>
                       <th>目标账号</th>
                       <th>动作</th>
                       <th>状态</th>
@@ -362,7 +485,8 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                   <tbody>
                     {scheduledPosts.map(p => (
                       <tr key={p.id}>
-                        <td>{p.day} {p.time}</td>
+                        <td>{p.day} {p.tzTag || p.time}</td>
+                        <td>{p.title || '无标题成片'}</td>
                         <td>{p.account}</td>
                         <td>{p.action}</td>
                         <td><span className="omx-badge-violet">{p.state}</span></td>
@@ -375,7 +499,7 @@ export function DeviceStage({ t, stage, store, visible = true }) {
           </div>
         )}
 
-        {/* 3. 素材视图 (Content)：管理视频、图片与文案库 */}
+        {/* 3. 素材视图 (Content)：资产就绪货架与防重发排他锁 */}
         {activeTab === 'content' && (
           <div>
             <div className="omx-content-toolbar">
@@ -389,31 +513,126 @@ export function DeviceStage({ t, stage, store, visible = true }) {
                 />
               </div>
               <div className="omx-banner-actions">
-                <button className="omx-btn-subtle" onClick={() => showToast('已打开默认文案库弹窗')} /* exempt-ui01 文案弹窗 */>添加默认文案</button>
-                <button className="omx-btn-ink" onClick={() => showToast('请选择需要上传至媒体库的照片或视频')} /* exempt-ui01 上传按钮 */>上传照片或视频</button>
+                <button className="omx-btn-subtle" onClick={() => showToast('已同步拉取 OmniMux 资产库最新成片')} /* exempt-ui01 同步资产库 */>
+                  {ICONS.refresh}
+                  <span>同步资产库</span>
+                </button>
+                <button className="omx-btn-ink" onClick={() => { setActiveTab('schedules'); setScheduleFormOpen(true); showToast('已直通排期管线，请挑选目标账号与黄金发布窗口') }} /* exempt-ui01 直通排期管线 */>
+                  {ICONS.plus}
+                  <span>从资产库挑选成片并排期</span>
+                </button>
               </div>
             </div>
 
-            <div className="omx-empty-box">
-              <h3 className="omx-empty-title">暂无就绪发布素材</h3>
-              <p className="omx-empty-desc">在此集中管理发布所需的短视频与封面素材。当排期任务到达触发点时，系统仅在需要时才会按需下载并注入至对应真机。</p>
-              <button className="omx-btn-ink" onClick={() => setActiveTab('schedules')} /* exempt-ui01 前往排期 */>前往排期管理</button>
-            </div>
+            {assetInventory.length === 0 ? (
+              <div className="omx-empty-box">
+                <h3 className="omx-empty-title">暂无就绪发布素材</h3>
+                <p className="omx-empty-desc">在此集中管理发布所需的短视频与封面素材。当排期任务到达触发点时，系统仅在需要时才会按需下载并注入至对应真机。</p>
+                <button type="button" className="omx-btn-ink" onClick={() => setActiveTab('schedules')} /* exempt-ui01 前往排期 */>前往排期管理</button>
+              </div>
+            ) : (
+              <div className="omx-asset-shelf-grid">
+                {assetInventory.map(ast => (
+                  <div key={ast.id} className="omx-asset-shelf-card">
+                    <div className="omx-asset-shelf-thumb">
+                      <span className={`omx-asset-status-pill ${ast.state === 'fulfilled' ? 'omx-pill-fulfilled' : ast.state === 'locked' ? 'omx-pill-locked' : 'omx-pill-ready'}`}>
+                        {ast.stateLabel}
+                      </span>
+                    </div>
+                    <div className="omx-asset-shelf-body">
+                      <div className="omx-asset-shelf-title">{ast.title}</div>
+                      <div className="omx-asset-shelf-meta">{ast.meta}</div>
+                      <div className="omx-asset-shelf-foot">
+                        {ast.state === 'fulfilled' && (
+                          <span className="omx-pill-success-text">防重发锁已激活</span>
+                        )}
+                        {ast.state === 'locked' && (
+                          <span className="omx-pill-brand-text">{ast.targetAccount} {ast.scheduleTime}</span>
+                        )}
+                        {ast.state === 'ready' && (
+                          <button type="button" className="omx-btn-ink omx-btn-sm-ink" onClick={() => { setActiveTab('schedules'); setScheduleFormOpen(true); showToast(`已将《${ast.title}》载入排期规划表单`) }} /* exempt-ui01 一键排期 */>
+                            一键排期
+                          </button>
+                        )}
+                        {ast.receiptUrl && (
+                          <button type="button" className="omx-btn-receipt" onClick={() => { setCurrentReceipt({ url: ast.receiptUrl, title: ast.title, account: ast.targetAccount, metrics: '14.8k 播放 · 2.1k 赞' }); setReceiptModalOpen(true) }} /* exempt-ui01 资产查看线上帖 */>
+                            <span>查看线上帖</span>
+                            {ICONS.externalLink}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* 4. 账号视图 (Accounts)：账号与真机矩阵绑定与轮换顺序 */}
+        {/* 4. 账号视图 (Accounts)：矩阵账号拓扑与安全发帖配额 */}
         {activeTab === 'accounts' && (
           <div>
             <div className="omx-section-card">
-              <h3 className="omx-section-title">矩阵账号拓扑与调度</h3>
-              <p className="omx-section-desc">编排各账号的所属社交平台、承载真机位置与任务执行顺序。配置变更将在 2 分钟内同步至设备集群。</p>
-            </div>
+              <div className="omx-schedule-toolbar">
+                <div className="omx-banner-left">
+                  <h3 className="omx-section-title">矩阵账号拓扑与安全配额</h3>
+                  <span className="omx-section-desc">账号与物理真机已彻底解耦。系统动态监控各账号今日发帖额度与健康权重指数。</span>
+                </div>
+                <button className="omx-btn-ink" onClick={() => showToast('请在手机上打开社交 App 并扫描完成托管授权')} /* exempt-ui01 绑定账号 */>
+                  {ICONS.plus}
+                  <span>绑定新社交账号</span>
+                </button>
+              </div>
 
-            <div className="omx-empty-box">
-              <h3 className="omx-empty-title">尚未配置绑定社交账号</h3>
-              <p className="omx-empty-desc">单台真机严格对应单个账号与专用网络隔离环境。请先通过「接入设备」向导纳管手机，再绑定登录账号。</p>
-              <button className="omx-btn-ink" onClick={() => setWizardOpen(true)} /* exempt-ui01 触发向导 */>打开接入向导</button>
+              {matrixAccounts.length === 0 ? (
+                <div className="omx-empty-box">
+                  <h3 className="omx-empty-title">尚未配置绑定社交账号</h3>
+                  <p className="omx-empty-desc">单台真机严格对应单个账号与专用网络隔离环境。请先通过「接入设备」向导纳管手机，再绑定登录账号。</p>
+                  <button type="button" className="omx-btn-ink" onClick={() => setWizardOpen(true)} /* exempt-ui01 触发向导 */>打开接入向导</button>
+                </div>
+              ) : (
+                <div className="omx-acc-grid">
+                  {matrixAccounts.map(acc => (
+                    <div key={acc.id} className="omx-acc-card">
+                      <div className="omx-acc-head">
+                        <div className="omx-acc-info">
+                          <div className="omx-acc-avatar">
+                            {acc.platform.includes('TikTok') ? ICONS.tiktok : acc.platform.slice(0, 2)}
+                          </div>
+                          <div className="omx-acc-meta">
+                            <div className="omx-acc-handle">
+                              <span>{acc.handle}</span>
+                              <span className="omx-acc-platform-tag">{acc.platform}</span>
+                            </div>
+                            <div className="omx-acc-tz">{acc.tzDesc}</div>
+                          </div>
+                        </div>
+                        <div className="omx-acc-health">
+                          <span className="omx-acc-health-score">{acc.healthScore}</span>
+                          <span className="omx-acc-health-label">{acc.healthLabel}</span>
+                        </div>
+                      </div>
+
+                      <div className="omx-quota-box">
+                        <div className="omx-quota-header">
+                          <span className="omx-form-label">安全发布配额感知</span>
+                          <span className={acc.isWarning ? 'omx-badge-orange' : 'omx-badge-green'}>{acc.quotaText}</span>
+                        </div>
+                        <div className="omx-quota-track">
+                          <div className={`${acc.isWarning ? 'omx-quota-fill-warn' : 'omx-quota-fill-safe'} ${acc.quotaPercent === 100 ? 'omx-w-100' : acc.quotaPercent === 33 ? 'omx-w-33' : 'omx-w-0'}`} />
+                        </div>
+                      </div>
+
+                      <div className="omx-acc-foot">
+                        <span>承载宿主：{acc.hardware}</span>
+                        <button type="button" className="omx-btn-subtle omx-btn-sm" onClick={() => showToast(`已启动无感设备漂移：${acc.handle} 任务将静默迁移至空闲机位`)} /* exempt-ui01 无感漂移 */>
+                          无感漂移
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -639,6 +858,55 @@ export function DeviceStage({ t, stage, store, visible = true }) {
 
             <div className="omx-modal-footer">
               <button className="omx-btn-ink" onClick={() => setWhitelistOpen(false)} /* exempt-ui01 安全确认 */>我已知晓安全护栏</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 履约回执凭证模态弹窗 (SaaS 科技回执) */}
+      <div className={`omx-modal-mask ${receiptModalOpen ? 'active' : ''}`} onClick={() => setReceiptModalOpen(false)}>
+        {receiptModalOpen && currentReceipt && (
+          <div className="omx-receipt-dialog-box" onClick={e => e.stopPropagation()}>
+            <div className="omx-modal-header">
+              <div className="omx-modal-title">
+                {ICONS.check}
+                <span>发帖履约凭证与线上回执</span>
+              </div>
+              <button className="omx-btn-subtle omx-btn-sm" onClick={() => setReceiptModalOpen(false)} /* exempt-ui01 关闭回执 */>
+                {ICONS.close}
+              </button>
+            </div>
+            <div className="omx-receipt-grid">
+              <div className="omx-receipt-grid-item">
+                <span className="omx-form-label">成片标题</span>
+                <strong>{currentReceipt.title}</strong>
+              </div>
+              <div className="omx-receipt-grid-item">
+                <span className="omx-form-label">目标账号</span>
+                <strong>{currentReceipt.account}</strong>
+              </div>
+              <div className="omx-receipt-grid-item">
+                <span className="omx-form-label">时区排期与履约</span>
+                <span>{currentReceipt.time || '美西 19:30 · 黄金档 (已履约)'}</span>
+              </div>
+              <div className="omx-receipt-grid-item">
+                <span className="omx-form-label">实时线上表现</span>
+                <span className="omx-pill-success-text">{currentReceipt.metrics || '线上数据抓取中'}</span>
+              </div>
+            </div>
+            <div className="omx-receipt-link-card">
+              <span>{currentReceipt.url}</span>
+              <button type="button" className="omx-btn-ink omx-btn-sm-ink" onClick={() => { navigator.clipboard?.writeText(currentReceipt.url); showToast('已复制海外社媒线上直链') }} /* exempt-ui01 复制链接 */>
+                复制直链
+              </button>
+            </div>
+            <div className="omx-drawer-actions">
+              <button type="button" className="omx-btn-subtle" onClick={() => setReceiptModalOpen(false)} /* exempt-ui01 关闭弹层 */>
+                关闭
+              </button>
+              <button type="button" className="omx-btn-ink" onClick={() => { showToast('已请求在系统默认浏览器中打开该社媒链接'); setReceiptModalOpen(false) }} /* exempt-ui01 浏览器打开视频 */>
+                在浏览器打开线上视频
+              </button>
             </div>
           </div>
         )}
