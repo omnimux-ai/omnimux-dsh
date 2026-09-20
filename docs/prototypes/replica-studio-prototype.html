@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>复刻工坊 · OmniMux 插件高保真原型</title>
+<style>
+  /* 设计基座：DSH 原生纯黑 + 极光紫（design.md / demo-page-template） */
+  :root{
+    --violet:#7961f2; --violet-glow:rgba(121,97,242,.25); --violet-soft:rgba(121,97,242,.12);
+    --violet-grad:linear-gradient(135deg,#6757e7,#7961f2);
+    --ctl-h:32px; --r8:8px; --r12:12px; --r16:16px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  html[data-theme="dark"]{
+    --bg:#111113; --l1:#18181b; --l2:#212124; --elev:#1c1c1f;
+    --bd1:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.12); --bdh:rgba(255,255,255,.22);
+    --t1:#fff; --t2:rgba(255,255,255,.70); --t3:rgba(255,255,255,.38);
+    --cta-bg:#fff; --cta-t:#111113; --cta-h:rgba(255,255,255,.90);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+  button{font-family:var(--font)}
+
+  /* ===== 顶栏 ===== */
+  header{height:48px;flex:none;border-bottom:1px solid var(--bd1);display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--bg)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+  .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet-glow)}
+  .header-right{display:flex;align-items:center;gap:8px;color:var(--t3);font-size:12px}
+
+  /* ===== 布局 ===== */
+  .shell{flex:1;display:flex;min-height:0}
+  nav{width:200px;flex:none;border-right:1px solid var(--bd1);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+  .nav-item{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-radius:var(--r8);color:var(--t2);cursor:pointer;font-size:13px;border:1px solid transparent;transition:all 120ms}
+  .nav-item:hover{color:var(--t1);background:var(--l1)}
+  .nav-item.active{color:var(--t1);background:var(--l1);border-color:var(--bd1)}
+  .nav-item .ico{width:16px;height:16px;flex:none}
+  .nav-foot{margin-top:auto;padding:10px 12px;border:1px dashed var(--bd2);border-radius:var(--r8);font-size:11px;color:var(--t3);line-height:1.6}
+  main{flex:1;overflow-y:auto;padding:24px 28px;min-width:0}
+  .page{display:none;flex-direction:column;gap:20px;max-width:1080px}
+  .page.active{display:flex}
+
+  /* ===== 通用组件 ===== */
+  .page-head{display:flex;flex-direction:column;gap:4px}
+  .page-title{font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .page-desc{font-size:12px;color:var(--t2)}
+  .card{background:var(--l1);border:1px solid var(--bd1);border-radius:var(--r12);padding:16px;display:flex;flex-direction:column;gap:12px}
+  .card-t{font-size:14px;font-weight:600}
+  .btn{height:var(--ctl-h);padding:0 14px;border-radius:var(--r8);font-size:13px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;border:none;transition:transform 120ms cubic-bezier(.16,1,.3,1),background 120ms,border-color 120ms;white-space:nowrap}
+  .btn:active{transform:scale(.96)}
+  .btn-p{background:var(--cta-bg);color:var(--cta-t)} .btn-p:hover{background:var(--cta-h)}
+  .btn-s{background:var(--l1);border:1px solid var(--bd2);color:var(--t1)} .btn-s:hover{border-color:var(--bdh)}
+  .btn-g{background:transparent;color:var(--t2)} .btn-g:hover{color:var(--t1);background:var(--l1)}
+  .btn-brand{background:var(--violet-grad);color:#fff;border-radius:999px;box-shadow:0 4px 12px var(--violet-glow)}
+  .btn[disabled]{opacity:.4;pointer-events:none}
+  .input{height:var(--ctl-h);background:var(--l1);border:1px solid var(--bd2);border-radius:var(--r8);color:var(--t1);padding:0 10px;font-size:13px;outline:none;width:100%;transition:border-color 120ms,box-shadow 120ms}
+  .input:focus{border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-glow)}
+  textarea.input{height:auto;min-height:72px;padding:8px 10px;resize:vertical}
+  .tag{font-size:11px;padding:1px 8px;border-radius:4px;border:1px solid var(--bd2);color:var(--t2)}
+  .tag.violet{background:var(--violet-soft);color:var(--violet);border-color:var(--violet-glow)}
+  .tag.green{background:rgba(52,199,89,.12);color:#34c759;border-color:rgba(52,199,89,.25)}
+  .tag.orange{background:rgba(255,159,10,.12);color:#ff9f0a;border-color:rgba(255,159,10,.25)}
+  .tag.red{background:rgba(255,69,58,.12);color:#ff453a;border-color:rgba(255,69,58,.25)}
+  .row{display:flex;align-items:center;gap:8px}
+  .muted{color:var(--t2)} .dim{color:var(--t3);font-size:12px}
+  .beam{height:2px;background:linear-gradient(90deg,transparent,var(--violet),transparent);border-radius:1px;box-shadow:0 0 10px var(--violet)}
+
+  /* ===== 目标账号 ===== */
+  .link-bar{display:flex;gap:8px}
+  .acct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .acct-card{cursor:pointer;transition:border-color 150ms,transform 150ms}
+  .acct-card:hover{border-color:var(--bdh);transform:translateY(-1px)}
+  .acct-card.sel{border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-glow)}
+  .avatar{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;color:#fff}
+  .works-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .work-card{background:var(--l1);border:1px solid var(--bd1);border-radius:var(--r12);overflow:hidden;display:flex;flex-direction:column;transition:border-color 150ms}
+  .work-card:hover{border-color:var(--bdh)}
+  .thumb{aspect-ratio:9/13;position:relative;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85)}
+  .thumb .dur{position:absolute;right:6px;bottom:6px;font-size:10px;background:rgba(0,0,0,.6);padding:1px 6px;border-radius:4px}
+  .thumb .plays{position:absolute;left:6px;bottom:6px;font-size:10px;background:rgba(0,0,0,.6);padding:1px 6px;border-radius:4px}
+  .work-body{padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+  .work-title{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* ===== 流水线 ===== */
+  .stepper{display:flex;align-items:center;gap:0}
+  .step{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--r12);border:1px solid var(--bd1);background:var(--l1);cursor:pointer;transition:all 150ms;flex:1}
+  .step:hover{border-color:var(--bdh)}
+  .step.active{border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-glow)}
+  .step.done{border-color:var(--bd2)}
+  .step-num{width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--l2);color:var(--t2);border:1px solid var(--bd2)}
+  .step.active .step-num{background:var(--violet-grad);color:#fff;border-color:transparent}
+  .step.done .step-num{background:rgba(52,199,89,.15);color:#34c759;border-color:rgba(52,199,89,.3)}
+  .step-info{min-width:0}
+  .step-t{font-size:13px;font-weight:600}
+  .step-d{font-size:11px;color:var(--t3)}
+  .step-arrow{color:var(--t3);padding:0 8px;flex:none}
+  .pane{display:none;flex-direction:column;gap:16px}
+  .pane.active{display:flex}
+  .asset-slot{border:1px dashed var(--bd2);border-radius:var(--r12);padding:14px;display:flex;align-items:center;gap:12px;transition:border-color 150ms}
+  .asset-slot:hover{border-color:var(--bdh)}
+  .asset-thumb{width:64px;height:84px;border-radius:var(--r8);flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+  .gen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .gen-cell{aspect-ratio:3/4;border-radius:var(--r8);border:1px solid var(--bd1);position:relative;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;transition:transform 150ms,border-color 150ms}
+  .gen-cell:hover{transform:translateY(-1px)}
+  .gen-cell.sel{border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-glow)}
+  .audio-bar{display:flex;align-items:center;gap:10px;background:var(--l2);border:1px solid var(--bd1);border-radius:var(--r8);padding:8px 12px}
+  .wave{flex:1;display:flex;align-items:center;gap:2px;height:28px}
+  .wave i{flex:1;background:var(--violet);opacity:.55;border-radius:1px}
+  .progress{height:6px;background:var(--l2);border-radius:3px;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:var(--violet-grad);border-radius:3px;transition:width 200ms}
+  .kv{display:grid;grid-template-columns:88px 1fr;gap:6px 12px;font-size:12px}
+  .kv b{color:var(--t3);font-weight:400}
+
+  /* ===== 任务表 ===== */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:var(--t3);font-weight:500;padding:8px 12px;border-bottom:1px solid var(--bd1)}
+  td{padding:10px 12px;border-bottom:1px solid var(--bd1);vertical-align:middle}
+  tr:hover td{background:rgba(255,255,255,.02)}
+
+  /* ===== 资产库 ===== */
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{height:26px;padding:0 12px;border-radius:999px;border:1px solid var(--bd2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;transition:all 120ms}
+  .chip:hover{color:var(--t1);border-color:var(--bdh)}
+  .chip.on{background:var(--violet-soft);color:var(--violet);border-color:var(--violet-glow)}
+  .asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .asset-cell{background:var(--l1);border:1px solid var(--bd1);border-radius:var(--r12);overflow:hidden;cursor:pointer;transition:border-color 150ms}
+  .asset-cell:hover{border-color:var(--bdh)}
+  .asset-cell .ph{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff}
+  .asset-cell .meta{padding:8px 10px}
+  .asset-cell .nm{font-size:12px;font-weight:500}
+  .asset-cell .tp{font-size:11px;color:var(--t3)}
+
+  /* ===== 弹窗 / Toast ===== */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{width:640px;max-width:92vw;max-height:80vh;background:var(--elev);border:1px solid var(--bd2);border-radius:var(--r16);display:flex;flex-direction:column;overflow:hidden}
+  .modal-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd1)}
+  .modal-b{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+  .modal-f{padding:12px 18px;border-top:1px solid var(--bd1);display:flex;justify-content:flex-end;gap:8px}
+  .toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(20px);background:var(--elev);border:1px solid var(--bd2);border-radius:var(--r8);padding:10px 18px;font-size:13px;opacity:0;transition:all 250ms;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .empty{border:1px dashed var(--bd2);border-radius:var(--r12);padding:36px;text-align:center;color:var(--t3);font-size:12px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+    复刻工坊
+    <span class="badge">高保真原型</span>
+  </div>
+  <div class="header-right">
+    <span>复用：社媒采集 · 资产库 · 视频引擎 · 生成中枢</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav>
+    <div class="nav-item active" data-page="accounts"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>目标账号</div>
+    <div class="nav-item" data-page="pipeline"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h13"/></svg>复刻流水线</div>
+    <div class="nav-item" data-page="tasks"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>复刻任务<span class="tag violet" style="margin-left:auto">3</span></div>
+    <div class="nav-item" data-page="assets"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>素材资产</div>
+    <div class="nav-foot">本插件只做流程封装：提取走「社媒采集」，首帧/音频走「视频引擎」，生成走中枢模型，素材统一进「资产库」。</div>
+  </nav>
+
+  <main>
+    <!-- ============ 页 1：目标账号 ============ -->
+    <section class="page active" id="page-accounts">
+      <div class="page-head">
+        <div class="page-title">目标账号</div>
+        <div class="page-desc">粘贴账号主页或作品链接，拉取作品列表，挑选要复刻的视频。提取能力来自「社媒采集」插件（9 个平台，复用本机浏览器登录态）。</div>
+      </div>
+      <div class="card">
+        <div class="link-bar">
+          <input class="input" id="linkInput" placeholder="粘贴账号主页链接或作品链接，支持 TikTok / 抖音 / YouTube / Instagram / 小红书…" style="flex:1">
+          <button class="btn btn-s" onclick="toast('正在校验链接并识别平台…')">识别</button>
+          <button class="btn btn-p" onclick="addAccount()">+ 添加目标账号</button>
+        </div>
+        <div class="row" style="gap:6px">
+          <span class="dim">平台：</span>
+          <span class="tag">TikTok</span><span class="tag">抖音</span><span class="tag">YouTube</span><span class="tag">Instagram</span><span class="tag">小红书</span><span class="tag">X</span>
+          <span class="tag green" style="margin-left:auto">登录态正常</span>
+        </div>
+      </div>
+      <div class="acct-grid" id="acctGrid"></div>
+      <div class="card" id="worksPanel" style="display:none">
+        <div class="row">
+          <span class="card-t" id="worksTitle">作品列表</span>
+          <span class="tag violet">按热度排序</span>
+          <button class="btn btn-s" style="margin-left:auto" onclick="toast('已刷新（受云端配额约束）')">↻ 刷新</button>
+          <button class="btn btn-s" onclick="toast('已提取全部 12 条作品素材到资产库')">批量提取素材</button>
+        </div>
+        <div class="works-grid" id="worksGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============ 页 2：复刻流水线 ============ -->
+    <section class="page" id="page-pipeline">
+      <div class="page-head">
+        <div class="page-title">复刻流水线</div>
+        <div class="page-desc">从一条参考视频到一条新视频：解构素材 → 生成角色 → 合成复刻。每一步产物自动存入资产库，可跨任务复用。</div>
+      </div>
+      <div class="stepper">
+        <div class="step done" data-step="1" onclick="goStep(1)"><div class="step-num">✓</div><div class="step-info"><div class="step-t">素材解构</div><div class="step-d">视频 · 首帧 · 音频 · 提示词</div></div></div>
+        <div class="step-arrow">→</div>
+        <div class="step active" data-step="2" onclick="goStep(2)"><div class="step-num">2</div><div class="step-info"><div class="step-t">角色工坊</div><div class="step-d">新角色 · 角色一致性</div></div></div>
+        <div class="step-arrow">→</div>
+        <div class="step" data-step="3" onclick="goStep(3)"><div class="step-num">3</div><div class="step-info"><div class="step-t">复刻合成</div><div class="step-d">角色 + 音频 + 提示词 → 新视频</div></div></div>
+      </div>
+
+      <!-- 步骤 1 -->
+      <div class="pane" id="pane-1">
+        <div class="card">
+          <div class="row"><span class="card-t">参考视频</span><span class="tag violet">已入资产库</span>
+            <button class="btn btn-s" style="margin-left:auto" onclick="openPicker('video')">从资产库导入</button>
+            <button class="btn btn-s" onclick="toast('打开链接提取（跳转目标账号页）')">从链接提取</button>
+          </div>
+          <div class="row" style="align-items:stretch">
+            <div class="asset-thumb" style="width:120px;height:160px;background:linear-gradient(135deg,#3a3a42,#232327)">▶</div>
+            <div class="kv" style="flex:1;align-content:start;padding-top:6px">
+              <b>来源</b><span>TikTok · @luna.daily</span>
+              <b>时长</b><span>00:32 · 9:16 · 1080×1920</span>
+              <b>解构</b><span class="muted">黄金 3 秒钩子 · 7 个分镜 · 逆向提示词已生成 <a style="color:var(--violet);cursor:pointer" onclick="toast('打开分镜拆解侧边栏预览（复用 video_breakdown）')">查看拆解</a></span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <span class="card-t">自动提取的素材</span>
+          <div class="row" style="align-items:stretch;flex-wrap:wrap">
+            <div class="asset-slot" style="flex:1;min-width:220px">
+              <div class="asset-thumb" style="background:linear-gradient(135deg,#4a4a55,#2a2a30)">🖼</div>
+              <div><div style="font-weight:600">首帧图</div><div class="dim">video_thumbnail_extract · 已存资产库</div></div>
+              <span class="tag green" style="margin-left:auto">完成</span>
+            </div>
+            <div class="asset-slot" style="flex:1;min-width:220px">
+              <div class="audio-bar" style="border:none;background:transparent;padding:0;width:120px;flex:none"><div class="wave" id="wave1"></div></div>
+              <div><div style="font-weight:600">原片音频</div><div class="dim">audio_extract · mp3 · 已存资产库</div></div>
+              <span class="tag green" style="margin-left:auto">完成</span>
+            </div>
+          </div>
+        </div>
+        <div class="row"><button class="btn btn-p" style="margin-left:auto" onclick="goStep(2)">下一步：生成角色 →</button></div>
+      </div>
+
+      <!-- 步骤 2 -->
+      <div class="pane active" id="pane-2">
+        <div class="card">
+          <div class="row"><span class="card-t">新角色设定</span><span class="dim">文生图 · 走中枢 imageGenerate</span></div>
+          <textarea class="input" id="charPrompt">一位 25 岁左右的东方女性，短发，穿着简约白色针织衫，气质温柔但有力量感，半身像，柔光摄影棚布光</textarea>
+          <div class="row">
+            <button class="btn btn-s" onclick="openPicker('character')">+ 参考图（资产库）</button>
+            <span class="dim" id="refHint">可加 1–4 张参考图保持角色一致性</span>
+            <button class="btn btn-brand" style="margin-left:auto" onclick="genCharacter()">✨ 生成新角色</button>
+          </div>
+        </div>
+        <div class="card" id="charResultCard" style="display:none">
+          <div class="row"><span class="card-t">生成结果</span><span class="dim">选择 1 张作为复刻角色 · 全部候选已存资产库「角色」</span></div>
+          <div class="gen-grid" id="charGrid"></div>
+          <div class="row">
+            <button class="btn btn-s" onclick="genCharacter()">↻ 换一批</button>
+            <button class="btn btn-s" onclick="toast('已基于选中角色生成 4 张衍生图（图生图 · 多参考）')">基于此角色再生成</button>
+            <button class="btn btn-p" style="margin-left:auto" id="charNextBtn" disabled onclick="goStep(3)">下一步：复刻合成 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 3 -->
+      <div class="pane" id="pane-3">
+        <div class="card">
+          <span class="card-t">复刻合成</span>
+          <div class="row" style="align-items:stretch">
+            <div style="flex:1" class="asset-slot"><div class="asset-thumb" style="background:linear-gradient(135deg,#5b4a8a,#2a2438)">👤</div><div><div style="font-weight:600">复刻角色</div><div class="dim">短发女性 · 步骤 2 产物</div></div></div>
+            <div style="flex:1" class="asset-slot"><div class="asset-thumb" style="background:linear-gradient(135deg,#3a3a42,#232327)">▶</div><div><div style="font-weight:600">参考视频</div><div class="dim">luna.daily · 00:32</div></div></div>
+          </div>
+          <div class="audio-bar"><span style="font-size:11px" class="muted">驱动音频</span><div class="wave" id="wave2"></div><span class="dim">原片音频.mp3 · 00:32</span>
+            <button class="btn btn-g" onclick="openPicker('audio')">更换</button></div>
+          <textarea class="input">保持原片的节奏与分镜结构，把人物替换为新角色，场景换成暖色调咖啡馆，口型对齐驱动音频</textarea>
+          <div class="row">
+            <span class="dim">模型：数字人/对口型（digital_human）· 由中枢按当前通道路由</span>
+            <button class="btn btn-p" style="margin-left:auto" id="submitBtn" onclick="submitReplica()">开始复刻</button>
+          </div>
+          <div id="genProgress" style="display:none;flex-direction:column;gap:8px">
+            <div class="row"><span class="dim" id="genStage">提交任务…</span><span class="dim" style="margin-left:auto" id="genPct">0%</span></div>
+            <div class="progress"><i id="genBar"></i></div>
+          </div>
+        </div>
+        <div class="card" id="resultCard" style="display:none">
+          <div class="row"><span class="card-t">复刻产物</span><span class="tag green">已入资产库</span><span class="tag violet">血缘已记录</span></div>
+          <div class="row" style="align-items:stretch">
+            <div class="asset-thumb" style="width:140px;height:186px;background:linear-gradient(135deg,#6a5aa8,#2c2438);font-size:32px">▶</div>
+            <div class="kv" style="flex:1;align-content:start;padding-top:6px">
+              <b>时长</b><span>00:32 · 9:16 · 1080×1920</span>
+              <b>血缘</b><span class="muted">@luna.daily 作品 → 角色「短发女性」→ 本产物</span>
+              <b>校验</b><span class="muted">可播放 · 可导出</span>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn btn-s" onclick="toast('已发送到剪辑工坊（omnimux-clip）')">送剪辑</button>
+            <button class="btn btn-s" onclick="toast('已创建发布草稿（发布中心）')">去发布</button>
+            <button class="btn btn-p" style="margin-left:auto" onclick="toast('已导出到本地')">导出视频</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 页 3：复刻任务 ============ -->
+    <section class="page" id="page-tasks">
+      <div class="page-head">
+        <div class="page-title">复刻任务</div>
+        <div class="page-desc">每一次复刻都是一条可回溯的任务：来源链接、角色、参数与产物血缘全程留痕。</div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>任务</th><th>来源</th><th>角色</th><th>状态</th><th>产物</th><th style="text-align:right">操作</th></tr></thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 页 4：素材资产 ============ -->
+    <section class="page" id="page-assets">
+      <div class="page-head">
+        <div class="page-title">素材资产</div>
+        <div class="page-desc">复刻产出的视频、首帧、音频、角色全部落在统一资产库（omnimux-assets），这里只做复刻视角的过滤视图。</div>
+      </div>
+      <div class="filter-bar" id="assetFilter"></div>
+      <div class="asset-grid" id="assetGrid"></div>
+    </section>
+  </main>
+</div>
+
+<!-- 资产选择弹窗 -->
+<div class="mask" id="pickerMask">
+  <div class="modal">
+    <div class="modal-h"><span style="font-weight:600" id="pickerTitle">从资产库选择</span><button class="btn btn-g" onclick="closePicker()">✕</button></div>
+    <div class="modal-b">
+      <input class="input" placeholder="搜索资产名称或标签…">
+      <div class="filter-bar" id="pickerFilter"></div>
+      <div class="asset-grid" id="pickerGrid"></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-s" onclick="closePicker()">取消</button><button class="btn btn-p" onclick="confirmPicker()">确认选择</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+/* ---------- 模拟数据 ---------- */
+const C=['linear-gradient(135deg,#4a4a55,#26262c)','linear-gradient(135deg,#5b4a8a,#2a2438)','linear-gradient(135deg,#3f5a52,#22302b)','linear-gradient(135deg,#6a4a3f,#33251f)','linear-gradient(135deg,#3a4a6a,#202636)'];
+const accounts=[
+  {name:'luna.daily',plat:'TikTok',fans:'86.2万',note:'生活vlog · 日更',c:1,works:12},
+  {name:'咖啡研究所',plat:'抖音',fans:'132万',note:'探店 · 每周3更',c:2,works:24},
+  {name:'AlexTalks',plat:'YouTube',fans:'45.8万',note:'知识口播 · 周更',c:4,works:8},
+];
+const works=['3秒钩住你：这家咖啡店凭什么排队2小时','早八人的续命日常vlog','我按网友推荐踩点了一整条街','别再乱点单了！咖啡师不会说的秘密','一个人也要好好吃饭','雨天氛围感拉满的街角小店','这套晨间流程让我效率翻倍','探店翻车现场，老板脸都绿了','周末出逃计划：城市边缘发呆指南','被问爆的穿搭公式，照着穿就行','深夜食堂同款，自己在家复刻','这家店的隐藏菜单我挖到了'];
+const taskRows=[
+  {t:'咖啡店探店复刻 v3',src:'@luna.daily · 3秒钩住你…',role:'短发女性',st:['green','完成'],out:'00:32 · 可导出'},
+  {t:'晨间流程复刻 v1',src:'@luna.daily · 这套晨间流程…',role:'短发女性',st:['orange','生成中 68%'],out:'—'},
+  {t:'穿搭公式复刻 v2',src:'@咖啡研究所 · 被问爆的穿搭…',role:'职场男性',st:['red','失败 · 通道超时'],out:'—'},
+  {t:'雨天氛围感复刻 v1',src:'@luna.daily · 雨天氛围感…',role:'短发女性',st:['green','完成'],out:'00:28 · 可导出'},
+];
+const assetTypes=['全部','视频','首帧图','音频','角色','参考图'];
+const assets=[
+  {n:'探店原片 0032',t:'视频',e:'▶',c:0},{n:'首帧 · 咖啡店门面',t:'首帧图',e:'🖼',c:3},
+  {n:'原片音频 0032',t:'音频',e:'♪',c:2},{n:'短发女性 · 正面',t:'角色',e:'👤',c:1},
+  {n:'短发女性 · 侧身',t:'角色',e:'👤',c:1},{n:'晨间流程原片',t:'视频',e:'▶',c:4},
+  {n:'咖啡馆参考图 A',t:'参考图',e:'🖼',c:3},{n:'穿搭原片 0028',t:'视频',e:'▶',c:0},
+  {n:'职场男性 · 半身',t:'角色',e:'👤',c:2},{n:'氛围感音频 0028',t:'音频',e:'♪',c:4},
+];
+
+/* ---------- 渲染 ---------- */
+const $=s=>document.querySelector(s);
+function renderAccounts(){
+  $('#acctGrid').innerHTML=accounts.map((a,i)=>`
+    <div class="card acct-card" data-i="${i}" onclick="selAccount(${i},this)">
+      <div class="row">
+        <div class="avatar" style="background:${C[a.c]}">${a.name[0].toUpperCase()}</div>
+        <div style="min-width:0"><div style="font-weight:600">@${a.name}</div><div class="dim">${a.plat} · 粉丝 ${a.fans}</div></div>
+        <span class="tag" style="margin-left:auto">${a.plat}</span>
+      </div>
+      <div class="dim">${a.note} · 已抓取 ${a.works} 条作品</div>
+    </div>`).join('');
+}
+function renderWorks(){
+  $('#worksGrid').innerHTML=works.map((w,i)=>`
+    <div class="work-card">
+      <div class="thumb" style="background:${C[i%5]}">▶<span class="dur">00:${28+i%9}</span><span class="plays">▶ ${(120-i*7)}万</span></div>
+      <div class="work-body">
+        <div class="work-title">${w}</div>
+        <div class="row" style="gap:6px">
+          <button class="btn btn-s" style="flex:1;height:26px;font-size:11px" onclick="toast('已提取：视频+首帧+音频 → 资产库')">提取素材</button>
+          <button class="btn btn-p" style="flex:1;height:26px;font-size:11px" onclick="startReplica('${w}')">复刻</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function renderTasks(){
+  $('#taskBody').innerHTML=taskRows.map(r=>`
+    <tr><td style="font-weight:500">${r.t}</td><td class="muted">${r.src}</td><td class="muted">${r.role}</td>
+    <td><span class="tag ${r.st[0]}">${r.st[1]}</span></td><td class="muted">${r.out}</td>
+    <td style="text-align:right"><button class="btn btn-g" style="height:26px;font-size:12px" onclick="toast('打开任务详情与血缘')">详情</button></td></tr>`).join('');
+}
+function renderAssets(filter){
+  const list=assets.filter(a=>!filter||filter==='全部'||a.t===filter);
+  $('#assetGrid').innerHTML=list.map(a=>`
+    <div class="asset-cell"><div class="ph" style="background:${C[a.c]}">${a.e}</div>
+    <div class="meta"><div class="nm">${a.n}</div><div class="tp">${a.t}</div></div></div>`).join('')||'<div class="empty">暂无此类素材</div>';
+}
+function renderFilters(){
+  $('#assetFilter').innerHTML=assetTypes.map((t,i)=>`<button class="chip${i===0?' on':''}" onclick="filterAsset(this,'${t}')">${t}</button>`).join('');
+}
+function renderWave(id){const el=document.getElementById(id);if(!el)return;el.innerHTML=Array.from({length:36},()=>`<i style="height:${4+Math.random()*22}px"></i>`).join('');}
+
+/* ---------- 交互 ---------- */
+function toast(msg){const t=$('#toastEl');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),2200);}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));n.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('#page-'+n.dataset.page).classList.add('active');
+}));
+function selAccount(i,el){
+  document.querySelectorAll('.acct-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');
+  $('#worksPanel').style.display='flex';$('#worksTitle').textContent='@'+accounts[i].name+' 的作品';
+  toast('已拉取 '+accounts[i].works+' 条作品（社媒采集插件）');
+}
+function addAccount(){const v=$('#linkInput').value.trim();toast(v?'已识别为账号主页链接，正在拉取作品…':'请先粘贴账号或作品链接');}
+function startReplica(w){document.querySelector('[data-page="pipeline"]').click();goStep(1);toast('已载入参考视频：'+w);}
+function goStep(n){
+  [1,2,3].forEach(i=>{
+    const s=document.querySelector('.step[data-step="'+i+'"]');
+    s.classList.toggle('active',i===n);s.classList.toggle('done',i<n);
+    s.querySelector('.step-num').textContent=i<n?'✓':i;
+    $('#pane-'+i).classList.toggle('active',i===n);
+  });
+}
+function genCharacter(){
+  $('#charResultCard').style.display='flex';
+  $('#charGrid').innerHTML='<div class="empty" style="grid-column:1/-1;padding:24px">✨ 正在生成 4 个候选角色…</div>';
+  setTimeout(()=>{
+    $('#charGrid').innerHTML=[1,2,3,4].map(i=>`<div class="gen-cell" style="background:${C[i%5]}" onclick="pickChar(this)">👤</div>`).join('');
+    toast('已生成 4 个候选，全部存入资产库「角色」');
+  },900);
+}
+function pickChar(el){
+  document.querySelectorAll('.gen-cell').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');
+  $('#charNextBtn').disabled=false;
+}
+function submitReplica(){
+  $('#submitBtn').disabled=true;$('#genProgress').style.display='flex';$('#resultCard').style.display='none';
+  const stages=[['提交任务…',8],['排队等待通道…',22],['角色驱动生成中…',55],['口型对齐与合成…',82],['下载并入库…',96],['完成',100]];
+  let i=0;
+  (function tick(){
+    const[s,p]=stages[i];$('#genStage').textContent=s;$('#genPct').textContent=p+'%';$('#genBar').style.width=p+'%';
+    if(++i<stages.length)setTimeout(tick,700);
+    else setTimeout(()=>{$('#genProgress').style.display='none';$('#resultCard').style.display='flex';$('#submitBtn').disabled=false;toast('复刻完成，产物已入资产库');},500);
+  })();
+}
+/* 资产选择弹窗 */
+let pickerType='';
+function openPicker(type){
+  pickerType=type;
+  $('#pickerTitle').textContent='从资产库选择 · '+( {video:'视频',character:'角色/参考图',audio:'音频'}[type]||'素材');
+  const map={video:'视频',character:'角色',audio:'音频'};
+  $('#pickerFilter').innerHTML=['全部','视频','音频','角色','参考图'].map((t,i)=>`<button class="chip${i===0?' on':''}" onclick="pickerFilter(this,'${t}')">${t}</button>`).join('');
+  fillPicker(map[type]);
+  $('#pickerMask').classList.add('show');
+}
+function fillPicker(t){
+  const list=assets.filter(a=>!t||a.t===t||t==='角色'&&a.t==='参考图');
+  $('#pickerGrid').innerHTML=list.map(a=>`<div class="asset-cell" onclick="this.classList.toggle('sel');this.style.borderColor=this.classList.contains('sel')?'var(--violet)':''"><div class="ph" style="background:${C[a.c]}">${a.e}</div><div class="meta"><div class="nm">${a.n}</div><div class="tp">${a.t}</div></div></div>`).join('')||'<div class="empty">资产库暂无此类素材</div>';
+}
+function pickerFilter(el,t){el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');fillPicker(t==='全部'?'':t);}
+function closePicker(){$('#pickerMask').classList.remove('show');}
+function confirmPicker(){closePicker();toast('已从资产库导入所选素材');}
+function filterAsset(el,t){el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderAssets(t);}
+$('#pickerMask').addEventListener('click',e=>{if(e.target.id==='pickerMask')closePicker();});
+
+/* init */
+renderAccounts();renderWorks();renderTasks();renderFilters();renderAssets('全部');
+renderWave('wave1');renderWave('wave2');
+</script>
+</body>
+</html>
