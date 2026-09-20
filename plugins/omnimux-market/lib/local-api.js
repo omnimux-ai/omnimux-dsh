@@ -95,8 +95,24 @@ export const MUTATING_METHODS = new Set([
     'tryAttach',
     'tryDetach',
 ]);
-export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
+export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, materializeEnabledMarketExperts, } from './expert-market.js';
 import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
+/**
+ * Agent 预设列表变更通知钩子：官方预设菜单只在页面挂载或收到
+ * `settings/document-updated`（命名空间 agent-presets）时重读列表，
+ * 市场安装/禁用/启动物化后由 host 注入此钩子广播一次，免重启即时可见。
+ * 同 setModelCatalogResolver 的模块级注入先例。
+ */
+let agentPresetsNotify = null;
+export function setAgentPresetsNotify(fn) {
+    agentPresetsNotify = typeof fn === 'function' ? fn : null;
+}
+function notifyAgentPresetsChanged() {
+    try {
+        agentPresetsNotify?.();
+    }
+    catch { }
+}
 // --- 独立领域 Handler 路由实现 ---
 async function handleSearch(ctx) {
     const { body, url, cfg, res } = ctx;
@@ -424,6 +440,7 @@ function handleExpertMarketInstall(ctx) {
         return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` });
     const home = expertRoots().home;
     installMarketExpertPreset(home, exp);
+    notifyAgentPresetsChanged();
     return sendJson(res, 200, { ok: true, id, status: 'enabled' });
 }
 function handleExpertMarketDisable(ctx) {
@@ -433,6 +450,7 @@ function handleExpertMarketDisable(ctx) {
         return sendJson(res, 400, { ok: false, error: '缺少 id' });
     const home = expertRoots().home;
     disableMarketExpertPreset(home, id);
+    notifyAgentPresetsChanged();
     return sendJson(res, 200, { ok: true, id, status: 'disabled' });
 }
 function handleExperts(ctx) {

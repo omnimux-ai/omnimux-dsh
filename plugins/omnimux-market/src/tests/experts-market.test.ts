@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test, { beforeEach, afterEach } from 'node:test'
 import { Readable } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { dshHome, withDefaults } from '../config-store.js'
-import { handleApi, DEFAULT_MARKET_EXPERTS } from '../local-api.js'
+import { handleApi, DEFAULT_MARKET_EXPERTS, materializeEnabledMarketExperts, setAgentPresetsNotify } from '../local-api.js'
 
 function cleanRetiredTestExperts() {
   const home = dshHome()
@@ -241,4 +242,76 @@ test('all 8 experts define crisp deterministic pixel avatars', () => {
     assert.match(decodeURIComponent(exp.avatar), /shape-rendering="crispEdges"/, `${exp.id} has pixel art rendering tag`)
     assert.match(decodeURIComponent(exp.avatar), /viewBox="0 0 16 16"/, `${exp.id} is 16x16 pixel grid`)
   }
+})
+
+test('materializeEnabledMarketExperts 启动物化：enabled 初值专家幂等落盘', () => {
+  const home = mkdtempSync(join(tmpdir(), 'omx-expert-materialize-'))
+  try {
+    const first = materializeEnabledMarketExperts(home)
+    assert.deepEqual(first.sort(), [
+      'amazon-ops-expert',
+      'shopee-ops-expert',
+      'tiktok-shop-ops-expert',
+      'youtube-creator-expert',
+    ])
+    for (const id of first) {
+      assert.ok(existsSync(join(home, '.agent-presets', id, 'preset.yml')), `${id} preset.yml 落盘`)
+      assert.ok(existsSync(join(home, '.agent-presets', id, 'agent.cordis.yml')), `${id} agent.cordis.yml 落盘`)
+    }
+    // initialStatus 为 available 的专家不被物化
+    assert.ok(!existsSync(join(home, '.agent-presets', 'media-creator')))
+    assert.ok(!existsSync(join(home, '.agent-presets', 'html-generator')))
+    // 幂等：第二次物化无新增
+    assert.deepEqual(materializeEnabledMarketExperts(home), [])
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('materializeEnabledMarketExperts 尊重用户禁用：.retired 标记不复活', () => {
+  const home = mkdtempSync(join(tmpdir(), 'omx-expert-materialize-retired-'))
+  try {
+    mkdirSync(join(home, '.agent-presets', '.retired'), { recursive: true })
+    writeFileSync(join(home, '.agent-presets', '.retired', `shopee-ops-expert-${Date.now()}`), '', 'utf8')
+    const installed = materializeEnabledMarketExperts(home)
+    assert.equal(installed.length, 3)
+    assert.ok(!installed.includes('shopee-ops-expert'))
+    assert.ok(!existsSync(join(home, '.agent-presets', 'shopee-ops-expert')))
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('expertMarketInstall/Disable 触发 Agent 预设列表变更广播钩子', async () => {
+  const cfg = withDefaults({})
+  let calls = 0
+  setAgentPresetsNotify(() => { calls += 1 })
+  try {
+    const reqInstall = mockReq('POST', '/api', {
+      origin: 'http://127.0.0.1:3080',
+      'sec-fetch-site': 'same-origin',
+    }, { method: 'expertMarketInstall', id: 'html-generator' })
+    const resInstall = mockRes()
+    await handleApi(reqInstall, resInstall, cfg)
+    assert.equal(resInstall._json?.ok, true)
+    assert.equal(calls, 1)
+
+    const reqDisable = mockReq('POST', '/api', {
+      origin: 'http://127.0.0.1:3080',
+      'sec-fetch-site': 'same-origin',
+    }, { method: 'expertMarketDisable', id: 'html-generator' })
+    const resDisable = mockRes()
+    await handleApi(reqDisable, resDisable, cfg)
+    assert.equal(resDisable._json?.ok, true)
+    assert.equal(calls, 2)
+  } finally {
+    setAgentPresetsNotify(null)
+  }
+})
+
+test('host apply 接入启动物化与预设列表广播（源码契约）', () => {
+  const host = readFileSync(new URL('../../src/host.ts', import.meta.url), 'utf8')
+  assert.match(host, /materializeEnabledMarketExperts\(dshHome\(\)\)/, '激活时必须启动物化已入职专家')
+  assert.match(host, /setAgentPresetsNotify\(/, '激活时必须注入预设列表广播钩子')
+  assert.match(host, /ctx\.emit\('settings\/document-updated' as any, 'agent-presets'/, '广播必须复用官方转发白名单事件')
 })
