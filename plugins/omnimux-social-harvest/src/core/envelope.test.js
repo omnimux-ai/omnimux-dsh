@@ -48,6 +48,13 @@ describe('parseEnvelope', () => {
   it('JSON 对象但无数组字段 → invalid', () => {
     assert.equal(parseEnvelope('{"ok":true}').kind, 'invalid')
   })
+
+  it('whoami 单对象信封（含 logged_in）解析为单元素数组', () => {
+    const r = parseEnvelope(JSON.stringify({ logged_in: true, site: 'tiktok', username: 'u' }))
+    assert.equal(r.kind, 'array')
+    assert.equal(r.items.length, 1)
+    assert.equal(r.items[0].username, 'u')
+  })
 })
 
 describe('classifyFailure（顺序不可调换）', () => {
