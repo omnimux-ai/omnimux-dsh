@@ -4,7 +4,7 @@ import plugin, { name, inject, apply } from './index.js'
 
 test('omnimux-device exports valid Cordis plugin shape', () => {
   assert.equal(name, 'omnimux-device')
-  assert.deepEqual(inject, { optional: ['tools'] })
+  assert.deepEqual(inject, [])
   assert.equal(typeof apply, 'function')
   assert.equal(plugin.name, 'omnimux-device')
 })
