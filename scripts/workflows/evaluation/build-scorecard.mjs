@@ -533,9 +533,26 @@ const html = `<!DOCTYPE html>
     let scores = {};
     let currentIndex = 0;
 
-    const cache = localStorage.getItem("omnimux_batch_scorecard_scores");
-    if (cache) {
-      try { scores = JSON.parse(cache); } catch(e) {}
+    // localStorage 在沙箱化预览（如侧边栏 iframe）中可能被禁用并抛 SecurityError，
+    // 读写必须带兜底：缓存不可用时静默降级为不持久化，绝不能阻断页面初始化。
+    const SCORE_CACHE_KEY = "omnimux_batch_scorecard_scores";
+    function loadCache() {
+      try {
+        const raw = localStorage.getItem(SCORE_CACHE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    function saveCache(value) {
+      try {
+        localStorage.setItem(SCORE_CACHE_KEY, JSON.stringify(value));
+      } catch (e) {}
+    }
+
+    const cache = loadCache();
+    if (cache && typeof cache === "object") {
+      scores = cache;
     }
     scripts.forEach(s => {
       if (!scores[s.fingerprint]) {
@@ -544,7 +561,7 @@ const html = `<!DOCTYPE html>
     });
 
     function saveScores() {
-      localStorage.setItem("omnimux_batch_scorecard_scores", JSON.stringify(scores));
+      saveCache(scores);
       updateMetrics();
       renderSidebar();
     }
