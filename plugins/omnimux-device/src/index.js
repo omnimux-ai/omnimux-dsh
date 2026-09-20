@@ -1,5 +1,7 @@
 export const name = 'omnimux-device'
-export const inject = ['tools']
+export const inject = {
+  optional: ['tools'],
+}
 
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
@@ -15,8 +17,9 @@ export function apply(ctx) {
     })
   }
 
-  if (ctx.tools?.register) {
-    ctx.tools.register({
+  const registerTools = (tools) => {
+    if (!tools || typeof tools.register !== 'function') return
+    tools.register({
       name: 'device_list',
       description: '列出当前连接的所有物理 iPhone 及其在线状态与电量',
       parameters: { type: 'object', properties: {} },
@@ -24,6 +27,15 @@ export function apply(ctx) {
       async execute() {
         return { count: 0, devices: [] }
       }
+    })
+  }
+
+  const tools = typeof ctx.get === 'function' ? ctx.get('tools') : undefined
+  if (tools) {
+    registerTools(tools)
+  } else if (typeof ctx.inject === 'function') {
+    ctx.inject(['tools'], (inner) => {
+      registerTools(inner?.tools ?? inner?.get?.('tools'))
     })
   }
 }
