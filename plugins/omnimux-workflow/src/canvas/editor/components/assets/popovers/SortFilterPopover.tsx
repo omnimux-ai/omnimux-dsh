@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { stopToolbarNativeEvent } from '../../toolbarPointerGuard';
+import { useT } from '../../../../i18n';
 
 interface SortFilterPopoverProps {
   isOpen: boolean;
@@ -18,7 +19,17 @@ export const SortFilterPopover: React.FC<SortFilterPopoverProps> = ({
   onChange,
   onClose,
 }) => {
+  const t = useT();
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getSortOptionLabel = (id: string, defaultLabel: string) => {
+    switch (id) {
+      case 'recent': return t('assets.popover.sortRecent') || defaultLabel;
+      case 'name': return t('assets.popover.sortNameAZ') || defaultLabel;
+      case 'count': return t('assets.popover.sortCount') || defaultLabel;
+      default: return defaultLabel;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,7 +90,7 @@ export const SortFilterPopover: React.FC<SortFilterPopoverProps> = ({
                 onClose();
               }}
             >
-              <span className="wf-popover-item-label">{opt.label}</span>
+              <span className="wf-popover-item-label">{getSortOptionLabel(opt.id, opt.label)}</span>
               {isSelected && <Check size={14} className="wf-popover-item-check" />}
             </div>
           );

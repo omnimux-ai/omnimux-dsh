@@ -31,6 +31,35 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
   'omnimux-automation:workbench': '自动化',
 })
 
+/** Professional SaaS English fallback titles in English language environments. */
+export const WORKBENCH_TAB_TITLE_FALLBACKS_EN = Object.freeze({
+  'omnimux:media-viewer': 'Image Generation',
+  'omnimux-workflow:canvas': 'Creative Canvas',
+  'omnimux-clip:studio': 'Video Studio',
+  'omnimux-assets:library': 'Assets',
+  'omnimux-products:library': 'Products',
+  'omnimux-forms:tasks': 'Task Forms',
+  'omnimux-accounts:library': 'Accounts',
+  'omnimux-device:library': 'Devices',
+  'omnimux-inspiration:library': 'Inspiration',
+  'omnimux-publish:library': 'Publish',
+  'omnimux-analytics:library': 'Analytics',
+  'omnimux-workflow:library': 'Projects',
+  'omnimux-market:plaza': 'Skills & Experts',
+  'omnimux-automation:workbench': 'Automation',
+})
+
+function isEnLocale() {
+  try {
+    const win = hostWindow()
+    const localeAct = win?.__omnimuxLocale?.active || win?.__omnimuxLocale?.getLocale?.()?.active
+    if (typeof localeAct === 'string' && localeAct.toLowerCase().startsWith('en')) return true
+    const docLang = win?.document?.documentElement?.lang || (typeof document !== 'undefined' ? document.documentElement?.lang : '')
+    if (typeof docLang === 'string' && /^en\b/i.test(docLang)) return true
+  } catch {}
+  return false
+}
+
 export function resolveWorkbenchTabTitle(tabId, optsTitle, getTab) {
   if (typeof optsTitle === 'string' && optsTitle.trim()) return optsTitle.trim()
   if (typeof getTab === 'function' && tabId) {
@@ -45,7 +74,10 @@ export function resolveWorkbenchTabTitle(tabId, optsTitle, getTab) {
       // fall through
     }
   }
+  const isEn = isEnLocale()
+  if (isEn && tabId && WORKBENCH_TAB_TITLE_FALLBACKS_EN[tabId]) return WORKBENCH_TAB_TITLE_FALLBACKS_EN[tabId]
   if (tabId && WORKBENCH_TAB_TITLE_FALLBACKS[tabId]) return WORKBENCH_TAB_TITLE_FALLBACKS[tabId]
+  if (tabId && WORKBENCH_TAB_TITLE_FALLBACKS_EN[tabId]) return WORKBENCH_TAB_TITLE_FALLBACKS_EN[tabId]
   return tabId || ''
 }
 

@@ -24,6 +24,25 @@
       }
       if (!slots) return;
       ctx.inject(["locale"], (c) => {
+        if (c.locale) {
+          try {
+            if (typeof window !== "undefined") window.__omnimuxLocale = c.locale;
+            if (typeof c.locale.subscribe === "function") {
+              c.locale.subscribe(() => {
+                if (typeof window !== "undefined") {
+                  const entryLabel = document.querySelector(".omnimux-market-entry .omnimux-sidebar-nav-entry-label");
+                  const entryBtn = document.querySelector(".omnimux-market-entry");
+                  const titleText = lookup("plaza.title") || "Skills & Experts";
+                  if (entryLabel) entryLabel.textContent = titleText;
+                  if (entryBtn) {
+                    entryBtn.title = titleText;
+                    entryBtn.setAttribute("aria-label", titleText);
+                  }
+                }
+              });
+            }
+          } catch {}
+        }
         if (!c.locale || typeof c.locale.register !== "function") return;
         c.effect(() => {
           try {
@@ -89,7 +108,7 @@
           btn.className = "omnimux-sidebar-nav-entry omnimux-market-entry";
           btn.setAttribute("data-omnimux-market-entry", "");
           btn.setAttribute("data-omnimux-esc-entry", "");
-          const titleText = lookup("plaza.title") || "Skills";
+          const titleText = lookup("plaza.title") || "Skills & Experts";
           btn.setAttribute("aria-label", titleText);
           btn.title = titleText;
 
@@ -106,7 +125,7 @@
 
           btn.addEventListener("click", (e) => {
             e.preventDefault();
-            window.__omnimuxWorkbench?.open?.({ tabId: PLAZA_TAB_ID, title: lookup("plaza.title") || "Skills" });
+            window.__omnimuxWorkbench?.open?.({ tabId: PLAZA_TAB_ID, title: lookup("plaza.title") || "Skills & Experts" });
           });
 
           const syncActive = () => {
@@ -167,7 +186,7 @@
           } catch {}
           const registerPlazaTab = () => sidebar.registerTab({
             id: PLAZA_TAB_ID,
-            title: () => lookup("plaza.title") || "Skills",
+            title: () => lookup("plaza.title") || "Skills & Experts",
             icon: renderPlazaIcon,
             order: 25,
             hidden: false,

@@ -145,6 +145,7 @@ export function writeCachedTasks(appId, tasks) {
  * @param {object} props
  */
 export function AppTab(props) {
+  const t = typeof props?.t === 'function' ? props.t : (k) => k
   useEffect(() => {
     injectWorkflowStyles()
   }, [])
@@ -555,18 +556,18 @@ export function AppTab(props) {
           <IconRocket size={36} />
         </div>
         <div className="omx-apptab-empty-title">
-          暂无已加载的 AI 应用
+          {(props?.t?.('projects.appEmptyLoaded') && props.t('projects.appEmptyLoaded') !== 'projects.appEmptyLoaded') ? props.t('projects.appEmptyLoaded') : '暂无已加载的 AI 应用'}
         </div>
-        <div>请先在创作画布中点击「发布为 AI 应用」，或通过应用中心打开。</div>
+        <div>{(props?.t?.('projects.appEmptyLoadedHint') && props.t('projects.appEmptyLoadedHint') !== 'projects.appEmptyLoadedHint') ? props.t('projects.appEmptyLoadedHint') : '请先在创作画布中点击「发布为 AI 应用」，或通过应用中心打开。'}</div>
       </div>
     )
   }
 
   const categoryLabel = {
-    video: '视频应用',
-    image: '图片应用',
-    audio: '音频应用',
-  }[manifest.metadata?.category] || 'AI 应用'
+    video: (props?.t?.('projects.appCategoryVideo') && props.t('projects.appCategoryVideo') !== 'projects.appCategoryVideo') ? props.t('projects.appCategoryVideo') : '视频应用',
+    image: (props?.t?.('projects.appCategoryImage') && props.t('projects.appCategoryImage') !== 'projects.appCategoryImage') ? props.t('projects.appCategoryImage') : '图片应用',
+    audio: (props?.t?.('projects.appCategoryAudio') && props.t('projects.appCategoryAudio') !== 'projects.appCategoryAudio') ? props.t('projects.appCategoryAudio') : '音频应用',
+  }[manifest.metadata?.category] || ((props?.t?.('projects.appCategoryUnknown') && props.t('projects.appCategoryUnknown') !== 'projects.appCategoryUnknown') ? props.t('projects.appCategoryUnknown') : 'AI 应用')
 
   return (
     <div className="omx-apptab-root">
@@ -574,7 +575,7 @@ export function AppTab(props) {
       <div className="omx-apptab-header">
         <div className="omx-apptab-header-left">
           <div className="omx-apptab-title">
-            {manifest.metadata?.name || 'AI 应用'}
+            {manifest.metadata?.name || ((props?.t?.('projects.appCategoryUnknown') && props.t('projects.appCategoryUnknown') !== 'projects.appCategoryUnknown') ? props.t('projects.appCategoryUnknown') : 'AI 应用')}
           </div>
           <span className="omx-apptab-badge">
             {categoryLabel}

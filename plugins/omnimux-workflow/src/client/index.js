@@ -105,7 +105,7 @@ export function apply(ctx) {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
     return sidebar.registerTab({
       id: APP_TAB_ID,
-      title: (seed) => seed?.title || 'AI 应用',
+      title: (seed) => seed?.title || t('workflow.tab.aiApps') || t('projects.appCategoryUnknown') || 'AI Apps',
       icon: renderWorkflowIcon,
       order: 6,
       hidden: false,

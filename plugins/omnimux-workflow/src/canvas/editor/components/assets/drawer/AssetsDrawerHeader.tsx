@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { ActiveTab } from '../types';
+import { useT } from '../../../../i18n';
 
 export interface AssetsDrawerHeaderProps {
   activeTab: ActiveTab;
@@ -17,8 +18,14 @@ export const AssetsDrawerHeader: React.FC<AssetsDrawerHeaderProps> = ({
   onSelectAssets,
   onClose,
 }) => {
+  const t = useT();
   const isCanvasActive = activeTab === 'canvas' && viewState === 'normal';
   const isAssetsActive = activeTab === 'assets' || viewState === 'subject-library';
+
+  const canvasText = t('assets.tab.canvas');
+  const assetsText = t('assets.tab.assets');
+  const canvasLabel = canvasText && canvasText !== 'assets.tab.canvas' ? canvasText : '创作画布';
+  const assetsLabel = assetsText && assetsText !== 'assets.tab.assets' ? assetsText : '资产';
 
   return (
     <div className="wf-drawer-header-compact">
@@ -28,7 +35,7 @@ export const AssetsDrawerHeader: React.FC<AssetsDrawerHeaderProps> = ({
           className={`wf-segmented-tab-compact ${isCanvasActive ? 'active' : ''}`}
           onClick={onSelectCanvas}
         >
-          创作画布
+          {canvasLabel}
         </button>
 
         <button
@@ -36,7 +43,7 @@ export const AssetsDrawerHeader: React.FC<AssetsDrawerHeaderProps> = ({
           className={`wf-segmented-tab-compact ${isAssetsActive ? 'active' : ''}`}
           onClick={onSelectAssets}
         >
-          资产
+          {assetsLabel}
         </button>
       </div>
 
@@ -44,7 +51,7 @@ export const AssetsDrawerHeader: React.FC<AssetsDrawerHeaderProps> = ({
         type="button"
         className="wf-drawer-close-btn-compact"
         onClick={onClose}
-        title="关闭抽屉 (Esc / A)"
+        title={t('assets.closeDrawer') || '关闭抽屉 (Esc / A)'}
       >
         <X size={14} />
       </button>

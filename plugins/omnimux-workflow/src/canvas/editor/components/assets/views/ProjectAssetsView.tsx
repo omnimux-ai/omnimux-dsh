@@ -18,6 +18,7 @@ import {
   Crosshair,
 } from 'lucide-react';
 import type { AssetItem, ViewMode } from '../types';
+import { useT } from '../../../../i18n';
 
 interface ProjectAssetsViewProps {
   assets: AssetItem[];
@@ -40,6 +41,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
   onInsertToCanvas,
   onRefresh,
 }) => {
+  const t = useT();
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -167,7 +169,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
       <div className="wf-subject-hero-card-compact" onClick={onOpenSubjects}>
         <div className="wf-subject-hero-left-compact">
           <Sparkles size={14} style={{ color: 'var(--wb-accent, #3b82f6)' }} />
-          <span className="wf-subject-hero-name-compact">主体库</span>
+          <span className="wf-subject-hero-name-compact">{t('assets.subjectLibrary') || '主体库'}</span>
         </div>
         <ChevronRight size={14} className="wf-subject-hero-arrow" />
       </div>
@@ -180,7 +182,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
             <input
               type="text"
               className="wf-search-input-compact"
-              placeholder="搜索项目资产"
+              placeholder={t('assets.searchProjectAssets') || '搜索项目资产'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -190,7 +192,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
             <button
               type="button"
               className={`wf-view-mode-btn-compact ${viewMode === 'tree' ? 'active' : ''}`}
-              title="列表视图"
+              title={t('assets.viewList') || '列表视图'}
               onClick={() => setViewMode('tree')}
             >
               <List size={13} />
@@ -198,7 +200,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
             <button
               type="button"
               className={`wf-view-mode-btn-compact ${viewMode === 'grid' ? 'active' : ''}`}
-              title="网格视图"
+              title={t('assets.viewGrid') || '网格视图'}
               onClick={() => setViewMode('grid')}
             >
               <LayoutGrid size={13} />
@@ -208,7 +210,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
           <button
             type="button"
             className="wf-view-mode-btn-compact"
-            title="刷新项目资产"
+            title={t('assets.refreshProject') || '刷新项目资产'}
             onClick={onRefresh}
           >
             <RefreshCw size={13} />
@@ -221,7 +223,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
         {filteredAssets.length === 0 ? (
           <div className="wf-assets-empty-state-compact">
             <Layers size={24} className="wf-assets-empty-icon" />
-            <div className="wf-assets-empty-title">暂无素材文件</div>
+            <div className="wf-assets-empty-title">{t('assets.emptyProjectFiles') || '暂无素材文件'}</div>
           </div>
         ) : viewMode === 'tree' ? (
           <div className="wf-tree-list-container-compact">
@@ -287,7 +289,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
           onClick={onCreateFolder}
         >
           <FolderPlus size={13} />
-          <span>新建文件夹</span>
+          <span>{t('assets.newFolder') || '新建文件夹'}</span>
         </button>
         <button
           type="button"
@@ -295,7 +297,7 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
           onClick={onImportFiles}
         >
           <ArrowUp size={13} />
-          <span>导入文件</span>
+          <span>{t('assets.importFile') || '导入文件'}</span>
         </button>
       </div>
     </div>

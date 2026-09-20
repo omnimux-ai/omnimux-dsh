@@ -532,6 +532,15 @@
       "skill.desc.tiktok-script-creation": "TikTok UGC 口播、达人种草、品牌广告与直播带货脚本生成。",
       "skill.name.bggg-data-amazon": "BGGG Amazon 评论采集",
       "skill.desc.bggg-data-amazon": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入。",
+      "skill.desc.clip-craft": "OmniMux Clip 专业剪辑判断层。用于剪视频、修时间轴、加字幕花字、去黑场、自动切片和导出成片。",
+      "skill.desc.cinematic-ai-comic-director": "专业影视级 AI 漫剧导演。严格执行剧本创作、漫剧落地与影视镜头库自动匹配。",
+      "skill.desc.ip-character-consistency-studio": "可持续复用的 AI IP 角色形象包制作，锁定角色多角度人设、表情、姿势与场景一致性。",
+      "skill.desc.viral-video-replication": "爆款视频智能解构与变体复刻，提炼黄金 Hook 与节奏节拍，批量生成多模态素材矩阵。",
+      "skill.desc.tiktok-shop-product-video-maker": "TikTok Shop 商品视频出海方案，快速生成爆款钩子、实拍脚本与本地化行动引导。",
+      "skill.desc.3d-animation-short-generator": "3D 风格化动画短片生成，涵盖叙事场景与角色动作呈现。",
+      "skill.desc.skill-creator": "技能脚手架与编写辅助工具，快速定义并扩展 Agent 专属能力。",
+      "skill.desc.video-analysis": "视频全景拆解引擎，深度解析镜头景别、节奏节拍与视听语言。",
+      "skill.desc.video-hook-analysis": "前 3 秒黄金开场 Hook 与停留率留存诊断分析。",
     };
     const EN = {
       locale: "en",
@@ -641,7 +650,7 @@
       "mkt.more": "Load more",
       "mkt.moreLeft": "{n} remaining",
       "mkt.catAll": "All",
-      "plaza.title": "Skills/Experts",
+      "plaza.title": "Skills & Experts",
       "workshop.tabExpertsMarket": "Experts Market",
       "expertMarket.title": "Experts Market",
       "expertMarket.subtitle": "Discover and install AI Agents to extend your workspace",
@@ -714,7 +723,7 @@
       "modelPicker.auto": "Auto",
       "modelPicker.tab.video": "Video",
       "modelPicker.tab.image": "Image",
-      "workshop.title": "Skills/Experts",
+      "workshop.title": "Skills & Experts",
       "workshop.subtitle": "Discover, install and manage skills to extend OmniMux capabilities",
       "workshop.create": "Create Skill",
       "workshop.install": "Install Skill",
@@ -1067,6 +1076,15 @@
       "skill.desc.tiktok-script-creation": "TikTok UGC, creator, ad and live script generation.",
       "skill.name.bggg-data-amazon": "BGGG Amazon Data · Review Scraper",
       "skill.desc.bggg-data-amazon": "Collect public Amazon US reviews and normalize into auditable JSONL datasets for VOC.",
+      "skill.desc.clip-craft": "OmniMux Clip intelligent editing and timeline orchestration engine. Professional video trimming, subtitles, and export automation.",
+      "skill.desc.cinematic-ai-comic-director": "Cinematic AI comic and drama director. End-to-end scriptwriting, shot planning, and cinematic visual style matching.",
+      "skill.desc.ip-character-consistency-studio": "Consistent AI IP character and asset generator. Multi-angle reference sheets, expressions, and recurring persona styling.",
+      "skill.desc.viral-video-replication": "High-performing viral video deconstruction and reproduction suite. Hook extraction, beat alignment, and multi-variant generation.",
+      "skill.desc.tiktok-shop-product-video-maker": "AI video ad generator for TikTok Shop. High-converting hooks, actionable camera scripts, and localized product showcases.",
+      "skill.desc.3d-animation-short-generator": "3D animation short video generator for stylized narrative scenes and characters.",
+      "skill.desc.skill-creator": "Skill scaffolding and authoring toolkit for custom Agent capabilities and tool extensions.",
+      "skill.desc.video-analysis": "Comprehensive video breakdown engine for shot pacing, auditory beats, and narrative hooks.",
+      "skill.desc.video-hook-analysis": "Opening hook analysis and retention scoring for viral short-form video content.",
     };
 
     const I18nCtx = React.createContext(null);
@@ -1077,6 +1095,10 @@
     }
 
     function browserLang() {
+      if (typeof window !== "undefined" && window.__omnimuxLocale) {
+        const act = window.__omnimuxLocale.active || (typeof window.__omnimuxLocale.getLocale === "function" ? window.__omnimuxLocale.getLocale()?.active : undefined);
+        if (typeof act === "string" && act.toLowerCase().startsWith("en")) return "en";
+      }
       const lang = (typeof document !== "undefined" && document.documentElement.lang)
         || (typeof navigator !== "undefined" && navigator.language)
         || "zh";
@@ -1107,7 +1129,7 @@
       if (!item) return "";
       const slug = item.slug || item.skill || item.id || "";
       const trFn = typeof tr === "function" ? tr : lookup;
-      const isEn = trFn("locale") === "en";
+      const isEn = trFn("locale") === "en" || browserLang() === "en";
       const key = "skill.name." + slug;
       const keyById = "skill.name." + (item.id || "");
       const translated = trFn(key);
@@ -1123,7 +1145,7 @@
       if (!item) return "";
       const slug = item.slug || item.skill || item.id || "";
       const trFn = typeof tr === "function" ? tr : lookup;
-      const isEn = trFn("locale") === "en";
+      const isEn = trFn("locale") === "en" || browserLang() === "en";
       const key = "skill.desc." + slug;
       const keyById = "skill.desc." + (item.id || "");
       const translated = trFn(key);
