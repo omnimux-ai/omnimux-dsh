@@ -23,3 +23,6 @@ deliverables/
 /demos/
 /demo-*.html
 /skills/
+
+# 工作流运行期生成物（args 等）。脚本与池子是资产，out/ 是产物。
+/scripts/workflows/out/

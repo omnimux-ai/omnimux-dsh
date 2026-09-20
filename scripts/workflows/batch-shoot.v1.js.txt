@@ -1,0 +1,188 @@
+// scripts/workflows/batch-shoot.v1.js.txt
+//
+// OmniMux 批量出片 · 固化编排脚本 v1（扇出版）
+//
+// 与 v0 的分工：
+//   v0  一体化：读池子 → 算配方 → 扇出。args 需 113KB 池子（模型抄不动）。
+//   v1  只扇出：接收本地算好的配方 → 扇出子代理。args 约 4KB。
+//
+// 配方由 scripts/workflows/prepare-args.mjs 在本地生成（跑的是 v0 的同一段算法，
+// 同一 seed 结果一致），OmniMux 侧只负责读文件与扇出。
+//
+// 运行方式：作为 DSH `workflow` 工具的 script 参数提交（脚本体，非模块）
+//
+// 硬约束（同 README.md）：
+//   1. 不得 import / require —— 一切外部数据走 args
+//   2. 不得使用 Math.random / Date.now / new Date() —— 本脚本不做抽样，无随机源
+//   3. 必须以 return <json-value> 结束
+//   4. 可用钩子：agent / parallel / pipeline / phase / log
+//   5. 无文件系统访问 —— 配方必须由 args 传入，不能自己读盘
+
+// ---------------------------------------------------------------------------
+// 脚本正文开始
+// ---------------------------------------------------------------------------
+
+const input = args || {};
+const product = input.product || {};
+const recipes = input.recipes || [];
+const seed = Number.isFinite(input.seed) ? input.seed : 20260920;
+const dryRun = input.dryRun === true;
+
+if (!Array.isArray(recipes) || recipes.length === 0) {
+  throw new Error(
+    'args.recipes 为空：请先在本地运行 scripts/workflows/prepare-args.mjs 生成配方，' +
+      '再把输出文件的内容作为 args 提交。'
+  );
+}
+
+// 自检：配方指纹必须唯一，否则归因会失真
+const seen = {};
+for (let i = 0; i < recipes.length; i += 1) {
+  const fp = recipes[i] && recipes[i].fingerprint;
+  if (!fp) {
+    throw new Error('第 ' + (i + 1) + ' 条配方缺少 fingerprint 字段。');
+  }
+  if (seen[fp]) {
+    throw new Error('配方指纹重复，无法归因: ' + fp);
+  }
+  seen[fp] = true;
+}
+
+if (dryRun) {
+  return {
+    mode: 'dry-run',
+    seed: seed,
+    product: product.name || null,
+    total: recipes.length,
+    recipes: recipes.map(function (r) {
+      return {
+        index: r.index,
+        fingerprint: r.fingerprint,
+        vertical: r.vertical && r.vertical.name,
+        identity: r.identity && r.identity.name,
+        method: r.method && r.method.id,
+        hook: r.hook && r.hook.name,
+        format: r.format && r.format.name,
+      };
+    }),
+    note: 'dryRun 模式：只回显配方，未启动子代理。',
+  };
+}
+
+phase('扇出子代理生成脚本');
+
+function buildPrompt(recipe) {
+  const method = recipe.method || {};
+  const identity = recipe.identity || {};
+  const vertical = recipe.vertical || {};
+  const hook = recipe.hook || {};
+  const format = recipe.format || {};
+
+  const lines = [
+    '你在为一条电商带货短视频写可执行拍摄脚本。',
+    '',
+    '## 商品',
+    '名称：' + (product.name || '未提供'),
+    product.sellingPoints ? '卖点：' + product.sellingPoints.join('、') : '',
+    product.audience ? '目标人群：' + product.audience : '',
+    product.url ? '链接：' + product.url : '',
+    '',
+    '## 你要扮演的角色',
+    '垂类：' + (vertical.name || '未指定'),
+    '身份：' + (identity.name || '未指定'),
+    '语气要求：' + (identity.voice || '自然口语'),
+    '',
+    '## 必须严格采用的手法（不得替换）',
+    '手法：' + (method.id || '未指定'),
+    '分类：' + (method.category || '未指定'),
+    method.style && method.style.length ? '风格特征：' + method.style.join('、') : '',
+    method.bestFor && method.bestFor.length ? '适用场景：' + method.bestFor.join('、') : '',
+    '',
+    '## 开场 Hook（必须落在前 3 秒）',
+    (hook.name || '未指定') + '（话术种子：' + (hook.seed || '') + '）',
+    '',
+    '## 画面形态',
+    (format.name || '未指定') + '（operation: ' + (format.id || '未指定') + '）',
+    '',
+    recipe.compliance
+      ? '## 合规约束\n' + recipe.compliance + '（功效表述不得越界，无据不下结论）\n'
+      : '',
+    '## 输出',
+    '只返回 JSON，不要任何解释文字，结构：',
+    '{ "hookLine": "前3秒口播原文", "shots": [{ "idx": 1, "durationSec": 3, "visual": "画面描述", "voiceover": "口播", "onScreenText": "花字" }], "cta": "行动号召", "caption": "发布文案" }',
+    '要求：总时长 15-45 秒；shot 数量 4-8；口播口语化、不用书面语；画面描述可直接用于生成模型。',
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+const outputs = await parallel(
+  recipes.map(function (recipe, i) {
+    return function () {
+      return agent(buildPrompt(recipe), {
+        // DSH 的 agent() 只认 label（不是 name）。真实签名见 README 的「钩子契约」。
+        label: 'shot-' + (recipe.index || i + 1) + ' ' + (recipe.fingerprint || ''),
+      });
+    };
+  })
+);
+
+const results = recipes.map(function (recipe, i) {
+  const raw = outputs[i];
+  let parsed = null;
+  let parseError = null;
+  if (typeof raw === 'string') {
+    try {
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      parsed = JSON.parse(raw.slice(start, end + 1));
+    } catch (e) {
+      parseError = String(e && e.message ? e.message : e);
+    }
+  } else {
+    parseError = 'child returned non-string';
+  }
+  return {
+    fingerprint: recipe.fingerprint,
+    vertical: recipe.vertical && recipe.vertical.name,
+    identity: recipe.identity && recipe.identity.name,
+    method: recipe.method && recipe.method.id,
+    hook: recipe.hook && recipe.hook.name,
+    format: recipe.format && recipe.format.id,
+    script: parsed,
+    parseError: parseError,
+  };
+});
+
+const failed = results.filter(function (r) {
+  return r.parseError !== null;
+}).length;
+
+log('脚本生成完成：成功 ' + (results.length - failed) + ' / 失败 ' + failed);
+
+return {
+  mode: 'full',
+  seed: seed,
+  product: product.name || null,
+  total: results.length,
+  failed: failed,
+  // 只回摘要表，不回整包脚本：避免超出 maxResultChars 被截断
+  index: results.map(function (r) {
+    return {
+      fingerprint: r.fingerprint,
+      vertical: r.vertical,
+      identity: r.identity,
+      method: r.method,
+      hook: r.hook,
+      format: r.format,
+      hookLine: r.script ? r.script.hookLine : null,
+      shotCount: r.script && r.script.shots ? r.script.shots.length : null,
+      cta: r.script ? r.script.cta : null,
+      parseError: r.parseError,
+    };
+  }),
+  scripts: results,
+};
+
+// ---------------------------------------------------------------------------
+// 脚本正文结束
+// ---------------------------------------------------------------------------
