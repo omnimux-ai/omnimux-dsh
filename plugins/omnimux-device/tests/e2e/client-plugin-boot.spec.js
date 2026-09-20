@@ -214,3 +214,32 @@ test('E2E 竞品全量对齐（Issue #2434）：6 大能力结构件与对齐验
   assert.ok(decoded.includes('允许 AI 自主执行'), '缺少允许操作白名单')
   assert.ok(decoded.includes('严禁擅自执行'), '缺少禁止高危操作黑名单')
 })
+
+test('E2E 创作者 PRD 适配增强（Issue #2441）：双时区日历、安全配额看板与防重发锁', () => {
+  const raw = readFileSync(join(root, 'lib', 'client.js'), 'utf8')
+  const decoded = raw.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+
+  // 1. 排期规划管线：双时区智能对齐 + 发帖履约回执直达
+  assert.ok(raw.includes('omx-timezone-pill'), '缺少双时区胶囊类')
+  assert.ok(raw.includes('omx-time-sub'), '缺少次级本地时区标注类')
+  assert.ok(raw.includes('omx-btn-receipt'), '缺少回执直达按钮')
+  assert.ok(raw.includes('omx-receipt-dialog-box'), '缺少履约凭证模态窗')
+  assert.ok(raw.includes('omx-receipt-link-card'), '缺少线上直链卡片')
+  assert.ok(decoded.includes('发帖履约凭证与线上回执'), '缺少回执弹窗标题')
+
+  // 2. 矩阵账号拓扑：安全发布配额动态感知 + 健康权重指数 + 无感漂移
+  assert.ok(raw.includes('omx-acc-grid'), '缺少账号拓扑三列网格')
+  assert.ok(raw.includes('omx-acc-card'), '缺少账号卡片类')
+  assert.ok(raw.includes('omx-quota-box'), '缺少安全发布配额容器')
+  assert.ok(raw.includes('omx-quota-track'), '缺少配额进度条底轨')
+  assert.ok(decoded.includes('安全发布配额感知'), '缺少配额感知标题')
+  assert.ok(decoded.includes('无感漂移'), '缺少无感设备漂移操作')
+
+  // 3. 资产就绪货架：直通资产库 + 防重发排他锁状态机
+  assert.ok(raw.includes('omx-asset-shelf-grid'), '缺少资产货架四列网格')
+  assert.ok(raw.includes('omx-asset-shelf-card'), '缺少资产卡片类')
+  assert.ok(raw.includes('omx-pill-locked'), '缺少排期锁定标签')
+  assert.ok(raw.includes('omx-pill-fulfilled'), '缺少履约发布标签')
+  assert.ok(decoded.includes('从资产库挑选成片并排期'), '缺少直通资产库排期按钮')
+  assert.ok(decoded.includes('防重发锁已激活'), '缺少防重发排他锁提示')
+})

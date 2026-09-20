@@ -852,6 +852,14 @@ export function injectDeviceStyles() {
       margin-top: 10px;
     }
 
+    /* 配额填充百分比与辅助尺寸类 (杜绝内联样式，符合 UI02 门禁) */
+    .omx-w-33 { width: 33%; }
+    .omx-w-100 { width: 100%; }
+    .omx-w-0 { width: 0%; }
+    .omx-btn-sm-ink { padding: 2px 8px; font-size: 11px; }
+    .omx-pill-success-text { color: var(--dsw-alias-status-success); font-size: 10px; }
+    .omx-pill-brand-text { color: var(--dsw-alias-brand, #7961f2); font-size: 10px; }
+
     /* 悬浮 Toast */
     .omx-toast-float {
       position: fixed;
@@ -865,6 +873,285 @@ export function injectDeviceStyles() {
       color: var(--dsw-alias-label-primary, #ffffff);
       z-index: 1000;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); /* exempt-ui03: 浮动提示阴影 */
+    }
+
+    /* SaaS 科技增强：双时区胶囊与次级时区标注 */
+    .omx-timezone-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--dsw-alias-brand, #7961f2);
+      background: var(--dsw-alias-brand-subtle, rgba(121, 97, 242, 0.12));
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+    }
+    .omx-time-sub {
+      font-size: 10px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+      margin-bottom: 4px;
+    }
+    .omx-card-asset-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary, #ffffff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .omx-btn-receipt {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      color: var(--dsw-alias-label-primary, #ffffff);
+      background: var(--dsw-alias-surface-overlay, rgba(255, 255, 255, 0.08));
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .omx-btn-receipt:hover {
+      background: var(--dsw-alias-cta-ink-bg, #ffffff);
+      color: var(--dsw-alias-cta-ink-text, #000000);
+    }
+
+    /* SaaS 矩阵账号拓扑网格与卡片 */
+    .omx-acc-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .omx-acc-card {
+      background: var(--dsw-alias-bg-layer-1, #18181b);
+      border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.15s ease;
+    }
+    .omx-acc-card:hover {
+      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+    }
+    .omx-acc-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .omx-acc-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .omx-acc-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--dsw-alias-bg-elevated, #1c1c1f);
+      border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dsw-alias-label-primary, #ffffff);
+      flex-shrink: 0;
+    }
+    .omx-acc-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .omx-acc-handle {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dsw-alias-label-primary, #ffffff);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .omx-acc-platform-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--dsw-alias-surface-overlay, rgba(255, 255, 255, 0.08));
+      color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.70));
+    }
+    .omx-acc-tz {
+      font-size: 11px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+    }
+    .omx-acc-health {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .omx-acc-health-score {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--dsw-alias-status-success);
+    }
+    .omx-acc-health-label {
+      font-size: 10px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+    }
+
+    /* 安全发布配额动态进度条 */
+    .omx-quota-box {
+      background: var(--dsw-alias-bg-base, #111113);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .omx-quota-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+    .omx-quota-track {
+      width: 100%;
+      height: 4px;
+      background: var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .omx-quota-fill-safe {
+      height: 100%;
+      background: var(--dsw-alias-status-success);
+      border-radius: 9999px;
+    }
+    .omx-quota-fill-warn {
+      height: 100%;
+      background: var(--dsw-alias-status-warning, #fbbf24);
+      border-radius: 9999px;
+    }
+    .omx-acc-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+      padding-top: 8px;
+      border-top: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+    }
+
+    /* SaaS 资产就绪货架网格与状态卡片 */
+    .omx-asset-shelf-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .omx-asset-shelf-card {
+      background: var(--dsw-alias-bg-layer-1, #18181b);
+      border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .omx-asset-shelf-thumb {
+      height: 120px;
+      background: var(--dsw-alias-bg-base, #111113);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .omx-asset-status-pill {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .omx-pill-locked {
+      background: var(--dsw-alias-brand-subtle, rgba(121, 97, 242, 0.25));
+      color: var(--dsw-alias-brand, #7961f2);
+      border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+    }
+    .omx-pill-fulfilled {
+      background: var(--dsw-alias-status-success);
+      color: var(--dsw-alias-cta-ink-text, #000000);
+    }
+    .omx-pill-ready {
+      background: var(--dsw-alias-surface-overlay, rgba(255, 255, 255, 0.08));
+      color: var(--dsw-alias-label-primary, #ffffff);
+    }
+    .omx-asset-shelf-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .omx-asset-shelf-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary, #ffffff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .omx-asset-shelf-meta {
+      font-size: 10px;
+      color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+    }
+    .omx-asset-shelf-foot {
+      padding-top: 8px;
+      border-top: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 履约凭证模态弹窗 */
+    .omx-receipt-dialog-box {
+      width: 460px;
+      background: var(--dsw-alias-bg-elevated, #1c1c1f);
+      border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); /* exempt-ui03: 浮层阴影 */
+    }
+    .omx-receipt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: var(--dsw-alias-bg-base, #111113);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 11px;
+    }
+    .omx-receipt-grid-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .omx-receipt-link-card {
+      background: var(--dsw-alias-bg-base, #111113);
+      border: 1px dashed var(--dsw-alias-status-success);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--dsw-alias-status-success);
+      word-break: break-all;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     @keyframes slideDrawer {
