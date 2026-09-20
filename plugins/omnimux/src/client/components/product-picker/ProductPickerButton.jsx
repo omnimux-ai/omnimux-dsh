@@ -288,15 +288,13 @@ export function ProductPickerButton(props) {
     setIsOpen(false);
     if (!product) return;
 
-    // 换选：先移除旧商品 Chip，再插入新 Chip
-    setSelectedProduct((previous) => {
-      if (previous && String(previous.id) !== String(product.id)) {
-        removeChip(previous.id);
-      }
-      return product;
-    });
+    // 换选：先移除旧商品 Chip，再插入新 Chip（副作用不得放进状态更新回调，避免严格模式双调用）
+    if (selectedProduct && String(selectedProduct.id) !== String(product.id)) {
+      removeChip(selectedProduct.id);
+    }
+    setSelectedProduct(product);
     insertChip(product);
-  }, [insertChip, removeChip]);
+  }, [selectedProduct, insertChip, removeChip]);
 
   /** 悬停移除：清空选中态并移除输入框 Chip，阻止冒泡以免触发弹窗 */
   const handleRemove = useCallback((e) => {
