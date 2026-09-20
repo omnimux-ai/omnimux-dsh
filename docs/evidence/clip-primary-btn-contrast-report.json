@@ -1,0 +1,59 @@
+{
+  "runId": "bb21380f-da31-4778-b84f-cc4a575341cc",
+  "startedAt": "2026-09-20T06:33:32.556Z",
+  "scenario": "clip-create-form-primary-button-contrast",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "worktree-code-bundled",
+      "pass": true,
+      "bytes": 15624248
+    },
+    {
+      "name": "dynamic-port-server",
+      "pass": true,
+      "port": 61696
+    },
+    {
+      "name": "create-form-mounted",
+      "pass": true
+    },
+    {
+      "name": "primary-button-found",
+      "pass": true,
+      "found": true,
+      "text": "创建并进入编辑器",
+      "bg": "rgb(255, 255, 255)",
+      "color": "rgb(17, 17, 19)",
+      "width": 179,
+      "height": 39
+    },
+    {
+      "name": "primary-button-positive-geometry",
+      "pass": true,
+      "width": 179,
+      "height": 39
+    },
+    {
+      "name": "contrast-ratio>=4.5",
+      "pass": true,
+      "bg": "rgb(255, 255, 255)",
+      "color": "rgb(17, 17, 19)",
+      "ratio": 18.86
+    },
+    {
+      "name": "not-white-on-white",
+      "pass": true,
+      "bg": "rgb(255, 255, 255)",
+      "color": "rgb(17, 17, 19)"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "bytes": 26425
+    }
+  ],
+  "errors": [],
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-primary-btn-contrast/.workbuddy/evidence/clip-primary-btn/bb21380f-da31-4778-b84f-cc4a575341cc/create-form.png",
+  "completedAt": "2026-09-20T06:33:35.051Z"
+}
