@@ -227,7 +227,6 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
     key: item.slug || item.id,
     className: 'featured-card omnimux-creatify-card',
     onClick: onCardClick,
-    title,
     style: {
       background: aurora.bg,
     },
