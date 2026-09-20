@@ -50,7 +50,8 @@ function renderDeviceIcon(size = 16) {
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh: locales['zh-CN'], en: locales['en-US'] }), 'omnimux-device: dictionaries')
   const t = ctx.locale.bind(NS)
-  ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-device: sidebar entry')
+  // 现网隐藏：apply() 不挂左侧行；Tab omnimux-device:library 仍注册，保留 sidebar-entry.js 以便恢复
+  // ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-device: sidebar entry')
 
   const registerDeviceTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}

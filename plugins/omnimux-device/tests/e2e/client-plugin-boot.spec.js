@@ -143,29 +143,24 @@ test('E2E 插件启动旅程：打包产物通过运行时形态校验并成功 
   t.after(() => boot.disposers.forEach((dispose) => dispose()))
 
   assert.ok(boot.effects.includes('omnimux-device: dictionaries'), 'apply 必须注册词典')
-  assert.ok(boot.effects.includes('omnimux-device: sidebar entry'), 'apply 必须挂载侧边栏入口')
   assert.ok(boot.dicts['omnimux-device']?.zh?.nav, 'apply 必须注册中文词典')
   assert.ok(boot.dicts['omnimux-device']?.en?.nav, 'apply 必须注册英文词典')
-  assert.deepEqual(boot.registered, ['omnimux-device-entry'], '侧边栏必须注册手机管理入口')
-  assert.equal(boot.created.length, 1, '入口按钮必须被创建')
-  assert.equal(boot.created[0].attrs['aria-label'], '手机管理', '入口无障碍标签必须是「手机管理」')
+  assert.equal(boot.effects.includes('omnimux-device: sidebar entry'), false, '现网下架：apply 顶层不再挂载侧边栏入口')
+  assert.deepEqual(boot.registered, [], '侧边栏不再注册手机管理入口')
+  assert.equal(boot.created.length, 0, '入口按钮不再创建')
 })
 
-test('E2E 点击旅程（Issue #2429）：入口点击打开已注册的手机管理工作台标签', (t) => {
+test('E2E 工作台标签注册旅程（Issue #2429）：应用注册手机管理工作台标签供 Agent 与流程调用', (t) => {
   const boot = bootClientPlugin()
   t.after(() => boot.disposers.forEach((dispose) => dispose()))
 
-  // apply 必须向侧边栏服务注册与 stageStore 同 id 的标签，否则 waitForTab 超时、点击静默无效
+  // apply 必须向侧边栏服务注册工作台标签，供智能体与工作台调用
   assert.equal(boot.registeredTabs.length, 1, 'apply 必须注册一个工作台标签')
   const tab = boot.registeredTabs[0]
-  assert.equal(tab.id, DEVICE_TAB_ID, '标签 id 必须与 stageStore 的 tabId 一致')
+  assert.equal(tab.id, DEVICE_TAB_ID, '标签 id 必须为 omnimux-device:library')
   assert.equal(tab.hidden, false, '标签必须可见')
   assert.equal(typeof tab.component, 'function', '标签必须携带内容组件')
   assert.equal(tab.title(), '手机管理', '标签标题必须是「手机管理」')
-
-  // 模拟用户点击入口 → stageStore.open() → workbench.open(tabId)，标签已注册故可命中
-  boot.created[0].dispatch('click')
-  assert.deepEqual(boot.openedTabs, [DEVICE_TAB_ID], '点击入口必须打开手机管理工作台标签')
 })
 
 test('E2E 真机卡片（Issue #2432）：集群视图采用 iPhone 真机比例与外壳结构', () => {
