@@ -39,6 +39,14 @@ export class ClipDomainError extends Error {
   }
 
   /**
+   * No UI channel exists in this realm — clip_open only.
+   * @param {string} message
+   */
+  static uiUnavailable(message = 'clip UI channel is unavailable') {
+    return new ClipDomainError('ui-unavailable', message)
+  }
+
+  /**
    * @param {string} message
    */
   static timelineGap(message = 'timeline has a gap') {
@@ -107,6 +115,7 @@ export const CLIP_STATUS_BY_CODE = {
   'needs-clip-plugin': 503,
   'export-encode-failed': 500,
   PREVIEW_NOT_READY: 409,
+  'ui-unavailable': 409,
   timeline_gap: 400,
   clip_overlap: 400,
   media_missing: 400,

@@ -60,10 +60,73 @@ describe('clip_* tools', () => {
     rmSync(ctx.home, { recursive: true, force: true })
   })
 
-  it('registers the six frozen tool names', () => {
+  it('registers the nine frozen tool names', () => {
     assert.deepEqual(
       tools.map((item) => item.name),
-      ['clip_get', 'clip_edit', 'clip_view', 'clip_snapshot', 'clip_diagnostics', 'clip_export'],
+      ['clip_list', 'clip_create', 'clip_open', 'clip_get', 'clip_edit', 'clip_view', 'clip_snapshot', 'clip_diagnostics', 'clip_export'],
+    )
+  })
+
+  it('clip_create persists an empty project and clip_list discovers it', async () => {
+    const created = await byName(tools, 'clip_create').execute({ name: ' 我的短视频 ', resolution: 'portrait', fps: 24 })
+    assert.match(created.projectId, /^clip_/)
+    assert.equal(created.name, '我的短视频')
+    assert.equal(created.aspectRatio, '9:16')
+    assert.equal(created.fps, 24)
+    // persisted: clip_get can read it back without an overlay
+    const got = await byName(tools, 'clip_get').execute({ projectId: created.projectId })
+    assert.equal(got.projectId, created.projectId)
+    const listed = await byName(tools, 'clip_list').execute({})
+    const hit = listed.projects.find((item) => item.id === created.projectId)
+    assert.ok(hit, 'clip_list must surface the created project')
+    assert.equal(hit.projectName, '我的短视频')
+    assert.equal(hit.aspectRatio, '9:16')
+  })
+
+  it('clip_create validates name / resolution / fps', async () => {
+    const create = byName(tools, 'clip_create')
+    await assert.rejects(() => create.execute({ name: '  ' }), (e) => e instanceof ClipDomainError)
+    await assert.rejects(() => create.execute({ name: 'x'.repeat(81) }), (e) => e instanceof ClipDomainError)
+    await assert.rejects(() => create.execute({ name: 'ok', resolution: 'wide' }), (e) => e instanceof ClipDomainError)
+    await assert.rejects(() => create.execute({ name: 'ok', fps: 0 }), (e) => e instanceof ClipDomainError)
+  })
+
+  it('clip_list sorts newest first and clamps limit', async () => {
+    await byName(tools, 'clip_create').execute({ name: 'newer' })
+    const all = await byName(tools, 'clip_list').execute({})
+    assert.equal(all.count, 2)
+    assert.equal(all.projects[0].projectName, 'newer')
+    const one = await byName(tools, 'clip_list').execute({ limit: 1 })
+    assert.equal(one.projects.length, 1)
+    await assert.rejects(() => byName(tools, 'clip_list').execute({ limit: -1 }), (e) => e instanceof ClipDomainError)
+  })
+
+  it('clip_open validates the project then calls the injected open channel', async () => {
+    const opened = []
+    const openTools = createClipTools({
+      store: ctx.store,
+      overlayReady: () => false,
+      openEditor: (projectId) => { opened.push(projectId); return { channels: ['clip-event'] } },
+    })
+    const result = await byName(openTools, 'clip_open').execute({ projectId: 'demo' })
+    assert.deepEqual(opened, ['demo'])
+    assert.equal(result.opened, true)
+    assert.deepEqual(result.channels, ['clip-event'])
+    assert.equal(result.overlayReady, false)
+    await assert.rejects(
+      () => byName(openTools, 'clip_open').execute({ projectId: 'ghost' }),
+      (e) => e instanceof ClipDomainError && e.code === 'not-found',
+    )
+  })
+
+  it('clip_open surfaces ui-unavailable when no UI channel exists', async () => {
+    const noUiTools = createClipTools({
+      store: ctx.store,
+      openEditor: () => { throw ClipDomainError.uiUnavailable('no DOM in this realm') },
+    })
+    await assert.rejects(
+      () => byName(noUiTools, 'clip_open').execute({ projectId: 'demo' }),
+      (e) => e instanceof ClipDomainError && e.code === 'ui-unavailable',
     )
   })
 
@@ -208,6 +271,7 @@ describe('apply() host entry', () => {
       rmSync(home, { recursive: true, force: true })
     }
     assert.deepEqual(registered, [
+      'clip_list', 'clip_create', 'clip_open',
       'clip_get', 'clip_edit', 'clip_view', 'clip_snapshot', 'clip_diagnostics', 'clip_export',
     ])
     assert.deepEqual(sections, ['clip:ops'])

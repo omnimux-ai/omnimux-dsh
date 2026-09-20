@@ -11,6 +11,7 @@ description: "OmniMux Clip 专业剪辑判断层。用于剪视频、修时间�
 
 ## 工作循环
 
+0. 先拿项目编号：`clip_list` 看已有工程；没有合适的就 `clip_create` 新建。绝不凭记忆编 projectId。
 1. `clip_get`（`view=summary`，必要时 `tracks` / `clips` / `full`）摸清轨道与时长。
 2. 把一次意图收成**一条** `clip_edit`（一个 Undo 步）。`description` 写人话，如「切掉片头 1.2s 静音」。
 3. 大改前 `validateOnly: true` 预演；预演通过后，用户已明确授权的精确操作直接落盘，不重复确认。预演暴露新范围或高风险影响时才追问。
@@ -18,7 +19,7 @@ description: "OmniMux Clip 专业剪辑判断层。用于剪视频、修时间�
 5. 编辑器已打开时 `clip_snapshot` 抽 2–3 帧做视觉自检（字幕是否出安全区、花字是否挡脸、切点是否跳）。
 6. 用户要成片再 `clip_export`。不要把预览当交付。
 
-`clip_view` / `clip_snapshot` 在 overlay 未挂载时会抛 `PREVIEW_NOT_READY`。先发现并尝试当前运行时可用的官方入口/挂载能力；只有 Agent 无可用入口时才请用户打开「AI 剪辑工坊」。不要重试空转，也不要把 `{ ok: false }` 当成功。
+`clip_view` / `clip_snapshot` 在 overlay 未挂载时会抛 `PREVIEW_NOT_READY`。先试一次 `clip_open` 拉起编辑界面；它抛 `ui-unavailable` 时才请用户打开「视频剪辑」侧边栏面板。不要重试空转，也不要把 `{ ok: false }` 当成功。
 
 ## 时间轴感知
 

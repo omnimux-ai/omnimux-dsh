@@ -175,7 +175,7 @@ export function createProjectStore(deps) {
           }
           listItems.push({
             id,
-            projectName: envelope.schema?.projectId || id,
+            projectName: envelope.schema?.name || envelope.schema?.projectId || id,
             updatedAt: envelope.updatedAt || 0,
             durationMs: envelope.schema?.canvasConfig?.durationMs || 0,
             aspectRatio: envelope.schema?.canvasConfig?.aspectRatio || '16:9',
