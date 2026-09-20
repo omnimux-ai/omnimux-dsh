@@ -10,6 +10,9 @@
   "skills": ["skills/clip-craft/SKILL.md"],
   "capabilities": {
     "tools": [
+      { "name": "clip_list", "summary": "列出已有剪辑项目（编号、名称、更新时间、时长）", "category": "clip", "isWriteOperation": false, "requiresAuth": false },
+      { "name": "clip_create", "summary": "新建空剪辑工程（名称/分辨率/帧率），返回项目编号", "category": "clip", "isWriteOperation": true, "requiresAuth": false },
+      { "name": "clip_open", "summary": "拉起并聚焦「视频剪辑」编辑界面，挂载指定工程", "category": "clip", "isWriteOperation": false, "requiresAuth": false },
       { "name": "clip_get", "summary": "读取剪辑工程时间轴与轨道信息（summary/tracks/clips/full）", "category": "clip", "isWriteOperation": false, "requiresAuth": false },
       { "name": "clip_edit", "summary": "批处理原子剪辑操作，一次调用等于一个 Undo 步", "category": "clip", "isWriteOperation": true, "requiresAuth": false },
       { "name": "clip_view", "summary": "控制播放与播放头定位（不属于 Undo）", "category": "clip", "isWriteOperation": false, "requiresAuth": false },

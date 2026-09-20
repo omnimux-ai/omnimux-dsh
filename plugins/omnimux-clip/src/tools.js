@@ -5,6 +5,11 @@ import { applyOperations } from './timeline/ops.js'
 import { diagnoseTimeline } from './timeline/diagnostics.js'
 import { projectView } from './timeline/views.js'
 import { optionalSecToMs, secToMs } from './timeline/time.js'
+import { createEmptySchema, uid } from './client/store/timelineTypes.js'
+import { OMNIMUX_CLIP_OPEN, dispatchClipEvent } from './client/clip-events.js'
+
+/** clip_create resolution enum → canvas aspectRatio. */
+const RESOLUTION_TO_ASPECT = { landscape: '16:9', portrait: '9:16', square: '1:1' }
 
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
@@ -44,21 +49,152 @@ function overlayReady() {
 }
 
 /**
- * Build the six `clip_*` tool specs. Host-side: persist via projectStore,
+ * Default clip_open channel: dispatch the agent open event on window and, when
+ * the better-sidebar seam is reachable, focus the 视频剪辑 tab. Throws
+ * ui-unavailable when this realm has no DOM at all.
+ * @param {string} projectId
+ * @returns {{ channels: string[] }}
+ */
+export function defaultOpenClipEditor(projectId) {
+  const win = typeof window !== 'undefined' ? window : undefined
+  if (!win || typeof CustomEvent !== 'function') {
+    throw ClipDomainError.uiUnavailable(
+      'clip editor UI is not mounted in this realm（当前运行环境没有界面通道），请在右侧边栏手动打开「视频剪辑」。',
+    )
+  }
+  /** @type {string[]} */
+  const channels = []
+  try {
+    dispatchClipEvent(OMNIMUX_CLIP_OPEN, { source: 'agent', projectId }, { target: win })
+    channels.push('clip-event')
+  } catch { /* no event realm */ }
+  try {
+    const sidebar = win.__OMNIMUX_BETTER_SIDEBAR__ || win.__omnimuxBetterSidebar
+    if (sidebar && typeof sidebar.openTab === 'function') {
+      sidebar.openTab({ type: 'omnimux-clip:studio', id: 'omnimux-clip:studio', title: '视频剪辑' })
+      channels.push('sidebar-tab')
+    }
+  } catch { /* sidebar seam unavailable */ }
+  if (channels.length === 0) {
+    throw ClipDomainError.uiUnavailable(
+      'clip editor UI is not mounted: no channel answered（剪辑界面通道不可用），请在右侧边栏手动打开「视频剪辑」。',
+    )
+  }
+  return { channels }
+}
+
+/**
+ * Build the nine `clip_*` tool specs. Host-side: persist via projectStore,
  * never return `{ ok: false }` as a successful value.
  *
  * @param {{
  *   store: ReturnType<typeof import('./store/projectStore.js').createProjectStore>,
  *   fs?: { writeFileSync: Function, existsSync?: Function },
  *   overlayReady?: () => boolean,
+ *   openEditor?: (projectId: string) => { channels: string[] } | Promise<{ channels: string[] }>,
  * }} deps
  */
 export function createClipTools(deps) {
   const store = deps.store
   const fs = deps.fs ?? { writeFileSync }
   const isOverlayReady = deps.overlayReady ?? overlayReady
+  const openEditor = deps.openEditor ?? defaultOpenClipEditor
 
   return [
+    {
+      name: 'clip_list',
+      description:
+        'List existing clip projects (id, projectName, updatedAt, durationSec, aspectRatio, track/clip counts), newest first. Call this to discover a projectId before clip_get/clip_edit, or clip_create to start a new one.',
+      timeoutMs: 10_000,
+      parameters: objectParams({
+        limit: { type: 'number', description: 'Max projects to return, 1-100. Default 50.' },
+      }),
+      output: jsonOut,
+      async execute(args) {
+        let limit
+        if (args.limit != null) {
+          if (typeof args.limit !== 'number' || !Number.isFinite(args.limit) || args.limit <= 0) {
+            throw ClipDomainError.invalidJson('limit must be a positive number')
+          }
+          limit = Math.floor(args.limit)
+        }
+        const items = store.list(limit != null ? { limit } : {}).map((item) => ({
+          id: item.id,
+          projectName: item.projectName,
+          updatedAt: item.updatedAt,
+          durationSec: (item.durationMs || 0) / 1000,
+          aspectRatio: item.aspectRatio,
+          trackCount: item.trackCount,
+          clipCount: item.clipCount,
+        }))
+        return { count: items.length, projects: items }
+      },
+    },
+    {
+      name: 'clip_create',
+      description:
+        'Create and persist a new empty clip project (video/audio/text tracks, black canvas). resolution landscape|portrait|square (default landscape); fps default 30. Returns the projectId for clip_edit/clip_get/clip_open.',
+      timeoutMs: 15_000,
+      parameters: objectParams({
+        name: { type: 'string', required: true, description: 'Project name, 1-80 chars after trim' },
+        resolution: {
+          type: 'string',
+          enum: ['landscape', 'portrait', 'square'],
+          description: 'Canvas shape. Default landscape (16:9); portrait=9:16; square=1:1.',
+        },
+        fps: { type: 'number', description: 'Canvas frame rate. Default 30.' },
+      }),
+      output: jsonOut,
+      async execute(args) {
+        const name = typeof args.name === 'string' ? args.name.trim() : ''
+        if (!name) throw ClipDomainError.invalidJson('name is required')
+        if (name.length > 80) throw ClipDomainError.invalidJson('name must be <= 80 chars')
+        const resolution = args.resolution || 'landscape'
+        const aspectRatio = RESOLUTION_TO_ASPECT[resolution]
+        if (!aspectRatio) {
+          throw ClipDomainError.invalidJson('resolution must be landscape|portrait|square')
+        }
+        let fps = 30
+        if (args.fps != null) {
+          if (typeof args.fps !== 'number' || !Number.isFinite(args.fps) || args.fps <= 0) {
+            throw ClipDomainError.invalidJson('fps must be a positive number')
+          }
+          fps = args.fps
+        }
+        const projectId = uid('clip')
+        const schema = createEmptySchema({ projectId, aspectRatio, canvasConfig: { fps } })
+        schema.name = name
+        store.create(projectId, schema)
+        return {
+          projectId,
+          name,
+          aspectRatio,
+          fps,
+          durationSec: (schema.canvasConfig?.durationMs || 0) / 1000,
+        }
+      },
+    },
+    {
+      name: 'clip_open',
+      description:
+        'Open/focus the 视频剪辑 editor UI for a project so clip_view/clip_snapshot and pixel export can run. Best-effort UI navigation; does not modify the timeline. Throws ui-unavailable when this realm has no UI channel — then ask the user to open the 视频剪辑 sidebar tab manually.',
+      timeoutMs: 10_000,
+      parameters: objectParams({
+        projectId: { type: 'string', required: true, description: 'Clip project id' },
+      }),
+      output: jsonOut,
+      async execute(args) {
+        const id = requireProjectId(args)
+        store.load(id)
+        const result = await openEditor(id)
+        return {
+          projectId: id,
+          opened: true,
+          channels: result?.channels ?? [],
+          overlayReady: isOverlayReady(),
+        }
+      },
+    },
     {
       name: 'clip_get',
       description:
@@ -340,7 +476,8 @@ export function registerClipTools(ctx, tools) {
 }
 
 export const CLIP_PROMPT = `This workspace may use OmniMux Clip (omnimux-clip) for local multi-track editing.
+Get a projectId first: clip_list shows existing projects; clip_create starts a new one. Never invent a projectId.
 Call clip_get before stating timeline facts. Mutate the timeline only through clip_edit (one call = one undo step; times in seconds).
-After a batch of edits call clip_diagnostics, then clip_snapshot if the overlay is open. clip_view / clip_snapshot throw PREVIEW_NOT_READY when the editor overlay is not mounted — tell the user to open 剪辑工坊 first.
+After a batch of edits call clip_diagnostics, then clip_snapshot if the overlay is open. clip_open focuses the 视频剪辑 editor UI for a project; clip_view / clip_snapshot throw PREVIEW_NOT_READY when the editor overlay is not mounted — try clip_open once, otherwise tell the user to open 剪辑工坊 first.
 Do not return { ok: false } as a successful tool value; failures throw ClipDomainError.
 Follow skills/clip-craft/SKILL.md for pacing, caption size, and black-frame checks.`

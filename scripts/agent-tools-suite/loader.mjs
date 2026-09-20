@@ -90,6 +90,8 @@ export async function loadAllPluginTools(rootDir = process.cwd()) {
               store: {
                 load: () => ({ schema: { canvasConfig: { durationMs: 5000 }, tracks: [] } }),
                 patchPlayback: () => {},
+                list: () => [],
+                create: (id, schema) => ({ id, schema, updatedAt: Date.now() }),
                 paths: { snapshotsDir: mockCtx.workspaceDir, exportsDir: mockCtx.workspaceDir },
               },
               overlayReady: () => false, // 正常模拟未挂载
