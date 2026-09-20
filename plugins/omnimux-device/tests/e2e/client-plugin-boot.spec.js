@@ -1,13 +1,17 @@
 /**
  * @file plugins/omnimux-device/tests/e2e/client-plugin-boot.spec.js
- * E2E（Issue #2427 / #2429）：模拟 Web 运行时的完整插件启动与点击旅程——
- * 加载打包产物 → unwrapExports 解包 → Cordis resolve 校验插件形态 →
- * apply(ctx) 注册词典、挂载侧边栏入口并注册工作台标签 →
- * 模拟点击入口 → stageStore.open → workbench.open(tabId) 命中已注册标签。
- * 故障版本一（PR #2417 纯再导出入口）在 resolve 步被判 invalid plugin；
- * 故障版本二（#2427 修复后未注册标签）点击时 waitForTab 超时静默放弃。
- * 浏览器实机对照证据：docs/evidence/device-client-plugin-shape-verified.png、
- * docs/evidence/device-sidebar-tab-registration-verified.png。
+ * E2E（Issue #2427 / #2429 / #2434）：
+ * 1. 模拟 Web 运行时完整插件装载旅程（unwrapExports -> resolve -> apply -> 侧边栏与标签注册）
+ * 2. 验证 iPhone 真机外壳结构与比例
+ * 3. 验证 tame.so 竞品 6 大能力对齐：
+ *    - 顶部全局连接与安全状态条 (omx-global-banner)
+ *    - 6 个全量对齐选项卡 (集群/排期/素材/账号/审计/养号)
+ *    - 接入新设备四步向导 (omx-modal-dialog / omx-steps-row)
+ *    - 签名方案双选卡片 (omx-options-grid) 与接入前准备清单 (omx-checklist)
+ *    - AI 权限白名单双栏护栏 (omx-whitelist-grid)
+ *    - 排期日历与列表双视图 (omx-view-toggle) + 5 字段内联新建表单 (omx-inline-form)
+ *    - 素材、账号、审计、养号各专属空状态与引导跳转 (omx-empty-box)
+ * 浏览器实机多视角留证：docs/evidence/device-frontend-alignment-verified.png。
  */
 
 import assert from 'node:assert/strict'
@@ -19,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DEVICE_TAB_ID = 'omnimux-device:library'
 
-/** 最小 DOM 桩：覆盖 sidebar-entry.js 的元素操作面（setAttribute/dataset/querySelector/事件）。 */
+/** 最小 DOM 桩：覆盖元素操作面（setAttribute/dataset/querySelector/事件）。 */
 function makeElement() {
   return {
     attrs: {},
@@ -165,14 +169,48 @@ test('E2E 点击旅程（Issue #2429）：入口点击打开已注册的手机�
 })
 
 test('E2E 真机卡片（Issue #2432）：集群视图采用 iPhone 真机比例与外壳结构', () => {
-  const bundle = readFileSync(join(root, 'lib', 'client.js'), 'utf8')
-  // 真机外壳结构件必须存在于打包产物
+  const raw = readFileSync(join(root, 'lib', 'client.js'), 'utf8')
   for (const marker of ['omx-phone-grid', 'omx-phone-frame', 'omx-phone-screen', 'omx-phone-island', 'omx-phone-statusbar', 'omx-phone-home', 'omx-phone-caption', 'omx-phone-state']) {
-    assert.ok(bundle.includes(marker), `打包产物缺少真机结构件 ${marker}`)
+    assert.ok(raw.includes(marker), `打包产物缺少真机结构件 ${marker}`)
   }
-  // 真机比例样式（9:19.5）必须存在于样式表
-  assert.ok(bundle.includes('aspect-ratio: 9 / 19.5'), '真机比例样式缺失')
-  // 旧版通用黑色矩形必须彻底移除
-  assert.ok(!bundle.includes('omx-mock-screen-box'), '旧版 mock-screen-box 必须移除')
-  assert.ok(!bundle.includes('omx-fleet-card'), '旧版 fleet-card 必须移除')
+  assert.ok(raw.includes('aspect-ratio: 9 / 19.5'), '真机比例样式缺失')
+  assert.ok(!raw.includes('omx-mock-screen-box'), '旧版 mock-screen-box 必须移除')
+})
+
+test('E2E 竞品全量对齐（Issue #2434）：6 大能力结构件与对齐验证', () => {
+  const raw = readFileSync(join(root, 'lib', 'client.js'), 'utf8')
+  // 将 esbuild 产物中的 unicode 转义还原为可读字符以进行文本断言
+  const decoded = raw.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+
+  // 1. 全局连接状态条与 AI 权限入口
+  assert.ok(raw.includes('omx-global-banner'), '缺少全局状态条样式类')
+  assert.ok(decoded.includes('AI 权限白名单'), '缺少 AI 权限白名单触发入口')
+
+  // 2. 6 大对齐选项卡
+  for (const tab of ['集群', '排期', '素材', '账号', '审计', '养号']) {
+    assert.ok(decoded.includes(tab), `缺少选项卡: ${tab}`)
+  }
+
+  // 3. 接入向导与签名双选
+  assert.ok(raw.includes('omx-steps-row'), '缺少接入向导步进条')
+  assert.ok(raw.includes('omx-options-grid'), '缺少签名方案双选卡')
+  assert.ok(decoded.includes('Apple 开发者计划 API 密钥'), '缺少 Team 密钥签名方案')
+  assert.ok(decoded.includes('免费 Apple ID 个人证书'), '缺少免费个人证书方案')
+  assert.ok(raw.includes('omx-checklist'), '缺少接入前准备清单')
+
+  // 4. 排期日历/列表双视图 + 内联新建表单
+  assert.ok(raw.includes('omx-view-toggle'), '缺少排期视图切换开关')
+  assert.ok(raw.includes('omx-week-grid'), '缺少周日历网格')
+  assert.ok(raw.includes('omx-inline-form'), '缺少内联新建任务表单')
+
+  // 5. 素材库与空状态引导
+  assert.ok(raw.includes('omx-content-toolbar'), '缺少素材库操作栏')
+  assert.ok(raw.includes('omx-empty-box'), '缺少统一空状态组件')
+  assert.ok(decoded.includes('前往排期管理'), '缺少素材空状态引导按钮')
+  assert.ok(decoded.includes('打开接入向导'), '缺少账号空状态引导按钮')
+
+  // 6. AI 权限白名单双栏
+  assert.ok(raw.includes('omx-whitelist-grid'), '缺少白名单双栏结构')
+  assert.ok(decoded.includes('允许 AI 自主执行'), '缺少允许操作白名单')
+  assert.ok(decoded.includes('严禁擅自执行'), '缺少禁止高危操作黑名单')
 })

@@ -1,0 +1,48 @@
+{
+  "task": "device-frontend-alignment",
+  "issue": 2434,
+  "verifiedAt": "2026-09-20T04:30:31+08:00",
+  "method": "ego-browser 真实 Chrome 内核驱动验证台（tmp/device-alignment-harness.html）：以真实打包产物 lib/client.js 完整挂载 DeviceStage，执行全量 6 大能力与弹层实测留证",
+  "results": {
+    "globalBanner": "顶部状态条就绪（琥珀色指示灯 + Mac 待命状态 + AI 权限入口）",
+    "tabList": ["集群", "排期", "素材", "账号", "审计", "养号"],
+    "tabsCount": 6,
+    "onboardingWizard": {
+      "verified": true,
+      "steps": ["连接与信任", "签名方案", "自动部署", "真机就绪"],
+      "signOptions": ["Apple 开发者计划 API 密钥 (100台/年)", "免费 Apple ID 个人证书 (3台)"],
+      "prerequisites": ["Apple Silicon Mac", "Xcode", "无密码测试机", "高速数据线"]
+    },
+    "schedulesView": {
+      "verified": true,
+      "toggles": ["日历视图", "列表视图"],
+      "inlineForm": "5 字段表单（平台/账号/动作/细节/时间）提交成功并弹出 toast 确认"
+    },
+    "contentView": {
+      "verified": true,
+      "elements": ["搜索框", "添加默认文案按钮", "上传照片或视频按钮", "前往排期管理引导按钮"]
+    },
+    "accountsView": {
+      "verified": true,
+      "elements": ["2 分钟下发同步说明", "打开接入向导引导按钮"]
+    },
+    "activityView": {
+      "verified": true,
+      "elements": ["会话全量审计说明", "查看设备集群引导按钮"]
+    },
+    "aiWhitelist": {
+      "verified": true,
+      "columns": ["允许 AI 自主执行 (5条)", "严禁擅自执行/必须人工确认 (5条)"]
+    },
+    "designGate": "零内联业务样式，全部收敛至 styles.js 类；色值全部遵循 --dsw-* Token"
+  },
+  "screenshots": [
+    "docs/evidence/device-frontend-alignment-verified.png",
+    "/tmp/device-wizard-step1.png",
+    "/tmp/device-wizard-step2.png",
+    "/tmp/device-whitelist-modal.png",
+    "/tmp/device-schedules-form.png",
+    "/tmp/device-content-view.png"
+  ],
+  "conclusion": "tame.so 竞品 6 大功能点（接入向导/排期升级/素材库/账号矩阵/执行审计/AI安全白名单）已全部高保真落地并通过真实浏览器全量交互验证"
+}
