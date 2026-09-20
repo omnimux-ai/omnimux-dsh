@@ -1,0 +1,796 @@
+{
+  "timestamp": "2026-09-20T03:23:27.468Z",
+  "totalSkills": 112,
+  "chineseCoverage": {
+    "titleZhPass": 112,
+    "summaryZhPass": 112
+  },
+  "illegalTokensFound": [],
+  "templateContaminationFound": [],
+  "verifiedSkills": [
+    {
+      "id": "sk-omx-ugc-confessional",
+      "slug": "ugc-confessional",
+      "titleZh": "UGC 告白",
+      "titleEn": "UGC Confessional",
+      "summaryZh": "第一人称对着镜头倾诉式种草，以自拍机位与真实痛点引发情感共鸣，适合美妆、个护与生活方式类短视频推广。"
+    },
+    {
+      "id": "sk-omx-cinematic",
+      "slug": "cinematic",
+      "titleZh": "电影级视觉大片",
+      "titleEn": "Cinematic",
+      "summaryZh": "院线级光影质感与高级调色方案，提供大师级镜头语言与氛围感构图，打造高转化品牌形象大片。"
+    },
+    {
+      "id": "sk-omx-ugc-showcase",
+      "slug": "ugc-showcase",
+      "titleZh": "UGC 产品展示",
+      "titleEn": "UGC Showcase",
+      "summaryZh": "聚焦真实产品特写与动态使用展示，通过四镜头递进展示细节质感，适合数码硬件、美妆护肤与日用好物带货。"
+    },
+    {
+      "id": "sk-omx-ecommerce",
+      "slug": "ecommerce",
+      "titleZh": "电商营销实战",
+      "titleEn": "Ecommerce",
+      "summaryZh": "专为实体电商爆款打造，快速提炼产品核心卖点与促销钩子，生成高点击率的主图视频与投放分镜方案。"
+    },
+    {
+      "id": "sk-omx-static-image",
+      "slug": "static-image",
+      "titleZh": "静态图片广告",
+      "titleEn": "Static Image",
+      "summaryZh": "精细化排版与高转化单图营销方案，融合产品特写、痛点文案与行动呼吁，适配多渠道社媒信息流广告投放。"
+    },
+    {
+      "id": "sk-omx-carousel",
+      "slug": "carousel",
+      "titleZh": "轮播图卡片",
+      "titleEn": "Carousel",
+      "summaryZh": "故事递进式多图轮播广告，打造连贯叙事与细节多维拆解，大幅提升用户滑动探索深度与互动留存率。"
+    },
+    {
+      "id": "sk-omx-course-to-short-video",
+      "slug": "course-to-short-video",
+      "titleZh": "课程转短视频",
+      "titleEn": "Course To Short Video",
+      "summaryZh": "长视频课程与干货教学智能浓缩，快速提炼黄金 Hook 与干货要点，批量转化出高传播价值的短剧和短视频脚本。"
+    },
+    {
+      "id": "sk-omx-ugc-fit-check",
+      "slug": "ugc-fit-check",
+      "titleZh": "UGC 穿搭检查",
+      "titleEn": "UGC Fit Check",
+      "summaryZh": "时尚服饰穿搭展示专用，模拟对镜自拍或全身走位镜头，生动展现上身剪裁与材质细节，打造沉浸式种草氛围。"
+    },
+    {
+      "id": "sk-omx-youth-sports-hype-reel",
+      "slug": "youth-sports-hype-reel",
+      "titleZh": "青少年体育宣传片",
+      "titleEn": "Youth Sports Hype Reel",
+      "summaryZh": "高燃运动混剪与热血分镜，捕捉竞技对抗与热血瞬间，适合运动装备、培训夏令营与青训机构品牌宣传。"
+    },
+    {
+      "id": "sk-omx-script-to-video",
+      "slug": "script-to-video",
+      "titleZh": "脚本转视频",
+      "titleEn": "Script To Video",
+      "summaryZh": "从纯文本营销脚本快速映射生成视频镜头分镜，按时间轴精准规划画面提示词、转场节拍与配音对齐方案。"
+    },
+    {
+      "id": "sk-omx-service",
+      "slug": "service",
+      "titleZh": "本地生活服务广告",
+      "titleEn": "Local Service Ads",
+      "summaryZh": "针对咨询机构、诊所医疗、家政美容等服务类商业场景，以专业信任感和客户见证为核心构建获客引流脚本。"
+    },
+    {
+      "id": "sk-omx-ugc-unwrap",
+      "slug": "ugc-unwrap",
+      "titleZh": "UGC 好物开箱种草",
+      "titleEn": "UGC Unwrap",
+      "summaryZh": "第一人称沉浸式开箱展示，从包装拆封到上手体验全流程特写，快速激发购买欲望。"
+    },
+    {
+      "id": "sk-omx-animated-storymode",
+      "slug": "animated-storymode",
+      "titleZh": "动画故事模式",
+      "titleEn": "Animated Storymode",
+      "summaryZh": "适用于the ad format is animated / cartoon 故事叙述 for any general industry — explainer animations, ani..."
+    },
+    {
+      "id": "sk-omx-ugc-walkthrough",
+      "slug": "ugc-walkthrough",
+      "titleZh": "UGC 场景化实操演练",
+      "titleEn": "UGC Walkthrough",
+      "summaryZh": "分步骤展示产品在实际生活场景中的使用方法与操作细节，降低用户学习成本与决策门槛。"
+    },
+    {
+      "id": "sk-omx-games",
+      "slug": "games",
+      "titleZh": "手游与电竞广告",
+      "titleEn": "Games",
+      "summaryZh": "适用于the product is a mobile / desktop / console game or game-like app (puzzle, casual, midcore, RPG, hype..."
+    },
+    {
+      "id": "sk-omx-ctv",
+      "slug": "ctv",
+      "titleZh": "联网电视大屏广告",
+      "titleEn": "Ctv",
+      "summaryZh": "适用于producing a Connected TV (CTV / OTT / streaming TV) 视频广告 — Hulu, Disney+, Roku, Samsung TV Plus,..."
+    },
+    {
+      "id": "sk-omx-street-interview",
+      "slug": "street-interview",
+      "titleZh": "街头随机采访",
+      "titleEn": "Street Interview",
+      "summaryZh": "适用于producing street-interview / vox-pop / man-on-the-street style ads — a host approaches real strangers..."
+    },
+    {
+      "id": "sk-omx-podcast",
+      "slug": "podcast",
+      "titleZh": "播客精彩切片",
+      "titleEn": "Podcast",
+      "summaryZh": "适用于the user wants a podcast-style two-host conversational video — Joe Rogan-style, creator interview, fo..."
+    },
+    {
+      "id": "sk-omx-audio-generation",
+      "slug": "audio-generation",
+      "titleZh": "音频与音效生成",
+      "titleEn": "Audio Generation",
+      "summaryZh": "适用于the user wants any audio work on a video — generating a text-to-speech voiceover or narration, clonin..."
+    },
+    {
+      "id": "sk-omx-meme",
+      "slug": "meme",
+      "titleZh": "网络模因与梗图广告",
+      "titleEn": "Meme",
+      "summaryZh": "适用于the ad format is a meme or native-feed remix — image macros, top-text/bottom-text, two-panel reaction..."
+    },
+    {
+      "id": "sk-omx-amazon-product-listing",
+      "slug": "amazon-product-listing",
+      "titleZh": "亚马逊商详图设计",
+      "titleEn": "Amazon Product Listing",
+      "summaryZh": "适用于the user wants Amazon marketplace images from a product photo or product URL — a compliant main image..."
+    },
+    {
+      "id": "sk-omx-ads-static-image-from-reference",
+      "slug": "ads-static-image-from-reference",
+      "titleZh": "参考图生成静态广告",
+      "titleEn": "Static Image From Reference",
+      "summaryZh": "当需要时使用本技能：the user uploads a reference image of a static product ad (a competitor's poster, a Pi..."
+    },
+    {
+      "id": "sk-omx-cinematic-dark-luxury-food-reveal",
+      "slug": "cinematic-dark-luxury-food-reveal",
+      "titleZh": "电影感暗调奢华美食",
+      "titleEn": "Cinematic Dark Luxury Food Reveal",
+      "summaryZh": "采用暗黑奢华光影与微距特写呈现顶级美食质感，以高帧慢动作与细节声音营造极致食欲诱惑。"
+    },
+    {
+      "id": "sk-omx-mobile-app-chaos-to-calm-confessional",
+      "slug": "mobile-app-chaos-to-calm-confessional",
+      "titleZh": "从混乱到从容 App 倾诉广告",
+      "titleEn": "Mobile App Chaos To Calm Confessional",
+      "summaryZh": "通过生活焦虑混乱到使用产品后井井有条的鲜明对照，引发强烈情感共鸣。"
+    },
+    {
+      "id": "sk-omx-cinematic-home-services-multicity-arc",
+      "slug": "cinematic-home-services-multicity-arc",
+      "titleZh": "家政服务多城市电影叙事",
+      "titleEn": "Cinematic Home Services Multicity Arc",
+      "summaryZh": "以多城市生活实景与电影级叙事串联家政上门服务，展现专业可靠的服务细节与家庭温情。"
+    },
+    {
+      "id": "sk-omx-curated-lifestyle-brand-video",
+      "slug": "curated-lifestyle-brand-video",
+      "titleZh": "格调生活品牌宣传片",
+      "titleEn": "Curated Lifestyle Brand Video",
+      "summaryZh": "精选生活美学与日常仪式感镜头，以高格调调色与人文视角树立品牌高端生活方式形象。"
+    },
+    {
+      "id": "sk-omx-b2b-saas-dark-cinematic-exec-arc",
+      "slug": "b2b-saas-dark-cinematic-exec-arc",
+      "titleZh": "B2B 高管暗黑商业短片",
+      "titleEn": "B2B Saas Dark Cinematic Exec Arc",
+      "summaryZh": "以电影级冷色调与商业精英视角，直击企业管理痛点与数字化转型方案。"
+    },
+    {
+      "id": "sk-omx-ugc-script-planner",
+      "slug": "ugc-script-planner",
+      "titleZh": "UGC 脚本全流程策划",
+      "titleEn": "UGC Script Planner",
+      "summaryZh": "根据产品核心卖点与投放时长（15~60秒），系统输出全流程口播脚本、镜头节拍与行动号召，专业易落地。"
+    },
+    {
+      "id": "sk-omx-motion-design-flow",
+      "slug": "motion-design-flow",
+      "titleZh": "动态图形运镜设计",
+      "titleEn": "Motion Design Flow",
+      "summaryZh": "规划连贯流畅的镜头推拉摇移、空间透视转换与速度曲线，让静态设计图焕发灵动生命力与高级动态质感。"
+    },
+    {
+      "id": "sk-omx-animated-character-ad-plan",
+      "slug": "animated-character-ad-plan",
+      "titleZh": "动画 IP 角色广告企划",
+      "titleEn": "Animated Character Ad Plan",
+      "summaryZh": "结合原创虚拟形象与品牌吉祥物，打造趣味幽默的情节故事，强化品牌认知。"
+    },
+    {
+      "id": "sk-omx-cinematic-anime-episodic-serial-hook",
+      "slug": "cinematic-anime-episodic-serial-hook",
+      "titleZh": "日漫连载黄金开头",
+      "titleEn": "Cinematic Anime Episodic Serial Hook",
+      "summaryZh": "动漫风高燃分镜开头，以悬念与强情节迅速抓住年轻二次元受众目光。"
+    },
+    {
+      "id": "sk-omx-dark-saas-ui-hero",
+      "slug": "dark-saas-ui-hero",
+      "titleZh": "暗色软件 UI 主图演示",
+      "titleEn": "Dark Saas Ui Hero",
+      "summaryZh": "高对比暗黑科技风界面动态呈现，多维度展示软件仪表盘与核心功能交互。"
+    },
+    {
+      "id": "sk-omx-fashion-mood-video-skill",
+      "slug": "fashion-mood-video-skill",
+      "titleZh": "时尚情绪氛围短片",
+      "titleEn": "Fashion Mood Video",
+      "summaryZh": "融合情绪张力、时尚走秀光影与个性卡点音乐，传递服装品牌独有的设计灵魂与氛围感。"
+    },
+    {
+      "id": "sk-omx-meme-merch-multi-format-tiktok",
+      "slug": "meme-merch-multi-format-tiktok",
+      "titleZh": "梗图文创多格式短视频",
+      "titleEn": "Meme Merch Multi Format Tiktok",
+      "summaryZh": "紧跟社媒热梗与网梗文化，将流行热点与文创周边巧妙融合，打造极具自发传播力的趣味短片。"
+    },
+    {
+      "id": "sk-omx-ugc-inherited-burden-testimonial",
+      "slug": "ugc-inherited-burden-testimonial",
+      "titleZh": "痛点共鸣用户真实自述",
+      "titleEn": "UGC Inherited Burden Testimonial",
+      "summaryZh": "直击用户长期受困的典型痛点，以真诚倾诉与豁然开朗的情感转折，建立深层次品牌共鸣。"
+    },
+    {
+      "id": "sk-omx-video-recreate-skill",
+      "slug": "video-recreate-skill",
+      "titleZh": "爆款视频智能复刻",
+      "titleEn": "Video Recreate",
+      "summaryZh": "深度解构全网爆款视频的脚本结构、视觉节奏与黄金钩子，一键复刻符合自身品牌的同款神作。"
+    },
+    {
+      "id": "sk-omx-animated-mascot-problem-solution",
+      "slug": "animated-mascot-problem-solution",
+      "titleZh": "吉祥物问题解决型广告",
+      "titleEn": "Animated Mascot Problem Solution",
+      "summaryZh": "让品牌吉祥物化身问题解决专家，用趣味生动的动画情节演绎用户痛点与产品化解方案。"
+    },
+    {
+      "id": "sk-omx-cartoon-mascot-narrator-shorts",
+      "slug": "cartoon-mascot-narrator-shorts",
+      "titleZh": "卡通吉祥物旁白短视频",
+      "titleEn": "Cartoon Mascot Narrator Shorts",
+      "summaryZh": "以萌系卡通吉祥物作为全能旁白主播，通过夸张表情与趣味解说快速科普产品核心优势。"
+    },
+    {
+      "id": "sk-omx-casino-streamer-split-screen-reaction",
+      "slug": "casino-streamer-split-screen-reaction",
+      "titleZh": "双屏互动实时反应广告",
+      "titleEn": "Casino Streamer Split Screen Reaction",
+      "summaryZh": "采用双屏实时互动形式，将主角夸张的情绪反应与高光时刻同屏呈现，极具感染力。"
+    },
+    {
+      "id": "sk-omx-cinematic-dual-persona-dark-luxury-ad",
+      "slug": "cinematic-dual-persona-dark-luxury-ad",
+      "titleZh": "双重人格暗调轻奢大片",
+      "titleEn": "Cinematic Dual Persona Dark Luxury Ad",
+      "summaryZh": "通过同一角色双重身份的戏剧化反差与暗调光影，营造出奢华神秘的高级叙事质感。"
+    },
+    {
+      "id": "sk-omx-cinematic-editorial-luxury-reveal",
+      "slug": "cinematic-editorial-luxury-reveal",
+      "titleZh": "杂志级奢品震撼登场",
+      "titleEn": "Cinematic Editorial Luxury Reveal",
+      "summaryZh": "院线级灯光布局与杂志大片式登场镜头，层层揭晓顶级奢侈品工艺细节与尊崇身份象征。"
+    },
+    {
+      "id": "sk-omx-cinematic-led-product-reveal",
+      "slug": "cinematic-led-product-reveal",
+      "titleZh": "光影科技产品高光亮相",
+      "titleEn": "Cinematic Led Product Reveal",
+      "summaryZh": "利用科技感 LED 矩阵光效与赛博暗黑空间，为数码潮品与智能硬件打造极具震撼力的首秀。"
+    },
+    {
+      "id": "sk-omx-dtc-multi-format-ad-playbook",
+      "slug": "dtc-multi-format-ad-playbook",
+      "titleZh": "DTC 出海多渠道投放宝典",
+      "titleEn": "Dtc Multi Format Ad Playbook",
+      "summaryZh": "覆盖多版式广告素材策划，专为跨境电商品牌量身定制高转化信息流脚本。"
+    },
+    {
+      "id": "sk-omx-ugc-avatar-broll-splice-ad",
+      "slug": "ugc-avatar-broll-splice-ad",
+      "titleZh": "数字人与空镜拼接广告",
+      "titleEn": "UGC Avatar Broll Splice Ad",
+      "summaryZh": "将数字人面对面讲解与丰富的生活实景空镜交替混剪，既具真人温度又兼顾视觉丰富度。"
+    },
+    {
+      "id": "sk-omx-ugc-curiosity-hook",
+      "slug": "ugc-curiosity-hook",
+      "titleZh": "好奇心驱动神级开场",
+      "titleEn": "UGC Curiosity Hook",
+      "summaryZh": "在视频开局 3 秒抛出反常识疑问或视觉悬念，牢牢锁死用户停留时长，大幅提升完播率。"
+    },
+    {
+      "id": "sk-omx-ugc-voiceover-app-screen-showcase",
+      "slug": "ugc-voiceover-app-screen-showcase",
+      "titleZh": "画外音旁白 App 录屏展示",
+      "titleEn": "UGC Voiceover App Screen Showcase",
+      "summaryZh": "真实操作录屏配合亲和力画外音讲解，清晰演示移动应用的使用场景与核心价值。"
+    },
+    {
+      "id": "sk-omx-ad-layout-mirror-image",
+      "slug": "ad-layout-mirror-image",
+      "titleZh": "镜像构图广告排版",
+      "titleEn": "Ad Layout Mirror Image",
+      "summaryZh": "当需要时使用本技能：the user uploads a reference image ad (a competitor's ad, a designer mockup, an old ve..."
+    },
+    {
+      "id": "sk-omx-bridal-macro-editorial-hook",
+      "slug": "bridal-macro-editorial-hook",
+      "titleZh": "高级感婚纱微距开头",
+      "titleEn": "Bridal Macro Editorial Hook",
+      "summaryZh": "电影级微距呈现婚纱蕾丝纹理与配饰光泽，营造唯美浪漫的高级仪式感。"
+    },
+    {
+      "id": "sk-omx-cinematic-service-brand-reveal",
+      "slug": "cinematic-service-brand-reveal",
+      "titleZh": "高端服务品牌视觉大片",
+      "titleEn": "Cinematic Service Brand Reveal",
+      "summaryZh": "为高阶定制等无形服务打造电影级视觉隐喻，将专业严谨转化为震撼心智的视听符号。"
+    },
+    {
+      "id": "sk-omx-clinical-ugc-3d-tech-insert-arc",
+      "slug": "clinical-ugc-3d-tech-insert-arc",
+      "titleZh": "医疗科技 3D 透视叙事",
+      "titleEn": "Clinical UGC 3D Tech Insert Arc",
+      "summaryZh": "结合专业真实用户讲述与 3D 透视微观机理，深度解析健康医疗产品的作用原理与科研实力。"
+    },
+    {
+      "id": "sk-omx-comedy-character-bookend-saas-demo",
+      "slug": "comedy-character-bookend-saas-demo",
+      "titleZh": "喜剧角色首尾呼应演示",
+      "titleEn": "Comedy Character Bookend Saas Demo",
+      "summaryZh": "借由幽默逗趣的职场喜剧人物在首尾制造笑点，在中间丝滑嵌入软件核心操作与提效演示。"
+    },
+    {
+      "id": "sk-omx-editorial-apparel-static",
+      "slug": "editorial-apparel-static",
+      "titleZh": "高定时装静态画报",
+      "titleEn": "Editorial Apparel Static",
+      "summaryZh": "适用于the user wants a premium, magazine-grade static fashion / apparel ad (1:1, 4:5, or 9:16) built from a..."
+    },
+    {
+      "id": "sk-omx-editorial-magazine-lifestyle-ad",
+      "slug": "editorial-magazine-lifestyle-ad",
+      "titleZh": "生活方式杂志画报广告",
+      "titleEn": "Editorial Magazine Lifestyle Ad",
+      "summaryZh": "复刻高端时尚杂志的图文排版与构图美学，以极简优雅的镜头节奏诠释品质生活态度。"
+    },
+    {
+      "id": "sk-omx-luxury-product-reveal",
+      "slug": "luxury-product-reveal",
+      "titleZh": "奢侈品级高定登场",
+      "titleEn": "Luxury Product Reveal",
+      "summaryZh": "聚焦高定单品独家工艺、稀缺材质与典雅轮廓，用沉稳慢调镜头展现无可替代的轻奢魅力。"
+    },
+    {
+      "id": "sk-omx-product-photoshoot",
+      "slug": "product-photoshoot",
+      "titleZh": "电商产品影棚精修图",
+      "titleEn": "Product Photoshoot",
+      "summaryZh": "AI 生成影棚白底包装图、高阶电商图册与生活场景图，多机位还原产品材质与光影细节。"
+    },
+    {
+      "id": "sk-omx-street-interview-blind-test-ad",
+      "slug": "street-interview-blind-test-ad",
+      "titleZh": "街头盲测对比实测广告",
+      "titleEn": "Street Interview Blind Test Ad",
+      "summaryZh": "真实街头随机拦截路人进行盲测试用，以最真实的即兴评价与对比反应击穿受众防备心。"
+    },
+    {
+      "id": "sk-omx-ugc-mom-discovery-hook-kids-product",
+      "slug": "ugc-mom-discovery-hook-kids-product",
+      "titleZh": "宝妈育儿好物发现开头",
+      "titleEn": "UGC Mom Discovery Hook Kids Product",
+      "summaryZh": "以真实宝妈第一视角展现带娃困境与好物解围，快速打动母婴核心消费人群。"
+    },
+    {
+      "id": "sk-omx-ugc-skeptic-convert",
+      "slug": "ugc-skeptic-convert",
+      "titleZh": "从质疑到真香心路历程",
+      "titleEn": "UGC Skeptic Convert",
+      "summaryZh": "真实记录用户从最初的半信半疑到亲身体验后的惊喜安利，以真实心路历程打消顾虑。"
+    },
+    {
+      "id": "sk-omx-ugc-two-character-comedy-skit-hook",
+      "slug": "ugc-two-character-comedy-skit-hook",
+      "titleZh": "双人爆笑短剧冲突开场",
+      "titleEn": "UGC Two Character Comedy Skit Hook",
+      "summaryZh": "双人快节奏爆笑对手戏开场，在冲突与反转中自然引出产品卖点，极富下饭神剧属性。"
+    },
+    {
+      "id": "sk-omx-vox-paper-cutout-explainer",
+      "slug": "vox-paper-cutout-explainer",
+      "titleZh": "Vox 拼贴剪纸深度解说",
+      "titleEn": "Vox Paper Cutout Explainer",
+      "summaryZh": "采用新闻纪实拼贴与剪纸动效风格，深度拆解复杂概念与产品商业逻辑，极具知识获得感。"
+    },
+    {
+      "id": "sk-omx-anthropomorphic-dark-comedy-telenovela",
+      "slug": "anthropomorphic-dark-comedy-telenovela",
+      "titleZh": "拟人化暗黑喜剧剧场",
+      "titleEn": "Anthropomorphic Dark Comedy Telenovela",
+      "summaryZh": "赋予物品或动物夸张情绪与抓马剧情，用意想不到的幽默冲突快速吸引观众眼球，打造高赞出圈社媒内容。"
+    },
+    {
+      "id": "sk-omx-cinematic-dual-persona-cultural-identity-arc",
+      "slug": "cinematic-dual-persona-cultural-identity-arc",
+      "titleZh": "双重人格文化反差故事弧",
+      "titleEn": "Cinematic Dual Persona Cultural Identity Arc",
+      "summaryZh": "以跨文化背景与双重身份冲突切入，结合电影级视听语言展现个人心路历程，适用于高端品牌情感叙事。"
+    },
+    {
+      "id": "sk-omx-cinematic-pharma-parody-arc",
+      "slug": "cinematic-pharma-parody-arc",
+      "titleZh": "幽默疗愈戏仿短剧弧",
+      "titleEn": "Cinematic Pharma Parody Arc",
+      "summaryZh": "幽默戏仿专业疗愈与医疗广告风格，以反转剧情化解用户痛点，适合健康护理与生活好物的趣味营销。"
+    },
+    {
+      "id": "sk-omx-cinematic-saas-character-arc",
+      "slug": "cinematic-saas-character-arc",
+      "titleZh": "SaaS 职场人物成长弧",
+      "titleEn": "Cinematic SaaS Character Arc",
+      "summaryZh": "围绕职场人物在工具前后的效率对比构建真实戏剧冲突，生动直观展现软件解决工作痛点的核心价值。"
+    },
+    {
+      "id": "sk-omx-cinematic-stat-shock-local-pride",
+      "slug": "cinematic-stat-shock-local-pride",
+      "titleZh": "震撼数据与地方自豪感叙事",
+      "titleEn": "Cinematic Stat Shock Local Pride",
+      "summaryZh": "以令人震撼的客观数据为黄金开头，唤醒观众的地方归属感与认同，适合本地服务与文旅品牌重磅发声。"
+    },
+    {
+      "id": "sk-omx-cinematic-thriller-book-multi-format-campaign",
+      "slug": "cinematic-thriller-book-multi-format-campaign",
+      "titleZh": "悬疑惊悚小说多维宣传企划",
+      "titleEn": "Cinematic Thriller Book Multi Format Campaign",
+      "summaryZh": "营造高悬念扣人心弦的惊悚氛围，多维适配预告片、分镜海报与社媒短剧，助力图书出版物与IP破圈。"
+    },
+    {
+      "id": "sk-omx-cinematic-warmtodark-safety-arc",
+      "slug": "cinematic-warmtodark-safety-arc",
+      "titleZh": "安全守护冷暖反差叙事弧",
+      "titleEn": "Cinematic Warm To Dark Safety Arc",
+      "summaryZh": "从日常温暖场景突转危机挑战，最终以可靠安全保障托底，适合保险、安防、母婴与家庭防护品牌。"
+    },
+    {
+      "id": "sk-omx-client-process-guide-builder",
+      "slug": "client-process-guide-builder",
+      "titleZh": "客户合作流程指南搭建",
+      "titleEn": "Client Process Guide Builder",
+      "summaryZh": "为 B2B 与专业服务团队梳理清晰、透明的客户合作链路与交付周期表，有效增强初次沟通信任度。"
+    },
+    {
+      "id": "sk-omx-color-spec-sheet",
+      "slug": "color-spec-sheet",
+      "titleZh": "专业色彩规范说明书",
+      "titleEn": "Color Spec Sheet",
+      "summaryZh": "输出印刷与屏幕通用的标准化色彩配方表（HEX、RGB、CMYK、Pantone），确保品牌调色在跨媒介中稳定还原。"
+    },
+    {
+      "id": "sk-omx-dark-athletic-carousel",
+      "slug": "dark-athletic-carousel",
+      "titleZh": "硬核运动暗调轮播图",
+      "titleEn": "Dark Athletic Carousel",
+      "summaryZh": "深色金属冷光与硬朗肌肉线条相呼应的运动轮播海报，凸显热血竞技与装备科技感，适合健身服饰与补剂。"
+    },
+    {
+      "id": "sk-omx-editorial-luxury-ig-carousel",
+      "slug": "editorial-luxury-ig-carousel",
+      "titleZh": "奢华高端杂志风轮播卡片",
+      "titleEn": "Editorial Luxury Ig Carousel",
+      "summaryZh": "面向高客单奢侈品与时尚品牌，打造多页高端杂志风排版，突出材质质感与品牌格调。"
+    },
+    {
+      "id": "sk-omx-educational-deficiency-carousel",
+      "slug": "educational-deficiency-carousel",
+      "titleZh": "认知差痛点科普轮播卡片",
+      "titleEn": "Educational Deficiency Carousel",
+      "summaryZh": "通过直击认知盲区与痛点反思的严密视觉节奏，分步传递专业干货，实现高收藏与高转化。"
+    },
+    {
+      "id": "sk-omx-fashion-silent-multishot-showcase",
+      "slug": "fashion-silent-multishot-showcase",
+      "titleZh": "时尚穿搭多镜头卡点展示",
+      "titleEn": "Fashion Silent Multishot Showcase",
+      "summaryZh": "快节奏多机位无声穿搭卡点展示，通过全身、局部与面料细节快速切换，打造沉浸式种草氛围。"
+    },
+    {
+      "id": "sk-omx-gulf-recruitment-cinematic-arc",
+      "slug": "gulf-recruitment-cinematic-arc",
+      "titleZh": "海外招聘电影级人物叙事",
+      "titleEn": "Gulf Recruitment Cinematic Arc",
+      "summaryZh": "以电影级镜头语言呈现海外高薪岗位的职场成长与生活蜕变，极大提升人才招聘信任感。"
+    },
+    {
+      "id": "sk-omx-guofeng-palace-drama-single-call",
+      "slug": "guofeng-palace-drama-single-call",
+      "titleZh": "国风宫廷短剧独白",
+      "titleEn": "Guofeng Palace Drama",
+      "summaryZh": "Cinematic 3D 国风 (Chinese palace / period drama) short delivered as ONE continuous omni-reference Seedance call..."
+    },
+    {
+      "id": "sk-omx-hinglish-before-after-saas-hook",
+      "slug": "hinglish-before-after-saas-hook",
+      "titleZh": "跨境印式英语前后对比黄金钩子",
+      "titleEn": "Hinglish Before After Saas Hook",
+      "summaryZh": "专为南亚与出海市场打造的痛点对比黄金开头，以戏剧化反差迅速抓住软件目标受众注意力。"
+    },
+    {
+      "id": "sk-omx-home-service-lead-gen-static-meta",
+      "slug": "home-service-lead-gen-static-meta",
+      "titleZh": "家政到家服务引流海报",
+      "titleEn": "Home Service Lead Gen",
+      "summaryZh": "针对家庭保洁、家电清洗等本地生活服务，以清晰权益与痛点对比设计高点击率引流海报。"
+    },
+    {
+      "id": "sk-omx-illustrated-world-map-builder",
+      "slug": "illustrated-world-map-builder",
+      "titleZh": "手绘插画世界地图构建",
+      "titleEn": "Illustrated World Map Builder",
+      "summaryZh": "手绘复古与现代插画风格世界地图设计，生动标示全球业务版图、旅游路线与物流网络。"
+    },
+    {
+      "id": "sk-omx-kannada-bus-poster-dark-gold",
+      "slug": "kannada-bus-poster-dark-gold",
+      "titleZh": "黑金质感巴士海报",
+      "titleEn": "Bus Poster Dark Gold",
+      "summaryZh": "黑金配色与沉稳排版的户外车身海报，极具视觉冲击力与大牌品质感，适合高曝光线下投放。"
+    },
+    {
+      "id": "sk-omx-kit-produto-mecanismo-reveal-ptbr",
+      "slug": "kit-produto-mecanismo-reveal-ptbr",
+      "titleZh": "产品机制原理解密展示",
+      "titleEn": "Product Mechanism Reveal",
+      "summaryZh": "动态拆解与机理动画展示，透视产品内部构造与核心专利技术，以硬核实力促成购买转化。"
+    },
+    {
+      "id": "sk-omx-landing-page-dr-skill",
+      "slug": "landing-page-dr-skill",
+      "titleZh": "高转化着陆页策划",
+      "titleEn": "Direct Response Landing Page",
+      "summaryZh": "针对高转化直接响应式着陆页，提供从首屏抓眼、信任背书到痛点催化与行动号召的全案策划。"
+    },
+    {
+      "id": "sk-omx-latam-marketplace-mixed-ugc-skill",
+      "slug": "latam-marketplace-mixed-ugc-skill",
+      "titleZh": "拉美电商混合 UGC 种草短片",
+      "titleEn": "Marketplace Mixed UGC",
+      "summaryZh": "融合本土化真人实拍与平台促销权益，适合美客多、Shopee 等拉美电商爆款带货。"
+    },
+    {
+      "id": "sk-omx-listing-cinematic-silent-spec-reveal",
+      "slug": "listing-cinematic-silent-spec-reveal",
+      "titleZh": "大牌单品静默微距解密大片",
+      "titleEn": "Listing Cinematic Silent Spec Reveal",
+      "summaryZh": "专为豪车、游艇、腕表等高奢单品打造，以电影级微距与参数特写营造极致科技与品质感。"
+    },
+    {
+      "id": "sk-omx-local-service-static-batch-blitz",
+      "slug": "local-service-static-batch-blitz",
+      "titleZh": "本地服务批量静态图营销",
+      "titleEn": "Local Service Static Blitz",
+      "summaryZh": "面向本地生活与同城门店服务，批量生成多场景、多卖点的轻量静态营销图阵列。"
+    },
+    {
+      "id": "sk-omx-luxury-brand-photo-reel",
+      "slug": "luxury-brand-photo-reel",
+      "titleZh": "奢华高端品牌图集短片",
+      "titleEn": "Luxury Brand Photo Reel",
+      "summaryZh": "将顶级品牌棚拍大片通过节奏转场编排为动态短视频，彰显优雅高级的品牌美学。"
+    },
+    {
+      "id": "sk-omx-luxury-dark-carousel-5slide",
+      "slug": "luxury-dark-carousel-5slide",
+      "titleZh": "暗黑奢华风五页轮播卡片",
+      "titleEn": "Luxury Dark Carousel 5slide",
+      "summaryZh": "采用黑金质感与极简暗黑排版，五页结构层层递进展示高端产品细节与品牌故事。"
+    },
+    {
+      "id": "sk-omx-luxury-editorial-app-reveal",
+      "slug": "luxury-editorial-app-reveal",
+      "titleZh": "奢华杂志风应用揭秘短片",
+      "titleEn": "Luxury Editorial App Reveal",
+      "summaryZh": "将高端移动端界面与奢华杂志排版相结合，优雅呈现产品的核心功能与尊贵体验。"
+    },
+    {
+      "id": "sk-omx-mirror-tryon-haul-beat-cut",
+      "slug": "mirror-tryon-haul-beat-cut",
+      "titleZh": "对镜换装卡点混剪",
+      "titleEn": "Mirror Try-On Beat Cut",
+      "summaryZh": "当需要时使用本技能：the user wants to produce a TikTok-style mirror try-on haul ad — the format where a si..."
+    },
+    {
+      "id": "sk-omx-motif-mirror-product-reel",
+      "slug": "motif-mirror-product-reel",
+      "titleZh": "镜像图腾商品质感短片",
+      "titleEn": "Motif Mirror Product Reel",
+      "summaryZh": "利用对称构图、镜像视觉与高级光影衬托商品几何美学，适用于首饰、香水等精致好物。"
+    },
+    {
+      "id": "sk-omx-paperfold-diorama-journey-arc",
+      "slug": "paperfold-diorama-journey-arc",
+      "titleZh": "折纸微缩立体心路故事",
+      "titleEn": "Paperfold Diorama Journey Arc",
+      "summaryZh": "以纯手工质感的折纸与微缩立体沙盘作为视觉载体，讲述引人入胜的品牌成长与心路历程。"
+    },
+    {
+      "id": "sk-omx-pedestal-product-hero",
+      "slug": "pedestal-product-hero",
+      "titleZh": "展台高光产品特写大片",
+      "titleEn": "Pedestal Product Hero",
+      "summaryZh": "围绕精品展台机位做环绕与光影推拉，凸显产品工业设计与王牌旗舰地位。"
+    },
+    {
+      "id": "sk-omx-phone-mockup-page",
+      "slug": "phone-mockup-page",
+      "titleZh": "真机手机模型样机展示",
+      "titleEn": "Phone Mockup Showcase",
+      "summaryZh": "高清拟真手机样机与悬浮视差展示，完美还原应用在各种真实机型中的交互界面与动态效果。"
+    },
+    {
+      "id": "sk-omx-pil-print-flyer-photo-grid",
+      "slug": "pil-print-flyer-photo-grid",
+      "titleZh": "照片九宫格印刷传单",
+      "titleEn": "Print Flyer Photo Grid",
+      "summaryZh": "经典九宫格照片墙传单版式设计，密集陈列热卖爆款与活动单品，视觉冲击强且信息量充实。"
+    },
+    {
+      "id": "sk-omx-playstore-ui-anchored-promo",
+      "slug": "playstore-ui-anchored-promo",
+      "titleZh": "应用商店界面锚定推广视频",
+      "titleEn": "Playstore Ui Anchored Promo",
+      "summaryZh": "将真实软件截图无缝融入移动端交互动态，突出核心功能亮点，提升商店下载转化率。"
+    },
+    {
+      "id": "sk-omx-pregnancy-subscription-warmblush-static-ad",
+      "slug": "pregnancy-subscription-warmblush-static-ad",
+      "titleZh": "孕期暖粉治愈风静态图广告",
+      "titleEn": "Pregnancy Subscription Warmblush Static Ad",
+      "summaryZh": "采用温暖柔和的粉白色调与母婴情感共鸣排版，适合孕产订阅制服务与母婴好物引流。"
+    },
+    {
+      "id": "sk-omx-real-estate-multiformat-static-ad",
+      "slug": "real-estate-multiformat-static-ad",
+      "titleZh": "房产多版式静态营销广告",
+      "titleEn": "Real Estate Multiformat Static Ad",
+      "summaryZh": "包含户型亮点、实景航拍与优惠权益的专业地产海报矩阵，契合多平台精准获客。"
+    },
+    {
+      "id": "sk-omx-refurb-tech-product-reel",
+      "slug": "refurb-tech-product-reel",
+      "titleZh": "翻新数码好物特写短片",
+      "titleEn": "Refurb Tech Product Reel",
+      "summaryZh": "真实还原数码产品验机成色、配件细节与高性价比优势，打消用户二手翻新顾虑。"
+    },
+    {
+      "id": "sk-omx-regulated-claims-static-ad-matrix",
+      "slug": "regulated-claims-static-ad-matrix",
+      "titleZh": "合规功效矩阵静态图广告",
+      "titleEn": "Regulated Claims Static Ad Matrix",
+      "summaryZh": "严格遵循广告合规标准的功效说明图谱，科学严谨呈现成分数据与权威背书。"
+    },
+    {
+      "id": "sk-omx-retail-multi-variant-carousel-sale",
+      "slug": "retail-multi-variant-carousel-sale",
+      "titleZh": "多规格零售促销轮播卡片",
+      "titleEn": "Retail Multi Variant Carousel Sale",
+      "summaryZh": "适用于多色系、多尺码零售商品的大促轮播，清晰展示款式矩阵与限时立减优惠。"
+    },
+    {
+      "id": "sk-omx-revenue-transformation-arc",
+      "slug": "revenue-transformation-arc",
+      "titleZh": "营收逆袭蜕变故事弧",
+      "titleEn": "Revenue Transformation Arc",
+      "summaryZh": "以跌宕起伏的逆袭故事为主线，完整呈现从业绩低谷到营收爆发的转型历程，震撼吸睛。"
+    },
+    {
+      "id": "sk-omx-spanish-ugc-community-spokesperson-hook",
+      "slug": "spanish-ugc-community-spokesperson-hook",
+      "titleZh": "西语 UGC 社区发言人黄金开头",
+      "titleEn": "Spanish UGC Community Spokesperson Hook",
+      "summaryZh": "本土母语创作者面对镜头热情自述，以社区熟人视角在开局3秒建立极强信任背书。"
+    },
+    {
+      "id": "sk-omx-split-screen-dialogue",
+      "slug": "split-screen-dialogue",
+      "titleZh": "双屏分屏对话短剧",
+      "titleEn": "Split Screen Dialogue",
+      "summaryZh": "双屏或多屏分屏对话形式，跨越时空展现角色交流或方案对照，节奏紧凑张力十足。"
+    },
+    {
+      "id": "sk-omx-two-mascot-comedy-commercial",
+      "slug": "two-mascot-comedy-commercial",
+      "titleZh": "双吉祥物爆笑喜剧广告",
+      "titleEn": "Two Mascot Comedy Commercial",
+      "summaryZh": "一对性格迥异的品牌吉祥物逗趣互捧，在捧逗之间寓教于乐地输出产品特性，亲和力拉满。"
+    },
+    {
+      "id": "sk-omx-ugc-advisor-numbered-points-reel",
+      "slug": "ugc-advisor-numbered-points-reel",
+      "titleZh": "专家干货数字条列短视频",
+      "titleEn": "Advisor Numbered Points Reel",
+      "summaryZh": "行业顾问或领域达人以条理分明的数字序号分步输出避坑干货，节奏明晰。"
+    },
+    {
+      "id": "sk-omx-ugc-diaspora-direct-address-hook",
+      "slug": "ugc-diaspora-direct-address-hook",
+      "titleZh": "海外同胞第一人称共情开头",
+      "titleEn": "UGC Diaspora Direct Address Hook",
+      "summaryZh": "面向海外华人及特定族群，以乡情与生活痛点直面镜头倾诉，开篇直击目标人群。"
+    },
+    {
+      "id": "sk-omx-ugc-female-creator-product-confession-arc",
+      "slug": "ugc-female-creator-product-confession-arc",
+      "titleZh": "女性创作者真情倾诉种草短片",
+      "titleEn": "UGC Female Creator Product Confession Arc",
+      "summaryZh": "以女性博主闺蜜式视角分享真实使用心得与心路历程，适用于护肤、彩妆与健康好物。"
+    },
+    {
+      "id": "sk-omx-ugc-homeowner-testimonial-problem-payoff",
+      "slug": "ugc-homeowner-testimonial-problem-payoff",
+      "titleZh": "真实屋主口碑痛点反转视频",
+      "titleEn": "UGC Homeowner Testimonial Problem Payoff",
+      "summaryZh": "居家改造与智能家居真实屋主口碑实录，展示从困扰混乱到惬意舒适的戏剧化反转。"
+    },
+    {
+      "id": "sk-omx-ugc-personal-reveal-ad",
+      "slug": "ugc-personal-reveal-ad",
+      "titleZh": "个人自述蜕变揭秘视频广告",
+      "titleEn": "UGC Personal Reveal Ad",
+      "summaryZh": "以主人公自述蜕变历程为主线，层层揭示改变人生的秘密好物，高共鸣强种草。"
+    },
+    {
+      "id": "sk-omx-ugc-street-interview-nightlife-hook",
+      "slug": "ugc-street-interview-nightlife-hook",
+      "titleZh": "街头夜生活采访黄金开头",
+      "titleEn": "UGC Street Interview Nightlife Hook",
+      "summaryZh": "抓拍潮流街头夜生活真实路人随机问答，自带极高好奇心与娱乐属性，秒吸眼球。"
+    },
+    {
+      "id": "sk-omx-video-adapt",
+      "slug": "video-adapt",
+      "titleZh": "多画幅跨平台自适应",
+      "titleEn": "Video Adapt",
+      "summaryZh": "适用于a brief pairs a source video URL (YouTube, TikTok, Instagram reel) with recreate or reproduce or adap..."
+    },
+    {
+      "id": "sk-omx-white-bg-feature-callout-product-overview",
+      "slug": "white-bg-feature-callout-product-overview",
+      "titleZh": "纯白背景卖点标注展示",
+      "titleEn": "White Bg Feature Callout Product Overview",
+      "summaryZh": "极简纯白无杂质背景与悬浮发光引线卖点标注，让用户的视觉焦点聚焦于产品本身。"
+    },
+    {
+      "id": "sk-omx-wise-elder-ugc-kids-product",
+      "slug": "wise-elder-ugc-kids-product",
+      "titleZh": "长辈权威视角儿童好物种草",
+      "titleEn": "Wise Elder UGC Kids Product",
+      "summaryZh": "祖父母等长辈视角慈爱推荐儿童益智玩具与成长用品，传递满满的关爱与安全可靠感。"
+    }
+  ]
+}
