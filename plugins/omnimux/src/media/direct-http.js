@@ -68,6 +68,24 @@ export function registerDirectMediaRoutes(webServer, deps) {
       const ext = kind === 'video' ? 'mp4' : 'png'
       const dest = body.dest || path.join(destDir, `direct_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`)
 
+      let envKey = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+      if (!envKey) {
+        try {
+          const credPath = path.join(os.homedir(), '.dsh', '.credentials.yaml')
+          if (fs.existsSync(credPath)) {
+            const lines = fs.readFileSync(credPath, 'utf8').split('\n')
+            for (const line of lines) {
+              if (line.includes('OMNIMUX_API_KEY:')) {
+                const val = line.split('OMNIMUX_API_KEY:')[1]?.trim()
+                if (val) envKey = val.replace(/^['"]|['"]$/g, '')
+              }
+            }
+          }
+        } catch {
+          // ignore credential read error
+        }
+      }
+
       try {
         const executePayload = {
           prompt,
@@ -79,6 +97,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           seed: body.seed,
           wait: body.wait !== false,
           references: Array.isArray(body.references) ? body.references : undefined,
+          env: envKey ? { OMNIMUX_API_KEY: envKey } : undefined,
         }
 
         const result = await executor(executePayload)
