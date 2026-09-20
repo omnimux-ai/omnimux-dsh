@@ -39,6 +39,7 @@ import {
 import {
   WORKBENCH_FOCUS,
   WORKBENCH_TAB_TITLE_FALLBACKS,
+  WORKBENCH_TAB_TITLE_FALLBACKS_EN,
   focusRecordForTab,
   getWorkbenchFocus,
   inferWorkbenchFocus,
@@ -1235,6 +1236,9 @@ test('resolveWorkbenchTabTitle prefers opts, then getTab, then human fallback (#
     resolveWorkbenchTabTitle('omnimux-publish:library', '', () => null),
     'omnimux-publish:library',
   )
+  assert.equal(WORKBENCH_TAB_TITLE_FALLBACKS_EN['omnimux-market:plaza'], 'Skills & Experts')
+  assert.equal(WORKBENCH_TAB_TITLE_FALLBACKS_EN['omnimux-workflow:canvas'], 'Creative Canvas')
+  assert.equal(WORKBENCH_TAB_TITLE_FALLBACKS_EN['omnimux-workflow:library'], 'Projects')
 })
 
 test('openWorkbench uses human title fallback when getTab has no title (#345)', async () => {

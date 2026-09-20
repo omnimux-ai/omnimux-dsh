@@ -178,7 +178,7 @@ test('expertMarketInstall and expertMarketDisable toggle preset lifecycle', asyn
 test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     const i18n = readFileSync(new URL('../../src/client/i18n.js', import.meta.url), 'utf8');
     assert.match(i18n, /"plaza\.title": "技能\/专家"/);
-    assert.match(i18n, /"plaza\.title": "Skills\/Experts"/);
+    assert.match(i18n, /"plaza\.title": "Skills (&|\/) Experts"/);
     assert.match(i18n, /"workshop\.tabExpertsMarket": "专家市场"/);
     assert.match(i18n, /"workshop\.tabExpertsMarket": "Experts Market"/);
     assert.match(i18n, /"expertMarket\.title": "专家市场"/);
@@ -194,7 +194,7 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     assert.match(i18n, /"expertMarket\.disabled": "已离职"/);
     assert.match(i18n, /"expertMarket\.disabled": "Resigned"/);
     assert.match(i18n, /"workshop\.title": "技能\/专家"/);
-    assert.match(i18n, /"workshop\.title": "Skills\/Experts"/);
+    assert.match(i18n, /"workshop\.title": "Skills (&|\/) Experts"/);
     const plaza = readFileSync(new URL('../../src/client/skill-plaza.js', import.meta.url), 'utf8');
     assert.match(plaza, /mainTab === "experts-market"/);
     assert.match(plaza, /introHeading/);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { stopToolbarNativeEvent } from './toolbarPointerGuard';
 import { toast } from '../../ui';
+import { useT } from '../../i18n';
 import {
   CanvasOutlineView,
   ProjectAssetsView,
@@ -84,30 +85,33 @@ const CanvasTabWrap: React.FC<CanvasTabWrapProps> = ({
   onHoverItem,
   onViewModeChange,
   onImport,
-}) => (
-  <div className="wf-drawer-tab-canvas-wrap">
-    <CanvasOutlineView
-      nodes={nodes}
-      onFocusNode={onFocusNode}
-      onContextMenu={onContextMenu}
-      onHoverItem={onHoverItem}
-      viewMode={viewMode}
-      onViewModeChange={onViewModeChange}
-      onRefresh={() => toast.success('已刷新创作画布素材')}
-    />
-    <div className="wf-assets-bottom-bar-compact">
-      <button
-        type="button"
-        className="wf-assets-action-primary-btn-compact"
-        style={{ width: '100%' }}
-        onClick={onImport}
-      >
-        <ArrowUp size={13} />
-        <span>导入文件</span>
-      </button>
+}) => {
+  const t = useT();
+  return (
+    <div className="wf-drawer-tab-canvas-wrap">
+      <CanvasOutlineView
+        nodes={nodes}
+        onFocusNode={onFocusNode}
+        onContextMenu={onContextMenu}
+        onHoverItem={onHoverItem}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        onRefresh={() => toast.success(t('assets.refreshed') || '已刷新创作画布素材')}
+      />
+      <div className="wf-assets-bottom-bar-compact">
+        <button
+          type="button"
+          className="wf-assets-action-primary-btn-compact"
+          style={{ width: '100%' }}
+          onClick={onImport}
+        >
+          <ArrowUp size={13} />
+          <span>{t('assets.importFile') || '导入文件'}</span>
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export function executeCanvasMenuAction(
   action: string,

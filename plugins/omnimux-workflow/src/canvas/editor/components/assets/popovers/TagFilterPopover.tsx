@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { stopToolbarNativeEvent } from '../../toolbarPointerGuard';
 import type { TagInfo } from '../types';
+import { useT } from '../../../../i18n';
 
 interface TagFilterPopoverProps {
   isOpen: boolean;
@@ -28,7 +29,21 @@ export const TagFilterPopover: React.FC<TagFilterPopoverProps> = ({
   onChange,
   onClose,
 }) => {
+  const t = useT();
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getTagName = (id: string, defaultName: string) => {
+    switch (id) {
+      case 'person': return t('assets.tag.character') || defaultName;
+      case 'scene': return t('assets.tag.scene') || defaultName;
+      case 'draft': return t('assets.tag.draft') || defaultName;
+      case 'final': return t('assets.tag.final') || defaultName;
+      case 'prop': return t('assets.tag.prop') || defaultName;
+      case 'voice': return t('assets.tag.voice') || defaultName;
+      case 'costume': return t('assets.tag.costume') || defaultName;
+      default: return defaultName;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -90,7 +105,7 @@ export const TagFilterPopover: React.FC<TagFilterPopoverProps> = ({
             >
               <div className="wf-popover-item-left">
                 <span className="wf-popover-tag-dot" style={{ backgroundColor: tag.color }} />
-                <span className="wf-popover-item-label">{tag.name}</span>
+                <span className="wf-popover-item-label">{getTagName(tag.id, tag.name)}</span>
               </div>
             </div>
           );

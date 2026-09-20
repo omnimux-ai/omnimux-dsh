@@ -11,6 +11,7 @@ import {
 import { SortFilterPopover } from '../popovers/SortFilterPopover';
 import { SUBJECT_CATEGORY_TABS } from '../../../../bridge/assetsLibraryMapper';
 import type { SubjectPack } from '../types';
+import { useT } from '../../../../i18n';
 
 interface SubjectLibraryViewProps {
   subjects: SubjectPack[];
@@ -27,11 +28,22 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
   onSelectSubject,
   onCreateSubject,
 }) => {
+  const t = useT();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortValue, setSortValue] = useState<'recent' | 'name' | 'count'>('recent');
   const [sortOpen, setSortOpen] = useState(false);
   const [sortAnchor, setSortAnchor] = useState<DOMRect | null>(null);
+
+  const getCatLabel = (id: string, defaultLabel: string) => {
+    switch (id) {
+      case 'all': return t('assets.popover.all') || defaultLabel;
+      case 'character': return t('assets.tag.character') || defaultLabel;
+      case 'scene': return t('assets.tag.scene') || defaultLabel;
+      case 'prop': return t('assets.tag.prop') || defaultLabel;
+      default: return defaultLabel;
+    }
+  };
 
   const handleOpenSort = (e: React.MouseEvent<HTMLButtonElement>) => {
     setSortAnchor(e.currentTarget.getBoundingClientRect());
@@ -66,13 +78,13 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
   const getSortLabel = () => {
     switch (sortValue) {
       case 'recent':
-        return '最近更新';
+        return t('assets.popover.sortRecent') || '最近更新';
       case 'name':
-        return '名称 A-Z';
+        return t('assets.popover.sortNameAZ') || '名称 A-Z';
       case 'count':
-        return '素材数量';
+        return t('assets.popover.sortCount') || '素材数量';
       default:
-        return '排序';
+        return t('assets.filter.sort') || '排序';
     }
   };
 
@@ -82,7 +94,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
       <div className="wf-subject-nav-header-compact">
         <button type="button" className="wf-subject-nav-back-btn-compact" onClick={onBack}>
           <ArrowLeft size={13} />
-          <span>主体库</span>
+          <span>{t('assets.subjectLibrary') || '主体库'}</span>
         </button>
 
         <button
@@ -103,7 +115,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
           <input
             type="text"
             className="wf-subject-search-input-compact"
-            placeholder="搜索主体名称或标签..."
+            placeholder={t('assets.searchSubject') || '搜索主体名称或标签...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -118,7 +130,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
               className={`wf-subject-pill-compact ${selectedCategory === cat.id ? 'active' : ''}`}
               onClick={() => setSelectedCategory(cat.id)}
             >
-              {cat.label}
+              {getCatLabel(cat.id, cat.label)}
             </button>
           ))}
         </div>
@@ -199,7 +211,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
           onClick={onCreateSubject}
         >
           <Plus size={13} />
-          <span>新建主体</span>
+          <span>{t('assets.newSubject') || '新建主体'}</span>
         </button>
       </div>
 

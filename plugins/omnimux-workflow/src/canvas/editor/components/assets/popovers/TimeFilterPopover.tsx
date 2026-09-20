@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { stopToolbarNativeEvent } from '../../toolbarPointerGuard';
+import { useT } from '../../../../i18n';
 
 interface TimeFilterPopoverProps {
   isOpen: boolean;
@@ -22,7 +23,19 @@ export const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({
   onRangeChange,
   onClose,
 }) => {
+  const t = useT();
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getRangeLabel = (id: string, defaultLabel: string) => {
+    switch (id) {
+      case 'all': return t('assets.popover.all') || defaultLabel;
+      case 'today': return t('assets.popover.today') || defaultLabel;
+      case '7d': return t('assets.popover.last7Days') || defaultLabel;
+      case '30d': return t('assets.popover.last30Days') || defaultLabel;
+      case 'custom': return t('assets.popover.custom') || defaultLabel;
+      default: return defaultLabel;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -70,14 +83,14 @@ export const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({
           className={`wf-popover-item ${sortOrder === 'desc' ? 'wf-popover-item--selected' : ''}`}
           onClick={() => onSortChange('desc')}
         >
-          <span className="wf-popover-item-label">最新优先</span>
+          <span className="wf-popover-item-label">{t('assets.popover.sortNewest') || '最新优先'}</span>
           {sortOrder === 'desc' && <Check size={14} className="wf-popover-item-check" />}
         </div>
         <div
           className={`wf-popover-item ${sortOrder === 'asc' ? 'wf-popover-item--selected' : ''}`}
           onClick={() => onSortChange('asc')}
         >
-          <span className="wf-popover-item-label">最旧优先</span>
+          <span className="wf-popover-item-label">{t('assets.popover.sortOldest') || '最旧优先'}</span>
           {sortOrder === 'asc' && <Check size={14} className="wf-popover-item-check" />}
         </div>
       </div>
@@ -99,7 +112,7 @@ export const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({
               className={`wf-popover-item ${isSelected ? 'wf-popover-item--selected' : ''}`}
               onClick={() => onRangeChange(item.id as typeof timeRange)}
             >
-              <span className="wf-popover-item-label">{item.label}</span>
+              <span className="wf-popover-item-label">{getRangeLabel(item.id, item.label)}</span>
               {isSelected && <Check size={14} className="wf-popover-item-check" />}
             </div>
           );

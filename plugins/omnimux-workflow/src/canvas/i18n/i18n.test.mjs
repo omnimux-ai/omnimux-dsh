@@ -53,3 +53,22 @@ test('i18n: 分组 / 模板 / 资产入库 key 中英都有值', () => {
   assert.equal(t('asset.modal.defaultName'), 'Canvas output');
   setLocale('zh');
 });
+
+test('i18n: 资产抽屉 (Assets Drawer) 全量中英双语对称与专业术语对齐', () => {
+  setLocale('zh');
+  assert.equal(t('assets.tab.canvas'), '创作画布');
+  assert.equal(t('assets.tab.assets'), '资产');
+  assert.equal(t('assets.importFile'), '导入文件');
+  assert.equal(t('assets.searchFiles'), '搜索文件');
+  assert.equal(t('assets.filter.type'), '类型');
+  assert.equal(t('assets.emptyCanvas'), '创作画布暂无素材');
+
+  setLocale('en');
+  assert.equal(t('assets.tab.canvas'), 'Canvas');
+  assert.equal(t('assets.tab.assets'), 'Assets');
+  assert.equal(t('assets.importFile'), 'Import Files');
+  assert.equal(t('assets.searchFiles'), 'Search files');
+  assert.equal(t('assets.filter.type'), 'Type');
+  assert.equal(t('assets.emptyCanvas'), 'No assets on canvas');
+  setLocale('zh');
+});

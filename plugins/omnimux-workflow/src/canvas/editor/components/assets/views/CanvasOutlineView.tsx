@@ -17,6 +17,7 @@ import type { CanvasNodeItem, FilterState, ViewMode } from '../types';
 import { TypeFilterPopover } from '../popovers/TypeFilterPopover';
 import { TagFilterPopover, TAG_OPTIONS } from '../popovers/TagFilterPopover';
 import { TimeFilterPopover } from '../popovers/TimeFilterPopover';
+import { useT } from '../../../../i18n';
 
 interface CanvasOutlineViewProps {
   nodes: CanvasNodeItem[];
@@ -89,6 +90,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
   viewMode: propViewMode,
   onViewModeChange,
 }) => {
+  const t = useT();
   const [internalQuery, setInternalQuery] = useState('');
   const searchQuery = propQuery !== undefined ? propQuery : internalQuery;
   const handleSearchChange = (q: string) => {
@@ -173,7 +175,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
             <input
               type="text"
               className="wf-search-input-compact"
-              placeholder="搜索文件"
+              placeholder={t('assets.searchFiles') || '搜索文件'}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
             />
@@ -183,7 +185,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
             <button
               type="button"
               className={`wf-view-mode-btn-compact ${viewMode === 'tree' ? 'active' : ''}`}
-              title="列表视图"
+              title={t('assets.viewList') || '列表视图'}
               onClick={() => setViewMode('tree')}
             >
               <List size={13} />
@@ -191,7 +193,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
             <button
               type="button"
               className={`wf-view-mode-btn-compact ${viewMode === 'grid' ? 'active' : ''}`}
-              title="网格视图"
+              title={t('assets.viewGrid') || '网格视图'}
               onClick={() => setViewMode('grid')}
             >
               <LayoutGrid size={13} />
@@ -201,7 +203,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
           <button
             type="button"
             className="wf-view-mode-btn-compact"
-            title="刷新创作画布素材"
+            title={t('assets.refresh') || '刷新创作画布素材'}
             onClick={onRefresh}
           >
             <RefreshCw size={13} />
@@ -222,8 +224,8 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
             >
               <span>
                 {filterState.types.length > 0
-                  ? `类型 (${filterState.types.includes('__none__') ? 0 : filterState.types.length})`
-                  : '类型'}
+                  ? `${t('assets.filter.type') || '类型'} (${filterState.types.includes('__none__') ? 0 : filterState.types.length})`
+                  : (t('assets.filter.type') || '类型')}
               </span>
               <ChevronDown size={11} />
             </button>
@@ -240,7 +242,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                 setTimeOpen(false);
               }}
             >
-              <span>{filterState.tags.length > 0 ? `标签 (${filterState.tags.length})` : '标签'}</span>
+              <span>{filterState.tags.length > 0 ? `${t('assets.filter.tag') || '标签'} (${filterState.tags.length})` : (t('assets.filter.tag') || '标签')}</span>
               <ChevronDown size={11} />
             </button>
           </div>
@@ -256,7 +258,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                 setTagOpen(false);
               }}
             >
-              <span>时间</span>
+              <span>{t('assets.filter.time') || '时间'}</span>
               <ChevronDown size={11} />
             </button>
           </div>
@@ -267,13 +269,13 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
         {nodes.length === 0 ? (
           <div className="wf-assets-empty-state-compact">
             <Layers size={24} className="wf-assets-empty-icon" />
-            <div className="wf-assets-empty-title">创作画布暂无素材</div>
-            <div className="wf-assets-empty-subtitle">请导入文件或添加节点并生成</div>
+            <div className="wf-assets-empty-title">{t('assets.emptyCanvas') || '创作画布暂无素材'}</div>
+            <div className="wf-assets-empty-subtitle">{t('assets.emptyCanvasSub') || '请导入文件或添加节点并生成'}</div>
           </div>
         ) : filteredNodes.length === 0 ? (
           <div className="wf-assets-empty-state-compact">
             <Layers size={24} className="wf-assets-empty-icon" />
-            <div className="wf-assets-empty-title">当前创作画布暂无匹配素材</div>
+            <div className="wf-assets-empty-title">{t('assets.emptyCanvasMatch') || '当前创作画布暂无匹配素材'}</div>
           </div>
         ) : viewMode === 'tree' ? (
           <div className="wf-tree-list-container-compact">
@@ -311,13 +313,13 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                   </span>
                   {node.nodeKind ? (
                     <span className={`wf-node-kind-badge wf-node-kind-badge--${node.nodeKind}`}>
-                      {node.nodeKind === 'import' ? '导入' : '生成'}
+                      {node.nodeKind === 'import' ? (t('assets.badge.import') || '导入') : (t('assets.badge.generate') || '生成')}
                     </span>
                   ) : null}
 
                   <div
                     className="wf-item-locate-icon-compact"
-                    title="在创作画布定位"
+                    title={t('assets.locateOnCanvas') || '在创作画布定位'}
                     onClick={(e) => {
                       e.stopPropagation();
                       onFocusNode(node.id);
@@ -362,7 +364,7 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                   </div>
                   {node.nodeKind ? (
                     <span className={`wf-node-kind-badge wf-node-kind-badge--${node.nodeKind}`}>
-                      {node.nodeKind === 'import' ? '导入' : '生成'}
+                      {node.nodeKind === 'import' ? (t('assets.badge.import') || '导入') : (t('assets.badge.generate') || '生成')}
                     </span>
                   ) : null}
                 </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { stopToolbarNativeEvent } from '../../toolbarPointerGuard';
+import { useT } from '../../../../i18n';
 
 interface TypeFilterPopoverProps {
   isOpen: boolean;
@@ -29,7 +30,20 @@ export const TypeFilterPopover: React.FC<TypeFilterPopoverProps> = ({
   onChange,
   onClose,
 }) => {
+  const t = useT();
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getOptionLabel = (id: string, defaultLabel: string) => {
+    switch (id) {
+      case 'all': return t('assets.popover.all') || defaultLabel;
+      case 'image': return t('assets.popover.image') || defaultLabel;
+      case 'video': return t('assets.popover.video') || defaultLabel;
+      case 'audio': return t('assets.popover.audio') || defaultLabel;
+      case 'text': return t('assets.popover.text') || defaultLabel;
+      case 'other': return t('assets.popover.other') || defaultLabel;
+      default: return defaultLabel;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -135,7 +149,7 @@ export const TypeFilterPopover: React.FC<TypeFilterPopoverProps> = ({
                 <div className={`wf-popover-check-circle ${checked ? 'wf-popover-check-circle--checked' : ''}`}>
                   {checked && <Check size={10} strokeWidth={3} />}
                 </div>
-                <span className="wf-popover-item-label">{opt.label}</span>
+                <span className="wf-popover-item-label">{getOptionLabel(opt.id, opt.label)}</span>
               </div>
             </div>
           );

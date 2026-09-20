@@ -1,0 +1,88 @@
+{
+  "task": "i18n-saas-globalization",
+  "timestamp": "2026-09-20T12:33:00+08:00",
+  "verifiedBy": "E2E automated suite & isolated runtime checks",
+  "status": "PASS",
+  "dimensions": {
+    "sidebarAndTabTitles": {
+      "verified": true,
+      "enTerms": {
+        "omnimux-market:plaza": "Skills & Experts",
+        "omnimux-workflow:canvas": "Creative Canvas",
+        "omnimux-workflow:library": "Projects",
+        "omnimux:media-viewer": "Image Generation",
+        "omnimux-device:library": "Devices",
+        "omnimux-assets:library": "Assets",
+        "omnimux-workflow:appTab": "AI Apps"
+      },
+      "dynamicLocaleListener": "Active (c.locale.subscribe wired to omnimux-market entry)"
+    },
+    "skillsMarketplaceI18n": {
+      "verified": true,
+      "localeDetection": "Dynamic via window.__omnimuxLocale or document.documentElement.lang",
+      "coveredCoreSkills": [
+        "clip-craft",
+        "cinematic-ai-comic-director",
+        "ip-character-consistency-studio",
+        "viral-video-replication",
+        "tiktok-shop-product-video-maker",
+        "3d-animation-short-generator",
+        "skill-creator",
+        "video-analysis",
+        "video-hook-analysis"
+      ],
+      "bilingualSymmetric": true
+    },
+    "canvasAssetsDrawer": {
+      "verified": true,
+      "componentsChecked": [
+        "AssetsDrawerHeader.tsx",
+        "CanvasOutlineView.tsx",
+        "AssetsDrawer.tsx",
+        "TypeFilterPopover.tsx",
+        "TimeFilterPopover.tsx",
+        "TagFilterPopover.tsx",
+        "SortFilterPopover.tsx",
+        "ProjectAssetsView.tsx",
+        "SubjectLibraryView.tsx"
+      ],
+      "keysVerified": [
+        "assets.tab.canvas",
+        "assets.tab.assets",
+        "assets.closeDrawer",
+        "assets.importFile",
+        "assets.newFolder",
+        "assets.searchFiles",
+        "assets.searchProjectAssets",
+        "assets.searchSubject",
+        "assets.viewList",
+        "assets.viewGrid",
+        "assets.filter.type",
+        "assets.filter.time",
+        "assets.filter.tag",
+        "assets.filter.sort",
+        "assets.emptyCanvas",
+        "assets.emptyCanvasSub",
+        "assets.popover.all",
+        "assets.popover.sortNewest",
+        "assets.popover.sortOldest",
+        "assets.tag.character"
+      ]
+    },
+    "aiAppsTab": {
+      "verified": true,
+      "noHardcodedChineseFallback": true,
+      "resolvedTitle": "AI Apps"
+    }
+  },
+  "testSuites": [
+    "tests/e2e/i18n-saas-globalization.spec.js",
+    "plugins/omnimux/src/client/workbench.test.js",
+    "plugins/omnimux-market/src/client/workbench-seat.test.js",
+    "plugins/omnimux-market/lib/tests/experts-market.test.js",
+    "plugins/omnimux-workflow/src/canvas/i18n/i18n.test.mjs",
+    "plugins/omnimux-workflow/src/canvas/editor/hooks/asyncImports.runtime.test.mjs",
+    "plugins/omnimux-workflow/tests/ai-app-library.e2e.test.mjs",
+    "plugins/omnimux-workflow/tests/app-edit-and-fork-flow.e2e.test.mjs"
+  ]
+}
