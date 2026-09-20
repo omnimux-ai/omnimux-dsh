@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  collectCategoryCounts,
+  createCategoryCache,
   createInspirationShare,
   listQueryString,
   listInspirations,
@@ -125,5 +127,164 @@ describe('inspiration query + rewrite', () => {
       title: 'b',
       prompt: 'c',
     })
+  })
+})
+
+describe('collectCategoryCounts', () => {
+  /**
+   * Fake catalogue client: serves `total` split across page_size'd pages,
+   * drawing categories round-robin from `names` ('' = row without category).
+   */
+  function catalogueClient({ total, names, onRequest }) {
+    return {
+      async withPat(path) {
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        const pageSize = Number(url.searchParams.get('page_size')) || 100
+        onRequest?.(path)
+        const start = (page - 1) * pageSize
+        const items = []
+        for (let index = start; index < Math.min(start + pageSize, total); index += 1) {
+          items.push({ id: String(index + 1), category: names[index % names.length] })
+        }
+        return { success: true, data: { total, page, size: pageSize, items } }
+      },
+    }
+  }
+
+  it('walks every page and aggregates deduped counts, sorted by count desc', async () => {
+    /** @type {string[]} */
+    const requested = []
+    const client = catalogueClient({
+      total: 250,
+      names: ['digital', 'digital', ' 健康 ', 'digital', '', '  ', 'Health & Wellness', '健康'],
+      onRequest: (path) => requested.push(path),
+    })
+    const data = await collectCategoryCounts(client, { pageSize: 100 })
+    assert.deepEqual(requested, [
+      '/api/inspiration/v1/inspirations?page=1&page_size=100',
+      '/api/inspiration/v1/inspirations?page=2&page_size=100',
+      '/api/inspiration/v1/inspirations?page=3&page_size=100',
+    ])
+    assert.deepEqual(data, [
+      { name: 'digital', count: 95 },
+      { name: '健康', count: 62 },
+      { name: 'Health & Wellness', count: 31 },
+    ])
+  })
+
+  it('never exceeds the concurrency limit while paging', async () => {
+    let active = 0
+    let maxActive = 0
+    const client = {
+      async withPat(path) {
+        active += 1
+        maxActive = Math.max(maxActive, active)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        active -= 1
+        const url = new URL(path, 'http://127.0.0.1')
+        const page = Number(url.searchParams.get('page')) || 1
+        const pageSize = Number(url.searchParams.get('page_size')) || 2
+        const total = 10
+        const start = (page - 1) * pageSize
+        const items = []
+        for (let index = start; index < Math.min(start + pageSize, total); index += 1) {
+          items.push({ id: String(index + 1), category: 'digital' })
+        }
+        return { success: true, data: { total, items } }
+      },
+    }
+    const data = await collectCategoryCounts(client, { pageSize: 2, concurrency: 2 })
+    assert.equal(maxActive <= 2, true, `expected at most 2 in-flight page requests, saw ${maxActive}`)
+    assert.deepEqual(data, [{ name: 'digital', count: 10 }])
+  })
+
+  it('drops empty and missing categories entirely', async () => {
+    const client = {
+      async withPat() {
+        return {
+          success: true,
+          data: {
+            total: 4,
+            items: [
+              { id: '1' },
+              { id: '2', category: '' },
+              { id: '3', category: '   ' },
+              { id: '4', category: 'digital' },
+            ],
+          },
+        }
+      },
+    }
+    assert.deepEqual(await collectCategoryCounts(client), [{ name: 'digital', count: 1 }])
+  })
+
+  it('breaks count ties by name for a stable order', async () => {
+    const client = {
+      async withPat() {
+        return {
+          success: true,
+          data: {
+            total: 3,
+            items: [
+              { id: '1', category: 'b' },
+              { id: '2', category: 'a' },
+              { id: '3', category: 'b' },
+            ],
+          },
+        }
+      },
+    }
+    assert.deepEqual(await collectCategoryCounts(client), [
+      { name: 'b', count: 2 },
+      { name: 'a', count: 1 },
+    ])
+  })
+})
+
+describe('createCategoryCache', () => {
+  it('reads null before the first load and fresh data within the TTL', async () => {
+    let now = 1_000_000
+    const cache = createCategoryCache({ ttlMs: 600_000, now: () => now })
+    assert.equal(cache.read(), null)
+    await cache.refresh(async () => [{ name: 'digital', count: 3 }])
+    const fresh = cache.read()
+    assert.equal(fresh.stale, false)
+    assert.deepEqual(fresh.data, [{ name: 'digital', count: 3 }])
+    now += 600_001
+    assert.equal(cache.read().stale, true)
+  })
+
+  it('dedupes concurrent refreshes onto one loader call', async () => {
+    const cache = createCategoryCache()
+    let loads = 0
+    const [a, b] = await Promise.all([
+      cache.refresh(async () => {
+        loads += 1
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return [{ name: 'digital', count: 1 }]
+      }),
+      cache.refresh(async () => {
+        loads += 1
+        return [{ name: 'other', count: 1 }]
+      }),
+    ])
+    assert.equal(loads, 1)
+    assert.deepEqual(a, b)
+  })
+
+  it('keeps the stale value after a failed refresh and retries next time', async () => {
+    let now = 0
+    const cache = createCategoryCache({ ttlMs: 10, now: () => now })
+    await cache.refresh(async () => [{ name: 'digital', count: 1 }])
+    now += 100
+    await assert.rejects(cache.refresh(async () => {
+      throw new Error('upstream down')
+    }))
+    const held = cache.read()
+    assert.equal(held.stale, true)
+    assert.deepEqual(held.data, [{ name: 'digital', count: 1 }])
+    const retried = await cache.refresh(async () => [{ name: 'digital', count: 2 }])
+    assert.deepEqual(retried, [{ name: 'digital', count: 2 }])
   })
 })

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { OmnimuxError } from '../media/errors.js'
+import { createCategoryCache } from './inspiration.js'
 import { createInspirationDispatcher, registerInspirationRoutes } from './inspiration-http.js'
 
 function clientWith(handler, rawHandler) {
@@ -235,6 +236,147 @@ describe('inspiration dispatcher', () => {
     })
     assert.equal(resForeverAdmin.status, 200)
     assert.equal(resForeverAdmin.body.data.expire, 'forever')
+  })
+})
+
+describe('inspiration categories route (Issue #2497)', () => {
+  /**
+   * Catalogue client for the category walk: `total` rows paged at 100,
+   * categories round-robin from `names`.
+   * @param {{ total: number, names: string[], onRequest?: (path: string) => void }} options
+   */
+  function catalogueClient({ total, names, onRequest }) {
+    return clientWith(async (path) => {
+      onRequest?.(path)
+      const url = new URL(path, 'http://127.0.0.1')
+      const page = Number(url.searchParams.get('page')) || 1
+      const pageSize = Number(url.searchParams.get('page_size')) || 100
+      const start = (page - 1) * pageSize
+      const items = []
+      for (let index = start; index < Math.min(start + pageSize, total); index += 1) {
+        items.push({ id: String(index + 1), category: names[index % names.length] })
+      }
+      return { success: true, data: { total, page, size: pageSize, items } }
+    })
+  }
+
+  it('aggregates the catalogue and never forwards "categories" as an id', async () => {
+    /** @type {string[]} */
+    const requested = []
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      client: catalogueClient({ total: 4, names: ['digital', 'digital', '健康', ''], onRequest: (path) => requested.push(path) }),
+    })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(result.status, 200)
+    assert.deepEqual(result.body, {
+      data: [
+        { name: 'digital', count: 2 },
+        { name: '健康', count: 1 },
+      ],
+    })
+    assert.deepEqual(requested, ['/api/inspiration/v1/inspirations?page=1&page_size=100'])
+    assert.equal(
+      requested.some((path) => path.includes('/inspirations/categories')),
+      false,
+      'the categories route must not fall through to the :id wildcard',
+    )
+  })
+
+  it('still routes a real id through the :id wildcard', async () => {
+    /** @type {string[]} */
+    const requested = []
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      client: clientWith(async (path) => {
+        requested.push(path)
+        return { success: true, data: { id: 'abc123' } }
+      }),
+    })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/abc123' })
+    assert.equal(result.status, 200)
+    assert.deepEqual(requested, ['/api/inspiration/v1/inspirations/abc123'])
+  })
+
+  it('serves the cached aggregate within the TTL without re-walking', async () => {
+    let walks = 0
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      client: catalogueClient({ total: 2, names: ['digital', 'digital'], onRequest: () => { walks += 1 } }),
+    })
+    const first = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    const second = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.deepEqual(first.body, second.body)
+    assert.equal(walks, 1, 'a TTL-fresh cache must not re-walk the catalogue')
+  })
+
+  it('serves the stale value immediately and refreshes behind it', async () => {
+    let now = 1_000_000
+    let walks = 0
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      categoryCache: createCategoryCache({ ttlMs: 600_000, now: () => now }),
+      client: catalogueClient({ total: 2, names: ['digital', 'digital'], onRequest: () => { walks += 1 } }),
+    })
+    const first = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(walks, 1)
+    now += 600_001
+    const stale = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(stale.status, 200)
+    assert.deepEqual(stale.body, first.body, 'a stale cache answers with the stale value right away')
+    for (let attempt = 0; attempt < 50 && walks < 2; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    assert.equal(walks, 2, 'a stale answer must trigger a background refresh')
+  })
+
+  it('answers 200 with an empty list when the walk fails and nothing is cached', async () => {
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      client: clientWith(async () => {
+        throw new OmnimuxError('upstream', 'cloud unreachable')
+      }),
+    })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(result.status, 200)
+    assert.deepEqual(result.body, { data: [] })
+  })
+
+  it('keeps serving the stale value when the background refresh fails', async () => {
+    let now = 1_000_000
+    let failing = false
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      categoryCache: createCategoryCache({ ttlMs: 600_000, now: () => now }),
+      client: clientWith(async (path) => {
+        if (failing) throw new OmnimuxError('upstream', 'cloud unreachable')
+        return { success: true, data: { total: 1, items: [{ id: '1', category: 'digital' }] } }
+      }),
+    })
+    const first = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.deepEqual(first.body, { data: [{ name: 'digital', count: 1 }] })
+    now += 600_001
+    failing = true
+    const stale = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(stale.status, 200)
+    assert.deepEqual(stale.body, first.body)
+    // Let the background refresh fail and settle; the cache must still hold.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    failing = false
+    now += 1
+    const recovered = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(recovered.status, 200)
+  })
+
+  it('accepts GET without an admin identity like every other read', async () => {
+    const dispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      identity: { require: async () => ({ id: 1, role: 1, is_admin: false }) },
+      client: catalogueClient({ total: 1, names: ['digital'] }),
+    })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration/categories' })
+    assert.equal(result.status, 200)
+    assert.deepEqual(result.body, { data: [{ name: 'digital', count: 1 }] })
   })
 })
 

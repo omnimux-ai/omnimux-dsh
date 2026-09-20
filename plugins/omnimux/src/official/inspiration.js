@@ -111,6 +111,134 @@ export function listTags(client) {
   return client.withPat(`${API}/tags`)
 }
 
+/** Category aggregation pulls the catalogue in pages of this size. */
+const CATEGORY_PAGE_SIZE = 100
+/** Pages fetched in parallel while aggregating categories. */
+const CATEGORY_CONCURRENCY = 5
+/** Aggregated categories are served from memory for this long (SWR). */
+const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000
+
+/**
+ * Run `worker` over every item with at most `limit` calls in flight.
+ * @template T, R
+ * @param {T[]} items
+ * @param {number} limit
+ * @param {(item: T, index: number) => Promise<R>} worker
+ * @returns {Promise<R[]>}
+ */
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length)
+  let cursor = 0
+  const lanes = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor
+      cursor += 1
+      results[index] = await worker(items[index], index)
+    }
+  })
+  await Promise.all(lanes)
+  return results
+}
+
+/**
+ * Trimmed category of a catalogue row; `''` when it carries none. Empty and
+ * missing categories are dropped from the aggregate: an unnamed bucket is
+ * useless as a dropdown option, and the dropdown's 全部 entry already covers
+ * the unfiltered view.
+ * @param {unknown} item
+ */
+function categoryNameOf(item) {
+  if (!item || typeof item !== 'object') return ''
+  const name = /** @type {Record<string, unknown>} */ (item).category
+  return typeof name === 'string' ? name.trim() : ''
+}
+
+/**
+ * Page through the whole cloud catalogue and aggregate its `category` field
+ * into `{ name, count }` rows, sorted by count desc (name asc on ties).
+ *
+ * The cloud has no category aggregation endpoint, so this walks the list with
+ * `page_size=100`, `concurrency` pages in flight (~30 pages at the time of
+ * writing). Callers wrap this in a cache; it is too heavy to run per request.
+ * @param {{ withPat: Function }} client
+ * @param {{ pageSize?: number, concurrency?: number }} [opts]
+ * @returns {Promise<Array<{ name: string, count: number }>>}
+ */
+export async function collectCategoryCounts(client, opts = {}) {
+  const pageSize = Math.max(1, Number(opts.pageSize) || CATEGORY_PAGE_SIZE)
+  const concurrency = Math.max(1, Number(opts.concurrency) || CATEGORY_CONCURRENCY)
+  /** @type {Map<string, number>} */
+  const counts = new Map()
+  const absorb = (payload) => {
+    const items = responseData(payload).items
+    if (!Array.isArray(items)) return 0
+    for (const item of items) {
+      const name = categoryNameOf(item)
+      if (name) counts.set(name, (counts.get(name) || 0) + 1)
+    }
+    return items.length
+  }
+
+  const first = await client.withPat(`${API}/inspirations?page=1&page_size=${pageSize}`)
+  const firstCount = absorb(first)
+  const total = Number(responseData(first).total) || firstCount
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  if (pageCount > 1) {
+    const pages = Array.from({ length: pageCount - 1 }, (_, index) => index + 2)
+    await mapWithConcurrency(pages, concurrency, async (page) => {
+      absorb(await client.withPat(`${API}/inspirations?page=${page}&page_size=${pageSize}`))
+    })
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+}
+
+/**
+ * In-memory SWR cache for the aggregated categories.
+ *
+ * `read()` reports whether the held value is stale; `refresh(loader)` dedupes
+ * concurrent reloads onto one in-flight promise and only replaces the entry on
+ * success, so a failed reload never destroys a usable stale value.
+ * @param {{ ttlMs?: number, now?: () => number }} [opts]
+ */
+export function createCategoryCache(opts = {}) {
+  const ttlMs = Math.max(0, Number(opts.ttlMs) || CATEGORY_CACHE_TTL_MS)
+  const now = typeof opts.now === 'function' ? opts.now : () => Date.now()
+  /** @type {{ data: Array<{ name: string, count: number }>, at: number } | null} */
+  let entry = null
+  /** @type {Promise<Array<{ name: string, count: number }>> | null} */
+  let inflight = null
+  return {
+    /**
+     * The held value, or null when never loaded.
+     * @returns {{ data: Array<{ name: string, count: number }>, stale: boolean } | null}
+     */
+    read() {
+      if (!entry) return null
+      return { data: entry.data, stale: now() - entry.at > ttlMs }
+    },
+    /**
+     * Load (or reload) the aggregate, sharing one in-flight attempt.
+     * @param {() => Promise<Array<{ name: string, count: number }>>} loader
+     */
+    refresh(loader) {
+      if (!inflight) {
+        inflight = Promise.resolve()
+          .then(loader)
+          .then((data) => {
+            entry = { data, at: now() }
+            return data
+          })
+          .finally(() => {
+            inflight = null
+          })
+      }
+      return inflight
+    },
+  }
+}
+
 /**
  * @param {{ withPat: Function }} client
  */

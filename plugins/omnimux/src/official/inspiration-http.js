@@ -6,6 +6,8 @@ import { mapOfficialError } from './http-routes.js'
 import { createOfficialClient } from './client.js'
 import { parseOfficialConfig } from './config.js'
 import {
+  collectCategoryCounts,
+  createCategoryCache,
   createInspiration,
   createInspirationShare,
   deleteInspiration,
@@ -46,6 +48,7 @@ function mapError(error) {
  *   env?: NodeJS.ProcessEnv,
  *   fetcher?: typeof fetch,
  *   client?: { withPat: Function, withPatRaw?: Function },
+ *   categoryCache?: ReturnType<typeof createCategoryCache>,
  * }} [deps]
  */
 export function createInspirationDispatcher(deps = {}) {
@@ -69,6 +72,30 @@ export function createInspirationDispatcher(deps = {}) {
       return { token, userId: profile.id }
     },
   })
+
+  const categoryCache = deps.categoryCache ?? createCategoryCache()
+
+  /**
+   * Aggregated catalogue categories (Issue #2497). The cloud has no category
+   * endpoint, so the aggregate is walked and cached here; the route never
+   * fails the page — an upstream failure with no cached value answers
+   * `200 { data: [] }` instead of an error.
+   */
+  async function categoriesResult() {
+    const cached = categoryCache.read()
+    if (cached && !cached.stale) return { status: 200, body: { data: cached.data } }
+    if (cached && cached.stale) {
+      // Stale-while-revalidate: serve the stale value now, refresh behind it.
+      void categoryCache.refresh(() => collectCategoryCounts(client)).catch(() => {})
+      return { status: 200, body: { data: cached.data } }
+    }
+    try {
+      const data = await categoryCache.refresh(() => collectCategoryCounts(client))
+      return { status: 200, body: { data } }
+    } catch {
+      return { status: 200, body: { data: [] } }
+    }
+  }
 
   /**
    * @param {{ method: string, url: string, body?: unknown, origin?: string, referer?: string, secFetchSite?: string }} req
@@ -105,6 +132,11 @@ export function createInspirationDispatcher(deps = {}) {
       }
       if (method === 'GET' && path === `${PREFIX}/tags`) {
         return { status: 200, body: rewriteMediaUrlsForHost(await listTags(client)) }
+      }
+      // Must precede the `${PREFIX}/:id` wildcard below: `categories` is an
+      // aggregate, not an inspiration id.
+      if (method === 'GET' && path === `${PREFIX}/categories`) {
+        return categoriesResult()
       }
       if (method === 'GET' && path === PREFIX) {
         return { status: 200, body: rewriteMediaUrlsForHost(await listInspirations(client, queryRecord(url))) }

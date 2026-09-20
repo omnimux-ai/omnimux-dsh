@@ -6,8 +6,9 @@ import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPa
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
-import { buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
+import { buildCategoryFilterOptions, buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
 import { CheckIcon, PlusIcon } from './icons.jsx'
+import { listCategories } from './api.js'
 import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
@@ -195,6 +196,37 @@ export function InspirationSection({ t, active }) {
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
   const rivalPlatformOptions = buildRivalPlatformOptions(t)
 
+  /**
+   * Cloud catalogue categories for the category dropdown (Issue #2497).
+   *
+   * The cloud's `category` field is free text, so the option list comes from
+   * the hub's aggregate of the real catalogue instead of a hardcoded list —
+   * the previous hardcoded 9 e-commerce buckets matched almost nothing and
+   * emptied the grid on selection. Only the 全部/云端 tabs query the cloud
+   * catalogue at all, so only they load this list; any failure or empty
+   * answer degrades the dropdown to the fixed 全部 entry, never an error.
+   */
+  const [cloudCategories, setCloudCategories] = useState([])
+  const cloudCategoryTab = tab === 'all' || tab === 'public'
+  useEffect(() => {
+    if (!cloudCategoryTab || active === false) return undefined
+    let cancelled = false
+    listCategories()
+      .then((res) => {
+        if (cancelled || !res.ok) return
+        const rows = Array.isArray(res.body?.data) ? res.body.data : []
+        setCloudCategories(rows)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [cloudCategoryTab, active])
+  const categoryOptions = useMemo(
+    () => buildCategoryFilterOptions(cloudCategories, t, category),
+    [cloudCategories, t, category],
+  )
+
   // The row the last import produced is pinned above the list while it is
   // missing from it: the tab switch that follows an import refetches page 1, and
   // a row created a second ago can be sorted off that page even with no filter.
@@ -363,18 +395,7 @@ export function InspirationSection({ t, active }) {
               aria-label={t('filter.category')}
               onChange={setCategory}
               className="omnimux-inspiration-subfilter-select"
-              options={[
-                { value: '', label: t('category.all') },
-                { value: '美妆护肤', label: '美妆护肤' },
-                { value: '厨房用品', label: '厨房用品' },
-                { value: '家居生活', label: '家居生活' },
-                { value: '健康保健', label: '健康保健' },
-                { value: '服装服饰', label: '服装服饰' },
-                { value: '母婴玩具', label: '母婴玩具' },
-                { value: '数码科技', label: '数码科技' },
-                { value: '食品饮料', label: '食品饮料' },
-                { value: '汽车与户外', label: '汽车与户外' },
-              ]}
+              options={categoryOptions}
             />
             <DropdownSelect
               value={duration}

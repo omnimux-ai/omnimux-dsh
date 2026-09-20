@@ -336,6 +336,18 @@ export const listTags = quotaGuard(
 )
 
 /**
+ * Cloud catalogue categories aggregated by the hub (Issue #2497).
+ *
+ * The hub walks the catalogue and answers `{ data: [{ name, count }] }`;
+ * callers degrade to the fixed 全部-only option set on any failure, so this
+ * call is intentionally left unguarded — a category list must never pop a
+ * login or quota gate over a filter dropdown.
+ */
+export function listCategories() {
+  return inspirationRequest('/omnimux/inspiration/categories')
+}
+
+/**
  * Host-rewritten media path for <img src>. Absolute http(s) URLs pass through.
  * Bare keys (detail envelope) get the Host media prefix.
  * @param {unknown} url
