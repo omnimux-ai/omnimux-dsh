@@ -546,9 +546,9 @@
       "id": "sk-omx-ugc-unwrap",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC 开箱",
+      "title": "UGC 好物开箱种草",
       "subtitle": "UGC 和用户评价",
-      "summary": "适用于creating UGC unboxing 视频广告s — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
+      "summary": "第一人称沉浸式开箱展示，从包装拆封到上手体验全流程特写，快速激发购买欲望。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -564,9 +564,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 开箱"
       },
-      "titleZh": "UGC 开箱",
+      "titleZh": "UGC 好物开箱种草",
       "titleEn": "UGC Unwrap",
-      "summaryZh": "适用于creating UGC unboxing 视频广告s — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
+      "summaryZh": "第一人称沉浸式开箱展示，从包装拆封到上手体验全流程特写，快速激发购买欲望。",
       "summaryEn": "Use when creating UGC unboxing video ads — single-take 4-cut Seedance clips with the canonical PACKED → REVEAL...",
       "isHot": false,
       "isNew": false,
@@ -574,7 +574,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-unwrap\n请运行 UGC 开箱 (UGC Unwrap) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-unwrap\n请运行 UGC 好物开箱种草 (UGC Unwrap) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 开箱"
@@ -624,9 +624,9 @@
       "id": "sk-omx-ugc-walkthrough",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGC 演练演示",
+      "title": "UGC 场景化实操演练",
       "subtitle": "UGC 和用户评价",
-      "summary": "适用于creating UGC tutorial / how-to / step-by-step 视频广告s — single-take 4-cut Seedance clips where each...",
+      "summary": "分步骤展示产品在实际生活场景中的使用方法与操作细节，降低用户学习成本与决策门槛。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -642,9 +642,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "UGC 演练演示"
       },
-      "titleZh": "UGC 演练演示",
+      "titleZh": "UGC 场景化实操演练",
       "titleEn": "UGC Walkthrough",
-      "summaryZh": "适用于creating UGC tutorial / how-to / step-by-step 视频广告s — single-take 4-cut Seedance clips where each...",
+      "summaryZh": "分步骤展示产品在实际生活场景中的使用方法与操作细节，降低用户学习成本与决策门槛。",
       "summaryEn": "Use when creating UGC tutorial / how-to / step-by-step video ads — single-take 4-cut Seedance clips where each...",
       "isHot": false,
       "isNew": false,
@@ -652,7 +652,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-walkthrough\n请运行 UGC 演练演示 (UGC Walkthrough) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-walkthrough\n请运行 UGC 场景化实操演练 (UGC Walkthrough) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "UGC 演练演示"
@@ -977,7 +977,7 @@
       "kind": "skill",
       "title": "电影感暗调奢华美食",
       "subtitle": "视频广告",
-      "summary": "专为电影感暗调奢华美食营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "采用暗黑奢华光影与微距特写呈现顶级美食质感，以高帧慢动作与细节声音营造极致食欲诱惑。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -995,7 +995,7 @@
       },
       "titleZh": "电影感暗调奢华美食",
       "titleEn": "Cinematic Dark Luxury Food Reveal",
-      "summaryZh": "专为电影感暗调奢华美食营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "采用暗黑奢华光影与微距特写呈现顶级美食质感，以高帧慢动作与细节声音营造极致食欲诱惑。",
       "summaryEn": "A high-production cinematic food or restaurant commercial pattern built around macro ingredient beauty shots,...",
       "isHot": false,
       "isNew": false,
@@ -1014,9 +1014,9 @@
       "id": "sk-omx-mobile-app-chaos-to-calm-confessional",
       "tab": "skills",
       "kind": "skill",
-      "title": "从混乱到宁静App告白",
+      "title": "从混乱到从容 App 倾诉广告",
       "subtitle": "视频广告",
-      "summary": "专为从混乱到宁静App告白营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "通过生活焦虑混乱到使用产品后井井有条的鲜明对照，引发强烈情感共鸣。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1032,9 +1032,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "从混乱到宁静App告白"
       },
-      "titleZh": "从混乱到宁静App告白",
+      "titleZh": "从混乱到从容 App 倾诉广告",
       "titleEn": "Mobile App Chaos To Calm Confessional",
-      "summaryZh": "专为从混乱到宁静App告白营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "通过生活焦虑混乱到使用产品后井井有条的鲜明对照，引发强烈情感共鸣。",
       "summaryEn": "A two-archetype creative pattern for mobile app social video ads (TikTok/Reels/Shorts) that opens with relatab...",
       "isHot": false,
       "isNew": false,
@@ -1042,7 +1042,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/mobile-app-chaos-to-calm-confessional\n请运行 从混乱到宁静App告白 (Mobile App Chaos To Calm Confessional) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/mobile-app-chaos-to-calm-confessional\n请运行 从混乱到从容 App 倾诉广告 (Mobile App Chaos To Calm Confessional) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "从混乱到宁静App告白"
@@ -1055,7 +1055,7 @@
       "kind": "skill",
       "title": "家政服务多城市电影叙事",
       "subtitle": "视频广告",
-      "summary": "专为家政服务多城市电影叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以多城市生活实景与电影级叙事串联家政上门服务，展现专业可靠的服务细节与家庭温情。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1073,7 +1073,7 @@
       },
       "titleZh": "家政服务多城市电影叙事",
       "titleEn": "Cinematic Home Services Multicity Arc",
-      "summaryZh": "专为家政服务多城市电影叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以多城市生活实景与电影级叙事串联家政上门服务，展现专业可靠的服务细节与家庭温情。",
       "summaryEn": "Encodes a cinematic before-to-after transformation arc for home services brands targeting multiple geographic...",
       "isHot": false,
       "isNew": false,
@@ -1094,7 +1094,7 @@
       "kind": "skill",
       "title": "格调生活品牌宣传片",
       "subtitle": "视频广告",
-      "summary": "专为格调生活品牌宣传片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "精选生活美学与日常仪式感镜头，以高格调调色与人文视角树立品牌高端生活方式形象。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1112,7 +1112,7 @@
       },
       "titleZh": "格调生活品牌宣传片",
       "titleEn": "Curated Lifestyle Brand Video",
-      "summaryZh": "专为格调生活品牌宣传片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "精选生活美学与日常仪式感镜头，以高格调调色与人文视角树立品牌高端生活方式形象。",
       "summaryEn": "Encodes the creative system for a warm, elevated, hands-only lifestyle video style built on quiet confidence,...",
       "isHot": false,
       "isNew": false,
@@ -1131,9 +1131,9 @@
       "id": "sk-omx-b2b-saas-dark-cinematic-exec-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "B2B高管暗黑商业短片",
+      "title": "B2B 高管暗黑商业短片",
       "subtitle": "视频广告",
-      "summary": "专为B2B高管暗黑商业短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以电影级冷色调与商业精英视角，直击企业管理痛点与数字化转型方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1149,9 +1149,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "B2B高管暗黑商业短片"
       },
-      "titleZh": "B2B高管暗黑商业短片",
+      "titleZh": "B2B 高管暗黑商业短片",
       "titleEn": "B2B Saas Dark Cinematic Exec Arc",
-      "summaryZh": "专为B2B高管暗黑商业短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以电影级冷色调与商业精英视角，直击企业管理痛点与数字化转型方案。",
       "summaryEn": "Encodes a premium dark-cinematic narrative arc for B2B SaaS video ads targeting regulated-industry executives...",
       "isHot": false,
       "isNew": false,
@@ -1159,7 +1159,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/b2b-saas-dark-cinematic-exec-arc\n请运行 B2B高管暗黑商业短片 (B2B Saas Dark Cinematic Exec Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/b2b-saas-dark-cinematic-exec-arc\n请运行 B2B 高管暗黑商业短片 (B2B Saas Dark Cinematic Exec Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "B2B高管暗黑商业短片"
@@ -1249,9 +1249,9 @@
       "id": "sk-omx-animated-character-ad-plan",
       "tab": "skills",
       "kind": "skill",
-      "title": "动画IP角色广告企划",
+      "title": "动画 IP 角色广告企划",
       "subtitle": "故事讲述和脚本",
-      "summary": "专为动画IP角色广告企划营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "结合原创虚拟形象与品牌吉祥物，打造趣味幽默的情节故事，强化品牌认知。",
       "category": "storytelling-script",
       "tags": [
         "故事讲述和脚本"
@@ -1267,9 +1267,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "动画IP角色广告企划"
       },
-      "titleZh": "动画IP角色广告企划",
+      "titleZh": "动画 IP 角色广告企划",
       "titleEn": "Animated Character Ad Plan",
-      "summaryZh": "专为动画IP角色广告企划营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "结合原创虚拟形象与品牌吉祥物，打造趣味幽默的情节故事，强化品牌认知。",
       "summaryEn": "Use this whenever someone wants a high-end 3D-animated character-comedy ad, a cute-mascot animated spot, an an...",
       "isHot": false,
       "isNew": false,
@@ -1277,7 +1277,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/animated-character-ad-plan\n请运行 动画IP角色广告企划 (Animated Character Ad Plan) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/animated-character-ad-plan\n请运行 动画 IP 角色广告企划 (Animated Character Ad Plan) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "动画IP角色广告企划"
@@ -1288,9 +1288,9 @@
       "id": "sk-omx-cinematic-anime-episodic-serial-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "日漫连载黄金开头Hook",
+      "title": "日漫连载黄金开头",
       "subtitle": "视频广告",
-      "summary": "专为日漫连载黄金开头Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "动漫风高燃分镜开头，以悬念与强情节迅速抓住年轻二次元受众目光。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1306,9 +1306,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "日漫连载黄金开头Hook"
       },
-      "titleZh": "日漫连载黄金开头Hook",
+      "titleZh": "日漫连载黄金开头",
       "titleEn": "Cinematic Anime Episodic Serial Hook",
-      "summaryZh": "专为日漫连载黄金开头Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "动漫风高燃分镜开头，以悬念与强情节迅速抓住年轻二次元受众目光。",
       "summaryEn": "Produces a cinematic dark-fantasy anime-style episodic serial for short-form vertical video (TikTok / Instagra...",
       "isHot": false,
       "isNew": false,
@@ -1316,7 +1316,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/cinematic-anime-episodic-serial-hook\n请运行 日漫连载黄金开头Hook (Cinematic Anime Episodic Serial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/cinematic-anime-episodic-serial-hook\n请运行 日漫连载黄金开头 (Cinematic Anime Episodic Serial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "日漫连载黄金开头Hook"
@@ -1327,9 +1327,9 @@
       "id": "sk-omx-dark-saas-ui-hero",
       "tab": "skills",
       "kind": "skill",
-      "title": "暗色软件UI主图演示",
+      "title": "暗色软件 UI 主图演示",
       "subtitle": "产品展示",
-      "summary": "适用于a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
+      "summary": "高对比暗黑科技风界面动态呈现，多维度展示软件仪表盘与核心功能交互。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1345,9 +1345,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "暗色软件UI主图演示"
       },
-      "titleZh": "暗色软件UI主图演示",
+      "titleZh": "暗色软件 UI 主图演示",
       "titleEn": "Dark Saas Ui Hero",
-      "summaryZh": "适用于a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
+      "summaryZh": "高对比暗黑科技风界面动态呈现，多维度展示软件仪表盘与核心功能交互。",
       "summaryEn": "Use when a user uploads 3-6 screenshots of a SaaS dashboard, web app, or product UI and wants a short vertical...",
       "isHot": false,
       "isNew": false,
@@ -1355,7 +1355,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/dark-saas-ui-hero\n请运行 暗色软件UI主图演示 (Dark Saas Ui Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/dark-saas-ui-hero\n请运行 暗色软件 UI 主图演示 (Dark Saas Ui Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "暗色软件UI主图演示"
@@ -1368,7 +1368,7 @@
       "kind": "skill",
       "title": "时尚情绪氛围短片",
       "subtitle": "视频广告",
-      "summary": "专为时尚情绪氛围短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "融合情绪张力、时尚走秀光影与个性卡点音乐，传递服装品牌独有的设计灵魂与氛围感。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1386,7 +1386,7 @@
       },
       "titleZh": "时尚情绪氛围短片",
       "titleEn": "Fashion Mood Video",
-      "summaryZh": "专为时尚情绪氛围短片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "融合情绪张力、时尚走秀光影与个性卡点音乐，传递服装品牌独有的设计灵魂与氛围感。",
       "summaryEn": "Creates a vertical 9:16 Pinterest-style fashion editorial video where each scene shows a woman moving naturall...",
       "isHot": false,
       "isNew": false,
@@ -1394,7 +1394,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/fashion-mood-video\n请运行 时尚情绪氛围短片 (Fashion Mood Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/fashion-mood-video-skill\n请运行 时尚情绪氛围短片 (Fashion Mood Video) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "时尚情绪氛围短片"
@@ -1407,7 +1407,7 @@
       "kind": "skill",
       "title": "梗图文创多格式短视频",
       "subtitle": "视频广告",
-      "summary": "专为梗图文创多格式短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "紧跟社媒热梗与网梗文化，将流行热点与文创周边巧妙融合，打造极具自发传播力的趣味短片。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1425,7 +1425,7 @@
       },
       "titleZh": "梗图文创多格式短视频",
       "titleEn": "Meme Merch Multi Format Tiktok",
-      "summaryZh": "专为梗图文创多格式短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "紧跟社媒热梗与网梗文化，将流行热点与文创周边巧妙融合，打造极具自发传播力的趣味短片。",
       "summaryEn": "Produces a cohesive suite of TikTok video ads — UGC fit-check, unboxing, and cinematic fit-check — for novelty...",
       "isHot": false,
       "isNew": false,
@@ -1446,7 +1446,7 @@
       "kind": "skill",
       "title": "痛点共鸣用户真实自述",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为痛点共鸣用户真实自述营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "直击用户长期受困的典型痛点，以真诚倾诉与豁然开朗的情感转折，建立深层次品牌共鸣。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1464,7 +1464,7 @@
       },
       "titleZh": "痛点共鸣用户真实自述",
       "titleEn": "UGC Inherited Burden Testimonial",
-      "summaryZh": "专为痛点共鸣用户真实自述营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "直击用户长期受困的典型痛点，以真诚倾诉与豁然开朗的情感转折，建立深层次品牌共鸣。",
       "summaryEn": "A UGC talking-head testimonial arc built around a relatable life-event burden (inherited property, sudden expe...",
       "isHot": false,
       "isNew": false,
@@ -1485,7 +1485,7 @@
       "kind": "skill",
       "title": "爆款视频智能复刻",
       "subtitle": "视频广告",
-      "summary": "专为爆款视频智能复刻营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "深度解构全网爆款视频的脚本结构、视觉节奏与黄金钩子，一键复刻符合自身品牌的同款神作。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1503,7 +1503,7 @@
       },
       "titleZh": "爆款视频智能复刻",
       "titleEn": "Video Recreate",
-      "summaryZh": "专为爆款视频智能复刻营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "深度解构全网爆款视频的脚本结构、视觉节奏与黄金钩子，一键复刻符合自身品牌的同款神作。",
       "summaryEn": "Reverse-engineer a user-supplied reference video into a paid-plan-ready ad recreation. Trigger when the user p...",
       "isHot": false,
       "isNew": false,
@@ -1511,7 +1511,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/video-recreate\n请运行 爆款视频智能复刻 (Video Recreate) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/video-recreate-skill\n请运行 爆款视频智能复刻 (Video Recreate) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "爆款视频智能复刻"
@@ -1524,7 +1524,7 @@
       "kind": "skill",
       "title": "吉祥物问题解决型广告",
       "subtitle": "视频广告",
-      "summary": "专为吉祥物问题解决型广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "让品牌吉祥物化身问题解决专家，用趣味生动的动画情节演绎用户痛点与产品化解方案。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1542,7 +1542,7 @@
       },
       "titleZh": "吉祥物问题解决型广告",
       "titleEn": "Animated Mascot Problem Solution",
-      "summaryZh": "专为吉祥物问题解决型广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "让品牌吉祥物化身问题解决专家，用趣味生动的动画情节演绎用户痛点与产品化解方案。",
       "summaryEn": "A 15-second stylized 3D-animated ad pattern where an anthropomorphic product character dramatizes its own suff...",
       "isHot": false,
       "isNew": false,
@@ -1563,7 +1563,7 @@
       "kind": "skill",
       "title": "卡通吉祥物旁白短视频",
       "subtitle": "视频广告",
-      "summary": "专为卡通吉祥物旁白短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以萌系卡通吉祥物作为全能旁白主播，通过夸张表情与趣味解说快速科普产品核心优势。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1581,7 +1581,7 @@
       },
       "titleZh": "卡通吉祥物旁白短视频",
       "titleEn": "Cartoon Mascot Narrator Shorts",
-      "summaryZh": "专为卡通吉祥物旁白短视频营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以萌系卡通吉祥物作为全能旁白主播，通过夸张表情与趣味解说快速科普产品核心优势。",
       "summaryEn": "Encodes the \"cartoon mascot narrator\" creative pattern for YouTube Shorts (9:16) ads: a branded, studio-qualit...",
       "isHot": false,
       "isNew": false,
@@ -1602,7 +1602,7 @@
       "kind": "skill",
       "title": "双屏互动实时反应广告",
       "subtitle": "视频广告",
-      "summary": "专为双屏互动实时反应广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "采用双屏实时互动形式，将主角夸张的情绪反应与高光时刻同屏呈现，极具感染力。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1620,7 +1620,7 @@
       },
       "titleZh": "双屏互动实时反应广告",
       "titleEn": "Casino Streamer Split Screen Reaction",
-      "summaryZh": "专为双屏互动实时反应广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "采用双屏实时互动形式，将主角夸张的情绪反应与高光时刻同屏呈现，极具感染力。",
       "summaryEn": "Produces a vertical 9:16 split-screen reaction ad (15–20s) where the top half shows a webcam-style creator rea...",
       "isHot": false,
       "isNew": false,
@@ -1641,7 +1641,7 @@
       "kind": "skill",
       "title": "双重人格暗调轻奢大片",
       "subtitle": "视频广告",
-      "summary": "专为双重人格暗调轻奢大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "通过同一角色双重身份的戏剧化反差与暗调光影，营造出奢华神秘的高级叙事质感。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1659,7 +1659,7 @@
       },
       "titleZh": "双重人格暗调轻奢大片",
       "titleEn": "Cinematic Dual Persona Dark Luxury Ad",
-      "summaryZh": "专为双重人格暗调轻奢大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "通过同一角色双重身份的戏剧化反差与暗调光影，营造出奢华神秘的高级叙事质感。",
       "summaryEn": "Encodes a high-impact, music-driven cinematic luxury sportswear ad pattern built around two simultaneous hero...",
       "isHot": false,
       "isNew": false,
@@ -1680,7 +1680,7 @@
       "kind": "skill",
       "title": "杂志级奢品震撼登场",
       "subtitle": "产品展示",
-      "summary": "专为杂志级奢品震撼登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "院线级灯光布局与杂志大片式登场镜头，层层揭晓顶级奢侈品工艺细节与尊崇身份象征。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1698,7 +1698,7 @@
       },
       "titleZh": "杂志级奢品震撼登场",
       "titleEn": "Cinematic Editorial Luxury Reveal",
-      "summaryZh": "专为杂志级奢品震撼登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "院线级灯光布局与杂志大片式登场镜头，层层揭晓顶级奢侈品工艺细节与尊崇身份象征。",
       "summaryEn": "Encodes a cinematic editorial reveal arc for fashion accessories and premium lifestyle products targeting wome...",
       "isHot": false,
       "isNew": false,
@@ -1719,7 +1719,7 @@
       "kind": "skill",
       "title": "光影科技产品高光亮相",
       "subtitle": "产品展示",
-      "summary": "专为光影科技产品高光亮相营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "利用科技感 LED 矩阵光效与赛博暗黑空间，为数码潮品与智能硬件打造极具震撼力的首秀。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1737,7 +1737,7 @@
       },
       "titleZh": "光影科技产品高光亮相",
       "titleEn": "Cinematic Led Product Reveal",
-      "summaryZh": "专为光影科技产品高光亮相营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "利用科技感 LED 矩阵光效与赛博暗黑空间，为数码潮品与智能硬件打造极具震撼力的首秀。",
       "summaryEn": "A high-end 16:9 cinematic product reveal pattern that opens in total darkness and atmosphere, then cascades dr...",
       "isHot": false,
       "isNew": false,
@@ -1756,9 +1756,9 @@
       "id": "sk-omx-dtc-multi-format-ad-playbook",
       "tab": "skills",
       "kind": "skill",
-      "title": "DTC出海多渠道投放宝典",
+      "title": "DTC 出海多渠道投放宝典",
       "subtitle": "视频广告",
-      "summary": "适用于producing 9:16 视频广告s for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
+      "summary": "覆盖多版式广告素材策划，专为跨境电商品牌量身定制高转化信息流脚本。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1774,9 +1774,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "DTC出海多渠道投放宝典"
       },
-      "titleZh": "DTC出海多渠道投放宝典",
+      "titleZh": "DTC 出海多渠道投放宝典",
       "titleEn": "Dtc Multi Format Ad Playbook",
-      "summaryZh": "适用于producing 9:16 视频广告s for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
+      "summaryZh": "覆盖多版式广告素材策划，专为跨境电商品牌量身定制高转化信息流脚本。",
       "summaryEn": "Use when producing 9:16 video ads for cross-border DTC brands (apparel, accessories, home, beauty) running on...",
       "isHot": false,
       "isNew": false,
@@ -1784,7 +1784,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/dtc-multi-format-ad-playbook\n请运行 DTC出海多渠道投放宝典 (Dtc Multi Format Ad Playbook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/dtc-multi-format-ad-playbook\n请运行 DTC 出海多渠道投放宝典 (Dtc Multi Format Ad Playbook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "DTC出海多渠道投放宝典"
@@ -1797,7 +1797,7 @@
       "kind": "skill",
       "title": "数字人与空镜拼接广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为数字人与空镜拼接广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "将数字人面对面讲解与丰富的生活实景空镜交替混剪，既具真人温度又兼顾视觉丰富度。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1815,7 +1815,7 @@
       },
       "titleZh": "数字人与空镜拼接广告",
       "titleEn": "UGC Avatar Broll Splice Ad",
-      "summaryZh": "专为数字人与空镜拼接广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "将数字人面对面讲解与丰富的生活实景空镜交替混剪，既具真人温度又兼顾视觉丰富度。",
       "summaryEn": "Use this whenever a user wants a UGC-style talking-head ad where an AI avatar carries the voiceover and the us...",
       "isHot": false,
       "isNew": false,
@@ -1836,7 +1836,7 @@
       "kind": "skill",
       "title": "好奇心驱动神级开场",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为好奇心驱动神级开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "在视频开局 3 秒抛出反常识疑问或视觉悬念，牢牢锁死用户停留时长，大幅提升完播率。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -1854,7 +1854,7 @@
       },
       "titleZh": "好奇心驱动神级开场",
       "titleEn": "UGC Curiosity Hook",
-      "summaryZh": "专为好奇心驱动神级开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "在视频开局 3 秒抛出反常识疑问或视觉悬念，牢牢锁死用户停留时长，大幅提升完播率。",
       "summaryEn": "A 30-second UGC talking-head creative pattern for mobile app ads on TikTok/Instagram Reels. Opens with a consp...",
       "isHot": false,
       "isNew": false,
@@ -1873,9 +1873,9 @@
       "id": "sk-omx-ugc-voiceover-app-screen-showcase",
       "tab": "skills",
       "kind": "skill",
-      "title": "画外音旁白App录屏展示",
+      "title": "画外音旁白 App 录屏展示",
       "subtitle": "视频广告",
-      "summary": "专为画外音旁白App录屏展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "真实操作录屏配合亲和力画外音讲解，清晰演示移动应用的使用场景与核心价值。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -1891,9 +1891,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "画外音旁白App录屏展示"
       },
-      "titleZh": "画外音旁白App录屏展示",
+      "titleZh": "画外音旁白 App 录屏展示",
       "titleEn": "UGC Voiceover App Screen Showcase",
-      "summaryZh": "专为画外音旁白App录屏展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "真实操作录屏配合亲和力画外音讲解，清晰演示移动应用的使用场景与核心价值。",
       "summaryEn": "A voice-only narrator TikTok/Reels ad pattern built around app screenshot walkthroughs. Opens with a sharp pro...",
       "isHot": false,
       "isNew": false,
@@ -1901,7 +1901,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-voiceover-app-screen-showcase\n请运行 画外音旁白App录屏展示 (UGC Voiceover App Screen Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-voiceover-app-screen-showcase\n请运行 画外音旁白 App 录屏展示 (UGC Voiceover App Screen Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "画外音旁白App录屏展示"
@@ -1951,9 +1951,9 @@
       "id": "sk-omx-bridal-macro-editorial-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "婚纱微距高级感Hook",
+      "title": "高级感婚纱微距开头",
       "subtitle": "产品展示",
-      "summary": "专为婚纱微距高级感Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "电影级微距呈现婚纱蕾丝纹理与配饰光泽，营造唯美浪漫的高级仪式感。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -1969,9 +1969,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "婚纱微距高级感Hook"
       },
-      "titleZh": "婚纱微距高级感Hook",
+      "titleZh": "高级感婚纱微距开头",
       "titleEn": "Bridal Macro Editorial Hook",
-      "summaryZh": "专为婚纱微距高级感Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "电影级微距呈现婚纱蕾丝纹理与配饰光泽，营造唯美浪漫的高级仪式感。",
       "summaryEn": "A cinematic editorial TikTok/Reels ad pattern for luxury handcraft or artisan fashion products — specifically...",
       "isHot": false,
       "isNew": false,
@@ -1979,7 +1979,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/bridal-macro-editorial-hook\n请运行 婚纱微距高级感Hook (Bridal Macro Editorial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/bridal-macro-editorial-hook\n请运行 高级感婚纱微距开头 (Bridal Macro Editorial Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "婚纱微距高级感Hook"
@@ -1992,7 +1992,7 @@
       "kind": "skill",
       "title": "高端服务品牌视觉大片",
       "subtitle": "视频广告",
-      "summary": "专为高端服务品牌视觉大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "为高阶定制等无形服务打造电影级视觉隐喻，将专业严谨转化为震撼心智的视听符号。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2010,7 +2010,7 @@
       },
       "titleZh": "高端服务品牌视觉大片",
       "titleEn": "Cinematic Service Brand Reveal",
-      "summaryZh": "专为高端服务品牌视觉大片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "为高阶定制等无形服务打造电影级视觉隐喻，将专业严谨转化为震撼心智的视听符号。",
       "summaryEn": "A premium cinematic three-act arc for local/regional service businesses on Instagram Reels and TikTok (9:16, 2...",
       "isHot": false,
       "isNew": false,
@@ -2029,9 +2029,9 @@
       "id": "sk-omx-clinical-ugc-3d-tech-insert-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "医疗科技3D透视叙事",
+      "title": "医疗科技 3D 透视叙事",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为医疗科技3D透视叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "结合专业真实用户讲述与 3D 透视微观机理，深度解析健康医疗产品的作用原理与科研实力。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2047,9 +2047,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "医疗科技3D透视叙事"
       },
-      "titleZh": "医疗科技3D透视叙事",
+      "titleZh": "医疗科技 3D 透视叙事",
       "titleEn": "Clinical UGC 3D Tech Insert Arc",
-      "summaryZh": "专为医疗科技3D透视叙事营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "结合专业真实用户讲述与 3D 透视微观机理，深度解析健康医疗产品的作用原理与科研实力。",
       "summaryEn": "Encodes a hybrid creative pattern that combines raw, unretouched UGC authenticity with embedded 3D technical/m...",
       "isHot": false,
       "isNew": false,
@@ -2057,7 +2057,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/clinical-ugc-3d-tech-insert-arc\n请运行 医疗科技3D透视叙事 (Clinical UGC 3D Tech Insert Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/clinical-ugc-3d-tech-insert-arc\n请运行 医疗科技 3D 透视叙事 (Clinical UGC 3D Tech Insert Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "医疗科技3D透视叙事"
@@ -2070,7 +2070,7 @@
       "kind": "skill",
       "title": "喜剧角色首尾呼应演示",
       "subtitle": "视频广告",
-      "summary": "专为喜剧角色首尾呼应演示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "借由幽默逗趣的职场喜剧人物在首尾制造笑点，在中间丝滑嵌入软件核心操作与提效演示。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2088,7 +2088,7 @@
       },
       "titleZh": "喜剧角色首尾呼应演示",
       "titleEn": "Comedy Character Bookend Saas Demo",
-      "summaryZh": "专为喜剧角色首尾呼应演示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "借由幽默逗趣的职场喜剧人物在首尾制造笑点，在中间丝滑嵌入软件核心操作与提效演示。",
       "summaryEn": "Encodes the \"slovenly comedy character bookends a software demo reel\" creative pattern for long-form (~90–120s...",
       "isHot": false,
       "isNew": false,
@@ -2148,7 +2148,7 @@
       "kind": "skill",
       "title": "生活方式杂志画报广告",
       "subtitle": "图片和静态广告",
-      "summary": "专为生活方式杂志画报广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "复刻高端时尚杂志的图文排版与构图美学，以极简优雅的镜头节奏诠释品质生活态度。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2166,7 +2166,7 @@
       },
       "titleZh": "生活方式杂志画报广告",
       "titleEn": "Editorial Magazine Lifestyle Ad",
-      "summaryZh": "专为生活方式杂志画报广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "复刻高端时尚杂志的图文排版与构图美学，以极简优雅的镜头节奏诠释品质生活态度。",
       "summaryEn": "Encodes the editorial magazine creative pattern for lifestyle product advertising — full-bleed hero photo, ult...",
       "isHot": false,
       "isNew": false,
@@ -2187,7 +2187,7 @@
       "kind": "skill",
       "title": "奢侈品级高定登场",
       "subtitle": "产品展示",
-      "summary": "专为奢侈品级高定登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "聚焦高定单品独家工艺、稀缺材质与典雅轮廓，用沉稳慢调镜头展现无可替代的轻奢魅力。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -2205,7 +2205,7 @@
       },
       "titleZh": "奢侈品级高定登场",
       "titleEn": "Luxury Product Reveal",
-      "summaryZh": "专为奢侈品级高定登场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "聚焦高定单品独家工艺、稀缺材质与典雅轮廓，用沉稳慢调镜头展现无可替代的轻奢魅力。",
       "summaryEn": "A pure-product cinematic showcase pattern for premium physical goods — perfumes, jewelry, skincare, spirits, w...",
       "isHot": false,
       "isNew": false,
@@ -2224,9 +2224,9 @@
       "id": "sk-omx-product-photoshoot",
       "tab": "skills",
       "kind": "skill",
-      "title": "影棚级商业产品静物摄影",
+      "title": "电商产品影棚精修图",
       "subtitle": "产品展示",
-      "summary": "适用于the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
+      "summary": "AI 生成影棚白底包装图、高阶电商图册与生活场景图，多机位还原产品材质与光影细节。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -2242,9 +2242,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "影棚级商业产品静物摄影"
       },
-      "titleZh": "影棚级商业产品静物摄影",
+      "titleZh": "电商产品影棚精修图",
       "titleEn": "Product Photoshoot",
-      "summaryZh": "适用于the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
+      "summaryZh": "AI 生成影棚白底包装图、高阶电商图册与生活场景图，多机位还原产品材质与光影细节。",
       "summaryEn": "Use when the user asks for AI product photography — studio packshots, catalog and e-commerce shots, lifestyle...",
       "isHot": false,
       "isNew": false,
@@ -2252,7 +2252,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/product-photoshoot\n请运行 影棚级商业产品静物摄影 (Product Photoshoot) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/product-photoshoot\n请运行 电商产品影棚精修图 (Product Photoshoot) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "影棚级商业产品静物摄影"
@@ -2265,7 +2265,7 @@
       "kind": "skill",
       "title": "街头盲测对比实测广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为街头盲测对比实测广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "真实街头随机拦截路人进行盲测试用，以最真实的即兴评价与对比反应击穿受众防备心。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2283,7 +2283,7 @@
       },
       "titleZh": "街头盲测对比实测广告",
       "titleEn": "Street Interview Blind Test Ad",
-      "summaryZh": "专为街头盲测对比实测广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "真实街头随机拦截路人进行盲测试用，以最真实的即兴评价与对比反应击穿受众防备心。",
       "summaryEn": "Produces a 25–30 second street-interview / vox-pop video ad for TikTok and Instagram Reels. A host approaches...",
       "isHot": false,
       "isNew": false,
@@ -2302,9 +2302,9 @@
       "id": "sk-omx-ugc-mom-discovery-hook-kids-product",
       "tab": "skills",
       "kind": "skill",
-      "title": "宝妈育儿好物发现Hook",
+      "title": "宝妈育儿好物发现开头",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为宝妈育儿好物发现Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以真实宝妈第一视角展现带娃困境与好物解围，快速打动母婴核心消费人群。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2320,9 +2320,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "宝妈育儿好物发现Hook"
       },
-      "titleZh": "宝妈育儿好物发现Hook",
+      "titleZh": "宝妈育儿好物发现开头",
       "titleEn": "UGC Mom Discovery Hook Kids Product",
-      "summaryZh": "专为宝妈育儿好物发现Hook营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以真实宝妈第一视角展现带娃困境与好物解围，快速打动母婴核心消费人群。",
       "summaryEn": "A warm, relatable UGC-style vertical video pattern for children's products (toys, kits, games, educational ite...",
       "isHot": false,
       "isNew": false,
@@ -2330,7 +2330,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-mom-discovery-hook-kids-product\n请运行 宝妈育儿好物发现Hook (UGC Mom Discovery Hook Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-mom-discovery-hook-kids-product\n请运行 宝妈育儿好物发现开头 (UGC Mom Discovery Hook Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "宝妈育儿好物发现Hook"
@@ -2343,7 +2343,7 @@
       "kind": "skill",
       "title": "从质疑到真香心路历程",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为从质疑到真香心路历程营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "真实记录用户从最初的半信半疑到亲身体验后的惊喜安利，以真实心路历程打消顾虑。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2361,7 +2361,7 @@
       },
       "titleZh": "从质疑到真香心路历程",
       "titleEn": "UGC Skeptic Convert",
-      "summaryZh": "专为从质疑到真香心路历程营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "真实记录用户从最初的半信半疑到亲身体验后的惊喜安利，以真实心路历程打消顾虑。",
       "summaryEn": "Use this when producing a short-form (8–12s, 9:16) social ad for a premium DTC wellness, oral-care, skincare,...",
       "isHot": false,
       "isNew": false,
@@ -2382,7 +2382,7 @@
       "kind": "skill",
       "title": "双人爆笑短剧冲突开场",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为双人爆笑短剧冲突开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "双人快节奏爆笑对手戏开场，在冲突与反转中自然引出产品卖点，极富下饭神剧属性。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -2400,7 +2400,7 @@
       },
       "titleZh": "双人爆笑短剧冲突开场",
       "titleEn": "UGC Two Character Comedy Skit Hook",
-      "summaryZh": "专为双人爆笑短剧冲突开场营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "双人快节奏爆笑对手戏开场，在冲突与反转中自然引出产品卖点，极富下饭神剧属性。",
       "summaryEn": "A two-character UGC comedy skit format where an \"everyman\" character reacts to a relatable financial/lifestyle...",
       "isHot": false,
       "isNew": false,
@@ -2419,9 +2419,9 @@
       "id": "sk-omx-vox-paper-cutout-explainer",
       "tab": "skills",
       "kind": "skill",
-      "title": "Vox拼贴剪纸深度解说",
+      "title": "Vox 拼贴剪纸深度解说",
       "subtitle": "视频广告",
-      "summary": "当需要时使用本技能：the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
+      "summary": "采用新闻纪实拼贴与剪纸动效风格，深度拆解复杂概念与产品商业逻辑，极具知识获得感。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2437,9 +2437,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Vox拼贴剪纸深度解说"
       },
-      "titleZh": "Vox拼贴剪纸深度解说",
+      "titleZh": "Vox 拼贴剪纸深度解说",
       "titleEn": "Vox Paper Cutout Explainer",
-      "summaryZh": "当需要时使用本技能：the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
+      "summaryZh": "采用新闻纪实拼贴与剪纸动效风格，深度拆解复杂概念与产品商业逻辑，极具知识获得感。",
       "summaryEn": "Use this skill whenever the user asks for an explainer-video-style motion graphic, paper-cutout motion graphic...",
       "isHot": false,
       "isNew": false,
@@ -2447,7 +2447,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/vox-paper-cutout-explainer\n请运行 Vox拼贴剪纸深度解说 (Vox Paper Cutout Explainer) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/vox-paper-cutout-explainer\n请运行 Vox 拼贴剪纸深度解说 (Vox Paper Cutout Explainer) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Vox拼贴剪纸深度解说"
@@ -2848,9 +2848,9 @@
       "id": "sk-omx-editorial-luxury-ig-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "editorial奢华高端ig轮播卡片",
+      "title": "奢华高端杂志风轮播卡片",
       "subtitle": "图片和静态广告",
-      "summary": "当需要时使用本技能：the user asks for an Instagram 轮播卡片 (or any multi-slide static IG post) for a prem...",
+      "summary": "面向高客单奢侈品与时尚品牌，打造多页高端杂志风排版，突出材质质感与品牌格调。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2866,9 +2866,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
       },
-      "titleZh": "editorial奢华高端ig轮播卡片",
+      "titleZh": "奢华高端杂志风轮播卡片",
       "titleEn": "Editorial Luxury Ig Carousel",
-      "summaryZh": "当需要时使用本技能：the user asks for an Instagram 轮播卡片 (or any multi-slide static IG post) for a prem...",
+      "summaryZh": "面向高客单奢侈品与时尚品牌，打造多页高端杂志风排版，突出材质质感与品牌格调。",
       "summaryEn": "Use this skill whenever the user asks for an Instagram carousel (or any multi-slide static IG post) for a prem...",
       "isHot": false,
       "isNew": false,
@@ -2876,7 +2876,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/editorial-luxury-ig-carousel\n请运行 Editorial Luxury Ig Carousel (Editorial Luxury Ig Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/editorial-luxury-ig-carousel\n请运行 奢华高端杂志风轮播卡片 (Editorial Luxury Ig Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
@@ -2887,9 +2887,9 @@
       "id": "sk-omx-educational-deficiency-carousel",
       "tab": "skills",
       "kind": "skill",
-      "title": "educationaldeficiency轮播卡片",
+      "title": "认知差痛点科普轮播卡片",
       "subtitle": "图片和静态广告",
-      "summary": "专为educationaldeficiency轮播卡片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "通过直击认知盲区与痛点反思的严密视觉节奏，分步传递专业干货，实现高收藏与高转化。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -2905,9 +2905,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
       },
-      "titleZh": "educationaldeficiency轮播卡片",
+      "titleZh": "认知差痛点科普轮播卡片",
       "titleEn": "Educational Deficiency Carousel",
-      "summaryZh": "专为educationaldeficiency轮播卡片营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "通过直击认知盲区与痛点反思的严密视觉节奏，分步传递专业干货，实现高收藏与高转化。",
       "summaryEn": "Three-slide non-English educational Instagram carousel that teaches a single topic through a strict visual seq...",
       "isHot": false,
       "isNew": false,
@@ -2915,7 +2915,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/educational-deficiency-carousel\n请运行 Educational Deficiency Carousel (Educational Deficiency Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/educational-deficiency-carousel\n请运行 认知差痛点科普轮播卡片 (Educational Deficiency Carousel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
@@ -2926,9 +2926,9 @@
       "id": "sk-omx-fashion-silent-multishot-showcase",
       "tab": "skills",
       "kind": "skill",
-      "title": "时尚穿搭silentmultishotshowcase",
+      "title": "时尚穿搭多镜头卡点展示",
       "subtitle": "视频广告",
-      "summary": "专为时尚穿搭silentmultishotshowcase营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "快节奏多机位无声穿搭卡点展示，通过全身、局部与面料细节快速切换，打造沉浸式种草氛围。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2944,9 +2944,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
       },
-      "titleZh": "时尚穿搭silentmultishotshowcase",
+      "titleZh": "时尚穿搭多镜头卡点展示",
       "titleEn": "Fashion Silent Multishot Showcase",
-      "summaryZh": "专为时尚穿搭silentmultishotshowcase营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "快节奏多机位无声穿搭卡点展示，通过全身、局部与面料细节快速切换，打造沉浸式种草氛围。",
       "summaryEn": "A timeless, visually-led fashion ad pattern built on editorial silence: multiple locked-off camera angles of a...",
       "isHot": false,
       "isNew": false,
@@ -2954,7 +2954,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/fashion-silent-multishot-showcase\n请运行 Fashion Silent Multishot Showcase (Fashion Silent Multishot Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/fashion-silent-multishot-showcase\n请运行 时尚穿搭多镜头卡点展示 (Fashion Silent Multishot Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
@@ -2965,9 +2965,9 @@
       "id": "sk-omx-gulf-recruitment-cinematic-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "gulfrecruitment电影级arc",
+      "title": "海外招聘电影级人物叙事",
       "subtitle": "视频广告",
-      "summary": "专为gulfrecruitment电影级arc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以电影级镜头语言呈现海外高薪岗位的职场成长与生活蜕变，极大提升人才招聘信任感。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -2983,9 +2983,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
       },
-      "titleZh": "gulfrecruitment电影级arc",
+      "titleZh": "海外招聘电影级人物叙事",
       "titleEn": "Gulf Recruitment Cinematic Arc",
-      "summaryZh": "专为gulfrecruitment电影级arc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以电影级镜头语言呈现海外高薪岗位的职场成长与生活蜕变，极大提升人才招聘信任感。",
       "summaryEn": "Premium corporate ad pattern for overseas recruitment and visa-processing companies targeting jobseekers seeki...",
       "isHot": false,
       "isNew": false,
@@ -2993,7 +2993,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/gulf-recruitment-cinematic-arc\n请运行 Gulf Recruitment Cinematic Arc (Gulf Recruitment Cinematic Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/gulf-recruitment-cinematic-arc\n请运行 海外招聘电影级人物叙事 (Gulf Recruitment Cinematic Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
@@ -3043,9 +3043,9 @@
       "id": "sk-omx-hinglish-before-after-saas-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "hinglishbeforeafterSaaS软件黄金钩子",
+      "title": "跨境印式英语前后对比黄金钩子",
       "subtitle": "视频广告",
-      "summary": "专为hinglishbeforeafterSaaS软件黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "专为南亚与出海市场打造的痛点对比黄金开头，以戏剧化反差迅速抓住软件目标受众注意力。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3061,9 +3061,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
       },
-      "titleZh": "hinglishbeforeafterSaaS软件黄金钩子",
+      "titleZh": "跨境印式英语前后对比黄金钩子",
       "titleEn": "Hinglish Before After Saas Hook",
-      "summaryZh": "专为hinglishbeforeafterSaaS软件黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "专为南亚与出海市场打造的痛点对比黄金开头，以戏剧化反差迅速抓住软件目标受众注意力。",
       "summaryEn": "Encodes the \"Pehle vs Ab\" (Before vs After) creative pattern for Indian B2B/SaaS vertical video ads targeting...",
       "isHot": false,
       "isNew": false,
@@ -3071,7 +3071,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/hinglish-before-after-saas-hook\n请运行 Hinglish Before After Saas Hook (Hinglish Before After Saas Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/hinglish-before-after-saas-hook\n请运行 跨境印式英语前后对比黄金钩子 (Hinglish Before After Saas Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
@@ -3084,7 +3084,7 @@
       "kind": "skill",
       "title": "家政到家服务引流海报",
       "subtitle": "图片和静态广告",
-      "summary": "专为homeserviceleadgenstaticmeta营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "针对家庭保洁、家电清洗等本地生活服务，以清晰权益与痛点对比设计高点击率引流海报。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3102,7 +3102,7 @@
       },
       "titleZh": "家政到家服务引流海报",
       "titleEn": "Home Service Lead Gen",
-      "summaryZh": "专为homeserviceleadgenstaticmeta营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "针对家庭保洁、家电清洗等本地生活服务，以清晰权益与痛点对比设计高点击率引流海报。",
       "summaryEn": "A multi-wave static Meta feed ad creation pattern for B2B lead generation agencies targeting trade/home servic...",
       "isHot": false,
       "isNew": false,
@@ -3110,7 +3110,7 @@
       "coverFile": "skill-card-9.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/home-service-lead-gen-static-meta\n请运行 Home Service Lead Gen Static Meta (Home Service Lead Gen Static Meta) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/home-service-lead-gen-static-meta\n请运行 家政到家服务引流海报 (Home Service Lead Gen) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Home Service Lead Gen Static Meta"
@@ -3123,7 +3123,7 @@
       "kind": "skill",
       "title": "手绘插画世界地图构建",
       "subtitle": "图片和静态广告",
-      "summary": "专为illustratedworldmapbuilder营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "手绘复古与现代插画风格世界地图设计，生动标示全球业务版图、旅游路线与物流网络。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3141,7 +3141,7 @@
       },
       "titleZh": "手绘插画世界地图构建",
       "titleEn": "Illustrated World Map Builder",
-      "summaryZh": "专为illustratedworldmapbuilder营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "手绘复古与现代插画风格世界地图设计，生动标示全球业务版图、旅游路线与物流网络。",
       "summaryEn": "Builds an illustrated isometric brand-universe World Map — a 16:9 illustrated isometric campus map composited...",
       "isHot": false,
       "isNew": false,
@@ -3149,7 +3149,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/illustrated-world-map-builder\n请运行 Illustrated World Map Builder (Illustrated World Map Builder) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/illustrated-world-map-builder\n请运行 手绘插画世界地图构建 (Illustrated World Map Builder) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Illustrated World Map Builder"
@@ -3162,7 +3162,7 @@
       "kind": "skill",
       "title": "黑金质感巴士海报",
       "subtitle": "图片和静态广告",
-      "summary": "专为kannadabusposterdarkgold营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "黑金配色与沉稳排版的户外车身海报，极具视觉冲击力与大牌品质感，适合高曝光线下投放。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3180,7 +3180,7 @@
       },
       "titleZh": "黑金质感巴士海报",
       "titleEn": "Bus Poster Dark Gold",
-      "summaryZh": "专为kannadabusposterdarkgold营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "黑金配色与沉稳排版的户外车身海报，极具视觉冲击力与大牌品质感，适合高曝光线下投放。",
       "summaryEn": "Generates a premium A4 portrait bus advertisement poster for South Indian (Kannada-language) travel companies...",
       "isHot": false,
       "isNew": false,
@@ -3188,7 +3188,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/kannada-bus-poster-dark-gold\n请运行 Kannada Bus Poster Dark Gold (Kannada Bus Poster Dark Gold) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/kannada-bus-poster-dark-gold\n请运行 黑金质感巴士海报 (Bus Poster Dark Gold) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Kannada Bus Poster Dark Gold"
@@ -3201,7 +3201,7 @@
       "kind": "skill",
       "title": "产品机制原理解密展示",
       "subtitle": "产品展示",
-      "summary": "专为kitprodutomecanismorevealptbr营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "动态拆解与机理动画展示，透视产品内部构造与核心专利技术，以硬核实力促成购买转化。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3219,7 +3219,7 @@
       },
       "titleZh": "产品机制原理解密展示",
       "titleEn": "Product Mechanism Reveal",
-      "summaryZh": "专为kitprodutomecanismorevealptbr营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "动态拆解与机理动画展示，透视产品内部构造与核心专利技术，以硬核实力促成购买转化。",
       "summaryEn": "Encodes the \"mechanism reveal\" creative arc for Brazilian e-commerce kit products where the attachment, modula...",
       "isHot": false,
       "isNew": false,
@@ -3227,7 +3227,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/kit-produto-mecanismo-reveal-ptbr\n请运行 Kit Produto Mecanismo Reveal Ptbr (Kit Produto Mecanismo Reveal Ptbr) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/kit-produto-mecanismo-reveal-ptbr\n请运行 产品机制原理解密展示 (Product Mechanism Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Kit Produto Mecanismo Reveal Ptbr"
@@ -3240,7 +3240,7 @@
       "kind": "skill",
       "title": "高转化着陆页策划",
       "subtitle": "图片和静态广告",
-      "summary": "专为landingpagedrskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "针对高转化直接响应式着陆页，提供从首屏抓眼、信任背书到痛点催化与行动号召的全案策划。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3258,7 +3258,7 @@
       },
       "titleZh": "高转化着陆页策划",
       "titleEn": "Direct Response Landing Page",
-      "summaryZh": "专为landingpagedrskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "针对高转化直接响应式着陆页，提供从首屏抓眼、信任背书到痛点催化与行动号召的全案策划。",
       "summaryEn": "Generates a complete direct-response (DR) landing page image set for e-commerce products sold under the cash-o...",
       "isHot": false,
       "isNew": false,
@@ -3266,7 +3266,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/landing-page-dr\n请运行 Landing Page Dr (Landing Page Dr) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/landing-page-dr-skill\n请运行 高转化着陆页策划 (Direct Response Landing Page) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Landing Page Dr"
@@ -3277,9 +3277,9 @@
       "id": "sk-omx-latam-marketplace-mixed-ugc-skill",
       "tab": "skills",
       "kind": "skill",
-      "title": "拉美电商混合UGC视频",
+      "title": "拉美电商混合 UGC 种草短片",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为latammarketplacemixedUGCskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "融合本土化真人实拍与平台促销权益，适合美客多、Shopee 等拉美电商爆款带货。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -3295,9 +3295,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
       },
-      "titleZh": "拉美电商混合UGC视频",
+      "titleZh": "拉美电商混合 UGC 种草短片",
       "titleEn": "Marketplace Mixed UGC",
-      "summaryZh": "专为latammarketplacemixedUGCskill营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "融合本土化真人实拍与平台促销权益，适合美客多、Shopee 等拉美电商爆款带货。",
       "summaryEn": "Use for short-form vertical video ads (TikTok/Reels/Shorts, 20-40s, 9:16) for a Latin American multi-category...",
       "isHot": false,
       "isNew": false,
@@ -3305,7 +3305,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/latam-marketplace-mixed-ugc\n请运行 Latam Marketplace Mixed UGC (Latam Marketplace Mixed UGC) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/latam-marketplace-mixed-ugc-skill\n请运行 拉美电商混合 UGC 种草短片 (Marketplace Mixed UGC) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
@@ -3316,9 +3316,9 @@
       "id": "sk-omx-listing-cinematic-silent-spec-reveal",
       "tab": "skills",
       "kind": "skill",
-      "title": "listing电影级silentspecreveal",
+      "title": "大牌单品静默微距解密大片",
       "subtitle": "产品展示",
-      "summary": "专为listing电影级silentspecreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "专为豪车、游艇、腕表等高奢单品打造，以电影级微距与参数特写营造极致科技与品质感。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3334,9 +3334,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
       },
-      "titleZh": "listing电影级silentspecreveal",
+      "titleZh": "大牌单品静默微距解密大片",
       "titleEn": "Listing Cinematic Silent Spec Reveal",
-      "summaryZh": "专为listing电影级silentspecreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "专为豪车、游艇、腕表等高奢单品打造，以电影级微距与参数特写营造极致科技与品质感。",
       "summaryEn": "Transforms a product listing URL (aircraft, automotive, real estate, marine, or any luxury asset with high-res...",
       "isHot": false,
       "isNew": false,
@@ -3344,7 +3344,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/listing-cinematic-silent-spec-reveal\n请运行 Listing Cinematic Silent Spec Reveal (Listing Cinematic Silent Spec Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/listing-cinematic-silent-spec-reveal\n请运行 大牌单品静默微距解密大片 (Listing Cinematic Silent Spec Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
@@ -3357,7 +3357,7 @@
       "kind": "skill",
       "title": "本地服务批量静态图营销",
       "subtitle": "图片和静态广告",
-      "summary": "专为localservicestaticbatchblitz营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "面向本地生活与同城门店服务，批量生成多场景、多卖点的轻量静态营销图阵列。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3375,7 +3375,7 @@
       },
       "titleZh": "本地服务批量静态图营销",
       "titleEn": "Local Service Static Blitz",
-      "summaryZh": "专为localservicestaticbatchblitz营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "面向本地生活与同城门店服务，批量生成多场景、多卖点的轻量静态营销图阵列。",
       "summaryEn": "Produces a batch of 15 Meta-ready 9:16 static image ads for a local service business in a single parallel disp...",
       "isHot": false,
       "isNew": false,
@@ -3383,7 +3383,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/local-service-static-batch-blitz\n请运行 Local Service Static Batch Blitz (Local Service Static Batch Blitz) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/local-service-static-batch-blitz\n请运行 本地服务批量静态图营销 (Local Service Static Blitz) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Local Service Static Batch Blitz"
@@ -3394,9 +3394,9 @@
       "id": "sk-omx-luxury-brand-photo-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "奢华高端brandphotoreel",
+      "title": "奢华高端品牌图集短片",
       "subtitle": "产品展示",
-      "summary": "专为奢华高端brandphotoreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "将顶级品牌棚拍大片通过节奏转场编排为动态短视频，彰显优雅高级的品牌美学。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3412,9 +3412,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
       },
-      "titleZh": "奢华高端brandphotoreel",
+      "titleZh": "奢华高端品牌图集短片",
       "titleEn": "Luxury Brand Photo Reel",
-      "summaryZh": "专为奢华高端brandphotoreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "将顶级品牌棚拍大片通过节奏转场编排为动态短视频，彰显优雅高级的品牌美学。",
       "summaryEn": "Assembles a polished, music-driven social media video reel from 3–5 user-uploaded product or showroom photos....",
       "isHot": false,
       "isNew": false,
@@ -3422,7 +3422,7 @@
       "coverFile": "skill-card-9.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/luxury-brand-photo-reel\n请运行 Luxury Brand Photo Reel (Luxury Brand Photo Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/luxury-brand-photo-reel\n请运行 奢华高端品牌图集短片 (Luxury Brand Photo Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
@@ -3433,9 +3433,9 @@
       "id": "sk-omx-luxury-dark-carousel-5slide",
       "tab": "skills",
       "kind": "skill",
-      "title": "奢华高端dark轮播卡片5slide",
+      "title": "暗黑奢华风五页轮播卡片",
       "subtitle": "图片和静态广告",
-      "summary": "专为奢华高端dark轮播卡片5slide营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "采用黑金质感与极简暗黑排版，五页结构层层递进展示高端产品细节与品牌故事。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3451,9 +3451,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
       },
-      "titleZh": "奢华高端dark轮播卡片5slide",
+      "titleZh": "暗黑奢华风五页轮播卡片",
       "titleEn": "Luxury Dark Carousel 5slide",
-      "summaryZh": "专为奢华高端dark轮播卡片5slide营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "采用黑金质感与极简暗黑排版，五页结构层层递进展示高端产品细节与品牌故事。",
       "summaryEn": "Generates a 5-slide Instagram carousel (4:5, 1080×1350) in a luxury minimalist dark aesthetic — deep sage gree...",
       "isHot": false,
       "isNew": false,
@@ -3461,7 +3461,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/luxury-dark-carousel-5slide\n请运行 Luxury Dark Carousel 5slide (Luxury Dark Carousel 5slide) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/luxury-dark-carousel-5slide\n请运行 暗黑奢华风五页轮播卡片 (Luxury Dark Carousel 5slide) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
@@ -3472,9 +3472,9 @@
       "id": "sk-omx-luxury-editorial-app-reveal",
       "tab": "skills",
       "kind": "skill",
-      "title": "奢华高端editorialappreveal",
+      "title": "奢华杂志风应用揭秘短片",
       "subtitle": "视频广告",
-      "summary": "专为奢华高端editorialappreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "将高端移动端界面与奢华杂志排版相结合，优雅呈现产品的核心功能与尊贵体验。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3490,9 +3490,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
       },
-      "titleZh": "奢华高端editorialappreveal",
+      "titleZh": "奢华杂志风应用揭秘短片",
       "titleEn": "Luxury Editorial App Reveal",
-      "summaryZh": "专为奢华高端editorialappreveal营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "将高端移动端界面与奢华杂志排版相结合，优雅呈现产品的核心功能与尊贵体验。",
       "summaryEn": "Encodes a cinematic editorial luxury reveal pattern for premium consumer apps tied to life milestones — events...",
       "isHot": false,
       "isNew": false,
@@ -3500,7 +3500,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/luxury-editorial-app-reveal\n请运行 Luxury Editorial App Reveal (Luxury Editorial App Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/luxury-editorial-app-reveal\n请运行 奢华杂志风应用揭秘短片 (Luxury Editorial App Reveal) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
@@ -3550,9 +3550,9 @@
       "id": "sk-omx-motif-mirror-product-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "motifmirror商品reel",
+      "title": "镜像图腾商品质感短片",
       "subtitle": "产品展示",
-      "summary": "专为motifmirror商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "利用对称构图、镜像视觉与高级光影衬托商品几何美学，适用于首饰、香水等精致好物。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3568,9 +3568,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
       },
-      "titleZh": "motifmirror商品reel",
+      "titleZh": "镜像图腾商品质感短片",
       "titleEn": "Motif Mirror Product Reel",
-      "summaryZh": "专为motifmirror商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "利用对称构图、镜像视觉与高级光影衬托商品几何美学，适用于首饰、香水等精致好物。",
       "summaryEn": "Use this when a user uploads photos of custom-print / personalized giftable products (mugs, tumblers, candles,...",
       "isHot": false,
       "isNew": false,
@@ -3578,7 +3578,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/motif-mirror-product-reel\n请运行 Motif Mirror Product Reel (Motif Mirror Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/motif-mirror-product-reel\n请运行 镜像图腾商品质感短片 (Motif Mirror Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
@@ -3591,7 +3591,7 @@
       "kind": "skill",
       "title": "折纸微缩立体心路故事",
       "subtitle": "视频广告",
-      "summary": "专为paperfolddioramajourneyarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以纯手工质感的折纸与微缩立体沙盘作为视觉载体，讲述引人入胜的品牌成长与心路历程。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3609,7 +3609,7 @@
       },
       "titleZh": "折纸微缩立体心路故事",
       "titleEn": "Paperfold Diorama Journey Arc",
-      "summaryZh": "专为paperfolddioramajourneyarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以纯手工质感的折纸与微缩立体沙盘作为视觉载体，讲述引人入胜的品牌成长与心路历程。",
       "summaryEn": "A cinematic 9:16 video ad style built entirely around a paperfold/origami diorama aesthetic — every character,...",
       "isHot": false,
       "isNew": false,
@@ -3617,7 +3617,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/paperfold-diorama-journey-arc\n请运行 Paperfold Diorama Journey Arc (Paperfold Diorama Journey Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/paperfold-diorama-journey-arc\n请运行 折纸微缩立体心路故事 (Paperfold Diorama Journey Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Paperfold Diorama Journey Arc"
@@ -3628,9 +3628,9 @@
       "id": "sk-omx-pedestal-product-hero",
       "tab": "skills",
       "kind": "skill",
-      "title": "pedestal商品hero",
+      "title": "展台高光产品特写大片",
       "subtitle": "产品展示",
-      "summary": "专为pedestal商品hero营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "围绕精品展台机位做环绕与光影推拉，凸显产品工业设计与王牌旗舰地位。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3646,9 +3646,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
       },
-      "titleZh": "pedestal商品hero",
+      "titleZh": "展台高光产品特写大片",
       "titleEn": "Pedestal Product Hero",
-      "summaryZh": "专为pedestal商品hero营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "围绕精品展台机位做环绕与光影推拉，凸显产品工业设计与王牌旗舰地位。",
       "summaryEn": "Clean editorial pedestal-style product hero image ad — warm beige seamless backdrop, pale-maple round wood ped...",
       "isHot": false,
       "isNew": false,
@@ -3656,7 +3656,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/pedestal-product-hero\n请运行 Pedestal Product Hero (Pedestal Product Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/pedestal-product-hero\n请运行 展台高光产品特写大片 (Pedestal Product Hero) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
@@ -3669,7 +3669,7 @@
       "kind": "skill",
       "title": "真机手机模型样机展示",
       "subtitle": "产品展示",
-      "summary": "专为phonemockuppage营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "高清拟真手机样机与悬浮视差展示，完美还原应用在各种真实机型中的交互界面与动态效果。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3687,7 +3687,7 @@
       },
       "titleZh": "真机手机模型样机展示",
       "titleEn": "Phone Mockup Showcase",
-      "summaryZh": "专为phonemockuppage营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "高清拟真手机样机与悬浮视差展示，完美还原应用在各种真实机型中的交互界面与动态效果。",
       "summaryEn": "Turn raw app/dashboard screenshots into clean, phone-ready \"product page\" images and optional \"hand holding a...",
       "isHot": false,
       "isNew": false,
@@ -3695,7 +3695,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/phone-mockup-page\n请运行 Phone Mockup Page (Phone Mockup Page) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/phone-mockup-page\n请运行 真机手机模型样机展示 (Phone Mockup Showcase) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Phone Mockup Page"
@@ -3708,7 +3708,7 @@
       "kind": "skill",
       "title": "照片九宫格印刷传单",
       "subtitle": "图片和静态广告",
-      "summary": "专为pilprintflyerphotogrid营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "经典九宫格照片墙传单版式设计，密集陈列热卖爆款与活动单品，视觉冲击强且信息量充实。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3726,7 +3726,7 @@
       },
       "titleZh": "照片九宫格印刷传单",
       "titleEn": "Print Flyer Photo Grid",
-      "summaryZh": "专为pilprintflyerphotogrid营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "经典九宫格照片墙传单版式设计，密集陈列热卖爆款与活动单品，视觉冲击强且信息量充实。",
       "summaryEn": "Build a print-ready business flyer (8.5×11 or similar, 150 DPI, PNG) entirely in Python PIL — compositing user...",
       "isHot": false,
       "isNew": false,
@@ -3734,7 +3734,7 @@
       "coverFile": "skill-card-9.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/pil-print-flyer-photo-grid\n请运行 Pil Print Flyer Photo Grid (Pil Print Flyer Photo Grid) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/pil-print-flyer-photo-grid\n请运行 照片九宫格印刷传单 (Print Flyer Photo Grid) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Pil Print Flyer Photo Grid"
@@ -3745,9 +3745,9 @@
       "id": "sk-omx-playstore-ui-anchored-promo",
       "tab": "skills",
       "kind": "skill",
-      "title": "playstoreuianchored宣传推广",
+      "title": "应用商店界面锚定推广视频",
       "subtitle": "产品展示",
-      "summary": "当需要时使用本技能：the user wants Google Play or App Store listing visuals built from real app screenshot...",
+      "summary": "将真实软件截图无缝融入移动端交互动态，突出核心功能亮点，提升商店下载转化率。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3763,9 +3763,9 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
       },
-      "titleZh": "playstoreuianchored宣传推广",
+      "titleZh": "应用商店界面锚定推广视频",
       "titleEn": "Playstore Ui Anchored Promo",
-      "summaryZh": "当需要时使用本技能：the user wants Google Play or App Store listing visuals built from real app screenshot...",
+      "summaryZh": "将真实软件截图无缝融入移动端交互动态，突出核心功能亮点，提升商店下载转化率。",
       "summaryEn": "Use this skill whenever the user wants Google Play or App Store listing visuals built from real app screenshot...",
       "isHot": false,
       "isNew": false,
@@ -3773,7 +3773,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/playstore-ui-anchored-promo\n请运行 Playstore Ui Anchored Promo (Playstore Ui Anchored Promo) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/playstore-ui-anchored-promo\n请运行 应用商店界面锚定推广视频 (Playstore Ui Anchored Promo) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
@@ -3784,9 +3784,9 @@
       "id": "sk-omx-pregnancy-subscription-warmblush-static-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "pregnancysubscriptionwarmblushstatic广告",
+      "title": "孕期暖粉治愈风静态图广告",
       "subtitle": "图片和静态广告",
-      "summary": "专为pregnancysubscriptionwarmblushstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "采用温暖柔和的粉白色调与母婴情感共鸣排版，适合孕产订阅制服务与母婴好物引流。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3802,9 +3802,9 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
       },
-      "titleZh": "pregnancysubscriptionwarmblushstatic广告",
+      "titleZh": "孕期暖粉治愈风静态图广告",
       "titleEn": "Pregnancy Subscription Warmblush Static Ad",
-      "summaryZh": "专为pregnancysubscriptionwarmblushstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "采用温暖柔和的粉白色调与母婴情感共鸣排版，适合孕产订阅制服务与母婴好物引流。",
       "summaryEn": "Encodes a warm-blush, celebration-first creative pattern for life-milestone subscription-box and gift-box stat...",
       "isHot": false,
       "isNew": false,
@@ -3812,7 +3812,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/pregnancy-subscription-warmblush-static-ad\n请运行 Pregnancy Subscription Warmblush Static Ad (Pregnancy Subscription Warmblush Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/pregnancy-subscription-warmblush-static-ad\n请运行 孕期暖粉治愈风静态图广告 (Pregnancy Subscription Warmblush Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
@@ -3823,9 +3823,9 @@
       "id": "sk-omx-real-estate-multiformat-static-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "realestatemultiformatstatic广告",
+      "title": "房产多版式静态营销广告",
       "subtitle": "图片和静态广告",
-      "summary": "专为realestatemultiformatstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "包含户型亮点、实景航拍与优惠权益的专业地产海报矩阵，契合多平台精准获客。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3841,9 +3841,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
       },
-      "titleZh": "realestatemultiformatstatic广告",
+      "titleZh": "房产多版式静态营销广告",
       "titleEn": "Real Estate Multiformat Static Ad",
-      "summaryZh": "专为realestatemultiformatstatic广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "包含户型亮点、实景航拍与优惠权益的专业地产海报矩阵，契合多平台精准获客。",
       "summaryEn": "Produces a matched set of 4 branded static image ads (1:1, 4:5, 9:16, 1.91:1) for a single real estate listing...",
       "isHot": false,
       "isNew": false,
@@ -3851,7 +3851,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/real-estate-multiformat-static-ad\n请运行 Real Estate Multiformat Static Ad (Real Estate Multiformat Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/real-estate-multiformat-static-ad\n请运行 房产多版式静态营销广告 (Real Estate Multiformat Static Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
@@ -3862,9 +3862,9 @@
       "id": "sk-omx-refurb-tech-product-reel",
       "tab": "skills",
       "kind": "skill",
-      "title": "refurbtech商品reel",
+      "title": "翻新数码好物特写短片",
       "subtitle": "产品展示",
-      "summary": "专为refurbtech商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "真实还原数码产品验机成色、配件细节与高性价比优势，打消用户二手翻新顾虑。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3880,9 +3880,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
       },
-      "titleZh": "refurbtech商品reel",
+      "titleZh": "翻新数码好物特写短片",
       "titleEn": "Refurb Tech Product Reel",
-      "summaryZh": "专为refurbtech商品reel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "真实还原数码产品验机成色、配件细节与高性价比优势，打消用户二手翻新顾虑。",
       "summaryEn": "Generate a monthly 18-second text-led product Reels/Stories ad for the brand from any product page URL. Fetch...",
       "isHot": false,
       "isNew": false,
@@ -3890,7 +3890,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/refurb-tech-product-reel\n请运行 Refurb Tech Product Reel (Refurb Tech Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/refurb-tech-product-reel\n请运行 翻新数码好物特写短片 (Refurb Tech Product Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
@@ -3901,9 +3901,9 @@
       "id": "sk-omx-regulated-claims-static-ad-matrix",
       "tab": "skills",
       "kind": "skill",
-      "title": "regulatedclaimsstatic广告matrix",
+      "title": "合规功效矩阵静态图广告",
       "subtitle": "图片和静态广告",
-      "summary": "专为regulatedclaimsstatic广告matrix营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "严格遵循广告合规标准的功效说明图谱，科学严谨呈现成分数据与权威背书。",
       "category": "image-static",
       "tags": [
         "图片和静态广告"
@@ -3919,9 +3919,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
       },
-      "titleZh": "regulatedclaimsstatic广告matrix",
+      "titleZh": "合规功效矩阵静态图广告",
       "titleEn": "Regulated Claims Static Ad Matrix",
-      "summaryZh": "专为regulatedclaimsstatic广告matrix营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "严格遵循广告合规标准的功效说明图谱，科学严谨呈现成分数据与权威背书。",
       "summaryEn": "Encodes the large-scale static image ad production pattern for regulated services that must carry a mandated l...",
       "isHot": false,
       "isNew": false,
@@ -3929,7 +3929,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/regulated-claims-static-ad-matrix\n请运行 Regulated Claims Static Ad Matrix (Regulated Claims Static Ad Matrix) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/regulated-claims-static-ad-matrix\n请运行 合规功效矩阵静态图广告 (Regulated Claims Static Ad Matrix) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
@@ -3940,9 +3940,9 @@
       "id": "sk-omx-retail-multi-variant-carousel-sale",
       "tab": "skills",
       "kind": "skill",
-      "title": "retailmultivariant轮播卡片sale",
+      "title": "多规格零售促销轮播卡片",
       "subtitle": "产品展示",
-      "summary": "专为retailmultivariant轮播卡片sale营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "适用于多色系、多尺码零售商品的大促轮播，清晰展示款式矩阵与限时立减优惠。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -3958,9 +3958,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
       },
-      "titleZh": "retailmultivariant轮播卡片sale",
+      "titleZh": "多规格零售促销轮播卡片",
       "titleEn": "Retail Multi Variant Carousel Sale",
-      "summaryZh": "专为retailmultivariant轮播卡片sale营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "适用于多色系、多尺码零售商品的大促轮播，清晰展示款式矩阵与限时立减优惠。",
       "summaryEn": "A Facebook carousel ad pattern for retail/appliance products sold in multiple colour or configuration variants...",
       "isHot": false,
       "isNew": false,
@@ -3968,7 +3968,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/retail-multi-variant-carousel-sale\n请运行 Retail Multi Variant Carousel Sale (Retail Multi Variant Carousel Sale) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/retail-multi-variant-carousel-sale\n请运行 多规格零售促销轮播卡片 (Retail Multi Variant Carousel Sale) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
@@ -3981,7 +3981,7 @@
       "kind": "skill",
       "title": "营收逆袭蜕变故事弧",
       "subtitle": "视频广告",
-      "summary": "专为revenuetransformationarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以跌宕起伏的逆袭故事为主线，完整呈现从业绩低谷到营收爆发的转型历程，震撼吸睛。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -3999,7 +3999,7 @@
       },
       "titleZh": "营收逆袭蜕变故事弧",
       "titleEn": "Revenue Transformation Arc",
-      "summaryZh": "专为revenuetransformationarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以跌宕起伏的逆袭故事为主线，完整呈现从业绩低谷到营收爆发的转型历程，震撼吸睛。",
       "summaryEn": "Encodes a dark-grid motion-graphic ad pattern for local-business and food-service brands: a compressed before/...",
       "isHot": false,
       "isNew": false,
@@ -4007,7 +4007,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/revenue-transformation-arc\n请运行 Revenue Transformation Arc (Revenue Transformation Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/revenue-transformation-arc\n请运行 营收逆袭蜕变故事弧 (Revenue Transformation Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Revenue Transformation Arc"
@@ -4018,9 +4018,9 @@
       "id": "sk-omx-spanish-ugc-community-spokesperson-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "spanishUGCcommunityspokesperson黄金钩子",
+      "title": "西语 UGC 社区发言人黄金开头",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为spanishUGCcommunityspokesperson黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "本土母语创作者面对镜头热情自述，以社区熟人视角在开局3秒建立极强信任背书。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4036,9 +4036,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
       },
-      "titleZh": "spanishUGCcommunityspokesperson黄金钩子",
+      "titleZh": "西语 UGC 社区发言人黄金开头",
       "titleEn": "Spanish UGC Community Spokesperson Hook",
-      "summaryZh": "专为spanishUGCcommunityspokesperson黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "本土母语创作者面对镜头热情自述，以社区熟人视角在开局3秒建立极强信任背书。",
       "summaryEn": "Encodes a Spanish-language UGC ad pattern built around a warm, trusted community-insider spokesperson — a mid-...",
       "isHot": false,
       "isNew": false,
@@ -4046,7 +4046,7 @@
       "coverFile": "skill-card-9.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/spanish-ugc-community-spokesperson-hook\n请运行 Spanish UGC Community Spokesperson Hook (Spanish UGC Community Spokesperson Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/spanish-ugc-community-spokesperson-hook\n请运行 西语 UGC 社区发言人黄金开头 (Spanish UGC Community Spokesperson Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
@@ -4059,7 +4059,7 @@
       "kind": "skill",
       "title": "双屏分屏对话短剧",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为splitscreendialogue营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "双屏或多屏分屏对话形式，跨越时空展现角色交流或方案对照，节奏紧凑张力十足。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4077,7 +4077,7 @@
       },
       "titleZh": "双屏分屏对话短剧",
       "titleEn": "Split Screen Dialogue",
-      "summaryZh": "专为splitscreendialogue营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "双屏或多屏分屏对话形式，跨越时空展现角色交流或方案对照，节奏紧凑张力十足。",
       "summaryEn": "Convert any two-person dialog script (one female, one male — coach/student, girlfriend/boyfriend, expert/skept...",
       "isHot": false,
       "isNew": false,
@@ -4085,7 +4085,7 @@
       "coverFile": "skill-card-10.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/split-screen-dialogue\n请运行 Split Screen Dialogue (Split Screen Dialogue) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/split-screen-dialogue\n请运行 双屏分屏对话短剧 (Split Screen Dialogue) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Split Screen Dialogue"
@@ -4098,7 +4098,7 @@
       "kind": "skill",
       "title": "双吉祥物爆笑喜剧广告",
       "subtitle": "视频广告",
-      "summary": "专为twomascotcomedycommercial营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "一对性格迥异的品牌吉祥物逗趣互捧，在捧逗之间寓教于乐地输出产品特性，亲和力拉满。",
       "category": "video-ads",
       "tags": [
         "视频广告"
@@ -4116,7 +4116,7 @@
       },
       "titleZh": "双吉祥物爆笑喜剧广告",
       "titleEn": "Two Mascot Comedy Commercial",
-      "summaryZh": "专为twomascotcomedycommercial营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "一对性格迥异的品牌吉祥物逗趣互捧，在捧逗之间寓教于乐地输出产品特性，亲和力拉满。",
       "summaryEn": "Produces 16:9 broadcast-format animated comedy commercials starring a two-character animated mascot duo: Chara...",
       "isHot": false,
       "isNew": false,
@@ -4124,7 +4124,7 @@
       "coverFile": "skill-card-2.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/two-mascot-comedy-commercial\n请运行 Two Mascot Comedy Commercial (Two Mascot Comedy Commercial) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/two-mascot-comedy-commercial\n请运行 双吉祥物爆笑喜剧广告 (Two Mascot Comedy Commercial) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Two Mascot Comedy Commercial"
@@ -4137,7 +4137,7 @@
       "kind": "skill",
       "title": "专家干货数字条列短视频",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGCadvisornumberedpointsreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "行业顾问或领域达人以条理分明的数字序号分步输出避坑干货，节奏明晰。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4155,7 +4155,7 @@
       },
       "titleZh": "专家干货数字条列短视频",
       "titleEn": "Advisor Numbered Points Reel",
-      "summaryZh": "专为UGCadvisornumberedpointsreel营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "行业顾问或领域达人以条理分明的数字序号分步输出避坑干货，节奏明晰。",
       "summaryEn": "Produces a ~60-second UGC-style vertical short-form reel where a single on-camera advisor persona walks throug...",
       "isHot": false,
       "isNew": false,
@@ -4163,7 +4163,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-advisor-numbered-points-reel\n请运行 UGC Advisor Numbered Points Reel (UGC Advisor Numbered Points Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-advisor-numbered-points-reel\n请运行 专家干货数字条列短视频 (Advisor Numbered Points Reel) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC Advisor Numbered Points Reel"
@@ -4174,9 +4174,9 @@
       "id": "sk-omx-ugc-diaspora-direct-address-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGCdiasporadirectaddress黄金钩子",
+      "title": "海外同胞第一人称共情开头",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGCdiasporadirectaddress黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "面向海外华人及特定族群，以乡情与生活痛点直面镜头倾诉，开篇直击目标人群。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4192,9 +4192,9 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
       },
-      "titleZh": "UGCdiasporadirectaddress黄金钩子",
+      "titleZh": "海外同胞第一人称共情开头",
       "titleEn": "UGC Diaspora Direct Address Hook",
-      "summaryZh": "专为UGCdiasporadirectaddress黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "面向海外华人及特定族群，以乡情与生活痛点直面镜头倾诉，开篇直击目标人群。",
       "summaryEn": "A UGC-style short-form video ad pattern targeting a diaspora or expat community (a tightly-knit immigrant audi...",
       "isHot": false,
       "isNew": false,
@@ -4202,7 +4202,7 @@
       "coverFile": "skill-card-4.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-diaspora-direct-address-hook\n请运行 UGC Diaspora Direct Address Hook (UGC Diaspora Direct Address Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-diaspora-direct-address-hook\n请运行 海外同胞第一人称共情开头 (UGC Diaspora Direct Address Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
@@ -4213,9 +4213,9 @@
       "id": "sk-omx-ugc-female-creator-product-confession-arc",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGCfemalecreator商品confessionarc",
+      "title": "女性创作者真情倾诉种草短片",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGCfemalecreator商品confessionarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以女性博主闺蜜式视角分享真实使用心得与心路历程，适用于护肤、彩妆与健康好物。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4231,9 +4231,9 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
       },
-      "titleZh": "UGCfemalecreator商品confessionarc",
+      "titleZh": "女性创作者真情倾诉种草短片",
       "titleEn": "UGC Female Creator Product Confession Arc",
-      "summaryZh": "专为UGCfemalecreator商品confessionarc营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以女性博主闺蜜式视角分享真实使用心得与心路历程，适用于护肤、彩妆与健康好物。",
       "summaryEn": "A 57–62 second UGC talking-head ad pattern anchored by an emotional pain-point confession hook (no product vis...",
       "isHot": false,
       "isNew": false,
@@ -4241,7 +4241,7 @@
       "coverFile": "skill-card-5.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-female-creator-product-confession-arc\n请运行 UGC Female Creator Product Confession Arc (UGC Female Creator Product Confession Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-female-creator-product-confession-arc\n请运行 女性创作者真情倾诉种草短片 (UGC Female Creator Product Confession Arc) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
@@ -4252,9 +4252,9 @@
       "id": "sk-omx-ugc-homeowner-testimonial-problem-payoff",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGChomeowner用户好评problempayoff",
+      "title": "真实屋主口碑痛点反转视频",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGChomeowner用户好评problempayoff营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "居家改造与智能家居真实屋主口碑实录，展示从困扰混乱到惬意舒适的戏剧化反转。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4270,9 +4270,9 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
       },
-      "titleZh": "UGChomeowner用户好评problempayoff",
+      "titleZh": "真实屋主口碑痛点反转视频",
       "titleEn": "UGC Homeowner Testimonial Problem Payoff",
-      "summaryZh": "专为UGChomeowner用户好评problempayoff营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "居家改造与智能家居真实屋主口碑实录，展示从困扰混乱到惬意舒适的戏剧化反转。",
       "summaryEn": "A UGC-style direct-to-camera testimonial arc built around a relatable homeowner persona who opens with a visce...",
       "isHot": false,
       "isNew": false,
@@ -4280,7 +4280,7 @@
       "coverFile": "skill-card-6.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-homeowner-testimonial-problem-payoff\n请运行 UGC Homeowner Testimonial Problem Payoff (UGC Homeowner Testimonial Problem Payoff) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-homeowner-testimonial-problem-payoff\n请运行 真实屋主口碑痛点反转视频 (UGC Homeowner Testimonial Problem Payoff) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
@@ -4291,9 +4291,9 @@
       "id": "sk-omx-ugc-personal-reveal-ad",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGCpersonalreveal广告",
+      "title": "个人自述蜕变揭秘视频广告",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGCpersonalreveal广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "以主人公自述蜕变历程为主线，层层揭示改变人生的秘密好物，高共鸣强种草。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4309,9 +4309,9 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
       },
-      "titleZh": "UGCpersonalreveal广告",
+      "titleZh": "个人自述蜕变揭秘视频广告",
       "titleEn": "UGC Personal Reveal Ad",
-      "summaryZh": "专为UGCpersonalreveal广告营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "以主人公自述蜕变历程为主线，层层揭示改变人生的秘密好物，高共鸣强种草。",
       "summaryEn": "Modular UGC-style video ad generator with full creative governance. Generates short-form social ads (6s–45s) i...",
       "isHot": false,
       "isNew": false,
@@ -4319,7 +4319,7 @@
       "coverFile": "skill-card-7.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-personal-reveal-ad\n请运行 UGC Personal Reveal Ad (UGC Personal Reveal Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-personal-reveal-ad\n请运行 个人自述蜕变揭秘视频广告 (UGC Personal Reveal Ad) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
@@ -4330,9 +4330,9 @@
       "id": "sk-omx-ugc-street-interview-nightlife-hook",
       "tab": "skills",
       "kind": "skill",
-      "title": "UGCstreetinterviewnightlife黄金钩子",
+      "title": "街头夜生活采访黄金开头",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为UGCstreetinterviewnightlife黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "抓拍潮流街头夜生活真实路人随机问答，自带极高好奇心与娱乐属性，秒吸眼球。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4348,9 +4348,9 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
       },
-      "titleZh": "UGCstreetinterviewnightlife黄金钩子",
+      "titleZh": "街头夜生活采访黄金开头",
       "titleEn": "UGC Street Interview Nightlife Hook",
-      "summaryZh": "专为UGCstreetinterviewnightlife黄金钩子营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "抓拍潮流街头夜生活真实路人随机问答，自带极高好奇心与娱乐属性，秒吸眼球。",
       "summaryEn": "A UGC street-interview ad pattern set at a nightlife venue entrance (nightclub, bar, concert hall) where an ey...",
       "isHot": false,
       "isNew": false,
@@ -4358,7 +4358,7 @@
       "coverFile": "skill-card-9.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/ugc-street-interview-nightlife-hook\n请运行 UGC Street Interview Nightlife Hook (UGC Street Interview Nightlife Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/ugc-street-interview-nightlife-hook\n请运行 街头夜生活采访黄金开头 (UGC Street Interview Nightlife Hook) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
@@ -4410,7 +4410,7 @@
       "kind": "skill",
       "title": "纯白背景卖点标注展示",
       "subtitle": "产品展示",
-      "summary": "专为纯白背景卖点标注展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "极简纯白无杂质背景与悬浮发光引线卖点标注，让用户的视觉焦点聚焦于产品本身。",
       "category": "product-showcase",
       "tags": [
         "产品展示"
@@ -4428,7 +4428,7 @@
       },
       "titleZh": "纯白背景卖点标注展示",
       "titleEn": "White Bg Feature Callout Product Overview",
-      "summaryZh": "专为纯白背景卖点标注展示营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "极简纯白无杂质背景与悬浮发光引线卖点标注，让用户的视觉焦点聚焦于产品本身。",
       "summaryEn": "Produces a silent, music-only 16:9 product overview video in a clean white-studio style — pure white backgroun...",
       "isHot": false,
       "isNew": false,
@@ -4447,9 +4447,9 @@
       "id": "sk-omx-wise-elder-ugc-kids-product",
       "tab": "skills",
       "kind": "skill",
-      "title": "wiseelderUGCkids商品",
+      "title": "长辈权威视角儿童好物种草",
       "subtitle": "UGC 和用户评价",
-      "summary": "专为wiseelderUGCkids商品营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summary": "祖父母等长辈视角慈爱推荐儿童益智玩具与成长用品，传递满满的关爱与安全可靠感。",
       "category": "ugc-testimonial",
       "tags": [
         "UGC 和用户评价"
@@ -4465,9 +4465,9 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
       },
-      "titleZh": "wiseelderUGCkids商品",
+      "titleZh": "长辈权威视角儿童好物种草",
       "titleEn": "Wise Elder UGC Kids Product",
-      "summaryZh": "专为wiseelderUGCkids商品营销场景打造，提供高效的脚本分镜策划、受众心理洞察与爆款创意落地方案。",
+      "summaryZh": "祖父母等长辈视角慈爱推荐儿童益智玩具与成长用品，传递满满的关爱与安全可靠感。",
       "summaryEn": "Encodes a warm, trust-forward \"wise-elder peer\" UGC creative pattern for children's product ads: a grandmother...",
       "isHot": false,
       "isNew": false,
@@ -4475,7 +4475,7 @@
       "coverFile": "skill-card-3.webp",
       "badge": "",
       "installFlow": "session-guide",
-      "sessionPrefill": "/wise-elder-ugc-kids-product\n请运行 Wise Elder UGC Kids Product (Wise Elder UGC Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
+      "sessionPrefill": "/wise-elder-ugc-kids-product\n请运行 长辈权威视角儿童好物种草 (Wise Elder UGC Kids Product) 技能，为我的产品/视频制作专业营销脚本与分镜方案。",
       "homeCover": {
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
