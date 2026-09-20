@@ -182,14 +182,13 @@ export async function loadInspirationsAtomic(params) {
     posted_after = '',
     posted_before = '',
   } = params
-  const filterArgs = {
+  const sharedArgs = {
     q: q.trim() || undefined,
     platform: platform ? platform.trim() : undefined,
     type: type || undefined,
     sort: sort || undefined,
     is_favorite: favorite === '1' ? '1' : undefined,
     country: country.trim() || undefined,
-    category: category.trim() || undefined,
     duration_min: duration_min !== '' && duration_min != null ? duration_min : undefined,
     duration_max: duration_max !== '' && duration_max != null ? duration_max : undefined,
     views_min: views_min !== '' && views_min != null ? views_min : undefined,
@@ -201,9 +200,12 @@ export async function loadInspirationsAtomic(params) {
     page_size: pageSize,
     projection: 'lean',
   }
+  // Cloud free-text categories are not tags on local rows. Never forward
+  // `category` to `/local` — including the local half of tab=all.
+  const cloudArgs = { ...sharedArgs, category: category.trim() || undefined }
 
   if (tab === 'local') {
-    const res = await listLocalInspirations(filterArgs)
+    const res = await listLocalInspirations(sharedArgs)
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
     const items = (res.body?.data?.items || []).map((it) => ({ ...it, is_local: true }))
     const total = Number(res.body?.data?.total) || items.length
@@ -212,7 +214,7 @@ export async function loadInspirationsAtomic(params) {
   }
 
   if (tab === 'public') {
-    const res = await listInspirationsGuarded(filterArgs)
+    const res = await listInspirationsGuarded(cloudArgs)
     if (res.status === 401) return { items: [], total: 0, hasMore: false, phase: 'need-login' }
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
     const items = (res.body?.data?.items || []).map((it) => ({ ...it, is_local: false }))
@@ -222,8 +224,8 @@ export async function loadInspirationsAtomic(params) {
 
   // tab === 'all': Fetch both simultaneously and merge atomically
   const [localOutcome, pubOutcome] = await Promise.allSettled([
-    listLocalInspirations(filterArgs),
-    listInspirationsGuarded(filterArgs),
+    listLocalInspirations(sharedArgs),
+    listInspirationsGuarded(cloudArgs),
   ])
 
   let items = []
@@ -334,6 +336,18 @@ export const listTags = quotaGuard(
   () => inspirationRequest('/omnimux/inspiration/tags'),
   { capability: 'inspiration' },
 )
+
+/**
+ * Cloud catalogue categories aggregated by the hub (Issue #2497).
+ *
+ * The hub walks the catalogue and answers `{ data: [{ name, count }] }`;
+ * callers degrade to the fixed 全部-only option set on any failure, so this
+ * call is intentionally left unguarded — a category list must never pop a
+ * login or quota gate over a filter dropdown.
+ */
+export function listCategories() {
+  return inspirationRequest('/omnimux/inspiration/categories')
+}
 
 /**
  * Host-rewritten media path for <img src>. Absolute http(s) URLs pass through.

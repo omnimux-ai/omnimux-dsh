@@ -7,6 +7,7 @@ import {
   hostMediaSrc,
   listInspirations,
   listLocalInspirations,
+  loadInspirationsAtomic,
   quotaGuard,
   publishableMediaAddress,
   shareDeconstructionOf,
@@ -275,6 +276,38 @@ describe('listInspirations query params', () => {
 
       await listLocalInspirations({ platform: 'tiktok' })
       assert.equal(calls.at(-1), '/omnimux/inspiration/local?platform=tiktok')
+
+      calls.length = 0
+      await loadInspirationsAtomic({ tab: 'local', category: 'digital', sort: 'new' })
+      assert.ok(calls.length > 0, 'the local tab must still query the local library')
+      assert.equal(
+        calls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `the local tab must not forward a leftover cloud category: ${JSON.stringify(calls)}`,
+      )
+
+      calls.length = 0
+      await loadInspirationsAtomic({ tab: 'public', category: 'digital', sort: 'hot' })
+      assert.ok(
+        calls.some((url) => url.includes('category=digital')),
+        `the 云端 tab must still forward category: ${JSON.stringify(calls)}`,
+      )
+
+      calls.length = 0
+      await loadInspirationsAtomic({ tab: 'all', category: 'digital', sort: 'hot' })
+      const localUrls = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
+      const cloudUrls = calls.filter((url) => url.startsWith('/omnimux/inspiration?') || url === '/omnimux/inspiration')
+      assert.ok(localUrls.length > 0, `tab=all must still query the local library: ${JSON.stringify(calls)}`)
+      assert.ok(cloudUrls.length > 0, `tab=all must still query the cloud library: ${JSON.stringify(calls)}`)
+      assert.equal(
+        localUrls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `tab=all local half must not forward category: ${JSON.stringify(localUrls)}`,
+      )
+      assert.ok(
+        cloudUrls.some((url) => url.includes('category=digital')),
+        `tab=all cloud half must still forward category: ${JSON.stringify(cloudUrls)}`,
+      )
     } finally {
       globalThis.fetch = originalFetch
     }

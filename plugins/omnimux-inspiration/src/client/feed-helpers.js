@@ -170,6 +170,37 @@ export function buildPlatformFilterOptions(availablePlatforms, translate) {
   ]
 }
 
+/**
+ * Category dropdown options for the cloud catalogue (Issue #2497).
+ *
+ * The first entry is the fixed 全部 reset; the rest are the catalogue's own
+ * categories as aggregated by the hub — never a hardcoded list, because the
+ * cloud's `category` field is free text. The current selection is appended
+ * when the fresh list no longer carries it, so the trigger never shows a
+ * blank value after the options refresh underneath it.
+ * @param {unknown} categories hub rows (`[{ name, count }]`) or bare names
+ * @param {(key: string) => string} translate
+ * @param {string} [selectedValue] currently selected category value
+ * @returns {Array<{ value: string, label: string }>}
+ */
+export function buildCategoryFilterOptions(categories, translate, selectedValue = '') {
+  const options = [{ value: '', label: translate('category.all') }]
+  const seen = new Set([''])
+  for (const entry of Array.isArray(categories) ? categories : []) {
+    const name = typeof entry === 'string'
+      ? entry.trim()
+      : String(/** @type {Record<string, unknown>} */ (entry)?.name ?? '').trim()
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    options.push({ value: name, label: name })
+  }
+  const selected = String(selectedValue || '').trim()
+  if (selected && !seen.has(selected)) {
+    options.push({ value: selected, label: selected })
+  }
+  return options
+}
+
 export function updateItemInList(items, updatedItem) {
   if (!updatedItem) return items || []
   return (items || []).map((it) => (it.id === updatedItem.id ? updatedItem : it))

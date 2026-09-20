@@ -1,0 +1,51 @@
+{
+  "task": "inspiration-dynamic-category-filter",
+  "issue": 2497,
+  "startedAt": "2026-09-20T16:47:09.970Z",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "category-trigger-mounted",
+      "pass": true,
+      "dimensions": {
+        "width": 112,
+        "height": 32
+      }
+    },
+    {
+      "name": "dynamic-category-options",
+      "pass": true,
+      "options": [
+        "全部",
+        "digital",
+        "Health & Wellness",
+        "女装和内衣"
+      ]
+    },
+    {
+      "name": "screenshot-saved",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-dynamic-category-filter/docs/evidence/inspiration-dynamic-category-filter-verified.png"
+    },
+    {
+      "name": "degrade-on-aggregate-failure",
+      "pass": true,
+      "options": [
+        "全部"
+      ]
+    },
+    {
+      "name": "local-tab-drops-cloud-category",
+      "pass": true,
+      "options": [
+        "全部"
+      ],
+      "localQueries": [
+        "?sort=hot&page=1&page_size=20&projection=lean",
+        "?sort=new&page=1&page_size=20&projection=lean"
+      ]
+    }
+  ],
+  "errors": [],
+  "completedAt": "2026-09-20T16:47:12.711Z"
+}

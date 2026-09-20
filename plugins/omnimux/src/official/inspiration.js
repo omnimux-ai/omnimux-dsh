@@ -111,6 +111,256 @@ export function listTags(client) {
   return client.withPat(`${API}/tags`)
 }
 
+/** Category aggregation pulls the catalogue in pages of this size. */
+const CATEGORY_PAGE_SIZE = 100
+/** Pages fetched in parallel while aggregating categories. */
+const CATEGORY_CONCURRENCY = 5
+/** Aggregated categories are served from memory for this long (SWR). */
+const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000
+/**
+ * Hard cap on catalogue pages walked for one aggregate.
+ * `page_size=100` × 50 ≈ 5000 rows; a poisoned `total` must not schedule more.
+ */
+export const CATEGORY_MAX_PAGES = 50
+/**
+ * Whole-walk deadline. A timeout fails the walk so the route can
+ * stale-while-revalidate degrade to `200 { data: [] }`.
+ */
+export const CATEGORY_TIMEOUT_MS = 15_000
+
+/**
+ * Run `worker` over every item with at most `limit` calls in flight.
+ * @template T, R
+ * @param {T[]} items
+ * @param {number} limit
+ * @param {(item: T, index: number) => Promise<R>} worker
+ * @returns {Promise<R[]>}
+ */
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length)
+  let cursor = 0
+  const lanes = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor
+      cursor += 1
+      results[index] = await worker(items[index], index)
+    }
+  })
+  await Promise.all(lanes)
+  return results
+}
+
+/**
+ * Trimmed category of a catalogue row; `''` when it carries none. Empty and
+ * missing categories are dropped from the aggregate: an unnamed bucket is
+ * useless as a dropdown option, and the dropdown's 全部 entry already covers
+ * the unfiltered view.
+ * @param {unknown} item
+ */
+function categoryNameOf(item) {
+  if (!item || typeof item !== 'object') return ''
+  const name = /** @type {Record<string, unknown>} */ (item).category
+  return typeof name === 'string' ? name.trim() : ''
+}
+
+/** @param {Map<string, number>} counts */
+function sortedCategoryRows(counts) {
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+}
+
+/** Walk promise attached to a deadline-raced collect so cache inflight can wait it out. */
+const CATEGORY_WALK_SETTLE = Symbol('categoryWalkSettle')
+
+/**
+ * Settle `work` or reject when `timeoutMs` elapses. The loser is ignored so a
+ * late walk rejection cannot surface as unhandled; in-flight `withPat` calls
+ * are not aborted (the official client has no AbortController). `onTimeout`
+ * lets the walk stop scheduling further batches.
+ * @param {Promise<T>} work
+ * @param {number} timeoutMs
+ * @param {string} message
+ * @param {() => void} [onTimeout]
+ * @returns {Promise<T>}
+ * @template T
+ */
+function withDeadline(work, timeoutMs, message, onTimeout) {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      onTimeout?.()
+      reject(new Error(message))
+    }, timeoutMs)
+    work.then(
+      (value) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
+/**
+ * Page through the cloud catalogue and aggregate its `category` field into
+ * `{ name, count }` rows, sorted by count desc (name asc on ties).
+ *
+ * The cloud has no category aggregation endpoint, so this walks the list with
+ * `page_size=100` and `concurrency` pages in flight. Bounds:
+ * - at most `maxPages` (default 50);
+ * - a page shorter than `pageSize` ends the walk;
+ * - a `timeoutMs` (default 15s) deadline fails the caller so they can
+ *   SWR-degrade; the walk stops scheduling further batches (`withPat` cannot
+ *   abort, so the current batch still settles);
+ * - only a page-1 failure fails the walk; a later short page or later page
+ *   failure ends the walk after the current batch is absorbed.
+ *
+ * Callers wrap this in a cache; it is too heavy to run per request.
+ * @param {{ withPat: Function }} client
+ * @param {{ pageSize?: number, concurrency?: number, maxPages?: number, timeoutMs?: number }} [opts]
+ * @returns {Promise<Array<{ name: string, count: number }>>}
+ */
+export function collectCategoryCounts(client, opts = {}) {
+  const pageSize = Math.max(1, Number(opts.pageSize) || CATEGORY_PAGE_SIZE)
+  const concurrency = Math.max(1, Number(opts.concurrency) || CATEGORY_CONCURRENCY)
+  const maxPages = Math.max(1, Number(opts.maxPages) || CATEGORY_MAX_PAGES)
+  const timeoutMs = Math.max(1, Number(opts.timeoutMs) || CATEGORY_TIMEOUT_MS)
+
+  let aborted = false
+  const walk = async () => {
+    /** @type {Map<string, number>} */
+    const counts = new Map()
+    const absorb = (payload) => {
+      const items = responseData(payload).items
+      if (!Array.isArray(items)) return 0
+      for (const item of items) {
+        const name = categoryNameOf(item)
+        if (name) counts.set(name, (counts.get(name) || 0) + 1)
+      }
+      return items.length
+    }
+
+    const first = await client.withPat(`${API}/inspirations?page=1&page_size=${pageSize}`)
+    if (aborted) return sortedCategoryRows(counts)
+    const firstCount = absorb(first)
+    if (firstCount < pageSize) return sortedCategoryRows(counts)
+
+    const rawTotal = Number(responseData(first).total)
+    const hasTotal = Number.isFinite(rawTotal) && rawTotal >= 0
+    const pageCount = Math.min(
+      maxPages,
+      hasTotal ? Math.max(1, Math.ceil(rawTotal / pageSize)) : maxPages,
+    )
+    if (pageCount <= 1) return sortedCategoryRows(counts)
+
+    // Walk remaining pages in concurrent batches. A short page, a later
+    // page failure, or the deadline ends the walk after this batch so
+    // later batches are never scheduled.
+    for (let page = 2; page <= pageCount; ) {
+      if (aborted) break
+      const batch = []
+      while (batch.length < concurrency && page <= pageCount) {
+        batch.push(page)
+        page += 1
+      }
+      let short = false
+      await mapWithConcurrency(batch, concurrency, async (target) => {
+        if (aborted) return
+        try {
+          const count = absorb(await client.withPat(`${API}/inspirations?page=${target}&page_size=${pageSize}`))
+          if (count < pageSize) short = true
+        } catch {
+          // Later pages are best-effort: one failed page must not wipe page 1,
+          // but it must stop further paging after this batch is absorbed.
+          short = true
+        }
+      })
+      if (short || aborted) break
+    }
+    return sortedCategoryRows(counts)
+  }
+
+  const walkPromise = walk()
+  walkPromise.catch(() => {})
+  const result = withDeadline(walkPromise, timeoutMs, 'category aggregation timed out', () => {
+    aborted = true
+  })
+  result[CATEGORY_WALK_SETTLE] = walkPromise
+  return result
+}
+
+/**
+ * In-memory SWR cache for the aggregated categories.
+ *
+ * `read()` reports whether the held value is stale; `refresh(loader)` dedupes
+ * concurrent reloads onto one in-flight promise and only replaces the entry on
+ * success, so a failed reload never destroys a usable stale value.
+ * @param {{ ttlMs?: number, now?: () => number }} [opts]
+ */
+export function createCategoryCache(opts = {}) {
+  const ttlMs = Math.max(0, Number(opts.ttlMs) || CATEGORY_CACHE_TTL_MS)
+  const now = typeof opts.now === 'function' ? opts.now : () => Date.now()
+  /** @type {{ data: Array<{ name: string, count: number }>, at: number } | null} */
+  let entry = null
+  /** @type {Promise<Array<{ name: string, count: number }>> | null} */
+  let inflight = null
+  return {
+    /**
+     * The held value, or null when never loaded.
+     * @returns {{ data: Array<{ name: string, count: number }>, stale: boolean } | null}
+     */
+    read() {
+      if (!entry) return null
+      return { data: entry.data, stale: now() - entry.at > ttlMs }
+    },
+    /**
+     * Load (or reload) the aggregate, sharing one in-flight attempt.
+     * @param {() => Promise<Array<{ name: string, count: number }>>} loader
+     */
+    refresh(loader) {
+      if (inflight) return inflight
+      let walkSettle = null
+      const visible = Promise.resolve()
+        .then(() => {
+          const result = loader()
+          if (result && typeof result.then === 'function' && result[CATEGORY_WALK_SETTLE]) {
+            walkSettle = result[CATEGORY_WALK_SETTLE]
+          }
+          return result
+        })
+        .then((data) => {
+          entry = { data, at: now() }
+          return data
+        })
+        .then(
+          (data) => {
+            inflight = null
+            return data
+          },
+          (error) => {
+            const held = inflight
+            const done = () => { if (inflight === held) inflight = null }
+            if (walkSettle) walkSettle.then(done, done)
+            else done()
+            throw error
+          },
+        )
+      inflight = visible
+      return visible
+    },
+  }
+}
+
 /**
  * @param {{ withPat: Function }} client
  */
