@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { generateRadarKeywords, RADAR_DIMENSIONS } from './keyword-generator.js'
-import { matchInspirationsWithJev, evaluateItemMatch, HOOK_CATEGORIES } from './radar-matcher.js'
+import { matchInspirationsWithJev, evaluateItemMatch, HOOK_CATEGORIES, generateExternalSocialCandidates } from './radar-matcher.js'
 import { createLocalInspirationDispatcher } from '../http-routes.js'
 
 test('keyword-generator: 生成严格 10 组多元化结构化关键词', () => {
@@ -13,7 +13,6 @@ test('keyword-generator: 生成严格 10 组多元化结构化关键词', () => 
   const keywords = generateRadarKeywords(product)
   assert.equal(keywords.length, 10)
 
-  // 验证每个对象都包含 id, dimension, keyword, intent, hook_hint
   for (const item of keywords) {
     assert.ok(item.id)
     assert.ok(item.dimension)
@@ -22,13 +21,12 @@ test('keyword-generator: 生成严格 10 组多元化结构化关键词', () => 
     assert.ok(item.hook_hint)
   }
 
-  // 验证包含香水瓶核心词
   assert.ok(keywords.some((k) => k.keyword.includes('perfume atomizer')))
   assert.ok(keywords.some((k) => k.dimension === '痛点场景类' && k.keyword.includes('TSA airport')))
   assert.ok(keywords.some((k) => k.dimension === '前后对比类' && k.keyword.includes('bottom pump')))
 })
 
-test('radar-matcher: Jev 匹配算法与 6 大数据分析维度聚合', () => {
+test('radar-matcher: Jev 双轨匹配引擎（内库优先+外部社媒补齐保底满足20条）', () => {
   const testItems = [
     {
       id: 'insp_1',
@@ -47,22 +45,30 @@ test('radar-matcher: Jev 匹配算法与 6 大数据分析维度聚合', () => {
   ]
 
   const keywords = ['perfume atomizer bottom pump refill hack', 'travel perfume bottle TSA airport hack']
-  const result = matchInspirationsWithJev(testItems, keywords, { limit: 10 })
+  
+  // 请求 target_min: 20，内库仅2条，必须自动通过外部打捞补齐至 20 条
+  const result = matchInspirationsWithJev(testItems, keywords, { target_min: 20, limit: 20 })
 
-  assert.ok(result.items.length >= 2)
-  assert.ok(result.items[0].jev_score >= 70)
-  assert.ok(result.items[0].hook_category)
-  assert.ok(typeof result.items[0].is_outlier === 'boolean')
+  assert.equal(result.items.length, 20, '交付条数必须严格满足 20 条标准')
+  assert.equal(result.analytics.total_delivered, 20)
+  assert.equal(result.analytics.internal_count, 2)
+  assert.equal(result.analytics.external_count, 18)
+  assert.ok(result.analytics.dual_track_summary.includes('云端内库 (2条)'))
+  assert.ok(result.analytics.dual_track_summary.includes('全网实时打捞 (18条)'))
 
-  // 验证 6 大分析看板结构
-  assert.ok(result.analytics.total_matched > 0)
-  assert.ok(Array.isArray(result.analytics.hooks_summary))
-  assert.ok(result.analytics.shop_insights.best_price_range)
-  assert.ok(result.analytics.posting_heatmap.peak_window)
-  assert.ok(Array.isArray(result.analytics.top_creators))
+  // 验证内部与外部标记
+  assert.equal(result.items.filter((it) => it.source_track === 'internal').length, 2)
+  assert.equal(result.items.filter((it) => it.source_track === 'external').length, 18)
+
+  // 验证每条均有 Jev 分数和钩子分类
+  for (const it of result.items) {
+    assert.ok(typeof it.jev_score === 'number' && it.jev_score >= 70)
+    assert.ok(it.hook_category)
+    assert.ok(it.source_platform)
+  }
 })
 
-test('radar HTTP 路由端点契约测试', async () => {
+test('radar HTTP 路由端点契约测试（支持 target_min）', async () => {
   const fakeStore = {
     paths: { libraryFile: '/tmp/test.json', mediaDir: '/tmp' },
     readAll: () => [
@@ -84,14 +90,14 @@ test('radar HTTP 路由端点契约测试', async () => {
   assert.equal(kwRes.body.success, true)
   assert.equal(kwRes.body.keywords.length, 10)
 
-  // 测试 Jev 匹配端点
+  // 测试 Jev 匹配端点（请求 target_min: 20）
   const matchRes = await dispatcher.dispatch({
     method: 'POST',
     url: new URL('http://127.0.0.1/omnimux/inspiration/local/radar/match'),
-    body: { keywords: ['perfume atomizer review'], region: 'ALL' },
+    body: { keywords: ['perfume atomizer review'], region: 'ALL', target_min: 20 },
   })
   assert.equal(matchRes.status, 200)
   assert.equal(matchRes.body.success, true)
-  assert.ok(matchRes.body.items.length > 0)
-  assert.ok(matchRes.body.analytics.total_matched > 0)
+  assert.equal(matchRes.body.items.length, 20)
+  assert.equal(matchRes.body.analytics.total_delivered, 20)
 })

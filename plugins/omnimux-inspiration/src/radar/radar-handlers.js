@@ -30,10 +30,10 @@ export async function handleRadarKeywords(args) {
 export async function handleRadarMatch(args) {
   const req = args.req || args
   const body = req.body || args.body || {}
-  const { keywords = [], product = {}, region, limit = 50 } = body
+  const { keywords = [], product = {}, region, limit = 50, target_min = 20 } = body
   const store = args.store || args.localStore
   const items = store && typeof store.readAll === 'function' ? store.readAll() : []
-  const result = matchInspirationsWithJev(items, keywords, { region, limit })
+  const result = matchInspirationsWithJev(items, keywords, { region, limit, target_min })
   return {
     status: 200,
     body: {
