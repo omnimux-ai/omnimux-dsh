@@ -51,19 +51,13 @@ export async function detectEnvironment(input, deps) {
   }
 
   try {
-    const doc = await deps.run(['doctor', '-f', 'json'], { timeoutMs: HARVEST_TIMEOUT_MS })
+    const doc = await deps.run(['doctor'], { timeoutMs: HARVEST_TIMEOUT_MS })
     const text = typeof doc.stdout === 'string' ? doc.stdout.trim() : ''
-    if (doc.code === 0 && text !== '') {
-      try {
-        const parsed = JSON.parse(text)
-        report.bridgeOk = true
-        report.bridgeDetail = typeof parsed === 'object' && parsed !== null ? 'ok' : null
-      } catch {
-        // doctor 输出非 JSON（table 文案）：exit 0 即视为可用
-        report.bridgeOk = true
-      }
+    if (doc.code === 0) {
+      report.bridgeOk = true
+      report.bridgeDetail = 'ok'
     } else {
-      report.bridgeDetail = (typeof doc.stderr === 'string' ? doc.stderr : text).slice(0, 200)
+      report.bridgeDetail = (typeof doc.stderr === 'string' && doc.stderr.trim() ? doc.stderr : text).slice(0, 200)
     }
   } catch (err) {
     report.bridgeDetail = err instanceof Error ? err.message.slice(0, 200) : String(err)
