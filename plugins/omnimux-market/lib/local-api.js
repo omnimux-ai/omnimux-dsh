@@ -95,8 +95,9 @@ export const MUTATING_METHODS = new Set([
     'tryAttach',
     'tryDetach',
 ]);
-export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, materializeEnabledMarketExperts, } from './expert-market.js';
-import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
+import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, materializeEnabledMarketExperts, } from './expert-market.js';
+import { agentPresetCordis, healAgentPresetCordis, healInstalledAgentPresets, writeAgentPreset, } from './expert-presets.js';
+export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, materializeEnabledMarketExperts, agentPresetCordis, healAgentPresetCordis, healInstalledAgentPresets, writeAgentPreset, };
 /**
  * Agent 预设列表变更通知钩子：官方预设菜单只在页面挂载或收到
  * `settings/document-updated`（命名空间 agent-presets）时重读列表，

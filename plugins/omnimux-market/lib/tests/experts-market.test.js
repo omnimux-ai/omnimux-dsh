@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test, { beforeEach, afterEach } from 'node:test';
 import { Readable } from 'node:stream';
 import { dshHome, withDefaults } from '../config-store.js';
-import { handleApi, DEFAULT_MARKET_EXPERTS, materializeEnabledMarketExperts, setAgentPresetsNotify } from '../local-api.js';
+import { handleApi, DEFAULT_MARKET_EXPERTS, materializeEnabledMarketExperts, healAgentPresetCordis, healInstalledAgentPresets, setAgentPresetsNotify } from '../local-api.js';
 function cleanRetiredTestExperts() {
     const home = dshHome();
     const retired = join(home, '.agent-presets', '.retired');
@@ -237,6 +237,10 @@ test('materializeEnabledMarketExperts 启动物化：enabled 初值专家幂等�
         for (const id of first) {
             assert.ok(existsSync(join(home, '.agent-presets', id, 'preset.yml')), `${id} preset.yml 落盘`);
             assert.ok(existsSync(join(home, '.agent-presets', id, 'agent.cordis.yml')), `${id} agent.cordis.yml 落盘`);
+            const cordis = readFileSync(join(home, '.agent-presets', id, 'agent.cordis.yml'), 'utf8');
+            assert.ok(cordis.includes('sampleOverCapGlobResults: false'), `${id} tool-fs-search 必须包含 sampleOverCapGlobResults`);
+            assert.ok(cordis.includes('provider: spawn'), `${id} tool-subagent 必须包含 provider: spawn`);
+            assert.ok(cordis.includes('provider: fork'), `${id} tool-subagent-fork 必须包含 provider: fork`);
         }
         // initialStatus 为 available 的专家不被物化
         assert.ok(!existsSync(join(home, '.agent-presets', 'media-creator')));
@@ -247,6 +251,65 @@ test('materializeEnabledMarketExperts 启动物化：enabled 初值专家幂等�
     finally {
         rmSync(home, { recursive: true, force: true });
     }
+});
+test('healInstalledAgentPresets 自动修复缺失 sampleOverCapGlobResults 和 provider 的存量预设', () => {
+    const home = mkdtempSync(join(tmpdir(), 'omx-expert-heal-'));
+    try {
+        const dir = join(home, '.agent-presets', 'media-creator');
+        mkdirSync(dir, { recursive: true });
+        const legacy = `# media-creator Agent Preset
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
+`;
+        writeFileSync(join(dir, 'agent.cordis.yml'), legacy, 'utf8');
+        const healed = healInstalledAgentPresets(home);
+        assert.equal(healed.length, 1);
+        const fixed = readFileSync(join(dir, 'agent.cordis.yml'), 'utf8');
+        assert.ok(fixed.includes('sampleOverCapGlobResults: false'));
+        assert.ok(fixed.includes('provider: spawn'));
+        assert.ok(fixed.includes('provider: fork'));
+        // 再次自愈幂等
+        assert.deepEqual(healInstalledAgentPresets(home), []);
+    }
+    finally {
+        rmSync(home, { recursive: true, force: true });
+    }
+});
+test('healAgentPresetCordis 支持 CRLF 跨平台换行与已有部分 config 字段自愈合并', () => {
+    // 1. CRLF 格式且已有部分 config（但缺少必填字段）
+    const legacyCrlf = [
+        '# media-creator Agent Preset',
+        '- id: persona',
+        '  name: \'@deepseek-ai/dsh-persona\'',
+        '- id: tool-fs-search',
+        '  name: \'@deepseek-ai/dsh-tool-fs-search\'',
+        '  config:',
+        '    timeoutMs: 5000',
+        '- id: tool-subagent',
+        '  name: \'@deepseek-ai/dsh-tool-subagent\'',
+        '  config:',
+        '    customHeader: true',
+    ].join('\r\n');
+    const healed = healAgentPresetCordis(legacyCrlf);
+    assert.ok(healed.includes('\r\n'), '输出必须保留 CRLF 换行');
+    assert.ok(healed.includes('sampleOverCapGlobResults: false'), 'tool-fs-search 在已有 config 下成功插入缺失必填字段');
+    assert.ok(healed.includes('timeoutMs: 5000'), '保留已有 config 内容');
+    assert.ok(healed.includes('provider: spawn'), 'tool-subagent 在已有 config 下成功插入 provider: spawn');
+    assert.ok(healed.includes('customHeader: true'), '保留已有 subagent config');
+    // 幂等自愈
+    assert.equal(healAgentPresetCordis(healed), healed, '已自愈内容再次调用保持完全一致');
 });
 test('materializeEnabledMarketExperts 尊重用户禁用：.retired 标记不复活', () => {
     const home = mkdtempSync(join(tmpdir(), 'omx-expert-materialize-retired-'));

@@ -6,7 +6,7 @@
  * 目录名即 preset id，由官方 `@deepseek-ai/dsh-agent-presets` 发现；`preset.yml`
  * 只承载展示元数据（name/description/order），`agent.cordis.yml` 是组合清单。
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 /** YAML 块标量的每一行都要缩进，否则多行 persona 会截断正文。 */
 function indentBlock(text, spaces) {
@@ -39,8 +39,15 @@ ${indentBlock(persona, 6)}
   name: '@deepseek-ai/dsh-tool-fs'
 - id: tool-fs-search
   name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
 - id: tool-subagent
   name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    modelSelectionSettings: true
+    backgroundMode: continuable
 - id: tool-subagent-fork
   name: '@deepseek-ai/dsh-tool-subagent'
   config:
@@ -57,4 +64,98 @@ export function writeAgentPreset(home, preset) {
     writeFileSync(join(dir, 'preset.yml'), presetYml, 'utf8');
     writeFileSync(join(dir, 'agent.cordis.yml'), agentPresetCordis(preset.id, preset.persona), 'utf8');
     return dir;
+}
+/**
+ * 对存量 agent.cordis.yml 内容进行模式自愈：
+ * 1. 修复缺少 sampleOverCapGlobResults 的 tool-fs-search 配置项（兼容无 config 或已有部分 config）；
+ * 2. 修复缺少 provider 的 tool-subagent 配置项；
+ * 3. 严格兼容 CRLF 与 LF 跨平台换行。
+ */
+export function healAgentPresetCordis(content) {
+    const isCrlf = content.includes('\r\n');
+    const eol = isCrlf ? '\r\n' : '\n';
+    const lines = content.replace(/\r\n/g, '\n').split('\n');
+    const result = [];
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+        if (/^-\s+id:\s+tool-fs-search\b/.test(line)) {
+            const block = [line];
+            i++;
+            while (i < lines.length && !/^-\s+id:\s+/.test(lines[i])) {
+                block.push(lines[i]);
+                i++;
+            }
+            const blockText = block.join('\n');
+            if (blockText.includes("'@deepseek-ai/dsh-tool-fs-search'") || blockText.includes('"@deepseek-ai/dsh-tool-fs-search"')) {
+                if (!blockText.includes('sampleOverCapGlobResults')) {
+                    const configIndex = block.findIndex((l) => /^\s+config:\s*$/.test(l));
+                    if (configIndex >= 0) {
+                        block.splice(configIndex + 1, 0, '    sampleOverCapGlobResults: false');
+                    }
+                    else {
+                        block.push('  config:', '    sampleOverCapGlobResults: false');
+                    }
+                }
+            }
+            result.push(...block);
+            continue;
+        }
+        if (/^-\s+id:\s+tool-subagent\b/.test(line)) {
+            const block = [line];
+            i++;
+            while (i < lines.length && !/^-\s+id:\s+/.test(lines[i])) {
+                block.push(lines[i]);
+                i++;
+            }
+            const blockText = block.join('\n');
+            if (blockText.includes("'@deepseek-ai/dsh-tool-subagent'") || blockText.includes('"@deepseek-ai/dsh-tool-subagent"')) {
+                if (!/^\s+provider:\s+/m.test(blockText)) {
+                    const configIndex = block.findIndex((l) => /^\s+config:\s*$/.test(l));
+                    if (configIndex >= 0) {
+                        block.splice(configIndex + 1, 0, '    provider: spawn', '    toolName: subagent', '    modelSelectionSettings: true', '    backgroundMode: continuable');
+                    }
+                    else {
+                        block.push('  config:', '    provider: spawn', '    toolName: subagent', '    modelSelectionSettings: true', '    backgroundMode: continuable');
+                    }
+                }
+            }
+            result.push(...block);
+            continue;
+        }
+        result.push(line);
+        i++;
+    }
+    return result.join(eol);
+}
+/**
+ * 遍历 `<home>/.agent-presets`，对已存在的 agent.cordis.yml 执行配置格式自愈修补。
+ * 忽略 .retired 与非目录项。返回被修补的文件路径列表。
+ */
+export function healInstalledAgentPresets(home) {
+    const rootDir = join(home, '.agent-presets');
+    if (!existsSync(rootDir))
+        return [];
+    const healed = [];
+    try {
+        const entries = readdirSync(rootDir, { withFileTypes: true });
+        for (const ent of entries) {
+            if (!ent.isDirectory() || ent.name.startsWith('.'))
+                continue;
+            const cordisPath = join(rootDir, ent.name, 'agent.cordis.yml');
+            if (!existsSync(cordisPath))
+                continue;
+            try {
+                const raw = readFileSync(cordisPath, 'utf8');
+                const fixed = healAgentPresetCordis(raw);
+                if (fixed !== raw) {
+                    writeFileSync(cordisPath, fixed, 'utf8');
+                    healed.push(cordisPath);
+                }
+            }
+            catch { }
+        }
+    }
+    catch { }
+    return healed;
 }
