@@ -1,0 +1,302 @@
+{
+  "schema": "omnimux.recipe.pool.persona.v0",
+  "dimension": "persona",
+  "note": "二维正交：垂类决定说什么，身份决定怎么说。垂类依据 method 池的 category/bestFor 覆盖度；身份为设计补充，需经真实素材验证",
+  "sourceNote": "垂类来自手法池数据反推；身份清单为设计补充（模板库未提供独立人设数据）",
+  "verticals": [
+    {
+      "id": "beauty",
+      "name": "美妆个护",
+      "methodHint": [
+        "UGC & Testimonial",
+        "Product Showcase"
+      ],
+      "domains": [
+        "beauty"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "home",
+      "name": "家居日用",
+      "methodHint": [
+        "Video Ads",
+        "Product Showcase"
+      ],
+      "domains": [
+        "home-service"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "health",
+      "name": "保健营养",
+      "methodHint": [
+        "UGC & Testimonial"
+      ],
+      "compliance": "需过 regulated-claims 声明矩阵",
+      "domains": [
+        "pharma",
+        "wellness"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "food",
+      "name": "食品饮料",
+      "methodHint": [
+        "Video Ads"
+      ],
+      "domains": [
+        "food"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "apparel",
+      "name": "服饰穿搭",
+      "methodHint": [
+        "Image & Static Ads",
+        "Product Showcase"
+      ],
+      "domains": [
+        "apparel"
+      ],
+      "excludeDomains": [
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "tech",
+      "name": "3C 数码",
+      "methodHint": [
+        "Video Ads"
+      ],
+      "domains": [
+        "tech"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports"
+      ]
+    },
+    {
+      "id": "kids",
+      "name": "母婴亲子",
+      "methodHint": [
+        "UGC & Testimonial"
+      ],
+      "domains": [
+        "kids",
+        "prenatal"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "pharma",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "service",
+      "name": "本地服务",
+      "methodHint": [
+        "Video Ads",
+        "Image & Static Ads"
+      ],
+      "domains": [
+        "home-service"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "b2b",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "saas",
+        "sports",
+        "tech"
+      ]
+    },
+    {
+      "id": "saas",
+      "name": "B2B 软件",
+      "methodHint": [
+        "Video Ads"
+      ],
+      "domains": [
+        "saas",
+        "b2b"
+      ],
+      "excludeDomains": [
+        "apparel",
+        "education",
+        "food",
+        "gambling",
+        "game",
+        "home-service",
+        "kids",
+        "pharma",
+        "prenatal",
+        "real-estate",
+        "recruitment",
+        "sports",
+        "tech"
+      ]
+    }
+  ],
+  "identities": [
+    {
+      "id": "reviewer",
+      "name": "测评博主",
+      "voice": "对比实测、给结论、有取舍"
+    },
+    {
+      "id": "creator",
+      "name": "内容创作者",
+      "voice": "第一人称体验、生活化、不吆喝"
+    },
+    {
+      "id": "mom",
+      "name": "宝妈",
+      "voice": "为孩子挑、怕踩坑、讲安全感"
+    },
+    {
+      "id": "expert",
+      "name": "专业人士",
+      "voice": "讲原理、讲机制、克制"
+    },
+    {
+      "id": "homeowner",
+      "name": "真实用户",
+      "voice": "长期使用后回访、讲变化"
+    },
+    {
+      "id": "skeptic",
+      "name": "怀疑转粉",
+      "voice": "先质疑、被说服、给证据"
+    },
+    {
+      "id": "founder",
+      "name": "品牌主理人",
+      "voice": "讲做产品的初衷与成本"
+    },
+    {
+      "id": "elder",
+      "name": "长辈推荐",
+      "voice": "经验派、口语、慢节奏"
+    },
+    {
+      "id": "student",
+      "name": "学生党",
+      "voice": "预算敏感、性价比导向"
+    },
+    {
+      "id": "colleague",
+      "name": "职场同事",
+      "voice": "办公室场景、效率导向"
+    }
+  ],
+  "domainNote": "domains = 本垂类相关领域；excludeDomains = 其余领域，用于剔除行业错配项（黑名单减法）。"
+}

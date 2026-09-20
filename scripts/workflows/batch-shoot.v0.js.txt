@@ -1,0 +1,322 @@
+// scripts/workflows/batch-shoot.v0.js.txt
+//
+// OmniMux 批量出片 · 固化编排脚本 v0
+// 运行方式：作为 DSH `workflow` 工具的 script 参数提交（脚本体，非模块）
+// 设计依据：docs/specs/2026-09-20-execution-first-route.md
+//
+// ⚠️ 本文件是「脚本体」，不是可 import 的模块。以下划线开头的说明段落不属于脚本内容。
+//
+// 硬约束（详见同目录 README.md）：
+//   1. 不得 import / require —— 一切外部数据走 args
+//   2. 不得使用 Math.random / Date.now / new Date() —— 随机性只来自 args.seed
+//   3. 必须以 return <json-value> 结束
+//   4. 可用钩子：agent / parallel / pipeline / phase / log
+//
+// ---------------------------------------------------------------------------
+// 脚本正文开始
+// ---------------------------------------------------------------------------
+
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffled(list, rng) {
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+}
+
+function sampleDistinct(pool, count, rng) {
+  const out = [];
+  let bag = [];
+  while (out.length < count) {
+    if (bag.length === 0) bag = shuffled(pool, rng);
+    out.push(bag.pop());
+  }
+  return out;
+}
+
+function fingerprint(parts) {
+  let h = 0x811c9dc5;
+  const s = parts.join('|');
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return ('00000000' + h.toString(16)).slice(-8);
+}
+
+const input = args || {};
+const product = input.product || {};
+const requests = input.requests || [];
+const pools = input.pools || {};
+const seed = Number.isFinite(input.seed) ? input.seed : 20260920;
+const dryRun = input.dryRun !== false;
+
+// 只取 kind=creative 的手法。method 池混入了生产工具与过泛占位
+// （script-to-video / ugc-script-planner / dtc-multi-format-ad-playbook /
+//  cinematic / ecommerce 等），它们是工具不是创意手法，抽进配方只会产出空壳脚本。
+// 无 kind 字段的旧池子视为 creative，保持向后兼容。
+const methodPool = ((pools.method && pools.method.methods) || []).filter(function (m) {
+  return !m.kind || m.kind === 'creative';
+});
+const verticals = (pools.persona && pools.persona.verticals) || [];
+const identities = (pools.persona && pools.persona.identities) || [];
+const hookPool = (pools.hook && pools.hook.hooks) || [];
+const formatPool = (pools.format && pools.format.formats) || [];
+
+if (methodPool.length === 0 || hookPool.length === 0 || verticals.length === 0) {
+  throw new Error(
+    'args.pools 不完整：需要 method.methods / persona.verticals / hook.hooks，实际收到 ' +
+      JSON.stringify({
+        methods: methodPool.length,
+        verticals: verticals.length,
+        hooks: hookPool.length,
+      }),
+  );
+}
+
+const byId = (list, id) => list.filter((x) => x.id === id)[0];
+
+// 领域锁定标记。category 是「广告形式」维度（Video Ads / UGC / Product Showcase），
+// 不是「行业」维度——行业适配必须靠 method.domain 做黑名单剔除，否则会把
+// dark-saas-ui-hero、cinematic-saas-character-arc 这类手法配到美妆商品上
+// （形式正确、领域错配）。实测于 S0 首次 dry-run 暴露。
+const ALL_DOMAINS = [
+  'saas', 'b2b', 'pharma', 'home-service', 'prenatal',
+  'kids', 'apparel', 'food', 'tech', 'game', 'education',
+];
+
+function methodsForVertical(vertical) {
+  const hints = vertical.methodHint || [];
+  const hit = hints.length > 0 ? methodPool.filter((m) => hints.indexOf(m.category) >= 0) : [];
+  const base = hit.length > 0 ? hit : methodPool;
+
+  // 黑名单减法而非白名单加法：112 个手法中 94 个是行业中立的，
+  // 加法匹配会把候选池挖空，减法只剔除明确锁定其他行业的 18 个。
+  const deny =
+    vertical.excludeDomains ||
+    ALL_DOMAINS.filter(function (d) {
+      return (vertical.domains || []).indexOf(d) < 0;
+    });
+  if (deny.length === 0) return base;
+
+  const kept = base.filter(function (m) {
+    const dom = m.domain || [];
+    for (let i = 0; i < dom.length; i += 1) {
+      if (deny.indexOf(dom[i]) >= 0) return false;
+    }
+    return true;
+  });
+  return kept.length > 0 ? kept : base;
+}
+
+function screenFormats() {
+  return formatPool.filter(function (f) {
+    return f.role === '画面';
+  });
+}
+
+phase('解析配方请求');
+
+const recipes = [];
+const seenFingerprints = {};
+
+requests.forEach(function (req, reqIndex) {
+  const vertical = byId(verticals, req.verticalId);
+  const identity = byId(identities, req.identityId);
+  if (!vertical || !identity) {
+    throw new Error(
+      'unknown persona: ' + req.verticalId + ' / ' + req.identityId,
+    );
+  }
+
+  const count = Math.max(1, Math.min(Number(req.count) || 1, 60));
+  const rng = makeRng((seed + reqIndex * 7919) >>> 0);
+
+  const candidates = methodsForVertical(vertical);
+  const screens = screenFormats();
+
+  // 「同角色内不重样」是硬要求：重复组合会让批次内出现同一变量水平的撞车，
+  // 归因时无法把表现差异拆回具体变量。抽样池小于请求条数时必然重复，
+  // 因此提前 fail loud，而不是静默产出看似正常、实则不可归因的配方。
+  const capacity = Math.min(candidates.length, hookPool.length, screens.length);
+  if (count > capacity) {
+    throw new Error(
+      '角色「' + vertical.name + ' / ' + identity.name + '」请求 ' + count +
+        ' 条，但可用的不重复组合只有 ' + capacity + ' 种（候选手法 ' + candidates.length +
+        ' / Hook ' + hookPool.length + ' / 画面形态 ' + screens.length +
+        '）。请把 count 降到 ' + capacity + ' 以内，或先扩充对应池子。',
+    );
+  }
+
+  const methods = sampleDistinct(candidates, count, rng);
+  const hooks = sampleDistinct(hookPool, count, rng);
+  const formats = sampleDistinct(screens, count, rng);
+
+  for (let i = 0; i < count; i += 1) {
+    const method = methods[i];
+    const hook = hooks[i];
+    const format = formats[i];
+    const fp = fingerprint([
+      product.name || 'product',
+      vertical.id,
+      identity.id,
+      method.id,
+      hook.id,
+      format.id,
+      String(seed),
+    ]);
+    if (seenFingerprints[fp]) {
+      throw new Error('批次内配方指纹重复，正交分配失效: ' + fp);
+    }
+    seenFingerprints[fp] = true;
+
+    recipes.push({
+      index: recipes.length + 1,
+      fingerprint: fp,
+      vertical: { id: vertical.id, name: vertical.name },
+      identity: { id: identity.id, name: identity.name, voice: identity.voice },
+      method: {
+        id: method.id,
+        category: method.category,
+        style: method.style,
+        bestFor: method.bestFor,
+      },
+      hook: { id: hook.id, name: hook.name, seed: hook.seed },
+      format: { id: format.id, name: format.name },
+      compliance: vertical.compliance || null,
+    });
+  }
+});
+
+log('配方生成完成：' + recipes.length + ' 组，seed=' + seed);
+
+if (dryRun) {
+  return {
+    mode: 'dry-run',
+    seed: seed,
+    product: product.name || null,
+    total: recipes.length,
+    recipes: recipes,
+    note: 'dryRun 模式：只产出配方，未启动子代理。设 args.dryRun=false 才扇出。',
+  };
+}
+
+phase('扇出子代理生成脚本');
+
+function buildPrompt(recipe) {
+  const lines = [
+    '你在为一条电商带货短视频写可执行拍摄脚本。',
+    '',
+    '## 商品',
+    '名称：' + (product.name || '未提供'),
+    product.sellingPoints ? '卖点：' + product.sellingPoints.join('、') : '',
+    product.audience ? '目标人群：' + product.audience : '',
+    product.url ? '链接：' + product.url : '',
+    '',
+    '## 你要扮演的角色',
+    '垂类：' + recipe.vertical.name,
+    '身份：' + recipe.identity.name,
+    '语气要求：' + recipe.identity.voice,
+    '',
+    '## 必须严格采用的手法（不得替换）',
+    '手法：' + recipe.method.id,
+    '分类：' + recipe.method.category,
+    recipe.method.style && recipe.method.style.length
+      ? '风格特征：' + recipe.method.style.join('、')
+      : '',
+    recipe.method.bestFor && recipe.method.bestFor.length
+      ? '适用场景：' + recipe.method.bestFor.join('、')
+      : '',
+    '',
+    '## 开场 Hook（必须落在前 3 秒）',
+    recipe.hook.name + '（话术种子：' + recipe.hook.seed + '）',
+    '',
+    '## 画面形态',
+    recipe.format.name + '（operation: ' + recipe.format.id + '）',
+    '',
+    recipe.compliance ? '## 合规约束\n' + recipe.compliance + '（功效表述不得越界，无据不下结论）\n' : '',
+    '## 输出',
+    '只返回 JSON，不要任何解释文字，结构：',
+    '{ "hookLine": "前3秒口播原文", "shots": [{ "idx": 1, "durationSec": 3, "visual": "画面描述", "voiceover": "口播", "onScreenText": "花字" }], "cta": "行动号召", "caption": "发布文案" }',
+    '要求：总时长 15-45 秒；shot 数量 4-8；口播口语化、不用书面语；画面描述可直接用于生成模型。',
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+const outputs = await parallel(
+  recipes.map(function (recipe) {
+    return function () {
+      return agent(buildPrompt(recipe), { name: 'shot-' + recipe.index });
+    };
+  }),
+);
+
+const results = recipes.map(function (recipe, i) {
+  const raw = outputs[i];
+  let parsed = null;
+  let parseError = null;
+  if (typeof raw === 'string') {
+    try {
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      parsed = JSON.parse(raw.slice(start, end + 1));
+    } catch (e) {
+      parseError = String(e && e.message ? e.message : e);
+    }
+  } else {
+    parseError = 'child returned non-string';
+  }
+  return {
+    fingerprint: recipe.fingerprint,
+    vertical: recipe.vertical.name,
+    identity: recipe.identity.name,
+    method: recipe.method.id,
+    hook: recipe.hook.name,
+    format: recipe.format.name,
+    script: parsed,
+    parseError: parseError,
+  };
+});
+
+const failed = results.filter(function (r) {
+  return r.parseError !== null;
+}).length;
+
+log('脚本生成完成：成功 ' + (results.length - failed) + ' / 失败 ' + failed);
+
+return {
+  mode: 'full',
+  seed: seed,
+  product: product.name || null,
+  total: results.length,
+  failed: failed,
+  byFingerprint: results.reduce(function (acc, r) {
+    acc[r.fingerprint] = {
+      vertical: r.vertical,
+      identity: r.identity,
+      method: r.method,
+      hook: r.hook,
+      format: r.format,
+    };
+    return acc;
+  }, {}),
+  scripts: results,
+};
+
+// ---------------------------------------------------------------------------
+// 脚本正文结束
+// ---------------------------------------------------------------------------

@@ -1,0 +1,60 @@
+{
+  "schema": "omnimux.recipe.pool.format.v0",
+  "dimension": "format",
+  "source": "plugins/omnimux/src/catalog/contract/operation-registry.json",
+  "sourceNote": "operation id 取自 hub 契约注册表（22 项中挑选电商视频生产相关的 10 项），非杜撰",
+  "registryTotal": 22,
+  "count": 10,
+  "formats": [
+    {
+      "id": "text_to_image",
+      "name": "文生图",
+      "role": "画面"
+    },
+    {
+      "id": "image_to_image",
+      "name": "图生图",
+      "role": "画面"
+    },
+    {
+      "id": "multi_reference",
+      "name": "多图主体参考",
+      "role": "画面"
+    },
+    {
+      "id": "text_to_video",
+      "name": "文生视频",
+      "role": "画面"
+    },
+    {
+      "id": "first_frame",
+      "name": "首帧驱动",
+      "role": "画面"
+    },
+    {
+      "id": "first_last_frame",
+      "name": "首尾帧过渡",
+      "role": "画面"
+    },
+    {
+      "id": "digital_human",
+      "name": "数字人/对口型",
+      "role": "出镜"
+    },
+    {
+      "id": "text_to_speech",
+      "name": "语音合成",
+      "role": "声音"
+    },
+    {
+      "id": "voice_clone",
+      "name": "声音克隆",
+      "role": "声音"
+    },
+    {
+      "id": "text_to_music",
+      "name": "音乐创作",
+      "role": "配乐"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schema": "omnimux.recipe.pool.hook.v0",
+  "dimension": "hook",
+  "sourceNote": "设计补充。模板库未见独立 Hook 数据本体（PRD 附录 B 待核实项），先以行业通用 15 型起步；后续可用灵感库 hook_highlight 实例替换或扩充",
+  "count": 15,
+  "hooks": [
+    {
+      "id": "pain-question",
+      "name": "痛点反问",
+      "seed": "你是不是也……"
+    },
+    {
+      "id": "conflict",
+      "name": "冲突开场",
+      "seed": "别再……了"
+    },
+    {
+      "id": "curiosity",
+      "name": "悬念好奇",
+      "seed": "我发现了……，但先说结论"
+    },
+    {
+      "id": "before-after",
+      "name": "前后对比",
+      "seed": "用了 30 天之后"
+    },
+    {
+      "id": "blind-test",
+      "name": "盲测挑战",
+      "seed": "把标签撕掉，让他们选"
+    },
+    {
+      "id": "street-interview",
+      "name": "街头采访",
+      "seed": "随机问 10 个人"
+    },
+    {
+      "id": "confession",
+      "name": "自白爆料",
+      "seed": "说个行业内不会讲的"
+    },
+    {
+      "id": "stat-shock",
+      "name": "数据冲击",
+      "seed": "这个数字我第一次看到也愣了"
+    },
+    {
+      "id": "unbox",
+      "name": "开箱即时",
+      "seed": "刚到手，直接开"
+    },
+    {
+      "id": "price-shock",
+      "name": "价格反差",
+      "seed": "这个价格我以为看错了"
+    },
+    {
+      "id": "problem-demo",
+      "name": "问题演示",
+      "seed": "先看它怎么坏"
+    },
+    {
+      "id": "social-proof",
+      "name": "社会证明",
+      "seed": "已经有人在复购了"
+    },
+    {
+      "id": "list-format",
+      "name": "清单体",
+      "seed": "三个理由，第二个最关键"
+    },
+    {
+      "id": "myth-bust",
+      "name": "误区破除",
+      "seed": "一直以为……其实不是"
+    },
+    {
+      "id": "direct-address",
+      "name": "直接喊话",
+      "seed": "如果你也在……这条给你"
+    }
+  ]
+}
