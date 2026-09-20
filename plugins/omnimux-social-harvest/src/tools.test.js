@@ -70,9 +70,10 @@ describe('checkGates 门禁链', () => {
 })
 
 describe('registerHarvestTools', () => {
-  it('注册恰好 6 个工具，命名与参数面正确', () => {
+  it('注册恰好 8 个工具，命名与参数面正确', () => {
     const registered = []
     registerHarvestTools({ tools: { register: (t) => registered.push(t) } }, { run: okRun })
+    assert.equal(registered.length, 8)
     assert.deepEqual(registered.map((t) => t.name), [...HARVEST_TOOL_NAMES])
     for (const t of registered) {
       assert.equal(typeof t.execute, 'function', t.name)
@@ -82,5 +83,24 @@ describe('registerHarvestTools', () => {
     const login = registered.find((t) => t.name === 'harvest_site_login')
     assert.ok(login.parameters.properties.site.enum.length > 0)
     assert.ok(!login.parameters.properties.site.enum.includes('pinterest'))
+    assert.ok(login.parameters.properties.site.enum.includes('flow'))
+  })
+
+  it('flow_image_generate 执行端到端', async () => {
+    await saveConfig({ enabled: true })
+    resetDoctorCache()
+    const r = await gatedHarvest('flow', 'image', { prompt: 'a sunset', ratio: '16:9' }, { run: okRun })
+    assert.equal(r.ok, true)
+    assert.equal(r.site, 'flow')
+    assert.equal(r.command, 'image')
+  })
+
+  it('flow_video_generate 执行端到端', async () => {
+    await saveConfig({ enabled: true })
+    resetDoctorCache()
+    const r = await gatedHarvest('flow', 'video', { prompt: 'a video of city', ratio: '9:16' }, { run: okRun })
+    assert.equal(r.ok, true)
+    assert.equal(r.site, 'flow')
+    assert.equal(r.command, 'video')
   })
 })

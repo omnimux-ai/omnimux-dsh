@@ -14,7 +14,9 @@
       { "name": "harvest_pinterest_pins", "summary": "搜索 Pinterest 图钉（免登录可用）", "category": "harvest" },
       { "name": "harvest_pinterest_download", "summary": "下载 Pinterest 图钉原图到本地", "category": "harvest" },
       { "name": "harvest_sites_status", "summary": "查询各社媒平台登录态（whoami 自检）", "category": "harvest" },
-      { "name": "harvest_site_login", "summary": "打开指定平台的浏览器登录页并等待人工完成登录", "category": "harvest" }
+      { "name": "harvest_site_login", "summary": "打开指定平台的浏览器登录页并等待人工完成登录", "category": "harvest" },
+      { "name": "flow_image_generate", "summary": "调用 Google Flow (flow.google.com) AI 文生图", "category": "create" },
+      { "name": "flow_video_generate", "summary": "调用 Google Flow (flow.google.com) 生成 Veo AI 视频", "category": "create" }
     ],
     "seamsProvided": [],
     "seamsConsumed": [],

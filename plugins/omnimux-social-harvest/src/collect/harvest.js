@@ -26,7 +26,10 @@ export function resolveArgs(command, args) {
   for (const field of command.form) {
     const raw = args?.[field.key]
     if (field.type === 'number') {
-      out[field.key] = clampLimit(typeof raw === 'number' ? raw : field.value)
+      const min = typeof field.min === 'number' ? field.min : 1
+      const max = typeof field.max === 'number' ? field.max : 50
+      const n = typeof raw === 'number' && Number.isFinite(raw) ? Math.trunc(raw) : (field.value ?? min)
+      out[field.key] = Math.min(max, Math.max(min, n))
       continue
     }
     if (field.type === 'select') {

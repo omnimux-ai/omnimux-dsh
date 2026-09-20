@@ -72,7 +72,8 @@ function QARoot() {
 
       // 1. 平台列表
       const siteRows = $$('.sh-site');
-      check('平台列表渲染 9 个站点', siteRows.length === 9, `actual=${siteRows.length}`);
+      check('平台列表渲染 10 个站点', siteRows.length === 10, `actual=${siteRows.length}`);
+      check('Google Flow 平台卡片在列', siteRows.some((r) => r.textContent.includes('Google Flow')));
       check('Pinterest 免登录徽章', siteRows.some((r) => r.textContent.includes('免登录')));
       check('环境就绪胶囊', $('.sh-env')?.classList.contains('ok'));
 
