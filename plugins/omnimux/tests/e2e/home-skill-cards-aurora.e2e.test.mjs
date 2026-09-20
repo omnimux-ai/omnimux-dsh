@@ -62,11 +62,11 @@ describe('E2E: 首页 Skills 技能库货架卡片高饱和度极光样式端到
     assert.equal(firstCard.querySelector('.omnimux-creatify-star-btn'), null, '必须移除右上角收藏星标')
     assert.equal(firstCard.querySelector('.omnimux-creatify-card-hover-drawer'), null, '必须移除覆盖大标题的文字抽屉')
 
-    // 验证居中大标题与纯矢量认证对勾
+    // 验证居中大标题（认证对勾徽标已按用户要求移除）
     const centerTitle = firstCard.querySelector('.omnimux-creatify-center-title')
     assert.ok(centerTitle, '必须展示居中标题区')
     assert.match(centerTitle.textContent, /UGC 告白/)
-    assert.ok(centerTitle.querySelector('.creatify-card-verified-svg'), '居中标题必须携带纯矢量认证打勾徽章')
+    assert.equal(centerTitle.querySelector('.creatify-card-verified-svg'), null, '居中标题严禁携带认证打勾徽标')
 
     // 验证悬停使用按钮点击
     const useBtn = firstCard.querySelector('.omnimux-skill-card-btn')
