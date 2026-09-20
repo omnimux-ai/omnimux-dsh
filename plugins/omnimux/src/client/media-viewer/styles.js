@@ -1048,10 +1048,10 @@ export const MEDIA_VIEWER_CSS = `
    ======================================================== */
 .omx-mv-composer-root {
   position: absolute;
-  bottom: 20px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 64px);
+  width: calc(100% - 24px);
   max-width: 860px;
   z-index: 60;
   background: var(--dsw-alias-bg-layer-1);
@@ -1149,8 +1149,6 @@ export const MEDIA_VIEWER_CSS = `
   justify-content: space-between;
   gap: 8px;
   flex-wrap: nowrap;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-  padding-top: 10px;
 }
 
 .omx-mv-toolbar-left {
