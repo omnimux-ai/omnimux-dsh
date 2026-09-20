@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-20T04:12:06.346Z",
+  "task": "fix-attach-reveal-scroll",
+  "topic": "根治点击复刻后附件挂载提醒把页面拉回顶部的跳动",
+  "assertions": {
+    "1. dock() 同一帧同步写入停靠 DOM（吸底先手），不等渲染周期": true,
+    "2. handleItemRecreate 顺序矫正：先 onApplyTemplate 吸底，后 attachTemplateToConversation": true,
+    "3. 附件提醒 scrollIntoView 落在 fixed 输入框上天然失效": true,
+    "4. FLIP 动画无损保留（先手反向补偿 + 布局效果释放）": true,
+    "5. 视口 0 像素位移": true
+  },
+  "evidence": "docs/evidence/fix-attach-reveal-scroll-verified.png",
+  "verdict": "PASS"
+}

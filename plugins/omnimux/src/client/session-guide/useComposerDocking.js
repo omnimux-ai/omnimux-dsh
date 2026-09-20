@@ -70,11 +70,13 @@ function isSameItem(a, b) {
  * 首页引导会话输入框吸底控制器 Hook
  *
  * 当用户在首页选用技能（点击「使用」）或复刻模板/爆款视频（点击「复刻」）时：
- * 1. 原生输入框通过 FLIP 动画平滑固定停靠在视口底部；
- * 2. 原 Hero 槽位由占位高度（min-height）撑住，防止页面布局坍塌；
- * 3. 输入框右上方渲染收起气泡按钮（.omnimux-trending-undock），点击解除吸底；
- * 4. 滚动迟滞联动：向下浏览保持吸底，向上滑回最顶部（<=10px）自动切回原位；
- * 5. 再次点击同一张卡片触发反悔，解除吸底。
+ * 1. 点击同一帧同步把停靠态写入真实界面（吸底先手），抢在附件挂载提醒等
+ *    强制滚动定位之前——输入框已是视口底部 fixed 形态时，滚动定位天然失效；
+ * 2. 原生输入框通过 FLIP 动画平滑固定停靠在视口底部；
+ * 3. 原 Hero 槽位由占位高度（min-height）撑住，防止页面布局坍塌；
+ * 4. 输入框右上方渲染收起气泡按钮（.omnimux-trending-undock），点击解除吸底；
+ * 5. 滚动迟滞联动：向下浏览保持吸底，向上滑回最顶部（<=10px）自动切回原位；
+ * 6. 再次点击同一张卡片触发反悔，解除吸底。
  */
 export function useComposerDocking({ hostRef, onUndock } = {}) {
   const [dockedItem, setDockedItem] = useState(null)
@@ -82,12 +84,14 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const dockHostRef = useRef(null)
   const pendingApplyRef = useRef(null)
   const savedScrollRef = useRef(null)
+  const primedFlipRef = useRef(null)
 
   const undock = useCallback(() => {
     setDockedItem(null)
     setPlacement('inline')
     pendingApplyRef.current = null
     savedScrollRef.current = null
+    primedFlipRef.current = null
     onUndock?.()
   }, [onUndock])
 
@@ -98,11 +102,50 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       undock()
       return false
     }
-    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') || hostRef?.current?.closest?.('[data-phase]')
+    const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') ||
+      hostRef?.current?.closest?.('[data-phase]') ||
+      hostRef?.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
-    // 记录用户触发点击当帧的绝对真实滚动位置
+    // 记录用户触发点击当帧的绝对真实滚动位置（必须先于任何 DOM 变更）
     savedScrollRef.current = readPageScrollTop(scroller)
     pendingApplyRef.current = typeof onDocked === 'function' ? onDocked : null
+
+    // 吸底先手：同一帧同步写入停靠 DOM，不等渲染周期。
+    // 附件挂载提醒的 scrollIntoView 等强制滚动定位晚于本帧执行时，
+    // 输入框已是视口底部 fixed 形态，滚动定位落在它身上即天然失效（元素已在视口内）。
+    if (root) {
+      const card = root.querySelector?.('[data-composer-card]')
+      const band = card?.parentElement || root
+      const from = card?.getBoundingClientRect?.()
+      const fromBand = band?.getBoundingClientRect?.()
+      if (fromBand && fromBand.width > 0) {
+        const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, fromBand.width - 24))
+        const left = fromBand.left + (fromBand.width - width) / 2
+        root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
+        root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)
+        root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
+      }
+      const reserved = Math.round(fromBand?.height || from?.height || 0)
+      if (band && reserved > 0) band.style.minHeight = `${reserved}px`
+      root.setAttribute(DOCK_OPEN_ATTR, '')
+
+      // FLIP 反向补偿：输入框物理上已 fixed 到底部，视觉上先钉在原位，
+      // 渲染周期到达后由布局效果释放过渡，平滑滑到底部。
+      if (card && from && from.width > 0 && from.height > 0) {
+        const to = card.getBoundingClientRect?.()
+        if (to && to.width > 0 && to.height > 0) {
+          const dx = Math.round(from.left - to.left)
+          const dy = Math.round(from.top - to.top)
+          if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
+            card.style.transition = 'none'
+            card.style.transform = `translate(${dx}px, ${dy}px)`
+            card.style.opacity = '0.92'
+            primedFlipRef.current = card
+          }
+        }
+      }
+    }
+
     setPlacement('docked')
     setDockedItem(item)
     return true
@@ -184,6 +227,31 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       root.removeAttribute(DOCK_OPEN_ATTR)
     }
 
+    // 吸底先手的 FLIP 释放：dock() 同帧已做反向补偿把输入框视觉钉在原位，
+    // 此处排程播放过渡，让它平滑滑入底部停靠位。
+    let primedAnimCancel = null
+    if (primedFlipRef.current) {
+      const primedCard = primedFlipRef.current
+      primedFlipRef.current = null
+      const raf = scheduleFrame(() => {
+        primedCard.style.transition = 'transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease-out'
+        primedCard.style.transform = ''
+        primedCard.style.opacity = ''
+      })
+      const timer = setTimeout(() => {
+        primedCard.style.transition = ''
+        primedCard.style.transform = ''
+        primedCard.style.opacity = ''
+      }, 420)
+      primedAnimCancel = () => {
+        cancelFrame(raf)
+        clearTimeout(timer)
+        primedCard.style.transition = ''
+        primedCard.style.transform = ''
+        primedCard.style.opacity = ''
+      }
+    }
+
     let cancelAnim = null
     if (currentlyDocked !== shouldDock && card && from && from.width > 0 && from.height > 0) {
       const to = card.getBoundingClientRect?.()
@@ -221,6 +289,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
     if (!dockedItem) {
       return () => {
+        primedAnimCancel?.()
         cancelAnim?.()
       }
     }
@@ -232,6 +301,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     if (card) observer?.observe(card)
     window.addEventListener('resize', writeGeometry)
     return () => {
+      primedAnimCancel?.()
       cancelAnim?.()
       observer?.disconnect()
       window.removeEventListener('resize', writeGeometry)
