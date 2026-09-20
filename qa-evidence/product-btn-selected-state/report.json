@@ -1,0 +1,76 @@
+{
+  "pass": true,
+  "assertions": [
+    {
+      "name": "默认态显示「产品」且无缩略图",
+      "pass": true,
+      "detail": "{\"text\":\"产品\",\"h\":28,\"thumb\":false}"
+    },
+    {
+      "name": "默认态高度 28px",
+      "pass": true,
+      "detail": "h=28"
+    },
+    {
+      "name": "点击按钮弹出选择弹窗",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "选中后按钮显示商品名",
+      "pass": true,
+      "detail": "{\"name\":\"便携小风扇\",\"thumbW\":18,\"thumbH\":18,\"chipId\":\"p-fan\",\"chipText\":\"便携小风扇\"}"
+    },
+    {
+      "name": "选中后缩略图 18x18",
+      "pass": true,
+      "detail": "18x18"
+    },
+    {
+      "name": "输入框插入对应 Chip",
+      "pass": true,
+      "detail": "{\"name\":\"便携小风扇\",\"thumbW\":18,\"thumbH\":18,\"chipId\":\"p-fan\",\"chipText\":\"便携小风扇\"}"
+    },
+    {
+      "name": "超长名称按钮宽度 ≤ 200px",
+      "pass": true,
+      "detail": "w=200"
+    },
+    {
+      "name": "超长名称以省略号截断",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "换选后旧 Chip 移除、新 Chip 插入",
+      "pass": true,
+      "detail": "{\"w\":200,\"ellipsis\":true,\"oldChip\":false,\"newChip\":true}"
+    },
+    {
+      "name": "悬停选中态显示移除按钮",
+      "pass": true,
+      "detail": "display=flex"
+    },
+    {
+      "name": "移除后按钮恢复默认态",
+      "pass": true,
+      "detail": "{\"text\":\"产品\",\"picker\":false,\"chip\":false}"
+    },
+    {
+      "name": "点击移除未触发弹窗",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "移除后输入框 Chip 同步移除",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "无图商品回退购物袋图标",
+      "pass": true,
+      "detail": "{\"thumb\":false,\"svg\":true}"
+    }
+  ],
+  "finishedAt": "2026-09-20T07:52:05.670Z"
+}
