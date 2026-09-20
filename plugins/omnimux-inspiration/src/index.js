@@ -271,6 +271,13 @@ export function apply(ctx) {
    */
   const callLocalEndpoint = async (req, res) => {
     try {
+      // Cross-origin pages (e.g. a file:// workbench) preflight JSON POSTs with
+      // OPTIONS. `sendJson` already carries the full CORS headers, so answering
+      // 204 here is all the browser needs to let the real request through.
+      if ((req.method || '').toUpperCase() === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       const rawUrl = req.url || '/omnimux/inspiration/local'
       const url = new URL(rawUrl, 'http://127.0.0.1')
       if (url.pathname.startsWith('/omnimux/inspiration/local/media/')) {

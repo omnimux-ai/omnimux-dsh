@@ -586,6 +586,15 @@ describe('HTTP entry: assembly completeness and teardown', () => {
     assert.ok(world.effects.some((entry) => entry.label === 'omnimux-inspiration-http-routes'))
   })
 
+  it('answers OPTIONS preflight with 204 and full CORS headers so cross-origin pages can POST', async () => {
+    const world = bootPlugin()
+    const res = await httpCall(world.route, { method: 'OPTIONS', url: `${LOCAL_PREFIX}/import-url` })
+    assert.equal(res.status, 204)
+    assert.equal(res.headers['access-control-allow-origin'], '*')
+    assert.equal(res.headers['access-control-allow-headers'], '*')
+    assert.match(String(res.headers['access-control-allow-methods']), /POST/)
+  })
+
   it('answers through the injected cloud seam, never through a real client', async () => {
     const world = bootPlugin()
     // `deny-network.mjs` already replaces dns / net / tls / http(s) / fetch with
