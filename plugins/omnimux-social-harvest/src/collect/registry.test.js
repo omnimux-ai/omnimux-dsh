@@ -15,10 +15,10 @@ const WRITE_IDS = new Set([
 ])
 
 describe('registry', () => {
-  it('9 个平台齐备', () => {
+  it('10 个平台齐备', () => {
     assert.deepEqual(
       SITES.map((s) => s.id),
-      ['tiktok', 'instagram', 'pinterest', 'youtube', 'twitter', 'facebook', 'xiaohongshu', 'douyin', 'linkedin'],
+      ['tiktok', 'instagram', 'pinterest', 'youtube', 'twitter', 'facebook', 'xiaohongshu', 'douyin', 'linkedin', 'flow'],
     )
   })
 

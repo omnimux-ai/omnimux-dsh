@@ -89,6 +89,8 @@ export const HARVEST_TOOL_NAMES = Object.freeze([
   'harvest_pinterest_download',
   'harvest_sites_status',
   'harvest_site_login',
+  'flow_image_generate',
+  'flow_video_generate',
 ])
 
 const SITE_ENUM = SITES.filter((s) => s.login).map((s) => s.id)
@@ -188,5 +190,39 @@ export function registerHarvestTools(ctx, deps) {
       await executeSiteLogin({ siteId: site.id, nowMs: Date.now() }, deps)
       return { ok: true, site: site.id }
     },
+  })
+
+  ctx.tools.register({
+    name: 'flow_image_generate',
+    description: '调用 Google Flow (flow.google.com) AI 文生图，自动复用浏览器登录态并下载图片到本地。',
+    parameters: objectParams({
+      prompt: { type: 'string', description: '图片生成提示词', required: true },
+      ratio: { type: 'string', description: '画面比例 (16:9, 4:3, 1:1, 3:4, 9:16)', enum: ['16:9', '4:3', '1:1', '3:4', '9:16'] },
+      count: { type: 'number', description: '生成张数 (1-4，默认 1)' },
+      dest: { type: 'string', description: '本地保存路径 (选填)' },
+    }),
+    output: jsonOut,
+    execute: (args) => gatedHarvest('flow', 'image', {
+      prompt: args?.prompt,
+      ratio: args?.ratio,
+      count: args?.count,
+      output: args?.dest,
+    }, deps),
+  })
+
+  ctx.tools.register({
+    name: 'flow_video_generate',
+    description: '调用 Google Flow (flow.google.com) 生成 Veo AI 视频，自动复用浏览器登录态并导出 720p 视频到本地。',
+    parameters: objectParams({
+      prompt: { type: 'string', description: '视频生成提示词', required: true },
+      ratio: { type: 'string', description: '画面比例 (16:9, 9:16)', enum: ['16:9', '9:16'] },
+      dest: { type: 'string', description: '本地保存路径 (选填)' },
+    }),
+    output: jsonOut,
+    execute: (args) => gatedHarvest('flow', 'video', {
+      prompt: args?.prompt,
+      ratio: args?.ratio,
+      output: args?.dest,
+    }, deps),
   })
 }

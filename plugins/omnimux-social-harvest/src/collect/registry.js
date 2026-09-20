@@ -23,6 +23,20 @@ export const F = {
     placeholder: '粘贴链接', hint: '支持粘贴，自动识别平台',
   }),
   limit: () => ({ key: 'limit', label: '数量上限', type: 'number', min: 5, max: 50, value: 15 }),
+  prompt: (label = '提示词') => ({
+    key: 'prompt', label, type: 'text', required: true,
+    placeholder: '例如：a cinematic slow pan over a futuristic city at sunset',
+  }),
+  ratio: (label = '画面比例', choices = [['16:9', '16:9'], ['4:3', '4:3'], ['1:1', '1:1'], ['3:4', '3:4'], ['9:16', '9:16']], defaultValue = '16:9') => ({
+    key: 'ratio', label, type: 'select', choices, value: defaultValue,
+  }),
+  count: (label = '生成张数', min = 1, max = 4, defaultValue = 1) => ({
+    key: 'count', label, type: 'number', min, max, value: defaultValue,
+  }),
+  output: (label = '保存路径 (选填)') => ({
+    key: 'output', label, type: 'text', required: false,
+    placeholder: '选填，如 ./output.png（留空自动保存）',
+  }),
 }
 
 /** @typedef {{ id: string, summary: string, tags: string[], form: object[], argv: (args: any) => string[], needsAuth?: boolean, loginCmd?: boolean }} CommandSpec */
@@ -165,6 +179,21 @@ export const SITES = [
         argv: () => ['linkedin', 'login'] },
       { id: 'whoami', summary: '查看当前登录账号', tags: ['auth'], form: [],
         argv: () => ['linkedin', 'whoami', '-f', 'json'] },
+    ],
+  },
+  {
+    id: 'flow', name: 'Google Flow', glyph: 'G', login: true,
+    commands: [
+      { id: 'image', summary: 'AI 生图：在 Flow 生成图片并支持本地下载', tags: ['create', 'auth'], needsAuth: true,
+        form: [F.prompt('图片提示词'), F.ratio(), F.count('生成张数', 1, 4, 1), F.output('保存路径 (选填)')],
+        argv: (a) => ['flow', 'image', a.prompt, '--ratio', a.ratio ?? '16:9', '--count', String(a.count ?? 1), ...(a.output ? ['--output', a.output] : []), '-f', 'json'] },
+      { id: 'video', summary: 'AI 生视频：在 Flow 生成 Veo 视频并支持导出 720p', tags: ['create', 'auth'], needsAuth: true,
+        form: [F.prompt('视频提示词'), F.ratio('视频比例', [['16:9', '16:9'], ['9:16', '9:16']], '16:9'), F.output('保存路径 (选填)')],
+        argv: (a) => ['flow', 'video', a.prompt, '--ratio', a.ratio ?? '16:9', ...(a.output ? ['--output', a.output] : []), '-f', 'json'] },
+      { id: 'login', summary: '打开 Flow 登录页并等待人工完成登录', tags: ['auth'], loginCmd: true, form: [],
+        argv: () => ['flow', 'login'] },
+      { id: 'whoami', summary: '查看当前登录账号', tags: ['auth'], form: [],
+        argv: () => ['flow', 'whoami', '-f', 'json'] },
     ],
   },
 ]

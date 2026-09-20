@@ -1,12 +1,16 @@
 {
   "task": "Issue #2426",
-  "total": 14,
+  "total": 15,
   "failed": 0,
   "assertions": [
     {
-      "name": "平台列表渲染 9 个站点",
+      "name": "平台列表渲染 10 个站点",
       "pass": true,
-      "detail": "actual=9"
+      "detail": "actual=10"
+    },
+    {
+      "name": "Google Flow 平台卡片在列",
+      "pass": true
     },
     {
       "name": "Pinterest 免登录徽章",
@@ -68,10 +72,10 @@
   ],
   "pass": true,
   "screenshot": "docs/evidence/social-harvest-stage-qa.png",
-  "screenshotBytes": 76461,
-  "url": "http://127.0.0.1:50085/",
+  "screenshotBytes": 80134,
+  "url": "http://127.0.0.1:58973/",
   "chrome": "Google Chrome 153.0.8010.52",
-  "bundleSha256": "2730ed4db04972dbba3f19ece3c130f10cf65ffcc96cb573c07fad61ba30219d",
-  "baseSha": "3b12bf59dee9d3fee97f28a4d5da68a18a2023a4",
-  "ranAt": "2026-09-19T19:03:02.406Z"
+  "bundleSha256": "26dffa3ee9c2befbdf8265933c32ba6f850d26b5979578274da2fc07c2f75eef",
+  "baseSha": "9c31ebc8059ae73e3fda947a114d2a9a45d76bb1",
+  "ranAt": "2026-09-20T04:35:19.262Z"
 }

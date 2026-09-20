@@ -53,6 +53,16 @@ describe('argv 构造（逐位断言）', () => {
     assert.deepEqual(command.argv({ query: '好物', limit: 15 }),
       ['douyin', 'hashtag', 'search', '好物', '-f', 'json'])
   })
+  it('flow image argv', () => {
+    const { command } = getCommand('flow', 'image')
+    assert.deepEqual(command.argv({ prompt: 'sunset beach', ratio: '16:9', count: 2, output: './out.png' }),
+      ['flow', 'image', 'sunset beach', '--ratio', '16:9', '--count', '2', '--output', './out.png', '-f', 'json'])
+  })
+  it('flow video argv', () => {
+    const { command } = getCommand('flow', 'video')
+    assert.deepEqual(command.argv({ prompt: 'pan over city', ratio: '9:16' }),
+      ['flow', 'video', 'pan over city', '--ratio', '9:16', '-f', 'json'])
+  })
 })
 
 describe('resolveArgs', () => {
