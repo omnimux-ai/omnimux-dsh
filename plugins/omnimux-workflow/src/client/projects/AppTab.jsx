@@ -21,7 +21,7 @@ import {
   resolveOwningProject,
   toPublishedAppEntry,
 } from './appLibrary.js'
-import { listProjects } from '../api.js'
+import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 
 const EMPTY_PROPS = Object.freeze({})
@@ -515,9 +515,19 @@ export function AppTab(props) {
           setEditNotice({ type: 'error', text: '打开画布失败，请重试。' })
         }
       } else {
-        // 2. 不同用户的应用：创建副本工程，并将工作流节点包装为工作流组
         setEditNotice({ type: 'info', text: '正在为此应用生成独立工程副本...' })
-        const { project, workspaceId, groupId } = await createProjectForkFromManifest(manifest)
+        const sessions = props?.ctx?.sessions
+        let hostProject = null
+        try {
+          const currentId = sessions?.list?.getSnapshot?.()?.current
+          if (currentId) {
+            const bound = await fetchSessionProjectBinding(String(currentId)).catch(() => null)
+            hostProject = bound?.ok ? bound.body?.project : null
+          }
+        } catch {
+          hostProject = null
+        }
+        const { project, workspaceId, groupId } = await createProjectForkFromManifest(manifest, { hostProject })
 
         if (workspaceId && typeof localStorage !== 'undefined') {
           localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
@@ -535,7 +545,9 @@ export function AppTab(props) {
         if (opened) {
           setEditNotice({
             type: 'success',
-            text: `已为你创建「${manifest.metadata?.name || '应用'}」的副本工程，编辑后可随时重新打包发布。`,
+            text: hostProject?.id
+              ? `已在当前项目新建「${manifest.metadata?.name || '应用'}_副本」。`
+              : `已为你创建「${manifest.metadata?.name || '应用'}」的副本工程，编辑后可随时重新打包发布。`,
           })
         } else {
           setEditNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })

@@ -156,8 +156,9 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
         if (typeof workspaceDir !== 'string' || workspaceDir.trim() === '') {
           return { status: 200, body: { ok: true, source: 'unknown-session', libraryRoot, project: null } };
         }
-        const existingSummary = store.list().find((row) => resolve(row.path) === resolve(workspaceDir));
-        let record = existingSummary ? store.get(existingSummary.id) : null;
+        const existingByRoot = store.findByRoot(workspaceDir);
+        let record = existingByRoot;
+        const hadExisting = Boolean(existingByRoot);
         if (!record) {
           try {
             record = ensureWorkspaceProjectBound(store, {
@@ -173,7 +174,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           }
         }
         if (!record) {
-          // 库根之外的工作区不登记，也不当作错误：画布保持自由画布语义。
+          // 库根之外且磁盘上也没有项目档案：不写盘，画布保持自由画布语义。
           return { status: 200, body: { ok: true, source: 'outside-library', workspaceDir, libraryRoot, project: null } };
         }
         const pages = record.pages ?? [];
@@ -182,7 +183,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           status: 200,
           body: {
             ok: true,
-            source: existingSummary ? 'existing' : 'registered',
+            source: hadExisting ? 'existing' : 'registered',
             libraryRoot,
             project: {
               id: record.id,
@@ -199,6 +200,14 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
       if (collectionRe.exec(path)) {
         if (method === 'GET') {
           const { store } = scopedStore(opts.libraryRoot);
+          const lookupPath = (url.searchParams.get('path') ?? '').trim();
+          if (lookupPath !== '') {
+            if (!isAbsolute(lookupPath)) {
+              return { status: 400, body: { error: 'invalid-project-root', message: 'path must be absolute' } };
+            }
+            const found = store.findByRoot(lookupPath);
+            return { status: 200, body: { project: found ? enrich(found) : null } };
+          }
           return { status: 200, body: { projects: store.list().map((project) => enrich(project)) } };
         }
         if (method === 'POST') {

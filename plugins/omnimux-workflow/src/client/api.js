@@ -57,6 +57,30 @@ export function listProjects() {
 }
 
 /**
+ * 按文件夹绝对路径认项目（含库外已有档案）。
+ * @param {string} projectRoot
+ */
+export function findProjectByRoot(projectRoot) {
+  const path = typeof projectRoot === 'string' ? projectRoot.trim() : ''
+  if (!path) return Promise.resolve({ ok: false, status: 400, body: { error: 'invalid-project-root' } })
+  return workflowRequest(`/omnimux-workflow/api/projects?path=${encodeURIComponent(path)}`)
+}
+
+/**
+ * 在已有画布上新建一张带空白画布的创作页。
+ * @param {string} canvasWorkspaceId
+ * @param {string} [title]
+ */
+export function createCanvasProjectPage(canvasWorkspaceId, title) {
+  const id = typeof canvasWorkspaceId === 'string' ? canvasWorkspaceId.trim() : ''
+  if (!id) return Promise.resolve({ ok: false, status: 400, body: { error: 'invalid-id' } })
+  return workflowRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(id)}/project-pages`, {
+    method: 'POST',
+    body: title ? { title } : {},
+  })
+}
+
+/**
  * 按会话解析所属工作区的项目（缺失即登记，Issue #2104）。
  * 返回体 `source`: existing | registered | outside-library | unknown-session。
  * @param {string} sessionId

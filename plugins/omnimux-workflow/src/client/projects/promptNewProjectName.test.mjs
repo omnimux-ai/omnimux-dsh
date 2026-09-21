@@ -115,4 +115,33 @@ describe('promptNewProjectName', () => {
       dom.window.close()
     }
   })
+
+  it('second submit after existing project carries confirmedExisting', async () => {
+    const { dom, promptNewProjectName } = await withDom()
+    const submits = []
+    try {
+      const pending = promptNewProjectName(t, {
+        submit: async (title, extra) => {
+          submits.push({ title, extra: { ...extra } })
+          if (!extra?.confirmedExisting) return { ok: false, existing: true, error: 'projects.existingConfirm' }
+          return { ok: true }
+        },
+      })
+      const overlay = document.querySelector('[data-omnimux-new-local-project]')
+      const input = overlay.querySelector('#omnimux-new-local-project-name')
+      const submitBtn = [...overlay.querySelectorAll('button')].find((btn) => btn.textContent === 'projects.dialog.submit')
+      input.value = '别的项目'
+      input.dispatchEvent(new window.Event('input', { bubbles: true }))
+      submitBtn.click()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      assert.equal(submits.length, 1)
+      assert.equal(Boolean(submits[0].extra.confirmedExisting), false)
+      submitBtn.click()
+      await pending
+      assert.equal(submits.length, 2)
+      assert.equal(submits[1].extra.confirmedExisting, true)
+    } finally {
+      dom.window.close()
+    }
+  })
 })

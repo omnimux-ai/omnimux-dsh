@@ -89,7 +89,7 @@ function ChevronLeftGlyph({ size = 14 }) {
  *   initialPath?: string,
  *   initialTitle?: string,
  *   onCancel: () => void,
- *   onSubmit: (payload: { title: string, projectRoot?: string }) => void,
+ *   onSubmit: (payload: { title: string, projectRoot?: string, confirmedExisting?: boolean }) => void | Promise<unknown>,
  *   onBrowseDirectory?: (path?: string) => Promise<unknown>,
  * }} props
  */
@@ -114,6 +114,7 @@ export function NewLocalProjectDialog({
   const [browseEntries, setBrowseEntries] = useState([])
   const [browseBusy, setBrowseBusy] = useState(false)
   const [browseError, setBrowseError] = useState('')
+  const [confirmedExisting, setConfirmedExisting] = useState(false)
 
   useEffect(() => {
     nameRef.current?.focus()
@@ -126,16 +127,22 @@ export function NewLocalProjectDialog({
 
   const submit = () => {
     if (!canSubmit) return
-    onSubmit({
+    void Promise.resolve(onSubmit({
       title: trimmed,
       ...(trimmedPath !== '' ? { projectRoot: trimmedPath } : {}),
-    })
+      ...(confirmedExisting ? { confirmedExisting: true } : {}),
+    })).then((result) => {
+      if (result && typeof result === 'object' && result.existing) {
+        setConfirmedExisting(true)
+      }
+    }).catch(() => {})
   }
 
   const applyPickedPath = (nextPath) => {
     const next = typeof nextPath === 'string' ? nextPath.trim() : ''
     if (next === '') return
     setPath(next)
+    setConfirmedExisting(false)
     setBrowsing(false)
     if (!nameTouched) {
       const fromFolder = extractFolderName(next)
@@ -240,7 +247,7 @@ export function NewLocalProjectDialog({
         disabled={busy}
         aria-label={t('projects.dialog.removeFolder')}
         data-omnimux-new-project-remove=""
-        onClick={() => { setPath('') }}
+        onClick={() => { setPath(''); setConfirmedExisting(false) }}
       >
         <IconCloseOutline16 size={14} />
       </IconButton>

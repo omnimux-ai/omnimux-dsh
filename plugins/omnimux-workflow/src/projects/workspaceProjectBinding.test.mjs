@@ -241,4 +241,36 @@ describe('workspace project binding (#2104)', { concurrency: 1 }, () => {
     rmSync(libraryRoot, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
   });
+
+  test('库外已有档案按路径认项目，不抛 project-exists', async () => {
+    const libraryRoot = tmpDir();
+    const outside = tmpDir('omnimux-outside-seeded-');
+    mkdirSync(join(outside, '.omnimux'), { recursive: true });
+    const store = host.createProjectStore({ libraryRoot });
+    const first = store.create('视频代做', { projectRoot: outside });
+    const reused = store.create('视频代做', { projectRoot: outside });
+    assert.equal(reused.id, first.id);
+    assert.equal(store.findByRoot(outside)?.id, first.id);
+
+    const dispatcher = host.createProjectDispatcher({
+      libraryRoot,
+      resolveSessionWorkspaceDir: () => outside,
+    });
+    const bound = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux-workflow/api/projects/session-binding?sessionId=s-out',
+    });
+    assert.equal(bound.status, 200);
+    assert.equal(bound.body.source, 'existing');
+    assert.equal(bound.body.project.id, first.id);
+
+    const byPath = await dispatcher.dispatch({
+      method: 'GET',
+      url: `/omnimux-workflow/api/projects?path=${encodeURIComponent(outside)}`,
+    });
+    assert.equal(byPath.status, 200);
+    assert.equal(byPath.body.project.id, first.id);
+    rmSync(libraryRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
 });

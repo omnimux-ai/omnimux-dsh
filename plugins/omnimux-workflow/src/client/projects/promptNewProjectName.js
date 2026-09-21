@@ -20,6 +20,7 @@ function formatCreateError(error, t) {
   if (code === 'title-required' || code === 'title-invalid' || code === 'title-too-long') {
     return t('projects.genericError')
   }
+  if (code === 'project-exists') return t('projects.existingConfirm')
   return t('projects.createFailed').replace('{error}', code)
 }
 
@@ -297,10 +298,14 @@ export function promptNewProjectName(t, opts = {}) {
       errorEl.style.display = 'block'
     }
 
+    let confirmedExisting = false
     const runSubmit = async () => {
       const title = input.value.trim()
       if (busy || title === '' || title.length > MAX_PROJECT_TITLE_LENGTH) return
-      const extra = folderPath.trim() !== '' ? { projectRoot: folderPath.trim() } : {}
+      const extra = {
+        ...(folderPath.trim() !== '' ? { projectRoot: folderPath.trim() } : {}),
+        ...(confirmedExisting ? { confirmedExisting: true } : {}),
+      }
       if (typeof opts.submit !== 'function') {
         finish(title)
         return
@@ -314,6 +319,12 @@ export function promptNewProjectName(t, opts = {}) {
           finish(title)
           return
         }
+        if (result?.existing) {
+          confirmedExisting = true
+          setError(t('projects.existingConfirm'))
+          return
+        }
+        confirmedExisting = false
         setError(formatCreateError(result?.error, t))
       } catch (error) {
         setError(formatCreateError(error instanceof Error ? error.message : String(error), t))

@@ -11,7 +11,7 @@
  */
 
 import { PRESET_WORKFLOW_MAP } from './presetWorkflows.js'
-import { createProject, workflowRequest } from '../api.js'
+import { createCanvasProjectPage, createProject, workflowRequest } from '../api.js'
 
 /** 发布向导写入的存储键（与 AppTab / 向导保持一致，改名即破坏读回）。 */
 export const APP_MANIFESTS_STORAGE_KEY = 'omnimux_apps_manifests'
@@ -428,9 +428,8 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
  */
 export async function createProjectForkFromManifest(manifest, deps = {}) {
   const appName = textOf(manifest?.metadata?.name) || 'AI 应用'
-  const projectTitle = `${appName} (副本)`
+  const pageTitle = `${appName}_副本`
 
-  // 1. 获取工作流节点与连线拓扑
   let rawNodes = manifest?.workflowBinding?.snapshot?.nodes
   let rawEdges = manifest?.workflowBinding?.snapshot?.edges
 
@@ -446,13 +445,52 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     rawEdges = []
   }
 
-  // 2. 将节点包装进工作流组
-  const groupTitle = `${appName} (副本)`
-  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, groupTitle)
+  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, pageTitle)
+  const doRequest = deps.requestFn || workflowRequest
+  const hostProject = deps.hostProject && typeof deps.hostProject === 'object' ? deps.hostProject : null
 
-  // 3. 创建新项目
+  if (hostProject?.id) {
+    const pages = Array.isArray(hostProject.pages) ? hostProject.pages : []
+    const active = pages.find((page) => page?.id === hostProject.activePageId) || pages[0]
+    const hostCanvasId = active?.canvasWorkspaceId
+      || hostProject.canvasWorkspaceId
+      || (Array.isArray(hostProject.canvasWorkspaceIds) ? hostProject.canvasWorkspaceIds[0] : '')
+      || ''
+    if (!hostCanvasId) {
+      throw new Error('未能为副本分配画布工作区')
+    }
+    const doCreatePage = deps.createPageFn || createCanvasProjectPage
+    const pageRes = await doCreatePage(hostCanvasId, pageTitle)
+    if (!pageRes || !pageRes.ok) {
+      throw new Error(pageRes?.body?.error || pageRes?.body?.message || '创建创作页副本失败')
+    }
+    const workspaceId = pageRes.body?.page?.canvasWorkspaceId
+      || pageRes.body?.workspace?.id
+      || ''
+    if (!workspaceId) {
+      throw new Error('未能为副本分配画布工作区')
+    }
+    const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
+      method: 'PUT',
+      body: { nodes, edges },
+    })
+    if (!saved || saved.ok === false) {
+      throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')
+    }
+    const page = pageRes.body?.page
+    if (!page?.id) {
+      throw new Error('创建创作页副本失败')
+    }
+    return {
+      project: pageRes.body?.project || hostProject,
+      page,
+      workspaceId,
+      groupId,
+    }
+  }
+
   const doCreateProject = deps.createProjectFn || createProject
-  const createRes = await doCreateProject(projectTitle)
+  const createRes = await doCreateProject(pageTitle)
   if (!createRes || !createRes.ok || !createRes.body?.project) {
     throw new Error(createRes?.body?.error || createRes?.body?.message || '创建项目工程副本失败')
   }
@@ -463,15 +501,13 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     throw new Error('未能为副本分配画布工作区')
   }
 
-  // 4. 将打包好的节点与边保存到新画布工作区
-  const doRequest = deps.requestFn || workflowRequest
-  await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
+  const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
     method: 'PUT',
-    body: {
-      nodes,
-      edges,
-    },
-  }).catch(() => {})
+    body: { nodes, edges },
+  })
+  if (!saved || saved.ok === false) {
+    throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')
+  }
 
   return {
     project: newProject,

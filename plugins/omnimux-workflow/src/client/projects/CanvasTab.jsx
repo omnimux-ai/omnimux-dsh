@@ -312,7 +312,7 @@ export function CanvasTab({
           onCancel={() => {
             if (!busy) setProjectDialogOpen(false)
           }}
-          onSubmit={async ({ title, projectRoot }) => {
+          onSubmit={async (payload) => {
             setBusy(true)
             setCreateError('')
             try {
@@ -336,11 +336,11 @@ export function CanvasTab({
                   betterSidebar: effectiveSidebar,
                   t,
                 },
-                { title, projectRoot }
+                payload
               )
               if (!res?.ok) {
                 setCreateError(res?.error || t('projects.genericError') || '创建失败')
-                return
+                return res
               }
               setProjectDialogOpen(false)
               if (sessionId) {
@@ -353,6 +353,7 @@ export function CanvasTab({
                   workspaceDir: updated?.body?.workspaceDir,
                 })
               }
+              return res
             } catch (err) {
               setCreateError(err instanceof Error ? err.message : String(err))
             } finally {
