@@ -2222,6 +2222,7 @@ export const INSPIRATION_CSS = `
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 12px;
+  flex: 0 0 auto;
 }
 .omnimux-inspiration-modal-panel-heading h3 {
   margin: 0;

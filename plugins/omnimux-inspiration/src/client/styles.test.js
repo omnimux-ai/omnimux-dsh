@@ -356,6 +356,8 @@ describe('preview modal doc style and glass removal', () => {
     assert.equal(decl(headingTitle, 'white-space'), 'nowrap')
     const wrap = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-title')
     assert.equal(decl(wrap, 'flex'), '0 0 auto')
+    const heading = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel-heading')
+    assert.equal(decl(heading, 'flex'), '0 0 auto')
   })
 
   it('removes breakdown badge from deconstruction panel and renders document layout without accordion fold', () => {

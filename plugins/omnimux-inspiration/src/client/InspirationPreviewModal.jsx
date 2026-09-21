@@ -277,8 +277,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   }, [onClose])
 
   const data = useMemo(() => getInspirationPreviewData(item), [item])
-  if (!row) return null
-
   const currentShotIndex = useMemo(() => {
     if (!data?.shots?.length) return -1
     return data.shots.findIndex((shot) => {
@@ -391,6 +389,8 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const deconValue = deconstructionCopyText(data)
   const shotsScroll = useOverlayScrollReveal('omnimux-inspiration-shots-scroll-area')
   const deconScroll = useOverlayScrollReveal('omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style')
+
+  if (!row) return null
 
   const mobileTabs = ['video', 'script', 'deconstruction'].map((tab) => ({
     id: tab,
