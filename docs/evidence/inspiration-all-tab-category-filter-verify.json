@@ -1,7 +1,7 @@
 {
   "task": "inspiration-all-tab-category-filter",
   "issue": 2511,
-  "startedAt": "2026-09-21T12:45:55.863Z",
+  "startedAt": "2026-09-21T13:09:47.808Z",
   "pass": true,
   "assertions": [
     {
@@ -41,11 +41,17 @@
       "trigger": "美妆护肤"
     },
     {
+      "name": "all-tab-reset-restores-mix",
+      "pass": true,
+      "trigger": "全部",
+      "localAfterReset": []
+    },
+    {
       "name": "screenshot-saved",
       "pass": true,
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-inspiration-all-tab-category/docs/evidence/inspiration-all-tab-category-filter-verified.png"
     }
   ],
   "errors": [],
-  "completedAt": "2026-09-21T12:45:56.928Z"
+  "completedAt": "2026-09-21T13:09:48.505Z"
 }

@@ -308,6 +308,30 @@ try {
     assert.ok(filtered, '选美妆护肤后列表仍混有本地或其它行业卡片')
     report.assertions.push({ name: 'all-tab-industry-shows-cloud-slice', pass: true, trigger: filtered.label })
 
+    const beforeResetLocal = logLocal.length
+    await evaluate(`document.querySelector('${CATEGORY_TRIGGER}').click()`)
+    const resetClicked = await evaluate(`(function() {
+      const node = [...document.querySelectorAll('${OPTION_QUERY}')].find((item) => item.textContent.trim() === '全部');
+      if (!node) return false;
+      node.click();
+      return true;
+    })()`)
+    assert.ok(resetClicked, '未点回分类「全部」')
+    const restored = await waitFor(evaluate, `(function() {
+      const text = document.body.innerText || '';
+      const trigger = document.querySelector('${CATEGORY_TRIGGER}');
+      const label = (trigger?.textContent || '').trim();
+      return (label === '全部' && text.includes('local cowboy item') && text.includes('cloud beauty item'))
+        ? { label } : null;
+    })()`, 5000)
+    assert.ok(restored, '点回分类「全部」后必须恢复本地+云端混排')
+    report.assertions.push({
+      name: 'all-tab-reset-restores-mix',
+      pass: true,
+      trigger: restored.label,
+      localAfterReset: logLocal.slice(beforeResetLocal),
+    })
+
     const shot = await send('Page.captureScreenshot', { format: 'png' })
     assert.ok(shot?.data, '截图数据为空')
     mkdirSync(EVIDENCE_DIR, { recursive: true })

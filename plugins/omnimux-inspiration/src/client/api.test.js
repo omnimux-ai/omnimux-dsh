@@ -320,6 +320,14 @@ describe('listInspirations query params', () => {
         false,
         'tab=all with an industry must not surface unfiltered local cards',
       )
+
+      calls.length = 0
+      await loadInspirationsAtomic({ tab: 'all', category: '', sort: 'hot' })
+      const restoredLocal = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
+      assert.ok(
+        restoredLocal.length > 0,
+        `tab=all after clearing industry must query the local library again: ${JSON.stringify(calls)}`,
+      )
     } finally {
       globalThis.fetch = originalFetch
     }
