@@ -10,6 +10,7 @@ import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createGuideStore } from '../../src/client/session-guide/state.js'
 import { guideZh } from '../../src/client/session-guide/catalog.js'
+import { installGuideStyles } from '../../src/client/session-guide/styles.js'
 
 async function loadSessionGuide() {
   const output = await build({
@@ -44,11 +45,8 @@ test('E2E: 首页不再渲染热门入门方式，探索模板与胶囊保留且
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-  const style = document.createElement('style')
-  style.textContent = `
-    .omnimux-explore-title { font-size: 16px; font-weight: 600; color: #f4f4f5; margin: 0; }
-  `
-  document.head.appendChild(style)
+  // 注入生产样式真源，避免自写 CSS 导致字号断言自指
+  const uninstallStyles = installGuideStyles(document)
 
   const store = createGuideStore()
   const root = createRoot(document.querySelector('#guide'))
@@ -90,6 +88,7 @@ test('E2E: 首页不再渲染热门入门方式，探索模板与胶囊保留且
     assert.ok(['600', 'bold'].includes(cs.fontWeight), '探索模板标题字重必须为 600')
   } finally {
     await act(async () => root.unmount())
+    uninstallStyles?.()
     store.dispose()
     dom.window.close()
     globalThis.window = previous.window
