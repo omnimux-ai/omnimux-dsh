@@ -77,28 +77,136 @@ function ClockIcon({ size = 12 }) {
 // 真实采集数据源
 const SUBPROMPTS_DATA = {
   'video-ads': [
-    { labelZh: "使用 AI 数字人为您的网站制作视频广告:", labelEn: "Create a video ad with an AI avatar for your website:", prompt: "Create a video ad with an AI avatar for " },
-    { labelZh: "为您的网站制作 TikTok 竖屏视频广告:", labelEn: "Create a TikTok video ad for your website:", prompt: "Create a vertical TikTok video ad for " },
-    { labelZh: "为您的网站制作 UGC 风格的好物推荐视频:", labelEn: "Create a UGC-style testimonial video for your website:", prompt: "Create a UGC-style testimonial video with an AI avatar for " },
-    { labelZh: "为您的网站制作 Facebook / Instagram 视频广告:", labelEn: "Create a Facebook / Instagram video ad for your website:", prompt: "Create a video ad for Facebook and Instagram for " },
-    { labelZh: "为您的网站制作 30 秒产品演示视频:", labelEn: "Create a 30-second product demo for your website:", prompt: "Create a 30-second product demo video ad for " },
-    { labelZh: "为您的独立站制作 Shopify 产品视频:", labelEn: "Create a Shopify product video for your store:", prompt: "Create a product video ad for my Shopify store: " },
-    { labelZh: "为您的商品制作 Amazon 视频广告:", labelEn: "Create an Amazon product video for your listing:", prompt: "Create a product showcase video for my Amazon listing: " }
+    {
+      labelZh: "使用 AI 数字人为您的网站制作视频广告:",
+      labelEn: "Create a video ad with an AI avatar for your website:",
+      promptZh: "使用 AI 数字人为我的网站制作视频广告：",
+      promptEn: "Create a video ad with an AI avatar for ",
+      prompt: "Create a video ad with an AI avatar for "
+    },
+    {
+      labelZh: "为您的网站制作 TikTok 竖屏视频广告:",
+      labelEn: "Create a TikTok video ad for your website:",
+      promptZh: "为我的网站制作 TikTok 竖屏视频广告：",
+      promptEn: "Create a vertical TikTok video ad for ",
+      prompt: "Create a vertical TikTok video ad for "
+    },
+    {
+      labelZh: "为您的网站制作 UGC 风格的好物推荐视频:",
+      labelEn: "Create a UGC-style testimonial video for your website:",
+      promptZh: "使用 AI 数字人为我的网站制作 UGC 风格的好物推荐视频：",
+      promptEn: "Create a UGC-style testimonial video with an AI avatar for ",
+      prompt: "Create a UGC-style testimonial video with an AI avatar for "
+    },
+    {
+      labelZh: "为您的网站制作 Facebook / Instagram 视频广告:",
+      labelEn: "Create a Facebook / Instagram video ad for your website:",
+      promptZh: "为我的网站制作 Facebook / Instagram 视频广告：",
+      promptEn: "Create a video ad for Facebook and Instagram for ",
+      prompt: "Create a video ad for Facebook and Instagram for "
+    },
+    {
+      labelZh: "为您的网站制作 30 秒产品演示视频:",
+      labelEn: "Create a 30-second product demo for your website:",
+      promptZh: "为我的网站制作 30 秒产品演示视频：",
+      promptEn: "Create a 30-second product demo video ad for ",
+      prompt: "Create a 30-second product demo video ad for "
+    },
+    {
+      labelZh: "为您的独立站制作 Shopify 产品视频:",
+      labelEn: "Create a Shopify product video for your store:",
+      promptZh: "为我的独立站制作 Shopify 产品视频广告：",
+      promptEn: "Create a product video ad for my Shopify store: ",
+      prompt: "Create a product video ad for my Shopify store: "
+    },
+    {
+      labelZh: "为您的商品制作 Amazon 视频广告:",
+      labelEn: "Create an Amazon product video for your listing:",
+      promptZh: "为我的商品制作 Amazon 视频广告：",
+      promptEn: "Create a product showcase video for my Amazon listing: ",
+      prompt: "Create a product showcase video for my Amazon listing: "
+    }
   ],
   'image-ads': [
-    { labelZh: "为您的网站制作产品主图海报:", labelEn: "Create a product hero shot for your website:", prompt: "Create a product hero shot image ad for " },
-    { labelZh: "为您的网站制作 Instagram 轮播广告组:", labelEn: "Create an Instagram carousel ad set for your website:", prompt: "Create an Instagram carousel ad set for " },
-    { labelZh: "为您的网站制作生活场景氛围图:", labelEn: "Create a lifestyle scene image for your website:", prompt: "Create a lifestyle image ad for " },
-    { labelZh: "为您的网站制作 Facebook 横幅广告:", labelEn: "Create Facebook banner ads for your website:", prompt: "Create Facebook banner ads in multiple sizes for " },
-    { labelZh: "为您的 Shopify 店铺制作商品图片:", labelEn: "Create product images for your Shopify store:", prompt: "Create product images and banner ads for my Shopify store: " },
-    { labelZh: "为您的产品制作 Amazon 详情页主图:", labelEn: "Create Amazon listing images for your product:", prompt: "Create product listing images for my Amazon product: " }
+    {
+      labelZh: "为您的网站制作产品主图海报:",
+      labelEn: "Create a product hero shot for your website:",
+      promptZh: "为我的网站制作产品主图海报：",
+      promptEn: "Create a product hero shot image ad for ",
+      prompt: "Create a product hero shot image ad for "
+    },
+    {
+      labelZh: "为您的网站制作 Instagram 轮播广告组:",
+      labelEn: "Create an Instagram carousel ad set for your website:",
+      promptZh: "为我的网站制作 Instagram 轮播广告组：",
+      promptEn: "Create an Instagram carousel ad set for ",
+      prompt: "Create an Instagram carousel ad set for "
+    },
+    {
+      labelZh: "为您的网站制作生活场景氛围图:",
+      labelEn: "Create a lifestyle scene image for your website:",
+      promptZh: "为我的网站制作生活场景氛围图：",
+      promptEn: "Create a lifestyle image ad for ",
+      prompt: "Create a lifestyle image ad for "
+    },
+    {
+      labelZh: "为您的网站制作 Facebook 横幅广告:",
+      labelEn: "Create Facebook banner ads for your website:",
+      promptZh: "为我的网站制作 Facebook 横幅广告：",
+      promptEn: "Create Facebook banner ads in multiple sizes for ",
+      prompt: "Create Facebook banner ads in multiple sizes for "
+    },
+    {
+      labelZh: "为您的 Shopify 店铺制作商品图片:",
+      labelEn: "Create product images for your Shopify store:",
+      promptZh: "为我的 Shopify 店铺制作商品图片与横幅广告：",
+      promptEn: "Create product images and banner ads for my Shopify store: ",
+      prompt: "Create product images and banner ads for my Shopify store: "
+    },
+    {
+      labelZh: "为您的产品制作 Amazon 详情页主图:",
+      labelEn: "Create Amazon listing images for your product:",
+      promptZh: "为我的产品制作 Amazon 详情页主图：",
+      promptEn: "Create product listing images for my Amazon product: ",
+      prompt: "Create product listing images for my Amazon product: "
+    }
   ],
   'competitor': [
-    { labelZh: "查看竞争对手正在投放哪些广告...", labelEn: "Show me what ads my competitors are running...", prompt: "Show me what ads my competitors are running for " },
-    { labelZh: "我所在行业的当前广告创意趋势是什么？", labelEn: "What ad trends are working in my industry?", prompt: "What ad creative trends are working right now in my industry: " },
-    { labelZh: "查找竞争对手表现最佳的 Facebook 广告:", labelEn: "Find top performing Facebook ads for a competitor:", prompt: "Find top performing Facebook ads for " },
-    { labelZh: "查找竞争对手表现最佳的 TikTok 爆款广告:", labelEn: "Find top performing TikTok ads for a competitor:", prompt: "Find top performing TikTok ads for " },
-    { labelZh: "将我的广告与竞争对手进行对比分析:", labelEn: "Compare my ads against a competitor:", prompt: "Compare my ads against this competitor and tell me how to win: " }
+    {
+      labelZh: "查看竞争对手正在投放哪些广告...",
+      labelEn: "Show me what ads my competitors are running...",
+      promptZh: "查看竞争对手正在投放哪些广告：",
+      promptEn: "Show me what ads my competitors are running for ",
+      prompt: "Show me what ads my competitors are running for "
+    },
+    {
+      labelZh: "我所在行业的当前广告创意趋势是什么？",
+      labelEn: "What ad trends are working in my industry?",
+      promptZh: "我所在行业的当前广告创意趋势是什么：",
+      promptEn: "What ad creative trends are working right now in my industry: ",
+      prompt: "What ad creative trends are working right now in my industry: "
+    },
+    {
+      labelZh: "查找竞争对手表现最佳的 Facebook 广告:",
+      labelEn: "Find top performing Facebook ads for a competitor:",
+      promptZh: "查找竞争对手表现最佳的 Facebook 广告：",
+      promptEn: "Find top performing Facebook ads for ",
+      prompt: "Find top performing Facebook ads for "
+    },
+    {
+      labelZh: "查找竞争对手表现最佳的 TikTok 爆款广告:",
+      labelEn: "Find top performing TikTok ads for a competitor:",
+      promptZh: "查找竞争对手表现最佳的 TikTok 爆款广告：",
+      promptEn: "Find top performing TikTok ads for ",
+      prompt: "Find top performing TikTok ads for "
+    },
+    {
+      labelZh: "将我的广告与竞争对手进行对比分析:",
+      labelEn: "Compare my ads against a competitor:",
+      promptZh: "将我的广告与竞争对手进行对比分析，告诉我如何胜出：",
+      promptEn: "Compare my ads against this competitor and tell me how to win: ",
+      prompt: "Compare my ads against this competitor and tell me how to win: "
+    }
   ]
 };
 
@@ -177,13 +285,128 @@ const MARKET_SKILLS = Array.isArray(featuredSkillsData?.skills) && featuredSkill
     }))
   : FEATURED_SKILLS;
 
-export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
+/**
+ * 校验是否为合法语言代码（如 'zh'、'en'、'zh-CN'、'en-US'）
+ * 匹配正则 /^[a-zA-Z]{2}(-[a-zA-Z0-9]+)?$/
+ * 严格过滤非字符串、空串、未知标识或未命中的翻译 key（如 'locale'、'guide.locale'）
+ */
+export function isValidLanguageCode(code) {
+  if (typeof code !== 'string') return false;
+  const trimmed = code.trim();
+  if (!trimmed) return false;
+  return /^[a-zA-Z]{2}(-[a-zA-Z0-9]+)?$/.test(trimmed);
+}
+
+/**
+ * 统一语言判定纯函数：
+ * 优先级：
+ * a. t('locale') 或 t('guide.locale')（若返回有效合法的 'zh' 或 'en' 等字符串）；
+ * b. typeof document !== 'undefined' && document?.documentElement?.lang（若合法有效）；
+ * c. 显式传入且合法的 locale prop；
+ * d. 兜底回退为 'zh'。
+ */
+export function resolveLocale(locale, t) {
+  // a. t('locale') 或 t('guide.locale')
+  if (typeof t === 'function') {
+    try {
+      const tLocale = t('locale');
+      if (isValidLanguageCode(tLocale) && tLocale.trim() !== 'locale') {
+        return tLocale.trim();
+      }
+      const tGuideLocale = t('guide.locale');
+      if (isValidLanguageCode(tGuideLocale) && tGuideLocale.trim() !== 'guide.locale') {
+        return tGuideLocale.trim();
+      }
+    } catch {}
+  }
+
+  // b. typeof document !== 'undefined' && document?.documentElement?.lang
+  if (typeof document !== 'undefined' && document?.documentElement?.lang) {
+    const docLang = String(document.documentElement.lang).trim();
+    if (isValidLanguageCode(docLang)) {
+      return docLang;
+    }
+  }
+
+  // c. 显式传入且合法的 locale prop
+  if (isValidLanguageCode(locale)) {
+    return locale.trim();
+  }
+
+  // d. 兜底回退为 'zh'
+  return 'zh';
+}
+
+export function CreatifyPillsBar({ onApplyPrompt, t, locale }) {
   const [activeMenu, setActiveMenu] = useState(null); // null | 'skills' | 'video-ads' | 'image-ads' | 'competitor'
   const [hoverSkill, setHoverSkill] = useState(MARKET_SKILLS[0]);
   const [searchKey, setSearchKey] = useState('');
   const containerRef = useRef(null);
 
-  const isZh = locale ? String(locale).startsWith('zh') : true;
+  const [currentLocale, setCurrentLocale] = useState(() => resolveLocale(locale, t));
+
+  // 合并与统一多语言监听与同步生命周期：严格保持「只读宿主环境」的单向数据流，绝不修改全局 DOM
+  useEffect(() => {
+    const syncLocale = (candidateLocale) => {
+      if (isValidLanguageCode(candidateLocale)) {
+        setCurrentLocale((prev) => (prev === candidateLocale ? prev : candidateLocale));
+        return;
+      }
+      const nextLocale = resolveLocale(locale, t);
+      setCurrentLocale((prev) => (prev === nextLocale ? prev : nextLocale));
+    };
+
+    // 基于当前 [locale, t] 计算并同步更新当前语言
+    syncLocale();
+
+    let observer = null;
+    const ObserverClass = (typeof document !== 'undefined' && document?.defaultView?.MutationObserver)
+      || (typeof window !== 'undefined' && window?.MutationObserver)
+      || (typeof MutationObserver !== 'undefined' ? MutationObserver : null);
+
+    if (ObserverClass && typeof document !== 'undefined' && document?.documentElement) {
+      observer = new ObserverClass(() => {
+        syncLocale();
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['lang'],
+      });
+    }
+
+    const handleCustomLocaleEvent = (event) => {
+      const rawEventLocale = event?.detail?.locale || event?.detail || (typeof event?.data === 'string' ? event.data : null);
+      const eventLocale = typeof rawEventLocale === 'string' ? rawEventLocale.trim() : null;
+      if (isValidLanguageCode(eventLocale)) {
+        syncLocale(eventLocale);
+      } else {
+        syncLocale();
+      }
+    };
+
+    const targetWindow = typeof window !== 'undefined'
+      ? window
+      : (typeof document !== 'undefined' ? document?.defaultView : null);
+
+    if (targetWindow && typeof targetWindow.addEventListener === 'function') {
+      targetWindow.addEventListener('languagechange', handleCustomLocaleEvent);
+      targetWindow.addEventListener('omnimux:locale-change', handleCustomLocaleEvent);
+      targetWindow.addEventListener('localechange', handleCustomLocaleEvent);
+    }
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+      if (targetWindow && typeof targetWindow.removeEventListener === 'function') {
+        targetWindow.removeEventListener('languagechange', handleCustomLocaleEvent);
+        targetWindow.removeEventListener('omnimux:locale-change', handleCustomLocaleEvent);
+        targetWindow.removeEventListener('localechange', handleCustomLocaleEvent);
+      }
+    };
+  }, [locale, t]);
+
+  const isZh = currentLocale ? String(currentLocale).toLowerCase().startsWith('zh') : true;
 
   const toggleMenu = useCallback((menuId) => {
     setActiveMenu((prev) => (prev === menuId ? null : menuId));
@@ -204,21 +427,25 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
     return () => document.removeEventListener('click', handleDocClick);
   }, []);
 
-  const handleSelectPrompt = useCallback((prompt) => {
+  const handleSelectPrompt = useCallback((item) => {
     handleClose();
+    const promptText = typeof item === 'string'
+      ? item
+      : (isZh ? (item?.promptZh || item?.prompt || '') : (item?.promptEn || item?.prompt || ''));
+
     if (onApplyPrompt) {
-      onApplyPrompt(prompt);
+      onApplyPrompt(promptText);
     } else {
       try {
         const editor = document.querySelector('[data-chip-editor], [contenteditable="true"], .dsh-composer-input');
         if (editor) {
           editor.focus();
-          editor.innerText = prompt;
+          editor.innerText = promptText;
           editor.dispatchEvent(new Event('input', { bubbles: true }));
         }
       } catch {}
     }
-  }, [handleClose, onApplyPrompt]);
+  }, [handleClose, onApplyPrompt, isZh]);
 
   const handleSelectSkill = useCallback((skill) => {
     handleClose();
@@ -522,7 +749,7 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
           {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => (
             <div
               key={idx}
-              onClick={() => handleSelectPrompt(item.prompt)}
+              onClick={() => handleSelectPrompt(item)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -543,8 +770,8 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale = 'zh' }) {
                 e.currentTarget.style.color = 'var(--dsw-alias-label-secondary)';
               }}
             >
-              <div style={{ opacity: 0.7 }}><PlayIcon size={13} /></div>
-              <div>{isZh ? item.labelZh : item.labelEn}</div>
+              <div style={{ opacity: 0.7 }} /* exempt-ui02: 子提示词图标透明度 */><PlayIcon size={13} /></div>
+              <div>{isZh ? (item.labelZh || item.label) : (item.labelEn || item.label)}</div>
             </div>
           ))}
         </div>

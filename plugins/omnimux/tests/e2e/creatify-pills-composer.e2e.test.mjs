@@ -60,13 +60,43 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     assert.match(videoPopover.style.background, /dsw-alias-bg-elevated/, '弹窗必须采用设计系统标准提升背景色');
     assert.ok(!videoPopover.style.backdropFilter, '弹窗禁止使用毛玻璃透底滤镜');
     
-    // 点击第一项子提示词
+    // 点击第一项子提示词（验证中文环境下注入中文提示词）
     const firstOption = videoPopover.querySelector('div');
     await act(async () => { firstOption.click(); });
     assert.ok(capturedPrompt.length > 0, '提示词注入成功');
+    assert.match(capturedPrompt, /使用 AI 数字人|制作视频广告/);
 
-    // 2. 点击 Skills 按钮验证技能菜单面板两端对齐与不透明
-    await act(async () => { pills[0].click(); });
+    // 2. 验证英文环境下点击子选项注入英文提示词
+    root.unmount();
+    const enContainer = document.getElementById('root');
+    const enRoot = createRoot(enContainer);
+    let enCapturedPrompt = '';
+    await act(async () => {
+      enRoot.render(React.createElement(CreatifyPillsBar, {
+        locale: 'en',
+        onApplyPrompt: (p) => { enCapturedPrompt = p; }
+      }));
+    });
+    const enPills = document.querySelectorAll('.omnimux-pill-btn');
+    assert.match(enPills[1].textContent, /Video ads/);
+    await act(async () => { enPills[1].click(); });
+    const enVideoPopover = document.querySelector('.omnimux-subprompt-popover');
+    const enFirstOption = enVideoPopover.querySelector('div');
+    await act(async () => { enFirstOption.click(); });
+    assert.ok(enCapturedPrompt.length > 0, '英文提示词注入成功');
+    assert.match(enCapturedPrompt, /Create a video ad with an AI avatar/);
+    enRoot.unmount();
+
+    // 3. 点击 Skills 按钮验证技能菜单面板两端对齐与不透明
+    const finalContainer = document.getElementById('root');
+    const finalRoot = createRoot(finalContainer);
+    await act(async () => {
+      finalRoot.render(React.createElement(CreatifyPillsBar, {
+        locale: 'zh',
+      }));
+    });
+    const finalPills = document.querySelectorAll('.omnimux-pill-btn');
+    await act(async () => { finalPills[0].click(); });
     const skillsPopover = document.querySelector('.omnimux-skills-popover');
     assert.ok(skillsPopover, 'Skills 技能弹窗必须展开');
     assert.ok(!skillsPopover.querySelector('button[aria-label*="关闭"], button[aria-label*="Close"]'), '技能弹窗严禁包含关闭按钮，必须支持点击外部任意位置收起');
@@ -76,6 +106,6 @@ describe('E2E: 4大Creatify胶囊按键与输入框交互链路', () => {
     assert.match(skillsPopover.style.background, /dsw-alias-bg-elevated/, '技能弹窗必须采用设计系统标准提升背景色');
     assert.ok(!skillsPopover.style.backdropFilter, '技能弹窗禁止使用毛玻璃透底滤镜');
 
-    root.unmount();
+    finalRoot.unmount();
   });
 });
