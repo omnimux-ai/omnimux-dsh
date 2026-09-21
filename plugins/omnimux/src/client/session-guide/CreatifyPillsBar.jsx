@@ -74,6 +74,109 @@ function ClockIcon({ size = 12 }) {
   );
 }
 
+function ArrowRightIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  );
+}
+
+// design.md v2.0 §5.1/§5.2/§5.3：面板全部样式收敛至样式表，JSX 零内联业务样式（UI02 硬门禁）
+const POPOVER_CSS = `
+@keyframes omnimux-popover-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.omnimux-skills-popover, .omnimux-subprompt-popover {
+  position: relative; left: 0; right: 0; width: 100%; max-width: 100%;
+  background: var(--dsw-alias-bg-elevated, #1c1c1f);
+  border: 1px solid var(--dsw-alias-border, rgba(255, 255, 255, 0.14));
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3); /* exempt-ui03: 弹窗投影 */
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  z-index: 130; overflow: hidden; box-sizing: border-box;
+  animation: omnimux-popover-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-subprompt-popover { padding: 6px; }
+.omnimux-skills-search-row { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
+.omnimux-skills-search-box {
+  flex: 1; display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box;
+  padding: 0 10px; background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border)); border-radius: 8px;
+  color: var(--dsw-alias-label-tertiary); transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.omnimux-skills-search-box:focus-within {
+  border-color: var(--dsw-alias-brand-primary);
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
+}
+.omnimux-skills-search-input {
+  flex: 1; background: transparent; border: none; outline: none; padding: 0;
+  color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 18px;
+}
+.omnimux-skills-search-input::placeholder { color: var(--dsw-alias-label-tertiary); }
+.omnimux-browse-all-btn {
+  height: 32px; box-sizing: border-box; padding: 0 14px; border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border));
+  color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+}
+.omnimux-browse-all-btn:hover { border-color: var(--dsw-alias-border-l3, var(--dsw-alias-border-hover)); }
+.omnimux-browse-all-btn:active { transform: scale(0.96); }
+.omnimux-skills-list { max-height: 280px; overflow-y: auto; padding: 4px 6px 8px; }
+.omnimux-skill-item {
+  display: flex; align-items: flex-start; gap: 12px; padding: 9px 12px;
+  border-radius: 8px; cursor: pointer; transition: background-color 0.1s ease;
+}
+.omnimux-skill-item:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.omnimux-skill-item-icon { margin-top: 2px; color: var(--dsw-alias-label-secondary); flex-shrink: 0; }
+.omnimux-skill-item-body { flex: 1; min-width: 0; }
+.omnimux-skill-item-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omnimux-skill-item-recent { color: var(--dsw-alias-label-tertiary); display: inline-flex; align-items: center; }
+.omnimux-skill-item-desc {
+  font-size: 12px; color: var(--dsw-alias-label-secondary); line-height: 1.4; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omnimux-skills-empty { padding: 32px 16px; text-align: center; color: var(--dsw-alias-label-tertiary); font-size: 13px; }
+.omnimux-panel-footer {
+  display: flex; align-items: center; justify-content: space-between; padding: 10px 16px;
+  border-top: 1px solid var(--dsw-alias-border-l1, var(--dsw-alias-border));
+  background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);
+  font-size: 12px; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease;
+}
+.omnimux-panel-footer:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.omnimux-panel-footer-label { display: flex; align-items: center; gap: 8px; }
+.omnimux-panel-footer-arrow {
+  display: inline-flex; color: var(--dsw-alias-label-secondary); opacity: 0.7;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.omnimux-panel-footer:hover .omnimux-panel-footer-arrow { transform: translateX(2px); opacity: 1; }
+.omnimux-subprompt-header {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, var(--dsw-alias-border));
+  margin-bottom: 6px; color: var(--dsw-alias-label-secondary);
+}
+.omnimux-subprompt-title { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.omnimux-subprompt-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+  cursor: pointer; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 18px;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+.omnimux-subprompt-item:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.omnimux-subprompt-item-icon { display: inline-flex; opacity: 0.7; flex-shrink: 0; }
+.omnimux-pill-btn:active { transform: scale(0.96); }
+`;
+
+// 子提示词面板分类图标（与对应胶囊入口一致）
+const SUBPROMPT_ICONS = {
+  'video-ads': PlayIcon,
+  'image-ads': ImageIcon,
+  'competitor': SearchIcon,
+};
+
 // 真实采集数据源
 const SUBPROMPTS_DATA = {
   'video-ads': [
@@ -416,16 +519,35 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale }) {
     setActiveMenu(null);
   }, []);
 
-  // 点击外部收起
+  // 幂等注入面板样式表（复用仓库 ensureStyles 约定：固定 id 查重，多宿主挂载不重复注入）
+  useEffect(() => {
+    const STYLE_ID = 'omnimux-creatify-pills-styles';
+    if (document.getElementById(STYLE_ID)) return;
+    const el = document.createElement('style');
+    el.id = STYLE_ID;
+    el.textContent = POPOVER_CSS;
+    document.head.appendChild(el);
+  }, []);
+
+  // 点击外部收起 + Escape 关闭（design.md §6 Do 5）；仅在面板打开时消费 Escape，避免抢占宿主层处理
   useEffect(() => {
     function handleDocClick(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setActiveMenu(null);
       }
     }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && activeMenu) {
+        setActiveMenu(null);
+      }
+    }
     document.addEventListener('click', handleDocClick);
-    return () => document.removeEventListener('click', handleDocClick);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleDocClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeMenu]);
 
   const handleSelectPrompt = useCallback((item) => {
     handleClose();
@@ -601,92 +723,51 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale }) {
 
       {/* Skills 专属列表面板：直接依附在输入框正下方 */}
       {activeMenu === 'skills' && (
-        <div
-          className="omnimux-skills-popover"
-          style={{
-            position: 'relative',
-            left: '0',
-            right: '0',
-            width: '100%',
-            maxWidth: '100%',
-            background: 'var(--dsw-alias-bg-elevated)',
-            border: '1px solid var(--dsw-alias-border)',
-            borderRadius: '16px',
-            boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
-            zIndex: 130,
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px 6px' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border)', borderRadius: '8px', height: '34px', padding: '0 10px' }}>
+        <div className="omnimux-skills-popover">
+          <div className="omnimux-skills-search-row">
+            <div className="omnimux-skills-search-box">
               <SearchIcon size={14} />
               <input
                 type="text"
+                className="omnimux-skills-search-input"
                 placeholder={isZh ? "搜索技能..." : "Search skills"}
                 value={searchKey}
                 onChange={(e) => setSearchKey(e.target.value)}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: '13px' }}
               />
             </div>
             <button /* exempt-ui01: 浏览全部按钮 */
               type="button"
-              style={{
-                height: '34px',
-                padding: '0 16px',
-                borderRadius: '8px',
-                background: 'var(--dsw-alias-interactive-bg-subtle, rgba(97, 97, 255, 0.16))',
-                border: 'none',
-                color: 'var(--dsw-alias-accent, rgb(165, 160, 255))',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
+              className="omnimux-browse-all-btn"
             >
               {isZh ? "浏览全部" : "Browse all"}
             </button>
           </div>
 
-          <div style={{ maxHeight: '280px', overflowY: 'auto', padding: '4px 6px 8px' }}>
+          <div className="omnimux-skills-list skills-list-box">
             {filteredSkills.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--dsw-alias-label-tertiary)', fontSize: '13px' }}>
+              <div className="omnimux-skills-empty">
                 {isZh ? "暂无匹配的技能" : "No skills available."}
               </div>
             ) : (
               filteredSkills.map((skill) => (
                 <div
                   key={skill.id}
+                  className="omnimux-skill-item"
                   onClick={() => handleSelectSkill(skill)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.1s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--dsw-alias-interactive-bg-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
                 >
-                  <div style={{ marginTop: '2px', color: 'var(--dsw-alias-label-secondary)', flexShrink: 0 }}>
+                  <div className="omnimux-skill-item-icon">
                     {skill.iconType === 'box' ? <BoxIcon size={16} /> : <UserIcon size={16} />}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
+                  <div className="omnimux-skill-item-body">
+                    <div className="omnimux-skill-item-title">
                       {skill.isRecent && (
-                        <span style={{ color: 'var(--dsw-alias-label-tertiary)', display: 'inline-flex', alignItems: 'center' }}>
+                        <span className="omnimux-skill-item-recent">
                           <ClockIcon size={12} />
                         </span>
                       )}
                       <span>{isZh ? skill.titleZh : skill.titleEn}</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px', lineHeight: '1.4' }}>
+                    <div className="omnimux-skill-item-desc">
                       {isZh ? skill.descZh : skill.descEn}
                     </div>
                   </div>
@@ -695,85 +776,46 @@ export function CreatifyPillsBar({ onApplyPrompt, t, locale }) {
             )}
           </div>
 
-          {/* 底部浏览全部横条，与图 2 一致 */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 16px',
-              borderTop: '1px solid var(--dsw-alias-border)',
-              background: 'var(--dsw-alias-bg-layer-1)',
-              color: 'var(--dsw-alias-label-primary)',
-              fontSize: '12px',
-              fontWeight: '500',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* 底部浏览全部横条 */}
+          <div className="omnimux-panel-footer">
+            <div className="omnimux-panel-footer-label">
               <ZapIcon size={14} />
               <span>{isZh ? "浏览全部技能" : "Browse all skills"}</span>
             </div>
-            <span style={{ fontSize: '14px', opacity: 0.7 }}>&rarr;</span>
+            <span className="omnimux-panel-footer-arrow"><ArrowRightIcon size={14} /></span>
           </div>
         </div>
       )}
 
       {/* 视频/图片/竞品 下拉子提示词菜单：直接依附在输入框正下方 */}
       {activeMenu && activeMenu !== 'skills' && (
-        <div
-          className="omnimux-subprompt-popover"
-          style={{
-            position: 'relative',
-            left: '0',
-            right: '0',
-            width: '100%',
-            maxWidth: '100%',
-            background: 'var(--dsw-alias-bg-elevated)',
-            border: '1px solid var(--dsw-alias-border)',
-            borderRadius: '16px',
-            boxShadow: '0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.65))', /* exempt-ui03: 弹窗投影 */
-            zIndex: 130,
-            overflow: 'hidden',
-            padding: '8px 10px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <header style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 8px', borderBottom: '1px solid var(--dsw-alias-border)', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dsw-alias-label-primary)' }}>
-              {activeMenu === 'video-ads' ? (isZh ? '视频广告推荐提示词' : 'Video Ads Prompts') :
-               activeMenu === 'image-ads' ? (isZh ? '图片广告推荐提示词' : 'Image Ads Prompts') :
-               (isZh ? '竞争对手研究推荐' : 'Competitor Research')}
-            </span>
-          </header>
-          {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleSelectPrompt(item)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                color: 'var(--dsw-alias-label-secondary)',
-                fontSize: '13px',
-                transition: 'all 0.1s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--dsw-alias-interactive-bg-hover)';
-                e.currentTarget.style.color = 'var(--dsw-alias-label-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = 'var(--dsw-alias-label-secondary)';
-              }}
-            >
-              <div style={{ opacity: 0.7 }} /* exempt-ui02: 子提示词图标透明度 */><PlayIcon size={13} /></div>
-              <div>{isZh ? (item.labelZh || item.label) : (item.labelEn || item.label)}</div>
-            </div>
-          ))}
+        <div className="omnimux-subprompt-popover">
+          {(() => {
+            const CategoryIcon = SUBPROMPT_ICONS[activeMenu] || PlayIcon;
+            return (
+              <header className="omnimux-subprompt-header">
+                <CategoryIcon size={14} />
+                <span className="omnimux-subprompt-title">
+                  {activeMenu === 'video-ads' ? (isZh ? '视频广告推荐提示词' : 'Video Ads Prompts') :
+                   activeMenu === 'image-ads' ? (isZh ? '图片广告推荐提示词' : 'Image Ads Prompts') :
+                   (isZh ? '竞争对手研究推荐' : 'Competitor Research')}
+                </span>
+              </header>
+            );
+          })()}
+          {SUBPROMPTS_DATA[activeMenu]?.map((item, idx) => {
+            const ItemIcon = SUBPROMPT_ICONS[activeMenu] || PlayIcon;
+            return (
+              <div
+                key={idx}
+                className="omnimux-subprompt-item"
+                onClick={() => handleSelectPrompt(item)}
+              >
+                <span className="omnimux-subprompt-item-icon"><ItemIcon size={13} /></span>
+                <div>{isZh ? (item.labelZh || item.label) : (item.labelEn || item.label)}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
