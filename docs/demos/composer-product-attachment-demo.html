@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>输入框选中产品后消息卡片附加缩略图与上下文演示</title>
+  <style>
+    /* ==========================================================================
+       OmniMux UI 设计与视觉基座规范 (DSH 原生纯黑 + 极光紫)
+       ========================================================================== */
+    :root {
+      --omx-violet-primary: #7961f2;
+      --omx-violet-glow: rgba(121, 97, 242, 0.25);
+      --omx-violet-soft: rgba(121, 97, 242, 0.12);
+      --omx-control-height: 32px;
+      --omx-radius-base: 8px;
+      --omx-radius-card: 12px;
+      --omx-radius-dialog: 16px;
+      --omx-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --omx-mono-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    html[data-theme="dark"] {
+      --dsw-alias-bg-base: #111113;
+      --dsw-alias-bg-layer-1: #18181b;
+      --dsw-alias-bg-layer-2: #212124;
+      --dsw-alias-bg-layer-3: #2a2a2e;
+      --dsw-alias-bg-elevated: #1c1c1f;
+      --dsw-alias-border-l1: rgba(255, 255, 255, 0.07);
+      --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
+      --dsw-alias-border-hover: rgba(255, 255, 255, 0.22);
+      --dsw-alias-label-primary: #ffffff;
+      --dsw-alias-label-secondary: rgba(255, 255, 255, 0.70);
+      --dsw-alias-label-tertiary: rgba(255, 255, 255, 0.38);
+      --dsw-dot-grid: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      --dsw-btn-primary-bg: #ffffff;
+      --dsw-btn-primary-text: #111113;
+      --dsw-btn-primary-hover: rgba(255, 255, 255, 0.90);
+    }
+
+    html[data-theme="light"] {
+      --dsw-alias-bg-base: #ffffff;
+      --dsw-alias-bg-layer-1: #f7f7f8;
+      --dsw-alias-bg-layer-2: #efeff1;
+      --dsw-alias-bg-layer-3: #e5e5e8;
+      --dsw-alias-bg-elevated: #ffffff;
+      --dsw-alias-border-l1: rgba(0, 0, 0, 0.06);
+      --dsw-alias-border-l2: rgba(0, 0, 0, 0.10);
+      --dsw-alias-border-hover: rgba(0, 0, 0, 0.20);
+      --dsw-alias-label-primary: #111827;
+      --dsw-alias-label-secondary: #4b5563;
+      --dsw-alias-label-tertiary: #9ca3af;
+      --dsw-dot-grid: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+      --dsw-btn-primary-bg: #111827;
+      --dsw-btn-primary-text: #ffffff;
+      --dsw-btn-primary-hover: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--omx-font-family);
+      background-color: var(--dsw-alias-bg-base);
+      background-image: var(--dsw-dot-grid);
+      background-size: 20px 20px;
+      color: var(--dsw-alias-label-primary);
+      line-height: 1.5;
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 顶部导航 */
+    header {
+      height: 48px;
+      border-bottom: 1px solid var(--dsw-alias-border-l1);
+      background: var(--dsw-alias-bg-base);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-tag {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--omx-violet-soft);
+      color: var(--omx-violet-primary);
+      font-weight: 500;
+    }
+
+    .theme-toggle {
+      height: 28px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid var(--dsw-alias-border-l2);
+      background: transparent;
+      color: var(--dsw-alias-label-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .theme-toggle:hover {
+      background: var(--dsw-alias-bg-layer-2);
+      color: var(--dsw-alias-label-primary);
+    }
+
+    /* 主舞台双栏布局：左侧会话视口，右侧后台对账视口 */
+    .main-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 20px;
+      padding: 24px;
+      height: calc(100vh - 48px);
+      overflow: hidden;
+    }
+
+    /* 左侧会话卡片容器 */
+    .chat-panel {
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l1);
+      border-radius: var(--omx-radius-card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .chat-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--dsw-alias-border-l1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .chat-header-desc {
+      font-size: 12px;
+      color: var(--dsw-alias-label-secondary);
+    }
+
+    .chat-stream {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 消息气泡 */
+    .message-row {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .message-row.user {
+      align-items: flex-end;
+    }
+
+    .message-row.assistant {
+      align-items: flex-start;
+    }
+
+    /* 消息卡片上方的附件轨 (与原组件同名类 omx-user-attachments-rail) */
+    .omx-user-attachments-rail {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      justify-content: flex-start;
+      align-self: flex-start;
+      width: 100%;
+    }
+
+    .message-row.user .omx-user-attachments-rail {
+      justify-content: flex-end;
+      align-self: flex-end;
+    }
+
+    /* 商品专属附件微卡片 */
+    .omx-user-att-card--product {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 5px;
+      border-radius: 8px;
+      border: 1px solid var(--dsw-alias-border-l2);
+      background: var(--dsw-alias-bg-layer-2);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      max-width: 280px;
+    }
+
+    .omx-user-att-card--product:hover {
+      transform: translateY(-1px);
+      border-color: var(--omx-violet-primary);
+      box-shadow: 0 2px 8px var(--omx-violet-glow);
+    }
+
+    .omx-user-att-card__thumb-wrapper {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--dsw-alias-bg-layer-3);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .omx-user-att-card__thumb-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .omx-user-att-card__info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .omx-user-att-card__name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .omx-user-att-card__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      color: var(--dsw-alias-label-secondary);
+      line-height: 1.2;
+    }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      max-width: 82%;
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .message-row.user .bubble {
+      background: var(--dsw-alias-bg-layer-2);
+      color: var(--dsw-alias-label-primary);
+      border: 1px solid var(--dsw-alias-border-l1);
+      border-bottom-right-radius: 3px;
+    }
+
+    .message-row.assistant .bubble {
+      background: transparent;
+      color: var(--dsw-alias-label-primary);
+      padding: 0;
+    }
+
+    /* 输入框容器 Composer */
+    .composer-wrapper {
+      padding: 14px 18px 16px;
+      border-top: 1px solid var(--dsw-alias-border-l1);
+      background: var(--dsw-alias-bg-layer-1);
+    }
+
+    .composer-card {
+      border: 1px solid var(--dsw-alias-border-l2);
+      background: var(--dsw-alias-bg-layer-2);
+      border-radius: var(--omx-radius-card);
+      padding: 10px 12px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .composer-card:focus-within {
+      border-color: var(--omx-violet-primary);
+      box-shadow: 0 0 0 1px var(--omx-violet-primary), 0 0 12px var(--omx-violet-glow);
+    }
+
+    .composer-input-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+
+    /* 产品 Chip 胶囊 (输入框内) */
+    .omnimux-product-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--dsw-alias-bg-layer-3);
+      border: 1px solid var(--dsw-alias-border-hover);
+      border-radius: 9999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary);
+      margin: 0 4px 0 1px;
+      vertical-align: baseline;
+      user-select: none;
+    }
+
+    .omnimux-product-chip-remove {
+      cursor: pointer;
+      margin-left: 3px;
+      opacity: 0.65;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .omnimux-product-chip-remove:hover {
+      opacity: 1;
+    }
+
+    .composer-textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      color: var(--dsw-alias-label-primary);
+      font-family: inherit;
+      font-size: 13px;
+      min-width: 140px;
+      resize: none;
+      line-height: 1.5;
+    }
+
+    .composer-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 4px;
+    }
+
+    .composer-tools-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tool-btn {
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 24px;
+      border: none;
+      background: transparent;
+      color: var(--dsw-alias-label-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover {
+      background: var(--dsw-alias-bg-layer-3);
+      color: var(--dsw-alias-label-primary);
+    }
+
+    /* 真实商品选择按钮样式 (对标 ProductPickerButton) */
+    .omnimux-composer-product-btn {
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 24px;
+      border: none;
+      background: transparent;
+      color: var(--dsw-alias-label-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      max-width: 200px;
+    }
+
+    .omnimux-composer-product-btn:hover {
+      background: var(--dsw-alias-bg-layer-3);
+      color: var(--dsw-alias-label-primary);
+    }
+
+    .omnimux-composer-product-btn.is-selected {
+      background: var(--dsw-alias-bg-layer-3);
+      color: var(--dsw-alias-label-primary);
+    }
+
+    .omnimux-composer-product-btn__thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .omnimux-composer-product-btn__name {
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .omnimux-composer-product-btn__remove {
+      display: none;
+      margin-left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+    }
+
+    .omnimux-composer-product-btn:hover .omnimux-composer-product-btn__remove {
+      display: inline-flex;
+    }
+
+    .omnimux-composer-product-btn__remove:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .composer-tools-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .model-selector {
+      font-size: 12px;
+      color: var(--dsw-alias-label-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      height: 28px;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .model-selector:hover {
+      background: var(--dsw-alias-bg-layer-3);
+    }
+
+    .send-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--dsw-btn-primary-bg);
+      color: var(--dsw-btn-primary-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+    }
+
+    .send-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.04);
+    }
+
+    .send-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* 右侧后台对账面板 */
+    .context-panel {
+      background: var(--dsw-alias-bg-layer-1);
+      border: 1px solid var(--dsw-alias-border-l1);
+      border-radius: var(--omx-radius-card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .context-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--dsw-alias-border-l1);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .context-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .context-card {
+      background: var(--dsw-alias-bg-layer-2);
+      border: 1px solid var(--dsw-alias-border-l1);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .context-card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--omx-violet-primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .context-item {
+      display: flex;
+      font-size: 12px;
+      line-height: 1.6;
+      margin-bottom: 4px;
+    }
+
+    .context-label {
+      width: 70px;
+      color: var(--dsw-alias-label-secondary);
+      flex-shrink: 0;
+    }
+
+    .context-val {
+      color: var(--dsw-alias-label-primary);
+      font-weight: 500;
+    }
+
+    .raw-code {
+      font-family: var(--omx-mono-family);
+      font-size: 11px;
+      background: var(--dsw-alias-bg-base);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--dsw-alias-border-l1);
+      color: var(--dsw-alias-label-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    /* 模拟商品选择模态弹窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      width: 480px;
+      background: var(--dsw-alias-bg-elevated);
+      border: 1px solid var(--dsw-alias-border-l2);
+      border-radius: var(--omx-radius-dialog);
+      padding: 20px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .product-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .product-row-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--dsw-alias-border-l1);
+      background: var(--dsw-alias-bg-layer-2);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .product-row-item:hover {
+      border-color: var(--omx-violet-primary);
+      background: var(--omx-violet-soft);
+    }
+
+    .product-row-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .product-row-detail {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .product-row-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--dsw-alias-label-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-row-meta {
+      font-size: 11px;
+      color: var(--dsw-alias-label-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span>OmniMux</span>
+      <span class="brand-tag">商品选择与消息缩略图演示</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="themeText">切换浅色</span>
+    </button>
+  </header>
+
+  <main class="main-container">
+    <!-- 左侧模拟会话区 -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>创作会话 (带商品上下文交付)</span>
+        <span class="chat-header-desc">纯黑底色 · 极简紧凑</span>
+      </div>
+
+      <div class="chat-stream" id="chatStream">
+        <!-- 助手引导语 -->
+        <div class="message-row assistant">
+          <div class="bubble">
+            你好！我是你的带货与社媒创作团队。在下方选择你的产品后，随时输入创作指令（如写爆款带货脚本或文案），我会自动调取产品的核心卖点与受众信息进行创作。
+          </div>
+        </div>
+
+        <!-- 既有一条发送带商品的消息示范 -->
+        <div class="message-row user">
+          <!-- 消息卡片上方的商品缩略图卡片 -->
+          <div class="omx-user-attachments-rail">
+            <div class="omx-user-att-card--product" title="查看商品详情: 5ml便携迷你香水喷雾瓶">
+              <div class="omx-user-att-card__thumb-wrapper">
+                <img src="https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100&auto=format&fit=crop&q=80" alt="商品封面">
+              </div>
+              <div class="omx-user-att-card__info">
+                <span class="omx-user-att-card__name">5ml 便携迷你香水喷雾瓶</span>
+                <span class="omx-user-att-card__badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  关联商品
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="bubble">
+            帮我根据这款香水喷雾瓶写一段 15 秒短视频黄金开头脚本，重点突出方便携带和不漏液！
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部 Composer 输入区 -->
+      <div class="composer-wrapper">
+        <div class="composer-card">
+          <div class="composer-input-row" id="composerInputRow">
+            <span class="omnimux-product-chip" id="productChip" style="display:none;">
+              <span id="chipText">5ml便携迷你...</span>
+              <span class="omnimux-product-chip-remove" onclick="removeProduct()" title="移除商品">✕</span>
+            </span>
+            <textarea class="composer-textarea" id="userInput" rows="1" placeholder="输入你想创作的内容，按回车或点击右侧发送..."></textarea>
+          </div>
+
+          <div class="composer-tools">
+            <div class="composer-tools-left">
+              <button class="tool-btn" title="添加素材">+</button>
+
+              <!-- 产品入口按钮 -->
+              <button id="productPickerBtn" class="omnimux-composer-product-btn" onclick="openModal()" title="选择产品">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+                <span id="btnLabel">产品</span>
+              </button>
+            </div>
+
+            <div class="composer-tools-right">
+              <div class="model-selector">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+                <span>Gemini 3.8 Flash Max</span>
+              </div>
+              <button class="send-btn" onclick="sendMessage()" title="发送消息">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧后台对账视口 -->
+    <div class="context-panel">
+      <div class="context-header">
+        <span>AI 上下文对账中心</span>
+        <span class="brand-tag">实时信封监控</span>
+      </div>
+
+      <div class="context-body">
+        <div class="context-card">
+          <div class="context-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            当前关联商品档案
+          </div>
+          <div id="productDetailSection">
+            <div class="context-item"><span class="context-label">商品名称:</span><span class="context-val" id="ctxName">未选择商品</span></div>
+            <div class="context-item"><span class="context-label">参考售价:</span><span class="context-val" id="ctxPrice">--</span></div>
+            <div class="context-item"><span class="context-label">核心卖点:</span><span class="context-val" id="ctxSelling">--</span></div>
+            <div class="context-item"><span class="context-label">目标受众:</span><span class="context-val" id="ctxAudience">--</span></div>
+          </div>
+        </div>
+
+        <div class="context-card">
+          <div class="context-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            后台注入 AI 模型的原始上下文信封
+          </div>
+          <div class="raw-code" id="rawContextBlock">暂无结构化附件注入</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 模拟商品选择弹窗 -->
+  <div class="modal-backdrop" id="productModal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <span>从产品库选择商品</span>
+        <button class="tool-btn" onclick="closeModal()" style="font-size:16px;">✕</button>
+      </div>
+      <div class="product-list">
+        <div class="product-row-item" onclick="selectProduct('p1')">
+          <img class="product-row-img" src="https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100&auto=format&fit=crop&q=80" alt="">
+          <div class="product-row-detail">
+            <div class="product-row-name">5ml 便携迷你香水喷雾瓶 (买二送一)</div>
+            <div class="product-row-meta">美妆个护 · 航空铝合金外壳 · 底部直充</div>
+          </div>
+        </div>
+        <div class="product-row-item" onclick="selectProduct('p2')">
+          <img class="product-row-img" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&auto=format&fit=crop&q=80" alt="">
+          <div class="product-row-detail">
+            <div class="product-row-name">极光无线主动降噪头戴式耳机 Pro</div>
+            <div class="product-row-meta">数码影音 · 40小时续航 · 空间音频</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PRODUCTS_DATA = {
+      p1: {
+        id: 'p1',
+        name: '5ml 便携迷你香水喷雾瓶 (买二送一)',
+        price: '¥29.90',
+        brand: 'AromaMini',
+        thumb: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100&auto=format&fit=crop&q=80',
+        selling_points: '底部直接分装对冲，不漏一滴；口红大小，随时随地上飞机高铁免安检；高精度纳米喷雾细腻均匀。',
+        target_audience: '精致通勤上班族、出差旅行爱好者、派对聚会达人',
+        features: '航空级铝材外壳，高透内胆，容量5ml可喷约80次'
+      },
+      p2: {
+        id: 'p2',
+        name: '极光无线主动降噪头戴式耳机 Pro',
+        price: '¥399.00',
+        brand: 'AuraAudio',
+        thumb: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&auto=format&fit=crop&q=80',
+        selling_points: '45dB 深度降噪，办公室与地铁瞬间安静；蛋白皮零压耳罩，戴一整天不夹头；40小时超长续航。',
+        target_audience: '高频出差商务人士、考研自习学生、开放式办公室打工人',
+        features: '双馈主动降噪，40mm 镀钛振膜，蓝牙 5.4 低延迟'
+      }
+    };
+
+    let currentSelectedProduct = null;
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('themeText').textContent = isDark ? '切换深色' : '切换浅色';
+    }
+
+    function openModal() {
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('productModal').classList.remove('open');
+    }
+
+    function selectProduct(id) {
+      const prod = PRODUCTS_DATA[id];
+      if (!prod) return;
+      currentSelectedProduct = prod;
+      closeModal();
+
+      // 更新输入框内的 Chip
+      const chip = document.getElementById('productChip');
+      chip.style.display = 'inline-flex';
+      const shortName = prod.name.length > 10 ? prod.name.slice(0, 9) + '...' : prod.name;
+      document.getElementById('chipText').textContent = shortName;
+
+      // 更新底栏按钮
+      const btn = document.getElementById('productPickerBtn');
+      btn.classList.add('is-selected');
+      btn.innerHTML = `
+        <img class="omnimux-composer-product-btn__thumb" src="${prod.thumb}" alt="">
+        <span class="omnimux-composer-product-btn__name">${shortName}</span>
+        <span class="omnimux-composer-product-btn__remove" onclick="event.stopPropagation(); removeProduct();" title="移除">✕</span>
+      `;
+
+      // 更新右侧对账中心
+      document.getElementById('ctxName').textContent = prod.name;
+      document.getElementById('ctxPrice').textContent = prod.price;
+      document.getElementById('ctxSelling').textContent = prod.selling_points;
+      document.getElementById('ctxAudience').textContent = prod.target_audience;
+
+      const rawBlock = `\n---\n### 会话关联上下文 (Attached Context):\n- [产品] ${prod.name} (\`JSON\`):\n  * 相对路径: @products/${prod.id}.json\n  * 封面缩略图: ${prod.thumb}\n  * 核心卖点: ${prod.selling_points}\n  * 目标受众: ${prod.target_audience}\n  * 特性参数: ${prod.features}`;
+      document.getElementById('rawContextBlock').textContent = rawBlock;
+    }
+
+    function removeProduct() {
+      currentSelectedProduct = null;
+      document.getElementById('productChip').style.display = 'none';
+
+      const btn = document.getElementById('productPickerBtn');
+      btn.classList.remove('is-selected');
+      btn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+        <span id="btnLabel">产品</span>
+      `;
+
+      document.getElementById('ctxName').textContent = '未选择商品';
+      document.getElementById('ctxPrice').textContent = '--';
+      document.getElementById('ctxSelling').textContent = '--';
+      document.getElementById('ctxAudience').textContent = '--';
+      document.getElementById('rawContextBlock').textContent = '暂无结构化附件注入';
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text && !currentSelectedProduct) return;
+
+      const chatStream = document.getElementById('chatStream');
+
+      const messageRow = document.createElement('div');
+      messageRow.className = 'message-row user';
+
+      // 若附带产品，生成上方缩略图微卡片
+      if (currentSelectedProduct) {
+        const rail = document.createElement('div');
+        rail.className = 'omx-user-attachments-rail';
+
+        rail.innerHTML = `
+          <div class="omx-user-att-card--product" title="查看商品详情: ${currentSelectedProduct.name}">
+            <div class="omx-user-att-card__thumb-wrapper">
+              <img src="${currentSelectedProduct.thumb}" alt="商品封面">
+            </div>
+            <div class="omx-user-att-card__info">
+              <span class="omx-user-att-card__name">${currentSelectedProduct.name}</span>
+              <span class="omx-user-att-card__badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                关联商品
+              </span>
+            </div>
+          </div>
+        `;
+        messageRow.appendChild(rail);
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text || '请结合所选商品进行创意创作。';
+      messageRow.appendChild(bubble);
+
+      chatStream.appendChild(messageRow);
+      chatStream.scrollTop = chatStream.scrollHeight;
+
+      // 清空输入与重置选中态（闭环）
+      input.value = '';
+      removeProduct();
+    }
+
+    document.getElementById('userInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

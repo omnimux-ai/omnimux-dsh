@@ -132,6 +132,76 @@ ${NATIVE_ATTACHMENTS_SELECTOR}[${HIDDEN_NATIVE_ATTR}="true"] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* 商品专属附件微卡片 (缩略图 + 商品名称 + 关联商品角标) */
+.omx-user-att-card--product {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  cursor: default;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  max-width: 280px;
+}
+
+.omx-user-att-card--product:hover {
+  transform: translateY(-1px);
+  border-color: var(--dsw-alias-brand-primary, #7961f2); /* exempt-ui03: 极光紫品牌主色 */
+  box-shadow: 0 2px 8px rgba(121, 97, 242, 0.25); /* exempt-ui03: 极光紫微光阴影 */
+}
+
+.omx-user-att-card__thumb-wrapper {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omx-user-att-card__thumb-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.omx-user-att-card__info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.omx-user-att-card__name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.omx-user-att-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.2;
+}
+
+.omx-user-att-card__badge svg {
+  flex-shrink: 0;
+}
 `;
 
 function ensureStyles(doc: Document) {
@@ -148,6 +218,51 @@ function ensureStyles(doc: Document) {
 export function createAttachmentCardElement(att: ConversationAttachment, doc: Document = document): HTMLElement {
   const isImage = att.kind === 'image' || (att.extension && /^(PNG|JPG|JPEG|WEBP|GIF)$/i.test(att.extension));
   const isVideo = att.kind === 'video' || (att.extension && /^(MP4|MOV|WEBM|MKV)$/i.test(att.extension));
+  const isProduct = att.kind === 'product';
+
+  // 1. 优先为商品附件渲染专属商品微卡片（缩略图 + 商品名称 + 关联商品角标）
+  if (isProduct) {
+    const card = doc.createElement('div');
+    card.className = 'omx-user-att-card omx-user-att-card--product';
+    card.title = att.title ? `关联商品: ${att.title}` : '关联商品';
+
+    const thumbWrap = doc.createElement('div');
+    thumbWrap.className = 'omx-user-att-card__thumb-wrapper';
+
+    const previewUrl = att.previewUrl || att.relativePath || '';
+    if (previewUrl && !previewUrl.endsWith('.json')) {
+      const img = doc.createElement('img');
+      img.src = previewUrl;
+      img.alt = att.title || '商品封面';
+      img.loading = 'lazy';
+      img.onerror = () => {
+        img.remove();
+        thumbWrap.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+      };
+      thumbWrap.appendChild(img);
+    } else {
+      thumbWrap.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+    }
+
+    const info = doc.createElement('div');
+    info.className = 'omx-user-att-card__info';
+
+    const name = doc.createElement('span');
+    name.className = 'omx-user-att-card__name';
+    name.textContent = att.title || '关联商品';
+
+    const badge = doc.createElement('span');
+    badge.className = 'omx-user-att-card__badge';
+    badge.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> 关联商品';
+
+    info.appendChild(name);
+    info.appendChild(badge);
+
+    card.appendChild(thumbWrap);
+    card.appendChild(info);
+
+    return card;
+  }
 
   if (isImage || isVideo) {
     const card = doc.createElement('div');
