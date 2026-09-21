@@ -38,6 +38,7 @@ import {
   scriptCopyText,
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
+import { useOverlayScrollReveal } from './use-overlay-scroll-reveal.js'
 
 const ICON_SHARE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -388,6 +389,8 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const scriptValue = scriptCopyText(data, showTranslation)
   const deconValue = deconstructionCopyText(data)
+  const shotsScroll = useOverlayScrollReveal('omnimux-inspiration-shots-scroll-area')
+  const deconScroll = useOverlayScrollReveal('omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style')
 
   const mobileTabs = ['video', 'script', 'deconstruction'].map((tab) => ({
     id: tab,
@@ -661,7 +664,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
               {translateError ? <div className="omnimux-inspiration-error-text">{translateError}</div> : null}
 
-              <div className="omnimux-inspiration-shots-scroll-area">
+              <div {...shotsScroll}>
                 {data.shots.length ? (
                   <div className="omnimux-inspiration-shots-list">
                     {data.shots.map((shot, sIdx) => {
@@ -772,7 +775,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 ) : null}
               </div>
 
-              <div className="omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style">
+              <div {...deconScroll}>
                 {data.sections && data.sections.length ? (
                   data.sections.map((section) => (
                     <article

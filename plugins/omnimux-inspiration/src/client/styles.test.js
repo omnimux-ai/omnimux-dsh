@@ -42,8 +42,7 @@ describe('inspiration triptych modal', () => {
     assert.equal(columns[0], columns[2])
     const panel = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel')
     assert.equal(decl(panel, 'min-width'), '0')
-    assert.equal(decl(panel, 'overflow-y'), 'auto')
-    assert.equal(decl(panel, 'overflow-x'), 'hidden')
+    assert.equal(decl(panel, 'overflow'), 'hidden')
   })
 
   it('keeps the footer focused on a stable one-line replication action', () => {
@@ -392,6 +391,17 @@ describe('preview modal doc style and glass removal', () => {
     assert.equal(decl(deconBodyCss, 'overflow-y'), 'auto')
     assert.equal(decl(deconBodyCss, 'overscroll-behavior'), 'contain')
     assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'stable')
+  })
+
+  it('hides overlay scroll thumbs until the pane is scrolling', () => {
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.match(preview, /useOverlayScrollReveal/)
+    assert.match(preview, /omnimux-inspiration-shots-scroll-area/)
+    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*transparent/)
+    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll\.is-scrolling::-webkit-scrollbar-thumb/)
+    assert.doesNotMatch(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll:hover::-webkit-scrollbar-thumb/)
+    const deconThumb = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb')
+    assert.match(decl(deconThumb, 'background'), /transparent/)
   })
 
   it('establishes clear 3-level visual hierarchy: title (15px) -> item (14px) -> description (13px)', () => {
