@@ -650,13 +650,21 @@ export const MEDIA_VIEWER_CSS = `
 .omx-mv-composer__textarea {
   flex: 1;
   background: transparent;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: var(--dsw-alias-label-primary);
   font-family: inherit;
   font-size: 13px;
   resize: none;
   min-height: 26px;
+}
+
+.omx-mv-composer__textarea:focus,
+.omx-mv-composer__textarea:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .omx-mv-composer__bottom {
@@ -1129,14 +1137,22 @@ export const MEDIA_VIEWER_CSS = `
   min-height: 52px;
   max-height: 120px;
   background: transparent;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
   font-family: inherit;
   line-height: 1.6;
   resize: none;
   box-sizing: border-box;
+}
+
+.omx-mv-prompt-textarea:focus,
+.omx-mv-prompt-textarea:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .omx-mv-prompt-textarea::placeholder {
