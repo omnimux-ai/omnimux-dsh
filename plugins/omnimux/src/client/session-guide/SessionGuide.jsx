@@ -156,6 +156,7 @@ function BlankSessionGuide({
   const live = useRef(null)
   const mounted = useRef(true)
   live.current = { input, state }
+  const isEn = typeof t === 'function' ? (t('locale') === 'en' || t('guide.locale') === 'en') : false
 
   const {
     dockedItem,
@@ -345,7 +346,6 @@ function BlankSessionGuide({
     const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
     const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
     const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
-    const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false
     const prompt = isEn
       ? `${skillPrefix}Please explain the best way to use this skill.`
       : `${skillPrefix}为我解释下这个技能的最佳使用方式。`
@@ -389,7 +389,7 @@ function BlankSessionGuide({
           <CreatifyPillsBar
             onApplyPrompt={handleTrendingApply}
             t={t}
-            locale="zh"
+            locale={isEn ? 'en' : 'zh'}
           />
 
           {/* 第 2 层：Popular Ways to Get Started (4 Featured Cards) */}
