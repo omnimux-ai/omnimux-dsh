@@ -121,7 +121,7 @@ function ProjectPageCard({ page, active, onOpenPage, onRenamePage, onDeletePage,
               onDeletePage(page)
             }}
           >
-            {t?.('projects.delete') || '删除'}
+            {t?.('projects.deletePage') || '删除'}
           </Button>
         </div>
       )}

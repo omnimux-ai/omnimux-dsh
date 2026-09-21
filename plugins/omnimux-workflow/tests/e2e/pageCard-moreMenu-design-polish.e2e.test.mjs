@@ -24,7 +24,7 @@ test('E2E: 创作页卡片操作菜单全链路遵循 design.md 设计规范契�
     '创作页卡片菜单必须声明 role="menu" 与规范样式类',
   )
 
-  // 2. 危险操作契约：删除创作页必须标记 data-danger="true" 与危险项专属类名
+  // 2. 危险操作契约：删除创作页必须标记 data-danger="true"、危险项专属类名与创作页专属删除文案（绝非解散项目）
   assert.match(
     pageTabSrc,
     /className="omnimux-folder-menu-item--danger"/,
@@ -35,8 +35,23 @@ test('E2E: 创作页卡片操作菜单全链路遵循 design.md 设计规范契�
     /data-danger="true"/,
     '删除创作页菜单项必须包含 data-danger 契约属性',
   )
+  assert.match(
+    pageTabSrc,
+    /projects\.deletePage/,
+    '创作页操作菜单必须使用 projects.deletePage 专属文案，不得复用解散项目 projects.delete',
+  )
+  assert.doesNotMatch(
+    pageTabSrc,
+    /projects\.delete['"]\s*\)\s*\|\|/,
+    '创作页操作菜单严禁再直接回落到 projects.delete',
+  )
 
-  // 3. 样式规则契约：卡片必须支持悬停展示更多操作按键，浮层具备毛玻璃与内切几何
+  // 3. 样式规则契约：卡片必须支持悬停展示更多操作按键，浮层具备毛玻璃、内切几何与黑白纯净主题
+  assert.match(
+    stylesSrc,
+    /\.omnimux-folder-menu\s*\{[^}]*--dsw-alias-bg-elevated:\s*var\(--dsw-specific-menu,\s*var\(--dsw-alias-bg-base\)\)/,
+    '菜单浮层必须显式定义深邃纯黑底色，彻底根除水泥灰回退',
+  )
   assert.match(
     stylesSrc,
     /\.omnimux-page-card\s*\{[^}]*position:\s*relative;/,
