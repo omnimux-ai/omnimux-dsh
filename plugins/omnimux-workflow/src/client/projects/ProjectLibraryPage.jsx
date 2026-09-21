@@ -35,7 +35,6 @@ import {
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
 import { createProjectSession, dismissProductStage, runNewProject } from './newProject.js'
-import { resolveCurrentCwd } from './cwd.js'
 import { activateProjectCanvas, closeAppTab, openAppTab } from './projectCanvas.js'
 import { ProjectFolderCard } from './ProjectFolderCard.jsx'
 import { ProjectPagesTab } from './ProjectPagesTab.jsx'
@@ -771,7 +770,7 @@ export function ProjectLibraryPage(props) {
           t={t}
           busy={busy}
           error={error}
-          initialPath={resolveCurrentCwd(sessions, workspaces) || ''}
+          initialPath=""
           initialTitle=""
           onCancel={() => { if (!busy) setDialogOpen(false) }}
           onSubmit={(payload) => { void handleDialogSubmit(payload) }}

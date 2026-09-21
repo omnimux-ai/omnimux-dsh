@@ -157,3 +157,14 @@ export function uploadProjectFiles(projectId, paths = [], subpath = '') {
     body: { paths, subpath },
   })
 }
+
+/**
+ * 弹窗内列出本机一层文件夹。path 为空则落到桌面或用户主目录。
+ * @param {string} [path]
+ */
+export function browseProjectDirectory(path) {
+  return workflowRequest('/omnimux-workflow/api/browse-directory', {
+    method: 'POST',
+    body: typeof path === 'string' && path.trim() !== '' ? { path } : {},
+  })
+}

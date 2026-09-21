@@ -15,7 +15,7 @@ const canvasTabPath = join(here, '../../src/client/projects/CanvasTab.jsx')
 const canvasTabSrc = readFileSync(canvasTabPath, 'utf8')
 
 test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
-  // 1. 新建本地项目弹窗支持路径自动预填契约
+  // 1. 新建本地项目弹窗支持路径自动预填契约（空 initialPath 走空态，非空走选中卡片）
   assert.match(
     dialogSrc,
     /initialPath\s*=\s*''/,
@@ -31,12 +31,22 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
     /extractFolderName\s*\(\s*initialPath\s*\)/,
     '未传标题时必须根据 initialPath 自动提取当前工作区文件夹名',
   )
+  assert.match(dialogSrc, /data-omnimux-new-project-drop/, '空态必须渲染源文件夹点击区')
+  assert.match(dialogSrc, /data-omnimux-new-project-picked/, '选中态必须渲染可移除目录卡片')
+  assert.match(dialogSrc, /data-omnimux-new-project-browse/, '点添加后必须在弹窗内浏览目录')
+  assert.doesNotMatch(dialogSrc, /pickProjectDirectory/, '不得再弹出系统选文件夹窗口')
+  assert.doesNotMatch(dialogSrc, /projects\.dialog\.pathPlaceholder/, '不得再手填绝对路径')
 
-  // 2. 项目中心自动预填当前工作区物理路径
+  // 2. 项目中心打开新建弹窗不得预填当前工作区路径
   assert.match(
     librarySrc,
-    /initialPath=\{\s*resolveCurrentCwd\s*\(\s*sessions,\s*workspaces\s*\)\s*\|\|\s*''\s*\}/,
-    '项目中心打开新建弹窗必须传入当前工作区的物理绝对路径',
+    /initialPath=""/,
+    '项目中心打开新建弹窗必须传入空 initialPath',
+  )
+  assert.doesNotMatch(
+    librarySrc,
+    /resolveCurrentCwd/,
+    '项目中心不得再把当前工作区路径预填进新建弹窗',
   )
   assert.match(
     librarySrc,

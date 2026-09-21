@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { createLocalFileRoutes } from './localFileRoutes.ts';
@@ -203,6 +203,46 @@ test('POST /api/local-file/probe exists/missing，上限 64', async () => {
   });
   assert.equal(capped.status, 200);
   assert.equal(capped.body.items.length, 64);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('POST /api/browse-directory lists one layer of folders and refuses files', async () => {
+  const dir = mkdtempSync(join(homedir(), 'wf-browse-'));
+  mkdirSync(join(dir, 'alpha'));
+  mkdirSync(join(dir, 'beta'));
+  writeFileSync(join(dir, 'note.txt'), 'x');
+  const routes = createLocalFileRoutes({ picker: async () => ({ path: null, paths: [] }) });
+  const listed = await routes.tryHandle('POST', '/omnimux-workflow/api/browse-directory', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/browse-directory',
+    origin: local.origin,
+    body: { path: dir },
+  });
+  assert.equal(listed.status, 200);
+  assert.equal(listed.body.path, realpathSync(dir));
+  assert.deepEqual(listed.body.entries.map((row) => row.name).sort(), ['alpha', 'beta']);
+  const asFile = await routes.tryHandle('POST', '/omnimux-workflow/api/browse-directory', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/browse-directory',
+    origin: local.origin,
+    body: { path: join(dir, 'note.txt') },
+  });
+  assert.equal(asFile.status, 400);
+  assert.equal(asFile.body.error, 'not-directory');
+  const missing = await routes.tryHandle('POST', '/omnimux-workflow/api/browse-directory', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/browse-directory',
+    origin: local.origin,
+    body: { path: join(dir, 'nope') },
+  });
+  assert.equal(missing.status, 404);
+  const outside = await routes.tryHandle('POST', '/omnimux-workflow/api/browse-directory', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/browse-directory',
+    origin: local.origin,
+    body: { path: tmpdir() },
+  });
+  assert.equal(outside.status, 403);
   rmSync(dir, { recursive: true, force: true });
 });
 

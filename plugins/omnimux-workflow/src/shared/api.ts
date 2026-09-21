@@ -63,6 +63,8 @@ export const WORKFLOW_API_ROUTES = {
   media: `${WORKFLOW_ROUTE_PREFIX}/media`,
   /** POST: native file/folder picker → absolute paths (no copy). */
   pick: `${WORKFLOW_ROUTE_PREFIX}/api/pick`,
+  /** POST: list one layer of local directories for in-dialog browse. */
+  browseDirectory: `${WORKFLOW_ROUTE_PREFIX}/api/browse-directory`,
   /** GET: stream an imported local file by realPath (Range 206). */
   localFile: `${WORKFLOW_ROUTE_PREFIX}/api/local-file`,
   /** POST: batch exists/size probe for imported realPath values. */
