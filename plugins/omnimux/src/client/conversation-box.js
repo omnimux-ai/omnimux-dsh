@@ -1,7 +1,5 @@
-import { isRightSidebarExpanded } from './split-compact-layout.js'
 import { ensureConversationVisible as ensureConversationVisibleShared } from './workbench/ensure-conversation-visible.js'
 import { requestRailActivationSync } from './workbench/sidebar-activation.js'
-import { loadConversationCollapsed } from './conversation-collapse.js'
 
 /**
  * @param {unknown} node
@@ -407,41 +405,24 @@ function isNewSessionIntent(target) {
 }
 
 /**
- * Session / 新会话 intent means enter the conversation column.
- *
- * 三步链路（顺序固定）：
- *   1. 先退宿主右侧全屏 —— 那是官方自己的状态键（`surface.layout.mode`），插件清折叠键动不了它，
- *      面板会继续以 `position:fixed; width:100%` 盖住中间栏（用户看到的是「点了没反应」）；
- *   2. 插件折叠键为真时 `setFocus('split')` —— 清粘性折叠并重写焦点记录，避免下一次左轨变化
- *      又按 `record.mode` 把面板翻回全屏（#372 的面板独立性在此只让位于「进入对话意图」）；
- *   3. 同步一次激活仲裁 —— 中间栏可见 + 会话行选中后，活动位立即归会话行，插件行全部熄灭。
- *
- * 不关闭右侧面板、不清已开 Tab：面板展开态与 Tab 属于面板自身，本手势只负责「让对话可见」。
+ * Session / 新会话 intent means enter the conversation column (Issue #2516).
+ * 新对话 → 会话全屏。旧会话有三栏记忆 → 三栏。否则会话全屏。不得恢复右侧全屏。
  */
-function ensureConversationVisible() {
-  // 两层状态的清理与全局 API 共用同一份实现，避免两处漂移。
+function ensureConversationVisible(opts = {}) {
   ensureConversationVisibleShared(
     typeof document !== 'undefined' ? document : undefined,
     typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined,
+    opts,
   )
   requestRailActivationSync()
 }
 
-/**
- * 新会话意图只做状态对齐，不主动收起右侧侧栏。
- *
- * 真实侧栏还展开着的时候，新会话本来就该落在中间栏、由 SessionGuide 切到简洁模式；
- * 早先无条件 closePanel() 会把内存状态改成 panelOpen:false，而真实侧栏纹丝不动，
- * 于是空白会话在分栏里错误地渲染出完整引导卡片。只有宿主确实已把侧栏收起、
- * 内存状态还停在 open 时才补写关闭，两侧状态由此收敛。
- */
-function reconcileWorkbenchPanel() {
-  const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-  if (!api) return
-  if (isRightSidebarExpanded(typeof document !== 'undefined' ? document : undefined)) return
-  if (typeof api.closePanel === 'function') {
-    api.closePanel()
-  }
+function currentWorkbenchSessionId() {
+  try {
+    const snap = window.__omnimuxWorkbench?.getSnapshot?.()
+    if (snap?.sessionId) return String(snap.sessionId)
+  } catch {}
+  return undefined
 }
 
 function handleSessionEnterIntent(target) {
@@ -452,22 +433,13 @@ function handleSessionEnterIntent(target) {
 function extractSessionIdFromTarget(target) {
   if (!(target instanceof Element)) return undefined
   const row = target.closest('[data-session-id], [data-tree-item-session-id], [role="treeitem"]')
-  const idAttr = row?.getAttribute('data-session-id') || row?.getAttribute('data-tree-item-session-id') || row?.id
+  const idAttr = row?.getAttribute('data-session-id') || row?.getAttribute('data-tree-item-session-id')
   return idAttr || undefined
-}
-
-function shouldPreserveFullscreenForSession(target) {
-  if (!(target instanceof Element)) return false
-  const sid = extractSessionIdFromTarget(target)
-  if (sid && loadConversationCollapsed(sid)) return true
-  return false
 }
 
 /**
  * 任意工作区会话行离开产品页；已选中行官方 no-op 也要关。
- * 「新会话」官方会复用空白会话（看起来像没点），一级页必须自己关 overlay。
- * 藏中后点会话行 / 新会话：同时退出宿主全屏并重新展开中间对话栏（进入对话意图）。
- * 点新建会话：只对齐右侧辅助工作台的内存状态，真实侧栏展开/收起由用户与宿主决定。
+ * 点会话 / 新会话：进聊天意图。新对话会话全屏；旧会话按三栏记忆恢复。
  */
 function watchSelectedSessionClick() {
   if (document.documentElement.dataset.dshSessionCloser === '1') return
@@ -478,10 +450,10 @@ function watchSelectedSessionClick() {
     const inProductStage = Boolean(document.documentElement.dataset.dshProductStage)
     if (inProductStage) leaveProductStage()
     if (isNewSessionIntent(target)) {
-      ensureConversationVisible()
-      reconcileWorkbenchPanel()
-    } else if (inProductStage || !shouldPreserveFullscreenForSession(target)) {
-      ensureConversationVisible()
+      ensureConversationVisible({ newSession: true })
+    } else {
+      const sid = extractSessionIdFromTarget(target) || currentWorkbenchSessionId()
+      ensureConversationVisible({ sessionId: sid, newSession: false })
     }
   }, true)
   document.addEventListener('click', (event) => {
@@ -489,8 +461,7 @@ function watchSelectedSessionClick() {
     if (!(target instanceof Element)) return
     if (!shellNewSessionControl(target)) return
     if (document.documentElement.dataset.dshProductStage) leaveProductStage()
-    ensureConversationVisible()
-    reconcileWorkbenchPanel()
+    ensureConversationVisible({ newSession: true })
   })
 }
 

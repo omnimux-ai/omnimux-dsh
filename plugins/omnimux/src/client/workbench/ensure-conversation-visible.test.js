@@ -10,6 +10,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { JSDOM } from 'jsdom'
 import { ensureConversationVisible } from './ensure-conversation-visible.js'
+import { persistSessionThreeColumn, resetConversationCollapseForTests } from '../conversation-collapse.js'
 
 const previousWindow = globalThis.window
 const previousDocument = globalThis.document
@@ -17,6 +18,7 @@ const previousDocument = globalThis.document
 let dom
 
 afterEach(() => {
+  resetConversationCollapseForTests()
   dom?.window.close()
   dom = undefined
   globalThis.window = previousWindow
@@ -48,11 +50,11 @@ test('宿主全屏时：点击官方退出控件，且不依赖折叠键', () =>
 
   assert.equal(clicked, 1, '必须点了官方退出控件')
   assert.equal(result.hostFullscreenExited, true)
-  assert.equal(result.collapseCleared, false, '折叠键本来就是 false，无需再清')
-  assert.deepEqual(focusCalls, [], '折叠键为 false 时不该写焦点')
+  assert.equal(result.sessionFullscreen, false, '无参数调用只让聊天可见，不收右侧')
+  assert.deepEqual(focusCalls, ['split'])
 })
 
-test('折叠键为真时：用 setFocus(split) 清粘性折叠', () => {
+test('无参数且折叠键为真：用 setFocus(split) 清粘性折叠', () => {
   dom = new JSDOM('<!doctype html><html><body></body></html>')
   globalThis.window = dom.window
   globalThis.document = dom.window.document
@@ -64,7 +66,7 @@ test('折叠键为真时：用 setFocus(split) 清粘性折叠', () => {
   })
 
   assert.deepEqual(focusCalls, ['split'])
-  assert.equal(result.collapseCleared, true)
+  assert.equal(result.sessionFullscreen, false)
   assert.equal(result.hostFullscreenExited, false)
 })
 
@@ -81,10 +83,29 @@ test('全屏 + 折叠键同时成立：两件事都做', () => {
 
   assert.equal(clicked, 1)
   assert.deepEqual(focusCalls, ['split'])
-  assert.deepEqual(result, { hostFullscreenExited: true, collapseCleared: true })
+  assert.equal(result.hostFullscreenExited, true)
+  assert.equal(result.sessionFullscreen, false)
 })
 
-test('本来就可见时：纯 no-op（不得产生任何布局动作）', () => {
+test('该会话有三栏记忆：退出全屏并 setFocus(split)', () => {
+  const doc = createFullscreenDom()
+  persistSessionThreeColumn(true, 'sess-three')
+  let clicked = 0
+  doc.querySelector('button[data-sidebar-right-mode="push"]').addEventListener('click', () => { clicked += 1 })
+  const focusCalls = []
+
+  const result = ensureConversationVisible(doc, {
+    getConversationCollapsed: () => true,
+    setFocus: (mode) => focusCalls.push(mode),
+  }, { sessionId: 'sess-three' })
+
+  assert.equal(clicked, 1)
+  assert.deepEqual(focusCalls, ['split'])
+  assert.equal(result.sessionFullscreen, false)
+  assert.equal(result.hostFullscreenExited, true)
+})
+
+test('新对话：进入会话全屏', () => {
   dom = new JSDOM('<!doctype html><html><body></body></html>')
   globalThis.window = dom.window
   globalThis.document = dom.window.document
@@ -93,10 +114,22 @@ test('本来就可见时：纯 no-op（不得产生任何布局动作）', () =>
   const result = ensureConversationVisible(dom.window.document, {
     getConversationCollapsed: () => false,
     setFocus: (mode) => focusCalls.push(mode),
-  })
+  }, { newSession: true })
 
-  assert.deepEqual(focusCalls, [])
-  assert.deepEqual(result, { hostFullscreenExited: false, collapseCleared: false })
+  assert.deepEqual(focusCalls, ['chat'])
+  assert.equal(result.sessionFullscreen, true)
+})
+
+test('点无三栏记忆的旧会话：进入会话全屏', () => {
+  const doc = createFullscreenDom()
+  const focusCalls = []
+  const result = ensureConversationVisible(doc, {
+    getConversationCollapsed: () => false,
+    setFocus: (mode) => focusCalls.push(mode),
+  }, { sessionId: 'sess-new' })
+
+  assert.deepEqual(focusCalls, ['chat'])
+  assert.equal(result.sessionFullscreen, true)
 })
 
 test('API 缺失或抛错：静默降级，绝不抛出', () => {
@@ -110,5 +143,5 @@ test('API 缺失或抛错：静默降级，绝不抛出', () => {
   const result = ensureConversationVisible(doc, {
     getConversationCollapsed: () => { throw new Error('boom') },
   })
-  assert.equal(result.collapseCleared, false)
+  assert.equal(result.sessionFullscreen, false)
 })

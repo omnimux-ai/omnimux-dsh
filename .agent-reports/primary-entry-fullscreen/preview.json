@@ -1,0 +1,59 @@
+{
+  "spaceId": 20,
+  "shots": [
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/01-open-app-fullscreen.png",
+      "layout": "page-full",
+      "status": "第一次进该页：右侧全屏",
+      "badge": "右侧全屏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/02-open-assets-fullscreen.png",
+      "layout": "page-full",
+      "status": "第一次进该页：右侧全屏",
+      "badge": "右侧全屏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/03-reopen-app-still-fullscreen.png",
+      "layout": "page-full",
+      "status": "第一次进该页：右侧全屏",
+      "badge": "右侧全屏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/04-open-chat-three-column.png",
+      "layout": "three",
+      "status": "亲手打开聊天：该页记住三栏",
+      "badge": "三栏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/05-other-page-fullscreen.png",
+      "layout": "page-full",
+      "status": "第一次进该页：右侧全屏",
+      "badge": "右侧全屏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/06-remembered-three-column.png",
+      "layout": "three",
+      "status": "该页曾打开过聊天，恢复三栏",
+      "badge": "三栏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/07-new-session-fullscreen.png",
+      "layout": "session-full",
+      "status": "新对话：会话全屏，不继承上一条",
+      "badge": "会话全屏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/08-old-session-three-column.png",
+      "layout": "three",
+      "status": "该会话记过三栏，恢复三栏",
+      "badge": "三栏"
+    },
+    {
+      "file": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-primary-entry-fullscreen/docs/evidence/primary-entry-fullscreen/09-session-from-page-fullscreen.png",
+      "layout": "session-full",
+      "status": "点会话必须看见聊天：会话全屏",
+      "badge": "会话全屏"
+    }
+  ]
+}

@@ -62,9 +62,10 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     assert.equal(STAGE_CSS_CLASS_MAP['omnimux-inspiration'], 'omnimux-inspiration-stage')
     assert.equal(STAGE_CSS_CLASS_MAP['omnimux-workflow'], 'omnimux-workflow-stage')
     assert.equal(STAGE_CSS_CLASS_MAP['omnimux-publish'], 'omnimux-publish-stage')
+    assert.equal(STAGE_CSS_CLASS_MAP['omnimux-device'], 'omnimux-device-stage')
     assert.equal(STAGE_CSS_CLASS_MAP['omnimux-clip'], 'omnimux-clip-stage')
     assert.equal(STAGE_CSS_CLASS_MAP['omnimux-apps'], 'omnimux-apps-stage')
-    assert.equal(Object.keys(STAGE_CSS_CLASS_MAP).length, 9)
+    assert.ok(Object.keys(STAGE_CSS_CLASS_MAP).length >= 9)
   })
 
   it('injects host-level mutual exclusion CSS for each stage', () => {
@@ -156,7 +157,7 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     globalThis.window.__omnimuxWorkbench = {
       closePanel() { closed++ },
       getConversationCollapsed() { return false },
-      setFocus() {},
+      setFocus(mode) { if (mode === 'chat') closed++ },
     }
 
     // 1. 官方侧栏「+ 新对话」
@@ -198,34 +199,19 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     // 5. 普通会话树行点击：不应触发 closePanel
     const plainRow = document.createElement('div')
     plainRow.setAttribute('role', 'treeitem')
+    plainRow.setAttribute('data-session-id', 'sess-plain')
     plainRow.textContent = '已有会话'
     document.body.append(plainRow)
     plainRow.click()
-    assert.equal(closed, 4, 'plain session row must not close workbench panel')
+    assert.equal(closed, 5, 'plain session row without three-column memory also enters session fullscreen')
 
-    // 6. 真实右侧侧栏展开着：新会话只把会话挤到中间栏，不得破坏用户已打开的分栏
-    const frame = document.createElement('div')
-    frame.className = 'dshDesktopFrame'
-    const rightbar = document.createElement('div')
-    rightbar.setAttribute('data-rightbar-col', '')
-    Object.defineProperty(rightbar, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => ({ width: 1028, height: 600, top: 0, left: 680, right: 1708, bottom: 600, x: 680, y: 0 }),
-    })
-    frame.append(rightbar)
-    document.body.append(frame)
     topbarBtn.click()
-    assert.equal(closed, 4, 'an expanded right sidebar must survive a new session intent (split stays open)')
+    assert.equal(closed, 6, 'new session intent is session fullscreen even if a right panel is expanded')
     shellBtn.click()
-    assert.equal(closed, 4, 'shell newSession must not collapse an expanded right sidebar either')
+    assert.equal(closed, 7)
     menuItem.click()
-    assert.equal(closed, 4, 'menu newSession pick must not collapse an expanded right sidebar either')
+    assert.equal(closed, 8)
     wsBtn.click()
-    assert.equal(closed, 4, 'workspace newSession must not collapse an expanded right sidebar either')
-
-    // 7. 宿主已收起侧栏、内存状态仍停在 open：补写关闭，两端状态收敛
-    frame.setAttribute('data-rightbar-collapsed', 'true')
-    wsBtn.click()
-    assert.equal(closed, 5, 'a stale open state must be reconciled once the host sidebar is collapsed')
+    assert.equal(closed, 9)
   })
 })

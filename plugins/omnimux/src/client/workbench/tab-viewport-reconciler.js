@@ -1,19 +1,12 @@
 /**
  * 页面级全屏与分栏视窗模式调和器（Tab Viewport Reconciler）。
  *
- * 核心机制：
- * 1. 消除原生 DSH 右栏全屏与 Tab 状态脱节的问题，为每个 Tab 提供独立的视窗模式记忆；
- * 2. 默认行为：页签默认以**分栏**（WORKBENCH_FOCUS.split）呈现。展开右侧栏是一次「并排」意图，
- *    自动播种的默认值不构成用户意图，因此绝不自动占满整屏；
- * 3. 用户在面板右上角手动切换全屏/分栏时，持久化记录当前 Tab 的选择并标记为显式意图（`explicit`）；
- * 4. 切换激活 Tab 时，自动调和原生面板的模式 —— **只对用户显式选过的页签恢复其偏好**：
- *    - 目标 Tab 偏好为 split 且面板处于 fullscreen -> 调用 exitHostRightSidebarFullscreen()
- *    - 目标 Tab 偏好为 gui 且面板处于 push -> 调用 enterHostRightSidebarFullscreen()
- *    面板由收起转为展开的那一次同步一律呈现分栏，显式全屏记录在此刻也不生效。
- * 5. 防护与高稳定性：切页判定优先，调和锁仅防误判手势，快速切换不丢状态。
- *    判定只依赖面板自身的模式键与页签身份，绝不读取左侧会话列表的渲染事实 —— 曾经用作
- *    兜底的 `[role="treeitem"][aria-selected="true"]` 会让右侧栏的呈现方式取决于左栏是否
- *    展开、列表是否有选中行，与用户意图无关（Issue #2056）。
+ * Issue #2516 一级入口按意图全屏：
+ * 1. 左侧打开右侧页面默认全屏。调和器不得把未标记 explicit 的全屏拆回三栏（图 1 真凶）。
+ * 2. 同会话内部换页签锁当前布局，不按目标页默认弹全屏。
+ * 3. 用户点官方全屏/分栏按钮才写入页面钥匙 + 会话钥匙。
+ * 4. 切换会话时按目标会话钥匙恢复三栏或会话全屏，不把 A 的布局带到 B。
+ * 5. 判定只依赖面板模式键与页签身份，不读左侧会话列表渲染事实。
  */
 
 import {
@@ -32,15 +25,13 @@ import {
   WORKBENCH_TAB_TITLE_FALLBACKS,
 } from './focus-state.js'
 import {
-  enterHostRightSidebarFullscreen,
-  exitHostRightSidebarFullscreen,
   isHostRightSidebarFullscreen,
   HOST_RIGHT_PANEL_ATTR,
 } from './host-fullscreen.js'
 import {
   applyConversationCollapsedAttr,
-  loadConversationCollapsed,
   persistConversationCollapsed,
+  persistSessionThreeColumn,
 } from '../conversation-collapse.js'
 
 const TITLE_TO_TAB_ID = new Map(
@@ -145,10 +136,8 @@ export function createTabViewportReconciler(deps = {}) {
   const getTabId = deps.getTabId || (() => resolveCurrentTabId(getDoc()))
   const getFocusRecord = deps.getFocusRecord || focusRecordForTab
   const persistFocus = deps.persistFocus || persistSessionFocus
+  const persistThreeColumn = deps.persistSessionThreeColumn || persistSessionThreeColumn
   const isFullscreen = deps.isFullscreen || (() => isHostRightSidebarFullscreen(getDoc()))
-  const enterFullscreen = deps.enterFullscreen || (() => enterHostRightSidebarFullscreen(getDoc()))
-  const exitFullscreen = deps.exitFullscreen || (() => exitHostRightSidebarFullscreen(getDoc()))
-  const loadCollapsed = deps.loadConversationCollapsed || loadConversationCollapsed
   const persistCollapsed = deps.persistConversationCollapsed || persistConversationCollapsed
   const applyCollapsedAttr = deps.applyConversationCollapsedAttr || applyConversationCollapsedAttr
 
@@ -187,42 +176,15 @@ export function createTabViewportReconciler(deps = {}) {
     const currentTab = getTabId()
     const sessionId = getSessionId()
 
-    // 1. 会话切换场景（Session Switch）：读取并恢复目标会话自身的视窗开闭偏好
+    // 1. 会话切换：只记下身份。进聊天意图由会话行点击处理，这里不得把右侧全屏带回来。
     if (sessionId && sessionId !== lastSessionId) {
       lastSessionId = sessionId
       lastActiveTabId = currentTab
       lastMode = currentMode
-
-      const sessionCollapsed = loadCollapsed(sessionId)
-      if (sessionCollapsed && currentMode !== 'fullscreen') {
-        isReconciling = true
-        lastMode = 'fullscreen'
-        try {
-          enterFullscreen()
-          applyCollapsedAttr(true, doc)
-        } finally {
-          scheduleUnlock()
-        }
-        return
-      } else if (!sessionCollapsed && currentMode === 'fullscreen') {
-        isReconciling = true
-        lastMode = 'push'
-        try {
-          exitFullscreen()
-          applyCollapsedAttr(false, doc)
-          if (doc?.documentElement) {
-            doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
-          }
-          ensureHealthySplitWidth(doc)
-        } finally {
-          scheduleUnlock()
-        }
-        return
-      }
       return
     }
 
-    // 2. Tab 切换场景：在同一个会话记录内，切换右侧 Tab 绝对锁定当前全屏/分栏模式，绝不弹开展开！
+    // 2. 同会话内部换页签：锁当前布局，不按目标页默认弹全屏。
     if (currentTab && currentTab !== lastActiveTabId) {
       lastActiveTabId = currentTab
       lastMode = currentMode
@@ -238,12 +200,13 @@ export function createTabViewportReconciler(deps = {}) {
       return
     }
 
-    // 4. 用户手势场景：在同一个会话内，用户手动点击模式按钮改变了模式
+    // 4. 用户手势：同一会话内点官方全屏/分栏。默认全屏不得走这里被拆掉。
     if (lastMode && currentMode !== lastMode) {
       lastMode = currentMode
       const isFs = currentMode === 'fullscreen'
       if (sessionId) {
         persistCollapsed(isFs, sessionId)
+        persistThreeColumn(!isFs, sessionId)
         if (currentTab && isWorkbenchTab(currentTab)) {
           persistFocus(sessionId, currentTab, {
             mode: isFs ? WORKBENCH_FOCUS.gui : WORKBENCH_FOCUS.split,

@@ -12,6 +12,8 @@
 export const CONVERSATION_COLLAPSED_ATTR = 'data-omnimux-conversation-collapsed'
 export const CONVERSATION_COLLAPSE_STYLE_ID = 'omnimux-conversation-collapse-chrome'
 export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collapsed:v1:'
+/** 会话钥匙：用户是否亲手把该会话变成过三栏（打开聊天）。新会话为空。 */
+export const SESSION_THREE_COLUMN_STORAGE_PREFIX = 'omnimux-session-three-column:v1:'
 
 /** 画布身份片段：媒体查看器正在展示单张大图且该舞台在前台（见 media-viewer/image-canvas-stage.js）。 */
 const IMAGE_CANVAS_VISIBLE = '[data-omnimux-image-canvas][data-visible="true"]'
@@ -168,6 +170,8 @@ function currentSessionId() {
 /** In-memory session collapse cache: sessionId -> boolean */
 const memoryCollapsedBySession = new Map()
 let lastActiveCollapsed = false
+/** 会话钥匙：用户是否亲手打开过该会话的聊天（三栏）。 */
+const memoryThreeColumnBySession = new Map()
 
 export function ensureConversationCollapseChrome(doc = hostDocument()) {
   if (!doc?.head) return null
@@ -272,8 +276,36 @@ export function hydrateConversationCollapsed(sessionId = currentSessionId(), doc
   return collapsed
 }
 
+export function loadSessionThreeColumn(sessionId = currentSessionId()) {
+  const sid = sessionId || currentSessionId()
+  if (!sid || sid === '__none__') return false
+  if (memoryThreeColumnBySession.has(sid)) return memoryThreeColumnBySession.get(sid)
+  try {
+    const raw = hostWindow()?.localStorage?.getItem?.(SESSION_THREE_COLUMN_STORAGE_PREFIX + sid)
+    const val = raw === '1'
+    memoryThreeColumnBySession.set(sid, val)
+    return val
+  } catch {
+    return false
+  }
+}
+
+export function persistSessionThreeColumn(value, sessionId = currentSessionId()) {
+  const sid = sessionId || currentSessionId()
+  const val = Boolean(value)
+  if (!sid || sid === '__none__') return
+  memoryThreeColumnBySession.set(sid, val)
+  try {
+    hostWindow()?.localStorage?.setItem?.(
+      SESSION_THREE_COLUMN_STORAGE_PREFIX + sid,
+      val ? '1' : '0',
+    )
+  } catch { /* ignore */ }
+}
+
 export function resetConversationCollapseForTests() {
   memoryCollapsedBySession.clear()
+  memoryThreeColumnBySession.clear()
   lastActiveCollapsed = false
   const doc = hostDocument()
   const root = doc?.documentElement

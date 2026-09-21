@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-13"
+updated: "2026-09-21"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -125,7 +125,7 @@ MUST NOT fake a tab as a real session row (no `conversation.view`, no session da
 | Top chrome | In-tab L1 still `12px 20px 12px` (same as official conversation header). Do not add a 44/56px inset. Window-drag stays on (no product-stage). | Same 12/20/12. Window-drag off while claimed. |
 | Mutual exclusion | Switching left-rows **activates** the other Tab; does not claim. Cross-type Tabs may coexist (`single: true` per type). | Opening one leftover dispatches `dsh-product-stage` so the others close. |
 | Layout chrome | MUST NOT hide `toggleCluster` or `[data-dsh-panel-host]`. Hub injects the chat-toggle as the cluster's first child. | While claimed, hide `toggleCluster`, `conversation.session.header`, **and** `[data-dsh-panel-host]`; force `--dsh-sidebar-width` / `--dsh-sidebar-height` to `0`. |
-| Session click | Clicking a workspace session row **does not** close workbench Tabs. The same click exits the host right panel's fullscreen presentation, restores the middle column, and hands the activation slot back to the session row (enter-conversation intent; see [workbench-split.md](./workbench-split.md)). | Clicking **any** workspace session row (`[role="treeitem"]`, selected or not) must leave the leftover overlay. Official workspace treats a click on the already-selected row as a no-op, so leftovers must close that case themselves. Clicks on buttons inside a row (pin / delete) MUST NOT close. **新会话** also leaves leftovers. 「新建项目」MUST NOT use this path. |
+| Session click | Clicking a workspace session row **does not** close workbench Tabs. The same click is enter-conversation intent: conversation MUST become visible. If that session has an explicit three-column memory, restore split; otherwise close the right panel (session fullscreen). MUST NOT restore host right-panel fullscreen on this path — that layout belongs to a later left-row page click ([workbench-split.md](./workbench-split.md) Issue #2516). | Clicking **any** workspace session row (`[role="treeitem"]`, selected or not) must leave the leftover overlay. Official workspace treats a click on the already-selected row as a no-op, so leftovers must close that case themselves. Clicks on buttons inside a row (pin / delete) MUST NOT close. **新会话** also leaves leftovers. 「新建项目」MUST NOT use this path. |
 
 MUST NOT register workbench pages as `conversation.view`. That slot is a session-hosted tab (chat / trajectory / team run).
 

@@ -363,12 +363,16 @@ function syncConversationCollapsedForFocus(mode, sessionId) {
   }
 }
 
-function updateFocusRecord(mode, sessionId, effectiveTabId) {
+function updateFocusRecord(mode, sessionId, effectiveTabId, persistUserIntent) {
   const record = focusRecordForTab(sessionId, effectiveTabId)
   if (mode !== WORKBENCH_FOCUS.chat && sessionId && effectiveTabId) {
     record.mode = mode
-    record.explicit = true
-    persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: true })
+    if (persistUserIntent) {
+      record.explicit = true
+      persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: true })
+    } else {
+      persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: record.explicit === true })
+    }
   }
   return record
 }
@@ -379,13 +383,15 @@ function updateFocusRecord(mode, sessionId, effectiveTabId) {
  * @param {object} [store]
  * @param {object} [env]
  * @param {string} [targetTabId]
+ * @param {{ persistUserIntent?: boolean }} [opts] 默认打开 / 智能体打开不得写成用户选择。
  * @returns {boolean}
  */
-export function setWorkbenchFocus(mode, store = getAttachedStore(), env = {}, targetTabId = undefined) {
+export function setWorkbenchFocus(mode, store = getAttachedStore(), env = {}, targetTabId = undefined, opts = {}) {
   if (mode !== WORKBENCH_FOCUS.split && mode !== WORKBENCH_FOCUS.gui && mode !== WORKBENCH_FOCUS.chat) {
     return false
   }
 
+  const persistUserIntent = opts.persistUserIntent !== false
   const snapshot = liveSnapshot(store)
   const state = snapshot?.state
   const sessionId = snapshot?.sessionId
@@ -394,7 +400,7 @@ export function setWorkbenchFocus(mode, store = getAttachedStore(), env = {}, ta
   persistClampedSplitWidth({ state, record: prevRecord, sessionId, tabId: prevTabId, env })
 
   const effectiveTabId = targetTabId || prevTabId
-  const record = updateFocusRecord(mode, sessionId, effectiveTabId)
+  const record = updateFocusRecord(mode, sessionId, effectiveTabId, persistUserIntent)
   syncConversationCollapsedForFocus(mode, sessionId)
 
   if (!store || typeof store.reduce !== 'function') {

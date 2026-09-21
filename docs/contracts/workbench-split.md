@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-31"
-updated: "2026-09-15"
+updated: "2026-09-21"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -47,16 +47,16 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
-| `omnimux-assets:library` | `omnimux-assets` | `split` | `[data-omnimux-assets-entry]` |
-| `omnimux-products:library` | `omnimux-products` | `split` | `[data-omnimux-products-entry]` |
-| `omnimux-accounts:library` | `omnimux-accounts` | `split` | `[data-omnimux-accounts-entry]` |
-| `omnimux-inspiration:library` | `omnimux-inspiration` | `split` | `[data-omnimux-inspiration-entry]` |
-| `omnimux-publish:library` | `omnimux-publish` | `split` | `[data-omnimux-publish-entry]` |
-| `omnimux-analytics:library` | `omnimux-analytics` | `split` | `[data-omnimux-analytics-entry]` |
-| `omnimux-workflow:library` | `omnimux-workflow` | `split` | `[data-dsh-omnimux-workflow-entry]` |
-| `omnimux-workflow:canvas` | `omnimux-workflow` | `split` | not a left-row; opened after a project session |
-| `omnimux-market:plaza` | `omnimux-market` | `split` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
-| `omnimux-clip:studio` | `omnimux-clip` | `split` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；画布/Agent 打开 |
+| `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |
+| `omnimux-products:library` | `omnimux-products` | `gui` | `[data-omnimux-products-entry]` |
+| `omnimux-accounts:library` | `omnimux-accounts` | `gui` | `[data-omnimux-accounts-entry]` |
+| `omnimux-inspiration:library` | `omnimux-inspiration` | `gui` | `[data-omnimux-inspiration-entry]` |
+| `omnimux-publish:library` | `omnimux-publish` | `gui` | `[data-omnimux-publish-entry]` |
+| `omnimux-analytics:library` | `omnimux-analytics` | `gui` | `[data-omnimux-analytics-entry]` |
+| `omnimux-workflow:library` | `omnimux-workflow` | `gui` | `[data-dsh-omnimux-workflow-entry]` |
+| `omnimux-workflow:canvas` | `omnimux-workflow` | `gui` | not a left-row; opened after a project session |
+| `omnimux-market:plaza` | `omnimux-market` | `gui` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
+| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；画布/Agent 打开 |
 
 Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCanvas`, does not claim). Sidebar clicks MUST NOT call `stage.open()`.
 
@@ -81,30 +81,39 @@ Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCan
 
 Toggling one pane **MUST NOT** flip another pane's sticky intent.
 
-**Exception — enter-conversation gesture:** clicking a workspace session row (`[role="treeitem"]` plain click, not pin/delete), workspace-group「新建会话」, shell「新会话」, or the brand new-session control **MUST** make the conversation visible in one gesture:
+**Exception — enter-conversation gesture:** clicking a workspace session row (`[role="treeitem"]` plain click, not pin/delete), workspace-group「新建会话」, shell「新会话」, or the brand new-session control **MUST** make the conversation visible in one gesture. This is **session fullscreen** or **split**, never a restore of right-panel fullscreen (Issue #2516).
 
 | Step | Action | Why |
 |---|---|---|
-| a | Exit the native right panel's fullscreen presentation if it is active — click the panel's own mode control (`[data-sidebar-right-panel="fullscreen"] button[data-sidebar-right-mode="push"]`) | Fullscreen is the **host's** state key (`surface.layout.mode`), not the plugin's collapse key; the plugin has no `setMode` / `exitFullscreen` seam, and clearing the collapse key alone leaves the panel `position:fixed; width:100%` over the middle column |
-| b | Clear `conversationCollapsed` via `setFocus('split')` when it is set | `setFocus` also rewrites the focus record, so a later left-rail change cannot flip the panel back to fullscreen via `record.mode` |
-| c | Leave the panel's expanded state and open tabs untouched | The gesture enters the conversation column; it is not a close-panel gesture |
+| a | Exit the native right panel's fullscreen presentation if it is active — click the panel's own mode control (`[data-sidebar-right-panel="fullscreen"] button[data-sidebar-right-mode="push"]`) | Fullscreen is the **host's** state key (`surface.layout.mode`), not the plugin's collapse key; clearing collapse alone leaves the panel `position:fixed; width:100%` over the middle column |
+| b | If this session has an explicit three-column memory → `setFocus('split')`. Otherwise (new session, or the user never opened chat here) → `setFocus('chat')` so the right panel closes and the conversation fills | Clicking a session is enter-chat intent. Right-panel fullscreen belongs only to a later left-row page click |
+| c | Leave open tab ids in the session snapshot | The gesture is not a close-tab gesture; the page can come back when the user clicks that left-row again |
 
-The gesture is idempotent: clicking the already-selected session row repeats no destructive work and resets no panel width.
+The gesture is idempotent: clicking the already-selected session row repeats no destructive work and resets no panel width. MUST NOT restore host fullscreen on this path.
 
 **Session row highlight (normative):** the official `[role="treeitem"][aria-selected="true"]` in the left column is the single truth for session selection. Plugins MUST NOT mirror session selection, and plugin-side highlighting MUST yield to it: while a session row is selected and the middle column is visible, every plugin left-row is inactive. When no visible session row owns the slot, the plugin row is active only when the official `ctx.sidebarRight.isExpanded()` is true and `ctx.sidebarRight.active()` identifies that row's current Tab. A registered or retained Tab alone never makes its row active. See [sidebar-extra-entries.md](./sidebar-extra-entries.md) 「Left-rail single activation slot」.
 
 ### Default Focus Rule
 
-Only when `(sessionId, tabId)` has **no user gesture record**:
+Only when `(sessionId, tabId)` has **no user gesture record** (`explicit !== true`):
 
 ```
-if (isWorkbenchTab(tabId)) default = split
+if (isWorkbenchTab(tabId)) default = gui   // 右侧全屏：导航 + 右侧页面，聊天收起
 else do not write focus (third-party Files, etc.)
 ```
 
-MUST NOT inherit `lastOpenMode` across tabs. Ordinary `open({ tabId })` calls without `focus`, including Agent-driven opens, restore **that tab's** remembered mode and split width while `chat`, or the default matrix if none.
+Primary-entry intents (Issue #2516):
 
-**Left-row user navigation:** an explicit user click on a left-row workbench entry goes through `createSidebarStore.open()` (or its `set(true)` equivalent) without a `focus` override. An untouched Tab opens in `split`; a Tab with a prior user gesture restores its own remembered `split` / `gui` mode and split width, including after the right panel was closed. Agent tools still MUST NOT force GUI focus or write `conversationCollapsed`.
+| Gesture | Intent | Layout |
+|---|---|---|
+| Left-row workbench entry / app tab | Enter-page | Untouched tab → `gui` + host fullscreen. Tab with `explicit: true` restores that tab's `split` / `gui`. Default open MUST NOT set `explicit`. |
+| Session row / 新对话 | Enter-conversation | See enter-conversation gesture. New session never inherits the previous session's three-column memory. |
+| In-panel tab strip (same session) | Not a primary entry | Lock the current layout. MUST NOT re-enter fullscreen just because the target tab's default is `gui`. |
+| Agent `workbench_open_tab` | Preserve layout | `open({ preserveLayout: true })`. MUST NOT `setFocus` or write `conversationCollapsed` / `explicit`. |
+
+MUST NOT inherit `lastOpenMode` across tabs. MUST NOT treat a default `gui` seed as a user choice.
+
+**Left-row user navigation:** an explicit user click on a left-row workbench entry goes through `createSidebarStore.open()` without a `focus` override and without `preserveLayout`. An untouched Tab opens in `gui` (host fullscreen); a Tab with a prior user gesture restores its own remembered `split` / `gui`.
 
 Canvas `applyProjectCanvasRatio` MUST skip while focus is `gui` or `chat`, and MUST run only for `omnimux-workflow:canvas`.
 
@@ -113,12 +122,13 @@ Canvas `applyProjectCanvasRatio` MUST skip while focus is `gui` or `chat`, and M
 | Key | Value |
 |---|---|
 | Storage | `localStorage['omnimux-workbench-focus:v1:' + sessionId]` |
-| Shape | `{ [tabId]: { mode: 'split'\|'gui', splitWidth?: number } }` |
-| Write | User: chat-toggle, drag splitter |
-| Do not write | Pure default open (so a later default-rule change still applies to untouched tabs) |
+| Shape | `{ [tabId]: { mode: 'split'\|'gui', splitWidth?: number, explicit?: boolean } }` |
+| Session three-column | `localStorage['omnimux-session-three-column:v1:' + sessionId]` = `1` only after the user explicitly opened chat (`split`) |
+| Write `explicit` | User: host fullscreen/split button, chat-toggle. `setFocus(..., { persistUserIntent: true })` |
+| Do not write `explicit` | Pure default open, Agent `preserveLayout` |
 | `chat` | Session-level `panelOpen`; **not** stored in the tab table |
-| New session | Empty table → default matrix |
-| Switch session | Read that session's table only |
+| New session | Empty table → enter-conversation = session fullscreen (`chat`) |
+| Switch session via session row | Restore three-column if that session key is `1`; otherwise session fullscreen. Never restore right-panel fullscreen |
 
 MUST NOT persist focus only in an in-memory `Map`. MUST NOT patch `dsh-sidebar:v1:<sessionId>` for mode (that snapshot owns width / panelOpen / tabs).
 
@@ -149,7 +159,7 @@ Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `_
 2. Bind a StageStore-shaped adapter via `window.__omnimuxWorkbench.createSidebarStore({ tabId, title, path })` into `createSidebarEntry`. For explicit user left-row navigation, `open()` calls `window.__omnimuxWorkbench.open({ tabId, path })` without a focus override. **MUST** use this factory for left-row StageStores; **MUST NOT** re-implement highlight/open/close semantics (`isActive` / `closeTab` / focus). A **thin lazy forwarder** (acquire factory when first used; ≤8s poll if hub not ready) is allowed so vertical mount order cannot crash plugin load. Clip may also keep local `CLIP_TAB_ID` / path constants (ADR Q12).
 3. `attachStore(props.store)` from the Tab component so width writes can `store.reduce` (public API has no `setWidth`)
 
-`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })` → apply a contract-authorized explicit focus when provided; otherwise apply Default Focus Rule or restore `(sessionId, tabId)` memory. NEVER `claim` a stage. NEVER `sessions.create({})`.
+`open()` sequence: `closeDetails` → **release any current `data-dsh-product-stage`** (leftover overlay would hide the panel) → require a current session (else `false` + toast) → wait for session snapshot → close empty Files seed tabs → `openTab({ type, id, path: sentinel })`. If `preserveLayout` (Agent): stop; do not `setFocus`. Otherwise apply a contract-authorized explicit `focus` when provided; else apply Default Focus Rule or restore `(sessionId, tabId)` memory, writing geometry with `persistUserIntent: false`, and if the target is `gui` also enter host right-panel fullscreen. NEVER `claim` a stage. NEVER `sessions.create({})`. NEVER persist `explicit: true` on this default path.
 
 `createSidebarStore` six-pack: `getSnapshot` / `subscribe` / `open` / `close` / `set` / `readBox`. `close()` = `closeTab(tabId)` then `setFocus('chat')` if no OmniMux workbench tab remains.
 

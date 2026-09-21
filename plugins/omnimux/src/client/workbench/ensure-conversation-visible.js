@@ -1,27 +1,51 @@
 import { exitHostRightSidebarFullscreen } from './host-fullscreen.js'
+import { loadSessionThreeColumn } from '../conversation-collapse.js'
 
 /**
- * 「让对话可见」的单一实现。
+ * 「让对话可见」的单一实现（进聊天意图，Issue #2516）。
  *
- * 会话栏不可见有**两层互不相同的状态**，由不同层拥有：
- *   1. 插件折叠键 —— `html[data-omnimux-conversation-collapsed]`，由 `setConversationCollapsed` / `setFocus` 处理；
- *   2. 宿主右侧栏全屏 —— 官方自己的状态键（`surface.layout.mode === 'fullscreen'`），DOM 上是
- *      `[data-sidebar-right-panel="fullscreen"]`，只有官方模式控件能退出；插件清折叠键动不了它，
- *      面板会继续 `position:fixed; width:100%` 盖住中间栏（用户看到的是「点了没反应」）。
+ * 会话栏不可见有两层状态：
+ *   1. 插件折叠键 —— `html[data-omnimux-conversation-collapsed]`；
+ *   2. 宿主右侧栏全屏 —— `[data-sidebar-right-panel="fullscreen"]`。
  *
- * 必须同时兼顾 DOM 属性与内存 API：全屏同步器写 DOM 时，内存读数可能为 false；
- * 只要任一层存在折叠，即执行精准清除并退出全屏。本来就可见时保持纯 no-op。
+ * 无参数（画布「添加到对话」等）：只退出宿主全屏并清折叠，保持右侧打开。
+ * `newSession` 或该会话无三栏记忆：会话全屏。有三栏记忆：退出全屏并 split。
  *
  * @param {Document} [doc]
- * @param {{ getConversationCollapsed?: () => boolean, setConversationCollapsed?: (val: boolean) => unknown, setFocus?: (mode: string) => unknown }} [api]
- * @returns {{ hostFullscreenExited: boolean, collapseCleared: boolean }}
+ * @param {{ getConversationCollapsed?: () => boolean, setConversationCollapsed?: (val: boolean) => unknown, setFocus?: Function, closePanel?: Function }} [api]
+ * @param {{ sessionId?: string, newSession?: boolean }} [opts]
+ * @returns {{ hostFullscreenExited: boolean, collapseCleared: boolean, sessionFullscreen: boolean }}
  */
-export function ensureConversationVisible(doc, api) {
+export function ensureConversationVisible(doc, api, opts = {}) {
   let hostFullscreenExited = false
   try {
     hostFullscreenExited = Boolean(exitHostRightSidebarFullscreen(doc))
   } catch {
     hostFullscreenExited = false
+  }
+
+  const sessionFullscreen = Boolean(opts.newSession)
+    || (Boolean(opts.sessionId) && !loadSessionThreeColumn(opts.sessionId))
+  const focusOpts = { persistUserIntent: false }
+
+  if (sessionFullscreen) {
+    if (typeof api?.setFocus === 'function') {
+      try {
+        api.setFocus('chat', undefined, {}, undefined, focusOpts)
+      } catch {
+        try { api.closePanel?.() } catch {}
+      }
+    } else {
+      try { api?.closePanel?.() } catch {}
+    }
+    if (typeof api?.setConversationCollapsed === 'function') {
+      try { api.setConversationCollapsed(false) } catch {}
+    }
+    try {
+      doc?.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      doc?.documentElement?.removeAttribute?.('data-omnimux-fullscreen-collapse-snapshot')
+    } catch {}
+    return { hostFullscreenExited, collapseCleared: true, sessionFullscreen: true }
   }
 
   const domCollapsed = Boolean(doc?.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed'))
@@ -34,7 +58,7 @@ export function ensureConversationVisible(doc, api) {
     apiCollapsed = false
   }
 
-  const needsClear = domCollapsed || apiCollapsed
+  const needsClear = domCollapsed || apiCollapsed || hostFullscreenExited
   let collapseCleared = false
 
   if (needsClear) {
@@ -55,11 +79,11 @@ export function ensureConversationVisible(doc, api) {
 
     if (typeof api?.setFocus === 'function') {
       try {
-        api.setFocus('split')
+        api.setFocus('split', undefined, {}, undefined, focusOpts)
         collapseCleared = true
       } catch {}
     }
   }
 
-  return { hostFullscreenExited, collapseCleared }
+  return { hostFullscreenExited, collapseCleared, sessionFullscreen: false }
 }

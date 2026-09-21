@@ -30,6 +30,7 @@ import {
 import { notifyWorkbenchChange } from './event-bus.js'
 import { isRailRowActive } from './sidebar-activation.js'
 import { setWorkbenchFocus } from './split-layout.js'
+import { enterHostRightSidebarFullscreen } from './host-fullscreen.js'
 
 export const WORKBENCH_GLOBAL_KEY = '__omnimuxWorkbench'
 
@@ -264,8 +265,18 @@ export async function openWorkbench(opts = {}) {
   const payload = resolveTabPayload(service, tabId, opts.title, opts.path)
   service.openTab(payload, openScope)
 
+  if (opts.preserveLayout) {
+    notifyWorkbenchChange()
+    return true
+  }
+
   const targetMode = opts.focus || resolveTargetFocusMode(sessionId, tabId)
-  setWorkbenchFocus(targetMode, getAttachedStore(), {}, tabId)
+  setWorkbenchFocus(targetMode, getAttachedStore(), {}, tabId, { persistUserIntent: false })
+  if (targetMode === WORKBENCH_FOCUS.gui) {
+    try {
+      enterHostRightSidebarFullscreen(hostDocument(), { setFocus: () => false })
+    } catch { /* host button may be absent in tests */ }
+  }
   notifyWorkbenchChange()
   return true
 }
@@ -390,7 +401,7 @@ function openSidebarStore(options, tabId, path) {
   const api = getWorkbenchApi()
   if (api && typeof api.open === 'function') {
     const title = resolveStoreTitle(options, tabId)
-    // 左侧侧边栏按钮直接点击：遵从现代桌面端三栏规范，默认采用分屏模式呈现（保留会话栏，Issue #1882）
+    // 左侧一级入口：进页面意图，默认右侧全屏（Issue #2516）
     void api.open({ tabId, title, ...(path ? { path } : {}) })
   }
 }

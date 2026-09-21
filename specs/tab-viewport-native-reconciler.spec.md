@@ -1,5 +1,7 @@
 # 规格：侧边栏分栏与全屏机制回归原生并纯粹化视窗独立偏好记忆
 
+> **部分被替代（Issue #2516）**：一级工作台页面默认全屏、退出全屏后聊天立刻可见，这两条仍有效。已废止的是「当前三栏优先于左侧点页面」以及「未显式标记就拉回分栏」——那是图 1 再次打开回到三栏的根因。现行真源：`specs/primary-entry-fullscreen.spec.md`。
+
 - 任务单号：Issue #2037
 - 目标模块：`plugins/omnimux`
 - 实施分支：`agent/omnimux-tab-viewport-native-reconciler-issue-2037`

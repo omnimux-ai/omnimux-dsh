@@ -141,7 +141,7 @@ function syncAttachedPanelFocus(store, sessionId, tabId, state) {
   persistClampedSplitWidth({ state, record, sessionId, tabId })
 
   if (record.explicit === true && record.mode === WORKBENCH_FOCUS.gui) {
-    setWorkbenchFocus(record.mode, store)
+    setWorkbenchFocus(record.mode, store, {}, tabId, { persistUserIntent: false })
     return
   }
   record.mode = inferWorkbenchFocus(state)
@@ -262,9 +262,10 @@ function createApi() {
     setConversationCollapsed,
     // 「让对话可见」的唯一对外入口：宿主右侧栏全屏 + 插件折叠键两层一起处理。
     // 垂直插件（如画布「添加会话」）在全屏态下必须走这里，只清折叠键动不了宿主全屏。
-    ensureConversationVisible: () => ensureConversationVisible(
+    ensureConversationVisible: (opts = {}) => ensureConversationVisible(
       typeof document !== 'undefined' ? document : undefined,
       typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined,
+      opts,
     ),
     hydrateConversationCollapsed,
     registerContextContributor,

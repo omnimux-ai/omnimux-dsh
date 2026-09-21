@@ -16,7 +16,7 @@ const CHROME_SOURCE = readFileSync(join(here, '..', '..', 'src', 'client', 'chro
  * @param {string} panelMode
  * @param {string} initialTab
  */
-function fixture(panelMode = 'push', initialTab = 'omnimux-assets:library') {
+function fixture(panelMode = 'fullscreen', initialTab = 'omnimux-assets:library') {
   const dom = new JSDOM(`<!doctype html><html><body>
     <div class="dshDesktopFrame">
       <aside class="dshDesktopSidebarSurface"></aside>
@@ -37,16 +37,15 @@ function fixture(panelMode = 'push', initialTab = 'omnimux-assets:library') {
   return win
 }
 
-test('e2e: 打开插件页面默认分栏展开，绝不自动调和为全屏覆盖会话（Issue #2056 & #2212）', async () => {
-  const win = fixture('push', 'omnimux-assets:library')
+test('e2e: 已全屏的插件页面调和器不得拆回三栏（Issue #2516 图 1）', async () => {
+  const win = fixture('fullscreen', 'omnimux-assets:library')
   const doc = win.document
   const panel = doc.querySelector('[data-sidebar-right-panel]')
   const button = doc.getElementById('mode-btn')
 
-  // 模拟原生点击全屏行为：更新属性与按钮 mode
   button.addEventListener('click', () => {
-    panel.setAttribute('data-sidebar-right-panel', 'fullscreen')
-    button.setAttribute('data-sidebar-right-mode', 'push')
+    panel.setAttribute('data-sidebar-right-panel', 'push')
+    button.setAttribute('data-sidebar-right-mode', 'fullscreen')
   })
 
   let activeTab = { kind: 'omnimux-assets:library' }
@@ -62,9 +61,8 @@ test('e2e: 打开插件页面默认分栏展开，绝不自动调和为全屏覆
 
   const uninstall = installTabViewportReconciler(doc)
 
-  // 默认期望分栏，宿主调和器检测到面板为 push，绝不自动触发全屏
   await new Promise((r) => setTimeout(r, 60))
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '打开插件页面默认分栏，绝不自动全屏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'fullscreen', '已全屏的右侧页面不得被调和器拆回三栏')
 
   uninstall()
   bindWorkbenchDeps({ sidebarRight: null, sessions: null })
