@@ -8,7 +8,6 @@ import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.j
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { buildCategoryFilterOptions, buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
 import { CheckIcon, PlusIcon } from './icons.jsx'
-import { listCategories } from './api.js'
 import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
@@ -197,42 +196,13 @@ export function InspirationSection({ t, active }) {
   const rivalPlatformOptions = buildRivalPlatformOptions(t)
 
   /**
-   * Cloud catalogue categories for the category dropdown (Issue #2497).
-   *
-   * The cloud's `category` field is free text, so the option list comes from
-   * the hub's aggregate of the real catalogue instead of a hardcoded list —
-   * the previous hardcoded 9 e-commerce buckets matched almost nothing and
-   * emptied the grid on selection. Only the 全部/云端 tabs query the cloud
-   * catalogue at all, so only they load this list; any failure or empty
-   * answer degrades the dropdown to the fixed 全部 entry, never an error.
+   * Official 18-industry dropdown (Issue #2507). The list is local and does
+   * not wait on `/categories`. Cloud tabs still send the official id as the
+   * filter value; local / rivals keep the leftover selection from leaking
+   * into `/local` by blanking the control (setTab already clears state).
    */
-  const [cloudCategories, setCloudCategories] = useState([])
   const cloudCategoryTab = tab === 'all' || tab === 'public'
-  useEffect(() => {
-    if (!cloudCategoryTab || active === false) return undefined
-    let cancelled = false
-    listCategories()
-      .then((res) => {
-        if (cancelled || !res.ok) return
-        const rows = Array.isArray(res.body?.data) ? res.body.data : []
-        setCloudCategories(rows)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [cloudCategoryTab, active])
-  // Local / rivals must not reuse the cloud aggregate: leftover `digital`
-  // would keep filtering the local list empty. Pass an empty list (and no
-  // selected value) so the dropdown degrades to the fixed 全部 entry.
-  const categoryOptions = useMemo(
-    () => buildCategoryFilterOptions(
-      cloudCategoryTab ? cloudCategories : [],
-      t,
-      cloudCategoryTab ? category : '',
-    ),
-    [cloudCategoryTab, cloudCategories, t, category],
-  )
+  const categoryOptions = useMemo(() => buildCategoryFilterOptions(t), [t])
 
   // The row the last import produced is pinned above the list while it is
   // missing from it: the tab switch that follows an import refetches page 1, and

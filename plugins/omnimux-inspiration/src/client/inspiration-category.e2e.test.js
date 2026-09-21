@@ -8,36 +8,26 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
+import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
 
 /**
- * Render gate for the dynamic category dropdown (Issue #2497).
- *
- * The category dropdown used to render 9 hardcoded e-commerce buckets while
- * the cloud catalogue's `category` field is free text (`digital`,
- * `Health & Wellness`, …) — selecting any of them emptied the grid. This gate
- * bundles the real `InspirationSection.jsx`, mounts it in jsdom against a
- * stubbed Host, and asserts on the rendered DOM that the dropdown now offers
- * the catalogue's own categories, degrades to 全部-only on failure, and stops
- * asking for categories on the 本地 tab. The `dsh-ui-kit` leaves are replaced
- * by `test-fixtures/ui-kit-shim.mjs` (same DOM contract; the kit's lib pulls
- * in `.module.css` that esbuild cannot inline).
+ * Browser-shaped render gate for the official 18-industry dropdown (Issue #2507).
+ * Live verification evidence: docs/evidence/inspiration-gxgen-category-converge-verify.json
  */
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationSection.jsx')
 const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
-const cacheDir = join(here, '.esbuild-cache', 'category-section')
+const cacheDir = join(here, '.esbuild-cache', 'category-e2e')
 
-/** aria-label the section puts on the category dropdown (`filter.category`). */
 const CATEGORY_LABEL = zh['filter.category']
-/** The fixed first option every category dropdown must lead with. */
-const ALL_LABEL = zh['category.all']
+const EXPECTED_LABELS = ['全部', ...OFFICIAL_CATEGORIES.map((row) => zh[`category.${row.id}`])]
 
 let bundleCounter = 0
 
 async function bundleSection() {
   mkdirSync(cacheDir, { recursive: true })
-  const outFile = join(cacheDir, `category-section-${bundleCounter}.mjs`)
+  const outFile = join(cacheDir, `category-e2e-${bundleCounter}.mjs`)
   bundleCounter += 1
   const result = await esbuild.build({
     absWorkingDir: join(here, '..', '..'),
@@ -63,13 +53,10 @@ async function bundleSection() {
 }
 
 /**
- * Mount the section against a stubbed Host.
- * @param {{ categories: { ok: boolean, status?: number, body?: any }, onFetch?: (url: string) => void }} options
- *   categories: the answer `/omnimux/inspiration/categories` returns.
+ * @param {{ listStatus?: number, onFetch?: (url: string) => void }} [options]
  */
-async function mountSection({ categories, onFetch } = {}) {
-  const sectionModule = await import(`${await bundleSection()}?mount=${bundleCounter}`)
-
+async function mountSection({ listStatus = 200, onFetch } = {}) {
+  const sectionModule = await import(`${await bundleSection()}?e2e=${bundleCounter}`)
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
     url: 'http://localhost:3000',
   })
@@ -97,22 +84,20 @@ async function mountSection({ categories, onFetch } = {}) {
     const text = String(url)
     onFetch?.(text)
     if (text.includes('/omnimux/inspiration/categories')) {
-      return {
-        ok: categories?.ok !== false,
-        status: categories?.status ?? (categories?.ok === false ? 500 : 200),
-        json: async () => categories?.body ?? { data: [] },
-      }
+      return { ok: false, status: 500, json: async () => ({ error: 'unused' }) }
+    }
+    if (listStatus === 401 && !text.includes('/local')) {
+      return { ok: false, status: 401, json: async () => ({ error: 'needs-omnimux' }) }
     }
     const body = text.includes('/local')
       ? { success: true, data: { items, total: items.length, platforms: [{ name: 'tiktok', count: 1 }] } }
       : { success: true, data: { items, total: items.length } }
-    return { ok: true, status: 200, json: async () => body }
+    return { ok: listStatus === 200, status: listStatus, json: async () => body }
   }
 
   const container = dom.window.document.getElementById('host')
   const reactRoot = createRoot(container)
   const t = (key) => zh[key] || key
-
   await act(async () => {
     reactRoot.render(React.createElement(sectionModule.InspirationSection, { t, active: true }))
   })
@@ -124,9 +109,8 @@ async function mountSection({ categories, onFetch } = {}) {
   }
 
   return {
-    document: dom.window.document,
     container,
-    /** Wait until `probe()` is truthy (or the budget runs out). */
+    document: dom.window.document,
     async waitFor(probe, budgetMs = 2000) {
       const start = Date.now()
       for (;;) {
@@ -152,10 +136,6 @@ async function mountSection({ categories, onFetch } = {}) {
   }
 }
 
-/**
- * Open the category dropdown and return its option labels.
- * @param {{ container: HTMLElement, document: Document }} mounted
- */
 async function openCategoryOptions(mounted) {
   const trigger = mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${CATEGORY_LABEL}"]`)
   assert.ok(trigger, 'the category dropdown trigger must render')
@@ -171,115 +151,55 @@ after(() => {
   rmSync(cacheDir, { recursive: true, force: true })
 })
 
-describe('InspirationSection render gate — dynamic category dropdown', () => {
-  it('offers the catalogue categories the hub aggregated, led by 全部', async () => {
+describe('InspirationSection e2e — official 18-industry dropdown', () => {
+  it('offers 全部 plus the 18 official Chinese names and never asks /categories', async () => {
     /** @type {string[]} */
     const fetched = []
-    const mounted = await mountSection({
-      categories: {
-        ok: true,
-        body: {
-          data: [
-            { name: 'digital', count: 1178 },
-            { name: 'Health & Wellness', count: 300 },
-          ],
-        },
-      },
-      onFetch: (url) => fetched.push(url),
-    })
-    try {
-      // Wait for the aggregate answer to land before opening: the menu renders
-      // the options live, so the list must already carry them.
-      await mounted.waitFor(() => fetched.some((url) => url.includes('/categories')))
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 20))
-      })
-      const labels = await openCategoryOptions(mounted)
-      assert.equal(labels[0], ALL_LABEL, 'the first option must be exactly 全部')
-      assert.ok(labels.includes('digital'), `expected digital in ${JSON.stringify(labels)}`)
-      assert.ok(labels.includes('Health & Wellness'), `expected Health & Wellness in ${JSON.stringify(labels)}`)
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
-
-  it('degrades to the 全部-only set when the aggregate request fails', async () => {
-    const mounted = await mountSection({ categories: { ok: false, status: 500 } })
+    const mounted = await mountSection({ onFetch: (url) => fetched.push(url) })
     try {
       const labels = await openCategoryOptions(mounted)
-      assert.deepEqual(labels, [ALL_LABEL], 'a failed aggregate must leave exactly the 全部 option')
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
-
-  it('stops requesting categories on the 本地 tab', async () => {
-    /** @type {string[]} */
-    const fetched = []
-    const mounted = await mountSection({
-      categories: { ok: true, body: { data: [{ name: 'digital', count: 1 }] } },
-      onFetch: (url) => fetched.push(url),
-    })
-    try {
-      // The default 全部 tab legitimately asked once on mount; the gate is that
-      // switching to 本地 does not ask again.
-      const before = fetched.filter((url) => url.includes('/categories')).length
-      const localTab = mounted.container.querySelector('[data-tab="local"]')
-      assert.ok(localTab, 'the 本地 tab must render')
-      await act(async () => {
-        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
-      })
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      })
-      const after = fetched.filter((url) => url.includes('/categories')).length
-      assert.equal(after, before, 'the 本地 tab must not request the category aggregate')
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
-
-  it('clears cloud categories on 本地 so the dropdown is 全部-only and local queries drop category', async () => {
-    /** @type {string[]} */
-    const fetched = []
-    const mounted = await mountSection({
-      categories: { ok: true, body: { data: [{ name: 'digital', count: 1178 }] } },
-      onFetch: (url) => fetched.push(url),
-    })
-    try {
-      await mounted.waitFor(() => fetched.some((url) => url.includes('/categories')))
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 20))
-      })
-      const labelsBefore = await openCategoryOptions(mounted)
-      assert.ok(labelsBefore.includes('digital'), `expected digital before the tab switch: ${JSON.stringify(labelsBefore)}`)
-      const digital = [...mounted.container.querySelectorAll('[role="option"]')]
-        .find((node) => node.textContent === 'digital')
-      assert.ok(digital, 'the digital option must be clickable on 全部')
-      await act(async () => {
-        digital.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
-      })
-      const localTab = mounted.container.querySelector('[data-tab="local"]')
-      assert.ok(localTab, 'the 本地 tab must render')
-      const beforeSwitch = fetched.length
-      await act(async () => {
-        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
-      })
-      await mounted.waitFor(() => fetched.slice(beforeSwitch).some((url) => url.includes('/omnimux/inspiration/local')))
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 40))
-      })
-      const labels = await openCategoryOptions(mounted)
-      assert.deepEqual(labels, [ALL_LABEL], 'the 本地 tab must degrade the dropdown to exactly 全部')
-      const localUrls = fetched.slice(beforeSwitch).filter((url) => url.includes('/omnimux/inspiration/local'))
-      assert.ok(localUrls.length > 0, 'switching to 本地 must query the local library')
+      assert.deepEqual(labels, EXPECTED_LABELS)
+      assert.equal(labels[0], '全部')
       assert.equal(
-        localUrls.some((url) => /[?&]category=/.test(url)),
+        fetched.some((url) => url.includes('/categories')),
         false,
-        `local queries after the tab switch must not forward a cloud category: ${JSON.stringify(localUrls)}`,
+        `dropdown must not request /categories: ${JSON.stringify(fetched)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('still shows 全部+18 when the catalogue is unauthorized', async () => {
+    const mounted = await mountSection({ listStatus: 401 })
+    try {
+      const labels = await openCategoryOptions(mounted)
+      assert.deepEqual(labels, EXPECTED_LABELS)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('sends the official id when an industry is chosen', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection({ onFetch: (url) => fetched.push(url) })
+    try {
+      await openCategoryOptions(mounted)
+      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === '美妆护肤')
+      assert.ok(beauty, '美妆护肤 must be clickable')
+      const before = fetched.length
+      await act(async () => {
+        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.slice(before).some((url) => url.includes('category=beauty_skincare')))
+      const cloudUrls = fetched.slice(before).filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      assert.ok(
+        cloudUrls.some((url) => url.includes('category=beauty_skincare')),
+        `cloud queries must send the official id: ${JSON.stringify(cloudUrls)}`,
       )
     } finally {
       await mounted.unmount()

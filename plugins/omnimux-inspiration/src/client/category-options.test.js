@@ -3,76 +3,68 @@ import { describe, it } from 'node:test'
 import { listCategories } from './api.js'
 import { buildCategoryFilterOptions } from './feed-helpers.js'
 import { zh, en } from './locales.js'
+import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
 
 /**
- * Category dropdown dynamic options (Issue #2497).
- *
- * The dropdown used to carry 9 hardcoded e-commerce buckets that matched
- * almost nothing in the cloud catalogue (category=数码科技 → total=0). These
- * gates pin the replacement: options come from the hub's aggregate of the
- * real catalogue, the first entry is exactly 全部, and a stale selection
- * stays visible instead of blanking the trigger.
+ * Category dropdown (Issue #2507): fixed 全部 + 18 official industries.
+ * The list is local; `/categories` is no longer the option source.
  */
 
 const tZh = (key) => zh[key] || key
 const tEn = (key) => en[key] || key
+const COPY_GATE = /全部(平台|账号|来源|类型|状态|分类|发布方式)/
 
 describe('category filter copywriting', () => {
   it('keeps the first option label exactly 全部 / All', () => {
     assert.equal(zh['category.all'], '全部')
     assert.equal(en['category.all'], 'All')
-    // The QA gate regex fails the build on 全部+维度 compounds.
-    assert.doesNotMatch(zh['category.all'], /全部(平台|账号|来源|类型|状态|分类|发布方式)/)
+    assert.doesNotMatch(zh['category.all'], COPY_GATE)
+  })
+
+  it('ships zh/en labels for every official industry and never trips the 全部+维度 gate', () => {
+    for (const row of OFFICIAL_CATEGORIES) {
+      assert.equal(zh[`category.${row.id}`], row.zh, row.id)
+      assert.equal(en[`category.${row.id}`], row.en, row.id)
+      assert.doesNotMatch(zh[`category.${row.id}`], COPY_GATE)
+      assert.doesNotMatch(en[`category.${row.id}`], COPY_GATE)
+    }
+    const zhBlob = Object.values(zh).join('\n')
+    const enBlob = Object.values(en).join('\n')
+    assert.doesNotMatch(zhBlob, COPY_GATE)
+    assert.doesNotMatch(enBlob, COPY_GATE)
   })
 })
 
 describe('buildCategoryFilterOptions', () => {
-  it('leads with the fixed 全部 entry and appends hub rows in order', () => {
-    const options = buildCategoryFilterOptions([
-      { name: 'digital', count: 1178 },
-      { name: 'Health & Wellness', count: 300 },
-      { name: '女装和内衣', count: 120 },
-    ], tZh)
-    assert.deepEqual(options, [
-      { value: '', label: '全部' },
-      { value: 'digital', label: 'digital' },
-      { value: 'Health & Wellness', label: 'Health & Wellness' },
-      { value: '女装和内衣', label: '女装和内衣' },
-    ])
+  it('leads with 全部 and then the 18 official ids in sort_order', () => {
+    const options = buildCategoryFilterOptions(tZh)
+    assert.equal(options.length, 19)
+    assert.deepEqual(options[0], { value: '', label: '全部' })
+    assert.deepEqual(
+      options.slice(1),
+      OFFICIAL_CATEGORIES.map((row) => ({ value: row.id, label: row.zh })),
+    )
   })
 
-  it('degrades to the 全部-only set on empty or malformed data', () => {
-    assert.deepEqual(buildCategoryFilterOptions([], tZh), [{ value: '', label: '全部' }])
-    assert.deepEqual(buildCategoryFilterOptions(undefined, tZh), [{ value: '', label: '全部' }])
-    assert.deepEqual(buildCategoryFilterOptions(null, tEn), [{ value: '', label: 'All' }])
-    assert.deepEqual(buildCategoryFilterOptions([{ name: '' }, { count: 3 }, 'digital'], tZh), [
-      { value: '', label: '全部' },
-      { value: 'digital', label: 'digital' },
-    ])
+  it('uses English labels when translated that way', () => {
+    const options = buildCategoryFilterOptions(tEn)
+    assert.deepEqual(options[0], { value: '', label: 'All' })
+    assert.equal(options[1].value, 'baby_parenting')
+    assert.equal(options[1].label, 'Baby & Parenting')
+    assert.equal(options.at(-1).value, 'other')
+    assert.equal(options.at(-1).label, 'Other')
   })
 
-  it('trims, dedupes and accepts bare-string rows', () => {
-    const options = buildCategoryFilterOptions([' digital ', { name: 'digital' }, { name: ' 健康 ' }], tZh)
-    assert.deepEqual(options, [
-      { value: '', label: '全部' },
-      { value: 'digital', label: 'digital' },
-      { value: '健康', label: '健康' },
-    ])
-  })
-
-  it('keeps the current selection visible when the fresh list drops it', () => {
-    const options = buildCategoryFilterOptions([{ name: 'digital', count: 5 }], tZh, 'legacy-bucket')
-    assert.deepEqual(options.at(-1), { value: 'legacy-bucket', label: 'legacy-bucket' })
-    // A selection already in the list is not duplicated.
-    const same = buildCategoryFilterOptions([{ name: 'digital', count: 5 }], tZh, 'digital')
-    assert.equal(same.filter((option) => option.value === 'digital').length, 1)
-    // An empty selection adds nothing.
-    assert.equal(buildCategoryFilterOptions([], tZh, '').length, 1)
+  it('does not include product forms or free-text leftovers', () => {
+    const values = buildCategoryFilterOptions(tZh).map((row) => row.value)
+    assert.equal(values.includes('digital'), false)
+    assert.equal(values.includes('physical'), false)
+    assert.equal(values.includes('Health & Wellness'), false)
   })
 })
 
 describe('listCategories', () => {
-  it('requests the hub aggregate route', async () => {
+  it('still requests the hub aggregate route (dropdown does not depend on it)', async () => {
     const savedFetch = globalThis.fetch
     /** @type {string[]} */
     const seen = []
@@ -90,7 +82,7 @@ describe('listCategories', () => {
     }
   })
 
-  it('reports failures without throwing so the dropdown can degrade', async () => {
+  it('reports failures without throwing', async () => {
     const savedFetch = globalThis.fetch
     globalThis.fetch = async () => ({ ok: false, status: 500, json: async () => ({ error: 'boom' }) })
     try {

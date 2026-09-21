@@ -1,0 +1,112 @@
+{
+  "task": "inspiration-gxgen-category-converge",
+  "issue": 2507,
+  "startedAt": "2026-09-21T02:59:39.554Z",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "category-trigger-mounted",
+      "pass": true,
+      "dimensions": {
+        "width": 90,
+        "height": 32
+      }
+    },
+    {
+      "name": "official-18-industry-options",
+      "pass": true,
+      "options": [
+        "全部",
+        "母婴亲子",
+        "美食餐饮",
+        "教育培训",
+        "健身运动",
+        "美妆护肤",
+        "时尚穿搭",
+        "家居生活",
+        "数码科技",
+        "旅行出行",
+        "健康养生",
+        "宠物",
+        "游戏娱乐",
+        "金融理财",
+        "房产家装",
+        "情感社交",
+        "法律咨询",
+        "商业服务",
+        "其他"
+      ]
+    },
+    {
+      "name": "screenshot-saved",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-gxgen-category-converge/docs/evidence/inspiration-gxgen-category-converge-verified.png"
+    },
+    {
+      "name": "unauthorized-still-official-18",
+      "pass": true,
+      "options": [
+        "全部",
+        "母婴亲子",
+        "美食餐饮",
+        "教育培训",
+        "健身运动",
+        "美妆护肤",
+        "时尚穿搭",
+        "家居生活",
+        "数码科技",
+        "旅行出行",
+        "健康养生",
+        "宠物",
+        "游戏娱乐",
+        "金融理财",
+        "房产家装",
+        "情感社交",
+        "法律咨询",
+        "商业服务",
+        "其他"
+      ]
+    },
+    {
+      "name": "filter-sends-official-id",
+      "pass": true,
+      "cloud": [
+        "?sort=hot&page=1&page_size=20",
+        "?sort=hot&page=1&page_size=20",
+        "?sort=hot&page=1&page_size=20&category=beauty_skincare",
+        "?sort=hot&page=1&page_size=20&category=beauty_skincare"
+      ]
+    },
+    {
+      "name": "local-tab-keeps-official-18-drops-category",
+      "pass": true,
+      "options": [
+        "全部",
+        "母婴亲子",
+        "美食餐饮",
+        "教育培训",
+        "健身运动",
+        "美妆护肤",
+        "时尚穿搭",
+        "家居生活",
+        "数码科技",
+        "旅行出行",
+        "健康养生",
+        "宠物",
+        "游戏娱乐",
+        "金融理财",
+        "房产家装",
+        "情感社交",
+        "法律咨询",
+        "商业服务",
+        "其他"
+      ],
+      "localQueries": [
+        "?sort=hot&page=1&page_size=20&projection=lean",
+        "?sort=new&page=1&page_size=20&projection=lean"
+      ]
+    }
+  ],
+  "errors": [],
+  "completedAt": "2026-09-21T02:59:41.827Z"
+}
