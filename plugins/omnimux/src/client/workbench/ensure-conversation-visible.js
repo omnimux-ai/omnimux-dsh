@@ -63,7 +63,8 @@ export function ensureConversationVisible(doc, api, opts = {}) {
     apiCollapsed = false
   }
 
-  const needsClear = domCollapsed || apiCollapsed || hostFullscreenExited
+  const restoreThreeColumn = Boolean(opts.sessionId)
+  const needsClear = restoreThreeColumn || domCollapsed || apiCollapsed || hostFullscreenExited
   let collapseCleared = false
 
   if (needsClear) {

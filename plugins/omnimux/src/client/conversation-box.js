@@ -426,7 +426,10 @@ function extractSessionIdFromTarget(target) {
   if (!(target instanceof Element)) return undefined
   const row = target.closest('[data-session-id], [data-tree-item-session-id], [role="treeitem"]')
   const idAttr = row?.getAttribute('data-session-id') || row?.getAttribute('data-tree-item-session-id')
-  return idAttr || undefined
+  if (idAttr) return idAttr
+  const rowId = row?.id
+  if (typeof rowId === 'string' && rowId && !rowId.startsWith('session-row')) return rowId
+  return undefined
 }
 
 /**
@@ -445,7 +448,6 @@ function watchSelectedSessionClick() {
       ensureConversationVisible({ newSession: true })
     } else {
       const sid = extractSessionIdFromTarget(target)
-      if (!sid) return
       ensureConversationVisible({ sessionId: sid, newSession: false })
     }
   }, true)

@@ -196,7 +196,6 @@ export function createTabViewportReconciler(deps = {}) {
       isReconciling = true
       try {
         if (threeColumn) {
-          lastMode = 'push'
           if (currentMode === 'fullscreen') {
             try { setFocus('split') } catch {}
             applyCollapsedAttr(false, doc)
@@ -205,12 +204,12 @@ export function createTabViewportReconciler(deps = {}) {
             }
           }
         } else {
-          lastMode = 'push'
           try { closePanel() } catch {}
           try { setFocus('chat') } catch {}
           applyCollapsedAttr(false, doc)
         }
       } finally {
+        lastMode = isFullscreen() ? 'fullscreen' : 'push'
         scheduleUnlock()
       }
       return

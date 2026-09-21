@@ -366,12 +366,15 @@ function syncConversationCollapsedForFocus(mode, sessionId) {
 function updateFocusRecord(mode, sessionId, effectiveTabId, persistUserIntent) {
   const record = focusRecordForTab(sessionId, effectiveTabId)
   if (mode !== WORKBENCH_FOCUS.chat && sessionId && effectiveTabId) {
-    record.mode = mode
     if (persistUserIntent) {
+      record.mode = mode
       record.explicit = true
       persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: true })
+    } else if (record.explicit === true) {
+      persistSessionFocus(sessionId, effectiveTabId, { mode: record.mode, explicit: true })
     } else {
-      persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: record.explicit === true })
+      record.mode = mode
+      persistSessionFocus(sessionId, effectiveTabId, { mode, explicit: false })
     }
   }
   return record

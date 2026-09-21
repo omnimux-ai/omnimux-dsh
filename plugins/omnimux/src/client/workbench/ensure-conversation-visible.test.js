@@ -105,6 +105,22 @@ test('该会话有三栏记忆：退出全屏并 setFocus(split)', () => {
   assert.equal(result.hostFullscreenExited, true)
 })
 
+test('该会话有三栏记忆且当前已是聊天全屏：仍 setFocus(split)', () => {
+  persistSessionThreeColumn(true, 'sess-three')
+  dom = new JSDOM('<!doctype html><html><body></body></html>')
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  const focusCalls = []
+  const result = ensureConversationVisible(dom.window.document, {
+    getConversationCollapsed: () => false,
+    setFocus: (mode) => focusCalls.push(mode),
+  }, { sessionId: 'sess-three' })
+
+  assert.deepEqual(focusCalls, ['split'])
+  assert.equal(result.sessionFullscreen, false)
+  assert.equal(result.hostFullscreenExited, false)
+})
+
 test('新对话：进入会话全屏', () => {
   dom = new JSDOM('<!doctype html><html><body></body></html>')
   globalThis.window = dom.window
