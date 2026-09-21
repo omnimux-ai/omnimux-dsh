@@ -332,6 +332,28 @@ function extractCountryCode(row, assets) {
   return ''
 }
 
+/**
+ * Pull string tokens from a nested category value before lookup.
+ * Objects contribute name / id / zh / en so `{ name: '美妆护肤' }` is not
+ * folded into `[object Object]`.
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+export function categoryLookupTokens(value) {
+  if (value == null) return []
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = String(value).trim()
+    return text ? [text] : []
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => categoryLookupTokens(entry))
+  }
+  if (typeof value === 'object') {
+    return ['name', 'id', 'zh', 'en'].flatMap((key) => categoryLookupTokens(value[key]))
+  }
+  return []
+}
+
 function collectCategoryCandidates(row, assets) {
   const nested = Array.isArray(assets?.categories) ? assets.categories : []
   return [
@@ -358,10 +380,12 @@ export function extractCategory(row, assets) {
   const tags = Array.isArray(assets?.tags) ? assets.tags : []
   const candidates = collectCategoryCandidates(row, assets)
   for (const raw of candidates) {
-    const industry = lookupOfficialCategory(raw)
-    if (industry) return industry
+    for (const token of categoryLookupTokens(raw)) {
+      const industry = lookupOfficialCategory(token)
+      if (industry) return industry
+    }
   }
-  const form = candidates.find((raw) => isProductForm(raw)) ?? ''
+  const form = candidates.flatMap((raw) => categoryLookupTokens(raw)).find((token) => isProductForm(token)) ?? ''
   return normalizeCategory(form, { tags })
 }
 

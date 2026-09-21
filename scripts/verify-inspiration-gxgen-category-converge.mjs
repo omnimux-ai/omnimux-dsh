@@ -368,6 +368,44 @@ async function scenarioSendsOfficialIdThenLocalDropsCategory(bundledJs, report) 
     const pageErrors = await evaluate(`(window.__pageErrors || []).length`)
     assert.equal(pageErrors || 0, 0, '切本地时页面出现未捕获错误')
     report.assertions.push({ name: 'local-tab-keeps-official-18-drops-category', pass: true, options: localLabels, localQueries: afterSwitch })
+
+    const beforeLocalPick = { cloud: logCloud.length, local: logLocal.length }
+    const pickedOnLocal = await evaluate(`(function() {
+      const trigger = document.querySelector('${CATEGORY_TRIGGER}');
+      if (!trigger) return false;
+      trigger.click();
+      const node = [...document.querySelectorAll('${OPTION_QUERY}')].find((item) => item.textContent.trim() === '美妆护肤');
+      if (!node) return false;
+      node.click();
+      return true;
+    })()`)
+    assert.ok(pickedOnLocal, '本地 tab 未点到美妆护肤')
+    await new Promise((resolveWait) => setTimeout(resolveWait, 400))
+    const leakedAfterLocalPick = [
+      ...logLocal.slice(beforeLocalPick.local),
+      ...logCloud.slice(beforeLocalPick.cloud),
+    ].filter((search) => /(?:^|[?&])category=/.test(search))
+    assert.equal(leakedAfterLocalPick.length, 0, `本地 tab 点行业不得写入 category。切片: ${JSON.stringify(leakedAfterLocalPick)}`)
+
+    const beforeBack = logCloud.length
+    const allClicked = await evaluate(`(function() {
+      const tabs = [...document.querySelectorAll('[role="tab"], [data-tab="all"]')];
+      const all = tabs.find((node) => (node.getAttribute('data-tab') === 'all') || (node.textContent || '').trim() === '全部');
+      if (!all) return false;
+      all.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      return true;
+    })()`)
+    assert.ok(allClicked, '未找到「全部」tab')
+    const triggerText = await waitFor(evaluate, `(function() {
+      const el = document.querySelector('${CATEGORY_TRIGGER}');
+      if (!el) return null;
+      const text = (el.textContent || '').trim();
+      return text === '全部' ? text : null;
+    })()`)
+    assert.equal(triggerText, '全部', '切回全部后触发器必须仍是「全部」，不得套回隐藏官方 id')
+    const leakedBack = logCloud.slice(beforeBack).filter((search) => /(?:^|[?&])category=/.test(search))
+    assert.equal(leakedBack.length, 0, `切回全部不得套回隐藏官方 id。切片: ${JSON.stringify(logCloud.slice(beforeBack))}`)
+    report.assertions.push({ name: 'local-tab-ignores-category-onchange', pass: true, triggerText })
   })
 }
 

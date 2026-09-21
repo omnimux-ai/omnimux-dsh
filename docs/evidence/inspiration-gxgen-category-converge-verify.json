@@ -1,7 +1,7 @@
 {
   "task": "inspiration-gxgen-category-converge",
   "issue": 2507,
-  "startedAt": "2026-09-21T02:59:39.554Z",
+  "startedAt": "2026-09-21T04:02:53.151Z",
   "pass": true,
   "assertions": [
     {
@@ -105,8 +105,13 @@
         "?sort=hot&page=1&page_size=20&projection=lean",
         "?sort=new&page=1&page_size=20&projection=lean"
       ]
+    },
+    {
+      "name": "local-tab-ignores-category-onchange",
+      "pass": true,
+      "triggerText": "全部"
     }
   ],
   "errors": [],
-  "completedAt": "2026-09-21T02:59:41.827Z"
+  "completedAt": "2026-09-21T04:02:55.270Z"
 }

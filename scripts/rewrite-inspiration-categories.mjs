@@ -11,13 +11,14 @@
 
 import { pathToFileURL } from 'node:url'
 import {
-  isOfficialCategoryId,
+  lookupOfficialCategory,
   normalizeCategory,
 } from '../plugins/omnimux-inspiration/src/gxgen-category-map.js'
 
 const DEFAULT_BASE = 'http://127.0.0.1:45120'
 const DEFAULT_PAGE_SIZE = 100
 const TIMEOUT_MS = 15_000
+const OMIT_AFTER_PATCH = new Set(['category', 'updated_at'])
 
 class SystemError extends Error {}
 
@@ -47,10 +48,19 @@ function hostPath(base, path) {
 }
 
 function dataOf(body, label) {
-  if (!body || typeof body !== 'object' || body.success === false) {
+  if (!body || typeof body !== 'object' || body.success !== true) {
     throw new Error(`${label} returned an invalid response`)
   }
   return body.data
+}
+
+/**
+ * Tags that can drive industry inference: a non-empty string array.
+ * @param {unknown} tags
+ * @returns {boolean}
+ */
+export function hasUsableTags(tags) {
+  return Array.isArray(tags) && tags.some((entry) => typeof entry === 'string' && entry.trim() !== '')
 }
 
 /**
@@ -63,15 +73,63 @@ export function plannedCategory(raw, tags) {
 }
 
 /**
+ * Classify one catalogue row. Does not fetch.
+ * When the raw token is not an industry and tags are missing, `needsTags` is
+ * true: the caller must GET the detail record. Still-missing tags stay skip
+ * (never default to `other`).
+ * Skip only when the stored string already equals the planned official id, so
+ * padded / cased official ids are rewritten.
+ *
  * @param {{ id?: unknown, category?: unknown, tags?: unknown }} item
- * @returns {{ id: string, raw: string, next: string, skip: boolean }}
+ * @param {{ fetchedTags?: boolean }} [options]
+ * @returns {{ id: string, raw: string, next: string, skip: boolean, needsTags?: boolean }}
  */
-export function classifyItem(item) {
+export function classifyItem(item, options = {}) {
   const id = String(item?.id ?? '').trim()
   if (!id) throw new Error('list item is missing id')
   const raw = item?.category == null ? '' : String(item.category)
-  const next = plannedCategory(raw, item?.tags)
-  return { id, raw, next, skip: isOfficialCategoryId(raw) && raw.trim() === next }
+  const industry = lookupOfficialCategory(raw)
+  if (industry) {
+    return { id, raw, next: industry, skip: raw === industry }
+  }
+  if (!hasUsableTags(item?.tags)) {
+    if (options.fetchedTags) {
+      return { id, raw, next: '', skip: true }
+    }
+    return { id, raw, next: '', skip: true, needsTags: true }
+  }
+  const next = plannedCategory(raw, item.tags)
+  return { id, raw, next, skip: raw === next }
+}
+
+function comparable(value) {
+  if (Array.isArray(value)) return value.map((entry) => comparable(entry))
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, comparable(value[key])]))
+}
+
+/**
+ * @param {Record<string, unknown>} patched
+ * @param {Record<string, unknown>} original
+ * @param {string} id
+ */
+export function assertCategoryApplied(patched, original, id, next) {
+  if (!patched || typeof patched !== 'object') {
+    throw new Error(`PATCH inspiration ${id} returned no record`)
+  }
+  if (String(patched.category) !== next) {
+    throw new Error(`PATCH inspiration ${id} returned category ${JSON.stringify(patched.category)}, expected ${next}`)
+  }
+  if (!original || typeof original !== 'object') return
+  for (const [key, value] of Object.entries(original)) {
+    if (OMIT_AFTER_PATCH.has(key)) continue
+    if (!Object.prototype.hasOwnProperty.call(patched, key)) {
+      throw new Error(`verification failed: field ${key} missing after PATCH inspiration ${id}`)
+    }
+    if (JSON.stringify(comparable(patched[key])) !== JSON.stringify(comparable(value))) {
+      throw new Error(`verification failed: field ${key} changed for inspiration ${id}`)
+    }
+  }
 }
 
 /**
@@ -82,7 +140,8 @@ export function countMappings(rows) {
   /** @type {Record<string, number>} */
   const counts = {}
   for (const row of rows) {
-    const key = `${row.raw || '(empty)'} → ${row.next}`
+    const mapped = row.skip && !row.next ? '(skip)' : row.next
+    const key = `${row.raw || '(empty)'} → ${mapped}`
     counts[key] = (counts[key] || 0) + 1
   }
   return counts
@@ -112,18 +171,63 @@ export async function listAllInspirations(base, deps, opts = {}) {
   let page = 1
   let total = Infinity
   while (items.length < total) {
-    const url = hostPath(base, `/omnimux/inspiration?page=${page}&page_size=${pageSize}`)
-    const body = await jsonRequest(url, { method: 'GET' }, deps, `GET inspiration page ${page}`)
+    const url = new URL(hostPath(base, '/omnimux/inspiration'))
+    url.searchParams.set('page', String(page))
+    url.searchParams.set('page_size', String(pageSize))
+    url.searchParams.set('sort', 'new')
+    const body = await jsonRequest(url.toString(), { method: 'GET' }, deps, `GET inspiration page ${page}`)
     const data = dataOf(body, `GET inspiration page ${page}`)
-    const batch = Array.isArray(data?.items) ? data.items : []
-    const reported = Number(data?.total)
-    if (Number.isFinite(reported) && reported >= 0) total = reported
-    items.push(...batch)
-    if (batch.length < pageSize) break
+    if (!data || typeof data !== 'object' || !Array.isArray(data.items)) {
+      throw new Error(`GET inspiration page ${page} returned an invalid list`)
+    }
+    const reported = Number(data.total)
+    if (!Number.isFinite(reported) || reported < 0 || !Number.isSafeInteger(reported)) {
+      throw new Error(`GET inspiration page ${page} returned a non-numeric total`)
+    }
+    total = reported
+    items.push(...data.items)
+    if (items.length >= total) break
+    if (data.items.length === 0 || data.items.length < pageSize) {
+      throw new Error(`GET inspiration pagination stopped before total ${total}`)
+    }
     page += 1
     if (page > 200) throw new SystemError('refusing to walk more than 200 catalogue pages')
   }
+  if (items.length < total) {
+    throw new Error(`GET inspiration pagination stopped before total ${total}`)
+  }
   return items
+}
+
+/**
+ * @param {string} base
+ * @param {string} id
+ * @param {{ fetch: typeof fetch }} deps
+ */
+export async function getInspiration(base, id, deps) {
+  const body = await jsonRequest(
+    hostPath(base, `/omnimux/inspiration/${encodeURIComponent(id)}`),
+    { method: 'GET' },
+    deps,
+    `GET inspiration ${id}`,
+  )
+  const record = dataOf(body, `GET inspiration ${id}`)
+  if (!record || typeof record !== 'object') {
+    throw new Error(`GET inspiration ${id} returned no record`)
+  }
+  return record
+}
+
+/**
+ * @param {string} base
+ * @param {{ id?: unknown, category?: unknown, tags?: unknown }} item
+ * @param {{ fetch: typeof fetch }} deps
+ */
+export async function resolveClassification(base, item, deps) {
+  const first = classifyItem(item)
+  if (!first.needsTags) return first
+  const detail = await getInspiration(base, first.id, deps)
+  return classifyItem({ ...item, tags: detail.tags }, { fetchedTags: true })
 }
 
 /**
@@ -143,7 +247,11 @@ export async function patchCategory(base, id, category, deps) {
     deps,
     `PATCH inspiration ${id}`,
   )
-  return dataOf(body, `PATCH inspiration ${id}`)
+  const record = dataOf(body, `PATCH inspiration ${id}`)
+  if (!record || typeof record !== 'object') {
+    throw new Error(`PATCH inspiration ${id} returned no record`)
+  }
+  return record
 }
 
 const defaultDeps = { fetch: globalThis.fetch }
@@ -157,7 +265,12 @@ export async function rewriteInspirationCategories(options = {}, deps = defaultD
   const apply = Boolean(options.apply)
   const fetchImpl = deps.fetch || globalThis.fetch
   const items = await listAllInspirations(base, { fetch: fetchImpl }, { pageSize: options.pageSize })
-  const classified = items.map((item) => classifyItem(item))
+  /** @type {Array<{ id: string, raw: string, next: string, skip: boolean, needsTags?: boolean }>} */
+  const classified = []
+  for (const item of items) {
+    classified.push(await resolveClassification(base, item, { fetch: fetchImpl }))
+  }
+  const originals = new Map(items.map((item) => [String(item.id), item]))
   const mappings = countMappings(classified)
   const toPatch = classified.filter((row) => !row.skip)
   const skipped = classified.length - toPatch.length
@@ -165,7 +278,8 @@ export async function rewriteInspirationCategories(options = {}, deps = defaultD
   const patched = []
   if (apply) {
     for (const row of toPatch) {
-      await patchCategory(base, row.id, row.next, { fetch: fetchImpl })
+      const record = await patchCategory(base, row.id, row.next, { fetch: fetchImpl })
+      assertCategoryApplied(record, originals.get(row.id), row.id, row.next)
       patched.push({ id: row.id, raw: row.raw, next: row.next })
     }
   }

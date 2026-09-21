@@ -356,4 +356,54 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
       mounted.close()
     }
   })
+
+  it('ignores category onChange on 本地 so a hidden official id cannot leak back', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
+    try {
+      const localTab = mounted.container.querySelector('[data-tab="local"]')
+      assert.ok(localTab, 'the 本地 tab must render')
+      await act(async () => {
+        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.some((url) => url.includes('/omnimux/inspiration/local')))
+      await openCategoryOptions(mounted)
+      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === '美妆护肤')
+      assert.ok(beauty, '美妆护肤 must still be listed on 本地')
+      const beforeClick = fetched.length
+      await act(async () => {
+        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const afterClick = fetched.slice(beforeClick)
+      assert.equal(
+        afterClick.some((url) => /[?&]category=/.test(url)),
+        false,
+        `clicking an industry on 本地 must not write category: ${JSON.stringify(afterClick)}`,
+      )
+      const allTab = mounted.container.querySelector('[data-tab="all"]')
+      assert.ok(allTab, 'the 全部 tab must render')
+      const beforeSwitchBack = fetched.length
+      await act(async () => {
+        allTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const trigger = mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${CATEGORY_LABEL}"]`)
+      assert.ok(trigger, 'the category trigger must remain on 全部')
+      assert.equal(
+        trigger.textContent,
+        ALL_CATEGORY_LABEL,
+        'switching back must still show 全部, not a hidden official id',
+      )
+      const cloudUrls = fetched.slice(beforeSwitchBack).filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      assert.equal(
+        cloudUrls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `switching back must not reuse a hidden official id: ${JSON.stringify(cloudUrls)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 })

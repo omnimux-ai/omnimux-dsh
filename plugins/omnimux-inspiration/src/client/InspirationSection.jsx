@@ -197,12 +197,16 @@ export function InspirationSection({ t, active }) {
 
   /**
    * Official 18-industry dropdown (Issue #2507). The list is local and does
-   * not wait on `/categories`. Cloud tabs still send the official id as the
-   * filter value; local / rivals keep the leftover selection from leaking
-   * into `/local` by blanking the control (setTab already clears state).
+   * not wait on `/categories`. Only 全部 / 云端 apply the official id; on
+   * 本地 the same 19 labels stay visible but onChange is ignored so a click
+   * cannot stash a hidden id that would reappear after switching back.
    */
   const cloudCategoryTab = tab === 'all' || tab === 'public'
   const categoryOptions = useMemo(() => buildCategoryFilterOptions(t), [t])
+  const handleCategoryChange = useCallback((next) => {
+    if (!cloudCategoryTab) return
+    setCategory(next)
+  }, [cloudCategoryTab, setCategory])
 
   // The row the last import produced is pinned above the list while it is
   // missing from it: the tab switch that follows an import refetches page 1, and
@@ -370,7 +374,7 @@ export function InspirationSection({ t, active }) {
             <DropdownSelect
               value={cloudCategoryTab ? category : ''}
               aria-label={t('filter.category')}
-              onChange={setCategory}
+              onChange={handleCategoryChange}
               className="omnimux-inspiration-subfilter-select"
               options={categoryOptions}
             />

@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   applyImport,
+  categoryLookupTokens,
   extractCategory,
   planImport,
   readPlan,
@@ -510,6 +511,16 @@ test('extractCategory maps industry aliases and infers from tags on product form
     extractCategory({ product_type: 'digital' }, { product_type: 'digital', tags: ['ai_tool', 'mobile_app'] }),
     'other',
   )
+  assert.equal(
+    extractCategory({}, { categories: [{ name: '美妆护肤', id: 'beauty_skincare' }], tags: ['x'] }),
+    'beauty_skincare',
+  )
+  assert.equal(
+    extractCategory({}, { categories: [{ zh: '厨房用品', en: 'Kitchen' }], tags: ['x'] }),
+    'home_living',
+  )
+  assert.deepEqual(categoryLookupTokens({ name: '美妆护肤', id: 'beauty_skincare' }), ['美妆护肤', 'beauty_skincare'])
+  assert.equal(String({ name: '美妆护肤' }), '[object Object]')
 })
 
 function send(response, body, status = 200) {
