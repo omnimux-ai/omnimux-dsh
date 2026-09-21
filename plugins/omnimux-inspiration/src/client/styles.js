@@ -2378,7 +2378,6 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-deconstruction-panel {
   display: flex;
   flex-direction: column;
-  padding: 0 !important;
   overflow: hidden !important;
   scrollbar-gutter: auto !important;
   background: var(--dsw-alias-bg-base, #111111) !important;
@@ -2391,9 +2390,8 @@ export const INSPIRATION_CSS = `
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  margin: 0 !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, #262626);
+  padding: 0;
+  margin-bottom: 12px;
   background: var(--dsw-alias-bg-base, #111111);
   z-index: 5;
 }
