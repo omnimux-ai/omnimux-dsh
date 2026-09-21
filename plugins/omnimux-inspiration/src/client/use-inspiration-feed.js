@@ -203,11 +203,11 @@ function useInspirationFilters() {
   const [views, setViews] = useState('')
   const [trafficType, setTrafficType] = useState('')
   const [dateRange, setDateRange] = useState('')
-  // Cloud categories are free text (`digital`, …) and do not exist on local
-  // rows. Leaving 全部/云端 must drop the selection so the local list is not
-  // filtered empty; both updates run in this handler so React batches them
-  // and the local query never sees a leftover `digital`. `setTab` also
-  // accepts an updater (import landing).
+  // Official industry ids are a cloud-catalogue filter. Leaving 全部/云端
+  // must drop the selection so the local list is not filtered empty; both
+  // updates run in this handler so React batches them and the local query
+  // never sees a leftover category. `setTab` also accepts an updater
+  // (import landing).
   const tabRef = useRef(tab)
   tabRef.current = tab
   const setTab = useCallback((next) => {

@@ -8,6 +8,7 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
+import { OFFICIAL_CATEGORIES } from '../gxgen-category-map.js'
 
 /**
  * Render gate for the platform filter (P2-8 / P2-E).
@@ -40,6 +41,13 @@ const cacheDir = join(here, '.esbuild-cache', 'section')
 const PLATFORM_LABEL = zh['filter.platform']
 /** aria-label of the always-rendered type dropdown, used as a "mounted" probe. */
 const TYPE_LABEL = zh['filter.type']
+/** aria-label the section puts on the category dropdown (`filter.category`). */
+const CATEGORY_LABEL = zh['filter.category']
+const ALL_CATEGORY_LABEL = zh['category.all']
+const OFFICIAL_CATEGORY_LABELS = [
+  ALL_CATEGORY_LABEL,
+  ...OFFICIAL_CATEGORIES.map((row) => zh[`category.${row.id}`]),
+]
 
 let bundleCounter = 0
 
@@ -81,9 +89,10 @@ async function bundleSection() {
  * matters because the feed keeps an SWR cache at module scope — reusing one
  * instance across cases would serve the first case's payload from cache.
  * @param {string[]} platformNames platforms the stubbed feed reports
- * @returns {Promise<{ document: Document, container: HTMLElement, unmount: () => Promise<void>, close: () => void }>}
+ * @param {{ onFetch?: (url: string) => void, listStatus?: number }} [options]
+ * @returns {Promise<{ document: Document, container: HTMLElement, unmount: () => Promise<void>, close: () => void, waitFor: Function }>}
  */
-async function mountSection(platformNames) {
+async function mountSection(platformNames, options = {}) {
   const sectionModule = await import(`${await bundleSection()}?mount=${bundleCounter}`)
 
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
@@ -114,7 +123,15 @@ async function mountSection(platformNames) {
     is_local: index % 2 === 0,
   }))
   globalThis.fetch = async (url) => {
-    const body = String(url).includes('/local')
+    const text = String(url)
+    options.onFetch?.(text)
+    if (text.includes('/omnimux/inspiration/categories')) {
+      return { ok: false, status: 500, json: async () => ({ error: 'unused' }) }
+    }
+    if (options.listStatus === 401 && !text.includes('/local')) {
+      return { ok: false, status: 401, json: async () => ({ error: 'needs-omnimux' }) }
+    }
+    const body = text.includes('/local')
       ? { success: true, data: { items, total: items.length, platforms: platformNames.map((name) => ({ name, count: 1 })) } }
       : { success: true, data: { items, total: items.length } }
     return { ok: true, status: 200, json: async () => body }
@@ -137,6 +154,17 @@ async function mountSection(platformNames) {
   return {
     document: dom.window.document,
     container,
+    async waitFor(probe, budgetMs = 2000) {
+      const start = Date.now()
+      for (;;) {
+        const value = probe()
+        if (value) return value
+        if (Date.now() - start > budgetMs) return null
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 20))
+        })
+      }
+    },
     async unmount() {
       await act(async () => reactRoot.unmount())
       globalThis.window = previousWindow
@@ -222,6 +250,157 @@ describe('InspirationSection render gate — platform dropdown', () => {
           `the opened menu must offer ${label} (got ${JSON.stringify(openedOptions)})`,
         )
       }
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+})
+
+describe('InspirationSection render gate — official 18-industry dropdown', () => {
+  async function openCategoryOptions(mounted) {
+    const trigger = mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${CATEGORY_LABEL}"]`)
+    assert.ok(trigger, 'the category dropdown trigger must render')
+    await act(async () => {
+      trigger.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+    })
+    const listbox = trigger.parentElement.querySelector('[role="listbox"]')
+    assert.ok(listbox, 'clicking the category trigger must open a listbox')
+    return [...listbox.querySelectorAll('[role="option"]')].map((node) => node.textContent)
+  }
+
+  it('offers 全部 plus the 18 official Chinese names and never asks /categories', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
+    try {
+      const labels = await openCategoryOptions(mounted)
+      assert.deepEqual(labels, OFFICIAL_CATEGORY_LABELS)
+      assert.equal(labels[0], '全部')
+      assert.equal(
+        fetched.some((url) => url.includes('/categories')),
+        false,
+        `dropdown must not request /categories: ${JSON.stringify(fetched)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('still shows 全部+18 when the cloud catalogue is unauthorized', async () => {
+    const mounted = await mountSection(['tiktok'], { listStatus: 401 })
+    try {
+      const labels = await openCategoryOptions(mounted)
+      assert.deepEqual(labels, OFFICIAL_CATEGORY_LABELS)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('sends the official id when an industry is chosen', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
+    try {
+      await openCategoryOptions(mounted)
+      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === '美妆护肤')
+      assert.ok(beauty, '美妆护肤 must be clickable')
+      const before = fetched.length
+      await act(async () => {
+        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.slice(before).some((url) => url.includes('category=beauty_skincare')))
+      const cloudUrls = fetched.slice(before).filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      assert.ok(
+        cloudUrls.some((url) => url.includes('category=beauty_skincare')),
+        `cloud queries must send the official id: ${JSON.stringify(cloudUrls)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps 全部+18 on 本地 and drops category from local queries', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
+    try {
+      await openCategoryOptions(mounted)
+      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === '美妆护肤')
+      await act(async () => {
+        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const localTab = mounted.container.querySelector('[data-tab="local"]')
+      assert.ok(localTab, 'the 本地 tab must render')
+      const beforeSwitch = fetched.length
+      await act(async () => {
+        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.slice(beforeSwitch).some((url) => url.includes('/omnimux/inspiration/local')))
+      const labels = await openCategoryOptions(mounted)
+      assert.deepEqual(labels, OFFICIAL_CATEGORY_LABELS)
+      const localUrls = fetched.slice(beforeSwitch).filter((url) => url.includes('/omnimux/inspiration/local'))
+      assert.ok(localUrls.length > 0, 'switching to 本地 must query the local library')
+      assert.equal(
+        localUrls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `local queries after the tab switch must not forward category: ${JSON.stringify(localUrls)}`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('ignores category onChange on 本地 so a hidden official id cannot leak back', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
+    try {
+      const localTab = mounted.container.querySelector('[data-tab="local"]')
+      assert.ok(localTab, 'the 本地 tab must render')
+      await act(async () => {
+        localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      await mounted.waitFor(() => fetched.some((url) => url.includes('/omnimux/inspiration/local')))
+      await openCategoryOptions(mounted)
+      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
+        .find((node) => node.textContent === '美妆护肤')
+      assert.ok(beauty, '美妆护肤 must still be listed on 本地')
+      const beforeClick = fetched.length
+      await act(async () => {
+        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const afterClick = fetched.slice(beforeClick)
+      assert.equal(
+        afterClick.some((url) => /[?&]category=/.test(url)),
+        false,
+        `clicking an industry on 本地 must not write category: ${JSON.stringify(afterClick)}`,
+      )
+      const allTab = mounted.container.querySelector('[data-tab="all"]')
+      assert.ok(allTab, 'the 全部 tab must render')
+      const beforeSwitchBack = fetched.length
+      await act(async () => {
+        allTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
+      const trigger = mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${CATEGORY_LABEL}"]`)
+      assert.ok(trigger, 'the category trigger must remain on 全部')
+      assert.equal(
+        trigger.textContent,
+        ALL_CATEGORY_LABEL,
+        'switching back must still show 全部, not a hidden official id',
+      )
+      const cloudUrls = fetched.slice(beforeSwitchBack).filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      assert.equal(
+        cloudUrls.some((url) => /[?&]category=/.test(url)),
+        false,
+        `switching back must not reuse a hidden official id: ${JSON.stringify(cloudUrls)}`,
+      )
     } finally {
       await mounted.unmount()
       mounted.close()

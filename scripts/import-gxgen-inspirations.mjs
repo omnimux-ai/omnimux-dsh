@@ -16,6 +16,11 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import {
+  isProductForm,
+  lookupOfficialCategory,
+  normalizeCategory,
+} from '../plugins/omnimux-inspiration/src/gxgen-category-map.js'
 
 export const PLAN_SCHEMA = 'omnimux.gxgen-inspiration-import-plan/v1'
 export const RECEIPTS_SCHEMA = 'omnimux.gxgen-inspiration-import-receipts/v1'
@@ -327,24 +332,61 @@ function extractCountryCode(row, assets) {
   return ''
 }
 
-function extractCategory(row, assets) {
-  const candidates = [
+/**
+ * Pull string tokens from a nested category value before lookup.
+ * Objects contribute name / id / zh / en so `{ name: '美妆护肤' }` is not
+ * folded into `[object Object]`.
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+export function categoryLookupTokens(value) {
+  if (value == null) return []
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = String(value).trim()
+    return text ? [text] : []
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => categoryLookupTokens(entry))
+  }
+  if (typeof value === 'object') {
+    return ['name', 'id', 'zh', 'en'].flatMap((key) => categoryLookupTokens(value[key]))
+  }
+  return []
+}
+
+function collectCategoryCandidates(row, assets) {
+  const nested = Array.isArray(assets?.categories) ? assets.categories : []
+  return [
     assets?.category_zh,
     assets?.category_en,
     assets?.raw_source?.industry,
     assets?.industry,
     assets?.raw_source?.category,
     assets?.meta?.category,
-    Array.isArray(assets?.categories) ? assets.categories.find(nonempty) : null,
+    ...nested,
     row?.product_type,
     assets?.product_type,
   ]
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim()) {
-      return c.trim().slice(0, 64)
+}
+
+/**
+ * Map a Gxgen row onto one official industry id.
+ * Industry aliases win; product forms only feed tag inference.
+ * @param {Record<string, unknown>} row
+ * @param {Record<string, unknown> | null} assets
+ * @returns {string}
+ */
+export function extractCategory(row, assets) {
+  const tags = Array.isArray(assets?.tags) ? assets.tags : []
+  const candidates = collectCategoryCandidates(row, assets)
+  for (const raw of candidates) {
+    for (const token of categoryLookupTokens(raw)) {
+      const industry = lookupOfficialCategory(token)
+      if (industry) return industry
     }
   }
-  return ''
+  const form = candidates.flatMap((raw) => categoryLookupTokens(raw)).find((token) => isProductForm(token)) ?? ''
+  return normalizeCategory(form, { tags })
 }
 
 function extractDuration(row, assets) {

@@ -340,10 +340,9 @@ export const listTags = quotaGuard(
 /**
  * Cloud catalogue categories aggregated by the hub (Issue #2497).
  *
- * The hub walks the catalogue and answers `{ data: [{ name, count }] }`;
- * callers degrade to the fixed 全部-only option set on any failure, so this
- * call is intentionally left unguarded — a category list must never pop a
- * login or quota gate over a filter dropdown.
+ * The inspiration dropdown no longer consumes this list (Issue #2507 uses
+ * the official 18 industries). The route stays for diagnostics and is left
+ * unguarded so a category probe never pops a login or quota gate.
  */
 export function listCategories() {
   return inspirationRequest('/omnimux/inspiration/categories')

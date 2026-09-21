@@ -18,6 +18,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   applyImport,
+  categoryLookupTokens,
+  extractCategory,
   planImport,
   readPlan,
   verifyImport,
@@ -478,7 +480,7 @@ test('maps and verifies multidimensional filter fields from Gxgen row', async (t
   const { document } = await planned(root, fixture)
   const item = document.items[0]
   assert.equal(item.payload.country_code, 'US')
-  assert.equal(item.payload.category, '美妆护肤')
+  assert.equal(item.payload.category, 'beauty_skincare')
   assert.equal(item.payload.duration, 45)
   assert.equal(item.payload.views, 1500000)
   assert.equal(item.payload.traffic_type, 'ad')
@@ -487,7 +489,7 @@ test('maps and verifies multidimensional filter fields from Gxgen row', async (t
   const applied = await applyImport(config(root), deps(root, fixture))
   assert.equal(applied.counts.created, 1)
   assert.equal(capturedPayload.country_code, 'US')
-  assert.equal(capturedPayload.category, '美妆护肤')
+  assert.equal(capturedPayload.category, 'beauty_skincare')
   assert.equal(capturedPayload.duration, 45)
   assert.equal(capturedPayload.views, 1500000)
   assert.equal(capturedPayload.traffic_type, 'ad')
@@ -495,6 +497,30 @@ test('maps and verifies multidimensional filter fields from Gxgen row', async (t
 
   const verified = await verifyImport(config(root), deps(root, fixture))
   assert.equal(verified.ok, true)
+})
+
+test('extractCategory maps industry aliases and infers from tags on product forms', () => {
+  assert.equal(extractCategory({}, { category_zh: '美妆护肤', tags: ['x'] }), 'beauty_skincare')
+  assert.equal(extractCategory({}, { category_en: 'Health & Wellness', tags: ['x'] }), 'health_wellness')
+  assert.equal(extractCategory({}, { categories: ['厨房用品'], tags: ['x'] }), 'home_living')
+  assert.equal(
+    extractCategory({ product_type: 'digital' }, { product_type: 'digital', tags: ['fitness', 'ai_tool'] }),
+    'fitness_sports',
+  )
+  assert.equal(
+    extractCategory({ product_type: 'digital' }, { product_type: 'digital', tags: ['ai_tool', 'mobile_app'] }),
+    'other',
+  )
+  assert.equal(
+    extractCategory({}, { categories: [{ name: '美妆护肤', id: 'beauty_skincare' }], tags: ['x'] }),
+    'beauty_skincare',
+  )
+  assert.equal(
+    extractCategory({}, { categories: [{ zh: '厨房用品', en: 'Kitchen' }], tags: ['x'] }),
+    'home_living',
+  )
+  assert.deepEqual(categoryLookupTokens({ name: '美妆护肤', id: 'beauty_skincare' }), ['美妆护肤', 'beauty_skincare'])
+  assert.equal(String({ name: '美妆护肤' }), '[object Object]')
 })
 
 function send(response, body, status = 200) {
