@@ -1,0 +1,57 @@
+{
+  "task": "inspiration-all-tab-category-filter",
+  "issue": 2511,
+  "startedAt": "2026-09-21T13:09:47.808Z",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "category-trigger-mounted",
+      "pass": true,
+      "dimensions": {
+        "width": 90,
+        "height": 32
+      }
+    },
+    {
+      "name": "all-tab-mixes-local-and-cloud",
+      "pass": true,
+      "localQueries": [
+        "?sort=hot&page=1&page_size=20&projection=lean",
+        "?sort=hot&page=1&page_size=20&projection=lean"
+      ],
+      "cloudQueries": [
+        "?sort=hot&page=1&page_size=20",
+        "?sort=hot&page=1&page_size=20"
+      ]
+    },
+    {
+      "name": "all-tab-industry-skips-local",
+      "pass": true,
+      "cloud": [
+        "?sort=hot&page=1&page_size=20",
+        "?sort=hot&page=1&page_size=20",
+        "?sort=hot&page=1&page_size=20&category=beauty_skincare",
+        "?sort=hot&page=1&page_size=20&category=beauty_skincare"
+      ],
+      "localAfterPick": []
+    },
+    {
+      "name": "all-tab-industry-shows-cloud-slice",
+      "pass": true,
+      "trigger": "美妆护肤"
+    },
+    {
+      "name": "all-tab-reset-restores-mix",
+      "pass": true,
+      "trigger": "全部",
+      "localAfterReset": []
+    },
+    {
+      "name": "screenshot-saved",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-inspiration-all-tab-category/docs/evidence/inspiration-all-tab-category-filter-verified.png"
+    }
+  ],
+  "errors": [],
+  "completedAt": "2026-09-21T13:09:48.505Z"
+}

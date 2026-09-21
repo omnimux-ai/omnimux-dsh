@@ -294,19 +294,39 @@ describe('listInspirations query params', () => {
       )
 
       calls.length = 0
-      await loadInspirationsAtomic({ tab: 'all', category: 'digital', sort: 'hot' })
-      const localUrls = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
-      const cloudUrls = calls.filter((url) => url.startsWith('/omnimux/inspiration?') || url === '/omnimux/inspiration')
-      assert.ok(localUrls.length > 0, `tab=all must still query the local library: ${JSON.stringify(calls)}`)
-      assert.ok(cloudUrls.length > 0, `tab=all must still query the cloud library: ${JSON.stringify(calls)}`)
+      const mixed = await loadInspirationsAtomic({ tab: 'all', category: '', sort: 'hot' })
+      const mixedLocal = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
+      const mixedCloud = calls.filter((url) => url.startsWith('/omnimux/inspiration?') || url === '/omnimux/inspiration')
+      assert.ok(mixedLocal.length > 0, `tab=all with no industry must still query the local library: ${JSON.stringify(calls)}`)
+      assert.ok(mixedCloud.length > 0, `tab=all with no industry must still query the cloud library: ${JSON.stringify(calls)}`)
+      assert.equal(mixedLocal.some((url) => /[?&]category=/.test(url)), false)
+      assert.ok(Array.isArray(mixed.items))
+
+      calls.length = 0
+      const filtered = await loadInspirationsAtomic({ tab: 'all', category: 'beauty_skincare', sort: 'hot' })
+      const filteredLocal = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
+      const filteredCloud = calls.filter((url) => url.startsWith('/omnimux/inspiration?') || url === '/omnimux/inspiration')
       assert.equal(
-        localUrls.some((url) => /[?&]category=/.test(url)),
-        false,
-        `tab=all local half must not forward category: ${JSON.stringify(localUrls)}`,
+        filteredLocal.length,
+        0,
+        `tab=all with an industry must not query the local library: ${JSON.stringify(calls)}`,
       )
       assert.ok(
-        cloudUrls.some((url) => url.includes('category=digital')),
-        `tab=all cloud half must still forward category: ${JSON.stringify(cloudUrls)}`,
+        filteredCloud.some((url) => url.includes('category=beauty_skincare')),
+        `tab=all with an industry must still query the cloud library: ${JSON.stringify(filteredCloud)}`,
+      )
+      assert.equal(
+        filtered.items.some((item) => item.is_local),
+        false,
+        'tab=all with an industry must not surface unfiltered local cards',
+      )
+
+      calls.length = 0
+      await loadInspirationsAtomic({ tab: 'all', category: '', sort: 'hot' })
+      const restoredLocal = calls.filter((url) => url.includes('/omnimux/inspiration/local'))
+      assert.ok(
+        restoredLocal.length > 0,
+        `tab=all after clearing industry must query the local library again: ${JSON.stringify(calls)}`,
       )
     } finally {
       globalThis.fetch = originalFetch
