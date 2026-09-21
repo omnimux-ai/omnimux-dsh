@@ -7,6 +7,8 @@ import {
   listenComposerAddCommands,
   FILE_COMMAND,
   LIBRARY_COMMAND,
+  PRODUCT_COMMAND,
+  INSPIRATION_COMMAND,
 } from './commands.js'
 
 function eventFixture() {
@@ -22,6 +24,8 @@ function eventFixture() {
     actions: {
       openFile(id) { calls.push(['file', id]) },
       openLibrary(id) { calls.push(['library', id]) },
+      openProduct(id) { calls.push(['product', id]) },
+      openInspiration(id) { calls.push(['inspiration', id]) },
     },
     async emit(id, name, result) {
       for (const listener of listeners) await listener(id, name, result)
@@ -35,9 +39,11 @@ describe('composer command acknowledgment', () => {
     const stop = listenComposerAddCommands(f.ctx, f.actions)
     await f.emit('a', 'add-file', { kind: 'success' })
     await f.emit('b', 'add-from-library', { kind: 'success' })
+    await f.emit('p', 'add-from-product', { kind: 'success' })
+    await f.emit('i', 'add-from-inspiration', { kind: 'success' })
     await f.emit('c', 'add-from-library', { kind: 'error', text: 'failed' })
     await f.emit('c', 'clear', { kind: 'success' })
-    assert.deepEqual(f.calls, [['file', 'a'], ['library', 'b']])
+    assert.deepEqual(f.calls, [['file', 'a'], ['library', 'b'], ['product', 'p'], ['inspiration', 'i']])
     stop()
   })
 
@@ -97,13 +103,19 @@ describe('composer library command decoration', () => {
     const stop = installComposerAddCommands(ctx, {
       openLibrary(id) { calls.push(['library', id]) },
       openFile(id) { calls.push(['file', id]) },
+      openProduct(id) { calls.push(['product', id]) },
+      openInspiration(id) { calls.push(['inspiration', id]) },
     })
     assert.equal(listeners.size, 1)
     assert.equal(decorations.get(LIBRARY_COMMAND).ui.kind, 'action')
     assert.equal(decorations.get(FILE_COMMAND).ui.kind, 'action')
+    assert.equal(decorations.get(PRODUCT_COMMAND).ui.kind, 'action')
+    assert.equal(decorations.get(INSPIRATION_COMMAND).ui.kind, 'action')
     decorations.get(LIBRARY_COMMAND).ui.run({ sessionId: 's1' })
     decorations.get(FILE_COMMAND).ui.run({ sessionId: 's2' })
-    assert.deepEqual(calls, [['library', 's1'], ['file', 's2']])
+    decorations.get(PRODUCT_COMMAND).ui.run({ sessionId: 's3' })
+    decorations.get(INSPIRATION_COMMAND).ui.run({ sessionId: 's4' })
+    assert.deepEqual(calls, [['library', 's1'], ['file', 's2'], ['product', 's3'], ['inspiration', 's4']])
     stop()
     assert.equal(listeners.size, 0)
     assert.equal(decorations.size, 0)

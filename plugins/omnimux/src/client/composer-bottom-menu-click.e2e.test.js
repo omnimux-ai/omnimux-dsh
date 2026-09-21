@@ -10,7 +10,7 @@ describe('e2e: 首页沉底指令菜单可点', () => {
       <div data-composer-card>
         <div class="overlayAnchor" data-overlay-placement="bottom" style="pointer-events:none">
           <div data-trigger-menu class="iRJKyq_menu" style="pointer-events:none">
-            <button role="option"><span class="iRJKyq_itemName">从资产库添加</span></button>
+            <button role="option"><span class="iRJKyq_itemName">从资产库选择</span></button>
           </div>
         </div>
       </div>

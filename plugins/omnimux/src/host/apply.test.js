@@ -19,8 +19,10 @@ describe('hub apply composition', () => {
     const commands = { register(definition) { definitions.push(definition) } }
     registration[0].callback({ commands })
     assert.deepEqual(definitions.map(({ name, description }) => ({ name, description })), [
-      { name: 'add-file', description: '添加文件 / Add files' },
-      { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+      { name: 'add-file', description: '上传媒体或文件 / Upload media or files' },
+      { name: 'add-from-library', description: '从资产库选择 / Choose from asset library' },
+      { name: 'add-from-product', description: '从商品库选择 / Choose from product library' },
+      { name: 'add-from-inspiration', description: '从灵感库选择 / Choose from inspiration library' },
     ])
     for (const definition of definitions) {
       assert.equal(Object.hasOwn(definition, 'input'), false)

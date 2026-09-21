@@ -18,11 +18,12 @@ export const PICKER_DIALOG_CLASS = 'omx-pick-dialog';
 export const PICKER_DIALOG_VARIANT_CLASS = Object.freeze({
   product: 'omx-pick-dialog--product',
   assets: 'omx-pick-dialog--assets',
+  inspiration: 'omx-pick-dialog--inspiration',
 });
 
 /**
  * 组装 ModalDialog 的 className（基础类 + 变体类）。
- * @param {'product' | 'assets'} kind
+ * @param {'product' | 'assets' | 'inspiration'} kind
  */
 export function pickerDialogClassName(kind) {
   const variant = PICKER_DIALOG_VARIANT_CLASS[kind];
@@ -30,8 +31,12 @@ export function pickerDialogClassName(kind) {
   return `${PICKER_DIALOG_CLASS} ${variant}`;
 }
 
-/** 两个选择器各自的根类名，用于 :has() 定位正文滚动容器 */
-export const PICKER_ROOT_CLASSES = Object.freeze(['.omx-product-pick', '.omx-asset-pick']);
+/** 选择器各自的根类名，用于 :has() 定位正文滚动容器 */
+export const PICKER_ROOT_CLASSES = Object.freeze([
+  '.omx-product-pick',
+  '.omx-asset-pick',
+  '.omx-inspiration-pick',
+]);
 
 /** 布局无关的默认几何（各选择器可覆盖） */
 export const PICKER_CARD_WIDTH = 264;
@@ -50,17 +55,19 @@ export function pickerDialogWidth({ columns, cardWidth = PICKER_CARD_WIDTH, gap 
   return `calc(${parts.join(' + ')})`;
 }
 
-/** 两个选择器各自的布局几何（单一真源；验收脚本与单测都从这里取值） */
+/** 布局几何（单一真源；验收脚本与单测都从这里取值） */
 export const PICKER_LAYOUTS = Object.freeze({
   /** 产品库：顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
   product: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
   /** 资产库：参考选择产品弹窗，顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
   assets: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
+  /** 灵感库：参考选择产品弹窗，顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
+  inspiration: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
 });
 
 /**
  * 某个选择器的期望弹窗宽度（px）
- * @param {'product' | 'assets'} kind
+ * @param {'product' | 'assets' | 'inspiration'} kind
  */
 export function pickerExpectedWidth(kind) {
   const layout = PICKER_LAYOUTS[kind];
@@ -81,19 +88,22 @@ export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器通过**弹窗�
    故此处保留对 primitive 公共类名的依赖：放开上限，改由弹窗自身 80vh 统一约束。
    运行时漂移由 pnpm verify:picker 兜底告警。 */
 .dshUk-Dialog-body:has(.omx-product-pick),
-.dshUk-Dialog-body:has(.omx-asset-pick) {
+.dshUk-Dialog-body:has(.omx-asset-pick),
+.dshUk-Dialog-body:has(.omx-inspiration-pick) {
   max-height: none !important;
 }
 /* 选择器在正文内贴边：清掉 kit 内层 _body_ 的左右内边距与上间距（结构定位：正文滚动容器最后一个子元素），
    让内容区完整占满弹窗正文。 */
 .dshUk-Dialog-body:has(.omx-product-pick) > *:last-child,
-.dshUk-Dialog-body:has(.omx-asset-pick) > *:last-child {
+.dshUk-Dialog-body:has(.omx-asset-pick) > *:last-child,
+.dshUk-Dialog-body:has(.omx-inspiration-pick) > *:last-child {
   margin-top: 0 !important;
   padding: 0 !important;
 }
-/* 隐藏产品库与资产库自带的 ModalDialog 默认 Header（采用单层 Tab-as-Header 架构，避免双重 Header） */
+/* 隐藏产品库、资产库与灵感库自带的 ModalDialog 默认 Header（采用单层 Tab-as-Header 架构，避免双重 Header） */
 .omx-pick-dialog--product .dshUk-Dialog-body > *:first-child,
-.omx-pick-dialog--assets .dshUk-Dialog-body > *:first-child {
+.omx-pick-dialog--assets .dshUk-Dialog-body > *:first-child,
+.omx-pick-dialog--inspiration .dshUk-Dialog-body > *:first-child {
   display: none !important;
 }
 /* 共享的 external 关闭按钮定位在弹窗右外侧（right:-50px），而底座弹窗自带 overflow: hidden 会把它裁出可视区

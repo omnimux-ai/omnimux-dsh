@@ -13,17 +13,20 @@ const detectorSource = readFileSync(join(here, 'media-detector.ts'), 'utf8')
 const cssSource = readFileSync(join(here, 'styles.css'), 'utf8')
 
 describe('composer inner attachment slot', () => {
-  it('registers conversation.input.attachments instead of the outer dock', () => {
-    assert.match(indexSource, /ctx\.slots\.inject\('conversation\.input\.attachments'/)
-    assert.match(indexSource, /name: 'conversation\.input\.attachments'/)
+  it('registers the visible tray above the composer and a silent inner upload bridge', () => {
     assert.match(indexSource, /id: 'omnimux-attachment-tray'/)
-    assert.match(indexSource, /priority: -10/)
-    assert.match(indexSource, /locale: NS/)
+    assert.match(indexSource, /order: 118/)
+    assert.match(indexSource, /id: 'omnimux-native-composer-bridge'/)
+    assert.match(indexSource, /NativeComposerBridge/)
     const trayEnd = indexSource.indexOf('}, AttachmentTray)')
     const trayStart = indexSource.lastIndexOf('ctx.slots.inject', trayEnd)
     const trayRegistration = indexSource.slice(trayStart, trayEnd)
-    assert.match(trayRegistration, /conversation\.input\.attachments/)
-    assert.doesNotMatch(trayRegistration, /conversation\.input\.dock/)
+    assert.match(trayRegistration, /conversation\.input\.dock/)
+    assert.doesNotMatch(trayRegistration, /conversation\.input\.attachments/)
+    const bridgeEnd = indexSource.indexOf('}, NativeComposerBridge)')
+    const bridgeStart = indexSource.lastIndexOf('ctx.slots.inject', bridgeEnd)
+    const bridgeRegistration = indexSource.slice(bridgeStart, bridgeEnd)
+    assert.match(bridgeRegistration, /conversation\.input\.attachments/)
   })
 
   it('accepts native composer attachment props and drop callbacks', () => {
@@ -37,10 +40,11 @@ describe('composer inner attachment slot', () => {
     assert.match(traySource, /store\.setActiveSessionId\(currentSessionId\)/)
     assert.match(traySource, /store\.claimPendingAttachments\(currentSessionId\)/)
     assert.match(traySource, /omnimuxAttachments = useSyncExternalStore/)
-    assert.match(traySource, /props\.onAddFiles/)
-    assert.match(traySource, /props\.onRemoveAttachment/)
-    assert.match(traySource, /uploads=\{props\.uploads\}/)
-    assert.match(traySource, /onRetryFile=\{props\.onRetryFile\}/)
+    assert.match(traySource, /subscribeNativeComposer/)
+    assert.match(traySource, /nativeOnAddFiles/)
+    assert.match(traySource, /nativeOnRemove/)
+    assert.match(traySource, /uploads=\{nativeUploads\}/)
+    assert.match(traySource, /onRetryFile=\{nativeOnRetry\}/)
     assert.match(traySource, /data-omnimux-attachments-dock="true"/)
   })
 

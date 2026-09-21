@@ -8,12 +8,11 @@ import { getCreativePresetsStore } from './presets-store.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const clientIndex = fs.readFileSync(path.resolve(__dirname, '../index.js'), 'utf8')
 
-test('ComposerPresetsTriggers slot registration contract: conversation.input.left order 30', () => {
-  // 必须通过官方标准插槽 conversation.input.left 注入
-  assert.ok(clientIndex.includes("ctx.slots.inject('conversation.input.left'"), 'Must inject to conversation.input.left')
-  assert.ok(clientIndex.includes("id: 'omnimux-creative-presets-triggers'"), 'Must register with id omnimux-creative-presets-triggers')
-  assert.ok(clientIndex.includes('order: 30'), 'Must place triggers at order 30 (after skills order 10 and models order 20)')
-  assert.ok(clientIndex.includes('ComposerPresetsTriggers'), 'Must bind ComposerPresetsTriggers component')
+test('composer left rail no longer mounts creative preset pills', () => {
+  assert.doesNotMatch(clientIndex, /omnimux-creative-presets-triggers/)
+  assert.doesNotMatch(clientIndex, /ComposerPresetsTriggers/)
+  assert.doesNotMatch(clientIndex, /omnimux-composer-product-picker-button/)
+  assert.doesNotMatch(clientIndex, /omnimux-composer-character-picker-button/)
 })
 
 test('PresetsStore: provides isolated state for triggers and chips', () => {

@@ -13,7 +13,7 @@ import { createElement } from 'react'
  *    - Feedback Bubble (💬) for `feedback`
  *    - Tray Download (📥) for `export`
  * 2. Command name (item.name) adaptive localization:
- *    - In Chinese locale (zh), renders Chinese command names (e.g. "add-from-library" -> "从资产库添加")
+ *    - In Chinese locale (zh), renders Chinese command names (e.g. "add-from-library" -> "从资产库选择")
  *    - In English locale (en), retains canonical English command names (e.g. "add-from-library")
  * 3. Command description adaptive localization:
  *    - In Chinese locale (zh), renders concise Chinese descriptions (e.g. "从统一资产库选择素材")
@@ -93,6 +93,32 @@ export function renderLibraryIcon(size = 16, className) {
       strokeWidth: 1.2,
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
+    })
+  )
+}
+
+export function renderProductIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M4 2L2 5v8.5A1.5 1.5 0 003.5 15h9A1.5 1.5 0 0014 13.5V5L12 2H4z',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+    }),
+    createElement('path', {
+      d: 'M2 5h12M10 7.5a2 2 0 01-4 0',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
     })
   )
 }
@@ -285,6 +311,9 @@ export const COMMAND_ICONS = {
   'paperclip': renderPaperclipIcon,
   'add-from-library': renderLibraryIcon,
   'library': renderLibraryIcon,
+  'add-from-product': renderProductIcon,
+  'product': renderProductIcon,
+  'add-from-inspiration': renderPlanIcon,
   'compact': renderCompactIcon,
   'compress': renderCompactIcon,
   'feedback': renderFeedbackIcon,
@@ -307,7 +336,17 @@ export const COMMAND_SVG_STRINGS = {
   '添加文件': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
 
   'add-from-library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  '从资产库选择': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   '从资产库添加': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'add-from-product': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2L2 5v8.5A1.5 1.5 0 003.5 15h9A1.5 1.5 0 0014 13.5V5L12 2H4z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5h12M10 7.5a2 2 0 01-4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  '从商品库选择': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2L2 5v8.5A1.5 1.5 0 003.5 15h9A1.5 1.5 0 0014 13.5V5L12 2H4z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5h12M10 7.5a2 2 0 01-4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  'add-from-inspiration': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.2C6.12 3.2 4.6 4.72 4.6 6.6C4.6 7.82 5.25 8.9 6.2 9.5V11C6.2 11.22 6.38 11.4 6.6 11.4H9.4C9.62 11.4 9.8 11.22 9.8 11V9.5C10.75 8.9 11.4 7.82 11.4 6.6C11.4 4.72 9.88 3.2 8 3.2Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.8 12.8H9.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+  '从灵感库选择': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.2C6.12 3.2 4.6 4.72 4.6 6.6C4.6 7.82 5.25 8.9 6.2 9.5V11C6.2 11.22 6.38 11.4 6.6 11.4H9.4C9.62 11.4 9.8 11.22 9.8 11V9.5C10.75 8.9 11.4 7.82 11.4 6.6C11.4 4.72 9.88 3.2 8 3.2Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.8 12.8H9.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
+  '上传媒体或文件': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
+  'Upload media or files': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
+  'Choose from asset library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'Choose from product library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2L2 5v8.5A1.5 1.5 0 003.5 15h9A1.5 1.5 0 0014 13.5V5L12 2H4z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5h12M10 7.5a2 2 0 01-4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  'Choose from inspiration library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.2C6.12 3.2 4.6 4.72 4.6 6.6C4.6 7.82 5.25 8.9 6.2 9.5V11C6.2 11.22 6.38 11.4 6.6 11.4H9.4C9.62 11.4 9.8 11.22 9.8 11V9.5C10.75 8.9 11.4 7.82 11.4 6.6C11.4 4.72 9.88 3.2 8 3.2Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.8 12.8H9.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>',
 
   'compact': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2H12.5M3.5 14H12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 3.8V6.8M8 12.2V9.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M5.8 5.6L8 7.2L10.2 5.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.8 10.4L8 8.8L10.2 10.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   '压缩历史': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2H12.5M3.5 14H12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 3.8V6.8M8 12.2V9.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M5.8 5.6L8 7.2L10.2 5.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.8 10.4L8 8.8L10.2 10.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -683,16 +722,28 @@ export const installMenuIconsAutoSync = installMenuAutoSync
 export const COMMAND_I18N = {
   zh: {
     'add-file': {
-      name: '添加文件',
+      name: '上传媒体或文件',
       icon: 'add-file',
       description: '从本地选择文件或图片',
-      keywords: ['文件', '添加', 'wenjian', 'tianjia', 'file', 'upload', 'add-file', 'addfile', 'add'],
+      keywords: ['文件', '添加', '上传', '媒体', 'wenjian', 'tianjia', 'file', 'upload', 'add-file', 'addfile', 'add'],
     },
     'add-from-library': {
-      name: '从资产库添加',
+      name: '从资产库选择',
       icon: 'add-from-library',
       description: '从统一资产库选择素材',
       keywords: ['资产', '素材', '资产库', '素材库', 'zichan', 'sucai', 'library', 'add-from-library'],
+    },
+    'add-from-product': {
+      name: '从商品库选择',
+      icon: 'add-from-product',
+      description: '从商品库选择要介绍的商品',
+      keywords: ['商品', '产品', '商品库', '产品库', 'shangpin', 'chanpin', 'product', 'add-from-product'],
+    },
+    'add-from-inspiration': {
+      name: '从灵感库选择',
+      icon: 'add-from-inspiration',
+      description: '从灵感库选择参考作品',
+      keywords: ['灵感', '灵感库', 'linggan', 'inspiration', 'add-from-inspiration'],
     },
     'compact': {
       name: '压缩历史',
@@ -733,16 +784,28 @@ export const COMMAND_I18N = {
   },
   en: {
     'add-file': {
-      name: 'add-file',
+      name: 'Upload media or files',
       icon: 'add-file',
       description: 'Add files',
       keywords: ['file', 'upload', 'add'],
     },
     'add-from-library': {
-      name: 'add-from-library',
+      name: 'Choose from asset library',
       icon: 'add-from-library',
-      description: 'Add from library',
+      description: 'Choose from the asset library',
       keywords: ['library', 'asset', 'add'],
+    },
+    'add-from-product': {
+      name: 'Choose from product library',
+      icon: 'add-from-product',
+      description: 'Choose a product to feature',
+      keywords: ['product', 'catalog', 'add'],
+    },
+    'add-from-inspiration': {
+      name: 'Choose from inspiration library',
+      icon: 'add-from-inspiration',
+      description: 'Choose a reference work',
+      keywords: ['inspiration', 'library', 'add'],
     },
     'compact': {
       name: 'compact',
@@ -793,13 +856,22 @@ export const ZH_NAME_TO_RAW = Object.freeze(
 )
 
 /**
+ * Reverse lookup dictionary: English display name -> canonical raw command name.
+ */
+export const EN_NAME_TO_RAW = Object.freeze(
+  Object.fromEntries(
+    Object.entries(COMMAND_I18N.en).map(([raw, conf]) => [conf.name, raw])
+  )
+)
+
+/**
  * Resolve canonical raw command name from any alias or localized display name.
  * @param {string} name
  * @returns {string}
  */
 export function resolveRawCommandName(name) {
   if (!name || typeof name !== 'string') return name || ''
-  return ZH_NAME_TO_RAW[name] || name
+  return ZH_NAME_TO_RAW[name] || EN_NAME_TO_RAW[name] || name
 }
 
 /**
@@ -953,13 +1025,14 @@ export function triggerNativeFileInput(doc = typeof document !== 'undefined' ? d
 
 /**
  * Whitelist of commands allowed in the composer "+" / slash menu.
- * Only 'add-file', 'add-from-library', and 'plan' are retained;
+ * Only the four plus-menu commands are retained;
  * all other native host commands are concealed to keep the menu clean and focused.
  */
 export const ALLOWED_COMMAND_NAMES = Object.freeze(new Set([
   'add-file',
   'add-from-library',
-  'plan',
+  'add-from-product',
+  'add-from-inspiration',
 ]))
 
 /**
@@ -980,7 +1053,7 @@ export function enhanceCommandCandidates(allRows, req, locale) {
   })
   const baseRows = hasAddFile
     ? allRows
-    : [{ name: 'add-file', description: '添加文件 / Add files' }, ...allRows]
+    : [{ name: 'add-file', description: '上传媒体或文件 / Upload media or files' }, ...allRows]
 
   // 1. Filter by allowed command whitelist
   const allowedRows = baseRows.filter((row) => {

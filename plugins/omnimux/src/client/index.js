@@ -21,6 +21,7 @@ import { HeroBrandMark } from './HeroBrandMark.jsx'
 import { installHeroBrandSlot } from './hero-brand.js'
 import { installStatsLineShadow } from './stats-line-shadow.js'
 import { AttachmentTray } from './attachments/AttachmentTray.tsx'
+import { NativeComposerBridge } from './attachments/NativeComposerBridge.tsx'
 import { getGlobalAttachmentStore } from './attachments/store.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installWebSocketHmr } from '../hmr/client.js'
@@ -32,8 +33,6 @@ import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.js
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
-import { ProductPickerButton } from './components/product-picker/index.js'
-import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
@@ -79,19 +78,6 @@ export function apply(ctx) {
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-    name: 'conversation.input.left',
-    id: 'omnimux-composer-product-picker-button',
-    order: 15,
-    locale: NS,
-    inject: () => ({ t }),
-  }, ProductPickerButton))
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-    name: 'conversation.input.left',
-    id: 'omnimux-creative-presets-triggers',
-    order: 30,
-    locale: NS,
-  }, ComposerPresetsTriggers))
   // Optional session warmup: fill the status cache so the first sidebar
   // click can take the sync short path. Not a startup gate — fire-and-forget,
   // never setState, never block apply().
@@ -188,14 +174,20 @@ export function apply(ctx) {
     locale: NS,
     inject: () => ({ workbench: guideFace.workbench }),
   }, ComposerModeTabs))
-  // 全平台通用「添加到会话」附件附着槽 (挂载至输入框内侧 conversation.input.attachments)
-  // Official `dsh-client-ui-attachment` already occupies this single cell at
-  // default priority 0. Shadow it with a lower priority so OmniMux wins
-  // (lowest renders) instead of failing the client Loader.
+  // Visible tray sits above the composer. The official inner seat still
+  // receives native uploads through a silent bridge so Host drop/file
+  // callbacks keep working without drawing a second tray inside the card.
   const attachmentStore = getGlobalAttachmentStore()
   mountFormsBridge(ctx, attachmentStore)
   const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore })
   ctx.effect(() => () => { attachmentAdmission.dispose() }, 'omnimux: attachment admission')
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock',
+    id: 'omnimux-attachment-tray',
+    order: 118,
+    locale: NS,
+    inject: () => ({ getSessions: () => guideSessions }),
+  }, AttachmentTray))
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
     inject: () => ({ attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
@@ -211,11 +203,10 @@ export function apply(ctx) {
   }), 'omnimux: replicate skill release')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
-    id: 'omnimux-attachment-tray',
+    id: 'omnimux-native-composer-bridge',
     priority: -10,
     locale: NS,
-    inject: () => ({ getSessions: () => guideSessions }),
-  }, AttachmentTray))
+  }, NativeComposerBridge))
 
   ctx.effect(() => {
     const eventsClient = createEventsClient()

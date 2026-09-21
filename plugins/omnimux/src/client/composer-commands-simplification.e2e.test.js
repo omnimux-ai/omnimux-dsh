@@ -11,9 +11,11 @@ import {
   installComposerAddCommands,
   FILE_COMMAND,
   LIBRARY_COMMAND,
+  PRODUCT_COMMAND,
+  INSPIRATION_COMMAND,
 } from './composer-add/commands.js'
 
-describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三项收敛', () => {
+describe('e2e: 会话输入框原生回形针隐藏与加号菜单四项收敛', () => {
   it('注入样式表中必须包含隐藏原生回形针图标的 CSS 规则', () => {
     const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>')
     const doc = dom.window.document
@@ -26,7 +28,7 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     assert.match(css, /display:\s*none\s*!important/)
   })
 
-  it('点击「添加文件」菜单项能直接唤起输入框关联的原生文件选择器', () => {
+  it('点击「上传媒体或文件」菜单项能直接唤起输入框关联的原生文件选择器', () => {
     const dom = new JSDOM(`<!DOCTYPE html><html><body>
       <div data-composer-card>
         <input type="file" multiple style="display:none" />
@@ -45,10 +47,12 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     assert.equal(inputClicked, true)
   })
 
-  it('指令菜单仅严格保留添加文件、从资产库添加、计划模式三项，全量过滤原生底层指令', () => {
+  it('指令菜单仅严格保留加号四项，全量过滤原生底层指令', () => {
     const allHostRows = [
-      { name: 'add-file', description: '添加文件 / Add files' },
-      { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+      { name: 'add-file', description: '上传媒体或文件 / Add files' },
+      { name: 'add-from-library', description: '从资产库选择 / Add from library' },
+      { name: 'add-from-product', description: '从商品库选择 / Choose from product library' },
+      { name: 'add-from-inspiration', description: '从灵感库选择 / Choose from inspiration library' },
       { name: 'compact', description: '压缩较早的历史对话上下文' },
       { name: 'feedback', description: '记录本轮会话评价或问题' },
       { name: 'permission', description: '切换运行权限预设 (沙箱/免审批)' },
@@ -60,25 +64,20 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     const zhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
     const result = enhanceCommandCandidates(allHostRows, { query: '' }, zhLocale)
 
-    assert.equal(result.length, 3, '最终菜单条目必须严格为 3 项')
+    assert.equal(result.length, 4, '最终菜单条目必须严格为 4 项')
     assert.deepEqual(
       result.map((r) => r.name),
-      ['添加文件', '从资产库添加', '计划模式']
+      ['上传媒体或文件', '从资产库选择', '从商品库选择', '从灵感库选择']
     )
     assert.deepEqual(
       result.map((r) => r.rawName),
-      ['add-file', 'add-from-library', 'plan']
-    )
-    assert.deepEqual(
-      result.map((r) => r.icon),
-      ['add-file', 'add-from-library', 'plan']
+      ['add-file', 'add-from-library', 'add-from-product', 'add-from-inspiration']
     )
   })
 
-  it('当宿主尚未重启缺少 add-file 时，前端自愈补齐为添加文件、从资产库添加、计划模式 3 项', () => {
-    // 模拟底座 Host 尚未重启，宿主命令列表只有 add-from-library 与各类原生指令，缺少 add-file
+  it('当宿主尚未重启缺少 add-file 时，前端自愈补齐上传媒体或文件', () => {
     const legacyHostRowsWithoutAddFile = [
-      { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+      { name: 'add-from-library', description: '从资产库选择 / Add from library' },
       { name: 'compact', description: '压缩历史' },
       { name: 'plan', description: '开启或退出长任务计划模式' },
       { name: 'fast', description: '切换 Codex 速度档' },
@@ -88,15 +87,13 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     const zhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
     const result = enhanceCommandCandidates(legacyHostRowsWithoutAddFile, { query: '' }, zhLocale)
 
-    assert.equal(result.length, 3, '即便宿主缺 add-file，前端自愈补齐后必须严格为 3 项')
-    assert.deepEqual(
-      result.map((r) => r.name),
-      ['添加文件', '从资产库添加', '计划模式']
-    )
+    assert.equal(result[0].rawName, 'add-file')
+    assert.equal(result[0].name, '上传媒体或文件')
     assert.equal(result[0].icon, 'add-file')
+    assert.ok(result.every((row) => row.rawName !== 'plan'))
   })
 
-  it('集成验证：installComposerAddCommands 同时注册添加文件与资产库两个动作并可调用', () => {
+  it('集成验证：installComposerAddCommands 同时注册上传媒体或文件与资产库两个动作并可调用', () => {
     const decorations = new Map()
     const ctx = {
       commandUi: {
@@ -110,17 +107,25 @@ describe('e2e: 会话输入框原生添加文件图标隐藏与指令菜单三�
     const stop = installComposerAddCommands(ctx, {
       openLibrary(id) { calls.push(['library', id]) },
       openFile(id) { calls.push(['file', id]) },
+      openProduct(id) { calls.push(['product', id]) },
+      openInspiration(id) { calls.push(['inspiration', id]) },
     })
 
     assert.ok(decorations.has(FILE_COMMAND), '必须注册 add-file 装饰动作')
     assert.ok(decorations.has(LIBRARY_COMMAND), '必须注册 add-from-library 装饰动作')
+    assert.ok(decorations.has(PRODUCT_COMMAND), '必须注册 add-from-product 装饰动作')
+    assert.ok(decorations.has(INSPIRATION_COMMAND), '必须注册 add-from-inspiration 装饰动作')
 
     decorations.get(FILE_COMMAND).ui.run({ sessionId: 'session-1' })
     decorations.get(LIBRARY_COMMAND).ui.run({ sessionId: 'session-1' })
+    decorations.get(PRODUCT_COMMAND).ui.run({ sessionId: 'session-1' })
+    decorations.get(INSPIRATION_COMMAND).ui.run({ sessionId: 'session-1' })
 
     assert.deepEqual(calls, [
       ['file', 'session-1'],
       ['library', 'session-1'],
+      ['product', 'session-1'],
+      ['inspiration', 'session-1'],
     ])
     stop()
     assert.equal(decorations.size, 0)

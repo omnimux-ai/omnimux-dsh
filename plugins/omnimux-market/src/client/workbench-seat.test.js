@@ -31,7 +31,7 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /PLAZA_TAB_ID/)
   })
 
-  it.skip('registers the composer Skill picker on conversation.input.left', () => {
+  it('registers the composer Skill picker on conversation.input.left', () => {
     const source = readFileSync(join(here, 'apply.js'), 'utf8')
     assert.match(source, /conversation\.input\.left/)
     assert.match(source, /omnimux-market-skill-picker/)

@@ -1,9 +1,10 @@
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
 
 /**
  * @typedef {import('../attachments/store.ts').AttachmentStore} AttachmentStore
  * @typedef {{ ok: boolean, status: number, body: object }} JsonResponse
- * @typedef {{ id: number, sessionId: string, kind: 'library', importing: boolean, selection: AbortController }} Operation
+ * @typedef {{ id: number, sessionId: string, kind: 'library' | 'product' | 'inspiration', importing: boolean, selection: AbortController }} Operation
  */
 
 /** Reads JSON through the Host attachment seam without assuming a response shape. */
@@ -52,7 +53,40 @@ export function createComposerAddController(options) {
     return !usableSession(current) || current === operation.sessionId
   }
   const rowsFor = (sessionId) => store.getSnapshot(sessionId)
-  const entityIds = (sessionId) => new Set(rowsFor(sessionId).map(row => row.entityId).filter(Boolean))
+
+  function makeFingerprint(row) {
+    if (!row) return ''
+    const sourcePlugin = row.sourcePlugin || ''
+    const kind = row.kind || ''
+    const entityId = row.entityId || row.id || ''
+    return `${sourcePlugin}:${kind}:${entityId}`
+  }
+
+  function alreadyIdsFor(operation) {
+    const rows = rowsFor(operation.sessionId)
+    if (operation.kind === 'product') {
+      return new Set(
+        rows
+          .filter(r => r.sourcePlugin === 'omnimux-products' || r.kind === 'product')
+          .map(r => r.entityId)
+          .filter(Boolean),
+      )
+    }
+    if (operation.kind === 'inspiration') {
+      return new Set(
+        rows
+          .filter(r => r.sourcePlugin === 'omnimux-inspiration')
+          .map(r => r.entityId)
+          .filter(Boolean),
+      )
+    }
+    return new Set(
+      rows
+        .filter(r => r.sourcePlugin === 'omnimux' || r.sourcePlugin === 'omnimux-assets' || r.kind === 'asset')
+        .map(r => r.entityId)
+        .filter(Boolean),
+    )
+  }
 
   function summary(counts) {
     const parts = []
@@ -74,14 +108,25 @@ export function createComposerAddController(options) {
     if (restore) options.restoreFocus?.(operation.sessionId)
   }
 
+  function confirmFor(operation) {
+    if (operation.kind === 'product') {
+      return (picked) => confirmDirect(operation, normalizeProductPicked(picked), mapProductAttachment)
+    }
+    if (operation.kind === 'inspiration') {
+      return (picked) => confirmDirect(operation, Array.isArray(picked) ? picked : [picked], mapInspirationAttachment)
+    }
+    return (picked) => confirmLibrary(operation, picked)
+  }
+
   function render(operation) {
     if (!visible(operation)) return
     renderLibrary({
       key: operation.id,
+      kind: operation.kind,
       occupied: rowsFor(operation.sessionId).length,
-      alreadyIds: entityIds(operation.sessionId),
+      alreadyIds: alreadyIdsFor(operation),
       onClose: () => close(operation, true),
-      onConfirm: (picked) => confirmLibrary(operation, picked),
+      onConfirm: confirmFor(operation),
     })
   }
 
@@ -98,7 +143,7 @@ export function createComposerAddController(options) {
     return usableSession(current) ? current : null
   }
 
-  function begin(sessionId) {
+  function begin(sessionId, kind = 'library') {
     if (disposed) return null
     const target = resolveSessionId(sessionId)
     if (!target) {
@@ -118,7 +163,7 @@ export function createComposerAddController(options) {
       notify(text('composerAdd.toast.quota'))
       return null
     }
-    const operation = { id: ++revision, sessionId: target, kind: 'library', importing: false, selection: new AbortController() }
+    const operation = { id: ++revision, sessionId: target, kind, importing: false, selection: new AbortController() }
     owner = operation
     options.onBegin?.()
     stopAttachments = store.subscribe(target, () => render(operation))
@@ -127,14 +172,17 @@ export function createComposerAddController(options) {
 
   function addResults(operation, items, counts) {
     if (disposed) return counts
-    const known = entityIds(operation.sessionId)
+    const knownFp = new Set(rowsFor(operation.sessionId).map(makeFingerprint))
     for (const item of items) {
       if (!item || item.ok !== true) {
         counts.failed += 1
         continue
       }
-      const id = item.entityId || item.sourcePath
-      if (id && known.has(id)) {
+      const id = item.entityId || item.sourcePath || item.relativePath
+      const sourcePlugin = item.sourcePlugin || 'omnimux'
+      const kind = item.kind || inferKindFromName(item.title, item.relativePath)
+      const fp = makeFingerprint({ sourcePlugin, kind, entityId: id })
+      if (id && knownFp.has(fp)) {
         counts.duplicate += 1
         continue
       }
@@ -142,9 +190,9 @@ export function createComposerAddController(options) {
         ...(Array.isArray(item.files) ? { files: item.files } : {}),
       }
       const result = store.addAttachment(operation.sessionId, {
-        sourcePlugin: 'omnimux',
-        kind: item.kind || inferKindFromName(item.title, item.relativePath),
-        entityId: id || item.relativePath,
+        sourcePlugin,
+        kind,
+        entityId: id,
         title: item.title,
         extension: item.extension,
         relativePath: item.relativePath,
@@ -153,7 +201,7 @@ export function createComposerAddController(options) {
       })
       if (result.ok) {
         counts.added += 1
-        if (id) known.add(id)
+        knownFp.add(fp)
       } else if (result.reason === 'duplicate') counts.duplicate += 1
       else if (result.reason === 'quota-exceeded') counts.quota += 1
       else counts.failed += 1
@@ -163,9 +211,22 @@ export function createComposerAddController(options) {
 
   async function confirmLibrary(operation, picked) {
     if (!visible(operation) || operation.importing) return
-    const known = entityIds(operation.sessionId)
-    const remaining = Math.max(0, MAX_ATTACHMENTS - rowsFor(operation.sessionId).length)
-    const assetIds = [...new Set(picked.map(row => row.id))].filter(id => !known.has(id)).slice(0, remaining)
+    const currentRows = rowsFor(operation.sessionId)
+    const knownFp = new Set(currentRows.map(makeFingerprint))
+    const totalRemaining = Math.max(0, MAX_ATTACHMENTS - currentRows.length)
+    const uniquePicked = [...new Set(picked.map(row => row.id))].filter(Boolean)
+    const nonDuplicates = uniquePicked.filter(id => {
+      const fp1 = makeFingerprint({ sourcePlugin: 'omnimux', kind: 'asset', entityId: id })
+      const fp2 = makeFingerprint({ sourcePlugin: 'omnimux-assets', kind: 'asset', entityId: id })
+      return !knownFp.has(fp1) && !knownFp.has(fp2)
+    })
+    if (!nonDuplicates.length) {
+      if (uniquePicked.length > 0 && totalRemaining > 0) {
+        throw new Error(text('composerAdd.toast.duplicate', { n: uniquePicked.length }))
+      }
+      throw new Error(text('composerAdd.toast.quota'))
+    }
+    const assetIds = nonDuplicates.slice(0, totalRemaining)
     if (!assetIds.length) throw new Error(text('composerAdd.toast.quota'))
     operation.importing = true
     importingSessions.add(operation.sessionId)
@@ -191,6 +252,92 @@ export function createComposerAddController(options) {
     }
   }
 
+  function normalizeProductPicked(picked) {
+    if (!picked) return []
+    return Array.isArray(picked) ? picked : [picked]
+  }
+
+  function mapProductAttachment(product) {
+    if (!product || !product.id) return null
+    return {
+      sourcePlugin: 'omnimux-products',
+      kind: 'product',
+      entityId: String(product.id),
+      title: String(product.name || product.title || '产品'),
+      extension: 'JSON',
+      relativePath: `products/${product.id}.json`,
+      previewUrl: resolveProductPreview(product),
+      metadata: {
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          sku: product.sku,
+          brand: product.brand,
+          description: product.description,
+          selling_points: product.selling_points,
+          features: product.features,
+          target_audience: product.target_audience,
+        },
+      },
+    }
+  }
+
+  function mapInspirationAttachment(item) {
+    if (!item || !item.id) return null
+    return {
+      sourcePlugin: 'omnimux-inspiration',
+      kind: item.kind === 'video' ? 'video' : 'image',
+      entityId: String(item.id),
+      title: String(item.title || item.name || item.id),
+      previewUrl: item.previewUrl || '',
+      metadata: {
+        inspiration: {
+          id: item.id,
+          is_local: Boolean(item.is_local),
+          category: item.category || '',
+        },
+      },
+    }
+  }
+
+  function confirmDirect(operation, picked, mapper) {
+    if (!visible(operation) || operation.importing) return
+    const currentRows = rowsFor(operation.sessionId)
+    const knownFp = new Set(currentRows.map(makeFingerprint))
+    const totalRemaining = Math.max(0, MAX_ATTACHMENTS - currentRows.length)
+    const rawPayloads = picked.map(mapper).filter(Boolean)
+    const nonDuplicates = rawPayloads.filter((payload) => !knownFp.has(makeFingerprint(payload)))
+    if (!nonDuplicates.length) {
+      if (rawPayloads.length > 0 && totalRemaining > 0) {
+        notify(text('composerAdd.toast.duplicate', { n: rawPayloads.length }))
+      } else {
+        notify(text('composerAdd.toast.quota'))
+      }
+      return
+    }
+    const payloads = nonDuplicates.slice(0, totalRemaining)
+    if (!payloads.length) {
+      notify(text('composerAdd.toast.quota'))
+      return
+    }
+    const counts = { added: 0, duplicate: 0, quota: 0, failed: 0 }
+    for (const payload of payloads) {
+      const result = store.addAttachment(operation.sessionId, payload)
+      if (result.ok) counts.added += 1
+      else if (result.reason === 'duplicate') counts.duplicate += 1
+      else if (result.reason === 'quota-exceeded') counts.quota += 1
+      else counts.failed += 1
+    }
+    notify(summary(counts))
+    if (counts.added) close(operation, true)
+  }
+
+  function openKind(sessionId, kind) {
+    const operation = begin(sessionId, kind)
+    if (operation) render(operation)
+  }
+
   const stopSession = options.subscribeCurrentSession(() => {
     const current = getCurrentSessionId()
     if (owner && usableSession(current) && current !== owner.sessionId) close(owner)
@@ -198,8 +345,13 @@ export function createComposerAddController(options) {
 
   return {
     openLibrary(sessionId) {
-      const operation = begin(sessionId)
-      if (operation) render(operation)
+      openKind(sessionId, 'library')
+    },
+    openProduct(sessionId) {
+      openKind(sessionId, 'product')
+    },
+    openInspiration(sessionId) {
+      openKind(sessionId, 'inspiration')
     },
     dispose() {
       if (disposed) return

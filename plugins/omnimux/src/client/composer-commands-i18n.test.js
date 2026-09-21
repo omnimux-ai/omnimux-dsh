@@ -55,10 +55,10 @@ test('isZhLocale & getActiveLang', () => {
 })
 
 test('splitBilingualDescription splits slash copy', () => {
-  assert.equal(splitBilingualDescription('添加文件 / Add files', 'zh'), '添加文件')
-  assert.equal(splitBilingualDescription('添加文件 / Add files', 'en'), 'Add files')
-  assert.equal(splitBilingualDescription('从资产库添加 / Add from library', 'zh'), '从资产库添加')
-  assert.equal(splitBilingualDescription('从资产库添加 / Add from library', 'en'), 'Add from library')
+  assert.equal(splitBilingualDescription('上传媒体或文件 / Add files', 'zh'), '上传媒体或文件')
+  assert.equal(splitBilingualDescription('上传媒体或文件 / Add files', 'en'), 'Add files')
+  assert.equal(splitBilingualDescription('从资产库选择 / Add from library', 'zh'), '从资产库选择')
+  assert.equal(splitBilingualDescription('从资产库选择 / Add from library', 'en'), 'Add from library')
   assert.equal(splitBilingualDescription('纯中文描述', 'zh'), '纯中文描述')
   assert.equal(splitBilingualDescription('Pure English', 'en'), 'Pure English')
 })
@@ -132,7 +132,10 @@ test('resolveCommandDisplayName localizes command names on the left', () => {
   const enLocale = { getSnapshot: () => ({ active: 'en-US' }) }
 
   // Chinese locale: left names become Chinese
-  assert.equal(resolveCommandDisplayName('add-from-library', zhLocale), '从资产库添加')
+  assert.equal(resolveCommandDisplayName('add-file', zhLocale), '上传媒体或文件')
+  assert.equal(resolveCommandDisplayName('add-from-library', zhLocale), '从资产库选择')
+  assert.equal(resolveCommandDisplayName('add-from-product', zhLocale), '从商品库选择')
+  assert.equal(resolveCommandDisplayName('add-from-inspiration', zhLocale), '从灵感库选择')
   assert.equal(resolveCommandDisplayName('compact', zhLocale), '压缩历史')
   assert.equal(resolveCommandDisplayName('feedback', zhLocale), '会话反馈')
   assert.equal(resolveCommandDisplayName('permission', zhLocale), '权限预设')
@@ -140,8 +143,8 @@ test('resolveCommandDisplayName localizes command names on the left', () => {
   assert.equal(resolveCommandDisplayName('goal', zhLocale), '任务目标')
   assert.equal(resolveCommandDisplayName('export', zhLocale), '导出日志')
 
-  // English locale: left names stay canonical English
-  assert.equal(resolveCommandDisplayName('add-from-library', enLocale), 'add-from-library')
+  // English locale: left names use English display copy
+  assert.equal(resolveCommandDisplayName('add-from-library', enLocale), 'Choose from asset library')
   assert.equal(resolveCommandDisplayName('compact', enLocale), 'compact')
   assert.equal(resolveCommandDisplayName('plan', enLocale), 'plan')
 
@@ -150,7 +153,7 @@ test('resolveCommandDisplayName localizes command names on the left', () => {
 })
 
 test('resolveRawCommandName reverses Chinese name to canonical name', () => {
-  assert.equal(resolveRawCommandName('从资产库添加'), 'add-from-library')
+  assert.equal(resolveRawCommandName('从资产库选择'), 'add-from-library')
   assert.equal(resolveRawCommandName('压缩历史'), 'compact')
   assert.equal(resolveRawCommandName('计划模式'), 'plan')
   assert.equal(resolveRawCommandName('add-from-library'), 'add-from-library')
@@ -159,8 +162,8 @@ test('resolveRawCommandName reverses Chinese name to canonical name', () => {
 
 test('enhanceCommandCandidates binds icons to every candidate', () => {
   const allRows = [
-    { name: 'add-file', description: '添加文件 / Add files' },
-    { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+    { name: 'add-file', description: '上传媒体或文件 / Add files' },
+    { name: 'add-from-library', description: '从资产库选择 / Add from library' },
     { name: 'plan', description: 'Enter or leave plan mode' },
     { name: 'compact', description: 'Compact older conversation history' },
     { name: 'goal', description: 'set or view the goal' },
@@ -168,29 +171,27 @@ test('enhanceCommandCandidates binds icons to every candidate', () => {
   const zhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
 
   const zhList = enhanceCommandCandidates(allRows, { query: '' }, zhLocale)
-  assert.equal(zhList.length, 3)
-  assert.equal(zhList[0].name, '添加文件')
+  assert.equal(zhList.length, 2)
+  assert.equal(zhList[0].name, '上传媒体或文件')
   assert.equal(zhList[0].icon, 'add-file')
-  assert.equal(zhList[1].name, '从资产库添加')
+  assert.equal(zhList[1].name, '从资产库选择')
   assert.equal(zhList[1].icon, 'add-from-library')
-  assert.equal(zhList[2].name, '计划模式')
-  assert.equal(zhList[2].icon, 'plan')
 })
 
 test('scoreCommandCandidate handles Chinese name, English rawName, prefix, keyword and fuzzy queries', () => {
   const candidate = {
-    name: '添加文件',
+    name: '从资产库选择',
     rawName: 'add-from-library',
     icon: 'add-from-library',
     description: '从统一资产库选择素材',
   }
 
   // Exact Chinese name
-  assert.equal(scoreCommandCandidate(candidate, '添加文件', 'zh'), 1000)
+  assert.equal(scoreCommandCandidate(candidate, '从资产库选择', 'zh'), 1000)
   // Exact English rawName
   assert.equal(scoreCommandCandidate(candidate, 'add-from-library', 'zh'), 1000)
   // Chinese prefix
-  assert(scoreCommandCandidate(candidate, '添加', 'zh') > 500)
+  assert(scoreCommandCandidate(candidate, '从资产', 'zh') > 500)
   // English prefix
   assert(scoreCommandCandidate(candidate, 'add', 'zh') > 400)
   // Keywords
@@ -202,8 +203,8 @@ test('scoreCommandCandidate handles Chinese name, English rawName, prefix, keywo
 
 test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwraps names', async () => {
   const rawRows = [
-    { name: 'add-file', description: '添加文件 / Add files' },
-    { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+    { name: 'add-file', description: '上传媒体或文件 / Add files' },
+    { name: 'add-from-library', description: '从资产库选择 / Add from library' },
     { name: 'compact', description: 'Compact older conversation history' },
     { name: 'plan', description: 'Enter or leave plan mode' },
   ]
@@ -232,18 +233,14 @@ test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwra
 
   const dispose = wrapCommandUi(fakeCommandUi, fakeLocale)
 
-  // 1. Test candidates yield Chinese names on left and icons (only allowed: add-file, add-from-library, plan)
   const res = await fakeCommandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.equal(res.length, 3)
-  assert.equal(res[0].name, '添加文件')
+  assert.equal(res.length, 2)
+  assert.equal(res[0].name, '上传媒体或文件')
   assert.equal(res[0].rawName, 'add-file')
   assert.equal(res[0].icon, 'add-file')
-  assert.equal(res[1].name, '从资产库添加')
+  assert.equal(res[1].name, '从资产库选择')
   assert.equal(res[1].rawName, 'add-from-library')
   assert.equal(res[1].icon, 'add-from-library')
-  assert.equal(res[2].name, '计划模式')
-  assert.equal(res[2].rawName, 'plan')
-  assert.equal(res[2].icon, 'plan')
 
   // 2. Test dispatch unwraps Chinese name to rawName
   fakeCommandUi.dispatch({
@@ -258,8 +255,8 @@ test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwra
   })
   assert.equal(dispatchedPick.candidate.name, 'add-from-library')
 
-  // 3. Test matchSpace maps "/从资产库添加 " to "/add-from-library"
-  fakeCommandUi.matchSpace({ sessionId: 's1' }, '/从资产库添加')
+  // 3. Test matchSpace maps "/从资产库选择 " to "/add-from-library"
+  fakeCommandUi.matchSpace({ sessionId: 's1' }, '/从资产库选择')
   assert.equal(matchedSpaceToken, '/add-from-library')
 
   // 4. Test matchEnter maps "/计划模式 off" to "/plan off"
@@ -268,8 +265,8 @@ test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwra
 
   // 5. Test dispose restores original methods
   dispose()
-  assert.equal(fakeCommandUi.dispatch({ candidate: { name: '从资产库添加' } }), 'handled')
-  assert.equal(dispatchedPick.candidate.name, '从资产库添加')
+  assert.equal(fakeCommandUi.dispatch({ candidate: { name: '从资产库选择' } }), 'handled')
+  assert.equal(dispatchedPick.candidate.name, '从资产库选择')
 })
 
 test('syncMenuIcons injects matching SVG icons to menu option buttons', () => {
@@ -281,7 +278,7 @@ test('syncMenuIcons injects matching SVG icons to menu option buttons', () => {
         <span class="iRJKyq_itemDescription">压缩较早的历史对话上下文</span>
       </button>
       <button role="option">
-        <span class="iRJKyq_itemName">从资产库添加</span>
+        <span class="iRJKyq_itemName">从资产库选择</span>
       </button>
       <button role="option">
         <span class="iRJKyq_itemName">未知命令</span>
@@ -304,7 +301,7 @@ test('syncMenuIcons injects matching SVG icons to menu option buttons', () => {
   const icon2 = buttons[1].querySelector('.iRJKyq_itemIcon')
   assert.ok(icon2)
   assert.ok(icon2.innerHTML.includes('<svg'))
-  assert.equal(icon2.dataset.iconCommand, '从资产库添加')
+  assert.equal(icon2.dataset.iconCommand, '从资产库选择')
 
   // Button 3: unknown command remains untouched
   const icon3 = buttons[2].querySelector('.iRJKyq_itemIcon')
@@ -466,7 +463,7 @@ test('bottom composer leftover overlay still leaves the menu clickable', () => {
     <div data-composer-card>
       <div class="overlayAnchor" data-overlay-placement="bottom" style="pointer-events:none">
         <div data-trigger-menu class="iRJKyq_menu" style="pointer-events:none">
-          <button role="option"><span class="iRJKyq_itemName">从资产库添加</span></button>
+          <button role="option"><span class="iRJKyq_itemName">从资产库选择</span></button>
         </div>
       </div>
     </div>
@@ -496,7 +493,7 @@ test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
         <div class="overlayAnchor">
           <div class="_1q_ULW_card">
             <button role="option">
-              <span class="iRJKyq_itemName">从资产库添加</span>
+              <span class="iRJKyq_itemName">从资产库选择</span>
             </button>
           </div>
           <div data-trigger-menu class="iRJKyq_menu"></div>
@@ -625,7 +622,7 @@ test('wrapCommandUi normalizes contributions registered after the wrapper (compo
   // The host's candidate synthesis must now complete instead of throwing, and
   // non-whitelisted commands (like fast) are filtered out, keeping only allowed commands (add-file, add-from-library).
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['上传媒体或文件', '从资产库选择'])
   assert.equal(rows[0].rawName, 'add-file')
   assert.equal(rows[0].description, '从本地选择文件或图片')
   assert.equal(rows[1].rawName, 'add-from-library')
@@ -648,7 +645,7 @@ test('wrapCommandUi repairs a contribution registered before the wrapper (load-o
 
   const dispose = wrapCommandUi(commandUi, fakeZhLocale)
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['上传媒体或文件', '从资产库选择'])
   assert.equal(typeof commandUi.live.contributions.get('fast').description, 'function')
   dispose()
 })
@@ -667,7 +664,7 @@ test('wrapCommandUi leaves compliant contributions and non-contract failures alo
   assert.equal(commandUi.live.contributions.get('model'), compliant)
 
   const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(rows.map((row) => row.name), ['添加文件', '从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['上传媒体或文件', '从资产库选择'])
 
   // An unrelated host failure must still surface through the same channel it
   // always did (the localized pass is attempted once, then the raw pass runs).
@@ -797,18 +794,18 @@ test('wrapCommandUi keeps the host receiver so dispatch resolves its own dotted 
   // Localization and pinyin/English search still come from the candidate pass,
   // and the dispatch mapping still unwraps the localized name.
   const rows = await instance.candidates({ sessionId: 's1' }, { query: 'zichan' })
-  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库选择'])
   assert.equal(rows[0].rawName, 'add-from-library')
 
   // The candidate pass itself must run against the host receiver as well,
   // and allowed commands (add-file, add-from-library) remain visible.
   const all = await instance.candidates({ sessionId: 's1' }, { query: '' })
-  assert.deepEqual(all.map((row) => row.name), ['添加文件', '从资产库添加'])
+  assert.deepEqual(all.map((row) => row.name), ['上传媒体或文件', '从资产库选择'])
 
   // Every wrapper forwards the host receiver — each host method still sees the service.
   seenReceivers.length = 0
   await instance.candidates({ sessionId: 's1' }, { query: '' })
-  instance.matchSpace({ sessionId: 's1' }, '/从资产库添加')
+  instance.matchSpace({ sessionId: 's1' }, '/从资产库选择')
   assert.equal(await instance.matchEnter({ sessionId: 's1' }, '/计划模式 off'), 'enter')
   instance.register({ name: 'probe', description: () => '' })
   assert.deepEqual(seenReceivers, [instance, instance, instance, instance])
@@ -1038,4 +1035,27 @@ test('wrapInputTriggersSkills hooks existing and newly registered skill trigger 
   // 3. Disposer restores cleanly
   dispose()
   assert.equal(typeof activeSkill.candidates, 'function')
+})
+
+test('add-from-product uses dedicated product icon instead of library icon', () => {
+  assert.notEqual(COMMAND_ICONS['add-from-product'], renderLibraryIcon)
+  assert.equal(typeof COMMAND_ICONS['add-from-product'], 'function')
+})
+
+test('syncMenuIcons handles English command names seamlessly', () => {
+  const dom = new JSDOM(`
+    <div class="menu">
+      <button role="option"><span class="iRJKyq_itemName">Choose from asset library</span></button>
+      <button role="option"><span class="iRJKyq_itemName">Choose from product library</span></button>
+      <button role="option"><span class="iRJKyq_itemName">Choose from inspiration library</span></button>
+      <button role="option"><span class="iRJKyq_itemName">Upload media or files</span></button>
+    </div>
+  `)
+  const patched = syncMenuIcons(dom.window.document)
+  assert.equal(patched, 4)
+  const buttons = dom.window.document.querySelectorAll('button[role="option"]')
+  for (const btn of buttons) {
+    const icon = btn.querySelector('.iRJKyq_itemIcon')
+    assert.ok(icon && icon.innerHTML.includes('<svg'))
+  }
 })

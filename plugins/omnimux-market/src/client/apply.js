@@ -73,6 +73,17 @@
         { name: "settings.plugin.item", key: "omnimux-market", locale: "omnimux-market" },
         ConfigCard,
       ));
+      slots.inject("conversation.input.left", () => registerSlot(
+        slots,
+        {
+          name: "conversation.input.left",
+          id: "omnimux-market-skill-picker",
+          order: 10,
+          label: () => lookup("picker.title") || "Skill",
+          locale: "omnimux-market",
+        },
+        SkillPickerButton,
+      ));
 
       function mountSidebarEntry() {
         const SIDEBAR_ENTRY_STYLES = `
