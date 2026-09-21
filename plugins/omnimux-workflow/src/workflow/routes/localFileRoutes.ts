@@ -12,6 +12,7 @@ import {
 } from '../../shared/localMedia.ts';
 import { assertLocalWrite, jsonBodyProblem } from '../../http/helpers.ts';
 import { PickerError, pickNativePath } from '../picker.ts';
+import { browseDirectory } from '../browseDirectory.ts';
 import type { RouteTry, WorkflowDispatchRequest } from './dispatch.ts';
 
 const PROBE_LIMIT = 64;
@@ -99,6 +100,7 @@ function probeOne(rawPath: string): {
 export function createLocalFileRoutes(deps: LocalFileRouteDeps = {}): { tryHandle: RouteTry } {
   const picker = deps.picker ?? pickNativePath;
   const pickPath = `${WORKFLOW_ROUTE_PREFIX}/api/pick`;
+  const browsePath = `${WORKFLOW_ROUTE_PREFIX}/api/browse-directory`;
   const filePath = `${WORKFLOW_ROUTE_PREFIX}/api/local-file`;
   const probePath = `${WORKFLOW_ROUTE_PREFIX}/api/local-file/probe`;
 
@@ -128,6 +130,27 @@ export function createLocalFileRoutes(deps: LocalFileRouteDeps = {}): { tryHandl
           return jsonError(status, error.code, error.message);
         }
         return jsonError(500, 'picker-failed', error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    if (method === 'POST' && path === browsePath) {
+      const denied = guardLoopback(req);
+      if (denied) return denied;
+      const problem = jsonBodyProblem(req.body);
+      if (problem) return problem;
+      const body = (req.body ?? {}) as { path?: unknown };
+      try {
+        const listed = browseDirectory(body.path);
+        return { status: 200, body: listed };
+      } catch (error) {
+        const code = error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: string }).code || 'browse-failed')
+          : 'browse-failed';
+        const status = code === 'invalid-path' || code === 'not-directory' ? 400
+          : code === 'not-found' ? 404
+          : code === 'unreadable' || code === 'path-denied' ? 403
+          : 500;
+        return jsonError(status, code, error instanceof Error ? error.message : String(error));
       }
     }
 

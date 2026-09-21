@@ -69,7 +69,7 @@ export function mountNewProjectEntry(deps, t, locale) {
   paintLabel(entry, t('projects.newProject'))
   entry.addEventListener('click', () => {
     void promptNewProjectName(t, {
-      submit: (title) => runNewProject(deps, { title }),
+      submit: (title, extra = {}) => runNewProject(deps, { title, ...extra }),
     })
   })
 
