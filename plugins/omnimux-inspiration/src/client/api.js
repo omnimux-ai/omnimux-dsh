@@ -200,9 +200,12 @@ export async function loadInspirationsAtomic(params) {
     page_size: pageSize,
     projection: 'lean',
   }
-  // Cloud free-text categories are not tags on local rows. Never forward
-  // `category` to `/local` — including the local half of tab=all.
-  const cloudArgs = { ...sharedArgs, category: category.trim() || undefined }
+  // Official industry ids exist on the cloud catalogue, not on local rows.
+  // Never forward `category` to `/local`. On 全部, a chosen industry therefore
+  // shows only that cloud slice — mixing unfiltered local cards on top made
+  // the dropdown look dead (Issue #2511).
+  const industry = category.trim()
+  const cloudArgs = { ...sharedArgs, category: industry || undefined }
 
   if (tab === 'local') {
     const res = await listLocalInspirations(sharedArgs)
@@ -213,7 +216,7 @@ export async function loadInspirationsAtomic(params) {
     return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready', platforms }
   }
 
-  if (tab === 'public') {
+  if (tab === 'public' || (tab === 'all' && industry)) {
     const res = await listInspirationsGuarded(cloudArgs)
     if (res.status === 401) return { items: [], total: 0, hasMore: false, phase: 'need-login' }
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
@@ -222,7 +225,7 @@ export async function loadInspirationsAtomic(params) {
     return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready' }
   }
 
-  // tab === 'all': Fetch both simultaneously and merge atomically
+  // tab === 'all' with no industry: Fetch both simultaneously and merge atomically
   const [localOutcome, pubOutcome] = await Promise.allSettled([
     listLocalInspirations(sharedArgs),
     listInspirationsGuarded(cloudArgs),

@@ -313,10 +313,17 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
         beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       await mounted.waitFor(() => fetched.slice(before).some((url) => url.includes('category=beauty_skincare')))
-      const cloudUrls = fetched.slice(before).filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      const afterPick = fetched.slice(before)
+      const cloudUrls = afterPick.filter((url) => /\/omnimux\/inspiration(\?|$)/.test(url) && !url.includes('/local'))
+      const localUrls = afterPick.filter((url) => url.includes('/omnimux/inspiration/local'))
       assert.ok(
         cloudUrls.some((url) => url.includes('category=beauty_skincare')),
         `cloud queries must send the official id: ${JSON.stringify(cloudUrls)}`,
+      )
+      assert.equal(
+        localUrls.length,
+        0,
+        `全部 + 具体行业 must not re-query the local library: ${JSON.stringify(localUrls)}`,
       )
     } finally {
       await mounted.unmount()

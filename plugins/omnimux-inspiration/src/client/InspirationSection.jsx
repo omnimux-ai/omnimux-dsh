@@ -196,8 +196,8 @@ export function InspirationSection({ t, active }) {
   const rivalPlatformOptions = buildRivalPlatformOptions(t)
 
   /**
-   * Official 18-industry dropdown (Issue #2507). The list is local and does
-   * not wait on `/categories`. Only 全部 / 云端 apply the official id; on
+   * Official 18-industry dropdown (Issue #2507 / #2511). The list is local and does
+   * not wait on `/categories`. 全部 / 云端 apply the official id (全部 + an industry shows only that cloud slice). On
    * 本地 the same 19 labels stay visible but onChange is ignored so a click
    * cannot stash a hidden id that would reappear after switching back.
    */
