@@ -9,7 +9,6 @@ export const OVERLAY_SCROLL_REVEAL_MS = 800
  */
 export function useOverlayScrollReveal(className = '') {
   const timerRef = useRef(null)
-  const nodeRef = useRef(null)
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -17,7 +16,6 @@ export function useOverlayScrollReveal(className = '') {
 
   const onScroll = (event) => {
     const el = event.currentTarget
-    nodeRef.current = el
     el.classList.add('is-scrolling')
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {

@@ -2433,19 +2433,6 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-overlay-scroll.is-scrolling::-webkit-scrollbar-thumb:hover {
   background: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.4));
 }
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar {
-  width: 6px;
-}
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 9999px;
-}
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb:hover {
-  background: transparent;
-}
 .omnimux-inspiration-deconstruct-title {
   display: inline-flex;
   align-items: center;

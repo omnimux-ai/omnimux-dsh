@@ -400,8 +400,7 @@ describe('preview modal doc style and glass removal', () => {
     assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*transparent/)
     assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll\.is-scrolling::-webkit-scrollbar-thumb/)
     assert.doesNotMatch(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll:hover::-webkit-scrollbar-thumb/)
-    const deconThumb = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb')
-    assert.match(decl(deconThumb, 'background'), /transparent/)
+    assert.doesNotMatch(INSPIRATION_CSS, /\.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb/)
   })
 
   it('establishes clear 3-level visual hierarchy: title (15px) -> item (14px) -> description (13px)', () => {
