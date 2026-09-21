@@ -518,6 +518,75 @@ test('openWorkbench switches focus mode to default per tab without cross-tab lea
   assert.equal(api.getFocus(), WORKBENCH_FOCUS.gui)
 })
 
+test('openWorkbench default gui does not mark explicit user intent (Issue #2516)', async () => {
+  const win = setupWindow()
+  const api = installWorkbenchGlobal(win)
+  let state = makeState([{ id: 'omnimux-assets:library', type: 'omnimux-assets:library' }], 780, true)
+  const store = {
+    getSnapshot: () => ({ sessionId: 's-default', state }),
+    reduce: (fn) => { state = fn(state) },
+  }
+  api.bind({
+    betterSidebar: {
+      openTab(seed) {
+        state = {
+          ...state,
+          splits: {
+            kind: 'leaf',
+            id: 'main',
+            active: seed.id,
+            tabs: [{ id: seed.id, type: seed.type }],
+          },
+        }
+      },
+      getTab(id) { return { id } },
+      getSnapshot() { return { sessionId: 's-default', state } },
+    },
+    sessions: {
+      list: { getSnapshot: () => ({ current: 's-default' }) },
+    },
+  })
+  api.attachStore(store)
+  await api.open({ tabId: 'omnimux-assets:library', timeoutMs: 0 })
+  const record = focusRecordForTab('s-default', 'omnimux-assets:library')
+  assert.equal(record.mode, WORKBENCH_FOCUS.gui)
+  assert.equal(record.explicit, false)
+})
+
+test('openWorkbench preserveLayout does not change focus (Issue #2516)', async () => {
+  const win = setupWindow()
+  const api = installWorkbenchGlobal(win)
+  let state = makeState([{ id: 'omnimux-assets:library', type: 'omnimux-assets:library' }], 780, true)
+  const store = {
+    getSnapshot: () => ({ sessionId: 's-agent', state }),
+    reduce: (fn) => { state = fn(state) },
+  }
+  api.bind({
+    betterSidebar: {
+      openTab(seed) {
+        state = {
+          ...state,
+          splits: {
+            kind: 'leaf',
+            id: 'main',
+            active: seed.id,
+            tabs: [{ id: seed.id, type: seed.type }],
+          },
+        }
+      },
+      getTab(id) { return { id } },
+      getSnapshot() { return { sessionId: 's-agent', state } },
+    },
+    sessions: {
+      list: { getSnapshot: () => ({ current: 's-agent' }) },
+    },
+  })
+  api.attachStore(store)
+  const before = state.width
+  await api.open({ tabId: 'omnimux-inspiration:library', timeoutMs: 0, preserveLayout: true })
+  assert.equal(state.width, before)
+})
+
 test('applyDefaultWidth writes via store.reduce and skips a second write', () => {
   setupWindow()
   let state = makeState([{ id: 't1', type: 't1' }], 500, true)

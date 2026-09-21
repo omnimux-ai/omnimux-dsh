@@ -12,6 +12,7 @@ import { isWorkbenchTab } from './workbench/focus-state.js'
 import {
   getConversationCollapsed,
   setConversationCollapsed,
+  persistSessionThreeColumn,
 } from './conversation-collapse.js'
 
 export const CHAT_TOGGLE_ATTR = 'data-omnimux-chat-toggle'
@@ -121,14 +122,13 @@ export function createChatToggleButton(doc = hostDocument()) {
     const api = getWorkbenchApi()
     if (!api) return
     const nextCollapsed = !getConversationCollapsed()
-    // Independent middle intent first (CSS). Optionally fill the right panel
-    // when hiding chat so the layout has no dead gap — fill must not be the
-    // sole mechanism that "hides" conversation (#372).
     setConversationCollapsed(nextCollapsed)
     if (nextCollapsed) {
-      api.setFocus?.('gui')
+      api.setFocus?.('gui', undefined, {}, undefined, { persistUserIntent: true })
+      persistSessionThreeColumn(false)
     } else {
-      api.setFocus?.('split')
+      api.setFocus?.('split', undefined, {}, undefined, { persistUserIntent: true })
+      persistSessionThreeColumn(true)
     }
     syncChatToggleState(btn)
   })

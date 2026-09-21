@@ -142,7 +142,7 @@ test('AC-4: 分栏面板 CSS 铺满保证与健康分栏宽度保底机制', asy
   assert.ok(currentRightbar >= 500, `自愈后宽度必须恢复到健康黄金比例(>=500px)，实际: ${currentRightbar}`)
 })
 
-test('AC-5: 从分栏页面跨页面切换标签，当前三栏分栏状态绝对优先，绝不触发全屏覆盖（Issue #2212）', async () => {
+test('AC-5: 同会话内部换页签锁当前分栏，不按目标页默认弹全屏（Issue #2516）', async () => {
   const doc = createDomFixture('push')
   const root = doc.documentElement
   const panel = doc.querySelector('[data-sidebar-right-panel]')
@@ -182,8 +182,7 @@ test('AC-5: 从分栏页面跨页面切换标签，当前三栏分栏状态绝�
   currentTab = 'omnimux-assets:library'
   reconciler.sync()
 
-  // 用户当前分栏状态绝对优先，绝不进入全屏
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '切入资产库时用户当前分栏状态绝对优先，保持分栏')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '内部换页签锁当前分栏')
   assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏恒定展开，不被折叠')
 
   reconciler.reset()
@@ -207,7 +206,7 @@ test('AC-6: 自动化 Tab 身份收敛与侧栏激活仲裁验证 (Issue #2046)'
   assert.equal(verdict.tabId, AUTO, '胜出的 tabId 必须严格等于自动化 Tab ID')
 })
 
-test('AC-7: 右侧边栏展开不再强制伪全屏，未显式配置时默认并排分栏 (Issue #2056)', async () => {
+test('AC-7: 调和器对已展开分栏保持静默，进全屏由打开序列负责 (Issue #2516)', async () => {
   const doc = createDomFixture('push')
   const root = doc.documentElement
   const panel = doc.querySelector('[data-sidebar-right-panel]')
@@ -236,10 +235,9 @@ test('AC-7: 右侧边栏展开不再强制伪全屏，未显式配置时默认�
     },
   })
 
-  // 1. 未记录显式偏好的工作台页签，展开面板时保持分栏，不得进入全屏
   reconciler.sync()
-  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '初始展开时必须保持分栏')
-  assert.deepEqual(enters, [], '不得自动调用 enterFullscreen')
+  assert.equal(panel.getAttribute('data-sidebar-right-panel'), 'push', '已是分栏时调和器不改布局')
+  assert.deepEqual(enters, [], '进全屏由打开序列负责，调和器不自动 enterFullscreen')
   assert.equal(root.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false, '会话栏保持展开')
 
   // 2. 即便左侧列表没有任何选中会话，同样保持分栏，绝不受左侧列表渲染状态干扰

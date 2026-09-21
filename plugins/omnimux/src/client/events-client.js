@@ -60,7 +60,7 @@ export function createEventsClient(options = {}) {
     let code = 'no-workbench'
     if (wb && typeof wb.open === 'function') {
       try {
-        applied = Boolean(await wb.open({ tabId, path: path || tabId }))
+        applied = Boolean(await wb.open({ tabId, path: path || tabId, preserveLayout: true }))
         code = applied ? 'opened' : 'open-failed'
       } catch (error) {
         console.error('[EventsClient] RPC open failed:', error)
