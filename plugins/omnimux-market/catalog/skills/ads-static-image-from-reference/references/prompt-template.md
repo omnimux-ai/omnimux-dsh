@@ -28,7 +28,7 @@ HARD CONSTRAINTS
 ## Call parameters
 
 ```
-model: gpt-image-2          # default for ≥3 text blocks; switch to nano-banana-2 only if pure product-fidelity case
+model: gpt-image-2.5-sunburst          # default for ≥3 text blocks; switch to nano-banana-2 only if pure product-fidelity case
 aspect_ratio: <user override or reference native>
 resolution: 2K
 image_urls:

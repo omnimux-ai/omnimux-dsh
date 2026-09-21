@@ -92,7 +92,7 @@ Rules: ≤8 words per line; headlines crisp; non-ASCII characters (umlauts ö ä
 
 ### 5. Model choice
 
-Use **gpt-image-2** for image ads with non-trivial typography: multi-line headlines, multiple short copy strings (chips, badges, rating), or non-ASCII characters. It is materially better at multi-string text fidelity than the alternatives. Echo packaging-shape constraints verbatim regardless of model — silhouette drift happens in every model.
+Use **gpt-image-2.5-sunburst** for image ads with non-trivial typography: multi-line headlines, multiple short copy strings (chips, badges, rating), or non-ASCII characters. It is materially better at multi-string text fidelity than the alternatives. Echo packaging-shape constraints verbatim regardless of model — silhouette drift happens in every model.
 
 ### 6. The rating row — omit by default
 

@@ -76,7 +76,7 @@ Every step ends by uploading the deliverable to tmpfiles.org and replying with t
 
 ### Model defaults to record in the plan
 - Script + direction: **Claude**
-- Keyframes / start frames: **Nano Banana 2 / GPT 2** (default `gpt-image-2` for standalone generation in step 2; `nano-banana-2` for tight product / persona I2I)
+- Keyframes / start frames: **Nano Banana 2 / GPT Image 2.5 画质版 (gpt-image-2.5-sunburst)** (default `gpt-image-2.5-sunburst` for standalone generation in step 2; `nano-banana-2` for tight product / persona I2I)
 - Scene video: **Seedance 2.0 Pro / Kling O3 / Kling 3.0**
 
 These model names are a deliverable — the user explicitly asked for them in the plan.
@@ -91,7 +91,7 @@ These model names are a deliverable — the user explicitly asked for them in th
 
 ### Actions
 1. **Personas** — use `setup_persona` (never `generate_image` for personas). Compose the persona prompt via `ads-persona-prompt-skill` conventions. Pass user face references in `reference_asset_ids`. Use the plan's **style_direction** string **verbatim**. Capture `voice_asset_id` and `kling_voice_id` from the returned asset for use in step 3.
-2. **Settings / props / locations / backgrounds** — `generate_image` with `model="gpt-image-2"` as default. Switch to `nano-banana-2` only for tight product silhouette I2I.
+2. **Settings / props / locations / backgrounds** — `generate_image` with `model="gpt-image-2.5-sunburst"` as default. Switch to `nano-banana-2` only for tight product silhouette I2I.
 3. **QA every generated image** with the `ad-image-qa-skill` against product / persona / brand references. On FAIL, regenerate. Max 3 attempts per asset. On 3rd-attempt FAIL, surface the failure to the user with the QA diff and ask how to proceed.
 4. **Pack the deliverable**:
    - Download each registered asset into `/tmp/outputs/images/<asset_id>.png`.
@@ -203,6 +203,6 @@ Always state which inputs are present, which are missing, and what you're about 
 7. **`expire=172800`** on every tmpfiles upload (48 h).
 8. **Per-step input gates are mandatory.** If the user jumps into step 2/3/4, verify inputs before running anything; ask via `AskUserQuestion` if missing.
 9. **Free-trial duration cap (20 s) applies to production runs (steps 2–4), not to plan text.** If the reference is longer and the session is free-trial, ask once: trim vs upgrade.
-10. **Model names in the plan are a deliverable** — Claude, Nano Banana 2 / GPT 2, Seedance 2.0 Pro / Kling O3 / Kling 3.0. Include them in the plan; the user asked for them by name.
+10. **Model names in the plan are a deliverable** — Claude, Nano Banana 2 / GPT Image 2.5 画质版 (gpt-image-2.5-sunburst), Seedance 2.0 Pro / Kling O3 / Kling 3.0. Include them in the plan; the user asked for them by name.
 11. **3-attempt QA cap** per generated image; surface failure to the user on the third miss instead of looping silently.
 12. **Single-step invocations are first-class.** If the user asks for "just the plan" or "just the images", stop at that step. Do not auto-continue.

@@ -65,10 +65,10 @@ Priority order:
 ### 5. Pick the image model
 
 Decision rule:
-- **gpt-image-2** — choose when the ad has **≥3 distinct text blocks** (headline + subhead + multiple callouts + footer), OR when brand wordmark / logo fidelity is critical, OR when the product label text must remain legible. gpt-image-2 is the only model that reliably handles dense typography in non-English languages.
+- **gpt-image-2.5-sunburst** — choose when the ad has **≥3 distinct text blocks** (headline + subhead + multiple callouts + footer), OR when brand wordmark / logo fidelity is critical, OR when the product label text must remain legible. gpt-image-2.5-sunburst is the only model that reliably handles dense typography in non-English languages.
 - **nano-banana-2** — choose when the product silhouette / packaging photorealism is the dominant fidelity concern AND the ad has minimal text (just a logo + a one-line headline). nano-banana-2 renders product textures and materials more faithfully but garbles text once you exceed two or three distinct blocks.
 
-When in doubt with a typography-heavy reference: **gpt-image-2**.
+When in doubt with a typography-heavy reference: **gpt-image-2.5-sunburst**.
 
 ### 6. Compose ONE `generate_image` call
 
@@ -101,8 +101,8 @@ Call `get_asset` on the generated image. Check, in order:
 3. **Claim copy** — does every visible text block match exactly what you specified? No hallucinated extras?
 4. **Layout** — are the zones where you put them?
 
-If product or logo is mangled: regenerate with stronger preservation language in the HARD CONSTRAINTS block, or switch to gpt-image-2 if you were on nano-banana-2.
-If claim text is garbled or hallucinated: regenerate with shorter claim strings, or switch to gpt-image-2.
+If product or logo is mangled: regenerate with stronger preservation language in the HARD CONSTRAINTS block, or switch to gpt-image-2.5-sunburst if you were on nano-banana-2.
+If claim text is garbled or hallucinated: regenerate with shorter claim strings, or switch to gpt-image-2.5-sunburst.
 Stop after **two regeneration attempts**; if it's still wrong, surface the issue to the user and ask whether to simplify the layout.
 
 ### 8. Deliver

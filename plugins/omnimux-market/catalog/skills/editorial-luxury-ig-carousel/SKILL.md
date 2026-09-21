@@ -112,8 +112,8 @@ Keep the caption in the same voice. Structure:
 6. **No people's faces on slides 1–4 unless the brief is explicitly portrait/fashion.** Faces pull attention away from typography and break the artifact-as-magazine illusion.
 7. **No emojis, no exclamation marks, no all-caps headlines.** Small-caps labels are the only place uppercase is allowed.
 8. **Fire all 5 image generations in parallel** — they share a design system, not a dependency chain, so there is no reason to serialize.
-9. **Default to gpt-image-2 for slides with heavy typography (1, 2, 4, 5).** It renders crisp serif letterforms more reliably than nano-banana-2.
-10. **If gpt-image-2 content-moderation rejects a prompt** (common triggers: "model in metallic gown," named living artists, anything that reads as a real person), strip body-language language and artist names, then retry on nano-banana-2 as the fallback. Do not abandon the slide.
+9. **Default to gpt-image-2.5-sunburst for slides with heavy typography (1, 2, 4, 5).** It renders crisp serif letterforms more reliably than nano-banana-2.
+10. **If gpt-image-2.5-sunburst content-moderation rejects a prompt** (common triggers: "model in metallic gown," named living artists, anything that reads as a real person), strip body-language language and artist names, then retry on nano-banana-2 as the fallback. Do not abandon the slide.
 11. **Skip the structured director / persona / image-QA pipeline.** These are standalone editorial stills, not ad scenes. Call `generate_image` directly, in parallel.
 12. **Skip AskUserQuestion when the brief is already concrete** (brand name + vibe + format are present). Use the brand description verbatim as creative direction. Premium briefs lose energy when interrogated.
 13. **Brand subject is the only true variable.** Palette, typography, layout chrome, beat order, and CTA mechanic are locked. If the user pushes for "more color" or "more energy," that's a different skill — push back or hand off, do not dilute this one.

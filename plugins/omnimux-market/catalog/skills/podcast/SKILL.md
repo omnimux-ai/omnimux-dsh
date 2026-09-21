@@ -65,7 +65,7 @@ Call `generate_image`:
 | `image_urls` | `[persona:<host>, persona:<guest>]` — left-to-right seating order. |
 | `aspect_ratio` | `16:9` |
 | `resolution` | `1K` |
-| `model` | `"gpt-image-2"` |
+| `model` | `"gpt-image-2.5-sunburst"` |
 | `output_asset_id` | `podcast:composite` |
 
 The composite is the **180° anchor + blocking + room + lighting + mic geometry ground truth** for every chunk. Every chunk's `reference_images` includes this asset in slot 0.
@@ -80,7 +80,7 @@ For each shot pattern used (typically Pattern A for most chunks, optional Patter
 | `image_urls` | `[podcast:composite, persona:<host>, persona:<guest>]` |
 | `aspect_ratio` | `16:9` |
 | `resolution` | `1K` |
-| `model` | `"gpt-image-2"` |
+| `model` | `"gpt-image-2.5-sunburst"` |
 | `output_asset_id` | `podcast:storyboard:A` (or `:B`, `:C`) |
 
 **Pattern selection per chunk** (lock in plan):
@@ -182,7 +182,7 @@ Each rule is enforced at one or more pipeline steps.
 3. **Set is a podcast studio.** Bookshelf / brand backdrop / neon / lived-in production space, table mics. Both personas share the SAME backdrop (one room, two angles). Outdoors / home / cafe are valid setting variants (see composite guide invent-from-scratch seeds), but never **mixed** within one episode.
 4. **Eye-line continuity — NEVER eyes-to-camera.** Host on camera-LEFT → body angled toward camera-right, eyes off-camera right. Guest on camera-RIGHT → body angled toward camera-left, eyes off-camera left. Wides on the composite = mutual / inward gaze. Chunk close-ups = biased toward the off-frame partner. **No "presenting to camera," ever.**
 5. **Camera is LOCKED-OFF on every chunk.** No push-in, pull-out, pan, tilt, zoom, rack focus, handheld shake, Ken-Burns. Each `generate_scene_video` motion field MUST include "no camera motion, locked tripod, no zoom, no pan, no push, no pull" — otherwise Seedance adds motion by default.
-6. **Mics visible on every talking shot — plain, unbranded.** Generic black studio condenser on a black boom arm. **Never name a specific mic model** — gpt-image-2 renders model names as branding text on the mic body. Describe it generically instead: "a large black studio condenser mic on a black boom arm in the lower-third foreground."
+6. **Mics visible on every talking shot — plain, unbranded.** Generic black studio condenser on a black boom arm. **Never name a specific mic model** — gpt-image-2.5-sunburst renders model names as branding text on the mic body. Describe it generically instead: "a large black studio condenser mic on a black boom arm in the lower-third foreground."
 7. **Composite is the blocking anchor — REQUIRED in every chunk's `reference_images[0]`.** Without it, chunks re-imagine blocking and the multi-chunk video falls apart at splices.
 8. **No planning markers in the Seedance prompt body.** No `chunk #K of N`, no `EPISODE_SPINE`, no `CONTINUATION_RULE`, no `BEAT_NOTE`, no total-duration / outline metadata. Plan the arc in the plan file; the chunk prompt describes only what is shown and said in this one chunk.
 9. **Silent tail = final chunk only.** The ~1.5 s silent end-tail belongs ONLY on chunk N (or chunks the user explicitly asked to end on silence). Intermediate chunks end mid-beat — no silent hold, no "clean editing tail", no "hold the final close-up silently", no "ambient room tone only" directive.

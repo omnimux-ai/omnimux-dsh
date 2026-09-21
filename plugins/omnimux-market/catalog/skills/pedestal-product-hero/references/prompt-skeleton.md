@@ -7,7 +7,7 @@ Use this as the starting point for every pedestal-hero generation. Fill in the b
 - `image_urls`: **only the hero product image**. Do NOT include the reference layout image even if the user provided one — describe the layout in prose below instead.
 - `model`:
   - `nano-banana-2` if no baked-in headline.
-  - `gpt-image-2` if a headline is baked in (mandatory for non-English diacritics).
+  - `gpt-image-2.5-sunburst` if a headline is baked in (mandatory for non-English diacritics).
 - `aspect_ratio`: `1:1` (default), `4:5`, or `9:16` per brief.
 
 ## Prompt template

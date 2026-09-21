@@ -8,7 +8,7 @@ There are exactly three cases:
 
 If the user wrote exact words they want on the image (`"the headline should say 'New Drop'"`, `"add 'Sale ends Friday'"`, `"with the text 'Made with love'"`), include the text DIRECTLY in the prompt as part of the composition. The model will render it as integrated typography inside the scene.
 
-When the deliverable IS the text — an on-image headline, a logo lockup, or a flat graphic — switch the `generate_image` call to `model="gpt-image-2"`, which is tuned for legible typography. Photoreal product imagery without baked-in text stays on `model="nano-banana-2"`.
+When the deliverable IS the text — an on-image headline, a logo lockup, or a flat graphic — switch the `generate_image` call to `model="gpt-image-2.5-sunburst"`, which is tuned for legible typography. Photoreal product imagery without baked-in text stays on `model="nano-banana-2"`.
 
 In the prompt, write something like:
 ```

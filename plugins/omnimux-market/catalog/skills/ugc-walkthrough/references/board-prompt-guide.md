@@ -2,7 +2,7 @@
 
 Use this when composing the `prompt` for `generate_image` to produce a 21:9 four-slot UGC tutorial storyboard sheet for ONE Seedance video clip. **Each slot depicts ONE chronological physical step of using the product AND carries a rendered `"Step N — Heading"` text caption baked into the slot using consistent typography across all 4 slots of one board.**
 
-The output of this composition is a single prose prompt string (no JSON wrapper, no markdown fences). The orchestrator skill passes that string as `generate_image(prompt=...)` with `aspect_ratio="21:9"`, `resolution="1K"`, `model="gpt-image-2"`, and `image_urls` in the order specified below — so `@Image1`, `@Image2`, ... in your prompt text bind directly to those resolved URLs.
+The output of this composition is a single prose prompt string (no JSON wrapper, no markdown fences). The orchestrator skill passes that string as `generate_image(prompt=...)` with `aspect_ratio="21:9"`, `resolution="1K"`, `model="gpt-image-2.5-sunburst"`, and `image_urls` in the order specified below — so `@Image1`, `@Image2`, ... in your prompt text bind directly to those resolved URLs.
 
 CORE PRINCIPLE: The sheet is a sequential UGC tutorial storyboard for ONE 15-second-or-shorter video clip — four product-usage steps inside that single clip. NOT a presentation deck. **Allowed text on each slot: exactly ONE caption in the format `"Step N — Heading"`, rendered with identical typography (font family, size, color, position) across all four slots of one board.** No other text of any kind. Just four equal-size 9:16 slots in one row, each containing a photorealistic UGC iPhone-style still + the Step caption that advances a coherent tutorial. Slots are separated by thin white gutters. **All four slots are always active — there are no placeholders.** **The four slots follow a tutorial step arc — Step `(4·(K−1)+1)` through Step `(4·K)` of a real product-usage sequence, in chronological order.**
 
@@ -14,13 +14,13 @@ The product (when supplied) follows strict Angle Lock, Realistic Scale, and Plac
 
 ---
 
-## CRITICAL LAYOUT GUARD (gpt-image-2 — include verbatim in every composed prompt)
+## CRITICAL LAYOUT GUARD (gpt-image-2.5-sunburst — include verbatim in every composed prompt)
 
-This guard fixes three known failure modes specific to gpt-image-2 (the model the skill uses for board generation):
+This guard fixes three known failure modes specific to gpt-image-2.5-sunburst (the model the skill uses for board generation):
 
-1. **gpt-image-2 misreads "four 9:16 slots in a 21:9 sheet" as "four wide horizontal bands stacked top-to-bottom"** — producing a vertical stack of full-width strips instead of four side-by-side columns.
-2. **gpt-image-2 has a strong "label the panels" prior** that auto-adds forbidden `"SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4"` typography (and sometimes numbers, captions, or "Panel X" tags) to the rendered output, overriding any vague "no text" instruction. For this tutorial flow we DO want one specific caption per slot (the `"Step N — Heading"` line) — but ONLY that caption, never "SLOT N" / "Panel N" / "Frame N" labels alongside it.
-3. **gpt-image-2 sometimes silently swaps the rendered caption text** — e.g. the brief asks for `"Step 1 — Wet Hands"` and the render comes back with `"Step One: Wet Your Hands"` or just `"Wet Hands"`. To anchor the exact caption strings, the prompt must repeat each slot's caption text in quotes inside the slot description AND list all four captions verbatim in a single "rendered captions" line near the top.
+1. **gpt-image-2.5-sunburst misreads "four 9:16 slots in a 21:9 sheet" as "four wide horizontal bands stacked top-to-bottom"** — producing a vertical stack of full-width strips instead of four side-by-side columns.
+2. **gpt-image-2.5-sunburst has a strong "label the panels" prior** that auto-adds forbidden `"SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4"` typography (and sometimes numbers, captions, or "Panel X" tags) to the rendered output, overriding any vague "no text" instruction. For this tutorial flow we DO want one specific caption per slot (the `"Step N — Heading"` line) — but ONLY that caption, never "SLOT N" / "Panel N" / "Frame N" labels alongside it.
+3. **gpt-image-2.5-sunburst sometimes silently swaps the rendered caption text** — e.g. the brief asks for `"Step 1 — Wet Hands"` and the render comes back with `"Step One: Wet Your Hands"` or just `"Wet Hands"`. To anchor the exact caption strings, the prompt must repeat each slot's caption text in quotes inside the slot description AND list all four captions verbatim in a single "rendered captions" line near the top.
 
 To counter all three, the composed prompt MUST include the following block verbatim, placed near the top of the prompt (right after the `@ImageN` reference lines and before the per-slot descriptions). Do NOT summarize, paraphrase, or shorten it — the explicit redundancy is load-bearing:
 
@@ -34,9 +34,9 @@ CAPTIONS: each of the four panels carries exactly ONE rendered text caption in t
 DO NOT add ANY OTHER text, labels, numbers, panel identifiers, headers, footers, watermarks, or typography anywhere on the output — only the four "Step N — Heading" captions. Specifically forbidden: "SLOT 1", "SLOT 2", "SLOT 3", "SLOT 4", "Panel 1/2/3/4", "#1 #2 #3 #4", "1 of 4", "Frame 1", brand banners, badges, pop-text, subtitles, or any decorative typography beyond the four Step captions. The only other text that may appear is the product's own real label printed on the physical product itself when the product is in frame.
 ```
 
-When you fill in `[CAPTION 1 VERBATIM]` through `[CAPTION 4 VERBATIM]`, drop the brackets and paste the exact caption strings the skill was handed (or that you derived from the product) — e.g. `"Step 5 — Pump Twice"`. The verbatim repetition near the top is what anchors gpt-image-2 to render the right letters; the per-slot description below repeats the caption once more inside its slot's text.
+When you fill in `[CAPTION 1 VERBATIM]` through `[CAPTION 4 VERBATIM]`, drop the brackets and paste the exact caption strings the skill was handed (or that you derived from the product) — e.g. `"Step 5 — Pump Twice"`. The verbatim repetition near the top is what anchors gpt-image-2.5-sunburst to render the right letters; the per-slot description below repeats the caption once more inside its slot's text.
 
-This block is the single most important rendering directive for gpt-image-2. Include it verbatim near the top of every composed prompt for every board (K=1 and K>1).
+This block is the single most important rendering directive for gpt-image-2.5-sunburst. Include it verbatim near the top of every composed prompt for every board (K=1 and K>1).
 
 ---
 

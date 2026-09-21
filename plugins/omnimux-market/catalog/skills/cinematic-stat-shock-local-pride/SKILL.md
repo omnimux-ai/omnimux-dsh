@@ -114,7 +114,7 @@ Treat each of these as a hard rule for any future execution of this pattern:
 
 1. **Product color accuracy is a first-class concern.** If the hero product is a specific named colorway, include the full color description in every image/video generation prompt: `"[Color Name] — LIGHT TEAL SEAFOAM MINT GREEN"` (adapt the descriptors to the actual color). Explicitly negate the wrong colors: `NOT dark green, NOT forest green, NOT olive, NOT hunter green`. Color drift between scenes is a failure.
 
-2. **Use `gpt-image-2` (not default model) for product close-up shots when color accuracy is critical.** The default image model drifts on specific Pantone-adjacent colorways. If color looks wrong after first generation, switch models immediately — do not iterate on prompts with the wrong model.
+2. **Use `gpt-image-2.5-sunburst` (not default model) for product close-up shots when color accuracy is critical.** The default image model drifts on specific Pantone-adjacent colorways. If color looks wrong after first generation, switch models immediately — do not iterate on prompts with the wrong model.
 
 3. **Back-of-product shots: camera is always BEHIND the subject.** Prompt must explicitly state: `"camera behind person, back of shirt facing camera, NEVER show face, person's face is away from camera."` This is a hard constraint, not a preference.
 

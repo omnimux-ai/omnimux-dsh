@@ -2,7 +2,7 @@
 
 Use this when composing the `prompt` for `generate_image` to produce a 21:9 four-slot UGC product-focused storyboard sheet for ONE Seedance video clip.
 
-The output of this composition is a single prose prompt string (no JSON wrapper, no markdown fences). The orchestrator skill passes that string as `generate_image(prompt=...)` with `aspect_ratio="21:9"`, `resolution="1K"`, `model="gpt-image-2"`, and `image_urls` in the order specified below — so `@Image1`, `@Image2`, ... in your prompt text bind directly to those resolved URLs.
+The output of this composition is a single prose prompt string (no JSON wrapper, no markdown fences). The orchestrator skill passes that string as `generate_image(prompt=...)` with `aspect_ratio="21:9"`, `resolution="1K"`, `model="gpt-image-2.5-sunburst"`, and `image_urls` in the order specified below — so `@Image1`, `@Image2`, ... in your prompt text bind directly to those resolved URLs.
 
 CORE PRINCIPLE: The sheet is a sequential UGC product-focused storyboard for ONE 15-second-or-shorter video clip — four frames showing four narrative moments inside that single clip. **The PRODUCT is the hero of every slot.** Person, when present in the frame, is auxiliary — cropped, hands-only, partial body, or first-person POV — and never the focal subject. Person's identity is not preserved (no recurring character reference). NOT a presentation deck. No headers, no metadata blocks, no pop-text captions, no badges, no numbers, no brand-matched design system, no typography of any kind. Just four equal-size 9:16 slots in one row, each containing a photorealistic UGC iPhone-style still that advances a coherent product-demo story. Slots are separated by thin white gutters. **All four slots are always active — there are no placeholders.** **The four slots follow a fixed product-demo arc: PRODUCT-INTRO → PRODUCT-DEMO-A → PRODUCT-DEMO-B → PRODUCT-RESULT** (Board 1 always carries this arc; Boards 2..N continue with additional demo angles).
 
@@ -12,12 +12,12 @@ Story matters. Setting matters. Camera POV adapts to the action in each slot and
 
 ---
 
-## CRITICAL LAYOUT GUARD (gpt-image-2 — include verbatim in every composed prompt)
+## CRITICAL LAYOUT GUARD (gpt-image-2.5-sunburst — include verbatim in every composed prompt)
 
-This guard fixes two known failure modes specific to gpt-image-2 (the model the skill uses for board generation):
+This guard fixes two known failure modes specific to gpt-image-2.5-sunburst (the model the skill uses for board generation):
 
-1. **gpt-image-2 misreads "four 9:16 slots in a 21:9 sheet" as "four wide horizontal bands stacked top-to-bottom"** — producing a vertical stack of full-width strips instead of four side-by-side columns.
-2. **gpt-image-2 has a strong "label the panels" prior** that auto-adds forbidden "SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4" typography (and sometimes numbers, captions, or "Panel X" tags) directly onto the rendered output, overriding any vague "no text" instruction.
+1. **gpt-image-2.5-sunburst misreads "four 9:16 slots in a 21:9 sheet" as "four wide horizontal bands stacked top-to-bottom"** — producing a vertical stack of full-width strips instead of four side-by-side columns.
+2. **gpt-image-2.5-sunburst has a strong "label the panels" prior** that auto-adds forbidden "SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4" typography (and sometimes numbers, captions, or "Panel X" tags) directly onto the rendered output, overriding any vague "no text" instruction.
 
 To counter both, the composed prompt MUST include the following block verbatim, placed near the top of the prompt (right after the `@ImageN` reference lines and before the per-slot descriptions). Do NOT summarize, paraphrase, or shorten it — the explicit redundancy is load-bearing:
 
@@ -29,7 +29,7 @@ DO NOT lay out the panels as four wide horizontal bands stacked top-to-bottom �
 DO NOT add any text, labels, numbers, captions, panel identifiers, headers, footers, watermarks, or typography of any kind anywhere on the output. Specifically forbidden: "SLOT 1", "SLOT 2", "SLOT 3", "SLOT 4", "Panel 1/2/3/4", "#1 #2 #3 #4", "1 of 4", "Frame 1", or any other panel-naming text. There is no on-image typography of any kind on this storyboard sheet. The only text that may appear is the product's own real label printed on the physical product itself when the product is in frame.
 ```
 
-This block is the single most important rendering directive for gpt-image-2. Include it verbatim near the top of every composed prompt for every board (K=1 and K>1).
+This block is the single most important rendering directive for gpt-image-2.5-sunburst. Include it verbatim near the top of every composed prompt for every board (K=1 and K>1).
 
 ---
 

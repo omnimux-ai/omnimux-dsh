@@ -14,12 +14,12 @@ generate_image(
   image_urls=["persona:<host>", "persona:<guest>"],
   aspect_ratio="16:9",
   resolution="1K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   output_asset_id="podcast:composite",
 )
 ```
 
-**Asset-id ordering inside the prompt:** `gpt-image-2` reads the `image_urls` array in order. Refer to them in the prompt body as `the host reference (first image)` / `the guest reference (second image)` — do NOT use `@Image1` / `@Image2` syntax. Our prompt body uses natural language identifiers.
+**Asset-id ordering inside the prompt:** `gpt-image-2.5-sunburst` reads the `image_urls` array in order. Refer to them in the prompt body as `the host reference (first image)` / `the guest reference (second image)` — do NOT use `@Image1` / `@Image2` syntax. Our prompt body uses natural language identifiers.
 
 ---
 
@@ -41,13 +41,13 @@ Place a working microphone close to each host's mouth — boom-arm broadcast mic
 - **No phantom / decorative mics on the table** while the hosts speak into thin air.
 - **No mics pushed back against the wall.**
 - **No mic shared between two hosts.**
-- **NEVER name a specific mic model** — `gpt-image-2` renders the brand text onto the mic body. Use a generic shape only: "a plain unbranded large black studio condenser mic on a black boom arm".
+- **NEVER name a specific mic model** — `gpt-image-2.5-sunburst` renders the brand text onto the mic body. Use a generic shape only: "a plain unbranded large black studio condenser mic on a black boom arm".
 
 ---
 
 ## Location-as-positive-description (HARD)
 
-`gpt-image-2` is steered by **what is in the frame**, not what is forbidden. Do **NOT** write any of the following into the prompt:
+`gpt-image-2.5-sunburst` is steered by **what is in the frame**, not what is forbidden. Do **NOT** write any of the following into the prompt:
 
 - Negation clusters (`no`, `not`, `without`, `zero`, `NEGATIVES:`)
 - Imperative instructions to the model (`make sure`, `avoid`, `keep the backdrop white`, `do not include`)

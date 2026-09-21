@@ -32,7 +32,7 @@
 - **Camera grammar:** Locked-off overhead isometric. No handheld drift. No perspective warp.
 - **Color palette:** Warm cream/sandstone for main academy, dark slate for auditorium roof, red brick for the academic hall, orange-cream for café awning, glass/teal for off-campus venue
 - **Aspect ratio:** Always 16:9, resolution 2K or higher
-- **Model:** gpt-image-2 (better than alternatives for architectural text rendering and map precision)
+- **Model:** gpt-image-2.5-sunburst (better than alternatives for architectural text rendering and map precision)
 
 **Every generation prompt must include:**
 ```
@@ -213,7 +213,7 @@ Each of the following is a hard constraint learned while iterating on this map.
 3. **Off-campus venue has BOTH glass walls AND glass ceiling.** Specify both explicitly to distinguish it from the café atrium (which has solid roof + arched side windows only).
 4. **Aerial isometric perspective must be anchored.** Without "aerial bird's-eye isometric" the model drifts to street-level perspective.
 5. **Style must explicitly say "NOT painterly NOT watercolor."** Omitting this causes drift toward illustrated/painted look on regeneration.
-6. **gpt-image-2 is the correct model.** Use this model specifically for architectural text legibility and map precision.
+6. **gpt-image-2.5-sunburst is the correct model.** Use this model specifically for architectural text legibility and map precision.
 7. **Campus café has NO exterior sign text.** The storefront shows only the orange-cream awning — no text on the building facade.
 8. **Always generate two versions in parallel** (labeled + clean). Sequential generation risks inconsistency between versions.
 9. **Composite split at exactly 64.5% (SPLIT_X = int(2560 * 0.645)).** Do not adjust without explicit user instruction. The right panel crop was tuned to this exact split.

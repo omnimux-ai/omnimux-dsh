@@ -92,7 +92,7 @@ no inconsistent palette across variants, no flat lighting, no synthetic stock lo
 
 ## Typography handling
 
-If user provided concrete ad copy/headline — see Case 1 in `references/typography.md` (integrate as part of the composition, and switch that variant to `model="gpt-image-2"`).
+If user provided concrete ad copy/headline — see Case 1 in `references/typography.md` (integrate as part of the composition, and switch that variant to `model="gpt-image-2.5-sunburst"`).
 If user said they'll add headline + CTA later in their ad manager — see Case 2 in `references/typography.md` (leave one tonally calm area within the natural scene).
 Otherwise — compose freely with strong focal hierarchy.
 

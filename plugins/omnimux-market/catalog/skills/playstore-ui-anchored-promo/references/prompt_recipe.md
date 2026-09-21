@@ -50,7 +50,7 @@ Call params:
 ```
 generate_image(
   prompt=<above>,
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   aspect_ratio="9:16",
   resolution="2K",
   image_urls=["input:image-N"],   # the matching screenshot
@@ -94,7 +94,7 @@ Call params:
 ```
 generate_image(
   prompt=<above>,
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   aspect_ratio="16:9",
   resolution="2K",
   image_urls=["input:logo", "input:front-screenshot", "input:back-screenshot"],

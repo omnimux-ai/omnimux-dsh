@@ -51,7 +51,7 @@ PHOTOGRAPHIC FRAME PURITY (Rule 10) applies INSIDE panel frames in BOTH artifact
 
 If no reference video — skip to Step 2 and infer DNA from brief tier vocabulary.
 
-**Step 2 — Character sheet (`generate_image`, `model="gpt-image-2"`).** Product bible for cross-shot consistency. Build the character sheet following the format spec described below. Pass the user's product photo as `@Image1` foundation (in `image_urls`). Single 16:9 4K image, light gray paper background `#DDDDDD`, 5 views horizontal row (single product) OR 6 views in 2×3 (two-colorway). Studio cyclorama lighting (NOT dramatic chiaroscuro — sheet must show product clearly across all angles). Hairline borders, monospace bold labels, brand+sheet-version+product-category top bar, color palette swatches + material callouts + dimensions + model code bottom section. (Use `gpt-image-2` because the sheet is typography/label-heavy.)
+**Step 2 — Character sheet (`generate_image`, `model="gpt-image-2.5-sunburst"`).** Product bible for cross-shot consistency. Build the character sheet following the format spec described below. Pass the user's product photo as `@Image1` foundation (in `image_urls`). Single 16:9 4K image, light gray paper background `#DDDDDD`, 5 views horizontal row (single product) OR 6 views in 2×3 (two-colorway). Studio cyclorama lighting (NOT dramatic chiaroscuro — sheet must show product clearly across all angles). Hairline borders, monospace bold labels, brand+sheet-version+product-category top bar, color palette swatches + material callouts + dimensions + model code bottom section. (Use `gpt-image-2.5-sunburst` because the sheet is typography/label-heavy.)
 
 ```python
 generate_image(
@@ -60,13 +60,13 @@ generate_image(
   image_urls=["product:main"],   # the user's real product photo asset id
   aspect_ratio="3:2",
   resolution="2K",
-  model="gpt-image-2"
+  model="gpt-image-2.5-sunburst"
 )
 ```
 
 Output asset id = `product:character_sheet`.
 
-**Step 3 — 9-shot 3×3 storyboard (`generate_image`, `model="gpt-image-2"`).** Pass character sheet as `@Image1` foundation (in `image_urls`). Single 16:9 4K image, light gray paper background, 9 thumbnails in 3×3 grid (validated optimal — 9 is the sweet spot between 6-shot fidelity and 12-shot detail loss). 16:9 horizontal aspect inside each thumbnail (matches deliverable). 3px black borders, gutters 28px, outer margin 40px. Above each thumbnail: shot number + timecode + scale tag. Below each: 3-line tech notes (SHOT / CAMERA / COLORWAY).
+**Step 3 — 9-shot 3×3 storyboard (`generate_image`, `model="gpt-image-2.5-sunburst"`).** Pass character sheet as `@Image1` foundation (in `image_urls`). Single 16:9 4K image, light gray paper background, 9 thumbnails in 3×3 grid (validated optimal — 9 is the sweet spot between 6-shot fidelity and 12-shot detail loss). 16:9 horizontal aspect inside each thumbnail (matches deliverable). 3px black borders, gutters 28px, outer margin 40px. Above each thumbnail: shot number + timecode + scale tag. Below each: 3-line tech notes (SHOT / CAMERA / COLORWAY).
 
 ```python
 generate_image(
@@ -75,7 +75,7 @@ generate_image(
   image_urls=["product:character_sheet"],   # the Step 2 character sheet asset id
   aspect_ratio="3:2",
   resolution="2K",
-  model="gpt-image-2"
+  model="gpt-image-2.5-sunburst"
 )
 ```
 
@@ -250,7 +250,7 @@ These three slots per shot, no mixed actions or stacked camera moves.
 
 ```yaml
 storyboard:                # generate_image
-  model: "gpt-image-2"     # typography/label-heavy character sheet + 9-shot board
+  model: "gpt-image-2.5-sunburst"     # typography/label-heavy character sheet + 9-shot board
   aspect_ratio: "3:2"
   resolution: "2K"
 
@@ -286,7 +286,7 @@ Acceptable SFX descriptions in the `motion` prompt:
 
 ## Validated failure modes for Track B
 
-- **Sunglasses + storyboard sheet (thin frame geometry)**: drifts in small thumbnails. After 13 iterations failed across both `gpt-image-2` and `nano-banana-2`. Solution: pivot to W2 modular pipeline (individual full-4K hero shots) OR pivot product entirely.
+- **Sunglasses + storyboard sheet (thin frame geometry)**: drifts in small thumbnails. After 13 iterations failed across both `gpt-image-2.5-sunburst` and `nano-banana-2`. Solution: pivot to W2 modular pipeline (individual full-4K hero shots) OR pivot product entirely.
 - **Multi-thumbnail grid > 12 shots**: each thumbnail too small. **9 shots in 3×3 grid is the optimal balance** — validated through 70+ production gens.
 - **Dual-ref (character sheet + storyboard at once)**: confuses model. Use single ref `image` role — storyboard ref already encodes character sheet visually.
 - **3+ iterations same approach failing**: honest format/product ceiling signal. Real options: pivot product, W2 modular, or skip storyboard.

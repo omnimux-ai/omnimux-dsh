@@ -4,17 +4,17 @@
 
 | Image | Type | Recommended Model | Notes |
 |-------|------|-------------------|-------|
-| 1 — Hero | Graphic / design-heavy | gpt-image-2 | Dark bg, UI layout, icon grid |
-| 2 — Antes/Después | Graphic / split-screen | gpt-image-2 | Checklist layout, color zones |
+| 1 — Hero | Graphic / design-heavy | gpt-image-2.5-sunburst | Dark bg, UI layout, icon grid |
+| 2 — Antes/Después | Graphic / split-screen | gpt-image-2.5-sunburst | Checklist layout, color zones |
 | 3 — Beneficios / Manos | Photorealistic lifestyle | nano-banana-2 | Real hands holding product |
-| 4 — Ingredientes | Graphic + macro photo circles | gpt-image-2 | Realistic ingredient textures |
-| 5 — Comparación | Infographic / design | gpt-image-2 | 3-column table layout |
+| 4 — Ingredientes | Graphic + macro photo circles | gpt-image-2.5-sunburst | Realistic ingredient textures |
+| 5 — Comparación | Infographic / design | gpt-image-2.5-sunburst | 3-column table layout |
 | 6 — Doctor | Photorealistic person | nano-banana-2 | Doctor holding large product box |
 | 7 — Testimonio | Photorealistic person | nano-banana-2 | Relatable local person, holding product |
-| 8 — Prueba Social | Graphic / design | gpt-image-2 | Big number, face circles, review cards |
-| 9 — Ofertas | Graphic / design | gpt-image-2 | 3-column pricing cards |
-| 10 — FAQs | Graphic / design | gpt-image-2 | 5 visible Q&A blocks |
-| 11 — Cierre CTA | Graphic / design | gpt-image-2 | Badges + logos + CTA button |
+| 8 — Prueba Social | Graphic / design | gpt-image-2.5-sunburst | Big number, face circles, review cards |
+| 9 — Ofertas | Graphic / design | gpt-image-2.5-sunburst | 3-column pricing cards |
+| 10 — FAQs | Graphic / design | gpt-image-2.5-sunburst | 5 visible Q&A blocks |
+| 11 — Cierre CTA | Graphic / design | gpt-image-2.5-sunburst | Badges + logos + CTA button |
 
 ## Resolution & aspect ratio
 - Always: **1024×1792** (1K, 9:16 vertical)

@@ -2,7 +2,7 @@
 
 All 7 A+ Brand Content modules live in this file. Each section below contains the template for one module. Read the section matching the module you're generating.
 
-**Critical reminder:** Every A+ image must use the MAIN IMAGE as reference in the `image_urls` array (`image_urls=["main:final"]`) for product consistency. All 7 A+ modules are typography- and graphic-heavy, so generate them with `model="gpt-image-2"`.
+**Critical reminder:** Every A+ image must use the MAIN IMAGE as reference in the `image_urls` array (`image_urls=["main:final"]`) for product consistency. All 7 A+ modules are typography- and graphic-heavy, so generate them with `model="gpt-image-2.5-sunburst"`.
 
 **Ratios and resolution by module:**
 - Module 1 (Hero Banner): `aspect_ratio="21:9"`, `resolution="2K"`
@@ -422,7 +422,7 @@ Strict exclusions:
 
 ## Tool call pattern for A+ modules
 
-All 7 A+ modules are generated with `model="gpt-image-2"` (they are typography- and graphic-heavy), each referencing the main image via `image_urls=["main:final"]` for product consistency. Each `generate_image` call returns its result directly — no job submission, no polling.
+All 7 A+ modules are generated with `model="gpt-image-2.5-sunburst"` (they are typography- and graphic-heavy), each referencing the main image via `image_urls=["main:final"]` for product consistency. Each `generate_image` call returns its result directly — no job submission, no polling.
 
 For **21:9 modules** (Module 1 and 7):
 
@@ -432,7 +432,7 @@ generate_image(
   output_asset_id="aplus:<module-name>",
   aspect_ratio="21:9",
   resolution="2K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   image_urls=["main:final"]
 )
 # → returns the result directly with the given output_asset_id
@@ -446,7 +446,7 @@ generate_image(
   output_asset_id="aplus:<module-name>",
   aspect_ratio="3:2",
   resolution="2K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   image_urls=["main:final"]
 )
 # → returns the result directly with the given output_asset_id

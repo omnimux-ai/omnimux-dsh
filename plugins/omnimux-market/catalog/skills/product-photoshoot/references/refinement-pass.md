@@ -84,7 +84,7 @@ generate_image(
 )
 ```
 
-(Use the same `model` as the first pass — `gpt-image-2` if the first pass was a typography/graphic deliverable, otherwise `nano-banana-2`.)
+(Use the same `model` as the first pass — `gpt-image-2.5-sunburst` if the first pass was a typography/graphic deliverable, otherwise `nano-banana-2`.)
 
 ## Step 5 — Re-audit
 

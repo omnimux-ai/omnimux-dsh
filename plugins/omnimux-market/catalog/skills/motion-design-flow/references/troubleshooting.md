@@ -86,7 +86,7 @@ If still appearing — check that frame doesn't have UI with baked text + captio
 - Colors slightly off (pink in one has slightly different hue)
 - Letter spacing inconsistent
 
-**Root cause:** GPT Image 2 / Nano Banana 2 random seed on each gen. Without anchor — drift.
+**Root cause:** GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) / Nano Banana 2 random seed on each gen. Without anchor — drift.
 
 **Fixes:**
 
@@ -127,7 +127,7 @@ If still appearing — check that frame doesn't have UI with baked text + captio
    - This gives real AE-feel
 
 2. **Fully After Effects:**
-   - GPT Image 2 keyframes only, no Seedance
+   - GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) keyframes only, no Seedance
    - All motion in AE
    - MDC6 pipeline in motion-design-cases.md
 
@@ -187,7 +187,7 @@ If still appearing — check that frame doesn't have UI with baked text + captio
 
 3. **If nothing helps:**
    - Render Seedance without Spencerian (only bg + light + particles)
-   - Composite Spencerian wordmark in CapCut on top (alpha PNG from GPT Image 2)
+   - Composite Spencerian wordmark in CapCut on top (alpha PNG from GPT Image 2.5 画质版 (gpt-image-2.5-sunburst))
 
 ---
 
@@ -213,7 +213,7 @@ If still appearing — check that frame doesn't have UI with baked text + captio
 - Letter-spacing different
 - Stylistic alternates substituted
 
-**Root cause:** GPT Image 2 on ref-gen can drift in font choice if not anchored.
+**Root cause:** GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) on ref-gen can drift in font choice if not anchored.
 
 **Fix:**
 
@@ -258,7 +258,7 @@ If still appearing — check that frame doesn't have UI with baked text + captio
 - "3D rendered cursor arrow" comes out plasticky
 - Drop shadow looks fake
 
-**Root cause:** GPT Image 2 interprets "3D" as stylized 3D render with mouse-shaped icon, not realistic cursor.
+**Root cause:** GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) interprets "3D" as stylized 3D render with mouse-shaped icon, not realistic cursor.
 
 **Fix:**
 
@@ -306,7 +306,7 @@ Signs that Seedance pipeline isn't suitable — switch to pure After Effects (MD
 - Precise control over easing curves for each element
 - Brand-critical typography that cannot drift
 
-If 2+ of these signs — pipeline = pure AE on static GPT Image 2 keyframes.
+If 2+ of these signs — pipeline = pure AE on static GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) keyframes.
 
 ---
 

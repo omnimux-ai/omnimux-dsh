@@ -68,7 +68,7 @@ no different surfaces between slides, no broken visual continuity.
 
 ## Typography handling per slide
 
-If user provided concrete text for any slide (e.g. "Slide 1 should say 'New Collection'") — see Case 1 in `references/typography.md` (and switch that slide to `model="gpt-image-2"`).
+If user provided concrete text for any slide (e.g. "Slide 1 should say 'New Collection'") — see Case 1 in `references/typography.md` (and switch that slide to `model="gpt-image-2.5-sunburst"`).
 If user said they'll add text later — see Case 2 in `references/typography.md` (apply consistently across all slides).
 Otherwise — compose freely.
 
