@@ -1,0 +1,52 @@
+{
+  "at": "2026-09-21T17:18:35.076Z",
+  "evidenceLevel": "工作树内真实浏览器（headless Chrome + CDP，动态端口 0，自清理）+ 真实组件 esbuild 打包双实例挂载",
+  "screenshots": {
+    "skills": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/creatify-pills-panel-design/.agent-reports/creatify-pills-panel/s2-skills-open.png",
+    "subprompt": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/creatify-pills-panel-design/.agent-reports/creatify-pills-panel/s3-subprompt-open.png"
+  },
+  "results": [
+    {
+      "id": "S1",
+      "name": "样式幂等注入（双实例仅一个 style 节点）",
+      "pass": true,
+      "detail": "实测 style 节点数=1"
+    },
+    {
+      "id": "S2a",
+      "name": "技能面板展开 + 搜索框可输入过滤",
+      "pass": true,
+      "detail": "展开=true 总数=112 过滤词=\"UG\" 过滤后=26"
+    },
+    {
+      "id": "S2b",
+      "name": "点击技能项注入芯片并关闭面板",
+      "pass": true,
+      "detail": "芯片注入=true 面板关闭=true"
+    },
+    {
+      "id": "S3",
+      "name": "视频广告面板 7 项 + 点击第 1 项回调注入",
+      "pass": true,
+      "detail": "展开=true 项数=7 回调次数=1 首条命中=true"
+    },
+    {
+      "id": "S4",
+      "name": "Escape 关闭已打开面板 / 未打开时不被消费",
+      "pass": true,
+      "detail": "打开=true Escape后关闭=true 未打开时defaultPrevented=false=true"
+    },
+    {
+      "id": "S5a",
+      "name": "面板几何为正",
+      "pass": true,
+      "detail": "skills=720x384 subprompt=720x291"
+    },
+    {
+      "id": "S5b",
+      "name": "无控制台报错 / 无页面异常",
+      "pass": true,
+      "detail": "0 条"
+    }
+  ]
+}
