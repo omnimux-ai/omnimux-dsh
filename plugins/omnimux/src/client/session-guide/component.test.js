@@ -8,10 +8,25 @@ import { createRoot } from 'react-dom/client'
 import { createGuideStore } from './state.js'
 import { guideZh, guideEn } from './catalog.js'
 
-const output = await build({ entryPoints: [new URL('./SessionGuide.jsx', import.meta.url).pathname], bundle: true, write: false, format: 'cjs', platform: 'node', external: ['react'] })
-const module = { exports: {} }
-new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
-const { SessionGuide } = module.exports
+async function loadBundledModule(relPath) {
+  const output = await build({
+    entryPoints: [new URL(relPath, import.meta.url).pathname],
+    bundle: true,
+    write: false,
+    format: 'cjs',
+    platform: 'node',
+    external: ['react'],
+  })
+  const module = { exports: {} }
+  new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
+  return module.exports
+}
+
+const { SessionGuide } = await loadBundledModule('./SessionGuide.jsx')
+const { MarketingInsightModal } = await loadBundledModule('./MarketingInsightModal.jsx')
+const { UrlToVideoModal } = await loadBundledModule('./UrlToVideoModal.jsx')
+const { RecreateViralAdsModal } = await loadBundledModule('./RecreateViralAdsModal.jsx')
+const { BulkCreateAdsModal } = await loadBundledModule('./BulkCreateAdsModal.jsx')
 
 /** 加载会话附件 Store：复刻板块写入的就是这个全局单例，断言看到的是真实挂载结果。 */
 async function loadAttachmentStore() {
@@ -111,7 +126,7 @@ test('session guide switches drafts without a reference panel or send intercepti
   }
 })
 
-test('popular starters render 4 cards and marketing insight modal flows draft into input', async () => {
+test('homepage no longer renders popular starters and keeps explore templates', async () => {
   const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
@@ -119,56 +134,61 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   const store = createGuideStore()
   const root = createRoot(document.querySelector('#guide'))
-  let draft = ''
-  let writes = 0
   const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
   const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = (localeMap = guideZh) => ({
+  const props = {
     sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
-    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
-  })
-  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+    useInput: s => s({ draft: '', phase: 'plain' }), inputActions: { setDraft() {} },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => guideZh[key] || key,
+  }
+
+  try {
+    await act(async () => root.render(React.createElement(SessionGuide, props)))
+    assert.equal(document.querySelectorAll('[data-popular-starter-id]').length, 0, 'homepage must not render popular starter cards')
+    assert.equal(document.querySelector('.omnimux-popular-section'), null, 'homepage must not render popular starters section')
+    assert.ok(document.querySelector('[data-omnimux-explore-section]'), 'explore templates root must remain')
+    assert.ok(document.querySelector('[data-explore-title]'), 'explore templates title must remain')
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 4, 'Creatify pills bar must remain')
+  } finally {
+    await act(async () => root.unmount())
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+test('marketing insight modal flows draft into input when mounted directly', async () => {
+  const dom = new JSDOM('<div id="root"><div id="modal"></div></div>', { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const root = createRoot(document.querySelector('#modal'))
+  let draft = ''
+  let writes = 0
+  let isOpen = true
+  const t = key => guideZh[key] || key
+  const render = () => act(async () => root.render(React.createElement(MarketingInsightModal, {
+    isOpen,
+    onClose: () => { isOpen = false },
+    t,
+    onSubmitDraft: (prompt) => {
+      draft = prompt
+      writes++
+      isOpen = false
+    },
+  })))
   const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    // 1. 中文环境渲染与验证
-    await render(guideZh)
-    // 验证 4 个卡片均已呈现
-    const popularCards = document.querySelectorAll('[data-popular-starter-id]')
-    assert.equal(popularCards.length, 4)
-    assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
-    assert.equal(popularCards[1].dataset.popularStarterId, 'url-to-video')
-    assert.equal(popularCards[2].dataset.popularStarterId, 'recreate-viral-ads')
-    assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
-
-    // 2. 点击批量创建广告卡片打开全功能模态框
-    await click('[data-popular-starter-id="bulk-create-ads"]')
-    await render(guideZh)
-    assert.ok(document.querySelector('.omnimux-bulk-modal'))
-    // 输入简报并提交
-    const briefInput = document.querySelector('.omnimux-bulk-textarea')
-    await act(async () => {
-      const propKey = Object.keys(briefInput).find(k => k.startsWith('__reactProps$'))
-      if (propKey && briefInput[propKey]?.onChange) {
-        briefInput[propKey].onChange({ target: { value: '智能发光降噪耳机快速开箱测评' } })
-      }
-    })
-    await click('.omnimux-bulk-submit-btn')
-    await render(guideZh)
-    assert.equal(document.querySelector('.omnimux-bulk-modal'), null)
-    assert.ok(draft.includes('智能发光降噪耳机快速开箱测评'))
-    assert.equal(writes, 1)
-
-    // 3. 点击营销洞察卡片打开模态框，验证结构化表单与必填/选填标识
-    await click('[data-popular-starter-id="marketing-insight"]')
-    await render(guideZh)
+    await render()
     const modal = document.querySelector('.omnimux-insight-modal')
     assert.ok(modal, 'modal should open')
     const items = document.querySelectorAll('[data-insight-id]')
     assert.equal(items.length, 6)
-    
-    // 验证当前选中的 TikTok 创作者场景表单渲染
+
     assert.ok(document.querySelector('.omnimux-insight-form-container'))
     const productField = document.querySelector('[data-insight-field="product"]')
     assert.ok(productField, 'product input field should be present')
@@ -177,13 +197,11 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     const optTags = document.querySelectorAll('.omnimux-insight-optional-tag')
     assert.ok(optTags.length >= 1, 'optional tags should be rendered')
 
-    // 4. 未填必填项直接提交，触发校验提示
     await click('.omnimux-insight-submit')
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-insight-error-banner'), 'validation error banner should be visible')
-    assert.equal(writes, 1, 'no draft write should happen on validation failure')
+    assert.equal(writes, 0, 'no draft write should happen on validation failure')
 
-    // 5. 填写必填项并提交
     await act(async () => {
       const prodProps = Object.keys(productField).find(k => k.startsWith('__reactProps$'))
       if (prodProps && productField[prodProps]?.onChange) {
@@ -196,24 +214,22 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
       }
     })
     await click('.omnimux-insight-submit')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
     assert.ok(draft.includes('智能骨传导运动耳机'), 'draft should contain entered product')
     assert.ok(draft.includes('欧美市场'), 'draft should contain entered market')
-    assert.equal(writes, 2)
+    assert.equal(writes, 1)
 
-    // 6. 再次打开并切换到第2项（广告ROAS分析），验证场景表单字段联动切换
-    await click('[data-popular-starter-id="marketing-insight"]')
-    await render(guideZh)
+    isOpen = true
+    await render()
     await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
-    await render(guideZh)
+    await render()
     const platformField = document.querySelector('[data-insight-field="platform"]')
     assert.ok(platformField, 'platform input should be present for ads-roas')
     await click('.omnimux-insight-close')
-    await render(guideZh)
+    await render()
   } finally {
     await act(async () => root.unmount())
-    store.dispose()
     dom.window.close()
     globalThis.window = previous.window
     globalThis.document = previous.document
@@ -222,7 +238,7 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
 })
 
 test('url to video modal renders carousel and submits video ad prompt', async () => {
-  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const dom = new JSDOM('<div id="root"><div id="modal"></div></div>', { url: 'http://localhost/' })
   dom.window.HTMLInputElement.prototype.attachEvent = () => {}
   dom.window.HTMLTextAreaElement.prototype.attachEvent = () => {}
   dom.window.HTMLElement.prototype.attachEvent = () => {}
@@ -232,39 +248,36 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  const store = createGuideStore()
-  const root = createRoot(document.querySelector('#guide'))
+  const root = createRoot(document.querySelector('#modal'))
   let draft = ''
   let writes = 0
-  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
-  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = (localeMap = guideZh) => ({
-    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
-    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
-  })
-  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  let isOpen = true
+  const t = key => guideZh[key] || key
+  const render = () => act(async () => root.render(React.createElement(UrlToVideoModal, {
+    isOpen,
+    onClose: () => { isOpen = false },
+    t,
+    onSubmitDraft: (prompt) => {
+      draft = prompt
+      writes++
+      isOpen = false
+    },
+  })))
   const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    await render(guideZh)
-    // 1. 点击“视频网址”卡片打开弹窗
-    await click('[data-popular-starter-id="url-to-video"]')
-    await render(guideZh)
+    await render()
     const modal = document.querySelector('.omnimux-u2v-modal')
     assert.ok(modal, 'url-to-video modal should open')
 
-    // 2. 验证左侧轮播卡片与右侧表单输入项
     const cards = document.querySelectorAll('.omnimux-u2v-card')
     assert.ok(cards.length >= 1)
 
-    // 3. 未输入 URL 点击提交，触发错误提示
     await click('.omnimux-u2v-submit')
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-u2v-error'))
     assert.equal(writes, 0)
 
-    // 4. 输入 URL 并切换风格、画幅与时长
     const input = document.querySelector('.omnimux-u2v-input')
     await act(async () => {
       const propKey = Object.keys(input).find(k => k.startsWith('__reactProps$'))
@@ -273,7 +286,6 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
       }
     })
 
-    // 验证目标时长滑块默认不处于禁用态，可直接拖动并自动解除自动状态
     const autoBtn = document.querySelector('.omnimux-u2v-auto-btn')
     const slider = document.querySelector('.omnimux-u2v-slider')
     const durationLabel = document.querySelector('.omnimux-u2v-duration-label')
@@ -281,37 +293,32 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
     assert.equal(autoBtn.getAttribute('aria-pressed'), 'true')
     assert.equal(durationLabel.textContent.trim(), '自动')
 
-    // 模拟用户直接拖拽滑块至 30 秒
     await act(async () => {
       const sliderProps = Object.keys(slider).find(k => k.startsWith('__reactProps$'))
       if (sliderProps && slider[sliderProps]?.onChange) {
         slider[sliderProps].onChange({ target: { value: '30' } })
       }
     })
-    await render(guideZh)
+    await render()
     assert.equal(autoBtn.getAttribute('aria-pressed'), 'false', 'auto mode should be toggled off after dragging slider')
     assert.equal(durationLabel.textContent.trim(), '30s', 'duration label should update to 30s')
 
-    // 选择 UGC 风格
     const styleBtns = document.querySelectorAll('.omnimux-u2v-style-btn')
     assert.equal(styleBtns.length, 9)
     await click('.omnimux-u2v-style-btn:nth-child(7)')
 
-    // 选择 16:9 比例
     const ratioBtns = document.querySelectorAll('.omnimux-u2v-ratio-btn')
     assert.equal(ratioBtns.length, 6)
     await click('.omnimux-u2v-ratio-btn:nth-child(2)')
 
-    // 5. 点击提交
     await click('.omnimux-u2v-submit')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-u2v-modal'), null, 'modal should close')
     assert.ok(draft.includes('https://www.amazon.com/dp/B09XYZ1234'))
     assert.ok(draft.includes('16:9'))
     assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())
-    store.dispose()
     dom.window.close()
     globalThis.window = previous.window
     globalThis.document = previous.document
@@ -320,65 +327,58 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
 })
 
 test('recreate viral ads modal allows mode selection, handles file selection and submits prompt', async () => {
-  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const dom = new JSDOM('<div id="root"><div id="modal"></div></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  const store = createGuideStore()
-  const root = createRoot(document.querySelector('#guide'))
+  const root = createRoot(document.querySelector('#modal'))
   let draft = ''
   let writes = 0
-  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
-  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = (localeMap = guideZh) => ({
-    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
-    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
-  })
-  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  let isOpen = true
+  const t = key => guideZh[key] || key
+  const render = () => act(async () => root.render(React.createElement(RecreateViralAdsModal, {
+    isOpen,
+    onClose: () => { isOpen = false },
+    t,
+    onSubmitDraft: (prompt) => {
+      draft = prompt
+      writes++
+      isOpen = false
+    },
+  })))
   const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    await render(guideZh)
-    // 1. 点击“重现病毒式广告”卡片打开弹窗
-    await click('[data-popular-starter-id="recreate-viral-ads"]')
-    await render(guideZh)
+    await render()
     const modal = document.querySelector('.omnimux-recreate-modal')
     assert.ok(modal, 'recreate viral ads modal should open')
 
-    // 2. 验证弹窗外侧独立右上角关闭按钮存在，点击可关闭
     const closeBtn = document.querySelector('.omnimux-split-modal-close')
     assert.ok(closeBtn, 'external close button should be present')
     await click('.omnimux-split-modal-close')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-recreate-modal'), null, 'modal should close on close button click')
 
-    // 3. 再次打开弹窗并测试交互流程
-    await click('[data-popular-starter-id="recreate-viral-ads"]')
-    await render(guideZh)
+    isOpen = true
+    await render()
 
-    // 4. 轮播切换测试
     const navDown = document.querySelector('.omnimux-recreate-nav-down')
     assert.ok(navDown)
     await click('.omnimux-recreate-nav-down')
-    await render(guideZh)
+    await render()
 
-    // 5. 克隆模式切换测试
     const modeCards = document.querySelectorAll('.omnimux-clone-mode-card')
     assert.equal(modeCards.length, 2)
-    // 切换到“重现结构”
     await click('.omnimux-clone-mode-card:nth-child(1)')
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-clone-mode-card:nth-child(1)').classList.contains('active'))
 
-    // 6. 未选视频点击提交，被拦截并提示
     await click('.omnimux-recreate-submit-btn')
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-recreate-error-msg'))
     assert.equal(writes, 0)
 
-    // 7. 模拟目标视频文件选择
     const videoInput = document.querySelector('input[type="file"][accept*="video"]')
     assert.ok(videoInput)
     const fakeVideoFile = new dom.window.File(['video bytes'], 'viral-hook-sample.mp4', { type: 'video/mp4' })
@@ -388,11 +388,10 @@ test('recreate viral ads modal allows mode selection, handles file selection and
         videoInput[propKey].onChange({ target: { files: [fakeVideoFile], value: '' } })
       }
     })
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-recreate-selected-file-card'))
     assert.ok(document.querySelector('.omnimux-recreate-file-name').textContent.includes('viral-hook-sample.mp4'))
 
-    // 8. 输入新视频内容描述
     const textarea = document.querySelector('.omnimux-recreate-textarea')
     assert.ok(textarea)
     await act(async () => {
@@ -401,9 +400,8 @@ test('recreate viral ads modal allows mode selection, handles file selection and
         textarea[propKey].onChange({ target: { value: '替换为轻奢女装产品展示，突出优雅剪裁与面料垂坠感' } })
       }
     })
-    await render(guideZh)
+    await render()
 
-    // 9. 模拟添加参考素材文件
     const refInput = document.querySelectorAll('input[type="file"]')[1]
     assert.ok(refInput)
     const fakeImageFile = new dom.window.File(['img bytes'], 'dress-ref-1.jpg', { type: 'image/jpeg' })
@@ -413,12 +411,11 @@ test('recreate viral ads modal allows mode selection, handles file selection and
         refInput[propKey].onChange({ target: { files: [fakeImageFile], value: '' } })
       }
     })
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelectorAll('.omnimux-recreate-ref-pill').length, 1)
 
-    // 10. 点击提交按钮
     await click('.omnimux-recreate-submit-btn')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-recreate-modal'), null, 'modal should close')
     assert.ok(draft.includes('viral-hook-sample.mp4'))
     assert.ok(draft.includes('重现结构'))
@@ -427,7 +424,6 @@ test('recreate viral ads modal allows mode selection, handles file selection and
     assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())
-    store.dispose()
     dom.window.close()
     globalThis.window = previous.window
     globalThis.document = previous.document
@@ -436,55 +432,50 @@ test('recreate viral ads modal allows mode selection, handles file selection and
 })
 
 test('bulk create ads modal allows brief, references, ratio, duration, stepper and submits prompt', async () => {
-  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const dom = new JSDOM('<div id="root"><div id="modal"></div></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  const store = createGuideStore()
-  const root = createRoot(document.querySelector('#guide'))
+  const root = createRoot(document.querySelector('#modal'))
   let draft = ''
   let writes = 0
-  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
-  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = (localeMap = guideZh) => ({
-    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
-    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
-  })
-  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  let isOpen = true
+  const t = key => guideZh[key] || key
+  const render = () => act(async () => root.render(React.createElement(BulkCreateAdsModal, {
+    isOpen,
+    onClose: () => { isOpen = false },
+    t,
+    onSubmitDraft: (prompt) => {
+      draft = prompt
+      writes++
+      isOpen = false
+    },
+  })))
   const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    await render(guideZh)
-    // 1. 点击卡片打开批量创建广告模态框
-    await click('[data-popular-starter-id="bulk-create-ads"]')
-    await render(guideZh)
+    await render()
     const modal = document.querySelector('.omnimux-bulk-modal')
     assert.ok(modal, 'bulk create ads modal should open')
 
-    // 2. 验证右上角外侧关闭按钮并测试点击关闭
     const closeBtn = document.querySelector('.omnimux-split-modal-close')
     assert.ok(closeBtn)
     await click('.omnimux-split-modal-close')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-bulk-modal'), null)
 
-    // 3. 再次打开
-    await click('[data-popular-starter-id="bulk-create-ads"]')
-    await render(guideZh)
+    isOpen = true
+    await render()
 
-    // 4. 扇形轮播切换
     await click('.omnimux-bulk-nav-next')
-    await render(guideZh)
+    await render()
 
-    // 5. 空简报提交应被阻断
     await click('.omnimux-bulk-submit-btn')
-    await render(guideZh)
+    await render()
     assert.ok(document.querySelector('.omnimux-bulk-error-msg'))
     assert.equal(writes, 0)
 
-    // 6. 填写创意简报
     const textarea = document.querySelector('.omnimux-bulk-textarea')
     assert.ok(textarea)
     await act(async () => {
@@ -493,9 +484,8 @@ test('bulk create ads modal allows brief, references, ratio, duration, stepper a
         textarea[propKey].onChange({ target: { value: '智能温感保温杯，突出长效锁温与极简外观' } })
       }
     })
-    await render(guideZh)
+    await render()
 
-    // 7. 模拟添加参考素材
     const fileInput = document.querySelector('input[type="file"]')
     assert.ok(fileInput)
     const fakeFile = new dom.window.File(['ref'], 'cup-spec.png', { type: 'image/png' })
@@ -505,25 +495,22 @@ test('bulk create ads modal allows brief, references, ratio, duration, stepper a
         fileInput[propKey].onChange({ target: { files: [fakeFile], value: '' } })
       }
     })
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelectorAll('.omnimux-bulk-ref-pill').length, 1)
 
-    // 8. 切换画幅比例为 16:9
     const ratioBtns = document.querySelectorAll('.omnimux-bulk-ratio-btn')
     assert.equal(ratioBtns.length, 5)
     await click('.omnimux-bulk-ratio-btn:nth-child(1)')
-    await render(guideZh)
+    await render()
 
-    // 9. 操作步进器增加视频生成数量至 5
     const stepperPlus = document.querySelectorAll('.omnimux-bulk-stepper-btn')[1]
     assert.ok(stepperPlus)
     await click('.omnimux-bulk-stepper-btn:nth-child(3)')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-bulk-stepper-value').textContent, '5')
 
-    // 10. 点击生成批量创意方案
     await click('.omnimux-bulk-submit-btn')
-    await render(guideZh)
+    await render()
     assert.equal(document.querySelector('.omnimux-bulk-modal'), null, 'modal should close')
     assert.ok(draft.includes('智能温感保温杯'))
     assert.ok(draft.includes('16:9'))
@@ -532,7 +519,6 @@ test('bulk create ads modal allows brief, references, ratio, duration, stepper a
     assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())
-    store.dispose()
     dom.window.close()
     globalThis.window = previous.window
     globalThis.document = previous.document
