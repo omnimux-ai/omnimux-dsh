@@ -110,3 +110,20 @@ test('E2E: 创作画布与工作区同频流转契约 (#2224)', () => {
     'CanvasTab 必须对 ctx 进行安全服务属性读取防护，防御未注入 Context 崩溃',
   )
 })
+
+test('E2E: 确认创建按路径加页或先问再加页 (#2519)', () => {
+  const newProjectSrc = readFileSync(join(here, '../../src/client/projects/newProject.js'), 'utf8')
+  const promptSrc = readFileSync(join(here, '../../src/client/projects/promptNewProjectName.js'), 'utf8')
+  const forkSrc = readFileSync(join(here, '../../src/client/projects/appLibrary.js'), 'utf8')
+
+  assert.match(newProjectSrc, /createCanvasProjectPage/, '已有项目必须走带画布的加页')
+  assert.match(newProjectSrc, /needsConfirm\s*=\s*!stillStaying\s*&&\s*!confirmedExisting/, '换到其他已有项目文件夹必须先问')
+  assert.match(newProjectSrc, /existing:\s*true/, '换路径撞档必须把已有项目标记回给弹窗')
+  assert.match(promptSrc, /let confirmedExisting = false/, '侧栏弹窗确认标记必须跨两次提交存活')
+  assert.match(promptSrc, /confirmedExisting = true/, '第一次撞档后必须记下确认')
+  assert.match(dialogSrc, /confirmedExisting/, '主弹窗第二次提交必须带确认标记')
+  assert.match(forkSrc, /\$\{appName\}_副本/, '别人的应用必须复制一页原名_副本')
+  assert.match(forkSrc, /hostProject/, '有当前项目时不得另开项目')
+  assert.doesNotMatch(librarySrc, /confirmedExisting:\s*true/, '项目库不得偷偷带上二次确认')
+  assert.doesNotMatch(canvasTabSrc, /confirmedExisting:\s*true/, '画布弹窗不得偷偷带上二次确认')
+})

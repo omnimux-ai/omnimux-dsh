@@ -63,6 +63,9 @@ function findProjectByRoot(
   projectStore: ProjectStore,
   root: string,
 ): ProjectRecord | null {
+  if (typeof projectStore.findByRoot === 'function') {
+    return projectStore.findByRoot(root);
+  }
   const row = projectStore.list().find((entry) => resolve(entry.path) === root);
   if (!row) return null;
   try {

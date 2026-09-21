@@ -62,6 +62,8 @@ export interface ProjectStore {
   get(id: string): ProjectRecord;
   rename(id: string, title: string): ProjectRecord;
   bindSession(id: string, sessionId: string): ProjectRecord;
+  /** 按文件夹绝对路径认项目（含外部登记与磁盘档案）。 */
+  findByRoot(projectRoot: string): ProjectRecord | null;
   /** Resolve a canvas `ws_*` id to the owning project (lazy-binds canvasWorkspaceIds). */
   findByCanvasWorkspaceId(workspaceId: string): ProjectRecord | null;
   addPage(projectId: string, pageTitle: string, opts?: { canvasWorkspaceId?: string; loadMemory?: boolean }): ProjectRecord;
@@ -258,9 +260,25 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
     return found;
   }
 
+  function lookupByRoot(projectRoot: string): ProjectRecord | null {
+    const dir = typeof projectRoot === 'string' ? projectRoot.trim() : '';
+    if (dir === '') return null;
+    const root = resolve(dir);
+    const file = join(root, '.omnimux', 'project.json');
+    const raw = readJsonFile(file);
+    if (raw === undefined) return null;
+    const project = parseProject(raw);
+    if (!project) return null;
+    return { ...project, path: root };
+  }
+
   return {
     list(): ProjectSummary[] {
       return scanEntries().map((row) => toSummary(row.project, row.dir));
+    },
+
+    findByRoot(projectRoot: string): ProjectRecord | null {
+      return lookupByRoot(projectRoot);
     },
 
     create(title, createOpts = {}): ProjectRecord {
@@ -276,6 +294,8 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         registerExternalProjectDir(paths.projectRoot);
       }
       if (existsSync(paths.projectFile)) {
+        const existing = lookupByRoot(paths.projectRoot);
+        if (existing) return existing;
         throw new ProjectStoreError('project-exists', `project already seeded at ${paths.projectRoot}`);
       }
       const now = new Date().toISOString();

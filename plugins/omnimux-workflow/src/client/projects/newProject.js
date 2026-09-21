@@ -8,8 +8,13 @@
  *
  * 禁止 connectWorkspace、sessions.create({ cwd })、resolveCurrentCwd 当库作用域。
  */
-import { bindProjectSession, createProject } from '../api.js'
-import { resolveWorkspaceForCwd } from './cwd.js'
+import {
+  bindProjectSession,
+  createCanvasProjectPage,
+  createProject,
+  findProjectByRoot,
+} from '../api.js'
+import { normalizeWorkspacePath, resolveCurrentCwd, resolveWorkspaceForCwd } from './cwd.js'
 import { validateProjectTitle } from './folderName.js'
 import { activateProjectCanvas } from './projectCanvas.js'
 
@@ -63,6 +68,86 @@ function errorText(value) {
   return String(value)
 }
 
+function friendlyCreateError(code, t) {
+  const raw = errorText(code)
+  const text = typeof t === 'function' ? t : () => ''
+  if (raw === 'no-workspace') return text('projects.noWorkspace') || '请先选择一个工作区目录。'
+  if (raw === 'title-required' || raw === 'title-invalid' || raw === 'title-too-long') {
+    return text('projects.genericError') || '操作失败，请重试。'
+  }
+  if (raw === 'project-exists') {
+    return text('projects.existingConfirm') || '当前工作区已有项目，要在该项目新建创作页吗？'
+  }
+  const mapped = text('projects.createFailed')
+  if (typeof mapped === 'string' && mapped.includes('{error}')) {
+    return mapped.replace('{error}', '操作失败，请重试。')
+  }
+  return text('projects.genericError') || '操作失败，请重试。'
+}
+
+function currentSessionId(sessions) {
+  try {
+    const snap = sessions?.list?.getSnapshot?.()
+    const id = snap?.current
+    return typeof id === 'string' && id !== '' ? id : ''
+  } catch {
+    return ''
+  }
+}
+
+function sameFolder(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.trim() === '' || b.trim() === '') return false
+  return normalizeWorkspacePath(a) === normalizeWorkspacePath(b)
+}
+
+function nextPageTitle(project, fallbackTitle) {
+  const pages = Array.isArray(project?.pages) ? project.pages : []
+  if (pages.length === 0 && fallbackTitle) return fallbackTitle
+  return `创作页 ${pages.length + 1}`
+}
+
+function activeCanvasId(project) {
+  const pages = Array.isArray(project?.pages) ? project.pages : []
+  const active = pages.find((page) => page?.id === project?.activePageId) || pages[0]
+  return active?.canvasWorkspaceId
+    || (Array.isArray(project?.canvasWorkspaceIds) ? project.canvasWorkspaceIds[0] : '')
+    || ''
+}
+
+async function addBlankPage(project, title) {
+  const canvasId = activeCanvasId(project)
+  if (!canvasId) return { ok: false, error: 'invalid-id' }
+  const res = await createCanvasProjectPage(canvasId, title)
+  if (!res?.ok) return { ok: false, error: errorText(res?.body?.error || res?.status) }
+  const page = res.body?.page
+  const nextProject = res.body?.project || project
+  const workspaceId = page?.canvasWorkspaceId || res.body?.workspace?.id || ''
+  if (!workspaceId) return { ok: false, error: 'invalid-id' }
+  return { ok: true, project: nextProject, page, workspaceId }
+}
+
+async function openOnSession(ctx, sessionId, cwd, extra = {}) {
+  dismissProductStage(ctx.stage)
+  if (sessionId && typeof ctx.sessions?.open === 'function') {
+    ctx.sessions.open(sessionId)
+  }
+  revealConversationAfterOpen(sessionId)
+  const opened = await activateProjectCanvas(ctx, {
+    sessionId,
+    cwd,
+    focusGroupId: extra.focusGroupId,
+  })
+  if (extra.workspaceId && typeof localStorage !== 'undefined') {
+    try { localStorage.setItem('omnimux:latest-active-canvas', extra.workspaceId) } catch { /* ignore */ }
+  }
+  if (extra.workspaceId && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+      detail: { workspaceId: extra.workspaceId },
+    }))
+  }
+  return opened
+}
+
 /**
  * Enter-Conversation Intent（对齐 omnimux-inspiration #552）：
  * 从一级库 gui 模式新建/重置会话后，必须解除中间栏折叠并切 split，
@@ -93,30 +178,76 @@ function revealConversationAfterOpen(sessionId) {
 export async function runNewProject(ctx, opts = {}) {
   const title = typeof opts.title === 'string' ? opts.title : ''
   const givenRoot = typeof opts.projectRoot === 'string' ? opts.projectRoot.trim() : ''
+  const confirmedExisting = Boolean(opts.confirmedExisting)
   const validated = validateProjectTitle(title)
   if (!validated.ok) return { ok: false, error: validated.error }
 
-  const seeded = await createProject(validated.title, null, givenRoot !== '' ? givenRoot : undefined)
-  if (!seeded.ok || !seeded.body?.project) {
-    return { ok: false, error: errorText(seeded.body?.error || seeded.body?.message || seeded.status) }
-  }
-  const projectRoot = typeof seeded.body.project.path === 'string' ? seeded.body.project.path : ''
-  if (projectRoot === '') {
-    return { ok: false, error: 'invalid-project-root' }
-  }
-  const project = { ...seeded.body.project, path: projectRoot }
-
   try {
-    const session = await createProjectSession(ctx.sessions, ctx.workspaces, projectRoot)
-    if (!session.ok) return session
-    await bindProjectSession(project.id, session.sessionId)
-    dismissProductStage(ctx.stage)
-    ctx.sessions.open(session.sessionId)
-    revealConversationAfterOpen(session.sessionId)
-    await activateProjectCanvas(ctx, { sessionId: session.sessionId, cwd: projectRoot })
-    return { ok: true, project: { ...project, sessionId: session.sessionId, path: projectRoot } }
+    const currentCwd = resolveCurrentCwd(ctx.sessions, ctx.workspaces) || ''
+    const currentSid = currentSessionId(ctx.sessions)
+    const staying = givenRoot !== '' && sameFolder(givenRoot, currentCwd)
+
+    if (givenRoot !== '') {
+      const found = await findProjectByRoot(givenRoot)
+      const liveCwd = resolveCurrentCwd(ctx.sessions, ctx.workspaces) || currentCwd
+      const liveSid = currentSessionId(ctx.sessions) || currentSid
+      const stillStaying = givenRoot !== '' && sameFolder(givenRoot, liveCwd)
+      const existing = found?.ok ? found.body?.project : null
+      if (existing?.id) {
+        const needsConfirm = !stillStaying && !confirmedExisting
+        if (needsConfirm) {
+          return {
+            ok: false,
+            error: friendlyCreateError('project-exists', ctx.t),
+            existing: true,
+            project: existing,
+          }
+        }
+        let sessionId = liveSid
+        if (!stillStaying || !sessionId) {
+          const jumped = await createProjectSession(ctx.sessions, ctx.workspaces, givenRoot)
+          if (!jumped.ok) return { ok: false, error: friendlyCreateError(jumped.error, ctx.t) }
+          sessionId = jumped.sessionId
+          await bindProjectSession(existing.id, sessionId)
+        }
+        const added = await addBlankPage(existing, nextPageTitle(existing, validated.title))
+        if (!added.ok) return { ok: false, error: friendlyCreateError(added.error, ctx.t) }
+        await openOnSession(ctx, sessionId, givenRoot, { workspaceId: added.workspaceId })
+        return {
+          ok: true,
+          action: 'page-added',
+          project: { ...added.project, sessionId, path: givenRoot },
+          page: added.page,
+        }
+      }
+    }
+
+    const seeded = await createProject(validated.title, staying ? currentSid || null : null, givenRoot !== '' ? givenRoot : undefined)
+    if (!seeded.ok || !seeded.body?.project) {
+      return { ok: false, error: friendlyCreateError(seeded.body?.error || seeded.body?.message || seeded.status, ctx.t) }
+    }
+    const projectRoot = typeof seeded.body.project.path === 'string' ? seeded.body.project.path : ''
+    if (projectRoot === '') {
+      return { ok: false, error: 'invalid-project-root' }
+    }
+    const project = { ...seeded.body.project, path: projectRoot }
+    const stayAfterSeed = staying || sameFolder(projectRoot, currentCwd)
+    let sessionId = currentSid
+    if (!stayAfterSeed || !sessionId) {
+      const session = await createProjectSession(ctx.sessions, ctx.workspaces, projectRoot)
+      if (!session.ok) return { ok: false, error: friendlyCreateError(session.error, ctx.t) }
+      sessionId = session.sessionId
+    }
+    await bindProjectSession(project.id, sessionId)
+    const canvasId = activeCanvasId(project)
+    await openOnSession(ctx, sessionId, projectRoot, { workspaceId: canvasId })
+    return {
+      ok: true,
+      action: stayAfterSeed && givenRoot !== '' ? 'registered' : 'created',
+      project: { ...project, sessionId, path: projectRoot },
+    }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: friendlyCreateError(error instanceof Error ? error.message : String(error), ctx.t) }
   }
 }
 

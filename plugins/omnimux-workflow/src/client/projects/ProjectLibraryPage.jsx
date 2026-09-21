@@ -477,7 +477,7 @@ export function ProjectLibraryPage(props) {
   }
 
   // 新建项目提交
-  const handleDialogSubmit = async ({ title, projectRoot }) => {
+  const handleDialogSubmit = async (payload) => {
     setBusy(true)
     setError('')
     try {
@@ -488,13 +488,14 @@ export function ProjectLibraryPage(props) {
         betterSidebar,
         stage,
         t,
-      }, { title, projectRoot })
+      }, payload)
       if (!created?.ok) {
         setError(created?.error || t('projects.genericError') || '创建失败')
-        return
+        return created
       }
       setDialogOpen(false)
       void reload()
+      return created
     } finally {
       setBusy(false)
     }

@@ -282,6 +282,138 @@ describe('runNewProject', () => {
     }
   })
 
+  it('adds a page on the current folder instead of creating another project', async () => {
+    const originalFetch = globalThis.fetch
+    const posts = []
+    globalThis.fetch = async (url, opts = {}) => {
+      const href = String(url)
+      if (href.includes('/api/projects?path=') && (!opts.method || opts.method === 'GET')) {
+        return {
+          ok: true,
+          json: async () => ({
+            project: {
+              id: 'p-exist',
+              title: '视频代做',
+              path: '/Users/x/Desktop/Project/视频代做',
+              activePageId: 'page-1',
+              pages: [{ id: 'page-1', title: '视频代做', canvasWorkspaceId: 'ws_old' }],
+              canvasWorkspaceIds: ['ws_old'],
+            },
+          }),
+        }
+      }
+      if (href.includes('/project-pages') && opts.method === 'POST') {
+        posts.push(JSON.parse(String(opts.body)))
+        return {
+          ok: true,
+          json: async () => ({
+            page: { id: 'page-2', title: '创作页 2', canvasWorkspaceId: 'ws_new' },
+            project: { id: 'p-exist' },
+          }),
+        }
+      }
+      if (opts.method === 'POST' && href.endsWith('/api/projects')) {
+        throw new Error('must not create a second project')
+      }
+      return { ok: true, json: async () => ({}) }
+    }
+    try {
+      const result = await runNewProject({
+        sessions: {
+          ...sessionsWith('s-now', { 's-now': { cwd: '/Users/x/Desktop/Project/视频代做' } }),
+          async create() { throw new Error('must not create session') },
+          open() {},
+        },
+        workspaces: {
+          ...workspacesWith([{ workspaceId: 'ws-ledger', path: '/Users/x/Desktop/Project/视频代做' }]),
+          async create() { throw new Error('must not create workspace') },
+        },
+        layout: { closeDetails() {} },
+        betterSidebar: {
+          openTab() {},
+          closeTab() {},
+          getTab() { return { id: 'omnimux-workflow:canvas' } },
+          getSnapshot() { return { sessionId: 's-now', state: { splits: {}, width: 700 } } },
+        },
+        t: (key) => key,
+      }, { title: '视频代做', projectRoot: '/Users/x/Desktop/Project/视频代做' })
+      assert.equal(result.ok, true)
+      assert.equal(result.action, 'page-added')
+      assert.equal(posts.length, 1)
+      assert.equal(posts[0].title, '创作页 2')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('asks before adding a page when switching to another existing project folder', async () => {
+    const originalFetch = globalThis.fetch
+    let pagePosts = 0
+    globalThis.fetch = async (url, opts = {}) => {
+      const href = String(url)
+      if (href.includes('/api/projects?path=')) {
+        return {
+          ok: true,
+          json: async () => ({
+            project: {
+              id: 'p-other',
+              title: '别的项目',
+              path: '/tmp/other',
+              pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_other' }],
+              canvasWorkspaceIds: ['ws_other'],
+            },
+          }),
+        }
+      }
+      if (href.includes('/project-pages') && opts.method === 'POST') {
+        pagePosts += 1
+        return { ok: true, json: async () => ({ page: { canvasWorkspaceId: 'ws_new' } }) }
+      }
+      return { ok: true, json: async () => ({}) }
+    }
+    try {
+      const first = await runNewProject({
+        sessions: {
+          ...sessionsWith('s-now', { 's-now': { cwd: '/tmp/current' } }),
+          async create() { return 's-new' },
+          open() {},
+        },
+        workspaces: {
+          ...workspacesWith([{ workspaceId: 'ws-cur', path: '/tmp/current' }]),
+          async create() { return { workspaceId: 'ws-other' } },
+        },
+        t: (key) => key,
+      }, { title: '别的项目', projectRoot: '/tmp/other' })
+      assert.equal(first.ok, false)
+      assert.equal(first.existing, true)
+      assert.equal(pagePosts, 0)
+      const second = await runNewProject({
+        sessions: {
+          ...sessionsWith('s-now', { 's-now': { cwd: '/tmp/current' } }),
+          async create() { return 's-new' },
+          open() {},
+        },
+        workspaces: {
+          ...workspacesWith([{ workspaceId: 'ws-cur', path: '/tmp/current' }]),
+          async create() { return { workspaceId: 'ws-other' } },
+        },
+        layout: { closeDetails() {} },
+        betterSidebar: {
+          openTab() {},
+          closeTab() {},
+          getTab() { return { id: 'omnimux-workflow:canvas' } },
+          getSnapshot() { return { sessionId: 's-new', state: { splits: {}, width: 700 } } },
+        },
+        t: (key) => key,
+      }, { title: '别的项目', projectRoot: '/tmp/other', confirmedExisting: true })
+      assert.equal(second.ok, true)
+      assert.equal(second.action, 'page-added')
+      assert.equal(pagePosts, 1)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('un-collapses conversation after sessions.open (enter-conversation intent)', async () => {
     const originalFetch = globalThis.fetch
     const order = []
