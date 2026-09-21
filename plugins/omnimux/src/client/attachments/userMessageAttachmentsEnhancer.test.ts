@@ -64,28 +64,54 @@ describe('userMessageAttachmentsEnhancer', () => {
     assert.equal(dur.textContent, '0:35');
   });
 
-  it('creates file capsule for documents, tables, and products', () => {
+  it('creates product card with thumbnail for product attachment', () => {
     const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
     const doc = dom.window.document;
 
-    const fileAtt: ConversationAttachment = {
+    const prodAtt: ConversationAttachment = {
       id: 'att-3',
       fingerprint: 'fp-3',
       sessionId: 'sess-1',
       sourcePlugin: 'omnimux-products',
       kind: 'product',
       entityId: 'prd-01',
-      title: '智能降噪耳机',
+      title: '5ml便携迷你香水喷雾瓶',
       extension: 'JSON',
-      relativePath: '.omnimux/products/prd-01.json',
+      relativePath: 'products/prd-01.json',
+      previewUrl: 'https://example.com/perfume.jpg',
+      status: 'ready',
+      createdAt: 100,
+    };
+
+    const card = createAttachmentCardElement(prodAtt, doc);
+    assert.ok(card.classList.contains('omx-user-att-card--product'));
+    assert.equal(card.querySelector('.omx-user-att-card__name')?.textContent, '5ml便携迷你香水喷雾瓶');
+    assert.equal(card.querySelector('img')?.src, 'https://example.com/perfume.jpg');
+    assert.ok(card.querySelector('.omx-user-att-card__badge'));
+  });
+
+  it('creates file capsule for documents and tables', () => {
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+    const doc = dom.window.document;
+
+    const fileAtt: ConversationAttachment = {
+      id: 'att-4',
+      fingerprint: 'fp-4',
+      sessionId: 'sess-1',
+      sourcePlugin: 'omnimux-assets',
+      kind: 'document',
+      entityId: 'doc-01',
+      title: '商品营销策划案',
+      extension: 'DOCX',
+      relativePath: 'docs/plan.docx',
       status: 'ready',
       createdAt: 100,
     };
 
     const card = createAttachmentCardElement(fileAtt, doc);
     assert.ok(card.classList.contains('omx-user-att-card--file'));
-    assert.equal(card.querySelector('.omx-user-att-ext-badge')?.textContent, 'JSON');
-    assert.equal(card.querySelector('.omx-user-att-title')?.textContent, '智能降噪耳机');
+    assert.equal(card.querySelector('.omx-user-att-ext-badge')?.textContent, 'DOCX');
+    assert.equal(card.querySelector('.omx-user-att-title')?.textContent, '商品营销策划案');
   });
 
   it('mounts attachments rail right above user message bubble', () => {

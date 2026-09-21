@@ -1,5 +1,14 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ProductPicker } from './ProductPicker.jsx';
+import {
+  syncProductAttachment,
+  removeProductAttachment,
+} from './product-attachment-sync.js';
+
+export {
+  syncProductAttachment,
+  removeProductAttachment,
+};
 
 export const PRODUCT_BTN_STYLE_ID = 'omnimux-composer-product-btn-style';
 
@@ -186,9 +195,11 @@ function createCloseSvg(size = 10) {
 export function resolveProductPreview(product) {
   if (!product) return '';
   const cover = product.cover;
-  if (cover?.kind === 'image' && cover.id) {
+  const coverId = cover?.id || product.cover_media_id;
+  if (coverId && product.id) {
     return `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(cover.id)}`;
   }
+  if (cover?.real_path) return `file://${cover.real_path}`;
   return product.cover_url || product.image || '';
 }
 
@@ -215,10 +226,36 @@ function notifyEditorInput(editor) {
 export function ProductPickerButton(props) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const selectedProductRef = useRef(selectedProduct);
+  const activeSessionIdRef = useRef('default');
   const t = props?.t;
 
   useEffect(() => {
+    selectedProductRef.current = selectedProduct;
+  }, [selectedProduct]);
+
+  useEffect(() => {
     ensureProductButtonStyles();
+  }, []);
+
+  // 监听消息提交事件：消息发送完毕后清理全局附件并自动重置底栏产品按钮选中态
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSubmitted = () => {
+      const current = selectedProductRef.current;
+      if (current?.id) {
+        removeProductAttachment(current.id, activeSessionIdRef.current);
+      }
+      setSelectedProduct(null);
+    };
+    window.addEventListener('omnimux:user-message-submitted', handleSubmitted);
+    return () => {
+      window.removeEventListener('omnimux:user-message-submitted', handleSubmitted);
+      // 组件卸载时若存在未提交的商品附件，执行退出清理，防止泄露至下轮对话
+      if (selectedProductRef.current?.id) {
+        removeProductAttachment(selectedProductRef.current.id, activeSessionIdRef.current);
+      }
+    };
   }, []);
 
   const handleOpen = useCallback((e) => {
@@ -231,9 +268,10 @@ export function ProductPickerButton(props) {
     setIsOpen(false);
   }, []);
 
-  /** 从输入框移除指定商品的 Chip 胶囊 */
+  /** 从输入框移除指定商品的 Chip 胶囊，并同步清理会话附件池 */
   const removeChip = useCallback((productId) => {
     try {
+      removeProductAttachment(productId);
       const chip = queryProductChip(productId);
       if (chip) {
         const editor = chip.closest('[data-chip-editor], [contenteditable="true"], .dsh-composer-input') || queryEditor();
@@ -270,6 +308,7 @@ export function ProductPickerButton(props) {
         e.stopPropagation();
         chip.remove();
         notifyEditorInput(editor);
+        removeProductAttachment(product.id);
         setSelectedProduct((current) => (current && String(current.id) === String(product.id) ? null : current));
       });
 
@@ -291,6 +330,10 @@ export function ProductPickerButton(props) {
     // 换选：先移除旧商品 Chip，再插入新 Chip（副作用不得放进状态更新回调，避免严格模式双调用）
     if (selectedProduct && String(selectedProduct.id) !== String(product.id)) {
       removeChip(selectedProduct.id);
+    }
+    const boundSession = syncProductAttachment(product, selectedProduct);
+    if (boundSession) {
+      activeSessionIdRef.current = boundSession;
     }
     setSelectedProduct(product);
     insertChip(product);
