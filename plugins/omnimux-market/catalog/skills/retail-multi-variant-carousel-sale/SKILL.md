@@ -60,7 +60,7 @@ This pattern always produces **two distinct carousel sets**:
 | Attribute | Feature carousel | Sales carousel |
 |-----------|-----------------|----------------|
 | Format | 1:1 square, 1080×1080 px | 1:1 square, 1080×1080 px |
-| Model | gpt-image-2 (best text rendering) | gpt-image-2 |
+| Model | gpt-image-2.5-sunburst (best text rendering) | gpt-image-2.5-sunburst |
 | Brand colour | A deep, saturated brand base (e.g. a dark navy) | Match feature carousel base |
 | Accent | Teal/cyan | Red (a strong sale red) |
 | Font | Heavy extra-bold sans headlines | Heavy extra-bold sans for price |

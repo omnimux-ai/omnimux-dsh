@@ -138,4 +138,4 @@ generate_image(prompt="<variant 1>", output_asset_id="hero:v1", aspect_ratio="16
 generate_image(prompt="<variant 2>", output_asset_id="hero:v2", aspect_ratio="21:9", resolution="2K", model="nano-banana-2")
 ```
 
-When the deliverable is on-image typography (Case 1 in `references/typography.md`), switch `model="gpt-image-2"`. If preserving a real uploaded product, add `image_urls=["product:reference"]` to each call.
+When the deliverable is on-image typography (Case 1 in `references/typography.md`), switch `model="gpt-image-2.5-sunburst"`. If preserving a real uploaded product, add `image_urls=["product:reference"]` to each call.

@@ -76,7 +76,7 @@ AskUserQuestion({
 
 **Branch B — Build from this:** lock subject identity from `@Image1` through all 6 panels (or 9 shots for Track B-style Product Reel use of image — though Product Reel uses its own character sheet pipeline, see MDC8). Pass the real image asset id in `image_urls` ONLY when preserving a real persona/product. Pose / scale / framing / context vary, the recognizable subject identity stays. Apply brand-stamp protection clause: "Preserve product silhouette, material, color from @Image1. Do NOT render any real-world brand stamp / logo / printed text present on the input photo. Render only the brand wordmark specified in the brief on its dedicated reveal panel."
 
-**HR-1b FOUNDATION GENERATOR — when image is NOT attached.** Offer to generate 2 foundation options via parallel fan-out — one `generate_image` with `model="nano-banana-2"` and one with `model="gpt-image-2"`. User picks one / both / none. Picked images carry into the storyboard's `image_urls` with **build-from-this** as default semantics. Override to style-ref only via explicit phrase in original brief.
+**HR-1b FOUNDATION GENERATOR — when image is NOT attached.** Offer to generate 2 foundation options via parallel fan-out — one `generate_image` with `model="nano-banana-2"` and one with `model="gpt-image-2.5-sunburst"`. User picks one / both / none. Picked images carry into the storyboard's `image_urls` with **build-from-this** as default semantics. Override to style-ref only via explicit phrase in original brief.
 
 Full procedure in Step 0b Branch B below. Key points:
 - 2-model fan-out via two `generate_image` calls (one per model), each writing its own `output_asset_id`
@@ -265,7 +265,7 @@ If ANY assertion fails — DO NOT call the tool. Rewrite the request first.
 | Field | Canonical value | Notes |
 |---|---|---|
 | Image tool | `generate_image` | Storyboard sheets, moodboards, character sheets, keyframes |
-| `model` param in `generate_image` | `"nano-banana-2"` (default) / `"gpt-image-2"` | Use `gpt-image-2` for typography / on-image text / flat-graphic output (storyboard sheets, character sheets); `nano-banana-2` for photographic / material-rich foundation images |
+| `model` param in `generate_image` | `"nano-banana-2"` (default) / `"gpt-image-2.5-sunburst"` | Use `gpt-image-2.5-sunburst` for typography / on-image text / flat-graphic output (storyboard sheets, character sheets); `nano-banana-2` for photographic / material-rich foundation images |
 | Chain-ref to a prior image output | the prior call's `output_asset_id` passed in `image_urls` | No re-upload, no type field — pass the asset id directly |
 | Video tool | `generate_scene_video` | Animates a storyboard keyframe into a clip |
 | `backend` param in `generate_scene_video` | `"seedance"` (default) / `"kling"` | Use `kling` when the source pattern requires Kling-only features (e.g. `end_frame` locking) |
@@ -555,13 +555,13 @@ generate_image(
   model="nano-banana-2"
 )
 
-# Option 2 — gpt-image-2 (graphic / typographic register)
+# Option 2 — gpt-image-2.5-sunburst (graphic / typographic register)
 generate_image(
   prompt="<same foundation prompt, optionally tightened for the graphic register>",
   output_asset_id="foundation:opt2",
   aspect_ratio="<Step 0d answer — 1:1 if Step 0d hasn't fired yet, else passed-through>",
   resolution="2K",
-  model="gpt-image-2"
+  model="gpt-image-2.5-sunburst"
 )
 ```
 
@@ -577,7 +577,7 @@ AskUserQuestion({
     multiSelect: true,
     options: [
       {label: "Option 1 — nano-banana-2", description: "<short description / first 60 chars of resolved url>"},
-      {label: "Option 2 — gpt-image-2", description: "<short description>"},
+      {label: "Option 2 — gpt-image-2.5-sunburst", description: "<short description>"},
       {label: "None — regenerate", description: "Regenerate via Step B.2 with a different prompt phrasing"},
       {label: "None — skip foundation", description: "Continue Step 0c without any foundation image, text-to-storyboard"}
     ]
@@ -781,7 +781,7 @@ generate_image(
   output_asset_id="moodboard:sheet",
   aspect_ratio="3:2",
   resolution="2K",
-  model="gpt-image-2"
+  model="gpt-image-2.5-sunburst"
 )
 ```
 
@@ -825,7 +825,7 @@ Branch on result:
 ```
 [ ] `image_urls` array is non-empty
 [ ] `image_urls[0]` equals the Stage A moodboard `output_asset_id` from this session
-[ ] `model="gpt-image-2"` (storyboard sheet is typography/label-heavy)
+[ ] `model="gpt-image-2.5-sunburst"` (storyboard sheet is typography/label-heavy)
 [ ] Prompt body contains explicit foundation-build phrase: "BUILD FROM the <TOP-LEFT|TOP-RIGHT|BOTTOM-LEFT|BOTTOM-RIGHT> frame of @Image1 as foundation"
 [ ] Prompt body lists ALL FOUR foundation sources explicitly: subject + material + palette + style ALL from the picked frame
 [ ] Prompt body does NOT replace the moodboard ref with text-only style description (no "sculptural 3D Buck Studio style" instead of @Image1 build-from)
@@ -845,7 +845,7 @@ generate_image(
   image_urls=["moodboard:sheet"],   # HR-12: the Stage A moodboard asset id (non-empty, foundation lock)
   aspect_ratio="<3:2 for 16:9 / 9:16 for 9:16 / 1:1 for 1:1 — per Step 0d>",
   resolution="2K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   prompt="Generate a designed 15s motion design storyboard sheet — 6 panel compositions BUILT FROM @Image1 (a 4-up moodboard).\n\nBUILD FROM the [TOP-LEFT | TOP-RIGHT | BOTTOM-LEFT | BOTTOM-RIGHT] frame of @Image1 as foundation. The picked frame IS the visual world of this storyboard. Ignore the other 3 frames.\n\n═══ GRID LAYOUT ═══\n[For 16:9 video target]: 6 panels in 3×2 grid — 3 cols × 2 rows HORIZONTAL layout. TOP ROW left-to-right: 01, 02, 03. BOTTOM ROW left-to-right: 04, 05, 06. Sheet aspect 3:2 horizontal.\n[For 9:16 video target]: 6 panels in 2×3 grid — 2 cols × 3 rows VERTICAL layout. Sheet aspect 9:16 vertical.\n[For 1:1 video target]: 6 panels in 3×2 grid (square cells). Sheet aspect 1:1.\nSheet bg: extract from picked frame's background register. Thin 1pt hairline gutters between panels, 12-20px gap. NO panel borders inside individual panels.\n\n═══ MIN-TEXT RULE (HR-2) — pre-panel check ═══\nAny text rendered INSIDE the panel frame ≥ cap-height of 'cities' headline baseline (~10-12% panel height). Latin sub-labels, tracked monospace dates, location tags, faux-data chips inside panels — all STRIPPED. Headlines + brand wordmarks at full scale.\n\n═══ REALISM BAN (HR-3) — applies to MDCM (non-Product mode) ═══\nPhotoreal humans / documentary cinema register / ARRI Alexa / 35mm grain / real-skin texture = BANNED. Use silhouettes / abstract human forms / stylized 3D characters / illustrated 2D / motion-trace forms / particle figures instead.\n\n═══ TEXT-ANCHOR MANDATE (HR-4 + HR-5) — pre-panel check ═══\nText on 3 of 6 panels per Pattern [A {01,03,05} OR B {02,04,06}]:\n- 3 text beats (in English): [from user brief OR the agent invents 2-4-word atmospheric punch-lines fitting the frame's visual world]\n- Each beat occupies a DIFFERENT semantic level from {1: invitation/setup, 2: verb action, 3: revelation/mid-state, 4: absolute claim, 5: identity/closure} — 3 beats must span ≥3 different levels. Synonyms at same level = FAIL.\n- Other 3 panels = pure visual scenes from foundation world, ZERO text\n- PRIMARY copy VERBATIM (exact glyphs) — never '[caption]' / '[label]' / '...' placeholders.\n\n═══ VISUAL-CONCEPT ARC (HR-8 Visual World Lock — FOUNDATION VARIANT v2.11) ═══\nSUBJECT LOCK: subject identity from picked moodboard frame — same subject world across all 6 panels.\nMATERIAL LOCK: material register from picked frame — same texture/substance language.\nSTYLE LOCK: aesthetic register from picked frame — same lighting/rendering approach.\nPALETTE LOCK: dominant 3-color hex set extracted from picked frame, locked across panels.\nATMOSPHERE LOCK: mood/energy from picked frame.\n\n═══ SCENE VARIATION MANDATE (HR-8 sub-rule) ═══\nSubject LOCK ≠ Same-Scene LOCK. The 6 panels render 6 DIFFERENT moments/scales/angles/scenes WITHIN picked frame's visual world — NOT 6 copies of the frame.\nScale spread: ≥3 distinct framings from {extreme macro / close detail / medium / wide / vista / aerial}.\nEach panel introduces NEW scene context (different angle / different supporting element / different interaction setup / different micro-environment) within same subject/material/palette world.\n\n═══ MASTER CAMERA DOCTRINE (v2.11.1) — Internal choreography primary ═══\nMDCM master camera = Internal choreography primary (matches MDT / MDI). Camera HOLDS steady on 4-5 of 6 panels; motion comes from elements within the still frame — subject breathes / shifts / pulses / scale rebalance / typographic mass shifts / material transforms.\nOptional: slow elegant micro-drift (1-3cm dolly with parallax) on 1-2 panels max.\nBANNED for MDCM default: HYPERKINETIC CHAOS register, VERTIGO PULL, WHIP-PAN SMEAR, DROP-DIVE PAST, CRASH-OUT REVEAL, SHATTER PUSH-THROUGH, speed ramps + stutter cuts. These belong to MDH (kinetic brand reel), not MDCM.\nTransitions between panels = VFX-driven match-cut morphs default: DRAMATIC OBJECT MORPH, HALFTONE MORPH, INK FLOW, DRAMATIC UNFURL, LIGHT SWEEP, CHROME DUST DISPERSE — soft designed metamorphosis, NOT violent camera moves.\n\n═══ CHROME TIER ═══\nDefault tier (b) PANEL-CAPTIONS for MDCM — panel labels below thumbnails with timecodes (e.g. '01  0:00-0:02') in small monospace. Tier (a) MINIMAL allowed if foundation frame's register is editorial-restraint. Tier (c) FULL only if foundation frame's register is explicit editorial poster / Anthropic / illustrated narrative.\nChrome lives ENTIRELY in sheet margins OUTSIDE photographic frames. Never bake chrome inside panel content.\n\n═══ PHOTOGRAPHIC FRAME PURITY (Rule 10) ═══\nEach panel's photographic frame contains ONLY: (a) cinematic scene composition from foundation world, (b) intentional punch-line typography per Pattern A/B, (c) brand wordmark on P06 if brief mentions brand. NO document-metadata chips inside panels — banned: 'CHAPTER X' / 'JOURNAL №' / 'SECTOR Y' / 'OPENING DAY N' / 'EDITION 2026' / version stamps / date stamps.\n\n═══ PANEL CONTENT — per-panel breakdown ═══\nEach panel below uses Format A creative-density slots: CONTENT / NARRATIVE BEAT / INTERNAL CHOREOGRAPHY / TEXT / LIGHT / EFFECTS / PARALLAX (optional). Fill every slot with concrete creative content — never placeholders.\n\n# Panel 01 (0:00-0:02 — internal reference, NOT rendered in image)\nCONTENT: [SPECIFIC scene from foundation world — concrete subject in concrete moment. Different scale/angle from other panels.]\nNARRATIVE BEAT: [WHAT happens as a moment, with timecode hints. e.g. 'subject breathes at 0.8Hz / pulses at 1.2s' / 'ink-bleed expands at 0.5s' / 'material wave shifts left at 1.0s']\nINTERNAL CHOREOGRAPHY: [per-element micro-motion within still frame. e.g. 'subject silhouette breathes 1-2% scale pulse at 0.8Hz, accent particle drifts upward at 30% scene speed, background gradient breathes saturation 5%']\nTEXT: [if text-panel per Pattern: exact glyphs verbatim + LAYOUT + font + position + size %] OR [if visual-panel: zero scene text — atmosphere only]\nLIGHT: TYPE [hard rim / soft fill / volumetric shaft / chiaroscuro / gobo] — DIRECTION [from upper-left at 30° / volumetric shaft from upper-right / behind subject] — DOES [catches edge / casts long shadow / silhouettes subject]\nEFFECTS: [at least one — motion blur / depth-of-field / bloom / atmospheric haze / chromatic aberration micro / film grain]\nPARALLAX: [only if camera micro-drifts on this panel — per-plane drift speed; otherwise skip and let INTERNAL CHOREOGRAPHY carry motion]\n\n# Panel 02 (0:02-0:05) [same structure]\n# Panel 03 (0:05-0:07) [same structure]\n# Panel 04 (0:07-0:10) [same structure]\n# Panel 05 (0:10-0:12) [same structure]\n# Panel 06 (0:12-0:15) [same structure — brand closer or atmospheric closer per route below]\n\n═══ PANEL 06 CLOSER ROUTE ═══\nIF user brief explicitly mentions a brand name:\n  Route 1 — ATMOSPHERIC INTEGRATED CLOSER (Track A default per HR brand reveal):\n  Brand wordmark renders as CLEAN TYPOGRAPHY at 15-22% panel height, sitting INTEGRATED within atmospheric closing scene from foundation world. Wordmark is text element WITHIN composition, foundation scene as background. If brief gave a tagline, render verbatim below wordmark in accent font.\n  Banned for atmospheric closer: subject-as-letters (wordmark as 3D sculpture / cloud formation / material-substance shape OF brand letters — that's a different aesthetic requiring explicit brief opt-in via 'wordmark forged from material world').\nIF no brand in brief:\n  Route 3 — CONCEPT/GENERIC MODE: NO wordmark. NO invented brand name. P06 = atmospheric closer in foundation world with optional atmospheric punch-line ('INFINITE FLOW.' / 'PURE MOTION.' / 'EVERY STORY.') — atmospheric anchor, NOT brand tagline.\n\n——— LOCKS ———\nPALETTE LOCK: 3 hex codes extracted from picked moodboard frame.\nSTYLE LOCK: aesthetic register from picked frame, locked across all 6 panels.\nSUBJECT LOCK: subject identity from picked frame, locked across all 6 panels.\nMATERIAL LOCK: material register from picked frame.\nATMOSPHERE LOCK: mood/energy from picked frame.\n\nDirect like a motion design genius — concept arc TRANSFORMS across the 6 panels (hook → develop → reveal) WITHIN the foundation world. NOT 6 disconnected decorations."
 )
 ```
@@ -919,7 +919,7 @@ Choose the most reliable strategy that preserves quality. Premium reel with rest
 ## Production parameters (always-rules)
 
 Storyboard generation (`generate_image`):
-- `model="gpt-image-2"` for storyboard sheets / moodboards / character sheets (typography/label-heavy); `model="nano-banana-2"` for photographic / material-rich foundation images
+- `model="gpt-image-2.5-sunburst"` for storyboard sheets / moodboards / character sheets (typography/label-heavy); `model="nano-banana-2"` for photographic / material-rich foundation images
 - `aspect_ratio` per Step 0d mapping (16:9 video → `"3:2"`; 9:16 → `"9:16"`; 1:1 → `"1:1"`)
 - `resolution="2K"` (or `"4K"`)
 - `output_asset_id` set on every call (e.g. `moodboard:sheet`, `storyboard:sheet`, `product:character_sheet`)

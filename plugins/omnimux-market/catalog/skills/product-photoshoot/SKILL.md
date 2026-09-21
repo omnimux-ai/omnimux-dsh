@@ -249,7 +249,7 @@ If the user asks *"what style are you using?"* — respond with the **descriptor
 
 ## Universal generation rules
 
-- **Model:** always `nano-banana-2` for photoreal product imagery. Switch to `gpt-image-2` only when the deliverable is on-image typography, a logo, or a flat graphic (see `references/typography.md` Case 1 and the ad-creative-pack typography notes).
+- **Model:** always `nano-banana-2` for photoreal product imagery. Switch to `gpt-image-2.5-sunburst` only when the deliverable is on-image typography, a logo, or a flat graphic (see `references/typography.md` Case 1 and the ad-creative-pack typography notes).
 - **Prompt structure:** assemble using the mode's structured template from `references/<mode>.md` — never freeform.
 - **Aspect ratio:** chosen from the mode's reference file, passed via the `aspect_ratio` parameter.
 - **Typography:** follow the three-case rule in `references/typography.md`.
@@ -319,7 +319,7 @@ generate_image(
 
 ### Typography / graphic output
 
-When the deliverable IS the text — an on-image headline, a logo lockup, or a flat graphic — switch `model="gpt-image-2"`. Keep everything else (prompt structure, aspect ratio, resolution, negative prompts, refinement pass) the same. Photoreal product imagery stays on `nano-banana-2`.
+When the deliverable IS the text — an on-image headline, a logo lockup, or a flat graphic — switch `model="gpt-image-2.5-sunburst"`. Keep everything else (prompt structure, aspect ratio, resolution, negative prompts, refinement pass) the same. Photoreal product imagery stays on `nano-banana-2`.
 
 ### Results are surfaced automatically
 
@@ -349,7 +349,7 @@ These are the design decisions that make this skill produce consistent, high-qua
 - Skipping negative prompts
 - **Forgetting `resolution="2K"` on the `generate_image` call**
 - Delivering the first pass without the refinement audit
-- Using a model other than `nano-banana-2` for photoreal product imagery (reserve `gpt-image-2` for typography / graphic output)
+- Using a model other than `nano-banana-2` for photoreal product imagery (reserve `gpt-image-2.5-sunburst` for typography / graphic output)
 - Confusing modes (e.g. using `product-shot` for a Pinterest request)
 - Asking more than 4 interview questions at once — users abandon
 - Reserving "clean negative space" for text by default — produces flat color bands (see `references/typography.md`)

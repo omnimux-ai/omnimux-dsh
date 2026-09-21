@@ -46,4 +46,4 @@ TEXT OVERLAYS (bake into image):
 
 ## Model
 
-Always `gpt-image-2` when typography is baked in — especially for any non-English diacritics (ä ö ü ß, é è ñ, etc.). `nano-banana-2` will garble these reliably enough that it costs you a second generation.
+Always `gpt-image-2.5-sunburst` when typography is baked in — especially for any non-English diacritics (ä ö ü ß, é è ñ, etc.). `nano-banana-2` will garble these reliably enough that it costs you a second generation.

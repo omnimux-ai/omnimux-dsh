@@ -63,7 +63,7 @@ There is no on-image CTA in this pattern. The product's own packaging and the he
 This is the single highest-leverage decision in the workflow. Pick based on whether text must render in the image:
 
 - **No baked-in headline → `nano-banana-2`.** Best product fidelity, preserves packaging detail, label typography stays sharp.
-- **Baked-in headline (especially any non-English diacritics) → `gpt-image-2`.** Renders typography much more reliably. `nano-banana-2` frequently garbles diacritics (ä, ö, ü, ß, é, ñ, etc.) and breaks lines wrong.
+- **Baked-in headline (especially any non-English diacritics) → `gpt-image-2.5-sunburst`.** Renders typography much more reliably. `nano-banana-2` frequently garbles diacritics (ä, ö, ü, ß, é, ñ, etc.) and breaks lines wrong.
 
 Do not try to force `nano-banana-2` to bake non-English typography "to keep fidelity" — the headline will come back wrong and you will burn a second generation anyway.
 
@@ -92,7 +92,7 @@ If you do not know the product's contents, **ask the user** rather than guessing
 
 - `1:1` — default e-commerce / marketplace hero. Headline optional, usually omitted.
 - `4:5` — feed-native portrait. Headline optional.
-- `9:16` — story / reels still. Headline almost always wanted; route through `gpt-image-2`.
+- `9:16` — story / reels still. Headline almost always wanted; route through `gpt-image-2.5-sunburst`.
 
 Vertical formats: keep the pedestal in the lower third, headline in the upper third, generous breathing space between them. Do not enlarge the product to fill vertical space — the empty backdrop is the look.
 
@@ -107,7 +107,7 @@ A concrete fill-in-the-blanks prompt skeleton lives in `references/prompt-skelet
 3. **No callout pills, ribbons, badges, price flashes, "NEW", "BIO", percentage discs.**
 4. **Spillage matches contents** — never leak content shapes/colors from a reference image.
 5. **One headline maximum**, or none. No subline, no CTA text on image.
-6. **Non-English typography → `gpt-image-2`.** Do not try to bake non-English diacritics with `nano-banana-2`.
+6. **Non-English typography → `gpt-image-2.5-sunburst`.** Do not try to bake non-English diacritics with `nano-banana-2`.
 7. **Reference image stays out of `image_urls` once the layout is internalized** — describe it in prose, pass only the hero product.
 8. **No people, no hands, no in-use scenes.** Pure still-life only.
 9. **Headline color is dark warm brown on the warm beige backdrop** — never black, never white, never brand-accent.

@@ -44,11 +44,11 @@ Anything else — IMAGE MAP block, `[RENDER MODE: ...]` marker, "I'll now create
 8. **Full mode runs in the main agent context.** A full-mode A→B→C→D→E pipeline is long-running; run the steps directly from your own turns rather than handing the whole pipeline to a single bounded sub-task.
 9. **Pipeline assembles at Step E.** After every in-scope chunk has rendered, assemble the completed scene videos into the final cut with `assemble_video`. Do NOT hand back un-stitched scene clips.
 10. **MANDATORY Step 0a prompt — first user-facing action.** You MUST call `AskUserQuestion` at Step 0a (immediately after the brief is understood, BEFORE Step A analysis or any B-step keyframe generation) with BOTH questions in a single card (aspect ratio + storyboard mode) per the `## AskUserQuestion` section above. There is NO implicit storyboard default — proceeding to generate a storyboard sheet without the user's explicit `storyboard_mode` answer is a HARD VIOLATION. Three modes the user picks from — `classic`, `sketch`, or `off`:
-    - **`classic`** (default visual) — colored pictogram on warm beige paper; LEGEND ROW banner + ID badges + END card. Build the C.5 storyboard sheet with `generate_image(model="gpt-image-2", ...)` using `style="classic"` prompt layers.
-    - **`sketch`** — semi-transparent pencil/ink strokes (`#A0A0A0–#C0C0C0`) on pure white `#FFFFFF`; NO LEGEND ROW banner, NO entity badges, NO ID glyphs, NO END card; CHUNK badge rendered in thinnest grey `#D0D0D0–#E8E8E8`; hairline cell-grid stays black for legibility. Build the C.5 storyboard sheet with `generate_image(model="gpt-image-2", ...)` using `style="sketch"` prompt layers.
+    - **`classic`** (default visual) — colored pictogram on warm beige paper; LEGEND ROW banner + ID badges + END card. Build the C.5 storyboard sheet with `generate_image(model="gpt-image-2.5-sunburst", ...)` using `style="classic"` prompt layers.
+    - **`sketch`** — semi-transparent pencil/ink strokes (`#A0A0A0–#C0C0C0`) on pure white `#FFFFFF`; NO LEGEND ROW banner, NO entity badges, NO ID glyphs, NO END card; CHUNK badge rendered in thinnest grey `#D0D0D0–#E8E8E8`; hairline cell-grid stays black for legibility. Build the C.5 storyboard sheet with `generate_image(model="gpt-image-2.5-sunburst", ...)` using `style="sketch"` prompt layers.
     - **`off`** — NO storyboard sheet generated; do NOT run C.5; do NOT add a storyboard slot to IMAGE MAP / ELEMENT_BINDINGS / `bindings_meta`; render scenes in D.1 with no storyboard reference image.
 
-    For modes `classic` / `sketch`: the SHEET parameters are locked to `model="gpt-image-2"` / 2:3 vertical / `resolution="2K"` / high quality — none overridable (typography/flat-graphic output is why the sheet uses `gpt-image-2`). Two public knobs: `panel_aspect` (orients inner cell tiles to match the chosen scene-video output aspect) and `style` (`classic` / `sketch`). The storyboard sheet's asset id is bound to the trailing slot in IMAGE MAP / ELEMENT_BINDINGS and passed to each scene's `generate_scene_video(reference_images=[..., <storyboard asset id>])`. A storyboard generation failure ABORTS the pipeline — do NOT fall through to Step D without it (modes `classic` / `sketch` only). The deterministic composition prefix prepended to each chunk's prompt at scene-render time is internal (the chunk dict is NOT mutated, INVARIANT 4 holds: the parsed `prompt_text` from the adapt step stays byte-identical). Element naming uses the `vadapt-sb-<sha8>` convention so storyboard sheets never get confused with outfit boards (`*-outfit`) or other prop elements. Both visual styles are HARDCODED-per-mode — they are NOT driven by the source video's visual register (a cinematic source does NOT make the storyboard render as a cinematic frame; that would defeat its purpose as a composition anchor).
+    For modes `classic` / `sketch`: the SHEET parameters are locked to `model="gpt-image-2.5-sunburst"` / 2:3 vertical / `resolution="2K"` / high quality — none overridable (typography/flat-graphic output is why the sheet uses `gpt-image-2.5-sunburst`). Two public knobs: `panel_aspect` (orients inner cell tiles to match the chosen scene-video output aspect) and `style` (`classic` / `sketch`). The storyboard sheet's asset id is bound to the trailing slot in IMAGE MAP / ELEMENT_BINDINGS and passed to each scene's `generate_scene_video(reference_images=[..., <storyboard asset id>])`. A storyboard generation failure ABORTS the pipeline — do NOT fall through to Step D without it (modes `classic` / `sketch` only). The deterministic composition prefix prepended to each chunk's prompt at scene-render time is internal (the chunk dict is NOT mutated, INVARIANT 4 holds: the parsed `prompt_text` from the adapt step stays byte-identical). Element naming uses the `vadapt-sb-<sha8>` convention so storyboard sheets never get confused with outfit boards (`*-outfit`) or other prop elements. Both visual styles are HARDCODED-per-mode — they are NOT driven by the source video's visual register (a cinematic source does NOT make the storyboard render as a cinematic frame; that would defeat its purpose as a composition anchor).
 11. **Scene budget is ≤ 9 unique reference images per scene.** The scene video model rejects scenes that reference more than 9 distinct reference-image asset ids via `<<image_N>>` markers. **The agent ALWAYS plans under an effective budget of 8** — the planner keeps `reserve_storyboard_slot=True` regardless of which storyboard mode the user picks at Step 0a. Rationale: this guarantees a plan built for `off` stays valid if the user later flips the mode to `classic` / `sketch` (the storyboard prefix would then add 1 ref per scene and a budget-9 plan would over-fill). At render time the per-scene audit relaxes to 9 when there is no storyboard reference (mode `off`) and stays 8 when a storyboard reference is set (modes `classic` / `sketch`); the planning-side reserve is independent of that. Effective budget for everything else (main + secondaries + ensembles + locations + recurring props + outfit-elements): **8**. **Compaction is upstream, at keyframe-creation time** (Steps A.5 → B.2 / B.4 / B.5), driven by the budget-planning oracle (Step A.5). The oracle takes the chunked adapt output plus the agent's intended slot kinds and returns ordered composite recommendations following the **composition hierarchy** (priority order, MUST be honored):
 
     1. **`composite_outfit`** (B.5) — same-subject outfits collapsed onto one numbered ghost-mannequin sheet. Fires when one character has ≥2 outfit slots and at least one chunk holds two or more of them. Cap: 2 ≤ panels ≤ 3 (image fidelity).
@@ -75,13 +75,13 @@ A user-attached photo is NOT a trained persona reference. Photo → read it with
 
 Defaults are non-negotiable; surfacing them as a viewer choice is a flow violation.
 
-- **Model preference** ("which image / video model?", "cinematic vs UGC?") — locked: `generate_scene_video(backend="seedance")` (video) + `generate_image(model="nano-banana-2")` (B-step keyframes) + `generate_image(model="gpt-image-2")` (storyboard sheet). Never ask.
+- **Model preference** ("which image / video model?", "cinematic vs UGC?") — locked: `generate_scene_video(backend="seedance")` (video) + `generate_image(model="nano-banana-2")` (B-step keyframes) + `generate_image(model="gpt-image-2.5-sunburst")` (storyboard sheet). Never ask.
 - **Input assets** ("do you have a product photo / brand logo / reference image?") — the source video URL IS the input. Avatar is either user-attached (auto-detected) or auto-generated via B.3. Never ask.
 - **Quantity / variants** ("how many variants?", "how many chunks?") — pinned by the `D.0` render-mode keyword detector (default = chunk 0 only; full = all chunks via English keyword list). Never ask.
 - **Style reference** ("any creator's style to match?", "match an existing aesthetic?") — the source video IS the style reference. Never ask.
 - **Render mode forks** ("full or default?", "all chunks or just one?", "preview or final?") — derived from the `D.0` keyword detector inside the brief. Never asked.
 - **Outfit preservation** ("keep original outfit or use the avatar's?") — derived from the `D.0c` keyword detector inside the brief. Never asked.
-- **Resolution / quality / dimensions** — locked per step (scene-video preset, `gpt-image-2` `resolution="2K"` high). Never ask.
+- **Resolution / quality / dimensions** — locked per step (scene-video preset, `gpt-image-2.5-sunburst` `resolution="2K"` high). Never ask.
 - **Pipeline forks** ("skip storyboard?", "skip composite?", "skip B-step?", "text-only?") — Step C.5's mode-gate is already covered by `storyboard_mode` in DO ask. No other pipeline forks exist for adapt.
 
 ### DO ask via `AskUserQuestion` (creative gaps only)
@@ -839,7 +839,7 @@ For Case 3 there is no `adapt_*` analysis. Build chunks manually from the Step A
 
 **Skip this entire step when the Step 0a storyboard mode answer is `off`.** When mode is `off`: do NOT build a storyboard sheet; do NOT add a storyboard slot to IMAGE MAP / ELEMENT_BINDINGS / `bindings_meta`; jump directly to D.1 with no storyboard reference image.
 
-When the Step 0a answer is `classic` or `sketch`, after C.3 (or C.alt) produces `chunks` AND Step 0a has resolved the user's chosen scene-video aspect ratio + storyboard mode, generate the video-adapt storyboard sheet that anchors composition for every scene in Step D. Build the 9-layer prompt (see `video-adapt-storyboard.md`) and render the sheet with `generate_image(model="gpt-image-2")` (typography / flat-graphic output — the storyboard is a labeled schematic, which is why it uses `gpt-image-2`):
+When the Step 0a answer is `classic` or `sketch`, after C.3 (or C.alt) produces `chunks` AND Step 0a has resolved the user's chosen scene-video aspect ratio + storyboard mode, generate the video-adapt storyboard sheet that anchors composition for every scene in Step D. Build the 9-layer prompt (see `video-adapt-storyboard.md`) and render the sheet with `generate_image(model="gpt-image-2.5-sunburst")` (typography / flat-graphic output — the storyboard is a labeled schematic, which is why it uses `gpt-image-2.5-sunburst`):
 
 ```
 storyboard = generate_image(
@@ -847,13 +847,13 @@ storyboard = generate_image(
     output_asset_id="vadapt-sb-<sha8>:final",
     aspect_ratio="2:3",
     resolution="2K",
-    model="gpt-image-2",
+    model="gpt-image-2.5-sunburst",
 )
 
 storyboard_slot = "<<image_9>>"   # next free slot AFTER all other elements
 ```
 
-The sheet is locked to `model="gpt-image-2"` / 2:3 vertical / `resolution="2K"` / quality=high. Two public knobs drive the prompt: `panel_aspect` and `style`.
+The sheet is locked to `model="gpt-image-2.5-sunburst"` / 2:3 vertical / `resolution="2K"` / quality=high. Two public knobs drive the prompt: `panel_aspect` and `style`.
 
 **`panel_aspect` orientation:**
 
@@ -998,7 +998,7 @@ For each entry in `failed`:
 
 | `status` | Meaning | Action |
 |---|---|---|
-| `nsfw` | `gpt-image-2` content-policy block | Escalate — do NOT auto-retry. |
+| `nsfw` | `gpt-image-2.5-sunburst` content-policy block | Escalate — do NOT auto-retry. |
 | `failed` | Generic backend failure | Single retry OK. Two failures → escalate. |
 | `timeout` | Render deadline exceeded | Single retry OK; sustained → escalate. |
 | `download_failed` | Internal CDN swap / download error | Same as `failed`. |
@@ -1035,7 +1035,7 @@ Pass the scenes in chunk order. If a chunk failed and the user chose to skip it 
 | B.5 (secondary/ensemble) | `generate_image(model="nano-banana-2")` | Combined identity (+ baked outfit) keyframe. Prepend `full body shot, ` (idempotent). |
 | C.2 | adapt the concept (`get_asset` + your own write) | `adapt_avatar` / `adapt_product` schema; IMAGE MAP + ORIGINAL CONCEPT (+ PRODUCT INFO for Case 1) |
 | C.3 | parse chunks | Split on `===CHUNKS_15S===`; returns a list of `{chunk_index, time_range, duration, prompt_text}` |
-| C.5 (storyboard) | `generate_image(model="gpt-image-2", panel_aspect=..., style=...)` | Sheet locked to 2:3 / `resolution="2K"` / high. `vadapt-sb-<sha8>` naming. Both styles HARDCODED-per-mode. |
+| C.5 (storyboard) | `generate_image(model="gpt-image-2.5-sunburst", panel_aspect=..., style=...)` | Sheet locked to 2:3 / `resolution="2K"` / high. `vadapt-sb-<sha8>` naming. Both styles HARDCODED-per-mode. |
 | A.5 (planner) | budget plan (`plan_chunk_budget`) | Readonly structural projection — no API calls; idempotent. |
 | B.2 / B.4 / B.5 (composite, planner-driven) | `generate_image(model="nano-banana-2")` multi-panel sheet | Panel order is part of the cache key. |
 | D.1 (render) | `generate_scene_video(backend="seedance", reference_images=..., scene_number=...)` | One call per chunk; resolves `<<image_N>>` → bound asset ids. |

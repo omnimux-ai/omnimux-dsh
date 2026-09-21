@@ -358,7 +358,7 @@ The anti-vocabulary list is **Track B-only** because those phrases trigger Seeda
 **Critical (v1.8.2):** UI tutorial / text-heavy reels use MDC2 default with Pattern Hybrid (diegetic + supporting text both layers) + HR-2.2 detailed text spec mandate (every UI element specified verbatim). Production-keyframes pipeline removed v1.8.2. For premium per-shot pixel control → escalate to Track B MDC8 character sheet pipeline.
 
 **Validated on:**
-- Habit tracker app tutorial walkthrough (6 screens via GPT Image 2 keyframes + 5 Seedance sub-clips)
+- Habit tracker app tutorial walkthrough (6 screens via GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) keyframes + 5 Seedance sub-clips)
 
 ---
 

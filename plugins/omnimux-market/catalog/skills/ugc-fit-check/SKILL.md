@@ -81,7 +81,7 @@ Apply the guide's `@ImageN` ordering exactly — the order maps directly to the 
 | `image_urls` | per the board guide's Image Reference Order — typical: `[product, character]` for K=1, `[product, character, prev_board]` for K>1 |
 | `aspect_ratio` | `21:9` |
 | `resolution` | `1K` |
-| `model` | `"gpt-image-2"` — 4-slot 21:9 storyboard sheets render with stronger slot separation and cleaner panel-to-panel layout on gpt-image-2 than on the default nano-banana-2. **Layout guard: the board-prompt-guide's Required Prompt Template includes explicit anti-stack / anti-label phrasing** because gpt-image-2 otherwise (a) lays slots out as horizontal bands stacked top-to-bottom instead of vertical panels side-by-side, and (b) adds forbidden "SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4" typography. Always use the guide's template verbatim; never shorten the anti-stack / anti-label clauses. |
+| `model` | `"gpt-image-2.5-sunburst"` — 4-slot 21:9 storyboard sheets render with stronger slot separation and cleaner panel-to-panel layout on gpt-image-2.5-sunburst than on the default nano-banana-2. **Layout guard: the board-prompt-guide's Required Prompt Template includes explicit anti-stack / anti-label phrasing** because gpt-image-2.5-sunburst otherwise (a) lays slots out as horizontal bands stacked top-to-bottom instead of vertical panels side-by-side, and (b) adds forbidden "SLOT 1 / SLOT 2 / SLOT 3 / SLOT 4" typography. Always use the guide's template verbatim; never shorten the anti-stack / anti-label clauses. |
 | `output_asset_id` | `tryon:board:K` |
 
 **c. Compose the Seedance clip prompt** following [references/clip-prompt-guide.md](references/clip-prompt-guide.md).

@@ -44,9 +44,9 @@ Line 2: "ENGINEERED TO LAST"
 Swap subject (product category), keep two-line punchy format.
 
 **Start frame generation — CRITICAL:**
-- Use model: **`gpt-image-2`** (NOT the default nano-banana-2 model)
+- Use model: **`gpt-image-2.5-sunburst`** (NOT the default nano-banana-2 model)
 - Prompt must include: `"pure white background, white seamless backdrop fills entire frame edge to edge, no black bars, no letterboxing"`
-- Reason: nano-banana-2 adds black letterbox bars when converting 9:16 product reference images to 16:9. gpt-image-2 avoids this.
+- Reason: nano-banana-2 adds black letterbox bars when converting 9:16 product reference images to 16:9. gpt-image-2.5-sunburst avoids this.
 
 ---
 
@@ -182,7 +182,7 @@ These were validated corrections during production — treat each as an absolute
 8. **Auto-crop white margins** from product image before compositing on end card.
 9. **Instrumental-only music.** No vocal tracks.
 10. **DejaVu fonts only** for PIL rendering. LiberationSans will silently break.
-11. **gpt-image-2 for 16:9 start frames.** Avoids black letterbox bars that nano-banana-2 produces when converting 9:16 source images.
+11. **gpt-image-2.5-sunburst for 16:9 start frames.** Avoids black letterbox bars that nano-banana-2 produces when converting 9:16 source images.
 12. **Scene 1 start frame → end card product image.** Reuse the hero shot CloudFront URL. Do not generate a separate image.
 13. **Use the seller's standard tagline** on the end card unless the user specifies otherwise.
 14. **Use ONLY scraped product photos as `start_image`.** For every scene (hero and feature close-ups), the `start_image` MUST be an actual photo scraped from the provided product URL. Do NOT generate product imagery from scratch or use image-to-image (I2I) to drift from the source photo. The source photo is ground truth — the video must show the same product, same finish, same surfaces.

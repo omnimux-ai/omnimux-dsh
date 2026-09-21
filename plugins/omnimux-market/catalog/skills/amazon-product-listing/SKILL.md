@@ -1,6 +1,6 @@
 # Amazon Product Listing Designer
 
-Turns a single product photo or product URL into a full set of Amazon-compliant marketplace images: main image, secondary images (infographics, multi-angle, detail shots, lifestyle, what's in box), and A+ Brand Content modules. All generation happens through the native `generate_image` tool. Use `model="nano-banana-2"` for photoreal product shots and `model="gpt-image-2"` for typography- and infographic-heavy images (on-image text, callouts, feature matrices, A+ modules).
+Turns a single product photo or product URL into a full set of Amazon-compliant marketplace images: main image, secondary images (infographics, multi-angle, detail shots, lifestyle, what's in box), and A+ Brand Content modules. All generation happens through the native `generate_image` tool. Use `model="nano-banana-2"` for photoreal product shots and `model="gpt-image-2.5-sunburst"` for typography- and infographic-heavy images (on-image text, callouts, feature matrices, A+ modules).
 
 ## When to use this skill
 
@@ -121,7 +121,7 @@ All generation runs through the native `generate_image` tool — never shell out
 
 ### Model
 
-Use **`model="nano-banana-2"`** for photoreal product shots (main image, multi-angle, detail shot, lifestyle, what's-in-the-box) — it handles product + person composition well and keeps the product faithful to the reference. Use **`model="gpt-image-2"`** for typography- and graphic-heavy images (infographic and all 7 A+ modules) where crisp on-image text, callouts, icons, and feature matrices are the point. Keep the model choice consistent within each image type across the whole set so the visual style stays unified.
+Use **`model="nano-banana-2"`** for photoreal product shots (main image, multi-angle, detail shot, lifestyle, what's-in-the-box) — it handles product + person composition well and keeps the product faithful to the reference. Use **`model="gpt-image-2.5-sunburst"`** for typography- and graphic-heavy images (infographic and all 7 A+ modules) where crisp on-image text, callouts, icons, and feature matrices are the point. Keep the model choice consistent within each image type across the whole set so the visual style stays unified.
 
 ### Aspect ratios and resolution
 
@@ -157,13 +157,13 @@ The main image result is available immediately. It is the visual anchor for ever
 
 ### Generate downstream images
 
-For each downstream image, reference the main image asset `main:final` in `image_urls`. Photoreal secondary shots use `model="nano-banana-2"`; the infographic and A+ modules use `model="gpt-image-2"`. Each call returns its result directly — issue them concurrently once the main image exists.
+For each downstream image, reference the main image asset `main:final` in `image_urls`. Photoreal secondary shots use `model="nano-banana-2"`; the infographic and A+ modules use `model="gpt-image-2.5-sunburst"`. Each call returns its result directly — issue them concurrently once the main image exists.
 
 **Example — secondary images (5 items):**
 
 ```
 generate_image(prompt="[INFOGRAPHIC_PROMPT]", output_asset_id="secondary:infographic",
-  aspect_ratio="1:1", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="1:1", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[MULTI_ANGLE_PROMPT]", output_asset_id="secondary:multi-angle",
   aspect_ratio="1:1", resolution="2K", model="nano-banana-2", image_urls=["main:final"])
@@ -178,29 +178,29 @@ generate_image(prompt="[WHATS_IN_BOX_PROMPT]", output_asset_id="secondary:whats-
   aspect_ratio="1:1", resolution="2K", model="nano-banana-2", image_urls=["main:final"])
 ```
 
-**Example — A+ modules (7 items, mixed aspect ratios, all typography-heavy → gpt-image-2):**
+**Example — A+ modules (7 items, mixed aspect ratios, all typography-heavy → gpt-image-2.5-sunburst):**
 
 ```
 generate_image(prompt="[APLUS_MODULE_1_HERO_BANNER]", output_asset_id="aplus:1-hero",
-  aspect_ratio="21:9", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="21:9", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_2_PAIN_POINTS]", output_asset_id="aplus:2-pain-points",
-  aspect_ratio="3:2", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="3:2", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_3_FEATURES]", output_asset_id="aplus:3-features",
-  aspect_ratio="3:2", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="3:2", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_4_INGREDIENTS]", output_asset_id="aplus:4-ingredients",
-  aspect_ratio="3:2", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="3:2", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_5_EFFICACY]", output_asset_id="aplus:5-efficacy",
-  aspect_ratio="3:2", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="3:2", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_6_HOW_TO_USE]", output_asset_id="aplus:6-how-to-use",
-  aspect_ratio="3:2", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="3:2", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 
 generate_image(prompt="[APLUS_MODULE_7_ENDORSEMENT]", output_asset_id="aplus:7-endorsement",
-  aspect_ratio="21:9", resolution="2K", model="gpt-image-2", image_urls=["main:final"])
+  aspect_ratio="21:9", resolution="2K", model="gpt-image-2.5-sunburst", image_urls=["main:final"])
 ```
 
 **Full-set ordering:** generate the main image first, then the 5 secondary images and the 7 A+ modules (all referencing `main:final`). The two downstream groups together = the 12 downstream items of a full set; together with the main image, the user gets 13 total.
@@ -212,7 +212,7 @@ generate_image(prompt="[APLUS_MODULE_7_ENDORSEMENT]", output_asset_id="aplus:7-e
 ### Key reference rules
 - Reference the main image (`main:final`) via `image_urls` on every secondary and every A+ module — this is what enforces product consistency.
 - Reference the freshly registered product asset only on the main-image generation.
-- Set `model` per image type: `nano-banana-2` for photoreal product shots, `gpt-image-2` for infographic and A+ modules.
+- Set `model` per image type: `nano-banana-2` for photoreal product shots, `gpt-image-2.5-sunburst` for infographic and A+ modules.
 - Each `generate_image` call writes its result to the `output_asset_id` you specify — use descriptive, stable IDs so downstream references resolve.
 
 ### Partial scope handling
@@ -258,7 +258,7 @@ In auto mode: state the chosen scope in ONE line before Step 4 (*"Scope: main im
 
 ### NEVER ask via `AskUserQuestion` (anti-flow forks — defaults are locked)
 
-- **Model** — locked per image type (`nano-banana-2` for photoreal product shots, `gpt-image-2` for infographic / A+ modules). See § *Generation Integration* → *Model*.
+- **Model** — locked per image type (`nano-banana-2` for photoreal product shots, `gpt-image-2.5-sunburst` for infographic / A+ modules). See § *Generation Integration* → *Model*.
 - **Aspect ratio per image type** (1:1 main + secondary, 21:9 A+ hero / endorsement, 3:2 A+ modules 2–6) — locked. See § *Aspect ratios and resolution*.
 - **Resolution** — locked to `2K`. Never *"1K or 2K?"* / *"what size?"*.
 - **Pixel dimensions** (`width` × `height`) — never. Aspect ratio + resolution is the contract.

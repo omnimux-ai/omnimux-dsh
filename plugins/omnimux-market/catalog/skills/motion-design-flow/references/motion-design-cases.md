@@ -12,7 +12,7 @@ The four reel modes. Pick via SKILL.md Step 0a, then resolve image source via St
 
 All four modes share: HR-1 image source resolution (HR-1a image-gate when image attached / HR-1b foundation generator when not — both bypass for Product Reel), HR-2 MIN-TEXT, HR-3 REALISM BAN (except Product Reel), HR-4 Pattern A/B/Hybrid, HR-5 punch-line discipline, HR-6 named camera + transition, HR-7 sheet chrome tier, HR-8 Visual World Lock, HR-9 palette LOCK, HR-10 tail freeze, HR-11 cliché ban.
 
-**Foundation generator (HR-1b, v2.1)** — MDH / MDT / MDI users who don't attach a foundation image are offered a 2-up parallel generation (`generate_image` with `model="nano-banana-2"` + `generate_image` with `model="gpt-image-2"`) before the storyboard step. Picked image(s) carry into the storyboard with build-from-this default semantics. Full procedure in SKILL.md Step 0b Branch B. Product Reel does NOT participate — if no product photo attached, Product Reel stops and asks user to attach (cannot fabricate the user's actual product).
+**Foundation generator (HR-1b, v2.1)** — MDH / MDT / MDI users who don't attach a foundation image are offered a 2-up parallel generation (`generate_image` with `model="nano-banana-2"` + `generate_image` with `model="gpt-image-2.5-sunburst"`) before the storyboard step. Picked image(s) carry into the storyboard with build-from-this default semantics. Full procedure in SKILL.md Step 0b Branch B. Product Reel does NOT participate — if no product photo attached, Product Reel stops and asks user to attach (cannot fabricate the user's actual product).
 
 ---
 
@@ -98,7 +98,7 @@ generate_image(
   prompt="Storyboard for X. Render in sculptural 3D dark cinematic Buck Studio style — heavy chiaroscuro, polished material, deep void background.",
   output_asset_id="storyboard1:sheet",
   image_urls=[],  # ← HARD VIOLATION
-  aspect_ratio="16:9", resolution="2K", model="gpt-image-2"
+  aspect_ratio="16:9", resolution="2K", model="gpt-image-2.5-sunburst"
 )
 # ... 4 more with text-only style descriptions, no moodboard asset passed
 ```
@@ -111,14 +111,14 @@ generate_image(
   prompt="6-panel storyboard sheet generated FROM @Image1. BUILD FROM the TOP-LEFT frame of @Image1 as foundation — preserve its subject, material, palette, atmosphere across all 6 panels. Scene variation: 6 different moments/scales/angles WITHIN the picked frame's world. Brand wordmark on P06 only if brief mentions brand.",
   output_asset_id="storyboard1:sheet",
   image_urls=["moodboard:sheet"],   # the Stage A moodboard asset id
-  aspect_ratio="16:9", resolution="2K", model="gpt-image-2"
+  aspect_ratio="16:9", resolution="2K", model="gpt-image-2.5-sunburst"
 )
 # storyboard 2 — TOP-RIGHT foundation
 generate_image(
   prompt="6-panel storyboard sheet generated FROM @Image1. BUILD FROM the TOP-RIGHT frame of @Image1 as foundation — preserve its subject, material, palette, atmosphere across all 6 panels...",
   output_asset_id="storyboard2:sheet",
   image_urls=["moodboard:sheet"],   # SAME moodboard asset id
-  aspect_ratio="16:9", resolution="2K", model="gpt-image-2"
+  aspect_ratio="16:9", resolution="2K", model="gpt-image-2.5-sunburst"
 )
 # ... 3 more with the same moodboard asset id in image_urls, different position foundation phrases
 ```

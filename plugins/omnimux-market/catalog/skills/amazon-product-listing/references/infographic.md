@@ -122,7 +122,7 @@ Strict exclusions:
 
 ## Tool call
 
-This item is normally generated alongside the rest of the SKILL.md secondary set — one `generate_image` call per secondary image, each referencing the main image. The infographic is typography- and icon-heavy, so use `model="gpt-image-2"`. The standalone shape:
+This item is normally generated alongside the rest of the SKILL.md secondary set — one `generate_image` call per secondary image, each referencing the main image. The infographic is typography- and icon-heavy, so use `model="gpt-image-2.5-sunburst"`. The standalone shape:
 
 ```
 generate_image(
@@ -130,7 +130,7 @@ generate_image(
   output_asset_id="secondary:infographic",
   aspect_ratio="1:1",
   resolution="2K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   image_urls=["main:final"]
 )
 # → returns the result directly with output_asset_id "secondary:infographic"

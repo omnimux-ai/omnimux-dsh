@@ -1,6 +1,6 @@
 # Storyboard prompt guide
 
-Hand-drawn-style **4-panel 16:9** B&W sketches generated with `gpt-image-2`. Lock the chunk shot grammar BEFORE Seedance gets the prompt. **Inputs:** `image_urls = [podcast:composite, persona:<host>, persona:<guest>]`. Output: `podcast:storyboard:A` (or `:B`, `:C`).
+Hand-drawn-style **4-panel 16:9** B&W sketches generated with `gpt-image-2.5-sunburst`. Lock the chunk shot grammar BEFORE Seedance gets the prompt. **Inputs:** `image_urls = [podcast:composite, persona:<host>, persona:<guest>]`. Output: `podcast:storyboard:A` (or `:B`, `:C`).
 
 This guide gives 3 verbatim storyboard templates plus the color rule, the 180° rule, and the storyboard design rules. Copy a template verbatim and replace the placeholders.
 
@@ -14,7 +14,7 @@ generate_image(
   image_urls=["podcast:composite", "persona:<host>", "persona:<guest>"],
   aspect_ratio="16:9",
   resolution="1K",
-  model="gpt-image-2",
+  model="gpt-image-2.5-sunburst",
   output_asset_id="podcast:storyboard:A",  # or :B, :C
 )
 ```
@@ -30,7 +30,7 @@ generate_image(
 
 ## Color rule — strict black and white only
 
-Every storyboard prompt MUST contain this verbatim clause near the top of the `prompt` field. `gpt-image-2` does NOT infer "no color" from the word *storyboard* — without explicit B&W language it renders colored marker sketches on cream paper.
+Every storyboard prompt MUST contain this verbatim clause near the top of the `prompt` field. `gpt-image-2.5-sunburst` does NOT infer "no color" from the word *storyboard* — without explicit B&W language it renders colored marker sketches on cream paper.
 
 ```
 STRICTLY BLACK AND WHITE — bold black ink linework on PURE WHITE paper background (#FFFFFF), optional gray pencil shading for shadow / fabric / hair mass only. NO color anywhere — no cream tint, no off-white paper, no sepia, no watercolor wash, no colored markers, no accent colors, no color on faces, wardrobe, headphones, mics, set, headers, or footers. If hero references in the image_urls inputs are colored, convert them to grayscale in the sketch — keep facial structure, age, hair shape, glasses, build; drop skin tone, hair color, and wardrobe color. Hand-drawn pen-and-pencil planning sketch, NOT photorealism.
@@ -46,7 +46,7 @@ The verbatim Storyboard A / B / C templates below already include this clause �
 - **Speaker close-up**: head / eyes **biased toward the off-frame partner** (where the co-host sits in the composite room) — NOT a flat hero-ref / mugshot symmetry toward the viewer.
 - **Listener close-up**: already off-axis toward speaker — keep that; NO "presenting to camera" while "listening".
 
-Repeat these cues **inside every image prompt** so `gpt-image-2` doesn't replay persona plates as "dual news anchors".
+Repeat these cues **inside every image prompt** so `gpt-image-2.5-sunburst` doesn't replay persona plates as "dual news anchors".
 
 ---
 

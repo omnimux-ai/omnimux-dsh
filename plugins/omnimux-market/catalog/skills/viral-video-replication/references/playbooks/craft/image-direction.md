@@ -92,7 +92,7 @@ lighting and a coherent image. Carry this wording intact into phone-footage imag
 direct this picture's content. Adding sensor grain, exposure falloff or elaborate lighting language
 is an additional aesthetic choice, not a necessary completion of the capture paragraph.
 
-GPT Image 2 is the usual choice. Favor `2K` for a full-screen picture or video reference; `1K` often
+GPT Image 2.5 画质版 (gpt-image-2.5-sunburst) is the usual choice. Favor `2K` for a full-screen picture or video reference; `1K` often
 suffices for an inset or small graphic. Set aspect ratio and resolution on the model's parameters.
 The prompt concentrates on composition inside that shape. For an illustration, product photograph
 or other explicitly different visual form, select capture language that serves that goal.
