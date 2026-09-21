@@ -1,0 +1,35 @@
+{
+  "spaceId": 22,
+  "url": "http://127.0.0.1:56263/",
+  "pass": true,
+  "idle": {
+    "shots": {
+      "className": "omnimux-inspiration-overlay-scroll omnimux-inspiration-shots-scroll-area",
+      "scrolling": false,
+      "overflowY": "auto",
+      "scrollHeight": 650,
+      "clientHeight": 570,
+      "thumbBg": "rgba(0, 0, 0, 0)"
+    },
+    "decon": {
+      "className": "omnimux-inspiration-overlay-scroll omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style",
+      "scrolling": false,
+      "overflowY": "auto",
+      "scrollHeight": 553,
+      "clientHeight": 553,
+      "thumbBg": "rgba(0, 0, 0, 0)"
+    }
+  },
+  "scrolling": {
+    "shots": {
+      "scrolling": true,
+      "scrollTop": 79.5
+    },
+    "decon": {
+      "scrolling": false,
+      "scrollTop": 0
+    },
+    "leaked": false
+  },
+  "finished": true
+}

@@ -2196,8 +2196,7 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-panel {
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
@@ -2205,6 +2204,8 @@ export const INSPIRATION_CSS = `
   border-right: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-base, #111111);
+  display: flex;
+  flex-direction: column;
 }
 .omnimux-inspiration-modal-panel:last-child { border-right: 0; }
 .omnimux-inspiration-modal-video-panel {
@@ -2221,11 +2222,13 @@ export const INSPIRATION_CSS = `
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 12px;
+  flex: 0 0 auto;
 }
 .omnimux-inspiration-modal-panel-heading h3 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .omnimux-inspiration-modal-player-box {
   position: relative;
@@ -2304,6 +2307,7 @@ export const INSPIRATION_CSS = `
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 .omnimux-inspiration-modal-meta-row {
   display: flex;
@@ -2406,23 +2410,35 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-bg-base, #111111) !important;
   contain: paint;
 }
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar {
+.omnimux-inspiration-shots-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.omnimux-inspiration-overlay-scroll::-webkit-scrollbar {
   width: 6px;
 }
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-track {
+.omnimux-inspiration-overlay-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb {
-  background: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.18));
+.omnimux-inspiration-overlay-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
   border-radius: 9999px;
+  transition: background-color 260ms ease;
 }
-.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb:hover {
-  background: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.3));
+.omnimux-inspiration-overlay-scroll.is-scrolling::-webkit-scrollbar-thumb {
+  background: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.28));
+}
+.omnimux-inspiration-overlay-scroll.is-scrolling::-webkit-scrollbar-thumb:hover {
+  background: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.4));
 }
 .omnimux-inspiration-deconstruct-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
   color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omnimux-inspiration-deconstruct-title svg {
@@ -2436,6 +2452,7 @@ export const INSPIRATION_CSS = `
   font-size: 14px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary, #ffffff);
+  white-space: nowrap;
 }
 .omnimux-inspiration-modal-panel-actions .omnimux-inspiration-modal-copy,
 .omnimux-inspiration-deconstruct-heading .omnimux-inspiration-modal-copy {
@@ -2740,7 +2757,11 @@ export const INSPIRATION_CSS = `
     height: 100%;
     border-right: 0;
   }
-  .omnimux-inspiration-modal-panel.is-active { display: block; }
+  .omnimux-inspiration-modal-panel.is-active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
   .omnimux-inspiration-modal-deconstruction-panel.is-active {
     display: flex;
     flex-direction: column;
@@ -2771,7 +2792,7 @@ export const INSPIRATION_CSS = `
   display: flex !important;
   flex-direction: column !important;
   padding: 16px 18px !important;
-  overflow-y: auto !important;
+  overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #111111) !important;
   box-sizing: border-box !important;
 }
@@ -2779,7 +2800,7 @@ export const INSPIRATION_CSS = `
   display: flex !important;
   flex-direction: column !important;
   padding: 16px 18px !important;
-  overflow-y: auto !important;
+  overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #111111) !important;
   border-right: none !important;
   box-sizing: border-box !important;
@@ -2965,7 +2986,6 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-shot-prompt-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 4px 8px;
   margin-top: 6px;
@@ -2980,10 +3000,6 @@ export const INSPIRATION_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.omnimux-inspiration-shot-copy-btn {
-  flex-shrink: 0;
-  font-size: 11px !important;
 }
 `
 

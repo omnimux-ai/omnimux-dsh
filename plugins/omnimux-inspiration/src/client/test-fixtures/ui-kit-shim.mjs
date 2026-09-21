@@ -126,7 +126,11 @@ export const ModalDialog = ({ open, children, footer, title, closeLabel, onClose
   )
   : null)
 
-export const CopyButton = () => h('button', { type: 'button' }, null)
+export const CopyButton = ({ label, className, 'aria-label': ariaLabel, title }) => h(
+  'button',
+  { type: 'button', className, 'aria-label': ariaLabel || label || title, title },
+  label || null,
+)
 
 /**
  * Mirrors the kit's DOM contract where a gate has to read it: the real

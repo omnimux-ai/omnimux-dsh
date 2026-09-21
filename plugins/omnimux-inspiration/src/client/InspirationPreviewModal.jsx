@@ -38,6 +38,7 @@ import {
   scriptCopyText,
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
+import { useOverlayScrollReveal } from './use-overlay-scroll-reveal.js'
 
 const ICON_SHARE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -276,8 +277,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   }, [onClose])
 
   const data = useMemo(() => getInspirationPreviewData(item), [item])
-  if (!row) return null
-
   const currentShotIndex = useMemo(() => {
     if (!data?.shots?.length) return -1
     return data.shots.findIndex((shot) => {
@@ -388,6 +387,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const scriptValue = scriptCopyText(data, showTranslation)
   const deconValue = deconstructionCopyText(data)
+  const shotsScroll = useOverlayScrollReveal('omnimux-inspiration-shots-scroll-area')
+  const deconScroll = useOverlayScrollReveal('omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style')
+
+  if (!row) return null
 
   const mobileTabs = ['video', 'script', 'deconstruction'].map((tab) => ({
     id: tab,
@@ -631,7 +634,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <div className="omnimux-inspiration-modal-panel-heading">
                 <div className="omnimux-inspiration-deconstruct-title">
                   {ICON_CLAPPERBOARD}
-                  <h3>{t('modal.deconstruction.shotsTitle') || '逐镜头分镜脚本'} ({data.shots.length || data.segments.length})</h3>
+                  <h3>{t('modal.deconstruction.shotsTitle')} ({data.shots.length || data.segments.length})</h3>
                 </div>
                 <div className="omnimux-inspiration-modal-panel-actions">
                   {scriptValue ? (
@@ -661,7 +664,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
               {translateError ? <div className="omnimux-inspiration-error-text">{translateError}</div> : null}
 
-              <div className="omnimux-inspiration-shots-scroll-area">
+              <div {...shotsScroll}>
                 {data.shots.length ? (
                   <div className="omnimux-inspiration-shots-list">
                     {data.shots.map((shot, sIdx) => {
@@ -706,14 +709,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                           {shot.prompt ? (
                             <div className="omnimux-inspiration-shot-prompt-box">
                               <code className="omnimux-inspiration-shot-prompt">{shot.prompt}</code>
-                              <CopyButton
-                                text={shot.prompt}
-                                label={t('modal.deconstruction.copyPrompt') || '复制 Prompt'}
-                                copiedLabel={t('modal.header.copied') || '已复制'}
-                                size="xs"
-                                variant="ghost"
-                                className="omnimux-inspiration-shot-copy-btn"
-                              />
                             </div>
                           ) : null}
                         </article>
@@ -780,7 +775,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 ) : null}
               </div>
 
-              <div className="omnimux-inspiration-modal-deconstruction-body omnimux-inspiration-modal-dimensions is-doc-style">
+              <div {...deconScroll}>
                 {data.sections && data.sections.length ? (
                   data.sections.map((section) => (
                     <article
