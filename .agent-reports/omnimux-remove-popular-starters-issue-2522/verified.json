@@ -1,0 +1,16 @@
+{
+  "task": "fix(omnimux): 首页移除热门入门方式并对齐探索模板标题",
+  "issue": "#2522",
+  "verifiedAt": "2026-09-21T17:16:35.920Z",
+  "screenshot": "docs/evidence/remove-popular-starters-issue-2522-verified.png",
+  "facts": {
+    "hasPopularTitleText": false,
+    "hasPopularCards": false,
+    "hasExploreTitle": true,
+    "exploreTitleText": "探索模板",
+    "exploreFontSize": "16px",
+    "exploreFontWeight": "600",
+    "pillCount": 4
+  },
+  "status": "VERIFIED_PASSED"
+}

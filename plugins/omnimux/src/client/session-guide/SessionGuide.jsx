@@ -1,13 +1,7 @@
 import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { STARTERS, STARTER_GROUPS, POPULAR_STARTERS } from './catalog.js'
+import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
-import { PopularCardCover } from './PopularCardCover.jsx'
-import { MarketingInsightModal } from './MarketingInsightModal.jsx'
-import { UrlToVideoModal } from './UrlToVideoModal.jsx'
-import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
-import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
-import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
 import { CreatifyPillsBar } from './CreatifyPillsBar.jsx'
@@ -66,35 +60,6 @@ function StarterGroupList({ groups, starters, selectedId, t, onChoose }) {
   )
 }
 
-function PopularStarterCard({ starter, t, onCardClick }) {
-  return (
-    <button key={starter.id} type="button" className="omnimux-popular-card" data-popular-starter-id={starter.id} onClick={() => onCardClick(starter)} /* exempt-ui01: popular starter card button */>
-      <div className="omnimux-popular-cover">
-        <PopularCardCover id={starter.id} />
-      </div>
-      <div className="omnimux-popular-footer">
-        <span className="omnimux-popular-card-title">{t(`guide.popular.${starter.id}.title`)}</span>
-        {starter.type === 'placeholder' && (
-          <span className="omnimux-popular-tag">Coming</span>
-        )}
-      </div>
-    </button>
-  )
-}
-
-function PopularStarterGrid({ popularStarters, t, onCardClick }) {
-  return (
-    <section className="omnimux-popular-section" aria-label={t('guide.popular.title')}>
-      <h2 className="omnimux-popular-title">{t('guide.popular.title')}</h2>
-      <div className="omnimux-popular-grid">
-        {popularStarters.map((starter) => (
-          <PopularStarterCard key={starter.id} starter={starter} t={t} onCardClick={onCardClick} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
 /** The owner hooks address the rendered session, including its first draft. */
 export function SessionGuide(props) {
   const session = props.useSession((value) => value)
@@ -147,11 +112,6 @@ function BlankSessionGuide({
   const [notice, setNotice] = useState(null)
   const [toastText, setToastText] = useState(null)
   const toastTimer = useRef(null)
-  const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
-  const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
-  const [isRecreateModalOpen, setIsRecreateModalOpen] = useState(false)
-  const [isBulkCreateAdsOpen, setIsBulkCreateAdsOpen] = useState(false)
-  const [isCreativePresetsOpen, setIsCreativePresetsOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
@@ -224,34 +184,10 @@ function BlankSessionGuide({
     }
   }
 
-  function handlePopularClick(starter) {
-    if (starter.id === 'marketing-insight') {
-      setIsInsightModalOpen(true)
-      return
-    }
-    if (starter.id === 'url-to-video') {
-      setIsUrlToVideoOpen(true)
-      return
-    }
-    if (starter.id === 'recreate-viral-ads') {
-      setIsRecreateModalOpen(true)
-      return
-    }
-    if (starter.id === 'bulk-create-ads') {
-      setIsBulkCreateAdsOpen(true)
-      return
-    }
-    if (starter.id === 'creative-presets') {
-      setIsCreativePresetsOpen(true)
-      return
-    }
-    showToast(t('guide.popular.placeholder-notice'))
-  }
-
   /**
    * 把一段意图写入官方会话输入框（唯一副作用 = setDraft + 聚焦，从不代发）。
    *
-   * 模态框与爆款对标吸底输入框共用本函数，差异只在 toast 文案与
+   * 探索模板与爆款对标吸底输入框共用本函数，差异只在 toast 文案与
    * `restoreNotice`（用户手动操作时清掉上一轮的「输入框未就绪」提示）。
    * `toastKey` 可缺省：调用方已有更直接的界面证据（如附件缩略图、
    * 技能药丸）时不再叠一层弹窗。
@@ -276,18 +212,9 @@ function BlankSessionGuide({
     }
   }
 
-  function handleSubmitDraft(prompt) {
-    setIsInsightModalOpen(false)
-    setIsUrlToVideoOpen(false)
-    setIsRecreateModalOpen(false)
-    setIsBulkCreateAdsOpen(false)
-    setIsCreativePresetsOpen(false)
-    applyDraftToComposer(prompt, { toastKey: 'guide.insight.copied', copy: true })
-  }
-
   /**
    * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
-   * 与模态框同源语义——只预填、不代发，用户保有最终发送权。
+   * 只预填、不代发，用户保有最终发送权。
    * 不弹 toast：复刻对象已挂成附件缩略图、技能药丸也已点亮，
    * 界面本身即是回执，再弹一层提示只会变成视觉干扰。
    */
@@ -392,14 +319,7 @@ function BlankSessionGuide({
             locale={isEn ? 'en' : 'zh'}
           />
 
-          {/* 第 2 层：Popular Ways to Get Started (4 Featured Cards) */}
-          <PopularStarterGrid
-            popularStarters={POPULAR_STARTERS}
-            t={t}
-            onCardClick={handlePopularClick}
-          />
-
-          {/* 第 3 层：探索模板 (Explore templates) 核心专区（内含 TikTok热门、Skills 与各分类单行货架） */}
+          {/* 第 2 层：探索模板 (Explore templates) 核心专区（内含 TikTok热门、Skills 与各分类单行货架） */}
           <ExploreTemplatesSection
             onApplyTemplate={handleExploreTemplateApply}
             onApplyTrending={handleExploreTrendingApply}
@@ -413,46 +333,6 @@ function BlankSessionGuide({
           </div>
         </>
       )}
-
-      {/* Marketing Insight Modal */}
-      <MarketingInsightModal
-        isOpen={isInsightModalOpen}
-        onClose={() => setIsInsightModalOpen(false)}
-        t={t}
-        onSubmitDraft={handleSubmitDraft}
-      />
-
-      {/* URL to Video Modal */}
-      <UrlToVideoModal
-        isOpen={isUrlToVideoOpen}
-        onClose={() => setIsUrlToVideoOpen(false)}
-        t={t}
-        onSubmitDraft={handleSubmitDraft}
-      />
-
-      {/* Recreate Viral Ads Modal */}
-      <RecreateViralAdsModal
-        isOpen={isRecreateModalOpen}
-        onClose={() => setIsRecreateModalOpen(false)}
-        t={t}
-        onSubmitDraft={handleSubmitDraft}
-      />
-
-      {/* Bulk Create Ads Modal */}
-      <BulkCreateAdsModal
-        isOpen={isBulkCreateAdsOpen}
-        onClose={() => setIsBulkCreateAdsOpen(false)}
-        t={t}
-        onSubmitDraft={handleSubmitDraft}
-      />
-
-      {/* Creative Presets Modal */}
-      <CreativePresetsModal
-        isOpen={isCreativePresetsOpen}
-        onClose={() => setIsCreativePresetsOpen(false)}
-        t={t}
-        onSubmitDraft={handleSubmitDraft}
-      />
 
       {/* 吸底时浮现的收起/归还按钮 */}
       {isDocked && (

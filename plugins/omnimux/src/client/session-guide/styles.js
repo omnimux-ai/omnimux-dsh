@@ -3184,6 +3184,12 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 /* Explore Templates Section & Shelves */
 .omnimux-explore-templates-root { display:flex; flex-direction:column; gap:20px; margin-top:28px; }
 .omnimux-explore-header-row { margin-bottom:8px; }
+.omnimux-explore-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin: 0;
+}
 .omnimux-explore-main-title { font-size:18px; font-weight:700; color:var(--dsw-alias-label-primary); margin:0; }
 .omnimux-explore-filter-bar { margin-bottom:8px; }
 .omnimux-explore-pills-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
