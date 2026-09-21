@@ -341,6 +341,24 @@ describe('preview modal doc style and glass removal', () => {
     assert.equal(en['modal.deconstruction.copy'], 'Copy')
   })
 
+  it('registers a human shots-panel title and never a per-shot copyPrompt key', () => {
+    assert.equal(zh['modal.deconstruction.shotsTitle'], '逐镜头分镜脚本')
+    assert.equal(en['modal.deconstruction.shotsTitle'], 'Shot-by-shot script')
+    assert.equal(zh['modal.deconstruction.copyPrompt'], undefined)
+    assert.equal(en['modal.deconstruction.copyPrompt'], undefined)
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.match(preview, /t\('modal\.deconstruction\.shotsTitle'\)/)
+    assert.doesNotMatch(preview, /copyPrompt/)
+    assert.doesNotMatch(preview, /omnimux-inspiration-shot-copy-btn/)
+    assert.doesNotMatch(INSPIRATION_CSS, /omnimux-inspiration-shot-copy-btn/)
+    const title = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-title h3')
+    assert.equal(decl(title, 'white-space'), 'nowrap')
+    const headingTitle = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel-heading h3')
+    assert.equal(decl(headingTitle, 'white-space'), 'nowrap')
+    const wrap = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-title')
+    assert.equal(decl(wrap, 'flex'), '0 0 auto')
+  })
+
   it('removes breakdown badge from deconstruction panel and renders document layout without accordion fold', () => {
     const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
     assert.doesNotMatch(preview, /omnimux-inspiration-status-badge/)

@@ -631,7 +631,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <div className="omnimux-inspiration-modal-panel-heading">
                 <div className="omnimux-inspiration-deconstruct-title">
                   {ICON_CLAPPERBOARD}
-                  <h3>{t('modal.deconstruction.shotsTitle') || '逐镜头分镜脚本'} ({data.shots.length || data.segments.length})</h3>
+                  <h3>{t('modal.deconstruction.shotsTitle')} ({data.shots.length || data.segments.length})</h3>
                 </div>
                 <div className="omnimux-inspiration-modal-panel-actions">
                   {scriptValue ? (
@@ -706,14 +706,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                           {shot.prompt ? (
                             <div className="omnimux-inspiration-shot-prompt-box">
                               <code className="omnimux-inspiration-shot-prompt">{shot.prompt}</code>
-                              <CopyButton
-                                text={shot.prompt}
-                                label={t('modal.deconstruction.copyPrompt') || '复制 Prompt'}
-                                copiedLabel={t('modal.header.copied') || '已复制'}
-                                size="xs"
-                                variant="ghost"
-                                className="omnimux-inspiration-shot-copy-btn"
-                              />
                             </div>
                           ) : null}
                         </article>

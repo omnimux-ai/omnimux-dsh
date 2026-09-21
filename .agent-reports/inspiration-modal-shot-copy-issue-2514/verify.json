@@ -1,0 +1,28 @@
+{
+  "spaceId": 10,
+  "url": "http://127.0.0.1:52051/",
+  "pass": true,
+  "metrics": {
+    "heading": "逐镜头分镜脚本 (4)",
+    "headingBox": {
+      "x": 772,
+      "y": 165.5,
+      "width": 120.3984375,
+      "height": 20,
+      "top": 165.5,
+      "right": 892.3984375,
+      "bottom": 185.5,
+      "left": 772
+    },
+    "cards": 4,
+    "leaked": false,
+    "copyPrompt": false,
+    "shotCopyButtons": 0,
+    "panelCopy": true,
+    "deconCopy": true,
+    "panelCopyText": "复制",
+    "deconCopyText": "复制"
+  },
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-modal-shot-copy-issue-2514/docs/evidence/inspiration-modal-shot-copy-issue-2514/shots-panel-title.png",
+  "finished": true
+}
