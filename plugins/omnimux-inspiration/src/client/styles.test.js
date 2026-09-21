@@ -66,7 +66,10 @@ describe('inspiration triptych modal', () => {
   it('provides narrow-screen tabs without horizontal overflow', () => {
     assert.match(INSPIRATION_CSS, /@media \(max-width: 860px\)/)
     assert.match(INSPIRATION_CSS, /modal-mobile-tabs/)
-    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-modal-panel\.is-active/)
+    assert.match(
+      INSPIRATION_CSS,
+      /@media \(max-width: 860px\)[\s\S]*?\.omnimux-inspiration-modal-panel\.is-active \{\s*display:\s*flex;\s*flex-direction:\s*column;\s*overflow:\s*hidden;/,
+    )
   })
 
   it('fills the video panel width with a 9:16 preview, floating actions, and compact title-only header', () => {

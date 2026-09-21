@@ -2757,7 +2757,11 @@ export const INSPIRATION_CSS = `
     height: 100%;
     border-right: 0;
   }
-  .omnimux-inspiration-modal-panel.is-active { display: block; }
+  .omnimux-inspiration-modal-panel.is-active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
   .omnimux-inspiration-modal-deconstruction-panel.is-active {
     display: flex;
     flex-direction: column;
