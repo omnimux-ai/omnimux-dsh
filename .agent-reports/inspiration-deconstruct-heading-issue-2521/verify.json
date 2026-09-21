@@ -1,0 +1,31 @@
+{
+  "spaceId": 29,
+  "url": "http://127.0.0.1:64466/",
+  "pass": true,
+  "metrics": {
+    "center": {
+      "top": 161.5,
+      "bottom": 189.5,
+      "height": 28,
+      "paddingTop": "0px",
+      "paddingBottom": "0px",
+      "marginBottom": "12px",
+      "borderBottomWidth": "0px",
+      "borderBottomStyle": "none"
+    },
+    "right": {
+      "top": 161.5,
+      "bottom": 189.5,
+      "height": 28,
+      "paddingTop": "0px",
+      "paddingBottom": "0px",
+      "marginBottom": "12px",
+      "borderBottomWidth": "0px",
+      "borderBottomStyle": "none"
+    },
+    "deconCopy": true
+  },
+  "topDelta": 0,
+  "heightDelta": 0,
+  "finished": true
+}

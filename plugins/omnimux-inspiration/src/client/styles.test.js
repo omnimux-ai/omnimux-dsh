@@ -391,6 +391,11 @@ describe('preview modal doc style and glass removal', () => {
 
     const deconHeadingCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-heading')
     assert.doesNotMatch(deconHeadingCss, /position:\s*sticky/)
+    assert.doesNotMatch(deconHeadingCss, /border-bottom:\s*1px/)
+    assert.equal(decl(deconHeadingCss, 'padding'), '0')
+    assert.equal(decl(deconHeadingCss, 'margin-bottom'), '12px')
+    const deconPanelPad = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-panel')
+    assert.doesNotMatch(deconPanelPad, /padding:\s*0\s*!important/)
 
     const deconBodyCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body')
     assert.equal(decl(deconBodyCss, 'overflow-y'), 'auto')
