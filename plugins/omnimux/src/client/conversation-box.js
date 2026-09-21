@@ -417,14 +417,6 @@ function ensureConversationVisible(opts = {}) {
   requestRailActivationSync()
 }
 
-function currentWorkbenchSessionId() {
-  try {
-    const snap = window.__omnimuxWorkbench?.getSnapshot?.()
-    if (snap?.sessionId) return String(snap.sessionId)
-  } catch {}
-  return undefined
-}
-
 function handleSessionEnterIntent(target) {
   if (!(target instanceof Element)) return false
   return sessionRowPlainClick(target) || workspaceNewSessionButton(target) || newSessionMenuPick(target)
@@ -452,7 +444,8 @@ function watchSelectedSessionClick() {
     if (isNewSessionIntent(target)) {
       ensureConversationVisible({ newSession: true })
     } else {
-      const sid = extractSessionIdFromTarget(target) || currentWorkbenchSessionId()
+      const sid = extractSessionIdFromTarget(target)
+      if (!sid) return
       ensureConversationVisible({ sessionId: sid, newSession: false })
     }
   }, true)

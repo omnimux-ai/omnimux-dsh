@@ -151,6 +151,39 @@ test('AC-6 面板收起时保持静默', () => {
   assert.equal(triggered, 0)
 })
 
+test('AC-7 切到无三栏记忆的会话：收起右侧，不把全屏带过去', () => {
+  const doc = setupDom(FULLSCREEN_PANEL)
+  const closes = []
+  const focus = []
+  let session = 'sess-a'
+  let isFs = true
+  const reconciler = createTabViewportReconciler({
+    getDoc: () => doc,
+    getSessionId: () => session,
+    getTabId: () => 'omnimux-assets:library',
+    isFullscreen: () => isFs,
+    loadSessionThreeColumn: (id) => id === 'sess-a',
+    closePanel: () => { closes.push(session); isFs = false },
+    setFocus: (mode) => { focus.push(mode) },
+  })
+  reconciler.sync()
+  assert.deepEqual(closes, [])
+  session = 'sess-b'
+  reconciler.sync()
+  assert.deepEqual(closes, ['sess-b'])
+  assert.ok(focus.includes('chat'))
+})
+
+test('AC-8 程序化进全屏不得写成 explicit', () => {
+  const doc = setupDom(OPEN_PANEL)
+  const { state, storage, reconciler } = harness(doc, { tab: 'omnimux-assets:library', isFs: false })
+  reconciler.sync()
+  reconciler.beginProgrammatic()
+  state.isFs = true
+  reconciler.sync()
+  assert.equal(storage['omnimux-assets:library']?.explicit, undefined)
+})
+
 test('installTabViewportReconciler lifecycle: install and uninstall without leak', () => {
   const doc = setupDom(OPEN_PANEL)
   const unsub = installTabViewportReconciler(doc)

@@ -273,9 +273,13 @@ export async function openWorkbench(opts = {}) {
   const targetMode = opts.focus || resolveTargetFocusMode(sessionId, tabId)
   setWorkbenchFocus(targetMode, getAttachedStore(), {}, tabId, { persistUserIntent: false })
   if (targetMode === WORKBENCH_FOCUS.gui) {
+    const win = hostWindow()
+    const rec = win?.__omnimuxTabViewport
+    rec?.beginProgrammatic?.()
     try {
-      enterHostRightSidebarFullscreen(hostDocument(), { setFocus: () => false })
+      enterHostRightSidebarFullscreen(hostDocument())
     } catch { /* host button may be absent in tests */ }
+    rec?.endProgrammatic?.()
   }
   notifyWorkbenchChange()
   return true

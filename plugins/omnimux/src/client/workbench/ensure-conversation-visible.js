@@ -29,23 +29,28 @@ export function ensureConversationVisible(doc, api, opts = {}) {
   const focusOpts = { persistUserIntent: false }
 
   if (sessionFullscreen) {
+    let collapseCleared = false
     if (typeof api?.setFocus === 'function') {
       try {
         api.setFocus('chat', undefined, {}, undefined, focusOpts)
+        collapseCleared = true
       } catch {
-        try { api.closePanel?.() } catch {}
+        try { api.closePanel?.(); collapseCleared = true } catch {}
       }
-    } else {
-      try { api?.closePanel?.() } catch {}
+    } else if (typeof api?.closePanel === 'function') {
+      try { api.closePanel(); collapseCleared = true } catch {}
     }
     if (typeof api?.setConversationCollapsed === 'function') {
-      try { api.setConversationCollapsed(false) } catch {}
+      try { api.setConversationCollapsed(false); collapseCleared = true } catch {}
     }
     try {
-      doc?.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      if (doc?.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed')) {
+        doc.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+        collapseCleared = true
+      }
       doc?.documentElement?.removeAttribute?.('data-omnimux-fullscreen-collapse-snapshot')
     } catch {}
-    return { hostFullscreenExited, collapseCleared: true, sessionFullscreen: true }
+    return { hostFullscreenExited, collapseCleared, sessionFullscreen: true }
   }
 
   const domCollapsed = Boolean(doc?.documentElement?.hasAttribute?.('data-omnimux-conversation-collapsed'))

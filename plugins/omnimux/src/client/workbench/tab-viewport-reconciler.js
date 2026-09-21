@@ -32,7 +32,9 @@ import {
   applyConversationCollapsedAttr,
   persistConversationCollapsed,
   persistSessionThreeColumn,
+  loadSessionThreeColumn,
 } from '../conversation-collapse.js'
+const PROGRAMMATIC_LOCK_MS = 80
 
 const TITLE_TO_TAB_ID = new Map(
   Object.entries(WORKBENCH_TAB_TITLE_FALLBACKS).map(([tabId, title]) => [title, tabId])
@@ -137,9 +139,16 @@ export function createTabViewportReconciler(deps = {}) {
   const getFocusRecord = deps.getFocusRecord || focusRecordForTab
   const persistFocus = deps.persistFocus || persistSessionFocus
   const persistThreeColumn = deps.persistSessionThreeColumn || persistSessionThreeColumn
+  const loadThreeColumn = deps.loadSessionThreeColumn || loadSessionThreeColumn
   const isFullscreen = deps.isFullscreen || (() => isHostRightSidebarFullscreen(getDoc()))
   const persistCollapsed = deps.persistConversationCollapsed || persistConversationCollapsed
   const applyCollapsedAttr = deps.applyConversationCollapsedAttr || applyConversationCollapsedAttr
+  const closePanel = deps.closePanel || (() => {
+    try { getDoc()?.defaultView?.__omnimuxWorkbench?.closePanel?.() } catch {}
+  })
+  const setFocus = deps.setFocus || ((mode) => {
+    try { getDoc()?.defaultView?.__omnimuxWorkbench?.setFocus?.(mode, undefined, {}, undefined, { persistUserIntent: false }) } catch {}
+  })
 
   let lastActiveTabId = null
   let lastMode = null
@@ -154,7 +163,7 @@ export function createTabViewportReconciler(deps = {}) {
     unlockTimer = setTimeout(() => {
       isReconciling = false
       unlockTimer = null
-    }, 40)
+    }, PROGRAMMATIC_LOCK_MS)
   }
 
   function sync() {
@@ -176,11 +185,34 @@ export function createTabViewportReconciler(deps = {}) {
     const currentTab = getTabId()
     const sessionId = getSessionId()
 
-    // 1. 会话切换：只记下身份。进聊天意图由会话行点击处理，这里不得把右侧全屏带回来。
+    // 1. 会话切换：首次只记身份。之后按目标会话钥匙恢复，不得把右侧全屏带过来。
     if (sessionId && sessionId !== lastSessionId) {
+      const isFirstSight = lastSessionId == null
       lastSessionId = sessionId
       lastActiveTabId = currentTab
       lastMode = currentMode
+      if (isFirstSight) return
+      const threeColumn = loadThreeColumn(sessionId)
+      isReconciling = true
+      try {
+        if (threeColumn) {
+          lastMode = 'push'
+          if (currentMode === 'fullscreen') {
+            try { setFocus('split') } catch {}
+            applyCollapsedAttr(false, doc)
+            if (doc?.documentElement) {
+              doc.documentElement.removeAttribute('data-omnimux-fullscreen-collapse-snapshot')
+            }
+          }
+        } else {
+          lastMode = 'push'
+          try { closePanel() } catch {}
+          try { setFocus('chat') } catch {}
+          applyCollapsedAttr(false, doc)
+        }
+      } finally {
+        scheduleUnlock()
+      }
       return
     }
 
@@ -232,6 +264,19 @@ export function createTabViewportReconciler(deps = {}) {
 
   return {
     sync,
+    beginProgrammatic() {
+      isReconciling = true
+      if (unlockTimer) {
+        clearTimeout(unlockTimer)
+        unlockTimer = null
+      }
+    },
+    endProgrammatic() {
+      lastMode = isFullscreen() ? 'fullscreen' : 'push'
+      lastActiveTabId = getTabId()
+      isReconciling = true
+      scheduleUnlock()
+    },
     reset() {
       lastActiveTabId = null
       lastMode = null
@@ -256,6 +301,10 @@ export function installTabViewportReconciler(doc = hostDocument()) {
 
   const reconciler = createTabViewportReconciler({ getDoc: () => doc })
   reconciler.sync()
+  try {
+    const win = doc.defaultView
+    if (win) win.__omnimuxTabViewport = reconciler
+  } catch {}
 
   const Observer = doc.defaultView?.MutationObserver
   if (typeof Observer !== 'function') return () => {}
@@ -283,6 +332,10 @@ export function installTabViewportReconciler(doc = hostDocument()) {
   return () => {
     observer.disconnect()
     doc.removeEventListener('click', handleClick, { capture: true })
+    try {
+      const win = doc.defaultView
+      if (win && win.__omnimuxTabViewport === reconciler) delete win.__omnimuxTabViewport
+    } catch {}
     reconciler.reset()
   }
 }

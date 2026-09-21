@@ -145,3 +145,12 @@ test('API 缺失或抛错：静默降级，绝不抛出', () => {
   })
   assert.equal(result.sessionFullscreen, false)
 })
+
+test('无 api 的会话全屏：collapseCleared 不得谎报成功', () => {
+  dom = new JSDOM('<!doctype html><html><body></body></html>')
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  const result = ensureConversationVisible(dom.window.document, undefined, { newSession: true })
+  assert.equal(result.sessionFullscreen, true)
+  assert.equal(result.collapseCleared, false)
+})

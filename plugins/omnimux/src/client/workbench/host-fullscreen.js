@@ -213,7 +213,7 @@ export function enterHostRightSidebarFullscreen(doc, deps = {}) {
   const setFocus = typeof deps.setFocus === 'function' ? deps.setFocus : resolveHostSetFocus()
   if (typeof setFocus === 'function') {
     try {
-      setFocus('gui')
+      setFocus('gui', undefined, {}, undefined, { persistUserIntent: false })
       return true
     } catch {
       return false
