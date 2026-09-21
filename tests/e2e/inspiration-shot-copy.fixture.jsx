@@ -12,7 +12,7 @@ const shots = [
     title: '开场悬念',
     description: '快速举起产品贴近镜头',
     script: '这真的是我今年发现最绝的宝藏',
-    prompt: 'Young creator holding a towel, close-up',
+    prompt: 'Young creator holding product with shocked wide eyes and a tight close-up',
     tags: ['特写'],
   },
   {

@@ -400,7 +400,21 @@ describe('preview modal doc style and glass removal', () => {
     const deconBodyCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body')
     assert.equal(decl(deconBodyCss, 'overflow-y'), 'auto')
     assert.equal(decl(deconBodyCss, 'overscroll-behavior'), 'contain')
-    assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'stable')
+    assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'auto')
+  })
+
+  it('uses one narrow card inset on both the shot list and the deconstruction column', () => {
+    const center = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-workbench-center')
+    const right = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-workbench-right')
+    assert.equal(decl(center, 'padding'), '12px 8px !important')
+    assert.equal(decl(right, 'padding'), '12px 8px !important')
+    const doc = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-dimensions.is-doc-style')
+    assert.equal(decl(doc, 'padding'), '0')
+    const shots = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-shots-scroll-area')
+    assert.equal(decl(shots, 'scrollbar-gutter'), 'auto')
+    const prompt = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-shot-prompt')
+    assert.equal(decl(prompt, 'white-space'), 'normal')
+    assert.notEqual(decl(prompt, 'text-overflow'), 'ellipsis')
   })
 
   it('hides overlay scroll thumbs until the pane is scrolling', () => {

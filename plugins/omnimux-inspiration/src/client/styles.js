@@ -2404,7 +2404,7 @@ export const INSPIRATION_CSS = `
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   background: var(--dsw-alias-bg-base, #111111) !important;
   contain: paint;
 }
@@ -2414,9 +2414,18 @@ export const INSPIRATION_CSS = `
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
+  scrollbar-gutter: auto;
 }
 .omnimux-inspiration-overlay-scroll::-webkit-scrollbar {
   width: 6px;
+  background: transparent;
+}
+.omnimux-inspiration-overlay-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.omnimux-inspiration-overlay-scroll.is-scrolling {
+  scrollbar-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.28)) transparent;
 }
 .omnimux-inspiration-overlay-scroll::-webkit-scrollbar-track {
   background: transparent;
@@ -2471,12 +2480,12 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-dimensions.is-doc-style {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 12px;
+  padding: 0;
+  gap: 10px;
 }
 .omnimux-inspiration-doc-section,
 .omnimux-inspiration-modal-dimensions.is-doc-style article {
-  padding: 18px 20px !important;
+  padding: 14px 12px !important;
   margin: 0 !important;
   border-radius: 8px !important;
   background: var(--dsw-alias-bg-module-platform, rgba(255, 255, 255, 0.02)) !important;
@@ -2789,7 +2798,7 @@ export const INSPIRATION_CSS = `
   border-right: 1px solid var(--dsw-alias-border-l2) !important;
   display: flex !important;
   flex-direction: column !important;
-  padding: 16px 18px !important;
+  padding: 12px 8px !important;
   overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #111111) !important;
   box-sizing: border-box !important;
@@ -2797,7 +2806,7 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-workbench-right {
   display: flex !important;
   flex-direction: column !important;
-  padding: 16px 18px !important;
+  padding: 12px 8px !important;
   overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #111111) !important;
   border-right: none !important;
@@ -2862,7 +2871,7 @@ export const INSPIRATION_CSS = `
   border: 1px solid var(--dsw-alias-border-l2, #262626) !important;
   background: var(--dsw-alias-bg-layer-1, #18181b) !important;
   border-radius: 10px !important;
-  padding: 14px 16px !important;
+  padding: 14px 12px !important;
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
 }
 .omnimux-inspiration-shot-card:hover {
@@ -2995,9 +3004,10 @@ export const INSPIRATION_CSS = `
   font-size: 11px;
   font-family: var(--dsw-font-mono, monospace);
   color: var(--dsw-alias-label-tertiary, #a1a1aa);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 `
 
