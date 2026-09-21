@@ -197,6 +197,33 @@ describe('composer add controller', () => {
     assert.equal(f.model, null)
   })
 
+  it('writes confirmed products into the tray without a library request', () => {
+    const f = setup()
+    f.controller.openProduct('a')
+    assert.equal(f.model.kind, 'product')
+    f.model.onConfirm({ id: 'prod-1', name: '女士高级淡香水50ml', sku: '1730' })
+    const rows = f.store.getSnapshot('a')
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].kind, 'product')
+    assert.equal(rows[0].title, '女士高级淡香水50ml')
+    assert.equal(f.requests.length, 0)
+    assert.equal(f.model, null)
+    f.controller.dispose()
+  })
+
+  it('writes confirmed inspirations into the tray without a library request', () => {
+    const f = setup()
+    f.controller.openInspiration('a')
+    assert.equal(f.model.kind, 'inspiration')
+    f.model.onConfirm([{ id: 'insp-1', title: '晨间闺蜜', previewUrl: '/omnimux/inspiration/media/covers/a.jpg' }])
+    const rows = f.store.getSnapshot('a')
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].kind, 'image')
+    assert.equal(rows[0].title, '晨间闺蜜')
+    assert.equal(f.requests.length, 0)
+    f.controller.dispose()
+  })
+
   it('ignores an import completion after plugin disposal', async () => {
     const pending = deferred()
     const started = deferred()
@@ -212,5 +239,35 @@ describe('composer add controller', () => {
     assert.equal(f.store.getSnapshot('a').length, 0)
     assert.equal(f.notices.length, 0)
     assert.equal(f.listeners.size, 0)
+  })
+
+  it('allows same numeric id across different sources without collision', () => {
+    const f = setup()
+    f.controller.openProduct('a')
+    f.model.onConfirm({ id: '100', name: '商品A' })
+    assert.equal(f.store.getSnapshot('a').length, 1)
+
+    f.controller.openInspiration('a')
+    // 灵感也是 id '100'，但 sourcePlugin 和 kind 不同，不应被判重拦截
+    f.model.onConfirm([{ id: '100', title: '灵感A' }])
+    const rows = f.store.getSnapshot('a')
+    assert.equal(rows.length, 2)
+    assert.equal(rows[0].kind, 'product')
+    assert.equal(rows[1].kind, 'image')
+    f.controller.dispose()
+  })
+
+  it('notifies duplicate when all selected items already exist and quota is not exceeded', () => {
+    const f = setup()
+    f.controller.openInspiration('a')
+    f.model.onConfirm([{ id: 'dup-1', title: '灵感1' }])
+    assert.equal(f.store.getSnapshot('a').length, 1)
+
+    // 再次添加相同项（此时远未达到 MAX_ATTACHMENTS 8 项上限）
+    f.controller.openInspiration('a')
+    f.model.onConfirm([{ id: 'dup-1', title: '灵感1' }])
+    assert.match(f.notices.at(-1), /已在会话中/)
+    assert.doesNotMatch(f.notices.at(-1), /上限|最多/)
+    f.controller.dispose()
   })
 })

@@ -23,6 +23,12 @@ export type AttachmentSourcePlugin =
 
 export type AttachmentStatus = 'ready' | 'missing' | 'stale';
 
+/** 官方 DraftFileUpload：会话草稿里的上传回执。 */
+export type DraftFileUpload =
+  | { readonly status: 'uploading'; readonly loaded: number; readonly total?: number }
+  | { readonly status: 'ready'; readonly receiptId: string; readonly file: unknown }
+  | { readonly status: 'error'; readonly message: string };
+
 /** 会话附件完整数据模型 */
 export interface ConversationAttachment {
   /** 唯一标识 (UUID / 纳秒时间戳) */

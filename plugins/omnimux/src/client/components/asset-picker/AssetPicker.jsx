@@ -258,7 +258,7 @@ function interpolate(template, vars) {
 
 /** 内置 zh-CN 兜底文案（调用方通常注入宿主 t） */
 const DEFAULT_STRINGS = {
-  'composerAdd.fromLibrary': '从资产库添加',
+  'composerAdd.fromLibrary': '从资产库选择',
   'composerAdd.cancel': '取消',
   'composerAdd.confirm': '确认添加',
   'composerAdd.categories': '资产分类',

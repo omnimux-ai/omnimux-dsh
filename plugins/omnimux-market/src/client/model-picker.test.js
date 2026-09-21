@@ -15,11 +15,9 @@ describe('model picker client & session contracts (Issue #1167 / #2136)', () => 
   const bootSrc = readFileSync(join(here, 'boot.js'), 'utf8')
   const catalogSrc = readFileSync(join(here, 'model-picker-catalog.js'), 'utf8')
 
-  it('registers ModelPickerButton on conversation.input.left with order 20 (to the right of skill picker)', () => {
-    assert.match(applySrc, /conversation\.input\.left/)
-    assert.match(applySrc, /omnimux-market-model-picker/)
-    assert.match(applySrc, /order:\s*20/)
-    assert.match(applySrc, /ModelPickerButton/)
+  it('does not restore the composer Model picker on conversation.input.left', () => {
+    assert.doesNotMatch(applySrc, /omnimux-market-model-picker/)
+    assert.match(applySrc, /omnimux-market-skill-picker/)
   })
 
   it('loads ModelPickerCatalog from boot and never ships a hardcoded DEFAULT_MODEL_CATALOG list', () => {

@@ -54,7 +54,7 @@ function mountJourney(current = 'session-a') {
   }
 }
 
-describe('e2e: 从资产库添加点击即打开选择窗', () => {
+describe('e2e: 从资产库选择点击即打开选择窗', () => {
   it('菜单点选后同一操作内出现选择弹窗，取消不留附件', () => {
     const f = mountJourney()
     assert.equal(f.commandUi.spec.name, LIBRARY_COMMAND)
@@ -64,7 +64,7 @@ describe('e2e: 从资产库添加点击即打开选择窗', () => {
     f.clickLibrary()
     const dialog = f.doc.querySelector('[role="dialog"]')
     assert.ok(dialog)
-    assert.equal(dialog.getAttribute('aria-label'), '从资产库添加')
+    assert.equal(dialog.getAttribute('aria-label'), '从资产库选择')
     assert.ok(dialog.className.includes('omx-pick-dialog--assets'))
     const box = dialog.getBoundingClientRect()
     assert.ok(typeof box.width === 'number')

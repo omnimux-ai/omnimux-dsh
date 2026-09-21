@@ -20,5 +20,5 @@ export function ProductPickerModal({ open, onClose, t, initialProductId, onConfi
       initialProductId={initialProductId}
       onConfirm={onConfirm}
     />
-  );
+  )
 }

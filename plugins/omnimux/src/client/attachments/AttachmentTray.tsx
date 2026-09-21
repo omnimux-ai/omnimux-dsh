@@ -3,7 +3,7 @@ import { AttachmentCard } from './AttachmentCard.tsx';
 import { isMediaAttachment, isVideoAttachment } from './media-detector.ts';
 import { Button } from 'dsh-ui-kit';
 import { getGlobalAttachmentStore } from './store.ts';
-import type { ConversationAttachment } from './types.ts';
+import type { ConversationAttachment, DraftFileUpload } from './types.ts';
 import { PromptSlotChips } from './PromptSlotChips.tsx';
 import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
 import { ensureStylesInjected } from './trayStyles.ts';
@@ -22,12 +22,10 @@ import {
   type NativeAttachmentUpload,
   type NativeComposerAttachment,
 } from './NativeAttachmentCard.tsx';
+import { getNativeComposerSnapshot, subscribeNativeComposer } from './nativeComposerBridge.ts';
 
-/** 官方 DraftFileUpload：会话草稿里的上传回执。 */
-export type DraftFileUpload =
-  | { readonly status: 'uploading'; readonly loaded: number; readonly total?: number }
-  | { readonly status: 'ready'; readonly receiptId: string; readonly file: unknown }
-  | { readonly status: 'error'; readonly message: string };
+/** 官方 DraftFileUpload：会话草稿里的上传回执（定义收敛于 ./types.ts）。 */
+export type { DraftFileUpload };
 
 export interface AttachmentTrayProps {
   attachments?: readonly any[];
@@ -191,10 +189,18 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     'default';
 
   const { error: commentError, retry: retryComments } = useCommentAttachment(props, currentSessionId);
-  const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof props.onAddFiles === 'function';
-  const nativeAttachments: readonly NativeComposerAttachment[] = Array.isArray(props.attachments)
-    ? (props.attachments as readonly NativeComposerAttachment[])
-    : [];
+  const nativeComposer = useSyncExternalStore(subscribeNativeComposer, getNativeComposerSnapshot, getNativeComposerSnapshot);
+  const useProps = Array.isArray(props.attachments) || typeof props.onRemoveAttachment === 'function' || typeof props.onAddFiles === 'function';
+  const nativeAttachments: readonly NativeComposerAttachment[] = useProps
+    ? ((props.attachments || []) as readonly NativeComposerAttachment[])
+    : nativeComposer.attachments;
+  const nativeUploads = useProps ? props.uploads : nativeComposer.uploads;
+  const nativeOnRemove = useProps ? props.onRemoveAttachment : nativeComposer.onRemoveAttachment;
+  const nativeOnRetry = useProps ? props.onRetryFile : nativeComposer.onRetryFile;
+  const nativeOnAddFiles = useProps ? props.onAddFiles : nativeComposer.onAddFiles;
+  const nativeCanAcceptDrop = useProps ? props.canAcceptDrop : nativeComposer.canAcceptDrop;
+  const nativeDropLimits = useProps ? props.dropLimits : nativeComposer.dropLimits;
+  const canAcceptDrop = Boolean(nativeCanAcceptDrop) && typeof nativeOnAddFiles === 'function';
 
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -204,7 +210,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const { slots, activeSlotIndex, selectSlot, replaceSlot } = usePromptSlotEnhancer();
   const dragActive = useDragDrop({
     canAcceptDrop,
-    onAddFiles: props.onAddFiles,
+    onAddFiles: nativeOnAddFiles,
   });
 
   useEffect(() => {
@@ -333,11 +339,11 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   }, []);
 
   const handleRemoveNative = useCallback((id: string) => {
-    if (typeof props.onRemoveAttachment === 'function') {
-      props.onRemoveAttachment(id);
+    if (typeof nativeOnRemove === 'function') {
+      nativeOnRemove(id);
       removeCommentAttachment(currentSessionId, id);
     }
-  }, [props.onRemoveAttachment, currentSessionId]);
+  }, [nativeOnRemove, currentSessionId]);
 
   const closePreview = useCallback(() => {
     setPreview(null);
@@ -390,8 +396,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const dropTitle = canAcceptDrop
     ? translate(props.t, 'attachments.dropTitle', '将图片拖放到此处')
     : translate(props.t, 'attachments.dropBlocked', '当前无法添加图片');
-  const dropDesc = canAcceptDrop && props.dropLimits
-    ? translate(props.t, 'attachments.dropDesc', '最多 {count} 张，单张不超过 {size}', props.dropLimits)
+  const dropDesc = canAcceptDrop && nativeDropLimits
+    ? translate(props.t, 'attachments.dropDesc', '最多 {count} 张，单张不超过 {size}', nativeDropLimits)
     : '';
 
   return (
@@ -410,7 +416,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         activeSlotIndex={activeSlotIndex}
         onSelectSlot={selectSlot}
         onReplaceSlot={replaceSlot}
-        onAddFiles={props.onAddFiles}
+        onAddFiles={nativeOnAddFiles}
         onAddProductAttachment={handleAddProductAttachment}
         t={props.t}
       />
@@ -438,8 +444,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               onOpenOmnimux={handleOpenOmnimux}
               onRemoveNative={handleRemoveNative}
               onOpenNative={handleOpenNative}
-              uploads={props.uploads}
-              onRetryFile={props.onRetryFile}
+              uploads={nativeUploads}
+              onRetryFile={nativeOnRetry}
               t={props.t}
             />
           )}

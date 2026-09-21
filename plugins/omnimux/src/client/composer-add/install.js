@@ -1,6 +1,8 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AssetPickerModal } from './AssetPickerModal.jsx'
+import { ProductPickerModal } from './ProductPickerModal.jsx'
+import { InspirationPickerModal } from './InspirationPickerModal.jsx'
 import { createComposerAddController } from './controller.js'
 
 function createToast(doc) {
@@ -31,8 +33,16 @@ function createToast(doc) {
   }
 }
 
+function pickerFor(model, t) {
+  if (!model) return null
+  const shared = { ...model, open: true, t }
+  if (model.kind === 'product') return createElement(ProductPickerModal, shared)
+  if (model.kind === 'inspiration') return createElement(InspirationPickerModal, shared)
+  return createElement(AssetPickerModal, shared)
+}
+
 /**
- * Bind the existing asset modal to the official selected-session store.
+ * Bind the existing pickers to the official selected-session store.
  * @param {Document} doc
  * @param {{
  *   t: (key: string, vars?: object) => string,
@@ -60,12 +70,18 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     renderLibrary(model) {
       if (!root && !model) return
       if (!root) root = createRoot(host)
-      root.render(model ? createElement(AssetPickerModal, { ...model, open: true, t }) : null)
+      root.render(pickerFor(model, t))
     },
   })
   return {
     openLibrary(sessionId) {
       controller.openLibrary(sessionId)
+    },
+    openProduct(sessionId) {
+      controller.openProduct(sessionId)
+    },
+    openInspiration(sessionId) {
+      controller.openInspiration(sessionId)
     },
     dispose() {
       controller.dispose()

@@ -17,6 +17,7 @@ import {
 test('dialog className carries a variant class so the width variable lands on the dialog itself', () => {
   assert.equal(pickerDialogClassName('product'), `${PICKER_DIALOG_CLASS} omx-pick-dialog--product`);
   assert.equal(pickerDialogClassName('assets'), `${PICKER_DIALOG_CLASS} omx-pick-dialog--assets`);
+  assert.equal(pickerDialogClassName('inspiration'), `${PICKER_DIALOG_CLASS} omx-pick-dialog--inspiration`);
   assert.throws(() => pickerDialogClassName('nope'), /unknown picker variant/);
   assert.equal(
     PICKER_DIALOG_SHELL_CSS.includes('var(--omnimux-pick-dialog-width'),
@@ -41,6 +42,10 @@ test('each picker derives its width from its own layout geometry', () => {
   assert.equal(PICKER_LAYOUTS.assets.leading, 0, '顶部 Tab 布局没有左侧栏');
   assert.equal(pickerExpectedWidth('assets'), 6 * 156 + 5 * PICKER_GRID_GAP);
   assert.equal(pickerExpectedWidth('assets'), 1016);
+
+  assert.equal(PICKER_LAYOUTS.inspiration.columns, 6, '灵感库采用 6 列高密度微卡网格');
+  assert.equal(PICKER_LAYOUTS.inspiration.leading, 0, '顶部 Tab 布局没有左侧栏');
+  assert.equal(pickerExpectedWidth('inspiration'), 1016);
 
   assert.throws(() => pickerExpectedWidth('nope'), /unknown picker layout/);
 });
