@@ -24,7 +24,8 @@ export function MediaViewerComposer({
   const handedOff = useSyncExternalStore(subscribeComposerPrefill, peekComposerPrefill, () => null);
   const [prompt, setPrompt] = useState('');
   const config = useMediaGenerationConfig({ initialMode });
-  const { mode } = config;
+  // 先解构出被 effect / 回调读取的方法再依赖：将来宿主换了实现也不会读到过期闭包。
+  const { mode, setMode, closePopovers } = config;
 
   // 聊天提示词块一键填入：只写文本 + 切模式并收起浮层，不自动提交。
   useEffect(() => {
@@ -32,13 +33,15 @@ export function MediaViewerComposer({
     const request = takeComposerPrefill(handedOff.token);
     if (!request) return;
     setPrompt(request.prompt);
-    config.setMode(request.kind === 'video' ? 'video' : 'image');
-    config.closePopovers();
-  }, [handedOff]);
+    setMode(request.kind === 'video' ? 'video' : 'image');
+    closePopovers();
+  }, [handedOff, setMode, closePopovers]);
 
   const handleSend = () => {
     const trimmed = prompt.trim();
     if (!trimmed || disabled) return;
+    // 提交后收起还开着的浮层（模型级联 / 参数面板），与抽取共享控件前一致。
+    closePopovers();
     setPrompt(''); // 提交后立即清空输入框
 
     onDirectSubmit?.({

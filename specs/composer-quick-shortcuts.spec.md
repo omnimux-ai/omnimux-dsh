@@ -69,23 +69,24 @@
 
 1. **技能解析通道**：四条 slug 不在会话技能选择器消费的 `plugins/omnimux-market/catalog/preset-skills.json` 里（该文件按 `specs/market-creatify-cards.spec.md` 被刻意清理过：下架 423 个旧技能、改绑 112 套专业营销技能）。四条 slug 只在 `presets/tiktok-agent/skills.json`（出厂 Agent 预设真源）里且 `installed: true`。
    - 实现按契约「技能缺失即不渲染」落地：经 `window.__omnimuxSkillLibrary`（由 omnimux-market 的 `apply.js` 发布）解析，解析不到整条不渲染。
-   - **当前数据下四条都会不渲染**，需维护者决定是补回 `preset-skills.json`、补进 market 目录、还是让宿主暴露 agent-presets 技能表。该分叉由 `plugins/omnimux-market/src/client/preset-skill-lookup.test.js` 显式钉住。
+   - **当时数据下四条都会不渲染**（该阶段性结论已被下文「数据分叉的收敛」取代：13 款技能已随本轮改动并入货架），需维护者决定是补回 `preset-skills.json`、补进 market 目录、还是让宿主暴露 agent-presets 技能表。该分叉由 `plugins/omnimux-market/src/client/preset-skill-lookup.test.js` 显式钉住。
 2. **链接胶囊**：胶囊落地为既有 prompt 变量槽位令牌 `[视频]` / `[商品]`（沿用输入框行内 `omx-prompt-slot` 高亮），**不是**带 URL 的 markdown 链接——四条快捷方式点击时没有真实 URL 可放。`VideoLinkPopover` / `ProductUrlPopover` 是 URL 输入弹窗，因此本版未接入；卡槽行并入素材导轨同一行（输入框内侧、文字上方），与「胶囊在输入框内、卡槽在其上方」的空间关系一致。
 3. **模型与参数**：从 `media-viewer/MediaViewerComposer.jsx` 抽出共享控件 `media-viewer/MediaConfigControls.jsx`（状态机 `useMediaGenerationConfig` + 模型三列级联 + 参数面板，DOM/类名/数据源不变），媒体面板改为消费它、行为不变；输入框快捷方式消费同一套，选模型时按 `model-picker.js` 的同一载荷契约 POST `/omnimux/session-model`。快捷方式里不显示「生成方式」（这两条明确是视频）。
 4. **再点同一条 = 撤回**（提示语、卡槽、技能一并清空）：规格未定义，为可预期性如此实现，由单测钉住。
 
 ## 验收状态
 
-- 单元/回归：见 `.agent-reports/composer-quick-shortcuts/report.md` 第 3 节（新增 17 例、相关目录 160 例全绿；`pnpm --filter omnimux test` 2596 例中 29 例为既有红灯）。
-- 真实浏览器逐条验收：**BLOCKED，未完成**，无截图证据。
+- 单元/回归：见 `.agent-reports/composer-quick-shortcuts/report.md` 第 5 节（第二轮数据）与第 9 节（第三轮修正后的实测）。第三轮实测：快捷方式 26/26、货架解析 10/10、附件 122/122、会话引导 36/36、媒体面板 87 例中 86 通过 1 失败（失败项 `generation feedback: real browser transport-to-viewer journeys` 与主干同一红灯，改动前后同名同结果）。
+- 真实浏览器逐条验收：**BLOCKED，未完成**，无截图证据（原因见「浏览器验收状态（第二轮）」）。
 
 ## 数据分叉的收敛（2026-09-22 用户拍板）
 
-用户已就四条快捷方式的技能数据拍板：「把我截图的那些技能恢复，而不是 400 多个全部」「分创作视频和创作图片两个分类」「技能菜单货架 + 快捷方式都能选」。执行口径与落地结果：
+用户已就四条快捷方式的技能数据拍板：「把我截图的那些技能恢复，而不是 400 多个全部」「分创作视频和创作图片两个分类」「技能菜单货架 + 快捷方式都能选」。执行口径与落地结果（第三轮已按提交事实逐条校正）：
 
-1. `plugins/omnimux-market/catalog/preset-skills.json` 的 `tiktok-agent` 与 `omni-agent` 恢复 `创作视频`、`创作图片` 两个分类各 6 款（共 12 款），文案逐字取自 `presets/tiktok-agent/skills.json`；其余 5 个 preset 条目与既有 112 款一字未动，不做全量回滚。
-2. 第 4 条快捷方式的 `reverse-video-prompt`（反推视频提示词）在预设真源里归属第三个分类 `搜索爆款视频`（不是本次要恢复的两个分类之一）。为满足「四条快捷方式都渲染」，按事实一并恢复该技能与它的真实分类，未把它挪进不适用的分类（详见报告第 3 节冲突说明）。
+1. `plugins/omnimux-market/catalog/preset-skills.json` 的 `tiktok-agent` 与 `omni-agent` 各恢复 `创作视频` 7 款、`创作图片` 6 款，共 **13 款**；**只有这两个分类，没有第三个分类**。第 4 条快捷方式的 `reverse-video-prompt`（反推视频提示词）按产品口径并入 `创作视频`，未额外恢复它在预设真源里的原始分类 `搜索爆款视频`。文案逐字取自 `presets/tiktok-agent/skills.json`；其余 5 个 preset 条目与既有 112 款一字未动，不做全量回滚。数据文件实测 **+458 行 / -0 行**（提交 `99f3ccaab`）。
+2. 13 款按既有条目的 **16 字段**形状落盘，含 `titleEn` 英文标题（英文界面经 `skillTitle` 的英文分支取它）；`preset-skill-lookup.test.js` 新增「字段集与既有条目完全一致 + `titleEn` 非空」断言，防止再漏字段。
 3. 四条 slug 现在都能经 `findPresetSkill` 解析，`preset-skill-lookup.test.js` 的断言方向已从「解析不到」翻转为「必须解析到」。
+4. 本节取代上文「实现落地与事实修订」第 1 条的阶段性结论——那条记录的是当轮「四条都会不渲染」的中间状态，不是最终事实。
 
 ## 浏览器验收状态（第二轮）
 

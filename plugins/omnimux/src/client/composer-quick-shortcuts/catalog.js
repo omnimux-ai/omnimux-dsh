@@ -127,24 +127,6 @@ export function clearQuickShortcutSkill(state) {
   }
 }
 
-/**
- * 判断某个链接卡槽在草稿里是否**已经存在胶囊**：存在则卡槽不可点。
- * 胶囊即提示语槽位令牌 `[视频]` / `[商品]`，带链接时形如 `[视频](https://…)`，
- * 两种形态都含令牌本体，因此一次包含判断即可覆盖。
- *
- * @param {string | null | undefined} draft 输入框草稿
- * @param {string} kind 链接种类
- * @param {(key: string) => string} label 令牌文案（跟随语言）
- * @returns {boolean}
- */
-export function hasLinkToken(draft, kind, label) {
-  const token = typeof label === 'string' ? label.trim() : ''
-  if (!token) return false
-  const text = typeof draft === 'string' ? draft : ''
-  if (!text) return false
-  return text.includes(`[${token}]`)
-}
-
 /** 内部：按 id 取条目（不对外暴露，避免调用方绕过解析）。 */
 function byId(id) {
   return QUICK_SHORTCUTS.find((entry) => entry.id === id) || null

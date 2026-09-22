@@ -5,11 +5,13 @@ import {
   resolveQuickShortcuts,
 } from './catalog.js';
 import { getGlobalQuickShortcutStore } from './store.js';
-import { writeDraft } from './dom.js';
-import { quickLinkLabels, quickLinkToken } from './links.js';
+import { readDraft, writeDraft } from './dom.js';
+import { quickLinkLabels, quickLinkToken, stripQuickShortcutText } from './links.js';
+import { resolveComposerSessionId } from './session.js';
 import { ensureQuickShortcutStyles } from './styles.js';
 import { MediaConfigControls, useMediaGenerationConfig } from '../media-viewer/MediaConfigControls.jsx';
 import { publishActiveSkill, subscribeSkillChanged } from '../composer-add/skill-event.ts';
+import { getGlobalAttachmentStore } from '../attachments/store.ts';
 import { isBlankConversation } from '../session-guide/state.js';
 
 /** 技能库通道就绪前的重试节奏：插件装载顺序不保证，最多等 3 秒。 */
@@ -42,7 +44,8 @@ function readSkillLibrary() {
 export function ComposerQuickShortcuts(props) {
   const {
     t,
-    sessionId = 'default',
+    sessionId: sessionIdProp,
+    session: sessionProp,
     useInput,
     inputActions,
     useSession,
@@ -51,6 +54,18 @@ export function ComposerQuickShortcuts(props) {
 
   const store = getGlobalQuickShortcutStore();
   const labels = useMemo(() => quickLinkLabels(t), [t]);
+
+  const draft = useInput ? useInput((value) => (value && value.draft) || '') : '';
+  const session = useSession ? useSession((value) => value) : null;
+  const hasTargets = useConversation ? useConversation((value) => value && value.activeTargets ? value.activeTargets.size > 0 : false) : false;
+
+  // 会话标识与附件托盘走同一条派生链（唯一实现在 `session.js`）：两侧必须命中
+  // 同一行，链接卡槽才会出现在本会话、技能胶囊的 ✕ 才回写本会话、模型才钉对本会话。
+  const sessionId = resolveComposerSessionId(
+    sessionProp || session,
+    sessionIdProp,
+    getGlobalAttachmentStore().getActiveSessionId(),
+  );
 
   useEffect(() => ensureQuickShortcutStyles(), []);
 
@@ -84,10 +99,6 @@ export function ComposerQuickShortcuts(props) {
   const getSnapshot = useCallback(() => store.getSnapshot(sessionId), [store, sessionId]);
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  const draft = useInput ? useInput((value) => (value && value.draft) || '') : '';
-  const session = useSession ? useSession((value) => value) : null;
-  const hasTargets = useConversation ? useConversation((value) => value && value.activeTargets ? value.activeTargets.size > 0 : false) : false;
-
   // 技能药丸被 ✕ 撤下时只动技能：提示语与链接卡槽原样保留。
   useEffect(() => subscribeSkillChanged((skill) => {
     const current = store.getSnapshot(sessionId);
@@ -106,16 +117,21 @@ export function ComposerQuickShortcuts(props) {
   const handlePick = useCallback((entry) => {
     const next = applyQuickShortcut(store.getSnapshot(sessionId).activeId, entry.id);
     if (!next.activeId) {
-      // 再点同一条 = 撤回：提示语与链接卡槽整组清空，技能同步撤下。
+      // 再点同一条 = 撤回：只清本快捷方式写入的提示语与链接令牌，用户手打的
+      // 追加文字原样保留；技能同步撤下。
+      const stripped = stripQuickShortcutText(entry, readDraft(), labels);
+      // 草稿清不掉（宿主桥缺失或抛错）就整条不生效：否则会出现
+      // 「输入框还是原样，卡槽与技能胶囊却已经撤下」的错位状态。
+      if (!writeDraft(stripped)) return;
       store.set(sessionId, { activeId: null, links: [], skill: null });
-      writeDraft('');
       publishActiveSkill(null);
       return;
     }
     const links = quickShortcutLinks(entry);
     const tokens = links.map((kind) => quickLinkToken(labels[kind])).filter(Boolean);
     const text = tokens.length > 0 ? `${entry.prompt}\n\n${tokens.join(' ')}` : entry.prompt;
-    writeDraft(text);
+    // 提示语写不进去就整条不生效：否则会出现「输入框空的，卡槽已出现、技能胶囊已亮」。
+    if (!writeDraft(text)) return;
     store.set(sessionId, { activeId: entry.id, links, skill: entry.skill });
     publishActiveSkill(entry.skill);
   }, [store, sessionId, labels]);
@@ -152,6 +168,7 @@ export function ComposerQuickShortcuts(props) {
           <MediaConfigControls
             config={mediaConfig}
             showModeSwitch={false}
+            showModelSummary
             onModelChange={({ model }) => {
               if (!model) return;
               try {

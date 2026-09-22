@@ -502,13 +502,17 @@ export function MediaParamsPanel({ config, open, onToggle }) {
  * 生成方式（图像/视频）默认不渲染：输入框下方的两条快捷方式明确是视频，
  * 显示一个必然为「视频生成」的切换器只会增加噪声；媒体面板仍按原样显示它。
  *
+ * 模型回执（`.omx-media-config-summary`）默认**不渲染**：媒体面板原本没有这个节点，
+ * 抽共享时不得给它新增可见节点；只有输入框下方的快捷方式消费方显式要它。
+ *
  * @param {{
  *   config: object,
  *   showModeSwitch?: boolean,
+ *   showModelSummary?: boolean,
  *   onModelChange?: (selection: object) => void,
  * }} props
  */
-export function MediaConfigControls({ config, showModeSwitch = true, onModelChange }) {
+export function MediaConfigControls({ config, showModeSwitch = true, showModelSummary = false, onModelChange }) {
   const [activePopover, setActivePopover] = useState(null);
   const containerRef = useRef(null);
 
@@ -602,10 +606,13 @@ export function MediaConfigControls({ config, showModeSwitch = true, onModelChan
         onToggle={() => handleTogglePopover('params')}
       />
 
-      {/* 当前模型与版本在快捷方式里是对外唯一的可读回执（免去打开面板确认） */}
-      <span className="omx-media-config-summary" data-omx-media-config-summary="true">
-        {model?.name || '选择模型'}{channel?.name ? ` · ${channel.name}` : ''}
-      </span>
+      {/* 当前模型与版本在快捷方式里是对外唯一的可读回执（免去打开面板确认）；
+          媒体面板不渲染它，保持抽取前的零新增节点。 */}
+      {showModelSummary ? (
+        <span className="omx-media-config-summary" data-omx-media-config-summary="true">
+          {model?.name || '选择模型'}{channel?.name ? ` · ${channel.name}` : ''}
+        </span>
+      ) : null}
     </div>
   );
 }

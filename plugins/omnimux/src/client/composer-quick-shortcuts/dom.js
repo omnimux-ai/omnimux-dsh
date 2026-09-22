@@ -117,5 +117,6 @@ export function insertTokenAtCursor(token, appendText) {
 
 /**
  * 输入框是否已经存在某个链接胶囊（存在则对应卡槽不可点）的判据，
- * 唯一实现在 `catalog.js` 的 `hasLinkToken`（纯函数，卡片行与卡槽行共用）。
+ * 唯一实现在 `links.js` 的 `isQuickLinkSlotFilled` / `splitQuickLinkSlots`
+ * （纯函数，卡片行与卡槽行共用）。本模块只负责读写草稿，不重复一份判据。
  */

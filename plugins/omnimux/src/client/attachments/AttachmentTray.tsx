@@ -17,12 +17,13 @@ import { DropOverlay } from './DropOverlay.tsx';
 import { getGlobalQuickShortcutStore } from '../composer-quick-shortcuts/store.js';
 import {
   buildQuickLinkSlots,
+  detectedSlotsDraftText,
+  isQuickLinkSlotFilled,
   quickLinkLabels,
-  quickLinkToken,
   splitQuickLinkSlots,
 } from '../composer-quick-shortcuts/links.js';
-import { readDraft } from '../composer-quick-shortcuts/dom.js';
-import { insertTokenAtCursor } from '../composer-quick-shortcuts/dom.js';
+import { readDraft, insertTokenAtCursor } from '../composer-quick-shortcuts/dom.js';
+import { resolveComposerSessionId } from '../composer-quick-shortcuts/session.js';
 import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewModal.tsx';
 import {
   NativeAttachmentCard,
@@ -68,14 +69,6 @@ function translate(
     if (typeof result === 'string' && result && result !== key) return result;
   }
   return interpolate(fallback, vars);
-}
-
-/** 快捷链接卡槽的显示名：跟随页面语言，缺文案时退回中文原名。 */
-function translateQuickLabels(t: AttachmentTrayProps['t']): { video: string; product: string } {
-  return {
-    video: translate(t, 'quickShortcuts.link.video', '视频'),
-    product: translate(t, 'quickShortcuts.link.product', '商品'),
-  };
 }
 
 const LinkIcon = ({ size = 14 }: { size?: number }) => (  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -195,13 +188,13 @@ const ATTACHMENT_CARD_SELECTOR = '.omx-att-card';
 
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const store = getGlobalAttachmentStore();
-  const sessionObj = props.session;
-  const currentSessionId =
-    sessionObj?.sessionId ||
-    props.sessionId ||
-    sessionObj?.id ||
-    store.getActiveSessionId() ||
-    'default';
+  // 会话标识走与输入框快捷方式同一条派生链（`composer-quick-shortcuts/session.js`）：
+  // 两侧命中同一行，链接卡槽与技能胶囊才会落到同一个会话上。
+  const currentSessionId = resolveComposerSessionId(
+    props.session,
+    props.sessionId,
+    store.getActiveSessionId(),
+  );
 
   const { error: commentError, retry: retryComments } = useCommentAttachment(props, currentSessionId);
   const nativeAttachments: readonly NativeComposerAttachment[] = Array.isArray(props.attachments)
@@ -235,12 +228,23 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   );
   const quickState = useSyncExternalStore(subscribeQuick, getQuickSnapshot, getQuickSnapshot);
 
-  const quickLabels = translateQuickLabels(props.t);
+  const quickLabels = quickLinkLabels(props.t);
   const quickLinkSlots = buildQuickLinkSlots(quickState.links, quickLabels);
   const quickTokens = new Set(quickLinkSlots.map((slot) => slot.raw));
   const derivedSlots = slots.filter((slot) => !quickTokens.has(slot.raw));
   const mergedSlots = quickLinkSlots.length > 0 ? [...quickLinkSlots, ...derivedSlots] : derivedSlots;
-  const { filledIds: quickFilledIds } = splitQuickLinkSlots(readDraft(), quickLinkSlots);
+  // 两态判据随草稿响应式重算：输入框已解析出的令牌就是草稿文本的投影
+  // （`detectedSlotsDraftText`），因此不在渲染期读 DOM。
+  const { filledIds: quickFilledIds } = splitQuickLinkSlots(detectedSlotsDraftText(slots), quickLinkSlots);
+  // 合并数组把快捷卡槽排在最前，输入框自带槽位整体后移：按槽位 id 重新定位高亮，
+  // 否则索引落在原数组上会高亮到别的槽位。
+  const activeSlot = activeSlotIndex === null || activeSlotIndex === undefined
+    ? null
+    : slots[activeSlotIndex] || null;
+  const mergedActiveSlotIndex = activeSlot
+    ? mergedSlots.findIndex((slot) => slot.id === activeSlot.id)
+    : null;
+  const resolvedActiveSlotIndex = mergedActiveSlotIndex === -1 ? null : mergedActiveSlotIndex;
   const dragActive = useDragDrop({
     canAcceptDrop,
     onAddFiles: nativeOnAddFiles,
@@ -446,11 +450,13 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
       )}
       <PromptSlotChips
         slots={mergedSlots}
-        activeSlotIndex={activeSlotIndex}
+        activeSlotIndex={resolvedActiveSlotIndex}
         onSelectSlot={(slot) => {
           // 快捷链接卡槽：胶囊已被删掉才会走到这里（存在时卡槽不可点），
           // 点击即把胶囊插回光标处，不再打开任何选择器。
           if (slot && (slot as { quickLinkKind?: string }).quickLinkKind) {
+            // 入口再判一次：禁用态滞后一拍时不重复插入同名令牌。
+            if (isQuickLinkSlotFilled(readDraft(), slot)) return;
             insertTokenAtCursor(slot.raw);
             return;
           }

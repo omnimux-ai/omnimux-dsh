@@ -1176,6 +1176,30 @@ export const MEDIA_VIEWER_CSS = `
   min-width: 0;
 }
 
+/* 「生成方式 / 模型 / 参数」三件套的容器：抽出共享控件前后必须是同一套单行布局。
+   三个子节点都是 .omx-popover-anchor（块级盒），容器不设弹性布局就会各占一行。 */
+.omx-media-config-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* 当前模型回执：只在快捷方式消费方渲染，给一个克制的次要文字样式 */
+.omx-media-config-summary {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .omx-capsule-trigger {
   display: inline-flex;
   align-items: center;

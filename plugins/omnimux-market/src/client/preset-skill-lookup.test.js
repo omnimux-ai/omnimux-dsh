@@ -100,26 +100,26 @@ const RESTORED_CATEGORIES = [
   {
     id: '创作视频',
     skills: [
-      { slug: 'replicate-viral-video', name: '复刻爆款视频', description: '参考爆款视频结构，为你的产品一键生成同款带货视频。' },
-      { slug: 'create-selling-video', name: '创作带货视频', description: '从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。' },
-      { slug: 'video-hook-analysis', name: '视频拆解', description: '拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。' },
-      { slug: 'video-script-creation', name: '视频脚本创作', description: '复刻爆款结构或基于商品原创，生成可执行的带货分镜脚本。' },
-      { slug: 'video-prompt-generation', name: '视频提示词生成', description: '把脚本或视频转换为可直接使用的 AI 视频生成提示词。' },
-      { slug: 'video-generation', name: '视频生成', description: '将分镜或提示词渲染为成片视频。' },
+      { slug: 'replicate-viral-video', name: '复刻爆款视频', titleEn: 'Replicate Viral Video', description: '参考爆款视频结构，为你的产品一键生成同款带货视频。' },
+      { slug: 'create-selling-video', name: '创作带货视频', titleEn: 'Create Selling Video', description: '从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。' },
+      { slug: 'video-hook-analysis', name: '视频拆解', titleEn: 'Video Breakdown', description: '拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。' },
+      { slug: 'video-script-creation', name: '视频脚本创作', titleEn: 'Video Script Writing', description: '复刻爆款结构或基于商品原创，生成可执行的带货分镜脚本。' },
+      { slug: 'video-prompt-generation', name: '视频提示词生成', titleEn: 'Video Prompt Generator', description: '把脚本或视频转换为可直接使用的 AI 视频生成提示词。' },
+      { slug: 'video-generation', name: '视频生成', titleEn: 'Video Generation', description: '将分镜或提示词渲染为成片视频。' },
       // 反推视频提示词在预设真源里原始分类是「搜索爆款视频」；按产品口径只恢复
       // 创作视频 / 创作图片两个分类，因此它并入创作视频，不额外立第三个分类。
-      { slug: 'reverse-video-prompt', name: '反推视频提示词', description: '上传TK视频链接，自动反推出该视频背后，可用于AI视频生成的高质量提示词。' },
+      { slug: 'reverse-video-prompt', name: '反推视频提示词', titleEn: 'Reverse Video Prompt', description: '上传TK视频链接，自动反推出该视频背后，可用于AI视频生成的高质量提示词。' },
     ],
   },
   {
     id: '创作图片',
     skills: [
-      { slug: 'video-storyboard-image', name: '视频分镜图', description: '为视频脚本生成连贯的分镜画面。' },
-      { slug: 'product-image-set', name: '商品套图', description: '为商品一键生成一套高质量主图。' },
-      { slug: 'aplus-content', name: 'A+内容', description: '生成电商平台 A+ 详情页图文。' },
-      { slug: 'image-replication', name: '图片复刻', description: '基于参考图风格批量复刻产品图。' },
-      { slug: 'multi-angle-product-images', name: '多角度产品图', description: '为同一商品生成多个角度的展示图。' },
-      { slug: 'ai-virtual-try-on', name: 'AI 换装', description: '为模特生成 AI 换装效果。' },
+      { slug: 'video-storyboard-image', name: '视频分镜图', titleEn: 'Video Storyboard', description: '为视频脚本生成连贯的分镜画面。' },
+      { slug: 'product-image-set', name: '商品套图', titleEn: 'Product Image Set', description: '为商品一键生成一套高质量主图。' },
+      { slug: 'aplus-content', name: 'A+内容', titleEn: 'A+ Content', description: '生成电商平台 A+ 详情页图文。' },
+      { slug: 'image-replication', name: '图片复刻', titleEn: 'Image Replication', description: '基于参考图风格批量复刻产品图。' },
+      { slug: 'multi-angle-product-images', name: '多角度产品图', titleEn: 'Multi-Angle Product Shots', description: '为同一商品生成多个角度的展示图。' },
+      { slug: 'ai-virtual-try-on', name: 'AI 换装', titleEn: 'AI Virtual Try-On', description: '为模特生成 AI 换装效果。' },
     ],
   },
 ]
@@ -153,6 +153,7 @@ describe('恢复的创作视频 / 创作图片分类与 13 款技能', () => {
         assert.equal(hit.name, expected.name)
         assert.equal(hit.title, expected.name)
         assert.equal(hit.titleZh, expected.name)
+        assert.equal(hit.titleEn, expected.titleEn, `${expected.slug} 的英文标题必须是行业通行英文名`)
         assert.equal(hit.category, category.id)
         assert.equal(hit.description, expected.description, `${expected.slug} 文案必须逐字取自预设真源`)
         assert.equal(hit.summary, expected.description)
@@ -180,6 +181,30 @@ describe('恢复的创作视频 / 创作图片分类与 13 款技能', () => {
     }
     for (const { slug } of QUICK_SHORTCUT_SKILLS) {
       assert.ok(omni.skills.some((s) => String(s.slug || s.skill) === slug), `omni-agent 缺 ${slug}`)
+    }
+  })
+
+  it('新增 13 款的字段集与既有条目完全一致（不再漏 titleEn）', () => {
+    const newSlugs = new Set(RESTORED_CATEGORIES.flatMap((c) => c.skills.map((s) => s.slug)))
+    for (const presetId of ['tiktok-agent', 'omni-agent']) {
+      const binding = getPresetSkillBinding(presetId)
+      const fieldsOf = (item) => Object.keys(item).sort().join(',')
+      const legacyFields = new Set(
+        binding.skills
+          .filter((s) => !newSlugs.has(String(s.slug || s.skill)))
+          .map(fieldsOf),
+      )
+      assert.equal(legacyFields.size, 1, `${presetId} 既有条目的字段集必须只有一种形状`)
+      const expectedFields = [...legacyFields][0]
+      const added = binding.skills.filter((s) => newSlugs.has(String(s.slug || s.skill)))
+      assert.equal(added.length, newSlugs.size, `${presetId} 新增条目数应为 ${newSlugs.size}`)
+      for (const item of added) {
+        assert.equal(fieldsOf(item), expectedFields, `${presetId} 的 ${item.slug} 字段集必须与既有条目一致`)
+        assert.ok(
+          typeof item.titleEn === 'string' && item.titleEn.trim().length > 0,
+          `${presetId} 的 ${item.slug} 必须有非空 titleEn（英文界面标题）`,
+        )
+      }
     }
   })
 })

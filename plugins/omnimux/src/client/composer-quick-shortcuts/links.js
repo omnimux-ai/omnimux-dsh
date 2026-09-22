@@ -7,7 +7,7 @@
  * 不需要任何新的卡槽 UI。
  */
 
-import { quickLinkLabelKey } from './catalog.js'
+import { quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
 
 /**
  * 链接胶囊令牌：草稿里真正被插进输入框的那段文本。
@@ -96,4 +96,47 @@ export function splitQuickLinkSlots(draft, slots) {
     else openIds.push(slot.id)
   }
   return { filledIds, openIds }
+}
+
+/**
+ * 把输入框已解析出的令牌列表折成一份**等效草稿文本**。
+ *
+ * 卡槽的两态必须随草稿变化重渲染，而渲染期读 DOM 是不可靠的派生源；
+ * `usePromptSlotEnhancer` 的 `slots` 本身就是草稿文本的响应式投影
+ * （`extractPromptSlots` 的产物），因此用它拼一份等效文本，
+ * 交给同一个 `isQuickLinkSlotFilled` 判据，判据仍然只有一份实现。
+ *
+ * @param {readonly { raw?: string }[]} detectedSlots 输入框已解析出的令牌
+ * @returns {string}
+ */
+export function detectedSlotsDraftText(detectedSlots) {
+  if (!Array.isArray(detectedSlots)) return ''
+  return detectedSlots
+    .map((slot) => (slot && typeof slot.raw === 'string' ? slot.raw : ''))
+    .filter(Boolean)
+    .join(' ')
+}
+
+/**
+ * 撤回时只剥掉**本快捷方式写入**的那部分草稿：预填提示语与它带来的链接令牌。
+ * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空。
+ *
+ * 提示语只在仍是草稿开头时才剥（用户改过提示语就整段保留），令牌则整篇移除。
+ *
+ * @param {{ prompt?: string } | null | undefined} entry 快捷方式条目
+ * @param {string | null | undefined} draft 当前草稿
+ * @param {{ video: string, product: string }} labels 跟随语言的令牌文案
+ * @returns {string} 剥掉本快捷方式内容后的草稿
+ */
+export function stripQuickShortcutText(entry, draft, labels) {
+  const text = typeof draft === 'string' ? draft : ''
+  if (!text) return ''
+  const tokens = quickShortcutLinks(entry)
+    .map((kind) => quickLinkToken(labels && labels[kind]))
+    .filter(Boolean)
+  let rest = text
+  for (const token of tokens) rest = rest.split(token).join('')
+  const prompt = entry && typeof entry.prompt === 'string' ? entry.prompt : ''
+  if (prompt && rest.startsWith(prompt)) rest = rest.slice(prompt.length)
+  return rest.trim()
 }

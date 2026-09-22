@@ -4,7 +4,6 @@ import {
   QUICK_SHORTCUTS,
   applyQuickShortcut,
   clearQuickShortcutSkill,
-  hasLinkToken,
   quickShortcutLinks,
   resolveQuickShortcuts,
 } from './catalog.js'
@@ -113,19 +112,5 @@ describe('切换互斥与取消技能', () => {
   })
 })
 
-describe('链接卡槽的两态判据', () => {
-  it('草稿里已有令牌时卡槽不可点', () => {
-    assert.equal(hasLinkToken('请用我的产品复刻这个爆款视频\n[视频]', 'video', '视频'), true)
-    assert.equal(hasLinkToken('[视频](https://example.com/a.mp4) 帮我复制', 'video', '视频'), true)
-    assert.equal(hasLinkToken('只有提示语', 'video', '视频'), false)
-  })
-
-  it('商品与视频互不影响，空草稿一律不可点', () => {
-    const draft = '[商品](https://shop.example.com/p/1)'
-    assert.equal(hasLinkToken(draft, 'product', '商品'), true)
-    assert.equal(hasLinkToken(draft, 'video', '视频'), false)
-    assert.equal(hasLinkToken('', 'video', '视频'), false)
-    assert.equal(hasLinkToken(null, 'video', '视频'), false)
-    assert.equal(hasLinkToken(draft, 'video', ''), false)
-  })
-})
+// 链接卡槽的两态判据（`hasLinkToken`）曾是本文件的副本，已删除：唯一实现在
+// `links.js` 的 `isQuickLinkSlotFilled` / `splitQuickLinkSlots`，语义用例归 `links.test.js`。

@@ -1,8 +1,9 @@
-# Issue #2562 输入框下方四条快捷方式 — 第二轮交付报告（数据分叉收敛）
+# Issue #2562 输入框下方四条快捷方式 — 交付报告（第二、三轮）
 
 工作区：`.worktrees/omnimux-composer-quick-shortcuts-issue-2562`（分支 `agent/omnimux-composer-quick-shortcuts-issue-2562`，基线 `origin/main` = `072037a0b`）
-本轮目标：按用户拍板恢复技能数据，让四条快捷方式真正可解析、可渲染，并完成真实浏览器验收。
-结论一句话：**数据分叉已收敛，四条 slug 全部可解析、单测与相关回归全绿；浏览器验收仍未拿到有效证据 → BLOCKED（原因与证据见第 6 节，不是「没做」，是宿主不加载本工作树构建）。**
+第二轮目标：按用户拍板恢复技能数据，让四条快捷方式真正可解析、可渲染，并完成真实浏览器验收。
+第三轮目标：处理独立代码审查提出的必改 4 条 + 建议 8 条，并把文档与提交事实对齐（见第 3 节更正与第 9 节）。
+结论一句话：**数据分叉已收敛、审查意见已全部处理（详情改），单测与相关回归全绿；浏览器验收仍未拿到有效证据 → BLOCKED（原因与证据见第 6 节，不是「没做」，是宿主不加载本工作树构建）。**
 
 ---
 
@@ -10,29 +11,32 @@
 
 | 文件 | 变更 | 说明 |
 | --- | --- | --- |
-| `plugins/omnimux-market/catalog/preset-skills.json` | 修改（+466 行，0 删 0 改） | `tiktok-agent`、`omni-agent` 各恢复 3 个分类、13 款技能；既有 112 款与其余 5 个 preset 条目一字未动 |
-| `plugins/omnimux-market/src/client/preset-skill-lookup.test.js` | 修改 | 断言方向翻转（见第 4 节）+ 新增「恢复的创作视频 / 创作图片分类与 12 款技能」数据测试 |
-| `plugins/omnimux-market/lib/client/skill-picker-logic.js` | 已修改（上一轮） | 类型编译产物，随 `src` 保持一致 |
-| `plugins/omnimux/lib/client.js`、`plugins/omnimux-market/lib/client.js` | 本地重建（未跟踪构建产物） | 用仓内既有构建入口重建，让运行时能读到本轮数据与代码；这两个文件在本仓是 gitignore 的 |
-| `specs/composer-quick-shortcuts.spec.md` | 修改 | 增加「数据分叉的收敛（用户拍板）」与「浏览器验收状态（第二轮）」两节 |
-| `.agent-reports/composer-quick-shortcuts/` | 新增证据 | 环境截图 2 张 + 本轮测试原始输出 + 复现脚本 `tooling/` |
+| `plugins/omnimux-market/catalog/preset-skills.json` | 修改（第二轮 **+458 行 / -0 行**；第三轮再 +26 行 `titleEn`） | `tiktok-agent`、`omni-agent` 各恢复 **2 个分类、13 款技能**（创作视频 7 + 创作图片 6）；既有 112 款与其余 5 个 preset 条目一字未动 |
+| `plugins/omnimux-market/src/client/preset-skill-lookup.test.js` | 修改 | 断言方向翻转（见第 4 节）+ 数据测试 + 第三轮新增「字段集与既有条目一致、`titleEn` 非空」断言 |
+| `plugins/omnimux-market/lib/client/skill-picker-logic.js` | 已修改（第二轮） | 类型编译产物，随 `src` 保持一致 |
+| `plugins/omnimux/lib/client.js`、`plugins/omnimux-market/lib/client.js` | 本地重建（未跟踪构建产物） | 用仓内既有构建入口重建，让运行时能读到本轮数据与代码；这两个文件在本仓是 gitignore 的。第三轮已再次重建 hub 包（3165958 字节），并实测包内 `resolveComposerSessionId` / `showModelSummary` / `stripQuickShortcutText` 均命中、已删除的 `hasLinkToken` 命中 0 次 |
+| `plugins/omnimux/src/client/composer-quick-shortcuts/*`、`attachments/AttachmentTray.tsx`、`media-viewer/*` | 第三轮修改 | S1/H2/H3/M1–M6/M10–M12 的落地（见第 9 节） |
+| `plugins/omnimux/src/client/composer-quick-shortcuts/session.js` + `session.test.js` | 第三轮新增 | 会话标识派生的唯一实现 + 「两侧同源」钉子（见第 9 节 H3） |
+| `plugins/omnimux/src/client/composer-quick-shortcuts/links.test.js` | 第三轮新增 | 链接令牌 / 卡槽两态 / 撤回剥离的语义用例（`hasLinkToken` 删除后由它承接覆盖） |
+| `specs/composer-quick-shortcuts.spec.md` | 修改 | 增加「数据分叉的收敛（用户拍板）」与「浏览器验收状态（第二轮）」两节；第三轮按提交事实校正分类数、款数与 diff 行数 |
+| `.agent-reports/composer-quick-shortcuts/` | 新增证据 | 环境截图 2 张 + 测试原始输出 + 复现脚本 `tooling/` |
 
-上一轮的实现文件（`composer-quick-shortcuts/*`、`MediaConfigControls.jsx`、`AttachmentTray.tsx`、`PromptSlotsChips.tsx`、`apply.js` 等）本轮未再改动，除数据与测试外只重建了构建产物。
+第二轮之后，实现文件在第三轮被逐一复核并修正（见第 9 节）；数据与测试之外没有重建构建产物以外的额外动作。
 
 **未做的事**：没有 push / 开 PR / merge / 物化开发版；没有改动工作区外任何文件（含 `~/.omnimux-dev`）。
 
-## 2. 两个分类与 12 款的落地情况
+## 2. 两个分类与 13 款的落地情况
 
 `tiktok-agent` 与 `omni-agent` 的分类数组现为：
 
 ```
-创作视频、创作图片、搜索爆款视频、ugc-testimonial、storytelling-script、image-static、
+创作视频、创作图片、ugc-testimonial、storytelling-script、image-static、
 video-ads、product-showcase、meme-native、other
 ```
 
-（恢复的 3 个分类置于最前，点开「技能」菜单即可看到并点选。）
+（恢复的 2 个分类置于最前，点开「技能」菜单即可看到并点选；**没有第三个分类**。）
 
-技能条目 13 款，字段形状与既有 112 条完全一致（16 个字段，无自造字段）：
+技能条目 13 款（创作视频 7 款 + 创作图片 6 款），字段形状与既有 112 条完全一致（**16 个字段**，含 `titleEn`，无自造字段）：
 
 | 分类 | slug | name | id | 封面 |
 | --- | --- | --- | --- | --- |
@@ -42,25 +46,23 @@ video-ads、product-showcase、meme-native、other
 | 创作视频 | video-script-creation | 视频脚本创作 | sk-tk-script-creation | skill-card-5 |
 | 创作视频 | video-prompt-generation | 视频提示词生成 | sk-tk-prompt-generation | skill-card-6 |
 | 创作视频 | video-generation | 视频生成 | sk-tk-video-render | skill-card-7 |
+| 创作视频 | reverse-video-prompt | 反推视频提示词 | sk-tk-reverse-prompt | skill-card-6 |
 | 创作图片 | video-storyboard-image | 视频分镜图 | sk-tk-storyboard-image | skill-card-9 |
 | 创作图片 | product-image-set | 商品套图 | sk-tk-product-image-set | skill-card-10 |
 | 创作图片 | aplus-content | A+内容 | sk-tk-aplus-content | skill-card-2 |
 | 创作图片 | image-replication | 图片复刻 | sk-tk-image-replication | skill-card-3 |
 | 创作图片 | multi-angle-product-images | 多角度产品图 | sk-tk-multi-angle | skill-card-4 |
 | 创作图片 | ai-virtual-try-on | AI 换装 | sk-tk-virtual-tryon | skill-card-5 |
-| 搜索爆款视频 | reverse-video-prompt | 反推视频提示词 | sk-tk-reverse-prompt | skill-card-6 |
 
-填充口径：`title` = `name` = `titleZh`（文案逐字取自 `presets/tiktok-agent/skills.json`）；`skill` = `slug`；`category` 用中文分类 id；`summary` = `description`；`installed: true`、`isHot: false`、`isNew: false`、`downloads: 0`；`cover` = `catalog/covers/skills/skill-card-N.webp`（N 与 `coverIndex` 一致，8 张既有通用封面循环复用，全部指向真实文件）。`titleEn` 按要求**未编造**、直接省略。
+填充口径：`title` = `name` = `titleZh`（文案逐字取自 `presets/tiktok-agent/skills.json`）；`titleEn` 为行业通行英文名（英文界面 `skillTitle` 走英文分支取它）；`skill` = `slug`；`category` 用中文分类 id；`summary` = `description`；`installed: true`、`isHot: false`、`isNew: false`、`downloads: 0`；`cover` = `catalog/covers/skills/skill-card-N.webp`（N 与 `coverIndex` 一致，8 张既有通用封面循环复用，全部指向真实文件）。
 
-## 3. 必须显式上报的一处口径冲突（第 13 款）
+## 3. 第 13 款（反推视频提示词）的归属，以及一处已更正的历史记录
 
-- 用户口径一：**只恢复 `创作视频`、`创作图片` 两个分类，各 6 款，共 12 款**。
-- 用户口径二：**四条快捷方式都要渲染，第 4 条的技能胶囊是「反推视频提示词」**。
-- 仓库事实：`reverse-video-prompt`（反推视频提示词）在预设真源里归属**第三个分类 `搜索爆款视频`**，不属于上述两个分类中的任何一个。
-
-两条口径在同一份数据上无法同时成立。按「与仓库事实冲突时以事实为准，不要硬凑」，处理为：**额外恢复它自己的真实分类 `搜索爆款视频` 与该 1 款技能**（共 13 款 / 3 个分类）。没有把它塞进不适用的分类，也没有顺手恢复 `搜索爆款视频` 的其余 9 款（保持最小改动）。
-
-若产品只要「两个分类、宁可第 4 条不渲染」，删掉该分类与这 1 款即可，四条快捷方式会按既有契约（技能缺失即不渲染）自动只显示三条——这一取舍需要主理人/用户确认一句。
+- 用户口径：恢复「创作视频」「创作图片」两个分类；四条快捷方式都要渲染，第 4 条的技能胶囊是「反推视频提示词」。
+- 仓库事实：`reverse-video-prompt` 在预设真源 `presets/tiktok-agent/skills.json` 里归属另一个分类 `搜索爆款视频`。
+- 落地结果：**按产品口径并入 `创作视频`**（该分类 7 款），**不额外立第三个分类**，也不恢复 `搜索爆款视频` 的其余技能，保持最小改动。
+- 数据与文案已逐字取自预设真源，四条快捷方式 slug 全部可解析（见第 4 节）。
+- **历史记录更正**：本报告第 2 轮曾写「额外恢复了 `搜索爆款视频` 分类与该 1 款技能」、分类列表含三个分类、第 13 款归属 `搜索爆款视频`——均与提交事实不符，现按实测数据改正为上述内容。数据文件实测 **+458 行 / -0 行**（提交 `99f3ccaab`），并非当时所写的 +466 行。
 
 ## 4. 四条快捷方式的解析结果
 
@@ -78,20 +80,33 @@ video-ads、product-showcase、meme-native、other
 - 旧：「四条 slug 均不在 `catalog/preset-skills.json` → `findPresetSkill` 返回 null」（上一轮的临时护栏）
 - 新：「四条 slug 现在都能从会话技能选择器的预设绑定解析到，且 `slug`/`name`/`installed`/来源预设 均正确」
 
-新增数据测试三条：
+新增数据测试四条：
 1. `tiktok-agent` 分类含 `创作视频`、`创作图片`，且两者都出现在分类页签里（`tabs[0]` 仍是 `all`）；
-2. 12 款技能都在货架上，且每个分类恰好 6 款，`skill`/`name`/`title`/`titleZh`/`category`/`description`/`summary`/`installed`/`isHot`/`isNew`/`downloads` 齐备，`cover` 与 `coverIndex` 一致**且文件真实存在**（`existsSync`）；
-3. `omni-agent` 与 `tiktok-agent` 恢复内容一致（默认菜单与快捷方式不会打架）。
+2. 13 款技能都在货架上，每个分类数量与清单一致（创作视频 7 + 创作图片 6），`skill`/`name`/`title`/`titleZh`/`titleEn`/`category`/`description`/`summary`/`installed`/`isHot`/`isNew`/`downloads` 齐备，`cover` 与 `coverIndex` 一致**且文件真实存在**（`existsSync`）；
+3. `omni-agent` 与 `tiktok-agent` 恢复内容一致（默认菜单与快捷方式不会打架）；
+4. **新增 13 款的字段集与既有条目完全一致，且 `titleEn` 非空**（第三轮补上，防止再漏字段）。
 
 ## 5. 测试真实结果（含既有红灯对比）
 
+**第三轮（本轮，修正后实测）**
+
+| 命令 | 改动前 | 改动后 |
+| --- | --- | --- |
+| `node --test plugins/omnimux/src/client/composer-quick-shortcuts/*.test.js` | 11/11 通过 | **26/26 通过**（新增 `links.test.js` 10 例、`session.test.js` 5 例，`catalog.test.js` 中已删的 `hasLinkToken` 用例随之移除） |
+| `node --test plugins/omnimux-market/src/client/preset-skill-lookup.test.js` | 9/9 通过 | **10/10 通过**（新增字段集一致性断言） |
+| `node --test plugins/omnimux/src/client/attachments/*.test.js *.test.ts` | 122/122 通过 | **122/122 通过** |
+| `node --test plugins/omnimux/src/client/media-viewer/*.test.js` | 87 例：86 通过 / 1 失败 | 87 例：**86 通过 / 1 失败**，失败项同名 `generation feedback: real browser transport-to-viewer journeys`（与主干既有红灯一致，改动前后实测同一项） |
+| `node --test plugins/omnimux/src/client/session-guide/*.test.js` | 36/36 通过 | **36/36 通过** |
+| `git diff --check` | — | 干净（无空白错误） |
+
+**第二轮（数据分叉收敛那轮，保留原记录）**
+
 | 命令 | 结果 |
 | --- | --- |
-| `node --test plugins/omnimux-market/src/client/preset-skill-lookup.test.js` | **9/9 通过**（上一轮 6/6，本轮新增 3 例） |
-| `node --test plugins/omnimux/src/client/composer-quick-shortcuts/catalog.test.js + preset-skill-lookup.test.js` | **20/20 通过** |
-| `node --test plugins/omnimux/src/client/attachments/*.test.js` | **26/26 通过** |
-| `pnpm --filter omnimux test` | 2596 例，**2568 通过 / 28 失败**（上一轮实测为 2567/29；差异来自上一轮修好的 `media-composer-direct.e2e.test.js`） |
-| `pnpm --filter omnimux-market test` | 928 例，**859 通过 / 68 失败**（未在改动前采集整包基线，故只报现状） |
+| `node --test plugins/omnimux-market/src/client/preset-skill-lookup.test.js` | 9/9 通过（当时新增 3 例） |
+| `node --test plugins/omnimux/src/client/attachments/*.test.js` | 26/26 通过（当时只跑了 `.test.js`，未含 `.test.ts`） |
+| `pnpm --filter omnimux test` | 2596 例，2568 通过 / 28 失败 |
+| `pnpm --filter omnimux-market test` | 928 例，859 通过 / 68 失败（未采改动前基线，只报现状） |
 | `git diff --check` | 干净（无空白错误） |
 
 **既有红灯对比（用户点名要看的一条）**
@@ -136,17 +151,40 @@ video-ads、product-showcase、meme-native、other
 
 ## 7. 仍未做到 / 待确认
 
-1. **四条快捷方式的浏览器逐条核对**：BLOCKED（见第 6 节）。需要一条能让宿主加载未合入插件构建的路径，或等合入后物化到 Dev 再由人工/自动化在 45120 上核对。
-2. **第 13 款技能与第三个分类**：见第 3 节，属对口径冲突的按事实处理，请主理人确认是否保留。
+1. **四条快捷方式的浏览器逐条核对**：BLOCKED（见第 6 节）。需要一条能让宿主加载未合入插件构建的路径，或等合入后物化到 Dev 再由人工/自动化在 45120 上核对。第三轮同样受此限制：本轮修好的工具条单行布局与媒体面板「零新增可见节点」，判据落在源码级断言（`media-composer-direct.e2e.test.js` 校验容器弹性声明与回执开关默认值），不是像素级实机证据。
+2. ~~第 13 款技能与第三个分类~~：**已按提交事实改正**（第 3 节）——只有两个分类，`reverse-video-prompt` 并入 `创作视频`，无需再裁决。
 3. `VideoLinkPopover` / `ProductUrlPopover` 仍未接入（上一轮已说明）：四条快捷方式点击时没有真实 URL 可填，链接胶囊是占位令牌而非带 URL 的 markdown 链接。
 4. `skill-linkage.test.js` 仍有 1 条既有红灯（`video-analysis` / 竞品爆款复盘 不在恢复清单），刻意不扩范围。
-5. 英文界面标题：`titleEn` 未编造、直接省略，英文界面会按既有回退显示中文名（与仓内既有 legacy 条目同一行为，`skillTitle` 单测已钉住），不会出现空标题。
+5. ~~英文界面标题 `titleEn` 省略~~：**第三轮已补齐**，13 款 × 2 个预设共 26 条 `titleEn`，英文界面不再回退中文名；字段集与既有 112 条完全一致（16 字段），并有断言钉住。
 
 ## 8. 建议下一步
 
-1. 请用户/主理人确认第 3 节的取舍（保留「搜索爆款视频 + 反推视频提示词」，还是砍掉让第 4 条不渲染）。
-2. 浏览器验收建议改为：合入 + 物化到 Dev 后，在 45120 上按本文第 6 节列出的 8 项逐条核对（提示语逐字 / 技能胶囊名 / 链接胶囊 / 模型与参数显隐 / 删胶囊后卡槽可点 / 链接在框内卡槽不可点 / 切换只留一颗技能 / 点 ✕ 后提示语与链接保留），并打开技能菜单确认 `创作视频`、`创作图片` 两个页签各 6 款。
-3. 交审查员做行级审查（跨 hub 与 market 两个插件；数据文件 `preset-skills.json`、`preset-skill-lookup.test.js`、`apply.js` 是重点）。
+1. 浏览器验收：合入 + 物化到 Dev 后，在 45120 上按本文第 6 节列出的 8 项逐条核对（提示语逐字 / 技能胶囊名 / 链接胶囊 / 模型与参数显隐 / 删胶囊后卡槽可点 / 链接在框内卡槽不可点 / 切换只留一颗技能 / 点 ✕ 后提示语与链接保留），并打开技能菜单确认 `创作视频`（7 款）、`创作图片`（6 款）两个页签；顺带核对媒体面板底部工具条仍是**单行**（生成方式 ｜ 模型 ｜ 参数展示 ──► 发送）。
+2. 交审查员复核第三轮的 S1/H1/H2/H3 与 M1–M12 处置。
+3. 合入后按既有铁律物化到开发版（正式版不写）。
+
+## 9. 第三轮：代码审查意见的处置结果（2026-09-22）
+
+审查跑了 17 个文件、0 失败、29 条意见。必改 4 条 + 建议 8 条已全部处理，无「判定不改」项。
+
+| 意见 | 处置 | 落地位置 |
+| --- | --- | --- |
+| S1 媒体面板工具条被拆成竖排 | 已修 | `media-viewer/styles.js` 给 `.omx-media-config-controls` 补 `display:flex; align-items:center; gap:8px; flex-wrap:nowrap; min-width:0`；`.omx-media-config-summary` 改为 `showModelSummary` 开关控制，**默认不渲染**，仅快捷方式消费方显式打开 |
+| H1 13 款新增技能缺 `titleEn` | 已修 | `preset-skills.json` 两段各补 13 条（26 条）；`preset-skill-lookup.test.js` 新增「字段集与既有条目完全一致 + `titleEn` 非空」断言 |
+| H2 写草稿失败却继续改状态 | 已修 | `ComposerQuickShortcuts.jsx`：`writeDraft` 返回 false 即整条不生效，store 与技能通道都不提交；撤回分支同样处理 |
+| H3 会话标识派生与附件托盘不一致 | 已修 | 新增 `composer-quick-shortcuts/session.js` 的 `resolveComposerSessionId`，快捷方式与托盘都调它；新增 `session.test.js` 钉住「两侧同源、都不再自造 `'default'` 单点」 |
+| M6 提交后不再收起浮层 | 已修 | `MediaViewerComposer.jsx` 的 `handleSend` 恢复 `closePopovers()`（等价于抽取前的 `setActivePopover(null)`） |
+| M12 e2e 断言被拼接削弱 | 已修 | `media-composer-direct.e2e.test.js` 改为分别断言：媒体面板断言**使用形态**（`<MediaConfigControls config={config} showModeSwitch />`、不渲染回执节点），共享控件单独断言结构 |
+| M3 托盘自持一份标签映射 | 已修 | `AttachmentTray.tsx` 复用 `quickLinkLabels`，删掉本地副本与死导入（`quickLinkToken`、重复的 `dom.js` import） |
+| M1 渲染期读 DOM | 已修 | 两态判据改由输入框已解析令牌的响应式投影（`detectedSlotsDraftText`）驱动 |
+| M2 合并数组后高亮错槽 | 已修 | 按槽位 id 在合并后数组重算 `activeSlotIndex` |
+| M4 卡槽重复插入同名令牌 | 已修 | 卡槽点击入口再判一次已填（`isQuickLinkSlotFilled` 的生产调用方） |
+| M5 effect 依赖缺 `setMode`/`closePopovers` | 已修 | 先解构再依赖 |
+| M10 `hasLinkToken` 是无人调用的伪真源 | 已修 | 删除 `hasLinkToken`（判据唯一实现留在 `links.js` 并被托盘的点击入口真正消费），`dom.js` 注释同步改正 |
+| M11 撤回清掉整个草稿 | 已修 | 新增 `stripQuickShortcutText`：只剥本快捷方式写入的令牌与提示语前缀，用户追加文字原样保留 |
+| M9 文档与数据打架 | 已修 | 本报告第 1/2/3/4/7 节与 `specs/composer-quick-shortcuts.spec.md` 的「数据分叉的收敛」一节按提交事实改正（两个分类 / 13 款 / +458 行 / 16 字段） |
+
+**明确未动（按要求）**：`omnimux-market/src/client/skill-picker-logic.test.js` 的既有红灯、`media-viewer` 的 `generation feedback: real browser transport-to-viewer journeys`、既有 112 款技能与其余 preset。
 
 ## 附：复现脚本
 
