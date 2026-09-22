@@ -200,7 +200,7 @@ describe('E2E: 新会话封面卡悬停整卡变暗', () => {
   })
 
   after(() => {
-    act(() => root.unmount())
+    if (root) act(() => root.unmount())
     delete globalThis.window
     delete globalThis.document
   })
@@ -261,6 +261,8 @@ describe('E2E: 新会话封面卡悬停整卡变暗', () => {
     assert.match(dimValue, /transparent/, '暗层颜色必须带透明度')
     assert.match(dimValue, /--dsw-static-neutral-1000/, '暗层必须是黑色系，不得是亮色')
 
+    assert.ok(lastDeclared(base, 'content'), '暗层必须声明 content，伪元素才能生成')
+    assert.equal(lastDeclared(base, 'position'), 'absolute', '暗层必须绝对定位，inset:0 才有效')
     assert.equal(lastDeclared(base, 'inset'), '0', '暗层必须铺满整张卡片')
     assert.equal(lastDeclared(base, 'pointer-events'), 'none', '暗层不得拦截点击')
   })
