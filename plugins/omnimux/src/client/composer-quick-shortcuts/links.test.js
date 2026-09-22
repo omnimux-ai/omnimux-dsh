@@ -4,6 +4,8 @@ import {
   buildQuickLinkSlots,
   detectedSlotsDraftText,
   isQuickLinkSlotFilled,
+  mergeQuickLinkKinds,
+  quickLinkKindsInDraft,
   quickLinkLabels,
   quickLinkToken,
   quickLinkTokensForKind,
@@ -54,43 +56,62 @@ describe('链接令牌与显示名', () => {
 
 describe('卡槽两态判据（唯一实现）', () => {
   const slots = buildQuickLinkSlots(['video', 'product'], LABELS)
+  /** 判据输入 = 输入框里的胶囊种类 + 草稿里手打的令牌种类（业务侧就这一条合成路径）。 */
+  const present = (chipKinds, draft) => mergeQuickLinkKinds(chipKinds, draft)
 
-  it('草稿里已有令牌即视为已填，带链接的 markdown 形态同样命中', () => {
-    assert.equal(isQuickLinkSlotFilled('请用我的产品复刻这个爆款视频\n[视频]', slots[0]), true)
-    assert.equal(isQuickLinkSlotFilled('[视频](https://example.com/a.mp4) 帮我复制', slots[0]), true)
-    assert.equal(isQuickLinkSlotFilled('只有提示语', slots[0]), false)
+  it('输入框里有该种类的胶囊即视为已填（胶囊不进草稿文本，全靠节点种类）', () => {
+    assert.equal(isQuickLinkSlotFilled(present(['video'], ''), slots[0]), true)
+    assert.equal(isQuickLinkSlotFilled(present(['product'], ''), slots[1]), true)
+    assert.equal(isQuickLinkSlotFilled(present([], ''), slots[0]), false)
   })
 
-  it('商品与视频互不影响，空草稿一律未填', () => {
-    const draft = '[商品](https://shop.example.com/p/1)'
-    assert.equal(isQuickLinkSlotFilled(draft, slots[1]), true)
-    assert.equal(isQuickLinkSlotFilled(draft, slots[0]), false)
-    assert.equal(isQuickLinkSlotFilled('', slots[0]), false)
+  it('草稿里已有手打令牌同样算已填，带链接的 markdown 形态也命中', () => {
+    assert.equal(isQuickLinkSlotFilled(present([], '请用我的产品复刻这个爆款视频\n[视频]'), slots[0]), true)
+    assert.equal(isQuickLinkSlotFilled(present([], '[视频](https://example.com/a.mp4) 帮我复制'), slots[0]), true)
+    assert.equal(isQuickLinkSlotFilled(present([], '只有提示语'), slots[0]), false)
+  })
+
+  it('商品与视频互不影响，空输入一律未填', () => {
+    const chips = present([], '[商品](https://shop.example.com/p/1)')
+    assert.equal(isQuickLinkSlotFilled(chips, slots[1]), true)
+    assert.equal(isQuickLinkSlotFilled(chips, slots[0]), false)
+    assert.equal(isQuickLinkSlotFilled(present([], ''), slots[0]), false)
+    assert.equal(isQuickLinkSlotFilled(present([], null), slots[0]), false)
+    assert.equal(isQuickLinkSlotFilled(present([], '随便'), null), false)
     assert.equal(isQuickLinkSlotFilled(null, slots[0]), false)
-    assert.equal(isQuickLinkSlotFilled('随便', null), false)
   })
 
   it('切换界面语言后旧令牌仍算已填（判据走 kind，不走当前语言的显示名）', () => {
     const englishSlots = buildQuickLinkSlots(['video', 'product'], { video: 'Video', product: 'Product' })
-    const chineseDraft = '请用我的产品复刻这个爆款视频\n[视频] [商品]'
+    const chineseDraft = present([], '请用我的产品复刻这个爆款视频\n[视频] [商品]')
     assert.equal(isQuickLinkSlotFilled(chineseDraft, englishSlots[0]), true)
     assert.equal(isQuickLinkSlotFilled(chineseDraft, englishSlots[1]), true)
-    assert.equal(isQuickLinkSlotFilled('[Video] [Product]', slots[0]), true)
-    assert.equal(isQuickLinkSlotFilled('[Video] [Product]', slots[1]), true)
+    const englishDraft = present([], '[Video] [Product]')
+    assert.equal(isQuickLinkSlotFilled(englishDraft, slots[0]), true)
+    assert.equal(isQuickLinkSlotFilled(englishDraft, slots[1]), true)
   })
 
-  it('卡槽缺稳定标识时按令牌文本跨语言反查种类；认不出就不判已填', () => {
-    assert.equal(isQuickLinkSlotFilled('[Video]', { raw: '[Video]' }), true)
-    assert.equal(isQuickLinkSlotFilled('[视频]', { raw: '[视频]' }), true)
-    assert.equal(isQuickLinkSlotFilled('[视频]', { raw: '[角色]' }), false)
-    assert.equal(isQuickLinkSlotFilled('[视频]', { quickLinkKind: 'not-a-kind' }), false)
+  it('草稿文本反查种类跨语言；认不出的种类不算已填', () => {
+    assert.deepEqual(quickLinkKindsInDraft('[Video]'), ['video'])
+    assert.deepEqual(quickLinkKindsInDraft('[商品] 加个 [角色]'), ['product'])
+    assert.deepEqual(quickLinkKindsInDraft(''), [])
+    assert.deepEqual(quickLinkKindsInDraft(null), [])
+    assert.equal(isQuickLinkSlotFilled(present([], '[视频]'), { raw: '[视频]' }), true)
+    assert.equal(isQuickLinkSlotFilled(present([], '[视频]'), { raw: '[角色]' }), false)
+    assert.equal(isQuickLinkSlotFilled(present([], '[视频]'), { quickLinkKind: 'not-a-kind' }), false)
+  })
+
+  it('胶囊种类与草稿令牌合并且按真源顺序去重', () => {
+    assert.deepEqual(mergeQuickLinkKinds(['product'], '[视频]'), ['video', 'product'])
+    assert.deepEqual(mergeQuickLinkKinds(['video', 'video'], ''), ['video'])
+    assert.deepEqual(mergeQuickLinkKinds(null, null), [])
   })
 
   it('一次拆出「不可点」与「可点」两拨 id', () => {
-    const split = splitQuickLinkSlots('[视频]', slots)
+    const split = splitQuickLinkSlots(present(['video'], ''), slots)
     assert.deepEqual(split.filledIds, ['omx-quick-link-video'])
     assert.deepEqual(split.openIds, ['omx-quick-link-product'])
-    assert.deepEqual(splitQuickLinkSlots('', slots), {
+    assert.deepEqual(splitQuickLinkSlots(present([], ''), slots), {
       filledIds: [],
       openIds: ['omx-quick-link-video', 'omx-quick-link-product'],
     })
@@ -100,7 +121,7 @@ describe('卡槽两态判据（唯一实现）', () => {
     const detected = [{ raw: '请稍等' }, { raw: '[视频]' }, { raw: null }]
     const draft = detectedSlotsDraftText(detected)
     assert.equal(draft, '请稍等 [视频]')
-    assert.deepEqual(splitQuickLinkSlots(draft, slots).filledIds, ['omx-quick-link-video'])
+    assert.deepEqual(splitQuickLinkSlots(present([], draft), slots).filledIds, ['omx-quick-link-video'])
     assert.equal(detectedSlotsDraftText(null), '')
   })
 })
@@ -143,7 +164,7 @@ describe('撤回只清本快捷方式写入的部分', () => {
 describe('剥离边界：markdown 形态、用户自输令牌、语言切换', () => {
   it('markdown 形态整体剥离，不留 (url) 残骸（与「已填」判据对称）', () => {
     const draft = `${CLONE.prompt}\n\n[视频](https://example.com/a.mp4) [商品](https://shop.example.com/p/1)`
-    assert.equal(isQuickLinkSlotFilled(draft, buildQuickLinkSlots(['video'], LABELS)[0]), true)
+    assert.equal(isQuickLinkSlotFilled(mergeQuickLinkKinds([], draft), buildQuickLinkSlots(['video'], LABELS)[0]), true)
     assert.equal(stripQuickShortcutText(CLONE, draft), '')
   })
 

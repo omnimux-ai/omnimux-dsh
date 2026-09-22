@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore 
 import {
   applyQuickShortcut,
   clearQuickShortcutSkill,
+  quickShortcutDefaultLinks,
   quickShortcutLinks,
   resolveQuickShortcuts,
 } from './catalog.js';
 import { getGlobalQuickShortcutStore } from './store.js';
-import { readDraft, writeDraft } from './dom.js';
-import { quickLinkLabels, quickLinkToken, stripQuickShortcutText } from './links.js';
+import { readDraft, removeQuickLinkChips, replaceQuickLinkChips, writeDraft } from './dom.js';
+import { quickLinkLabels, stripQuickShortcutText } from './links.js';
 import { resolveComposerSessionId } from './session.js';
 import { ensureQuickShortcutStyles } from './styles.js';
 import { QuickShortcutArrow, QuickShortcutIcon } from './icons.jsx';
@@ -82,8 +83,9 @@ function QuickShortcutModelControls({ sessionId }) {
  *
  * 点任意一条同时完成三件事：
  *   1. 写好提示语（整组替换，不追加）；
- *   2. 放入对应链接胶囊（`[视频]` / `[商品]`，卡槽行在输入框内侧上方，
- *      由素材导轨同一行承载）；
+ *   2. 在输入框光标处插入**默认链接**那一枚胶囊（图标 + 名称 + 可粘贴链接的输入框 + ×，
+ *      形态见 `linkChip.js`、样式见 `styles.js`）；整组替换，不留上一条的胶囊。
+ *      条目上的 `extraLinks` 不在这里插入——它们只是上方卡槽行的可点项，用户点了才追加；
  *   3. 选中一款已内置技能（走既有全局通道 `publishActiveSkill`，
  *      底部技能药丸据此亮起）。
  *
@@ -208,7 +210,7 @@ export function ComposerQuickShortcuts(props) {
   const handlePick = useCallback((entry) => {
     const next = applyQuickShortcut(store.getSnapshot(sessionId).activeId, entry.id);
     if (!next.activeId) {
-      // 再点同一条 = 撤回：只清本快捷方式写入的提示语与链接令牌，用户手打的
+      // 再点同一条 = 撤回：只清本快捷方式写入的提示语与链接胶囊，用户手打的
       // 追加文字原样保留；技能同步撤下。
       const stripped = stripQuickShortcutText(entry, readDraft());
       // 草稿清不掉（宿主桥缺失、`inputActions.setDraft` 缺失或抛错）就整条不生效：
@@ -217,23 +219,29 @@ export function ComposerQuickShortcuts(props) {
         setNoticeSeq((n) => n + 1);
         return;
       }
+      removeQuickLinkChips();
       setNoticeSeq(0);
       store.set(sessionId, { activeId: null, links: [], skill: null });
       publishActiveSkill(null);
       return;
     }
     const links = quickShortcutLinks(entry);
-    const tokens = links.map((kind) => quickLinkToken(labels[kind])).filter(Boolean);
-    const text = tokens.length > 0 ? `${entry.prompt}\n\n${tokens.join(' ')}` : entry.prompt;
+    // 点快捷方式只预填**默认链接**：`extraLinks` 那几枚是上方卡槽上的可点项，
+    // 用户点了卡槽才插进来，不在这里自动插入。
+    const defaults = quickShortcutDefaultLinks(entry);
     // 提示语写不进去就整条不生效：否则会出现「输入框空的，卡槽已出现、技能胶囊已亮」。
-    if (!writeDraft(text)) {
+    if (!writeDraft(entry.prompt)) {
       setNoticeSeq((n) => n + 1);
       return;
     }
-    setNoticeSeq(0);
+    // 链接是真正的胶囊节点，插在输入框光标处；整组替换，不残留上一个快捷方式插入的胶囊。
+    // 胶囊插不进去（拿不到输入框等）只降级为「没有胶囊 + 轻提示」：提示语与技能照旧生效，
+    // 上方卡槽仍可点回，不会出现「静默什么都不发生」。
+    const inserted = replaceQuickLinkChips(defaults, { labels, t });
+    setNoticeSeq(inserted === defaults.length ? 0 : (n) => n + 1);
     store.set(sessionId, { activeId: entry.id, links, skill: entry.skill });
     publishActiveSkill(entry.skill);
-  }, [store, sessionId, labels]);
+  }, [store, sessionId, labels, t]);
 
   // 只在新对话（空会话）里出现：这是新会话的起手入口，不是会话中的工具条。
   if (useSession && !isBlankConversation(session, hasTargets)) return null;

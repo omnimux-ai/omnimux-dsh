@@ -128,6 +128,128 @@ export const QUICK_SHORTCUTS_CSS = `
 [data-phase='hero'] .omx-quick-shortcuts {
   order: 3;
 }
+
+/* ── 链接胶囊：输入框内的原子内联节点（图标 + 名称 + 分隔线 + 输入框 + ×） ──
+ * 节点由 dom.js 用 DOM API 造，业务内联样式一律不写（design.md UI02），
+ * 因此全部形态收敛在这张表里；宿主提交读取用的锚点属性见 linkChip.js。
+ * 两种胶囊靠图标与描边色区分（视频 = 业务主色，商品 = 警示主色），
+ * 底色 / 文字 / 分隔线一律取既有 token，不新造色值。 */
+/* 胶囊宿主行（.omx-link-chip-row）：由 dom.js 建在 [data-composer-card] 内、输入行上方。
+ * 它必须待在宿主 React 不管理的位置（原因见 dom.js 里 resolveQuickLinkChipRow 的宿主事实），
+ * 因此形态一律由这张表定义。空行不占位。 */
+.omx-link-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2px 2px 6px 2px;
+}
+
+.omx-link-chip-row:empty {
+  display: none;
+}
+
+.omx-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 26px;
+  max-width: 100%;
+  margin: 0 2px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-s-14, inherit);
+  font-size: 12px;
+  line-height: 16px;
+  vertical-align: middle;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.omx-link-chip--video {
+  border-color: var(--dsw-alias-state-business-primary);
+}
+
+.omx-link-chip--product {
+  border-color: var(--dsw-alias-state-warn-primary);
+}
+
+/* 焦点落进胶囊（输入框 / 删除按钮）时只给一处提示，不做第二圈描边。 */
+.omx-link-chip:focus-within {
+  box-shadow: 0 0 0 2px var(--dsw-alias-bg-mask-2, transparent);
+}
+
+.omx-link-chip__icon {
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omx-link-chip--video .omx-link-chip__icon {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.omx-link-chip--product .omx-link-chip__icon {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.omx-link-chip__name {
+  flex: none;
+  font-weight: 500;
+}
+
+.omx-link-chip__divider {
+  flex: none;
+  width: 1px;
+  height: 12px;
+  background: var(--dsw-alias-border-l3);
+}
+
+.omx-link-chip__input {
+  flex: 1 1 auto;
+  width: 168px;
+  min-width: 96px;
+  max-width: 42vw;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.omx-link-chip__input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.omx-link-chip__remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.omx-link-chip__remove:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
 `;
 
 /**

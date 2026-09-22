@@ -11,15 +11,22 @@
  * 收成一张登记表，任何语言的令牌都能反查回同一个 kind。否则用户切换界面语言后，
  * 输入框里那条旧语言的令牌既判不出「已填」，也剥不掉，卡槽会重新变可点并插进
  * 第二种语言的重复令牌。
+ *
+ * **链接已改成真正的胶囊节点**（`linkChip.js` 定义形态、`dom.js` 负责插入与读取），
+ * 因此「已填」的主判据从「草稿文本里有令牌」换成「输入框里有该种类的胶囊节点」：
+ * 胶囊不进草稿文本，槽位投影看不见它，卡槽两态只能靠节点种类判。文本令牌判据保留
+ * 下来兼容用户手打的 `[视频]`（提示词槽位高亮仍认它），两条输入合成同一份判据。
  */
 
 import { QUICK_LINK_KINDS, quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
 import { en, zh } from '../locales.js'
 
 /**
- * 链接胶囊令牌：草稿里真正被插进输入框的那段文本。
- * 采用既有 prompt 变量槽位的方括号语法，因而会被输入框的行内高亮
- * （`usePromptSlotEnhancer` 的 `omx-prompt-slot`）渲染成胶囊，零新增机制。
+ * 链接卡槽的**令牌文本**（`[视频]` / `[商品]`）。
+ *
+ * 链接本身早已由胶囊节点承载（`dom.js`），令牌此刻只剩两个用途：喂给
+ * `PromptSlotChips` 的 `raw` 契约字段，以及兼容用户手打的同名令牌
+ * （提示词槽位高亮仍按它解析，卡槽据此判「已填」）。
  * @param {string} label 跟随语言的卡槽显示名（视频 / 商品）
  * @returns {string}
  */
@@ -131,34 +138,67 @@ function resolveSlotKind(slot) {
 }
 
 /**
+ * 草稿文本里出现的链接种类（跨语言反查令牌，`[视频]` 与 `[Video]` 都认）。
+ *
+ * 胶囊节点的种类读口在 `dom.js` 的 `readQuickLinkChipKinds`；这里只负责文本令牌，
+ * 两条输入由 `mergeQuickLinkKinds` 合成同一份「已填」判据。
+ * @param {string | null | undefined} draft
+ * @returns {readonly string[]}
+ */
+export function quickLinkKindsInDraft(draft) {
+  const text = typeof draft === 'string' ? draft : ''
+  if (!text) return []
+  const kinds = []
+  for (const kind of QUICK_LINK_KINDS) {
+    if (quickLinkTokensForKind(kind).some((token) => text.includes(token))) kinds.push(kind)
+  }
+  return kinds
+}
+
+/**
+ * 合成「输入框里已有哪些链接种类」：胶囊节点种类 + 草稿里的手打令牌种类。
+ * 按真源顺序去重，判据因此仍然只有一份。
+ * @param {readonly string[] | null | undefined} chipKinds 胶囊节点上的种类
+ * @param {string | null | undefined} draft 草稿文本
+ * @returns {readonly string[]}
+ */
+export function mergeQuickLinkKinds(chipKinds, draft) {
+  const present = Array.isArray(chipKinds) ? chipKinds : []
+  const textKinds = quickLinkKindsInDraft(draft)
+  const kinds = []
+  for (const kind of QUICK_LINK_KINDS) {
+    if (present.includes(kind) || textKinds.includes(kind)) kinds.push(kind)
+  }
+  return kinds
+}
+
+/**
  * 卡槽是否处于「链接已在输入框内」的不可点态。
  * 按链接种类判定：`[视频]` 与 `[Video]` 是同一个卡槽的两种语言写法，
  * 切换界面语言后旧令牌仍然算「已填」。
- * @param {string | null | undefined} draft
+ * @param {readonly string[] | null | undefined} presentKinds 输入框里已有的链接种类
  * @param {object} slot
  * @returns {boolean}
  */
-export function isQuickLinkSlotFilled(draft, slot) {
+export function isQuickLinkSlotFilled(presentKinds, slot) {
   const kind = resolveSlotKind(slot)
   if (!kind) return false
-  const text = typeof draft === 'string' ? draft : ''
-  if (!text) return false
-  return quickLinkTokensForKind(kind).some((token) => text.includes(token))
+  return Array.isArray(presentKinds) && presentKinds.includes(kind)
 }
 
 /**
  * 把卡槽列表拆成「已有胶囊（不可点）」与「缺胶囊（可点）」两拨 id，
  * 供卡槽组件一次拿到两态判据。
- * @param {string | null | undefined} draft
+ * @param {readonly string[] | null | undefined} presentKinds 输入框里已有的链接种类
  * @param {ReadonlyArray<object>} slots
  * @returns {{ filledIds: readonly string[], openIds: readonly string[] }}
  */
-export function splitQuickLinkSlots(draft, slots) {
+export function splitQuickLinkSlots(presentKinds, slots) {
   const filledIds = []
   const openIds = []
   for (const slot of Array.isArray(slots) ? slots : []) {
     if (!slot || typeof slot.id !== 'string') continue
-    if (isQuickLinkSlotFilled(draft, slot)) filledIds.push(slot.id)
+    if (isQuickLinkSlotFilled(presentKinds, slot)) filledIds.push(slot.id)
     else openIds.push(slot.id)
   }
   return { filledIds, openIds }
@@ -278,7 +318,9 @@ export function stripQuickShortcutText(entry, draft) {
   let rest = text
   if (prompt && rest.startsWith(prompt)) rest = rest.slice(prompt.length)
 
-  // 上限 = 本条目写过的链接种类数：用户后来自己敲的同名令牌不在上限内，绝不动。
+  // 上限 = 本条目的卡槽集会写入的链接种类数（默认链接 + 上方可点的可追加链接）：
+  // 点快捷方式只写默认链接，可追加链接要用户点上方卡槽才写，故两者都算本条目名下。
+  // 用户后来自己敲的同名令牌不在上限内，绝不动。
   let budget = kinds.length
   const leading = consumeLeadingTokens(rest, pattern, budget)
   rest = leading.rest

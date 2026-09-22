@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AttachmentCard } from './AttachmentCard.tsx';
 import { isMediaAttachment, isVideoAttachment } from './media-detector.ts';
 import { Button } from 'dsh-ui-kit';
@@ -19,10 +19,15 @@ import {
   buildQuickLinkSlots,
   detectedSlotsDraftText,
   isQuickLinkSlotFilled,
+  mergeQuickLinkKinds,
   quickLinkLabels,
   splitQuickLinkSlots,
 } from '../composer-quick-shortcuts/links.js';
-import { readDraft, insertTokenAtCursor } from '../composer-quick-shortcuts/dom.js';
+import {
+  insertQuickLinkChip,
+  readQuickLinkChipKinds,
+  subscribeQuickLinkChipChange,
+} from '../composer-quick-shortcuts/dom.js';
 import { resolveComposerSessionId } from '../composer-quick-shortcuts/session.js';
 import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewModal.tsx';
 import {
@@ -234,9 +239,20 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const quickTokens = new Set(quickLinkSlots.map((slot) => slot.raw));
   const derivedSlots = slots.filter((slot) => !quickTokens.has(slot.raw));
   const mergedSlots = quickLinkSlots.length > 0 ? [...quickLinkSlots, ...derivedSlots] : derivedSlots;
-  // 两态判据随草稿响应式重算：输入框已解析出的令牌就是草稿文本的投影
-  // （`detectedSlotsDraftText`），因此不在渲染期读 DOM。
-  const { filledIds: quickFilledIds } = splitQuickLinkSlots(detectedSlotsDraftText(slots), quickLinkSlots);
+  // 两态判据 = 输入框里的胶囊种类 + 草稿里手打的令牌种类。链接已经是胶囊节点、
+  // 不再进草稿文本，槽位投影看不见它，因此胶囊种类由增删事件驱动读一次节点
+  // （渲染期仍然不读 DOM），与草稿令牌在同一个 `mergeQuickLinkKinds` 里合成。
+  const [chipKinds, setChipKinds] = useState<readonly string[]>([]);
+  useEffect(() => {
+    const sync = () => setChipKinds(readQuickLinkChipKinds());
+    sync();
+    return subscribeQuickLinkChipChange(sync);
+  }, [currentSessionId]);
+  const presentKinds = useMemo(
+    () => mergeQuickLinkKinds(chipKinds, detectedSlotsDraftText(slots)),
+    [chipKinds, slots],
+  );
+  const { filledIds: quickFilledIds } = splitQuickLinkSlots(presentKinds, quickLinkSlots);
   // 合并数组把快捷卡槽排在最前，输入框自带槽位整体后移：按槽位 id 重新定位高亮，
   // 否则索引落在原数组上会高亮到别的槽位。
   const activeSlot = activeSlotIndex === null || activeSlotIndex === undefined
@@ -454,11 +470,13 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         activeSlotIndex={resolvedActiveSlotIndex}
         onSelectSlot={(slot) => {
           // 快捷链接卡槽：胶囊已被删掉才会走到这里（存在时卡槽不可点），
-          // 点击即把胶囊插回光标处，不再打开任何选择器。
-          if (slot && (slot as { quickLinkKind?: string }).quickLinkKind) {
-            // 入口再判一次：禁用态滞后一拍时不重复插入同名令牌。
-            if (isQuickLinkSlotFilled(readDraft(), slot)) return;
-            insertTokenAtCursor(slot.raw);
+          // 点击即把对应胶囊插回输入框卡片里的胶囊行，不再打开任何选择器。
+          const quickKind = slot && (slot as { quickLinkKind?: string }).quickLinkKind;
+          if (quickKind) {
+            // 入口再判一次：禁用态滞后一拍时不重复插入同种胶囊。
+            const fresh = mergeQuickLinkKinds(readQuickLinkChipKinds(), detectedSlotsDraftText(slots));
+            if (isQuickLinkSlotFilled(fresh, slot)) return;
+            insertQuickLinkChip(quickKind, { label: quickLabels[quickKind], t: props.t });
             return;
           }
           const index = Array.isArray(slots) ? slots.findIndex((item) => item.id === slot.id) : -1;

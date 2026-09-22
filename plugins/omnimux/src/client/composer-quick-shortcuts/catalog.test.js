@@ -5,6 +5,7 @@ import {
   QUICK_SHORTCUT_ARROW_ICON,
   applyQuickShortcut,
   clearQuickShortcutSkill,
+  quickShortcutDefaultLinks,
   quickShortcutLinks,
   resolveQuickShortcuts,
 } from './catalog.js'
@@ -127,3 +128,46 @@ describe('切换互斥与取消技能', () => {
 
 // 链接卡槽的两态判据（`hasLinkToken`）曾是本文件的副本，已删除：唯一实现在
 // `links.js` 的 `isQuickLinkSlotFilled` / `splitQuickLinkSlots`，语义用例归 `links.test.js`。
+
+describe('点快捷方式只插默认链接，可追加链接留给上方卡槽', () => {
+  const entryOf = (id) => QUICK_SHORTCUTS.find((entry) => entry.id === id)
+
+  it('每条快捷方式「点击即插入」的胶囊集只有 defaultLink 一枚', () => {
+    assert.deepEqual(
+      QUICK_SHORTCUTS.map((entry) => [entry.id, quickShortcutDefaultLinks(entry)]),
+      [
+        ['clone', ['video']],
+        ['breakdown', ['video']],
+        ['selling', ['product']],
+        ['reverse', ['video']],
+      ],
+    )
+  })
+
+  it('点 clone 只有 video 一枚：extraLinks 的 product 不在插入集里', () => {
+    const clone = entryOf('clone')
+    assert.deepEqual(quickShortcutDefaultLinks(clone), ['video'], '点复刻只预填视频胶囊')
+    assert.ok(!quickShortcutDefaultLinks(clone).includes('product'), '商品胶囊不得随点击自动插入')
+    // 卡槽集仍带商品：它是上方那一行里「可点、点了才插」的那一枚
+    assert.deepEqual(quickShortcutLinks(clone), ['video', 'product'], '商品卡槽照样摆在上方')
+    assert.deepEqual(
+      applyQuickShortcut(null, 'clone'),
+      { activeId: 'clone', links: ['video', 'product'] },
+      '会话态里存的是卡槽集，不是插入集',
+    )
+  })
+
+  it('带货反向对称：默认只插商品，视频由上方卡槽点了才插', () => {
+    const selling = entryOf('selling')
+    assert.deepEqual(quickShortcutDefaultLinks(selling), ['product'])
+    assert.deepEqual(quickShortcutLinks(selling), ['product', 'video'])
+  })
+
+  it('非法输入与没带默认链接的条目回空数组，不猜', () => {
+    assert.deepEqual(quickShortcutDefaultLinks(null), [])
+    assert.deepEqual(quickShortcutDefaultLinks(undefined), [])
+    assert.deepEqual(quickShortcutDefaultLinks({}), [])
+    assert.deepEqual(quickShortcutDefaultLinks({ defaultLink: 'not-a-kind' }), [])
+    assert.deepEqual(quickShortcutDefaultLinks({ defaultLink: 42 }), [])
+  })
+})
