@@ -124,7 +124,11 @@ function mountStage() {
 test('整页源码保留钉顶分类、贴底输入框与技能按钮', () => {
   assert.match(guideSource, /LibraryBrowser/)
   assert.match(guideSource, /pin\(\{ id: LIBRARY_STAGE_DOCK_ID \}\)/)
-  assert.match(styleSource, /\.omnimux-library-stage-tabs \{[^}]*position:sticky/)
+  assert.match(styleSource, /\.omnimux-library-stage \{[^}]*position:fixed/)
+  assert.match(styleSource, /\.omnimux-library-stage-grid \{[^}]*overflow:auto/)
+  assert.match(guideSource, /scrollBody/)
+  assert.match(guideSource, /documentElement\.style\.setProperty\('--omnimux-library-stage-left'/)
+  assert.doesNotMatch(styleSource, /\.omnimux-library-stage-tabs \{[^}]*position:sticky/)
   assert.match(styleSource, /data-omnimux-skill-picker/)
   assert.doesNotMatch(styleSource, /data-omnimux-skill-picker[\s\S]{0,120}display:\s*none/)
   assert.match(browserSource, /ensureAssetCardStyles/)
