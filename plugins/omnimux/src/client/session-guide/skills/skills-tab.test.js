@@ -276,7 +276,8 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     await click(useBtn)
     await flush()
 
-    assert.ok(appliedPrompt.includes('使用技能'), '必须通过 onApplyPrompt 预填技能指令')
+    assert.equal(appliedPrompt, '为我解释下这个技能的最佳使用方式。', '输入框只预填一句说明请求')
+    assert.equal(appliedPrompt.includes('/'), false, '输入框不得出现斜杠指令')
     assert.equal(useBtn.getAttribute('aria-pressed'), 'true', '点击后卡片按钮状态为 pressed')
     assert.ok(filteredCards[0].classList.contains('is-active'), '点击后技能卡片具备 is-active 样式')
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '选用 Skill 与复刻同源：同样必须先把输入框吸底')
@@ -326,7 +327,7 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
 
     // 验证中文环境下成功适配为中文标题，且旧技能已全部从精选下架
     assert.ok(titlesZh.includes('UGC 告白'), '中文环境下必须显示 "UGC 告白"')
-    assert.ok(titlesZh.includes('UGC 开箱'), '中文环境下必须显示 "UGC 开箱"')
+    assert.ok(titlesZh.includes('UGC 好物开箱种草'), '中文环境下必须显示 "UGC 好物开箱种草"')
     assert.ok(titlesZh.includes('UGC 穿搭检查'), '中文环境下必须显示 "UGC 穿搭检查"')
     assert.ok(!titlesZh.includes('Shopee 关键词分析'), '旧版 Shopee 关键词分析已下架')
     assert.ok(!titlesZh.includes('亚马逊关键词流量分析'), '旧版 亚马逊关键词流量分析已下架')
@@ -335,7 +336,7 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
     const ugcCard = Array.from(cardsZh).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'UGC 告白')
     await click(ugcCard.querySelector('.omnimux-skill-card-btn'))
     await flush()
-    assert.ok(appliedPrompt.includes('使用技能「UGC 告白」'), '中文环境下预填指令必须包含中文技能名')
+    assert.equal(appliedPrompt, '为我解释下这个技能的最佳使用方式。', '中文环境只预填说明请求，技能名不进输入框')
 
     // 2. 英文语言环境（t 使用 guideEn）
     const tEn = (key) => guideEn[key] || key
@@ -362,7 +363,7 @@ test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准�
     const unwrapCardEn = Array.from(cardsEn).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'UGC Unwrap')
     await click(unwrapCardEn.querySelector('.omnimux-skill-card-btn'))
     await flush()
-    assert.ok(appliedPrompt.includes('UGC Unwrap'), '英文环境下预填指令必须包含英文技能名')
+    assert.equal(appliedPrompt, 'Please explain the best way to use this skill.', '英文环境只预填英文说明请求')
 
     await act(async () => root.unmount())
   } finally {

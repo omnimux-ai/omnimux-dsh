@@ -7,7 +7,7 @@ import { TrendingSentinel } from './TrendingSentinel.jsx'
 import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
 import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
-import { buildSkillPrompt } from '../skills/featured-skills-data.js'
+import { isLocaleEn, resolveSkillTitle } from '../skills/featured-skills-data.js'
 import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
@@ -19,7 +19,7 @@ import {
   isRecreateSkill,
   readReplicateEntityId,
 } from './replicate-linkage.js'
-import { publishActiveSkill, readActiveSkill, subscribeSkillChanged } from '../../composer-add/skill-event.ts'
+import { publishActiveSkill, readActiveSkill, requestSkillAttach, subscribeSkillChanged } from '../../composer-add/skill-event.ts'
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
@@ -475,12 +475,23 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   const handleSelectSkill = useCallback((skill) => {
     if (dockedItem?.id === skill.id) {
       setDockedItem(null)
+      publishActiveSkill(null)
       return
     }
-    // 与复刻同源：选用技能同样先吸底呈现，再由滚动迟滞监听决定何时收回原位。
+    // 与复刻同源：选用技能同样先吸底呈现。技能名称只出现在技能按钮旁的
+    // 标签上，输入框只预填一句说明请求，不再写入「使用技能」整段指令。
+    const slug = String(skill?.skill || skill?.slug || '').replace(/^\/+/, '').trim()
+    const en = isLocaleEn(t)
+    const displayName = resolveSkillTitle(skill, t) || slug
+    if (slug) {
+      requestSkillAttach({ id: skill.id || '', slug, skill: slug, name: displayName, title: displayName })
+    }
+    const explain = en
+      ? 'Please explain the best way to use this skill.'
+      : '为我解释下这个技能的最佳使用方式。'
     setPlacement('docked')
     setDockedItem(skill)
-    pendingPromptRef.current = { prompt: buildSkillPrompt(skill, t), item: skill }
+    pendingPromptRef.current = { prompt: explain, item: skill }
   }, [dockedItem, t])
 
   return (

@@ -72,24 +72,13 @@ test('视频链接令牌在发送时回落为标准 Markdown，且不夹带附�
   }
 })
 
-test('技能手势在发送时补到草稿最前，不打乱用户原文', async () => {
+test('选中技能后发送不再往草稿里补斜杠指令', async () => {
   const env = await mountBridge({ draft: '请帮我分析拆解这个视频。' })
   try {
     window.__omnimuxActiveSkill = { slug: 'video-hook-analysis', name: '视频拆解' }
     await env.send()
-    assert.equal(env.draft.value, '/video-hook-analysis 请帮我分析拆解这个视频。')
-  } finally {
-    delete window.__omnimuxActiveSkill
-    await env.dispose()
-  }
-})
-
-test('已经带手势令牌的草稿不会被重复补一遍', async () => {
-  const env = await mountBridge({ draft: '/video-hook-analysis 请帮我分析拆解这个视频。' })
-  try {
-    window.__omnimuxActiveSkill = { slug: 'video-hook-analysis', name: '视频拆解' }
-    await env.send()
-    assert.equal(env.draft.value, '/video-hook-analysis 请帮我分析拆解这个视频。')
+    assert.equal(env.draft.value, '请帮我分析拆解这个视频。')
+    assert.equal(env.draft.value.includes('/video-hook-analysis'), false)
   } finally {
     delete window.__omnimuxActiveSkill
     await env.dispose()

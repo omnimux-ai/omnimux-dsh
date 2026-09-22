@@ -86,10 +86,10 @@ test('e2e: composer slash-skill bilingual adaptive search, selection, and plain-
     span: { start: 0, end: 3 },
   })
 
-  // Verify input box fill is the canonical English slug required by dsh-tool-skill
-  assert.equal(outcome.text, '/ip-character-consistency-studio ')
-  inputEl.value = outcome.text
-  assert.equal(inputEl.value, '/ip-character-consistency-studio ')
+  // 选中后输入框清空斜杠，技能名称交给技能按钮旁的标签
+  assert.equal(outcome.text, '')
+  assert.equal(globalThis.window.__omnimuxActiveSkill?.slug, 'ip-character-consistency-studio')
+  assert.equal(globalThis.window.__omnimuxActiveSkill?.name, '角色一致性形象包')
 
   // 6. User Journey D: User types pinyin "/jiaose" without switching IME
   const pinyinCandidates = await enhancedSource.candidates(

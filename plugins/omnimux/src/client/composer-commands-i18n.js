@@ -1,4 +1,5 @@
 import { createElement } from 'react'
+import { requestSkillAttach } from './composer-add/skill-event.ts'
 
 /**
  * Injects and maintains adaptive localized copy, icons, and smart search for slash commands.
@@ -1719,9 +1720,13 @@ export function wrapSkillInputTriggerSource(source, locale) {
     if (!pick || !pick.candidate) {
       return typeof originalOnPick === 'function' ? originalOnPick.call(this, pick) : { text: '' }
     }
-    // Transparently resolve to canonical English rawName so host dsh-tool-skill recognizes it!
+    // 选中后名称只出现在技能按钮旁的标签上，输入框里的斜杠和技能名一并清掉。
     const rawName = pick.candidate.rawName || pick.candidate.name
-    return { text: `/${rawName} ` }
+    const displayName = pick.candidate.name && pick.candidate.name !== rawName ? pick.candidate.name : rawName
+    if (rawName) {
+      requestSkillAttach({ id: '', slug: rawName, skill: rawName, name: displayName, title: displayName })
+    }
+    return { text: '' }
   }
 
   source.candidates = wrappedCandidates

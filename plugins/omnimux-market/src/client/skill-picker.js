@@ -473,13 +473,7 @@
             }));
           } catch {}
         }
-        try {
-          const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : (typeof window !== "undefined" ? window.__omnimuxSessions : null);
-          const sid = sessions && sessions.list && typeof sessions.list.getSnapshot === "function"
-            ? (sessions.list.getSnapshot() || {}).current
-            : "";
-          if (sid) api("tryDetach", { sessionId: sid }).catch(() => {});
-        } catch {}
+        // 会话试用的卸下由技能市场统一监听 omnimux:skill:changed，这里不再重复调用。
       }, []);
 
       const applyItem = useCallback((item) => {
@@ -500,6 +494,24 @@
         if (payload) {
           api("install", payload).catch(() => {});
         }
+        // 技能说明挂到当前会话，发送时随上下文带上，不写进输入框。
+        try {
+          const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : (typeof window !== "undefined" ? window.__omnimuxSessions : null);
+          const sid = sessions && sessions.list && typeof sessions.list.getSnapshot === "function"
+            ? (sessions.list.getSnapshot() || {}).current
+            : "";
+          const slug = item.slug || item.skill || "";
+          const rawId = String(item.catalogId || item.id || "");
+          const catalogId = rawId.startsWith("sk-") ? rawId : "";
+          if (sid && slug) {
+            api("tryAttach", {
+              sessionId: sid,
+              slug,
+              catalogId,
+              title: item.name || item.title || slug,
+            }).catch(() => {});
+          }
+        } catch {}
         setOpen(false);
         return true;
       }, []);

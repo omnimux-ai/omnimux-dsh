@@ -8,6 +8,7 @@ import { LibraryBrowser } from './LibraryBrowser.jsx'
 import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
+import { publishActiveSkill, requestSkillAttach } from '../composer-add/skill-event.ts'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
 const NOOP_SUBSCRIBE = () => () => {}
@@ -344,18 +345,28 @@ function BlankSessionGuide({
   }
 
   /**
-   * Skill 复刻：加载到技能槽并吸底，吸底就位后预填官方标准使用说明提问（以 /<slug> 指令开头，零跳动、零弹窗）
+   * 选用技能：名称只出现在技能按钮旁的标签上，输入框只预填一句说明请求，
+   * 不再写入斜杠指令。再次点击同一张卡片时连同标签一起撤下。
    */
   function handleExploreSkillApply(payload) {
     if (!payload) return
     const rawSlug = payload.skill || payload.slug || payload.item?.skill || payload.item?.slug || (typeof payload.id === 'string' ? payload.id.replace(/^sk-omx-/, '') : '') || ''
     const cleanSlug = rawSlug.replace(/^\/+/, '').trim()
-    const skillPrefix = cleanSlug ? `/${cleanSlug} ` : ''
+    const displayName = payload.title || payload.item?.title || payload.name || cleanSlug
     const prompt = isEn
-      ? `${skillPrefix}Please explain the best way to use this skill.`
-      : `${skillPrefix}为我解释下这个技能的最佳使用方式。`
+      ? 'Please explain the best way to use this skill.'
+      : '为我解释下这个技能的最佳使用方式。'
 
     const docked = dock(payload, () => {
+      if (cleanSlug) {
+        requestSkillAttach({
+          id: payload.id || '',
+          slug: cleanSlug,
+          skill: cleanSlug,
+          name: displayName,
+          title: displayName,
+        })
+      }
       applyDraftToComposer(prompt, {
         toastKey: null,
         restoreNotice: true,
@@ -363,6 +374,7 @@ function BlankSessionGuide({
       })
     })
     if (!docked) {
+      publishActiveSkill(null)
       applyDraftToComposer('', { toastKey: null, restoreNotice: true })
     }
   }
