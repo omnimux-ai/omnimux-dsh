@@ -6,7 +6,6 @@
  * 发送时展开成模型能读到的素材说明。不替换官方的 reference 源。
  */
 
-import { formatAttachmentLine } from './prompt-assembly.ts';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
 
@@ -77,7 +76,12 @@ export function serializeMaterialMention(sessionId: string, ref: string): string
   if (!parsed) return ref;
   const attachment = findSessionMaterial(sessionId, parsed.id);
   if (!attachment) return ref;
-  return `@${attachment.title || '素材'}`;
+  const title = attachment.title || '素材';
+  // 若素材名称含空格，按 DSH 语法使用 @"名称"（无空格使用 @名称）
+  if (/\s/.test(title)) {
+    return `@"${title}"`;
+  }
+  return `@${title}`;
 }
 
 export function createMaterialMentionSource() {

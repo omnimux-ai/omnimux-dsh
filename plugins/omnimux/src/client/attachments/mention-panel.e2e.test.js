@@ -82,10 +82,84 @@ test('e2e: 素材引用提交只保留引用 Token，不泄漏代码块到消息
     assert.equal(serialized, '@测试素材封面');
     assert.doesNotMatch(serialized, /-\s*\[/);
     assert.doesNotMatch(serialized, /`FILE`/);
+
+    // 验证带空格的素材名称正确转义为 @"名称"
+    mockStore.getSnapshot = () => [
+      { id: 'm-space', title: '爆款镜头 01.mp4', kind: 'video', previewUrl: 'shot.mp4' },
+    ];
+    const candidateSpace = { value: 'material:m-space', name: '爆款镜头 01.mp4' };
+    const pickSpace = src.onPick({ candidate: candidateSpace, session: { sessionId: 'sess-e2e' } });
+    const serializedSpace = serializeMaterialMention('sess-e2e', pickSpace.insert.ref);
+    assert.equal(serializedSpace, '@"爆款镜头 01.mp4"');
   } finally {
     if (previousWindow) root.window = previousWindow;
     else delete root.window;
     if (previousStore) root.__omnimuxAttachments = previousStore;
     else delete root.__omnimuxAttachments;
+  }
+});
+
+test('e2e: 搜索过滤时候选索引与全量列表错位修复，并且普通菜单不受影响', () => {
+  const dom = new JSDOM(`<!doctype html>
+    <head>
+      <style>${COMPOSER_COMPACT_CSS}</style>
+    </head>
+    <body>
+      <div data-composer-card>
+        <!-- 1. 普通斜杠菜单，绝不应受 mention 翻转样式影响 -->
+        <div id="slash-menu" data-trigger-menu>
+          <button id="dsh-slash-option-cmd-0" role="option">
+            <span class="itemName">/help 帮助</span>
+          </button>
+        </div>
+
+        <!-- 2. @ 引用菜单，模拟经用户输入 "@镜头" 筛选后的结果 -->
+        <div id="mention-menu" data-trigger-menu data-source="material">
+          <!-- 筛选后只有一项，id 为 dsh-slash-option-material-0，但对应全量列表的第二项 (idx 1) -->
+          <button id="dsh-slash-option-material-0" role="option" data-material-id="m-shot">
+            <span class="iRJKyq_itemName">特写镜头</span>
+          </button>
+        </div>
+      </div>
+    </body>`);
+
+  const card = dom.window.document.querySelector('[data-composer-card]');
+  const slashMenu = dom.window.document.querySelector('#slash-menu');
+  const mentionMenu = dom.window.document.querySelector('#mention-menu');
+  const mentionOpt = dom.window.document.querySelector('#dsh-slash-option-material-0');
+  const slashOpt = dom.window.document.querySelector('#dsh-slash-option-cmd-0');
+
+  const previousWindow = globalThis.window;
+  globalThis.window = dom.window;
+
+  // 全量列表：0 是全景，1 是特写
+  dom.window.__omnimuxAttachments = {
+    getActiveSessionId: () => 'sess-filter-e2e',
+    getSnapshot: () => [
+      { id: 'm-wide', title: '全景镜头', kind: 'video', previewUrl: '/covers/wide.jpg' },
+      { id: 'm-shot', title: '特写镜头', kind: 'video', previewUrl: '/covers/shot.jpg' },
+    ],
+    subscribeRoster: () => () => {},
+  };
+
+  card.getBoundingClientRect = () => ({ top: 600, bottom: 740, left: 100, right: 700, width: 600, height: 140, x: 100, y: 600 });
+
+  try {
+    placeMentionMenu(dom.window.document);
+
+    // 斜杠菜单不受影响
+    assert.equal(slashMenu.hasAttribute('data-omx-mention-menu'), false);
+    assert.equal(slashOpt.hasAttribute('data-omx-thumb'), false);
+
+    // 引用菜单被打上专有标记
+    assert.equal(mentionMenu.getAttribute('data-omx-mention-menu'), 'true');
+    // 缩略图必须精确绑定到特写镜头 (/covers/shot.jpg)，绝不错配为全景镜头的 /covers/wide.jpg
+    assert.equal(mentionOpt.getAttribute('data-omx-thumb'), 'true');
+    assert.match(mentionOpt.style.getPropertyValue('--omx-thumb'), /\/covers\/shot\.jpg/);
+    assert.doesNotMatch(mentionOpt.style.getPropertyValue('--omx-thumb'), /wide\.jpg/);
+  } finally {
+    if (previousWindow) globalThis.window = previousWindow;
+    else delete globalThis.window;
+    dom.window.close();
   }
 });

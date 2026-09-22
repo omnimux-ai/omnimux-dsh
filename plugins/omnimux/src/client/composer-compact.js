@@ -13,7 +13,7 @@
  * bottom, Codex-style) and the conversation-column min-width guard.
  */
 
-import { listSessionMaterials } from './attachments/materialMentionSource.ts'
+import { listSessionMaterials, materialCandidates, parseMaterialMention } from './attachments/materialMentionSource.ts'
 
 export const COMPOSER_COMPACT_STYLE_ID = 'omnimux-composer-compact-chrome'
 export const COMPOSER_COMPACT_ATTR = 'data-omnimux-composer-density'
@@ -396,12 +396,17 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   align-items:center;
 }
 
-/* @ 菜单默认钉在输入框上方。输入框靠近页面顶部时改从下方展开，避免被顶出屏幕。 */
-[data-composer-card] [data-trigger-menu]{
+/* @ 菜单默认钉在输入框上方。输入框靠近页面顶部时改从下方展开，避免被顶出屏幕。
+   严格限定仅对 @ 引用菜单生效（通过识别 [data-omx-mention-menu] 或内含素材项），绝不影响斜杠/模型/加号等其他菜单。 */
+[data-composer-card] [data-trigger-menu][data-omx-mention-menu],
+[data-composer-card] [data-trigger-menu]:has([data-source="material"]),
+[data-composer-card] [data-trigger-menu]:has([id^="dsh-slash-option-material-"]){
   bottom:auto!important;
   top:calc(100% + 4px)!important;
 }
-[data-composer-card][data-omx-mention-up] [data-trigger-menu]{
+[data-composer-card][data-omx-mention-up] [data-trigger-menu][data-omx-mention-menu],
+[data-composer-card][data-omx-mention-up] [data-trigger-menu]:has([data-source="material"]),
+[data-composer-card][data-omx-mention-up] [data-trigger-menu]:has([id^="dsh-slash-option-material-"]){
   top:auto!important;
   bottom:calc(100% + 4px)!important;
 }
@@ -656,7 +661,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   if (typeof MutationObserver !== 'undefined') {
     composerMountObserver = new MutationObserver(() => {
       const next = findComposerTarget(doc)
-      placeMentionMenu(doc)
+      schedulePlaceMentionMenu(doc)
       if (next && (next !== observedTarget || !observedTarget?.isConnected)) {
         observeComposerTarget(doc, next)
         scheduleComposerDensity(doc)
@@ -671,7 +676,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
 
   // 视口 resize 监听常驻作为兜底保障（包括无 RO 环境或视口跳变）
   if (!composerResizeListener) {
-    composerResizeListener = () => { applyComposerDensity(doc); placeMentionMenu(doc) }
+    composerResizeListener = () => { applyComposerDensity(doc); schedulePlaceMentionMenu(doc) }
     const win = hostWindow()
     if (win?.addEventListener) {
       win.addEventListener('resize', composerResizeListener)
@@ -686,42 +691,220 @@ export function installComposerCompactObserver(doc = hostDocument()) {
 const MENTION_UP_ATTR = 'data-omx-mention-up'
 const MENTION_MENU_HEIGHT = 320
 
+let placeMentionMenuRaf = null
+
+/**
+ * rAF 防抖节流调度 placeMentionMenu，避免高频 MutationObserver 导致持续卡顿
+ * @param {Document | undefined} doc
+ */
+export function schedulePlaceMentionMenu(doc = hostDocument()) {
+  if (placeMentionMenuRaf != null) return
+  const win = hostWindow()
+  const raf = (win && typeof win.requestAnimationFrame === 'function')
+    ? win.requestAnimationFrame.bind(win)
+    : (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => setTimeout(cb, 16))
+  placeMentionMenuRaf = raf(() => {
+    placeMentionMenuRaf = null
+    placeMentionMenu(doc)
+  })
+}
+
+/**
+ * 取消已调度的 placeMentionMenu
+ */
+export function cancelScheduledPlaceMentionMenu() {
+  if (placeMentionMenuRaf == null) return
+  const win = hostWindow()
+  const cancel = (win && typeof win.cancelAnimationFrame === 'function')
+    ? win.cancelAnimationFrame.bind(win)
+    : (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout)
+  cancel(placeMentionMenuRaf)
+  placeMentionMenuRaf = null
+}
+
+/**
+ * 校验并清洗缩略图 URL：
+ * 严格白名单限制为 http:, https:, blob: 或合法的相对/绝对路径，
+ * 彻底过滤换行符、控制字符、引号、括号、反斜杠等危险字符，杜绝 CSS 属性注入。
+ * @param {unknown} rawUrl
+ * @returns {string} 安全的 URL 字符串，校验失败返回空字符串
+ */
+export function sanitizeThumbnailUrl(rawUrl) {
+  if (typeof rawUrl !== 'string') return ''
+  const trimmed = rawUrl.trim()
+  if (!trimmed || trimmed.length > 2048) return ''
+
+  // 严禁包含控制字符、换行符、引号、括号或反斜杠（避免跳出 url("...")）
+  if (/[\x00-\x1f\x7f\r\n"'\\()]/.test(trimmed)) {
+    return ''
+  }
+
+  // 严格协议与路径格式白名单
+  // 若包含冒号，只允许 http:, https:, blob: 协议；其余（如 data:, javascript:, file: 等）一律拒绝
+  if (trimmed.includes(':')) {
+    if (/^https?:\/\/[^\s"'()<>]+$/i.test(trimmed)) {
+      return trimmed
+    }
+    if (/^blob:[^\s"'()<>]+$/i.test(trimmed)) {
+      return trimmed
+    }
+    return ''
+  }
+
+  // 不含冒号时：
+  // 1. 绝对路径（以单个 / 开头，禁止 // 开头）
+  if (/^\/[^/\s"'()<>][^\s"'()<>]*$/.test(trimmed)) {
+    return trimmed
+  }
+  // 2. 相对路径（以 ./ 或 ../ 或 普通名称/路径 开头）
+  if (/^(?:\.\.?\/|[a-zA-Z0-9_-])[^\s"'()<>]*$/.test(trimmed)) {
+    return trimmed
+  }
+
+  return ''
+}
+
 /**
  * 输入框靠近页面顶部时，菜单从下方展开；否则从上方展开。
  * 素材行的缩略图地址写到行上，样式用它画在名称前面。
+ * 严禁全局影响斜杠/模型/加号等非 @ 引用菜单。
  * @param {Document | undefined} doc
  */
 export function placeMentionMenu(doc = hostDocument()) {
   if (!doc?.querySelectorAll) return
   const menus = doc.querySelectorAll('[data-trigger-menu]')
+  if (!menus || menus.length === 0) return
+
+  const materials = listSessionMaterials('')
+  const materialTitleSet = new Set(materials.map((m) => m.title).filter(Boolean))
+
   menus.forEach((menu) => {
     const card = menu.closest?.('[data-composer-card]')
     if (!card) return
-    const top = card.getBoundingClientRect?.().top ?? 0
-    if (top < MENTION_MENU_HEIGHT + 8) card.removeAttribute(MENTION_UP_ATTR)
-    else card.setAttribute(MENTION_UP_ATTR, 'true')
-    const materials = listSessionMaterials('')
-    const thumbs = new Map()
-    for (const item of materials) {
-      if (item.previewUrl && item.title) thumbs.set(item.title, item.previewUrl)
+
+    // 1. 严格限定仅对 @ 引用/素材菜单生效：
+    // 通过检测是否包含素材数据源属性、素材项专属 id 格式、行内素材名称匹配或已有专用标记
+    const optionRows = typeof menu.querySelectorAll === 'function' ? Array.from(menu.querySelectorAll('[role="option"]')) : []
+    const hasMaterialItems = Boolean(
+      menu.hasAttribute?.('data-omx-mention-menu') ||
+      menu.querySelector?.('[data-source="material"]') ||
+      menu.querySelector?.('[id^="dsh-slash-option-material-"]') ||
+      menu.querySelector?.('[data-material-id]') ||
+      optionRows.some((r) => {
+        if (r.id && /^dsh-slash-option-material-/.test(r.id)) return true
+        if (r.getAttribute?.('data-source') === 'material') return true
+        if (r.getAttribute?.('data-material-id')) return true
+        const val = r.getAttribute?.('data-value') || ''
+        if (val.startsWith('material:')) return true
+        const name = (r.querySelector?.('[class*="itemName"]')?.textContent || r.textContent || '').trim()
+        return Boolean(name && materialTitleSet.has(name))
+      })
+    )
+
+    if (!hasMaterialItems) {
+      // 非素材引用菜单，移除专有标记并跳过，绝不修改其位置或样式
+      menu.removeAttribute?.('data-omx-mention-menu')
+      return
     }
+
+    // 标记为专有 @ 引用菜单
+    menu.setAttribute?.('data-omx-mention-menu', 'true')
+
+    // 2. 测量菜单实际高度与坐标，自适应上下翻转
+    const rect = typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null
+    const top = rect && typeof rect.top === 'number' ? rect.top : 9999
+    const menuHeight = menu.offsetHeight || MENTION_MENU_HEIGHT
+    if (top < menuHeight + 8) {
+      card.removeAttribute(MENTION_UP_ATTR)
+    } else {
+      card.setAttribute(MENTION_UP_ATTR, 'true')
+    }
+
+    // 3. 构建全量与基于当前输入过滤的素材映射
+    const materials = listSessionMaterials('')
+    const materialsById = new Map()
+    const materialsByTitle = new Map()
+    for (const item of materials) {
+      if (item.id) materialsById.set(item.id, item)
+      if (item.title) {
+        if (!materialsByTitle.has(item.title)) {
+          materialsByTitle.set(item.title, [])
+        }
+        materialsByTitle.get(item.title).push(item)
+      }
+    }
+
+    // 尝试从卡片输入框探测当前的 mention 搜索词（例如 @xxx）
+    let currentCandidates = null
+    const inputEl = card.querySelector?.('textarea, [contenteditable]')
+    if (inputEl) {
+      const text = inputEl.value ?? inputEl.textContent ?? ''
+      const match = /(?:^|\s)@([^\s@]*)$/.exec(text)
+      if (match) {
+        const query = match[1] || ''
+        try {
+          currentCandidates = materialCandidates('', query)
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 4. 遍历菜单行，通过稳定映射绑定缩略图，防止搜索过滤错位
     menu.querySelectorAll('[role="option"]').forEach((row) => {
-      let src = ''
-      if (row.id && /^dsh-slash-option-material-(\d+)$/.test(row.id)) {
-        const idx = parseInt(RegExp.$1, 10)
-        src = materials[idx]?.previewUrl || ''
+      let matchedItem = null
+
+      // A. 优先从行 DOM 属性提取稳定标识 (data-material-id / data-id / data-entity-id / data-value)
+      const explicitId = row.getAttribute?.('data-material-id') || row.getAttribute?.('data-id')
+      if (explicitId && materialsById.has(explicitId)) {
+        matchedItem = materialsById.get(explicitId)
       }
-      if (!src) {
-        const name = row.querySelector('[class*="itemName"]')?.textContent || ''
-        src = thumbs.get(name.trim()) || ''
+
+      if (!matchedItem) {
+        const val = row.getAttribute?.('data-value') || ''
+        const parsed = parseMaterialMention(val)
+        if (parsed?.id && materialsById.has(parsed.id)) {
+          matchedItem = materialsById.get(parsed.id)
+        }
       }
-      if (!src) {
+
+      const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
+
+      // B. 尝试从经过滤的 candidates 中根据索引精确匹配（废弃全局 RegExp.$1）
+      const m = row.id ? /^dsh-slash-option-material-(\d+)$/.exec(row.id) : null
+      const idx = m ? parseInt(m[1], 10) : -1
+
+      if (!matchedItem && idx >= 0 && currentCandidates && currentCandidates[idx]) {
+        const cand = currentCandidates[idx]
+        if (!itemName || cand.name === itemName) {
+          const parsed = parseMaterialMention(cand.value)
+          if (parsed?.id && materialsById.has(parsed.id)) {
+            matchedItem = materialsById.get(parsed.id)
+          }
+        }
+      }
+
+      // C. 从行内展示的素材标题稳定映射
+      if (!matchedItem && itemName && materialsByTitle.has(itemName)) {
+        const list = materialsByTitle.get(itemName)
+        matchedItem = list[0]
+      }
+
+      // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致时才允许采用，杜绝错配）
+      if (!matchedItem && idx >= 0 && materials[idx]) {
+        if (!itemName || materials[idx].title === itemName) {
+          matchedItem = materials[idx]
+        }
+      }
+
+      const rawSrc = matchedItem?.previewUrl || ''
+      const safeSrc = sanitizeThumbnailUrl(rawSrc)
+      if (!safeSrc) {
         row.removeAttribute('data-omx-thumb')
         row.style?.removeProperty?.('--omx-thumb')
         return
       }
+
       row.setAttribute('data-omx-thumb', 'true')
-      row.style?.setProperty?.('--omx-thumb', `url("${src.replace(/"/g, '')}")`)
+      row.style?.setProperty?.('--omx-thumb', `url("${safeSrc}")`)
     })
   })
 }
@@ -729,6 +912,7 @@ export function placeMentionMenu(doc = hostDocument()) {
 /** Tear down the observer (RO, fallback resize listener, mount watcher). */
 export function uninstallComposerCompactObserver() {
   cancelScheduledComposerDensity()
+  cancelScheduledPlaceMentionMenu()
   if (composerResizeObserver) {
     try { composerResizeObserver.disconnect() } catch { /* ignore */ }
     composerResizeObserver = null
@@ -750,6 +934,7 @@ export function uninstallComposerCompactObserver() {
 export function resetComposerCompactForTests() {
   uninstallComposerCompactObserver()
   cancelScheduledComposerDensity()
+  cancelScheduledPlaceMentionMenu()
   const doc = hostDocument()
   const root = doc?.documentElement
   if (root && typeof root.removeAttribute === 'function') {

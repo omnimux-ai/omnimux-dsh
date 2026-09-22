@@ -26,8 +26,15 @@ export function hasAttachedContextMarker(text: unknown): boolean {
     && (text.includes(ATTACHED_CONTEXT_MARKER) || text.includes(ATTACHED_CONTEXT_MARKER_EN));
 }
 
-/** 引用被展开后写进消息的素材说明，形如「- [图像] 名称 (`FILE`):」。 */
-const MATERIAL_LINE = /(?:^|\n)\s*-\s*\[[^\]]+\]\s+\S/;
+/** 允许匹配的素材类型标识（涵盖中英文标准类型），杜绝匹配 Markdown 待办「- [ ]」或「- [x]」。 */
+const ATTACHMENT_KINDS =
+  '图像|视频|音频|表格|文档|工作流|资产|产品|灵感|图片|画布|商品|文件|image|video|audio|document|table|canvas|asset|product|inspiration|file';
+
+/** 引用被展开后写进消息的素材说明，严格限定为附件格式，形如「- [图像] 名称 (`FILE`):」。 */
+const MATERIAL_LINE = new RegExp(
+  `(?:^|\\n)\\s*-\\s*\\[(?:${ATTACHMENT_KINDS})\\]\\s+.*?\\(\``,
+  'i'
+);
 
 /** 取文本中附加数据块的起始下标；没有返回 -1。 */
 export function findAttachedContextStart(text: string): number {

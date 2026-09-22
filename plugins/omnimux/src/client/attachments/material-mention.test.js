@@ -60,7 +60,19 @@ describe('material @ mention', () => {
       assert.equal(source.codec.clipboardText(picked.insert.ref), '海浪封面')
       assert.equal(picked.insert.clipboardText, '海浪封面')
 
+      // 测试带空格的素材标题用 @"名称" 转义包裹
+      const res2 = store.addAttachment('s1', {
+        sourcePlugin: 'omnimux-assets',
+        kind: 'video',
+        entityId: 'a2',
+        title: 'US beauty hook 01',
+        relativePath: 'assets/us-beauty.mp4',
+      })
+      const textWithSpaces = serializeMaterialMention('s1', `material:${res2.attachment.id}`)
+      assert.equal(textWithSpaces, '@"US beauty hook 01"')
+
       store.removeAttachment('s1', store.getSnapshot('s1')[0].id)
+      store.removeAttachment('s1', res2.attachment.id)
       assert.equal(materialCandidates('s1', '').length, 0)
     })
   })

@@ -154,7 +154,7 @@ test('hideAttachedContextBlock：用户自己写的引用块不受影响', () =>
     '<div id="bubble">',
     '<span class="plainRun">看看这个 </span>',
     '<span class="refChip"><svg class="refIcon"></svg>my-own.mp4</span>',
-    '<span class="plainRun"> 再说\n\n---\n### 会话关联上下文 (Attached Context):\n- [视频] hook: @inspiration/us-beauty.mp4</span>',
+    '<span class="plainRun"> 再说\n\n---\n### 会话关联上下文 (Attached Context):\n- [视频] hook (`MP4`): @inspiration/us-beauty.mp4</span>',
     '</div>',
   ].join('')
   const env = withDom(html)
@@ -164,4 +164,31 @@ test('hideAttachedContextBlock：用户自己写的引用块不受影响', () =>
 
   assert.equal(bubble.querySelectorAll('.refChip').length, 1, '标记之前的引用块属于用户自己的正文')
   assert.equal(bubble.textContent, '看看这个 my-own.mp4 再说')
+})
+
+test('hideAttachedContextBlock：严禁误伤用户正文中的 Markdown 待办任务列表 (- [ ] 和 - [x])', () => {
+  const todoText = [
+    '这是我的任务清单：',
+    '- [ ] 完成第一阶段视频剪辑',
+    '- [x] 确认爆款分镜脚本文案',
+    '- [ ] 与产品经理核对交付指标',
+  ].join('\n')
+
+  // 1. 只有待办列表的普通正文，绝不误截断
+  const env1 = withDom('<div id="bubble"></div>')
+  const bubble1 = env1.document.querySelector('#bubble')
+  bubble1.textContent = todoText
+
+  assert.equal(findAttachedContextStart(todoText), -1)
+  assert.equal(hideAttachedContextBlock(bubble1, env1.document), false)
+  assert.equal(bubble1.textContent, todoText)
+
+  // 2. 待办列表后面附带有素材关联上下文时，仅移除附件数据块，待办列表完整保留
+  const textWithContext = `${todoText}\n\n---\n### 会话关联上下文 (Attached Context):\n- [视频] 参考视频 (\`MP4\`, 0:15): @videos/demo.mp4`
+  const env2 = withDom('<div id="bubble"></div>')
+  const bubble2 = env2.document.querySelector('#bubble')
+  bubble2.textContent = textWithContext
+
+  assert.equal(hideAttachedContextBlock(bubble2, env2.document), true)
+  assert.equal(bubble2.textContent, todoText)
 })
