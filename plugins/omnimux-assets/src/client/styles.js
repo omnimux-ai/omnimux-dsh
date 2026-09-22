@@ -1503,9 +1503,10 @@ export const ASSETS_CSS = `
   overflow: hidden;
 }
 
-/* 风格分类专用：固定 16:9 横版卡片 */
+/* 风格、声音：固定 16:9 横版卡片。声音没有画面，竖长色块只剩一个播放键。 */
 .omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card[data-aspect="horizontal"],
-.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-card {
+.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-card,
+.omnimux-assets-cloud-row-section[data-category="audio"] .omnimux-assets-cloud-card {
   flex: 0 0 300px;
   width: 300px;
   max-width: 300px;
@@ -1606,7 +1607,8 @@ export const ASSETS_CSS = `
   aspect-ratio: 9 / 16;
 }
 
-.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-row-skeleton {
+.omnimux-assets-cloud-row-section[data-category="style"] .omnimux-assets-cloud-row-skeleton,
+.omnimux-assets-cloud-row-section[data-category="audio"] .omnimux-assets-cloud-row-skeleton {
   flex: 0 0 300px;
   width: 300px;
   height: 169px;

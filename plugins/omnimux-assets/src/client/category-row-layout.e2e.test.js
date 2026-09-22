@@ -50,6 +50,18 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
               </div>
             </div>
           </section>
+
+          <!-- 声音：横版卡片，加载占位也是横的 -->
+          <section class="omnimux-assets-cloud-row-section" data-category="audio">
+            <div class="omnimux-assets-cloud-row-cards">
+              <div class="omnimux-assets-card omnimux-assets-cloud-card" data-aspect="horizontal">
+                <div class="omnimux-assets-cloud-thumb"></div>
+              </div>
+              <div class="omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-skeleton omnimux-assets-cloud-row-skeleton">
+                <div class="omnimux-assets-cloud-skeleton-thumb"></div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>`,
     measure: () => {
@@ -58,6 +70,8 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
       const cardsContainer = document.querySelector('.omnimux-assets-cloud-row-cards')
       const verticalCard = document.querySelector('[data-category="character"] .omnimux-assets-cloud-card')
       const horizontalCard = document.querySelector('[data-category="style"] .omnimux-assets-cloud-card')
+      const audioCard = document.querySelector('[data-category="audio"] .omnimux-assets-cloud-card:not(.omnimux-assets-cloud-row-skeleton)')
+      const audioSkeleton = document.querySelector('[data-category="audio"] .omnimux-assets-cloud-row-skeleton')
       const cardBody = document.querySelector('[data-category="character"] .omnimux-assets-card-body')
       const cardMask = document.querySelector('[data-category="character"] .omnimux-assets-cloud-card-mask')
       const cardMedia = document.querySelector('[data-category="character"] .omnimux-assets-card-media')
@@ -73,6 +87,12 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
         horizontalCardWidth: getComputedStyle(horizontalCard).width,
         horizontalCardHeight: getComputedStyle(horizontalCard).height,
         horizontalCardAspect: getComputedStyle(horizontalCard).aspectRatio,
+        audioCardWidth: getComputedStyle(audioCard).width,
+        audioCardHeight: getComputedStyle(audioCard).height,
+        audioCardAspect: getComputedStyle(audioCard).aspectRatio,
+        audioSkeletonWidth: getComputedStyle(audioSkeleton).width,
+        audioSkeletonHeight: getComputedStyle(audioSkeleton).height,
+        audioSkeletonAspect: getComputedStyle(audioSkeleton).aspectRatio,
         cardBodyPosition: getComputedStyle(cardBody).position,
         cardBodyOpacity: getComputedStyle(cardBody).opacity,
         cardMaskPosition: getComputedStyle(cardMask).position,
@@ -101,6 +121,14 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
   assert.equal(result.horizontalCardWidth, '300px')
   assert.equal(result.horizontalCardHeight, '169px')
   assert.equal(result.horizontalCardAspect, '16 / 9')
+
+  // 3b. 声音行与风格同尺寸，加载占位也是横的
+  assert.equal(result.audioCardWidth, '300px')
+  assert.equal(result.audioCardHeight, '169px')
+  assert.equal(result.audioCardAspect, '16 / 9')
+  assert.equal(result.audioSkeletonWidth, '300px')
+  assert.equal(result.audioSkeletonHeight, '169px')
+  assert.equal(result.audioSkeletonAspect, '16 / 9')
 
   // 4. 验证默认不显示标题（对标图 2 纯净画面）
   assert.equal(result.cardBodyPosition, 'absolute')
