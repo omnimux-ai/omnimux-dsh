@@ -32,8 +32,11 @@ describe('try skill in current session without install (issue 2166)', () => {
     assert.match(sessionCreateSrc, /await api\(["']install["']/)
   })
 
-  it('clearing the skill chip detaches the trial', () => {
-    assert.match(pickerSrc, /tryDetach/)
+  it('clearing the skill chip broadcasts removal and the market detaches once', () => {
+    assert.match(pickerSrc, /omnimux:skill:changed/)
+    assert.doesNotMatch(pickerSrc, /tryDetach/)
+    assert.match(sessionCreateSrc, /omnimux:skill:changed/)
+    assert.match(sessionCreateSrc, /tryDetach/)
   })
 
   it('trySkillInSession ensures conversation is visible and focuses composer (issue 2201)', () => {

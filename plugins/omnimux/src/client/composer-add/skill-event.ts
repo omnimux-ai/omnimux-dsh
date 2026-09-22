@@ -44,6 +44,24 @@ export function publishActiveSkill(
   return skill;
 }
 
+/**
+ * 点亮技能并请求技能市场把说明挂到当前会话。
+ * 技能页、技能列表、输入框斜杠三个入口共用这一处。
+ */
+export function requestSkillAttach(
+  skill: ActiveSkillIdentity | null,
+  win: Window | null = typeof window !== 'undefined' ? window : null,
+): void {
+  if (!skill || !win) return
+  publishActiveSkill(skill, win)
+  if (typeof win.CustomEvent !== 'function' || typeof win.dispatchEvent !== 'function') return
+  try {
+    win.dispatchEvent(new win.CustomEvent('omnimux:skill:attach-request', { detail: { skill } }))
+  } catch {
+    // 挂接失败不影响名称标签本身
+  }
+}
+
 /** 只广播技能变更，不改变持久值（例如另一处已经写入激活技能）。 */
 export function dispatchSkillChanged(
   skill: ActiveSkillIdentity | null,

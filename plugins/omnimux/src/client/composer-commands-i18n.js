@@ -1,4 +1,5 @@
 import { createElement } from 'react'
+import { requestSkillAttach } from './composer-add/skill-event.ts'
 
 /**
  * Injects and maintains adaptive localized copy, icons, and smart search for slash commands.
@@ -1722,16 +1723,8 @@ export function wrapSkillInputTriggerSource(source, locale) {
     // 选中后名称只出现在技能按钮旁的标签上，输入框里的斜杠和技能名一并清掉。
     const rawName = pick.candidate.rawName || pick.candidate.name
     const displayName = pick.candidate.name && pick.candidate.name !== rawName ? pick.candidate.name : rawName
-    if (typeof window !== 'undefined' && rawName) {
-      const identity = { id: '', slug: rawName, skill: rawName, name: displayName, title: displayName }
-      window.__omnimuxActiveSkill = identity
-      const EventCtor = window.CustomEvent
-      if (typeof EventCtor === 'function') {
-        try {
-          window.dispatchEvent(new EventCtor('omnimux:skill:changed', { detail: { skill: identity, category: '' } }))
-          window.dispatchEvent(new EventCtor('omnimux:skill:attach-request', { detail: { skill: identity } }))
-        } catch {}
-      }
+    if (rawName) {
+      requestSkillAttach({ id: '', slug: rawName, skill: rawName, name: displayName, title: displayName })
     }
     return { text: '' }
   }

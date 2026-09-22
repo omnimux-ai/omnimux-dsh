@@ -8,7 +8,7 @@ import { LibraryBrowser } from './LibraryBrowser.jsx'
 import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
-import { publishActiveSkill } from '../composer-add/skill-event.ts'
+import { publishActiveSkill, requestSkillAttach } from '../composer-add/skill-event.ts'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
 const NOOP_SUBSCRIBE = () => () => {}
@@ -359,19 +359,13 @@ function BlankSessionGuide({
 
     const docked = dock(payload, () => {
       if (cleanSlug) {
-        const identity = {
+        requestSkillAttach({
           id: payload.id || '',
           slug: cleanSlug,
           skill: cleanSlug,
           name: displayName,
           title: displayName,
-        }
-        publishActiveSkill(identity)
-        // 技能说明由技能市场挂到当前会话。这里只发请求，不调用市场内部接口。
-        const EventCtor = typeof window !== 'undefined' ? window.CustomEvent : null
-        if (typeof window !== 'undefined' && typeof EventCtor === 'function') {
-          window.dispatchEvent(new EventCtor('omnimux:skill:attach-request', { detail: { skill: identity } }))
-        }
+        })
       }
       applyDraftToComposer(prompt, {
         toastKey: null,

@@ -962,7 +962,13 @@ test('wrapSkillInputTriggerSource wraps candidates and transparently resolves on
   assert.equal(candidates[0].name, '角色一致性形象包')
   assert.equal(candidates[0].rawName, 'ip-character-consistency-studio')
 
-  // 2. onPick with Chinese candidate name transparently fills canonical English rawName
+  // 2. 选中后输入框清空斜杠，技能名称交给技能按钮旁的标签
+  const events = []
+  globalThis.window = {
+    __omnimuxActiveSkill: null,
+    CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail } },
+    dispatchEvent(event) { events.push(event) },
+  }
   const pickOutcome = wrapped.onPick({
     candidate: candidates[0],
     session: { sessionId: 's1' },
@@ -971,7 +977,11 @@ test('wrapSkillInputTriggerSource wraps candidates and transparently resolves on
     action: 'pick',
     span: { start: 0, end: 3 },
   })
-  assert.equal(pickOutcome.text, '/ip-character-consistency-studio ')
+  assert.equal(pickOutcome.text, '')
+  assert.equal(globalThis.window.__omnimuxActiveSkill.slug, 'ip-character-consistency-studio')
+  assert.equal(globalThis.window.__omnimuxActiveSkill.name, '角色一致性形象包')
+  assert.ok(events.some((event) => event.type === 'omnimux:skill:attach-request'))
+  delete globalThis.window
 })
 
 test('wrapInputTriggersSkills hooks existing and newly registered skill trigger sources', async () => {

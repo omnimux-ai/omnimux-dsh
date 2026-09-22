@@ -19,7 +19,7 @@ import {
   isRecreateSkill,
   readReplicateEntityId,
 } from './replicate-linkage.js'
-import { publishActiveSkill, readActiveSkill, subscribeSkillChanged } from '../../composer-add/skill-event.ts'
+import { publishActiveSkill, readActiveSkill, requestSkillAttach, subscribeSkillChanged } from '../../composer-add/skill-event.ts'
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
@@ -484,12 +484,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     const en = isLocaleEn(t)
     const displayName = resolveSkillTitle(skill, t) || slug
     if (slug) {
-      const identity = { id: skill.id || '', slug, skill: slug, name: displayName, title: displayName }
-      publishActiveSkill(identity)
-      const EventCtor = typeof window !== 'undefined' ? window.CustomEvent : null
-      if (typeof window !== 'undefined' && typeof EventCtor === 'function') {
-        window.dispatchEvent(new EventCtor('omnimux:skill:attach-request', { detail: { skill: identity } }))
-      }
+      requestSkillAttach({ id: skill.id || '', slug, skill: slug, name: displayName, title: displayName })
     }
     const explain = en
       ? 'Please explain the best way to use this skill.'
