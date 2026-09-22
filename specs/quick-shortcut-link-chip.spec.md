@@ -208,6 +208,7 @@
 ## 命令
 
 - `node --test plugins/omnimux/src/client/composer-quick-shortcuts/*.test.js`
+- `node --test plugins/omnimux/tests/e2e/composer-quick-shortcuts-narrow-layout.e2e.test.mjs`（几何不变量的固化用例，见下节）
 - `node scripts/auto-qa-gate.mjs . --diff --base origin/main`
 - `git diff --check`
 - 几何验收：`node .agent-reports/quick-shortcut-link-chip/boot-app.mjs --skip-build --no-probe --scenario .agent-reports/quick-shortcut-link-chip/layout-scenario.mjs`
@@ -231,3 +232,38 @@
    逐段省略会读成残句，比折行更差；它不由用户数据驱动，宽度有界。
 4. **`flex-basis: 100%` 的独占行策略保持不变**：控件仍自成一行、不参与四条按钮的居中计算，
    四条按钮的居中结果与修前一致（实测并集包围盒左右留白差 ≤ 0.02px）。
+
+## 端到端用例（把上面这套几何验收固化下来）
+
+一次性量测脚本出的是证据，不是回归网。本次把它的判据固化成仓库约定位置的端到端用例：
+
+- 落点：`plugins/omnimux/tests/e2e/composer-quick-shortcuts-narrow-layout.e2e.test.mjs`
+- 运行：`node --test plugins/omnimux/tests/e2e/composer-quick-shortcuts-narrow-layout.e2e.test.mjs`
+- 起法：仓库共享入口 `scripts/test-env-bootstrap.mjs` 的 `ui` 合成模式（应用、模拟端点、私有 profile
+  都在临时目录内，测完自清理），配本文件自带的「真实文件垫片 ＋ 启动前登记夹具工作区」——与
+  `.agent-reports/quick-shortcut-link-chip/boot-app.mjs` 同源，但**不依赖** `.agent-reports/`（该目录在本机
+  被 `.git/info/exclude` 排除，不是仓库资产）。量的是本工作树**现构建**的 `plugins/omnimux/lib/client.js`，
+  页面在真实无头 Chrome 里由真实 React 渲染，读数取真实 `getBoundingClientRect()`。
+- 断言（全是不变量，不钉某一个窗口宽度；即「成功标准」12–17）：
+
+  1. 720–1600px 共 45 个宽度，这一排**及其内部每一个元素**的左右缘都不越出输入框卡片；
+  2. 同一批宽度下，两个胶囊与模型回执都完整落在卡片内、自身无裁切（`scrollWidth − clientWidth ≤ 1`），
+     且模型回执宽度 > 40px（不得被压成零宽）；
+  3. 四条快捷方式的并集包围盒逐宽度居中（左右留白差 < 2px，换行后同样成立）；
+  4. 卡片不超自身宽度上限、不宽于窗口，页面 / 这一排 / 控件行 / 共享控件本体都不产生横向滚动条；
+  5. 不回归：这一排与卡片逐宽度等宽（≤1px）；
+  6. 反空转前置：扫描必须同时覆盖紧凑列（卡片 ≤360px）与宽列（≥680px），且紧凑列下「单行所需宽度 >
+     可用宽」并确实折了行——否则「不越界」可能只是碰巧放得下。
+
+- 实测：全绿 `pass 6 / fail 0 / skipped 0`，整轮 30.1s（含起应用与清理）。
+- 判红能力已实证：把 `styles.js` 换回 `origin/main` 版本重跑，6 项里 **3 项转红**，读数与上文病灶逐点一致
+  （内容右缘越出卡片 **78.34px**，出现在 720–1020px 共 16 个宽度；这一排自身横向溢出 70px；
+  参数胶囊落在卡片外、模型回执被压成 0 宽）。红 / 绿两份运行日志见
+  `.agent-reports/quick-shortcut-link-chip/e2e-narrow-layout-prefix-red.log` 与 `e2e-narrow-layout-run.log`。
+- **是否被 CI 收集：否，本仓现状不收集。** 已核实两处：Hub 测试入口
+  `plugins/omnimux/scripts/run-tests.mjs` 的 `TEST_GLOBS` 只有 `src/**/*.test.js` 与 `src/**/*.test.ts`，
+  `tests/e2e/**` 不在其中；`.github/workflows/quality-gate.yml` 只跑它显式列出的测试路径，没有一条
+  `plugins/*/tests/e2e/**`。所以本文件的作用是满足「质量五步闭环」端到端完整性门禁对**改动集合含界面源码**
+  时的 e2e 文件要求，并由人或 Agent 在本工作树内用上面的命令显式执行，**不随 CI 自动跑**。
+- skip 条件（不假绿）：缺应用运行时（`TEST_ENV_RUNTIME_MISSING`）或缺本机 Chrome 时，整组记为 skipped
+  并在原因里写明缺什么；断言本身在任何情况下都不放宽。
