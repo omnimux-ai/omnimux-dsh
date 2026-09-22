@@ -942,9 +942,11 @@ export const INSPIRATION_CSS = `
   white-space: nowrap;
 }
 /* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字整块退出布局。
-   阈值由实测反解：英文文案 "Replicate now" 需卡片约 280px 才完整容纳，
-   288px 留出余量，使任何语言下只要显示文字就一定放得下。 */
-@container inspiration-card (max-width: 288px) {
+   实测：中文「详情 / 立即复刻」在卡片约 190px 即可完整放下，
+   完整窗口一行五张卡时单卡约 200px 以上。旧的 288px 会把这个尺寸提前收成纯图标。
+   200px 让完整窗口显示全名；更窄时收成图标，省略号规则继续挡住半截字。
+   英文 "Replicate now" 要到约 248px 才放得下，200–247px 之间显示省略号而不是半截字。 */
+@container inspiration-card (max-width: 200px) {
   .omnimux-inspiration-overlay-cta {
     justify-content: center;
   }
