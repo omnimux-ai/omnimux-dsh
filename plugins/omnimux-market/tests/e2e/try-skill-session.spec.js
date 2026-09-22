@@ -41,6 +41,12 @@ test('E2E 试用后联动展开会话栏并聚焦输入框，消除无响应感 
   assert.match(tryFn, /findComposer\(\)\?\.focus/)
 })
 
+test('E2E 已有对话时去对话试试留在当前对话', () => {
+  const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+  assert.match(tryFn, /const existingSessionId = currentPlazaSessionId\(\)/)
+  assert.match(tryFn, /installFlow === ["']session-guide["'] && !existingSessionId/)
+})
+
 test('E2E 技能试用只点亮技能按钮，不往输入框写斜杠指令', () => {
   const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
   const nonGuide = tryFn.slice(tryFn.indexOf('activateSharedToolSkill({ ...skill, slug })'))

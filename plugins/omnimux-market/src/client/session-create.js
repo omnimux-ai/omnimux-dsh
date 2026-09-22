@@ -597,7 +597,10 @@
       const slug = skill.token || skill.slug || skill.skillKey || skill.skill || "";
       if (!slug) return { ok: false };
 
-      const guide = skill.installFlow === "session-guide";
+      // 技能市场把普通技能也标成「先安装」。已有对话时，
+      // 「去对话试试」只更新当前对话的技能名称，不再新开对话。
+      const existingSessionId = currentPlazaSessionId();
+      const guide = skill.installFlow === "session-guide" && !existingSessionId;
       if (guide) {
         if (!skill.installed) {
           try {

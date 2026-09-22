@@ -26,10 +26,11 @@ describe('try skill in current session without install (issue 2166)', () => {
     assert.match(nonGuide, /installed:\s*false/)
   })
 
-  it('session-guide still installs then prefills', () => {
-    assert.match(sessionCreateSrc, /installFlow === ["']session-guide["']/)
+  it('session-guide only opens a new session when none is current', () => {
+    const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+    assert.match(tryFn, /installFlow === ["']session-guide["'] && !existingSessionId/)
+    assert.match(tryFn, /const existingSessionId = currentPlazaSessionId\(\)/)
     assert.match(sessionCreateSrc, /sessionGuidePrefillText/)
-    assert.match(sessionCreateSrc, /await api\(["']install["']/)
   })
 
   it('clearing the skill chip broadcasts removal and the market detaches once', () => {
