@@ -1,6 +1,7 @@
 {
-  "origin": "http://127.0.0.1:52642",
-  "clientBundleBytes": 3187202,
+  "origin": "http://127.0.0.1:54195",
+  "clientBundleBytes": 3188392,
+  "reviewedFixRevision": "review-response",
   "base": {
     "viewport": {
       "w": 1920,
@@ -16,8 +17,7 @@
       "center": 1099,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 623,
@@ -28,15 +28,7 @@
       "bottom": 316,
       "center": 1099
     },
-    "editor": {
-      "x": 623,
-      "y": 210,
-      "w": 948,
-      "h": 52,
-      "right": 1571,
-      "bottom": 262,
-      "center": 1097
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -79,7 +71,7 @@
           "bottom": 355,
           "center": 921.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -132,7 +124,7 @@
           "bottom": 355,
           "center": 1061.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -182,7 +174,7 @@
           "bottom": 355,
           "center": 1227.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -230,7 +222,7 @@
           "bottom": 355,
           "center": 1380.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -269,8 +261,7 @@
       "center": 1099,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 623,
@@ -281,15 +272,7 @@
       "bottom": 316,
       "center": 1099
     },
-    "editor": {
-      "x": 623,
-      "y": 210,
-      "w": 948,
-      "h": 52,
-      "right": 1571,
-      "bottom": 262,
-      "center": 1097
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -332,7 +315,7 @@
           "bottom": 355,
           "center": 921.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -385,7 +368,7 @@
           "bottom": 355,
           "center": 1061.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -435,7 +418,7 @@
           "bottom": 355,
           "center": 1227.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -483,7 +466,7 @@
           "bottom": 355,
           "center": 1380.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -522,8 +505,7 @@
       "center": 1099,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 623,
@@ -534,15 +516,7 @@
       "bottom": 390,
       "center": 1099
     },
-    "editor": {
-      "x": 623,
-      "y": 260,
-      "w": 948,
-      "h": 76,
-      "right": 1571,
-      "bottom": 336,
-      "center": 1097
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -585,7 +559,7 @@
           "bottom": 429,
           "center": 921.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -638,7 +612,7 @@
           "bottom": 429,
           "center": 1061.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -688,7 +662,7 @@
           "bottom": 429,
           "center": 1227.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -736,7 +710,7 @@
           "bottom": 429,
           "center": 1380.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -787,8 +761,7 @@
       "center": 1099,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 623,
@@ -799,15 +772,7 @@
       "bottom": 390,
       "center": 1099
     },
-    "editor": {
-      "x": 623,
-      "y": 260,
-      "w": 948,
-      "h": 76,
-      "right": 1571,
-      "bottom": 336,
-      "center": 1097
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -850,7 +815,7 @@
           "bottom": 429,
           "center": 921.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -903,7 +868,7 @@
           "bottom": 429,
           "center": 1061.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -953,7 +918,7 @@
           "bottom": 429,
           "center": 1227.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -1001,7 +966,7 @@
           "bottom": 429,
           "center": 1380.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1052,8 +1017,7 @@
       "center": 1099,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 623,
@@ -1064,15 +1028,7 @@
       "bottom": 390,
       "center": 1099
     },
-    "editor": {
-      "x": 623,
-      "y": 260,
-      "w": 948,
-      "h": 76,
-      "right": 1571,
-      "bottom": 336,
-      "center": 1097
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -1115,7 +1071,7 @@
           "bottom": 429,
           "center": 921.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -1168,7 +1124,7 @@
           "bottom": 429,
           "center": 1061.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1218,7 +1174,7 @@
           "bottom": 429,
           "center": 1227.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -1266,7 +1222,7 @@
           "bottom": 429,
           "center": 1380.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1308,17 +1264,16 @@
       "h": 900
     },
     "row": {
-      "x": 8,
+      "x": 20,
       "y": 770,
-      "w": 342,
+      "w": 318,
       "h": 104,
-      "right": 350,
+      "right": 338,
       "bottom": 874,
       "center": 179,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px"
+      "order": "3"
     },
     "card": {
       "x": 20,
@@ -1329,15 +1284,7 @@
       "bottom": 752,
       "center": 179
     },
-    "editor": {
-      "x": 20,
-      "y": 622,
-      "w": 314,
-      "h": 76,
-      "right": 334,
-      "bottom": 698,
-      "center": 177
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -1380,7 +1327,7 @@
           "bottom": 791,
           "center": 161
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -1433,7 +1380,7 @@
           "bottom": 791,
           "center": 301
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1483,7 +1430,7 @@
           "bottom": 827,
           "center": 167.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -1531,7 +1478,7 @@
           "bottom": 827,
           "center": 320.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1551,11 +1498,11 @@
       }
     ],
     "controls": {
-      "x": 8,
+      "x": 20,
       "y": 842,
-      "w": 342,
+      "w": 318,
       "h": 32,
-      "right": 350,
+      "right": 338,
       "bottom": 874,
       "center": 179,
       "basis": "100%",
@@ -1582,8 +1529,7 @@
       "center": 960,
       "justify": "center",
       "wrap": "wrap",
-      "order": "3",
-      "margin": "0px 124px"
+      "order": "3"
     },
     "card": {
       "x": 484,
@@ -1594,15 +1540,7 @@
       "bottom": 390,
       "center": 960
     },
-    "editor": {
-      "x": 484,
-      "y": 260,
-      "w": 948,
-      "h": 76,
-      "right": 1432,
-      "bottom": 336,
-      "center": 958
-    },
+    "rowMatchesCardWidth": true,
     "belowInputBox": true,
     "gapBelowInputBox": 18,
     "buttonGroup": {
@@ -1645,7 +1583,7 @@
           "bottom": 429,
           "center": 782.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "path",
@@ -1698,7 +1636,7 @@
           "bottom": 429,
           "center": 922.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",
@@ -1748,7 +1686,7 @@
           "bottom": 429,
           "center": 1088.5
         },
-        "glyphs": [
+        "childTags": [
           "rect",
           "path",
           "rect"
@@ -1796,7 +1734,7 @@
           "bottom": 429,
           "center": 1241.5
         },
-        "glyphs": [
+        "childTags": [
           "path",
           "path",
           "path",

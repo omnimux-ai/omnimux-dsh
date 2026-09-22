@@ -8,7 +8,8 @@ import { QUICK_SHORTCUTS_CSS } from './styles.js'
 
 /**
  * 本文件把 Issue #2572 的形态契约钉死在源码层：无边框、整行居中、箭头透明态、
- * 图标与条目一一对应。原型是**真实浏览器**里量到的几何与计算样式，见
+ * 图标与条目一一对应，且五枚 lucide 图标**逐元素逐属性**不被改写。
+ * 原型是**真实浏览器**里量到的几何与计算样式，见
  * `.agent-reports/quick-shortcuts-icon-style/`；源码断言只负责防止回退。
  *
  * `icons.jsx` 是 JSX，node:test 不能直接 import，因此一律按文本读并断言关键片段。
@@ -16,6 +17,49 @@ import { QUICK_SHORTCUTS_CSS } from './styles.js'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ICONS_PATH = resolve(HERE, 'icons.jsx')
 const COMPONENT_PATH = resolve(HERE, 'ComposerQuickShortcuts.jsx')
+/** 宿主主题 Token 契约快照（与本仓 `tests/e2e/clip-primary-btn-contrast.e2e.test.mjs` 同一真源）。 */
+const HOST_TOKENS_PATH = resolve(HERE, '../../../../../tests/e2e/fixtures/dsh-theme-tokens.json')
+
+/**
+ * 五枚图标**逐元素逐属性**的期望值（标签 + 全部属性，顺序照给定源）。
+ * 只抽样一条路径是抓不住事故的：改掉任意一段数值照样能变绿。
+ */
+const LUCIDE_ELEMENTS = {
+  film: [
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
+    ['path', { d: 'M7 3v18' }],
+    ['path', { d: 'M3 7.5h4' }],
+    ['path', { d: 'M3 12h18' }],
+    ['path', { d: 'M3 16.5h4' }],
+    ['path', { d: 'M17 3v18' }],
+    ['path', { d: 'M17 7.5h4' }],
+    ['path', { d: 'M17 16.5h4' }],
+  ],
+  'text-search': [
+    ['path', { d: 'M21 5H3' }],
+    ['path', { d: 'M10 12H3' }],
+    ['path', { d: 'M10 19H3' }],
+    ['circle', { cx: '17', cy: '15', r: '3' }],
+    ['path', { d: 'm21 19-1.9-1.9' }],
+  ],
+  workflow: [
+    ['rect', { width: '8', height: '8', x: '3', y: '3', rx: '2' }],
+    ['path', { d: 'M7 11v4a2 2 0 0 0 2 2h4' }],
+    ['rect', { width: '8', height: '8', x: '13', y: '13', rx: '2' }],
+  ],
+  sparkles: [
+    ['path', {
+      d: 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z',
+    }],
+    ['path', { d: 'M20 2v4' }],
+    ['path', { d: 'M22 4h-4' }],
+    ['circle', { cx: '4', cy: '20', r: '2' }],
+  ],
+  'move-up-right': [
+    ['path', { d: 'M13 5H19V11' }],
+    ['path', { d: 'M19 5L5 19' }],
+  ],
+}
 
 /** 样式表里全部规则块（本表无嵌套与 @media，直接按花括号切分；先剥掉注释）。 */
 function cssBlocks(css) {
@@ -35,12 +79,25 @@ function ruleBody(css, selector) {
   return hits[hits.length - 1].body
 }
 
-/** 取 icons.jsx 里图标查表的全部键名。 */
-function glyphNames(source) {
-  const at = source.indexOf('QUICK_SHORTCUT_ICON_PATHS = Object.freeze({')
-  assert.ok(at !== -1, 'icons.jsx 必须仍以查表方式给出图标')
-  const body = source.slice(at, source.indexOf('})', at))
-  return [...body.matchAll(/^\s{2}'?([a-z][a-z-]*)'?: \(/gm)].map((match) => match[1])
+/** 取 icons.jsx 里某枚图标的图形元素，规范化为「标签 + 全部属性」的字符串数组。 */
+function glyphElements(source, name) {
+  const at = source.indexOf(`\n  ${name}: (`) !== -1
+    ? source.indexOf(`\n  ${name}: (`)
+    : source.indexOf(`\n  '${name}': (`)
+  assert.ok(at !== -1, `icons.jsx 的图标查表里必须仍有 ${name}`)
+  const start = source.indexOf('(', at) + 1
+  const end = source.indexOf('\n  ),', start)
+  assert.ok(end > start, `${name} 的图形块必须闭合`)
+  const block = source.slice(start, end)
+  return [...block.matchAll(/<([a-z]+)((?:\s+[a-zA-Z-]+="[^"]*")*)\s*\/>/g)].map((match) => {
+    const attrs = [...match[2].matchAll(/([a-zA-Z-]+)="([^"]*)"/g)].map(([, key, value]) => `${key}=${value}`)
+    return `${match[1]}|${attrs.join('|')}`
+  })
+}
+
+/** 期望值同样规范化成「标签 + 全部属性」，便于与源码逐元素对拍。 */
+function expectedElements(name) {
+  return LUCIDE_ELEMENTS[name].map(([tag, attrs]) => `${tag}|${Object.entries(attrs).map(([key, value]) => `${key}=${value}`).join('|')}`)
 }
 
 describe('四条快捷方式：无边框「图标 + 文字 + 箭头」', () => {
@@ -98,48 +155,59 @@ describe('四条快捷方式：无边框「图标 + 文字 + 箭头」', () => {
     assert.doesNotMatch(active, /background/, '选中态不得用底色表达（本任务要求去掉底色）')
   })
 
-  it('色彩一律取既有 token，不新造色值', () => {
+  it('色彩一律取既有 token，且不含裸色值', () => {
     const bareColors = QUICK_SHORTCUTS_CSS.match(/#[0-9a-fA-F]{3,8}\b|\brgba?\(/g) || []
     assert.deepEqual(bareColors, [], `样式表出现裸色值：${bareColors.join(', ')}`)
     assert.match(QUICK_SHORTCUTS_CSS, /var\(--dsw-alias-label-secondary\)/, '文字色必须取既有 token')
+  })
+
+  it('样式表引用的宿主主题 Token 必须真实存在（防宿主升级后静默改名）', async () => {
+    const fixture = JSON.parse(await readFile(HOST_TOKENS_PATH, 'utf8'))
+    assert.ok(Array.isArray(fixture.tokens) && fixture.tokens.length > 100, '宿主 Token 快照必须可用')
+    const available = new Set(fixture.tokens)
+    const referenced = [...new Set([...QUICK_SHORTCUTS_CSS.matchAll(/var\((--dsw-alias-[a-z0-9-]+)/g)].map((m) => m[1]))]
+    assert.ok(referenced.length >= 2, '样式表必须引用宿主语义 Token')
+    for (const token of referenced) {
+      assert.ok(available.has(token), `样式表引用了宿主不存在的 Token：${token}`)
+    }
   })
 })
 
 describe('图标与条目一一对应', () => {
   it('四条条目的图标名各不相同，且都在图标查表里', async () => {
-    const names = glyphNames(await readFile(ICONS_PATH, 'utf8'))
+    const source = await readFile(ICONS_PATH, 'utf8')
     for (const entry of QUICK_SHORTCUTS) {
-      assert.ok(names.includes(entry.icon), `${entry.id} 的图标 ${entry.icon} 必须在 icons.jsx 的查表里`)
+      assert.ok(glyphElements(source, entry.icon).length > 0, `${entry.id} 的图标 ${entry.icon} 必须在 icons.jsx 的查表里`)
     }
     assert.equal(new Set(QUICK_SHORTCUTS.map((entry) => entry.icon)).size, 4, '四条不得复用同一枚图标')
   })
 
-  it('行尾箭头用的 `move-up-right` 也在查表里', async () => {
+  it('行尾箭头按真源常量取图，不在图标文件里重复字面量', async () => {
     const source = await readFile(ICONS_PATH, 'utf8')
-    assert.ok(glyphNames(source).includes(QUICK_SHORTCUT_ARROW_ICON), '箭头图标必须在查表里')
-    assert.match(source, /QUICK_SHORTCUT_ICON_PATHS\['move-up-right'\]/, '箭头组件必须按名取图，不复制一份路径')
+    assert.ok(glyphElements(source, QUICK_SHORTCUT_ARROW_ICON).length > 0, '箭头图标必须在查表里')
+    assert.match(source, /import \{ QUICK_SHORTCUT_ARROW_ICON \} from '\.\/catalog\.js'/, '箭头名必须来自 catalog.js 真源')
+    assert.match(source, /ICON_PATHS\[QUICK_SHORTCUT_ARROW_ICON\]/, '箭头必须按真源常量取图')
+    assert.doesNotMatch(source, /ICON_PATHS\['move-up-right'\]/, '不得再按字面量取图（那会形成第二个真源）')
   })
 
   it('图标 14px、箭头 12px，尺寸有单一真源', async () => {
     const source = await readFile(ICONS_PATH, 'utf8')
-    assert.match(source, /QUICK_SHORTCUT_ICON_SIZE = 14\b/, '条目图标尺寸必须是 14px')
-    assert.match(source, /QUICK_SHORTCUT_ARROW_SIZE = 12\b/, '行尾箭头尺寸必须是 12px')
-    assert.equal((source.match(/width=\{QUICK_SHORTCUT_(?:ICON|ARROW)_SIZE\}/g) || []).length, 2, '两个组件都必须用尺寸常量')
+    assert.match(source, /const ICON_SIZE = 14\b/, '条目图标尺寸必须是 14px')
+    assert.match(source, /const ARROW_SIZE = 12\b/, '行尾箭头尺寸必须是 12px')
+    assert.equal((source.match(/width=\{(?:ICON|ARROW)_SIZE\}/g) || []).length, 2, '两个组件都必须用尺寸常量')
+    assert.equal((source.match(/height=\{(?:ICON|ARROW)_SIZE\}/g) || []).length, 2, '两个组件都必须用尺寸常量')
+    assert.equal((source.match(/viewBox="0 0 24 24"/g) || []).length, 2, '两个 svg 的 viewBox 必须都是 24')
   })
 
-  it('lucide 路径逐字落地（抽样钉住五枚图标的特征路径）', async () => {
+  it('五枚 lucide 图标逐元素逐属性落地，一个数值都不许改', async () => {
     const source = await readFile(ICONS_PATH, 'utf8')
-    const fingerprints = [
-      ['film', 'M3 12h18'],
-      ['text-search', 'm21 19-1.9-1.9'],
-      ['workflow', 'M7 11v4a2 2 0 0 0 2 2h4'],
-      ['sparkles', 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558'],
-      [QUICK_SHORTCUT_ARROW_ICON, 'M19 5L5 19'],
-    ]
-    for (const [name, path] of fingerprints) {
-      assert.ok(source.includes(path), `${name} 的特征路径不得改动：${path}`)
+    for (const [name, expected] of Object.entries(LUCIDE_ELEMENTS)) {
+      assert.deepEqual(
+        glyphElements(source, name),
+        expectedElements(name),
+        `${name} 的图形必须与给定 lucide 源逐元素逐属性一致`,
+      )
     }
-    assert.equal((source.match(/viewBox="0 0 24 24"/g) || []).length, 2, '两个 svg 的 viewBox 必须都是 24')
   })
 
   it('组件按条目取图标，且每项固定是「图标 + 文字 + 箭头」', async () => {

@@ -44,12 +44,76 @@ const LABELS = {
   'quickShortcuts.link.product': '商品',
 }
 
-/** 每条快捷方式的图标名与它必须渲染出的图形（lucide 源逐字照抄）。 */
+/**
+ * 每条快捷方式的图标名，以及它在真实 DOM 里必须渲染出的**逐节点逐属性**图形
+ * （lucide 源逐字照抄；只对拍标签名抓不住「数值被改」这类事故）。
+ */
 const ICON_SHAPE = {
-  clone: { icon: 'film', glyphs: ['rect', 'path', 'path', 'path', 'path', 'path', 'path', 'path'] },
-  breakdown: { icon: 'text-search', glyphs: ['path', 'path', 'path', 'circle', 'path'] },
-  selling: { icon: 'workflow', glyphs: ['rect', 'path', 'rect'] },
-  reverse: { icon: 'sparkles', glyphs: ['path', 'path', 'path', 'circle'] },
+  clone: {
+    icon: 'film',
+    glyphs: [
+      ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
+      ['path', { d: 'M7 3v18' }],
+      ['path', { d: 'M3 7.5h4' }],
+      ['path', { d: 'M3 12h18' }],
+      ['path', { d: 'M3 16.5h4' }],
+      ['path', { d: 'M17 3v18' }],
+      ['path', { d: 'M17 7.5h4' }],
+      ['path', { d: 'M17 16.5h4' }],
+    ],
+  },
+  breakdown: {
+    icon: 'text-search',
+    glyphs: [
+      ['path', { d: 'M21 5H3' }],
+      ['path', { d: 'M10 12H3' }],
+      ['path', { d: 'M10 19H3' }],
+      ['circle', { cx: '17', cy: '15', r: '3' }],
+      ['path', { d: 'm21 19-1.9-1.9' }],
+    ],
+  },
+  selling: {
+    icon: 'workflow',
+    glyphs: [
+      ['rect', { width: '8', height: '8', x: '3', y: '3', rx: '2' }],
+      ['path', { d: 'M7 11v4a2 2 0 0 0 2 2h4' }],
+      ['rect', { width: '8', height: '8', x: '13', y: '13', rx: '2' }],
+    ],
+  },
+  reverse: {
+    icon: 'sparkles',
+    glyphs: [
+      ['path', {
+        d: 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z',
+      }],
+      ['path', { d: 'M20 2v4' }],
+      ['path', { d: 'M22 4h-4' }],
+      ['circle', { cx: '4', cy: '20', r: '2' }],
+    ],
+  },
+}
+
+/** 行尾箭头（四条共用）：move-up-right 的两段路径。 */
+const ARROW_SHAPE = [
+  ['path', { d: 'M13 5H19V11' }],
+  ['path', { d: 'M19 5L5 19' }],
+]
+
+/** 把「标签 + 属性」规范成可比字符串（属性按名排序，与书写顺序无关）。 */
+function canonical(tag, attributes) {
+  const pairs = Object.entries(attributes).map(([key, value]) => `${key}=${value}`).sort()
+  return `${tag}|${pairs.join('|')}`
+}
+
+/** 从真实 DOM 节点读出同样的规范化字符串。 */
+function readNode(node) {
+  const attributes = {}
+  for (const name of node.getAttributeNames()) attributes[name] = node.getAttribute(name)
+  return canonical(node.tagName.toLowerCase(), attributes)
+}
+
+function expectedNodes(shape) {
+  return shape.map(([tag, attributes]) => canonical(tag, attributes))
 }
 
 /**
@@ -123,18 +187,18 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
         assert.equal(arrow.getAttribute('height'), '12', `${id} 箭头必须是 12px`)
         assert.equal(icon.getAttribute('viewBox'), '0 0 24 24', `${id} 图标 viewBox 必须逐字保留`)
 
-        // 图标由条目决定：数据属性与查表名一致，图形逐节点对拍
+        // 图标由条目决定：数据属性与查表名一致，图形逐节点逐属性对拍（改一个数值就红）
         const expected = ICON_SHAPE[id]
         assert.equal(button.dataset.omxQuickShortcutIcon, expected.icon, `${id} 的图标名必须来自 catalog`)
         assert.deepEqual(
-          [...icon.children].map((node) => node.tagName.toLowerCase()),
-          expected.glyphs,
-          `${id} 的 lucide 图形不得增删或改写`,
+          [...icon.children].map(readNode),
+          expectedNodes(expected.glyphs),
+          `${id} 的 lucide 图形必须逐节点逐属性一致，不得增删或改写`,
         )
         assert.deepEqual(
-          [...arrow.children].map((node) => node.tagName.toLowerCase()),
-          ['path', 'path'],
-          `${id} 的箭头必须是 move-up-right 的两段路径`,
+          [...arrow.children].map(readNode),
+          expectedNodes(ARROW_SHAPE),
+          `${id} 的箭头必须是 move-up-right 的两段原样路径`,
         )
       }
     } finally {

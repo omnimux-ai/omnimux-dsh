@@ -1,4 +1,5 @@
 import React from 'react'
+import { QUICK_SHORTCUT_ARROW_ICON } from './catalog.js'
 
 /**
  * 快捷方式的矢量图标：**渲染处只按名字取图**，名字由 `catalog.js` 的条目给出。
@@ -8,8 +9,9 @@ import React from 'react'
  * （`session-guide/StarterIcon.jsx`、`media-viewer/MediaConfigControls.jsx`）一致。
  *
  * 路径与 `viewBox` 逐字照抄给定源，不得增删或改写：改了就是产品事故。
+ * 本表是模块内部实现细节，不对外导出；对外只有两个组件。
  */
-export const QUICK_SHORTCUT_ICON_PATHS = Object.freeze({
+const ICON_PATHS = Object.freeze({
   film: (
     <>
       <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -55,10 +57,10 @@ export const QUICK_SHORTCUT_ICON_PATHS = Object.freeze({
 })
 
 /** 条目图标尺寸（design.md 的 size-3.5）。 */
-export const QUICK_SHORTCUT_ICON_SIZE = 14
+const ICON_SIZE = 14
 
 /** 行尾箭头尺寸。 */
-export const QUICK_SHORTCUT_ARROW_SIZE = 12
+const ARROW_SIZE = 12
 
 /**
  * 条目图标。名字查不到时**不渲染**（不猜、不留空壳）：条目真源里没有的图标名
@@ -66,13 +68,13 @@ export const QUICK_SHORTCUT_ARROW_SIZE = 12
  * @param {{ name?: string }} props
  */
 export function QuickShortcutIcon({ name }) {
-  const glyph = name ? QUICK_SHORTCUT_ICON_PATHS[name] : null
+  const glyph = name ? ICON_PATHS[name] : null
   if (!glyph) return null
   return (
     <svg
       className="omx-quick-shortcut-icon"
-      width={QUICK_SHORTCUT_ICON_SIZE}
-      height={QUICK_SHORTCUT_ICON_SIZE}
+      width={ICON_SIZE}
+      height={ICON_SIZE}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -86,13 +88,17 @@ export function QuickShortcutIcon({ name }) {
   )
 }
 
-/** 行尾箭头（四条共用）：默认半透明，悬停整条时变实，由样式表控制。 */
+/**
+ * 行尾箭头（四条共用）：默认半透明，悬停整条时变实，由样式表控制。
+ * 图标名取自真源 `catalog.js` 的常量，**不在本文件重复一个字面量**：
+ * 否则改真源不会改界面，测试也不会红。
+ */
 export function QuickShortcutArrow() {
   return (
     <svg
       className="omx-quick-shortcut-arrow"
-      width={QUICK_SHORTCUT_ARROW_SIZE}
-      height={QUICK_SHORTCUT_ARROW_SIZE}
+      width={ARROW_SIZE}
+      height={ARROW_SIZE}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -101,7 +107,7 @@ export function QuickShortcutArrow() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {QUICK_SHORTCUT_ICON_PATHS['move-up-right']}
+      {ICON_PATHS[QUICK_SHORTCUT_ARROW_ICON]}
     </svg>
   )
 }

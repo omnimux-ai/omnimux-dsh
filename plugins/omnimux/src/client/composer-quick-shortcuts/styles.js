@@ -29,8 +29,12 @@ export const QUICK_SHORTCUTS_CSS = `
   align-items: center;
   justify-content: center;
   gap: 6px 24px;
-  width: var(--dsh-composer-card-max-width, 952px);
-  max-width: 100%;
+  /* 与输入框卡同宽：上限取卡片最大宽，窄列下再各让出宿主给输入框的侧边清除量，
+     否则这一排会比输入框左右各宽出 12px（窄列实测 342 vs 318）。 */
+  width: min(
+    var(--dsh-composer-card-max-width, 952px),
+    calc(100% - 2 * var(--dsh-composer-side-clearance, 16px))
+  );
   margin: 0 auto;
   padding: 0;
 }
@@ -63,7 +67,7 @@ export const QUICK_SHORTCUTS_CSS = `
 }
 
 .omx-quick-shortcut-btn:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary, var(--dsw-alias-border-hover));
+  outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: 3px;
 }
 
@@ -113,8 +117,13 @@ export const QUICK_SHORTCUTS_CSS = `
 }
 
 /* 位置：这一排挂在官方「输入框停靠槽」上，而 hero 栈把该槽排在输入框**之前**，
- * 照原样落位就在输入框上方。同栈里输入框那块的 order 已是 2，这里取 3 排在它之后，
- * 于是真正落在输入框正下方（浏览器实测：输入框 202→390，这一排 416→484）。
+ * 照原样落位就在输入框上方（加这条规则之前的实测：这一排 y 210→240、输入框 258→372）。
+ * 这条规则依赖两个宿主事实同时成立：本行与输入框块是 hero 栈里**同级**的 flex 项，
+ * 且输入框那块的 order 恰好是 2（本仓 session-guide/styles.js 给 composer.bar 的子元素
+ * 定的就是 2）。任一失效都会**静默**退回「输入框上方」，所以位置另有浏览器几何证据，
+ * 见 .agent-reports/quick-shortcuts-icon-style/browser-geometry.json。
+ * 加规则后的实测（2026-09-22，中文界面 1920×929，基础态 / 选中态）：
+ *   基础态 输入框 202→316、这一排 334→364；选中态 输入框 202→390、这一排 408→476。
  * 只在 hero（新对话）生效：会话开始后这一段本就不渲染，不干扰官方停靠布局。 */
 [data-phase='hero'] .omx-quick-shortcuts {
   order: 3;
