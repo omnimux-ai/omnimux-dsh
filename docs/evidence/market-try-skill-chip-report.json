@@ -1,0 +1,25 @@
+{
+  "feature": "market-try-skill-chip",
+  "url": "http://127.0.0.1:52926/",
+  "port": 52926,
+  "sourceOk": true,
+  "steps": [
+    {
+      "step": "before",
+      "chip": "电商营销实战",
+      "draft": "已有的一句话",
+      "sessions": 1,
+      "hasSlash": false
+    },
+    {
+      "step": "after-try",
+      "chip": "医疗家政美容",
+      "draft": "已有的一句话",
+      "sessions": 1,
+      "hasSlash": false
+    }
+  ],
+  "interactionOk": true,
+  "screenshot": "docs/evidence/market-try-skill-chip-verified.png",
+  "ok": true
+}
