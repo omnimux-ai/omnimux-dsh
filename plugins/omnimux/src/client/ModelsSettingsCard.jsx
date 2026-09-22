@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, DropdownSelect, SelectableTile } from 'dsh-ui-kit'
+import { RuntimeModeSection } from './RuntimeModeSection.jsx'
 
 /** Sentinel the hub stores for "no explicit choice"; the picker shows the resolved mode instead. */
 const DEFAULT_OPERATION_AUTO = 'auto'
@@ -227,6 +228,7 @@ export function ModelsSettingsCard({ t, scope }) {
         <p className="omnimux-models-card__desc">{t('models.description')}</p>
       </div>
       <div className="omnimux-models-card__body">
+        <RuntimeModeSection t={t} scope={scope} />
         {GROUPS.map((group) => (
           <div key={group.kind} className="omnimux-models-card__group">
             <p className="omnimux-models-card__group-title">{t(group.titleKey)}</p>

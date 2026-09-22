@@ -13,8 +13,12 @@ import { probeMediaAssets } from './asset-probe.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
+import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
+
+/** Fixed credential reference for the BYOK API key. */
+const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
 
 const CAPABILITY_SEAM = Object.freeze({
   video: 'videoGenerate',
@@ -77,7 +81,63 @@ export async function executeOmnimuxMedia(capability, input) {
     throw new OmnimuxError('omnimux-invalid-request', 'dest is required')
   }
   const taskId = typeof input.taskId === 'string' ? input.taskId.trim() : ''
-  const media = parseMediaConfig(input.media)
+  let media = parseMediaConfig(input.media)
+
+  // BYOK: when the user's own key covers this media kind, inject their
+  // endpoint as a provider and route to it instead of the official one.
+  // A kind the user did not tick is unavailable — never the official channel.
+  const runtime = resolveRuntimeChoice(input.runtimeSettings)
+  if (runtime.mode === 'agent') {
+    throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置自备密钥或改用官方')
+  }
+  if (runtime.mode === 'key' && runtime.textReady) {
+    const capKey = capability === 'image' ? 'runtimeMediaImage'
+      : capability === 'video' ? 'runtimeMediaVideo'
+      : capability === 'audio' ? 'runtimeMediaAudio'
+      : null
+    const capEnabled = capKey && input.runtimeSettings?.[capKey] === true
+    if (!capEnabled) {
+      throw new OmnimuxError('omnimux-unconfigured', `自备密钥未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
+    }
+    if (typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string') {
+      const endpoint = input.runtimeSettings.runtimeKeyEndpoint.trim()
+      if (endpoint) {
+        // Resolve the BYOK key from credentials so it never sits in the config.
+        let byokKey = ''
+        if (input.credentials && typeof input.credentials.resolve === 'function') {
+          try {
+            const hit = await input.credentials.resolve(BYOK_KEY_REF)
+            if (hit && typeof hit.value === 'string') byokKey = hit.value.trim()
+          } catch { /* fall through */ }
+        }
+        if (!byokKey) {
+          throw new OmnimuxError('omnimux-unconfigured', '自备密钥未找到，请在设置中重新填写')
+        }
+        media = {
+          ...media,
+          providers: {
+            ...media.providers,
+            byok: {
+              protocol: 'openai-media',
+              baseUrl: endpoint,
+              apiKeyEnv: BYOK_KEY_REF,
+              models: {
+                [capability]: typeof input.runtimeSettings?.runtimeKeyModel === 'string'
+                  ? input.runtimeSettings.runtimeKeyModel.trim() || 'default'
+                  : 'default',
+              },
+            },
+          },
+        }
+        input = {
+          ...input,
+          provider: 'byok',
+          env: { ...(input.env ?? {}), [BYOK_KEY_REF]: byokKey },
+        }
+      }
+    }
+  }
+
   const route = resolveMediaRoute(capability, input, media, input.env)
 
   // taskId poll/finish: skip initial asset SubmitGuard and do not resubmit.
@@ -93,7 +153,25 @@ export async function executeOmnimuxMedia(capability, input) {
   const prompt = typeof input.prompt === 'string' ? input.prompt : ''
   const seam = CAPABILITY_SEAM[capability] ?? capability
   const assets = await probeMediaAssets(input, { capability, seam })
-  const guardPlan = assertGuardSubmit(
+
+  // BYOK models are user-defined and not in the official contract. Skip the
+  // submit guard for them; the endpoint decides what it accepts.
+  const isByok = route.providerId === 'byok'
+  let guardPlan = null
+  if (isByok) {
+    guardPlan = {
+      plan: null,
+      byok: true,
+      prompt,
+      modelId: route.modelId,
+      // A BYOK endpoint speaks the generic speech shape; ride the synchronous
+      // channel unless the caller named another operation.
+      operationId: typeof input.operation === 'string' && input.operation.trim()
+        ? input.operation.trim()
+        : (capability === 'audio' ? 'text_to_speech' : undefined),
+    }
+  } else {
+    guardPlan = assertGuardSubmit(
     {
       prompt,
       model: route.modelId,
@@ -128,6 +206,7 @@ export async function executeOmnimuxMedia(capability, input) {
       outputType: capability === 'video' || capability === 'image' || capability === 'audio' ? capability : undefined,
     },
   )
+  }
 
   const auth = await resolveMediaAuth(route, {
     env: input.env,
@@ -219,7 +298,9 @@ export async function executeOmnimuxMedia(capability, input) {
     }
   }
 
-  assertGuardOutput(guardPlan, result, { capability })
+  if (!guardPlan?.byok) {
+    assertGuardOutput(guardPlan, result, { capability })
+  }
 
   const url = result.outputs.find((item) => item.type === capability)?.url
   const submittedId = result.taskId ?? null

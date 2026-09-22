@@ -10,6 +10,8 @@ import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
 import { LoginGate } from './LoginGate.jsx'
+import { RuntimeGuideGate } from './RuntimeGuideGate.jsx'
+import { setRuntimeChoiceReader } from './auth-gate.js'
 import { QuotaGate } from './QuotaGate.jsx'
 import { installQuotaGlobal } from './quota-gate.js'
 import { SidebarUpdateAction } from './SidebarUpdateAction.jsx'
@@ -119,6 +121,13 @@ export function apply(ctx) {
       const binder = sctx.settingsScope
       if (!binder || typeof binder.bind !== 'function') return
       const scope = binder.bind({ namespace: 'omnimux' })
+      // The login gate asks this before prompting: a local agent or custom key
+      // does not need the official account for generation. Without a readable
+      // value the gate keeps its old behaviour and still prompts.
+      setRuntimeChoiceReader(() => {
+        const snapshot = typeof scope.getSnapshot === 'function' ? scope.getSnapshot() : undefined
+        return snapshot && typeof snapshot === 'object' ? snapshot.value : undefined
+      })
       ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
         name: 'settings.plugin.item',
         key: 'omnimux',
@@ -126,6 +135,16 @@ export function apply(ctx) {
         locale: NS,
         inject: () => ({ t, scope }),
       }, ModelsSettingsCard))
+      // First-run runtime guide: shows only while `runtimeMode` is unset, then
+      // never again. Mounted on the overlay seat below the login gate so the
+      // official choice can open sign-in on top of it.
+      ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+        name: 'shell.overlay',
+        id: 'omnimux-runtime-guide',
+        order: 29,
+        locale: NS,
+        inject: () => ({ t, scope }),
+      }, RuntimeGuideGate))
     })
   }
   // Unified login gate. It lives on the shell.overlay seat but renders as a

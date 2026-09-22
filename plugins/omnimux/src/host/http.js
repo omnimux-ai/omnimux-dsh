@@ -10,6 +10,8 @@ import { injectBrandBoot } from '../brand/inject-index.js'
 import { registerCatalogRoutes } from '../catalog/http.js'
 import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes } from './composer-attachments-http.js'
 import { registerTextCompleteRoutes } from '../text/http.js'
+import { registerByokRoutes } from '../byok/http.js'
+import { registerAgentRoutes } from '../agents/http.js'
 
 /**
  * Mount Host HTTP faces. Match order is auth → plugins → apps → official → inspiration → avatar.
@@ -109,6 +111,14 @@ export function mountHubHttp(httpCtx, deps) {
       settings: deps.settings || httpCtx.get?.('settings'),
       env: process.env,
     })
+    const stopByok = registerByokRoutes(webServer, {
+      // Services arrive after mount; resolve them per request, never eagerly.
+      getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
+      getCredentials: () => deps.credentials ?? httpCtx.get?.('credentials'),
+    })
+    const stopAgents = registerAgentRoutes(webServer, {
+      getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
+    })
     return () => {
       stopAuth()
       stopCatalog()
@@ -120,6 +130,8 @@ export function mountHubHttp(httpCtx, deps) {
       stopComposerAttachments()
       stopFormAttachments()
       stopTextComplete()
+      stopByok()
+      stopAgents()
     }
   }
   if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux: http routes')

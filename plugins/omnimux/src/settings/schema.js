@@ -29,6 +29,23 @@ export const SETTINGS_DEFAULTS = Object.freeze({
    * list says.
    */
   composerHiddenModels: Object.freeze([]),
+  /**
+   * Which way this install runs models: 'official' | 'agent' | 'key'.
+   * Empty means the user has not chosen yet, which stays on the official route
+   * so an existing install is never blocked.
+   */
+  runtimeMode: '',
+  /** Local agent: the program id the user picked and whether it tested OK. */
+  runtimeAgentId: '',
+  runtimeAgentVerified: false,
+  /** Custom key: endpoint, default model, and whether the test passed. */
+  runtimeKeyEndpoint: '',
+  runtimeKeyModel: '',
+  runtimeKeyVerified: false,
+  /** Which media kinds this custom key may run. Text is implied by a pass. */
+  runtimeMediaImage: false,
+  runtimeMediaVideo: false,
+  runtimeMediaAudio: false,
 })
 
 const FIELD_META = Object.freeze({
@@ -41,6 +58,15 @@ const FIELD_META = Object.freeze({
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
   allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
   composerHiddenModels: '输入框模型列表中隐藏的模型',
+  runtimeMode: '运行方式（官方、本机助手、自己的密钥）',
+  runtimeAgentId: '本机助手',
+  runtimeAgentVerified: '本机助手是否已测试通过',
+  runtimeKeyEndpoint: '自备密钥的接口地址',
+  runtimeKeyModel: '自备密钥的默认模型',
+  runtimeKeyVerified: '自备密钥是否已测试通过',
+  runtimeMediaImage: '自备密钥是否用于图片',
+  runtimeMediaVideo: '自备密钥是否用于视频',
+  runtimeMediaAudio: '自备密钥是否用于音频',
 })
 
 function stringNode(key) {
@@ -50,6 +76,26 @@ function stringNode(key) {
     meta: { description: FIELD_META[key] },
   }
 }
+
+function boolNode(key) {
+  return {
+    type: 'boolean',
+    default: SETTINGS_DEFAULTS[key],
+    meta: { description: FIELD_META[key] },
+  }
+}
+
+const RUNTIME_DICT = Object.freeze({
+  runtimeMode: stringNode('runtimeMode'),
+  runtimeAgentId: stringNode('runtimeAgentId'),
+  runtimeAgentVerified: boolNode('runtimeAgentVerified'),
+  runtimeKeyEndpoint: stringNode('runtimeKeyEndpoint'),
+  runtimeKeyModel: stringNode('runtimeKeyModel'),
+  runtimeKeyVerified: boolNode('runtimeKeyVerified'),
+  runtimeMediaImage: boolNode('runtimeMediaImage'),
+  runtimeMediaVideo: boolNode('runtimeMediaVideo'),
+  runtimeMediaAudio: boolNode('runtimeMediaAudio'),
+})
 
 function parseSettingsSection(value) {
   const input = value && typeof value === 'object' && !Array.isArray(value)
@@ -92,6 +138,7 @@ SettingsConfig.dict = {
   defaultImageOperation: stringNode('defaultImageOperation'),
   defaultVideoOperation: stringNode('defaultVideoOperation'),
   defaultTextReasoning: stringNode('defaultTextReasoning'),
+  ...RUNTIME_DICT,
 }
 SettingsConfig.toJSON = function toJSON() {
   return {
@@ -104,6 +151,7 @@ SettingsConfig.toJSON = function toJSON() {
       defaultImageOperation: stringNode('defaultImageOperation'),
       defaultVideoOperation: stringNode('defaultVideoOperation'),
       defaultTextReasoning: stringNode('defaultTextReasoning'),
+      ...RUNTIME_DICT,
     },
   }
 }

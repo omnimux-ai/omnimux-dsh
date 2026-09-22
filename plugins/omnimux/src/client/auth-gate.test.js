@@ -13,6 +13,7 @@ import {
   installAuthGlobal,
   resetAuthGate,
   retry,
+  setRuntimeChoiceReader,
   subscribe,
 } from './auth-gate.js'
 import { describeLoginGate } from './login-gate-view.js'
@@ -509,6 +510,44 @@ describe('auth-gate store', () => {
     await pending
     assert.equal(win[AUTH_GLOBAL_KEY].isLoggedIn(), true)
     assert.ok(ticks >= 1)
+  })
+
+  it('keeps prompting while the runtime choice is unknown or official', async () => {
+    const { gate } = install({ loggedIn: false })
+    setRuntimeChoiceReader(null)
+    await gate.ensureLogin({ kind: 'explicit', action: 'generate', onSuccess: () => { throw new Error('no reader must still prompt') } })
+    assert.equal(getSnapshot().phase, 'prompt')
+    cancel('done')
+    resetAuthGate()
+
+    install({ loggedIn: false })
+    setRuntimeChoiceReader(() => ({ runtimeMode: 'official' }))
+    await ensureLogin({ kind: 'explicit', action: 'generate', onSuccess: () => { throw new Error('official must still prompt') } })
+    assert.equal(getSnapshot().phase, 'prompt')
+    setRuntimeChoiceReader(null)
+  })
+
+  it('lets a custom key generate without the official window but still gates accounts', async () => {
+    install({ loggedIn: false })
+    setRuntimeChoiceReader(() => ({
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://example.test/v1',
+      runtimeKeyModel: 'demo',
+      runtimeKeyVerified: true,
+    }))
+
+    let bypassed = null
+    await ensureLogin({
+      kind: 'explicit',
+      action: 'generate',
+      onSuccess: (profile) => { bypassed = profile },
+    })
+    assert.equal(bypassed?.runtimeBypass, true)
+    assert.equal(getSnapshot().phase, 'closed', 'generation does not open the window')
+
+    await ensureLogin({ kind: 'explicit', action: 'accounts', onSuccess: () => { throw new Error('accounts must still prompt') } })
+    assert.equal(getSnapshot().phase, 'prompt', 'account-bound action keeps the window')
+    setRuntimeChoiceReader(null)
   })
 
   it('T9 hub apply warms the status cache without awaiting or setState', () => {

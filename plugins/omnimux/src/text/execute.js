@@ -10,6 +10,11 @@ import { loadTextVideo, toVideoImageUrlPart } from './video.js'
 import { loadTextAudio, toAudioImageUrlPart } from './audio.js'
 import { loadTextDocument, toDocumentImageUrlPart } from './document.js'
 import { normalizeTextReferences } from './references.js'
+import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
+import { runAgentText } from '../agents/local.js'
+
+/** Fixed credential reference for the BYOK API key. */
+const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
 
 /**
  * One-shot expert completion. Default path: `ctx.llm.stream` (text / image).
@@ -61,16 +66,59 @@ export async function executeOmnimuxText(input) {
   const hasDocument = references.some((asset) => asset.type === 'document')
   const hasComplexMedia = hasVideo || hasAudio || hasDocument
   const gate = input.gate ?? input.hub?.gate
-  const route = resolveTextRoute({
-    model: input.model,
-    references,
-    strategy: input.strategy,
-    group: input.group,
-    allowedGroups: input.allowedGroups,
-  }, text, input.env, gate)
+
+  // BYOK: the user configured their own key and it tested OK. Text runs
+  // directly against their endpoint; the official channel is not consulted.
+  const runtimeSettings = input.settings && typeof input.settings.get === 'function'
+    ? input.settings.get('omnimux')
+    : undefined
+  const runtime = resolveRuntimeChoice(runtimeSettings)
+  // Chose BYOK but hasn't finished configuring — fail loudly, not silently
+  // fall through to the official account.
+  if (runtime.mode === 'key' && !runtime.textReady) {
+    throw new OmnimuxError('omnimux-unconfigured', '自备密钥尚未配置完成，请在设置中填写地址和模型并测试通过')
+  }
+  if (runtime.mode === 'agent' && !runtime.textReady) {
+    throw new OmnimuxError('omnimux-unconfigured', '本机助手尚未配置完成，请在设置中选择并测试通过')
+  }
+  const useByok = runtime.mode === 'key' && runtime.textReady
+  const useAgent = runtime.mode === 'agent' && runtime.textReady
+
+  // Local agent: text goes to the selected CLI and back. Media references are
+  // out of scope for the agent path in this version — only plain text rides it.
+  if (useAgent) {
+    if (references.length > 0) {
+      throw new OmnimuxError('omnimux-invalid-request', '本机助手目前只承接纯文字任务')
+    }
+    try {
+      const agentRun = typeof input.agentRun === 'function' ? input.agentRun : runAgentText
+      const text2 = await agentRun({
+        id: String(runtimeSettings?.runtimeAgentId ?? ''),
+        prompt,
+      })
+      return { mode: 'live', model: String(runtimeSettings?.runtimeAgentId ?? 'agent'), text: text2 }
+    } catch (error) {
+      const message = typeof error?.message === 'string' ? error.message : String(error)
+      throw new OmnimuxError('omnimux-failed', message)
+    }
+  }
+
+  // The official route — its whitelist, channel plan and submit guard — only
+  // applies when the request actually rides it. A BYOK endpoint knows its own
+  // model names, so none of that machinery may run for it.
+  const route = useByok
+    ? null
+    : resolveTextRoute({
+      model: input.model,
+      references,
+      strategy: input.strategy,
+      group: input.group,
+      allowedGroups: input.allowedGroups,
+    }, text, input.env, gate)
+
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
-    : route.maxTokens
+    : (route ? route.maxTokens : text.maxTokens)
   const system = typeof input.system === 'string' ? input.system.trim() : ''
 
   if (hasImage && (!input.attachments || typeof input.attachments.saveImage !== 'function')) {
@@ -94,7 +142,11 @@ export async function executeOmnimuxText(input) {
     probed.push(media)
     assets.push({ ...asset, mime: media.mediaType, sizeBytes: media.sizeBytes ?? media.bytes })
   }
-  const guardPlan = assertGuardSubmit(
+  // BYOK models are user-defined; the official submit/output guard does not
+  // know them, so it only runs for the official route.
+  const guardPlan = useByok
+    ? { plan: null, byok: true }
+    : assertGuardSubmit(
     {
       prompt,
       model: route.modelId,
@@ -120,6 +172,62 @@ export async function executeOmnimuxText(input) {
         : undefined,
     },
   )
+
+  // BYOK mode: every text request goes directly to the user's endpoint.
+  // This runs before the official channel/stream split so it always wins.
+  if (useByok) {
+    const mediaParts = []
+    for (const [index, asset] of references.entries()) {
+      const media = probed[index]
+      if (!media) continue
+      if (asset.type === 'video') mediaParts.push(toVideoImageUrlPart(media))
+      else if (asset.type === 'image') mediaParts.push(toImageUrlPart(media))
+      else if (asset.type === 'audio') mediaParts.push(toAudioImageUrlPart(media))
+      else if (asset.type === 'document') mediaParts.push(toDocumentImageUrlPart(media))
+    }
+    let byokKey = ''
+    if (input.credentials && typeof input.credentials.resolve === 'function') {
+      try {
+        const hit = await input.credentials.resolve(BYOK_KEY_REF)
+        if (hit && typeof hit.value === 'string') byokKey = hit.value.trim()
+      } catch { /* fall through */ }
+    }
+    if (!byokKey) {
+      throw new OmnimuxError('omnimux-unconfigured', '自备密钥未找到，请在设置中重新填写')
+    }
+    const byokEndpoint = typeof runtimeSettings?.runtimeKeyEndpoint === 'string'
+      ? runtimeSettings.runtimeKeyEndpoint.trim()
+      : ''
+    if (!byokEndpoint) {
+      throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少接口地址')
+    }
+    // The user's endpoint knows their model, not the official directory's.
+    // An explicit caller model wins; otherwise the tested runtimeKeyModel goes.
+    const explicitModel = typeof input.model === 'string' && input.model.trim()
+    const byokModel = explicitModel
+      ? input.model.trim()
+      : (typeof runtimeSettings?.runtimeKeyModel === 'string' && runtimeSettings.runtimeKeyModel.trim())
+    if (!byokModel) {
+      throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少模型名')
+    }
+    const result = await completeTextViaChat({
+      model: byokModel,
+      prompt,
+      system,
+      maxTokens,
+      mediaParts,
+      env: input.env,
+      fetcher: input.fetcher,
+      signal: input.signal,
+      apiKey: byokKey,
+      baseUrl: byokEndpoint,
+      credentials: input.credentials,
+    })
+    if (!guardPlan?.byok) {
+      assertGuardOutput(guardPlan, result, { capability: 'text' })
+    }
+    return result
+  }
 
   // A channel selection cannot ride `ctx.llm.stream`: the harness resolves the
   // model id against the provider's declared list, so `model@group` fails before

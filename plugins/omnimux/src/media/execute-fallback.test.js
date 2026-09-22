@@ -229,3 +229,94 @@ test('wait=false returns the task submitted by the single gateway candidate', as
   assert.deepEqual(models, [productId])
   assert.equal(existsSync(input.dest), false)
 })
+
+// BYOK: the user's own key covers image, so the request goes to their endpoint.
+test('BYOK media sends image to the user endpoint, not the official one', async (t) => {
+  const requests = []
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-byok-'))
+  t.after(() => rmSync(dir, { recursive: true, force: true }))
+  const result = await executeOmnimuxMedia('image', {
+    prompt: 'a lamp',
+    dest: join(dir, 'out.png'),
+    runtimeSettings: {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-image-model',
+      runtimeKeyVerified: true,
+      runtimeMediaImage: true,
+    },
+    credentials: {
+      async resolve(ref) {
+        if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-media' }
+        return undefined
+      },
+    },
+    fetcher: async (url, init) => {
+      requests.push({ url, auth: init.headers.authorization, body: JSON.parse(init.body) })
+      return json({ data: [{ b64_json: 'cG5n' }] })
+    },
+  })
+  assert.equal(result.mode, 'live')
+  assert.equal(requests.length, 1)
+  assert.ok(requests[0].url.startsWith('https://my-provider.test/v1'))
+  assert.equal(requests[0].auth, 'Bearer sk-byok-media')
+  assert.equal(requests[0].body.model, 'my-image-model')
+})
+
+// BYOK without a stored key fails before any request.
+test('BYOK media without a stored key throws unconfigured', async (t) => {
+  const input = inputFor(t, {
+    runtimeSettings: {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+      runtimeMediaImage: true,
+    },
+    credentials: { async resolve() { return undefined } },
+    fetcher: async () => json({}),
+  })
+  await assert.rejects(
+    () => executeOmnimuxMedia('image', input),
+    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+  )
+})
+
+// BYOK for a media kind not selected is unavailable — never the official route.
+test('BYOK media for an unselected kind throws, never falls back to official', async (t) => {
+  let calls = 0
+  const input = inputFor(t, {
+    runtimeSettings: {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+      runtimeMediaImage: false,
+      runtimeMediaVideo: true,
+    },
+    fetcher: async () => { calls += 1; return json({ data: [{ b64_json: 'cG5n' }] }) },
+  })
+  await assert.rejects(
+    () => executeOmnimuxMedia('image', input),
+    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+  )
+  assert.equal(calls, 0, 'no request may leave for any channel')
+})
+
+// Local agent mode never covers media.
+test('agent mode rejects media without touching any channel', async (t) => {
+  let calls = 0
+  const input = inputFor(t, {
+    runtimeSettings: {
+      runtimeMode: 'agent',
+      runtimeAgentId: 'claude',
+      runtimeAgentVerified: true,
+    },
+    fetcher: async () => { calls += 1; return json({}) },
+  })
+  await assert.rejects(
+    () => executeOmnimuxMedia('image', input),
+    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+  )
+  assert.equal(calls, 0)
+})
