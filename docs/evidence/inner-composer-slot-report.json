@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "measure": {
+    "inside": true,
+    "aboveText": true,
+    "width": 44,
+    "height": 44,
+    "outsideCount": 1
+  },
+  "screenshot": "docs/evidence/inner-composer-slot-verified.png"
+}

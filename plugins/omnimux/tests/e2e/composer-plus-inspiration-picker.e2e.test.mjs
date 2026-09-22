@@ -41,11 +41,11 @@ test('AC-3 灵感库弹窗走共享外壳且 Tab 首位为全部', () => {
   assert.match(pickerSource, /inspirationPicker\.tab\.all/);
 });
 
-test('AC-6 卡槽挂在输入框上方且内部座只做静默桥接', () => {
+test('AC-6 卡槽挂在输入框内侧，不再占用外侧停靠位', () => {
   assert.match(omnimuxClientIndex, /id: 'omnimux-attachment-tray'/);
-  assert.match(omnimuxClientIndex, /order: 118/);
-  assert.match(omnimuxClientIndex, /NativeComposerBridge/);
-  assert.match(omnimuxClientIndex, /id: 'omnimux-native-composer-bridge'/);
+  assert.match(omnimuxClientIndex, /conversation\.input\.attachments/);
+  assert.doesNotMatch(omnimuxClientIndex, /order: 118/);
+  assert.doesNotMatch(omnimuxClientIndex, /NativeComposerBridge/);
 });
 
 test('AC-5 底栏恢复技能并卸掉产品/角色/预设胶囊', () => {

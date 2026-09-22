@@ -11,22 +11,20 @@ const dockStylesSource = readFileSync(join(here, 'dockStyles.ts'), 'utf8')
 const cardSource = readFileSync(join(here, 'AttachmentCard.tsx'), 'utf8')
 const detectorSource = readFileSync(join(here, 'media-detector.ts'), 'utf8')
 const cssSource = readFileSync(join(here, 'styles.css'), 'utf8')
+const compactSource = readFileSync(join(here, '../composer-compact.js'), 'utf8')
 
 describe('composer inner attachment slot', () => {
-  it('registers the visible tray above the composer and a silent inner upload bridge', () => {
+  it('registers the visible tray inside the official composer and keeps the outer dock clear', () => {
     assert.match(indexSource, /id: 'omnimux-attachment-tray'/)
-    assert.match(indexSource, /order: 118/)
-    assert.match(indexSource, /id: 'omnimux-native-composer-bridge'/)
-    assert.match(indexSource, /NativeComposerBridge/)
+    assert.match(indexSource, /priority: -10/)
+    assert.doesNotMatch(indexSource, /NativeComposerBridge/)
+    assert.doesNotMatch(indexSource, /order: 118/)
     const trayEnd = indexSource.indexOf('}, AttachmentTray)')
     const trayStart = indexSource.lastIndexOf('ctx.slots.inject', trayEnd)
     const trayRegistration = indexSource.slice(trayStart, trayEnd)
-    assert.match(trayRegistration, /conversation\.input\.dock/)
-    assert.doesNotMatch(trayRegistration, /conversation\.input\.attachments/)
-    const bridgeEnd = indexSource.indexOf('}, NativeComposerBridge)')
-    const bridgeStart = indexSource.lastIndexOf('ctx.slots.inject', bridgeEnd)
-    const bridgeRegistration = indexSource.slice(bridgeStart, bridgeEnd)
-    assert.match(bridgeRegistration, /conversation\.input\.attachments/)
+    assert.match(trayRegistration, /conversation\.input\.attachments/)
+    assert.doesNotMatch(trayRegistration, /conversation\.input\.dock/)
+    assert.doesNotMatch(compactSource, /data-slot="conversation\.input\.attachments"[\s\S]{0,80}display:none/)
   })
 
   it('accepts native composer attachment props and drop callbacks', () => {
@@ -40,7 +38,7 @@ describe('composer inner attachment slot', () => {
     assert.match(traySource, /store\.setActiveSessionId\(currentSessionId\)/)
     assert.match(traySource, /store\.claimPendingAttachments\(currentSessionId\)/)
     assert.match(traySource, /omnimuxAttachments = useSyncExternalStore/)
-    assert.match(traySource, /subscribeNativeComposer/)
+    assert.doesNotMatch(traySource, /subscribeNativeComposer/)
     assert.match(traySource, /nativeOnAddFiles/)
     assert.match(traySource, /nativeOnRemove/)
     assert.match(traySource, /uploads=\{nativeUploads\}/)
@@ -48,17 +46,11 @@ describe('composer inner attachment slot', () => {
     assert.match(traySource, /data-omnimux-attachments-dock="true"/)
   })
 
-  it('keeps the visible tray above the composer and follows it when the composer docks', () => {
+  it('does not pull the inner tray back outside when the composer docks', () => {
     const guideStyles = readFileSync(join(here, '../session-guide/styles.js'), 'utf8')
-    assert.match(traySource, /hasRailContent &&/)
-    assert.match(traySource, /SHOW_MANUAL_LINK_BUTTON \|\| hasRailContent/)
-    assert.match(
+    assert.doesNotMatch(
       guideStyles,
-      /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \.omx-attachment-dock \{[^}]*left:var\(--omnimux-dock-left/,
-    )
-    assert.match(
-      guideStyles,
-      /bottom:calc\(var\(--omnimux-dock-bottom, 20px\) \+ var\(--omnimux-dock-card-height, 168px\) \+ 8px\)!important/,
+      /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \.omx-attachment-dock/,
     )
   })
 
@@ -117,6 +109,15 @@ describe('composer inner attachment slot', () => {
     assert.match(cardSource, /isVideoAttachment/)
     assert.match(cardSource, /omx-att-card--media/)
     assert.match(cardSource, /omx-att-card--file/)
+  })
+
+  it('registers the material @ source ahead of the official conversation reference', () => {
+    assert.match(indexSource, /registerMaterialMentionSource\(ctx\)/)
+    const source = readFileSync(join(here, 'materialMentionSource.ts'), 'utf8')
+    assert.match(source, /trigger: '@'/)
+    assert.match(source, /name: SOURCE_NAME/)
+    assert.match(source, /order: -10/)
+    assert.match(source, /已加入素材/)
   })
 
   it('registers link trigger source to serialize URL chips on message submit', () => {

@@ -27,6 +27,8 @@ export interface AttachmentStore {
    */
   claimPendingAttachments(targetSessionId: string): number;
   installGlobalEvents(): () => void;
+  /** 任意会话的素材增删。@ 菜单用它刷新候选，不绑定某一个会话。 */
+  subscribeRoster(listener: () => void): () => void;
 }
 
 /**
@@ -63,6 +65,7 @@ export function generateFingerprint(payload: AttachmentPayload): string {
 export function createAttachmentStore(): AttachmentStore {
   const sessionMap = new Map<string, ConversationAttachment[]>();
   const listenersMap = new Map<string, Set<() => void>>();
+  const rosterListeners = new Set<() => void>();
   let activeSessionId = 'default';
   /** 同一 store 实例只允许注册一套全局事件监听（单例创建与插件 effect 各调用一次）。 */
   let globalEventsInstalled = false;
@@ -76,6 +79,13 @@ export function createAttachmentStore(): AttachmentStore {
         } catch (err) {
           console.error('[AttachmentStore] listener error:', err);
         }
+      }
+    }
+    for (const listener of rosterListeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error('[AttachmentStore] roster listener error:', err);
       }
     }
   }
@@ -243,6 +253,13 @@ export function createAttachmentStore(): AttachmentStore {
     removeAttachment,
 
     clear,
+
+    subscribeRoster(listener: () => void): () => void {
+      rosterListeners.add(listener);
+      return () => {
+        rosterListeners.delete(listener);
+      };
+    },
 
     installGlobalEvents(): () => void {
       if (typeof window === 'undefined') return () => {};

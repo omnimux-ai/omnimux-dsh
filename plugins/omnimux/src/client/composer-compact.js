@@ -388,10 +388,6 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   align-items:center;
   flex-shrink:1;
 }
-/* Tray lives above the composer; keep the inner official seat from drawing a second rail. */
-[data-composer-card] [data-slot="conversation.input.attachments"]{
-  display:none!important;
-}
 [data-composer-card] [class*="trailing"]{
   flex-shrink:0;
   display:inline-flex;

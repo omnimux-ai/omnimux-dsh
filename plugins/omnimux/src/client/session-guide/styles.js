@@ -3142,21 +3142,6 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   bottom:var(--omnimux-dock-bottom, 20px)!important;
   z-index:45!important;
 }
-/* 素材卡槽挂在页面内容最前面。输入框吸底后它会留在窗口顶部，
-   所以有素材时跟着同一套停靠几何，贴到输入框正上方。没有素材时不渲染这条，避免空条占位。 */
-[data-omnimux-starter-host][data-omnimux-dock-open] .omx-attachment-dock {
-  position:fixed!important;
-  left:var(--omnimux-dock-left, 0px)!important;
-  width:var(--omnimux-dock-width, 100%)!important;
-  max-width:none!important;
-  margin:0!important;
-  bottom:calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 8px)!important;
-  z-index:46!important;
-  box-sizing:border-box!important;
-}
-[data-omnimux-starter-host][data-omnimux-dock-open]:has(.omx-attachment-dock) .omnimux-trending-undock {
-  bottom:calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 76px)!important;
-}
 /* 工作区行留在 Hero：输入框已经搬走，它不该继续悬空显示 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [class*="heroWorkspaceRow"] {
   opacity:0!important; pointer-events:none!important;
