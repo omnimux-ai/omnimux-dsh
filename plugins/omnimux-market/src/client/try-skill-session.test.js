@@ -41,13 +41,13 @@ describe('try skill in current session without install (issue 2166)', () => {
     assert.match(tryFn, /ensureConversationVisible/)
     assert.match(tryFn, /setFocus\?\.\(["']split["']\)/)
     assert.match(tryFn, /findComposer\(\)/)
-    assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
+    assert.match(tryFn, /findComposer\(\)\?\.focus/)
   })
 
-  it('trySkillInSession prefills skill command in composer without auto-send', () => {
-    assert.match(sessionCreateSrc, /function applySkillPrefillToComposer/)
-    assert.match(sessionCreateSrc, /targetToken\s*=\s*`\/\${slug}\s*`/)
+  it('trySkillInSession lights the skill chip and never writes a slash command', () => {
     const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
-    assert.match(tryFn, /applySkillPrefillToComposer\(slug\)/)
+    const nonGuide = tryFn.slice(tryFn.indexOf('activateSharedToolSkill({ ...skill, slug })'))
+    assert.doesNotMatch(nonGuide, /applySkillPrefillToComposer/)
+    assert.match(nonGuide, /text:\s*""/)
   })
 })

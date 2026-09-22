@@ -90,20 +90,8 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       const attachments = attachmentStore.getSnapshot(sessionId)
       let draft = value.draft
 
-      // Reconcile active skill gesture without polluting input UI
-      const activeSkill = typeof window !== 'undefined' ? window.__omnimuxActiveSkill : null
-      if (activeSkill) {
-        const slug = activeSkill.slug || activeSkill.skill || (activeSkill.id ? String(activeSkill.id).replace(/^sk-tk-/, '') : '')
-        if (slug) {
-          const gesture = `/${slug}`
-          if (!draft.includes(gesture)) {
-            draft = draft.trim() ? `${gesture} ${draft.trim()}` : `${gesture} `
-            try {
-              actions?.setDraft?.(draft)
-            } catch {}
-          }
-        }
-      }
+      // 选中的技能只显示在技能按钮旁的名称标签上。发送时由会话试用通道
+      // 把技能说明带进上下文，草稿正文保持用户写下的原话，不再补斜杠指令。
 
       // Reconcile video link token to [视频](url) markdown syntax
       const doc = root?.ownerDocument || (typeof document !== 'undefined' ? document : null)

@@ -38,12 +38,12 @@ test('E2E 试用后联动展开会话栏并聚焦输入框，消除无响应感 
   assert.match(tryFn, /ensureConversationVisible/)
   assert.match(tryFn, /setFocus\?\.\(["']split["']\)/)
   assert.match(tryFn, /findComposer\(\)/)
-  assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
+  assert.match(tryFn, /findComposer\(\)\?\.focus/)
 })
 
-test('E2E 技能试用在输入框自动预填技能指令，支持无损续写', () => {
-  assert.match(sessionCreateSrc, /function applySkillPrefillToComposer/)
-  assert.match(sessionCreateSrc, /targetToken\s*=\s*`\/\${slug}\s*`/)
+test('E2E 技能试用只点亮技能按钮，不往输入框写斜杠指令', () => {
   const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
-  assert.match(tryFn, /applySkillPrefillToComposer\(slug\)/)
+  const nonGuide = tryFn.slice(tryFn.indexOf('activateSharedToolSkill({ ...skill, slug })'))
+  assert.doesNotMatch(nonGuide, /applySkillPrefillToComposer/)
+  assert.match(nonGuide, /text:\s*""/)
 })

@@ -1,0 +1,38 @@
+{
+  "feature": "skill-chip-interaction",
+  "url": "http://127.0.0.1:55772/",
+  "port": 55772,
+  "sourceOk": true,
+  "steps": [
+    {
+      "step": "before",
+      "chipVisible": false,
+      "chipName": "",
+      "chipWidth": 0,
+      "chipHeight": 0,
+      "draft": "已有的一句话",
+      "hasSlash": false
+    },
+    {
+      "step": "after-use",
+      "chipVisible": true,
+      "chipName": "UGC 告白",
+      "chipWidth": 101,
+      "chipHeight": 28,
+      "draft": "为我解释下这个技能的最佳使用方式。",
+      "hasSlash": false
+    },
+    {
+      "step": "after-close",
+      "chipVisible": false,
+      "chipName": "",
+      "chipWidth": 0,
+      "chipHeight": 0,
+      "draft": "为我解释下这个技能的最佳使用方式。",
+      "hasSlash": false
+    }
+  ],
+  "interactionOk": true,
+  "screenshot": "docs/evidence/skill-chip-interaction-verified.png",
+  "ok": true
+}

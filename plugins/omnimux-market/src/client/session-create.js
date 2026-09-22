@@ -722,9 +722,9 @@
 
       activateSharedToolSkill({ ...skill, slug });
       let sessionId = currentPlazaSessionId();
-      const prefillText = `/${slug} `;
       if (!sessionId) {
-        const created = await createSkillSession({ skipInstall: true, text: prefillText });
+        // 没有当前会话时只开一个空会话，不往输入框写斜杠指令。
+        const created = await createSkillSession({ skipInstall: true, text: "" });
         sessionId = created && created.sessionId;
       }
       if (!sessionId) return { ok: false, attached: false };
@@ -737,18 +737,38 @@
         });
       } catch {}
 
-      // 确保中间会话栏完全显露并聚焦输入框，消除用户视觉上的无响应感
+      // 确保中间会话栏完全显露并聚焦输入框，消除用户视觉上的无响应感。
+      // 技能名称由技能按钮旁的标签显示，输入框保持原样。
       const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
       try { wb?.ensureConversationVisible?.(); } catch {}
       try { wb?.setFocus?.("split"); } catch {}
       try { wb?.setConversationCollapsed?.(false, { sessionId }); } catch {}
-      try {
-        const composer = findComposer();
-        composer?.focus?.();
-        await applySkillPrefillToComposer(slug);
-      } catch {}
+      try { findComposer()?.focus?.(); } catch {}
 
       return { ok: true, sessionId, attached: true, installed: false };
+    }
+
+    /**
+     * 其它入口点亮技能后，请求把技能说明挂到当前会话。只接收事件，不改输入框。
+     */
+    if (typeof window !== "undefined") {
+      window.addEventListener("omnimux:skill:attach-request", (event) => {
+        const skill = event?.detail?.skill;
+        const slug = skill && (skill.slug || skill.skill);
+        const sessionId = currentPlazaSessionId();
+        if (!slug || !sessionId) return;
+        api("tryAttach", {
+          sessionId,
+          slug,
+          catalogId: skill.id || skill.catalogId || "",
+          title: skill.name || skill.title || slug,
+        }).catch(() => {});
+      });
+      window.addEventListener("omnimux:skill:changed", (event) => {
+        if (event?.detail?.skill) return;
+        const sessionId = currentPlazaSessionId();
+        if (sessionId) api("tryDetach", { sessionId }).catch(() => {});
+      });
     }
 
     if (typeof window !== "undefined") {

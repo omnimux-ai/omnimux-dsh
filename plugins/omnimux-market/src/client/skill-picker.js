@@ -500,6 +500,22 @@
         if (payload) {
           api("install", payload).catch(() => {});
         }
+        // 技能说明挂到当前会话，发送时随上下文带上，不写进输入框。
+        try {
+          const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : (typeof window !== "undefined" ? window.__omnimuxSessions : null);
+          const sid = sessions && sessions.list && typeof sessions.list.getSnapshot === "function"
+            ? (sessions.list.getSnapshot() || {}).current
+            : "";
+          const slug = item.slug || item.skill || "";
+          if (sid && slug) {
+            api("tryAttach", {
+              sessionId: sid,
+              slug,
+              catalogId: item.id || item.catalogId || "",
+              title: item.name || item.title || slug,
+            }).catch(() => {});
+          }
+        } catch {}
         setOpen(false);
         return true;
       }, []);

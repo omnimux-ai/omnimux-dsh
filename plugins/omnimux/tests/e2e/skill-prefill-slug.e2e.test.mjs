@@ -22,8 +22,8 @@ new Function('require', 'module', 'exports', output.outputFiles[0].text)(
 )
 const { SessionGuide } = module.exports
 
-describe('E2E: 首页 Skill 点击使用在输入框自动预填 /<skill-slug> 指令话术', () => {
-  it('点击 Skills 货架上的技能卡片，输入框草稿自动拼接 /<slug> 并聚焦', async () => {
+describe('E2E: 首页 Skill 点击使用只在技能按钮点亮名称，输入框不预填斜杠指令', () => {
+  it('点击 Skills 货架上的技能卡片，输入框只出现说明请求', async () => {
     const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>')
     global.window = dom.window
     global.document = dom.window.document
@@ -70,9 +70,11 @@ describe('E2E: 首页 Skill 点击使用在输入框自动预填 /<skill-slug> �
       useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
     })
 
-    // 4. 断言输入框预填内容以 /<slug> 开头
-    assert.ok(capturedDraft.startsWith('/'), '预填内容必须以斜杠指令开头')
-    assert.match(capturedDraft, /^\/ugc-confessional\s+为我解释下这个技能的最佳使用方式。$/, 'UGC 告白必须预填 /ugc-confessional 指令')
+    // 4. 输入框只剩说明请求；技能名称交给技能按钮旁的标签
+    assert.equal(capturedDraft, '为我解释下这个技能的最佳使用方式。')
+    assert.equal(capturedDraft.includes('/ugc-confessional'), false, '输入框不得出现斜杠指令')
+    assert.equal(window.__omnimuxActiveSkill?.slug, 'ugc-confessional', '技能按钮必须点亮这款技能')
+    assert.equal(window.__omnimuxActiveSkill?.name, 'UGC 告白')
 
     // 5. 断言绝不弹出「已激活技能」Toast 浮层
     const toastPill = document.querySelector('.omnimux-toast-pill')
