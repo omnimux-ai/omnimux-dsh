@@ -1,7 +1,17 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaConfigControls, useMediaGenerationConfig } from './MediaConfigControls.jsx';
+import { MediaSlotGroup } from './MediaSlotGroup.jsx';
 import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from './composer-prefill.js';
 import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
+import { VIDEO_MODE_OPTIONS, operationsOf, slotPlan } from './media-slot.js';
+
+const VIDEO_MODE_IDS = {
+  文生视频: 'text_to_video',
+  首帧: 'first_frame',
+  首尾帧: 'first_last_frame',
+  全能参考: 'video_multi_ref',
+  视频编辑: 'video_edit',
+};
 
 /**
  * 图像/视频生成专用输入面板 (MediaViewerComposer)
@@ -19,16 +29,17 @@ export function MediaViewerComposer({
   onDirectSubmit,
   initialMode = 'image',
   disabled = false,
-  refThumbnails = [],
 }) {
   // 提示词输入框默认空。聊天里的提示词块点「使用提示词生成」后填入一次，不自动发送。
   const handedOff = useSyncExternalStore(subscribeComposerPrefill, peekComposerPrefill, () => null);
   const [prompt, setPrompt] = useState('');
+  const [buckets, setBuckets] = useState({});
+  const [notice, setNotice] = useState('');
   const promptRef = useRef(null);
   const promptBoxRef = useRef(null);
   const config = useMediaGenerationConfig({ initialMode });
   // 先解构出被 effect / 回调读取的方法再依赖：将来宿主换了实现也不会读到过期闭包。
-  const { mode, setMode, closePopovers } = config;
+  const { mode, setMode, closePopovers, model, videoGenMode, setVideoGenMode } = config;
 
   // 聊天提示词块一键填入：只写文本 + 切模式并收起浮层，不自动提交。
   useEffect(() => {
@@ -39,6 +50,27 @@ export function MediaViewerComposer({
     setMode(request.kind === 'video' ? 'video' : 'image');
     closePopovers();
   }, [handedOff, setMode, closePopovers]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(''), 2400);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const videoModeId = VIDEO_MODE_IDS[videoGenMode] ?? 'text_to_video';
+  const videoChoices = VIDEO_MODE_OPTIONS.filter((option) => (
+    operationsOf(model, 'video').some((operation) => operation.id === option.id)
+  ));
+  const slots = slotPlan(model, mode, videoModeId);
+
+  useEffect(() => {
+    if (mode !== 'video' || videoChoices.length === 0) return;
+    if (!videoChoices.some((option) => option.id === videoModeId)) {
+      setVideoGenMode(videoChoices[0].label);
+    }
+  }, [mode, videoChoices, videoModeId, setVideoGenMode]);
+
+  const bucketKey = (slot) => `${mode}:${model?.id ?? ''}:${slot.key}`;
 
   // 按内容行数变高，最多露出 10 行；再多的字在框里滚动。
   // 文字变了要重算。窗口或侧栏把外层挤窄、拉宽、折行变了，也要重算。
@@ -69,14 +101,22 @@ export function MediaViewerComposer({
     if (!trimmed || disabled) return;
     // 提交后收起还开着的浮层（模型级联 / 参数面板），与抽取共享控件前一致。
     closePopovers();
+    const assets = slots.flatMap((slot) => (buckets[bucketKey(slot)] ?? []).map((item) => ({
+      slot: slot.slot,
+      type: slot.type,
+      role: slot.role,
+      name: item.name,
+      file: item.file,
+    })));
     setPrompt(''); // 提交后立即清空输入框
 
     onDirectSubmit?.({
       prompt: trimmed,
       kind: mode,
-      model: config.model?.id,
+      model: model?.id,
       channel: config.channel?.id,
       params: config.params,
+      assets,
     });
   };
 
@@ -89,30 +129,54 @@ export function MediaViewerComposer({
 
   return (
     <div className="omx-mv-composer-root">
-      {/* 1. 顶部参考素材缩略图 (仅在有真实参考图时渲染，绝不使用死假图) */}
-      {refThumbnails && refThumbnails.length > 0 ? (
-        <div className="omx-mv-ref-row">
-          {refThumbnails.map((item, idx) => (
-            <div key={item.id || idx} className="omx-mv-ref-thumb" title={item.title || `参考图 ${idx + 1}`}>
-              <img src={item.url} alt={item.title || '参考图'} />
-              <span className="omx-mv-ref-tag">@{item.label || `Image ${idx + 1}`}</span>
-            </div>
+      {notice ? <div className="omx-slot-notice" role="status">{notice}</div> : null}
+
+      {mode === 'video' && videoChoices.length > 0 ? (
+        <div className="omx-slot-modes" role="tablist" aria-label="视频生成模式">
+          {videoChoices.map((option) => (
+            <button // exempt-ui01: 与输入框胶囊同一行的模式切换，高度 32px
+              key={option.id}
+              type="button"
+              className={`omx-slot-mode${option.id === videoModeId ? ' is-active' : ''}`}
+              aria-pressed={option.id === videoModeId}
+              onClick={() => setVideoGenMode(option.label)}
+            >
+              {option.label}
+            </button>
           ))}
         </div>
       ) : null}
 
-      {/* 2. 提示词输入区域 (默认空，随心输入) */}
-      <div className="omx-mv-prompt-box" ref={promptBoxRef}>
-        <textarea // exempt-ui01: 专用多模态提示词输入框
-          ref={promptRef}
-          className="omx-mv-prompt-textarea"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="随心输入画面提示词，支持回车立即直连生成…"
-          rows={2}
-          disabled={disabled}
-        />
+      {/* 提示词与素材卡槽同一行。没有契约槽位时只留输入框，不放占位图。 */}
+      <div className="omx-mv-prompt-row">
+        {slots.length > 0 ? (
+          <div className="omx-slot-row">
+            {slots.map((slot) => (
+              <MediaSlotGroup
+                key={bucketKey(slot)}
+                slot={slot}
+                items={buckets[bucketKey(slot)] ?? []}
+                disabled={disabled}
+                onChange={(items) => setBuckets((prev) => ({ ...prev, [bucketKey(slot)]: items }))}
+                onReject={setNotice}
+              />
+            ))}
+          </div>
+        ) : null}
+        <div className="omx-mv-prompt-box" ref={promptBoxRef}>
+          <textarea // exempt-ui01: 专用多模态提示词输入框
+            ref={promptRef}
+            className="omx-mv-prompt-textarea"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={mode === 'image'
+              ? '描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用'
+              : '描述视频画面内容和动态过程，使用 @ 指定参考图或参考视频'}
+            rows={2}
+            disabled={disabled}
+          />
+        </div>
       </div>
 
       {/* 3. 底部操作工具栏 (单行流不折行：生成方式 ｜ 模型 ｜ 参数展示 ──► 发送) */}

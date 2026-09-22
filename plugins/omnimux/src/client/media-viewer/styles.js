@@ -1079,6 +1079,164 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25), 0 20px 48px rgba(0, 0, 0, 0.7); /* exempt-ui03: 极光紫微光焦点与深度阴影 */
 }
 
+/* 素材卡槽：竖屏虚线框。位置只通过 --omx-slot-* 变量传入，不写内联尺寸。 */
+.omx-slot-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  min-height: 96px;
+}
+.omx-slot-group {
+  position: relative;
+  height: 96px;
+  flex: none;
+}
+.omx-slot-fan {
+  position: relative;
+  height: 92px;
+  width: var(--omx-slot-fan-width);
+}
+.omx-slot-card,
+.omx-slot-add {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 64px;
+  height: 88px;
+  border-radius: 12px;
+  transform: translateX(var(--omx-slot-shift, 0px));
+  transition: transform 220ms ease, opacity 180ms ease;
+}
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(92px); }
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-0 { transform: translate(2px, 2px) rotate(0deg); }
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-1 { transform: translate(-2px, 5px) rotate(-6deg); }
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-2 { transform: translate(6px, 6px) rotate(5deg); }
+.omx-slot-card {
+  z-index: var(--omx-slot-z, 1);
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); /* exempt-ui03: 叠卡层次 */
+}
+.omx-slot-card.is-depth-1 { transform: translate(var(--omx-slot-shift), 5px) rotate(-6deg); }
+.omx-slot-card.is-depth-2 { transform: translate(var(--omx-slot-shift), 6px) rotate(5deg); }
+.omx-slot-card.is-hidden { opacity: 0; pointer-events: none; }
+.omx-slot-card img,
+.omx-slot-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.omx-slot-audio {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-slot-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.62); /* exempt-ui03: 缩略图上的移除按钮 */
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+.omx-slot-card:hover .omx-slot-remove,
+.omx-slot-card:focus-within .omx-slot-remove { display: flex; }
+.omx-slot-add {
+  z-index: 8;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+.omx-slot-add span {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-slot-add:hover { border-color: var(--dsw-alias-border-l4); }
+.omx-slot-count {
+  position: absolute;
+  left: 50px;
+  bottom: 2px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  font-size: 12px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9;
+}
+.omx-slot-file { display: none; }
+.omx-slot-modes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.omx-slot-mode {
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  flex: none;
+}
+.omx-slot-mode.is-active {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-slot-notice {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-elevated, #1c1c1f);
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); /* exempt-ui03: 顶部提示浮层 */
+}
+.omx-mv-prompt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.omx-mv-prompt-row .omx-mv-prompt-box { flex: 1; min-width: 0; }
+
 .omx-mv-ref-row {
   display: flex;
   align-items: center;
