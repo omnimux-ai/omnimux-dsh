@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-09-22T03:49:18.821Z",
+  "feature": "skill-try-prefill-composer",
+  "environment": "Worktree Isolated Web QA (Headless Chrome)",
+  "evidence": [
+    "01-initial-state.png",
+    "02-try-first-skill.png",
+    "03-user-typed-prompt.png",
+    "04-smooth-replace-skill.png"
+  ],
+  "verifications": [
+    {
+      "scenario": "点击技能卡片「去对话中试试」自动预填技能指令",
+      "status": "PASSED",
+      "expected": "/viral-video-replication ",
+      "actual": "/viral-video-replication "
+    },
+    {
+      "scenario": "输入框自动获得焦点且光标就绪",
+      "status": "PASSED",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "scenario": "切换其他技能时智能平滑替换指令且保留用户既有提示词",
+      "status": "PASSED",
+      "expected": "/video-hook-analysis 请帮我解构这段美食探店视频",
+      "actual": "/video-hook-analysis 请帮我解构这段美食探店视频"
+    }
+  ]
+}

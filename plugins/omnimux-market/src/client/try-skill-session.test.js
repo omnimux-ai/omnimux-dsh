@@ -43,4 +43,11 @@ describe('try skill in current session without install (issue 2166)', () => {
     assert.match(tryFn, /findComposer\(\)/)
     assert.match(tryFn, /composer\?\.focus\?\.\(\)/)
   })
+
+  it('trySkillInSession prefills skill command in composer without auto-send', () => {
+    assert.match(sessionCreateSrc, /function applySkillPrefillToComposer/)
+    assert.match(sessionCreateSrc, /targetToken\s*=\s*`\/\${slug}\s*`/)
+    const tryFn = sessionCreateSrc.slice(sessionCreateSrc.indexOf('async function trySkillInSession'))
+    assert.match(tryFn, /applySkillPrefillToComposer\(slug\)/)
+  })
 })
