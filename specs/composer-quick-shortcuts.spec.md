@@ -77,7 +77,7 @@
 ## 验收状态
 
 - 单元/回归：见 `.agent-reports/composer-quick-shortcuts/report.md` 第 5 节（第二轮数据）、第 9 节（第三轮）与第 10 节（第四轮修正后的实测）。第四轮实测：快捷方式 47/47（`catalog` 9 + `links` 23 + `session` 6 + `dom` 9）、货架解析 10/10、附件 122/122、会话引导 39/39、媒体面板 87 例中 86 通过 1 失败（失败项 `generation feedback: real browser transport-to-viewer journeys` 与主干同一红灯，改动前后同名同结果）。
-- 真实浏览器逐条验收：**BLOCKED，未完成**，无截图证据（原因见「浏览器验收状态（第二轮）」）。
+- 真实浏览器逐条验收：**已完成**（第五轮，2026-09-22）。核心里程碑 71 条断言 71 条通过；唯一没拿到浏览器证据的是「媒体面板工具条单行」。细则与证据见「浏览器验收状态（第五轮：已取得）」。
 
 ## 数据分叉的收敛（2026-09-22 用户拍板）
 
@@ -93,4 +93,17 @@
 - 已在任务工作树内起 `ui` 模式的完整应用环境（动态端口、合成凭据、任务私有 profile），并用 ego-browser 完成同源登录、进入新会话、拿到输入框。
 - 但宿主（OmniMux Dev.app）实际加载的插件客户端产物是**已合入 main 的旧构建**，不是本工作树的构建：实测服务端返回的 `omnimux-market` 客户端模块里 `resolvePresetSkill` 命中 0 次、`sk-tk-replicate-viral` 命中 0 次（本工作树构建分别为 1 次、13 次）。把未合入产物写入 Dev profile 或改动应用包都超出本任务授权，故**逐条点击四条的浏览器验收仍为 BLOCKED**。
 - 证据：`.agent-reports/composer-quick-shortcuts/`（环境截图 + 本文件所在目录的 `report.md` 第 6 节）；复现脚本见该目录下 `tooling/`。
+- 本节结论**已被第三轮推翻的部分**：软链形态才有上述回落，改成真实文件拷贝后宿主就会读私有 profile；详见下一节。
+
+## 浏览器验收状态（第五轮：已取得）
+
+第四轮之后的独立复核证明「工作树构建送不到浏览器」可解，第五轮把逐条验收做完：
+
+- **通路**：HOME 垫片把两个插件包以 `cpSync(..., { dereference: true })` 的**真实文件**放进私有 profile，`lib/client.js` 与 `catalog/preset-skills.json` 换成本工作树版本，再以 `ui` 模式起动态端口的完整环境（合成凭据、环境自清理、只读开发版）。
+- **上轮卡点的真正原因**：环境起来时 `storages/workspace.json` 的 `workspaceIds` 为空数组，Hero 停在「Choose a workspace to start」，界面上没有任何工作区可选。在应用启动前预置一个工作区（`tests/fixtures/qa-workspace-media` 复制成项目目录并登记进 v2 工作区存储）之后，「选择工作区 → 出现输入框」一次就位。这与「需要真实指针手势」无关。
+- **交付面**：服务端送出的 hub bundle 里本轮新引入的标记 `clearQuickShortcutSkill(current)` 命中 1 次、`omx-quick-shortcut` 13 次，尾部 30,000 字节与工作树构建逐字相同。
+- **结果**：核心断言 **71/71 通过**（四条预填逐字、按钮文案逐字、技能胶囊名、模型/参数显隐与「生成方式」缺席、卡槽三态与「插回光标处」、切换互斥、技能 ✕ 只清技能）。补充项：技能菜单两个分类实测 **创作视频 7 款 / 创作图片 6 款**；D13 的真实用户路径（点亮复刻技能 → 进整页素材库 → 复刻板块卸载）实测**技能胶囊未被熄灭**。
+- **未取得**：「媒体面板工具条单行」仍只有源码/样式级证据 —— 该环境里 `omnimux:media-viewer`（图像生成）没有可见入口，唯一含该文案的卡片 `visibility: hidden`，应用自己的页签 API 也不会渲染它。
+- **一条规格表述待澄清**：规格表 `显示名` 列 = 按钮文案（实测 4/4 逐字）；`默认技能` 列 = 技能胶囊名（实测 4/4 逐字）。两列在 clone / reverse 上同名，在 breakdown（拆解爆款视频 / 视频拆解）与 selling（一键创作带货视频 / 创作带货视频）上本就不同，而成功标准 1 写的是「技能胶囊名称为上表**显示名**」。是否需要把胶囊名改成按钮名属产品裁决。
+- **证据**：`.agent-reports/composer-quick-shortcuts/report-round5.md`、`.agent-reports/composer-quick-shortcuts/acceptance/`（31 张 PNG + 4 份结构化 JSON）。
 

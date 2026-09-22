@@ -256,10 +256,10 @@ function consumeTrailingTokens(text, pattern, budget) {
  * 撤回时只剥掉**本快捷方式写入**的那部分草稿：预填提示语与它带来的链接令牌。
  * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空；用户自己独立输入的
  * 同名令牌也不动——剥离按「本快捷方式写入的尾块」定点进行，且以本条目写过的
- * 链接条数为出现次数上限。
+ * 链接种类数为出现次数上限（每种链接本条目只写一个令牌，故与写入的令牌数相等）。
  *
  * 提示语只在仍是草稿开头时才剥（用户改过提示语就整段保留）；用户改过提示语时，
- * 令牌会落在草稿末尾，因此尾块再收一次，两次合计仍不超过条数上限。
+ * 令牌会落在草稿末尾，因此尾块再收一次，两次合计仍不超过种类数上限。
  *
  * @param {{ prompt?: string } | null | undefined} entry 快捷方式条目
  * @param {string | null | undefined} draft 当前草稿
@@ -278,7 +278,7 @@ export function stripQuickShortcutText(entry, draft) {
   let rest = text
   if (prompt && rest.startsWith(prompt)) rest = rest.slice(prompt.length)
 
-  // 上限 = 本条目写过的链接条数：用户后来自己敲的同名令牌不在上限内，绝不动。
+  // 上限 = 本条目写过的链接种类数：用户后来自己敲的同名令牌不在上限内，绝不动。
   let budget = kinds.length
   const leading = consumeLeadingTokens(rest, pattern, budget)
   rest = leading.rest

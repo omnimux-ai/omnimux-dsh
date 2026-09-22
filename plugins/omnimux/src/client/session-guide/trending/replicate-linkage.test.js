@@ -40,6 +40,32 @@ test('isRecreateSkill：别的技能与空值一律不认', () => {
   assert.equal(isRecreateSkill({ id: 'sk-other', slug: 'video-hook-analysis', name: '视频拆解' }), false)
 })
 
+test('isRecreateSkill：同名但身份不同（slug 存在且不同）不是复刻技能', () => {
+  // 货架上的「复刻爆款视频」是与复刻技能同名、身份不同的内置技能。
+  // 名称兜底若压过 slug，这条会被认成复刻技能，进而在复刻板块卸载时被静默熄灭。
+  assert.equal(isRecreateSkill({ slug: 'replicate-viral-video', name: '复刻爆款视频' }), false)
+  assert.equal(isRecreateSkill({ id: 'sk-tk-replicate-viral', slug: 'replicate-viral-video', name: '复刻爆款视频' }), false)
+  assert.equal(isRecreateSkill({ id: 'sk-tk-replicate-viral', name: '复刻爆款视频' }), false)
+  assert.equal(isRecreateSkill({ slug: 'replicate-viral-video', title: '复刻爆款视频' }), false)
+  // 身份正确时仍然认得出，名称分支不影响判定。
+  assert.equal(isRecreateSkill({ id: 'sk-omx-video-deconstruct', name: '别的名字' }), true)
+  assert.equal(isRecreateSkill({ slug: 'video-deconstruct', name: '别的名字' }), true)
+})
+
+test('isRecreateSkill：收紧身份后复刻对象释放判据的既有语义不变', () => {
+  // 撤回（广播 null）且通道里钉的正是复刻技能 → 撤复刻对象；其余一律不撤。
+  assert.equal(shouldReleaseReplicateAttachments(null, RECREATE_SKILL), true)
+  assert.equal(shouldReleaseReplicateAttachments(null, { slug: 'video-deconstruct' }), true)
+  assert.equal(shouldReleaseReplicateAttachments(null, { name: '复刻爆款视频' }), true)
+  assert.equal(
+    shouldReleaseReplicateAttachments(null, { slug: 'replicate-viral-video', name: '复刻爆款视频' }),
+    false,
+    '同名货架技能不得触发复刻对象的附件释放',
+  )
+  assert.equal(shouldReleaseReplicateAttachments(null, null), false)
+  assert.equal(shouldReleaseReplicateAttachments(RECREATE_SKILL, RECREATE_SKILL), false)
+})
+
 test('buildReplicateAttachmentPayload：卡片行映射为视频附件，封面与标题都在', () => {
   const payload = buildReplicateAttachmentPayload(CARD)
 

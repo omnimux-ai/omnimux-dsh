@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   applyQuickShortcut,
+  clearQuickShortcutSkill,
   quickShortcutLinks,
   resolveQuickShortcuts,
 } from './catalog.js';
@@ -182,11 +183,12 @@ export function ComposerQuickShortcuts(props) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   // 技能药丸被 ✕ 撤下时只动技能：提示语与链接卡槽原样保留。
+  // 归约规则只有 `clearQuickShortcutSkill` 一份实现，组件不再内联第二份。
   useEffect(() => subscribeSkillChanged((skill) => {
     const current = store.getSnapshot(sessionId);
     if (!current.skill) return;
     if (skill) return;
-    store.set(sessionId, { skill: null });
+    store.set(sessionId, clearQuickShortcutSkill(current));
   }), [store, sessionId]);
 
   // 写不进输入框时的轻提示（序号驱动，重复触发也能重新出现，4 秒后自动收起）。
