@@ -13,6 +13,8 @@
  * bottom, Codex-style) and the conversation-column min-width guard.
  */
 
+import { listSessionMaterials } from './attachments/materialMentionSource.ts'
+
 export const COMPOSER_COMPACT_STYLE_ID = 'omnimux-composer-compact-chrome'
 export const COMPOSER_COMPACT_ATTR = 'data-omnimux-composer-density'
 export const COMPOSER_COMPACT_DENSITY = Object.freeze({ full: 'full', short: 'short', icon: 'icon' })
@@ -394,6 +396,27 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   align-items:center;
 }
 
+/* @ 菜单默认钉在输入框上方。输入框靠近页面顶部时改从下方展开，避免被顶出屏幕。 */
+[data-composer-card] [data-trigger-menu]{
+  bottom:auto!important;
+  top:calc(100% + 4px)!important;
+}
+[data-composer-card][data-omx-mention-up] [data-trigger-menu]{
+  top:auto!important;
+  bottom:calc(100% + 4px)!important;
+}
+/* 素材行开头的缩略图。地址写在行的 data-omx-thumb 上。 */
+[data-trigger-menu] [role="option"][data-omx-thumb]::before{
+  content:"";
+  width:32px;
+  height:32px;
+  border-radius:6px;
+  flex:none;
+  background:var(--dsw-alias-bg-layer-3) center/cover no-repeat;
+  background-image:var(--omx-thumb);
+  display:inline-block;
+}
+
 /* 纯 CSS 容器查询自适应兜底：当卡片宽度变窄时原生即时收敛（Issue #2302） */
 @container composer-card (max-width: 559px){
   [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerLabel"]{
@@ -633,6 +656,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   if (typeof MutationObserver !== 'undefined') {
     composerMountObserver = new MutationObserver(() => {
       const next = findComposerTarget(doc)
+      placeMentionMenu(doc)
       if (next && (next !== observedTarget || !observedTarget?.isConnected)) {
         observeComposerTarget(doc, next)
         scheduleComposerDensity(doc)
@@ -647,7 +671,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
 
   // 视口 resize 监听常驻作为兜底保障（包括无 RO 环境或视口跳变）
   if (!composerResizeListener) {
-    composerResizeListener = () => { applyComposerDensity(doc) }
+    composerResizeListener = () => { applyComposerDensity(doc); placeMentionMenu(doc) }
     const win = hostWindow()
     if (win?.addEventListener) {
       win.addEventListener('resize', composerResizeListener)
@@ -655,7 +679,51 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   }
 
   applyComposerDensity(doc)
+  placeMentionMenu(doc)
   return uninstallComposerCompactObserver
+}
+
+const MENTION_UP_ATTR = 'data-omx-mention-up'
+const MENTION_MENU_HEIGHT = 320
+
+/**
+ * 输入框靠近页面顶部时，菜单从下方展开；否则从上方展开。
+ * 素材行的缩略图地址写到行上，样式用它画在名称前面。
+ * @param {Document | undefined} doc
+ */
+export function placeMentionMenu(doc = hostDocument()) {
+  if (!doc?.querySelectorAll) return
+  const menus = doc.querySelectorAll('[data-trigger-menu]')
+  menus.forEach((menu) => {
+    const card = menu.closest?.('[data-composer-card]')
+    if (!card) return
+    const top = card.getBoundingClientRect?.().top ?? 0
+    if (top < MENTION_MENU_HEIGHT + 8) card.removeAttribute(MENTION_UP_ATTR)
+    else card.setAttribute(MENTION_UP_ATTR, 'true')
+    const materials = listSessionMaterials('')
+    const thumbs = new Map()
+    for (const item of materials) {
+      if (item.previewUrl && item.title) thumbs.set(item.title, item.previewUrl)
+    }
+    menu.querySelectorAll('[role="option"]').forEach((row) => {
+      let src = ''
+      if (row.id && /^dsh-slash-option-material-(\d+)$/.test(row.id)) {
+        const idx = parseInt(RegExp.$1, 10)
+        src = materials[idx]?.previewUrl || ''
+      }
+      if (!src) {
+        const name = row.querySelector('[class*="itemName"]')?.textContent || ''
+        src = thumbs.get(name.trim()) || ''
+      }
+      if (!src) {
+        row.removeAttribute('data-omx-thumb')
+        row.style?.removeProperty?.('--omx-thumb')
+        return
+      }
+      row.setAttribute('data-omx-thumb', 'true')
+      row.style?.setProperty?.('--omx-thumb', `url("${src.replace(/"/g, '')}")`)
+    })
+  })
 }
 
 /** Tear down the observer (RO, fallback resize listener, mount watcher). */

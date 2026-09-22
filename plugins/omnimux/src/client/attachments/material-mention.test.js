@@ -56,10 +56,9 @@ describe('material @ mention', () => {
       assert.equal(picked.insert.label, '海浪封面')
 
       const text = serializeMaterialMention('s1', picked.insert.ref)
-      assert.match(text, /海浪封面/)
-      assert.match(text, /assets\/wave\.png/)
-      assert.equal(source.codec.clipboardText(picked.insert.ref), '@海浪封面')
-      assert.equal(picked.insert.clipboardText, '@海浪封面')
+      assert.equal(text, '@海浪封面')
+      assert.equal(source.codec.clipboardText(picked.insert.ref), '海浪封面')
+      assert.equal(picked.insert.clipboardText, '海浪封面')
 
       store.removeAttachment('s1', store.getSnapshot('s1')[0].id)
       assert.equal(materialCandidates('s1', '').length, 0)

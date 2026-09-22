@@ -46,10 +46,11 @@ export function formatAttachmentLine(
   const ext = att.extension || 'FILE';
   const durationPart = att.duration ? `, ${att.duration}` : '';
   const paths = attachmentPaths(att);
+  const fallbackRef = !paths[0] && att.previewUrl ? att.previewUrl : '';
 
   let header = '';
   if (paths.length <= 1) {
-    const pathRef = formatPathReference(paths[0] || att.relativePath);
+    const pathRef = formatPathReference(paths[0] || att.relativePath) || fallbackRef;
     header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}): ${pathRef}`;
   } else {
     const lines = paths.map((rel) => `  - ${formatPathReference(rel)}`);

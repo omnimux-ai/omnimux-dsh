@@ -7,6 +7,7 @@ import {
   COMPOSER_COMPACT_STYLE_ID,
   COMPOSER_WORKSPACE_MAX_WIDTH_PX,
   applyComposerDensity,
+  placeMentionMenu,
   composerDensityForWidth,
   ensureComposerCompactChrome,
   installComposerCompactObserver,
@@ -452,4 +453,38 @@ test('installComposerCompactObserver re-binds when card DOM node is replaced by 
   )
 
   dispose()
+})
+
+test('placeMentionMenu opens downward near the top and upward near the bottom', () => {
+  const row = {
+    attrs: {},
+    style: { props: {}, setProperty(k, v) { this.props[k] = v }, removeProperty(k) { delete this.props[k] } },
+    querySelector(sel) { return sel.includes('itemName') ? { textContent: '海浪封面' } : null },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+  const card = {
+    top: 40,
+    attrs: {},
+    getBoundingClientRect() { return { top: this.top } },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+  const menu = { closest() { return card }, querySelectorAll() { return [row] } }
+  const doc = { querySelectorAll(sel) { return sel === '[data-trigger-menu]' ? [menu] : [] } }
+  globalThis.window = {
+    __omnimuxAttachments: {
+      getActiveSessionId() { return 's1' },
+      getSnapshot() { return [{ title: '海浪封面', previewUrl: 'https://img/a.png' }] },
+      subscribeRoster() { return () => {} },
+    },
+  }
+  placeMentionMenu(doc)
+  assert.equal(card.getAttribute('data-omx-mention-up'), undefined)
+  card.top = 500
+  placeMentionMenu(doc)
+  assert.equal(card.getAttribute('data-omx-mention-up'), 'true')
+  assert.equal(row.getAttribute('data-omx-thumb'), 'true')
 })

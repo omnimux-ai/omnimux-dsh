@@ -26,13 +26,18 @@ export function hasAttachedContextMarker(text: unknown): boolean {
     && (text.includes(ATTACHED_CONTEXT_MARKER) || text.includes(ATTACHED_CONTEXT_MARKER_EN));
 }
 
+/** 引用被展开后写进消息的素材说明，形如「- [图像] 名称 (`FILE`):」。 */
+const MATERIAL_LINE = /(?:^|\n)\s*-\s*\[[^\]]+\]\s+\S/;
+
 /** 取文本中附加数据块的起始下标；没有返回 -1。 */
 export function findAttachedContextStart(text: string): number {
   const zh = text.indexOf(ATTACHED_CONTEXT_MARKER);
   const en = text.indexOf(ATTACHED_CONTEXT_MARKER_EN);
-  if (zh < 0) return en;
-  if (en < 0) return zh;
-  return Math.min(zh, en);
+  const marked = zh < 0 ? en : en < 0 ? zh : Math.min(zh, en);
+  const line = text.search(MATERIAL_LINE);
+  if (marked < 0) return line;
+  if (line < 0) return marked;
+  return Math.min(marked, line);
 }
 
 /**

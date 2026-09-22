@@ -77,7 +77,7 @@ export function serializeMaterialMention(sessionId: string, ref: string): string
   if (!parsed) return ref;
   const attachment = findSessionMaterial(sessionId, parsed.id);
   if (!attachment) return ref;
-  return formatAttachmentLine(attachment);
+  return `@${attachment.title || '素材'}`;
 }
 
 export function createMaterialMentionSource() {
@@ -108,7 +108,8 @@ export function createMaterialMentionSource() {
           ref,
           label,
           appearance: 'file' as const,
-          clipboardText: `@${label}`,
+          // 写进用户消息的只留名称。文件说明走不显示的通道。
+          clipboardText: label,
         },
       };
     },
@@ -117,7 +118,7 @@ export function createMaterialMentionSource() {
         const parsed = parseMaterialMention(ref);
         if (!parsed) return ref;
         const attachment = findSessionMaterial(getGlobalAttachmentStore().getActiveSessionId(), parsed.id);
-        return `@${attachment?.title || '素材'}`;
+        return attachment?.title || '素材';
       },
       serialize(ref: string, _signal?: AbortSignal, sessionId?: string) {
         const target = sessionId || getGlobalAttachmentStore().getActiveSessionId();

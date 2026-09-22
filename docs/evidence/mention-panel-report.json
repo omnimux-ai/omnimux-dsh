@@ -1,0 +1,17 @@
+{
+  "task": "mention-panel-flip-and-tokens",
+  "issue": 2561,
+  "verified": true,
+  "metrics": {
+    "menuPlacementHero": "downward",
+    "menuPlacementDocked": "upward",
+    "thumbnailSizePx": 32,
+    "thumbnailVisible": true,
+    "userMessageTokenPills": true,
+    "agentContextChannel": "pre-step-intact"
+  },
+  "evidenceFiles": [
+    "docs/evidence/mention-panel-flipped-thumb.png",
+    "docs/evidence/mention-panel-live.png"
+  ]
+}
