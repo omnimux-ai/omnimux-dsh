@@ -1134,8 +1134,11 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-mv-prompt-textarea {
   width: 100%;
+  height: 52px;
   min-height: 52px;
-  max-height: 120px;
+  /* 10 行可见：ceil(10 × 14px × 1.6 + 4) = 228px，与 prompt-textarea-height.js 同一公式 */
+  max-height: 228px;
+  overflow-y: auto;
   background: transparent;
   border: none !important;
   outline: none !important;
