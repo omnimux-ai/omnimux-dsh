@@ -397,28 +397,28 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
 }
 
 /* @ 菜单默认钉在输入框上方。输入框靠近页面顶部时改从下方展开，避免被顶出屏幕。
-   严格限定仅对 @ 引用菜单生效（通过识别 [data-omx-mention-menu] 或内含素材项），绝不影响斜杠/模型/加号等其他菜单。 */
-[data-composer-card] [data-trigger-menu][data-omx-mention-menu],
+   严格限定仅对 @ 引用菜单生效（通过识别 [data-omnimux-mention-menu] 或内含素材项），绝不影响斜杠/模型/加号等其他菜单。 */
+[data-composer-card] [data-trigger-menu][data-omnimux-mention-menu],
 [data-composer-card] [data-trigger-menu]:has([data-source="material"]),
 [data-composer-card] [data-trigger-menu]:has([id^="dsh-slash-option-material-"]){
   bottom:auto!important;
   top:calc(100% + 4px)!important;
 }
-[data-composer-card][data-omx-mention-up] [data-trigger-menu][data-omx-mention-menu],
-[data-composer-card][data-omx-mention-up] [data-trigger-menu]:has([data-source="material"]),
-[data-composer-card][data-omx-mention-up] [data-trigger-menu]:has([id^="dsh-slash-option-material-"]){
+[data-composer-card][data-omnimux-mention-up] [data-trigger-menu][data-omnimux-mention-menu],
+[data-composer-card][data-omnimux-mention-up] [data-trigger-menu]:has([data-source="material"]),
+[data-composer-card][data-omnimux-mention-up] [data-trigger-menu]:has([id^="dsh-slash-option-material-"]){
   top:auto!important;
   bottom:calc(100% + 4px)!important;
 }
-/* 素材行开头的缩略图。地址写在行的 data-omx-thumb 上。 */
-[data-trigger-menu] [role="option"][data-omx-thumb]::before{
+/* 素材行开头的缩略图。地址写在行的 data-omnimux-thumb 上。 */
+[data-trigger-menu] [role="option"][data-omnimux-thumb]::before{
   content:"";
   width:32px;
   height:32px;
   border-radius:6px;
   flex:none;
   background:var(--dsw-alias-bg-layer-3) center/cover no-repeat;
-  background-image:var(--omx-thumb);
+  background-image:var(--omnimux-thumb);
   display:inline-block;
 }
 
@@ -688,7 +688,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   return uninstallComposerCompactObserver
 }
 
-const MENTION_UP_ATTR = 'data-omx-mention-up'
+const MENTION_UP_ATTR = 'data-omnimux-mention-up'
 const MENTION_MENU_HEIGHT = 320
 
 let placeMentionMenuRaf = null
@@ -802,12 +802,12 @@ export function placeMentionMenu(doc = hostDocument()) {
 
     if (!hasMaterialItems) {
       // 非素材引用菜单，移除专有标记并跳过，绝不修改其位置或样式
-      menu.removeAttribute?.('data-omx-mention-menu')
+      menu.removeAttribute?.('data-omnimux-mention-menu')
       return
     }
 
     // 标记为专有 @ 引用菜单
-    menu.setAttribute?.('data-omx-mention-menu', 'true')
+    menu.setAttribute?.('data-omnimux-mention-menu', 'true')
 
     // 2. 测量菜单实际高度与坐标，自适应上下翻转
     const rect = typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null
@@ -916,13 +916,13 @@ export function placeMentionMenu(doc = hostDocument()) {
       const rawSrc = matchedItem?.previewUrl || ''
       const safeSrc = sanitizeThumbnailUrl(rawSrc)
       if (!safeSrc) {
-        row.removeAttribute('data-omx-thumb')
-        row.style?.removeProperty?.('--omx-thumb')
+        row.removeAttribute('data-omnimux-thumb')
+        row.style?.removeProperty?.('--omnimux-thumb')
         return
       }
 
-      row.setAttribute('data-omx-thumb', 'true')
-      row.style?.setProperty?.('--omx-thumb', `url("${safeSrc}")`)
+      row.setAttribute('data-omnimux-thumb', 'true')
+      row.style?.setProperty?.('--omnimux-thumb', `url("${safeSrc}")`)
     })
   })
 }

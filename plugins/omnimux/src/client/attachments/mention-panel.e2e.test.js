@@ -44,8 +44,8 @@ test('e2e: 引用菜单根据输入框位置自适应上下翻转', () => {
 
     // 2. 检查素材行前置缩略图标记
     const opt = dom.window.document.querySelector('#dsh-slash-option-material-0');
-    assert.equal(opt.getAttribute('data-omx-thumb'), 'true');
-    assert.match(opt.style.getPropertyValue('--omx-thumb'), /\/covers\/wave\.jpg/);
+    assert.equal(opt.getAttribute('data-omnimux-thumb'), 'true');
+    assert.match(opt.style.getPropertyValue('--omnimux-thumb'), /\/covers\/wave\.jpg/);
 
     // 3. 输入框吸底时，菜单自适应向上翻转
     card.getBoundingClientRect = () => ({ top: 780, bottom: 920, left: 100, right: 700, width: 600, height: 140, x: 100, y: 780 });
@@ -148,15 +148,15 @@ test('e2e: 搜索过滤时候选索引与全量列表错位修复，并且普通
     placeMentionMenu(dom.window.document);
 
     // 斜杠菜单不受影响
-    assert.equal(slashMenu.hasAttribute('data-omx-mention-menu'), false);
-    assert.equal(slashOpt.hasAttribute('data-omx-thumb'), false);
+    assert.equal(slashMenu.hasAttribute('data-omnimux-mention-menu'), false);
+    assert.equal(slashOpt.hasAttribute('data-omnimux-thumb'), false);
 
     // 引用菜单被打上专有标记
-    assert.equal(mentionMenu.getAttribute('data-omx-mention-menu'), 'true');
+    assert.equal(mentionMenu.getAttribute('data-omnimux-mention-menu'), 'true');
     // 缩略图必须精确绑定到特写镜头 (/covers/shot.jpg)，绝不错配为全景镜头的 /covers/wide.jpg
-    assert.equal(mentionOpt.getAttribute('data-omx-thumb'), 'true');
-    assert.match(mentionOpt.style.getPropertyValue('--omx-thumb'), /\/covers\/shot\.jpg/);
-    assert.doesNotMatch(mentionOpt.style.getPropertyValue('--omx-thumb'), /wide\.jpg/);
+    assert.equal(mentionOpt.getAttribute('data-omnimux-thumb'), 'true');
+    assert.match(mentionOpt.style.getPropertyValue('--omnimux-thumb'), /\/covers\/shot\.jpg/);
+    assert.doesNotMatch(mentionOpt.style.getPropertyValue('--omnimux-thumb'), /wide\.jpg/);
   } finally {
     if (previousWindow) globalThis.window = previousWindow;
     else delete globalThis.window;
@@ -200,10 +200,10 @@ test('e2e: 菜单容器复用时能正常清理专有标记，杜绝自引用与
   try {
     // 第一次调用：是素材菜单，打上标记
     placeMentionMenu(dom.window.document);
-    assert.equal(menu.getAttribute('data-omx-mention-menu'), 'true');
+    assert.equal(menu.getAttribute('data-omnimux-mention-menu'), 'true');
 
     // 模拟容器被宿主复用为非素材斜杠菜单（例如 /help），此时虽然素材库里恰好有名为 "/help" 的素材，
-    // 但由于移除了弱文本标题匹配且不再有自引用，该容器必须被清理掉 data-omx-mention-menu
+    // 但由于移除了弱文本标题匹配且不再有自引用，该容器必须被清理掉 data-omnimux-mention-menu
     menu.innerHTML = `
       <button id="dsh-slash-option-cmd-0" role="option">
         <span class="itemName">/help</span>
@@ -211,7 +211,7 @@ test('e2e: 菜单容器复用时能正常清理专有标记，杜绝自引用与
     `;
 
     placeMentionMenu(dom.window.document);
-    assert.equal(menu.hasAttribute('data-omx-mention-menu'), false, '复用为非素材菜单后，data-omx-mention-menu 必须被移除');
+    assert.equal(menu.hasAttribute('data-omnimux-mention-menu'), false, '复用为非素材菜单后，data-omnimux-mention-menu 必须被移除');
 
     // 再次验证同名素材缩略图歧义保护
     dom.window.__omnimuxAttachments.getSnapshot = () => [
@@ -226,7 +226,7 @@ test('e2e: 菜单容器复用时能正常清理专有标记，杜绝自引用与
     placeMentionMenu(dom.window.document);
     const ambigOpt = menu.querySelector('#dsh-slash-option-material-0');
     // 存在两项名为“封面”的素材且无任何扩展名区分，不应随意挑选第一项错配
-    assert.equal(ambigOpt.hasAttribute('data-omx-thumb'), false, '同名素材歧义时应降级，不随意挑选第一项');
+    assert.equal(ambigOpt.hasAttribute('data-omnimux-thumb'), false, '同名素材歧义时应降级，不随意挑选第一项');
 
     // 若带有扩展名区分
     menu.innerHTML = `
@@ -237,8 +237,8 @@ test('e2e: 菜单容器复用时能正常清理专有标记，杜绝自引用与
     `;
     placeMentionMenu(dom.window.document);
     const resolvedOpt = menu.querySelector('#dsh-slash-option-material-0');
-    assert.equal(resolvedOpt.getAttribute('data-omx-thumb'), 'true');
-    assert.match(resolvedOpt.style.getPropertyValue('--omx-thumb'), /thumb-2\.jpg/);
+    assert.equal(resolvedOpt.getAttribute('data-omnimux-thumb'), 'true');
+    assert.match(resolvedOpt.style.getPropertyValue('--omnimux-thumb'), /thumb-2\.jpg/);
   } finally {
     if (previousWindow) globalThis.window = previousWindow;
     else delete globalThis.window;

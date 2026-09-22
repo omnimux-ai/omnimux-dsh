@@ -484,11 +484,11 @@ test('placeMentionMenu opens downward near the top and upward near the bottom', 
     },
   }
   placeMentionMenu(doc)
-  assert.equal(card.getAttribute('data-omx-mention-up'), undefined)
+  assert.equal(card.getAttribute('data-omnimux-mention-up'), undefined)
   card.top = 500
   placeMentionMenu(doc)
-  assert.equal(card.getAttribute('data-omx-mention-up'), 'true')
-  assert.equal(row.getAttribute('data-omx-thumb'), 'true')
+  assert.equal(card.getAttribute('data-omnimux-mention-up'), 'true')
+  assert.equal(row.getAttribute('data-omnimux-thumb'), 'true')
 })
 
 test('sanitizeThumbnailUrl: 严格白名单校验与防 CSS 注入', () => {
@@ -540,8 +540,8 @@ test('placeMentionMenu: 非素材菜单（如斜杠菜单/模型菜单）严禁�
 
   placeMentionMenu(doc)
 
-  assert.equal(normalMenu.hasAttribute('data-omx-mention-menu'), false, '非素材引用菜单不得被标记为 mention 专有菜单')
-  assert.equal(normalRow.getAttribute('data-omx-thumb'), undefined, '非素材项不得被注入缩略图属性')
+  assert.equal(normalMenu.hasAttribute('data-omnimux-mention-menu'), false, '非素材引用菜单不得被标记为 mention 专有菜单')
+  assert.equal(normalRow.getAttribute('data-omnimux-thumb'), undefined, '非素材项不得被注入缩略图属性')
 })
 
 test('placeMentionMenu: 搜索过滤时候选索引与全量列表错位修复，稳定映射永不错配', () => {
@@ -598,8 +598,8 @@ test('placeMentionMenu: 搜索过滤时候选索引与全量列表错位修复�
   placeMentionMenu(doc)
 
   // 必须精确匹配到「夜景视频」的缩略图 (night.mp4)，严禁错配为全量 0 号的 wave.png
-  assert.equal(filteredRow.getAttribute('data-omx-thumb'), 'true')
-  assert.equal(filteredRow.style.props['--omx-thumb'], 'url("https://img/night.mp4")')
+  assert.equal(filteredRow.getAttribute('data-omnimux-thumb'), 'true')
+  assert.equal(filteredRow.style.props['--omnimux-thumb'], 'url("https://img/night.mp4")')
 })
 
 test('installComposerCompactObserver: 统一改用 schedulePlaceMentionMenu 异步调度，避免同步重排', () => {
