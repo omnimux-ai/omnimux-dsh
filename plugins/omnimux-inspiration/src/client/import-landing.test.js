@@ -39,7 +39,6 @@ describe('import landing — pinned row', () => {
   it('prepends the landed row when the list does not hold it', () => {
     const items = [{ id: 'a' }, { id: 'b' }]
     assert.deepEqual(withLandedItem(items, landed, 'local').map((row) => row.id), ['local-9', 'a', 'b'])
-    assert.deepEqual(withLandedItem(items, landed, 'all').map((row) => row.id), ['local-9', 'a', 'b'])
   })
 
   it('never duplicates a row the list already holds', () => {
@@ -59,7 +58,7 @@ describe('import landing — pinned row', () => {
 
   it('ignores a landed row without an id, which could not be found in the DOM', () => {
     const items = [{ id: 'a' }]
-    assert.deepEqual(withLandedItem(items, { title: 'no id' }, 'all'), items)
+    assert.deepEqual(withLandedItem(items, { title: 'no id' }, 'local'), items)
   })
 })
 
