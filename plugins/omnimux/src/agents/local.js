@@ -48,20 +48,21 @@ export async function scanLocalAgents(run = execFileAsync) {
 
 /**
  * The one-shot text command for an agent: how the hub hands a prompt to it.
- * Kept declarative so each CLI's flags live in exactly one place.
+ * Kept declarative so each CLI's flags live in exactly one place. `--` ends
+ * option parsing, so a prompt that starts with a dash is data, never a flag.
  * @param {string} id
  * @param {string} prompt
  */
 export function agentTextCommand(id, prompt) {
   switch (id) {
     case 'claude':
-      return { bin: 'claude', args: ['-p', prompt, '--output-format', 'text'] }
+      return { bin: 'claude', args: ['-p', '--output-format', 'text', '--', prompt] }
     case 'codex':
-      return { bin: 'codex', args: ['exec', prompt] }
+      return { bin: 'codex', args: ['exec', '--', prompt] }
     case 'kimi':
-      return { bin: 'kimi', args: ['-p', prompt] }
+      return { bin: 'kimi', args: ['-p', '--', prompt] }
     case 'qwen':
-      return { bin: 'qwen', args: ['-p', prompt] }
+      return { bin: 'qwen', args: ['-p', '--', prompt] }
     default:
       return null
   }

@@ -101,6 +101,9 @@ async function resolveStoredKey(credentials) {
 
 async function runByokTest({ endpoint, model, apiKey, fetcher, signal }) {
   const fetchImpl = fetcher ?? fetch
+  // A test must never hang the settings UI: 15 seconds, no retry.
+  const timeout = AbortSignal.timeout(15000)
+  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
   const response = await fetchImpl(`${endpoint}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -113,7 +116,7 @@ async function runByokTest({ endpoint, model, apiKey, fetcher, signal }) {
       max_tokens: 8,
       messages: [{ role: 'user', content: 'ping' }],
     }),
-    ...(signal ? { signal } : {}),
+    signal: combined,
   })
   if (!response.ok) {
     return { ok: false, status: response.status }
@@ -248,8 +251,12 @@ export function registerByokRoutes(webServer, deps) {
         const endpoint = str(input.endpoint) || str(current.runtimeKeyEndpoint)
         const model = str(input.model) || str(current.runtimeKeyModel)
         const apiKey = str(input.apiKey) || (await resolveStoredKey(getCredentials()))
-        if (!endpoint || !model) {
-          sendJson(res, 400, { ok: false, error: '缺少接口地址或模型名' })
+        if (!endpoint || !/^https?:\/\//.test(endpoint)) {
+          sendJson(res, 400, { ok: false, error: '接口地址必须是 http(s) 地址' })
+          return
+        }
+        if (!model) {
+          sendJson(res, 400, { ok: false, error: '缺少模型名' })
           return
         }
         if (!apiKey) {

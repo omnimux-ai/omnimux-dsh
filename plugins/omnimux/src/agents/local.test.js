@@ -23,10 +23,21 @@ describe('scanLocalAgents', () => {
 })
 
 describe('agentTextCommand', () => {
-  it('returns one declarative command per CLI', () => {
-    assert.deepEqual(agentTextCommand('claude', 'hi'), { bin: 'claude', args: ['-p', 'hi', '--output-format', 'text'] })
-    assert.deepEqual(agentTextCommand('codex', 'hi'), { bin: 'codex', args: ['exec', 'hi'] })
+  it('returns one declarative command per CLI, with -- ending option parsing', () => {
+    assert.deepEqual(agentTextCommand('claude', 'hi'), { bin: 'claude', args: ['-p', '--output-format', 'text', '--', 'hi'] })
+    assert.deepEqual(agentTextCommand('codex', 'hi'), { bin: 'codex', args: ['exec', '--', 'hi'] })
+    assert.deepEqual(agentTextCommand('kimi', 'hi'), { bin: 'kimi', args: ['-p', '--', 'hi'] })
+    assert.deepEqual(agentTextCommand('qwen', 'hi'), { bin: 'qwen', args: ['-p', '--', 'hi'] })
     assert.equal(agentTextCommand('nope', 'hi'), null)
+  })
+
+  it('a prompt starting with a dash stays data, never a flag', () => {
+    for (const id of ['claude', 'codex', 'kimi', 'qwen']) {
+      const command = agentTextCommand(id, '-v follow up')
+      const separator = command.args.indexOf('--')
+      assert.ok(separator >= 0, `${id} must separate options from the prompt`)
+      assert.equal(command.args[separator + 1], '-v follow up')
+    }
   })
 })
 

@@ -50,12 +50,26 @@ const t = (key, params) => {
 };
 
 function createScope(initialValues = {}) {
-  const snap = { status: 'ready', value: initialValues, writable: true, user: {} };
+  let snap = { status: 'ready', value: { ...initialValues }, writable: true, user: {} };
+  const listeners = new Set();
   return {
     getSnapshot: () => snap,
-    subscribe: () => () => {},
-    set: async () => {},
-    unset: async () => {},
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+    set: async (field, value) => {
+      // A fresh snapshot object every change: useSyncExternalStore compares
+      // identity, a mutated-in-place snapshot silently breaks the update.
+      snap = { ...snap, value: { ...snap.value, [field]: value } };
+      for (const listener of [...listeners]) listener();
+    },
+    unset: async (field) => {
+      const next = { ...snap.value };
+      delete next[field];
+      snap = { ...snap, value: next };
+      for (const listener of [...listeners]) listener();
+    },
   };
 }
 
@@ -140,13 +154,14 @@ async function renderGuide(initialValues = {}) {
   const container = document.createElement('main');
   document.body.appendChild(container);
   const root = createRoot(container);
+  const scope = createScope(initialValues);
   await act(async () => {
-    root.render(React.createElement(Guide, { t, scope: createScope(initialValues) }));
+    root.render(React.createElement(Guide, { t, scope }));
   });
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
-  return { document: dom.window.document, root };
+  return { document: dom.window.document, root, scope };
 }
 
 function setInputValue(input, value) {
@@ -176,7 +191,7 @@ describe('首次运行引导（Issue #2557）', () => {
   });
 
   it('选「自己的密钥」出表单，测试通过后写入运行方式并关闭', async () => {
-    const { document, root } = await renderGuide({});
+    const { document, root, scope } = await renderGuide({});
     const buttons = [...document.querySelectorAll('[data-omnimux-runtime-guide] button')];
     const keyButton = buttons.find((el) => el.textContent.trim() === '自己的密钥');
     assert.ok(keyButton, 'BYOK entry must exist');
@@ -216,6 +231,13 @@ describe('首次运行引导（Issue #2557）', () => {
     const modeCall = calls.find((call) => call.path === '/omnimux/runtime/mode' && call.method === 'PUT');
     assert.ok(modeCall, 'passing the test must write the runtime choice');
     assert.equal(modeCall.body.mode, 'key');
+
+    // The guide's core promise: once a mode is stored, it never shows again.
+    await scope.set('runtimeMode', 'key');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(document.querySelector('[data-omnimux-runtime-guide]'), null, 'guide must close after the choice is written');
     await act(async () => { root.unmount(); });
   });
 });
