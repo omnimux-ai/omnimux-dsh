@@ -150,8 +150,8 @@ export function apply(ctx, config = {}) {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
-          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials') }),
-          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials') }),
+          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
+          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
         }), 'omnimux: direct media generate HTTP')
       }
     })
