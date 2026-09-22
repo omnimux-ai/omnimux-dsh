@@ -4,7 +4,6 @@ import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
-import { CreatifyPillsBar } from './CreatifyPillsBar.jsx'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
@@ -312,14 +311,7 @@ function BlankSessionGuide({
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
       {!isCompact && (
         <>
-          {/* 第 1 层：Creatify 1:1 4大核心胶囊按钮与全套专属下拉弹窗 */}
-          <CreatifyPillsBar
-            onApplyPrompt={handleTrendingApply}
-            t={t}
-            locale={isEn ? 'en' : 'zh'}
-          />
-
-          {/* 第 2 层：探索模板 (Explore templates) 核心专区（内含 TikTok热门、Skills 与各分类单行货架） */}
+          {/* 探索模板核心专区（内含 Skills 与各分类单行货架） */}
           <ExploreTemplatesSection
             onApplyTemplate={handleExploreTemplateApply}
             onApplyTrending={handleExploreTrendingApply}
