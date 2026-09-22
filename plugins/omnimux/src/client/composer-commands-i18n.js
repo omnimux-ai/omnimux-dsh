@@ -435,7 +435,8 @@ export function ensurePlacementStyles(doc) {
       pointer-events: auto !important;
       z-index: 1000 !important;
     }
-    /* 技能列表菜单（Trigger Menu）专用于即时触发联想，固定显示在输入框上方（上一层），图层严格置顶避免遮挡 */
+    /* 默认（斜杠联想、输入框在底部）贴在输入框上方。
+       输入框在页面顶部且加号处于展开时，同一菜单改到输入框下方，避免被顶出可视区域。 */
     [data-composer-card] [data-trigger-menu],
     [data-composer-card] [class*="iRJKyq_menu"],
     [data-trigger-menu],
@@ -444,6 +445,16 @@ export function ensurePlacementStyles(doc) {
       bottom: calc(100% + 4px) !important;
       pointer-events: auto !important;
       z-index: 1000 !important;
+    }
+    [data-composer-card]:has(button[aria-haspopup="listbox"][aria-expanded="true"])[data-menu-placement="bottom"] [data-trigger-menu],
+    [data-composer-card]:has(button[aria-haspopup="listbox"][aria-expanded="true"])[data-menu-placement="bottom"] [class*="iRJKyq_menu"],
+    [data-trigger-menu][data-placement="bottom"],
+    [class*="iRJKyq_menu"][data-placement="bottom"] {
+      position: absolute !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: calc(100% + 4px) !important;
+      bottom: auto !important;
     }
     /* 所有输入框菜单均赋予最高层级（z-index: 1000），彻底杜绝被页面内胶囊栏（120）或卡片遮挡 */
     [data-composer-card] [data-trigger-menu],
@@ -466,29 +477,41 @@ export function ensurePlacementStyles(doc) {
   doc.head.appendChild(style)
 }
 
+/** 加号按钮：aria-haspopup=listbox。斜杠联想没有这个按钮展开态。 */
+const PLUS_BUTTON = 'button[aria-haspopup="listbox"]'
+
 /**
- * Determine whether the candidate menu should be placed below the input box.
+ * 加号菜单与斜杠联想共用同一菜单层。只有加号处于展开，才允许改到输入框下方。
+ * 菜单节点尚未挂上时，用卡片上的加号按钮判断。
+ * @param {HTMLElement|null} card
+ * @param {HTMLElement|null} menu
+ * @returns {boolean}
+ */
+export function isPlusMenuContext(card, menu) {
+  const root = menu?.closest?.('[data-composer-card]') || card
+  const button = root?.querySelector?.(PLUS_BUTTON)
+  if (!button) return false
+  if (button.getAttribute?.('aria-expanded') === 'true') return true
+  // 按下加号的同一帧，宿主还没把展开态写上，菜单也还没挂出来。
+  // 已挂出的菜单必须等展开态，避免斜杠联想被误判成加号。
+  return !menu
+}
+
+/**
+ * Determine whether the plus menu should open below the input box.
  * Rule:
- * 1. Skill/slash trigger menus (data-trigger-menu / iRJKyq_menu) MUST always be placed
- *    above the input box (never below) so they never clash with pills/cards below.
- * 2. If the input box is near the bottom of the page (spaceBelow < 220px),
- *    keep the original behavior (place above).
- * 3. If in Hero/centered/full-stage mode with sufficient space below (spaceBelow >= 220px),
- *    place below so it doesn't obstruct headers and feels natural.
- * 4. Fallback geometric check: if spaceBelow >= 280px and spaceBelow > spaceAbove,
- *    place below.
+ * 1. Slash / skill suggestions stay above the input box.
+ * 2. The plus menu follows the input box: below when the box sits in the
+ *    upper half of the page, above when it sits in the lower half.
+ * 3. If the side that follows the box has less than 160px, use the other side.
  * @param {HTMLElement|null} card - The [data-composer-card] element
  * @param {HTMLElement|null} menu - The candidate menu element
  * @param {Window} [windowObj]
- * @returns {boolean} True if menu should be placed below the composer card
+ * @returns {boolean} True if the plus menu should be placed below the composer card
  */
 export function shouldPlaceMenuBelow(card, menu, windowObj = (typeof window !== 'undefined' ? window : null)) {
   if (!card || !windowObj) return false
-
-  // 技能列表联想菜单（Trigger Menu）专用于即时触发，固定显示在输入框上方（上一层），绝不置于下方
-  if (menu && (menu.hasAttribute?.('data-trigger-menu') || menu.classList?.contains?.('iRJKyq_menu') || menu.matches?.('[data-trigger-menu], [class*="iRJKyq_menu"]'))) {
-    return false
-  }
+  if (!isPlusMenuContext(card, menu)) return false
 
   const cardRect = typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null
   if (!cardRect) return false
@@ -496,30 +519,10 @@ export function shouldPlaceMenuBelow(card, menu, windowObj = (typeof window !== 
   const viewportHeight = windowObj.innerHeight || windowObj.document?.documentElement?.clientHeight || 800
   const spaceBelow = viewportHeight - cardRect.bottom
   const spaceAbove = cardRect.top
+  const composerAtTop = cardRect.top + cardRect.height / 2 < viewportHeight / 2
 
-  // Strict lower bound: if space below is too tight, always keep above
-  if (spaceBelow < 220) {
-    return false
-  }
-
-  // Hero / Centered state check (New chat / full-stage hero mode)
-  const isHero = Boolean(
-    card.closest?.('[class*="hero"]') ||
-    card.closest?.('[class*="Hero"]') ||
-    card.closest?.('[data-phase="hero"]') ||
-    card.closest?.('[class*="composerHero"]') ||
-    card.closest?.('[class*="Q7WfXG_hero"]')
-  )
-  if (isHero && spaceBelow >= 220) {
-    return true
-  }
-
-  // Geometric adaptive check: if space below is substantially larger than space above
-  if (spaceBelow >= 280 && spaceBelow > spaceAbove) {
-    return true
-  }
-
-  return false
+  if (composerAtTop) return spaceBelow >= 160
+  return spaceAbove < 160 && spaceBelow >= 160
 }
 
 /**
@@ -551,6 +554,9 @@ export function syncMenuPlacement(menu, doc) {
       card.dataset.menuPlacement = 'bottom'
     }
     menu.dataset.placement = 'bottom'
+    menu.style.position = 'absolute'
+    menu.style.left = '0'
+    menu.style.right = '0'
     menu.style.bottom = 'auto'
     menu.style.top = 'calc(100% + 4px)'
     menu.style.pointerEvents = 'auto'
@@ -578,6 +584,9 @@ export function syncMenuPlacement(menu, doc) {
     }
     if (menu.dataset.placement === 'bottom') {
       delete menu.dataset.placement
+      menu.style.position = ''
+      menu.style.left = ''
+      menu.style.right = ''
       menu.style.bottom = ''
       menu.style.top = ''
       menu.style.removeProperty('max-height')
@@ -607,13 +616,23 @@ export function syncAllComposerMenus(doc = (typeof document !== 'undefined' ? do
     }
   }
 
-  // If menu is not yet open, but card is in hero mode, pre-tag card so first frame has zero jitter
+  // 菜单还没挂出来时，按输入框当前位置预先标好方向，避免第一帧弹错边。
+  // 输入框挪到底部后必须清掉旧标记，否则加号会沿用顶部时的向下展开。
   const card = doc.querySelector?.('[data-composer-card]')
-  if (card && shouldPlaceMenuBelow(card, null, doc.defaultView)) {
-    card.dataset.menuPlacement = 'bottom'
+  if (card) {
     const anchor = card.querySelector?.('[class*="overlayAnchor"]')
-    if (anchor) {
-      anchor.dataset.overlayPlacement = 'bottom'
+    if (shouldPlaceMenuBelow(card, null, doc.defaultView)) {
+      card.dataset.menuPlacement = 'bottom'
+      if (anchor) anchor.dataset.overlayPlacement = 'bottom'
+    } else if (card.dataset.menuPlacement === 'bottom') {
+      delete card.dataset.menuPlacement
+      if (anchor?.dataset.overlayPlacement === 'bottom') {
+        delete anchor.dataset.overlayPlacement
+        anchor.style.position = ''
+        anchor.style.inset = ''
+        anchor.style.height = ''
+        anchor.style.pointerEvents = ''
+      }
     }
   }
 
@@ -675,15 +694,26 @@ export function installMenuAutoSync(doc = (typeof document !== 'undefined' ? doc
     const target = e.target
     if (target && target.closest?.('button[aria-label="指令"], button[class*="add"], [class*="Q7WfXG_add"]')) {
       const card = target.closest?.('[data-composer-card]') || doc.querySelector?.('[data-composer-card]')
-      if (card && shouldPlaceMenuBelow(card, null, win)) {
-        card.dataset.menuPlacement = 'bottom'
+      if (card) {
         const anchor = card.querySelector?.('[class*="overlayAnchor"]')
-        if (anchor) {
-          anchor.dataset.overlayPlacement = 'bottom'
-          anchor.style.position = 'absolute'
-          anchor.style.inset = '0'
-          anchor.style.height = '100%'
-          anchor.style.pointerEvents = 'none'
+        if (shouldPlaceMenuBelow(card, null, win)) {
+          card.dataset.menuPlacement = 'bottom'
+          if (anchor) {
+            anchor.dataset.overlayPlacement = 'bottom'
+            anchor.style.position = 'absolute'
+            anchor.style.inset = '0'
+            anchor.style.height = '100%'
+            anchor.style.pointerEvents = 'none'
+          }
+        } else if (card.dataset.menuPlacement === 'bottom') {
+          delete card.dataset.menuPlacement
+          if (anchor?.dataset.overlayPlacement === 'bottom') {
+            delete anchor.dataset.overlayPlacement
+            anchor.style.position = ''
+            anchor.style.inset = ''
+            anchor.style.height = ''
+            anchor.style.pointerEvents = ''
+          }
         }
       }
       scheduleSync()
