@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-09-22"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -27,7 +27,7 @@ subsystem: "global"
 | `yarn omnimux:stage` | 发版前写入桌面 preset；需要发布授权 |
 | `yarn omnimux:path` / `yarn omnimux:help` | 显示解析路径和用法 |
 
-没有合并前独立 App/Host 环境或对应生命周期命令。合并前执行隔离 worktree 自动化测试、静态检查、Agent 侧真实浏览器 Web 验证和独立评审；通过 required CI/MQ 后 Dev 物化按需执行（保留给人工查看或人工要求时），Dev 真机验收归人工，Agent 不等待、不阻塞、不声称取得。L2 专属 baseline 创建、消费与激活迁移已退役，不是待实现的运维能力。
+没有合并前独立 App/Host 环境或对应生命周期命令。合并前执行隔离 worktree 自动化测试、静态检查、Agent 侧真实浏览器 Web 验证和独立评审；通过 required CI/MQ 后，收尾必须把本次合并的插件改动装进 Dev（开发版已一致则跳过），Dev 真机验收归人工，Agent 不等待、不阻塞、不声称取得。L2 专属 baseline 创建、消费与激活迁移已退役，不是待实现的运维能力。
 
 #765 viewer 版本转换仍使用同一 `yarn omnimux:sync --managed-tarball=…` 入口，追加的成套旧/新来源参数、固定身份与反向 receipt 约束见 [dev-pipeline 转换例外](dev-pipeline.md#839765-viewer-精确转换例外)。没有新部署命令；未合并工具只在自动化测试的 synthetic fixture 验证，不得写共享 Dev。`--recover-managed-tarball` 遇到 COMMITTED 仅完成终态清理，提交后退版必须走绑定成功 receipt 的新反向转换，不能把恢复命令当降级命令。
 

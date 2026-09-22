@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-09-09"
+updated: "2026-09-22"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -35,7 +35,7 @@ subsystem: "omnimux"
 |---|---|
 | 合并前 worktree | base/head SHA、dirty 状态、实际 diff 与测试命令；无 App 物化 |
 | 隔离 worktree Web 验收 | 任务自身 worktree 内启动的本地服务，动态端口、自清理；Agent 可自证的验收基线，保留截图与结构化报告 |
-| Dev 真机 | `~/.omnimux-dev`，端口 `45120`；**人工职责**，Agent 不据其出证据、不等待、不阻塞交付；物化仅按需保留供人工查看；Dev/Prod 不得 link 或接收未合并 worktree |
+| Dev 真机 | `~/.omnimux-dev`，端口 `45120`；**人工职责**，Agent 不据其出证据、不等待、不阻塞交付；插件改动合入后由收尾自动装入，已一致则跳过；Dev/Prod 不得 link 或接收未合并 worktree |
 | Prod | `~/.omnimux`；没有独立发布授权不得写入或用于普通交付 |
 
 隔离 worktree Web 验收证据须绑定实际运行的服务进程、端口、URL 与源码身份。源码提交或目标进程变化后，不得拿旧请求、截图或运行身份冒充当前版本；在报告中区分源码检查与已加载版本。
