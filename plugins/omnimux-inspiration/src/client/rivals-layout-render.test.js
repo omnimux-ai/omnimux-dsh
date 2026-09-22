@@ -444,7 +444,11 @@ describe('inspiration tabs — filter row follows the tab', () => {
             `[${tabId}] the library filter ${label} must stay on the row`,
           )
         }
-        assert.ok(subfilterRow(gated.container), `[${tabId}] the library second filter row must stay`)
+        assert.equal(
+          Boolean(subfilterRow(gated.container)),
+          tabId === 'public',
+          `[${tabId}] the cloud-only second filter row must ${tabId === 'public' ? 'stay' : 'be hidden'}`,
+        )
         assert.equal(
           platformTriggers(gated.container).length,
           0,

@@ -351,7 +351,7 @@ export function InspirationSection({ t, active }) {
           </>
         )}
       />
-      {!rivalTab ? (
+      {tab === 'public' ? (
         <div className="omnimux-inspiration-subfilter-sticky">
           <div className="omnimux-inspiration-subfilter-row">
             <DropdownSelect
