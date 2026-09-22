@@ -52,9 +52,11 @@ export async function generateSpeech(input) {
     assertDownloadedMediaType(mime, 'audio')
     const bytes = Buffer.from(await response.arrayBuffer())
     signal.throwIfAborted()
-    assertGuardOutput(input.guardPlan, {
-      mode: 'live', outputs: [{ type: 'audio', mime, bytes }],
-    }, { capability: 'audio' })
+    if (!input.guardPlan?.byok) {
+      assertGuardOutput(input.guardPlan, {
+        mode: 'live', outputs: [{ type: 'audio', mime, bytes }],
+      }, { capability: 'audio' })
+    }
 
     const headerDuration = response.headers.get('x-audio-duration')
     const durationValue = headerDuration?.trim() ? Number(headerDuration) : NaN

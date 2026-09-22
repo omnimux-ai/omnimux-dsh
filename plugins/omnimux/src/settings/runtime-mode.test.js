@@ -67,6 +67,21 @@ describe('resolveRuntimeChoice', () => {
     assert.equal(requiresOfficialSignIn({}, 'generate'), true)
   })
 
+  it('checks media kinds one by one: an image-only key never lets video through', () => {
+    const imageOnly = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://example.test/v1',
+      runtimeKeyModel: 'demo',
+      runtimeKeyVerified: true,
+      runtimeMediaImage: true,
+    }
+    assert.doesNotThrow(() => assertRuntimeReady(imageOnly, 'image'))
+    assert.throws(() => assertRuntimeReady(imageOnly, 'video'), /尚未配置/)
+    assert.throws(() => assertRuntimeReady(imageOnly, 'audio'), /尚未配置/)
+    // The aggregate must not rescue a kind the user never ticked.
+    assert.equal(resolveRuntimeChoice(imageOnly).mediaReady, true)
+  })
+
   it('stops an unconfigured media request before it can fall back', () => {
     assert.throws(
       () => assertRuntimeReady({ runtimeMode: 'agent', runtimeAgentId: 'claude', runtimeAgentVerified: true }, 'image'),

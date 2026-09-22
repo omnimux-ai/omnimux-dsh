@@ -282,9 +282,9 @@ test('BYOK media without a stored key throws unconfigured', async (t) => {
   )
 })
 
-// BYOK for a media kind not selected does not override the official route.
-test('BYOK media for an unselected kind keeps the official route', async (t) => {
-  const requests = []
+// BYOK for a media kind not selected is unavailable — never the official route.
+test('BYOK media for an unselected kind throws, never falls back to official', async (t) => {
+  let calls = 0
   const input = inputFor(t, {
     runtimeSettings: {
       runtimeMode: 'key',
@@ -294,13 +294,29 @@ test('BYOK media for an unselected kind keeps the official route', async (t) => 
       runtimeMediaImage: false,
       runtimeMediaVideo: true,
     },
-    fetcher: async (url, init) => {
-      requests.push({ url })
-      return json({ data: [{ b64_json: 'cG5n' }] })
-    },
+    fetcher: async () => { calls += 1; return json({ data: [{ b64_json: 'cG5n' }] }) },
   })
-  const result = await executeOmnimuxMedia('image', input)
-  assert.equal(result.mode, 'live')
-  assert.equal(requests.length, 1)
-  assert.ok(!requests[0].url.startsWith('https://my-provider.test'), 'unselected kind must not use BYOK')
+  await assert.rejects(
+    () => executeOmnimuxMedia('image', input),
+    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+  )
+  assert.equal(calls, 0, 'no request may leave for any channel')
+})
+
+// Local agent mode never covers media.
+test('agent mode rejects media without touching any channel', async (t) => {
+  let calls = 0
+  const input = inputFor(t, {
+    runtimeSettings: {
+      runtimeMode: 'agent',
+      runtimeAgentId: 'claude',
+      runtimeAgentVerified: true,
+    },
+    fetcher: async () => { calls += 1; return json({}) },
+  })
+  await assert.rejects(
+    () => executeOmnimuxMedia('image', input),
+    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+  )
+  assert.equal(calls, 0)
 })

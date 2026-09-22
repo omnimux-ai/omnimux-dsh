@@ -207,6 +207,34 @@ describe('byok routes', () => {
     assert.equal(settings.value.runtimeKeyVerified, false)
   })
 
+  it('test pass persists a caller-provided key so verified and credentials agree', async () => {
+    const settings = fakeSettings({
+      runtimeKeyEndpoint: 'https://p.test/v1',
+      runtimeKeyModel: 'm1',
+    })
+    const credentials = fakeCredentials('')
+    const handlers = register({
+      settings,
+      credentials,
+      fetcher: async () => ({ ok: true, status: 200 }),
+    })
+    const res = fakeRes()
+    await handlers['/omnimux/byok/test'](fakeReq('POST', { apiKey: 'sk-fresh' }), res)
+    assert.equal(res.status, 200)
+    assert.equal(res.body().ok, true)
+    assert.equal(settings.value.runtimeKeyVerified, true)
+    assert.deepEqual(credentials.writes, [[BYOK_KEY_REF, 'sk-fresh']])
+  })
+
+  it('answers OPTIONS preflight with 204 on every route', async () => {
+    const handlers = register({ settings: fakeSettings({}), credentials: fakeCredentials('') })
+    for (const path of ['/omnimux/byok/config', '/omnimux/byok/test', '/omnimux/runtime/mode']) {
+      const res = fakeRes()
+      await handlers[path](fakeReq('OPTIONS'), res)
+      assert.equal(res.status, 204, `${path} must answer preflight`)
+    }
+  })
+
   it('DELETE clears the config and the key', async () => {
     const settings = fakeSettings({
       runtimeKeyEndpoint: 'https://p.test/v1',

@@ -85,14 +85,21 @@ export async function executeOmnimuxMedia(capability, input) {
 
   // BYOK: when the user's own key covers this media kind, inject their
   // endpoint as a provider and route to it instead of the official one.
+  // A kind the user did not tick is unavailable — never the official channel.
   const runtime = resolveRuntimeChoice(input.runtimeSettings)
+  if (runtime.mode === 'agent') {
+    throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置自备密钥或改用官方')
+  }
   if (runtime.mode === 'key' && runtime.textReady) {
     const capKey = capability === 'image' ? 'runtimeMediaImage'
       : capability === 'video' ? 'runtimeMediaVideo'
       : capability === 'audio' ? 'runtimeMediaAudio'
       : null
     const capEnabled = capKey && input.runtimeSettings?.[capKey] === true
-    if (capEnabled && typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string') {
+    if (!capEnabled) {
+      throw new OmnimuxError('omnimux-unconfigured', `自备密钥未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
+    }
+    if (typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string') {
       const endpoint = input.runtimeSettings.runtimeKeyEndpoint.trim()
       if (endpoint) {
         // Resolve the BYOK key from credentials so it never sits in the config.
@@ -157,7 +164,11 @@ export async function executeOmnimuxMedia(capability, input) {
       byok: true,
       prompt,
       modelId: route.modelId,
-      operationId: input.operation,
+      // A BYOK endpoint speaks the generic speech shape; ride the synchronous
+      // channel unless the caller named another operation.
+      operationId: typeof input.operation === 'string' && input.operation.trim()
+        ? input.operation.trim()
+        : (capability === 'audio' ? 'text_to_speech' : undefined),
     }
   } else {
     guardPlan = assertGuardSubmit(

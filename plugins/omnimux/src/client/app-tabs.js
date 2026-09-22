@@ -61,10 +61,6 @@ export function safeOpenApp(id, title, openFn = openApp) {
     auth.ensureLogin({
       reason: title || id,
       kind: 'explicit',
-      // Opening a surface is not itself an account-bound action. Features that
-      // do need the official account (publish, accounts, quota) keep their own
-      // gate calls, so a local agent or custom key can still open the app.
-      action: 'generate',
       onSuccess: () => {
         openFn(id)
       },

@@ -26,17 +26,42 @@ export function requiresOfficialSignIn(settings, action) {
  * Stop a request that the selected runtime has not made available.
  *
  * Official and an unset choice pass through. A local agent can only run text.
- * A custom key runs a capability only after its endpoint and verification exist.
+ * A custom key runs a capability only after its endpoint and verification exist
+ * — and media kinds are checked one by one: a key that only covers images never
+ * lets a video request slip back to the official channel.
  *
  * @param {unknown} settings
  * @param {'text' | 'image' | 'video' | 'audio'} capability
  */
 export function assertRuntimeReady(settings, capability) {
   const choice = resolveRuntimeChoice(settings)
-  const ready = capability === 'text' ? choice.textReady : choice.mediaReady
+  const ready = capability === 'text'
+    ? choice.textReady
+    : mediaReadyFor(choice, settings, capability)
   if (ready) return choice
   const label = capability === 'text' ? '文字' : '图片、视频和音频'
   throw new Error(`尚未配置${label}，当前运行方式不能使用这一项`)
+}
+
+/**
+ * Whether one media kind is enabled for the resolved choice. Only a verified
+ * custom key with that kind ticked passes; the official route and an unset
+ * choice are always ready, and a local agent never covers media.
+ * @param {ReturnType<typeof resolveRuntimeChoice>} choice
+ * @param {unknown} settings
+ * @param {string} capability
+ */
+function mediaReadyFor(choice, settings, capability) {
+  if (choice.mode === 'official') return true
+  if (choice.mode !== 'key' || !choice.textReady) return false
+  const input = settings && typeof settings === 'object' && !Array.isArray(settings)
+    ? /** @type {Record<string, unknown>} */ (settings)
+    : {}
+  const flag = capability === 'image' ? 'runtimeMediaImage'
+    : capability === 'video' ? 'runtimeMediaVideo'
+    : capability === 'audio' ? 'runtimeMediaAudio'
+    : ''
+  return flag !== '' && input[flag] === true
 }
 
 /**

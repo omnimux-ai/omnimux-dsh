@@ -142,6 +142,10 @@ export function registerByokRoutes(webServer, deps) {
     path: '/omnimux/byok/config',
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       try {
         if (method === 'GET') {
           const value = await readCurrentSettings(getSettings())
@@ -198,6 +202,10 @@ export function registerByokRoutes(webServer, deps) {
     path: '/omnimux/runtime/mode',
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       if (method !== 'PUT') {
         sendJson(res, 404, { error: 'not found' })
         return
@@ -223,6 +231,10 @@ export function registerByokRoutes(webServer, deps) {
     path: '/omnimux/byok/test',
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       if (method !== 'POST') {
         sendJson(res, 404, { error: 'not found' })
         return
@@ -254,6 +266,17 @@ export function registerByokRoutes(webServer, deps) {
           await writeSettings(getSettings(), { runtimeKeyVerified: false })
           sendJson(res, 200, { ok: false, status: result.status })
           return
+        }
+        // A key that just passed must be the one generation will find later:
+        // persist a caller-provided key so "verified" and the stored
+        // credential never drift apart.
+        if (str(input.apiKey)) {
+          const credentials = getCredentials()
+          if (credentials && typeof credentials.set === 'function') {
+            await credentials.set(BYOK_KEY_REF, apiKey)
+          } else {
+            fail(503, 'credentials unavailable')
+          }
         }
         await writeSettings(getSettings(), {
           runtimeKeyEndpoint: endpoint,

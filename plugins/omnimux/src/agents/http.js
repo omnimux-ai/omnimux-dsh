@@ -37,10 +37,16 @@ export function registerAgentRoutes(webServer, deps) {
     path: '/omnimux/agents',
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       if (method !== 'GET') {
         sendJson(res, 404, { error: 'not found' })
         return
       }
+      // A scan reveals what lives on this machine; same-origin only.
+      if (!assertLocal(req, res)) return
       try {
         const scan = typeof deps.scan === 'function' ? deps.scan : () => scanLocalAgents()
         const agents = await scan()
@@ -55,6 +61,10 @@ export function registerAgentRoutes(webServer, deps) {
     path: '/omnimux/agents/select',
     async handler(req, res) {
       const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') {
+        sendJson(res, 204, {})
+        return
+      }
       if (method !== 'POST') {
         sendJson(res, 404, { error: 'not found' })
         return

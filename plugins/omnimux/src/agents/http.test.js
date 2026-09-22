@@ -90,6 +90,16 @@ describe('agent routes', () => {
     assert.equal(res.status, 400)
   })
 
+  it('GET refuses a cross-origin read (machine fingerprint)', async () => {
+    const handlers = register({
+      settings: fakeSettings({}),
+      scan: async () => [{ id: 'claude', name: 'Claude Code', installed: true, version: '2.1' }],
+    })
+    const res = fakeRes()
+    await handlers['/omnimux/agents'](fakeReq('GET', undefined, { origin: 'https://evil.example' }), res)
+    assert.equal(res.status, 403)
+  })
+
   it('select refuses a cross-origin write', async () => {
     const handlers = register({ settings: fakeSettings({}) })
     const res = fakeRes()

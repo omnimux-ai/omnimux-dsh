@@ -66,13 +66,6 @@ export async function executeOmnimuxText(input) {
   const hasDocument = references.some((asset) => asset.type === 'document')
   const hasComplexMedia = hasVideo || hasAudio || hasDocument
   const gate = input.gate ?? input.hub?.gate
-  const route = resolveTextRoute({
-    model: input.model,
-    references,
-    strategy: input.strategy,
-    group: input.group,
-    allowedGroups: input.allowedGroups,
-  }, text, input.env, gate)
 
   // BYOK: the user configured their own key and it tested OK. Text runs
   // directly against their endpoint; the official channel is not consulted.
@@ -110,9 +103,22 @@ export async function executeOmnimuxText(input) {
     }
   }
 
+  // The official route — its whitelist, channel plan and submit guard — only
+  // applies when the request actually rides it. A BYOK endpoint knows its own
+  // model names, so none of that machinery may run for it.
+  const route = useByok
+    ? null
+    : resolveTextRoute({
+      model: input.model,
+      references,
+      strategy: input.strategy,
+      group: input.group,
+      allowedGroups: input.allowedGroups,
+    }, text, input.env, gate)
+
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
-    : route.maxTokens
+    : (route ? route.maxTokens : text.maxTokens)
   const system = typeof input.system === 'string' ? input.system.trim() : ''
 
   if (hasImage && (!input.attachments || typeof input.attachments.saveImage !== 'function')) {
@@ -136,7 +142,11 @@ export async function executeOmnimuxText(input) {
     probed.push(media)
     assets.push({ ...asset, mime: media.mediaType, sizeBytes: media.sizeBytes ?? media.bytes })
   }
-  const guardPlan = assertGuardSubmit(
+  // BYOK models are user-defined; the official submit/output guard does not
+  // know them, so it only runs for the official route.
+  const guardPlan = useByok
+    ? { plan: null, byok: true }
+    : assertGuardSubmit(
     {
       prompt,
       model: route.modelId,
@@ -191,8 +201,17 @@ export async function executeOmnimuxText(input) {
     if (!byokEndpoint) {
       throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少接口地址')
     }
+    // The user's endpoint knows their model, not the official directory's.
+    // An explicit caller model wins; otherwise the tested runtimeKeyModel goes.
+    const explicitModel = typeof input.model === 'string' && input.model.trim()
+    const byokModel = explicitModel
+      ? input.model.trim()
+      : (typeof runtimeSettings?.runtimeKeyModel === 'string' && runtimeSettings.runtimeKeyModel.trim())
+    if (!byokModel) {
+      throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少模型名')
+    }
     const result = await completeTextViaChat({
-      model: route.modelId,
+      model: byokModel,
       prompt,
       system,
       maxTokens,
@@ -204,7 +223,9 @@ export async function executeOmnimuxText(input) {
       baseUrl: byokEndpoint,
       credentials: input.credentials,
     })
-    assertGuardOutput(guardPlan, result, { capability: 'text' })
+    if (!guardPlan?.byok) {
+      assertGuardOutput(guardPlan, result, { capability: 'text' })
+    }
     return result
   }
 

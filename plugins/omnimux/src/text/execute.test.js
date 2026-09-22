@@ -608,7 +608,7 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(result.text, 'a small png')
   })
 
-  it('BYOK mode sends text to the user endpoint, not the official channel', async () => {
+  it('BYOK mode sends text to the user endpoint with the tested model, not the official directory name', async () => {
     const requests = []
     let streamCalls = 0
     const byokSettings = {
@@ -629,7 +629,7 @@ describe('omnimux_text_complete tool', () => {
         },
       },
       fetcher: async (url, options) => {
-        requests.push({ url, auth: options.headers.authorization })
+        requests.push({ url, auth: options.headers.authorization, body: JSON.parse(options.body) })
         return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'byok reply' } }] }) }
       },
       llm: {
@@ -644,7 +644,65 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(requests.length, 1)
     assert.ok(requests[0].url.startsWith('https://my-provider.test/v1'))
     assert.equal(requests[0].auth, 'Bearer sk-byok-secret')
+    assert.equal(requests[0].body.model, 'gemini-3.8-flash', 'an explicit caller model still wins')
     assert.equal(result.text, 'byok reply')
+  })
+
+  it('BYOK mode defaults the wire model to the tested runtimeKeyModel', async () => {
+    const requests = []
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      env: {},
+      settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          return undefined
+        },
+      },
+      fetcher: async (url, options) => {
+        requests.push({ body: JSON.parse(options.body) })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) }
+      },
+    })
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].body.model, 'my-model')
+    assert.equal(result.text, 'ok')
+  })
+
+  it('BYOK mode accepts a custom model the official whitelist does not know', async () => {
+    const requests = []
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      model: 'totally-custom-model-id',
+      env: {},
+      settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          return undefined
+        },
+      },
+      fetcher: async (url, options) => {
+        requests.push({ body: JSON.parse(options.body) })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) }
+      },
+    })
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].body.model, 'totally-custom-model-id')
+    assert.equal(result.text, 'ok')
   })
 
   it('BYOK mode without a stored key throws unconfigured', async () => {
