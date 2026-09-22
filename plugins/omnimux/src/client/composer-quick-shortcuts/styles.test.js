@@ -136,6 +136,39 @@ describe('四条快捷方式：无边框「图标 + 文字 + 箭头」', () => {
     assert.match(notice, /flex-basis:\s*100%;/, '提示出现时也不得把按钮挤偏')
   })
 
+  /**
+   * Issue #2588：窄列下控件内容横向溢出输入框卡片（实测越界 78.34px）。
+   * 病灶是「行内那一块 nowrap 内容压不动」，不是行宽——这一排与卡片本来就同宽
+   * （720–1600px 共 45 个宽度实测宽差恒为 0），所以修法是放开折行 + 给一条收敛兜底链。
+   */
+  it('窄列下控件内容在卡片内折行，不横向溢出（Issue #2588）', () => {
+    const inner = ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-controls > .omx-media-config-controls')
+    assert.match(inner, /flex-wrap:\s*wrap;/, '共享控件本体必须能折行，否则 509.3px 的内容在 318px 的卡片里顶出边界')
+    assert.match(inner, /justify-content:\s*center;/, '折行后每一行仍要居中')
+    assert.match(inner, /max-width:\s*100%;/, '控件本体不得宽过所在行')
+
+    for (const selector of [
+      '.omx-quick-shortcut-controls .omx-popover-anchor',
+      '.omx-quick-shortcut-controls .omx-capsule-trigger',
+    ]) {
+      const body = ruleBody(QUICK_SHORTCUTS_CSS, selector)
+      assert.match(body, /max-width:\s*100%;/, `${selector} 不得宽过所在行`)
+      assert.match(body, /min-width:\s*0;/, `${selector} 的最小宽必须归零，否则 max-width 只是相对自身取 100%，等于没写`)
+    }
+
+    // 模型胶囊里唯一由数据驱动的两段文字：宁可省略号，也不把内容顶出卡片。
+    for (const selector of [
+      '.omx-quick-shortcut-controls .omx-model-name-display',
+      '.omx-quick-shortcut-controls .omx-channel-name-display',
+    ]) {
+      const body = ruleBody(QUICK_SHORTCUTS_CSS, selector)
+      assert.match(body, /text-overflow:\s*ellipsis;/, `${selector} 必须有省略号兜底`)
+      assert.match(body, /overflow:\s*hidden;/)
+      assert.match(body, /white-space:\s*nowrap;/)
+      assert.match(body, /min-width:\s*0;/)
+    }
+  })
+
   it('箭头默认半透明、悬停与选中时变实；悬停另有文字提亮', () => {
     const arrow = ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-arrow')
     assert.match(arrow, /opacity:\s*0\.5;/, '箭头默认必须半透明')

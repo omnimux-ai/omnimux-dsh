@@ -15,6 +15,14 @@
  * 最右两字，右对齐则按钮整体左移约 150px）。让控件自成一行是唯一同时成立的做法，
  * 且窄列下按钮换行也不会与控件相撞。
  *
+ * 窄列下的横向溢出（Issue #2588）：病灶不在**行宽**，而在**行内内容**。
+ * 这一排与输入框卡片本来就同宽——两者读同一个令牌（卡片是 `max-width: var(--dsh-composer-card-max-width)`，
+ * 这一排是 `min(同一令牌, 100% − 2×侧边清除量)`），扫过 720–1600px 共 45 个宽度，
+ * 实测两者宽度差恒为 0。真正撑破卡片的是控件那一行里那块压不动的 nowrap 内容：
+ * 最小内容宽 509.3px，而卡片进紧凑列后只有 318px，内容从行右缘顶出卡片 78.34px。
+ * 因此修法是把控件那一行**在作用域内**放开折行（见下方 `.omx-quick-shortcut-controls > …`），
+ * 而不是给这一排换一个宽度来源。证据：`.agent-reports/quick-shortcut-link-chip/layout-geometry*.json`。
+ *
  * 位置：见文末的 `order` 规则——照官方停靠槽的原样落位会跑到输入框**上方**，
  * 这里显式排到输入框之后，才是产品要求的「输入框正下方」。
  */
@@ -30,7 +38,9 @@ export const QUICK_SHORTCUTS_CSS = `
   justify-content: center;
   gap: 6px 24px;
   /* 与输入框卡同宽：上限取卡片最大宽，窄列下再各让出宿主给输入框的侧边清除量，
-     否则这一排会比输入框左右各宽出 12px（窄列实测 342 vs 318）。 */
+     否则这一排会比输入框左右各宽出 12px（窄列实测 342 vs 318）。
+     注意这是**同一个令牌 + 同一条清除量**的第二次求值，与卡片自身 max-width 的那次求值
+     逐宽度同解（720–1600px 共 45 个宽度实测宽差恒为 0），所以不要再给这一排换宽度来源。 */
   width: min(
     var(--dsh-composer-card-max-width, 952px),
     calc(100% - 2 * var(--dsh-composer-side-clearance, 16px))
@@ -114,6 +124,43 @@ export const QUICK_SHORTCUTS_CSS = `
   flex-wrap: wrap;
   min-width: 0;
   gap: 8px;
+}
+
+/* 共享控件本体（.omx-media-config-controls）在媒体面板里是 nowrap 的单行三件套，
+   在这里必须能折：它是这一行**唯一**的子节点，而它的内容是一块压不动的铁板——
+   实测最小内容宽 509.3px（模型胶囊 170 ＋ 参数胶囊 197.34 ＋ 模型回执 112.95 ＋ 间距），
+   而卡片进紧凑列后只有 318px。父盒的 min-width: 0 只能压盒子，压不动 nowrap 行里的内容，
+   于是内容从行右缘顶出卡片 78.34px（参数胶囊被裁切、模型回执被压成 0 宽）。
+   放开折行后每一段在自己那一行里居中，卡片宽度再小也不会越界。
+   只在快捷方式这一处生效：媒体面板里的三件套仍是单行（见 media-composer-direct 的既有断言）。 */
+.omx-quick-shortcut-controls > .omx-media-config-controls {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+}
+
+/* 兜底：单个控件都放不进所在行时，宁可自己收敛也不把内容顶出卡片。
+   min-width: 0 是这条链成立的前提——flex 项的默认最小宽是 min-content，
+   不显式归零，下面胶囊上的 max-width: 100% 只是相对自身宽度取 100%，等于没写。 */
+.omx-quick-shortcut-controls .omx-popover-anchor {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.omx-quick-shortcut-controls .omx-capsule-trigger {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* 模型胶囊里唯一由数据驱动的两段文字（模型名 / 版本名）走省略号。
+   参数胶囊不在此列：它的文字是「生成方式 · 分辨率 · 时长」等 span 拼成的复合串，
+   逐段省略会读成残句；且它不由数据驱动、宽度有界（实测 197.34px，远小于卡片下限 318px）。 */
+.omx-quick-shortcut-controls .omx-model-name-display,
+.omx-quick-shortcut-controls .omx-channel-name-display {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 位置：这一排挂在官方「输入框停靠槽」上，而 hero 栈把该槽排在输入框**之前**，

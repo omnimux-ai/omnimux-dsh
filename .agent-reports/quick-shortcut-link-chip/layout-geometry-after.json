@@ -1,0 +1,3697 @@
+{
+  "pass": true,
+  "at": "2026-09-22T15:43:21.826Z",
+  "sweepRange": {
+    "from": 720,
+    "to": 1600,
+    "step": 20
+  },
+  "sweepWorst": {
+    "maxAbsRowWidthDelta": 0,
+    "maxRowRightOverCard": 0,
+    "maxContentRightOverCard": 0,
+    "maxContentLeftOverCard": 0,
+    "maxPageOverflow": 0,
+    "maxCenterDelta": 0.02,
+    "minCardWidth": 318,
+    "maxCardWidth": 876.8,
+    "widths": 45
+  },
+  "sweep": [
+    {
+      "width": 720,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 740,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 760,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 780,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 800,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 820,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 840,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 860,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 880,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 900,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 920,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 940,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 960,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 980,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 1000,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 1020,
+      "cardWidth": 318,
+      "rowWidth": 318,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "318px",
+      "density": "icon",
+      "capsuleCount": 2,
+      "buttonsSameLine": false,
+      "centerDelta": 0,
+      "mediaControlsWidth": 318
+    },
+    {
+      "width": 1040,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1060,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1080,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1100,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1120,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1140,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1160,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1180,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1200,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1220,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1240,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1260,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1280,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1300,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1320,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1340,
+      "cardWidth": 712,
+      "rowWidth": 712,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "712px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1360,
+      "cardWidth": 723.19,
+      "rowWidth": 723.19,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -106.95,
+      "contentLeftOverCard": -106.93,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "723px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1380,
+      "cardWidth": 736,
+      "rowWidth": 736,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -113.36,
+      "contentLeftOverCard": -113.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "736px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1400,
+      "cardWidth": 748.8,
+      "rowWidth": 748.8,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -119.75,
+      "contentLeftOverCard": -119.75,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "749px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0.01,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1420,
+      "cardWidth": 761.59,
+      "rowWidth": 761.59,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -126.16,
+      "contentLeftOverCard": -126.14,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "762px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1440,
+      "cardWidth": 774.39,
+      "rowWidth": 774.39,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -132.55,
+      "contentLeftOverCard": -132.54,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "774px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0.02,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1460,
+      "cardWidth": 787.19,
+      "rowWidth": 787.19,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -138.95,
+      "contentLeftOverCard": -138.93,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "787px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1480,
+      "cardWidth": 800,
+      "rowWidth": 800,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -145.36,
+      "contentLeftOverCard": -145.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "800px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1500,
+      "cardWidth": 812.8,
+      "rowWidth": 812.8,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -151.75,
+      "contentLeftOverCard": -151.75,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "813px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0.01,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1520,
+      "cardWidth": 825.59,
+      "rowWidth": 825.59,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -158.16,
+      "contentLeftOverCard": -158.14,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "826px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1540,
+      "cardWidth": 838.39,
+      "rowWidth": 838.39,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -164.55,
+      "contentLeftOverCard": -164.54,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "838px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0.02,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1560,
+      "cardWidth": 851.19,
+      "rowWidth": 851.19,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -170.95,
+      "contentLeftOverCard": -170.93,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "851px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1580,
+      "cardWidth": 864,
+      "rowWidth": 864,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -177.36,
+      "contentLeftOverCard": -177.34,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "864px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0,
+      "mediaControlsWidth": 509.3
+    },
+    {
+      "width": 1600,
+      "cardWidth": 876.8,
+      "rowWidth": 876.8,
+      "rowWidthDelta": 0,
+      "rowRightOverCard": 0,
+      "contentRightOverCard": -183.75,
+      "contentLeftOverCard": -183.75,
+      "contentOverflow": 0,
+      "pageOverflow": 0,
+      "measuredCardVar": "877px",
+      "density": "full",
+      "capsuleCount": 2,
+      "buttonsSameLine": true,
+      "centerDelta": 0.01,
+      "mediaControlsWidth": 509.3
+    }
+  ],
+  "widths": [
+    1440,
+    1280,
+    1167,
+    1024,
+    900
+  ],
+  "measurements": [
+    {
+      "width": 1440,
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "vars": {
+          "measuredCardWidth": "774px",
+          "cardMaxWidth": "calc(clamp(680px, calc(1160px * .64), 920px) + 32px)",
+          "sideClearance": "16px",
+          "density": "full"
+        },
+        "cardChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "Q7WfXG_card",
+            "width": 774.39,
+            "left": 471.8,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "774.4px",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "Q7WfXG_root Q7WfXG_hero",
+            "width": 1110,
+            "left": 304,
+            "paddingLeft": "16px",
+            "paddingRight": "16px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 1110,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          }
+        ],
+        "rowChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "omx-quick-shortcuts",
+            "width": 774.39,
+            "left": 471.8,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 1110,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          }
+        ],
+        "document": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440,
+          "pageOverflowX": 0
+        },
+        "card": {
+          "left": 471.8,
+          "right": 1246.19,
+          "top": 202,
+          "bottom": 412,
+          "width": 774.39,
+          "height": 210,
+          "scrollWidth": 774,
+          "clientWidth": 774,
+          "overflowX": 0
+        },
+        "row": {
+          "left": 471.8,
+          "right": 1246.19,
+          "top": 430,
+          "bottom": 498,
+          "width": 774.39,
+          "height": 68,
+          "scrollWidth": 774,
+          "clientWidth": 774,
+          "overflowX": 0
+        },
+        "controlsWrap": {
+          "left": 471.8,
+          "right": 1246.19,
+          "top": 466,
+          "bottom": 498,
+          "width": 774.39,
+          "height": 32,
+          "scrollWidth": 774,
+          "clientWidth": 774,
+          "overflowX": 0
+        },
+        "mediaControls": {
+          "left": 604.34,
+          "right": 1113.64,
+          "top": 466,
+          "bottom": 498,
+          "width": 509.3,
+          "height": 32,
+          "scrollWidth": 509,
+          "clientWidth": 509,
+          "overflowX": 0
+        },
+        "rowRightOverCard": 0,
+        "rowLeftOverCard": 0,
+        "contentRightOverCard": -132.55,
+        "contentLeftOverCard": -132.54,
+        "maxDescendantRight": 1113.64,
+        "minDescendantLeft": 604.34,
+        "descendantCount": 29,
+        "widestDescendants": [
+          {
+            "cls": "omx-media-config-controls",
+            "left": 604.34,
+            "right": 1113.64,
+            "width": 509.3
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 1000.69,
+            "right": 1113.64,
+            "width": 112.95
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 795.34,
+            "right": 992.69,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-trigger ",
+            "left": 795.34,
+            "right": 992.69,
+            "width": 197.34
+          }
+        ],
+        "capsuleCount": 2,
+        "capsules": [
+          {
+            "label": "MiniMax H3标准版",
+            "left": 604.34,
+            "right": 774.34,
+            "width": 170,
+            "fullyInsideCard": true
+          },
+          {
+            "label": "文生视频··720P·5s",
+            "left": 795.34,
+            "right": 992.69,
+            "width": 197.34,
+            "fullyInsideCard": true
+          }
+        ],
+        "controlItems": [
+          {
+            "cls": "omx-popover-anchor",
+            "left": 604.34,
+            "right": 774.34,
+            "top": 466,
+            "width": 170
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 784.34,
+            "right": 785.34,
+            "top": 473,
+            "width": 1
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 795.34,
+            "right": 992.69,
+            "top": 466,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 1000.69,
+            "right": 1113.64,
+            "top": 473,
+            "width": 112.95
+          }
+        ],
+        "summary": {
+          "text": "MiniMax H3 · 标准版",
+          "left": 1000.69,
+          "right": 1113.64,
+          "width": 112.95,
+          "fullyInsideCard": true
+        },
+        "shortcutButtons": [
+          {
+            "id": "clone",
+            "text": "复刻爆款视频",
+            "left": 571.48,
+            "right": 687.48,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "breakdown",
+            "text": "拆解爆款视频",
+            "left": 711.48,
+            "right": 827.48,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "selling",
+            "text": "一键创作带货视频",
+            "left": 851.48,
+            "right": 993.48,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "reverse",
+            "text": "反推视频提示词",
+            "left": 1017.48,
+            "right": 1146.48,
+            "top": 430,
+            "bottom": 460
+          }
+        ],
+        "shortcutRowSameLine": true,
+        "shortcutRowCentered": {
+          "gapLeft": 99.68,
+          "gapRight": 99.71,
+          "delta": 0.02
+        }
+      }
+    },
+    {
+      "width": 1280,
+      "geometry": {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "vars": {
+          "measuredCardWidth": "712px",
+          "cardMaxWidth": "calc(clamp(680px, calc(1000px * .64), 920px) + 32px)",
+          "sideClearance": "16px",
+          "density": "full"
+        },
+        "cardChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "Q7WfXG_card",
+            "width": 712,
+            "left": 423,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "712px",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "Q7WfXG_root Q7WfXG_hero",
+            "width": 950,
+            "left": 304,
+            "paddingLeft": "16px",
+            "paddingRight": "16px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 950,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          }
+        ],
+        "rowChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "omx-quick-shortcuts",
+            "width": 712,
+            "left": 423,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 950,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          }
+        ],
+        "document": {
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "pageOverflowX": 0
+        },
+        "card": {
+          "left": 423,
+          "right": 1135,
+          "top": 202,
+          "bottom": 412,
+          "width": 712,
+          "height": 210,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "row": {
+          "left": 423,
+          "right": 1135,
+          "top": 430,
+          "bottom": 498,
+          "width": 712,
+          "height": 68,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "controlsWrap": {
+          "left": 423,
+          "right": 1135,
+          "top": 466,
+          "bottom": 498,
+          "width": 712,
+          "height": 32,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "mediaControls": {
+          "left": 524.34,
+          "right": 1033.64,
+          "top": 466,
+          "bottom": 498,
+          "width": 509.3,
+          "height": 32,
+          "scrollWidth": 509,
+          "clientWidth": 509,
+          "overflowX": 0
+        },
+        "rowRightOverCard": 0,
+        "rowLeftOverCard": 0,
+        "contentRightOverCard": -101.36,
+        "contentLeftOverCard": -101.34,
+        "maxDescendantRight": 1033.64,
+        "minDescendantLeft": 524.34,
+        "descendantCount": 29,
+        "widestDescendants": [
+          {
+            "cls": "omx-media-config-controls",
+            "left": 524.34,
+            "right": 1033.64,
+            "width": 509.3
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 920.69,
+            "right": 1033.64,
+            "width": 112.95
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 715.34,
+            "right": 912.69,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-trigger ",
+            "left": 715.34,
+            "right": 912.69,
+            "width": 197.34
+          }
+        ],
+        "capsuleCount": 2,
+        "capsules": [
+          {
+            "label": "MiniMax H3标准版",
+            "left": 524.34,
+            "right": 694.34,
+            "width": 170,
+            "fullyInsideCard": true
+          },
+          {
+            "label": "文生视频··720P·5s",
+            "left": 715.34,
+            "right": 912.69,
+            "width": 197.34,
+            "fullyInsideCard": true
+          }
+        ],
+        "controlItems": [
+          {
+            "cls": "omx-popover-anchor",
+            "left": 524.34,
+            "right": 694.34,
+            "top": 466,
+            "width": 170
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 704.34,
+            "right": 705.34,
+            "top": 473,
+            "width": 1
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 715.34,
+            "right": 912.69,
+            "top": 466,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 920.69,
+            "right": 1033.64,
+            "top": 473,
+            "width": 112.95
+          }
+        ],
+        "summary": {
+          "text": "MiniMax H3 · 标准版",
+          "left": 920.69,
+          "right": 1033.64,
+          "width": 112.95,
+          "fullyInsideCard": true
+        },
+        "shortcutButtons": [
+          {
+            "id": "clone",
+            "text": "复刻爆款视频",
+            "left": 491.5,
+            "right": 607.5,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "breakdown",
+            "text": "拆解爆款视频",
+            "left": 631.5,
+            "right": 747.5,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "selling",
+            "text": "一键创作带货视频",
+            "left": 771.5,
+            "right": 913.5,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "reverse",
+            "text": "反推视频提示词",
+            "left": 937.5,
+            "right": 1066.5,
+            "top": 430,
+            "bottom": 460
+          }
+        ],
+        "shortcutRowSameLine": true,
+        "shortcutRowCentered": {
+          "gapLeft": 68.5,
+          "gapRight": 68.5,
+          "delta": 0
+        }
+      }
+    },
+    {
+      "width": 1167,
+      "geometry": {
+        "viewport": {
+          "width": 1167,
+          "height": 900
+        },
+        "vars": {
+          "measuredCardWidth": "712px",
+          "cardMaxWidth": "calc(clamp(680px, calc(887px * .64), 920px) + 32px)",
+          "sideClearance": "16px",
+          "density": "full"
+        },
+        "cardChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "Q7WfXG_card",
+            "width": 712,
+            "left": 366.5,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "712px",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "Q7WfXG_root Q7WfXG_hero",
+            "width": 837,
+            "left": 304,
+            "paddingLeft": "16px",
+            "paddingRight": "16px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 837,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          }
+        ],
+        "rowChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "omx-quick-shortcuts",
+            "width": 712,
+            "left": 366.5,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 837,
+            "left": 304,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "min(1200px, 100% - 32px)",
+            "display": "flex"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          }
+        ],
+        "document": {
+          "scrollWidth": 1167,
+          "clientWidth": 1167,
+          "pageOverflowX": 0
+        },
+        "card": {
+          "left": 366.5,
+          "right": 1078.5,
+          "top": 202,
+          "bottom": 412,
+          "width": 712,
+          "height": 210,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "row": {
+          "left": 366.5,
+          "right": 1078.5,
+          "top": 430,
+          "bottom": 498,
+          "width": 712,
+          "height": 68,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "controlsWrap": {
+          "left": 366.5,
+          "right": 1078.5,
+          "top": 466,
+          "bottom": 498,
+          "width": 712,
+          "height": 32,
+          "scrollWidth": 712,
+          "clientWidth": 712,
+          "overflowX": 0
+        },
+        "mediaControls": {
+          "left": 467.84,
+          "right": 977.14,
+          "top": 466,
+          "bottom": 498,
+          "width": 509.3,
+          "height": 32,
+          "scrollWidth": 509,
+          "clientWidth": 509,
+          "overflowX": 0
+        },
+        "rowRightOverCard": 0,
+        "rowLeftOverCard": 0,
+        "contentRightOverCard": -101.36,
+        "contentLeftOverCard": -101.34,
+        "maxDescendantRight": 977.14,
+        "minDescendantLeft": 467.84,
+        "descendantCount": 29,
+        "widestDescendants": [
+          {
+            "cls": "omx-media-config-controls",
+            "left": 467.84,
+            "right": 977.14,
+            "width": 509.3
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 864.19,
+            "right": 977.14,
+            "width": 112.95
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 658.84,
+            "right": 856.19,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-trigger ",
+            "left": 658.84,
+            "right": 856.19,
+            "width": 197.34
+          }
+        ],
+        "capsuleCount": 2,
+        "capsules": [
+          {
+            "label": "MiniMax H3标准版",
+            "left": 467.84,
+            "right": 637.84,
+            "width": 170,
+            "fullyInsideCard": true
+          },
+          {
+            "label": "文生视频··720P·5s",
+            "left": 658.84,
+            "right": 856.19,
+            "width": 197.34,
+            "fullyInsideCard": true
+          }
+        ],
+        "controlItems": [
+          {
+            "cls": "omx-popover-anchor",
+            "left": 467.84,
+            "right": 637.84,
+            "top": 466,
+            "width": 170
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 647.84,
+            "right": 648.84,
+            "top": 473,
+            "width": 1
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 658.84,
+            "right": 856.19,
+            "top": 466,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 864.19,
+            "right": 977.14,
+            "top": 473,
+            "width": 112.95
+          }
+        ],
+        "summary": {
+          "text": "MiniMax H3 · 标准版",
+          "left": 864.19,
+          "right": 977.14,
+          "width": 112.95,
+          "fullyInsideCard": true
+        },
+        "shortcutButtons": [
+          {
+            "id": "clone",
+            "text": "复刻爆款视频",
+            "left": 435,
+            "right": 551,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "breakdown",
+            "text": "拆解爆款视频",
+            "left": 575,
+            "right": 691,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "selling",
+            "text": "一键创作带货视频",
+            "left": 715,
+            "right": 857,
+            "top": 430,
+            "bottom": 460
+          },
+          {
+            "id": "reverse",
+            "text": "反推视频提示词",
+            "left": 881,
+            "right": 1010,
+            "top": 430,
+            "bottom": 460
+          }
+        ],
+        "shortcutRowSameLine": true,
+        "shortcutRowCentered": {
+          "gapLeft": 68.5,
+          "gapRight": 68.5,
+          "delta": 0
+        }
+      }
+    },
+    {
+      "width": 1024,
+      "geometry": {
+        "viewport": {
+          "width": 1024,
+          "height": 900
+        },
+        "vars": {
+          "measuredCardWidth": "702px",
+          "cardMaxWidth": "calc(clamp(680px, calc(744px * .64), 920px) + 32px)",
+          "sideClearance": "12px",
+          "density": "full"
+        },
+        "cardChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "Q7WfXG_card",
+            "width": 702,
+            "left": 300,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "712px",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "Q7WfXG_root Q7WfXG_hero",
+            "width": 726,
+            "left": 288,
+            "paddingLeft": "12px",
+            "paddingRight": "12px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 726,
+            "left": 288,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "100%",
+            "display": "flex"
+          }
+        ],
+        "rowChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "omx-quick-shortcuts",
+            "width": 702,
+            "left": 300,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 726,
+            "left": 288,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "100%",
+            "display": "flex"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          }
+        ],
+        "document": {
+          "scrollWidth": 1024,
+          "clientWidth": 1024,
+          "pageOverflowX": 0
+        },
+        "card": {
+          "left": 300,
+          "right": 1002,
+          "top": 586,
+          "bottom": 796,
+          "width": 702,
+          "height": 210,
+          "scrollWidth": 702,
+          "clientWidth": 702,
+          "overflowX": 0
+        },
+        "row": {
+          "left": 300,
+          "right": 1002,
+          "top": 814,
+          "bottom": 882,
+          "width": 702,
+          "height": 68,
+          "scrollWidth": 702,
+          "clientWidth": 702,
+          "overflowX": 0
+        },
+        "controlsWrap": {
+          "left": 300,
+          "right": 1002,
+          "top": 850,
+          "bottom": 882,
+          "width": 702,
+          "height": 32,
+          "scrollWidth": 702,
+          "clientWidth": 702,
+          "overflowX": 0
+        },
+        "mediaControls": {
+          "left": 396.34,
+          "right": 905.64,
+          "top": 850,
+          "bottom": 882,
+          "width": 509.3,
+          "height": 32,
+          "scrollWidth": 509,
+          "clientWidth": 509,
+          "overflowX": 0
+        },
+        "rowRightOverCard": 0,
+        "rowLeftOverCard": 0,
+        "contentRightOverCard": -96.36,
+        "contentLeftOverCard": -96.34,
+        "maxDescendantRight": 905.64,
+        "minDescendantLeft": 396.34,
+        "descendantCount": 29,
+        "widestDescendants": [
+          {
+            "cls": "omx-media-config-controls",
+            "left": 396.34,
+            "right": 905.64,
+            "width": 509.3
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 792.69,
+            "right": 905.64,
+            "width": 112.95
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 587.34,
+            "right": 784.69,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-trigger ",
+            "left": 587.34,
+            "right": 784.69,
+            "width": 197.34
+          }
+        ],
+        "capsuleCount": 2,
+        "capsules": [
+          {
+            "label": "MiniMax H3标准版",
+            "left": 396.34,
+            "right": 566.34,
+            "width": 170,
+            "fullyInsideCard": true
+          },
+          {
+            "label": "文生视频··720P·5s",
+            "left": 587.34,
+            "right": 784.69,
+            "width": 197.34,
+            "fullyInsideCard": true
+          }
+        ],
+        "controlItems": [
+          {
+            "cls": "omx-popover-anchor",
+            "left": 396.34,
+            "right": 566.34,
+            "top": 850,
+            "width": 170
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 576.34,
+            "right": 577.34,
+            "top": 857,
+            "width": 1
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 587.34,
+            "right": 784.69,
+            "top": 850,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 792.69,
+            "right": 905.64,
+            "top": 857,
+            "width": 112.95
+          }
+        ],
+        "summary": {
+          "text": "MiniMax H3 · 标准版",
+          "left": 792.69,
+          "right": 905.64,
+          "width": 112.95,
+          "fullyInsideCard": true
+        },
+        "shortcutButtons": [
+          {
+            "id": "clone",
+            "text": "复刻爆款视频",
+            "left": 363.5,
+            "right": 479.5,
+            "top": 814,
+            "bottom": 844
+          },
+          {
+            "id": "breakdown",
+            "text": "拆解爆款视频",
+            "left": 503.5,
+            "right": 619.5,
+            "top": 814,
+            "bottom": 844
+          },
+          {
+            "id": "selling",
+            "text": "一键创作带货视频",
+            "left": 643.5,
+            "right": 785.5,
+            "top": 814,
+            "bottom": 844
+          },
+          {
+            "id": "reverse",
+            "text": "反推视频提示词",
+            "left": 809.5,
+            "right": 938.5,
+            "top": 814,
+            "bottom": 844
+          }
+        ],
+        "shortcutRowSameLine": true,
+        "shortcutRowCentered": {
+          "gapLeft": 63.5,
+          "gapRight": 63.5,
+          "delta": 0
+        }
+      }
+    },
+    {
+      "width": 900,
+      "geometry": {
+        "viewport": {
+          "width": 900,
+          "height": 900
+        },
+        "vars": {
+          "measuredCardWidth": "318px",
+          "cardMaxWidth": "calc(clamp(680px, calc(360px * .64), 920px) + 32px)",
+          "sideClearance": "12px",
+          "density": "icon"
+        },
+        "cardChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "Q7WfXG_card",
+            "width": 318,
+            "left": 20,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "712px",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "Q7WfXG_root Q7WfXG_hero",
+            "width": 342,
+            "left": 8,
+            "paddingLeft": "12px",
+            "paddingRight": "12px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 342,
+            "left": 8,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "100%",
+            "display": "flex"
+          }
+        ],
+        "rowChain": [
+          {
+            "level": "self",
+            "tag": "DIV",
+            "cls": "omx-quick-shortcuts",
+            "width": 318,
+            "left": 20,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "flex"
+          },
+          {
+            "level": "parent1",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          },
+          {
+            "level": "parent2",
+            "tag": "DIV",
+            "cls": "uPhUma_composerStack uPhUma_composerHero",
+            "width": 342,
+            "left": 8,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "100%",
+            "display": "flex"
+          },
+          {
+            "level": "parent3",
+            "tag": "DIV",
+            "cls": "",
+            "width": 0,
+            "left": 0,
+            "paddingLeft": "0px",
+            "paddingRight": "0px",
+            "maxWidth": "none",
+            "display": "contents"
+          }
+        ],
+        "document": {
+          "scrollWidth": 900,
+          "clientWidth": 900,
+          "pageOverflowX": 0
+        },
+        "card": {
+          "left": 20,
+          "right": 338,
+          "top": 484,
+          "bottom": 694,
+          "width": 318,
+          "height": 210,
+          "scrollWidth": 318,
+          "clientWidth": 318,
+          "overflowX": 0
+        },
+        "row": {
+          "left": 20,
+          "right": 338,
+          "top": 712,
+          "bottom": 882,
+          "width": 318,
+          "height": 170,
+          "scrollWidth": 318,
+          "clientWidth": 318,
+          "overflowX": 0
+        },
+        "controlsWrap": {
+          "left": 20,
+          "right": 338,
+          "top": 784,
+          "bottom": 882,
+          "width": 318,
+          "height": 98,
+          "scrollWidth": 318,
+          "clientWidth": 318,
+          "overflowX": 0
+        },
+        "mediaControls": {
+          "left": 20,
+          "right": 338,
+          "top": 784,
+          "bottom": 882,
+          "width": 318,
+          "height": 98,
+          "scrollWidth": 318,
+          "clientWidth": 318,
+          "overflowX": 0
+        },
+        "rowRightOverCard": 0,
+        "rowLeftOverCard": 0,
+        "contentRightOverCard": 0,
+        "contentLeftOverCard": 0,
+        "maxDescendantRight": 338,
+        "minDescendantLeft": 20,
+        "descendantCount": 29,
+        "widestDescendants": [
+          {
+            "cls": "omx-media-config-controls",
+            "left": 20,
+            "right": 338,
+            "width": 318
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 80.33,
+            "right": 277.67,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-trigger ",
+            "left": 80.33,
+            "right": 277.67,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 267.5,
+            "right": 268.5,
+            "width": 1
+          }
+        ],
+        "capsuleCount": 2,
+        "capsules": [
+          {
+            "label": "MiniMax H3标准版",
+            "left": 87.5,
+            "right": 257.5,
+            "width": 170,
+            "fullyInsideCard": true
+          },
+          {
+            "label": "文生视频··720P·5s",
+            "left": 80.33,
+            "right": 277.67,
+            "width": 197.34,
+            "fullyInsideCard": true
+          }
+        ],
+        "controlItems": [
+          {
+            "cls": "omx-popover-anchor",
+            "left": 87.5,
+            "right": 257.5,
+            "top": 784,
+            "width": 170
+          },
+          {
+            "cls": "omx-capsule-divider",
+            "left": 267.5,
+            "right": 268.5,
+            "top": 791,
+            "width": 1
+          },
+          {
+            "cls": "omx-popover-anchor",
+            "left": 80.33,
+            "right": 277.67,
+            "top": 824,
+            "width": 197.34
+          },
+          {
+            "cls": "omx-media-config-summary",
+            "left": 122.52,
+            "right": 235.47,
+            "top": 864,
+            "width": 112.95
+          }
+        ],
+        "summary": {
+          "text": "MiniMax H3 · 标准版",
+          "left": 122.52,
+          "right": 235.47,
+          "width": 112.95,
+          "fullyInsideCard": true
+        },
+        "shortcutButtons": [
+          {
+            "id": "clone",
+            "text": "复刻爆款视频",
+            "left": 51,
+            "right": 167,
+            "top": 712,
+            "bottom": 742
+          },
+          {
+            "id": "breakdown",
+            "text": "拆解爆款视频",
+            "left": 191,
+            "right": 307,
+            "top": 712,
+            "bottom": 742
+          },
+          {
+            "id": "selling",
+            "text": "一键创作带货视频",
+            "left": 31.5,
+            "right": 173.5,
+            "top": 748,
+            "bottom": 778
+          },
+          {
+            "id": "reverse",
+            "text": "反推视频提示词",
+            "left": 197.5,
+            "right": 326.5,
+            "top": 748,
+            "bottom": 778
+          }
+        ],
+        "shortcutRowSameLine": false,
+        "shortcutRowCentered": {
+          "gapLeft": 11.5,
+          "gapRight": 11.5,
+          "delta": 0
+        }
+      }
+    }
+  ],
+  "byWidth": {
+    "900": {
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "vars": {
+        "measuredCardWidth": "318px",
+        "cardMaxWidth": "calc(clamp(680px, calc(360px * .64), 920px) + 32px)",
+        "sideClearance": "12px",
+        "density": "icon"
+      },
+      "cardChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "Q7WfXG_card",
+          "width": 318,
+          "left": 20,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "712px",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "Q7WfXG_root Q7WfXG_hero",
+          "width": 342,
+          "left": 8,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 342,
+          "left": 8,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "100%",
+          "display": "flex"
+        }
+      ],
+      "rowChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "omx-quick-shortcuts",
+          "width": 318,
+          "left": 20,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 342,
+          "left": 8,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "100%",
+          "display": "flex"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        }
+      ],
+      "document": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "pageOverflowX": 0
+      },
+      "card": {
+        "left": 20,
+        "right": 338,
+        "top": 484,
+        "bottom": 694,
+        "width": 318,
+        "height": 210,
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "overflowX": 0
+      },
+      "row": {
+        "left": 20,
+        "right": 338,
+        "top": 712,
+        "bottom": 882,
+        "width": 318,
+        "height": 170,
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "overflowX": 0
+      },
+      "controlsWrap": {
+        "left": 20,
+        "right": 338,
+        "top": 784,
+        "bottom": 882,
+        "width": 318,
+        "height": 98,
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "overflowX": 0
+      },
+      "mediaControls": {
+        "left": 20,
+        "right": 338,
+        "top": 784,
+        "bottom": 882,
+        "width": 318,
+        "height": 98,
+        "scrollWidth": 318,
+        "clientWidth": 318,
+        "overflowX": 0
+      },
+      "rowRightOverCard": 0,
+      "rowLeftOverCard": 0,
+      "contentRightOverCard": 0,
+      "contentLeftOverCard": 0,
+      "maxDescendantRight": 338,
+      "minDescendantLeft": 20,
+      "descendantCount": 29,
+      "widestDescendants": [
+        {
+          "cls": "omx-media-config-controls",
+          "left": 20,
+          "right": 338,
+          "width": 318
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 80.33,
+          "right": 277.67,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-trigger ",
+          "left": 80.33,
+          "right": 277.67,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 267.5,
+          "right": 268.5,
+          "width": 1
+        }
+      ],
+      "capsuleCount": 2,
+      "capsules": [
+        {
+          "label": "MiniMax H3标准版",
+          "left": 87.5,
+          "right": 257.5,
+          "width": 170,
+          "fullyInsideCard": true
+        },
+        {
+          "label": "文生视频··720P·5s",
+          "left": 80.33,
+          "right": 277.67,
+          "width": 197.34,
+          "fullyInsideCard": true
+        }
+      ],
+      "controlItems": [
+        {
+          "cls": "omx-popover-anchor",
+          "left": 87.5,
+          "right": 257.5,
+          "top": 784,
+          "width": 170
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 267.5,
+          "right": 268.5,
+          "top": 791,
+          "width": 1
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 80.33,
+          "right": 277.67,
+          "top": 824,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 122.52,
+          "right": 235.47,
+          "top": 864,
+          "width": 112.95
+        }
+      ],
+      "summary": {
+        "text": "MiniMax H3 · 标准版",
+        "left": 122.52,
+        "right": 235.47,
+        "width": 112.95,
+        "fullyInsideCard": true
+      },
+      "shortcutButtons": [
+        {
+          "id": "clone",
+          "text": "复刻爆款视频",
+          "left": 51,
+          "right": 167,
+          "top": 712,
+          "bottom": 742
+        },
+        {
+          "id": "breakdown",
+          "text": "拆解爆款视频",
+          "left": 191,
+          "right": 307,
+          "top": 712,
+          "bottom": 742
+        },
+        {
+          "id": "selling",
+          "text": "一键创作带货视频",
+          "left": 31.5,
+          "right": 173.5,
+          "top": 748,
+          "bottom": 778
+        },
+        {
+          "id": "reverse",
+          "text": "反推视频提示词",
+          "left": 197.5,
+          "right": 326.5,
+          "top": 748,
+          "bottom": 778
+        }
+      ],
+      "shortcutRowSameLine": false,
+      "shortcutRowCentered": {
+        "gapLeft": 11.5,
+        "gapRight": 11.5,
+        "delta": 0
+      }
+    },
+    "1024": {
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "vars": {
+        "measuredCardWidth": "702px",
+        "cardMaxWidth": "calc(clamp(680px, calc(744px * .64), 920px) + 32px)",
+        "sideClearance": "12px",
+        "density": "full"
+      },
+      "cardChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "Q7WfXG_card",
+          "width": 702,
+          "left": 300,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "712px",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "Q7WfXG_root Q7WfXG_hero",
+          "width": 726,
+          "left": 288,
+          "paddingLeft": "12px",
+          "paddingRight": "12px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 726,
+          "left": 288,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "100%",
+          "display": "flex"
+        }
+      ],
+      "rowChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "omx-quick-shortcuts",
+          "width": 702,
+          "left": 300,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 726,
+          "left": 288,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "100%",
+          "display": "flex"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        }
+      ],
+      "document": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "pageOverflowX": 0
+      },
+      "card": {
+        "left": 300,
+        "right": 1002,
+        "top": 586,
+        "bottom": 796,
+        "width": 702,
+        "height": 210,
+        "scrollWidth": 702,
+        "clientWidth": 702,
+        "overflowX": 0
+      },
+      "row": {
+        "left": 300,
+        "right": 1002,
+        "top": 814,
+        "bottom": 882,
+        "width": 702,
+        "height": 68,
+        "scrollWidth": 702,
+        "clientWidth": 702,
+        "overflowX": 0
+      },
+      "controlsWrap": {
+        "left": 300,
+        "right": 1002,
+        "top": 850,
+        "bottom": 882,
+        "width": 702,
+        "height": 32,
+        "scrollWidth": 702,
+        "clientWidth": 702,
+        "overflowX": 0
+      },
+      "mediaControls": {
+        "left": 396.34,
+        "right": 905.64,
+        "top": 850,
+        "bottom": 882,
+        "width": 509.3,
+        "height": 32,
+        "scrollWidth": 509,
+        "clientWidth": 509,
+        "overflowX": 0
+      },
+      "rowRightOverCard": 0,
+      "rowLeftOverCard": 0,
+      "contentRightOverCard": -96.36,
+      "contentLeftOverCard": -96.34,
+      "maxDescendantRight": 905.64,
+      "minDescendantLeft": 396.34,
+      "descendantCount": 29,
+      "widestDescendants": [
+        {
+          "cls": "omx-media-config-controls",
+          "left": 396.34,
+          "right": 905.64,
+          "width": 509.3
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 792.69,
+          "right": 905.64,
+          "width": 112.95
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 587.34,
+          "right": 784.69,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-trigger ",
+          "left": 587.34,
+          "right": 784.69,
+          "width": 197.34
+        }
+      ],
+      "capsuleCount": 2,
+      "capsules": [
+        {
+          "label": "MiniMax H3标准版",
+          "left": 396.34,
+          "right": 566.34,
+          "width": 170,
+          "fullyInsideCard": true
+        },
+        {
+          "label": "文生视频··720P·5s",
+          "left": 587.34,
+          "right": 784.69,
+          "width": 197.34,
+          "fullyInsideCard": true
+        }
+      ],
+      "controlItems": [
+        {
+          "cls": "omx-popover-anchor",
+          "left": 396.34,
+          "right": 566.34,
+          "top": 850,
+          "width": 170
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 576.34,
+          "right": 577.34,
+          "top": 857,
+          "width": 1
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 587.34,
+          "right": 784.69,
+          "top": 850,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 792.69,
+          "right": 905.64,
+          "top": 857,
+          "width": 112.95
+        }
+      ],
+      "summary": {
+        "text": "MiniMax H3 · 标准版",
+        "left": 792.69,
+        "right": 905.64,
+        "width": 112.95,
+        "fullyInsideCard": true
+      },
+      "shortcutButtons": [
+        {
+          "id": "clone",
+          "text": "复刻爆款视频",
+          "left": 363.5,
+          "right": 479.5,
+          "top": 814,
+          "bottom": 844
+        },
+        {
+          "id": "breakdown",
+          "text": "拆解爆款视频",
+          "left": 503.5,
+          "right": 619.5,
+          "top": 814,
+          "bottom": 844
+        },
+        {
+          "id": "selling",
+          "text": "一键创作带货视频",
+          "left": 643.5,
+          "right": 785.5,
+          "top": 814,
+          "bottom": 844
+        },
+        {
+          "id": "reverse",
+          "text": "反推视频提示词",
+          "left": 809.5,
+          "right": 938.5,
+          "top": 814,
+          "bottom": 844
+        }
+      ],
+      "shortcutRowSameLine": true,
+      "shortcutRowCentered": {
+        "gapLeft": 63.5,
+        "gapRight": 63.5,
+        "delta": 0
+      }
+    },
+    "1167": {
+      "viewport": {
+        "width": 1167,
+        "height": 900
+      },
+      "vars": {
+        "measuredCardWidth": "712px",
+        "cardMaxWidth": "calc(clamp(680px, calc(887px * .64), 920px) + 32px)",
+        "sideClearance": "16px",
+        "density": "full"
+      },
+      "cardChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "Q7WfXG_card",
+          "width": 712,
+          "left": 366.5,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "712px",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "Q7WfXG_root Q7WfXG_hero",
+          "width": 837,
+          "left": 304,
+          "paddingLeft": "16px",
+          "paddingRight": "16px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 837,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        }
+      ],
+      "rowChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "omx-quick-shortcuts",
+          "width": 712,
+          "left": 366.5,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 837,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        }
+      ],
+      "document": {
+        "scrollWidth": 1167,
+        "clientWidth": 1167,
+        "pageOverflowX": 0
+      },
+      "card": {
+        "left": 366.5,
+        "right": 1078.5,
+        "top": 202,
+        "bottom": 412,
+        "width": 712,
+        "height": 210,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "row": {
+        "left": 366.5,
+        "right": 1078.5,
+        "top": 430,
+        "bottom": 498,
+        "width": 712,
+        "height": 68,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "controlsWrap": {
+        "left": 366.5,
+        "right": 1078.5,
+        "top": 466,
+        "bottom": 498,
+        "width": 712,
+        "height": 32,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "mediaControls": {
+        "left": 467.84,
+        "right": 977.14,
+        "top": 466,
+        "bottom": 498,
+        "width": 509.3,
+        "height": 32,
+        "scrollWidth": 509,
+        "clientWidth": 509,
+        "overflowX": 0
+      },
+      "rowRightOverCard": 0,
+      "rowLeftOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "maxDescendantRight": 977.14,
+      "minDescendantLeft": 467.84,
+      "descendantCount": 29,
+      "widestDescendants": [
+        {
+          "cls": "omx-media-config-controls",
+          "left": 467.84,
+          "right": 977.14,
+          "width": 509.3
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 864.19,
+          "right": 977.14,
+          "width": 112.95
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 658.84,
+          "right": 856.19,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-trigger ",
+          "left": 658.84,
+          "right": 856.19,
+          "width": 197.34
+        }
+      ],
+      "capsuleCount": 2,
+      "capsules": [
+        {
+          "label": "MiniMax H3标准版",
+          "left": 467.84,
+          "right": 637.84,
+          "width": 170,
+          "fullyInsideCard": true
+        },
+        {
+          "label": "文生视频··720P·5s",
+          "left": 658.84,
+          "right": 856.19,
+          "width": 197.34,
+          "fullyInsideCard": true
+        }
+      ],
+      "controlItems": [
+        {
+          "cls": "omx-popover-anchor",
+          "left": 467.84,
+          "right": 637.84,
+          "top": 466,
+          "width": 170
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 647.84,
+          "right": 648.84,
+          "top": 473,
+          "width": 1
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 658.84,
+          "right": 856.19,
+          "top": 466,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 864.19,
+          "right": 977.14,
+          "top": 473,
+          "width": 112.95
+        }
+      ],
+      "summary": {
+        "text": "MiniMax H3 · 标准版",
+        "left": 864.19,
+        "right": 977.14,
+        "width": 112.95,
+        "fullyInsideCard": true
+      },
+      "shortcutButtons": [
+        {
+          "id": "clone",
+          "text": "复刻爆款视频",
+          "left": 435,
+          "right": 551,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "breakdown",
+          "text": "拆解爆款视频",
+          "left": 575,
+          "right": 691,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "selling",
+          "text": "一键创作带货视频",
+          "left": 715,
+          "right": 857,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "reverse",
+          "text": "反推视频提示词",
+          "left": 881,
+          "right": 1010,
+          "top": 430,
+          "bottom": 460
+        }
+      ],
+      "shortcutRowSameLine": true,
+      "shortcutRowCentered": {
+        "gapLeft": 68.5,
+        "gapRight": 68.5,
+        "delta": 0
+      }
+    },
+    "1280": {
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "vars": {
+        "measuredCardWidth": "712px",
+        "cardMaxWidth": "calc(clamp(680px, calc(1000px * .64), 920px) + 32px)",
+        "sideClearance": "16px",
+        "density": "full"
+      },
+      "cardChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "Q7WfXG_card",
+          "width": 712,
+          "left": 423,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "712px",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "Q7WfXG_root Q7WfXG_hero",
+          "width": 950,
+          "left": 304,
+          "paddingLeft": "16px",
+          "paddingRight": "16px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 950,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        }
+      ],
+      "rowChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "omx-quick-shortcuts",
+          "width": 712,
+          "left": 423,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 950,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        }
+      ],
+      "document": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "pageOverflowX": 0
+      },
+      "card": {
+        "left": 423,
+        "right": 1135,
+        "top": 202,
+        "bottom": 412,
+        "width": 712,
+        "height": 210,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "row": {
+        "left": 423,
+        "right": 1135,
+        "top": 430,
+        "bottom": 498,
+        "width": 712,
+        "height": 68,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "controlsWrap": {
+        "left": 423,
+        "right": 1135,
+        "top": 466,
+        "bottom": 498,
+        "width": 712,
+        "height": 32,
+        "scrollWidth": 712,
+        "clientWidth": 712,
+        "overflowX": 0
+      },
+      "mediaControls": {
+        "left": 524.34,
+        "right": 1033.64,
+        "top": 466,
+        "bottom": 498,
+        "width": 509.3,
+        "height": 32,
+        "scrollWidth": 509,
+        "clientWidth": 509,
+        "overflowX": 0
+      },
+      "rowRightOverCard": 0,
+      "rowLeftOverCard": 0,
+      "contentRightOverCard": -101.36,
+      "contentLeftOverCard": -101.34,
+      "maxDescendantRight": 1033.64,
+      "minDescendantLeft": 524.34,
+      "descendantCount": 29,
+      "widestDescendants": [
+        {
+          "cls": "omx-media-config-controls",
+          "left": 524.34,
+          "right": 1033.64,
+          "width": 509.3
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 920.69,
+          "right": 1033.64,
+          "width": 112.95
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 715.34,
+          "right": 912.69,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-trigger ",
+          "left": 715.34,
+          "right": 912.69,
+          "width": 197.34
+        }
+      ],
+      "capsuleCount": 2,
+      "capsules": [
+        {
+          "label": "MiniMax H3标准版",
+          "left": 524.34,
+          "right": 694.34,
+          "width": 170,
+          "fullyInsideCard": true
+        },
+        {
+          "label": "文生视频··720P·5s",
+          "left": 715.34,
+          "right": 912.69,
+          "width": 197.34,
+          "fullyInsideCard": true
+        }
+      ],
+      "controlItems": [
+        {
+          "cls": "omx-popover-anchor",
+          "left": 524.34,
+          "right": 694.34,
+          "top": 466,
+          "width": 170
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 704.34,
+          "right": 705.34,
+          "top": 473,
+          "width": 1
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 715.34,
+          "right": 912.69,
+          "top": 466,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 920.69,
+          "right": 1033.64,
+          "top": 473,
+          "width": 112.95
+        }
+      ],
+      "summary": {
+        "text": "MiniMax H3 · 标准版",
+        "left": 920.69,
+        "right": 1033.64,
+        "width": 112.95,
+        "fullyInsideCard": true
+      },
+      "shortcutButtons": [
+        {
+          "id": "clone",
+          "text": "复刻爆款视频",
+          "left": 491.5,
+          "right": 607.5,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "breakdown",
+          "text": "拆解爆款视频",
+          "left": 631.5,
+          "right": 747.5,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "selling",
+          "text": "一键创作带货视频",
+          "left": 771.5,
+          "right": 913.5,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "reverse",
+          "text": "反推视频提示词",
+          "left": 937.5,
+          "right": 1066.5,
+          "top": 430,
+          "bottom": 460
+        }
+      ],
+      "shortcutRowSameLine": true,
+      "shortcutRowCentered": {
+        "gapLeft": 68.5,
+        "gapRight": 68.5,
+        "delta": 0
+      }
+    },
+    "1440": {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "vars": {
+        "measuredCardWidth": "774px",
+        "cardMaxWidth": "calc(clamp(680px, calc(1160px * .64), 920px) + 32px)",
+        "sideClearance": "16px",
+        "density": "full"
+      },
+      "cardChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "Q7WfXG_card",
+          "width": 774.39,
+          "left": 471.8,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "774.4px",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "Q7WfXG_root Q7WfXG_hero",
+          "width": 1110,
+          "left": 304,
+          "paddingLeft": "16px",
+          "paddingRight": "16px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 1110,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        }
+      ],
+      "rowChain": [
+        {
+          "level": "self",
+          "tag": "DIV",
+          "cls": "omx-quick-shortcuts",
+          "width": 774.39,
+          "left": 471.8,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "flex"
+        },
+        {
+          "level": "parent1",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        },
+        {
+          "level": "parent2",
+          "tag": "DIV",
+          "cls": "uPhUma_composerStack uPhUma_composerHero",
+          "width": 1110,
+          "left": 304,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "min(1200px, 100% - 32px)",
+          "display": "flex"
+        },
+        {
+          "level": "parent3",
+          "tag": "DIV",
+          "cls": "",
+          "width": 0,
+          "left": 0,
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "maxWidth": "none",
+          "display": "contents"
+        }
+      ],
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "pageOverflowX": 0
+      },
+      "card": {
+        "left": 471.8,
+        "right": 1246.19,
+        "top": 202,
+        "bottom": 412,
+        "width": 774.39,
+        "height": 210,
+        "scrollWidth": 774,
+        "clientWidth": 774,
+        "overflowX": 0
+      },
+      "row": {
+        "left": 471.8,
+        "right": 1246.19,
+        "top": 430,
+        "bottom": 498,
+        "width": 774.39,
+        "height": 68,
+        "scrollWidth": 774,
+        "clientWidth": 774,
+        "overflowX": 0
+      },
+      "controlsWrap": {
+        "left": 471.8,
+        "right": 1246.19,
+        "top": 466,
+        "bottom": 498,
+        "width": 774.39,
+        "height": 32,
+        "scrollWidth": 774,
+        "clientWidth": 774,
+        "overflowX": 0
+      },
+      "mediaControls": {
+        "left": 604.34,
+        "right": 1113.64,
+        "top": 466,
+        "bottom": 498,
+        "width": 509.3,
+        "height": 32,
+        "scrollWidth": 509,
+        "clientWidth": 509,
+        "overflowX": 0
+      },
+      "rowRightOverCard": 0,
+      "rowLeftOverCard": 0,
+      "contentRightOverCard": -132.55,
+      "contentLeftOverCard": -132.54,
+      "maxDescendantRight": 1113.64,
+      "minDescendantLeft": 604.34,
+      "descendantCount": 29,
+      "widestDescendants": [
+        {
+          "cls": "omx-media-config-controls",
+          "left": 604.34,
+          "right": 1113.64,
+          "width": 509.3
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 1000.69,
+          "right": 1113.64,
+          "width": 112.95
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 795.34,
+          "right": 992.69,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-capsule-trigger ",
+          "left": 795.34,
+          "right": 992.69,
+          "width": 197.34
+        }
+      ],
+      "capsuleCount": 2,
+      "capsules": [
+        {
+          "label": "MiniMax H3标准版",
+          "left": 604.34,
+          "right": 774.34,
+          "width": 170,
+          "fullyInsideCard": true
+        },
+        {
+          "label": "文生视频··720P·5s",
+          "left": 795.34,
+          "right": 992.69,
+          "width": 197.34,
+          "fullyInsideCard": true
+        }
+      ],
+      "controlItems": [
+        {
+          "cls": "omx-popover-anchor",
+          "left": 604.34,
+          "right": 774.34,
+          "top": 466,
+          "width": 170
+        },
+        {
+          "cls": "omx-capsule-divider",
+          "left": 784.34,
+          "right": 785.34,
+          "top": 473,
+          "width": 1
+        },
+        {
+          "cls": "omx-popover-anchor",
+          "left": 795.34,
+          "right": 992.69,
+          "top": 466,
+          "width": 197.34
+        },
+        {
+          "cls": "omx-media-config-summary",
+          "left": 1000.69,
+          "right": 1113.64,
+          "top": 473,
+          "width": 112.95
+        }
+      ],
+      "summary": {
+        "text": "MiniMax H3 · 标准版",
+        "left": 1000.69,
+        "right": 1113.64,
+        "width": 112.95,
+        "fullyInsideCard": true
+      },
+      "shortcutButtons": [
+        {
+          "id": "clone",
+          "text": "复刻爆款视频",
+          "left": 571.48,
+          "right": 687.48,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "breakdown",
+          "text": "拆解爆款视频",
+          "left": 711.48,
+          "right": 827.48,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "selling",
+          "text": "一键创作带货视频",
+          "left": 851.48,
+          "right": 993.48,
+          "top": 430,
+          "bottom": 460
+        },
+        {
+          "id": "reverse",
+          "text": "反推视频提示词",
+          "left": 1017.48,
+          "right": 1146.48,
+          "top": 430,
+          "bottom": 460
+        }
+      ],
+      "shortcutRowSameLine": true,
+      "shortcutRowCentered": {
+        "gapLeft": 99.68,
+        "gapRight": 99.71,
+        "delta": 0.02
+      }
+    }
+  },
+  "shots": [
+    "layout-1440.png",
+    "layout-1440-composer.png",
+    "layout-1280.png",
+    "layout-1280-composer.png",
+    "layout-1167.png",
+    "layout-1167-composer.png",
+    "layout-1024.png",
+    "layout-1024-composer.png",
+    "layout-900.png",
+    "layout-900-composer.png"
+  ],
+  "checks": [
+    {
+      "id": "S1 扫描带内这一排恒等于卡片实测宽（跟随，≤1px 舍入）",
+      "pass": true,
+      "detail": "最大宽差 0（45 个宽度）"
+    },
+    {
+      "id": "S2 扫描带内这一排从不超出卡片",
+      "pass": true,
+      "detail": "最大右溢 0；最大左溢 0"
+    },
+    {
+      "id": "S3 扫描带内控件内容从不越出卡片",
+      "pass": true,
+      "detail": "内容右溢卡片最大 0"
+    },
+    {
+      "id": "S4 扫描带内没有页面级横向滚动条",
+      "pass": true,
+      "detail": "页面横溢最大 0"
+    },
+    {
+      "id": "S5 扫描带内四条按钮整组（并集包围盒）居中",
+      "pass": true,
+      "detail": "左右留白最大差 0.02"
+    },
+    {
+      "id": "G1 证据宽度下都没有页面级横向滚动条",
+      "pass": true,
+      "detail": "1440:0 1280:0 1167:0 1024:0 900:0"
+    },
+    {
+      "id": "G2 这一排整体不超出输入框卡片",
+      "pass": true,
+      "detail": "1440:右0/左0 1280:右0/左0 1167:右0/左0 1024:右0/左0 900:右0/左0"
+    },
+    {
+      "id": "G3 控件行内容不超出卡片边界",
+      "pass": true,
+      "detail": "1440:右-132.55/左-132.54 1280:右-101.36/左-101.34 1167:右-101.36/左-101.34 1024:右-96.36/左-96.34 900:右0/左0"
+    },
+    {
+      "id": "G4 两个胶囊在所有宽度都完整落在卡片内",
+      "pass": true,
+      "detail": "1440:in,in 1280:in,in 1167:in,in 1024:in,in 900:in,in"
+    },
+    {
+      "id": "G5 模型回执完整落在卡片内且未被压成零宽",
+      "pass": true,
+      "detail": "1440:1113.64<=1246.19(宽112.95) 1280:1033.64<=1135(宽112.95) 1167:977.14<=1078.5(宽112.95) 1024:905.64<=1002(宽112.95) 900:235.47<=338(宽112.95)"
+    },
+    {
+      "id": "G6 宽窗与用户截图宽度下四条仍整行不换行",
+      "pass": true,
+      "detail": "1440:true 1280:true 1167:true"
+    },
+    {
+      "id": "G7 四条快捷方式整组居中（并集包围盒左右留白差 < 2px）",
+      "pass": true,
+      "detail": "1440:左99.68/右99.71 1280:左68.5/右68.5 1167:左68.5/右68.5 1024:左63.5/右63.5 900:左11.5/右11.5"
+    },
+    {
+      "id": "G8 宽窗下这一排与卡片等宽（不倒退成更窄）",
+      "pass": true,
+      "detail": "row 774.39 vs card 774.39"
+    },
+    {
+      "id": "G9 窄窗下卡片自适应收缩（卡片宽 < 窗口宽）",
+      "pass": true,
+      "detail": "1167:712 900:318"
+    }
+  ]
+}
