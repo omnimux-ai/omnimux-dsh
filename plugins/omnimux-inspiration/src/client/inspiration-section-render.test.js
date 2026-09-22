@@ -389,11 +389,11 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
         false,
         `clicking an industry on 本地 must not write category: ${JSON.stringify(afterClick)}`,
       )
-      const allTab = mounted.container.querySelector('[data-tab="all"]')
-      assert.ok(allTab, 'the 全部 tab must render')
+      const trendingTab = mounted.container.querySelector('[data-tab="public"]')
+      assert.ok(trendingTab, 'the 爆款趋势 tab must render')
       const beforeSwitchBack = fetched.length
       await act(async () => {
-        allTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+        trendingTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       const trigger = mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${CATEGORY_LABEL}"]`)
       assert.ok(trigger, 'the category trigger must remain on 全部')

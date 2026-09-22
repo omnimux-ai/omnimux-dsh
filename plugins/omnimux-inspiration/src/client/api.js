@@ -222,7 +222,8 @@ export async function loadInspirationsAtomic(params) {
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
     const items = (res.body?.data?.items || []).map((it) => ({ ...it, is_local: false }))
     const total = Number(res.body?.data?.total) || items.length
-    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready' }
+    const platforms = res.body?.data?.platforms || []
+    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready', platforms }
   }
 
   // tab === 'all' with no industry: Fetch both simultaneously and merge atomically

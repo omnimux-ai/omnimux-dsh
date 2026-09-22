@@ -185,10 +185,10 @@ export function resolveDateRange(dateKey, nowMs = Date.now()) {
  * renders its own panel instead of the inspiration grid, so the feed simply
  * stops issuing requests for it and leaves every other branch untouched.
  */
-export const INSPIRATION_TABS = ['all', 'local', 'public', 'rivals']
+export const INSPIRATION_TABS = ['public', 'local', 'rivals']
 
 function useInspirationFilters() {
-  const [tab, setTabState] = useState('all')
+  const [tab, setTabState] = useState('public')
   const [q, setQ] = useState('')
   const [platform, setPlatform] = useState('')
   const [type, setType] = useState('')
@@ -203,7 +203,7 @@ function useInspirationFilters() {
   const [views, setViews] = useState('')
   const [trafficType, setTrafficType] = useState('')
   const [dateRange, setDateRange] = useState('')
-  // Official industry ids are a cloud-catalogue filter. Leaving 全部/云端
+  // Official industry ids are a cloud-catalogue filter. Leaving 爆款趋势
   // must drop the selection so the local list is not filtered empty; both
   // updates run in this handler so React batches them and the local query
   // never sees a leftover category. `setTab` also accepts an updater
@@ -212,7 +212,7 @@ function useInspirationFilters() {
   tabRef.current = tab
   const setTab = useCallback((next) => {
     const nextId = typeof next === 'function' ? next(tabRef.current) : next
-    if (nextId !== 'all' && nextId !== 'public') setCategory('')
+    if (nextId !== 'public') setCategory('')
     setTabState(nextId)
   }, [])
 
@@ -444,10 +444,9 @@ export function useInspirationFeed({ active }) {
    */
   const handleImportSuccess = useCallback((newItem) => {
     if (!newItem) return
-    setItems((prev) => [newItem, ...prev])
+    setItems((prev) => [newItem, ...prev.filter((row) => String(row?.id) !== String(newItem.id))])
     setLandedItem(newItem)
-    // `all` already lists local rows and is kept; `public` cannot show a local
-    // row at all, so the grid follows the import to `local`.
+    // 爆款趋势 cannot show a local row, so the grid follows the import to 灵感库.
     setTab((prev) => tabAfterContentImport(prev))
     if (isImportingRow(newItem)) watch.pollerRef.current?.track([newItem.id])
     const plat = (newItem?.source_platform || newItem?.platform || '').trim().toLowerCase()

@@ -213,7 +213,7 @@ async function mountSection(host) {
   await React.act(async () => {
     reactRoot.render(React.createElement(sectionModule.InspirationSection, { t, active: true }))
   })
-  await settle(container, () => container.querySelector(`[data-tab="all"]`))
+  await settle(container, () => container.querySelector(`[data-tab="public"]`))
 
   return {
     container,
@@ -542,7 +542,7 @@ describe('import landing — content URL', () => {
     }
   })
 
-  it('keeps the all tab and shows the new card there', async () => {
+  it('lands the new card on the local library tab', async () => {
     const host = createHost({
       classify: jsonResponse(200, { success: true, data: { kind: 'content', platform: 'tiktok' } }),
       contentImport: jsonResponse(202, {
@@ -562,9 +562,9 @@ describe('import landing — content URL', () => {
       await settle(mounted.container, () => firstCard(mounted.container)?.getAttribute('data-inspiration-id') === 'local-new-2')
 
       assert.equal(
-        mounted.container.querySelector('[data-tab="all"]').getAttribute('aria-pressed'),
+        mounted.container.querySelector('[data-tab="local"]').getAttribute('aria-pressed'),
         'true',
-        'the all tab already lists local rows and must be kept',
+        'a content import must land on the local library tab',
       )
       assert.equal(firstCard(mounted.container)?.getAttribute('data-inspiration-id'), 'local-new-2')
       assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null)

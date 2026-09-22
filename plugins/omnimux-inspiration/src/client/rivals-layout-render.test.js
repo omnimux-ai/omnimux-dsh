@@ -53,7 +53,7 @@ const RIVAL_PREFIX = '/omnimux/inspiration/local/rival-accounts'
 /** Requests one mount may make before the gate calls it a loop. */
 const REQUEST_BUDGET = 120
 
-const TABS = ['all', 'local', 'public', 'rivals']
+const TABS = ['public', 'local', 'rivals']
 
 /** Labels the gate drives the UI by, taken from the plugin's own table. */
 const L = {
@@ -195,6 +195,18 @@ async function mountStage(options = {}) {
         data: { items, total: items.length, platforms: platforms.map((name) => ({ name, count: 1 })) },
       })
     }
+    if (path.startsWith('/omnimux/inspiration')) {
+      const items = platforms.map((name, index) => ({
+        id: `cloud-${index + 1}`,
+        title: `cloud ${index + 1}`,
+        source_platform: name,
+        is_local: false,
+      }))
+      return jsonResponse(200, {
+        success: true,
+        data: { items, total: items.length, platforms: platforms.map((name) => ({ name, count: 1 })) },
+      })
+    }
     return jsonResponse(200, { success: true, data: { items: [], total: 0 } })
   }
 
@@ -205,7 +217,7 @@ async function mountStage(options = {}) {
   await act(async () => {
     reactRoot.render(React.createElement(stageModule.InspirationStage, { t, visible: true }))
   })
-  await settle(container, () => container.querySelector('[data-tab="all"]'))
+  await settle(container, () => container.querySelector('[data-tab="public"]'))
 
   return {
     container,
@@ -393,8 +405,8 @@ describe('inspiration tabs — shared shell', () => {
       // Every tab switch in between still shows the shell's own nodes.
       assertShellOnScreen(mounted.container, 'rivals')
 
-      await mounted.openTab('all')
-      assertShellOnScreen(mounted.container, 'all')
+      await mounted.openTab('public')
+      assertShellOnScreen(mounted.container, 'public')
 
       assert.equal(heading(mounted.container), before.heading, 'the heading DOM node must survive a tab switch')
       assert.equal(importButton(mounted.container), before.importButton, 'the 导入灵感 node must survive a tab switch')
@@ -406,7 +418,7 @@ describe('inspiration tabs — shared shell', () => {
       assert.deepEqual(
         tabButtons(mounted.container),
         before.tabButtons,
-        'the four tab nodes must be the same nodes after a round trip',
+        'the three tab nodes must be the same nodes after a round trip',
       )
     } finally {
       await mounted.unmount()
@@ -419,7 +431,7 @@ describe('inspiration tabs — filter row follows the tab', () => {
   it('keeps the library filters on the content tabs, platform gate included', async () => {
     const gated = await mountStage({ platforms: ['tiktok'] })
     try {
-      for (const tabId of ['all', 'local', 'public']) {
+      for (const tabId of ['public', 'local']) {
         await gated.openTab(tabId)
         assert.equal(
           searchInput(gated.container)?.getAttribute('aria-label'),

@@ -197,11 +197,11 @@ export function InspirationSection({ t, active }) {
 
   /**
    * Official 18-industry dropdown (Issue #2507 / #2511). The list is local and does
-   * not wait on `/categories`. 全部 / 云端 apply the official id (全部 + an industry shows only that cloud slice). On
-   * 本地 the same 19 labels stay visible but onChange is ignored so a click
+   * not wait on `/categories`. 爆款趋势 applies the official id. On
+   * 灵感库 the same labels stay visible but onChange is ignored so a click
    * cannot stash a hidden id that would reappear after switching back.
    */
-  const cloudCategoryTab = tab === 'all' || tab === 'public'
+  const cloudCategoryTab = tab === 'public'
   const categoryOptions = useMemo(() => buildCategoryFilterOptions(t), [t])
   const handleCategoryChange = useCallback((next) => {
     if (!cloudCategoryTab) return
@@ -258,9 +258,8 @@ export function InspirationSection({ t, active }) {
           <Tabs
             variant="underline"
             items={[
-              { id: 'all', label: t('tab.all') },
-              { id: 'local', label: t('tab.local') },
               { id: 'public', label: t('tab.public') },
+              { id: 'local', label: t('tab.local') },
               { id: 'rivals', label: t('tab.rivals') },
             ]}
             activeId={tab}

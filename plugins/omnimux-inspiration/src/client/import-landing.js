@@ -12,7 +12,7 @@
  */
 
 /** Tabs whose list can hold a freshly imported local row. */
-export const CONTENT_LANDING_TABS = ['all', 'local']
+export const CONTENT_LANDING_TABS = ['local']
 
 /** Card attribute carrying the row id, used to find the landed card again. */
 export const LANDED_CARD_ATTRIBUTE = 'data-inspiration-id'
@@ -36,9 +36,8 @@ export const LANDED_PIN_MS = 12000
 
 /**
  * Tab the grid must show once a content import landed in the local library.
- * `all` already lists local rows and is kept as-is; any other tab (the cloud tab
- * cannot show a local row at all, the rival workbench shows accounts) moves to
- * `local`.
+ * The trending tab cannot show a local row, and the rival workbench shows
+ * accounts, so both move to the local library.
  * @param {string} tab
  * @returns {string}
  */

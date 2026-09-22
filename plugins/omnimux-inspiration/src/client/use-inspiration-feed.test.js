@@ -599,6 +599,9 @@ describe('useInspirationFeed lifecycle', () => {
       if (url.pathname === '/omnimux/inspiration/local') {
         return jsonResponse(200, { data: { items: [{ id: 'local-old-1', title: 'old', is_local: true }], total: 1 } })
       }
+      if (url.pathname === '/omnimux/inspiration') {
+        return jsonResponse(200, { data: { items: [{ id: 'cloud-old-1', title: 'cloud', is_local: false }], total: 1 } })
+      }
       return jsonResponse(200, { data: { items: [], total: 0 } })
     }
 
@@ -613,16 +616,16 @@ describe('useInspirationFeed lifecycle', () => {
         root.render(React.createElement(Harness))
       })
       await waitFor(() => feed?.items.length === 1, 'first page did not load')
-      assert.equal(feed.tab, 'all')
+      assert.equal(feed.tab, 'public')
+      assert.equal(feed.items[0].id, 'cloud-old-1', 'the default tab must load cloud rows')
 
       await act(async () => {
         feed.handleImportSuccess(row)
       })
 
       assert.equal(feed.selectedItem, null, 'an import must not open the preview modal')
-      assert.equal(feed.items[0].id, 'local-new-1', 'the imported row must be the first card')
       assert.equal(feed.landedItem?.id, 'local-new-1', 'the imported row must stay pinned for the reveal')
-      assert.equal(feed.tab, 'all', 'the all tab can show the imported row and must be kept')
+      assert.equal(feed.tab, 'local', 'an import from trending must land on the local library')
 
       // A tab that cannot show a local row has to give way to one that can.
       await act(async () => {
