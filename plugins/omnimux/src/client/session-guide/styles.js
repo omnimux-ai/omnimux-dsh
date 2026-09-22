@@ -3677,15 +3677,22 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-tpl-btn-primary:hover { opacity:0.92; }
 
-/* 加号整页选素材：分类钉在内容顶部，卡片铺满中间。输入框沿用吸底，不在这里再画一个。 */
+/* 加号整页选素材：整页铺满会话列。分类是窗口顶栏，卡片单独滚，输入框沿用吸底。 */
 .omnimux-library-stage {
-  display:flex; flex-direction:column; gap:16px; width:100%; min-width:0;
+  position:fixed; z-index:40; box-sizing:border-box;
+  top:0; bottom:0;
+  left:var(--omnimux-library-stage-left, 0px);
+  width:var(--omnimux-library-stage-width, 100%);
+  display:flex; flex-direction:column; gap:12px; min-width:0;
+  padding:6px 28px 148px;
+  background:var(--dsw-alias-bg-base, #111113);
+  overflow:hidden;
 }
 .omnimux-library-stage-tabs {
-  position:sticky; top:0; z-index:8;
+  position:relative; flex:0 0 auto; z-index:1;
   display:flex; align-items:center; gap:20px;
-  padding:8px 0;
-  background:var(--dsw-alias-bg-base, #111113);
+  height:52px; padding:0;
+  background:transparent;
 }
 .omnimux-library-stage-tab {
   height:32px; padding:0; border:0; background:transparent; cursor:pointer;
@@ -3709,7 +3716,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-library-stage-grid {
   display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
-  gap:16px; align-items:start;
+  gap:16px; align-items:start; align-content:start;
+  flex:1 1 auto; min-height:0; overflow:auto;
 }
 .omnimux-library-stage-grid.is-mixed {
   grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
@@ -3720,9 +3728,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   display:inline-flex;
 }
 #omnimux-composer-add-host:has([data-omnimux-library-stage]) {
-  position:fixed; z-index:40; overflow:auto;
-  top:12px; left:max(240px, 18vw); right:16px; bottom:168px;
-  padding:12px 20px 24px; box-sizing:border-box;
+  position:fixed; z-index:40; overflow:hidden;
+  top:0; bottom:0;
+  left:var(--omnimux-library-stage-left, 0px);
+  width:var(--omnimux-library-stage-width, 100%);
+  box-sizing:border-box;
   background:var(--dsw-alias-bg-base, #111113);
 }
 `
