@@ -16,9 +16,7 @@ export function queueComposerPrefill({ prompt, kind, token = `${Date.now()}` } =
   const mode = kind === KIND.video ? KIND.video : KIND.image
   if (!text.trim()) return null
   pending = { prompt: text, kind: mode, token: String(token) }
-  for (const listener of listeners) {
-    try { listener(pending) } catch { /* a closed page must not drop the request */ }
-  }
+  notify()
   return pending
 }
 
@@ -26,11 +24,18 @@ export function peekComposerPrefill() {
   return pending
 }
 
+function notify() {
+  for (const listener of listeners) {
+    try { listener(pending) } catch { /* a closed page must not drop the request */ }
+  }
+}
+
 export function takeComposerPrefill(token) {
   if (!pending) return null
   if (token != null && pending.token !== String(token)) return null
   const current = pending
   pending = null
+  notify()
   return current
 }
 
@@ -40,5 +45,7 @@ export function subscribeComposerPrefill(listener) {
 }
 
 export function resetComposerPrefill() {
+  if (!pending) return
   pending = null
+  notify()
 }

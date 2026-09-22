@@ -135,11 +135,15 @@ function openGenerationPage(doc: Document): Promise<boolean> {
 function paintPromptFence(root: HTMLElement, kind: PromptFenceKind, doc: Document): void {
   const lang = resolvePromptFenceLang(doc)
   const caption = root.querySelector('.omx-prompt-caption')
-  if (caption) caption.textContent = KIND_LABEL[kind][lang]
+  setTextIfChanged(caption, KIND_LABEL[kind][lang])
   const footKind = root.querySelector('.omx-prompt-foot-kind')
-  if (footKind) footKind.textContent = FOOT_LABEL[kind][lang]
+  setTextIfChanged(footKind, FOOT_LABEL[kind][lang])
   const button = root.querySelector('.omx-prompt-generate') as HTMLButtonElement | null
-  if (button && button.dataset.state !== 'done') button.textContent = BUTTON_COPY.idle[lang]
+  if (button && button.dataset.state !== 'done') setTextIfChanged(button, BUTTON_COPY.idle[lang])
+}
+
+function setTextIfChanged(node: Element | null, text: string): void {
+  if (node && node.textContent !== text) node.textContent = text
 }
 
 /**
@@ -253,6 +257,7 @@ export function installPromptFenceGenerate(targetDoc: Document = document): () =
   }
   const onLocale = () => schedule()
   targetDoc.defaultView?.addEventListener('omnimux:locale-change', onLocale)
+  targetDoc.defaultView?.addEventListener('languagechange', onLocale)
   schedule()
 
   return () => {
@@ -262,5 +267,6 @@ export function installPromptFenceGenerate(targetDoc: Document = document): () =
     observer?.disconnect()
     langObserver?.disconnect()
     targetDoc.defaultView?.removeEventListener('omnimux:locale-change', onLocale)
+    targetDoc.defaultView?.removeEventListener('languagechange', onLocale)
   }
 }
