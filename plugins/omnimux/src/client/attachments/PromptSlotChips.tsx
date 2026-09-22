@@ -13,6 +13,11 @@ export interface PromptSlotChipsProps {
   readonly onAddFiles?: (files: readonly File[]) => void;
   readonly onAddProductAttachment?: (product: any) => void;
   readonly t?: (key: string, vars?: any) => string;
+  /**
+   * 不可点卡槽的 id 列表（两态判据由调用方给出）。
+   * 典型场景：快捷方式的链接胶囊已经在输入框里时，对应卡槽不再可点。
+   */
+  readonly disabledSlotIds?: readonly string[];
 }
 
 const FileUploadIcon = ({ size = 13 }: { size?: number }) => (
@@ -142,6 +147,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   onAddFiles,
   onAddProductAttachment,
   t = (key) => key,
+  disabledSlotIds,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
@@ -288,6 +294,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
         {slots.map((slot, index) => {
           const isActive = activeSlotIndex === index;
           const isFilled = Boolean(slot.selectedValue);
+          const isDisabled = Array.isArray(disabledSlotIds) && disabledSlotIds.includes(slot.id);
           const displayText = isFilled
             ? `${slot.placeholder}: ${slot.selectedValue}`
             : slot.placeholder || '输入内容';
@@ -311,8 +318,9 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
             <button /* exempt-ui01: prompt 变量槽位胶囊按钮 */
               key={slot.id}
               type="button"
-              className={`omx-prompt-slot-chip ${isActive ? 'is-active' : ''} ${isFilled ? 'has-value' : ''}`}
+              className={`omx-prompt-slot-chip ${isActive ? 'is-active' : ''} ${isFilled ? 'has-value' : ''} ${isDisabled ? 'is-disabled' : ''}`}
               onClick={(e) => handleSlotClick(slot, index, e)}
+              disabled={isDisabled}
               title={actionTitle}
             >
               {renderSlotIcon(slot.protocol, 13)}

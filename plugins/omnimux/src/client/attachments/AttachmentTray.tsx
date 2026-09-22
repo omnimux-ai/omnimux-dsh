@@ -14,6 +14,15 @@ import { useCommentAttachment, removeCommentAttachment } from './useCommentAttac
 import { usePasteVideoInterceptor } from './usePasteVideoInterceptor.ts';
 import { VideoLinkPopover } from './VideoLinkPopover.tsx';
 import { DropOverlay } from './DropOverlay.tsx';
+import { getGlobalQuickShortcutStore } from '../composer-quick-shortcuts/store.js';
+import {
+  buildQuickLinkSlots,
+  quickLinkLabels,
+  quickLinkToken,
+  splitQuickLinkSlots,
+} from '../composer-quick-shortcuts/links.js';
+import { readDraft } from '../composer-quick-shortcuts/dom.js';
+import { insertTokenAtCursor } from '../composer-quick-shortcuts/dom.js';
 import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewModal.tsx';
 import {
   NativeAttachmentCard,
@@ -61,8 +70,15 @@ function translate(
   return interpolate(fallback, vars);
 }
 
-const LinkIcon = ({ size = 14 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+/** 快捷链接卡槽的显示名：跟随页面语言，缺文案时退回中文原名。 */
+function translateQuickLabels(t: AttachmentTrayProps['t']): { video: string; product: string } {
+  return {
+    video: translate(t, 'quickShortcuts.link.video', '视频'),
+    product: translate(t, 'quickShortcuts.link.product', '商品'),
+  };
+}
+
+const LinkIcon = ({ size = 14 }: { size?: number }) => (  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
@@ -204,6 +220,27 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   usePasteVideoInterceptor();
   const { slots, activeSlotIndex, selectSlot, replaceSlot } = usePromptSlotEnhancer();
+
+  // 快捷方式带来的链接卡槽与输入框自带的变量槽位**共用同一行**：
+  // 卡槽状态来自快捷方式的会话级 Store（删掉胶囊后卡槽仍在，因此可再点），
+  // 输入框文本里解析出的同名令牌不再重复成第二个卡槽。
+  const quickStore = getGlobalQuickShortcutStore();
+  const subscribeQuick = useCallback(
+    (notify: () => void) => quickStore.subscribe(currentSessionId, notify),
+    [quickStore, currentSessionId],
+  );
+  const getQuickSnapshot = useCallback(
+    () => quickStore.getSnapshot(currentSessionId),
+    [quickStore, currentSessionId],
+  );
+  const quickState = useSyncExternalStore(subscribeQuick, getQuickSnapshot, getQuickSnapshot);
+
+  const quickLabels = translateQuickLabels(props.t);
+  const quickLinkSlots = buildQuickLinkSlots(quickState.links, quickLabels);
+  const quickTokens = new Set(quickLinkSlots.map((slot) => slot.raw));
+  const derivedSlots = slots.filter((slot) => !quickTokens.has(slot.raw));
+  const mergedSlots = quickLinkSlots.length > 0 ? [...quickLinkSlots, ...derivedSlots] : derivedSlots;
+  const { filledIds: quickFilledIds } = splitQuickLinkSlots(readDraft(), quickLinkSlots);
   const dragActive = useDragDrop({
     canAcceptDrop,
     onAddFiles: nativeOnAddFiles,
@@ -408,12 +445,22 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         />
       )}
       <PromptSlotChips
-        slots={slots}
+        slots={mergedSlots}
         activeSlotIndex={activeSlotIndex}
-        onSelectSlot={selectSlot}
+        onSelectSlot={(slot) => {
+          // 快捷链接卡槽：胶囊已被删掉才会走到这里（存在时卡槽不可点），
+          // 点击即把胶囊插回光标处，不再打开任何选择器。
+          if (slot && (slot as { quickLinkKind?: string }).quickLinkKind) {
+            insertTokenAtCursor(slot.raw);
+            return;
+          }
+          const index = Array.isArray(slots) ? slots.findIndex((item) => item.id === slot.id) : -1;
+          selectSlot(slot, index);
+        }}
         onReplaceSlot={replaceSlot}
         onAddFiles={nativeOnAddFiles}
         onAddProductAttachment={handleAddProductAttachment}
+        disabledSlotIds={quickFilledIds}
         t={props.t}
       />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (

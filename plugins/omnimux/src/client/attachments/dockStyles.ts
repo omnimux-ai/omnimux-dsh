@@ -157,6 +157,12 @@ export const DOCK_STYLES = `
   color: #4ade80 !important; /* exempt-ui03: 柔和绿勾标示完成 */
   opacity: 0.9 !important;
 }
+/* 链接已在输入框内时卡槽不可点：降透明度 + 虚线边框，两态一眼可辨 */
+.omx-prompt-slot-chip.is-disabled {
+  opacity: 0.45 !important;
+  cursor: default !important;
+  border-style: dashed !important;
+}
 .omx-prompt-slot-chip svg {
   flex-shrink: 0 !important;
   color: currentColor !important;

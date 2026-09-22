@@ -53,6 +53,31 @@
         }, "omnimux-market-locale");
       });
       ctx.effect(() => ensureCss(), "omnimux-market-style");
+
+      // 出厂预设技能库的**跨插件只读通道**。
+      //
+      // 技能数据（`catalog/preset-skills.json`）由本插件拥有；中枢（omnimux）不得
+      // 导入本插件的私有模块，因此把「按 slug 解析一款已内置技能」这一件事
+      // 收敛成一个窄接口挂到 window 上，与 `__omnimuxStage` / `__omnimuxWorkbench`
+      // / `__omnimuxAttachments` 等既有跨插件 seam 同一形态。
+      // 输入框下方的快捷方式据此判断「技能缺失即不渲染」。
+      if (typeof window !== "undefined") {
+        ctx.effect(() => {
+          const api = {
+            resolvePresetSkill: (slug) => {
+              try {
+                return SkillShelf.findPresetSkill(slug);
+              } catch {
+                return null;
+              }
+            },
+          };
+          window.__omnimuxSkillLibrary = api;
+          return () => {
+            if (window.__omnimuxSkillLibrary === api) delete window.__omnimuxSkillLibrary;
+          };
+        }, "omnimux-market: preset skill library seam");
+      }
       slots.inject("tool.call.toolview", () => registerSlot(
         slots,
         { name: "tool.call.toolview", key: "skillhub_search", locale: "omnimux-market" },

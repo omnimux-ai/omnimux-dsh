@@ -13,7 +13,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async () => {
   // 1. 验证 MediaViewerComposer.jsx 契约
-  const composerSource = await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8');
+  // 「生成方式 / 模型 / 参数」三件套已抽到共享控件 MediaConfigControls.jsx，
+  // 由媒体面板与输入框快捷方式共同消费（Issue #2562）；契约因此跨这两个文件校验，
+  // 媒体面板的 DOM、类名与行为保持原样。
+  const composerSource = [
+    await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8'),
+    await readFile(resolve(here, 'MediaConfigControls.jsx'), 'utf8'),
+  ].join('\n');
 
   // 必须包含三大按钮排布：生成方式 ｜ 模型 ｜ 参数展示
   assert.ok(

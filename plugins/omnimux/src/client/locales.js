@@ -1,6 +1,14 @@
 export const zh = {
   'composer.product': '产品',
   'composer.character': '角色',
+  // 输入框下方四条快捷方式（名称逐字，不得改写）
+  'quickShortcuts.group': '快捷方式',
+  'quickShortcuts.clone': '复刻爆款视频',
+  'quickShortcuts.breakdown': '拆解爆款视频',
+  'quickShortcuts.selling': '一键创作带货视频',
+  'quickShortcuts.reverse': '反推视频提示词',
+  'quickShortcuts.link.video': '视频',
+  'quickShortcuts.link.product': '商品',
   'characterPicker.title': '选择角色',
   'characterPicker.cat.all': '全部',
   'characterPicker.cat.digitalHuman': '数字人',
@@ -217,6 +225,14 @@ export const zh = {
 export const en = {
   'composer.product': 'Product',
   'composer.character': 'Character',
+  // Composer quick shortcuts (names are fixed copy, never reworded)
+  'quickShortcuts.group': 'Quick start',
+  'quickShortcuts.clone': 'Replicate viral video',
+  'quickShortcuts.breakdown': 'Break down viral video',
+  'quickShortcuts.selling': 'Create selling video',
+  'quickShortcuts.reverse': 'Reverse-engineer prompt',
+  'quickShortcuts.link.video': 'Video',
+  'quickShortcuts.link.product': 'Product',
   'characterPicker.title': 'Select Character',
   'characterPicker.cat.all': 'All',
   'characterPicker.cat.digitalHuman': 'Digital Human',
