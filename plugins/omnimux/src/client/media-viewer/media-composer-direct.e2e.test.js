@@ -106,8 +106,8 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
     '必须动态请求执行中枢模型目录 /omnimux/model-catalog'
   );
   assert.ok(
-    composerSource.includes('refThumbnails && refThumbnails.length > 0'),
-    '无真实参考图时严禁渲染任何静态人像占位'
+    composerSource.includes('slots.length > 0'),
+    '当前模型没有契约槽位时不渲染卡槽，也不放静态占位图'
   );
 
   // 5. 验证媒体查看器 Store 状态流转与直连产物自动入库

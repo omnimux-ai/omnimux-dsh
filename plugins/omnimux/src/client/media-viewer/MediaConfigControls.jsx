@@ -90,7 +90,7 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
   const [imageBatch, setImageBatch] = useState('1');
 
   // 视频参数
-  const [videoGenMode, setVideoGenMode] = useState('全能参考');
+  const [videoGenMode, setVideoGenMode] = useState('文生视频');
   const [videoAspect, setVideoAspect] = useState('16:9');
   const [videoRes, setVideoRes] = useState('720p');
   const [hasSound, setHasSound] = useState(true);
@@ -388,7 +388,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
               <div className="omx-param-group">
                 <div className="omx-param-title">生成模式</div>
                 <div className="omx-mode-track">
-                  {['文生视频', '首帧', '首尾帧', '全能参考'].map((m) => (
+                  {['文生视频', '首帧', '首尾帧', '全能参考', '视频编辑'].map((m) => (
                     <button // exempt-ui01: 视频生成模式按钮
                       key={m}
                       type="button"
