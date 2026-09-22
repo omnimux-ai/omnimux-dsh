@@ -47,7 +47,8 @@ When the block includes view: canvas and workspace: <id>, that workspace is the 
 Call workbench_get_active_view only if the block is missing, stale, or contradictory.
 Call workbench_open_tab only when the user needs to see a result; always pass reason.
 If a tool returns applied=false, tell the user in one sentence — reuse the returned \`message\` verbatim when present; do not retry in a loop.
-Never claim an image/video was generated unless the media result mode is "live".`
+Never claim an image/video was generated unless the media result mode is "live".
+When you write a prompt the user can send straight to image or video generation, put that prompt alone in a fenced block whose language is exactly prompt-image or prompt-video. Use prompt-image for a still image and prompt-video for a video. Do not use those marks for scripts, breakdowns, JSON, or ordinary code; those stay in their own fences. The product adds a fill button only on those two marks.`
 
 export const WORKBENCH_VIEWPORT_PROMPT_SECTION = {
   name: 'workbench:viewport',
