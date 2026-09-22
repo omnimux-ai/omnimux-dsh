@@ -108,7 +108,7 @@ export function MediaSlotGroup({ slot, items, onChange, onReject, disabled = fal
   return (
     <div
       className={`omx-slot-group${piled ? ' is-piled' : ''}${expanded ? ' is-open' : ''}`}
-      style={{ '--omx-slot-fan-width': `${fanWidth}px` }}
+      style={{ '--slot-fan-width': `${fanWidth}px` }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
@@ -124,7 +124,7 @@ export function MediaSlotGroup({ slot, items, onChange, onReject, disabled = fal
             <div
               key={item.id}
               className={`omx-slot-card is-depth-${Math.min(count - 1 - index, 2)}${shown ? '' : ' is-hidden'}`}
-              style={{ '--omx-slot-shift': shift, '--omx-slot-z': index + 1 }}
+              style={{ '--slot-shift': shift, '--slot-z': index + 1 }}
             >
               {slot.type === 'audio' ? (
                 <span className="omx-slot-audio">{ICONS.audio}</span>
@@ -153,7 +153,7 @@ export function MediaSlotGroup({ slot, items, onChange, onReject, disabled = fal
           <button // exempt-ui01: 竖屏虚线卡槽，高度随素材比例，不是 32px 工具按钮
             type="button"
             className="omx-slot-add"
-            style={{ '--omx-slot-shift': `${adderAt}px` }}
+            style={{ '--slot-shift': `${adderAt}px` }}
             aria-label={slot.label ? `添加${slot.label}` : '添加素材'}
             onClick={() => inputRef.current?.click()}
           >

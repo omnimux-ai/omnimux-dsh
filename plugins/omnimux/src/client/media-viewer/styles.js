@@ -1079,7 +1079,7 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25), 0 20px 48px rgba(0, 0, 0, 0.7); /* exempt-ui03: 极光紫微光焦点与深度阴影 */
 }
 
-/* 素材卡槽：竖屏虚线框。位置只通过 --omx-slot-* 变量传入，不写内联尺寸。 */
+/* 素材卡槽：竖屏虚线框。位置只通过 --slot-* 变量传入，不写内联尺寸。 */
 .omx-slot-row {
   display: flex;
   align-items: flex-start;
@@ -1094,7 +1094,7 @@ export const MEDIA_VIEWER_CSS = `
 .omx-slot-fan {
   position: relative;
   height: 92px;
-  width: var(--omx-slot-fan-width);
+  width: var(--slot-fan-width);
 }
 .omx-slot-card,
 .omx-slot-add {
@@ -1104,7 +1104,7 @@ export const MEDIA_VIEWER_CSS = `
   width: 64px;
   height: 88px;
   border-radius: 12px;
-  transform: translateX(var(--omx-slot-shift, 0px));
+  transform: translateX(var(--slot-shift, 0px));
   transition: transform 220ms ease, opacity 180ms ease;
 }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(92px); }
@@ -1112,14 +1112,14 @@ export const MEDIA_VIEWER_CSS = `
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-1 { transform: translate(-2px, 5px) rotate(-6deg); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-2 { transform: translate(6px, 6px) rotate(5deg); }
 .omx-slot-card {
-  z-index: var(--omx-slot-z, 1);
+  z-index: var(--slot-z, 1);
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); /* exempt-ui03: 叠卡层次 */
 }
-.omx-slot-card.is-depth-1 { transform: translate(var(--omx-slot-shift), 5px) rotate(-6deg); }
-.omx-slot-card.is-depth-2 { transform: translate(var(--omx-slot-shift), 6px) rotate(5deg); }
+.omx-slot-card.is-depth-1 { transform: translate(var(--slot-shift), 5px) rotate(-6deg); }
+.omx-slot-card.is-depth-2 { transform: translate(var(--slot-shift), 6px) rotate(5deg); }
 .omx-slot-card.is-hidden { opacity: 0; pointer-events: none; }
 .omx-slot-card img,
 .omx-slot-card video {
