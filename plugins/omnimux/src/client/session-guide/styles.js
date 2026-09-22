@@ -3426,6 +3426,20 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   line-height:1.35;
   text-shadow:0 1px 4px var(--dsw-alias-bg-base);
 }
+.omnimux-tpl-prompt-preview {
+  display:none;
+  margin:0;
+  font-size:11px;
+  font-weight:400;
+  line-height:1.4;
+  color:var(--omnimux-trending-cover-text);
+  -webkit-line-clamp:4;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.omnimux-tpl-card:hover .omnimux-tpl-prompt-preview {
+  display:-webkit-box;
+}
 
 /* 悬停平滑浮现的毛玻璃复刻操作栏：默认隐藏，强对比度高光背景 */
 .omnimux-tpl-hover-action {

@@ -69,6 +69,7 @@ export function TemplatesShelfRow({
               template={template}
               onSelect={onSelectTemplate}
               onOpenDetail={onOpenDetail}
+              t={t}
             />
           ))}
         </div>

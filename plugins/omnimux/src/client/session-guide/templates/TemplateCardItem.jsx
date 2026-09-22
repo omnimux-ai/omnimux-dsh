@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { resolveSkillAuroraStyle } from '../skills/auroraGradients.js'
+import { resolveTemplateCopy } from './template-locale.js'
+import { useTemplateLocale } from './use-template-locale.js'
 
 const ICON_REPLICATE = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="13" height="13">
@@ -44,10 +46,12 @@ function formatMetric(num) {
  * @param {object} props.template
  * @param {(template: object) => void} props.onSelect
  * @param {(template: object) => void} props.onOpenDetail
+ * @param {string} [props.locale]
+ * @param {Function} [props.t]
  */
-export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
+export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }) {
   const [imgError, setImgError] = useState(false)
-  const [isFavorite, setIsFavorite] = useState(false)
+  const currentLocale = useTemplateLocale(locale, t)
 
   if (!template) return null
 
@@ -64,12 +68,19 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
   const isTikTok = template.type === 'tiktok' || template.categorySlug === 'tiktok' || (typeof template.views === 'number' && template.views > 0)
   const isSkill = template.type === 'skill' || template.categorySlug === 'skills'
   const isApp = template.isApp === true || (template.type === 'app' && !!template.manifest)
-  const actionText = isApp ? '打开应用' : (isSkill ? '使用' : '复刻')
   const actionIcon = isApp ? ICON_OPEN_APP : ICON_REPLICATE
   const viewsText = isTikTok ? formatMetric(template.views) : null
   const engagementText = isTikTok && typeof template.engagement === 'number' ? `${(template.engagement * 100).toFixed(1)}%` : null
 
-  const title = template.title || template.titleZh || template.nameZh || template.name || ''
+  const localized = resolveTemplateCopy(template, currentLocale)
+  const title = localized.title || template.name || ''
+  const promptPreview = isSkill ? '' : localized.prompt
+  const isEn = String(currentLocale).toLowerCase().startsWith('en')
+  const actionText = isApp
+    ? (isEn ? 'Open app' : '打开应用')
+    : (isSkill ? (isEn ? 'Use' : '使用') : (isEn ? 'Recreate' : '复刻'))
+  const metricEngagement = isEn ? 'Engagement' : '互动率'
+  const metricViews = isEn ? 'Views' : '播放量'
   const coverUrl = template.thumbnailUrl || template.cover || template.img || ''
 
   // 技能卡片：极简极光流光样式（移除左上角水滴/胶囊、右上角星标、使用量与文字遮挡，居中大标题与认证对勾）
@@ -177,13 +188,13 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
               {engagementText && (
                 <div className="omnimux-tpl-metric-col">
                   <span className="omnimux-tpl-metric-value">{engagementText}</span>
-                  <span className="omnimux-tpl-metric-label">互动率</span>
+                  <span className="omnimux-tpl-metric-label">{metricEngagement}</span>
                 </div>
               )}
               {viewsText && (
                 <div className="omnimux-tpl-metric-col">
                   <span className="omnimux-tpl-metric-value">{viewsText}</span>
-                  <span className="omnimux-tpl-metric-label">播放量</span>
+                  <span className="omnimux-tpl-metric-label">{metricViews}</span>
                 </div>
               )}
             </div>
@@ -192,6 +203,11 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail }) {
           <div className="omnimux-tpl-title" title={title}>
             {title}
           </div>
+          {promptPreview ? (
+            <p className="omnimux-tpl-prompt-preview" data-template-prompt="">
+              {promptPreview}
+            </p>
+          ) : null}
         </div>
 
         {/* 悬停平滑浮现的毛玻璃圆角按键（直接复用创作灵感样式） */}

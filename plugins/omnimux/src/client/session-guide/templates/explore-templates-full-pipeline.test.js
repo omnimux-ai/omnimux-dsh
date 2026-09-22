@@ -83,10 +83,14 @@ test('attachTemplateToConversation: 点击复刻自动挂载为会话附件并�
 
   const sampleTemplate = {
     id: 'tpl-creatify-8164bec4-098f-4a20-b3d4-108a5fb0b521',
-    title: '3D Billboard',
+    title: '三维广告大屏',
+    titleEn: '3D Billboard',
+    localizedTitle: '三维广告大屏',
+    localizedPrompt: '用「三维广告大屏」做一条竖屏短视频。',
     categorySlug: 'cinematic-vfx',
     duration: '15s',
     prompt: 'Turn your product into an eye-catching 3D billboard.',
+    promptZh: '用「三维广告大屏」做一条竖屏短视频。',
     thumbnailUrl: 'https://cdn.creatify.ai/preview.webp',
   };
 
@@ -98,14 +102,14 @@ test('attachTemplateToConversation: 点击复刻自动挂载为会话附件并�
   assert.equal(record.sessionId, 'sess-test-123');
   assert.equal(record.payload.kind, 'inspiration');
   assert.equal(record.payload.entityId, sampleTemplate.id);
-  assert.equal(record.payload.title, '3D Billboard');
+  assert.equal(record.payload.title, '三维广告大屏');
   assert.equal(record.payload.extension, 'TPL');
-  assert.equal(record.payload.metadata.prompt, sampleTemplate.prompt);
+  assert.equal(record.payload.metadata.prompt, sampleTemplate.localizedPrompt);
 
   // 2. 验证附件导轨高亮事件派发
   const revealEvt = dispatchedEvents.find((e) => e.type === 'omnimux:attachments:reveal');
   assert.ok(revealEvt, '必须派发 omnimux:attachments:reveal 事件');
 
-  // 3. 验证输入框引导草稿预填
-  assert.ok(currentDraft.includes('3D Billboard'), '输入框应包含该模板名称的引导复刻语');
+  // 挂载附件本身不写输入框；提示词由点击模板时按当前语言另行填入。
+  assert.equal(currentDraft, '');
 });

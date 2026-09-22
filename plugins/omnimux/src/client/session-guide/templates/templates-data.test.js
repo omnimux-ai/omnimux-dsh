@@ -7,7 +7,7 @@ import {
   SHELVES_CONFIG,
   selectTemplatesByCategory,
   findTemplateById,
-  selectShelfItems,
+  resolveLocalizedTemplate,
 } from './templates-data.js';
 
 test('全量灵感模板与置顶 AI 应用规模与数据完整性验证', () => {
@@ -70,4 +70,20 @@ test('分类筛选与 ID 检索功能验证', () => {
 
   const allItems = selectTemplatesByCategory('all');
   assert.equal(allItems.length, ALL_CREATIVE_TEMPLATES.length);
+});
+
+test('营销模板名称与提示词具备中英两套文案', () => {
+  const templates = ALL_CREATIVE_TEMPLATES.filter((item) => !item.isApp);
+  assert.equal(templates.length, 395);
+  for (const item of templates) {
+    assert.ok(item.title && /[\u4e00-\u9fff]/.test(item.title), `${item.id} 中文名`);
+    assert.ok(item.titleEn && !/[\u4e00-\u9fff]/.test(item.titleEn), `${item.id} 英文名`);
+    assert.ok(item.promptZh && /[\u4e00-\u9fff]/.test(item.promptZh), `${item.id} 中文提示词`);
+    assert.ok(item.prompt && item.prompt.trim(), `${item.id} 英文提示词`);
+  }
+  const comic = templates.find((item) => item.titleEn === 'American Comic Style Ad');
+  assert.equal(resolveLocalizedTemplate(comic, 'zh').title, '美式漫画广告');
+  assert.match(resolveLocalizedTemplate(comic, 'zh').prompt, /美式漫画广告/);
+  assert.equal(resolveLocalizedTemplate(comic, 'en').title, 'American Comic Style Ad');
+  assert.equal(resolveLocalizedTemplate(comic, 'en').prompt, comic.prompt);
 });
