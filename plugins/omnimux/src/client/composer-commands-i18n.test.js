@@ -351,42 +351,42 @@ test('ensurePlacementStyles injects idempotent placement CSS stylesheet into doc
   assert.equal(styles.length, 1)
 })
 
-test('shouldPlaceMenuBelow correctly identifies hero/bottom/middle states', () => {
+const PLUS_OPEN = '<button aria-haspopup="listbox" aria-expanded="true" aria-label="指令"></button>'
+
+test('shouldPlaceMenuBelow follows composer position only while the plus menu is the one opening', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
-    <div class="container Q7WfXG_hero">
-      <div data-composer-card></div>
-    </div>
-    <div class="normal-session">
-      <div id="bottom-card" data-composer-card></div>
-    </div>
+    <div data-composer-card id="top-card">${PLUS_OPEN}</div>
+    <div data-composer-card id="bottom-card">${PLUS_OPEN}</div>
+    <div data-composer-card id="slash-card"></div>
   </body></html>`)
   const win = dom.window
   win.innerHeight = 1000
+  const doc = dom.window.document
+  const topCard = doc.getElementById('top-card')
+  const bottomCard = doc.getElementById('bottom-card')
+  const slashCard = doc.getElementById('slash-card')
 
-  const heroCard = dom.window.document.querySelector('.Q7WfXG_hero [data-composer-card]')
-  const bottomCard = dom.window.document.getElementById('bottom-card')
+  // 输入框在页面上半部：加号菜单在下方
+  topCard.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
+  assert.equal(shouldPlaceMenuBelow(topCard, null, win), true)
 
-  // 1. Hero card in middle of screen (spaceBelow = 600 >= 220) -> true
-  heroCard.getBoundingClientRect = () => ({ top: 300, bottom: 400, height: 100 })
-  assert.equal(shouldPlaceMenuBelow(heroCard, null, win), true)
-
-  // 2. Card at bottom of screen (spaceBelow = 50 < 220) -> false (keep above)
+  // 输入框在页面下半部：加号菜单保持在上方
   bottomCard.getBoundingClientRect = () => ({ top: 850, bottom: 950, height: 100 })
   assert.equal(shouldPlaceMenuBelow(bottomCard, null, win), false)
 
-  // 3. Normal session, but card in middle with spaceBelow > spaceAbove (top: 200, bottom: 300, spaceBelow: 700) -> true
-  bottomCard.getBoundingClientRect = () => ({ top: 200, bottom: 300, height: 100 })
-  assert.equal(shouldPlaceMenuBelow(bottomCard, null, win), true)
+  // 没有加号展开态（斜杠联想）：即使输入框在顶部也保持在上方
+  slashCard.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
+  assert.equal(shouldPlaceMenuBelow(slashCard, null, win), false)
 
-  // 4. Edge cases: null card or window
   assert.equal(shouldPlaceMenuBelow(null, null, win), false)
-  assert.equal(shouldPlaceMenuBelow(heroCard, null, null), false)
+  assert.equal(shouldPlaceMenuBelow(topCard, null, null), false)
 })
 
-test('syncMenuPlacement applies bottom placement in hero mode and restores in bottom mode', () => {
+test('syncMenuPlacement applies bottom placement when the composer is at the top and restores it at the bottom', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
     <div class="Q7WfXG_hero">
       <div data-composer-card>
+        ${PLUS_OPEN}
         <div class="overlayAnchor">
           <div class="_1q_ULW_card"></div>
         </div>
@@ -401,13 +401,14 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   const anchor = doc.querySelector('.overlayAnchor')
   const menu = doc.querySelector('._1q_ULW_card')
 
-  // A. Hero mode with plenty of room below
-  card.getBoundingClientRect = () => ({ top: 300, bottom: 420, height: 120 })
+  // A. Composer in the upper half: plus menu opens below
+  card.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
   const result1 = syncMenuPlacement(menu, doc)
   assert.equal(result1, true)
   assert.equal(card.dataset.menuPlacement, 'bottom')
   assert.equal(anchor.dataset.overlayPlacement, 'bottom')
   assert.equal(menu.dataset.placement, 'bottom')
+  assert.equal(menu.style.position, 'absolute')
   assert.equal(menu.style.top, 'calc(100% + 4px)')
   assert.equal(menu.style.bottom, 'auto')
   assert.equal(menu.style.maxHeight, '320px')
@@ -421,6 +422,7 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   assert.equal(card.dataset.menuPlacement, undefined)
   assert.equal(anchor.dataset.overlayPlacement, undefined)
   assert.equal(menu.dataset.placement, undefined)
+  assert.equal(menu.style.position, '')
   assert.equal(menu.style.top, '')
   assert.equal(menu.style.bottom, '')
   assert.equal(menu.style.maxHeight, '')
@@ -428,10 +430,11 @@ test('syncMenuPlacement applies bottom placement in hero mode and restores in bo
   assert.equal(menu.style.zIndex, '1000')
 })
 
-test('syncMenuPlacement keeps skill trigger menu above input box even in hero mode (#2336)', () => {
+test('syncMenuPlacement keeps slash suggestions above the input box even when the composer is at the top', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
     <div class="Q7WfXG_hero">
       <div data-composer-card>
+        <button aria-haspopup="listbox" aria-expanded="false" aria-label="指令"></button>
         <div class="overlayAnchor">
           <div data-trigger-menu class="iRJKyq_menu"></div>
         </div>
@@ -446,8 +449,8 @@ test('syncMenuPlacement keeps skill trigger menu above input box even in hero mo
   const anchor = doc.querySelector('.overlayAnchor')
   const menu = doc.querySelector('[data-trigger-menu]')
 
-  // Even with ample space below in hero mode, skill trigger menu stays on top
-  card.getBoundingClientRect = () => ({ top: 300, bottom: 420, height: 120 })
+  // Plus button is collapsed, so this open menu is the slash suggestion and stays above
+  card.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
   const result = syncMenuPlacement(menu, doc)
   assert.equal(result, false)
   assert.equal(menu.dataset.placement, undefined)
@@ -461,6 +464,7 @@ test('bottom composer leftover overlay still leaves the menu clickable', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
     <div class="omnimux-trending-card-body" style="position:fixed;inset:0;"></div>
     <div data-composer-card>
+      ${PLUS_OPEN}
       <div class="overlayAnchor" data-overlay-placement="bottom" style="pointer-events:none">
         <div data-trigger-menu class="iRJKyq_menu" style="pointer-events:none">
           <button role="option"><span class="iRJKyq_itemName">从资产库选择</span></button>
@@ -490,6 +494,7 @@ test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
     <div class="Q7WfXG_hero">
       <div data-composer-card>
+        ${PLUS_OPEN}
         <div class="overlayAnchor">
           <div class="_1q_ULW_card">
             <button role="option">
@@ -504,21 +509,21 @@ test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
   const doc = dom.window.document
   dom.window.innerHeight = 1000
   const card = doc.querySelector('[data-composer-card]')
-  card.getBoundingClientRect = () => ({ top: 280, bottom: 400, height: 120 })
+  card.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
 
   const res = syncAllComposerMenus(doc)
   assert.equal(res.patchedIcons, 1)
-  assert.equal(res.placedBelowCount, 1)
+  assert.equal(res.placedBelowCount, 2)
   assert.equal(card.dataset.menuPlacement, 'bottom')
-  const skillMenu = doc.querySelector('[data-trigger-menu]')
-  assert.equal(skillMenu.dataset.placement, undefined)
+  const plusMenu = doc.querySelector('[data-trigger-menu]')
+  assert.equal(plusMenu.dataset.placement, 'bottom')
 })
 
 test('installMenuAutoSync handles pointerdown on add button and cleans up', () => {
   const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
     <div class="Q7WfXG_hero">
       <div data-composer-card>
-        <button class="Q7WfXG_add" aria-label="指令"></button>
+        <button class="Q7WfXG_add" aria-haspopup="listbox" aria-expanded="false" aria-label="指令"></button>
         <div class="overlayAnchor"></div>
       </div>
     </div>
@@ -526,7 +531,7 @@ test('installMenuAutoSync handles pointerdown on add button and cleans up', () =
   const doc = dom.window.document
   dom.window.innerHeight = 1000
   const card = doc.querySelector('[data-composer-card]')
-  card.getBoundingClientRect = () => ({ top: 280, bottom: 400, height: 120 })
+  card.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
 
   const cleanup = installMenuAutoSync(doc)
   assert.equal(typeof cleanup, 'function')
