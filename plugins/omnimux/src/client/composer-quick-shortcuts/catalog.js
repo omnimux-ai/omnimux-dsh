@@ -1,7 +1,8 @@
 /**
  * 输入框下方四条快捷方式的**唯一真源**。
  *
- * 一条快捷方式 = 预填提示语 + 默认链接卡槽（+ 可追加链接卡槽）+ 一款已内置技能。
+ * 一条快捷方式 = 预填提示语 + 默认链接卡槽（+ 可追加链接卡槽）+ 一款已内置技能
+ * + 一个展示图标（lucide 名，渲染处按名取图，不在渲染处硬编码四段分支）。
  * 技能不在作品里硬编码身份，只记 slug，运行时经全局技能库通道
  * （`window.__omnimuxSkillLibrary`，由 omnimux-market 发布）按 slug 解析；
  * 解析不到就**整条不渲染**，绝不弹空选择器。
@@ -20,6 +21,7 @@ export const QUICK_SHORTCUTS = Object.freeze([
     defaultLink: 'video',
     extraLinks: Object.freeze(['product']),
     showModelControls: true,
+    icon: 'film',
   }),
   Object.freeze({
     id: 'breakdown',
@@ -29,6 +31,7 @@ export const QUICK_SHORTCUTS = Object.freeze([
     defaultLink: 'video',
     extraLinks: Object.freeze([]),
     showModelControls: false,
+    icon: 'text-search',
   }),
   Object.freeze({
     id: 'selling',
@@ -38,6 +41,7 @@ export const QUICK_SHORTCUTS = Object.freeze([
     defaultLink: 'product',
     extraLinks: Object.freeze(['video']),
     showModelControls: true,
+    icon: 'workflow',
   }),
   Object.freeze({
     id: 'reverse',
@@ -47,8 +51,15 @@ export const QUICK_SHORTCUTS = Object.freeze([
     defaultLink: 'video',
     extraLinks: Object.freeze([]),
     showModelControls: false,
+    icon: 'sparkles',
   }),
 ])
+
+/**
+ * 四条共用的行尾箭头图标名（lucide `move-up-right`）。
+ * 与条目上的 `icon` 同住真源：渲染处只按名字取图标，不写硬编码分支。
+ */
+export const QUICK_SHORTCUT_ARROW_ICON = 'move-up-right'
 
 /** 链接种类 → 卡槽显示名（i18n key）；真源只有视频与商品两种。 */
 export const QUICK_LINK_KINDS = Object.freeze(['video', 'product'])

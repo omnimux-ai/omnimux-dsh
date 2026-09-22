@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   QUICK_SHORTCUTS,
+  QUICK_SHORTCUT_ARROW_ICON,
   applyQuickShortcut,
   clearQuickShortcutSkill,
   quickShortcutLinks,
@@ -12,7 +13,7 @@ import {
 const fullLibrary = (slug) => ({ slug, name: slug, title: slug })
 
 describe('四条快捷方式的映射真源', () => {
-  it('id / 显示名 key / 提示语 / 技能 slug / 链接 / 模型与参数 与规格逐条一致', () => {
+  it('id / 显示名 key / 提示语 / 技能 slug / 链接 / 模型与参数 / 图标 与规格逐条一致', () => {
     const rows = QUICK_SHORTCUTS.map((entry) => ({
       id: entry.id,
       labelKey: entry.labelKey,
@@ -20,6 +21,7 @@ describe('四条快捷方式的映射真源', () => {
       skillSlug: entry.skillSlug,
       links: quickShortcutLinks(entry),
       showModelControls: entry.showModelControls,
+      icon: entry.icon,
     }))
     assert.deepEqual(rows, [
       {
@@ -29,6 +31,7 @@ describe('四条快捷方式的映射真源', () => {
         skillSlug: 'replicate-viral-video',
         links: ['video', 'product'],
         showModelControls: true,
+        icon: 'film',
       },
       {
         id: 'breakdown',
@@ -37,6 +40,7 @@ describe('四条快捷方式的映射真源', () => {
         skillSlug: 'video-hook-analysis',
         links: ['video'],
         showModelControls: false,
+        icon: 'text-search',
       },
       {
         id: 'selling',
@@ -45,6 +49,7 @@ describe('四条快捷方式的映射真源', () => {
         skillSlug: 'create-selling-video',
         links: ['product', 'video'],
         showModelControls: true,
+        icon: 'workflow',
       },
       {
         id: 'reverse',
@@ -53,8 +58,16 @@ describe('四条快捷方式的映射真源', () => {
         skillSlug: 'reverse-video-prompt',
         links: ['video'],
         showModelControls: false,
+        icon: 'sparkles',
       },
     ])
+  })
+
+  it('四条各有一枚不同的图标，行尾箭头另有其名', () => {
+    const icons = QUICK_SHORTCUTS.map((entry) => entry.icon)
+    assert.equal(new Set(icons).size, 4, '四条快捷方式不得复用同一枚图标')
+    assert.equal(QUICK_SHORTCUT_ARROW_ICON, 'move-up-right')
+    assert.ok(!icons.includes(QUICK_SHORTCUT_ARROW_ICON), '行尾箭头不得与条目图标重名')
   })
 
   it('只有 clone 与 selling 显示模型与参数按钮', () => {
