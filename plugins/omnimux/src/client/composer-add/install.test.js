@@ -9,9 +9,8 @@ const commandsSource = read('./commands.js')
 
 describe('composer add integration boundaries', () => {
   it('keeps selection UI separate from the session-scoped submission bridge', () => {
-    assert.match(installSource, /AssetPickerModal/)
-    assert.match(installSource, /ProductPickerModal/)
-    assert.match(installSource, /InspirationPickerModal/)
+    assert.match(installSource, /LibraryBrowser/)
+    assert.doesNotMatch(installSource, /AssetPickerModal|ProductPickerModal|InspirationPickerModal/)
     assert.match(indexSource, /AttachmentSubmitBridge/)
     assert.match(indexSource, /export const inject = \['slots', 'locale'\]/)
   })

@@ -1,5 +1,6 @@
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
+import { promptForCard, tabForKind } from './library-stage-model.js'
 
 /**
  * @typedef {import('../attachments/store.ts').AttachmentStore} AttachmentStore
@@ -123,11 +124,38 @@ export function createComposerAddController(options) {
     renderLibrary({
       key: operation.id,
       kind: operation.kind,
+      tab: operation.tab || tabForKind(operation.kind),
+      sessionId: operation.sessionId,
+      presentation: 'stage',
       occupied: rowsFor(operation.sessionId).length,
       alreadyIds: alreadyIdsFor(operation),
       onClose: () => close(operation, true),
       onConfirm: confirmFor(operation),
+      onTab: (tab) => {
+        if (!visible(operation)) return
+        operation.tab = tab
+        render(operation)
+      },
+      onPick: (card) => pickCard(operation, card),
     })
+  }
+
+  function pickCard(operation, card) {
+    if (!visible(operation) || !card?.raw) return undefined
+    const prompt = promptForCard(card)
+    const finish = (result) => {
+      if (prompt && result?.added) options.onPrompt?.(prompt)
+      return result
+    }
+    if (card.lane === 'assets') {
+      return confirmLibrary(operation, [card.raw], { keepOpen: true }).then(finish, (error) => {
+        if (visible(operation)) notify(error instanceof Error ? error.message : String(error))
+      })
+    }
+    if (card.lane === 'products') {
+      return finish(confirmDirect(operation, [card.raw], mapProductAttachment, { keepOpen: true }))
+    }
+    return finish(confirmDirect(operation, [card.raw], mapInspirationAttachment, { keepOpen: true }))
   }
 
   function usableSession(id) {
@@ -209,7 +237,7 @@ export function createComposerAddController(options) {
     return counts
   }
 
-  async function confirmLibrary(operation, picked) {
+  async function confirmLibrary(operation, picked, { keepOpen = false } = {}) {
     if (!visible(operation) || operation.importing) return
     const currentRows = rowsFor(operation.sessionId)
     const knownFp = new Set(currentRows.map(makeFingerprint))
@@ -245,7 +273,8 @@ export function createComposerAddController(options) {
         throw new Error(failed?.message || response.body.message || summary(counts) || text('composerAdd.toast.failed', { n: 1 }))
       }
       notify(summary(counts))
-      close(operation, true)
+      if (!keepOpen) close(operation, true)
+      return counts
     } finally {
       operation.importing = false
       importingSessions.delete(operation.sessionId)
@@ -301,7 +330,7 @@ export function createComposerAddController(options) {
     }
   }
 
-  function confirmDirect(operation, picked, mapper) {
+  function confirmDirect(operation, picked, mapper, { keepOpen = false } = {}) {
     if (!visible(operation) || operation.importing) return
     const currentRows = rowsFor(operation.sessionId)
     const knownFp = new Set(currentRows.map(makeFingerprint))
@@ -330,7 +359,8 @@ export function createComposerAddController(options) {
       else counts.failed += 1
     }
     notify(summary(counts))
-    if (counts.added) close(operation, true)
+    if (counts.added && !keepOpen) close(operation, true)
+    return counts
   }
 
   function openKind(sessionId, kind) {

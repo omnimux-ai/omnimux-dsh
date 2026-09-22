@@ -85,6 +85,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const pendingApplyRef = useRef(null)
   const savedScrollRef = useRef(null)
   const primedFlipRef = useRef(null)
+  const pinnedRef = useRef(false)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -92,13 +93,14 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     pendingApplyRef.current = null
     savedScrollRef.current = null
     primedFlipRef.current = null
+    pinnedRef.current = false
     onUndock?.()
   }, [onUndock])
 
   const dock = useCallback((item, onDocked) => {
     if (!item) return false
-    // 再次点击同一张卡片：作为反悔动作解除吸底
-    if (dockedItem && isSameItem(dockedItem, item)) {
+    // 再次点击同一张卡片：作为反悔动作解除吸底。整页选素材期间不走这条。
+    if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
       undock()
       return false
     }
@@ -150,6 +152,11 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     setDockedItem(item)
     return true
   }, [dockedItem, undock, hostRef])
+
+  const pin = useCallback((item) => {
+    pinnedRef.current = true
+    return dock(item)
+  }, [dock])
 
   // 1. 吸底几何适配、占位高度防塌陷与 FLIP 位移动画
   useLayoutEffect(() => {
@@ -321,7 +328,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       const scrollTop = readPageScrollTop(scroller)
       if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
       setPlacement((prev) => {
-        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
+        if (pinnedRef.current) return 'docked'
+      if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
         if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
         return prev
       })
@@ -365,6 +373,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     dockedItem,
     placement,
     dock,
+    pin,
     undock,
     isDocked: Boolean(dockedItem && placement === 'docked'),
   }

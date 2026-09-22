@@ -257,6 +257,35 @@ describe('composer add controller', () => {
     f.controller.dispose()
   })
 
+  it('opens the page on the matching tab and keeps it open after one card', async () => {
+    const prompts = []
+    const store = createAttachmentStore()
+    let stage = null
+    const controller = createComposerAddController({
+      store,
+      t: key => zh[key] || key,
+      getCurrentSessionId: () => 'a',
+      subscribeCurrentSession() { return () => {} },
+      renderLibrary(next) { stage = next },
+      notify() {},
+      onPrompt(prompt) { prompts.push(prompt) },
+      async request(path, body) {
+        if (path === INSTANTIATE) return ok({ results: body.assetIds.map(asset) })
+        throw new Error('Unexpected request: ' + path)
+      },
+    })
+    controller.openInspiration('a')
+    assert.equal(stage.presentation, 'stage')
+    assert.equal(stage.tab, 'inspiration')
+    stage.onTab('trending')
+    assert.equal(stage.tab, 'trending')
+    stage.onPick({ lane: 'trending', title: '街拍', raw: { id: 'cloud-1', title: '街拍' } })
+    assert.equal(store.getSnapshot('a').length, 1)
+    assert.deepEqual(prompts, ['请对标这条爆款「街拍」复刻一条视频：'])
+    assert.equal(stage.presentation, 'stage')
+    controller.dispose()
+  })
+
   it('notifies duplicate when all selected items already exist and quota is not exceeded', () => {
     const f = setup()
     f.controller.openInspiration('a')

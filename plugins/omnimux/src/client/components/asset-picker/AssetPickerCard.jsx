@@ -157,3 +157,97 @@ export function AssetPickerCard({
     </article>
   );
 }
+
+export const ASSET_CARD_CSS = `
+.omx-asset-pick-card {
+  display: flex; flex-direction: column; width: 100%;
+  background: transparent; border: none; padding: 0; text-align: left;
+  cursor: pointer; box-sizing: border-box;
+}
+.omx-asset-pick-card__thumb {
+  position: relative; width: 100%; aspect-ratio: 1 / 1;
+  background: var(--dsw-alias-bg-module-platform); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--dsw-alias-label-tertiary); overflow: hidden;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.omx-asset-pick-card:hover .omx-asset-pick-card__thumb { transform: translateY(-2px); }
+.omx-asset-pick-card[data-selected="true"] .omx-asset-pick-card__thumb {
+  border-color: var(--dsw-alias-button-primary-fill);
+}
+.omx-asset-pick-card[aria-disabled="true"] { cursor: default; opacity: 0.72; }
+.omx-asset-pick-card[aria-disabled="true"]:hover .omx-asset-pick-card__thumb { transform: none; }
+.omx-asset-pick-card__img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.omx-asset-pick-card__placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.omx-asset-pick-card__glyph {
+  font-size: 18px; font-weight: 600; opacity: 0.6;
+}
+.omx-asset-pick-card__check {
+  position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center; z-index: 2;
+  border: 1.5px solid var(--dsw-alias-border-l4);
+  background: var(--dsw-alias-bg-layer-2);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.omx-asset-pick-card__check[data-selected="true"] {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omx-asset-pick-card__badge {
+  position: absolute; left: 8px; bottom: 8px; z-index: 2;
+  font-size: 11px; line-height: 16px; font-weight: 600; padding: 2px 8px;
+  border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary);
+}
+.omx-asset-pick-card__already, .omx-asset-pick-card__missing {
+  position: absolute; right: 8px; top: 8px; z-index: 2;
+  font-size: 10px; line-height: 14px; padding: 2px 6px; border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-state-warn-primary);
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+.omx-asset-pick-card__body {
+  display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 0 2px; min-width: 0;
+}
+.omx-asset-pick-card__title {
+  font-size: 13px; font-weight: 600; line-height: 18px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary);
+}
+.omx-asset-pick-card__meta {
+  display: flex; align-items: center; min-width: 0;
+}
+.omx-asset-pick-card__desc {
+  font-size: 11px; color: var(--dsw-alias-label-tertiary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-asset-pick-card--add .omx-asset-pick-card__thumb--add {
+  border: 1.5px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.omx-asset-pick-card--add:hover .omx-asset-pick-card__thumb--add {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-button-primary-fill);
+  transform: translateY(-2px);
+}
+.omx-asset-pick-card__add-icon {
+  display: flex; align-items: center; justify-content: center;
+  color: inherit;
+}
+`
+
+const CARD_STYLE_ID = 'omx-asset-pick-card-styles'
+
+export function ensureAssetCardStyles(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc || doc.getElementById(CARD_STYLE_ID)) return
+  const style = doc.createElement('style')
+  style.id = CARD_STYLE_ID
+  style.textContent = ASSET_CARD_CSS
+  doc.head?.appendChild(style)
+}

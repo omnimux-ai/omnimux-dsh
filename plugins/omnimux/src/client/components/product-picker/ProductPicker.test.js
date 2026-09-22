@@ -60,7 +60,8 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
     !/\.omx-product-pick\s*\{[^}]*--omnimux-pick-dialog-width/.test(pickerSource),
     '宽度变量不得写在不被弹窗读取的根元素上',
   );
-  assert.ok(pickerSource.includes('aspect-ratio: 1 / 1'), '卡片缩略图为 1:1');
+  assert.ok(pickerSource.includes('PRODUCT_CARD_CSS'), '卡片样式来自 ProductPickerCard，弹窗只组合引用');
+  assert.ok(cardSource.includes('aspect-ratio: 1 / 1'), '卡片缩略图为 1:1');
   assert.ok(!pickerSource.includes('__nav-header'), '分类栏目标题已移除（信息降噪）');
   assert.ok(!pickerSource.includes('__tab-badge'), '分类数量徽标已移除');
   assert.ok(!pickerSource.includes('unselectedHint'), '未选中时的页脚提示已移除');
@@ -114,7 +115,8 @@ test('ProductPicker: 列表首位创建产品 + 链接弹窗回流契约', () =>
   assert.ok(source.includes('list.unshift(product)'), '新产品插入列表首位');
   assert.ok(source.includes('setSelectedProduct(product)'), '创建成功后选中新产品');
   assert.ok(!/onConfirm\(result\.product\)/.test(source), '创建成功不得自动确认外层');
-  assert.ok(source.includes('omx-product-pick-card--add'), '创建卡虚线样式');
+  assert.ok(source.includes('PRODUCT_CARD_CSS'), '创建卡虚线样式随卡片样式组合进弹窗');
+  assert.ok(readFileSync(join(here, 'ProductPickerCard.jsx'), 'utf8').includes('omx-product-pick-card--add'), '创建卡虚线样式');
   assert.ok(source.includes('omx-product-pick__empty--span'), '空态跨列用 class 而非内联 style');
   assert.doesNotMatch(source, /style=\{\{\s*gridColumn/, '禁止空态内联 gridColumn');
 

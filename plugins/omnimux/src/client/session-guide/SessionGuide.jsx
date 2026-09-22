@@ -1,9 +1,11 @@
-import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
+import { LibraryBrowser } from './LibraryBrowser.jsx'
+import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
@@ -117,14 +119,17 @@ function BlankSessionGuide({
   live.current = { input, state }
   const isEn = typeof t === 'function' ? (t('locale') === 'en' || t('guide.locale') === 'en') : false
 
+  const [libraryStage, setLibraryStage] = useState(null)
   const {
     dockedItem,
     placement,
     dock,
+    pin,
     undock,
     isDocked,
   } = useComposerDocking({
     hostRef: guideRef,
+    onUndock: () => setLibraryStage(null),
   })
 
   const isSessionActive = () => {
@@ -139,6 +144,30 @@ function BlankSessionGuide({
     // 让刚吸底到视口底部的输入框连同页面一起跳回顶部。
     root?.querySelector('[data-composer-input="true"]')?.focus({ preventScroll: true })
   }
+
+  useEffect(() => {
+    const onStage = (event) => {
+      const model = event.detail
+      if (!model || model.sessionId !== sessionId) return
+      event.preventDefault()
+      setLibraryStage(model)
+      pin({ id: LIBRARY_STAGE_DOCK_ID })
+    }
+    const onPrompt = (event) => {
+      const prompt = String(event.detail?.prompt || '')
+      if (!prompt) return
+      applyDraftToComposer(mergeLibraryPrompt(live.current?.input?.draft || '', prompt), {
+        toastKey: null,
+        restoreNotice: true,
+      })
+    }
+    window.addEventListener(LIBRARY_STAGE_EVENT, onStage)
+    window.addEventListener('omnimux:library-stage:prompt', onPrompt)
+    return () => {
+      window.removeEventListener(LIBRARY_STAGE_EVENT, onStage)
+      window.removeEventListener('omnimux:library-stage:prompt', onPrompt)
+    }
+  }, [pin, sessionId])
 
   useLayoutEffect(() => {
     mounted.current = true
@@ -309,7 +338,21 @@ function BlankSessionGuide({
       )}
 
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
-      {!isCompact && (
+      {libraryStage ? (
+        <LibraryBrowser
+          model={{
+            ...libraryStage,
+            onClose: () => {
+              libraryStage.onClose?.()
+              setLibraryStage(null)
+              undock()
+            },
+          }}
+          t={t}
+        />
+      ) : null}
+
+      {!libraryStage && !isCompact && (
         <>
           {/* 探索模板核心专区（内含 Skills 与各分类单行货架） */}
           <ExploreTemplatesSection

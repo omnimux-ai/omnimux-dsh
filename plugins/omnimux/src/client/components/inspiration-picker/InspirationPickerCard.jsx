@@ -97,3 +97,71 @@ export function InspirationPickerCard({
     </article>
   )
 }
+
+export const INSPIRATION_CARD_CSS = `
+.omx-inspiration-pick-card {
+  display: flex; flex-direction: column; width: 100%;
+  background: transparent; border: none; padding: 0; text-align: left;
+  cursor: pointer; box-sizing: border-box;
+}
+.omx-inspiration-pick-card__thumb {
+  position: relative; width: 100%;
+  background: var(--dsw-alias-bg-module-platform); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--dsw-alias-label-tertiary); overflow: hidden;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.omx-inspiration-pick-card__thumb[data-ratio="pending"] { aspect-ratio: 1 / 1; }
+.omx-inspiration-pick-card:hover .omx-inspiration-pick-card__thumb { transform: translateY(-2px); }
+.omx-inspiration-pick-card[data-selected="true"] .omx-inspiration-pick-card__thumb {
+  border-color: var(--dsw-alias-button-primary-fill);
+}
+.omx-inspiration-pick-card[aria-disabled="true"] { cursor: default; opacity: 0.72; }
+.omx-inspiration-pick-card[aria-disabled="true"]:hover .omx-inspiration-pick-card__thumb { transform: none; }
+.omx-inspiration-pick-card__img { width: 100%; height: auto; display: block; }
+.omx-inspiration-pick-card__placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; aspect-ratio: 1 / 1;
+}
+.omx-inspiration-pick-card__glyph { font-size: 18px; font-weight: 600; opacity: 0.6; }
+.omx-inspiration-pick-card__check {
+  position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; border-radius: 5px;
+  display: none; align-items: center; justify-content: center; z-index: 2;
+  border: 1.5px solid var(--dsw-alias-border-l4);
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omx-inspiration-pick-card:hover .omx-inspiration-pick-card__check,
+.omx-inspiration-pick-card:focus-visible .omx-inspiration-pick-card__check,
+.omx-inspiration-pick-card[data-selected="true"] .omx-inspiration-pick-card__check {
+  display: inline-flex;
+}
+.omx-inspiration-pick-card__check[data-selected="true"] {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omx-inspiration-pick-card__already {
+  position: absolute; right: 8px; top: 8px; z-index: 2;
+  font-size: 10px; line-height: 14px; padding: 2px 6px; border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-state-warn-primary);
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+.omx-inspiration-pick-card__body {
+  display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 0 2px; min-width: 0;
+}
+.omx-inspiration-pick-card__title {
+  font-size: 13px; font-weight: 600; line-height: 18px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary);
+}
+`
+
+const CARD_STYLE_ID = 'omx-inspiration-pick-card-styles'
+
+export function ensureInspirationCardStyles(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc || doc.getElementById(CARD_STYLE_ID)) return
+  const style = doc.createElement('style')
+  style.id = CARD_STYLE_ID
+  style.textContent = INSPIRATION_CARD_CSS
+  doc.head?.appendChild(style)
+}

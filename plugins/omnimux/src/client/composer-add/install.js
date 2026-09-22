@@ -1,9 +1,8 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { AssetPickerModal } from './AssetPickerModal.jsx'
-import { ProductPickerModal } from './ProductPickerModal.jsx'
-import { InspirationPickerModal } from './InspirationPickerModal.jsx'
 import { createComposerAddController } from './controller.js'
+import { LIBRARY_STAGE_EVENT } from './library-stage-model.js'
+import { LibraryBrowser } from '../session-guide/LibraryBrowser.jsx'
 
 function createToast(doc) {
   let toast = null
@@ -33,13 +32,7 @@ function createToast(doc) {
   }
 }
 
-function pickerFor(model, t) {
-  if (!model) return null
-  const shared = { ...model, open: true, t }
-  if (model.kind === 'product') return createElement(ProductPickerModal, shared)
-  if (model.kind === 'inspiration') return createElement(InspirationPickerModal, shared)
-  return createElement(AssetPickerModal, shared)
-}
+
 
 /**
  * Bind the existing pickers to the official selected-session store.
@@ -70,7 +63,20 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     renderLibrary(model) {
       if (!root && !model) return
       if (!root) root = createRoot(host)
-      root.render(pickerFor(model, t))
+      root.render(null)
+      const stageEvent = new doc.defaultView.CustomEvent(LIBRARY_STAGE_EVENT, { detail: model, cancelable: true })
+      doc.defaultView.dispatchEvent(stageEvent)
+      doc.defaultView.setTimeout(() => {
+        if (!model) {
+          root?.render(null)
+          return
+        }
+        if (stageEvent.defaultPrevented || doc.querySelector('[data-omnimux-library-stage]')) return
+        root.render(createElement(LibraryBrowser, { model, t }))
+      }, 0)
+    },
+    onPrompt(prompt) {
+      doc.defaultView?.dispatchEvent(new CustomEvent('omnimux:library-stage:prompt', { detail: { prompt } }))
     },
   })
   return {
