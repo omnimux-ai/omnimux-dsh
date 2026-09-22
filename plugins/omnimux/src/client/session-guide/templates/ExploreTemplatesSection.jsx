@@ -5,6 +5,8 @@ import {
   selectTemplatesByCategory,
   selectShelfItems,
 } from './templates-data.js';
+import { resolveTemplateCopy } from './template-locale.js';
+import { useTemplateLocale } from './use-template-locale.js';
 import { TemplatesShelfRow } from './TemplatesShelfRow.jsx';
 import { TemplatesGridView } from './TemplatesGridView.jsx';
 import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
@@ -45,7 +47,7 @@ export function attachTemplateToConversation(item, customWin) {
     sourcePlugin: 'omnimux',
     kind: 'inspiration',
     entityId: item.id || `tpl-${Date.now()}`,
-    title: item.title || item.titleZh || '灵感模板',
+    title: item.localizedTitle || item.title || item.titleZh || '灵感模板',
     extension: 'TPL',
     relativePath: `templates/${item.categorySlug || 'video'}/${item.id}.json`,
     previewUrl: item.thumbnailUrl || item.cover || '',
@@ -53,7 +55,7 @@ export function attachTemplateToConversation(item, customWin) {
     metadata: {
       templateId: item.id,
       categorySlug: item.categorySlug,
-      prompt: item.prompt,
+      prompt: item.localizedPrompt || item.prompt,
       workflow: item.workflow,
       sourcePlatform: item.sourcePlatform || 'creatify',
     },
@@ -91,7 +93,8 @@ export function ExploreTemplatesSection({
   const [activeDrawerTemplate, setActiveDrawerTemplate] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const isEn = typeof t === 'function' ? t('locale') === 'en' || t('guide.locale') === 'en' : false;
+  const currentLocale = useTemplateLocale(undefined, t);
+  const isEn = String(currentLocale).toLowerCase().startsWith('en');
 
   // Skills 数据源映射
   const allSkillsItems = useMemo(() => {
@@ -187,7 +190,7 @@ export function ExploreTemplatesSection({
         isApp: true,
         template: item,
         manifest: item.manifest,
-        title: item.titleZh || item.title,
+        title: resolveTemplateCopy(item, currentLocale).title || item.title,
         titleEn: item.titleEn,
       });
     }
@@ -219,16 +222,22 @@ export function ExploreTemplatesSection({
     // 3. 普通灵感模板：先触发吸底（同一帧同步写入停靠态），再挂载附件。
     //    附件挂载提醒的强制滚动定位晚于吸底先手执行，落在已 fixed 到底部的
     //    输入框上即天然失效，页面保持原地不动。
+    const copy = resolveTemplateCopy(item, currentLocale);
+    const localizedItem = {
+      ...item,
+      localizedTitle: copy.title,
+      localizedPrompt: copy.prompt,
+    };
     if (onApplyTemplate) {
       onApplyTemplate({
-        template: item,
-        prompt: item.prompt,
-        title: item.title,
+        template: localizedItem,
+        prompt: copy.prompt,
+        title: copy.title,
         titleEn: item.titleEn,
       });
     }
 
-    attachTemplateToConversation(item);
+    attachTemplateToConversation(localizedItem);
   };
 
   const handleViewAllFromShelf = (targetCat) => {
@@ -342,6 +351,8 @@ export function ExploreTemplatesSection({
         template={activeDrawerTemplate}
         onClose={handleCloseDrawer}
         onApply={handleItemRecreate}
+        t={t}
+        locale={currentLocale}
       />
     </div>
   );

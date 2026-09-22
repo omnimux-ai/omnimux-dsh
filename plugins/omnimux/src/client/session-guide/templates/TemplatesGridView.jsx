@@ -113,6 +113,7 @@ export function TemplatesGridView({
             template={template}
             onSelect={onSelectTemplate}
             onOpenDetail={onOpenDetail}
+            t={t}
           />
         ))}
       </div>

@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react'
+import { resolveTemplateCopy } from './template-locale.js'
+import { useTemplateLocale } from './use-template-locale.js'
 
 const ICON_CLOSE = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -20,13 +22,18 @@ const ICON_SPARKLES = (
  * @param {object | null} props.template
  * @param {() => void} props.onClose
  * @param {(template: object) => void} props.onApply
+ * @param {string} [props.locale]
+ * @param {Function} [props.t]
  */
 export function TemplateDetailDrawer({
   isOpen,
   template,
   onClose,
   onApply,
+  locale,
+  t,
 }) {
+  const currentLocale = useTemplateLocale(locale, t)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -44,7 +51,16 @@ export function TemplateDetailDrawer({
     onClose()
   }
 
-  const durationTag = template.duration || '15s 竖版'
+  const isEn = String(currentLocale).toLowerCase().startsWith('en')
+  const copy = resolveTemplateCopy(template, currentLocale)
+  const title = copy.title || template.title || ''
+  const prompt = copy.prompt || ''
+  const durationTag = template.duration || (isEn ? '15s vertical' : '15秒竖版')
+  const sourceLabel = isEn ? 'Source' : '来源'
+  const durationLabel = isEn ? 'Length' : '时长'
+  const closeLabel = isEn ? 'Close' : '关闭'
+  const applyLabel = isEn ? 'Use this template' : '用这个模板'
+  const promptLabel = isEn ? 'Prompt' : '提示词'
 
   return (
     <div
@@ -61,12 +77,11 @@ export function TemplateDetailDrawer({
         <div className="omnimux-tpl-drawer-header">
           <div>
             <h3 id="omnimux-drawer-title" className="omnimux-tpl-drawer-title">
-              {template.title}
+              {title}
             </h3>
             <p className="omnimux-tpl-drawer-subtitle">
-              <span>{template.titleEn}</span>
-              <span>· 来源 {template.sourcePlatform || '精选'}</span>
-              <span>· 时长 {durationTag}</span>
+              <span>{sourceLabel} {template.sourcePlatform || (isEn ? 'Featured' : '精选')}</span>
+              <span>· {durationLabel} {durationTag}</span>
             </p>
           </div>
 
@@ -74,7 +89,7 @@ export function TemplateDetailDrawer({
             type="button"
             className="omnimux-tpl-drawer-close"
             onClick={onClose}
-            aria-label="关闭详情抽屉"
+            aria-label={closeLabel}
           >
             {ICON_CLOSE}
           </button>
@@ -86,7 +101,7 @@ export function TemplateDetailDrawer({
               {template.thumbnailUrl ? (
                 <img
                   src={template.thumbnailUrl}
-                  alt={template.title}
+                  alt={title}
                   className="omnimux-tpl-drawer-img"
                 />
               ) : (
@@ -96,26 +111,26 @@ export function TemplateDetailDrawer({
               )}
             </div>
             <div className="omnimux-tpl-drawer-r2-note">
-              已托管至 OmniMux R2 存储桶
+              {isEn ? 'Saved in your template library' : '已收进模板库'}
             </div>
           </div>
 
           <div className="omnimux-tpl-drawer-right">
             {template.rhythm && (
               <div className="omnimux-tpl-drawer-section">
-                <h4 className="omnimux-tpl-sec-title">分镜节奏与结构</h4>
+                <h4 className="omnimux-tpl-sec-title">{isEn ? 'Pacing' : '分镜节奏'}</h4>
                 <p className="omnimux-tpl-sec-p">{template.rhythm}</p>
               </div>
             )}
 
             <div className="omnimux-tpl-drawer-section">
-              <h4 className="omnimux-tpl-sec-title">AI 生成提示词 (Prompt)</h4>
-              <pre className="omnimux-tpl-prompt-box">{template.prompt}</pre>
+              <h4 className="omnimux-tpl-sec-title">{promptLabel}</h4>
+              <pre className="omnimux-tpl-prompt-box" data-template-prompt="">{prompt}</pre>
             </div>
 
             {template.slotGuide && (
               <div className="omnimux-tpl-drawer-section">
-                <h4 className="omnimux-tpl-sec-title">替换插槽指引</h4>
+                <h4 className="omnimux-tpl-sec-title">{isEn ? 'What to replace' : '替换说明'}</h4>
                 <div className="omnimux-tpl-slot-guide-box">
                   {template.slotGuide}
                 </div>
@@ -130,7 +145,7 @@ export function TemplateDetailDrawer({
             className="omnimux-tpl-btn-secondary"
             onClick={onClose}
           >
-            关闭
+            {closeLabel}
           </button>
 
           <button /* exempt-ui01: drawer apply button */
@@ -139,7 +154,7 @@ export function TemplateDetailDrawer({
             onClick={handleApplyClick}
           >
             <span className="omnimux-tpl-btn-icon">{ICON_SPARKLES}</span>
-            <span>立即装配并复刻</span>
+            <span>{applyLabel}</span>
           </button>
         </div>
       </div>

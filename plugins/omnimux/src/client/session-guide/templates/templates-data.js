@@ -5,6 +5,7 @@
 
 import { FEATURED_APPS_CARDS } from './featured-apps-data.js';
 import CREATIVE_TEMPLATES_RAW from './creative-templates.json' with { type: 'json' };
+import { resolveTemplateCopy } from './template-locale.js';
 
 /**
  * 7 大精选应用卡片（包含对应 ApplicationManifest 与直通跳转参数）
@@ -17,7 +18,8 @@ export const FEATURED_APPS_LIST = Object.freeze(
       title: card.titleZh,
       titleEn: card.titleEn,
       description: card.descZh,
-      prompt: card.descZh,
+      prompt: card.descEn || card.descZh,
+      promptZh: card.descZh,
       cover: card.coverUrl,
       thumbnailUrl: card.coverUrl,
       previewVideoUrl: card.previewVideoUrl,
@@ -211,6 +213,16 @@ export function findTemplateById(id) {
  * @param {number} [limit=8]
  * @returns {Array}
  */
+/**
+ * 按当前语言取出名称与提示词。
+ * @param {object | null | undefined} item
+ * @param {string} locale
+ * @returns {{ title: string, prompt: string }}
+ */
+export function resolveLocalizedTemplate(item, locale) {
+  return resolveTemplateCopy(item, locale);
+}
+
 export function selectShelfItems(shelfSlug, limit = 8) {
   if (shelfSlug === 'explore-templates') {
     return FEATURED_APPS_LIST.slice(0, limit);
