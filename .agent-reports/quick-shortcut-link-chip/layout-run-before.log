@@ -1,0 +1,27 @@
+[boot-app] 客户端产物：/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/.build-ref/plugins/omnimux/lib/client.js（3233718 字节，sha256 7afe67c40fe96118…，来源 build-ref）
+[scenario] 同源登录完成（HTTP 303）
+[scenario] 无头 Chrome 调试端口 65444
+[scenario] 浮层处理：点了「继续」；剩余可见浮层 0
+[scenario] 扫描 720–1600px（步长 20，45 个宽度）：卡片宽 318–876.8／这一排与卡片最大宽差 0／内容右溢卡片最大 78.34／左溢最大 0／页面横溢最大 0
+[scenario] 宽度 1440：卡片 471.8→1246.19（774.39）/ 这一排 471.8→1246.19（774.39）/ 控件行溢出 0 / 内容右溢卡片 -132.55 / 页面横溢 0
+[scenario] 宽度 1280：卡片 423→1135（712）/ 这一排 423→1135（712）/ 控件行溢出 0 / 内容右溢卡片 -101.36 / 页面横溢 0
+[scenario] 宽度 1167：卡片 366.5→1078.5（712）/ 这一排 366.5→1078.5（712）/ 控件行溢出 0 / 内容右溢卡片 -101.36 / 页面横溢 0
+[scenario] 宽度 1024：卡片 300→1002（702）/ 这一排 300→1002（702）/ 控件行溢出 0 / 内容右溢卡片 -96.36 / 页面横溢 0
+[scenario] 宽度 900：卡片 20→338（318）/ 这一排 20→338（318）/ 控件行溢出 70 / 内容右溢卡片 78.34 / 页面横溢 0
+[scenario] 通过 S1 扫描带内这一排恒等于卡片实测宽（跟随，≤1px 舍入）：最大宽差 0（45 个宽度）
+[scenario] 通过 S2 扫描带内这一排从不超出卡片：最大右溢 0；最大左溢 0
+[scenario] 失败 S3 扫描带内控件内容从不越出卡片：内容右溢卡片最大 78.34
+[scenario] 通过 S4 扫描带内没有页面级横向滚动条：页面横溢最大 0
+[scenario] 通过 S5 扫描带内四条按钮整组（并集包围盒）居中：左右留白最大差 0.02
+[scenario] 通过 G1 证据宽度下都没有页面级横向滚动条：1440:0 1280:0 1167:0 1024:0 900:0
+[scenario] 通过 G2 这一排整体不超出输入框卡片：1440:右0/左0 1280:右0/左0 1167:右0/左0 1024:右0/左0 900:右0/左0
+[scenario] 失败 G3 控件行内容不超出卡片边界：1440:右-132.55/左-132.54 1280:右-101.36/左-101.34 1167:右-101.36/左-101.34 1024:右-96.36/左-96.34 900:右78.34/左0
+[scenario] 失败 G4 两个胶囊在所有宽度都完整落在卡片内：1440:in,in 1280:in,in 1167:in,in 1024:in,in 900:in,OUT
+[scenario] 失败 G5 模型回执完整落在卡片内且未被压成零宽：1440:1113.64<=1246.19(宽112.95) 1280:1033.64<=1135(宽112.95) 1167:977.14<=1078.5(宽112.95) 1024:905.64<=1002(宽112.95) 900:416.34<=338(宽0)
+[scenario] 通过 G6 宽窗与用户截图宽度下四条仍整行不换行：1440:true 1280:true 1167:true
+[scenario] 通过 G7 四条快捷方式整组居中（并集包围盒左右留白差 < 2px）：1440:左99.68/右99.71 1280:左68.5/右68.5 1167:左68.5/右68.5 1024:左63.5/右63.5 900:左11.5/右11.5
+[scenario] 通过 G8 宽窗下这一排与卡片等宽（不倒退成更窄）：row 774.39 vs card 774.39
+[scenario] 通过 G9 窄窗下卡片自适应收缩（卡片宽 < 窗口宽）：1167:712 900:318
+[boot-app] 本次运行留档：/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/runs/2026-09-22T15-44-36-743Z-pid23210
+{"ok":true,"origin":"http://127.0.0.1:65442","url":"http://127.0.0.1:65442/","appPort":65442,"clientBundle":{"sha256":"7afe67c40fe961184095b0fb7382c5ffbd0e3b3d6bdaed43cf2c98217ed8ffeb","bytes":3233718,"mode":"build-ref"},"probe":null,"summaryPath":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/env-summary.json","runArchive":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/runs/2026-09-22T15-44-36-743Z-pid23210","runtimeLogPath":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/app-runtime.log"}
+[boot-app] 清理完成：{"cleaned":true}
