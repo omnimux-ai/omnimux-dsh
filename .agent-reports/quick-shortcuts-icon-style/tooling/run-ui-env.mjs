@@ -177,4 +177,10 @@ process.stdout.write(JSON.stringify({
 }) + '\n');
 
 // 常驻等待外部信号；浏览器驱动脚本读上面的 stdout 拿 origin。
-setInterval(() => {}, 1 << 30);
+// 句柄留给收尾清理：收到终止信号或进程退出时一并清掉，不留悬挂定时器。
+const keepAlive = setInterval(() => {}, 1 << 30);
+const stopKeepAlive = () => { clearInterval(keepAlive); dropHandshake(); };
+process.on('exit', stopKeepAlive);
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => { stopKeepAlive(); process.exit(0); });
+}
