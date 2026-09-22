@@ -68,9 +68,9 @@ describe('胶囊形态真源', () => {
 
 describe('胶囊 → 提交文本', () => {
   it('视频按既有桥的 markdown 形态，商品按既有商品槽位填充形态', () => {
-    assert.equal(quickLinkChipMarkdown('video', 'https://www.tiktok.com/@a/video/1', '视频'), '[视频](https://www.tiktok.com/@a/video/1)')
-    assert.equal(quickLinkChipMarkdown('product', 'https://shop.example.com/p/1', '商品'), '[商品: https://shop.example.com/p/1]')
-    assert.equal(quickLinkChipMarkdown('product', 'SKU-9', '商品'), '[商品: SKU-9]')
+    assert.equal(quickLinkChipMarkdown('video', 'https://www.tiktok.com/@a/video/1'), '[视频](https://www.tiktok.com/@a/video/1)')
+    assert.equal(quickLinkChipMarkdown('product', 'https://shop.example.com/p/1'), '[商品: https://shop.example.com/p/1]')
+    assert.equal(quickLinkChipMarkdown('product', 'SKU-9'), '[商品: SKU-9]')
   })
 
   it('链接两边空白先裁掉；没填链接不出文本（宁可不提交半截标记）', () => {
@@ -81,10 +81,14 @@ describe('胶囊 → 提交文本', () => {
     assert.equal(quickLinkChipMarkdown('not-a-kind', 'https://a.example/1'), '')
   })
 
-  it('名称缺失时退回中文原名，提交形态不因语言而丢标记', () => {
+  it('提交名是语言无关的固定名：界面语言不改变提交标记', () => {
+    // 规格 S6 字面就是中文形态；提交文本随语言漂移会让下游没有唯一写法可认。
+    assert.equal(quickLinkChipSpec('video').commitLabel, '视频')
+    assert.equal(quickLinkChipSpec('product').commitLabel, '商品')
     assert.equal(quickLinkChipMarkdown('video', 'https://a.example/1'), '[视频](https://a.example/1)')
-    assert.equal(quickLinkChipMarkdown('product', 'SKU-9', '  '), '[商品: SKU-9]')
-    assert.equal(quickLinkChipMarkdown('video', 'https://a.example/1', 'Video'), '[Video](https://a.example/1)')
+    assert.equal(quickLinkChipMarkdown('product', 'SKU-9'), '[商品: SKU-9]')
+    // 显示名仍跟随语言（两件事互不影响）：胶囊上的名称可以叫 Video。
+    assert.equal(quickLinkChipTexts('video', 'Video', zhT).name, 'Video')
   })
 })
 

@@ -1,6 +1,6 @@
 {
   "pass": true,
-  "origin": "http://127.0.0.1:53309",
+  "origin": "http://127.0.0.1:61838",
   "checks": [
     {
       "id": "overlay-detected",
@@ -296,6 +296,49 @@
       ]
     },
     {
+      "id": "retract-typed-token-at-draft-tail",
+      "pass": true,
+      "detail": {
+        "editorText": "请帮我分析拆解这个视频。 我的补充 [视频]",
+        "tokens": [
+          "[视频]"
+        ],
+        "focus": {
+          "found": true,
+          "focused": true,
+          "activeTag": "DIV",
+          "x": 857,
+          "y": 332,
+          "width": 770,
+          "height": 52
+        }
+      }
+    },
+    {
+      "id": "retract-removes-chip",
+      "pass": true,
+      "detail": {
+        "chipCount": 0
+      }
+    },
+    {
+      "id": "retract-keeps-user-typed-token",
+      "pass": true,
+      "detail": {
+        "editorText": "我的补充 [视频]",
+        "tokens": [
+          "[视频]"
+        ]
+      }
+    },
+    {
+      "id": "no-write-failure-notice",
+      "pass": true,
+      "detail": {
+        "noticeText": null
+      }
+    },
+    {
       "id": "no-console-exceptions",
       "pass": true,
       "detail": []
@@ -305,53 +348,59 @@
     {
       "name": "chip-00c-after-overlay.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-00c-after-overlay.png",
-      "bytes": 431273,
-      "sha256": "f8c9f4a15f56fffd525244bd6f229d66153194fabcf090e2c1a76bf234160531"
+      "bytes": 431264,
+      "sha256": "47dd7a3aa42e25e82a6b2212969440088c1b6bf152e5d9cd88314d8d40a1b7fe"
     },
     {
       "name": "chip-00-hero.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-00-hero.png",
-      "bytes": 431273,
-      "sha256": "f8c9f4a15f56fffd525244bd6f229d66153194fabcf090e2c1a76bf234160531"
+      "bytes": 431264,
+      "sha256": "47dd7a3aa42e25e82a6b2212969440088c1b6bf152e5d9cd88314d8d40a1b7fe"
     },
     {
       "name": "chip-01-clone-chips.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-01-clone-chips.png",
-      "bytes": 229542,
-      "sha256": "4999e3f6a7c56529070bac6a60c72f3c941036afbd85cfbda0625942323599e2"
+      "bytes": 229461,
+      "sha256": "0ec22eee0bd422de36f66e79bb5c007fbbc6a061706cf9bc2d44052f9e4ef0c8"
     },
     {
       "name": "chip-01b-product-chip-via-slot.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-01b-product-chip-via-slot.png",
-      "bytes": 233122,
-      "sha256": "f7c9423b1bf7dab6c8fb647984b34d9c14de73ff16e4aa84238cc8bbc7671c1a"
+      "bytes": 233043,
+      "sha256": "bb46dfde3d10dddfc6e6294c8de5abc50c0a0a29b05930f03fd5340f42639ded"
     },
     {
       "name": "chip-02-video-url-filled.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-02-video-url-filled.png",
-      "bytes": 234711,
-      "sha256": "518c8aa5ca008103a1868b11b12e0c59aca11d28d20d5a1421b3b1728edbbc1c"
+      "bytes": 234636,
+      "sha256": "cb68b98916549a13454f13439cdb759f3a368a1750fede447f69660737a6f208"
     },
     {
       "name": "chip-03-typing-and-highlight.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-03-typing-and-highlight.png",
-      "bytes": 238137,
-      "sha256": "62f908e73ff81ec9b57f9771749c9dfe9ae6db12072ad10b7306d2c107f3cd5f"
+      "bytes": 238061,
+      "sha256": "d00eed8d1b2ec6e07ab097ad5b54dc8885692e18cd1c4ad0c38424e2e2b0254a"
     },
     {
       "name": "chip-04-after-remove-product.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-04-after-remove-product.png",
-      "bytes": 234199,
-      "sha256": "fe61747cdb16e1780a3395321cae77273a4756c388c5c07f5c6875c64b83e0ec"
+      "bytes": 234118,
+      "sha256": "c456ca83306c2b64514b64f7736f7bc611b88b1e02a6a7ee0ff5e0dba884cfbb"
     },
     {
       "name": "chip-05-switch-shortcut.png",
       "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-05-switch-shortcut.png",
-      "bytes": 351433,
-      "sha256": "5d72a9c335dd396ea309376959e2394eb4bc1a354024e7026ecd84205023d567"
+      "bytes": 351423,
+      "sha256": "b540c68afe90df1bf19f0469e2b7065a9c6d1ecc0fc0367f8dd04e8adf123fc9"
+    },
+    {
+      "name": "chip-06-retract-keeps-user-token.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-06-retract-keeps-user-token.png",
+      "bytes": 354375,
+      "sha256": "a8004f6617cb395c0eed7baf28afcdd5c54dbda0a7e242f75caa750735d6b4b4"
     }
   ],
   "consoleErrors": [],
-  "at": "2026-09-22T14:45:38.100Z",
+  "at": "2026-09-22T15:20:30.313Z",
   "note": "真实无头 Chrome + CDP；loginUrl 只在内存里换 Cookie，不打印、不落盘、不进本文件。"
 }

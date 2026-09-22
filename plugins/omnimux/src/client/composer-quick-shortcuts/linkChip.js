@@ -4,12 +4,16 @@
  * 只做纯数据与纯函数——不碰 DOM、不碰 Store、不发起请求，因此 node:test 可以直接
  * 消费；真实节点的创建与插入在 `dom.js`，两处共用这里这一份形态定义，不各自拼一份。
  *
- * 提交形态按仓库现状对齐，不另发明格式：
+ * 提交形态按仓库现状对齐，不另发明格式，且**语言无关**（用 `commitLabel`，不用界面语言名）：
  *   - 视频 `[视频](url)`：既有提交桥（`composer-add/AttachmentSubmitBridge.jsx`）与
  *     `composer-video-token.test.js` 钉死的形态，保持不变；
  *   - 商品 `[商品: url]`：既有商品槽位填充形态——`attachments/ProductUrlPopover.tsx`
  *     确认后经 `PromptSlotChips.onReplaceSlot` 写入的正是这一形态，
  *     `attachments/promptSlotDetector.ts` 也按「名称: 值」解析它。
+ *
+ * 为什么固定名而不是跟随语言：提交文本一旦随界面语言漂移（中文 `[视频](url)`、英文
+ * `[Video](url)`），下游就没有唯一形态可认——规格 S6 也只字面写了中文形态。
+ * 胶囊**显示名**（`data-omx-chip-label`、胶囊内文字）照旧跟随语言，两者互不影响。
  */
 
 /** 胶囊根节点类名（样式表 `styles.js` 与此处共用一个名字）。 */
@@ -40,6 +44,8 @@ export const QUICK_LINK_CHIP_SELECTOR = '[data-omx-video-token="true"], [data-om
  * `tokenAttr` 是提交桥读取用的锚点：视频沿用既有 `data-omx-video-token`（桥已按它读
  * 内部 input 的 value），商品新增对等的 `data-omx-product-token`。
  * `markdown` 标明提交形态（`markdown-link` = `[名称](url)`；`markdown-slot` = `[名称: url]`）。
+ * `commitLabel` 是**提交文本里的固定名**（语言无关，见文件头）；`defaultLabel` 只是
+ * 胶囊显示名在文案解析器失灵时的中文兜底，两者不可互换。
  */
 export const QUICK_LINK_CHIP_SPECS = Object.freeze({
   video: Object.freeze({
@@ -48,6 +54,7 @@ export const QUICK_LINK_CHIP_SPECS = Object.freeze({
     tokenAttr: 'data-omx-video-token',
     icon: 'link',
     defaultLabel: '视频',
+    commitLabel: '视频',
     markdown: 'markdown-link',
     placeholderKey: 'quickShortcuts.link.videoPlaceholder',
     placeholder: '粘贴 TikTok 视频链接',
@@ -60,6 +67,7 @@ export const QUICK_LINK_CHIP_SPECS = Object.freeze({
     tokenAttr: 'data-omx-product-token',
     icon: 'package',
     defaultLabel: '商品',
+    commitLabel: '商品',
     markdown: 'markdown-slot',
     placeholderKey: 'quickShortcuts.link.productPlaceholder',
     placeholder: '粘贴商品链接或 ID',
@@ -130,17 +138,17 @@ export function quickLinkChipTexts(kind, label, t) {
 
 /**
  * 胶囊 → 提交文本。空链接不出文本（宁可不提交，也不提交半截标记）。
+ *
+ * 名称取 `commitLabel`（语言无关的固定名）：提交文本是给下游认的形态，不随界面语言变。
  * @param {string} kind 链接种类
  * @param {string} url 用户填进胶囊的链接或 ID
- * @param {string} [label] 当前语言下的链接名称
  * @returns {string} 例如 `[视频](https://…)` 或 `[商品: https://…]`；非法输入返回空串
  */
-export function quickLinkChipMarkdown(kind, url, label) {
+export function quickLinkChipMarkdown(kind, url) {
   const spec = quickLinkChipSpec(kind)
   const value = typeof url === 'string' ? url.trim() : ''
   if (!spec || !value) return ''
-  const name = typeof label === 'string' && label.trim() ? label.trim() : spec.defaultLabel
-  return spec.markdown === 'markdown-slot' ? `[${name}: ${value}]` : `[${name}](${value})`
+  return spec.markdown === 'markdown-slot' ? `[${spec.commitLabel}: ${value}]` : `[${spec.commitLabel}](${value})`
 }
 
 /**

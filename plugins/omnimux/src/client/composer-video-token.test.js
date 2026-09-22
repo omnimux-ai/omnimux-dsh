@@ -39,9 +39,31 @@ function mountChip(kind, url) {
   return chip
 }
 
-/** 起一个最小宿主环境并装上桥接组件；返回可直接观察的草稿读写口。 */
-async function mountBridge({ draft: initialDraft, sessionId = 'A', attachments = [] } = {}) {
-  const dom = new JSDOM('<div data-phase="hero"><div id="bridge"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>')
+/** 单会话宿主（既有夹具：没有任何输入框卡片，提交桥按文档兜底读胶囊）。 */
+const DEFAULT_HTML = '<div data-phase="hero"><div id="bridge"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>'
+
+/**
+ * 分屏 / 多标签保活：宿主同时挂载两张输入框卡片，各自在自己的会话座位
+ * `[data-composer-seat]` 里；本会话那张卡的内部就是本桥的锚点落点。
+ */
+const SPLIT_HTML = [
+  '<div data-phase="hero">',
+  '  <div data-composer-seat>',
+  '    <div data-composer-card><div id="bridge"></div><div data-composer-input="true" contenteditable="true"></div></div>',
+  '  </div>',
+  '  <div data-composer-seat>',
+  '    <div data-composer-card id="other-card"><div data-composer-input="true" contenteditable="true"></div></div>',
+  '  </div>',
+  '  <button data-send-button>Send</button>',
+  '</div>',
+].join('')
+
+/**
+ * 起一个最小宿主环境并装上桥接组件；返回可直接观察的草稿读写口。
+ * `failAppend` 模拟宿主写入失败：追加块（带空行）抛错，提示语那种单行写入照常成功。
+ */
+async function mountBridge({ draft: initialDraft, sessionId = 'A', attachments = [], html, failAppend = false } = {}) {
+  const dom = new JSDOM(html || DEFAULT_HTML)
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
@@ -50,7 +72,14 @@ async function mountBridge({ draft: initialDraft, sessionId = 'A', attachments =
   const props = {
     sessionId,
     useInput: selector => selector({ draft: draft.value, phase: 'plain' }),
-    inputActions: { setDraft(value) { draft.value = value } },
+    inputActions: {
+      setDraft(value) {
+        if (failAppend && typeof value === 'string' && value.includes('\n\n')) {
+          throw new Error('editor disposed')
+        }
+        draft.value = value
+      },
+    },
     attachmentStore: { getSnapshot: () => attachments },
     attachmentAdmission: { arm() {} },
     getCurrentSessionId: () => sessionId,
@@ -165,6 +194,70 @@ test('草稿里已经有同一条链接时不重复追加（只把胶囊消费�
     assert.equal(env.draft.value, `已经写好了 [视频](${url})`)
     assert.equal(env.draft.value.split(url).length - 1, 1)
     assert.equal(document.querySelector('[data-omx-video-token="true"]'), null)
+  } finally {
+    await env.dispose()
+  }
+})
+
+test('视频胶囊：写入失败时保留胶囊，用户填的链接不许丢', async () => {
+  const url = 'https://www.tiktok.com/@a/video/1'
+  const env = await mountBridge({ draft: '请用我的产品复刻这个爆款视频', failAppend: true })
+  try {
+    mountChip('video', url)
+    await env.send()
+    assert.equal(env.draft.value, '请用我的产品复刻这个爆款视频', '写不进去时草稿保持原文')
+    const chip = document.querySelector('[data-omx-video-token="true"]')
+    assert.ok(chip, '写入失败必须保留胶囊让用户重试，绝不能不声不响地删掉')
+    assert.equal(chip.querySelector('input').value, url, '用户填的链接还在胶囊里')
+  } finally {
+    await env.dispose()
+  }
+})
+
+test('商品胶囊：写入失败时同样保留胶囊', async () => {
+  const url = 'https://shop.example.com/p/1'
+  const env = await mountBridge({ draft: '请帮我一键生成一条带货视频。', failAppend: true })
+  try {
+    mountChip('product', url)
+    await env.send()
+    assert.equal(env.draft.value, '请帮我一键生成一条带货视频。')
+    const chip = document.querySelector('[data-omx-product-token="true"]')
+    assert.ok(chip, '写入失败必须保留商品胶囊')
+    assert.equal(chip.querySelector('input').value, url)
+  } finally {
+    await env.dispose()
+  }
+})
+
+test('两种胶囊都写不进去时两枚都留着（各自独立判定，互不牵连）', async () => {
+  const videoUrl = 'https://www.tiktok.com/@a/video/1'
+  const productUrl = 'https://shop.example.com/p/1'
+  const env = await mountBridge({ draft: '请用我的产品复刻这个爆款视频', failAppend: true })
+  try {
+    mountChip('video', videoUrl)
+    mountChip('product', productUrl)
+    await env.send()
+    assert.ok(document.querySelector('[data-omx-video-token="true"]'))
+    assert.ok(document.querySelector('[data-omx-product-token="true"]'))
+  } finally {
+    await env.dispose()
+  }
+})
+
+test('提交只读本会话卡片里的胶囊（分屏 / 多标签保活）', async () => {
+  const ownUrl = 'https://www.tiktok.com/@a/video/1'
+  const foreignUrl = 'https://shop.example.com/p/9'
+  const env = await mountBridge({ draft: '请用我的产品复刻这个爆款视频', html: SPLIT_HTML })
+  try {
+    const foreignChip = createQuickLinkChipNode('product', { label: '商品', doc: document })
+    foreignChip.querySelector('input').value = foreignUrl
+    document.querySelector('#other-card').appendChild(foreignChip)
+    mountChip('video', ownUrl)
+    await env.send()
+    assert.equal(env.draft.value, `请用我的产品复刻这个爆款视频\n\n[视频](${ownUrl})`)
+    assert.equal(env.draft.value.includes(foreignUrl), false, '别的会话的链接不得写进本会话草稿')
+    assert.ok(document.querySelector('#other-card [data-omx-product-token="true"]'), '别的会话的胶囊不得被消费')
+    assert.equal(document.querySelector('[data-omx-video-token="true"]'), null, '本会话的胶囊照常消费掉')
   } finally {
     await env.dispose()
   }

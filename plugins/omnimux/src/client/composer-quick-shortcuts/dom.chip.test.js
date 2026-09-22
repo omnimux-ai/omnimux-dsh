@@ -306,3 +306,101 @@ describe('点快捷方式只插默认链接，另一枚由上方卡槽点了才�
     }
   })
 })
+
+/**
+ * 宿主可以同时挂载两张输入框卡片（分屏、多标签保活），每张卡在自己的会话座位
+ * `[data-composer-seat]` 里。读 / 删 / 整组替换都必须收敛到锚点所在的那一张卡片：
+ * 否则 A 的卡槽会把 B 的胶囊算作已填、A 的撤回会删掉 B 的胶囊。
+ */
+describe('胶囊作用域收敛到本会话的输入框卡片', () => {
+  const SPLIT_HTML = [
+    '<div data-phase="hero">',
+    '  <div data-composer-seat id="seat-a">',
+    '    <div data-composer-card id="card-a"><div data-composer-input="true" contenteditable="true"></div></div>',
+    '  </div>',
+    '  <div data-composer-seat id="seat-b">',
+    '    <div data-composer-card id="card-b"><div data-composer-input="true" contenteditable="true"></div></div>',
+    '  </div>',
+    '</div>',
+  ].join('')
+
+  /** 取某一侧卡片内的锚点（与组件把根节点当锚点的做法一致）。 */
+  const anchorOf = (env, cardId) => env.dom.window.document.querySelector(`#${cardId} [data-composer-input="true"]`)
+
+  it('插入只看得到本会话：A 的锚点插出的胶囊不落进 B 的卡片', () => {
+    const env = mountComposer(SPLIT_HTML)
+    try {
+      const a = anchorOf(env, 'card-a')
+      const b = anchorOf(env, 'card-b')
+      assert.equal(insertQuickLinkChip('video', { label: '视频', anchor: a }), true)
+      assert.deepEqual(readQuickLinkChipKinds(a), ['video'])
+      assert.deepEqual(readQuickLinkChipKinds(b), [], 'B 会话不得看到 A 的胶囊')
+      assert.equal(env.dom.window.document.querySelector('#card-b .omx-link-chip'), null, 'A 的胶囊只落在 A 的卡片里')
+      // 卡片行也只建在本会话卡片内
+      assert.equal(env.dom.window.document.querySelectorAll('#card-b .omx-link-chip-row').length, 0)
+    } finally {
+      env.dispose()
+    }
+  })
+
+  it('撤回只删本会话的胶囊：B 的撤回不动 A 的胶囊', () => {
+    const env = mountComposer(SPLIT_HTML)
+    try {
+      const a = anchorOf(env, 'card-a')
+      const b = anchorOf(env, 'card-b')
+      insertQuickLinkChip('video', { label: '视频', anchor: a })
+      insertQuickLinkChip('product', { label: '商品', anchor: b })
+      assert.equal(removeQuickLinkChips(b), 1, '只清掉 B 的那一枚')
+      assert.deepEqual(readQuickLinkChipKinds(b), [])
+      assert.deepEqual(readQuickLinkChipKinds(a), ['video'], 'A 的胶囊必须还在')
+    } finally {
+      env.dispose()
+    }
+  })
+
+  it('文档里有多张卡片又拿不到锚点时：不按文档兜底，宁可不动作', () => {
+    const env = mountComposer(SPLIT_HTML)
+    try {
+      const a = anchorOf(env, 'card-a')
+      assert.equal(insertQuickLinkChip('video', { label: '视频', anchor: a }), true)
+      // 无锚点（文档里两张卡 → 无从归属会话）：读为空、删为 0、不插入
+      assert.deepEqual(readQuickLinkChipKinds(), [])
+      assert.equal(removeQuickLinkChips(), 0)
+      assert.equal(insertQuickLinkChip('product', { label: '商品' }), false)
+      assert.equal(replaceQuickLinkChips(['product'], { labels: { product: '商品' } }), 0)
+      assert.deepEqual(readQuickLinkChipKinds(a), ['video'], 'A 的胶囊不受无锚点调用影响')
+    } finally {
+      env.dispose()
+    }
+  })
+
+  it('整组替换只在锚点那张卡片里清旧插新', () => {
+    const env = mountComposer(SPLIT_HTML)
+    try {
+      const a = anchorOf(env, 'card-a')
+      const b = anchorOf(env, 'card-b')
+      insertQuickLinkChip('video', { label: '视频', anchor: a })
+      assert.equal(replaceQuickLinkChips(['product'], { labels: { product: '商品' }, anchor: b }), 1)
+      assert.deepEqual(readQuickLinkChipKinds(b), ['product'])
+      assert.deepEqual(readQuickLinkChipKinds(a), ['video'], 'B 的整组替换不得动 A')
+    } finally {
+      env.dispose()
+    }
+  })
+
+  it('拿不到胶囊行时整条不动：不先把旧胶囊清掉', () => {
+    const env = mountComposer(SPLIT_HTML)
+    try {
+      const a = anchorOf(env, 'card-a')
+      insertQuickLinkChip('video', { label: '视频', anchor: a })
+      // 锚点落在一张没有卡片的座位里（宿主重建中的瞬间）：替换必须原样返回 0 且不清旧
+      const orphanSeat = env.dom.window.document.createElement('div')
+      orphanSeat.setAttribute('data-composer-seat', '')
+      env.dom.window.document.body.appendChild(orphanSeat)
+      assert.equal(replaceQuickLinkChips(['product'], { labels: { product: '商品' }, anchor: orphanSeat }), 0)
+      assert.deepEqual(readQuickLinkChipKinds(a), ['video'], '拿不到行时必须整条不动，不能先清掉旧的')
+    } finally {
+      env.dispose()
+    }
+  })
+})

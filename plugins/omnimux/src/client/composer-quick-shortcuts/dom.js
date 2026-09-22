@@ -6,7 +6,9 @@
  *      `composer-add/AttachmentSubmitBridge.jsx` 发布，官方输入框草稿的唯一写入口）；
  *   2. 链接不再写成 `[视频]` 纯文本，而是在输入框卡片里插入真正的**胶囊节点**
  *      （`linkChip.js` 定义形态，宿主提交时按 `data-omx-*-token` 读回链接；
- *      胶囊为什么落在卡片内、而不是 contenteditable 里，见 `resolveQuickLinkChipRow`）。
+ *      胶囊为什么落在卡片内、而不是 contenteditable 里，见 `resolveQuickLinkChipRow`）；
+ *   3. 插入 / 读取 / 删除 / 整组替换一律收敛到**当前会话的输入框卡片**（`resolveComposerCard`）：
+ *      宿主可以同时挂载多张卡（分屏、多标签保活），按整个文档读写会把别的会话的胶囊算进来。
  *
  * 本模块不做任何状态管理，也不发起请求；拿不到宿主能力时一律安静返回 false。
  */
@@ -29,6 +31,16 @@ const EDITOR_SELECTORS = [
   '[data-composer-input="true"]',
   'div[role="textbox"][contenteditable="true"]',
 ].join(', ')
+
+/** 官方输入框卡片（胶囊行的宿主）。 */
+const COMPOSER_CARD_SELECTOR = '[data-composer-card]'
+
+/**
+ * 会话作用域根（宿主事实，见 `resolveComposerCard`）：
+ * 每个会话自己的输入区都落在自己的 `[data-composer-seat]` 里，
+ * 会话整体再包在 `[data-phase]` 的会话根内。
+ */
+const CONVERSATION_SCOPE_SELECTOR = '[data-composer-seat], [data-phase]'
 
 /** 胶囊出现 / 消失的广播事件：卡槽行据此重算两态（胶囊不进草稿文本，槽位投影看不见它）。 */
 export const QUICK_LINK_CHIP_CHANGE_EVENT = 'omnimux:quick-link-chips:changed'
@@ -289,7 +301,41 @@ export function createQuickLinkChipNode(kind, options) {
 }
 
 /**
- * 取（必要时创建）输入框卡片里的链接胶囊行。
+ * 取**当前会话**的输入框卡片。
+ *
+ * **为什么必须按会话定位**：宿主可以同时挂载两张卡（分屏、多标签保活），而胶囊的读取、
+ * 删除、整组替换原先一律 `document.querySelector`——那样 A 会话的卡槽会把 B 会话的胶囊
+ * 算作已填、A 的撤回会删掉 B 的胶囊、提交桥会读走 B 的链接。所以三个动作统一收口到本函数。
+ *
+ * 定位口径（宿主官方结构，见 `ConversationRoot` / `InputBar`）：
+ * `[data-phase]`（会话根）⊃ `[data-composer-seat]`（本会话输入区）⊃ `[data-composer-card]`（输入框卡片）。
+ * 本插件的四条快捷方式与提交桥挂在**座位内的输入区 dock**（卡片之外、座位之内），
+ * 素材托盘挂在**卡片内**——两者向上找座位（其次会话根）都能唯一命中本会话，再在座位内取卡片。
+ *
+ * 兜底只有一条，条件写死在这里：调用点不在任何会话输入区里（座位与会话根都找不到，例如
+ * 测试夹具），或本会话座位内暂时还没有卡片时，**仅当整个文档里恰好只有一张卡片**才回退到它。
+ * 文档里有多张卡片时无从归属会话，宁可返回 null（调用方据此不动作），也不能替别的会话读删。
+ *
+ * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置（本会话输入区里的任意节点）
+ * @returns {Element | null}
+ */
+export function resolveComposerCard(anchor) {
+  const doc = (anchor && anchor.ownerDocument) || (typeof document !== 'undefined' ? document : null)
+  if (!doc) return null
+  const node = anchor && typeof anchor.closest === 'function' ? anchor : null
+  if (node) {
+    const seat = node.closest(CONVERSATION_SCOPE_SELECTOR)
+    const card = seat ? seat.querySelector(COMPOSER_CARD_SELECTOR) : node.closest(COMPOSER_CARD_SELECTOR)
+    if (card) return card
+    // 座位在、卡片还没建出来：本会话此刻没有卡片，不回退到别的会话
+    if (seat) return null
+  }
+  const cards = doc.querySelectorAll(COMPOSER_CARD_SELECTOR)
+  return cards.length === 1 ? cards[0] : null
+}
+
+/**
+ * 取（必要时创建）当前会话输入框卡片里的链接胶囊行。
  *
  * **为什么胶囊不在 contenteditable 里**：宿主输入框是 Lexical 编辑器，它每次更新都会把
  * 自己根节点下的**非受管子节点**清掉——浏览器实测：把胶囊节点插进可编辑区后，宿主一渲染
@@ -298,37 +344,23 @@ export function createQuickLinkChipNode(kind, options) {
  * 外部子节点，稳定存在，同时又落在输入框卡片内、就贴着输入行的上方，视觉上就是
  * 「输入框里的链接胶囊」。
  *
- * @param {Document} doc
+ * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置
  * @returns {HTMLElement | null} 拿不到输入框卡片时回 null（调用方降级为不插入）
  */
-function resolveQuickLinkChipRow(doc) {
-  const card = doc.querySelector('[data-composer-card]')
+function resolveQuickLinkChipRow(anchor) {
+  const card = resolveComposerCard(anchor)
   if (!card) return null
   const existing = card.querySelector(`.${QUICK_LINK_CHIP_ROW_CLASS}`)
   if (existing) return existing
-  const row = doc.createElement('div')
+  const row = card.ownerDocument.createElement('div')
   row.className = QUICK_LINK_CHIP_ROW_CLASS
   row.setAttribute('data-omx-link-chip-row', 'true')
   card.insertBefore(row, card.firstChild)
   return row
 }
 
-/**
- * 在输入框卡片里插入一个链接胶囊。
- *
- * 插入点是卡片内的胶囊行（见 `resolveQuickLinkChipRow` 的宿主事实），新胶囊排在行尾；
- * 拿不到输入框卡片时就**不插入**（调用方据此给轻提示），绝不写到别处去。
- *
- * @param {string} kind 链接种类
- * @param {{ label?: string, t?: (key: string) => string }} [options]
- * @returns {boolean} 是否真的插进去了
- */
-export function insertQuickLinkChip(kind, options) {
-  if (typeof document === 'undefined') return false
-  ensureQuickShortcutStyles()
-  const player = typeof document !== 'undefined' ? document : null
-  const row = resolveQuickLinkChipRow(player)
-  if (!row) return false
+/** 往指定胶囊行里追加一枚胶囊；失败时不留下半个节点。 */
+function appendQuickLinkChip(row, kind, options) {
   const chip = createQuickLinkChipNode(kind, options)
   if (!chip) return false
   row.appendChild(chip)
@@ -337,17 +369,36 @@ export function insertQuickLinkChip(kind, options) {
 }
 
 /**
+ * 在输入框卡片里插入一个链接胶囊。
+ *
+ * 插入点是**当前会话**卡片内的胶囊行（见 `resolveQuickLinkChipRow` 的宿主事实），新胶囊排在行尾；
+ * 拿不到本会话输入框卡片时就**不插入**（调用方据此给轻提示），绝不写到别处去。
+ *
+ * @param {string} kind 链接种类
+ * @param {{ label?: string, t?: (key: string) => string, anchor?: Node | null }} [options]
+ *   `anchor` 传调用方的 DOM 位置，用于把作用域收敛到本会话的输入框卡片
+ * @returns {boolean} 是否真的插进去了
+ */
+export function insertQuickLinkChip(kind, options) {
+  if (typeof document === 'undefined') return false
+  ensureQuickShortcutStyles()
+  const row = resolveQuickLinkChipRow(options && options.anchor)
+  if (!row) return false
+  return appendQuickLinkChip(row, kind, options)
+}
+
+/**
  * 输入框里现有的链接胶囊种类（按 DOM 顺序去重）。
  * 胶囊不进草稿文本，卡槽两态只能靠读节点，因此这里是唯一读口。
- * @param {ParentNode} [root] 读取范围，缺省整个文档（胶囊宿主行由宿主重渲染时可能被换掉，
- *   按文档读才不会漏）
+ * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置；读取范围收敛到本会话的输入框卡片
+ *   （见 `resolveComposerCard` 的兜底条件）。缺省时按文档兜底，多张卡片下回空数组。
  * @returns {string[]}
  */
-export function readQuickLinkChipKinds(root) {
-  const scope = root || (typeof document !== 'undefined' ? document : null)
-  if (!scope || typeof scope.querySelectorAll !== 'function') return []
+export function readQuickLinkChipKinds(anchor) {
+  const card = resolveComposerCard(anchor)
+  if (!card || typeof card.querySelectorAll !== 'function') return []
   const kinds = []
-  for (const node of scope.querySelectorAll(QUICK_LINK_CHIP_SELECTOR)) {
+  for (const node of card.querySelectorAll(QUICK_LINK_CHIP_SELECTOR)) {
     const kind = kindOfChipNode(node)
     if (kind && !kinds.includes(kind)) kinds.push(kind)
   }
@@ -355,15 +406,15 @@ export function readQuickLinkChipKinds(root) {
 }
 
 /**
- * 清掉输入框里的全部快捷链接胶囊（撤回与「整组替换」共用这一个动作）。
- * @param {ParentNode} [root] 读取范围，缺省整个文档
+ * 清掉**本会话**输入框里的全部快捷链接胶囊（撤回与「整组替换」共用这一个动作）。
+ * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置；范围收敛到本会话的输入框卡片
  * @returns {number} 实际移除的胶囊数
  */
-export function removeQuickLinkChips(root) {
-  const scope = root || (typeof document !== 'undefined' ? document : null)
-  if (!scope || typeof scope.querySelectorAll !== 'function') return 0
+export function removeQuickLinkChips(anchor) {
+  const card = resolveComposerCard(anchor)
+  if (!card || typeof card.querySelectorAll !== 'function') return 0
   let removed = 0
-  for (const node of Array.from(scope.querySelectorAll(QUICK_LINK_CHIP_SELECTOR))) {
+  for (const node of Array.from(card.querySelectorAll(QUICK_LINK_CHIP_SELECTOR))) {
     if (node.parentNode) {
       node.parentNode.removeChild(node)
       removed += 1
@@ -377,17 +428,22 @@ export function removeQuickLinkChips(root) {
  * 整组替换链接胶囊：先清掉上一个快捷方式留下的，再按本次的链接种类依次插入。
  * 切换快捷方式时不残留上一个插入的胶囊。
  *
+ * **不先清后插**：先解析胶囊行，行拿得到才清旧插新；行拿不到（本会话没有输入框卡片）
+ * 就整条不动——先清一次再插失败会「两不剩」，把上一条快捷方式的胶囊也一起弄丢。
+ *
  * @param {readonly string[]} kinds 本次要插入的链接种类
- * @param {{ labels?: Record<string, string>, t?: (key: string) => string }} [options]
+ * @param {{ labels?: Record<string, string>, t?: (key: string) => string, anchor?: Node | null }} [options]
  * @returns {number} 实际插入成功的胶囊数
  */
 export function replaceQuickLinkChips(kinds, options) {
   const list = Array.isArray(kinds) ? kinds.filter((kind) => quickLinkChipSpec(kind)) : []
-  removeQuickLinkChips()
+  const row = resolveQuickLinkChipRow(options && options.anchor)
+  if (!row) return 0
+  removeQuickLinkChips(options && options.anchor)
   let inserted = 0
   for (const kind of list) {
     const label = options && options.labels ? options.labels[kind] : undefined
-    if (insertQuickLinkChip(kind, { label, t: options && options.t })) inserted += 1
+    if (appendQuickLinkChip(row, kind, { label, t: options && options.t })) inserted += 1
   }
   return inserted
 }

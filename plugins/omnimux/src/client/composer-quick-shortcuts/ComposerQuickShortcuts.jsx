@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   applyQuickShortcut,
   clearQuickShortcutSkill,
@@ -9,6 +9,7 @@ import {
 import { getGlobalQuickShortcutStore } from './store.js';
 import { readDraft, removeQuickLinkChips, replaceQuickLinkChips, writeDraft } from './dom.js';
 import { quickLinkLabels, stripQuickShortcutText } from './links.js';
+import { QuickWriteNotice, useQuickWriteNotice } from './notice.jsx';
 import { resolveComposerSessionId } from './session.js';
 import { ensureQuickShortcutStyles } from './styles.js';
 import { QuickShortcutArrow, QuickShortcutIcon } from './icons.jsx';
@@ -21,9 +22,6 @@ import { isBlankConversation } from '../session-guide/state.js';
 const SKILL_LIBRARY_RETRY_BASE_MS = 200;
 const SKILL_LIBRARY_RETRY_MAX_MS = 3200;
 const SKILL_LIBRARY_RETRY_LIMIT = 8;
-
-/** 写不进输入框时的轻提示：内容固定一条，重复触发靠序号刷新，4 秒后自动收起。 */
-const NOTICE_TIMEOUT_MS = 4000;
 
 /**
  * 读取跨插件技能库通道（由 `omnimux-market` 的 `apply.js` 发布）。
@@ -104,6 +102,9 @@ export function ComposerQuickShortcuts(props) {
 
   const store = getGlobalQuickShortcutStore();
   const labels = useMemo(() => quickLinkLabels(t), [t]);
+  // 本组件的根节点：所有胶囊动作都以它为锚点定位**本会话**的输入框卡片，
+  // 宿主同时挂载多张卡（分屏 / 多标签保活）时不会动到别的会话。
+  const rootRef = useRef(null);
 
   const session = useSession ? useSession((value) => value) : null;
   const hasTargets = useConversation ? useConversation((value) => value && value.activeTargets ? value.activeTargets.size > 0 : false) : false;
@@ -195,12 +196,8 @@ export function ComposerQuickShortcuts(props) {
   }), [store, sessionId]);
 
   // 写不进输入框时的轻提示（序号驱动，重复触发也能重新出现，4 秒后自动收起）。
-  const [noticeSeq, setNoticeSeq] = useState(0);
-  useEffect(() => {
-    if (noticeSeq === 0) return undefined;
-    const timer = setTimeout(() => setNoticeSeq(0), NOTICE_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [noticeSeq]);
+  // 状态与展示组件由 `notice.jsx` 提供，素材卡槽行那条通道用的是同一份。
+  const { visible: noticeVisible, notify: notifyWriteFailed, dismiss: dismissNotice } = useQuickWriteNotice();
 
   const active = useMemo(
     () => shortcuts.find((entry) => entry.id === state.activeId) || null,
@@ -210,17 +207,17 @@ export function ComposerQuickShortcuts(props) {
   const handlePick = useCallback((entry) => {
     const next = applyQuickShortcut(store.getSnapshot(sessionId).activeId, entry.id);
     if (!next.activeId) {
-      // 再点同一条 = 撤回：只清本快捷方式写入的提示语与链接胶囊，用户手打的
-      // 追加文字原样保留；技能同步撤下。
+      // 再点同一条 = 撤回：只剥掉本快捷方式写入的提示语，用户手打的追加文字
+      // （含同名的 `[视频]` / `[视频](url)` 令牌）原样保留；胶囊走删除通道清掉。
       const stripped = stripQuickShortcutText(entry, readDraft());
       // 草稿清不掉（宿主桥缺失、`inputActions.setDraft` 缺失或抛错）就整条不生效：
       // 否则会出现「输入框还是原样，卡槽与技能胶囊却已经撤下」的错位状态。
       if (!writeDraft(stripped)) {
-        setNoticeSeq((n) => n + 1);
+        notifyWriteFailed();
         return;
       }
-      removeQuickLinkChips();
-      setNoticeSeq(0);
+      removeQuickLinkChips(rootRef.current);
+      dismissNotice();
       store.set(sessionId, { activeId: null, links: [], skill: null });
       publishActiveSkill(null);
       return;
@@ -231,17 +228,18 @@ export function ComposerQuickShortcuts(props) {
     const defaults = quickShortcutDefaultLinks(entry);
     // 提示语写不进去就整条不生效：否则会出现「输入框空的，卡槽已出现、技能胶囊已亮」。
     if (!writeDraft(entry.prompt)) {
-      setNoticeSeq((n) => n + 1);
+      notifyWriteFailed();
       return;
     }
-    // 链接是真正的胶囊节点，插在输入框光标处；整组替换，不残留上一个快捷方式插入的胶囊。
-    // 胶囊插不进去（拿不到输入框等）只降级为「没有胶囊 + 轻提示」：提示语与技能照旧生效，
+    // 链接是真正的胶囊节点，插在本会话输入框卡片内的胶囊行；整组替换，不残留上一个快捷方式的胶囊。
+    // 胶囊插不进去（拿不到本会话输入框等）只降级为「没有胶囊 + 轻提示」：提示语与技能照旧生效，
     // 上方卡槽仍可点回，不会出现「静默什么都不发生」。
-    const inserted = replaceQuickLinkChips(defaults, { labels, t });
-    setNoticeSeq(inserted === defaults.length ? 0 : (n) => n + 1);
+    const inserted = replaceQuickLinkChips(defaults, { labels, t, anchor: rootRef.current });
+    if (inserted === defaults.length) dismissNotice();
+    else notifyWriteFailed();
     store.set(sessionId, { activeId: entry.id, links, skill: entry.skill });
     publishActiveSkill(entry.skill);
-  }, [store, sessionId, labels, t]);
+  }, [store, sessionId, labels, t, notifyWriteFailed, dismissNotice]);
 
   // 只在新对话（空会话）里出现：这是新会话的起手入口，不是会话中的工具条。
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
@@ -252,6 +250,7 @@ export function ComposerQuickShortcuts(props) {
 
   return (
     <div
+      ref={rootRef}
       className="omx-quick-shortcuts"
       data-omnimux-quick-shortcuts="true"
       role="group"
@@ -277,11 +276,7 @@ export function ComposerQuickShortcuts(props) {
 
       {showControls ? <QuickShortcutModelControls sessionId={sessionId} /> : null}
 
-      {noticeSeq > 0 ? (
-        <p className="omx-quick-shortcut-notice" role="status">
-          {typeof t === 'function' ? (t('quickShortcuts.notice.writeFailed') || '输入框未就绪，请重试') : '输入框未就绪，请重试'}
-        </p>
-      ) : null}
+      <QuickWriteNotice visible={noticeVisible} t={t} />
     </div>
   );
 }

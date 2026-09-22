@@ -10,7 +10,7 @@ import {
   quickLinkChipMarkdown,
   quickLinkChipSelectorFor,
 } from '../composer-quick-shortcuts/linkChip.js'
-import { notifyQuickLinkChipChange } from '../composer-quick-shortcuts/dom.js'
+import { notifyQuickLinkChipChange, resolveComposerCard } from '../composer-quick-shortcuts/dom.js'
 
 /**
  * 立即把本会话的 viewport 信封推给宿主，不等 2s 心跳。
@@ -102,14 +102,20 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       // Reconcile inline link chips to their submit forms:
       // video -> `[视频](url)` (pinned by composer-video-token.test.js),
       // product -> `[商品: url]` (the existing product slot fill form).
-      const doc = root?.ownerDocument || (typeof document !== 'undefined' ? document : null)
+      // Both markers are language-independent fixed names (linkChip.js `commitLabel`).
+      // 读取范围收敛到**本会话**的输入框卡片：宿主可以同时挂载两张卡（分屏、多标签保活），
+      // 按整文档取节点会把别的会话的链接读走。卡片解析不到时（本会话没有卡片，例如夹具环境）
+      // 才退回整文档——这条兜底只覆盖「文档里就只有这一套输入框」的降级路径。
+      const card = resolveComposerCard(anchor.current)
+      const scope = card || root?.ownerDocument || (typeof document !== 'undefined' ? document : null)
       const readChip = (kind) => {
-        const node = doc?.querySelector?.(quickLinkChipSelectorFor(kind))
-        const input = node?.querySelector?.('input')
+        const node = scope?.querySelector?.(quickLinkChipSelectorFor(kind))
+        const value = node?.querySelector?.('input')
         const label = node?.getAttribute?.('data-omx-chip-label') || ''
-        return { node, label, url: input?.value?.trim() || '' }
+        return { node, label, url: value?.value?.trim() || '' }
       }
       const appendBlock = (block) => {
+        if (!block) return false
         draft = draft.trim() ? `${draft.trim()}\n\n${block}` : block
         try {
           actions?.setDraft?.(draft)
@@ -117,6 +123,22 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         } catch {
           return false
         }
+      }
+      // 胶囊只有在链接**真的进了草稿**之后才允许消费（写进去，或草稿里已经有同一条链接）。
+      // `setDraft` 抛错时草稿没落地，这时若照样删掉节点，用户填的链接就只存在于被删的胶囊里
+      // ——彻底丢失且无任何提示。宁可留着胶囊让用户重试。
+      const consumeChip = (chip, url, block) => {
+        if (!url) return false
+        if (draft.includes(url)) {
+          chip.node?.remove?.()
+          return true
+        }
+        if (!appendBlock(block)) {
+          console.warn('[AttachmentSubmitBridge] 链接未写入草稿，保留胶囊让用户重试:', url)
+          return false
+        }
+        chip.node?.remove?.()
+        return true
       }
 
       const video = readChip('video')
@@ -134,21 +156,21 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         } catch {}
       }
 
+      let consumedChip = false
       if (url) {
-        if (!draft.includes(url) && appendBlock(quickLinkChipMarkdown('video', url, video.label))) {
-          clearVideoToken()
+        const appended = !draft.includes(url)
+        if (consumeChip(video, url, quickLinkChipMarkdown('video', url))) {
+          consumedChip = true
+          if (appended) clearVideoToken()
         }
-        video.node?.remove?.()
       }
 
       const product = readChip('product')
-      if (product.url) {
-        if (!draft.includes(product.url)) {
-          appendBlock(quickLinkChipMarkdown('product', product.url, product.label))
-        }
-        product.node?.remove?.()
+      if (product.url && consumeChip(product, product.url, quickLinkChipMarkdown('product', product.url))) {
+        consumedChip = true
       }
-      if (video.node || product.node) notifyQuickLinkChipChange()
+
+      if (consumedChip) notifyQuickLinkChipChange()
 
       // Reconcile creative presets (Format, Hook, Style) into structured system context (only in marketing mode)
       try {

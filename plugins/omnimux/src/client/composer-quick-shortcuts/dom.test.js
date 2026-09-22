@@ -7,7 +7,9 @@ import { writeDraft } from './dom.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const COMPONENT_PATH = resolve(HERE, 'ComposerQuickShortcuts.jsx')
+const NOTICE_PATH = resolve(HERE, 'notice.jsx')
 const BRIDGE_PATH = resolve(HERE, '..', 'composer-add', 'AttachmentSubmitBridge.jsx')
+const TRAY_PATH = resolve(HERE, '..', 'attachments', 'AttachmentTray.tsx')
 const LOCALES_PATH = resolve(HERE, '..', 'locales.js')
 
 /** 装一个假宿主桥，返回清场函数（node 下 `window` 不存在，测试里临时挂上）。 */
@@ -117,11 +119,22 @@ describe('桥的回执契约与消费方的守卫', () => {
 
   it('写失败时给出轻提示，中英文案都在字典里', async () => {
     const component = await readFile(COMPONENT_PATH, 'utf8')
-    assert.match(component, /quickShortcuts\.notice\.writeFailed/, '组件必须消费这条提示文案')
-    assert.match(component, /role="status"/, '提示必须可被读屏播报')
+    assert.match(component, /<QuickWriteNotice/, '组件必须渲染这条轻提示')
+
+    // 提示本体（文案键 + 读屏播报）落在共用的 `notice.jsx`：快捷方式与素材卡槽行共用同一条。
+    const notice = await readFile(NOTICE_PATH, 'utf8')
+    assert.match(notice, /quickShortcuts\.notice\.writeFailed/, '轻提示必须消费这条文案')
+    assert.match(notice, /role="status"/, '提示必须可被读屏播报')
 
     const locales = await readFile(LOCALES_PATH, 'utf8')
     assert.match(locales, /'quickShortcuts\.notice\.writeFailed': '输入框未就绪，请重试'/, '中文文案缺失')
     assert.match(locales, /'quickShortcuts\.notice\.writeFailed': 'Input not ready, please retry'/, '英文文案缺失')
+  })
+
+  it('素材卡槽行插不进胶囊时复用同一条轻提示，绝不静默', async () => {
+    const tray = await readFile(TRAY_PATH, 'utf8')
+    assert.match(tray, /if \(!insertQuickLinkChip\(/, '必须读插入通道的回执，不能丢弃')
+    assert.match(tray, /notifyWriteFailed\(\)/, '插不进去必须给轻提示')
+    assert.match(tray, /<QuickWriteNotice/, '渲染的必须是同一条轻提示')
   })
 })

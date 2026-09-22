@@ -9,24 +9,26 @@
  * **令牌判据与界面语言解耦**：令牌文本是跟随语言的显示名（`[视频]` / `[Video]`），
  * 但判据一律走「链接种类（kind）」这个稳定标识——本模块把全部支持语言的显示名
  * 收成一张登记表，任何语言的令牌都能反查回同一个 kind。否则用户切换界面语言后，
- * 输入框里那条旧语言的令牌既判不出「已填」，也剥不掉，卡槽会重新变可点并插进
- * 第二种语言的重复令牌。
+ * 输入框里那条旧语言的令牌判不出「已填」，卡槽会重新变可点并插进第二种语言的重复令牌。
  *
  * **链接已改成真正的胶囊节点**（`linkChip.js` 定义形态、`dom.js` 负责插入与读取），
  * 因此「已填」的主判据从「草稿文本里有令牌」换成「输入框里有该种类的胶囊节点」：
- * 胶囊不进草稿文本，槽位投影看不见它，卡槽两态只能靠节点种类判。文本令牌判据保留
- * 下来兼容用户手打的 `[视频]`（提示词槽位高亮仍认它），两条输入合成同一份判据。
+ * 胶囊不进草稿文本，槽位投影看不见它，卡槽两态只能靠节点种类判。文本判据保留下来
+ * 兼容**用户手打**的令牌：`[视频]` 这种裸令牌照旧算「已填」；商品那一路还认它自己的
+ * 提交形态 `[商品: <值>]`（与 `attachments/promptSlotDetector.ts` 的「名称: 值」解析同口径），
+ * 否则草稿里已经躺着一条商品槽位、卡槽却仍判未填，再点就插出第二枚商品胶囊。
  */
 
-import { QUICK_LINK_KINDS, quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
+import { QUICK_LINK_KINDS, quickLinkLabelKey } from './catalog.js'
+import { quickLinkChipSpec } from './linkChip.js'
 import { en, zh } from '../locales.js'
 
 /**
  * 链接卡槽的**令牌文本**（`[视频]` / `[商品]`）。
  *
- * 链接本身早已由胶囊节点承载（`dom.js`），令牌此刻只剩两个用途：喂给
- * `PromptSlotChips` 的 `raw` 契约字段，以及兼容用户手打的同名令牌
- * （提示词槽位高亮仍按它解析，卡槽据此判「已填」）。
+ * 链接本身由胶囊节点承载（`dom.js`），令牌只剩一个用途：喂给
+ * `PromptSlotChips` 的 `raw` 契约字段，以及兼容**用户手打**的同名令牌
+ * （提示词槽位高亮仍按它解析，卡槽据此判「已填」）。本通道自己不往草稿写令牌。
  * @param {string} label 跟随语言的卡槽显示名（视频 / 商品）
  * @returns {string}
  */
@@ -65,6 +67,35 @@ function buildTokenIndex() {
 
 const LINK_LABELS_BY_KIND = buildLabelRegistry()
 const KIND_BY_TOKEN = buildTokenIndex()
+
+/** 正则元字符转义（显示名目前都是纯文本，转义只为不依赖这个前提）。 */
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * 各种类的**槽位形态**匹配式：`[<名称>: <值>]`。
+ *
+ * 只给提交形态是 `markdown-slot` 的种类建式（现在是商品）：视频的提交形态是
+ * `[视频](url)`，而 `[视频: xxx]` 在 `promptSlotDetector` 口径里落的是文件槽位，
+ * 不该被算成「视频链接已填」。名称取登记表里全部支持语言的显示名，
+ * 因此 `[商品: url]` 与 `[Product: url]` 都认。
+ */
+function buildSlotFormIndex() {
+  const index = new Map()
+  for (const kind of QUICK_LINK_KINDS) {
+    const spec = quickLinkChipSpec(kind)
+    if (!spec || spec.markdown !== 'markdown-slot') continue
+    const forms = []
+    for (const label of LINK_LABELS_BY_KIND.get(kind) || []) {
+      if (label) forms.push(new RegExp(`\\[\\s*${escapeRegExp(label)}\\s*:\\s*[^\\]\\n]+\\]`))
+    }
+    index.set(kind, Object.freeze(forms))
+  }
+  return index
+}
+
+const SLOT_FORMS_BY_KIND = buildSlotFormIndex()
 
 /**
  * 某个链接种类在全部支持语言下的令牌（`[视频]` / `[Video]`）。
@@ -140,7 +171,11 @@ function resolveSlotKind(slot) {
 /**
  * 草稿文本里出现的链接种类（跨语言反查令牌，`[视频]` 与 `[Video]` 都认）。
  *
- * 胶囊节点的种类读口在 `dom.js` 的 `readQuickLinkChipKinds`；这里只负责文本令牌，
+ * 两条文本判据：裸令牌（用户手打），以及该种类自己的**提交形态槽位**
+ * `[商品: <值>]`（本通道提交时写进草稿的就是它，`promptSlotDetector` 同口径解析）。
+ * 缺了后者，草稿里已有商品槽位时卡槽仍判未填，再点会插出第二枚商品胶囊。
+ *
+ * 胶囊节点的种类读口在 `dom.js` 的 `readQuickLinkChipKinds`；这里只负责文本，
  * 两条输入由 `mergeQuickLinkKinds` 合成同一份「已填」判据。
  * @param {string | null | undefined} draft
  * @returns {readonly string[]}
@@ -150,7 +185,9 @@ export function quickLinkKindsInDraft(draft) {
   if (!text) return []
   const kinds = []
   for (const kind of QUICK_LINK_KINDS) {
-    if (quickLinkTokensForKind(kind).some((token) => text.includes(token))) kinds.push(kind)
+    const bare = quickLinkTokensForKind(kind).some((token) => text.includes(token))
+    const slotForm = (SLOT_FORMS_BY_KIND.get(kind) || []).some((pattern) => pattern.test(text))
+    if (bare || slotForm) kinds.push(kind)
   }
   return kinds
 }
@@ -223,110 +260,30 @@ export function detectedSlotsDraftText(detectedSlots) {
     .join(' ')
 }
 
-/** 正则元字符转义（显示名目前都是纯文本，转义只为不依赖这个前提）。 */
-function escapeRegExp(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 /**
- * 本快捷方式写过的令牌匹配式：跨语言（`[视频]` 或 `[Video]`），
- * 且**整体**吃掉 markdown 形态 `[视频](url)`——只删方括号会留下 `(url)` 残骸，
- * 而 `isQuickLinkSlotFilled` 又把该形态判为「已填」，两者必须对称。
- * @param {readonly string[]} kinds
- * @returns {RegExp | null}
- */
-function shortcutTokenPattern(kinds) {
-  const alternatives = []
-  for (const kind of kinds) {
-    for (const token of quickLinkTokensForKind(kind)) {
-      const label = token.slice(1, -1)
-      if (label) alternatives.push(escapeRegExp(label))
-    }
-  }
-  if (alternatives.length === 0) return null
-  return new RegExp(`\\[(?:${alternatives.join('|')})\\](?:\\([^)\\s]*\\))?`, 'g')
-}
-
-/** 一次扫出全部令牌命中，取首个与末个（首末各用于一个方向的定点剥离）。 */
-function tokenSpans(text, pattern) {
-  let first = null
-  let last = null
-  for (const match of text.matchAll(pattern)) {
-    if (!first) first = match
-    last = match
-  }
-  return { first, last }
-}
-
-/**
- * 从头吃掉「空白 + 本快捷方式的令牌」这一串，最多吃 budget 个。
- * @returns {{ rest: string, used: number }}
- */
-function consumeLeadingTokens(text, pattern, budget) {
-  let rest = text
-  let used = 0
-  while (used < budget) {
-    const trimmed = rest.replace(/^\s+/, '')
-    const { first } = tokenSpans(trimmed, pattern)
-    if (!first || first.index !== 0) break
-    rest = trimmed.slice(first[0].length)
-    used += 1
-  }
-  return { rest: used > 0 ? rest : text, used }
-}
-
-/**
- * 从尾吃掉「本快捷方式的令牌 + 空白」这一串，最多吃 budget 个。
- * @returns {{ rest: string, used: number }}
- */
-function consumeTrailingTokens(text, pattern, budget) {
-  let rest = text
-  let used = 0
-  while (used < budget) {
-    const trimmed = rest.replace(/\s+$/, '')
-    const { last } = tokenSpans(trimmed, pattern)
-    if (!last || last.index + last[0].length !== trimmed.length) break
-    rest = trimmed.slice(0, last.index)
-    used += 1
-  }
-  return { rest: used > 0 ? rest : text, used }
-}
-
-/**
- * 撤回时只剥掉**本快捷方式写入**的那部分草稿：预填提示语与它带来的链接令牌。
- * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空；用户自己独立输入的
- * 同名令牌也不动——剥离按「本快捷方式写入的尾块」定点进行，且以本条目写过的
- * 链接种类数为出现次数上限（每种链接本条目只写一个令牌，故与写入的令牌数相等）。
+ * 撤回时只剥掉**本快捷方式写入**的那部分草稿。
  *
- * 提示语只在仍是草稿开头时才剥（用户改过提示语就整段保留）；用户改过提示语时，
- * 令牌会落在草稿末尾，因此尾块再收一次，两次合计仍不超过种类数上限。
+ * 本通道写草稿只写一样东西——条目自带的预填提示语（`entry.prompt`）；链接由胶囊节点
+ * 承载，**不写任何文本令牌**。因此这里只做一件事：提示语仍在草稿开头时把它剥掉，
+ * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空。
+ *
+ * 曾经的「按卡槽集数量为上限剥离令牌」已删除（Issue #2579 审查 中-7）：那时点快捷方式
+ * 会往草稿写 `[视频]` 文本令牌，剥离上限按卡槽集算还说得过去；现在写入的令牌数为 0，
+ * 同一条上限就会反过来吃掉**用户手打**的 `[视频]` / `[视频](url)` 令牌——违反
+ * 「绝不动用户手打的同名令牌」这条承诺。胶囊的清理交给胶囊删除通道
+ * （`dom.js` 的 `removeQuickLinkChips`，按当前会话的输入框卡片收敛）。
+ *
+ * 代价：用户改过提示语时（提示语不再是草稿开头）整条保留，不再顺手清掉末尾令牌；
+ * 宁可留下一行可见的文字，也不静默删掉用户可能不是在替我们写的内容。
  *
  * @param {{ prompt?: string } | null | undefined} entry 快捷方式条目
  * @param {string | null | undefined} draft 当前草稿
- * @returns {string} 剥掉本快捷方式内容后的草稿
+ * @returns {string} 剥掉本快捷方式提示语后的草稿
  */
 export function stripQuickShortcutText(entry, draft) {
   const text = typeof draft === 'string' ? draft : ''
   if (!text) return ''
-  const kinds = quickShortcutLinks(entry)
-  if (kinds.length === 0) return text.trim()
-
-  const pattern = shortcutTokenPattern(kinds)
-  if (!pattern) return text.trim()
-
   const prompt = entry && typeof entry.prompt === 'string' ? entry.prompt : ''
-  let rest = text
-  if (prompt && rest.startsWith(prompt)) rest = rest.slice(prompt.length)
-
-  // 上限 = 本条目的卡槽集会写入的链接种类数（默认链接 + 上方可点的可追加链接）：
-  // 点快捷方式只写默认链接，可追加链接要用户点上方卡槽才写，故两者都算本条目名下。
-  // 用户后来自己敲的同名令牌不在上限内，绝不动。
-  let budget = kinds.length
-  const leading = consumeLeadingTokens(rest, pattern, budget)
-  rest = leading.rest
-  budget -= leading.used
-
-  if (budget > 0) rest = consumeTrailingTokens(rest, pattern, budget).rest
-
-  return rest.trim()
+  if (!prompt || !text.startsWith(prompt)) return text.trim()
+  return text.slice(prompt.length).trim()
 }

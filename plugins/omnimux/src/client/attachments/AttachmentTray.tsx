@@ -28,6 +28,7 @@ import {
   readQuickLinkChipKinds,
   subscribeQuickLinkChipChange,
 } from '../composer-quick-shortcuts/dom.js';
+import { QuickWriteNotice, useQuickWriteNotice } from '../composer-quick-shortcuts/notice.jsx';
 import { resolveComposerSessionId } from '../composer-quick-shortcuts/session.js';
 import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewModal.tsx';
 import {
@@ -242,12 +243,17 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   // 两态判据 = 输入框里的胶囊种类 + 草稿里手打的令牌种类。链接已经是胶囊节点、
   // 不再进草稿文本，槽位投影看不见它，因此胶囊种类由增删事件驱动读一次节点
   // （渲染期仍然不读 DOM），与草稿令牌在同一个 `mergeQuickLinkKinds` 里合成。
+  //
+  // `composerAnchorRef` 是本组件在宿主输入框卡片里的落点：读胶囊 / 插胶囊都以它为锚点
+  // 收敛到**本会话**的卡片（宿主可以同时挂载多张卡：分屏、多标签保活），不按整文档读写。
+  const composerAnchorRef = useRef<HTMLSpanElement | null>(null);
   const [chipKinds, setChipKinds] = useState<readonly string[]>([]);
   useEffect(() => {
-    const sync = () => setChipKinds(readQuickLinkChipKinds());
+    const sync = () => setChipKinds(readQuickLinkChipKinds(composerAnchorRef.current));
     sync();
     return subscribeQuickLinkChipChange(sync);
   }, [currentSessionId]);
+  const { visible: noticeVisible, notify: notifyWriteFailed } = useQuickWriteNotice();
   const presentKinds = useMemo(
     () => mergeQuickLinkKinds(chipKinds, detectedSlotsDraftText(slots)),
     [chipKinds, slots],
@@ -456,6 +462,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   return (
     <>
+      {/* 本组件在输入框卡片里的落点：胶囊的读 / 插 / 删都以它为锚点收敛到本会话（见上方注释）。 */}
+      <span ref={composerAnchorRef} hidden aria-hidden="true" data-omx-composer-anchor="true" />
       <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} disabled={!canAcceptDrop} />
       {commentError && <div role="alert">{commentError}<Button onClick={retryComments}>重试评论附件</Button></div>}
       {SHOW_MANUAL_LINK_BUTTON && (
@@ -470,13 +478,18 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         activeSlotIndex={resolvedActiveSlotIndex}
         onSelectSlot={(slot) => {
           // 快捷链接卡槽：胶囊已被删掉才会走到这里（存在时卡槽不可点），
-          // 点击即把对应胶囊插回输入框卡片里的胶囊行，不再打开任何选择器。
+          // 点击即把对应胶囊插回本会话输入框卡片里的胶囊行，不再打开任何选择器。
           const quickKind = slot && (slot as { quickLinkKind?: string }).quickLinkKind;
           if (quickKind) {
+            const anchor = composerAnchorRef.current;
             // 入口再判一次：禁用态滞后一拍时不重复插入同种胶囊。
-            const fresh = mergeQuickLinkKinds(readQuickLinkChipKinds(), detectedSlotsDraftText(slots));
+            const fresh = mergeQuickLinkKinds(readQuickLinkChipKinds(anchor), detectedSlotsDraftText(slots));
             if (isQuickLinkSlotFilled(fresh, slot)) return;
-            insertQuickLinkChip(quickKind, { label: quickLabels[quickKind], t: props.t });
+            // 插不进去（拿不到本会话输入框卡片等）就给与快捷方式同一条轻提示，绝不静默：
+            // 否则用户看到的是「点了没反应」。
+            if (!insertQuickLinkChip(quickKind, { label: quickLabels[quickKind], t: props.t, anchor })) {
+              notifyWriteFailed();
+            }
             return;
           }
           const index = Array.isArray(slots) ? slots.findIndex((item) => item.id === slot.id) : -1;
@@ -488,6 +501,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         disabledSlotIds={quickFilledIds}
         t={props.t}
       />
+      <QuickWriteNotice visible={noticeVisible} t={props.t} />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
           {SHOW_MANUAL_LINK_BUTTON && (
