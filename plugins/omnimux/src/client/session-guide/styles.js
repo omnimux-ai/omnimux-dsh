@@ -52,6 +52,14 @@ body[data-ds-dark-theme] {
   max-width:var(--dsh-composer-card-max-width, 952px)!important;
   margin-inline:auto!important;
 }
+/* 素材条挂在比输入框更宽的内容层。未吸底时也要收成输入框同宽并居中，
+   否则缩略图会贴在整栏最左边，输入框却在中间。 */
+[data-omnimux-starter-host] .omx-attachment-dock {
+  width:100%!important;
+  max-width:var(--dsh-composer-card-max-width, 952px)!important;
+  margin-inline:auto!important;
+  box-sizing:border-box!important;
+}
 [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
   max-width:var(--dsh-chat-content-width, 920px)!important;

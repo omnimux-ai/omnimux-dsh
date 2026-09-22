@@ -52,6 +52,10 @@ describe('composer inner attachment slot', () => {
       guideStyles,
       /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \.omx-attachment-dock/,
     )
+    assert.match(
+      guideStyles,
+      /\[data-omnimux-starter-host\] \.omx-attachment-dock \{[^}]*max-width:var\(--dsh-composer-card-max-width, 952px\)!important;[^}]*margin-inline:auto!important/,
+    )
   })
 
   it('compacts the inner rail to the 44×44 / 40px spec', () => {
