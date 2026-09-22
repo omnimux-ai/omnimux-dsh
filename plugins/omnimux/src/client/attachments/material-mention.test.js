@@ -56,12 +56,23 @@ describe('material @ mention', () => {
       assert.equal(picked.insert.label, '海浪封面')
 
       const text = serializeMaterialMention('s1', picked.insert.ref)
-      assert.match(text, /海浪封面/)
-      assert.match(text, /assets\/wave\.png/)
-      assert.equal(source.codec.clipboardText(picked.insert.ref), '@海浪封面')
-      assert.equal(picked.insert.clipboardText, '@海浪封面')
+      assert.equal(text, '@海浪封面')
+      assert.equal(source.codec.clipboardText(picked.insert.ref), '海浪封面')
+      assert.equal(picked.insert.clipboardText, '海浪封面')
+
+      // 测试带空格的素材标题用 @"名称" 转义包裹
+      const res2 = store.addAttachment('s1', {
+        sourcePlugin: 'omnimux-assets',
+        kind: 'video',
+        entityId: 'a2',
+        title: 'US beauty hook 01',
+        relativePath: 'assets/us-beauty.mp4',
+      })
+      const textWithSpaces = serializeMaterialMention('s1', `material:${res2.attachment.id}`)
+      assert.equal(textWithSpaces, '@"US beauty hook 01"')
 
       store.removeAttachment('s1', store.getSnapshot('s1')[0].id)
+      store.removeAttachment('s1', res2.attachment.id)
       assert.equal(materialCandidates('s1', '').length, 0)
     })
   })
@@ -104,5 +115,29 @@ describe('material @ mention', () => {
     })
     assert.deepEqual(calls, ['material'])
     assert.equal(effects.length, 1)
+  })
+
+  it('strips double quotes and newlines from material title to prevent token corruption', () => {
+    withStore((store) => {
+      const res1 = store.addAttachment('s1', {
+        sourcePlugin: 'omnimux-assets',
+        kind: 'video',
+        entityId: 'a3',
+        title: 'demo "final"\r\n edit',
+        relativePath: 'assets/demo.mp4',
+      })
+      const text1 = serializeMaterialMention('s1', `material:${res1.attachment.id}`)
+      assert.equal(text1, '@"demo final edit"')
+
+      const res2 = store.addAttachment('s1', {
+        sourcePlugin: 'omnimux-assets',
+        kind: 'image',
+        entityId: 'a4',
+        title: '"clean"',
+        relativePath: 'assets/clean.png',
+      })
+      const text2 = serializeMaterialMention('s1', `material:${res2.attachment.id}`)
+      assert.equal(text2, '@clean')
+    })
   })
 })

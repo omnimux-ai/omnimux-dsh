@@ -121,3 +121,68 @@ test('formatAttachmentLine: 支持场景上下文注入', () => {
   assert.match(line, /\* 场景: ecommerce_marketing/);
   assert.match(line, /\* 简述: 45dB深度降噪/);
 });
+
+test('formatAttachmentLine: 无实体路径时使用 previewUrl 作为 fallbackRef', () => {
+  const attWithPreview: ConversationAttachment = {
+    id: 'att-preview-fallback',
+    fingerprint: 'fp-preview',
+    sessionId: 'sess-preview',
+    sourcePlugin: 'omnimux',
+    kind: 'image',
+    entityId: 'img-preview-1',
+    title: '未落地草图.png',
+    extension: 'PNG',
+    relativePath: '',
+    previewUrl: 'https://cdn.example.com/attachments/preview-thumb.png',
+    status: 'ready',
+    createdAt: 200,
+  };
+  const line = formatAttachmentLine(attWithPreview);
+  assert.equal(
+    line,
+    '- [图像] 未落地草图.png (`PNG`): https://cdn.example.com/attachments/preview-thumb.png',
+    '无本地相对路径时，应正确降级为 previewUrl'
+  );
+
+  const attWithBlob: ConversationAttachment = {
+    id: 'att-blob-fallback',
+    fingerprint: 'fp-blob',
+    sessionId: 'sess-blob',
+    sourcePlugin: 'omnimux',
+    kind: 'video',
+    entityId: 'vid-blob-1',
+    title: '临时录制片段.mp4',
+    extension: 'MP4',
+    relativePath: '',
+    previewUrl: 'blob:http://localhost:43120/abc-123',
+    status: 'ready',
+    createdAt: 201,
+  };
+  const blobLine = formatAttachmentLine(attWithBlob);
+  assert.equal(
+    blobLine,
+    '- [视频] 临时录制片段.mp4 (`MP4`): blob:http://localhost:43120/abc-123'
+  );
+
+  // 测试路径存在但清洗格式化后为空串时，能正确回退到 previewUrl（修复短路缺陷）
+  const attWithDirtyPath: ConversationAttachment = {
+    id: 'att-dirty-path-fallback',
+    fingerprint: 'fp-dirty',
+    sessionId: 'sess-dirty',
+    sourcePlugin: 'omnimux',
+    kind: 'image',
+    entityId: 'img-dirty-1',
+    title: '清洗空路径.png',
+    extension: 'PNG',
+    relativePath: '///',
+    previewUrl: 'https://cdn.example.com/attachments/dirty-path-fallback.png',
+    status: 'ready',
+    createdAt: 202,
+  };
+  const dirtyLine = formatAttachmentLine(attWithDirtyPath);
+  assert.equal(
+    dirtyLine,
+    '- [图像] 清洗空路径.png (`PNG`): https://cdn.example.com/attachments/dirty-path-fallback.png',
+    '路径清洗为空串时，应正确降级为 previewUrl'
+  );
+});

@@ -20,6 +20,7 @@ export function formatPathReference(relativePath: string): string {
   if (!relativePath) return '';
   // 规范化 POSIX 分隔符并去除前导斜杠
   const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalized) return '';
   // 如果路径包含空格，用引号包裹 @"path with spaces"
   if (/\s/.test(normalized)) {
     return `@"${normalized}"`;
@@ -49,11 +50,19 @@ export function formatAttachmentLine(
 
   let header = '';
   if (paths.length <= 1) {
-    const pathRef = formatPathReference(paths[0] || att.relativePath);
+    const formattedRef = formatPathReference(paths[0]) || formatPathReference(att.relativePath);
+    const pathRef = formattedRef || (att.previewUrl ? att.previewUrl : '');
     header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}): ${pathRef}`;
   } else {
-    const lines = paths.map((rel) => `  - ${formatPathReference(rel)}`);
-    header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}):\n${lines.join('\n')}`;
+    const validLines = paths
+      .map((rel) => formatPathReference(rel))
+      .filter(Boolean)
+      .map((ref) => `  - ${ref}`);
+    if (validLines.length === 0 && att.previewUrl) {
+      header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}): ${att.previewUrl}`;
+    } else {
+      header = `- [${kindLabel}] ${att.title} (\`${ext}\`${durationPart}):\n${validLines.join('\n')}`;
+    }
   }
 
   // 场景上下文注入 (若有)：仅供 Agent 模型感知，在前端气泡中被整体剥离隐藏

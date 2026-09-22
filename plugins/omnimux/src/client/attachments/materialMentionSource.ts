@@ -6,7 +6,6 @@
  * 发送时展开成模型能读到的素材说明。不替换官方的 reference 源。
  */
 
-import { formatAttachmentLine } from './prompt-assembly.ts';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
 
@@ -77,7 +76,14 @@ export function serializeMaterialMention(sessionId: string, ref: string): string
   if (!parsed) return ref;
   const attachment = findSessionMaterial(sessionId, parsed.id);
   if (!attachment) return ref;
-  return formatAttachmentLine(attachment);
+  const rawTitle = attachment.title || '素材';
+  // 剥离英文双引号和换行符，避免引用 Token 闭合错位与断裂
+  const safeTitle = rawTitle.replace(/["\r\n]/g, '').trim() || '素材';
+  // 若素材名称含空格，按 DSH 语法使用 @"名称"（无空格使用 @名称）
+  if (/\s/.test(safeTitle)) {
+    return `@"${safeTitle}"`;
+  }
+  return `@${safeTitle}`;
 }
 
 export function createMaterialMentionSource() {
@@ -108,7 +114,8 @@ export function createMaterialMentionSource() {
           ref,
           label,
           appearance: 'file' as const,
-          clipboardText: `@${label}`,
+          // 写进用户消息的只留名称。文件说明走不显示的通道。
+          clipboardText: label,
         },
       };
     },
@@ -117,7 +124,7 @@ export function createMaterialMentionSource() {
         const parsed = parseMaterialMention(ref);
         if (!parsed) return ref;
         const attachment = findSessionMaterial(getGlobalAttachmentStore().getActiveSessionId(), parsed.id);
-        return `@${attachment?.title || '素材'}`;
+        return attachment?.title || '素材';
       },
       serialize(ref: string, _signal?: AbortSignal, sessionId?: string) {
         const target = sessionId || getGlobalAttachmentStore().getActiveSessionId();

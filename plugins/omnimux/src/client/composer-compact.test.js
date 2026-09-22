@@ -7,6 +7,8 @@ import {
   COMPOSER_COMPACT_STYLE_ID,
   COMPOSER_WORKSPACE_MAX_WIDTH_PX,
   applyComposerDensity,
+  placeMentionMenu,
+  sanitizeThumbnailUrl,
   composerDensityForWidth,
   ensureComposerCompactChrome,
   installComposerCompactObserver,
@@ -452,4 +454,169 @@ test('installComposerCompactObserver re-binds when card DOM node is replaced by 
   )
 
   dispose()
+})
+
+test('placeMentionMenu opens downward near the top and upward near the bottom', () => {
+  const row = {
+    id: 'dsh-slash-option-material-0',
+    attrs: { 'data-source': 'material' },
+    style: { props: {}, setProperty(k, v) { this.props[k] = v }, removeProperty(k) { delete this.props[k] } },
+    querySelector(sel) { return sel.includes('itemName') ? { textContent: '海浪封面' } : null },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+  const card = {
+    top: 40,
+    attrs: {},
+    getBoundingClientRect() { return { top: this.top } },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+  const menu = { closest() { return card }, querySelectorAll() { return [row] } }
+  const doc = { querySelectorAll(sel) { return sel === '[data-trigger-menu]' ? [menu] : [] } }
+  globalThis.window = {
+    __omnimuxAttachments: {
+      getActiveSessionId() { return 's1' },
+      getSnapshot() { return [{ title: '海浪封面', previewUrl: 'https://img/a.png' }] },
+      subscribeRoster() { return () => {} },
+    },
+  }
+  placeMentionMenu(doc)
+  assert.equal(card.getAttribute('data-omnimux-mention-up'), undefined)
+  card.top = 500
+  placeMentionMenu(doc)
+  assert.equal(card.getAttribute('data-omnimux-mention-up'), 'true')
+  assert.equal(row.getAttribute('data-omnimux-thumb'), 'true')
+})
+
+test('sanitizeThumbnailUrl: 严格白名单校验与防 CSS 注入', () => {
+  // 合法协议与路径
+  assert.equal(sanitizeThumbnailUrl('https://example.com/cover.png'), 'https://example.com/cover.png')
+  assert.equal(sanitizeThumbnailUrl('http://example.com/pic.jpg'), 'http://example.com/pic.jpg')
+  assert.equal(sanitizeThumbnailUrl('blob:http://localhost:43120/uuid-1234'), 'blob:http://localhost:43120/uuid-1234')
+  assert.equal(sanitizeThumbnailUrl('/covers/sample.webp'), '/covers/sample.webp')
+  assert.equal(sanitizeThumbnailUrl('./relative/path.png'), './relative/path.png')
+
+  // 非法协议拦截
+  assert.equal(sanitizeThumbnailUrl('javascript:alert(1)'), '')
+  assert.equal(sanitizeThumbnailUrl('data:text/html;base64,PHNjcmlwdD4='), '')
+  assert.equal(sanitizeThumbnailUrl('file:///etc/passwd'), '')
+
+  // 尝试跳出 url("...") 的特殊注入字符拦截
+  assert.equal(sanitizeThumbnailUrl('https://example.com/a.png"); background: red; --x: "'), '')
+  assert.equal(sanitizeThumbnailUrl('https://example.com/a.png); color: red;'), '')
+  assert.equal(sanitizeThumbnailUrl('https://example.com/a.png\\'), '')
+  assert.equal(sanitizeThumbnailUrl('https://example.com/a.png\nbackground: red'), '')
+  assert.equal(sanitizeThumbnailUrl('//evil.com/x.png'), '')
+
+  // 边界值
+  assert.equal(sanitizeThumbnailUrl(''), '')
+  assert.equal(sanitizeThumbnailUrl(null), '')
+  assert.equal(sanitizeThumbnailUrl(undefined), '')
+})
+
+test('placeMentionMenu: 非素材菜单（如斜杠菜单/模型菜单）严禁添加专有标记，保持原生展开', () => {
+  const normalRow = {
+    id: 'dsh-slash-command-0',
+    attrs: {},
+    style: { props: {}, setProperty(k, v) { this.props[k] = v }, removeProperty(k) { delete this.props[k] } },
+    querySelector() { return { textContent: '/clear 清空会话' } },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+  const normalMenu = {
+    attrs: {},
+    closest() { return { top: 100, setAttribute() {}, removeAttribute() {}, getAttribute() {} } },
+    querySelectorAll() { return [normalRow] },
+    hasAttribute(k) { return Boolean(this.attrs[k]) },
+    setAttribute(k, v) { this.attrs[k] = v },
+    removeAttribute(k) { delete this.attrs[k] },
+    querySelector() { return null },
+  }
+  const doc = { querySelectorAll(sel) { return sel === '[data-trigger-menu]' ? [normalMenu] : [] } }
+
+  placeMentionMenu(doc)
+
+  assert.equal(normalMenu.hasAttribute('data-omnimux-mention-menu'), false, '非素材引用菜单不得被标记为 mention 专有菜单')
+  assert.equal(normalRow.getAttribute('data-omnimux-thumb'), undefined, '非素材项不得被注入缩略图属性')
+})
+
+test('placeMentionMenu: 搜索过滤时候选索引与全量列表错位修复，稳定映射永不错配', () => {
+  // 全量素材列表：0 号是「海浪封面.png」，1 号是「夜景视频.mp4」
+  const materials = [
+    { id: 'm-wave', title: '海浪封面', kind: 'image', previewUrl: 'https://img/wave.png' },
+    { id: 'm-night', title: '夜景视频', kind: 'video', previewUrl: 'https://img/night.mp4' },
+  ]
+
+  // 用户在输入框中输入 "@夜景" 过滤后，DOM 中只显示过滤后的第一项（夜景视频），但行 id 依然是宿主分配的 0 号：dsh-slash-option-material-0
+  const filteredRow = {
+    id: 'dsh-slash-option-material-0',
+    attrs: { 'data-material-id': 'm-night' },
+    style: { props: {}, setProperty(k, v) { this.props[k] = v }, removeProperty(k) { delete this.props[k] } },
+    querySelector(sel) { return sel.includes('itemName') ? { textContent: '夜景视频' } : null },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+  }
+
+  const card = {
+    top: 500,
+    attrs: {},
+    getBoundingClientRect() { return { top: this.top } },
+    setAttribute(key, value) { this.attrs[key] = value },
+    removeAttribute(key) { delete this.attrs[key] },
+    getAttribute(key) { return this.attrs[key] },
+    querySelector(sel) {
+      if (sel.includes('textarea')) return { value: '@夜景' }
+      return null
+    },
+  }
+
+  const menu = {
+    attrs: {},
+    closest() { return card },
+    querySelectorAll() { return [filteredRow] },
+    hasAttribute(k) { return Boolean(this.attrs[k]) },
+    setAttribute(k, v) { this.attrs[k] = v },
+    removeAttribute(k) { delete this.attrs[k] },
+    querySelector() { return null },
+  }
+
+  const doc = { querySelectorAll(sel) { return sel === '[data-trigger-menu]' ? [menu] : [] } }
+
+  globalThis.window = {
+    __omnimuxAttachments: {
+      getActiveSessionId() { return 's1' },
+      getSnapshot() { return materials },
+      subscribeRoster() { return () => {} },
+    },
+  }
+
+  placeMentionMenu(doc)
+
+  // 必须精确匹配到「夜景视频」的缩略图 (night.mp4)，严禁错配为全量 0 号的 wave.png
+  assert.equal(filteredRow.getAttribute('data-omnimux-thumb'), 'true')
+  assert.equal(filteredRow.style.props['--omnimux-thumb'], 'url("https://img/night.mp4")')
+})
+
+test('installComposerCompactObserver: 统一改用 schedulePlaceMentionMenu 异步调度，避免同步重排', () => {
+  const { doc } = setupDoc()
+  let scheduled = false
+  const origRaf = globalThis.requestAnimationFrame
+  globalThis.requestAnimationFrame = (cb) => {
+    scheduled = true
+    return setTimeout(cb, 10)
+  }
+  try {
+    const uninstall = installComposerCompactObserver(doc)
+    assert.equal(scheduled, true, '挂载时必须走 schedulePlaceMentionMenu 异步调度，严禁直接同步测量')
+    assert.equal(typeof uninstall, 'function')
+    uninstall()
+  } finally {
+    if (origRaf) globalThis.requestAnimationFrame = origRaf
+    else delete globalThis.requestAnimationFrame
+  }
 })
