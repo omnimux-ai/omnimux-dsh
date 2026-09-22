@@ -12,7 +12,7 @@ const cardSource = readFileSync(join(here, 'InspirationCoverCard.jsx'), 'utf8')
 const LABEL = '.omnimux-inspiration-overlay-cta-label'
 const BTN = '.omnimux-inspiration-overlay-cta-btn'
 
-const BASE_CSS = `.dshUk-Button-label { min-width: 0; } .probe-cover { position: relative; width: 100%; overflow: hidden; }`
+const BASE_CSS = `.probe-cover { position: relative; width: 100%; overflow: hidden; }`
 
 const html = (detail, tryLabel) => `
 <div style="width:1600px;padding:20px">
@@ -116,7 +116,17 @@ test('灵感库卡片：容器查询按卡片宽度判定，且字号契约不�
     /@container inspiration-card \(max-width:\s*200px\)/,
     '退化规则必须由具名容器查询判定',
   )
+  assert.match(
+    INSPIRATION_CSS,
+    /\.omnimux-inspiration-overlay-cta-btn\s*>\s*\.dshUk-Button-label\s*\{[^}]*min-width:\s*0/,
+    '生产样式必须钉住 Button 文字槽可收缩，不能只靠测试伪装',
+  )
   assert.doesNotMatch(INSPIRATION_CSS, /font:\s*550 12px\/16px inherit/, 'font 简写里的 inherit 非法，整条声明会被丢弃')
+  assert.doesNotMatch(
+    BASE_CSS,
+    /dshUk-Button-label/,
+    '测试 BASE_CSS 不得再伪装 Button 文字槽收缩',
+  )
 })
 
 test('灵感库卡片：文字标签由源码渲染，无障碍名称与交互保持原样', () => {
