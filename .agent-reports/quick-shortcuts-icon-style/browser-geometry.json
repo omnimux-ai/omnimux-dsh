@@ -1,0 +1,1773 @@
+{
+  "origin": "http://127.0.0.1:54195",
+  "clientBundleBytes": 3188392,
+  "reviewedFixRevision": "review-response",
+  "base": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 623,
+      "y": 334,
+      "w": 952,
+      "h": 30,
+      "right": 1575,
+      "bottom": 364,
+      "center": 1099,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 623,
+      "y": 202,
+      "w": 952,
+      "h": 114,
+      "right": 1575,
+      "bottom": 316,
+      "center": 1099
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 811.5,
+      "right": 1386.5,
+      "center": 1099,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 811.5,
+          "y": 334,
+          "w": 116,
+          "h": 30,
+          "right": 927.5,
+          "bottom": 364,
+          "center": 869.5
+        },
+        "iconBox": {
+          "x": 811.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 825.5,
+          "bottom": 356,
+          "center": 818.5
+        },
+        "arrowBox": {
+          "x": 915.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 927.5,
+          "bottom": 355,
+          "center": 921.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 951.5,
+          "y": 334,
+          "w": 116,
+          "h": 30,
+          "right": 1067.5,
+          "bottom": 364,
+          "center": 1009.5
+        },
+        "iconBox": {
+          "x": 951.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 965.5,
+          "bottom": 356,
+          "center": 958.5
+        },
+        "arrowBox": {
+          "x": 1055.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1067.5,
+          "bottom": 355,
+          "center": 1061.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 1091.5,
+          "y": 334,
+          "w": 142,
+          "h": 30,
+          "right": 1233.5,
+          "bottom": 364,
+          "center": 1162.5
+        },
+        "iconBox": {
+          "x": 1091.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 1105.5,
+          "bottom": 356,
+          "center": 1098.5
+        },
+        "arrowBox": {
+          "x": 1221.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1233.5,
+          "bottom": 355,
+          "center": 1227.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1257.5,
+          "y": 334,
+          "w": 129,
+          "h": 30,
+          "right": 1386.5,
+          "bottom": 364,
+          "center": 1322
+        },
+        "iconBox": {
+          "x": 1257.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 1271.5,
+          "bottom": 356,
+          "center": 1264.5
+        },
+        "arrowBox": {
+          "x": 1374.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1386.5,
+          "bottom": 355,
+          "center": 1380.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": null,
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": ""
+  },
+  "hover": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 623,
+      "y": 334,
+      "w": 952,
+      "h": 30,
+      "right": 1575,
+      "bottom": 364,
+      "center": 1099,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 623,
+      "y": 202,
+      "w": 952,
+      "h": 114,
+      "right": 1575,
+      "bottom": 316,
+      "center": 1099
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 811.5,
+      "right": 1386.5,
+      "center": 1099,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 811.5,
+          "y": 334,
+          "w": 116,
+          "h": 30,
+          "right": 927.5,
+          "bottom": 364,
+          "center": 869.5
+        },
+        "iconBox": {
+          "x": 811.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 825.5,
+          "bottom": 356,
+          "center": 818.5
+        },
+        "arrowBox": {
+          "x": 915.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 927.5,
+          "bottom": 355,
+          "center": 921.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 951.5,
+          "y": 334,
+          "w": 116,
+          "h": 30,
+          "right": 1067.5,
+          "bottom": 364,
+          "center": 1009.5
+        },
+        "iconBox": {
+          "x": 951.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 965.5,
+          "bottom": 356,
+          "center": 958.5
+        },
+        "arrowBox": {
+          "x": 1055.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1067.5,
+          "bottom": 355,
+          "center": 1061.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "400",
+        "arrowOpacity": "1",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 1091.5,
+          "y": 334,
+          "w": 142,
+          "h": 30,
+          "right": 1233.5,
+          "bottom": 364,
+          "center": 1162.5
+        },
+        "iconBox": {
+          "x": 1091.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 1105.5,
+          "bottom": 356,
+          "center": 1098.5
+        },
+        "arrowBox": {
+          "x": 1221.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1233.5,
+          "bottom": 355,
+          "center": 1227.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1257.5,
+          "y": 334,
+          "w": 129,
+          "h": 30,
+          "right": 1386.5,
+          "bottom": 364,
+          "center": 1322
+        },
+        "iconBox": {
+          "x": 1257.5,
+          "y": 342,
+          "w": 14,
+          "h": 14,
+          "right": 1271.5,
+          "bottom": 356,
+          "center": 1264.5
+        },
+        "arrowBox": {
+          "x": 1374.5,
+          "y": 343,
+          "w": 12,
+          "h": 12,
+          "right": 1386.5,
+          "bottom": 355,
+          "center": 1380.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": null,
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": ""
+  },
+  "activeClone": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 623,
+      "y": 408,
+      "w": 952,
+      "h": 68,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 623,
+      "y": 202,
+      "w": 952,
+      "h": 188,
+      "right": 1575,
+      "bottom": 390,
+      "center": 1099
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 811.5,
+      "right": 1386.5,
+      "center": 1099,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 811.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 927.5,
+          "bottom": 438,
+          "center": 869.5
+        },
+        "iconBox": {
+          "x": 811.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 825.5,
+          "bottom": 430,
+          "center": 818.5
+        },
+        "arrowBox": {
+          "x": 915.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 927.5,
+          "bottom": 429,
+          "center": 921.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "600",
+        "arrowOpacity": "1",
+        "active": true,
+        "ariaPressed": "true"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 951.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 1067.5,
+          "bottom": 438,
+          "center": 1009.5
+        },
+        "iconBox": {
+          "x": 951.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 965.5,
+          "bottom": 430,
+          "center": 958.5
+        },
+        "arrowBox": {
+          "x": 1055.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1067.5,
+          "bottom": 429,
+          "center": 1061.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 1091.5,
+          "y": 408,
+          "w": 142,
+          "h": 30,
+          "right": 1233.5,
+          "bottom": 438,
+          "center": 1162.5
+        },
+        "iconBox": {
+          "x": 1091.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1105.5,
+          "bottom": 430,
+          "center": 1098.5
+        },
+        "arrowBox": {
+          "x": 1221.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1233.5,
+          "bottom": 429,
+          "center": 1227.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1257.5,
+          "y": 408,
+          "w": 129,
+          "h": 30,
+          "right": 1386.5,
+          "bottom": 438,
+          "center": 1322
+        },
+        "iconBox": {
+          "x": 1257.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1271.5,
+          "bottom": 430,
+          "center": 1264.5
+        },
+        "arrowBox": {
+          "x": 1374.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1386.5,
+          "bottom": 429,
+          "center": 1380.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": {
+      "x": 623,
+      "y": 444,
+      "w": 952,
+      "h": 32,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "basis": "100%",
+      "wrap": "wrap",
+      "text": "MiniMax H3 标准版 全能参考 · · 720P · 5s MiniMax H3 · 标准版",
+      "overflowsRow": false
+    },
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": "请用我的产品复刻这个爆款视频\\n[视频] [商品]"
+  },
+  "activePlusHover": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 623,
+      "y": 408,
+      "w": 952,
+      "h": 68,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 623,
+      "y": 202,
+      "w": 952,
+      "h": 188,
+      "right": 1575,
+      "bottom": 390,
+      "center": 1099
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 811.5,
+      "right": 1386.5,
+      "center": 1099,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 811.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 927.5,
+          "bottom": 438,
+          "center": 869.5
+        },
+        "iconBox": {
+          "x": 811.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 825.5,
+          "bottom": 430,
+          "center": 818.5
+        },
+        "arrowBox": {
+          "x": 915.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 927.5,
+          "bottom": 429,
+          "center": 921.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "600",
+        "arrowOpacity": "1",
+        "active": true,
+        "ariaPressed": "true"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 951.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 1067.5,
+          "bottom": 438,
+          "center": 1009.5
+        },
+        "iconBox": {
+          "x": 951.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 965.5,
+          "bottom": 430,
+          "center": 958.5
+        },
+        "arrowBox": {
+          "x": 1055.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1067.5,
+          "bottom": 429,
+          "center": 1061.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 1091.5,
+          "y": 408,
+          "w": 142,
+          "h": 30,
+          "right": 1233.5,
+          "bottom": 438,
+          "center": 1162.5
+        },
+        "iconBox": {
+          "x": 1091.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1105.5,
+          "bottom": 430,
+          "center": 1098.5
+        },
+        "arrowBox": {
+          "x": 1221.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1233.5,
+          "bottom": 429,
+          "center": 1227.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "400",
+        "arrowOpacity": "1",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1257.5,
+          "y": 408,
+          "w": 129,
+          "h": 30,
+          "right": 1386.5,
+          "bottom": 438,
+          "center": 1322
+        },
+        "iconBox": {
+          "x": 1257.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1271.5,
+          "bottom": 430,
+          "center": 1264.5
+        },
+        "arrowBox": {
+          "x": 1374.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1386.5,
+          "bottom": 429,
+          "center": 1380.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": {
+      "x": 623,
+      "y": 444,
+      "w": 952,
+      "h": 32,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "basis": "100%",
+      "wrap": "wrap",
+      "text": "MiniMax H3 标准版 全能参考 · · 720P · 5s MiniMax H3 · 标准版",
+      "overflowsRow": false
+    },
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": "请用我的产品复刻这个爆款视频\\n[视频] [商品]"
+  },
+  "activeSelling": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 623,
+      "y": 408,
+      "w": 952,
+      "h": 68,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 623,
+      "y": 202,
+      "w": 952,
+      "h": 188,
+      "right": 1575,
+      "bottom": 390,
+      "center": 1099
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 811.5,
+      "right": 1386.5,
+      "center": 1099,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 811.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 927.5,
+          "bottom": 438,
+          "center": 869.5
+        },
+        "iconBox": {
+          "x": 811.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 825.5,
+          "bottom": 430,
+          "center": 818.5
+        },
+        "arrowBox": {
+          "x": 915.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 927.5,
+          "bottom": 429,
+          "center": 921.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 951.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 1067.5,
+          "bottom": 438,
+          "center": 1009.5
+        },
+        "iconBox": {
+          "x": 951.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 965.5,
+          "bottom": 430,
+          "center": 958.5
+        },
+        "arrowBox": {
+          "x": 1055.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1067.5,
+          "bottom": 429,
+          "center": 1061.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 1091.5,
+          "y": 408,
+          "w": 142,
+          "h": 30,
+          "right": 1233.5,
+          "bottom": 438,
+          "center": 1162.5
+        },
+        "iconBox": {
+          "x": 1091.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1105.5,
+          "bottom": 430,
+          "center": 1098.5
+        },
+        "arrowBox": {
+          "x": 1221.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1233.5,
+          "bottom": 429,
+          "center": 1227.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "600",
+        "arrowOpacity": "1",
+        "active": true,
+        "ariaPressed": "true"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1257.5,
+          "y": 408,
+          "w": 129,
+          "h": 30,
+          "right": 1386.5,
+          "bottom": 438,
+          "center": 1322
+        },
+        "iconBox": {
+          "x": 1257.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1271.5,
+          "bottom": 430,
+          "center": 1264.5
+        },
+        "arrowBox": {
+          "x": 1374.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1386.5,
+          "bottom": 429,
+          "center": 1380.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": {
+      "x": 623,
+      "y": 444,
+      "w": 952,
+      "h": 32,
+      "right": 1575,
+      "bottom": 476,
+      "center": 1099,
+      "basis": "100%",
+      "wrap": "wrap",
+      "text": "MiniMax H3 标准版 全能参考 · · 720P · 5s MiniMax H3 · 标准版",
+      "overflowsRow": false
+    },
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": "请帮我一键生成一条带货视频。\\n[商品] [视频]"
+  },
+  "narrow640": {
+    "viewport": {
+      "w": 640,
+      "h": 900
+    },
+    "row": {
+      "x": 20,
+      "y": 770,
+      "w": 318,
+      "h": 104,
+      "right": 338,
+      "bottom": 874,
+      "center": 179,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 20,
+      "y": 564,
+      "w": 318,
+      "h": 188,
+      "right": 338,
+      "bottom": 752,
+      "center": 179
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 31.5,
+      "right": 326.5,
+      "center": 179,
+      "width": 295,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 51,
+          "y": 770,
+          "w": 116,
+          "h": 30,
+          "right": 167,
+          "bottom": 800,
+          "center": 109
+        },
+        "iconBox": {
+          "x": 51,
+          "y": 778,
+          "w": 14,
+          "h": 14,
+          "right": 65,
+          "bottom": 792,
+          "center": 58
+        },
+        "arrowBox": {
+          "x": 155,
+          "y": 779,
+          "w": 12,
+          "h": 12,
+          "right": 167,
+          "bottom": 791,
+          "center": 161
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 191,
+          "y": 770,
+          "w": 116,
+          "h": 30,
+          "right": 307,
+          "bottom": 800,
+          "center": 249
+        },
+        "iconBox": {
+          "x": 191,
+          "y": 778,
+          "w": 14,
+          "h": 14,
+          "right": 205,
+          "bottom": 792,
+          "center": 198
+        },
+        "arrowBox": {
+          "x": 295,
+          "y": 779,
+          "w": 12,
+          "h": 12,
+          "right": 307,
+          "bottom": 791,
+          "center": 301
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 31.5,
+          "y": 806,
+          "w": 142,
+          "h": 30,
+          "right": 173.5,
+          "bottom": 836,
+          "center": 102.5
+        },
+        "iconBox": {
+          "x": 31.5,
+          "y": 814,
+          "w": 14,
+          "h": 14,
+          "right": 45.5,
+          "bottom": 828,
+          "center": 38.5
+        },
+        "arrowBox": {
+          "x": 161.5,
+          "y": 815,
+          "w": 12,
+          "h": 12,
+          "right": 173.5,
+          "bottom": 827,
+          "center": 167.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "600",
+        "arrowOpacity": "1",
+        "active": true,
+        "ariaPressed": "true"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 197.5,
+          "y": 806,
+          "w": 129,
+          "h": 30,
+          "right": 326.5,
+          "bottom": 836,
+          "center": 262
+        },
+        "iconBox": {
+          "x": 197.5,
+          "y": 814,
+          "w": 14,
+          "h": 14,
+          "right": 211.5,
+          "bottom": 828,
+          "center": 204.5
+        },
+        "arrowBox": {
+          "x": 314.5,
+          "y": 815,
+          "w": 12,
+          "h": 12,
+          "right": 326.5,
+          "bottom": 827,
+          "center": 320.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": {
+      "x": 20,
+      "y": 842,
+      "w": 318,
+      "h": 32,
+      "right": 338,
+      "bottom": 874,
+      "center": 179,
+      "basis": "100%",
+      "wrap": "wrap",
+      "text": "MiniMax H3 标准版 全能参考 · · 720P · 5s MiniMax H3 · 标准版",
+      "overflowsRow": false
+    },
+    "anyOverlap": false,
+    "buttonLineCount": 2,
+    "draft": "请帮我一键生成一条带货视频。\\n[商品] [视频]"
+  },
+  "wideAgain": {
+    "viewport": {
+      "w": 1920,
+      "h": 929
+    },
+    "row": {
+      "x": 484,
+      "y": 408,
+      "w": 952,
+      "h": 68,
+      "right": 1436,
+      "bottom": 476,
+      "center": 960,
+      "justify": "center",
+      "wrap": "wrap",
+      "order": "3"
+    },
+    "card": {
+      "x": 484,
+      "y": 202,
+      "w": 952,
+      "h": 188,
+      "right": 1436,
+      "bottom": 390,
+      "center": 960
+    },
+    "rowMatchesCardWidth": true,
+    "belowInputBox": true,
+    "gapBelowInputBox": 18,
+    "buttonGroup": {
+      "left": 672.5,
+      "right": 1247.5,
+      "center": 960,
+      "width": 575,
+      "driftFromRowCenter": 0,
+      "driftFromCardCenter": 0
+    },
+    "buttons": [
+      {
+        "id": "clone",
+        "iconName": "film",
+        "label": "复刻爆款视频",
+        "box": {
+          "x": 672.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 788.5,
+          "bottom": 438,
+          "center": 730.5
+        },
+        "iconBox": {
+          "x": 672.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 686.5,
+          "bottom": 430,
+          "center": 679.5
+        },
+        "arrowBox": {
+          "x": 776.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 788.5,
+          "bottom": 429,
+          "center": 782.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "breakdown",
+        "iconName": "text-search",
+        "label": "拆解爆款视频",
+        "box": {
+          "x": 812.5,
+          "y": 408,
+          "w": 116,
+          "h": 30,
+          "right": 928.5,
+          "bottom": 438,
+          "center": 870.5
+        },
+        "iconBox": {
+          "x": 812.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 826.5,
+          "bottom": 430,
+          "center": 819.5
+        },
+        "arrowBox": {
+          "x": 916.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 928.5,
+          "bottom": 429,
+          "center": 922.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle",
+          "path"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      },
+      {
+        "id": "selling",
+        "iconName": "workflow",
+        "label": "一键创作带货视频",
+        "box": {
+          "x": 952.5,
+          "y": 408,
+          "w": 142,
+          "h": 30,
+          "right": 1094.5,
+          "bottom": 438,
+          "center": 1023.5
+        },
+        "iconBox": {
+          "x": 952.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 966.5,
+          "bottom": 430,
+          "center": 959.5
+        },
+        "arrowBox": {
+          "x": 1082.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1094.5,
+          "bottom": 429,
+          "center": 1088.5
+        },
+        "childTags": [
+          "rect",
+          "path",
+          "rect"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(249, 250, 251)",
+        "fontWeight": "600",
+        "arrowOpacity": "1",
+        "active": true,
+        "ariaPressed": "true"
+      },
+      {
+        "id": "reverse",
+        "iconName": "sparkles",
+        "label": "反推视频提示词",
+        "box": {
+          "x": 1118.5,
+          "y": 408,
+          "w": 129,
+          "h": 30,
+          "right": 1247.5,
+          "bottom": 438,
+          "center": 1183
+        },
+        "iconBox": {
+          "x": 1118.5,
+          "y": 416,
+          "w": 14,
+          "h": 14,
+          "right": 1132.5,
+          "bottom": 430,
+          "center": 1125.5
+        },
+        "arrowBox": {
+          "x": 1235.5,
+          "y": 417,
+          "w": 12,
+          "h": 12,
+          "right": 1247.5,
+          "bottom": 429,
+          "center": 1241.5
+        },
+        "childTags": [
+          "path",
+          "path",
+          "path",
+          "circle"
+        ],
+        "svgCount": 2,
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "borderRadius": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "color": "rgb(207, 211, 214)",
+        "fontWeight": "400",
+        "arrowOpacity": "0.5",
+        "active": false,
+        "ariaPressed": "false"
+      }
+    ],
+    "controls": {
+      "x": 484,
+      "y": 444,
+      "w": 952,
+      "h": 32,
+      "right": 1436,
+      "bottom": 476,
+      "center": 960,
+      "basis": "100%",
+      "wrap": "wrap",
+      "text": "MiniMax H3 标准版 全能参考 · · 720P · 5s MiniMax H3 · 标准版",
+      "overflowsRow": false
+    },
+    "anyOverlap": false,
+    "buttonLineCount": 1,
+    "draft": "请帮我一键生成一条带货视频。\\n[商品] [视频]"
+  }
+}

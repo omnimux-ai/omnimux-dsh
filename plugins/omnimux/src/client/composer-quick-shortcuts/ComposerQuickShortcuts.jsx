@@ -10,6 +10,7 @@ import { readDraft, writeDraft } from './dom.js';
 import { quickLinkLabels, quickLinkToken, stripQuickShortcutText } from './links.js';
 import { resolveComposerSessionId } from './session.js';
 import { ensureQuickShortcutStyles } from './styles.js';
+import { QuickShortcutArrow, QuickShortcutIcon } from './icons.jsx';
 import { MediaConfigControls, useMediaGenerationConfig } from '../media-viewer/MediaConfigControls.jsx';
 import { publishActiveSkill, subscribeSkillChanged } from '../composer-add/skill-event.ts';
 import { getGlobalAttachmentStore } from '../attachments/store.ts';
@@ -249,15 +250,20 @@ export function ComposerQuickShortcuts(props) {
       aria-label={typeof t === 'function' ? (t('quickShortcuts.group') || '快捷方式') : '快捷方式'}
     >
       {shortcuts.map((entry) => (
-        <button /* exempt-ui01: 快捷方式胶囊按钮 */
+        <button /* exempt-ui01: 快捷方式入口（无边框「图标 + 文字 + 箭头」） */
           key={entry.id}
           type="button"
           className={`omx-quick-shortcut-btn${isActive(entry.id) ? ' is-active' : ''}`}
           data-omx-quick-shortcut={entry.id}
+          data-omx-quick-shortcut-icon={entry.icon}
           aria-pressed={isActive(entry.id)}
           onClick={() => handlePick(entry)}
         >
-          {typeof t === 'function' ? (t(entry.labelKey) || entry.id) : entry.id}
+          <QuickShortcutIcon name={entry.icon} />
+          <span className="omx-quick-shortcut-label">
+            {typeof t === 'function' ? (t(entry.labelKey) || entry.id) : entry.id}
+          </span>
+          <QuickShortcutArrow />
         </button>
       ))}
 
