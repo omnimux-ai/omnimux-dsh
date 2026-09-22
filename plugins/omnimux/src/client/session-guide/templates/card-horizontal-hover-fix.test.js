@@ -30,4 +30,22 @@ test('卡片样式验证：横版 16:10 比例与滚动轨道上下防截断留�
 
   // 4. 验证平铺网格视图最小列宽同步升级为 240px
   assert.ok(code.includes('minmax(240px, 1fr)'), '网格视图列宽必须对齐 240px');
+
+  // 5. 封面卡悬停时整卡变暗，文字保持纯白且不加阴影
+  assert.ok(
+    code.includes('.omnimux-tpl-card:not(.is-skill-card)::after'),
+    '封面卡必须有整卡暗层',
+  );
+  assert.ok(
+    code.includes('.omnimux-tpl-card:not(.is-skill-card):hover::after'),
+    '悬停时必须点亮整卡暗层',
+  );
+  assert.ok(
+    code.includes('text-shadow:none'),
+    '悬停文字不得再加阴影',
+  );
+  assert.ok(
+    !code.includes('.omnimux-tpl-title {\n  font-size:13px;\n  font-weight:600;\n  color:var(--omnimux-trending-cover-text);\n  display:-webkit-box;\n  -webkit-line-clamp:2;\n  -webkit-box-orient:vertical;\n  overflow:hidden;\n  line-height:1.35;\n  text-shadow:'),
+    '标题默认样式不得再带文字阴影',
+  );
 });

@@ -1,0 +1,74 @@
+{
+  "task": "新会话封面卡悬停整卡变暗",
+  "feature": "session-card-hover-dim",
+  "worktree": ".worktrees/omnimux-card-hover-dim",
+  "branch": "agent/omnimux-card-hover-dim",
+  "baseSha": "b16456146790893a4ba93c642ef78f75ca9017e9",
+  "spec": "specs/session-card-hover-dim.spec.md",
+  "verifiedAt": "2026-09-22T08:47:30.000Z",
+  "runtime": {
+    "browser": "ego-browser Chromium",
+    "spaceId": 79,
+    "fixtureUrl": "http://127.0.0.1:8793/tmp/card-hover-dim/fixture.html",
+    "fixtureSource": "真实 TemplateCardItem + 真实 GUIDE_CSS 对照页",
+    "note": "验证的是封面卡组件与真实样式在真实浏览器中的悬停效果，不是完整组装应用首页。"
+  },
+  "screenshots": [
+    "docs/evidence/session-card-hover-dim/before-hover.png",
+    "docs/evidence/session-card-hover-dim/after-hover.png"
+  ],
+  "measurements": {
+    "rest": {
+      "veilOpacity": "0",
+      "veilBackground": "color(srgb 0 0 0 / 0.55)",
+      "titleColor": "color-mix cover text"
+    },
+    "hover": {
+      "hovered": true,
+      "veilOpacity": "1",
+      "veilBackground": "color(srgb 0 0 0 / 0.55)",
+      "veilZ": "5",
+      "titleZ": "6",
+      "titleColor": "rgb(255, 255, 255)",
+      "titleShadow": "none",
+      "previewColor": "rgb(255, 255, 255)",
+      "previewShadow": "none",
+      "buttonOpacity": "1"
+    }
+  },
+  "assertions": [
+    {
+      "name": "平时暗层透明",
+      "pass": true,
+      "detail": "opacity=0"
+    },
+    {
+      "name": "悬停整张卡片盖半透明黑",
+      "pass": true,
+      "detail": "opacity=1, background=color(srgb 0 0 0 / 0.55)"
+    },
+    {
+      "name": "标题纯白且无阴影",
+      "pass": true,
+      "detail": "color=rgb(255,255,255), text-shadow=none"
+    },
+    {
+      "name": "说明纯白且无阴影",
+      "pass": true,
+      "detail": "color=rgb(255,255,255), text-shadow=none"
+    },
+    {
+      "name": "文字层压在暗层之上",
+      "pass": true,
+      "detail": "titleZ=6 > veilZ=5"
+    },
+    {
+      "name": "用户确认效果正确",
+      "pass": true,
+      "detail": "用户说「对了 就是这效果 立即实施 合并 物化 收尾」"
+    }
+  ],
+  "total": 6,
+  "passed": 6,
+  "failed": 0
+}
