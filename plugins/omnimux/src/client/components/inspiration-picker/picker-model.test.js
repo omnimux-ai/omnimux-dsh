@@ -12,6 +12,7 @@ import {
 } from './picker-model.js'
 
 const pickerSource = readFileSync(new URL('./InspirationPicker.jsx', import.meta.url), 'utf8')
+const cardSource = readFileSync(new URL('./InspirationPickerCard.jsx', import.meta.url), 'utf8')
 const modalSource = readFileSync(new URL('../../composer-add/InspirationPickerModal.jsx', import.meta.url), 'utf8')
 const installSource = readFileSync(new URL('../../composer-add/install.js', import.meta.url), 'utf8')
 
@@ -31,6 +32,20 @@ test('InspirationPicker reuses the shared picker dialog contract', () => {
   assert.match(pickerSource, /ModalCloseButton/)
   assert.match(pickerSource, /grid-template-columns: repeat\(6/)
   assert.doesNotMatch(pickerSource, /from ['"]omnimux-inspiration/)
+})
+
+test('picker cards follow the cover ratio and hide idle chrome', () => {
+  assert.doesNotMatch(cardSource, /omx-inspiration-pick-card__badge/)
+  assert.doesNotMatch(pickerSource, /typeLabel=/)
+  assert.doesNotMatch(pickerSource, /\.omx-inspiration-pick-card__thumb\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1/)
+  assert.match(pickerSource, /\.omx-inspiration-pick-card__img\s*\{[^}]*height:\s*auto/)
+  assert.match(pickerSource, /\.omx-inspiration-pick-card__check\s*\{[^}]*display:\s*none/)
+  assert.match(
+    pickerSource,
+    /\.omx-inspiration-pick-card:hover \.omx-inspiration-pick-card__check[\s\S]*display:\s*inline-flex/,
+  )
+  assert.match(pickerSource, /\[data-selected="true"\] \.omx-inspiration-pick-card__check/)
+  assert.match(cardSource, /data-ratio=/)
 })
 
 test('InspirationPickerModal is a thin reusable adapter', () => {

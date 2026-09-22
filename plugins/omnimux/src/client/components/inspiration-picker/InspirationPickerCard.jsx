@@ -20,7 +20,6 @@ function CoverPlaceholder({ glyph }) {
  *   selected?: boolean,
  *   alreadyAdded?: boolean,
  *   disabled?: boolean,
- *   typeLabel: string,
  *   alreadyLabel: string,
  *   onToggle: (item: object) => void,
  * }} props
@@ -30,7 +29,6 @@ export function InspirationPickerCard({
   selected = false,
   alreadyAdded = false,
   disabled = false,
-  typeLabel,
   alreadyLabel,
   onToggle,
 }) {
@@ -39,6 +37,7 @@ export function InspirationPickerCard({
   const title = item.title || item.name || item.id
   const glyph = String(title || '灵').trim().slice(0, 1)
   const [imageError, setImageError] = useState(false)
+  const [ratioReady, setRatioReady] = useState(false)
 
   return (
     <article
@@ -60,7 +59,10 @@ export function InspirationPickerCard({
         }
       }}
     >
-      <div className="omx-inspiration-pick-card__thumb">
+      <div
+        className="omx-inspiration-pick-card__thumb"
+        data-ratio={item.previewUrl && !imageError && !ratioReady ? 'pending' : 'ready'}
+      >
         <span
           className="omx-inspiration-pick-card__check"
           data-selected={isChecked ? 'true' : 'false'}
@@ -77,6 +79,9 @@ export function InspirationPickerCard({
             src={item.previewUrl}
             alt=""
             className="omx-inspiration-pick-card__img"
+            onLoad={() => {
+              setRatioReady(true)
+            }}
             onError={() => {
               setImageError(true)
             }}
@@ -84,7 +89,6 @@ export function InspirationPickerCard({
         ) : (
           <CoverPlaceholder glyph={glyph} />
         )}
-        {typeLabel ? <span className="omx-inspiration-pick-card__badge">{typeLabel}</span> : null}
         {alreadyAdded ? <span className="omx-inspiration-pick-card__already">{alreadyLabel}</span> : null}
       </div>
       <div className="omx-inspiration-pick-card__body">
