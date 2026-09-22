@@ -37,21 +37,23 @@ test('InspirationPicker reuses the shared picker dialog contract', () => {
 test('picker cards follow the cover ratio and hide idle chrome', () => {
   assert.doesNotMatch(cardSource, /omx-inspiration-pick-card__badge/)
   assert.doesNotMatch(pickerSource, /typeLabel=/)
-  assert.doesNotMatch(pickerSource, /\.omx-inspiration-pick-card__thumb\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1/)
-  assert.match(pickerSource, /\.omx-inspiration-pick-card__img\s*\{[^}]*height:\s*auto/)
-  assert.match(pickerSource, /\.omx-inspiration-pick-card__check\s*\{[^}]*display:\s*none/)
+  assert.match(pickerSource, /INSPIRATION_CARD_CSS/)
+  assert.doesNotMatch(cardSource, /\.omx-inspiration-pick-card__thumb\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1/)
+  assert.match(cardSource, /\.omx-inspiration-pick-card__img\s*\{[^}]*height:\s*auto/)
+  assert.match(cardSource, /\.omx-inspiration-pick-card__check\s*\{[^}]*display:\s*none/)
   assert.match(
-    pickerSource,
+    cardSource,
     /\.omx-inspiration-pick-card:hover \.omx-inspiration-pick-card__check[\s\S]*display:\s*inline-flex/,
   )
-  assert.match(pickerSource, /\[data-selected="true"\] \.omx-inspiration-pick-card__check/)
+  assert.match(cardSource, /\[data-selected="true"\] \.omx-inspiration-pick-card__check/)
   assert.match(cardSource, /data-ratio=/)
 })
 
-test('InspirationPickerModal is a thin reusable adapter', () => {
+test('InspirationPickerModal remains a thin reusable adapter while composer-add opens the page browser', () => {
   assert.match(modalSource, /InspirationPicker/)
   assert.match(modalSource, /omnimux-inspiration:library/)
-  assert.match(installSource, /InspirationPickerModal/)
+  assert.match(installSource, /LibraryBrowser/)
+  assert.doesNotMatch(installSource, /InspirationPickerModal/)
 })
 
 test('cover mapping never invents filesystem media routes', () => {

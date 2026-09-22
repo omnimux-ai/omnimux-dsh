@@ -3676,6 +3676,55 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   gap:6px;
 }
 .omnimux-tpl-btn-primary:hover { opacity:0.92; }
+
+/* 加号整页选素材：分类钉在内容顶部，卡片铺满中间。输入框沿用吸底，不在这里再画一个。 */
+.omnimux-library-stage {
+  display:flex; flex-direction:column; gap:16px; width:100%; min-width:0;
+}
+.omnimux-library-stage-tabs {
+  position:sticky; top:0; z-index:8;
+  display:flex; align-items:center; gap:20px;
+  padding:8px 0;
+  background:var(--dsw-alias-bg-base, #111113);
+}
+.omnimux-library-stage-tab {
+  height:32px; padding:0; border:0; background:transparent; cursor:pointer;
+  color:var(--dsw-alias-label-tertiary); font:inherit; font-size:15px; font-weight:650;
+}
+.omnimux-library-stage-tab.is-active { color:var(--dsw-alias-label-primary); }
+.omnimux-library-stage-close {
+  margin-left:auto; width:32px; height:32px; border:0; border-radius:8px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:transparent; color:var(--dsw-alias-label-secondary); cursor:pointer;
+}
+.omnimux-library-stage-close:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary); }
+.omnimux-library-stage-status {
+  margin:0; color:var(--dsw-alias-label-tertiary); font-size:13px;
+  display:flex; align-items:center; gap:12px;
+}
+.omnimux-library-stage-retry {
+  height:32px; padding:0 12px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--dsw-alias-border-l2); background:transparent;
+  color:var(--dsw-alias-label-primary); font:inherit; font-size:13px;
+}
+.omnimux-library-stage-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+  gap:16px; align-items:start;
+}
+.omnimux-library-stage-grid.is-mixed {
+  grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+}
+.omnimux-library-stage-cell.is-trending { max-width:240px; }
+[data-omnimux-starter-host][data-omnimux-dock-open] [data-omnimux-skill-picker],
+[data-omnimux-starter-host][data-omnimux-dock-open] .sh-picker-trigger {
+  display:inline-flex;
+}
+#omnimux-composer-add-host:has([data-omnimux-library-stage]) {
+  position:fixed; z-index:40; overflow:auto;
+  top:12px; left:max(240px, 18vw); right:16px; bottom:168px;
+  padding:12px 20px 24px; box-sizing:border-box;
+  background:var(--dsw-alias-bg-base, #111113);
+}
 `
 
 export function installGuideStyles(doc) {

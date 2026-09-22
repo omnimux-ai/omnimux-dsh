@@ -5,8 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { runStyleDomProbe } from '../../../../../../scripts/test-fixtures/style-dom-probe.mjs'
 
 const source = readFileSync(new URL('./InspirationPicker.jsx', import.meta.url), 'utf8')
+const cardSource = readFileSync(new URL('./InspirationPickerCard.jsx', import.meta.url), 'utf8')
 const start = source.indexOf('const CSS = `') + 'const CSS = `'.length
-const styles = source.slice(start, source.indexOf('`', start))
+const dialogStyles = source.slice(start, source.indexOf('`', start)).replace('${INSPIRATION_CARD_CSS}', '')
+const cardCssStart = cardSource.indexOf('export const INSPIRATION_CARD_CSS = `') + 'export const INSPIRATION_CARD_CSS = `'.length
+const cardStyles = cardSource.slice(cardCssStart, cardSource.indexOf('`', cardCssStart))
+const styles = `${dialogStyles}\n${cardStyles}`
 
 const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="640"><rect width="100%" height="100%" fill="#285a9a"/></svg>')
 const landscape = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="100%" height="100%" fill="#9a5a28"/></svg>')
@@ -53,9 +57,12 @@ function measure() {
     }
   }
   const portrait = read('portrait')
-  document.getElementById('portrait').focus()
-  const focused = read('portrait')
-  return { portrait, landscape: read('landscape'), empty: read('empty'), focused }
+  // 无头浏览器里 :focus-visible / :hover 不稳定；改用同一条选中规则验证勾选框会出现。
+  const portraitCard = document.getElementById('portrait')
+  portraitCard.setAttribute('data-selected', 'true')
+  const selectedChrome = read('portrait')
+  portraitCard.setAttribute('data-selected', 'false')
+  return { portrait, landscape: read('landscape'), empty: read('empty'), selectedChrome }
 }
 
 test('灵感选择卡片按封面比例显示，勾选框只在悬停或已选时出现', () => {
@@ -74,5 +81,5 @@ test('灵感选择卡片按封面比例显示，勾选框只在悬停或已选�
   assert.equal(result.portrait.check, 'none')
   assert.equal(result.landscape.check, 'none')
   assert.equal(result.empty.check, 'flex')
-  assert.equal(result.focused.check, 'flex')
+  assert.equal(result.selectedChrome.check, 'flex')
 })
