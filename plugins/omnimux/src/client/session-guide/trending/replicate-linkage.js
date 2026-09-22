@@ -41,15 +41,23 @@ export const RECREATE_PROMPT = '复刻这条爆款视频'
 
 /**
  * 判断某个技能是否就是复刻技能（技能身份取自事件载荷，字段可能只给其一）。
+ *
+ * **身份优先于名称**：只要能拿到 id 或 slug 之一，就只按这两个稳定标识判定——
+ * 名字是展示文案，会被别的货架条目复用（例如「复刻爆款视频」这款内置货架技能
+ * 与复刻技能**同名但不同身份**）。若让名称兜底压过 slug，同名技能就会被认成
+ * 复刻技能，进而被复刻板块的卸载清理静默熄灭。名称分支只在 id 与 slug
+ * **都缺席**时启用，兼容只带显示名的历史载荷。
+ *
  * @param {{ id?: unknown, slug?: unknown, name?: unknown, title?: unknown } | null | undefined} skill
  * @returns {boolean}
  */
 export function isRecreateSkill(skill) {
   if (!skill || typeof skill !== 'object') return false
   const id = String(skill.id || '')
-  if (id && id === RECREATE_SKILL.id) return true
   const slug = String(skill.slug || '')
-  if (slug && slug === RECREATE_SKILL.slug) return true
+  if (id || slug) {
+    return id === RECREATE_SKILL.id || slug === RECREATE_SKILL.slug
+  }
   const label = String(skill.name || skill.title || '')
   return label !== '' && label === RECREATE_SKILL.name
 }

@@ -161,6 +161,38 @@ export function hasPresetSkillBinding(presetId) {
   return getPresetSkillBinding(presetId) !== null
 }
 
+/**
+ * 按 slug 从**出厂预设技能库**里解析一款已内置技能。
+ *
+ * 优先在 Agent 模式的两条主力绑定（`tiktok-agent` 全能社媒操盘手、`omni-agent`
+ * 社媒专家）里找，找不到再遍历其余预设；只认 `installed === true` 的条目，
+ * 未内置的技能一律当作"解析不到"（调用方据此不渲染入口）。找不到返回 null，
+ * 绝不抛错、绝不编造技能身份。
+ *
+ * @param {string} slug 技能 slug（可带前导 `/`）
+ * @param {Record<string, { skills?: readonly object[] }>} [bindings] 绑定表，测试可注入
+ * @returns {object | null} 技能条目（附 `presetId` 标明来源预设）
+ */
+export function findPresetSkill(slug, bindings = AGENT_PRESET_SKILL_BINDINGS) {
+  const target = String(slug || '').trim().replace(/^\/+/, '')
+  if (!target || !bindings || typeof bindings !== 'object') return null
+  const preferred = ['tiktok-agent', 'omni-agent']
+  const keys = [
+    ...preferred.filter((key) => bindings[key]),
+    ...Object.keys(bindings).filter((key) => !preferred.includes(key)),
+  ]
+  for (const key of keys) {
+    const list = bindings[key] && bindings[key].skills
+    if (!Array.isArray(list)) continue
+    const hit = list.find((item) => {
+      if (!item || item.installed !== true) return false
+      return String(item.slug || item.skill || '').trim().replace(/^\/+/, '') === target
+    })
+    if (hit) return { ...hit, presetId: key }
+  }
+  return null
+}
+
 export function resolveActivePreset({ props, sessions } = {}) {
   if (props && typeof props.agentPreset === 'string' && props.agentPreset) {
     return props.agentPreset
