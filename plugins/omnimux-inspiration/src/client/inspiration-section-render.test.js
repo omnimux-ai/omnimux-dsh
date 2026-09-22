@@ -331,28 +331,25 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
     }
   })
 
-  it('keeps 全部+18 on 本地 and drops category from local queries', async () => {
+  it('hides the category filter on 灵感库 and drops category from local queries', async () => {
     /** @type {string[]} */
     const fetched = []
     const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
     try {
-      await openCategoryOptions(mounted)
-      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
-        .find((node) => node.textContent === '美妆护肤')
-      await act(async () => {
-        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
-      })
       const localTab = mounted.container.querySelector('[data-tab="local"]')
-      assert.ok(localTab, 'the 本地 tab must render')
+      assert.ok(localTab, 'the 灵感库 tab must render')
       const beforeSwitch = fetched.length
       await act(async () => {
         localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       await mounted.waitFor(() => fetched.slice(beforeSwitch).some((url) => url.includes('/omnimux/inspiration/local')))
-      const labels = await openCategoryOptions(mounted)
-      assert.deepEqual(labels, OFFICIAL_CATEGORY_LABELS)
+      assert.equal(
+        mounted.container.querySelector(`[aria-label="${CATEGORY_LABEL}"]`),
+        null,
+        '灵感库 must not show the cloud category filter',
+      )
       const localUrls = fetched.slice(beforeSwitch).filter((url) => url.includes('/omnimux/inspiration/local'))
-      assert.ok(localUrls.length > 0, 'switching to 本地 must query the local library')
+      assert.ok(localUrls.length > 0, 'switching to 灵感库 must query the local library')
       assert.equal(
         localUrls.some((url) => /[?&]category=/.test(url)),
         false,
@@ -364,30 +361,21 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
     }
   })
 
-  it('ignores category onChange on 本地 so a hidden official id cannot leak back', async () => {
+  it('keeps the category filter off 灵感库 so no hidden official id can leak back', async () => {
     /** @type {string[]} */
     const fetched = []
     const mounted = await mountSection(['tiktok', 'x'], { onFetch: (url) => fetched.push(url) })
     try {
       const localTab = mounted.container.querySelector('[data-tab="local"]')
-      assert.ok(localTab, 'the 本地 tab must render')
+      assert.ok(localTab, 'the 灵感库 tab must render')
       await act(async () => {
         localTab.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       await mounted.waitFor(() => fetched.some((url) => url.includes('/omnimux/inspiration/local')))
-      await openCategoryOptions(mounted)
-      const beauty = [...mounted.container.querySelectorAll('[role="option"]')]
-        .find((node) => node.textContent === '美妆护肤')
-      assert.ok(beauty, '美妆护肤 must still be listed on 本地')
-      const beforeClick = fetched.length
-      await act(async () => {
-        beauty.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
-      })
-      const afterClick = fetched.slice(beforeClick)
       assert.equal(
-        afterClick.some((url) => /[?&]category=/.test(url)),
-        false,
-        `clicking an industry on 本地 must not write category: ${JSON.stringify(afterClick)}`,
+        mounted.container.querySelector(`[aria-label="${CATEGORY_LABEL}"]`),
+        null,
+        '灵感库 has no category control that could stash a hidden official id',
       )
       const trendingTab = mounted.container.querySelector('[data-tab="public"]')
       assert.ok(trendingTab, 'the 爆款趋势 tab must render')
