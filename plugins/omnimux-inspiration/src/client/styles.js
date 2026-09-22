@@ -941,6 +941,11 @@ export const INSPIRATION_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Button 的文字槽是它自己的 flex 项，能否收缩由外层槽位决定；显式钉住，
+   不依赖 UI 库内部默认值，也不让测试用 BASE_CSS 伪装生产环境。 */
+.omnimux-inspiration-overlay-cta-btn > .dshUk-Button-label {
+  min-width: 0;
+}
 /* 卡片自身宽度进入紧凑区间：CTA 退化为纯图标，文字整块退出布局。
    实测：中文「详情 / 立即复刻」在卡片约 190px 即可完整放下，
    完整窗口一行五张卡时单卡约 200px 以上。旧的 288px 会把这个尺寸提前收成纯图标。
