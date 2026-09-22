@@ -1,0 +1,107 @@
+{
+  "runId": "4b12ce90-0331-4da7-bbb5-e9d00973aa02",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "inline-not-fixed",
+      "pass": true
+    },
+    {
+      "name": "inline-stuck-at-page-top",
+      "pass": true
+    },
+    {
+      "name": "inline-separated-from-card",
+      "pass": true
+    },
+    {
+      "name": "docked-position-fixed",
+      "pass": true
+    },
+    {
+      "name": "docked-above-composer",
+      "pass": true
+    },
+    {
+      "name": "docked-aligned",
+      "pass": true
+    },
+    {
+      "name": "docked-on-screen",
+      "pass": true
+    },
+    {
+      "name": "undock-not-overlapping",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "cleanup": {
+    "profileRemoved": true
+  },
+  "before": {
+    "dockPosition": "static",
+    "dock": {
+      "top": 0,
+      "left": 0,
+      "right": 1200,
+      "bottom": 52,
+      "width": 1200,
+      "height": 52
+    },
+    "card": {
+      "top": 952,
+      "left": 0,
+      "right": 1200,
+      "bottom": 1114,
+      "width": 1200,
+      "height": 162
+    },
+    "undock": {
+      "top": 584,
+      "left": 885.34375,
+      "right": 976,
+      "bottom": 610,
+      "width": 90.65625,
+      "height": 26
+    },
+    "gap": 900,
+    "sameLeft": true,
+    "sameWidth": true,
+    "overlaps": false,
+    "viewportHeight": 800
+  },
+  "after": {
+    "dockPosition": "fixed",
+    "dock": {
+      "top": 558,
+      "left": 200,
+      "right": 980,
+      "bottom": 610,
+      "width": 780,
+      "height": 52
+    },
+    "card": {
+      "top": 618,
+      "left": 200,
+      "right": 980,
+      "bottom": 780,
+      "width": 780,
+      "height": 162
+    },
+    "undock": {
+      "top": 516,
+      "left": 885.34375,
+      "right": 976,
+      "bottom": 542,
+      "width": 90.65625,
+      "height": 26
+    },
+    "gap": 8,
+    "sameLeft": true,
+    "sameWidth": true,
+    "overlaps": false,
+    "viewportHeight": 800
+  },
+  "screenshot": "docs/evidence/docked-slot-position-verified.png"
+}

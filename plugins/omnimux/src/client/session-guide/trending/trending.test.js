@@ -314,6 +314,16 @@ test('trending: 复刻接管契约（搬迁原生输入框 / 只预填不代发�
   assert.ok(styles.includes('--omnimux-dock-left'), '必须按 Hero 栏给出停靠横向几何')
   assert.ok(styles.includes('--omnimux-dock-width'), '必须按 Hero 栏给出停靠宽度')
   assert.ok(styles.includes('[class*="heroWorkspaceRow"]'), '工作区行必须随接管让位')
+  assert.match(
+    styles,
+    /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \.omx-attachment-dock \{[^}]*position:fixed!important/,
+    '接管时素材卡槽必须跟着输入框固定到视口底部上方',
+  )
+  assert.match(
+    styles,
+    /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\]:has\(\.omx-attachment-dock\) \.omnimux-trending-undock/,
+    '有素材时收起按钮必须上移，避免压住卡槽',
+  )
 
   // 4. 会话指南必须挂载该板块并只预填、不代发
   assert.ok(sessionGuide.includes('<TrendingReplicateSection'), 'BlankSessionGuide 必须渲染爆款对标板块')

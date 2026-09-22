@@ -48,6 +48,20 @@ describe('composer inner attachment slot', () => {
     assert.match(traySource, /data-omnimux-attachments-dock="true"/)
   })
 
+  it('keeps the visible tray above the composer and follows it when the composer docks', () => {
+    const guideStyles = readFileSync(join(here, '../session-guide/styles.js'), 'utf8')
+    assert.match(traySource, /hasRailContent &&/)
+    assert.match(traySource, /SHOW_MANUAL_LINK_BUTTON \|\| hasRailContent/)
+    assert.match(
+      guideStyles,
+      /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \.omx-attachment-dock \{[^}]*left:var\(--omnimux-dock-left/,
+    )
+    assert.match(
+      guideStyles,
+      /bottom:calc\(var\(--omnimux-dock-bottom, 20px\) \+ var\(--omnimux-dock-card-height, 168px\) \+ 8px\)!important/,
+    )
+  })
+
   it('compacts the inner rail to the 44×44 / 40px spec', () => {
     for (const source of [dockStylesSource, cssSource]) {
       assert.match(source, /padding: 6px 12px 2px 12px/)
