@@ -30,7 +30,7 @@ async function loadSessionGuide() {
   return compiled.exports.SessionGuide
 }
 
-test('E2E: 首页不再渲染热门入门方式，探索模板与胶囊保留且标题对齐 16px/600', async () => {
+test('E2E: 首页不再渲染热门入门方式和四个快捷按钮，探索模板保留且标题对齐 16px/600', async () => {
   const SessionGuide = await loadSessionGuide()
   const dom = new JSDOM(
     '<!doctype html><html><body><div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div></body></html>',
@@ -76,7 +76,7 @@ test('E2E: 首页不再渲染热门入门方式，探索模板与胶囊保留且
     assert.equal(document.querySelector('.omnimux-popular-section'), null, '首页不得渲染热门入门整块')
     assert.ok(!document.body.textContent.includes('热门入门方式'), '首页可见文案不得出现热门入门方式')
 
-    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 4, '顶部胶囊必须保留 4 个')
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, '首页不再出现技能、视频广告、图片广告、竞争对手研究四个按钮')
     const exploreRoot = document.querySelector('[data-omnimux-explore-section], .omnimux-explore-templates-root')
     assert.ok(exploreRoot, '探索模板专区必须保留')
 
