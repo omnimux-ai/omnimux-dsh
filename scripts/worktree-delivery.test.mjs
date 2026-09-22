@@ -284,3 +284,208 @@ for (const [label, changedFile, expectRestart] of [
     } finally { rmSync(fixture, { recursive: true, force: true }) }
   })
 }
+
+// ---------------------------------------------------------------------------
+// 合并成功后必装开发版（Issue #2539）
+// 昨天的漏装：正式版本已经拉齐，删除临时工作区时安装被跳过。
+// ---------------------------------------------------------------------------
+
+/**
+ * 建一个只含种子提交的仓库，并放上记录参数的安装脚本。
+ */
+function mergedRepo(label) {
+  const fixture = mkdtempSync(join(tmpdir(), `omnimux-${label}-`))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  mkdirSync(repo)
+  mkdirSync(bin)
+  git('init', '--bare', '-b', 'main', remote)
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'delivery-test')
+  git('config', 'user.email', 'delivery@example.test')
+  mkdirSync(join(repo, 'scripts'))
+  copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+  writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+  writeFileSync(
+    join(repo, 'scripts/sync-to-app.sh'),
+    '#!/bin/sh\necho "$*" >> sync_receipt.txt\n',
+    { mode: 0o755 },
+  )
+  git('add', '.')
+  git('commit', '-m', 'seed')
+  git('remote', 'add', 'origin', remote)
+  git('push', '-u', 'origin', 'main')
+  return { fixture, repo, bin, git }
+}
+
+test('remove 在正式版本已拉齐时仍把本次合并的插件装进开发版', () => {
+  const { fixture, repo, bin, git } = mergedRepo('remove-caught-up')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 2\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel')
+    const head = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/plugin-feature:main')
+    git('pull', '--ff-only', 'origin', 'main')
+    assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'))
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev') },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(git('rev-parse', 'HEAD'), head)
+    assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
+    assert.equal(existsSync(worktree), false)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('开发版已经和这次提交一致时不重复安装', () => {
+  const { fixture, repo, bin, git } = mergedRepo('already-installed')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 2\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel')
+    const head = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/plugin-feature:main')
+    git('pull', '--ff-only', 'origin', 'main')
+
+    const snapshot = join(fixture, 'dev-snapshot/omnimux')
+    mkdirSync(join(snapshot, 'src'), { recursive: true })
+    writeFileSync(join(snapshot, 'src/panel.jsx'), 'export const panel = 2\n')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: snapshot },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /无需重复安装/)
+    assert.equal(existsSync(join(repo, 'sync_receipt.txt')), false)
+    assert.equal(git('rev-parse', 'HEAD'), head)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('双父合并提交在正式版本已拉齐时也会装进开发版', () => {
+  const { fixture, repo, bin, git } = mergedRepo('merge-commit')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 2\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel')
+    git('fetch', 'origin')
+    git('merge', '--no-ff', '--no-edit', 'agent/plugin-feature')
+    const head = git('rev-parse', 'HEAD')
+    assert.equal(git('rev-parse', `${head}^2`), git('-C', worktree, 'rev-parse', 'HEAD'))
+    git('push', 'origin', 'main')
+    assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'))
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev') },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('一次落后多次提交时，最新提交没改插件也会补装更早的插件改动', () => {
+  const { fixture, repo, bin, git } = mergedRepo('behind-several')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    const base = git('rev-parse', 'HEAD')
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 2\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel')
+    mkdirSync(join(worktree, 'docs'), { recursive: true })
+    writeFileSync(join(worktree, 'docs/later.md'), '后面的提交只改文档\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'docs: later')
+    git('push', 'origin', 'agent/plugin-feature:main')
+    assert.notEqual(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'))
+    // 开发版停在更早的内容：目录存在，但文件不是最终内容。
+    // 这样才会真正走进整段比较，而不是因为目录不存在直接安装。
+    const snapshot = join(fixture, 'dev/omnimux')
+    mkdirSync(join(snapshot, 'src'), { recursive: true })
+    writeFileSync(join(snapshot, 'src/panel.jsx'), 'export const panel = 1\n')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: snapshot },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'))
+    assert.notEqual(git('rev-parse', 'HEAD'), base)
+    assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('范围内删除了插件文件且开发版还留着旧文件时会补装', () => {
+  const { fixture, repo, bin, git } = mergedRepo('deleted-file')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 2\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel')
+    git('-C', worktree, 'rm', 'plugins/omnimux/src/panel.jsx')
+    git('-C', worktree, 'commit', '-m', 'chore: drop panel')
+    git('push', 'origin', 'agent/plugin-feature:main')
+    const snapshot = join(fixture, 'dev/omnimux')
+    mkdirSync(join(snapshot, 'src'), { recursive: true })
+    writeFileSync(join(snapshot, 'src/panel.jsx'), 'export const panel = 2\n')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: snapshot },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('只有文档改动时不安装开发版', () => {
+  const { fixture, repo, bin, git } = mergedRepo('docs-only')
+  try {
+    const worktree = join(repo, '.worktrees/docs-feature')
+    git('worktree', 'add', '-b', 'agent/docs-feature', worktree)
+    mkdirSync(join(worktree, 'docs'), { recursive: true })
+    writeFileSync(join(worktree, 'docs/note.md'), '只改说明\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'docs: note')
+    git('push', 'origin', 'agent/docs-feature:main')
+    git('pull', '--ff-only', 'origin', 'main')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'docs-feature', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev') },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /无需物化/)
+    assert.equal(existsSync(join(repo, 'sync_receipt.txt')), false)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})

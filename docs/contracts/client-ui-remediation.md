@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-08-31"
+updated: "2026-09-22"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-accounts"
 ---
@@ -236,7 +236,7 @@ kit 新增（P0 先合 kit，再改页面，避免 6 个插件同时改接口）
 
 ## 6. 分阶段路线图（零回归）
 
-原则：**先门禁后改码**；PR 范围遵循 [plugin-git-pr](plugin-git-pr.md)；合入前隔离 worktree 自动化/静态检查与独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器 Web 验证（动态端口、自清理，保留截图/结构化报告）。Dev 真机验收归人工，不作为 Agent 交付卡点；Dev 物化按需保留给人工查看。不建合入前独立运行环境、不默认强杀 App。本文件的 L1–L4 页面层级仍为 UI 结构分类，不是测试环境。
+原则：**先门禁后改码**；PR 范围遵循 [plugin-git-pr](plugin-git-pr.md)；合入前隔离 worktree 自动化/静态检查与独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器 Web 验证（动态端口、自清理，保留截图/结构化报告）。Dev 真机验收归人工，不作为 Agent 交付卡点；插件改动合入后由收尾自动装进 Dev。不建合入前独立运行环境、不默认强杀 App。本文件的 L1–L4 页面层级仍为 UI 结构分类，不是测试环境。
 
 ### P0 —— 挡住回归 + 四个标准库页对齐金标（约 5 个工作日）
 

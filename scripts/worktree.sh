@@ -332,18 +332,70 @@ cmd_list() {
 
 # ---------------------------------------------------------------------------
 # 自动物化与实机热重载辅助函数（Post-Merge Auto-Materialize & Live Reload）
+# 合并一旦确认，改到已安装插件的提交必须装进开发版。两条收尾都走这里：
+# ship 在快进之后，remove 在删除之后（正式版本已拉齐时也要补上这一次）。
 # ---------------------------------------------------------------------------
+
+# 开发版里这个插件是否已经包含给定范围的最终内容。
+# 范围可能跨过多次提交：必须拿目标提交的每个改动文件去比，不能只看最新一次。
+# 列不出文件、对不上内容，都算未一致，交给安装。一致才跳过。
+dev_plugin_matches_range() {
+  local plugin="$1" base_ref="$2" target_ref="$3"
+  local dev_root="${OMNIMUX_DEV_SNAPSHOT:-${HOME}/.omnimux-dev/profiles/omnimux/.materialize-snapshots/plugins/${plugin}}"
+  [ -d "${dev_root}" ] || return 1
+  # 逐次提交看，不能只看两端净差：同一范围里删了又加回来的文件，
+  # 净差是空的，开发版却还留着旧内容。
+  local commits
+  commits="$(git -C "${ROOT}" rev-list --reverse "${base_ref}..${target_ref}" 2>/dev/null || true)"
+  [ -n "${commits}" ] || return 1
+  local commit status path old_path src dest touched=0
+  while IFS= read -r commit; do
+    [ -n "${commit}" ] || continue
+    local changes
+    changes="$(git -C "${ROOT}" diff-tree --no-commit-id --name-status --find-renames -r -m --first-parent "${commit}" -- "plugins/${plugin}" 2>/dev/null || true)"
+    [ -n "${changes}" ] || continue
+    while IFS=$'\t' read -r status path old_path; do
+      [ -n "${status}" ] || continue
+      touched=1
+      case "${status}" in
+        R[0-9]*|C[0-9]*) ;;
+        *) old_path="" ;;
+      esac
+      [ -n "${path}" ] || return 1
+      src="${path#plugins/${plugin}/}"
+      dest="${dev_root}/${src}"
+      if git -C "${ROOT}" cat-file -e "${target_ref}:${path}" 2>/dev/null; then
+        [ -f "${dest}" ] || return 1
+        git -C "${ROOT}" show "${target_ref}:${path}" 2>/dev/null | cmp -s - "${dest}" || return 1
+      else
+        # 目标提交里已删除的文件，开发版里也不该还在。
+        [ -e "${dest}" ] && return 1
+      fi
+      case "${status}" in
+        R[0-9]*|C[0-9]*)
+          [ -n "${old_path}" ] || return 1
+          [ -e "${dev_root}/${old_path#plugins/${plugin}/}" ] && return 1
+          ;;
+      esac
+    done <<< "${changes}"
+  done <<< "${commits}"
+  [ "${touched}" -eq 1 ] || return 1
+  return 0
+}
+
 auto_materialize_and_reload() {
   local base_ref="${1:-HEAD~1}"
   local target_ref="${2:-HEAD}"
 
   if [ ! -f "${ROOT}/scripts/sync-to-app.sh" ]; then
+    say "⚠️ 缺少安装脚本，开发版未更新。请在主检出运行: ./scripts/sync-to-app.sh"
     return 0
   fi
 
-  # 检测改动的插件
-  local changed_paths changed_plugins=()
-  changed_paths="$(git -C "${ROOT}" diff --name-only "${base_ref}" "${target_ref}" 2>/dev/null | grep -E '^plugins/' || true)"
+  # 只认插件目录。文档、流程、脚本、测试夹具不进开发版。
+  # 逐次提交收集：同一范围里先改后还原的文件，两端净差是空的，不能因此跳过。
+  local changed_paths changed_plugins=() pending=()
+  changed_paths="$(git -C "${ROOT}" log --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
   while IFS= read -r p; do
     [ -n "${p}" ] && changed_plugins+=("${p}")
   done < <(printf '%s\n' "${changed_paths}" | cut -d'/' -f2 | sort -u)
@@ -353,6 +405,21 @@ auto_materialize_and_reload() {
     return 0
   fi
 
+  # 开发版已经包含整段范围的插件不再装第二遍。
+  local plugin
+  for plugin in "${changed_plugins[@]}"; do
+    if dev_plugin_matches_range "${plugin}" "${base_ref}" "${target_ref}"; then
+      say "ℹ️ ${plugin} 已包含 ${base_ref}..${target_ref}，跳过重复安装。"
+    else
+      pending+=("${plugin}")
+    fi
+  done
+  if [ "${#pending[@]}" -eq 0 ]; then
+    say "✅ 开发版已包含本次合入，无需重复安装。"
+    return 0
+  fi
+  changed_plugins=("${pending[@]}")
+
   # Client 产物由 Web 服务按请求从磁盘读取，刷新页面即取得新版；其余插件文件（宿主路由、
   # 清单、构建期入口）只有宿主进程重新加载后才生效，必须走受控重启，否则会留下新旧混装。
   local needs_restart=0
@@ -360,7 +427,7 @@ auto_materialize_and_reload() {
     needs_restart=1
   fi
 
-  say "🔄 自动物化：检测到变更插件 [${changed_plugins[*]}]，开始增量同步至开发版 (~/.omnimux-dev)..."
+  say "🔄 自动物化：合并已确认，变更插件 [${changed_plugins[*]}] 开始装进开发版 (~/.omnimux-dev)，不写正式版..."
   if (cd "${ROOT}" && bash "${ROOT}/scripts/sync-to-app.sh" "${changed_plugins[@]}"); then
     say "✅ 增量物化成功！"
     # 自动探测 Dev App：宿主侧变更受控重启，纯 Client 变更刷新页面
@@ -499,7 +566,8 @@ cmd_remove() {
   git worktree prune
   say "done: ${task} removed"
 
-  # 兜底：若带 --pr 且主检出干净，确保主分支同步并自动物化
+  # 合并确认后必装开发版。正式版本落后时先快进再装这次拉进来的范围；
+  # 已经拉齐时也不能跳过——这次合并可能走了别的收尾，开发版还停在上一版。
   if [ -n "${pr_number}" ] && [ -z "$(git -C "${ROOT}" status --porcelain 2>/dev/null)" ]; then
     local cur_branch
     cur_branch="$(git -C "${ROOT}" symbolic-ref --short HEAD 2>/dev/null || true)"
@@ -512,6 +580,14 @@ cmd_remove() {
         say "🔄 自动同步：主工作区落后于远端主干，正在自动拉取最新代码并物化..."
         if git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}" 2>/dev/null; then
           auto_materialize_and_reload "${local_head}" "HEAD"
+        fi
+      elif [ -n "${remote_head}" ]; then
+        local first_parent
+        first_parent="$(git -C "${ROOT}" rev-parse "${remote_head}^1" 2>/dev/null || true)"
+        if [ -n "${first_parent}" ]; then
+          auto_materialize_and_reload "${first_parent}" "${remote_head}"
+        else
+          say "⚠️ 无法确定本次合并的起点，开发版未更新。请在主检出运行: ./scripts/sync-to-app.sh"
         fi
       fi
     fi
