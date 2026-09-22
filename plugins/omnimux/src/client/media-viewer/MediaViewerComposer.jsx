@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useSyncExternalStore } from 'react';
 import {
   DEFAULT_FALLBACK_CATALOG,
   parseCatalogToCascade,
 } from './MediaViewerComposerData.js';
+import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from './composer-prefill.js';
 
 /**
  * 图像/视频生成专用输入面板 (MediaViewerComposer)
@@ -18,12 +19,22 @@ export function MediaViewerComposer({
   disabled = false,
   refThumbnails = [],
 }) {
-  // 提示词输入框初始化为空字符串，等待用户自主输入
+  // 提示词输入框默认空。聊天里的提示词块点「使用提示词生成」后填入一次，不自动发送。
+  const handedOff = useSyncExternalStore(subscribeComposerPrefill, peekComposerPrefill, () => null);
   const [prompt, setPrompt] = useState('');
 
-  // 模式：默认图像生成，支持图像/视频切换
+  // 模式：默认图像生成，支持图像/视频切换；提示词块按标记切换。
   const [mode, setMode] = useState(initialMode);
   const [activePopover, setActivePopover] = useState(null); // 'opMode' | 'modelCascade' | 'params'
+
+  useEffect(() => {
+    if (!handedOff) return;
+    const request = takeComposerPrefill(handedOff.token);
+    if (!request) return;
+    setPrompt(request.prompt);
+    setMode(request.kind === 'video' ? 'video' : 'image');
+    setActivePopover(null);
+  }, [handedOff]);
 
   // 模型全量目录缓存
   const [catalogMap, setCatalogMap] = useState(() => ({

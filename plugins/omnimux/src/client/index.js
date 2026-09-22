@@ -38,6 +38,7 @@ import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
 import { installUserMessageAttachmentsEnhancer } from './attachments/userMessageAttachmentsEnhancer.ts'
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
+import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
 import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
 import { injectMediaViewerStyles } from './media-viewer/styles.js'
 import { getGlobalMediaViewerStore } from './media-viewer/media-viewer-store.js'
@@ -228,6 +229,7 @@ export function apply(ctx) {
     ctx.effect(() => installUserMessageAttachmentsEnhancer(document), 'omnimux: user message attachments enhancer')
     ctx.effect(() => { injectMediaViewerStyles(document) }, 'omnimux: media viewer styles')
     ctx.effect(() => installAssistantMessageMediaEnhancer(document), 'omnimux: assistant message media enhancer')
+    ctx.effect(() => installPromptFenceGenerate(document), 'omnimux: prompt fence generate')
     if (typeof ctx.inject === 'function') {
       ctx.inject(['betterSidebar', 'sessions', 'uiConversation'], (inner) => {
         const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')

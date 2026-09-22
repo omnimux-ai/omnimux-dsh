@@ -46,6 +46,8 @@ describe('Workbench Tools', () => {
     assert.equal(viewportSection.order, WORKBENCH_VIEWPORT_PROMPT_SECTION.order)
     assert.match(viewportSection.text, /ui_context/)
     assert.match(viewportSection.text, /workspace/)
+    assert.match(viewportSection.text, /prompt-image/)
+    assert.match(viewportSection.text, /prompt-video/)
 
     const getTool = tools.get('workbench_get_active_view')
     const viewRes = await getTool.execute({})
