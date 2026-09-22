@@ -76,4 +76,21 @@ describe('e2e: 加号菜单跟随输入框位置', () => {
     assert.equal(syncMenuPlacement(menu, doc), false)
     assert.equal(menu.dataset.placement, undefined)
   })
+
+  it('从顶部回到底部后，点击层恢复，不再挡住页面', () => {
+    const { doc, card, menu } = page(80, 200, 'true')
+    const anchor = doc.querySelector('.overlayAnchor')
+    anchor.style.position = 'absolute'
+    anchor.style.inset = '0'
+    anchor.style.height = '100%'
+    anchor.style.pointerEvents = 'none'
+    anchor.dataset.overlayPlacement = 'bottom'
+    card.dataset.menuPlacement = 'bottom'
+    card.getBoundingClientRect = () => ({ top: 850, bottom: 970, height: 120 })
+    ensurePlacementStyles(doc)
+    assert.equal(syncMenuPlacement(menu, doc), false)
+    assert.equal(anchor.dataset.overlayPlacement, undefined)
+    assert.equal(anchor.style.pointerEvents, '')
+    assert.equal(anchor.style.position, '')
+  })
 })

@@ -490,10 +490,11 @@ const PLUS_BUTTON = 'button[aria-haspopup="listbox"]'
 export function isPlusMenuContext(card, menu) {
   const root = menu?.closest?.('[data-composer-card]') || card
   const button = root?.querySelector?.(PLUS_BUTTON)
-  if (button?.getAttribute?.('aria-expanded') === 'true') return true
+  if (!button) return false
+  if (button.getAttribute?.('aria-expanded') === 'true') return true
   // 按下加号的同一帧，宿主还没把展开态写上，菜单也还没挂出来。
-  if (button && !menu) return true
-  return false
+  // 已挂出的菜单必须等展开态，避免斜杠联想被误判成加号。
+  return !menu
 }
 
 /**
@@ -520,7 +521,7 @@ export function shouldPlaceMenuBelow(card, menu, windowObj = (typeof window !== 
   const spaceAbove = cardRect.top
   const composerAtTop = cardRect.top + cardRect.height / 2 < viewportHeight / 2
 
-  if (composerAtTop) return spaceBelow >= 160 || spaceBelow >= spaceAbove
+  if (composerAtTop) return spaceBelow >= 160
   return spaceAbove < 160 && spaceBelow >= 160
 }
 
@@ -625,7 +626,13 @@ export function syncAllComposerMenus(doc = (typeof document !== 'undefined' ? do
       if (anchor) anchor.dataset.overlayPlacement = 'bottom'
     } else if (card.dataset.menuPlacement === 'bottom') {
       delete card.dataset.menuPlacement
-      if (anchor?.dataset.overlayPlacement === 'bottom') delete anchor.dataset.overlayPlacement
+      if (anchor?.dataset.overlayPlacement === 'bottom') {
+        delete anchor.dataset.overlayPlacement
+        anchor.style.position = ''
+        anchor.style.inset = ''
+        anchor.style.height = ''
+        anchor.style.pointerEvents = ''
+      }
     }
   }
 

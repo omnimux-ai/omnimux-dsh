@@ -378,6 +378,17 @@ test('shouldPlaceMenuBelow follows composer position only while the plus menu is
   slashCard.getBoundingClientRect = () => ({ top: 80, bottom: 200, height: 120 })
   assert.equal(shouldPlaceMenuBelow(slashCard, null, win), false)
 
+  // 已挂出的菜单必须看加号是否展开。加号收起时不能因为按钮还在就被翻到下方。
+  const openSlash = doc.createElement('div')
+  openSlash.setAttribute('data-trigger-menu', '')
+  topCard.querySelector('button').setAttribute('aria-expanded', 'false')
+  assert.equal(shouldPlaceMenuBelow(topCard, openSlash, win), false)
+  topCard.querySelector('button').setAttribute('aria-expanded', 'true')
+
+  // 顶部但下方不足 160px：保持在上方，不画出屏幕
+  topCard.getBoundingClientRect = () => ({ top: 40, bottom: 900, height: 860 })
+  assert.equal(shouldPlaceMenuBelow(topCard, null, win), false)
+
   assert.equal(shouldPlaceMenuBelow(null, null, win), false)
   assert.equal(shouldPlaceMenuBelow(topCard, null, null), false)
 })
