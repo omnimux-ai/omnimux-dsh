@@ -22,7 +22,7 @@ DSH 插槽体系分为两类：
 | 插槽名称 (Slot Name) | 职责说明 | 宿主默认 Priority | OmniMux 约定 Priority | 必须携带字段 |
 |---|---|---|---|---|
 | `conversation.hero.brand.mark` | 会话空白页中央品牌 Mark 区域 | `0` (`ui-brand-official`) | `-10` | `name`, `id`, `priority` |
-| `conversation.input.attachments` | 输入框内部附件托盘栏 | 无 / `0` | `-10` | `name`, `id`, `priority`, `locale` |
+| `conversation.input.attachments` | 输入框内部附件托盘栏 | 无 / `0` | `-10` | `name`, `id`（`omnimux-attachment-tray`）, `priority`, `locale` |
 
 ### 2.3 Priority 阶梯标准
 

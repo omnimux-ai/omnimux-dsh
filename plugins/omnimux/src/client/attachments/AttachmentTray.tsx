@@ -22,7 +22,6 @@ import {
   type NativeAttachmentUpload,
   type NativeComposerAttachment,
 } from './NativeAttachmentCard.tsx';
-import { getNativeComposerSnapshot, subscribeNativeComposer } from './nativeComposerBridge.ts';
 
 /** 官方 DraftFileUpload：会话草稿里的上传回执（定义收敛于 ./types.ts）。 */
 export type { DraftFileUpload };
@@ -189,18 +188,15 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     'default';
 
   const { error: commentError, retry: retryComments } = useCommentAttachment(props, currentSessionId);
-  const nativeComposer = useSyncExternalStore(subscribeNativeComposer, getNativeComposerSnapshot, getNativeComposerSnapshot);
-  const useProps = Array.isArray(props.attachments) || typeof props.onRemoveAttachment === 'function' || typeof props.onAddFiles === 'function';
-  const nativeAttachments: readonly NativeComposerAttachment[] = useProps
-    ? ((props.attachments || []) as readonly NativeComposerAttachment[])
-    : nativeComposer.attachments;
-  const nativeUploads = useProps ? props.uploads : nativeComposer.uploads;
-  const nativeOnRemove = useProps ? props.onRemoveAttachment : nativeComposer.onRemoveAttachment;
-  const nativeOnRetry = useProps ? props.onRetryFile : nativeComposer.onRetryFile;
-  const nativeOnAddFiles = useProps ? props.onAddFiles : nativeComposer.onAddFiles;
-  const nativeCanAcceptDrop = useProps ? props.canAcceptDrop : nativeComposer.canAcceptDrop;
-  const nativeDropLimits = useProps ? props.dropLimits : nativeComposer.dropLimits;
-  const canAcceptDrop = Boolean(nativeCanAcceptDrop) && typeof nativeOnAddFiles === 'function';
+  const nativeAttachments: readonly NativeComposerAttachment[] = Array.isArray(props.attachments)
+    ? (props.attachments as readonly NativeComposerAttachment[])
+    : [];
+  const nativeUploads = props.uploads;
+  const nativeOnRemove = props.onRemoveAttachment;
+  const nativeOnRetry = props.onRetryFile;
+  const nativeOnAddFiles = props.onAddFiles;
+  const nativeDropLimits = props.dropLimits;
+  const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof nativeOnAddFiles === 'function';
 
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);

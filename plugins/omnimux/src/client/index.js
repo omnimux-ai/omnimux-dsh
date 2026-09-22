@@ -21,8 +21,8 @@ import { HeroBrandMark } from './HeroBrandMark.jsx'
 import { installHeroBrandSlot } from './hero-brand.js'
 import { installStatsLineShadow } from './stats-line-shadow.js'
 import { AttachmentTray } from './attachments/AttachmentTray.tsx'
-import { NativeComposerBridge } from './attachments/NativeComposerBridge.tsx'
 import { getGlobalAttachmentStore } from './attachments/store.ts'
+import { registerMaterialMentionSource } from './attachments/materialMentionSource.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installWebSocketHmr } from '../hmr/client.js'
 import { injectUiContextStyle } from './composer-envelope.js'
@@ -72,6 +72,7 @@ export const inject = ['slots', 'locale']
 export function apply(ctx) {
   const t = installHubChrome(ctx)
   registerLinkTriggerSource(ctx)
+  registerMaterialMentionSource(ctx)
   installAgentPresetsI18n(ctx)
   installSessionCopyI18n(ctx)
   installCommandsI18n(ctx, primitives)
@@ -174,20 +175,11 @@ export function apply(ctx) {
     locale: NS,
     inject: () => ({ workbench: guideFace.workbench }),
   }, ComposerModeTabs))
-  // Visible tray sits above the composer. The official inner seat still
-  // receives native uploads through a silent bridge so Host drop/file
-  // callbacks keep working without drawing a second tray inside the card.
+  // 素材卡槽回到官方输入框内侧。Host 直接把上传回调交给托盘，不再经外侧桥接。
   const attachmentStore = getGlobalAttachmentStore()
   mountFormsBridge(ctx, attachmentStore)
   const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore })
   ctx.effect(() => () => { attachmentAdmission.dispose() }, 'omnimux: attachment admission')
-  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
-    name: 'conversation.input.dock',
-    id: 'omnimux-attachment-tray',
-    order: 118,
-    locale: NS,
-    inject: () => ({ getSessions: () => guideSessions }),
-  }, AttachmentTray))
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
     inject: () => ({ attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
@@ -203,10 +195,11 @@ export function apply(ctx) {
   }), 'omnimux: replicate skill release')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
-    id: 'omnimux-native-composer-bridge',
+    id: 'omnimux-attachment-tray',
     priority: -10,
     locale: NS,
-  }, NativeComposerBridge))
+    inject: () => ({ getSessions: () => guideSessions }),
+  }, AttachmentTray))
 
   ctx.effect(() => {
     const eventsClient = createEventsClient()
