@@ -163,3 +163,85 @@ test('e2e: 搜索过滤时候选索引与全量列表错位修复，并且普通
     dom.window.close();
   }
 });
+
+test('e2e: 菜单容器复用时能正常清理专有标记，杜绝自引用与弱文本标题假阳性污染', () => {
+  const dom = new JSDOM(`<!doctype html>
+    <head>
+      <style>${COMPOSER_COMPACT_CSS}</style>
+    </head>
+    <body>
+      <div data-composer-card>
+        <!-- 初始为素材菜单 -->
+        <div id="reused-menu" data-trigger-menu>
+          <button id="dsh-slash-option-material-0" role="option" data-material-id="m-1">
+            <span class="itemName">素材A</span>
+          </button>
+        </div>
+      </div>
+    </body>`);
+
+  const card = dom.window.document.querySelector('[data-composer-card]');
+  const menu = dom.window.document.querySelector('#reused-menu');
+
+  const previousWindow = globalThis.window;
+  globalThis.window = dom.window;
+
+  dom.window.__omnimuxAttachments = {
+    getActiveSessionId: () => 'sess-reuse',
+    getSnapshot: () => [
+      { id: 'm-1', title: '素材A', kind: 'image', previewUrl: '/covers/a.png' },
+      { id: 'm-2', title: '/help', kind: 'document', previewUrl: '/covers/help.png' },
+    ],
+    subscribeRoster: () => () => {},
+  };
+
+  card.getBoundingClientRect = () => ({ top: 700, bottom: 840, left: 100, right: 700, width: 600, height: 140, x: 100, y: 700 });
+
+  try {
+    // 第一次调用：是素材菜单，打上标记
+    placeMentionMenu(dom.window.document);
+    assert.equal(menu.getAttribute('data-omx-mention-menu'), 'true');
+
+    // 模拟容器被宿主复用为非素材斜杠菜单（例如 /help），此时虽然素材库里恰好有名为 "/help" 的素材，
+    // 但由于移除了弱文本标题匹配且不再有自引用，该容器必须被清理掉 data-omx-mention-menu
+    menu.innerHTML = `
+      <button id="dsh-slash-option-cmd-0" role="option">
+        <span class="itemName">/help</span>
+      </button>
+    `;
+
+    placeMentionMenu(dom.window.document);
+    assert.equal(menu.hasAttribute('data-omx-mention-menu'), false, '复用为非素材菜单后，data-omx-mention-menu 必须被移除');
+
+    // 再次验证同名素材缩略图歧义保护
+    dom.window.__omnimuxAttachments.getSnapshot = () => [
+      { id: 'm-ambig-1', title: '封面', kind: 'image', extension: 'png', previewUrl: '/covers/thumb-1.png' },
+      { id: 'm-ambig-2', title: '封面', kind: 'image', extension: 'jpg', previewUrl: '/covers/thumb-2.jpg' },
+    ];
+    menu.innerHTML = `
+      <button id="dsh-slash-option-material-0" role="option" data-source="material">
+        <span class="itemName">封面</span>
+      </button>
+    `;
+    placeMentionMenu(dom.window.document);
+    const ambigOpt = menu.querySelector('#dsh-slash-option-material-0');
+    // 存在两项名为“封面”的素材且无任何扩展名区分，不应随意挑选第一项错配
+    assert.equal(ambigOpt.hasAttribute('data-omx-thumb'), false, '同名素材歧义时应降级，不随意挑选第一项');
+
+    // 若带有扩展名区分
+    menu.innerHTML = `
+      <button id="dsh-slash-option-material-0" role="option" data-source="material">
+        <span class="itemName">封面</span>
+        <span class="ext">jpg</span>
+      </button>
+    `;
+    placeMentionMenu(dom.window.document);
+    const resolvedOpt = menu.querySelector('#dsh-slash-option-material-0');
+    assert.equal(resolvedOpt.getAttribute('data-omx-thumb'), 'true');
+    assert.match(resolvedOpt.style.getPropertyValue('--omx-thumb'), /thumb-2\.jpg/);
+  } finally {
+    if (previousWindow) globalThis.window = previousWindow;
+    else delete globalThis.window;
+    dom.window.close();
+  }
+});

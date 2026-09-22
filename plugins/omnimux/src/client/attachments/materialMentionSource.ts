@@ -76,12 +76,14 @@ export function serializeMaterialMention(sessionId: string, ref: string): string
   if (!parsed) return ref;
   const attachment = findSessionMaterial(sessionId, parsed.id);
   if (!attachment) return ref;
-  const title = attachment.title || '素材';
+  const rawTitle = attachment.title || '素材';
+  // 剥离英文双引号和换行符，避免引用 Token 闭合错位与断裂
+  const safeTitle = rawTitle.replace(/["\r\n]/g, '').trim() || '素材';
   // 若素材名称含空格，按 DSH 语法使用 @"名称"（无空格使用 @名称）
-  if (/\s/.test(title)) {
-    return `@"${title}"`;
+  if (/\s/.test(safeTitle)) {
+    return `@"${safeTitle}"`;
   }
-  return `@${title}`;
+  return `@${safeTitle}`;
 }
 
 export function createMaterialMentionSource() {

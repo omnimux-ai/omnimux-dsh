@@ -458,7 +458,8 @@ test('installComposerCompactObserver re-binds when card DOM node is replaced by 
 
 test('placeMentionMenu opens downward near the top and upward near the bottom', () => {
   const row = {
-    attrs: {},
+    id: 'dsh-slash-option-material-0',
+    attrs: { 'data-source': 'material' },
     style: { props: {}, setProperty(k, v) { this.props[k] = v }, removeProperty(k) { delete this.props[k] } },
     querySelector(sel) { return sel.includes('itemName') ? { textContent: '海浪封面' } : null },
     setAttribute(key, value) { this.attrs[key] = value },
@@ -599,4 +600,23 @@ test('placeMentionMenu: 搜索过滤时候选索引与全量列表错位修复�
   // 必须精确匹配到「夜景视频」的缩略图 (night.mp4)，严禁错配为全量 0 号的 wave.png
   assert.equal(filteredRow.getAttribute('data-omx-thumb'), 'true')
   assert.equal(filteredRow.style.props['--omx-thumb'], 'url("https://img/night.mp4")')
+})
+
+test('installComposerCompactObserver: 统一改用 schedulePlaceMentionMenu 异步调度，避免同步重排', () => {
+  const { doc } = setupDoc()
+  let scheduled = false
+  const origRaf = globalThis.requestAnimationFrame
+  globalThis.requestAnimationFrame = (cb) => {
+    scheduled = true
+    return setTimeout(cb, 10)
+  }
+  try {
+    const uninstall = installComposerCompactObserver(doc)
+    assert.equal(scheduled, true, '挂载时必须走 schedulePlaceMentionMenu 异步调度，严禁直接同步测量')
+    assert.equal(typeof uninstall, 'function')
+    uninstall()
+  } finally {
+    if (origRaf) globalThis.requestAnimationFrame = origRaf
+    else delete globalThis.requestAnimationFrame
+  }
 })

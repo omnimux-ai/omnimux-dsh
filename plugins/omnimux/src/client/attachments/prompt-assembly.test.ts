@@ -163,4 +163,26 @@ test('formatAttachmentLine: 无实体路径时使用 previewUrl 作为 fallbackR
     blobLine,
     '- [视频] 临时录制片段.mp4 (`MP4`): blob:http://localhost:43120/abc-123'
   );
+
+  // 测试路径存在但清洗格式化后为空串时，能正确回退到 previewUrl（修复短路缺陷）
+  const attWithDirtyPath: ConversationAttachment = {
+    id: 'att-dirty-path-fallback',
+    fingerprint: 'fp-dirty',
+    sessionId: 'sess-dirty',
+    sourcePlugin: 'omnimux',
+    kind: 'image',
+    entityId: 'img-dirty-1',
+    title: '清洗空路径.png',
+    extension: 'PNG',
+    relativePath: '///',
+    previewUrl: 'https://cdn.example.com/attachments/dirty-path-fallback.png',
+    status: 'ready',
+    createdAt: 202,
+  };
+  const dirtyLine = formatAttachmentLine(attWithDirtyPath);
+  assert.equal(
+    dirtyLine,
+    '- [图像] 清洗空路径.png (`PNG`): https://cdn.example.com/attachments/dirty-path-fallback.png',
+    '路径清洗为空串时，应正确降级为 previewUrl'
+  );
 });

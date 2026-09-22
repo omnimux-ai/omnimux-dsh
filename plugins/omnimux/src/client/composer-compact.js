@@ -684,7 +684,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   }
 
   applyComposerDensity(doc)
-  placeMentionMenu(doc)
+  schedulePlaceMentionMenu(doc)
   return uninstallComposerCompactObserver
 }
 
@@ -776,17 +776,17 @@ export function placeMentionMenu(doc = hostDocument()) {
   if (!menus || menus.length === 0) return
 
   const materials = listSessionMaterials('')
-  const materialTitleSet = new Set(materials.map((m) => m.title).filter(Boolean))
 
   menus.forEach((menu) => {
     const card = menu.closest?.('[data-composer-card]')
     if (!card) return
 
     // 1. 严格限定仅对 @ 引用/素材菜单生效：
-    // 通过检测是否包含素材数据源属性、素材项专属 id 格式、行内素材名称匹配或已有专用标记
+    // 仅依据强结构化特征判定（data-source="material"、id 匹配、data-material-id、data-value 结构），
+    // 移除自引用检查与弱文本标题匹配，杜绝假阳性并确保容器复用时能正常清理专有标记
     const optionRows = typeof menu.querySelectorAll === 'function' ? Array.from(menu.querySelectorAll('[role="option"]')) : []
     const hasMaterialItems = Boolean(
-      menu.hasAttribute?.('data-omx-mention-menu') ||
+      menu.getAttribute?.('data-source') === 'material' ||
       menu.querySelector?.('[data-source="material"]') ||
       menu.querySelector?.('[id^="dsh-slash-option-material-"]') ||
       menu.querySelector?.('[data-material-id]') ||
@@ -796,8 +796,7 @@ export function placeMentionMenu(doc = hostDocument()) {
         if (r.getAttribute?.('data-material-id')) return true
         const val = r.getAttribute?.('data-value') || ''
         if (val.startsWith('material:')) return true
-        const name = (r.querySelector?.('[class*="itemName"]')?.textContent || r.textContent || '').trim()
-        return Boolean(name && materialTitleSet.has(name))
+        return false
       })
     )
 
@@ -820,8 +819,7 @@ export function placeMentionMenu(doc = hostDocument()) {
       card.setAttribute(MENTION_UP_ATTR, 'true')
     }
 
-    // 3. 构建全量与基于当前输入过滤的素材映射
-    const materials = listSessionMaterials('')
+    // 3. 构建全量与基于当前输入过滤的素材映射（复用外层已获取的 materials）
     const materialsById = new Map()
     const materialsByTitle = new Map()
     for (const item of materials) {
@@ -882,16 +880,36 @@ export function placeMentionMenu(doc = hostDocument()) {
         }
       }
 
-      // C. 从行内展示的素材标题稳定映射
+      // C. 从行内展示的素材标题稳定映射（同名歧义时不随意挑选首项，避免错配）
+      let titleAmbiguous = false
       if (!matchedItem && itemName && materialsByTitle.has(itemName)) {
         const list = materialsByTitle.get(itemName)
-        matchedItem = list[0]
+        if (list.length === 1) {
+          matchedItem = list[0]
+        } else if (list.length > 1) {
+          // 存在同名歧义：尝试结合行内可能携带的扩展名/文本辅助确认
+          const rowText = (row.textContent || '').toLowerCase()
+          const matchedByExt = list.filter((item) => {
+            const ext = (item.extension || '').toLowerCase().replace(/^\./, '')
+            return ext && rowText.includes(ext)
+          })
+          if (matchedByExt.length === 1) {
+            matchedItem = matchedByExt[0]
+          } else {
+            // 无法确定唯一性时，不随意挑选第一项，避免错配
+            matchedItem = null
+            titleAmbiguous = true
+          }
+        }
       }
 
-      // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致时才允许采用，杜绝错配）
-      if (!matchedItem && idx >= 0 && materials[idx]) {
+      // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致且无同名歧义时才允许采用，杜绝错配）
+      if (!matchedItem && !titleAmbiguous && idx >= 0 && materials[idx]) {
         if (!itemName || materials[idx].title === itemName) {
-          matchedItem = materials[idx]
+          const titleMatches = materialsByTitle.get(materials[idx].title)
+          if (!titleMatches || titleMatches.length === 1) {
+            matchedItem = materials[idx]
+          }
         }
       }
 
