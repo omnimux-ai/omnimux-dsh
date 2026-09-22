@@ -119,10 +119,16 @@ function expectedNodes(shape) {
 /**
  * 起一套 JSDOM 夹具并渲染组件，返回 DOM 与宿主侧的读写句柄。
  */
-async function mount() {
-  const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="host"></div></body></html>', {
-    url: 'http://localhost/',
-  })
+async function mount(options) {
+  // 会话 id 决定快捷方式会话级状态（选中/撤回互斥）落哪一行：需要干净起点的用例
+  // 传自己的 id，避免上一条用例留下的「已选中」把这次点击变成撤回。
+  const sessionId = (options && options.sessionId) || 'e2e-session'
+  const dom = new JSDOM(
+    '<!DOCTYPE html><html><head></head><body>'
+    + '<div data-composer-card><div id="editor" data-composer-input="true" contenteditable="true"></div></div>'
+    + '<div id="host"></div></body></html>',
+    { url: 'http://localhost/' },
+  )
   global.window = dom.window
   global.document = dom.window.document
   global.CustomEvent = dom.window.CustomEvent
@@ -139,11 +145,11 @@ async function mount() {
 
   const container = document.getElementById('host')
   const root = createRoot(container)
-  const session = { id: 'e2e-session', blank: true }
+  const session = { id: sessionId, blank: true }
   await act(async () => {
     root.render(React.createElement(ComposerQuickShortcuts, {
       t: (key, fallback) => LABELS[key] || fallback || key,
-      sessionId: 'e2e-session',
+      sessionId,
       session,
       useSession: (selector) => selector(session),
       useConversation: (selector) => selector({ activeTargets: new Set() }),
@@ -158,7 +164,13 @@ async function mount() {
     })
   }
 
-  return { dom, root, click, writes, getDraft: () => draft }
+  return { dom, root, click, writes, getDraft: () => draft, chipKinds }
+}
+
+/** 输入框里现有的链接胶囊种类（按 DOM 顺序）；胶囊是节点，不进草稿文本。 */
+function chipKinds() {
+  return [...document.querySelectorAll('[data-omx-video-token="true"], [data-omx-product-token="true"]')]
+    .map((node) => (node.getAttribute('data-omx-video-token') === 'true' ? 'video' : 'product'))
 }
 
 describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', () => {
@@ -221,36 +233,79 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
     }
   })
 
-  it('点复刻：预填提示语与链接、选中态生效、模型与参数出现', async () => {
+  it('点复刻：预填提示语、只插视频胶囊、选中态生效、模型与参数出现', async () => {
     const env = await mount()
     try {
       await env.click('clone')
-      assert.equal(env.getDraft(), '请用我的产品复刻这个爆款视频\n\n[视频] [商品]', '必须预填提示语与两个链接令牌')
+      assert.equal(env.getDraft(), '请用我的产品复刻这个爆款视频', '草稿里只有提示语，链接不再写成 [视频] 纯文本')
+      assert.deepEqual(env.chipKinds(), ['video'], '点复刻只预填视频胶囊，商品胶囊由上方卡槽点了才插')
+
+      const video = document.querySelector('[data-omx-video-token="true"]')
+      assert.equal(document.querySelector('[data-omx-product-token="true"]'), null, '商品胶囊不得随点击自动插入')
+      for (const [node, name, placeholder] of [
+        [video, '视频', '粘贴 TikTok 视频链接'],
+      ]) {
+        assert.equal(node.getAttribute('contenteditable'), 'false', `${name}胶囊必须是原子不可编辑节点`)
+        assert.equal(node.querySelector('.omx-link-chip__name').textContent, name, `${name}胶囊必须带名称`)
+        assert.ok(node.querySelector('.omx-link-chip__icon'), `${name}胶囊必须带图标`)
+        assert.ok(node.querySelector('.omx-link-chip__divider'), `${name}胶囊必须有分隔线`)
+        assert.equal(node.querySelector('input').getAttribute('placeholder'), placeholder, `${name}胶囊必须带可粘贴链接的输入框`)
+        assert.ok(node.querySelector('.omx-link-chip__remove'), `${name}胶囊必须带 × 删除`)
+      }
 
       const clone = document.querySelector('[data-omx-quick-shortcut="clone"]')
       assert.equal(clone.getAttribute('aria-pressed'), 'true', '选中态必须可被读屏')
       assert.ok(clone.classList.contains('is-active'), '选中态必须有类名')
       assert.ok(document.querySelector('.omx-quick-shortcut-controls'), '复刻必须出现模型与参数控件')
 
-      // 再点同一条 = 撤回：草稿剥掉本快捷方式写入的内容，技能与控件同步撤下
+      // 再点同一条 = 撤回：草稿剥掉本快捷方式写入的内容，胶囊一并清掉，技能与控件同步撤下
       await env.click('clone')
       assert.equal(clone.getAttribute('aria-pressed'), 'false', '再点同一条必须撤回')
       assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '撤回后控件必须消失')
-      assert.equal(env.writes[env.writes.length - 1], '', '撤回必须剥掉本快捷方式写入的提示语与令牌')
+      assert.equal(env.writes[env.writes.length - 1], '', '撤回必须剥掉本快捷方式写入的提示语')
+      assert.deepEqual(env.chipKinds(), [], '撤回必须一并清掉本快捷方式插入的胶囊')
     } finally {
       await act(async () => env.root.unmount())
     }
   })
 
-  it('切到拆解：提示语与链接整组替换，且不出现模型与参数', async () => {
+  it('带货：默认只插商品胶囊，视频胶囊不由点击自动插入', async () => {
+    const env = await mount({ sessionId: 'e2e-selling-default-link' })
+    try {
+      await env.click('selling')
+      assert.deepEqual(env.chipKinds(), ['product'], '点带货只预填商品胶囊，视频胶囊由上方卡槽点了才插')
+      assert.equal(document.querySelector('[data-omx-video-token="true"]'), null)
+    } finally {
+      await act(async () => env.root.unmount())
+    }
+  })
+
+  it('切到拆解：提示语整组替换，胶囊整组替换（不残留上一条的胶囊）', async () => {
     const env = await mount()
     try {
       await env.click('clone')
       await env.click('breakdown')
-      assert.equal(env.getDraft(), '请帮我分析拆解这个视频。\n\n[视频]', '切换必须整组替换提示语与链接')
+      assert.equal(env.getDraft(), '请帮我分析拆解这个视频。', '切换必须整组替换提示语')
+      assert.deepEqual(env.chipKinds(), ['video'], '切换后只留本条的视频胶囊，上一条的胶囊不得残留')
       assert.equal(document.querySelectorAll('.omx-quick-shortcut-btn.is-active').length, 1, '任何时候只允许一条选中')
       assert.equal(document.querySelector('[data-omx-quick-shortcut="breakdown"]').getAttribute('aria-pressed'), 'true')
       assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '拆解不得出现模型与参数')
+    } finally {
+      await act(async () => env.root.unmount())
+    }
+  })
+
+  it('胶囊里的 × 删除后节点消失（卡槽两态由节点种类判，不再看草稿文本）', async () => {
+    const env = await mount({ sessionId: 'e2e-chip-remove' })
+    try {
+      await env.click('breakdown')
+      assert.deepEqual(env.chipKinds(), ['video'])
+      const remove = document.querySelector('[data-omx-video-token="true"] .omx-link-chip__remove')
+      await act(async () => {
+        remove.dispatchEvent(new env.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }))
+      })
+      assert.deepEqual(env.chipKinds(), [], '× 必须把胶囊整体清掉')
+      assert.equal(env.getDraft(), '请帮我分析拆解这个视频。', '删胶囊不动草稿文本')
     } finally {
       await act(async () => env.root.unmount())
     }

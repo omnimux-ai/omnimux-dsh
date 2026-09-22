@@ -70,7 +70,12 @@ export function quickLinkLabelKey(kind) {
 }
 
 /**
- * 一条快捷方式会用到的全部链接卡槽：默认链接在前，可追加链接在后。
+ * 一条快捷方式的**卡槽集**：默认链接在前，可追加链接在后。
+ *
+ * 这是输入框上方那一行卡槽的集合，**不是**点快捷方式时插入的胶囊集：
+ * 卡槽集里 `extraLinks` 那几枚只是「摆在那儿可点」，点了才插进输入框
+ * （见 `quickShortcutDefaultLinks`）。
+ *
  * @param {{ defaultLink?: string, extraLinks?: readonly string[] } | null | undefined} entry
  * @returns {readonly string[]} 去重后的链接种类；非法输入返回空数组
  */
@@ -84,6 +89,22 @@ export function quickShortcutLinks(entry) {
   push(entry.defaultLink)
   if (Array.isArray(entry.extraLinks)) entry.extraLinks.forEach(push)
   return kinds
+}
+
+/**
+ * 点一条快捷方式时**实际插入**输入框的胶囊集：只有 `defaultLink`。
+ *
+ * `extraLinks` 是「上方卡槽可点、点了再追加」的可选链接，不得在点快捷方式时
+ * 自动插入——产品口径：复刻默认只预填视频，商品由用户手动加。
+ *
+ * @param {{ defaultLink?: string } | null | undefined} entry
+ * @returns {readonly string[]} 至多一个合法链接种类；非法输入返回空数组
+ */
+export function quickShortcutDefaultLinks(entry) {
+  if (!entry || typeof entry !== 'object') return []
+  const kind = entry.defaultLink
+  if (typeof kind !== 'string' || !QUICK_LINK_KINDS.includes(kind)) return []
+  return [kind]
 }
 
 /**
@@ -112,6 +133,9 @@ export function resolveQuickShortcuts(resolveSkill) {
 /**
  * 切换互斥规则：从一条快捷方式切到另一条，提示语与链接**整组替换**，
  * 技能只保留一颗（技能身份由当前条目唯一决定，因此天然不叠加）。
+ *
+ * 返回的 `links` 是**卡槽集**（默认链接 + 可追加链接），供输入框上方那行卡槽
+ * 渲染两态；实际插进输入框的胶囊集由 `quickShortcutDefaultLinks` 单独给出。
  *
  * @param {string | null} activeId 当前选中的快捷方式 id
  * @param {string} nextId 被点击的快捷方式 id

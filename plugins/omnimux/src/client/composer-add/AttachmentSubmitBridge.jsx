@@ -5,6 +5,12 @@ import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
 import { getGlobalShadowContextStore } from '../reference/shadow-context.ts'
 import { submittedAttachmentStore } from '../attachments/submittedAttachmentStore.ts'
+import {
+  isQuickLinkChipTarget,
+  quickLinkChipMarkdown,
+  quickLinkChipSelectorFor,
+} from '../composer-quick-shortcuts/linkChip.js'
+import { notifyQuickLinkChipChange, resolveComposerCard } from '../composer-quick-shortcuts/dom.js'
 
 /**
  * 立即把本会话的 viewport 信封推给宿主，不等 2s 心跳。
@@ -93,28 +99,78 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       // 选中的技能只显示在技能按钮旁的名称标签上。发送时由会话试用通道
       // 把技能说明带进上下文，草稿正文保持用户写下的原话，不再补斜杠指令。
 
-      // Reconcile video link token to [视频](url) markdown syntax
-      const doc = root?.ownerDocument || (typeof document !== 'undefined' ? document : null)
-      const tokenNode = doc?.querySelector?.('[data-omx-video-token="true"]')
-      const tokenInput = tokenNode?.querySelector?.('input')
-      const liveUrl = tokenInput?.value?.trim() || ''
-      const videoToken = typeof window !== 'undefined' ? window.__omnimuxVideoToken : null
-      const url = liveUrl || (videoToken && typeof videoToken.url === 'string' ? videoToken.url.trim() : '')
-
-      if (url) {
-        if (!draft.includes(url)) {
-          const videoBlock = `[视频](${url})`
-          draft = draft.trim() ? `${draft.trim()}\n\n${videoBlock}` : videoBlock
-          try {
-            actions?.setDraft?.(draft)
-            if (typeof window !== 'undefined') {
-              window.__omnimuxVideoToken = null
-              window.dispatchEvent(new CustomEvent('omnimux:video-token:cleared'))
-            }
-          } catch {}
-        }
-        tokenNode?.remove?.()
+      // Reconcile inline link chips to their submit forms:
+      // video -> `[视频](url)` (pinned by composer-video-token.test.js),
+      // product -> `[商品: url]` (the existing product slot fill form).
+      // Both markers are language-independent fixed names (linkChip.js `commitLabel`).
+      // 读取范围收敛到**本会话**的输入框卡片：宿主可以同时挂载两张卡（分屏、多标签保活），
+      // 按整文档取节点会把别的会话的链接读走。卡片解析不到时（本会话没有卡片，例如夹具环境）
+      // 才退回整文档——这条兜底只覆盖「文档里就只有这一套输入框」的降级路径。
+      const card = resolveComposerCard(anchor.current)
+      const scope = card || root?.ownerDocument || (typeof document !== 'undefined' ? document : null)
+      const readChip = (kind) => {
+        const node = scope?.querySelector?.(quickLinkChipSelectorFor(kind))
+        const value = node?.querySelector?.('input')
+        const label = node?.getAttribute?.('data-omx-chip-label') || ''
+        return { node, label, url: value?.value?.trim() || '' }
       }
+      const appendBlock = (block) => {
+        if (!block) return false
+        draft = draft.trim() ? `${draft.trim()}\n\n${block}` : block
+        try {
+          actions?.setDraft?.(draft)
+          return true
+        } catch {
+          return false
+        }
+      }
+      // 胶囊只有在链接**真的进了草稿**之后才允许消费（写进去，或草稿里已经有同一条链接）。
+      // `setDraft` 抛错时草稿没落地，这时若照样删掉节点，用户填的链接就只存在于被删的胶囊里
+      // ——彻底丢失且无任何提示。宁可留着胶囊让用户重试。
+      const consumeChip = (chip, url, block) => {
+        if (!url) return false
+        if (draft.includes(url)) {
+          chip.node?.remove?.()
+          return true
+        }
+        if (!appendBlock(block)) {
+          console.warn('[AttachmentSubmitBridge] 链接未写入草稿，保留胶囊让用户重试:', url)
+          return false
+        }
+        chip.node?.remove?.()
+        return true
+      }
+
+      const video = readChip('video')
+      const videoToken = typeof window !== 'undefined' ? window.__omnimuxVideoToken : null
+      const url = video.url || (videoToken && typeof videoToken.url === 'string' ? videoToken.url.trim() : '')
+
+      // 消费掉全局视频令牌。事件构造器取宿主 window 自己那份并整体兜错：
+      // 这一段抛错会中断后面全部的提交流程（附件信封、预设编译），代价远大于通知本身。
+      const clearVideoToken = () => {
+        try {
+          if (typeof window === 'undefined') return
+          window.__omnimuxVideoToken = null
+          const Ctor = typeof window.CustomEvent === 'function' ? window.CustomEvent : null
+          if (Ctor) window.dispatchEvent(new Ctor('omnimux:video-token:cleared'))
+        } catch {}
+      }
+
+      let consumedChip = false
+      if (url) {
+        const appended = !draft.includes(url)
+        if (consumeChip(video, url, quickLinkChipMarkdown('video', url))) {
+          consumedChip = true
+          if (appended) clearVideoToken()
+        }
+      }
+
+      const product = readChip('product')
+      if (product.url && consumeChip(product, product.url, quickLinkChipMarkdown('product', product.url))) {
+        consumedChip = true
+      }
+
+      if (consumedChip) notifyQuickLinkChipChange()
 
       // Reconcile creative presets (Format, Hook, Style) into structured system context (only in marketing mode)
       try {
@@ -182,6 +238,8 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
     }
     const key = event => {
       if (!belongs(event.target) || event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
+      // 链接胶囊输入框里的回车归胶囊（确认粘贴的链接），既不进草稿也不触发发送。
+      if (isQuickLinkChipTarget(event.target)) return
       if (!event.target.closest?.('[data-composer-input="true"]') && !send(event.target)) return
       if (doc.querySelector('[data-trigger-menu] [aria-activedescendant]')?.getAttribute('aria-activedescendant')) return
       if (!check()) stop(event)

@@ -1,0 +1,406 @@
+{
+  "pass": true,
+  "origin": "http://127.0.0.1:61838",
+  "checks": [
+    {
+      "id": "overlay-detected",
+      "pass": true,
+      "detail": {
+        "present": true,
+        "maskClass": "_mask_w1urq_14",
+        "text": "内测声明\n\nOmniMux 目前的 0.1 版本仍处在面向 Harness 开发者进行测试的阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者的反馈建议。预计 OmniMux 的核心插件以及基础 API 都会在接下来的一段时间内快速迭代、持续演化。\n\n我们期待与全球开发者一起，在开源、开放、可复用、可组合的基础设",
+        "buttons": [
+          {
+            "text": "继续",
+            "cls": "_button_cfgyt_4 _primary_cfgyt_38 _md_cf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "overlay-confirmed",
+      "pass": true,
+      "detail": {
+        "clicked": "继续"
+      }
+    },
+    {
+      "id": "hero-shortcuts",
+      "pass": true,
+      "detail": [
+        "clone",
+        "breakdown",
+        "selling",
+        "reverse"
+      ]
+    },
+    {
+      "id": "host-bridge-ready",
+      "pass": true,
+      "detail": {
+        "composerActions": true,
+        "hasSetDraft": true,
+        "getDraft": "",
+        "skillLibrary": true,
+        "composerCard": true
+      }
+    },
+    {
+      "id": "clone-inserts-default-link-only",
+      "pass": true,
+      "detail": {
+        "chipCount": 1,
+        "kinds": [
+          "video"
+        ]
+      }
+    },
+    {
+      "id": "clone-single-kind-video",
+      "pass": true,
+      "detail": [
+        "video"
+      ]
+    },
+    {
+      "id": "clone-no-product-chip",
+      "pass": true,
+      "detail": {
+        "kinds": [
+          "video"
+        ]
+      }
+    },
+    {
+      "id": "no-plain-text-token",
+      "pass": true,
+      "detail": {
+        "found": [],
+        "editorText": "请用我的产品复刻这个爆款视频"
+      }
+    },
+    {
+      "id": "chip-anatomy",
+      "pass": true,
+      "detail": [
+        {
+          "kind": "video",
+          "label": "视频",
+          "placeholder": "粘贴 TikTok 视频链接",
+          "inputValue": "",
+          "hasIcon": true,
+          "hasDivider": true,
+          "hasRemove": true,
+          "contentEditable": "false",
+          "inlineStyle": null,
+          "width": 262,
+          "height": 26,
+          "parentTag": "DIV"
+        }
+      ]
+    },
+    {
+      "id": "chip-placeholder",
+      "pass": true,
+      "detail": [
+        "粘贴 TikTok 视频链接"
+      ]
+    },
+    {
+      "id": "chip-positive-geometry",
+      "pass": true,
+      "detail": [
+        [
+          262,
+          26
+        ]
+      ]
+    },
+    {
+      "id": "chip-inside-composer",
+      "pass": true,
+      "detail": [
+        "DIV"
+      ]
+    },
+    {
+      "id": "clone-video-slot-disabled",
+      "pass": true,
+      "detail": [
+        {
+          "text": "视频",
+          "disabled": true
+        },
+        {
+          "text": "商品",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "clone-product-slot-clickable",
+      "pass": true,
+      "detail": [
+        {
+          "text": "视频",
+          "disabled": true
+        },
+        {
+          "text": "商品",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "product-slot-clickable-before-click",
+      "pass": true,
+      "detail": {
+        "mode": "mouse",
+        "x": 599,
+        "y": 274,
+        "width": 69,
+        "height": 28,
+        "disabled": false,
+        "hitIsSelfOrChild": true
+      }
+    },
+    {
+      "id": "product-slot-inserts-chip",
+      "pass": true,
+      "detail": {
+        "chipCount": 2,
+        "kinds": [
+          "video",
+          "product"
+        ]
+      }
+    },
+    {
+      "id": "product-slot-disabled-after-insert",
+      "pass": true,
+      "detail": [
+        {
+          "text": "视频",
+          "disabled": true,
+          "className": "omx-prompt-slot-chip   is-disabled"
+        },
+        {
+          "text": "商品",
+          "disabled": true,
+          "className": "omx-prompt-slot-chip   is-disabled"
+        }
+      ]
+    },
+    {
+      "id": "product-chip-placeholder",
+      "pass": true,
+      "detail": [
+        "粘贴 TikTok 视频链接",
+        "粘贴商品链接或 ID"
+      ]
+    },
+    {
+      "id": "chip-input-accepts-url",
+      "pass": true,
+      "detail": {
+        "focus": {
+          "found": true,
+          "focused": true,
+          "activeTag": "INPUT",
+          "x": 625,
+          "y": 225,
+          "width": 168,
+          "height": 16
+        },
+        "value": "https://www.tiktok.com/@ryannreedbuild/video/7391823719283719283"
+      }
+    },
+    {
+      "id": "chip-enter-keeps-draft",
+      "pass": true,
+      "detail": {
+        "before": "请用我的产品复刻这个爆款视频",
+        "after": "请用我的产品复刻这个爆款视频"
+      }
+    },
+    {
+      "id": "editor-typing-survives",
+      "pass": true,
+      "detail": {
+        "focus": {
+          "found": true,
+          "focused": true,
+          "activeTag": "DIV",
+          "x": 857,
+          "y": 332,
+          "width": 770,
+          "height": 52
+        },
+        "editorText": "请用我的产品复刻这个爆款视频 再加一句标题 [角色]"
+      }
+    },
+    {
+      "id": "chips-survive-typing",
+      "pass": true,
+      "detail": {
+        "chipCount": 2
+      }
+    },
+    {
+      "id": "legacy-slot-highlight-alive",
+      "pass": true,
+      "detail": {
+        "highlightCount": 1
+      }
+    },
+    {
+      "id": "remove-keeps-video-chip",
+      "pass": true,
+      "detail": [
+        "video"
+      ]
+    },
+    {
+      "id": "removed-slot-clickable-again",
+      "pass": true,
+      "detail": [
+        {
+          "text": "视频",
+          "disabled": true,
+          "className": "omx-prompt-slot-chip   is-disabled"
+        },
+        {
+          "text": "商品",
+          "disabled": false,
+          "className": "omx-prompt-slot-chip   "
+        },
+        {
+          "text": "角色",
+          "disabled": false,
+          "className": "omx-prompt-slot-chip   "
+        }
+      ]
+    },
+    {
+      "id": "switch-replaces-group",
+      "pass": true,
+      "detail": [
+        "video"
+      ]
+    },
+    {
+      "id": "switch-single-active-shortcut",
+      "pass": true,
+      "detail": [
+        "breakdown"
+      ]
+    },
+    {
+      "id": "retract-typed-token-at-draft-tail",
+      "pass": true,
+      "detail": {
+        "editorText": "请帮我分析拆解这个视频。 我的补充 [视频]",
+        "tokens": [
+          "[视频]"
+        ],
+        "focus": {
+          "found": true,
+          "focused": true,
+          "activeTag": "DIV",
+          "x": 857,
+          "y": 332,
+          "width": 770,
+          "height": 52
+        }
+      }
+    },
+    {
+      "id": "retract-removes-chip",
+      "pass": true,
+      "detail": {
+        "chipCount": 0
+      }
+    },
+    {
+      "id": "retract-keeps-user-typed-token",
+      "pass": true,
+      "detail": {
+        "editorText": "我的补充 [视频]",
+        "tokens": [
+          "[视频]"
+        ]
+      }
+    },
+    {
+      "id": "no-write-failure-notice",
+      "pass": true,
+      "detail": {
+        "noticeText": null
+      }
+    },
+    {
+      "id": "no-console-exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "chip-00c-after-overlay.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-00c-after-overlay.png",
+      "bytes": 431264,
+      "sha256": "47dd7a3aa42e25e82a6b2212969440088c1b6bf152e5d9cd88314d8d40a1b7fe"
+    },
+    {
+      "name": "chip-00-hero.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-00-hero.png",
+      "bytes": 431264,
+      "sha256": "47dd7a3aa42e25e82a6b2212969440088c1b6bf152e5d9cd88314d8d40a1b7fe"
+    },
+    {
+      "name": "chip-01-clone-chips.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-01-clone-chips.png",
+      "bytes": 229461,
+      "sha256": "0ec22eee0bd422de36f66e79bb5c007fbbc6a061706cf9bc2d44052f9e4ef0c8"
+    },
+    {
+      "name": "chip-01b-product-chip-via-slot.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-01b-product-chip-via-slot.png",
+      "bytes": 233043,
+      "sha256": "bb46dfde3d10dddfc6e6294c8de5abc50c0a0a29b05930f03fd5340f42639ded"
+    },
+    {
+      "name": "chip-02-video-url-filled.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-02-video-url-filled.png",
+      "bytes": 234636,
+      "sha256": "cb68b98916549a13454f13439cdb759f3a368a1750fede447f69660737a6f208"
+    },
+    {
+      "name": "chip-03-typing-and-highlight.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-03-typing-and-highlight.png",
+      "bytes": 238061,
+      "sha256": "d00eed8d1b2ec6e07ab097ad5b54dc8885692e18cd1c4ad0c38424e2e2b0254a"
+    },
+    {
+      "name": "chip-04-after-remove-product.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-04-after-remove-product.png",
+      "bytes": 234118,
+      "sha256": "c456ca83306c2b64514b64f7736f7bc611b88b1e02a6a7ee0ff5e0dba884cfbb"
+    },
+    {
+      "name": "chip-05-switch-shortcut.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-05-switch-shortcut.png",
+      "bytes": 351423,
+      "sha256": "b540c68afe90df1bf19f0469e2b7065a9c6d1ecc0fc0367f8dd04e8adf123fc9"
+    },
+    {
+      "name": "chip-06-retract-keeps-user-token.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-quick-shortcut-link-chip-issue-2579/.agent-reports/quick-shortcut-link-chip/chip-06-retract-keeps-user-token.png",
+      "bytes": 354375,
+      "sha256": "a8004f6617cb395c0eed7baf28afcdd5c54dbda0a7e242f75caa750735d6b4b4"
+    }
+  ],
+  "consoleErrors": [],
+  "at": "2026-09-22T15:20:30.313Z",
+  "note": "真实无头 Chrome + CDP；loginUrl 只在内存里换 Cookie，不打印、不落盘、不进本文件。"
+}
