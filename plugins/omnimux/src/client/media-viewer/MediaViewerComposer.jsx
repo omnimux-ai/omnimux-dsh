@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaConfigControls, useMediaGenerationConfig } from './MediaConfigControls.jsx';
 import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from './composer-prefill.js';
+import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
 
 /**
  * 图像/视频生成专用输入面板 (MediaViewerComposer)
@@ -23,6 +24,8 @@ export function MediaViewerComposer({
   // 提示词输入框默认空。聊天里的提示词块点「使用提示词生成」后填入一次，不自动发送。
   const handedOff = useSyncExternalStore(subscribeComposerPrefill, peekComposerPrefill, () => null);
   const [prompt, setPrompt] = useState('');
+  const promptRef = useRef(null);
+  const promptBoxRef = useRef(null);
   const config = useMediaGenerationConfig({ initialMode });
   // 先解构出被 effect / 回调读取的方法再依赖：将来宿主换了实现也不会读到过期闭包。
   const { mode, setMode, closePopovers } = config;
@@ -36,6 +39,30 @@ export function MediaViewerComposer({
     setMode(request.kind === 'video' ? 'video' : 'image');
     closePopovers();
   }, [handedOff, setMode, closePopovers]);
+
+  // 按内容行数变高，最多露出 10 行；再多的字在框里滚动。
+  // 文字变了要重算。窗口或侧栏把外层挤窄、拉宽、折行变了，也要重算。
+  // 只听外层宽度：听输入框自己会被「量高 → 变高」再次触发，来回抖。
+  useLayoutEffect(() => {
+    const node = promptRef.current;
+    const box = promptBoxRef.current;
+    if (!node) return undefined;
+    const fit = () => {
+      node.style.height = 'auto';
+      node.style.height = `${clampPromptTextareaHeight(node.scrollHeight)}px`;
+    };
+    fit();
+    if (!box || typeof ResizeObserver !== 'function') return undefined;
+    let width = box.clientWidth;
+    const observer = new ResizeObserver(() => {
+      const next = box.clientWidth;
+      if (next === width) return;
+      width = next;
+      fit();
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [prompt]);
 
   const handleSend = () => {
     const trimmed = prompt.trim();
@@ -75,8 +102,9 @@ export function MediaViewerComposer({
       ) : null}
 
       {/* 2. 提示词输入区域 (默认空，随心输入) */}
-      <div className="omx-mv-prompt-box">
+      <div className="omx-mv-prompt-box" ref={promptBoxRef}>
         <textarea // exempt-ui01: 专用多模态提示词输入框
+          ref={promptRef}
           className="omx-mv-prompt-textarea"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
