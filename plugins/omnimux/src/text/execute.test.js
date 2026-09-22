@@ -607,4 +607,149 @@ describe('omnimux_text_complete tool', () => {
     assert.ok(imagePart.image_url.url.startsWith('data:image/png;base64,'))
     assert.equal(result.text, 'a small png')
   })
+
+  it('BYOK mode sends text to the user endpoint, not the official channel', async () => {
+    const requests = []
+    let streamCalls = 0
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      model: 'gemini-3.8-flash',
+      env: {},
+      settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          return undefined
+        },
+      },
+      fetcher: async (url, options) => {
+        requests.push({ url, auth: options.headers.authorization })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'byok reply' } }] }) }
+      },
+      llm: {
+        async * stream() {
+          streamCalls += 1
+          yield { type: 'text-delta', text: 'must not run' }
+        },
+      },
+    })
+
+    assert.equal(streamCalls, 0, 'BYOK must not use the official stream')
+    assert.equal(requests.length, 1)
+    assert.ok(requests[0].url.startsWith('https://my-provider.test/v1'))
+    assert.equal(requests[0].auth, 'Bearer sk-byok-secret')
+    assert.equal(result.text, 'byok reply')
+  })
+
+  it('BYOK mode without a stored key throws unconfigured', async () => {
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+    }
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'hello',
+        model: 'gemini-3.8-flash',
+        env: {},
+        settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
+        credentials: { async resolve() { return undefined } },
+        fetcher: async () => ({ ok: true, json: async () => ({}) }),
+        llm: { async * stream() { yield {} } },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
+
+  it('BYOK mode without an endpoint throws unconfigured', async () => {
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: '',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+    }
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'hello',
+        model: 'gemini-3.8-flash',
+        env: {},
+        settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
+        credentials: { async resolve() { return { value: 'sk-x' } } },
+        fetcher: async () => ({ ok: true, json: async () => ({}) }),
+        llm: { async * stream() { yield {} } },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
+
+  it('agent mode runs text through the CLI, not the official stream', async () => {
+    let streamCalls = 0
+    const calls = []
+    const agentSettings = {
+      runtimeMode: 'agent',
+      runtimeAgentId: 'claude',
+      runtimeAgentVerified: true,
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      env: {},
+      settings: { get: (key) => key === 'omnimux' ? agentSettings : undefined },
+      agentRun: async ({ id, prompt }) => {
+        calls.push({ id, prompt })
+        return 'agent reply'
+      },
+      llm: {
+        async * stream() {
+          streamCalls += 1
+          yield { type: 'text-delta', text: 'must not run' }
+        },
+      },
+    })
+    assert.equal(streamCalls, 0, 'agent mode must not use the official stream')
+    assert.deepEqual(calls, [{ id: 'claude', prompt: 'hello' }])
+    assert.deepEqual(result, { mode: 'live', model: 'claude', text: 'agent reply' })
+  })
+
+  it('agent mode rejects media references in this version', async () => {
+    const agentSettings = {
+      runtimeMode: 'agent',
+      runtimeAgentId: 'claude',
+      runtimeAgentVerified: true,
+    }
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'describe',
+        image: `data:image/png;base64,${MP4.toString('base64')}`,
+        attachments: { saveImage: async () => ({ id: 'x' }) },
+        env: {},
+        settings: { get: (key) => key === 'omnimux' ? agentSettings : undefined },
+        llm: { async * stream() { yield {} } },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
+    )
+  })
+
+  it('agent mode unverified throws unconfigured before any call', async () => {
+    const agentSettings = {
+      runtimeMode: 'agent',
+      runtimeAgentId: '',
+      runtimeAgentVerified: false,
+    }
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'hello',
+        env: {},
+        settings: { get: (key) => key === 'omnimux' ? agentSettings : undefined },
+        llm: { async * stream() { yield {} } },
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
 })

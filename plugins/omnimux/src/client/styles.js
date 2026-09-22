@@ -290,6 +290,33 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
     0 0 40px color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 18%, transparent);
   color: var(--dsw-alias-label-primary, inherit);
 }
+.omnimux-runtime-guide-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding: 28px;
+  overflow-y: auto;
+}
+.omnimux-runtime-guide-choices {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.omnimux-runtime-guide-alt {
+  display: flex;
+  gap: 8px;
+}
+.omnimux-runtime-guide-hints {
+  margin-top: 12px;
+}
+.omnimux-runtime-guide-step {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .omnimux-modal-close-btn {
   width: 36px;
   height: 36px;

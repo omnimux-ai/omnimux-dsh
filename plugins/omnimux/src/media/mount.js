@@ -1,5 +1,6 @@
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
+import { assertRuntimeReady } from '../settings/runtime-mode.js'
 import { objectParams, rethrow } from '../tools/schema.js'
 
 /**
@@ -54,11 +55,14 @@ export function mountMedia(ctx, opts) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
+      const current = ctx.get?.('settings')?.get?.('omnimux')
+      assertRuntimeReady(current, kind)
       return execute({
         ...req,
         media,
         store: opts.store,
         credentials: ctx.get?.('credentials'),
+        runtimeSettings: current,
       })
     },
   }

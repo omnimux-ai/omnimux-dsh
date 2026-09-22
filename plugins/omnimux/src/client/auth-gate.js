@@ -40,6 +40,7 @@ import {
   resetStatusCache,
 } from './api.js'
 import { runLogin } from './use-omnimux-auth.js'
+import { requiresOfficialSignIn } from '../settings/runtime-mode.js'
 
 /** Global key the hub installs and vertical plugins read. */
 export const AUTH_GLOBAL_KEY = '__omnimuxAuth'
@@ -77,6 +78,36 @@ let impl = {
 }
 
 /** Current gate snapshot (never exposed mutated; replaced on every change). */
+/**
+ * Reads the stored OmniMux settings so the gate can tell whether the current
+ * runtime still depends on the official account. Unset keeps today's rule:
+ * a missing reader never lets an action through.
+ * @type {(() => unknown) | null}
+ */
+let runtimeChoiceReader = null
+
+/**
+ * @param {(() => unknown) | null} reader
+ */
+export function setRuntimeChoiceReader(reader) {
+  runtimeChoiceReader = typeof reader === 'function' ? reader : null
+}
+
+/**
+ * Whether an intent still has to open the official sign-in window.
+ * @param {string | undefined} action
+ */
+function gateNeedsSignIn(action) {
+  if (typeof action !== 'string' || !action) return true
+  if (!runtimeChoiceReader) return true
+  try {
+    return requiresOfficialSignIn(runtimeChoiceReader(), action)
+  } catch {
+    // A reader that throws must not silently unlock account-bound actions.
+    return true
+  }
+}
+
 let state = Object.freeze({ phase: 'closed' })
 
 /** Session suppression for Policy D (cancel mutes subsequent nav prompts). */
@@ -122,7 +153,7 @@ export function subscribe(listener) {
 }
 
 /**
- * @param {{ reason?: string, kind?: string, onSuccess?: (p: any) => void, onCancel?: (r?: any) => void }} opts
+ * @param {{ reason?: string, kind?: string, action?: string, onSuccess?: (p: any) => void, onCancel?: (r?: any) => void }} opts
  */
 function makeIntent(opts) {
   intentSeq += 1
@@ -130,6 +161,7 @@ function makeIntent(opts) {
     id: intentSeq,
     reason: typeof opts.reason === 'string' ? opts.reason : undefined,
     kind: opts.kind === 'write' || opts.kind === 'explicit' ? opts.kind : 'nav',
+    action: typeof opts.action === 'string' && opts.action ? opts.action : undefined,
     onSuccess: typeof opts.onSuccess === 'function' ? opts.onSuccess : undefined,
     onCancel: typeof opts.onCancel === 'function' ? opts.onCancel : undefined,
   }
@@ -236,7 +268,7 @@ async function checkAndStart(reason) {
  *
  * `kind` is a C/D seam (`'nav'` default, `'write'` from authGuard, `'explicit'` from manual user action).
  *
- * @param {{ reason?: string, kind?: 'nav' | 'write' | 'explicit', onSuccess?: (profile: any) => void, onCancel?: (reason?: any) => void }} [opts]
+ * @param {{ reason?: string, kind?: 'nav' | 'write' | 'explicit', action?: string, onSuccess?: (profile: any) => void, onCancel?: (reason?: any) => void }} [opts]
  * @returns {Promise<void>}
  */
 export async function ensureLogin(opts = {}) {
@@ -259,6 +291,16 @@ export async function ensureLogin(opts = {}) {
   ) {
     try {
       if (intent.onSuccess) intent.onSuccess({ logged_in: false, suppressed: true })
+    } catch {
+      // caller error must not break gate
+    }
+    return
+  }
+  // A generation action on a local agent / custom key does not need the
+  // official account, so it resumes without opening the window.
+  if (!gateNeedsSignIn(intent.action)) {
+    try {
+      if (intent.onSuccess) intent.onSuccess({ logged_in: false, runtimeBypass: true })
     } catch {
       // caller error must not break gate
     }
@@ -360,6 +402,7 @@ export function installAuthGlobal(target, overrides = {}) {
     },
     peekCache: () => impl.peekCache(),
     ensureLogin,
+    setRuntimeChoiceReader,
     cancel,
     begin,
     retry,

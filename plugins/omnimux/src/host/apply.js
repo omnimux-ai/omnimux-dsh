@@ -129,6 +129,8 @@ export function apply(ctx, config = {}) {
     sessionQuery: null,
     getWorkspaceRegistry: () => ctx.get?.('workspaceRegistry'),
     getConnection: () => ctx.get?.('connection'),
+    settings: ctx.get?.('settings'),
+    credentials: ctx.get?.('credentials'),
   }
   mountComposerCommands(ctx)
   // Session model pin: the composer's picker writes it here, the agent is told
@@ -170,6 +172,9 @@ export function apply(ctx, config = {}) {
     ctx.inject(['settings'], (sctx) => {
       const settings = sctx.settings
       if (!settings || typeof settings.register !== 'function') return
+      // The settings service arrives after httpDeps is built; hand it to the
+      // HTTP faces (BYOK / agent routes) only once it actually exists.
+      httpDeps.settings = settings
       const scope = settings.register('omnimux', SettingsConfig, {
         base: {
           defaultTextModel: hub.text.defaultModel,

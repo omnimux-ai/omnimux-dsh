@@ -1,6 +1,7 @@
 import { assertCapabilityEnabled, isModelEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from '../media/errors.js'
 import { objectParams } from '../tools/schema.js'
+import { assertRuntimeReady } from '../settings/runtime-mode.js'
 import { enabledTextModels } from './catalog.js'
 import { executeOmnimuxText } from './execute.js'
 
@@ -23,6 +24,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
+      assertRuntimeReady(ctx.get?.('settings')?.get?.('omnimux'), 'text')
       if (req.model) {
         const baseModel = String(req.model).split('@')[0].trim()
         assertCapabilityEnabled(gate, baseModel || req.model, 'model')
