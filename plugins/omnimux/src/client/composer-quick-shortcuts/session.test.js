@@ -22,6 +22,21 @@ describe('会话标识派生（快捷方式与附件托盘共用）', () => {
     assert.equal(resolveComposerSessionId('不是对象', '', ''), 'default')
     assert.equal(resolveComposerSessionId({ sessionId: '  ' }, undefined, undefined), 'default')
   })
+
+  it('只接受字符串：非字符串一律跳过，绝不强转（{} 不能变成 [object Object]）', () => {
+    assert.equal(resolveComposerSessionId({ sessionId: {} }, undefined, undefined), 'default')
+    assert.equal(resolveComposerSessionId({ sessionId: 123 }, undefined, undefined), 'default')
+    assert.equal(resolveComposerSessionId(null, 123, 456), 'default')
+    assert.equal(resolveComposerSessionId(null, [], {}), 'default')
+    // 非法值之后仍是同一条链：跳过它，继续往下找。
+    assert.equal(resolveComposerSessionId({ sessionId: {} }, '', 'from-host'), 'from-host')
+    assert.equal(resolveComposerSessionId({ id: 42 }, 'from-prop', 'from-host'), 'from-prop')
+  })
+
+  it('只导出派生函数，不留没人用的 default', async () => {
+    const mod = await import('./session.js')
+    assert.deepEqual(Object.keys(mod).sort(), ['resolveComposerSessionId'])
+  })
 })
 
 describe('两侧会话标识同源', () => {

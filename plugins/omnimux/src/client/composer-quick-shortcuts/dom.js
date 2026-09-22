@@ -47,6 +47,15 @@ export function readDraft() {
 
 /**
  * 整组写入草稿（切换快捷方式时提示语与链接一次替换到位）。
+ *
+ * 返回值**必须来自桥自己的回执**，不能只看「桥对象存在」：官方输入框的
+ * `inputActions.setDraft` 缺失或抛错时，桥会回 false，这里也回 false，
+ * 调用方据此整条不生效，不会出现「输入框原样、卡槽与技能胶囊已变」的错位。
+ *
+ * 不做写后回读校验：桥的 `getDraft` 读的是宿主输入快照，而快照在调用方
+ * 最近一次渲染时就已捕获（`live.current.input`），写完立刻回读只会读到旧值，
+ * 把每次成功写入都误判成失败。
+ *
  * @param {string} text
  * @returns {boolean} 是否真的写入成功
  */
@@ -54,14 +63,11 @@ export function writeDraft(text) {
   const value = typeof text === 'string' ? text : ''
   try {
     const actions = typeof window !== 'undefined' ? window.__omnimuxComposerActions : null
-    if (actions && typeof actions.setDraft === 'function') {
-      actions.setDraft(value)
-      return true
-    }
+    if (!actions || typeof actions.setDraft !== 'function') return false
+    return actions.setDraft(value) !== false
   } catch {
     return false
   }
-  return false
 }
 
 /**

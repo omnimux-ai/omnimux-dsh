@@ -53,10 +53,12 @@ export const QUICK_SHORTCUTS_CSS = `
   color: var(--dsw-alias-label-primary);
 }
 
-.omx-quick-shortcut-icon {
-  display: inline-flex;
-  flex: none;
-  opacity: 0.75;
+.omx-quick-shortcut-notice {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font: var(--dsw-font-s-14, inherit);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .omx-quick-shortcut-controls {

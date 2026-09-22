@@ -32,11 +32,21 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
     window.__omnimuxComposerActions = {
+      // 回执契约：只有真的把草稿交给了官方输入框才回 true。
+      // `inputActions.setDraft` 缺失、或调用抛错时回 false——消费方（输入框下方的
+      // 四条快捷方式）据此整条不生效，不会出现「输入框没变、卡槽与技能已变」的错位。
       setDraft: (text) => {
         try {
-          live.current?.inputActions?.setDraft?.(text)
+          const actions = live.current?.inputActions
+          if (!actions || typeof actions.setDraft !== 'function') {
+            console.warn('[AttachmentSubmitBridge] setDraft unavailable: input actions not mounted')
+            return false
+          }
+          actions.setDraft(text)
+          return true
         } catch (err) {
           console.warn('[AttachmentSubmitBridge] setDraft failed:', err)
+          return false
         }
       },
       getDraft: () => live.current?.input?.draft || '',

@@ -21,7 +21,7 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
   const controlsSource = await readFile(resolve(here, 'MediaConfigControls.jsx'), 'utf8');
 
   assert.ok(
-    composerSource.includes('<MediaConfigControls config={config} showModeSwitch />'),
+    /<MediaConfigControls[^>]*showModeSwitch/.test(composerSource),
     '媒体面板必须以内置生成方式切换器的形态消费共享控件（生成方式 ｜ 模型 ｜ 参数展示）'
   );
   assert.ok(

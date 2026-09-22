@@ -11,7 +11,8 @@
 /**
  * 按同一条优先级链解析当前会话 id：
  * `session.sessionId` → 插槽透传的 `sessionId` → `session.id` → 宿主当前会话 → `'default'`。
- * 空串、纯空白与非法值一律跳过，绝不返回空会话 id（空 id 会写到谁都认不出的那一行）。
+ * 只接受字符串：空串、纯空白与非字符串一律跳过（**不做强转**——`{}` 会被强转成
+ * `[object Object]`，那是个谁都认不出的 store 键），绝不返回空会话 id。
  *
  * @param {{ sessionId?: string, id?: string } | null | undefined} session 会话对象
  * @param {string | null | undefined} sessionId 插槽透传的会话 id
@@ -19,19 +20,16 @@
  * @returns {string} 非空会话 id；全部缺失时返回 `'default'`
  */
 export function resolveComposerSessionId(session, sessionId, activeSessionId) {
-  const sessionObj = session && typeof session === 'object' ? session : null;
-  // 空串、纯空白、非字符串的一律跳过：它们当 store 键既认不出也回写不到。
+  const sessionObj = session && typeof session === 'object' ? session : null
   const candidates = [
     sessionObj && sessionObj.sessionId,
     sessionId,
     sessionObj && sessionObj.id,
     activeSessionId,
-  ];
+  ]
   for (const value of candidates) {
-    const text = typeof value === 'string' ? value : value ? String(value) : '';
-    if (text.trim()) return text;
+    if (typeof value !== 'string') continue
+    if (value.trim()) return value
   }
-  return 'default';
+  return 'default'
 }
-
-export default resolveComposerSessionId;

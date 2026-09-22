@@ -61,6 +61,10 @@
       // 收敛成一个窄接口挂到 window 上，与 `__omnimuxStage` / `__omnimuxWorkbench`
       // / `__omnimuxAttachments` 等既有跨插件 seam 同一形态。
       // 输入框下方的快捷方式据此判断「技能缺失即不渲染」。
+      //
+      // 通道**只收 slug、不收 sessionId，属有意设计**：`preset-skills.json` 是出厂
+      // 预设的全局只读目录，解析结果与会话无关；加上会话 id 反而会让人以为存在
+      // 会话级技能解析，诱导出第二份真源。会话级状态一律留在消费方自己的 store 里。
       if (typeof window !== "undefined") {
         ctx.effect(() => {
           const api = {

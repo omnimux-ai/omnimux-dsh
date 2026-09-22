@@ -132,7 +132,8 @@ export const DOCK_STYLES = `
   user-select: none !important;
   flex-shrink: 0 !important;
 }
-.omx-prompt-slot-chip:hover {
+/* 悬浮高亮只给可点态：禁用胶囊（链接已在输入框内）不该在悬停时变亮上浮。 */
+.omx-prompt-slot-chip:not(.is-disabled):hover {
   border-color: rgba(255, 255, 255, 0.45) !important; /* exempt-ui03: 悬浮高亮边框 */
   color: #ffffff !important; /* exempt-ui03: 悬浮纯白文字 */
   background: rgba(255, 255, 255, 0.08) !important; /* exempt-ui03: 悬浮微亮底色 */
@@ -168,7 +169,7 @@ export const DOCK_STYLES = `
   color: currentColor !important;
   opacity: 0.8 !important;
 }
-.omx-prompt-slot-chip:hover svg,
+.omx-prompt-slot-chip:not(.is-disabled):hover svg,
 .omx-prompt-slot-chip.is-active svg {
   opacity: 1 !important;
 }

@@ -1,0 +1,127 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, it } from 'node:test'
+import { writeDraft } from './dom.js'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const COMPONENT_PATH = resolve(HERE, 'ComposerQuickShortcuts.jsx')
+const BRIDGE_PATH = resolve(HERE, '..', 'composer-add', 'AttachmentSubmitBridge.jsx')
+const LOCALES_PATH = resolve(HERE, '..', 'locales.js')
+
+/** 装一个假宿主桥，返回清场函数（node 下 `window` 不存在，测试里临时挂上）。 */
+function useBridge(actions) {
+  const previous = globalThis.window
+  globalThis.window = actions ? { __omnimuxComposerActions: actions } : {}
+  return () => { globalThis.window = previous }
+}
+
+describe('writeDraft 的返回值来自桥的回执', () => {
+  it('桥不存在 → false（拿不到宿主能力时安静失败）', () => {
+    const cleanup = useBridge(null)
+    try {
+      assert.equal(writeDraft('提示语'), false)
+    } finally {
+      cleanup()
+    }
+  })
+
+  it('桥在、但 inputActions.setDraft 缺失 → false（这正是「守卫形同虚设」的那条）', () => {
+    const cleanup = useBridge({ getDraft: () => '' })
+    try {
+      assert.equal(writeDraft('提示语'), false)
+    } finally {
+      cleanup()
+    }
+  })
+
+  it('setDraft 回 false（宿主没接住）→ false', () => {
+    const cleanup = useBridge({ setDraft: () => false, getDraft: () => '' })
+    try {
+      assert.equal(writeDraft('提示语'), false)
+    } finally {
+      cleanup()
+    }
+  })
+
+  it('setDraft 抛错 → false', () => {
+    const cleanup = useBridge({
+      setDraft: () => {
+        throw new Error('editor disposed')
+      },
+    })
+    try {
+      assert.equal(writeDraft('提示语'), false)
+    } finally {
+      cleanup()
+    }
+  })
+
+  it('setDraft 回 true → true，且写进去的是同一条草稿', () => {
+    const written = []
+    const cleanup = useBridge({ setDraft: (text) => { written.push(text); return true } })
+    try {
+      assert.equal(writeDraft('提示语\n\n[视频]'), true)
+    } finally {
+      cleanup()
+    }
+    assert.deepEqual(written, ['提示语\n\n[视频]'])
+  })
+
+  it('非字符串一律按空草稿写，不强转', () => {
+    const written = []
+    const cleanup = useBridge({ setDraft: (text) => { written.push(text); return true } })
+    try {
+      assert.equal(writeDraft(null), true)
+      assert.equal(writeDraft({}), true)
+    } finally {
+      cleanup()
+    }
+    assert.deepEqual(written, ['', ''])
+  })
+})
+
+describe('桥的回执契约与消费方的守卫', () => {
+  it('桥的 setDraft 在两条失败分支上都回 false，成功才回 true', async () => {
+    const source = await readFile(BRIDGE_PATH, 'utf8')
+    const start = source.indexOf('setDraft: (text) =>')
+    const end = source.indexOf('getDraft:')
+    assert.ok(start !== -1 && end > start, '桥必须仍然发布 setDraft / getDraft')
+    const body = source.slice(start, end)
+    assert.match(body, /typeof actions\.setDraft !== 'function'/, 'inputActions.setDraft 缺失必须走显式失败分支（不再用可选链静默跳过）')
+    assert.match(body, /return false/, '失败分支必须回 false')
+    assert.match(body, /return true/, '成功分支必须回 true')
+  })
+
+  it('每次改 store 之前先确认草稿真的写进去了', async () => {
+    const source = await readFile(COMPONENT_PATH, 'utf8')
+    const start = source.indexOf('const handlePick =')
+    const end = source.indexOf('const showControls')
+    assert.ok(start !== -1 && end > start, '组件必须仍然有 handlePick 与 showControls 两段')
+    const body = source.slice(start, end)
+
+    const guards = body.split('if (!writeDraft(').length - 1
+    const mutations = body.split('store.set(').length - 1
+    assert.equal(guards, 2, '选中与撤回两条分支都必须有 writeDraft 守卫')
+    assert.equal(mutations, 2, '两条分支各改一次 store')
+
+    let cursor = 0
+    for (let i = 0; i < mutations; i += 1) {
+      const guardAt = body.indexOf('if (!writeDraft(', cursor)
+      const mutateAt = body.indexOf('store.set(', cursor)
+      assert.ok(guardAt !== -1 && guardAt < mutateAt, '写草稿失败时不得继续改 store')
+      cursor = mutateAt + 1
+    }
+  })
+
+  it('写失败时给出轻提示，中英文案都在字典里', async () => {
+    const component = await readFile(COMPONENT_PATH, 'utf8')
+    assert.match(component, /quickShortcuts\.notice\.writeFailed/, '组件必须消费这条提示文案')
+    assert.match(component, /role="status"/, '提示必须可被读屏播报')
+
+    const locales = await readFile(LOCALES_PATH, 'utf8')
+    assert.match(locales, /'quickShortcuts\.notice\.writeFailed': '输入框未就绪，请重试'/, '中文文案缺失')
+    assert.match(locales, /'quickShortcuts\.notice\.writeFailed': 'Input not ready, please retry'/, '英文文案缺失')
+  })
+})

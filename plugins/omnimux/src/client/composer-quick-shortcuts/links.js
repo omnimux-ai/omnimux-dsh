@@ -5,9 +5,16 @@
  * 卡槽对象沿用既有 `PromptSlot` 契约（`attachments/promptSlotDetector.ts`），
  * 因此可以直接喂给既有组件 `attachments/PromptSlotChips.tsx` 渲染，
  * 不需要任何新的卡槽 UI。
+ *
+ * **令牌判据与界面语言解耦**：令牌文本是跟随语言的显示名（`[视频]` / `[Video]`），
+ * 但判据一律走「链接种类（kind）」这个稳定标识——本模块把全部支持语言的显示名
+ * 收成一张登记表，任何语言的令牌都能反查回同一个 kind。否则用户切换界面语言后，
+ * 输入框里那条旧语言的令牌既判不出「已填」，也剥不掉，卡槽会重新变可点并插进
+ * 第二种语言的重复令牌。
  */
 
-import { quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
+import { QUICK_LINK_KINDS, quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
+import { en, zh } from '../locales.js'
 
 /**
  * 链接胶囊令牌：草稿里真正被插进输入框的那段文本。
@@ -19,6 +26,48 @@ import { quickLinkLabelKey, quickShortcutLinks } from './catalog.js'
 export function quickLinkToken(label) {
   const text = typeof label === 'string' ? label.trim() : ''
   return text ? `[${text}]` : ''
+}
+
+/** 链接种类 → 全部支持语言的显示名（kind 才是稳定标识，显示名只是它在某语言下的写法）。 */
+function buildLabelRegistry() {
+  const registry = new Map()
+  for (const kind of QUICK_LINK_KINDS) {
+    const key = quickLinkLabelKey(kind)
+    const labels = []
+    for (const dictionary of [zh, en]) {
+      const raw = dictionary ? dictionary[key] : ''
+      const label = typeof raw === 'string' ? raw.trim() : ''
+      if (label && !labels.includes(label)) labels.push(label)
+    }
+    registry.set(kind, Object.freeze(labels))
+  }
+  return registry
+}
+
+/** 令牌文本 → 链接种类：跨语言反查，使判据不依赖「当前是哪种语言」。 */
+function buildTokenIndex() {
+  const index = new Map()
+  for (const kind of QUICK_LINK_KINDS) {
+    for (const label of LINK_LABELS_BY_KIND.get(kind) || []) {
+      const token = quickLinkToken(label)
+      if (token) index.set(token, kind)
+    }
+  }
+  return index
+}
+
+const LINK_LABELS_BY_KIND = buildLabelRegistry()
+const KIND_BY_TOKEN = buildTokenIndex()
+
+/**
+ * 某个链接种类在全部支持语言下的令牌（`[视频]` / `[Video]`）。
+ * @param {string} kind
+ * @returns {readonly string[]}
+ */
+export function quickLinkTokensForKind(kind) {
+  const labels = LINK_LABELS_BY_KIND.get(kind)
+  if (!labels) return []
+  return labels.map(quickLinkToken).filter(Boolean)
 }
 
 /**
@@ -68,16 +117,33 @@ export function buildQuickLinkSlots(links, labels) {
 }
 
 /**
+ * 取卡槽对应的链接种类，优先用卡槽自带的稳定标识（`quickLinkKind`），
+ * 退回用令牌文本跨语言反查。两处都不认才返回空串（判据不上抛、不猜）。
+ * @param {object | null | undefined} slot
+ * @returns {string}
+ */
+function resolveSlotKind(slot) {
+  if (!slot || typeof slot !== 'object') return ''
+  const declared = slot.quickLinkKind
+  if (typeof declared === 'string' && LINK_LABELS_BY_KIND.has(declared)) return declared
+  const raw = typeof slot.raw === 'string' ? slot.raw.trim() : ''
+  return raw ? (KIND_BY_TOKEN.get(raw) || '') : ''
+}
+
+/**
  * 卡槽是否处于「链接已在输入框内」的不可点态。
+ * 按链接种类判定：`[视频]` 与 `[Video]` 是同一个卡槽的两种语言写法，
+ * 切换界面语言后旧令牌仍然算「已填」。
  * @param {string | null | undefined} draft
  * @param {object} slot
  * @returns {boolean}
  */
 export function isQuickLinkSlotFilled(draft, slot) {
-  const token = slot && typeof slot.raw === 'string' ? slot.raw : ''
-  if (!token) return false
+  const kind = resolveSlotKind(slot)
+  if (!kind) return false
   const text = typeof draft === 'string' ? draft : ''
-  return text.includes(token)
+  if (!text) return false
+  return quickLinkTokensForKind(kind).some((token) => text.includes(token))
 }
 
 /**
@@ -117,26 +183,108 @@ export function detectedSlotsDraftText(detectedSlots) {
     .join(' ')
 }
 
+/** 正则元字符转义（显示名目前都是纯文本，转义只为不依赖这个前提）。 */
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * 本快捷方式写过的令牌匹配式：跨语言（`[视频]` 或 `[Video]`），
+ * 且**整体**吃掉 markdown 形态 `[视频](url)`——只删方括号会留下 `(url)` 残骸，
+ * 而 `isQuickLinkSlotFilled` 又把该形态判为「已填」，两者必须对称。
+ * @param {readonly string[]} kinds
+ * @returns {RegExp | null}
+ */
+function shortcutTokenPattern(kinds) {
+  const alternatives = []
+  for (const kind of kinds) {
+    for (const token of quickLinkTokensForKind(kind)) {
+      const label = token.slice(1, -1)
+      if (label) alternatives.push(escapeRegExp(label))
+    }
+  }
+  if (alternatives.length === 0) return null
+  return new RegExp(`\\[(?:${alternatives.join('|')})\\](?:\\([^)\\s]*\\))?`, 'g')
+}
+
+/** 一次扫出全部令牌命中，取首个与末个（首末各用于一个方向的定点剥离）。 */
+function tokenSpans(text, pattern) {
+  let first = null
+  let last = null
+  for (const match of text.matchAll(pattern)) {
+    if (!first) first = match
+    last = match
+  }
+  return { first, last }
+}
+
+/**
+ * 从头吃掉「空白 + 本快捷方式的令牌」这一串，最多吃 budget 个。
+ * @returns {{ rest: string, used: number }}
+ */
+function consumeLeadingTokens(text, pattern, budget) {
+  let rest = text
+  let used = 0
+  while (used < budget) {
+    const trimmed = rest.replace(/^\s+/, '')
+    const { first } = tokenSpans(trimmed, pattern)
+    if (!first || first.index !== 0) break
+    rest = trimmed.slice(first[0].length)
+    used += 1
+  }
+  return { rest: used > 0 ? rest : text, used }
+}
+
+/**
+ * 从尾吃掉「本快捷方式的令牌 + 空白」这一串，最多吃 budget 个。
+ * @returns {{ rest: string, used: number }}
+ */
+function consumeTrailingTokens(text, pattern, budget) {
+  let rest = text
+  let used = 0
+  while (used < budget) {
+    const trimmed = rest.replace(/\s+$/, '')
+    const { last } = tokenSpans(trimmed, pattern)
+    if (!last || last.index + last[0].length !== trimmed.length) break
+    rest = trimmed.slice(0, last.index)
+    used += 1
+  }
+  return { rest: used > 0 ? rest : text, used }
+}
+
 /**
  * 撤回时只剥掉**本快捷方式写入**的那部分草稿：预填提示语与它带来的链接令牌。
- * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空。
+ * 用户在提示语之后手打的追加文字原样保留，绝不整篇清空；用户自己独立输入的
+ * 同名令牌也不动——剥离按「本快捷方式写入的尾块」定点进行，且以本条目写过的
+ * 链接条数为出现次数上限。
  *
- * 提示语只在仍是草稿开头时才剥（用户改过提示语就整段保留），令牌则整篇移除。
+ * 提示语只在仍是草稿开头时才剥（用户改过提示语就整段保留）；用户改过提示语时，
+ * 令牌会落在草稿末尾，因此尾块再收一次，两次合计仍不超过条数上限。
  *
  * @param {{ prompt?: string } | null | undefined} entry 快捷方式条目
  * @param {string | null | undefined} draft 当前草稿
- * @param {{ video: string, product: string }} labels 跟随语言的令牌文案
  * @returns {string} 剥掉本快捷方式内容后的草稿
  */
-export function stripQuickShortcutText(entry, draft, labels) {
+export function stripQuickShortcutText(entry, draft) {
   const text = typeof draft === 'string' ? draft : ''
   if (!text) return ''
-  const tokens = quickShortcutLinks(entry)
-    .map((kind) => quickLinkToken(labels && labels[kind]))
-    .filter(Boolean)
-  let rest = text
-  for (const token of tokens) rest = rest.split(token).join('')
+  const kinds = quickShortcutLinks(entry)
+  if (kinds.length === 0) return text.trim()
+
+  const pattern = shortcutTokenPattern(kinds)
+  if (!pattern) return text.trim()
+
   const prompt = entry && typeof entry.prompt === 'string' ? entry.prompt : ''
+  let rest = text
   if (prompt && rest.startsWith(prompt)) rest = rest.slice(prompt.length)
+
+  // 上限 = 本条目写过的链接条数：用户后来自己敲的同名令牌不在上限内，绝不动。
+  let budget = kinds.length
+  const leading = consumeLeadingTokens(rest, pattern, budget)
+  rest = leading.rest
+  budget -= leading.used
+
+  if (budget > 0) rest = consumeTrailingTokens(rest, pattern, budget).rest
+
   return rest.trim()
 }

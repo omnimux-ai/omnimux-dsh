@@ -149,10 +149,9 @@ const CheckIcon = ({ size = 14, stroke = 'var(--dsw-alias-state-success, #10b981
 /** 模型级联触发器 + 三列级联面板（品牌 → 型号 → 版本渠道）。 */
 export function MediaModelCascade({ config, open, onToggle, onPicked }) {
   const {
-    catalogMap, currentCascadeList, brand, setBrand, model, setModel, channel, setChannel,
+    currentCascadeList, brand, setBrand, model, setModel, channel, setChannel,
     hoveredBrand, setHoveredBrand, hoveredModel, setHoveredModel,
   } = config;
-  void catalogMap;
 
   const pickChannel = useCallback((targetBrand, targetModel, targetChannel) => {
     setBrand(targetBrand);
