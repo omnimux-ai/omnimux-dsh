@@ -3309,7 +3309,6 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   justify-content:flex-end;
 }
 .omnimux-tpl-card:hover {
-  transform:translateY(-4px);
   border-color:var(--dsw-alias-brand-primary);
   box-shadow:0 8px 24px var(--dsw-alias-bg-base);
 }
@@ -3369,12 +3368,31 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   z-index:2;
   pointer-events:none;
 }
+/* 悬停时整张卡片铺一层半透明黑，文字保持纯白。颜色写在卡片上，不借用只在别的区块才有的变量。 */
+.omnimux-tpl-card:not(.is-skill-card) {
+  --omnimux-tpl-dim:color-mix(in srgb, var(--dsw-static-neutral-1000, #000) 55%, transparent);
+}
+.omnimux-tpl-card:not(.is-skill-card)::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:5;
+  border-radius:inherit;
+  pointer-events:none;
+  background:var(--omnimux-tpl-dim);
+  opacity:0;
+  transition:opacity 240ms ease;
+}
+.omnimux-tpl-card:not(.is-skill-card):hover::after,
+.omnimux-tpl-card:not(.is-skill-card):focus-within::after {
+  opacity:1;
+}
 .omnimux-tpl-bottom-bar {
   position:absolute;
   bottom:0;
   left:0;
   right:0;
-  z-index:3;
+  z-index:6;
   padding:14px;
   display:flex;
   flex-direction:column;
@@ -3417,7 +3435,15 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   -webkit-box-orient:vertical;
   overflow:hidden;
   line-height:1.35;
-  text-shadow:0 1px 4px var(--dsw-alias-bg-base);
+}
+.omnimux-tpl-card:not(.is-skill-card):hover .omnimux-tpl-title,
+.omnimux-tpl-card:not(.is-skill-card):focus-within .omnimux-tpl-title,
+.omnimux-tpl-card:not(.is-skill-card):hover .omnimux-tpl-prompt-preview,
+.omnimux-tpl-card:not(.is-skill-card):focus-within .omnimux-tpl-prompt-preview,
+.omnimux-tpl-card:not(.is-skill-card):hover .omnimux-tpl-metric-value,
+.omnimux-tpl-card:not(.is-skill-card):focus-within .omnimux-tpl-metric-value {
+  color:var(--dsw-static-neutral-00);
+  text-shadow:none;
 }
 .omnimux-tpl-prompt-preview {
   display:none;
@@ -3439,7 +3465,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   position:absolute;
   inset-inline:12px;
   bottom:10px;
-  z-index:4;
+  z-index:6;
   opacity:0;
   transform:translateY(10px);
   pointer-events:none;
