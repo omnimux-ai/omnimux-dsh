@@ -29,7 +29,6 @@ import { ModalCloseButton } from '../ModalCloseButton.jsx'
 const STYLE_ID = 'omx-composer-add-inspiration-picker'
 
 const CSS = `
-
 .${PICKER_DIALOG_VARIANT_CLASS.inspiration} {
   --omnimux-pick-dialog-width: ${pickerDialogWidth(PICKER_LAYOUTS.inspiration)};
 }
@@ -130,7 +129,6 @@ const CSS = `
 }
 ${INSPIRATION_CARD_CSS}
 `;
-
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
   ensurePickerDialogStyles(doc)

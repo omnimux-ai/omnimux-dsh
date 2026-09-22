@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createComposerAddController } from './controller.js'
-import { LIBRARY_STAGE_EVENT } from './library-stage-model.js'
+import { LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT } from './library-stage-model.js'
 import { LibraryBrowser } from '../session-guide/LibraryBrowser.jsx'
 
 function createToast(doc) {
@@ -49,6 +49,7 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
   doc.body.appendChild(host)
   let root = null
   let focusTarget = null
+  let renderToken = 0
   const toast = createToast(doc)
   const controller = createComposerAddController({
     t,
@@ -64,9 +65,11 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
       if (!root && !model) return
       if (!root) root = createRoot(host)
       root.render(null)
+      const token = ++renderToken
       const stageEvent = new doc.defaultView.CustomEvent(LIBRARY_STAGE_EVENT, { detail: model, cancelable: true })
       doc.defaultView.dispatchEvent(stageEvent)
       doc.defaultView.setTimeout(() => {
+        if (token !== renderToken) return
         if (!model) {
           root?.render(null)
           return
@@ -76,7 +79,10 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
       }, 0)
     },
     onPrompt(prompt) {
-      doc.defaultView?.dispatchEvent(new CustomEvent('omnimux:library-stage:prompt', { detail: { prompt } }))
+      const sessionId = sessions.list.getSnapshot().current
+      doc.defaultView?.dispatchEvent(new doc.defaultView.CustomEvent(LIBRARY_STAGE_PROMPT_EVENT, {
+        detail: { prompt, sessionId },
+      }))
     },
   })
   return {

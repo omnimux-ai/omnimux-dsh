@@ -279,7 +279,7 @@ describe('composer add controller', () => {
     assert.equal(stage.tab, 'inspiration')
     stage.onTab('trending')
     assert.equal(stage.tab, 'trending')
-    stage.onPick({ lane: 'trending', title: '街拍', raw: { id: 'cloud-1', title: '街拍' } })
+    await stage.onPick({ lane: 'trending', title: '街拍', raw: { id: 'cloud-1', title: '街拍' } })
     assert.equal(store.getSnapshot('a').length, 1)
     assert.deepEqual(prompts, ['请对标这条爆款「街拍」复刻一条视频：'])
     assert.equal(stage.presentation, 'stage')

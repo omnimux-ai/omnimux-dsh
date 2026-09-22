@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import { createAttachmentStore } from '../attachments/store.ts'
 import { createComposerAddController } from '../composer-add/controller.js'
-import { LIBRARY_STAGE_EVENT, LIBRARY_TABS, mergeLibraryPrompt, promptForCard } from '../composer-add/library-stage-model.js'
+import { LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT, LIBRARY_TABS, mergeLibraryPrompt, promptForCard } from '../composer-add/library-stage-model.js'
 import { zh } from '../locales.js'
 
 const guideSource = readFileSync(new URL('./SessionGuide.jsx', import.meta.url), 'utf8')
@@ -73,7 +73,7 @@ function mountStage() {
     stage.appendChild(card)
   })
 
-  window.addEventListener('omnimux:library-stage:prompt', (event) => {
+  window.addEventListener(LIBRARY_STAGE_PROMPT_EVENT, (event) => {
     prompts.push(String(event.detail?.prompt || ''))
   })
 
@@ -84,7 +84,7 @@ function mountStage() {
     subscribeCurrentSession() { return () => {} },
     notify() {},
     onPrompt(prompt) {
-      window.dispatchEvent(new window.CustomEvent('omnimux:library-stage:prompt', { detail: { prompt } }))
+      window.dispatchEvent(new window.CustomEvent(LIBRARY_STAGE_PROMPT_EVENT, { detail: { prompt, sessionId: 'session-a' } }))
     },
     renderLibrary(model) {
       const event = new window.CustomEvent(LIBRARY_STAGE_EVENT, { detail: model, cancelable: true })

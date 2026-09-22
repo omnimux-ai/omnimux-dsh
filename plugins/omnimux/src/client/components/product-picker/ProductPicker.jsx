@@ -23,7 +23,6 @@ import { ModalCloseButton } from '../ModalCloseButton.jsx';
 const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
-
 /* 顶部 Tab 单层顶栏：宽度 = 6 列高密度微卡 + 5 个列间距（由契约推导）。
    变量必须挂在弹窗自身的变体类上——挂到 .omx-product-pick（子元素）上，父元素读不到，会退化为兜底列数。 */
 .${PICKER_DIALOG_VARIANT_CLASS.product} {

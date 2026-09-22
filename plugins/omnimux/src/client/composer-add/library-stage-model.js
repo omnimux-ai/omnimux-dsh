@@ -6,6 +6,7 @@ import { mapInspirationRow } from '../components/inspiration-picker/picker-model
 import { mapSourceItem } from '../session-guide/trending/trending-source.js'
 
 export const LIBRARY_STAGE_EVENT = 'omnimux:library-stage'
+export const LIBRARY_STAGE_PROMPT_EVENT = 'omnimux:library-stage:prompt'
 export const LIBRARY_STAGE_DOCK_ID = 'omnimux-library-stage'
 
 export const LIBRARY_TABS = Object.freeze([
@@ -52,7 +53,7 @@ export function mergeLibraryPrompt(draft, prompt) {
   if (!next) return String(draft || '')
   const current = String(draft || '')
   if (!current.trim()) return next
-  if (current.includes(next)) return current
+  if (current.split('\n').some((line) => line.trim() === next)) return current
   return `${current.replace(/\s+$/, '')}\n${next}`
 }
 
@@ -101,8 +102,8 @@ async function loadInspiration(fetchImpl, limit) {
     fetchImpl,
   )
   if (!res.ok) throw failure(res, '灵感库暂时打不开')
-  const rows = res.body?.data?.items || []
-  return rows.slice(0, limit).map((row) => mapInspirationRow(row, true)).filter(Boolean).map((row) => ({
+  const rows = Array.isArray(res.body?.data?.items) ? res.body.data.items : []
+  return rows.map((row) => mapInspirationRow(row, true)).filter(Boolean).slice(0, limit).map((row) => ({
     id: row.id,
     title: row.title,
     raw: row,
@@ -120,8 +121,8 @@ async function loadTrending(fetchImpl, limit) {
     throw error
   }
   if (!res.ok) throw failure(res, '爆款趋势暂时打不开')
-  const rows = res.body?.data?.items || []
-  return rows.slice(0, limit).map((row) => mapSourceItem(row)).filter(Boolean).map((item) => ({
+  const rows = Array.isArray(res.body?.data?.items) ? res.body.data.items : []
+  return rows.map((row) => mapSourceItem(row)).filter(Boolean).slice(0, limit).map((item) => ({
     id: item.id,
     title: item.title,
     trending: item,

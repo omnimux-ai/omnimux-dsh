@@ -148,14 +148,14 @@ export function createComposerAddController(options) {
       return result
     }
     if (card.lane === 'assets') {
-      return confirmLibrary(operation, [card.raw], { keepOpen: true }).then(finish, (error) => {
+      return Promise.resolve(confirmLibrary(operation, [card.raw], { keepOpen: true })).then(finish, (error) => {
         if (visible(operation)) notify(error instanceof Error ? error.message : String(error))
       })
     }
     if (card.lane === 'products') {
-      return finish(confirmDirect(operation, [card.raw], mapProductAttachment, { keepOpen: true }))
+      return Promise.resolve(confirmDirect(operation, [card.raw], mapProductAttachment, { keepOpen: true })).then(finish)
     }
-    return finish(confirmDirect(operation, [card.raw], mapInspirationAttachment, { keepOpen: true }))
+    return Promise.resolve(confirmDirect(operation, [card.raw], mapInspirationAttachment, { keepOpen: true })).then(finish)
   }
 
   function usableSession(id) {

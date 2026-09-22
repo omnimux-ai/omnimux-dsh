@@ -1,11 +1,11 @@
-import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
 import { LibraryBrowser } from './LibraryBrowser.jsx'
-import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
+import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
@@ -120,6 +120,7 @@ function BlankSessionGuide({
   const isEn = typeof t === 'function' ? (t('locale') === 'en' || t('guide.locale') === 'en') : false
 
   const [libraryStage, setLibraryStage] = useState(null)
+  const clearLibraryStage = useCallback(() => setLibraryStage(null), [])
   const {
     dockedItem,
     placement,
@@ -129,7 +130,7 @@ function BlankSessionGuide({
     isDocked,
   } = useComposerDocking({
     hostRef: guideRef,
-    onUndock: () => setLibraryStage(null),
+    onUndock: clearLibraryStage,
   })
 
   const isSessionActive = () => {
@@ -148,13 +149,20 @@ function BlankSessionGuide({
   useEffect(() => {
     const onStage = (event) => {
       const model = event.detail
-      if (!model || model.sessionId !== sessionId) return
+      if (!model) {
+        setLibraryStage(null)
+        undock()
+        return
+      }
+      if (model.sessionId !== sessionId) return
       event.preventDefault()
       setLibraryStage(model)
       pin({ id: LIBRARY_STAGE_DOCK_ID })
     }
     const onPrompt = (event) => {
-      const prompt = String(event.detail?.prompt || '')
+      const detail = event.detail || {}
+      if (detail.sessionId && detail.sessionId !== sessionId) return
+      const prompt = String(detail.prompt || '')
       if (!prompt) return
       applyDraftToComposer(mergeLibraryPrompt(live.current?.input?.draft || '', prompt), {
         toastKey: null,
@@ -162,12 +170,12 @@ function BlankSessionGuide({
       })
     }
     window.addEventListener(LIBRARY_STAGE_EVENT, onStage)
-    window.addEventListener('omnimux:library-stage:prompt', onPrompt)
+    window.addEventListener(LIBRARY_STAGE_PROMPT_EVENT, onPrompt)
     return () => {
       window.removeEventListener(LIBRARY_STAGE_EVENT, onStage)
-      window.removeEventListener('omnimux:library-stage:prompt', onPrompt)
+      window.removeEventListener(LIBRARY_STAGE_PROMPT_EVENT, onPrompt)
     }
-  }, [pin, sessionId])
+  }, [pin, sessionId, undock])
 
   useLayoutEffect(() => {
     mounted.current = true

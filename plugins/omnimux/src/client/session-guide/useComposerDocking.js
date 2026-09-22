@@ -154,8 +154,11 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   }, [dockedItem, undock, hostRef])
 
   const pin = useCallback((item) => {
+    const previous = pinnedRef.current
     pinnedRef.current = true
-    return dock(item)
+    const ok = dock(item)
+    if (!ok) pinnedRef.current = previous
+    return ok
   }, [dock])
 
   // 1. 吸底几何适配、占位高度防塌陷与 FLIP 位移动画
@@ -329,7 +332,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
       setPlacement((prev) => {
         if (pinnedRef.current) return 'docked'
-      if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
+        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
         if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
         return prev
       })
