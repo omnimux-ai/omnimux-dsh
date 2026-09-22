@@ -81,9 +81,9 @@ test('灵感库卡片：卡片自身宽度驱动 CTA 退化，紧凑只留图标
     ['zh', '详情', '立即复刻'],
     ['en', 'Details', 'Replicate now'],
   ]) {
-    const rows = probeWidths(detail, tryLabel, [140, 200, 240, 280, 292, 320, 400])
-    const compact = rows.filter((r) => r.cardWidth <= 280)
-    const roomy = rows.filter((r) => r.cardWidth >= 292)
+    const rows = probeWidths(detail, tryLabel, [140, 180, 208, 240, 260, 320, 400])
+    const compact = rows.filter((r) => r.cardWidth <= 180)
+    const roomy = rows.filter((r) => r.cardWidth >= (locale === 'en' ? 260 : 208))
 
     assert.equal(compact.length > 0 && roomy.length > 0, true, `${locale}: 宽度分组必须同时覆盖紧凑与充足区间`)
 
@@ -113,7 +113,7 @@ test('灵感库卡片：容器查询按卡片宽度判定，且字号契约不�
   assert.match(INSPIRATION_CSS, /container-name:\s*inspiration-card/, '容器必须有唯一名字，避免误命中祖先容器')
   assert.match(
     INSPIRATION_CSS,
-    /@container inspiration-card \(max-width:\s*288px\)/,
+    /@container inspiration-card \(max-width:\s*200px\)/,
     '退化规则必须由具名容器查询判定',
   )
   assert.doesNotMatch(INSPIRATION_CSS, /font:\s*550 12px\/16px inherit/, 'font 简写里的 inherit 非法，整条声明会被丢弃')
