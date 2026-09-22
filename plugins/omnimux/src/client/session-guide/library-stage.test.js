@@ -18,6 +18,8 @@ test('整页选素材时分类钉在顶部，输入框贴底，技能按钮不�
   assert.doesNotMatch(styles, /data-omnimux-skill-picker[\s\S]{0,120}display:\s*none/)
   assert.match(guide, /LibraryBrowser/)
   assert.match(guide, /pin\(\{ id: LIBRARY_STAGE_DOCK_ID \}\)/)
+  assert.match(guide, /setAttribute\('data-omnimux-dock-open'/)
+  assert.match(read('./useComposerDocking.js'), /pinnedRef\.current\) return undefined/)
   assert.match(stage, /LIBRARY_TABS/)
   assert.match(model, /精选/)
   assert.match(model, /资产库/)

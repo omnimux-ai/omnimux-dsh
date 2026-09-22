@@ -158,6 +158,9 @@ function BlankSessionGuide({
       const width = `${Math.round(rect.width)}px`
       column.style.setProperty('--omnimux-library-stage-left', left)
       column.style.setProperty('--omnimux-library-stage-width', width)
+      const phase = column.closest?.('[data-phase]') || column
+      phase.setAttribute('data-omnimux-starter-host', '')
+      phase.setAttribute('data-omnimux-dock-open', '')
       const view = column.ownerDocument?.defaultView
       if (view) {
         view.document.documentElement.style.setProperty('--omnimux-library-stage-left', left)
@@ -183,6 +186,8 @@ function BlankSessionGuide({
       view.removeEventListener('resize', schedule)
       column.style.removeProperty('--omnimux-library-stage-left')
       column.style.removeProperty('--omnimux-library-stage-width')
+      const phase = column.closest?.('[data-phase]') || column
+      phase.removeAttribute('data-omnimux-dock-open')
       const view = column.ownerDocument?.defaultView
       view?.document.documentElement.style.removeProperty('--omnimux-library-stage-left')
       view?.document.documentElement.style.removeProperty('--omnimux-library-stage-width')

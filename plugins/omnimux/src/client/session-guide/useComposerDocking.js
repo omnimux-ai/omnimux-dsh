@@ -174,6 +174,9 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       }
       return undefined
     }
+    // 整页选素材铺满后，会话列尺寸会变。那一拍如果还没读到宿主，
+    // 不能把已经贴底的输入框清掉，否则它会回到上半截被整页盖住。
+    if (!root.isConnected && pinnedRef.current) return undefined
     dockHostRef.current = root
 
     const card = root.querySelector?.('[data-composer-card]')
@@ -194,7 +197,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const from = card?.getBoundingClientRect?.()
     const fromBand = band?.getBoundingClientRect?.()
 
-    const shouldDock = Boolean(dockedItem && placement === 'docked')
+    const shouldDock = Boolean(dockedItem && (placement === 'docked' || pinnedRef.current))
     const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
 
     if (shouldDock) {

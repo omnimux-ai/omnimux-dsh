@@ -127,6 +127,8 @@ test('整页源码保留钉顶分类、贴底输入框与技能按钮', () => {
   assert.match(styleSource, /\.omnimux-library-stage \{[^}]*position:fixed/)
   assert.match(styleSource, /\.omnimux-library-stage-grid \{[^}]*overflow:auto/)
   assert.match(guideSource, /scrollBody/)
+  assert.match(guideSource, /setAttribute\('data-omnimux-dock-open'/)
+  assert.match(readFileSync(new URL('./useComposerDocking.js', import.meta.url), 'utf8'), /placement === 'docked' \|\| pinnedRef\.current/)
   assert.match(guideSource, /documentElement\.style\.setProperty\('--omnimux-library-stage-left'/)
   assert.doesNotMatch(styleSource, /\.omnimux-library-stage-tabs \{[^}]*position:sticky/)
   assert.match(styleSource, /data-omnimux-skill-picker/)
