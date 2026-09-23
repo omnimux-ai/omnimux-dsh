@@ -179,7 +179,14 @@ export function createComposerAddController(options) {
       return null
     }
     if (owner) {
-      if (owner.sessionId === target) return null
+      if (owner.sessionId === target) {
+        if (owner.kind !== kind) {
+          owner.kind = kind
+          owner.tab = tabForKind(kind)
+          return owner
+        }
+        return null
+      }
       notify(text('composerAdd.busy'))
       return null
     }

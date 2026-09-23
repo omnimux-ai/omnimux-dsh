@@ -41,6 +41,12 @@ function mountStage() {
     stage.innerHTML = ''
     const tabs = doc.createElement('div')
     tabs.className = 'omnimux-library-stage-tabs'
+    const back = doc.createElement('button')
+    back.type = 'button'
+    back.className = 'omnimux-library-stage-back'
+    back.textContent = '返回'
+    back.addEventListener('click', () => stageModel.onClose?.())
+    tabs.appendChild(back)
     for (const item of LIBRARY_TABS) {
       const button = doc.createElement('button')
       button.type = 'button'
@@ -111,13 +117,24 @@ function mountStage() {
     },
   })
 
+  const onKey = (event) => {
+    if (event.key === 'Escape') stageModel?.onClose?.()
+  }
+  window.addEventListener('keydown', onKey)
+
   return {
     doc,
+    window,
     store,
     prompts,
     controller,
     openAssets() { controller.openLibrary('session-a') },
-    dispose() { controller.dispose() },
+    openInspiration() { controller.openInspiration('session-a') },
+    openProduct() { controller.openProduct('session-a') },
+    dispose() {
+      window.removeEventListener('keydown', onKey)
+      controller.dispose()
+    },
   }
 }
 
@@ -157,5 +174,41 @@ test('e2e: 打开整页后点卡片写入素材与提示词，整页保持打开
 
   f.doc.querySelector('.omnimux-library-stage-close').click()
   assert.equal(f.doc.querySelector('[data-omnimux-library-stage]'), null)
+  f.dispose()
+})
+
+test('e2e: 点击返回按钮与按下 Escape 键均可退出整页素材层', async () => {
+  const f = mountStage()
+  f.openAssets()
+  let stage = f.doc.querySelector('[data-omnimux-library-stage]')
+  assert.ok(stage)
+
+  // 1. 点击左侧返回按钮退出
+  const backBtn = f.doc.querySelector('.omnimux-library-stage-back')
+  assert.ok(backBtn, '返回按钮必须存在')
+  backBtn.click()
+  assert.equal(f.doc.querySelector('[data-omnimux-library-stage]'), null, '点击返回按钮后必须退出素材层')
+
+  // 2. 重新打开并验证 Escape 按键退出
+  f.openAssets()
+  assert.ok(f.doc.querySelector('[data-omnimux-library-stage]'))
+  f.window.dispatchEvent(new f.window.KeyboardEvent('keydown', { key: 'Escape' }))
+  assert.equal(f.doc.querySelector('[data-omnimux-library-stage]'), null, '按 Escape 键后必须退出素材层')
+
+  f.dispose()
+})
+
+test('e2e: 打开素材层时再次点击不同入口无缝切换选项卡分类', async () => {
+  const f = mountStage()
+  f.openAssets()
+  let stage = f.doc.querySelector('[data-omnimux-library-stage]')
+  assert.equal(stage.dataset.tab, 'assets')
+
+  // 再次点击从灵感库选择
+  f.openInspiration()
+  stage = f.doc.querySelector('[data-omnimux-library-stage]')
+  assert.ok(stage, '素材层保持打开')
+  assert.equal(stage.dataset.tab, 'inspiration', '分类成功切换到灵感库')
+
   f.dispose()
 })
