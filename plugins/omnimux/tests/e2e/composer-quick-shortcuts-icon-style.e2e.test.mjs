@@ -238,85 +238,56 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
     }
   })
 
-  it('点复刻：预填提示语、只插视频胶囊、选中态生效、模型与参数出现', async () => {
+  it('点复刻：预填提示语、选中态生效、模型选择器出现且无相机参数按钮', async () => {
     const env = await mount()
     try {
       await env.click('clone')
-      assert.equal(env.getDraft(), '请用我的产品复刻这个爆款视频', '草稿里只有提示语，链接不再写成 [视频] 纯文本')
-      assert.deepEqual(env.chipKinds(), ['video'], '点复刻只预填视频胶囊，商品胶囊由上方卡槽点了才插')
-
-      const video = document.querySelector('[data-omx-video-token="true"]')
-      assert.equal(document.querySelector('[data-omx-product-token="true"]'), null, '商品胶囊不得随点击自动插入')
-      for (const [node, name, placeholder] of [
-        [video, '视频', '粘贴 TikTok 视频链接'],
-      ]) {
-        assert.equal(node.getAttribute('contenteditable'), 'false', `${name}胶囊必须是原子不可编辑节点`)
-        assert.equal(node.querySelector('.omx-link-chip__name').textContent, name, `${name}胶囊必须带名称`)
-        assert.ok(node.querySelector('.omx-link-chip__icon'), `${name}胶囊必须带图标`)
-        assert.ok(node.querySelector('.omx-link-chip__divider'), `${name}胶囊必须有分隔线`)
-        assert.equal(node.querySelector('input').getAttribute('placeholder'), placeholder, `${name}胶囊必须带可粘贴链接的输入框`)
-        assert.ok(node.querySelector('.omx-link-chip__remove'), `${name}胶囊必须带 × 删除`)
-      }
+      assert.equal(env.getDraft(), '请用我的产品复刻这个爆款视频', '草稿里只有提示语')
 
       const clone = document.querySelector('[data-omx-quick-shortcut="clone"]')
       assert.equal(clone.getAttribute('aria-pressed'), 'true', '选中态必须可被读屏')
       assert.ok(clone.classList.contains('is-active'), '选中态必须有类名')
-      assert.ok(document.querySelector('[data-composer-card] .omx-quick-shortcut-controls'), '复刻必须在输入框内出现模型与参数控件')
+      assert.ok(document.querySelector('[data-composer-card] .omx-quick-shortcut-controls'), '复刻必须在输入框内出现模型选择器控件')
       assert.equal(document.querySelector('#host .omx-quick-shortcut-controls'), null, '外部快捷方式不得重复挂载控件')
-      const params = document.querySelector('[data-composer-card] #paramSummaryTriggerBtn')
-      assert.equal(params.getAttribute('aria-label'), params.title)
-      assert.match(params.title, /文生视频.*16:9.*720p.*有声.*5s/)
 
-      // 再点同一条 = 撤回：草稿剥掉本快捷方式写入的内容，胶囊一并清掉，技能与控件同步撤下
+      // Issue #2626: 彻底移除参数摘要按钮 paramSummaryTriggerBtn，接入方案 B 模型选择器
+      assert.equal(document.querySelector('#paramSummaryTriggerBtn'), null, '底栏快捷方式严禁展示相机生成参数摘要按钮')
+      const picker = document.querySelector('[data-composer-card] [data-omnimux-model-picker]')
+      assert.ok(picker, '必须展示方案 B 立体层级模型选择器')
+      assert.equal(picker.getAttribute('aria-label'), '模型')
+
+      // 再点同一条 = 撤回：草稿剥掉本快捷方式写入的内容，技能与控件同步撤下
       await env.click('clone')
       assert.equal(clone.getAttribute('aria-pressed'), 'false', '再点同一条必须撤回')
       assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '撤回后控件必须消失')
       assert.equal(env.writes[env.writes.length - 1], '', '撤回必须剥掉本快捷方式写入的提示语')
-      assert.deepEqual(env.chipKinds(), [], '撤回必须一并清掉本快捷方式插入的胶囊')
     } finally {
       await act(async () => env.root.unmount())
     }
   })
 
-  it('带货：默认只插商品胶囊，视频胶囊不由点击自动插入', async () => {
+  it('带货：选中态生效，输入框内出现模型选择器控件，无相机参数按钮', async () => {
     const env = await mount({ sessionId: 'e2e-selling-default-link' })
     try {
       await env.click('selling')
-      assert.deepEqual(env.chipKinds(), ['product'], '点带货只预填商品胶囊，视频胶囊由上方卡槽点了才插')
-      assert.equal(document.querySelector('[data-omx-video-token="true"]'), null)
       assert.ok(document.querySelector('[data-composer-card] .omx-quick-shortcut-controls'))
       assert.equal(document.querySelector('#host .omx-quick-shortcut-controls'), null)
+      assert.equal(document.querySelector('#paramSummaryTriggerBtn'), null)
+      assert.ok(document.querySelector('[data-composer-card] [data-omnimux-model-picker]'))
     } finally {
       await act(async () => env.root.unmount())
     }
   })
 
-  it('切到拆解：提示语整组替换，胶囊整组替换（不残留上一条的胶囊）', async () => {
+  it('切到拆解：提示语整组替换，选中态切换，拆解不出现模型控件', async () => {
     const env = await mount()
     try {
       await env.click('clone')
       await env.click('breakdown')
       assert.equal(env.getDraft(), '请帮我分析拆解这个视频。', '切换必须整组替换提示语')
-      assert.deepEqual(env.chipKinds(), ['video'], '切换后只留本条的视频胶囊，上一条的胶囊不得残留')
       assert.equal(document.querySelectorAll('.omx-quick-shortcut-btn.is-active').length, 1, '任何时候只允许一条选中')
       assert.equal(document.querySelector('[data-omx-quick-shortcut="breakdown"]').getAttribute('aria-pressed'), 'true')
-      assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '拆解不得出现模型与参数')
-    } finally {
-      await act(async () => env.root.unmount())
-    }
-  })
-
-  it('胶囊里的 × 删除后节点消失（卡槽两态由节点种类判，不再看草稿文本）', async () => {
-    const env = await mount({ sessionId: 'e2e-chip-remove' })
-    try {
-      await env.click('breakdown')
-      assert.deepEqual(env.chipKinds(), ['video'])
-      const remove = document.querySelector('[data-omx-video-token="true"] .omx-link-chip__remove')
-      await act(async () => {
-        remove.dispatchEvent(new env.dom.window.MouseEvent('click', { bubbles: true, cancelable: true }))
-      })
-      assert.deepEqual(env.chipKinds(), [], '× 必须把胶囊整体清掉')
-      assert.equal(env.getDraft(), '请帮我分析拆解这个视频。', '删胶囊不动草稿文本')
+      assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '拆解不得出现模型控件')
     } finally {
       await act(async () => env.root.unmount())
     }

@@ -116,7 +116,7 @@ describe('桥的回执契约与消费方的守卫', () => {
   it('每次改 store 之前先确认草稿真的写进去了', async () => {
     const source = await readFile(COMPONENT_PATH, 'utf8')
     const start = source.indexOf('const handlePick =')
-    const end = source.indexOf('}, [store, sessionId, labels, t, notifyWriteFailed, dismissNotice]);', start)
+    const end = source.indexOf('}, [store, sessionId, writePrompt, notifyWriteFailed, dismissNotice]);', start)
     assert.ok(start !== -1 && end > start, '必须定位完整的 handlePick 回调，不能依赖已迁移的控件显示变量')
     const body = source.slice(start, end)
 
