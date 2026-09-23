@@ -23,7 +23,9 @@ const BRAND_SVGS = {
 export function resolveModelBrand(modelId) {
   if (!modelId || typeof modelId !== 'string') return 'bytedance';
   const id = modelId.trim().toLowerCase();
-  if (/(^seed|seedance|seedream|doubao|豆包|即梦|dreamina|bytedance)/i.test(id)) return 'bytedance';
+  if (Object.prototype.hasOwnProperty.call(BRAND_SVGS, id)) return id;
+  if (/(^seedream|seed-dream)/i.test(id)) return 'seedream';
+  if (/(^seedance|^seed|doubao|豆包|即梦|dreamina|bytedance)/i.test(id)) return 'bytedance';
   if (/(^nanobanana|nano[-_ ]?banana)/i.test(id)) return 'nanobanana';
   if (/(^gpt|^openai)/i.test(id)) return 'openai';
   if (/(^google|^gemini)/i.test(id)) return 'google';
@@ -31,6 +33,48 @@ export function resolveModelBrand(modelId) {
   if (/(^minimax|\bminimax\b|hailuo|海螺)/i.test(id)) return 'minimax';
   if (/(^grok|\bgrok\b|xai)/i.test(id)) return 'grok';
   return 'bytedance';
+}
+
+/**
+ * 统一发布会话模型持久化状态与全局事件
+ */
+export function publishSessionModel({ sessionId, auto, model }) {
+  if (!sessionId) return;
+  const modelPayload = auto ? null : model;
+  try {
+    window.sessionStorage.setItem(
+      `omnimux:model:${sessionId}`,
+      JSON.stringify({
+        auto,
+        selectedModel: modelPayload,
+      })
+    );
+    window.dispatchEvent(
+      new CustomEvent('omnimux:model:changed', {
+        detail: { sessionId, auto, selectedModel: modelPayload },
+      })
+    );
+  } catch (err) {
+    console.error('[omnimux:model-picker] 存储会话模型失败:', err);
+  }
+
+  try {
+    fetch('/omnimux/session-model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        sessionId,
+        auto,
+        modelId: modelPayload ? (modelPayload.id || '') : '',
+        label: modelPayload ? (modelPayload.name || modelPayload.id || '') : '',
+      }),
+    }).catch((err) => {
+      console.error('[omnimux:model-picker] 持久化会话模型至中枢失败:', err);
+    });
+  } catch (err) {
+    console.error('[omnimux:model-picker] 请求持久化会话模型失败:', err);
+  }
 }
 
 /** 默认离线保底模型目录 */
@@ -228,21 +272,76 @@ function ModelPickerPanel({
 
   useEffect(() => {
     if (!open) return undefined;
+
+    // 打开时将焦点移入面板首个可聚焦元素
+    const focusTimer = setTimeout(() => {
+      if (panelRef.current) {
+        const firstFocusable = panelRef.current.querySelector(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (firstFocusable && typeof firstFocusable.focus === 'function') {
+          firstFocusable.focus();
+        } else if (typeof panelRef.current.focus === 'function') {
+          panelRef.current.focus();
+        }
+      }
+    }, 0);
+
+    const restoreFocus = () => {
+      if (anchorRef && anchorRef.current && typeof anchorRef.current.focus === 'function') {
+        anchorRef.current.focus();
+      }
+    };
+
     const onDoc = (e) => {
       const tEl = e.target;
       if (panelRef.current && panelRef.current.contains(tEl)) return;
       if (anchorRef && anchorRef.current && anchorRef.current.contains(tEl)) return;
       onClose();
+      restoreFocus();
     };
+
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+        restoreFocus();
+        return;
+      }
+
+      // Tab / Shift+Tab 循环聚焦守卫 (Focus Trap)
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusables = Array.from(
+          panelRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => {
+          const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+          return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+        });
+
+        if (focusables.length > 0) {
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || !panelRef.current.contains(document.activeElement)) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last || !panelRef.current.contains(document.activeElement)) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
       }
     };
+
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey);
     };
@@ -259,6 +358,7 @@ function ModelPickerPanel({
       role="dialog"
       aria-label="模型"
       aria-modal="true"
+      tabIndex={-1}
       style={{ left: `${pos.left}px`, top: `${pos.top}px`, width: `${pos.width}px` }}
     >
       <div className="sh-model-picker-header">
@@ -372,7 +472,9 @@ export function ModelPicker({ sessionId }) {
         const parsed = JSON.parse(raw);
         if (typeof parsed.auto === 'boolean') return parsed.auto;
       }
-    } catch {}
+    } catch (err) {
+      console.error('[omnimux:model-picker] 读取会话自动推荐状态失败:', err);
+    }
     return true;
   });
 
@@ -383,7 +485,9 @@ export function ModelPicker({ sessionId }) {
         const parsed = JSON.parse(raw);
         return parsed.selectedModel || null;
       }
-    } catch {}
+    } catch (err) {
+      console.error('[omnimux:model-picker] 读取会话选中模型失败:', err);
+    }
     return null;
   });
 
@@ -395,48 +499,85 @@ export function ModelPicker({ sessionId }) {
     const fetchCatalog = async () => {
       try {
         const res = await fetch('/omnimux/model-catalog');
-        if (res.ok) {
-          const payload = await res.json();
-          if (!live || !payload) return;
-          const root = payload.catalog || payload;
-          const video = [];
-          const image = [];
-          if (Array.isArray(root.video) && root.video.length > 0) {
-            for (const row of root.video) {
-              video.push({
-                id: row.id,
-                name: row.name || row.label || row.id,
-                capsuleName: row.capsuleName || row.name || row.label || row.id,
-                subtitle: row.subtitle || '多模态高质量视频生成',
-                pro: typeof row.pro === 'boolean' ? row.pro : true,
-                badge: typeof row.badge === 'string' ? { text: row.badge, type: 'purple' } : row.badge,
-                icon: row.icon || resolveModelBrand(row.id),
-                priceLabel: row.priceLabel || '',
-              });
-            }
-          }
-          if (Array.isArray(root.image) && root.image.length > 0) {
-            for (const row of root.image) {
-              image.push({
-                id: row.id,
-                name: row.name || row.label || row.id,
-                capsuleName: row.capsuleName || row.name || row.label || row.id,
-                subtitle: row.subtitle || '高精细节渲染',
-                pro: typeof row.pro === 'boolean' ? row.pro : true,
-                badge: typeof row.badge === 'string' ? { text: row.badge, type: 'purple' } : row.badge,
-                icon: row.icon || resolveModelBrand(row.id),
-                priceLabel: row.priceLabel || '',
-              });
-            }
-          }
-          if (video.length > 0 || image.length > 0) {
-            setModelsData({
-              video: video.length > 0 ? video : DEFAULT_PRESET_MODELS.video,
-              image: image.length > 0 ? image : DEFAULT_PRESET_MODELS.image,
-            });
+        if (!res.ok) {
+          console.error('[omnimux:model-picker] 加载模型目录网络错误:', res.status, res.statusText);
+          return;
+        }
+        const payload = await res.json();
+        if (!live || !payload) return;
+        const root = payload.catalog || payload;
+        const video = [];
+        const image = [];
+        const seenIds = new Set();
+
+        const processRow = (row, defaultSubtitle) => {
+          if (!row || typeof row !== 'object') return null;
+          if (typeof row.id !== 'string') return null;
+          const rawId = row.id.trim();
+          if (!rawId || seenIds.has(rawId)) return null;
+          seenIds.add(rawId);
+
+          const name = (typeof row.name === 'string' && row.name.trim())
+            || (typeof row.label === 'string' && row.label.trim())
+            || rawId;
+          const capsuleName = (typeof row.capsuleName === 'string' && row.capsuleName.trim())
+            || name;
+          return {
+            id: rawId,
+            name,
+            capsuleName,
+            subtitle: (typeof row.subtitle === 'string' && row.subtitle.trim()) || defaultSubtitle,
+            pro: typeof row.pro === 'boolean' ? row.pro : true,
+            badge: typeof row.badge === 'string'
+              ? { text: row.badge, type: 'purple' }
+              : (row.badge && typeof row.badge === 'object' ? row.badge : undefined),
+            icon: (typeof row.icon === 'string' && row.icon.trim()) || resolveModelBrand(rawId),
+            priceLabel: typeof row.priceLabel === 'string' ? row.priceLabel : '',
+          };
+        };
+
+        if (Array.isArray(root.video) && root.video.length > 0) {
+          for (const row of root.video) {
+            const item = processRow(row, '多模态高质量视频生成');
+            if (item) video.push(item);
           }
         }
-      } catch {}
+        if (Array.isArray(root.image) && root.image.length > 0) {
+          for (const row of root.image) {
+            const item = processRow(row, '高精细节渲染');
+            if (item) image.push(item);
+          }
+        }
+
+        if (video.length > 0 || image.length > 0) {
+          const nextVideo = video.length > 0 ? video : DEFAULT_PRESET_MODELS.video;
+          const nextImage = image.length > 0 ? image : DEFAULT_PRESET_MODELS.image;
+          setModelsData({
+            video: nextVideo,
+            image: nextImage,
+          });
+
+          // 如果已锁定的模型不再位于刷新后的 Catalog 中，自动重置为自动推荐模式
+          setSelectedModel((currentSelected) => {
+            if (!currentSelected || !currentSelected.id) return null;
+            const allAvailable = [...nextVideo, ...nextImage];
+            const exists = allAvailable.some((m) => m.id === currentSelected.id);
+            if (!exists) {
+              console.warn(`[omnimux:model-picker] 锁定的模型 ${currentSelected.id} 已下架，重置为自动推荐`);
+              setAuto(true);
+              publishSessionModel({
+                sessionId,
+                auto: true,
+                model: null,
+              });
+              return null;
+            }
+            return currentSelected;
+          });
+        }
+      } catch (err) {
+        console.error('[omnimux:model-picker] 加载或解析模型目录异常:', err);
+      }
     };
 
     fetchCatalog();
@@ -446,7 +587,7 @@ export function ModelPicker({ sessionId }) {
       live = false;
       window.removeEventListener('omnimux:model-catalog-updated', onUpdated);
     };
-  }, []);
+  }, [sessionId]);
 
   // 监听外部模型选择变化
   useEffect(() => {
@@ -471,59 +612,26 @@ export function ModelPicker({ sessionId }) {
     if (nextAuto) {
       setSelectedModel(null);
     }
-    try {
-      window.sessionStorage.setItem(`omnimux:model:${sessionId}`, JSON.stringify({
-        auto: nextAuto,
-        selectedModel: nextModel,
-      }));
-      window.dispatchEvent(new CustomEvent('omnimux:model:changed', {
-        detail: { sessionId, auto: nextAuto, selectedModel: nextModel },
-      }));
-    } catch {}
-
-    try {
-      fetch('/omnimux/session-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          sessionId,
-          auto: nextAuto,
-          modelId: nextModel ? (nextModel.id || '') : '',
-          label: nextModel ? (nextModel.name || nextModel.id || '') : '',
-        }),
-      }).catch(() => {});
-    } catch {}
+    publishSessionModel({
+      sessionId,
+      auto: nextAuto,
+      model: nextModel,
+    });
   }, [sessionId, selectedModel]);
 
   // 选中特定模型
   const handleSelectModel = useCallback((model) => {
     setAuto(false);
     setSelectedModel(model);
-    try {
-      window.sessionStorage.setItem(`omnimux:model:${sessionId}`, JSON.stringify({
-        auto: false,
-        selectedModel: model,
-      }));
-      window.dispatchEvent(new CustomEvent('omnimux:model:changed', {
-        detail: { sessionId, auto: false, selectedModel: model },
-      }));
-    } catch {}
-
-    try {
-      fetch('/omnimux/session-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          sessionId,
-          auto: false,
-          modelId: model.id || '',
-          label: model.name || model.id || '',
-        }),
-      }).catch(() => {});
-    } catch {}
+    publishSessionModel({
+      sessionId,
+      auto: false,
+      model,
+    });
     setOpen(false);
+    if (btnRef.current && typeof btnRef.current.focus === 'function') {
+      btnRef.current.focus();
+    }
   }, [sessionId]);
 
   const isModelChosen = !auto && Boolean(selectedModel);

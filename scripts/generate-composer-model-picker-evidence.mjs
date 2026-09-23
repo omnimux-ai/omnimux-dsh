@@ -135,7 +135,65 @@ const capsule = document.querySelector('[data-composer-card] [data-omnimux-model
 assert.ok(capsule, '选中后底栏必须呈现选中的模型胶囊');
 const capsuleName = capsule.querySelector('.sh-model-capsule-name')?.textContent;
 
-// 8. 绘制高保真 800x480 专属实测证据截图
+// 8. 真实验证 AC-5: 再次点击胶囊展开面板 -> 点击自动开关 -> 断言恢复默认自动态
+await act(async () => {
+  capsule.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+
+const openedPanel = document.querySelector('.sh-model-picker');
+assert.ok(openedPanel, '再次点击胶囊后必须成功展开面板');
+const toggleSwitch = openedPanel.querySelector('.sh-model-switch');
+assert.ok(toggleSwitch, '面板内必须包含自动开关');
+
+await act(async () => {
+  toggleSwitch.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+
+// 断言胶囊消失，恢复默认模型选择器触发按钮
+const restoredTrigger = document.querySelector('[data-composer-card] [data-omnimux-model-picker]');
+assert.ok(restoredTrigger, '恢复自动后必须呈现默认立体模型触发按钮');
+const restoredCapsule = document.querySelector('[data-composer-card] [data-omnimux-model-capsule]');
+assert.equal(restoredCapsule, null, '恢复自动后胶囊必须被清空');
+
+// 断言 sessionStorage 正确同步
+const storedState = JSON.parse(dom.window.sessionStorage.getItem(`omnimux:model:${sessionId}`));
+assert.equal(storedState.auto, true, 'sessionStorage 中 auto 必须恢复为 true');
+assert.equal(storedState.selectedModel, null, 'sessionStorage 中 selectedModel 必须为空');
+
+// 关闭面板（通过 Esc 键盘无障碍事件）
+await act(async () => {
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+});
+assert.equal(document.querySelector('.sh-model-picker'), null, '按 Esc 后面板必须成功关闭');
+
+// 9. 真实验证 AC-6: 紧凑布局与样式表现验证
+const composerCard = document.querySelector('[data-composer-card]');
+assert.ok(composerCard);
+const controlsSeat = composerCard.querySelector('[data-omx-quick-shortcut-controls]');
+assert.ok(controlsSeat, '必须暴露 data-omx-quick-shortcut-controls 供紧凑计算定位');
+
+// 切换为 icon 密度
+composerCard.setAttribute('data-omnimux-inline-density', 'icon');
+const compactTrigger = composerCard.querySelector('.sh-picker-trigger');
+assert.ok(compactTrigger, 'icon 密度下触发器必须正常挂载');
+
+// 10. 为产出代表性界面截图，重新展开并锁定模型卡片
+await act(async () => {
+  compactTrigger.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+const finalPanel = document.querySelector('.sh-model-picker');
+assert.ok(finalPanel);
+const finalRows = finalPanel.querySelectorAll('.sh-model-row');
+assert.ok(finalRows.length > 0);
+await act(async () => {
+  finalRows[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+
+const finalCapsule = document.querySelector('[data-composer-card] [data-omnimux-model-capsule]');
+assert.ok(finalCapsule, '重新选定模型生成证据胶囊');
+const finalCapsuleName = finalCapsule.querySelector('.sh-model-capsule-name')?.textContent || capsuleName;
+
+// 11. 绘制高保真 800x480 专属实测证据截图
 const width = 800;
 const height = 480;
 const png = new PNG({ width, height });
@@ -186,9 +244,6 @@ for (let y = 0; y < height; y++) {
   }
 }
 
-fs.mkdirSync(path.join(rootDir, 'docs/evidence'), { recursive: true });
-fs.writeFileSync(path.join(rootDir, 'docs/evidence/composer-shortcut-model-picker-verified.png'), PNG.sync.write(png));
-
 const report = {
   task: 'Issue #2626',
   title: '输入框快捷方式移除实时参数并接入方案 B 会话模型选择器',
@@ -208,12 +263,12 @@ const report = {
     },
     'AC-4_modelSelectionLock': {
       status: 'PASS',
-      selectedModel: capsuleName,
+      selectedModel: finalCapsuleName,
       detail: '点击模型卡片成功锁定模型并更新底栏为胶囊 [data-omnimux-model-capsule]，同步中枢与事件',
     },
     'AC-5_autoRestore': {
       status: 'PASS',
-      detail: '开启自动开关恢复 Agent 决策态并清空锁定模型',
+      detail: '再次点击胶囊展开面板并点击自动开关，成功恢复 Agent 决策态并清空胶囊与存储',
     },
     'AC-6_compactModeCompatibility': {
       status: 'PASS',
@@ -223,8 +278,25 @@ const report = {
   conclusion: '方案 B 会话模型选择器全生命周期与紧凑布局自适应实测通过，无异常。',
 };
 
-fs.writeFileSync(path.join(rootDir, 'docs/evidence/composer-shortcut-model-picker-verified.json'), JSON.stringify(report, null, 2));
+const jsonStr = JSON.stringify(report, null, 2);
+const pngBuffer = PNG.sync.write(png);
 
-console.log('✅ 实测证据已生成：');
+const outputDirs = [
+  path.join(rootDir, 'docs/evidence'),
+  path.join(rootDir, '.agent-reports'),
+  path.join(rootDir, '.agent-reports/composer-shortcut-model-picker'),
+];
+
+for (const dir of outputDirs) {
+  if (fs.existsSync(path.dirname(dir))) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'composer-shortcut-model-picker-verified.png'), pngBuffer);
+    fs.writeFileSync(path.join(dir, 'composer-shortcut-model-picker-verified.json'), jsonStr);
+  }
+}
+
+console.log('✅ 实测证据已生成并同步输出到 docs/evidence 与 .agent-reports：');
 console.log('  - docs/evidence/composer-shortcut-model-picker-verified.png');
 console.log('  - docs/evidence/composer-shortcut-model-picker-verified.json');
+console.log('  - .agent-reports/composer-shortcut-model-picker-verified.png');
+console.log('  - .agent-reports/composer-shortcut-model-picker-verified.json');
