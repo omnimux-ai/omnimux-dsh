@@ -81,6 +81,43 @@ function announceAppOpen(appId, title, manifest) {
   }
 }
 
+/** 解析宿主窗口（与 getBetterSidebar 同一条 globalThis 解析链）。 */
+function resolveHostWindow() {
+  return typeof globalThis !== 'undefined' && globalThis.window
+    ? globalThis.window
+    : (typeof window !== 'undefined' ? window : undefined)
+}
+
+/**
+ * 空会话（新会话页，hero 阶段）打开应用时自动进入官方全屏。
+ *
+ * 只消费中枢公开缝 `__omnimuxEnterRightSidebarFullscreen`（唯一实现留在中枢
+ * host-fullscreen），不复制宿主按钮选择器；全程包在调和器程序化保护里，
+ * 这次自动全屏不会被记成用户布局偏好。缝缺失、非空会话、已全屏（中枢 no-op）
+ * 或任何抛错都安静降级——应用照常打开，绝不因布局动作失败而阻断。
+ *
+ * @param {Window} [win]
+ * @returns {boolean} 是否实际执行了一次进入全屏动作
+ */
+export function enterFullscreenWhenBlankConversation(win = resolveHostWindow()) {
+  try {
+    const doc = win?.document
+    if (!doc || typeof doc.querySelector !== 'function') return false
+    if (!doc.querySelector('[data-phase="hero"]')) return false
+    const enter = win.__omnimuxEnterRightSidebarFullscreen
+    if (typeof enter !== 'function') return false
+    const rec = win.__omnimuxTabViewport
+    try {
+      rec?.beginProgrammatic?.()
+      return enter(doc) === true
+    } finally {
+      rec?.endProgrammatic?.()
+    }
+  } catch {
+    return false
+  }
+}
+
 /**
  * 打开发布生成的独立 AI 应用 Tab。
  *
@@ -111,6 +148,7 @@ export function openAppTab(manifest = {}, opts = {}) {
       extra: { manifest, appId },
     }, opts?.scope)
     announceAppOpen(appId, title, manifest)
+    enterFullscreenWhenBlankConversation()
     return true
   }
   return false

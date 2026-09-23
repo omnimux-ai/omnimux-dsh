@@ -26,6 +26,7 @@ import {
 } from './focus-state.js'
 import {
   isHostRightSidebarFullscreen,
+  enterHostRightSidebarFullscreen,
   HOST_RIGHT_PANEL_ATTR,
 } from './host-fullscreen.js'
 import {
@@ -302,7 +303,12 @@ export function installTabViewportReconciler(doc = hostDocument()) {
   reconciler.sync()
   try {
     const win = doc.defaultView
-    if (win) win.__omnimuxTabViewport = reconciler
+    if (win) {
+      win.__omnimuxTabViewport = reconciler
+      // 公开缝：跨插件（如 omnimux-workflow 的应用打开通道）进入官方全屏的唯一入口，
+      // 消费方只调缝、不复制宿主按钮选择器；卸载时按身份回收，绝不留野引用。
+      win.__omnimuxEnterRightSidebarFullscreen = enterHostRightSidebarFullscreen
+    }
   } catch {}
 
   const Observer = doc.defaultView?.MutationObserver
@@ -334,6 +340,9 @@ export function installTabViewportReconciler(doc = hostDocument()) {
     try {
       const win = doc.defaultView
       if (win && win.__omnimuxTabViewport === reconciler) delete win.__omnimuxTabViewport
+      if (win && win.__omnimuxEnterRightSidebarFullscreen === enterHostRightSidebarFullscreen) {
+        delete win.__omnimuxEnterRightSidebarFullscreen
+      }
     } catch {}
     reconciler.reset()
   }
