@@ -19,6 +19,18 @@
  */
 
 import { openCollapsedNewMenuAt } from './sidebar-coordinator.js'
+import {
+  CONVERSATION_RATIO_DEFAULT,
+  conversationStageWidthPx,
+  conversationWidthFromRatio,
+  ratioFromConversationWidth,
+} from './conversation-ratio.js'
+import { getWorkbenchLayout } from './workbench/host-adapter.js'
+import {
+  migrateChatRatioFromAuthoredGeometry,
+  persistChatRatioNow,
+  readChatRatio,
+} from './workbench/workspace-layout-store.js'
 
 export const SIDEBAR_TOGGLE_TOPBAR_ATTR = 'data-omnimux-sidebar-toggle-topbar'
 export const SIDEBAR_TOGGLE_TOPBAR_HTML_ATTR = 'data-omnimux-sidebar-toggle-topbar'
@@ -317,9 +329,48 @@ const CONVERSATION_COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
 export const CONVERSATION_WIDTH_FALLBACK_PX = 380
 /** Never publish a conversation column narrower than this. */
 export const CONVERSATION_WIDTH_MIN_PX = 320
+/**
+ * 展开态左栏基线兜底（外壳 `SIDEBAR_DEFAULT`）。
+ *
+ * 分母在收起态要锁「展开态左栏」，而外壳在收起态 authored 的第一轨是**收起**宽度
+ * （macOS advanced 90px），不能当基线用。正常路径下 `computeChromeLayout` 会把
+ * `lastGoodLeftRailW`（最后一次展开态宽度）传进来，只有「冷启动即处于收起态」才走到本兜底。
+ * 数值与 `workbench/geometry.js` 的 `WORKBENCH_LEFT_RAIL_EXPANDED_FALLBACK_PX` 一致；
+ * 本模块按硬约束不得依赖 workbench 几何模块（其传递依赖 conversation-collapse.js）。
+ */
+export const CONVERSATION_RAIL_BASELINE_FALLBACK_PX = 280
 
 /** Last plausible expanded rail width; repairs a poisoned reading (see below). */
 let lastGoodLeftRailW = 0
+
+/**
+ * 外壳分隔线是否正在被拖动。
+ *
+ * 拖拽期是「authored 几何权威」的判据（方案 D3）：此时宽度必须由外壳当帧写出的内联栅格
+ * 派生，比例不得参与任何写入路径——否则等价于把「记忆式基准」重新钉回轨道，#2097 原样复发。
+ * @param {Document | null | undefined} doc
+ * @returns {boolean}
+ */
+export function isShellSplitDragging(doc) {
+  return Boolean(
+    doc?.body?.hasAttribute?.('data-dsh-sidebar-dragging') ||
+    doc?.querySelector?.('[data-dragging]'),
+  )
+}
+
+/**
+ * 幂等写判据：几何不变时不得重复 `setProperty`。
+ *
+ * 外壳 frame 的 `style` 是每次 render 重建的新对象，插件又用 `style` MutationObserver 盯它，
+ * 非幂等写会形成「外壳写 → 观察者 → 插件写 → 再触发观察者」的自激回路（契约 E-2 / 禁改清单 §5）。
+ * @param {string} current 变量当前值（如 `"492px"`）
+ * @param {number} nextPx 期望的像素值
+ * @returns {boolean} true 表示差异小于 1px，可跳过写入
+ */
+export function isSamePxValue(current, nextPx) {
+  const parsed = Number.parseFloat(current)
+  return Number.isFinite(parsed) && Math.abs(parsed - nextPx) < 1
+}
 
 /**
  * The desktop shell's frame element — the grid host both of us write to.
@@ -363,32 +414,192 @@ export function readShellSplitPx(doc) {
 }
 
 /**
- * Conversation-column width, derived from the shell's authored split rather than
- * remembered from a measurement.
+ * Conversation-column width for the current shell state.
  *
- * Collapsing the left rail keeps the conversation column at its pixel width and
- * hands the released rail width to the workbench (spec
- * `three-column-sidebar-collapse` AC-101/AC-102). Deriving that width keeps the
- * two layouts in step by construction: the same expression yields the native
- * remainder while the rail is expanded and the identical number once it is
- * collapsed, so the toggle cannot move the column, and a native splitter drag
- * (which rewrites the shell's third track) stays live in *both* rail states
- * instead of being swallowed by a stale pinned value.
+ * 两个状态，两条权威链（方案 D3，唯一硬约束）：
+ *
+ * - **稳态（默认）**：比例权威。宽度 = `conversationWidthFromRatio(舞台, 比例)`，
+ *   舞台 = 窗口内容宽 − 左栏（收起态锁展开态基线）。窗口缩放按同一比例重算，
+ *   多出来的宽度不再全部落进中栏（#2316 的荒原）。
+ * - **拖拽期**（`body[data-dsh-sidebar-dragging]` 或外壳 `[data-dragging]`）：外壳
+ *   authored 内联栅格是唯一权威，与 #2097 修复后的实现逐字一致。比例在此分支**只记录、
+ *   绝不参与宽度来源**——用测量值或比例反推宽度再写回就是自证读数，会让渲染被钉住、
+ *   整段拖拽零写入，松手后再展开跳变（#2097）。
+ *
+ * 收起左栏的保宽（契约 INV-1/INV-2）在两条链上都成立：稳态靠基线分母，拖拽期靠
+ * `releasedRailW` 把释放宽度还给中栏，同一表达式在两种状态下给出同一数值。
  * @param {Document | null | undefined} doc
  * @param {boolean} collapsed
  * @param {number} leftRailW visible rail width (0 while collapsed)
  * @param {number} [expandedRailW] last trustworthy expanded rail width
+ * @param {{ chatRatio?: number }} [env] 显式比例（单测 / 诊断用）；缺省走持久化真源
  * @returns {number}
  */
-export function deriveConversationWidthPx(doc, collapsed, leftRailW, expandedRailW = 0) {
+export function deriveConversationWidthPx(doc, collapsed, leftRailW, expandedRailW = 0, env = {}) {
+  const viewportW = readViewportWidthPx(doc)
+  if (viewportW <= 0) return CONVERSATION_WIDTH_FALLBACK_PX
+
   const { rail, right } = readShellSplitPx(doc)
-  const viewportW = Math.round(doc?.defaultView?.innerWidth || doc?.documentElement?.clientWidth || 0)
-  if (right === null || right <= 0 || viewportW <= 0) return CONVERSATION_WIDTH_FALLBACK_PX
-  // Collapsed: the visible rail is 0, so the width the shell would have given
-  // back to the rail has to be re-added here — it belongs to the workbench now.
   const railW = collapsed ? 0 : (rail ?? leftRailW ?? 0)
-  const releasedRailW = collapsed ? (expandedRailW || 0) : 0
-  return Math.max(CONVERSATION_WIDTH_MIN_PX, viewportW - railW - right - releasedRailW)
+
+  // 拖拽期：authored 权威（与 #2097 修复后的实现逐字一致）。
+  if (isShellSplitDragging(doc)) {
+    const authored = authoredConversationWidthPx({
+      viewportWidth: viewportW,
+      railVisiblePx: railW,
+      rightTrackPx: right,
+      releasedRailPx: collapsed ? (expandedRailW || 0) : 0,
+    })
+    return authored ?? CONVERSATION_WIDTH_FALLBACK_PX
+  }
+
+  // 稳态：比例权威。分母在收起态锁定展开态左栏基线，使收起动作对中栏宽度成为恒等变换。
+  const stage = conversationStageWidthPx({
+    viewportWidth: viewportW,
+    railVisiblePx: railW,
+    railBaselinePx: expandedRailW || CONVERSATION_RAIL_BASELINE_FALLBACK_PX,
+    collapsed,
+  })
+  return conversationWidthFromRatio(stage, resolveConversationRatio(doc, env))
+}
+
+/**
+ * 视口内容宽（外壳把手的 `viewport` 口径为 frame 实测宽，此处保留窗口口径供几何推导；
+ * 需要与外壳完全同口径时用 {@link readFrameWidthPx}）。
+ * @param {Document | null | undefined} doc
+ * @returns {number} 整数像素；不可测时为 0
+ */
+function readViewportWidthPx(doc) {
+  return Math.round(doc?.defaultView?.innerWidth || doc?.documentElement?.clientWidth || 0)
+}
+
+/**
+ * 外壳 frame 的实测宽度 —— 外壳 `computeDesktopColumns(viewport, …)` 与把手
+ * `left = viewport − normal.rightbar` 用的就是这个口径（`AdvancedFrame.tsx`）。
+ * 回写 `panels.rightbar` 时必须与外壳同口径，否则夹紧结果与把手位置各算一套。
+ * @param {Document | null | undefined} doc
+ * @returns {number} 整数像素；测不到时退回窗口内容宽
+ */
+export function readFrameWidthPx(doc) {
+  const frame = readFrame(doc)
+  try {
+    const width = frame?.getBoundingClientRect?.().width
+    if (typeof width === 'number' && Number.isFinite(width) && width > 0) return Math.round(width)
+  } catch {
+    // ignore
+  }
+  return readViewportWidthPx(doc)
+}
+
+/**
+ * 拖拽期宽度算式（纯函数）：`视口 − 可见左栏 − 外壳 authored 第三轨 − 收起释放宽`。
+ *
+ * 抽成纯函数是为了让「拖拽期发布什么值」与「松手后反推什么比例」共用同一个表达式：
+ * 两处若各写一遍，结算出的比例就会与用户实际拖到的宽度差一截（AC-7 比例记忆 ±0.005）。
+ * @param {{ viewportWidth?: number, railVisiblePx?: number, rightTrackPx?: number | null, releasedRailPx?: number }} geometry
+ * @returns {number | null} 无可用第三轨（右栏收起 / 外壳未 authored）时返回 `null`
+ */
+export function authoredConversationWidthPx(geometry = {}) {
+  const viewportW = Number(geometry.viewportWidth)
+  const right = Number(geometry.rightTrackPx)
+  if (!Number.isFinite(viewportW)) return null
+  if (!Number.isFinite(right) || right <= 0) return null
+  const railW = Math.max(0, Number(geometry.railVisiblePx) || 0)
+  const releasedRailW = Math.max(0, Number(geometry.releasedRailPx) || 0)
+  return Math.max(CONVERSATION_WIDTH_MIN_PX, Math.round(viewportW) - railW - Math.round(right) - releasedRailW)
+}
+
+/**
+ * 当前生效的比例：存储 → 老用户迁移 → 产品默认。
+ *
+ * 显式注入的 `env.chatRatio` 优先（单测与诊断用），其余走持久化真源。
+ * @param {Document | null | undefined} doc
+ * @param {{ chatRatio?: number }} [env]
+ * @returns {number}
+ */
+export function resolveConversationRatio(doc, env = {}) {
+  if (typeof env.chatRatio === 'number' && Number.isFinite(env.chatRatio)) return env.chatRatio
+  const stored = readChatRatio()
+  if (stored !== null) return stored
+  const migrated = migrateConversationRatioOnce(doc)
+  return migrated ?? CONVERSATION_RATIO_DEFAULT
+}
+
+/** 迁移只允许发生一次；失败（外壳几何尚未就绪）不置位，留给下一帧重试。 */
+let ratioMigrationSettled = false
+
+/**
+ * 老用户首跑迁移：只在**外壳已持有用户自己写出的面板宽**时反推。
+ *
+ * 外壳 `panels.rightbar` 的初值是 `null`，唯一写入者是用户拖动分隔线；因此
+ * 「它是数字」等价于「这位用户曾经亲手定过版式」。全新用户没有可迁移的版式，
+ * 必须拿到产品默认 30%（规格 §10），不能被外壳默认 45% 面板反推成 47%。
+ * @param {Document | null | undefined} doc
+ * @returns {number | null} 落盘的比例；不满足迁移前提时为 `null`
+ */
+function migrateConversationRatioOnce(doc) {
+  if (ratioMigrationSettled) return null
+  const snapshot = getWorkbenchLayout()?.getSnapshot?.()
+  if (!snapshot || typeof snapshot.rightbar !== 'number') return null
+  const viewportW = readViewportWidthPx(doc)
+  const collapsed = isLeftSidebarCollapsed(doc)
+  const { rail, right } = readShellSplitPx(doc)
+  const migrated = migrateChatRatioFromAuthoredGeometry({
+    viewportWidth: viewportW,
+    railVisiblePx: collapsed ? 0 : (rail ?? lastGoodLeftRailW ?? 0),
+    railBaselinePx: lastGoodLeftRailW || CONVERSATION_RAIL_BASELINE_FALLBACK_PX,
+    collapsed,
+    rightTrackPx: right,
+  })
+  if (migrated !== null) ratioMigrationSettled = true
+  return migrated
+}
+
+/**
+ * 拖拽结算：把用户刚拖到的宽度反推成比例并**立即落盘**（跳过防抖），随后按稳态重算一次。
+ *
+ * 结算读的是外壳 authored 栅格而不是我们刚写出去的 CSS 变量：读自己的写值等于自证读数
+ * （INV-4），一旦外壳当帧的几何与我们的写入不同步，落盘的比例就会悄悄偏掉。
+ * @param {Document | null | undefined} doc
+ * @returns {number | null} 落盘的比例；无可用 authored 第三轨时为 `null`
+ */
+export function settleConversationRatioFromAuthoredGeometry(doc) {
+  const viewportW = readViewportWidthPx(doc)
+  if (viewportW <= 0) return null
+  const layout = computeChromeLayout(doc)
+  const { rail, right } = readShellSplitPx(doc)
+  const collapsed = layout.collapsed
+  const railW = collapsed ? 0 : (rail ?? layout.leftRailW ?? 0)
+  const chatWidth = authoredConversationWidthPx({
+    viewportWidth: viewportW,
+    railVisiblePx: railW,
+    rightTrackPx: right,
+    releasedRailPx: collapsed ? (lastGoodLeftRailW || 0) : 0,
+  })
+  if (chatWidth === null) return null
+  const stage = conversationStageWidthPx({
+    viewportWidth: viewportW,
+    railVisiblePx: railW,
+    railBaselinePx: lastGoodLeftRailW || CONVERSATION_RAIL_BASELINE_FALLBACK_PX,
+    collapsed,
+  })
+  if (!(stage > 0)) return null
+  const ratio = ratioFromConversationWidth(stage, chatWidth)
+  persistChatRatioNow(ratio)
+  // 结算即回到稳态：比例已等于拖拽结果，重算对可见宽度是恒等变换（无跳变）。
+  try {
+    applyTopbarToggleCssVars(doc)
+  } catch {
+    // 重算失败不吞掉已落盘的比例：下一帧的观察者同步会补上。
+  }
+  return ratio
+}
+
+/**
+ * 测试专用：复位「迁移已结算」记忆，避免用例之间互相污染。
+ */
+export function resetConversationRatioAuthorityForTests() {
+  ratioMigrationSettled = false
 }
 
 /**
@@ -425,10 +636,7 @@ export function readShellRailWidthPx(doc) {
  * }}
  */
 export function computeChromeLayout(doc) {
-  const isDragging = Boolean(
-    doc?.body?.hasAttribute?.('data-dsh-sidebar-dragging') ||
-    doc?.querySelector?.('[data-dragging]')
-  )
+  const isDragging = isShellSplitDragging(doc)
   let collapsed = isLeftSidebarCollapsed(doc)
   if (explicitLeftCollapseIntent === true && (isDragging || !collapsed)) {
     collapsed = true
@@ -584,12 +792,39 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
   const sidebarWidth = layout.collapsed ? 0 : expandedRailWidth
   root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
   const convW = layout.conversationWidth ?? CONVERSATION_WIDTH_FALLBACK_PX
-  root.style.setProperty('--omnimux-conversation-width', `${convW}px`)
+  // 幂等写：几何不变时跳过，避免与外壳 `style` 观察者形成自激回路（E-2 / 禁改清单 §5）。
+  if (!isSamePxValue(root.style.getPropertyValue('--omnimux-conversation-width'), convW)) {
+    root.style.setProperty('--omnimux-conversation-width', `${convW}px`)
+  }
   syncTopbarTabClearance(doc)
   if (typeof newSessionLeft === 'number') {
     root.style.setProperty('--omnimux-topbar-new-session-left', `${newSessionLeft}px`)
   } else {
     try { root.style.removeProperty('--omnimux-topbar-new-session-left') } catch { /* ignore */ }
+  }
+}
+
+/** @type {((doc: Document) => void) | null} 窗口缩放后的几何协调钩子（由装配层注入）。 */
+let topbarGeometryHook = null
+
+/**
+ * 注册「窗口缩放后」的几何协调钩子。
+ *
+ * 顶栏模块只负责把中栏变量写到最新视口；右栏面板宽与分隔线把手由工作台侧协调
+ * （方案 D7-S1′）。两者必须挂在同一次 resize 上，否则缩放后中栏按新比例、面板仍按旧宽度，
+ * 把手与真实列边界当场错位。装配层注入、模块自身不反向依赖工作台几何。
+ * @param {((doc: Document) => void) | null} hook
+ */
+export function setTopbarGeometryHook(hook) {
+  topbarGeometryHook = typeof hook === 'function' ? hook : null
+}
+
+function runTopbarGeometryHook(doc) {
+  if (!topbarGeometryHook) return
+  try {
+    topbarGeometryHook(doc)
+  } catch {
+    // 协调失败不得中断顶栏几何同步（面板宽最多滞后一帧）。
   }
 }
 
@@ -953,6 +1188,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
   // Track mounted controls and leaf panes so split dragging updates overlap.
   const syncGeometry = () => {
     try { applyTopbarToggleCssVars(doc) } catch { /* ignore */ }
+    runTopbarGeometryHook(doc)
   }
   /** @type {Set<Element>} */
   let observedTargets = new Set()

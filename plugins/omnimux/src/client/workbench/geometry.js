@@ -7,14 +7,25 @@
  */
 
 import { getConversationCollapsed } from '../conversation-collapse.js'
+import {
+  CONVERSATION_MIN_CHAT_PX,
+  CONVERSATION_RATIO_DEFAULT,
+  conversationStageWidthPx,
+  resolveConversationPixelBudget,
+} from '../conversation-ratio.js'
 import { WORKBENCH_FOCUS } from '../../workbench/contract.js'
 import { activeTabId, hostDocument, hostWindow, liveSnapshot } from './host-adapter.js'
 import { focusRecordForTab } from './focus-state.js'
+import { readChatRatio } from './workspace-layout-store.js'
 
 export const WORKBENCH_PANEL_MIN_PX = 280
-export const WORKBENCH_CONVERSATION_TARGET_PX = 380
-/** Visible split conversation floor. CSS and live drag clamp share this value. */
-export const WORKBENCH_CONVERSATION_MIN_PX = 360
+/**
+ * Visible split conversation floor. CSS and live drag clamp share this value.
+ *
+ * 单一真源在 `conversation-ratio.js`（`CONVERSATION_MIN_CHAT_PX`）：拖拽下限与派生下限
+ * 曾各自为政（360 / 320 两处不一致），比例制把两处统一到同一个常量。
+ */
+export const WORKBENCH_CONVERSATION_MIN_PX = CONVERSATION_MIN_CHAT_PX
 export const WORKBENCH_SPLIT_MAX_CSS_VAR = '--omnimux-split-max'
 /**
  * Marker stamped on the resolved real better-sidebar right panel so the
@@ -54,6 +65,18 @@ let lastCollapsedOfficialWidth = WORKBENCH_LEFT_RAIL_COLLAPSED_FALLBACK_PX
 export function resetWorkbenchGeometryMemory() {
   lastExpandedOfficialWidth = WORKBENCH_LEFT_RAIL_EXPANDED_FALLBACK_PX
   lastCollapsedOfficialWidth = collapsedLeftRailFallbackPx()
+}
+
+/**
+ * 最后一次展开态左栏宽度（基线）。
+ *
+ * 收起左栏时中栏分母要锁「展开态基线」才能保宽（契约 INV-1/INV-2）。收起态下
+ * `officialSessionSidebarWidth` 返回的是收起宽度（0 / 56 / 90），本值是其保留的
+ * 展开态记忆——外壳在收起态 authored 的第一轨是收起宽度，无法当基线用。
+ * @returns {number}
+ */
+export function officialExpandedRailBaselinePx() {
+  return lastExpandedOfficialWidth
 }
 
 export function viewportWidth() {
@@ -309,22 +332,71 @@ export function workbenchUsableWidthPx(state, env = {}) {
 }
 
 /**
- * Default GUI width: keep ~380px for the conversation column, give the rest
- * to the right panel (same ruler as the project canvas 15:85).
+ * 当前生效的比例：显式注入优先，其次持久化真源，最后产品默认。
+ *
+ * 与 `sidebar-toggle-topbar.resolveConversationRatio` 必须给出同一个值——两侧一个算中栏、
+ * 一个算右栏，比例若不同源，「三栏之和 = 视口」当场破裂。
+ * @param {{ chatRatio?: number }} [env]
+ * @returns {number}
+ */
+function resolveChatRatio(env = {}) {
+  if (typeof env.chatRatio === 'number' && Number.isFinite(env.chatRatio)) return env.chatRatio
+  const stored = readChatRatio()
+  return stored ?? CONVERSATION_RATIO_DEFAULT
+}
+
+/**
+ * 中间会话栏与画布的像素预算（比例制真源）。
+ *
+ * 三个宽度必须同时成立，缺一就会出现「把手与真实列边界错位」或「收起左栏不保宽」：
+ *
+ * - `stage`（**基线舞台**）：窗口内容宽 − 左栏。收起左栏时改用「展开态左栏基线」，
+ *   使收起动作对中栏宽度成为恒等变换（契约 INV-1/INV-2 保宽）。
+ * - `budget.chatWidth`：`clamp(round(舞台 × 比例), 360, min(舞台 × 72%, 舞台 − 320))`。
+ * - `visibleStage`（**可见舞台**）：窗口内容宽 − **可见**左栏。画布/面板宽永远按可见舞台算：
+ *   CSS 保宽规则把第一轨钉成 0，释放的左栏宽度物理上归第三轨，若面板仍按基线舞台算，
+ *   外壳 authored 第三轨会小于真实列宽，右分隔线把手随之偏离真实列边界（方案 D7）。
+ * @param {{ viewportWidth?: number, officialSidebarWidth?: number, chatRatio?: number, railBaselinePx?: number }} [env]
+ * @returns {{ visibleStage: number, stage: number, budget: { chatWidth: number, minChatWidth: number, maxChatWidth: number } }}
+ */
+function workbenchConversationGeometryPx(env = {}) {
+  const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
+  const railVisible = officialSessionSidebarWidth(env)
+  const collapsed = isOfficialSidebarCollapsed(hostDocument())
+  const railBaseline = typeof env.railBaselinePx === 'number' && Number.isFinite(env.railBaselinePx)
+    ? env.railBaselinePx
+    : officialExpandedRailBaselinePx()
+  const ratio = resolveChatRatio(env)
+  const visibleStage = Math.max(0, Math.round(viewport) - Math.max(0, railVisible))
+  const stage = conversationStageWidthPx({
+    viewportWidth: viewport,
+    railVisiblePx: railVisible,
+    railBaselinePx: railBaseline,
+    collapsed,
+  })
+  return { visibleStage, stage, budget: resolveConversationPixelBudget(stage, ratio) }
+}
+
+/**
+ * Default GUI width: hand the right panel everything the middle conversation
+ * column does not take, at the configured ratio.
+ *
+ * 算式由「可用宽 − 380」换成「可见舞台 − 比例中栏宽」；写入通道不变
+ * （`applyDefaultWidth → updateStoreWithDefaultWidth`，终点是 better-sidebar 的 tab store）。
+ *
+ * **该通道不驱动外壳 `panels.rightbar`**（取证见
+ * `.agent-reports/conversation-ratio-layout/forensics-s1-s2.md`：外壳那个字段的唯一写入者是
+ * 外壳自己的手柄拖拽 `layout.setRightbar`，外壳客户端不读 better-sidebar store）。
+ * 因此本函数只决定「右栏该多宽」，**不决定分隔线把手位置**；把手的对齐由 T04 的 D7-S1′
+ * 桥负责——复用 `workbench/tab-viewport-reconciler.js` 已持有的 `layout.setRightbar()` 通道。
  */
 export function workbenchDefaultWidthPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
-  const max = viewport > 0 ? Math.max(WORKBENCH_PANEL_MIN_PX, viewport) : WORKBENCH_PANEL_MIN_PX
-  const usable = workbenchUsableWidthPx(state, env)
-  if (usable <= 0) {
-    const raw = viewport > 0
-      ? Math.max(WORKBENCH_PANEL_MIN_PX, viewport - WORKBENCH_CONVERSATION_TARGET_PX)
-      : WORKBENCH_PANEL_MIN_PX
-    return Math.min(max, raw)
-  }
-  let target = usable - WORKBENCH_CONVERSATION_TARGET_PX
-  if (target < WORKBENCH_PANEL_MIN_PX) target = usable - WORKBENCH_CONVERSATION_MIN_PX
-  return Math.min(max, Math.max(WORKBENCH_PANEL_MIN_PX, Math.round(target)))
+  if (!(viewport > 0)) return WORKBENCH_PANEL_MIN_PX
+  const max = Math.max(WORKBENCH_PANEL_MIN_PX, viewport)
+  const { visibleStage, budget } = workbenchConversationGeometryPx(env)
+  const target = Math.max(WORKBENCH_PANEL_MIN_PX, Math.round(visibleStage - budget.chatWidth))
+  return Math.min(max, target)
 }
 
 /**
@@ -347,18 +419,23 @@ export function workbenchGuiWidthPx(state, env = {}) {
 
 /**
  * Largest right-panel width that still leaves the middle conversation column at
- * least WORKBENCH_CONVERSATION_MIN_PX wide, given the viewport and the official
- * left session rail. Split focus is clamped to this; intentional gui and the
- * collapsed middle column are never clamped (the column is allowed to be 0).
+ * least its floor wide, given the viewport and the official left session rail.
+ * Split focus is clamped to this; intentional gui and the collapsed middle column
+ * are never clamped (the column is allowed to be 0).
  * When the viewport cannot be measured it has no safe bound, so it conservatively
  * returns the current panel width / gui upper bound (it never reduces an existing
  * split that it cannot reason about).
+ *
+ * 物理余量按**可见**舞台算（不是基线舞台）：左栏收起时第一轨被钉成 0，释放的宽度
+ * 物理上归第三轨，面板上限必须允许它吃到 `视口 − 可见左栏 − 中栏下限`；若按基线舞台算，
+ * 收起态面板会被夹小、中栏被反向挤窄，保宽（INV-1）当场失效。
+ * 地板来自比例预算的 `minChatWidth`，与拖拽下限、派生下限同源。
  */
 export function workbenchSplitMaxPanelPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
-  const leftRail = officialSessionSidebarWidth(env)
   if (viewport > 0) {
-    return Math.max(WORKBENCH_PANEL_MIN_PX, viewport - leftRail - WORKBENCH_CONVERSATION_MIN_PX)
+    const { visibleStage, budget } = workbenchConversationGeometryPx(env)
+    return Math.max(WORKBENCH_PANEL_MIN_PX, visibleStage - budget.minChatWidth)
   }
   const current = typeof state?.width === 'number' && Number.isFinite(state.width) ? state.width : 0
   const gui = workbenchGuiWidthPx(state, env)

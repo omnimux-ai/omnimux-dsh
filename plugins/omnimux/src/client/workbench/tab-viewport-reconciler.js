@@ -16,7 +16,9 @@ import {
   currentSessionId,
   getWorkbenchSidebarRight,
   getWorkbenchLayout,
+  resolveWorkbenchLayoutHandle,
 } from './host-adapter.js'
+import { reconcileRightbarFromRatio } from './split-layout.js'
 import {
   focusRecordForTab,
   persistSessionFocus,
@@ -42,12 +44,19 @@ const TITLE_TO_TAB_ID = new Map(
 )
 
 /**
- * 确保分栏状态下右侧工作台处于健康舒适的黄金比例宽度（≥450px，大屏约为视口的 45%），
- * 防止桌面端 layout 曾经被误拖拽至 300px 极端窄缝，导致中间会话栏被强行拉扯出 500px 黑色空洞。
+ * 确保分栏状态下右侧工作台处于健康宽度，防止桌面端 layout 曾经被误拖拽至 300px 极端窄缝，
+ * 导致中间会话栏被强行拉扯出 500px 黑色空洞。
+ *
+ * 比例制落地后，右栏宽度是「可见舞台 − 比例中栏宽」的函数，**唯一写入者**是
+ * `split-layout.reconcileRightbarFromRatio`（D7-S1′）。本函数因此先让比例协调写说话：
+ * 若它已接管（写入或已一致），这里绝不另写一个 45% 健康值——两个写入者会在换页签与
+ * 缩放之间来回打架。只有当比例权威不适用（拿不到外壳 layout 句柄 / 非三栏分栏态）时，
+ * 才退回原有的「健康宽度」兜底。
  * @param {Document} [doc]
  */
 export function ensureHealthySplitWidth(doc = hostDocument()) {
   if (!doc) return
+  if (reconcileRightbarFromRatio(liveSnapshot()?.state, { doc }) !== 'skipped') return
   const win = doc.defaultView || globalThis.window
   const viewport = win?.innerWidth || 1728
   const targetHealthyWidth = Math.max(500, Math.round(viewport * 0.45))
@@ -67,18 +76,12 @@ export function ensureHealthySplitWidth(doc = hostDocument()) {
   try {
     const frame = doc.querySelector?.('.dshDesktopFrame')
     if (frame) {
-      const key = Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
-      let p = key ? frame[key] : null
-      while (p) {
-        if (p.memoizedProps?.layout && typeof p.memoizedProps.layout.setRightbar === 'function') {
-          const l = p.memoizedProps.layout
-          const snap = l.getSnapshot?.()
-          if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
-            l.setRightbar(targetHealthyWidth, viewport)
-          }
-          break
+      const layoutHandle = resolveWorkbenchLayoutHandle(doc)
+      if (layoutHandle) {
+        const snap = layoutHandle.getSnapshot?.()
+        if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
+          layoutHandle.setRightbar(targetHealthyWidth, viewport)
         }
-        p = p.return
       }
     }
   } catch {}

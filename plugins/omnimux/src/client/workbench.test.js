@@ -185,8 +185,12 @@ test('default focus matrix: canvas and all libraries default to gui (Issue #2006
   assert.equal(WORKBENCH_OCCUPANTS.length, 12)
 })
 
-test('workbenchDefaultWidthPx keeps ~380px for conversation', () => {
-  assert.equal(workbenchDefaultWidthPx(makeState([], 820), { viewportWidth: 1200 }), 820)
+test('workbenchDefaultWidthPx gives the panel everything the ratio column does not take', () => {
+  // 比例制（Issue #2608）：面板宽 = 可见舞台 − 比例中栏宽。
+  // 1200 视口、无左栏 → 舞台 1200，中栏 = clamp(round(1200 × 0.3), 360, min(864, 880)) = 360
+  // → 面板 840（旧算式「可用宽 − 380」给 820，差额正是中栏地板 360 与旧目标 380 之差）。
+  assert.equal(workbenchDefaultWidthPx(makeState([], 820), { viewportWidth: 1200 }), 840)
+  // 600 视口：中栏被 360px 下限占满 → 面板退到 280 地板。
   assert.equal(workbenchDefaultWidthPx(makeState([], 820), { viewportWidth: 600 }), 280)
 })
 
@@ -865,8 +869,8 @@ test('applyDefaultWidth writes via store.reduce and skips a second write', () =>
     reduce: (fn) => { state = fn(state) },
   }
   const applied1 = applyDefaultWidth(null, 's1', store, { viewportWidth: 1200 })
-  assert.equal(applied1, 820)
-  assert.equal(state.width, 820)
+  assert.equal(applied1, 840, '比例制下面板宽 = 可见舞台 1200 − 中栏 360')
+  assert.equal(state.width, 840)
 
   state.width = 600
   const applied2 = applyDefaultWidth(null, 's1', store, { viewportWidth: 1200 })
@@ -1396,7 +1400,7 @@ test('setWorkbenchFocus chat/gui/split writes panel geometry and restores split 
 
   setWorkbenchFocus(WORKBENCH_FOCUS.split, store, env)
   assert.equal(state.panelOpen, true)
-  assert.equal(state.width, 820)
+  assert.equal(state.width, 840, '比例制下 split 默认面板宽 = 可见舞台 1200 − 中栏 360')
 
   state.width = 650
   setWorkbenchFocus(WORKBENCH_FOCUS.gui, store, env)

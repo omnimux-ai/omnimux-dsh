@@ -14,6 +14,7 @@ import {
   hostDocument,
   hostWindow,
   liveSnapshot,
+  resolveWorkbenchLayoutHandle,
 } from './host-adapter.js'
 import {
   WORKBENCH_FOCUS,
@@ -33,6 +34,7 @@ import {
   workbenchSplitMaxPanelPx,
 } from './geometry.js'
 import { notifyWorkbenchChange } from './event-bus.js'
+import { settleConversationRatioFromAuthoredGeometry, readFrameWidthPx } from '../sidebar-toggle-topbar.js'
 
 export const WORKBENCH_SPLIT_MIN_STYLE_ID = 'omnimux-split-conversation-min-chrome'
 
@@ -148,6 +150,52 @@ export function clampLiveSplitDom(state = liveSnapshot()?.state, env = {}) {
   clampStyleWidth(panel?.style, '', max)
 }
 
+/**
+ * 把「可见舞台 − 比例中栏宽」写回外壳消费的面板宽通道（方案 D7-S1′）。
+ *
+ * 外壳的 `panels.rightbar` 同时决定三件事：① authored 第三轨；② 拖拽起点 `rightbarBase`
+ * （`setRightbar(base − dx)` 是 delta 模型）；③ 右分隔把手位置 `left = viewport − rightbar`。
+ * 因此只要 `panels.rightbar ≡ 可见舞台 − 中栏`，把手就贴在真实列边界上，缩放后立刻拖拽也
+ * 不会出现首帧跳变。写通道复用 `tab-viewport-reconciler` 已持有的 `layout.setRightbar()`。
+ *
+ * 三条硬规则：
+ * - **拖拽期绝不写**：那时外壳 authored 几何是权威，代写面板宽会与指针抢同一根轨道；
+ * - **只在三栏分栏态写**：中栏收起 / 右栏收起 / gui 单栏态不比例化（D6）；
+ * - **口径与外壳一致**：外壳 `viewport` 取 frame 实测宽，这里用 {@link readFrameWidthPx}
+ *   同一个口径，否则外壳的夹紧结果与把手位置会各算一套。
+ * @param {object} [state] better-sidebar 快照状态
+ * @param {{ doc?: Document, sessionId?: string, viewportWidth?: number, chatRatio?: number }} [env]
+ * @returns {'written' | 'consistent' | 'skipped'} 写入 / 已一致 / 不适用
+ */
+export function reconcileRightbarFromRatio(state, env = {}) {
+  const resolvedState = state === undefined ? readAttachedStateSafely() : state
+  const doc = env.doc || hostDocument()
+  if (!doc) return 'skipped'
+  if (isWorkbenchPanelDragging(doc)) return 'skipped'
+  if (!splitConversationMinApplies(resolvedState, env)) return 'skipped'
+  const handle = resolveWorkbenchLayoutHandle(doc)
+  if (!handle || typeof handle.setRightbar !== 'function') return 'skipped'
+  const snapshot = handle.getSnapshot?.()
+  if (!snapshot || snapshot.rightbarShown !== true || snapshot.rightbarTrack !== true || snapshot.rightbarFullscreen === true) {
+    return 'skipped'
+  }
+  const frameViewport = readFrameWidthPx(doc)
+  if (!(frameViewport > 0)) return 'skipped'
+  const target = workbenchDefaultWidthPx(resolvedState, { ...env, viewportWidth: frameViewport })
+  if (typeof snapshot.rightbar === 'number' && Math.abs(snapshot.rightbar - target) < 1) return 'consistent'
+  handle.setRightbar(target, frameViewport)
+  return 'written'
+}
+
+/** 宿主快照可能尚未就绪或自身抛错：协调写必须降级为「不适用」，不得冒泡。 */
+function readAttachedStateSafely() {
+  try {
+    return liveSnapshot()?.state
+  } catch {
+    return undefined
+  }
+}
+
 function resolveStoreSessionId(store) {
   if (typeof store?.getSnapshot === 'function') {
     return store.getSnapshot()?.sessionId
@@ -251,6 +299,24 @@ function onMovePointerSample() {
 function onUpPointerSample() {
   onSplitPointerSample()
   scheduleNextFrame(clampStoreOnPointerUp)
+  scheduleNextFrame(settleConversationRatioAfterDrag)
+}
+
+/**
+ * 拖拽结算（方案 §4.4 / D3 的 `settling` 态）。
+ *
+ * 松手后必须**立刻**把终态宽度反推成比例落盘（跳过 250ms 防抖），否则用户拖到某个比例
+ * 就切会话 / 关窗口时，最后一次拖拽会被防抖窗口吃掉（AC-7）。随后按稳态重算一次，
+ * 由于稳态值就是 `round(舞台 × 该比例)`，重算对可见宽度是恒等变换，不会跳变。
+ * @returns {number | null} 落盘的比例
+ */
+export function settleConversationRatioAfterDrag() {
+  const doc = hostDocument()
+  if (!doc) return null
+  const ratio = settleConversationRatioFromAuthoredGeometry(doc)
+  if (ratio === null) return null
+  reconcileRightbarFromRatio()
+  return ratio
 }
 
 function addPointerListeners(doc) {

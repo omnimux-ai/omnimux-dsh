@@ -29,6 +29,8 @@ import {
   getExplicitLeftCollapseIntent,
   installSidebarToggleTopbar,
   isLeftSidebarCollapsed,
+  isSamePxValue,
+  isShellSplitDragging,
   readShellSplitPx,
   setExplicitLeftCollapseIntent,
   syncLeftCollapsedHtmlAttr,
@@ -1087,7 +1089,41 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     )
   })
 
-  it('derives --omnimux-conversation-width from the split the shell authored', () => {
+  it('publishes the ratio width while steady, and the authored remainder while dragging', () => {
+    // 稳态：比例权威。1920 视口、左栏 280 → 舞台 1640 → round(1640 × 0.3) = 492。
+    // 拖拽期：外壳 authored 几何权威 → 1920 − 280 − 1155 = 485（与 #2097 修复后逐字一致）。
+    // 两个值都必须精确，任何一侧漂移都会让「拖拽跟手」或「缩放按比例」当场失真。
+    const build = (dragging) => {
+      const doc = setup(`<!doctype html><html><head></head><body>
+      <div class="dshDesktopFrame" style="grid-template-columns:280px minmax(0px, 1fr) 1155px">
+        <aside class="dshDesktopSidebarSurface" style="width: 280px;"></aside>
+        <main class="dshDesktopConversationSurface"></main>
+        <aside class="dshDesktopRightbarSurface"></aside>
+      </div>
+    </body></html>`)
+      Object.defineProperty(doc.defaultView, 'innerWidth', { value: 1920, configurable: true })
+      if (dragging) doc.body.setAttribute('data-dsh-sidebar-dragging', '')
+      return doc
+    }
+
+    const steady = build(false)
+    applyTopbarToggleCssVars(steady)
+    assert.equal(
+      steady.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+      '492px',
+      '稳态发布的必须是「舞台 × 比例」的值（AC-1：比例是唯一真源）',
+    )
+
+    const dragging = build(true)
+    applyTopbarToggleCssVars(dragging)
+    assert.equal(
+      dragging.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
+      '485px',
+      '拖拽期发布的必须是「视口 − 左栏 − 外壳第三轨」的当帧派生值（比例不得参与写入）',
+    )
+  })
+
+  it('keeps the steady width invariant to repeated syncs (idempotent write, E-2)', () => {
     const doc = setup(`<!doctype html><html><head></head><body>
       <div class="dshDesktopFrame" style="grid-template-columns:280px minmax(0px, 1fr) 1155px">
         <aside class="dshDesktopSidebarSurface" style="width: 280px;"></aside>
@@ -1097,13 +1133,18 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
     </body></html>`)
     Object.defineProperty(doc.defaultView, 'innerWidth', { value: 1920, configurable: true })
 
-    applyTopbarToggleCssVars(doc)
+    const root = doc.documentElement
+    let writes = 0
+    const original = root.style.setProperty.bind(root.style)
+    root.style.setProperty = (name, value, priority) => {
+      if (name === '--omnimux-conversation-width') writes += 1
+      return original(name, value, priority)
+    }
 
-    assert.equal(
-      doc.documentElement.style.getPropertyValue('--omnimux-conversation-width'),
-      '485px',
-      '展开态发布的必须是「视口 − 左栏 − 外壳第三轨」的派生值（也是收起后保持的比例）',
-    )
+    for (let i = 0; i < 10; i += 1) applyTopbarToggleCssVars(doc)
+
+    assert.equal(writes, 1, `几何不变时连续 10 次同步只允许写 1 次，实测 ${writes} 次`)
+    assert.equal(root.style.getPropertyValue('--omnimux-conversation-width'), '492px')
   })
 
   it('never derives a split width from a frame without an authored right track', () => {
@@ -1141,10 +1182,15 @@ describe('three-column sidebar collapse proportions (issue #2074)', () => {
   })
 })
 
-describe('derived conversation width (issue #2074 续 3)', () => {
-  const framed = (grid) => {
+describe('derived conversation width (issue #2074 续 3 / #2608 比例制)', () => {
+  /**
+   * 最小外壳夹具：frame 内联栅格 + 视口宽。
+   * `dragging` 打开时补上外壳拖拽标记，用于区分「稳态比例权威」与「拖拽 authored 权威」两组。
+   */
+  const framed = (grid, { dragging = false, viewportPx = 1920 } = {}) => {
     const dom = new JSDOM(`<!doctype html><html><body><div class="dshDesktopFrame" style="grid-template-columns:${grid}"></div></body></html>`)
-    Object.defineProperty(dom.window, 'innerWidth', { value: 1920, configurable: true })
+    Object.defineProperty(dom.window, 'innerWidth', { value: viewportPx, configurable: true })
+    if (dragging) dom.window.document.body.setAttribute('data-dsh-sidebar-dragging', '')
     return dom.window.document
   }
 
@@ -1162,46 +1208,6 @@ describe('derived conversation width (issue #2074 续 3)', () => {
     assert.deepEqual(readShellSplitPx(framed('90px minmax(0px, 1fr) 0px')), { rail: 90, right: 0 })
   })
 
-  it('derives the native remainder while the rail is expanded', () => {
-    assert.equal(deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 864px'), false, 280, 280), 776)
-  })
-
-  it('keeps that exact width once the rail is collapsed', () => {
-    const doc = framed('90px minmax(0px, 1fr) 864px')
-    assert.equal(
-      deriveConversationWidthPx(doc, true, 0, 280),
-      776,
-      '收起左栏不得改变会话栏宽度，释放宽度全部交给工作台（AC-101 / AC-103 / AC-403）',
-    )
-  })
-
-  it('follows the native splitter while the rail is collapsed', () => {
-    // 收起草稿态下拖拽 260px 后，外壳第三轨 864 → 604；旧实现把它吞掉（会话栏纹丝不动）。
-    const doc = framed('90px minmax(0px, 1fr) 604px')
-    assert.equal(
-      deriveConversationWidthPx(doc, true, 0, 280),
-      1036,
-      '收起态拖动分界线必须改变会话栏宽度（AC-404）',
-    )
-  })
-
-  it('falls back to the contract width without an authored split', () => {
-    assert.equal(
-      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 0px'), true, 0, 280),
-      CONVERSATION_WIDTH_FALLBACK_PX,
-      '右栏收起（第三轨 0px）不得派生会话栏宽度',
-    )
-    const bare = new JSDOM('<!doctype html><html><body></body></html>').window.document
-    assert.equal(deriveConversationWidthPx(bare, false, 280, 0), CONVERSATION_WIDTH_FALLBACK_PX)
-  })
-
-  it('never publishes below the conversation floor', () => {
-    assert.equal(
-      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1600px'), false, 280, 280),
-      CONVERSATION_WIDTH_MIN_PX,
-    )
-  })
-
   it('observes the shell-authored grid so no pin can freeze the splitter', () => {
     assert.match(moduleSource, /attributeFilter:\s*\['style'\]/, '必须观察外壳内联栅格改写（AC-405）')
     assert.match(moduleSource, /bindFrameObserver\(\)/, '观察者必须挂进几何同步循环')
@@ -1211,5 +1217,151 @@ describe('derived conversation width (issue #2074 续 3)', () => {
       '点击处理器不得再做分栏快照：派生值不依赖点击时序',
     )
   })
+
+  describe('稳态组：比例权威（AC-1 / AC-3 / AC-4 / AC-9）', () => {
+    it('derives the width from stage × ratio instead of the authored third track', () => {
+      // 同一视口下外壳第三轨从 864 变到 604，稳态中栏都必须保持 492px：
+      // 比例是唯一真源，authored 第三轨在稳态不参与中栏宽度。
+      assert.equal(deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 864px'), false, 280, 280), 492)
+      assert.equal(deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 604px'), false, 280, 280), 492)
+    })
+
+    it('follows the viewport at the same ratio (AC-4 缩放跟随)', () => {
+      // 缩放前后比例不变：1920 → 492，2560 → 684；多出来的宽度不再全落中栏（#2316 的荒原）。
+      assert.equal(
+        deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1155px', { viewportPx: 1920 }), false, 280, 280),
+        492,
+      )
+      assert.equal(
+        deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1596px', { viewportPx: 2560 }), false, 280, 280),
+        684,
+      )
+    })
+
+    it('clamps to the 360px floor on a small viewport (AC-3)', () => {
+      assert.equal(
+        deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 800px', { viewportPx: 1440 }), false, 280, 280),
+        360,
+        '1440 视口下舞台 1160 × 30% = 348 被 360px 下限抬到 360',
+      )
+    })
+
+    it('keeps the same pixel width once the rail is collapsed (AC-9 保宽)', () => {
+      const expanded = deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1155px'), false, 280, 280)
+      const collapsed = deriveConversationWidthPx(framed('90px minmax(0px, 1fr) 1155px'), true, 0, 280)
+      assert.equal(collapsed, expanded, '收起左栏不得改变中栏像素宽度，释放宽度全部进画布')
+      assert.equal(collapsed, 492)
+    })
+
+    it('honours an explicit ratio from the caller (T05 持久化接线口)', () => {
+      assert.equal(
+        deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 864px'), false, 280, 280, { chatRatio: 0.5 }),
+        820,
+        '舞台 1640 × 0.5 = 820',
+      )
+    })
+
+    it('falls back to the default ratio when the supplied ratio is garbage', () => {
+      const doc = framed('280px minmax(0px, 1fr) 864px')
+      for (const bad of [Number.NaN, undefined, null, Number.POSITIVE_INFINITY]) {
+        assert.equal(
+          deriveConversationWidthPx(doc, false, 280, 280, { chatRatio: bad }),
+          492,
+          `损坏比例 ${String(bad)} 必须回落默认 0.3`,
+        )
+      }
+    })
+
+    it('falls back to the contract width when the viewport cannot be measured', () => {
+      const dom = new JSDOM('<!doctype html><html><body></body></html>')
+      Object.defineProperty(dom.window, 'innerWidth', { value: 0, configurable: true })
+      assert.equal(
+        deriveConversationWidthPx(dom.window.document, false, 280, 0),
+        CONVERSATION_WIDTH_FALLBACK_PX,
+        '首帧（视口不可测）必须发布兜底宽度，与 CSS 兜底值同源',
+      )
+    })
+  })
+
+  describe('拖拽组：authored 权威（防 #2097 复发）', () => {
+    it('derives the native remainder while the rail is expanded', () => {
+    assert.equal(
+      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 864px', { dragging: true }), false, 280, 280),
+      776,
+    )
+  })
+
+  it('keeps that exact width once the rail is collapsed', () => {
+    const doc = framed('90px minmax(0px, 1fr) 864px', { dragging: true })
+    assert.equal(
+      deriveConversationWidthPx(doc, true, 0, 280),
+      776,
+      '收起左栏不得改变会话栏宽度，释放宽度全部交给工作台（AC-101 / AC-103 / AC-403）',
+    )
+  })
+
+  it('follows the native splitter while the rail is collapsed', () => {
+    // 收起草稿态下拖拽 260px 后，外壳第三轨 864 → 604；旧实现把它吞掉（会话栏纹丝不动）。
+    const doc = framed('90px minmax(0px, 1fr) 604px', { dragging: true })
+    assert.equal(
+      deriveConversationWidthPx(doc, true, 0, 280),
+      1036,
+      '收起态拖动分界线必须改变会话栏宽度（AC-404）',
+    )
+  })
+
+  it('falls back to the contract width without an authored split', () => {
+    assert.equal(
+      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 0px', { dragging: true }), true, 0, 280),
+      CONVERSATION_WIDTH_FALLBACK_PX,
+      '拖拽期右栏第三轨为 0px（右栏收起）时不得派生会话栏宽度',
+    )
+  })
+
+  it('never publishes below the conversation floor', () => {
+    assert.equal(
+      deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1600px', { dragging: true }), false, 280, 280),
+      CONVERSATION_WIDTH_MIN_PX,
+    )
+  })
+
+  it('ignores the stored ratio while dragging (the #2097 authority switch)', () => {
+    // 拖拽期把调用方给的比例故意设成 0.9，宽度仍必须逐帧跟随外壳 authored 几何：
+    // 一旦比例参与拖拽写入路径，记忆式基准就被重新钉回轨道，#2097 原样复发。
+    const doc = framed('280px minmax(0px, 1fr) 864px', { dragging: true })
+    assert.equal(
+      deriveConversationWidthPx(doc, false, 280, 280, { chatRatio: 0.9 }),
+      776,
+      '拖拽期比例只记录、不干预',
+    )
+  })
+
+  describe('权威判据与幂等判据（E-2 / E-4 的底层谓词）', () => {
+    it('treats the shell drag marker as the authority switch', () => {
+      const idle = framed('280px minmax(0px, 1fr) 864px')
+      assert.equal(isShellSplitDragging(idle), false, '无拖拽标记时必须走稳态比例权威')
+
+      const viaBody = framed('280px minmax(0px, 1fr) 864px')
+      viaBody.body.setAttribute('data-dsh-sidebar-dragging', '')
+      assert.equal(isShellSplitDragging(viaBody), true, 'better-sidebar 的 body 标记必须被识别')
+
+      const viaFrame = framed('280px minmax(0px, 1fr) 864px')
+      viaFrame.querySelector('.dshDesktopFrame').setAttribute('data-dragging', '')
+      assert.equal(isShellSplitDragging(viaFrame), true, '外壳 frame 的 data-dragging 必须被识别')
+
+      assert.equal(isShellSplitDragging(null), false)
+      assert.equal(isShellSplitDragging(undefined), false)
+    })
+
+    it('skips a rewrite only when the published value already matches within 1px', () => {
+      assert.equal(isSamePxValue('492px', 492), true, '同值必须跳过写入（幂等）')
+      assert.equal(isSamePxValue('492px', 492.4), true, '亚像素差异同样跳过')
+      assert.equal(isSamePxValue('492px', 493), false, '差异达到 1px 必须重写')
+      assert.equal(isSamePxValue('', 492), false, '变量尚未发布时必须写入')
+      assert.equal(isSamePxValue('auto', 492), false, '非法值必须被真实数值覆盖')
+      assert.equal(isSamePxValue(undefined, 492), false)
+    })
+  })
+})
 })
 
