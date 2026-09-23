@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AssetPickerCard } from '../components/asset-picker/AssetPickerCard.jsx'
 import { ProductPickerCard } from '../components/product-picker/ProductPickerCard.jsx'
 import { InspirationPickerCard } from '../components/inspiration-picker/InspirationPickerCard.jsx'
@@ -81,15 +81,18 @@ export function LibraryBrowser({ model, t }) {
     ensureInspirationCardStyles()
   }, [])
 
+  const onCloseRef = useRef(model?.onClose)
+  onCloseRef.current = model?.onClose
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        model?.onClose?.()
+        onCloseRef.current?.()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [model?.onClose])
+  }, [])
 
   useEffect(() => {
     let live = true
