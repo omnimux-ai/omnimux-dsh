@@ -949,7 +949,7 @@ export const WORKFLOW_CSS = `
   color: var(--dsw-alias-label-tertiary);
 }
 .omx-apptab-multi-limit {
-  color: var(--dsw-alias-state-warning-primary);
+  color: var(--dsw-alias-state-warn-primary);
 }
 /* 选定回填展示卡片 */
 .omx-apptab-picked {

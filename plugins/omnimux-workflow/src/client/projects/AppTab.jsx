@@ -301,10 +301,15 @@ export function AppTab(props) {
   const initialFormValues = useMemo(() => {
     const vals = {}
     for (const [key, prop] of Object.entries(properties)) {
+      const widget = resolveWidget(key, prop, manifest?.fieldMappings?.[key])
       if (manifest?.demoSnapshot?.[key] !== undefined) {
         vals[key] = manifest.demoSnapshot[key]
       } else if (prop.default !== undefined) {
-        vals[key] = prop.default
+        if (prop.type === 'array' && widget !== 'multi-tags' && Array.isArray(prop.default)) {
+          vals[key] = prop.default[0] ?? ''
+        } else {
+          vals[key] = prop.default
+        }
       } else if (manifest?.fieldMappings?.[key]?.defaultValue !== undefined) {
         vals[key] = manifest.fieldMappings[key].defaultValue
       } else if (prop.type === 'boolean') {
@@ -312,7 +317,7 @@ export function AppTab(props) {
       } else if (prop.type === 'number' || prop.type === 'integer') {
         vals[key] = prop.minimum ?? 0
       } else if (prop.type === 'array') {
-        vals[key] = Array.isArray(prop.default) ? prop.default : []
+        vals[key] = widget === 'multi-tags' ? (Array.isArray(prop.default) ? prop.default : []) : ''
       } else {
         vals[key] = ''
       }
@@ -390,6 +395,9 @@ export function AppTab(props) {
       setTasks(readCachedTasks(manifest.appId))
       setFormValues(initialFormValues)
       setErrors({})
+      setLinkDrafts({})
+      setOpenDropdownKey(null)
+      setPromptModal(null)
     }
   }, [manifest?.appId, initialFormValues])
 
@@ -445,16 +453,15 @@ export function AppTab(props) {
     }
   }, [handleDirectUploadFile])
 
-  // 接收 explicitVal 参数，避免输入失焦时闭包滞后导致字符丢失（M-04）
+  // 接收 explicitVal 参数，先计算最新 nextDrafts 后分别更新，保持状态更新纯度（M-04）
   const handleCommitLink = useCallback((key, explicitVal) => {
-    setLinkDrafts((prev) => {
-      const draft = (typeof explicitVal === 'string' ? explicitVal : prev[key] || '').trim()
-      if (draft) {
-        handleFieldChange(key, draft)
-      }
-      return { ...prev, [key]: '' }
-    })
-  }, [handleFieldChange])
+    const draft = (typeof explicitVal === 'string' ? explicitVal : linkDrafts[key] || '').trim()
+    const nextDrafts = { ...linkDrafts, [key]: '' }
+    setLinkDrafts(nextDrafts)
+    if (draft) {
+      handleFieldChange(key, draft)
+    }
+  }, [handleFieldChange, linkDrafts])
 
   // 轻量模态输入框提交，包含安全白名单校验（M-05 & H-02）
   const handlePromptModalSubmit = useCallback(() => {
@@ -470,7 +477,7 @@ export function AppTab(props) {
       setPromptModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
       return
     }
-    handleFieldChange(key, trimmed)
+    handleFieldChange(key, safeUrl || trimmed)
     setPromptModal(null)
   }, [promptModal, handleFieldChange])
 
