@@ -1,0 +1,28 @@
+{
+  "task": "mention-entity-submenus",
+  "spec": "specs/mention-entity-submenus.spec.md",
+  "verified": true,
+  "metrics": {
+    "categoryEntries": [
+      { "name": "角色", "arrow": "›", "value": "entity:category:character" },
+      { "name": "产品", "arrow": "›", "value": "entity:category:product" }
+    ],
+    "submenuPureSingleLine": true,
+    "groupTitleAbsent": true,
+    "itemDescriptionAbsent": true,
+    "thumbnailSizePx": 28,
+    "thumbnailFallbackIcon": true,
+    "hoverDelayProtectionMs": 180,
+    "adaptiveFlippedPlacement": true,
+    "slotPayloadContract": {
+      "product": { "sourcePlugin": "omnimux-products", "kind": "product", "extension": "JSON" },
+      "character": { "sourcePlugin": "omnimux-assets", "kind": "asset", "extension": "ASSET" }
+    },
+    "dualLinkageChipInsertion": true,
+    "cleanTriggerAtChar": true
+  },
+  "evidenceFiles": [
+    "docs/evidence/mention-entity-submenus-verified.png"
+  ],
+  "at": "2026-09-23T16:09:00.000Z"
+}
