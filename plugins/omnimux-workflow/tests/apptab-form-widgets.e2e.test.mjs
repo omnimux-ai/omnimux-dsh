@@ -126,9 +126,43 @@ const PRODUCT_VIDEO_APP = {
   },
 }
 
+const TEST_MANIFEST = {
+  appId: 'app-creatify-app-demo',
+  metadata: {
+    name: '手机与网页交互实机演示',
+    description: '测试商品主图三合一与下拉透视穿透防卫',
+  },
+  formSchema: {
+    type: 'object',
+    properties: {
+      voice: {
+        type: 'string',
+        title: '解说音色',
+        widget: 'select-single',
+        options: [
+          { label: '活力女声', value: 'zh_female_energetic' },
+          { label: '沉稳男声', value: 'zh_male_calm' },
+        ],
+        default: 'zh_female_energetic',
+      },
+      product_image: {
+        type: 'string',
+        title: '商品主图',
+        widget: 'product-link',
+        placeholder: '粘贴商品链接，或从商品库选择',
+      },
+    },
+  },
+  fieldMappings: {
+    voice: { widget: 'select-single' },
+    product_image: { widget: 'product-link' },
+  },
+}
+
 // 预设目录非空防御断言 (M-09)
 assert.ok(CHASING_PRODUCT_APP, '预设 CHASING_PRODUCT_APP 必须存在')
 assert.ok(PRODUCT_VIDEO_APP, '预设 PRODUCT_VIDEO_APP 必须存在')
+assert.ok(TEST_MANIFEST, '预设 TEST_MANIFEST 必须存在')
 
 let AppTabComponent = null
 let dom = null
@@ -139,6 +173,8 @@ const originalGlobals = {
   window: globalThis.window,
   document: globalThis.document,
   HTMLElement: globalThis.HTMLElement,
+  HTMLInputElement: globalThis.HTMLInputElement,
+  Event: globalThis.Event,
   MouseEvent: globalThis.MouseEvent,
   IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
 }
@@ -156,6 +192,8 @@ afterEach(() => {
   globalThis.window = originalGlobals.window
   globalThis.document = originalGlobals.document
   globalThis.HTMLElement = originalGlobals.HTMLElement
+  globalThis.HTMLInputElement = originalGlobals.HTMLInputElement
+  globalThis.Event = originalGlobals.Event
   globalThis.MouseEvent = originalGlobals.MouseEvent
   globalThis.IS_REACT_ACT_ENVIRONMENT = originalGlobals.IS_REACT_ACT_ENVIRONMENT
 })
@@ -219,6 +257,8 @@ function initDom() {
   globalThis.document = dom.window.document
   doc = dom.window.document
   globalThis.HTMLElement = dom.window.HTMLElement
+  globalThis.HTMLInputElement = dom.window.HTMLInputElement
+  globalThis.Event = dom.window.Event
   globalThis.MouseEvent = dom.window.MouseEvent
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
@@ -231,6 +271,15 @@ function initDom() {
 function fireClick(el) {
   act(() => {
     el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }))
+  })
+}
+
+function fireChange(el, value) {
+  act(() => {
+    const propKey = Object.keys(el).find((k) => k.startsWith('__reactProps$'))
+    if (propKey && typeof el[propKey]?.onChange === 'function') {
+      el[propKey].onChange({ target: { value } })
+    }
   })
 }
 
@@ -413,39 +462,6 @@ test('E2E: 下拉菜单防透视穿透与商品主图三合一紧凑复合控件
   doc.body.appendChild(host)
   const root = createRoot(host)
 
-  const TEST_MANIFEST = {
-    appId: 'app-creatify-app-demo',
-    metadata: {
-      name: '手机与网页交互实机演示',
-      description: '测试商品主图三合一与下拉透视穿透防卫',
-    },
-    formSchema: {
-      type: 'object',
-      properties: {
-        voice: {
-          type: 'string',
-          title: '解说音色',
-          widget: 'select-single',
-          options: [
-            { label: '活力女声', value: 'zh_female_energetic' },
-            { label: '沉稳男声', value: 'zh_male_calm' },
-          ],
-          default: 'zh_female_energetic',
-        },
-        product_image: {
-          type: 'string',
-          title: '商品主图',
-          widget: 'product-link',
-          placeholder: '粘贴商品链接，或从商品库选择',
-        },
-      },
-    },
-    fieldMappings: {
-      voice: { widget: 'select-single' },
-      product_image: { widget: 'product-link' },
-    },
-  }
-
   act(() => {
     root.render(
       React.createElement(AppTab, {
@@ -511,6 +527,70 @@ test('E2E: 下拉菜单防透视穿透与商品主图三合一紧凑复合控件
   fireClick(removeBtn)
   assert.equal(host.querySelector('.omx-apptab-picked'), null, '移除后卡片消失')
   assert.ok(host.querySelector('.omx-apptab-product-widget'), '无缝恢复为 40px 单行输入条')
+
+  act(() => {
+    root.unmount()
+  })
+})
+
+test('E2E: 商品库弹窗链接安全协议清洗与非法协议拦截 (Issue #2622 Review Fix)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_app-creatify-app-demo',
+          extra: { manifest: TEST_MANIFEST },
+        },
+      }),
+    )
+  })
+
+  const productWidget = host.querySelector('.omx-apptab-product-widget')
+  assert.ok(productWidget, '商品主图复合条渲染')
+
+  const storeBtn = productWidget.querySelector('button[aria-label="从商品库选择"]')
+  assert.ok(storeBtn, '从商品库选择按钮存在')
+  fireClick(storeBtn)
+
+  const modal = doc.querySelector('.omx-apptab-modal')
+  assert.ok(modal, '点击唤起弹窗')
+
+  const modalInput = modal.querySelector('.omx-apptab-input')
+  assert.ok(modalInput, '弹窗搜索/链接输入框存在')
+
+  const submitBtn = modal.querySelector('.omx-apptab-btn-primary')
+  assert.ok(submitBtn, '弹窗确定按钮存在')
+
+  // 1. 模拟输入危险协议 javascript:alert(1)
+  fireChange(modalInput, 'javascript:alert(1)')
+
+  // 点击确定
+  fireClick(submitBtn)
+
+  // 验证弹窗依然存在（未被关闭），并且展示了安全拦截错误提示
+  assert.ok(doc.querySelector('.omx-apptab-modal'), '非法协议被拦截，弹窗不关闭')
+  const errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
+  assert.ok(errorText, '弹窗内展示错误提示')
+  assert.match(errorText.textContent, /链接协议不支持/)
+
+  // 2. 模拟输入合法链接 https://example.com/item.png
+  fireChange(modalInput, 'https://example.com/item.png')
+
+  // 再次点击确定
+  fireClick(submitBtn)
+
+  // 验证弹窗成功关闭并回填为已选卡片
+  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '合法链接提交后弹窗关闭')
+  const pickedCard = host.querySelector('.omx-apptab-picked')
+  assert.ok(pickedCard, '合法链接成功回填为已选卡片')
+  assert.match(pickedCard.textContent, /item\.png/)
 
   act(() => {
     root.unmount()

@@ -530,23 +530,24 @@ export function AppTab(props) {
             const mapped = list.map((p, idx) => ({
               id: p.id || `prod-remote-${idx}`,
               name: p.name || p.title || '未命名商品',
-              sub: p.sub || p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库',
+              sub: p.sub || (p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库'),
               url: p.link || p.url || '',
               preview: p.preview || p.image || p.url || '',
             }))
             setCustomProducts(mapped)
           }
         })
-        .catch(() => {
-          // fallback to defaults
+        .catch((err) => {
+          console.warn('[omnimux-workflow] 获取商品列表失败:', err?.message)
         })
     }
   }, [])
 
-  // 从商品库选择已有商品并直接回填
+  // 从商品库选择已有商品并直接回填（先释放原有临时 Object URL）
   const handleSelectProduct = useCallback((item) => {
     if (!productPickerModal) return
     const { key } = productPickerModal
+    revokeCreatedUrl(key)
     const picked = {
       name: item.name,
       sub: item.sub || '商品库',
@@ -556,9 +557,9 @@ export function AppTab(props) {
     }
     handleFieldChange(key, JSON.stringify(picked))
     setProductPickerModal(null)
-  }, [productPickerModal, handleFieldChange])
+  }, [productPickerModal, handleFieldChange, revokeCreatedUrl])
 
-  // 商品库弹窗输入外部链接提交
+  // 商品库弹窗输入外部链接提交（增加协议安全清洗与释放原有 Object URL）
   const handleProductModalSubmitLink = useCallback(() => {
     if (!productPickerModal) return
     const { key, search } = productPickerModal
@@ -567,9 +568,15 @@ export function AppTab(props) {
       setProductPickerModal(null)
       return
     }
-    handleCommitLink(key, trimmed)
+    const safeUrl = sanitizePreviewUrl(trimmed)
+    if (!safeUrl && trimmed.includes(':') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      setProductPickerModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
+      return
+    }
+    revokeCreatedUrl(key)
+    handleCommitLink(key, safeUrl || trimmed)
     setProductPickerModal(null)
-  }, [productPickerModal, handleCommitLink])
+  }, [productPickerModal, handleCommitLink, revokeCreatedUrl])
 
   // Execute generation
   const handleGenerate = useCallback(async (e) => {
@@ -1707,7 +1714,7 @@ export function AppTab(props) {
                 placeholder="搜索商品名称或输入商品链接 (https://...)"
                 onChange={(e) => {
                   const s = e.target.value
-                  setProductPickerModal((prev) => ({ ...prev, search: s }))
+                  setProductPickerModal((prev) => ({ ...prev, search: s, error: '' }))
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1718,6 +1725,12 @@ export function AppTab(props) {
                   }
                 }}
               />
+              {productPickerModal.error && (
+                <div className="omx-apptab-error-text">
+                  <IconAlert size={14} />
+                  <span>{productPickerModal.error}</span>
+                </div>
+              )}
               <div className="omx-apptab-product-list">
                 {customProducts
                   .filter((p) => {
