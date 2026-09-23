@@ -37,15 +37,22 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   runtimeMode: '',
   /** Local agent: the program id the user picked and whether it tested OK. */
   runtimeAgentId: '',
+  /** Local agent specific model or reasoning override if configured */
+  runtimeAgentModel: '',
+  runtimeAgentReasoning: 'default',
   runtimeAgentVerified: false,
-  /** Custom key: endpoint, default model, and whether the test passed. */
+  /** Custom key / Media generation provider: 'fal' | 'openai' | 'openrouter' | 'custom' */
+  runtimeMediaProvider: 'fal',
   runtimeKeyEndpoint: '',
   runtimeKeyModel: '',
   runtimeKeyVerified: false,
-  /** Which media kinds this custom key may run. Text is implied by a pass. */
-  runtimeMediaImage: false,
-  runtimeMediaVideo: false,
-  runtimeMediaAudio: false,
+  /** Which media kinds this media provider covers. */
+  runtimeMediaImage: true,
+  runtimeMediaVideo: true,
+  runtimeMediaAudio: true,
+  runtimeMediaImageModel: 'fal-ai/flux/dev',
+  runtimeMediaVideoModel: 'fal-ai/kling-video/v1/standard',
+  runtimeMediaAudioModel: 'fal-ai/f5-tts',
 })
 
 const FIELD_META = Object.freeze({
@@ -58,15 +65,21 @@ const FIELD_META = Object.freeze({
   allowAgentSwitchTab: '允许 Agent 控制右侧工作台切换选项卡',
   allowAutoSurfaceFollow: '自动跟随 Agent 处理的工作面切换右侧工作台',
   composerHiddenModels: '输入框模型列表中隐藏的模型',
-  runtimeMode: '运行方式（官方、本机助手、自己的密钥）',
+  runtimeMode: '运行方式（官方、本机助手、媒体生成提供商）',
   runtimeAgentId: '本机助手',
+  runtimeAgentModel: '本机助手模型',
+  runtimeAgentReasoning: '本机助手推理等级',
   runtimeAgentVerified: '本机助手是否已测试通过',
-  runtimeKeyEndpoint: '自备密钥的接口地址',
-  runtimeKeyModel: '自备密钥的默认模型',
-  runtimeKeyVerified: '自备密钥是否已测试通过',
-  runtimeMediaImage: '自备密钥是否用于图片',
-  runtimeMediaVideo: '自备密钥是否用于视频',
-  runtimeMediaAudio: '自备密钥是否用于音频',
+  runtimeMediaProvider: '媒体生成提供商',
+  runtimeKeyEndpoint: '媒体生成提供商的接口地址',
+  runtimeKeyModel: '媒体生成提供商默认模型',
+  runtimeKeyVerified: '媒体生成提供商是否已测试通过',
+  runtimeMediaImage: '媒体提供商是否用于图片',
+  runtimeMediaVideo: '媒体提供商是否用于视频',
+  runtimeMediaAudio: '媒体提供商是否用于音频',
+  runtimeMediaImageModel: '图片生成模型',
+  runtimeMediaVideoModel: '视频生成模型',
+  runtimeMediaAudioModel: '音频生成模型',
 })
 
 function stringNode(key) {
@@ -88,13 +101,19 @@ function boolNode(key) {
 const RUNTIME_DICT = Object.freeze({
   runtimeMode: stringNode('runtimeMode'),
   runtimeAgentId: stringNode('runtimeAgentId'),
+  runtimeAgentModel: stringNode('runtimeAgentModel'),
+  runtimeAgentReasoning: stringNode('runtimeAgentReasoning'),
   runtimeAgentVerified: boolNode('runtimeAgentVerified'),
+  runtimeMediaProvider: stringNode('runtimeMediaProvider'),
   runtimeKeyEndpoint: stringNode('runtimeKeyEndpoint'),
   runtimeKeyModel: stringNode('runtimeKeyModel'),
   runtimeKeyVerified: boolNode('runtimeKeyVerified'),
   runtimeMediaImage: boolNode('runtimeMediaImage'),
   runtimeMediaVideo: boolNode('runtimeMediaVideo'),
   runtimeMediaAudio: boolNode('runtimeMediaAudio'),
+  runtimeMediaImageModel: stringNode('runtimeMediaImageModel'),
+  runtimeMediaVideoModel: stringNode('runtimeMediaVideoModel'),
+  runtimeMediaAudioModel: stringNode('runtimeMediaAudioModel'),
 })
 
 function parseSettingsSection(value) {

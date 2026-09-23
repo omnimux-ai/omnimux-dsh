@@ -13,12 +13,10 @@ import { probeMediaAssets } from './asset-probe.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
-import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
+import { resolveRuntimeChoice, resolveMediaProviderChoice } from '../settings/runtime-mode.js'
+import { DEFAULT_PROVIDER_ENDPOINTS, BYOK_KEY_REF } from '../byok/http.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
-
-/** Fixed credential reference for the BYOK API key. */
-const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
 
 const CAPABILITY_SEAM = Object.freeze({
   video: 'videoGenerate',
@@ -83,58 +81,79 @@ export async function executeOmnimuxMedia(capability, input) {
   const taskId = typeof input.taskId === 'string' ? input.taskId.trim() : ''
   let media = parseMediaConfig(input.media)
 
-  // BYOK: when the user's own key covers this media kind, inject their
-  // endpoint as a provider and route to it instead of the official one.
-  // A kind the user did not tick is unavailable — never the official channel.
   const runtime = resolveRuntimeChoice(input.runtimeSettings)
-  if (runtime.mode === 'agent') {
-    throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置自备密钥或改用官方')
+  const mediaChoice = resolveMediaProviderChoice(input.runtimeSettings, capability)
+  if (runtime.mode === 'agent' && !mediaChoice.ready) {
+    throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置媒体生成提供商或改用官方')
   }
-  if (runtime.mode === 'key' && runtime.textReady) {
-    const capKey = capability === 'image' ? 'runtimeMediaImage'
-      : capability === 'video' ? 'runtimeMediaVideo'
-      : capability === 'audio' ? 'runtimeMediaAudio'
-      : null
-    const capEnabled = capKey && input.runtimeSettings?.[capKey] === true
-    if (!capEnabled) {
-      throw new OmnimuxError('omnimux-unconfigured', `自备密钥未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
+
+  // Media Generation Providers (fal.ai, OpenAI, OpenRouter, or custom key).
+  // When configured and verified, requests route directly to the chosen media provider.
+  // Local agent CLI handles conversation text and coexists peacefully without blocking media.
+  if (mediaChoice.ready) {
+    if (!mediaChoice.isCapEnabled) {
+      throw new OmnimuxError('omnimux-unconfigured', `媒体生成提供商未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
     }
-    if (typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string') {
-      const endpoint = input.runtimeSettings.runtimeKeyEndpoint.trim()
-      if (endpoint) {
-        // Resolve the BYOK key from credentials so it never sits in the config.
-        let byokKey = ''
-        if (input.credentials && typeof input.credentials.resolve === 'function') {
-          try {
-            const hit = await input.credentials.resolve(BYOK_KEY_REF)
-            if (hit && typeof hit.value === 'string') byokKey = hit.value.trim()
-          } catch { /* fall through */ }
-        }
-        if (!byokKey) {
-          throw new OmnimuxError('omnimux-unconfigured', '自备密钥未找到，请在设置中重新填写')
-        }
-        media = {
-          ...media,
-          providers: {
-            ...media.providers,
-            byok: {
-              protocol: 'openai-media',
-              baseUrl: endpoint,
-              apiKeyEnv: BYOK_KEY_REF,
-              models: {
-                [capability]: typeof input.runtimeSettings?.runtimeKeyModel === 'string'
-                  ? input.runtimeSettings.runtimeKeyModel.trim() || 'default'
-                  : 'default',
-              },
-            },
-          },
-        }
-        input = {
-          ...input,
-          provider: 'byok',
-          env: { ...(input.env ?? {}), [BYOK_KEY_REF]: byokKey },
-        }
+    const provider = (mediaChoice.provider || 'fal').toLowerCase()
+    const defaultEndpoint = DEFAULT_PROVIDER_ENDPOINTS[provider] || ''
+    const endpoint = mediaChoice.endpoint || defaultEndpoint
+
+    const hasMediaProvider = Boolean(input.runtimeSettings?.runtimeMediaProvider)
+    const customModel = typeof input.runtimeSettings?.runtimeKeyModel === 'string'
+      ? input.runtimeSettings.runtimeKeyModel.trim()
+      : ''
+    const model = hasMediaProvider
+      ? (mediaChoice.activeModel || customModel || 'default')
+      : (customModel || mediaChoice.activeModel || 'default')
+
+    const keyRef = `OMNIMUX_MEDIA_KEY_${provider.toUpperCase()}`
+    let providerKey = ''
+    if (input.credentials && typeof input.credentials.resolve === 'function') {
+      try {
+        const hit = await input.credentials.resolve(keyRef)
+        if (hit && typeof hit.value === 'string' && hit.value.trim()) providerKey = hit.value.trim()
+      } catch { /* fall through */ }
+      if (!providerKey && (provider === 'fal' || !hasMediaProvider)) {
+        try {
+          const hit = await input.credentials.resolve(BYOK_KEY_REF)
+          if (hit && typeof hit.value === 'string' && hit.value.trim()) providerKey = hit.value.trim()
+        } catch { /* fall through */ }
       }
+    }
+    if (!providerKey) {
+      throw new OmnimuxError('omnimux-unconfigured', `${provider} 媒体 API 密钥未找到，请在设置中填写`)
+    }
+
+    media = {
+      ...media,
+      providers: {
+        ...media.providers,
+        [provider]: {
+          protocol: 'openai-media',
+          baseUrl: endpoint,
+          apiKeyEnv: keyRef,
+          models: {
+            [capability]: model,
+          },
+        },
+        byok: {
+          protocol: 'openai-media',
+          baseUrl: endpoint,
+          apiKeyEnv: keyRef,
+          models: {
+            [capability]: model,
+          },
+        },
+      },
+    }
+    input = {
+      ...input,
+      provider,
+      env: {
+        ...(input.env ?? {}),
+        [keyRef]: providerKey,
+        ...(provider === 'fal' || !hasMediaProvider ? { [BYOK_KEY_REF]: providerKey } : {}),
+      },
     }
   }
 
@@ -154,9 +173,9 @@ export async function executeOmnimuxMedia(capability, input) {
   const seam = CAPABILITY_SEAM[capability] ?? capability
   const assets = await probeMediaAssets(input, { capability, seam })
 
-  // BYOK models are user-defined and not in the official contract. Skip the
-  // submit guard for them; the endpoint decides what it accepts.
-  const isByok = route.providerId === 'byok'
+  // Media providers (fal, openai, openrouter, byok) are external endpoints.
+  // Skip the submit guard for them; the endpoint decides what it accepts.
+  const isByok = route.providerId === 'byok' || route.providerId === 'fal' || route.providerId === 'openai' || route.providerId === 'openrouter'
   let guardPlan = null
   if (isByok) {
     guardPlan = {

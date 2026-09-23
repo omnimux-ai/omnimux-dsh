@@ -1,0 +1,55 @@
+{
+  "issue": 2597,
+  "feature": "media-providers-convergence",
+  "verified_at": "2026-09-23T15:30:00+08:00",
+  "criteria": {
+    "S1_dual_tabs": "PASS",
+    "S2_cloud_banner_independence": "PASS",
+    "S3_local_cli_agents": "PASS",
+    "S4_media_generation_providers": "PASS",
+    "S5_credentials_security_isolation": "PASS",
+    "S6_unauthenticated_generation_readiness": "PASS",
+    "S7_automated_test_suites_100_percent_green": "PASS"
+  },
+  "verified_elements": [
+    {
+      "selector": ".omx-cloud-banner",
+      "mounted": true,
+      "width": 840,
+      "height": 56,
+      "state": "unlogged_with_cta"
+    },
+    {
+      "selector": ".omx-segmented-tabs",
+      "mounted": true,
+      "width": 840,
+      "height": 44,
+      "tabs": ["本机 CLI", "媒体生成提供商"]
+    },
+    {
+      "selector": ".omx-cli-list",
+      "mounted": true,
+      "count": 4,
+      "items": ["Claude Code", "Codex CLI", "Kimi CLI", "Qwen Code"]
+    },
+    {
+      "selector": ".omx-media-grid",
+      "mounted": true,
+      "count": 3,
+      "providers": ["fal.ai", "OpenAI", "OpenRouter"]
+    },
+    {
+      "selector": ".omx-status-bar",
+      "mounted": true,
+      "chat_link": "DSH native / default",
+      "media_link": "fal",
+      "verified_flag": true
+    }
+  ],
+  "suites": {
+    "runtime-mode.test.js": "8/8 pass",
+    "byok/http.test.js": "16/16 pass",
+    "media/execute-fallback.test.js": "26/26 pass",
+    "RuntimeModeSection.qa.test.js": "14/14 pass"
+  }
+}
