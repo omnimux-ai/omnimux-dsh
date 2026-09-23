@@ -63,8 +63,8 @@ export function safeOpenApp(id, title, openFn = openApp) {
       kind: 'explicit',
       // Opening a surface is a generation-adjacent action, not an account one.
       // Account-bound verticals gate their own API calls (omnimux-accounts /
-      // publish / analytics / assets / inspiration each call ensureLogin in
-      // their own api layer), so the page chrome can open without the window
+      // analytics / inspiration each call ensureLogin with their own action
+      // in their api layer), so the page chrome can open without the window
       // while every real account action still prompts.
       action: 'generate',
       onSuccess: () => {
