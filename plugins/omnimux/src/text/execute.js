@@ -92,11 +92,21 @@ export async function executeOmnimuxText(input) {
     }
     try {
       const agentRun = typeof input.agentRun === 'function' ? input.agentRun : runAgentText
+      const agentModel = String(runtimeSettings?.runtimeAgentModel ?? '').trim()
       const text2 = await agentRun({
         id: String(runtimeSettings?.runtimeAgentId ?? ''),
         prompt,
+        model: agentModel,
       })
-      return { mode: 'live', model: String(runtimeSettings?.runtimeAgentId ?? 'agent'), text: text2 }
+      const result = {
+        mode: 'live',
+        model: String(runtimeSettings?.runtimeAgentId ?? 'agent'),
+        text: text2,
+      }
+      if (agentModel) {
+        result.agentModel = agentModel
+      }
+      return result
     } catch (error) {
       const message = typeof error?.message === 'string' ? error.message : String(error)
       throw new OmnimuxError('omnimux-failed', message)

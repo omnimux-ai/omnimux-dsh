@@ -775,6 +775,34 @@ describe('omnimux_text_complete tool', () => {
     assert.deepEqual(result, { mode: 'live', model: 'claude', text: 'agent reply' })
   })
 
+  it('agent mode preserves raw model name and attaches agentModel when specified', async () => {
+    const calls = []
+    const agentSettings = {
+      runtimeMode: 'agent',
+      runtimeAgentId: 'codex',
+      runtimeAgentVerified: true,
+      runtimeAgentModel: 'gpt-4o',
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      env: {},
+      settings: { get: (key) => key === 'omnimux' ? agentSettings : undefined },
+      agentRun: async ({ id, prompt, model }) => {
+        calls.push({ id, prompt, model })
+        return 'agent reply with model'
+      },
+    })
+    assert.deepEqual(calls, [{ id: 'codex', prompt: 'hello', model: 'gpt-4o' }])
+    assert.equal(result.model, 'codex', 'main model field must retain raw agentId')
+    assert.equal(result.agentModel, 'gpt-4o', 'agentModel must be returned as optional attachment')
+    assert.deepEqual(result, {
+      mode: 'live',
+      model: 'codex',
+      agentModel: 'gpt-4o',
+      text: 'agent reply with model',
+    })
+  })
+
   it('agent mode rejects media references in this version', async () => {
     const agentSettings = {
       runtimeMode: 'agent',

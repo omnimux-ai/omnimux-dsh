@@ -212,7 +212,14 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
 
   const selectAndSaveAgent = async (agent) => {
     if (busy || !agent.installed) return
+    const prevAgent = selectedAgent
     setSelectedAgent(agent.id)
+    if (prevAgent !== agent.id) {
+      setAgentModel('')
+      if (scope && typeof scope.set === 'function') {
+        void scope.set('runtimeAgentModel', '')
+      }
+    }
     setBusy(true)
     setError('')
     try {
@@ -323,11 +330,30 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                 <div className="omx-cli-extra">
                   <div className="omx-form-row">
                     <span className="omx-cli-desc">{t('runtime.modelLabel')}</span>
-                    <InputField
-                      value={agentModel}
-                      placeholder="CLI 默认设置"
-                      onChange={(e) => { void handleModelChange(e.target.value) }}
-                    />
+                    {(() => {
+                      const agentModels = Array.isArray(agent.models) ? agent.models : []
+                      const isSafeModel = typeof agentModel === 'string' && agentModel.trim() !== '' && !agentModel.trim().startsWith('-') && /^[a-zA-Z0-9_.:/-]+$/.test(agentModel.trim())
+                      const rawOptions = [
+                        { value: '', label: t('runtime.cliDefaultSetting') },
+                        ...agentModels.map((m) => ({ value: m, label: m })),
+                        ...(agentModel && !agentModels.includes(agentModel) && isSafeModel ? [{ value: agentModel, label: agentModel }] : []),
+                      ]
+                      const seen = new Set()
+                      const uniqueOptions = rawOptions.filter((opt) => {
+                        if (seen.has(opt.value)) return false
+                        seen.add(opt.value)
+                        return true
+                      })
+                      return (
+                        <DropdownSelect
+                          id={`omx-agent-model-${agent.id}`}
+                          value={agentModel || ''}
+                          options={uniqueOptions}
+                          disabled={busy}
+                          onChange={(next) => { void handleModelChange(next) }}
+                        />
+                      )
+                    })()}
                   </div>
                 </div>
               ) : null}
