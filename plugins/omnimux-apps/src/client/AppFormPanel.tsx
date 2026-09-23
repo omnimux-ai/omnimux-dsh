@@ -37,6 +37,7 @@ import {
   displayValueOf,
   encodePickedValue,
   fetchLibraryItems,
+  sanitizePreviewUrl,
   type LibraryItem,
   type PickedValue,
 } from './librarySources.ts';
@@ -107,6 +108,28 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const uploadTargetKeyRef = useRef<string | null>(null);
 
+  // Track blob: object URLs per field so they can be revoked on replace/remove/unmount
+  const objectUrlsRef = useRef<Map<string, string>>(new Map());
+
+  const revokeObjectUrl = useCallback((fieldKey: string) => {
+    const tracked = objectUrlsRef.current.get(fieldKey);
+    if (tracked && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+      URL.revokeObjectURL(tracked);
+    }
+    objectUrlsRef.current.delete(fieldKey);
+  }, []);
+
+  // Revoke every outstanding object URL when the panel unmounts
+  useEffect(() => {
+    const tracked = objectUrlsRef.current;
+    return () => {
+      if (typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        for (const url of tracked.values()) URL.revokeObjectURL(url);
+      }
+      tracked.clear();
+    };
+  }, []);
+
   // Field change handler
   const handleFieldChange = useCallback(
     (key: string, val: unknown) => {
@@ -167,6 +190,7 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
       url: item.url || item.preview,
       source: picker.library,
     };
+    if (item.type) value.type = item.type;
     handleFieldChange(picker.fieldKey, encodePickedValue(value));
     setPicker(null);
   }, [picker, pickerSelectedId, pickerItems, handleFieldChange]);
@@ -183,15 +207,25 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
       const fieldKey = uploadTargetKeyRef.current;
       e.target.value = '';
       if (!file || !fieldKey) return;
+      // Revoke the object URL this field previously held before minting a new one
+      revokeObjectUrl(fieldKey);
+      const canCreateObjectUrl = typeof URL !== 'undefined' && URL.createObjectURL;
+      const objectUrl = canCreateObjectUrl ? URL.createObjectURL(file) : '';
+      if (objectUrl) objectUrlsRef.current.set(fieldKey, objectUrl);
       const value: PickedValue = {
         name: file.name,
         sub: `${Math.max(1, Math.round(file.size / 1024))} KB · 本地上传`,
-        url: typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : file.name,
+        url: objectUrl || file.name,
         source: 'upload',
+        type: file.type.startsWith('video/')
+          ? 'video'
+          : file.type.startsWith('audio/')
+            ? 'audio'
+            : 'image',
       };
       handleFieldChange(fieldKey, encodePickedValue(value));
     },
-    [handleFieldChange],
+    [handleFieldChange, revokeObjectUrl],
   );
 
   // Commit a pasted link draft as the raw string value
@@ -199,8 +233,20 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
     (fieldKey: string) => {
       const draft = (linkDrafts[fieldKey] || '').trim();
       if (draft) handleFieldChange(fieldKey, draft);
+      // Clear the draft after commit so it cannot resurrect on re-render
+      setLinkDrafts((prev) => ({ ...prev, [fieldKey]: '' }));
     },
     [linkDrafts, handleFieldChange],
+  );
+
+  // Remove a picked result: clear value + stale draft, revoke any tracked blob URL
+  const clearPickedValue = useCallback(
+    (fieldKey: string) => {
+      revokeObjectUrl(fieldKey);
+      setLinkDrafts((prev) => ({ ...prev, [fieldKey]: '' }));
+      handleFieldChange(fieldKey, '');
+    },
+    [handleFieldChange, revokeObjectUrl],
   );
 
   // Form submit handler
@@ -292,7 +338,7 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
             type="button"
             className="omx-widget-picked-clear"
             aria-label="移除"
-            onClick={() => handleFieldChange(fieldKey, '')}
+            onClick={() => clearPickedValue(fieldKey)}
           >
             <X size={14} />
           </button>
@@ -818,7 +864,10 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
                   }
                   return (
                     <div className="omx-widget-lib-grid">
-                      {visible.map((item) => (
+                      {visible.map((item) => {
+                        // Whitelist preview schemes before using them as <img src>
+                        const previewSrc = sanitizePreviewUrl(item.preview);
+                        return (
                         <div
                           key={item.id}
                           className={`omx-widget-lib-item ${pickerSelectedId === item.id ? 'is-on' : ''}`}
@@ -832,9 +881,9 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
                             ) : (
                               <Folder size={22} />
                             )}
-                            {item.preview && (
+                            {previewSrc && (
                               <img
-                                src={item.preview}
+                                src={previewSrc}
                                 alt=""
                                 className="omx-widget-lib-thumb-img"
                                 onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -846,7 +895,8 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
                           <div className="omx-widget-lib-name">{item.name}</div>
                           {item.sub && <div className="omx-widget-lib-sub">{item.sub}</div>}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })()

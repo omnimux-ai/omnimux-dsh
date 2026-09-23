@@ -14,6 +14,7 @@ import {
   mapInspirationRow,
   mapProductRow,
   hostMediaSrc,
+  sanitizePreviewUrl,
   encodePickedValue,
   decodePickedValue,
   displayValueOf,
@@ -59,6 +60,18 @@ describe('librarySources: row mapping', () => {
     assert.equal(item.sub, 'TikTok');
     assert.equal(item.url, '/omnimux/inspiration/media/videos/42.mp4');
     assert.equal(item.preview, '/omnimux/inspiration/media/inspiration-covers/42.jpg');
+    assert.equal(item.type, 'video');
+  });
+
+  it('reads the inspiration platform from source_platform first', () => {
+    const item = mapInspirationRow({
+      id: 77,
+      title: '宠物开箱',
+      source_platform: 'tiktok',
+      media_urls: ['/omnimux/inspiration/local/media/videos/77.mp4'],
+    });
+    assert.ok(item);
+    assert.equal(item.sub, 'tiktok');
   });
 
   it('hostMediaSrc keeps absolute URLs and rejects traversal', () => {
@@ -68,18 +81,62 @@ describe('librarySources: row mapping', () => {
     assert.equal(hostMediaSrc(undefined), '');
   });
 
-  it('maps product rows with sku sub and link value', () => {
+  it('maps product rows using the real collection cover contract (id-based preview seam)', () => {
+    // Real /omnimux/products/collection cover: listViewOf media object, no uri/url
     const item = mapProductRow({
       id: 'prd_1',
       name: '极简连帽卫衣',
       sku: 'SKU-1001',
       link: 'https://shop.example.com/p/1',
-      cover: { uri: '/omnimux/products/draft-media/med_1' },
+      cover: { id: 'med_1', kind: 'image', real_path: '/data/products/prd_1/med_1.jpg', is_primary: 1 },
     });
     assert.ok(item);
     assert.equal(item.sub, 'SKU-1001');
     assert.equal(item.url, 'https://shop.example.com/p/1');
-    assert.equal(item.preview, '/omnimux/products/draft-media/med_1');
+    assert.equal(item.preview, '/omnimux/products/prd_1?preview=med_1');
+    assert.equal(item.type, 'image');
+  });
+
+  it('product preview falls back to cover_media_id, then stays empty without a cover id', () => {
+    const viaMediaId = mapProductRow({ id: 'prd_2', name: 'A', cover_media_id: 'med_9' });
+    assert.ok(viaMediaId);
+    assert.equal(viaMediaId.preview, '/omnimux/products/prd_2?preview=med_9');
+
+    // Regression: a cover object without id/cover_media_id must yield empty
+    // preview (never read fictional uri/url fields), not a broken or opaque URL
+    const noCover = mapProductRow({
+      id: 'prd_3',
+      name: 'B',
+      cover: { kind: 'image', real_path: '/data/x.jpg' },
+    });
+    assert.ok(noCover);
+    assert.equal(noCover.preview, '');
+  });
+
+  it('product preview is protocol-whitelisted (javascript:/data: blocked, cover_url sanitized)', () => {
+    const hostile = mapProductRow({ id: 'prd_4', name: 'C', cover_url: 'javascript:alert(1)' });
+    assert.ok(hostile);
+    assert.equal(hostile.preview, '');
+
+    const dataUrl = mapProductRow({ id: 'prd_5', name: 'D', cover_url: 'data:text/html,<script>' });
+    assert.ok(dataUrl);
+    assert.equal(dataUrl.preview, '');
+
+    const https = mapProductRow({ id: 'prd_6', name: 'E', cover_url: 'https://cdn.example.com/cover.jpg' });
+    assert.ok(https);
+    assert.equal(https.preview, 'https://cdn.example.com/cover.jpg');
+  });
+
+  it('sanitizePreviewUrl whitelists http(s), relative paths and blob:, blocks the rest', () => {
+    assert.equal(sanitizePreviewUrl('https://cdn.example.com/a.jpg'), 'https://cdn.example.com/a.jpg');
+    assert.equal(sanitizePreviewUrl('/omnimux/products/prd_1?preview=med_1'), '/omnimux/products/prd_1?preview=med_1');
+    assert.equal(sanitizePreviewUrl('blob:http://localhost/uuid-1'), 'blob:http://localhost/uuid-1');
+    assert.equal(sanitizePreviewUrl('javascript:alert(1)'), '');
+    assert.equal(sanitizePreviewUrl('data:image/png;base64,AAAA'), '');
+    assert.equal(sanitizePreviewUrl('file:///etc/passwd'), '');
+    assert.equal(sanitizePreviewUrl('../traversal.jpg'), '');
+    assert.equal(sanitizePreviewUrl(''), '');
+    assert.equal(sanitizePreviewUrl(undefined), '');
   });
 });
 

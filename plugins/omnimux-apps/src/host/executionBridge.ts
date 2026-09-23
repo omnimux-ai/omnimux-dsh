@@ -175,6 +175,21 @@ export interface InjectedWorkflowEdge {
   [key: string]: any;
 }
 
+/**
+ * Decode a JSON-encoded picked-card form value (library-picker / media-extractor
+ * picks and uploads). Returns null for plain pasted links and malformed input.
+ */
+function decodePickedFormValue(val: unknown): Record<string, any> | null {
+  if (typeof val !== 'string' || !val.trim().startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(val);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch {
+    // fall through: treat as raw string
+  }
+  return null;
+}
+
 export interface PreparedWorkflowSnapshot {
   nodes: InjectedWorkflowNode[];
   edges: InjectedWorkflowEdge[];
@@ -323,26 +338,35 @@ export function prepareAndInjectWorkflowSnapshot(
     // 2.5: Slot association & standard FeedAsset construction
     const hasExplicitSlot = Boolean((mapping as any).targetSlot);
     const isSlotMapping = mapping.mappingType === 'slot' || targetPath.startsWith('slot:');
-    const isMediaWidget = mapping.widget === 'media-uploader' || mapping.widget === 'media-extractor';
+    const isMediaWidget =
+      mapping.widget === 'media-uploader' ||
+      mapping.widget === 'media-extractor' ||
+      mapping.widget === 'library-picker';
 
     if (hasExplicitSlot || isSlotMapping || isMediaWidget) {
       const slotName =
         (mapping as any).targetSlot ||
         (targetPath.startsWith('slot:') ? targetPath.slice(5) : (mapping.mappingType === 'slot' ? targetPath : 'input'));
 
-      const mediaUrl =
-        typeof val === 'string'
+      // Library-picked / uploaded values are JSON-encoded picked cards
+      // ({name, sub, url, source, type?}); plain pasted links stay raw strings.
+      const picked = decodePickedFormValue(val);
+
+      const mediaUrl = picked
+        ? String(picked.url || picked.pathOrUrl || '')
+        : typeof val === 'string'
           ? val
           : typeof val === 'object' && val !== null
             ? (val as any).url || (val as any).pathOrUrl || ''
             : String(val);
 
       const mediaType =
-        typeof val === 'object' && val !== null && (val as any).type
+        (picked && picked.type) ||
+        (typeof val === 'object' && val !== null && (val as any).type
           ? (val as any).type
           : mapping.widget === 'media-extractor' || mapping.widget === 'media-uploader'
             ? manifest.metadata.category || 'video'
-            : 'image';
+            : 'image');
 
       const feedAsset: InjectedFeedAsset = {
         edgeId: `feed-edge-${targetNode.id}-${fieldKey}`,

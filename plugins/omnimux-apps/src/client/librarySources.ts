@@ -24,6 +24,8 @@ export interface LibraryItem {
   url: string;
   /** Optional thumbnail URL for the grid card */
   preview: string;
+  /** Media category of the row (image | video | audio) when the source library declares it */
+  type?: string;
 }
 
 /** Fetch outcome: `unavailable` marks a missing plugin/route (distinct from an empty library) */
@@ -38,6 +40,8 @@ export interface PickedValue {
   sub: string;
   url: string;
   source: LibraryKind | 'upload' | 'link';
+  /** Media category (image | video | audio) used by the execution bridge for slot feed typing */
+  type?: string;
 }
 
 interface LibraryMeta {
@@ -92,6 +96,17 @@ export function hostMediaSrc(url: unknown): string {
   return '';
 }
 
+/**
+ * Whitelist for URLs rendered as <img src> in the picker grid:
+ * only http(s), site-relative paths, and existing blob: object URLs.
+ * Blocks javascript:/data: and other scriptable or opaque schemes.
+ */
+export function sanitizePreviewUrl(url: unknown): string {
+  const text = toText(url).trim();
+  if (!text || text.includes('..')) return '';
+  return /^(https?:\/\/|\/|blob:)/i.test(text) ? text : '';
+}
+
 /** Map one asset-library view row into a picker item */
 export function mapAssetRow(row: unknown): LibraryItem | null {
   if (!row || typeof row !== 'object') return null;
@@ -103,12 +118,14 @@ export function mapAssetRow(row: unknown): LibraryItem | null {
   const coverFileId = toText(rec.cover_file_id || cover?.id || files[0]?.id);
   const url = toText(cover?.uri || files[0]?.uri || rec.uri);
   const typeLabel = ASSET_TYPE_LABELS[toText(rec.type)] || '素材';
+  const mediaType = ASSET_TYPE_LABELS[toText(rec.type)] ? toText(rec.type) : undefined;
   return {
     id,
     name: toText(rec.name) || id,
     sub: toText(rec.description) || typeLabel,
     url,
     preview: coverFileId ? `/omnimux/assets/library/preview?id=${encodeURIComponent(id)}&file=${encodeURIComponent(coverFileId)}` : '',
+    type: mediaType,
   };
 }
 
@@ -123,9 +140,10 @@ export function mapInspirationRow(row: unknown): LibraryItem | null {
   return {
     id,
     name: toText(rec.title || rec.name) || id,
-    sub: toText(rec.platform || rec.category),
+    sub: toText(rec.source_platform || rec.platform || rec.category),
     url: hostMediaSrc(video),
     preview: hostMediaSrc(rec.cover_url ?? rec.cover_key ?? rec.cover) || hostMediaSrc(video),
+    type: 'video',
   };
 }
 
@@ -135,14 +153,21 @@ export function mapProductRow(row: unknown): LibraryItem | null {
   const rec = row as Record<string, any>;
   const id = toText(rec.id);
   if (!id) return null;
-  const cover = rec.cover;
-  const preview = typeof cover === 'string' ? cover : toText(cover?.uri || cover?.url);
+  // Real /omnimux/products/collection contract: cover is a listViewOf media
+  // object ({id, kind, real_path, ...}) with NO uri/url. Thumbnails are served
+  // through the product preview seam, same as the hub product picker.
+  const cover = rec.cover && typeof rec.cover === 'object' ? rec.cover : null;
+  const coverMediaId = toText(cover?.id || rec.cover_media_id);
+  const rawPreview = coverMediaId
+    ? `/omnimux/products/${encodeURIComponent(id)}?preview=${encodeURIComponent(coverMediaId)}`
+    : toText(rec.cover_url);
   return {
     id,
     name: toText(rec.name) || id,
     sub: toText(rec.sku || rec.price || rec.brand),
     url: toText(rec.link),
-    preview,
+    preview: sanitizePreviewUrl(rawPreview),
+    type: 'image',
   };
 }
 
@@ -194,12 +219,15 @@ export function decodePickedValue(raw: unknown): PickedValue | null {
     const name = toText(parsed.name);
     const url = toText(parsed.url);
     if (!name && !url) return null;
-    return {
+    const value: PickedValue = {
       name: name || url,
       sub: toText(parsed.sub),
       url,
       source: (parsed.source as PickedValue['source']) || 'link',
     };
+    const type = toText(parsed.type);
+    if (type) value.type = type;
+    return value;
   } catch {
     return null;
   }
