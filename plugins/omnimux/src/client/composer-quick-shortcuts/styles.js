@@ -176,6 +176,13 @@ export const QUICK_SHORTCUTS_CSS = `
   order: 3;
 }
 
+/* 非全屏（右侧打开辅助面板分屏）模式下：快捷方式那一排自动隐藏，让输入框自然贴底 */
+html[data-omnimux-split-compact] .omx-quick-shortcuts,
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts,
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts {
+  display: none !important;
+}
+
 /* ── 链接胶囊：输入框内的原子内联节点（图标 + 名称 + 分隔线 + 输入框 + ×） ──
  * 节点由 dom.js 用 DOM API 造，业务内联样式一律不写（design.md UI02），
  * 因此全部形态收敛在这张表里；宿主提交读取用的锚点属性见 linkChip.js。

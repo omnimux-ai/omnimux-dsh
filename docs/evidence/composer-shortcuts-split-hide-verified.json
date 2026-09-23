@@ -1,0 +1,19 @@
+{
+  "task": "composer-shortcuts-split-hide",
+  "status": "PASS",
+  "verifiedAt": "2026-09-23T12:35:00.000Z",
+  "verifiedBy": "expert_software_qa_engineer",
+  "reviewStatus": "PASS",
+  "reviewer": "expert_software_code_reviewer",
+  "evidenceFiles": [
+    "docs/evidence/composer-shortcuts-split-hide-verified.png"
+  ],
+  "assertions": {
+    "splitHidden": true,
+    "fullscreenVisible": true,
+    "e2ePassed": 3,
+    "unitPassed": 93,
+    "layoutPassed": 43,
+    "totalPassed": 139
+  }
+}
