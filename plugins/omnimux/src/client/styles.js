@@ -290,32 +290,87 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
     0 0 40px color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 18%, transparent);
   color: var(--dsw-alias-label-primary, inherit);
 }
-.omnimux-runtime-guide-content {
+.omnimux-runtime-guide-sheet {
+  --login-gate-cta-bg: #ffffff;
+  --login-gate-cta-text: #09090b; /* --dsw- */
+  --login-gate-cta-hover: #f4f4f5; /* --dsw- */
+  --login-gate-cta-active: #e4e4e7; /* --dsw- */
+  position: relative;
+  width: min(1080px, calc(100vw - 48px));
+  min-height: min(640px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--dsw-alias-surface-raised, var(--dsw-alias-bg-elevated, #161618));
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1));
+  box-shadow:
+    0 24px 64px -12px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.75)),
+    0 0 40px color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 18%, transparent);
+  color: var(--dsw-alias-label-primary, inherit);
+}
+.omnimux-runtime-guide-sheet--single {
+  grid-template-columns: minmax(0, 760px);
+  justify-content: center;
+}
+.omnimux-runtime-guide-pane {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-width: 0;
-  padding: 28px;
+  padding: 56px 64px;
   overflow-y: auto;
 }
-.omnimux-runtime-guide-choices {
-  margin-top: 16px;
+.omnimux-runtime-guide-hero {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  justify-content: center;
+  flex: 1;
+}
+.omnimux-runtime-guide-hero .omnimux-login-gate-headline {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+}
+.omnimux-runtime-guide-hero .omnimux-login-gate-cta {
+  margin-top: 28px;
 }
 .omnimux-runtime-guide-alt {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
 }
-.omnimux-runtime-guide-hints {
-  margin-top: 12px;
+.omnimux-runtime-guide-alt > button {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+}
+.omnimux-runtime-guide-alt > button:hover {
+  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.1));
+}
+.omnimux-runtime-guide-or {
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
+  font-size: 13px;
+  flex: none;
+}
+.omnimux-runtime-guide-art {
+  background:
+    radial-gradient(ellipse 90% 70% at 25% 18%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 38%, transparent), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 78% 68%, color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 22%, transparent), transparent 75%),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 30%, var(--dsw-alias-bg-base, #0b0b0d)),
+      var(--dsw-alias-bg-elevated, #161618) 62%,
+      var(--dsw-alias-bg-base, #0b0b0d));
 }
 .omnimux-runtime-guide-step {
-  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  flex: 1;
+}
+.omnimux-runtime-guide-back {
+  align-self: flex-start;
 }
 .omnimux-modal-close-btn {
   width: 36px;

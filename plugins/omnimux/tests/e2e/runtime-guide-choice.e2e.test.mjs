@@ -19,10 +19,13 @@ const ZH = {
   'runtime.title': '运行方式',
   'runtime.hint': '文字和媒体由谁生成；账号、发布、额度仍需要登录',
   'runtime.official': '官方',
+  'runtime.officialCta': '登录 OmniMux',
+  'runtime.or': '或',
   'runtime.officialHint': '登录后使用官方默认模型',
   'runtime.agent': '本机助手',
   'runtime.agentHint': '使用已安装的 Claude、Codex、Kimi、Qwen',
   'runtime.key': '自己的密钥',
+  'runtime.keyCta': '使用自己的密钥',
   'runtime.keyHint': '使用自己的接口地址和密钥',
   'runtime.endpoint': '接口地址',
   'runtime.endpointPlaceholder': 'https://',
@@ -176,9 +179,9 @@ describe('首次运行引导（Issue #2557）', () => {
     const guide = document.querySelector('[data-omnimux-runtime-guide]');
     assert.ok(guide, 'guide must render on a fresh install');
     const text = guide.textContent;
-    assert.ok(text.includes('官方'));
+    assert.ok(text.includes('登录 OmniMux'), 'the official path leads with the sign-in action');
     assert.ok(text.includes('本机助手'));
-    assert.ok(text.includes('自己的密钥'));
+    assert.ok(text.includes('使用自己的密钥'));
     await act(async () => { root.unmount(); });
   });
 
@@ -193,7 +196,7 @@ describe('首次运行引导（Issue #2557）', () => {
   it('选「自己的密钥」出表单，测试通过后写入运行方式并关闭', async () => {
     const { document, root, scope } = await renderGuide({});
     const buttons = [...document.querySelectorAll('[data-omnimux-runtime-guide] button')];
-    const keyButton = buttons.find((el) => el.textContent.trim() === '自己的密钥');
+    const keyButton = buttons.find((el) => el.textContent.trim() === '使用自己的密钥');
     assert.ok(keyButton, 'BYOK entry must exist');
     await act(async () => { keyButton.click(); });
 

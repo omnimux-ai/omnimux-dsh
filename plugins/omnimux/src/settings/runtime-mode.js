@@ -8,18 +8,18 @@ const OFFICIAL_ONLY = new Set(['publish', 'accounts', 'quota', 'inspiration'])
 /**
  * Whether an action still needs the official sign-in window.
  *
- * Official mode keeps today's rule. A local agent or custom key can generate
- * without that window. Account-bound actions always need it.
+ * Official mode keeps today's rule: everything prompts, and an action nobody
+ * classified fails safe into prompting too. A local agent or custom key
+ * answers only the named account-bound actions — generation and the generic
+ * boot-time check never open the window for them.
  *
  * @param {unknown} settings
  * @param {string} action
  */
 export function requiresOfficialSignIn(settings, action) {
   if (OFFICIAL_ONLY.has(action)) return true
-  // Fail safe: an action nobody classified keeps today's rule. Only callers
-  // that explicitly declare themselves as generation opt out of the window.
-  if (action !== 'generate') return true
-  return resolveRuntimeChoice(settings).mode === 'official'
+  if (resolveRuntimeChoice(settings).mode === 'official') return true
+  return false
 }
 
 /**

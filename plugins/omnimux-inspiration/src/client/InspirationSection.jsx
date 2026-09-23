@@ -38,7 +38,7 @@ function accountImportNotice(t, account) {
 function LoginGate({ t }) {
   const login = () => {
     const gate = typeof window !== 'undefined' ? window.__omnimuxAuth : undefined
-    if (gate && typeof gate.ensureLogin === 'function') gate.ensureLogin({ kind: 'explicit' })
+    if (gate && typeof gate.ensureLogin === 'function') gate.ensureLogin({ kind: 'explicit', action: 'inspiration' })
   }
   return (
     <div className="omnimux-inspiration-gate">

@@ -261,6 +261,7 @@ export function AccountsSection({ t, active = true, showHeader = false, onClose 
       if (gate && typeof gate.ensureLogin === 'function') {
         gate.ensureLogin({
           kind: 'explicit',
+          action: 'accounts',
           reason: t('needLogin'),
           onSuccess: () => { void refresh() },
         })

@@ -77,44 +77,48 @@ export function RuntimeGuideGate({ t, scope }) {
     (
       <div className="omnimux-login-gate-backdrop" data-omnimux-runtime-guide="">
         <div
-          className="omnimux-login-gate-dialog"
+          className={`omnimux-runtime-guide-sheet${step === 'choose' ? '' : ' omnimux-runtime-guide-sheet--single'}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="omnimux-runtime-guide-headline"
           onClick={(event) => { event.stopPropagation() }}
         >
-          <section className="omnimux-runtime-guide-content">
-            <h2 id="omnimux-runtime-guide-headline" className="omnimux-login-gate-headline">
-              {t('runtime.title')}
-            </h2>
-            <p className="omnimux-login-gate-subdeck">{t('runtime.hint')}</p>
-
+          <section className="omnimux-runtime-guide-pane">
             {step === 'choose' ? (
-              <div className="omnimux-models-card__group-card omnimux-runtime-guide-choices">
+              <div className="omnimux-runtime-guide-hero">
+                <h2 id="omnimux-runtime-guide-headline" className="omnimux-login-gate-headline">
+                  {t('runtime.title')}
+                </h2>
+                <p className="omnimux-login-gate-subdeck">{t('runtime.hint')}</p>
                 <Button
                   variant="primary"
                   className="omnimux-login-gate-cta"
                   disabled={busy}
                   onClick={startOfficial}
                 >
-                  {t('runtime.official')}
+                  {t('runtime.officialCta')}
                 </Button>
                 <div className="omnimux-runtime-guide-alt">
                   <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('agent') }}>
                     {t('runtime.agent')}
                   </Button>
+                  <span className="omnimux-runtime-guide-or">{t('runtime.or')}</span>
                   <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('key') }}>
-                    {t('runtime.key')}
+                    {t('runtime.keyCta')}
                   </Button>
                 </div>
-                <p className="omnimux-models-card__desc omnimux-runtime-guide-hints">
-                  {t('runtime.officialHint')} · {t('runtime.agentHint')} · {t('runtime.keyHint')}
-                </p>
               </div>
             ) : null}
 
             {step === 'agent' ? (
               <div className="omnimux-runtime-guide-step">
+                <Button variant="ghost" className="omnimux-runtime-guide-back" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('choose') }}>
+                  {t('runtime.back')}
+                </Button>
+                <h2 id="omnimux-runtime-guide-headline" className="omnimux-login-gate-headline">
+                  {t('runtime.agent')}
+                </h2>
+                <p className="omnimux-login-gate-subdeck">{t('runtime.agentHint')}</p>
                 <AgentPanel
                   t={t}
                   value={value}
@@ -126,14 +130,18 @@ export function RuntimeGuideGate({ t, scope }) {
                   setNotice={setNotice}
                   onVerified={() => { void finish('agent') }}
                 />
-                <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('choose') }}>
-                  {t('runtime.back')}
-                </Button>
               </div>
             ) : null}
 
             {step === 'key' ? (
               <div className="omnimux-runtime-guide-step">
+                <Button variant="ghost" className="omnimux-runtime-guide-back" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('choose') }}>
+                  {t('runtime.back')}
+                </Button>
+                <h2 id="omnimux-runtime-guide-headline" className="omnimux-login-gate-headline">
+                  {t('runtime.key')}
+                </h2>
+                <p className="omnimux-login-gate-subdeck">{t('runtime.keyHint')}</p>
                 <ByokPanel
                   t={t}
                   value={value}
@@ -145,15 +153,13 @@ export function RuntimeGuideGate({ t, scope }) {
                   setNotice={setNotice}
                   onVerified={() => { void finish('key') }}
                 />
-                <Button variant="ghost" disabled={busy} onClick={() => { setError(''); setNotice(''); setStep('choose') }}>
-                  {t('runtime.back')}
-                </Button>
               </div>
             ) : null}
 
             {error ? <p className="omnimux-login-gate-error">{error}</p> : null}
             {notice ? <p className="omnimux-models-card__desc">{notice}</p> : null}
           </section>
+          {step === 'choose' ? <div className="omnimux-runtime-guide-art" aria-hidden="true" /> : null}
         </div>
       </div>
     ),
