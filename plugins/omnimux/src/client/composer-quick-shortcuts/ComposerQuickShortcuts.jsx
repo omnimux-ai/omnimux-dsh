@@ -7,11 +7,12 @@ import {
 } from './catalog.js';
 import { getGlobalQuickShortcutStore } from './store.js';
 import { useOwnedPrompt } from './useOwnedPrompt.ts';
+import { writeDraft } from './dom.js';
 import { QuickWriteNotice, useQuickWriteNotice } from './notice.jsx';
 import { resolveComposerSessionId } from './session.js';
 import { acquireQuickShortcutStyles } from './styles.js';
 import { QuickShortcutArrow, QuickShortcutIcon } from './icons.jsx';
-import { MediaConfigControls, useMediaGenerationConfig } from '../media-viewer/MediaConfigControls.jsx';
+import { ModelPicker } from './ModelPicker.jsx';
 import { publishActiveSkill, subscribeSkillChanged } from '../composer-add/skill-event.ts';
 import { getGlobalAttachmentStore } from '../attachments/store.ts';
 import { isBlankConversation } from '../session-guide/state.js';
@@ -37,39 +38,13 @@ function readSkillLibrary() {
 }
 
 /**
- * 模型 / 参数按钮：只有 `clone` 与 `selling` 两条需要。
- *
- * 单独成组件是为了 `useMediaGenerationConfig`——它会拉一次
- * `/omnimux/model-catalog`。挂在父组件里时，非空会话（父组件随后就返回 null）
- * 也会白跑一次请求；放进子组件后，只有真的选中这两条时才会发生。
+ * 方案 B 经典会话模型选择器：只有 `clone` 与 `selling` 两条需要。
+ * 彻底移除相机生成参数面板及参数摘要按钮，仅保留由 Agent 自主选型的会话模型选择器。
  */
 function QuickShortcutModelControls({ sessionId }) {
-  const mediaConfig = useMediaGenerationConfig({ initialMode: 'video' });
   return (
     <div className="omx-quick-shortcut-controls" data-omx-quick-shortcut-controls="true">
-      <MediaConfigControls
-        config={mediaConfig}
-        showModeSwitch={false}
-        compact
-        onModelChange={({ model }) => {
-          if (!model) return;
-          try {
-            fetch('/omnimux/session-model', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'same-origin',
-              body: JSON.stringify({
-                sessionId,
-                auto: false,
-                modelId: model.id || '',
-                label: model.name || model.id || '',
-              }),
-            }).catch(() => {});
-          } catch {
-            // 中枢不可达不能让一次选择变成报错
-          }
-        }}
-      />
+      <ModelPicker sessionId={sessionId} />
     </div>
   );
 }
@@ -123,7 +98,13 @@ export function ComposerQuickShortcuts(props) {
     getGlobalAttachmentStore().getActiveSessionId(),
   );
 
-  const writePrompt = useOwnedPrompt(input, sessionId, props.mutatePrompt);
+  const ownedPrompt = useOwnedPrompt(input, sessionId, props.mutatePrompt);
+  const writePrompt = useCallback((text) => {
+    if (input && typeof props?.mutatePrompt === 'function') {
+      return ownedPrompt(text);
+    }
+    return writeDraft(text);
+  }, [input, props?.mutatePrompt, ownedPrompt]);
   useEffect(() => acquireQuickShortcutStyles(), []);
 
   // 出厂技能库是跨插件通道，插件装载顺序不保证：未就绪时按指数退避重试；
