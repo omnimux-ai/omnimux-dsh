@@ -1,6 +1,59 @@
     var inflightSessionCreation = null;
     var plazaWorkspaces = null;
     var plazaRemote = null;
+    const skillCreationInputs = new Map();
+
+    // Only mounted official input slots may write a session's creation guide.
+    async function createReadySkillSession(sessions, opts) {
+      const origin = sessions.list?.getSnapshot?.()?.current || "";
+      let expected = origin;
+      let cancelled = false;
+      const check = () => {
+        if ((sessions.list?.getSnapshot?.()?.current || "") !== expected) cancelled = true;
+        return !cancelled && !opts.isCancelled?.();
+      };
+      const unsubscribe = sessions.list?.subscribe?.(check);
+      const stopped = () => ({ ok: false, cancelled: true, prefilled: false });
+      try {
+        if (!check()) return stopped();
+        const slug = opts.slug || "skill-creator";
+        const catalogId = opts.catalogId || "sk-omx-skill-creator";
+        await api("install", { slug, catalogId });
+        if (!check()) return stopped();
+        const workspaceId = resolveFallbackWorkspaceId(sessions, plazaWorkspaces);
+        const sessionId = await sessions.create(workspaceId ? { workspaceId } : {});
+        if (!check()) return stopped();
+        if (!sessionId || sessionId === origin) throw new Error("create-session-failed");
+        const attached = await api("tryAttach", { sessionId, slug, catalogId, title: opts.title || slug });
+        if (!check()) return stopped();
+        if (attached?.attached !== true || attached?.hasBody !== true || attached.sessionId !== sessionId || attached.slug !== slug) {
+          throw new Error("skill-body-unavailable");
+        }
+        if (typeof sessions.open !== "function") throw new Error("sessions-open-unavailable");
+        expected = sessionId;
+        opts.onTarget?.(sessionId);
+        sessions.open(sessionId);
+        const text = typeof opts.text === "string" ? opts.text : "/skill-creator\n帮我使用它来创建一个新的技能。首先询问我这个技能应该做什么。";
+        const start = Date.now();
+        const timeout = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 10000;
+        while (Date.now() - start < timeout) {
+          if (!check()) return stopped();
+          const slot = skillCreationInputs.get(sessionId);
+          if (slot) {
+            if (slot.draft || slot.protected) return { ok: false, sessionId, prefilled: false, error: "draft-protected" };
+            // Official setDraft is synchronous/void; this wrapper returns an explicit receipt.
+            // Do not read a render-captured draft snapshot immediately after writing.
+            if (!slot.write(text)) return { ok: false, sessionId, prefilled: false, error: "prefill-failed" };
+            return { ok: true, sessionId, prefilled: true };
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (!check()) return stopped();
+        return { ok: false, sessionId, prefilled: false, error: "input-unavailable" };
+      } finally {
+        if (typeof unsubscribe === "function") unsubscribe();
+      }
+    }
 
     const SESSION_MENU_RE = /新会话|新建会话|new session|新对话|新建对话/i;
     const PROJECT_MENU_RE = /新建项目|create project|new project/i;
@@ -375,7 +428,7 @@
      * 7. 严禁自动发送（no auto-send）！
      */
     async function createSkillSession(opts = {}) {
-      if (inflightSessionCreation) return inflightSessionCreation;
+      if (inflightSessionCreation) return opts.requireReady ? { ok: false, error: "creation-busy" } : inflightSessionCreation;
 
       const promise = (async () => {
         try {
@@ -383,6 +436,8 @@
           if (!sessions || typeof sessions.create !== "function") {
             throw new Error("sessions-unavailable");
           }
+
+          if (opts.requireReady) return await createReadySkillSession(sessions, opts);
 
           // 1. 捕获当前会话 A 状态（只读，防污染，绝不改写其草稿与附件）
           const snapshot = typeof sessions.list?.getSnapshot === "function" ? sessions.list.getSnapshot() : null;
