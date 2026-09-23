@@ -49,6 +49,9 @@ declare module 'lucide-react' {
   export const Sliders: FC<IconProps>;
   export const Share2: FC<IconProps>;
   export const X: FC<IconProps>;
+  export const Folder: FC<IconProps>;
+  export const Store: FC<IconProps>;
+  export const Link2: FC<IconProps>;
   export const Plus: FC<IconProps>;
   export const RotateCcw: FC<IconProps>;
   export const RefreshCw: FC<IconProps>;

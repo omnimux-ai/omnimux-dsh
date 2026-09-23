@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 3,
+  "id": "ws-app-builtin-product-video",
+  "name": "商品生视频",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "node-slot-product-image",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "image",
+        "tool": "import-image",
+        "label": "商品主图槽位 (Product Image)",
+        "slotRole": "product_image",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "image"
+      }
+    },
+    {
+      "id": "node-slot-custom-brief",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "自定义描述槽位 (Custom Brief)",
+        "slotRole": "custom_brief",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "text"
+      }
+    },
+    {
+      "id": "node-slot-product-link",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 500
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "商品链接槽位 (Product Link)",
+        "slotRole": "product_link",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "text"
+      }
+    },
+    {
+      "id": "node-video-generation-core",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 200
+      },
+      "data": {
+        "type": "video",
+        "tool": "omnimux_video_submit",
+        "label": "商品生视频 视频生成内核",
+        "model": "seedance-2.0",
+        "params": {
+          "aspectRatio": "9:16",
+          "duration": 5,
+          "mode": "first_frame",
+          "contentMode": "preset",
+          "presetType": "ugc",
+          "platforms": [
+            "TikTok"
+          ]
+        },
+        "upstreamBindings": {
+          "image": "node-slot-product-image",
+          "prompt": "node-slot-custom-brief"
+        }
+      }
+    },
+    {
+      "id": "node-slot-voice-tts",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 420
+      },
+      "data": {
+        "type": "audio",
+        "tool": "omnimux_audio_submit",
+        "label": "旁白解说与音色 (Voice TTS)",
+        "slotRole": "voice_tts",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "audio",
+        "params": {
+          "voice": "zh_female_energetic",
+          "speed": 1
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-img-to-video",
+      "source": "node-slot-product-image",
+      "target": "node-video-generation-core",
+      "targetHandle": "image",
+      "label": "商品图输入"
+    },
+    {
+      "id": "edge-text-to-video",
+      "source": "node-slot-custom-brief",
+      "target": "node-video-generation-core",
+      "targetHandle": "prompt",
+      "label": "自定义描述"
+    }
+  ],
+  "settings": {
+    "maxParallel": 2,
+    "failStrategy": "fail-fast"
+  },
+  "metadata": {
+    "createdAt": "2026-09-23T03:00:00.000Z",
+    "updatedAt": "2026-09-23T03:00:00.000Z",
+    "nodeCount": 5,
+    "sourceWorkflowId": "app-builtin-product-video"
+  }
+}

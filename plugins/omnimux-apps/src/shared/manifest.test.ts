@@ -221,3 +221,173 @@ test('Manifest.8: validateFormData strictly checks types, required fields, and r
   assert.equal(resBadType.valid, false);
   assert.ok(resBadType.errors.some((e) => e.includes('must be a string')));
 });
+
+test('Manifest.9: Compound widgets (Issue #2596) pass validation with legal configs', () => {
+  const schema = {
+    type: 'object',
+    required: ['assetPick'],
+    additionalProperties: false,
+    properties: {
+      assetPick: { type: 'string', widget: 'library-picker', library: 'asset' },
+      inspirationPick: { type: 'string', widget: 'library-picker', library: 'inspiration' },
+      productLink: { type: 'string', widget: 'product-link' },
+      tabs: {
+        type: 'string',
+        widget: 'segmented-tabs',
+        options: [
+          { label: '预设视频类型', value: 'preset' },
+          { label: '自定义视频内容', value: 'custom' },
+        ],
+      },
+      tags: {
+        type: 'array',
+        widget: 'multi-tags',
+        items: { type: 'string' },
+        maxItems: 3,
+        options: [
+          { label: 'TikTok', value: 'TikTok' },
+          { label: '快手', value: '快手' },
+        ],
+      },
+    },
+  } as const;
+
+  const res = validateFormSchema(schema);
+  assert.equal(res.valid, true, `legal compound widgets should validate: ${res.errors.join('; ')}`);
+});
+
+test('Manifest.10: Rejects library-picker without a valid library kind', () => {
+  const base = {
+    type: 'object',
+    required: [],
+    additionalProperties: false,
+    properties: {
+      pick: { type: 'string', widget: 'library-picker', library: 'asset' },
+    },
+  } as const;
+
+  const missing = validateFormSchema({
+    ...base,
+    properties: { pick: { type: 'string', widget: 'library-picker' } },
+  });
+  assert.equal(missing.valid, false);
+  assert.ok(missing.errors.some((e) => e.includes('library must be one of')));
+
+  const unknown = validateFormSchema({
+    ...base,
+    properties: { pick: { type: 'string', widget: 'library-picker', library: 'warehouse' } },
+  });
+  assert.equal(unknown.valid, false);
+
+  const wrongType = validateFormSchema({
+    ...base,
+    properties: { pick: { type: 'array', widget: 'library-picker', library: 'asset', items: { type: 'string' } } },
+  });
+  assert.equal(wrongType.valid, false);
+  assert.ok(wrongType.errors.some((e) => e.includes('must have type "string"')));
+});
+
+test('Manifest.11: Rejects segmented-tabs with fewer than 2 or more than 4 options', () => {
+  const wrap = (options: unknown) => ({
+    type: 'object',
+    required: [],
+    additionalProperties: false,
+    properties: { tabs: { type: 'string', widget: 'segmented-tabs', options } },
+  });
+
+  const tooFew = validateFormSchema(wrap([{ label: '仅一项', value: 'one' }]));
+  assert.equal(tooFew.valid, false);
+  assert.ok(tooFew.errors.some((e) => e.includes('2~4')));
+
+  const tooMany = validateFormSchema(
+    wrap([1, 2, 3, 4, 5].map((i) => ({ label: `选项${i}`, value: `v${i}` }))),
+  );
+  assert.equal(tooMany.valid, false);
+
+  const missing = validateFormSchema({
+    type: 'object',
+    required: [],
+    additionalProperties: false,
+    properties: { tabs: { type: 'string', widget: 'segmented-tabs' } },
+  });
+  assert.equal(missing.valid, false);
+
+  const four = validateFormSchema(
+    wrap([1, 2, 3, 4].map((i) => ({ label: `选项${i}`, value: `v${i}` }))),
+  );
+  assert.equal(four.valid, true, `4 options should validate: ${four.errors.join('; ')}`);
+});
+
+test('Manifest.12: Rejects multi-tags with illegal config; enforces maxItems on data', () => {
+  const legal = {
+    type: 'object',
+    required: [],
+    additionalProperties: false,
+    properties: {
+      tags: {
+        type: 'array',
+        widget: 'multi-tags',
+        items: { type: 'string' },
+        maxItems: 2,
+        options: [
+          { label: 'A', value: 'a' },
+          { label: 'B', value: 'b' },
+          { label: 'C', value: 'c' },
+        ],
+      },
+    },
+  } as const;
+  assert.equal(validateFormSchema(legal).valid, true);
+
+  const wrongType = validateFormSchema({
+    ...legal,
+    properties: { tags: { ...legal.properties.tags, type: 'string' } },
+  });
+  assert.equal(wrongType.valid, false);
+  assert.ok(wrongType.errors.some((e) => e.includes('must have type "array"')));
+
+  const noOptions = validateFormSchema({
+    ...legal,
+    properties: { tags: { type: 'array', widget: 'multi-tags', items: { type: 'string' } } },
+  });
+  assert.equal(noOptions.valid, false);
+  assert.ok(noOptions.errors.some((e) => e.includes('non-empty "options"')));
+
+  const badMax = validateFormSchema({
+    ...legal,
+    properties: { tags: { ...legal.properties.tags, maxItems: 0 } },
+  });
+  assert.equal(badMax.valid, false);
+  assert.ok(badMax.errors.some((e) => e.includes('positive integer')));
+
+  const badItems = validateFormSchema({
+    ...legal,
+    properties: { tags: { ...legal.properties.tags, items: { type: 'number' } } },
+  });
+  assert.equal(badItems.valid, false);
+  assert.ok(badItems.errors.some((e) => e.includes('items of type "string"')));
+
+  // Data-level: exceeding maxItems is rejected by validateFormData
+  const overLimit = validateFormData(legal as any, { tags: ['a', 'b', 'c'] });
+  assert.equal(overLimit.valid, false);
+  assert.ok(overLimit.errors.some((e) => e.includes('exceeds maxItems')));
+
+  const withinLimit = validateFormData(legal as any, { tags: ['a', 'b'] });
+  assert.equal(withinLimit.valid, true, `within limit should pass: ${withinLimit.errors.join('; ')}`);
+
+  const badItemType = validateFormData(legal as any, { tags: ['a', 42] });
+  assert.equal(badItemType.valid, false);
+});
+
+test('Manifest.13: Rejects product-link with non-string type', () => {
+  const res = validateFormSchema({
+    type: 'object',
+    required: [],
+    additionalProperties: false,
+    properties: {
+      link: { type: 'array', widget: 'product-link', items: { type: 'string' } },
+    },
+  });
+  assert.equal(res.valid, false);
+  assert.ok(res.errors.some((e) => e.includes('product-link')));
+});

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 3,
+  "id": "ws-app-builtin-video-to-prompt",
+  "name": "视频转提示词",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "node-slot-source-video",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "video",
+        "tool": "import-video",
+        "label": "视频链接槽位 (Source Video)",
+        "slotRole": "source_video",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "video"
+      }
+    },
+    {
+      "id": "node-prompt-analysis-core",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 200
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "视频转提示词 提示词拆解内核",
+        "params": {
+          "analysisFocus": [
+            "hook",
+            "pacing"
+          ],
+          "promptLanguage": "zh"
+        },
+        "upstreamBindings": {
+          "prompt": "node-slot-source-video"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-video-to-analysis",
+      "source": "node-slot-source-video",
+      "target": "node-prompt-analysis-core",
+      "targetHandle": "prompt",
+      "label": "视频输入"
+    }
+  ],
+  "settings": {
+    "maxParallel": 2,
+    "failStrategy": "fail-fast"
+  },
+  "metadata": {
+    "createdAt": "2026-09-23T03:00:00.000Z",
+    "updatedAt": "2026-09-23T03:00:00.000Z",
+    "nodeCount": 2,
+    "sourceWorkflowId": "app-builtin-video-to-prompt"
+  }
+}

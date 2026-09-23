@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 3,
+  "id": "ws-app-builtin-viral-replication",
+  "name": "爆款复刻",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "node-slot-reference-video",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 100
+      },
+      "data": {
+        "type": "video",
+        "tool": "import-video",
+        "label": "参考视频槽位 (Reference Video)",
+        "slotRole": "reference_video",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "video"
+      }
+    },
+    {
+      "id": "node-slot-reference-inspiration",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 300
+      },
+      "data": {
+        "type": "video",
+        "tool": "import-video",
+        "label": "参考灵感槽位 (Reference Inspiration)",
+        "slotRole": "reference_inspiration",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "video"
+      }
+    },
+    {
+      "id": "node-slot-rewrite-intent",
+      "type": "material",
+      "position": {
+        "x": 50,
+        "y": 500
+      },
+      "data": {
+        "type": "text",
+        "tool": "prompt-template",
+        "label": "改写意图槽位 (Rewrite Intent)",
+        "slotRole": "rewrite_intent",
+        "isSlot": true,
+        "nodeKind": "import",
+        "selectedTool": "import",
+        "status": "completed",
+        "materialType": "text"
+      }
+    },
+    {
+      "id": "node-video-generation-core",
+      "type": "material",
+      "position": {
+        "x": 450,
+        "y": 200
+      },
+      "data": {
+        "type": "video",
+        "tool": "omnimux_video_submit",
+        "label": "爆款复刻 视频生成内核",
+        "model": "seedance-2.0",
+        "params": {
+          "aspectRatio": "9:16",
+          "duration": 5,
+          "platforms": [
+            "TikTok"
+          ]
+        },
+        "upstreamBindings": {
+          "image": "node-slot-reference-video",
+          "prompt": "node-slot-rewrite-intent"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-ref-to-video",
+      "source": "node-slot-reference-video",
+      "target": "node-video-generation-core",
+      "targetHandle": "image",
+      "label": "参考视频"
+    },
+    {
+      "id": "edge-intent-to-video",
+      "source": "node-slot-rewrite-intent",
+      "target": "node-video-generation-core",
+      "targetHandle": "prompt",
+      "label": "改写意图"
+    }
+  ],
+  "settings": {
+    "maxParallel": 2,
+    "failStrategy": "fail-fast"
+  },
+  "metadata": {
+    "createdAt": "2026-09-23T03:00:00.000Z",
+    "updatedAt": "2026-09-23T03:00:00.000Z",
+    "nodeCount": 4,
+    "sourceWorkflowId": "app-builtin-viral-replication"
+  }
+}

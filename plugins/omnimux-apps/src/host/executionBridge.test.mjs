@@ -181,6 +181,113 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     assert.equal(slotEdge.target, 'node_generator');
   });
 
+  it('T05.11: library-picker picked values are injected as slot FeedAssets with decoded URL and type', () => {
+    const manifest = createMockManifest();
+    manifest.workflowBinding.snapshot.nodes.push({
+      id: 'node-slot-product-image',
+      type: 'material',
+      data: { isSlot: true, label: '商品图' },
+    });
+    manifest.fieldMappings.productImage = {
+      nodeId: 'node-slot-product-image',
+      targetField: 'mediaUrl',
+      mappingType: 'media',
+      widget: 'library-picker',
+      required: false,
+    };
+
+    const pickedValue = JSON.stringify({
+      name: '极简连帽卫衣',
+      sub: 'SKU-1001',
+      url: 'https://cdn.omnimux.com/products/prd_1/cover.jpg',
+      source: 'product',
+      type: 'image',
+    });
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '卫衣种草短视频',
+      productImage: pickedValue,
+    });
+
+    const slotNode = injected.nodes.find((n) => n.id === 'node-slot-product-image');
+    assert.ok(slotNode);
+    assert.ok(Array.isArray(slotNode.data.feedAssets) && slotNode.data.feedAssets.length === 1,
+      'library-picker value must produce a slot FeedAsset');
+    const feedAsset = slotNode.data.feedAssets[0];
+    // The JSON-encoded picked card must be decoded to its media URL, not injected raw
+    assert.equal(feedAsset.url, 'https://cdn.omnimux.com/products/prd_1/cover.jpg');
+    assert.equal(feedAsset.type, 'image');
+    assert.equal(feedAsset.targetSlot, 'input');
+
+    const virtualSource = injected.nodes.find((n) => n.id === feedAsset.sourceNodeId);
+    assert.ok(virtualSource);
+    assert.equal(virtualSource.data.mediaUrl, 'https://cdn.omnimux.com/products/prd_1/cover.jpg');
+
+    const slotEdge = injected.edges.find((e) => e.id === feedAsset.edgeId);
+    assert.ok(slotEdge);
+    assert.equal(slotEdge.target, 'node-slot-product-image');
+  });
+
+  it('T05.12: media-extractor library picks (JSON values) decode to their media URL as well', () => {
+    const manifest = createMockManifest();
+    const pickedValue = JSON.stringify({
+      name: '参考视频',
+      sub: '灵感库',
+      url: '/omnimux/inspiration/media/videos/42.mp4',
+      source: 'inspiration',
+      type: 'video',
+    });
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '开箱视频复刻',
+      referenceMedia: pickedValue,
+    });
+
+    const genNode = injected.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(genNode);
+    const feedAsset = genNode.data.feedAssets[0];
+    assert.equal(feedAsset.url, '/omnimux/inspiration/media/videos/42.mp4');
+    assert.equal(feedAsset.type, 'video');
+  });
+
+  it('T05.13: Fail-Closed: malformed picked-card JSON is rejected, never injected as a media URL', () => {
+    const manifest = createMockManifest();
+
+    // Truncated / malformed JSON fragment (starts with '{' but does not parse)
+    const truncated = '{"name":"参考视频","url":"/omnimux/inspiration/media/videos/42.mp';
+    assert.throws(
+      () => prepareAndInjectWorkflowSnapshot(manifest, { topic: '开箱视频复刻', referenceMedia: truncated }),
+      (err) => {
+        assert.ok(err instanceof ExecutionBridgeError);
+        assert.equal(err.code, 'validation_failed');
+        assert.match(err.message, /malformed library-picked value/);
+        return true;
+      },
+      'Malformed picked JSON must be rejected instead of injected raw',
+    );
+
+    // Parses as an object but carries no media URL (shape mismatch)
+    const shapeMismatch = JSON.stringify({ name: '无地址卡片', source: 'inspiration' });
+    assert.throws(
+      () => prepareAndInjectWorkflowSnapshot(manifest, { topic: '开箱视频复刻', referenceMedia: shapeMismatch }),
+      (err) => {
+        assert.ok(err instanceof ExecutionBridgeError);
+        assert.equal(err.code, 'validation_failed');
+        return true;
+      },
+      'Picked cards without a media URL must be rejected',
+    );
+
+    // Plain pasted links (not card-shaped) still flow through unchanged
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '开箱视频复刻',
+      referenceMedia: 'https://www.tiktok.com/@user/video/123',
+    });
+    const genNode = injected.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(genNode);
+    assert.equal(genNode.data.feedAssets[0].url, 'https://www.tiktok.com/@user/video/123');
+  });
+
   it('T05.8: Fail-Closed: executeAppWorkflow rejects when required field is missing', async () => {
     const manifest = createMockManifest();
     // Missing 'topic' which is required
