@@ -191,6 +191,8 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
   const newBadgeText = safeTr('workshop.badgeNew', undefined, isEn ? 'NEW' : '新');
   const hotBadgeTitle = safeTr('workshop.hotPicks', undefined, isEn ? 'HOT PICKS' : '热门精选');
   const tryButtonText = safeTr('workshop.try', undefined, isEn ? 'Try in Chat' : '去对话中试试');
+  // 悬停气泡提示：有意使用更紧凑精炼的「去对话试试」（相比按钮展开全称「去对话中试试」更轻量，避免气泡文字冗长）
+  const tryTooltip = safeTr('workshop.tryTooltip', undefined, isEn ? 'Try in Chat' : '去对话试试');
 
   const onCardClick = () => { if (onOpen) onOpen(item); };
   const onTryClick = (e) => {
@@ -247,19 +249,13 @@ export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
           h('button', {
             type: 'button',
             className: 'omnimux-creatify-quick-try-btn',
-            style: {
-              background: 'var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.16))', /* exempt-ui03: 悬停按钮底色 */
-              border: '1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.2))', /* exempt-ui03: 悬停按钮边框 */
-              borderRadius: '999px',
-              padding: '2px 10px',
-              fontSize: '11px',
-              fontWeight: 500,
-              color: 'var(--dsw-static-neutral-00, #ffffff)', /* exempt-ui03: 按钮文本纯白色 */
-              cursor: 'pointer',
-              pointerEvents: 'auto',
-            },
+            title: tryTooltip,
+            'aria-label': tryTooltip,
             onClick: onTryClick,
-          }, tryButtonText),
+          },
+            renderHoverIcon('try'),
+            h('span', { className: 'omnimux-creatify-quick-try-label' }, tryButtonText),
+          ),
         ),
       ),
     ),
