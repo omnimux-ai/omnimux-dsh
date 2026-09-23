@@ -9,14 +9,16 @@
 import { getConversationCollapsed } from '../conversation-collapse.js'
 import {
   CONVERSATION_MIN_CHAT_PX,
-  CONVERSATION_RATIO_DEFAULT,
   conversationStageWidthPx,
   resolveConversationPixelBudget,
 } from '../conversation-ratio.js'
 import { WORKBENCH_FOCUS } from '../../workbench/contract.js'
 import { activeTabId, hostDocument, hostWindow, liveSnapshot } from './host-adapter.js'
 import { focusRecordForTab } from './focus-state.js'
-import { readChatRatio } from './workspace-layout-store.js'
+// 比例解析的唯一真源在顶栏模块（存储 → 老用户迁移 → 默认 + 缓存）。本模块只消费它的结果，
+// 不得自己实现一套（H-4）。依赖方向：workbench/geometry → client/sidebar-toggle-topbar，
+// 后者只依赖 conversation-ratio / workspace-layout-store / host-adapter，不构成环。
+import { resolveConversationRatio } from '../sidebar-toggle-topbar.js'
 
 export const WORKBENCH_PANEL_MIN_PX = 280
 /**
@@ -278,7 +280,9 @@ export function officialSessionSidebarWidth(env = {}) {
     if (forced >= WORKBENCH_LEFT_RAIL_EXPANDED_MIN_PX) lastExpandedOfficialWidth = Math.round(forced)
     return forced
   }
-  const doc = hostDocument()
+  // 文档来源必须与调用方同源：注入 `env.doc`（测试 / 多文档）时不得回读全局文档，
+  // 否则一次调用里「面板宽按注入文档、左栏宽按全局文档」各算一套（M-6）。
+  const doc = env.doc || hostDocument()
   if (!doc || typeof doc.querySelector !== 'function') return 0
   const column = findOfficialSidebarColumn(doc)
   if (!column || typeof column.getBoundingClientRect !== 'function') return 0
@@ -332,17 +336,17 @@ export function workbenchUsableWidthPx(state, env = {}) {
 }
 
 /**
- * 当前生效的比例：显式注入优先，其次持久化真源，最后产品默认。
+ * 当前生效的比例：显式注入优先，其余走**唯一真源** `sidebar-toggle-topbar.resolveConversationRatio`
+ * （存储 → 老用户迁移 → 产品默认 + 缓存）。
  *
- * 与 `sidebar-toggle-topbar.resolveConversationRatio` 必须给出同一个值——两侧一个算中栏、
- * 一个算右栏，比例若不同源，「三栏之和 = 视口」当场破裂。
- * @param {{ chatRatio?: number }} [env]
+ * 两侧必须给出同一个值——一个算中栏、一个算右栏，比例若不同源，「三栏之和 = 视口」当场破裂。
+ * 本模块曾经只做 `readChatRatio() ?? 默认`：那会跳过老用户迁移，使中栏按迁移值、右栏按
+ * 默认 0.3 各算一套（H-4）。此处不再保留任何重复实现。
+ * @param {{ chatRatio?: number, doc?: Document }} [env]
  * @returns {number}
  */
 function resolveChatRatio(env = {}) {
-  if (typeof env.chatRatio === 'number' && Number.isFinite(env.chatRatio)) return env.chatRatio
-  const stored = readChatRatio()
-  return stored ?? CONVERSATION_RATIO_DEFAULT
+  return resolveConversationRatio(env.doc || hostDocument(), env)
 }
 
 /**
@@ -362,7 +366,7 @@ function resolveChatRatio(env = {}) {
 function workbenchConversationGeometryPx(env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
   const railVisible = officialSessionSidebarWidth(env)
-  const collapsed = isOfficialSidebarCollapsed(hostDocument())
+  const collapsed = isOfficialSidebarCollapsed(env.doc || hostDocument())
   const railBaseline = typeof env.railBaselinePx === 'number' && Number.isFinite(env.railBaselinePx)
     ? env.railBaselinePx
     : officialExpandedRailBaselinePx()

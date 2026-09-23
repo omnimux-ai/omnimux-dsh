@@ -19,6 +19,7 @@ import {
   resolveWorkbenchLayoutHandle,
 } from './host-adapter.js'
 import { reconcileRightbarFromRatio } from './split-layout.js'
+import { notePluginPanelWidthWrite } from '../sidebar-toggle-topbar.js'
 import {
   focusRecordForTab,
   persistSessionFocus,
@@ -67,6 +68,9 @@ export function ensureHealthySplitWidth(doc = hostDocument()) {
       const snap = layout.getSnapshot?.()
       if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
         layout.setRightbar(targetHealthyWidth, viewport)
+        // 兜底通道同样在写外壳 `panels.rightbar`：登记它，否则迁移探针会把插件自己写出的
+        // 几何当成「用户亲手定过的版式」反推（H-1）。
+        notePluginPanelWidthWrite()
         return
       }
     } catch {}
@@ -81,6 +85,7 @@ export function ensureHealthySplitWidth(doc = hostDocument()) {
         const snap = layoutHandle.getSnapshot?.()
         if (snap && typeof snap.rightbar === 'number' && snap.rightbar < 450) {
           layoutHandle.setRightbar(targetHealthyWidth, viewport)
+          notePluginPanelWidthWrite()
         }
       }
     }

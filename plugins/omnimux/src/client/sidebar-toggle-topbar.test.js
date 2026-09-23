@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { afterEach, describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -19,7 +19,6 @@ import {
   computeChromeLayout,
   computeTabBarPadLeft,
   CONVERSATION_WIDTH_FALLBACK_PX,
-  CONVERSATION_WIDTH_MIN_PX,
   computeToggleLeftPx,
   deriveConversationWidthPx,
   ensureSidebarToggleTopbar,
@@ -31,13 +30,26 @@ import {
   isLeftSidebarCollapsed,
   isSamePxValue,
   isShellSplitDragging,
+  notePluginPanelWidthWrite,
+  noteShellSplitDragObserved,
   readShellSplitPx,
+  resetConversationRatioAuthorityForTests,
+  resolveConversationRatio,
   setExplicitLeftCollapseIntent,
   syncLeftCollapsedHtmlAttr,
   syncNativeRightbarControls,
   syncTopbarTabClearance,
 } from './sidebar-toggle-topbar.js'
 import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
+// 拖拽分支与稳态分支的地板是同一个常量（H-3）：320 的历史常量已随比例制移除。
+import { CONVERSATION_MIN_CHAT_PX, CONVERSATION_RATIO_DEFAULT } from './conversation-ratio.js'
+import { bindWorkbenchDeps, resetWorkbenchHostAdapter } from './workbench/host-adapter.js'
+import {
+  WORKSPACE_LAYOUT_KEY,
+  persistChatRatioNow,
+  readChatRatio,
+  resetWorkspaceLayoutStoreForTests,
+} from './workbench/workspace-layout-store.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const moduleSource = readFileSync(join(here, 'sidebar-toggle-topbar.js'), 'utf8')
@@ -1319,9 +1331,10 @@ describe('derived conversation width (issue #2074 续 3 / #2608 比例制)', () 
   })
 
   it('never publishes below the conversation floor', () => {
+    // 地板与稳态同源：拖拽分支若用历史 320，[320,360) 区间松手会跳回 360（H-3）。
     assert.equal(
       deriveConversationWidthPx(framed('280px minmax(0px, 1fr) 1600px', { dragging: true }), false, 280, 280),
-      CONVERSATION_WIDTH_MIN_PX,
+      CONVERSATION_MIN_CHAT_PX,
     )
   })
 
@@ -1361,6 +1374,100 @@ describe('derived conversation width (issue #2074 续 3 / #2608 比例制)', () 
       assert.equal(isSamePxValue('auto', 492), false, '非法值必须被真实数值覆盖')
       assert.equal(isSamePxValue(undefined, 492), false)
     })
+  })
+})
+
+describe('老用户迁移门槛（H-1：插件自己写出的几何不得被当成用户版式）', () => {
+  /** 外壳夹具：frame 内联栅格 + 视口宽；`rightbar` 由假 layout 句柄给出。 */
+  const framedDoc = (grid, viewportPx = 1920) => {
+    const doc = setup(`<!doctype html><html><head></head><body>
+      <div class="dshDesktopFrame" style="grid-template-columns:${grid}">
+        <aside class="dshDesktopSidebarSurface" style="width: 280px"></aside>
+        <main class="dshDesktopConversationSurface"></main>
+      </div>
+    </body></html>`)
+    Object.defineProperty(doc.defaultView, 'innerWidth', { value: viewportPx, configurable: true })
+    return doc
+  }
+  const shellLayout = (rightbar) => ({ getSnapshot: () => ({ rightbar }), setRightbar() {} })
+  /** 1920 视口 − 280 左栏 − 730 第三轨 = 910 中栏 ÷ 1640 舞台。 */
+  const USER_RATIO = (1920 - 280 - 730) / (1920 - 280)
+
+  beforeEach(() => {
+    resetConversationRatioAuthorityForTests()
+    resetWorkbenchHostAdapter()
+    resetWorkspaceLayoutStoreForTests()
+  })
+
+  afterEach(() => {
+    resetConversationRatioAuthorityForTests()
+    resetWorkbenchHostAdapter()
+    resetWorkspaceLayoutStoreForTests()
+  })
+
+  it('keeps the product default when the shell panel width was written by this plugin', () => {
+    const doc = framedDoc('280px minmax(0px, 1fr) 730px')
+    // 协调写先发生：外壳该字段随后变成数字，但那个数字是我们自己写出去的。
+    notePluginPanelWidthWrite()
+    bindWorkbenchDeps({ layout: shellLayout(730) })
+
+    assert.equal(
+      resolveConversationRatio(doc),
+      CONVERSATION_RATIO_DEFAULT,
+      '全新用户必须拿到产品默认 30%（规格 §10）',
+    )
+    assert.equal(readChatRatio(), null, '自证读数不得被反推并落盘（INV-4 / 禁改清单第 6、8 条）')
+  })
+
+  it('latches the first shell reading, so a later plugin write cannot reopen migration', () => {
+    const doc = framedDoc('280px minmax(0px, 1fr) 730px')
+    // 第 1 帧：外壳尚未持有面板宽 → 判定「本会话没有用户版式」。
+    bindWorkbenchDeps({ layout: shellLayout(null) })
+    assert.equal(resolveConversationRatio(doc), CONVERSATION_RATIO_DEFAULT)
+
+    // 第 2 帧：协调写把该字段写成数字；缓存被一次真实落盘失效、键又被删掉之后，
+    // 迁移判据仍必须回答「没有用户版式」——不得反推、不得落盘（这正是 H-1 的时序）。
+    bindWorkbenchDeps({ layout: shellLayout(730) })
+    persistChatRatioNow(CONVERSATION_RATIO_DEFAULT)
+    doc.defaultView.localStorage.removeItem(WORKSPACE_LAYOUT_KEY)
+
+    assert.equal(resolveConversationRatio(doc), CONVERSATION_RATIO_DEFAULT)
+    assert.equal(readChatRatio(), null, '插件写出的数字不构成迁移前提')
+  })
+
+  it('still migrates a layout the user wrote themselves (positive control)', () => {
+    const doc = framedDoc('280px minmax(0px, 1fr) 730px')
+    bindWorkbenchDeps({ layout: shellLayout(730) })
+
+    const ratio = resolveConversationRatio(doc)
+    assert.ok(
+      Math.abs(ratio - USER_RATIO) <= 0.005,
+      `老用户版式必须按「中栏 ÷ 舞台」反推保留：期望 ${USER_RATIO}，实测 ${ratio}`,
+    )
+    assert.ok(
+      Math.abs(readChatRatio() - USER_RATIO) <= 0.005,
+      '迁移结果必须落盘（AC-11 老用户不突变）',
+    )
+  })
+
+  it('allows migration once the user has dragged the divider themselves', () => {
+    const doc = framedDoc('280px minmax(0px, 1fr) 730px')
+    // 插件先写过面板宽（字段被污染），但本会话确实观察到用户拖拽 → 允许反推。
+    notePluginPanelWidthWrite()
+    noteShellSplitDragObserved()
+    bindWorkbenchDeps({ layout: shellLayout(730) })
+
+    assert.ok(Math.abs(resolveConversationRatio(doc) - USER_RATIO) <= 0.005)
+  })
+
+  it('re-resolves after a real write so both sides keep the same ratio (M-3 / H-4)', () => {
+    const doc = framedDoc('280px minmax(0px, 1fr) 730px')
+    bindWorkbenchDeps({ layout: shellLayout(null) })
+    assert.equal(resolveConversationRatio(doc), CONVERSATION_RATIO_DEFAULT)
+
+    // 别处写入新比例：缓存必须失效，否则中栏按新比例、右栏按旧比例，三栏之和当场破裂。
+    persistChatRatioNow(0.42)
+    assert.equal(resolveConversationRatio(doc), 0.42)
   })
 })
 })

@@ -26,7 +26,12 @@ import {
   installSplitConversationMin,
   uninstallSplitConversationMin,
 } from './workbench/split-layout.js'
-import { resetWorkbenchHostAdapter } from './workbench/host-adapter.js'
+import { resetWorkbenchHostAdapter, setAttachedStore } from './workbench/host-adapter.js'
+import {
+  WORKBENCH_FOCUS,
+  focusRecordForTab,
+  resetWorkbenchFocusMemory,
+} from './workbench/focus-state.js'
 import {
   readChatRatio,
   resetWorkspaceLayoutStoreForTests,
@@ -37,6 +42,9 @@ const VIEWPORT_PX = 1920
 const RAIL_PX = 280
 const STAGE_PX = VIEWPORT_PX - RAIL_PX
 const CONVERSATION_VAR = '--omnimux-conversation-width'
+/** 结算用例的会话 / 页签标识（三栏态判据按会话+页签取焦点记录）。 */
+const SESSION_ID = 'session-ratio-authority'
+const TAB_ID = 'omnimux-workflow:canvas'
 /** 与外壳 authored 几何冲突的存储比例（用于证明拖拽期比例不参与写入）。 */
 const CONFLICTING_RATIO = 0.6
 /** 拖拽前外壳 authored 的第三轨（右栏面板宽）。 */
@@ -127,10 +135,29 @@ function countConversationWrites(doc) {
   return counter
 }
 
+/**
+ * 武装「三栏分栏态」：结算与面板宽协调写都只在这一态发生。
+ *
+ * 中栏收起 / 右栏收起 / gui 单栏态一律不结算、不落盘（H-5），因此结算用例必须先把夹具
+ * 摆成真实的三栏态（右侧工作台已挂载 + 该页签焦点为 split），否则验证的是「没有右侧
+ * 工作台时也不该落盘」这条反向守卫，而不是本用例要证明的结算语义。
+ */
+function armThreeColumnState() {
+  const state = {
+    panelOpen: true,
+    width: 800,
+    activePane: 'pane-main',
+    splits: { kind: 'leaf', id: 'pane-main', tabs: [{ id: TAB_ID }] },
+  }
+  setAttachedStore({ getSnapshot: () => ({ sessionId: SESSION_ID, state }) })
+  focusRecordForTab(SESSION_ID, TAB_ID).mode = WORKBENCH_FOCUS.split
+}
+
 beforeEach(() => {
   resetWorkspaceLayoutStoreForTests()
   resetConversationRatioAuthorityForTests()
   resetWorkbenchHostAdapter()
+  resetWorkbenchFocusMemory()
 })
 
 afterEach(() => {
@@ -141,6 +168,7 @@ afterEach(() => {
   resetWorkspaceLayoutStoreForTests()
   resetConversationRatioAuthorityForTests()
   resetWorkbenchHostAdapter()
+  resetWorkbenchFocusMemory()
   if (previous.window === undefined) delete globalThis.window
   else globalThis.window = previous.window
   if (previous.document === undefined) delete globalThis.document
@@ -187,6 +215,7 @@ describe('T03 拖拽权威切换（防 #2097 复发）', () => {
 
   it('settles the drag into a stored ratio that reproduces the final width (no jump)', async () => {
     const harness = createHarness()
+    armThreeColumnState()
     cleanups.push(installSidebarToggleTopbar(harness.doc))
     cleanups.push(installSplitConversationMin(harness.doc))
     harness.flushFrames()
@@ -247,6 +276,7 @@ describe('T03 拖拽权威切换（防 #2097 复发）', () => {
 
   it('records the settled ratio from the authored grid, not from its own published value', async () => {
     const harness = createHarness()
+    armThreeColumnState()
     cleanups.push(installSidebarToggleTopbar(harness.doc))
     cleanups.push(installSplitConversationMin(harness.doc))
     harness.flushFrames()
@@ -265,5 +295,70 @@ describe('T03 拖拽权威切换（防 #2097 复发）', () => {
       Math.abs(readChatRatio() - (VIEWPORT_PX - RAIL_PX - 604) / STAGE_PX) <= 0.005,
       '结算只能读外壳 authored 栅格；读自己的写值即 INV-4 禁的自证读数',
     )
+  })
+
+  it('does not settle on a pointer release that ends no shell drag (H-5)', async () => {
+    const harness = createHarness()
+    armThreeColumnState()
+    cleanups.push(installSidebarToggleTopbar(harness.doc))
+    cleanups.push(installSplitConversationMin(harness.doc))
+    harness.flushFrames()
+
+    // 用户只是点了某个按钮：没有任何外壳分隔线拖拽发生过，绝不反推比例、绝不落盘。
+    harness.doc.dispatchEvent(new harness.dom.window.Event('pointerup'))
+    await harness.settleObservers()
+    harness.flushFrames()
+    harness.flushFrames()
+
+    assert.equal(readChatRatio(), null, '任意一次指针释放都不得反推并落盘比例（H-5）')
+  })
+
+  it('waits for the drag to really end before settling (H-5)', async () => {
+    const harness = createHarness()
+    armThreeColumnState()
+    cleanups.push(installSidebarToggleTopbar(harness.doc))
+    cleanups.push(installSplitConversationMin(harness.doc))
+    harness.flushFrames()
+
+    harness.doc.body.setAttribute('data-dsh-sidebar-dragging', '')
+    await dragFrame(harness, 604)
+
+    // 拖拽仍在进行（标记还在）：此时的指针释放不得结算，也不得消费待结算状态。
+    harness.doc.dispatchEvent(new harness.dom.window.Event('pointerup'))
+    await harness.settleObservers()
+    harness.flushFrames()
+    assert.equal(readChatRatio(), null, '拖拽进行中不结算（INV-16 的 settling 前置条件）')
+
+    // 真正的松手：外壳摘掉标记后再释放，必须结算出终态比例。
+    harness.doc.body.removeAttribute('data-dsh-sidebar-dragging')
+    harness.doc.dispatchEvent(new harness.dom.window.Event('pointerup'))
+    await harness.settleObservers()
+    harness.flushFrames()
+    harness.flushFrames()
+
+    assert.ok(
+      Math.abs(readChatRatio() - (VIEWPORT_PX - RAIL_PX - 604) / STAGE_PX) <= 0.005,
+      '真实拖拽结束必须结算（AC-7 比例记忆）',
+    )
+  })
+
+  it('does not settle while the middle column is collapsed (single-column state, H-5)', async () => {
+    const harness = createHarness()
+    armThreeColumnState()
+    cleanups.push(installSidebarToggleTopbar(harness.doc))
+    cleanups.push(installSplitConversationMin(harness.doc))
+    harness.flushFrames()
+
+    // 中栏收起：中栏列宽被 !important 钉成 0，反推出来的比例不代表任何可见版式。
+    harness.doc.documentElement.setAttribute('data-omnimux-conversation-collapsed', '')
+    harness.doc.body.setAttribute('data-dsh-sidebar-dragging', '')
+    await dragFrame(harness, 604)
+    harness.doc.body.removeAttribute('data-dsh-sidebar-dragging')
+    harness.doc.dispatchEvent(new harness.dom.window.Event('pointerup'))
+    await harness.settleObservers()
+    harness.flushFrames()
+    harness.flushFrames()
+
+    assert.equal(readChatRatio(), null, '单栏态一律不结算、不落盘（不得覆盖用户既有比例）')
   })
 })

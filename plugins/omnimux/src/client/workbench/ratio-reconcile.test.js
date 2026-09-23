@@ -230,6 +230,24 @@ describe('T04 面板宽度协调（D7-S1′）', () => {
     )
   })
 
+  it('never writes while the shell divider is being dragged (INV-16)', () => {
+    const dom = setupWindow(1920)
+    const layout = createShellLayout()
+    bindWorkbenchDeps({ layout })
+    focusRecordForTab(SESSION_ID, TAB_ID).mode = WORKBENCH_FOCUS.split
+
+    // 外壳右分隔线拖拽把 `[data-dragging]` 打在 frame / 手柄上，而不是工作台面板上：
+    // 只看 `isWorkbenchPanelDragging`（面板级）会漏判，于是拖拽进行中仍写面板宽、与指针抢轨道。
+    dom.window.document.querySelector('.dshDesktopFrame').setAttribute('data-dragging', '')
+
+    assert.equal(
+      reconcileRightbarFromRatio(makeState(), { sessionId: SESSION_ID, officialSidebarWidth: RAIL_PX, chatRatio: RATIO }),
+      'skipped',
+      '外壳拖拽期绝不写 panels.rightbar（INV-16）',
+    )
+    assert.equal(layout.calls.length, 0)
+  })
+
   it('reads the persisted ratio so the panel matches the published conversation column', () => {
     const dom = setupWindow(1920)
     writeChatRatio(0.5)

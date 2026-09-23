@@ -1,7 +1,7 @@
 {
-  "runId": "8e401f52-e712-4a2a-8976-ab75e62c5690",
+  "runId": "112302cc-cd71-43bc-acf6-b73ad3191250",
   "scenario": "three-column-collapse",
-  "startedAt": "2026-09-23T10:52:53.072Z",
+  "startedAt": "2026-09-23T11:50:11.553Z",
   "sourcePaths": [
     "plugins/omnimux/src/client/conversation-box.js",
     "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
@@ -11,12 +11,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 58607
+      "port": 51845
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 58608
+      "port": 51846
     },
     {
       "name": "expanded-conversation-positive",
@@ -132,9 +132,25 @@
     {
       "name": "viewport-tier-1920-production-pinned",
       "pass": true,
-      "authoredGrid": "280px minmax(0px, 1fr) 1148px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "bridgeChat": 492,
       "measuredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 612,
+      "measuredChat": 612,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1640,
+      "expectedChat": 492,
+      "driftPx": 1148,
+      "restoredChat": 492,
       "reasons": []
     },
     {
@@ -157,9 +173,25 @@
     {
       "name": "viewport-tier-2560-production-pinned",
       "pass": true,
-      "authoredGrid": "280px minmax(0px, 1fr) 1596px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "bridgeChat": 684,
       "measuredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 804,
+      "measuredChat": 804,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 2280,
+      "expectedChat": 684,
+      "driftPx": 1596,
+      "restoredChat": 684,
       "reasons": []
     },
     {
@@ -191,9 +223,25 @@
     {
       "name": "viewport-tier-1440-production-pinned",
       "pass": true,
-      "authoredGrid": "280px minmax(0px, 1fr) 800px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "bridgeChat": 360,
       "measuredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 480,
+      "measuredChat": 480,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1160,
+      "expectedChat": 360,
+      "driftPx": 800,
+      "restoredChat": 360,
       "reasons": []
     },
     {
@@ -222,8 +270,8 @@
   },
   "errors": [],
   "pass": true,
-  "serverPort": 58607,
-  "cdpPort": 58608,
+  "serverPort": 51845,
+  "cdpPort": 51846,
   "expanded": {
     "viewport": 1920,
     "tracks": [
@@ -501,9 +549,9 @@
         "stage": 1640,
         "chat": 492,
         "rightbar": 1148,
-        "authoredGrid": "280px minmax(0px, 1fr) 1148px"
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
       },
-      "authoredGrid": "280px minmax(0px, 1fr) 1148px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "before": {
         "viewport": 1920,
         "firstTrack": 280,
@@ -523,6 +571,15 @@
         "conversationVar": "492px"
       },
       "trackSum": 1920,
+      "sentinel": {
+        "sentinelPx": 612,
+        "measuredChat": 612
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1640,
+        "driftPx": 1148,
+        "restoredChat": 492
+      },
       "pass": true,
       "reasons": []
     },
@@ -543,9 +600,9 @@
         "stage": 2280,
         "chat": 684,
         "rightbar": 1596,
-        "authoredGrid": "280px minmax(0px, 1fr) 1596px"
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
       },
-      "authoredGrid": "280px minmax(0px, 1fr) 1596px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "before": {
         "viewport": 1920,
         "firstTrack": 280,
@@ -565,6 +622,15 @@
         "conversationVar": "684px"
       },
       "trackSum": 2560,
+      "sentinel": {
+        "sentinelPx": 804,
+        "measuredChat": 804
+      },
+      "reverseControl": {
+        "productionDisabledChat": 2280,
+        "driftPx": 1596,
+        "restoredChat": 684
+      },
       "pass": true,
       "reasons": []
     },
@@ -585,9 +651,9 @@
         "stage": 1160,
         "chat": 360,
         "rightbar": 800,
-        "authoredGrid": "280px minmax(0px, 1fr) 800px"
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
       },
-      "authoredGrid": "280px minmax(0px, 1fr) 800px",
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
       "before": {
         "viewport": 2560,
         "firstTrack": 280,
@@ -607,6 +673,15 @@
         "conversationVar": "360px"
       },
       "trackSum": 1440,
+      "sentinel": {
+        "sentinelPx": 480,
+        "measuredChat": 480
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1160,
+        "driftPx": 800,
+        "restoredChat": 360
+      },
       "pass": true,
       "reasons": []
     }
@@ -618,7 +693,7 @@
       "stage": 1640,
       "chat": 492,
       "rightbar": 1148,
-      "authoredGrid": "280px minmax(0px, 1fr) 1148px"
+      "authoredGrid": "280px minmax(0px, 1fr) 0px"
     },
     "measured": {
       "viewport": 1920,
@@ -637,5 +712,5 @@
     "height": 1080,
     "bytes": 10536
   },
-  "completedAt": "2026-09-23T10:52:54.802Z"
+  "completedAt": "2026-09-23T11:50:13.257Z"
 }

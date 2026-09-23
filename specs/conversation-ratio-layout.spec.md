@@ -190,3 +190,26 @@ export function conversationWidthFromRatio(stageWidth, ratio) { … }
   Chrome**里给出：页面内跑生产比例算法、由生产 CSS 钉轨、按真实视口切换测量三列宽度。
   该证据覆盖 AC-2/AC-4 的算法与渲染链，但不覆盖「外壳 React 重算 + 外壳把手位置」这一段；
   外壳把手对齐由 `ratio-reconcile.test.js` 以句柄替身覆盖。
+
+## 13. 第 1 轮独立审查退修记录（2026-09-23 新增）
+
+`ocr` 第 1 轮审查（`d866bae10..7c2056fcd`，v1.12.9）保留高 5 条、中 6 条，逐条处置如下；
+契约侧口径见 `docs/contracts/three-column-layout.md` 第九节（新增行，不改既有行）。
+
+| 编号 | 意见 | 处置 | 落地位置 |
+| --- | --- | --- | --- |
+| H-1 | 迁移门槛被协调写破坏，全新用户被自证读数反推 | 修复：迁移前提改为两个用户信号（① 观察到外壳分隔线拖拽；② 首次读到的 `panels.rightbar` 已是数字且那一刻插件尚未写过它），插件每次写该字段都登记 | `sidebar-toggle-topbar.js`（`hasUserAuthoredPanelWidth` / `notePluginPanelWidthWrite`）、`split-layout.js`、`tab-viewport-reconciler.js` |
+| H-2 | 拖拽判据与外壳不同源，拖拽期仍写面板宽（INV-16） | 修复：`reconcileRightbarFromRatio` 的拖拽判据并入 `isShellSplitDragging`（与面板级判据取并集，保守方向是「不写」） | `split-layout.js` |
+| H-3 | 拖拽地板 320 与稳态 360 冲突，§11 第 7 条自述失真 | 修复：删除 `CONVERSATION_WIDTH_MIN_PX`，拖拽分支改用 `CONVERSATION_MIN_CHAT_PX`；§11 第 7 条自述自此与实现一致 | `sidebar-toggle-topbar.js`、契约第九节第 1 条 |
+| H-4 | 两侧比例读取不同源 | 修复：`geometry.js` 删除本地实现，委托 `sidebar-toggle-topbar.resolveConversationRatio`（唯一真源 + 按落盘版本号缓存） | `geometry.js`、`sidebar-toggle-topbar.js`、`workspace-layout-store.js` |
+| H-5 | 结算挂任意指针释放且无状态守卫 | 修复：结算入口要求「拖拽观察计数前进 ∧ 释放当帧已非拖拽态 ∧ 三栏分栏态」；观察计数只在**真正结算成功**后消费 | `split-layout.js`、`sidebar-toggle-topbar.js` |
+| M-1 | 拖拽期 250ms 防抖落盘无调用方 | 修复：装配层在拖拽期以同一算式采样比例并 `schedulePersistChatRatio`；无可用存储时不挂定时器 | `sidebar-toggle-topbar.js`、`workspace-layout-store.js` |
+| M-2 | QA 缩放档位判定近似空断言 | 修复：夹具 authored 第三轨改为**不由 chat 推导**的常量 `0px`；新增变量哨兵探针与「停用生产样式表必须转红」的反向对照 | `scripts/three-column-collapse-qa.mjs` |
+| M-3 | 每帧读 localStorage、迁移探针每帧重入 | 修复：迁移判定一次性置位（无论是否迁移）；解析结果按落盘版本号缓存，任何真实落盘使其失效 | `sidebar-toggle-topbar.js`、`workspace-layout-store.js` |
+| M-4 | 未测量视口守卫排在拖拽分支之前 | 修复：拖拽分支前置，只有 frame 与窗口都测不到才走 380px 兜底 | `sidebar-toggle-topbar.js` |
+| M-5 | 窗口口径与 frame 口径混用 | 修复：参与「视口 − 左栏 − 第三轨」的宽度与舞台分母统一取 frame 实测宽（测不到退回窗口内容宽） | `sidebar-toggle-topbar.js` |
+| M-6 | `env.doc` 未向下透传 | 修复：`officialSessionSidebarWidth` / `isOfficialSidebarCollapsed` 走 `env.doc`；协调写把 `doc` 注入 env | `geometry.js`、`split-layout.js` |
+
+**本轮新增证据**：缩放档位夹具的可证伪性由三层判定共同锁住——档位期望值（±2px）、变量哨兵
+（第二轨必须跟随 `--omnimux-conversation-width` 哨兵）、反向对照（停用生产样式表后该档必须偏离
+期望）。三者任一失效即变红。

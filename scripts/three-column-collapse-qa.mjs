@@ -61,6 +61,14 @@ export const CONVERSATION_MIN_PX = 320;
 export const VIEWPORT_TIER_TOLERANCE_PX = 2;
 /** 缩放档位的固定高度（只切换宽度，避免高度变化引入无关变量）。 */
 export const VIEWPORT_TIER_HEIGHT = 1080;
+/**
+ * 变量哨兵相对该档 chat 的偏移量。
+ *
+ * 哨兵必须与 chat 有明显差值（远大于 ±2px 容差），又必须保证 `rail + sentinel < viewport`，
+ * 否则弹性第三轨会被压成 0、判定失去意义。120px 在最小档（1440：rail 280 + 480 = 760）仍有
+ * 680px 余量。
+ */
+export const VIEWPORT_TIER_SENTINEL_DELTA_PX = 120;
 
 /**
  * 缩放档位契约（Issue #2608）：三分栏展开态下，中间会话栏 = 舞台 × 比例，
@@ -235,12 +243,15 @@ export function judgeViewportResize({ before, expectedBefore, after, expectedAft
 /**
  * 夹具未失真的判定：第二轨的宽度必须出自生产 CSS 的钉宽规则，而不是夹具自己写死的栅格。
  *
- * 夹具 authored 栅格刻意写成 `${rail}px minmax(0px, 1fr) ${stage - chat}px` —— 中轨是弹性值，
- * 若生产规则没命中，它会被撑成「视口 − 左栏 − 右栏」；只有 `PRODUCT_STAGE_CHROME` 里那条
- * `:has([data-sidebar-right-panel][data-sidebar-right-open])` 规则能把第二轨钉成
- * `var(--omnimux-conversation-width)`。因此这里同时校验两件事：
+ * 夹具 authored 栅格写成 `${rail}px minmax(0px, 1fr) 0px` —— 中轨是弹性值、第三轨是**不由
+ * chat 推导**的常量。因此两种情形逐轨可分：规则命中时第二轨 = `var(--omnimux-conversation-width)`
+ * = chat；规则没命中时第二轨被撑成「视口 − 左栏 − 0」= stage，与 chat 相差数百像素。
+ * 这里同时校验两件事：
  * (1) authored 栅格第二轨仍是弹性值（说明实测的 chat 不可能是从栅格读回来的）；
  * (2) 页面内生产模块自算的 chat 与实测第二轨一致（说明这个值确实出自页面里的生产算法）。
+ *
+ * 注意：本判定只证明「实测 chat 等于生产算法算出的 chat」，不单独证明规则绑在哪个变量上；
+ * 后者由变量哨兵探针 {@link judgeViewportTierPinBoundToVar} 覆盖。
  */
 export function judgeViewportTierProductionPinned({ measured, bridge, authoredGrid }) {
   const reasons = [];
@@ -256,6 +267,43 @@ export function judgeViewportTierProductionPinned({ measured, bridge, authoredGr
     );
   }
   return { pass: reasons.length === 0, reasons };
+}
+
+/**
+ * 钉宽规则确实绑在 `--omnimux-conversation-width` 上的判定（变量哨兵）。
+ *
+ * 把该变量临时置成 `chat + 120` 的哨兵值，断言第二轨跟着哨兵走：规则文本被删、被改绑到别的
+ * 变量、或选择器失效时，第二轨会退回弹性值（= 视口 − 左栏），当场偏离哨兵 ±2px 之外。
+ * 没有这一层，「第二轨 = chat」在两个同值来源之间不可证伪（假绿）。
+ */
+export function judgeViewportTierPinBoundToVar({ measured, sentinelPx }) {
+  const reasons = [];
+  if (typeof measured?.conversationTrack !== 'number') {
+    reasons.push('哨兵探针拿不到实测第二轨宽度');
+  } else if (Math.abs(measured.conversationTrack - sentinelPx) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(
+      `第二轨未跟随 --omnimux-conversation-width 哨兵：期望 ${sentinelPx}px，实测 ${measured.conversationTrack}px`,
+    );
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/**
+ * 反向对照：停用生产样式表后，弹性中轨必须明显偏离该档 chat。
+ *
+ * 夹具第三轨是不由 chat 推导的常量，所以停用钉宽规则后中轨会被撑成「视口 − 左栏」。
+ * 若此时读数仍等于 chat，说明「第二轨 = chat」另有来源，档位判定不可证伪（假绿）。
+ * @returns {{ pass: boolean, reasons: string[], drift: number }}
+ */
+export function judgeViewportTierPinReverseControl({ measured, tier }) {
+  const reasons = [];
+  const drift = Math.abs(measured.conversationTrack - tier.chat);
+  if (drift <= VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(
+      `停用生产样式表后第二轨仍等于 ${tier.chat}px（实测 ${measured.conversationTrack}px），档位判定不可证伪`,
+    );
+  }
+  return { pass: reasons.length === 0, reasons, drift };
 }
 
 /**
@@ -330,9 +378,10 @@ function apply() {
   const rightbar = stage - chat;
   root.style.setProperty('--omnimux-conversation-width', chat + 'px');
   root.style.setProperty('--omnimux-sidebar-width', RAIL_PX + 'px');
-  // 外壳 authored 栅格：宿主每帧按当前列宽重写；中轨刻意留弹性值，
-  // 这样实测到的第二轨只可能来自生产 CSS 的钉宽规则（见 judgeViewportTierProductionPinned）。
-  frame.style.gridTemplateColumns = RAIL_PX + 'px minmax(0px, 1fr) ' + rightbar + 'px';
+  // 外壳 authored 栅格：宿主每帧按当前列宽重写；中轨刻意留弹性值，第三轨取**不由 chat 推导**
+  // 的常量 0px —— 若生产钉宽规则没命中，弹性中轨会被撑成「视口 − 左栏」而不是 chat，
+  // 实测值与期望当场分离（写成 stage − chat 会让两种情形逐轨同值，判定恒真）。
+  frame.style.gridTemplateColumns = RAIL_PX + 'px minmax(0px, 1fr) 0px';
   window.__omnimuxRatio.last = {
     viewport: viewport,
     rail: RAIL_PX,
@@ -802,6 +851,45 @@ async function main() {
       const trackSum =
         after.measured.firstTrack + after.measured.conversationTrack + after.measured.rightbarTrack;
 
+      // ---- 变量哨兵：证明钉宽规则确实绑在 --omnimux-conversation-width 上 ----
+      // 把变量临时置成哨兵值，第二轨必须跟着走；随后 `apply()` 复原成生产算法值。
+      const sentinelPx = tier.chat + VIEWPORT_TIER_SENTINEL_DELTA_PX;
+      const sentinel = await evaluate(`(() => { ${MEASURE_FN}
+        const root = document.documentElement;
+        root.style.setProperty('--omnimux-conversation-width', '${sentinelPx}px');
+        const probed = measure();
+        const restored = window.__omnimuxRatio.apply();
+        return { probed: probed, restored: restored };
+      })()`);
+      const sentinelVerdict = judgeViewportTierPinBoundToVar({
+        measured: sentinel.probed,
+        sentinelPx,
+      });
+      const restoreVerdict = judgeViewportTier(sentinel.restored, tier);
+      if (!restoreVerdict.pass) {
+        sentinelVerdict.pass = false;
+        sentinelVerdict.reasons.push(
+          `哨兵探针未复原成产线状态：${restoreVerdict.reasons.join('；')}`,
+        );
+      }
+
+      // ---- 反向对照：停用生产样式表后该档必须转红（档位判定可证伪）----
+      const reverse = await evaluate(`(() => { ${MEASURE_FN}
+        const production = document.getElementById('qa-production');
+        if (production) production.disabled = true;
+        const probed = measure();
+        if (production) production.disabled = false;
+        return { probed: probed, restored: measure() };
+      })()`);
+      const reverseVerdict = judgeViewportTierPinReverseControl({ measured: reverse.probed, tier });
+      const reverseRestoreVerdict = judgeViewportTier(reverse.restored, tier);
+      if (!reverseRestoreVerdict.pass) {
+        reverseVerdict.pass = false;
+        reverseVerdict.reasons.push(
+          `反向对照未复原成产线状态：${reverseRestoreVerdict.reasons.join('；')}`,
+        );
+      }
+
       report.viewportTiers.push({
         key: `viewport-tier-${tier.viewport}`,
         viewport: tier.viewport,
@@ -818,8 +906,19 @@ async function main() {
         before: pickTracks(before),
         after: pickTracks(after.measured),
         trackSum,
-        pass: tierVerdict.pass && rightbarVerdict.pass && pinnedVerdict.pass,
-        reasons: [...tierVerdict.reasons, ...rightbarVerdict.reasons, ...pinnedVerdict.reasons],
+        sentinel: {
+          sentinelPx,
+          measuredChat: sentinel.probed.conversationTrack,
+          restoredChat: sentinel.restored.conversationTrack,
+        },
+        reverseControl: {
+          productionDisabledChat: reverse.probed.conversationTrack,
+          driftPx: reverseVerdict.drift,
+          restoredChat: reverse.restored.conversationTrack,
+        },
+        pass: tierVerdict.pass && rightbarVerdict.pass && pinnedVerdict.pass
+          && sentinelVerdict.pass && reverseVerdict.pass,
+        reasons: [...tierVerdict.reasons, ...rightbarVerdict.reasons, ...pinnedVerdict.reasons, ...sentinelVerdict.reasons, ...reverseVerdict.reasons],
       });
 
       add(`viewport-tier-${tier.viewport}`, tierVerdict.pass, {
@@ -840,6 +939,19 @@ async function main() {
         bridgeChat: after.bridge?.chat,
         measuredChat: after.measured.conversationTrack,
         reasons: pinnedVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-pin-bound-to-var`, sentinelVerdict.pass, {
+        sentinelPx,
+        measuredChat: sentinel.probed.conversationTrack,
+        restoredChat: sentinel.restored.conversationTrack,
+        reasons: sentinelVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-pin-reverse-control`, reverseVerdict.pass, {
+        productionDisabledChat: reverse.probed.conversationTrack,
+        expectedChat: tier.chat,
+        driftPx: reverseVerdict.drift,
+        restoredChat: reverse.restored.conversationTrack,
+        reasons: reverseVerdict.reasons,
       });
 
       if (previousTier) {

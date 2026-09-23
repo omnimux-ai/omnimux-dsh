@@ -37,6 +37,14 @@ export const CHAT_RATIO_WRITE_EPSILON = 5e-4
 let pendingTimer = null
 /** @type {number | null} */
 let pendingRatio = null
+/**
+ * 落盘版本号：每次真实写入自增。
+ *
+ * 上层（`sidebar-toggle-topbar.resolveConversationRatio`）按帧解析比例并缓存，缓存必须能感知
+ * 「别处刚写过比例」——用版本号比对代替「每帧重新读盘」，否则一旦有写入者绕过缓存，
+ * 中栏按新比例、右栏按旧比例，「三栏之和 = 视口」当场破裂（H-4）。
+ */
+let writeRevision = 0
 
 function resolveStorage(explicit) {
   if (explicit) return explicit
@@ -54,6 +62,14 @@ function resolveTimers() {
   } catch {
     return globalThis
   }
+}
+
+/**
+ * 读取落盘版本号。上层缓存的失效判据：版本号变化即重新解析（H-4）。
+ * @returns {number}
+ */
+export function getChatRatioWriteRevision() {
+  return writeRevision
 }
 
 /**
@@ -115,6 +131,7 @@ export function writeChatRatio(ratio, opts = {}) {
       WORKSPACE_LAYOUT_KEY,
       JSON.stringify({ version: WORKSPACE_LAYOUT_VERSION, chatRatio: normalized }),
     )
+    writeRevision += 1
     return true
   } catch {
     return false
@@ -133,10 +150,15 @@ function readStoredNumber(storage) {
 
 /**
  * 防抖写入：拖拽期每帧都会产生一个新比例，逐帧落盘既无必要也伤性能。
+ *
+ * 无可用存储时直接返回：拖拽热路径不该为一次注定失败的写入挂一个定时器
+ * （隐私模式 / 无 DOM 环境；`writeChatRatio` 自己也会判空）。
  * @param {unknown} ratio
  * @param {{ storage?: Storage | null, delayMs?: number }} [opts]
+ * @returns {boolean} 是否真的排入了一次待发写
  */
 export function schedulePersistChatRatio(ratio, opts = {}) {
+  if (!resolveStorage(opts.storage)) return false
   pendingRatio = normalizeConversationRatio(ratio)
   const delay = Number.isFinite(opts.delayMs) ? Math.max(0, Number(opts.delayMs)) : CHAT_RATIO_PERSIST_DEBOUNCE_MS
   const timers = resolveTimers()
@@ -150,6 +172,7 @@ export function schedulePersistChatRatio(ratio, opts = {}) {
     pendingRatio = null
     if (value !== null) writeChatRatio(value, { storage: opts.storage })
   }, delay)
+  return true
 }
 
 /**
