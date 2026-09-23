@@ -374,6 +374,17 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 }
 
 /* OmniMux Settings: Dual-Tab & Providers layout */
+.omnimux-settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.omx-runtime-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 .omx-segmented-tabs {
   display: flex;
   background: var(--dsw-alias-bg-layer-2);

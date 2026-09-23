@@ -1,13 +1,12 @@
 /**
- * E2E: 插件配置收敛为本机 CLI 与媒体生成提供商分层共存架构 (Issue #2597)
+ * E2E: 插件配置双栏目解耦：分离「对话与媒体生成模型」与「创作画布模型」双独立卡片 (Issue #2605)
  *
- * 真实渲染 RuntimeModeSection 组件（esbuild 打包 -> jsdom -> React），UI 原子组件使用轻量桩，
+ * 真实渲染 ModelsSettingsCard 组件（esbuild 打包 -> jsdom -> React），UI 原子组件使用轻量桩，
  * 验证：
- * 1. 顶置 OmniMux Cloud 横幅独立性（未登录展示引导文案及登录/注册按钮，不阻断设置）；
- * 2. 双分段选项卡（Tab 1: 本机 CLI，Tab 2: 媒体生成提供商）平滑切换；
- * 3. 本机 CLI 列表展示与选择；
- * 4. 媒体生成提供商三大预设（fal.ai, OpenAI, OpenRouter）及端点/模型表单配置；
- * 5. 底栏全局状态常驻指示器。
+ * 1. 结构彻底解耦：页面呈现出两个并列独立的 .omnimux-models-card 卡片；
+ * 2. 栏目标题准确：第一个卡片标题严格为“对话与媒体生成模型”，第二个卡片标题严格为“创作画布模型”；
+ * 3. 栏目一（对话与媒体）：承载顶置 OmniMux Cloud 横幅、双分段选项卡（本机 CLI ｜ 媒体生成提供商）与全局底栏；
+ * 4. 栏目二（创作画布）：纯粹承载文本、图片、视频、音频各模态新建节点默认模型及思考等级。
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -17,9 +16,25 @@ import React, { act } from 'react'
 import { JSDOM } from 'jsdom'
 
 const require = createRequire(import.meta.url)
-const COMPONENT_PATH = new URL('../../src/client/RuntimeModeSection.jsx', import.meta.url).pathname
+const CARD_PATH = new URL('../../src/client/ModelsSettingsCard.jsx', import.meta.url).pathname
 
 const ZH = {
+  'models.title': '创作画布模型',
+  'models.description': '管理创作画布右侧面板各类型节点的新建默认模型与参数规则',
+  'models.composerTitle': '输入框可见模型',
+  'models.composerHint': '只列出执行中枢当前上架的模型',
+  'models.composerKeepOne': '至少保留一个模型',
+  'models.groupText': '文本',
+  'models.groupImage': '图片',
+  'models.groupVideo': '视频',
+  'models.groupAudio': '音频',
+  'models.rowModel': '默认模型',
+  'models.rowMode': '默认模式',
+  'models.rowReasoning': '思考等级',
+  'models.reset': '恢复默认',
+  'models.loading': '加载模型列表…',
+  'runtime.cardTitle': '对话与媒体生成模型',
+  'runtime.cardDesc': '管理用于执行对话提示词的本地命令行助手，以及图片、视频、音频的媒体生成提供商',
   'runtime.title': '运行方式',
   'runtime.hint': '文字和媒体由谁生成；账号、发布、额度仍需要登录',
   'runtime.tabCli': '本机 CLI',
@@ -80,10 +95,10 @@ function createScope(initialValues = {}) {
   }
 }
 
-async function loadComponent() {
+async function loadCardComponent() {
   globalThis.React = React
   const output = await build({
-    entryPoints: [COMPONENT_PATH],
+    entryPoints: [CARD_PATH],
     bundle: true,
     write: false,
     format: 'cjs',
@@ -104,6 +119,8 @@ async function loadComponent() {
           React.createElement('select', { id, value, onChange: (e) => onChange(e.target.value), className: 'omx-stub-select' },
             (options || []).map(o => React.createElement('option', { key: o.value, value: o.value }, o.label))
           ),
+        SelectableTile: ({ title, selected, onChange }) =>
+          React.createElement('div', { onClick: () => onChange(!selected), className: 'omx-stub-tile' }, title),
       }
     }
     return require(id)
@@ -112,9 +129,9 @@ async function loadComponent() {
   return mod.exports
 }
 
-describe('media-providers-convergence.e2e', () => {
-  it('renders dual-tabs, cloud banner, CLI list, media providers and bottom status bar', async () => {
-    const { RuntimeModeSection } = await loadComponent()
+describe('settings-sections-split.e2e', () => {
+  it('renders two separate cards: Conversation & Media Generation Models vs Creative Canvas Models', async () => {
+    const { ModelsSettingsCard } = await loadCardComponent()
 
     const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
       url: 'http://localhost:43120/',
@@ -123,6 +140,26 @@ describe('media-providers-convergence.e2e', () => {
     globalThis.window = dom.window
     globalThis.document = dom.window.document
     globalThis.fetch = async (url) => {
+      if (url.includes('/omnimux/model-catalog')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            text: [{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }],
+            image: [{ id: 'gpt-image-2.5', label: 'GPT Image 2.5' }],
+            video: [{ id: 'seedance-2-5', label: 'Seedance 2.5' }],
+            audio: [{ id: 'suno', label: 'Suno' }],
+            defaults: {
+              text: 'gemini-3.8-flash',
+              image: 'gpt-image-2.5',
+              video: 'seedance-2-5',
+              audio: 'suno',
+            },
+            defaultOperations: {},
+            models: [],
+          }),
+        }
+      }
       if (url.includes('/omnimux/agents')) {
         return {
           ok: true,
@@ -159,6 +196,10 @@ describe('media-providers-convergence.e2e', () => {
       runtimeAgentId: 'codex',
       runtimeMediaProvider: 'fal',
       runtimeKeyVerified: true,
+      defaultTextModel: 'gemini-3.8-flash',
+      defaultImageModel: 'gpt-image-2.5',
+      defaultVideoModel: 'seedance-2-5',
+      defaultAudioModel: 'suno',
     })
 
     const root = dom.window.document.getElementById('root')
@@ -166,45 +207,33 @@ describe('media-providers-convergence.e2e', () => {
     const reactRoot = createRoot(root)
 
     await act(async () => {
-      reactRoot.render(React.createElement(RuntimeModeSection, { t, scope }))
+      reactRoot.render(React.createElement(ModelsSettingsCard, { t, scope }))
     })
 
-    // Assert S1 & S2: Cloud banner rendered and dual tabs present
-    const banner = root.querySelector('.omx-cloud-banner')
-    assert.ok(banner, 'Cloud banner must be mounted')
-    assert.ok(banner.textContent.includes('OmniMux Cloud'), 'Banner must display OmniMux Cloud')
+    // Assert S1: Two separate cards rendered
+    const cards = root.querySelectorAll('.omnimux-models-card')
+    assert.equal(cards.length, 2, 'Must render exactly two distinct cards')
 
-    const tabs = root.querySelectorAll('.omx-tab-btn')
-    assert.equal(tabs.length, 2, 'Must have exactly two tabs: 本机 CLI and 媒体生成提供商')
-    assert.ok(tabs[0].textContent.includes('本机 CLI'), 'First tab is 本机 CLI')
-    assert.ok(tabs[1].textContent.includes('媒体生成提供商'), 'Second tab is 媒体生成提供商')
+    // Assert S2: Card titles and descriptions
+    const runtimeCard = cards[0]
+    const canvasCard = cards[1]
 
-    // Tab 1 active by default
-    assert.equal(tabs[0].getAttribute('aria-selected'), 'true')
-    const cliList = root.querySelector('.omx-cli-list')
-    assert.ok(cliList, 'CLI list must be rendered when Tab 1 is active')
+    assert.equal(runtimeCard.getAttribute('data-section'), 'runtime')
+    assert.ok(runtimeCard.querySelector('.omnimux-models-card__title').textContent.includes('对话与媒体生成模型'), 'Card 1 title is 对话与媒体生成模型')
+    assert.ok(runtimeCard.querySelector('.omnimux-models-card__desc').textContent.includes('管理用于执行对话提示词'), 'Card 1 desc is correct')
 
-    // Switch to Tab 2
-    await act(async () => {
-      tabs[1].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
-    })
-    assert.equal(tabs[1].getAttribute('aria-selected'), 'true')
+    assert.equal(canvasCard.getAttribute('data-section'), 'canvas-models')
+    assert.ok(canvasCard.querySelector('.omnimux-models-card__title').textContent.includes('创作画布模型'), 'Card 2 title is 创作画布模型')
+    assert.ok(canvasCard.querySelector('.omnimux-models-card__desc').textContent.includes('管理创作画布右侧面板各类型节点'), 'Card 2 desc is correct')
 
-    const mediaGrid = root.querySelector('.omx-media-grid')
-    assert.ok(mediaGrid, 'Media provider grid must be rendered when Tab 2 is active')
-    const providerCards = root.querySelectorAll('.omx-provider-choice')
-    assert.equal(providerCards.length, 3, 'Must render fal.ai, OpenAI, OpenRouter providers')
+    // Assert S3: Card 1 has tabs, banner, and status bar
+    assert.ok(runtimeCard.querySelector('.omx-cloud-banner'), 'Card 1 contains OmniMux Cloud banner')
+    assert.ok(runtimeCard.querySelector('.omx-segmented-tabs'), 'Card 1 contains dual tabs')
+    assert.ok(runtimeCard.querySelector('.omx-status-bar'), 'Card 1 contains bottom status bar')
 
-    // Assert S4: Form contains image, video, audio model pickers
-    const selects = root.querySelectorAll('.omx-stub-select')
-    assert.equal(selects.length, 3, 'Must have dropdowns for image, video, audio models')
-
-    // Assert S5: Bottom status bar reflects coexistence
-    const statusBar = root.querySelector('.omx-status-bar')
-    assert.ok(statusBar, 'Global status bar must be mounted')
-    assert.ok(statusBar.textContent.includes('当前对话链路：'), 'Displays conversation link')
-    assert.ok(statusBar.textContent.includes('媒体链路：'), 'Displays media link')
-    assert.ok(statusBar.textContent.includes('✓ 媒体链路就绪'), 'Displays ready indicator')
+    // Assert S4: Card 2 contains canvas groups
+    const groups = canvasCard.querySelectorAll('.omnimux-models-card__group')
+    assert.ok(groups.length >= 4, 'Card 2 contains text, image, video, audio model groups')
 
     await act(async () => {
       reactRoot.unmount()
