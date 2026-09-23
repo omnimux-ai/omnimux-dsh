@@ -9,6 +9,7 @@ import type {
   ApplicationManifest,
   ApplicationCategory,
   FormWidgetType,
+  LibraryKind,
   FieldMappingType,
   RestrictedJsonSchema,
   FormPropertySchema,
@@ -29,7 +30,13 @@ export const VALID_WIDGETS: readonly FormWidgetType[] = [
   'ratio-cards',
   'slider-range',
   'switch-boolean',
+  'library-picker',
+  'multi-tags',
+  'segmented-tabs',
+  'product-link',
 ] as const;
+
+export const VALID_LIBRARY_KINDS: readonly LibraryKind[] = ['asset', 'inspiration', 'product'] as const;
 
 export const VALID_MAPPING_TYPES: readonly FieldMappingType[] = ['text', 'param', 'slot', 'media'] as const;
 
@@ -365,6 +372,8 @@ function validatePropertySchema(propName: string, prop: unknown, errors: string[
 
   if (p.widget !== undefined && !VALID_WIDGETS.includes(p.widget as any)) {
     errors.push(`property "${propName}".widget must be one of [${VALID_WIDGETS.join(', ')}]`);
+  } else if (p.widget !== undefined) {
+    validateWidgetConfig(propName, p, errors);
   }
 
   if (p.type === 'array') {
@@ -381,6 +390,62 @@ function validatePropertySchema(propName: string, prop: unknown, errors: string[
     }
     for (const [subKey, subDef] of Object.entries(p.properties as Record<string, unknown>)) {
       validatePropertySchema(`${propName}.${subKey}`, subDef, errors);
+    }
+  }
+}
+
+/**
+ * Per-widget configuration contract for the compound widgets.
+ * Fail-closed: an illegal widget configuration rejects the whole schema.
+ */
+function validateWidgetConfig(propName: string, p: Record<string, unknown>, errors: string[]): void {
+  const widget = p.widget as FormWidgetType;
+
+  if (widget === 'library-picker') {
+    if (p.type !== 'string') {
+      errors.push(`property "${propName}" with widget "library-picker" must have type "string"`);
+    }
+    if (!VALID_LIBRARY_KINDS.includes(p.library as any)) {
+      errors.push(
+        `property "${propName}".library must be one of [${VALID_LIBRARY_KINDS.join(', ')}], received "${p.library}"`,
+      );
+    }
+  }
+
+  if (widget === 'product-link' && p.type !== 'string') {
+    errors.push(`property "${propName}" with widget "product-link" must have type "string"`);
+  }
+
+  if (widget === 'segmented-tabs') {
+    if (p.type !== 'string') {
+      errors.push(`property "${propName}" with widget "segmented-tabs" must have type "string"`);
+    }
+    const optionCount = Array.isArray(p.options)
+      ? p.options.length
+      : Array.isArray(p.enum)
+        ? p.enum.length
+        : 0;
+    if (optionCount < 2 || optionCount > 4) {
+      errors.push(
+        `property "${propName}" with widget "segmented-tabs" must declare 2~4 options/enum entries, received ${optionCount}`,
+      );
+    }
+  }
+
+  if (widget === 'multi-tags') {
+    if (p.type !== 'array') {
+      errors.push(`property "${propName}" with widget "multi-tags" must have type "array"`);
+    } else {
+      const items = p.items as Record<string, unknown> | undefined;
+      if (!items || items.type !== 'string') {
+        errors.push(`property "${propName}" with widget "multi-tags" must declare items of type "string"`);
+      }
+    }
+    if (!Array.isArray(p.options) || p.options.length === 0) {
+      errors.push(`property "${propName}" with widget "multi-tags" must declare a non-empty "options" array`);
+    }
+    if (p.maxItems !== undefined && (!Number.isInteger(p.maxItems) || (p.maxItems as number) < 1)) {
+      errors.push(`property "${propName}".maxItems must be a positive integer for widget "multi-tags"`);
     }
   }
 }

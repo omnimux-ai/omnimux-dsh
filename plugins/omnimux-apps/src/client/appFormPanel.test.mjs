@@ -184,6 +184,10 @@ describe('T04: AI Application Form Engine (AppFormPanel)', () => {
     assert.match(content, /switch-boolean/);
     assert.match(content, /media-uploader/);
     assert.match(content, /media-extractor/);
+    assert.match(content, /library-picker/);
+    assert.match(content, /multi-tags/);
+    assert.match(content, /segmented-tabs/);
+    assert.match(content, /product-link/);
     assert.match(content, /立即生成/);
   });
 

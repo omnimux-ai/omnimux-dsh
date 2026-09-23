@@ -9,9 +9,9 @@
 /** Top-level category for OmniMux AI applications: strictly video | image | audio */
 export type ApplicationCategory = 'video' | 'image' | 'audio';
 
-/** 9 Standard Universal Form Widgets */
+/** 13 Standard Universal Form Widgets */
 export type FormWidgetType =
-  | 'media-extractor'   // Compound social media video/link extractor + drag-and-drop
+  | 'media-extractor'   // Compound media link input: paste link / local upload / asset library
   | 'media-uploader'    // Pure media asset drag-and-drop uploader
   | 'input-text'        // 40px Single-line text input
   | 'textarea'          // 80px Multi-line text area (fixed height, resize: none)
@@ -19,7 +19,14 @@ export type FormWidgetType =
   | 'select-grid-pair'  // Dual-column dropdown pair (195px + 8px gap + 195px = 398px)
   | 'ratio-cards'       // Aspect ratio option cards (9:16, 16:9, 1:1, 4:3)
   | 'slider-range'      // Numeric range slider with dual cursor support
-  | 'switch-boolean';   // Boolean toggle switch
+  | 'switch-boolean'    // Boolean toggle switch
+  | 'library-picker'    // Library picker: asset / inspiration / product library modal with search + grid
+  | 'multi-tags'        // Capsule-tag multi-select with a max selection limit
+  | 'segmented-tabs'    // 2~4 option segmented tabs (single choice)
+  | 'product-link';     // Single-line product link input + product library picker button
+
+/** Business library a library-picker field binds to */
+export type LibraryKind = 'asset' | 'inspiration' | 'product';
 
 /** Mapping type between form field and workflow execution slot / parameter */
 export type FieldMappingType = 'text' | 'param' | 'slot' | 'media';
@@ -78,6 +85,8 @@ export interface FormPropertySchema {
   widget?: FormWidgetType;
   placeholder?: string;
   options?: Array<{ label: string; value: unknown }>;
+  /** library-picker only: which business library the picker reads */
+  library?: LibraryKind;
 }
 
 /** Restricted JSON Schema Draft-07 root schema */

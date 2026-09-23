@@ -964,5 +964,529 @@
         }
       ]
     }
+  },
+  {
+    "schemaVersion": "1.0.0",
+    "appId": "app-builtin-product-video",
+    "version": "1.0.0",
+    "workflowBinding": {
+      "workspaceId": "ws-app-builtin-product-video",
+      "workflowVersion": 1
+    },
+    "metadata": {
+      "name": "商品生视频",
+      "category": "video",
+      "description": "粘贴商品链接或选择商品主图，一键生成带货短视频",
+      "icon": "video",
+      "tags": [
+        "builtin",
+        "e-commerce",
+        "product-video"
+      ],
+      "author": "OmniMux Official"
+    },
+    "formSchema": {
+      "type": "object",
+      "properties": {
+        "product_image": {
+          "type": "string",
+          "title": "商品主图 / 白底图",
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "library": "asset",
+          "placeholder": "从资产库选择"
+        },
+        "product_link": {
+          "type": "string",
+          "title": "商品链接",
+          "description": "EchoTik 及其他数据平台",
+          "widget": "product-link",
+          "placeholder": "粘贴商品链接，或从商品库选择"
+        },
+        "content_mode": {
+          "type": "string",
+          "title": "视频内容",
+          "widget": "segmented-tabs",
+          "default": "preset",
+          "options": [
+            {
+              "label": "预设视频类型",
+              "value": "preset"
+            },
+            {
+              "label": "自定义视频内容",
+              "value": "custom"
+            }
+          ]
+        },
+        "preset_type": {
+          "type": "string",
+          "title": "视频类型",
+          "description": "预设视频类型下生效",
+          "widget": "select-single",
+          "default": "ugc",
+          "options": [
+            {
+              "label": "UGC 种草",
+              "value": "ugc"
+            },
+            {
+              "label": "测评对比",
+              "value": "review"
+            },
+            {
+              "label": "开箱展示",
+              "value": "unboxing"
+            },
+            {
+              "label": "促销广告",
+              "value": "promo"
+            }
+          ]
+        },
+        "custom_brief": {
+          "type": "string",
+          "title": "自定义描述",
+          "description": "自定义视频内容下生效，描述想要的视频内容与风格",
+          "widget": "textarea",
+          "maxLength": 300,
+          "placeholder": "请输入视频内容与风格..."
+        },
+        "platforms": {
+          "type": "array",
+          "title": "投放平台",
+          "description": "选择本次成片要适配的平台，最多 3 个",
+          "widget": "multi-tags",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "options": [
+            {
+              "label": "TikTok",
+              "value": "TikTok"
+            },
+            {
+              "label": "Instagram",
+              "value": "Instagram"
+            },
+            {
+              "label": "YouTube",
+              "value": "YouTube"
+            },
+            {
+              "label": "Facebook",
+              "value": "Facebook"
+            },
+            {
+              "label": "快手",
+              "value": "快手"
+            },
+            {
+              "label": "小红书",
+              "value": "小红书"
+            }
+          ],
+          "default": [
+            "TikTok"
+          ]
+        },
+        "voice": {
+          "type": "string",
+          "title": "解说音色",
+          "description": "选择适合该视频情绪的 AI 配音解说音色",
+          "widget": "select-single",
+          "default": "zh_female_energetic",
+          "options": [
+            {
+              "label": "活力女声（电商促销爆款）",
+              "value": "zh_female_energetic"
+            },
+            {
+              "label": "沉稳男声（数码科技大片）",
+              "value": "zh_male_calm"
+            },
+            {
+              "label": "亲和闺蜜（达人开箱真实种草）",
+              "value": "zh_female_friendly"
+            },
+            {
+              "label": "磁性男声（高端商业质感）",
+              "value": "zh_male_deep"
+            }
+          ]
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "title": "成片比例",
+          "description": "选择适用的平台播放比例",
+          "widget": "ratio-cards",
+          "default": "9:16",
+          "options": [
+            {
+              "label": "9:16 竖屏 (TikTok / Shorts)",
+              "value": "9:16"
+            },
+            {
+              "label": "16:9 横屏 (YouTube / 官网)",
+              "value": "16:9"
+            },
+            {
+              "label": "1:1 方屏 (Instagram / 推广)",
+              "value": "1:1"
+            }
+          ]
+        }
+      },
+      "required": [
+        "product_image"
+      ],
+      "additionalProperties": false
+    },
+    "fieldMappings": {
+      "product_image": {
+        "nodeId": "node-slot-product-image",
+        "targetField": "mediaUrl",
+        "mappingType": "media",
+        "widget": "library-picker",
+        "required": true
+      },
+      "product_link": {
+        "nodeId": "node-slot-product-link",
+        "targetField": "content",
+        "mappingType": "text",
+        "widget": "product-link",
+        "required": false
+      },
+      "content_mode": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.contentMode",
+        "mappingType": "param",
+        "widget": "segmented-tabs",
+        "required": false,
+        "defaultValue": "preset"
+      },
+      "preset_type": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.presetType",
+        "mappingType": "param",
+        "widget": "select-single",
+        "required": false,
+        "defaultValue": "ugc"
+      },
+      "custom_brief": {
+        "nodeId": "node-slot-custom-brief",
+        "targetField": "content",
+        "mappingType": "text",
+        "widget": "textarea",
+        "required": false
+      },
+      "platforms": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.platforms",
+        "mappingType": "param",
+        "widget": "multi-tags",
+        "required": false,
+        "defaultValue": [
+          "TikTok"
+        ]
+      },
+      "voice": {
+        "nodeId": "node-slot-voice-tts",
+        "targetField": "params.voice",
+        "mappingType": "param",
+        "widget": "select-single",
+        "required": false,
+        "defaultValue": "zh_female_energetic"
+      },
+      "aspect_ratio": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.aspectRatio",
+        "mappingType": "param",
+        "widget": "ratio-cards",
+        "required": false,
+        "defaultValue": "9:16"
+      }
+    },
+    "showcase": {
+      "mode": "carousel",
+      "items": []
+    }
+  },
+  {
+    "schemaVersion": "1.0.0",
+    "appId": "app-builtin-viral-replication",
+    "version": "1.0.0",
+    "workflowBinding": {
+      "workspaceId": "ws-app-builtin-viral-replication",
+      "workflowVersion": 1
+    },
+    "metadata": {
+      "name": "爆款复刻",
+      "category": "video",
+      "description": "以爆款参考视频为蓝本，按你的改写意图复刻同款结构与节奏",
+      "icon": "video",
+      "tags": [
+        "builtin",
+        "viral-video",
+        "replication"
+      ],
+      "author": "OmniMux Official"
+    },
+    "formSchema": {
+      "type": "object",
+      "properties": {
+        "reference_video": {
+          "type": "string",
+          "title": "参考视频",
+          "description": "粘贴链接或上传，自动解析。支持 TikTok",
+          "widget": "media-extractor",
+          "placeholder": "粘贴视频链接或上传，自动解析"
+        },
+        "reference_inspiration": {
+          "type": "string",
+          "title": "参考灵感",
+          "description": "从灵感库选一条爆款作为参考",
+          "widget": "library-picker",
+          "library": "inspiration",
+          "placeholder": "从灵感库选择"
+        },
+        "rewrite_intent": {
+          "type": "string",
+          "title": "改写意图",
+          "description": "说明要替换的商品、人设或卖点",
+          "widget": "textarea",
+          "maxLength": 300,
+          "placeholder": "请输入改写意图..."
+        },
+        "platforms": {
+          "type": "array",
+          "title": "投放平台",
+          "description": "选择本次成片要适配的平台，最多 3 个",
+          "widget": "multi-tags",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "options": [
+            {
+              "label": "TikTok",
+              "value": "TikTok"
+            },
+            {
+              "label": "Instagram",
+              "value": "Instagram"
+            },
+            {
+              "label": "YouTube",
+              "value": "YouTube"
+            },
+            {
+              "label": "Facebook",
+              "value": "Facebook"
+            },
+            {
+              "label": "快手",
+              "value": "快手"
+            },
+            {
+              "label": "小红书",
+              "value": "小红书"
+            }
+          ],
+          "default": [
+            "TikTok"
+          ]
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "title": "成片比例",
+          "description": "选择适用的平台播放比例",
+          "widget": "ratio-cards",
+          "default": "9:16",
+          "options": [
+            {
+              "label": "9:16 竖屏 (TikTok / Shorts)",
+              "value": "9:16"
+            },
+            {
+              "label": "16:9 横屏 (YouTube / 官网)",
+              "value": "16:9"
+            },
+            {
+              "label": "1:1 方屏 (Instagram / 推广)",
+              "value": "1:1"
+            }
+          ]
+        }
+      },
+      "required": [
+        "reference_video",
+        "rewrite_intent"
+      ],
+      "additionalProperties": false
+    },
+    "fieldMappings": {
+      "reference_video": {
+        "nodeId": "node-slot-reference-video",
+        "targetField": "mediaUrl",
+        "mappingType": "media",
+        "widget": "media-extractor",
+        "required": true
+      },
+      "reference_inspiration": {
+        "nodeId": "node-slot-reference-inspiration",
+        "targetField": "mediaUrl",
+        "mappingType": "media",
+        "widget": "library-picker",
+        "required": false
+      },
+      "rewrite_intent": {
+        "nodeId": "node-slot-rewrite-intent",
+        "targetField": "content",
+        "mappingType": "text",
+        "widget": "textarea",
+        "required": true
+      },
+      "platforms": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.platforms",
+        "mappingType": "param",
+        "widget": "multi-tags",
+        "required": false,
+        "defaultValue": [
+          "TikTok"
+        ]
+      },
+      "aspect_ratio": {
+        "nodeId": "node-video-generation-core",
+        "targetField": "params.aspectRatio",
+        "mappingType": "param",
+        "widget": "ratio-cards",
+        "required": false,
+        "defaultValue": "9:16"
+      }
+    },
+    "showcase": {
+      "mode": "carousel",
+      "items": []
+    }
+  },
+  {
+    "schemaVersion": "1.0.0",
+    "appId": "app-builtin-video-to-prompt",
+    "version": "1.0.0",
+    "workflowBinding": {
+      "workspaceId": "ws-app-builtin-video-to-prompt",
+      "workflowVersion": 1
+    },
+    "metadata": {
+      "name": "视频转提示词",
+      "category": "video",
+      "description": "拆解参考视频的钩子、节奏与分镜，反推可复用的生成提示词",
+      "icon": "video",
+      "tags": [
+        "builtin",
+        "deconstruction",
+        "prompt"
+      ],
+      "author": "OmniMux Official"
+    },
+    "formSchema": {
+      "type": "object",
+      "properties": {
+        "source_video": {
+          "type": "string",
+          "title": "视频链接",
+          "description": "粘贴链接或上传，自动解析。支持 TikTok",
+          "widget": "media-extractor",
+          "placeholder": "粘贴视频链接或上传，自动解析"
+        },
+        "analysis_focus": {
+          "type": "array",
+          "title": "拆解维度",
+          "description": "选择要拆解的维度，最多 4 个",
+          "widget": "multi-tags",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "options": [
+            {
+              "label": "黄金钩子",
+              "value": "hook"
+            },
+            {
+              "label": "节奏结构",
+              "value": "pacing"
+            },
+            {
+              "label": "分镜语言",
+              "value": "shots"
+            },
+            {
+              "label": "口播文案",
+              "value": "script"
+            }
+          ],
+          "default": [
+            "hook",
+            "pacing"
+          ]
+        },
+        "prompt_language": {
+          "type": "string",
+          "title": "提示词语言",
+          "widget": "segmented-tabs",
+          "default": "zh",
+          "options": [
+            {
+              "label": "中文提示词",
+              "value": "zh"
+            },
+            {
+              "label": "英文提示词",
+              "value": "en"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_video"
+      ],
+      "additionalProperties": false
+    },
+    "fieldMappings": {
+      "source_video": {
+        "nodeId": "node-slot-source-video",
+        "targetField": "mediaUrl",
+        "mappingType": "media",
+        "widget": "media-extractor",
+        "required": true
+      },
+      "analysis_focus": {
+        "nodeId": "node-prompt-analysis-core",
+        "targetField": "params.analysisFocus",
+        "mappingType": "param",
+        "widget": "multi-tags",
+        "required": false,
+        "defaultValue": [
+          "hook",
+          "pacing"
+        ]
+      },
+      "prompt_language": {
+        "nodeId": "node-prompt-analysis-core",
+        "targetField": "params.promptLanguage",
+        "mappingType": "param",
+        "widget": "segmented-tabs",
+        "required": false,
+        "defaultValue": "zh"
+      }
+    },
+    "showcase": {
+      "mode": "carousel",
+      "items": []
+    }
   }
 ]
