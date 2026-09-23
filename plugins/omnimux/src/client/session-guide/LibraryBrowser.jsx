@@ -79,6 +79,9 @@ export function LibraryBrowser({ model, t }) {
     ensureAssetCardStyles()
     ensureProductCardStyles()
     ensureInspirationCardStyles()
+  }, [])
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         model?.onClose?.()
@@ -86,7 +89,7 @@ export function LibraryBrowser({ model, t }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [model])
+  }, [model?.onClose])
 
   useEffect(() => {
     let live = true
