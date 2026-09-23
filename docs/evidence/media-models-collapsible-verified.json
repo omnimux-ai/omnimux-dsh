@@ -1,0 +1,27 @@
+{
+  "issue": 2613,
+  "feature": "media-models-collapsible",
+  "verified_at": "2026-09-23T17:49:00+08:00",
+  "criteria": {
+    "S1_default_collapsed": "PASS",
+    "S2_interactive_expand": "PASS",
+    "S3_vertical_column_layout": "PASS",
+    "S4_e2e_regression_pass": "PASS"
+  },
+  "verified_elements": [
+    {
+      "trigger": ".omx-collapsible-header",
+      "text": "高级模型映射",
+      "default_expanded": false
+    },
+    {
+      "container": ".omx-caps-column",
+      "direction": "column",
+      "items": [
+        "runtime.imageModel",
+        "runtime.videoModel",
+        "runtime.audioModel"
+      ]
+    }
+  ]
+}
