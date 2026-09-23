@@ -1,0 +1,20 @@
+{
+  "task": "app-open-fullscreen",
+  "status": "PASS",
+  "verifiedAt": "2026-09-23T14:20:00+08:00",
+  "scene": "新会话页（空会话/hero）打开 AI 应用 → 右侧栏自动官方全屏；已有对话打开应用 → 布局不变",
+  "evidenceFiles": ["docs/evidence/app-open-fullscreen-scene.png"],
+  "assertions": {
+    "heroOpenAppClicksOfficialFullscreenOnce": true,
+    "activeConversationOpenAppClicksNothing": true,
+    "alreadyFullscreenNoOp": true,
+    "programmaticGuardWrapsAction": true,
+    "seamRegisteredOnInstallAndReclaimedOnUninstall": true
+  },
+  "tests": {
+    "workflowProjectCanvas": "33/33",
+    "workflowAppTabAndLibrary": "24/24",
+    "hubWorkbenchSuites": "56/56",
+    "e2e": "plugins/omnimux-workflow/tests/app-open-fullscreen.e2e.test.mjs (4/4)"
+  }
+}

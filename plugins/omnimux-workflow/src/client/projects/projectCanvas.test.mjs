@@ -8,6 +8,7 @@ import {
   CANVAS_SENTINEL_PATH,
   CANVAS_TAB_ID,
   collectTabs,
+  enterFullscreenWhenBlankConversation,
   factorySidebarWidthPx,
   isSeedFilesTab,
   leftoverHalfSidebarWidthPx,
@@ -578,6 +579,90 @@ describe('projectCanvas isolation', () => {
       assert.equal(opened.length, 1)
       assert.equal(opened[0].seed.id, 'app_from_window_global')
       assert.equal(opened[0].seed.title, '全局打开测试')
+    } finally {
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+      bindBetterSidebar(null)
+    }
+  })
+})
+
+describe('空会话打开应用自动全屏', () => {
+  function fakeDoc({ hero }) {
+    return {
+      querySelector(selector) {
+        if (selector === '[data-phase="hero"]') return hero ? { nodeType: 1 } : null
+        return null
+      },
+    }
+  }
+
+  it('hero 阶段 + 中枢缝就绪：在程序化保护内调用缝一次', () => {
+    const calls = []
+    const guard = []
+    const doc = fakeDoc({ hero: true })
+    const win = {
+      document: doc,
+      __omnimuxEnterRightSidebarFullscreen: (arg) => { calls.push(arg); return true },
+      __omnimuxTabViewport: {
+        beginProgrammatic() { guard.push('begin') },
+        endProgrammatic() { guard.push('end') },
+      },
+    }
+    assert.equal(enterFullscreenWhenBlankConversation(win), true)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0], doc)
+    assert.deepEqual(guard, ['begin', 'end'], '必须包在调和器程序化保护内，且成对出现')
+  })
+
+  it('非 hero 阶段（已有对话）：不调用缝，返回 false', () => {
+    const calls = []
+    const win = {
+      document: fakeDoc({ hero: false }),
+      __omnimuxEnterRightSidebarFullscreen: () => { calls.push(1); return true },
+    }
+    assert.equal(enterFullscreenWhenBlankConversation(win), false)
+    assert.equal(calls.length, 0)
+  })
+
+  it('中枢缝缺失或抛错：安静降级 false，绝不阻断', () => {
+    assert.equal(enterFullscreenWhenBlankConversation({ document: fakeDoc({ hero: true }) }), false)
+    const win = {
+      document: fakeDoc({ hero: true }),
+      __omnimuxEnterRightSidebarFullscreen: () => { throw new Error('boom') },
+    }
+    assert.equal(enterFullscreenWhenBlankConversation(win), false)
+    assert.equal(enterFullscreenWhenBlankConversation(null), false)
+  })
+
+  it('openAppTab 在空会话页打开应用后自动全屏；非空会话不触发', () => {
+    const previous = globalThis.window
+    const mockService = { openTab() { return true } }
+    const enterCalls = []
+    const guard = []
+    const makeWin = (hero) => ({
+      document: fakeDoc({ hero }),
+      dispatchEvent() {},
+      CustomEvent: class {},
+      __omnimuxEnterRightSidebarFullscreen: () => { enterCalls.push(1); return true },
+      __omnimuxTabViewport: {
+        beginProgrammatic() { guard.push('begin') },
+        endProgrammatic() { guard.push('end') },
+      },
+    })
+    try {
+      globalThis.window = makeWin(true)
+      bindBetterSidebar(mockService)
+      assert.equal(openAppTab({ appId: 'hero_app' }), true)
+      assert.equal(enterCalls.length, 1, '空会话页打开应用必须自动进入全屏')
+      assert.deepEqual(guard, ['begin', 'end'], '自动全屏必须包在调和器程序化保护内')
+
+      enterCalls.length = 0
+      guard.length = 0
+      globalThis.window = makeWin(false)
+      assert.equal(openAppTab({ appId: 'active_app' }), true)
+      assert.equal(enterCalls.length, 0, '已有对话时打开应用不得动布局')
+      assert.deepEqual(guard, [], '非空会话不得进入程序化保护')
     } finally {
       if (previous === undefined) delete globalThis.window
       else globalThis.window = previous

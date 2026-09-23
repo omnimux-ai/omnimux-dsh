@@ -17,6 +17,7 @@ import {
   installTabViewportReconciler,
   resolveCurrentTabId,
 } from './tab-viewport-reconciler.js'
+import { enterHostRightSidebarFullscreen } from './host-fullscreen.js'
 import { resetConversationCollapseForTests } from '../conversation-collapse.js'
 
 let dom
@@ -188,5 +189,9 @@ test('installTabViewportReconciler lifecycle: install and uninstall without leak
   const doc = setupDom(OPEN_PANEL)
   const unsub = installTabViewportReconciler(doc)
   assert.equal(typeof unsub, 'function')
+  const win = doc.defaultView
+  assert.equal(typeof win.__omnimuxEnterRightSidebarFullscreen, 'function', '安装后必须暴露官方全屏公开缝')
+  assert.equal(win.__omnimuxEnterRightSidebarFullscreen, enterHostRightSidebarFullscreen, '公开缝必须就是中枢唯一实现')
   unsub()
+  assert.equal(win.__omnimuxEnterRightSidebarFullscreen, undefined, '卸载后公开缝必须按身份回收')
 })
