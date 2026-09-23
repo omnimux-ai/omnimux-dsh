@@ -43,7 +43,7 @@ function login() {
     let settled = false
     const finish = () => { if (!settled) { settled = true; resolve() } }
     try {
-      const result = impl.ensureLogin({ onSuccess: finish, onCancel: finish, kind: 'write' })
+      const result = impl.ensureLogin({ onSuccess: finish, onCancel: finish, kind: 'write', action: 'quota' })
       if (result && typeof result.then === 'function') result.then(finish, finish)
     } catch { finish() }
   })

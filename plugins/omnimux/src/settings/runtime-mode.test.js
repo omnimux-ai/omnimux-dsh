@@ -62,9 +62,15 @@ describe('resolveRuntimeChoice', () => {
     assert.equal(requiresOfficialSignIn(custom, 'generate'), false)
     assert.equal(requiresOfficialSignIn(custom, 'publish'), true)
     assert.equal(requiresOfficialSignIn(custom, 'accounts'), true)
-    // An unclassified action keeps today's rule rather than being let through.
-    assert.equal(requiresOfficialSignIn(custom, 'something-else'), true)
+    assert.equal(requiresOfficialSignIn(custom, 'quota'), true)
+    assert.equal(requiresOfficialSignIn(custom, 'inspiration'), true)
+    // A local agent or custom key never sees the boot-time / unclassified window;
+    // only the named account actions open it for them.
+    assert.equal(requiresOfficialSignIn(custom, 'something-else'), false)
+    assert.equal(requiresOfficialSignIn(custom, undefined), false)
+    // Official mode keeps today's rule: everything prompts, unclassified included.
     assert.equal(requiresOfficialSignIn({}, 'generate'), true)
+    assert.equal(requiresOfficialSignIn({ runtimeMode: 'official' }, 'something-else'), true)
   })
 
   it('checks media kinds one by one: an image-only key never lets video through', () => {

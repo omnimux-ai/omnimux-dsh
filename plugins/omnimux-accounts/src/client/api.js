@@ -63,6 +63,7 @@ export function authGuard(fn) {
       return new Promise((resolve, reject) => {
         gate.ensureLogin({
           kind: 'write',
+          action: 'accounts',
           onSuccess: () => {
             fn(...args).then(resolve, reject)
           },
