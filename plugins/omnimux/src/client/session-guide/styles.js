@@ -3720,6 +3720,18 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   height:52px; padding:0;
   background:transparent;
 }
+.omnimux-library-stage-back {
+  display:inline-flex; align-items:center; gap:6px;
+  height:32px; padding:0 12px; border:0; border-radius:8px;
+  background:var(--dsw-alias-interactive-bg-subtle, rgba(255,255,255,0.06));
+  color:var(--dsw-alias-label-secondary); font:inherit; font-size:13px; font-weight:600;
+  cursor:pointer; transition:all 0.15s ease;
+  margin-right:4px;
+}
+.omnimux-library-stage-back:hover {
+  background:var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,0.12));
+  color:var(--dsw-alias-label-primary);
+}
 .omnimux-library-stage-tab {
   height:32px; padding:0; border:0; background:transparent; cursor:pointer;
   color:var(--dsw-alias-label-tertiary); font:inherit; font-size:15px; font-weight:650;

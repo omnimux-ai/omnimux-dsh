@@ -299,4 +299,23 @@ describe('composer add controller', () => {
     assert.doesNotMatch(f.notices.at(-1), /上限|最多/)
     f.controller.dispose()
   })
+
+  it('switches kind and tab when clicking another picker entrance in open state', () => {
+    const f = setup()
+    f.controller.openLibrary('a')
+    assert.equal(f.model.kind, 'library')
+    assert.equal(f.model.tab, 'assets')
+
+    // 再次点击从灵感库选择：应当平滑切换至 inspiration
+    f.controller.openInspiration('a')
+    assert.equal(f.model.kind, 'inspiration')
+    assert.equal(f.model.tab, 'inspiration')
+
+    // 再次点击从产品库选择：应当平滑切换至 products
+    f.controller.openProduct('a')
+    assert.equal(f.model.kind, 'product')
+    assert.equal(f.model.tab, 'products')
+
+    f.controller.dispose()
+  })
 })

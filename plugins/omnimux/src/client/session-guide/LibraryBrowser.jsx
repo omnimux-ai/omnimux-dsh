@@ -79,7 +79,14 @@ export function LibraryBrowser({ model, t }) {
     ensureAssetCardStyles()
     ensureProductCardStyles()
     ensureInspirationCardStyles()
-  }, [])
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        model?.onClose?.()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [model])
 
   useEffect(() => {
     let live = true
@@ -107,6 +114,17 @@ export function LibraryBrowser({ model, t }) {
   return (
     <section className="omnimux-library-stage" data-omnimux-library-stage="" aria-label="挑选素材">
       <div className="omnimux-library-stage-tabs" role="tablist" aria-label="素材分类">
+        <button
+          type="button"
+          className="omnimux-library-stage-back"
+          aria-label="返回首页"
+          onClick={() => model?.onClose?.()}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          <span>返回</span>
+        </button>
         {LIBRARY_TABS.map((item) => (
           <button
             key={item.id}

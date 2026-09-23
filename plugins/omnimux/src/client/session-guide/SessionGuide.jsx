@@ -151,6 +151,7 @@ function BlankSessionGuide({
     const root = guideRef.current?.closest('[data-phase]')
     const column = root?.querySelector?.('[class*="scrollBody"]') || root
     if (!libraryStage || !column) return undefined
+    const win = column.ownerDocument?.defaultView || window
     const place = () => {
       const rect = column.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
@@ -161,36 +162,33 @@ function BlankSessionGuide({
       const phase = column.closest?.('[data-phase]') || column
       phase.setAttribute('data-omnimux-starter-host', '')
       phase.setAttribute('data-omnimux-dock-open', '')
-      const view = column.ownerDocument?.defaultView
-      if (view) {
-        view.document.documentElement.style.setProperty('--omnimux-library-stage-left', left)
-        view.document.documentElement.style.setProperty('--omnimux-library-stage-width', width)
+      if (win) {
+        win.document.documentElement.style.setProperty('--omnimux-library-stage-left', left)
+        win.document.documentElement.style.setProperty('--omnimux-library-stage-width', width)
       }
     }
     place()
-    const view = column.ownerDocument?.defaultView || window
     let frame = 0
     const schedule = () => {
       if (frame) return
-      frame = view.requestAnimationFrame(() => {
+      frame = win.requestAnimationFrame(() => {
         frame = 0
         place()
       })
     }
-    const observer = typeof view.ResizeObserver === 'function' ? new view.ResizeObserver(schedule) : null
+    const observer = typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(schedule) : null
     observer?.observe(column)
-    view.addEventListener('resize', schedule)
+    win.addEventListener('resize', schedule)
     return () => {
-      if (frame) view.cancelAnimationFrame(frame)
+      if (frame) win.cancelAnimationFrame(frame)
       observer?.disconnect()
-      view.removeEventListener('resize', schedule)
+      win.removeEventListener('resize', schedule)
       column.style.removeProperty('--omnimux-library-stage-left')
       column.style.removeProperty('--omnimux-library-stage-width')
       const phase = column.closest?.('[data-phase]') || column
       phase.removeAttribute('data-omnimux-dock-open')
-      const view = column.ownerDocument?.defaultView
-      view?.document.documentElement.style.removeProperty('--omnimux-library-stage-left')
-      view?.document.documentElement.style.removeProperty('--omnimux-library-stage-width')
+      win.document.documentElement.style.removeProperty('--omnimux-library-stage-left')
+      win.document.documentElement.style.removeProperty('--omnimux-library-stage-width')
     }
   }, [libraryStage])
 
