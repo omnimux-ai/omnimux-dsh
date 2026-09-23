@@ -2,6 +2,19 @@
     const pickerSearchCache = new Map();
     const pickerSearchInflight = new Map();
 
+    function showSkillCreationError(text) {
+      if (typeof document === "undefined" || !document.body) return;
+      document.getElementById("sh-skill-create-error")?.remove();
+      const notice = document.createElement("div");
+      notice.id = "sh-skill-create-error";
+      notice.className = "sh-toast";
+      notice.setAttribute("role", "alert");
+      notice.textContent = text;
+      notice.addEventListener("click", () => notice.remove(), { once: true });
+      document.body.appendChild(notice);
+      setTimeout(() => notice.remove(), 8000);
+    }
+
     function peekPickerCache(payload) {
       return SkillShelf.peekPickerCache(pickerSearchCache, SkillShelf.pickerCacheKey(payload));
     }
@@ -108,6 +121,26 @@
       const [err, setErr] = useState("");
       const [remoteDown, setRemoteDown] = useState(false);
       const [hint, setHint] = useState("");
+      const [creating, setCreating] = useState(false);
+      const creatingRef = useRef(false);
+
+      const handleCreate = async () => {
+        if (creatingRef.current) return;
+        creatingRef.current = true;
+        setCreating(true);
+        setHint("");
+        try {
+          const result = await onCreate();
+          if (result?.cancelled) return;
+          if (!result || !result.ok) throw new Error("create-unavailable");
+          onClose();
+        } catch {
+          setHint(tr("picker.createFail"));
+        } finally {
+          creatingRef.current = false;
+          setCreating(false);
+        }
+      };
       const [activeIndex, setActiveIndex] = useState(0);
       const [pos, setPos] = useState({ left: 0, top: 0, width: 380 });
 
@@ -202,7 +235,7 @@
       }, [open, onClose, anchorRef]);
 
       const visible = presetBinding && !presetBinding.useDefaultContentCatalog
-        ? SkillShelf.filterPickerItems(items, tabId, presetBinding)
+        ? SkillShelf.filterPickerItems(items, tabId, presetBinding, debounced)
         : SkillShelf.filterPickerItems(items, tabId);
 
       const handlePick = (item) => {
@@ -312,7 +345,6 @@
               h("div", { className: "sh-picker-row-main" },
                 h("div", { className: "sh-picker-row-top" },
                   h("span", { className: "sh-picker-name" }, name),
-                  h("span", { className: "sh-picker-slug" }, "/" + slug),
                 ),
                 h("div", { className: "sh-picker-desc" }, desc),
               ),
@@ -325,7 +357,12 @@
         ),
         h("div", { className: "sh-picker-foot" },
           h("button", { type: "button", className: "sh-picker-btn", onClick: onExplore }, tr("picker.explore")),
-          h("button", { type: "button", className: "sh-picker-btn primary", onClick: onCreate }, tr("picker.create")),
+          h("button", {
+            type: "button", className: "sh-picker-btn primary",
+            disabled: creating, "aria-busy": creating,
+            onKeyDown: (event) => event.stopPropagation(),
+            onClick: handleCreate,
+          }, tr(creating ? "picker.creating" : "picker.create")),
         ),
       );
       if (typeof document === "undefined" || !document.body) return node;
@@ -338,8 +375,30 @@
       const btnRef = useRef(null);
       const inputActions = props && props.inputActions;
       const useInputHook = props && typeof props.useInput === "function" ? props.useInput : null;
-      const draft = useInputHook ? (useInputHook((s) => (s && s.draft) || "") || "") : "";
+      const input = useInputHook ? useInputHook((s) => s) : null;
       const sessionId = props && props.sessionId;
+      const creationRef = useRef(null);
+      useEffect(() => () => {
+        const attempt = creationRef.current;
+        if (attempt && currentPlazaSessionId() !== attempt.targetSessionId) attempt.cancelled = true;
+      }, []);
+      useLayoutEffect(() => {
+        if (!sessionId || !input) return undefined;
+        const slot = {
+          draft: input.draft || "",
+          protected: Boolean(input.imageIds?.length || (input.phase && input.phase !== "plain")),
+          write: (text) => {
+            try {
+              if (typeof inputActions?.setDraft !== "function") return false;
+              return inputActions.setDraft(text) !== false;
+            } catch { return false; }
+          },
+        };
+        skillCreationInputs.set(sessionId, slot);
+        return () => {
+          if (skillCreationInputs.get(sessionId) === slot) skillCreationInputs.delete(sessionId);
+        };
+      }, [sessionId, input, inputActions]);
       const [activeSkill, setActiveSkill] = useState(() => {
         if (typeof window !== "undefined" && window.__omnimuxActiveSkill) {
           return window.__omnimuxActiveSkill;
@@ -392,7 +451,10 @@
 
       useEffect(() => {
         if (!open) return undefined;
-        const onPage = () => setOpen(false);
+        const onPage = () => {
+          if (creationRef.current) creationRef.current.cancelled = true;
+          setOpen(false);
+        };
         window.addEventListener("dsh-product-stage", onPage);
         return () => window.removeEventListener("dsh-product-stage", onPage);
       }, [open]);
@@ -461,7 +523,10 @@
 
       const isMarketingMode = composerMode === "marketing";
 
-      const close = useCallback(() => setOpen(false), []);
+      const close = useCallback(() => {
+        if (creationRef.current) creationRef.current.cancelled = true;
+        setOpen(false);
+      }, []);
 
       const clearActiveSkill = useCallback(() => {
         setActiveSkill(null);
@@ -477,6 +542,7 @@
       }, []);
 
       const applyItem = useCallback((item) => {
+        if (creationRef.current) creationRef.current.cancelled = true;
         focusComposerCard();
         setActiveSkill(item);
         if (typeof window !== "undefined") {
@@ -518,16 +584,36 @@
 
       const onExplore = useCallback(() => {
         writePlazaSkillsIntent();
-        setOpen(false);
+        close();
         const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
         if (wb && typeof wb.open === "function") {
           wb.open({ tabId: "omnimux-market:plaza", title: tr("plaza.title") });
         }
-      }, [tr]);
+      }, [tr, close]);
 
-      const onCreate = useCallback(() => {
-        applyItem(SkillShelf.CREATE_SKILL);
-      }, [applyItem]);
+      const onCreate = useCallback(async () => {
+        if (creationRef.current) return { ok: false, cancelled: true };
+        const attempt = { cancelled: false };
+        creationRef.current = attempt;
+        try {
+          const result = await createSkillSession({
+            ...SkillShelf.CREATE_SKILL,
+            requireReady: true,
+            isCancelled: () => attempt.cancelled,
+            onTarget: (id) => { attempt.targetSessionId = id; },
+          });
+          if (result?.cancelled || attempt.cancelled) return { ...result, ok: false, cancelled: true };
+          if (!result?.ok || !result.prefilled) throw new Error("create-unavailable");
+          if (currentPlazaSessionId() !== result.sessionId) return { ...result, ok: false, cancelled: true };
+          activateSharedToolSkill(SkillShelf.CREATE_SKILL);
+          return result;
+        } catch (error) {
+          showSkillCreationError(tr("picker.createFail"));
+          throw error;
+        } finally {
+          creationRef.current = null;
+        }
+      }, [tr]);
 
       return h(I18nProvider, { t: tr },
         h("div", {
@@ -542,7 +628,7 @@
             "aria-haspopup": "dialog",
             "aria-expanded": open ? "true" : "false",
             "data-omnimux-skill-picker": "",
-            onClick: () => setOpen((v) => !v),
+            onClick: () => { if (open) close(); else setOpen(true); },
           },
             renderBookOpenIcon(16),
             h("span", { className: "sh-picker-trigger-label" }, tr("picker.title")),

@@ -537,9 +537,9 @@ export function inSkillShelf(item) {
         return true;
     return SKILL_SHELF_TAGS.some((tag) => matchesDomainTag(item, tag));
 }
-export function filterPickerItems(items, tabId, presetBinding = null) {
+export function filterPickerItems(items, tabId, presetBinding = null, query = '') {
     if (presetBinding && Array.isArray(presetBinding.skills)) {
-        return filterPresetSkills(presetBinding.skills, tabId);
+        return filterPresetSkills(presetBinding.skills, tabId, query);
     }
     const list = Array.isArray(items) ? items : [];
     const tab = PICKER_TABS.find((row) => row.id === tabId) || PICKER_TABS[0];

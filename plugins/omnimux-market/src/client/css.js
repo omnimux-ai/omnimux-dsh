@@ -266,7 +266,6 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .sh-picker-row-main{min-width:0;flex:1}
 .sh-picker-row-top{display:flex;align-items:baseline;gap:8px;min-width:0}
 .sh-picker-name{font-size:13px;line-height:20px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sh-picker-slug{flex:none;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary,#7b8088)}
 .sh-picker-desc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary,#7b8088);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sh-picker-dl{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,#7b8088);margin-top:2px}
 .sh-picker-empty{margin:16px 12px;font-size:13px;line-height:20px;color:var(--dsw-alias-label-tertiary,#7b8088)}
