@@ -48,6 +48,36 @@ const MEDIA_PROVIDER_PRESETS = {
   },
 }
 
+/**
+ * Built-in official models for known agent CLIs as resilient frontend fallback.
+ */
+const CLI_KNOWN_MODELS = {
+  claude: [
+    'claude-3-7-sonnet',
+    'claude-3-5-sonnet',
+    'claude-3-5-haiku',
+    'claude-3-opus',
+  ],
+  codex: [
+    'gpt-4o',
+    'o3-mini',
+    'o1',
+    'gpt-4.5-preview',
+  ],
+  kimi: [
+    'kimi-latest',
+    'moonshot-v1-128k',
+    'moonshot-v1-32k',
+    'moonshot-v1-8k',
+  ],
+  qwen: [
+    'qwen-max',
+    'qwen-plus',
+    'qwen-turbo',
+    'qwen-2.5-coder-32b',
+  ],
+}
+
 async function api(path, init) {
   const response = await fetch(path, init)
   const body = await response.json().catch(() => ({}))
@@ -331,7 +361,8 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                   <div className="omx-form-row">
                     <span className="omx-cli-desc">{t('runtime.modelLabel')}</span>
                     {(() => {
-                      const agentModels = Array.isArray(agent.models) ? agent.models : []
+                      const dynamicModels = Array.isArray(agent.models) && agent.models.length > 0 ? agent.models : null
+                      const agentModels = dynamicModels || CLI_KNOWN_MODELS[agent.id] || []
                       const isSafeModel = typeof agentModel === 'string' && agentModel.trim() !== '' && !agentModel.trim().startsWith('-') && /^[a-zA-Z0-9_.:/-]+$/.test(agentModel.trim())
                       const rawOptions = [
                         { value: '', label: t('runtime.cliDefaultSetting') },
