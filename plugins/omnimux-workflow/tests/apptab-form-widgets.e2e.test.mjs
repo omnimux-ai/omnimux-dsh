@@ -576,8 +576,16 @@ test('E2E: 商品库弹窗链接安全协议清洗与非法协议拦截 (Issue #
 
   // 验证弹窗依然存在（未被关闭），并且展示了安全拦截错误提示
   assert.ok(doc.querySelector('.omx-apptab-modal'), '非法协议被拦截，弹窗不关闭')
-  const errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
+  let errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
   assert.ok(errorText, '弹窗内展示错误提示')
+  assert.match(errorText.textContent, /链接协议不支持/)
+
+  // 1b. 模拟输入文件伪协议 file:///etc/passwd
+  fireChange(modalInput, 'file:///etc/passwd')
+  fireClick(submitBtn)
+  assert.ok(doc.querySelector('.omx-apptab-modal'), 'file协议被拦截，弹窗不关闭')
+  errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
+  assert.ok(errorText)
   assert.match(errorText.textContent, /链接协议不支持/)
 
   // 2. 模拟输入合法链接 https://example.com/item.png

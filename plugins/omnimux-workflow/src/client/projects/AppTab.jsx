@@ -506,11 +506,11 @@ export function AppTab(props) {
       return
     }
     const safeUrl = sanitizePreviewUrl(trimmed)
-    if (!safeUrl && trimmed.includes(':') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    if (!safeUrl) {
       setPromptModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
       return
     }
-    handleFieldChange(key, safeUrl || trimmed)
+    handleFieldChange(key, safeUrl)
     setPromptModal(null)
   }, [promptModal, handleFieldChange])
 
@@ -569,12 +569,12 @@ export function AppTab(props) {
       return
     }
     const safeUrl = sanitizePreviewUrl(trimmed)
-    if (!safeUrl && trimmed.includes(':') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    if (!safeUrl) {
       setProductPickerModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
       return
     }
     revokeCreatedUrl(key)
-    handleCommitLink(key, safeUrl || trimmed)
+    handleCommitLink(key, safeUrl)
     setProductPickerModal(null)
   }, [productPickerModal, handleCommitLink, revokeCreatedUrl])
 
