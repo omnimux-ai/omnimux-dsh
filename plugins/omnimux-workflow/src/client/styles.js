@@ -770,6 +770,357 @@ export const WORKFLOW_CSS = `
   align-items: center;
   gap: 4px;
 }
+/* 比例卡片网格与卡片 */
+.omx-apptab-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  width: 398px;
+  box-sizing: border-box;
+}
+.omx-apptab-ratio-card {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+.omx-apptab-ratio-card:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-apptab-ratio-card.is-active {
+  background: var(--dsw-alias-interactive-bg-active);
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+  font-weight: 600;
+}
+/* 单选定制下拉菜单 */
+.omx-apptab-select-single {
+  position: relative;
+  width: 398px;
+  box-sizing: border-box;
+}
+.omx-apptab-select-trigger {
+  width: 398px;
+  height: 40px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  font-size: 13px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease;
+}
+.omx-apptab-select-trigger:hover {
+  border-color: var(--dsw-alias-border-l3);
+}
+.omx-apptab-select-trigger.is-open {
+  border-color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-select-trigger.is-error {
+  border-color: var(--dsw-alias-state-error-primary);
+}
+.omx-apptab-select-options {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  width: 398px;
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 8px;
+  box-sizing: border-box;
+  background: var(--dsw-alias-surface-raised);
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+  z-index: 50;
+}
+.omx-apptab-select-option {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-apptab-select-option:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-apptab-select-option.is-selected {
+  color: var(--dsw-alias-brand-primary);
+  font-weight: 500;
+}
+/* 分段选项卡 */
+.omx-apptab-seg-tabs {
+  display: flex;
+  height: 40px;
+  width: 398px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-1);
+  padding: 3px;
+  gap: 4px;
+}
+.omx-apptab-seg-tab {
+  flex: 1;
+  height: 100%;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.omx-apptab-seg-tab:hover {
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-seg-tab.is-on {
+  background: var(--dsw-alias-surface-raised);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px var(--dsw-alias-bg-mask-1);
+}
+/* 多选胶囊 */
+.omx-apptab-multi-box {
+  width: 398px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omx-apptab-multi-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.omx-apptab-mtag {
+  height: 30px;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.omx-apptab-mtag:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-mtag.is-on {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-brand-primary);
+  font-weight: 500;
+}
+.omx-apptab-mtag.is-locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.omx-apptab-multi-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-apptab-multi-limit {
+  color: var(--dsw-alias-state-warning-primary);
+}
+/* 选定回填展示卡片 */
+.omx-apptab-picked {
+  width: 398px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  box-sizing: border-box;
+}
+.omx-apptab-picked-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.omx-apptab-picked-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.omx-apptab-picked-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.omx-apptab-picked-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omx-apptab-picked-sub {
+  font-size: 10px;
+  color: var(--dsw-alias-label-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omx-apptab-picked-clear {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.omx-apptab-picked-clear:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+/* 资产库触发按钮 */
+.omx-apptab-library-trigger {
+  width: 398px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 13px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+.omx-apptab-library-trigger:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary);
+}
+/* 提取器与复合输入 */
+.omx-apptab-extractor {
+  display: flex;
+  gap: 6px;
+  width: 398px;
+  box-sizing: border-box;
+  align-items: center;
+}
+.omx-apptab-extractor-input {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  padding: 0 10px;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+.omx-apptab-extractor-input:focus {
+  border-color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-extractor-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.omx-apptab-extractor-btn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-apptab-extractor-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.omx-apptab-extractor-icon-btn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+/* 上传器 */
+.omx-apptab-uploader {
+  width: 398px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+.omx-apptab-uploader:hover {
+  border-color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-uploader-icon {
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-apptab-uploader-hint {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+}
 .omx-apptab-cta-wrap {
   margin-top: 24px;
   padding-top: 16px;
