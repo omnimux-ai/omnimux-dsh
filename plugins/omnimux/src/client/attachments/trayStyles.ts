@@ -1,9 +1,10 @@
 import { DOCK_STYLES } from './dockStyles.ts';
 import { MODAL_STYLES } from './modalStyles.ts';
+import { LINK_POPOVER_STYLES } from './linkPopoverStyles.ts';
 
 const ATTACHMENTS_STYLE_ID = 'omnimux-attachments-styles';
 
-export const BASE_CSS = `${DOCK_STYLES}\n${MODAL_STYLES}`;
+export const BASE_CSS = `${DOCK_STYLES}\n${MODAL_STYLES}\n${LINK_POPOVER_STYLES}`;
 
 export function ensureStylesInjected(): void {
   if (typeof document === 'undefined') return;

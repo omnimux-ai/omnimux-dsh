@@ -41,12 +41,12 @@ export function useQuickWriteNotice() {
  * 轻提示本体：`role="status"` 供读屏播报；不展示时渲染 null。
  * @param {{ visible?: boolean, t?: (key: string) => string }} props
  */
-export function QuickWriteNotice({ visible, t }) {
+export function QuickWriteNotice({ visible, t, messageKey = NOTICE_KEY, fallback = QUICK_NOTICE_FALLBACK }) {
   if (!visible) return null
-  const resolved = typeof t === 'function' ? t(NOTICE_KEY) : ''
-  const text = typeof resolved === 'string' && resolved && resolved !== NOTICE_KEY
+  const resolved = typeof t === 'function' ? t(messageKey) : ''
+  const text = typeof resolved === 'string' && resolved && resolved !== messageKey
     ? resolved
-    : QUICK_NOTICE_FALLBACK
+    : fallback
   return (
     <p className="omx-quick-shortcut-notice" role="status">
       {text}

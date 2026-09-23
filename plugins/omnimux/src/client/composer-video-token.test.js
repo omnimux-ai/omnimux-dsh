@@ -39,8 +39,8 @@ function mountChip(kind, url) {
   return chip
 }
 
-/** 单会话宿主（既有夹具：没有任何输入框卡片，提交桥按文档兜底读胶囊）。 */
-const DEFAULT_HTML = '<div data-phase="hero"><div id="bridge"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>'
+/** Legacy chips must belong to the same public composer card as the bridge. */
+const DEFAULT_HTML = '<div data-phase="hero"><div data-composer-card><div id="bridge"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div></div>'
 
 /**
  * 分屏 / 多标签保活：宿主同时挂载两张输入框卡片，各自在自己的会话座位
@@ -90,7 +90,11 @@ async function mountBridge({ draft: initialDraft, sessionId = 'A', attachments =
   return {
     draft,
     // 必须精确点发送键：胶囊自带的 × 删除按钮同样是 button，按标签名取会点到它。
-    send: async () => act(async () => document.querySelector('[data-send-button]').click()),
+    async send() {
+      await act(async () => document.querySelector('[data-send-button]').click())
+      // Publish the changed host state separately from its setter receipt.
+      await act(async () => root.render(React.createElement(AttachmentSubmitBridge, props)))
+    },
     async dispose() {
       await act(async () => root.unmount())
       dom.window.close()
@@ -101,15 +105,15 @@ async function mountBridge({ draft: initialDraft, sessionId = 'A', attachments =
   }
 }
 
-test('视频链接令牌在发送时回落为标准 Markdown，且不夹带附件上下文', async () => {
+test('无会话归属的全局视频令牌不追加、不清空，附件上下文不进入正文', async () => {
   const tokenUrl = 'https://www.tiktok.com/@ryannreeddesignbuild/video/7391823719283719283'
   const env = await mountBridge({ draft: '请帮我分析拆解这个视频。', attachments: [ATTACHMENT] })
   try {
     window.__omnimuxVideoToken = { url: tokenUrl }
     await env.send()
-    assert.equal(env.draft.value, `请帮我分析拆解这个视频。\n\n[视频](${tokenUrl})`)
-    assert.equal(env.draft.value.split(tokenUrl).length - 1, 1, '同一条链接只能出现一次')
-    assert.equal(window.__omnimuxVideoToken, null, '令牌消费后必须清掉，避免下一轮重复追加')
+    assert.equal(env.draft.value, '请帮我分析拆解这个视频。')
+    assert.equal(env.draft.value.includes(tokenUrl), false, '不读取可能属于其他会话的全局令牌')
+    assert.deepEqual(window.__omnimuxVideoToken, { url: tokenUrl }, '不迁移或清空在线旧状态')
     assert.ok(!env.draft.value.includes('### 会话关联上下文'), '附件数据块不得进入正文')
     assert.ok(!env.draft.value.includes('brief.md'), '附件路径不得进入正文')
   } finally {

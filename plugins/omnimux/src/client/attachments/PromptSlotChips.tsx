@@ -1,12 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { PromptSlot } from './promptSlotDetector.ts';
 import { AssetPickerModal } from '../composer-add/AssetPickerModal.jsx';
 import { ProductPickerModal } from '../composer-add/ProductPickerModal.jsx';
 import { ProductSlotMenu, saveRecentProductId } from './ProductSlotMenu.tsx';
 import { ProductUrlPopover } from './ProductUrlPopover.tsx';
+import { focusEditorElement } from './focusEditorElement.ts';
+import type { LinkPopoverCloseReason } from './VideoLinkPopover.tsx';
 
 export interface PromptSlotChipsProps {
   readonly slots: readonly PromptSlot[];
+  readonly onOpenLink?: (kind: 'video' | 'product', anchor: HTMLElement) => void;
+  readonly onAddLink?: (kind: 'video' | 'product', url: string) => Promise<boolean>;
   readonly activeSlotIndex?: number | null;
   readonly onSelectSlot: (slot: PromptSlot, index: number) => void;
   readonly onReplaceSlot?: (slot: PromptSlot, newRaw: string) => void;
@@ -146,10 +150,15 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   onReplaceSlot,
   onAddFiles,
   onAddProductAttachment,
+  onOpenLink,
+  onAddLink,
   t = (key) => key,
   disabledSlotIds,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const productAnchorRef = useRef<HTMLElement | null>(null);
+  const activeMenuSlotRef = useRef<PromptSlot | null>(null);
+  const [productAnchor, setProductAnchor] = useState<HTMLElement | null>(null);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
@@ -160,6 +169,24 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   const [pendingProductSlot, setPendingProductSlot] = useState<PromptSlot | null>(null);
   const [pendingFileSlot, setPendingFileSlot] = useState<PromptSlot | null>(null);
 
+  const closeProductFlow = useCallback(() => {
+    setIsProductMenuOpen(false);
+    setIsProductPickerOpen(false);
+    setIsProductUrlPopoverOpen(false);
+    setActiveMenuSlot(null);
+    setPendingProductSlot(null);
+    setProductAnchor(null);
+    setMenuAnchorRect(null);
+  }, []);
+
+  const handleCloseProductUrlPopover = useCallback((reason?: LinkPopoverCloseReason) => {
+    closeProductFlow();
+    if (reason === 'cancel') {
+      const card = productAnchorRef.current?.closest('[data-composer-card]') ?? null;
+      focusEditorElement(card);
+    }
+  }, [closeProductFlow]);
+
   if (!slots || slots.length === 0) {
     return null;
   }
@@ -169,6 +196,11 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
     index: number,
     event?: React.MouseEvent<HTMLButtonElement>,
   ) => {
+    const kind = slot.quickLinkKind;
+    if (kind && event?.currentTarget && onOpenLink) {
+      onOpenLink(kind, event.currentTarget);
+      return;
+    }
     if (slot.protocol === 'file') {
       setPendingFileSlot(slot);
       if (fileInputRef.current) {
@@ -186,8 +218,11 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
 
     if (slot.protocol === 'product') {
       setActiveMenuSlot(slot);
+      activeMenuSlotRef.current = slot;
       setPendingProductSlot(slot);
       if (event?.currentTarget) {
+        productAnchorRef.current = event.currentTarget;
+        setProductAnchor(event.currentTarget);
         setMenuAnchorRect(event.currentTarget.getBoundingClientRect());
       }
       setIsProductMenuOpen(true);
@@ -235,10 +270,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
         onAddProductAttachment(product);
       }
     }
-    setIsProductPickerOpen(false);
-    setPendingProductSlot(null);
-    setIsProductMenuOpen(false);
-    setActiveMenuSlot(null);
+    closeProductFlow();
   };
 
   const handleSelectProductFromMenu = (product: any) => {
@@ -247,38 +279,36 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
 
   const handleOpenMoreProducts = () => {
     setIsProductMenuOpen(false);
-    if (activeMenuSlot) {
-      setPendingProductSlot(activeMenuSlot);
+    const targetSlot = activeMenuSlot || activeMenuSlotRef.current;
+    if (targetSlot) {
+      setPendingProductSlot(targetSlot);
     }
     setIsProductPickerOpen(true);
   };
 
   const handleActivateCustomInput = () => {
-    setIsProductMenuOpen(false);
-    if (activeMenuSlot) {
-      const idx = slots.findIndex((s) => s.id === activeMenuSlot.id);
+    const targetSlot = activeMenuSlot || activeMenuSlotRef.current;
+    closeProductFlow();
+    if (targetSlot) {
+      const idx = slots.findIndex((s) => s.id === targetSlot.id);
       if (idx !== -1) {
-        onSelectSlot(activeMenuSlot, idx);
+        onSelectSlot(targetSlot, idx);
       }
     }
   };
 
   const handleOpenUrlInput = () => {
     setIsProductMenuOpen(false);
+    const targetSlot = activeMenuSlot || activeMenuSlotRef.current;
+    if (targetSlot) {
+      setActiveMenuSlot(targetSlot);
+      setPendingProductSlot(targetSlot);
+    }
+    setProductAnchor(productAnchorRef.current);
     setIsProductUrlPopoverOpen(true);
   };
 
-  const handleUrlConfirm = (url: string) => {
-    const targetSlot = activeMenuSlot || pendingProductSlot;
-    if (url && targetSlot) {
-      if (typeof onReplaceSlot === 'function') {
-        onReplaceSlot(targetSlot, `[${targetSlot.placeholder}: ${url}]`);
-      }
-    }
-    setIsProductUrlPopoverOpen(false);
-    setActiveMenuSlot(null);
-    setPendingProductSlot(null);
-  };
+  const handleUrlConfirm = (url: string) => onAddLink?.('product', url) ?? Promise.resolve(false);
 
   return (
     <>
@@ -352,10 +382,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
       {isProductPickerOpen && (
         <ProductPickerModal
           open={isProductPickerOpen}
-          onClose={() => {
-            setIsProductPickerOpen(false);
-            setPendingProductSlot(null);
-          }}
+          onClose={closeProductFlow}
           t={t}
           onConfirm={handleProductConfirm}
         />
@@ -365,10 +392,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
         isOpen={isProductMenuOpen}
         anchorRect={menuAnchorRect}
         slot={activeMenuSlot}
-        onClose={() => {
-          setIsProductMenuOpen(false);
-          setActiveMenuSlot(null);
-        }}
+        onClose={closeProductFlow}
         onSelectProduct={handleSelectProductFromMenu}
         onOpenMoreProducts={handleOpenMoreProducts}
         onActivateCustomInput={handleActivateCustomInput}
@@ -378,7 +402,8 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
 
       <ProductUrlPopover
         isOpen={isProductUrlPopoverOpen}
-        onClose={() => setIsProductUrlPopoverOpen(false)}
+        anchor={productAnchor}
+        onClose={handleCloseProductUrlPopover}
         onConfirm={handleUrlConfirm}
         t={t}
       />

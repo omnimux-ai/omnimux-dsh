@@ -9,6 +9,7 @@ export interface PromptSlot {
   readonly end: number;
   readonly delimiter: '[' | '{';
   readonly selectedValue?: string; // 已选择的文件名或资产名
+  readonly quickLinkKind?: 'video' | 'product';
 }
 
 /**

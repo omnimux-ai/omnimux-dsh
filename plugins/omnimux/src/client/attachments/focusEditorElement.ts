@@ -14,11 +14,20 @@ export const COMPOSER_EDITOR_SELECTOR = [
   'div[role="textbox"][contenteditable="true"]',
 ].join(', ');
 
-/** 把焦点交回原生 composer 输入框；找不到输入框时静默返回。 */
-export function focusEditorElement(): void {
-  if (typeof document === 'undefined') return;
-  const editor = document.querySelector(COMPOSER_EDITOR_SELECTOR) as HTMLElement | null;
-  if (editor) {
-    editor.focus();
-  }
+/** 显式作用域缺失时不回退到其他会话；无参数调用保留既有全局入口。
+ * 兼容 Window / Document 类 scope，其余 scope 必须是已连接的 DOM 节点。
+ */
+export function focusEditorElement(root?: ParentNode | Window | null): void {
+  const scope = arguments.length === 0
+    ? (typeof document === 'undefined' ? null : document)
+    : root;
+  if (!scope) return;
+  const container = (scope as { document?: Document | null }).document ?? (scope as ParentNode);
+  if (!container || typeof container.querySelector !== 'function') return;
+  const isConnected = (container as Node).nodeType === 9
+    ? (typeof (container as Node).isConnected === 'boolean' ? (container as Node).isConnected : Boolean((container as Document).documentElement))
+    : Boolean((container as Node).isConnected);
+  if (!isConnected) return;
+  const editor = container.querySelector(COMPOSER_EDITOR_SELECTOR) as HTMLElement | null;
+  editor?.focus();
 }

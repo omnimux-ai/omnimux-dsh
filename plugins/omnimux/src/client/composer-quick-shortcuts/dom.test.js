@@ -120,14 +120,14 @@ describe('桥的回执契约与消费方的守卫', () => {
     assert.ok(start !== -1 && end > start, '必须定位完整的 handlePick 回调，不能依赖已迁移的控件显示变量')
     const body = source.slice(start, end)
 
-    const guards = body.split('if (!writeDraft(').length - 1
+    const guards = body.split('if (!writePrompt(').length - 1
     const mutations = body.split('store.set(').length - 1
     assert.equal(guards, 2, '选中与撤回两条分支都必须有 writeDraft 守卫')
     assert.equal(mutations, 2, '两条分支各改一次 store')
 
     let cursor = 0
     for (let i = 0; i < mutations; i += 1) {
-      const guardAt = body.indexOf('if (!writeDraft(', cursor)
+      const guardAt = body.indexOf('if (!writePrompt(', cursor)
       const mutateAt = body.indexOf('store.set(', cursor)
       assert.ok(guardAt !== -1 && guardAt < mutateAt, '写草稿失败时不得继续改 store')
       const guardEnd = body.indexOf('}', guardAt)
@@ -151,10 +151,10 @@ describe('桥的回执契约与消费方的守卫', () => {
     assert.match(locales, /'quickShortcuts\.notice\.writeFailed': 'Input not ready, please retry'/, '英文文案缺失')
   })
 
-  it('素材卡槽行插不进胶囊时复用同一条轻提示，绝不静默', async () => {
+  it('链接入口使用公开引用通道，不再创建私有空胶囊', async () => {
     const tray = await readFile(TRAY_PATH, 'utf8')
-    assert.match(tray, /if \(!insertQuickLinkChip\(/, '必须读插入通道的回执，不能丢弃')
-    assert.match(tray, /notifyWriteFailed\(\)/, '插不进去必须给轻提示')
-    assert.match(tray, /<QuickWriteNotice/, '渲染的必须是同一条轻提示')
+    assert.match(tray, /useLinkReference\(inputState, currentSessionId/, '引用操作绑定当前公开会话状态')
+    assert.match(tray, /onConfirm=\{url => addLink\(linkPopover.kind, url\)\}/, '异步插入结果交回浮层处理')
+    assert.doesNotMatch(tray, /insertQuickLinkChip|usePasteVideoInterceptor/, '新入口不得回到私有芯片路径')
   })
 })

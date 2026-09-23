@@ -19,7 +19,7 @@
  * 否则草稿里已经躺着一条商品槽位、卡槽却仍判未填，再点就插出第二枚商品胶囊。
  */
 
-import { QUICK_LINK_KINDS, quickLinkLabelKey } from './catalog.js'
+import { QUICK_LINK_KINDS, quickLinkLabelKey, quickLinkEntryLabelKey } from './catalog.js'
 import { quickLinkChipSpec } from './linkChip.js'
 import { en, zh } from '../locales.js'
 
@@ -109,7 +109,7 @@ export function quickLinkTokensForKind(kind) {
 }
 
 /**
- * 解析各链接种类的显示名。文案缺失时退回中文原名，绝不渲染空卡槽。
+ * 解析各链接种类的显示名（令牌使用）。文案缺失时退回中文原名，绝不渲染空卡槽。
  * @param {(key: string) => string} t
  * @returns {{ video: string, product: string }}
  */
@@ -124,26 +124,43 @@ export function quickLinkLabels(t) {
 }
 
 /**
+ * 解析各链接种类的入口展示名（“视频链接” / “商品链接”）。文案缺失时退回中文原名。
+ * @param {(key: string) => string} t
+ * @returns {{ video: string, product: string }}
+ */
+export function quickLinkEntryLabels(t) {
+  const read = (kind, fallback) => {
+    const key = quickLinkEntryLabelKey(kind)
+    if (typeof t !== 'function') return fallback
+    const value = t(key)
+    return typeof value === 'string' && value && value !== key ? value : fallback
+  }
+  return { video: read('video', '视频链接'), product: read('product', '商品链接') }
+}
+
+/**
  * 把链接种类数组构建成既定组件可消费的卡槽列表。
  *
  * `protocol: 'url'` 只用于复用既有卡槽的链接图标与文案分支；
  * 点击行为由调用方经 `onSelectSlot` 覆盖，不走协议自身的默认分支。
  *
  * @param {readonly string[]} links 链接种类（顺序即展示顺序）
- * @param {{ video: string, product: string }} labels
+ * @param {{ video: string, product: string }} labels 底层令牌名称（用于 raw / token 生成）
+ * @param {{ video: string, product: string }} [entryLabels] 入口展示标签（用于 placeholder 渲染）
  * @returns {ReadonlyArray<object>}
  */
-export function buildQuickLinkSlots(links, labels) {
+export function buildQuickLinkSlots(links, labels, entryLabels) {
   if (!Array.isArray(links) || links.length === 0) return []
   const slots = []
   for (const kind of links) {
     const label = labels && labels[kind]
     const token = quickLinkToken(label)
     if (!token) continue
+    const entryLabel = (entryLabels && entryLabels[kind]) || label
     slots.push(Object.freeze({
       id: `omx-quick-link-${kind}`,
       raw: token,
-      placeholder: label,
+      placeholder: entryLabel,
       protocol: 'url',
       start: -1,
       end: -1,
