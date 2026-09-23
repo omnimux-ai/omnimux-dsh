@@ -250,4 +250,15 @@ describe('图标与条目一一对应', () => {
     assert.match(source, /className="omx-quick-shortcut-label"/, '文案必须有独立节点')
     assert.match(source, /<QuickShortcutArrow \/>/, '每项末尾必须有箭头')
   })
+
+  it('非全屏（分栏/分屏）模式下强制隐藏快捷方式那一排（display: none !important）', () => {
+    for (const selector of [
+      'html[data-omnimux-split-compact] .omx-quick-shortcuts',
+      '.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts',
+      '[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) .omx-quick-shortcuts',
+    ]) {
+      const body = ruleBody(QUICK_SHORTCUTS_CSS, selector)
+      assert.match(body, /display:\s*none\s*!important;/, `${selector} 必须在分屏模式下隐藏`)
+    }
+  })
 })
