@@ -1852,6 +1852,10 @@ export const ASSETS_CSS = `
   box-sizing: border-box;
 }
 .omnimux-generations-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
+  gap: 12px;
+  justify-content: start;
   width: 100%;
 }
 .omnimux-generations-nav-divider {
@@ -1870,6 +1874,8 @@ export const ASSETS_CSS = `
   display: flex;
   flex-direction: column;
   cursor: pointer;
+  max-width: 320px;
+  width: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .omnimux-generation-card:hover {
@@ -1880,7 +1886,8 @@ export const ASSETS_CSS = `
 .omnimux-generation-card-thumb {
   position: relative;
   width: 100%;
-  min-height: 140px;
+  min-height: 160px;
+  max-height: 220px;
   background: var(--dsw-alias-bg-secondary);
   display: flex;
   align-items: center;
@@ -1898,6 +1905,7 @@ export const ASSETS_CSS = `
   width: 100%;
   height: 100%;
   min-height: 140px;
+  max-height: 220px;
   background: var(--dsw-alias-bg-secondary);
   display: flex;
   align-items: center;

@@ -17,12 +17,14 @@ describe('Generations tab integration into Assets Stage', () => {
     assert.match(stageJsx, /\{ id: 'local', label: t\('source\.local'\) \}/)
     assert.match(stageJsx, /\{ id: 'cloud', label: t\('source\.cloud'\) \}/)
     assert.match(stageJsx, /\{ id: 'product', label: t\('source\.product'\) \|\| '产品库' \}/)
-    assert.match(stageJsx, /\{ id: 'generations', label: t\('source\.generations'\) \|\| '生成的' \}/)
+    assert.match(stageJsx, /\{ id: 'generations', label: t\('source\.generations'\) \|\| 'AI生成' \}/)
   })
 
   it('contains valid i18n locales for generations in both zh and en', () => {
-    assert.equal(zh['source.generations'], '生成的')
-    assert.equal(en['source.generations'], 'Generations')
+    assert.equal(zh['source.generations'], 'AI生成')
+    assert.equal(en['source.generations'], 'AI Generations')
+    assert.equal(zh['generations.createButton'], '去生成')
+    assert.equal(en['generations.createButton'], 'Generate')
     assert.equal(zh['generations.source.all'], '全部来源')
     assert.equal(en['generations.source.all'], 'All Sources')
     assert.equal(zh['generations.source.agent'], '智能体')
@@ -33,8 +35,8 @@ describe('Generations tab integration into Assets Stage', () => {
     assert.equal(en['generations.source.canvas'], 'Canvas')
   })
 
-  it('switches action row and hides product creation menu when sourceTab is generations', () => {
-    assert.match(stageJsx, /if \(sourceTab === 'generations'\) \{\s*return null\s*\}/)
+  it('renders primary create button in action row when sourceTab is generations', () => {
+    assert.match(stageJsx, /if \(sourceTab === 'generations'\) \{\s*return \(\s*<div className="omnimux-assets-action-row">\s*<Button variant="primary" leadingIcon=\{<PlusIcon \/>\} onClick=\{onOpenImageGeneration\}>/)
   })
 
   it('mounts GenerationsCategoryNav in sticky rail when sourceTab is generations', () => {
@@ -68,7 +70,10 @@ describe('Generations tab integration into Assets Stage', () => {
 
   it('injects generations styles into ASSETS_CSS without raw hex or broken template escapes', () => {
     assert.match(ASSETS_CSS, /\.omnimux-generations-container/)
+    assert.match(ASSETS_CSS, /\.omnimux-generations-grid\s*\{[^}]*display:\s*grid\s*!important/)
     assert.match(ASSETS_CSS, /\.omnimux-generation-card/)
     assert.match(ASSETS_CSS, /\.omnimux-generation-badge/)
+    assert.match(ASSETS_CSS, /grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(260px,\s*300px\)\)/)
+    assert.match(ASSETS_CSS, /max-width:\s*320px/)
   })
 })
