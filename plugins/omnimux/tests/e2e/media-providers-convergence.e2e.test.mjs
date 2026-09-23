@@ -55,6 +55,7 @@ const ZH = {
   'runtime.mediaReady': '✓ 媒体链路就绪',
   'runtime.unconfigured': '未配置',
   'runtime.modelLabel': '模型',
+  'runtime.cliDefaultSetting': 'CLI 默认设置',
   'runtime.imageModel': '图片模型',
   'runtime.videoModel': '视频模型',
   'runtime.audioModel': '音频模型',
@@ -174,8 +175,8 @@ describe('settings-sections-split.e2e', () => {
           status: 200,
           json: async () => ({
             agents: [
-              { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223' },
-              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0' },
+              { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223', models: ['claude-3-7-sonnet', 'claude-3-5-sonnet'] },
+              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0', models: ['gpt-4o', 'o3-mini'] },
             ],
           }),
         }
@@ -238,6 +239,19 @@ describe('settings-sections-split.e2e', () => {
     assert.ok(runtimeCard.querySelector('.omx-cloud-banner'), 'Card 1 contains OmniMux Cloud banner')
     assert.ok(runtimeCard.querySelector('.omx-segmented-tabs'), 'Card 1 contains dual tabs')
     assert.ok(runtimeCard.querySelector('.omx-status-bar'), 'Card 1 contains bottom status bar')
+
+    // Tab 1: Agent CLI models dropdown assertion
+    const agentModelSelect = runtimeCard.querySelector('#omx-agent-model-codex')
+    assert.ok(agentModelSelect, 'Must render DropdownSelect for selected CLI agent')
+    const agentModelOptions = [...agentModelSelect.querySelectorAll('option')].map((o) => ({
+      value: o.getAttribute('value'),
+      label: o.textContent,
+    }))
+    assert.equal(agentModelOptions[0].value, '', 'First option value is empty for default')
+    assert.equal(agentModelOptions[0].label, 'CLI 默认设置', 'First option label is CLI 默认设置')
+    assert.ok(agentModelOptions.some((o) => o.value === 'gpt-4o'), 'Contains gpt-4o option from agent models')
+    assert.ok(agentModelOptions.some((o) => o.value === 'o3-mini'), 'Contains o3-mini option from agent models')
+    assert.equal(agentModelOptions.some((o) => o.value.includes('claude')), false, 'Codex options must not contain claude models')
 
     // Switch to Tab 2 (媒体生成提供商)
     const tabs = runtimeCard.querySelectorAll('.omx-tab-btn')

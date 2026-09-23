@@ -9,10 +9,50 @@ const execFileAsync = promisify(execFile)
  * an agent that is not installed is simply not offered.
  */
 export const KNOWN_AGENTS = Object.freeze([
-  { id: 'claude', name: 'Claude Code', bin: 'claude' },
-  { id: 'codex', name: 'Codex CLI', bin: 'codex' },
-  { id: 'kimi', name: 'Kimi CLI', bin: 'kimi' },
-  { id: 'qwen', name: 'Qwen Code', bin: 'qwen' },
+  {
+    id: 'claude',
+    name: 'Claude Code',
+    bin: 'claude',
+    models: Object.freeze([
+      'claude-3-7-sonnet',
+      'claude-3-5-sonnet',
+      'claude-3-5-haiku',
+      'claude-3-opus',
+    ]),
+  },
+  {
+    id: 'codex',
+    name: 'Codex CLI',
+    bin: 'codex',
+    models: Object.freeze([
+      'gpt-4o',
+      'o3-mini',
+      'o1',
+      'gpt-4.5-preview',
+    ]),
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi CLI',
+    bin: 'kimi',
+    models: Object.freeze([
+      'kimi-latest',
+      'moonshot-v1-128k',
+      'moonshot-v1-32k',
+      'moonshot-v1-8k',
+    ]),
+  },
+  {
+    id: 'qwen',
+    name: 'Qwen Code',
+    bin: 'qwen',
+    models: Object.freeze([
+      'qwen-max',
+      'qwen-plus',
+      'qwen-turbo',
+      'qwen-2.5-coder-32b',
+    ]),
+  },
 ])
 
 const PROBE_TIMEOUT_MS = 5000
@@ -41,9 +81,24 @@ export async function probeAgentBin(bin, run = execFileAsync) {
 export async function scanLocalAgents(run = execFileAsync) {
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {
     const probe = await probeAgentBin(agent.bin, run)
-    return { id: agent.id, name: agent.name, installed: probe.installed, version: probe.version }
+    return {
+      id: agent.id,
+      name: agent.name,
+      installed: probe.installed,
+      version: probe.version,
+      models: Array.isArray(agent.models) ? [...agent.models] : [],
+    }
   }))
   return rows
+}
+
+const SAFE_MODEL_REGEX = /^[a-zA-Z0-9_.:/-]+$/
+
+export function isSafeAgentModel(model) {
+  if (typeof model !== 'string') return false
+  const trimmed = model.trim()
+  if (!trimmed || trimmed.startsWith('-')) return false
+  return SAFE_MODEL_REGEX.test(trimmed)
 }
 
 /**
@@ -52,17 +107,35 @@ export async function scanLocalAgents(run = execFileAsync) {
  * option parsing, so a prompt that starts with a dash is data, never a flag.
  * @param {string} id
  * @param {string} prompt
+ * @param {string} [model]
  */
-export function agentTextCommand(id, prompt) {
+export function agentTextCommand(id, prompt, model = '') {
+  const chosenModel = isSafeAgentModel(model) ? model.trim() : ''
   switch (id) {
-    case 'claude':
-      return { bin: 'claude', args: ['-p', '--output-format', 'text', '--', prompt] }
-    case 'codex':
-      return { bin: 'codex', args: ['exec', '--', prompt] }
-    case 'kimi':
-      return { bin: 'kimi', args: ['-p', '--', prompt] }
-    case 'qwen':
-      return { bin: 'qwen', args: ['-p', '--', prompt] }
+    case 'claude': {
+      const args = ['-p', '--output-format', 'text']
+      if (chosenModel) args.push('--model', chosenModel)
+      args.push('--', prompt)
+      return { bin: 'claude', args }
+    }
+    case 'codex': {
+      const args = ['exec']
+      if (chosenModel) args.push('-m', chosenModel)
+      args.push('--', prompt)
+      return { bin: 'codex', args }
+    }
+    case 'kimi': {
+      const args = ['-p']
+      if (chosenModel) args.push('-m', chosenModel)
+      args.push('--', prompt)
+      return { bin: 'kimi', args }
+    }
+    case 'qwen': {
+      const args = ['-p']
+      if (chosenModel) args.push('-m', chosenModel)
+      args.push('--', prompt)
+      return { bin: 'qwen', args }
+    }
     default:
       return null
   }
@@ -72,10 +145,10 @@ export function agentTextCommand(id, prompt) {
  * Run one text completion through the selected agent CLI. The agent's own
  * sign-in is the user's responsibility — a non-zero exit surfaces its error
  * text; the hub never retries it against the official route.
- * @param {{ id: string, prompt: string, timeoutMs?: number, run?: Function }} input
+ * @param {{ id: string, prompt: string, model?: string, timeoutMs?: number, run?: Function }} input
  */
-export async function runAgentText({ id, prompt, timeoutMs = 120000, run = execFileAsync }) {
-  const command = agentTextCommand(id, prompt)
+export async function runAgentText({ id, prompt, model = '', timeoutMs = 120000, run = execFileAsync }) {
+  const command = agentTextCommand(id, prompt, model)
   if (!command) {
     throw Object.assign(new Error(`unknown agent '${id}'`), { code: 'unknown-agent' })
   }
