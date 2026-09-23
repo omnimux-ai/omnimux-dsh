@@ -372,6 +372,269 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 .omnimux-runtime-guide-back {
   align-self: flex-start;
 }
+
+/* OmniMux Settings: Dual-Tab & Providers layout */
+.omx-segmented-tabs {
+  display: flex;
+  background: var(--dsw-alias-bg-layer-2);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-tab-btn {
+  flex: 1;
+  height: 36px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.omx-tab-btn.active {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--dsw-alias-bg-mask-1);
+}
+.omx-cloud-banner {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 12%, var(--dsw-alias-bg-layer-2));
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-cloud-banner.logged {
+  background: color-mix(in srgb, var(--dsw-alias-success, #22c55e) 15%, var(--dsw-alias-bg-layer-2));
+  border-color: color-mix(in srgb, var(--dsw-alias-success, #22c55e) 30%, transparent);
+}
+.omx-banner-content strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin-bottom: 2px;
+}
+.omx-banner-content p {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+.omx-banner-btn {
+  background: var(--dsw-alias-surface-raised);
+  color: var(--dsw-alias-label-primary);
+  padding: 0 16px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.omx-section-title {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omx-cli-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.omx-cli-card {
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
+}
+.omx-cli-card:hover {
+  border-color: var(--dsw-alias-border-l2);
+}
+.omx-cli-card.selected {
+  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3);
+}
+.omx-cli-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-cli-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.omx-cli-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  flex-shrink: 0;
+}
+.omx-cli-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-cli-vendor {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-cli-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-secondary);
+}
+.omx-cli-desc {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.omx-provider-choice {
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
+}
+.omx-provider-choice:hover {
+  border-color: var(--dsw-alias-border-l2);
+}
+.omx-provider-choice.active {
+  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3);
+}
+.omx-provider-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-provider-caps {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.omx-provider-form {
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.omx-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omx-caps-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.omx-cap-card {
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omx-status-bar {
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-status-bar strong {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+}
+.omx-dot-separator {
+  margin: 0 8px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-status-pass {
+  color: var(--dsw-alias-success);
+}
+.omx-cli-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.omx-cli-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.omx-cli-extra {
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.omx-form-item {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-provider-form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
 .omnimux-modal-close-btn {
   width: 36px;
   height: 36px;
