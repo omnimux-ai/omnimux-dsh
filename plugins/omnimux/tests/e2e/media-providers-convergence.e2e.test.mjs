@@ -175,8 +175,8 @@ describe('settings-sections-split.e2e', () => {
           status: 200,
           json: async () => ({
             agents: [
-              { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223', models: ['claude-3-7-sonnet', 'claude-3-5-sonnet'] },
-              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0', models: ['gpt-4o', 'o3-mini'] },
+              { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223' },
+              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0' },
             ],
           }),
         }

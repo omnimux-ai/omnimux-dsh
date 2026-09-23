@@ -1,0 +1,16 @@
+{
+  "issue": 2623,
+  "feature": "cli-models-builtin-fallback",
+  "verified_at": "2026-09-23T20:03:00+08:00",
+  "criteria": {
+    "S1_legacy_backend_fallback": "PASS",
+    "S2_first_option_cli_default": "PASS",
+    "S3_all_tests_green": "PASS"
+  },
+  "verified_fallback_models": {
+    "codex": ["gpt-4o", "o3-mini", "o1", "gpt-4.5-preview"],
+    "claude": ["claude-3-7-sonnet", "claude-3-5-sonnet", "claude-3-5-haiku", "claude-3-opus"],
+    "kimi": ["kimi-latest", "moonshot-v1-128k", "moonshot-v1-32k", "moonshot-v1-8k"],
+    "qwen": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen-2.5-coder-32b"]
+  }
+}
