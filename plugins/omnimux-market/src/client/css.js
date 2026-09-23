@@ -584,6 +584,7 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
   box-shadow:0 1px 3px var(--dsw-alias-shadow-color, rgba(0, 0, 0, 0.35));
   cursor:pointer; user-select:none;
   transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
+  container-type:inline-size; container-name:market-featured-card;
 }
 .omnimux-creatify-card:hover {
   transform:translateY(-4px);
@@ -690,6 +691,30 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .omnimux-creatify-drawer-uses {
   display:flex; align-items:center; gap:4px; font-size:11px;
   color:var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65));
+}
+.omnimux-creatify-quick-try-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  background:var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.16)); /* exempt-ui03: 悬停按钮底色 */
+  border:1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.2)); /* exempt-ui03: 悬停按钮边框 */
+  border-radius:999px; padding:2px 10px;
+  font-size:11px; font-weight:500;
+  color:var(--dsw-static-neutral-00, #ffffff); /* exempt-ui03: 按钮文本纯白色 */
+  cursor:pointer; pointer-events:auto; white-space:nowrap; box-sizing:border-box;
+  transition:all 150ms ease;
+}
+.omnimux-creatify-quick-try-btn:hover {
+  background:var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.24));
+  color:var(--dsw-static-neutral-00, #ffffff);
+}
+.omnimux-creatify-quick-try-btn svg {
+  flex:none; width:12px; height:12px;
+}
+.omnimux-creatify-quick-try-label {
+  white-space:nowrap;
+}
+@container market-featured-card (max-width: 288px) {
+  .omnimux-creatify-quick-try-label { display: none !important; }
+  .omnimux-creatify-quick-try-btn { width: 24px !important; height: 24px !important; padding: 0 !important; border-radius: 50% !important; gap: 0 !important; }
 }
 
 /* 8 套高饱和度炫彩渐变卡片底色 (对标 Creatify 官方炫彩视觉) */

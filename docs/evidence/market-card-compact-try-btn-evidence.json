@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-09-23T08:58:00.305Z",
+  "feature": "market-card-compact-try-btn",
+  "metrics": {
+    "wide": {
+      "cardWidth": 340,
+      "btnWidth": 104,
+      "btnHeight": 22,
+      "labelDisplay": "block",
+      "title": "去对话试试",
+      "ariaLabel": "去对话试试",
+      "textClipped": false
+    },
+    "narrow": {
+      "cardWidth": 240,
+      "btnWidth": 24,
+      "btnHeight": 24,
+      "borderRadius": "50%",
+      "labelDisplay": "none",
+      "title": "去对话试试",
+      "ariaLabel": "去对话试试",
+      "iconCentered": true,
+      "drawerOverflow": false
+    },
+    "enWide": {
+      "cardWidth": 340,
+      "btnWidth": 91.4,
+      "btnHeight": 18,
+      "labelDisplay": "block",
+      "title": "Try in Chat"
+    },
+    "enNarrow": {
+      "cardWidth": 240,
+      "btnWidth": 24,
+      "btnHeight": 24,
+      "labelDisplay": "none",
+      "title": "Try in Chat"
+    }
+  },
+  "screenshot": "market-card-compact-try-btn-verify.png",
+  "verified": true
+}
