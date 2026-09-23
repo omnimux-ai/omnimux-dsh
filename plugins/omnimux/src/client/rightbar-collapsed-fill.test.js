@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { JSDOM } from 'jsdom'
 
 import {
   COLLAPSED_ATTR,
@@ -45,7 +46,106 @@ function makeEnv({ collapsed = true, leftCollapsed = false, innerWidth = 1920, r
   return { doc, panel, writes, attrs }
 }
 
+function makeNativeEnv(t, grid = '280px minmax(0px, 1fr) 864px') {
+  const dom = new JSDOM(`<div class="_1qAH1q_frame">
+    <div class="_1qAH1q_sidebarCol"></div>
+    <div data-sidebar-right-panel="fullscreen" data-sidebar-right-open></div>
+  </div>`)
+  t.after(() => dom.window.close())
+  const doc = dom.window.document
+  doc.documentElement.setAttribute(COLLAPSED_ATTR, '')
+  Object.defineProperty(dom.window, 'innerWidth', { value: 1920, writable: true })
+  const frame = doc.querySelector('[class*="frame"]')
+  frame.style.gridTemplateColumns = grid
+  const rail = doc.querySelector('[class*="sidebarCol"]')
+  rail.getBoundingClientRect = () => ({ right: 280, width: 280 })
+  return { doc, frame, rail, panel: doc.querySelector('[data-sidebar-right-panel]') }
+}
+
+describe('native panel fill boundaries', () => {
+  it('uses the shell track with CSS-module columns and follows left collapse/restore', (t) => {
+    const { doc, panel, rail } = makeNativeEnv(t)
+    rail.getBoundingClientRect = () => ({ right: 1920, width: 1920 })
+    assert.equal(syncCollapsedPanelFill(doc), true)
+    assert.equal(panel.style.getPropertyValue('width'), '1640px')
+    doc.documentElement.setAttribute(LEFT_COLLAPSED_ATTR, '')
+    syncCollapsedPanelFill(doc)
+    assert.equal(panel.style.getPropertyValue('width'), '1920px')
+    doc.documentElement.removeAttribute(LEFT_COLLAPSED_ATTR)
+    syncCollapsedPanelFill(doc)
+    assert.equal(panel.style.getPropertyValue('width'), '1640px')
+  })
+
+  it('falls back to the shared CSS-module sidebar selector without a shell track', (t) => {
+    const { doc, panel } = makeNativeEnv(t, '')
+    assert.equal(syncCollapsedPanelFill(doc), true)
+    assert.equal(panel.style.getPropertyValue('width'), '1640px')
+  })
+
+  it('does not treat an absent rail as zero unless explicitly collapsed', (t) => {
+    const { doc, panel, rail } = makeNativeEnv(t, '')
+    rail.remove()
+    assert.equal(syncCollapsedPanelFill(doc), false)
+    assert.equal(panel.style.cssText, '')
+    doc.documentElement.setAttribute(LEFT_COLLAPSED_ATTR, '')
+    assert.equal(syncCollapsedPanelFill(doc), true)
+    assert.equal(panel.style.getPropertyValue('width'), '1920px')
+  })
+
+  it('releases old ownership when rail measurement fails', (t) => {
+    const { doc, panel, frame, rail } = makeNativeEnv(t)
+    syncCollapsedPanelFill(doc)
+    frame.style.gridTemplateColumns = ''
+    rail.getBoundingClientRect = () => { throw new Error('unavailable') }
+    assert.equal(syncCollapsedPanelFill(doc), false)
+    assert.equal(panel.style.getPropertyValue('width'), '')
+    assert.equal(panel.style.getPropertyValue('transition'), '')
+    assert.equal(panel.hasAttribute(FILL_MARK_ATTR), false)
+  })
+
+  it('releases old ownership when viewport measurement fails', (t) => {
+    const { doc, panel } = makeNativeEnv(t)
+    syncCollapsedPanelFill(doc)
+    doc.defaultView.innerWidth = 0
+    assert.equal(syncCollapsedPanelFill(doc), false)
+    assert.equal(panel.style.cssText, '')
+    assert.equal(panel.hasAttribute(FILL_MARK_ATTR), false)
+  })
+
+  it('releases a retained closed panel and remains idempotent', (t) => {
+    const { doc, panel } = makeNativeEnv(t)
+    syncCollapsedPanelFill(doc)
+    panel.removeAttribute('data-sidebar-right-open')
+    panel.setAttribute('data-sidebar-right-panel', 'push')
+    panel.style.setProperty('width', '864px')
+    assert.equal(syncCollapsedPanelFill(doc), false)
+    assert.equal(panel.style.cssText, '')
+    assert.equal(panel.hasAttribute(FILL_MARK_ATTR), false)
+    assert.equal(syncCollapsedPanelFill(doc), false)
+    assert.equal(releaseCollapsedPanelFill(doc), false)
+    panel.style.setProperty('width', '864px')
+    syncCollapsedPanelFill(doc)
+    assert.equal(panel.style.getPropertyValue('width'), '864px', 'unowned native geometry stays intact')
+  })
+
+  it('explicit cleanup also releases a closed panel without sync', (t) => {
+    const { doc, panel } = makeNativeEnv(t)
+    syncCollapsedPanelFill(doc)
+    panel.removeAttribute('data-sidebar-right-open')
+    assert.equal(releaseCollapsedPanelFill(doc), true)
+    assert.equal(releaseCollapsedPanelFill(doc), false)
+    assert.equal(panel.style.cssText, '')
+  })
+})
+
 describe('computeCollapsedPanelSpan', () => {
+  it('rejects missing, zero, invalid or nonfinite measurements', () => {
+    for (const leftRailRight of [undefined, null, 0, -1, NaN, Infinity]) {
+      assert.equal(computeCollapsedPanelSpan({ viewportWidth: 1920, leftRailRight }), 0)
+    }
+    assert.equal(computeCollapsedPanelSpan({ viewportWidth: Infinity, leftCollapsed: true }), 0)
+    assert.equal(computeCollapsedPanelSpan({ viewportWidth: 1920, leftCollapsed: true }), 1920)
+  })
   it('spans from the left rail right edge to the viewport edge', () => {
     assert.equal(computeCollapsedPanelSpan({ viewportWidth: 1920, leftRailRight: 280, leftCollapsed: false }), 1640)
   })

@@ -813,6 +813,7 @@ button[data-sidebar-right-expand] {
   right: 0 !important;
   left: var(--omnimux-sidebar-width, 280px) !important;
   width: calc(100vw - var(--omnimux-sidebar-width, 280px)) !important;
+  box-sizing: border-box !important;
   z-index: 30 !important;
   border-left: 0.5px solid var(--dsw-alias-border-l4) !important;
   transition: left var(--ds-transition-duration-normal, 0.2s) ease,

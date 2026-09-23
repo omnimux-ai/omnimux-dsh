@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   TEMPLATE_CATEGORIES,
   SHELVES_CONFIG,
@@ -11,7 +11,7 @@ import { TemplatesShelfRow } from './TemplatesShelfRow.jsx';
 import { TemplatesGridView } from './TemplatesGridView.jsx';
 import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
-import { claimProductStage } from '../../conversation-box.js';
+import { openWorkbench } from '../../workbench/sidebar-controller.js';
 
 /**
  * 分类全量数据内存缓存池
@@ -92,6 +92,8 @@ export function ExploreTemplatesSection({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeDrawerTemplate, setActiveDrawerTemplate] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [appLaunchError, setAppLaunchError] = useState('');
+  const appLaunchPending = useRef(false);
 
   const currentLocale = useTemplateLocale(undefined, t);
   const isEn = String(currentLocale).toLowerCase().startsWith('en');
@@ -132,67 +134,49 @@ export function ExploreTemplatesSection({
     setActiveDrawerTemplate(null);
   };
 
-  // 打开官方 AI 应用
-  const handleAppLaunch = (item) => {
-    if (!item) return;
-    if (typeof window !== 'undefined') {
+  // 应用与其它工作台页面共用会话、服务就绪和布局导航。
+  const handleAppLaunch = async (item) => {
+    if (!item || typeof window === 'undefined' || appLaunchPending.current) return;
+    appLaunchPending.current = true;
+    setAppLaunchError('');
+    const failure = isEn
+      ? 'Unable to open this app. Check your workspace and try again.'
+      : '应用暂时无法打开，请确认已选择工作区后重试。';
+    try {
+      const appId = typeof item.appId === 'string' ? item.appId.trim() : '';
+      if (!appId) throw new Error('Missing app identity');
+      const stored = window.localStorage.getItem('omnimux_apps_manifests');
+      let parsed = {};
       try {
-        const stored = window.localStorage?.getItem('omnimux_apps_manifests');
-        let manifestsMap = stored ? JSON.parse(stored) : {};
-        if (item.manifest && !manifestsMap[item.appId]) {
-          manifestsMap[item.appId] = item.manifest;
-          window.localStorage?.setItem('omnimux_apps_manifests', JSON.stringify(manifestsMap));
-        }
-      } catch {}
-
-      try {
-        claimProductStage('omnimux-apps');
-      } catch {}
-
-      try {
-        if (typeof window.__omnimuxOpenAppTab === 'function') {
-          window.__omnimuxOpenAppTab(item.manifest, {
-            appId: item.appId,
-            title: item.titleZh || item.title || 'AI 应用',
-          });
-        }
-      } catch {}
-
-      try {
-        const sidebar = window.__OMNIMUX_BETTER_SIDEBAR__ || window.parent?.__OMNIMUX_BETTER_SIDEBAR__ || window.__omnimuxBetterSidebar;
-        if (sidebar && typeof sidebar.openTab === 'function') {
-          sidebar.openTab({
-            type: 'omnimux-workflow:app',
-            id: `app_${item.appId}`,
-            title: item.titleZh || item.title || 'AI 应用',
-            path: `app://${item.appId}`,
-            meta: { appId: item.appId },
-            extra: { manifest: item.manifest, appId: item.appId },
-          });
-        }
-      } catch {}
-
-      window.dispatchEvent(
-        new CustomEvent('omnimux-app-open', {
-          detail: {
-            id: item.appId,
-            appId: item.appId,
-            title: item.titleZh || item.title,
-            manifest: item.manifest,
-          },
-        })
-      );
-    }
-
-    if (onApplyTemplate) {
-      onApplyTemplate({
-        appId: item.appId,
-        isApp: true,
-        template: item,
-        manifest: item.manifest,
-        title: resolveTemplateCopy(item, currentLocale).title || item.title,
-        titleEn: item.titleEn,
+        parsed = stored ? JSON.parse(stored) : {};
+      } catch {
+        // A malformed cache can be rebuilt; storage access failures must still fail.
+      }
+      const manifestsMap = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      if (item.manifest) {
+        manifestsMap[appId] = item.manifest;
+        window.localStorage.setItem('omnimux_apps_manifests', JSON.stringify(manifestsMap));
+      }
+      const title = item.manifest?.metadata?.name || resolveTemplateCopy(item, currentLocale).title || 'AI 应用';
+      const opened = await openWorkbench({
+        tabId: 'omnimux-workflow:app',
+        id: `app_${appId}`,
+        title,
+        path: `app://${appId}`,
+        meta: { appId },
+        extra: { manifest: item.manifest, appId },
       });
+      if (!opened) {
+        setAppLaunchError(failure);
+        return;
+      }
+      window.dispatchEvent(new CustomEvent('omnimux-app-open', {
+        detail: { id: appId, appId, title, manifest: item.manifest },
+      }));
+    } catch {
+      setAppLaunchError(failure);
+    } finally {
+      appLaunchPending.current = false;
     }
   };
 
@@ -307,6 +291,8 @@ export function ExploreTemplatesSection({
           })}
         </div>
       </div>
+
+      {appLaunchError && <div role="alert" className="omnimux-starter-notice">{appLaunchError}</div>}
 
       {/* 视图展现：全部时展现各分类横滑货架行；选定特定分类时展现全量网格 */}
       {selectedCategory === 'all' ? (

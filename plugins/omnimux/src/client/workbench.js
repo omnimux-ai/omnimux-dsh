@@ -284,6 +284,8 @@ export function installWorkbenchGlobal(target = hostWindow()) {
   const existing = target[WORKBENCH_GLOBAL_KEY]
   if (existing !== undefined) {
     if (typeof existing.getConversationCollapsed === 'function') {
+      // Preserve consumers' object identity while refreshing module-owned closures after HMR.
+      Object.assign(existing, createApi())
       return existing
     }
     const api = createApi()

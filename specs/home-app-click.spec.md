@@ -47,5 +47,23 @@ Spec → Code → Verify → Test → Green。先提交本规格再改业务代�
 - 若生命周期缺口确证，服务绑定和标签注册的清理应属于注入作用域，旧作用域清理不得清除更新的实例。
 - 真实按钮回归覆盖缺会话提示、首次打开、切换/重复/关闭重开、服务卸载期间失败反馈和重装后恢复；不点生成，核对草稿。
 
+## 第一轮正式退修（QA44 完成后）
+- M1：缓存 JSON 损坏但可写时用当前 manifest 恢复；storage getter/getItem/setItem 失败必须显示失败且不调用导航或成功广播，不建立未经证明的无缓存降级。
+- M4/M6：捕获发起时会话；provider、会话、注册检查与打开成功确认前不关闭旧 details/stage/seed。异步打开期间 provider 或会话变化不得清理新界面或提交焦点；仅清理本次捕获的旧空 Files，不误关用户文件或新 seed。
+- M7：按本次正规化安装值清理原 window，保留 owner 门禁与外部覆盖保护。
+- M2/M3/M5 按当前 Cordis/string id 契约保留详细反证，不恢复根 ctx.effect，不扩展数字 id。
+- 原 108 定向测试与新增边界测试、两插件构建、diff 检查；旧 QA 七组只作现场基准。业务改后最终独立浏览器 QA 仍待执行，已有 tests/e2e/home-app-click.* 不删除、不改动。
+- 仅本工作树本任务文件；不真实生成、不改共享 Dev/Prod/官方包、不提交推送合入。报告 fix-review-round1.md 后停写等待第二轮 CLI。
+
+## 第二次且最后一次实际退修
+- 以 review-round2-triage.md 接受范围为准，QA78 已清理解除冻结。保留全部既有失败证据与原 M2/M3 契约冲突。
+- R2-H1：仓库 worktree-web-qa 模拟注入须拥有独立 effect 集合；依赖退出、重复退出、整体清理均正确释放，不借根 effect，不改生产 inner.effect。
+- R2-M1：正式 wrapper 只借用任务空间；可复用 task-owned harness 必须以准备成功作硬门禁，任何前置失败不启动正式旅程，最终 finally 由所有者 finish/cleanup。
+- R2-M3：05-resize 保存/恢复拥有者传入的真实原 metrics 或明确无 override；成功与失败路径都恢复，恢复失败阻止后续独立生命周期结论，不猜 scale 或尺寸。
+- R2-M4：保留 session/provider 导航安全门禁，补充 session 短暂落后后追上及等待超时测试，禁止为兼容旧 mock 放松。
+- 先最小调查 fullscreen left280 + viewport width 及 Close 后货架不回；仅本插件违背公开布局契约时最小修复。官方责任保留已知，不改官方源码/包，不使用 CSS 强制覆盖或新路由。mounted A-B-A 不得以 Close/reload 或 force 替代。
+- Verify 使用恢复辅助 private-launch，仅私有 Host 参数 --max-http-header-size=65536，不重做默认对照、不改共享 Cookie。最终正式 prepared wrapper 七组实跑，保留新 bundle Debugger 身份、截图与最终清理证据。
+- 检查原134定向测试及新增契约、必要构建和阶段门禁；报告 fix-review-round2.md 后冻结。无推送、合入、Dev/Prod、付费生成权限。
+
 ## 文档影响
 本修复不改变产品功能与视觉合同；本规格与 implementation 报告记录导航修复和验证边界。如统一导航参数新增身份透传，将同步最小接口注释。

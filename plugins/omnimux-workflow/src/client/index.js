@@ -82,7 +82,6 @@ export function apply(ctx) {
 
   const registerCanvas = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
-    bindBetterSidebar(sidebar)
     return sidebar.registerTab({
       id: CANVAS_TAB_ID,
       title: () => t('details.canvasTab'),
@@ -131,15 +130,10 @@ export function apply(ctx) {
     ctx.inject(['betterSidebar'], (inner) => {
       const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
       bindWorkbench({ betterSidebar: sidebar, layout: ctx.layout, sessions: ctx.sessions })
-      if (typeof ctx.effect === 'function') {
-        ctx.effect(() => registerWorkflowLibraryTab(sidebar), 'omnimux-workflow: library tab')
-        ctx.effect(() => registerCanvas(sidebar), 'omnimux-workflow: canvas tab')
-        ctx.effect(() => registerAppTab(sidebar), 'omnimux-workflow: app tab')
-      } else {
-        registerWorkflowLibraryTab(sidebar)
-        registerCanvas(sidebar)
-        registerAppTab(sidebar)
-      }
+      inner.effect(() => bindBetterSidebar(sidebar), 'omnimux-workflow: sidebar binding')
+      inner.effect(() => registerWorkflowLibraryTab(sidebar), 'omnimux-workflow: library tab')
+      inner.effect(() => registerCanvas(sidebar), 'omnimux-workflow: canvas tab')
+      inner.effect(() => registerAppTab(sidebar), 'omnimux-workflow: app tab')
     })
   }
 }

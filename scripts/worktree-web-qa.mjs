@@ -312,6 +312,52 @@ export function generateRunnerHtml(stageKey, bundledJs) {
 
       window.__omnimuxWorkbench = workbenchApi;
 
+      // Each injection owns its effects; withdrawing it must leave root effects alive.
+      function createEffectScope() {
+        const effects = new Set();
+        let disposed = false;
+        return {
+          effect(fn) {
+            if (disposed) throw new Error('Effect scope is disposed');
+            const cleanup = fn();
+            let active = true;
+            const release = () => {
+              if (!active) return;
+              active = false;
+              effects.delete(release);
+              if (typeof cleanup === 'function') cleanup();
+            };
+            if (disposed) release();
+            else effects.add(release);
+            return release;
+          },
+          dispose() {
+            if (disposed) return;
+            disposed = true;
+            const errors = [];
+            for (const release of [...effects].reverse()) {
+              try { release(); } catch (error) { errors.push(error); }
+            }
+            if (errors.length) throw new AggregateError(errors, 'Effect cleanup failed');
+          },
+        };
+      }
+      const rootScope = createEffectScope();
+      const injections = new Set();
+      let disposed = false;
+      const dispose = () => {
+        if (disposed) return;
+        disposed = true;
+        const errors = [];
+        for (const release of [...injections].reverse()) {
+          try { release(); } catch (error) { errors.push(error); }
+        }
+        try { rootScope.dispose(); } catch (error) { errors.push(error); }
+        if (errors.length) throw new AggregateError(errors, 'Runner cleanup failed');
+      };
+      window.__worktreeQaLifecycle = { dispose };
+      window.addEventListener('pagehide', dispose);
+
       const ctx = {
         locale: {
           register: () => () => {},
@@ -325,18 +371,36 @@ export function generateRunnerHtml(stageKey, bundledJs) {
           register: () => () => {},
         },
         inject: (deps, fn) => {
-          fn({
-            betterSidebar: {
-              registerTab: (tab) => {
-                registeredTabs.set(tab.id, tab);
-                return () => registeredTabs.delete(tab.id);
-              }
-            },
-            layout: {},
-            sessions: {},
-          });
+          if (disposed) throw new Error('Runner is disposed');
+          const scope = createEffectScope();
+          const release = () => {
+            injections.delete(release);
+            scope.dispose();
+          };
+          injections.add(release);
+          try {
+            fn({
+              betterSidebar: {
+                registerTab: (tab) => {
+                  registeredTabs.set(tab.id, tab);
+                  return () => {
+                    if (registeredTabs.get(tab.id) === tab) registeredTabs.delete(tab.id);
+                  };
+                }
+              },
+              layout: {},
+              sessions: {},
+              effect: scope.effect,
+            });
+          } catch (error) {
+            try { release(); } catch (cleanupError) {
+              throw new AggregateError([error, cleanupError], 'Injection failed');
+            }
+            throw error;
+          }
+          return release;
         },
-        effect: (fn) => fn(),
+        effect: rootScope.effect,
       };
 
       // 注册侧边栏 UI 按钮
@@ -439,6 +503,7 @@ export async function runWorktreeWebQa(stageKey, options = {}) {
   let server = null;
   let chromeProc = null;
   let cdpWs = null;
+  let disposeRunner = null;
 
   try {
     // 1. 编译客户端 Bundle
@@ -519,6 +584,20 @@ export async function runWorktreeWebQa(stageKey, options = {}) {
 
     await sendCdp('Page.enable');
     await sendCdp('Runtime.enable');
+    disposeRunner = async () => {
+      let timer;
+      try {
+        const result = await Promise.race([
+          sendCdp('Runtime.evaluate', { expression: 'window.__worktreeQaLifecycle?.dispose()' }),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Runner cleanup timed out')), 3000);
+          }),
+        ]);
+        if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || 'Runner cleanup failed');
+      } finally {
+        clearTimeout(timer);
+      }
+    };
     await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
 
     // 等待页面加载与就绪
@@ -595,6 +674,12 @@ export async function runWorktreeWebQa(stageKey, options = {}) {
   } catch (error) {
     report.errors.push(error instanceof Error ? error.message : String(error));
   } finally {
+    if (disposeRunner) {
+      try { await disposeRunner(); } catch (error) {
+        report.pass = false;
+        report.errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
     if (cdpWs) {
       try { cdpWs.close(); } catch {}
     }

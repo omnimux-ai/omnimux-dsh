@@ -16,7 +16,7 @@ import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
 import { installCollapsedPanelFill } from './rightbar-collapsed-fill.js'
 import { NS, en, zh } from './locales.js'
-import { bindWorkbenchDeps } from './workbench/host-adapter.js'
+import { bindWorkbenchDeps, getWorkbenchService } from './workbench/host-adapter.js'
 // x.ai 全壳 overrideTokens 已临时关闭：发送钮在暗色下变成白底白箭头。
 // 恢复时：重新 import applyXaiShellTheme，并把 'theme' 加回 inject + package.json dsh.client.inject。
 // import { applyXaiShellTheme } from './xai-theme.js'
@@ -43,7 +43,13 @@ export function installHubChrome(ctx) {
       workbench.bind({ layout: inner.layout, sessions: inner.sessions })
     })
     ctx.inject(['betterSidebar'], (inner) => {
-      workbench.bind({ betterSidebar: inner.betterSidebar ?? inner.get?.('betterSidebar') })
+      inner.effect(() => {
+        const service = inner.betterSidebar ?? inner.get?.('betterSidebar')
+        workbench.bind({ betterSidebar: service })
+        return () => {
+          if (getWorkbenchService() === service) workbench.bind({ betterSidebar: null })
+        }
+      }, 'omnimux: sidebar context')
     })
     ctx.inject(['sidebarRight'], (inner) => {
       inner.effect(() => {

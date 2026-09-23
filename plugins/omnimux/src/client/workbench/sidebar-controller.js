@@ -5,8 +5,9 @@
  */
 
 import {
-  closeSeedFiles,
+  currentSessionId,
   ensureSessionId,
+  isSeedFilesTab,
   getAttachedStore,
   getWorkbenchLayout,
   getWorkbenchService,
@@ -238,32 +239,59 @@ function resolveTabPayload(service, tabId, titleOpt, pathOpt) {
 
 /**
  * Open a workbench tab in the right panel. Never claims a product stage.
- * @param {object} [opts]
+ * @param {{ tabId?: string, id?: string, title?: string, path?: string,
+ *   meta?: object, extra?: object, sessionId?: string, cwd?: string,
+ *   timeoutMs?: number, preserveLayout?: boolean, focus?: string }} [opts]
  * @returns {Promise<boolean>}
  */
 export async function openWorkbench(opts = {}) {
   const tabId = typeof opts.tabId === 'string' ? opts.tabId : ''
   if (!tabId) return false
-  closeDetails()
-  releaseCurrentProductStage()
+  const sessions = getWorkbenchSessions()
+  const initialSession = currentSessionId(sessions)
+  const stage = hostDocument()?.documentElement?.dataset?.dshProductStage
+  const layout = getWorkbenchLayout()
+  const contextIsCurrent = () => getWorkbenchSessions() === sessions
+    && currentSessionId(sessions) === initialSession
+    && getWorkbenchLayout() === layout
+    && hostDocument()?.documentElement?.dataset?.dshProductStage === stage
 
   const timeoutMs = typeof opts.timeoutMs === 'number' ? opts.timeoutMs : 4000
   const service = await waitForBetterSidebar(timeoutMs)
   if (!service || typeof service.openTab !== 'function') return false
-  await waitForTab(service, tabId, timeoutMs)
+  if (!await waitForTab(service, tabId, timeoutMs)) return false
 
-  const sessionId = await ensureSessionId(getWorkbenchSessions(), opts.sessionId)
+  if (!contextIsCurrent() || getWorkbenchService() !== service) return false
+  const sessionId = await ensureSessionId(sessions, opts.sessionId)
   if (!sessionId) {
     nudgeWorkbenchNeedsSession()
     return false
   }
 
   const ready = await waitForSidebarSession(service, sessionId, timeoutMs)
+  if (!ready || !contextIsCurrent() || getWorkbenchService() !== service) return false
   const openScope = resolveTabScope(sessionId, opts.cwd, ready)
-  closeSeedFiles(service, openScope)
+  const seedIds = new Set(listOpenTabs(service.getSnapshot?.()?.state)
+    .filter((tab) => isSeedFilesTab(tab) && tab.id).map((tab) => tab.id))
 
   const payload = resolveTabPayload(service, tabId, opts.title, opts.path)
-  service.openTab(payload, openScope)
+  if (typeof opts.id === 'string' && opts.id) payload.id = opts.id
+  if (opts.meta && typeof opts.meta === 'object') payload.meta = opts.meta
+  if (opts.extra && typeof opts.extra === 'object') payload.extra = opts.extra
+  // A provider may have unloaded while session/registration readiness was awaited.
+  if (getWorkbenchService() !== service || !contextIsCurrent()) return false
+  if (await service.openTab(payload, openScope) === false) return false
+  if (getWorkbenchService() !== service || !contextIsCurrent()
+    || service.getSnapshot?.()?.sessionId !== sessionId) return false
+
+  // Commit only after the same provider has opened in the captured session.
+  for (const tab of listOpenTabs(service.getSnapshot?.()?.state)) {
+    if (seedIds.has(tab.id) && tab.id !== payload.id && isSeedFilesTab(tab)) {
+      try { service.closeTab?.(tab.id, openScope) } catch { /* ignore */ }
+    }
+  }
+  closeDetails()
+  releaseCurrentProductStage()
 
   if (opts.preserveLayout) {
     notifyWorkbenchChange()

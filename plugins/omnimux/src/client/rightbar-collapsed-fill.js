@@ -19,14 +19,14 @@
  * @see ./conversation-collapse.js 收起态属性与投影座席的来源
  */
 
+import { findSidebarColumn, readShellRailWidthPx } from './sidebar-toggle-topbar.js'
+
 /** 收起态标记属性（由 conversation-collapse.js 写入 html）。 */
 export const COLLAPSED_ATTR = 'data-omnimux-conversation-collapsed'
 /** 左栏收起标记属性（收起时座席左基准为 0）。 */
 export const LEFT_COLLAPSED_ATTR = 'data-omnimux-left-collapsed'
-/** 已打开的原生右栏面板。 */
-export const PANEL_SELECTOR = '[data-sidebar-right-panel][data-sidebar-right-open]'
-/** 左侧导航容器：其右边界就是收起态的跨度起点。 */
-export const LEFT_RAIL_SELECTOR = '.dshDesktopSidebarSurface'
+/** 原生右栏面板，包括关闭后保留的节点。 */
+export const PANEL_SELECTOR = '[data-sidebar-right-panel]'
 /** 本模块持有几何时打在面板上的标记（便于排查与断言）。 */
 export const FILL_MARK_ATTR = 'data-omnimux-collapsed-fill'
 
@@ -38,9 +38,11 @@ export const FILL_MARK_ATTR = 'data-omnimux-collapsed-fill'
  * @returns {number} 像素宽度；无法测量时返回 0（调用方据此放弃写入）
  */
 export function computeCollapsedPanelSpan(env = {}) {
-  const viewport = Math.round(Number(env.viewportWidth) || 0)
-  if (viewport <= 0) return 0
-  const start = env.leftCollapsed ? 0 : Math.max(0, Math.round(Number(env.leftRailRight) || 0))
+  const viewport = Math.round(Number(env.viewportWidth))
+  if (!Number.isFinite(viewport) || viewport <= 0) return 0
+  const railRight = Number(env.leftRailRight)
+  if (!env.leftCollapsed && (!Number.isFinite(railRight) || railRight <= 0)) return 0
+  const start = env.leftCollapsed ? 0 : Math.round(railRight)
   const span = viewport - start
   return span > 0 ? span : 0
 }
@@ -50,17 +52,27 @@ function hostWindow(doc) {
 }
 
 function findPanel(doc) {
+  // Closed native panels remain mounted, so cleanup must not require the open marker.
   return doc?.querySelector?.(PANEL_SELECTOR) || null
 }
 
-function measureEnv(doc, panel) {
+function measureEnv(doc) {
   const win = hostWindow(doc)
   const root = doc?.documentElement
-  const rail = doc?.querySelector?.(LEFT_RAIL_SELECTOR)
   const leftCollapsed = Boolean(root?.hasAttribute?.(LEFT_COLLAPSED_ATTR))
+  let leftRailRight = null
+  if (!leftCollapsed) {
+    try {
+      // Prefer the shell-authored track: collapsed-layout CSS can affect live geometry.
+      leftRailRight = readShellRailWidthPx(doc)
+      if (leftRailRight === null) {
+        leftRailRight = findSidebarColumn(doc)?.getBoundingClientRect?.().right ?? null
+      }
+    } catch { leftRailRight = null }
+  }
   return {
     viewportWidth: win?.innerWidth || 0,
-    leftRailRight: leftCollapsed ? 0 : Math.round(rail?.getBoundingClientRect?.().right || 0),
+    leftRailRight,
     leftCollapsed,
   }
 }
@@ -88,13 +100,16 @@ export function syncCollapsedPanelFill(doc) {
   const collapsed = Boolean(root?.hasAttribute?.(COLLAPSED_ATTR))
 
   if (!panel) return false
-  if (!collapsed) {
+  if (!collapsed || panel.getAttribute?.('data-sidebar-right-open') == null) {
     releaseCollapsedPanelFill(doc)
     return false
   }
 
-  const span = computeCollapsedPanelSpan(measureEnv(doc, panel))
-  if (span <= 0) return false
+  const span = computeCollapsedPanelSpan(measureEnv(doc))
+  if (span <= 0) {
+    releaseCollapsedPanelFill(doc)
+    return false
+  }
 
   const target = `${span}px`
   const style = panel.style

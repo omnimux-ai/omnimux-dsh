@@ -34,10 +34,14 @@ export function resetProjectCanvasRatioMemory() {
 }
 
 let boundService = null
+let bindingOwner = null
 
-/** registerCanvasTab 绑一次，供 newProject 在没有 inject 的 ctx 上取到服务。 */
+/** Bind a provider for this injection lifetime; return its identity-owned disposer. */
 export function bindBetterSidebar(service) {
-  boundService = service || null
+  const owner = {}
+  bindingOwner = owner
+  const installedService = service || null
+  boundService = installedService
   const win = typeof globalThis !== 'undefined' && globalThis.window
     ? globalThis.window
     : (typeof window !== 'undefined' ? window : undefined)
@@ -48,6 +52,13 @@ export function bindBetterSidebar(service) {
     } catch {
       // ignore
     }
+  }
+  return () => {
+    if (bindingOwner !== owner) return
+    bindingOwner = null
+    boundService = null
+    if (win?.__omnimuxBetterSidebar === installedService) delete win.__omnimuxBetterSidebar
+    if (win?.__omnimuxOpenAppTab === openAppTab) delete win.__omnimuxOpenAppTab
   }
 }
 
@@ -174,18 +185,6 @@ export function closeAppTab(appId) {
   service.closeTab(tabId)
   forgetOpenAppTab(tabId)
   return true
-}
-
-// 安全同步挂载至 globalThis.window.__omnimuxOpenAppTab
-const globalWin = typeof globalThis !== 'undefined' && globalThis.window
-  ? globalThis.window
-  : (typeof window !== 'undefined' ? window : undefined)
-if (globalWin) {
-  try {
-    globalWin.__omnimuxOpenAppTab = openAppTab
-  } catch {
-    // ignore
-  }
 }
 
 /** workflow 与 better-sidebar 谁先加载不确定，新建项目时可能还没 provide。 */

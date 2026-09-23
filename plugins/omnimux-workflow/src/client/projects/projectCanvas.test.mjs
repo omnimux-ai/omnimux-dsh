@@ -23,6 +23,48 @@ import {
 } from './projectCanvas.js'
 
 describe('projectCanvas isolation', () => {
+  for (const service of [undefined, null]) {
+    it(`bindBetterSidebar cleans normalized ${service} on its original window only`, () => {
+      const previous = globalThis.window
+      const original = {}
+      globalThis.window = original
+      const dispose = bindBetterSidebar(service)
+      assert.equal(original.__omnimuxBetterSidebar, null)
+      const replacement = { __omnimuxBetterSidebar: { owner: 'other' }, __omnimuxOpenAppTab: () => {} }
+      globalThis.window = replacement
+      try {
+        dispose()
+        assert.equal(Object.hasOwn(original, '__omnimuxBetterSidebar'), false)
+        assert.equal(Object.hasOwn(original, '__omnimuxOpenAppTab'), false)
+        assert.equal(replacement.__omnimuxBetterSidebar.owner, 'other')
+        assert.equal(typeof replacement.__omnimuxOpenAppTab, 'function')
+      } finally {
+        dispose()
+        if (previous === undefined) delete globalThis.window
+        else globalThis.window = previous
+      }
+    })
+  }
+
+  it('normalized empty binding preserves an external replacement', () => {
+    const previous = globalThis.window
+    const win = {}
+    globalThis.window = win
+    const dispose = bindBetterSidebar(undefined)
+    const externalService = {}
+    const externalOpen = () => {}
+    win.__omnimuxBetterSidebar = externalService
+    win.__omnimuxOpenAppTab = externalOpen
+    try {
+      dispose()
+      assert.equal(win.__omnimuxBetterSidebar, externalService)
+      assert.equal(win.__omnimuxOpenAppTab, externalOpen)
+    } finally {
+      dispose()
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+    }
+  })
   it('getBetterSidebar: Proxy 未 inject 不炸，回落到 bind', async () => {
     const { getBetterSidebar } = await import('./projectCanvas.js')
     bindBetterSidebar(null)
@@ -495,6 +537,71 @@ describe('projectCanvas isolation', () => {
       if (previous === undefined) delete globalThis.window
       else globalThis.window = previous
       bindBetterSidebar(null)
+    }
+  })
+
+  for (const sameService of [false, true]) {
+    it(`binding disposer preserves a newer ${sameService ? 'same-service' : 'different-service'} owner`, async () => {
+      const { getBetterSidebar } = await import('./projectCanvas.js')
+      const previous = globalThis.window
+      const fakeWin = {}
+      globalThis.window = fakeWin
+      const oldCalls = []
+      const newCalls = []
+      const oldService = { openTab(seed) { oldCalls.push(seed) } }
+      const newService = sameService ? oldService : { openTab(seed) { newCalls.push(seed) } }
+      let disposeOld
+      let disposeNew
+      try {
+        disposeOld = bindBetterSidebar(oldService)
+        disposeNew = bindBetterSidebar(newService)
+        disposeOld()
+        assert.equal(getBetterSidebar(), newService)
+        assert.equal(fakeWin.__omnimuxBetterSidebar, newService)
+        assert.equal(fakeWin.__omnimuxOpenAppTab, openAppTab)
+        assert.equal(fakeWin.__omnimuxOpenAppTab({ appId: 'new-owner' }), true)
+        assert.equal((sameService ? oldCalls : newCalls).length, 1)
+        if (!sameService) assert.equal(oldCalls.length, 0)
+        disposeNew()
+        assert.equal(getBetterSidebar(), null)
+        assert.equal(Object.hasOwn(fakeWin, '__omnimuxBetterSidebar'), false)
+        assert.equal(Object.hasOwn(fakeWin, '__omnimuxOpenAppTab'), false)
+        assert.equal(openAppTab({ appId: 'disposed' }), false)
+        disposeOld()
+        disposeNew()
+        assert.equal(getBetterSidebar(), null, 'disposal remains idempotent')
+      } finally {
+        disposeNew?.()
+        disposeOld?.()
+        // Reset module state while the isolated test window is still installed.
+        const reset = bindBetterSidebar(null)
+        reset()
+        if (previous === undefined) delete globalThis.window
+        else globalThis.window = previous
+      }
+    })
+  }
+
+  it('binding disposer does not remove globals replaced by another publisher', () => {
+    const previous = globalThis.window
+    const fakeWin = {}
+    globalThis.window = fakeWin
+    const ownedService = { openTab() {} }
+    const otherService = { openTab() {} }
+    const otherOpen = () => 'other-owner'
+    const dispose = bindBetterSidebar(ownedService)
+    try {
+      fakeWin.__omnimuxBetterSidebar = otherService
+      fakeWin.__omnimuxOpenAppTab = otherOpen
+      dispose()
+      assert.equal(fakeWin.__omnimuxBetterSidebar, otherService)
+      assert.equal(fakeWin.__omnimuxOpenAppTab, otherOpen)
+    } finally {
+      dispose()
+      const reset = bindBetterSidebar(null)
+      reset()
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
     }
   })
 

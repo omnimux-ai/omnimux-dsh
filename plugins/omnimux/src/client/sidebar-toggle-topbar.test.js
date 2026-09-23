@@ -72,6 +72,13 @@ it('split panels keep native grid geometry while fullscreen stays right-anchored
   assert.match(moduleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-sidebar-right-panel="fullscreen"\]\[data-sidebar-right-open\][\s\S]*?transition:\s*none\s*!important/)
 })
 
+it('stable fullscreen panel rules include borders inside the workspace span', () => {
+  const stable = moduleSource.match(/^\[data-sidebar-right-panel="fullscreen"\],\n\[class\*="_panel"\]\[data-sidebar-right-panel="fullscreen"\]\s*\{([^}]+)\}/m)?.[1]
+  assert.ok(stable, 'must not depend on the legacy desktop frame class')
+  assert.match(stable, /box-sizing:\s*border-box\s*!important/)
+  assert.match(stable, /width:\s*calc\(100vw - var\(--omnimux-sidebar-width, 280px\)\)/)
+})
+
 /** @type {JSDOM | undefined} */
 let dom
 const previous = {
