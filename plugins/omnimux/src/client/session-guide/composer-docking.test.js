@@ -105,6 +105,46 @@ test('useComposerDocking: 调用 dock(item) 后宿主被打上 dock-open 标记�
   }
 })
 
+test('dock owner expands for inline demand, clamps to column and restores default after removal', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const card = host.querySelector('[data-composer-card]')
+  host.classList.add('centerCol')
+  let availableWidth = 1200
+  host.getBoundingClientRect = () => ({ left: 394, right: 394 + availableWidth, width: availableWidth })
+  card.innerHTML = '<div class="row" style="display:flex"><div class="tools"><div data-omx-quick-shortcut-controls><button>Model</button></div></div></div>'
+  for (const node of [card, ...card.querySelectorAll('*')]) {
+    node.style.padding = '0px'
+    node.style.border = '0px'
+  }
+  card.querySelector('button').getBoundingClientRect = () => ({ width: 960 })
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef })
+  }
+  try {
+    await act(async () => root.render(React.createElement(TestHarness)))
+    await act(async () => hookApi.dock({ id: 'inline-demand' }))
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '960px')
+    availableWidth = 900
+    await act(async () => window.dispatchEvent(new window.Event('resize')))
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '888px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '406px')
+    await act(async () => {
+      card.querySelector('[data-omx-quick-shortcut-controls]').remove()
+      await Promise.resolve()
+    })
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+    assert.equal(card.style.width, '')
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
 test('useComposerDocking: 调用 undock() 解除吸底并清除标记', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')

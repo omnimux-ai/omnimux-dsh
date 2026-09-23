@@ -381,10 +381,11 @@ function appendQuickLinkChip(row, kind, options) {
  */
 export function insertQuickLinkChip(kind, options) {
   if (typeof document === 'undefined') return false
-  ensureQuickShortcutStyles()
   const row = resolveQuickLinkChipRow(options && options.anchor)
   if (!row) return false
-  return appendQuickLinkChip(row, kind, options)
+  const inserted = appendQuickLinkChip(row, kind, options)
+  if (inserted) ensureQuickShortcutStyles(row.ownerDocument)
+  return inserted
 }
 
 /**

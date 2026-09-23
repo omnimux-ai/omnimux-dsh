@@ -11,7 +11,7 @@ import { readDraft, removeQuickLinkChips, replaceQuickLinkChips, writeDraft } fr
 import { quickLinkLabels, stripQuickShortcutText } from './links.js';
 import { QuickWriteNotice, useQuickWriteNotice } from './notice.jsx';
 import { resolveComposerSessionId } from './session.js';
-import { ensureQuickShortcutStyles } from './styles.js';
+import { acquireQuickShortcutStyles } from './styles.js';
 import { QuickShortcutArrow, QuickShortcutIcon } from './icons.jsx';
 import { MediaConfigControls, useMediaGenerationConfig } from '../media-viewer/MediaConfigControls.jsx';
 import { publishActiveSkill, subscribeSkillChanged } from '../composer-add/skill-event.ts';
@@ -52,7 +52,7 @@ function QuickShortcutModelControls({ sessionId }) {
       <MediaConfigControls
         config={mediaConfig}
         showModeSwitch={false}
-        showModelSummary
+        compact
         onModelChange={({ model }) => {
           if (!model) return;
           try {
@@ -74,6 +74,21 @@ function QuickShortcutModelControls({ sessionId }) {
       />
     </div>
   );
+}
+
+/** 官方底部扩展座：与外部快捷入口共用会话快照，不复制配置状态。 */
+export function ComposerQuickShortcutControls({ sessionId: sessionIdProp, session: sessionProp, useSession, useConversation }) {
+  const session = useSession ? useSession((value) => value) : null;
+  const hasTargets = useConversation ? useConversation((value) => Boolean(value?.activeTargets?.size)) : false;
+  const sessionId = resolveComposerSessionId(sessionProp || session, sessionIdProp, getGlobalAttachmentStore().getActiveSessionId());
+  const store = getGlobalQuickShortcutStore();
+  const subscribe = useCallback((listener) => store.subscribe(sessionId, listener), [store, sessionId]);
+  const snapshot = useCallback(() => store.getSnapshot(sessionId), [store, sessionId]);
+  const state = useSyncExternalStore(subscribe, snapshot, snapshot);
+  useEffect(() => acquireQuickShortcutStyles(), []);
+  if (useSession && !isBlankConversation(session, hasTargets)) return null;
+  if (state.activeId !== 'clone' && state.activeId !== 'selling') return null;
+  return <QuickShortcutModelControls key={sessionId} sessionId={sessionId} />;
 }
 
 /**
@@ -117,7 +132,7 @@ export function ComposerQuickShortcuts(props) {
     getGlobalAttachmentStore().getActiveSessionId(),
   );
 
-  useEffect(() => ensureQuickShortcutStyles(), []);
+  useEffect(() => acquireQuickShortcutStyles(), []);
 
   // 出厂技能库是跨插件通道，插件装载顺序不保证：未就绪时按指数退避重试；
   // 预算用尽仍拿不到就留痕（不静默），并保留「窗口重新可见/获得焦点」的兜底重查。
@@ -199,11 +214,6 @@ export function ComposerQuickShortcuts(props) {
   // 状态与展示组件由 `notice.jsx` 提供，素材卡槽行那条通道用的是同一份。
   const { visible: noticeVisible, notify: notifyWriteFailed, dismiss: dismissNotice } = useQuickWriteNotice();
 
-  const active = useMemo(
-    () => shortcuts.find((entry) => entry.id === state.activeId) || null,
-    [shortcuts, state.activeId],
-  );
-
   const handlePick = useCallback((entry) => {
     const next = applyQuickShortcut(store.getSnapshot(sessionId).activeId, entry.id);
     if (!next.activeId) {
@@ -245,7 +255,6 @@ export function ComposerQuickShortcuts(props) {
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
   if (shortcuts.length === 0) return null;
 
-  const showControls = Boolean(active && active.showModelControls);
   const isActive = (id) => state.activeId === id;
 
   return (
@@ -273,8 +282,6 @@ export function ComposerQuickShortcuts(props) {
           <QuickShortcutArrow />
         </button>
       ))}
-
-      {showControls ? <QuickShortcutModelControls sessionId={sessionId} /> : null}
 
       <QuickWriteNotice visible={noticeVisible} t={t} />
     </div>

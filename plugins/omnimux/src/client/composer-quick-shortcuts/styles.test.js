@@ -4,7 +4,29 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import { QUICK_SHORTCUTS, QUICK_SHORTCUT_ARROW_ICON } from './catalog.js'
-import { QUICK_SHORTCUTS_CSS } from './styles.js'
+import { QUICK_SHORTCUTS_CSS, ensureQuickShortcutStyles, acquireQuickShortcutStyles } from './styles.js'
+import { JSDOM } from 'jsdom'
+
+it('shares stylesheet lifetime across independent composer seats', () => {
+  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>')
+  try {
+    const doc = dom.window.document
+    const releaseFirst = acquireQuickShortcutStyles(doc)
+    const releaseSecond = acquireQuickShortcutStyles(doc)
+    ensureQuickShortcutStyles(doc)
+    ensureQuickShortcutStyles(doc)
+    assert.equal(doc.head.querySelector('style').getAttribute('data-users'), '2')
+    assert.equal(doc.head.querySelectorAll('style').length, 1)
+    releaseFirst()
+    releaseFirst()
+    assert.equal(doc.head.querySelectorAll('style').length, 1)
+    assert.equal(doc.head.querySelector('style').textContent, QUICK_SHORTCUTS_CSS)
+    releaseSecond()
+    assert.equal(doc.head.querySelectorAll('style').length, 0)
+  } finally {
+    dom.window.close()
+  }
+})
 
 /**
  * 本文件把 Issue #2572 的形态契约钉死在源码层：无边框、整行居中、箭头透明态、
@@ -124,37 +146,28 @@ describe('四条快捷方式：无边框「图标 + 文字 + 箭头」', () => {
     assert.match(body, /order:\s*3;/, '必须排到输入框那块（order: 2）之后，否则会跑到输入框上方')
   })
 
-  it('模型与参数控件、写失败提示都独占一行，不参与四条按钮的居中计算', () => {
+  it('内联模型参数保持单行，外部写失败提示独占一行（Issue #2592）', () => {
     const controls = ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-controls')
-    assert.match(controls, /flex-basis:\s*100%;/, '控件必须自成一行，否则会把居中的按钮挤偏')
-    assert.doesNotMatch(controls, /position:\s*absolute/, '控件不得绝对定位到行内（会压住最右侧按钮）')
-    assert.match(controls, /justify-content:\s*center;/, '控件在自己的行里居中')
-    assert.match(controls, /min-width:\s*0;/, '控件必须能被压缩，否则窄列下横向溢出压字')
-    assert.match(controls, /flex-wrap:\s*wrap;/, '窄列下两个胶囊要能自己折行')
+    assert.match(controls, /display:\s*inline-flex;/)
+    assert.doesNotMatch(controls, /flex-basis:\s*100%;/, '内联控件不得另占一行')
+    assert.doesNotMatch(controls, /position:\s*absolute/, '控件不得盖住其它入口')
+    assert.match(controls, /min-width:\s*0;/)
+    assert.match(controls, /flex-wrap:\s*nowrap;/, '内联底栏不得折行增高')
 
     const notice = ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-notice')
     assert.match(notice, /flex-basis:\s*100%;/, '提示出现时也不得把按钮挤偏')
   })
 
-  /**
-   * Issue #2588：窄列下控件内容横向溢出输入框卡片（实测越界 78.34px）。
-   * 病灶是「行内那一块 nowrap 内容压不动」，不是行宽——这一排与卡片本来就同宽
-   * （720–1600px 共 45 个宽度实测宽差恒为 0），所以修法是放开折行 + 给一条收敛兜底链。
-   */
-  it('窄列下控件内容在卡片内折行，不横向溢出（Issue #2588）', () => {
+  it('内联控件窄列压缩文字而不折行，浮层不被工具区裁切（Issue #2592）', () => {
     const inner = ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-controls > .omx-media-config-controls')
-    assert.match(inner, /flex-wrap:\s*wrap;/, '共享控件本体必须能折行，否则 509.3px 的内容在 318px 的卡片里顶出边界')
-    assert.match(inner, /justify-content:\s*center;/, '折行后每一行仍要居中')
-    assert.match(inner, /max-width:\s*100%;/, '控件本体不得宽过所在行')
-
-    for (const selector of [
-      '.omx-quick-shortcut-controls .omx-popover-anchor',
-      '.omx-quick-shortcut-controls .omx-capsule-trigger',
-    ]) {
-      const body = ruleBody(QUICK_SHORTCUTS_CSS, selector)
-      assert.match(body, /max-width:\s*100%;/, `${selector} 不得宽过所在行`)
-      assert.match(body, /min-width:\s*0;/, `${selector} 的最小宽必须归零，否则 max-width 只是相对自身取 100%，等于没写`)
-    }
+    assert.match(inner, /flex-wrap:\s*nowrap;/)
+    assert.match(inner, /min-width:\s*0;/)
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, '.omx-quick-shortcut-controls .omx-capsule-trigger'), /min-width:\s*28px;/, '保留可操作的最小按钮')
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, '[data-composer-card][data-omnimux-inline-density] [class*="tools"]'), /overflow:\s*visible;/)
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, '[data-composer-card][data-omnimux-inline-density] .omx-popover-shell'), /max-width:\s*100%;/)
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, "[data-composer-card][data-omnimux-inline-density='short'] .omx-model-name-display"), /max-width:\s*88px;/)
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, "[data-composer-card][data-omnimux-inline-density='icon'] #modelCascadeTriggerBtn"), /width:\s*28px;/)
+    assert.match(ruleBody(QUICK_SHORTCUTS_CSS, "html [data-composer-card][data-omnimux-inline-density='short'] .sh-active-skill-chip .sh-chip-label"), /display:\s*inline-block!important;/, 'short 不能被全局 icon 密度提前隐藏技能文字')
 
     // 模型胶囊里唯一由数据驱动的两段文字：宁可省略号，也不把内容顶出卡片。
     for (const selector of [

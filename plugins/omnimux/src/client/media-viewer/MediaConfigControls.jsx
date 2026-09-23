@@ -169,7 +169,10 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
         type="button"
         className={`omx-capsule-trigger ${open ? 'is-active' : ''}`}
         onClick={onToggle}
-        title="选择模型与版本"
+        title={`${model?.name || '选择模型'}${channel?.name ? ` · ${channel.name}` : ''}`}
+        aria-label={`模型：${model?.name || '选择模型'}${channel?.name ? ` · ${channel.name}` : ''}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <line x1="6" y1="20" x2="6" y2="10" />
@@ -190,6 +193,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
                 type="button"
                 className={`omx-brand-tile ${hoveredBrand?.brandId === b.brandId ? 'is-active' : ''}`}
                 onMouseEnter={() => { setHoveredBrand(b); setHoveredModel(b.models[0]); }}
+                onFocus={() => { setHoveredBrand(b); setHoveredModel(b.models[0]); }}
                 onClick={() => pickChannel(b, b.models[0], b.models[0]?.channels?.[0])}
               >
                 <span className="omx-brand-name">{b.brandName}</span>
@@ -205,6 +209,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
                 type="button"
                 className={`omx-model-card-tile ${hoveredModel?.id === m.id ? 'is-active' : ''}`}
                 onMouseEnter={() => setHoveredModel(m)}
+                onFocus={() => setHoveredModel(m)}
                 onClick={() => pickChannel(hoveredBrand, m, m.channels?.[0])}
               >
                 <div className="omx-model-card-head">
@@ -219,7 +224,9 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
           <div className="omx-cascade-col omx-col-version">
             <div className="omx-version-title">选择版本</div>
             {(hoveredModel?.channels || []).map((c) => (
-              <div
+              <button // exempt-ui01: 模型版本选择按钮
+                type="button"
+                aria-pressed={channel?.id === c.id}
                 key={c.id}
                 className={`omx-version-row ${channel?.id === c.id ? 'is-active' : ''}`}
                 onClick={() => {
@@ -236,7 +243,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
                   <span className="omx-version-tag">{c.billing}</span>
                 </div>
                 {channel?.id === c.id && <CheckIcon size={15} stroke="var(--dsw-alias-label-primary)" />}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -255,6 +262,11 @@ export function MediaParamsPanel({ config, open, onToggle }) {
     videoGenMode, setVideoGenMode, videoAspect, setVideoAspect, videoRes, setVideoRes,
     hasSound, setHasSound, duration, setDuration,
   } = config;
+
+  const parameterSummary = mode === 'image'
+    ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}张`
+    : `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s`;
+  const parameterLabel = `配置模型参数：${parameterSummary}`;
 
   const IMAGE_RATIOS = [
     { r: '1:1', cls: 'ratio-1-1' },
@@ -281,8 +293,12 @@ export function MediaParamsPanel({ config, open, onToggle }) {
         type="button"
         className={`omx-capsule-trigger ${open ? 'is-active' : ''}`}
         onClick={onToggle}
-        title="配置模型参数"
+        title={parameterLabel}
+        aria-label={parameterLabel}
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
+        <span className="omx-param-compact-label" aria-hidden="true">参数</span>
         {mode === 'image' ? (
           <>
             <span>{imageAspect}</span>
@@ -337,14 +353,16 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                 <div className="omx-param-title">比例</div>
                 <div className="omx-ratio-grid">
                   {IMAGE_RATIOS.map((item) => (
-                    <div
+                    <button // exempt-ui01: 图像比例选择按钮
+                      type="button"
+                      aria-pressed={imageAspect === item.r}
                       key={item.r}
                       className={`omx-ratio-card ${imageAspect === item.r ? 'is-active' : ''}`}
                       onClick={() => setImageAspect(item.r)}
                     >
                       <span className={`omx-ratio-wire ${item.cls}`} />
                       <span className="omx-ratio-label">{item.r}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -405,14 +423,16 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                 <div className="omx-param-title">比例</div>
                 <div className="omx-ratio-grid">
                   {VIDEO_RATIOS.map((item) => (
-                    <div
+                    <button // exempt-ui01: 视频比例选择按钮
+                      type="button"
+                      aria-pressed={videoAspect === item.r}
                       key={item.r}
                       className={`omx-ratio-card ${videoAspect === item.r ? 'is-active' : ''}`}
                       onClick={() => setVideoAspect(item.r)}
                     >
                       <span className={`omx-ratio-wire ${item.cls}`} />
                       <span className="omx-ratio-label">{item.r}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -508,10 +528,11 @@ export function MediaParamsPanel({ config, open, onToggle }) {
  *   config: object,
  *   showModeSwitch?: boolean,
  *   showModelSummary?: boolean,
+ *   compact?: boolean, // 输入框使用可滚动、自适应参数布局；默认面板不启用
  *   onModelChange?: (selection: object) => void,
  * }} props
  */
-export function MediaConfigControls({ config, showModeSwitch = true, showModelSummary = false, onModelChange }) {
+export function MediaConfigControls({ config, showModeSwitch = true, showModelSummary = false, compact = false, onModelChange }) {
   const [activePopover, setActivePopover] = useState(null);
   const containerRef = useRef(null);
 
@@ -528,8 +549,19 @@ export function MediaConfigControls({ config, showModeSwitch = true, showModelSu
         setActivePopover(null);
       }
     };
+    const handleKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      const panel = containerRef.current?.querySelector('[role="dialog"], [role="menu"]');
+      if (!panel) return;
+      panel.parentElement?.querySelector('button')?.focus();
+      setActivePopover(null);
+    };
     window.addEventListener('pointerdown', handleOutsideClick);
-    return () => window.removeEventListener('pointerdown', handleOutsideClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handleOutsideClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleTogglePopover = (name) => {
@@ -543,7 +575,7 @@ export function MediaConfigControls({ config, showModeSwitch = true, showModelSu
   const { mode, setMode, model, channel } = config;
 
   return (
-    <div className="omx-media-config-controls" ref={containerRef}>
+    <div className={`omx-media-config-controls${compact ? ' omx-media-config-controls--compact' : ''}`} ref={containerRef}>
       {showModeSwitch && (
         <div className="omx-popover-anchor">
           <button // exempt-ui01: 生成方式切换触发器

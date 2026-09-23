@@ -249,9 +249,8 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="trigger
 }
 /*
  * Model seat (conversation.input.model): official ModelSelect has no triggerIcon —
- * only triggerLabel + optional triggerEffort + chevron. On any narrow density
- * (short OR icon, i.e. card < 560px) collapse the chip to a 28px glyph
- * (3-layer box) so a long model name never squeezes the trailing row.
+ * only triggerLabel + optional triggerEffort + chevron. Keep a 28px glyph
+ * (3-layer box) at every density so a long name never squeezes the row.
  * Selector is scoped to trailing + aria-haspopup=menu so the ContextMeter
  * (dialog) and left-side Permission/Plan chips stay untouched.
  * title/aria-label remain on the button for hover + a11y.
@@ -287,7 +286,7 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="trigger
 [data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:hover:not(:disabled){
   background:var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08))!important;
 }
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu']{
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]){
   width:28px;
   height:28px;
   min-width:28px;
@@ -296,12 +295,12 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   justify-content:center;
   gap:0;
 }
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerLabel"],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerEffort"],
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="chevron"]{
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]) [class*="triggerLabel"],
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]) [class*="triggerEffort"],
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]) [class*="chevron"]{
   display:none!important;
 }
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu']::before{
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"])::before{
   content:'';
   display:block;
   width:14px;
@@ -344,7 +343,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   content:none!important;
 }
 /* 原生 triggerIcon 在 28px 紧凑圆形/圆角按钮中居中居正 */
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerIcon"]{
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]) [class*="triggerIcon"]{
   margin:0!important;
   flex-shrink:0!important;
 }
@@ -473,6 +472,10 @@ let composerResizeObserver = null
 let composerResizeListener = null
 /** @type {MutationObserver | null} */
 let composerMountObserver = null
+/** @type {MutationObserver | null} */
+const composerContentObservers = new Map()
+let pendingInlineCards = new Set()
+let pendingAllCards = false
 /** @type {Element | null} */
 let observedTarget = null
 /** @type {Document | null} */
@@ -547,12 +550,143 @@ export function syncHeroWorkspaceRowToCard(doc = hostDocument()) {
   root.style.setProperty('--omnimux-composer-card-offset', `${offset}px`)
 }
 
+const inlineCardOverrides = new Map()
+const inlineDensityCards = new Set()
+const INLINE_DENSITY = 'data-omnimux-inline-density'
+const INLINE_GEOMETRY_PROPERTIES = ['width', 'max-width', 'margin-left', 'margin-right', 'left']
+
+function restoreInlineCard(card, saved) {
+  for (const [name, value, priority] of saved) {
+    if (value) card.style.setProperty(name, value, priority)
+    else card.style.removeProperty(name)
+  }
+  card.removeAttribute(INLINE_DENSITY)
+}
+
+/** Intrinsic single-row demand excludes floating menus and hidden descendants. */
+function inlineContentWidth(node, win) {
+  const css = win.getComputedStyle(node)
+  if (css.display === 'none' || css.position === 'absolute' || css.position === 'fixed') return 0
+  const children = Array.from(node.children).filter((child) => {
+    const style = win.getComputedStyle(child)
+    return style.display !== 'none' && !['absolute', 'fixed'].includes(style.position)
+  })
+  const edge = (parseFloat(css.paddingLeft) || 0) + (parseFloat(css.paddingRight) || 0)
+    + (parseFloat(css.borderLeftWidth) || 0) + (parseFloat(css.borderRightWidth) || 0)
+  if (!children.length || node.matches('button, svg, input')) return Math.max(node.getBoundingClientRect().width, node.scrollWidth || 0)
+  const widths = children.map((child) => inlineContentWidth(child, win))
+  if (css.display.includes('flex') && css.flexDirection !== 'column') {
+    return widths.reduce((sum, value) => sum + value, 0) + Math.max(0, children.length - 1) * (parseFloat(css.columnGap) || 0) + edge
+  }
+  return Math.max(0, ...widths) + edge
+}
+
+/** Release temporary inline geometry before the dock owner measures its card. */
+export function releaseInlineComposerGeometry(card) {
+  const saved = inlineCardOverrides.get(card)
+  if (saved) {
+    restoreInlineCard(card, saved)
+    inlineCardOverrides.delete(card)
+  }
+}
+
+/** Intrinsic full-label demand; the caller retains ownership of dock geometry. */
+export function measureInlineComposerDemand(card) {
+  const win = card?.ownerDocument?.defaultView
+  const row = card?.querySelector(':scope > [class*="row"]:has(> [class*="tools"])')
+  if (!win || !row || !card.querySelector('[data-omx-quick-shortcut-controls]') || !card.getBoundingClientRect().width) return 0
+  const previous = card.getAttribute(INLINE_DENSITY)
+  card.setAttribute(INLINE_DENSITY, 'full')
+  try {
+    const css = win.getComputedStyle(card)
+    return Math.ceil(inlineContentWidth(row, win) + ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, key) => sum + (parseFloat(css[key]) || 0), 0))
+  } finally {
+    if (previous === null) card.removeAttribute(INLINE_DENSITY)
+    else card.setAttribute(INLINE_DENSITY, previous)
+  }
+}
+
+/** Card-local temporary width; saved user preference and message width are untouched. */
+export function syncInlineComposerWidths(doc = hostDocument(), changedCards = null) {
+  const win = doc?.defaultView
+  if (!win?.getComputedStyle || !doc?.querySelectorAll) return
+  const includes = card => !changedCards || changedCards.has(card)
+  for (const card of inlineDensityCards) {
+    if (!card.isConnected || !card.querySelector('[data-omx-quick-shortcut-controls]')) {
+      card.removeAttribute(INLINE_DENSITY)
+      inlineDensityCards.delete(card)
+    }
+  }
+  for (const [card, saved] of inlineCardOverrides) {
+    if (!includes(card) && card.isConnected && card.querySelector('[data-omx-quick-shortcut-controls]')) continue
+    restoreInlineCard(card, saved)
+    if (!card.isConnected || !card.querySelector('[data-omx-quick-shortcut-controls]')) inlineCardOverrides.delete(card)
+  }
+  const cards = []
+  for (const controls of doc.querySelectorAll('[data-omx-quick-shortcut-controls]')) {
+    const card = controls.closest('[data-composer-card]')
+    if (card?.isConnected && includes(card)) {
+      inlineDensityCards.add(card)
+      card.setAttribute(INLINE_DENSITY, 'full')
+    }
+  }
+  for (const controls of doc.querySelectorAll('[data-omx-quick-shortcut-controls]')) {
+    const card = controls.closest('[data-composer-card]')
+    const row = card?.querySelector(':scope > [class*="row"]:has(> [class*="tools"])')
+    const seat = card?.closest('[data-composer-seat]')
+    if (!card || !includes(card) || !row || !seat || !card.getBoundingClientRect().width) continue
+    const docked = Boolean(card.closest('[data-omnimux-starter-host][data-omnimux-dock-open]'))
+    if (docked) releaseInlineComposerGeometry(card)
+    else if (!inlineCardOverrides.has(card)) {
+      inlineCardOverrides.set(card, INLINE_GEOMETRY_PROPERTIES.map((name) => [name, card.style.getPropertyValue(name), card.style.getPropertyPriority(name)]))
+    }
+    const original = card.getBoundingClientRect()
+    const seatBox = seat.getBoundingClientRect()
+    const column = card.closest('[data-conversation-scroll], [class*="centerCol"]')
+    const columnBox = column?.getBoundingClientRect() || seatBox
+    const css = win.getComputedStyle(card)
+    const seatCss = win.getComputedStyle(seat)
+    const clearance = parseFloat(css.getPropertyValue('--dsh-composer-side-clearance')) || 16
+    const left = Math.max(seatBox.left + (parseFloat(seatCss.paddingLeft) || 0), columnBox.left) + clearance
+    const right = Math.min(seatBox.right - (parseFloat(seatCss.paddingRight) || 0), columnBox.right) - clearance
+    const available = Math.max(0, right - left)
+    if (!available) continue
+    const padding = (parseFloat(css.paddingLeft) || 0) + (parseFloat(css.paddingRight) || 0)
+      + (parseFloat(css.borderLeftWidth) || 0) + (parseFloat(css.borderRightWidth) || 0)
+    const needed = Math.ceil(inlineContentWidth(row, win) + padding)
+    const target = docked ? original.width : Math.min(available, Math.max(original.width, needed))
+    cards.push({ card, row, padding, needed, target, docked, position: css.position,
+      originalLeft: parseFloat(css.left) || 0, centeredLeft: left + (available - target) / 2 })
+  }
+  // Commit widths together before reading their resulting auto-margin positions.
+  for (const item of cards) {
+    const { card, target, docked, needed } = item
+    if (!docked) {
+      card.style.setProperty('width', `${target}px`, 'important')
+      card.style.setProperty('max-width', `${target}px`, 'important')
+      card.style.setProperty('margin-left', 'auto', 'important')
+      card.style.setProperty('margin-right', 'auto', 'important')
+    }
+    if (needed > target + 1) card.setAttribute(INLINE_DENSITY, 'short')
+  }
+  const updates = cards.map(item => ({ ...item,
+    offset: !item.docked && item.position === 'relative'
+      ? item.centeredLeft - item.card.getBoundingClientRect().left + item.originalLeft : item.centeredLeft,
+    icon: item.needed > item.target + 1 && inlineContentWidth(item.row, win) + item.padding > item.target + 1,
+  }))
+  for (const { card, docked, position, offset, icon } of updates) {
+    if (!docked && (position === 'fixed' || position === 'relative')) card.style.setProperty('left', `${offset}px`, 'important')
+    if (icon) card.setAttribute(INLINE_DENSITY, 'icon')
+  }
+}
+
 /**
  * Write the density attribute on `<html>` based on the current probe width.
  * Also keeps the hero seats row docked to the composer card.
  * @param {Document | undefined} [doc]
  */
-export function applyComposerDensity(doc = hostDocument()) {
+export function applyComposerDensity(doc = hostDocument(), changedCards = null) {
+  syncInlineComposerWidths(doc, changedCards)
   const root = doc?.documentElement
   if (!root || typeof root.setAttribute !== 'function') return
   const target = findComposerTarget(doc)
@@ -581,6 +715,34 @@ export function ensureComposerCompactChrome(doc = hostDocument()) {
   return style
 }
 
+function observeComposerToolbars(doc) {
+  const cards = new Set(doc.querySelectorAll?.('[data-composer-card]') || [])
+  for (const [card, entry] of composerContentObservers) {
+    const row = card.querySelector?.(':scope > [class*="row"]:has(> [class*="tools"])')
+    if (!cards.has(card) || !card.isConnected || row !== entry.row || card.closest?.('[data-composer-seat]') !== entry.seat) {
+      entry.observer?.disconnect()
+      entry.resize?.disconnect()
+      composerContentObservers.delete(card)
+      scheduleComposerDensity(doc, card)
+    }
+  }
+  for (const card of cards) {
+    if (composerContentObservers.has(card)) continue
+    const row = card.querySelector?.(':scope > [class*="row"]:has(> [class*="tools"])')
+    if (!row) continue
+    const observer = typeof MutationObserver === 'function'
+      ? new MutationObserver(() => scheduleComposerDensity(doc, card)) : null
+    observer?.observe(row, { childList: true, characterData: true, subtree: true })
+    const resize = typeof globalThis.ResizeObserver === 'function'
+      ? new globalThis.ResizeObserver(() => scheduleComposerDensity(doc, card)) : null
+    const seat = card.closest?.('[data-composer-seat]')
+    if (seat) resize?.observe(seat)
+    resize?.observe(card)
+    composerContentObservers.set(card, { row, seat, observer, resize })
+    scheduleComposerDensity(doc, card)
+  }
+}
+
 function observeComposerTarget(doc, target) {
   if (observedTarget === target && composerResizeObserver) return
   if (composerResizeObserver) {
@@ -592,6 +754,8 @@ function observeComposerTarget(doc, target) {
   if (typeof RO === 'function' && target) {
     composerResizeObserver = new RO(() => { scheduleComposerDensity(doc) })
     composerResizeObserver.observe(target)
+    const seat = target.closest?.('[data-composer-seat]')
+    if (seat) composerResizeObserver.observe(seat)
   }
 }
 
@@ -602,16 +766,21 @@ function observeComposerTarget(doc, target) {
  * 卡片在同一周期里再次改变尺寸，触发宿主浏览器的
  * `ResizeObserver loop completed with undelivered notifications.` 告警。
  * 推迟一帧后尺寸变化落到下一个正常交付周期；同帧多次触发合并为一次，
- * 取不到 requestAnimationFrame 时退到微任务。resize 兜底路径保持同步。
+ * 取不到 requestAnimationFrame 时退到微任务；resize 兜底复用同一调度。
  * @param {Document | undefined} doc
  */
-function scheduleComposerDensity(doc) {
+function scheduleComposerDensity(doc, card = null) {
+  if (card) pendingInlineCards.add(card)
+  else pendingAllCards = true
   if (densityFrame !== null) return
   const token = densityFrameToken
   const run = () => {
     densityFrame = null
     if (token !== densityFrameToken || observerDoc !== doc) return
-    applyComposerDensity(doc)
+    const changedCards = pendingAllCards ? null : pendingInlineCards
+    pendingInlineCards = new Set()
+    pendingAllCards = false
+    applyComposerDensity(doc, changedCards)
   }
   const win = hostWindow()
   if (typeof win?.requestAnimationFrame === 'function') {
@@ -656,17 +825,19 @@ export function installComposerCompactObserver(doc = hostDocument()) {
   if (target) {
     observeComposerTarget(doc, target)
   }
+  observeComposerToolbars(doc)
 
   // 持续监听挂载变动：无论切换会话还是 React 重新渲染 Card，保持自愈重新绑定（Issue #2302）
   if (typeof MutationObserver !== 'undefined') {
     composerMountObserver = new MutationObserver(() => {
+      observeComposerToolbars(doc)
       const next = findComposerTarget(doc)
       schedulePlaceMentionMenu(doc)
       if (next && (next !== observedTarget || !observedTarget?.isConnected)) {
         observeComposerTarget(doc, next)
         scheduleComposerDensity(doc)
       } else if (!next && observedTarget) {
-        observedTarget = null
+        observeComposerTarget(doc, null)
         scheduleComposerDensity(doc)
       }
     })
@@ -676,7 +847,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
 
   // 视口 resize 监听常驻作为兜底保障（包括无 RO 环境或视口跳变）
   if (!composerResizeListener) {
-    composerResizeListener = () => { applyComposerDensity(doc); schedulePlaceMentionMenu(doc) }
+    composerResizeListener = () => { scheduleComposerDensity(doc); schedulePlaceMentionMenu(doc) }
     const win = hostWindow()
     if (win?.addEventListener) {
       win.addEventListener('resize', composerResizeListener)
@@ -929,6 +1100,10 @@ export function placeMentionMenu(doc = hostDocument()) {
 
 /** Tear down the observer (RO, fallback resize listener, mount watcher). */
 export function uninstallComposerCompactObserver() {
+  for (const [card, saved] of inlineCardOverrides) restoreInlineCard(card, saved)
+  inlineCardOverrides.clear()
+  for (const card of inlineDensityCards) card.removeAttribute(INLINE_DENSITY)
+  inlineDensityCards.clear()
   cancelScheduledComposerDensity()
   cancelScheduledPlaceMentionMenu()
   if (composerResizeObserver) {
@@ -944,6 +1119,13 @@ export function uninstallComposerCompactObserver() {
     try { composerMountObserver.disconnect() } catch { /* ignore */ }
     composerMountObserver = null
   }
+  for (const entry of composerContentObservers.values()) {
+    entry.observer?.disconnect()
+    entry.resize?.disconnect()
+  }
+  composerContentObservers.clear()
+  pendingInlineCards.clear()
+  pendingAllCards = false
   observedTarget = null
   observerDoc = null
 }
