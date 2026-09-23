@@ -1,7 +1,7 @@
 {
   "task": "Issue #2626",
   "title": "输入框快捷方式移除实时参数并接入方案 B 会话模型选择器",
-  "verifiedAt": "2026-09-23T14:33:31.503Z",
+  "verifiedAt": "2026-09-23T14:47:19.669Z",
   "acceptanceCriteria": {
     "AC-1_paramSummaryRemoved": {
       "status": "PASS",
