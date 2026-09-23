@@ -111,8 +111,16 @@ async function loadCardComponent() {
   const stubRequire = (id) => {
     if (id === 'dsh-ui-kit') {
       return {
-        Button: ({ children, onClick, className, variant, disabled, role, 'aria-selected': selected }) =>
-          React.createElement('button', { type: 'button', onClick, className, disabled, role, 'aria-selected': selected }, children),
+        Button: ({ children, onClick, className, variant, disabled, role, 'aria-selected': selected, 'aria-expanded': expanded }) =>
+          React.createElement('button', {
+            type: 'button',
+            onClick,
+            className,
+            disabled,
+            role,
+            'aria-selected': selected,
+            'aria-expanded': expanded != null ? String(expanded) : undefined,
+          }, children),
         InputField: ({ value, onChange, placeholder, type }) =>
           React.createElement('input', { value, onChange, placeholder, type, className: 'omx-stub-input' }),
         DropdownSelect: ({ value, onChange, options, id }) =>
@@ -230,6 +238,31 @@ describe('settings-sections-split.e2e', () => {
     assert.ok(runtimeCard.querySelector('.omx-cloud-banner'), 'Card 1 contains OmniMux Cloud banner')
     assert.ok(runtimeCard.querySelector('.omx-segmented-tabs'), 'Card 1 contains dual tabs')
     assert.ok(runtimeCard.querySelector('.omx-status-bar'), 'Card 1 contains bottom status bar')
+
+    // Switch to Tab 2 (媒体生成提供商)
+    const tabs = runtimeCard.querySelectorAll('.omx-tab-btn')
+    assert.equal(tabs.length, 2, 'Must have two tabs')
+    await act(async () => {
+      tabs[1].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+    })
+
+    // Assert: Models mapping dropdowns are initially COLLAPSED by default
+    assert.equal(runtimeCard.querySelectorAll('.omx-stub-select').length, 0, 'Models mapping should be collapsed by default')
+    const trigger = runtimeCard.querySelector('.omx-collapsible-trigger')
+    assert.ok(trigger, 'Collapsible trigger must be present')
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false')
+
+    // Click trigger to EXPAND
+    await act(async () => {
+      trigger.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+    })
+    assert.equal(trigger.getAttribute('aria-expanded'), 'true')
+
+    // Assert: Models dropdowns are rendered in a vertical column container (上下排列，非左右并排)
+    const columnContainer = runtimeCard.querySelector('.omx-caps-column')
+    assert.ok(columnContainer, 'Must use .omx-caps-column for vertical stacking')
+    const selects = columnContainer.querySelectorAll('.omx-stub-select')
+    assert.equal(selects.length, 3, 'Must render image, video, audio selects vertically in column')
 
     // Assert S4: Card 2 contains canvas groups
     const groups = canvasCard.querySelectorAll('.omnimux-models-card__group')

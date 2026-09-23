@@ -350,6 +350,7 @@ function ByokPanel({ t, scope, value, busy, setBusy, error, setError, notice, se
   const [imgModel, setImgModel] = useState(value.runtimeMediaImageModel || DEFAULT_MEDIA_MODELS.image)
   const [vidModel, setVidModel] = useState(value.runtimeMediaVideoModel || DEFAULT_MEDIA_MODELS.video)
   const [audModel, setAudModel] = useState(value.runtimeMediaAudioModel || DEFAULT_MEDIA_MODELS.audio)
+  const [modelsExpanded, setModelsExpanded] = useState(false)
 
   const preset = MEDIA_PROVIDER_PRESETS[provider] || MEDIA_PROVIDER_PRESETS.fal
 
@@ -498,38 +499,52 @@ function ByokPanel({ t, scope, value, busy, setBusy, error, setError, notice, se
         </div>
 
         <div className="omx-form-row">
-          <span className="omx-section-title">{t('runtime.mediaTitle')}</span>
-          <div className="omx-caps-row">
-            <div className="omx-cap-card">
-              <span className="omx-form-item">{t('runtime.imageModel')}</span>
-              <DropdownSelect
-                id="omx-img-model"
-                value={imgModel}
-                options={preset.models.image.map((m) => ({ value: m, label: m }))}
-                onChange={(next) => setImgModel(next)}
-              />
-            </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="omx-collapsible-trigger"
+            aria-expanded={modelsExpanded}
+            onClick={() => setModelsExpanded(!modelsExpanded)}
+          >
+            <span className="omx-section-title">{t('runtime.mediaModelsToggle')}</span>
+            <span className="omx-toggle-badge">
+              {modelsExpanded ? t('runtime.collapse') : t('runtime.expand')}
+            </span>
+          </Button>
 
-            <div className="omx-cap-card">
-              <span className="omx-form-item">{t('runtime.videoModel')}</span>
-              <DropdownSelect
-                id="omx-vid-model"
-                value={vidModel}
-                options={preset.models.video.map((m) => ({ value: m, label: m }))}
-                onChange={(next) => setVidModel(next)}
-              />
-            </div>
+          {modelsExpanded ? (
+            <div className="omx-caps-column">
+              <div className="omx-cap-card">
+                <span className="omx-form-item">{t('runtime.imageModel')}</span>
+                <DropdownSelect
+                  id="omx-img-model"
+                  value={imgModel}
+                  options={preset.models.image.map((m) => ({ value: m, label: m }))}
+                  onChange={(next) => setImgModel(next)}
+                />
+              </div>
 
-            <div className="omx-cap-card">
-              <span className="omx-form-item">{t('runtime.audioModel')}</span>
-              <DropdownSelect
-                id="omx-aud-model"
-                value={audModel}
-                options={preset.models.audio.map((m) => ({ value: m, label: m }))}
-                onChange={(next) => setAudModel(next)}
-              />
+              <div className="omx-cap-card">
+                <span className="omx-form-item">{t('runtime.videoModel')}</span>
+                <DropdownSelect
+                  id="omx-vid-model"
+                  value={vidModel}
+                  options={preset.models.video.map((m) => ({ value: m, label: m }))}
+                  onChange={(next) => setVidModel(next)}
+                />
+              </div>
+
+              <div className="omx-cap-card">
+                <span className="omx-form-item">{t('runtime.audioModel')}</span>
+                <DropdownSelect
+                  id="omx-aud-model"
+                  value={audModel}
+                  options={preset.models.audio.map((m) => ({ value: m, label: m }))}
+                  onChange={(next) => setAudModel(next)}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="omx-provider-form-actions">

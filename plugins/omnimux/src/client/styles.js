@@ -579,6 +579,28 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
   flex-direction: column;
   gap: 6px;
 }
+.omx-collapsible-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.omx-toggle-badge {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-caps-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
 .omx-caps-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
