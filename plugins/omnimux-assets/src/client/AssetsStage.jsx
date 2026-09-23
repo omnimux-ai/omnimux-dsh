@@ -31,9 +31,15 @@ function AssetsHeader(props) {
 }
 
 function AssetsActionRow(props) {
-  const { t, feed, sourceTab, onOpenCreateProduct } = props
+  const { t, feed, sourceTab, onOpenCreateProduct, onOpenImageGeneration } = props
   if (sourceTab === 'generations') {
-    return null
+    return (
+      <div className="omnimux-assets-action-row">
+        <Button variant="primary" leadingIcon={<PlusIcon />} onClick={onOpenImageGeneration}>
+          {t('generations.createButton') || '去生成'}
+        </Button>
+      </div>
+    )
   }
   const onAdd = () => {
     feed.setCreating(feed.filterType || 'character')
@@ -172,7 +178,7 @@ function AssetsFilterBar(props) {
             { id: 'local', label: t('source.local') },
             { id: 'cloud', label: t('source.cloud') },
             { id: 'product', label: t('source.product') || '产品库' },
-            { id: 'generations', label: t('source.generations') || '生成的' },
+            { id: 'generations', label: t('source.generations') || 'AI生成' },
           ]}
           activeId={sourceTab}
           onChange={onSourceTabChange}
@@ -492,6 +498,17 @@ export function AssetsStage(props) {
     }
   }, [])
 
+  const handleOpenImageGeneration = useCallback(() => {
+    const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+    if (api) {
+      if (typeof api.open === 'function') {
+        api.open({ tabId: 'omnimux:media-viewer' })
+      } else if (typeof api.openWorkbench === 'function') {
+        api.openWorkbench({ tabId: 'omnimux:media-viewer' })
+      }
+    }
+  }, [])
+
   return (
     <div
       ref={stageRootRef}
@@ -503,7 +520,13 @@ export function AssetsStage(props) {
       style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} />
-      <AssetsActionRow t={t} feed={feed} sourceTab={sourceTab} onOpenCreateProduct={handleOpenCreateProduct} />
+      <AssetsActionRow
+        t={t}
+        feed={feed}
+        sourceTab={sourceTab}
+        onOpenCreateProduct={handleOpenCreateProduct}
+        onOpenImageGeneration={handleOpenImageGeneration}
+      />
       <Divider />
       {/* 吸附栈：一级 Tab + 二级分类行，随整页滚动到顶后固定（骨架契约 §二·补，Issue 1977） */}
       <div className="omx-stage-sticky" ref={railRef}>
