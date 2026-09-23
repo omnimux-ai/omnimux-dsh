@@ -808,6 +808,13 @@ export const WORKFLOW_CSS = `
   width: 398px;
   box-sizing: border-box;
 }
+.omx-apptab-select-single.is-open {
+  z-index: 50;
+}
+.omx-apptab-field-group.is-dropdown-open {
+  position: relative;
+  z-index: 50;
+}
 .omx-apptab-select-trigger {
   width: 398px;
   height: 40px;
@@ -843,10 +850,10 @@ export const WORKFLOW_CSS = `
   overflow-y: auto;
   border-radius: 8px;
   box-sizing: border-box;
-  background: var(--dsw-alias-surface-raised);
+  background-color: var(--dsw-alias-bg-elevated, #1c1c1f) !important;
   border: 1px solid var(--dsw-alias-border-l2);
-  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
-  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important; /* exempt-ui03 issue-2622 dropdown solid shadow */
+  z-index: 100;
 }
 .omx-apptab-select-option {
   padding: 8px 12px;
@@ -1199,6 +1206,60 @@ export const WORKFLOW_CSS = `
   gap: 8px;
   border-top: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-alias-bg-layer-2);
+}
+.omx-apptab-modal.is-wide {
+  width: 440px;
+}
+.omx-apptab-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.omx-apptab-product-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.omx-apptab-product-item:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-apptab-product-item-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--dsw-alias-bg-layer-3);
+}
+.omx-apptab-product-item-meta {
+  flex: 1;
+  min-width: 0;
+}
+.omx-apptab-product-item-name {
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omx-apptab-product-item-sub {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .omx-apptab-btn-ghost {
   height: 32px;

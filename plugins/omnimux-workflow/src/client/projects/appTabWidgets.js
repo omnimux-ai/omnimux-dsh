@@ -63,6 +63,7 @@ export function resolveWidget(key, prop, mapping) {
     return 'ratio-cards'
   }
   if (opts.length > 0) return 'select-single'
+  if (key === 'product_link') return 'product-link'
   if (prop?.type === 'string' && ((prop.maxLength !== undefined && prop.maxLength > 100) || (key && key.toLowerCase().includes('prompt')) || prop.title?.includes('提示'))) {
     return 'textarea'
   }
@@ -113,6 +114,23 @@ export function sanitizePreviewUrl(rawUrl) {
 }
 
 /**
+ * 依据素材来源标识推导人类友好的来源标签
+ * @param {unknown} source
+ * @returns {string}
+ */
+export function resolveSourceLabel(source) {
+  if (!source || typeof source !== 'string') return ''
+  switch (source) {
+    case 'product':
+      return '商品库'
+    case 'upload':
+      return '本地上传'
+    default:
+      return `来源: ${source}`
+  }
+}
+
+/**
  * 选定值回填展示解析
  * @param {unknown} val
  * @returns {{ name: string, sub: string, source: string, url: string }}
@@ -123,7 +141,7 @@ export function displayValueOf(val) {
     const url = String(val.url || '')
     return {
       name: String(val.name || val.url || '已选素材'),
-      sub: val.sub || (val.source ? `来源: ${val.source}` : ''),
+      sub: val.sub || resolveSourceLabel(val.source),
       source: val.source || 'asset',
       url,
     }
@@ -136,7 +154,7 @@ export function displayValueOf(val) {
         const url = String(parsed.url || '')
         return {
           name: String(parsed.name || parsed.url || '已选素材'),
-          sub: parsed.sub || (parsed.source ? `来源: ${parsed.source}` : ''),
+          sub: parsed.sub || resolveSourceLabel(parsed.source),
           source: parsed.source || 'asset',
           url,
         }

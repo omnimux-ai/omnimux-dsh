@@ -45,10 +45,10 @@ const CHASING_PRODUCT_APP = {
       product_image: {
         type: 'string',
         title: '商品主图',
-        widget: 'library-picker',
-        description: '请选择或上传需要追踪展示的商品核心视觉图',
+        widget: 'product-link',
+        description: '粘贴商品链接、从商品库选择或本地上传',
         default: '/assets/sample-shoe.webp',
-        library: 'asset',
+        placeholder: '粘贴商品链接，或从商品库选择',
       },
       aspect_ratio: {
         type: 'string',
@@ -70,7 +70,7 @@ const CHASING_PRODUCT_APP = {
     },
   },
   fieldMappings: {
-    product_image: { widget: 'library-picker', library: 'asset' },
+    product_image: { widget: 'product-link' },
     aspect_ratio: { widget: 'ratio-cards' },
     voice: { widget: 'select-single' },
   },
@@ -126,9 +126,43 @@ const PRODUCT_VIDEO_APP = {
   },
 }
 
+const TEST_MANIFEST = {
+  appId: 'app-creatify-app-demo',
+  metadata: {
+    name: '手机与网页交互实机演示',
+    description: '测试商品主图三合一与下拉透视穿透防卫',
+  },
+  formSchema: {
+    type: 'object',
+    properties: {
+      voice: {
+        type: 'string',
+        title: '解说音色',
+        widget: 'select-single',
+        options: [
+          { label: '活力女声', value: 'zh_female_energetic' },
+          { label: '沉稳男声', value: 'zh_male_calm' },
+        ],
+        default: 'zh_female_energetic',
+      },
+      product_image: {
+        type: 'string',
+        title: '商品主图',
+        widget: 'product-link',
+        placeholder: '粘贴商品链接，或从商品库选择',
+      },
+    },
+  },
+  fieldMappings: {
+    voice: { widget: 'select-single' },
+    product_image: { widget: 'product-link' },
+  },
+}
+
 // 预设目录非空防御断言 (M-09)
 assert.ok(CHASING_PRODUCT_APP, '预设 CHASING_PRODUCT_APP 必须存在')
 assert.ok(PRODUCT_VIDEO_APP, '预设 PRODUCT_VIDEO_APP 必须存在')
+assert.ok(TEST_MANIFEST, '预设 TEST_MANIFEST 必须存在')
 
 let AppTabComponent = null
 let dom = null
@@ -139,6 +173,8 @@ const originalGlobals = {
   window: globalThis.window,
   document: globalThis.document,
   HTMLElement: globalThis.HTMLElement,
+  HTMLInputElement: globalThis.HTMLInputElement,
+  Event: globalThis.Event,
   MouseEvent: globalThis.MouseEvent,
   IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
 }
@@ -156,6 +192,8 @@ afterEach(() => {
   globalThis.window = originalGlobals.window
   globalThis.document = originalGlobals.document
   globalThis.HTMLElement = originalGlobals.HTMLElement
+  globalThis.HTMLInputElement = originalGlobals.HTMLInputElement
+  globalThis.Event = originalGlobals.Event
   globalThis.MouseEvent = originalGlobals.MouseEvent
   globalThis.IS_REACT_ACT_ENVIRONMENT = originalGlobals.IS_REACT_ACT_ENVIRONMENT
 })
@@ -219,13 +257,29 @@ function initDom() {
   globalThis.document = dom.window.document
   doc = dom.window.document
   globalThis.HTMLElement = dom.window.HTMLElement
+  globalThis.HTMLInputElement = dom.window.HTMLInputElement
+  globalThis.Event = dom.window.Event
   globalThis.MouseEvent = dom.window.MouseEvent
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+  if (dom.window.HTMLInputElement?.prototype) {
+    dom.window.HTMLInputElement.prototype.attachEvent = () => {}
+    dom.window.HTMLInputElement.prototype.detachEvent = () => {}
+  }
 }
 
 function fireClick(el) {
   act(() => {
     el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }))
+  })
+}
+
+function fireChange(el, value) {
+  act(() => {
+    const propKey = Object.keys(el).find((k) => k.startsWith('__reactProps$'))
+    if (propKey && typeof el[propKey]?.onChange === 'function') {
+      el[propKey].onChange({ target: { value } })
+    }
   })
 }
 
@@ -277,8 +331,12 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
   assert.ok(trigger, '必须包含下拉触发器')
   assert.equal(trigger.textContent.trim(), '活力女声（电商促销爆款）', '默认选中活力女声')
 
-  // 点击展开下拉菜单
+  // 点击展开下拉菜单，验证防透视穿透样式类名挂载（Issue #2622 Task 1）
   fireClick(trigger)
+  assert.ok(selectBox.classList.contains('is-open'), '展开时 select-single 必须带有 is-open')
+  const fieldGroup = selectBox.closest('.omx-apptab-field-group')
+  assert.ok(fieldGroup.classList.contains('is-dropdown-open'), '展开时父级 field-group 必须带有 is-dropdown-open')
+
   const optionsPanel = selectBox.querySelector('.omx-apptab-select-options')
   assert.ok(optionsPanel, '展开后必须呈现 .omx-apptab-select-options 菜单面板')
 
@@ -294,17 +352,36 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
   assert.equal(selectBox.querySelector('.omx-apptab-select-options'), null, '选择后下拉面板必须自动收起')
   assert.equal(trigger.textContent.trim(), '沉稳男声（数码科技大片）', '触发器展示已选中的沉稳男声音色')
 
-  // 3. 验证商品主图字段已升级为资产库选择并卡片化呈现 (.omx-apptab-picked)
+  // 3. 验证商品主图字段已升级为三合一复合控件，默认卡片化呈现 (.omx-apptab-picked)（Issue #2622 Task 2）
   const pickedCard = host.querySelector('.omx-apptab-picked')
   assert.ok(pickedCard, '因自带默认样例图，商品主图必须卡片化展示')
 
   const clearBtn = pickedCard.querySelector('.omx-apptab-picked-clear')
   assert.ok(clearBtn, '已选卡片必须提供移除按钮')
 
-  // 点击移除，退回为从资产库选择触发按钮
+  // 点击移除，无缝恢复为 40px 单行紧凑复合输入条
   fireClick(clearBtn)
-  const libTrigger = host.querySelector('.omx-apptab-library-trigger')
-  assert.ok(libTrigger, '清空后呈现「从资产库选择…」触发行')
+  const productWidget = host.querySelector('.omx-apptab-product-widget')
+  assert.ok(productWidget, '清空后无缝恢复为 40px 单行紧凑输入条')
+  const storeBtn = productWidget.querySelector('button[aria-label="从商品库选择"]')
+  assert.ok(storeBtn, '输入条必须包含「从商品库选择」按钮')
+  const uploadBtn = productWidget.querySelector('button[aria-label="本地上传"]')
+  assert.ok(uploadBtn, '输入条必须包含「本地上传」按钮')
+  const linkInput = productWidget.querySelector('.omx-apptab-extractor-input')
+  assert.ok(linkInput, '输入条必须包含链接输入框')
+
+  // 点击从商品库选择按钮，唤起商品库选择交互弹窗
+  fireClick(storeBtn)
+  const modal = doc.querySelector('.omx-apptab-modal')
+  assert.ok(modal, '点击商品库按钮必须弹出从商品库选择的交互弹窗')
+  const productItems = Array.from(modal.querySelectorAll('.omx-apptab-product-item'))
+  assert.ok(productItems.length > 0, '商品库弹窗中必须列出已有可选商品卡片')
+
+  // 点击第一款已有商品进行回填
+  fireClick(productItems[0])
+  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '选择商品后弹窗自动关闭')
+  const repickedCard = host.querySelector('.omx-apptab-picked')
+  assert.ok(repickedCard, '挑选商品后重新渲染为已选卡片')
 
   act(() => {
     root.unmount()
@@ -371,6 +448,157 @@ test('E2E: 复合控件分段选项卡 (segmented-tabs) 与多选胶囊 (multi-t
   assert.equal(tagButtons[1].classList.contains('is-on'), false)
   assert.equal(unselectedTag.classList.contains('is-locked'), false, '释放后恢复可用')
   assert.equal(unselectedTag.disabled, false, '释放后 disabled 解除')
+
+  act(() => {
+    root.unmount()
+  })
+})
+
+test('E2E: 下拉菜单防透视穿透与商品主图三合一紧凑复合控件全交互 (Issue #2622)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_app-creatify-app-demo',
+          extra: { manifest: TEST_MANIFEST },
+        },
+      }),
+    )
+  })
+
+  // 1. 测试任务 1：音色下拉菜单防透视穿透
+  const selectBox = host.querySelector('.omx-apptab-select-single')
+  assert.ok(selectBox, '音色字段渲染为定制下拉单选')
+  assert.equal(selectBox.classList.contains('is-open'), false, '未展开时无 is-open')
+
+  const trigger = selectBox.querySelector('.omx-apptab-select-trigger')
+  assert.ok(trigger, '触发器存在')
+
+  // 点击展开
+  fireClick(trigger)
+  assert.ok(selectBox.classList.contains('is-open'), '展开后容器拥有 is-open 赋予 z-index: 50')
+  const group = selectBox.closest('.omx-apptab-field-group')
+  assert.ok(group.classList.contains('is-dropdown-open'), '父级字段组拥有 is-dropdown-open 赋予高 z-index')
+  const options = selectBox.querySelector('.omx-apptab-select-options')
+  assert.ok(options, '下拉菜单面板展开')
+
+  // 2. 测试任务 2：商品主图未回填时为 40px 紧凑单行复合输入条
+  const productWidget = host.querySelector('.omx-apptab-product-widget')
+  assert.ok(productWidget, '商品主图未回填时呈现为紧凑单行条')
+  assert.ok(productWidget.classList.contains('omx-apptab-extractor'), '复用 40px 高度 extractor 布局')
+
+  const linkInput = productWidget.querySelector('.omx-apptab-extractor-input')
+  assert.ok(linkInput, '包含商品链接输入框')
+
+  const storeBtn = productWidget.querySelector('button[aria-label="从商品库选择"]')
+  assert.ok(storeBtn, '包含从商品库选择功能按钮')
+
+  const uploadBtn = productWidget.querySelector('button[aria-label="本地上传"]')
+  assert.ok(uploadBtn, '包含本地上传功能按钮')
+
+  // 点击「从商品库选择」，验证弹窗交互并回填已有商品
+  fireClick(storeBtn)
+  const modal = doc.querySelector('.omx-apptab-modal')
+  assert.ok(modal, '点击从商品库选择唤起交互弹窗')
+  const items = Array.from(modal.querySelectorAll('.omx-apptab-product-item'))
+  assert.ok(items.length >= 1, '商品库弹窗中提供已有商品列表')
+
+  // 点击挑选第一款商品
+  fireClick(items[0])
+  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '选择商品后弹窗自动关闭')
+
+  // 验证回填后统一渲染为带缩略图与移除按键的高质感卡片
+  const pickedCard = host.querySelector('.omx-apptab-picked')
+  assert.ok(pickedCard, '挑选商品后回填为统一精美卡片')
+  assert.ok(pickedCard.querySelector('.omx-apptab-picked-thumb'), '包含商品缩略图')
+  assert.ok(pickedCard.querySelector('.omx-apptab-picked-title'), '包含商品标题')
+
+  const removeBtn = pickedCard.querySelector('.omx-apptab-picked-clear')
+  assert.ok(removeBtn, '包含一键移除按钮')
+
+  // 点击移除，无缝恢复为 40px 紧凑输入条
+  fireClick(removeBtn)
+  assert.equal(host.querySelector('.omx-apptab-picked'), null, '移除后卡片消失')
+  assert.ok(host.querySelector('.omx-apptab-product-widget'), '无缝恢复为 40px 单行输入条')
+
+  act(() => {
+    root.unmount()
+  })
+})
+
+test('E2E: 商品库弹窗链接安全协议清洗与非法协议拦截 (Issue #2622 Review Fix)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_app-creatify-app-demo',
+          extra: { manifest: TEST_MANIFEST },
+        },
+      }),
+    )
+  })
+
+  const productWidget = host.querySelector('.omx-apptab-product-widget')
+  assert.ok(productWidget, '商品主图复合条渲染')
+
+  const storeBtn = productWidget.querySelector('button[aria-label="从商品库选择"]')
+  assert.ok(storeBtn, '从商品库选择按钮存在')
+  fireClick(storeBtn)
+
+  const modal = doc.querySelector('.omx-apptab-modal')
+  assert.ok(modal, '点击唤起弹窗')
+
+  const modalInput = modal.querySelector('.omx-apptab-input')
+  assert.ok(modalInput, '弹窗搜索/链接输入框存在')
+
+  const submitBtn = modal.querySelector('.omx-apptab-btn-primary')
+  assert.ok(submitBtn, '弹窗确定按钮存在')
+
+  // 1. 模拟输入危险协议 javascript:alert(1)
+  fireChange(modalInput, 'javascript:alert(1)')
+
+  // 点击确定
+  fireClick(submitBtn)
+
+  // 验证弹窗依然存在（未被关闭），并且展示了安全拦截错误提示
+  assert.ok(doc.querySelector('.omx-apptab-modal'), '非法协议被拦截，弹窗不关闭')
+  let errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
+  assert.ok(errorText, '弹窗内展示错误提示')
+  assert.match(errorText.textContent, /链接协议不支持/)
+
+  // 1b. 模拟输入文件伪协议 file:///etc/passwd
+  fireChange(modalInput, 'file:///etc/passwd')
+  fireClick(submitBtn)
+  assert.ok(doc.querySelector('.omx-apptab-modal'), 'file协议被拦截，弹窗不关闭')
+  errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
+  assert.ok(errorText)
+  assert.match(errorText.textContent, /链接协议不支持/)
+
+  // 2. 模拟输入合法链接 https://example.com/item.png
+  fireChange(modalInput, 'https://example.com/item.png')
+
+  // 再次点击确定
+  fireClick(submitBtn)
+
+  // 验证弹窗成功关闭并回填为已选卡片
+  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '合法链接提交后弹窗关闭')
+  const pickedCard = host.querySelector('.omx-apptab-picked')
+  assert.ok(pickedCard, '合法链接成功回填为已选卡片')
+  assert.match(pickedCard.textContent, /item\.png/)
 
   act(() => {
     root.unmount()

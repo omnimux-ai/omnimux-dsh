@@ -250,6 +250,49 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     assert.equal(feedAsset.type, 'video');
   });
 
+  it('T05.14: product-link widget picks decode to image URL and properly inject into target mediaUrl slot', () => {
+    const manifest = createMockManifest();
+    manifest.workflowBinding.snapshot.nodes.push({
+      id: 'node-slot-product-image',
+      type: 'material',
+      data: { isSlot: true, label: '商品主图' },
+    });
+    manifest.fieldMappings.productLink = {
+      nodeId: 'node-slot-product-image',
+      targetField: 'mediaUrl',
+      mappingType: 'media',
+      widget: 'product-link',
+      required: false,
+    };
+
+    const pickedValue = JSON.stringify({
+      name: '智能降噪耳机',
+      sub: '数码配件',
+      url: 'https://cdn.omnimux.com/products/headphones.jpg',
+      preview: 'https://cdn.omnimux.com/products/headphones.jpg',
+      source: 'product',
+      type: 'image',
+    });
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '耳机种草测评',
+      productLink: pickedValue,
+    });
+
+    const slotNode = injected.nodes.find((n) => n.id === 'node-slot-product-image');
+    assert.ok(slotNode);
+    // 关键校验：杜绝 JSON 字符串直接赋给 mediaUrl
+    assert.equal(slotNode.data.mediaUrl, 'https://cdn.omnimux.com/products/headphones.jpg');
+    assert.ok(Array.isArray(slotNode.data.feedAssets) && slotNode.data.feedAssets.length === 1);
+    const feedAsset = slotNode.data.feedAssets[0];
+    assert.equal(feedAsset.url, 'https://cdn.omnimux.com/products/headphones.jpg');
+    assert.equal(feedAsset.type, 'image');
+
+    const virtualSource = injected.nodes.find((n) => n.id === feedAsset.sourceNodeId);
+    assert.ok(virtualSource);
+    assert.equal(virtualSource.data.mediaUrl, 'https://cdn.omnimux.com/products/headphones.jpg');
+  });
+
   it('T05.13: Fail-Closed: malformed picked-card JSON is rejected, never injected as a media URL', () => {
     const manifest = createMockManifest();
 

@@ -17,7 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ApplicationManifest, FieldMappingEntry } from '../shared/manifest.ts';
+import type { ApplicationManifest, FieldMappingEntry, FormWidgetType } from '../shared/manifest.ts';
 import { PRESET_WORKFLOW_SNAPSHOTS } from '../shared/builtinCatalogData.ts';
 
 function resolvePresetSnapshot(appId: string): any | null {
@@ -190,6 +190,18 @@ function decodePickedFormValue(val: unknown): Record<string, any> | null {
   return null;
 }
 
+/**
+ * Check if the widget is a media-capable widget that may supply picked JSON or media URLs.
+ */
+function isMediaWidget(widget: FormWidgetType | undefined): boolean {
+  return (
+    widget === 'media-uploader' ||
+    widget === 'media-extractor' ||
+    widget === 'library-picker' ||
+    widget === 'product-link'
+  );
+}
+
 export interface PreparedWorkflowSnapshot {
   nodes: InjectedWorkflowNode[];
   edges: InjectedWorkflowEdge[];
@@ -338,12 +350,9 @@ export function prepareAndInjectWorkflowSnapshot(
     // 2.5: Slot association & standard FeedAsset construction
     const hasExplicitSlot = Boolean((mapping as any).targetSlot);
     const isSlotMapping = mapping.mappingType === 'slot' || targetPath.startsWith('slot:');
-    const isMediaWidget =
-      mapping.widget === 'media-uploader' ||
-      mapping.widget === 'media-extractor' ||
-      mapping.widget === 'library-picker';
+    const isMedia = isMediaWidget(mapping.widget);
 
-    if (hasExplicitSlot || isSlotMapping || isMediaWidget) {
+    if (hasExplicitSlot || isSlotMapping || isMedia) {
       const slotName =
         (mapping as any).targetSlot ||
         (targetPath.startsWith('slot:') ? targetPath.slice(5) : (mapping.mappingType === 'slot' ? targetPath : 'input'));
@@ -379,6 +388,22 @@ export function prepareAndInjectWorkflowSnapshot(
           : mapping.widget === 'media-extractor' || mapping.widget === 'media-uploader'
             ? manifest.metadata.category || 'video'
             : 'image');
+
+      if (
+        targetPath === 'mediaUrl' ||
+        targetPath === 'data.mediaUrl' ||
+        targetPath === 'url' ||
+        targetPath === 'data.url' ||
+        mapping.mappingType === 'media'
+      ) {
+        targetNode.data.mediaUrl = mediaUrl;
+        targetNode.data.mediaAssets = [
+          {
+            type: mediaType,
+            url: mediaUrl,
+          },
+        ];
+      }
 
       const feedAsset: InjectedFeedAsset = {
         edgeId: `feed-edge-${targetNode.id}-${fieldKey}`,

@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import {
   resolveOptions,
   resolveWidget,
+  resolveSourceLabel,
   displayValueOf,
   sanitizePreviewUrl,
 } from './appTabWidgets.js'
@@ -132,6 +133,21 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
     })
   })
 
+  describe('resolveSourceLabel() (Issue #2622 Review Fix)', () => {
+    it('maps known sources to friendly labels', () => {
+      assert.equal(resolveSourceLabel('product'), '商品库')
+      assert.equal(resolveSourceLabel('upload'), '本地上传')
+      assert.equal(resolveSourceLabel('custom-source'), '来源: custom-source')
+    })
+
+    it('returns empty string for falsy or non-string values', () => {
+      assert.equal(resolveSourceLabel(''), '')
+      assert.equal(resolveSourceLabel(null), '')
+      assert.equal(resolveSourceLabel(undefined), '')
+      assert.equal(resolveSourceLabel(123), '')
+    })
+  })
+
   describe('displayValueOf()', () => {
     it('decodes JSON-encoded picked cards', () => {
       const raw = JSON.stringify({
@@ -144,6 +160,17 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       assert.equal(res.name, 'test-product.png')
       assert.equal(res.sub, '120 KB · 资产库')
       assert.equal(res.source, 'asset')
+    })
+
+    it('infers source label via resolveSourceLabel when sub is omitted', () => {
+      const fromObj = displayValueOf({ name: '商品A', source: 'product', url: 'https://example.com/a.jpg' })
+      assert.equal(fromObj.sub, '商品库')
+
+      const fromUploadObj = displayValueOf({ name: '上传A', source: 'upload', url: 'blob:...' })
+      assert.equal(fromUploadObj.sub, '本地上传')
+
+      const fromJson = displayValueOf(JSON.stringify({ name: '商品B', source: 'product', url: 'https://example.com/b.jpg' }))
+      assert.equal(fromJson.sub, '商品库')
     })
 
     it('handles raw url string gracefully', () => {
@@ -196,6 +223,19 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       assert.match(src, /omx-apptab-picked/, 'picked card mounted')
       assert.match(src, /omx-apptab-extractor/, 'media-extractor mounted')
       assert.match(src, /omx-apptab-uploader/, 'media-uploader mounted')
+    })
+
+    it('AppTab.jsx implements Issue #2622 review fixes (operator precedence, url sanitization, memory release, and error handling)', () => {
+      const src = readFileSync(join(here, 'AppTab.jsx'), 'utf8')
+      // 1. 运算符优先级修复，杜绝 "规格: undefined"
+      assert.match(src, /sub:\s*p\.sub\s*\|\|\s*\(p\.sku\s*\|\|\s*p\.price\s*\?/, '运算符优先级加括号')
+      // 2. 弹窗提交链接增加协议安全清洗
+      assert.match(src, /const\s+safeUrl\s*=\s*sanitizePreviewUrl\(trimmed\)/, '弹窗提交链接执行 sanitizePreviewUrl 清洗')
+      // 3 & 4. 选择商品与弹窗提交链接均调用 revokeCreatedUrl 释放内存
+      assert.match(src, /handleSelectProduct[\s\S]*?revokeCreatedUrl\(key\)/, '选择商品前释放旧 Object URL')
+      assert.match(src, /handleProductModalSubmitLink[\s\S]*?revokeCreatedUrl\(key\)/, '提交链接覆盖前释放旧 Object URL')
+      // 5. 远程商品接口异常处理输出警告日志
+      assert.match(src, /console\.warn\('\[omnimux-workflow\] 获取商品列表失败:'/, '接口异常捕获并输出 console.warn')
     })
 
     it('styles.js provides full CSS for AppTab widgets using official tokens', () => {
