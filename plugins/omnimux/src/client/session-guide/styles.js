@@ -3257,45 +3257,40 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-shelf-btn-view-all:hover { color:var(--dsw-alias-brand-primary); background:var(--dsw-alias-bg-layer-2); }
 .omnimux-shelf-view-arrow { display:inline-flex; }
 
-/* Shelf Track & Float Arrow */
-.omnimux-shelf-slider-container { position:relative; width:100%; }
-.omnimux-shelf-track {
-  display:flex;
+/* Shelf Grid - 默认 5 列大卡片排版 */
+.omnimux-shelf-grid {
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
   gap:16px;
-  overflow-x:auto;
-  scroll-behavior:smooth;
-  padding-top:10px;
-  margin-top:-10px;
-  padding-bottom:14px;
-  margin-bottom:-6px;
-  scrollbar-width:none;
+  width:100%;
 }
-.omnimux-shelf-track::-webkit-scrollbar { display:none; }
-.omnimux-shelf-arrow-btn {
-  position:absolute;
-  right:-14px;
-  top:50%;
-  transform:translateY(-50%);
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  background:var(--dsw-alias-bg-layer-3);
-  backdrop-filter:blur(12px);
-  border:1px solid var(--dsw-alias-border-l3);
-  color:var(--dsw-alias-label-primary);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  z-index:10;
-  box-shadow:0 4px 16px var(--dsw-alias-bg-base);
-  transition:all 0.2s ease;
+@media (max-width: 1200px) {
+  .omnimux-shelf-grid {
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+  }
 }
-.omnimux-shelf-arrow-btn:hover { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-brand-primary); transform:translateY(-50%) scale(1.08); }
+@media (max-width: 960px) {
+  .omnimux-shelf-grid {
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .omnimux-shelf-grid {
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+}
+@media (max-width: 420px) {
+  .omnimux-shelf-grid {
+    grid-template-columns:repeat(1, minmax(0, 1fr));
+    gap:10px;
+  }
+}
 
-/* Template Card - 现代化竖版短视频卡片 (9:16 短视频黄金比例) */
+/* Template Card - 现代化竖版短视频卡片 (9:16 短视频黄金比例，自适应大卡片) */
 .omnimux-tpl-card {
-  flex:0 0 170px;
+  width:100%;
+  min-width:0;
   aspect-ratio:9 / 16;
   background:var(--dsw-alias-bg-layer-2);
   border:1px solid var(--dsw-alias-border-l2);
@@ -3545,8 +3540,31 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-btn-back:hover { color:var(--dsw-alias-label-primary); border-color:var(--dsw-alias-border-l3); }
 .omnimux-tpl-full-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
-  gap:18px;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:16px;
+  width:100%;
+}
+@media (max-width: 1200px) {
+  .omnimux-tpl-full-grid {
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 960px) {
+  .omnimux-tpl-full-grid {
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .omnimux-tpl-full-grid {
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+}
+@media (max-width: 420px) {
+  .omnimux-tpl-full-grid {
+    grid-template-columns:repeat(1, minmax(0, 1fr));
+    gap:10px;
+  }
 }
 .omnimux-tpl-grid-view[data-category="skills"] .omnimux-tpl-full-grid {
   grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));

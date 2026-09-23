@@ -53,7 +53,7 @@ export function TemplateVideo({ src, poster, active = false, controls = false, c
       loop={!controls}
       playsInline
       controls={controls}
-      preload="none"
+      preload={controls ? 'none' : (enabled ? 'auto' : 'none')}
       aria-label={controls ? title : undefined}
       aria-hidden={controls ? undefined : true}
       onPlaying={() => setPlaying(true)}
