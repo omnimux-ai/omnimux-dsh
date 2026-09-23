@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import { TemplateVideo } from './TemplateVideo.jsx'
 import { resolveTemplateVideoUrl } from './template-media.js'
 import { resolveSkillAuroraStyle } from '../skills/auroraGradients.js'
@@ -56,14 +56,27 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
   const [videoError, setVideoError] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [inViewport, setInViewport] = useState(false)
+  const cardRef = useRef(null)
   const failVideo = useCallback(() => setVideoError(true), [])
   const currentLocale = useTemplateLocale(locale, t)
+
   useEffect(() => {
     setImgError(false)
     setVideoError(false)
     setHovered(false)
     setFocused(false)
   }, [template?.id, template?.previewVideoUrl])
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => {
+      setInViewport(entry.isIntersecting && entry.intersectionRatio > 0.2)
+    }, { threshold: [0, 0.2, 0.5] })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [template?.id])
 
   if (!template) return null
 
@@ -160,6 +173,7 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
 
   return (
     <div
+      ref={cardRef}
       className="omnimux-tpl-card"
       onPointerEnter={(e) => { if (e.pointerType !== 'touch') setHovered(true) }}
       onPointerLeave={() => setHovered(false)}
@@ -194,11 +208,11 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
           </div>
         )}
 
-        {!videoError && resolveTemplateVideoUrl(template) && (hovered || focused) ? (
+        {!videoError && resolveTemplateVideoUrl(template) ? (
           <TemplateVideo
             src={resolveTemplateVideoUrl(template)}
             poster={coverUrl}
-            active={hovered || focused}
+            active={inViewport || hovered || focused}
             className="omnimux-tpl-video"
             onError={failVideo}
           />

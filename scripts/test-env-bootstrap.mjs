@@ -200,7 +200,7 @@ export function createTestEnvironmentStarter(deps = {}) {
       if (mode === 'live' && (typeof credential !== 'string' || !credential.trim())) throw failure('CREDENTIAL_INVALID');
       privateDir = io.mkdtempSync(join(root, '.test-env-')); io.chmodSync(privateDir, 0o700);
       const paths = { HOME: 'home', DSH_HOME: 'dsh', DSH_AGENTS_HOME: 'agents', XDG_CONFIG_HOME: 'config', XDG_CACHE_HOME: 'cache', XDG_STATE_HOME: 'state', XDG_DATA_HOME: 'data', TMPDIR: 'tmp', TMP: 'tmp', TEMP: 'tmp' };
-      const env = { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', ELECTRON_RUN_AS_NODE: '1' };
+      const env = { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536' };
       for (const [name, leaf] of Object.entries(paths)) { env[name] = join(privateDir, leaf); io.mkdirSync(env[name], { recursive: true, mode: 0o700 }); }
       if (mode === 'ui') mock = await startMock();
       const endpoint = mode === 'ui' ? mock.origin : OFFICIAL_ENDPOINT;
@@ -243,7 +243,24 @@ export function createTestEnvironmentStarter(deps = {}) {
             } catch {}
           }
           try {
-            io.symlinkSync(join(devProfile, 'node_modules'), join(omnimuxProfileDir, 'node_modules'));
+            const targetNodeModules = join(omnimuxProfileDir, 'node_modules');
+            io.mkdirSync(targetNodeModules, { recursive: true, mode: 0o700 });
+            const devNodeModules = join(devProfile, 'node_modules');
+            if (io.existsSync(devNodeModules)) {
+              for (const pkg of io.readdirSync(devNodeModules)) {
+                if (pkg === 'omnimux') {
+                  try {
+                    io.symlinkSync(join(root, 'plugins', 'omnimux'), join(targetNodeModules, 'omnimux'));
+                  } catch {
+                    io.symlinkSync(join(devNodeModules, pkg), join(targetNodeModules, pkg));
+                  }
+                } else {
+                  try {
+                    io.symlinkSync(join(devNodeModules, pkg), join(targetNodeModules, pkg));
+                  } catch {}
+                }
+              }
+            }
           } catch {}
         }
       } catch {}

@@ -300,9 +300,9 @@ export function ExploreTemplatesSection({
           {SHELVES_CONFIG.map((shelf) => {
             let shelfItems = [];
             if (shelf.slug === 'skills') {
-              shelfItems = allSkillsItems.slice(0, 8);
+              shelfItems = allSkillsItems.slice(0, 5);
             } else {
-              shelfItems = selectShelfItems(shelf.slug, 8);
+              shelfItems = selectShelfItems(shelf.slug, 5);
             }
 
             return (

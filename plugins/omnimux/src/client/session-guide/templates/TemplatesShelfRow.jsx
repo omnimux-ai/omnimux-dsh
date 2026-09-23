@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { TemplateCardItem } from './TemplateCardItem.jsx'
 
 const ICON_CHEVRON_RIGHT = (
@@ -25,14 +25,6 @@ export function TemplatesShelfRow({
   onViewAll,
   t,
 }) {
-  const trackRef = useRef(null)
-
-  const handleScrollRight = () => {
-    if (trackRef.current) {
-      trackRef.current.scrollBy({ left: 420, behavior: 'smooth' })
-    }
-  }
-
   const handleViewAllClick = () => {
     const target = shelf.targetCategory || shelf.slug
     if (onViewAll) onViewAll(target)
@@ -61,28 +53,16 @@ export function TemplatesShelfRow({
         </button>
       </div>
 
-      <div className="omnimux-shelf-slider-container">
-        <div className="omnimux-shelf-track" ref={trackRef} tabIndex={0} aria-label={`${title} 列表`}>
-          {items.map((template) => (
-            <TemplateCardItem
-              key={template.id}
-              template={template}
-              onSelect={onSelectTemplate}
-              onOpenDetail={onOpenDetail}
-              t={t}
-            />
-          ))}
-        </div>
-
-        <button /* exempt-ui01: shelf slider float arrow button */
-          type="button"
-          className="omnimux-shelf-arrow-btn"
-          onClick={handleScrollRight}
-          aria-label={`向右滑动查看更多 ${title}`}
-          title="向右滚动"
-        >
-          {ICON_CHEVRON_RIGHT}
-        </button>
+      <div className="omnimux-shelf-grid" aria-label={`${title} 列表`}>
+        {items.map((template) => (
+          <TemplateCardItem
+            key={template.id}
+            template={template}
+            onSelect={onSelectTemplate}
+            onOpenDetail={onOpenDetail}
+            t={t}
+          />
+        ))}
       </div>
     </section>
   )
