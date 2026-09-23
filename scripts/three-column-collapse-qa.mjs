@@ -858,7 +858,8 @@ async function main() {
         const root = document.documentElement;
         root.style.setProperty('--omnimux-conversation-width', '${sentinelPx}px');
         const probed = measure();
-        const restored = window.__omnimuxRatio.apply();
+        window.__omnimuxRatio.apply();
+        const restored = measure();
         return { probed: probed, restored: restored };
       })()`);
       const sentinelVerdict = judgeViewportTierPinBoundToVar({

@@ -76,8 +76,8 @@ export function installHubChrome(ctx) {
     const unsubCompact = installComposerCompactObserver()
     const unsubSidebarTopbar = installSidebarToggleTopbar()
     // 缩放后中栏按新比例重算，右栏面板宽与分隔线把手必须同一次跟上（D7-S1′）：
-    // 顶栏模块只写中栏变量，面板宽由工作台协调写，两者挂在同一次 resize 上。
-    setTopbarGeometryHook(() => { reconcileRightbarFromRatio() })
+    // 顶栏模块只写中栏变量，面板宽由工作台协调写，两者挂在同一次 resize 上（透传 doc 杜绝分叉，M-2）。
+    setTopbarGeometryHook((doc) => { reconcileRightbarFromRatio(undefined, { doc }) })
     const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     const unsubWelcome = installWelcomeGreetingObserver()

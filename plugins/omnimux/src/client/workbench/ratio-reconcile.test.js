@@ -27,6 +27,7 @@ import {
 import {
   reconcileRightbarFromRatio,
   resetWorkbenchWidthMemory,
+  resetSplitReconciliationForTests,
 } from './split-layout.js'
 import {
   resetConversationCollapseForTests,
@@ -92,6 +93,7 @@ function setupWindow(viewportPx) {
 beforeEach(() => {
   resetWorkbenchHostAdapter()
   resetWorkbenchWidthMemory()
+  resetSplitReconciliationForTests()
   resetConversationCollapseForTests()
   resetWorkspaceLayoutStoreForTests()
 })
@@ -99,6 +101,7 @@ beforeEach(() => {
 afterEach(() => {
   resetWorkbenchHostAdapter()
   resetWorkbenchWidthMemory()
+  resetSplitReconciliationForTests()
   resetConversationCollapseForTests()
   resetWorkspaceLayoutStoreForTests()
   if (previous.window === undefined) delete globalThis.window

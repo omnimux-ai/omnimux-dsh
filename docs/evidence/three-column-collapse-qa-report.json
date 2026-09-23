@@ -1,7 +1,7 @@
 {
-  "runId": "112302cc-cd71-43bc-acf6-b73ad3191250",
+  "runId": "f6535b97-5b2a-4d31-9df0-384aa394c534",
   "scenario": "three-column-collapse",
-  "startedAt": "2026-09-23T11:50:11.553Z",
+  "startedAt": "2026-09-23T12:57:12.617Z",
   "sourcePaths": [
     "plugins/omnimux/src/client/conversation-box.js",
     "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
@@ -11,12 +11,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 51845
+      "port": 60633
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 51846
+      "port": 60634
     },
     {
       "name": "expanded-conversation-positive",
@@ -142,6 +142,7 @@
       "pass": true,
       "sentinelPx": 612,
       "measuredChat": 612,
+      "restoredChat": 492,
       "reasons": []
     },
     {
@@ -183,6 +184,7 @@
       "pass": true,
       "sentinelPx": 804,
       "measuredChat": 804,
+      "restoredChat": 684,
       "reasons": []
     },
     {
@@ -233,6 +235,7 @@
       "pass": true,
       "sentinelPx": 480,
       "measuredChat": 480,
+      "restoredChat": 360,
       "reasons": []
     },
     {
@@ -270,8 +273,8 @@
   },
   "errors": [],
   "pass": true,
-  "serverPort": 51845,
-  "cdpPort": 51846,
+  "serverPort": 60633,
+  "cdpPort": 60634,
   "expanded": {
     "viewport": 1920,
     "tracks": [
@@ -573,7 +576,8 @@
       "trackSum": 1920,
       "sentinel": {
         "sentinelPx": 612,
-        "measuredChat": 612
+        "measuredChat": 612,
+        "restoredChat": 492
       },
       "reverseControl": {
         "productionDisabledChat": 1640,
@@ -624,7 +628,8 @@
       "trackSum": 2560,
       "sentinel": {
         "sentinelPx": 804,
-        "measuredChat": 804
+        "measuredChat": 804,
+        "restoredChat": 684
       },
       "reverseControl": {
         "productionDisabledChat": 2280,
@@ -675,7 +680,8 @@
       "trackSum": 1440,
       "sentinel": {
         "sentinelPx": 480,
-        "measuredChat": 480
+        "measuredChat": 480,
+        "restoredChat": 360
       },
       "reverseControl": {
         "productionDisabledChat": 1160,
@@ -712,5 +718,5 @@
     "height": 1080,
     "bytes": 10536
   },
-  "completedAt": "2026-09-23T11:50:13.257Z"
+  "completedAt": "2026-09-23T12:57:14.402Z"
 }

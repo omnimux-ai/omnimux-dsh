@@ -34,6 +34,7 @@ import {
   workbenchSplitMaxPanelPx,
 } from './geometry.js'
 import { notifyWorkbenchChange } from './event-bus.js'
+import { isHostRightSidebarFullscreen } from './host-fullscreen.js'
 import {
   getShellSplitDragObservationCount,
   isShellSplitDragging,
@@ -41,6 +42,7 @@ import {
   noteShellSplitDragObserved,
   settleConversationRatioFromAuthoredGeometry,
   readFrameWidthPx,
+  readFrame,
 } from '../sidebar-toggle-topbar.js'
 
 export const WORKBENCH_SPLIT_MIN_STYLE_ID = 'omnimux-split-conversation-min-chrome'
@@ -157,6 +159,16 @@ export function clampLiveSplitDom(state = liveSnapshot()?.state, env = {}) {
   clampStyleWidth(panel?.style, '', max)
 }
 
+let lastReconciledHandle = null
+let lastReconciledTarget = null
+let lastReconciledViewport = null
+
+export function resetSplitReconciliationForTests() {
+  lastReconciledHandle = null
+  lastReconciledTarget = null
+  lastReconciledViewport = null
+}
+
 /**
  * 把「可见舞台 − 比例中栏宽」写回外壳消费的面板宽通道（方案 D7-S1′）。
  *
@@ -187,14 +199,32 @@ export function reconcileRightbarFromRatio(state, env = {}) {
   const handle = resolveWorkbenchLayoutHandle(doc)
   if (!handle || typeof handle.setRightbar !== 'function') return 'skipped'
   const snapshot = handle.getSnapshot?.()
-  if (!snapshot || snapshot.rightbarShown !== true || snapshot.rightbarTrack !== true || snapshot.rightbarFullscreen === true) {
+  const frame = readFrame(doc) || doc.querySelector?.('.dshDesktopFrame, [class*="frame"]')
+  if (!frame) return 'skipped'
+  // 三栏分栏状态真实判据（H-1）：frame 包含 rightbar 面板且未收起，非全屏
+  if (frame.getAttribute?.('data-rightbar-collapsed') === 'true'
+    || doc.querySelector?.('.dshDesktopFrame[data-rightbar-collapsed="true"], [class*="frame"][data-rightbar-collapsed="true"]')) {
+    return 'skipped'
+  }
+  if (isHostRightSidebarFullscreen(doc)
+    || frame.getAttribute?.('data-rightbar-fullscreen') === 'true'
+    || snapshot?.rightbarFullscreen === true) {
+    return 'skipped'
+  }
+  if (snapshot?.rightbarShown === false) {
     return 'skipped'
   }
   const frameViewport = readFrameWidthPx(doc)
   if (!(frameViewport > 0)) return 'skipped'
   const target = workbenchDefaultWidthPx(resolvedState, { ...env, doc, viewportWidth: frameViewport })
-  if (typeof snapshot.rightbar === 'number' && Math.abs(snapshot.rightbar - target) < 1) return 'consistent'
+  if (typeof snapshot?.rightbar === 'number' && Math.abs(snapshot.rightbar - target) < 1) return 'consistent'
+  if (lastReconciledHandle === handle && lastReconciledTarget === target && lastReconciledViewport === frameViewport) {
+    return 'consistent'
+  }
   handle.setRightbar(target, frameViewport)
+  lastReconciledHandle = handle
+  lastReconciledTarget = target
+  lastReconciledViewport = frameViewport
   // 登记「本插件写了面板宽」：写出去的数字下一帧会被读回来，不登记就会被老用户迁移探针
   // 当成「用户亲手定过的版式」反推（H-1 的自证读数）。
   notePluginPanelWidthWrite()
@@ -289,6 +319,9 @@ function scheduleNextFrame(callback) {
  */
 let pendingShellSplitSettle = false
 
+/** 最近一次观察到外壳拖拽的时间戳，用于防止待结算状态泄漏至远期无关点击（M-7）。 */
+let lastShellSplitDragObservedTime = 0
+
 /**
  * 已被结算消费掉的拖拽观察计数。
  *
@@ -306,13 +339,22 @@ let consumedShellSplitDragObservations = 0
 function noteShellSplitDragFromDom() {
   if (!isShellSplitDragging(hostDocument())) return false
   pendingShellSplitSettle = true
+  lastShellSplitDragObservedTime = Date.now()
   noteShellSplitDragObserved()
   return true
 }
 
 /** 是否还有未被消费的拖拽观察（= 上一次真实拖拽还没结算）。 */
 function hasUnconsumedShellSplitDrag() {
-  return getShellSplitDragObservationCount() > consumedShellSplitDragObservations
+  if (getShellSplitDragObservationCount() <= consumedShellSplitDragObservations) {
+    return false
+  }
+  // 超过 1000ms 未检测到拖拽，视为已终止的陈旧拖拽，避免后续无关点击触发误结算（M-7）
+  if (lastShellSplitDragObservedTime > 0 && Date.now() - lastShellSplitDragObservedTime > 1000) {
+    consumedShellSplitDragObservations = getShellSplitDragObservationCount()
+    return false
+  }
+  return true
 }
 
 function onSplitPointerSample() {
@@ -419,6 +461,7 @@ export function installSplitConversationMin(doc = hostDocument()) {
   // 拖拽观察都会让安装后的第一次任意指针释放触发结算（H-5）。
   pendingShellSplitSettle = false
   consumedShellSplitDragObservations = getShellSplitDragObservationCount()
+  lastShellSplitDragObservedTime = 0
   ensureSplitMinChrome(doc)
   syncSplitMaxCssVar()
   tagWorkbenchPanel(doc)
@@ -454,6 +497,7 @@ export function uninstallSplitConversationMin() {
   }
   splitMinUnsub = null
   splitMinDoc = null
+  resetSplitReconciliationForTests()
 }
 
 function computeFocusWidth(current, options) {

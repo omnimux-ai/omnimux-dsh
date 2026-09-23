@@ -267,7 +267,7 @@ describe('E2E: 三分栏中栏比例制（Issue #2608）', () => {
   })
 
   it('缩放钩子与协调写已接线到装配层（E-5 的落地证据）', () => {
-    assert.match(chromeSource, /setTopbarGeometryHook\(\(\)\s*=>\s*\{\s*reconcileRightbarFromRatio\(\)\s*\}\)/, 'resize 后必须同一次协调面板宽与把手')
+    assert.match(chromeSource, /setTopbarGeometryHook\(\s*\(doc\)\s*=>\s*\{\s*reconcileRightbarFromRatio\(undefined,\s*\{\s*doc\s*\}\)\s*\}\)/, 'resize 后必须同一次协调面板宽与把手（透传 doc）')
     assert.match(chromeSource, /setTopbarGeometryHook\(null\)/, '卸载时必须回收钩子，绝不留野引用')
   })
 })

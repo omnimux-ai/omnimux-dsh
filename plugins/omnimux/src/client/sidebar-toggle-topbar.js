@@ -27,6 +27,7 @@ import {
   ratioFromConversationWidth,
 } from './conversation-ratio.js'
 import { getWorkbenchLayout } from './workbench/host-adapter.js'
+import { isHostRightSidebarFullscreen } from './workbench/host-fullscreen.js'
 import {
   getChatRatioWriteRevision,
   migrateChatRatioFromAuthoredGeometry,
@@ -429,9 +430,12 @@ export function getShellSplitDragObservationCount() {
  * @returns {boolean}
  */
 export function isShellSplitDragging(doc) {
+  if (!doc) return false
+  if (doc.body?.hasAttribute?.('data-dsh-sidebar-dragging')) return true
+  const frame = readFrame(doc)
   return Boolean(
-    doc?.body?.hasAttribute?.('data-dsh-sidebar-dragging') ||
-    doc?.querySelector?.('[data-dragging]'),
+    frame?.hasAttribute?.('data-dragging') ||
+    frame?.querySelector?.('[data-dragging]'),
   )
 }
 
@@ -454,7 +458,7 @@ export function isSamePxValue(current, nextPx) {
  * @param {Document | null | undefined} doc
  * @returns {Element | null}
  */
-function readFrame(doc) {
+export function readFrame(doc) {
   return doc?.querySelector?.('.dshDesktopFrame:has([data-sidebar-right-panel]), [class*="frame"]:has([data-sidebar-right-panel])')
     || doc?.querySelector?.('.dshDesktopFrame')
     || doc?.querySelector?.('[class*="frame"]')
@@ -518,7 +522,6 @@ export function deriveConversationWidthPx(doc, collapsed, leftRailW, expandedRai
   const { rail, right } = readShellSplitPx(doc)
   const railW = collapsed ? 0 : (rail ?? leftRailW ?? 0)
   const dragging = isShellSplitDragging(doc)
-  if (dragging) noteShellSplitDragObserved()
 
   // 口径与外壳同源：外壳 `computeDesktopColumns` 与右分隔把手 `left = viewport − rightbar`
   // 用的都是 frame 实测宽（`AdvancedFrame` 的 ResizeObserver 读的就是 frame），不是
@@ -689,12 +692,17 @@ function migrateConversationRatioOnce(doc) {
  */
 function hasUserAuthoredPanelWidth(snapshot) {
   if (shellSplitDragObserved) return true
-  if (shellPanelWidthBaseline === null) {
-    shellPanelWidthBaseline = {
-      userAuthored: typeof snapshot?.rightbar === 'number' && pluginPanelWidthWrites === 0,
+  // 若首帧外壳尚未 authored 出数字宽度（rightbar 为 null/undefined），不提前锁定基线，
+  // 留给后续就绪帧；仅当首次观察到数字宽度时锁定基线（M-4）。
+  if (typeof snapshot?.rightbar === 'number') {
+    if (shellPanelWidthBaseline === null) {
+      shellPanelWidthBaseline = {
+        userAuthored: pluginPanelWidthWrites === 0,
+      }
     }
+    return shellPanelWidthBaseline.userAuthored
   }
-  return shellPanelWidthBaseline.userAuthored
+  return shellPanelWidthBaseline?.userAuthored ?? false
 }
 
 /**
@@ -712,6 +720,7 @@ function hasUserAuthoredPanelWidth(snapshot) {
  */
 function recordDraggingConversationRatio(doc, layout = {}) {
   if (!isShellSplitDragging(doc)) return null
+  noteShellSplitDragObserved()
   if (doc?.documentElement?.hasAttribute?.(CONVERSATION_COLLAPSED_MARKER) === true) return null
   const viewportW = readFrameWidthPx(doc)
   if (!(viewportW > 0)) return null
@@ -750,6 +759,18 @@ function recordDraggingConversationRatio(doc, layout = {}) {
  */
 export function settleConversationRatioFromAuthoredGeometry(doc) {
   if (doc?.documentElement?.hasAttribute?.(CONVERSATION_COLLAPSED_MARKER) === true) return null
+  const frame = readFrame(doc)
+  if (!frame) return null
+  // 分栏显示态自守卫（M-5）：右栏收起或全屏等非三栏分栏态严禁结算反推落盘
+  if (frame.getAttribute?.('data-rightbar-collapsed') === 'true'
+    || doc?.querySelector?.('.dshDesktopFrame[data-rightbar-collapsed="true"], [class*="frame"][data-rightbar-collapsed="true"]')) {
+    return null
+  }
+  if (frame.getAttribute?.('data-rightbar-fullscreen') === 'true'
+    || doc?.querySelector?.('.dshDesktopFrame[data-rightbar-fullscreen="true"], [class*="frame"][data-rightbar-fullscreen="true"]')
+    || isHostRightSidebarFullscreen(doc)) {
+    return null
+  }
   const viewportW = readFrameWidthPx(doc)
   if (viewportW <= 0) return null
   const layout = computeChromeLayout(doc)

@@ -25,6 +25,7 @@ import {
 import {
   installSplitConversationMin,
   uninstallSplitConversationMin,
+  resetSplitReconciliationForTests,
 } from './workbench/split-layout.js'
 import { resetWorkbenchHostAdapter, setAttachedStore } from './workbench/host-adapter.js'
 import {
@@ -157,6 +158,7 @@ beforeEach(() => {
   resetWorkspaceLayoutStoreForTests()
   resetConversationRatioAuthorityForTests()
   resetWorkbenchHostAdapter()
+  resetSplitReconciliationForTests()
   resetWorkbenchFocusMemory()
 })
 
@@ -168,6 +170,7 @@ afterEach(() => {
   resetWorkspaceLayoutStoreForTests()
   resetConversationRatioAuthorityForTests()
   resetWorkbenchHostAdapter()
+  resetSplitReconciliationForTests()
   resetWorkbenchFocusMemory()
   if (previous.window === undefined) delete globalThis.window
   else globalThis.window = previous.window

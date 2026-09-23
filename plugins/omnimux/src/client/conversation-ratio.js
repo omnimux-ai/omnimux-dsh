@@ -92,11 +92,11 @@ export function resolveConversationPixelBudget(stageWidth, ratio) {
   const stage = Math.max(0, Number.isFinite(Number(stageWidth)) ? Number(stageWidth) : 0)
   const availablePaneWidth = Math.max(0, stage - DIVIDER_LAYOUT_WIDTH)
   const ratioMax = stage * CONVERSATION_RATIO_MAX
-  const minChatWidth = Math.min(CONVERSATION_MIN_CHAT_PX, availablePaneWidth)
+  const minChatWidth = Math.round(Math.min(CONVERSATION_MIN_CHAT_PX, availablePaneWidth))
   const desiredMaxChatWidth = Math.min(ratioMax, Math.max(0, availablePaneWidth - CONVERSATION_MIN_CANVAS_PX))
-  const maxChatWidth = Math.max(minChatWidth, desiredMaxChatWidth)
+  const maxChatWidth = Math.round(Math.max(minChatWidth, desiredMaxChatWidth))
   const preferredChatWidth = Math.round(stage * normalizeConversationRatio(ratio))
-  const chatWidth = Math.min(maxChatWidth, Math.max(minChatWidth, preferredChatWidth))
+  const chatWidth = Math.round(Math.min(maxChatWidth, Math.max(minChatWidth, preferredChatWidth)))
   return { chatWidth, minChatWidth, maxChatWidth }
 }
 

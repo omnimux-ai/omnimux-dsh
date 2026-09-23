@@ -19,7 +19,8 @@ import {
   resolveWorkbenchLayoutHandle,
 } from './host-adapter.js'
 import { reconcileRightbarFromRatio } from './split-layout.js'
-import { notePluginPanelWidthWrite } from '../sidebar-toggle-topbar.js'
+import { notePluginPanelWidthWrite, isShellSplitDragging } from '../sidebar-toggle-topbar.js'
+import { isWorkbenchPanelDragging } from './geometry.js'
 import {
   focusRecordForTab,
   persistSessionFocus,
@@ -57,6 +58,8 @@ const TITLE_TO_TAB_ID = new Map(
  */
 export function ensureHealthySplitWidth(doc = hostDocument()) {
   if (!doc) return
+  // 拖拽期间严格禁止任何写入（INV-16 / H-2）：绝对不穿透至 45% 兜底写，彻底阻断与指针抢轨
+  if (isWorkbenchPanelDragging(doc) || isShellSplitDragging(doc)) return
   if (reconcileRightbarFromRatio(liveSnapshot()?.state, { doc }) !== 'skipped') return
   const win = doc.defaultView || globalThis.window
   const viewport = win?.innerWidth || 1728
