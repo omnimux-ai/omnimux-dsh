@@ -286,4 +286,20 @@ describe('T04: AI Application Form Engine (AppFormPanel)', () => {
     assert.equal(collisionResult.valid, false);
     assert.ok(collisionResult.errors.some((e) => e.includes('is also an exposed form property')));
   });
+
+  it('T04.9: confirmPicker revokes the tracked blob URL before overwriting an uploaded field (R2-H1)', () => {
+    const filePath = path.resolve(import.meta.dirname, 'AppFormPanel.tsx');
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    // Isolate the confirmPicker callback body
+    const confirmMatch = content.match(/const confirmPicker = useCallback\(\(\) => \{[\s\S]*?\}, \[/);
+    assert.ok(confirmMatch, 'confirmPicker callback must exist');
+    const body = confirmMatch[0];
+
+    const revokeAt = body.indexOf('revokeObjectUrl(picker.fieldKey)');
+    const writeAt = body.indexOf('handleFieldChange(picker.fieldKey');
+    assert.ok(revokeAt !== -1, 'confirmPicker must revoke the previously tracked blob URL');
+    assert.ok(writeAt !== -1, 'confirmPicker must write the picked value');
+    assert.ok(revokeAt < writeAt, 'Revocation must happen BEFORE the field value is overwritten');
+  });
 });

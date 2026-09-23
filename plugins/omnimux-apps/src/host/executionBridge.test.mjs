@@ -250,6 +250,44 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     assert.equal(feedAsset.type, 'video');
   });
 
+  it('T05.13: Fail-Closed: malformed picked-card JSON is rejected, never injected as a media URL', () => {
+    const manifest = createMockManifest();
+
+    // Truncated / malformed JSON fragment (starts with '{' but does not parse)
+    const truncated = '{"name":"参考视频","url":"/omnimux/inspiration/media/videos/42.mp';
+    assert.throws(
+      () => prepareAndInjectWorkflowSnapshot(manifest, { topic: '开箱视频复刻', referenceMedia: truncated }),
+      (err) => {
+        assert.ok(err instanceof ExecutionBridgeError);
+        assert.equal(err.code, 'validation_failed');
+        assert.match(err.message, /malformed library-picked value/);
+        return true;
+      },
+      'Malformed picked JSON must be rejected instead of injected raw',
+    );
+
+    // Parses as an object but carries no media URL (shape mismatch)
+    const shapeMismatch = JSON.stringify({ name: '无地址卡片', source: 'inspiration' });
+    assert.throws(
+      () => prepareAndInjectWorkflowSnapshot(manifest, { topic: '开箱视频复刻', referenceMedia: shapeMismatch }),
+      (err) => {
+        assert.ok(err instanceof ExecutionBridgeError);
+        assert.equal(err.code, 'validation_failed');
+        return true;
+      },
+      'Picked cards without a media URL must be rejected',
+    );
+
+    // Plain pasted links (not card-shaped) still flow through unchanged
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '开箱视频复刻',
+      referenceMedia: 'https://www.tiktok.com/@user/video/123',
+    });
+    const genNode = injected.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(genNode);
+    assert.equal(genNode.data.feedAssets[0].url, 'https://www.tiktok.com/@user/video/123');
+  });
+
   it('T05.8: Fail-Closed: executeAppWorkflow rejects when required field is missing', async () => {
     const manifest = createMockManifest();
     // Missing 'topic' which is required

@@ -352,6 +352,18 @@ export function prepareAndInjectWorkflowSnapshot(
       // ({name, sub, url, source, type?}); plain pasted links stay raw strings.
       const picked = decodePickedFormValue(val);
 
+      // Fail-closed: a value shaped like a picked card (leading '{') that fails
+      // to decode, or decodes to a card without a media URL, must NOT be
+      // injected — passing the raw JSON fragment through as mediaUrl would
+      // silently feed a broken URL into the slot.
+      const trimmedVal = typeof val === 'string' ? val.trim() : '';
+      if (trimmedVal.startsWith('{') && (!picked || !(picked.url || picked.pathOrUrl))) {
+        throw new ExecutionBridgeError(
+          'validation_failed',
+          `Form field "${fieldKey}" holds a malformed library-picked value; refusing to inject it as a media URL.`,
+        );
+      }
+
       const mediaUrl = picked
         ? String(picked.url || picked.pathOrUrl || '')
         : typeof val === 'string'

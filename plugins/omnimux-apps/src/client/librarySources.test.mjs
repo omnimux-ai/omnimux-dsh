@@ -74,6 +74,30 @@ describe('librarySources: row mapping', () => {
     assert.equal(item.sub, 'tiktok');
   });
 
+  it('R2-M5: inspiration rows keep their own media type, unknown types fall back to video', () => {
+    const imagePost = mapInspirationRow({
+      id: 88,
+      title: '图文穿搭帖',
+      type: 'image',
+      cover_url: '/omnimux/inspiration/local/media/covers/88.jpg',
+      media_urls: ['/omnimux/inspiration/local/media/images/88.jpg'],
+    });
+    assert.ok(imagePost);
+    assert.equal(imagePost.type, 'image', 'image inspiration posts must not be mislabelled as video');
+
+    const audioPost = mapInspirationRow({ id: 89, title: '口播音频', type: 'audio' });
+    assert.ok(audioPost);
+    assert.equal(audioPost.type, 'audio');
+
+    const unknown = mapInspirationRow({ id: 90, title: '未知类型', type: 'link' });
+    assert.ok(unknown);
+    assert.equal(unknown.type, 'video', 'unrecognised types fall back to video');
+
+    const missing = mapInspirationRow({ id: 91, title: '缺省类型' });
+    assert.ok(missing);
+    assert.equal(missing.type, 'video');
+  });
+
   it('hostMediaSrc keeps absolute URLs and rejects traversal', () => {
     assert.equal(hostMediaSrc('https://cdn.example.com/a.jpg'), 'https://cdn.example.com/a.jpg');
     assert.equal(hostMediaSrc('../etc/passwd'), '');

@@ -191,9 +191,12 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
       source: picker.library,
     };
     if (item.type) value.type = item.type;
+    // Overwriting a field that holds a local upload must release its blob URL,
+    // same tracking mechanism as re-upload / remove / unmount
+    revokeObjectUrl(picker.fieldKey);
     handleFieldChange(picker.fieldKey, encodePickedValue(value));
     setPicker(null);
-  }, [picker, pickerSelectedId, pickerItems, handleFieldChange]);
+  }, [picker, pickerSelectedId, pickerItems, handleFieldChange, revokeObjectUrl]);
 
   // Local upload source for media-extractor
   const openUpload = useCallback((fieldKey: string) => {

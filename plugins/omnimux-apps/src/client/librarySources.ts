@@ -137,13 +137,17 @@ export function mapInspirationRow(row: unknown): LibraryItem | null {
   if (!id) return null;
   const mediaList = Array.isArray(rec.media_urls) ? rec.media_urls.filter((u: unknown) => typeof u === 'string' && u) : [];
   const video = toText(mediaList[0] || rec.media_url);
+  // Honour the row's own media type (the inspiration store keeps video/image/link
+  // records behind the same seam); fall back to video only when absent/unknown.
+  const recType = toText(rec.type);
+  const mediaType = ASSET_TYPE_LABELS[recType] ? recType : 'video';
   return {
     id,
     name: toText(rec.title || rec.name) || id,
     sub: toText(rec.source_platform || rec.platform || rec.category),
     url: hostMediaSrc(video),
     preview: hostMediaSrc(rec.cover_url ?? rec.cover_key ?? rec.cover) || hostMediaSrc(video),
-    type: 'video',
+    type: mediaType,
   };
 }
 
