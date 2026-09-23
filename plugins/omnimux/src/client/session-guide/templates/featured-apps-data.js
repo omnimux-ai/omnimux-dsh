@@ -12,8 +12,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "App Demo: Interactive UI Screen",
     "descZh": "适用于 SaaS 界面穿屏、手机 App 操作流程实录与软件出海推广",
     "descEn": "High-conversion interactive screen demo for SaaS and mobile apps",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_video_fc46dffa_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-app-demo",
@@ -43,7 +43,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
           },
           "copywriting": {
             "type": "string",
@@ -112,7 +112,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -146,8 +146,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-app-demo-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_video_fc46dffa_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
           }
         ]
       }
@@ -161,8 +161,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "Chasing The Product: Impact Hook",
     "descZh": "专治前3秒滑走：巨型商品撞屏、路人惊呼追逐与戏剧性反差",
     "descEn": "Stop scrolling in 3 seconds: Giant product drop and chase drama",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_video_f049866c_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-chasing-product",
@@ -192,7 +192,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
           },
           "copywriting": {
             "type": "string",
@@ -261,7 +261,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -295,8 +295,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-chasing-product-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_video_f049866c_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
           }
         ]
       }
@@ -310,8 +310,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "UGC Selfie: Authentic Product Review",
     "descZh": "降低买家防备心：海外真实达人自拍口播、手持展示与痛点实测吐槽",
     "descEn": "Authentic first-person selfie review to boost trust and sales",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_video_c2f93f97_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-ugc-selfie",
@@ -341,7 +341,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
           },
           "copywriting": {
             "type": "string",
@@ -410,7 +410,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -444,8 +444,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-ugc-selfie-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_video_c2f93f97_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
           }
         ]
       }
@@ -459,8 +459,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "3D VFX: Dynamic Particle Impact",
     "descZh": "营造高端电影质感：3D 光影粒子环绕、超现实悬浮与破屏动效",
     "descEn": "Cinematic 3D particle impact and floating product commercial",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_video_e7e71f76_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-3d-cute-vfx",
@@ -490,7 +490,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
           },
           "copywriting": {
             "type": "string",
@@ -559,7 +559,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -593,8 +593,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-3d-cute-vfx-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_video_e7e71f76_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
           }
         ]
       }
@@ -608,8 +608,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "Fashion Apparel: Runway Try-On",
     "descZh": "专攻服饰鞋包转化：模特街头走秀、多场景无缝换装与面料微距质感",
     "descEn": "Dynamic runway fashion try-on with scene transitions",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_video_083e3d55_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-apparel-tryon",
@@ -639,7 +639,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
           },
           "copywriting": {
             "type": "string",
@@ -708,7 +708,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -742,8 +742,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-apparel-tryon-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_video_083e3d55_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
           }
         ]
       }
@@ -757,8 +757,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "15s Product Spotlight: Commercial Ad",
     "descZh": "电商大促爆款标配：强节奏多镜头分镜、核心卖点连续轰炸与高光特写",
     "descEn": "15-second high-energy product spotlight and promo ad",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_video_07f45334_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-product-spotlight",
@@ -788,7 +788,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
           },
           "copywriting": {
             "type": "string",
@@ -857,7 +857,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -891,8 +891,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-product-spotlight-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_video_07f45334_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
           }
         ]
       }
@@ -906,8 +906,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     "titleEn": "Fall Down: Durability & Discount Showcase",
     "descZh": "建立极强品质信任：高空跌落耐摔、极限冲击与实拍折扣力度揭晓",
     "descEn": "High impact drop durability test to prove solid product quality",
-    "coverUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp",
-    "previewVideoUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_video_14eb8331_compressed_v2.mp4",
+    "coverUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
+    "previewVideoUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
     "manifest": {
       "schemaVersion": "1.0.0",
       "appId": "app-creatify-fall-down-durability",
@@ -937,7 +937,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "title": "商品主图 / 白底图",
             "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
             "widget": "media-uploader",
-            "default": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
+            "default": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
           },
           "copywriting": {
             "type": "string",
@@ -1006,7 +1006,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "mappingType": "media",
           "widget": "media-uploader",
           "required": true,
-          "defaultValue": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
+          "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
         },
         "copywriting": {
           "nodeId": "node-slot-copywriting",
@@ -1040,8 +1040,8 @@ export const FEATURED_APPS_CARDS = Object.freeze([
             "id": "showcase-app-creatify-fall-down-durability-01",
             "title": "爆款成片效果演示",
             "mediaType": "video",
-            "mediaUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_video_14eb8331_compressed_v2.mp4",
-            "posterUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
+            "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
+            "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
           }
         ]
       }

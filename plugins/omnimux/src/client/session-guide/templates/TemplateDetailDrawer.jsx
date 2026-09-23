@@ -1,4 +1,6 @@
-import React, { useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { TemplateVideo } from './TemplateVideo.jsx'
+import { resolveTemplateVideoUrl } from './template-media.js'
 import { resolveTemplateCopy } from './template-locale.js'
 import { useTemplateLocale } from './use-template-locale.js'
 
@@ -34,6 +36,9 @@ export function TemplateDetailDrawer({
   t,
 }) {
   const currentLocale = useTemplateLocale(locale, t)
+  const [videoError, setVideoError] = useState(false)
+  const failVideo = useCallback(() => setVideoError(true), [])
+  useEffect(() => setVideoError(false), [template?.id, template?.previewVideoUrl, isOpen])
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -55,7 +60,8 @@ export function TemplateDetailDrawer({
   const copy = resolveTemplateCopy(template, currentLocale)
   const title = copy.title || template.title || ''
   const prompt = copy.prompt || ''
-  const durationTag = template.duration || (isEn ? '15s vertical' : '15秒竖版')
+  const videoUrl = resolveTemplateVideoUrl(template)
+  const durationTag = videoUrl ? template.duration : ''
   const sourceLabel = isEn ? 'Source' : '来源'
   const durationLabel = isEn ? 'Length' : '时长'
   const closeLabel = isEn ? 'Close' : '关闭'
@@ -81,7 +87,7 @@ export function TemplateDetailDrawer({
             </h3>
             <p className="omnimux-tpl-drawer-subtitle">
               <span>{sourceLabel} {template.sourcePlatform || (isEn ? 'Featured' : '精选')}</span>
-              <span>· {durationLabel} {durationTag}</span>
+              {durationTag ? <span>· {durationLabel} {durationTag}</span> : null}
             </p>
           </div>
 
@@ -98,7 +104,17 @@ export function TemplateDetailDrawer({
         <div className="omnimux-tpl-drawer-body">
           <div className="omnimux-tpl-drawer-left">
             <div className="omnimux-tpl-drawer-media-wrap">
-              {template.thumbnailUrl ? (
+              {videoUrl && !videoError ? (
+                <TemplateVideo
+                  key={template.id}
+                  src={videoUrl}
+                  poster={template.thumbnailUrl}
+                  controls
+                  title={title}
+                  className="omnimux-tpl-drawer-img"
+                  onError={failVideo}
+                />
+              ) : template.thumbnailUrl ? (
                 <img
                   src={template.thumbnailUrl}
                   alt={title}
@@ -111,7 +127,9 @@ export function TemplateDetailDrawer({
               )}
             </div>
             <div className="omnimux-tpl-drawer-r2-note">
-              {isEn ? 'Saved in your template library' : '已收进模板库'}
+              {videoError
+                ? (isEn ? 'Preview unavailable' : '预览暂不可用')
+                : (isEn ? 'Template preview' : '模板预览')}
             </div>
           </div>
 

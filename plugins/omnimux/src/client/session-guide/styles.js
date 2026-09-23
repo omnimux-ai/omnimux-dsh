@@ -3315,6 +3315,14 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-media-box { position:relative; width:100%; height:100%; overflow:hidden; }
 .omnimux-tpl-img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease; }
 .omnimux-tpl-card:hover .omnimux-tpl-img { transform:scale(1.04); }
+.omnimux-tpl-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.omnimux-tpl-video.is-preview-pending { opacity:0; }
+.omnimux-tpl-card:focus-within .omnimux-tpl-hover-action { opacity:1; transform:translateY(0); pointer-events:auto; }
+.omnimux-tpl-card:focus-within .omnimux-tpl-bottom-bar { transform:translateY(-44px); }
+@media (hover:none) {
+  .omnimux-tpl-card .omnimux-tpl-hover-action { opacity:1; transform:translateY(0); pointer-events:auto; }
+  .omnimux-tpl-card .omnimux-tpl-bottom-bar { transform:translateY(-44px); }
+}
 .omnimux-tpl-placeholder {
   width:100%;
   height:100%;
