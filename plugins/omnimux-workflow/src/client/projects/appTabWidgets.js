@@ -63,6 +63,7 @@ export function resolveWidget(key, prop, mapping) {
     return 'ratio-cards'
   }
   if (opts.length > 0) return 'select-single'
+  if (key === 'product_link') return 'product-link'
   if (prop?.type === 'string' && ((prop.maxLength !== undefined && prop.maxLength > 100) || (key && key.toLowerCase().includes('prompt')) || prop.title?.includes('提示'))) {
     return 'textarea'
   }
@@ -123,7 +124,7 @@ export function displayValueOf(val) {
     const url = String(val.url || '')
     return {
       name: String(val.name || val.url || '已选素材'),
-      sub: val.sub || (val.source ? `来源: ${val.source}` : ''),
+      sub: val.sub || (val.source === 'product' ? '商品库' : val.source === 'upload' ? '本地上传' : val.source ? `来源: ${val.source}` : ''),
       source: val.source || 'asset',
       url,
     }
@@ -136,7 +137,7 @@ export function displayValueOf(val) {
         const url = String(parsed.url || '')
         return {
           name: String(parsed.name || parsed.url || '已选素材'),
-          sub: parsed.sub || (parsed.source ? `来源: ${parsed.source}` : ''),
+          sub: parsed.sub || (parsed.source === 'product' ? '商品库' : parsed.source === 'upload' ? '本地上传' : parsed.source ? `来源: ${parsed.source}` : ''),
           source: parsed.source || 'asset',
           url,
         }

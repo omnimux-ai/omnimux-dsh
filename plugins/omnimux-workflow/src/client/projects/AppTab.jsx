@@ -40,6 +40,37 @@ export {
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
 
+const DEFAULT_PRODUCTS = Object.freeze([
+  {
+    id: 'prod-001',
+    name: '智能降噪真无线耳机',
+    sub: '数码影音 · 现货',
+    url: 'https://cdn.creatify.ai/community_creation/d4d983e2-108b-4b24-be0d-9fa6619eb608/preview_image_9ec543ab.webp',
+    preview: 'https://cdn.creatify.ai/community_creation/d4d983e2-108b-4b24-be0d-9fa6619eb608/preview_image_9ec543ab.webp',
+  },
+  {
+    id: 'prod-002',
+    name: '超轻透气缓震跑鞋',
+    sub: '运动户外 · 现货',
+    url: 'https://cdn.creatify.ai/community_creation/8ab931cd-711e-451e-92b1-127eec12822a/preview_image_c8c7f3b8.webp',
+    preview: 'https://cdn.creatify.ai/community_creation/8ab931cd-711e-451e-92b1-127eec12822a/preview_image_c8c7f3b8.webp',
+  },
+  {
+    id: 'prod-003',
+    name: '极简便携桌面加湿器',
+    sub: '家居生活 · 现货',
+    url: 'https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp',
+    preview: 'https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp',
+  },
+  {
+    id: 'prod-004',
+    name: '极简智能触控保温杯',
+    sub: '日常器物 · 现货',
+    url: 'https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp',
+    preview: 'https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp',
+  },
+])
+
 function IconCheck({ size = 12, className = '' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -333,6 +364,8 @@ export function AppTab(props) {
   const [openDropdownKey, setOpenDropdownKey] = useState(null)
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
+  const [productPickerModal, setProductPickerModal] = useState(null)
+  const [customProducts, setCustomProducts] = useState(DEFAULT_PRODUCTS)
   const fileInputRef = useRef(null)
   const uploadTargetKeyRef = useRef(null)
   const loadedAppIdRef = useRef(null)
@@ -480,6 +513,63 @@ export function AppTab(props) {
     handleFieldChange(key, safeUrl || trimmed)
     setPromptModal(null)
   }, [promptModal, handleFieldChange])
+
+  // 打开商品库选择弹窗，支持异步获取用户建档商品及默认商品库展示
+  const handleOpenProductPicker = useCallback((key) => {
+    setProductPickerModal({
+      key,
+      title: '从商品库选择商品',
+      search: '',
+    })
+    if (typeof fetch === 'function') {
+      fetch('/omnimux/products/collection')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const list = Array.isArray(data?.products) ? data.products : []
+          if (list.length > 0) {
+            const mapped = list.map((p, idx) => ({
+              id: p.id || `prod-remote-${idx}`,
+              name: p.name || p.title || '未命名商品',
+              sub: p.sub || p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库',
+              url: p.link || p.url || '',
+              preview: p.preview || p.image || p.url || '',
+            }))
+            setCustomProducts(mapped)
+          }
+        })
+        .catch(() => {
+          // fallback to defaults
+        })
+    }
+  }, [])
+
+  // 从商品库选择已有商品并直接回填
+  const handleSelectProduct = useCallback((item) => {
+    if (!productPickerModal) return
+    const { key } = productPickerModal
+    const picked = {
+      name: item.name,
+      sub: item.sub || '商品库',
+      url: item.url || item.preview,
+      preview: item.preview || item.url,
+      source: 'product',
+    }
+    handleFieldChange(key, JSON.stringify(picked))
+    setProductPickerModal(null)
+  }, [productPickerModal, handleFieldChange])
+
+  // 商品库弹窗输入外部链接提交
+  const handleProductModalSubmitLink = useCallback(() => {
+    if (!productPickerModal) return
+    const { key, search } = productPickerModal
+    const trimmed = (search || '').trim()
+    if (!trimmed) {
+      setProductPickerModal(null)
+      return
+    }
+    handleCommitLink(key, trimmed)
+    setProductPickerModal(null)
+  }, [productPickerModal, handleCommitLink])
 
   // Execute generation
   const handleGenerate = useCallback(async (e) => {
@@ -843,8 +933,10 @@ export function AppTab(props) {
                 const desc = prop.description || manifest.fieldMappings?.[key]?.fieldDescription
                 const widget = resolveWidget(key, prop, manifest.fieldMappings?.[key])
 
+                const isDropdownOpen = openDropdownKey === key
+
                 return (
-                  <div key={key} className="omx-apptab-field-group">
+                  <div key={key} className={`omx-apptab-field-group ${isDropdownOpen ? 'is-dropdown-open' : ''}`}>
                     <div className="omx-apptab-label-row">
                       <label className="omx-apptab-label">
                         {title}
@@ -897,7 +989,7 @@ export function AppTab(props) {
                         const displayLabel = currentOpt ? currentOpt.label : (val || prop.placeholder || '请选择')
                         const isOpen = openDropdownKey === key
                         return (
-                          <div className="omx-apptab-select-single">
+                          <div className={`omx-apptab-select-single ${isOpen ? 'is-open' : ''}`}>
                             <div
                               className={`omx-apptab-select-trigger ${error ? 'is-error' : ''} ${isOpen ? 'is-open' : ''}`}
                               onClick={(e) => {
@@ -1115,19 +1207,27 @@ export function AppTab(props) {
                         )
                       })()
                     ) : widget === 'product-link' ? (
-                      /* 7. 商品链接 */
+                      /* 7. 商品链接 + 商品库选择 + 本地上传三合一复合控件 */
                       (() => {
                         const hasVal = typeof val === 'string' && val.trim() !== ''
                         if (hasVal) {
                           const disp = displayValueOf(val)
+                          const rawUrl = disp.url || (typeof val === 'string' ? val : '')
+                          const safeUrl = sanitizePreviewUrl(rawUrl)
                           return (
                             <div className="omx-apptab-picked">
                               <div className="omx-apptab-picked-thumb">
-                                <IconStore size={18} />
+                                {safeUrl ? (
+                                  <img src={safeUrl} alt="Preview" className="omx-apptab-picked-thumb-img" />
+                                ) : disp.source === 'upload' ? (
+                                  <IconUpload size={18} />
+                                ) : (
+                                  <IconStore size={18} />
+                                )}
                               </div>
                               <div className="omx-apptab-picked-info">
-                                <div className="omx-apptab-picked-title">{disp.name}</div>
-                                {disp.sub && <div className="omx-apptab-picked-sub">{disp.sub}</div>}
+                                <div className="omx-apptab-picked-title">{disp.name || '已选商品'}</div>
+                                <div className="omx-apptab-picked-sub">{disp.sub || (disp.source === 'upload' ? '本地上传' : '商品库')}</div>
                               </div>
                               <button // exempt-ui01 ai-app-ui-spec 24px clear picked item
                                 type="button"
@@ -1141,7 +1241,19 @@ export function AppTab(props) {
                           )
                         }
                         return (
-                          <div className="omx-apptab-extractor">
+                          <div
+                            className="omx-apptab-extractor omx-apptab-product-widget"
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const file = e.dataTransfer?.files?.[0]
+                              if (file) handleDirectUploadFile(key, file)
+                            }}
+                          >
                             <input
                               type="text"
                               className="omx-apptab-extractor-input"
@@ -1160,17 +1272,19 @@ export function AppTab(props) {
                               type="button"
                               className="omx-apptab-extractor-icon-btn"
                               aria-label="从商品库选择"
-                              onClick={() => {
-                                setPromptModal({
-                                  key,
-                                  title: '从商品库选择商品',
-                                  placeholder: '请输入商品链接 (https://...)',
-                                  value: '',
-                                  error: '',
-                                })
-                              }}
+                              title="从商品库选择"
+                              onClick={() => handleOpenProductPicker(key)}
                             >
                               <IconStore size={16} />
+                            </button>
+                            <button // exempt-ui01 ai-app-ui-spec 36px upload button
+                              type="button"
+                              className="omx-apptab-extractor-icon-btn"
+                              aria-label="本地上传"
+                              title="本地上传"
+                              onClick={() => handleOpenUpload(key)}
+                            >
+                              <IconUpload size={16} />
                             </button>
                           </div>
                         )
@@ -1555,6 +1669,98 @@ export function AppTab(props) {
                 type="button"
                 className="omx-apptab-btn-primary"
                 onClick={handlePromptModalSubmit}
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 从商品库选择已有商品的交互弹窗 */}
+      {productPickerModal && (
+        <div
+          className="omx-apptab-modal-mask"
+          onClick={() => setProductPickerModal(null)}
+        >
+          <div
+            className="omx-apptab-modal is-wide"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="omx-apptab-modal-header">
+              <span className="omx-apptab-modal-title">{productPickerModal.title}</span>
+              <button // exempt-ui01 ai-app-ui-spec 28px modal close button
+                type="button"
+                className="omx-apptab-modal-close"
+                aria-label="关闭"
+                onClick={() => setProductPickerModal(null)}
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+            <div className="omx-apptab-modal-body">
+              <input
+                type="text"
+                className="omx-apptab-input"
+                autoFocus
+                value={productPickerModal.search || ''}
+                placeholder="搜索商品名称或输入商品链接 (https://...)"
+                onChange={(e) => {
+                  const s = e.target.value
+                  setProductPickerModal((prev) => ({ ...prev, search: s }))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleProductModalSubmitLink()
+                  } else if (e.key === 'Escape') {
+                    setProductPickerModal(null)
+                  }
+                }}
+              />
+              <div className="omx-apptab-product-list">
+                {customProducts
+                  .filter((p) => {
+                    const q = (productPickerModal.search || '').trim().toLowerCase()
+                    if (!q) return true
+                    return p.name.toLowerCase().includes(q) || (p.sub && p.sub.toLowerCase().includes(q))
+                  })
+                  .map((item) => {
+                    const safeThumb = sanitizePreviewUrl(item.preview)
+                    return (
+                      <div
+                        key={item.id}
+                        className="omx-apptab-product-item"
+                        onClick={() => handleSelectProduct(item)}
+                      >
+                        {safeThumb ? (
+                          <img src={safeThumb} alt={item.name} className="omx-apptab-product-item-thumb" />
+                        ) : (
+                          <div className="omx-apptab-product-item-thumb">
+                            <IconStore size={18} />
+                          </div>
+                        )}
+                        <div className="omx-apptab-product-item-meta">
+                          <div className="omx-apptab-product-item-name">{item.name}</div>
+                          {item.sub && <div className="omx-apptab-product-item-sub">{item.sub}</div>}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+            <div className="omx-apptab-modal-footer">
+              <button // exempt-ui01 ai-app-ui-spec 32px modal cancel button
+                type="button"
+                className="omx-apptab-btn-ghost"
+                onClick={() => setProductPickerModal(null)}
+              >
+                取消
+              </button>
+              <button // exempt-ui01 ai-app-ui-spec 32px modal submit button
+                type="button"
+                className="omx-apptab-btn-primary"
+                onClick={handleProductModalSubmitLink}
               >
                 确定
               </button>

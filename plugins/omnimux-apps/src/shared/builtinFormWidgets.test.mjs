@@ -50,13 +50,12 @@ describe('Builtin form widgets catalog (Issue #2596)', () => {
     }
   });
 
-  it('renovated classic apps have product_image upgraded to library-picker and voice/aspectRatio properly configured', () => {
+  it('renovated classic apps have product_image upgraded to product-link and voice/aspectRatio properly configured', () => {
     for (const id of RENOVATED_CREATIFY_IDS) {
       const app = catalogApps.find((a) => a.appId === id);
       const pi = app.formSchema.properties.product_image;
-      assert.equal(pi.widget, 'library-picker', `${id}: product_image widget must be library-picker`);
-      assert.equal(pi.library, 'asset', `${id}: product_image library must be asset`);
-      assert.equal(app.fieldMappings.product_image.widget, 'library-picker', `${id}: fieldMapping widget must be library-picker`);
+      assert.equal(pi.widget, 'product-link', `${id}: product_image widget must be product-link`);
+      assert.equal(app.fieldMappings.product_image.widget, 'product-link', `${id}: fieldMapping widget must be product-link`);
 
       const voice = app.formSchema.properties.voice;
       assert.equal(voice.widget, 'select-single', `${id}: voice widget must be select-single`);
