@@ -1,0 +1,18 @@
+display-name-zh: 图文复刻
+version: 1.0.0
+tag-en: "E-Commerce / Carousel Replication"
+tag-cn: "电商 / 图文复刻"
+complete-tags-en:
+  - "E-Commerce"
+  - "Image Generation"
+complete-tags-cn:
+  - "电商"
+  - "图像生成"
+summary-en: "Deconstruct a reference carousel and rebuild an original one for a new product"
+summary-cn: "拆解参考图文案例的视觉结构，为新商品生成原创轮播方案"
+desc-en: "For replicating the structure of a reference e-commerce carousel — image count, page order, hook type, information hierarchy, composition, scene mood, selling-point order and copy rhythm — while producing original work for the user's own product. Extracts the reference's visual logic, deliberately keeps the original images, models, brand assets and full copy out, and outputs an original page-by-page plan, English in-image copy and image generation prompts."
+desc-cn: "适用于拿到参考图文、图片组或商品案例，需要为新商品产出同结构原创轮播的场景。拆解参考案例的图片数量、页面顺序、Hook 类型、信息层级、构图关系、场景氛围、卖点顺序与文案节奏，同时避免复制原图、原模特、品牌资产与完整原文案，输出适用于用户商品的原创逐页方案、英文图内文案与生图提示词。"
+cover: ""
+author-en: "OmniMux Team"
+author-cn: "OmniMux 团队"
+source: official

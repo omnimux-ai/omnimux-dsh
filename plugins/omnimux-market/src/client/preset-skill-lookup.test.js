@@ -95,7 +95,13 @@ describe('出厂预设技能库的四个快捷方式技能', () => {
   })
 })
 
-/** 本次恢复的两个分类及其技能（真源：presets/tiktok-agent/skills.json，逐字取用）。 */
+/**
+ * 创作视频 / 创作图片两个分类的钉住清单。
+ *
+ * 13 款恢复技能逐字取自预设真源 `presets/tiktok-agent/skills.json`；
+ * 「商品轮播图」「图文复刻」是 Issue #2609 预装的电商图文技能，真源即
+ * `catalog/preset-skills.json` 自身。
+ */
 const RESTORED_CATEGORIES = [
   {
     id: '创作视频',
@@ -120,11 +126,14 @@ const RESTORED_CATEGORIES = [
       { slug: 'image-replication', name: '图片复刻', titleEn: 'Image Replication', description: '基于参考图风格批量复刻产品图。' },
       { slug: 'multi-angle-product-images', name: '多角度产品图', titleEn: 'Multi-Angle Product Shots', description: '为同一商品生成多个角度的展示图。' },
       { slug: 'ai-virtual-try-on', name: 'AI 换装', titleEn: 'AI Virtual Try-On', description: '为模特生成 AI 换装效果。' },
+      // Issue #2609 预装的两款电商图文技能（真源即 catalog/preset-skills.json 本条数据）
+      { slug: 'shoppable-carousel', name: '商品轮播图', titleEn: 'Shoppable Carousel', description: '根据商品图片规划逐页轮播图方案与生图提示词。' },
+      { slug: 'replicate-carousel', name: '图文复刻', titleEn: 'Carousel Replication', description: '拆解参考图文结构，为新商品生成原创轮播方案。' },
     ],
   },
 ]
 
-describe('恢复的创作视频 / 创作图片分类与 13 款技能', () => {
+describe('恢复的创作视频 / 创作图片分类与 15 款技能', () => {
   it('tiktok-agent 的分类里含创作视频与创作图片', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     assert.ok(binding)
@@ -140,7 +149,7 @@ describe('恢复的创作视频 / 创作图片分类与 13 款技能', () => {
     }
   })
 
-  it('13 款技能都在货架上，且分类、文案、封面齐备', () => {
+  it('15 款技能都在货架上，且分类、文案、封面齐备', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     const bySlug = new Map(binding.skills.map((s) => [String(s.slug || s.skill), s]))
     for (const category of RESTORED_CATEGORIES) {
@@ -184,7 +193,7 @@ describe('恢复的创作视频 / 创作图片分类与 13 款技能', () => {
     }
   })
 
-  it('新增 13 款的字段集与既有条目完全一致（不再漏 titleEn）', () => {
+  it('新增 15 款的字段集与既有条目完全一致（不再漏 titleEn）', () => {
     const newSlugs = new Set(RESTORED_CATEGORIES.flatMap((c) => c.skills.map((s) => s.slug)))
     for (const presetId of ['tiktok-agent', 'omni-agent']) {
       const binding = getPresetSkillBinding(presetId)

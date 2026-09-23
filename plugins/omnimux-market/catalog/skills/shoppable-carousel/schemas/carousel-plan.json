@@ -1,0 +1,21 @@
+{
+  "product_type": "",
+  "selected_playbook": "",
+  "reason": "",
+  "target_market": "",
+  "language": "",
+  "pages": [
+    {
+      "page_number": 1,
+      "image_type": "",
+      "sales_role": "",
+      "shot": "",
+      "subject_action": "",
+      "scene": "",
+      "layout": "",
+      "copy": "",
+      "fidelity_requirements": [],
+      "negative_requirements": []
+    }
+  ]
+}

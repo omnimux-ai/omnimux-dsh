@@ -1,0 +1,20 @@
+{
+  "project": "carousel-replication",
+  "delivery": {
+    "planned_count": 0,
+    "generated_count": 0,
+    "approved_count": 0,
+    "delivered_count": 0,
+    "zip_status": "not_requested",
+    "zip_filename": null
+  },
+  "files": [
+    {
+      "page_number": 1,
+      "filename": "01_hook-problem.png",
+      "image_type": "hook",
+      "status": "approved",
+      "delivery_status": "pending"
+    }
+  ]
+}

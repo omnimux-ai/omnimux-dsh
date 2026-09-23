@@ -1,0 +1,37 @@
+{
+  "project": "carousel-replication",
+  "product": {
+    "name": "product-name",
+    "confirmed_facts": [],
+    "visible_facts": [],
+    "unknown_items": []
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "reference_page": 1,
+      "is_extension": false,
+      "image_type": "product-close-up",
+      "sales_role": "hook",
+      "composition": {
+        "layout": "full-frame",
+        "camera_angle": "",
+        "shot_size": "",
+        "subject_position": "",
+        "background": "",
+        "lighting": ""
+      },
+      "action": "",
+      "preserved_elements": [],
+      "replaced_elements": [],
+      "on_image_text": {
+        "headline": "",
+        "subheadline": "",
+        "position": ""
+      },
+      "fidelity_requirements": [],
+      "prohibited_additions": [],
+      "prompt": ""
+    }
+  ]
+}
