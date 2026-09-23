@@ -1,4 +1,17 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { measureInlineComposerDemand, releaseInlineComposerGeometry } from '../composer-compact.js'
+
+function dockGeometry(card, band) {
+  const rect = band?.getBoundingClientRect?.()
+  if (!rect || rect.width <= 0) return null
+  const column = card?.closest?.('[data-conversation-scroll], [class*="centerCol"]')?.getBoundingClientRect?.() || rect
+  const leftEdge = Math.max(rect.left + 12, column.left)
+  const rightEdge = Math.min(rect.left + rect.width - 12, column.right ?? column.left + column.width)
+  const available = Math.max(0, rightEdge - leftEdge)
+  if (!available) return null
+  const width = Math.min(available, Math.max(DOCK_MAX_WIDTH, measureInlineComposerDemand(card)))
+  return { width, left: leftEdge + (available - width) / 2 }
+}
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
@@ -120,9 +133,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       const band = card?.parentElement || root
       const from = card?.getBoundingClientRect?.()
       const fromBand = band?.getBoundingClientRect?.()
-      if (fromBand && fromBand.width > 0) {
-        const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, fromBand.width - 24))
-        const left = fromBand.left + (fromBand.width - width) / 2
+      releaseInlineComposerGeometry(card)
+      const geometry = dockGeometry(card, band)
+      if (geometry) {
+        const { width, left } = geometry
         root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
         root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)
         root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
@@ -183,10 +197,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const band = card?.parentElement || root
 
     const writeGeometry = () => {
-      const rect = band?.getBoundingClientRect?.()
-      if (!rect || rect.width <= 0) return
-      const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, rect.width - 24))
-      const left = rect.left + (rect.width - width) / 2
+      releaseInlineComposerGeometry(card)
+      const geometry = dockGeometry(card, band)
+      if (!geometry) return
+      const { width, left } = geometry
       root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
       root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)
       root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
@@ -312,11 +326,16 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       : null
     observer?.observe(root)
     if (card) observer?.observe(card)
+    const toolbar = card?.querySelector?.(':scope > [class*="row"]:has(> [class*="tools"])')
+    const contentObserver = typeof window.MutationObserver === 'function'
+      ? new window.MutationObserver(writeGeometry) : null
+    if (toolbar) contentObserver?.observe(toolbar, { childList: true, characterData: true, subtree: true })
     window.addEventListener('resize', writeGeometry)
     return () => {
       primedAnimCancel?.()
       cancelAnim?.()
       observer?.disconnect()
+      contentObserver?.disconnect()
       window.removeEventListener('resize', writeGeometry)
     }
   }, [dockedItem, placement, hostRef])

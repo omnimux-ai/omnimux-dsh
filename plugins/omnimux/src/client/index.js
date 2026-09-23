@@ -36,7 +36,7 @@ import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
-import { ComposerQuickShortcuts } from './composer-quick-shortcuts/ComposerQuickShortcuts.jsx'
+import { ComposerQuickShortcuts, ComposerQuickShortcutControls } from './composer-quick-shortcuts/ComposerQuickShortcuts.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
 import { installUserMessageAttachmentsEnhancer } from './attachments/userMessageAttachmentsEnhancer.ts'
@@ -206,6 +206,13 @@ export function apply(ctx) {
     locale: NS,
     inject: () => ({ t }),
   }, ComposerQuickShortcuts))
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+    name: 'conversation.input.left',
+    id: 'omnimux-quick-shortcut-controls',
+    order: 20,
+    locale: NS,
+    inject: () => ({ t }),
+  }, ComposerQuickShortcutControls))
   // 素材卡槽回到官方输入框内侧。Host 直接把上传回调交给托盘，不再经外侧桥接。
   const attachmentStore = getGlobalAttachmentStore()
   mountFormsBridge(ctx, attachmentStore)

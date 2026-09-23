@@ -208,7 +208,7 @@ const MEASURE_EXPRESSION = `JSON.stringify((() => {
     const rect = box(node);
     return { label: (node.textContent || '').trim().slice(0, 32), ...rect, insideCard: insideCard(rect) };
   });
-  const summary = document.querySelector('[data-omx-media-config-summary], .omx-media-config-summary');
+  const summary = document.querySelector('[data-composer-card] #modelCascadeTriggerBtn');
   const summaryBox = box(summary);
   const buttons = [...document.querySelectorAll('[data-omx-quick-shortcut]')].map((node) => ({ id: node.getAttribute('data-omx-quick-shortcut'), ...box(node) }));
   const buttonsLeft = buttons.length ? Math.min(...buttons.map((item) => item.left)) : null;
@@ -223,6 +223,8 @@ const MEASURE_EXPRESSION = `JSON.stringify((() => {
   return {
     viewportWidth: window.innerWidth,
     density: document.documentElement.getAttribute('data-omnimux-composer-density'),
+    inlineDensity: card?.getAttribute('data-omnimux-inline-density'),
+    send: (() => { const rect = box(card?.querySelector('button[aria-label="发送消息"], button[aria-label="Send message"]')); return rect ? { ...rect, insideCard: insideCard(rect) } : null; })(),
     cardMaxWidth,
     cardMaxWidthPx: cardMaxWidth && cardMaxWidth !== 'none' ? round2(parseFloat(cardMaxWidth)) : null,
     document: { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth, overflowX: doc.scrollWidth - doc.clientWidth },
@@ -423,7 +425,7 @@ before(async () => {
   await evaluate(`(() => { const node = document.querySelector('[data-omx-quick-shortcut="clone"]'); if (node) node.click(); return JSON.stringify({ ok: Boolean(node) }); })()`)
   await waitFor(`JSON.stringify(Boolean(document.querySelector('[data-omx-quick-shortcut-controls] .omx-media-config-controls')))`, '模型 / 参数控件就绪')
   await waitFor(
-    `JSON.stringify((() => { const node = document.querySelector('[data-omx-media-config-summary]'); if (!node) return false; const text = (node.textContent || '').trim(); return Boolean(text) && text.indexOf('选择模型') === -1; })())`,
+    `JSON.stringify((() => { const node = document.querySelector('[data-composer-card] #modelCascadeTriggerBtn'); if (!node) return false; const text = (node.textContent || '').trim(); return Boolean(text) && text.indexOf('选择模型') === -1; })())`,
     '模型回执就绪',
   )
 
@@ -493,13 +495,11 @@ describe('E2E(#2588)：输入框下方快捷方式那一排的横向几何不变
     const wide = sweep.filter((item) => item.card.width >= 680)
     assert.ok(compact.length >= 3, `扫描里没有紧凑列读数（卡片最窄 ${Math.min(...sweep.map((item) => item.card.width))}px），这条用例的病灶态没被覆盖`)
     assert.ok(wide.length >= 3, '扫描里没有宽列读数，无法证明宽窗不回归')
-    // 紧凑列下「不越界」不能是碰巧：先证明单行放不下（单行所需宽度 > 可用宽），再证明它确实折了行。
     for (const item of compact) {
-      assert.ok(
-        item.controlsChildWidthSum > item.card.width,
-        `${item.viewportWidth}px（卡片 ${item.card.width}px）：紧凑列下模型 / 参数控件本应放不下单行，实测单行宽 ${item.controlsChildWidthSum}px`,
-      )
-      assert.ok(item.controlsRows >= 2, `${item.viewportWidth}px（卡片 ${item.card.width}px）：紧凑列下模型 / 参数控件应折行，实测 ${item.controlsRows} 行`)
+      assert.equal(item.controlsRows, 1, `${item.viewportWidth}px：内部控件必须保持单行`)
+      assert.ok(item.controlsChildWidthSum <= item.card.width + 1, `${item.viewportWidth}px：压缩后控件不得越界`)
+      assert.ok(item.send?.width > 0 && item.send?.height > 0 && item.send.insideCard, `${item.viewportWidth}px：发送按钮必须可见且留在卡片内`)
+      assert.ok(['full', 'short', 'icon'].includes(item.inlineDensity), '必须记录当前卡片的密度')
     }
   })
 
@@ -533,7 +533,7 @@ describe('E2E(#2588)：输入框下方快捷方式那一排的横向几何不变
 
     assertEveryWidth(state.sweep, (item) => {
       if (item.summary.insideCard !== true) return `模型回执落在卡片外（${item.summary.left}→${item.summary.right}，卡片右缘 ${item.card.right}）`
-      if (item.summary.width <= 40) return `模型回执被压成 ${item.summary.width}px，等于看不清`
+      if (item.summary.width <= 0 || item.summary.height <= 0) return '模型触发器不可见'
       if (item.summary.clipX > 1) return `模型回执内部被裁切 ${item.summary.clipX}px`
       return true
     }, '模型回执必须在任意宽度下完整可见且不被压扁')
@@ -565,11 +565,11 @@ describe('E2E(#2588)：输入框下方快捷方式那一排的横向几何不变
     }, '卡片宽度受上限约束，且任何一层都不产生横向滚动条')
   })
 
-  it('不回归：这一排的实测宽恒等于输入框卡片实测宽（跟随卡片，而不是各算各的公式）', (t) => {
+  it('不回归：外部快捷方式仍居中，临时扩宽仅由输入框承担', (t) => {
     if (state.skip) return t.skip(state.skip)
     assertEveryWidth(state.sweep, (item) => {
-      const delta = Math.abs(Math.round((item.row.width - item.card.width) * 100) / 100)
-      return delta <= 1 ? true : `这一排 ${item.row.width}px 与卡片 ${item.card.width}px 宽差 ${delta}px`
-    }, '这一排与输入框卡片必须逐宽度同宽')
+      const delta = Math.abs((item.row.left + item.row.right) / 2 - (item.card.left + item.card.right) / 2)
+      return delta <= 1 && item.row.width <= item.card.width + 1 ? true : `外部快捷方式与卡片中心偏差 ${delta}px`
+    }, '外部快捷方式不要求跟随临时扩宽，但必须保持居中')
   })
 })

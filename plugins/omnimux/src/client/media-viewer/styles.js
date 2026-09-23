@@ -1399,6 +1399,8 @@ export const MEDIA_VIEWER_CSS = `
   transition: transform 150ms ease;
 }
 
+.omx-param-compact-label { display: none; }
+
 .omx-capsule-divider {
   width: 1px;
   height: 18px;
@@ -1593,6 +1595,10 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-version-row {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1705,6 +1711,9 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-ratio-card {
+  padding: 0;
+  color: inherit;
+  font: inherit;
   height: 64px;
   border-radius: 10px;
   border: 1px solid var(--dsw-alias-border-l1);

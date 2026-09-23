@@ -8,12 +8,8 @@
  * 因此这里没有边框、圆角底与底色，取而代之的是两处可读的状态表达：
  * 文字色（次级 → 一级）与行尾箭头的透明度（半透明 → 实心）；选中态另有文字色。
  *
- * 居中怎么不被「模型 / 参数」控件带偏：控件与写失败提示都取 `flex-basis: 100%`，
- * 各自独占一行、**不参与四条按钮那一行的居中计算**。这不是偷懒的折中——
- * 实测四条按钮在中文下约占 570px、在英文下约占 756px，而行宽上限 952px，
- * 控件自身约 300px：同排时「严格居中」与「不压字」二者必损其一（居中则控件压住
- * 最右两字，右对齐则按钮整体左移约 150px）。让控件自成一行是唯一同时成立的做法，
- * 且窄列下按钮换行也不会与控件相撞。
+ * 模型与参数挂在输入框左侧槽位；外部仅保留四条快捷方式与整行错误提示。
+ * 输入框内配置由卡片局部密度控制，不参与外部快捷方式的居中与换行计算。
  *
  * 窄列下的横向溢出（Issue #2588）：病灶不在**行宽**，而在**行内内容**。
  * 这一排与输入框卡片本来就同宽——两者读同一个令牌（卡片是 `max-width: var(--dsh-composer-card-max-width)`，
@@ -115,46 +111,24 @@ export const QUICK_SHORTCUTS_CSS = `
   line-height: 18px;
 }
 
-/* 控件自成一行：换行 + 允许收缩，窄列下两个胶囊自己折行，绝不横向溢出压住按钮。 */
-.omx-quick-shortcut-controls {
-  display: inline-flex;
-  flex-basis: 100%;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  min-width: 0;
-  gap: 8px;
-}
-
-/* 共享控件本体（.omx-media-config-controls）在媒体面板里是 nowrap 的单行三件套，
-   在这里必须能折：它是这一行**唯一**的子节点，而它的内容是一块压不动的铁板——
-   实测最小内容宽 509.3px（模型胶囊 170 ＋ 参数胶囊 197.34 ＋ 模型回执 112.95 ＋ 间距），
-   而卡片进紧凑列后只有 318px。父盒的 min-width: 0 只能压盒子，压不动 nowrap 行里的内容，
-   于是内容从行右缘顶出卡片 78.34px（参数胶囊被裁切、模型回执被压成 0 宽）。
-   放开折行后每一段在自己那一行里居中，卡片宽度再小也不会越界。
-   只在快捷方式这一处生效：媒体面板里的三件套仍是单行（见 media-composer-direct 的既有断言）。 */
+/* 视频配置复用媒体面板；仅输入区使用紧凑的单行外观。 */
+.omx-quick-shortcut-controls,
 .omx-quick-shortcut-controls > .omx-media-config-controls {
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: 100%;
-}
-
-/* 兜底：单个控件都放不进所在行时，宁可自己收敛也不把内容顶出卡片。
-   min-width: 0 是这条链成立的前提——flex 项的默认最小宽是 min-content，
-   不显式归零，下面胶囊上的 max-width: 100% 只是相对自身宽度取 100%，等于没写。 */
-.omx-quick-shortcut-controls .omx-popover-anchor {
-  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
   min-width: 0;
+  gap: 6px;
 }
-
 .omx-quick-shortcut-controls .omx-capsule-trigger {
-  max-width: 100%;
-  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  min-width: 28px;
 }
-
-/* 模型胶囊里唯一由数据驱动的两段文字（模型名 / 版本名）走省略号。
-   参数胶囊不在此列：它的文字是「生成方式 · 分辨率 · 时长」等 span 拼成的复合串，
-   逐段省略会读成残句；且它不由数据驱动、宽度有界（实测 197.34px，远小于卡片下限 318px）。 */
+.omx-quick-shortcut-controls .omx-capsule-divider { display: none; }
+.omx-quick-shortcut-controls .omx-popover-anchor { min-width: 0; }
 .omx-quick-shortcut-controls .omx-model-name-display,
 .omx-quick-shortcut-controls .omx-channel-name-display {
   min-width: 0;
@@ -162,6 +136,62 @@ export const QUICK_SHORTCUTS_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+[data-composer-card][data-omnimux-inline-density] [class*="tools"] { overflow: visible; }
+[data-composer-card][data-omnimux-inline-density] .omx-quick-shortcut-controls .omx-popover-anchor { position: static; }
+[data-composer-card][data-omnimux-inline-density] .omx-popover-shell {
+  left: 0;
+  max-width: 100%;
+  max-height: min(340px, 60vh);
+}
+[data-composer-card][data-omnimux-inline-density][data-menu-placement='bottom'] .omx-popover-shell {
+  top: calc(100% + 8px); bottom: auto;
+}
+[data-composer-card][data-omnimux-inline-density] .omx-cascade-col { min-width: 0; flex: 1 1 0; }
+[data-composer-card][data-omnimux-inline-density] .omx-media-config-controls--compact .omx-params-panel {
+  width: min(420px, 100%);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.omx-media-config-controls--compact .omx-params-panel > * { flex-shrink: 0; }
+.omx-media-config-controls--compact .omx-clarity-sound-row { flex-wrap: wrap; gap: 12px; }
+.omx-media-config-controls--compact .omx-mode-track { flex-wrap: wrap; }
+.omx-media-config-controls--compact .omx-mode-pill { flex: 1 0 auto; }
+.omx-media-config-controls--compact .omx-ratio-grid { grid-template-columns: repeat(auto-fit, minmax(32px, 1fr)); }
+.omx-media-config-controls--compact .omx-ratio-card { min-width: 0; padding: 0; }
+[data-composer-card][data-omnimux-inline-density='short'] .omx-model-name-display { max-width: 88px; }
+[data-composer-card][data-omnimux-inline-density='short'] .omx-channel-name-display { display: none; }
+[data-composer-card]:is([data-omnimux-inline-density='short'], [data-omnimux-inline-density='icon']) #paramSummaryTriggerBtn > :not(.omx-param-compact-label) { display: none; }
+[data-composer-card]:is([data-omnimux-inline-density='short'], [data-omnimux-inline-density='icon']) #paramSummaryTriggerBtn > .omx-param-compact-label { display: inline; }
+[data-composer-card][data-omnimux-inline-density='icon'] #modelCascadeTriggerBtn > :not(svg:first-child) { display: none; }
+[data-composer-card][data-omnimux-inline-density='icon'] #modelCascadeTriggerBtn { width: 28px; padding: 0; justify-content: center; }
+/* 完整密度必须先测量正常文字，不能继承按卡片宽度提前收起的技能样式。 */
+html [data-composer-card][data-omnimux-inline-density='full'] .sh-active-skill-chip {
+  width: auto!important; min-width: 0!important; max-width: none!important;
+  padding: 0 8px 0 10px!important;
+}
+html [data-composer-card][data-omnimux-inline-density='full'] .sh-active-skill-chip .sh-chip-label {
+  display: inline-block!important; max-width: none!important;
+}
+html [data-composer-card][data-omnimux-inline-density='full'] .sh-active-skill-chip .sh-chip-close { display: inline-flex!important; }
+html [data-composer-card][data-omnimux-inline-density='full'] .sh-picker-trigger {
+  width: auto!important; max-width: none!important; padding: 0 8px!important;
+}
+html [data-composer-card][data-omnimux-inline-density='full'] .sh-picker-trigger-label { display: inline!important; }
+html [data-composer-card][data-omnimux-inline-density='short'] .sh-active-skill-chip {
+  width: auto!important; min-width: 0!important; max-width: none!important;
+  padding: 0 8px 0 10px!important;
+}
+html [data-composer-card][data-omnimux-inline-density='short'] .sh-active-skill-chip .sh-chip-label { display: inline-block!important; max-width: 64px!important; }
+html [data-composer-card][data-omnimux-inline-density='short'] .sh-active-skill-chip .sh-chip-close { display: inline-flex!important; }
+html [data-composer-card][data-omnimux-inline-density='short'] .sh-picker-trigger { width: auto!important; max-width: none!important; padding: 0 8px!important; }
+html [data-composer-card][data-omnimux-inline-density='short'] .sh-picker-trigger-label { display: inline!important; }
+html [data-composer-card][data-omnimux-inline-density='icon'] .sh-active-skill-chip {
+  width: 28px!important; min-width: 28px!important; max-width: 28px!important; padding: 0!important; justify-content: center!important;
+}
+html [data-composer-card][data-omnimux-inline-density='icon'] .sh-chip-label,
+html [data-composer-card][data-omnimux-inline-density='icon'] .sh-chip-close { display: none!important; }
+
 
 /* 位置：这一排挂在官方「输入框停靠槽」上，而 hero 栈把该槽排在输入框**之前**，
  * 照原样落位就在输入框上方（加这条规则之前的实测：这一排 y 210→240、输入框 258→372）。
@@ -309,20 +339,32 @@ html[data-omnimux-split-compact] .omx-quick-shortcuts,
 /**
  * 幂等注入样式表。
  * @param {Document | null} [doc]
- * @returns {() => void} 卸载函数
+ * @returns {HTMLStyleElement | null} 样式节点；不取得生命周期租约
  */
 export function ensureQuickShortcutStyles(doc = typeof document !== 'undefined' ? document : null) {
-  if (!doc || !doc.head) return () => {};
-  if (doc.getElementById(QUICK_SHORTCUTS_STYLE_ID)) return () => {};
-  const style = doc.createElement('style');
-  style.id = QUICK_SHORTCUTS_STYLE_ID;
-  style.textContent = QUICK_SHORTCUTS_CSS;
-  doc.head.appendChild(style);
+  if (!doc || !doc.head) return null;
+  let style = doc.getElementById(QUICK_SHORTCUTS_STYLE_ID);
+  if (!style) {
+    style = doc.createElement('style');
+    style.id = QUICK_SHORTCUTS_STYLE_ID;
+    doc.head.appendChild(style);
+  }
+  if (style.textContent !== QUICK_SHORTCUTS_CSS) style.textContent = QUICK_SHORTCUTS_CSS;
+  return style;
+}
+
+/** A mounted composer slot owns one lease; DOM chip insertion only ensures presence. */
+export function acquireQuickShortcutStyles(doc = typeof document !== 'undefined' ? document : null) {
+  const style = ensureQuickShortcutStyles(doc);
+  if (!style?.getAttribute) return () => {};
+  const count = Number(style.getAttribute('data-users')) || 0;
+  style.setAttribute('data-users', String(count + 1));
+  let released = false;
   return () => {
-    try {
-      doc.getElementById(QUICK_SHORTCUTS_STYLE_ID)?.remove();
-    } catch {
-      // 宿主已卸载时忽略
-    }
+    if (released) return;
+    released = true;
+    const remaining = Math.max(0, (Number(style.getAttribute('data-users')) || 1) - 1);
+    if (remaining) style.setAttribute('data-users', String(remaining));
+    else style.remove();
   };
 }

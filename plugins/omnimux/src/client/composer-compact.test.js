@@ -14,6 +14,7 @@ import {
   installComposerCompactObserver,
   resetComposerCompactForTests,
   syncHeroWorkspaceRowToCard,
+  syncInlineComposerWidths,
 } from './composer-compact.js'
 
 const previousWindow = globalThis.window
@@ -112,6 +113,129 @@ function setupDoc() {
   return { doc, win, resizeListeners, attrs, cssVars, setCardWidth: (w) => { cardWidth = w } }
 }
 
+// Geometry-only mock: no browser layout or persistent configuration is involved.
+function setupInlineCard({ original = 400, available = 800, full = 600, short = 300 } = {}) {
+  const { doc } = setupDoc()
+  const props = new Map([['width', ['400px', '']], ['left', ['12px', 'important']]])
+  const attrs = new Map()
+  let active = true
+  const style = {
+    getPropertyValue: (name) => props.get(name)?.[0] || '',
+    getPropertyPriority: (name) => props.get(name)?.[1] || '',
+    setProperty: (name, value, priority = '') => props.set(name, [value, priority]),
+    removeProperty: (name) => props.delete(name),
+  }
+  const seat = { getBoundingClientRect: () => ({ left: 100, right: 100 + available + 32 }) }
+  const column = { getBoundingClientRect: () => ({ left: 100, right: 100 + available + 32 }) }
+  const leaf = {
+    children: [], matches: () => true,
+    getBoundingClientRect: () => ({ width: attrs.get('data-omnimux-inline-density') === 'short' ? short : full }),
+  }
+  const overlay = { children: [], matches: () => false, getBoundingClientRect: () => ({ width: 5000 }) }
+  const row = { children: [leaf, overlay], matches: () => false }
+  const card = {
+    style, isConnected: true,
+    getBoundingClientRect: () => ({ width: original }),
+    setAttribute: (key, value) => attrs.set(key, value),
+    removeAttribute: (key) => attrs.delete(key),
+    querySelector: (selector) => selector.startsWith(':scope') ? row : active ? controls : null,
+    closest: selector => selector === '[data-composer-seat]' ? seat : selector.includes('conversation-scroll') ? column : null,
+  }
+  const controls = { closest: () => card }
+  doc.querySelectorAll = () => active ? [controls] : []
+  doc.defaultView = {
+    getComputedStyle: (node) => ({
+      display: node === row ? 'flex' : 'block',
+      position: node === card ? 'fixed' : node === overlay ? 'absolute' : 'static',
+      flexDirection: 'row', columnGap: '0',
+      getPropertyValue: () => '16',
+    }),
+  }
+  return { doc, card, column, attrs, props, deactivate: () => { active = false } }
+}
+
+test('inline width grows only when needed, centers within boundaries and never shrinks below original', () => {
+  for (const [original, full, expected] of [[400, 600, 600], [700, 600, 700]]) {
+    const { doc, card, attrs } = setupInlineCard({ original, full })
+    syncInlineComposerWidths(doc)
+    assert.equal(card.style.getPropertyValue('width'), `${expected}px`)
+    assert.equal(card.style.getPropertyPriority('width'), 'important')
+    assert.equal(card.style.getPropertyValue('left'), `${116 + (800 - expected) / 2}px`)
+    assert.equal(attrs.get('data-omnimux-inline-density'), 'full', 'floating menus must not inflate demand')
+    resetComposerCompactForTests()
+  }
+})
+
+test('column boundary clamps a wider seat and reset releases active overrides', () => {
+  const { doc, card, column, props } = setupInlineCard({ full: 900 })
+  const original = [...props]
+  column.getBoundingClientRect = () => ({ left: 180, right: 580 })
+  syncInlineComposerWidths(doc)
+  assert.equal(card.style.getPropertyValue('width'), '368px')
+  assert.equal(card.style.getPropertyValue('left'), '196px')
+  resetComposerCompactForTests()
+  assert.deepEqual([...props], original)
+  syncInlineComposerWidths({ querySelectorAll: () => [], defaultView: doc.defaultView })
+  assert.deepEqual([...props], original)
+})
+
+test('inline density compresses only at the available boundary, short before icon', () => {
+  for (const [short, expected] of [[450, 'short'], [550, 'icon']]) {
+    const { doc, card, attrs } = setupInlineCard({ available: 500, full: 650, short })
+    syncInlineComposerWidths(doc)
+    assert.equal(card.style.getPropertyValue('width'), '500px')
+    assert.equal(card.style.getPropertyValue('max-width'), '500px')
+    assert.equal(attrs.get('data-omnimux-inline-density'), expected)
+    resetComposerCompactForTests()
+  }
+})
+
+test('inline width is stable across recomputation and cancellation restores values and priorities', () => {
+  const { doc, card, attrs, props, deactivate } = setupInlineCard()
+  const saved = [...props]
+  syncInlineComposerWidths(doc)
+  const grown = [...props]
+  syncInlineComposerWidths(doc)
+  assert.deepEqual([...props], grown, 'repeated sizing must not accumulate width')
+  deactivate()
+  syncInlineComposerWidths(doc)
+  assert.deepEqual([...props], saved, 'restore only original card overrides, including important priority')
+  assert.equal(attrs.has('data-omnimux-inline-density'), false)
+  assert.equal(card.style.getPropertyValue('max-width'), '')
+})
+
+test('zero-width and incomplete cards release temporary density on cancel, detach and uninstall', () => {
+  for (const missing of ['width', 'row', 'seat']) {
+    for (const cleanup of ['cancel', 'detach', 'uninstall']) {
+      const fixture = setupInlineCard({ original: missing === 'width' ? 0 : 400 })
+      const { doc, card, attrs } = fixture
+      if (missing === 'row') card.querySelector = selector => selector.startsWith(':scope') ? null : {}
+      if (missing === 'seat') card.closest = () => null
+      syncInlineComposerWidths(doc)
+      assert.equal(attrs.get('data-omnimux-inline-density'), 'full')
+      if (cleanup === 'uninstall') resetComposerCompactForTests()
+      else {
+        if (cleanup === 'detach') card.isConnected = false
+        else { fixture.deactivate(); card.querySelector = () => null }
+        syncInlineComposerWidths(doc)
+      }
+      assert.equal(attrs.has('data-omnimux-inline-density'), false, `${missing}/${cleanup}`)
+    }
+  }
+})
+
+test('relative card centers within its own column and restores left', () => {
+  const { doc, card, props } = setupInlineCard({ full: 600, available: 800 })
+  const style = doc.defaultView.getComputedStyle
+  doc.defaultView.getComputedStyle = node => ({ ...style(node), position: node === card ? 'relative' : style(node).position })
+  card.getBoundingClientRect = () => ({ width: 400, left: 150 })
+  syncInlineComposerWidths(doc)
+  assert.equal(props.get('width')[0], '600px')
+  assert.equal(props.get('left')[0], '66px')
+  resetComposerCompactForTests()
+  assert.deepEqual(props.get('left'), ['12px', 'important'])
+})
+
 test('composerDensityForWidth maps widths to full/short/icon', () => {
   assert.equal(composerDensityForWidth(700), COMPOSER_COMPACT_DENSITY.full)
   assert.equal(composerDensityForWidth(560), COMPOSER_COMPACT_DENSITY.full)
@@ -151,16 +275,16 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.doesNotMatch(style.textContent, /\[data-composer-card\]\{\s*width:100%!important/)
   assert.doesNotMatch(style.textContent, /\[data-composer-seat\] > \*/)
   assert.match(style.textContent, /\[class\*="headline"\]:has\(> \[class\*="previewBadge"\]\[data-omnimux-hide\]\)\{\s*grid-template-columns:auto auto;/)
-  // Narrow densities (short + icon): model seat (trailing + aria-haspopup=menu)
-  // collapses to a 28px glyph chip — hide label/effort/chevron, paint the
-  // 3-layer box mask. Scope to the trailing rule so Permission (modes) or
-  // ContextMeter (dialog) cannot create a false green.
-  assert.match(
-    style.textContent,
-    /:is\(\[data-omnimux-composer-density='short'\], \[data-omnimux-composer-density='icon'\]\)/,
-  )
+  // All densities: the text-model seat is a 28px icon. Require the model
+  // label discriminator so another trailing menu cannot satisfy the assertion.
+  for (const name of ['triggerLabel', 'triggerEffort', 'chevron']) {
+    const selector = `[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerLabel"]) [class*="${name}"]`
+    const rules = style.textContent.match(/[^{}]+\{[^{}]*\}/g) || []
+    assert.ok(rules.some((rule) => rule.split('{')[0].split(',').some((part) => part.trim() === selector)
+      && /display:none!important/.test(rule)), `${name} must be hidden by the unconditional model rule`)
+  }
   const modelIconRule = style.textContent.match(
-    /:is\(\[data-omnimux-composer-density='short'\], \[data-omnimux-composer-density='icon'\]\) \[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]\{([^}]*)\}/,
+    /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]:has\(\[class\*="triggerLabel"\]\)\{([^}]*)\}/,
   )?.[1]
   assert.ok(modelIconRule, 'narrow-density model trigger sizing rule should be present')
   assert.match(modelIconRule, /width:28px/)
@@ -174,10 +298,10 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   )
   assert.match(
     style.textContent,
-    /\[class\*="trailing"\] button\[aria-haspopup='menu'\] \[class\*="chevron"\]/,
+    /\[class\*="trailing"\] button\[aria-haspopup='menu'\]:has\(\[class\*="triggerLabel"\]\) \[class\*="chevron"\]/,
   )
   const modelIconBefore = style.textContent.match(
-    /:is\(\[data-omnimux-composer-density='short'\], \[data-omnimux-composer-density='icon'\]\) \[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]::before\{([^}]*)\}/,
+    /\[data-composer-card\] \[class\*="trailing"\] button\[aria-haspopup='menu'\]:has\(\[class\*="triggerLabel"\]\)::before\{([^}]*)\}/,
   )?.[1]
   assert.ok(modelIconBefore, 'narrow-density model glyph ::before rule should be present')
   assert.match(modelIconBefore, /mask-image/)
@@ -362,7 +486,7 @@ test('ResizeObserver 密度写入按帧合并：同一帧内多次触发只应�
   dispose()
 })
 
-test('installComposerCompactObserver falls back to resize listener when ResizeObserver is absent', () => {
+test('installComposerCompactObserver schedules resize fallback when ResizeObserver is absent', async () => {
   const { doc, resizeListeners, setCardWidth } = setupDoc()
   setCardWidth(400)
   delete globalThis.ResizeObserver
@@ -372,6 +496,8 @@ test('installComposerCompactObserver falls back to resize listener when ResizeOb
 
   setCardWidth(700)
   resizeListeners[0]()
+  assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.icon, 'resize must not measure synchronously')
+  await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.full)
 
   dispose()
@@ -454,6 +580,45 @@ test('installComposerCompactObserver re-binds when card DOM node is replaced by 
   )
 
   dispose()
+})
+
+test('body and editor mutations do not resize stable composer; toolbar mutations do and dispose disconnects all', async () => {
+  const { doc, card } = setupInlineCard()
+  const query = doc.querySelector
+  doc.querySelector = selector => selector === '[data-composer-card]' ? card : query(selector)
+  const controlsQuery = doc.querySelectorAll
+  doc.querySelectorAll = selector => selector === '[data-composer-card]' ? [card] : controlsQuery(selector)
+  const prior = globalThis.MutationObserver
+  const instances = []
+  class Observer {
+    constructor(callback) { this.callback = callback; this.disconnected = false; instances.push(this) }
+    observe(target, options) { this.target = target; this.options = options }
+    disconnect() { this.disconnected = true }
+  }
+  globalThis.MutationObserver = Observer
+  globalThis.ResizeObserver = FakeResizeObserver
+  try {
+    const dispose = installComposerCompactObserver(doc)
+    const content = instances.find(item => item.options.characterData)
+    const mount = instances.find(item => !item.options.characterData)
+    assert.ok(content)
+    assert.ok(mount)
+    assert.notEqual(content.target, mount.target)
+    let reads = 0
+    assert.notEqual(content.target, card, 'only the toolbar, not the editor card, is observed')
+    const measure = card.getBoundingClientRect
+    card.getBoundingClientRect = () => { reads++; return measure() }
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const unrelatedReads = reads
+    mount.callback([])
+    await new Promise(resolve => setTimeout(resolve, 0))
+    assert.equal(reads, unrelatedReads, 'unrelated message/editor mutation must not measure')
+    content.callback([])
+    await new Promise(resolve => setTimeout(resolve, 0))
+    assert.ok(reads > unrelatedReads, 'composer text changes must schedule density measurement')
+    dispose()
+    assert.ok(instances.every(item => item.disconnected))
+  } finally { globalThis.MutationObserver = prior }
 })
 
 test('placeMentionMenu opens downward near the top and upward near the bottom', () => {

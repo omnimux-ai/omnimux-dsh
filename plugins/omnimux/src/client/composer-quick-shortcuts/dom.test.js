@@ -84,6 +84,23 @@ describe('writeDraft 的返回值来自桥的回执', () => {
   })
 })
 
+describe('内联控件与外部入口分离（Issue #2592）', () => {
+  it('控件挂在左侧扩展座，四入口仍留在外部停靠座', async () => {
+    const source = await readFile(resolve(HERE, '..', 'index.js'), 'utf8')
+    assert.match(source, /ctx\.slots\.inject\('conversation\.input\.left',[\s\S]*?id: 'omnimux-quick-shortcut-controls',[\s\S]*?\}, ComposerQuickShortcutControls\)\)/)
+    assert.match(source, /ctx\.slots\.inject\('conversation\.input\.dock',[\s\S]*?id: 'omnimux-quick-shortcuts',[\s\S]*?\}, ComposerQuickShortcuts\)\)/)
+    const component = await readFile(COMPONENT_PATH, 'utf8')
+    const outside = component.slice(component.indexOf('export function ComposerQuickShortcuts('))
+    assert.doesNotMatch(outside, /<QuickShortcutModelControls|<MediaConfigControls/, '外部四入口不得再渲染视频配置')
+    const controls = component.slice(component.indexOf('export function ComposerQuickShortcutControls('), component.indexOf('export function ComposerQuickShortcuts('))
+    assert.match(controls, /state\.activeId !== 'clone' && state\.activeId !== 'selling'\) return null/)
+    assert.match(controls, /<QuickShortcutModelControls key=\{sessionId\} sessionId=\{sessionId\}/, '切换会话必须使用对应身份')
+    assert.match(controls, /store\.subscribe\(sessionId, listener\)/)
+    assert.match(controls, /store\.getSnapshot\(sessionId\)/)
+    assert.doesNotMatch(component, /showModelSummary/, '视频名称不可再显示第二份摘要')
+  })
+})
+
 describe('桥的回执契约与消费方的守卫', () => {
   it('桥的 setDraft 在两条失败分支上都回 false，成功才回 true', async () => {
     const source = await readFile(BRIDGE_PATH, 'utf8')
@@ -99,8 +116,8 @@ describe('桥的回执契约与消费方的守卫', () => {
   it('每次改 store 之前先确认草稿真的写进去了', async () => {
     const source = await readFile(COMPONENT_PATH, 'utf8')
     const start = source.indexOf('const handlePick =')
-    const end = source.indexOf('const showControls')
-    assert.ok(start !== -1 && end > start, '组件必须仍然有 handlePick 与 showControls 两段')
+    const end = source.indexOf('}, [store, sessionId, labels, t, notifyWriteFailed, dismissNotice]);', start)
+    assert.ok(start !== -1 && end > start, '必须定位完整的 handlePick 回调，不能依赖已迁移的控件显示变量')
     const body = source.slice(start, end)
 
     const guards = body.split('if (!writeDraft(').length - 1
@@ -113,6 +130,9 @@ describe('桥的回执契约与消费方的守卫', () => {
       const guardAt = body.indexOf('if (!writeDraft(', cursor)
       const mutateAt = body.indexOf('store.set(', cursor)
       assert.ok(guardAt !== -1 && guardAt < mutateAt, '写草稿失败时不得继续改 store')
+      const guardEnd = body.indexOf('}', guardAt)
+      assert.ok(guardEnd < mutateAt)
+      assert.match(body.slice(guardAt, guardEnd), /notifyWriteFailed\(\);\s*return;/, '草稿失败分支必须提示并提前返回，而不是只检查回执后继续写 store')
       cursor = mutateAt + 1
     }
   })

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
+import { createPortal } from 'react-dom'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 
@@ -33,7 +34,7 @@ new Function('require', 'module', 'exports', output.outputFiles[0].text)(
   module,
   module.exports,
 )
-const { ComposerQuickShortcuts } = module.exports
+const { ComposerQuickShortcuts, ComposerQuickShortcutControls } = module.exports
 
 const LABELS = {
   'quickShortcuts.clone': '复刻爆款视频',
@@ -125,7 +126,7 @@ async function mount(options) {
   const sessionId = (options && options.sessionId) || 'e2e-session'
   const dom = new JSDOM(
     '<!DOCTYPE html><html><head></head><body>'
-    + '<div data-composer-card><div id="editor" data-composer-input="true" contenteditable="true"></div></div>'
+    + '<div data-composer-card><div id="editor" data-composer-input="true" contenteditable="true"></div><div id="inline-seat"></div></div>'
     + '<div id="host"></div></body></html>',
     { url: 'http://localhost/' },
   )
@@ -147,13 +148,17 @@ async function mount(options) {
   const root = createRoot(container)
   const session = { id: sessionId, blank: true }
   await act(async () => {
-    root.render(React.createElement(ComposerQuickShortcuts, {
+    const props = {
       t: (key, fallback) => LABELS[key] || fallback || key,
       sessionId,
       session,
       useSession: (selector) => selector(session),
       useConversation: (selector) => selector({ activeTargets: new Set() }),
-    }))
+    }
+    root.render(React.createElement(React.Fragment, null,
+      React.createElement(ComposerQuickShortcuts, props),
+      createPortal(React.createElement(ComposerQuickShortcutControls, props), document.getElementById('inline-seat')),
+    ))
   })
 
   const click = async (id) => {
@@ -256,7 +261,11 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
       const clone = document.querySelector('[data-omx-quick-shortcut="clone"]')
       assert.equal(clone.getAttribute('aria-pressed'), 'true', '选中态必须可被读屏')
       assert.ok(clone.classList.contains('is-active'), '选中态必须有类名')
-      assert.ok(document.querySelector('.omx-quick-shortcut-controls'), '复刻必须出现模型与参数控件')
+      assert.ok(document.querySelector('[data-composer-card] .omx-quick-shortcut-controls'), '复刻必须在输入框内出现模型与参数控件')
+      assert.equal(document.querySelector('#host .omx-quick-shortcut-controls'), null, '外部快捷方式不得重复挂载控件')
+      const params = document.querySelector('[data-composer-card] #paramSummaryTriggerBtn')
+      assert.equal(params.getAttribute('aria-label'), params.title)
+      assert.match(params.title, /文生视频.*16:9.*720p.*有声.*5s/)
 
       // 再点同一条 = 撤回：草稿剥掉本快捷方式写入的内容，胶囊一并清掉，技能与控件同步撤下
       await env.click('clone')
@@ -275,6 +284,8 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
       await env.click('selling')
       assert.deepEqual(env.chipKinds(), ['product'], '点带货只预填商品胶囊，视频胶囊由上方卡槽点了才插')
       assert.equal(document.querySelector('[data-omx-video-token="true"]'), null)
+      assert.ok(document.querySelector('[data-composer-card] .omx-quick-shortcut-controls'))
+      assert.equal(document.querySelector('#host .omx-quick-shortcut-controls'), null)
     } finally {
       await act(async () => env.root.unmount())
     }
