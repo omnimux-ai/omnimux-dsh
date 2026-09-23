@@ -69,6 +69,11 @@ export function quickLinkLabelKey(kind) {
   return kind === 'product' ? 'quickShortcuts.link.product' : 'quickShortcuts.link.video'
 }
 
+/** 链接种类的入口展示文案 key。 */
+export function quickLinkEntryLabelKey(kind) {
+  return kind === 'product' ? 'quickShortcuts.link.productEntry' : 'quickShortcuts.link.videoEntry'
+}
+
 /**
  * 一条快捷方式的**卡槽集**：默认链接在前，可追加链接在后。
  *

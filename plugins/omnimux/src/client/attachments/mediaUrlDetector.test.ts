@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { isValidUrl, isVideoUrl, resolvePlatformName } from './mediaUrlDetector.ts';
 import { MODAL_STYLES } from './modalStyles.ts';
 import { DOCK_STYLES } from './dockStyles.ts';
+import { LINK_POPOVER_STYLES } from './linkPopoverStyles.ts';
 
 test('isValidUrl: validates standard HTTP and HTTPS URLs', () => {
   assert.equal(isValidUrl('https://www.tiktok.com/@user/video/123'), true);
@@ -37,11 +38,10 @@ test('resolvePlatformName: resolves clean platform or domain names without "视�
   assert.notEqual(resolvePlatformName('https://example.com/article'), '视频');
 });
 
-test('MODAL_STYLES: ensures popover card has solid opaque background', () => {
-  assert.ok(MODAL_STYLES.includes('background: var(--dsw-alias-bg-layer-2, #2c2c2e) !important;'));
-  assert.ok(MODAL_STYLES.includes('backdrop-filter: blur(8px);'));
-  // Should NOT have bare undefined bg-elevated without fallback
-  assert.ok(!MODAL_STYLES.includes('background: var(--dsw-alias-bg-elevated);'));
+test('LINK_POPOVER_STYLES: ensures popover card has solid background and semantic styling', () => {
+  assert.ok(LINK_POPOVER_STYLES.includes('background: var(--dsw-alias-bg-layer-3);'));
+  assert.ok(LINK_POPOVER_STYLES.includes('border: 1px solid var(--dsw-alias-border-l2);'));
+  assert.ok(LINK_POPOVER_STYLES.includes('border-radius: 12px;'));
 });
 
 test('DOCK_STYLES: provides brand purple link icon mask for composer chip', () => {

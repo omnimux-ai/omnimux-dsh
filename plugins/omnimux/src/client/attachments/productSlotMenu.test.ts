@@ -57,11 +57,11 @@ test('ProductSlotMenu: complies with UI and modular design system', () => {
   assert.doesNotMatch(menuSource, /[\u{1F300}-\u{1FAFF}]/u, 'contains no emoji');
 });
 
-test('ProductUrlPopover: provides clean modal for entering product URLs', () => {
+test('ProductUrlPopover: delegates product URLs to the shared anchored popover', () => {
   assert.ok(popoverSource.includes('ProductUrlPopover'), 'exports ProductUrlPopover');
-  assert.ok(popoverSource.includes('从 URL 添加产品'), 'has localized title');
-  assert.ok(popoverSource.includes('placeholder="输入或粘贴产品页面网址'), 'has clear input placeholder');
-  assert.ok(popoverSource.includes('omx-video-popover-backdrop'), 'reuses standard backdrop');
+  assert.ok(popoverSource.includes('VideoLinkPopover'), 'uses the shared link popover');
+  assert.ok(popoverSource.includes('kind="product"'), 'sets product purpose');
+  assert.ok(!popoverSource.includes('omx-video-popover-backdrop'), 'does not create a blocking backdrop');
   assert.doesNotMatch(popoverSource, /[\u{1F300}-\u{1FAFF}]/u, 'contains no emoji');
 });
 

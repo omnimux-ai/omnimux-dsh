@@ -1,89 +1,68 @@
-/**
- * Link Reference Trigger Source
- *
- * 为 Lexical ReferenceChipNode（source: 'link'）提供全局序列化支持与 Roster 注册。
- * 彻底避免用户提交包含 URL 药丸时抛出 `slash: no serializer for reference source "link"` 错误。
- */
+import { LINK_SOURCES, linkClipboardText, validLinkUrl, type LinkKind } from './linkReference.ts';
 
 export interface LinkSourceCodec {
   clipboardText: (ref: string) => string;
   serialize: (ref: string, signal?: AbortSignal) => Promise<string>;
 }
-
 export interface LinkTriggerSource {
-  trigger: string;
+  trigger: '@' | '/';
   name: string;
   order?: number;
   candidates: () => Promise<readonly unknown[]>;
   codec: LinkSourceCodec;
 }
 
-export function createLinkTriggerSource(): LinkTriggerSource {
+/** Keep the legacy source resolvable for existing unsent references. */
+export function createLinkTriggerSource(kind?: LinkKind): LinkTriggerSource {
+  const text = (ref: string) => kind ? linkClipboardText(kind, ref) : ref;
   return {
-    trigger: '', // 非 @/ 触发符，纯作为 reference source 注册，不在输入时弹出建议列表
-    name: 'link',
-    order: 100,
+    trigger: '@', name: kind ? LINK_SOURCES[kind] : 'link', order: 100,
     candidates: () => Promise.resolve([]),
     codec: {
-      clipboardText: (ref: string) => ref,
-      serialize: (ref: string) => Promise.resolve(ref),
+      clipboardText: text,
+      serialize: async (ref, signal) => {
+        if (signal?.aborted) throw new Error('链接提交已取消');
+        if (kind && !validLinkUrl(ref)) throw new Error('链接格式无效');
+        return text(ref);
+      },
     },
   };
 }
 
-/**
- * 注册 link 触发源到 inputTriggers 服务中
- * 具备幂等性与生命周期管理（支持返回注销函数并挂载至 ctx.effect）
- */
 export function registerLinkTriggerSource(ctx: any): (() => void) | undefined {
   if (!ctx) return undefined;
-
-  let activeUnregister: (() => void) | undefined = undefined;
-
-  const tryRegister = (inputTriggers: any): (() => void) | undefined => {
-    if (!inputTriggers || typeof inputTriggers.registerSource !== 'function') {
-      return undefined;
-    }
-    const sources = inputTriggers.live?.sources;
-    if (Array.isArray(sources) && sources.some((s: any) => s?.name === 'link')) {
-      return undefined;
-    }
-
+  const registrations = new Map<any, () => void>();
+  let stopped = false;
+  const register = (service: any) => {
+    if (stopped || !service?.registerSource || registrations.has(service)) return;
+    const disposers: (() => void)[] = [];
     try {
-      const unreg = inputTriggers.registerSource(createLinkTriggerSource());
-      activeUnregister = unreg;
-      return unreg;
-    } catch (err) {
-      console.warn('[omnimux] registerSource("link") failed:', err);
+      for (const kind of [undefined, 'video', 'product'] as const) {
+        const source = createLinkTriggerSource(kind);
+        if (service.live?.sources?.some((item: { name: string }) => item.name === source.name)) continue;
+        const unregister = service.registerSource(source);
+        if (typeof unregister === 'function') disposers.push(unregister);
+      }
+      const dispose = () => {
+        if (!registrations.delete(service)) return;
+        disposers.reverse().forEach(fn => fn());
+      };
+      registrations.set(service, dispose);
+      return dispose;
+    } catch (error) {
+      disposers.reverse().forEach(fn => fn());
+      console.warn('[omnimux] link source registration failed:', error);
       return undefined;
     }
   };
-
-  // 1. 若当前上下文已同步持有 inputTriggers，立即执行注册
-  if (typeof ctx.get === 'function') {
-    const directIt = ctx.get('inputTriggers');
-    if (directIt) {
-      const unreg = tryRegister(directIt);
-      if (unreg && typeof ctx.effect === 'function') {
-        ctx.effect(() => unreg, 'omnimux: link trigger source');
-      }
-    }
-  }
-
-  // 2. 同时使用 ctx.inject 保证异步/延迟注入时依然能成功注册
-  if (typeof ctx.inject === 'function') {
-    ctx.inject(['inputTriggers'], (inner: any) => {
-      const unreg = tryRegister(inner.inputTriggers);
-      if (unreg && typeof inner.effect === 'function') {
-        inner.effect(() => unreg, 'omnimux: link trigger source');
-      }
-    });
-  }
-
+  const direct = register(ctx.get?.('inputTriggers'));
+  if (direct) ctx.effect?.(() => direct, 'omnimux: link sources');
+  ctx.inject?.(['inputTriggers'], (inner: any) => {
+    const dispose = register(inner.inputTriggers);
+    if (dispose) inner.effect?.(() => dispose, 'omnimux: link sources');
+  });
   return () => {
-    if (activeUnregister) {
-      activeUnregister();
-      activeUnregister = undefined;
-    }
+    stopped = true;
+    for (const dispose of [...registrations.values()]) dispose();
   };
 }

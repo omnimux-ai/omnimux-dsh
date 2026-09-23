@@ -1,23 +1,13 @@
 /**
- * 快捷方式与宿主输入框之间的 DOM 桥。
- *
- * 全部动作都收敛到宿主（官方）已有的两件事上：
- *   1. 写草稿走 `window.__omnimuxComposerActions.setDraft`（由
- *      `composer-add/AttachmentSubmitBridge.jsx` 发布，官方输入框草稿的唯一写入口）；
- *   2. 链接不再写成 `[视频]` 纯文本，而是在输入框卡片里插入真正的**胶囊节点**
- *      （`linkChip.js` 定义形态，宿主提交时按 `data-omx-*-token` 读回链接；
- *      胶囊为什么落在卡片内、而不是 contenteditable 里，见 `resolveQuickLinkChipRow`）；
- *   3. 插入 / 读取 / 删除 / 整组替换一律收敛到**当前会话的输入框卡片**（`resolveComposerCard`）：
- *      宿主可以同时挂载多张卡（分屏、多标签保活），按整个文档读写会把别的会话的胶囊算进来。
- *
- * 本模块不做任何状态管理，也不发起请求；拿不到宿主能力时一律安静返回 false。
+ * 输入框作用域解析与旧草稿兼容辅助。
+ * 在线旧胶囊保留读取、显式关闭和提交通知；新链接由公开引用接口插入。
+ * 本模块不挂载胶囊行、不批量删除在线节点，也不发起请求。
  */
 
 import {
   QUICK_LINK_CHIP_CLASS,
   QUICK_LINK_CHIP_INPUT_CLASS,
   QUICK_LINK_CHIP_KINDS,
-  QUICK_LINK_CHIP_ROW_CLASS,
   QUICK_LINK_CHIP_SELECTOR,
   quickLinkChipSpec,
   quickLinkChipTexts,
@@ -335,60 +325,6 @@ export function resolveComposerCard(anchor) {
 }
 
 /**
- * 取（必要时创建）当前会话输入框卡片里的链接胶囊行。
- *
- * **为什么胶囊不在 contenteditable 里**：宿主输入框是 Lexical 编辑器，它每次更新都会把
- * 自己根节点下的**非受管子节点**清掉——浏览器实测：把胶囊节点插进可编辑区后，宿主一渲染
- * 提示语，胶囊随即被抹掉（`chipCount` 从 2 变 0，草稿却是对的）。因此胶囊宿主换成
- * `[data-composer-card]` 里我们自己创建的 `.omx-link-chip-row`：它是宿主 React 不管的
- * 外部子节点，稳定存在，同时又落在输入框卡片内、就贴着输入行的上方，视觉上就是
- * 「输入框里的链接胶囊」。
- *
- * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置
- * @returns {HTMLElement | null} 拿不到输入框卡片时回 null（调用方降级为不插入）
- */
-function resolveQuickLinkChipRow(anchor) {
-  const card = resolveComposerCard(anchor)
-  if (!card) return null
-  const existing = card.querySelector(`.${QUICK_LINK_CHIP_ROW_CLASS}`)
-  if (existing) return existing
-  const row = card.ownerDocument.createElement('div')
-  row.className = QUICK_LINK_CHIP_ROW_CLASS
-  row.setAttribute('data-omx-link-chip-row', 'true')
-  card.insertBefore(row, card.firstChild)
-  return row
-}
-
-/** 往指定胶囊行里追加一枚胶囊；失败时不留下半个节点。 */
-function appendQuickLinkChip(row, kind, options) {
-  const chip = createQuickLinkChipNode(kind, options)
-  if (!chip) return false
-  row.appendChild(chip)
-  notifyQuickLinkChipChange()
-  return true
-}
-
-/**
- * 在输入框卡片里插入一个链接胶囊。
- *
- * 插入点是**当前会话**卡片内的胶囊行（见 `resolveQuickLinkChipRow` 的宿主事实），新胶囊排在行尾；
- * 拿不到本会话输入框卡片时就**不插入**（调用方据此给轻提示），绝不写到别处去。
- *
- * @param {string} kind 链接种类
- * @param {{ label?: string, t?: (key: string) => string, anchor?: Node | null }} [options]
- *   `anchor` 传调用方的 DOM 位置，用于把作用域收敛到本会话的输入框卡片
- * @returns {boolean} 是否真的插进去了
- */
-export function insertQuickLinkChip(kind, options) {
-  if (typeof document === 'undefined') return false
-  const row = resolveQuickLinkChipRow(options && options.anchor)
-  if (!row) return false
-  const inserted = appendQuickLinkChip(row, kind, options)
-  if (inserted) ensureQuickShortcutStyles(row.ownerDocument)
-  return inserted
-}
-
-/**
  * 输入框里现有的链接胶囊种类（按 DOM 顺序去重）。
  * 胶囊不进草稿文本，卡槽两态只能靠读节点，因此这里是唯一读口。
  * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置；读取范围收敛到本会话的输入框卡片
@@ -404,47 +340,4 @@ export function readQuickLinkChipKinds(anchor) {
     if (kind && !kinds.includes(kind)) kinds.push(kind)
   }
   return kinds
-}
-
-/**
- * 清掉**本会话**输入框里的全部快捷链接胶囊（撤回与「整组替换」共用这一个动作）。
- * @param {Node | null | undefined} [anchor] 调用方的 DOM 位置；范围收敛到本会话的输入框卡片
- * @returns {number} 实际移除的胶囊数
- */
-export function removeQuickLinkChips(anchor) {
-  const card = resolveComposerCard(anchor)
-  if (!card || typeof card.querySelectorAll !== 'function') return 0
-  let removed = 0
-  for (const node of Array.from(card.querySelectorAll(QUICK_LINK_CHIP_SELECTOR))) {
-    if (node.parentNode) {
-      node.parentNode.removeChild(node)
-      removed += 1
-    }
-  }
-  if (removed > 0) notifyQuickLinkChipChange()
-  return removed
-}
-
-/**
- * 整组替换链接胶囊：先清掉上一个快捷方式留下的，再按本次的链接种类依次插入。
- * 切换快捷方式时不残留上一个插入的胶囊。
- *
- * **不先清后插**：先解析胶囊行，行拿得到才清旧插新；行拿不到（本会话没有输入框卡片）
- * 就整条不动——先清一次再插失败会「两不剩」，把上一条快捷方式的胶囊也一起弄丢。
- *
- * @param {readonly string[]} kinds 本次要插入的链接种类
- * @param {{ labels?: Record<string, string>, t?: (key: string) => string, anchor?: Node | null }} [options]
- * @returns {number} 实际插入成功的胶囊数
- */
-export function replaceQuickLinkChips(kinds, options) {
-  const list = Array.isArray(kinds) ? kinds.filter((kind) => quickLinkChipSpec(kind)) : []
-  const row = resolveQuickLinkChipRow(options && options.anchor)
-  if (!row) return 0
-  removeQuickLinkChips(options && options.anchor)
-  let inserted = 0
-  for (const kind of list) {
-    const label = options && options.labels ? options.labels[kind] : undefined
-    if (appendQuickLinkChip(row, kind, { label, t: options && options.t })) inserted += 1
-  }
-  return inserted
 }

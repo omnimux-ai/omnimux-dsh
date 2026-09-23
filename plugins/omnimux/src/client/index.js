@@ -204,7 +204,16 @@ export function apply(ctx) {
     id: 'omnimux-quick-shortcuts',
     order: 105,
     locale: NS,
-    inject: () => ({ t }),
+    inject: (sessionId) => ({
+      t,
+      mutatePrompt: (text, span) => {
+        const scope = sessionId && guideSessions?.scope(sessionId)
+        if (!scope) return false
+        return text
+          ? scope.bail(scope, 'slash/input-insert-text', { text, span }) === true
+          : scope.bail(scope, 'slash/input-consume-token', { guard: { kind: 'span', span } }) === true
+      },
+    }),
   }, ComposerQuickShortcuts))
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
     name: 'conversation.input.left',
@@ -220,7 +229,13 @@ export function apply(ctx) {
   ctx.effect(() => () => { attachmentAdmission.dispose() }, 'omnimux: attachment admission')
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
-    inject: () => ({ attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
+    inject: (sessionId) => ({
+      attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId,
+      insertText: (text, span) => {
+        const scope = sessionId && guideSessions?.scope(sessionId)
+        return scope?.bail(scope, 'slash/input-insert-text', { text, span }) === true
+      },
+    }),
   }, AttachmentSubmitBridge))
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
   // 「复刻爆款视频」技能从底部药丸被移除时，复刻对象一并撤离附件栏。
@@ -236,7 +251,13 @@ export function apply(ctx) {
     id: 'omnimux-attachment-tray',
     priority: -10,
     locale: NS,
-    inject: () => ({ getSessions: () => guideSessions }),
+    inject: (sessionId) => ({
+      getSessions: () => guideSessions,
+      insertLinkReference: (request) => {
+        const scope = sessionId && guideSessions?.scope(sessionId)
+        return scope?.bail(scope, 'slash/input-insert-reference', request) === true
+      },
+    }),
   }, AttachmentTray))
 
   ctx.effect(() => {

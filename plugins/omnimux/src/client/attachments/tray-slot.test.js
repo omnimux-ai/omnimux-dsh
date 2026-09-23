@@ -86,9 +86,9 @@ describe('composer inner attachment slot', () => {
 
   it('decomposes attachment tray into modular sub-components and hooks', () => {
     assert.match(traySource, /import \{ ensureStylesInjected \} from '\.\/trayStyles\.ts'/)
-    assert.match(traySource, /import \{ insertNativeVideoChip \} from '\.\/nativeVideoChip\.ts'/)
+    assert.match(traySource, /import \{ useLinkReference, type InsertLinkRequest \} from '\.\/useLinkReference\.ts'/)
+    assert.doesNotMatch(traySource, /insertNativeVideoChip|usePasteVideoInterceptor/)
     assert.match(traySource, /import \{ useDragDrop \} from '\.\/useDragDrop\.ts'/)
-    assert.match(traySource, /import \{ usePasteVideoInterceptor \} from '\.\/usePasteVideoInterceptor\.ts'/)
     assert.match(traySource, /import \{ VideoLinkPopover \} from '\.\/VideoLinkPopover\.tsx'/)
     assert.match(traySource, /import \{ DropOverlay \} from '\.\/DropOverlay\.tsx'/)
     assert.match(traySource, /import \{ AttachmentPreviewModal/)
