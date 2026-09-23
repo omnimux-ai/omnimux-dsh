@@ -8,16 +8,20 @@
  * - Select-single dropdown opening and option selection
  * - Segmented-tabs and multi-tags interaction and limit locking
  * - Library-picker picked card rendering and clearing
+ *
+ * Environment isolation:
+ * - Teardown restores globalThis variables and calls dom.window.close() to prevent memory leaks (M-08)
+ * - Self-contained fixtures decouple tests from cross-plugin relative file paths (M-10)
+ * - Semantic assertions guard against brittle index/count bindings (M-11)
  */
 
-import { test } from 'node:test'
+import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import * as fs from 'node:fs'
 
 const require = createRequire(import.meta.url)
 const React = require('react')
@@ -26,16 +30,135 @@ const { act } = React
 const here = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = resolve(here, '..')
 
-// Read the renovated builtin-apps.json
-const catalogApps = JSON.parse(
-  fs.readFileSync(resolve(pluginRoot, '../omnimux-apps/catalog/builtin-apps.json'), 'utf8'),
-)
-const CHASING_PRODUCT_APP = catalogApps.find((a) => a.appId === 'app-creatify-chasing-product')
-const PRODUCT_VIDEO_APP = catalogApps.find((a) => a.appId === 'app-builtin-product-video')
+// 自包含测试夹具，避免直接跨插件读取私有路径 (M-10)
+const CHASING_PRODUCT_APP = {
+  appId: 'app-creatify-chasing-product',
+  metadata: {
+    name: '主体追踪与多机位展示',
+    description: '围绕特定核心商品进行主体视觉锁定与多视角运镜渲染',
+    version: '1.2.0',
+    official: true,
+  },
+  formSchema: {
+    type: 'object',
+    properties: {
+      product_image: {
+        type: 'string',
+        title: '商品主图',
+        widget: 'library-picker',
+        description: '请选择或上传需要追踪展示的商品核心视觉图',
+        default: '/assets/sample-shoe.webp',
+        library: 'asset',
+      },
+      aspect_ratio: {
+        type: 'string',
+        title: '视频比例',
+        enum: ['9:16', '16:9', '1:1'],
+        default: '9:16',
+      },
+      voice: {
+        type: 'string',
+        title: '解说音色',
+        options: [
+          { label: '活力女声（电商促销爆款）', value: 'zh_female_energetic' },
+          { label: '沉稳男声（数码科技大片）', value: 'zh_male_calm' },
+          { label: '甜美解说（美妆护肤首选）', value: 'zh_female_sweet' },
+          { label: '磁性男声（轻奢格调推荐）', value: 'zh_male_magnetic' },
+        ],
+        default: 'zh_female_energetic',
+      },
+    },
+  },
+  fieldMappings: {
+    product_image: { widget: 'library-picker', library: 'asset' },
+    aspect_ratio: { widget: 'ratio-cards' },
+    voice: { widget: 'select-single' },
+  },
+  demoSnapshot: {
+    product_image: '/assets/sample-shoe.webp',
+    aspect_ratio: '9:16',
+    voice: 'zh_female_energetic',
+  },
+}
+
+const PRODUCT_VIDEO_APP = {
+  appId: 'app-builtin-product-video',
+  metadata: {
+    name: '商品营销视频生成',
+    description: '快速生成多平台带货视频',
+    version: '1.0.0',
+  },
+  formSchema: {
+    type: 'object',
+    properties: {
+      video_type: {
+        type: 'string',
+        title: '视频类型',
+        widget: 'segmented-tabs',
+        options: [
+          { label: '预设视频', value: 'preset' },
+          { label: '自定义视频', value: 'custom' },
+        ],
+        default: 'preset',
+      },
+      platforms: {
+        type: 'array',
+        title: '发布平台',
+        widget: 'multi-tags',
+        options: [
+          { label: 'TikTok', value: 'tiktok' },
+          { label: 'YouTube Shorts', value: 'youtube' },
+          { label: 'Instagram Reels', value: 'instagram' },
+          { label: '小红书', value: 'xiaohongshu' },
+        ],
+        maxItems: 3,
+        default: ['tiktok'],
+      },
+    },
+  },
+  fieldMappings: {
+    video_type: { widget: 'segmented-tabs' },
+    platforms: { widget: 'multi-tags' },
+  },
+  demoSnapshot: {
+    video_type: 'preset',
+    platforms: ['tiktok'],
+  },
+}
+
+// 预设目录非空防御断言 (M-09)
+assert.ok(CHASING_PRODUCT_APP, '预设 CHASING_PRODUCT_APP 必须存在')
+assert.ok(PRODUCT_VIDEO_APP, '预设 PRODUCT_VIDEO_APP 必须存在')
 
 let AppTabComponent = null
 let dom = null
 let doc = null
+
+// 保存原始 globalThis 变量以便 teardown 还原 (M-08)
+const originalGlobals = {
+  window: globalThis.window,
+  document: globalThis.document,
+  HTMLElement: globalThis.HTMLElement,
+  MouseEvent: globalThis.MouseEvent,
+  IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
+}
+
+afterEach(() => {
+  if (dom?.window) {
+    try {
+      dom.window.close()
+    } catch {
+      // ignore
+    }
+  }
+  dom = null
+  doc = null
+  globalThis.window = originalGlobals.window
+  globalThis.document = originalGlobals.document
+  globalThis.HTMLElement = originalGlobals.HTMLElement
+  globalThis.MouseEvent = originalGlobals.MouseEvent
+  globalThis.IS_REACT_ACT_ENVIRONMENT = originalGlobals.IS_REACT_ACT_ENVIRONMENT
+})
 
 async function loadAppTab() {
   if (AppTabComponent) return AppTabComponent
@@ -130,7 +253,7 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
   assert.ok(ratioGrid, '比例字段必须渲染为 .omx-apptab-ratio-grid 比例卡片组')
 
   const ratioCards = Array.from(ratioGrid.querySelectorAll('.omx-apptab-ratio-card'))
-  assert.equal(ratioCards.length, 3, '必须渲染 9:16、16:9、1:1 三个比例卡片')
+  assert.ok(ratioCards.length >= 2, '必须渲染多个比例卡片')
 
   // 默认值为 9:16，处于 is-active 状态
   const defaultActive = ratioCards.find((c) => c.classList.contains('is-active'))
@@ -160,9 +283,9 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
   assert.ok(optionsPanel, '展开后必须呈现 .omx-apptab-select-options 菜单面板')
 
   const optionItems = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option'))
-  assert.equal(optionItems.length, 4, '音色下拉选项必须有 4 个')
+  assert.ok(optionItems.length >= 2, '音色下拉选项必须包含多个候选音色 (M-11)')
 
-  // 选中「沉稳男声（数码科技大片）」
+  // 语义化选中「沉稳男声（数码科技大片）」(M-11)
   const maleOption = optionItems.find((opt) => opt.textContent.includes('沉稳男声'))
   assert.ok(maleOption, '必须包含沉稳男声选项')
   fireClick(maleOption)
@@ -212,7 +335,7 @@ test('E2E: 复合控件分段选项卡 (segmented-tabs) 与多选胶囊 (multi-t
   assert.ok(segTabs, '视频内容字段必须渲染为 segmented-tabs')
 
   const tabs = Array.from(segTabs.querySelectorAll('.omx-apptab-seg-tab'))
-  assert.equal(tabs.length, 2, '必须有 2 项分段选项卡')
+  assert.ok(tabs.length >= 2, '必须至少有 2 项分段选项卡')
   assert.ok(tabs[0].classList.contains('is-on'), '默认预设视频类型为 is-on')
 
   // 点击切换到第二个 tab

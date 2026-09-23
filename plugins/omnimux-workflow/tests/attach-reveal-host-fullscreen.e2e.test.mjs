@@ -105,5 +105,6 @@ test('e2e：全屏态不得因为折叠键为 false 而跳过露出', () => {
   const ensureCall = scene.calls.find((entry) => entry[0] === 'ensureConversationVisible');
   assert.ok(ensureCall, '必须走统一入口');
   assert.equal(ensureCall[1].hostFullscreenExited, true, '宿主全屏确实被退出');
-  assert.equal(scene.calls.some((entry) => entry[0] === 'setConversationCollapsed'), false);
+  assert.equal(scene.calls.some((entry) => entry[0] === 'setConversationCollapsed' && entry[1] === false), true,
+    '宿主全屏退出后确保折叠状态被重置展开');
 });

@@ -15,6 +15,7 @@ import {
   resolveOptions,
   resolveWidget,
   displayValueOf,
+  sanitizePreviewUrl,
 } from './appTabWidgets.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -108,6 +109,14 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       assert.equal(resolveWidget('platforms', prop), 'multi-tags')
     })
 
+    it('infers multi-tags when type is array with enum', () => {
+      const prop = {
+        type: 'array',
+        enum: ['tiktok', 'youtube'],
+      }
+      assert.equal(resolveWidget('platforms', prop), 'multi-tags')
+    })
+
     it('infers switch-boolean for boolean type', () => {
       assert.equal(resolveWidget('enabled', { type: 'boolean' }), 'switch-boolean')
     })
@@ -145,8 +154,29 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
     })
 
     it('handles empty or null values', () => {
-      assert.deepEqual(displayValueOf(''), { name: '', sub: '', source: 'link' })
-      assert.deepEqual(displayValueOf(null), { name: '', sub: '', source: 'link' })
+      assert.deepEqual(displayValueOf(''), { name: '', sub: '', source: 'link', url: '' })
+      assert.deepEqual(displayValueOf(null), { name: '', sub: '', source: 'link', url: '' })
+    })
+  })
+
+  describe('sanitizePreviewUrl()', () => {
+    it('allows http, https, blob, relative paths and data:image/*', () => {
+      assert.equal(sanitizePreviewUrl('https://example.com/a.jpg'), 'https://example.com/a.jpg')
+      assert.equal(sanitizePreviewUrl('http://example.com/b.png'), 'http://example.com/b.png')
+      assert.equal(sanitizePreviewUrl('blob:http://localhost/123-456'), 'blob:http://localhost/123-456')
+      assert.equal(sanitizePreviewUrl('/assets/preview.png'), '/assets/preview.png')
+      assert.equal(sanitizePreviewUrl('./preview.png'), './preview.png')
+      assert.equal(sanitizePreviewUrl('data:image/png;base64,iVBORw0KGgo='), 'data:image/png;base64,iVBORw0KGgo=')
+    })
+
+    it('blocks dangerous schemes like javascript:, data:text/html, etc.', () => {
+      assert.equal(sanitizePreviewUrl('javascript:alert(1)'), '')
+      assert.equal(sanitizePreviewUrl('javascript://test'), '')
+      assert.equal(sanitizePreviewUrl('data:text/html;base64,PHNjcmlwdD4='), '')
+      assert.equal(sanitizePreviewUrl('file:///etc/passwd'), '')
+      assert.equal(sanitizePreviewUrl('vbscript:msgbox'), '')
+      assert.equal(sanitizePreviewUrl(''), '')
+      assert.equal(sanitizePreviewUrl(null), '')
     })
   })
 

@@ -27,12 +27,14 @@ import {
   resolveOptions,
   resolveWidget,
   displayValueOf,
+  sanitizePreviewUrl,
 } from './appTabWidgets.js'
 
 export {
   resolveOptions,
   resolveWidget,
   displayValueOf,
+  sanitizePreviewUrl,
 }
 
 const EMPTY_PROPS = Object.freeze({})
@@ -325,9 +327,40 @@ export function AppTab(props) {
   const [tasks, setTasks] = useState(() => readCachedTasks(manifest?.appId))
   const [openDropdownKey, setOpenDropdownKey] = useState(null)
   const [linkDrafts, setLinkDrafts] = useState({})
+  const [promptModal, setPromptModal] = useState(null)
   const fileInputRef = useRef(null)
   const uploadTargetKeyRef = useRef(null)
   const loadedAppIdRef = useRef(null)
+  const createdObjectUrlsRef = useRef(new Map())
+
+  // 安全释放指定字段曾创建的 Object URL（杜绝内存累积泄露，H-01）
+  const revokeCreatedUrl = useCallback((key) => {
+    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+    const existing = createdObjectUrlsRef.current.get(key)
+    if (existing) {
+      try {
+        URL.revokeObjectURL(existing)
+      } catch {
+        // ignore
+      }
+      createdObjectUrlsRef.current.delete(key)
+    }
+  }, [])
+
+  // 组件卸载时释放所有未释放的 Object URL（H-01）
+  useEffect(() => {
+    return () => {
+      if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+      for (const url of createdObjectUrlsRef.current.values()) {
+        try {
+          URL.revokeObjectURL(url)
+        } catch {
+          // ignore
+        }
+      }
+      createdObjectUrlsRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -344,6 +377,16 @@ export function AppTab(props) {
   useEffect(() => {
     if (manifest?.appId && loadedAppIdRef.current !== manifest.appId) {
       loadedAppIdRef.current = manifest.appId
+      if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        for (const url of createdObjectUrlsRef.current.values()) {
+          try {
+            URL.revokeObjectURL(url)
+          } catch {
+            // ignore
+          }
+        }
+        createdObjectUrlsRef.current.clear()
+      }
       setTasks(readCachedTasks(manifest.appId))
       setFormValues(initialFormValues)
       setErrors({})
@@ -361,8 +404,32 @@ export function AppTab(props) {
   }, [])
 
   const handleClearPicked = useCallback((key) => {
+    revokeCreatedUrl(key)
     handleFieldChange(key, '')
-  }, [handleFieldChange])
+  }, [handleFieldChange, revokeCreatedUrl])
+
+  // 统一的本地文件上传处理，供点击上传与拖拽上传复用（H-01 & M-03）
+  const handleDirectUploadFile = useCallback((key, file) => {
+    if (!file || !key) return
+    revokeCreatedUrl(key)
+    let objectUrl = ''
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      try {
+        objectUrl = URL.createObjectURL(file)
+        createdObjectUrlsRef.current.set(key, objectUrl)
+      } catch {
+        objectUrl = ''
+      }
+    }
+    const picked = {
+      name: file.name,
+      sub: `${Math.max(1, Math.round(file.size / 1024))} KB · 本地上传`,
+      url: objectUrl || file.name,
+      source: 'upload',
+      type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image',
+    }
+    handleFieldChange(key, JSON.stringify(picked))
+  }, [handleFieldChange, revokeCreatedUrl])
 
   const handleOpenUpload = useCallback((key) => {
     uploadTargetKeyRef.current = key
@@ -373,23 +440,39 @@ export function AppTab(props) {
     const file = e.target.files?.[0]
     const key = uploadTargetKeyRef.current
     e.target.value = ''
-    if (!file || !key) return
-    const objectUrl = typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : ''
-    const picked = {
-      name: file.name,
-      sub: `${Math.max(1, Math.round(file.size / 1024))} KB · 本地上传`,
-      url: objectUrl || file.name,
-      source: 'upload',
-      type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image',
+    if (file && key) {
+      handleDirectUploadFile(key, file)
     }
-    handleFieldChange(key, JSON.stringify(picked))
+  }, [handleDirectUploadFile])
+
+  // 接收 explicitVal 参数，避免输入失焦时闭包滞后导致字符丢失（M-04）
+  const handleCommitLink = useCallback((key, explicitVal) => {
+    setLinkDrafts((prev) => {
+      const draft = (typeof explicitVal === 'string' ? explicitVal : prev[key] || '').trim()
+      if (draft) {
+        handleFieldChange(key, draft)
+      }
+      return { ...prev, [key]: '' }
+    })
   }, [handleFieldChange])
 
-  const handleCommitLink = useCallback((key) => {
-    const draft = (linkDrafts[key] || '').trim()
-    if (draft) handleFieldChange(key, draft)
-    setLinkDrafts((prev) => ({ ...prev, [key]: '' }))
-  }, [linkDrafts, handleFieldChange])
+  // 轻量模态输入框提交，包含安全白名单校验（M-05 & H-02）
+  const handlePromptModalSubmit = useCallback(() => {
+    if (!promptModal) return
+    const { key, value } = promptModal
+    const trimmed = (value || '').trim()
+    if (!trimmed) {
+      setPromptModal(null)
+      return
+    }
+    const safeUrl = sanitizePreviewUrl(trimmed)
+    if (!safeUrl && trimmed.includes(':') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      setPromptModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
+      return
+    }
+    handleFieldChange(key, trimmed)
+    setPromptModal(null)
+  }, [promptModal, handleFieldChange])
 
   // Execute generation
   const handleGenerate = useCallback(async (e) => {
@@ -934,10 +1017,13 @@ export function AppTab(props) {
                             type="button"
                             className="omx-apptab-library-trigger"
                             onClick={() => {
-                              const inputUrl = window.prompt?.('请输入素材 URL 或资产库路径:')
-                              if (inputUrl && inputUrl.trim()) {
-                                handleFieldChange(key, inputUrl.trim())
-                              }
+                              setPromptModal({
+                                key,
+                                title: '从资产库选择素材',
+                                placeholder: '请输入素材 URL、http(s) 链接或本地路径',
+                                value: '',
+                                error: '',
+                              })
                             }}
                           >
                             <span>{prop.placeholder || '从资产库选择…'}</span>
@@ -979,11 +1065,11 @@ export function AppTab(props) {
                               value={linkDrafts[key] ?? ''}
                               placeholder={prop.placeholder || '粘贴视频链接或上传，自动解析'}
                               onChange={(e) => setLinkDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                              onBlur={() => handleCommitLink(key)}
+                              onBlur={(e) => handleCommitLink(key, e.target.value)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault()
-                                  handleCommitLink(key)
+                                  handleCommitLink(key, e.target.value)
                                 }
                               }}
                             />
@@ -1000,8 +1086,13 @@ export function AppTab(props) {
                               className="omx-apptab-extractor-icon-btn"
                               aria-label="从资产库选择"
                               onClick={() => {
-                                const inputUrl = window.prompt?.('从资产库选择素材 URL:')
-                                if (inputUrl && inputUrl.trim()) handleFieldChange(key, inputUrl.trim())
+                                setPromptModal({
+                                  key,
+                                  title: '从资产库选择素材',
+                                  placeholder: '请输入视频 URL 或素材路径',
+                                  value: '',
+                                  error: '',
+                                })
                               }}
                             >
                               <IconFolder size={16} />
@@ -1009,7 +1100,7 @@ export function AppTab(props) {
                             <button // exempt-ui01 ai-app-ui-spec 36px parse button
                               type="button"
                               className="omx-apptab-extractor-btn"
-                              onClick={() => handleCommitLink(key)}
+                              onClick={() => handleCommitLink(key, linkDrafts[key])}
                             >
                               解析
                             </button>
@@ -1050,11 +1141,11 @@ export function AppTab(props) {
                               value={linkDrafts[key] ?? ''}
                               placeholder={prop.placeholder || '粘贴商品链接，或从商品库选择'}
                               onChange={(e) => setLinkDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                              onBlur={() => handleCommitLink(key)}
+                              onBlur={(e) => handleCommitLink(key, e.target.value)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault()
-                                  handleCommitLink(key)
+                                  handleCommitLink(key, e.target.value)
                                 }
                               }}
                             />
@@ -1063,8 +1154,13 @@ export function AppTab(props) {
                               className="omx-apptab-extractor-icon-btn"
                               aria-label="从商品库选择"
                               onClick={() => {
-                                const inputUrl = window.prompt?.('从商品库选择商品链接:')
-                                if (inputUrl && inputUrl.trim()) handleFieldChange(key, inputUrl.trim())
+                                setPromptModal({
+                                  key,
+                                  title: '从商品库选择商品',
+                                  placeholder: '请输入商品链接 (https://...)',
+                                  value: '',
+                                  error: '',
+                                })
                               }}
                             >
                               <IconStore size={16} />
@@ -1077,17 +1173,20 @@ export function AppTab(props) {
                       (() => {
                         const hasVal = typeof val === 'string' && val.trim() !== ''
                         if (hasVal) {
+                          const disp = displayValueOf(val)
+                          const rawUrl = disp.url || val
+                          const safeUrl = sanitizePreviewUrl(rawUrl)
                           return (
                             <div className="omx-apptab-picked">
                               <div className="omx-apptab-picked-thumb">
-                                {val.startsWith('http') || val.startsWith('data:') || val.startsWith('blob:') ? (
-                                  <img src={val} alt="Preview" className="omx-apptab-picked-thumb-img" />
+                                {safeUrl ? (
+                                  <img src={safeUrl} alt="Preview" className="omx-apptab-picked-thumb-img" />
                                 ) : (
                                   <IconUpload size={18} />
                                 )}
                               </div>
                               <div className="omx-apptab-picked-info">
-                                <div className="omx-apptab-picked-title">{val.split('/').pop() || '已上传素材'}</div>
+                                <div className="omx-apptab-picked-title">{disp.name || '已上传素材'}</div>
                                 <div className="omx-apptab-picked-sub">点击右侧更换或移除</div>
                               </div>
                               <button // exempt-ui01 ai-app-ui-spec 24px clear button
@@ -1104,15 +1203,38 @@ export function AppTab(props) {
                         return (
                           <div
                             className="omx-apptab-uploader"
-                            onClick={() => {
-                              const inputUrl = window.prompt?.('请输入媒体素材资源 URL:')
-                              if (inputUrl && inputUrl.trim()) handleFieldChange(key, inputUrl.trim())
+                            onClick={() => handleOpenUpload(key)}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const file = e.dataTransfer?.files?.[0]
+                              if (file) handleDirectUploadFile(key, file)
                             }}
                           >
                             <IconUpload size={20} className="omx-apptab-uploader-icon" />
                             <span className="omx-apptab-uploader-hint">
                               点击选择或拖拽上传媒体素材
                             </span>
+                            <button // exempt-ui01 ai-app-ui-spec 24px inline link button
+                              type="button"
+                              className="omx-apptab-uploader-link-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPromptModal({
+                                  key,
+                                  title: '输入媒体素材资源链接',
+                                  placeholder: '请输入图片或视频 URL (http/https)',
+                                  value: '',
+                                  error: '',
+                                })
+                              }}
+                            >
+                              或输入网络链接
+                            </button>
                           </div>
                         )
                       })()
@@ -1190,7 +1312,7 @@ export function AppTab(props) {
           {/* 隐式文件上传 input */}
           <input
             type="file"
-            accept="video/*,image/*"
+            accept="video/*,image/*,audio/*"
             ref={fileInputRef}
             style={{ display: 'none' }}
             onChange={handleFileChange}
@@ -1365,6 +1487,74 @@ export function AppTab(props) {
           </div>
         </div>
       </div>
+
+      {/* 轻量内联录入弹层（消除原生 window.prompt，M-05 & H-02） */}
+      {promptModal && (
+        <div
+          className="omx-apptab-modal-mask"
+          onClick={() => setPromptModal(null)}
+        >
+          <div
+            className="omx-apptab-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="omx-apptab-modal-header">
+              <span className="omx-apptab-modal-title">{promptModal.title}</span>
+              <button // exempt-ui01 ai-app-ui-spec 28px modal close button
+                type="button"
+                className="omx-apptab-modal-close"
+                aria-label="关闭"
+                onClick={() => setPromptModal(null)}
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+            <div className="omx-apptab-modal-body">
+              <input
+                type="text"
+                className="omx-apptab-input"
+                autoFocus
+                value={promptModal.value}
+                placeholder={promptModal.placeholder}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setPromptModal((prev) => ({ ...prev, value: v, error: '' }))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handlePromptModalSubmit()
+                  } else if (e.key === 'Escape') {
+                    setPromptModal(null)
+                  }
+                }}
+              />
+              {promptModal.error && (
+                <div className="omx-apptab-error-text">
+                  <IconAlert size={14} />
+                  <span>{promptModal.error}</span>
+                </div>
+              )}
+            </div>
+            <div className="omx-apptab-modal-footer">
+              <button // exempt-ui01 ai-app-ui-spec 32px modal cancel button
+                type="button"
+                className="omx-apptab-btn-ghost"
+                onClick={() => setPromptModal(null)}
+              >
+                取消
+              </button>
+              <button // exempt-ui01 ai-app-ui-spec 32px modal submit button
+                type="button"
+                className="omx-apptab-btn-primary"
+                onClick={handlePromptModalSubmit}
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

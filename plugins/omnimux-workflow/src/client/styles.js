@@ -1121,6 +1121,113 @@ export const WORKFLOW_CSS = `
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
 }
+.omx-apptab-uploader-link-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.omx-apptab-uploader-link-btn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  text-decoration: underline;
+}
+
+/* 轻量模态输入弹层（消除原生 window.prompt） */
+.omx-apptab-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.45)); /* exempt-ui03 modal mask overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+.omx-apptab-modal {
+  width: 360px;
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.28)); /* exempt-ui03 modal shadow */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.omx-apptab-modal-header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-apptab-modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.omx-apptab-modal-close:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.omx-apptab-modal-footer {
+  height: 52px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omx-apptab-btn-ghost {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.omx-apptab-btn-ghost:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-btn-primary {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.omx-apptab-btn-primary:hover {
+  opacity: 0.9;
+}
 .omx-apptab-cta-wrap {
   margin-top: 24px;
   padding-top: 16px;
