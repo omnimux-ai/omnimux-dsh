@@ -189,6 +189,10 @@ function applyBodyWithoutComments(source) {
 function createApplyServices({ callInject = false, sidebar = null } = {}) {
   const injectCalls = []
   const effects = []
+  const injectionEffects = []
+  const disposeInjection = () => {
+    for (const dispose of injectionEffects.splice(0).reverse()) dispose()
+  }
   const services = {
     locale: {
       register() { return () => {} },
@@ -209,10 +213,17 @@ function createApplyServices({ callInject = false, sidebar = null } = {}) {
     },
     inject(deps, cb) {
       injectCalls.push(deps)
-      if (callInject) cb(createCordisCtx({ betterSidebar: sidebar }, ['betterSidebar']))
+      if (callInject) cb(createCordisCtx({
+        betterSidebar: sidebar,
+        effect(fn) {
+          const dispose = fn()
+          if (typeof dispose === 'function') injectionEffects.push(dispose)
+          return dispose
+        },
+      }, ['betterSidebar']))
     },
   }
-  return { services, injectCalls, effects }
+  return { services, injectCalls, effects, injectionEffects, disposeInjection }
 }
 
 describe('omnimux-workflow betterSidebar inject', () => {
@@ -270,21 +281,44 @@ describe('apply(ctx) 未 inject betterSidebar', () => {
     for (const dispose of effects) dispose()
   })
 
-  it('inject 回调里才碰 betterSidebar 并 registerTab', () => {
+  it('inject 回调注册的标签与全局绑定随注入生命周期释放，而不是等根插件卸载', () => {
     const registered = []
+    const disposed = []
+    const opened = []
     const sidebar = {
       registerTab(tab) {
         registered.push(tab)
-        return () => {}
+        return () => { disposed.push(tab.id) }
       },
+      openTab(seed) { opened.push(seed) },
     }
-    const { services, effects } = createApplyServices({ callInject: true, sidebar })
+    const { services, effects, injectionEffects, disposeInjection } = createApplyServices({ callInject: true, sidebar })
     const ctx = createCordisCtx(services, ['slots', 'locale', 'sessions', 'workspaces', 'layout', 'effect', 'inject'])
-    assert.doesNotThrow(() => { mod.apply(ctx) })
-    assert.equal(registered.length, 3)
-    assert.ok(registered.some((t) => t.id === 'omnimux-workflow:canvas'))
-    assert.ok(registered.some((t) => t.id === 'omnimux-workflow:library'))
-    assert.ok(registered.some((t) => t.id === 'omnimux-workflow:app'))
-    for (const dispose of effects) dispose()
+    try {
+      assert.doesNotThrow(() => { mod.apply(ctx) })
+      assert.equal(registered.length, 3)
+      assert.ok(registered.some((t) => t.id === 'omnimux-workflow:canvas'))
+      assert.ok(registered.some((t) => t.id === 'omnimux-workflow:library'))
+      assert.ok(registered.some((t) => t.id === 'omnimux-workflow:app'))
+      assert.equal(injectionEffects.length, 4, 'binding and all three registrations belong to inner lifetime')
+      assert.equal(window.__omnimuxBetterSidebar, sidebar)
+      const openApp = window.__omnimuxOpenAppTab
+      assert.equal(typeof openApp, 'function')
+      assert.equal(openApp({ appId: 'injected-app' }), true)
+      assert.equal(opened.length, 1)
+
+      // Only dispose the provider injection; root effects remain alive.
+      disposeInjection()
+      assert.deepEqual(disposed.slice().sort(), registered.map((tab) => tab.id).sort())
+      assert.equal(Object.hasOwn(window, '__omnimuxBetterSidebar'), false)
+      assert.equal(Object.hasOwn(window, '__omnimuxOpenAppTab'), false)
+      assert.equal(openApp({ appId: 'after-dispose' }), false, 'retained callers cannot use a disposed service')
+      assert.equal(opened.length, 1)
+      disposeInjection()
+      assert.equal(disposed.length, 3, 'lifetime cleanup is idempotent')
+    } finally {
+      disposeInjection()
+      for (const dispose of effects) dispose()
+    }
   })
 })

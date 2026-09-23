@@ -471,6 +471,276 @@ test('openWorkbench without current session does not create a session or claim o
   assert.match(String(kids[0].textContent || ''), /工作区|会话/)
 })
 
+test('workbench module reload refreshes binding closures without replacing the global API', async () => {
+  const win = setupWindow()
+  const existing = installWorkbenchGlobal(win)
+  const oldBind = existing.bind
+  const reloaded = await import('./workbench.js?issue2591-reload')
+  const refreshed = reloaded.installWorkbenchGlobal(win)
+  assert.equal(refreshed, existing)
+  assert.equal(win.__omnimuxWorkbench, existing)
+  assert.notEqual(refreshed.bind, oldBind, 'module-owned bind must not retain the old closure')
+  const opened = []
+  const service = {
+    getTab: (id) => ({ id }),
+    getSnapshot: () => ({ sessionId: 's-reload', state: makeState([]) }),
+    openTab(seed) { opened.push(seed) },
+  }
+  try {
+    refreshed.bind({
+      betterSidebar: service,
+      sessions: { list: { getSnapshot: () => ({ current: 's-reload' }) } },
+    })
+    assert.equal(await reloaded.openWorkbench({
+      tabId: 'omnimux-workflow:app', timeoutMs: 0, preserveLayout: true,
+    }), true)
+    assert.equal(opened.length, 1)
+    assert.equal(opened[0].type, 'omnimux-workflow:app')
+  } finally {
+    reloaded.resetWorkbenchForTests(win)
+  }
+})
+
+test('openWorkbench forwards app instance identity without replacing its registered type', async () => {
+  const api = installWorkbenchGlobal(setupWindow())
+  const opened = []
+  const registered = []
+  const manifest = { appId: 'app-home-test', metadata: { name: '首页应用' } }
+  api.bind({
+    betterSidebar: {
+      getTab(id) { registered.push(id); return { id } },
+      getSnapshot: () => ({ sessionId: 's-app', state: makeState([]) }),
+      openTab(seed, scope) { opened.push({ seed, scope }) },
+    },
+    sessions: { list: { getSnapshot: () => ({ current: 's-app' }) } },
+  })
+  const ok = await api.open({
+    tabId: 'omnimux-workflow:app', id: 'app_app-home-test', title: '首页应用',
+    path: 'app://app-home-test', meta: { appId: manifest.appId },
+    extra: { manifest, appId: manifest.appId }, timeoutMs: 0, preserveLayout: true,
+  })
+  assert.equal(ok, true, 'void-returning providers remain valid')
+  assert.deepEqual(registered, ['omnimux-workflow:app'])
+  assert.deepEqual(opened, [{
+    seed: {
+      type: 'omnimux-workflow:app', id: 'app_app-home-test', title: '首页应用',
+      path: 'app://app-home-test', meta: { appId: manifest.appId },
+      extra: { manifest, appId: manifest.appId },
+    },
+    scope: { sessionId: 's-app' },
+  }])
+})
+
+test('openWorkbench refuses an unregistered app without opening or closing seed tabs', async () => {
+  const api = installWorkbenchGlobal(setupWindow())
+  const actions = []
+  api.bind({
+    betterSidebar: {
+      getTab: () => undefined,
+      getSnapshot: () => ({ sessionId: 's-app', state: makeState([{ id: 'seed', type: 'editor' }]) }),
+      openTab() { actions.push('open') },
+      closeTab() { actions.push('close') },
+    },
+    sessions: { list: { getSnapshot: () => ({ current: 's-app' }) } },
+  })
+  // Provider binding independently cleans factory seed tabs; isolate the open action.
+  actions.length = 0
+  assert.equal(await api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 }), false)
+  assert.deepEqual(actions, [])
+})
+
+for (const [label, openTab] of [
+  ['false', () => false],
+  ['async false', async () => false],
+  ['throw', () => { throw new Error('app open rejected') }],
+  ['rejection', async () => { throw new Error('app open rejected') }],
+]) {
+  test(`openWorkbench exposes provider ${label} without changing focus`, async () => {
+    const api = installWorkbenchGlobal(setupWindow())
+    let opens = 0
+    api.bind({
+      betterSidebar: {
+        getTab: (id) => ({ id }),
+        getSnapshot: () => ({ sessionId: 's-app', state: makeState([]) }),
+        openTab(...args) { opens += 1; return openTab(...args) },
+      },
+      sessions: { list: { getSnapshot: () => ({ current: 's-app' }) } },
+    })
+    const before = api.getFocus()
+    const result = api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 })
+    if (label === 'throw' || label === 'rejection') {
+      await assert.rejects(result, /app open rejected/)
+    } else {
+      assert.equal(await result, false)
+    }
+    assert.equal(opens, 1)
+    assert.equal(api.getFocus(), before)
+  })
+}
+
+function setupPendingNavigation() {
+  const win = setupWindow()
+  const api = installWorkbenchGlobal(win)
+  win.localStorage.setItem('dsh-sidebar:v1:s-app', '{}')
+  let current = 's-app'
+  let snapshot = { sessionId: current, state: makeState([
+    { id: 'seed', type: 'editor' },
+    { id: 'user-file', type: 'editor', path: '/keep.txt' },
+  ]) }
+  const actions = []
+  const service = {
+    getTab: (id) => ({ id }),
+    getSnapshot: () => snapshot,
+    closeTab(id, scope) { actions.push(['close', id, scope]) },
+    openTab() { actions.push(['open']); return true },
+  }
+  const layout = { closeDetails() { actions.push(['details']) } }
+  api.bind({ betterSidebar: service, layout, sessions: { list: { getSnapshot: () => ({ current }) } } })
+  win.document.documentElement.dataset.dshProductStage = 'old-stage'
+  win.__omnimuxStage = { release(id) { actions.push(['stage', id]) } }
+  return { win, api, service, actions, layout,
+    setSession(id) { current = id },
+    setSnapshot(next) { snapshot = next },
+    assertPreserved() {
+      assert.deepEqual(actions.filter(([action]) => action !== 'open'), [])
+      assert.equal(win.document.documentElement.dataset.dshProductStage, 'old-stage')
+    },
+  }
+}
+
+for (const mode of ['unregistered', 'no-provider', 'not-ready', 'false', 'async-false', 'throw', 'rejection']) {
+  test(`open failure ${mode} preserves existing stage, details and seed`, async () => {
+    const env = setupPendingNavigation()
+    if (mode === 'unregistered') env.service.getTab = () => undefined
+    if (mode === 'no-provider') env.api.bind({ betterSidebar: null })
+    if (mode === 'not-ready') env.setSnapshot({ sessionId: 'other', state: makeState([]) })
+    if (mode === 'false') env.service.openTab = () => false
+    if (mode === 'async-false') env.service.openTab = async () => false
+    if (mode === 'throw') env.service.openTab = () => { throw new Error('rejected') }
+    if (mode === 'rejection') env.service.openTab = async () => { throw new Error('rejected') }
+    const result = env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 })
+    if (mode === 'throw' || mode === 'rejection') await assert.rejects(result, /rejected/)
+    else assert.equal(await result, false)
+    env.assertPreserved()
+  })
+}
+
+test('sidebar session may catch up before navigation commits', async () => {
+  const env = setupPendingNavigation()
+  env.setSnapshot({ sessionId: 'previous', state: makeState([]) })
+  const timer = setTimeout(() => env.setSnapshot({ sessionId: 's-app', state: makeState([]) }), 10)
+  try {
+    assert.equal(await env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 200, preserveLayout: true }), true)
+    assert.equal(env.actions.filter(([action]) => action === 'open').length, 1)
+    assert.deepEqual(env.actions.filter(([action]) => action === 'details' || action === 'stage'), [['details'], ['stage', 'old-stage']])
+  } finally {
+    clearTimeout(timer)
+  }
+})
+
+test('sidebar session timeout preserves navigation safety and cannot open late', async () => {
+  const env = setupPendingNavigation()
+  env.setSnapshot({ sessionId: 'previous', state: makeState([]) })
+  const before = env.api.getFocus()
+  assert.equal(await env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 1 }), false)
+  env.setSnapshot({ sessionId: 's-app', state: makeState([]) })
+  await new Promise((resolve) => setTimeout(resolve, 60))
+  assert.deepEqual(env.actions, [])
+  assert.equal(env.api.getFocus(), before)
+  env.assertPreserved()
+})
+
+for (const change of ['provider', 'session', 'snapshot', 'stage']) {
+  test(`async open does not commit old navigation after ${change} changes`, async () => {
+    const env = setupPendingNavigation()
+    let finish
+    let enter
+    const entered = new Promise((resolve) => { enter = resolve })
+    env.service.openTab = () => { enter(); return new Promise((resolve) => { finish = resolve }) }
+    const result = env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 })
+    await entered
+    const before = env.api.getFocus()
+    if (change === 'provider') env.api.bind({ betterSidebar: { getSnapshot: () => ({ sessionId: 's-app', state: makeState([]) }) } })
+    if (change === 'session') env.setSession('s-new')
+    if (change === 'snapshot') env.setSnapshot({ sessionId: 's-new', state: makeState([]) })
+    if (change === 'stage') env.win.document.documentElement.dataset.dshProductStage = 'new-stage'
+    finish(true)
+    assert.equal(await result, false)
+    assert.deepEqual(env.actions, [])
+    assert.equal(env.api.getFocus(), before)
+    assert.equal(env.win.document.documentElement.dataset.dshProductStage, change === 'stage' ? 'new-stage' : 'old-stage')
+  })
+}
+
+for (const change of ['provider', 'session']) {
+  test(`registration readiness does not redirect after ${change} changes`, async () => {
+    const env = setupPendingNavigation()
+    env.service.getTab = (id) => {
+      if (change === 'provider') env.api.bind({ betterSidebar: { getSnapshot: () => ({ sessionId: 's-app', state: makeState([]) }) } })
+      else env.setSession('s-new')
+      return { id }
+    }
+    assert.equal(await env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 }), false)
+    assert.deepEqual(env.actions, [])
+    env.assertPreserved()
+  })
+}
+
+test('missing session leaves the old stage and details intact while showing a cue', async () => {
+  const env = setupPendingNavigation()
+  env.setSession(undefined)
+  const messages = []
+  env.win.document.createElement = () => ({ style: {}, setAttribute() {}, remove() {}, textContent: '' })
+  env.win.document.body.appendChild = (node) => { messages.push(node.textContent) }
+  env.win.setTimeout = () => 0
+  assert.equal(await env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0 }), false)
+  env.assertPreserved()
+  assert.equal(messages.length, 1)
+  assert.match(messages[0], /会话/)
+})
+
+test('successful open commits old seed cleanup only after confirmation', async () => {
+  const env = setupPendingNavigation()
+  env.service.openTab = (_payload, scope) => {
+    env.assertPreserved()
+    assert.deepEqual(scope, { sessionId: 's-app' })
+    env.actions.push(['open'])
+    env.setSnapshot({ sessionId: 's-app', state: makeState([
+      { id: 'seed', type: 'editor' }, { id: 'new-seed', type: 'editor' },
+      { id: 'user-file', type: 'editor', path: '/keep.txt' },
+    ]) })
+    return true
+  }
+  assert.equal(await env.api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0, preserveLayout: true }), true)
+  assert.deepEqual(env.actions, [
+    ['open'], ['close', 'seed', { sessionId: 's-app' }], ['details'], ['stage', 'old-stage'],
+  ])
+})
+
+test('openWorkbench waits for provider completion before reporting success', async () => {
+  const api = installWorkbenchGlobal(setupWindow())
+  let resolveOpen
+  let enteredOpen
+  const entered = new Promise((resolve) => { enteredOpen = resolve })
+  const pending = new Promise((resolve) => { resolveOpen = resolve })
+  api.bind({
+    betterSidebar: {
+      getTab: (id) => ({ id }),
+      getSnapshot: () => ({ sessionId: 's-app', state: makeState([]) }),
+      openTab() { enteredOpen(); return pending },
+    },
+    sessions: { list: { getSnapshot: () => ({ current: 's-app' }) } },
+  })
+  let settled = false
+  const result = api.open({ tabId: 'omnimux-workflow:app', timeoutMs: 0, preserveLayout: true })
+  result.then(() => { settled = true })
+  await entered
+  await Promise.resolve()
+  assert.equal(settled, false)
+  resolveOpen(true)
+  assert.equal(await result, true)
+})
+
 test('openWorkbench switches focus mode to default per tab without cross-tab leakage', async () => {
   const win = setupWindow()
   const api = installWorkbenchGlobal(win)
@@ -1319,7 +1589,7 @@ test('openWorkbench uses human title fallback when getTab has no title (#345)', 
     betterSidebar: {
       openTab(seed, scope) { opened.push({ seed, scope }) },
       getTab() { return { id: 'omnimux-assets:library' } },
-      getSnapshot() { return { state } },
+      getSnapshot() { return { sessionId: 's-title', state } },
     },
     sessions: {
       list: { getSnapshot: () => ({ current: 's-title' }) },

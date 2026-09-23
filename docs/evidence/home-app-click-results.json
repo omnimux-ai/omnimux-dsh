@@ -1,0 +1,30 @@
+[
+  {
+    "id": "01-button",
+    "status": "pass"
+  },
+  {
+    "id": "02-repeat",
+    "status": "pass"
+  },
+  {
+    "id": "03-mounted-a-b-a",
+    "status": "pass"
+  },
+  {
+    "id": "04-close-reopen-body",
+    "status": "pass"
+  },
+  {
+    "id": "05-resize",
+    "status": "pass"
+  },
+  {
+    "id": "06-real-provider-restart",
+    "status": "pass"
+  },
+  {
+    "id": "07-provider-unavailable",
+    "status": "pass"
+  }
+]
