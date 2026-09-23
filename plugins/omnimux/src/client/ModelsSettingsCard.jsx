@@ -222,74 +222,87 @@ export function ModelsSettingsCard({ t, scope }) {
   if (!available) return null
 
   return (
-    <div className="omnimux-models-card">
-      <div className="omnimux-models-card__head">
-        <h3 className="omnimux-models-card__title">{t('models.title')}</h3>
-        <p className="omnimux-models-card__desc">{t('models.description')}</p>
+    <div className="omnimux-settings-sections">
+      {/* 栏目一：对话与媒体生成模型 */}
+      <div className="omnimux-models-card" data-section="runtime">
+        <div className="omnimux-models-card__head">
+          <h3 className="omnimux-models-card__title">{t('runtime.cardTitle')}</h3>
+          <p className="omnimux-models-card__desc">{t('runtime.cardDesc')}</p>
+        </div>
+        <div className="omnimux-models-card__body">
+          <RuntimeModeSection t={t} scope={scope} />
+        </div>
       </div>
-      <div className="omnimux-models-card__body">
-        <RuntimeModeSection t={t} scope={scope} />
-        {GROUPS.map((group) => (
-          <div key={group.kind} className="omnimux-models-card__group">
-            <p className="omnimux-models-card__group-title">{t(group.titleKey)}</p>
-            <div className="omnimux-models-card__group-card">
-              {group.rows.map((row) => {
-                const options = optionsForRow(group, row)
-                const current = currentValueForRow(group, row, options)
-                const overridden = Object.prototype.hasOwnProperty.call(user, row.key)
-                return (
-                  <div key={row.key} className="omnimux-models-card__row">
-                    <span className="omnimux-models-card__row-label">{t(row.labelKey)}</span>
-                    <div className="omnimux-models-card__row-body">
-                      {overridden ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="omnimux-models-card__reset"
-                          disabled={!writable || busy}
-                          onClick={() => { void onReset(row.key) }}
-                        >
-                          {t('models.reset')}
-                        </Button>
-                      ) : null}
-                      <DropdownSelect
-                        id={`omnimux-${row.key}`}
-                        aria-label={`${t(group.titleKey)} ${t(row.labelKey)}`}
-                        value={current}
-                        options={options}
-                        disabled={!writable || busy || options.length === 0}
-                        placeholder={t('models.loading')}
-                        onChange={(next) => { void onChange(row.key, next) }}
-                      />
+
+      {/* 栏目二：创作画布模型 */}
+      <div className="omnimux-models-card" data-section="canvas-models">
+        <div className="omnimux-models-card__head">
+          <h3 className="omnimux-models-card__title">{t('models.title')}</h3>
+          <p className="omnimux-models-card__desc">{t('models.description')}</p>
+        </div>
+        <div className="omnimux-models-card__body">
+          {GROUPS.map((group) => (
+            <div key={group.kind} className="omnimux-models-card__group">
+              <p className="omnimux-models-card__group-title">{t(group.titleKey)}</p>
+              <div className="omnimux-models-card__group-card">
+                {group.rows.map((row) => {
+                  const options = optionsForRow(group, row)
+                  const current = currentValueForRow(group, row, options)
+                  const overridden = Object.prototype.hasOwnProperty.call(user, row.key)
+                  return (
+                    <div key={row.key} className="omnimux-models-card__row">
+                      <span className="omnimux-models-card__row-label">{t(row.labelKey)}</span>
+                      <div className="omnimux-models-card__row-body">
+                        {overridden ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="omnimux-models-card__reset"
+                            disabled={!writable || busy}
+                            onClick={() => { void onReset(row.key) }}
+                          >
+                            {t('models.reset')}
+                          </Button>
+                        ) : null}
+                        <DropdownSelect
+                          id={`omnimux-${row.key}`}
+                          aria-label={`${t(group.titleKey)} ${t(row.labelKey)}`}
+                          value={current}
+                          options={options}
+                          disabled={!writable || busy || options.length === 0}
+                          placeholder={t('models.loading')}
+                          onChange={(next) => { void onChange(row.key, next) }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-        {composerModels.length > 0 ? (
-          <div className="omnimux-models-card__group">
-            <p className="omnimux-models-card__group-title">{t('models.composerTitle')}</p>
-            <p className="omnimux-models-card__desc">{t('models.composerHint')}</p>
-            <div className="omnimux-models-card__group-card">
-              {composerModels.map((model) => (
-                <SelectableTile
-                  key={model.id}
-                  id={`omnimux-composer-${model.id}`}
-                  selectionType="checkbox"
-                  selected={!hiddenModels.includes(model.id)}
-                  title={model.label || model.id}
-                  disabled={!writable || busy}
-                  onChange={(next) => { void onToggleComposerModel(model.id, next) }}
-                />
-              ))}
+          ))}
+          {composerModels.length > 0 ? (
+            <div className="omnimux-models-card__group">
+              <p className="omnimux-models-card__group-title">{t('models.composerTitle')}</p>
+              <p className="omnimux-models-card__desc">{t('models.composerHint')}</p>
+              <div className="omnimux-models-card__group-card">
+                {composerModels.map((model) => (
+                  <SelectableTile
+                    key={model.id}
+                    id={`omnimux-composer-${model.id}`}
+                    selectionType="checkbox"
+                    selected={!hiddenModels.includes(model.id)}
+                    title={model.label || model.id}
+                    disabled={!writable || busy}
+                    onChange={(next) => { void onToggleComposerModel(model.id, next) }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
+        {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
       </div>
-      {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
     </div>
   )
 }

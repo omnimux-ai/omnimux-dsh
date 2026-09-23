@@ -107,7 +107,7 @@ export function RuntimeModeSection({ t, scope }) {
   }, [cloudLogged, auth])
 
   return (
-    <div className="omnimux-models-card__group">
+    <div className="omx-runtime-section">
       <div className={`omx-cloud-banner ${cloudLogged ? 'logged' : ''}`}>
         <div className="omx-banner-content">
           <strong>{cloudLogged ? t('runtime.cloudLoggedTitle') : t('runtime.cloudTitle')}</strong>

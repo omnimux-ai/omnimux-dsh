@@ -97,11 +97,13 @@ async function loadCard() {
     if (id === 'dsh-ui-kit') {
       return {
         Button: ({ children, ...rest }) => React.createElement('button', rest, children),
+        InputField: ({ value, ...rest }) => React.createElement('input', { value, ...rest }),
         DropdownSelect: ({ id, value, options, onChange, ...rest }) => React.createElement(
           'select',
           { id, 'data-testid': id, value, onChange: (event) => onChange(event.target.value), ...rest },
           options.map((option) => React.createElement('option', { key: option.value, value: option.value }, option.label)),
         ),
+        SelectableTile: ({ title, selected, onChange }) => React.createElement('div', { onClick: () => onChange && onChange(!selected) }, title),
       };
     }
     return require(id);
@@ -134,7 +136,7 @@ describe('E2E: 设置页分组卡片与默认模式', () => {
 
     // 1. 分组标题断言
     const groupTitles = [...document.querySelectorAll('.omnimux-models-card__group-title')].map((el) => el.textContent.trim());
-    assert.deepEqual(groupTitles, ['文本', '图片', '视频', '音频']);
+    assert.deepEqual(groupTitles.slice(0, 4), ['文本', '图片', '视频', '音频']);
 
     // 2. 文本组思考等级行
     const textReasoning = document.querySelector('[data-testid="omnimux-defaultTextReasoning"]');

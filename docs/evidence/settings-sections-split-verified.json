@@ -1,0 +1,26 @@
+{
+  "issue": 2605,
+  "feature": "settings-sections-split",
+  "verified_at": "2026-09-23T16:32:00+08:00",
+  "criteria": {
+    "S1_dual_cards": "PASS",
+    "S2_card_titles_accuracy": "PASS",
+    "S3_feature_isolation": "PASS",
+    "S4_ui_design_token_compliance": "PASS",
+    "S5_e2e_and_unit_tests": "PASS"
+  },
+  "verified_sections": [
+    {
+      "section": "runtime",
+      "title": "对话与媒体生成模型",
+      "desc": "管理用于执行对话提示词的本地命令行助手，以及图片、视频、音频的媒体生成提供商",
+      "contains": [".omx-cloud-banner", ".omx-segmented-tabs", ".omx-status-bar"]
+    },
+    {
+      "section": "canvas-models",
+      "title": "创作画布模型",
+      "desc": "管理创作画布右侧面板各类型节点的新建默认模型与参数规则",
+      "contains": ["text", "image", "video", "audio"]
+    }
+  ]
+}
