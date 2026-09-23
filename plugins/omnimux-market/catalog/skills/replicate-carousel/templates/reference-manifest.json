@@ -1,0 +1,19 @@
+{
+  "project": "carousel-replication",
+  "reference_set": "reference-name",
+  "pages": [
+    {
+      "page_number": 1,
+      "source_page": "来源页面描述",
+      "source_media": "参考图片来源描述",
+      "local_file": "ref-01.ext",
+      "width": null,
+      "height": null,
+      "download_status": "success",
+      "view_status": "reviewed",
+      "notes": ""
+    }
+  ],
+  "missing_pages": [],
+  "assumptions": []
+}

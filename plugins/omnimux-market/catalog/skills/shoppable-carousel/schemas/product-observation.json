@@ -1,0 +1,27 @@
+{
+  "product_name": null,
+  "category": null,
+  "visible_facts": [
+    {
+      "field": "",
+      "value": "",
+      "source": "image"
+    }
+  ],
+  "user_confirmed_facts": [
+    {
+      "field": "",
+      "value": "",
+      "source": "user"
+    }
+  ],
+  "unknown_facts": [
+    ""
+  ],
+  "fidelity_constraints": [
+    ""
+  ],
+  "forbidden_assumptions": [
+    ""
+  ]
+}

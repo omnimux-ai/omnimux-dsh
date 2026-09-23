@@ -1,0 +1,17 @@
+{
+  "product_slug": "",
+  "expected_count": 0,
+  "files": [
+    {
+      "order": 1,
+      "filename": "",
+      "image_type": "",
+      "status": "pending",
+      "format": "",
+      "readable": false,
+      "content_checked": false
+    }
+  ],
+  "zip_filename": "",
+  "zip_status": "pending"
+}

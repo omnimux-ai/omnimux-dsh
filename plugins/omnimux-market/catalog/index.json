@@ -4483,6 +4483,86 @@
       "author": "Official"
     },
     {
+      "id": "sk-omx-shoppable-carousel",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "商品轮播图",
+      "subtitle": "图片和静态广告",
+      "summary": "从商品实拍与已确认信息出发，规划逐页商品轮播图方案与生图提示词。",
+      "category": "image-static",
+      "tags": [
+        "图片和静态广告",
+        "新品上市"
+      ],
+      "skill": "shoppable-carousel",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/shoppable-carousel"
+      },
+      "recommended": false,
+      "downloads": 0,
+      "cover": {
+        "asset": "catalog/covers/skills/skill-card-7.webp",
+        "alt": "商品轮播图"
+      },
+      "titleZh": "商品轮播图",
+      "titleEn": "Shoppable Carousel",
+      "summaryZh": "从商品实拍与已确认信息出发，规划逐页商品轮播图方案与生图提示词。",
+      "summaryEn": "Plan e-commerce product carousels and prompts from product photos and confirmed facts.",
+      "isHot": false,
+      "isNew": true,
+      "coverIndex": 7,
+      "coverFile": "skill-card-7.webp",
+      "badge": "NEW",
+      "installFlow": "session-guide",
+      "sessionPrefill": "/shoppable-carousel\n请运行 商品轮播图 (Shoppable Carousel) 技能，为我的商品规划逐页轮播图方案与生图提示词。",
+      "homeCover": {
+        "asset": "catalog/covers/skills/skill-card-7.webp",
+        "alt": "商品轮播图"
+      },
+      "author": "Official"
+    },
+    {
+      "id": "sk-omx-replicate-carousel",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "图文复刻",
+      "subtitle": "图片和静态广告",
+      "summary": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
+      "category": "image-static",
+      "tags": [
+        "图片和静态广告",
+        "新品上市"
+      ],
+      "skill": "replicate-carousel",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/replicate-carousel"
+      },
+      "recommended": false,
+      "downloads": 0,
+      "cover": {
+        "asset": "catalog/covers/skills/skill-card-2.webp",
+        "alt": "图文复刻"
+      },
+      "titleZh": "图文复刻",
+      "titleEn": "Carousel Replication",
+      "summaryZh": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
+      "summaryEn": "Deconstruct a reference carousel and rebuild an original one for a new product.",
+      "isHot": false,
+      "isNew": true,
+      "coverIndex": 2,
+      "coverFile": "skill-card-2.webp",
+      "badge": "NEW",
+      "installFlow": "session-guide",
+      "sessionPrefill": "/replicate-carousel\n请运行 图文复刻 (Carousel Replication) 技能，为我的商品复刻电商图文轮播方案。",
+      "homeCover": {
+        "asset": "catalog/covers/skills/skill-card-2.webp",
+        "alt": "图文复刻"
+      },
+      "author": "Official"
+    },
+    {
       "id": "exp-ad-creative-strategist",
       "tab": "experts",
       "kind": "expert",

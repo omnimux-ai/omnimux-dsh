@@ -1,0 +1,18 @@
+{
+  "project": "carousel-replication",
+  "planned_pages": 0,
+  "pages": [
+    {
+      "page_number": 1,
+      "reference_page": 1,
+      "product_image": "product-reference.ext",
+      "reference_image": "ref-01.ext",
+      "auxiliary_images": [],
+      "generation_status": "pending",
+      "inspection_status": "pending",
+      "needs_revision": false,
+      "output_file": null,
+      "notes": ""
+    }
+  ]
+}

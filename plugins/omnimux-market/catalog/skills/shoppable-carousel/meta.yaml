@@ -1,0 +1,18 @@
+display-name-zh: 商品轮播图
+version: 1.0.0
+tag-en: "E-Commerce / Carousel Planning"
+tag-cn: "电商 / 轮播图规划"
+complete-tags-en:
+  - "E-Commerce"
+  - "Image Generation"
+complete-tags-cn:
+  - "电商"
+  - "图像生成"
+summary-en: "Plan an e-commerce product carousel from real product photos and confirmed facts"
+summary-cn: "从商品实拍与已确认信息出发，规划逐页商品轮播图方案"
+desc-en: "For planning TikTok Shop and product-detail carousels when product photos and confirmed product facts are on hand. Identifies the product first, then picks a page scheme by category — appearance showcase, on-model usage, scenario solution, or variant choice — and produces a per-page plan covering image type, sales job, shot framing, layout, in-image copy, fidelity constraints and forbidden content, followed by per-image generation prompts, a result checklist, and file naming and packaging rules for the exported set."
+desc-cn: "适用于已有商品图片、需要规划 TikTok Shop 商品轮播图或电商详情页配图的场景。先识别商品，再按品类选择页面方案（外观展示、人物使用、场景方案、款式选择），输出逐页规划：图片类型、销售作用、景别机位、内部版式、图内文案、商品保真要求与禁止内容，并给出单图生图提示词结构、生成结果检查清单与文件命名打包规则。"
+cover: ""
+author-en: "OmniMux Team"
+author-cn: "OmniMux 团队"
+source: official
