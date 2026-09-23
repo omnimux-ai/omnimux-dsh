@@ -176,7 +176,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       }
 
       const res = await createProjectForkFromManifest(manifest, mockDeps)
-      assert.equal(createdTitle, '手机与网页交互实机演示_副本')
+      assert.equal(createdTitle, '手机与网页交互实机演示 (副本)')
       assert.equal(res.project.id, 'proj_fork_999')
       assert.equal(res.workspaceId, 'ws_fork_999')
       assert.ok(res.groupId.startsWith('group_'))
@@ -185,7 +185,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       assert.ok(savedPayload && Array.isArray(savedPayload.nodes))
       const groupNode = savedPayload.nodes.find((n) => n.type === 'group')
       assert.ok(groupNode, '必须包含外层工作流容器 GroupNode')
-      assert.equal(groupNode.data.title, '手机与网页交互实机演示_副本')
+      assert.equal(groupNode.data.title, '手机与网页交互实机演示 (副本)')
     })
 
     it('当前项目已存在时复制创作页而不是新建项目', async () => {

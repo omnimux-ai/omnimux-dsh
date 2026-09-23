@@ -19,6 +19,16 @@ const NEW_APP_IDS = [
   'app-builtin-video-to-prompt',
 ];
 
+const RENOVATED_CREATIFY_IDS = [
+  'app-creatify-app-demo',
+  'app-creatify-chasing-product',
+  'app-creatify-ugc-selfie',
+  'app-creatify-3d-cute-vfx',
+  'app-creatify-apparel-tryon',
+  'app-creatify-product-spotlight',
+  'app-creatify-fall-down-durability',
+];
+
 const catalogPath = path.resolve(import.meta.dirname, '../../catalog/builtin-apps.json');
 const catalogApps = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
 
@@ -32,11 +42,32 @@ describe('Builtin form widgets catalog (Issue #2596)', () => {
     }
   });
 
-  it('keeps the JSON catalog and BUILTIN_MANIFESTS in sync for the new apps', () => {
-    for (const id of NEW_APP_IDS) {
+  it('keeps the JSON catalog and BUILTIN_MANIFESTS in sync for the new apps and renovated apps', () => {
+    for (const id of [...NEW_APP_IDS, ...RENOVATED_CREATIFY_IDS]) {
       const fromJson = catalogApps.find((a) => a.appId === id);
       const fromTs = BUILTIN_MANIFESTS.find((a) => a.appId === id);
       assert.deepEqual(fromTs, fromJson, `${id} diverged between catalog sources`);
+    }
+  });
+
+  it('renovated classic apps have product_image upgraded to library-picker and voice/aspectRatio properly configured', () => {
+    for (const id of RENOVATED_CREATIFY_IDS) {
+      const app = catalogApps.find((a) => a.appId === id);
+      const pi = app.formSchema.properties.product_image;
+      assert.equal(pi.widget, 'library-picker', `${id}: product_image widget must be library-picker`);
+      assert.equal(pi.library, 'asset', `${id}: product_image library must be asset`);
+      assert.equal(app.fieldMappings.product_image.widget, 'library-picker', `${id}: fieldMapping widget must be library-picker`);
+
+      const voice = app.formSchema.properties.voice;
+      assert.equal(voice.widget, 'select-single', `${id}: voice widget must be select-single`);
+      assert.ok(Array.isArray(voice.options) && voice.options.length > 0, `${id}: voice options missing`);
+
+      const aspect = app.formSchema.properties.aspect_ratio;
+      assert.equal(aspect.widget, 'ratio-cards', `${id}: aspect_ratio widget must be ratio-cards`);
+      assert.ok(Array.isArray(aspect.options) && aspect.options.length > 0, `${id}: aspect options missing`);
+
+      const res = validateFormSchema(app.formSchema);
+      assert.equal(res.valid, true, `${id} schema invalid: ${res.errors.join('; ')}`);
     }
   });
 

@@ -23,6 +23,19 @@ import {
 } from './appLibrary.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
+import {
+  resolveOptions,
+  resolveWidget,
+  displayValueOf,
+  sanitizePreviewUrl,
+} from './appTabWidgets.js'
+
+export {
+  resolveOptions,
+  resolveWidget,
+  displayValueOf,
+  sanitizePreviewUrl,
+}
 
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
@@ -83,6 +96,53 @@ function IconPalette({ size = 32, className = '' }) {
       <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
       <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
       <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.21-.64-1.67-.39-.45-.61-1.02-.61-1.64 0-1.38 1.12-2.5 2.5-2.5H17c2.76 0 5-2.24 5-5 0-4.42-4.03-8.69-10-8.69z" />
+    </svg>
+  )
+}
+
+function IconChevronDown({ size = 14, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
+function IconFolder({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+    </svg>
+  )
+}
+
+function IconUpload({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  )
+}
+
+function IconStore({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+      <path d="M2 7h20" />
+    </svg>
+  )
+}
+
+function IconLink2({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+      <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+      <line x1="8" y1="12" x2="16" y2="12" />
     </svg>
   )
 }
@@ -241,16 +301,23 @@ export function AppTab(props) {
   const initialFormValues = useMemo(() => {
     const vals = {}
     for (const [key, prop] of Object.entries(properties)) {
+      const widget = resolveWidget(key, prop, manifest?.fieldMappings?.[key])
       if (manifest?.demoSnapshot?.[key] !== undefined) {
         vals[key] = manifest.demoSnapshot[key]
       } else if (prop.default !== undefined) {
-        vals[key] = prop.default
+        if (prop.type === 'array' && widget !== 'multi-tags' && Array.isArray(prop.default)) {
+          vals[key] = prop.default[0] ?? ''
+        } else {
+          vals[key] = prop.default
+        }
       } else if (manifest?.fieldMappings?.[key]?.defaultValue !== undefined) {
         vals[key] = manifest.fieldMappings[key].defaultValue
       } else if (prop.type === 'boolean') {
         vals[key] = false
       } else if (prop.type === 'number' || prop.type === 'integer') {
         vals[key] = prop.minimum ?? 0
+      } else if (prop.type === 'array') {
+        vals[key] = widget === 'multi-tags' ? (Array.isArray(prop.default) ? prop.default : []) : ''
       } else {
         vals[key] = ''
       }
@@ -263,15 +330,74 @@ export function AppTab(props) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeRightTab, setActiveRightTab] = useState('tasks')
   const [tasks, setTasks] = useState(() => readCachedTasks(manifest?.appId))
+  const [openDropdownKey, setOpenDropdownKey] = useState(null)
+  const [linkDrafts, setLinkDrafts] = useState({})
+  const [promptModal, setPromptModal] = useState(null)
+  const fileInputRef = useRef(null)
+  const uploadTargetKeyRef = useRef(null)
   const loadedAppIdRef = useRef(null)
+  const createdObjectUrlsRef = useRef(new Map())
+
+  // 安全释放指定字段曾创建的 Object URL（杜绝内存累积泄露，H-01）
+  const revokeCreatedUrl = useCallback((key) => {
+    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+    const existing = createdObjectUrlsRef.current.get(key)
+    if (existing) {
+      try {
+        URL.revokeObjectURL(existing)
+      } catch {
+        // ignore
+      }
+      createdObjectUrlsRef.current.delete(key)
+    }
+  }, [])
+
+  // 组件卸载时释放所有未释放的 Object URL（H-01）
+  useEffect(() => {
+    return () => {
+      if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+      for (const url of createdObjectUrlsRef.current.values()) {
+        try {
+          URL.revokeObjectURL(url)
+        } catch {
+          // ignore
+        }
+      }
+      createdObjectUrlsRef.current.clear()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const handleWindowClick = (e) => {
+      if (openDropdownKey && !e.target.closest?.('.omx-apptab-select-single')) {
+        setOpenDropdownKey(null)
+      }
+    }
+    window.addEventListener('click', handleWindowClick)
+    return () => window.removeEventListener('click', handleWindowClick)
+  }, [openDropdownKey])
 
   // Update tasks and formValues when manifest changes
   useEffect(() => {
     if (manifest?.appId && loadedAppIdRef.current !== manifest.appId) {
       loadedAppIdRef.current = manifest.appId
+      if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        for (const url of createdObjectUrlsRef.current.values()) {
+          try {
+            URL.revokeObjectURL(url)
+          } catch {
+            // ignore
+          }
+        }
+        createdObjectUrlsRef.current.clear()
+      }
       setTasks(readCachedTasks(manifest.appId))
       setFormValues(initialFormValues)
       setErrors({})
+      setLinkDrafts({})
+      setOpenDropdownKey(null)
+      setPromptModal(null)
     }
   }, [manifest?.appId, initialFormValues])
 
@@ -285,6 +411,76 @@ export function AppTab(props) {
     })
   }, [])
 
+  const handleClearPicked = useCallback((key) => {
+    revokeCreatedUrl(key)
+    handleFieldChange(key, '')
+  }, [handleFieldChange, revokeCreatedUrl])
+
+  // 统一的本地文件上传处理，供点击上传与拖拽上传复用（H-01 & M-03）
+  const handleDirectUploadFile = useCallback((key, file) => {
+    if (!file || !key) return
+    revokeCreatedUrl(key)
+    let objectUrl = ''
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      try {
+        objectUrl = URL.createObjectURL(file)
+        createdObjectUrlsRef.current.set(key, objectUrl)
+      } catch {
+        objectUrl = ''
+      }
+    }
+    const picked = {
+      name: file.name,
+      sub: `${Math.max(1, Math.round(file.size / 1024))} KB · 本地上传`,
+      url: objectUrl || file.name,
+      source: 'upload',
+      type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image',
+    }
+    handleFieldChange(key, JSON.stringify(picked))
+  }, [handleFieldChange, revokeCreatedUrl])
+
+  const handleOpenUpload = useCallback((key) => {
+    uploadTargetKeyRef.current = key
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0]
+    const key = uploadTargetKeyRef.current
+    e.target.value = ''
+    if (file && key) {
+      handleDirectUploadFile(key, file)
+    }
+  }, [handleDirectUploadFile])
+
+  // 接收 explicitVal 参数，先计算最新 nextDrafts 后分别更新，保持状态更新纯度（M-04）
+  const handleCommitLink = useCallback((key, explicitVal) => {
+    const draft = (typeof explicitVal === 'string' ? explicitVal : linkDrafts[key] || '').trim()
+    const nextDrafts = { ...linkDrafts, [key]: '' }
+    setLinkDrafts(nextDrafts)
+    if (draft) {
+      handleFieldChange(key, draft)
+    }
+  }, [handleFieldChange, linkDrafts])
+
+  // 轻量模态输入框提交，包含安全白名单校验（M-05 & H-02）
+  const handlePromptModalSubmit = useCallback(() => {
+    if (!promptModal) return
+    const { key, value } = promptModal
+    const trimmed = (value || '').trim()
+    if (!trimmed) {
+      setPromptModal(null)
+      return
+    }
+    const safeUrl = sanitizePreviewUrl(trimmed)
+    if (!safeUrl && trimmed.includes(':') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      setPromptModal((prev) => ({ ...prev, error: '链接协议不支持，仅放行 http(s):// 或本地素材路径' }))
+      return
+    }
+    handleFieldChange(key, safeUrl || trimmed)
+    setPromptModal(null)
+  }, [promptModal, handleFieldChange])
+
   // Execute generation
   const handleGenerate = useCallback(async (e) => {
     if (e) e.preventDefault()
@@ -294,7 +490,7 @@ export function AppTab(props) {
     const newErrors = {}
     for (const reqKey of requiredList) {
       const val = formValues[reqKey]
-      if (val === undefined || val === null || val === '') {
+      if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
         newErrors[reqKey] = '此项为必填项'
       }
     }
@@ -645,6 +841,7 @@ export function AppTab(props) {
                 const val = formValues[key] ?? ''
                 const title = prop.title || manifest.fieldMappings?.[key]?.fieldTitle || key
                 const desc = prop.description || manifest.fieldMappings?.[key]?.fieldDescription
+                const widget = resolveWidget(key, prop, manifest.fieldMappings?.[key])
 
                 return (
                   <div key={key} className="omx-apptab-field-group">
@@ -662,20 +859,393 @@ export function AppTab(props) {
                       )}
                     </div>
 
-                    {/* 控件渲染根据属性定义 */}
-                    {Array.isArray(prop.enum) && prop.enum.length > 0 ? (
-                      <select // exempt-ui01 ai-app-ui-spec 动态应用表单下拉选择器
-                        className={`omx-apptab-select ${error ? 'is-error' : ''}`}
-                        value={val}
-                        onChange={(e) => handleFieldChange(key, e.target.value)}
-                      >
-                        {prop.enum.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : prop.type === 'boolean' ? (
+                    {/* 1. 比例卡片组 */}
+                    {widget === 'ratio-cards' ? (
+                      (() => {
+                        const opts = resolveOptions(prop)
+                        const ratios = opts.length > 0 ? opts : [
+                          { label: '1:1', value: '1:1' },
+                          { label: '16:9', value: '16:9' },
+                          { label: '9:16', value: '9:16' },
+                          { label: '4:3', value: '4:3' },
+                        ]
+                        return (
+                          <div className="omx-apptab-ratio-grid">
+                            {ratios.map((r) => {
+                              const rVal = String(r.value)
+                              const isActive = String(val) === rVal
+                              return (
+                                <button // exempt-ui01 ai-app-ui-spec 40px ratio card
+                                  key={rVal}
+                                  type="button"
+                                  title={r.label}
+                                  className={`omx-apptab-ratio-card ${isActive ? 'is-active' : ''}`}
+                                  onClick={() => handleFieldChange(key, rVal)}
+                                >
+                                  {rVal}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'select-single' ? (
+                      /* 2. 定制下拉选择器 */
+                      (() => {
+                        const opts = resolveOptions(prop)
+                        const currentOpt = opts.find((o) => String(o.value) === String(val))
+                        const displayLabel = currentOpt ? currentOpt.label : (val || prop.placeholder || '请选择')
+                        const isOpen = openDropdownKey === key
+                        return (
+                          <div className="omx-apptab-select-single">
+                            <div
+                              className={`omx-apptab-select-trigger ${error ? 'is-error' : ''} ${isOpen ? 'is-open' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenDropdownKey(isOpen ? null : key)
+                              }}
+                            >
+                              <span>{displayLabel}</span>
+                              <IconChevronDown size={14} />
+                            </div>
+                            {isOpen && (
+                              <div className="omx-apptab-select-options">
+                                {opts.map((opt) => (
+                                  <div
+                                    key={String(opt.value)}
+                                    className={`omx-apptab-select-option ${String(val) === String(opt.value) ? 'is-selected' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleFieldChange(key, opt.value)
+                                      setOpenDropdownKey(null)
+                                    }}
+                                  >
+                                    <span>{opt.label}</span>
+                                    {String(val) === String(opt.value) && <IconCheck size={14} />}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'segmented-tabs' ? (
+                      /* 3. 选项卡分段切换 */
+                      (() => {
+                        const opts = resolveOptions(prop)
+                        return (
+                          <div className="omx-apptab-seg-tabs" role="tablist">
+                            {opts.map((opt) => {
+                              const isOn = String(val ?? '') === String(opt.value)
+                              return (
+                                <button // exempt-ui01 ai-app-ui-spec 40px segmented tab
+                                  key={String(opt.value)}
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={isOn}
+                                  className={`omx-apptab-seg-tab ${isOn ? 'is-on' : ''}`}
+                                  onClick={() => handleFieldChange(key, opt.value)}
+                                >
+                                  {opt.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'multi-tags' ? (
+                      /* 4. 多选胶囊 */
+                      (() => {
+                        const opts = resolveOptions(prop)
+                        const selected = Array.isArray(val) ? val.map(String) : []
+                        const max = typeof prop.maxItems === 'number' ? prop.maxItems : undefined
+                        const limitHit = max !== undefined && selected.length >= max
+                        return (
+                          <div className="omx-apptab-multi-box">
+                            <div className="omx-apptab-multi-tags">
+                              {opts.map((opt) => {
+                                const optVal = String(opt.value)
+                                const isOn = selected.includes(optVal)
+                                const isLocked = !isOn && limitHit
+                                return (
+                                  <button // exempt-ui01 ai-app-ui-spec 30px capsule tag
+                                    key={optVal}
+                                    type="button"
+                                    className={`omx-apptab-mtag ${isOn ? 'is-on' : ''} ${isLocked ? 'is-locked' : ''}`}
+                                    disabled={isLocked}
+                                    onClick={() => {
+                                      const next = isOn
+                                        ? selected.filter((entry) => entry !== optVal)
+                                        : [...selected, optVal]
+                                      handleFieldChange(key, next)
+                                    }}
+                                  >
+                                    {isOn && <IconCheck size={13} />}
+                                    <span>{opt.label}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            <div className="omx-apptab-multi-foot">
+                              <span>{max !== undefined ? `已选 ${selected.length} / ${max}` : `已选 ${selected.length}`}</span>
+                              {limitHit && <span className="omx-apptab-multi-limit">已达上限，先取消一项</span>}
+                            </div>
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'library-picker' ? (
+                      /* 5. 库选择器 */
+                      (() => {
+                        const hasVal = typeof val === 'string' && val.trim() !== ''
+                        if (hasVal) {
+                          const disp = displayValueOf(val)
+                          return (
+                            <div className="omx-apptab-picked">
+                              <div className="omx-apptab-picked-thumb">
+                                <IconFolder size={18} />
+                              </div>
+                              <div className="omx-apptab-picked-info">
+                                <div className="omx-apptab-picked-title">{disp.name}</div>
+                                {disp.sub && <div className="omx-apptab-picked-sub">{disp.sub}</div>}
+                              </div>
+                              <button // exempt-ui01 ai-app-ui-spec 24px clear picked item
+                                type="button"
+                                className="omx-apptab-picked-clear"
+                                aria-label="移除"
+                                onClick={() => handleClearPicked(key)}
+                              >
+                                <IconClose size={12} />
+                              </button>
+                            </div>
+                          )
+                        }
+                        return (
+                          <button // exempt-ui01 ai-app-ui-spec 40px library trigger button
+                            type="button"
+                            className="omx-apptab-library-trigger"
+                            onClick={() => {
+                              setPromptModal({
+                                key,
+                                title: '从资产库选择素材',
+                                placeholder: '请输入素材 URL、http(s) 链接或本地路径',
+                                value: '',
+                                error: '',
+                              })
+                            }}
+                          >
+                            <span>{prop.placeholder || '从资产库选择…'}</span>
+                            <IconFolder size={16} />
+                          </button>
+                        )
+                      })()
+                    ) : widget === 'media-extractor' ? (
+                      /* 6. 媒体提取器 */
+                      (() => {
+                        const hasVal = typeof val === 'string' && val.trim() !== ''
+                        if (hasVal) {
+                          const disp = displayValueOf(val)
+                          return (
+                            <div className="omx-apptab-picked">
+                              <div className="omx-apptab-picked-thumb">
+                                {disp.source === 'upload' ? <IconUpload size={18} /> : <IconLink2 size={18} />}
+                              </div>
+                              <div className="omx-apptab-picked-info">
+                                <div className="omx-apptab-picked-title">{disp.name}</div>
+                                {disp.sub && <div className="omx-apptab-picked-sub">{disp.sub}</div>}
+                              </div>
+                              <button // exempt-ui01 ai-app-ui-spec 24px clear picked item
+                                type="button"
+                                className="omx-apptab-picked-clear"
+                                aria-label="移除"
+                                onClick={() => handleClearPicked(key)}
+                              >
+                                <IconClose size={12} />
+                              </button>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div className="omx-apptab-extractor">
+                            <input
+                              type="text"
+                              className="omx-apptab-extractor-input"
+                              value={linkDrafts[key] ?? ''}
+                              placeholder={prop.placeholder || '粘贴视频链接或上传，自动解析'}
+                              onChange={(e) => setLinkDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                              onBlur={(e) => handleCommitLink(key, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  handleCommitLink(key, e.target.value)
+                                }
+                              }}
+                            />
+                            <button // exempt-ui01 ai-app-ui-spec 36px local upload button
+                              type="button"
+                              className="omx-apptab-extractor-icon-btn"
+                              aria-label="本地上传"
+                              onClick={() => handleOpenUpload(key)}
+                            >
+                              <IconUpload size={16} />
+                            </button>
+                            <button // exempt-ui01 ai-app-ui-spec 36px asset library button
+                              type="button"
+                              className="omx-apptab-extractor-icon-btn"
+                              aria-label="从资产库选择"
+                              onClick={() => {
+                                setPromptModal({
+                                  key,
+                                  title: '从资产库选择素材',
+                                  placeholder: '请输入视频 URL 或素材路径',
+                                  value: '',
+                                  error: '',
+                                })
+                              }}
+                            >
+                              <IconFolder size={16} />
+                            </button>
+                            <button // exempt-ui01 ai-app-ui-spec 36px parse button
+                              type="button"
+                              className="omx-apptab-extractor-btn"
+                              onClick={() => handleCommitLink(key, linkDrafts[key])}
+                            >
+                              解析
+                            </button>
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'product-link' ? (
+                      /* 7. 商品链接 */
+                      (() => {
+                        const hasVal = typeof val === 'string' && val.trim() !== ''
+                        if (hasVal) {
+                          const disp = displayValueOf(val)
+                          return (
+                            <div className="omx-apptab-picked">
+                              <div className="omx-apptab-picked-thumb">
+                                <IconStore size={18} />
+                              </div>
+                              <div className="omx-apptab-picked-info">
+                                <div className="omx-apptab-picked-title">{disp.name}</div>
+                                {disp.sub && <div className="omx-apptab-picked-sub">{disp.sub}</div>}
+                              </div>
+                              <button // exempt-ui01 ai-app-ui-spec 24px clear picked item
+                                type="button"
+                                className="omx-apptab-picked-clear"
+                                aria-label="移除"
+                                onClick={() => handleClearPicked(key)}
+                              >
+                                <IconClose size={12} />
+                              </button>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div className="omx-apptab-extractor">
+                            <input
+                              type="text"
+                              className="omx-apptab-extractor-input"
+                              value={linkDrafts[key] ?? ''}
+                              placeholder={prop.placeholder || '粘贴商品链接，或从商品库选择'}
+                              onChange={(e) => setLinkDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                              onBlur={(e) => handleCommitLink(key, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  handleCommitLink(key, e.target.value)
+                                }
+                              }}
+                            />
+                            <button // exempt-ui01 ai-app-ui-spec 36px store button
+                              type="button"
+                              className="omx-apptab-extractor-icon-btn"
+                              aria-label="从商品库选择"
+                              onClick={() => {
+                                setPromptModal({
+                                  key,
+                                  title: '从商品库选择商品',
+                                  placeholder: '请输入商品链接 (https://...)',
+                                  value: '',
+                                  error: '',
+                                })
+                              }}
+                            >
+                              <IconStore size={16} />
+                            </button>
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'media-uploader' ? (
+                      /* 8. 媒体上传器 */
+                      (() => {
+                        const hasVal = typeof val === 'string' && val.trim() !== ''
+                        if (hasVal) {
+                          const disp = displayValueOf(val)
+                          const rawUrl = disp.url || val
+                          const safeUrl = sanitizePreviewUrl(rawUrl)
+                          return (
+                            <div className="omx-apptab-picked">
+                              <div className="omx-apptab-picked-thumb">
+                                {safeUrl ? (
+                                  <img src={safeUrl} alt="Preview" className="omx-apptab-picked-thumb-img" />
+                                ) : (
+                                  <IconUpload size={18} />
+                                )}
+                              </div>
+                              <div className="omx-apptab-picked-info">
+                                <div className="omx-apptab-picked-title">{disp.name || '已上传素材'}</div>
+                                <div className="omx-apptab-picked-sub">点击右侧更换或移除</div>
+                              </div>
+                              <button // exempt-ui01 ai-app-ui-spec 24px clear button
+                                type="button"
+                                className="omx-apptab-picked-clear"
+                                aria-label="移除"
+                                onClick={() => handleClearPicked(key)}
+                              >
+                                <IconClose size={12} />
+                              </button>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div
+                            className="omx-apptab-uploader"
+                            onClick={() => handleOpenUpload(key)}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const file = e.dataTransfer?.files?.[0]
+                              if (file) handleDirectUploadFile(key, file)
+                            }}
+                          >
+                            <IconUpload size={20} className="omx-apptab-uploader-icon" />
+                            <span className="omx-apptab-uploader-hint">
+                              点击选择或拖拽上传媒体素材
+                            </span>
+                            <button // exempt-ui01 ai-app-ui-spec 24px inline link button
+                              type="button"
+                              className="omx-apptab-uploader-link-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPromptModal({
+                                  key,
+                                  title: '输入媒体素材资源链接',
+                                  placeholder: '请输入图片或视频 URL (http/https)',
+                                  value: '',
+                                  error: '',
+                                })
+                              }}
+                            >
+                              或输入网络链接
+                            </button>
+                          </div>
+                        )
+                      })()
+                    ) : widget === 'switch-boolean' || prop.type === 'boolean' ? (
                       <label className="omx-apptab-checkbox-label">
                         <input
                           type="checkbox"
@@ -685,7 +1255,7 @@ export function AppTab(props) {
                         />
                         <span>启用 {title}</span>
                       </label>
-                    ) : prop.type === 'number' || prop.type === 'integer' ? (
+                    ) : widget === 'slider-range' || prop.type === 'number' || prop.type === 'integer' ? (
                       <input
                         type="number"
                         className={`omx-apptab-input ${error ? 'is-error' : ''}`}
@@ -695,7 +1265,7 @@ export function AppTab(props) {
                         step={prop.type === 'integer' ? 1 : 'any'}
                         onChange={(e) => handleFieldChange(key, e.target.value === '' ? '' : Number(e.target.value))}
                       />
-                    ) : (key.toLowerCase().includes('prompt') || prop.title?.includes('提示') || prop.maxLength > 100) ? (
+                    ) : widget === 'textarea' || (key.toLowerCase().includes('prompt') || prop.title?.includes('提示') || prop.maxLength > 100) ? (
                       <textarea
                         className={`omx-apptab-textarea ${error ? 'is-error' : ''}`}
                         value={val}
@@ -745,6 +1315,15 @@ export function AppTab(props) {
               </button>
             </div>
           </form>
+
+          {/* 隐式文件上传 input */}
+          <input
+            type="file"
+            accept="video/*,image/*,audio/*"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
         </div>
 
         {/* 右侧工作台：任务输出与示例展示 */}
@@ -915,6 +1494,74 @@ export function AppTab(props) {
           </div>
         </div>
       </div>
+
+      {/* 轻量内联录入弹层（消除原生 window.prompt，M-05 & H-02） */}
+      {promptModal && (
+        <div
+          className="omx-apptab-modal-mask"
+          onClick={() => setPromptModal(null)}
+        >
+          <div
+            className="omx-apptab-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="omx-apptab-modal-header">
+              <span className="omx-apptab-modal-title">{promptModal.title}</span>
+              <button // exempt-ui01 ai-app-ui-spec 28px modal close button
+                type="button"
+                className="omx-apptab-modal-close"
+                aria-label="关闭"
+                onClick={() => setPromptModal(null)}
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+            <div className="omx-apptab-modal-body">
+              <input
+                type="text"
+                className="omx-apptab-input"
+                autoFocus
+                value={promptModal.value}
+                placeholder={promptModal.placeholder}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setPromptModal((prev) => ({ ...prev, value: v, error: '' }))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handlePromptModalSubmit()
+                  } else if (e.key === 'Escape') {
+                    setPromptModal(null)
+                  }
+                }}
+              />
+              {promptModal.error && (
+                <div className="omx-apptab-error-text">
+                  <IconAlert size={14} />
+                  <span>{promptModal.error}</span>
+                </div>
+              )}
+            </div>
+            <div className="omx-apptab-modal-footer">
+              <button // exempt-ui01 ai-app-ui-spec 32px modal cancel button
+                type="button"
+                className="omx-apptab-btn-ghost"
+                onClick={() => setPromptModal(null)}
+              >
+                取消
+              </button>
+              <button // exempt-ui01 ai-app-ui-spec 32px modal submit button
+                type="button"
+                className="omx-apptab-btn-primary"
+                onClick={handlePromptModalSubmit}
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

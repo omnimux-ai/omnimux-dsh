@@ -32,9 +32,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -101,7 +103,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
       },
@@ -170,9 +172,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -239,7 +243,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
       },
@@ -308,9 +312,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -377,7 +383,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
       },
@@ -446,9 +452,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -515,7 +523,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
       },
@@ -584,9 +592,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -653,7 +663,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
       },
@@ -722,9 +732,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -791,7 +803,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
       },
@@ -860,9 +872,11 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "product_image": {
           "type": "string",
           "title": "商品主图 / 白底图",
-          "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-          "widget": "media-uploader",
-          "default": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
+          "description": "上传高清商品图，或从资产库选择",
+          "widget": "library-picker",
+          "default": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp",
+          "library": "asset",
+          "placeholder": "从资产库选择"
         },
         "copywriting": {
           "type": "string",
@@ -929,7 +943,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "nodeId": "node-slot-product-image",
         "targetField": "mediaUrl",
         "mappingType": "media",
-        "widget": "media-uploader",
+        "widget": "library-picker",
         "required": true,
         "defaultValue": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
       },
@@ -970,8 +984,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         }
       ]
     }
-  }
-,
+  },
   {
     "schemaVersion": "1.0.0",
     "appId": "app-builtin-product-video",

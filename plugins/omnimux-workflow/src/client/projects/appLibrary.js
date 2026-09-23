@@ -428,7 +428,10 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
  */
 export async function createProjectForkFromManifest(manifest, deps = {}) {
   const appName = textOf(manifest?.metadata?.name) || 'AI 应用'
+  const projectTitle = `${appName} (副本)`
   const pageTitle = `${appName}_副本`
+  const hostProject = deps.hostProject && typeof deps.hostProject === 'object' ? deps.hostProject : null
+  const groupTitle = hostProject?.id ? pageTitle : projectTitle
 
   let rawNodes = manifest?.workflowBinding?.snapshot?.nodes
   let rawEdges = manifest?.workflowBinding?.snapshot?.edges
@@ -445,9 +448,8 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     rawEdges = []
   }
 
-  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, pageTitle)
+  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, groupTitle)
   const doRequest = deps.requestFn || workflowRequest
-  const hostProject = deps.hostProject && typeof deps.hostProject === 'object' ? deps.hostProject : null
 
   if (hostProject?.id) {
     const pages = Array.isArray(hostProject.pages) ? hostProject.pages : []
@@ -490,7 +492,7 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   }
 
   const doCreateProject = deps.createProjectFn || createProject
-  const createRes = await doCreateProject(pageTitle)
+  const createRes = await doCreateProject(projectTitle)
   if (!createRes || !createRes.ok || !createRes.body?.project) {
     throw new Error(createRes?.body?.error || createRes?.body?.message || '创建项目工程副本失败')
   }
