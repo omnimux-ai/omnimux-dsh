@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { TemplateVideo } from './TemplateVideo.jsx'
+import { resolveTemplateVideoUrl } from './template-media.js'
 import { resolveSkillAuroraStyle } from '../skills/auroraGradients.js'
 import { resolveTemplateCopy } from './template-locale.js'
 import { useTemplateLocale } from './use-template-locale.js'
@@ -51,7 +53,17 @@ function formatMetric(num) {
  */
 export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }) {
   const [imgError, setImgError] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const failVideo = useCallback(() => setVideoError(true), [])
   const currentLocale = useTemplateLocale(locale, t)
+  useEffect(() => {
+    setImgError(false)
+    setVideoError(false)
+    setHovered(false)
+    setFocused(false)
+  }, [template?.id, template?.previewVideoUrl])
 
   if (!template) return null
 
@@ -100,7 +112,7 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
         aria-label={title}
         style={{ background: aurora.bg }} /* exempt-ui02: 极光算法动态流光背景 */
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault()
             handleCardClick()
           }
@@ -149,6 +161,10 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
   return (
     <div
       className="omnimux-tpl-card"
+      onPointerEnter={(e) => { if (e.pointerType !== 'touch') setHovered(true) }}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false) }}
       onClick={handleCardClick}
       data-template-id={template.id}
       data-template-type={template.type || 'template'}
@@ -157,7 +173,7 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
       tabIndex={0}
       aria-label={title}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault()
           handleCardClick()
         }
@@ -177,6 +193,16 @@ export function TemplateCardItem({ template, onSelect, onOpenDetail, locale, t }
             <span className="omnimux-tpl-ph-icon">{ICON_SPARKLES}</span>
           </div>
         )}
+
+        {!videoError && resolveTemplateVideoUrl(template) && (hovered || focused) ? (
+          <TemplateVideo
+            src={resolveTemplateVideoUrl(template)}
+            poster={coverUrl}
+            active={hovered || focused}
+            className="omnimux-tpl-video"
+            onError={failVideo}
+          />
+        ) : null}
 
         {/* 底部暗黑渐变遮罩 */}
         <div className="omnimux-tpl-gradient-layer" aria-hidden="true" />
