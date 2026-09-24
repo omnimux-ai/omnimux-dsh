@@ -70,11 +70,17 @@ export function resolveModelAspectRatios(activeModel, prop) {
  */
 export function resolveWidget(key, prop, mapping) {
   // 旧缓存智能自愈规则 (Issue #2631)
-  if (
-    (key === 'product_image' || prop?.title?.includes('商品')) &&
-    (prop?.widget === 'media-uploader' || prop?.widget === 'library-picker' || !prop?.widget ||
-     mapping?.widget === 'media-uploader' || mapping?.widget === 'library-picker')
-  ) {
+  // 严格收窄至商品图片字段，且仅当原形态为遗留 media-uploader 或 library-picker 时才自愈提升为 product-link
+  const isProductImageKey =
+    key === 'product_image' ||
+    (typeof key === 'string' && key.includes('product_image') && prop?.type === 'string')
+  const isLegacyMediaWidget =
+    prop?.widget === 'media-uploader' ||
+    prop?.widget === 'library-picker' ||
+    mapping?.widget === 'media-uploader' ||
+    mapping?.widget === 'library-picker'
+
+  if (isProductImageKey && isLegacyMediaWidget) {
     return 'product-link'
   }
 

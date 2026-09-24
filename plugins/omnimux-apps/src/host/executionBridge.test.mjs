@@ -509,4 +509,94 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
       '原 manifest 中的 snapshot 必须保持不可变',
     );
   });
+
+  it('T05.15: strictly addresses main generator node and initializes missing params object (Issue 2631 review)', () => {
+    const manifest = createMockManifest();
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        field: 'content',
+      },
+    };
+    // 构造复杂图：前置 LLM 提示词节点包含自身的 model 参数，后续视频生成节点最初无 params 对象
+    manifest.workflowBinding.snapshot.nodes = [
+      {
+        id: 'node_text_input',
+        type: 'text',
+        data: {
+          label: '提示词大语言模型',
+          tool: 'omnimux_text_chat',
+          params: {
+            model: 'deepseek-chat',
+          },
+        },
+      },
+      {
+        id: 'node_video_engine',
+        type: 'material',
+        data: {
+          label: '主视频生成引擎',
+          materialType: 'video',
+          // 故意不包含 params 对象
+        },
+      },
+    ];
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '科幻未来',
+      __model__: 'kling-v2-master',
+    });
+
+    const llmNode = injected.nodes.find((n) => n.id === 'node_text_input');
+    const videoNode = injected.nodes.find((n) => n.id === 'node_video_engine');
+
+    // 1. LLM 节点的 model 严禁被篡改
+    assert.equal(llmNode.data.params.model, 'deepseek-chat', 'LLM 文本节点的模型绝对不能被误改');
+
+    // 2. 视频生成引擎节点正确初始化 params 并写入模型
+    assert.ok(videoNode.data.params && typeof videoNode.data.params === 'object');
+    assert.equal(videoNode.data.model, 'kling-v2-master');
+    assert.equal(videoNode.data.params.model, 'kling-v2-master');
+  });
+
+  it('T05.16: logs warning when __model__ is specified but no generator node is found (Fail-Closed observability)', () => {
+    const manifest = createMockManifest();
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        field: 'content',
+      },
+    };
+    // 工作流中没有任何主生成节点（只有文本与插槽节点）
+    manifest.workflowBinding.snapshot.nodes = [
+      {
+        id: 'node_slot_1',
+        type: 'input',
+        data: { isSlot: true },
+      },
+      {
+        id: 'node_text_input',
+        type: 'text',
+        data: { content: '普通文本' },
+      },
+    ];
+
+    const warnings = [];
+    const origWarn = console.warn;
+    console.warn = (...args) => {
+      warnings.push(args.join(' '));
+    };
+
+    try {
+      const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+        topic: '测试告警',
+        __model__: 'seedance-2.0',
+      });
+      assert.ok(injected);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('未定位到主生成引擎节点'));
+    } finally {
+      console.warn = origWarn;
+    }
+  });
 });

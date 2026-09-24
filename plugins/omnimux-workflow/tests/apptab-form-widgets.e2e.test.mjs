@@ -691,8 +691,90 @@ test('E2E: 表单首部生成模型切换、画幅比例动态契约驱动与提
   })
 
   assert.ok(submittedPayload, '必须成功调用执行中枢接口')
-  assert.equal(submittedPayload.formValues.__model__, 'kling-v1-6', '提交参数必须携带 __model__ 为用户选中的模型')
-  assert.equal(submittedPayload.formValues.model, 'kling-v1-6', '同时冗余兼容 model 字段')
+  assert.equal(submittedPayload.formValues.__model__, 'kling-v1-6', '提交参数必须携带 __model__ 专用通道为用户选中的模型')
+  assert.equal(submittedPayload.formValues.model, undefined, '严禁直接赋值 model 字段避免污染业务字段 (Issue #2631 Review)')
+
+  act(() => {
+    root.unmount()
+  })
+})
+
+test('E2E: 初始默认智能推荐状态下完整保护应用 Schema 声明的原生画幅比例 (Issue #2631 Review Fix)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const customAppManifest = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  // 为该应用声明一个合法的特殊初始比例 '21:9'
+  customAppManifest.demoSnapshot = {
+    ...customAppManifest.demoSnapshot,
+    aspect_ratio: '21:9',
+  }
+  if (customAppManifest.formSchema?.properties?.aspect_ratio) {
+    customAppManifest.formSchema.properties.aspect_ratio.default = '21:9'
+  }
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  let submittedPayload = null
+  const win = doc.defaultView
+  win.__OMNIMUX_APPS_EXECUTE__ = async (manifest, formValues) => {
+    submittedPayload = { manifest, formValues }
+    return {
+      executionId: 'exec_test_preserve_ratio_456',
+      mediaUrl: 'https://cdn.omnimux.com/out2.mp4',
+    }
+  }
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_custom_ratio_app',
+          title: '原生比例保护测试应用',
+          extra: { manifest: customAppManifest },
+        },
+      }),
+    )
+  })
+
+  // 1. 在未显式选择模型（智能推荐状态）下，原生默认比例 '21:9' 绝不被兜底模型洗刷
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+
+  assert.ok(submittedPayload, '必须成功调用执行中枢接口')
+  assert.equal(
+    submittedPayload.formValues.aspect_ratio,
+    '21:9',
+    '默认智能推荐状态下必须完整尊重应用原生声明的默认比例，绝不被兜底模型静默洗刷',
+  )
+  assert.equal(submittedPayload.formValues.__model__, undefined, '未显式选择模型时不注入 __model__')
+
+  // 2. 当用户显式选择特定模型时（如 Kling，不支持 21:9），才自愈收敛为新模型默认比例
+  const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
+    return fg.textContent.includes('生成模型')
+  })
+  const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
+  fireClick(modelTrigger)
+  const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
+  const klingOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find(
+    (opt) => opt.textContent.includes('Kling v1.6') || opt.textContent.includes('kling'),
+  )
+  assert.ok(klingOption)
+  await act(async () => {
+    fireClick(klingOption)
+  })
+
+  // 提交再次断言，此时因显式选中 Kling，21:9 被合法自愈为 Kling 默认比例（9:16 或 16:9）
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+  assert.equal(submittedPayload.formValues.__model__, 'kling-v1-6')
+  assert.notEqual(submittedPayload.formValues.aspect_ratio, '21:9', '显式选定模型后非法比例必须被收敛')
 
   act(() => {
     root.unmount()

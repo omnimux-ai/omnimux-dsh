@@ -480,21 +480,27 @@ export function prepareAndInjectWorkflowSnapshot(
       return (
         d.tool === 'omnimux_video_submit' ||
         d.tool === 'omnimux_image_submit' ||
+        d.type === 'video' ||
+        d.type === 'image' ||
         d.materialType === 'video' ||
         d.materialType === 'image' ||
         n.type === 'video' ||
-        n.type === 'image' ||
-        (d.params && ('model' in d.params || 'aspectRatio' in d.params)) ||
-        'model' in d
+        n.type === 'image'
       );
     });
 
     if (generatorNode) {
       generatorNode.data = generatorNode.data || {};
       generatorNode.data.model = selectedModel;
-      if (generatorNode.data.params && typeof generatorNode.data.params === 'object') {
-        generatorNode.data.params.model = selectedModel;
-      }
+      generatorNode.data.params =
+        generatorNode.data.params && typeof generatorNode.data.params === 'object'
+          ? generatorNode.data.params
+          : {};
+      generatorNode.data.params.model = selectedModel;
+    } else {
+      console.warn(
+        `[omnimux:executionBridge] 指定了模型 ${selectedModel}，但在工作流快照中未定位到主生成引擎节点，无法执行模型动态穿透`,
+      );
     }
   }
 

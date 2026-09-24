@@ -548,8 +548,8 @@ export function AppTab(props) {
         if (alive && data && typeof data === 'object') {
           setModelCatalog(data)
         }
-      } catch {
-        // 网络不可用或离线时，平滑保持已知保底模型列表
+      } catch (err) {
+        console.warn('[omnimux:app-tab] 获取模型目录失败，使用内置官方模型保底:', err?.message)
       }
     }
     loadCatalog()
@@ -665,7 +665,8 @@ export function AppTab(props) {
 
   // 监听模型与有效比例切换，若成片比例不被新模型支持，自动自愈收敛为新模型默认比例 (Issue #2631)
   useEffect(() => {
-    if (!activeModelObj) return
+    // 仅当用户显式选择了特定模型（selectedModel !== ''）时，才触发强制比例收敛；默认智能推荐状态下，完全尊重应用 Schema 声明的原生默认比例
+    if (!selectedModel || !activeModelObj) return
     const modelRatios = resolveModelAspectRatios(activeModelObj, null)
     if (!modelRatios || modelRatios.length === 0) return
     const validRatioValues = modelRatios.map((r) => String(r.value))
@@ -680,15 +681,20 @@ export function AppTab(props) {
             activeModelObj.parameters?.aspectRatio?.default ||
             validRatioValues[0]
           if (fallbackVal) {
-            setFormValues((prev) => ({
-              ...prev,
-              [key]: String(fallbackVal),
-            }))
+            setFormValues((prev) => {
+              if (prev[key] && validRatioValues.includes(String(prev[key]))) {
+                return prev
+              }
+              return {
+                ...prev,
+                [key]: String(fallbackVal),
+              }
+            })
           }
         }
       }
     }
-  }, [selectedModel, activeModelObj, properties, manifest])
+  }, [selectedModel, activeModelObj, properties, manifest, formValues])
 
   const handleFieldChange = useCallback((key, val) => {
     setFormValues((prev) => ({ ...prev, [key]: val }))
@@ -855,7 +861,6 @@ export function AppTab(props) {
     const effectiveFormValues = { ...formValues }
     if (selectedModel && selectedModel.trim()) {
       effectiveFormValues.__model__ = selectedModel.trim()
-      effectiveFormValues.model = selectedModel.trim()
     }
 
     setIsSubmitting(true)

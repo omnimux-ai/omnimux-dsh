@@ -120,7 +120,8 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
   })
 
   describe('resolveWidget()', () => {
-    it('auto-heals product_image or product-titled fields from legacy widgets to product-link (Issue #2631)', () => {
+    it('auto-heals product_image fields from legacy media widgets to product-link without misidentifying text fields (Issue #2631)', () => {
+      // 1. 严格匹配 key === 'product_image' 且原控件为 legacy media-uploader / library-picker
       assert.equal(
         resolveWidget('product_image', { widget: 'media-uploader' }),
         'product-link',
@@ -130,19 +131,39 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
         'product-link',
       )
       assert.equal(
+        resolveWidget('product_image', {}, { widget: 'media-uploader' }),
+        'product-link',
+      )
+
+      // 2. 包含 product_image 且类型为 string 且为 legacy widget
+      assert.equal(
+        resolveWidget('main_product_image', { type: 'string', widget: 'media-uploader' }),
+        'product-link',
+      )
+
+      // 3. 防御：商品名称、商品规格等文本字段严禁误伤
+      assert.equal(
+        resolveWidget('product_name', { title: '商品名称', type: 'string' }),
+        'input-text',
+      )
+      assert.equal(
+        resolveWidget('product_spec', { title: '商品规格', type: 'string' }),
+        'input-text',
+      )
+
+      // 4. 无 legacy widget 的 product_image 字段不触发自愈
+      assert.equal(
         resolveWidget('product_image', { type: 'string' }),
-        'product-link',
+        'input-text',
       )
       assert.equal(
-        resolveWidget('product_image', { widget: 'media-uploader' }, { widget: 'media-uploader' }),
-        'product-link',
+        resolveWidget('product_image', { widget: 'select-single' }),
+        'select-single',
       )
+
+      // 5. 非商品字段保持自身形态
       assert.equal(
-        resolveWidget('img', { title: '商品主图', widget: 'media-uploader' }),
-        'product-link',
-      )
-      assert.equal(
-        resolveWidget('other_file', { title: '用户头像', widget: 'media-uploader' }),
+        resolveWidget('user_avatar', { title: '用户头像', widget: 'media-uploader' }),
         'media-uploader',
       )
     })
