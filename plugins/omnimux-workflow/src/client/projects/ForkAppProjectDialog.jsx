@@ -106,7 +106,6 @@ export function ForkAppProjectDialog({
   initialPath = '',
   busy = false,
   error = '',
-  t,
   onCancel,
   onSubmit,
   onBrowseDirectory,

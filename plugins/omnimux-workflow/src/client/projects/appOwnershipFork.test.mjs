@@ -189,7 +189,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       assert.equal(groupNode.data.title, '手机与网页交互实机演示 (副本)')
     })
 
-    it('支持自定义 projectTitle、pageTitle 和自选工作区 projectRoot', async () => {
+    it('支持自定义 projectTitle 和自选工作区 projectRoot', async () => {
       const manifest = {
         appId: 'app-creatify-app-demo',
         metadata: { name: '手机与网页交互实机演示' },
@@ -229,13 +229,14 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       assert.equal(res.project.id, 'proj_custom_root')
     })
 
-    it('当前项目已存在时复制创作页而不是新建项目', async () => {
+    it('当前项目已存在时复制创作页并支持自定义 pageTitle', async () => {
       const manifest = {
         appId: 'app-creatify-app-demo',
         metadata: { name: '手机与网页交互实机演示' },
       }
       let createdProject = 0
       let createdPageTitle = ''
+      let savedGroupTitle = ''
       const mockDeps = {
         hostProject: {
           id: 'proj_current',
@@ -243,6 +244,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
           pages: [{ id: 'page-1', canvasWorkspaceId: 'ws_host' }],
           canvasWorkspaceIds: ['ws_host'],
         },
+        pageTitle: '自定义专属创作页',
         createProjectFn: async () => {
           createdProject += 1
           return { ok: false }
@@ -257,11 +259,16 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
             },
           }
         },
-        requestFn: async () => ({ ok: true, body: {} }),
+        requestFn: async (_url, opts) => {
+          const group = opts.body?.nodes?.find((n) => n.type === 'group')
+          savedGroupTitle = group?.data?.title
+          return { ok: true, body: {} }
+        },
       }
       const res = await createProjectForkFromManifest(manifest, mockDeps)
       assert.equal(createdProject, 0)
-      assert.equal(createdPageTitle, '手机与网页交互实机演示_副本')
+      assert.equal(createdPageTitle, '自定义专属创作页')
+      assert.equal(savedGroupTitle, '自定义专属创作页')
       assert.equal(res.workspaceId, 'ws_copy')
       assert.equal(res.project.id, 'proj_current')
       assert.equal(res.page.id, 'page-copy')
