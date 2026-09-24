@@ -135,12 +135,12 @@ export const EXPLORE_SUB_CATEGORIES = Object.freeze({
   ]),
   skills: Object.freeze([
     { id: 'all', nameZh: '全部技能', nameEn: 'All Skills' },
-    { id: 'ugc', nameZh: 'UGC 种草', nameEn: 'UGC' },
+    { id: 'ugc-testimonial', nameZh: 'UGC 种草', nameEn: 'UGC' },
     { id: 'video-ads', nameZh: '视频广告', nameEn: 'Video Ads' },
-    { id: 'script', nameZh: '故事分镜', nameEn: 'Scripts' },
-    { id: 'display', nameZh: '产品展示', nameEn: 'Showcase' },
-    { id: 'audio', nameZh: '配音与音频', nameEn: 'Voice & Audio' },
-    { id: 'image', nameZh: '静态图像', nameEn: 'Images' },
+    { id: 'product-showcase', nameZh: '产品展示', nameEn: 'Showcase' },
+    { id: 'storytelling', nameZh: '故事分镜', nameEn: 'Storytelling' },
+    { id: 'voice-audio', nameZh: '配音与音频', nameEn: 'Voice & Audio' },
+    { id: 'image-ads', nameZh: '静态图像', nameEn: 'Images' },
   ]),
 });
 

@@ -48,13 +48,14 @@ test('探索模板核心板块：单分组与 7 大精选应用卡片静态标�
 
   // 4. 验证一级核心大库按钮与专属图标
   assert.ok(html.includes('omnimux-explore-primary-tabs'), '必须包含一级主导航容器');
-  assert.ok(html.includes('data-primary-tab="featured"'), '必须包含精选一级项');
-  assert.ok(html.includes('data-primary-tab="assets"'), '必须包含资产库一级项');
-  assert.ok(html.includes('data-primary-tab="inspiration"'), '必须包含灵感库一级项');
-  assert.ok(html.includes('data-primary-tab="products"'), '必须包含商品库一级项');
-  assert.ok(html.includes('data-primary-tab="trending"'), '必须包含爆款趋势一级项');
-  assert.ok(html.includes('data-primary-tab="skills"'), '必须包含Skills一级项');
-  assert.ok(html.includes('svg'), '一级按钮必须包含专属图标');
+  const primaryTabs = ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills'];
+  for (const tab of primaryTabs) {
+    assert.match(
+      html,
+      new RegExp(`data-primary-tab="${tab}"[^>]*>[\\s\\S]*?<svg`),
+      `一级项 ${tab} 按钮必须包含独立的专属 svg 图标`
+    );
+  }
 
   // 5. 验证二级极简下划线选项卡与冗余提示移除
   assert.ok(html.includes('omnimux-explore-sub-tabs'), '必须包含二级细分选项卡容器');

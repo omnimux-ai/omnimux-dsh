@@ -15,6 +15,9 @@ import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
 import { openWorkbench } from '../../workbench/sidebar-controller.js';
 import { loadLibraryCards, promptForCard } from '../../composer-add/library-stage-model.js';
+import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPickerCard.jsx';
+import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
+import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';
 import { LibraryCard } from '../LibraryBrowser.jsx';
 
 /**
@@ -159,6 +162,13 @@ export function ExploreTemplatesSection({
 
   const currentLocale = useTemplateLocale(undefined, t);
   const isEn = String(currentLocale).toLowerCase().startsWith('en');
+
+  // 确保跨库渲染 LibraryCard 时基础卡片样式已全局注入
+  useEffect(() => {
+    ensureAssetCardStyles();
+    ensureProductCardStyles();
+    ensureInspirationCardStyles();
+  }, []);
 
   // 当切换到资产库/灵感库/商品库/爆款趋势时，自动加载其卡片数据
   useEffect(() => {
@@ -322,29 +332,18 @@ export function ExploreTemplatesSection({
   // 计算精选模板在网格视图下的数据集
   const featuredGridItems = useMemo(() => {
     if (activePrimaryTab !== 'featured' || selectedSubCategory === 'all') return [];
-
-    const cached = CATEGORY_DATA_CACHE.get(selectedSubCategory);
-    const now = Date.now();
-    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-      return cached.items;
-    }
-
-    const fullList = selectTemplatesByCategory(selectedSubCategory);
-    CATEGORY_DATA_CACHE.set(selectedSubCategory, {
-      items: fullList,
-      timestamp: now,
-    });
-    return fullList;
+    return selectTemplatesByCategory(selectedSubCategory);
   }, [activePrimaryTab, selectedSubCategory]);
 
   // 计算技能在选定二级分类下的数据集
   const filteredSkills = useMemo(() => {
     if (activePrimaryTab !== 'skills') return [];
     if (selectedSubCategory === 'all') return allSkillsItems;
+    const target = String(selectedSubCategory).toLowerCase();
     return allSkillsItems.filter((sk) => {
-      const cat = String(sk.categorySlug || '').toLowerCase();
-      const target = String(selectedSubCategory).toLowerCase();
-      return cat.includes(target) || (Array.isArray(sk.tags) && sk.tags.some(t => String(t).toLowerCase().includes(target)));
+      const cat = String(sk.categorySlug || sk.category || '').toLowerCase();
+      const tags = Array.isArray(sk.tags) ? sk.tags.map((t) => String(t).toLowerCase()) : [];
+      return cat.includes(target) || tags.some((t) => t.includes(target));
     });
   }, [activePrimaryTab, selectedSubCategory, allSkillsItems]);
 
@@ -352,10 +351,14 @@ export function ExploreTemplatesSection({
   const filteredLibraryCards = useMemo(() => {
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
     if (selectedSubCategory === 'all') return libraryData.cards;
+    const target = String(selectedSubCategory).toLowerCase();
     return libraryData.cards.filter((c) => {
+      const trending = c.trending || {};
       const raw = c.raw || {};
-      const cat = String(raw.category || raw.type || '').toLowerCase();
-      return cat.includes(String(selectedSubCategory).toLowerCase());
+      const cat = String(
+        trending.industry || trending.category || raw.category || raw.type || c.lane || ''
+      ).toLowerCase();
+      return cat.includes(target);
     });
   }, [activePrimaryTab, selectedSubCategory, libraryData.cards]);
 
@@ -436,7 +439,12 @@ export function ExploreTemplatesSection({
                 onSelectTemplate={handleItemRecreate}
                 onOpenDetail={handleOpenDetail}
                 onViewAll={(targetCat) => {
-                  setSelectedSubCategory(targetCat || 'all');
+                  if (targetCat === 'skills') {
+                    setActivePrimaryTab('skills');
+                    setSelectedSubCategory('all');
+                  } else {
+                    setSelectedSubCategory(targetCat || 'all');
+                  }
                 }}
                 t={t}
               />
@@ -475,6 +483,17 @@ export function ExploreTemplatesSection({
         <div className="omnimux-explore-grid-view-wrap">
           {libraryData.loading ? (
             <p className="omnimux-library-stage-status">正在加载素材…</p>
+          ) : libraryData.error ? (
+            <div className="omnimux-library-stage-status">
+              <p>{libraryData.error}</p>
+              <button /* exempt-ui01: retry button */
+                type="button"
+                className="omnimux-library-stage-retry"
+                onClick={() => handlePrimaryTabChange(activePrimaryTab)}
+              >
+                重试
+              </button>
+            </div>
           ) : filteredLibraryCards.length === 0 ? (
             <p className="omnimux-library-stage-status">暂无对应素材</p>
           ) : (
