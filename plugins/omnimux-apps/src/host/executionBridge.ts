@@ -212,6 +212,7 @@ export interface ExecutionBridgeOptions {
   manifest: ApplicationManifest;
   formValues: Record<string, unknown>;
   headlessSeam?: HeadlessExecutionSeam;
+  modelCatalog?: ModelCatalogLike | ModelCapabilityContract[];
   caller?: {
     pluginId?: string;
     appId?: string;
@@ -233,6 +234,267 @@ export interface ExecutionBridgeResult {
   injectedSnapshot: PreparedWorkflowSnapshot;
 }
 
+export interface ModelCapabilityContract {
+  id: string;
+  parameters?: {
+    duration?: {
+      options?: Array<number | { label?: string; value: number }>;
+      range?: { min?: number; max?: number; step?: number };
+      defaultValue?: number;
+      default?: number;
+      max?: number;
+      allowAuto?: boolean;
+    };
+    aspectRatio?: {
+      options?: Array<string | { label?: string; value: string }>;
+      defaultValue?: string;
+      default?: string;
+    };
+    resolution?: {
+      options?: Array<string | { label?: string; value: string }>;
+      defaultValue?: string;
+      default?: string;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface ModelCatalogLike {
+  models?: ModelCapabilityContract[];
+  video?: ModelCapabilityContract[];
+  image?: ModelCapabilityContract[];
+  [key: string]: unknown;
+}
+
+/**
+ * 离线权威模型能力兜底契约表（Fallback Metadata）。
+ * 运行时优先消费中枢 `modelCatalog` 动态契约；仅当动态目录不可用或缺少参数定义时回退至本表。
+ */
+export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityContract> = {
+  'seedance-2.0': {
+    id: 'seedance-2.0',
+    parameters: {
+      duration: {
+        range: { min: 4, max: 15, step: 1 },
+        defaultValue: 5,
+        max: 15,
+      },
+      aspectRatio: {
+        options: ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', 'adaptive'],
+        defaultValue: '16:9',
+      },
+      resolution: {
+        options: ['480p', '720p', '1080p', '4k'],
+        defaultValue: '720p',
+      },
+    },
+  },
+  'seedance-2-0': {
+    id: 'seedance-2-0',
+    parameters: {
+      duration: {
+        range: { min: 4, max: 15, step: 1 },
+        defaultValue: 5,
+        max: 15,
+      },
+      aspectRatio: {
+        options: ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', 'adaptive'],
+        defaultValue: '16:9',
+      },
+      resolution: {
+        options: ['480p', '720p', '1080p', '4k'],
+        defaultValue: '720p',
+      },
+    },
+  },
+  'minimax-h3': {
+    id: 'minimax-h3',
+    parameters: {
+      duration: {
+        range: { min: 4, max: 15, step: 1 },
+        defaultValue: 5,
+        max: 15,
+      },
+      aspectRatio: {
+        options: ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'],
+        defaultValue: '16:9',
+      },
+      resolution: {
+        options: ['2K', '768P'],
+        defaultValue: '2K',
+      },
+    },
+  },
+  'kling-v1-6': {
+    id: 'kling-v1-6',
+    parameters: {
+      duration: {
+        options: [5, 10],
+        defaultValue: 5,
+        max: 10,
+      },
+      aspectRatio: {
+        options: ['9:16', '16:9', '1:1'],
+        defaultValue: '9:16',
+      },
+      resolution: {
+        options: ['1080p'],
+        defaultValue: '1080p',
+      },
+    },
+  },
+  'kling-o3': {
+    id: 'kling-o3',
+    parameters: {
+      duration: {
+        options: [5, 10, 15],
+        defaultValue: 5,
+        max: 15,
+      },
+      aspectRatio: {
+        options: ['9:16', '16:9', '1:1'],
+        defaultValue: '9:16',
+      },
+      resolution: {
+        options: ['1080p', '4k'],
+        defaultValue: '1080p',
+      },
+    },
+  },
+  'kling-v2-master': {
+    id: 'kling-v2-master',
+    parameters: {
+      duration: {
+        options: [5, 10],
+        defaultValue: 5,
+        max: 10,
+      },
+      aspectRatio: {
+        options: ['9:16', '16:9', '1:1'],
+        defaultValue: '9:16',
+      },
+      resolution: {
+        options: ['1080p'],
+        defaultValue: '1080p',
+      },
+    },
+  },
+  'gpt-image-2.5': {
+    id: 'gpt-image-2.5',
+    parameters: {
+      aspectRatio: {
+        options: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
+        defaultValue: '16:9',
+      },
+      resolution: {
+        options: ['1K', '2K', '4K'],
+        defaultValue: '1K',
+      },
+    },
+  },
+  'flux-1-schnell': {
+    id: 'flux-1-schnell',
+    parameters: {
+      aspectRatio: {
+        options: ['1:1', '16:9', '9:16', '4:3', '3:4'],
+        defaultValue: '1:1',
+      },
+      resolution: {
+        options: ['1K', '2K'],
+        defaultValue: '1K',
+      },
+    },
+  },
+  'wan-3.0': {
+    id: 'wan-3.0',
+    parameters: {
+      duration: {
+        range: { min: 2, max: 30, step: 1 },
+        max: 30,
+        defaultValue: 5,
+        allowAuto: true,
+      },
+      aspectRatio: {
+        options: ['16:9', '9:16', '1:1'],
+        defaultValue: '16:9',
+      },
+      resolution: {
+        options: ['720p', '1080p'],
+        defaultValue: '720p',
+      },
+    },
+  },
+};
+
+export function resolveModelContract(
+  modelId: string,
+  customCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null,
+): ModelCapabilityContract | null {
+  if (!modelId || typeof modelId !== 'string') return null;
+  const normalizedId = modelId.trim().toLowerCase();
+  const strippedId = normalizedId.replace(/[-_.]/g, '');
+
+  const aliasKey = Object.keys(KNOWN_MODEL_CAPABILITY_CONTRACTS).find(
+    (k) => k === normalizedId || k.replace(/[-_.]/g, '') === strippedId,
+  );
+  const fallbackContract =
+    KNOWN_MODEL_CAPABILITY_CONTRACTS[normalizedId] ||
+    (aliasKey ? KNOWN_MODEL_CAPABILITY_CONTRACTS[aliasKey] : undefined);
+
+  if (customCatalog) {
+    let list: ModelCapabilityContract[] = [];
+    if (Array.isArray(customCatalog)) {
+      list = customCatalog;
+    } else if (typeof customCatalog === 'object' && customCatalog !== null) {
+      const cat = customCatalog;
+      if (Array.isArray(cat.models)) list.push(...cat.models);
+      if (Array.isArray(cat.video)) list.push(...cat.video);
+      if (Array.isArray(cat.image)) list.push(...cat.image);
+    }
+    const found = list.find((m) => {
+      if (!m || typeof m.id !== 'string') return false;
+      const mLower = m.id.trim().toLowerCase();
+      if (m.id === modelId || mLower === normalizedId || mLower.replace(/[-_.]/g, '') === strippedId) {
+        return true;
+      }
+      const aliases = (m as { aliases?: unknown[] }).aliases;
+      if (Array.isArray(aliases)) {
+        return aliases.some(
+          (a) =>
+            typeof a === 'string' &&
+            (a.trim().toLowerCase() === normalizedId ||
+              a.trim().toLowerCase().replace(/[-_.]/g, '') === strippedId),
+        );
+      }
+      return false;
+    });
+    if (found) {
+      const dynParams = found.parameters && typeof found.parameters === 'object' ? found.parameters : {};
+      const hasDynParams = Object.keys(dynParams).length > 0;
+      if (fallbackContract?.parameters) {
+        return {
+          ...fallbackContract,
+          ...found,
+          parameters: {
+            ...fallbackContract.parameters,
+            ...dynParams,
+          },
+        };
+      }
+      if (hasDynParams) {
+        return found;
+      }
+    }
+  }
+
+  if (fallbackContract) {
+    return fallbackContract;
+  }
+
+  return null;
+}
+
 /**
  * Step 1 & Step 2: Prepare and inject form parameters into a deep-cloned workflow snapshot.
  * Guarantees that the input manifest snapshot is NEVER modified in-place (Fail-Closed immutability).
@@ -240,6 +502,7 @@ export interface ExecutionBridgeResult {
 export function prepareAndInjectWorkflowSnapshot(
   manifest: ApplicationManifest,
   formValues: Record<string, unknown> = {},
+  options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null },
 ): PreparedWorkflowSnapshot {
   if (!manifest || typeof manifest !== 'object') {
     throw new ExecutionBridgeError('validation_failed', 'ApplicationManifest must be a valid object');
@@ -497,6 +760,127 @@ export function prepareAndInjectWorkflowSnapshot(
           ? generatorNode.data.params
           : {};
       generatorNode.data.params.model = selectedModel;
+
+      // 未公开隐藏参数的契约自愈 (Issue #2642)
+      // 遍历未在表单公开由作者固定的后台参数（node.data.params）并进行安全校准
+      const contract = resolveModelContract(selectedModel, options?.modelCatalog);
+      if (contract && contract.parameters) {
+        const exposedParamKeys = new Set<string>();
+        for (const mapping of Object.values(fieldMappings)) {
+          if (mapping.nodeId === generatorNode.id) {
+            const tp = ((mapping as any).targetPath || mapping.targetField || '').trim();
+            if (tp.startsWith('data.params.')) {
+              exposedParamKeys.add(tp.slice('data.params.'.length));
+            } else if (tp.startsWith('params.')) {
+              exposedParamKeys.add(tp.slice('params.'.length));
+            }
+          }
+        }
+
+        const params = generatorNode.data.params;
+
+        // 1. 时长校准：未在表单公开且存在时，根据新模型真实能力契约（离散选项吸附 / 连续区间截断 / -1哨兵放行）安全收敛
+        if (!exposedParamKeys.has('duration') && params.duration !== undefined && params.duration !== null) {
+          const currentDur = Number(params.duration);
+          if (!Number.isNaN(currentDur)) {
+            const durSpec = contract.parameters.duration;
+            if (durSpec) {
+              const allowAuto = Boolean(
+                durSpec.allowAuto ||
+                  (Array.isArray(durSpec.options) &&
+                    durSpec.options.some((o: unknown) =>
+                      typeof o === 'object' && o !== null && 'value' in o
+                        ? Number((o as { value: unknown }).value) === -1
+                        : Number(o) === -1,
+                    )),
+              );
+
+              // 哨兵值 -1 保护：若模型支持自适应，直接放行，不截断或吸附
+              if (currentDur === -1) {
+                if (!allowAuto) {
+                  const fallbackDur =
+                    durSpec.defaultValue ??
+                    durSpec.default ??
+                    (durSpec.range?.min !== undefined ? Number(durSpec.range.min) : undefined);
+                  if (fallbackDur !== undefined) {
+                    params.duration = fallbackDur;
+                  }
+                }
+              } else {
+                // 1.1 若模型声明了连续 range，执行 [min, max] 严格双向截断
+                if (durSpec.range && typeof durSpec.range === 'object') {
+                  const min = Number(durSpec.range.min ?? 1);
+                  const max = Number(durSpec.range.max ?? durSpec.max ?? 60);
+                  if (currentDur < min) {
+                    params.duration = min;
+                  } else if (currentDur > max) {
+                    params.duration = max;
+                  }
+                }
+                // 1.2 若模型未声明 range 但声明了离散 options，非法值吸附到最接近的合法选项
+                else if (Array.isArray(durSpec.options) && durSpec.options.length > 0) {
+                  const validValues = durSpec.options
+                    .map((o: unknown) =>
+                      typeof o === 'object' && o !== null && 'value' in o
+                        ? Number((o as { value: unknown }).value)
+                        : Number(o),
+                    )
+                    .filter((v: number) => !Number.isNaN(v) && v !== -1);
+
+                  if (validValues.length > 0 && !validValues.includes(currentDur)) {
+                    const closest = validValues.reduce((prev: number, curr: number) =>
+                      Math.abs(curr - currentDur) < Math.abs(prev - currentDur) ? curr : prev,
+                    );
+                    params.duration = closest;
+                  }
+                }
+                // 1.3 仅声明 max 的保底截断
+                else if (durSpec.max !== undefined && currentDur > Number(durSpec.max)) {
+                  params.duration = Number(durSpec.max);
+                }
+              }
+            }
+          }
+        }
+
+        // 2. 比例校准：未在表单公开且存在时，若不被新模型支持，自动收敛为新模型默认比例
+        if (!exposedParamKeys.has('aspectRatio') && params.aspectRatio !== undefined && params.aspectRatio !== null) {
+          const ratioSpec = contract.parameters.aspectRatio;
+          if (ratioSpec && Array.isArray(ratioSpec.options) && ratioSpec.options.length > 0) {
+            const validRatios = ratioSpec.options.map((o: unknown) =>
+              typeof o === 'object' && o !== null && 'value' in o ? String((o as { value: unknown }).value) : String(o),
+            );
+            if (!validRatios.includes(String(params.aspectRatio))) {
+              const defRatio = ratioSpec.defaultValue || ratioSpec.default || validRatios[0];
+              if (defRatio) {
+                params.aspectRatio = defRatio;
+              }
+            }
+          }
+        }
+
+        // 3. 分辨率校准：未在表单公开且存在时，若不被新模型支持，自动收敛为新模型默认分辨率
+        if (!exposedParamKeys.has('resolution') && params.resolution !== undefined && params.resolution !== null) {
+          const resSpec = contract.parameters.resolution;
+          if (resSpec && Array.isArray(resSpec.options) && resSpec.options.length > 0) {
+            const validRes = resSpec.options.map((o: unknown) =>
+              typeof o === 'object' && o !== null && 'value' in o ? String((o as { value: unknown }).value).toLowerCase() : String(o).toLowerCase(),
+            );
+            if (!validRes.includes(String(params.resolution).toLowerCase())) {
+              const firstOpt = resSpec.options[0];
+              const defRes =
+                resSpec.defaultValue ||
+                resSpec.default ||
+                (typeof firstOpt === 'object' && firstOpt !== null && 'value' in firstOpt
+                  ? (firstOpt as { value: string }).value
+                  : String(firstOpt));
+              if (defRes) {
+                params.resolution = defRes;
+              }
+            }
+          }
+        }
+      }
     } else {
       console.warn(
         `[omnimux:executionBridge] 指定了模型 ${selectedModel}，但在工作流快照中未定位到主生成引擎节点，无法执行模型动态穿透`,
@@ -525,7 +909,9 @@ export async function executeAppWorkflow(options: ExecutionBridgeOptions): Promi
   }
 
   // 1 & 2: Prepare and inject parameters into deep-cloned snapshot
-  const injectedSnapshot = prepareAndInjectWorkflowSnapshot(manifest, formValues);
+  const injectedSnapshot = prepareAndInjectWorkflowSnapshot(manifest, formValues, {
+    modelCatalog: options.modelCatalog,
+  });
 
   // 3: Call Canvas HeadlessExecutionSeam
   try {

@@ -599,4 +599,197 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
       console.warn = origWarn;
     }
   });
+
+  it('T05.17: auto-heals undisclosed hidden parameters (duration, aspectRatio, resolution) against model contract (Issue #2642)', () => {
+    const manifest = createMockManifest();
+    // 移除表单中对 aspectRatio 的公开映射，仅公开 topic 字段
+    // 此时主生成节点的 params.duration, params.aspectRatio, params.resolution 均为未公开的作者固定后台参数
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        targetPath: 'data.content',
+        mappingType: 'text',
+        widget: 'textarea',
+        required: true,
+      },
+    };
+
+    const genNode = manifest.workflowBinding.snapshot.nodes.find((n) => n.id === 'node_generator');
+    // 作者后台写死未公开参数：时长 10s，比例 21:9，分辨率 4k
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 10,
+      aspectRatio: '21:9',
+      resolution: '4k',
+    };
+
+    // 1. 切到只支持最大 5s 的定制模型（通过 customCatalog 传入）
+    const custom5sCatalog = [
+      {
+        id: 'fast-video-5s',
+        parameters: {
+          duration: {
+            options: [5],
+            max: 5,
+            defaultValue: 5,
+          },
+          aspectRatio: {
+            options: ['16:9', '9:16'],
+            defaultValue: '16:9',
+          },
+          resolution: {
+            options: ['720p'],
+            defaultValue: '720p',
+          },
+        },
+      },
+    ];
+
+    const injected = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试隐藏参数自愈',
+        __model__: 'fast-video-5s',
+      },
+      { modelCatalog: custom5sCatalog },
+    );
+
+    const targetNode = injected.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(targetNode);
+    // 核心断言：未公开时长 10s 在切到只支持 5s 的模型时，节点 params.duration 被安全校准为 5s，彻底避免提交被拒
+    assert.equal(targetNode.data.params.duration, 5, '未公开时长 10s 必须被安全校准为 5s');
+    // 比例 21:9 不被新模型支持，平滑重置为新模型默认比例 16:9
+    assert.equal(targetNode.data.params.aspectRatio, '16:9', '未公开比例必须被安全校准为默认比例');
+    // 分辨率 4k 不被新模型支持，平滑重置为新模型默认分辨率 720p
+    assert.equal(targetNode.data.params.resolution, '720p', '未公开分辨率必须被安全校准为默认分辨率');
+
+    // 2. 切到已知内置模型 Kling v1.6（支持 5/10s，比例 9:16/16:9/1:1，不支持 21:9）
+    const injectedKling = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '切换到可灵',
+      __model__: 'kling-v1-6',
+    });
+    const targetKlingNode = injectedKling.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(targetKlingNode.data.params.duration, 10, 'Kling 支持 10s，故保留 10s');
+    assert.equal(targetKlingNode.data.params.aspectRatio, '9:16', 'Kling 不支持 21:9，自动平滑收敛为 Kling 默认 9:16');
+    assert.equal(targetKlingNode.data.params.resolution, '1080p', 'Kling 不支持 4k，自动平滑收敛为 Kling 默认 1080p');
+
+    // 3. 原 manifest snapshot 严格保持不可变
+    assert.equal(genNode.data.params.duration, 10);
+    assert.equal(genNode.data.params.aspectRatio, '21:9');
+    assert.equal(genNode.data.params.resolution, '4k');
+
+    // 4. 离散选项吸附测试：节点预设 7s 与 9s，切换到只有 [5, 10] 的模型
+    genNode.data.params.duration = 7;
+    const snapSnap7 = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试离散吸附',
+      __model__: 'kling-v1-6',
+    });
+    assert.equal(snapSnap7.nodes.find((n) => n.id === 'node_generator').data.params.duration, 5, '7s 应吸附到最接近的 5s');
+
+    genNode.data.params.duration = 9;
+    const snapSnap9 = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试离散吸附',
+      __model__: 'kling-v1-6',
+    });
+    assert.equal(snapSnap9.nodes.find((n) => n.id === 'node_generator').data.params.duration, 10, '9s 应吸附到最接近的 10s');
+
+    // 5. 连续区间 range 双向截断测试（MiniMax H3: 4-15s，分辨率 2K/768P，比例含 3:4）
+    genNode.data.params.duration = 2; // 低于 min 4s
+    genNode.data.params.resolution = '1080p'; // 不在 ['2K', '768P']
+    genNode.data.params.aspectRatio = '3:4'; // 合法比例
+    const snapMiniMax = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试 MiniMax 契约',
+      __model__: 'minimax-h3',
+    });
+    const miniMaxTarget = snapMiniMax.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(miniMaxTarget.data.params.duration, 4, '低于 min 的 2s 应双向截断提升至 4s');
+    assert.equal(miniMaxTarget.data.params.aspectRatio, '3:4', '合法 3:4 比例应保留');
+    assert.equal(miniMaxTarget.data.params.resolution, '2K', '非法分辨率应收敛至默认 2K');
+
+    // 6. 哨兵值 -1 保护：wan-3.0 具备 allowAuto，原时长 -1 必须放行保护
+    genNode.data.params.duration = -1;
+    const snapWan = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试 -1 哨兵放行',
+      __model__: 'wan-3.0',
+    });
+    assert.equal(snapWan.nodes.find((n) => n.id === 'node_generator').data.params.duration, -1, 'allowAuto 模型的 -1 必须原样放行');
+
+    // 7. 扁平化 customCatalog buckets：image 数组中的图像模型契约可被正确检索与自愈
+    const imageCatalogObj = {
+      video: [{ id: 'seedance-2.0', parameters: {} }],
+      image: [
+        {
+          id: 'custom-art-gen',
+          parameters: {
+            aspectRatio: { options: ['1:1', '16:9'], defaultValue: '1:1' },
+            resolution: { options: ['1K', '2K'], defaultValue: '1K' },
+          },
+        },
+      ],
+    };
+    genNode.data.params = {
+      model: 'custom-art-gen',
+      aspectRatio: '9:16', // 不在 ['1:1', '16:9']
+      resolution: '4K', // 不在 ['1K', '2K']
+    };
+    const snapImageCat = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试图像模型目录合并',
+        __model__: 'custom-art-gen',
+      },
+      { modelCatalog: imageCatalogObj },
+    );
+    const imgNode = snapImageCat.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(imgNode.data.params.aspectRatio, '1:1', '从 image bucket 解析的契约正确自愈比例');
+    assert.equal(imgNode.data.params.resolution, '1K', '从 image bucket 解析的契约正确自愈分辨率');
+
+    // 8. 动态目录条目 parameters 为空对象 {} 时，自动回退合并 KNOWN_MODEL_CAPABILITY_CONTRACTS 兜底表
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 25, // 超过 seedance-2.0 上限 15s
+      aspectRatio: '3:2', // 不在 seedance-2.0 比例列表中
+      resolution: '8k', // 不在 seedance-2.0 分辨率列表中
+    };
+    const snapEmptyParams = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试空参数动态目录回退兜底表',
+        __model__: 'seedance-2.0',
+      },
+      { modelCatalog: { video: [{ id: 'seedance-2.0', parameters: {} }] } },
+    );
+    const fallbackNode = snapEmptyParams.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(fallbackNode.data.params.duration, 15, '空 parameters 动态条目应回退兜底契约并将 25s 截断至 15s');
+    assert.equal(fallbackNode.data.params.aspectRatio, '16:9', '空 parameters 动态条目应回退兜底契约重置比例为 16:9');
+    assert.equal(fallbackNode.data.params.resolution, '720p', '空 parameters 动态条目应回退兜底契约重置分辨率为 720p');
+
+    // 9. 动态目录别名归一化：目录中 ID 为 seedance-2-0，前端提交 seedance-2.0 时正确命中动态契约
+    const aliasCatalog = {
+      video: [
+        {
+          id: 'seedance-2-0',
+          parameters: {
+            duration: { range: { min: 4, max: 12, step: 1 }, defaultValue: 5 },
+          },
+        },
+      ],
+    };
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 15,
+      aspectRatio: '16:9',
+      resolution: '720p',
+    };
+    const snapAlias = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试动态目录符号归一化匹配',
+        __model__: 'seedance-2.0',
+      },
+      { modelCatalog: aliasCatalog },
+    );
+    const aliasNode = snapAlias.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(aliasNode.data.params.duration, 12, '通过 -_. 归一化命中动态目录中的 seedance-2-0 并将 15s 截断为 12s');
+  });
 });

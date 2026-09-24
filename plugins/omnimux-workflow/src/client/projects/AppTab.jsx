@@ -28,6 +28,14 @@ import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
 import {
   resolveOptions,
   resolveModelAspectRatios,
+  isAspectRatioSupported,
+  resolveModelDurations,
+  resolveModelResolutions,
+  sanitizeModelDuration,
+  sanitizeModelResolution,
+  isAspectRatioField,
+  isDurationField,
+  isResolutionField,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
@@ -36,6 +44,14 @@ import {
 export {
   resolveOptions,
   resolveModelAspectRatios,
+  isAspectRatioSupported,
+  resolveModelDurations,
+  resolveModelResolutions,
+  sanitizeModelDuration,
+  sanitizeModelResolution,
+  isAspectRatioField,
+  isDurationField,
+  isResolutionField,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
@@ -60,13 +76,26 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '21:9 超宽屏', value: '21:9' },
           ],
         },
+        duration: {
+          range: { min: 4, max: 15, step: 1 },
+          defaultValue: 5,
+        },
+        resolution: {
+          defaultValue: '720p',
+          options: [
+            { label: '480p', value: '480p' },
+            { label: '720p', value: '720p' },
+            { label: '1080p', value: '1080p' },
+            { label: '4k', value: '4k' },
+          ],
+        },
       },
     },
     {
       id: 'minimax-h3',
       name: 'MiniMax H3',
       label: 'MiniMax H3',
-      subtitle: '768p/1080p · 强叙事高动态',
+      subtitle: '768P/2K · 4–15s · 强叙事高动态',
       parameters: {
         aspectRatio: {
           defaultValue: '16:9',
@@ -75,7 +104,19 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '9:16 竖屏', value: '9:16' },
             { label: '1:1 方屏', value: '1:1' },
             { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
             { label: '21:9 超宽屏', value: '21:9' },
+          ],
+        },
+        duration: {
+          range: { min: 4, max: 15, step: 1 },
+          defaultValue: 5,
+        },
+        resolution: {
+          defaultValue: '2K',
+          options: [
+            { label: '2K 超清', value: '2K' },
+            { label: '768P 高清', value: '768P' },
           ],
         },
       },
@@ -94,6 +135,19 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '1:1 方屏', value: '1:1' },
           ],
         },
+        duration: {
+          options: [
+            { label: '5s', value: 5 },
+            { label: '10s', value: 10 },
+          ],
+          defaultValue: 5,
+        },
+        resolution: {
+          defaultValue: '1080p',
+          options: [
+            { label: '1080p', value: '1080p' },
+          ],
+        },
       },
     },
     {
@@ -110,6 +164,49 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '1:1 方屏', value: '1:1' },
           ],
         },
+        duration: {
+          options: [
+            { label: '5s', value: 5 },
+            { label: '10s', value: 10 },
+            { label: '15s', value: 15 },
+          ],
+          defaultValue: 5,
+        },
+        resolution: {
+          defaultValue: '1080p',
+          options: [
+            { label: '1080p', value: '1080p' },
+            { label: '4k', value: '4k' },
+          ],
+        },
+      },
+    },
+    {
+      id: 'wan-3.0',
+      name: '通义万相 Wan 3.0',
+      label: '通义万相 Wan 3.0',
+      subtitle: '2–30s · 自由时长生成',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: [
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '1:1 方屏', value: '1:1' },
+          ],
+        },
+        duration: {
+          range: { min: 2, max: 30, step: 1 },
+          defaultValue: 5,
+          allowAuto: true,
+        },
+        resolution: {
+          defaultValue: '720p',
+          options: [
+            { label: '720p', value: '720p' },
+            { label: '1080p', value: '1080p' },
+          ],
+        },
       },
     },
   ],
@@ -118,17 +215,28 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
       id: 'gpt-image-2.5',
       name: 'GPT Image 2.5',
       label: 'GPT Image 2.5',
-      subtitle: '超清摄影质感 · 多主体一致性',
+      subtitle: '1k-4k · 超清摄影质感',
       parameters: {
         aspectRatio: {
-          defaultValue: '1:1',
+          defaultValue: '16:9',
           options: [
+            { label: '自适应', value: 'auto' },
             { label: '1:1 方屏', value: '1:1' },
             { label: '16:9 横屏', value: '16:9' },
             { label: '9:16 竖屏', value: '9:16' },
             { label: '4:3', value: '4:3' },
             { label: '3:4', value: '3:4' },
+            { label: '3:2', value: '3:2' },
+            { label: '2:3', value: '2:3' },
             { label: '21:9 超宽屏', value: '21:9' },
+          ],
+        },
+        resolution: {
+          defaultValue: '1K',
+          options: [
+            { label: '1K', value: '1K' },
+            { label: '2K', value: '2K' },
+            { label: '4K', value: '4K' },
           ],
         },
       },
@@ -147,6 +255,13 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '9:16 竖屏', value: '9:16' },
             { label: '4:3', value: '4:3' },
             { label: '3:4', value: '3:4' },
+          ],
+        },
+        resolution: {
+          defaultValue: '1K',
+          options: [
+            { label: '1K', value: '1K' },
+            { label: '2K', value: '2K' },
           ],
         },
       },
@@ -202,6 +317,8 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
             defaultValue,
             options,
           },
+          duration: m.parameters?.duration,
+          resolution: m.parameters?.resolution,
         },
       }
     })
@@ -210,6 +327,54 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
     return KNOWN_OFFICIAL_MODELS[targetCategory] || KNOWN_OFFICIAL_MODELS.video
   }
   return normalized
+}
+
+/**
+ * 根据模型 ID 从当前可用模型列表或内置官方模型规范表中解析真实模型契约对象。
+ * 支持符号归一化比对（将 `-`、`_`、`.` 统一），消除展示名称与激活契约对象的模型分歧。
+ */
+export function resolveKnownModelSpec(modelId, availableModels = []) {
+  if (!modelId || typeof modelId !== 'string') return null
+  const trimmed = modelId.trim()
+  if (!trimmed) return null
+  const lower = trimmed.toLowerCase()
+  const stripped = lower.replace(/[-_.]/g, '')
+
+  const matchFn = (m) => {
+    if (!m || typeof m.id !== 'string') return false
+    const mLower = m.id.trim().toLowerCase()
+    return m.id === trimmed || mLower === lower || mLower.replace(/[-_.]/g, '') === stripped
+  }
+
+  if (Array.isArray(availableModels)) {
+    const inAvail = availableModels.find(matchFn)
+    if (inAvail) return inAvail
+  }
+
+  const allKnown = [
+    ...(KNOWN_OFFICIAL_MODELS.video || []),
+    ...(KNOWN_OFFICIAL_MODELS.image || []),
+  ]
+  return allKnown.find(matchFn) || null
+}
+
+/**
+ * 统一推导单选下拉与分段切换控件的模型动态选项（分辨率 / 时长）
+ */
+export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur) {
+  let opts = resolveOptions(prop)
+  if (isRes) {
+    const modelResolutions = resolveModelResolutions(activeModelObj, prop)
+    if (modelResolutions && modelResolutions.length > 0) {
+      opts = modelResolutions
+    }
+  } else if (isDur) {
+    const durSpec = resolveModelDurations(activeModelObj, prop)
+    if (durSpec.options && durSpec.options.length > 0) {
+      opts = durSpec.options
+    }
+  }
+  return opts
 }
 
 const EMPTY_PROPS = Object.freeze({})
@@ -570,28 +735,63 @@ export function AppTab(props) {
 
   const defaultNodeModelId = useMemo(() => {
     const nodes = manifest?.workflowBinding?.snapshot?.nodes || []
+    // 优先主生成节点（omnimux_video_submit / omnimux_image_submit / node.type === 'video' | 'image'）
     for (const node of nodes) {
       const d = node.data || {}
-      if (d.model) return String(d.model)
-      if (d.params?.model) return String(d.params.model)
-      if (node.type === 'video' || d.materialType === 'video' || d.tool === 'omnimux_video_submit') {
-        if (d.model || d.params?.model) return String(d.model || d.params?.model)
+      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
+        continue
+      }
+      const isGenNode =
+        d.tool === 'omnimux_video_submit' ||
+        d.tool === 'omnimux_image_submit' ||
+        node.type === 'video' ||
+        node.type === 'image' ||
+        d.type === 'video' ||
+        d.type === 'image' ||
+        d.materialType === 'video' ||
+        d.materialType === 'image'
+
+      if (isGenNode && (d.model || d.params?.model)) {
+        const mid = String(d.model || d.params?.model)
+        return mid === 'seedance-2-0' ? 'seedance-2.0' : mid
+      }
+    }
+
+    // 次优先：其它带有 model/params.model 的非 import 节点
+    for (const node of nodes) {
+      const d = node.data || {}
+      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
+        continue
+      }
+      if (d.model || d.params?.model) {
+        const mid = String(d.model || d.params?.model)
+        return mid === 'seedance-2-0' ? 'seedance-2.0' : mid
       }
     }
     return ''
   }, [manifest])
 
+  const defaultModelObj = useMemo(() => {
+    if (!defaultNodeModelId) return null
+    return resolveKnownModelSpec(defaultNodeModelId, availableModels)
+  }, [defaultNodeModelId, availableModels])
+
   const activeModelObj = useMemo(() => {
     if (selectedModel) {
-      const found = availableModels.find((m) => m.id === selectedModel)
+      const found = resolveKnownModelSpec(selectedModel, availableModels)
       if (found) return found
     }
-    if (defaultNodeModelId) {
-      const found = availableModels.find((m) => m.id === defaultNodeModelId)
-      if (found) return found
+    if (defaultModelObj) {
+      return defaultModelObj
     }
     return availableModels[0] || null
-  }, [selectedModel, defaultNodeModelId, availableModels])
+  }, [selectedModel, defaultModelObj, availableModels])
+
+  const defaultModelName = useMemo(() => {
+    if (!defaultNodeModelId) return ''
+    if (defaultModelObj) return defaultModelObj.name || defaultModelObj.id
+    return activeModelObj?.name || ''
+  }, [defaultNodeModelId, defaultModelObj, activeModelObj])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
@@ -665,38 +865,61 @@ export function AppTab(props) {
     }
   }, [manifest?.appId, initialFormValues])
 
-  // 监听模型与有效比例切换，若成片比例不被新模型支持，自动自愈收敛为新模型默认比例 (Issue #2631)
+  // 监听模型切换，若已选参数不被新模型支持，自动自愈收敛为新模型合法值 (Issue #2631, #2642)
+  // 注意：依赖项不包含 formValues，避免用户在时长/数值输入框连续输入多位数时被强制 clamp 打断
   useEffect(() => {
-    // 仅当用户显式选择了特定模型（selectedModel !== ''）时，才触发强制比例收敛；默认智能推荐状态下，完全尊重应用 Schema 声明的原生默认比例
+    // 仅当用户显式选择了特定模型（selectedModel !== ''）时，才触发强制参数自愈收敛；默认智能推荐状态下，完全尊重应用 Schema 声明的原生默认参数
     if (!selectedModel || !activeModelObj) return
-    const modelRatios = resolveModelAspectRatios(activeModelObj, null)
-    if (!modelRatios || modelRatios.length === 0) return
-    const validRatioValues = modelRatios.map((r) => String(r.value))
 
-    for (const [key, prop] of Object.entries(properties)) {
-      const widget = resolveWidget(key, prop, manifest?.fieldMappings?.[key])
-      if (widget === 'ratio-cards' || key === 'aspect_ratio' || key === 'aspectRatio') {
-        const currentVal = formValues[key]
-        if (currentVal && !validRatioValues.includes(String(currentVal))) {
-          const fallbackVal =
-            activeModelObj.parameters?.aspectRatio?.defaultValue ||
-            activeModelObj.parameters?.aspectRatio?.default ||
-            validRatioValues[0]
-          if (fallbackVal) {
-            setFormValues((prev) => {
-              if (prev[key] && validRatioValues.includes(String(prev[key]))) {
-                return prev
+    setFormValues((prev) => {
+      let next = prev
+      for (const [key, prop] of Object.entries(properties)) {
+        const mapping = manifest?.fieldMappings?.[key]
+
+        // 1. 比例自愈校验
+        if (isAspectRatioField(key, prop, mapping)) {
+          const modelRatios = resolveModelAspectRatios(activeModelObj, null)
+          if (modelRatios && modelRatios.length > 0) {
+            const validRatioValues = modelRatios.map((r) => String(r.value))
+            const currentVal = next[key]
+            if (currentVal && !validRatioValues.includes(String(currentVal))) {
+              const fallbackVal =
+                activeModelObj.parameters?.aspectRatio?.defaultValue ||
+                activeModelObj.parameters?.aspectRatio?.default ||
+                validRatioValues[0]
+              if (fallbackVal) {
+                if (next === prev) next = { ...prev }
+                next[key] = String(fallbackVal)
               }
-              return {
-                ...prev,
-                [key]: String(fallbackVal),
-              }
-            })
+            }
+          }
+        }
+        // 2. 时长自愈校验
+        else if (isDurationField(key, prop, mapping)) {
+          const currentVal = next[key]
+          if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
+            const sanitized = sanitizeModelDuration(activeModelObj, currentVal)
+            if (sanitized !== undefined && sanitized !== currentVal) {
+              if (next === prev) next = { ...prev }
+              next[key] = sanitized
+            }
+          }
+        }
+        // 3. 分辨率自愈校验
+        else if (isResolutionField(key, prop, mapping)) {
+          const currentVal = next[key]
+          if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
+            const sanitized = sanitizeModelResolution(activeModelObj, currentVal)
+            if (sanitized !== undefined && sanitized !== currentVal) {
+              if (next === prev) next = { ...prev }
+              next[key] = sanitized
+            }
           }
         }
       }
-    }
-  }, [selectedModel, activeModelObj, properties, manifest, formValues])
+      return next
+    })
+  }, [selectedModel, activeModelObj, properties, manifest])
 
   const handleFieldChange = useCallback((key, val) => {
     setFormValues((prev) => ({ ...prev, [key]: val }))
@@ -861,6 +1084,24 @@ export function AppTab(props) {
     }
 
     const effectiveFormValues = { ...formValues }
+    for (const [key, prop] of Object.entries(properties)) {
+      const mapping = manifest?.fieldMappings?.[key]
+      const rawVal = effectiveFormValues[key]
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue
+      if (selectedModel && isDurationField(key, prop, mapping) && activeModelObj) {
+        const sanitized = sanitizeModelDuration(activeModelObj, rawVal)
+        if (sanitized !== undefined && sanitized !== rawVal) {
+          effectiveFormValues[key] = sanitized
+        }
+      } else if ((prop.type === 'number' || prop.type === 'integer') && typeof rawVal === 'number' && !Number.isNaN(rawVal)) {
+        let clamped = rawVal
+        if (typeof prop.minimum === 'number' && clamped < prop.minimum) clamped = prop.minimum
+        if (typeof prop.maximum === 'number' && clamped > prop.maximum) clamped = prop.maximum
+        if (clamped !== rawVal) {
+          effectiveFormValues[key] = clamped
+        }
+      }
+    }
     if (selectedModel && selectedModel.trim()) {
       effectiveFormValues.__model__ = selectedModel.trim()
     }
@@ -1244,7 +1485,7 @@ export function AppTab(props) {
       <div className="omx-apptab-body">
         {/* 左侧动态表单面板：规范外宽 448px，左右内边距各 24px，内可用宽 398px */}
         <div className="omx-apptab-form-panel">
-          <form className="omx-apptab-form" onSubmit={handleGenerate}>
+          <form className="omx-apptab-form" onSubmit={handleGenerate} noValidate>
             <div className="omx-apptab-form-fields">
               {/* 生成模型选择器 */}
               <div className={`omx-apptab-field-group ${openDropdownKey === '__model_selector__' ? 'is-dropdown-open' : ''}`}>
@@ -1263,7 +1504,9 @@ export function AppTab(props) {
                     <span>
                       {selectedModel
                         ? (availableModels.find((m) => m.id === selectedModel)?.name || selectedModel)
-                        : '智能推荐 (默认)'}
+                        : defaultModelName
+                          ? `${defaultModelName} (工程默认 · 作者推荐)`
+                          : '智能推荐 (默认)'}
                     </span>
                     <IconChevronDown size={14} />
                   </div>
@@ -1279,8 +1522,16 @@ export function AppTab(props) {
                         }}
                       >
                         <div className="omx-apptab-model-option-content">
-                          <span className="omx-apptab-model-name">智能推荐 (默认)</span>
-                          <span className="omx-apptab-model-sub">系统根据应用场景自动调度最佳生成模型</span>
+                          <span className="omx-apptab-model-name">
+                            {defaultModelName
+                              ? `${defaultModelName} (工程默认 · 作者推荐)`
+                              : '智能推荐 (默认)'}
+                          </span>
+                          <span className="omx-apptab-model-sub">
+                            {defaultModelName
+                              ? '当前工程节点预设模型，与分镜提示词深度调优'
+                              : '系统根据应用场景自动调度最佳生成模型'}
+                          </span>
                         </div>
                         {selectedModel === '' && <IconCheck size={12} className="omx-apptab-option-check" />}
                       </div>
@@ -1314,8 +1565,12 @@ export function AppTab(props) {
                 const error = errors[key]
                 const val = formValues[key] ?? ''
                 const title = prop.title || manifest.fieldMappings?.[key]?.fieldTitle || key
-                const desc = prop.description || manifest.fieldMappings?.[key]?.fieldDescription
-                const widget = resolveWidget(key, prop, manifest.fieldMappings?.[key])
+                const mapping = manifest.fieldMappings?.[key]
+                const desc = prop.description || mapping?.fieldDescription
+                const widget = resolveWidget(key, prop, mapping)
+
+                const isDur = isDurationField(key, prop, mapping)
+                const isRes = isResolutionField(key, prop, mapping)
 
                 const isDropdownOpen = openDropdownKey === key
 
@@ -1368,7 +1623,7 @@ export function AppTab(props) {
                       ) : widget === 'select-single' ? (
                       /* 2. 定制下拉选择器 */
                       (() => {
-                        const opts = resolveOptions(prop)
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
                         const currentOpt = opts.find((o) => String(o.value) === String(val))
                         const displayLabel = currentOpt ? currentOpt.label : (val || prop.placeholder || '请选择')
                         const isOpen = openDropdownKey === key
@@ -1408,7 +1663,7 @@ export function AppTab(props) {
                     ) : widget === 'segmented-tabs' ? (
                       /* 3. 选项卡分段切换 */
                       (() => {
-                        const opts = resolveOptions(prop)
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
                         return (
                           <div className="omx-apptab-seg-tabs" role="tablist">
                             {opts.map((opt) => {
@@ -1754,15 +2009,42 @@ export function AppTab(props) {
                         <span>启用 {title}</span>
                       </label>
                     ) : widget === 'slider-range' || prop.type === 'number' || prop.type === 'integer' ? (
-                      <input
-                        type="number"
-                        className={`omx-apptab-input ${error ? 'is-error' : ''}`}
-                        value={val}
-                        min={prop.minimum}
-                        max={prop.maximum}
-                        step={prop.type === 'integer' ? 1 : 'any'}
-                        onChange={(e) => handleFieldChange(key, e.target.value === '' ? '' : Number(e.target.value))}
-                      />
+                      (() => {
+                        const durSpec = isDur ? resolveModelDurations(activeModelObj, prop) : null
+                        const min = durSpec?.range?.min ?? prop.minimum
+                        const max = durSpec?.range?.max ?? prop.maximum
+                        const step = durSpec?.range?.step ?? (prop.type === 'integer' ? 1 : 'any')
+                        return (
+                          <input
+                            type="number"
+                            className={`omx-apptab-input ${error ? 'is-error' : ''}`}
+                            value={val}
+                            min={min}
+                            max={max}
+                            step={step}
+                            onChange={(e) => handleFieldChange(key, e.target.value === '' ? '' : Number(e.target.value))}
+                            onBlur={(e) => {
+                              const raw = e.target.value
+                              if (raw === '' || raw === undefined || raw === null) return
+                              const num = Number(raw)
+                              if (Number.isNaN(num)) return
+                              if (selectedModel && isDur && activeModelObj) {
+                                const sanitized = sanitizeModelDuration(activeModelObj, num)
+                                if (sanitized !== undefined && sanitized !== num) {
+                                  handleFieldChange(key, sanitized)
+                                }
+                              } else {
+                                let clamped = num
+                                if (typeof min === 'number' && clamped < min) clamped = min
+                                if (typeof max === 'number' && clamped > max) clamped = max
+                                if (clamped !== num) {
+                                  handleFieldChange(key, clamped)
+                                }
+                              }
+                            }}
+                          />
+                        )
+                      })()
                     ) : widget === 'textarea' || (key.toLowerCase().includes('prompt') || prop.title?.includes('提示') || prop.maxLength > 100) ? (
                       <textarea
                         className={`omx-apptab-textarea ${error ? 'is-error' : ''}`}

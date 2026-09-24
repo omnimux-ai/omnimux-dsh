@@ -36,10 +36,13 @@ import {
 } from './executionBridge.ts';
 import { registerAppsApiRoutes } from './routes.ts';
 import type {
+  ExecutionBridgeOptions,
   ExecutionBridgeResult,
   PreparedWorkflowSnapshot,
   HeadlessExecutionSeam,
   WorkflowJobStatus,
+  ModelCatalogLike,
+  ModelCapabilityContract,
 } from './executionBridge.ts';
 
 export interface OmnimuxAppsService {
@@ -52,11 +55,19 @@ export interface OmnimuxAppsService {
   listTasks(appId: string, limit?: number): Promise<TaskRecord[]>;
   validateManifest(manifest: unknown): { valid: boolean; errors: string[] };
   validateFormData(schema: RestrictedJsonSchema, data: unknown): { valid: boolean; errors: string[] };
-  prepareSnapshot(manifest: ApplicationManifest, formValues?: Record<string, unknown>): PreparedWorkflowSnapshot;
+  prepareSnapshot(
+    manifest: ApplicationManifest,
+    formValues?: Record<string, unknown>,
+    options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null },
+  ): PreparedWorkflowSnapshot;
   executeApp(
     manifest: ApplicationManifest,
     formValues: Record<string, unknown>,
     headlessSeam: HeadlessExecutionSeam,
+    options?: {
+      modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null;
+      caller?: ExecutionBridgeOptions['caller'];
+    },
   ): Promise<ExecutionBridgeResult>;
   getJobStatus(executionId: string, headlessSeam: HeadlessExecutionSeam): Promise<WorkflowJobStatus | null>;
   cancelJob(executionId: string, headlessSeam: HeadlessExecutionSeam): Promise<{ success: boolean; canceledAt: string }>;
@@ -74,9 +85,16 @@ export function createAppsService(options?: AppStorageOptions): OmnimuxAppsServi
     listTasks: (appId, limit) => storage.listTasks(appId, limit),
     validateManifest: (manifest) => validateApplicationManifest(manifest),
     validateFormData: (schema, data) => validateFormData(schema, data),
-    prepareSnapshot: (manifest, formValues) => prepareAndInjectWorkflowSnapshot(manifest, formValues),
-    executeApp: (manifest, formValues, headlessSeam) =>
-      executeAppWorkflow({ manifest, formValues, headlessSeam }),
+    prepareSnapshot: (manifest, formValues, snapOpts) =>
+      prepareAndInjectWorkflowSnapshot(manifest, formValues, snapOpts),
+    executeApp: (manifest, formValues, headlessSeam, execOpts) =>
+      executeAppWorkflow({
+        manifest,
+        formValues,
+        headlessSeam,
+        modelCatalog: execOpts?.modelCatalog ?? undefined,
+        caller: execOpts?.caller,
+      }),
     getJobStatus: (executionId, headlessSeam) => queryExecutionStatus(executionId, headlessSeam),
     cancelJob: (executionId, headlessSeam) => cancelAppExecution(executionId, headlessSeam),
   };
@@ -103,10 +121,23 @@ export function apply(ctx: any): void {
     );
   };
 
+  const getModelCatalog = (): ModelCatalogLike | ModelCapabilityContract[] | null => {
+    return (
+      (typeof ctx.get === 'function' ? ctx.get('modelCatalog')?.list?.() : null) ??
+      ctx['modelCatalog']?.list?.() ??
+      (typeof ctx.get === 'function'
+        ? ctx.get('omnimux')?.getModelCatalog?.() || ctx.get('omnimux-model-catalog')
+        : null) ??
+      ctx['omnimux']?.getModelCatalog?.() ??
+      ctx['omnimux-model-catalog'] ??
+      null
+    );
+  };
+
   const mount = (webServerCtx: any) => {
     const webServer = webServerCtx?.webServer ?? ctx.webServer;
     if (!webServer) return;
-    registerAppsApiRoutes(webServer, { service, getHeadlessSeam });
+    registerAppsApiRoutes(webServer, { service, getHeadlessSeam, getModelCatalog });
   };
 
   if (typeof ctx.inject === 'function') {

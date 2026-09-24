@@ -780,3 +780,323 @@ test('E2E: 初始默认智能推荐状态下完整保护应用 Schema 声明的�
     root.unmount()
   })
 })
+
+test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issue #2642)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const manifestWithModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  // 工程主节点预设为 seedance-2.0
+  manifestWithModel.workflowBinding = {
+    workspaceId: 'ws_test_seedance',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node_gen_video',
+          type: 'material',
+          data: {
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'seedance-2.0',
+            params: {
+              model: 'seedance-2.0',
+            },
+          },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_seedance_preset_app',
+          title: '预设模型显式绑定测试应用',
+          extra: { manifest: manifestWithModel },
+        },
+      }),
+    )
+  })
+
+  const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
+    return fg.textContent.includes('生成模型')
+  })
+  assert.ok(modelSelectGroup, '生成模型控件组存在')
+
+  // 1. 验证默认收起态：展示工程作者推荐模型名称及标签
+  const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
+  assert.ok(modelTrigger)
+  assert.match(
+    modelTrigger.textContent,
+    /Seedance 2\.0 \(工程默认 · 作者推荐\)/,
+    '默认态收起按钮文本必须显式展示工程节点模型名称与作者推荐标识',
+  )
+
+  // 2. 展开下拉菜单，核查第一项默认选项的文案与说明
+  fireClick(modelTrigger)
+  const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
+  assert.ok(optionsPanel)
+
+  const defaultOption = optionsPanel.querySelector('.omx-apptab-select-option')
+  assert.ok(defaultOption)
+  const nameSpan = defaultOption.querySelector('.omx-apptab-model-name')
+  const subSpan = defaultOption.querySelector('.omx-apptab-model-sub')
+  assert.match(nameSpan.textContent, /Seedance 2\.0 \(工程默认 · 作者推荐\)/)
+  assert.match(subSpan.textContent, /当前工程节点预设模型，与分镜提示词深度调优/)
+
+  // 3. 验证无模型工程节点的兜底呈现：当工程未声明模型时回退为「智能推荐 (默认)」
+  const manifestWithoutModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  manifestWithoutModel.workflowBinding = {
+    workspaceId: 'ws_test_no_model',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node_pure_text',
+          type: 'text',
+          data: { content: '普通文本' },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host2 = doc.createElement('div')
+  doc.body.appendChild(host2)
+  const root2 = createRoot(host2)
+
+  act(() => {
+    root2.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_no_model_app',
+          title: '无模型应用',
+          extra: { manifest: manifestWithoutModel },
+        },
+      }),
+    )
+  })
+
+  const modelSelectGroup2 = Array.from(host2.querySelectorAll('.omx-apptab-field-group')).find((fg) =>
+    fg.textContent.includes('生成模型'),
+  )
+  const modelTrigger2 = modelSelectGroup2.querySelector('.omx-apptab-select-trigger')
+  assert.match(modelTrigger2.textContent, /智能推荐 \(默认\)/, '无预设模型时必须安全兜底为智能推荐')
+
+  // 4. 验证复杂多节点拓扑（含 slot 节点、import 节点、LLM 节点与主生成节点）下的排他精确寻址 (Issue #2642 Review #13)
+  const manifestMultiNodes = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  manifestMultiNodes.workflowBinding = {
+    workspaceId: 'ws_test_multi_nodes_exclusive',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node-slot-1',
+          type: 'input',
+          data: {
+            isSlot: true,
+            slotRole: 'product_image',
+            model: 'fake-slot-model',
+            params: { model: 'fake-slot-model' },
+          },
+        },
+        {
+          id: 'node_import_video',
+          type: 'video',
+          data: {
+            nodeKind: 'import',
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'fake-import-model',
+          },
+        },
+        {
+          id: 'node_llm_prompt',
+          type: 'text',
+          data: {
+            tool: 'llm_generate',
+            model: 'deepseek-chat',
+            params: { model: 'deepseek-chat' },
+          },
+        },
+        {
+          id: 'node_real_video_gen',
+          type: 'video',
+          data: {
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'kling-o3',
+            params: { model: 'kling-o3' },
+          },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host3 = doc.createElement('div')
+  doc.body.appendChild(host3)
+  const root3 = createRoot(host3)
+
+  act(() => {
+    root3.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_multi_nodes_app',
+          title: '多节点排他寻址测试应用',
+          extra: { manifest: manifestMultiNodes },
+        },
+      }),
+    )
+  })
+
+  const modelSelectGroup3 = Array.from(host3.querySelectorAll('.omx-apptab-field-group')).find((fg) =>
+    fg.textContent.includes('生成模型'),
+  )
+  const modelTrigger3 = modelSelectGroup3.querySelector('.omx-apptab-select-trigger')
+  assert.match(
+    modelTrigger3.textContent,
+    /可灵 Kling O3 \(工程默认 · 作者推荐\)/,
+    '在含 slot、import 和 LLM 节点的复杂拓扑中必须排他锁定真实主生成节点模型',
+  )
+
+  act(() => {
+    root.unmount()
+    root2.unmount()
+    root3.unmount()
+  })
+})
+
+test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自适应并平滑收敛，且保护独立 quality 字段 (Issue #2642)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const multiParamManifest = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  // 增加时长、分辨率与独立画质 quality 表单属性
+  multiParamManifest.formSchema.properties.duration = {
+    type: 'integer',
+    title: '成片时长',
+    minimum: 4,
+    maximum: 20,
+    default: 20,
+  }
+  multiParamManifest.formSchema.properties.resolution = {
+    type: 'string',
+    title: '输出分辨率',
+    options: ['480p', '720p', '1080p'],
+    default: '480p',
+  }
+  multiParamManifest.formSchema.properties.quality = {
+    type: 'string',
+    title: '生成画质',
+    options: ['standard', 'hd'],
+    default: 'hd',
+  }
+  multiParamManifest.demoSnapshot = {
+    ...multiParamManifest.demoSnapshot,
+    aspect_ratio: '21:9',
+    duration: 20,
+    resolution: '480p',
+    quality: 'hd',
+  }
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  let submittedPayload = null
+  const win = doc.defaultView
+  win.__OMNIMUX_APPS_EXECUTE__ = async (manifest, formValues) => {
+    submittedPayload = { manifest, formValues }
+    return {
+      executionId: 'exec_multi_param_sync_123',
+      mediaUrl: 'https://cdn.omnimux.com/sync.mp4',
+    }
+  }
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_multi_param_app',
+          title: '多参数联动测试应用',
+          extra: { manifest: multiParamManifest },
+        },
+      }),
+    )
+  })
+
+  // 1. 默认状态下保护应用原生参数
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9')
+  assert.equal(submittedPayload.formValues.duration, 20)
+  assert.equal(submittedPayload.formValues.resolution, '480p')
+  assert.equal(submittedPayload.formValues.quality, 'hd')
+
+  // 2. 显式切换到 MiniMax H3（权威契约：4–15s，分辨率 2K/768P，比例 16:9/9:16/1:1/4:3/3:4/21:9）
+  const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
+    return fg.textContent.includes('生成模型')
+  })
+  const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
+  fireClick(modelTrigger)
+  const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
+  const minimaxOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find((opt) =>
+    opt.textContent.includes('MiniMax H3'),
+  )
+  assert.ok(minimaxOption)
+  await act(async () => {
+    fireClick(minimaxOption)
+  })
+
+  // 再次提交：时长 20s 超出 MiniMax H3 连续范围上限 (15s)，安全截断为 15s；
+  // 分辨率 480p 不在 MiniMax H3 支持范围 (2K/768P)，安全重置为默认分辨率 (2K)；
+  // 独立画质参数 quality ('hd') 绝不被误归类改写为分辨率！
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+
+  assert.equal(submittedPayload.formValues.__model__, 'minimax-h3')
+  assert.equal(submittedPayload.formValues.duration, 15, '时长 20s 超过 MiniMax H3 上限 15s，平滑收敛为 15s')
+  assert.equal(submittedPayload.formValues.resolution, '2K', '分辨率 480p 不被 MiniMax H3 支持，平滑重置为默认 2K')
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'MiniMax H3 支持 21:9，故保留')
+  assert.equal(submittedPayload.formValues.quality, 'hd', '独立 quality 画质参数严禁被误当成 resolution 覆写')
+
+  // 3. 验证在区间模型 (MiniMax H3: 4–15s) 下，用户在时长数字输入框逐字符输入 '1' 再输入 '0' 组成 '10' 时，不会在输入 '1' 时被强制 clamp 为 4
+  const numInput = host.querySelector('input[type="number"]')
+  assert.ok(numInput, '应存在时长数字输入框')
+  await act(async () => {
+    const nativeSetter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set
+    if (nativeSetter) {
+      nativeSetter.call(numInput, '1')
+    } else {
+      numInput.value = '1'
+    }
+    numInput.dispatchEvent(new win.Event('input', { bubbles: true }))
+    numInput.dispatchEvent(new win.Event('change', { bubbles: true }))
+  })
+  assert.equal(String(numInput.value), '1', '键入首字符 1 时不得被 useEffect 抢跑 clamp 为 4')
+
+  await act(async () => {
+    const nativeSetter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set
+    if (nativeSetter) {
+      nativeSetter.call(numInput, '10')
+    } else {
+      numInput.value = '10'
+    }
+    numInput.dispatchEvent(new win.Event('input', { bubbles: true }))
+    numInput.dispatchEvent(new win.Event('change', { bubbles: true }))
+  })
+  assert.equal(String(numInput.value), '10', '继续键入 0 后正常形成两位数 10')
+
+  act(() => {
+    root.unmount()
+  })
+})
