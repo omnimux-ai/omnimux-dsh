@@ -373,7 +373,6 @@ export function ForkAppProjectDialog({
                 maxLength={MAX_PROJECT_TITLE_LENGTH}
                 placeholder={mode === 'page' ? '输入创作页名称' : '输入项目名称'}
                 disabled={busy}
-                aria-label={mode === 'page' ? '创作页名称' : '项目名称'}
                 onChange={(event) => {
                   setName(event.target.value)
                   setNameTouched(true)
