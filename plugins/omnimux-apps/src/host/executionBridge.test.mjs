@@ -599,4 +599,83 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
       console.warn = origWarn;
     }
   });
+
+  it('T05.17: auto-heals undisclosed hidden parameters (duration, aspectRatio, resolution) against model contract (Issue #2642)', () => {
+    const manifest = createMockManifest();
+    // 移除表单中对 aspectRatio 的公开映射，仅公开 topic 字段
+    // 此时主生成节点的 params.duration, params.aspectRatio, params.resolution 均为未公开的作者固定后台参数
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        targetPath: 'data.content',
+        mappingType: 'text',
+        widget: 'textarea',
+        required: true,
+      },
+    };
+
+    const genNode = manifest.workflowBinding.snapshot.nodes.find((n) => n.id === 'node_generator');
+    // 作者后台写死未公开参数：时长 10s，比例 21:9，分辨率 4k
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 10,
+      aspectRatio: '21:9',
+      resolution: '4k',
+    };
+
+    // 1. 切到只支持最大 5s 的定制模型（通过 customCatalog 传入）
+    const custom5sCatalog = [
+      {
+        id: 'fast-video-5s',
+        parameters: {
+          duration: {
+            options: [5],
+            max: 5,
+            defaultValue: 5,
+          },
+          aspectRatio: {
+            options: ['16:9', '9:16'],
+            defaultValue: '16:9',
+          },
+          resolution: {
+            options: ['720p'],
+            defaultValue: '720p',
+          },
+        },
+      },
+    ];
+
+    const injected = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试隐藏参数自愈',
+        __model__: 'fast-video-5s',
+      },
+      { modelCatalog: custom5sCatalog },
+    );
+
+    const targetNode = injected.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(targetNode);
+    // 核心断言：未公开时长 10s 在切到只支持 5s 的模型时，节点 params.duration 被安全校准为 5s，彻底避免提交被拒
+    assert.equal(targetNode.data.params.duration, 5, '未公开时长 10s 必须被安全校准为 5s');
+    // 比例 21:9 不被新模型支持，平滑重置为新模型默认比例 16:9
+    assert.equal(targetNode.data.params.aspectRatio, '16:9', '未公开比例必须被安全校准为默认比例');
+    // 分辨率 4k 不被新模型支持，平滑重置为新模型默认分辨率 720p
+    assert.equal(targetNode.data.params.resolution, '720p', '未公开分辨率必须被安全校准为默认分辨率');
+
+    // 2. 切到已知内置模型 Kling v1.6（支持 5/10s，比例 9:16/16:9/1:1，不支持 21:9）
+    const injectedKling = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '切换到可灵',
+      __model__: 'kling-v1-6',
+    });
+    const targetKlingNode = injectedKling.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(targetKlingNode.data.params.duration, 10, 'Kling 支持 10s，故保留 10s');
+    assert.equal(targetKlingNode.data.params.aspectRatio, '9:16', 'Kling 不支持 21:9，自动平滑收敛为 Kling 默认 9:16');
+    assert.equal(targetKlingNode.data.params.resolution, '1080p', 'Kling 不支持 4k，自动平滑收敛为 Kling 默认 1080p');
+
+    // 3. 原 manifest snapshot 严格保持不可变
+    assert.equal(genNode.data.params.duration, 10);
+    assert.equal(genNode.data.params.aspectRatio, '21:9');
+    assert.equal(genNode.data.params.resolution, '4k');
+  });
 });

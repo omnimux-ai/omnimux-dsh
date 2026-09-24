@@ -14,6 +14,11 @@ import { fileURLToPath } from 'node:url'
 import {
   resolveOptions,
   resolveModelAspectRatios,
+  isAspectRatioSupported,
+  resolveModelDurations,
+  resolveModelResolutions,
+  sanitizeModelDuration,
+  sanitizeModelResolution,
   resolveWidget,
   resolveSourceLabel,
   displayValueOf,
@@ -116,6 +121,225 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
         { label: '4:3', value: '4:3' },
         { label: '16:9', value: '16:9' },
       ])
+    })
+  })
+
+  describe('isAspectRatioSupported() (Issue #2642)', () => {
+    const model = {
+      parameters: {
+        aspectRatio: {
+          options: [
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+          ],
+        },
+      },
+    }
+
+    it('returns true when ratio is present in model options', () => {
+      assert.equal(isAspectRatioSupported(model, '16:9'), true)
+      assert.equal(isAspectRatioSupported(model, '9:16'), true)
+    })
+
+    it('returns false when ratio is not supported by model', () => {
+      assert.equal(isAspectRatioSupported(model, '1:1'), false)
+      assert.equal(isAspectRatioSupported(model, '4:3'), false)
+    })
+
+    it('returns false for falsy or empty ratio values', () => {
+      assert.equal(isAspectRatioSupported(model, ''), false)
+      assert.equal(isAspectRatioSupported(model, null), false)
+      assert.equal(isAspectRatioSupported(model, undefined), false)
+    })
+
+    it('returns true when model has no aspect ratio constraints', () => {
+      assert.equal(isAspectRatioSupported({}, '16:9'), true)
+      assert.equal(isAspectRatioSupported(null, '9:16'), true)
+    })
+  })
+
+  describe('resolveModelDurations() (Issue #2642)', () => {
+    it('resolves discrete duration options from model contract', () => {
+      const activeModel = {
+        parameters: {
+          duration: {
+            options: [
+              { label: '5s', value: 5 },
+              { label: '10s', value: 10 },
+            ],
+            defaultValue: 5,
+          },
+        },
+      }
+      const res = resolveModelDurations(activeModel, {})
+      assert.equal(res.type, 'options')
+      assert.deepEqual(res.options, [
+        { label: '5s', value: 5 },
+        { label: '10s', value: 10 },
+      ])
+      assert.equal(res.defaultValue, 5)
+    })
+
+    it('resolves numeric range duration from model contract', () => {
+      const activeModel = {
+        parameters: {
+          duration: {
+            range: { min: 4, max: 15, step: 1 },
+            defaultValue: 5,
+          },
+        },
+      }
+      const res = resolveModelDurations(activeModel, {})
+      assert.equal(res.type, 'range')
+      assert.deepEqual(res.range, { min: 4, max: 15, step: 1 })
+      assert.equal(res.min, 4)
+      assert.equal(res.max, 15)
+      assert.equal(res.step, 1)
+      assert.equal(res.defaultValue, 5)
+    })
+
+    it('falls back to prop options or range when model has no duration spec', () => {
+      const propWithOptions = {
+        options: [
+          { label: '5s', value: 5 },
+          { label: '15s', value: 15 },
+        ],
+        defaultValue: 5,
+      }
+      const res1 = resolveModelDurations(null, propWithOptions)
+      assert.equal(res1.type, 'options')
+      assert.equal(res1.options.length, 2)
+
+      const propWithRange = {
+        minimum: 3,
+        maximum: 30,
+        step: 1,
+        defaultValue: 10,
+      }
+      const res2 = resolveModelDurations(null, propWithRange)
+      assert.equal(res2.type, 'range')
+      assert.equal(res2.min, 3)
+      assert.equal(res2.max, 30)
+      assert.equal(res2.defaultValue, 10)
+    })
+
+    it('returns none when neither model nor prop defines duration', () => {
+      const res = resolveModelDurations(null, null)
+      assert.equal(res.type, 'none')
+      assert.deepEqual(res.options, [])
+    })
+  })
+
+  describe('resolveModelResolutions() (Issue #2642)', () => {
+    it('resolves resolution options from activeModel contract', () => {
+      const activeModel = {
+        parameters: {
+          resolution: {
+            options: [
+              { label: '480p', value: '480p' },
+              { label: '720p', value: '720p' },
+              { label: '1080p', value: '1080p' },
+            ],
+            defaultValue: '720p',
+          },
+        },
+      }
+      const opts = resolveModelResolutions(activeModel, {})
+      assert.deepEqual(opts, [
+        { label: '480p', value: '480p' },
+        { label: '720p', value: '720p' },
+        { label: '1080p', value: '1080p' },
+      ])
+    })
+
+    it('falls back to prop options when activeModel has no resolution spec', () => {
+      const prop = {
+        options: [
+          { label: '高清 720p', value: '720p' },
+          { label: '超清 1080p', value: '1080p' },
+        ],
+      }
+      const opts = resolveModelResolutions(null, prop)
+      assert.deepEqual(opts, [
+        { label: '高清 720p', value: '720p' },
+        { label: '超清 1080p', value: '1080p' },
+      ])
+    })
+  })
+
+  describe('sanitizeModelDuration() (Issue #2642)', () => {
+    it('clamps duration to max when current value exceeds discrete options maximum', () => {
+      const activeModel = {
+        parameters: {
+          duration: {
+            options: [5, 10],
+            defaultValue: 5,
+          },
+        },
+      }
+      // 传入 15 超出 [5, 10]，应收敛到上限 10
+      assert.equal(sanitizeModelDuration(activeModel, 15), 10)
+      assert.equal(sanitizeModelDuration(activeModel, '15'), 10)
+      // 传入 5 在支持范围内，保持 5
+      assert.equal(sanitizeModelDuration(activeModel, 5), 5)
+      // 传入 10 在支持范围内，保持 10
+      assert.equal(sanitizeModelDuration(activeModel, 10), 10)
+    })
+
+    it('clamps duration to range boundary [min, max]', () => {
+      const activeModel = {
+        parameters: {
+          duration: {
+            range: { min: 4, max: 15, step: 1 },
+            defaultValue: 5,
+          },
+        },
+      }
+      assert.equal(sanitizeModelDuration(activeModel, 20), 15)
+      assert.equal(sanitizeModelDuration(activeModel, 2), 4)
+      assert.equal(sanitizeModelDuration(activeModel, 8), 8)
+    })
+
+    it('recovers with defaultValue when currentVal is invalid or omitted', () => {
+      const activeModel = {
+        parameters: {
+          duration: {
+            range: { min: 4, max: 15, step: 1 },
+            defaultValue: 5,
+          },
+        },
+      }
+      assert.equal(sanitizeModelDuration(activeModel, NaN), 5)
+      assert.equal(sanitizeModelDuration(activeModel, ''), 5)
+    })
+  })
+
+  describe('sanitizeModelResolution() (Issue #2642)', () => {
+    const activeModel = {
+      parameters: {
+        resolution: {
+          options: [
+            { label: '768p', value: '768p' },
+            { label: '1080p', value: '1080p' },
+          ],
+          defaultValue: '768p',
+        },
+      },
+    }
+
+    it('preserves valid resolution matching model options (case-insensitive)', () => {
+      assert.equal(sanitizeModelResolution(activeModel, '1080p'), '1080p')
+      assert.equal(sanitizeModelResolution(activeModel, '768P'), '768p')
+    })
+
+    it('smoothly resets unsupported resolution to new model defaultValue', () => {
+      assert.equal(sanitizeModelResolution(activeModel, '4k'), '768p')
+      assert.equal(sanitizeModelResolution(activeModel, '480p'), '768p')
+    })
+
+    it('returns current value intact when model has no resolution constraints', () => {
+      assert.equal(sanitizeModelResolution({}, '4k'), '4k')
+      assert.equal(sanitizeModelResolution(null, '720p'), '720p')
     })
   })
 

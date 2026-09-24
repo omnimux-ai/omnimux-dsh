@@ -780,3 +780,206 @@ test('E2E: 初始默认智能推荐状态下完整保护应用 Schema 声明的�
     root.unmount()
   })
 })
+
+test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issue #2642)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const manifestWithModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  // 工程主节点预设为 seedance-2.0
+  manifestWithModel.workflowBinding = {
+    workspaceId: 'ws_test_seedance',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node_gen_video',
+          type: 'material',
+          data: {
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'seedance-2.0',
+            params: {
+              model: 'seedance-2.0',
+            },
+          },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_seedance_preset_app',
+          title: '预设模型显式绑定测试应用',
+          extra: { manifest: manifestWithModel },
+        },
+      }),
+    )
+  })
+
+  const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
+    return fg.textContent.includes('生成模型')
+  })
+  assert.ok(modelSelectGroup, '生成模型控件组存在')
+
+  // 1. 验证默认收起态：展示工程作者推荐模型名称及标签
+  const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
+  assert.ok(modelTrigger)
+  assert.match(
+    modelTrigger.textContent,
+    /Seedance 2\.0 \(工程默认 · 作者推荐\)/,
+    '默认态收起按钮文本必须显式展示工程节点模型名称与作者推荐标识',
+  )
+
+  // 2. 展开下拉菜单，核查第一项默认选项的文案与说明
+  fireClick(modelTrigger)
+  const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
+  assert.ok(optionsPanel)
+
+  const defaultOption = optionsPanel.querySelector('.omx-apptab-select-option')
+  assert.ok(defaultOption)
+  const nameSpan = defaultOption.querySelector('.omx-apptab-model-name')
+  const subSpan = defaultOption.querySelector('.omx-apptab-model-sub')
+  assert.match(nameSpan.textContent, /Seedance 2\.0 \(工程默认 · 作者推荐\)/)
+  assert.match(subSpan.textContent, /当前工程节点预设模型，与分镜提示词深度调优/)
+
+  // 3. 验证无模型工程节点的兜底呈现：当工程未声明模型时回退为「智能推荐 (默认)」
+  const manifestWithoutModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  manifestWithoutModel.workflowBinding = {
+    workspaceId: 'ws_test_no_model',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node_pure_text',
+          type: 'text',
+          data: { content: '普通文本' },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host2 = doc.createElement('div')
+  doc.body.appendChild(host2)
+  const root2 = createRoot(host2)
+
+  act(() => {
+    root2.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_no_model_app',
+          title: '无模型应用',
+          extra: { manifest: manifestWithoutModel },
+        },
+      }),
+    )
+  })
+
+  const modelTrigger2 = host2.querySelector('.omx-apptab-select-trigger')
+  assert.match(modelTrigger2.textContent, /智能推荐 \(默认\)/, '无预设模型时必须安全兜底为智能推荐')
+
+  act(() => {
+    root.unmount()
+    root2.unmount()
+  })
+})
+
+test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自适应并平滑收敛 (Issue #2642)', async () => {
+  initDom()
+  const AppTab = await loadAppTab()
+
+  const multiParamManifest = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  // 增加时长与分辨率表单属性
+  multiParamManifest.formSchema.properties.duration = {
+    type: 'integer',
+    title: '成片时长',
+    minimum: 4,
+    maximum: 15,
+    default: 15,
+  }
+  multiParamManifest.formSchema.properties.resolution = {
+    type: 'string',
+    title: '输出分辨率',
+    options: ['480p', '720p', '1080p'],
+    default: '480p',
+  }
+  multiParamManifest.demoSnapshot = {
+    ...multiParamManifest.demoSnapshot,
+    aspect_ratio: '21:9',
+    duration: 15,
+    resolution: '480p',
+  }
+
+  const host = doc.createElement('div')
+  doc.body.appendChild(host)
+  const root = createRoot(host)
+
+  let submittedPayload = null
+  const win = doc.defaultView
+  win.__OMNIMUX_APPS_EXECUTE__ = async (manifest, formValues) => {
+    submittedPayload = { manifest, formValues }
+    return {
+      executionId: 'exec_multi_param_sync_123',
+      mediaUrl: 'https://cdn.omnimux.com/sync.mp4',
+    }
+  }
+
+  act(() => {
+    root.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_multi_param_app',
+          title: '多参数联动测试应用',
+          extra: { manifest: multiParamManifest },
+        },
+      }),
+    )
+  })
+
+  // 1. 默认状态下保护应用原生参数
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9')
+  assert.equal(submittedPayload.formValues.duration, 15)
+  assert.equal(submittedPayload.formValues.resolution, '480p')
+
+  // 2. 显式切换到 MiniMax H3（支持 5/10s，分辨率 768p/1080p，比例 16:9/9:16/1:1/4:3/21:9）
+  const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
+    return fg.textContent.includes('生成模型')
+  })
+  const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
+  fireClick(modelTrigger)
+  const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
+  const minimaxOption = Array.from(optionsPanel.querySelectorAll('.omx-apptab-select-option')).find((opt) =>
+    opt.textContent.includes('MiniMax H3'),
+  )
+  assert.ok(minimaxOption)
+  await act(async () => {
+    fireClick(minimaxOption)
+  })
+
+  // 再次提交：时长 15s 超出 MiniMax H3 上限 (10s)，必须安全收敛为 10s；
+  // 分辨率 480p 不在 MiniMax H3 支持范围 (768p/1080p)，必须安全重置为新模型默认分辨率 (768p)
+  await act(async () => {
+    const submitBtn = host.querySelector('.omx-apptab-cta-btn')
+    fireClick(submitBtn)
+  })
+
+  assert.equal(submittedPayload.formValues.__model__, 'minimax-h3')
+  assert.equal(submittedPayload.formValues.duration, 10, '时长 15s 超过 MiniMax H3 上限，平滑收敛为 10s')
+  assert.equal(submittedPayload.formValues.resolution, '768p', '分辨率 480p 不被 MiniMax H3 支持，平滑重置为默认 768p')
+  assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'MiniMax H3 支持 21:9，故保留')
+
+  act(() => {
+    root.unmount()
+  })
+})

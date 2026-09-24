@@ -52,6 +52,214 @@ export function resolveModelAspectRatios(activeModel, prop) {
 }
 
 /**
+ * 校验成片比例是否被当前模型支持。
+ * @param {object} [activeModel]
+ * @param {unknown} val
+ * @returns {boolean}
+ */
+export function isAspectRatioSupported(activeModel, val) {
+  if (val === undefined || val === null || val === '') return false
+  const ratios = resolveModelAspectRatios(activeModel, null)
+  if (!ratios || ratios.length === 0) return true
+  const strVal = String(val).trim()
+  return ratios.some((r) => String(r.value).trim() === strVal)
+}
+
+/**
+ * 依据当前生效模型契约动态推导成片时长选项或 range 规格。
+ * 支持 discrete options 数组或 min/max/step 的 range 对象，纯函数无副作用。
+ *
+ * @param {object} [activeModel] 当前选定或默认的模型对象
+ * @param {object} [prop] 属性定义 (兜底来源)
+ * @returns {Array<{ label: string, value: any }> & { type: 'options' | 'range' | 'none', range?: { min: number, max: number, step: number } | null, defaultValue?: any, options?: Array<{ label: string, value: any }> }}
+ */
+export function resolveModelDurations(activeModel, prop) {
+  const dur = activeModel?.parameters?.duration
+
+  // 1. 模型提供离散 options
+  if (Array.isArray(dur?.options) && dur.options.length > 0) {
+    const list = dur.options.map((opt) => {
+      if (opt && typeof opt === 'object' && 'value' in opt) {
+        return {
+          label: String(opt.label ?? (typeof opt.value === 'number' ? `${opt.value}s` : opt.value)),
+          value: opt.value,
+        }
+      }
+      return {
+        label: typeof opt === 'number' ? `${opt}s` : String(opt),
+        value: opt,
+      }
+    })
+    const def = dur.defaultValue ?? list[0]?.value
+    const res = [...list]
+    res.type = 'options'
+    res.options = list
+    res.range = null
+    res.defaultValue = def
+    return res
+  }
+
+  // 2. 模型提供连续 range 规格
+  if (dur?.range && typeof dur.range === 'object') {
+    const min = Number(dur.range.min ?? 1)
+    const max = Number(dur.range.max ?? 60)
+    const step = Number(dur.range.step ?? 1)
+    const def = dur.defaultValue ?? min
+    const rangeObj = { min, max, step }
+    const res = []
+    res.type = 'range'
+    res.range = rangeObj
+    res.min = min
+    res.max = max
+    res.step = step
+    res.defaultValue = def
+    res.options = []
+    return res
+  }
+
+  // 3. 兜底解析 prop
+  const propOpts = resolveOptions(prop)
+  if (propOpts.length > 0) {
+    const def = prop?.default ?? prop?.defaultValue ?? propOpts[0]?.value
+    const res = [...propOpts]
+    res.type = 'options'
+    res.options = propOpts
+    res.range = null
+    res.defaultValue = def
+    return res
+  }
+
+  if (
+    prop &&
+    (prop.minimum !== undefined ||
+      prop.min !== undefined ||
+      prop.maximum !== undefined ||
+      prop.max !== undefined)
+  ) {
+    const min = Number(prop.minimum ?? prop.min ?? 1)
+    const max = Number(prop.maximum ?? prop.max ?? 60)
+    const step = Number(prop.step ?? 1)
+    const def = prop.default ?? prop.defaultValue ?? min
+    const rangeObj = { min, max, step }
+    const res = []
+    res.type = 'range'
+    res.range = rangeObj
+    res.min = min
+    res.max = max
+    res.step = step
+    res.defaultValue = def
+    res.options = []
+    return res
+  }
+
+  const res = []
+  res.type = 'none'
+  res.range = null
+  res.defaultValue = undefined
+  res.options = []
+  return res
+}
+
+/**
+ * 依据当前生效模型契约动态推导可用成片分辨率选项。
+ * 纯函数无外部依赖，驱动分辨率下拉或分段选择器渲染。
+ *
+ * @param {object} [activeModel] 当前选定或默认的模型对象
+ * @param {object} [prop] 属性定义 (兜底来源)
+ * @returns {Array<{ label: string, value: any }>}
+ */
+export function resolveModelResolutions(activeModel, prop) {
+  const modelOptions = activeModel?.parameters?.resolution?.options
+  if (Array.isArray(modelOptions) && modelOptions.length > 0) {
+    return modelOptions.map((opt) => {
+      if (opt && typeof opt === 'object' && 'value' in opt) {
+        return { label: String(opt.label || opt.value), value: opt.value }
+      }
+      return { label: String(opt), value: opt }
+    })
+  }
+  return resolveOptions(prop)
+}
+
+/**
+ * 时长参数自愈清洗：若传入时长超出新模型支持范围，收敛为新模型允许的合法值（上限或默认值）。
+ * @param {object} [activeModel]
+ * @param {unknown} currentVal
+ * @returns {number|unknown}
+ */
+export function sanitizeModelDuration(activeModel, currentVal) {
+  const dur = activeModel?.parameters?.duration
+  if (!dur) return currentVal
+
+  const isEmpty =
+    currentVal === undefined ||
+    currentVal === null ||
+    (typeof currentVal === 'string' && currentVal.trim() === '')
+  const numVal = isEmpty ? NaN : Number(currentVal)
+
+  // 1. 离散 options 模式
+  if (Array.isArray(dur.options) && dur.options.length > 0) {
+    const validValues = dur.options.map((opt) =>
+      opt && typeof opt === 'object' && 'value' in opt ? Number(opt.value) : Number(opt),
+    )
+    if (isEmpty || Number.isNaN(numVal)) {
+      if (dur.defaultValue !== undefined && validValues.includes(Number(dur.defaultValue))) {
+        return Number(dur.defaultValue)
+      }
+      return validValues[0]
+    }
+    if (validValues.includes(numVal)) {
+      return numVal
+    }
+    const maxVal = Math.max(...validValues)
+    if (numVal > maxVal) {
+      return maxVal
+    }
+    if (dur.defaultValue !== undefined && validValues.includes(Number(dur.defaultValue))) {
+      return Number(dur.defaultValue)
+    }
+    return validValues[0]
+  }
+
+  // 2. 连续 range 模式
+  if (dur.range && typeof dur.range === 'object') {
+    const min = Number(dur.range.min ?? 1)
+    const max = Number(dur.range.max ?? 60)
+    if (isEmpty || Number.isNaN(numVal)) {
+      return Number(dur.defaultValue ?? min)
+    }
+    if (numVal > max) return max
+    if (numVal < min) return min
+    return numVal
+  }
+
+  return currentVal
+}
+
+/**
+ * 分辨率参数自愈清洗：若传入分辨率不被新模型支持，平滑重置为新模型默认分辨率。
+ * @param {object} [activeModel]
+ * @param {unknown} currentVal
+ * @returns {string|unknown}
+ */
+export function sanitizeModelResolution(activeModel, currentVal) {
+  const resOptions = resolveModelResolutions(activeModel, null)
+  if (!resOptions || resOptions.length === 0) return currentVal
+
+  const strVal = String(currentVal ?? '').trim().toLowerCase()
+  const matched = resOptions.find((opt) => String(opt.value).trim().toLowerCase() === strVal)
+  if (matched) {
+    return matched.value
+  }
+
+  const def =
+    activeModel?.parameters?.resolution?.defaultValue ||
+    activeModel?.parameters?.resolution?.default ||
+    resOptions[0]?.value
+  return def !== undefined ? def : currentVal
+}
+
+/**
  * 控件类型解析器：综合 mapping.widget、prop.widget、prop.type、options 特征推导控件形态。
  * 对齐 omnimux-apps 表单规范：
  * - 智能自愈：product_image 或商品相关字段从 media-uploader/library-picker 自愈升级为 product-link；
