@@ -155,6 +155,7 @@ export function ExploreTemplatesSection({
   const [activeDrawerTemplate, setActiveDrawerTemplate] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [appLaunchError, setAppLaunchError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const appLaunchPending = useRef(false);
 
   // 外部素材库数据加载态
@@ -180,14 +181,19 @@ export function ExploreTemplatesSection({
     loadLibraryCards(activePrimaryTab)
       .then((res) => {
         if (!alive) return;
-        setLibraryData({ cards: res.cards || [], loading: false, error: null });
+        const laneErrors = Object.values(res.errors || {}).map((e) => e?.message).filter(Boolean);
+        setLibraryData({
+          cards: res.cards || [],
+          loading: false,
+          error: laneErrors.length ? laneErrors.join('；') : null,
+        });
       })
       .catch((err) => {
         if (!alive) return;
         setLibraryData({ cards: [], loading: false, error: err instanceof Error ? err.message : String(err) });
       });
     return () => { alive = false; };
-  }, [activePrimaryTab]);
+  }, [activePrimaryTab, reloadToken]);
 
   // Skills 数据源映射
   const allSkillsItems = useMemo(() => {
@@ -343,6 +349,12 @@ export function ExploreTemplatesSection({
     return allSkillsItems.filter((sk) => {
       const cat = String(sk.categorySlug || sk.category || '').toLowerCase();
       const tags = Array.isArray(sk.tags) ? sk.tags.map((t) => String(t).toLowerCase()) : [];
+      if (target === 'voice-audio') {
+        return cat.includes('voice') || cat.includes('audio') || tags.some((t) => t.includes('音频') || t.includes('画外音'));
+      }
+      if (target === 'storytelling') {
+        return cat.includes('storytelling') || cat.includes('script') || tags.some((t) => t.includes('故事') || t.includes('脚本'));
+      }
       return cat.includes(target) || tags.some((t) => t.includes(target));
     });
   }, [activePrimaryTab, selectedSubCategory, allSkillsItems]);
@@ -352,13 +364,20 @@ export function ExploreTemplatesSection({
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
     if (selectedSubCategory === 'all') return libraryData.cards;
     const target = String(selectedSubCategory).toLowerCase();
+    if (target === 'favorites') {
+      return libraryData.cards.filter((c) => {
+        const raw = c.raw || {};
+        return Boolean(raw.is_favorite || raw.favorite);
+      });
+    }
     return libraryData.cards.filter((c) => {
       const trending = c.trending || {};
       const raw = c.raw || {};
+      const categories = Array.isArray(raw.categories) ? raw.categories.join(' ').toLowerCase() : '';
       const cat = String(
-        trending.industry || trending.category || raw.category || raw.type || c.lane || ''
+        trending.industry || trending.category || raw.category || raw.type || raw.kind || c.lane || ''
       ).toLowerCase();
-      return cat.includes(target);
+      return cat.includes(target) || categories.includes(target);
     });
   }, [activePrimaryTab, selectedSubCategory, libraryData.cards]);
 
@@ -430,7 +449,10 @@ export function ExploreTemplatesSection({
       {activePrimaryTab === 'featured' && selectedSubCategory === 'all' && (
         <div className="omnimux-explore-shelves-view">
           {SHELVES_CONFIG.map((shelf) => {
-            const shelfItems = selectShelfItems(shelf.slug, 5);
+            const shelfItems =
+              shelf.slug === 'skills'
+                ? allSkillsItems.slice(0, 5)
+                : selectShelfItems(shelf.slug, 5);
             return (
               <TemplatesShelfRow
                 key={shelf.slug}
@@ -489,7 +511,7 @@ export function ExploreTemplatesSection({
               <button /* exempt-ui01: retry button */
                 type="button"
                 className="omnimux-library-stage-retry"
-                onClick={() => handlePrimaryTabChange(activePrimaryTab)}
+                onClick={() => setReloadToken((c) => c + 1)}
               >
                 重试
               </button>

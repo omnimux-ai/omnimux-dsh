@@ -140,7 +140,7 @@ export const EXPLORE_SUB_CATEGORIES = Object.freeze({
     { id: 'product-showcase', nameZh: '产品展示', nameEn: 'Showcase' },
     { id: 'storytelling', nameZh: '故事分镜', nameEn: 'Storytelling' },
     { id: 'voice-audio', nameZh: '配音与音频', nameEn: 'Voice & Audio' },
-    { id: 'image-ads', nameZh: '静态图像', nameEn: 'Images' },
+    { id: 'image-static', nameZh: '静态图像', nameEn: 'Images' },
   ]),
 });
 
