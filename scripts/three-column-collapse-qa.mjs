@@ -7,6 +7,10 @@
  * `PRODUCT_STAGE_CHROME` 常量抽取，几何变量由真实 `sidebar-toggle-topbar.js`
  * 模块导出函数写入。抽取不到即失败，绝不用字面量副本冒充生产规则。
  *
+ * 另含「缩放档位」验收（Issue #2608）：用 CDP `Emulation.setDeviceMetricsOverride`
+ * 真实切换 1920 / 2560 / 1440 三档视口，并由夹具页面自己 `import` 生产模块
+ * `plugins/omnimux/src/client/conversation-ratio.js` 算出中间会话栏宽度。
+ *
  * 特性：动态空闲端口（服务 + CDP 均为 0）、临时 profile、测完即焚、PNG + JSON 留证。
  * 含反向对照：重新注入旧 `auto` 规则必须复现「右栏被压成 0px」，证明夹具未失真。
  *
@@ -23,6 +27,13 @@ import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
 import { findChromePath } from './worktree-web-qa.mjs';
+// 生产比例算法真源：档位期望值与页面内算式都出自这一份模块，脚本内不另抄一份算式。
+import {
+  CONVERSATION_MIN_CHAT_PX,
+  CONVERSATION_RATIO_DEFAULT,
+  conversationStageWidthPx,
+  conversationWidthFromRatio,
+} from '../plugins/omnimux/src/client/conversation-ratio.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,6 +43,10 @@ const REPO_ROOT = resolve(__dirname, '..');
 export const COLLAPSE_STYLE_SOURCE_PATH = 'plugins/omnimux/src/client/conversation-box.js';
 /** 生产几何真源（`--omnimux-conversation-width` 的唯一合法写入方）。 */
 export const COLLAPSE_GEOMETRY_SOURCE_PATH = 'plugins/omnimux/src/client/sidebar-toggle-topbar.js';
+/** 生产比例算法真源（缩放档位期望值与页面内算式的唯一合法来源）。 */
+export const CONVERSATION_RATIO_SOURCE_PATH = 'plugins/omnimux/src/client/conversation-ratio.js';
+/** 夹具页面内 `import` 生产比例模块时走的路由（与 HTML 共用同一台临时服务）。 */
+export const CONVERSATION_RATIO_ROUTE = '/conversation-ratio.js';
 
 const STYLE_ANCHOR = 'export const PRODUCT_STAGE_CHROME = `';
 
@@ -41,6 +56,90 @@ export const FIXTURE_SIDEBAR_PX = 280;
 export const FIXTURE_RIGHTBAR_PX = 1155;
 /** 会话栏宽度地板（与 sidebar-toggle-topbar.js 的过滤下限一致）。 */
 export const CONVERSATION_MIN_PX = 320;
+
+/** 缩放档位断言容差（px）。 */
+export const VIEWPORT_TIER_TOLERANCE_PX = 2;
+/** 缩放档位的固定高度（只切换宽度，避免高度变化引入无关变量）。 */
+export const VIEWPORT_TIER_HEIGHT = 1080;
+/**
+ * 变量哨兵相对该档 chat 的偏移量。
+ *
+ * 哨兵必须与 chat 有明显差值（远大于 ±2px 容差），又必须保证 `rail + sentinel < viewport`，
+ * 否则弹性第三轨会被压成 0、判定失去意义。120px 在最小档（1440：rail 280 + 480 = 760）仍有
+ * 680px 余量。
+ */
+export const VIEWPORT_TIER_SENTINEL_DELTA_PX = 120;
+
+/**
+ * 缩放档位契约（Issue #2608）：三分栏展开态下，中间会话栏 = 舞台 × 比例，
+ * 下限 360px、上限 min(舞台 × 72%, 舞台 − 320px)；`chat` / `rightbar` 是**声明值**。
+ *
+ * 期望值同时用生产纯函数算一遍并互相校验（见下方 `VIEWPORT_TIERS`）：
+ * 只写字面量 → 生产算法被改这里不会红；只算不写字面量 → 契约被实现静默改写也看不出来。
+ * 两者不一致立即抛错，让门禁变红。
+ */
+const VIEWPORT_TIER_CONTRACT = [
+  {
+    viewport: 1920,
+    rail: 280,
+    chat: 492,
+    rightbar: 1148,
+    note: '比例生效：round((1920 − 280) × 30%) = 492，未被夹紧',
+  },
+  {
+    viewport: 2560,
+    rail: 280,
+    chat: 684,
+    rightbar: 1596,
+    note: '大屏按比例分账：round((2560 − 280) × 30%) = 684，未被夹紧',
+  },
+  {
+    viewport: 1440,
+    rail: 280,
+    chat: 360,
+    rightbar: 800,
+    note: '被 360px 下限夹住：round((1440 − 280) × 30%) = 348 → 360',
+  },
+];
+
+/**
+ * 三档缩放矩阵：每档含 `viewport / rail / chat / rightbar / note`，
+ * 期望值由生产函数算出并与声明字面量逐项互校。
+ */
+export const VIEWPORT_TIERS = VIEWPORT_TIER_CONTRACT.map((tier) => {
+  const stage = conversationStageWidthPx({ viewportWidth: tier.viewport, railVisiblePx: tier.rail });
+  const computedChat = conversationWidthFromRatio(stage, CONVERSATION_RATIO_DEFAULT);
+  const computedRightbar = tier.viewport - tier.rail - computedChat;
+  assert.equal(
+    computedChat,
+    tier.chat,
+    `档位 ${tier.viewport} 中栏：契约声明 ${tier.chat}px，生产算法算出 ${computedChat}px`,
+  );
+  assert.equal(
+    computedRightbar,
+    tier.rightbar,
+    `档位 ${tier.viewport} 右栏：契约声明 ${tier.rightbar}px，生产算法算出 ${computedRightbar}px`,
+  );
+  return { ...tier, stage, computedChat, computedRightbar };
+});
+
+// 矩阵必须同时覆盖「比例生效」与「下限夹住」两条路径，否则三档只是同一个分支的重复测量。
+assert.equal(
+  VIEWPORT_TIERS[2].chat,
+  CONVERSATION_MIN_CHAT_PX,
+  `最窄档必须正好落在 ${CONVERSATION_MIN_CHAT_PX}px 下限上`,
+);
+assert.ok(
+  Math.round(VIEWPORT_TIERS[2].stage * CONVERSATION_RATIO_DEFAULT) < CONVERSATION_MIN_CHAT_PX,
+  '最窄档的原始比例值必须低于下限，否则「被下限夹住」并未被真实覆盖',
+);
+for (const tier of [VIEWPORT_TIERS[0], VIEWPORT_TIERS[1]]) {
+  assert.equal(
+    Math.round(tier.stage * CONVERSATION_RATIO_DEFAULT),
+    tier.chat,
+    `档位 ${tier.viewport} 必须由比例直接决定（未被夹紧）`,
+  );
+}
 
 /**
  * 从 `conversation-box.js` 源码文本抽取 `PRODUCT_STAGE_CHROME` 样式。
@@ -104,6 +203,225 @@ export function judgeLegacyRegression(rightbarAfter) {
   };
 }
 
+/**
+ * 判定单个缩放档位：第二轨（会话栏）等于该档 chat，且三列之和等于该档视口。
+ * 容差 ±2px。
+ */
+export function judgeViewportTier(measured, tier) {
+  const reasons = [];
+  if (Math.abs(measured.conversationTrack - tier.chat) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(`第二轨（会话栏）期望 ${tier.chat}px，实测 ${measured.conversationTrack}px`);
+  }
+  const sum = measured.firstTrack + measured.conversationTrack + measured.rightbarTrack;
+  if (Math.abs(sum - tier.viewport) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(`三列之和 ${sum}px 未占满 ${tier.viewport}px 视口`);
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/** 判定单个缩放档位的右栏（第三轨）等于该档 rightbar，容差 ±2px。 */
+export function judgeViewportTierRightbar(measured, tier) {
+  const reasons = [];
+  if (Math.abs(measured.rightbarTrack - tier.rightbar) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(`右栏（第三轨）期望 ${tier.rightbar}px，实测 ${measured.rightbarTrack}px`);
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/** 判定缩放过渡：切换前中栏等于上一档、切换后等于本档，容差 ±2px。 */
+export function judgeViewportResize({ before, expectedBefore, after, expectedAfter }) {
+  const reasons = [];
+  if (Math.abs(before - expectedBefore) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(`缩放前中栏期望 ${expectedBefore}px，实测 ${before}px`);
+  }
+  if (Math.abs(after - expectedAfter) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(`缩放后中栏期望 ${expectedAfter}px，实测 ${after}px`);
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/**
+ * 夹具未失真的判定：第二轨的宽度必须出自生产 CSS 的钉宽规则，而不是夹具自己写死的栅格。
+ *
+ * 夹具 authored 栅格写成 `${rail}px minmax(0px, 1fr) 0px` —— 中轨是弹性值、第三轨是**不由
+ * chat 推导**的常量。因此两种情形逐轨可分：规则命中时第二轨 = `var(--omnimux-conversation-width)`
+ * = chat；规则没命中时第二轨被撑成「视口 − 左栏 − 0」= stage，与 chat 相差数百像素。
+ * 这里同时校验两件事：
+ * (1) authored 栅格第二轨仍是弹性值（说明实测的 chat 不可能是从栅格读回来的）；
+ * (2) 页面内生产模块自算的 chat 与实测第二轨一致（说明这个值确实出自页面里的生产算法）。
+ *
+ * 注意：本判定只证明「实测 chat 等于生产算法算出的 chat」，不单独证明规则绑在哪个变量上；
+ * 后者由变量哨兵探针 {@link judgeViewportTierPinBoundToVar} 覆盖。
+ */
+export function judgeViewportTierProductionPinned({ measured, bridge, authoredGrid }) {
+  const reasons = [];
+  // 注意：`\)` 后面不能加 `\b` —— 右括号与紧随的空格都是非单词字符，之间不存在单词边界。
+  if (!/\bminmax\(0px,\s*1fr\)/.test(String(authoredGrid || ''))) {
+    reasons.push(`夹具 authored 栅格第二轨不是弹性值，测到的宽度可能是读回来的：${authoredGrid}`);
+  }
+  if (!bridge || typeof bridge.chat !== 'number') {
+    reasons.push('页面内比例桥未返回自算的会话栏宽度');
+  } else if (Math.abs(bridge.chat - measured.conversationTrack) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(
+      `页面内生产算法自算 ${bridge.chat}px 与实测第二轨 ${measured.conversationTrack}px 不一致`,
+    );
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/**
+ * 钉宽规则确实绑在 `--omnimux-conversation-width` 上的判定（变量哨兵）。
+ *
+ * 把该变量临时置成 `chat + 120` 的哨兵值，断言第二轨跟着哨兵走：规则文本被删、被改绑到别的
+ * 变量、或选择器失效时，第二轨会退回弹性值（= 视口 − 左栏），当场偏离哨兵 ±2px 之外。
+ * 没有这一层，「第二轨 = chat」在两个同值来源之间不可证伪（假绿）。
+ */
+export function judgeViewportTierPinBoundToVar({ measured, sentinelPx }) {
+  const reasons = [];
+  if (typeof measured?.conversationTrack !== 'number') {
+    reasons.push('哨兵探针拿不到实测第二轨宽度');
+  } else if (Math.abs(measured.conversationTrack - sentinelPx) > VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(
+      `第二轨未跟随 --omnimux-conversation-width 哨兵：期望 ${sentinelPx}px，实测 ${measured.conversationTrack}px`,
+    );
+  }
+  return { pass: reasons.length === 0, reasons };
+}
+
+/**
+ * 反向对照：停用生产样式表后，弹性中轨必须明显偏离该档 chat。
+ *
+ * 夹具第三轨是不由 chat 推导的常量，所以停用钉宽规则后中轨会被撑成「视口 − 左栏」。
+ * 若此时读数仍等于 chat，说明「第二轨 = chat」另有来源，档位判定不可证伪（假绿）。
+ * @returns {{ pass: boolean, reasons: string[], drift: number }}
+ */
+export function judgeViewportTierPinReverseControl({ measured, tier }) {
+  const reasons = [];
+  const drift = Math.abs(measured.conversationTrack - tier.chat);
+  if (drift <= VIEWPORT_TIER_TOLERANCE_PX) {
+    reasons.push(
+      `停用生产样式表后第二轨仍等于 ${tier.chat}px（实测 ${measured.conversationTrack}px），档位判定不可证伪`,
+    );
+  }
+  return { pass: reasons.length === 0, reasons, drift };
+}
+
+/**
+ * 等待夹具页面内的比例桥就绪。
+ *
+ * `<script type="module">` 是异步执行的：路由 404、导出名写错、模块语法坏掉时桥永远不会出现。
+ * 这里必须轮询到超时上限并判 FAIL，绝不静默跳过——否则「页面根本没跑生产算法」会被伪装成
+ * 「档位测量通过」。
+ */
+async function waitForRatioBridge(evaluate, timeoutMs = 4000, intervalMs = 100) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const ready = await evaluate('Boolean(window.__omnimuxRatio && window.__omnimuxRatio.ready === true)');
+    if (ready === true) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
+/** 等一帧（双 rAF）并留一点沉降时间，确保缩放后的布局已经落定再测。 */
+async function waitForLayoutFrame(evaluate) {
+  await evaluate(
+    'new Promise(function (done) { requestAnimationFrame(function () { requestAnimationFrame(function () { done(true); }); }); })',
+  );
+  await new Promise((r) => setTimeout(r, 120));
+}
+
+/** 只留档三列轨道与元素宽度，避免把整个 measure() 结果（含内部字段）写进证据。 */
+function pickTracks(measured) {
+  return {
+    viewport: measured.viewport,
+    firstTrack: measured.firstTrack,
+    conversationTrack: measured.conversationTrack,
+    rightbarTrack: measured.rightbarTrack,
+    conversation: measured.conversation,
+    rightbar: measured.rightbar,
+    conversationVar: measured.conversationVar,
+  };
+}
+
+/**
+ * 夹具页面内运行生产比例算法的桥（`<script type="module">`）。
+ *
+ * 为什么必须让页面自己跑生产算法，而不是 Node 算好再喂进来：
+ * 本段断言的对象是「生产 CSS 把第二轨钉在 `--omnimux-conversation-width` 上」，而该变量的值
+ * 在生产里由 `conversation-ratio.js` 依**当前视口**算出。若由 Node 预先算好写死，缩放档位就
+ * 退化成「把 Node 的算术结果读回来」：既测不到视口变化后的重算，也测不到生产模块能否在浏览器
+ * 里被加载执行（模块语法、导出名、纯函数语义任一坏掉都看不出来）。
+ * 因此这里把生产模块原文按 `/conversation-ratio.js` 路由送进页面 `import`，
+ * 页面用 `document.documentElement.clientWidth` 当视口自己算、自己写变量。
+ *
+ * 桥是**惰性**的：加载时只注册自己，不碰夹具状态——前面的收起/往返/反向对照各段都在
+ * 「外壳 authored 栅格为准」的前提下测量，必须等到缩放档位段调用 `arm()` 才武装三分栏展开态。
+ */
+const RATIO_BRIDGE_SCRIPT = `<script type="module">
+import {
+  CONVERSATION_RATIO_DEFAULT,
+  conversationStageWidthPx,
+  conversationWidthFromRatio,
+} from '${CONVERSATION_RATIO_ROUTE}';
+
+const RAIL_PX = ${FIXTURE_SIDEBAR_PX};
+let armed = false;
+
+// 页面自己算：视口取自 document.documentElement.clientWidth，左栏 280，其余全走生产纯函数。
+function apply() {
+  const root = document.documentElement;
+  const frame = document.getElementById('frame');
+  const viewport = root.clientWidth;
+  const stage = conversationStageWidthPx({ viewportWidth: viewport, railVisiblePx: RAIL_PX });
+  const chat = conversationWidthFromRatio(stage, CONVERSATION_RATIO_DEFAULT);
+  const rightbar = stage - chat;
+  root.style.setProperty('--omnimux-conversation-width', chat + 'px');
+  root.style.setProperty('--omnimux-sidebar-width', RAIL_PX + 'px');
+  // 外壳 authored 栅格：宿主每帧按当前列宽重写；中轨刻意留弹性值，第三轨取**不由 chat 推导**
+  // 的常量 0px —— 若生产钉宽规则没命中，弹性中轨会被撑成「视口 − 左栏」而不是 chat，
+  // 实测值与期望当场分离（写成 stage − chat 会让两种情形逐轨同值，判定恒真）。
+  frame.style.gridTemplateColumns = RAIL_PX + 'px minmax(0px, 1fr) 0px';
+  window.__omnimuxRatio.last = {
+    viewport: viewport,
+    rail: RAIL_PX,
+    stage: stage,
+    chat: chat,
+    rightbar: rightbar,
+    authoredGrid: frame.style.gridTemplateColumns,
+  };
+  return window.__omnimuxRatio.last;
+}
+
+// 武装三分栏展开态：清掉全部收起标记 + 让右侧栏带上 :has() 命中所需的两个属性。
+// 为什么必须让 :has() 命中：PRODUCT_STAGE_CHROME 里只有
+// :has([data-sidebar-right-panel][data-sidebar-right-open]) 这条三分栏规则会把第二轨钉成
+// var(--omnimux-conversation-width)；不命中就只剩夹具 authored 的弹性栅格，
+// 测到的中栏会变成「视口 − 左栏 − 右栏」，比例档位等于没测。
+function arm() {
+  const root = document.documentElement;
+  root.removeAttribute('data-omnimux-left-collapsed');
+  root.removeAttribute('data-omnimux-conversation-collapsed');
+  const frame = document.getElementById('frame');
+  frame.removeAttribute('data-sidebar-collapsed');
+  frame.removeAttribute('data-rightbar-collapsed');
+  frame.removeAttribute('data-details-collapsed');
+  const right = document.getElementById('rightbar');
+  right.setAttribute('data-sidebar-right-panel', '');
+  right.setAttribute('data-sidebar-right-open', '');
+  // 反向对照段停用过生产样式，这里必须恢复，否则测到的是夹具自己的行内栅格。
+  const production = document.getElementById('qa-production');
+  if (production) production.disabled = false;
+  const legacy = document.getElementById('qa-legacy');
+  if (legacy) legacy.remove();
+  armed = true;
+  return apply();
+}
+
+window.__omnimuxRatio = { ready: true, apply: apply, arm: arm, last: null };
+window.addEventListener('resize', function () { if (armed) apply(); });
+</script>`;
+
 function buildFixtureHtml(chromeCss) {
   const base = `
 html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
@@ -123,6 +441,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
   <main class="dshDesktopConversationSurface" id="conversation" data-dsh-center-col><div style="min-width:0;flex:1 1 0%"></div></main>
   <aside class="dshDesktopRightbarSurface" id="rightbar" data-rightbar-col="true"></aside>
 </div>
+${RATIO_BRIDGE_SCRIPT}
 </body></html>`;
 }
 
@@ -244,6 +563,16 @@ async function main() {
     geometrySource.includes('--omnimux-conversation-width'),
     '几何真源未写入 --omnimux-conversation-width，门禁拒绝放行',
   );
+  // 页面内 import 的生产模块原文：路由送出的就是这份文本，抽取不到即失败。
+  const ratioModuleSource = readFileSync(join(REPO_ROOT, CONVERSATION_RATIO_SOURCE_PATH), 'utf8');
+  assert.ok(
+    ratioModuleSource.includes('export function conversationWidthFromRatio'),
+    '比例真源未导出 conversationWidthFromRatio，门禁拒绝放行',
+  );
+  assert.ok(
+    ratioModuleSource.includes('export const CONVERSATION_RATIO_DEFAULT'),
+    '比例真源缺少默认比例常量，门禁拒绝放行',
+  );
   const chromeCss = extractProductStageChrome(chromeSource);
 
   const evidenceDir = join(REPO_ROOT, 'docs', 'evidence');
@@ -254,7 +583,11 @@ async function main() {
     runId,
     scenario: 'three-column-collapse',
     startedAt: new Date().toISOString(),
-    sourcePaths: [COLLAPSE_STYLE_SOURCE_PATH, COLLAPSE_GEOMETRY_SOURCE_PATH],
+    sourcePaths: [
+      COLLAPSE_STYLE_SOURCE_PATH,
+      COLLAPSE_GEOMETRY_SOURCE_PATH,
+      CONVERSATION_RATIO_SOURCE_PATH,
+    ],
     assertions: [],
     cleanup: {},
     errors: [],
@@ -268,7 +601,13 @@ async function main() {
 
   try {
     const htmlContent = buildFixtureHtml(chromeCss);
-    server = http.createServer((_req, res) => {
+    server = http.createServer((req, res) => {
+      // 生产比例模块按**原文**送出：页面里 `import` 的就是生产文件本身，不是脚本内的副本。
+      if (String(req.url).split('?')[0] === CONVERSATION_RATIO_ROUTE) {
+        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+        res.end(ratioModuleSource);
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(htmlContent);
     });
@@ -464,6 +803,200 @@ async function main() {
       reasons: legacyVerdict.reasons,
     });
 
+    // ---- 缩放档位：CDP 真实视口切换 × 页面内跑生产比例算法（Issue #2608） ----
+    // 本段必须放在最后：它会武装三分栏展开态（让 :has() 命中）并改写视口。前面的收起/往返/
+    // 反向对照各段都在「外壳 authored 栅格为准」的前提下测量，不能被本段污染。
+    report.viewportTiers = [];
+    const bridgeReady = await waitForRatioBridge(evaluate);
+    add('viewport-tier-bridge-ready', bridgeReady, {
+      reasons: bridgeReady
+        ? []
+        : ['等待 window.__omnimuxRatio 就绪超时（页面内生产模块未加载成功）'],
+    });
+    if (!bridgeReady) {
+      throw new Error(
+        '页面内比例桥未就绪：window.__omnimuxRatio 超时未出现，缩放档位验收无法执行',
+      );
+    }
+
+    const armed = await evaluate(`(() => { ${MEASURE_FN}
+      window.__omnimuxRatio.arm();
+      return { bridge: window.__omnimuxRatio.last, measured: measure() };
+    })()`);
+    report.viewportTierArm = { bridge: armed.bridge, measured: pickTracks(armed.measured) };
+
+    let previousTier = null;
+    for (const tier of VIEWPORT_TIERS) {
+      // 缩放前快照：此刻视口仍是上一档（首档为夹具初始视口），用于「缩放过渡」断言。
+      const before = await evaluate(`(() => { ${MEASURE_FN} return measure(); })()`);
+      await sendCdp('Emulation.setDeviceMetricsOverride', {
+        width: tier.viewport,
+        height: VIEWPORT_TIER_HEIGHT,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      await waitForLayoutFrame(evaluate);
+      const after = await evaluate(`(() => { ${MEASURE_FN}
+        const bridge = window.__omnimuxRatio.apply();
+        return { bridge, measured: measure() };
+      })()`);
+
+      const tierVerdict = judgeViewportTier(after.measured, tier);
+      const rightbarVerdict = judgeViewportTierRightbar(after.measured, tier);
+      const pinnedVerdict = judgeViewportTierProductionPinned({
+        measured: after.measured,
+        bridge: after.bridge,
+        authoredGrid: after.measured.frameTrackStyle,
+      });
+      const trackSum =
+        after.measured.firstTrack + after.measured.conversationTrack + after.measured.rightbarTrack;
+
+      // ---- 变量哨兵：证明钉宽规则确实绑在 --omnimux-conversation-width 上 ----
+      // 把变量临时置成哨兵值，第二轨必须跟着走；随后 `apply()` 复原成生产算法值。
+      const sentinelPx = tier.chat + VIEWPORT_TIER_SENTINEL_DELTA_PX;
+      const sentinel = await evaluate(`(() => { ${MEASURE_FN}
+        const root = document.documentElement;
+        root.style.setProperty('--omnimux-conversation-width', '${sentinelPx}px');
+        const probed = measure();
+        window.__omnimuxRatio.apply();
+        const restored = measure();
+        return { probed: probed, restored: restored };
+      })()`);
+      const sentinelVerdict = judgeViewportTierPinBoundToVar({
+        measured: sentinel.probed,
+        sentinelPx,
+      });
+      const restoreVerdict = judgeViewportTier(sentinel.restored, tier);
+      if (!restoreVerdict.pass) {
+        sentinelVerdict.pass = false;
+        sentinelVerdict.reasons.push(
+          `哨兵探针未复原成产线状态：${restoreVerdict.reasons.join('；')}`,
+        );
+      }
+
+      // ---- 反向对照：停用生产样式表后该档必须转红（档位判定可证伪）----
+      const reverse = await evaluate(`(() => { ${MEASURE_FN}
+        const production = document.getElementById('qa-production');
+        if (production) production.disabled = true;
+        const probed = measure();
+        if (production) production.disabled = false;
+        return { probed: probed, restored: measure() };
+      })()`);
+      const reverseVerdict = judgeViewportTierPinReverseControl({ measured: reverse.probed, tier });
+      const reverseRestoreVerdict = judgeViewportTier(reverse.restored, tier);
+      if (!reverseRestoreVerdict.pass) {
+        reverseVerdict.pass = false;
+        reverseVerdict.reasons.push(
+          `反向对照未复原成产线状态：${reverseRestoreVerdict.reasons.join('；')}`,
+        );
+      }
+
+      report.viewportTiers.push({
+        key: `viewport-tier-${tier.viewport}`,
+        viewport: tier.viewport,
+        note: tier.note,
+        rail: tier.rail,
+        expected: {
+          stage: tier.stage,
+          chat: tier.chat,
+          rightbar: tier.rightbar,
+          source: 'conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)',
+        },
+        bridge: after.bridge,
+        authoredGrid: after.measured.frameTrackStyle,
+        before: pickTracks(before),
+        after: pickTracks(after.measured),
+        trackSum,
+        sentinel: {
+          sentinelPx,
+          measuredChat: sentinel.probed.conversationTrack,
+          restoredChat: sentinel.restored.conversationTrack,
+        },
+        reverseControl: {
+          productionDisabledChat: reverse.probed.conversationTrack,
+          driftPx: reverseVerdict.drift,
+          restoredChat: reverse.restored.conversationTrack,
+        },
+        pass: tierVerdict.pass && rightbarVerdict.pass && pinnedVerdict.pass
+          && sentinelVerdict.pass && reverseVerdict.pass,
+        reasons: [...tierVerdict.reasons, ...rightbarVerdict.reasons, ...pinnedVerdict.reasons, ...sentinelVerdict.reasons, ...reverseVerdict.reasons],
+      });
+
+      add(`viewport-tier-${tier.viewport}`, tierVerdict.pass, {
+        viewport: tier.viewport,
+        expectedChat: tier.chat,
+        measuredChat: after.measured.conversationTrack,
+        trackSum,
+        reasons: tierVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-rightbar`, rightbarVerdict.pass, {
+        viewport: tier.viewport,
+        expectedRightbar: tier.rightbar,
+        measuredRightbar: after.measured.rightbarTrack,
+        reasons: rightbarVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-production-pinned`, pinnedVerdict.pass, {
+        authoredGrid: after.measured.frameTrackStyle,
+        bridgeChat: after.bridge?.chat,
+        measuredChat: after.measured.conversationTrack,
+        reasons: pinnedVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-pin-bound-to-var`, sentinelVerdict.pass, {
+        sentinelPx,
+        measuredChat: sentinel.probed.conversationTrack,
+        restoredChat: sentinel.restored.conversationTrack,
+        reasons: sentinelVerdict.reasons,
+      });
+      add(`viewport-tier-${tier.viewport}-pin-reverse-control`, reverseVerdict.pass, {
+        productionDisabledChat: reverse.probed.conversationTrack,
+        expectedChat: tier.chat,
+        driftPx: reverseVerdict.drift,
+        restoredChat: reverse.restored.conversationTrack,
+        reasons: reverseVerdict.reasons,
+      });
+
+      if (previousTier) {
+        const resizeVerdict = judgeViewportResize({
+          before: before.conversationTrack,
+          expectedBefore: previousTier.chat,
+          after: after.measured.conversationTrack,
+          expectedAfter: tier.chat,
+        });
+        add(`viewport-resize-${previousTier.viewport}-to-${tier.viewport}`, resizeVerdict.pass, {
+          before: before.conversationTrack,
+          after: after.measured.conversationTrack,
+          expectedBefore: previousTier.chat,
+          expectedAfter: tier.chat,
+          reasons: resizeVerdict.reasons,
+        });
+      }
+      previousTier = tier;
+    }
+
+    // ---- 缩放档位证据截图：回到最宽档（大屏按比例分账）留档，沿用既有截图写法 ----
+    const widestTier = VIEWPORT_TIERS.reduce((a, b) => (b.viewport > a.viewport ? b : a));
+    await sendCdp('Emulation.setDeviceMetricsOverride', {
+      width: widestTier.viewport,
+      height: VIEWPORT_TIER_HEIGHT,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await waitForLayoutFrame(evaluate);
+    await evaluate('window.__omnimuxRatio.apply()');
+    const tierShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    const tierShotBuf = Buffer.from(tierShot.result.data, 'base64');
+    const tierShotPath = join(evidenceDir, 'three-column-collapse-viewport-tiers.png');
+    writeFileSync(tierShotPath, tierShotBuf);
+    const tierPng = PNG.sync.read(tierShotBuf);
+    report.viewportTierScreenshot = {
+      path: tierShotPath,
+      viewport: widestTier.viewport,
+      width: tierPng.width,
+      height: tierPng.height,
+      bytes: tierShotBuf.length,
+    };
+    add('viewport-tier-screenshot-captured', tierPng.width > 0 && tierPng.height > 0, report.viewportTierScreenshot);
+
     report.pass = report.assertions.every((a) => a.pass !== false) && report.errors.length === 0;
   } catch (err) {
     report.errors.push(String(err?.message || err));
@@ -498,6 +1031,13 @@ async function main() {
         `右栏 ${report.expanded.rightbar}px → ${report.collapsed.rightbar}px（吸收 ${FIXTURE_SIDEBAR_PX}px）`,
     );
     console.log('   反向对照：旧 auto 规则下右栏塌为 ' + report.legacyControl.rightbar + 'px，夹具未失真');
+    console.log(
+      '✅ 缩放档位：' +
+        report.viewportTiers
+          .map((t) => `${t.viewport}→${t.after.conversationTrack}`)
+          .join(' / ') +
+        `（±${VIEWPORT_TIER_TOLERANCE_PX}px）`,
+    );
     console.log('   证据归档: docs/evidence/three-column-collapse-qa-report.json');
     return;
   }

@@ -3,7 +3,7 @@ import { ensureProductStageChrome } from './conversation-box.js'
 import { installStageGlobal } from './stage.js'
 import { installSidebarGlobal } from './sidebar-coordinator.js'
 import { installAuthGlobal } from './auth-gate.js'
-import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSidebarActivation, installSplitConversationMin, hydrateConversationCollapsed } from './workbench.js'
+import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSidebarActivation, installSplitConversationMin, hydrateConversationCollapsed, reconcileRightbarFromRatio } from './workbench.js'
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
@@ -13,7 +13,7 @@ import { installFullscreenCollapseSync } from './workbench/fullscreen-collapse-s
 import { installComposerWidthGuard } from './composer-width-guard.js'
 import { installTabViewportReconciler } from './workbench/tab-viewport-reconciler.js'
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
-import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
+import { installSidebarToggleTopbar, setTopbarGeometryHook } from './sidebar-toggle-topbar.js'
 import { installCollapsedPanelFill } from './rightbar-collapsed-fill.js'
 import { NS, en, zh } from './locales.js'
 import { bindWorkbenchDeps, getWorkbenchService } from './workbench/host-adapter.js'
@@ -75,6 +75,9 @@ export function installHubChrome(ctx) {
     const unsubSplitMin = installSplitConversationMin()
     const unsubCompact = installComposerCompactObserver()
     const unsubSidebarTopbar = installSidebarToggleTopbar()
+    // 缩放后中栏按新比例重算，右栏面板宽与分隔线把手必须同一次跟上（D7-S1′）：
+    // 顶栏模块只写中栏变量，面板宽由工作台协调写，两者挂在同一次 resize 上（透传 doc 杜绝分叉，M-2）。
+    setTopbarGeometryHook((doc) => { reconcileRightbarFromRatio(undefined, { doc }) })
     const unsubCollapsedFill = installCollapsedPanelFill()
     const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     const unsubWelcome = installWelcomeGreetingObserver()
@@ -89,6 +92,7 @@ export function installHubChrome(ctx) {
       unsubSplitMin?.()
       unsubCompact?.()
       unsubSidebarTopbar?.()
+      setTopbarGeometryHook(null)
       unsubCollapsedFill?.()
       unsubPresetAvatars?.()
       unsubWelcome?.()

@@ -103,15 +103,31 @@ describe('three-column sidebar collapse keeps conversation width (issue #2074)',
 
   it('keeps the collapsed pin following the shell splitter instead of a stale baseline', () => {
     // 收起态保宽曾把分界线拖拽整段吞掉：渲染被钉住、外壳第三轨照常变化，
-    // 两份状态分叉后再次展开就会跳变。派生值必须随外壳 authored 栅格变化。
-    const expanded = deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 864px'), false, 280, 280)
-    const afterDrag = deriveConversationWidthPx(shellDoc('90px minmax(0px, 1fr) 604px'), true, 0, 280)
-    assert.equal(expanded, 776, '展开态派生值必须等于原生剩余宽度')
+    // 两份状态分叉后再次展开就会跳变。**拖拽期**派生值必须随外壳 authored 栅格变化。
+    const expanded = deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 864px', 1920, true), false, 280, 280)
+    const afterDrag = deriveConversationWidthPx(shellDoc('90px minmax(0px, 1fr) 604px', 1920, true), true, 0, 280)
+    assert.equal(expanded, 776, '展开态拖拽派生值必须等于原生剩余宽度')
     assert.equal(
       afterDrag,
       expanded + 260,
       '收起态拖动分界线 260px 后会话栏宽度必须同步变化（旧实现保持 776 不变）',
     )
+  })
+
+  it('publishes stage × ratio while steady, and preserves the width when the rail collapses', () => {
+    // 稳态（无拖拽标记）：比例权威。1920 视口、左栏 280 → 舞台 1640 → 492px。
+    const steadyExpanded = deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 864px'), false, 280, 280)
+    assert.equal(steadyExpanded, 492, '稳态必须发布「舞台 × 比例」的值（AC-1）')
+
+    // 收起左栏：分母锁展开态基线 280，中栏像素宽度不变，释放宽度全部进画布（AC-9 保宽）。
+    const steadyCollapsed = deriveConversationWidthPx(shellDoc('90px minmax(0px, 1fr) 864px'), true, 0, 280)
+    assert.equal(steadyCollapsed, steadyExpanded, '收起左栏不得改变中栏像素宽度（INV-1 / AC-9）')
+  })
+
+  it('follows the viewport at the same ratio while steady (AC-4 缩放跟随)', () => {
+    // 缩放前后比例不变：1920 → 492，2560 → 684；多出来的宽度不再全部落进中栏。
+    assert.equal(deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 1155px', 1920), false, 280, 280), 492)
+    assert.equal(deriveConversationWidthPx(shellDoc('280px minmax(0px, 1fr) 1596px', 2560), false, 280, 280), 684)
   })
 
   it('watches the shell-authored grid so the pin can never freeze the drag', () => {
@@ -124,8 +140,12 @@ describe('three-column sidebar collapse keeps conversation width (issue #2074)',
   })
 })
 
-/** 最小外壳夹具：只有 frame 的内联栅格与视口宽度参与派生。 */
-function shellDoc(grid, viewportPx = 1920) {
+/**
+ * 最小外壳夹具：只有 frame 的内联栅格与视口宽度参与派生。
+ * `dragging` 打开时补上外壳拖拽标记 —— 拖拽期与稳态是两条权威链（方案 D3），
+ * 夹具必须显式区分，否则无法断言「authored 权威」。
+ */
+function shellDoc(grid, viewportPx = 1920, dragging = false) {
   const props = new Map()
   return {
     documentElement: {
@@ -139,6 +159,6 @@ function shellDoc(grid, viewportPx = 1920) {
     querySelector: (selector) => (String(selector).includes('frame')
       ? { style: { gridTemplateColumns: grid } }
       : null),
-    body: null,
+    body: dragging ? { hasAttribute: (name) => name === 'data-dsh-sidebar-dragging' } : null,
   }
 }

@@ -40,6 +40,34 @@ export function getWorkbenchLayout() {
   return deps.layout || null
 }
 
+/**
+ * 解析官方外壳 layout 句柄（`DesktopLayoutState`）：注入的服务优先，其次沿 React Fiber
+ * 向上找 `memoizedProps.layout`（注入时机未到时仍能拿到同一个对象）。
+ *
+ * 这是「写外壳 `panels.rightbar`」的唯一入口：外壳 authored 第三轨、拖拽起点
+ * `rightbarBase` 与右分隔线把手位置三者都由该字段决定（方案 D7）。拿不到句柄时
+ * 必须返回 `null` 而不是伪造一个对象——协调方据此跳过，绝不猜测几何。
+ * @param {Document | null | undefined} [doc]
+ * @returns {object | null} 具备 `setRightbar` 的 layout 句柄
+ */
+export function resolveWorkbenchLayoutHandle(doc = hostDocument()) {
+  if (deps.layout && typeof deps.layout.setRightbar === 'function') return deps.layout
+  try {
+    const frame = doc?.querySelector?.('.dshDesktopFrame')
+    if (!frame) return null
+    const key = Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
+    let node = key ? frame[key] : null
+    while (node) {
+      const layout = node.memoizedProps?.layout
+      if (layout && typeof layout.setRightbar === 'function') return layout
+      node = node.return
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
 export function getWorkbenchSessions() {
   return deps.sessions || null
 }

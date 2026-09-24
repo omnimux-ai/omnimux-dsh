@@ -60,6 +60,7 @@ import {
 import {
   applyDefaultWidth,
   persistClampedSplitWidth,
+  reconcileRightbarFromRatio,
   resetWorkbenchWidthMemory,
   setWorkbenchFocus,
   syncSplitMaxCssVar,
@@ -134,6 +135,8 @@ export {
   setWorkbenchFocus,
   resetWorkbenchWidthMemory,
   applyDefaultWidth,
+  reconcileRightbarFromRatio,
+  settleConversationRatioAfterDrag,
 } from './workbench/split-layout.js'
 
 function syncAttachedPanelFocus(store, sessionId, tabId, state) {
@@ -146,6 +149,8 @@ function syncAttachedPanelFocus(store, sessionId, tabId, state) {
   }
   record.mode = inferWorkbenchFocus(state)
   applyDefaultWidth(getWorkbenchService(), sessionId, store, {}, false, tabId)
+  // 面板宽与外壳把手必须在同一次装配里对齐：比例决定中栏后，右栏拿余量（D7-S1′）。
+  reconcileRightbarFromRatio(state, { sessionId })
   notifyWorkbenchChange()
 }
 
@@ -179,20 +184,29 @@ function detachStore(store) {
   if (remaining === 0) setAttachedStore(null)
 }
 
+/**
+ * 安全读取服务快照状态：服务可能尚未就绪或自身 `getSnapshot` 抛错（宿主能力缺失时
+ * 布局同步必须是安全的空操作，绝不把宿主异常冒泡成插件崩溃）。
+ * @param {object | null | undefined} service
+ * @returns {object | undefined}
+ */
+function safeServiceState(service) {
+  try {
+    return liveSnapshot(service)?.state
+  } catch {
+    return undefined
+  }
+}
+
 function handleServiceStateChange(service) {
   clearInitialFilesSeed(service)
-  let state
-  try {
-    const snapshot = typeof service.getSnapshot === 'function' ? service.getSnapshot() : null
-    state = snapshot?.state
-  } catch {
-    state = undefined
-  }
+  const state = safeServiceState(service)
   if (!state || state.panelOpen === false) {
     setConversationCollapsed(false)
   }
   notifyWorkbenchChange()
   syncSplitMaxCssVar(state)
+  reconcileRightbarFromRatio(state)
   if (state?.panelOpen && typeof state.width === 'number') {
     const sessionId = currentSessionId()
     const tabId = activeTabId(state)
@@ -214,6 +228,8 @@ function bind(next = {}) {
     }
   }
   notifyWorkbenchChange()
+  // layout 服务刚注入：此刻才拿得到外壳 layout 句柄，比例协调写与老用户迁移都在这里落地。
+  reconcileRightbarFromRatio(safeServiceState(service))
 }
 
 function applyDefaultWidthFromGlobal(sessionId, store, env, force) {
@@ -256,6 +272,8 @@ function createApi() {
     inferFocus: inferWorkbenchFocus,
     syncGuiWidth: syncWorkbenchGuiWidth,
     splitMaxPx: workbenchSplitMaxPanelPx,
+    // 诊断：把「可见舞台 − 比例中栏宽」写回外壳面板宽通道（D7-S1′），返回写入结果。
+    reconcileRightbar: (env) => reconcileRightbarFromRatio(liveSnapshot()?.state, env),
     installLeftRailObserver: installWorkbenchLeftRailObserver,
     installSplitMin: installSplitConversationMin,
     getConversationCollapsed,

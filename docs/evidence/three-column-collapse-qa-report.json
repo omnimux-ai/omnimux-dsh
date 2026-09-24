@@ -1,21 +1,22 @@
 {
-  "runId": "b1e7c502-9d61-4554-a1d3-a65b3c6ba3a6",
+  "runId": "f6535b97-5b2a-4d31-9df0-384aa394c534",
   "scenario": "three-column-collapse",
-  "startedAt": "2026-09-17T02:57:53.222Z",
+  "startedAt": "2026-09-23T12:57:12.617Z",
   "sourcePaths": [
     "plugins/omnimux/src/client/conversation-box.js",
-    "plugins/omnimux/src/client/sidebar-toggle-topbar.js"
+    "plugins/omnimux/src/client/sidebar-toggle-topbar.js",
+    "plugins/omnimux/src/client/conversation-ratio.js"
   ],
   "assertions": [
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 63121
+      "port": 60633
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 63122
+      "port": 60634
     },
     {
       "name": "expanded-conversation-positive",
@@ -39,7 +40,7 @@
     {
       "name": "screenshot-captured",
       "pass": true,
-      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-three-column-layout-hardening/docs/evidence/three-column-collapse-collapsed.png",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-conversation-ratio-issue-2608/docs/evidence/three-column-collapse-collapsed.png",
       "width": 1920,
       "height": 993,
       "bytes": 7826
@@ -105,6 +106,164 @@
       "pass": true,
       "rightbarAfter": 0,
       "reasons": []
+    },
+    {
+      "name": "viewport-tier-bridge-ready",
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920",
+      "pass": true,
+      "viewport": 1920,
+      "expectedChat": 492,
+      "measuredChat": 492,
+      "trackSum": 1920,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-rightbar",
+      "pass": true,
+      "viewport": 1920,
+      "expectedRightbar": 1148,
+      "measuredRightbar": 1148,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 492,
+      "measuredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 612,
+      "measuredChat": 612,
+      "restoredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1920-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1640,
+      "expectedChat": 492,
+      "driftPx": 1148,
+      "restoredChat": 492,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560",
+      "pass": true,
+      "viewport": 2560,
+      "expectedChat": 684,
+      "measuredChat": 684,
+      "trackSum": 2560,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-rightbar",
+      "pass": true,
+      "viewport": 2560,
+      "expectedRightbar": 1596,
+      "measuredRightbar": 1596,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 684,
+      "measuredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 804,
+      "measuredChat": 804,
+      "restoredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-2560-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 2280,
+      "expectedChat": 684,
+      "driftPx": 1596,
+      "restoredChat": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-resize-1920-to-2560",
+      "pass": true,
+      "before": 492,
+      "after": 684,
+      "expectedBefore": 492,
+      "expectedAfter": 684,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440",
+      "pass": true,
+      "viewport": 1440,
+      "expectedChat": 360,
+      "measuredChat": 360,
+      "trackSum": 1440,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-rightbar",
+      "pass": true,
+      "viewport": 1440,
+      "expectedRightbar": 800,
+      "measuredRightbar": 800,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-production-pinned",
+      "pass": true,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "bridgeChat": 360,
+      "measuredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-bound-to-var",
+      "pass": true,
+      "sentinelPx": 480,
+      "measuredChat": 480,
+      "restoredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-1440-pin-reverse-control",
+      "pass": true,
+      "productionDisabledChat": 1160,
+      "expectedChat": 360,
+      "driftPx": 800,
+      "restoredChat": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-resize-2560-to-1440",
+      "pass": true,
+      "before": 684,
+      "after": 360,
+      "expectedBefore": 684,
+      "expectedAfter": 360,
+      "reasons": []
+    },
+    {
+      "name": "viewport-tier-screenshot-captured",
+      "pass": true,
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-conversation-ratio-issue-2608/docs/evidence/three-column-collapse-viewport-tiers.png",
+      "viewport": 2560,
+      "width": 2560,
+      "height": 1080,
+      "bytes": 10536
     }
   ],
   "cleanup": {
@@ -114,8 +273,8 @@
   },
   "errors": [],
   "pass": true,
-  "serverPort": 63121,
-  "cdpPort": 63122,
+  "serverPort": 60633,
+  "cdpPort": 60634,
   "expanded": {
     "viewport": 1920,
     "tracks": [
@@ -147,7 +306,7 @@
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-three-column-layout-hardening/docs/evidence/three-column-collapse-collapsed.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-conversation-ratio-issue-2608/docs/evidence/three-column-collapse-collapsed.png",
     "width": 1920,
     "height": 993,
     "bytes": 7826
@@ -375,5 +534,189 @@
     "conversationVar": "485px",
     "frameTrackStyle": "90px minmax(0px, 1fr) 1155px"
   },
-  "completedAt": "2026-09-17T02:57:55.027Z"
+  "viewportTiers": [
+    {
+      "key": "viewport-tier-1920",
+      "viewport": 1920,
+      "note": "比例生效：round((1920 − 280) × 30%) = 492，未被夹紧",
+      "rail": 280,
+      "expected": {
+        "stage": 1640,
+        "chat": 492,
+        "rightbar": 1148,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 1920,
+        "rail": 280,
+        "stage": 1640,
+        "chat": 492,
+        "rightbar": 1148,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "after": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "trackSum": 1920,
+      "sentinel": {
+        "sentinelPx": 612,
+        "measuredChat": 612,
+        "restoredChat": 492
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1640,
+        "driftPx": 1148,
+        "restoredChat": 492
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "viewport-tier-2560",
+      "viewport": 2560,
+      "note": "大屏按比例分账：round((2560 − 280) × 30%) = 684，未被夹紧",
+      "rail": 280,
+      "expected": {
+        "stage": 2280,
+        "chat": 684,
+        "rightbar": 1596,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 2560,
+        "rail": 280,
+        "stage": 2280,
+        "chat": 684,
+        "rightbar": 1596,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 1920,
+        "firstTrack": 280,
+        "conversationTrack": 492,
+        "rightbarTrack": 1148,
+        "conversation": 492,
+        "rightbar": 1148,
+        "conversationVar": "492px"
+      },
+      "after": {
+        "viewport": 2560,
+        "firstTrack": 280,
+        "conversationTrack": 684,
+        "rightbarTrack": 1596,
+        "conversation": 684,
+        "rightbar": 1596,
+        "conversationVar": "684px"
+      },
+      "trackSum": 2560,
+      "sentinel": {
+        "sentinelPx": 804,
+        "measuredChat": 804,
+        "restoredChat": 684
+      },
+      "reverseControl": {
+        "productionDisabledChat": 2280,
+        "driftPx": 1596,
+        "restoredChat": 684
+      },
+      "pass": true,
+      "reasons": []
+    },
+    {
+      "key": "viewport-tier-1440",
+      "viewport": 1440,
+      "note": "被 360px 下限夹住：round((1440 − 280) × 30%) = 348 → 360",
+      "rail": 280,
+      "expected": {
+        "stage": 1160,
+        "chat": 360,
+        "rightbar": 800,
+        "source": "conversationWidthFromRatio(viewport - rail, CONVERSATION_RATIO_DEFAULT)"
+      },
+      "bridge": {
+        "viewport": 1440,
+        "rail": 280,
+        "stage": 1160,
+        "chat": 360,
+        "rightbar": 800,
+        "authoredGrid": "280px minmax(0px, 1fr) 0px"
+      },
+      "authoredGrid": "280px minmax(0px, 1fr) 0px",
+      "before": {
+        "viewport": 2560,
+        "firstTrack": 280,
+        "conversationTrack": 684,
+        "rightbarTrack": 1596,
+        "conversation": 684,
+        "rightbar": 1596,
+        "conversationVar": "684px"
+      },
+      "after": {
+        "viewport": 1440,
+        "firstTrack": 280,
+        "conversationTrack": 360,
+        "rightbarTrack": 800,
+        "conversation": 360,
+        "rightbar": 800,
+        "conversationVar": "360px"
+      },
+      "trackSum": 1440,
+      "sentinel": {
+        "sentinelPx": 480,
+        "measuredChat": 480,
+        "restoredChat": 360
+      },
+      "reverseControl": {
+        "productionDisabledChat": 1160,
+        "driftPx": 800,
+        "restoredChat": 360
+      },
+      "pass": true,
+      "reasons": []
+    }
+  ],
+  "viewportTierArm": {
+    "bridge": {
+      "viewport": 1920,
+      "rail": 280,
+      "stage": 1640,
+      "chat": 492,
+      "rightbar": 1148,
+      "authoredGrid": "280px minmax(0px, 1fr) 0px"
+    },
+    "measured": {
+      "viewport": 1920,
+      "firstTrack": 280,
+      "conversationTrack": 492,
+      "rightbarTrack": 1148,
+      "conversation": 492,
+      "rightbar": 1148,
+      "conversationVar": "492px"
+    }
+  },
+  "viewportTierScreenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-conversation-ratio-issue-2608/docs/evidence/three-column-collapse-viewport-tiers.png",
+    "viewport": 2560,
+    "width": 2560,
+    "height": 1080,
+    "bytes": 10536
+  },
+  "completedAt": "2026-09-23T12:57:14.402Z"
 }
