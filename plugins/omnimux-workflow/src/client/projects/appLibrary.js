@@ -428,10 +428,13 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
  */
 export async function createProjectForkFromManifest(manifest, deps = {}) {
   const appName = textOf(manifest?.metadata?.name) || 'AI 应用'
-  const projectTitle = `${appName} (副本)`
-  const pageTitle = `${appName}_副本`
+  const projectTitle = textOf(deps.projectTitle) || `${appName} (副本)`
+  const pageTitle = textOf(deps.pageTitle) || `${appName}_副本`
   const hostProject = deps.hostProject && typeof deps.hostProject === 'object' ? deps.hostProject : null
   const groupTitle = hostProject?.id ? pageTitle : projectTitle
+  const projectRoot = typeof deps.projectRoot === 'string' && deps.projectRoot.trim() !== ''
+    ? deps.projectRoot.trim()
+    : undefined
 
   let rawNodes = manifest?.workflowBinding?.snapshot?.nodes
   let rawEdges = manifest?.workflowBinding?.snapshot?.edges
@@ -474,7 +477,7 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     }
     const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
       method: 'PUT',
-      body: { nodes, edges },
+      body: { expectedVersion: 0, nodes, edges },
     })
     if (!saved || saved.ok === false) {
       throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')
@@ -492,7 +495,7 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   }
 
   const doCreateProject = deps.createProjectFn || createProject
-  const createRes = await doCreateProject(projectTitle)
+  const createRes = await doCreateProject(projectTitle, null, projectRoot)
   if (!createRes || !createRes.ok || !createRes.body?.project) {
     throw new Error(createRes?.body?.error || createRes?.body?.message || '创建项目工程副本失败')
   }
@@ -505,7 +508,7 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
 
   const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
     method: 'PUT',
-    body: { nodes, edges },
+    body: { expectedVersion: 0, nodes, edges },
   })
   if (!saved || saved.ok === false) {
     throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')

@@ -1936,6 +1936,61 @@ export const WORKFLOW_CSS = `
   padding: 32px 0;
   color: var(--dsw-alias-label-tertiary);
 }
+
+/* 应用编辑副本弹窗 */
+.omx-fork-dialog-desc {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.5;
+}
+.omx-fork-mode-section {
+  margin-bottom: 16px;
+}
+.omx-fork-mode-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  margin-bottom: 8px;
+}
+.omx-fork-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.omx-fork-mode-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  outline: none;
+}
+.omx-fork-mode-card:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-fork-mode-card.is-active {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-interactive-bg-active);
+}
+.omx-fork-mode-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-fork-mode-sub {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+  margin-top: 2px;
+}
+.omx-fork-error-text {
+  margin-top: 12px;
+}
+.omx-fork-source-head {
+  margin-top: 16px;
+}
 `
 
 export function injectWorkflowStyles() {

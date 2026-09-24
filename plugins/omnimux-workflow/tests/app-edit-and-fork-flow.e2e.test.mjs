@@ -142,6 +142,7 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
 
   // 验证工作流节点打组容器 (GroupNode)
   assert.ok(writtenCanvasPayload, '必须写入画布数据')
+  assert.equal(writtenCanvasPayload.expectedVersion, 0, '保存画布必须显式携带 expectedVersion: 0 杜绝 version-required 拦截')
   const groupNode = writtenCanvasPayload.nodes.find((n) => n.type === 'group')
   assert.ok(groupNode, '副本必须自动生成工作流组容器 GroupNode')
   assert.equal(groupNode.data.title, '手机与网页交互实机演示 (副本)')
@@ -223,4 +224,48 @@ test('E2E: 场景 5 - 副本修改后重新打包发布，在「项目」库的�
   assert.equal(publishedApp.category, 'video')
   assert.equal(publishedApp.projectId, 'proj_fork_demo')
   assert.equal(publishedApp.groupId, 'group_fork_101')
+})
+
+test('E2E: 场景 6 - ForkAppProjectDialog 弹窗支持追加创作页与自选工作区新建项目', async () => {
+  const dialogBuild = await build({
+    entryPoints: [new URL('../src/client/projects/ForkAppProjectDialog.jsx', import.meta.url).pathname],
+    bundle: true,
+    write: false,
+    format: 'cjs',
+    platform: 'node',
+    external: ['react', 'react-dom', 'dsh-ui-kit', '@deepseek-ai/dsh-client-ui-primitives', 'lucide-react'],
+  })
+
+  const dialogModule = { exports: {} }
+  new Function('require', 'module', 'exports', dialogBuild.outputFiles[0].text)(
+    require,
+    dialogModule,
+    dialogModule.exports,
+  )
+  const { ForkAppProjectDialog } = dialogModule.exports
+  assert.ok(ForkAppProjectDialog, '必须成功导出 ForkAppProjectDialog')
+
+  const manifest = {
+    metadata: { name: '爆款商品实拍' },
+  }
+  const hostProject = {
+    id: 'proj_current',
+    title: '我的视频主项目',
+  }
+
+  // 1. 静态渲染验证组件无语法或未定义引用报错
+  const html = renderToStaticMarkup(
+    React.createElement(ForkAppProjectDialog, {
+      manifest,
+      hostProject,
+      initialPath: '/Users/x/Projects/Current',
+      onCancel() {},
+      onSubmit() {},
+    }),
+  )
+
+  assert.ok(html.includes('创建应用编辑副本'), '必须包含弹窗标题')
+  assert.ok(html.includes('加入当前项目'), '有当前项目时必须展示加入当前项目选项')
+  assert.ok(html.includes('新建独立项目'), '必须展示新建独立项目选项')
+  assert.ok(html.includes('爆款商品实拍_副本'), '有当前项目时默认预填创作页副本名')
 })

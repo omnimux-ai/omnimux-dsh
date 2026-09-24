@@ -183,9 +183,50 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
 
       assert.equal(savedWorkspaceId, 'ws_fork_999')
       assert.ok(savedPayload && Array.isArray(savedPayload.nodes))
+      assert.equal(savedPayload.expectedVersion, 0, '保存画布必须显式携带 expectedVersion: 0 避免 version-required 拦截')
       const groupNode = savedPayload.nodes.find((n) => n.type === 'group')
       assert.ok(groupNode, '必须包含外层工作流容器 GroupNode')
       assert.equal(groupNode.data.title, '手机与网页交互实机演示 (副本)')
+    })
+
+    it('支持自定义 projectTitle、pageTitle 和自选工作区 projectRoot', async () => {
+      const manifest = {
+        appId: 'app-creatify-app-demo',
+        metadata: { name: '手机与网页交互实机演示' },
+      }
+      let passedTitle = ''
+      let passedRoot = ''
+      let savedExpectedVersion = null
+      const mockDeps = {
+        createProjectFn: async (title, _sid, root) => {
+          passedTitle = title
+          passedRoot = root
+          return {
+            ok: true,
+            status: 200,
+            body: {
+              project: {
+                id: 'proj_custom_root',
+                title,
+                path: root,
+                canvasWorkspaceIds: ['ws_custom'],
+              },
+            },
+          }
+        },
+        requestFn: async (_url, opts) => {
+          savedExpectedVersion = opts.body?.expectedVersion
+          return { ok: true, status: 200, body: { success: true } }
+        },
+        projectTitle: '我的自定义项目名',
+        projectRoot: '/Users/x/MyWorkspaces/CustomDir',
+      }
+
+      const res = await createProjectForkFromManifest(manifest, mockDeps)
+      assert.equal(passedTitle, '我的自定义项目名')
+      assert.equal(passedRoot, '/Users/x/MyWorkspaces/CustomDir')
+      assert.equal(savedExpectedVersion, 0, '新建独立项目保存画布必须携带 expectedVersion: 0')
+      assert.equal(res.project.id, 'proj_custom_root')
     })
 
     it('当前项目已存在时复制创作页而不是新建项目', async () => {
