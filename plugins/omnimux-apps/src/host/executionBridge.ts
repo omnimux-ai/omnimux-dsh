@@ -267,6 +267,10 @@ export interface ModelCatalogLike {
   [key: string]: unknown;
 }
 
+/**
+ * 离线权威模型能力兜底契约表（Fallback Metadata）。
+ * 运行时优先消费中枢 `modelCatalog` 动态契约；仅当动态目录不可用或缺少参数定义时回退至本表。
+ */
 export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityContract> = {
   'seedance-2.0': {
     id: 'seedance-2.0',
@@ -425,34 +429,67 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
 
 export function resolveModelContract(
   modelId: string,
-  customCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown,
+  customCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null,
 ): ModelCapabilityContract | null {
   if (!modelId || typeof modelId !== 'string') return null;
   const normalizedId = modelId.trim().toLowerCase();
+  const strippedId = normalizedId.replace(/[-_.]/g, '');
+
+  const aliasKey = Object.keys(KNOWN_MODEL_CAPABILITY_CONTRACTS).find(
+    (k) => k === normalizedId || k.replace(/[-_.]/g, '') === strippedId,
+  );
+  const fallbackContract =
+    KNOWN_MODEL_CAPABILITY_CONTRACTS[normalizedId] ||
+    (aliasKey ? KNOWN_MODEL_CAPABILITY_CONTRACTS[aliasKey] : undefined);
 
   if (customCatalog) {
     let list: ModelCapabilityContract[] = [];
     if (Array.isArray(customCatalog)) {
-      list = customCatalog as ModelCapabilityContract[];
+      list = customCatalog;
     } else if (typeof customCatalog === 'object' && customCatalog !== null) {
-      const cat = customCatalog as ModelCatalogLike;
+      const cat = customCatalog;
       if (Array.isArray(cat.models)) list.push(...cat.models);
       if (Array.isArray(cat.video)) list.push(...cat.video);
       if (Array.isArray(cat.image)) list.push(...cat.image);
     }
-    const found = list.find((m) => m && (m.id === modelId || m.id?.toLowerCase() === normalizedId));
-    if (found) return found;
+    const found = list.find((m) => {
+      if (!m || typeof m.id !== 'string') return false;
+      const mLower = m.id.trim().toLowerCase();
+      if (m.id === modelId || mLower === normalizedId || mLower.replace(/[-_.]/g, '') === strippedId) {
+        return true;
+      }
+      const aliases = (m as { aliases?: unknown[] }).aliases;
+      if (Array.isArray(aliases)) {
+        return aliases.some(
+          (a) =>
+            typeof a === 'string' &&
+            (a.trim().toLowerCase() === normalizedId ||
+              a.trim().toLowerCase().replace(/[-_.]/g, '') === strippedId),
+        );
+      }
+      return false;
+    });
+    if (found) {
+      const dynParams = found.parameters && typeof found.parameters === 'object' ? found.parameters : {};
+      const hasDynParams = Object.keys(dynParams).length > 0;
+      if (fallbackContract?.parameters) {
+        return {
+          ...fallbackContract,
+          ...found,
+          parameters: {
+            ...fallbackContract.parameters,
+            ...dynParams,
+          },
+        };
+      }
+      if (hasDynParams) {
+        return found;
+      }
+    }
   }
 
-  if (KNOWN_MODEL_CAPABILITY_CONTRACTS[normalizedId]) {
-    return KNOWN_MODEL_CAPABILITY_CONTRACTS[normalizedId];
-  }
-
-  const aliasKey = Object.keys(KNOWN_MODEL_CAPABILITY_CONTRACTS).find(
-    (k) => k === normalizedId || k.replace(/[-_.]/g, '') === normalizedId.replace(/[-_.]/g, ''),
-  );
-  if (aliasKey) {
-    return KNOWN_MODEL_CAPABILITY_CONTRACTS[aliasKey];
+  if (fallbackContract) {
+    return fallbackContract;
   }
 
   return null;
@@ -465,7 +502,7 @@ export function resolveModelContract(
 export function prepareAndInjectWorkflowSnapshot(
   manifest: ApplicationManifest,
   formValues: Record<string, unknown> = {},
-  options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown },
+  options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null },
 ): PreparedWorkflowSnapshot {
   if (!manifest || typeof manifest !== 'object') {
     throw new ExecutionBridgeError('validation_failed', 'ApplicationManifest must be a valid object');

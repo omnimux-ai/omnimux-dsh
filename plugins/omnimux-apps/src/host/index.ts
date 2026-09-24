@@ -36,6 +36,7 @@ import {
 } from './executionBridge.ts';
 import { registerAppsApiRoutes } from './routes.ts';
 import type {
+  ExecutionBridgeOptions,
   ExecutionBridgeResult,
   PreparedWorkflowSnapshot,
   HeadlessExecutionSeam,
@@ -57,13 +58,16 @@ export interface OmnimuxAppsService {
   prepareSnapshot(
     manifest: ApplicationManifest,
     formValues?: Record<string, unknown>,
-    options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown },
+    options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null },
   ): PreparedWorkflowSnapshot;
   executeApp(
     manifest: ApplicationManifest,
     formValues: Record<string, unknown>,
     headlessSeam: HeadlessExecutionSeam,
-    options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown; caller?: any },
+    options?: {
+      modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null;
+      caller?: ExecutionBridgeOptions['caller'];
+    },
   ): Promise<ExecutionBridgeResult>;
   getJobStatus(executionId: string, headlessSeam: HeadlessExecutionSeam): Promise<WorkflowJobStatus | null>;
   cancelJob(executionId: string, headlessSeam: HeadlessExecutionSeam): Promise<{ success: boolean; canceledAt: string }>;
@@ -88,7 +92,7 @@ export function createAppsService(options?: AppStorageOptions): OmnimuxAppsServi
         manifest,
         formValues,
         headlessSeam,
-        modelCatalog: execOpts?.modelCatalog as any,
+        modelCatalog: execOpts?.modelCatalog ?? undefined,
         caller: execOpts?.caller,
       }),
     getJobStatus: (executionId, headlessSeam) => queryExecutionStatus(executionId, headlessSeam),
@@ -117,8 +121,10 @@ export function apply(ctx: any): void {
     );
   };
 
-  const getModelCatalog = (): any => {
+  const getModelCatalog = (): ModelCatalogLike | ModelCapabilityContract[] | null => {
     return (
+      (typeof ctx.get === 'function' ? ctx.get('modelCatalog')?.list?.() : null) ??
+      ctx['modelCatalog']?.list?.() ??
       (typeof ctx.get === 'function'
         ? ctx.get('omnimux')?.getModelCatalog?.() || ctx.get('omnimux-model-catalog')
         : null) ??

@@ -1069,6 +1069,33 @@ test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自
   assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'MiniMax H3 支持 21:9，故保留')
   assert.equal(submittedPayload.formValues.quality, 'hd', '独立 quality 画质参数严禁被误当成 resolution 覆写')
 
+  // 3. 验证在区间模型 (MiniMax H3: 4–15s) 下，用户在时长数字输入框逐字符输入 '1' 再输入 '0' 组成 '10' 时，不会在输入 '1' 时被强制 clamp 为 4
+  const numInput = host.querySelector('input[type="number"]')
+  assert.ok(numInput, '应存在时长数字输入框')
+  await act(async () => {
+    const nativeSetter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set
+    if (nativeSetter) {
+      nativeSetter.call(numInput, '1')
+    } else {
+      numInput.value = '1'
+    }
+    numInput.dispatchEvent(new win.Event('input', { bubbles: true }))
+    numInput.dispatchEvent(new win.Event('change', { bubbles: true }))
+  })
+  assert.equal(String(numInput.value), '1', '键入首字符 1 时不得被 useEffect 抢跑 clamp 为 4')
+
+  await act(async () => {
+    const nativeSetter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set
+    if (nativeSetter) {
+      nativeSetter.call(numInput, '10')
+    } else {
+      numInput.value = '10'
+    }
+    numInput.dispatchEvent(new win.Event('input', { bubbles: true }))
+    numInput.dispatchEvent(new win.Event('change', { bubbles: true }))
+  })
+  assert.equal(String(numInput.value), '10', '继续键入 0 后正常形成两位数 10')
+
   act(() => {
     root.unmount()
   })

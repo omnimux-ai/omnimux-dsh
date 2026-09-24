@@ -180,6 +180,34 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
         },
       },
     },
+    {
+      id: 'wan-3.0',
+      name: '通义万相 Wan 3.0',
+      label: '通义万相 Wan 3.0',
+      subtitle: '2–30s · 自由时长生成',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: [
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '1:1 方屏', value: '1:1' },
+          ],
+        },
+        duration: {
+          range: { min: 2, max: 30, step: 1 },
+          defaultValue: 5,
+          allowAuto: true,
+        },
+        resolution: {
+          defaultValue: '720p',
+          options: [
+            { label: '720p', value: '720p' },
+            { label: '1080p', value: '1080p' },
+          ],
+        },
+      },
+    },
   ],
   image: [
     {
@@ -298,6 +326,54 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
     return KNOWN_OFFICIAL_MODELS[targetCategory] || KNOWN_OFFICIAL_MODELS.video
   }
   return normalized
+}
+
+/**
+ * 根据模型 ID 从当前可用模型列表或内置官方模型规范表中解析真实模型契约对象。
+ * 支持符号归一化比对（将 `-`、`_`、`.` 统一），消除展示名称与激活契约对象的模型分歧。
+ */
+export function resolveKnownModelSpec(modelId, availableModels = []) {
+  if (!modelId || typeof modelId !== 'string') return null
+  const trimmed = modelId.trim()
+  if (!trimmed) return null
+  const lower = trimmed.toLowerCase()
+  const stripped = lower.replace(/[-_.]/g, '')
+
+  const matchFn = (m) => {
+    if (!m || typeof m.id !== 'string') return false
+    const mLower = m.id.trim().toLowerCase()
+    return m.id === trimmed || mLower === lower || mLower.replace(/[-_.]/g, '') === stripped
+  }
+
+  if (Array.isArray(availableModels)) {
+    const inAvail = availableModels.find(matchFn)
+    if (inAvail) return inAvail
+  }
+
+  const allKnown = [
+    ...(KNOWN_OFFICIAL_MODELS.video || []),
+    ...(KNOWN_OFFICIAL_MODELS.image || []),
+  ]
+  return allKnown.find(matchFn) || null
+}
+
+/**
+ * 统一推导单选下拉与分段切换控件的模型动态选项（分辨率 / 时长）
+ */
+export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur) {
+  let opts = resolveOptions(prop)
+  if (isRes) {
+    const modelResolutions = resolveModelResolutions(activeModelObj, prop)
+    if (modelResolutions && modelResolutions.length > 0) {
+      opts = modelResolutions
+    }
+  } else if (isDur) {
+    const durSpec = resolveModelDurations(activeModelObj, prop)
+    if (durSpec.options && durSpec.options.length > 0) {
+      opts = durSpec.options
+    }
+  }
+  return opts
 }
 
 const EMPTY_PROPS = Object.freeze({})
@@ -694,23 +770,27 @@ export function AppTab(props) {
     return ''
   }, [manifest])
 
-  const defaultModelName = useMemo(() => {
-    if (!defaultNodeModelId) return ''
-    const found = availableModels.find((m) => m.id === defaultNodeModelId)
-    return found?.name || defaultNodeModelId
+  const defaultModelObj = useMemo(() => {
+    if (!defaultNodeModelId) return null
+    return resolveKnownModelSpec(defaultNodeModelId, availableModels)
   }, [defaultNodeModelId, availableModels])
 
   const activeModelObj = useMemo(() => {
     if (selectedModel) {
-      const found = availableModels.find((m) => m.id === selectedModel)
+      const found = resolveKnownModelSpec(selectedModel, availableModels)
       if (found) return found
     }
-    if (defaultNodeModelId) {
-      const found = availableModels.find((m) => m.id === defaultNodeModelId)
-      if (found) return found
+    if (defaultModelObj) {
+      return defaultModelObj
     }
     return availableModels[0] || null
-  }, [selectedModel, defaultNodeModelId, availableModels])
+  }, [selectedModel, defaultModelObj, availableModels])
+
+  const defaultModelName = useMemo(() => {
+    if (!defaultNodeModelId) return ''
+    if (defaultModelObj) return defaultModelObj.name || defaultModelObj.id
+    return activeModelObj?.name || ''
+  }, [defaultNodeModelId, defaultModelObj, activeModelObj])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
@@ -784,73 +864,61 @@ export function AppTab(props) {
     }
   }, [manifest?.appId, initialFormValues])
 
-  // 监听模型与有效比例、时长、分辨率切换，若参数不被新模型支持，自动自愈收敛为新模型合法值 (Issue #2631, #2642)
+  // 监听模型切换，若已选参数不被新模型支持，自动自愈收敛为新模型合法值 (Issue #2631, #2642)
+  // 注意：依赖项不包含 formValues，避免用户在时长/数值输入框连续输入多位数时被强制 clamp 打断
   useEffect(() => {
     // 仅当用户显式选择了特定模型（selectedModel !== ''）时，才触发强制参数自愈收敛；默认智能推荐状态下，完全尊重应用 Schema 声明的原生默认参数
     if (!selectedModel || !activeModelObj) return
 
-    for (const [key, prop] of Object.entries(properties)) {
-      const mapping = manifest?.fieldMappings?.[key]
+    setFormValues((prev) => {
+      let next = prev
+      for (const [key, prop] of Object.entries(properties)) {
+        const mapping = manifest?.fieldMappings?.[key]
 
-      // 1. 比例自愈校验
-      if (isAspectRatioField(key, prop, mapping)) {
-        const modelRatios = resolveModelAspectRatios(activeModelObj, null)
-        if (modelRatios && modelRatios.length > 0) {
-          const validRatioValues = modelRatios.map((r) => String(r.value))
-          const currentVal = formValues[key]
-          if (currentVal && !validRatioValues.includes(String(currentVal))) {
-            const fallbackVal =
-              activeModelObj.parameters?.aspectRatio?.defaultValue ||
-              activeModelObj.parameters?.aspectRatio?.default ||
-              validRatioValues[0]
-            if (fallbackVal) {
-              setFormValues((prev) => {
-                if (prev[key] && validRatioValues.includes(String(prev[key]))) {
-                  return prev
-                }
-                return {
-                  ...prev,
-                  [key]: String(fallbackVal),
-                }
-              })
+        // 1. 比例自愈校验
+        if (isAspectRatioField(key, prop, mapping)) {
+          const modelRatios = resolveModelAspectRatios(activeModelObj, null)
+          if (modelRatios && modelRatios.length > 0) {
+            const validRatioValues = modelRatios.map((r) => String(r.value))
+            const currentVal = next[key]
+            if (currentVal && !validRatioValues.includes(String(currentVal))) {
+              const fallbackVal =
+                activeModelObj.parameters?.aspectRatio?.defaultValue ||
+                activeModelObj.parameters?.aspectRatio?.default ||
+                validRatioValues[0]
+              if (fallbackVal) {
+                if (next === prev) next = { ...prev }
+                next[key] = String(fallbackVal)
+              }
+            }
+          }
+        }
+        // 2. 时长自愈校验
+        else if (isDurationField(key, prop, mapping)) {
+          const currentVal = next[key]
+          if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
+            const sanitized = sanitizeModelDuration(activeModelObj, currentVal)
+            if (sanitized !== undefined && sanitized !== currentVal) {
+              if (next === prev) next = { ...prev }
+              next[key] = sanitized
+            }
+          }
+        }
+        // 3. 分辨率自愈校验
+        else if (isResolutionField(key, prop, mapping)) {
+          const currentVal = next[key]
+          if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
+            const sanitized = sanitizeModelResolution(activeModelObj, currentVal)
+            if (sanitized !== undefined && sanitized !== currentVal) {
+              if (next === prev) next = { ...prev }
+              next[key] = sanitized
             }
           }
         }
       }
-      // 2. 时长自愈校验
-      else if (isDurationField(key, prop, mapping)) {
-        const currentVal = formValues[key]
-        if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
-          const sanitized = sanitizeModelDuration(activeModelObj, currentVal)
-          if (sanitized !== undefined && sanitized !== currentVal) {
-            setFormValues((prev) => {
-              if (prev[key] === sanitized) return prev
-              return {
-                ...prev,
-                [key]: sanitized,
-              }
-            })
-          }
-        }
-      }
-      // 3. 分辨率自愈校验
-      else if (isResolutionField(key, prop, mapping)) {
-        const currentVal = formValues[key]
-        if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
-          const sanitized = sanitizeModelResolution(activeModelObj, currentVal)
-          if (sanitized !== undefined && sanitized !== currentVal) {
-            setFormValues((prev) => {
-              if (prev[key] === sanitized) return prev
-              return {
-                ...prev,
-                [key]: sanitized,
-              }
-            })
-          }
-        }
-      }
-    }
-  }, [selectedModel, activeModelObj, properties, manifest, formValues])
+      return next
+    })
+  }, [selectedModel, activeModelObj, properties, manifest])
 
   const handleFieldChange = useCallback((key, val) => {
     setFormValues((prev) => ({ ...prev, [key]: val }))
@@ -1015,6 +1083,24 @@ export function AppTab(props) {
     }
 
     const effectiveFormValues = { ...formValues }
+    for (const [key, prop] of Object.entries(properties)) {
+      const mapping = manifest?.fieldMappings?.[key]
+      const rawVal = effectiveFormValues[key]
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue
+      if (selectedModel && isDurationField(key, prop, mapping) && activeModelObj) {
+        const sanitized = sanitizeModelDuration(activeModelObj, rawVal)
+        if (sanitized !== undefined && sanitized !== rawVal) {
+          effectiveFormValues[key] = sanitized
+        }
+      } else if ((prop.type === 'number' || prop.type === 'integer') && typeof rawVal === 'number' && !Number.isNaN(rawVal)) {
+        let clamped = rawVal
+        if (typeof prop.minimum === 'number' && clamped < prop.minimum) clamped = prop.minimum
+        if (typeof prop.maximum === 'number' && clamped > prop.maximum) clamped = prop.maximum
+        if (clamped !== rawVal) {
+          effectiveFormValues[key] = clamped
+        }
+      }
+    }
     if (selectedModel && selectedModel.trim()) {
       effectiveFormValues.__model__ = selectedModel.trim()
     }
@@ -1536,18 +1622,7 @@ export function AppTab(props) {
                       ) : widget === 'select-single' ? (
                       /* 2. 定制下拉选择器 */
                       (() => {
-                        let opts = resolveOptions(prop)
-                        if (isRes) {
-                          const modelResolutions = resolveModelResolutions(activeModelObj, prop)
-                          if (modelResolutions && modelResolutions.length > 0) {
-                            opts = modelResolutions
-                          }
-                        } else if (isDur) {
-                          const durSpec = resolveModelDurations(activeModelObj, prop)
-                          if (durSpec.options && durSpec.options.length > 0) {
-                            opts = durSpec.options
-                          }
-                        }
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
                         const currentOpt = opts.find((o) => String(o.value) === String(val))
                         const displayLabel = currentOpt ? currentOpt.label : (val || prop.placeholder || '请选择')
                         const isOpen = openDropdownKey === key
@@ -1587,18 +1662,7 @@ export function AppTab(props) {
                     ) : widget === 'segmented-tabs' ? (
                       /* 3. 选项卡分段切换 */
                       (() => {
-                        let opts = resolveOptions(prop)
-                        if (isRes) {
-                          const modelResolutions = resolveModelResolutions(activeModelObj, prop)
-                          if (modelResolutions && modelResolutions.length > 0) {
-                            opts = modelResolutions
-                          }
-                        } else if (isDur) {
-                          const durSpec = resolveModelDurations(activeModelObj, prop)
-                          if (durSpec.options && durSpec.options.length > 0) {
-                            opts = durSpec.options
-                          }
-                        }
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
                         return (
                           <div className="omx-apptab-seg-tabs" role="tablist">
                             {opts.map((opt) => {
@@ -1945,7 +2009,7 @@ export function AppTab(props) {
                       </label>
                     ) : widget === 'slider-range' || prop.type === 'number' || prop.type === 'integer' ? (
                       (() => {
-                        const durSpec = isDur && selectedModel ? resolveModelDurations(activeModelObj, prop) : null
+                        const durSpec = isDur ? resolveModelDurations(activeModelObj, prop) : null
                         const min = durSpec?.range?.min ?? prop.minimum
                         const max = durSpec?.range?.max ?? prop.maximum
                         const step = durSpec?.range?.step ?? (prop.type === 'integer' ? 1 : 'any')
@@ -1958,6 +2022,25 @@ export function AppTab(props) {
                             max={max}
                             step={step}
                             onChange={(e) => handleFieldChange(key, e.target.value === '' ? '' : Number(e.target.value))}
+                            onBlur={(e) => {
+                              const raw = e.target.value
+                              if (raw === '' || raw === undefined || raw === null) return
+                              const num = Number(raw)
+                              if (Number.isNaN(num)) return
+                              if (selectedModel && isDur && activeModelObj) {
+                                const sanitized = sanitizeModelDuration(activeModelObj, num)
+                                if (sanitized !== undefined && sanitized !== num) {
+                                  handleFieldChange(key, sanitized)
+                                }
+                              } else {
+                                let clamped = num
+                                if (typeof min === 'number' && clamped < min) clamped = min
+                                if (typeof max === 'number' && clamped > max) clamped = max
+                                if (clamped !== num) {
+                                  handleFieldChange(key, clamped)
+                                }
+                              }
+                            }}
                           />
                         )
                       })()

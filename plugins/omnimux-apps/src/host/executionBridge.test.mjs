@@ -743,5 +743,53 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     const imgNode = snapImageCat.nodes.find((n) => n.id === 'node_generator');
     assert.equal(imgNode.data.params.aspectRatio, '1:1', '从 image bucket 解析的契约正确自愈比例');
     assert.equal(imgNode.data.params.resolution, '1K', '从 image bucket 解析的契约正确自愈分辨率');
+
+    // 8. 动态目录条目 parameters 为空对象 {} 时，自动回退合并 KNOWN_MODEL_CAPABILITY_CONTRACTS 兜底表
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 25, // 超过 seedance-2.0 上限 15s
+      aspectRatio: '3:2', // 不在 seedance-2.0 比例列表中
+      resolution: '8k', // 不在 seedance-2.0 分辨率列表中
+    };
+    const snapEmptyParams = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试空参数动态目录回退兜底表',
+        __model__: 'seedance-2.0',
+      },
+      { modelCatalog: { video: [{ id: 'seedance-2.0', parameters: {} }] } },
+    );
+    const fallbackNode = snapEmptyParams.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(fallbackNode.data.params.duration, 15, '空 parameters 动态条目应回退兜底契约并将 25s 截断至 15s');
+    assert.equal(fallbackNode.data.params.aspectRatio, '16:9', '空 parameters 动态条目应回退兜底契约重置比例为 16:9');
+    assert.equal(fallbackNode.data.params.resolution, '720p', '空 parameters 动态条目应回退兜底契约重置分辨率为 720p');
+
+    // 9. 动态目录别名归一化：目录中 ID 为 seedance-2-0，前端提交 seedance-2.0 时正确命中动态契约
+    const aliasCatalog = {
+      video: [
+        {
+          id: 'seedance-2-0',
+          parameters: {
+            duration: { range: { min: 4, max: 12, step: 1 }, defaultValue: 5 },
+          },
+        },
+      ],
+    };
+    genNode.data.params = {
+      model: 'seedance-2.0',
+      duration: 15,
+      aspectRatio: '16:9',
+      resolution: '720p',
+    };
+    const snapAlias = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试动态目录符号归一化匹配',
+        __model__: 'seedance-2.0',
+      },
+      { modelCatalog: aliasCatalog },
+    );
+    const aliasNode = snapAlias.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(aliasNode.data.params.duration, 12, '通过 -_. 归一化命中动态目录中的 seedance-2-0 并将 15s 截断为 12s');
   });
 });
