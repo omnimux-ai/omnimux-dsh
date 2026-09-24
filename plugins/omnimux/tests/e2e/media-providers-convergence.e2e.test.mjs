@@ -249,8 +249,9 @@ describe('settings-sections-split.e2e', () => {
     }))
     assert.equal(agentModelOptions[0].value, '', 'First option value is empty for default')
     assert.equal(agentModelOptions[0].label, 'CLI 默认设置', 'First option label is CLI 默认设置')
-    assert.ok(agentModelOptions.some((o) => o.value === 'gpt-4o'), 'Contains gpt-4o option from agent models')
-    assert.ok(agentModelOptions.some((o) => o.value === 'o3-mini'), 'Contains o3-mini option from agent models')
+    assert.ok(agentModelOptions.some((o) => o.value === 'gpt-6-astra'), 'Contains gpt-6-astra option from agent models')
+    assert.ok(agentModelOptions.some((o) => o.value === 'gpt-6-sol'), 'Contains gpt-6-sol option from agent models')
+    assert.equal(agentModelOptions.some((o) => o.value === 'gpt-4o'), false, 'Legacy gpt-4o must be replaced')
     assert.equal(agentModelOptions.some((o) => o.value.includes('claude')), false, 'Codex options must not contain claude models')
 
     // Switch to Tab 2 (媒体生成提供商)
