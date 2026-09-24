@@ -1,0 +1,15 @@
+{
+  "issue": 2639,
+  "task": "ForkAppProjectDialog 弹窗增加显式输入框标签与意图说明",
+  "timestamp": "2026-09-24T13:44:17.477Z",
+  "verification": "PASS",
+  "evidenceFiles": [
+    "docs/evidence/fork-dialog-labels-demo.html",
+    "docs/evidence/fork-dialog-labels-verified.png"
+  ],
+  "featuresVerified": {
+    "explicitProjectLabel": "未建项时输入框显式展示「项目显示名称」，附带“不会新建或重命名物理文件夹”说明",
+    "explicitPageLabel": "已有项目时输入框显式展示「新创作页名称」，附带“原项目名不变追加画布”说明",
+    "workspaceDirClarification": "工作区标题统一优化为「存放工作区目录」，彻底消除物理文件夹新建疑虑"
+  }
+}
