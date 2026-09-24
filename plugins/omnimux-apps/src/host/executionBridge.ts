@@ -466,6 +466,38 @@ export function prepareAndInjectWorkflowSnapshot(
     }
   }
 
+  // Step 2.6: 动态模型穿透 (Issue 2631)
+  // 当用户在表单中显式选定生成模型（通过 formValues.__model__ 或 formValues.model 传入）时，
+  // 遍历工作流 DAG 节点，定位主生成引擎节点并安全覆盖其模型定义，保持连线拓扑不变
+  const rawSelectedModel = (formValues as any).__model__ || (formValues as any).model;
+  if (typeof rawSelectedModel === 'string' && rawSelectedModel.trim() !== '') {
+    const selectedModel = rawSelectedModel.trim();
+    const generatorNode = nodes.find((n) => {
+      const d = n.data || {};
+      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || n.id.startsWith('node-slot-')) {
+        return false;
+      }
+      return (
+        d.tool === 'omnimux_video_submit' ||
+        d.tool === 'omnimux_image_submit' ||
+        d.materialType === 'video' ||
+        d.materialType === 'image' ||
+        n.type === 'video' ||
+        n.type === 'image' ||
+        (d.params && ('model' in d.params || 'aspectRatio' in d.params)) ||
+        'model' in d
+      );
+    });
+
+    if (generatorNode) {
+      generatorNode.data = generatorNode.data || {};
+      generatorNode.data.model = selectedModel;
+      if (generatorNode.data.params && typeof generatorNode.data.params === 'object') {
+        generatorNode.data.params.model = selectedModel;
+      }
+    }
+  }
+
   return {
     nodes,
     edges,

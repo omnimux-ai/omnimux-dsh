@@ -25,6 +25,7 @@ import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 import {
   resolveOptions,
+  resolveModelAspectRatios,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
@@ -32,9 +33,181 @@ import {
 
 export {
   resolveOptions,
+  resolveModelAspectRatios,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
+}
+
+export const KNOWN_OFFICIAL_MODELS = Object.freeze({
+  video: [
+    {
+      id: 'seedance-2.0',
+      name: 'Seedance 2.0',
+      label: 'Seedance 2.0',
+      subtitle: '480p–4k · 高清多运镜 · 推荐',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: [
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '1:1 方屏', value: '1:1' },
+            { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
+            { label: '21:9 超宽屏', value: '21:9' },
+          ],
+        },
+      },
+    },
+    {
+      id: 'minimax-h3',
+      name: 'MiniMax H3',
+      label: 'MiniMax H3',
+      subtitle: '768p/1080p · 强叙事高动态',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: [
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '1:1 方屏', value: '1:1' },
+            { label: '4:3', value: '4:3' },
+            { label: '21:9 超宽屏', value: '21:9' },
+          ],
+        },
+      },
+    },
+    {
+      id: 'kling-v1-6',
+      name: '可灵 Kling v1.6',
+      label: '可灵 Kling v1.6',
+      subtitle: '1080p · 复杂物理世界模拟',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '9:16',
+          options: [
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '1:1 方屏', value: '1:1' },
+          ],
+        },
+      },
+    },
+    {
+      id: 'kling-o3',
+      name: '可灵 Kling O3',
+      label: '可灵 Kling O3',
+      subtitle: '影视级画质 · 质感光影',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '9:16',
+          options: [
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '1:1 方屏', value: '1:1' },
+          ],
+        },
+      },
+    },
+  ],
+  image: [
+    {
+      id: 'gpt-image-2.5',
+      name: 'GPT Image 2.5',
+      label: 'GPT Image 2.5',
+      subtitle: '超清摄影质感 · 多主体一致性',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '1:1',
+          options: [
+            { label: '1:1 方屏', value: '1:1' },
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
+            { label: '21:9 超宽屏', value: '21:9' },
+          ],
+        },
+      },
+    },
+    {
+      id: 'flux-1-schnell',
+      name: 'FLUX.1 schnell',
+      label: 'FLUX.1 schnell',
+      subtitle: '极速出片 · 构图细节丰富',
+      parameters: {
+        aspectRatio: {
+          defaultValue: '1:1',
+          options: [
+            { label: '1:1 方屏', value: '1:1' },
+            { label: '16:9 横屏', value: '16:9' },
+            { label: '9:16 竖屏', value: '9:16' },
+            { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
+          ],
+        },
+      },
+    },
+  ],
+})
+
+export function normalizeCatalogModels(catalogData, category = 'video') {
+  const targetCategory = category === 'image' ? 'image' : 'video'
+  let rawList = []
+  if (Array.isArray(catalogData)) {
+    rawList = catalogData
+  } else if (catalogData && typeof catalogData === 'object') {
+    if (Array.isArray(catalogData[targetCategory])) {
+      rawList = catalogData[targetCategory]
+    } else if (Array.isArray(catalogData.models)) {
+      rawList = catalogData.models
+    }
+  }
+
+  const normalized = rawList
+    .filter((m) => {
+      if (!m || !m.id) return false
+      if (m.category && m.category !== targetCategory) return false
+      if (m.type && m.type !== targetCategory) return false
+      return true
+    })
+    .map((m) => {
+      const id = m.id === 'seedance-2-0' ? 'seedance-2.0' : m.id
+      const name = m.name || m.label || id
+      const subtitle = m.subtitle || m.desc || m.badge || ''
+      const rawOptions = m.parameters?.aspectRatio?.options
+      let options = []
+      if (Array.isArray(rawOptions) && rawOptions.length > 0) {
+        options = rawOptions.map((opt) => {
+          if (opt && typeof opt === 'object' && 'value' in opt) {
+            return { label: opt.label || opt.value, value: String(opt.value) }
+          }
+          return { label: String(opt), value: String(opt) }
+        })
+      }
+      const defaultValue =
+        m.parameters?.aspectRatio?.default ||
+        m.parameters?.aspectRatio?.defaultValue ||
+        (options[0]?.value ?? (targetCategory === 'image' ? '1:1' : '16:9'))
+      return {
+        id,
+        name,
+        label: name,
+        subtitle,
+        parameters: {
+          aspectRatio: {
+            defaultValue,
+            options,
+          },
+        },
+      }
+    })
+
+  if (normalized.length === 0) {
+    return KNOWN_OFFICIAL_MODELS[targetCategory] || KNOWN_OFFICIAL_MODELS.video
+  }
+  return normalized
 }
 
 const EMPTY_PROPS = Object.freeze({})
@@ -362,6 +535,61 @@ export function AppTab(props) {
   const [activeRightTab, setActiveRightTab] = useState('tasks')
   const [tasks, setTasks] = useState(() => readCachedTasks(manifest?.appId))
   const [openDropdownKey, setOpenDropdownKey] = useState(null)
+  const [selectedModel, setSelectedModel] = useState('')
+  const [modelCatalog, setModelCatalog] = useState(() => KNOWN_OFFICIAL_MODELS)
+
+  useEffect(() => {
+    let alive = true
+    const loadCatalog = async () => {
+      try {
+        const resp = await fetch('/omnimux/model-catalog')
+        if (!resp.ok) return
+        const data = await resp.json()
+        if (alive && data && typeof data === 'object') {
+          setModelCatalog(data)
+        }
+      } catch {
+        // 网络不可用或离线时，平滑保持已知保底模型列表
+      }
+    }
+    loadCatalog()
+    const onCatalogUpdated = () => { loadCatalog() }
+    window.addEventListener?.('omnimux:model-catalog-updated', onCatalogUpdated)
+    return () => {
+      alive = false
+      window.removeEventListener?.('omnimux:model-catalog-updated', onCatalogUpdated)
+    }
+  }, [])
+
+  const currentCategory = manifest?.metadata?.category === 'image' ? 'image' : 'video'
+  const availableModels = useMemo(() => {
+    return normalizeCatalogModels(modelCatalog, currentCategory)
+  }, [modelCatalog, currentCategory])
+
+  const defaultNodeModelId = useMemo(() => {
+    const nodes = manifest?.workflowBinding?.snapshot?.nodes || []
+    for (const node of nodes) {
+      const d = node.data || {}
+      if (d.model) return String(d.model)
+      if (d.params?.model) return String(d.params.model)
+      if (node.type === 'video' || d.materialType === 'video' || d.tool === 'omnimux_video_submit') {
+        if (d.model || d.params?.model) return String(d.model || d.params?.model)
+      }
+    }
+    return ''
+  }, [manifest])
+
+  const activeModelObj = useMemo(() => {
+    if (selectedModel) {
+      const found = availableModels.find((m) => m.id === selectedModel)
+      if (found) return found
+    }
+    if (defaultNodeModelId) {
+      const found = availableModels.find((m) => m.id === defaultNodeModelId)
+      if (found) return found
+    }
+    return availableModels[0] || null
+  }, [selectedModel, defaultNodeModelId, availableModels])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
@@ -431,8 +659,36 @@ export function AppTab(props) {
       setLinkDrafts({})
       setOpenDropdownKey(null)
       setPromptModal(null)
+      setSelectedModel('')
     }
   }, [manifest?.appId, initialFormValues])
+
+  // 监听模型与有效比例切换，若成片比例不被新模型支持，自动自愈收敛为新模型默认比例 (Issue #2631)
+  useEffect(() => {
+    if (!activeModelObj) return
+    const modelRatios = resolveModelAspectRatios(activeModelObj, null)
+    if (!modelRatios || modelRatios.length === 0) return
+    const validRatioValues = modelRatios.map((r) => String(r.value))
+
+    for (const [key, prop] of Object.entries(properties)) {
+      const widget = resolveWidget(key, prop, manifest?.fieldMappings?.[key])
+      if (widget === 'ratio-cards' || key === 'aspect_ratio' || key === 'aspectRatio') {
+        const currentVal = formValues[key]
+        if (currentVal && !validRatioValues.includes(String(currentVal))) {
+          const fallbackVal =
+            activeModelObj.parameters?.aspectRatio?.defaultValue ||
+            activeModelObj.parameters?.aspectRatio?.default ||
+            validRatioValues[0]
+          if (fallbackVal) {
+            setFormValues((prev) => ({
+              ...prev,
+              [key]: String(fallbackVal),
+            }))
+          }
+        }
+      }
+    }
+  }, [selectedModel, activeModelObj, properties, manifest])
 
   const handleFieldChange = useCallback((key, val) => {
     setFormValues((prev) => ({ ...prev, [key]: val }))
@@ -596,6 +852,12 @@ export function AppTab(props) {
       return
     }
 
+    const effectiveFormValues = { ...formValues }
+    if (selectedModel && selectedModel.trim()) {
+      effectiveFormValues.__model__ = selectedModel.trim()
+      effectiveFormValues.model = selectedModel.trim()
+    }
+
     setIsSubmitting(true)
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     const now = new Date().toISOString()
@@ -605,7 +867,7 @@ export function AppTab(props) {
       status: 'running',
       createdAt: now,
       updatedAt: now,
-      inputs: { ...formValues },
+      inputs: effectiveFormValues,
     }
 
     const updatedTasks = [newTask, ...tasks]
@@ -636,7 +898,7 @@ export function AppTab(props) {
 
       const win = typeof window !== 'undefined' ? window : null
       if (win && typeof win.__OMNIMUX_APPS_EXECUTE__ === 'function') {
-        const res = await win.__OMNIMUX_APPS_EXECUTE__(manifest, formValues)
+        const res = await win.__OMNIMUX_APPS_EXECUTE__(manifest, effectiveFormValues)
         executionId = res.executionId || res.jobId || ''
         if (res.artifacts) artifacts = res.artifacts
         if (res.mediaUrl) mediaUrl = res.mediaUrl
@@ -647,7 +909,7 @@ export function AppTab(props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             version: manifest.version,
-            inputs: formValues,
+            inputs: effectiveFormValues,
             manifest,
           }),
         }).catch(() => null)
@@ -752,7 +1014,7 @@ export function AppTab(props) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, manifest, requiredList, formValues, tasks])
+  }, [isSubmitting, manifest, requiredList, formValues, tasks, selectedModel])
 
   // Apply demo snapshot
   const handleApplyDemo = useCallback((snapshot) => {
@@ -932,6 +1194,69 @@ export function AppTab(props) {
         <div className="omx-apptab-form-panel">
           <form className="omx-apptab-form" onSubmit={handleGenerate}>
             <div className="omx-apptab-form-fields">
+              {/* 生成模型选择器 */}
+              <div className={`omx-apptab-field-group ${openDropdownKey === '__model_selector__' ? 'is-dropdown-open' : ''}`}>
+                <div className="omx-apptab-label-row">
+                  <label className="omx-apptab-label">生成模型</label>
+                  <span className="omx-apptab-hint">选择生成底座模型，智能推荐为当前场景最优模型</span>
+                </div>
+                <div className={`omx-apptab-select-single ${openDropdownKey === '__model_selector__' ? 'is-open' : ''}`}>
+                  <div
+                    className={`omx-apptab-select-trigger ${openDropdownKey === '__model_selector__' ? 'is-open' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOpenDropdownKey(openDropdownKey === '__model_selector__' ? null : '__model_selector__')
+                    }}
+                  >
+                    <span>
+                      {selectedModel
+                        ? (availableModels.find((m) => m.id === selectedModel)?.name || selectedModel)
+                        : '智能推荐 (默认)'}
+                    </span>
+                    <IconChevronDown size={14} />
+                  </div>
+
+                  {openDropdownKey === '__model_selector__' && (
+                    <div className="omx-apptab-select-options">
+                      <div
+                        className={`omx-apptab-select-option ${selectedModel === '' ? 'is-selected' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedModel('')
+                          setOpenDropdownKey(null)
+                        }}
+                      >
+                        <div className="omx-apptab-model-option-content">
+                          <span className="omx-apptab-model-name">智能推荐 (默认)</span>
+                          <span className="omx-apptab-model-sub">系统根据应用场景自动调度最佳生成模型</span>
+                        </div>
+                        {selectedModel === '' && <IconCheck size={12} className="omx-apptab-option-check" />}
+                      </div>
+                      {availableModels.map((m) => {
+                        const isSelected = selectedModel === m.id
+                        return (
+                          <div
+                            key={m.id}
+                            className={`omx-apptab-select-option ${isSelected ? 'is-selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedModel(m.id)
+                              setOpenDropdownKey(null)
+                            }}
+                          >
+                            <div className="omx-apptab-model-option-content">
+                              <span className="omx-apptab-model-name">{m.name}</span>
+                              {m.subtitle && <span className="omx-apptab-model-sub">{m.subtitle}</span>}
+                            </div>
+                            {isSelected && <IconCheck size={12} className="omx-apptab-option-check" />}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {Object.entries(properties).map(([key, prop]) => {
                 const isRequired = requiredList.includes(key)
                 const error = errors[key]
@@ -944,51 +1269,51 @@ export function AppTab(props) {
 
                 return (
                   <div key={key} className={`omx-apptab-field-group ${isDropdownOpen ? 'is-dropdown-open' : ''}`}>
-                    <div className="omx-apptab-label-row">
-                      <label className="omx-apptab-label">
-                        {title}
-                        {isRequired && (
-                          <span className="omx-apptab-required">*</span>
+                      <div className="omx-apptab-label-row">
+                        <label className="omx-apptab-label">
+                          {title}
+                          {isRequired && (
+                            <span className="omx-apptab-required">*</span>
+                          )}
+                        </label>
+                        {desc && (
+                          <span className="omx-apptab-hint">
+                            {desc}
+                          </span>
                         )}
-                      </label>
-                      {desc && (
-                        <span className="omx-apptab-hint">
-                          {desc}
-                        </span>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* 1. 比例卡片组 */}
-                    {widget === 'ratio-cards' ? (
-                      (() => {
-                        const opts = resolveOptions(prop)
-                        const ratios = opts.length > 0 ? opts : [
-                          { label: '1:1', value: '1:1' },
-                          { label: '16:9', value: '16:9' },
-                          { label: '9:16', value: '9:16' },
-                          { label: '4:3', value: '4:3' },
-                        ]
-                        return (
-                          <div className="omx-apptab-ratio-grid">
-                            {ratios.map((r) => {
-                              const rVal = String(r.value)
-                              const isActive = String(val) === rVal
-                              return (
-                                <button // exempt-ui01 ai-app-ui-spec 40px ratio card
-                                  key={rVal}
-                                  type="button"
-                                  title={r.label}
-                                  className={`omx-apptab-ratio-card ${isActive ? 'is-active' : ''}`}
-                                  onClick={() => handleFieldChange(key, rVal)}
-                                >
-                                  {rVal}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()
-                    ) : widget === 'select-single' ? (
+                      {/* 1. 比例卡片组 */}
+                      {widget === 'ratio-cards' ? (
+                        (() => {
+                          const modelRatios = resolveModelAspectRatios(activeModelObj, prop)
+                          const ratios = modelRatios.length > 0 ? modelRatios : [
+                            { label: '1:1', value: '1:1' },
+                            { label: '16:9', value: '16:9' },
+                            { label: '9:16', value: '9:16' },
+                            { label: '4:3', value: '4:3' },
+                          ]
+                          return (
+                            <div className="omx-apptab-ratio-grid">
+                              {ratios.map((r) => {
+                                const rVal = String(r.value)
+                                const isActive = String(val) === rVal
+                                return (
+                                  <button // exempt-ui01 ai-app-ui-spec 40px ratio card
+                                    key={rVal}
+                                    type="button"
+                                    title={r.label}
+                                    className={`omx-apptab-ratio-card ${isActive ? 'is-active' : ''}`}
+                                    onClick={() => handleFieldChange(key, rVal)}
+                                  >
+                                    {rVal}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )
+                        })()
+                      ) : widget === 'select-single' ? (
                       /* 2. 定制下拉选择器 */
                       (() => {
                         const opts = resolveOptions(prop)

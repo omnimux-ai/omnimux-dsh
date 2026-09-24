@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   resolveOptions,
+  resolveModelAspectRatios,
   resolveWidget,
   resolveSourceLabel,
   displayValueOf,
@@ -62,7 +63,90 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
     })
   })
 
+  describe('resolveModelAspectRatios()', () => {
+    it('returns options from activeModel when present', () => {
+      const activeModel = {
+        parameters: {
+          aspectRatio: {
+            options: [
+              { label: '9:16 竖屏', value: '9:16' },
+              { label: '16:9 横屏', value: '16:9' },
+            ],
+          },
+        },
+      }
+      const opts = resolveModelAspectRatios(activeModel, {})
+      assert.deepEqual(opts, [
+        { label: '9:16 竖屏', value: '9:16' },
+        { label: '16:9 横屏', value: '16:9' },
+      ])
+    })
+
+    it('handles primitive values in activeModel options', () => {
+      const activeModel = {
+        parameters: {
+          aspectRatio: {
+            options: ['1:1', '21:9'],
+          },
+        },
+      }
+      const opts = resolveModelAspectRatios(activeModel, {})
+      assert.deepEqual(opts, [
+        { label: '1:1', value: '1:1' },
+        { label: '21:9', value: '21:9' },
+      ])
+    })
+
+    it('falls back to resolveOptions(prop) when activeModel has no aspectRatio options', () => {
+      const prop = {
+        options: [
+          { label: '4:3', value: '4:3' },
+          { label: '16:9', value: '16:9' },
+        ],
+      }
+      assert.deepEqual(resolveModelAspectRatios(null, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+      assert.deepEqual(resolveModelAspectRatios({}, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+      assert.deepEqual(resolveModelAspectRatios({ parameters: {} }, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+    })
+  })
+
   describe('resolveWidget()', () => {
+    it('auto-heals product_image or product-titled fields from legacy widgets to product-link (Issue #2631)', () => {
+      assert.equal(
+        resolveWidget('product_image', { widget: 'media-uploader' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('product_image', { widget: 'library-picker' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('product_image', { type: 'string' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('product_image', { widget: 'media-uploader' }, { widget: 'media-uploader' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('img', { title: '商品主图', widget: 'media-uploader' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('other_file', { title: '用户头像', widget: 'media-uploader' }),
+        'media-uploader',
+      )
+    })
+
     it('prefers mapping.widget over prop.widget', () => {
       const widget = resolveWidget('test', { widget: 'select-single' }, { widget: 'ratio-cards' })
       assert.equal(widget, 'ratio-cards')

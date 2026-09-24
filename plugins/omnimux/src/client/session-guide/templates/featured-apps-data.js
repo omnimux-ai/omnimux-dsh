@@ -41,8 +41,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
           },
           "copywriting": {
@@ -110,7 +111,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
         },
@@ -190,8 +191,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
           },
           "copywriting": {
@@ -259,7 +261,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
         },
@@ -339,8 +341,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
           },
           "copywriting": {
@@ -408,7 +411,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
         },
@@ -488,8 +491,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
           },
           "copywriting": {
@@ -557,7 +561,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
         },
@@ -637,8 +641,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
           },
           "copywriting": {
@@ -706,7 +711,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
         },
@@ -786,8 +791,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
           },
           "copywriting": {
@@ -855,7 +861,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
         },
@@ -935,8 +941,9 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "product_image": {
             "type": "string",
             "title": "商品主图 / 白底图",
-            "description": "支持拖拽上传高清商品图，或粘贴电商链接自动解析",
-            "widget": "media-uploader",
+            "placeholder": "粘贴商品链接，或从商品库选择",
+            "description": "粘贴商品链接、从商品库选择或本地上传",
+            "widget": "product-link",
             "default": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
           },
           "copywriting": {
@@ -1004,7 +1011,7 @@ export const FEATURED_APPS_CARDS = Object.freeze([
           "nodeId": "node-slot-product-image",
           "targetField": "mediaUrl",
           "mappingType": "media",
-          "widget": "media-uploader",
+          "widget": "product-link",
           "required": true,
           "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
         },

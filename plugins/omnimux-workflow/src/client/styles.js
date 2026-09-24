@@ -871,6 +871,29 @@ export const WORKFLOW_CSS = `
   color: var(--dsw-alias-brand-primary);
   font-weight: 500;
 }
+.omx-apptab-model-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  overflow: hidden;
+}
+.omx-apptab-model-name {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-select-option.is-selected .omx-apptab-model-name {
+  color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-model-sub {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* 分段选项卡 */
 .omx-apptab-seg-tabs {
   display: flex;
