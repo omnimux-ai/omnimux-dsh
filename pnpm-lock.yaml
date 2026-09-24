@@ -458,7 +458,7 @@ importers:
         version: 3.18.1
       dsh-ui-kit:
         specifier: file:../../../../personal/dsh-ui-kit
-        version: file:../../personal/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: file:../../personal/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@19.2.8(react@19.2.8))(react@18.3.1)
 
   plugins/omnimux-forms:
     devDependencies:
@@ -10171,6 +10171,12 @@ snapshots:
       '@deepseek-ai/dsh-client-ui-primitives': 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+
+  dsh-ui-kit@file:../../personal/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@19.2.8(react@19.2.8))(react@18.3.1):
+    dependencies:
+      '@deepseek-ai/dsh-client-ui-primitives': 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
+      react: 18.3.1
+      react-dom: 19.2.8(react@19.2.8)
 
   dsh-ui-kit@file:plugins/omnimux-studio/dsh-ui-kit-0.1.0.tgz(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:

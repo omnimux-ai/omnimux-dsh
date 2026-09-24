@@ -267,5 +267,21 @@ test('E2E: 场景 6 - ForkAppProjectDialog 弹窗支持追加创作页与自选�
   assert.ok(html.includes('创建应用编辑副本'), '必须包含弹窗标题')
   assert.ok(html.includes('加入当前项目'), '有当前项目时必须展示加入当前项目选项')
   assert.ok(html.includes('新建独立项目'), '必须展示新建独立项目选项')
+  assert.ok(html.includes('新创作页名称'), '有当前项目时显式标注为新创作页名称')
+  assert.ok(html.includes('将在当前项目「我的视频主项目」中追加一张新画布'), '包含清晰的项目内追加说明')
   assert.ok(html.includes('爆款商品实拍_副本'), '有当前项目时默认预填创作页副本名')
+
+  // 2. 验证未建项独立项目场景下的显式标签与意图说明
+  const htmlNoHost = renderToStaticMarkup(
+    React.createElement(ForkAppProjectDialog, {
+      manifest,
+      hostProject: null,
+      initialPath: '/Users/x/Projects/Current',
+      onCancel() {},
+      onSubmit() {},
+    }),
+  )
+  assert.ok(htmlNoHost.includes('项目显示名称'), '未建项时显式标注为项目显示名称')
+  assert.ok(htmlNoHost.includes('不会在电脑硬盘中新建或重命名物理文件夹'), '包含明确的物理文件夹不新建说明')
+  assert.ok(htmlNoHost.includes('存放工作区目录'), '明确提示这是工作区目录而非新物理文件夹')
 })

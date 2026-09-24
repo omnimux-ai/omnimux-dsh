@@ -2018,6 +2018,22 @@ export const WORKFLOW_CSS = `
 .omx-fork-source-head {
   margin-top: 16px;
 }
+.omx-fork-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omx-fork-input-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.omx-fork-input-hint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  line-height: 1.4;
+  margin-top: 4px;
+}
 `
 
 export function injectWorkflowStyles() {
