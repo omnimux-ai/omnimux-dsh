@@ -9,6 +9,9 @@ import {
   DOCK_BOTTOM,
   DOCK_MAX_WIDTH,
   readPageScrollTop,
+  getComposerScrollThresholds,
+  READ_TOP_MAX,
+  DOCK_LEAVE_MAX,
 } from './useComposerDocking.js'
 
 function withDom(html = '<div id="root"><div data-phase="conversation" data-omnimux-starter-host=""><div class="hero-band"><div data-composer-card="" style="height: 120px;"></div></div><div class="scrollBody" style="height: 600px; overflow-y: auto;"></div><div id="seat"></div></div></div>') {
@@ -400,6 +403,104 @@ test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 D
     await flush()
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
     assert.equal(scroller.scrollTop, 560)
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('getComposerScrollThresholds: 卡片缺失时返回防御性基线，严禁将 root 作为 band', () => {
+  const dom = new JSDOM('<div id="root" style="height: 5000px;"><div class="no-card"></div></div>')
+  const root = dom.window.document.getElementById('root')
+  const thresholds = getComposerScrollThresholds(root, null)
+  assert.deepEqual(thresholds, {
+    revealThreshold: READ_TOP_MAX,
+    leaveThreshold: DOCK_LEAVE_MAX,
+    measuredHeight: 0,
+    offsetTop: 0,
+  }, '卡片缺失时必须返回安全基线常量，严禁把 root 当作 band 测出几千像素的高度')
+})
+
+test('getComposerScrollThresholds: 当 scroller !== band.offsetParent 时精确按相对坐标系计算 offsetTop', () => {
+  const dom = new JSDOM(`
+    <div id="root">
+      <div id="scroller" style="overflow-y: auto;">
+        <div id="parent-container" style="position: relative;">
+          <div id="band">
+            <div data-composer-card="" style="height: 120px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `)
+  const root = dom.window.document.getElementById('root')
+  const scroller = dom.window.document.getElementById('scroller')
+  const band = dom.window.document.getElementById('band')
+  const card = dom.window.document.querySelector('[data-composer-card]')
+
+  // 模拟布局信息：band 距离视口 top 220，scroller 距离视口 top 50，当前 scroller 已滚动 30px
+  scroller.scrollTop = 30
+  band.getBoundingClientRect = () => ({ top: 220, height: 120, width: 780, left: 10, bottom: 340, right: 790 })
+  card.getBoundingClientRect = () => ({ top: 220, height: 120, width: 780, left: 10, bottom: 340, right: 790 })
+  scroller.getBoundingClientRect = () => ({ top: 50, height: 600, width: 800, left: 0, bottom: 650, right: 800 })
+
+  const thresholds = getComposerScrollThresholds(root, scroller)
+  assert.equal(thresholds.offsetTop, 200, '必须通过相对坐标系精确计算 offsetTop')
+  assert.equal(thresholds.measuredHeight, 120)
+  assert.equal(thresholds.revealThreshold, 320)
+  assert.equal(thresholds.leaveThreshold, 340)
+})
+
+test('useComposerDocking: 滚动热路径直接读取 thresholdsRef 缓存，避免重复触发 getBoundingClientRect 同步重排', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
+  const card = host.querySelector('[data-composer-card]')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  let rectCallCount = 0
+  const originalGetBoundingClientRect = card.getBoundingClientRect
+  card.getBoundingClientRect = function tracked() {
+    rectCallCount++
+    return originalGetBoundingClientRect.call(this)
+  }
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'Test')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    await act(async () => {
+      hookApi.dock({ id: 'sk-perf-test', title: '性能测试' })
+    })
+    await flush()
+
+    const countAfterDock = rectCallCount
+
+    // 触发多次连续滚动
+    for (let i = 0; i < 5; i++) {
+      scroller.scrollTop = 200 + i * 10
+      await act(async () => {
+        scroller.dispatchEvent(new window.Event('scroll'))
+        await new Promise((r) => setTimeout(r, 5))
+      })
+    }
+    await flush()
+
+    // 断言：在滚动热路径 evaluate 评估期间，直接读取 thresholdsRef，不产生针对 card 的 getBoundingClientRect 重新测量
+    assert.equal(
+      rectCallCount,
+      countAfterDock,
+      '滚动热路径不得在每一帧调用 getBoundingClientRect 造成强制同步重排 (Layout Thrashing)',
+    )
   } finally {
     await act(async () => root.unmount())
     env.restore()

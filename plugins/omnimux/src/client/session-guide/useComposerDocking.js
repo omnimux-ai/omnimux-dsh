@@ -46,12 +46,29 @@ export const DOCK_LEAVE_MAX = 20
  */
 export function getComposerScrollThresholds(root, scroller) {
   const card = root?.querySelector?.('[data-composer-card]') || null
-  const band = card?.parentElement || root || null
-  const cardHeight = card?.getBoundingClientRect?.().height || 0
-  const bandHeight = band?.getBoundingClientRect?.().height || 0
-  const styleMinHeight = parseFloat(band?.style?.minHeight || '0') || 0
+  if (!card) {
+    return { revealThreshold: READ_TOP_MAX, leaveThreshold: DOCK_LEAVE_MAX, measuredHeight: 0, offsetTop: 0 }
+  }
+  const band = card.parentElement || card
+  const cardHeight = card.getBoundingClientRect?.().height || 0
+  const bandHeight = band.getBoundingClientRect?.().height || 0
+  const styleMinHeight = parseFloat(band.style?.minHeight || '0') || 0
   const measuredHeight = Math.max(bandHeight, cardHeight, styleMinHeight) || 160
-  const offsetTop = Number(band?.offsetTop ?? 0)
+
+  let offsetTop = Number(band.offsetTop ?? 0)
+  if (scroller && typeof scroller.getBoundingClientRect === 'function' && typeof band.getBoundingClientRect === 'function') {
+    if (scroller !== band.offsetParent) {
+      const bandRect = band.getBoundingClientRect()
+      const scrollerRect = scroller.getBoundingClientRect()
+      if (Number.isFinite(bandRect?.top) && Number.isFinite(scrollerRect?.top)) {
+        const relativeOffset = bandRect.top - scrollerRect.top + (Number(scroller.scrollTop) || 0)
+        if (Number.isFinite(relativeOffset)) {
+          offsetTop = Math.max(0, relativeOffset)
+        }
+      }
+    }
+  }
+
   const revealThreshold = Math.max(0, offsetTop + measuredHeight)
   const leaveThreshold = revealThreshold + 20
   return { revealThreshold, leaveThreshold, measuredHeight, offsetTop }
@@ -125,6 +142,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const savedScrollRef = useRef(null)
   const primedFlipRef = useRef(null)
   const pinnedRef = useRef(false)
+  const thresholdsRef = useRef(null)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -150,6 +168,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     // 记录用户触发点击当帧的绝对真实滚动位置（必须先于任何 DOM 变更）
     savedScrollRef.current = readPageScrollTop(scroller)
     pendingApplyRef.current = typeof onDocked === 'function' ? onDocked : null
+    thresholdsRef.current = getComposerScrollThresholds(root, scroller)
 
     // 吸底先手：同一帧同步写入停靠 DOM，不等渲染周期。
     // 附件挂载提醒的 scrollIntoView 等强制滚动定位晚于本帧执行时，
@@ -218,6 +237,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     // 不能把已经贴底的输入框清掉，否则它会回到上半截被整页盖住。
     if (!root.isConnected && pinnedRef.current) return undefined
     dockHostRef.current = root
+    const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
+    thresholdsRef.current = getComposerScrollThresholds(root, scroller)
 
     const card = root.querySelector?.('[data-composer-card]')
     const band = card?.parentElement || root
@@ -232,6 +253,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
       const height = card?.getBoundingClientRect?.().height
       if (height) root.style.setProperty('--omnimux-dock-card-height', `${Math.round(height)}px`)
+      const currentScroller = root.querySelector?.(SCROLLER_SELECTOR) || null
+      thresholdsRef.current = getComposerScrollThresholds(root, currentScroller)
     }
 
     const from = card?.getBoundingClientRect?.()
@@ -372,13 +395,14 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const root = dockHostRef.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
-    const initialThresholds = getComposerScrollThresholds(root, scroller)
+    const initialThresholds = thresholdsRef.current || getComposerScrollThresholds(root, scroller)
+    thresholdsRef.current = initialThresholds
     let leftTop = readPageScrollTop(scroller) > initialThresholds.leaveThreshold
 
     const evaluate = () => {
       frame = 0
       const scrollTop = readPageScrollTop(scroller)
-      const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
+      const { revealThreshold, leaveThreshold } = thresholdsRef.current || initialThresholds
       if (scrollTop > leaveThreshold) leftTop = true
       setPlacement((prev) => {
         if (pinnedRef.current) return 'docked'
@@ -393,13 +417,19 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       frame = scheduleFrame(evaluate)
     }
 
+    const onResize = () => {
+      thresholdsRef.current = getComposerScrollThresholds(root, scroller)
+      if (frame) return
+      frame = scheduleFrame(evaluate)
+    }
+
     const targets = [scroller, window].filter(Boolean)
     for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', onResize)
     return () => {
       if (frame) cancelFrame(frame)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', onResize)
     }
   }, [dockedItem])
 
