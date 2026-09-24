@@ -271,7 +271,7 @@ export const QUICK_SHORTCUTS_CSS = `
   width: 38px;
   height: 22px;
   border-radius: 9999px;
-  background: var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18));
   border: none;
   padding: 0;
   cursor: pointer;
@@ -279,7 +279,7 @@ export const QUICK_SHORTCUTS_CSS = `
   outline: none;
 }
 .sh-model-switch.on {
-  background: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-state-success, #10b981);
 }
 .sh-model-switch-thumb {
   position: absolute;
@@ -288,7 +288,8 @@ export const QUICK_SHORTCUTS_CSS = `
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-elevated, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); /* exempt-ui03: 开关滑块立体阴影 */
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sh-model-switch.on .sh-model-switch-thumb {
@@ -323,13 +324,6 @@ export const QUICK_SHORTCUTS_CSS = `
   background: var(--dsw-alias-bg-layer-3);
   color: var(--dsw-alias-label-primary);
   font-weight: 600;
-}
-.sh-model-section-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-tertiary);
-  margin: 4px 0 6px 4px;
-  flex: none;
 }
 .sh-model-list {
   display: flex;

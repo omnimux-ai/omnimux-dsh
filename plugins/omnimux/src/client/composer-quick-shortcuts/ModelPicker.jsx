@@ -364,11 +364,11 @@ function ModelPickerPanel({
       <div className="sh-model-picker-header">
         <div className="sh-model-picker-title">模型</div>
         <div className="sh-model-auto-row">
-          <span className="sh-model-auto-label">自动 (由 Agent 决策)</span>
+          <span className="sh-model-auto-label">自动</span>
           <button // exempt-ui01: 模型选择器顶部自动决策切换开关
             type="button"
             role="switch"
-            aria-label="自动 (由 Agent 决策)"
+            aria-label="自动"
             aria-checked={auto ? 'true' : 'false'}
             className={`sh-model-switch${auto ? ' on' : ''}`}
             onClick={() => onToggleAuto(!auto)}
@@ -397,10 +397,6 @@ function ModelPickerPanel({
         >
           图像
         </button>
-      </div>
-
-      <div className="sh-model-section-title">
-        {tab === 'video' ? '视频生成模型' : '图像生成模型'}
       </div>
 
       <div className="sh-model-list" role="listbox">

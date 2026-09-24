@@ -1,7 +1,7 @@
 {
-  "task": "Issue #2626",
-  "title": "输入框快捷方式移除实时参数并接入方案 B 会话模型选择器",
-  "verifiedAt": "2026-09-23T14:47:19.669Z",
+  "task": "Issue #2632",
+  "title": "优化会话模型面板开关样式、文案精简与移除冗余分类标题",
+  "verifiedAt": "2026-09-24T12:01:39.768Z",
   "acceptanceCriteria": {
     "AC-1_paramSummaryRemoved": {
       "status": "PASS",
@@ -13,7 +13,7 @@
     },
     "AC-3_modelPickerPanelRendered": {
       "status": "PASS",
-      "detail": "浮层面板包含「自动 (由 Agent 决策)」开关与视频/图像双模态 Tab"
+      "detail": "浮层面板包含精简「自动」文案、成功绿开启背景 (#10b981) 与滑块微阴影，冗余分类标题彻底移除"
     },
     "AC-4_modelSelectionLock": {
       "status": "PASS",
@@ -22,12 +22,12 @@
     },
     "AC-5_autoRestore": {
       "status": "PASS",
-      "detail": "再次点击胶囊展开面板并点击自动开关，成功恢复 Agent 决策态并清空胶囊与存储"
+      "detail": "再次点击胶囊展开面板并点击自动开关，成功恢复自动决策态并清空胶囊与存储"
     },
     "AC-6_compactModeCompatibility": {
       "status": "PASS",
       "detail": "通过 data-omx-quick-shortcut-controls 兼容 composer-compact 内联紧凑自适应"
     }
   },
-  "conclusion": "方案 B 会话模型选择器全生命周期与紧凑布局自适应实测通过，无异常。"
+  "conclusion": "优化会话模型面板开关样式、文案精简与移除冗余分类标题实测通过，无异常。"
 }

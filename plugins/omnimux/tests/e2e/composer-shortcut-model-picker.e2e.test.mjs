@@ -181,7 +181,21 @@ describe('方案 B 会话模型选择器 E2E (Issue #2626)', () => {
       const autoSwitch = panel.querySelector('.sh-model-switch');
       assert.ok(autoSwitch, '面板顶部必须包含自动决策开关');
       assert.equal(autoSwitch.getAttribute('aria-checked'), 'true', '默认状态自动开关必须开启');
-      assert.match(panel.querySelector('.sh-model-auto-label').textContent, /自动/);
+      assert.equal(autoSwitch.getAttribute('aria-label'), '自动', '开关无障碍 aria-label 必须为「自动」');
+      assert.equal(panel.querySelector('.sh-model-auto-label').textContent.trim(), '自动', '文案必须精简为「自动」');
+      assert.strictEqual(panel.querySelector('.sh-model-section-title'), null, 'Tab 下方分类标题必须已彻底移除');
+
+      // 验证开启态开关样式为成功绿，滑块具备立体阴影
+      assert.match(
+        QUICK_SHORTCUTS_CSS,
+        /\.sh-model-switch\.on\s*\{[^}]*background:\s*var\(--dsw-alias-state-success,\s*#10b981\)/,
+        '开启态背景必须为成功绿 token，杜绝纯白',
+      );
+      assert.match(
+        QUICK_SHORTCUTS_CSS,
+        /\.sh-model-switch-thumb\s*\{[^}]*box-shadow:\s*0 1px 3px rgba\(0,\s*0,\s*0,\s*0\.25\)/,
+        '滑块必须具备立体阴影',
+      );
 
       // 模态 Tab
       const tabs = panel.querySelectorAll('[role="tab"]');
@@ -317,7 +331,8 @@ describe('方案 B 会话模型选择器 E2E (Issue #2626)', () => {
       });
 
       assert.ok(imageTab.classList.contains('active'));
-      assert.match(panel.querySelector('.sh-model-section-title').textContent, /图像/);
+      assert.strictEqual(panel.querySelector('.sh-model-section-title'), null, 'Tab 下方分类标题已彻底移除');
+      assert.equal(panel.querySelector('.sh-model-name').textContent, 'Seedream 5.0 Pro', '切换至图像 Tab 应显示图像模型');
     } finally {
       await act(async () => env.root.unmount());
     }
