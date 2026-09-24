@@ -677,5 +677,71 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     assert.equal(genNode.data.params.duration, 10);
     assert.equal(genNode.data.params.aspectRatio, '21:9');
     assert.equal(genNode.data.params.resolution, '4k');
+
+    // 4. 离散选项吸附测试：节点预设 7s 与 9s，切换到只有 [5, 10] 的模型
+    genNode.data.params.duration = 7;
+    const snapSnap7 = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试离散吸附',
+      __model__: 'kling-v1-6',
+    });
+    assert.equal(snapSnap7.nodes.find((n) => n.id === 'node_generator').data.params.duration, 5, '7s 应吸附到最接近的 5s');
+
+    genNode.data.params.duration = 9;
+    const snapSnap9 = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试离散吸附',
+      __model__: 'kling-v1-6',
+    });
+    assert.equal(snapSnap9.nodes.find((n) => n.id === 'node_generator').data.params.duration, 10, '9s 应吸附到最接近的 10s');
+
+    // 5. 连续区间 range 双向截断测试（MiniMax H3: 4-15s，分辨率 2K/768P，比例含 3:4）
+    genNode.data.params.duration = 2; // 低于 min 4s
+    genNode.data.params.resolution = '1080p'; // 不在 ['2K', '768P']
+    genNode.data.params.aspectRatio = '3:4'; // 合法比例
+    const snapMiniMax = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试 MiniMax 契约',
+      __model__: 'minimax-h3',
+    });
+    const miniMaxTarget = snapMiniMax.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(miniMaxTarget.data.params.duration, 4, '低于 min 的 2s 应双向截断提升至 4s');
+    assert.equal(miniMaxTarget.data.params.aspectRatio, '3:4', '合法 3:4 比例应保留');
+    assert.equal(miniMaxTarget.data.params.resolution, '2K', '非法分辨率应收敛至默认 2K');
+
+    // 6. 哨兵值 -1 保护：wan-3.0 具备 allowAuto，原时长 -1 必须放行保护
+    genNode.data.params.duration = -1;
+    const snapWan = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '测试 -1 哨兵放行',
+      __model__: 'wan-3.0',
+    });
+    assert.equal(snapWan.nodes.find((n) => n.id === 'node_generator').data.params.duration, -1, 'allowAuto 模型的 -1 必须原样放行');
+
+    // 7. 扁平化 customCatalog buckets：image 数组中的图像模型契约可被正确检索与自愈
+    const imageCatalogObj = {
+      video: [{ id: 'seedance-2.0', parameters: {} }],
+      image: [
+        {
+          id: 'custom-art-gen',
+          parameters: {
+            aspectRatio: { options: ['1:1', '16:9'], defaultValue: '1:1' },
+            resolution: { options: ['1K', '2K'], defaultValue: '1K' },
+          },
+        },
+      ],
+    };
+    genNode.data.params = {
+      model: 'custom-art-gen',
+      aspectRatio: '9:16', // 不在 ['1:1', '16:9']
+      resolution: '4K', // 不在 ['1K', '2K']
+    };
+    const snapImageCat = prepareAndInjectWorkflowSnapshot(
+      manifest,
+      {
+        topic: '测试图像模型目录合并',
+        __model__: 'custom-art-gen',
+      },
+      { modelCatalog: imageCatalogObj },
+    );
+    const imgNode = snapImageCat.nodes.find((n) => n.id === 'node_generator');
+    assert.equal(imgNode.data.params.aspectRatio, '1:1', '从 image bucket 解析的契约正确自愈比例');
+    assert.equal(imgNode.data.params.resolution, '1K', '从 image bucket 解析的契约正确自愈分辨率');
   });
 });

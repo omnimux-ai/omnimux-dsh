@@ -882,27 +882,107 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
     )
   })
 
-  const modelTrigger2 = host2.querySelector('.omx-apptab-select-trigger')
+  const modelSelectGroup2 = Array.from(host2.querySelectorAll('.omx-apptab-field-group')).find((fg) =>
+    fg.textContent.includes('生成模型'),
+  )
+  const modelTrigger2 = modelSelectGroup2.querySelector('.omx-apptab-select-trigger')
   assert.match(modelTrigger2.textContent, /智能推荐 \(默认\)/, '无预设模型时必须安全兜底为智能推荐')
+
+  // 4. 验证复杂多节点拓扑（含 slot 节点、import 节点、LLM 节点与主生成节点）下的排他精确寻址 (Issue #2642 Review #13)
+  const manifestMultiNodes = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
+  manifestMultiNodes.workflowBinding = {
+    workspaceId: 'ws_test_multi_nodes_exclusive',
+    snapshot: {
+      nodes: [
+        {
+          id: 'node-slot-1',
+          type: 'input',
+          data: {
+            isSlot: true,
+            slotRole: 'product_image',
+            model: 'fake-slot-model',
+            params: { model: 'fake-slot-model' },
+          },
+        },
+        {
+          id: 'node_import_video',
+          type: 'video',
+          data: {
+            nodeKind: 'import',
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'fake-import-model',
+          },
+        },
+        {
+          id: 'node_llm_prompt',
+          type: 'text',
+          data: {
+            tool: 'llm_generate',
+            model: 'deepseek-chat',
+            params: { model: 'deepseek-chat' },
+          },
+        },
+        {
+          id: 'node_real_video_gen',
+          type: 'video',
+          data: {
+            tool: 'omnimux_video_submit',
+            materialType: 'video',
+            model: 'kling-o3',
+            params: { model: 'kling-o3' },
+          },
+        },
+      ],
+      edges: [],
+    },
+  }
+
+  const host3 = doc.createElement('div')
+  doc.body.appendChild(host3)
+  const root3 = createRoot(host3)
+
+  act(() => {
+    root3.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_multi_nodes_app',
+          title: '多节点排他寻址测试应用',
+          extra: { manifest: manifestMultiNodes },
+        },
+      }),
+    )
+  })
+
+  const modelSelectGroup3 = Array.from(host3.querySelectorAll('.omx-apptab-field-group')).find((fg) =>
+    fg.textContent.includes('生成模型'),
+  )
+  const modelTrigger3 = modelSelectGroup3.querySelector('.omx-apptab-select-trigger')
+  assert.match(
+    modelTrigger3.textContent,
+    /可灵 Kling O3 \(工程默认 · 作者推荐\)/,
+    '在含 slot、import 和 LLM 节点的复杂拓扑中必须排他锁定真实主生成节点模型',
+  )
 
   act(() => {
     root.unmount()
     root2.unmount()
+    root3.unmount()
   })
 })
 
-test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自适应并平滑收敛 (Issue #2642)', async () => {
+test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自适应并平滑收敛，且保护独立 quality 字段 (Issue #2642)', async () => {
   initDom()
   const AppTab = await loadAppTab()
 
   const multiParamManifest = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
-  // 增加时长与分辨率表单属性
+  // 增加时长、分辨率与独立画质 quality 表单属性
   multiParamManifest.formSchema.properties.duration = {
     type: 'integer',
     title: '成片时长',
     minimum: 4,
-    maximum: 15,
-    default: 15,
+    maximum: 20,
+    default: 20,
   }
   multiParamManifest.formSchema.properties.resolution = {
     type: 'string',
@@ -910,11 +990,18 @@ test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自
     options: ['480p', '720p', '1080p'],
     default: '480p',
   }
+  multiParamManifest.formSchema.properties.quality = {
+    type: 'string',
+    title: '生成画质',
+    options: ['standard', 'hd'],
+    default: 'hd',
+  }
   multiParamManifest.demoSnapshot = {
     ...multiParamManifest.demoSnapshot,
     aspect_ratio: '21:9',
-    duration: 15,
+    duration: 20,
     resolution: '480p',
+    quality: 'hd',
   }
 
   const host = doc.createElement('div')
@@ -949,10 +1036,11 @@ test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自
     fireClick(submitBtn)
   })
   assert.equal(submittedPayload.formValues.aspect_ratio, '21:9')
-  assert.equal(submittedPayload.formValues.duration, 15)
+  assert.equal(submittedPayload.formValues.duration, 20)
   assert.equal(submittedPayload.formValues.resolution, '480p')
+  assert.equal(submittedPayload.formValues.quality, 'hd')
 
-  // 2. 显式切换到 MiniMax H3（支持 5/10s，分辨率 768p/1080p，比例 16:9/9:16/1:1/4:3/21:9）
+  // 2. 显式切换到 MiniMax H3（权威契约：4–15s，分辨率 2K/768P，比例 16:9/9:16/1:1/4:3/3:4/21:9）
   const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
     return fg.textContent.includes('生成模型')
   })
@@ -967,17 +1055,19 @@ test('E2E: 表单多参数（比例、时长、分辨率）跟随模型契约自
     fireClick(minimaxOption)
   })
 
-  // 再次提交：时长 15s 超出 MiniMax H3 上限 (10s)，必须安全收敛为 10s；
-  // 分辨率 480p 不在 MiniMax H3 支持范围 (768p/1080p)，必须安全重置为新模型默认分辨率 (768p)
+  // 再次提交：时长 20s 超出 MiniMax H3 连续范围上限 (15s)，安全截断为 15s；
+  // 分辨率 480p 不在 MiniMax H3 支持范围 (2K/768P)，安全重置为默认分辨率 (2K)；
+  // 独立画质参数 quality ('hd') 绝不被误归类改写为分辨率！
   await act(async () => {
     const submitBtn = host.querySelector('.omx-apptab-cta-btn')
     fireClick(submitBtn)
   })
 
   assert.equal(submittedPayload.formValues.__model__, 'minimax-h3')
-  assert.equal(submittedPayload.formValues.duration, 10, '时长 15s 超过 MiniMax H3 上限，平滑收敛为 10s')
-  assert.equal(submittedPayload.formValues.resolution, '768p', '分辨率 480p 不被 MiniMax H3 支持，平滑重置为默认 768p')
+  assert.equal(submittedPayload.formValues.duration, 15, '时长 20s 超过 MiniMax H3 上限 15s，平滑收敛为 15s')
+  assert.equal(submittedPayload.formValues.resolution, '2K', '分辨率 480p 不被 MiniMax H3 支持，平滑重置为默认 2K')
   assert.equal(submittedPayload.formValues.aspect_ratio, '21:9', 'MiniMax H3 支持 21:9，故保留')
+  assert.equal(submittedPayload.formValues.quality, 'hd', '独立 quality 画质参数严禁被误当成 resolution 覆写')
 
   act(() => {
     root.unmount()

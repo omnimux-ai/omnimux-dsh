@@ -32,6 +32,9 @@ import {
   resolveModelResolutions,
   sanitizeModelDuration,
   sanitizeModelResolution,
+  isAspectRatioField,
+  isDurationField,
+  isResolutionField,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
@@ -45,6 +48,9 @@ export {
   resolveModelResolutions,
   sanitizeModelDuration,
   sanitizeModelResolution,
+  isAspectRatioField,
+  isDurationField,
+  isResolutionField,
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
@@ -78,6 +84,8 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
           options: [
             { label: '480p', value: '480p' },
             { label: '720p', value: '720p' },
+            { label: '1080p', value: '1080p' },
+            { label: '4k', value: '4k' },
           ],
         },
       },
@@ -86,7 +94,7 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
       id: 'minimax-h3',
       name: 'MiniMax H3',
       label: 'MiniMax H3',
-      subtitle: '768p/1080p · 强叙事高动态',
+      subtitle: '768P/2K · 4–15s · 强叙事高动态',
       parameters: {
         aspectRatio: {
           defaultValue: '16:9',
@@ -95,21 +103,19 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
             { label: '9:16 竖屏', value: '9:16' },
             { label: '1:1 方屏', value: '1:1' },
             { label: '4:3', value: '4:3' },
+            { label: '3:4', value: '3:4' },
             { label: '21:9 超宽屏', value: '21:9' },
           ],
         },
         duration: {
-          options: [
-            { label: '5s', value: 5 },
-            { label: '10s', value: 10 },
-          ],
+          range: { min: 4, max: 15, step: 1 },
           defaultValue: 5,
         },
         resolution: {
-          defaultValue: '768p',
+          defaultValue: '2K',
           options: [
-            { label: '768p', value: '768p' },
-            { label: '1080p', value: '1080p' },
+            { label: '2K 超清', value: '2K' },
+            { label: '768P 高清', value: '768P' },
           ],
         },
       },
@@ -180,23 +186,28 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
       id: 'gpt-image-2.5',
       name: 'GPT Image 2.5',
       label: 'GPT Image 2.5',
-      subtitle: '超清摄影质感 · 多主体一致性',
+      subtitle: '1k-4k · 超清摄影质感',
       parameters: {
         aspectRatio: {
-          defaultValue: '1:1',
+          defaultValue: '16:9',
           options: [
+            { label: '自适应', value: 'auto' },
             { label: '1:1 方屏', value: '1:1' },
             { label: '16:9 横屏', value: '16:9' },
             { label: '9:16 竖屏', value: '9:16' },
             { label: '4:3', value: '4:3' },
             { label: '3:4', value: '3:4' },
+            { label: '3:2', value: '3:2' },
+            { label: '2:3', value: '2:3' },
             { label: '21:9 超宽屏', value: '21:9' },
           ],
         },
         resolution: {
-          defaultValue: '1024x1024',
+          defaultValue: '1K',
           options: [
-            { label: '1024x1024', value: '1024x1024' },
+            { label: '1K', value: '1K' },
+            { label: '2K', value: '2K' },
+            { label: '4K', value: '4K' },
           ],
         },
       },
@@ -218,9 +229,10 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
           ],
         },
         resolution: {
-          defaultValue: '1024x1024',
+          defaultValue: '1K',
           options: [
-            { label: '1024x1024', value: '1024x1024' },
+            { label: '1K', value: '1K' },
+            { label: '2K', value: '2K' },
           ],
         },
       },
@@ -778,10 +790,10 @@ export function AppTab(props) {
     if (!selectedModel || !activeModelObj) return
 
     for (const [key, prop] of Object.entries(properties)) {
-      const widget = resolveWidget(key, prop, manifest?.fieldMappings?.[key])
+      const mapping = manifest?.fieldMappings?.[key]
 
       // 1. 比例自愈校验
-      if (widget === 'ratio-cards' || key === 'aspect_ratio' || key === 'aspectRatio') {
+      if (isAspectRatioField(key, prop, mapping)) {
         const modelRatios = resolveModelAspectRatios(activeModelObj, null)
         if (modelRatios && modelRatios.length > 0) {
           const validRatioValues = modelRatios.map((r) => String(r.value))
@@ -805,15 +817,8 @@ export function AppTab(props) {
           }
         }
       }
-
       // 2. 时长自愈校验
-      const isDuration =
-        key === 'duration' ||
-        key === 'video_duration' ||
-        key === 'videoDuration' ||
-        key.toLowerCase().includes('duration') ||
-        Boolean(prop?.title && prop.title.includes('时长'))
-      if (isDuration) {
+      else if (isDurationField(key, prop, mapping)) {
         const currentVal = formValues[key]
         if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
           const sanitized = sanitizeModelDuration(activeModelObj, currentVal)
@@ -828,16 +833,8 @@ export function AppTab(props) {
           }
         }
       }
-
       // 3. 分辨率自愈校验
-      const isResolution =
-        key === 'resolution' ||
-        key === 'video_resolution' ||
-        key === 'videoResolution' ||
-        key === 'quality' ||
-        key.toLowerCase().includes('resolution') ||
-        Boolean(prop?.title && (prop.title.includes('分辨率') || prop.title.includes('清晰度')))
-      if (isResolution) {
+      else if (isResolutionField(key, prop, mapping)) {
         const currentVal = formValues[key]
         if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
           const sanitized = sanitizeModelResolution(activeModelObj, currentVal)
@@ -1401,7 +1398,7 @@ export function AppTab(props) {
       <div className="omx-apptab-body">
         {/* 左侧动态表单面板：规范外宽 448px，左右内边距各 24px，内可用宽 398px */}
         <div className="omx-apptab-form-panel">
-          <form className="omx-apptab-form" onSubmit={handleGenerate}>
+          <form className="omx-apptab-form" onSubmit={handleGenerate} noValidate>
             <div className="omx-apptab-form-fields">
               {/* 生成模型选择器 */}
               <div className={`omx-apptab-field-group ${openDropdownKey === '__model_selector__' ? 'is-dropdown-open' : ''}`}>
@@ -1481,23 +1478,12 @@ export function AppTab(props) {
                 const error = errors[key]
                 const val = formValues[key] ?? ''
                 const title = prop.title || manifest.fieldMappings?.[key]?.fieldTitle || key
-                const desc = prop.description || manifest.fieldMappings?.[key]?.fieldDescription
-                const widget = resolveWidget(key, prop, manifest.fieldMappings?.[key])
+                const mapping = manifest.fieldMappings?.[key]
+                const desc = prop.description || mapping?.fieldDescription
+                const widget = resolveWidget(key, prop, mapping)
 
-                const isDurationField =
-                  key === 'duration' ||
-                  key === 'video_duration' ||
-                  key === 'videoDuration' ||
-                  key.toLowerCase().includes('duration') ||
-                  Boolean(prop?.title && prop.title.includes('时长'))
-
-                const isResolutionField =
-                  key === 'resolution' ||
-                  key === 'video_resolution' ||
-                  key === 'videoResolution' ||
-                  key === 'quality' ||
-                  key.toLowerCase().includes('resolution') ||
-                  Boolean(prop?.title && (prop.title.includes('分辨率') || prop.title.includes('清晰度')))
+                const isDur = isDurationField(key, prop, mapping)
+                const isRes = isResolutionField(key, prop, mapping)
 
                 const isDropdownOpen = openDropdownKey === key
 
@@ -1551,12 +1537,12 @@ export function AppTab(props) {
                       /* 2. 定制下拉选择器 */
                       (() => {
                         let opts = resolveOptions(prop)
-                        if (isResolutionField) {
+                        if (isRes) {
                           const modelResolutions = resolveModelResolutions(activeModelObj, prop)
                           if (modelResolutions && modelResolutions.length > 0) {
                             opts = modelResolutions
                           }
-                        } else if (isDurationField) {
+                        } else if (isDur) {
                           const durSpec = resolveModelDurations(activeModelObj, prop)
                           if (durSpec.options && durSpec.options.length > 0) {
                             opts = durSpec.options
@@ -1602,12 +1588,12 @@ export function AppTab(props) {
                       /* 3. 选项卡分段切换 */
                       (() => {
                         let opts = resolveOptions(prop)
-                        if (isResolutionField) {
+                        if (isRes) {
                           const modelResolutions = resolveModelResolutions(activeModelObj, prop)
                           if (modelResolutions && modelResolutions.length > 0) {
                             opts = modelResolutions
                           }
-                        } else if (isDurationField) {
+                        } else if (isDur) {
                           const durSpec = resolveModelDurations(activeModelObj, prop)
                           if (durSpec.options && durSpec.options.length > 0) {
                             opts = durSpec.options
@@ -1959,7 +1945,7 @@ export function AppTab(props) {
                       </label>
                     ) : widget === 'slider-range' || prop.type === 'number' || prop.type === 'integer' ? (
                       (() => {
-                        const durSpec = isDurationField ? resolveModelDurations(activeModelObj, prop) : null
+                        const durSpec = isDur && selectedModel ? resolveModelDurations(activeModelObj, prop) : null
                         const min = durSpec?.range?.min ?? prop.minimum
                         const max = durSpec?.range?.max ?? prop.maximum
                         const step = durSpec?.range?.step ?? (prop.type === 'integer' ? 1 : 'any')

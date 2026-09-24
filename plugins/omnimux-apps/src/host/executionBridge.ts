@@ -212,7 +212,7 @@ export interface ExecutionBridgeOptions {
   manifest: ApplicationManifest;
   formValues: Record<string, unknown>;
   headlessSeam?: HeadlessExecutionSeam;
-  modelCatalog?: any;
+  modelCatalog?: ModelCatalogLike | ModelCapabilityContract[];
   caller?: {
     pluginId?: string;
     appId?: string;
@@ -241,7 +241,9 @@ export interface ModelCapabilityContract {
       options?: Array<number | { label?: string; value: number }>;
       range?: { min?: number; max?: number; step?: number };
       defaultValue?: number;
+      default?: number;
       max?: number;
+      allowAuto?: boolean;
     };
     aspectRatio?: {
       options?: Array<string | { label?: string; value: string }>;
@@ -253,9 +255,16 @@ export interface ModelCapabilityContract {
       defaultValue?: string;
       default?: string;
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+export interface ModelCatalogLike {
+  models?: ModelCapabilityContract[];
+  video?: ModelCapabilityContract[];
+  image?: ModelCapabilityContract[];
+  [key: string]: unknown;
 }
 
 export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityContract> = {
@@ -272,7 +281,7 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
         defaultValue: '16:9',
       },
       resolution: {
-        options: ['480p', '720p'],
+        options: ['480p', '720p', '1080p', '4k'],
         defaultValue: '720p',
       },
     },
@@ -290,7 +299,7 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
         defaultValue: '16:9',
       },
       resolution: {
-        options: ['480p', '720p'],
+        options: ['480p', '720p', '1080p', '4k'],
         defaultValue: '720p',
       },
     },
@@ -299,17 +308,17 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
     id: 'minimax-h3',
     parameters: {
       duration: {
-        options: [5, 10],
+        range: { min: 4, max: 15, step: 1 },
         defaultValue: 5,
-        max: 10,
+        max: 15,
       },
       aspectRatio: {
-        options: ['16:9', '9:16', '1:1', '4:3', '21:9'],
+        options: ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'],
         defaultValue: '16:9',
       },
       resolution: {
-        options: ['768p', '1080p'],
-        defaultValue: '768p',
+        options: ['2K', '768P'],
+        defaultValue: '2K',
       },
     },
   },
@@ -371,12 +380,12 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
     id: 'gpt-image-2.5',
     parameters: {
       aspectRatio: {
-        options: ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'],
-        defaultValue: '1:1',
+        options: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
+        defaultValue: '16:9',
       },
       resolution: {
-        options: ['1024x1024'],
-        defaultValue: '1024x1024',
+        options: ['1K', '2K', '4K'],
+        defaultValue: '1K',
       },
     },
   },
@@ -388,8 +397,8 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
         defaultValue: '1:1',
       },
       resolution: {
-        options: ['1024x1024'],
-        defaultValue: '1024x1024',
+        options: ['1K', '2K'],
+        defaultValue: '1K',
       },
     },
   },
@@ -397,8 +406,10 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
     id: 'wan-3.0',
     parameters: {
       duration: {
-        max: 15,
+        range: { min: 2, max: 30, step: 1 },
+        max: 30,
         defaultValue: 5,
+        allowAuto: true,
       },
       aspectRatio: {
         options: ['16:9', '9:16', '1:1'],
@@ -412,18 +423,22 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
   },
 };
 
-export function resolveModelContract(modelId: string, customCatalog?: any): ModelCapabilityContract | null {
+export function resolveModelContract(
+  modelId: string,
+  customCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown,
+): ModelCapabilityContract | null {
   if (!modelId || typeof modelId !== 'string') return null;
   const normalizedId = modelId.trim().toLowerCase();
 
   if (customCatalog) {
-    let list: any[] = [];
+    let list: ModelCapabilityContract[] = [];
     if (Array.isArray(customCatalog)) {
-      list = customCatalog;
-    } else if (typeof customCatalog === 'object') {
-      if (Array.isArray(customCatalog.models)) list = customCatalog.models;
-      else if (Array.isArray(customCatalog.video)) list = [...list, ...customCatalog.video];
-      else if (Array.isArray(customCatalog.image)) list = [...list, ...customCatalog.image];
+      list = customCatalog as ModelCapabilityContract[];
+    } else if (typeof customCatalog === 'object' && customCatalog !== null) {
+      const cat = customCatalog as ModelCatalogLike;
+      if (Array.isArray(cat.models)) list.push(...cat.models);
+      if (Array.isArray(cat.video)) list.push(...cat.video);
+      if (Array.isArray(cat.image)) list.push(...cat.image);
     }
     const found = list.find((m) => m && (m.id === modelId || m.id?.toLowerCase() === normalizedId));
     if (found) return found;
@@ -450,7 +465,7 @@ export function resolveModelContract(modelId: string, customCatalog?: any): Mode
 export function prepareAndInjectWorkflowSnapshot(
   manifest: ApplicationManifest,
   formValues: Record<string, unknown> = {},
-  options?: { modelCatalog?: any },
+  options?: { modelCatalog?: ModelCatalogLike | ModelCapabilityContract[] | unknown },
 ): PreparedWorkflowSnapshot {
   if (!manifest || typeof manifest !== 'object') {
     throw new ExecutionBridgeError('validation_failed', 'ApplicationManifest must be a valid object');
@@ -727,28 +742,66 @@ export function prepareAndInjectWorkflowSnapshot(
 
         const params = generatorNode.data.params;
 
-        // 1. 时长校准：未在表单公开且存在时，若超过新模型允许的最大时长，自动收敛为该模型最大支持时长
+        // 1. 时长校准：未在表单公开且存在时，根据新模型真实能力契约（离散选项吸附 / 连续区间截断 / -1哨兵放行）安全收敛
         if (!exposedParamKeys.has('duration') && params.duration !== undefined && params.duration !== null) {
           const currentDur = Number(params.duration);
           if (!Number.isNaN(currentDur)) {
-            let maxDuration: number | null = null;
             const durSpec = contract.parameters.duration;
             if (durSpec) {
-              if (durSpec.range?.max !== undefined) {
-                maxDuration = Number(durSpec.range.max);
-              } else if (durSpec.max !== undefined) {
-                maxDuration = Number(durSpec.max);
-              } else if (Array.isArray(durSpec.options) && durSpec.options.length > 0) {
-                maxDuration = Math.max(
-                  ...durSpec.options.map((o: any) =>
-                    typeof o === 'object' && o !== null && 'value' in o ? Number(o.value) : Number(o),
-                  ),
-                );
-              }
-            }
+              const allowAuto = Boolean(
+                durSpec.allowAuto ||
+                  (Array.isArray(durSpec.options) &&
+                    durSpec.options.some((o: unknown) =>
+                      typeof o === 'object' && o !== null && 'value' in o
+                        ? Number((o as { value: unknown }).value) === -1
+                        : Number(o) === -1,
+                    )),
+              );
 
-            if (maxDuration !== null && currentDur > maxDuration) {
-              params.duration = maxDuration;
+              // 哨兵值 -1 保护：若模型支持自适应，直接放行，不截断或吸附
+              if (currentDur === -1) {
+                if (!allowAuto) {
+                  const fallbackDur =
+                    durSpec.defaultValue ??
+                    durSpec.default ??
+                    (durSpec.range?.min !== undefined ? Number(durSpec.range.min) : undefined);
+                  if (fallbackDur !== undefined) {
+                    params.duration = fallbackDur;
+                  }
+                }
+              } else {
+                // 1.1 若模型声明了连续 range，执行 [min, max] 严格双向截断
+                if (durSpec.range && typeof durSpec.range === 'object') {
+                  const min = Number(durSpec.range.min ?? 1);
+                  const max = Number(durSpec.range.max ?? durSpec.max ?? 60);
+                  if (currentDur < min) {
+                    params.duration = min;
+                  } else if (currentDur > max) {
+                    params.duration = max;
+                  }
+                }
+                // 1.2 若模型未声明 range 但声明了离散 options，非法值吸附到最接近的合法选项
+                else if (Array.isArray(durSpec.options) && durSpec.options.length > 0) {
+                  const validValues = durSpec.options
+                    .map((o: unknown) =>
+                      typeof o === 'object' && o !== null && 'value' in o
+                        ? Number((o as { value: unknown }).value)
+                        : Number(o),
+                    )
+                    .filter((v: number) => !Number.isNaN(v) && v !== -1);
+
+                  if (validValues.length > 0 && !validValues.includes(currentDur)) {
+                    const closest = validValues.reduce((prev: number, curr: number) =>
+                      Math.abs(curr - currentDur) < Math.abs(prev - currentDur) ? curr : prev,
+                    );
+                    params.duration = closest;
+                  }
+                }
+                // 1.3 仅声明 max 的保底截断
+                else if (durSpec.max !== undefined && currentDur > Number(durSpec.max)) {
+                  params.duration = Number(durSpec.max);
+                }
+              }
             }
           }
         }
@@ -757,8 +810,8 @@ export function prepareAndInjectWorkflowSnapshot(
         if (!exposedParamKeys.has('aspectRatio') && params.aspectRatio !== undefined && params.aspectRatio !== null) {
           const ratioSpec = contract.parameters.aspectRatio;
           if (ratioSpec && Array.isArray(ratioSpec.options) && ratioSpec.options.length > 0) {
-            const validRatios = ratioSpec.options.map((o: any) =>
-              typeof o === 'object' && o !== null && 'value' in o ? String(o.value) : String(o),
+            const validRatios = ratioSpec.options.map((o: unknown) =>
+              typeof o === 'object' && o !== null && 'value' in o ? String((o as { value: unknown }).value) : String(o),
             );
             if (!validRatios.includes(String(params.aspectRatio))) {
               const defRatio = ratioSpec.defaultValue || ratioSpec.default || validRatios[0];
@@ -773,16 +826,17 @@ export function prepareAndInjectWorkflowSnapshot(
         if (!exposedParamKeys.has('resolution') && params.resolution !== undefined && params.resolution !== null) {
           const resSpec = contract.parameters.resolution;
           if (resSpec && Array.isArray(resSpec.options) && resSpec.options.length > 0) {
-            const validRes = resSpec.options.map((o: any) =>
-              typeof o === 'object' && o !== null && 'value' in o ? String(o.value).toLowerCase() : String(o).toLowerCase(),
+            const validRes = resSpec.options.map((o: unknown) =>
+              typeof o === 'object' && o !== null && 'value' in o ? String((o as { value: unknown }).value).toLowerCase() : String(o).toLowerCase(),
             );
             if (!validRes.includes(String(params.resolution).toLowerCase())) {
+              const firstOpt = resSpec.options[0];
               const defRes =
                 resSpec.defaultValue ||
                 resSpec.default ||
-                (typeof resSpec.options[0] === 'object' && resSpec.options[0] !== null && 'value' in resSpec.options[0]
-                  ? resSpec.options[0].value
-                  : resSpec.options[0]);
+                (typeof firstOpt === 'object' && firstOpt !== null && 'value' in firstOpt
+                  ? (firstOpt as { value: string }).value
+                  : String(firstOpt));
               if (defRes) {
                 params.resolution = defRes;
               }

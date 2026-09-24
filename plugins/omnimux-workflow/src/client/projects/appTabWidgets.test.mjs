@@ -19,6 +19,9 @@ import {
   resolveModelResolutions,
   sanitizeModelDuration,
   sanitizeModelResolution,
+  isAspectRatioField,
+  isDurationField,
+  isResolutionField,
   resolveWidget,
   resolveSourceLabel,
   displayValueOf,
@@ -228,6 +231,24 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       assert.equal(res.type, 'none')
       assert.deepEqual(res.options, [])
     })
+
+    it('preserves numeric range when model defines both range and auto sentinel options (-1)', () => {
+      const seedance25LikeModel = {
+        parameters: {
+          duration: {
+            range: { min: 4, max: 30, step: 1 },
+            options: [{ value: -1, label: '自适应 (-1)' }],
+            defaultValue: 5,
+          },
+        },
+      }
+      const res = resolveModelDurations(seedance25LikeModel, {})
+      assert.equal(res.type, 'range', '同时声明 range 与 options 时绝不能吞噬 range')
+      assert.deepEqual(res.range, { min: 4, max: 30, step: 1 })
+      assert.equal(res.allowAuto, true)
+      assert.equal(res.options.length, 1)
+      assert.equal(res.options[0].value, -1)
+    })
   })
 
   describe('resolveModelResolutions() (Issue #2642)', () => {
@@ -311,6 +332,51 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
       }
       assert.equal(sanitizeModelDuration(activeModel, NaN), 5)
       assert.equal(sanitizeModelDuration(activeModel, ''), 5)
+    })
+
+    it('snaps non-matching values to closest discrete option and protects -1 sentinel', () => {
+      const discreteModel = {
+        parameters: {
+          duration: {
+            options: [5, 10],
+            defaultValue: 5,
+          },
+        },
+      }
+      assert.equal(sanitizeModelDuration(discreteModel, 7), 5, '7s 应吸附到最接近的 5s')
+      assert.equal(sanitizeModelDuration(discreteModel, 9), 10, '9s 应吸附到最接近的 10s')
+      assert.equal(sanitizeModelDuration(discreteModel, -1), 5, '不支持自适应的模型收到 -1 应回退到默认值 5s')
+
+      const autoCapableRangeModel = {
+        parameters: {
+          duration: {
+            range: { min: 2, max: 30, step: 1 },
+            allowAuto: true,
+            defaultValue: 5,
+          },
+        },
+      }
+      assert.equal(sanitizeModelDuration(autoCapableRangeModel, -1), -1, 'allowAuto 模型收到 -1 必须原样放行')
+      assert.equal(sanitizeModelDuration(autoCapableRangeModel, 10), 10, '正常 10s 绝不能被抹平为 -1')
+    })
+  })
+
+  describe('Field classification predicates (Issue #2642 Review)', () => {
+    it('classifies aspectRatio, duration, and resolution fields without misclassifying quality', () => {
+      assert.equal(isAspectRatioField('aspectRatio', {}), true)
+      assert.equal(isAspectRatioField('aspect_ratio', {}), true)
+      assert.equal(isAspectRatioField('custom_key', { widget: 'ratio-cards' }), true)
+      assert.equal(isAspectRatioField('topic', { type: 'string' }), false)
+      assert.equal(isAspectRatioField('duration', {}), false, 'duration 含子串 ratio，严禁误归类为比例字段')
+
+      assert.equal(isDurationField('duration', {}), true)
+      assert.equal(isDurationField('video_duration', {}), true)
+      assert.equal(isDurationField('duration_unit', {}), false, '排除 duration_unit 等修饰字段')
+
+      assert.equal(isResolutionField('resolution', {}), true)
+      assert.equal(isResolutionField('videoResolution', {}), true)
+      assert.equal(isResolutionField('quality', {}), false, '严禁将独立画质字段 quality 误归类为分辨率')
+      assert.equal(isResolutionField('resolutionMode', {}), false, '排除 resolutionMode 修饰字段')
     })
   })
 

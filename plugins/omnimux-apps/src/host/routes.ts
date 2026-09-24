@@ -45,8 +45,9 @@ function loadBuiltinApps(): any[] {
 export function createAppsRoutes(deps: {
   service: OmnimuxAppsService;
   getHeadlessSeam: () => HeadlessExecutionSeam | null;
+  getModelCatalog?: () => any;
 }) {
-  const { service, getHeadlessSeam } = deps;
+  const { service, getHeadlessSeam, getModelCatalog } = deps;
 
   return {
     async handle(req: any, res: any): Promise<boolean> {
@@ -115,7 +116,10 @@ export function createAppsRoutes(deps: {
         }
 
         try {
-          const result = await service.executeApp(manifest, inputs, headlessSeam);
+          const modelCatalog =
+            body.modelCatalog ??
+            (typeof getModelCatalog === 'function' ? getModelCatalog() : undefined);
+          const result = await service.executeApp(manifest, inputs, headlessSeam, { modelCatalog });
           sendJson(200, result);
         } catch (err: any) {
           sendJson(500, {
@@ -176,6 +180,7 @@ export function registerAppsApiRoutes(
   deps: {
     service: OmnimuxAppsService;
     getHeadlessSeam: () => HeadlessExecutionSeam | null;
+    getModelCatalog?: () => any;
   },
 ): () => void {
   if (!webServer || typeof webServer.register !== 'function') {
