@@ -54,7 +54,7 @@ describe('composer inner attachment slot', () => {
     )
     assert.match(
       guideStyles,
-      /\[data-omnimux-starter-host\] \.omx-attachment-dock \{[^}]*max-width:var\(--dsh-composer-card-max-width, 952px\)!important;[^}]*margin-inline:auto!important/,
+      /\[data-omnimux-starter-host\] \.omx-attachment-dock \{[^}]*max-width:100%!important;[^}]*margin:0!important/,
     )
   })
 
