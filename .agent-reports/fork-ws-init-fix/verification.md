@@ -1,7 +1,7 @@
 # 验证证据报告：新建项目前置初始化画布与错误转译修复 (Issue #2644)
 
 ## 验证结论：PASS
-- 时间: 2026-09-24T14:43:14.059Z
+- 时间: 2026-09-24T14:54:08.367Z
 - 截图证据: [fork-ws-init-verified.png](docs/evidence/fork-ws-init-verified.png)
 - 演示单页: [fork-ws-init-demo.html](docs/evidence/fork-ws-init-demo.html)
 

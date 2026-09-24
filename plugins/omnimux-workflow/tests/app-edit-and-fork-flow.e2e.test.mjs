@@ -127,6 +127,9 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
       }
     },
     requestFn: async (url, opts) => {
+      if (url.includes('/api/workspaces/') && (!opts || !opts.method || opts.method === 'GET')) {
+        return { ok: false, status: 404, body: { error: 'workspace-not-found' } }
+      }
       if (url.endsWith('/api/workspaces') && opts.method === 'POST') {
         preInitedWorkspaceId = opts.body?.id
         return { ok: true, status: 200, body: { workspace: { id: opts.body?.id } } }

@@ -433,8 +433,9 @@ export function friendlyForkError(code, fallback = '操作失败，请重试') {
     'project-required': '需要关联项目工程，请重试',
     'invalid-project-root': '工作区目录路径无效，请重新选择',
     'not-local': '禁止跨域写入本地工作区',
+    'internal': '服务器内部处理异常，请重试',
   }
-  return map[err] || (err.includes('-') || err.includes('_') ? fallback : err)
+  return map[err] || (/^[a-z0-9_-]+$/i.test(err) ? fallback : err)
 }
 
 /**
@@ -530,11 +531,14 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   }
 
   // 关键修复：新建独立项目后，先确保画布工作区已在底层初始化落盘（生成初始 snapshot）
-  // 杜绝后续 PUT 阶段因快照文件不存在而被 requireSnapshot 拦截为 workspace-not-found
-  await doRequest('/omnimux-workflow/api/workspaces', {
-    method: 'POST',
-    body: { id: workspaceId, name: projectTitle },
-  }).catch(() => null)
+  // 幂等保护：先查是否存在，不存在时才 POST 创建初始画布快照，杜绝覆写已有工作区
+  const existingWs = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`).catch(() => null)
+  if (!existingWs || existingWs.ok === false) {
+    await doRequest('/omnimux-workflow/api/workspaces', {
+      method: 'POST',
+      body: { id: workspaceId, name: projectTitle },
+    }).catch(() => null)
+  }
 
   const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
     method: 'PUT',
