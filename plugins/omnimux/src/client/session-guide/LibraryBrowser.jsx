@@ -26,7 +26,7 @@ function laneClass(lane) {
   return 'is-square'
 }
 
-function LibraryCard({ card, t, onPick }) {
+export function LibraryCard({ card, t, onPick }) {
   if (card.lane === 'assets') {
     return (
       <AssetPickerCard

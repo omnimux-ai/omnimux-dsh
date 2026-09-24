@@ -3204,7 +3204,42 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   margin: 0;
 }
 .omnimux-explore-main-title { font-size:18px; font-weight:700; color:var(--dsw-alias-label-primary); margin:0; }
-.omnimux-explore-filter-bar { margin-bottom:8px; }
+.omnimux-explore-filter-bar { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+
+/* 一级导航：圆角矩形（非胶囊）、无边框、无背景、专属图标、激活显深底 */
+.omnimux-explore-primary-tabs { display:flex; align-items:center; gap:6px; overflow-x:auto; padding:2px 0; scrollbar-width:none; }
+.omnimux-explore-primary-tabs::-webkit-scrollbar { display:none; }
+.omnimux-explore-primary-tab {
+  height:36px; padding:0 12px; border-radius:8px; border:none; background:transparent;
+  color:var(--dsw-alias-label-secondary); font:inherit; font-size:14px; font-weight:500;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  white-space:nowrap; transition:background 0.15s ease, color 0.15s ease; user-select:none;
+}
+.omnimux-explore-primary-tab svg { width:15px; height:15px; stroke-width:1.9; flex-shrink:0; opacity:0.85; }
+.omnimux-explore-primary-tab:hover { background:var(--dsw-alias-interactive-bg-subtle, rgba(255,255,255,0.06)); color:var(--dsw-alias-label-primary); }
+.omnimux-explore-primary-tab:hover svg { opacity:1; }
+.omnimux-explore-primary-tab.active { background:var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,0.12)); color:var(--dsw-alias-label-primary); font-weight:600; }
+.omnimux-explore-primary-tab.active svg { opacity:1; stroke-width:2.1; }
+
+/* 二级导航：极简下划线文本选项卡（Underline Tabs） */
+.omnimux-explore-sub-tabs {
+  display:flex; align-items:center; gap:16px; overflow-x:auto; padding:4px 0 10px;
+  border-bottom:1px solid var(--dsw-alias-border-l1); scrollbar-width:none;
+}
+.omnimux-explore-sub-tabs::-webkit-scrollbar { display:none; }
+.omnimux-explore-sub-tab {
+  height:30px; padding:0 4px; border:none; background:transparent;
+  color:var(--dsw-alias-label-secondary); font:inherit; font-size:13px; font-weight:500;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  white-space:nowrap; transition:color 0.15s ease; user-select:none; position:relative;
+}
+.omnimux-explore-sub-tab:hover { color:var(--dsw-alias-label-primary); }
+.omnimux-explore-sub-tab.active { color:var(--dsw-alias-label-primary); font-weight:600; }
+.omnimux-explore-sub-tab.active::after {
+  content:''; position:absolute; bottom:-10px; left:0; right:0; height:2px;
+  background:var(--dsw-alias-label-primary); border-radius:2px;
+}
+
 .omnimux-explore-pills-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
 .omnimux-explore-pills-row::-webkit-scrollbar { display:none; }
 .omnimux-explore-pill-btn {

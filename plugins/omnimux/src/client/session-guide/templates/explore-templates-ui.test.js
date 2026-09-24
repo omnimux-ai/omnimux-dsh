@@ -45,4 +45,21 @@ test('探索模板核心板块：单分组与 7 大精选应用卡片静态标�
 
   // 3. 验证卡片与动作
   assert.ok(html.includes('omnimux-tpl-hover-action'), '卡片必须具备悬停动作层');
+
+  // 4. 验证一级核心大库按钮与专属图标
+  assert.ok(html.includes('omnimux-explore-primary-tabs'), '必须包含一级主导航容器');
+  const primaryTabs = ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills'];
+  for (const tab of primaryTabs) {
+    assert.match(
+      html,
+      new RegExp(`data-primary-tab="${tab}"[^>]*>[\\s\\S]*?<svg`),
+      `一级项 ${tab} 按钮必须包含独立的专属 svg 图标`
+    );
+  }
+
+  // 5. 验证二级极简下划线选项卡与冗余提示移除
+  assert.ok(html.includes('omnimux-explore-sub-tabs'), '必须包含二级细分选项卡容器');
+  assert.ok(html.includes('data-sub-category="all"'), '必须包含全部二级项');
+  assert.ok(html.includes('data-sub-category="hook-intro"'), '精选下必须包含黄金开场二级项');
+  assert.ok(!html.includes('filter-meta-hint'), '必须彻底移除当前视图状态提示文本');
 });

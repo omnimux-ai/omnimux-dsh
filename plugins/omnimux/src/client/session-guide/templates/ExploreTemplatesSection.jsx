@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
+  EXPLORE_PRIMARY_TABS,
+  EXPLORE_SUB_CATEGORIES,
   TEMPLATE_CATEGORIES,
   SHELVES_CONFIG,
   selectTemplatesByCategory,
@@ -12,6 +14,66 @@ import { TemplatesGridView } from './TemplatesGridView.jsx';
 import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
 import { openWorkbench } from '../../workbench/sidebar-controller.js';
+import { loadLibraryCards, promptForCard } from '../../composer-add/library-stage-model.js';
+import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPickerCard.jsx';
+import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
+import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';
+import { LibraryCard } from '../LibraryBrowser.jsx';
+
+/**
+ * 官方标准专属矢量图标渲染函数
+ */
+function renderPrimaryTabIcon(iconName) {
+  if (iconName === 'book-open') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </svg>
+    );
+  }
+  if (iconName === 'folder') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  if (iconName === 'lightbulb') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <line x1="9" y1="18" x2="15" y2="18" />
+        <line x1="10" y1="22" x2="14" y2="22" />
+        <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+      </svg>
+    );
+  }
+  if (iconName === 'shopping-bag') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+        <path d="M3 6h18" />
+        <path d="M16 10a4 4 0 0 1-8 0" />
+      </svg>
+    );
+  }
+  if (iconName === 'trending-up') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+        <polyline points="17 6 23 6 23 12" />
+      </svg>
+    );
+  }
+  if (iconName === 'zap') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    );
+  }
+  return null;
+}
 
 /**
  * 分类全量数据内存缓存池
@@ -70,7 +132,6 @@ export function attachTemplateToConversation(item, customWin) {
     win.dispatchEvent?.(new CustomEvent('omnimux:add-to-conversation', { detail: payload }));
   }
 
-  // 触发附件呼吸高亮与可见性通知
   win.dispatchEvent?.(
     new CustomEvent('omnimux:attachments:reveal', {
       detail: { sessionId: activeSessionId },
@@ -89,14 +150,50 @@ export function ExploreTemplatesSection({
   onApplySkill,
   t,
 }) {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activePrimaryTab, setActivePrimaryTab] = useState('featured');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [activeDrawerTemplate, setActiveDrawerTemplate] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [appLaunchError, setAppLaunchError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const appLaunchPending = useRef(false);
+
+  // 外部素材库数据加载态
+  const [libraryData, setLibraryData] = useState({ cards: [], loading: false, error: null });
 
   const currentLocale = useTemplateLocale(undefined, t);
   const isEn = String(currentLocale).toLowerCase().startsWith('en');
+
+  // 确保跨库渲染 LibraryCard 时基础卡片样式已全局注入
+  useEffect(() => {
+    ensureAssetCardStyles();
+    ensureProductCardStyles();
+    ensureInspirationCardStyles();
+  }, []);
+
+  // 当切换到资产库/灵感库/商品库/爆款趋势时，自动加载其卡片数据
+  useEffect(() => {
+    if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') {
+      return;
+    }
+    let alive = true;
+    setLibraryData((prev) => ({ ...prev, loading: true, error: null }));
+    loadLibraryCards(activePrimaryTab)
+      .then((res) => {
+        if (!alive) return;
+        const laneErrors = Object.values(res.errors || {}).map((e) => e?.message).filter(Boolean);
+        setLibraryData({
+          cards: res.cards || [],
+          loading: false,
+          error: laneErrors.length ? laneErrors.join('；') : null,
+        });
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setLibraryData({ cards: [], loading: false, error: err instanceof Error ? err.message : String(err) });
+      });
+    return () => { alive = false; };
+  }, [activePrimaryTab, reloadToken]);
 
   // Skills 数据源映射
   const allSkillsItems = useMemo(() => {
@@ -110,7 +207,7 @@ export function ExploreTemplatesSection({
       summary: isEn ? (sk.summaryEn || sk.summary) : (sk.summaryZh || sk.summary),
       thumbnailUrl: resolveSkillCover(sk.cover, sk.coverIndex),
       type: 'skill',
-      categorySlug: 'skills',
+      categorySlug: sk.category || 'skills',
     }));
   }, [isEn]);
 
@@ -134,7 +231,6 @@ export function ExploreTemplatesSection({
     setActiveDrawerTemplate(null);
   };
 
-  // 应用与其它工作台页面共用会话、服务就绪和布局导航。
   const handleAppLaunch = async (item) => {
     if (!item || typeof window === 'undefined' || appLaunchPending.current) return;
     appLaunchPending.current = true;
@@ -149,9 +245,7 @@ export function ExploreTemplatesSection({
       let parsed = {};
       try {
         parsed = stored ? JSON.parse(stored) : {};
-      } catch {
-        // A malformed cache can be rebuilt; storage access failures must still fail.
-      }
+      } catch {}
       const manifestsMap = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
       if (item.manifest) {
         manifestsMap[appId] = item.manifest;
@@ -184,13 +278,11 @@ export function ExploreTemplatesSection({
   const handleItemRecreate = (item) => {
     if (!item) return;
 
-    // 1. AI 应用：走直通打开
     if (item.isApp || item.type === 'app') {
       handleAppLaunch(item);
       return;
     }
 
-    // 2. Skill 技能
     if (item.type === 'skill') {
       if (onApplySkill) {
         onApplySkill({
@@ -203,9 +295,6 @@ export function ExploreTemplatesSection({
       return;
     }
 
-    // 3. 普通灵感模板：先触发吸底（同一帧同步写入停靠态），再挂载附件。
-    //    附件挂载提醒的强制滚动定位晚于吸底先手执行，落在已 fixed 到底部的
-    //    输入框上即天然失效，页面保持原地不动。
     const copy = resolveTemplateCopy(item, currentLocale);
     const localizedItem = {
       ...item,
@@ -224,41 +313,80 @@ export function ExploreTemplatesSection({
     attachTemplateToConversation(localizedItem);
   };
 
-  const handleViewAllFromShelf = (targetCat) => {
-    setSelectedCategory(targetCat || 'all');
+  // 挑选外部库卡片
+  const handleLibraryCardPick = (card) => {
+    if (!card) return;
+    const prompt = promptForCard(card);
+    if (card.lane === 'trending' && onApplyTrending) {
+      onApplyTrending(card.trending || card.raw);
+    } else if (onApplyTemplate) {
+      onApplyTemplate({
+        template: card.raw,
+        prompt,
+        title: card.title,
+      });
+    }
   };
 
-  const handleBackToAll = () => {
-    setSelectedCategory('all');
+  const handlePrimaryTabChange = (tabId) => {
+    setActivePrimaryTab(tabId);
+    setSelectedSubCategory('all');
   };
+
+  const currentSubCategories = EXPLORE_SUB_CATEGORIES[activePrimaryTab] || EXPLORE_SUB_CATEGORIES.featured;
+
+  // 计算精选模板在网格视图下的数据集
+  const featuredGridItems = useMemo(() => {
+    if (activePrimaryTab !== 'featured' || selectedSubCategory === 'all') return [];
+    return selectTemplatesByCategory(selectedSubCategory);
+  }, [activePrimaryTab, selectedSubCategory]);
+
+  // 计算技能在选定二级分类下的数据集
+  const filteredSkills = useMemo(() => {
+    if (activePrimaryTab !== 'skills') return [];
+    if (selectedSubCategory === 'all') return allSkillsItems;
+    const target = String(selectedSubCategory).toLowerCase();
+    return allSkillsItems.filter((sk) => {
+      const cat = String(sk.categorySlug || sk.category || '').toLowerCase();
+      const tags = Array.isArray(sk.tags) ? sk.tags.map((t) => String(t).toLowerCase()) : [];
+      if (target === 'voice-audio') {
+        return cat.includes('voice') || cat.includes('audio') || tags.some((t) => t.includes('音频') || t.includes('画外音'));
+      }
+      if (target === 'storytelling') {
+        return cat.includes('storytelling') || cat.includes('script') || tags.some((t) => t.includes('故事') || t.includes('脚本'));
+      }
+      return cat.includes(target) || tags.some((t) => t.includes(target));
+    });
+  }, [activePrimaryTab, selectedSubCategory, allSkillsItems]);
+
+  // 外部库过滤卡片数据集
+  const filteredLibraryCards = useMemo(() => {
+    if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
+    if (selectedSubCategory === 'all') return libraryData.cards;
+    const target = String(selectedSubCategory).toLowerCase();
+    if (target === 'favorites') {
+      return libraryData.cards.filter((c) => {
+        const raw = c.raw || {};
+        return Boolean(raw.is_favorite || raw.favorite || raw.source?.is_favorite);
+      });
+    }
+    return libraryData.cards.filter((c) => {
+      const trending = c.trending || {};
+      const raw = c.raw || {};
+      const categories = Array.isArray(raw.categories) ? raw.categories.join(' ').toLowerCase() : '';
+      const cat = String(
+        trending.industry || trending.category || raw.category || raw.type || raw.kind || c.lane || ''
+      ).toLowerCase();
+      return cat.includes(target) || categories.includes(target);
+    });
+  }, [activePrimaryTab, selectedSubCategory, libraryData.cards]);
 
   const currentCategoryObj =
-    TEMPLATE_CATEGORIES.find((c) => c.slug === selectedCategory) || TEMPLATE_CATEGORIES[0];
-
-  // 计算当前分类在网格视图下的全量数据集
-  const gridItems = useMemo(() => {
-    if (selectedCategory === 'all') return [];
-
-    const cached = CATEGORY_DATA_CACHE.get(selectedCategory);
-    const now = Date.now();
-    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-      return cached.items;
-    }
-
-    let fullList = [];
-    if (selectedCategory === 'skills') {
-      fullList = allSkillsItems;
-    } else {
-      fullList = selectTemplatesByCategory(selectedCategory);
-    }
-
-    CATEGORY_DATA_CACHE.set(selectedCategory, {
-      items: fullList,
-      timestamp: now,
-    });
-
-    return fullList;
-  }, [selectedCategory, allSkillsItems]);
+    TEMPLATE_CATEGORIES.find((c) => c.slug === selectedSubCategory) || {
+      slug: selectedSubCategory,
+      nameZh: currentSubCategories.find(s => s.id === selectedSubCategory)?.nameZh || '分类',
+      nameEn: currentSubCategories.find(s => s.id === selectedSubCategory)?.nameEn || 'Category',
+    };
 
   return (
     <div className="omnimux-explore-templates-root" data-omnimux-explore-section="">
@@ -269,21 +397,44 @@ export function ExploreTemplatesSection({
         </h2>
       </div>
 
-      {/* 10 大分类扁平胶囊栏 */}
+      {/* 一级导航与二级分类工具条 */}
       <div className="omnimux-explore-filter-bar">
-        <div className="omnimux-explore-pills-row" role="tablist" aria-label="分类列表">
-          {TEMPLATE_CATEGORIES.map((cat) => {
-            const isActive = selectedCategory === cat.slug;
-            const displayName = isEn ? (cat.nameEn || cat.nameZh) : (cat.nameZh || cat.nameEn);
+        {/* 一级主库按钮栏：圆角矩形、无边框、无背景、无数量、带专属图标、激活显深底 */}
+        <div className="omnimux-explore-primary-tabs" role="tablist" aria-label="一级核心库">
+          {EXPLORE_PRIMARY_TABS.map((tab) => {
+            const isActive = activePrimaryTab === tab.id;
+            const displayName = isEn ? tab.nameEn : tab.nameZh;
             return (
-              <button /* exempt-ui01: category filter tab button */
-                key={cat.slug}
+              <button /* exempt-ui01: primary tab button */
+                key={tab.id}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                className={`omnimux-explore-pill-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat.slug)}
-                data-category-slug={cat.slug}
+                className={`omnimux-explore-primary-tab ${isActive ? 'active' : ''}`}
+                onClick={() => handlePrimaryTabChange(tab.id)}
+                data-primary-tab={tab.id}
+              >
+                {renderPrimaryTabIcon(tab.iconName)}
+                <span>{displayName}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 二级场景与类目选项卡：极简下划线文本选项卡（Underline Tabs） */}
+        <div className="omnimux-explore-sub-tabs" role="tablist" aria-label="二级细分分类">
+          {currentSubCategories.map((sub) => {
+            const isActive = selectedSubCategory === sub.id;
+            const displayName = isEn ? sub.nameEn : sub.nameZh;
+            return (
+              <button /* exempt-ui01: sub category underline tab button */
+                key={sub.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`omnimux-explore-sub-tab ${isActive ? 'active' : ''}`}
+                onClick={() => setSelectedSubCategory(sub.id)}
+                data-sub-category={sub.id}
               >
                 <span>{displayName}</span>
               </button>
@@ -294,17 +445,14 @@ export function ExploreTemplatesSection({
 
       {appLaunchError && <div role="alert" className="omnimux-starter-notice">{appLaunchError}</div>}
 
-      {/* 视图展现：全部时展现各分类横滑货架行；选定特定分类时展现全量网格 */}
-      {selectedCategory === 'all' ? (
+      {/* 视图展现 */}
+      {activePrimaryTab === 'featured' && selectedSubCategory === 'all' && (
         <div className="omnimux-explore-shelves-view">
           {SHELVES_CONFIG.map((shelf) => {
-            let shelfItems = [];
-            if (shelf.slug === 'skills') {
-              shelfItems = allSkillsItems.slice(0, 5);
-            } else {
-              shelfItems = selectShelfItems(shelf.slug, 5);
-            }
-
+            const shelfItems =
+              shelf.slug === 'skills'
+                ? allSkillsItems.slice(0, 5)
+                : selectShelfItems(shelf.slug, 5);
             return (
               <TemplatesShelfRow
                 key={shelf.slug}
@@ -312,22 +460,77 @@ export function ExploreTemplatesSection({
                 items={shelfItems}
                 onSelectTemplate={handleItemRecreate}
                 onOpenDetail={handleOpenDetail}
-                onViewAll={handleViewAllFromShelf}
+                onViewAll={(targetCat) => {
+                  if (targetCat === 'skills') {
+                    setActivePrimaryTab('skills');
+                    setSelectedSubCategory('all');
+                  } else {
+                    setSelectedSubCategory(targetCat || 'all');
+                  }
+                }}
                 t={t}
               />
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {activePrimaryTab === 'featured' && selectedSubCategory !== 'all' && (
         <div className="omnimux-explore-grid-view-wrap">
           <TemplatesGridView
             category={currentCategoryObj}
-            items={gridItems}
-            onBackToAll={handleBackToAll}
+            items={featuredGridItems}
+            onBackToAll={() => setSelectedSubCategory('all')}
             onSelectTemplate={handleItemRecreate}
             onOpenDetail={handleOpenDetail}
             t={t}
           />
+        </div>
+      )}
+
+      {activePrimaryTab === 'skills' && (
+        <div className="omnimux-explore-grid-view-wrap">
+          <TemplatesGridView
+            category={currentCategoryObj}
+            items={filteredSkills}
+            onBackToAll={() => setSelectedSubCategory('all')}
+            onSelectTemplate={handleItemRecreate}
+            onOpenDetail={handleOpenDetail}
+            t={t}
+          />
+        </div>
+      )}
+
+      {activePrimaryTab !== 'featured' && activePrimaryTab !== 'skills' && (
+        <div className="omnimux-explore-grid-view-wrap">
+          {libraryData.loading ? (
+            <p className="omnimux-library-stage-status">正在加载素材…</p>
+          ) : libraryData.error ? (
+            <div className="omnimux-library-stage-status">
+              <p>{libraryData.error}</p>
+              <button /* exempt-ui01: retry button */
+                type="button"
+                className="omnimux-library-stage-retry"
+                onClick={() => setReloadToken((c) => c + 1)}
+              >
+                重试
+              </button>
+            </div>
+          ) : filteredLibraryCards.length === 0 ? (
+            <p className="omnimux-library-stage-status">暂无对应素材</p>
+          ) : (
+            <div className="omnimux-library-stage-grid">
+              {filteredLibraryCards.map((card) => (
+                <div
+                  key={`${card.lane}:${card.id}`}
+                  className="omnimux-library-stage-cell"
+                  data-library-lane={card.lane}
+                >
+                  <LibraryCard card={card} t={t} onPick={handleLibraryCardPick} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
