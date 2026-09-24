@@ -100,7 +100,10 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     const undockBtn = document.querySelector('.omnimux-trending-undock')
     assert.ok(undockBtn, '输入框吸底时右上方必须浮现收起按钮')
     assert.equal(undockBtn.textContent.includes('收起输入框'), true, '收起按钮文本必须包含国际化文案')
-    assert.ok(capturedDraft.includes('/ugc-confessional'), '输入框草稿已预填对应技能指令')
+    assert.ok(
+      capturedDraft.includes('最佳使用方式') || capturedDraft.includes('explain the best way to use this skill'),
+      '输入框草稿已预填自然语言说明请求'
+    )
 
     // 断言绝无任何 Toast 弹窗
     const toastPill = document.querySelector('.omnimux-toast-pill')
@@ -113,27 +116,35 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '点击收起按钮后必须解除吸底')
     assert.equal(document.querySelector('.omnimux-trending-undock'), null, '解除吸底后收起按钮必须消失')
 
-    // 5. 再次点击使用触发吸底，然后模拟滚回顶部归还
+    // 5. 再次点击使用触发吸底，然后模拟向下滚动后再向上回滚至露头阈值切换
     await act(async () => {
       useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
     })
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true)
 
-    // 模拟向下滚动超过 20px
-    scroller.scrollTop = 150
+    // 模拟向下滚动超过 leaveThreshold (例如 300px > 186px)
+    scroller.scrollTop = 300
     await act(async () => {
       scroller.dispatchEvent(new dom.window.Event('scroll'))
       await new Promise((r) => setTimeout(r, 10))
     })
-    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '向下浏览时输入框保持吸底')
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '向下浏览超过离开阈值时输入框保持吸底')
 
-    // 模拟向上滚动滑回最顶部 (0px)
+    // 模拟向上滚动至顶部槽位露头阈值内 (例如 100px <= revealThreshold 166px)，无需滑到 0px 或 10px 即可解除吸底！
+    scroller.scrollTop = 100
+    await act(async () => {
+      scroller.dispatchEvent(new dom.window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滚动至顶部槽位开始露头阈值内（100px）时立即解除吸底回流至原位')
+
+    // 模拟向上滚动滑回最顶部 (0px)，保持解除吸底
     scroller.scrollTop = 0
     await act(async () => {
       scroller.dispatchEvent(new dom.window.Event('scroll'))
       await new Promise((r) => setTimeout(r, 10))
     })
-    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滑回页面最顶部必须自动解除吸底回流至原位')
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滑回页面最顶部保持解除吸底')
 
     // 6. 验证普通模板复刻：吸底且严禁弹出任何 Toast 气泡
     const tplCard = document.querySelector('.omnimux-tpl-card[data-is-app="false"]:not(.is-skill-card)')

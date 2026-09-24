@@ -25,11 +25,37 @@ export const DOCK_MAX_WIDTH = 780
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 export const SCROLLER_SELECTOR = '[class*="scrollBody"]'
 
-/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。 */
+/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。已由动态 revealThreshold 升级感知，保留导出做兼容 fallback。 */
 export const READ_TOP_MAX = 10
 
-/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。 */
+/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。已由动态 leaveThreshold 升级感知，保留导出做兼容 fallback。 */
 export const DOCK_LEAVE_MAX = 20
+
+/**
+ * 动态测量顶部输入框槽位高度，并计算露头（reveal）与离开（leave）滚动阈值。
+ *
+ * 临界几何语义：
+ * - revealThreshold: 顶部槽位底边缘刚好触及视口顶端（开始露头/进入视口）。
+ *   当 scrollTop <= revealThreshold 时，输入框槽位已经进入视口可见范围，立即切换回 inline。
+ * - leaveThreshold: 顶部输入框完全滚出视口顶部，并保留 20px 迟滞防抖安全区。
+ *   当 scrollTop > leaveThreshold 时才判定为已离开顶部，触发吸底。
+ *
+ * @param {Element | null} root 宿主根容器
+ * @param {Element | null} scroller 滚动容器
+ * @returns {{ revealThreshold: number, leaveThreshold: number, measuredHeight: number, offsetTop: number }}
+ */
+export function getComposerScrollThresholds(root, scroller) {
+  const card = root?.querySelector?.('[data-composer-card]') || null
+  const band = card?.parentElement || root || null
+  const cardHeight = card?.getBoundingClientRect?.().height || 0
+  const bandHeight = band?.getBoundingClientRect?.().height || 0
+  const styleMinHeight = parseFloat(band?.style?.minHeight || '0') || 0
+  const measuredHeight = Math.max(bandHeight, cardHeight, styleMinHeight) || 160
+  const offsetTop = Number(band?.offsetTop ?? 0)
+  const revealThreshold = Math.max(0, offsetTop + measuredHeight)
+  const leaveThreshold = revealThreshold + 20
+  return { revealThreshold, leaveThreshold, measuredHeight, offsetTop }
+}
 
 export const ICON_CHEVRON_DOWN = React.createElement(
   'svg',
@@ -340,22 +366,24 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     }
   }, [dockedItem, placement, hostRef])
 
-  // 2. 页面滚动迟滞判定：滑回最顶部自动归还原位，滑离顶部恢复吸底
+  // 2. 页面滚动迟滞判定：槽位露头立即切回原位，完全滑离顶部后恢复吸底
   useEffect(() => {
     if (!dockedItem) return undefined
     const root = dockHostRef.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
-    let leftTop = readPageScrollTop(scroller) > DOCK_LEAVE_MAX
+    const initialThresholds = getComposerScrollThresholds(root, scroller)
+    let leftTop = readPageScrollTop(scroller) > initialThresholds.leaveThreshold
 
     const evaluate = () => {
       frame = 0
       const scrollTop = readPageScrollTop(scroller)
-      if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
+      const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
+      if (scrollTop > leaveThreshold) leftTop = true
       setPlacement((prev) => {
         if (pinnedRef.current) return 'docked'
-        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
-        if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
+        if (scrollTop <= revealThreshold && leftTop) return 'inline'
+        if (scrollTop > leaveThreshold) return 'docked'
         return prev
       })
     }

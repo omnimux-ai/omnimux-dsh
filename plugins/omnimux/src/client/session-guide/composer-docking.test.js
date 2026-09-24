@@ -248,23 +248,32 @@ test('useComposerDocking: 滚动迟滞判定：滑离顶部吸底，滑回最顶
     await flush()
     assert.equal(hookApi.placement, 'docked')
 
-    // 模拟向下滚动离开顶部 (>20px)
-    scroller.scrollTop = 120
+    // 模拟向下滚动离开顶部 (>leaveThreshold 186px)
+    scroller.scrollTop = 250
     await act(async () => {
       scroller.dispatchEvent(new window.Event('scroll'))
       await new Promise((r) => setTimeout(r, 10))
     })
     await flush()
-    assert.equal(hookApi.placement, 'docked')
+    assert.equal(hookApi.placement, 'docked', '向下滚动离开顶部槽位后保持吸底')
 
-    // 模拟向上滚动滑回最顶部 (<=10px)
+    // 模拟向上滚动至顶部槽位露头阈值内 (<=revealThreshold 166px)，无需滑到 0px 即可解除吸底
+    scroller.scrollTop = 100
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+    assert.equal(hookApi.placement, 'inline', '滑回露头阈值内必须自动切回 inline 归还原位')
+
+    // 模拟向上滚动滑回最顶部 (0px)，保持 inline
     scroller.scrollTop = 0
     await act(async () => {
       scroller.dispatchEvent(new window.Event('scroll'))
       await new Promise((r) => setTimeout(r, 10))
     })
     await flush()
-    assert.equal(hookApi.placement, 'inline', '滑回页面顶部必须自动切回 inline 归还原位')
+    assert.equal(hookApi.placement, 'inline', '滑回页面顶部保持 inline 归还原位')
   } finally {
     await act(async () => root.unmount())
     env.restore()

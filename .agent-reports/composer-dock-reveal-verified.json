@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-09-24T21:18:28.000Z",
+  "task": "composer-dock-reveal",
+  "topic": "重构输入框吸底往上滚动切换顶部的时机：动态露头感知即时归还与迟滞防抖",
+  "measurements": {
+    "measuredHeight": 166,
+    "offsetTop": 0,
+    "revealThreshold": 166,
+    "leaveThreshold": 186
+  },
+  "assertions": {
+    "1. 动态测量槽位高度与计算进入/离开阈值（getComposerScrollThresholds）": true,
+    "2. 向下滚动超过 leaveThreshold（例如 300px > 186px）输入框稳定吸底（data-omnimux-dock-open）": true,
+    "3. 向上滚动至顶部槽位露头阈值内（100px <= 166px）立即解除吸底回流至顶部，无需滑至 0px 或 10px": true,
+    "4. 向上滑回最顶部 0px 保持解除吸底": true,
+    "5. 选用技能草稿预填断言适配为自然语言最佳使用方式说明请求": true,
+    "6. 保留 READ_TOP_MAX (10) 与 DOCK_LEAVE_MAX (20) 导出常量向后兼容": true
+  },
+  "e2e": "plugins/omnimux/tests/e2e/restore-dock-composer.e2e.test.mjs",
+  "unit": "plugins/omnimux/src/client/session-guide/composer-docking.test.js",
+  "verdict": "PASS"
+}
