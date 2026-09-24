@@ -764,6 +764,20 @@ export function AppTab(props) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [editNotice, setEditNotice] = useState(null)
+  const noticeTimerRef = useRef(null)
+  const showTemporaryNotice = useCallback((notice, delay = 3500) => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    setEditNotice(notice)
+    noticeTimerRef.current = setTimeout(() => {
+      setEditNotice(null)
+      noticeTimerRef.current = null
+    }, delay)
+  }, [])
+
+  useEffect(() => () => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+  }, [])
+
   const [forkDialogOpen, setForkDialogOpen] = useState(false)
   const [forkContext, setForkContext] = useState({ hostProject: null, initialPath: '' })
   const [forkBusy, setForkBusy] = useState(false)
@@ -808,9 +822,9 @@ export function AppTab(props) {
           { sessionId: project?.sessionId, focusGroupId: target.groupId },
         )
         if (opened) {
-          setEditNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
+          showTemporaryNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
         } else {
-          setEditNotice({ type: 'error', text: '打开画布失败，请重试。' })
+          showTemporaryNotice({ type: 'error', text: '打开画布失败，请重试。' })
         }
       } else {
         // 2. 官方预设应用或未在当前工作区拥有的应用：唤起创建副本弹窗让用户自由选择
@@ -836,12 +850,11 @@ export function AppTab(props) {
         setEditNotice(null)
       }
     } catch (err) {
-      setEditNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
+      showTemporaryNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
     } finally {
       setIsEditing(false)
-      setTimeout(() => setEditNotice(null), 3500)
     }
-  }, [manifest, isEditing, props?.ctx])
+  }, [manifest, isEditing, props?.ctx, showTemporaryNotice])
 
   // 处理弹窗提交创建副本
   const handleForkSubmit = useCallback(async ({ mode, title, projectRoot }) => {
@@ -871,22 +884,21 @@ export function AppTab(props) {
       )
       setForkDialogOpen(false)
       if (opened) {
-        setEditNotice({
+        showTemporaryNotice({
           type: 'success',
           text: hostProject?.id
             ? `已在当前项目新建创作页「${title}」。`
             : `已为你创建「${title}」工程副本，编辑后可随时重新打包发布。`,
         })
       } else {
-        setEditNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
+        showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
       }
     } catch (err) {
       setForkError(err?.message || '创建副本失败，请重试。')
     } finally {
       setForkBusy(false)
-      setTimeout(() => setEditNotice(null), 3500)
     }
-  }, [manifest, forkContext, props?.ctx])
+  }, [manifest, forkContext, props?.ctx, showTemporaryNotice])
 
   if (!manifest) {
     return (

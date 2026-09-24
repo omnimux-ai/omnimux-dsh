@@ -1968,6 +1968,10 @@ export const WORKFLOW_CSS = `
   transition: all 0.15s ease;
   outline: none;
 }
+.omx-fork-mode-card:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
 .omx-fork-mode-card:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }

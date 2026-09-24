@@ -1,7 +1,7 @@
 # 验证证据报告：应用编辑弹窗与版本号校验修复 (Issue #2630)
 
 ## 验证结果：PASS
-- 时间: 2026-09-24T11:44:35.964Z
+- 时间: 2026-09-24T12:04:25.793Z
 - 截图证据: [app-edit-fork-modal-verified.png](docs/evidence/app-edit-fork-modal-verified.png)
 - 演示单页: [app-edit-fork-modal-demo.html](docs/evidence/app-edit-fork-modal-demo.html)
 

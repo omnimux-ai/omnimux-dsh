@@ -140,6 +140,7 @@ export function ForkAppProjectDialog({
   const handleModeChange = (nextMode) => {
     if (nextMode === mode) return
     setMode(nextMode)
+    setBrowseError('')
     if (!nameTouched) {
       setName(nextMode === 'page' ? defaultPageTitle : defaultProjectTitle)
     }
@@ -317,12 +318,13 @@ export function ForkAppProjectDialog({
           {/* 存放模式选择：仅在当前已有项目时提供选项 */}
           {hasHostProject && (
             <div className="omx-fork-mode-section">
-              <div className="omx-fork-mode-label">
+              <div className="omx-fork-mode-label" id="omx-fork-mode-label">
                 存放方式
               </div>
-              <div className="omx-fork-mode-grid">
+              <div className="omx-fork-mode-grid" role="radiogroup" aria-labelledby="omx-fork-mode-label">
                 <div
-                  role="button"
+                  role="radio"
+                  aria-checked={mode === 'page'}
                   tabIndex={0}
                   className={`omx-fork-mode-card ${mode === 'page' ? 'is-active' : ''}`}
                   onClick={() => handleModeChange('page')}
@@ -337,7 +339,8 @@ export function ForkAppProjectDialog({
                 </div>
 
                 <div
-                  role="button"
+                  role="radio"
+                  aria-checked={mode === 'project'}
                   tabIndex={0}
                   className={`omx-fork-mode-card ${mode === 'project' ? 'is-active' : ''}`}
                   onClick={() => handleModeChange('project')}

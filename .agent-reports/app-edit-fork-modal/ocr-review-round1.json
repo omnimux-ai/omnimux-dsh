@@ -1,0 +1,218 @@
+{
+  "status": "complete",
+  "llm": {
+    "provider": "dsh-opencode4",
+    "model": "deepseek-v4.1-flash"
+  },
+  "message": "Review complete: 6 finding(s) across 7 selected item(s).",
+  "summary": {
+    "files_reviewed": 7,
+    "comments": 6,
+    "total_tokens": 360285,
+    "input_tokens": 350589,
+    "output_tokens": 9696,
+    "cache_read_tokens": 295040,
+    "elapsed": "1m16s"
+  },
+  "tool_calls": {
+    "total": 33,
+    "by_tool": {
+      "code_comment": 2,
+      "code_search": 14,
+      "file_find": 1,
+      "file_read": 15,
+      "file_read_diff": 1
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": [
+    {
+      "path": "plugins/omnimux-workflow/src/client/styles.js",
+      "content": "`.omx-fork-mode-card` is used on focusable interactive elements (`role=\"button\"`, `tabIndex={0}`, keyboard handlers in ForkAppProjectDialog.jsx), but it sets `outline: none` without any `:focus-visible` replacement. This removes the visible focus indicator for keyboard users. Other focusable elements in this stylesheet (e.g. `.omnimux-workflow-card:focus-visible`, `.omnimux-new-project-drop:focus-visible`) define a focus-visible style. Please add an equivalent for consistency and accessibility.",
+      "suggestion_code": "  transition: all 0.15s ease;\n}\n.omx-fork-mode-card:focus-visible {\n  outline: 2px solid var(--dsw-alias-brand-primary);\n  outline-offset: 2px;\n}",
+      "existing_code": "  transition: all 0.15s ease;\n  outline: none;\n}",
+      "start_line": 1968,
+      "end_line": 1970,
+      "category": "style",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+      "content": "The `t` prop is declared but never used — all labels are hardcoded Chinese strings ('创建应用编辑副本', '官方预设应用为受保护模板…', '浏览目录失败，请重试', '确认并进入画布' …). The sibling `NewLocalProjectDialog` uses `t('projects.dialog.*')` for the same UI (including `t('projects.dialog.browseFailed')`), so this dialog bypasses the existing localization pipeline. Either localize the strings via `t` or drop the unused parameter to avoid a dead prop.",
+      "existing_code": "  t,\n  onCancel,\n  onSubmit,\n  onBrowseDirectory,\n}) {",
+      "start_line": 109,
+      "end_line": 113,
+      "category": "maintainability",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+      "content": "The two mode cards are `div` elements with `role=\"button\"` that only handle Enter/Space; the active option is conveyed exclusively via the `is-active` CSS class with no `aria-pressed`/`aria-selected`/`aria-checked`, so screen readers cannot tell which mode is selected. This is a single-select control — consider `role=\"radio\"` + `aria-checked` (or add `aria-pressed`) to expose the state.",
+      "existing_code": "                  role=\"button\"\n                  tabIndex={0}\n                  className={`omx-fork-mode-card ${mode === 'page' ? 'is-active' : ''}`}",
+      "start_line": 325,
+      "end_line": 327,
+      "category": "maintainability",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+      "content": "This file duplicates a large portion of `NewLocalProjectDialog` — `CloseGlyph`/`FolderGlyph`/`FolderPlusGlyph`/`ComputerGlyph`/`ChevronGlyph`, the `loadBrowse`/`openBrowse`/`applyPickedPath` logic, and the full browse/picked/drop `sourcePane` markup are near-copies, yet here they are rebuilt with raw `\u003cbutton\u003e` + `exempt-ui01 ai-app-ui-spec` instead of the shared `ModalDialog`/`IconButton`/`Button`/`InputField`. Consider extracting the shared folder-picker pane/glyphs into a reusable component to avoid the divergence (the sibling already drifted: e.g. `path` seeding, `setConfirmedExisting`).",
+      "existing_code": "+function FolderPlusGlyph({ size = 14 }) {",
+      "start_line": 32,
+      "end_line": 32,
+      "category": "maintainability",
+      "severity": "low"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+      "content": "`browseError` is only rendered inside the `mode === 'project'` branch below, but the state is not reset when the mode switches to 'page' (it is only cleared on a successful load / closing browse). If a browse attempt fails and the user then switches to 'page', the error is set but its paragraph is unmounted, so the message silently disappears and re-appears if the user switches back. Minor, but resetting `browseError` on `handleModeChange('page')` would keep state consistent.",
+      "existing_code": "+          {error \u0026\u0026 (\n+            \u003cp className=\"omnimux-new-project-error omx-fork-error-text\"\u003e\n+              {error}\n+            \u003c/p\u003e\n+          )}",
+      "start_line": 401,
+      "end_line": 405,
+      "category": "maintainability",
+      "severity": "low"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/client/projects/AppTab.jsx",
+      "content": "`handleForkSubmit` schedules `setTimeout(() =\u003e setEditNotice(null), 3500)` inside `finally`, and the timer handle is never stored or cleared. On the error path the dialog remains open (error is surfaced via `forkError`), but the notice-clearing timer still fires later; if the user starts another edit/fork operation before it fires, the stale timer can wipe the newer notice. The same untracked-timer pattern was copied from `handleEditApp`, so consider tracking/clearing the timeout (e.g. via a ref with cleanup on unmount) rather than adding another fire-and-forget timer.",
+      "existing_code": "    } finally {\n      setForkBusy(false)\n      setTimeout(() =\u003e setEditNotice(null), 3500)\n    }",
+      "start_line": 885,
+      "end_line": 888,
+      "category": "maintainability",
+      "severity": "medium"
+    }
+  ],
+  "groups": [
+    {
+      "label": "App fork dialog UI and integration",
+      "files": [
+        "plugins/omnimux-workflow/src/client/projects/AppTab.jsx",
+        "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+        "plugins/omnimux-workflow/src/client/projects/appLibrary.js"
+      ]
+    },
+    {
+      "label": "Unit and e2e tests for fork flow",
+      "files": [
+        "plugins/omnimux-workflow/src/client/projects/appOwnershipFork.test.mjs",
+        "plugins/omnimux-workflow/src/client/projects/appTab.test.mjs",
+        "plugins/omnimux-workflow/tests/app-edit-and-fork-flow.e2e.test.mjs"
+      ]
+    },
+    {
+      "label": "Fork dialog styles",
+      "files": [
+        "plugins/omnimux-workflow/src/client/styles.js"
+      ]
+    }
+  ],
+  "session_id": "27a13afc-0897-42df-9f83-36924e39c091",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "27a13afc-0897-42df-9f83-36924e39c091",
+    "operation": "review",
+    "terminal_state": "complete",
+    "repository": {
+      "identity_sha256": "72a4299b0cafc9688d8dfc1929645d8f103e3c696008f4d6323179f137dba672"
+    },
+    "input": {
+      "mode": "range",
+      "requested_from": "origin/main",
+      "requested_head": "HEAD",
+      "resolved_base": "9b181ef4bddc55dc04b6a9e362145baebfe1125a",
+      "resolved_head": "cb5e788b344b3ea1882bd62347004579410766c4",
+      "exact_range": "9b181ef4bddc55dc04b6a9e362145baebfe1125a..cb5e788b344b3ea1882bd62347004579410766c4",
+      "source_artifact_sha256": "ac42156892fbb14393a9d429a03492342be271e37a55f13641aa57ac38609130"
+    },
+    "execution": {
+      "ocr_version": "v1.12.9",
+      "provider": "dsh-opencode4",
+      "model": "deepseek-v4.1-flash",
+      "configured_concurrency": 8,
+      "rule_config_sha256": "5c585c42e708d84df07e94f103ca28089eb74483a033524f5c133c02d9276cb1",
+      "runtime_config_sha256": "4696d0ac60932c894d8f4a79033fee0d440ab60155f8a67164bacc618bafb45d"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "23b325773050b9a5e0ca3ba1978bad411232bbef34369bfc8492db175325312d",
+          "path": "plugins/omnimux-workflow/src/client/projects/appTab.test.mjs",
+          "fingerprint": "733bfbe88eecef5cd7199a0ab7ccd8a277d071dab9b2dd90853e8497a77c2fae"
+        },
+        {
+          "item_id": "32581468f10f175edbaf3a1b41634e87513b6608023edbff47828bb3068c1272",
+          "path": "plugins/omnimux-workflow/src/client/projects/AppTab.jsx",
+          "fingerprint": "f8900033006c93aded0347d125328a7031c1172d6e4f6d11f01fde9da7f857d0"
+        },
+        {
+          "item_id": "9f613574d5ba7f4a6f52e6bb379dd0213cd03b124b31565e8e396cf94888e1e4",
+          "path": "plugins/omnimux-workflow/src/client/projects/appOwnershipFork.test.mjs",
+          "fingerprint": "5d9794b041deb3bc096792617bf12114317fb34e1bfe83694d86c0c1143e6a47"
+        },
+        {
+          "item_id": "b6e3b1686bdcc13aa5fb82642fd235cccaa1ecd96064767ada3c38bcb4589697",
+          "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+          "fingerprint": "9b245345ec44421ebf295a8373a55c28cc222f1f006d395ac553154edd7f2a81"
+        },
+        {
+          "item_id": "df8f2151c682678cc79caa9e21f3b86e812b0fbc2dbfd36c16249c0a5d328676",
+          "path": "plugins/omnimux-workflow/tests/app-edit-and-fork-flow.e2e.test.mjs",
+          "fingerprint": "e8436b8fae3f14e929a86fa56a1a4023b57e40223456b491a0ff456d1a3c1021"
+        },
+        {
+          "item_id": "e5ea41dfe85500b1cbcf1886fc20aa668ccca9ecd3e9071b6c056c40e9c51e73",
+          "path": "plugins/omnimux-workflow/src/client/projects/appLibrary.js",
+          "fingerprint": "87ccf485f715ce1ac04adcbab411448d610d5109b41394b643ace9c6c0498974"
+        },
+        {
+          "item_id": "f517552b3b4d7d7e05422699be76ca133055a502f4c6f535b06005199e61ea4f",
+          "path": "plugins/omnimux-workflow/src/client/styles.js",
+          "fingerprint": "b1240f7c958af1985d6b8b0e621927d1cc515283d24e293d1940116636ccc0fb"
+        }
+      ],
+      "completed": [
+        {
+          "item_id": "23b325773050b9a5e0ca3ba1978bad411232bbef34369bfc8492db175325312d",
+          "path": "plugins/omnimux-workflow/src/client/projects/appTab.test.mjs",
+          "fingerprint": "733bfbe88eecef5cd7199a0ab7ccd8a277d071dab9b2dd90853e8497a77c2fae"
+        },
+        {
+          "item_id": "32581468f10f175edbaf3a1b41634e87513b6608023edbff47828bb3068c1272",
+          "path": "plugins/omnimux-workflow/src/client/projects/AppTab.jsx",
+          "fingerprint": "f8900033006c93aded0347d125328a7031c1172d6e4f6d11f01fde9da7f857d0"
+        },
+        {
+          "item_id": "9f613574d5ba7f4a6f52e6bb379dd0213cd03b124b31565e8e396cf94888e1e4",
+          "path": "plugins/omnimux-workflow/src/client/projects/appOwnershipFork.test.mjs",
+          "fingerprint": "5d9794b041deb3bc096792617bf12114317fb34e1bfe83694d86c0c1143e6a47"
+        },
+        {
+          "item_id": "b6e3b1686bdcc13aa5fb82642fd235cccaa1ecd96064767ada3c38bcb4589697",
+          "path": "plugins/omnimux-workflow/src/client/projects/ForkAppProjectDialog.jsx",
+          "fingerprint": "9b245345ec44421ebf295a8373a55c28cc222f1f006d395ac553154edd7f2a81"
+        },
+        {
+          "item_id": "df8f2151c682678cc79caa9e21f3b86e812b0fbc2dbfd36c16249c0a5d328676",
+          "path": "plugins/omnimux-workflow/tests/app-edit-and-fork-flow.e2e.test.mjs",
+          "fingerprint": "e8436b8fae3f14e929a86fa56a1a4023b57e40223456b491a0ff456d1a3c1021"
+        },
+        {
+          "item_id": "e5ea41dfe85500b1cbcf1886fc20aa668ccca9ecd3e9071b6c056c40e9c51e73",
+          "path": "plugins/omnimux-workflow/src/client/projects/appLibrary.js",
+          "fingerprint": "87ccf485f715ce1ac04adcbab411448d610d5109b41394b643ace9c6c0498974"
+        },
+        {
+          "item_id": "f517552b3b4d7d7e05422699be76ca133055a502f4c6f535b06005199e61ea4f",
+          "path": "plugins/omnimux-workflow/src/client/styles.js",
+          "fingerprint": "b1240f7c958af1985d6b8b0e621927d1cc515283d24e293d1940116636ccc0fb"
+        }
+      ],
+      "reused": [],
+      "failed": [],
+      "waived": []
+    },
+    "elapsed_ms": 76395
+  }
+}

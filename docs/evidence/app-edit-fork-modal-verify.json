@@ -1,7 +1,7 @@
 {
   "issue": 2630,
   "task": "应用详情页编辑应用弹窗工作流与版本号校验拦截修复",
-  "timestamp": "2026-09-24T11:44:35.963Z",
+  "timestamp": "2026-09-24T12:04:25.792Z",
   "verification": "PASS",
   "evidenceFiles": [
     "docs/evidence/app-edit-fork-modal-demo.html",
