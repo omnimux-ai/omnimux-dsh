@@ -1,5 +1,8 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import fs from 'node:fs'
+import path from 'node:path'
+import os from 'node:os'
 
 const execFileAsync = promisify(execFile)
 
@@ -25,10 +28,13 @@ export const KNOWN_AGENTS = Object.freeze([
     name: 'Codex CLI',
     bin: 'codex',
     models: Object.freeze([
-      'gpt-4o',
-      'o3-mini',
-      'o1',
-      'gpt-4.5-preview',
+      'gpt-6-astra',
+      'gpt-6-sol',
+      'gpt-6-luna',
+      'gpt-5.6-sol',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna',
+      'gpt-5.5',
     ]),
   },
   {
@@ -36,10 +42,10 @@ export const KNOWN_AGENTS = Object.freeze([
     name: 'Kimi CLI',
     bin: 'kimi',
     models: Object.freeze([
-      'kimi-latest',
-      'moonshot-v1-128k',
-      'moonshot-v1-32k',
-      'moonshot-v1-8k',
+      'kimi-code/k3',
+      'kimi-code/k3-256k',
+      'kimi-code/kimi-for-coding',
+      'kimi-code/kimi-for-coding-highspeed',
     ]),
   },
   {
@@ -56,6 +62,61 @@ export const KNOWN_AGENTS = Object.freeze([
 ])
 
 const PROBE_TIMEOUT_MS = 5000
+
+const SAFE_MODEL_REGEX = /^[a-zA-Z0-9_.:/-]+$/
+
+/**
+ * Validates that an agent model identifier is safe to pass as a CLI option value.
+ * Disallows empty strings, leading hyphens (which could trigger option parsing bugs),
+ * and special shell characters.
+ * @param {any} model
+ * @returns {boolean}
+ */
+export function isSafeAgentModel(model) {
+  if (typeof model !== 'string') return false
+  const trimmed = model.trim()
+  if (!trimmed || trimmed.startsWith('-')) return false
+  return SAFE_MODEL_REGEX.test(trimmed)
+}
+
+/**
+ * Dynamically probes the local runtime/cache files for an agent's available models.
+ * If the config/cache is present, returns live model identifiers; otherwise returns
+ * the static known models for that agent.
+ * @param {string} id
+ * @param {{ codexPath?: string, kimiPath?: string }} [options]
+ * @returns {string[]}
+ */
+export function probeAgentModels(id, options = {}) {
+  try {
+    if (id === 'codex') {
+      const cachePath = options.codexPath || path.join(os.homedir(), '.codex', 'models_cache.json')
+      if (fs.existsSync(cachePath)) {
+        const raw = fs.readFileSync(cachePath, 'utf8')
+        const data = JSON.parse(raw)
+        if (Array.isArray(data.models)) {
+          const list = data.models
+            .filter((m) => m && m.visibility === 'list')
+            .map((m) => String(m.id || m.slug || '').trim())
+            .filter((m) => isSafeAgentModel(m))
+          if (list.length > 0) return [...new Set(list)]
+        }
+      }
+    } else if (id === 'kimi') {
+      const configPath = options.kimiPath || path.join(os.homedir(), '.kimi-code', 'config.toml')
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf8')
+        const matches = [...raw.matchAll(/\[models\.["']([^"']+)["']\]/g)].map((m) => m[1].trim())
+        const list = matches.filter((m) => isSafeAgentModel(m))
+        if (list.length > 0) return [...new Set(list)]
+      }
+    }
+  } catch {
+    // fallback to preset
+  }
+  const found = KNOWN_AGENTS.find((a) => a.id === id)
+  return found && Array.isArray(found.models) ? [...found.models] : []
+}
 
 /**
  * Whether one binary answers `--version`. A missing binary, a timeout, or a
@@ -75,30 +136,23 @@ export async function probeAgentBin(bin, run = execFileAsync) {
 
 /**
  * Scan PATH for the known agent CLIs. Returns every known agent with its
- * availability — the UI hides or disables the ones that are not installed.
+ * availability and dynamically probed models.
  * @param {(file: string, args: string[], opts: object) => Promise<{ stdout: string, stderr: string }>} [run]
+ * @param {{ codexPath?: string, kimiPath?: string }} [options]
  */
-export async function scanLocalAgents(run = execFileAsync) {
+export async function scanLocalAgents(run = execFileAsync, options = {}) {
   const rows = await Promise.all(KNOWN_AGENTS.map(async (agent) => {
     const probe = await probeAgentBin(agent.bin, run)
+    const models = probeAgentModels(agent.id, options)
     return {
       id: agent.id,
       name: agent.name,
       installed: probe.installed,
       version: probe.version,
-      models: Array.isArray(agent.models) ? [...agent.models] : [],
+      models: models.length > 0 ? models : (Array.isArray(agent.models) ? [...agent.models] : []),
     }
   }))
   return rows
-}
-
-const SAFE_MODEL_REGEX = /^[a-zA-Z0-9_.:/-]+$/
-
-export function isSafeAgentModel(model) {
-  if (typeof model !== 'string') return false
-  const trimmed = model.trim()
-  if (!trimmed || trimmed.startsWith('-')) return false
-  return SAFE_MODEL_REGEX.test(trimmed)
 }
 
 /**

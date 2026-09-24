@@ -1,0 +1,35 @@
+{
+  "issue": 2628,
+  "feature": "cli-models-dynamic-probe",
+  "verified_at": "2026-09-24T18:59:00+08:00",
+  "criteria": {
+    "S1_codex_dynamic_models": "PASS",
+    "S2_kimi_dynamic_models": "PASS",
+    "S3_legacy_ids_eliminated": "PASS",
+    "S4_dropdown_first_option_default": "PASS",
+    "S5_all_tests_green": "PASS"
+  },
+  "verified_sources": {
+    "codex": {
+      "path": "~/.codex/models_cache.json",
+      "extracted_models": [
+        "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.5"
+      ]
+    },
+    "kimi": {
+      "path": "~/.kimi-code/config.toml",
+      "extracted_models": [
+        "kimi-code/k3",
+        "kimi-code/k3-256k",
+        "kimi-code/kimi-for-coding",
+        "kimi-code/kimi-for-coding-highspeed"
+      ]
+    }
+  }
+}
