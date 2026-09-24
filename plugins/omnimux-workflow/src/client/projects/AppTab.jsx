@@ -23,6 +23,7 @@ import {
 } from './appLibrary.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
+import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
 import {
   resolveOptions,
   resolveWidget,
@@ -763,9 +764,27 @@ export function AppTab(props) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [editNotice, setEditNotice] = useState(null)
+  const noticeTimerRef = useRef(null)
+  const showTemporaryNotice = useCallback((notice, delay = 3500) => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    setEditNotice(notice)
+    noticeTimerRef.current = setTimeout(() => {
+      setEditNotice(null)
+      noticeTimerRef.current = null
+    }, delay)
+  }, [])
+
+  useEffect(() => () => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+  }, [])
+
+  const [forkDialogOpen, setForkDialogOpen] = useState(false)
+  const [forkContext, setForkContext] = useState({ hostProject: null, initialPath: '' })
+  const [forkBusy, setForkBusy] = useState(false)
+  const [forkError, setForkError] = useState('')
 
   // 点击「编辑应用」：根据应用归属自适应分诊
-  // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方应用则创建副本工程并跳转
+  // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方预设应用则弹出「创建副本」确认窗
   const handleEditApp = useCallback(async () => {
     if (!manifest || isEditing) return
     setIsEditing(true)
@@ -803,56 +822,83 @@ export function AppTab(props) {
           { sessionId: project?.sessionId, focusGroupId: target.groupId },
         )
         if (opened) {
-          setEditNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
+          showTemporaryNotice({ type: 'success', text: '已进入应用源画布，可直接编辑与调试。' })
         } else {
-          setEditNotice({ type: 'error', text: '打开画布失败，请重试。' })
+          showTemporaryNotice({ type: 'error', text: '打开画布失败，请重试。' })
         }
       } else {
-        setEditNotice({ type: 'info', text: '正在为此应用生成独立工程副本...' })
+        // 2. 官方预设应用或未在当前工作区拥有的应用：唤起创建副本弹窗让用户自由选择
         const sessions = props?.ctx?.sessions
         let hostProject = null
+        let initialPath = ''
         try {
           const currentId = sessions?.list?.getSnapshot?.()?.current
           if (currentId) {
             const bound = await fetchSessionProjectBinding(String(currentId)).catch(() => null)
-            hostProject = bound?.ok ? bound.body?.project : null
+            if (bound?.ok) {
+              hostProject = bound.body?.project || null
+              initialPath = bound.body?.workspaceDir || ''
+            }
           }
         } catch {
           hostProject = null
         }
-        const { project, workspaceId, groupId } = await createProjectForkFromManifest(manifest, { hostProject })
 
-        if (workspaceId && typeof localStorage !== 'undefined') {
-          localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
-        }
-        if (workspaceId && typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-            detail: { workspaceId },
-          }))
-        }
-
-        const opened = await activateProjectCanvas(
-          { betterSidebar: getBetterSidebar(props?.ctx) },
-          { sessionId: project?.sessionId, focusGroupId: groupId },
-        )
-        if (opened) {
-          setEditNotice({
-            type: 'success',
-            text: hostProject?.id
-              ? `已在当前项目新建「${manifest.metadata?.name || '应用'}_副本」。`
-              : `已为你创建「${manifest.metadata?.name || '应用'}」的副本工程，编辑后可随时重新打包发布。`,
-          })
-        } else {
-          setEditNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
-        }
+        setForkContext({ hostProject, initialPath })
+        setForkError('')
+        setForkDialogOpen(true)
+        setEditNotice(null)
       }
     } catch (err) {
-      setEditNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
+      showTemporaryNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
     } finally {
       setIsEditing(false)
-      setTimeout(() => setEditNotice(null), 3500)
     }
-  }, [manifest, isEditing, props?.ctx])
+  }, [manifest, isEditing, props?.ctx, showTemporaryNotice])
+
+  // 处理弹窗提交创建副本
+  const handleForkSubmit = useCallback(async ({ mode, title, projectRoot }) => {
+    setForkBusy(true)
+    setForkError('')
+    try {
+      const hostProject = mode === 'page' ? forkContext.hostProject : null
+      const { project, workspaceId, groupId } = await createProjectForkFromManifest(manifest, {
+        hostProject,
+        projectTitle: title,
+        pageTitle: title,
+        projectRoot,
+      })
+
+      if (workspaceId && typeof localStorage !== 'undefined') {
+        localStorage.setItem('omnimux:latest-active-canvas', workspaceId)
+      }
+      if (workspaceId && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+          detail: { workspaceId },
+        }))
+      }
+
+      const opened = await activateProjectCanvas(
+        { betterSidebar: getBetterSidebar(props?.ctx) },
+        { sessionId: project?.sessionId, focusGroupId: groupId },
+      )
+      setForkDialogOpen(false)
+      if (opened) {
+        showTemporaryNotice({
+          type: 'success',
+          text: hostProject?.id
+            ? `已在当前项目新建创作页「${title}」。`
+            : `已为你创建「${title}」工程副本，编辑后可随时重新打包发布。`,
+        })
+      } else {
+        showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
+      }
+    } catch (err) {
+      setForkError(err?.message || '创建副本失败，请重试。')
+    } finally {
+      setForkBusy(false)
+    }
+  }, [manifest, forkContext, props?.ctx, showTemporaryNotice])
 
   if (!manifest) {
     return (
@@ -1781,6 +1827,21 @@ export function AppTab(props) {
           </div>
         </div>
       )}
+
+      {forkDialogOpen ? (
+        <ForkAppProjectDialog
+          manifest={manifest}
+          hostProject={forkContext.hostProject}
+          initialPath={forkContext.initialPath}
+          busy={forkBusy}
+          error={forkError}
+          t={props?.t}
+          onCancel={() => {
+            if (!forkBusy) setForkDialogOpen(false)
+          }}
+          onSubmit={handleForkSubmit}
+        />
+      ) : null}
     </div>
   )
 }

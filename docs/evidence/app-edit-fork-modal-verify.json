@@ -1,0 +1,17 @@
+{
+  "issue": 2630,
+  "task": "应用详情页编辑应用弹窗工作流与版本号校验拦截修复",
+  "timestamp": "2026-09-24T12:04:25.792Z",
+  "verification": "PASS",
+  "evidenceFiles": [
+    "docs/evidence/app-edit-fork-modal-demo.html",
+    "docs/evidence/app-edit-fork-modal-verified.png"
+  ],
+  "featuresVerified": {
+    "dialogPresence": "官方预设应用点击编辑应用不再静默执行，而是唤起 ForkAppProjectDialog 弹窗",
+    "smartDefaults": "智能预填名称（当前项目追加创作页预填“应用名_副本”，新建项目预填“应用名 (副本)”）",
+    "modeSwitching": "支持“加入当前项目（创作页）”与“新建独立项目”自由切换",
+    "workspacePicking": "新建独立项目支持自选工作区目录，默认带入当前会话目录",
+    "versionRequiredFix": "保存画布显式携带 expectedVersion: 0，彻底根治后端 400 version-required 拦截"
+  }
+}

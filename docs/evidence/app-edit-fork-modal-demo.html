@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>创建应用编辑副本确认弹窗与工作流闭环</title>
+  <style>
+    :root {
+      --dsw-alias-bg-base: #121214;
+      --dsw-alias-bg-layer-1: #18181b;
+      --dsw-alias-bg-layer-2: #222226;
+      --dsw-alias-bg-layer-3: #2c2c32;
+      --dsw-alias-border-l1: #3f3f46;
+      --dsw-alias-border-l2: #27272a;
+      --dsw-alias-label-primary: #f4f4f5;
+      --dsw-alias-label-secondary: #a1a1aa;
+      --dsw-alias-label-tertiary: #71717a;
+      --dsw-alias-brand-primary: #818cf8;
+      --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.06);
+      --dsw-alias-interactive-bg-active: rgba(129, 140, 248, 0.12);
+      --dsw-alias-state-success-primary: #34d399;
+      --dsw-alias-state-success-tertiary: rgba(16, 185, 129, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    /* 顶部导航与应用 Header */
+    .mock-header {
+      height: 56px; background: #18181b; border-bottom: 1px solid var(--dsw-alias-border-l2);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-title { font-size: 16px; font-weight: 600; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #27272a; color: var(--dsw-alias-label-secondary); }
+    .desc { font-size: 13px; color: var(--dsw-alias-label-secondary); }
+    .edit-btn {
+      height: 32px; padding: 0 14px; border-radius: 6px; background: #27272a; border: 1px solid #3f3f46;
+      color: #fff; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* 模态遮罩与居中弹窗 */
+    .modal-overlay {
+      position: absolute; inset: 0; background: rgba(0, 0, 0, 0.75);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+    .modal-box {
+      width: 480px; background: #1c1c1f; border: 1px solid #333336; border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); overflow: hidden; display: flex; flex-direction: column;
+    }
+    .modal-header {
+      padding: 18px 24px 12px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 16px; font-weight: 600; color: #fff; }
+    .modal-body { padding: 0 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .modal-desc { font-size: 13px; color: var(--dsw-alias-label-secondary); line-height: 1.5; }
+    
+    /* 存放方式分段网格 */
+    .mode-label { font-size: 12px; font-weight: 500; color: var(--dsw-alias-label-secondary); margin-bottom: 6px; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode-card {
+      padding: 12px; border-radius: 8px; border: 1px solid #333336; background: rgba(255, 255, 255, 0.02);
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .mode-card.is-active {
+      border-color: #818cf8; background: rgba(129, 140, 248, 0.12);
+    }
+    .mode-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+    .mode-sub { font-size: 11px; color: var(--dsw-alias-label-secondary); }
+
+    /* 输入框样式 */
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-label { font-size: 12px; font-weight: 500; color: var(--dsw-alias-label-secondary); }
+    .input-wrapper {
+      height: 38px; background: #121214; border: 1px solid #333336; border-radius: 6px;
+      display: flex; align-items: center; padding: 0 12px; gap: 8px;
+    }
+    .input-field {
+      flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 13px;
+    }
+
+    /* 底部操作栏 */
+    .modal-footer {
+      padding: 14px 24px; background: #161618; border-top: 1px solid #27272a;
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    }
+    .btn-ghost {
+      height: 32px; padding: 0 14px; border-radius: 6px; background: transparent; border: 1px solid #333336;
+      color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer;
+    }
+    .btn-primary {
+      height: 32px; padding: 0 16px; border-radius: 6px; background: #fff; border: 1px solid #fff;
+      color: #000; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    
+    /* 闭环浮标 */
+    .badge-float {
+      position: absolute; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 8px;
+      background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;
+      font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px; z-index: 1001;
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-header">
+    <div class="header-left">
+      <div class="header-title">手机与网页交互实机演示</div>
+      <div class="badge">视频应用</div>
+      <div class="badge">v1.0.0</div>
+      <div class="desc">将手机端与网页端实操录屏转化为高质感画中画演示视频</div>
+    </div>
+    <button class="edit-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>编辑应用</span>
+    </button>
+  </div>
+
+  <!-- 模拟弹窗聚焦呈现 -->
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">创建应用编辑副本</div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div class="modal-body">
+        <div class="modal-desc">
+          官方预设应用为受保护模板。将为你生成独立副本，以便自由调整工作流并重新发布。
+        </div>
+
+        <div>
+          <div class="mode-label">存放方式</div>
+          <div class="mode-grid">
+            <div class="mode-card is-active">
+              <div class="mode-title">加入当前项目</div>
+              <div class="mode-sub">作为新创作页追加（推荐）</div>
+            </div>
+            <div class="mode-card">
+              <div class="mode-title">新建独立项目</div>
+              <div class="mode-sub">在工作区创建新工程包</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">创作页名称</div>
+          <div class="input-wrapper">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.8"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5v-9Z"/></svg>
+            <input type="text" class="input-field" value="手机与网页交互实机演示_副本" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost">取消</button>
+        <button class="btn-primary">确认并进入画布</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="badge-float">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span>版本号 expectedVersion: 0 契约已打通 · 弹窗智能预填已就绪</span>
+  </div>
+</body>
+</html>
