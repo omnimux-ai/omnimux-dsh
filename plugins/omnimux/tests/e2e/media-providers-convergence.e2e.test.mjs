@@ -176,7 +176,7 @@ describe('settings-sections-split.e2e', () => {
           json: async () => ({
             agents: [
               { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223' },
-              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0' },
+              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0', models: ['gpt-4o', 'o3-mini', 'o1', 'gpt-4.5-preview'] },
             ],
           }),
         }
@@ -251,7 +251,8 @@ describe('settings-sections-split.e2e', () => {
     assert.equal(agentModelOptions[0].label, 'CLI 默认设置', 'First option label is CLI 默认设置')
     assert.ok(agentModelOptions.some((o) => o.value === 'gpt-6-astra'), 'Contains gpt-6-astra option from agent models')
     assert.ok(agentModelOptions.some((o) => o.value === 'gpt-6-sol'), 'Contains gpt-6-sol option from agent models')
-    assert.equal(agentModelOptions.some((o) => o.value === 'gpt-4o'), false, 'Legacy gpt-4o must be replaced')
+    assert.equal(agentModelOptions.some((o) => o.value === 'gpt-4o'), false, 'Legacy gpt-4o from backend must be cleansed')
+    assert.equal(agentModelOptions.some((o) => o.value === 'o1'), false, 'Legacy o1 from backend must be cleansed')
     assert.equal(agentModelOptions.some((o) => o.value.includes('claude')), false, 'Codex options must not contain claude models')
 
     // Switch to Tab 2 (媒体生成提供商)
@@ -282,6 +283,113 @@ describe('settings-sections-split.e2e', () => {
     // Assert S4: Card 2 contains canvas groups
     const groups = canvasCard.querySelectorAll('.omnimux-models-card__group')
     assert.ok(groups.length >= 4, 'Card 2 contains text, image, video, audio model groups')
+
+    await act(async () => {
+      reactRoot.unmount()
+    })
+  })
+
+  it('self-heals and cleanses obsolete legacy agent model from persistent scope on mount or change', async () => {
+    const { ModelsSettingsCard } = await loadCardComponent()
+
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost:43120/',
+    })
+
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.fetch = async (url) => {
+      if (url.includes('/omnimux/model-catalog')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            text: [{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }],
+            image: [{ id: 'gpt-image-2.5', label: 'GPT Image 2.5' }],
+            video: [{ id: 'seedance-2-5', label: 'Seedance 2.5' }],
+            audio: [{ id: 'suno', label: 'Suno' }],
+            defaults: {
+              text: 'gemini-3.8-flash',
+              image: 'gpt-image-2.5',
+              video: 'seedance-2-5',
+              audio: 'suno',
+            },
+            defaultOperations: {},
+            models: [],
+          }),
+        }
+      }
+      if (url.includes('/omnimux/agents')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            agents: [
+              { id: 'claude', name: 'Claude Code', installed: true, version: '2.1.223' },
+              { id: 'codex', name: 'Codex CLI', installed: true, version: '0.156.0', models: ['gpt-4o', 'o3-mini', 'o1', 'gpt-4.5-preview'] },
+            ],
+          }),
+        }
+      }
+      if (url.includes('/omnimux/byok/config')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            provider: 'fal',
+            endpoint: 'https://fal.run',
+            model: 'fal-ai/flux/dev',
+            hasKey: true,
+            verified: true,
+            mediaImage: true,
+            mediaVideo: true,
+            mediaAudio: true,
+          }),
+        }
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true }) }
+    }
+
+    const scope = createScope({
+      runtimeMode: 'key',
+      runtimeAgentId: 'codex',
+      runtimeAgentModel: 'gpt-4o',
+      runtimeMediaProvider: 'fal',
+      runtimeKeyVerified: true,
+      defaultTextModel: 'gemini-3.8-flash',
+      defaultImageModel: 'gpt-image-2.5',
+      defaultVideoModel: 'seedance-2-5',
+      defaultAudioModel: 'suno',
+    })
+
+    const root = dom.window.document.getElementById('root')
+    const { createRoot } = require('react-dom/client')
+    const reactRoot = createRoot(root)
+
+    await act(async () => {
+      reactRoot.render(React.createElement(ModelsSettingsCard, { t, scope }))
+    })
+
+    // Assert: Component mount triggers self-healing, cleansing obsolete model from scope
+    assert.equal(scope.getSnapshot().value.runtimeAgentModel, '', 'Obsolete model gpt-4o in persistent scope must be cleansed to empty string')
+
+    const runtimeCard = root.querySelectorAll('.omnimux-models-card')[0]
+    const agentModelSelect = runtimeCard.querySelector('#omx-agent-model-codex')
+    assert.ok(agentModelSelect, 'Agent model DropdownSelect must exist')
+    assert.equal(agentModelSelect.value, '', 'Agent model DropdownSelect value must be empty (CLI default)')
+
+    const agentModelOptions = [...agentModelSelect.querySelectorAll('option')].map((o) => o.getAttribute('value'))
+    assert.equal(agentModelOptions.includes('gpt-4o'), false, 'Dropdown options must not contain gpt-4o')
+    assert.equal(agentModelOptions.includes('o1'), false, 'Dropdown options must not contain o1')
+
+    // Test dynamic change: simulate external or stale sync setting obsolete model 'o1'
+    await act(async () => {
+      await scope.set('runtimeAgentModel', 'o1')
+    })
+
+    // Assert: Dynamic change triggers self-healing, cleansing scope again
+    assert.equal(scope.getSnapshot().value.runtimeAgentModel, '', 'Dynamic change with obsolete model o1 must trigger self-healing to empty string')
+    assert.equal(agentModelSelect.value, '', 'Agent model DropdownSelect value remains cleansed to empty string')
 
     await act(async () => {
       reactRoot.unmount()
