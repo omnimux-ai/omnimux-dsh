@@ -367,7 +367,7 @@ export function ExploreTemplatesSection({
     if (target === 'favorites') {
       return libraryData.cards.filter((c) => {
         const raw = c.raw || {};
-        return Boolean(raw.is_favorite || raw.favorite);
+        return Boolean(raw.is_favorite || raw.favorite || raw.source?.is_favorite);
       });
     }
     return libraryData.cards.filter((c) => {
