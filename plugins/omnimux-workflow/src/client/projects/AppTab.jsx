@@ -17,6 +17,7 @@ import {
   registerOpenAppTab,
   isAppOwnedByUser,
   createProjectForkFromManifest,
+  friendlyForkError,
   resolveAppEditTarget,
   resolveOwningProject,
   toPublishedAppEntry,
@@ -1117,7 +1118,7 @@ export function AppTab(props) {
         setEditNotice(null)
       }
     } catch (err) {
-      showTemporaryNotice({ type: 'error', text: err?.message || '操作失败，请重试。' })
+      showTemporaryNotice({ type: 'error', text: friendlyForkError(err?.message, '操作失败，请重试。') })
     } finally {
       setIsEditing(false)
     }
@@ -1161,7 +1162,7 @@ export function AppTab(props) {
         showTemporaryNotice({ type: 'error', text: '副本已创建，打开画布失败，请在项目库查看。' })
       }
     } catch (err) {
-      setForkError(err?.message || '创建副本失败，请重试。')
+      setForkError(friendlyForkError(err?.message, '创建副本失败，请重试。'))
     } finally {
       setForkBusy(false)
     }

@@ -109,6 +109,7 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
   let createdProjectTitle = ''
   let writtenWorkspaceId = ''
   let writtenCanvasPayload = null
+  let preInitedWorkspaceId = ''
 
   const mockDeps = {
     createProjectFn: async (title) => {
@@ -126,6 +127,13 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
       }
     },
     requestFn: async (url, opts) => {
+      if (url.includes('/api/workspaces/') && (!opts || !opts.method || opts.method === 'GET')) {
+        return { ok: false, status: 404, body: { error: 'workspace-not-found' } }
+      }
+      if (url.endsWith('/api/workspaces') && opts.method === 'POST') {
+        preInitedWorkspaceId = opts.body?.id
+        return { ok: true, status: 200, body: { workspace: { id: opts.body?.id } } }
+      }
       writtenWorkspaceId = url.split('/').pop()
       writtenCanvasPayload = opts.body
       return { ok: true, status: 200, body: { success: true } }
@@ -138,6 +146,7 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
   assert.equal(createdProjectTitle, '手机与网页交互实机演示 (副本)')
   assert.equal(forkResult.project.id, 'proj_fork_demo')
   assert.equal(forkResult.workspaceId, 'ws_fork_demo')
+  assert.equal(preInitedWorkspaceId, 'ws_fork_demo', '必须在保存画布前执行 POST /api/workspaces 初始化空白快照')
   assert.equal(writtenWorkspaceId, 'ws_fork_demo')
 
   // 验证工作流节点打组容器 (GroupNode)

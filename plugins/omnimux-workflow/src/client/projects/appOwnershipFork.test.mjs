@@ -5,6 +5,7 @@ import {
   getPresetWorkflowSnapshot,
   wrapNodesInGroup,
   createProjectForkFromManifest,
+  friendlyForkError,
 } from './appLibrary.js'
 
 describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
@@ -197,6 +198,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       let passedTitle = ''
       let passedRoot = ''
       let savedExpectedVersion = null
+      let initedWorkspaceId = ''
       const mockDeps = {
         createProjectFn: async (title, _sid, root) => {
           passedTitle = title
@@ -214,7 +216,14 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
             },
           }
         },
-        requestFn: async (_url, opts) => {
+        requestFn: async (url, opts) => {
+          if (url.includes('/api/workspaces/') && (!opts || !opts.method || opts.method === 'GET')) {
+            return { ok: false, status: 404, body: { error: 'workspace-not-found' } }
+          }
+          if (url.endsWith('/api/workspaces') && opts.method === 'POST') {
+            initedWorkspaceId = opts.body?.id
+            return { ok: true, status: 200, body: { workspace: { id: opts.body?.id } } }
+          }
           savedExpectedVersion = opts.body?.expectedVersion
           return { ok: true, status: 200, body: { success: true } }
         },
@@ -225,6 +234,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       const res = await createProjectForkFromManifest(manifest, mockDeps)
       assert.equal(passedTitle, '我的自定义项目名')
       assert.equal(passedRoot, '/Users/x/MyWorkspaces/CustomDir')
+      assert.equal(initedWorkspaceId, 'ws_custom', '新建独立项目前必须先 POST /api/workspaces 初始化空白画布物理快照')
       assert.equal(savedExpectedVersion, 0, '新建独立项目保存画布必须携带 expectedVersion: 0')
       assert.equal(res.project.id, 'proj_custom_root')
     })
@@ -272,6 +282,31 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       assert.equal(res.workspaceId, 'ws_copy')
       assert.equal(res.project.id, 'proj_current')
       assert.equal(res.page.id, 'page-copy')
+    })
+  })
+
+  describe('friendlyForkError 错误码大白话转译', () => {
+    it('正确将所有已知英文错误码转译为大白话中文', () => {
+      assert.equal(friendlyForkError('workspace-not-found'), '未找到工程画布，请重试')
+      assert.equal(friendlyForkError('version-required'), '画布版本号缺失，请重试')
+      assert.equal(friendlyForkError('version_conflict'), '画布版本冲突，请重试')
+      assert.equal(friendlyForkError('project-exists'), '该工作区已存在同名工程，请微调名称')
+      assert.equal(friendlyForkError('project-required'), '需要关联项目工程，请重试')
+      assert.equal(friendlyForkError('invalid-project-root'), '工作区目录路径无效，请重新选择')
+      assert.equal(friendlyForkError('not-local'), '禁止跨域写入本地工作区')
+      assert.equal(friendlyForkError('internal'), '服务器内部处理异常，请重试')
+    })
+
+    it('未知英文代号或单词英文自动回退至默认中文提示', () => {
+      assert.equal(friendlyForkError('unknown-code', '默认失败提示'), '默认失败提示')
+      assert.equal(friendlyForkError('some_error_code', '默认失败提示'), '默认失败提示')
+      assert.equal(friendlyForkError('panic', '默认失败提示'), '默认失败提示')
+    })
+
+    it('自然中文提示与空输入处理', () => {
+      assert.equal(friendlyForkError('磁盘空间不足'), '磁盘空间不足')
+      assert.equal(friendlyForkError('', '操作失败兜底'), '操作失败兜底')
+      assert.equal(friendlyForkError(null, '操作失败兜底'), '操作失败兜底')
     })
   })
 })
