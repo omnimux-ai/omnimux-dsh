@@ -44,6 +44,107 @@ export const ALL_CREATIVE_TEMPLATES = Object.freeze([
 ]);
 
 /**
+ * 一级主导航：六大创作与资产库
+ * 顺序：精选 -> 资产库 -> 灵感库 -> 商品库 -> 爆款趋势 -> Skills
+ */
+export const EXPLORE_PRIMARY_TABS = Object.freeze([
+  {
+    id: 'featured',
+    nameZh: '精选',
+    nameEn: 'Featured',
+    iconName: 'book-open',
+  },
+  {
+    id: 'assets',
+    nameZh: '资产库',
+    nameEn: 'Assets',
+    iconName: 'folder',
+  },
+  {
+    id: 'inspiration',
+    nameZh: '灵感库',
+    nameEn: 'Inspiration',
+    iconName: 'lightbulb',
+  },
+  {
+    id: 'products',
+    nameZh: '商品库',
+    nameEn: 'Products',
+    iconName: 'shopping-bag',
+  },
+  {
+    id: 'trending',
+    nameZh: '爆款趋势',
+    nameEn: 'Trending',
+    iconName: 'trending-up',
+  },
+  {
+    id: 'skills',
+    nameZh: 'Skills',
+    nameEn: 'Skills',
+    iconName: 'zap',
+  },
+]);
+
+/**
+ * 各一级库对应的真实二级分类字典
+ */
+export const EXPLORE_SUB_CATEGORIES = Object.freeze({
+  featured: Object.freeze([
+    { id: 'all', nameZh: '全部', nameEn: 'All' },
+    { id: 'hook-intro', nameZh: '黄金开场', nameEn: 'Hook & Intro' },
+    { id: 'ugc-review', nameZh: '真实种草', nameEn: 'UGC & Review' },
+    { id: 'cinematic-vfx', nameZh: '视效大片', nameEn: 'Cinematic VFX' },
+    { id: 'fashion-try-on', nameZh: '模特试穿', nameEn: 'Fashion Try-On' },
+    { id: 'industry-packs', nameZh: '行业精选', nameEn: 'Industry Packs' },
+    { id: 'durability-test', nameZh: '硬核评测', nameEn: 'Durability Test' },
+    { id: 'apps-software', nameZh: '软件应用', nameEn: 'Apps & Software' },
+  ]),
+  assets: Object.freeze([
+    { id: 'all', nameZh: '全部资产', nameEn: 'All Assets' },
+    { id: 'character', nameZh: '角色 IP', nameEn: 'Characters' },
+    { id: 'scene', nameZh: '场景空间', nameEn: 'Scenes' },
+    { id: 'prop', nameZh: '道具物件', nameEn: 'Props' },
+    { id: 'style', nameZh: '风格包', nameEn: 'Style Packs' },
+    { id: 'knowledge', nameZh: '知识包', nameEn: 'Knowledge' },
+  ]),
+  inspiration: Object.freeze([
+    { id: 'all', nameZh: '全部灵感', nameEn: 'All Inspiration' },
+    { id: 'favorites', nameZh: '我的收藏', nameEn: 'Favorites' },
+    { id: 'selling', nameZh: '带货实操', nameEn: 'E-commerce' },
+    { id: 'storyboard', nameZh: '剧情分镜', nameEn: 'Storyboards' },
+    { id: 'unboxing', nameZh: '实测开箱', nameEn: 'Unboxing' },
+  ]),
+  products: Object.freeze([
+    { id: 'all', nameZh: '全部商品', nameEn: 'All Products' },
+    { id: 'appliance', nameZh: '生活家电', nameEn: 'Appliances' },
+    { id: 'digital', nameZh: '数码影音', nameEn: 'Electronics' },
+    { id: 'beauty', nameZh: '美妆护肤', nameEn: 'Beauty & Care' },
+    { id: 'apparel', nameZh: '服饰箱包', nameEn: 'Fashion' },
+    { id: 'food', nameZh: '食品饮料', nameEn: 'Food & Beverage' },
+  ]),
+  trending: Object.freeze([
+    { id: 'all', nameZh: '全部爆款', nameEn: 'All Trending' },
+    { id: 'beauty_skincare', nameZh: '美妆个护', nameEn: 'Beauty' },
+    { id: 'fashion', nameZh: '服饰时尚', nameEn: 'Fashion' },
+    { id: 'tech_digital', nameZh: '数码家电', nameEn: 'Tech & Digital' },
+    { id: 'food_beverage', nameZh: '美食饮品', nameEn: 'Food & Drinks' },
+    { id: 'fitness_sports', nameZh: '运动健身', nameEn: 'Fitness & Sports' },
+    { id: 'home_living', nameZh: '居家生活', nameEn: 'Home & Living' },
+    { id: 'pets', nameZh: '萌宠生活', nameEn: 'Pets' },
+  ]),
+  skills: Object.freeze([
+    { id: 'all', nameZh: '全部技能', nameEn: 'All Skills' },
+    { id: 'ugc', nameZh: 'UGC 种草', nameEn: 'UGC' },
+    { id: 'video-ads', nameZh: '视频广告', nameEn: 'Video Ads' },
+    { id: 'script', nameZh: '故事分镜', nameEn: 'Scripts' },
+    { id: 'display', nameZh: '产品展示', nameEn: 'Showcase' },
+    { id: 'audio', nameZh: '配音与音频', nameEn: 'Voice & Audio' },
+    { id: 'image', nameZh: '静态图像', nameEn: 'Images' },
+  ]),
+});
+
+/**
  * 10 大核心分类定义（纯净中英双语、Slug、矢量图标名称）
  * 顺序：全部 -> TikTok热门 -> Skills -> 软件应用 -> 黄金开场 -> 真实种草 -> 视效大片 -> 模特试穿 -> 行业精选 -> 硬核评测
  */
