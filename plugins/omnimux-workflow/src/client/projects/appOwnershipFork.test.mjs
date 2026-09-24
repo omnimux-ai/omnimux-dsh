@@ -5,6 +5,7 @@ import {
   getPresetWorkflowSnapshot,
   wrapNodesInGroup,
   createProjectForkFromManifest,
+  friendlyForkError,
 } from './appLibrary.js'
 
 describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
@@ -197,6 +198,7 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       let passedTitle = ''
       let passedRoot = ''
       let savedExpectedVersion = null
+      let initedWorkspaceId = ''
       const mockDeps = {
         createProjectFn: async (title, _sid, root) => {
           passedTitle = title
@@ -214,7 +216,11 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
             },
           }
         },
-        requestFn: async (_url, opts) => {
+        requestFn: async (url, opts) => {
+          if (url.endsWith('/api/workspaces') && opts.method === 'POST') {
+            initedWorkspaceId = opts.body?.id
+            return { ok: true, status: 200, body: { workspace: { id: opts.body?.id } } }
+          }
           savedExpectedVersion = opts.body?.expectedVersion
           return { ok: true, status: 200, body: { success: true } }
         },
@@ -225,8 +231,17 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
       const res = await createProjectForkFromManifest(manifest, mockDeps)
       assert.equal(passedTitle, '我的自定义项目名')
       assert.equal(passedRoot, '/Users/x/MyWorkspaces/CustomDir')
+      assert.equal(initedWorkspaceId, 'ws_custom', '新建独立项目前必须先 POST /api/workspaces 初始化空白画布物理快照')
       assert.equal(savedExpectedVersion, 0, '新建独立项目保存画布必须携带 expectedVersion: 0')
       assert.equal(res.project.id, 'proj_custom_root')
+    })
+
+    it('friendlyForkError 正确将英文错误码转译为大白话中文', () => {
+      assert.equal(friendlyForkError('workspace-not-found'), '未找到工程画布，请重试')
+      assert.equal(friendlyForkError('version-required'), '画布版本号缺失，请重试')
+      assert.equal(friendlyForkError('project-exists'), '该工作区已存在同名工程，请微调名称')
+      assert.equal(friendlyForkError('unknown-unexpected-error', '默认操作失败'), '默认操作失败')
+      assert.equal(friendlyForkError('网络连接超时'), '网络连接超时')
     })
 
     it('当前项目已存在时复制创作页并支持自定义 pageTitle', async () => {

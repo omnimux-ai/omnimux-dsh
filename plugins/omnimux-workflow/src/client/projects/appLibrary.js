@@ -417,6 +417,27 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
 }
 
 /**
+ * 将底层抛出的原始英文代号转换为大白话中文提示，杜绝暴露未转译的变量名。
+ * @param {unknown} code
+ * @param {string} [fallback]
+ * @returns {string}
+ */
+export function friendlyForkError(code, fallback = '操作失败，请重试') {
+  const err = textOf(code)
+  if (!err) return fallback
+  const map = {
+    'workspace-not-found': '未找到工程画布，请重试',
+    'version-required': '画布版本号缺失，请重试',
+    'version_conflict': '画布版本冲突，请重试',
+    'project-exists': '该工作区已存在同名工程，请微调名称',
+    'project-required': '需要关联项目工程，请重试',
+    'invalid-project-root': '工作区目录路径无效，请重新选择',
+    'not-local': '禁止跨域写入本地工作区',
+  }
+  return map[err] || (err.includes('-') || err.includes('_') ? fallback : err)
+}
+
+/**
  * 根据应用清单创建一个全新的项目工程副本，并将应用工作流节点打组保存至新画布。
  *
  * @param {object} manifest
@@ -480,7 +501,8 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
       body: { expectedVersion: 0, nodes, edges },
     })
     if (!saved || saved.ok === false) {
-      throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')
+      const rawErr = saved?.body?.error || saved?.body?.message
+      throw new Error(friendlyForkError(rawErr, '保存创作页副本失败'))
     }
     const page = pageRes.body?.page
     if (!page?.id) {
@@ -497,7 +519,8 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   const doCreateProject = deps.createProjectFn || createProject
   const createRes = await doCreateProject(projectTitle, null, projectRoot)
   if (!createRes || !createRes.ok || !createRes.body?.project) {
-    throw new Error(createRes?.body?.error || createRes?.body?.message || '创建项目工程副本失败')
+    const rawErr = createRes?.body?.error || createRes?.body?.message
+    throw new Error(friendlyForkError(rawErr, '创建项目工程副本失败'))
   }
 
   const newProject = createRes.body.project
@@ -506,12 +529,20 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     throw new Error('未能为副本分配画布工作区')
   }
 
+  // 关键修复：新建独立项目后，先确保画布工作区已在底层初始化落盘（生成初始 snapshot）
+  // 杜绝后续 PUT 阶段因快照文件不存在而被 requireSnapshot 拦截为 workspace-not-found
+  await doRequest('/omnimux-workflow/api/workspaces', {
+    method: 'POST',
+    body: { id: workspaceId, name: projectTitle },
+  }).catch(() => null)
+
   const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
     method: 'PUT',
     body: { expectedVersion: 0, nodes, edges },
   })
   if (!saved || saved.ok === false) {
-    throw new Error(saved?.body?.error || saved?.body?.message || '保存创作页副本失败')
+    const rawErr = saved?.body?.error || saved?.body?.message
+    throw new Error(friendlyForkError(rawErr, '保存创作页副本失败'))
   }
 
   return {
