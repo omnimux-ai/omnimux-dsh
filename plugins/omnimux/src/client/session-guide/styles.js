@@ -52,12 +52,17 @@ body[data-ds-dark-theme] {
   max-width:var(--dsh-composer-card-max-width, 952px)!important;
   margin-inline:auto!important;
 }
-/* 素材条挂在比输入框更宽的内容层。未吸底时也要收成输入框同宽并居中，
-   否则缩略图会贴在整栏最左边，输入框却在中间。 */
+/* 素材导轨贴合输入框内壁，首张卡片由自身 padding-left: 12px 严格与底栏加号按钮垂直共线靠左对齐 */
 [data-omnimux-starter-host] .omx-attachment-dock {
   width:100%!important;
-  max-width:var(--dsh-composer-card-max-width, 952px)!important;
-  margin-inline:auto!important;
+  max-width:100%!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
+[data-composer-card] .omx-attachment-dock {
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
   box-sizing:border-box!important;
 }
 [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
