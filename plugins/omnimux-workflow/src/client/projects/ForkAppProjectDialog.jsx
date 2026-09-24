@@ -358,9 +358,9 @@ export function ForkAppProjectDialog({
 
           {/* 副本名称输入：带显式标题与明确行为提示 */}
           <div className="omx-fork-input-group">
-            <div className="omx-fork-input-label">
+            <label className="omx-fork-input-label" htmlFor="omnimux-fork-app-name">
               {mode === 'page' ? '新创作页名称' : '项目显示名称'}
-            </div>
+            </label>
             <div className="omnimux-new-project-name">
               <span className="omnimux-new-project-name-prefix" aria-hidden="true">
                 <FolderGlyph />
@@ -387,9 +387,9 @@ export function ForkAppProjectDialog({
               />
             </div>
             <div className="omx-fork-input-hint">
-              {mode === 'page'
-                ? (hasHostProject ? `将在当前项目「${hostProject?.title || '未命名项目'}」中追加一张新画布，原项目名不变` : '将在当前项目中追加一张新画布')
-                : '仅作为软件内工程显示名称，不会在电脑硬盘中新建或重命名物理文件夹'}
+              {mode === 'project'
+                ? '仅作为软件内工程显示名称，不会在电脑硬盘中新建或重命名物理文件夹'
+                : `将在当前项目「${hostProject?.title || '未命名项目'}」中追加一张新画布，原项目名不变`}
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 # 验证证据报告：应用编辑副本弹窗标签与意图标注 (Issue #2639)
 
 ## 验证结论：PASS
-- 时间: 2026-09-24T13:44:17.478Z
+- 时间: 2026-09-24T13:53:09.411Z
 - 截图证据: [fork-dialog-labels-verified.png](docs/evidence/fork-dialog-labels-verified.png)
 - 演示单页: [fork-dialog-labels-demo.html](docs/evidence/fork-dialog-labels-demo.html)
 
