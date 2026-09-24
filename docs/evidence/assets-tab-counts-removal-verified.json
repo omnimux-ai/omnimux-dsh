@@ -1,0 +1,24 @@
+{
+  "taskId": "assets-tab-counts-removal",
+  "title": "资产中心分类 Tab 胶囊移除数量统计对齐现代 SaaS 极简规范",
+  "verifiedAt": "2026-09-24T21:50:00+08:00",
+  "evidence": {
+    "publicCategoryNavCountsRemoved": true,
+    "publicSubCategoryNavCountsRemoved": true,
+    "localCategoryNavCountsRemoved": true,
+    "generationsNavCountsRemoved": true,
+    "characterDimensionsMenuCountsPreserved": true,
+    "noOverdesignOrBadges": true
+  },
+  "testSuites": {
+    "unitTests": "366/366 passed",
+    "e2eProbeTest": "1/1 passed (tab-counts-removal.e2e.test.js)",
+    "fullAssetsSuite": "598/598 passed"
+  },
+  "reviews": {
+    "productManager": "PM_SIGN_OFF: PASS",
+    "codeReviewer": "OCR_REVIEW_ROUND3: PASS (0 Critical / 0 High / 0 Medium)",
+    "qaEngineer": "QA_VERDICT: PASS"
+  },
+  "verdict": "PASS"
+}

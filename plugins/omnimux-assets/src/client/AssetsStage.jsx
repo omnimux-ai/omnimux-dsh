@@ -10,7 +10,7 @@ import { CloudAssetsView } from './CloudAssetsView.jsx'
 import { cloudAssetToPreviewItem } from './cloud-preview.js'
 import { useCloudSave } from './use-cloud-save.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { computeEmptyState, countAssetsByType } from './feed-helpers.js'
+import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
 import { ProductCategoryNav, ProductsView } from './ProductsView.jsx'
@@ -88,29 +88,21 @@ function AssetsActionRow(props) {
  * shape as the cloud tab's first level, driven by the local type vocabulary
  * instead of catalog categories.
  *
- * The row always leads with 全部 and then lists every asset type. Each chip
- * carries its own count; counts describe the whole library and never the
- * current query, so a chip's number holds still while the search box narrows
- * the grid — the cloud nav reads its totals from the manifest the same way.
- * An empty library still renders the row: 全部 0 is information, and a filter
- * row that appears only after the first asset would move the grid under the
- * user.
+ * The row always leads with 全部 and then lists every asset type.
+ * An empty library still renders the row: a filter row that appears only
+ * after the first asset would move the grid under the user.
  * @param {{
  *   t: (key: string) => string,
- *   assets: any[],
  *   filterType: string,
  *   onTypeChange: (type: string) => void,
  * }} props
  */
 function LocalCategoryNav(props) {
-  const { t, assets, filterType, onTypeChange } = props
-  const rows = useMemo(() => {
-    const counts = countAssetsByType(assets)
-    return [
-      { key: '', label: t('chip.all'), total: Array.isArray(assets) ? assets.length : 0 },
-      ...ASSET_TYPE_KEYS.map((key) => ({ key, label: t(`type.${key}`), total: counts[key] ?? 0 })),
-    ]
-  }, [assets, t])
+  const { t, filterType, onTypeChange } = props
+  const rows = useMemo(() => [
+    { key: '', label: t('chip.all') },
+    ...ASSET_TYPE_KEYS.map((key) => ({ key, label: t(`type.${key}`) })),
+  ], [t])
 
   return (
     <div className="omnimux-assets-local-nav">
@@ -125,7 +117,6 @@ function LocalCategoryNav(props) {
             onClick={() => onTypeChange(row.key)}
           >
             {row.label}
-            <span className="omnimux-assets-cloud-count">{row.total}</span>
           </Button>
         ))}
       </div>
@@ -262,7 +253,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail, generationsSource, generationsType, onGenerationsCountsChange } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible, productKindTab, onOpenCreateProduct, onEditDetail, generationsSource, generationsType } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -279,7 +270,6 @@ function AssetsBody(props) {
             filterSource={generationsSource}
             filterType={generationsType}
             onPreview={onPreview}
-            onCountsChange={onGenerationsCountsChange}
           />
         </div>
       </div>
@@ -423,7 +413,6 @@ export function AssetsStage(props) {
   const [productKindTab, setProductKindTab] = useState('all')
   const [generationsSource, setGenerationsSource] = useState('all')
   const [generationsType, setGenerationsType] = useState('all')
-  const [generationsCounts, setGenerationsCounts] = useState({ sources: {}, types: {} })
   const stageRootRef = useRef(null)
   const railRef = useRef(null)
 
@@ -537,7 +526,6 @@ export function AssetsStage(props) {
         // mounting this one there as well would stack two rows of chips.
         <LocalCategoryNav
           t={t}
-          assets={feed.assets}
           filterType={feed.filterType}
           onTypeChange={feed.setFilterType}
         />
@@ -556,7 +544,6 @@ export function AssetsStage(props) {
           onSourceChange={setGenerationsSource}
           filterType={generationsType}
           onTypeChange={setGenerationsType}
-          counts={generationsCounts}
         />
       ) : null}
       <AssetsSelectionBar t={t} feed={feed} />
@@ -577,7 +564,6 @@ export function AssetsStage(props) {
         onEditDetail={() => setDetailModalOpen(true)}
         generationsSource={generationsSource}
         generationsType={generationsType}
-        onGenerationsCountsChange={setGenerationsCounts}
       />
       <AssetsDialogs
         t={t}

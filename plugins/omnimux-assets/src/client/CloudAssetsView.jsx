@@ -445,9 +445,8 @@ function CloudDimensionBar(props) {
  *
  * The second level belongs to the data: a category shows its sub-categories
  * whenever the feed reports them (声音, 素材), and 场景 and the empty 道具 report
- * none. The first chip is always a plain 全部 carrying the category's own count
- * rather than a category-specific label, so no category can inherit another one's
- * wording. Both levels share one chip treatment: neutral until selected, then
+ * none. The first chip is always a plain 全部 rather than a category-specific label,
+ * so no category can inherit another one's wording. Both levels share one chip treatment: neutral until selected, then
  * inked with the label colour instead of a brand accent, so the tab row carries
  * no colour of its own in either theme.
  *
@@ -488,7 +487,6 @@ function CloudCategoryNav(props) {
             onClick={() => onCategory(row.id)}
           >
             {t(`cloud.category.${row.id}`)}
-            <span className="omnimux-assets-cloud-count">{row.total}</span>
           </Button>
         ))}
       </div>
@@ -512,7 +510,6 @@ function CloudCategoryNav(props) {
               onClick={() => onSubCategory(row.id)}
             >
               {row.id === '' ? t('cloud.subnav.all') : t(`cloud.subcategory.${row.id}`)}
-              <span className="omnimux-assets-cloud-count">{row.total}</span>
             </Button>
           ))}
         </div>
