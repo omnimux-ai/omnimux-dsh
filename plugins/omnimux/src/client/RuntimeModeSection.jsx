@@ -81,6 +81,20 @@ const CLI_KNOWN_MODELS = {
   ],
 }
 
+/**
+ * Obsolete legacy model identifiers that must be cleansed from in-memory backend cache.
+ */
+export const OBSOLETE_MODEL_IDS = new Set([
+  'gpt-4o',
+  'o1',
+  'o3-mini',
+  'gpt-4.5-preview',
+  'kimi-latest',
+  'moonshot-v1-128k',
+  'moonshot-v1-32k',
+  'moonshot-v1-8k',
+])
+
 async function api(path, init) {
   const response = await fetch(path, init)
   const body = await response.json().catch(() => ({}))
@@ -225,8 +239,26 @@ export function RuntimeModeSection({ t, scope }) {
 function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, setNotice, onVerified }) {
   const [agents, setAgents] = useState([])
   const [selectedAgent, setSelectedAgent] = useState(value.runtimeAgentId || '')
-  const [agentModel, setAgentModel] = useState(value.runtimeAgentModel || '')
+  const initialAgentModel = typeof value.runtimeAgentModel === 'string' && !OBSOLETE_MODEL_IDS.has(value.runtimeAgentModel.trim())
+    ? value.runtimeAgentModel
+    : ''
+  const [agentModel, setAgentModel] = useState(initialAgentModel)
   const [testedId, setTestedId] = useState('')
+
+  // 自愈清理机制：若检测到当前的 agentModel 或 value.runtimeAgentModel 存在且命中了 OBSOLETE_MODEL_IDS，主动清除并同步清理底层持久化存储
+  useEffect(() => {
+    const rawVal = typeof value.runtimeAgentModel === 'string' ? value.runtimeAgentModel.trim() : ''
+    const rawState = typeof agentModel === 'string' ? agentModel.trim() : ''
+    const isValObsolete = rawVal !== '' && OBSOLETE_MODEL_IDS.has(rawVal)
+    const isStateObsolete = rawState !== '' && OBSOLETE_MODEL_IDS.has(rawState)
+
+    if (isValObsolete || isStateObsolete) {
+      setAgentModel('')
+      if (scope && typeof scope.set === 'function') {
+        void scope.set('runtimeAgentModel', '')
+      }
+    }
+  }, [agentModel, value.runtimeAgentModel, scope])
 
   const refreshAgents = useCallback(async () => {
     try {
@@ -305,10 +337,13 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }
 
   const handleModelChange = async (nextModel) => {
-    setAgentModel(nextModel)
+    const safeModel = typeof nextModel === 'string' && !OBSOLETE_MODEL_IDS.has(nextModel.trim())
+      ? nextModel
+      : ''
+    setAgentModel(safeModel)
     if (scope && typeof scope.set === 'function') {
       try {
-        await scope.set('runtimeAgentModel', nextModel)
+        await scope.set('runtimeAgentModel', safeModel)
       } catch {
         // best effort
       }
@@ -364,9 +399,12 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                   <div className="omx-form-row">
                     <span className="omx-cli-desc">{t('runtime.modelLabel')}</span>
                     {(() => {
-                      const dynamicModels = Array.isArray(agent.models) && agent.models.length > 0 ? agent.models : null
-                      const agentModels = dynamicModels || CLI_KNOWN_MODELS[agent.id] || []
-                      const isSafeModel = typeof agentModel === 'string' && agentModel.trim() !== '' && !agentModel.trim().startsWith('-') && /^[a-zA-Z0-9_.:/-]+$/.test(agentModel.trim())
+                      const rawAgentModels = Array.isArray(agent.models) ? agent.models : []
+                      const cleansedModels = rawAgentModels.filter((m) => typeof m === 'string' && !OBSOLETE_MODEL_IDS.has(m.trim()))
+                      const rawFallbackModels = Array.isArray(CLI_KNOWN_MODELS[agent.id]) ? CLI_KNOWN_MODELS[agent.id] : []
+                      const cleansedFallbackModels = rawFallbackModels.filter((m) => typeof m === 'string' && !OBSOLETE_MODEL_IDS.has(m.trim()))
+                      const agentModels = cleansedModels.length > 0 ? cleansedModels : cleansedFallbackModels
+                      const isSafeModel = typeof agentModel === 'string' && agentModel.trim() !== '' && !agentModel.trim().startsWith('-') && /^[a-zA-Z0-9_.:/-]+$/.test(agentModel.trim()) && !OBSOLETE_MODEL_IDS.has(agentModel.trim())
                       const rawOptions = [
                         { value: '', label: t('runtime.cliDefaultSetting') },
                         ...agentModels.map((m) => ({ value: m, label: m })),

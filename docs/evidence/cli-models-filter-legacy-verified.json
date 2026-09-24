@@ -1,0 +1,26 @@
+{
+  "issue": 2632,
+  "feature": "cli-models-filter-legacy",
+  "verified_at": "2026-09-24T20:01:00+08:00",
+  "criteria": {
+    "S1_legacy_models_filtered": "PASS",
+    "S2_force_align_modern_models": "PASS",
+    "S3_all_tests_green": "PASS"
+  },
+  "verified_filtering": {
+    "obsolete_ids_blocked": [
+      "gpt-4o",
+      "o1",
+      "o3-mini",
+      "gpt-4.5-preview",
+      "kimi-latest",
+      "moonshot-v1-128k",
+      "moonshot-v1-32k",
+      "moonshot-v1-8k"
+    ],
+    "forced_modern_ids": {
+      "codex": ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"],
+      "kimi": ["kimi-code/k3", "kimi-code/k3-256k", "kimi-code/kimi-for-coding", "kimi-code/kimi-for-coding-highspeed"]
+    }
+  }
+}
