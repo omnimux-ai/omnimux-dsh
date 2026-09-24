@@ -471,4 +471,132 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     const cancelRes = await cancelAppExecution(result.executionId, mockSeam);
     assert.equal(cancelRes.success, true);
   });
+
+  it('T05.14: prepareAndInjectWorkflowSnapshot dynamically overrides generator node model via __model__ or model (Issue 2631)', () => {
+    const manifest = createMockManifest();
+    assert.equal(
+      manifest.workflowBinding.snapshot.nodes.find((n) => n.id === 'node_generator').data.params.model,
+      'minimax-h3',
+      'Original mock model is minimax-h3',
+    );
+
+    // 1. 传入 __model__ 覆盖
+    const formValues1 = {
+      topic: '赛博科技前沿',
+      __model__: 'seedance-2.0',
+    };
+    const injected1 = prepareAndInjectWorkflowSnapshot(manifest, formValues1);
+    const genNode1 = injected1.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(genNode1);
+    assert.equal(genNode1.data.model, 'seedance-2.0', 'data.model 必须被替换为 seedance-2.0');
+    assert.equal(genNode1.data.params.model, 'seedance-2.0', 'data.params.model 必须同步被替换为 seedance-2.0');
+
+    // 2. 传入 model 冗余属性覆盖
+    const formValues2 = {
+      topic: '赛博科技前沿',
+      model: 'kling-v1-6',
+    };
+    const injected2 = prepareAndInjectWorkflowSnapshot(manifest, formValues2);
+    const genNode2 = injected2.nodes.find((n) => n.id === 'node_generator');
+    assert.ok(genNode2);
+    assert.equal(genNode2.data.model, 'kling-v1-6', 'data.model 必须被替换为 kling-v1-6');
+    assert.equal(genNode2.data.params.model, 'kling-v1-6', 'data.params.model 必须同步被替换为 kling-v1-6');
+
+    // 3. 原 manifest 严格保持不可变
+    assert.equal(
+      manifest.workflowBinding.snapshot.nodes.find((n) => n.id === 'node_generator').data.params.model,
+      'minimax-h3',
+      '原 manifest 中的 snapshot 必须保持不可变',
+    );
+  });
+
+  it('T05.15: strictly addresses main generator node and initializes missing params object (Issue 2631 review)', () => {
+    const manifest = createMockManifest();
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        field: 'content',
+      },
+    };
+    // 构造复杂图：前置 LLM 提示词节点包含自身的 model 参数，后续视频生成节点最初无 params 对象
+    manifest.workflowBinding.snapshot.nodes = [
+      {
+        id: 'node_text_input',
+        type: 'text',
+        data: {
+          label: '提示词大语言模型',
+          tool: 'omnimux_text_chat',
+          params: {
+            model: 'deepseek-chat',
+          },
+        },
+      },
+      {
+        id: 'node_video_engine',
+        type: 'material',
+        data: {
+          label: '主视频生成引擎',
+          materialType: 'video',
+          // 故意不包含 params 对象
+        },
+      },
+    ];
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '科幻未来',
+      __model__: 'kling-v2-master',
+    });
+
+    const llmNode = injected.nodes.find((n) => n.id === 'node_text_input');
+    const videoNode = injected.nodes.find((n) => n.id === 'node_video_engine');
+
+    // 1. LLM 节点的 model 严禁被篡改
+    assert.equal(llmNode.data.params.model, 'deepseek-chat', 'LLM 文本节点的模型绝对不能被误改');
+
+    // 2. 视频生成引擎节点正确初始化 params 并写入模型
+    assert.ok(videoNode.data.params && typeof videoNode.data.params === 'object');
+    assert.equal(videoNode.data.model, 'kling-v2-master');
+    assert.equal(videoNode.data.params.model, 'kling-v2-master');
+  });
+
+  it('T05.16: logs warning when __model__ is specified but no generator node is found (Fail-Closed observability)', () => {
+    const manifest = createMockManifest();
+    manifest.fieldMappings = {
+      topic: {
+        nodeId: 'node_text_input',
+        field: 'content',
+      },
+    };
+    // 工作流中没有任何主生成节点（只有文本与插槽节点）
+    manifest.workflowBinding.snapshot.nodes = [
+      {
+        id: 'node_slot_1',
+        type: 'input',
+        data: { isSlot: true },
+      },
+      {
+        id: 'node_text_input',
+        type: 'text',
+        data: { content: '普通文本' },
+      },
+    ];
+
+    const warnings = [];
+    const origWarn = console.warn;
+    console.warn = (...args) => {
+      warnings.push(args.join(' '));
+    };
+
+    try {
+      const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+        topic: '测试告警',
+        __model__: 'seedance-2.0',
+      });
+      assert.ok(injected);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('未定位到主生成引擎节点'));
+    } finally {
+      console.warn = origWarn;
+    }
+  });
 });

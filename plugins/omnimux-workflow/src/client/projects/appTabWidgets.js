@@ -31,8 +31,30 @@ export function resolveOptions(prop) {
 }
 
 /**
+ * 依据当前生效模型契约动态推导可用成片比例选项。
+ * 纯函数无外部依赖，用于彻底取代前端写死比例，驱动 ratio-cards 渲染。
+ *
+ * @param {object} [activeModel] 当前选定或默认的模型对象
+ * @param {object} [prop] 属性定义 (兜底来源)
+ * @returns {Array<{ label: string, value: any }>}
+ */
+export function resolveModelAspectRatios(activeModel, prop) {
+  const modelOptions = activeModel?.parameters?.aspectRatio?.options
+  if (Array.isArray(modelOptions) && modelOptions.length > 0) {
+    return modelOptions.map((opt) => {
+      if (opt && typeof opt === 'object' && 'value' in opt) {
+        return { label: String(opt.label || opt.value), value: opt.value }
+      }
+      return { label: String(opt), value: opt }
+    })
+  }
+  return resolveOptions(prop)
+}
+
+/**
  * 控件类型解析器：综合 mapping.widget、prop.widget、prop.type、options 特征推导控件形态。
  * 对齐 omnimux-apps 表单规范：
+ * - 智能自愈：product_image 或商品相关字段从 media-uploader/library-picker 自愈升级为 product-link；
  * - 显式 mapping.widget / prop.widget 优先；
  * - boolean -> switch-boolean;
  * - number/integer -> slider-range;
@@ -47,6 +69,21 @@ export function resolveOptions(prop) {
  * @returns {string}
  */
 export function resolveWidget(key, prop, mapping) {
+  // 旧缓存智能自愈规则 (Issue #2631)
+  // 严格收窄至商品图片字段，且仅当原形态为遗留 media-uploader 或 library-picker 时才自愈提升为 product-link
+  const isProductImageKey =
+    key === 'product_image' ||
+    (typeof key === 'string' && key.includes('product_image') && prop?.type === 'string')
+  const isLegacyMediaWidget =
+    prop?.widget === 'media-uploader' ||
+    prop?.widget === 'library-picker' ||
+    mapping?.widget === 'media-uploader' ||
+    mapping?.widget === 'library-picker'
+
+  if (isProductImageKey && isLegacyMediaWidget) {
+    return 'product-link'
+  }
+
   if (mapping?.widget) return mapping.widget
   if (prop?.widget) return prop.widget
 

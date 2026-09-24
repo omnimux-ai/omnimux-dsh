@@ -1,0 +1,21 @@
+{
+  "taskId": "workflow-apptab-model-selector-issue-2631",
+  "issue": 2631,
+  "title": "AI 应用表单接入中枢模型选择器与动态画幅比例联动及旧缓存自愈",
+  "verifiedAt": "2026-09-24T20:22:00+08:00",
+  "evidence": {
+    "modelSelectorMounted": true,
+    "defaultRecommended": true,
+    "dynamicAspectRatioResolution": true,
+    "formAutoHealing": true,
+    "headlessExecutionModelPassthrough": true
+  },
+  "testSuites": {
+    "omnimuxWorkflow": "2032/2032 passed",
+    "omnimuxApps": "79/79 passed",
+    "appTabWidgets": "28/28 passed",
+    "appTabFormWidgetsE2E": "5/5 passed",
+    "executionBridge": "9/9 passed"
+  },
+  "verdict": "PASS"
+}

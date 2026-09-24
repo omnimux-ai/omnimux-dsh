@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   resolveOptions,
+  resolveModelAspectRatios,
   resolveWidget,
   resolveSourceLabel,
   displayValueOf,
@@ -62,7 +63,111 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
     })
   })
 
+  describe('resolveModelAspectRatios()', () => {
+    it('returns options from activeModel when present', () => {
+      const activeModel = {
+        parameters: {
+          aspectRatio: {
+            options: [
+              { label: '9:16 竖屏', value: '9:16' },
+              { label: '16:9 横屏', value: '16:9' },
+            ],
+          },
+        },
+      }
+      const opts = resolveModelAspectRatios(activeModel, {})
+      assert.deepEqual(opts, [
+        { label: '9:16 竖屏', value: '9:16' },
+        { label: '16:9 横屏', value: '16:9' },
+      ])
+    })
+
+    it('handles primitive values in activeModel options', () => {
+      const activeModel = {
+        parameters: {
+          aspectRatio: {
+            options: ['1:1', '21:9'],
+          },
+        },
+      }
+      const opts = resolveModelAspectRatios(activeModel, {})
+      assert.deepEqual(opts, [
+        { label: '1:1', value: '1:1' },
+        { label: '21:9', value: '21:9' },
+      ])
+    })
+
+    it('falls back to resolveOptions(prop) when activeModel has no aspectRatio options', () => {
+      const prop = {
+        options: [
+          { label: '4:3', value: '4:3' },
+          { label: '16:9', value: '16:9' },
+        ],
+      }
+      assert.deepEqual(resolveModelAspectRatios(null, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+      assert.deepEqual(resolveModelAspectRatios({}, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+      assert.deepEqual(resolveModelAspectRatios({ parameters: {} }, prop), [
+        { label: '4:3', value: '4:3' },
+        { label: '16:9', value: '16:9' },
+      ])
+    })
+  })
+
   describe('resolveWidget()', () => {
+    it('auto-heals product_image fields from legacy media widgets to product-link without misidentifying text fields (Issue #2631)', () => {
+      // 1. 严格匹配 key === 'product_image' 且原控件为 legacy media-uploader / library-picker
+      assert.equal(
+        resolveWidget('product_image', { widget: 'media-uploader' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('product_image', { widget: 'library-picker' }),
+        'product-link',
+      )
+      assert.equal(
+        resolveWidget('product_image', {}, { widget: 'media-uploader' }),
+        'product-link',
+      )
+
+      // 2. 包含 product_image 且类型为 string 且为 legacy widget
+      assert.equal(
+        resolveWidget('main_product_image', { type: 'string', widget: 'media-uploader' }),
+        'product-link',
+      )
+
+      // 3. 防御：商品名称、商品规格等文本字段严禁误伤
+      assert.equal(
+        resolveWidget('product_name', { title: '商品名称', type: 'string' }),
+        'input-text',
+      )
+      assert.equal(
+        resolveWidget('product_spec', { title: '商品规格', type: 'string' }),
+        'input-text',
+      )
+
+      // 4. 无 legacy widget 的 product_image 字段不触发自愈
+      assert.equal(
+        resolveWidget('product_image', { type: 'string' }),
+        'input-text',
+      )
+      assert.equal(
+        resolveWidget('product_image', { widget: 'select-single' }),
+        'select-single',
+      )
+
+      // 5. 非商品字段保持自身形态
+      assert.equal(
+        resolveWidget('user_avatar', { title: '用户头像', widget: 'media-uploader' }),
+        'media-uploader',
+      )
+    })
+
     it('prefers mapping.widget over prop.widget', () => {
       const widget = resolveWidget('test', { widget: 'select-single' }, { widget: 'ratio-cards' })
       assert.equal(widget, 'ratio-cards')
