@@ -28,7 +28,6 @@ export {
  *   onSourceChange: (source: string) => void,
  *   filterType: string,
  *   onTypeChange: (type: string) => void,
- *   counts?: { sources: Record<string, number>, types: Record<string, number> },
  * }} props
  */
 export function GenerationsCategoryNav(props) {
@@ -38,14 +37,12 @@ export function GenerationsCategoryNav(props) {
     onSourceChange,
     filterType = 'all',
     onTypeChange,
-    counts,
   } = props
 
   return (
     <div className="omnimux-assets-local-nav" role="group" aria-label={t('generations.nav.label') || '生成素材分类'}>
       <div className="omnimux-assets-local-nav-row">
         {GENERATION_SOURCES.map((item) => {
-          const count = counts?.sources?.[item.id]
           const label = t(item.labelKey) || item.defaultLabel
           return (
             <Button
@@ -57,7 +54,6 @@ export function GenerationsCategoryNav(props) {
               onClick={() => onSourceChange?.(item.id)}
             >
               {label}
-              {typeof count === 'number' ? <span className="omnimux-assets-cloud-count">{count}</span> : null}
             </Button>
           )
         })}
@@ -65,7 +61,6 @@ export function GenerationsCategoryNav(props) {
         <div className="omnimux-generations-nav-divider" role="separator" />
 
         {GENERATION_TYPES.map((item) => {
-          const count = counts?.types?.[item.id]
           const label = t(item.labelKey) || item.defaultLabel
           return (
             <Button
@@ -77,7 +72,6 @@ export function GenerationsCategoryNav(props) {
               onClick={() => onTypeChange?.(item.id)}
             >
               {label}
-              {typeof count === 'number' ? <span className="omnimux-assets-cloud-count">{count}</span> : null}
             </Button>
           )
         })}
@@ -266,7 +260,6 @@ export function GenerationCard({
  *   filterSource?: string,
  *   filterType?: string,
  *   onPreview?: (item: object) => void,
- *   onCountsChange?: (counts: object) => void,
  * }} props
  */
 export function GenerationsView(props) {
@@ -277,7 +270,6 @@ export function GenerationsView(props) {
     filterSource = 'all',
     filterType = 'all',
     onPreview,
-    onCountsChange,
   } = props
 
   const [artifacts, setArtifacts] = useState([])
@@ -338,22 +330,6 @@ export function GenerationsView(props) {
       loadData()
     }
   }, [open, loadData])
-
-  // 统计每个来源与格式的数据量
-  useEffect(() => {
-    const sources = { all: artifacts.length, agent: 0, image: 0, canvas: 0 }
-    const types = { all: artifacts.length, image: 0, video: 0, audio: 0 }
-
-    for (const art of artifacts) {
-      const s = resolveArtifactSource(art)
-      if (sources[s] !== undefined) sources[s] += 1
-
-      const typ = art.type
-      if (types[typ] !== undefined) types[typ] += 1
-    }
-
-    onCountsChange?.({ sources, types })
-  }, [artifacts, onCountsChange])
 
   // 综合过滤（来源 + 格式 + 搜索词）
   const visibleArtifacts = useMemo(() => {

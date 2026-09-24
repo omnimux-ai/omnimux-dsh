@@ -49,18 +49,16 @@ describe('Assets toolbar keeps no dropdown filter', () => {
 })
 
 describe('Local library category row', () => {
-  it('leads with the 全部 chip from the dictionary and counts the whole library', () => {
-    // The count reads the library, never the query, so the row is built from
-    // the feed's full asset list.
-    assert.match(localNav, /countAssetsByType\(assets\)/)
-    assert.match(localNav, /label: t\('chip\.all'\), total: Array\.isArray\(assets\) \? assets\.length : 0/)
+  it('leads with the 全部 chip from the dictionary', () => {
+    assert.match(localNav, /label: t\('chip\.all'\)/)
     assert.equal(zh['chip.all'], '全部')
     assert.equal(en['chip.all'], 'All')
   })
 
-  it('appends one chip per asset type, each with its own count', () => {
-    assert.match(localNav, /ASSET_TYPE_KEYS\.map\(\(key\) => \(\{ key, label: t\(`type\.\$\{key\}`\), total: counts\[key\] \?\? 0 \}\)\)/)
-    assert.match(localNav, /className="omnimux-assets-cloud-count">\{row\.total\}/)
+  it('appends one chip per asset type, rendering only label without count', () => {
+    assert.match(localNav, /ASSET_TYPE_KEYS\.map\(\(key\) => \(\{ key, label: t\(`type\.\$\{key\}`\) \}\)\)/)
+    assert.match(localNav, /\{row\.label\}/)
+    assert.doesNotMatch(localNav, /omnimux-assets-cloud-count/)
   })
 
   it('opens on 全部 and switches the filter through the feed setter', () => {
