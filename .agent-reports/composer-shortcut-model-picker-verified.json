@@ -1,7 +1,7 @@
 {
   "task": "Issue #2632",
   "title": "优化会话模型面板开关样式、文案精简与移除冗余分类标题",
-  "verifiedAt": "2026-09-24T12:01:39.768Z",
+  "verifiedAt": "2026-09-24T12:14:23.757Z",
   "acceptanceCriteria": {
     "AC-1_paramSummaryRemoved": {
       "status": "PASS",
