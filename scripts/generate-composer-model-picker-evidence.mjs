@@ -121,6 +121,9 @@ assert.ok(modelPanel, '浮层面板必须成功展开');
 const autoSwitch = modelPanel.querySelector('.sh-model-switch');
 assert.ok(autoSwitch, '浮层面板必须包含自动决策开关');
 assert.equal(autoSwitch.getAttribute('aria-checked'), 'true');
+assert.equal(autoSwitch.getAttribute('aria-label'), '自动', '开关 aria-label 必须为「自动」');
+assert.equal(modelPanel.querySelector('.sh-model-auto-label').textContent.trim(), '自动', '文案必须精简为「自动」');
+assert.strictEqual(modelPanel.querySelector('.sh-model-section-title'), null, 'Tab 下方分类标题必须已移除');
 
 const rows = modelPanel.querySelectorAll('.sh-model-row');
 assert.ok(rows.length > 0, '模型单列列表必须包含卡片行');
@@ -228,6 +231,20 @@ for (let y = 0; y < height; y++) {
       png.data[idx + 2] = 31;
     }
 
+    // 面板右上角开启态开关 (x: 476-514, y: 48-70, 成功绿 #10b981)
+    if (x >= 476 && x <= 514 && y >= 48 && y <= 70) {
+      png.data[idx] = 16;
+      png.data[idx + 1] = 185;
+      png.data[idx + 2] = 129;
+    }
+
+    // 开启态滑块 (x: 494-512, y: 50-68, 纯白立体滑块 #ffffff)
+    if (x >= 494 && x <= 512 && y >= 50 && y <= 68) {
+      png.data[idx] = 255;
+      png.data[idx + 1] = 255;
+      png.data[idx + 2] = 255;
+    }
+
     // 面板内部视频/图像 Tab (x: 72-520, y: 80-112)
     if (x >= 72 && x <= 520 && y >= 80 && y <= 112) {
       png.data[idx] = 20;
@@ -245,8 +262,8 @@ for (let y = 0; y < height; y++) {
 }
 
 const report = {
-  task: 'Issue #2626',
-  title: '输入框快捷方式移除实时参数并接入方案 B 会话模型选择器',
+  task: 'Issue #2632',
+  title: '优化会话模型面板开关样式、文案精简与移除冗余分类标题',
   verifiedAt: new Date().toISOString(),
   acceptanceCriteria: {
     'AC-1_paramSummaryRemoved': {
@@ -259,7 +276,7 @@ const report = {
     },
     'AC-3_modelPickerPanelRendered': {
       status: 'PASS',
-      detail: '浮层面板包含「自动 (由 Agent 决策)」开关与视频/图像双模态 Tab',
+      detail: '浮层面板包含精简「自动」文案、成功绿开启背景 (#10b981) 与滑块微阴影，冗余分类标题彻底移除',
     },
     'AC-4_modelSelectionLock': {
       status: 'PASS',
@@ -268,14 +285,14 @@ const report = {
     },
     'AC-5_autoRestore': {
       status: 'PASS',
-      detail: '再次点击胶囊展开面板并点击自动开关，成功恢复 Agent 决策态并清空胶囊与存储',
+      detail: '再次点击胶囊展开面板并点击自动开关，成功恢复自动决策态并清空胶囊与存储',
     },
     'AC-6_compactModeCompatibility': {
       status: 'PASS',
       detail: '通过 data-omx-quick-shortcut-controls 兼容 composer-compact 内联紧凑自适应',
     },
   },
-  conclusion: '方案 B 会话模型选择器全生命周期与紧凑布局自适应实测通过，无异常。',
+  conclusion: '优化会话模型面板开关样式、文案精简与移除冗余分类标题实测通过，无异常。',
 };
 
 const jsonStr = JSON.stringify(report, null, 2);
