@@ -1,7 +1,7 @@
 {
   "issue": 2644,
   "task": "修复新建独立项目保存画布时的 workspace-not-found 拦截报错",
-  "timestamp": "2026-09-24T14:54:08.366Z",
+  "timestamp": "2026-09-24T14:59:11.495Z",
   "verification": "PASS",
   "evidenceFiles": [
     "docs/evidence/fork-ws-init-demo.html",

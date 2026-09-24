@@ -435,7 +435,10 @@ export function friendlyForkError(code, fallback = '操作失败，请重试') {
     'not-local': '禁止跨域写入本地工作区',
     'internal': '服务器内部处理异常，请重试',
   }
-  return map[err] || (/^[a-z0-9_-]+$/i.test(err) ? fallback : err)
+  if (Object.prototype.hasOwnProperty.call(map, err)) {
+    return map[err]
+  }
+  return /^[a-z0-9_-]+$/i.test(err) ? fallback : err
 }
 
 /**
@@ -534,10 +537,14 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
   // 幂等保护：先查是否存在，不存在时才 POST 创建初始画布快照，杜绝覆写已有工作区
   const existingWs = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`).catch(() => null)
   if (!existingWs || existingWs.ok === false) {
-    await doRequest('/omnimux-workflow/api/workspaces', {
+    const inited = await doRequest('/omnimux-workflow/api/workspaces', {
       method: 'POST',
       body: { id: workspaceId, name: projectTitle },
     }).catch(() => null)
+    if (inited && inited.ok === false) {
+      const rawErr = inited?.body?.error || inited?.body?.message
+      throw new Error(friendlyForkError(rawErr, '初始化工程画布失败'))
+    }
   }
 
   const saved = await doRequest(`/omnimux-workflow/api/workspaces/${encodeURIComponent(workspaceId)}`, {
