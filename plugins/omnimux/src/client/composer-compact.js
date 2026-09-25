@@ -1080,7 +1080,7 @@ export function captureComposerSelection(doc = hostDocument()) {
       if (editor && editor.contains(range.commonAncestorContainer)) {
         return range.cloneRange()
       }
-      return range.cloneRange()
+      return null
     } catch {
       return null
     }
@@ -1280,8 +1280,8 @@ export function placeMentionMenu(doc = hostDocument()) {
       const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
 
       // 识别「角色」与「产品」一级分类入口，绑定悬停二级浮层
-      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || itemName === '角色' || itemName.startsWith('角色')
-      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || itemName === '产品' || itemName.startsWith('产品')
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || rawVal.includes(ENTITY_CATEGORY_CHARACTER_VALUE)
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || rawVal.includes(ENTITY_CATEGORY_PRODUCT_VALUE)
 
       if (isCharEntry || isProdEntry) {
         const entType = isCharEntry ? 'character' : 'product'
@@ -1300,8 +1300,9 @@ export function placeMentionMenu(doc = hostDocument()) {
               const isUp = card.hasAttribute(MENTION_UP_ATTR)
               const win = hostWindow()
               const curSessionId = win?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+              const activeType = row.getAttribute?.('data-omnimux-entity-category') || entType
               mountEntitySubmenu({
-                type: entType,
+                type: activeType,
                 anchorRect: rRect,
                 isFlippedUp: isUp,
                 sessionId: curSessionId,

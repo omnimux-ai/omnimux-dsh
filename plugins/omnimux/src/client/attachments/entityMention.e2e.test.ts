@@ -31,6 +31,7 @@ import {
   cancelCloseEntitySubmenu,
   registerEntitySubmenuRenderer,
   resetComposerCompactForTests,
+  captureComposerSelection,
   COMPOSER_COMPACT_CSS,
 } from '../composer-compact.js';
 
@@ -634,6 +635,198 @@ describe('OCR 审查缺陷闭环定向测试: 高危与中危防护', () => {
       if (prevDoc) (globalThis as any).document = prevDoc;
       else delete (globalThis as any).document;
       dom.window.close();
+    }
+  });
+
+  it('【修复 1】选区判定死分支修复：光标超出编辑器范围时安全返回 null，不返回外部选区', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div id="outside-box">外部无关内容</div>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true">编辑器内部内容</div>
+        </div>
+      </body>`);
+
+    const doc = dom.window.document;
+    const outsideEl = doc.getElementById('outside-box')!;
+    const range = doc.createRange();
+    range.selectNodeContents(outsideEl);
+    const sel = dom.window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    const captured = captureComposerSelection(doc);
+    assert.equal(captured, null, '超出编辑器范围的选区必须安全返回 null');
+
+    // 验证在编辑器内部时正常返回 cloneRange
+    const editor = doc.querySelector('[contenteditable="true"]')!;
+    const insideRange = doc.createRange();
+    insideRange.selectNodeContents(editor);
+    sel.removeAllRanges();
+    sel.addRange(insideRange);
+
+    const insideCaptured = captureComposerSelection(doc);
+    assert.ok(insideCaptured, '编辑器内部选区必须成功捕获');
+    assert.equal(insideCaptured?.commonAncestorContainer, editor);
+  });
+
+  it('【修复 2】分类入口前缀误判修复：普通素材名称即使以「角色」或「产品」开头也不误识别为分类入口', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true">@角色</div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" data-value="material:att_char_fake" id="opt-material-char">
+              <span class="itemName">角色立绘概念图.png</span>
+            </div>
+            <div role="option" data-value="material:att_prod_fake" id="opt-material-prod">
+              <span class="itemName">产品宣发主视觉.jpg</span>
+            </div>
+            <div role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}" id="opt-cat-char">
+              <span class="itemName">角色</span>
+            </div>
+            <div role="option" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}" id="opt-cat-prod">
+              <span class="itemName">产品</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+    const doc = dom.window.document;
+    placeMentionMenu(doc);
+
+    const optCharMaterial = doc.getElementById('opt-material-char')!;
+    const optProdMaterial = doc.getElementById('opt-material-prod')!;
+    const optCharCat = doc.getElementById('opt-cat-char')!;
+    const optProdCat = doc.getElementById('opt-cat-prod')!;
+
+    assert.equal(optCharMaterial.getAttribute('data-omnimux-entity-category'), null, '名称以角色开头的普通素材不得被标记为分类');
+    assert.equal(optProdMaterial.getAttribute('data-omnimux-entity-category'), null, '名称以产品开头的普通素材不得被标记为分类');
+    assert.equal(optCharCat.getAttribute('data-omnimux-entity-category'), 'character', '真角色分类入口必须基于 data-value 严格识别');
+    assert.equal(optProdCat.getAttribute('data-omnimux-entity-category'), 'product', '真产品分类入口必须基于 data-value 严格识别');
+  });
+
+  it('【修复 3】DOM复用陈旧闭包修复：mouseenter 触发时动态读取当前 DOM 的 category 属性作为 activeType', async () => {
+    let mountedType = '';
+    registerEntitySubmenuRenderer((_, props) => {
+      mountedType = props.type;
+    });
+
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div id="reusable-row" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="itemName">角色</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    try {
+      const doc = dom.window.document;
+      const row = doc.getElementById('reusable-row')!;
+      row.getBoundingClientRect = () => ({ top: 100, left: 100, width: 120, height: 32 } as any);
+
+      placeMentionMenu(doc);
+      assert.equal(row.getAttribute('data-omnimux-entity-category'), 'character');
+
+      // 模拟列表 DOM 复用：属性被置为 product，但事件监听器已绑在 row 上
+      row.setAttribute('data-omnimux-entity-category', 'product');
+
+      // 触发 mouseenter
+      row.dispatchEvent(new dom.window.Event('mouseenter'));
+
+      // 等待 40ms 防抖定时器
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      assert.equal(mountedType, 'product', '列表复用后 mouseenter 必须动态传递当前 DOM 上的最新 category 类型');
+    } finally {
+      unmountEntitySubmenu();
+      registerEntitySubmenuRenderer(null);
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【修复 4】降级文本插入位置：execCommand 失败且有 savedRange 在 editor 内时优先插入到 startContainer 对应位置', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"><p id="p1">头部内容中间</p><p id="p2">尾部内容</p></div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+    dom.window.document.execCommand = () => false; // 强制 execCommand 失败
+
+    try {
+      const p1 = dom.window.document.getElementById('p1')!;
+      const textNode = p1.firstChild as Text;
+
+      // 选区定在 "头部内容" 与 "中间" 之间（offset 4）
+      const range = dom.window.document.createRange();
+      range.setStart(textNode, 4);
+      range.setEnd(textNode, 4);
+
+      const ok = insertEntityMentionChip({
+        name: '精准插入商品',
+        ref: 'material:att_insert_pos',
+        type: 'product',
+        savedRange: range,
+      });
+
+      assert.equal(ok, true);
+      // 验证 p1 内容包含插入文本，而不是追加在 editor 的最后
+      assert.match(p1.textContent || '', /头部内容@精准插入商品 中间/, '降级插入必须插入到 savedRange.startContainer 的对应 offset 位置');
+      const p2 = dom.window.document.getElementById('p2')!;
+      assert.equal(p2.textContent, '尾部内容', '尾部段落之后不得被 appendChild 干扰');
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【修复 5】胶囊插入结果处理：EntityMentionSubmenu 中包含插入失败警告日志契约', () => {
+    const submenuSrc = readFileSync(join(__dirname, 'EntityMentionSubmenu.tsx'), 'utf-8');
+    assert.ok(
+      submenuSrc.includes("console.warn('[omnimux] entity mention chip insertion failed for attachment:', attachmentId)"),
+      'EntityMentionSubmenu.tsx 源码中必须包含针对插入失败的标准 warn 日志'
+    );
+  });
+
+  it('【修复 6】样式收敛：styles.css 与 composer-compact.js 中实体二级菜单类名与属性选择器 100% 对齐且无多余未引用样式', () => {
+    const cssFile = readFileSync(join(__dirname, 'styles.css'), 'utf-8');
+    const requiredSelectors = [
+      '.omx-entity-mention-submenu',
+      '.omx-entity-submenu-list',
+      '.omx-entity-submenu-item',
+      '.omx-entity-submenu-thumb',
+      '.omx-entity-submenu-img',
+      '.omx-entity-submenu-thumb-fallback',
+      '.omx-entity-submenu-name',
+      '.omx-entity-submenu-loading',
+      '.omx-entity-submenu-empty',
+      '[data-omnimux-entity-category]',
+    ];
+
+    for (const sel of requiredSelectors) {
+      assert.ok(cssFile.includes(sel), `styles.css 必须包含选择器: ${sel}`);
+      assert.ok(COMPOSER_COMPACT_CSS.includes(sel), `composer-compact.js 必须包含选择器: ${sel}`);
     }
   });
 });

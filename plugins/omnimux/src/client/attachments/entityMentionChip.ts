@@ -362,6 +362,27 @@ function insertFallbackEntityText(editor: HTMLElement, name: string, savedRange?
 
     // 4. 后备插入短路修复：若 execCommand 明确返回 false 或发生异常，继续流转至下方的 DOM 节点后备插入逻辑
     const fallbackNode = document.createTextNode(`@${name} `);
+    if (savedRange && editor.contains(savedRange.commonAncestorContainer)) {
+      try {
+        const container = savedRange.startContainer;
+        const offset = savedRange.startOffset;
+        if (container.nodeType === 3 /* Node.TEXT_NODE */) {
+          const textNode = container as Text;
+          const afterNode = textNode.splitText(offset);
+          textNode.parentNode?.insertBefore(fallbackNode, afterNode);
+        } else if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
+          const el = container as HTMLElement;
+          const referenceChild = el.childNodes[offset] || null;
+          el.insertBefore(fallbackNode, referenceChild);
+        } else {
+          savedRange.insertNode(fallbackNode);
+        }
+        return true;
+      } catch {
+        // 若插入到选区相应位置失败，平滑降级至末尾 appendChild
+      }
+    }
+
     editor.appendChild(fallbackNode);
     return true;
   } catch {

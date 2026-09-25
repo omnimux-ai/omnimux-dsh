@@ -225,12 +225,15 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
     const attachmentId = res.attachment.id;
 
     // 2.2 插入输入框实体胶囊并清除 @ 字符（显式传入持久化的 savedRange 还原选区）
-    insertEntityMentionChip({
+    const chipInserted = insertEntityMentionChip({
       name: entityName,
       ref: `material:${attachmentId}`,
       type,
       savedRange,
     });
+    if (!chipInserted) {
+      console.warn('[omnimux] entity mention chip insertion failed for attachment:', attachmentId);
+    }
 
     if (onSelect) {
       onSelect({
