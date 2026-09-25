@@ -22,7 +22,7 @@ import {
   getLexicalEditorInstance,
   getChipConstructor,
 } from './entityMentionChip.ts';
-import { createAttachmentStore } from './store.ts';
+import { createAttachmentStore, MAX_ATTACHMENTS_PER_SESSION } from './store.ts';
 import {
   placeMentionMenu,
   mountEntitySubmenu,
@@ -1011,9 +1011,10 @@ describe('PR #2649 第二轮审查缺陷闭环定点测试', () => {
     // 1. 性能截断：保持与产品分支一致的 12 项限制
     assert.ok(submenuSrc.includes('setItems(raw.slice(0, 12))'), '角色列表必须进行 raw.slice(0, 12) 性能截断');
 
-    // 2. 8 项配额告警契约
+    // 2. 配额告警契约与常量引入
     assert.ok(submenuSrc.includes("res?.reason === 'quota-exceeded'"), '必须显式校验 quota-exceeded 状态');
-    assert.ok(submenuSrc.includes('素材已达 8 项上限'), '配额超限时必须触发 素材已达 8 项上限 告警提示');
+    assert.ok(submenuSrc.includes('MAX_ATTACHMENTS_PER_SESSION'), '必须从 store.ts 引入 MAX_ATTACHMENTS_PER_SESSION 常量');
+    assert.ok(submenuSrc.includes('素材已达 ${MAX_ATTACHMENTS_PER_SESSION} 项上限'), '配额超限提示文案必须使用动态计算的常量');
 
     // 3. 实体类型定义导出
     assert.ok(submenuSrc.includes('export interface ProductItem'), '必须导出 ProductItem 类型');
@@ -1033,5 +1034,188 @@ describe('PR #2649 第二轮审查缺陷闭环定点测试', () => {
     // 匹配 execCommand 调用频次
     const execMatches = funcBody.match(/document\.execCommand\(/g) || [];
     assert.equal(execMatches.length, 1, `insertFallbackEntityText 内的 execCommand 必须严格收敛为 1 次，当前实际为 ${execMatches.length} 次`);
+  });
+});
+
+describe('PR #2649 第三轮审查缺陷闭环定点测试', () => {
+  it('【缺陷 1 行复用双向清理】普通素材行在宿主复用 DOM 时显式清理 data-omnimux-entity-category', () => {
+    const mock = setupMockStore('default');
+    const store = mock.store;
+
+    store.addAttachment('default', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'mat_reused',
+      title: '普通素材',
+      extension: 'PNG',
+      relativePath: 'assets/mat_reused.png',
+      previewUrl: 'http://example.com/mat_reused.png',
+    });
+
+    // 构造模拟 DOM：该 option 节点在宿主复用前残留了 data-omnimux-entity-category="character"
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true">@</div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" id="dsh-slash-option-material-0" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="itemName">角色</span>
+            </div>
+            <div role="option" id="dsh-slash-option-material-1" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}">
+              <span class="itemName">产品</span>
+            </div>
+            <!-- 被宿主复用的行，残留了分类属性 -->
+            <div role="option" id="dsh-slash-option-material-2" data-material-id="mat_reused" data-omnimux-entity-category="character">
+              <span class="itemName">普通素材</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+    (dom.window as any).__omnimuxAttachments = store;
+    (globalThis as any).__omnimuxAttachments = store;
+
+    let submenuMounted = false;
+    registerEntitySubmenuRenderer(() => {
+      submenuMounted = true;
+    });
+
+    try {
+      placeMentionMenu(dom.window.document);
+
+      const reusedRow = dom.window.document.getElementById('dsh-slash-option-material-2')!;
+
+      // 验证属性双向清理：非角色且非产品行，必须显式 removeAttribute('data-omnimux-entity-category')
+      assert.equal(
+        reusedRow.getAttribute('data-omnimux-entity-category'),
+        null,
+        '普通素材行在宿主复用 DOM 时必须彻底清理 data-omnimux-entity-category 属性'
+      );
+      assert.equal(
+        reusedRow.hasAttribute('data-omnimux-entity-category'),
+        false,
+        'hasAttribute 必须返回 false，杜绝伪箭头样式污染'
+      );
+
+      // 验证普通素材的缩略图仍正常绑定
+      assert.equal(reusedRow.getAttribute('data-omnimux-thumb'), 'true');
+      assert.equal(reusedRow.style.getPropertyValue('--omnimux-thumb'), 'url("http://example.com/mat_reused.png")');
+    } finally {
+      registerEntitySubmenuRenderer(null);
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      mock.restore();
+      dom.window.close();
+    }
+  });
+
+  it('【缺陷 2 过滤场景偏移校准】搜索词过滤掉分类入口时，categoryOffset 精准为 0，不再发生负索引错配', () => {
+    const mock = setupMockStore('default');
+    const store = mock.store;
+
+    // 添加素材
+    store.addAttachment('default', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'mat_filter_0',
+      title: 'FilteredTarget',
+      extension: 'PNG',
+      relativePath: 'assets/target.png',
+      previewUrl: 'http://example.com/target.png',
+    });
+
+    // 模拟搜索词过滤：输入框为 "@Target"，此时分类入口被过滤（entityCategoryCandidates('Target') 长度为 0）
+    // 宿主直接从 material-0 渲染经过滤的素材
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true">@Target</div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" id="dsh-slash-option-material-0">
+              <span class="itemName">FilteredTarget</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+    (dom.window as any).__omnimuxAttachments = store;
+    (globalThis as any).__omnimuxAttachments = store;
+
+    try {
+      placeMentionMenu(dom.window.document);
+
+      const row = dom.window.document.getElementById('dsh-slash-option-material-0')!;
+
+      // 在历史缺陷中：categoryOffset 使用 0 || entityCategoryCandidates('').length = 2，
+      // 导致 materialIdx = 0 - 2 = -2，发生负索引错配，无法匹配到 materials[0]。
+      // 修复后基于当前搜索过滤词 query 计算，categoryOffset = 0，materialIdx = 0，精准命中素材！
+      assert.equal(
+        row.getAttribute('data-omnimux-thumb'),
+        'true',
+        '分类入口被过滤时，首项素材行必须精准匹配到 materials[0] 并设置 data-omnimux-thumb'
+      );
+      assert.equal(
+        row.style.getPropertyValue('--omnimux-thumb'),
+        'url("http://example.com/target.png")',
+        '缩略图 URL 必须准确命中 FilteredTarget 的 previewUrl'
+      );
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      mock.restore();
+      dom.window.close();
+    }
+  });
+
+  it('【缺陷 3 配额常量与提示治理】MAX_ATTACHMENTS_PER_SESSION 动态文案与全局事件/通道安全降级分发', () => {
+    const submenuSrc = readFileSync(join(__dirname, 'EntityMentionSubmenu.tsx'), 'utf-8');
+
+    // 1. 静态代码契约断言：常量引入与动态模板字符串
+    assert.ok(
+      submenuSrc.includes("import { getGlobalAttachmentStore, MAX_ATTACHMENTS_PER_SESSION } from './store.ts';"),
+      '必须从 ./store.ts 显式解构引入 MAX_ATTACHMENTS_PER_SESSION'
+    );
+    assert.ok(
+      submenuSrc.includes('const msg = `素材已达 ${MAX_ATTACHMENTS_PER_SESSION} 项上限`;'),
+      '提示文案必须采用动态模板字符串插值 MAX_ATTACHMENTS_PER_SESSION'
+    );
+
+    // 2. 常量定义校验
+    assert.equal(typeof MAX_ATTACHMENTS_PER_SESSION, 'number');
+    assert.equal(MAX_ATTACHMENTS_PER_SESSION, 8);
+
+    // 3. 动态计算文案与事件派发治理契约
+    const expectedMsg = `素材已达 ${MAX_ATTACHMENTS_PER_SESSION} 项上限`;
+    assert.equal(expectedMsg, '素材已达 8 项上限');
+
+    // 4. 验证全局事件优先分发契约与降级保护
+    assert.ok(
+      submenuSrc.includes("win.dispatchEvent(new CustomEvent('omnimux:quota-exceeded'"),
+      '配额超限必须优先尝试派发 omnimux:quota-exceeded 全局事件'
+    );
+    assert.ok(
+      submenuSrc.includes("win.dispatchEvent(new CustomEvent('omnimux:toast'"),
+      '配额超限必须同时广播 omnimux:toast 全局事件'
+    );
+    assert.ok(
+      submenuSrc.includes('win.__omnimuxToast(msg)') && submenuSrc.includes('win.__omnimuxNotify('),
+      '必须兼容 __omnimuxToast 与 __omnimuxNotify 标准通知通道'
+    );
+    assert.ok(
+      submenuSrc.includes('console.warn(`[omnimux] ${msg}`);'),
+      '必须保留控制台 warn 基础输出以供调试'
+    );
   });
 });

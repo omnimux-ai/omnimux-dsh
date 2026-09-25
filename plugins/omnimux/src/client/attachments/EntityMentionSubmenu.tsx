@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { getGlobalAttachmentStore } from './store.ts';
+import { getGlobalAttachmentStore, MAX_ATTACHMENTS_PER_SESSION } from './store.ts';
 import {
   getRecentProductIds,
   saveRecentProductId,
@@ -267,15 +267,42 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
     // 2.1 添加到卡槽 Store（若为重复实体 duplicate，卡槽中已存在对应 attachment，同样视为有效并复用其 id）
     const res = store.addAttachment(targetSessionId, payload);
     if (res?.reason === 'quota-exceeded') {
-      const msg = '素材已达 8 项上限';
+      const msg = `素材已达 ${MAX_ATTACHMENTS_PER_SESSION} 项上限`;
+      console.warn(`[omnimux] ${msg}`);
+
       const win = typeof window !== 'undefined' ? (window as any) : null;
-      if (typeof win?.__omnimuxToast === 'function') {
-        win.__omnimuxToast(msg);
-      } else if (typeof win?.__omnimuxNotify === 'function') {
-        win.__omnimuxNotify({ message: msg, type: 'warning' });
-      } else {
-        console.warn(`[omnimux] ${msg}`);
+
+      // 优先通过全局事件分发
+      if (typeof win?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+        try {
+          win.dispatchEvent(new CustomEvent('omnimux:quota-exceeded', {
+            detail: { message: msg, max: MAX_ATTACHMENTS_PER_SESSION, type: 'warning' },
+          }));
+          win.dispatchEvent(new CustomEvent('omnimux:toast', {
+            detail: { message: msg, type: 'warning' },
+          }));
+        } catch {
+          // 安全降级
+        }
       }
+
+      // 次优或并存分发至标准通知通道（若已挂载）
+      if (typeof win?.__omnimuxToast === 'function') {
+        try {
+          win.__omnimuxToast(msg);
+        } catch {
+          // 安全降级
+        }
+      } else if (typeof win?.__omnimuxNotify === 'function') {
+        try {
+          win.__omnimuxNotify({ message: msg, type: 'warning' });
+        } catch {
+          // 安全降级
+        }
+      }
+
+      // 若都不存在则已通过开头的 console.warn 安全降级，绝不假定全局对象必存
+
       onClose();
       return;
     }

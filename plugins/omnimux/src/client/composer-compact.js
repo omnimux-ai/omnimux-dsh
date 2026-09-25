@@ -1264,13 +1264,14 @@ export function placeMentionMenu(doc = hostDocument()) {
     }
 
     // 尝试从卡片输入框探测当前的 mention 搜索词（例如 @xxx）
+    let query = ''
     let currentCandidates = null
     const inputEl = card.querySelector?.('textarea, [contenteditable]')
     if (inputEl) {
       const text = inputEl.value ?? inputEl.textContent ?? ''
       const match = /(?:^|\s)@([^\s@]*)$/.exec(text)
       if (match) {
-        const query = match[1] || ''
+        query = match[1] || ''
         try {
           const catList = entityCategoryCandidates(query)
           const matList = materialCandidates('', query)
@@ -1329,6 +1330,9 @@ export function placeMentionMenu(doc = hostDocument()) {
         return
       }
 
+      // 普通素材行清理分类属性，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
+      row.removeAttribute('data-omnimux-entity-category')
+
       let matchedItem = null
 
       // A. 优先从行 DOM 属性提取稳定标识 (data-material-id / data-id / data-entity-id / data-value)
@@ -1383,7 +1387,7 @@ export function placeMentionMenu(doc = hostDocument()) {
       }
 
       // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致且无同名歧义时才允许采用，杜绝错配）
-      const categoryOffset = menu.querySelectorAll?.('[data-omnimux-entity-category]')?.length || entityCategoryCandidates('').length
+      const categoryOffset = entityCategoryCandidates(query).length
       const materialIdx = idx - categoryOffset
       if (!matchedItem && !titleAmbiguous && materialIdx >= 0 && materials[materialIdx]) {
         if (!itemName || materials[materialIdx].title === itemName) {
