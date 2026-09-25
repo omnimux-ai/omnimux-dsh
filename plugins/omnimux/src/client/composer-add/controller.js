@@ -418,6 +418,15 @@ export function createComposerAddController(options) {
     openInspiration(sessionId) {
       return openKind(sessionId, 'inspiration').catch(() => {})
     },
+    openFeatured(sessionId) {
+      return openKind(sessionId, 'featured').catch(() => {})
+    },
+    openTrending(sessionId) {
+      return openKind(sessionId, 'trending').catch(() => {})
+    },
+    openSkills(sessionId) {
+      return openKind(sessionId, 'skills').catch(() => {})
+    },
     dispose() {
       if (disposed) return
       if (owner) close(owner)

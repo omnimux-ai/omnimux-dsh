@@ -1,56 +1,40 @@
 /**
  * Asset Hub Navigation Store & White-list Definitions.
- * 严格遵循 specs/three-column-asset-hub.spec.md 与 design.md 规范。
+ * 严格遵循 specs/asset-hub-shared-tabs.spec.md、specs/asset-hub-shared-tabs-architecture.md 与 design.md 规范。
+ * 彻底拔除 canvas，对齐 6 大主库，以共享契约层为单一真源。
  */
 
 import { ASSET_HUB_TAB_ID } from './geometry.js'
+import {
+  SHARED_PRIMARY_TABS,
+  SHARED_SUB_CATEGORIES,
+  SHARED_I18N_SPEC,
+} from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
 
 export { ASSET_HUB_TAB_ID }
 
 /**
- * 一级 Tab 严格白名单
- * @type {readonly ['canvas', 'assets', 'inspiration', 'products']}
+ * 一级 Tab 严格白名单（6 大主库，彻底拔除 canvas）
+ * @type {readonly ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills']}
  */
-export const PRIMARY_TABS = Object.freeze(['canvas', 'assets', 'inspiration', 'products'])
+export const PRIMARY_TABS = Object.freeze(SHARED_PRIMARY_TABS.map((t) => t.id))
 
 /**
  * 二级筛选标签白名单（首项必须严格固定为「全部」）
  */
 export const SECONDARY_FILTER_WHITELIST = Object.freeze({
-  canvas: Object.freeze([]),
-  assets: Object.freeze(['全部', '本地上传', '生成资产', '数字人', '商品图']),
-  inspiration: Object.freeze(['全部', '爆款视频', '分镜脚本', '创意提示词', '视觉风格']),
-  products: Object.freeze(['全部', '商品主图', '模特展示', '卖点细节', '场景切片']),
+  featured: Object.freeze(SHARED_SUB_CATEGORIES.featured.map((c) => c.nameZh)),
+  assets: Object.freeze(SHARED_SUB_CATEGORIES.assets.map((c) => c.nameZh)),
+  inspiration: Object.freeze(SHARED_SUB_CATEGORIES.inspiration.map((c) => c.nameZh)),
+  products: Object.freeze(SHARED_SUB_CATEGORIES.products.map((c) => c.nameZh)),
+  trending: Object.freeze(SHARED_SUB_CATEGORIES.trending.map((c) => c.nameZh)),
+  skills: Object.freeze(SHARED_SUB_CATEGORIES.skills.map((c) => c.nameZh)),
 })
 
 /**
- * 状态机文案字典（严格字面值锁定，零自由发挥）
+ * 状态机文案字典（严格字面值锁定，零自由发挥，对齐单一真源）
  */
-export const ASSET_HUB_I18N_SPEC = Object.freeze({
-  primaryTabs: {
-    canvas: '画布',
-    assets: '资产库',
-    inspiration: '灵感库',
-    products: '商品库',
-  },
-  actions: {
-    fullscreen: '全屏',
-    exitFullscreen: '退出全屏',
-    collapse: '收起',
-    upload: '上传',
-    addProduct: '添加商品',
-    clearSearch: '清除搜索',
-    retry: '重试',
-  },
-  searchPlaceholder: '搜索素材',
-  empty: {
-    assets: '暂无资产',
-    inspiration: '暂无灵感',
-    products: '暂无商品',
-    search: '无匹配结果',
-    error: '加载失败',
-  },
-})
+export const ASSET_HUB_I18N_SPEC = SHARED_I18N_SPEC
 
 const STORAGE_KEY_ACTIVE_TAB = 'omnimux:asset-hub:active-tab'
 
@@ -58,14 +42,14 @@ function readPersistedTab() {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const stored = sessionStorage.getItem(STORAGE_KEY_ACTIVE_TAB)
-      if (stored && PRIMARY_TABS.includes(stored)) {
+      if (stored && PRIMARY_TABS.includes(stored) && stored !== 'canvas') {
         return stored
       }
     }
   } catch {
     // ignore
   }
-  return 'assets'
+  return 'featured'
 }
 
 function persistActiveTab(tab) {
@@ -85,10 +69,12 @@ export function createAssetHubNavStore() {
   let state = {
     activeTab: readPersistedTab(),
     secondaryFilters: {
-      canvas: '',
+      featured: '全部',
       assets: '全部',
       inspiration: '全部',
       products: '全部',
+      trending: '全部',
+      skills: '全部',
     },
     searchQuery: '',
     isFullscreen: false,
@@ -147,12 +133,14 @@ export function createAssetHubNavStore() {
     },
     reset() {
       state = {
-        activeTab: 'assets',
+        activeTab: 'featured',
         secondaryFilters: {
-          canvas: '',
+          featured: '全部',
           assets: '全部',
           inspiration: '全部',
           products: '全部',
+          trending: '全部',
+          skills: '全部',
         },
         searchQuery: '',
         isFullscreen: false,

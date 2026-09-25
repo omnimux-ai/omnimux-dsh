@@ -19,60 +19,13 @@ import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPicker
 import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
 import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';
 import { LibraryCard } from '../LibraryBrowser.jsx';
+import { SharedTabIcon } from '../../shared/asset-hub-tabs/SharedTabIcons.jsx';
 
 /**
- * 官方标准专属矢量图标渲染函数
+ * 官方标准专属矢量图标渲染（代理共享单一真源）
  */
 function renderPrimaryTabIcon(iconName) {
-  if (iconName === 'book-open') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-    );
-  }
-  if (iconName === 'folder') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-    );
-  }
-  if (iconName === 'lightbulb') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <line x1="9" y1="18" x2="15" y2="18" />
-        <line x1="10" y1="22" x2="14" y2="22" />
-        <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-      </svg>
-    );
-  }
-  if (iconName === 'shopping-bag') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-        <path d="M3 6h18" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-      </svg>
-    );
-  }
-  if (iconName === 'trending-up') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-        <polyline points="17 6 23 6 23 12" />
-      </svg>
-    );
-  }
-  if (iconName === 'zap') {
-    return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-      </svg>
-    );
-  }
-  return null;
+  return <SharedTabIcon name={iconName} size={15} />;
 }
 
 /**

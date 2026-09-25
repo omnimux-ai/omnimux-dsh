@@ -14,6 +14,18 @@ import {
 import { hostDocument } from './host-adapter.js'
 import { installAssetHubStyles } from './styles/asset-hub-styles.js'
 
+function getAssetHubCardPrompt(item) {
+  const title = String(item?.title || item?.name || '').trim()
+  if (!title) return ''
+  if (item.lane === 'featured') return `请基于模板「${title}」，结合我的产品卖点生成对应视频脚本。`
+  if (item.lane === 'assets') return `请参考附件素材「${title}」，进行风格对标与内容生成。`
+  if (item.lane === 'inspiration') return `请基于灵感参考「${title}」，提炼其镜头节奏并复刻脚本。`
+  if (item.lane === 'products') return `请基于商品「${title}」，分析核心卖点并规划宣传文案。`
+  if (item.lane === 'trending') return `请对标热门爆款「${title}」，还原其前3秒黄金Hook与分镜结构。`
+  if (item.lane === 'skills') return `为我运行技能「${title}」，指导下一步创作流程。`
+  return promptForCard(item)
+}
+
 /**
  * 右栏素材工作台（Asset Hub Panel）
  * 彻底废除旧全屏弹窗，作为右侧边栏第三栏原生工作台运行。
@@ -133,13 +145,6 @@ export function AssetHubPanel(props) {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'canvas') {
-      setData([])
-      setLoading(false)
-      setError(null)
-      return
-    }
-
     let active = true
     const controller = new AbortController()
 
@@ -205,7 +210,7 @@ export function AssetHubPanel(props) {
       }
     } else {
       // 成功注入附件槽后，将素材对应的提示词追加到中间会话输入框草稿中（打通 Prompt 管道）
-      const prompt = promptForCard(item)
+      const prompt = getAssetHubCardPrompt(item)
       if (prompt) {
         if (typeof props.onPrompt === 'function') {
           props.onPrompt(prompt, resolvedSessionId)
@@ -294,42 +299,31 @@ export function AssetHubPanel(props) {
         </div>
       ) : null}
 
-      {/* 画布视图分支 */}
-      {activeTab === 'canvas' ? (
-        <div className="omx-hub-canvas-view">
-          <div className="omx-hub-state">
-            <p className="omx-hub-state__msg">画布创作区</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* 工具栏 */}
-          <AssetHubToolbar
-            activeTab={activeTab}
-            currentFilter={currentFilter}
-            searchQuery={searchQuery}
-            onFilterChange={(f) => navStore.setSecondaryFilter(activeTab, f)}
-            onSearchChange={(q) => navStore.setSearchQuery(q)}
-            onActionClick={handlePrimaryAction}
-          />
+      {/* 工具栏 */}
+      <AssetHubToolbar
+        activeTab={activeTab}
+        currentFilter={currentFilter}
+        searchQuery={searchQuery}
+        onFilterChange={(f) => navStore.setSecondaryFilter(activeTab, f)}
+        onSearchChange={(q) => navStore.setSearchQuery(q)}
+        onActionClick={handlePrimaryAction}
+      />
 
-          {/* 卡片滚动流 */}
-          <div className="omx-hub-content">
-            <AssetHubGrid
-              activeTab={activeTab}
-              items={displayItems}
-              attachedIds={attachedIds}
-              loading={loading}
-              error={error}
-              isSearching={Boolean(searchQuery.trim())}
-              onAttach={handleAttach}
-              onRetry={() => setReloadToken((prev) => prev + 1)}
-              onClearSearch={() => navStore.setSearchQuery('')}
-              onPrimaryAction={handlePrimaryAction}
-            />
-          </div>
-        </>
-      )}
+      {/* 卡片滚动流 */}
+      <div className="omx-hub-content">
+        <AssetHubGrid
+          activeTab={activeTab}
+          items={displayItems}
+          attachedIds={attachedIds}
+          loading={loading}
+          error={error}
+          isSearching={Boolean(searchQuery.trim())}
+          onAttach={handleAttach}
+          onRetry={() => setReloadToken((prev) => prev + 1)}
+          onClearSearch={() => navStore.setSearchQuery('')}
+          onPrimaryAction={handlePrimaryAction}
+        />
+      </div>
     </div>
   )
 }

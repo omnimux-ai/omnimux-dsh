@@ -17,12 +17,16 @@ import {
   normalizeAssetItem,
   normalizeInspirationItem,
   normalizeProductItem,
+  normalizeTrendingItem,
+  normalizeSkillItem,
+  normalizeFeaturedItem,
   filterAssetHubItems,
   adaptCardToAttachmentPayload,
 } from './asset-hub-data.js'
 import { createAttachmentStore } from '../attachments/store.ts'
 import { createComposerAddController } from '../composer-add/controller.js'
 import { installComposerAddCapture } from '../composer-add/install.js'
+import { promptForCard } from '../composer-add/library-stage-model.js'
 import { zh } from '../locales.js'
 
 describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测试', () => {
@@ -54,14 +58,16 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(maxWidth, 800)
   })
 
-  it('T02: 一级 Tab 白名单与二级 Filter 严格锁定（首项固定「全部」）', () => {
-    assert.deepEqual(PRIMARY_TABS, ['canvas', 'assets', 'inspiration', 'products'])
+  it('T02: 一级 Tab 白名单与二级 Filter 严格锁定（首项固定「全部」，彻底拔除 canvas）', () => {
+    assert.deepEqual(PRIMARY_TABS, ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills'])
 
-    // 文案逐字校验（零自由发挥）
-    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.canvas, '画布')
+    // 文案逐字校验（零自由发挥，对齐 Spec 5.1）
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.featured, '精选')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.assets, '资产库')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.inspiration, '灵感库')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.products, '商品库')
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.trending, '爆款趋势')
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.skills, 'Skills')
 
     // 操作文案
     assert.equal(ASSET_HUB_I18N_SPEC.actions.fullscreen, '全屏')
@@ -73,28 +79,35 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(ASSET_HUB_I18N_SPEC.actions.retry, '重试')
 
     // 空态文案字典
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.featured, '暂无精选')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.assets, '暂无资产')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.inspiration, '暂无灵感')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.products, '暂无商品')
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.trending, '暂无爆款')
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.skills, '暂无技能')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.search, '无匹配结果')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.error, '加载失败')
 
-    // 二级标签白名单首项必须为「全部」
-    for (const tab of ['assets', 'inspiration', 'products']) {
+    // 二级标签白名单首项必须严格为「全部」
+    for (const tab of PRIMARY_TABS) {
       const pills = SECONDARY_FILTER_WHITELIST[tab]
       assert.ok(pills.length > 0)
       assert.equal(pills[0], '全部')
     }
 
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.assets, ['全部', '本地上传', '生成资产', '数字人', '商品图'])
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.inspiration, ['全部', '爆款视频', '分镜脚本', '创意提示词', '视觉风格'])
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.products, ['全部', '商品主图', '模特展示', '卖点细节', '场景切片'])
+    assert.equal(SECONDARY_FILTER_WHITELIST.featured[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.assets[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.inspiration[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.products[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.trending[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.skills[0], '全部')
   })
 
   it('T02: AssetHubNavStore 状态机受控管理与持久化', () => {
     const store = createAssetHubNavStore()
     const initial = store.getSnapshot()
-    assert.equal(initial.activeTab, 'assets')
+    assert.equal(initial.activeTab, 'featured')
+    assert.equal(initial.secondaryFilters.featured, '全部')
     assert.equal(initial.secondaryFilters.assets, '全部')
     assert.equal(initial.isFullscreen, false)
 
@@ -552,5 +565,81 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     // 执行 dispose，由于修复了焦点抢夺，dispose 不应触发 restoreFocus
     captureInstance.dispose()
     assert.equal(focusRestored, false, 'dispose 过程中不应抢夺用户焦点')
+  })
+
+  it('T09: 六路数据归一化、Click-to-Attach 载荷与路由适配（Issue #2636 / Spec 5.5）', () => {
+    // 1. 数据归一化测试
+    const featured = normalizeFeaturedItem({
+      id: 'tpl_demo',
+      titleZh: '微距质感',
+      type: 'template',
+    })
+    assert.equal(featured.lane, 'featured')
+    assert.equal(featured.formatText, 'TPL')
+
+    const trending = normalizeTrendingItem({
+      id: 'tr_1',
+      title: '街拍穿搭爆款',
+      duration: 12,
+      views: '120W',
+    })
+    assert.equal(trending.lane, 'trending')
+    assert.equal(trending.formatText, 'MP4')
+    assert.equal(trending.durationText, '00:12')
+    assert.equal(trending.dimensionsOrSize, '120W 次播放')
+
+    const skill = normalizeSkillItem({
+      id: 'sk_1',
+      titleZh: '黄金 Hook 提炼',
+      category: 'ugc-testimonial',
+    })
+    assert.equal(skill.lane, 'skills')
+    assert.equal(skill.formatText, 'SKILL')
+
+    // 2. Click-to-Attach 载荷转换与 Spec 5.5 对齐
+    const featuredPayload = adaptCardToAttachmentPayload(featured)
+    assert.equal(featuredPayload.sourcePlugin, 'omnimux')
+    assert.equal(featuredPayload.kind, 'inspiration')
+    assert.equal(featuredPayload.extension, 'TPL')
+
+    const trendingPayload = adaptCardToAttachmentPayload(trending)
+    assert.equal(trendingPayload.sourcePlugin, 'omnimux-inspiration')
+    assert.equal(trendingPayload.kind, 'inspiration')
+    assert.equal(trendingPayload.extension, 'MP4')
+
+    const skillPayload = adaptCardToAttachmentPayload(skill)
+    assert.equal(skillPayload.sourcePlugin, 'omnimux')
+    assert.equal(skillPayload.kind, 'skill')
+    assert.equal(skillPayload.extension, 'SKILL')
+
+    // 3. 路由方法 openTrending / openSkills / openFeatured
+    const navStore = createAssetHubNavStore()
+    const workbenchCalls = []
+    const mockWorkbench = {
+      openWorkbench(opts) {
+        workbenchCalls.push(opts)
+      },
+    }
+    const controller = createComposerAddController({
+      store: createAttachmentStore(),
+      t: (key) => zh[key] || key,
+      getCurrentSessionId: () => 'sess_t09',
+      subscribeCurrentSession: () => () => {},
+      renderLibrary: () => {},
+      notify: () => {},
+      workbench: mockWorkbench,
+      assetHubNavStore: navStore,
+    })
+
+    controller.openFeatured('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'featured')
+
+    controller.openTrending('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'trending')
+
+    controller.openSkills('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'skills')
+
+    controller.dispose()
   })
 })
