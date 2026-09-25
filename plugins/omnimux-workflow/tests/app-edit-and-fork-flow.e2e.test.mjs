@@ -294,3 +294,69 @@ test('E2E: 场景 6 - ForkAppProjectDialog 弹窗支持追加创作页与自选�
   assert.ok(htmlNoHost.includes('不会在电脑硬盘中新建或重命名物理文件夹'), '包含明确的物理文件夹不新建说明')
   assert.ok(htmlNoHost.includes('存放工作区目录'), '明确提示这是工作区目录而非新物理文件夹')
 })
+
+test('E2E: 场景 7 - 官方预设工程与历史遗留拓扑在副本创建时自愈连线 Handle (out/in) 且模型层级与卡槽合规 (Issue #2648)', async () => {
+  // 1. 验证官方预设 app-creatify-app-demo 的连线全部为 sourceHandle: 'out' / targetHandle: 'in'
+  const presetSnapshot = getPresetWorkflowSnapshot('app-creatify-app-demo')
+  assert.ok(presetSnapshot, '预设工作流必须存在')
+  for (const edge of presetSnapshot.edges) {
+    assert.equal(edge.sourceHandle, 'out', `预设连线 ${edge.id} 必须为 sourceHandle: 'out'`)
+    assert.equal(edge.targetHandle, 'in', `预设连线 ${edge.id} 必须为 targetHandle: 'in'`)
+  }
+  const videoGen = presetSnapshot.nodes.find((n) => n.id === 'node-video-generation-core')
+  assert.ok(videoGen)
+  assert.equal(videoGen.data.params?.model, 'seedance-2.0', '预设视频生成节点必须包含 params.model')
+
+  // 2. 模拟克隆副本：传入缺失 Handle / targetHandle 为 image 的脏数据拓扑
+  const dirtyManifest = {
+    appId: 'app_dirty_test',
+    metadata: { name: '脏数据历史应用' },
+    workflowBinding: {
+      snapshot: {
+        nodes: [
+          { id: 'n_slot', data: { isSlot: true, label: '主图' } },
+          { id: 'n_gen', data: { model: 'seedance-2.0', params: { duration: 5 } } },
+        ],
+        edges: [
+          { id: 'e_dirty', source: 'n_slot', target: 'n_gen', targetHandle: 'image' },
+        ],
+      },
+    },
+  }
+
+  let capturedNodes = null
+  let capturedEdges = null
+  const mockDeps = {
+    createProjectFn: async (title) => ({
+      ok: true,
+      status: 200,
+      body: { project: { id: 'proj_clean', title, canvasWorkspaceIds: ['ws_clean'] } },
+    }),
+    requestFn: async (url, opts) => {
+      if (url.includes('/api/workspaces/') && opts?.method === 'PUT') {
+        capturedNodes = opts.body.nodes
+        capturedEdges = opts.body.edges
+      }
+      return { ok: true, status: 200, body: { success: true } }
+    },
+  }
+
+  await createProjectForkFromManifest(dirtyManifest, mockDeps)
+  assert.ok(capturedNodes && capturedEdges)
+
+  // 验证连线自愈：sourceHandle: 'out', targetHandle: 'in', targetSlot: 'first_frame'
+  const healedEdge = capturedEdges.find((e) => e.id === 'e_dirty')
+  assert.ok(healedEdge)
+  assert.equal(healedEdge.sourceHandle, 'out')
+  assert.equal(healedEdge.targetHandle, 'in')
+  assert.equal(healedEdge.data?.targetSlot, 'first_frame')
+
+  // 验证节点自愈：params.model 补齐，slot 补齐 nodeKind: 'import' / selectedTool: 'import' / status: 'completed'
+  const healedGen = capturedNodes.find((n) => n.id === 'n_gen')
+  assert.equal(healedGen.data.params.model, 'seedance-2.0')
+  const healedSlot = capturedNodes.find((n) => n.id === 'n_slot')
+  assert.equal(healedSlot.data.nodeKind, 'import')
+  assert.equal(healedSlot.data.selectedTool, 'import')
+  assert.equal(healedSlot.data.status, 'completed')
+})
+

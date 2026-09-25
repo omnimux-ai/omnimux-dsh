@@ -32,9 +32,14 @@
       },
       "data": {
         "type": "text",
-        "tool": "prompt-template",
+        "materialType": "text",
+        "nodeKind": "generate",
+        "selectedTool": "text-to-text",
+        "tool": "text-to-text",
         "label": "视频转提示词 提示词拆解内核",
+        "model": "gemini-3.8-flash",
         "params": {
+          "model": "gemini-3.8-flash",
           "analysisFocus": [
             "hook",
             "pacing"
@@ -51,8 +56,9 @@
     {
       "id": "edge-video-to-analysis",
       "source": "node-slot-source-video",
+      "sourceHandle": "out",
       "target": "node-prompt-analysis-core",
-      "targetHandle": "prompt",
+      "targetHandle": "in",
       "label": "视频输入"
     }
   ],

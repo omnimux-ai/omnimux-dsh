@@ -13,18 +13,18 @@
       },
       "data": {
         "type": "image",
+        "materialType": "image",
         "tool": "import-image",
         "label": "商品主图槽位 (Product Image)",
         "slotRole": "product_image",
         "isSlot": true,
-        "mediaUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp",
-        "params": {
-          "aspectRatio": "9:16"
-        },
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "materialType": "image"
+        "mediaUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp",
+        "params": {
+          "aspectRatio": "9:16"
+        }
       }
     },
     {
@@ -36,16 +36,16 @@
       },
       "data": {
         "type": "text",
+        "materialType": "text",
         "tool": "prompt-template",
         "label": "核心文案槽位 (Copywriting)",
         "slotRole": "copywriting",
         "isSlot": true,
-        "content": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products.",
-        "prompt": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products.",
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "materialType": "text"
+        "content": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products.",
+        "prompt": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
       }
     },
     {
@@ -57,10 +57,14 @@
       },
       "data": {
         "type": "video",
+        "materialType": "video",
+        "nodeKind": "generate",
+        "selectedTool": "omnimux_video_submit",
         "tool": "omnimux_video_submit",
         "label": "巨型商品撞屏与荒诞追逐 视频生成内核",
         "model": "seedance-2.0",
         "params": {
+          "model": "seedance-2.0",
           "aspectRatio": "9:16",
           "duration": 5,
           "mode": "first_frame"
@@ -80,18 +84,18 @@
       },
       "data": {
         "type": "audio",
+        "materialType": "audio",
         "tool": "omnimux_audio_submit",
         "label": "旁白解说与音色 (Voice TTS)",
         "slotRole": "voice_tts",
         "isSlot": true,
-        "params": {
-          "voice": "zh_female_energetic",
-          "speed": 1
-        },
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "materialType": "audio"
+        "params": {
+          "voice": "zh_female_energetic",
+          "speed": 1
+        }
       }
     }
   ],
@@ -99,15 +103,20 @@
     {
       "id": "edge-img-to-video",
       "source": "node-slot-product-image",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "image",
-      "label": "商品图输入"
+      "targetHandle": "in",
+      "label": "商品图输入",
+      "data": {
+        "targetSlot": "first_frame"
+      }
     },
     {
       "id": "edge-text-to-video",
       "source": "node-slot-copywriting",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "prompt",
+      "targetHandle": "in",
       "label": "分镜文案"
     }
   ],
@@ -116,8 +125,8 @@
     "failStrategy": "fail-fast"
   },
   "metadata": {
-    "createdAt": "2026-09-18T04:01:07.914Z",
-    "updatedAt": "2026-09-18T04:01:07.914Z",
+    "createdAt": "2026-09-25T03:53:25.609Z",
+    "updatedAt": "2026-09-25T03:53:25.609Z",
     "nodeCount": 4,
     "sourceWorkflowId": "dc1c50e1-f8cd-4120-a772-5a34730aeea4"
   }

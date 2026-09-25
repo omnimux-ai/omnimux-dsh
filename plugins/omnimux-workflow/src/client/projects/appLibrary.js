@@ -318,6 +318,125 @@ export function getPresetWorkflowSnapshot(appId) {
 }
 
 /**
+ * 对工作流节点和连线进行防御性自愈归一化，修复历史遗留与第三方不合规的 Handle 与模型层级配置。
+ *
+ * @param {Array<object>} rawNodes
+ * @param {Array<object>} rawEdges
+ * @returns {{ nodes: Array<object>, edges: Array<object> }}
+ */
+export function normalizeWorkflowTopology(rawNodes = [], rawEdges = []) {
+  const nodes = Array.isArray(rawNodes)
+    ? rawNodes.map((node) => {
+        if (!node || typeof node !== 'object') return node
+        const data = node.data
+        if (!data || typeof data !== 'object') return node
+
+        let nextData = data
+        let mutated = false
+
+        // 1. 若 node.data.model 存在且 node.data.params?.model 缺失，自动补全 params.model
+        if (data.model && (!data.params || typeof data.params !== 'object' || !data.params.model)) {
+          const safeParams = (nextData.params && typeof nextData.params === 'object' && !Array.isArray(nextData.params)) ? nextData.params : {}
+          nextData = {
+            ...nextData,
+            params: {
+              ...safeParams,
+              model: data.model,
+            },
+          }
+          mutated = true
+        }
+
+        // 2. 卡槽节点判定：不仅检查 data.isSlot，与宿主 executionBridge.ts 保持一致
+        const looksLikeSlot = Boolean(
+          data.isSlot ||
+          data.slotRole ||
+          (typeof node.id === 'string' && node.id.startsWith('node-slot-')) ||
+          data.tool === 'import-image' ||
+          data.tool === 'prompt-template'
+        )
+        if (looksLikeSlot) {
+          if (
+            nextData.nodeKind !== 'import' ||
+            nextData.selectedTool !== 'import' ||
+            nextData.status !== 'completed'
+          ) {
+            nextData = {
+              ...nextData,
+              nodeKind: 'import',
+              selectedTool: 'import',
+              status: 'completed',
+            }
+            mutated = true
+          }
+        }
+
+        return mutated ? { ...node, data: nextData } : node
+      })
+    : []
+
+  const edges = Array.isArray(rawEdges)
+    ? rawEdges.map((edge) => {
+        if (!edge || typeof edge !== 'object') return edge
+
+        let mutated = false
+        let sourceHandle = edge.sourceHandle
+        let targetHandle = edge.targetHandle
+        const rawEdgeData = edge.data
+        const hasPlainData = rawEdgeData && typeof rawEdgeData === 'object' && !Array.isArray(rawEdgeData)
+        let data = hasPlainData ? { ...rawEdgeData } : undefined
+
+        // 1. 自动补齐缺失的 sourceHandle: 'out'
+        if (!sourceHandle) {
+          sourceHandle = 'out'
+          mutated = true
+        }
+
+        // 2. 连线自愈语义：targetHandle 统一为物理句柄 'in'（'input' 仅为历史别名，物理桩只有 'in'）
+        if (targetHandle !== 'in') {
+          const oldTargetHandle = targetHandle
+          const KNOWN_SLOTS = ['first_frame', 'end_frame', 'reference']
+          if (!data?.targetSlot) {
+            if (oldTargetHandle === 'image') {
+              data = {
+                ...(data || {}),
+                targetSlot: 'first_frame',
+              }
+            } else if (KNOWN_SLOTS.includes(oldTargetHandle)) {
+              data = {
+                ...(data || {}),
+                targetSlot: oldTargetHandle,
+              }
+            }
+          }
+          targetHandle = 'in'
+          mutated = true
+        }
+
+        if (rawEdgeData !== undefined && !hasPlainData) {
+          mutated = true
+        }
+
+        if (!mutated) return edge
+
+        const nextEdge = {
+          ...edge,
+          sourceHandle,
+          targetHandle,
+        }
+        if (data !== undefined) {
+          nextEdge.data = data
+        } else if (rawEdgeData !== undefined) {
+          delete nextEdge.data
+        }
+        return nextEdge
+      })
+    : []
+
+  return { nodes, edges }
+}
+
+/**
  * 将一组节点和边封装在工作流组（GroupNode）容器内部。
  * 每一个工作流打组都是一个独立可执行、可打包发布的应用单元。
  *
@@ -327,21 +446,23 @@ export function getPresetWorkflowSnapshot(appId) {
  * @returns {{ groupId: string, nodes: Array<object>, edges: Array<object> }}
  */
 export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副本)') {
-  if (!Array.isArray(nodes) || nodes.length === 0) {
-    return { groupId: '', nodes: [], edges: Array.isArray(edges) ? edges : [] }
+  const { nodes: normNodes, edges: normEdges } = normalizeWorkflowTopology(nodes, edges)
+
+  if (!Array.isArray(normNodes) || normNodes.length === 0) {
+    return { groupId: '', nodes: [], edges: Array.isArray(normEdges) ? normEdges : [] }
   }
 
   // 1. 如果已有顶层 GroupNode，更新标题并重用
-  const existingGroup = nodes.find((n) => n && n.type === 'group')
+  const existingGroup = normNodes.find((n) => n && n.type === 'group')
   if (existingGroup) {
-    const updatedNodes = nodes.map((n) => (n.id === existingGroup.id ? {
+    const updatedNodes = normNodes.map((n) => (n.id === existingGroup.id ? {
       ...n,
       data: { ...(n.data || {}), title },
     } : n))
     return {
       groupId: existingGroup.id,
       nodes: updatedNodes,
-      edges: Array.isArray(edges) ? [...edges] : [],
+      edges: Array.isArray(normEdges) ? [...normEdges] : [],
     }
   }
 
@@ -351,7 +472,7 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
   let maxX = -Infinity
   let maxY = -Infinity
 
-  for (const node of nodes) {
+  for (const node of normNodes) {
     if (!node) continue
     const x = typeof node.position?.x === 'number' ? node.position.x : 0
     const y = typeof node.position?.y === 'number' ? node.position.y : 0
@@ -390,11 +511,11 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
       minWidth: 260,
       minHeight: 120,
       padding: 32,
-      nodeIds: nodes.map((n) => n.id),
+      nodeIds: normNodes.map((n) => n.id),
     },
   }
 
-  const childNodes = nodes.map((node) => {
+  const childNodes = normNodes.map((node) => {
     const absX = typeof node.position?.x === 'number' ? node.position.x : 0
     const absY = typeof node.position?.y === 'number' ? node.position.y : 0
     return {
@@ -412,7 +533,7 @@ export function wrapNodesInGroup(nodes = [], edges = [], title = '工作流 (副
   return {
     groupId,
     nodes: [groupNode, ...childNodes],
-    edges: Array.isArray(edges) ? [...edges] : [],
+    edges: Array.isArray(normEdges) ? [...normEdges] : [],
   }
 }
 
@@ -476,7 +597,8 @@ export async function createProjectForkFromManifest(manifest, deps = {}) {
     rawEdges = []
   }
 
-  const { groupId, nodes, edges } = wrapNodesInGroup(rawNodes, rawEdges, groupTitle)
+  const { nodes: normNodes, edges: normEdges } = normalizeWorkflowTopology(rawNodes, rawEdges)
+  const { groupId, nodes, edges } = wrapNodesInGroup(normNodes, normEdges, groupTitle)
   const doRequest = deps.requestFn || workflowRequest
 
   if (hostProject?.id) {
