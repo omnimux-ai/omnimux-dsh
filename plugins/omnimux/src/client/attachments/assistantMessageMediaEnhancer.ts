@@ -24,6 +24,66 @@ import { currentSessionId } from '../workbench/host-adapter.js';
 
 const ENHANCED_ATTR = 'data-omx-media-enhanced';
 
+export interface AspectRatioClampConfig {
+  minRatio?: number;
+  maxRatio?: number;
+  fallbackRatio?: number;
+}
+
+export const DEFAULT_THUMB_MIN_RATIO = 0.5;
+export const DEFAULT_THUMB_MAX_RATIO = 2.0;
+export const DEFAULT_THUMB_FALLBACK_RATIO = 1.0;
+export const DEFAULT_VIDEO_FALLBACK_RATIO = 16 / 9;
+export const DEFAULT_STAGE_MIN_RATIO = 0.25;
+export const DEFAULT_STAGE_MAX_RATIO = 4.0;
+export const DEFAULT_STAGE_FALLBACK_RATIO = 1.0;
+const STAGE_CLAMP_CONFIG = {
+  minRatio: DEFAULT_STAGE_MIN_RATIO,
+  maxRatio: DEFAULT_STAGE_MAX_RATIO,
+  fallbackRatio: DEFAULT_STAGE_FALLBACK_RATIO,
+};
+
+/**
+ * 钳制媒体宽高比，防止极限过高或过宽的素材导致布局破损或裁切失真。
+ * 纯函数，严格防御各种非法输入并返回保留 4 位小数的钳制比值。
+ */
+export function clampRatio(
+  width: number | null | undefined,
+  height: number | null | undefined,
+  config?: AspectRatioClampConfig
+): number {
+  let min = (config?.minRatio !== null && config?.minRatio !== undefined && Number.isFinite(config.minRatio) && config.minRatio > 0)
+    ? config.minRatio
+    : DEFAULT_THUMB_MIN_RATIO;
+  let max = (config?.maxRatio !== null && config?.maxRatio !== undefined && Number.isFinite(config.maxRatio) && config.maxRatio > 0)
+    ? config.maxRatio
+    : DEFAULT_THUMB_MAX_RATIO;
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
+  }
+  const fallback = (config?.fallbackRatio !== null && config?.fallbackRatio !== undefined && Number.isFinite(config.fallbackRatio) && config.fallbackRatio > 0)
+    ? config.fallbackRatio
+    : DEFAULT_THUMB_FALLBACK_RATIO;
+
+  if (
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    const clampedFallback = Math.min(Math.max(fallback, min), max);
+    return Number(clampedFallback.toFixed(4));
+  }
+
+  const rawRatio = width / height;
+  const clamped = Math.min(Math.max(rawRatio, min), max);
+  return Number(clamped.toFixed(4));
+}
+
 export interface DetectedMedia {
   id?: string;
   url: string;
@@ -291,6 +351,50 @@ export function deduplicateTurnMedia(rawItems: readonly DetectedMedia[]): Detect
 /**
  * Create DOM element for the message tail preview card
  */
+function createCanvasBtn(doc: Document, label = "画布"): HTMLButtonElement {
+  const canvasBtn = doc.createElement("button"); // exempt-ui01: 消息卡片悬浮画布按钮
+  canvasBtn.className = "omx-chat-media-tail__canvas-btn";
+  canvasBtn.title = "进入画布";
+  canvasBtn.setAttribute("aria-label", "进入画布");
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = doc.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", "13");
+  svg.setAttribute("height", "13");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  const circles = [
+    { cx: "13.5", cy: "6.5" },
+    { cx: "17.5", cy: "10.5" },
+    { cx: "8.5", cy: "7.5" },
+    { cx: "6.5", cy: "12.5" },
+  ];
+  for (const c of circles) {
+    const circle = doc.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", c.cx);
+    circle.setAttribute("cy", c.cy);
+    circle.setAttribute("r", ".5");
+    circle.setAttribute("fill", "currentColor");
+    svg.appendChild(circle);
+  }
+
+  const path = doc.createElementNS(svgNS, "path");
+  path.setAttribute("d", "M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z");
+  svg.appendChild(path);
+
+  canvasBtn.appendChild(svg);
+
+  const span = doc.createElement("span");
+  span.textContent = label;
+  canvasBtn.appendChild(span);
+  return canvasBtn;
+}
+
 export function createMediaTailElement(items: readonly DetectedMedia[], doc: Document = document): HTMLElement {
   const container = doc.createElement('div');
   container.className = 'omx-chat-media-tail';
@@ -341,7 +445,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
   const buildCardElement = (item: DetectedMedia): HTMLElement => {
     const card = doc.createElement('div');
     card.className = 'omx-chat-media-tail__card';
-    card.title = '点击进入图像生成';
+    card.title = '点击进入画布';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
 
@@ -352,20 +456,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     card.appendChild(img);
 
     // Pill canvas button in top-right corner (reveals on hover, matching Image 2)
-    const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
-    canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
-    canvasBtn.title = '进入图像生成';
-    canvasBtn.setAttribute('aria-label', '进入图像生成');
-    canvasBtn.innerHTML = `
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
-        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
-        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
-        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
-        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
-      </svg>
-      <span>图像生成</span>
-    `;
+    const canvasBtn = createCanvasBtn(doc);
 
     canvasBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -391,32 +482,20 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     container.setAttribute('aria-label', '媒体素材画廊');
 
     let activeIndex = 0;
+    let currentGeneration = 0;
 
     const mainStage = doc.createElement('div');
     mainStage.className = 'omx-chat-media-tail__main';
     mainStage.setAttribute('role', 'button');
     mainStage.setAttribute('tabindex', '0');
-    mainStage.title = '点击进入图像生成';
+    mainStage.title = '点击进入画布';
 
     const mainContent = doc.createElement('div');
     mainContent.className = 'omx-chat-media-tail__main-content';
     mainStage.appendChild(mainContent);
 
     // Pill canvas button in top-right corner
-    const canvasBtn = doc.createElement('button'); // exempt-ui01: 消息卡片悬浮画布按钮
-    canvasBtn.className = 'omx-chat-media-tail__canvas-btn';
-    canvasBtn.title = '进入图像生成';
-    canvasBtn.setAttribute('aria-label', '进入图像生成');
-    canvasBtn.innerHTML = `
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
-        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
-        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
-        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
-        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
-      </svg>
-      <span>图像生成</span>
-    `;
+    const canvasBtn = createCanvasBtn(doc);
     canvasBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       openInSidebar(items[activeIndex]);
@@ -441,6 +520,7 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
     const thumbElements: HTMLElement[] = [];
 
     const renderActive = () => {
+      const generation = ++currentGeneration;
       const item = items[activeIndex];
 
       // Clear previous main media and pause any video
@@ -459,15 +539,22 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         vid.setAttribute('playsinline', '');
         vid.addEventListener('click', (e) => e.stopPropagation());
         const applyVideoRatio = () => {
+          if (generation !== currentGeneration) return;
           if (vid.videoWidth && vid.videoHeight) {
-            mainStage.style.aspectRatio = `${vid.videoWidth} / ${vid.videoHeight}`;
+            mainStage.style.aspectRatio = `${clampRatio(vid.videoWidth, vid.videoHeight, STAGE_CLAMP_CONFIG)}`;
+          } else {
+            mainStage.style.aspectRatio = `${clampRatio(null, null, { ...STAGE_CLAMP_CONFIG, fallbackRatio: DEFAULT_VIDEO_FALLBACK_RATIO })}`;
           }
         };
-        vid.addEventListener('loadedmetadata', applyVideoRatio);
+        vid.addEventListener('loadedmetadata', applyVideoRatio, { once: true });
+        vid.addEventListener('error', () => {
+          if (generation !== currentGeneration) return;
+          mainStage.style.aspectRatio = `${clampRatio(null, null, { ...STAGE_CLAMP_CONFIG, fallbackRatio: DEFAULT_VIDEO_FALLBACK_RATIO })}`;
+        }, { once: true });
         if (vid.videoWidth && vid.videoHeight) {
           applyVideoRatio();
         } else {
-          mainStage.style.aspectRatio = '16 / 9';
+          mainStage.style.aspectRatio = `${clampRatio(null, null, { ...STAGE_CLAMP_CONFIG, fallbackRatio: DEFAULT_VIDEO_FALLBACK_RATIO })}`;
         }
         mainContent.appendChild(vid);
       } else {
@@ -476,12 +563,21 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         img.alt = item.title || '生成预览';
         img.className = 'omx-chat-media-tail__img';
         const applyRatio = () => {
+          if (generation !== currentGeneration) return;
           if (img.naturalWidth && img.naturalHeight) {
-            mainStage.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+            mainStage.style.aspectRatio = `${clampRatio(img.naturalWidth, img.naturalHeight, STAGE_CLAMP_CONFIG)}`;
           }
         };
-        img.onload = applyRatio;
-        applyRatio();
+        img.addEventListener('load', applyRatio, { once: true });
+        img.addEventListener('error', () => {
+          if (generation !== currentGeneration) return;
+          mainStage.style.aspectRatio = `${clampRatio(null, null, STAGE_CLAMP_CONFIG)}`;
+        }, { once: true });
+        if (img.complete && img.naturalWidth && img.naturalHeight) {
+          applyRatio();
+        } else {
+          mainStage.style.aspectRatio = `${clampRatio(null, null, STAGE_CLAMP_CONFIG)}`;
+        }
         mainContent.appendChild(img);
       }
 
@@ -507,12 +603,30 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
       thumb.setAttribute('aria-label', `查看素材 ${index + 1}: ${item.title || item.filename || ''}`);
       thumb.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
 
+      const applyThumbRatio = (w?: number | null, h?: number | null) => {
+        thumb.style.aspectRatio = `${clampRatio(w, h)}`;
+      };
+
       if (item.type === 'video') {
         const vid = doc.createElement('video');
         vid.src = item.url ? `${item.url}#t=0.001` : '';
         vid.preload = 'metadata';
         vid.muted = true;
         vid.setAttribute('playsinline', '');
+
+        vid.addEventListener('loadedmetadata', () => {
+          applyThumbRatio(vid.videoWidth, vid.videoHeight);
+        }, { once: true });
+        vid.addEventListener('error', () => {
+          applyThumbRatio(null, null);
+        }, { once: true });
+
+        if (vid.videoWidth && vid.videoHeight) {
+          applyThumbRatio(vid.videoWidth, vid.videoHeight);
+        } else {
+          applyThumbRatio(null, null);
+        }
+
         thumb.appendChild(vid);
 
         const dur = doc.createElement('span');
@@ -523,6 +637,19 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
         const img = doc.createElement('img');
         img.src = item.url;
         img.alt = item.title || '';
+
+        img.addEventListener('load', () => {
+          applyThumbRatio(img.naturalWidth, img.naturalHeight);
+        }, { once: true });
+        img.addEventListener('error', () => {
+          applyThumbRatio(null, null);
+        }, { once: true });
+
+        // 针对浏览器已缓存完成加载的图片，同步执行宽高比自适应
+        if (img.complete && img.naturalWidth && img.naturalHeight) {
+          applyThumbRatio(img.naturalWidth, img.naturalHeight);
+        }
+
         thumb.appendChild(img);
       }
 

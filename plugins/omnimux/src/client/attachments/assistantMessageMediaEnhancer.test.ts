@@ -13,6 +13,10 @@ import {
   resetAutoOpenedForTests,
   isUserMessageNode,
   isBreakdownOrAnalysisTurn,
+  clampRatio,
+  DEFAULT_THUMB_MIN_RATIO,
+  DEFAULT_THUMB_MAX_RATIO,
+  DEFAULT_THUMB_FALLBACK_RATIO,
 } from './assistantMessageMediaEnhancer.ts';
 import { getGlobalMediaViewerStore } from '../media-viewer/media-viewer-store.js';
 
@@ -224,7 +228,7 @@ test('assistantMessageMediaEnhancer: enhanceTurnMedia deduplicates image_generat
   assert.equal(cards[0].querySelector('.omx-chat-media-tail__actions'), null, 'Old bottom actions bar must be removed');
   const canvasBtn = cards[0].querySelector('.omx-chat-media-tail__canvas-btn');
   assert.ok(canvasBtn, 'Pill canvas button must exist on card');
-  assert.match(canvasBtn.textContent || '', /图像生成/, 'Canvas button must display "图像生成"');
+  assert.match(canvasBtn.textContent || '', /画布/, 'Canvas button must display "画布"');
 
   // 4. Verify clicking the canvas button switches to 2col canvas mode and collapses conversation
   const store = getGlobalMediaViewerStore();
@@ -375,5 +379,120 @@ test('assistantMessageMediaEnhancer: exclusivity gate blocks auto-open on breakd
   assert.equal(workbenchOpenedTabId, null, 'Workbench auto-open must be suppressed by exclusivity gate to prioritize breakdown workbench');
   // Verify tail is created
   assert.ok(doc.querySelector('.omx-chat-media-tail'), 'Media tail element should still be present');
+});
+
+test('assistantMessageMediaEnhancer: clampRatio clamps aspect ratios and guards against invalid inputs', () => {
+  // 1. Standard ratios
+  assert.equal(clampRatio(1920, 1080), 1.7778, '16:9 landscape should clamp to 1.7778');
+  assert.equal(clampRatio(1080, 1920), 0.5625, '9:16 portrait should clamp to 0.5625');
+  assert.equal(clampRatio(1000, 1000), 1.0, '1:1 square should be 1.0');
+  assert.equal(clampRatio(800, 600), 1.3333, '4:3 should be 1.3333');
+  assert.equal(clampRatio(600, 800), 0.75, '3:4 should be 0.75');
+
+  // 2. Extreme aspect ratios clamped to bounds
+  assert.equal(clampRatio(100, 1000), DEFAULT_THUMB_MIN_RATIO, 'Extreme tall (0.1) should clamp to 0.5');
+  assert.equal(clampRatio(50, 1000), DEFAULT_THUMB_MIN_RATIO, 'Extreme tall (0.05) should clamp to 0.5');
+  assert.equal(clampRatio(3000, 300), DEFAULT_THUMB_MAX_RATIO, 'Extreme wide (10.0) should clamp to 2.0');
+  assert.equal(clampRatio(10000, 1000), DEFAULT_THUMB_MAX_RATIO, 'Ultra wide panorama should clamp to 2.0');
+
+  // 3. Custom configuration overrides
+  assert.equal(clampRatio(100, 200, { minRatio: 0.8 }), 0.8, 'Custom minRatio 0.8 should clamp 0.5 to 0.8');
+  assert.equal(clampRatio(200, 100, { maxRatio: 1.5 }), 1.5, 'Custom maxRatio 1.5 should clamp 2.0 to 1.5');
+  assert.equal(clampRatio(null, 100, { fallbackRatio: 1.25 }), 1.25, 'Custom fallbackRatio should be used for invalid input');
+  // 3.1 Reviewer boundary hardening: minRatio > maxRatio auto swap, and invalid config values
+  assert.equal(clampRatio(100, 200, { minRatio: 1.8, maxRatio: 0.8 }), 0.8, 'Inverted min/max should be swapped and clamp properly');
+  assert.equal(clampRatio(null, 100, { fallbackRatio: NaN }), DEFAULT_THUMB_FALLBACK_RATIO, 'NaN fallbackRatio should gracefully use default fallback');
+  assert.equal(clampRatio(null, 100, { fallbackRatio: Infinity }), DEFAULT_THUMB_FALLBACK_RATIO, 'Infinity fallbackRatio should gracefully use default fallback');
+  assert.equal(clampRatio(null, 100, { fallbackRatio: -1 }), DEFAULT_THUMB_FALLBACK_RATIO, 'Negative fallbackRatio should gracefully use default fallback');
+  assert.equal(clampRatio(null, null, { fallbackRatio: 5.0, minRatio: 0.5, maxRatio: 2.0 }), 2.0, 'Out-of-range high fallbackRatio should be clamped to maxRatio');
+  assert.equal(clampRatio(null, null, { fallbackRatio: 0.1, minRatio: 0.5, maxRatio: 2.0 }), 0.5, 'Out-of-range low fallbackRatio should be clamped to minRatio');
+
+  // 4. Invalid, non-positive, NaN, Infinity inputs return fallback
+  assert.equal(clampRatio(null, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'null width should fallback to 1.0');
+  assert.equal(clampRatio(100, null), DEFAULT_THUMB_FALLBACK_RATIO, 'null height should fallback to 1.0');
+  assert.equal(clampRatio(undefined, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'undefined width should fallback to 1.0');
+  assert.equal(clampRatio(100, undefined), DEFAULT_THUMB_FALLBACK_RATIO, 'undefined height should fallback to 1.0');
+  assert.equal(clampRatio(0, 100), DEFAULT_THUMB_FALLBACK_RATIO, '0 width should fallback to 1.0');
+  assert.equal(clampRatio(100, 0), DEFAULT_THUMB_FALLBACK_RATIO, '0 height should fallback to 1.0');
+  assert.equal(clampRatio(-100, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'Negative width should fallback to 1.0');
+  assert.equal(clampRatio(100, -100), DEFAULT_THUMB_FALLBACK_RATIO, 'Negative height should fallback to 1.0');
+  assert.equal(clampRatio(NaN, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'NaN width should fallback to 1.0');
+  assert.equal(clampRatio(100, NaN), DEFAULT_THUMB_FALLBACK_RATIO, 'NaN height should fallback to 1.0');
+  assert.equal(clampRatio(Infinity, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'Infinity width should fallback to 1.0');
+  assert.equal(clampRatio(100, Infinity), DEFAULT_THUMB_FALLBACK_RATIO, 'Infinity height should fallback to 1.0');
+  assert.equal(clampRatio('100' as any, 100), DEFAULT_THUMB_FALLBACK_RATIO, 'String width should fallback to 1.0');
+});
+
+test('assistantMessageMediaEnhancer: thumbnails adapt aspect ratio dynamically on load and metadata events', () => {
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+  const doc = dom.window.document;
+
+  const items = [
+    { url: 'http://example.com/landscape.jpg', type: 'image' as const, title: '横版大片', filename: 'landscape.jpg' },
+    { url: 'http://example.com/portrait.jpg', type: 'image' as const, title: '竖版短剧', filename: 'portrait.jpg' },
+    { url: 'http://example.com/demo.mp4', type: 'video' as const, title: '高清视频', filename: 'demo.mp4' },
+    { url: 'http://example.com/extreme-tall.mp4', type: 'video' as const, title: '极端超高', filename: 'extreme-tall.mp4' },
+  ];
+
+  const gallery = createMediaTailElement(items, doc);
+  doc.body.appendChild(gallery);
+
+  const thumbs = gallery.querySelectorAll<HTMLElement>('.omx-chat-media-tail__thumb');
+  assert.equal(thumbs.length, 4, 'Should have 4 thumbnails');
+
+  // JSDOM initial state: naturalWidth & naturalHeight default to 0, no inline aspectRatio set yet (falls back to CSS 1/1)
+  assert.equal(thumbs[0].style.aspectRatio, '');
+
+  // 1. Simulate image load with landscape natural dimensions (1920 x 1080)
+  const imgLandscape = thumbs[0].querySelector('img')!;
+  Object.defineProperty(imgLandscape, 'naturalWidth', { value: 1920, configurable: true });
+  Object.defineProperty(imgLandscape, 'naturalHeight', { value: 1080, configurable: true });
+  imgLandscape.dispatchEvent(new dom.window.Event('load'));
+  assert.match(thumbs[0].style.aspectRatio, /^1\.7778(\s*\/\s*1)?$/, 'Landscape thumbnail should adapt to 1.7778');
+
+  // 2. Simulate image load with portrait natural dimensions (1080 x 1920)
+  const imgPortrait = thumbs[1].querySelector('img')!;
+  Object.defineProperty(imgPortrait, 'naturalWidth', { value: 1080, configurable: true });
+  Object.defineProperty(imgPortrait, 'naturalHeight', { value: 1920, configurable: true });
+  imgPortrait.dispatchEvent(new dom.window.Event('load'));
+  assert.match(thumbs[1].style.aspectRatio, /^0\.5625(\s*\/\s*1)?$/, 'Portrait thumbnail should adapt to 0.5625');
+
+  // 3. Simulate video loadedmetadata with 16:9 dimensions (1280 x 720)
+  const vid1 = thumbs[2].querySelector('video')!;
+  Object.defineProperty(vid1, 'videoWidth', { value: 1280, configurable: true });
+  Object.defineProperty(vid1, 'videoHeight', { value: 720, configurable: true });
+  vid1.dispatchEvent(new dom.window.Event('loadedmetadata'));
+  assert.match(thumbs[2].style.aspectRatio, /^1\.7778(\s*\/\s*1)?$/, 'Video thumbnail should adapt to 1.7778');
+
+  // 4. Simulate video loadedmetadata with extreme tall dimensions (100 x 1000) clamped to minRatio (0.5)
+  const vid2 = thumbs[3].querySelector('video')!;
+  Object.defineProperty(vid2, 'videoWidth', { value: 100, configurable: true });
+  Object.defineProperty(vid2, 'videoHeight', { value: 1000, configurable: true });
+  vid2.dispatchEvent(new dom.window.Event('loadedmetadata'));
+  assert.match(thumbs[3].style.aspectRatio, /^0\.5(\s*\/\s*1)?$/, 'Extreme tall video thumbnail should be clamped to 0.5');
+
+  // 5. Test error event fallback on image and video (thumbnails and mainStage)
+  imgLandscape.dispatchEvent(new dom.window.Event('error'));
+  assert.match(thumbs[0].style.aspectRatio, /^1(\.0+)?(\s*\/\s*1)?$/, 'Broken image thumbnail should fallback to 1.0');
+
+  vid1.dispatchEvent(new dom.window.Event('error'));
+  assert.match(thumbs[2].style.aspectRatio, /^1(\.0+)?(\s*\/\s*1)?$/, 'Broken video thumbnail should fallback to 1.0');
+
+  // Main stage active image error fallback
+  const mainImg = gallery.querySelector('.omx-chat-media-tail__main-content img');
+  if (mainImg) {
+    mainImg.dispatchEvent(new dom.window.Event('error'));
+    const mainStage = gallery.querySelector('.omx-chat-media-tail__main') as HTMLElement;
+    assert.match(mainStage.style.aspectRatio, /^1(\.0+)?(\s*\/\s*1)?$/, 'Broken mainStage image should fallback to 1.0');
+  }
+
+  // Switch to video (thumbs[2]) and test main stage video error fallback
+  thumbs[2].click();
+  const mainVid = gallery.querySelector('.omx-chat-media-tail__main-content video');
+  if (mainVid) {
+    mainVid.dispatchEvent(new dom.window.Event('error'));
+    const mainStage = gallery.querySelector('.omx-chat-media-tail__main') as HTMLElement;
+    assert.match(mainStage.style.aspectRatio, /^1\.7778(\s*\/\s*1)?$|^16\s*\/\s*9$/, 'Broken mainStage video should fallback to 16 / 9');
+  }
 });
 

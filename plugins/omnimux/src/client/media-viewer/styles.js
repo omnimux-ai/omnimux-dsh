@@ -93,7 +93,7 @@ export const MEDIA_VIEWER_CSS = `
   overflow-x: hidden;
   min-height: 0;
   height: auto;
-  padding: 2px 3px 2px 3px;
+  padding: 4px 3px;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
 }
@@ -103,24 +103,24 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-chat-media-tail__rail.cs-down {
-  mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
-  -webkit-mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
+  mask-image: linear-gradient(to bottom, black 0, black calc(100% - 8px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, black 0, black calc(100% - 8px), transparent 100%); /* exempt-ui03: 缩图栏下边缘滚动渐隐遮罩 */
 }
 
 .omx-chat-media-tail__rail.cs-up {
-  mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
+  mask-image: linear-gradient(to bottom, transparent 0, black 8px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8px, black 100%); /* exempt-ui03: 缩图栏上边缘滚动渐隐遮罩 */
 }
 
 .omx-chat-media-tail__rail.cs-up.cs-down {
-  mask-image: linear-gradient(to bottom, transparent 0, black 16px, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 16px, black calc(100% - 16px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
+  mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%); /* exempt-ui03: 缩图栏两端滚动渐隐遮罩 */
 }
 
 .omx-chat-media-tail__thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 4/3;
+  aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
   padding: 0;
