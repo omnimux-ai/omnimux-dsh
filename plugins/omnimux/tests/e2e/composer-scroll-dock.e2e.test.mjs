@@ -131,6 +131,14 @@ describe('E2E: 首页输入框滚动防抖定位状态机与交互收敛', () =>
       })
       assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '点击收起按钮必须解除吸底')
       assert.equal(document.querySelector('.omnimux-trending-undock'), null, '解除后收起按钮消失')
+
+      // 7. 【防弹顶核心断言】：有素材加载情况下向下滚动页面，视口绝不被弹回顶部
+      scroller.scrollTop = 480
+      await act(async () => {
+        scroller.dispatchEvent(new dom.window.Event('scroll'))
+        await new Promise((r) => setTimeout(r, 15))
+      })
+      assert.equal(scroller.scrollTop, 480, '有素材加载时向下滚动必须稳定保持在 480px，绝不弹顶回 0')
     } finally {
       await act(async () => root.unmount())
     }

@@ -99,35 +99,112 @@ function resolveSkillCover(cover, coverIndex) {
 }
 
 /**
- * 将模板作为附件挂载到会话输入框上方
+ * 将卡片（商品、爆款视频、资产、灵感、模板）作为附件挂载到会话输入框上方，
+ * 并沉淀深度结构化实体上下文，供 Agent 全面感知领域信息。
  */
-export function attachTemplateToConversation(item, customWin) {
+export function attachCardToConversation(cardOrItem, customWin) {
   const win = customWin || (typeof window !== 'undefined' ? window : null);
-  if (!item || !win) return;
+  if (!cardOrItem || !win) return;
+
+  const raw = cardOrItem.trending || cardOrItem.raw || cardOrItem;
+  const lane = cardOrItem.lane || raw.lane || (cardOrItem.trending ? 'trending' : (raw.price !== undefined || raw.sellingPoints ? 'products' : 'templates'));
+  const entityId = raw.id || cardOrItem.id || `entity-${Date.now()}`;
+  const title = cardOrItem.title || raw.title || raw.name || '创作素材';
+
+  let kind = 'inspiration';
+  let extension = 'TPL';
+  let previewUrl = raw.thumbnailUrl || raw.cover || raw.coverUrl || raw.mainImage || raw.image || cardOrItem.thumbnailUrl || '';
+  let metadata = {};
+
+  if (lane === 'products') {
+    kind = 'product';
+    extension = 'PRD';
+    previewUrl = raw.mainImage || raw.image || raw.thumbnailUrl || raw.cover || (Array.isArray(raw.images) ? raw.images[0] : '') || previewUrl;
+    metadata = {
+      entityType: 'product',
+      productId: entityId,
+      title,
+      price: raw.price || '',
+      category: raw.category || '',
+      sellingPoints: raw.sellingPoints || raw.description || '',
+      specs: raw.specs || [],
+      images: Array.isArray(raw.images) ? raw.images : (raw.image ? [raw.image] : []),
+      originUrl: raw.url || raw.originUrl || '',
+      sourcePlatform: raw.sourcePlatform || 'internal',
+      agentContext: {
+        entityType: 'product',
+        summary: `产品名称：${title}；价格：${raw.price || '未标明'}；核心卖点：${raw.sellingPoints || raw.description || '无'}`,
+        details: raw,
+      },
+    };
+  } else if (lane === 'trending') {
+    kind = 'inspiration';
+    extension = 'MP4';
+    previewUrl = raw.cover || raw.thumbnailUrl || raw.coverUrl || previewUrl;
+    metadata = {
+      entityType: 'trending_video',
+      videoId: entityId,
+      title,
+      coverUrl: previewUrl,
+      videoUrl: raw.videoUrl || '',
+      metrics: raw.metrics || { views: raw.views, likes: raw.likes, engagementRate: raw.engagementRate },
+      breakdown: raw.breakdown || '',
+      script: raw.script || raw.transcript || '',
+      tags: raw.tags || [],
+      agentContext: {
+        entityType: 'trending_video',
+        summary: `爆款视频：${title}；播放量：${raw.views || '-'}；分镜拆解：${raw.breakdown || '无'}`,
+        details: raw,
+      },
+    };
+  } else if (lane === 'assets') {
+    kind = 'asset';
+    extension = (raw.type || 'file').toUpperCase();
+    metadata = {
+      entityType: 'asset',
+      assetId: entityId,
+      fileType: raw.type,
+      url: raw.url || previewUrl,
+      dimensions: raw.dimensions,
+      duration: raw.duration,
+      summary: `素材资产：${title} (${raw.type || 'file'})`,
+    };
+  } else {
+    kind = 'inspiration';
+    extension = raw.workflow ? 'TPL' : 'MP4';
+    metadata = {
+      entityType: 'template',
+      templateId: entityId,
+      categorySlug: raw.categorySlug || 'video',
+      prompt: raw.localizedPrompt || raw.prompt || '',
+      workflow: raw.workflow,
+      sourcePlatform: raw.sourcePlatform || 'creatify',
+      summary: `灵感模板：${title}`,
+      agentContext: {
+        entityType: 'template',
+        summary: `模板名称：${title}；分类：${raw.categorySlug || 'video'}；预置指令：${raw.localizedPrompt || raw.prompt || '无'}`,
+        details: raw,
+      },
+    };
+  }
 
   const payload = {
     sourcePlugin: 'omnimux',
-    kind: 'inspiration',
-    entityId: item.id || `tpl-${Date.now()}`,
-    title: item.localizedTitle || item.title || item.titleZh || '灵感模板',
-    extension: 'TPL',
-    relativePath: `templates/${item.categorySlug || 'video'}/${item.id}.json`,
-    previewUrl: item.thumbnailUrl || item.cover || '',
-    duration: item.duration || '15s',
-    metadata: {
-      templateId: item.id,
-      categorySlug: item.categorySlug,
-      prompt: item.localizedPrompt || item.prompt,
-      workflow: item.workflow,
-      sourcePlatform: item.sourcePlatform || 'creatify',
-    },
+    kind,
+    entityId,
+    title,
+    extension,
+    relativePath: `materials/${lane}/${entityId}.${extension.toLowerCase()}`,
+    previewUrl,
+    duration: raw.duration || '15s',
+    metadata,
   };
 
   const store = win.__omnimuxAttachments;
   const activeSessionId = store?.getActiveSessionId?.() || '';
 
   if (store && typeof store.addAttachment === 'function') {
-    // 业务事件素材独占替换：每次复刻先清空已有附件槽，绝不追加堆叠
+    // 业务事件素材独占替换：每次复刻/选择先清空已有附件槽，绝不追加堆叠
     if (typeof store.clear === 'function') {
       store.clear(activeSessionId);
     }
@@ -143,6 +220,11 @@ export function attachTemplateToConversation(item, customWin) {
   );
   const composer = win.__omnimuxComposerActions;
   composer?.revealAttachments?.();
+}
+
+/** 兼容保留旧方法签名 */
+export function attachTemplateToConversation(item, customWin) {
+  return attachCardToConversation(item, customWin);
 }
 
 /**
@@ -321,11 +403,16 @@ export function ExploreTemplatesSection({
   const handleLibraryCardPick = (card) => {
     if (!card) return;
     const prompt = promptForCard(card);
+    const itemData = card.trending || card.raw || card;
+
+    // 关键！将卡片的素材主图/封面及深度结构化信息独占加载到素材卡槽，为 Agent 注入完整上下文
+    attachCardToConversation(card);
+
     if (card.lane === 'trending' && onApplyTrending) {
-      onApplyTrending(card.trending || card.raw);
+      onApplyTrending(itemData);
     } else if (onApplyTemplate) {
       onApplyTemplate({
-        template: card.raw,
+        template: itemData,
         prompt,
         title: card.title,
       });
