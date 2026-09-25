@@ -1297,7 +1297,7 @@ export function placeMentionMenu(doc = hostDocument()) {
 
         if (!row._omnimuxSubmenuBound) {
           row._omnimuxSubmenuBound = true
-          row.addEventListener('mouseenter', () => {
+          const onMouseEnter = () => {
             cancelCloseEntitySubmenu()
             const capturedRange = captureComposerSelection(doc)
             if (entitySubmenuOpenTimer != null) clearTimeout(entitySubmenuOpenTimer)
@@ -1308,7 +1308,8 @@ export function placeMentionMenu(doc = hostDocument()) {
               const isUp = card.hasAttribute(MENTION_UP_ATTR)
               const win = hostWindow()
               const curSessionId = win?.__omnimuxAttachments?.getActiveSessionId?.() || ''
-              const activeType = row.getAttribute?.('data-omnimux-entity-category') || entType
+              const activeType = row.getAttribute?.('data-omnimux-entity-category')
+              if (!activeType) return
               mountEntitySubmenu({
                 type: activeType,
                 anchorRect: rRect,
@@ -1317,21 +1318,37 @@ export function placeMentionMenu(doc = hostDocument()) {
                 savedRange: capturedRange,
               })
             }, 40)
-          })
+          }
 
-          row.addEventListener('mouseleave', () => {
+          const onMouseLeave = () => {
             if (entitySubmenuOpenTimer != null) {
               clearTimeout(entitySubmenuOpenTimer)
               entitySubmenuOpenTimer = null
             }
             scheduleCloseEntitySubmenu(180)
-          })
+          }
+
+          row._omnimuxMouseEnterHandler = onMouseEnter
+          row._omnimuxMouseLeaveHandler = onMouseLeave
+          row.addEventListener('mouseenter', onMouseEnter)
+          row.addEventListener('mouseleave', onMouseLeave)
         }
         return
       }
 
-      // 普通素材行清理分类属性，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
+      // 普通素材行清理分类属性与已绑定的二级悬停事件，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
       row.removeAttribute('data-omnimux-entity-category')
+      if (row._omnimuxSubmenuBound) {
+        if (row._omnimuxMouseEnterHandler) {
+          row.removeEventListener('mouseenter', row._omnimuxMouseEnterHandler)
+          row._omnimuxMouseEnterHandler = null
+        }
+        if (row._omnimuxMouseLeaveHandler) {
+          row.removeEventListener('mouseleave', row._omnimuxMouseLeaveHandler)
+          row._omnimuxMouseLeaveHandler = null
+        }
+        row._omnimuxSubmenuBound = false
+      }
 
       let matchedItem = null
 

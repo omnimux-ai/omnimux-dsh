@@ -271,8 +271,9 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
       console.warn(`[omnimux] ${msg}`);
 
       const win = typeof window !== 'undefined' ? (window as any) : null;
+      let dispatched = false;
 
-      // 优先通过全局事件分发
+      // 1. 优先通过标准事件派发
       if (typeof win?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
         try {
           win.dispatchEvent(new CustomEvent('omnimux:quota-exceeded', {
@@ -281,23 +282,26 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
           win.dispatchEvent(new CustomEvent('omnimux:toast', {
             detail: { message: msg, type: 'warning' },
           }));
+          dispatched = true;
         } catch {
-          // 安全降级
+          // 事件派发异常时回退降级
         }
       }
 
-      // 次优或并存分发至标准通知通道（若已挂载）
-      if (typeof win?.__omnimuxToast === 'function') {
-        try {
-          win.__omnimuxToast(msg);
-        } catch {
-          // 安全降级
-        }
-      } else if (typeof win?.__omnimuxNotify === 'function') {
-        try {
-          win.__omnimuxNotify({ message: msg, type: 'warning' });
-        } catch {
-          // 安全降级
+      // 2. 优先级降级链（Priority Chain）：若环境不支持事件派发，再降级至全局桥接函数，绝不并行重复触发
+      if (!dispatched) {
+        if (typeof win?.__omnimuxToast === 'function') {
+          try {
+            win.__omnimuxToast(msg);
+          } catch {
+            // 安全降级
+          }
+        } else if (typeof win?.__omnimuxNotify === 'function') {
+          try {
+            win.__omnimuxNotify({ message: msg, type: 'warning' });
+          } catch {
+            // 安全降级
+          }
         }
       }
 

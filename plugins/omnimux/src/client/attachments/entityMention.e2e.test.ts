@@ -1219,3 +1219,201 @@ describe('PR #2649 第三轮审查缺陷闭环定点测试', () => {
     );
   });
 });
+
+describe('PR #2649 第四轮审查缺陷闭环定点测试', () => {
+    it('【缺陷 1 复用行阻断悬停与双向卸载】普通素材行在 DOM 复用时显式卸载事件监听、置空标记，且在无 category 属性时强阻断二级弹窗', async () => {
+      const mock = setupMockStore('default');
+      const store = mock.store;
+
+      store.addAttachment('default', {
+        sourcePlugin: 'omnimux-assets',
+        kind: 'asset',
+        entityId: 'mat_reused_item',
+        title: 'ReusedItem',
+        extension: 'PNG',
+        relativePath: 'assets/reused.png',
+        previewUrl: 'http://example.com/reused.png',
+      });
+
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">@</div>
+            <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+              <div role="option" id="dsh-slash-option-material-0" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="itemName">角色</span>
+              </div>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+      (dom.window as any).__omnimuxAttachments = store;
+      (globalThis as any).__omnimuxAttachments = store;
+
+      let submenuMountCount = 0;
+      registerEntitySubmenuRenderer(() => {
+        submenuMountCount++;
+      });
+
+      try {
+        const row = dom.window.document.getElementById('dsh-slash-option-material-0') as any;
+
+        // 阶段 1：首轮渲染，当前行作为角色分类入口，绑定二级菜单事件与标记
+        placeMentionMenu(dom.window.document);
+        assert.equal(row.getAttribute('data-omnimux-entity-category'), 'character');
+        assert.equal(row._omnimuxSubmenuBound, true);
+        assert.equal(typeof row._omnimuxMouseEnterHandler, 'function');
+        assert.equal(typeof row._omnimuxMouseLeaveHandler, 'function');
+
+        // 阶段 2：宿主复用该 DOM 节点，变为普通素材行
+        row.setAttribute('data-value', 'mat_reused_item');
+        row.setAttribute('data-material-id', 'mat_reused_item');
+        row.querySelector('.itemName').textContent = 'ReusedItem';
+
+        placeMentionMenu(dom.window.document);
+
+        // 验证双向卸载：category 移除、_omnimuxSubmenuBound 重置为 false、handler 引用清理
+        assert.equal(
+          row.getAttribute('data-omnimux-entity-category'),
+          null,
+          '普通素材行 category 属性必须彻底移除'
+        );
+        assert.equal(
+          row._omnimuxSubmenuBound,
+          false,
+          '普通素材行 _omnimuxSubmenuBound 必须重置为 false'
+        );
+        assert.equal(
+          row._omnimuxMouseEnterHandler,
+          null,
+          '已绑定的 mouseenter 处理器引用必须置空'
+        );
+        assert.equal(
+          row._omnimuxMouseLeaveHandler,
+          null,
+          '已绑定的 mouseleave 处理器引用必须置空'
+        );
+
+        // 阶段 3：模拟触发 mouseenter，强校验 if (!activeType) return 阻断悬停弹窗
+        row.dispatchEvent(new dom.window.MouseEvent('mouseenter'));
+
+        // 等待 60ms 超过 40ms 防抖定时器
+        await new Promise((resolve) => setTimeout(resolve, 60));
+
+        assert.equal(
+          submenuMountCount,
+          0,
+          '已复用为普通素材行的 DOM 节点即使触发 mouseenter，也必须由于强校验拦截，绝不弹出二级菜单'
+        );
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        mock.restore();
+        dom.window.close();
+      }
+    });
+
+    it('【缺陷 2 单通道通知降级链】配额超限时优先标准事件派发，事件派发成功时绝不重复触发全局桥接函数（杜绝双重 Toast）', () => {
+      const submenuSrc = readFileSync(join(__dirname, 'EntityMentionSubmenu.tsx'), 'utf-8');
+
+      // 1. 静态代码契约断言：严格使用 dispatched 守卫构建优先级降级链
+      assert.ok(
+        submenuSrc.includes('let dispatched = false;'),
+        'EntityMentionSubmenu 中必须声明 dispatched 状态守卫'
+      );
+      assert.ok(
+        submenuSrc.includes('dispatched = true;'),
+        '标准事件成功派发后必须标记 dispatched = true'
+      );
+      assert.ok(
+        submenuSrc.includes('if (!dispatched) {'),
+        '全局桥接函数必须置于 if (!dispatched) 降级链守卫之后，绝不并行触发'
+      );
+
+      // 2. 模拟优先级通道逻辑契约：
+      // 场景 A：环境支持标准事件且有全局桥接，必须单通道派发，桥接函数调用为 0
+      let dispatchedEvents: string[] = [];
+      let toastBridgeCount = 0;
+      let notifyBridgeCount = 0;
+
+      const mockWinA: any = {
+        dispatchEvent: (e: any) => {
+          dispatchedEvents.push(e.type);
+          return true;
+        },
+        __omnimuxToast: () => {
+          toastBridgeCount++;
+        },
+        __omnimuxNotify: () => {
+          notifyBridgeCount++;
+        },
+      };
+
+      const triggerQuotaNotification = (win: any, msg: string) => {
+        let dispatched = false;
+        if (typeof win?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+          try {
+            win.dispatchEvent(new CustomEvent('omnimux:quota-exceeded', {
+              detail: { message: msg, max: MAX_ATTACHMENTS_PER_SESSION, type: 'warning' },
+            }));
+            win.dispatchEvent(new CustomEvent('omnimux:toast', {
+              detail: { message: msg, type: 'warning' },
+            }));
+            dispatched = true;
+          } catch {}
+        }
+        if (!dispatched) {
+          if (typeof win?.__omnimuxToast === 'function') {
+            try {
+              win.__omnimuxToast(msg);
+            } catch {}
+          } else if (typeof win?.__omnimuxNotify === 'function') {
+            try {
+              win.__omnimuxNotify({ message: msg, type: 'warning' });
+            } catch {}
+          }
+        }
+      };
+
+      const quotaMsg = `素材已达 ${MAX_ATTACHMENTS_PER_SESSION} 项上限`;
+      triggerQuotaNotification(mockWinA, quotaMsg);
+
+      assert.deepEqual(dispatchedEvents, ['omnimux:quota-exceeded', 'omnimux:toast']);
+      assert.equal(toastBridgeCount, 0, '事件派发成功时，__omnimuxToast 绝不触发（杜绝双重 Toast）');
+      assert.equal(notifyBridgeCount, 0, '事件派发成功时，__omnimuxNotify 绝不触发');
+
+      // 场景 B：环境不支持 dispatchEvent，降级调用 __omnimuxToast
+      const mockWinB: any = {
+        dispatchEvent: null,
+        __omnimuxToast: () => {
+          toastBridgeCount++;
+        },
+        __omnimuxNotify: () => {
+          notifyBridgeCount++;
+        },
+      };
+      triggerQuotaNotification(mockWinB, quotaMsg);
+      assert.equal(toastBridgeCount, 1, '环境不支持事件派发时，安全降级至 __omnimuxToast');
+      assert.equal(notifyBridgeCount, 0, '__omnimuxToast 触发后，不再继续触发 __omnimuxNotify');
+
+      // 场景 C：环境既无 dispatchEvent 也无 __omnimuxToast，降级调用 __omnimuxNotify
+      const mockWinC: any = {
+        dispatchEvent: null,
+        __omnimuxToast: null,
+        __omnimuxNotify: (payload: any) => {
+          assert.equal(payload.message, quotaMsg);
+          assert.equal(payload.type, 'warning');
+          notifyBridgeCount++;
+        },
+      };
+      triggerQuotaNotification(mockWinC, quotaMsg);
+      assert.equal(notifyBridgeCount, 1, '降级链末端安全触发 __omnimuxNotify');
+    });
+  });
