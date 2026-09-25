@@ -3159,6 +3159,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 [data-omnimux-starter-host][data-omnimux-dock-open] [class*="heroWorkspaceRow"] {
   opacity:0!important; pointer-events:none!important;
 }
+/* 吸底状态下宿主滚动底座动态安全垫高：
+   彻底避让 fixed 钉底的输入框与收起气泡，并留出 56px 现代 SaaS 呼吸间距，
+   确保长列表（模板、货架、灵感）滚到底部时，最底排卡片与操作按钮清晰可见且可交互。
+   无论常规全屏态还是分栏紧凑态，均以此动态垫高为最高优先级！ */
+[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
+html[data-omnimux-split-compact] [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
+.dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat],
+[class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-seat] {
+  padding-bottom: calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px) !important;
+}
 /* 归还原生输入框。原生输入框没有「取消」概念，这是接管期间唯一的自绘控件。 */
 .omnimux-trending-undock {
   position:fixed; z-index:46;
