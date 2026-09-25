@@ -26,6 +26,7 @@ import {
   resolveSourceLabel,
   displayValueOf,
   sanitizePreviewUrl,
+  resolveDefaultNodeModelId,
 } from './appTabWidgets.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -647,6 +648,102 @@ describe('AppTab Form Widgets Engine (Issue #2607)', () => {
 
       // 验证无任何私造变量与裸硬编码色
       assert.doesNotMatch(css, /--omx-[a-z0-9_-]+/, '禁止私造 --omx-* 变量')
+    })
+
+    it('AppTab.jsx thoroughly eliminates "(工程默认 · 作者推荐)" and robustly resolves default model (Issue #2647)', () => {
+      const src = readFileSync(join(here, 'AppTab.jsx'), 'utf8')
+      // 1. 绝对不包含任何 "(工程默认 · 作者推荐)"
+      assert.doesNotMatch(src, /工程默认 · 作者推荐/, 'AppTab.jsx 绝不能包含 "(工程默认 · 作者推荐)"')
+      // 2. 下拉菜单首项副标题展示为 "工程预设推荐模型"
+      assert.match(src, /工程预设推荐模型/, '下拉首项副标题展示极简推荐说明')
+      // 3. 收起态按钮文本使用纯净模型名称，无括号后缀
+      assert.match(src, /defaultModelName \|\| 'Seedance 2\.0'/, '首部收起态直接展示纯净模型名称')
+      // 4. 下拉项首项主标题直接展示纯净模型名称
+      assert.doesNotMatch(src, /智能推荐 \(默认\)/, '彻底消灭因 nodes 缺失而回退为智能推荐')
+    })
+  })
+
+  describe('resolveDefaultNodeModelId() (Issue #2647)', () => {
+    it('prioritizes manifest.defaultModel and normalizes seedance-2-0', () => {
+      assert.equal(
+        resolveDefaultNodeModelId({ defaultModel: 'seedance-2-0' }),
+        'seedance-2.0',
+      )
+      assert.equal(
+        resolveDefaultNodeModelId({ defaultModel: 'minimax-h3' }),
+        'minimax-h3',
+      )
+    })
+
+    it('prioritizes manifest.metadata.defaultModel when top-level defaultModel is absent', () => {
+      assert.equal(
+        resolveDefaultNodeModelId({ metadata: { defaultModel: 'kling-o3' } }),
+        'kling-o3',
+      )
+    })
+
+    it('identifies main generator node in snapshot.nodes while skipping slots and imports', () => {
+      const manifest = {
+        appId: 'app-custom-model',
+        workflowBinding: {
+          snapshot: {
+            nodes: [
+              { id: 'node-slot-1', type: 'input', data: { isSlot: true, model: 'wrong-model' } },
+              { id: 'node-import-1', type: 'input', data: { nodeKind: 'import', model: 'wrong-model-2' } },
+              {
+                id: 'node-gen-main',
+                type: 'video',
+                data: {
+                  tool: 'omnimux_video_submit',
+                  params: { model: 'kling-v1-6' },
+                },
+              },
+            ],
+          },
+        },
+      }
+      assert.equal(resolveDefaultNodeModelId(manifest), 'kling-v1-6')
+    })
+
+    it('falls back to seedance-2.0 when snapshot.nodes is missing but appId or workspaceId contains creatify', () => {
+      assert.equal(
+        resolveDefaultNodeModelId({
+          appId: 'app-creatify-chasing-product',
+          workflowBinding: { workspaceId: 'ws-app-creatify-app-demo' },
+        }),
+        'seedance-2.0',
+      )
+      assert.equal(
+        resolveDefaultNodeModelId({
+          appId: 'app-builtin-video-showcase',
+          workflowBinding: { workspaceId: 'ws-app-builtin-1' },
+        }),
+        'seedance-2.0',
+      )
+    })
+
+    it('resolves gpt-image-2.5 for image category when nodes are empty', () => {
+      assert.equal(
+        resolveDefaultNodeModelId({
+          appId: 'app-photo-enhancer',
+          metadata: { category: 'image' },
+        }),
+        'gpt-image-2.5',
+      )
+      assert.equal(
+        resolveDefaultNodeModelId({
+          appId: 'app-product-shoot',
+          category: 'image',
+          workflowBinding: { snapshot: { nodes: [] } },
+        }),
+        'gpt-image-2.5',
+      )
+    })
+
+    it('resolves seedance-2.0 for default video category or empty/null manifest', () => {
+      assert.equal(resolveDefaultNodeModelId({}), 'seedance-2.0')
+      assert.equal(resolveDefaultNodeModelId(null), 'seedance-2.0')
+      assert.equal(resolveDefaultNodeModelId({ category: 'video' }), 'seedance-2.0')
     })
   })
 })
