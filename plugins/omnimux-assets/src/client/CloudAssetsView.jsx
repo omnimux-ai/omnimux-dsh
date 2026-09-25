@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, EmptyState, IconButton } from 'dsh-ui-kit'
+import { IconDownloadOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   AudioIcon,
   ChatIcon,
@@ -40,6 +41,12 @@ const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action 
 /** Clip classes; the bare variant is the tile's face instead of a hover overlay. */
 const PREVIEW_CLASS = 'omnimux-assets-cloud-preview'
 const BARE_PREVIEW_CLASS = `${PREVIEW_CLASS} omnimux-assets-cloud-preview--bare`
+
+/**
+ * 缺省读面：没有控制器注入时（例如只渲染骨架的场合）两张卡都按「未保存」渲染。
+ * 逐文件声明而不跨文件共享，避免在两个互相 import 的文件之间多出一个导出。
+ */
+const NO_IDS = new Set()
 
 /**
  * 首次加载骨架卡张数随列数自适应（3 行，见 pageSizeFor），不再固定 12 张。
@@ -167,11 +174,16 @@ function CloudTileMedia(props) {
 /**
  * One cloud asset card.
  *
- * Three things live on a card: the body, the title under it, and the one hover
- * control pinned into the top-right corner that is the single way out of the
- * cloud — into the conversation. Copying a row into the local library used to
- * share that corner behind a `+`; it is gone, and the bubble is now the only
- * control on the card.
+ * Three things live on a card: the body, the title under it, and the hover
+ * cluster pinned into the top-right corner — 保存到本地, which copies the row
+ * into the local library, and 加入会话, which mounts it into the conversation.
+ * The save control sits first in the DOM, so it reads to the left of the bubble.
+ *
+ * The card holds no save state of its own: `saved` and `saving` are handed down
+ * by the stage's controller (the same one the preview modal reads), so a row
+ * saved from either entry point is marked in both, and the tick survives a
+ * re-sort, a sub-category switch or a re-mount of the grid. What the card does
+ * own is the 1800ms tick on 加入会话, which is a receipt — not a state.
  *
  * The body follows the row (`cloudCardKind`):
  * - a picture or video gets a thumbnail at the cover's original ratio with one line of title;
@@ -195,10 +207,14 @@ function CloudTileMedia(props) {
  *   playing: boolean,
  *   onTogglePlay: (asset: any) => void,
  *   onPreview?: (asset: any) => void,
+ *   aspect?: string,
+ *   saved?: boolean,
+ *   saving?: boolean,
+ *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay, onPreview, aspect } = props
+  const { asset, t, playing, onTogglePlay, onPreview, aspect, saved = false, saving = false, onSave } = props
   const [broken, setBroken] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [added, setAdded] = useState(false)
@@ -226,6 +242,14 @@ export function CloudAssetCard(props) {
     addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
   }
 
+  // The save itself belongs to the stage's controller: this only forwards the
+  // click, and stops it from reaching the card's own preview handler.
+  const handleSave = (event) => {
+    event.stopPropagation()
+    if (saved || saving) return
+    onSave?.(asset)
+  }
+
   // 悬停直接播放试听（音频/角色卡）
   useEffect(() => {
     if (!canPlay) return
@@ -244,6 +268,7 @@ export function CloudAssetCard(props) {
   }
 
   const addLabel = added ? t('card.addedToConversation') : t('card.addToConversation')
+  const saveLabel = saved ? t('card.savedToLocal') : t('card.saveToLocal')
   const previewLabel = `${asset.name} · ${t('card.view')}`
   // A voice card carries one of five restrained dark washes, picked by row id so
   // it never changes between renders. Other kinds declare no theme.
@@ -281,10 +306,23 @@ export function CloudAssetCard(props) {
       {/* 悬停暗化遮罩蒙层（对标图 3） */}
       <div className="omnimux-assets-cloud-card-mask" aria-hidden="true" />
       <div className="omnimux-assets-cloud-actions">
+        {/* FIRST in the cluster, so the save plate sits to the LEFT of the bubble. */}
         <IconButton
           variant="ghost"
           size="sm"
-          className="omnimux-assets-cloud-chat"
+          className="omnimux-assets-cloud-action omnimux-assets-cloud-save"
+          aria-label={saveLabel}
+          title={saveLabel}
+          disabled={saved}
+          loading={saving}
+          onClick={handleSave}
+        >
+          {saved ? <CheckIcon size={16} /> : <IconDownloadOutline16 size={16} />}
+        </IconButton>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          className="omnimux-assets-cloud-action omnimux-assets-cloud-chat"
           aria-label={addLabel}
           title={addLabel}
           disabled={added}
@@ -521,14 +559,22 @@ function CloudCategoryNav(props) {
 /**
  * Cloud source tab body: category navigation, a card grid with a fixed tile
  * ratio, and paging driven by a bottom sentinel.
+ *
+ * The save trio is injected by the stage's controller — read-only sets plus the
+ * one callback — so the cards and the preview modal report the same saved state
+ * for the same row. A caller that passes none of it simply gets no save entry.
  * @param {{
  *   t: (key: string) => string,
  *   open?: boolean,
  *   onPreview?: (asset: any) => void,
+ *   query?: string,
+ *   savedIds?: Set<string>,
+ *   savingIds?: Set<string>,
+ *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudAssetsView(props) {
-  const { t, open = true, onPreview } = props
+  const { t, open = true, onPreview, savedIds = NO_IDS, savingIds = NO_IDS, onSave } = props
   const query = props.query ?? ''
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   // 网格列数由容器宽度决定并封顶 5 列，写在容器的 data-columns 上（见 grid-columns.js）。
@@ -598,6 +644,9 @@ export function CloudAssetsView(props) {
             onPreview={onPreview}
             playingId={audition.playingId}
             refreshKey={feed.refreshKey}
+            savedIds={savedIds}
+            savingIds={savingIds}
+            onSave={onSave}
           />
         ))}
       </div>
@@ -642,6 +691,9 @@ export function CloudAssetsView(props) {
               playing={audition.playingId === asset.id}
               onTogglePlay={onTogglePlay}
               onPreview={onPreview}
+              saved={savedIds.has(asset.id)}
+              saving={savingIds.has(asset.id)}
+              onSave={onSave}
             />
           )}
         />

@@ -1,18 +1,20 @@
 /**
  * The save-to-local controller for the cloud source tab.
  *
- * One controller per stage rather than one per view. It serves the cloud preview
- * modal, which is now the only place a catalog row can be copied into the local
- * library — the grid cards themselves offer just 加入对话 — so `savedIds` marks
- * the modal's button as 已收藏 and keeps a second copy of the same row out.
+ * One controller per stage rather than one per view: the cloud cards and the
+ * preview modal share it, so a row saved from either entry point is marked in
+ * both. `savedIds` keeps the second copy of a row out of the library and pins
+ * the saved tick on the card.
  *
- * The save itself is single-flight — a second click while a copy is in progress
- * is dropped rather than racing the same catalog row into the library, and a row
- * already saved is never sent twice.
+ * The save is single-flight *per asset id* — a repeat click on the same row
+ * while its copy is in progress is dropped rather than racing that row into the
+ * library, while a second card's save starts its own request instead of being
+ * swallowed. A row already saved is never sent twice, and every failure lands
+ * on one notice line that says nothing but `error.saveFailed`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createCloudSaveFlight } from './cloud-save-flight.js'
 import { saveCloudAssetToLocal } from './cloud-save.js'
-import { errText } from './feed-helpers.js'
 
 /** How long the "saved" notice stays on screen. */
 export const CLOUD_NOTICE_MS = 2400
@@ -23,12 +25,10 @@ export const CLOUD_NOTICE_MS = 2400
 export function useCloudSave(options) {
   const { t } = options
   const [savedIds, setSavedIds] = useState(() => new Set())
-  const [savingId, setSavingId] = useState('')
+  const [savingIds, setSavingIds] = useState(() => new Set())
   const [notice, setNotice] = useState('')
-  const savedRef = useRef(savedIds)
-  const inFlightRef = useRef(false)
-
-  useEffect(() => { savedRef.current = savedIds }, [savedIds])
+  const flightRef = useRef(/** @type {ReturnType<typeof createCloudSaveFlight> | null} */ (null))
+  if (flightRef.current === null) flightRef.current = createCloudSaveFlight()
 
   /**
    * Save one row, reporting whether it landed and why it did not.
@@ -36,32 +36,34 @@ export function useCloudSave(options) {
    * @returns {Promise<boolean>}
    */
   const save = useCallback(async (asset) => {
+    const flight = flightRef.current
     const id = String(asset?.id ?? '')
-    if (id === '' || inFlightRef.current || savedRef.current.has(id)) return false
-    inFlightRef.current = true
-    setSavingId(id)
+    // A row with no id, a row already in flight and a row already saved are all
+    // dropped here: the first has nothing to save, and the other two are visible
+    // on the card itself (saving / saved), so the click is explained, not lost.
+    if (flight.admit(id) !== 'accept') return false
+    setSavingIds(new Set(flight.savingIds))
     setNotice('')
+    let ok = false
     try {
       const result = await saveCloudAssetToLocal(asset)
       if (!result.ok) {
-        // `save-failed` means the Host answered without a readable reason.
-        setNotice(result.error === 'save-failed' ? t('error.generic') : String(result.error))
+        // 宿主 message 是诊断信息，只进控制台：通知条上只允许那一句失败文案。
+        console.error('[assets] cloud save failed', result.error)
+        setNotice(t('error.saveFailed'))
         return false
       }
-      setSavedIds((prev) => {
-        if (prev.has(id)) return prev
-        const next = new Set(prev)
-        next.add(id)
-        return next
-      })
-      setNotice(t('modal.save.notice').replace('{name}', String(asset?.name ?? '')))
+      ok = true
+      setNotice(t('cloud.save.notice').replace('{name}', String(asset?.name ?? '')))
       return true
     } catch (caught) {
-      setNotice(errText(caught))
+      console.error(caught)
+      setNotice(t('error.saveFailed'))
       return false
     } finally {
-      inFlightRef.current = false
-      setSavingId('')
+      flight.settle(id, ok)
+      setSavedIds(new Set(flight.savedIds))
+      setSavingIds(new Set(flight.savingIds))
     }
   }, [t])
 
@@ -71,5 +73,5 @@ export function useCloudSave(options) {
     return () => { clearTimeout(timer) }
   }, [notice])
 
-  return { savedIds, savingId, notice, save }
+  return { savedIds, savingIds, notice, save }
 }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -52,6 +52,33 @@ function makeDispatcher(opts = {}) {
 /** POST with default local headers. */
 function post(path, body, extra = {}) {
   return { method: 'POST', url: path, body, ...extra }
+}
+
+/** Files under the catalog staging area, slices included. */
+function stagedCount(dir = join(root, 'catalog', '.staging')) {
+  if (!existsSync(dir)) return 0
+  return readdirSync(dir, { withFileTypes: true })
+    .reduce((total, entry) => total + (entry.isDirectory() ? stagedCount(join(dir, entry.name)) : 1), 0)
+}
+
+/** Poll until the staging area holds `expected` files: a download lands later. */
+async function waitForStaging(expected, timeoutMs = 3000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (stagedCount() === expected) return
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  assert.equal(stagedCount(), expected, 'timed out waiting for the expected staging state')
+}
+
+/** A successful remote answer whose content type follows the URL. */
+function remoteOkResponse(url) {
+  const isImage = /\.(jpe?g|png|webp|gif)$/i.test(String(url))
+  return {
+    ok: true,
+    headers: { get: (name) => (name === 'content-type' ? (isImage ? 'image/jpeg' : 'video/mp4') : null) },
+    arrayBuffer: async () => new TextEncoder().encode('remote-bytes').buffer,
+  }
 }
 
 /**
@@ -983,6 +1010,142 @@ describe('Cloud dimension filter route', () => {
     assert.equal(response.body.total, 2)
     assert.equal(response.body.totalPages, 2)
     assert.deepEqual(response.body.items.map((row) => row.id), ['character-2'])
+  })
+})
+
+describe('Cloud save route', () => {
+  /**
+   * A dispatcher over a catalog whose cover and media are both remote, so the
+   * route's answer depends entirely on the injected fetch.
+   * @param {typeof fetch} fetchImpl
+   * @param {object[]} [extraRows] further rows appended to the default one
+   */
+  function makeSaveDispatcher(fetchImpl, extraRows = []) {
+    const catalogDir = join(root, 'catalog')
+    mkdirSync(catalogDir, { recursive: true })
+    const rows = [
+      {
+        id: 'scene-remote-aaa',
+        category: 'scene',
+        sub_category: '',
+        name: 'Kitchen',
+        description: '厨房氛围',
+        media_type: 'video',
+        media_url: 'https://cdn.example.com/kitchen.mp4',
+        cover_url: 'https://cdn.example.com/kitchen-poster.jpg',
+        tags: [],
+        meta: {},
+      },
+      ...extraRows,
+    ]
+    writeFileSync(join(catalogDir, 'manifest.json'), JSON.stringify({
+      version: 1,
+      pageSize: 24,
+      totalAssets: rows.length,
+      sourceRoot: '',
+      categories: [{ id: 'scene', zh: '场景', en: 'Scenes', total: 1, pages: 1 }],
+    }))
+    writeFileSync(join(catalogDir, 'index.json'), JSON.stringify(rows))
+
+    const { mappings, artifacts, library } = makeDispatcher()
+    return {
+      dispatcher: createAssetsDispatcher({
+        mappings,
+        artifacts,
+        library,
+        cloud: createCloudCatalog({ catalogDir, library, fetchImpl }),
+      }),
+      library,
+    }
+  }
+
+  it('answers a failed remote download with 502', async () => {
+    const { dispatcher, library } = makeSaveDispatcher(async () => {
+      throw new Error('network down')
+    })
+
+    const response = await dispatcher.dispatch(
+      post('/omnimux/assets/cloud/save', { id: 'scene-remote-aaa' }),
+    )
+    assert.equal(response.status, 502)
+    assert.equal(response.body.error, 'remote-fetch-failed')
+    assert.equal(library.list().length, 0, '失败不得落一条空资产')
+  })
+
+  it('answers a saved remote row with the asset', async () => {
+    const { dispatcher, library } = makeSaveDispatcher(async (url) => ({
+      ok: true,
+      headers: {
+        get: (name) => (name === 'content-type'
+          ? (String(url).includes('poster') ? 'image/jpeg' : 'video/mp4')
+          : null),
+      },
+      arrayBuffer: async () => new TextEncoder().encode('remote-bytes').buffer,
+    }))
+
+    const response = await dispatcher.dispatch(
+      post('/omnimux/assets/cloud/save', { id: 'scene-remote-aaa' }),
+    )
+    assert.equal(response.status, 200)
+    assert.equal(response.body.asset.files.length, 2)
+    assert.equal(library.list().length, 1)
+  })
+
+  it('answers a save whose cover landed but the main media failed with 502', async () => {
+    const { dispatcher, library } = makeSaveDispatcher(async (url) => {
+      if (String(url).includes('kitchen.mp4')) return { ok: false, status: 404, headers: { get: () => null } }
+      return remoteOkResponse(url)
+    })
+
+    const response = await dispatcher.dispatch(
+      post('/omnimux/assets/cloud/save', { id: 'scene-remote-aaa' }),
+    )
+    assert.equal(response.status, 502)
+    assert.equal(response.body.error, 'remote-fetch-failed')
+    assert.equal(library.list().length, 0, '只有封面、没有内容文件的半截资产不得入库')
+  })
+
+  it('saves two overlapping rows without either clearing the other staging', async () => {
+    let releaseMedia = () => {}
+    const held = new Promise((resolve) => { releaseMedia = resolve })
+    const { dispatcher, library } = makeSaveDispatcher(
+      async (url) => {
+        // B 的主媒体被闸门卡住，好让 A 在 B 还在途时跑完自己的 finally。
+        if (String(url).includes('balcony.mp4')) await held
+        return remoteOkResponse(url)
+      },
+      [{
+        id: 'scene-remote-bbb',
+        category: 'scene',
+        sub_category: '',
+        name: 'Balcony',
+        description: '阳台氛围',
+        media_type: 'video',
+        media_url: 'https://cdn.example.com/balcony.mp4',
+        cover_url: 'https://cdn.example.com/balcony-poster.jpg',
+        tags: [],
+        meta: {},
+      }],
+    )
+
+    const savingB = dispatcher.dispatch(post('/omnimux/assets/cloud/save', { id: 'scene-remote-bbb' }))
+    try {
+      await waitForStaging(1)
+
+      const responseA = await dispatcher.dispatch(post('/omnimux/assets/cloud/save', { id: 'scene-remote-aaa' }))
+      assert.equal(responseA.status, 200)
+      assert.equal(responseA.body.asset.files.length, 2)
+      assert.equal(stagedCount(), 1, '先完成者不得抹掉在途者的暂存文件')
+    } finally {
+      // 断言失败也必须放行闸门，否则一条红灯会拖着 120s 的取用超时不让进程退出。
+      releaseMedia()
+    }
+
+    const responseB = await savingB
+    assert.equal(responseB.status, 200, 'B 不得因 A 的清理而 500')
+    assert.equal(responseB.body.asset.files.length, 2, 'B 声明的封面与主媒体都必须入库')
+    assert.equal(library.list().length, 2)
+    assert.equal(stagedCount(), 0, '两次保存都结束后暂存区不得留下残片')
   })
 })
 

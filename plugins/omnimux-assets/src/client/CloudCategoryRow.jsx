@@ -8,11 +8,21 @@ import { ChevronLeftIcon, ChevronRightIcon } from './icons.jsx'
 import { CloudAssetCard } from './CloudAssetsView.jsx'
 
 /**
+ * 缺省读面：没有控制器注入时两张卡都按「未保存」渲染（只读空集）。
+ * 逐文件声明，不新增跨文件的共享导出。
+ */
+const NO_IDS = new Set()
+
+/**
  * Single horizontal category row in the cross-category "All" view.
  *
  * Each category displays a section header (title, description, and "View all ->" CTA)
  * and a single-row scrollable container of cards with randomized order per refresh
  * and session-level caching to keep order stable during navigation.
+ *
+ * The row draws the same `CloudAssetCard` the grid does, so it has to pass the
+ * save trio straight through: read-only `savedIds` / `savingIds` and the
+ * `onSave` callback, both owned by the stage's controller.
  *
  * @param {{
  *   category: { id: string, zh?: string, en?: string, total?: number },
@@ -22,10 +32,13 @@ import { CloudAssetCard } from './CloudAssetsView.jsx'
  *   onPreview?: (asset: any) => void,
  *   playingId?: string,
  *   refreshKey?: number,
+ *   savedIds?: Set<string>,
+ *   savingIds?: Set<string>,
+ *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudCategoryRow(props) {
-  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, refreshKey = 0 } = props
+  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, refreshKey = 0, savedIds = NO_IDS, savingIds = NO_IDS, onSave } = props
   const [items, setItems] = useState(/** @type {any[]} */ ([]))
   const [loading, setLoading] = useState(false)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -158,6 +171,9 @@ export function CloudCategoryRow(props) {
                 playing={playingId === asset.id}
                 onTogglePlay={onTogglePlay}
                 onPreview={onPreview}
+                saved={savedIds.has(asset.id)}
+                saving={savingIds.has(asset.id)}
+                onSave={onSave}
               />
             ))
           )}

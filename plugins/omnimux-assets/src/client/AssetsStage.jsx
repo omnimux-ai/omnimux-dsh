@@ -279,12 +279,21 @@ function AssetsBody(props) {
   if (sourceTab === 'cloud') {
     // Mounted only while the cloud tab is selected: leaving it unmounts the
     // feed, which is what stops an in-flight audition and releases its audio.
-    // Cards carry no save control — the only route out of a card is into the
-    // conversation — so the stage's controller serves the preview modal alone.
+    // The stage's single save controller reaches the cards through this view as
+    // a narrow interface — the two read-only id sets plus the one callback —
+    // so the cards and the preview modal report the same saved state.
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} query={feed.query} />
+          <CloudAssetsView
+            t={t}
+            open={visible}
+            onPreview={onCloudPreview}
+            query={feed.query}
+            savedIds={cloudSave.savedIds}
+            savingIds={cloudSave.savingIds}
+            onSave={cloudSave.save}
+          />
         </div>
       </div>
     )
@@ -577,7 +586,7 @@ export function AssetsStage(props) {
           t={t}
           onClose={() => setPreviewTarget(null)}
           saved={previewCloudId !== '' && cloudSave.savedIds.has(previewCloudId)}
-          saving={previewCloudId !== '' && cloudSave.savingId === previewCloudId}
+          saving={previewCloudId !== '' && cloudSave.savingIds.has(previewCloudId)}
           onSaveToLocal={previewCloudId !== '' ? savePreviewItem : undefined}
         />
       )}

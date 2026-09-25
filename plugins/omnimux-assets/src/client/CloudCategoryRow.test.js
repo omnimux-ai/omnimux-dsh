@@ -63,4 +63,18 @@ describe('Cloud category row layout and refresh shuffle cache contract', () => {
     assert.match(ASSETS_CSS, /var\(--dsw-alias-bg-elevated\)/)
     assert.match(ASSETS_CSS, /var\(--dsw-alias-border\)/)
   })
+
+  /**
+   * 行布局复用同一个 CloudAssetCard，所以保存状态只有一条传递路径：
+   * stage 的控制器 → CloudAssetsView → 本行 → 卡片。
+   */
+  it('forwards the save trio down to the card', () => {
+    assert.match(rowJsx, /onSave=\{onSave\}/)
+    assert.match(rowJsx, /saved=\{savedIds\.has\(asset\.id\)\}/)
+    assert.match(rowJsx, /saving=\{savingIds\.has\(asset\.id\)\}/)
+    // 缺省读面：调用方不传这三项时，行仍按「未保存」渲染而不是崩掉。
+    assert.match(rowJsx, /savedIds = NO_IDS/)
+    assert.match(rowJsx, /savingIds = NO_IDS/)
+    assert.match(viewJsx, /savedIds=\{savedIds\}[\s\S]*?savingIds=\{savingIds\}[\s\S]*?onSave=\{onSave\}/)
+  })
 })

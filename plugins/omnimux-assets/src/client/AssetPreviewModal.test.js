@@ -97,7 +97,7 @@ describe('AssetPreviewModal component contract and tokens compliance', () => {
  * which is how a library item — already local — avoids being saved twice.
  */
 describe('AssetPreviewModal dual actions', () => {
-  it('offers 收藏到本地 next to 加入对话 when the caller can save', () => {
+  it('offers 保存到本地 next to 加入对话 when the caller can save', () => {
     assert.match(modalJsx, /\{typeof onSaveToLocal === 'function' \? \(/)
     assert.match(modalJsx, /className="omnimux-assets-modal-save"/)
     assert.match(modalJsx, /leadingIcon=\{saved \? <CheckIcon size=\{14\} \/> : <PlusIcon size=\{14\} \/>\}/)
@@ -118,13 +118,13 @@ describe('AssetPreviewModal dual actions', () => {
   })
 
   it('localizes the save action in zh and en', () => {
-    assert.equal(zh['modal.saveToLocal'], '收藏到本地')
-    assert.equal(zh['modal.savedToLocal'], '已收藏')
+    assert.equal(zh['modal.saveToLocal'], '保存到本地')
+    assert.equal(zh['modal.savedToLocal'], '已保存')
     assert.equal(en['modal.saveToLocal'], 'Save to Library')
     assert.equal(en['modal.savedToLocal'], 'Saved to Library')
   })
 
-  it('inks the saved plate with tokens so 已收藏 survives a reopen', () => {
+  it('inks the saved plate with tokens so 已保存 survives a reopen', () => {
     const saved = stylesJs.slice(stylesJs.indexOf('.omnimux-assets-modal-save[aria-pressed="true"]'))
     assert.match(saved, /background: var\(--dsw-alias-label-primary\)/)
     assert.match(saved, /color: var\(--dsw-alias-label-primary-foreground\)/)

@@ -954,7 +954,7 @@ export const ASSETS_CSS = `
   gap: 8px;
 }
 /* The modal's half of the cloud -> local bridge. The scoped selector is what
-   outranks the kit's own outline-button rule; 已收藏 then reads as a filled
+   outranks the kit's own outline-button rule; 已保存 then reads as a filled
    plate, so a reopened preview still shows the row as done. */
 .omnimux-assets-modal-actions .omnimux-assets-modal-save[aria-pressed="true"] {
   background: var(--dsw-alias-label-primary);
@@ -1302,10 +1302,11 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb[aria-pressed="true"] .omnimux-assets-cloud-play {
   opacity: 1;
 }
-/* Top-right hover control: the one route out of a card, which mounts the asset
-   into the conversation. A neutral plate that inverts to ink under the pointer;
-   it carries no hue of its own.
-   The control is pinned to the corner — absolute, above the card body — so it
+/* Top-right hover cluster: two controls share one corner — 保存到本地 copies the
+   row into the local library, 加入会话 mounts it into the conversation. Both wear
+   the same neutral plate, declared once on the shared class so the pair cannot
+   drift apart; it inverts to ink under the pointer and carries no hue of its own.
+   The cluster is pinned to the corner — absolute, above the card body — so it
    never joins the flow and never lands in the middle of the text. */
 .omnimux-assets-cloud-actions {
   position: absolute;
@@ -1316,7 +1317,7 @@ export const ASSETS_CSS = `
   align-items: center;
   gap: 6px;
 }
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat {
+.omnimux-assets-cloud-card .omnimux-assets-cloud-action {
   border-radius: 8px;
   background: var(--dsw-alias-bg-elevated);
   border-color: var(--dsw-alias-border-l2);
@@ -1324,11 +1325,11 @@ export const ASSETS_CSS = `
   opacity: 0;
   transition: opacity 0.16s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-chat,
-.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat {
+.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-action,
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-action {
   opacity: 1;
 }
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]) {
+.omnimux-assets-cloud-card .omnimux-assets-cloud-action:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-label-primary-foreground);
@@ -1403,6 +1404,10 @@ export const ASSETS_CSS = `
   font-size: 12px;
   background: var(--dsw-alias-bg-module-platform);
   color: var(--dsw-alias-label-secondary);
+  /* 资产名可以很长：截断成一行，避免通知条换行把工具区向下顶。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- cloud assets category rows layout (All category stream) ---- */

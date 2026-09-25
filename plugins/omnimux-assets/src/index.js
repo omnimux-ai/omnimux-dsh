@@ -189,6 +189,8 @@ export function apply(ctx) {
         })
         return { ok: true, asset }
       } finally {
+        // The save already dropped its own staging slice; this bare sweep only
+        // collects what a crashed save left behind and never touches a live slice.
         cloud.clearStaging()
       }
     },
