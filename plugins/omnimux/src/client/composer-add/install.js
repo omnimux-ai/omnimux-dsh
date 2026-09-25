@@ -40,6 +40,7 @@ function createToast(doc) {
  */
 export function installComposerAddCapture(doc, { t, store, sessions }) {
   let focusTarget = null
+  let currentModel = null
   const toast = createToast(doc)
   const controller = createComposerAddController({
     t,
@@ -53,10 +54,8 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     },
     renderLibrary(model) {
       // 废除旧全屏 LibraryBrowser 覆盖层，改由右栏 AssetHubPanel 承载
-      // 避免 owner 操作者残留：三栏架构下由右栏原生工作台接管交互，主动释放旧 operation 占位
-      if (model && typeof model.onClose === 'function') {
-        model.onClose()
-      }
+      // 严禁在此入口同步调用 model.onClose()，释放 operation 占位应在右栏完成消费接管或显式关闭时触发
+      currentModel = model
     },
     onPrompt(prompt) {
       const sessionId = sessions.list.getSnapshot().current
@@ -76,6 +75,10 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
       controller.openInspiration(sessionId)
     },
     dispose() {
+      if (currentModel && typeof currentModel.onClose === 'function') {
+        currentModel.onClose()
+        currentModel = null
+      }
       controller.dispose()
       toast.dispose()
     },

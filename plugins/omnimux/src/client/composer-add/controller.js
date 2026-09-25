@@ -404,13 +404,13 @@ export function createComposerAddController(options) {
 
   return {
     openLibrary(sessionId) {
-      openKind(sessionId, 'library')
+      return openKind(sessionId, 'library').catch(() => {})
     },
     openProduct(sessionId) {
-      openKind(sessionId, 'product')
+      return openKind(sessionId, 'product').catch(() => {})
     },
     openInspiration(sessionId) {
-      openKind(sessionId, 'inspiration')
+      return openKind(sessionId, 'inspiration').catch(() => {})
     },
     dispose() {
       if (disposed) return

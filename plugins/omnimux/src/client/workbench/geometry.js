@@ -35,7 +35,7 @@ export function isAssetHubActive(state) {
   if (typeof state === 'string') return state === ASSET_HUB_TAB_ID
   if (typeof state !== 'object') return false
   if (state.activeTab === ASSET_HUB_TAB_ID || state.tabId === ASSET_HUB_TAB_ID || state.activeTabId === ASSET_HUB_TAB_ID || state.tab === ASSET_HUB_TAB_ID) return true
-  if (state.state && typeof state.state === 'object') {
+  if (state.state && typeof state.state === 'object' && state.state !== state) {
     if (isAssetHubActive(state.state)) return true
   }
   const currentTab = activeTabId(state)
@@ -384,13 +384,26 @@ function resolveChatRatio(env = {}) {
  * @param {{ viewportWidth?: number, officialSidebarWidth?: number, chatRatio?: number, railBaselinePx?: number }} [env]
  * @returns {{ visibleStage: number, stage: number, budget: { chatWidth: number, minChatWidth: number, maxChatWidth: number } }}
  */
+function isEnvConfig(obj) {
+  if (!obj || typeof obj !== 'object') return false
+  return (
+    typeof obj.viewportWidth === 'number' ||
+    typeof obj.collapsed === 'boolean' ||
+    typeof obj.ratio === 'number' ||
+    typeof obj.isAssetHub === 'boolean' ||
+    (Boolean(obj.doc) && typeof obj.doc === 'object') ||
+    typeof obj.officialSidebarWidth === 'number' ||
+    typeof obj.railBaselinePx === 'number'
+  )
+}
+
 function workbenchConversationGeometryPx(arg1 = {}, arg2 = undefined) {
   let env = {}
   let state = undefined
-  if (arg1 && ('viewportWidth' in arg1 || 'collapsed' in arg1 || 'ratio' in arg1 || 'isAssetHub' in arg1 || 'doc' in arg1)) {
+  if (isEnvConfig(arg1)) {
     env = arg1
     state = arg2 ?? liveSnapshot()?.state
-  } else if (arg2 && ('viewportWidth' in arg2 || 'collapsed' in arg2 || 'ratio' in arg2 || 'isAssetHub' in arg2 || 'doc' in arg2)) {
+  } else if (isEnvConfig(arg2)) {
     state = arg1
     env = arg2
   } else {
@@ -413,8 +426,8 @@ function workbenchConversationGeometryPx(arg1 = {}, arg2 = undefined) {
     collapsed,
   })
   const budget = resolveConversationPixelBudget(stage, ratio)
-  if (isAssetHubActive(state) || isAssetHubActive(env) || env.isAssetHub) {
-    const lockedChat = ASSET_HUB_CHAT_PX
+  if (isAssetHubActive(state) || env.isAssetHub) {
+    const lockedChat = Math.min(visibleStage, ASSET_HUB_CHAT_PX)
     return {
       visibleStage,
       stage,

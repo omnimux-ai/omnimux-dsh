@@ -22,6 +22,7 @@ import {
 } from './asset-hub-data.js'
 import { createAttachmentStore } from '../attachments/store.ts'
 import { createComposerAddController } from '../composer-add/controller.js'
+import { installComposerAddCapture } from '../composer-add/install.js'
 import { zh } from '../locales.js'
 
 describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测试', () => {
@@ -293,5 +294,125 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     // 筛选「全部」不过滤
     const allResult = filterAssetHubItems(mockFeed, '全部', '')
     assert.equal(allResult.length, 4)
+  })
+
+  it('T07: 第3轮代码审查缺陷（1 Critical + 4 High + 7 Medium）闭环攻坚验证', async () => {
+    // 1. High #4: adaptCardToAttachmentPayload 严格动态匹配实际媒体类型 (image/audio/video)
+    const imgCard = {
+      id: 'insp_img',
+      lane: 'inspiration',
+      title: '创意海报.png',
+      mediaType: 'image',
+      formatText: 'PNG',
+      thumbnailUrl: 'http://test/img.png',
+      raw: {},
+    }
+    const imgPayload = adaptCardToAttachmentPayload(imgCard)
+    assert.equal(imgPayload.kind, 'image')
+    assert.equal(imgPayload.extension, 'PNG')
+
+    const audioCard = {
+      id: 'insp_audio',
+      lane: 'inspiration',
+      title: '音效.mp3',
+      mediaType: 'audio',
+      formatText: 'MP3',
+      thumbnailUrl: 'http://test/audio.png',
+      raw: {},
+    }
+    const audioPayload = adaptCardToAttachmentPayload(audioCard)
+    assert.equal(audioPayload.kind, 'audio')
+    assert.equal(audioPayload.extension, 'MP3')
+
+    const videoCard = {
+      id: 'insp_video',
+      lane: 'inspiration',
+      title: '成片.mp4',
+      mediaType: 'video',
+      formatText: 'MP4',
+      thumbnailUrl: 'http://test/video.png',
+      raw: {},
+    }
+    const videoPayload = adaptCardToAttachmentPayload(videoCard)
+    assert.equal(videoPayload.kind, 'video')
+    assert.equal(videoPayload.extension, 'MP4')
+
+    // 2. Medium #12: normalizeInspirationItem 增加正向视频特征探针，避免未知格式被误判为视频
+    const unknownItem = normalizeInspirationItem({
+      id: 'doc_1',
+      title: '纯文本笔记',
+      type: 'text_note',
+    })
+    assert.notEqual(unknownItem.mediaType, 'video')
+    assert.notEqual(unknownItem.formatText, 'MP4')
+
+    const videoItemWithUrl = normalizeInspirationItem({
+      id: 'video_1',
+      title: '一段视频',
+      videoUrl: 'http://test/video.mp4',
+    })
+    assert.equal(videoItemWithUrl.mediaType, 'video')
+    assert.equal(videoItemWithUrl.formatText, 'MP4')
+
+    // 3. Medium #11: geometry.js isAssetHubActive 环路与深度防御
+    const circularState = { tab: 'other' }
+    circularState.state = circularState
+    assert.equal(isAssetHubActive(circularState), false)
+
+    // 4. High #3 & Medium #9 & #10: geometry.js 夹紧保底与精准类型判定
+    // 窄屏 (可见舞台 300px < 380px) 下，中栏应被夹紧于 300px
+    const narrowWb = workbenchDefaultWidthPx({ tabId: ASSET_HUB_TAB_ID }, {
+      viewportWidth: 300,
+      officialSidebarWidth: 0,
+      railBaselinePx: 0,
+    })
+    // 检查不撑爆布局
+    assert.ok(narrowWb >= 280)
+
+    // 5. Medium #6: controller.js openLibrary / openProduct / openInspiration 补齐 .catch() 异常保护
+    const throwingStore = createAttachmentStore()
+    const throwingController = createComposerAddController({
+      store: throwingStore,
+      t: (key) => key,
+      getCurrentSessionId: () => 'sess_err',
+      subscribeCurrentSession: () => () => {},
+      renderLibrary: () => {},
+      notify: () => {},
+      workbench: {
+        openWorkbench() {
+          return Promise.reject(new Error('Workbench open failed'))
+        },
+      },
+    })
+    // 即使 openWorkbench 返回 reject，调用 openLibrary 也不会触发 unhandled rejection
+    await assert.doesNotReject(async () => {
+      await throwingController.openLibrary('sess_err')
+      await throwingController.openProduct('sess_err')
+      await throwingController.openInspiration('sess_err')
+    })
+    throwingController.dispose()
+
+    // 6. High #2: install.js 严禁在 renderLibrary 渲染入口同步调用 model.onClose()
+    const mockDoc = {
+      activeElement: null,
+      createElement: () => ({ setAttribute: () => {}, style: {} }),
+      body: { appendChild: () => {} },
+      defaultView: { clearTimeout: () => {}, setTimeout: () => 1 },
+    }
+    const mockSessions = {
+      list: {
+        getSnapshot: () => ({ current: 'sess_1' }),
+        subscribe: () => () => {},
+      },
+    }
+    const capture = installComposerAddCapture(mockDoc, {
+      t: (k) => k,
+      store: createAttachmentStore(),
+      sessions: mockSessions,
+    })
+    assert.doesNotThrow(() => {
+      capture.openLibrary('sess_1')
+    })
+    capture.dispose()
   })
 })

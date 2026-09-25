@@ -130,10 +130,17 @@ export function normalizeInspirationItem(row) {
   const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'picture' ||
     ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'WEBP' || ext === 'GIF'
   const isAudio = rawType === 'audio' || ext === 'MP3' || ext === 'WAV'
-  const isVideo = !isImage && !isAudio
+  const hasVideoProbe = Boolean(
+    rawType === 'video' || rawType === 'short' || rawType === 'reel' || rawType === 'media' ||
+    ext === 'MP4' || ext === 'WEBM' || ext === 'MOV' || ext === 'MKV' || ext === 'AVI' || ext === 'M4V' ||
+    row.videoUrl || row.mediaUrl || (Array.isArray(row.media_urls) && row.media_urls.length > 0) || row.video ||
+    (typeof row.duration === 'number' && row.duration > 0) ||
+    /video|视频|reel|short/i.test(title)
+  )
+  const isVideo = !isImage && !isAudio && hasVideoProbe
 
-  const mediaType = isImage ? 'image' : isAudio ? 'audio' : 'video'
-  const formatText = ext || (isImage ? 'PNG' : isAudio ? 'MP3' : 'MP4')
+  const mediaType = isImage ? 'image' : isAudio ? 'audio' : isVideo ? 'video' : (rawType || 'custom')
+  const formatText = ext || (isImage ? 'PNG' : isAudio ? 'MP3' : isVideo ? 'MP4' : '')
   const durationText = (isVideo || isAudio) && typeof row.duration === 'number' ? formatDuration(row.duration) : ''
   const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || row.cover_url || (isImage ? rawUrl : '')
   const previewVideoUrl = isVideo ? (row.videoUrl || row.mediaUrl || row.url || (Array.isArray(row.media_urls) ? row.media_urls[0] : '')) : ''
@@ -320,13 +327,15 @@ export function adaptCardToAttachmentPayload(card) {
   }
 
   if (card.lane === 'inspiration') {
+    const kind = card.mediaType === 'image' ? 'image' : card.mediaType === 'audio' ? 'audio' : 'video'
+    const extension = card.formatText || (card.mediaType === 'image' ? 'JPG' : 'MP4')
     return {
       sourcePlugin: 'omnimux-inspiration',
-      kind: 'video',
+      kind,
       entityId: card.id,
       title: card.title,
-      extension: 'MP4',
-      relativePath: raw.relativePath || `inspiration/${card.id}.mp4`,
+      extension,
+      relativePath: raw.relativePath || `inspiration/${card.id}.${extension.toLowerCase()}`,
       previewUrl: card.thumbnailUrl,
       metadata: { inspiration: raw },
     }

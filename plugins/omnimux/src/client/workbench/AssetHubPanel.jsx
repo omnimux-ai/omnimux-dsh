@@ -83,7 +83,7 @@ export function AssetHubPanel(props) {
         return props.sessions.list.subscribe(listener)
       }
       return () => {}
-    }, [props.sessions]),
+    }, [props.sessions?.list]),
     () => props.sessions?.list?.getSnapshot?.()?.current,
     () => props.sessions?.list?.getSnapshot?.()?.current
   )
@@ -194,7 +194,7 @@ export function AssetHubPanel(props) {
     const result = attachmentStore.addAttachment(resolvedSessionId, payload)
     if (!result.ok) {
       if (result.reason === 'duplicate') {
-        const dupMsg = (props.t?.('composerAdd.toast.duplicate') || '已存在 {n} 项重复附件').replace('{n}', '1')
+        const dupMsg = props.t?.('composerAdd.toast.duplicate') || '已在附件列表中'
         showNotice(dupMsg)
         const doc = hostDocument() || (typeof document !== 'undefined' ? document : null)
         doc?.querySelector?.('[data-composer-input="true"]')?.focus?.({ preventScroll: true })
@@ -224,7 +224,6 @@ export function AssetHubPanel(props) {
     if (!doc?.createElement) return
     const input = doc.createElement('input')
     input.type = 'file'
-    input.multiple = true
     input.style.display = 'none'
     input.setAttribute('aria-hidden', 'true')
     doc.body.appendChild(input)
@@ -238,24 +237,11 @@ export function AssetHubPanel(props) {
           return
         }
 
-        let assetType = 'custom'
-        if (file.type?.startsWith('image/')) assetType = 'image'
-        else if (file.type?.startsWith('video/')) assetType = 'video'
-        else if (file.type?.startsWith('audio/')) assetType = 'audio'
-
+        const form = new FormData()
+        form.append('file', file)
         const response = await fetchFn('/omnimux/assets/library', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: file.name,
-            type: assetType,
-            files: [{
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              lastModified: file.lastModified,
-            }],
-          }),
+          body: form,
         })
         const resData = await response.json().catch(() => ({}))
         if (!response.ok) {
