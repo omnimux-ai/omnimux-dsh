@@ -39,6 +39,7 @@ import {
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
+  resolveDefaultNodeModelId,
 } from './appTabWidgets.js'
 
 export {
@@ -55,6 +56,7 @@ export {
   resolveWidget,
   displayValueOf,
   sanitizePreviewUrl,
+  resolveDefaultNodeModelId,
 }
 
 export const KNOWN_OFFICIAL_MODELS = Object.freeze({
@@ -728,47 +730,14 @@ export function AppTab(props) {
     }
   }, [])
 
-  const currentCategory = manifest?.metadata?.category === 'image' ? 'image' : 'video'
+  const currentCategory =
+    manifest?.metadata?.category === 'image' || manifest?.category === 'image' ? 'image' : 'video'
   const availableModels = useMemo(() => {
     return normalizeCatalogModels(modelCatalog, currentCategory)
   }, [modelCatalog, currentCategory])
 
   const defaultNodeModelId = useMemo(() => {
-    const nodes = manifest?.workflowBinding?.snapshot?.nodes || []
-    // 优先主生成节点（omnimux_video_submit / omnimux_image_submit / node.type === 'video' | 'image'）
-    for (const node of nodes) {
-      const d = node.data || {}
-      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
-        continue
-      }
-      const isGenNode =
-        d.tool === 'omnimux_video_submit' ||
-        d.tool === 'omnimux_image_submit' ||
-        node.type === 'video' ||
-        node.type === 'image' ||
-        d.type === 'video' ||
-        d.type === 'image' ||
-        d.materialType === 'video' ||
-        d.materialType === 'image'
-
-      if (isGenNode && (d.model || d.params?.model)) {
-        const mid = String(d.model || d.params?.model)
-        return mid === 'seedance-2-0' ? 'seedance-2.0' : mid
-      }
-    }
-
-    // 次优先：其它带有 model/params.model 的非 import 节点
-    for (const node of nodes) {
-      const d = node.data || {}
-      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
-        continue
-      }
-      if (d.model || d.params?.model) {
-        const mid = String(d.model || d.params?.model)
-        return mid === 'seedance-2-0' ? 'seedance-2.0' : mid
-      }
-    }
-    return ''
+    return resolveDefaultNodeModelId(manifest)
   }, [manifest])
 
   const defaultModelObj = useMemo(() => {
@@ -788,10 +757,8 @@ export function AppTab(props) {
   }, [selectedModel, defaultModelObj, availableModels])
 
   const defaultModelName = useMemo(() => {
-    if (!defaultNodeModelId) return ''
-    if (defaultModelObj) return defaultModelObj.name || defaultModelObj.id
-    return activeModelObj?.name || ''
-  }, [defaultNodeModelId, defaultModelObj, activeModelObj])
+    return defaultModelObj?.name || (currentCategory === 'image' ? 'GPT Image 2.5' : 'Seedance 2.0')
+  }, [defaultModelObj, currentCategory])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
@@ -1504,9 +1471,7 @@ export function AppTab(props) {
                     <span>
                       {selectedModel
                         ? (availableModels.find((m) => m.id === selectedModel)?.name || selectedModel)
-                        : defaultModelName
-                          ? `${defaultModelName} (工程默认 · 作者推荐)`
-                          : '智能推荐 (默认)'}
+                        : (defaultModelName || 'Seedance 2.0')}
                     </span>
                     <IconChevronDown size={14} />
                   </div>
@@ -1523,14 +1488,10 @@ export function AppTab(props) {
                       >
                         <div className="omx-apptab-model-option-content">
                           <span className="omx-apptab-model-name">
-                            {defaultModelName
-                              ? `${defaultModelName} (工程默认 · 作者推荐)`
-                              : '智能推荐 (默认)'}
+                            {defaultModelName || 'Seedance 2.0'}
                           </span>
                           <span className="omx-apptab-model-sub">
-                            {defaultModelName
-                              ? '当前工程节点预设模型，与分镜提示词深度调优'
-                              : '系统根据应用场景自动调度最佳生成模型'}
+                            工程预设推荐模型
                           </span>
                         </div>
                         {selectedModel === '' && <IconCheck size={12} className="omx-apptab-option-check" />}

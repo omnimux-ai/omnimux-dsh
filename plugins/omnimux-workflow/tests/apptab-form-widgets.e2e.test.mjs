@@ -302,14 +302,15 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
     )
   })
 
-  // 0. 验证表单首部渲染生成模型选择器，默认选中「智能推荐 (默认)」(Issue 2631)
+  // 0. 验证表单首部渲染生成模型选择器，默认展示纯净模型名 Seedance 2.0 (Issue #2631, #2647)
   const modelSelectGroup = Array.from(host.querySelectorAll('.omx-apptab-field-group')).find((fg) => {
     return fg.textContent.includes('生成模型')
   })
   assert.ok(modelSelectGroup, '表单首部必须包含生成模型选择器')
   const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
   assert.ok(modelTrigger, '生成模型选择器必须包含触发器')
-  assert.equal(modelTrigger.textContent.trim(), '智能推荐 (默认)', '生成模型默认选中智能推荐')
+  assert.equal(modelTrigger.textContent.trim(), 'Seedance 2.0', '生成模型默认展示纯净模型名 Seedance 2.0')
+  assert.doesNotMatch(modelTrigger.textContent, /工程默认|作者推荐|智能推荐/, '绝不包含任何工程默认后缀或智能推荐字样')
 
   // 1. 验证视频比例字段不再是普通 input，而是标准比例卡片组 (.omx-apptab-ratio-grid)
   const ratioGrid = host.querySelector('.omx-apptab-ratio-grid')
@@ -654,7 +655,8 @@ test('E2E: 表单首部生成模型切换、画幅比例动态契约驱动与提
 
   const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
   assert.ok(modelTrigger, '触发器必须存在')
-  assert.equal(modelTrigger.textContent.trim(), '智能推荐 (默认)', '初始默认显示智能推荐')
+  assert.equal(modelTrigger.textContent.trim(), 'Seedance 2.0', '初始默认展示纯净模型名 Seedance 2.0')
+  assert.doesNotMatch(modelTrigger.textContent, /工程默认|作者推荐|智能推荐/, '绝不包含任何工程默认后缀或智能推荐字样')
 
   // 2. 点击展开模型下拉列表
   fireClick(modelTrigger)
@@ -829,16 +831,17 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
   })
   assert.ok(modelSelectGroup, '生成模型控件组存在')
 
-  // 1. 验证默认收起态：展示工程作者推荐模型名称及标签
+  // 1. 验证默认收起态：展示纯净工程默认模型名称，绝无 (工程默认 · 作者推荐) 括号后缀 (Issue #2647)
   const modelTrigger = modelSelectGroup.querySelector('.omx-apptab-select-trigger')
   assert.ok(modelTrigger)
-  assert.match(
-    modelTrigger.textContent,
-    /Seedance 2\.0 \(工程默认 · 作者推荐\)/,
-    '默认态收起按钮文本必须显式展示工程节点模型名称与作者推荐标识',
+  assert.equal(
+    modelTrigger.textContent.trim(),
+    'Seedance 2.0',
+    '默认态收起按钮文本必须显式展示纯净模型名称',
   )
+  assert.doesNotMatch(modelTrigger.textContent, /工程默认 · 作者推荐/, '绝不包含任何 (工程默认 · 作者推荐) 括号后缀')
 
-  // 2. 展开下拉菜单，核查第一项默认选项的文案与说明
+  // 2. 展开下拉菜单，核查第一项默认选项的文案与说明 (Issue #2647)
   fireClick(modelTrigger)
   const optionsPanel = modelSelectGroup.querySelector('.omx-apptab-select-options')
   assert.ok(optionsPanel)
@@ -847,10 +850,11 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
   assert.ok(defaultOption)
   const nameSpan = defaultOption.querySelector('.omx-apptab-model-name')
   const subSpan = defaultOption.querySelector('.omx-apptab-model-sub')
-  assert.match(nameSpan.textContent, /Seedance 2\.0 \(工程默认 · 作者推荐\)/)
-  assert.match(subSpan.textContent, /当前工程节点预设模型，与分镜提示词深度调优/)
+  assert.equal(nameSpan.textContent.trim(), 'Seedance 2.0', '首项主标题直接展示纯净模型名称')
+  assert.doesNotMatch(nameSpan.textContent, /工程默认 · 作者推荐/, '主标题绝无冗长后缀括号')
+  assert.equal(subSpan.textContent.trim(), '工程预设推荐模型', '副标题极简展示工程预设推荐模型')
 
-  // 3. 验证无模型工程节点的兜底呈现：当工程未声明模型时回退为「智能推荐 (默认)」
+  // 3. 验证无模型工程节点时的健全推导呈现：彻底杜绝回退为「智能推荐 (默认)」(Issue #2647)
   const manifestWithoutModel = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
   manifestWithoutModel.workflowBinding = {
     workspaceId: 'ws_test_no_model',
@@ -886,7 +890,8 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
     fg.textContent.includes('生成模型'),
   )
   const modelTrigger2 = modelSelectGroup2.querySelector('.omx-apptab-select-trigger')
-  assert.match(modelTrigger2.textContent, /智能推荐 \(默认\)/, '无预设模型时必须安全兜底为智能推荐')
+  assert.equal(modelTrigger2.textContent.trim(), 'Seedance 2.0', '无生成节点时健全推导为 Seedance 2.0，彻底杜绝智能推荐')
+  assert.doesNotMatch(modelTrigger2.textContent, /智能推荐/, '绝不回退为智能推荐')
 
   // 4. 验证复杂多节点拓扑（含 slot 节点、import 节点、LLM 节点与主生成节点）下的排他精确寻址 (Issue #2642 Review #13)
   const manifestMultiNodes = JSON.parse(JSON.stringify(CHASING_PRODUCT_APP))
@@ -958,16 +963,69 @@ test('E2E: 表单首部生成模型默认项显式绑定工程作者模型 (Issu
     fg.textContent.includes('生成模型'),
   )
   const modelTrigger3 = modelSelectGroup3.querySelector('.omx-apptab-select-trigger')
-  assert.match(
-    modelTrigger3.textContent,
-    /可灵 Kling O3 \(工程默认 · 作者推荐\)/,
-    '在含 slot、import 和 LLM 节点的复杂拓扑中必须排他锁定真实主生成节点模型',
+  assert.equal(
+    modelTrigger3.textContent.trim(),
+    '可灵 Kling O3',
+    '在含 slot、import 和 LLM 节点的复杂拓扑中必须排他锁定真实主生成节点纯净模型名',
   )
+  assert.doesNotMatch(modelTrigger3.textContent, /工程默认 · 作者推荐/, '绝不包含任何括号后缀')
+
+  // 5. 补充验证历史缓存仅存有 workspaceId 且 snapshot.nodes 为空时的推导 (Issue #2647)
+  const manifestEmptyNodesHistory = {
+    appId: 'app-creatify-quick-promo',
+    category: 'video',
+    workflowBinding: {
+      workspaceId: 'ws-app-creatify-app-demo',
+      // snapshot.nodes 缺失
+    },
+    formSchema: { type: 'object', properties: {} },
+  }
+  const host4 = doc.createElement('div')
+  doc.body.appendChild(host4)
+  const root4 = createRoot(host4)
+  act(() => {
+    root4.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_history_cache',
+          extra: { manifest: manifestEmptyNodesHistory },
+        },
+      }),
+    )
+  })
+  const modelTrigger4 = host4.querySelector('.omx-apptab-select-trigger')
+  assert.equal(modelTrigger4.textContent.trim(), 'Seedance 2.0', '历史缓存无 nodes 时推导为 Seedance 2.0')
+  assert.doesNotMatch(modelTrigger4.textContent, /智能推荐|工程默认/)
+
+  // 6. 补充验证图片类应用且无 nodes 时的推导为 GPT Image 2.5 (Issue #2647)
+  const manifestImageApp = {
+    appId: 'app-product-photo-gen',
+    category: 'image',
+    formSchema: { type: 'object', properties: {} },
+  }
+  const host5 = doc.createElement('div')
+  doc.body.appendChild(host5)
+  const root5 = createRoot(host5)
+  act(() => {
+    root5.render(
+      React.createElement(AppTab, {
+        seed: {
+          id: 'app_image_gen',
+          extra: { manifest: manifestImageApp },
+        },
+      }),
+    )
+  })
+  const modelTrigger5 = host5.querySelector('.omx-apptab-select-trigger')
+  assert.equal(modelTrigger5.textContent.trim(), 'GPT Image 2.5', '图片类应用推导为 GPT Image 2.5')
+  assert.doesNotMatch(modelTrigger5.textContent, /智能推荐|工程默认/)
 
   act(() => {
     root.unmount()
     root2.unmount()
     root3.unmount()
+    root4.unmount()
+    root5.unmount()
   })
 })
 
