@@ -495,8 +495,10 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     // 触发 confirm
     const cRows = []
     for (const item of mockInspirations) {
-      const kind = item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'audio' : 'image'
-      const extension = item.extension || (kind === 'image' ? 'JPG' : kind === 'audio' ? 'MP3' : 'MP4')
+      const KIND_MAP = { video: 'video', audio: 'audio' }
+      const DEFAULT_EXT = { video: 'MP4', audio: 'MP3', image: 'JPG' }
+      const kind = KIND_MAP[item.kind] || 'image'
+      const extension = item.extension || DEFAULT_EXT[kind]
       cStore.addAttachment('sess_t08', {
         sourcePlugin: 'omnimux-inspiration',
         kind,
