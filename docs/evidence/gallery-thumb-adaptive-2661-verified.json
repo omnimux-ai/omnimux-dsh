@@ -1,0 +1,11 @@
+{
+  "task": "Issue #2661: 会话多素材画廊缩略图真实比例自适应与防截断",
+  "result": "PASS",
+  "evidence": {
+    "image": "docs/evidence/gallery-thumb-adaptive-2661-verified.png",
+    "pm_sign_off": "PASS",
+    "code_review": "PASS (20 rounds, zero high, zero medium)",
+    "qa_verification": "IS_PASS: YES (25/25 tests passed)"
+  },
+  "at": "2026-09-25T23:50:00.000Z"
+}
