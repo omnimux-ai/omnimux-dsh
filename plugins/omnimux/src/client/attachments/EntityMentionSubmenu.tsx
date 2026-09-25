@@ -399,6 +399,10 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
       }}
       role="menu"
       aria-label={`${type === 'product' ? '产品' : '角色'}选项列表`}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

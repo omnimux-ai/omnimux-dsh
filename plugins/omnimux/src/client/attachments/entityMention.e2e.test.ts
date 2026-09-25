@@ -34,6 +34,8 @@ import {
   captureComposerSelection,
   uninstallComposerCompactObserver,
   COMPOSER_COMPACT_CSS,
+  ENTITY_LABEL_CHARACTER,
+  ENTITY_LABEL_PRODUCT,
 } from '../composer-compact.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1415,5 +1417,654 @@ describe('PR #2649 第四轮审查缺陷闭环定点测试', () => {
       };
       triggerQuotaNotification(mockWinC, quotaMsg);
       assert.equal(notifyBridgeCount, 1, '降级链末端安全触发 __omnimuxNotify');
+    });
+  });
+
+  describe('PR #2649 一级分类图标与 Click/Hover 双展开交互定向测试', () => {
+    it('【图标样式断言】CSS 中必须包含角色与产品专属的矢量 SVG 图标伪元素定义，且 styles.css 与 composer-compact.js 实体图标规则 100% 对齐', () => {
+      const stylesPath = join(__dirname, 'styles.css');
+      const stylesContent = readFileSync(stylesPath, 'utf8');
+
+      const iconRules = [
+        '[data-omnimux-entity-category]::before',
+        '[data-omnimux-entity-category="character"]::before',
+        '[data-omnimux-entity-category="product"]::before',
+        '[data-omnimux-entity-category]:hover::before',
+        '[data-omnimux-entity-category][aria-selected="true"]::before',
+        '[data-omnimux-entity-category="character"]:hover::before',
+        '[data-omnimux-entity-category="character"][aria-selected="true"]::before',
+        '[data-omnimux-entity-category="product"]:hover::before',
+        '[data-omnimux-entity-category="product"][aria-selected="true"]::before',
+        '[data-omnimux-entity-category]::after',
+      ];
+
+      for (const rule of iconRules) {
+        assert.ok(stylesContent.includes(rule), `styles.css 必须包含实体图标规则: ${rule}`);
+        assert.ok(COMPOSER_COMPACT_CSS.includes(rule), `composer-compact.js 必须同步包含实体图标规则: ${rule}`);
+      }
+
+      assert.match(stylesContent, /data:image\/svg\+xml/, 'styles.css 必须采用内联 SVG 作为矢量图标底图');
+      assert.match(COMPOSER_COMPACT_CSS, /data:image\/svg\+xml/, 'COMPOSER_COMPACT_CSS 必须采用内联 SVG 作为矢量图标底图');
+      assert.match(stylesContent, /content:\s*'›'/, 'styles.css 必须包含右侧指示箭头符号');
+      assert.match(COMPOSER_COMPACT_CSS, /content:\s*'›'/, 'COMPOSER_COMPACT_CSS 必须包含右侧指示箭头符号');
+    });
+
+    it('【宿主无 data-value 健壮识别】宿主 option 未透传 data-value 时，通过 itemName === "角色" / "产品" 精确全等识别', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div data-trigger-menu>
+              <button id="opt-1" role="option">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+              <button id="opt-2" role="option">
+                <span class="iRJKyq_itemName">产品</span>
+              </button>
+              <button id="opt-3" role="option">
+                <span class="iRJKyq_itemName">角色设定集.pdf</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btn1 = doc.getElementById('opt-1')!;
+        const btn2 = doc.getElementById('opt-2')!;
+        const btn3 = doc.getElementById('opt-3')!;
+
+        assert.equal(btn1.getAttribute('data-omnimux-entity-category'), 'character', '无 data-value 时角色项应精准识别');
+        assert.equal(btn2.getAttribute('data-omnimux-entity-category'), 'product', '无 data-value 时产品项应精准识别');
+        assert.equal(btn3.getAttribute('data-omnimux-entity-category'), null, '普通素材即使以角色开头也绝不被误判为分类入口');
+      } finally {
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【Click 点击展开二级菜单】点击角色或产品分类行时触发 mountEntitySubmenu 展开二级菜单', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedCategory = '';
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedCategory = props.type;
+          }
+        });
+
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+        // 模拟用户点击「角色」选项
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        assert.equal(mountedCategory, 'character', '点击角色行必须立即打开二级菜单');
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+  });
+
+  describe('PR #2653 审查缺陷闭环定向测试: 选区保护、保底寻址与样式 100% 对齐', () => {
+    it('【常量提取对齐】ENTITY_LABEL_CHARACTER 与 ENTITY_LABEL_PRODUCT 正确导出并在分类判定中生效', () => {
+      assert.equal(ENTITY_LABEL_CHARACTER, '角色');
+      assert.equal(ENTITY_LABEL_PRODUCT, '产品');
+    });
+
+    it('【High 1 修复】onRowClick 移除 stopPropagation，保留 preventDefault，事件正常冒泡到外层', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div id="parent-container" data-composer-card>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let parentClicked = false;
+        const parent = dom.window.document.getElementById('parent-container')!;
+        parent.addEventListener('click', () => {
+          parentClicked = true;
+        });
+
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+        const clickEvent = new dom.window.MouseEvent('click', { bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(clickEvent);
+
+        assert.ok(clickEvent.defaultPrevented, 'onRowClick 必须执行 preventDefault 阻止默认动作');
+        assert.ok(parentClicked, 'onRowClick 绝不能调用 stopPropagation，点击事件必须能冒泡至外层以便全局失焦/收起');
+      } finally {
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【High 2 修复】增加 mousedown 事件监听器阻止失焦并暂存选区，并在 DOM 复用时解绑', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">测试输入内容 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+        const mousedownEvent = new dom.window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(mousedownEvent);
+
+        assert.ok(mousedownEvent.defaultPrevented, 'mousedown 必须执行 e.preventDefault() 阻止输入框提前失焦');
+
+        // 测试 DOM 复用为普通素材行时的解绑
+        btnChar.setAttribute('data-value', 'material:mat-100');
+        btnChar.querySelector('.iRJKyq_itemName')!.textContent = '普通素材.png';
+        placeMentionMenu(doc);
+
+        const mousedownEvent2 = new dom.window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(mousedownEvent2);
+        assert.equal(mousedownEvent2.defaultPrevented, false, '普通素材行必须已解绑 mousedown 监听器');
+      } finally {
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【Medium 3 修复】保底寻址卡片策略：当 menu 不在 card 内部时，优先寻址激活 Session 对应的卡片', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div id="card-sess-1" data-composer-card data-session-id="session-alpha"></div>
+          <div id="card-sess-2" data-composer-card data-session-id="session-beta"></div>
+          <div id="portal-menu" data-trigger-menu>
+            <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="iRJKyq_itemName">角色</span>
+            </button>
+          </div>
+        </body>`);
+
+      const mock = setupMockStore('session-beta');
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      const prevCss = (globalThis as any).CSS;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+      (dom.window as any).__omnimuxAttachments = mock.store;
+      (dom.window as any).CSS = {
+        escape: (val: string) => val.replace(/([\\":#\[\]])/g, '\\$1'),
+      };
+      (globalThis as any).CSS = (dom.window as any).CSS;
+
+      try {
+        const doc = dom.window.document;
+        const cardAlpha = doc.getElementById('card-sess-1')!;
+        const cardBeta = doc.getElementById('card-sess-2')!;
+        cardAlpha.getBoundingClientRect = () => ({ top: 0, bottom: 50, left: 0, right: 100, width: 100, height: 50 } as any);
+        cardBeta.getBoundingClientRect = () => ({ top: 800, bottom: 850, left: 0, right: 100, width: 100, height: 50 } as any);
+
+        placeMentionMenu(doc);
+
+        assert.equal(cardBeta.hasAttribute('data-omnimux-mention-up'), true, '保底寻址必须优先命中激活 Session 的卡片并设置 MENTION_UP_ATTR');
+        assert.equal(cardAlpha.hasAttribute('data-omnimux-mention-up'), false, '未激活 Session 卡片不应被误操作');
+      } finally {
+        if (prevCss) (globalThis as any).CSS = prevCss;
+        else delete (globalThis as any).CSS;
+        mock.restore();
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+  });
+
+  describe('PR #2653 第二轮审查缺陷闭环定向测试: 选区防竞态、按键守卫与选择器转义防护', () => {
+    it('【High 1 修复】微移点击选区保护：onMouseLeave 不置空 savedMouseDownRange，仅在 click 消费或 unmount 时置空', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">测试选区微移 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedProps: any = null;
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedProps = props;
+          }
+        });
+
+        const doc = dom.window.document;
+        const editor = doc.querySelector('[contenteditable="true"]')!;
+        const textNode = editor.firstChild!;
+        const range = doc.createRange();
+        range.setStart(textNode, 2);
+        range.setEnd(textNode, 5);
+        const sel = dom.window.getSelection()!;
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+
+        // 1. 模拟鼠标左键按下（暂存选区）
+        const mousedownEvent = new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(mousedownEvent);
+        assert.ok(mousedownEvent.defaultPrevented, '左键 mousedown 必须阻止默认行为');
+
+        // 2. 模拟微移移出（触发 mouseleave），此时选区不得被置空，随后清空原生选区模拟失焦
+        btnChar.dispatchEvent(new dom.window.MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+        sel.removeAllRanges();
+
+        // 3. 模拟触发 click（微移点击）
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+        assert.ok(mountedProps, '必须成功挂载二级菜单');
+        assert.ok(mountedProps.savedRange, 'savedMouseDownRange 未被 mouseleave 提前销毁，click 必须能顺利读取到暂存选区');
+        assert.equal(mountedProps.savedRange.startOffset, 2);
+        assert.equal(mountedProps.savedRange.endOffset, 5);
+
+        // 4. 再次注销，验证 unmountEntitySubmenu 能够正常清理
+        unmountEntitySubmenu();
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【High 2 修复】onMouseDown 增加左键按键守卫：非左键（button !== 0）不阻止默认事件且不暂存选区', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">按键守卫测试 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+
+        // 模拟右键按下 (button: 2)
+        const rightClickEvent = new dom.window.MouseEvent('mousedown', { button: 2, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(rightClickEvent);
+        assert.equal(rightClickEvent.defaultPrevented, false, '非左键 mousedown 绝不能阻止默认行为');
+
+        // 模拟中键按下 (button: 1)
+        const middleClickEvent = new dom.window.MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(middleClickEvent);
+        assert.equal(middleClickEvent.defaultPrevented, false, '中键 mousedown 绝不能阻止默认行为');
+
+        // 模拟左键按下 (button: 0)
+        const leftClickEvent = new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(leftClickEvent);
+        assert.equal(leftClickEvent.defaultPrevented, true, '左键 mousedown 必须阻止默认行为');
+      } finally {
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【Medium 3 修复】doc.querySelector 拼装 sessionId 属性选择器：CSS.escape 安全转义与 try-catch 保护防 DOMException', () => {
+      const complexSessionId = 'sess"i\\on[test]:123#special';
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div id="card-complex" data-composer-card data-session-id="${complexSessionId.replace(/"/g, '&quot;')}"></div>
+          <div id="card-fallback" data-composer-card></div>
+          <div id="portal-menu" data-trigger-menu>
+            <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="iRJKyq_itemName">角色</span>
+            </button>
+          </div>
+        </body>`);
+
+      const mock = setupMockStore(complexSessionId);
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+      (dom.window as any).__omnimuxAttachments = mock.store;
+
+      try {
+        const doc = dom.window.document;
+        const cardComplex = doc.getElementById('card-complex')!;
+        cardComplex.getBoundingClientRect = () => ({ top: 900, bottom: 950, left: 0, right: 100, width: 100, height: 50 } as any);
+
+        // 即使包含引号、反斜杠、冒号等危险字符，placeMentionMenu 绝不抛出 DOMException
+        assert.doesNotThrow(() => {
+          placeMentionMenu(doc);
+        }, '含有特殊字符的 sessionId 寻址不得抛出 DOMException');
+
+        // 测试 CSS.escape 模拟转义
+        (dom.window as any).CSS = {
+          escape: (val: string) => val.replace(/([\\":#\[\]])/g, '\\$1'),
+        };
+        (globalThis as any).CSS = (dom.window as any).CSS;
+
+        assert.doesNotThrow(() => {
+          placeMentionMenu(doc);
+        });
+      } finally {
+        delete (globalThis as any).CSS;
+        mock.restore();
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+  });
+
+  describe('PR #2653 第三轮审查缺陷闭环定向测试: 行闭包物理隔离、消费即清空与 CSS.escape 严格降级', () => {
+    it('【缺陷 1 修复 行闭包物理隔离】角色行与产品行各自拥有独立闭包 savedMouseDownRange，绝不跨行污染', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">行闭包隔离测试 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+              <button id="opt-prod" role="option" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}">
+                <span class="iRJKyq_itemName">产品</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedHistory: any[] = [];
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedHistory.push(props);
+          }
+        });
+
+        const doc = dom.window.document;
+        const editor = doc.querySelector('[contenteditable="true"]')!;
+        const textNode = editor.firstChild!;
+        const range = doc.createRange();
+        range.setStart(textNode, 1);
+        range.setEnd(textNode, 4);
+        const sel = dom.window.getSelection()!;
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+        const btnProd = doc.getElementById('opt-prod')!;
+
+        // 1. 在「角色」行触发 mousedown（此时角色行闭包捕获并暂存 range）
+        const charMouseDown = new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(charMouseDown);
+        assert.ok(charMouseDown.defaultPrevented);
+
+        // 2. 模拟原生光标失焦或清空
+        sel.removeAllRanges();
+
+        // 3. 用户不点击「角色」，而是点击「产品」行
+        btnProd.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+        assert.equal(mountedHistory.length, 1);
+        assert.equal(mountedHistory[0].type, 'product');
+        // 「产品」行闭包内未触发过 mousedown，原生选区已被清空，因此产品行的 savedRange 绝不被角色行污染
+        assert.equal(mountedHistory[0].savedRange, null, '「产品」行绝不可读取到「角色」行的 savedMouseDownRange');
+
+        // 4. 用户点击「角色」行
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+        assert.equal(mountedHistory.length, 2);
+        assert.equal(mountedHistory[1].type, 'character');
+        // 「角色」行闭包保留了自己的暂存选区并成功消费
+        assert.ok(mountedHistory[1].savedRange, '「角色」行必须正常读取并消费自身行闭包内的 savedMouseDownRange');
+        assert.equal(mountedHistory[1].savedRange.startOffset, 1);
+        assert.equal(mountedHistory[1].savedRange.endOffset, 4);
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【缺陷 2 修复 微移保留与消费即清空】onRowClick 消费本行 savedMouseDownRange 后即刻清空，防止二次残留', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">消费清空测试 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedProps: any = null;
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedProps = props;
+          }
+        });
+
+        const doc = dom.window.document;
+        const editor = doc.querySelector('[contenteditable="true"]')!;
+        const textNode = editor.firstChild!;
+        const range = doc.createRange();
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 2);
+        const sel = dom.window.getSelection()!;
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+
+        // 1. mousedown 暂存选区，mouseleave 微移
+        btnChar.dispatchEvent(new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true }));
+        btnChar.dispatchEvent(new dom.window.MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+
+        // 清空原生选区
+        sel.removeAllRanges();
+
+        // 2. 第一次 click：消费暂存选区
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+        assert.ok(mountedProps?.savedRange, '第一次 click 成功读取到微移保留的暂存选区');
+        assert.equal(mountedProps.savedRange.endOffset, 2);
+
+        // 3. 重置回调记录，模拟未发生 mousedown 下再次触发 click
+        mountedProps = null;
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+        assert.ok(mountedProps, '第二次 click 正常触发');
+        assert.equal(mountedProps.savedRange, null, '消费后 savedMouseDownRange 已置空，未重新 mousedown 时不得残留');
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【缺陷 3 修复 CSS.escape 严格降级】环境不支持 CSS.escape 时跳过属性拼接并严格降级，绝不使用有损字符替换变异选择器', () => {
+      const complexSessionId = 'sess"i\\on[test]:123#special';
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div id="card-first" data-composer-card></div>
+          <div id="card-second" data-composer-card data-session-id="sess_second"></div>
+          <div id="portal-menu" data-trigger-menu>
+            <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="iRJKyq_itemName">角色</span>
+            </button>
+          </div>
+        </body>`);
+
+      const mock = setupMockStore(complexSessionId);
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+      (dom.window as any).__omnimuxAttachments = mock.store;
+
+      try {
+        const doc = dom.window.document;
+        const cardFirst = doc.getElementById('card-first')!;
+        cardFirst.getBoundingClientRect = () => ({ top: 900, bottom: 950, left: 0, right: 100, width: 100, height: 50 } as any);
+
+        // A. 模拟环境不支持 CSS.escape（window.CSS 与 globalThis.CSS 均无 escape 函数）
+        delete (dom.window as any).CSS;
+        delete (globalThis as any).CSS;
+
+        let querySelectorCalls: string[] = [];
+        const originalQuerySelector = doc.querySelector.bind(doc);
+        doc.querySelector = (selector: string) => {
+          querySelectorCalls.push(selector);
+          return originalQuerySelector(selector);
+        };
+
+        placeMentionMenu(doc);
+
+        // 断言：在不支持 CSS.escape 的环境下，严禁以有损字符替换拼接 [data-session-id="..."] 变异选择器
+        const mutatedSelectorCalls = querySelectorCalls.filter((s) => s.includes('data-session-id'));
+        assert.equal(mutatedSelectorCalls.length, 0, '无 CSS.escape 时必须跳过属性拼接，绝不执行有损变异选择器查询');
+
+        // 断言：直接安全降级到 [data-composer-card]
+        const fallbackCall = querySelectorCalls.find((s) => s === '[data-composer-card]');
+        assert.ok(fallbackCall, '必须严格降级调用 doc.querySelector("[data-composer-card]")');
+
+        // B. 模拟环境支持标准 CSS.escape
+        querySelectorCalls = [];
+        (dom.window as any).CSS = {
+          escape: (val: string) => val.replace(/([\\":#\[\]])/g, '\\$1'),
+        };
+        (globalThis as any).CSS = (dom.window as any).CSS;
+
+        placeMentionMenu(doc);
+        const escapedSelectorCalls = querySelectorCalls.filter((s) => s.includes('data-session-id'));
+        assert.ok(escapedSelectorCalls.length > 0, '支持 CSS.escape 时正常拼接安全转义选择器进行寻址');
+      } finally {
+        delete (globalThis as any).CSS;
+        mock.restore();
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
     });
   });

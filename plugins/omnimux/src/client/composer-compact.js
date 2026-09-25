@@ -23,6 +23,9 @@ export function registerEntitySubmenuRenderer(renderer) {
   customEntitySubmenuRenderer = renderer
 }
 
+export const ENTITY_LABEL_CHARACTER = '角色'
+export const ENTITY_LABEL_PRODUCT = '产品'
+
 export const COMPOSER_COMPACT_STYLE_ID = 'omnimux-composer-compact-chrome'
 export const COMPOSER_COMPACT_ATTR = 'data-omnimux-composer-density'
 export const COMPOSER_COMPACT_DENSITY = Object.freeze({ full: 'full', short: 'short', icon: 'icon' })
@@ -556,6 +559,46 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary, #9ca3af);
   text-align: center;
+}
+
+/* 一级菜单中的分类条目左侧图标 */
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 4px;
+  background-size: 14px 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  background-color: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category][aria-selected="true"]::before {
+  background-color: var(--dsw-alias-bg-hover, rgba(255, 255, 255, 0.12));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
 }
 
 /* 一级菜单中的分类条目右侧指示箭头 */
@@ -1210,6 +1253,19 @@ export function placeMentionMenu(doc = hostDocument()) {
 
   menus.forEach((menu) => {
     const card = menu.closest?.('[data-composer-card]')
+      || (() => {
+          const sessionId = hostWindow()?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+          if (sessionId && typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            try {
+              const safeSessionId = CSS.escape(sessionId)
+              const active = doc.querySelector?.(`[data-composer-card][data-session-id="${safeSessionId}"]`)
+              if (active) return active
+            } catch {
+              /* ignore CSS.escape failures and selector syntax errors */
+            }
+          }
+          return doc.querySelector?.('[data-composer-card]')
+        })()
     if (!card) return
 
     // 1. 严格限定仅对 @ 引用/素材菜单生效：
@@ -1226,7 +1282,9 @@ export function placeMentionMenu(doc = hostDocument()) {
         if (r.getAttribute?.('data-source') === 'material') return true
         if (r.getAttribute?.('data-material-id')) return true
         const val = r.getAttribute?.('data-value') || ''
-        if (val.startsWith('material:')) return true
+        if (val.startsWith('material:') || val.startsWith('entity:category:')) return true
+        const text = (r.querySelector?.('[class*="itemName"]')?.textContent || r.textContent || '').trim()
+        if (text === ENTITY_LABEL_CHARACTER || text === ENTITY_LABEL_PRODUCT) return true
         return false
       })
     )
@@ -1285,9 +1343,10 @@ export function placeMentionMenu(doc = hostDocument()) {
       const rawVal = row.getAttribute?.('data-value') || ''
       const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
 
-      // 识别「角色」与「产品」一级分类入口，绑定悬停二级浮层
-      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE
-      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE
+      // 识别「角色」与「产品」一级分类入口，绑定悬停与点击二级浮层
+      // 兼顾宿主未透传 data-value 的场景，通过 itemName 精确全等匹配（绝无模糊前缀假阳性）
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || itemName === ENTITY_LABEL_CHARACTER
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || itemName === ENTITY_LABEL_PRODUCT
 
       if (isCharEntry || isProdEntry) {
         row.removeAttribute('data-omnimux-thumb')
@@ -1297,6 +1356,14 @@ export function placeMentionMenu(doc = hostDocument()) {
 
         if (!row._omnimuxSubmenuBound) {
           row._omnimuxSubmenuBound = true
+          let savedMouseDownRange = null
+
+          const onMouseDown = (e) => {
+            if (e.button !== 0) return
+            e.preventDefault()
+            savedMouseDownRange = captureComposerSelection(doc)
+          }
+
           const onMouseEnter = () => {
             cancelCloseEntitySubmenu()
             const capturedRange = captureComposerSelection(doc)
@@ -1328,10 +1395,35 @@ export function placeMentionMenu(doc = hostDocument()) {
             scheduleCloseEntitySubmenu(180)
           }
 
+          const onRowClick = (e) => {
+            e.preventDefault()
+            cancelCloseEntitySubmenu()
+            const capturedRange = savedMouseDownRange || captureComposerSelection(doc)
+            savedMouseDownRange = null
+            const rRect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null
+            if (!rRect) return
+            const isUp = card.hasAttribute(MENTION_UP_ATTR)
+            const win = hostWindow()
+            const curSessionId = win?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+            const activeType = row.getAttribute?.('data-omnimux-entity-category')
+            if (!activeType) return
+            mountEntitySubmenu({
+              type: activeType,
+              anchorRect: rRect,
+              isFlippedUp: isUp,
+              sessionId: curSessionId,
+              savedRange: capturedRange,
+            })
+          }
+
+          row._omnimuxMouseDownHandler = onMouseDown
           row._omnimuxMouseEnterHandler = onMouseEnter
           row._omnimuxMouseLeaveHandler = onMouseLeave
+          row._omnimuxClickHandler = onRowClick
+          row.addEventListener('mousedown', onMouseDown)
           row.addEventListener('mouseenter', onMouseEnter)
           row.addEventListener('mouseleave', onMouseLeave)
+          row.addEventListener('click', onRowClick)
         }
         return
       }
@@ -1339,6 +1431,10 @@ export function placeMentionMenu(doc = hostDocument()) {
       // 普通素材行清理分类属性与已绑定的二级悬停事件，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
       row.removeAttribute('data-omnimux-entity-category')
       if (row._omnimuxSubmenuBound) {
+        if (row._omnimuxMouseDownHandler) {
+          row.removeEventListener('mousedown', row._omnimuxMouseDownHandler)
+          row._omnimuxMouseDownHandler = null
+        }
         if (row._omnimuxMouseEnterHandler) {
           row.removeEventListener('mouseenter', row._omnimuxMouseEnterHandler)
           row._omnimuxMouseEnterHandler = null
@@ -1346,6 +1442,10 @@ export function placeMentionMenu(doc = hostDocument()) {
         if (row._omnimuxMouseLeaveHandler) {
           row.removeEventListener('mouseleave', row._omnimuxMouseLeaveHandler)
           row._omnimuxMouseLeaveHandler = null
+        }
+        if (row._omnimuxClickHandler) {
+          row.removeEventListener('click', row._omnimuxClickHandler)
+          row._omnimuxClickHandler = null
         }
         row._omnimuxSubmenuBound = false
       }
