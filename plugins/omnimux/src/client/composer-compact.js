@@ -23,6 +23,9 @@ export function registerEntitySubmenuRenderer(renderer) {
   customEntitySubmenuRenderer = renderer
 }
 
+export const ENTITY_LABEL_CHARACTER = '角色'
+export const ENTITY_LABEL_PRODUCT = '产品'
+
 export const COMPOSER_COMPACT_STYLE_ID = 'omnimux-composer-compact-chrome'
 export const COMPOSER_COMPACT_ATTR = 'data-omnimux-composer-density'
 export const COMPOSER_COMPACT_DENSITY = Object.freeze({ full: 'full', short: 'short', icon: 'icon' })
@@ -1249,7 +1252,15 @@ export function placeMentionMenu(doc = hostDocument()) {
   const materials = listSessionMaterials('')
 
   menus.forEach((menu) => {
-    const card = menu.closest?.('[data-composer-card]') || doc.querySelector?.('[data-composer-card]')
+    const card = menu.closest?.('[data-composer-card]')
+      || (() => {
+          const sessionId = hostWindow()?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+          if (sessionId) {
+            const active = doc.querySelector?.(`[data-composer-card][data-session-id="${sessionId}"]`)
+            if (active) return active
+          }
+          return doc.querySelector?.('[data-composer-card]')
+        })()
     if (!card) return
 
     // 1. 严格限定仅对 @ 引用/素材菜单生效：
@@ -1268,7 +1279,7 @@ export function placeMentionMenu(doc = hostDocument()) {
         const val = r.getAttribute?.('data-value') || ''
         if (val.startsWith('material:') || val.startsWith('entity:category:')) return true
         const text = (r.querySelector?.('[class*="itemName"]')?.textContent || r.textContent || '').trim()
-        if (text === '角色' || text === '产品') return true
+        if (text === ENTITY_LABEL_CHARACTER || text === ENTITY_LABEL_PRODUCT) return true
         return false
       })
     )
@@ -1329,8 +1340,8 @@ export function placeMentionMenu(doc = hostDocument()) {
 
       // 识别「角色」与「产品」一级分类入口，绑定悬停与点击二级浮层
       // 兼顾宿主未透传 data-value 的场景，通过 itemName 精确全等匹配（绝无模糊前缀假阳性）
-      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || itemName === '角色'
-      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || itemName === '产品'
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || itemName === ENTITY_LABEL_CHARACTER
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || itemName === ENTITY_LABEL_PRODUCT
 
       if (isCharEntry || isProdEntry) {
         row.removeAttribute('data-omnimux-thumb')
@@ -1340,6 +1351,13 @@ export function placeMentionMenu(doc = hostDocument()) {
 
         if (!row._omnimuxSubmenuBound) {
           row._omnimuxSubmenuBound = true
+          let savedMouseDownRange = null
+
+          const onMouseDown = (e) => {
+            e.preventDefault()
+            savedMouseDownRange = captureComposerSelection(doc)
+          }
+
           const onMouseEnter = () => {
             cancelCloseEntitySubmenu()
             const capturedRange = captureComposerSelection(doc)
@@ -1368,14 +1386,15 @@ export function placeMentionMenu(doc = hostDocument()) {
               clearTimeout(entitySubmenuOpenTimer)
               entitySubmenuOpenTimer = null
             }
+            savedMouseDownRange = null
             scheduleCloseEntitySubmenu(180)
           }
 
           const onRowClick = (e) => {
             e.preventDefault()
-            e.stopPropagation()
             cancelCloseEntitySubmenu()
-            const capturedRange = captureComposerSelection(doc)
+            const capturedRange = savedMouseDownRange || captureComposerSelection(doc)
+            savedMouseDownRange = null
             const rRect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null
             if (!rRect) return
             const isUp = card.hasAttribute(MENTION_UP_ATTR)
@@ -1392,9 +1411,11 @@ export function placeMentionMenu(doc = hostDocument()) {
             })
           }
 
+          row._omnimuxMouseDownHandler = onMouseDown
           row._omnimuxMouseEnterHandler = onMouseEnter
           row._omnimuxMouseLeaveHandler = onMouseLeave
           row._omnimuxClickHandler = onRowClick
+          row.addEventListener('mousedown', onMouseDown)
           row.addEventListener('mouseenter', onMouseEnter)
           row.addEventListener('mouseleave', onMouseLeave)
           row.addEventListener('click', onRowClick)
@@ -1405,6 +1426,10 @@ export function placeMentionMenu(doc = hostDocument()) {
       // 普通素材行清理分类属性与已绑定的二级悬停事件，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
       row.removeAttribute('data-omnimux-entity-category')
       if (row._omnimuxSubmenuBound) {
+        if (row._omnimuxMouseDownHandler) {
+          row.removeEventListener('mousedown', row._omnimuxMouseDownHandler)
+          row._omnimuxMouseDownHandler = null
+        }
         if (row._omnimuxMouseEnterHandler) {
           row.removeEventListener('mouseenter', row._omnimuxMouseEnterHandler)
           row._omnimuxMouseEnterHandler = null
