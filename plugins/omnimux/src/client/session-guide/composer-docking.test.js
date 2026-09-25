@@ -71,9 +71,10 @@ test('useComposerDocking: 初始状态为 inline，且宿主未打上 dock-open 
   }
 })
 
-test('useComposerDocking: 调用 dock(item) 后宿主被打上 dock-open 标记，且设置几何变量', async () => {
+test('useComposerDocking: 顶部输入框可见时触发业务事件保持 inline，滚出视口后自动吸底设置几何变量', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -89,15 +90,28 @@ test('useComposerDocking: 调用 dock(item) 后宿主被打上 dock-open 标记�
     })
     await flush()
 
+    // 1. 顶部可见状态下（scrollTop = 0 <= revealThreshold）：触发 dock 保持在顶部 inline，不吸底
     await act(async () => {
       const res = hookApi.dock({ id: 'sk-test-skill', title: '测试技能' })
       assert.equal(res, true)
     })
     await flush()
 
-    assert.equal(hookApi.placement, 'docked')
+    assert.equal(hookApi.placement, 'inline', '顶部可见时点击业务事件优先保持在顶部 inline 显示')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '顶部可见时宿主绝不打上停靠标记')
+
+    // 2. 向下滚动离开顶部槽位（> leaveThreshold 196px）：自动触发吸底并写入停靠几何
+    scroller.scrollTop = 280
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked', '滚出顶部不可见时自动迁移到底部 fixed')
     assert.equal(hookApi.isDocked, true)
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '调用 dock 后宿主必须打上停靠标记')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '滚出顶部后宿主打上停靠标记')
     assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), `${DOCK_BOTTOM}px`)
   } finally {
     await act(async () => root.unmount())
@@ -127,7 +141,7 @@ test('dock owner expands for inline demand, clamps to column and restores defaul
   }
   try {
     await act(async () => root.render(React.createElement(TestHarness)))
-    await act(async () => hookApi.dock({ id: 'inline-demand' }))
+    await act(async () => hookApi.pin({ id: 'inline-demand' }))
     assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '960px')
     availableWidth = 900
     await act(async () => window.dispatchEvent(new window.Event('resize')))
@@ -164,7 +178,7 @@ test('useComposerDocking: 调用 undock() 解除吸底并清除标记', async ()
     await flush()
 
     await act(async () => {
-      hookApi.dock({ id: 'sk-test-skill', title: '测试技能' })
+      hookApi.pin({ id: 'sk-test-skill', title: '测试技能' })
     })
     await flush()
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
@@ -201,15 +215,15 @@ test('useComposerDocking: 再次点击同一卡片触发反悔收起', async () 
     })
     await flush()
 
-    // 第一次点击：吸底
+    // 第一次点击：登记激活
     await act(async () => {
       const res = hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
       assert.equal(res, true)
     })
     await flush()
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+    assert.equal(hookApi.dockedItem?.id, 'sk-skill-1')
 
-    // 第二次点击同一卡片：反悔解除吸底
+    // 第二次点击同一卡片：反悔解除并清空
     await act(async () => {
       const res = hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
       assert.equal(res, false, '再次点击同一卡片应返回 false')
@@ -217,6 +231,7 @@ test('useComposerDocking: 再次点击同一卡片触发反悔收起', async () 
     await flush()
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '反悔后必须解除停靠')
     assert.equal(hookApi.isDocked, false)
+    assert.equal(hookApi.dockedItem, null, '反悔后已选卡片必须清空')
   } finally {
     await act(async () => root.unmount())
     env.restore()
@@ -246,16 +261,16 @@ test('useComposerDocking: 滚动迟滞判定：滑离顶部吸底，滑回最顶
       hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
     })
     await flush()
-    assert.equal(hookApi.placement, 'docked')
+    assert.equal(hookApi.placement, 'inline', '在顶部可见时点击业务事件优先保持 inline')
 
-    // 模拟向下滚动离开顶部 (>leaveThreshold 186px)
+    // 模拟向下滚动离开顶部 (>leaveThreshold 196px)
     scroller.scrollTop = 250
     await act(async () => {
       scroller.dispatchEvent(new window.Event('scroll'))
       await new Promise((r) => setTimeout(r, 10))
     })
     await flush()
-    assert.equal(hookApi.placement, 'docked', '向下滚动离开顶部槽位后保持吸底')
+    assert.equal(hookApi.placement, 'docked', '向下滚动离开顶部槽位后自动吸底')
 
     // 模拟向上滚动至顶部槽位露头阈值内 (<=revealThreshold 166px)，无需滑到 0px 即可解除吸底
     scroller.scrollTop = 100
@@ -299,7 +314,7 @@ test('useComposerDocking: 组件卸载时安全清理所有宿主样式与标记
     await flush()
 
     await act(async () => {
-      hookApi.dock({ id: 'sk-skill-1', title: '技能1' })
+      hookApi.pin({ id: 'sk-skill-1', title: '技能1' })
     })
     await flush()
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)

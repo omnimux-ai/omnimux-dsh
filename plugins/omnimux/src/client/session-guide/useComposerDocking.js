@@ -148,11 +148,38 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       hostRef?.current?.closest?.('[data-phase]') ||
       hostRef?.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
-    // 记录用户触发点击当帧的绝对真实滚动位置
-    savedScrollRef.current = readPageScrollTop(scroller)
+    const currentScrollTop = readPageScrollTop(scroller)
+    savedScrollRef.current = currentScrollTop
+
+    const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
+    // 顶部优先原则：当前顶部输入框可见的时候，点击任意业务事件直接在顶部原位触发输入框事件交互，绝不迁移到底部！
+    const isTopVisible = currentScrollTop <= revealThreshold && !pinnedRef.current
+
+    if (isTopVisible) {
+      setPlacement('inline')
+      setDockedItem(item)
+
+      if (root) {
+        root.removeAttribute(DOCK_OPEN_ATTR)
+        const band = root.querySelector?.('[data-composer-card]')?.parentElement || root
+        if (band) band.style.minHeight = ''
+        const card = root.querySelector?.('[data-composer-card]')
+        if (card) {
+          card.style.transform = ''
+          card.style.transition = ''
+          card.style.opacity = ''
+        }
+      }
+
+      if (typeof onDocked === 'function') {
+        onDocked()
+      }
+      return true
+    }
+
     pendingApplyRef.current = typeof onDocked === 'function' ? onDocked : null
 
-    // 吸底先手：同一帧同步写入停靠 DOM，抢在外部滚动定位之前
+    // 只有当顶部输入框已滚出视口不可见时，才在底部固定停靠
     if (root) {
       const card = root.querySelector?.('[data-composer-card]')
       const band = card?.parentElement || root

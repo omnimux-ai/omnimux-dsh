@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
@@ -120,6 +120,11 @@ function BlankSessionGuide({
   live.current = { input, state }
   const isEn = typeof t === 'function' ? (t('locale') === 'en' || t('guide.locale') === 'en') : false
 
+  const handleUndock = useCallback(() => {
+    const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+    store?.clear?.(sessionId)
+  }, [sessionId])
+
   const {
     dockedItem,
     placement,
@@ -128,6 +133,7 @@ function BlankSessionGuide({
     isDocked,
   } = useComposerDocking({
     hostRef: guideRef,
+    onUndock: handleUndock,
   })
 
   const isSessionActive = () => {
@@ -259,8 +265,10 @@ function BlankSessionGuide({
       })
     })
     if (!docked) {
-      // 再次点击同一卡片反悔：清空草稿
+      // 再次点击同一卡片反悔：清空草稿与附件
       applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
+      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+      store?.clear?.(sessionId)
     }
   }
 
@@ -283,6 +291,8 @@ function BlankSessionGuide({
     })
     if (!docked) {
       applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
+      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+      store?.clear?.(sessionId)
     }
   }
 
@@ -318,6 +328,8 @@ function BlankSessionGuide({
     if (!docked) {
       publishActiveSkill(null)
       applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
+      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+      store?.clear?.(sessionId)
     }
   }
 

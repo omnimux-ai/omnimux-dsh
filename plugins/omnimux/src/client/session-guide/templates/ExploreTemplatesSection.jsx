@@ -127,6 +127,10 @@ export function attachTemplateToConversation(item, customWin) {
   const activeSessionId = store?.getActiveSessionId?.() || '';
 
   if (store && typeof store.addAttachment === 'function') {
+    // 业务事件素材独占替换：每次复刻先清空已有附件槽，绝不追加堆叠
+    if (typeof store.clear === 'function') {
+      store.clear(activeSessionId);
+    }
     store.addAttachment(activeSessionId, payload);
   } else {
     win.dispatchEvent?.(new CustomEvent('omnimux:add-to-conversation', { detail: payload }));
