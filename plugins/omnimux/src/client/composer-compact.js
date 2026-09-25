@@ -558,6 +558,46 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   text-align: center;
 }
 
+/* 一级菜单中的分类条目左侧图标 */
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 4px;
+  background-size: 14px 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  background-color: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category][aria-selected="true"]::before {
+  background-color: var(--dsw-alias-bg-hover, rgba(255, 255, 255, 0.12));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
+}
+
 /* 一级菜单中的分类条目右侧指示箭头 */
 [data-omnimux-entity-category]::after {
   content: '›';
@@ -1209,7 +1249,7 @@ export function placeMentionMenu(doc = hostDocument()) {
   const materials = listSessionMaterials('')
 
   menus.forEach((menu) => {
-    const card = menu.closest?.('[data-composer-card]')
+    const card = menu.closest?.('[data-composer-card]') || doc.querySelector?.('[data-composer-card]')
     if (!card) return
 
     // 1. 严格限定仅对 @ 引用/素材菜单生效：
@@ -1226,7 +1266,9 @@ export function placeMentionMenu(doc = hostDocument()) {
         if (r.getAttribute?.('data-source') === 'material') return true
         if (r.getAttribute?.('data-material-id')) return true
         const val = r.getAttribute?.('data-value') || ''
-        if (val.startsWith('material:')) return true
+        if (val.startsWith('material:') || val.startsWith('entity:category:')) return true
+        const text = (r.querySelector?.('[class*="itemName"]')?.textContent || r.textContent || '').trim()
+        if (text === '角色' || text === '产品') return true
         return false
       })
     )
@@ -1285,9 +1327,10 @@ export function placeMentionMenu(doc = hostDocument()) {
       const rawVal = row.getAttribute?.('data-value') || ''
       const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
 
-      // 识别「角色」与「产品」一级分类入口，绑定悬停二级浮层
-      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE
-      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE
+      // 识别「角色」与「产品」一级分类入口，绑定悬停与点击二级浮层
+      // 兼顾宿主未透传 data-value 的场景，通过 itemName 精确全等匹配（绝无模糊前缀假阳性）
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || itemName === '角色'
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || itemName === '产品'
 
       if (isCharEntry || isProdEntry) {
         row.removeAttribute('data-omnimux-thumb')
@@ -1328,10 +1371,33 @@ export function placeMentionMenu(doc = hostDocument()) {
             scheduleCloseEntitySubmenu(180)
           }
 
+          const onRowClick = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            cancelCloseEntitySubmenu()
+            const capturedRange = captureComposerSelection(doc)
+            const rRect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null
+            if (!rRect) return
+            const isUp = card.hasAttribute(MENTION_UP_ATTR)
+            const win = hostWindow()
+            const curSessionId = win?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+            const activeType = row.getAttribute?.('data-omnimux-entity-category')
+            if (!activeType) return
+            mountEntitySubmenu({
+              type: activeType,
+              anchorRect: rRect,
+              isFlippedUp: isUp,
+              sessionId: curSessionId,
+              savedRange: capturedRange,
+            })
+          }
+
           row._omnimuxMouseEnterHandler = onMouseEnter
           row._omnimuxMouseLeaveHandler = onMouseLeave
+          row._omnimuxClickHandler = onRowClick
           row.addEventListener('mouseenter', onMouseEnter)
           row.addEventListener('mouseleave', onMouseLeave)
+          row.addEventListener('click', onRowClick)
         }
         return
       }
@@ -1346,6 +1412,10 @@ export function placeMentionMenu(doc = hostDocument()) {
         if (row._omnimuxMouseLeaveHandler) {
           row.removeEventListener('mouseleave', row._omnimuxMouseLeaveHandler)
           row._omnimuxMouseLeaveHandler = null
+        }
+        if (row._omnimuxClickHandler) {
+          row.removeEventListener('click', row._omnimuxClickHandler)
+          row._omnimuxClickHandler = null
         }
         row._omnimuxSubmenuBound = false
       }

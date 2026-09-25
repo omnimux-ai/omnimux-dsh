@@ -413,6 +413,46 @@
   text-align: center;
 }
 
+/* 一级菜单中的分类条目左侧图标 */
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 4px;
+  background-size: 14px 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  background-color: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category][aria-selected="true"]::before {
+  background-color: var(--dsw-alias-bg-hover, rgba(255, 255, 255, 0.12));
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="character"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"]:hover::before,
+[data-trigger-menu] [role="option"][data-omnimux-entity-category="product"][aria-selected="true"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'/%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'/%3E%3C/svg%3E");
+}
+
 /* 一级菜单中的分类条目右侧指示箭头 */
 [data-omnimux-entity-category]::after {
   content: '›';

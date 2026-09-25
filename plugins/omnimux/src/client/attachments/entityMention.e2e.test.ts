@@ -1417,3 +1417,104 @@ describe('PR #2649 第四轮审查缺陷闭环定点测试', () => {
       assert.equal(notifyBridgeCount, 1, '降级链末端安全触发 __omnimuxNotify');
     });
   });
+
+  describe('PR #2649 一级分类图标与 Click/Hover 双展开交互定向测试', () => {
+    it('【图标样式断言】CSS 中必须包含角色与产品专属的矢量 SVG 图标伪元素定义', () => {
+      const stylesPath = join(__dirname, 'styles.css');
+      const stylesContent = readFileSync(stylesPath, 'utf8');
+
+      assert.match(stylesContent, /\[data-omnimux-entity-category="character"\]::before/, '必须包含角色项左侧图标定义');
+      assert.match(stylesContent, /\[data-omnimux-entity-category="product"\]::before/, '必须包含产品项左侧图标定义');
+      assert.match(stylesContent, /data:image\/svg\+xml/, '必须采用内联 SVG 作为矢量图标底图');
+
+      assert.match(COMPOSER_COMPACT_CSS, /\[data-omnimux-entity-category="character"\]::before/, 'COMPOSER_COMPACT_CSS 必须同步包含角色左侧图标');
+      assert.match(COMPOSER_COMPACT_CSS, /\[data-omnimux-entity-category="product"\]::before/, 'COMPOSER_COMPACT_CSS 必须同步包含产品左侧图标');
+    });
+
+    it('【宿主无 data-value 健壮识别】宿主 option 未透传 data-value 时，通过 itemName === "角色" / "产品" 精确全等识别', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div data-trigger-menu>
+              <button id="opt-1" role="option">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+              <button id="opt-2" role="option">
+                <span class="iRJKyq_itemName">产品</span>
+              </button>
+              <button id="opt-3" role="option">
+                <span class="iRJKyq_itemName">角色设定集.pdf</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btn1 = doc.getElementById('opt-1')!;
+        const btn2 = doc.getElementById('opt-2')!;
+        const btn3 = doc.getElementById('opt-3')!;
+
+        assert.equal(btn1.getAttribute('data-omnimux-entity-category'), 'character', '无 data-value 时角色项应精准识别');
+        assert.equal(btn2.getAttribute('data-omnimux-entity-category'), 'product', '无 data-value 时产品项应精准识别');
+        assert.equal(btn3.getAttribute('data-omnimux-entity-category'), null, '普通素材即使以角色开头也绝不被误判为分类入口');
+      } finally {
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【Click 点击展开二级菜单】点击角色或产品分类行时触发 mountEntitySubmenu 展开二级菜单', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedCategory = '';
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedCategory = props.type;
+          }
+        });
+
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+        // 模拟用户点击「角色」选项
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        assert.equal(mountedCategory, 'character', '点击角色行必须立即打开二级菜单');
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+  });
