@@ -14,7 +14,7 @@
  * serves its metadata and remote URLs, and simply reports local media as
  * unavailable instead of reading whatever happens to sit at that path here.
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AssetsError } from './mappings.js'
@@ -31,6 +31,12 @@ const CHARACTER_CATEGORY = 'character'
  *  pull a multi-gigabyte clip; local copies are trusted and not size-checked. */
 const MAX_REMOTE_SAVE_BYTES = 512 * 1024 * 1024
 const REMOTE_FETCH_TIMEOUT_MS = 120_000
+/** A staging slice left behind by a crashed save is swept once it is this old.
+ *  A running save cannot reach that age: both of its downloads are bounded by
+ *  the fetch timeout, so the whole save finishes far sooner. */
+const STAGING_STALE_MS = 30 * 60 * 1000
+/** A staging slice is a name this module minted, never a path a caller steers. */
+const STAGING_SCOPE_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/
 
 const MIME_BY_EXT = {
   '.jpg': 'image/jpeg',
@@ -132,6 +138,8 @@ export function createCloudCatalog(deps = {}) {
   let index = null
   let sourceRoot = ''
   let loaded = false
+  /** Monotonic part of a staging slice name: the clock alone can repeat. */
+  let stagingSeq = 0
 
   function load() {
     if (loaded) return
@@ -356,6 +364,11 @@ export function createCloudCatalog(deps = {}) {
    * local managed library vault, falling back to cloud remote URLs when local
    * file locators are unavailable.
    *
+   * Two saves may overlap — the client admits one save per asset id, so clicking
+   * a second card while the first is still running starts a second request. Each
+   * save therefore downloads into a staging slice of its own and clears only
+   * that slice: a save finishing must never delete what another save staged.
+   *
    * @param {string} id
    * @param {{ type?: string, name?: string }} [options]
    */
@@ -381,67 +394,139 @@ export function createCloudCatalog(deps = {}) {
     /** @type {{ real_path: string, original_name: string }[]} */
     const files = []
     const seenPaths = new Set()
+    /** The first remote download that failed, held back so a partial save can still land. */
+    let remoteFailure = null
+    /** A failed main-media slot: the row's content file never landed. */
+    let mediaStagingFailed = null
 
-    // 1. 优先解析并下载封面图片 (cover)
     const coverPrimary = row.cover_url
     const coverFallback = row.meta?.source_cover_url
-    if (coverPrimary || coverFallback) {
-      const resolvedCover = resolveResource(coverPrimary, coverFallback)
-      if (resolvedCover?.kind === 'local' && !seenPaths.has(resolvedCover.absolutePath)) {
-        files.push({ real_path: resolvedCover.absolutePath, original_name: basename(resolvedCover.absolutePath) })
-        seenPaths.add(resolvedCover.absolutePath)
-      } else if (resolvedCover?.kind === 'remote') {
-        const stagedCover = await stageRemote(resolvedCover.url, `${targetName}-cover`)
-        if (stagedCover && !seenPaths.has(stagedCover)) {
-          const ext = extensionFor(resolvedCover.url, '')
-          files.push({ real_path: stagedCover, original_name: `${targetName}-cover${ext}` })
-          seenPaths.add(stagedCover)
-        }
-      }
-    }
-
-    // 2. 解析并下载主媒体文件 (audio/video/other)
     const mediaPrimary = row.media_url
     const mediaFallback = row.meta?.source_media_url
-    if (mediaPrimary || mediaFallback) {
-      const isSameAsCover = (mediaPrimary && mediaPrimary === coverPrimary) || (mediaFallback && mediaFallback === coverFallback)
-      if (!isSameAsCover) {
-        const resolvedMedia = resolveResource(mediaPrimary, mediaFallback)
-        if (resolvedMedia?.kind === 'local' && !seenPaths.has(resolvedMedia.absolutePath)) {
-          files.push({ real_path: resolvedMedia.absolutePath, original_name: basename(resolvedMedia.absolutePath) })
-          seenPaths.add(resolvedMedia.absolutePath)
-        } else if (resolvedMedia?.kind === 'remote') {
-          const stagedMedia = await stageRemote(resolvedMedia.url, targetName)
-          if (stagedMedia && !seenPaths.has(stagedMedia)) {
-            const ext = extensionFor(resolvedMedia.url, '')
-            files.push({ real_path: stagedMedia, original_name: `${targetName}${ext}` })
-            seenPaths.add(stagedMedia)
+    /** Whether the row declared anything to fetch at all. A descriptor-only row
+     *  declares nothing, which is why an empty file list stays legal for it. */
+    const declaredLocators = Boolean(coverPrimary || coverFallback || mediaPrimary || mediaFallback)
+
+    // 本次保存独占一片暂存区：并发保存的清理只删自己那一片，绝不整目录抹除。
+    const stagingScope = newStagingScope()
+    try {
+      // 1. 优先解析并下载封面图片 (cover)
+      if (coverPrimary || coverFallback) {
+        const resolvedCover = resolveResource(coverPrimary, coverFallback)
+        if (resolvedCover?.kind === 'local' && !seenPaths.has(resolvedCover.absolutePath)) {
+          files.push({ real_path: resolvedCover.absolutePath, original_name: basename(resolvedCover.absolutePath) })
+          seenPaths.add(resolvedCover.absolutePath)
+        } else if (resolvedCover?.kind === 'remote') {
+          try {
+            const stagedCover = await stageRemote(resolvedCover.url, `${targetName}-cover`, stagingScope)
+            if (stagedCover && !seenPaths.has(stagedCover)) {
+              const ext = extensionFor(resolvedCover.url, '')
+              files.push({ real_path: stagedCover, original_name: `${targetName}-cover${ext}` })
+              seenPaths.add(stagedCover)
+            }
+          } catch (error) {
+            // 封面失败只记不抛：主媒体仍有机会落地，file-too-large 保持立即失败。
+            if (error instanceof AssetsError && error.code === 'file-too-large') throw error
+            remoteFailure = error
           }
         }
       }
-    }
 
-    return library.add({
-      name: targetName,
-      type: String(options.type ?? '') || typeForCategory(row.category),
-      description: descriptionFor(row),
-      tags: row.tags ?? [],
-      files,
-      source: `cloud:${row.id}`,
-    })
+      // 2. 解析并下载主媒体文件 (audio/video/other)
+      if (mediaPrimary || mediaFallback) {
+        const isSameAsCover = (mediaPrimary && mediaPrimary === coverPrimary) || (mediaFallback && mediaFallback === coverFallback)
+        if (!isSameAsCover) {
+          const resolvedMedia = resolveResource(mediaPrimary, mediaFallback)
+          if (resolvedMedia === null) {
+            // 声明了主媒体却连定位符都解析不出内容 —— 主媒体槽同样是空的。
+            mediaStagingFailed = new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
+          } else if (resolvedMedia.kind === 'local' && !seenPaths.has(resolvedMedia.absolutePath)) {
+            files.push({ real_path: resolvedMedia.absolutePath, original_name: basename(resolvedMedia.absolutePath) })
+            seenPaths.add(resolvedMedia.absolutePath)
+          } else if (resolvedMedia.kind === 'remote') {
+            try {
+              const stagedMedia = await stageRemote(resolvedMedia.url, targetName, stagingScope)
+              if (stagedMedia && !seenPaths.has(stagedMedia)) {
+                const ext = extensionFor(resolvedMedia.url, '')
+                files.push({ real_path: stagedMedia, original_name: `${targetName}${ext}` })
+                seenPaths.add(stagedMedia)
+              }
+            } catch (error) {
+              // 主媒体失败只记不抛：封面可能已经落地，是否成行交给下面那道闸判断。
+              if (error instanceof AssetsError && error.code === 'file-too-large') throw error
+              remoteFailure = error
+              mediaStagingFailed = error
+            }
+          }
+        }
+      }
+
+      // 主媒体槽失败即抛 —— 封面落地也不能把「没存下内容文件」报成成功；
+      // 声明了定位符却一个文件都没落地同样是失败，必须可见，不得落一条空资产。
+      if (mediaStagingFailed || (files.length === 0 && (remoteFailure || declaredLocators))) {
+        throw mediaStagingFailed ?? remoteFailure ?? new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
+      }
+
+      // 复制阶段不得静默少文件：声明过的路径必须先全部还在盘上。
+      const missing = missingDeclaredFiles(files)
+      if (missing.length > 0) {
+        console.error(`[assets] cloud save ${row.id}: declared file is gone before the copy: ${missing.join(', ')}`)
+        throw new AssetsError('internal', `declared file is gone before the copy: ${missing.join(', ')}`)
+      }
+
+      const asset = await library.add({
+        name: targetName,
+        type: String(options.type ?? '') || typeForCategory(row.category),
+        description: descriptionFor(row),
+        tags: row.tags ?? [],
+        files,
+        source: `cloud:${row.id}`,
+      })
+
+      // library.add 对已消失的路径静默 continue；落地数少于声明数就是「已声明却未落地」。
+      // 半截资产不得冒充成功：撤掉它，把失败交给调用方。
+      if (Array.isArray(asset?.files) && asset.files.length < files.length) {
+        const detail = `${asset.files.length}/${files.length} declared files landed`
+        console.error(`[assets] cloud save ${row.id}: copy stage dropped a declared file (${detail})`)
+        rollbackAddedAsset(asset)
+        throw new AssetsError('internal', `copy stage dropped a declared file (${detail})`)
+      }
+      return asset
+    } finally {
+      clearStaging(stagingScope)
+    }
   }
 
-  /** @param {string} url @param {string} name */
-  async function stageRemote(url, name) {
+  /** Root of the staging area; one slice per save lives under it. */
+  function stagingRoot() {
+    return join(catalogDir, '.staging')
+  }
+
+  /**
+   * A staging slice name for one save. Two saves running at the same time get
+   * different slices, so the one that finishes first cannot delete the other's
+   * downloads — which is what the client's per-asset-id concurrency produces.
+   */
+  function newStagingScope() {
+    stagingSeq += 1
+    return `${Date.now().toString(36)}-${stagingSeq.toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  }
+
+  /** @param {string} url @param {string} name @param {string} scope */
+  async function stageRemote(url, name, scope) {
     const fetchFunc = getFetch()
-    if (typeof fetchFunc !== 'function') return null
-    const staging = join(catalogDir, '.staging')
+    if (typeof fetchFunc !== 'function') {
+      throw new AssetsError('remote-fetch-failed', 'remote asset download failed')
+    }
+    const staging = join(stagingRoot(), scope)
     mkdirSync(staging, { recursive: true, mode: 0o700 })
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS)
     try {
       const response = await fetchFunc(url, { signal: controller.signal })
-      if (!response.ok) return null
+      if (!response.ok) {
+        throw new AssetsError('remote-fetch-failed', `remote asset answered HTTP ${response.status}`)
+      }
       const declared = Number(response.headers?.get?.('content-length') ?? 0)
       if (Number.isFinite(declared) && declared > MAX_REMOTE_SAVE_BYTES) {
         throw new AssetsError('file-too-large', `remote asset exceeds ${MAX_REMOTE_SAVE_BYTES} bytes`)
@@ -456,21 +541,49 @@ export function createCloudCatalog(deps = {}) {
       return target
     } catch (error) {
       if (error instanceof AssetsError) throw error
-      return null
+      // 网络故障、超时与 abort 都是取用失败：可见地失败，不返回半截结果。
+      throw new AssetsError('remote-fetch-failed', 'remote asset download failed')
     } finally {
       clearTimeout(timer)
     }
   }
 
-  /** Drop staged downloads after they have been copied into the library. */
-  function clearStaging() {
-    const staging = join(catalogDir, '.staging')
-    if (!existsSync(staging)) return
+  /**
+   * Undo an asset that landed short of what the save declared, so a half asset
+   * never survives as if the save had succeeded.
+   * @param {{ id?: string }} asset
+   */
+  function rollbackAddedAsset(asset) {
+    if (typeof library?.remove !== 'function' || typeof asset?.id !== 'string') return
     try {
-      rmSync(staging, { recursive: true, force: true })
+      library.remove(asset.id)
     } catch {
-      // Staging is best-effort; a leftover file is harmless and cleaned next run.
+      // The failure is already on its way out; a failed undo must not hide it.
     }
+  }
+
+  /**
+   * Drop staged downloads after they have been copied into the library.
+   *
+   * With a `scope` only that save's own slice is removed — which is what keeps
+   * two overlapping saves from deleting each other's staged files. Without one
+   * (the call shape the route and the Host tool keep) only slices that cannot
+   * belong to a running save are swept: empty ones, and ones older than
+   * {@link STAGING_STALE_MS}. A slice a save is still writing to is never
+   * touched, and the whole directory is never removed in one go.
+   * @param {string} [scope]
+   */
+  function clearStaging(scope) {
+    const root = stagingRoot()
+    if (!existsSync(root)) return
+    const wanted = typeof scope === 'string' ? scope.trim() : ''
+    if (wanted !== '') {
+      // A scope is a name this module minted; anything else is not a path to follow.
+      if (STAGING_SCOPE_PATTERN.test(wanted)) removeDir(join(root, wanted))
+    } else {
+      sweepStaleSlices(root)
+    }
+    removeDirIfEmpty(root)
   }
 
   return {
@@ -542,7 +655,8 @@ function dimensionToken(value) {
 /** @param {string} category */
 function typeForCategory(category) {
   // The library's own vocabulary already covers every cloud category except
-  // audio, which is not a creative-object type and therefore lands in custom.
+  // material and audio, which are not creative-object types and therefore land
+  // in custom.
   return category === 'character' || category === 'scene' || category === 'style' || category === 'prop' || category === 'knowledge'
     ? category
     : 'custom'
@@ -572,6 +686,73 @@ function extensionFor(url, contentType) {
 /** Absolute path of the committed catalog directory for this install. */
 export function defaultCatalogDir() {
   return DEFAULT_CATALOG_DIR
+}
+
+/**
+ * Declared slots whose file is no longer on disk.
+ *
+ * `library.add` copies what it is handed and silently drops a path that has
+ * gone away, which would turn a lost staging file into a smaller "successful"
+ * save. A save must never claim a slot it did not fill.
+ * @param {{ real_path: string }[]} files
+ * @returns {string[]}
+ */
+function missingDeclaredFiles(files) {
+  return files.map((file) => file.real_path).filter((path) => !existsSync(path))
+}
+
+/** @param {string} dir */
+function removeDir(dir) {
+  try {
+    rmSync(dir, { recursive: true, force: true })
+  } catch {
+    // Staging is best-effort; a leftover file is harmless and cleaned next run.
+  }
+}
+
+/**
+ * Remove the staging slices under `root` that cannot belong to a running save:
+ * empty ones, and ones older than {@link STAGING_STALE_MS}. A slice a save is
+ * still writing to is left alone, and the whole directory is never wiped.
+ * @param {string} root
+ */
+function sweepStaleSlices(root) {
+  let entries = []
+  try {
+    entries = readdirSync(root, { withFileTypes: true })
+  } catch {
+    return
+  }
+  const cutoff = Date.now() - STAGING_STALE_MS
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const dir = join(root, entry.name)
+    if (isDirEmpty(dir) || mtimeOf(dir) < cutoff) removeDir(dir)
+  }
+}
+
+/** @param {string} dir */
+function removeDirIfEmpty(dir) {
+  if (isDirEmpty(dir)) removeDir(dir)
+}
+
+/** @param {string} dir */
+function isDirEmpty(dir) {
+  try {
+    return readdirSync(dir).length === 0
+  } catch {
+    return false
+  }
+}
+
+/** @param {string} dir */
+function mtimeOf(dir) {
+  try {
+    return statSync(dir).mtimeMs
+  } catch {
+    // Unreadable means unknown age, and unknown age is never old enough to sweep.
+    return Number.POSITIVE_INFINITY
+  }
 }
 
 /** Exported for the route layer and its tests. */

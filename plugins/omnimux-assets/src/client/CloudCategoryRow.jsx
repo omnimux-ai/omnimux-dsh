@@ -8,6 +8,12 @@ import { ChevronLeftIcon, ChevronRightIcon } from './icons.jsx'
 import { CloudAssetCard } from './CloudAssetsView.jsx'
 
 /**
+ * 缺省读面：没有控制器注入时两张卡都按「未保存」渲染（只读空集）。
+ * 逐文件声明，不新增跨文件的共享导出。
+ */
+const NO_IDS = new Set()
+
+/**
  * 抽样范围必须取自具名二级 scope 的分类行。
  *
  * 声音「全部」：该行承诺的是可试听的卡点配乐与音效，而 `audio` 全量的 27 页里
@@ -26,6 +32,10 @@ const ROW_SAMPLE_SCOPES = { audio: ['audio/bgm', 'audio/sfx'] }
  * and a single-row scrollable container of cards with randomized order per refresh
  * and session-level caching to keep order stable during navigation.
  *
+ * The row draws the same `CloudAssetCard` the grid does, so it has to pass the
+ * save trio straight through: read-only `savedIds` / `savingIds` and the
+ * `onSave` callback, both owned by the stage's controller.
+ *
  * @param {{
  *   category: { id: string, zh?: string, en?: string, total?: number },
  *   t: (key: string) => string,
@@ -34,10 +44,13 @@ const ROW_SAMPLE_SCOPES = { audio: ['audio/bgm', 'audio/sfx'] }
  *   onPreview?: (asset: any) => void,
  *   playingId?: string,
  *   refreshKey?: number,
+ *   savedIds?: Set<string>,
+ *   savingIds?: Set<string>,
+ *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudCategoryRow(props) {
-  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, refreshKey = 0 } = props
+  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, refreshKey = 0, savedIds = NO_IDS, savingIds = NO_IDS, onSave } = props
   const [items, setItems] = useState(/** @type {any[]} */ ([]))
   const [loading, setLoading] = useState(false)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -179,6 +192,9 @@ export function CloudCategoryRow(props) {
                 playing={playingId === asset.id}
                 onTogglePlay={onTogglePlay}
                 onPreview={onPreview}
+                saved={savedIds.has(asset.id)}
+                saving={savingIds.has(asset.id)}
+                onSave={onSave}
               />
             ))
           )}

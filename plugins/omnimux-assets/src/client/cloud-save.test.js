@@ -22,7 +22,7 @@ function fakeWindow() {
 }
 
 describe('saveCloudAssetToLocal', () => {
-  it('posts the row id and the row name to the library', async () => {
+  it('posts the row id alone, so the Host can reuse an already-saved row', async () => {
     const calls = []
     const win = fakeWindow()
     const result = await saveCloudAssetToLocal(
@@ -37,7 +37,9 @@ describe('saveCloudAssetToLocal', () => {
       },
     )
 
-    assert.deepEqual(calls, [{ id: 'audio-voice-bbb', options: { name: '林潇 2.0' } }])
+    // 行名不转发：Host 的去重分支以「未指定 name」为前置条件，转发行名会让它永不触发，
+    // 二次保存就造出 `xxx (2)` 重复条目并重复下载同一份远端媒体。
+    assert.deepEqual(calls, [{ id: 'audio-voice-bbb', options: {} }])
     assert.equal(result.ok, true)
     assert.equal(result.asset.id, 'local-1')
   })

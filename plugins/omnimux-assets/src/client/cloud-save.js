@@ -22,7 +22,9 @@ export async function saveCloudAssetToLocal(asset, io = {}) {
   const id = String(asset?.id ?? '')
   if (id === '') return { ok: false, error: 'no-asset' }
   const request = io.request || cloudSaveToLocal
-  const result = await request(id, { name: asset?.name })
+  // 只声明「保存哪一行」：把行名转发过去会让 Host 的去重分支（未指定 name 才复用既有
+  // `cloud:<id>` 行）永不触发，二次保存就造出重复条目并重复下载同一份远端媒体。
+  const result = await request(id, {})
   if (!result || result.ok !== true) {
     const body = result?.body
     return {

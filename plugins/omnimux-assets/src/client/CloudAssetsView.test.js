@@ -9,6 +9,7 @@ import { ASSETS_CSS } from './styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const viewJsx = readFileSync(join(here, 'CloudAssetsView.jsx'), 'utf8')
+const rowJsx = readFileSync(join(here, 'CloudCategoryRow.jsx'), 'utf8')
 const feedJs = readFileSync(join(here, 'use-cloud-assets-feed.js'), 'utf8')
 const saveJs = readFileSync(join(here, 'use-cloud-save.js'), 'utf8')
 
@@ -393,9 +394,10 @@ describe('Cloud voice card plays from its colour plate', () => {
 })
 
 /**
- * 卡片右上角只留一个操作：加入对话。收藏（+ 号）连同它的悬浮条与状态一并删除。
+ * 卡片右上角的悬停控件簇：保存到本地（左）与加入对话（右）。两个控件共享一块中性
+ * 底板，簇内不再有第三种入口。
  */
-describe('Cloud card keeps exactly one hover control', () => {
+describe('Cloud card hover cluster holds the two product actions', () => {
   const actions = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-actions {')
 
   it('positions the control absolutely in the corner, above the card body', () => {
@@ -410,56 +412,84 @@ describe('Cloud card keeps exactly one hover control', () => {
     assert.match(viewJsx, /addAssetToConversation\(asset\)/)
     assert.match(viewJsx, /<ChatIcon size=\{16\} \/>/)
     assert.match(viewJsx, /t\('card\.addToConversation'\)/)
-    assert.match(viewJsx, /className="omnimux-assets-cloud-chat"/)
+    assert.match(viewJsx, /className="omnimux-assets-cloud-action omnimux-assets-cloud-chat"/)
     assert.match(viewJsx, /title=\{addLabel\}/)
   })
 
-  it('renders the bubble icon and nothing else in that corner', () => {
+  it('renders the save plate left of the bubble and nothing else in that corner', () => {
     const start = viewJsx.indexOf('className="omnimux-assets-cloud-actions"')
     const end = viewJsx.indexOf('className="omnimux-assets-card-body"', start)
     const cluster = viewJsx.slice(start, end)
-    assert.equal((cluster.match(/<IconButton/g) ?? []).length, 1)
+    assert.equal((cluster.match(/<IconButton/g) ?? []).length, 2)
+    assert.ok(cluster.indexOf('omnimux-assets-cloud-save') < cluster.indexOf('omnimux-assets-cloud-chat'))
+    assert.match(cluster, /<IconDownloadOutline16 size=\{16\} \/>/)
     assert.match(cluster, /<ChatIcon size=\{16\} \/>/)
+    // 上限声明：簇内恰好两个控件，且不写死任何可见中文（文案一律经 t() 解析）。
+    assert.equal((cluster.match(/<IconButton/g) ?? []).length, 2)
+    assert.equal((cluster.match(/>[^<>{}]*[\u4e00-\u9fa5][^<>{}]*</g) ?? []).length, 0)
   })
 
-  it('removes the save control and its state from the card, the feed and the stylesheet', () => {
+  it('adds the save control to the card without moving the request out of the controller', () => {
+    // 正向：保存控件确实在卡片上，并且读的是注入进来的读面。
+    assert.match(viewJsx, /omnimux-assets-cloud-action omnimux-assets-cloud-save/)
+    assert.match(viewJsx, /const handleSave/)
+    assert.match(viewJsx, /<IconDownloadOutline16 size=\{16\} \/>/)
+    assert.match(viewJsx, /savedIds/)
+    assert.match(viewJsx, /savingIds/)
+    assert.match(ASSETS_CSS, /\.omnimux-assets-cloud-card \.omnimux-assets-cloud-action/)
+    // 负向：卡片不得直连传输层，不得复用弹窗的加号字形，不得自持已保存状态。
     assert.doesNotMatch(viewJsx, /PlusIcon/)
-    assert.doesNotMatch(viewJsx, /cloud-save/)
-    assert.doesNotMatch(viewJsx, /handleSave/)
-    assert.doesNotMatch(viewJsx, /saveToLocal/)
     assert.doesNotMatch(viewJsx, /data-saved/)
-    assert.doesNotMatch(viewJsx, /savedIds|savingId/)
+    assert.doesNotMatch(viewJsx, /localStorage/)
+    assert.doesNotMatch(viewJsx, /saveCloudAssetToLocal/)
+    assert.doesNotMatch(viewJsx, /cloudSaveToLocal/)
+    assert.doesNotMatch(viewJsx, /\bfetch\(/)
     assert.doesNotMatch(feedJs, /useCloudSave/)
     assert.doesNotMatch(feedJs, /saveToLocal/)
-    assert.doesNotMatch(ASSETS_CSS, /omnimux-assets-cloud-save/)
+    // 底板上只有共享类；save 钩子即便出现，也不得长成第二个 save 类名分支。
+    assert.deepEqual(
+      (ASSETS_CSS.match(/omnimux-assets-cloud-save[\w-]*/g) ?? []).filter((name) => name !== 'omnimux-assets-cloud-save'),
+      [],
+    )
   })
 
-  it('drops the cloud-only save wording from both dictionaries', () => {
+  it('keeps the retired save keys dead and the card save keys live', () => {
     assert.equal(zh['cloud.action.save'], undefined)
     assert.equal(zh['cloud.action.saved'], undefined)
     assert.equal(zh['cloud.save.saved'], undefined)
     assert.equal(en['cloud.action.save'], undefined)
     assert.equal(en['cloud.action.saved'], undefined)
     assert.equal(en['cloud.save.saved'], undefined)
+    assert.equal(zh['card.saveToLocal'], '保存到本地')
+    assert.equal(en['card.saveToLocal'], 'Save to Library')
+    assert.equal(zh['card.savedToLocal'], '已保存')
+    assert.equal(en['card.savedToLocal'], 'Saved to Library')
+    assert.equal(typeof zh['error.saveFailed'], 'string')
+    assert.equal(typeof en['error.saveFailed'], 'string')
   })
 
-  it('re-points the surviving save notice at a modal-scoped key', () => {
-    // The preview modal is the only remaining saver, so the notice it shows must
-    // not be worded as a card action.
-    assert.match(saveJs, /setNotice\(t\('modal\.save\.notice'\)\.replace\('\{name\}'/)
+  it('points the shared save notice at a cloud-scoped key', () => {
+    // The cards and the preview modal save through one controller, so the notice
+    // must not be worded as a modal-only action.
+    assert.match(saveJs, /setNotice\(t\('cloud\.save\.notice'\)\.replace\('\{name\}'/)
     assert.match(saveJs, /import \{ saveCloudAssetToLocal \} from '\.\/cloud-save\.js'/)
-    assert.ok(zh['modal.save.notice'].includes('{name}'))
-    assert.ok(en['modal.save.notice'].includes('{name}'))
-    assert.equal(zh['modal.saveToLocal'], '收藏到本地')
+    assert.ok(zh['cloud.save.notice'].includes('{name}'))
+    assert.ok(en['cloud.save.notice'].includes('{name}'))
+    assert.equal(zh['modal.saveToLocal'], '保存到本地')
+    // 失败文案只有一个出口：宿主 message 与错误码都不许进 DOM。
+    assert.match(saveJs, /setNotice\(t\('error\.saveFailed'\)\)/)
+    assert.doesNotMatch(saveJs, /setNotice\(String\(result\.error\)\)/)
+    assert.doesNotMatch(saveJs, /errText\(caught\)/)
   })
 
-  it('inverts the plate on hover, with no brand hue anywhere in the control', () => {
+  it('inverts both corner plates on hover, with no brand hue anywhere in the cluster', () => {
     // Bounded at the description rule: everything above it is the fixed dark media
-    // plate, which is exempted, while this control is chrome and is not.
+    // plate, which is exempted, while these controls are chrome and are not.
     const plates = ASSETS_CSS.slice(
-      ASSETS_CSS.indexOf('.omnimux-assets-cloud-card .omnimux-assets-cloud-chat'),
+      ASSETS_CSS.indexOf('.omnimux-assets-cloud-card .omnimux-assets-cloud-action'),
       ASSETS_CSS.indexOf('.omnimux-assets-cloud-desc {'),
     )
+    assert.ok(plates.length > 0, 'the shared plate slice must not be empty')
     assert.match(plates, /background: var\(--dsw-alias-bg-elevated\)/)
     assert.match(plates, /transition: opacity/)
     assert.match(plates, /background: var\(--dsw-alias-label-primary\)/)
@@ -467,6 +497,11 @@ describe('Cloud card keeps exactly one hover control', () => {
     assert.doesNotMatch(plates, /brand-primary|interactive-bg-hover-accent/)
     assert.doesNotMatch(plates, /#[0-9a-fA-F]{3,8}\b/)
     assert.doesNotMatch(plates, /rgba\(/)
+    // 两键同源同触发：hover 与 focus-within 缺一，键盘可达性就退化。
+    assert.match(plates, /\.omnimux-assets-cloud-card:hover \.omnimux-assets-cloud-action/)
+    assert.match(plates, /\.omnimux-assets-cloud-card:focus-within \.omnimux-assets-cloud-action/)
+    // 共享类之外，save 钩子不得单独复写底板色值。
+    assert.doesNotMatch(plates, /\.omnimux-assets-cloud-save[^{]*\{[^}]*background/)
   })
 })
 
@@ -480,9 +515,48 @@ describe('Cloud card opens the preview', () => {
   })
 
   it('hands the preview handler down from the view to every card', () => {
-    assert.match(viewJsx, /const \{ t, open = true, onPreview \} = props/)
+    assert.match(viewJsx, /const \{ t, open = true, onPreview, savedIds = NO_IDS, savingIds = NO_IDS, onSave \} = props/)
     assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open/)
     assert.match(viewJsx, /onPreview=\{onPreview\}/)
+  })
+
+  it('hands the save state to the card in both grid forms', () => {
+    assert.match(viewJsx, /saved=\{savedIds\.has\(asset\.id\)\}/)
+    assert.match(viewJsx, /saving=\{savingIds\.has\(asset\.id\)\}/)
+    assert.match(viewJsx, /<CloudCategoryRow[\s\S]*?savedIds=\{savedIds\}[\s\S]*?savingIds=\{savingIds\}[\s\S]*?onSave=\{onSave\}/)
+    assert.match(rowJsx, /saved=\{savedIds\.has\(asset\.id\)\}/)
+    assert.match(rowJsx, /saving=\{savingIds\.has\(asset\.id\)\}/)
+  })
+
+  it('routes the card control through the injected controller, never the transport', () => {
+    assert.match(viewJsx, /const handleSave = \(event\) => \{[\s\S]*?event\.stopPropagation\(\)[\s\S]*?onSave\?\.\(asset\)/)
+    assert.doesNotMatch(viewJsx, /saveCloudAssetToLocal|cloudSaveToLocal|\bfetch\(/)
+  })
+
+  it('exposes saving and saved as separate, observable states without a data-* channel', () => {
+    const start = viewJsx.indexOf('className="omnimux-assets-cloud-actions"')
+    const end = viewJsx.indexOf('className="omnimux-assets-card-body"', start)
+    const cluster = viewJsx.slice(start, end)
+    // 忙态由 IconButton 原生 loading 转出 aria-busy 与 spinner，卡片不自己写。
+    assert.match(cluster, /loading=\{saving\}/)
+    assert.match(cluster, /disabled=\{saved\}/)
+    assert.match(cluster, /aria-label=\{saveLabel\}/)
+    assert.match(cluster, /title=\{saveLabel\}/)
+    assert.doesNotMatch(cluster, /aria-busy/)
+    assert.doesNotMatch(cluster, /data-state|data-saved/)
+  })
+
+  it('swaps the glyph and the label when the row is saved', () => {
+    assert.match(viewJsx, /saved \? t\('card\.savedToLocal'\) : t\('card\.saveToLocal'\)/)
+    assert.match(viewJsx, /saved \? <CheckIcon size=\{16\} \/> : <IconDownloadOutline16 size=\{16\} \/>/)
+    assert.match(viewJsx, /import \{ IconDownloadOutline16 \} from '@deepseek-ai\/dsh-client-ui-primitives'/)
+  })
+
+  it('keeps the corner cluster bounded to the two product actions', () => {
+    const start = viewJsx.indexOf('className="omnimux-assets-cloud-actions"')
+    const end = viewJsx.indexOf('className="omnimux-assets-card-body"', start)
+    const cluster = viewJsx.slice(start, end)
+    assert.equal((cluster.match(/<IconButton/g) ?? []).length, 2)
   })
 })
 
@@ -494,8 +568,8 @@ describe('Cloud chrome stays neutral', () => {
     assert.doesNotMatch(selected.slice(0, selected.indexOf('}')), /brand-primary|interactive-bg-hover-accent/)
   })
 
-  it('inverts the add-to-conversation control on its own hover', () => {
-    const hover = ASSETS_CSS.slice(ASSETS_CSS.indexOf('.omnimux-assets-cloud-chat:hover'))
+  it('inverts the shared plate on its own hover', () => {
+    const hover = ASSETS_CSS.slice(ASSETS_CSS.indexOf('.omnimux-assets-cloud-action:hover'))
     assert.match(hover, /background: var\(--dsw-alias-label-primary\)/)
     assert.match(hover, /color: var\(--dsw-alias-label-primary-foreground\)/)
   })

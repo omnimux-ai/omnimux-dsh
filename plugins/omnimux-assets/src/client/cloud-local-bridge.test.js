@@ -42,20 +42,24 @@ describe('cloud -> local bridge', () => {
   })
 
   it('keeps the cloud grid off the save path entirely', () => {
-    // Cards carry no save control any more — the single route out of a card is
-    // into the conversation — so the cloud feed must not hold a controller.
+    // 保存状态由 stage 经 props 注入；feed 不得自行持有控制器或保存状态。
     assert.doesNotMatch(cloudFeedJs, /useCloudSave/)
     assert.doesNotMatch(cloudFeedJs, /saveToLocal|savedIds|savingId/)
     assert.doesNotMatch(cloudFeedJs, /stageSave|ownSave/)
   })
 
-  it('keeps one save controller on the stage, serving the cloud preview modal', () => {
+  it('keeps one save controller on the stage, shared by the modal and the cards', () => {
     assert.match(stageJsx, /const cloudSave = useCloudSave\(\{ t \}\)/)
-    assert.match(stageJsx, /<CloudAssetsView t=\{t\} open=\{visible\} onPreview=\{onCloudPreview\}(?: query=\{feed\.query\})? \/>/)
-    assert.doesNotMatch(stageJsx, /<CloudAssetsView[^>]*save=\{cloudSave\}/)
+    // 卡片拿到的必须是窄接口（只读集合 + 一个回调），不是控制器整体。
+    assert.match(stageJsx, /<CloudAssetsView[\s\S]*?savedIds=\{cloudSave\.savedIds\}/)
+    assert.match(stageJsx, /<CloudAssetsView[\s\S]*?savingIds=\{cloudSave\.savingIds\}/)
+    assert.match(stageJsx, /<CloudAssetsView[\s\S]*?onSave=\{cloudSave\.save\}/)
+    assert.doesNotMatch(stageJsx, /<CloudAssetsView[^>]*\bcloudSave=\{cloudSave\}/)
     assert.match(stageJsx, /saved=\{previewCloudId !== '' && cloudSave\.savedIds\.has\(previewCloudId\)\}/)
-    assert.match(stageJsx, /saving=\{previewCloudId !== '' && cloudSave\.savingId === previewCloudId\}/)
+    assert.match(stageJsx, /saving=\{previewCloudId !== '' && cloudSave\.savingIds\.has\(previewCloudId\)\}/)
     assert.match(stageJsx, /onSaveToLocal=\{previewCloudId !== '' \? savePreviewItem : undefined\}/)
+    // 全插件只有一处控制器实例：卡片入口不得自建第二个。
+    assert.equal((stageJsx.match(/useCloudSave\(/g) ?? []).length, 1)
   })
 
   it('translates a cloud row into a preview item that still knows its row id', () => {

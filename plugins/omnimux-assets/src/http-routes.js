@@ -34,6 +34,7 @@ const STATUS_BY_CODE = {
   'catalog-unavailable': 503,
   'catalog-filter-invalid': 400,
   'cloud-media-unavailable': 404,
+  'remote-fetch-failed': 502,
   'name-conflict': 409,
   'type-invalid': 400,
   'name-invalid': 400,
@@ -333,6 +334,9 @@ export function createAssetsDispatcher(deps) {
       const asset = await cloud.saveToLocal(String(body.id ?? ''), { name: body.name, type: body.type })
       return { status: 200, body: { asset, lrev: library.revision() } }
     } finally {
+      // The save already dropped its own staging slice; this bare sweep only
+      // collects what a crashed save left behind and never touches a live slice,
+      // so a second save running at the same time keeps its staged files.
       cloud.clearStaging()
     }
   }
