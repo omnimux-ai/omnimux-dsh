@@ -1,128 +1,125 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { packageRoot, mcpRowId, mcpRowPattern, skillDir } from './paths.js';
-const TABS = new Set(['experts', 'skills', 'connectors']);
-const KINDS = new Set(['expert', 'team', 'skill', 'connector', 'suite']);
-const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import { packageRoot, mcpRowId, mcpRowPattern, skillDir } from './paths.js'
+
+const TABS = new Set(['experts', 'skills', 'connectors'])
+const KINDS = new Set(['expert', 'team', 'skill', 'connector', 'suite'])
+const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
 /** @type {Map<string, { mtimeMs: number, size: number, doc: ReturnType<typeof parseCatalog> }>} */
-const catalogMemo = new Map();
+const catalogMemo = new Map()
 /** skillDir(home, skill) → boolean */
-const skillInstalledMemo = new Map();
+const skillInstalledMemo = new Map()
 /** `${profileDir}\0${itemId}` → boolean */
-const mcpInstalledMemo = new Map();
+const mcpInstalledMemo = new Map()
 /** profileDir → { mtimeMs: number, size: number, text: string } | { missing: true } */
-const mcpPatchMemo = new Map();
+const mcpPatchMemo = new Map()
+
 /**
  * @param {string} [catalogPath]
  */
 export function catalogRoot(catalogPath) {
-    if (catalogPath)
-        return catalogPath;
-    return join(packageRoot(), 'catalog');
+  if (catalogPath) return catalogPath
+  return join(packageRoot(), 'catalog')
 }
+
 /**
  * @param {string} [catalogPath]
  */
 export function loadCatalog(catalogPath) {
-    const path = catalogPath || join(catalogRoot(), 'index.json');
-    let st;
-    try {
-        st = statSync(path);
-    }
-    catch {
-        const raw = JSON.parse(readFileSync(path, 'utf8'));
-        return parseCatalog(raw);
-    }
-    const hit = catalogMemo.get(path);
-    if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size)
-        return hit.doc;
-    const raw = JSON.parse(readFileSync(path, 'utf8'));
-    const doc = parseCatalog(raw);
-    catalogMemo.set(path, { mtimeMs: st.mtimeMs, size: st.size, doc });
-    return doc;
+  const path = catalogPath || join(catalogRoot(), 'index.json')
+  let st
+  try {
+    st = statSync(path)
+  } catch {
+    const raw = JSON.parse(readFileSync(path, 'utf8'))
+    return parseCatalog(raw)
+  }
+  const hit = catalogMemo.get(path)
+  if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.doc
+  const raw = JSON.parse(readFileSync(path, 'utf8'))
+  const doc = parseCatalog(raw)
+  catalogMemo.set(path, { mtimeMs: st.mtimeMs, size: st.size, doc })
+  return doc
 }
+
 /** Drop catalog parse + installed memos (call after install/uninstall writes). */
 export function invalidateCatalogMemos() {
-    catalogMemo.clear();
-    skillInstalledMemo.clear();
-    mcpInstalledMemo.clear();
-    mcpPatchMemo.clear();
+  catalogMemo.clear()
+  skillInstalledMemo.clear()
+  mcpInstalledMemo.clear()
+  mcpPatchMemo.clear()
 }
+
 /** Test helper. */
 export function catalogMemoSize() {
-    return catalogMemo.size;
+  return catalogMemo.size
 }
+
 /**
  * @param {unknown} raw
  */
 export function parseCatalog(raw) {
-    if (!raw || typeof raw !== 'object')
-        throw new Error('catalog: expected object');
-    const doc = /** @type {Record<string, unknown>} */ (raw);
-    if (doc.schema !== 1)
-        throw new Error('catalog: unsupported schema');
-    if (typeof doc.generated_at !== 'string' || !doc.generated_at)
-        throw new Error('catalog: generated_at required');
-    const tabs = Array.isArray(doc.tabs) ? doc.tabs.map(String) : ['experts', 'skills', 'connectors'];
-    for (const tab of tabs) {
-        if (!TABS.has(tab))
-            throw new Error(`catalog: bad tab ${tab}`);
-    }
-    const categories = Array.isArray(doc.categories) ? doc.categories.map(parseCategory) : [];
-    const items = Array.isArray(doc.items) ? doc.items.map(parseItem) : [];
-    const ids = new Set();
-    for (const item of items) {
-        if (ids.has(item.id))
-            throw new Error(`catalog: duplicate id ${item.id}`);
-        ids.add(item.id);
-    }
-    const featured = Array.isArray(doc.featured)
-        ? doc.featured.map(String).filter((id) => ids.has(id))
-        : [];
-    return {
-        schema: 1,
-        generated_at: doc.generated_at,
-        tabs,
-        categories,
-        featured,
-        items,
-    };
+  if (!raw || typeof raw !== 'object') throw new Error('catalog: expected object')
+  const doc = /** @type {Record<string, unknown>} */ (raw)
+  if (doc.schema !== 1) throw new Error('catalog: unsupported schema')
+  if (typeof doc.generated_at !== 'string' || !doc.generated_at) throw new Error('catalog: generated_at required')
+  const tabs = Array.isArray(doc.tabs) ? doc.tabs.map(String) : ['experts', 'skills', 'connectors']
+  for (const tab of tabs) {
+    if (!TABS.has(tab)) throw new Error(`catalog: bad tab ${tab}`)
+  }
+  const categories = Array.isArray(doc.categories) ? doc.categories.map(parseCategory) : []
+  const items = Array.isArray(doc.items) ? doc.items.map(parseItem) : []
+  const ids = new Set()
+  for (const item of items) {
+    if (ids.has(item.id)) throw new Error(`catalog: duplicate id ${item.id}`)
+    ids.add(item.id)
+  }
+  const featured = Array.isArray(doc.featured)
+    ? doc.featured.map(String).filter((id) => ids.has(id))
+    : []
+  return {
+    schema: 1,
+    generated_at: doc.generated_at,
+    tabs,
+    categories,
+    featured,
+    items,
+  }
 }
+
 /**
  * @param {unknown} raw
  */
 function parseAvatar(raw) {
-    if (typeof raw !== 'string' || !raw)
-        return '';
-    if (/^\/esc\/avatars\/[a-z0-9-]+\.png$/.test(raw))
-        return raw;
-    if (/^https:\/\/raw\.githubusercontent\.com\/infometa\/workbuddyskills\/(?:main|master)\/experts\/[A-Za-z0-9._-]+\/avatars\/[A-Za-z0-9._-]+\.png$/.test(raw)) {
-        return raw;
-    }
-    return '';
+  if (typeof raw !== 'string' || !raw) return ''
+  if (/^\/esc\/avatars\/[a-z0-9-]+\.png$/.test(raw)) return raw
+  if (/^https:\/\/raw\.githubusercontent\.com\/infometa\/workbuddyskills\/(?:main|master)\/experts\/[A-Za-z0-9._-]+\/avatars\/[A-Za-z0-9._-]+\.png$/.test(raw)) {
+    return raw
+  }
+  return ''
 }
+
 function parseCategory(raw) {
-    if (!raw || typeof raw !== 'object')
-        throw new Error('catalog: bad category');
-    const row = /** @type {Record<string, unknown>} */ (raw);
-    const id = String(row.id || '');
-    const title = String(row.title || '');
-    const tab = String(row.tab || '');
-    if (!ID.test(id))
-        throw new Error(`catalog: bad category id ${id}`);
-    if (!title)
-        throw new Error(`catalog: category ${id} missing title`);
-    if (!TABS.has(tab))
-        throw new Error(`catalog: category ${id} bad tab`);
-    return { id, title, tab };
+  if (!raw || typeof raw !== 'object') throw new Error('catalog: bad category')
+  const row = /** @type {Record<string, unknown>} */ (raw)
+  const id = String(row.id || '')
+  const title = String(row.title || '')
+  const tab = String(row.tab || '')
+  if (!ID.test(id)) throw new Error(`catalog: bad category id ${id}`)
+  if (!title) throw new Error(`catalog: category ${id} missing title`)
+  if (!TABS.has(tab)) throw new Error(`catalog: category ${id} bad tab`)
+  return { id, title, tab }
 }
+
 /**
  * 双语字段长度上限。**必须与 `src/skill-bilingual.ts` 的同名常量一致**，
  * 由 `src/tests/skill-bilingual.test.ts` 的漂移断言守卫。
  * 本层不得反向 import TS 模块：`src/expert/*.test.js` 会源码直跑，
  * 而 `src/skill-bilingual.js` 在源码目录并不存在（须经 tsc 产出）。
  */
-export const SKILL_BILINGUAL_LIMITS = Object.freeze({ titleZh: 80, titleEn: 80, summaryZh: 200, summaryEn: 200 });
+export const SKILL_BILINGUAL_LIMITS = Object.freeze({ titleZh: 80, titleEn: 80, summaryZh: 200, summaryEn: 200 })
+
 /**
  * 双语字段投影：trim + 长度裁剪，**不设语言回退**（缺失即空串）。
  * 空串是有意义信号：表示该条目未入库双语，工坊准入门禁据此拒绝该条目。
@@ -130,82 +127,75 @@ export const SKILL_BILINGUAL_LIMITS = Object.freeze({ titleZh: 80, titleEn: 80, 
  * @param {Record<string, unknown>} row
  */
 function parseBilingual(row) {
-    const out = {};
-    for (const field of Object.keys(SKILL_BILINGUAL_LIMITS)) {
-        const value = row[field];
-        out[field] = typeof value === 'string' ? value.trim().slice(0, SKILL_BILINGUAL_LIMITS[field]) : '';
-    }
-    return out;
+  const out = {}
+  for (const field of Object.keys(SKILL_BILINGUAL_LIMITS)) {
+    const value = row[field]
+    out[field] = typeof value === 'string' ? value.trim().slice(0, SKILL_BILINGUAL_LIMITS[field]) : ''
+  }
+  return out
 }
+
 /**
  * @param {unknown} raw
  */
 function parseItem(raw) {
-    if (!raw || typeof raw !== 'object')
-        throw new Error('catalog: bad item');
-    const row = /** @type {Record<string, unknown>} */ (raw);
-    const id = String(row.id || '');
-    const tab = String(row.tab || '');
-    const kind = String(row.kind || '');
-    const title = String(row.title || '');
-    const summary = String(row.summary || '');
-    const category = String(row.category || '');
-    if (!ID.test(id))
-        throw new Error(`catalog: bad item id ${id}`);
-    if (!TABS.has(tab))
-        throw new Error(`catalog: item ${id} bad tab`);
-    if (!KINDS.has(kind))
-        throw new Error(`catalog: item ${id} bad kind`);
-    if (!title || title.length > 40)
-        throw new Error(`catalog: item ${id} bad title`);
-    if (!summary || summary.length > 200)
-        throw new Error(`catalog: item ${id} bad summary`);
-    if (!ID.test(category))
-        throw new Error(`catalog: item ${id} bad category`);
-    const subtitle = typeof row.subtitle === 'string' ? row.subtitle.trim().slice(0, 24) : '';
-    const avatar = parseAvatar(row.avatar);
-    // 上限只防脏数据撑爆卡片；目录最长条目 7 个标签，取 8 以免**静默截断**掉领域标签。
-    const tags = Array.isArray(row.tags) ? row.tags.map(String).slice(0, 8) : [];
-    const skill = typeof row.skill === 'string' && ID.test(row.skill) ? row.skill : undefined;
-    const serverName = typeof row.serverName === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(row.serverName)
-        ? row.serverName
-        : undefined;
-    const source = parseSource(row.source, id);
-    if ((kind === 'expert' || kind === 'team' || kind === 'skill' || kind === 'suite') && !skill) {
-        throw new Error(`catalog: item ${id} missing skill`);
+  if (!raw || typeof raw !== 'object') throw new Error('catalog: bad item')
+  const row = /** @type {Record<string, unknown>} */ (raw)
+  const id = String(row.id || '')
+  const tab = String(row.tab || '')
+  const kind = String(row.kind || '')
+  const title = String(row.title || '')
+  const summary = String(row.summary || '')
+  const category = String(row.category || '')
+  if (!ID.test(id)) throw new Error(`catalog: bad item id ${id}`)
+  if (!TABS.has(tab)) throw new Error(`catalog: item ${id} bad tab`)
+  if (!KINDS.has(kind)) throw new Error(`catalog: item ${id} bad kind`)
+  if (!title || title.length > 40) throw new Error(`catalog: item ${id} bad title`)
+  if (!summary || summary.length > 200) throw new Error(`catalog: item ${id} bad summary`)
+  if (!ID.test(category)) throw new Error(`catalog: item ${id} bad category`)
+  const subtitle = typeof row.subtitle === 'string' ? row.subtitle.trim().slice(0, 24) : ''
+  const avatar = parseAvatar(row.avatar)
+  // 上限只防脏数据撑爆卡片；目录最长条目 7 个标签，取 8 以免**静默截断**掉领域标签。
+  const tags = Array.isArray(row.tags) ? row.tags.map(String).slice(0, 8) : []
+  const skill = typeof row.skill === 'string' && ID.test(row.skill) ? row.skill : undefined
+  const serverName = typeof row.serverName === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(row.serverName)
+    ? row.serverName
+    : undefined
+  const source = parseSource(row.source, id)
+  if ((kind === 'expert' || kind === 'team' || kind === 'skill' || kind === 'suite') && !skill) {
+    throw new Error(`catalog: item ${id} missing skill`)
+  }
+  if (kind === 'connector' && !serverName) {
+    throw new Error(`catalog: item ${id} missing serverName`)
+  }
+  const hub = parseHub(row.hub)
+  const item = { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub }
+  if (typeof row.preinstalled === 'boolean') item.preinstalled = row.preinstalled
+  if (kind === 'suite') item.suite = parseSuiteManifest(row.suite, id)
+  // Skill-only metadata; expert/team fields and top-level featured retain their contract.
+  if (kind === 'skill' && tab === 'skills') {
+    /** @type {'session-guide' | undefined} */
+    const installFlow = row.installFlow === 'session-guide' ? 'session-guide' : undefined
+    const sessionPrefill = typeof row.sessionPrefill === 'string' && row.sessionPrefill.trim()
+      ? row.sessionPrefill.trim().slice(0, 4000)
+      : undefined
+    return {
+      ...item,
+      ...parseBilingual(row),
+      recommended: Object.hasOwn(row, 'recommended') && row.recommended === true,
+      cover: parseSkillCover(row.cover),
+      downloads: typeof row.downloads === 'number' && Number.isSafeInteger(row.downloads) && row.downloads >= 0
+        ? row.downloads : null,
+      version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
+      updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
+      publishedAt: typeof row.publishedAt === 'string' ? row.publishedAt : null,
+      ...(installFlow ? { installFlow: /** @type {'session-guide'} */ ('session-guide') } : {}),
+      ...(sessionPrefill ? { sessionPrefill } : {}),
     }
-    if (kind === 'connector' && !serverName) {
-        throw new Error(`catalog: item ${id} missing serverName`);
-    }
-    const hub = parseHub(row.hub);
-    const item = { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub };
-    if (typeof row.preinstalled === 'boolean')
-        item.preinstalled = row.preinstalled;
-    if (kind === 'suite')
-        item.suite = parseSuiteManifest(row.suite, id);
-    // Skill-only metadata; expert/team fields and top-level featured retain their contract.
-    if (kind === 'skill' && tab === 'skills') {
-        /** @type {'session-guide' | undefined} */
-        const installFlow = row.installFlow === 'session-guide' ? 'session-guide' : undefined;
-        const sessionPrefill = typeof row.sessionPrefill === 'string' && row.sessionPrefill.trim()
-            ? row.sessionPrefill.trim().slice(0, 4000)
-            : undefined;
-        return {
-            ...item,
-            ...parseBilingual(row),
-            recommended: Object.hasOwn(row, 'recommended') && row.recommended === true,
-            cover: parseSkillCover(row.cover),
-            downloads: typeof row.downloads === 'number' && Number.isSafeInteger(row.downloads) && row.downloads >= 0
-                ? row.downloads : null,
-            version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
-            updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
-            publishedAt: typeof row.publishedAt === 'string' ? row.publishedAt : null,
-            ...(installFlow ? { installFlow: /** @type {'session-guide'} */ ('session-guide') } : {}),
-            ...(sessionPrefill ? { sessionPrefill } : {}),
-        };
-    }
-    return item;
+  }
+  return item
 }
+
 /**
  * 套件三块清单（技能 / 规则 / Agent）。条目名必填，标题缺省回落到条目名；
  * 说明允许为空——规则与部分包内文件本身没有描述字段，货架不伪造文案。
@@ -217,191 +207,179 @@ function parseItem(raw) {
  * @param {string} id
  */
 function parseSuiteManifest(raw, id) {
-    const row = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {};
-    const group = (value, label, withPath = false) => {
-        if (!Array.isArray(value))
-            return [];
-        return value.map((entry) => {
-            const item = entry && typeof entry === 'object' ? /** @type {Record<string, unknown>} */ (entry) : {};
-            const name = String(item.name || '').trim();
-            if (!name)
-                throw new Error(`catalog: item ${id} suite ${label} entry missing name`);
-            const title = String(item.title || '').trim();
-            // content 是规则类条目的完整源文本，也就是安装后写进 AGENTS.md 的内容，详情页直接展示它。
-            const out = {
-                name,
-                title: title || name,
-                desc: String(item.desc || '').trim(),
-                content: String(item.content || '').trim(),
-            };
-            if (withPath)
-                out.path = typeof item.path === 'string' ? item.path.trim() : '';
-            return out;
-        });
-    };
-    return {
-        skills: group(row.skills, 'skills', true),
-        rules: group(row.rules, 'rules'),
-        agents: group(row.agents, 'agents'),
-    };
+  const row = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {}
+  const group = (value, label, withPath = false) => {
+    if (!Array.isArray(value)) return []
+    return value.map((entry) => {
+      const item = entry && typeof entry === 'object' ? /** @type {Record<string, unknown>} */ (entry) : {}
+      const name = String(item.name || '').trim()
+      if (!name) throw new Error(`catalog: item ${id} suite ${label} entry missing name`)
+      const title = String(item.title || '').trim()
+      // content 是规则类条目的完整源文本，也就是安装后写进 AGENTS.md 的内容，详情页直接展示它。
+      const out = {
+        name,
+        title: title || name,
+        desc: String(item.desc || '').trim(),
+        content: String(item.content || '').trim(),
+      }
+      if (withPath) out.path = typeof item.path === 'string' ? item.path.trim() : ''
+      return out
+    })
+  }
+  return {
+    skills: group(row.skills, 'skills', true),
+    rules: group(row.rules, 'rules'),
+    agents: group(row.agents, 'agents'),
+  }
 }
+
 /** Only controlled relative raster asset references; no URL proxy or inline SVG. */
 function parseSkillCover(raw) {
-    if (!raw || typeof raw !== 'object')
-        return undefined;
-    const { asset, alt } = raw;
-    if (typeof asset !== 'string' || !/^catalog\/covers\/[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(asset))
-        return undefined;
-    return { asset, alt: typeof alt === 'string' ? alt.slice(0, 200) : '' };
+  if (!raw || typeof raw !== 'object') return undefined
+  const { asset, alt } = raw
+  if (typeof asset !== 'string' || !/^catalog\/covers\/[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(asset)) return undefined
+  return { asset, alt: typeof alt === 'string' ? alt.slice(0, 200) : '' }
 }
+
 /**
  * SkillHub 重复标记（可选）：{ slug, name?, version?, downloads? }。
  * @param {unknown} raw
  */
 function parseHub(raw) {
-    if (!raw || typeof raw !== 'object')
-        return undefined;
-    const row = /** @type {Record<string, unknown>} */ (raw);
-    const slug = String(row.slug || '');
-    if (!/^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug))
-        return undefined;
-    const out = { slug };
-    if (typeof row.name === 'string' && row.name)
-        out.name = row.name.slice(0, 80);
-    if (typeof row.version === 'string' && row.version)
-        out.version = row.version.slice(0, 40);
-    if (typeof row.downloads === 'number' && row.downloads > 0)
-        out.downloads = row.downloads;
-    return out;
+  if (!raw || typeof raw !== 'object') return undefined
+  const row = /** @type {Record<string, unknown>} */ (raw)
+  const slug = String(row.slug || '')
+  if (!/^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug)) return undefined
+  const out = { slug }
+  if (typeof row.name === 'string' && row.name) out.name = row.name.slice(0, 80)
+  if (typeof row.version === 'string' && row.version) out.version = row.version.slice(0, 40)
+  if (typeof row.downloads === 'number' && row.downloads > 0) out.downloads = row.downloads
+  return out
 }
+
 /**
  * @param {unknown} raw
  * @param {string} id
  */
 function parseSource(raw, id) {
-    if (!raw || typeof raw !== 'object')
-        throw new Error(`catalog: item ${id} missing source`);
-    const row = /** @type {Record<string, unknown>} */ (raw);
-    const type = String(row.type || '');
-    if (type === 'bundled') {
-        const path = String(row.path || '');
-        const bundled = path.startsWith('catalog/skills/') || path.startsWith('catalog/experts/');
-        if (!bundled || path.includes('..')) {
-            throw new Error(`catalog: item ${id} bad bundled path`);
-        }
-        return { type: 'bundled', path };
+  if (!raw || typeof raw !== 'object') throw new Error(`catalog: item ${id} missing source`)
+  const row = /** @type {Record<string, unknown>} */ (raw)
+  const type = String(row.type || '')
+  if (type === 'bundled') {
+    const path = String(row.path || '')
+    const bundled = path.startsWith('catalog/skills/') || path.startsWith('catalog/experts/')
+    if (!bundled || path.includes('..')) {
+      throw new Error(`catalog: item ${id} bad bundled path`)
     }
-    if (type === 'git') {
-        const repo = String(row.repo || '');
-        const path = String(row.path || '');
-        const ref = String(row.ref || 'main');
-        if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
-            throw new Error(`catalog: item ${id} bad git repo`);
-        }
-        if (!path || path.includes('..') || path.startsWith('/')) {
-            throw new Error(`catalog: item ${id} bad git path`);
-        }
-        return { type: 'git', repo, path, ref };
+    return { type: 'bundled', path }
+  }
+  if (type === 'git') {
+    const repo = String(row.repo || '')
+    const path = String(row.path || '')
+    const ref = String(row.ref || 'main')
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
+      throw new Error(`catalog: item ${id} bad git repo`)
     }
-    if (type === 'mcp') {
-        const transport = String(row.transport || 'stdio');
-        if (transport !== 'stdio' && transport !== 'streamable-http') {
-            throw new Error(`catalog: item ${id} bad mcp transport`);
-        }
-        if (transport === 'stdio') {
-            const command = String(row.command || '');
-            if (!command)
-                throw new Error(`catalog: item ${id} missing mcp command`);
-            const args = Array.isArray(row.args) ? row.args.map(String) : [];
-            return { type: 'mcp', transport, command, args };
-        }
-        const url = String(row.url || '');
-        if (!/^https?:\/\//.test(url))
-            throw new Error(`catalog: item ${id} bad mcp url`);
-        return { type: 'mcp', transport, url };
+    if (!path || path.includes('..') || path.startsWith('/')) {
+      throw new Error(`catalog: item ${id} bad git path`)
     }
-    throw new Error(`catalog: item ${id} unsupported source`);
+    return { type: 'git', repo, path, ref }
+  }
+  if (type === 'mcp') {
+    const transport = String(row.transport || 'stdio')
+    if (transport !== 'stdio' && transport !== 'streamable-http') {
+      throw new Error(`catalog: item ${id} bad mcp transport`)
+    }
+    if (transport === 'stdio') {
+      const command = String(row.command || '')
+      if (!command) throw new Error(`catalog: item ${id} missing mcp command`)
+      const args = Array.isArray(row.args) ? row.args.map(String) : []
+      return { type: 'mcp', transport, command, args }
+    }
+    const url = String(row.url || '')
+    if (!/^https?:\/\//.test(url)) throw new Error(`catalog: item ${id} bad mcp url`)
+    return { type: 'mcp', transport, url }
+  }
+  throw new Error(`catalog: item ${id} unsupported source`)
 }
+
 /**
  * @param {ReturnType<typeof parseCatalog>} catalog
  * @param {{ home: string, profileDir: string, packageRoot: string }} roots
  */
 export function decorateCatalog(catalog, roots) {
-    return {
-        ...catalog,
-        items: catalog.items.map((item) => ({
-            ...item,
-            installed: isInstalled(item, roots),
-        })),
-    };
+  return {
+    ...catalog,
+    items: catalog.items.map((item) => ({
+      ...item,
+      installed: isInstalled(item, roots),
+    })),
+  }
 }
+
 /**
  * @param {ReturnType<typeof parseItem>} item
  * @param {{ home: string, profileDir: string, packageRoot: string }} roots
  */
 export function isInstalled(item, roots) {
-    if (item.kind === 'connector') {
-        return mcpInstalled(roots.profileDir, item.id);
-    }
-    if (item.kind === 'suite' && item.preinstalled === true) {
-        const uninstalledFile = join(roots.home, 'omnimux-market', 'uninstalled-suites.json');
-        try {
-            if (existsSync(uninstalledFile)) {
-                const raw = readFileSync(uninstalledFile, 'utf8');
-                const list = JSON.parse(raw);
-                if (Array.isArray(list) && list.includes(item.id))
-                    return false;
-            }
-        }
-        catch { }
-        return true;
-    }
-    if (!item.skill)
-        return false;
-    const path = join(skillDir(roots.home, item.skill), 'SKILL.md');
-    if (skillInstalledMemo.has(path))
-        return skillInstalledMemo.get(path) === true;
-    const ok = existsSync(path);
-    skillInstalledMemo.set(path, ok);
-    return ok;
+  if (item.kind === 'connector') {
+    return mcpInstalled(roots.profileDir, item.id)
+  }
+  if (item.kind === 'suite' && item.preinstalled === true) {
+    const uninstalledFile = join(roots.home, 'omnimux-market', 'uninstalled-suites.json')
+    try {
+      if (existsSync(uninstalledFile)) {
+        const raw = readFileSync(uninstalledFile, 'utf8')
+        const list = JSON.parse(raw)
+        if (Array.isArray(list) && list.includes(item.id)) return false
+      }
+    } catch {}
+    return true
+  }
+  if (!item.skill) return false
+  const path = join(skillDir(roots.home, item.skill), 'SKILL.md')
+  if (skillInstalledMemo.has(path)) return skillInstalledMemo.get(path) === true
+  const ok = existsSync(path)
+  skillInstalledMemo.set(path, ok)
+  return ok
 }
+
 /**
  * @param {string} profileDir
  * @param {string} itemId
  */
 export function mcpInstalled(profileDir, itemId) {
-    const key = `${profileDir}\0${itemId}`;
-    if (mcpInstalledMemo.has(key))
-        return mcpInstalledMemo.get(key) === true;
-    const text = readMcpPatchText(profileDir);
-    if (text == null) {
-        mcpInstalledMemo.set(key, false);
-        return false;
-    }
-    // 整行精确匹配：cn-tencent-docs 不能误中 cn-tencent-docs-oa（id 前缀碰撞）
-    const ok = mcpRowPattern(mcpRowId(itemId)).test(text);
-    mcpInstalledMemo.set(key, ok);
-    return ok;
+  const key = `${profileDir}\0${itemId}`
+  if (mcpInstalledMemo.has(key)) return mcpInstalledMemo.get(key) === true
+  const text = readMcpPatchText(profileDir)
+  if (text == null) {
+    mcpInstalledMemo.set(key, false)
+    return false
+  }
+  // 整行精确匹配：cn-tencent-docs 不能误中 cn-tencent-docs-oa（id 前缀碰撞）
+  const ok = mcpRowPattern(mcpRowId(itemId)).test(text)
+  mcpInstalledMemo.set(key, ok)
+  return ok
 }
+
 /**
  * @param {string} profileDir
  * @returns {string | null}
  */
 function readMcpPatchText(profileDir) {
-    const patch = join(profileDir, 'cordis.patch.yml');
-    let st;
-    try {
-        st = statSync(patch);
-    }
-    catch {
-        mcpPatchMemo.set(profileDir, { missing: true });
-        return null;
-    }
-    const hit = mcpPatchMemo.get(profileDir);
-    if (hit && !('missing' in hit) && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
-        return hit.text;
-    }
-    const text = readFileSync(patch, 'utf8');
-    mcpPatchMemo.set(profileDir, { mtimeMs: st.mtimeMs, size: st.size, text });
-    return text;
+  const patch = join(profileDir, 'cordis.patch.yml')
+  let st
+  try {
+    st = statSync(patch)
+  } catch {
+    mcpPatchMemo.set(profileDir, { missing: true })
+    return null
+  }
+  const hit = mcpPatchMemo.get(profileDir)
+  if (hit && !('missing' in hit) && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+    return hit.text
+  }
+  const text = readFileSync(patch, 'utf8')
+  mcpPatchMemo.set(profileDir, { mtimeMs: st.mtimeMs, size: st.size, text })
+  return text
 }
