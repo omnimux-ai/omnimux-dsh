@@ -70,10 +70,14 @@
       },
       "data": {
         "type": "video",
+        "materialType": "video",
+        "nodeKind": "generate",
+        "selectedTool": "omnimux_video_submit",
         "tool": "omnimux_video_submit",
         "label": "爆款复刻 视频生成内核",
         "model": "seedance-2.0",
         "params": {
+          "model": "seedance-2.0",
           "aspectRatio": "9:16",
           "duration": 5,
           "platforms": [
@@ -81,7 +85,7 @@
           ]
         },
         "upstreamBindings": {
-          "image": "node-slot-reference-video",
+          "video": "node-slot-reference-video",
           "prompt": "node-slot-rewrite-intent"
         }
       }
@@ -91,15 +95,17 @@
     {
       "id": "edge-ref-to-video",
       "source": "node-slot-reference-video",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "image",
+      "targetHandle": "in",
       "label": "参考视频"
     },
     {
       "id": "edge-intent-to-video",
       "source": "node-slot-rewrite-intent",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "prompt",
+      "targetHandle": "in",
       "label": "改写意图"
     }
   ],

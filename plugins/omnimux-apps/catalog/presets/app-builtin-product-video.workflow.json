@@ -28,7 +28,7 @@
       "type": "material",
       "position": {
         "x": 50,
-        "y": 100
+        "y": 350
       },
       "data": {
         "type": "text",
@@ -70,10 +70,14 @@
       },
       "data": {
         "type": "video",
+        "materialType": "video",
+        "nodeKind": "generate",
+        "selectedTool": "omnimux_video_submit",
         "tool": "omnimux_video_submit",
         "label": "商品生视频 视频生成内核",
         "model": "seedance-2.0",
         "params": {
+          "model": "seedance-2.0",
           "aspectRatio": "9:16",
           "duration": 5,
           "mode": "first_frame",
@@ -117,15 +121,20 @@
     {
       "id": "edge-img-to-video",
       "source": "node-slot-product-image",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "image",
-      "label": "商品图输入"
+      "targetHandle": "in",
+      "label": "商品图输入",
+      "data": {
+        "targetSlot": "first_frame"
+      }
     },
     {
       "id": "edge-text-to-video",
       "source": "node-slot-custom-brief",
+      "sourceHandle": "out",
       "target": "node-video-generation-core",
-      "targetHandle": "prompt",
+      "targetHandle": "in",
       "label": "自定义描述"
     }
   ],

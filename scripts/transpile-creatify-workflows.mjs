@@ -96,10 +96,14 @@ function transpileWorkflow(rawDag, spec) {
     position: { x: 50, y: 100 },
     data: {
       type: 'image',
+      materialType: 'image',
       tool: 'import-image',
       label: '商品主图槽位 (Product Image)',
       slotRole: 'product_image',
       isSlot: true,
+      nodeKind: 'import',
+      selectedTool: 'import',
+      status: 'completed',
       mediaUrl: spec.previewImage || '',
       params: {
         aspectRatio: '9:16',
@@ -114,10 +118,14 @@ function transpileWorkflow(rawDag, spec) {
     position: { x: 50, y: 350 },
     data: {
       type: 'text',
+      materialType: 'text',
       tool: 'prompt-template',
       label: '核心文案槽位 (Copywriting)',
       slotRole: 'copywriting',
       isSlot: true,
+      nodeKind: 'import',
+      selectedTool: 'import',
+      status: 'completed',
       content: spec.defaultPrompt || '',
       prompt: spec.defaultPrompt || '',
     },
@@ -130,10 +138,14 @@ function transpileWorkflow(rawDag, spec) {
     position: { x: 450, y: 200 },
     data: {
       type: 'video',
+      materialType: 'video',
+      nodeKind: 'generate',
+      selectedTool: 'omnimux_video_submit',
       tool: 'omnimux_video_submit',
       label: `${spec.titleZh} 视频生成内核`,
       model: 'seedance-2.0',
       params: {
+        model: 'seedance-2.0',
         aspectRatio: '9:16',
         duration: 5,
         mode: 'first_frame',
@@ -152,10 +164,14 @@ function transpileWorkflow(rawDag, spec) {
     position: { x: 450, y: 450 },
     data: {
       type: 'audio',
+      materialType: 'audio',
       tool: 'omnimux_audio_submit',
       label: '旁白解说与音色 (Voice TTS)',
       slotRole: 'voice_tts',
       isSlot: true,
+      nodeKind: 'import',
+      selectedTool: 'import',
+      status: 'completed',
       params: {
         voice: 'zh_female_energetic',
         speed: 1.0,
@@ -167,15 +183,20 @@ function transpileWorkflow(rawDag, spec) {
   edges.push({
     id: 'edge-img-to-video',
     source: 'node-slot-product-image',
+    sourceHandle: 'out',
     target: 'node-video-generation-core',
-    targetHandle: 'image',
+    targetHandle: 'in',
     label: '商品图输入',
+    data: {
+      targetSlot: 'first_frame',
+    },
   });
   edges.push({
     id: 'edge-text-to-video',
     source: 'node-slot-copywriting',
+    sourceHandle: 'out',
     target: 'node-video-generation-core',
-    targetHandle: 'prompt',
+    targetHandle: 'in',
     label: '分镜文案',
   });
 
@@ -225,9 +246,10 @@ function generateAppManifest(spec, rawItem) {
         product_image: {
           type: 'string',
           title: '商品主图 / 白底图',
-          description: '支持拖拽上传高清商品图，或粘贴电商链接自动解析',
-          widget: 'media-uploader',
+          description: '粘贴商品链接、从商品库选择或本地上传',
+          widget: 'product-link',
           default: previewImage,
+          placeholder: '粘贴商品链接，或从商品库选择',
         },
         copywriting: {
           type: 'string',
@@ -270,7 +292,7 @@ function generateAppManifest(spec, rawItem) {
         nodeId: 'node-slot-product-image',
         targetField: 'mediaUrl',
         mappingType: 'media',
-        widget: 'media-uploader',
+        widget: 'product-link',
         required: true,
         defaultValue: previewImage,
       },
@@ -367,10 +389,22 @@ function main() {
     console.log(`✅ [${spec.categoryNameZh}] -> ${spec.titleZh} (${spec.appId}) 转译完成`);
   }
 
-  // 写入出厂内置应用总清单
+  // 写入出厂内置应用总清单（保留已有的非 creatify 内置应用如 app-builtin-*）
   const builtinAppsPath = path.join(catalogDir, 'builtin-apps.json');
-  fs.writeFileSync(builtinAppsPath, JSON.stringify(builtinManifests, null, 2), 'utf8');
-  console.log(`📦 7 款官方应用清单已写入: ${builtinAppsPath}`);
+  let finalManifests = builtinManifests;
+  if (fs.existsSync(builtinAppsPath)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(builtinAppsPath, 'utf8'));
+      if (Array.isArray(existing)) {
+        const nonCreatify = existing.filter((m) => m && m.appId && !m.appId.startsWith('app-creatify-'));
+        finalManifests = [...builtinManifests, ...nonCreatify];
+      }
+    } catch (err) {
+      throw new Error(`Failed to parse existing builtin-apps.json at ${builtinAppsPath}: ${err.message}`);
+    }
+  }
+  fs.writeFileSync(builtinAppsPath, JSON.stringify(finalManifests, null, 2), 'utf8');
+  console.log(`📦 官方应用清单已写入: ${builtinAppsPath}`);
 
   // 写入首页精选卡片数据
   const homeCardsPath = path.resolve(
