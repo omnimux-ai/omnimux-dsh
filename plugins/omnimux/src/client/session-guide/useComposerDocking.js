@@ -25,20 +25,20 @@ export const DOCK_MAX_WIDTH = 780
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 export const SCROLLER_SELECTOR = '[class*="scrollBody"]'
 
-/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。已由动态 revealThreshold 升级感知，保留导出做兼容 fallback。 */
+/** 真正回到页面最顶部 fallback 阈值（px）。 */
 export const READ_TOP_MAX = 10
 
-/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。已由动态 leaveThreshold 升级感知，保留导出做兼容 fallback。 */
+/** 已经滑离页面顶部 fallback 阈值（px）。 */
 export const DOCK_LEAVE_MAX = 20
 
 /**
  * 动态测量顶部输入框槽位高度，并计算露头（reveal）与离开（leave）滚动阈值。
  *
- * 临界几何语义：
- * - revealThreshold: 顶部槽位底边缘刚好触及视口顶端（开始露头/进入视口）。
- *   当 scrollTop <= revealThreshold 时，输入框槽位已经进入视口可见范围，立即切换回 inline。
- * - leaveThreshold: 顶部输入框完全滚出视口顶部，并保留 20px 迟滞防抖安全区。
- *   当 scrollTop > leaveThreshold 时才判定为已离开顶部，触发吸底。
+ * 几何语义：
+ * - revealThreshold: 顶部槽位底边缘开始露入视口。
+ *   当 scrollTop <= revealThreshold 时，顶部输入框槽位已经进入视口可见范围，立即切换回 inline。
+ * - leaveThreshold: 顶部输入框完全滚出视口顶部，并包含 30px 安全迟滞死区。
+ *   当 scrollTop > leaveThreshold 时才判定为离开顶部不可见，触发吸底。
  *
  * @param {Element | null} root 宿主根容器
  * @param {Element | null} scroller 滚动容器
@@ -53,7 +53,7 @@ export function getComposerScrollThresholds(root, scroller) {
   const measuredHeight = Math.max(bandHeight, cardHeight, styleMinHeight) || 160
   const offsetTop = Number(band?.offsetTop ?? 0)
   const revealThreshold = Math.max(0, offsetTop + measuredHeight)
-  const leaveThreshold = revealThreshold + 20
+  const leaveThreshold = revealThreshold + 30
   return { revealThreshold, leaveThreshold, measuredHeight, offsetTop }
 }
 
@@ -81,8 +81,7 @@ export const cancelFrame = typeof cancelAnimationFrame === 'function'
 
 /**
  * 读取页面真实的滚动位置：宿主用 `scrollBody` 容器滚动，整页滚动则是 window / documentElement。
- * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部，
- * 输入框就该留在底部，而不是被一次空读数顶回页首。
+ * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部。
  *
  * @param {Element | null} scroller 滚动容器（可能不存在）
  * @returns {number} 已滚动的像素数；无布局信息时为 0
@@ -106,16 +105,14 @@ function isSameItem(a, b) {
 }
 
 /**
- * 首页引导会话输入框吸底控制器 Hook
+ * 首页会话输入框吸底定位控制器 Hook
  *
- * 当用户在首页选用技能（点击「使用」）或复刻模板/爆款视频（点击「复刻」）时：
- * 1. 点击同一帧同步把停靠态写入真实界面（吸底先手），抢在附件挂载提醒等
- *    强制滚动定位之前——输入框已是视口底部 fixed 形态时，滚动定位天然失效；
- * 2. 原生输入框通过 FLIP 动画平滑固定停靠在视口底部；
- * 3. 原 Hero 槽位由占位高度（min-height）撑住，防止页面布局坍塌；
- * 4. 输入框右上方渲染收起气泡按钮（.omnimux-trending-undock），点击解除吸底；
- * 5. 滚动迟滞联动：向下浏览保持吸底，向上滑回最顶部（<=10px）自动切回原位；
- * 6. 再次点击同一张卡片触发反悔，解除吸底。
+ * 核心业务契约：
+ * 1. 默认在顶部（Inline）：页面初始或处于顶部可见范围时在原生 Hero 处；
+ * 2. 向下滚动自动迁移到底部（Docked）：顶部输入框完全滚出视口（不可见）时自动吸底；
+ * 3. 向上滚动自动归位到顶部（Inline）：顶部原位重新进入视口（可见）时自动归还原位；
+ * 4. 功能按钮触发一键吸底：点击使用、复刻、对标或快捷入口，输入框在底部就位并聚焦；
+ * 5. 零抖动保障：滚动触发切态绝不执行 380ms 物理位移动画，原位恒定占位，切断几何死循环。
  */
 export function useComposerDocking({ hostRef, onUndock } = {}) {
   const [dockedItem, setDockedItem] = useState(null)
@@ -125,6 +122,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const savedScrollRef = useRef(null)
   const primedFlipRef = useRef(null)
   const pinnedRef = useRef(false)
+  const isScrollTransitionRef = useRef(false)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -133,27 +131,28 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     savedScrollRef.current = null
     primedFlipRef.current = null
     pinnedRef.current = false
+    isScrollTransitionRef.current = false
     onUndock?.()
   }, [onUndock])
 
   const dock = useCallback((item, onDocked) => {
     if (!item) return false
-    // 再次点击同一张卡片：作为反悔动作解除吸底。整页选素材期间不走这条。
+    // 再次点击同一张卡片：作为反悔动作解除吸底
     if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
       undock()
       return false
     }
+    isScrollTransitionRef.current = false
+
     const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') ||
       hostRef?.current?.closest?.('[data-phase]') ||
       hostRef?.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
-    // 记录用户触发点击当帧的绝对真实滚动位置（必须先于任何 DOM 变更）
+    // 记录用户触发点击当帧的绝对真实滚动位置
     savedScrollRef.current = readPageScrollTop(scroller)
     pendingApplyRef.current = typeof onDocked === 'function' ? onDocked : null
 
-    // 吸底先手：同一帧同步写入停靠 DOM，不等渲染周期。
-    // 附件挂载提醒的 scrollIntoView 等强制滚动定位晚于本帧执行时，
-    // 输入框已是视口底部 fixed 形态，滚动定位落在它身上即天然失效（元素已在视口内）。
+    // 吸底先手：同一帧同步写入停靠 DOM，抢在外部滚动定位之前
     if (root) {
       const card = root.querySelector?.('[data-composer-card]')
       const band = card?.parentElement || root
@@ -171,8 +170,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       if (band && reserved > 0) band.style.minHeight = `${reserved}px`
       root.setAttribute(DOCK_OPEN_ATTR, '')
 
-      // FLIP 反向补偿：输入框物理上已 fixed 到底部，视觉上先钉在原位，
-      // 渲染周期到达后由布局效果释放过渡，平滑滑到底部。
+      // 仅在主动按钮点击时准备 FLIP 视觉过渡补偿
       if (card && from && from.width > 0 && from.height > 0) {
         const to = card.getBoundingClientRect?.()
         if (to && to.width > 0 && to.height > 0) {
@@ -201,7 +199,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     return ok
   }, [dock])
 
-  // 1. 吸底几何适配、占位高度防塌陷与 FLIP 位移动画
+  // 1. 吸底几何适配、占位高度防塌陷与过渡处理
   useLayoutEffect(() => {
     const root = hostRef?.current?.closest?.('[data-omnimux-starter-host]') ||
       hostRef?.current?.closest?.('[data-phase]') ||
@@ -214,8 +212,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       }
       return undefined
     }
-    // 整页选素材铺满后，会话列尺寸会变。那一拍如果还没读到宿主，
-    // 不能把已经贴底的输入框清掉，否则它会回到上半截被整页盖住。
     if (!root.isConnected && pinnedRef.current) return undefined
     dockHostRef.current = root
 
@@ -237,7 +233,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const from = card?.getBoundingClientRect?.()
     const fromBand = band?.getBoundingClientRect?.()
 
-    const shouldDock = Boolean(dockedItem && (placement === 'docked' || pinnedRef.current))
+    // 核心状态：若状态为 docked 或全屏 pin
+    const shouldDock = Boolean((dockedItem && placement === 'docked') || placement === 'docked' || pinnedRef.current)
     const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
 
     if (shouldDock) {
@@ -264,7 +261,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         pendingApplyRef.current = null
         applyFn()
 
-        // 注入后再次核验锁定，彻底消除外部 setDraft/focus 触发的意外滚顶
+        // 注入后再次核验锁定，消除外部 setDraft/focus 触发的意外滚顶
         if (savedScrollRef.current != null) {
           const currentAfter = readPageScrollTop(scroller)
           if (Math.abs(currentAfter - savedScrollRef.current) > 0.5) {
@@ -280,10 +277,9 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       root.removeAttribute(DOCK_OPEN_ATTR)
     }
 
-    // 吸底先手的 FLIP 释放：dock() 同帧已做反向补偿把输入框视觉钉在原位，
-    // 此处排程播放过渡，让它平滑滑入底部停靠位。
+    // FLIP 释放：仅在按钮点击的主动吸底时执行动画，滚动过程中绝不执行全屏位移！
     let primedAnimCancel = null
-    if (primedFlipRef.current) {
+    if (primedFlipRef.current && !isScrollTransitionRef.current) {
       const primedCard = primedFlipRef.current
       primedFlipRef.current = null
       const raf = scheduleFrame(() => {
@@ -303,10 +299,16 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         primedCard.style.transform = ''
         primedCard.style.opacity = ''
       }
+    } else if (primedFlipRef.current) {
+      const primedCard = primedFlipRef.current
+      primedFlipRef.current = null
+      primedCard.style.transition = ''
+      primedCard.style.transform = ''
+      primedCard.style.opacity = ''
     }
 
     let cancelAnim = null
-    if (currentlyDocked !== shouldDock && card && from && from.width > 0 && from.height > 0) {
+    if (!isScrollTransitionRef.current && currentlyDocked !== shouldDock && card && from && from.width > 0 && from.height > 0) {
       const to = card.getBoundingClientRect?.()
       if (to && to.width > 0 && to.height > 0) {
         const dx = Math.round(from.left - to.left)
@@ -340,13 +342,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       }
     }
 
-    if (!dockedItem) {
-      return () => {
-        primedAnimCancel?.()
-        cancelAnim?.()
-      }
-    }
-
     const observer = typeof window.ResizeObserver === 'function'
       ? new window.ResizeObserver(writeGeometry)
       : null
@@ -366,10 +361,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     }
   }, [dockedItem, placement, hostRef])
 
-  // 2. 页面滚动迟滞判定：槽位露头立即切回原位，完全滑离顶部后恢复吸底
+  // 2. 页面滚动判定：顶部输入框不可见时自动迁移到底部，重新可见时归位到顶部
   useEffect(() => {
-    if (!dockedItem) return undefined
-    const root = dockHostRef.current
+    const root = dockHostRef.current || hostRef?.current?.closest?.('[data-omnimux-starter-host]') || hostRef?.current
+    if (!root) return undefined
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
     const initialThresholds = getComposerScrollThresholds(root, scroller)
@@ -377,13 +372,26 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
     const evaluate = () => {
       frame = 0
-      const scrollTop = readPageScrollTop(scroller)
+      if (pinnedRef.current) return
+
       const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
+      const scrollTop = readPageScrollTop(scroller)
+
       if (scrollTop > leaveThreshold) leftTop = true
+
       setPlacement((prev) => {
-        if (pinnedRef.current) return 'docked'
-        if (scrollTop <= revealThreshold && leftTop) return 'inline'
-        if (scrollTop > leaveThreshold) return 'docked'
+        // 向上滚动至顶部原位露头可见（<= revealThreshold），且此前确实曾滑离过顶部 → 归还原位
+        if (scrollTop <= revealThreshold && leftTop) {
+          isScrollTransitionRef.current = true
+          leftTop = false
+          return 'inline'
+        }
+        // 向下滚动完全滑离顶部不可见（> leaveThreshold）→ 自动吸底
+        if (scrollTop > leaveThreshold) {
+          isScrollTransitionRef.current = true
+          return 'docked'
+        }
+        // 迟滞保护区（revealThreshold 与 leaveThreshold 之间）：维持上一状态，绝不横跳
         return prev
       })
     }
@@ -401,7 +409,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [dockedItem])
+  }, [hostRef, dockedItem])
 
   // 3. 卸载或会话切换时清理宿主样式与标记
   useEffect(() => () => {
@@ -428,6 +436,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     dock,
     pin,
     undock,
-    isDocked: Boolean(dockedItem && placement === 'docked'),
+    isDocked: Boolean((dockedItem && placement === 'docked') || placement === 'docked' || pinnedRef.current),
   }
 }

@@ -405,3 +405,56 @@ test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 D
     env.restore()
   }
 })
+
+test('useComposerDocking: 纯滚动模式（无激活 item）向下滚出视口自动吸底，向上滚回露头自动归位', async () => {
+  const env = withDom()
+  const host = document.querySelector('[data-omnimux-starter-host]')
+  const scroller = host.querySelector('.scrollBody')
+  const root = createRoot(document.querySelector('#seat'))
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'PureScrollTest')
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+    await flush()
+
+    // 初始状态：无 item，处于顶部，必须为 inline
+    assert.equal(hookApi.placement, 'inline')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false)
+
+    // 向下滚动离开顶部槽位（> leaveThreshold 196px）
+    scroller.scrollTop = 280
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked', '无 item 纯向下滚动离开视口必须自动切为 docked')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '宿主必须被打上吸底标记')
+
+    // 向上滚动回到原位露头范围（<= revealThreshold 166px）
+    scroller.scrollTop = 80
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'inline', '向上滚动回露头可见范围必须自动恢复 inline')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '宿主吸底标记必须被移除')
+  } finally {
+    await act(async () => root.unmount())
+    env.restore()
+  }
+})

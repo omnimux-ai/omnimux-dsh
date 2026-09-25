@@ -9,6 +9,7 @@ import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { isLocaleEn, resolveSkillTitle } from '../skills/featured-skills-data.js'
 import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
+import { getComposerScrollThresholds } from '../useComposerDocking.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
   RECREATE_PROMPT,
@@ -372,6 +373,13 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   // 用可视性判定会把每一次滚动（含聚焦、挂附件触发的滚动）都误判成「该归还了」。
   useEffect(() => {
     if (!dockedItem) return undefined
+    // 隐藏兼容渲染时（如在 SessionGuide 中被 display:none 包裹），
+    // 滚动统一由外层 useComposerDocking 掌管，避免双重控制器抢占撕裂。
+    const el = sectionRef.current
+    if (el && el.closest?.('[style*="display: none"], [style*="display:none"]')) {
+      return undefined
+    }
+
     const root = dockHostRef.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
