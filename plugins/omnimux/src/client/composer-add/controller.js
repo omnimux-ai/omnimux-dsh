@@ -372,7 +372,7 @@ export function createComposerAddController(options) {
     return counts
   }
 
-  function openKind(sessionId, kind) {
+  async function openKind(sessionId, kind) {
     const targetSessionId = resolveSessionId(sessionId)
     const operation = begin(sessionId, kind)
     if (operation) {
@@ -380,23 +380,20 @@ export function createComposerAddController(options) {
     }
 
     if (targetSessionId) {
-      const tabMap = {
-        library: 'assets',
-        assets: 'assets',
-        product: 'products',
-        products: 'products',
-        inspiration: 'inspiration',
-      }
-      const targetTab = tabMap[kind] || 'assets'
+      const targetTab = tabForKind(kind) || 'assets'
       const navStore = options.assetHubNavStore || getGlobalAssetHubNavStore()
       navStore?.setActiveTab?.(targetTab)
 
       const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
-      wb?.openWorkbench?.({
-        tabId: ASSET_HUB_TAB_ID,
-        focus: 'split',
-        sessionId: targetSessionId,
-      })
+      try {
+        await wb?.openWorkbench?.({
+          tabId: ASSET_HUB_TAB_ID,
+          focus: 'split',
+          sessionId: targetSessionId,
+        })
+      } catch {
+        // 容错处理：宿主工作台打开失败时不崩溃
+      }
     }
   }
 

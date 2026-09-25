@@ -79,6 +79,36 @@ export function AssetHubCard({
     }
   }
 
+  const renderMedia = () => {
+    if (item.previewVideoUrl && isHovered) {
+      return (
+        <video
+          ref={videoRef}
+          src={item.previewVideoUrl}
+          className="omx-asset-card__video"
+          muted
+          loop
+          playsInline
+        />
+      )
+    }
+    if (item.thumbnailUrl) {
+      return (
+        <img
+          src={item.thumbnailUrl}
+          alt={item.title}
+          className="omx-asset-card__img"
+          loading="lazy"
+        />
+      )
+    }
+    return (
+      <div className="omx-asset-card__fallback">
+        <FilePlaceholderIcon />
+      </div>
+    )
+  }
+
   const badgeText = item.durationText || item.formatText || ''
 
   return (
@@ -95,27 +125,7 @@ export function AssetHubCard({
     >
       {/* 封面与媒体预览区 */}
       <div className="omx-asset-card__cover">
-        {item.previewVideoUrl && isHovered ? (
-          <video
-            ref={videoRef}
-            src={item.previewVideoUrl}
-            className="omx-asset-card__video"
-            muted
-            loop
-            playsInline
-          />
-        ) : item.thumbnailUrl ? (
-          <img
-            src={item.thumbnailUrl}
-            alt={item.title}
-            className="omx-asset-card__img"
-            loading="lazy"
-          />
-        ) : (
-          <div className="omx-asset-card__fallback">
-            <FilePlaceholderIcon />
-          </div>
-        )}
+        {renderMedia()}
 
         {/* 右下角客观标记（时长或格式） */}
         {badgeText && (

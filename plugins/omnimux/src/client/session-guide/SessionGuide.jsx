@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
@@ -124,7 +124,6 @@ function BlankSessionGuide({
     dockedItem,
     placement,
     dock,
-    pin,
     undock,
     isDocked,
   } = useComposerDocking({

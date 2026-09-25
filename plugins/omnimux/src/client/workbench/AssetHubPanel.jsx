@@ -5,6 +5,7 @@ import { AssetHubGrid } from './AssetHubGrid.jsx'
 import { getGlobalAssetHubNavStore } from './asset-hub-store.js'
 import { loadAssetHubData, filterAssetHubItems, adaptCardToAttachmentPayload } from './asset-hub-data.js'
 import { getGlobalAttachmentStore } from '../attachments/store.ts'
+import { LIBRARY_STAGE_PROMPT_EVENT, promptForCard } from '../composer-add/library-stage-model.js'
 import {
   isHostRightSidebarFullscreen,
   enterHostRightSidebarFullscreen,
@@ -75,8 +76,18 @@ export function AssetHubPanel(props) {
     }
   }, [navStore])
 
-  // 3. 订阅当前会话的附件列表
-  const resolvedSessionId = props.sessionId || attachmentStore.getActiveSessionId()
+  // 3. 订阅当前会话的附件列表（会话响应式监听：通过 useSyncExternalStore 响应式监听 props.sessions.list.subscribe）
+  const currentSessionFromStore = useSyncExternalStore(
+    useCallback((listener) => {
+      if (typeof props.sessions?.list?.subscribe === 'function') {
+        return props.sessions.list.subscribe(listener)
+      }
+      return () => {}
+    }, [props.sessions]),
+    () => props.sessions?.list?.getSnapshot?.()?.current,
+    () => props.sessions?.list?.getSnapshot?.()?.current
+  )
+  const resolvedSessionId = props.sessionId || currentSessionFromStore || attachmentStore.getActiveSessionId()
   const attachments = useSyncExternalStore(
     useCallback((listener) => attachmentStore.subscribe(resolvedSessionId, listener), [attachmentStore, resolvedSessionId]),
     () => attachmentStore.getSnapshot(resolvedSessionId),
@@ -183,13 +194,27 @@ export function AssetHubPanel(props) {
     const result = attachmentStore.addAttachment(resolvedSessionId, payload)
     if (!result.ok) {
       if (result.reason === 'duplicate') {
-        showNotice(props.t?.('composerAdd.toast.duplicate') || '已在附件列表中')
+        const dupMsg = (props.t?.('composerAdd.toast.duplicate') || '已存在 {n} 项重复附件').replace('{n}', '1')
+        showNotice(dupMsg)
         const doc = hostDocument() || (typeof document !== 'undefined' ? document : null)
         doc?.querySelector?.('[data-composer-input="true"]')?.focus?.({ preventScroll: true })
       } else if (result.reason === 'quota-exceeded') {
         showNotice(props.t?.('composerAdd.toast.quota') || '附件数量已达上限')
       } else {
         showNotice('添加失败')
+      }
+    } else {
+      // 成功注入附件槽后，将素材对应的提示词追加到中间会话输入框草稿中（打通 Prompt 管道）
+      const prompt = promptForCard(item)
+      if (prompt) {
+        if (typeof props.onPrompt === 'function') {
+          props.onPrompt(prompt, resolvedSessionId)
+        }
+        const doc = hostDocument() || (typeof document !== 'undefined' ? document : null)
+        const win = doc?.defaultView || (typeof window !== 'undefined' ? window : null)
+        win?.dispatchEvent?.(new win.CustomEvent(LIBRARY_STAGE_PROMPT_EVENT, {
+          detail: { prompt, sessionId: resolvedSessionId },
+        }))
       }
     }
   }
@@ -203,11 +228,43 @@ export function AssetHubPanel(props) {
     input.style.display = 'none'
     input.setAttribute('aria-hidden', 'true')
     doc.body.appendChild(input)
-    input.onchange = () => {
+    input.onchange = async () => {
       try {
-        if (input.files && input.files.length > 0) {
-          setReloadToken((prev) => prev + 1)
+        const file = input.files?.[0]
+        if (!file) return
+        const fetchFn = props.fetchImpl || (typeof window !== 'undefined' ? window.fetch : globalThis.fetch)
+        if (typeof fetchFn !== 'function') {
+          showNotice('上传服务未就绪')
+          return
         }
+
+        let assetType = 'custom'
+        if (file.type?.startsWith('image/')) assetType = 'image'
+        else if (file.type?.startsWith('video/')) assetType = 'video'
+        else if (file.type?.startsWith('audio/')) assetType = 'audio'
+
+        const response = await fetchFn('/omnimux/assets/library', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: file.name,
+            type: assetType,
+            files: [{
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+            }],
+          }),
+        })
+        const resData = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(resData?.message || resData?.error || `上传失败 (${response.status})`)
+        }
+        showNotice(props.t?.('composerAdd.toast.uploaded') || '上传成功')
+        setReloadToken((prev) => prev + 1)
+      } catch (err) {
+        showNotice(err instanceof Error ? err.message : '上传失败')
       } finally {
         input.remove()
       }

@@ -51,8 +51,12 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     restoreFocus: () => {
       if (focusTarget?.isConnected && typeof focusTarget.focus === 'function') focusTarget.focus()
     },
-    renderLibrary() {
+    renderLibrary(model) {
       // 废除旧全屏 LibraryBrowser 覆盖层，改由右栏 AssetHubPanel 承载
+      // 避免 owner 操作者残留：三栏架构下由右栏原生工作台接管交互，主动释放旧 operation 占位
+      if (model && typeof model.onClose === 'function') {
+        model.onClose()
+      }
     },
     onPrompt(prompt) {
       const sessionId = sessions.list.getSnapshot().current

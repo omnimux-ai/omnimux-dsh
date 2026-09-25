@@ -82,7 +82,10 @@ export function normalizeAssetItem(row) {
   const isVideo = ext === 'MP4' || ext === 'WEBM' || ext === 'MOV' || row.type === 'video'
   const isImage = ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'WEBP' || ext === 'GIF' || row.type === 'image'
   const isAudio = ext === 'MP3' || ext === 'WAV' || row.type === 'audio'
-  const mediaType = isVideo ? 'video' : isImage ? 'image' : isAudio ? 'audio' : 'document'
+  let mediaType = 'document'
+  if (isVideo) mediaType = 'video'
+  else if (isImage) mediaType = 'image'
+  else if (isAudio) mediaType = 'audio'
 
   let durationText = ''
   if (typeof row.duration === 'number') {
@@ -114,16 +117,26 @@ export function normalizeAssetItem(row) {
 }
 
 /**
- * 转换灵感库数据
+ * 转换灵感库数据：严格读取真实 row.type，自适应支持静态图片与音视频灵感
  */
 export function normalizeInspirationItem(row) {
   if (!row || typeof row !== 'object') return null
   const id = String(row.id || '')
   const title = String(row.title || row.name || row.description || id)
-  const ext = 'MP4'
-  const durationText = typeof row.duration === 'number' ? formatDuration(row.duration) : ''
-  const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || row.cover_url || ''
-  const previewVideoUrl = row.videoUrl || row.mediaUrl || row.url || (Array.isArray(row.media_urls) ? row.media_urls[0] : '') || ''
+  const rawType = String(row.type || row.media_type || row.kind || '').toLowerCase()
+  const rawUrl = String(row.url || row.videoUrl || row.mediaUrl || row.coverUrl || row.cover || '')
+  const ext = inferExtension(title, rawUrl, row.format || row.extension)
+
+  const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'picture' ||
+    ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'WEBP' || ext === 'GIF'
+  const isAudio = rawType === 'audio' || ext === 'MP3' || ext === 'WAV'
+  const isVideo = !isImage && !isAudio
+
+  const mediaType = isImage ? 'image' : isAudio ? 'audio' : 'video'
+  const formatText = ext || (isImage ? 'PNG' : isAudio ? 'MP3' : 'MP4')
+  const durationText = (isVideo || isAudio) && typeof row.duration === 'number' ? formatDuration(row.duration) : ''
+  const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || row.cover_url || (isImage ? rawUrl : '')
+  const previewVideoUrl = isVideo ? (row.videoUrl || row.mediaUrl || row.url || (Array.isArray(row.media_urls) ? row.media_urls[0] : '')) : ''
 
   return {
     id,
@@ -131,9 +144,9 @@ export function normalizeInspirationItem(row) {
     title,
     thumbnailUrl,
     previewVideoUrl,
-    mediaType: 'video',
+    mediaType,
     durationText,
-    formatText: ext,
+    formatText,
     dimensionsOrSize: row.resolution || '',
     raw: row,
   }
@@ -164,6 +177,23 @@ export function normalizeProductItem(row) {
   }
 }
 
+function pickArrayCandidate(body, candidateKeys) {
+  if (!body || typeof body !== 'object') return []
+  for (const key of candidateKeys) {
+    let val = body
+    if (key.includes('.')) {
+      const parts = key.split('.')
+      for (const p of parts) {
+        val = val?.[p]
+      }
+    } else {
+      val = val[key]
+    }
+    if (Array.isArray(val)) return val
+  }
+  return []
+}
+
 /**
  * 加载并归一化素材卡片列表
  */
@@ -173,11 +203,7 @@ export async function loadAssetHubData(tab, options = {}) {
   if (tab === 'assets') {
     const res = await requestJson('/omnimux/assets/library', fetchImpl, signal)
     if (!res.ok) throw new Error(res.body?.message || '加载失败')
-    const list = Array.isArray(res.body?.assets)
-      ? res.body.assets
-      : Array.isArray(res.body?.items)
-        ? res.body.items
-        : []
+    const list = pickArrayCandidate(res.body, ['assets', 'items'])
     return list.map(normalizeAssetItem).filter(Boolean)
   }
 
@@ -188,26 +214,14 @@ export async function loadAssetHubData(tab, options = {}) {
       signal
     )
     if (!res.ok) throw new Error(res.body?.message || '加载失败')
-    const list = Array.isArray(res.body?.data?.items)
-      ? res.body.data.items
-      : Array.isArray(res.body?.items)
-        ? res.body.items
-        : Array.isArray(res.body?.videos)
-          ? res.body.videos
-          : Array.isArray(res.body?.inspirations)
-            ? res.body.inspirations
-            : []
+    const list = pickArrayCandidate(res.body, ['data.items', 'items', 'videos', 'inspirations'])
     return list.map(normalizeInspirationItem).filter(Boolean)
   }
 
   if (tab === 'products') {
     const res = await requestJson('/omnimux/products', fetchImpl, signal)
     if (!res.ok) throw new Error(res.body?.message || '加载失败')
-    const list = Array.isArray(res.body?.products)
-      ? res.body.products
-      : Array.isArray(res.body?.items)
-        ? res.body.items
-        : []
+    const list = pickArrayCandidate(res.body, ['products', 'items'])
     return list.map(normalizeProductItem).filter(Boolean)
   }
 
@@ -237,6 +251,12 @@ export const FILTER_PILL_ENUM_MAP = Object.freeze({
   '场景切片': Object.freeze(['scene', 'context', 'lifestyle', 'slice']),
 })
 
+function matchesExactToken(text, token) {
+  if (!text || !token) return false
+  const tokens = String(text).toLowerCase().split(/[^a-z0-9_-]+/).filter(Boolean)
+  return tokens.includes(String(token).toLowerCase())
+}
+
 /**
  * 二级筛选标签与搜索组合过滤
  */
@@ -255,11 +275,15 @@ export function filterAssetHubItems(items, filterPill, searchQuery) {
       // 1. 中文字符串直接匹配
       if (category.includes(query) || title.includes(query)) return true
 
-      // 2. 匹配后端英文枚举字典
+      // 2. 匹配后端英文枚举字典（整词精准匹配）
       if (targetEnums.length > 0) {
-        if (targetEnums.some((enumVal) => category.includes(enumVal))) return true
+        if (targetEnums.some((enumVal) => matchesExactToken(category, enumVal))) return true
         if (targetEnums.includes(item.mediaType)) return true
-        if (Array.isArray(raw.tags) && raw.tags.some((t) => targetEnums.includes(String(t).toLowerCase()))) return true
+        if (Array.isArray(raw.tags)) {
+          for (const t of raw.tags) {
+            if (targetEnums.some((enumVal) => matchesExactToken(String(t), enumVal))) return true
+          }
+        }
       }
 
       return false

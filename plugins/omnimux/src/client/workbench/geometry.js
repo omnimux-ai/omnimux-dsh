@@ -26,11 +26,18 @@ export const ASSET_HUB_CHAT_PX = 380
 
 /**
  * 判定当前活跃 Tab 是否为右栏素材工作台（Asset Hub）。
- * @param {object} [state]
+ * 深度适配真实结构：兼容对象属性、嵌套快照 (state.state)、Tab ID 字段与原生 split 节点。
+ * @param {object | string} [state]
  * @returns {boolean}
  */
 export function isAssetHubActive(state) {
-  if (state?.activeTab === ASSET_HUB_TAB_ID) return true
+  if (!state) return false
+  if (typeof state === 'string') return state === ASSET_HUB_TAB_ID
+  if (typeof state !== 'object') return false
+  if (state.activeTab === ASSET_HUB_TAB_ID || state.tabId === ASSET_HUB_TAB_ID || state.activeTabId === ASSET_HUB_TAB_ID || state.tab === ASSET_HUB_TAB_ID) return true
+  if (state.state && typeof state.state === 'object') {
+    if (isAssetHubActive(state.state)) return true
+  }
   const currentTab = activeTabId(state)
   return currentTab === ASSET_HUB_TAB_ID
 }
@@ -377,7 +384,20 @@ function resolveChatRatio(env = {}) {
  * @param {{ viewportWidth?: number, officialSidebarWidth?: number, chatRatio?: number, railBaselinePx?: number }} [env]
  * @returns {{ visibleStage: number, stage: number, budget: { chatWidth: number, minChatWidth: number, maxChatWidth: number } }}
  */
-function workbenchConversationGeometryPx(env = {}, state = liveSnapshot()?.state) {
+function workbenchConversationGeometryPx(arg1 = {}, arg2 = undefined) {
+  let env = {}
+  let state = undefined
+  if (arg1 && ('viewportWidth' in arg1 || 'collapsed' in arg1 || 'ratio' in arg1 || 'isAssetHub' in arg1 || 'doc' in arg1)) {
+    env = arg1
+    state = arg2 ?? liveSnapshot()?.state
+  } else if (arg2 && ('viewportWidth' in arg2 || 'collapsed' in arg2 || 'ratio' in arg2 || 'isAssetHub' in arg2 || 'doc' in arg2)) {
+    state = arg1
+    env = arg2
+  } else {
+    env = arg1 || {}
+    state = arg2 ?? liveSnapshot()?.state
+  }
+
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
   const railVisible = officialSessionSidebarWidth(env)
   const collapsed = isOfficialSidebarCollapsed(env.doc || hostDocument())
@@ -393,8 +413,8 @@ function workbenchConversationGeometryPx(env = {}, state = liveSnapshot()?.state
     collapsed,
   })
   const budget = resolveConversationPixelBudget(stage, ratio)
-  if (isAssetHubActive(state) || env.isAssetHub) {
-    const lockedChat = Math.min(visibleStage, ASSET_HUB_CHAT_PX)
+  if (isAssetHubActive(state) || isAssetHubActive(env) || env.isAssetHub) {
+    const lockedChat = ASSET_HUB_CHAT_PX
     return {
       visibleStage,
       stage,

@@ -341,7 +341,7 @@ export function apply(ctx) {
             order: 6,
             hidden: false,
             single: true,
-            component: (props) => createElement(AssetHubPanel, { ...props, sessions: inner.sessions }),
+            component: (props) => createElement(AssetHubPanel, { ...props, t, sessions: inner.sessions }),
           })
           inner.effect(registerAssetHub, 'omnimux: asset hub tab')
         }
