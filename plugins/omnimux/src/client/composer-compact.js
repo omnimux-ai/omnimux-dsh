@@ -1255,17 +1255,13 @@ export function placeMentionMenu(doc = hostDocument()) {
     const card = menu.closest?.('[data-composer-card]')
       || (() => {
           const sessionId = hostWindow()?.__omnimuxAttachments?.getActiveSessionId?.() || ''
-          if (sessionId) {
-            const safeSessionId = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-              ? CSS.escape(sessionId)
-              : null
-            if (safeSessionId) {
-              try {
-                const active = doc.querySelector?.(`[data-composer-card][data-session-id="${safeSessionId}"]`)
-                if (active) return active
-              } catch {
-                /* ignore selector syntax errors */
-              }
+          if (sessionId && typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            try {
+              const safeSessionId = CSS.escape(sessionId)
+              const active = doc.querySelector?.(`[data-composer-card][data-session-id="${safeSessionId}"]`)
+              if (active) return active
+            } catch {
+              /* ignore CSS.escape failures and selector syntax errors */
             }
           }
           return doc.querySelector?.('[data-composer-card]')
