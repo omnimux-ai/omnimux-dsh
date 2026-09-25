@@ -14,7 +14,7 @@ import { packageRoot, profileDir } from './expert/paths.js'
 import { configureHttpJsonCache } from './http.js'
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js'
 import { aggregateSkillSearch } from './skill-aggregate.js'
-import { getSessionModel, setAgentPresetsNotify, setModelCatalogResolver, handleApi, handleIcon, handleWorkshopApi } from './local-api.js'
+import { getSessionModel, setAgentPresetsNotify, setAgentPresetsProvider, setModelCatalogResolver, handleApi, handleIcon, handleWorkshopApi } from './local-api.js'
 import { materializeEnabledMarketExperts } from './expert-market.js'
 import { InventoryService } from './workshop-inventory.js'
 import { QueryService, createWorkshopSources } from './workshop-sources.js'
@@ -459,6 +459,14 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   registerCatalogSkillProvider(ctx)
+
+  // 注入官方 AgentPresets 服务，作为专家市场的唯一动态权威数据源
+  ctx.inject(['agentPresets'], (c) => {
+    const service = (c as unknown as { agentPresets?: { list: () => Promise<unknown[]> } }).agentPresets
+    if (service && typeof service.list === 'function') {
+      setAgentPresetsProvider(() => service.list())
+    }
+  })
 
   // Agent 预设列表变更广播：官方预设菜单只在页面挂载或收到
   // settings/document-updated（ns=agent-presets，官方转发白名单内事件）时重读列表；
