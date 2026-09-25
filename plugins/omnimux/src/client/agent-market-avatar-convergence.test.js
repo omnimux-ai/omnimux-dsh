@@ -63,11 +63,9 @@ describe('Agent 输入框与专家市场头像收敛一致性契约', () => {
     const marketHiredExperts = [
       { name: 'Shopee运营专家', id: 'shopee-ops-expert' },
       { name: 'YouTube创作者专家', id: 'youtube-creator-expert' },
-      { name: '亚马逊运营专家', id: 'amazon-ops-expert' },
-      { name: 'TikTok Shop运营专家', id: 'tiktok-shop-ops-expert' },
-      { name: 'HTML生成器', id: 'html-generator' },
-      { name: '媒体创作者', id: 'media-creator' },
+      { name: '亚马逊运营专家', id: 'amazon-operations-expert' },
       { name: 'TikTok电商专家', id: 'tiktok-ecommerce-expert' },
+      { name: '媒体创作者', id: 'media-creator' },
     ]
 
     for (const exp of marketHiredExperts) {

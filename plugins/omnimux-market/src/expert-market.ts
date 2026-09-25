@@ -1,9 +1,10 @@
 /**
  * @file plugins/omnimux-market/src/expert-market.ts
  * Dedicated data structures and preset installers for Market Experts.
+ * Aligned with official @deepseek-ai/dsh-agent-presets as Single Source of Truth.
  */
 
-import { existsSync, mkdirSync, readdirSync, rmSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { healInstalledAgentPresets, writeAgentPreset } from './expert-presets.js'
 import { generatePixelAvatarDataUrl } from './expert/pixel-avatar.js'
@@ -17,8 +18,21 @@ export interface MarketExpertItem {
   avatar: string
   initialStatus: 'enabled' | 'available' | 'disabled' | 'coming_soon'
   order: number
+  group?: 'ecommerce' | 'system' | 'custom'
+  trust?: 'system' | 'user'
+  status?: 'enabled' | 'available' | 'disabled' | 'coming_soon'
 }
 
+export interface DiscoveredPresetRef {
+  id: string
+  name?: string
+  description?: string
+  order?: number
+  trust?: 'system' | 'user'
+  broken?: string
+}
+
+/** 出海专精专家核心阵容（5 位精细化专精角色，已移除 html-generator 与粗糙版重复项） */
 export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
   {
     id: 'shopee-ops-expert',
@@ -29,6 +43,7 @@ export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
     avatar: generatePixelAvatarDataUrl('shopee-ops-expert', { size: 96 }),
     initialStatus: 'enabled',
     order: 12,
+    group: 'ecommerce',
   },
   {
     id: 'youtube-creator-expert',
@@ -39,26 +54,29 @@ export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
     avatar: generatePixelAvatarDataUrl('youtube-creator-expert', { size: 96 }),
     initialStatus: 'enabled',
     order: 13,
+    group: 'ecommerce',
   },
   {
-    id: 'amazon-ops-expert',
+    id: 'amazon-operations-expert',
     name: '亚马逊运营专家',
-    nameEn: 'Amazon Ops Expert',
-    description: '亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。',
-    descriptionEn: 'Amazon operation specialist for market, product, listing, keyword, review and risk analysis.',
-    avatar: generatePixelAvatarDataUrl('amazon-ops-expert', { size: 96 }),
+    nameEn: 'Amazon Operations Expert',
+    description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。',
+    descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion',
+    avatar: generatePixelAvatarDataUrl('amazon-operations-expert', { size: 96 }),
     initialStatus: 'enabled',
     order: 14,
+    group: 'ecommerce',
   },
   {
-    id: 'tiktok-shop-ops-expert',
-    name: 'TikTok Shop运营专家',
-    nameEn: 'TikTok Shop Ops Expert',
-    description: '负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。',
-    descriptionEn: 'TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.',
-    avatar: generatePixelAvatarDataUrl('tiktok-shop-ops-expert', { size: 96 }),
+    id: 'tiktok-ecommerce-expert',
+    name: 'TikTok电商专家',
+    nameEn: 'TikTok Ecommerce Expert',
+    description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。',
+    descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.',
+    avatar: generatePixelAvatarDataUrl('tiktok-ecommerce-expert', { size: 96 }),
     initialStatus: 'enabled',
     order: 15,
+    group: 'ecommerce',
   },
   {
     id: 'media-creator',
@@ -69,38 +87,69 @@ export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
     avatar: generatePixelAvatarDataUrl('media-creator', { size: 96 }),
     initialStatus: 'available',
     order: 16,
-  },
-  {
-    id: 'html-generator',
-    name: 'HTML生成器',
-    nameEn: 'HTML Generator',
-    description: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示',
-    descriptionEn: '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示',
-    avatar: generatePixelAvatarDataUrl('html-generator', { size: 96 }),
-    initialStatus: 'available',
-    order: 17,
-  },
-  {
-    id: 'amazon-operations-expert',
-    name: '亚马逊运营专家',
-    nameEn: 'Amazon Operations Expert',
-    description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。',
-    descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion',
-    avatar: generatePixelAvatarDataUrl('amazon-operations-expert', { size: 96 }),
-    initialStatus: 'available',
-    order: 18,
-  },
-  {
-    id: 'tiktok-ecommerce-expert',
-    name: 'TikTok电商专家',
-    nameEn: 'TikTok Ecommerce Expert',
-    description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。',
-    descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.',
-    avatar: generatePixelAvatarDataUrl('tiktok-ecommerce-expert', { size: 96 }),
-    initialStatus: 'available',
-    order: 19,
+    group: 'ecommerce',
   },
 ]
+
+/** 官方系统预设的增强元数据字典 */
+export const SYSTEM_PRESET_METADATA: Record<string, { name: string, nameEn: string, description: string, descriptionEn: string, order: number }> = {
+  standard: {
+    name: '代码开发',
+    nameEn: 'Code Developer',
+    description: '全栈软件工程、代码重构、测试编写与系统架构设计。',
+    descriptionEn: 'Full-stack software engineering, refactoring, testing and architecture.',
+    order: 1,
+  },
+  'drama-agent': {
+    name: '短剧专家',
+    nameEn: 'Short Drama Expert',
+    description: '短剧漫剧策划、剧本拆解、分镜编排与出海译制发行。',
+    descriptionEn: 'Short drama planning, script breakdown, storyboard and distribution.',
+    order: 2,
+  },
+  'tiktok-agent': {
+    name: 'TikTok运营专家团',
+    nameEn: 'TikTok Ops Team',
+    description: 'TikTok 全链路爆款视频创作、带货选品、互动截流与投流增长。',
+    descriptionEn: 'Full-funnel TikTok viral content creation, product selection, engagement and paid growth.',
+    order: 3,
+  },
+  'omni-agent': {
+    name: '社媒专家',
+    nameEn: 'Social Media Expert',
+    description: '全平台社媒营销操盘、跨渠道爆款内容创作与品牌心智建设。',
+    descriptionEn: 'Multi-platform social media marketing, content creation and brand building.',
+    order: 4,
+  },
+  'marketing-agent': {
+    name: '营销专家',
+    nameEn: 'Marketing Expert',
+    description: '全域营销战略策划、高转化文案撰写与品牌获客增长。',
+    descriptionEn: 'Marketing strategy, high-converting copywriting and user acquisition.',
+    order: 5,
+  },
+  'marketing-growth-team': {
+    name: '增长专家团',
+    nameEn: 'Growth Team',
+    description: '数据驱动的漏斗分析、病毒传播机制与规模化增长试验。',
+    descriptionEn: 'Data-driven funnel optimization, viral loops and scalable growth experimentation.',
+    order: 6,
+  },
+  'daily-work': {
+    name: '日常工作',
+    nameEn: 'Daily Work',
+    description: '通用办公助理，协助文档处理、日常沟通、会议纪要与信息整理。',
+    descriptionEn: 'General office assistant for documentation, communication and notes.',
+    order: 7,
+  },
+  'software-company': {
+    name: '软件开发团队',
+    nameEn: 'Software Company',
+    description: '多角色协同交付团队，涵盖架构师、前端、后端、QA、产品与审查员。',
+    descriptionEn: 'Multi-role collaborative software delivery team.',
+    order: 8,
+  },
+}
 
 export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'enabled' | 'available' | 'disabled' | 'coming_soon' {
   if (exp.initialStatus === 'coming_soon') return 'coming_soon'
@@ -191,4 +240,123 @@ export function disableMarketExpertPreset(home: string, id: string): void {
       writeFileSync(join(retiredDir, `${id}-${Date.now()}`), '', 'utf8')
     } catch {}
   }
+}
+
+/** 辅助：从本地磁盘目录扫描预设（单测与离线环境兜底） */
+function scanLocalPresets(home: string): DiscoveredPresetRef[] {
+  const presets: DiscoveredPresetRef[] = []
+  const userRoot = join(home, '.agent-presets')
+  if (existsSync(userRoot)) {
+    try {
+      const entries = readdirSync(userRoot, { withFileTypes: true })
+      for (const ent of entries) {
+        if (!ent.isDirectory() || ent.name.startsWith('.')) continue
+        const presetDir = join(userRoot, ent.name)
+        const ymlPath = join(presetDir, 'preset.yml')
+        if (existsSync(ymlPath)) {
+          let name = ent.name
+          let description = ''
+          let order = 20
+          try {
+            const raw = readFileSync(ymlPath, 'utf8')
+            const nameMatch = raw.match(/^name:\s*(.+)$/m)
+            if (nameMatch) name = nameMatch[1].trim()
+            const descMatch = raw.match(/^description:\s*(.+)$/m)
+            if (descMatch) description = descMatch[1].trim()
+            const orderMatch = raw.match(/^order:\s*(\d+)$/m)
+            if (orderMatch) order = Number(orderMatch[1])
+          } catch {}
+          presets.push({ id: ent.name, name, description, order, trust: 'user' })
+        }
+      }
+    } catch {}
+  }
+  return presets
+}
+
+/**
+ * 核心归一化聚合：全面对齐官方 ctx.agentPresets.list() 动态扫描结果。
+ * 融合「出海专精专家」、「官方系统团队」与「用户自建 Agent」为统一全景列表。
+ */
+export function reconcileMarketExperts(
+  home: string,
+  officialPresets?: DiscoveredPresetRef[],
+): MarketExpertItem[] {
+  const effectivePresets = (officialPresets && officialPresets.length > 0)
+    ? officialPresets
+    : scanLocalPresets(home)
+
+  const itemsMap = new Map<string, MarketExpertItem>()
+
+  // 1. 基底：出海专精专家（5 位）
+  for (const exp of DEFAULT_MARKET_EXPERTS) {
+    const curStatus = getMarketExpertStatus(home, exp)
+    itemsMap.set(exp.id, {
+      ...exp,
+      group: 'ecommerce',
+      status: curStatus,
+    })
+  }
+
+  // 2. 融合官方预设列表（包括系统级预设与用户自建预设）
+  for (const p of effectivePresets) {
+    if (!p.id || p.id === 'html-generator') continue // 彻底过滤 html-generator
+
+    if (itemsMap.has(p.id)) {
+      // 若该出海专家存在于生效预设中且未被显式 retired，且不是 coming_soon，锁定为已入职
+      const existing = itemsMap.get(p.id)!
+      if (existing.status !== 'disabled' && existing.status !== 'coming_soon') {
+        existing.status = 'enabled'
+      }
+      continue
+    }
+
+    // 过滤已被废弃的粗糙版专家
+    if (p.id === 'amazon-ops-expert' || p.id === 'tiktok-shop-ops-expert') {
+      continue
+    }
+
+    if (p.trust === 'system' || SYSTEM_PRESET_METADATA[p.id]) {
+      // 官方系统预设团队
+      const meta = SYSTEM_PRESET_METADATA[p.id]
+      itemsMap.set(p.id, {
+        id: p.id,
+        name: meta?.name || p.name || p.id,
+        nameEn: meta?.nameEn || p.name || p.id,
+        description: meta?.description || p.description || '',
+        descriptionEn: meta?.descriptionEn || p.description || '',
+        avatar: generatePixelAvatarDataUrl(p.id, { size: 96 }),
+        initialStatus: 'enabled',
+        status: 'enabled',
+        order: meta?.order ?? (p.order ?? 50),
+        group: 'system',
+        trust: 'system',
+      })
+    } else {
+      // 用户通过「创建 Agent」新建的本地专属 Agent
+      itemsMap.set(p.id, {
+        id: p.id,
+        name: p.name || p.id,
+        nameEn: p.name || p.id,
+        description: p.description || '',
+        descriptionEn: p.description || '',
+        avatar: generatePixelAvatarDataUrl(p.id, { size: 96 }),
+        initialStatus: 'enabled',
+        status: 'enabled',
+        order: p.order ?? 80,
+        group: 'custom',
+        trust: 'user',
+      })
+    }
+  }
+
+  const allItems = Array.from(itemsMap.values())
+  // 保持按 group 与 order 稳定排序：出海专精(ecommerce) > 系统预装(system) > 用户自建(custom)
+  const groupWeight: Record<string, number> = { ecommerce: 0, system: 1, custom: 2 }
+  return allItems.sort((a, b) => {
+    const wA = groupWeight[a.group || 'ecommerce'] ?? 99
+    const wB = groupWeight[b.group || 'ecommerce'] ?? 99
+    if (wA !== wB) return wA - wB
+    return (a.order ?? 999) - (b.order ?? 999)
+  })
 }

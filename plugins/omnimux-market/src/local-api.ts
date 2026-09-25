@@ -118,11 +118,13 @@ export const MUTATING_METHODS = new Set([
 
 import {
   type MarketExpertItem,
+  type DiscoveredPresetRef,
   DEFAULT_MARKET_EXPERTS,
   getMarketExpertStatus,
   installMarketExpertPreset,
   disableMarketExpertPreset,
   materializeEnabledMarketExperts,
+  reconcileMarketExperts,
 } from './expert-market.js'
 
 import {
@@ -134,11 +136,13 @@ import {
 
 export {
   type MarketExpertItem,
+  type DiscoveredPresetRef,
   DEFAULT_MARKET_EXPERTS,
   getMarketExpertStatus,
   installMarketExpertPreset,
   disableMarketExpertPreset,
   materializeEnabledMarketExperts,
+  reconcileMarketExperts,
   agentPresetCordis,
   healAgentPresetCordis,
   healInstalledAgentPresets,
@@ -146,7 +150,7 @@ export {
 }
 
 /**
- * Agent 预设列表变更通知钩子：官方预设菜单只在页面挂载或收到
+ * 官方 `@deepseek-ai/dsh-client-ui-agent-preset` 的 seat 控制器只在收到
  * `settings/document-updated`（命名空间 agent-presets）时重读列表，
  * 市场安装/禁用/启动物化后由 host 注入此钩子广播一次，免重启即时可见。
  * 同 setModelCatalogResolver 的模块级注入先例。
@@ -161,6 +165,16 @@ function notifyAgentPresetsChanged(): void {
   try {
     agentPresetsNotify?.()
   } catch {}
+}
+
+/**
+ * 官方 `@deepseek-ai/dsh-agent-presets` 发现服务注入点。
+ * 专家市场以官方发现的列表为真实全量数据源。
+ */
+let agentPresetsProvider: (() => Promise<DiscoveredPresetRef[] | unknown[]>) | null = null
+
+export function setAgentPresetsProvider(fn: (() => Promise<DiscoveredPresetRef[] | unknown[]>) | null): void {
+  agentPresetsProvider = typeof fn === 'function' ? fn : null
 }
 
 interface ApiContext {
@@ -479,12 +493,16 @@ function handleHomeCustomOrder(ctx: ApiContext): void {
   return sendJson(res, 200, { ok: true, order: currentOrder })
 }
 
-function handleExpertMarketList(ctx: ApiContext): void {
+async function handleExpertMarketList(ctx: ApiContext): Promise<void> {
   const home = expertRoots().home
-  const items = DEFAULT_MARKET_EXPERTS.map((exp) => ({
-    ...exp,
-    status: getMarketExpertStatus(home, exp),
-  }))
+  let official: any[] = []
+  if (typeof agentPresetsProvider === 'function') {
+    try {
+      const res = await agentPresetsProvider()
+      if (Array.isArray(res)) official = res
+    } catch {}
+  }
+  const items = reconcileMarketExperts(home, official)
   return sendJson(ctx.res, 200, { ok: true, items })
 }
 
@@ -492,9 +510,9 @@ function handleExpertMarketInstall(ctx: ApiContext): void {
   const { body, url, res } = ctx
   const id = String(body.id || url.searchParams.get('id') || '').trim()
   if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
+  const home = expertRoots().home
   const exp = DEFAULT_MARKET_EXPERTS.find((it) => it.id === id)
   if (!exp) return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` })
-  const home = expertRoots().home
   installMarketExpertPreset(home, exp)
   notifyAgentPresetsChanged()
   return sendJson(res, 200, { ok: true, id, status: 'enabled' })
