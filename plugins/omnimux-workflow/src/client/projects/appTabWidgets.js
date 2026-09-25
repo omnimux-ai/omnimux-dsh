@@ -565,6 +565,32 @@ export function displayValueOf(val) {
  * @param {object} [manifest]
  * @returns {string} 规范化模型 ID
  */
+/**
+ * 判定节点是否为插槽节点或导入节点（排他过滤）
+ * @param {object} node
+ * @returns {boolean}
+ */
+export function isSlotOrImportNode(node) {
+  if (!node || typeof node !== 'object') return false
+  const d = node.data || {}
+  return Boolean(
+    d.nodeKind === 'import' ||
+    d.isSlot ||
+    d.slotRole ||
+    (typeof node.id === 'string' && node.id.startsWith('node-slot-'))
+  )
+}
+
+/**
+ * 推导 AI 应用 Manifest 中的工程默认节点模型 ID
+ * 1. 优先 manifest.defaultModel / manifest.metadata.defaultModel
+ * 2. 遍历 nodes 拓扑（按应用实际分类限定目标生成引擎）
+ * 3. 图片分类（cat === 'image'）优先判定
+ * 4. 识别已知工作流预设（creatify / builtin）
+ * 5. 兜底默认视频模型
+ * @param {object} [manifest]
+ * @returns {string} 规范化模型 ID
+ */
 export function resolveDefaultNodeModelId(manifest) {
   if (!manifest || typeof manifest !== 'object') {
     return 'seedance-2.0'
@@ -579,24 +605,27 @@ export function resolveDefaultNodeModelId(manifest) {
     }
   }
 
-  // 2. 遍历 manifest?.workflowBinding?.snapshot?.nodes（按主生成节点排他寻址）
+  const cat = String(manifest.metadata?.category || manifest.category || '').toLowerCase()
+
+  // 2. 遍历 manifest?.workflowBinding?.snapshot?.nodes（按应用实际分类限定主生成节点排他寻址）
   const nodes = manifest.workflowBinding?.snapshot?.nodes || []
   if (Array.isArray(nodes) && nodes.length > 0) {
-    // 优先主生成节点（omnimux_video_submit / omnimux_image_submit / node.type === 'video' | 'image'）
+    // 优先主生成节点：若应用为图片分类，仅匹配图像生成引擎；若为视频类，仅匹配视频生成引擎
     for (const node of nodes) {
-      const d = node.data || {}
-      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
+      if (isSlotOrImportNode(node)) {
         continue
       }
+      const d = node.data || {}
       const isGenNode =
-        d.tool === 'omnimux_video_submit' ||
-        d.tool === 'omnimux_image_submit' ||
-        node.type === 'video' ||
-        node.type === 'image' ||
-        d.type === 'video' ||
-        d.type === 'image' ||
-        d.materialType === 'video' ||
-        d.materialType === 'image'
+        cat === 'image'
+          ? (d.tool === 'omnimux_image_submit' ||
+             d.type === 'image' ||
+             node.type === 'image' ||
+             d.materialType === 'image')
+          : (d.tool === 'omnimux_video_submit' ||
+             d.type === 'video' ||
+             node.type === 'video' ||
+             d.materialType === 'video')
 
       if (isGenNode && (d.model || d.params?.model)) {
         const mid = String(d.model || d.params?.model)
@@ -604,12 +633,12 @@ export function resolveDefaultNodeModelId(manifest) {
       }
     }
 
-    // 次优先：其它带有 model/params.model 的非 import 节点
+    // 次优先：其它带有 model/params.model 的非 import/slot 节点
     for (const node of nodes) {
-      const d = node.data || {}
-      if (d.nodeKind === 'import' || d.isSlot || d.slotRole || node.id?.startsWith?.('node-slot-')) {
+      if (isSlotOrImportNode(node)) {
         continue
       }
+      const d = node.data || {}
       if (d.model || d.params?.model) {
         const mid = String(d.model || d.params?.model)
         return mid === 'seedance-2-0' ? 'seedance-2.0' : mid
@@ -617,7 +646,12 @@ export function resolveDefaultNodeModelId(manifest) {
     }
   }
 
-  // 3. 若依然为空，根据 manifest?.appId 或 workspaceId 识别：
+  // 3. 图片分类优先判定，避免图片应用因 ID/Workspace 含有 creatify 等关键字被误判成视频模型
+  if (cat === 'image') {
+    return 'gpt-image-2.5'
+  }
+
+  // 4. 根据 manifest?.appId 或 workspaceId 识别已知预设：
   const appIdStr = String(manifest.appId || manifest.id || '').toLowerCase()
   const wsIdStr = String(
     manifest.workflowBinding?.workspaceId ||
@@ -637,11 +671,5 @@ export function resolveDefaultNodeModelId(manifest) {
     return 'seedance-2.0'
   }
 
-  // 若当前应用分类为图片（category === 'image'），默认提取 gpt-image-2.5
-  // 若当前应用分类为视频（category === 'video' 或没有指定），默认提取 seedance-2.0
-  const cat = String(manifest.metadata?.category || manifest.category || '').toLowerCase()
-  if (cat === 'image') {
-    return 'gpt-image-2.5'
-  }
   return 'seedance-2.0'
 }

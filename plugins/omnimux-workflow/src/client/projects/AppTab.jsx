@@ -757,16 +757,8 @@ export function AppTab(props) {
   }, [selectedModel, defaultModelObj, availableModels])
 
   const defaultModelName = useMemo(() => {
-    if (defaultModelObj?.name) return defaultModelObj.name
-    if (defaultNodeModelId) {
-      const spec = resolveKnownModelSpec(defaultNodeModelId, availableModels)
-      if (spec?.name) return spec.name
-      if (defaultNodeModelId === 'seedance-2.0') return 'Seedance 2.0'
-      if (defaultNodeModelId === 'gpt-image-2.5') return 'GPT Image 2.5'
-      return defaultNodeModelId
-    }
-    return currentCategory === 'image' ? 'GPT Image 2.5' : 'Seedance 2.0'
-  }, [defaultModelObj, defaultNodeModelId, availableModels, currentCategory])
+    return defaultModelObj?.name || (currentCategory === 'image' ? 'GPT Image 2.5' : 'Seedance 2.0')
+  }, [defaultModelObj, currentCategory])
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
