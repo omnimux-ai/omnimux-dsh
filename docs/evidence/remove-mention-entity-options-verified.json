@@ -1,0 +1,28 @@
+{
+  "task": "Issue #2660: 移除 @ 菜单中冗余的角色/产品入口与二级浮层，保留 + 号全套资产库链路",
+  "timestamp": "2026-09-25T18:55:00.000Z",
+  "verified_scenarios": [
+    {
+      "scenario": "AC-1: 输入框键入 @ 呼出菜单时绝不包含「角色」与「产品」固定入口",
+      "status": "PASS",
+      "details": "createMaterialMentionSource() 的 candidates 及 lexicon 完全剥离角色与产品伪项，空卡槽状态下返回 []。"
+    },
+    {
+      "scenario": "AC-2: 绝不挂载或打开二级子菜单浮层",
+      "status": "PASS",
+      "details": "composer-compact.js 中彻底删除 mountEntitySubmenu、unmountEntitySubmenu 及悬停/点击事件，DOM 绝无 omnimux-entity-submenu-root。"
+    },
+    {
+      "scenario": "AC-3: @ 菜单纯净素材引用正常工作",
+      "status": "PASS",
+      "details": "卡槽中已加入素材时正常被 candidates 命中，选中生成 material:id，序列化为 @名称。"
+    },
+    {
+      "scenario": "AC-4: 输入框底部加号（+）全套业务逻辑完好无损",
+      "status": "PASS",
+      "details": "从资产库选择 (add-from-library)、从商品库选择 (add-from-product)、从灵感库选择 (add-from-inspiration) 均正常触发对应打开回调与右栏工作台联动。"
+    }
+  ],
+  "verification_mode": "Automated contract & DOM unit simulation",
+  "result": "ALL_PASSED"
+}
