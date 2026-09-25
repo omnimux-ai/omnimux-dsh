@@ -4,29 +4,20 @@ import test from 'node:test'
 
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
 
-test('整页选素材时分类钉在顶部，输入框贴底，技能按钮不被藏起来', () => {
+test('彻底废除全屏遮罩：DOM 中绝对不存在 .omnimux-library-stage 与 fixed 覆盖层', () => {
   const styles = read('./styles.js')
   const guide = read('./SessionGuide.jsx')
-  const stage = read('./LibraryBrowser.jsx')
-  const model = read('../composer-add/library-stage-model.js')
-  assert.match(styles, /\.omnimux-library-stage \{[^}]*position:fixed/)
-  assert.match(styles, /\.omnimux-library-stage-grid \{[^}]*overflow:auto/)
-  assert.match(guide, /scrollBody/)
-  assert.match(guide, /documentElement\.style\.setProperty\('--omnimux-library-stage-left'/)
-  assert.doesNotMatch(styles, /\.omnimux-library-stage-tabs \{[^}]*position:sticky/)
+
+  // 1. styles.js 绝对不包含 .omnimux-library-stage 的 position:fixed 规则
+  assert.doesNotMatch(styles, /\.omnimux-library-stage \{[^}]*position:fixed/)
+  assert.doesNotMatch(styles, /#omnimux-composer-add-host:has\(\[data-omnimux-library-stage\]\)/)
+
+  // 2. SessionGuide 中已彻底移除 LibraryBrowser 与全屏 pin 逻辑
+  assert.doesNotMatch(guide, /LibraryBrowser/)
+  assert.doesNotMatch(guide, /pin\(\{ id: LIBRARY_STAGE_DOCK_ID \}\)/)
+  assert.doesNotMatch(guide, /documentElement\.style\.setProperty\('--omnimux-library-stage-left'/)
+
+  // 3. 原生输入框 dock 与技能选择器保持完好
   assert.match(styles, /data-omnimux-skill-picker/)
   assert.doesNotMatch(styles, /data-omnimux-skill-picker[\s\S]{0,120}display:\s*none/)
-  assert.match(guide, /LibraryBrowser/)
-  assert.match(guide, /pin\(\{ id: LIBRARY_STAGE_DOCK_ID \}\)/)
-  assert.match(guide, /setAttribute\('data-omnimux-dock-open'/)
-  assert.match(read('./useComposerDocking.js'), /pinnedRef\.current\) return undefined/)
-  assert.match(stage, /LIBRARY_TABS/)
-  assert.match(styles, /\.omnimux-library-stage-back/)
-  assert.match(stage, /omnimux-library-stage-back/)
-  assert.match(stage, /Escape/)
-  assert.match(model, /精选/)
-  assert.match(model, /资产库/)
-  assert.match(model, /灵感库/)
-  assert.match(model, /产品库/)
-  assert.match(model, /爆款趋势/)
 })

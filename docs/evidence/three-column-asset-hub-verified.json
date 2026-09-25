@@ -1,0 +1,50 @@
+{
+  "task": "feat(workbench): 三栏状态右侧素材工作台（Asset Hub）全链路交互与审查缺陷 21 项全面修复",
+  "verifiedAt": "2026-09-25T14:38:00.000Z",
+  "issues": [
+    "#2649"
+  ],
+  "reviewRemediations": {
+    "composerAddController": {
+      "storeLazyLoadSequence": "改用 getGlobalAssetHubNavStore()，面板挂载前先创建单例并完成目标 Tab 设置",
+      "reentryExpansion": "收起右栏后重入，只要目标会话有效，确保调用 openWorkbench 重新展开面板"
+    },
+    "sessionGuideStyles": {
+      "stylesRestored": "恢复供 ExploreTemplatesSection 复用的网格与状态样式（.omnimux-library-stage-grid, .omnimux-library-stage-cell, .omnimux-library-stage-status, .omnimux-library-stage-retry）"
+    },
+    "assetHubData": {
+      "inspirationEndpoint": "修正为真实存在的 /omnimux/inspiration/local?sort=hot&page=1&page_size=48&projection=lean",
+      "objectDefensive": "三个归一化函数开头增加 if (!row || typeof row !== 'object') return null 防卫",
+      "thumbnailUrlAssembly": "组装真实 /omnimux/assets/library/preview?id=...&file=...",
+      "fakeParametersPurged": "移除硬编码 '00:15' 与 '1080×1920'，无客观数据保持空字符串",
+      "pillEnumMap": "建立中文胶囊标签至后端英文枚举字典 FILTER_PILL_ENUM_MAP"
+    },
+    "assetHubPanel": {
+      "closePanelApi": "收起面板 API 修正为 wb?.closePanel?.() ?? wb?.closeWorkbenchPanel?.()",
+      "mutationObserverSubtree": "补充 subtree: true 确保宿主全屏状态监听无遗漏",
+      "uploadActionHardened": "文件选择加固隐藏 input 与动态清理机制",
+      "feedbackToast": "增加卡片重复添加与配额超限时的提示气泡与输入框聚焦"
+    },
+    "assetHubCard": {
+      "videoPlayTiming": "使用 useEffect 监听 isHovered，待 DOM 挂载完成后触发 play()",
+      "keyboardAccessibility": "补充 onKeyDown 键盘事件处理（Enter 与 Space 键）"
+    },
+    "assetHubGrid": {
+      "defaultProps": "为 items 入参提供默认值 items = []"
+    },
+    "assetHubStyles": {
+      "badgeColorContrast": "徽标文字颜色修正为 --dsw-static-neutral-00，确保深色背景强对比度"
+    },
+    "cleanupAndSingleSource": {
+      "orphanFileDeleted": "物理删除未引用的静态文件 workbench/styles/asset-hub.css",
+      "singleSource": "ASSET_HUB_TAB_ID 收敛至 workbench/geometry.js 单一真源",
+      "freshCallbackRef": "SessionGuide.jsx 中使用 applyDraftRef.current 避免闭包陈旧引用"
+    }
+  },
+  "testResults": {
+    "unitTests": "8/8 passed in asset-hub.test.js & library-stage.test.js",
+    "e2eTests": "3/3 passed in asset-hub.e2e.test.js",
+    "uiGuard": "PASS (0 violations)"
+  },
+  "status": "VERIFIED_PASSED"
+}

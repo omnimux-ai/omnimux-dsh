@@ -1,6 +1,8 @@
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
 import { promptForCard, tabForKind } from './library-stage-model.js'
+import { getGlobalAssetHubNavStore } from '../workbench/asset-hub-store.js'
+import { ASSET_HUB_TAB_ID } from '../workbench/geometry.js'
 
 /**
  * @typedef {import('../attachments/store.ts').AttachmentStore} AttachmentStore
@@ -321,11 +323,17 @@ export function createComposerAddController(options) {
 
   function mapInspirationAttachment(item) {
     if (!item || !item.id) return null
+    const KIND_MAP = { video: 'video', audio: 'audio' }
+    const DEFAULT_EXT = { video: 'MP4', audio: 'MP3', image: 'JPG' }
+    const kind = KIND_MAP[item.kind] || 'image'
+    const extension = item.extension || DEFAULT_EXT[kind]
     return {
       sourcePlugin: 'omnimux-inspiration',
-      kind: item.kind === 'video' ? 'video' : 'image',
+      kind,
       entityId: String(item.id),
       title: String(item.title || item.name || item.id),
+      extension,
+      relativePath: item.relativePath || `inspiration/${item.id}.${extension.toLowerCase()}`,
       previewUrl: item.previewUrl || '',
       metadata: {
         inspiration: {
@@ -370,9 +378,29 @@ export function createComposerAddController(options) {
     return counts
   }
 
-  function openKind(sessionId, kind) {
+  async function openKind(sessionId, kind) {
+    const targetSessionId = resolveSessionId(sessionId)
     const operation = begin(sessionId, kind)
-    if (operation) render(operation)
+    if (operation) {
+      render(operation)
+    }
+
+    if (targetSessionId) {
+      const targetTab = tabForKind(kind) || 'assets'
+      const navStore = options.assetHubNavStore || getGlobalAssetHubNavStore()
+      navStore?.setActiveTab?.(targetTab)
+
+      const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
+      try {
+        await wb?.openWorkbench?.({
+          tabId: ASSET_HUB_TAB_ID,
+          focus: 'split',
+          sessionId: targetSessionId,
+        })
+      } catch {
+        // 容错处理：宿主工作台打开失败时不崩溃
+      }
+    }
   }
 
   const stopSession = options.subscribeCurrentSession(() => {
@@ -382,13 +410,13 @@ export function createComposerAddController(options) {
 
   return {
     openLibrary(sessionId) {
-      openKind(sessionId, 'library')
+      return openKind(sessionId, 'library').catch(() => {})
     },
     openProduct(sessionId) {
-      openKind(sessionId, 'product')
+      return openKind(sessionId, 'product').catch(() => {})
     },
     openInspiration(sessionId) {
-      openKind(sessionId, 'inspiration')
+      return openKind(sessionId, 'inspiration').catch(() => {})
     },
     dispose() {
       if (disposed) return

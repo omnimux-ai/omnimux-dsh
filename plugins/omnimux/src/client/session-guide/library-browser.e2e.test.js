@@ -9,7 +9,8 @@ import { zh } from '../locales.js'
 
 const guideSource = readFileSync(new URL('./SessionGuide.jsx', import.meta.url), 'utf8')
 const styleSource = readFileSync(new URL('./styles.js', import.meta.url), 'utf8')
-const browserSource = readFileSync(new URL('./LibraryBrowser.jsx', import.meta.url), 'utf8')
+const assetHubSource = readFileSync(new URL('../workbench/AssetHubPanel.jsx', import.meta.url), 'utf8')
+const geometrySource = readFileSync(new URL('../workbench/geometry.js', import.meta.url), 'utf8')
 
 function mountStage() {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://example.test/' })
@@ -138,21 +139,17 @@ function mountStage() {
   }
 }
 
-test('整页源码保留钉顶分类、贴底输入框与技能按钮', () => {
-  assert.match(guideSource, /LibraryBrowser/)
-  assert.match(guideSource, /pin\(\{ id: LIBRARY_STAGE_DOCK_ID \}\)/)
-  assert.match(styleSource, /\.omnimux-library-stage \{[^}]*position:fixed/)
-  assert.match(styleSource, /\.omnimux-library-stage-grid \{[^}]*overflow:auto/)
-  assert.match(guideSource, /scrollBody/)
-  assert.match(guideSource, /setAttribute\('data-omnimux-dock-open'/)
+test('三栏工作台新架构保留贴底输入框、打通Prompt管道并移除旧全屏固定遮罩', () => {
+  assert.match(guideSource, /LIBRARY_STAGE_PROMPT_EVENT/)
+  assert.match(guideSource, /mergeLibraryPrompt/)
+  assert.match(assetHubSource, /LIBRARY_STAGE_PROMPT_EVENT/)
+  assert.match(assetHubSource, /promptForCard/)
+  assert.match(geometrySource, /ASSET_HUB_CHAT_PX = 380/)
+  assert.doesNotMatch(styleSource, /\.omnimux-library-stage \{[^}]*position:fixed/)
+  assert.match(readFileSync(new URL('./useComposerDocking.js', import.meta.url), 'utf8'), /scrollBody/)
   assert.match(readFileSync(new URL('./useComposerDocking.js', import.meta.url), 'utf8'), /placement === 'docked' \|\| pinnedRef\.current/)
-  assert.match(guideSource, /documentElement\.style\.setProperty\('--omnimux-library-stage-left'/)
-  assert.doesNotMatch(styleSource, /\.omnimux-library-stage-tabs \{[^}]*position:sticky/)
   assert.match(styleSource, /data-omnimux-skill-picker/)
   assert.doesNotMatch(styleSource, /data-omnimux-skill-picker[\s\S]{0,120}display:\s*none/)
-  assert.match(browserSource, /ensureAssetCardStyles/)
-  assert.match(browserSource, /ensureProductCardStyles/)
-  assert.match(browserSource, /ensureInspirationCardStyles/)
 })
 
 test('e2e: 打开整页后点卡片写入素材与提示词，整页保持打开', async () => {

@@ -313,6 +313,7 @@ export const zh = {
   'workbench.chatShow': '显示会话栏',
   'workbench.chatHide': '全屏铺满右侧栏',
   'mediaViewer.tabTitle': '图像生成',
+  'assetHub.tabTitle': '素材工作台',
 }
 
 export const en = {
@@ -630,6 +631,7 @@ export const en = {
   'workbench.chatShow': 'Show conversation',
   'workbench.chatHide': 'Expand to full width',
   'mediaViewer.tabTitle': 'Image Generation',
+  'assetHub.tabTitle': 'Asset Hub',
 }
 
 

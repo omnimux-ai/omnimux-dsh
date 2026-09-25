@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
-import { LibraryBrowser } from './LibraryBrowser.jsx'
-import { LIBRARY_STAGE_DOCK_ID, LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
+import { LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 import { publishActiveSkill, requestSkillAttach } from '../composer-add/skill-event.ts'
@@ -117,21 +116,18 @@ function BlankSessionGuide({
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
+  const applyDraftRef = useRef(null)
   live.current = { input, state }
   const isEn = typeof t === 'function' ? (t('locale') === 'en' || t('guide.locale') === 'en') : false
 
-  const [libraryStage, setLibraryStage] = useState(null)
-  const clearLibraryStage = useCallback(() => setLibraryStage(null), [])
   const {
     dockedItem,
     placement,
     dock,
-    pin,
     undock,
     isDocked,
   } = useComposerDocking({
     hostRef: guideRef,
-    onUndock: clearLibraryStage,
   })
 
   const isSessionActive = () => {
@@ -147,81 +143,22 @@ function BlankSessionGuide({
     root?.querySelector('[data-composer-input="true"]')?.focus({ preventScroll: true })
   }
 
-  useLayoutEffect(() => {
-    const root = guideRef.current?.closest('[data-phase]')
-    const column = root?.querySelector?.('[class*="scrollBody"]') || root
-    if (!libraryStage || !column) return undefined
-    const win = column.ownerDocument?.defaultView || window
-    const place = () => {
-      const rect = column.getBoundingClientRect?.()
-      if (!rect || rect.width <= 0) return
-      const left = `${Math.round(rect.left)}px`
-      const width = `${Math.round(rect.width)}px`
-      column.style.setProperty('--omnimux-library-stage-left', left)
-      column.style.setProperty('--omnimux-library-stage-width', width)
-      const phase = column.closest?.('[data-phase]') || column
-      phase.setAttribute('data-omnimux-starter-host', '')
-      phase.setAttribute('data-omnimux-dock-open', '')
-      if (win) {
-        win.document.documentElement.style.setProperty('--omnimux-library-stage-left', left)
-        win.document.documentElement.style.setProperty('--omnimux-library-stage-width', width)
-      }
-    }
-    place()
-    let frame = 0
-    const schedule = () => {
-      if (frame) return
-      frame = win.requestAnimationFrame(() => {
-        frame = 0
-        place()
-      })
-    }
-    const observer = typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(schedule) : null
-    observer?.observe(column)
-    win.addEventListener('resize', schedule)
-    return () => {
-      if (frame) win.cancelAnimationFrame(frame)
-      observer?.disconnect()
-      win.removeEventListener('resize', schedule)
-      column.style.removeProperty('--omnimux-library-stage-left')
-      column.style.removeProperty('--omnimux-library-stage-width')
-      const phase = column.closest?.('[data-phase]') || column
-      phase.removeAttribute('data-omnimux-dock-open')
-      win.document.documentElement.style.removeProperty('--omnimux-library-stage-left')
-      win.document.documentElement.style.removeProperty('--omnimux-library-stage-width')
-    }
-  }, [libraryStage])
-
   useEffect(() => {
-    const onStage = (event) => {
-      const model = event.detail
-      if (!model) {
-        setLibraryStage(null)
-        undock()
-        return
-      }
-      if (model.sessionId !== sessionId) return
-      event.preventDefault()
-      setLibraryStage(model)
-      pin({ id: LIBRARY_STAGE_DOCK_ID })
-    }
     const onPrompt = (event) => {
       const detail = event.detail || {}
       if (detail.sessionId && detail.sessionId !== sessionId) return
       const prompt = String(detail.prompt || '')
       if (!prompt) return
-      applyDraftToComposer(mergeLibraryPrompt(live.current?.input?.draft || '', prompt), {
+      applyDraftRef.current?.(mergeLibraryPrompt(live.current?.input?.draft || '', prompt), {
         toastKey: null,
         restoreNotice: true,
       })
     }
-    window.addEventListener(LIBRARY_STAGE_EVENT, onStage)
     window.addEventListener(LIBRARY_STAGE_PROMPT_EVENT, onPrompt)
     return () => {
-      window.removeEventListener(LIBRARY_STAGE_EVENT, onStage)
       window.removeEventListener(LIBRARY_STAGE_PROMPT_EVENT, onPrompt)
     }
-  }, [pin, sessionId, undock])
+  }, [sessionId])
 
   useLayoutEffect(() => {
     mounted.current = true
@@ -294,6 +231,8 @@ function BlankSessionGuide({
     }
   }
 
+  applyDraftRef.current = applyDraftToComposer
+
   /**
    * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
    * 只预填、不代发，用户保有最终发送权。
@@ -301,7 +240,7 @@ function BlankSessionGuide({
    * 界面本身即是回执，再弹一层提示只会变成视觉干扰。
    */
   function handleTrendingApply(prompt) {
-    applyDraftToComposer(prompt, { toastKey: null, restoreNotice: true })
+    applyDraftRef.current?.(prompt, { toastKey: null, restoreNotice: true })
   }
 
   /**
@@ -313,7 +252,7 @@ function BlankSessionGuide({
     }
     if (!payload?.prompt) return
     const docked = dock(payload, () => {
-      applyDraftToComposer(payload.prompt, {
+      applyDraftRef.current?.(payload.prompt, {
         toastKey: null,
         restoreNotice: true,
         copy: false,
@@ -321,7 +260,7 @@ function BlankSessionGuide({
     })
     if (!docked) {
       // 再次点击同一卡片反悔：清空草稿
-      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
     }
   }
 
@@ -336,14 +275,14 @@ function BlankSessionGuide({
     const prompt = `请基于灵感文件 #${id}（${title}${breakdown}），为我的产品对标还原其黄金节奏与分镜镜头。`
 
     const docked = dock(payload, () => {
-      applyDraftToComposer(prompt, {
+      applyDraftRef.current?.(prompt, {
         toastKey: null,
         restoreNotice: true,
         copy: false,
       })
     })
     if (!docked) {
-      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
     }
   }
 
@@ -370,7 +309,7 @@ function BlankSessionGuide({
           title: displayName,
         })
       }
-      applyDraftToComposer(prompt, {
+      applyDraftRef.current?.(prompt, {
         toastKey: null,
         restoreNotice: true,
         copy: false,
@@ -378,7 +317,7 @@ function BlankSessionGuide({
     })
     if (!docked) {
       publishActiveSkill(null)
-      applyDraftToComposer('', { toastKey: null, restoreNotice: true })
+      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
     }
   }
 
@@ -403,21 +342,7 @@ function BlankSessionGuide({
       )}
 
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
-      {libraryStage ? (
-        <LibraryBrowser
-          model={{
-            ...libraryStage,
-            onClose: () => {
-              libraryStage.onClose?.()
-              setLibraryStage(null)
-              undock()
-            },
-          }}
-          t={t}
-        />
-      ) : null}
-
-      {!libraryStage && !isCompact && (
+      {!isCompact && (
         <>
           {/* 探索模板核心专区（内含 Skills 与各分类单行货架） */}
           <ExploreTemplatesSection
