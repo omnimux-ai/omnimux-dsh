@@ -1093,6 +1093,7 @@ let entitySubmenuReactRoot = null
 let entitySubmenuCloseTimer = null
 let entitySubmenuOpenTimer = null
 let activeSubmenuType = null
+let savedMouseDownRange = null
 
 export function scheduleCloseEntitySubmenu(delayMs = 180) {
   if (entitySubmenuCloseTimer != null) {
@@ -1141,6 +1142,7 @@ export function unmountEntitySubmenu() {
     entitySubmenuCloseTimer = null
   }
   activeSubmenuType = null
+  savedMouseDownRange = null
 
   const doc = hostDocument()
   const portalContainer = doc?.getElementById?.('omnimux-entity-submenu-root')
@@ -1256,8 +1258,15 @@ export function placeMentionMenu(doc = hostDocument()) {
       || (() => {
           const sessionId = hostWindow()?.__omnimuxAttachments?.getActiveSessionId?.() || ''
           if (sessionId) {
-            const active = doc.querySelector?.(`[data-composer-card][data-session-id="${sessionId}"]`)
-            if (active) return active
+            try {
+              const safeSessionId = typeof CSS !== 'undefined' && CSS.escape
+                ? CSS.escape(sessionId)
+                : sessionId.replace(/["\\]/g, '')
+              const active = doc.querySelector?.(`[data-composer-card][data-session-id="${safeSessionId}"]`)
+              if (active) return active
+            } catch {
+              /* ignore selector syntax errors / DOMException */
+            }
           }
           return doc.querySelector?.('[data-composer-card]')
         })()
@@ -1351,9 +1360,9 @@ export function placeMentionMenu(doc = hostDocument()) {
 
         if (!row._omnimuxSubmenuBound) {
           row._omnimuxSubmenuBound = true
-          let savedMouseDownRange = null
 
           const onMouseDown = (e) => {
+            if (e.button !== 0) return
             e.preventDefault()
             savedMouseDownRange = captureComposerSelection(doc)
           }
@@ -1386,7 +1395,6 @@ export function placeMentionMenu(doc = hostDocument()) {
               clearTimeout(entitySubmenuOpenTimer)
               entitySubmenuOpenTimer = null
             }
-            savedMouseDownRange = null
             scheduleCloseEntitySubmenu(180)
           }
 

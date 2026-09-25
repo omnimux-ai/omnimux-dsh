@@ -1673,3 +1673,174 @@ describe('PR #2649 第四轮审查缺陷闭环定点测试', () => {
       }
     });
   });
+
+  describe('PR #2653 第二轮审查缺陷闭环定向测试: 选区防竞态、按键守卫与选择器转义防护', () => {
+    it('【High 1 修复】微移点击选区保护：onMouseLeave 不置空 savedMouseDownRange，仅在 click 消费或 unmount 时置空', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">测试选区微移 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        let mountedProps: any = null;
+        registerEntitySubmenuRenderer((container, props) => {
+          if (props?.isOpen) {
+            mountedProps = props;
+          }
+        });
+
+        const doc = dom.window.document;
+        const editor = doc.querySelector('[contenteditable="true"]')!;
+        const textNode = editor.firstChild!;
+        const range = doc.createRange();
+        range.setStart(textNode, 2);
+        range.setEnd(textNode, 5);
+        const sel = dom.window.getSelection()!;
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+
+        // 1. 模拟鼠标左键按下（暂存选区）
+        const mousedownEvent = new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(mousedownEvent);
+        assert.ok(mousedownEvent.defaultPrevented, '左键 mousedown 必须阻止默认行为');
+
+        // 2. 模拟微移移出（触发 mouseleave），此时选区不得被置空，随后清空原生选区模拟失焦
+        btnChar.dispatchEvent(new dom.window.MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+        sel.removeAllRanges();
+
+        // 3. 模拟触发 click（微移点击）
+        btnChar.dispatchEvent(new dom.window.MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+        assert.ok(mountedProps, '必须成功挂载二级菜单');
+        assert.ok(mountedProps.savedRange, 'savedMouseDownRange 未被 mouseleave 提前销毁，click 必须能顺利读取到暂存选区');
+        assert.equal(mountedProps.savedRange.startOffset, 2);
+        assert.equal(mountedProps.savedRange.endOffset, 5);
+
+        // 4. 再次注销，验证 unmountEntitySubmenu 能够正常清理
+        unmountEntitySubmenu();
+      } finally {
+        registerEntitySubmenuRenderer(null);
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【High 2 修复】onMouseDown 增加左键按键守卫：非左键（button !== 0）不阻止默认事件且不暂存选区', () => {
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div data-composer-card>
+            <div role="textbox" contenteditable="true">按键守卫测试 @</div>
+            <div data-trigger-menu>
+              <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+                <span class="iRJKyq_itemName">角色</span>
+              </button>
+            </div>
+          </div>
+        </body>`);
+
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+
+      try {
+        const doc = dom.window.document;
+        placeMentionMenu(doc);
+
+        const btnChar = doc.getElementById('opt-char')!;
+
+        // 模拟右键按下 (button: 2)
+        const rightClickEvent = new dom.window.MouseEvent('mousedown', { button: 2, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(rightClickEvent);
+        assert.equal(rightClickEvent.defaultPrevented, false, '非左键 mousedown 绝不能阻止默认行为');
+
+        // 模拟中键按下 (button: 1)
+        const middleClickEvent = new dom.window.MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(middleClickEvent);
+        assert.equal(middleClickEvent.defaultPrevented, false, '中键 mousedown 绝不能阻止默认行为');
+
+        // 模拟左键按下 (button: 0)
+        const leftClickEvent = new dom.window.MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        btnChar.dispatchEvent(leftClickEvent);
+        assert.equal(leftClickEvent.defaultPrevented, true, '左键 mousedown 必须阻止默认行为');
+      } finally {
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+
+    it('【Medium 3 修复】doc.querySelector 拼装 sessionId 属性选择器：CSS.escape 安全转义与 try-catch 保护防 DOMException', () => {
+      const complexSessionId = 'sess"i\\on[test]:123#special';
+      const dom = new JSDOM(`<!doctype html>
+        <body>
+          <div id="card-complex" data-composer-card data-session-id="${complexSessionId.replace(/"/g, '&quot;')}"></div>
+          <div id="card-fallback" data-composer-card></div>
+          <div id="portal-menu" data-trigger-menu>
+            <button id="opt-char" role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="iRJKyq_itemName">角色</span>
+            </button>
+          </div>
+        </body>`);
+
+      const mock = setupMockStore(complexSessionId);
+      const prevWin = globalThis.window;
+      const prevDoc = (globalThis as any).document;
+      (globalThis as any).window = dom.window;
+      (globalThis as any).document = dom.window.document;
+      (dom.window as any).__omnimuxAttachments = mock.store;
+
+      try {
+        const doc = dom.window.document;
+        const cardComplex = doc.getElementById('card-complex')!;
+        cardComplex.getBoundingClientRect = () => ({ top: 900, bottom: 950, left: 0, right: 100, width: 100, height: 50 } as any);
+
+        // 即使包含引号、反斜杠、冒号等危险字符，placeMentionMenu 绝不抛出 DOMException
+        assert.doesNotThrow(() => {
+          placeMentionMenu(doc);
+        }, '含有特殊字符的 sessionId 寻址不得抛出 DOMException');
+
+        // 测试 CSS.escape 模拟转义
+        (dom.window as any).CSS = {
+          escape: (val: string) => val.replace(/([\\":#\[\]])/g, '\\$1'),
+        };
+        (globalThis as any).CSS = (dom.window as any).CSS;
+
+        assert.doesNotThrow(() => {
+          placeMentionMenu(doc);
+        });
+      } finally {
+        delete (globalThis as any).CSS;
+        mock.restore();
+        resetComposerCompactForTests();
+        if (prevWin) (globalThis as any).window = prevWin;
+        else delete (globalThis as any).window;
+        if (prevDoc) (globalThis as any).document = prevDoc;
+        else delete (globalThis as any).document;
+        dom.window.close();
+      }
+    });
+  });
