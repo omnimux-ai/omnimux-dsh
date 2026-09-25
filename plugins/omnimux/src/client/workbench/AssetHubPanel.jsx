@@ -222,11 +222,30 @@ export function AssetHubPanel(props) {
   const handlePrimaryAction = () => {
     const doc = hostDocument() || (typeof document !== 'undefined' ? document : null)
     if (!doc?.createElement) return
+    const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
     const input = doc.createElement('input')
     input.type = 'file'
     input.style.display = 'none'
     input.setAttribute('aria-hidden', 'true')
     doc.body.appendChild(input)
+
+    let cleaned = false
+    const removeInput = () => {
+      if (cleaned) return
+      cleaned = true
+      input.remove()
+      win?.removeEventListener?.('focus', onFocus)
+      if (typeof window !== 'undefined' && window !== win) {
+        window.removeEventListener('focus', onFocus)
+      }
+    }
+    const onFocus = () => setTimeout(removeInput, 300)
+    input.addEventListener('cancel', removeInput)
+    win?.addEventListener?.('focus', onFocus)
+    if (typeof window !== 'undefined' && window !== win) {
+      window.addEventListener('focus', onFocus)
+    }
+
     input.onchange = async () => {
       try {
         const file = input.files?.[0]
@@ -252,11 +271,8 @@ export function AssetHubPanel(props) {
       } catch (err) {
         showNotice(err instanceof Error ? err.message : '上传失败')
       } finally {
-        input.remove()
+        removeInput()
       }
-    }
-    input.oncancel = () => {
-      input.remove()
     }
     input.click()
   }

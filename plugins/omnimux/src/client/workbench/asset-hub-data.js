@@ -139,8 +139,25 @@ export function normalizeInspirationItem(row) {
   )
   const isVideo = !isImage && !isAudio && hasVideoProbe
 
-  const mediaType = isImage ? 'image' : isAudio ? 'audio' : isVideo ? 'video' : (rawType || 'custom')
-  const formatText = ext || (isImage ? 'PNG' : isAudio ? 'MP3' : isVideo ? 'MP4' : '')
+  let mediaType = rawType || 'custom'
+  if (isImage) {
+    mediaType = 'image'
+  } else if (isAudio) {
+    mediaType = 'audio'
+  } else if (isVideo) {
+    mediaType = 'video'
+  }
+
+  let formatFallback = ''
+  if (isImage) {
+    formatFallback = 'PNG'
+  } else if (isAudio) {
+    formatFallback = 'MP3'
+  } else if (isVideo) {
+    formatFallback = 'MP4'
+  }
+  const cleanExt = (ext && ext !== 'FILE') ? ext : ''
+  const formatText = cleanExt || formatFallback
   const durationText = (isVideo || isAudio) && typeof row.duration === 'number' ? formatDuration(row.duration) : ''
   const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || row.cover_url || (isImage ? rawUrl : '')
   const previewVideoUrl = isVideo ? (row.videoUrl || row.mediaUrl || row.url || (Array.isArray(row.media_urls) ? row.media_urls[0] : '')) : ''
@@ -327,8 +344,16 @@ export function adaptCardToAttachmentPayload(card) {
   }
 
   if (card.lane === 'inspiration') {
-    const kind = card.mediaType === 'image' ? 'image' : card.mediaType === 'audio' ? 'audio' : 'video'
-    const extension = card.formatText || (card.mediaType === 'image' ? 'JPG' : 'MP4')
+    let kind = 'video'
+    let extensionFallback = 'MP4'
+    if (card.mediaType === 'image') {
+      kind = 'image'
+      extensionFallback = 'JPG'
+    } else if (card.mediaType === 'audio') {
+      kind = 'audio'
+      extensionFallback = 'MP3'
+    }
+    const extension = card.formatText || extensionFallback
     return {
       sourcePlugin: 'omnimux-inspiration',
       kind,

@@ -75,10 +75,7 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
       controller.openInspiration(sessionId)
     },
     dispose() {
-      if (currentModel && typeof currentModel.onClose === 'function') {
-        currentModel.onClose()
-        currentModel = null
-      }
+      currentModel = null
       controller.dispose()
       toast.dispose()
     },

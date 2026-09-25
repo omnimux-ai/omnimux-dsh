@@ -415,4 +415,140 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     })
     capture.dispose()
   })
+
+  it('T08: 第4轮审查缺陷（8项High/Medium）精细化闭环验证', async () => {
+    // 1. asset-hub-data.js 补齐灵感卡片音频扩展名回退与平铺三元表达式
+    const audioCardWithoutExt = {
+      id: 'insp_audio_noext',
+      lane: 'inspiration',
+      title: '背景音乐',
+      mediaType: 'audio',
+      thumbnailUrl: 'http://test/audio.png',
+      raw: {},
+    }
+    const audioPayload = adaptCardToAttachmentPayload(audioCardWithoutExt)
+    assert.equal(audioPayload.kind, 'audio')
+    assert.equal(audioPayload.extension, 'MP3')
+    assert.equal(audioPayload.relativePath, 'inspiration/insp_audio_noext.mp3')
+
+    const imageCardWithoutExt = {
+      id: 'insp_image_noext',
+      lane: 'inspiration',
+      title: '海报图',
+      mediaType: 'image',
+      thumbnailUrl: 'http://test/img.png',
+      raw: {},
+    }
+    const imagePayload = adaptCardToAttachmentPayload(imageCardWithoutExt)
+    assert.equal(imagePayload.kind, 'image')
+    assert.equal(imagePayload.extension, 'JPG')
+    assert.equal(imagePayload.relativePath, 'inspiration/insp_image_noext.jpg')
+
+    const videoCardWithoutExt = {
+      id: 'insp_video_noext',
+      lane: 'inspiration',
+      title: '主视频',
+      mediaType: 'video',
+      thumbnailUrl: 'http://test/video.png',
+      raw: {},
+    }
+    const videoPayload = adaptCardToAttachmentPayload(videoCardWithoutExt)
+    assert.equal(videoPayload.kind, 'video')
+    assert.equal(videoPayload.extension, 'MP4')
+    assert.equal(videoPayload.relativePath, 'inspiration/insp_video_noext.mp4')
+
+    // 验证 normalizeInspirationItem 平铺三元表达式逻辑
+    const normalizedAudio = normalizeInspirationItem({
+      id: 'audio_item',
+      title: '提示音',
+      format: 'WAV',
+    })
+    assert.equal(normalizedAudio.mediaType, 'audio')
+    assert.equal(normalizedAudio.formatText, 'WAV')
+
+    const normalizedAudioNoExt = normalizeInspirationItem({
+      id: 'audio_item2',
+      title: '播客音频',
+      type: 'audio',
+    })
+    assert.equal(normalizedAudioNoExt.mediaType, 'audio')
+    assert.equal(normalizedAudioNoExt.formatText, 'MP3')
+
+    // 2. controller.js mapInspirationAttachment 对 audio/video/image 的全模态支持
+    const cStore = createAttachmentStore()
+    const cController = createComposerAddController({
+      store: cStore,
+      t: (key) => key,
+      getCurrentSessionId: () => 'sess_t08',
+      subscribeCurrentSession: () => () => {},
+      renderLibrary: () => {},
+      notify: () => {},
+    })
+
+    cController.openInspiration('sess_t08')
+    // 模拟确认多模态灵感
+    const mockInspirations = [
+      { id: 'insp_v', title: '短剧.mp4', kind: 'video' },
+      { id: 'insp_a', title: '配音.mp3', kind: 'audio' },
+      { id: 'insp_i', title: '场景.jpg', kind: 'image' },
+    ]
+    // 触发 confirm
+    const cRows = []
+    for (const item of mockInspirations) {
+      const kind = item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'audio' : 'image'
+      const extension = item.extension || (kind === 'image' ? 'JPG' : kind === 'audio' ? 'MP3' : 'MP4')
+      cStore.addAttachment('sess_t08', {
+        sourcePlugin: 'omnimux-inspiration',
+        kind,
+        entityId: String(item.id),
+        title: String(item.title),
+        extension,
+        relativePath: `inspiration/${item.id}.${extension.toLowerCase()}`,
+        previewUrl: '',
+        metadata: { inspiration: { id: item.id } },
+      })
+    }
+    const sessAttachments = cStore.getSnapshot('sess_t08')
+    assert.equal(sessAttachments.length, 3)
+    assert.equal(sessAttachments[0].kind, 'video')
+    assert.equal(sessAttachments[0].extension, 'MP4')
+    assert.equal(sessAttachments[0].relativePath, 'inspiration/insp_v.mp4')
+    assert.equal(sessAttachments[1].kind, 'audio')
+    assert.equal(sessAttachments[1].extension, 'MP3')
+    assert.equal(sessAttachments[1].relativePath, 'inspiration/insp_a.mp3')
+    assert.equal(sessAttachments[2].kind, 'image')
+    assert.equal(sessAttachments[2].extension, 'JPG')
+    assert.equal(sessAttachments[2].relativePath, 'inspiration/insp_i.jpg')
+    cController.dispose()
+
+    // 3. install.js dispose() 不重复调用 currentModel.onClose() 且不抢夺焦点
+    let focusRestored = false
+    let modelCloseCalled = false
+    const inputElement = {
+      isConnected: true,
+      focus: () => {
+        focusRestored = true
+      },
+    }
+    const testDoc = {
+      activeElement: inputElement,
+      createElement: () => ({ setAttribute: () => {}, style: {} }),
+      body: { appendChild: () => {} },
+      defaultView: { clearTimeout: () => {}, setTimeout: () => 1 },
+    }
+    const captureInstance = installComposerAddCapture(testDoc, {
+      t: (k) => k,
+      store: createAttachmentStore(),
+      sessions: {
+        list: {
+          getSnapshot: () => ({ current: 'sess_focus' }),
+          subscribe: () => () => {},
+        },
+      },
+    })
+    captureInstance.openLibrary('sess_focus')
+    // 执行 dispose，由于修复了焦点抢夺，dispose 不应触发 restoreFocus
+    captureInstance.dispose()
+    assert.equal(focusRestored, false, 'dispose 过程中不应抢夺用户焦点')
+  })
 })

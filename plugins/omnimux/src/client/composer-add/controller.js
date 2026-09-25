@@ -323,11 +323,15 @@ export function createComposerAddController(options) {
 
   function mapInspirationAttachment(item) {
     if (!item || !item.id) return null
+    const kind = item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'audio' : 'image'
+    const extension = item.extension || (kind === 'image' ? 'JPG' : kind === 'audio' ? 'MP3' : 'MP4')
     return {
       sourcePlugin: 'omnimux-inspiration',
-      kind: item.kind === 'video' ? 'video' : 'image',
+      kind,
       entityId: String(item.id),
       title: String(item.title || item.name || item.id),
+      extension,
+      relativePath: item.relativePath || `inspiration/${item.id}.${extension.toLowerCase()}`,
       previewUrl: item.previewUrl || '',
       metadata: {
         inspiration: {
