@@ -103,7 +103,7 @@ describe('E2E: 首页输入框滚动防抖定位状态机与交互收敛', () =>
       assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滚动回到露头范围必须自动归位')
       assert.equal(document.querySelector('.omnimux-trending-undock'), null, '归位后收起按钮必须消失')
 
-      // 4. 点击 Skills 卡片「使用」按钮一键触发底部吸底
+      // 4. 【顶部优先核心断言】：顶部输入框可见时（scrollTop = 80 <= 166px），点击业务事件优先保持在顶部 inline 交互，绝不吸底！
       const skillsShelf = document.querySelector('[data-shelf-slug="skills"]')
       assert.ok(skillsShelf, '页面必须包含 Skills 货架')
       const useBtn = skillsShelf.querySelector('.omnimux-skill-card-btn')
@@ -112,11 +112,20 @@ describe('E2E: 首页输入框滚动防抖定位状态机与交互收敛', () =>
       await act(async () => {
         useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })
-      assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '点击使用按钮必须一键触发吸底')
-      assert.ok(document.querySelector('.omnimux-trending-undock'), '激活后必须浮现收起按钮')
+      assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '顶部可见时点击业务事件优先保持在顶部，绝不吸底')
+      assert.equal(document.querySelector('.omnimux-trending-undock'), null, '顶部可见时不渲染底部收起按钮')
 
-      // 5. 点击收起按钮解除吸底
+      // 5. 模拟向下滚动离开顶部不可见（scrollTop = 350px > leaveThreshold 196px）：自动迁移到底部 fixed
+      scroller.scrollTop = 350
+      await act(async () => {
+        scroller.dispatchEvent(new dom.window.Event('scroll'))
+        await new Promise((r) => setTimeout(r, 15))
+      })
+      assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '滚出顶部不可见后自动迁移吸底')
       const activeUndockBtn = document.querySelector('.omnimux-trending-undock')
+      assert.ok(activeUndockBtn, '吸底后必须浮现收起按钮')
+
+      // 6. 点击收起按钮解除吸底
       await act(async () => {
         activeUndockBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })

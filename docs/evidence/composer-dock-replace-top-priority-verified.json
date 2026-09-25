@@ -1,0 +1,18 @@
+{
+  "taskId": "issue-2660",
+  "feature": "composer-dock-replace-and-top-priority",
+  "timestamp": "2026-09-25T19:10:00.000Z",
+  "device": "macOS OmniMux Dev",
+  "cdpPort": 9229,
+  "assertions": {
+    "singleAttachmentExclusiveReplacement": "PASS",
+    "promptExclusiveReplacement": "PASS",
+    "topVisibleInteractionPreservesInline": "PASS",
+    "topInvisibleTriggersBottomDock": "PASS",
+    "undockClearsAttachments": "PASS"
+  },
+  "unitTests": "10/10 PASS",
+  "e2eTests": "2/2 PASS",
+  "totalSuiteTests": "52/52 PASS",
+  "qaSignOff": "PASS"
+}

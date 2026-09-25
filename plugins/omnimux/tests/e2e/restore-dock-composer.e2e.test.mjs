@@ -95,32 +95,42 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
       useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
     })
 
-    // 3. 验证吸底生效：宿主被打上 data-omnimux-dock-open，且出现收起按钮
-    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '点击使用技能后宿主必须打上吸底标记')
-    const undockBtn = document.querySelector('.omnimux-trending-undock')
-    assert.ok(undockBtn, '输入框吸底时右上方必须浮现收起按钮')
-    assert.equal(undockBtn.textContent.includes('收起输入框'), true, '收起按钮文本必须包含国际化文案')
+    // 3. 验证顶部优先：顶部可见状态下点击使用技能优先保持在顶部 inline，绝不吸底
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '顶部可见时点击使用技能优先保持在顶部，不得吸底')
+    assert.equal(document.querySelector('.omnimux-trending-undock'), null, '顶部可见时不渲染收起按钮')
     assert.ok(
       capturedDraft.includes('最佳使用方式') || capturedDraft.includes('explain the best way to use this skill'),
-      '输入框草稿已预填自然语言说明请求'
+      '输入框草稿已在顶部原位预填自然语言说明请求'
     )
 
     // 断言绝无任何 Toast 弹窗
     const toastPill = document.querySelector('.omnimux-toast-pill')
     assert.ok(!toastPill, '使用技能后绝不得出现 Toast 提示弹窗')
 
-    // 4. 点击收起按钮：解除吸底，恢复到原位
+    // 4. 模拟向下滚动超过离开阈值（> leaveThreshold 196px）：自动触发吸底
+    scroller.scrollTop = 300
+    await act(async () => {
+      scroller.dispatchEvent(new dom.window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '向下浏览超过离开阈值时输入框自动迁移吸底')
+    const undockBtn = document.querySelector('.omnimux-trending-undock')
+    assert.ok(undockBtn, '吸底后右上方必须浮现收起按钮')
+    assert.equal(undockBtn.textContent.includes('收起输入框'), true, '收起按钮文本必须包含国际化文案')
+
+    // 5. 点击收起按钮：解除吸底，恢复到原位
     await act(async () => {
       undockBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
     })
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '点击收起按钮后必须解除吸底')
     assert.equal(document.querySelector('.omnimux-trending-undock'), null, '解除吸底后收起按钮必须消失')
 
-    // 5. 再次点击使用触发吸底，然后模拟向下滚动后再向上回滚至露头阈值切换
+    // 6. 模拟偏下位置（例如 300px）再次点击使用卡片，此时因顶部不可见，一键触发底部吸底
+    scroller.scrollTop = 300
     await act(async () => {
       useBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
     })
-    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true)
+    assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '偏下位置点击必须触发底部吸底')
 
     // 模拟向下滚动超过 leaveThreshold (例如 300px > 186px)
     scroller.scrollTop = 300
@@ -146,7 +156,7 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     })
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '向上滑回页面最顶部保持解除吸底')
 
-    // 6. 验证普通模板复刻：吸底且严禁弹出任何 Toast 气泡
+    // 6. 验证普通模板复刻：在页面顶部可见时点击，优先在顶部原地填充交互（零吸底、零弹窗）
     const tplCard = document.querySelector('.omnimux-tpl-card[data-is-app="false"]:not(.is-skill-card)')
     if (tplCard) {
       const recreateBtn = tplCard.querySelector('.omnimux-trending-recreate-btn')
@@ -154,7 +164,7 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
         await act(async () => {
           recreateBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
         })
-        assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '点击模板复刻后必须吸底')
+        assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), false, '顶部可见时点击模板复刻优先在顶部原地交互，绝不吸底')
         const tplToast = document.querySelector('.omnimux-toast-pill')
         assert.ok(!tplToast || !tplToast.textContent.includes('已装配'), '点击模板复刻严禁弹出「已装配」Toast 提示')
       }
