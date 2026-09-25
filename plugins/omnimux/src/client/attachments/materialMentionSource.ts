@@ -41,13 +41,13 @@ export function entityCategoryCandidates(query = '') {
   const categories = [
     {
       name: '角色',
-      description: '›',
+      description: '',
       section: SECTION,
       value: ENTITY_CATEGORY_CHARACTER_VALUE,
     },
     {
       name: '产品',
-      description: '›',
+      description: '',
       section: SECTION,
       value: ENTITY_CATEGORY_PRODUCT_VALUE,
     },

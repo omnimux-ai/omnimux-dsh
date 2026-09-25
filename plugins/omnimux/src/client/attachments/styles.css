@@ -393,7 +393,7 @@
   background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.05));
 }
 
-.omx-entity-submenu-title {
+.omx-entity-submenu-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13px;

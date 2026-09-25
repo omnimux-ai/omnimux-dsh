@@ -20,6 +20,7 @@ export interface EntityMentionSubmenuProps {
   anchorRect: DOMRect | null;
   sessionId?: string;
   isFlippedUp?: boolean;
+  savedRange?: Range | null;
   onClose: () => void;
   onSelect?: (entity: { id: string; name: string; type: EntityMentionType; thumb: string }) => void;
   onMouseEnter?: () => void;
@@ -85,7 +86,7 @@ const EntityItemRow: React.FC<EntityItemRowProps> = ({ item, type, onSelect }) =
           />
         )}
       </div>
-      <span className="omx-entity-submenu-title">{name}</span>
+      <span className="omx-entity-submenu-name">{name}</span>
     </div>
   );
 };
@@ -96,6 +97,7 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
   anchorRect,
   sessionId = '',
   isFlippedUp = false,
+  savedRange = null,
   onClose,
   onSelect,
   onMouseEnter,
@@ -211,15 +213,23 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
       };
     }
 
-    // 2.1 添加到卡槽 Store
+    // 2.1 添加到卡槽 Store（若为重复实体 duplicate，卡槽中已存在对应 attachment，同样视为有效并复用其 id）
     const res = store.addAttachment(targetSessionId, payload);
-    const attachmentId = res.ok && res.attachment ? res.attachment.id : payload.entityId;
+    const isAttachmentValid = Boolean(res?.attachment && (res.ok || res.reason === 'duplicate'));
+    if (!isAttachmentValid || !res?.attachment) {
+      console.warn('[omnimux] store.addAttachment failed, aborting entity mention chip insertion:', res);
+      onClose();
+      return;
+    }
 
-    // 2.2 插入输入框实体胶囊并清除 @ 字符
+    const attachmentId = res.attachment.id;
+
+    // 2.2 插入输入框实体胶囊并清除 @ 字符（显式传入持久化的 savedRange 还原选区）
     insertEntityMentionChip({
       name: entityName,
       ref: `material:${attachmentId}`,
       type,
+      savedRange,
     });
 
     if (onSelect) {
@@ -233,7 +243,7 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
 
     // 2.3 关闭浮层
     onClose();
-  }, [sessionId, type, onClose, onSelect]);
+  }, [sessionId, type, savedRange, onClose, onSelect]);
 
   // 3. 键盘与全局点击监听
   useEffect(() => {

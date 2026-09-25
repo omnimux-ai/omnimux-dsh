@@ -538,7 +538,7 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.05));
 }
 
-.omx-entity-submenu-title {
+.omx-entity-submenu-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13px;
@@ -1068,16 +1068,64 @@ export function cancelCloseEntitySubmenu() {
   }
 }
 
+export function captureComposerSelection(doc = hostDocument()) {
+  const win = doc?.defaultView || hostWindow()
+  const sel = win?.getSelection?.()
+  if (sel && sel.rangeCount > 0) {
+    try {
+      const range = sel.getRangeAt(0)
+      const editor = doc?.querySelector?.(
+        '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+      )
+      if (editor && editor.contains(range.commonAncestorContainer)) {
+        return range.cloneRange()
+      }
+      return range.cloneRange()
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 export function unmountEntitySubmenu() {
   if (entitySubmenuOpenTimer != null) {
     clearTimeout(entitySubmenuOpenTimer)
     entitySubmenuOpenTimer = null
   }
+  if (entitySubmenuCloseTimer != null) {
+    clearTimeout(entitySubmenuCloseTimer)
+    entitySubmenuCloseTimer = null
+  }
   activeSubmenuType = null
+
+  const doc = hostDocument()
+  const portalContainer = doc?.getElementById?.('omnimux-entity-submenu-root')
+
+  // 1. 自定义渲染器完全注销与清理
+  if (typeof customEntitySubmenuRenderer === 'function') {
+    try {
+      customEntitySubmenuRenderer(portalContainer, { isOpen: false, type: null })
+    } catch { /* ignore */ }
+  }
+
+  // 2. ReactRoot 完全注销
   if (entitySubmenuReactRoot) {
     try {
-      entitySubmenuReactRoot.render(null)
+      entitySubmenuReactRoot.unmount()
     } catch { /* ignore */ }
+    entitySubmenuReactRoot = null
+  }
+
+  // 3. 清理 DOM 与解绑监听
+  if (portalContainer) {
+    try {
+      portalContainer.replaceChildren?.()
+      portalContainer.innerHTML = ''
+    } catch { /* ignore */ }
+    if (portalContainer.parentNode) {
+      portalContainer.parentNode.removeChild(portalContainer)
+    }
   }
 }
 
@@ -1096,12 +1144,16 @@ export function mountEntitySubmenu(options) {
     doc.body.appendChild(portalContainer)
   }
 
+  // 持久化当前选区
+  const savedRange = options.savedRange || captureComposerSelection(doc)
+
   const props = {
     isOpen: true,
     type,
     anchorRect,
     isFlippedUp,
     sessionId,
+    savedRange,
     onClose: () => {
       unmountEntitySubmenu()
     },
@@ -1120,10 +1172,18 @@ export function mountEntitySubmenu(options) {
 
   import('./attachments/EntityMentionSubmenu.tsx')
     .then((mod) => {
+      // 二次确认当前激活状态（防止异步竞态：若已被注销或切至其它类型则中断）
+      if (activeSubmenuType !== type) {
+        return
+      }
       const SubmenuComp = mod.EntityMentionSubmenu
       if (!SubmenuComp) return
+      const container = doc.getElementById('omnimux-entity-submenu-root') || portalContainer
+      if (!container.parentNode) {
+        doc.body.appendChild(container)
+      }
       if (!entitySubmenuReactRoot) {
-        entitySubmenuReactRoot = createRoot(portalContainer)
+        entitySubmenuReactRoot = createRoot(container)
       }
       entitySubmenuReactRoot.render(React.createElement(SubmenuComp, props))
     })
@@ -1231,6 +1291,7 @@ export function placeMentionMenu(doc = hostDocument()) {
           row._omnimuxSubmenuBound = true
           row.addEventListener('mouseenter', () => {
             cancelCloseEntitySubmenu()
+            const capturedRange = captureComposerSelection(doc)
             if (entitySubmenuOpenTimer != null) clearTimeout(entitySubmenuOpenTimer)
             entitySubmenuOpenTimer = setTimeout(() => {
               entitySubmenuOpenTimer = null
@@ -1244,6 +1305,7 @@ export function placeMentionMenu(doc = hostDocument()) {
                 anchorRect: rRect,
                 isFlippedUp: isUp,
                 sessionId: curSessionId,
+                savedRange: capturedRange,
               })
             }, 40)
           })

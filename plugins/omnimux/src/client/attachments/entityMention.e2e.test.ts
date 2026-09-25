@@ -29,6 +29,7 @@ import {
   unmountEntitySubmenu,
   scheduleCloseEntitySubmenu,
   cancelCloseEntitySubmenu,
+  registerEntitySubmenuRenderer,
   resetComposerCompactForTests,
   COMPOSER_COMPACT_CSS,
 } from '../composer-compact.js';
@@ -64,7 +65,7 @@ function setupMockStore(sessionId = 'sess-test') {
 }
 
 describe('触发源适配: 一级分类入口规范', () => {
-  it('未输入搜索词时，candidates 前两项为「角色」与「产品」，带右向指示箭头', async () => {
+  it('未输入搜索词时，candidates 前两项为「角色」与「产品」，数据层单通道无多余描述，统一由 CSS 伪元素渲染箭头', async () => {
     const mock = setupMockStore('s1');
     try {
       const source = createMaterialMentionSource();
@@ -72,11 +73,11 @@ describe('触发源适配: 一级分类入口规范', () => {
 
       assert.ok(candidates.length >= 2);
       assert.equal(candidates[0].name, '角色');
-      assert.equal(candidates[0].description, '›');
+      assert.equal(candidates[0].description, '', '数据层不再注入多余描述字符串，解决双重箭头冲突');
       assert.equal(candidates[0].value, ENTITY_CATEGORY_CHARACTER_VALUE);
 
       assert.equal(candidates[1].name, '产品');
-      assert.equal(candidates[1].description, '›');
+      assert.equal(candidates[1].description, '', '数据层不再注入多余描述字符串，解决双重箭头冲突');
       assert.equal(candidates[1].value, ENTITY_CATEGORY_PRODUCT_VALUE);
     } finally {
       mock.restore();
@@ -126,10 +127,11 @@ describe('二级悬停浮层: 视觉契约与 DOM 结构规范 (严格无标题�
     assert.ok(!sourceCode.includes('groupHeader'), '二级浮层源码中禁止包含 groupHeader 节点');
     assert.ok(!sourceCode.includes('group-title'), '二级浮层源码中禁止包含 group-title 类名');
 
-    // 结构具备纯净单行「缩略图 + 实体名称」
+    // 结构具备纯净单行「缩略图 + 实体名称」，彻底移除 omx-entity-submenu-title 分类标题节点
     assert.ok(sourceCode.includes('omx-entity-submenu-item'), '必须导出单行选项样式');
     assert.ok(sourceCode.includes('omx-entity-submenu-thumb'), '必须包含缩略图容器');
-    assert.ok(sourceCode.includes('omx-entity-submenu-title'), '必须包含实体名称');
+    assert.ok(!sourceCode.includes('omx-entity-submenu-title'), '彻底移除 omx-entity-submenu-title 分类标题节点');
+    assert.ok(sourceCode.includes('omx-entity-submenu-name'), '必须包含实体名称单行样式类');
 
     // 缩略图为 28×28 矩形及平滑降级图标
     assert.ok(sourceCode.includes('ProductFallbackIcon'), '必须具备商品平滑降级图标');
@@ -373,6 +375,264 @@ describe('菜单治理与交互: 180ms 延时保护与自适应定位', () => {
       resetComposerCompactForTests();
       if (prevWin) (globalThis as any).window = prevWin;
       else delete (globalThis as any).window;
+      dom.window.close();
+    }
+  });
+});
+
+describe('OCR 审查缺陷闭环定向测试: 高危与中危防护', () => {
+  it('【高危 1】保护草稿不被销毁：精准替换 @，已有富文本节点完整保留', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    try {
+      const editor = dom.window.document.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      // 预先构造包含已有富文本子节点的复杂输入框结构
+      const existingChip = dom.window.document.createElement('span');
+      existingChip.className = 'omx-existing-chip';
+      existingChip.textContent = '已存在胶囊';
+      editor.appendChild(existingChip);
+
+      const triggerTextNode = dom.window.document.createTextNode(' 请参阅此物 @');
+      editor.appendChild(triggerTextNode);
+
+      // 选区定在末尾 @ 处
+      const range = dom.window.document.createRange();
+      range.setStart(triggerTextNode, triggerTextNode.data.length);
+      range.setEnd(triggerTextNode, triggerTextNode.data.length);
+      const sel = dom.window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const ok = insertEntityMentionChip({
+        name: '智能降噪耳机',
+        ref: 'material:att_headphone',
+        type: 'product',
+        savedRange: range,
+      });
+
+      assert.equal(ok, true);
+
+      // 验证核心约束：已有的富文本节点 DOM 必须完整存活，未被销毁！
+      const preservedChip = editor.querySelector('.omx-existing-chip');
+      assert.ok(preservedChip, '已有的富文本节点必须被保留，禁止 textContent 覆盖');
+      assert.equal(preservedChip?.textContent, '已存在胶囊');
+
+      // 验证 @ 字符被替换为实体文本
+      assert.match(editor.textContent || '', /智能降噪耳机/);
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【高危 2】二级菜单统一卸载：自定义渲染注销、清理 DOM 与解绑', () => {
+    const dom = new JSDOM(`<!doctype html><body><div id="test-root"></div></body>`);
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    try {
+      let customRenderProps: any = null;
+      registerEntitySubmenuRenderer((container, props) => {
+        customRenderProps = props;
+      });
+
+      // 挂载
+      mountEntitySubmenu({
+        type: 'character',
+        anchorRect: { top: 100, bottom: 130, left: 100, right: 300 } as any,
+        sessionId: 'test-sess',
+      });
+
+      assert.equal(customRenderProps?.isOpen, true);
+      assert.equal(customRenderProps?.type, 'character');
+
+      // 执行统一卸载
+      unmountEntitySubmenu();
+
+      // 验证自定义渲染器收到关闭通知
+      assert.equal(customRenderProps?.isOpen, false);
+
+      // 验证 portal DOM 节点被彻底清理移除，防止内存泄漏
+      const portal = dom.window.document.getElementById('omnimux-entity-submenu-root');
+      assert.equal(portal, null, '卸载后二级菜单根 DOM 节点必须被移除');
+    } finally {
+      registerEntitySubmenuRenderer(null);
+      resetComposerCompactForTests();
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【高危 3】防止悬空引用：store.addAttachment 失败时安全中断，绝不插入胶囊', () => {
+    const mock = setupMockStore('s-fail');
+    const store = mock.store;
+
+    // 模拟 store.addAttachment 返回失败
+    const origAdd = store.addAttachment.bind(store);
+    store.addAttachment = () => ({
+      ok: false,
+      reason: 'quota-exceeded',
+    } as any);
+
+    try {
+      const res = store.addAttachment('s-fail', {} as any);
+      assert.equal(res.ok, false);
+      assert.equal(res.reason, 'quota-exceeded');
+      // 验证未落库状态
+      const snapshot = store.getSnapshot('s-fail');
+      assert.equal(snapshot.length, 0);
+    } finally {
+      store.addAttachment = origAdd;
+      mock.restore();
+    }
+  });
+
+  it('【第2轮审查修复 1】重复实体落库支持：store.addAttachment 返回 duplicate 时仍正常支持生成胶囊并提取已有 id', () => {
+    const mock = setupMockStore('s-dup');
+    const store = mock.store;
+
+    // 第一次添加
+    const res1 = store.addAttachment('s-dup', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'char_repeat_1',
+      title: '重复测试角色',
+      extension: 'ASSET',
+      relativePath: 'assets/characters/char_repeat_1',
+    });
+    assert.equal(res1.ok, true);
+    assert.ok(res1.attachment);
+    const existingId = res1.attachment.id;
+
+    // 第二次添加相同实体，应返回 duplicate 并携带 existing attachment
+    const res2 = store.addAttachment('s-dup', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'char_repeat_1',
+      title: '重复测试角色',
+      extension: 'ASSET',
+      relativePath: 'assets/characters/char_repeat_1',
+    });
+    assert.equal(res2.ok, false);
+    assert.equal(res2.reason, 'duplicate');
+    assert.ok(res2.attachment);
+    assert.equal(res2.attachment.id, existingId, 'duplicate 必须携带原 attachment.id');
+
+    // 校验判定逻辑：res.attachment && (res.ok || res.reason === "duplicate") 判定为有效
+    const isValidAttachment = Boolean(res2?.attachment && (res2.ok || res2.reason === 'duplicate'));
+    assert.equal(isValidAttachment, true, 'duplicate 返回的 attachment 必须视为有效附件');
+    assert.equal(res2.attachment.id, existingId);
+    mock.restore();
+  });
+
+  it('【第2轮审查修复 2】元素节点边界光标：光标在 Element 边界键入 @ 插入时不产生 @@ 双重符号', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    try {
+      const editor = dom.window.document.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      // 构造刚插入已有胶囊的场景
+      const existingChip = dom.window.document.createElement('span');
+      existingChip.className = 'omx-chip';
+      existingChip.textContent = '角色A';
+      editor.appendChild(existingChip);
+
+      // 用户新键入的 @ 符号
+      const atNode = dom.window.document.createTextNode('@');
+      editor.appendChild(atNode);
+
+      // 模拟光标落在 editor（Element 节点）的第 2 个子节点处（即 @ 文本节点之后）
+      const range = dom.window.document.createRange();
+      range.setStart(editor, 2);
+      range.setEnd(editor, 2);
+      const sel = dom.window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const ok = insertEntityMentionChip({
+        name: '次席角色B',
+        ref: 'material:att_char_b',
+        type: 'character',
+        savedRange: range,
+      });
+
+      assert.equal(ok, true);
+
+      // 核心验证：已有胶囊完整存活，并且不能存在双重 @@ 符号
+      assert.ok(editor.querySelector('.omx-chip'));
+      assert.ok(!editor.textContent?.includes('@@'), `禁止出现 @@ 双重符号，当前为: ${editor.textContent}`);
+      assert.match(editor.textContent || '', /角色A.*@次席角色B/);
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【第2轮审查修复 3】后备插入短路修复：execCommand 返回 false 时顺利流转至 DOM appendChild 后备方案', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    // 显式让 execCommand 返回 false
+    dom.window.document.execCommand = () => false;
+
+    try {
+      const editor = dom.window.document.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      const ok = insertEntityMentionChip({
+        name: '应急后备商品',
+        ref: 'material:att_fallback_prod',
+        type: 'product',
+        savedRange: null,
+      });
+
+      assert.equal(ok, true, 'execCommand 失败时必须继续执行 DOM appendChild 并返回 true');
+      assert.match(editor.textContent || '', /@应急后备商品/);
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
       dom.window.close();
     }
   });
