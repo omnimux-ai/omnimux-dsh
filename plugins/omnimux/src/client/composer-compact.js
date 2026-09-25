@@ -13,7 +13,15 @@
  * bottom, Codex-style) and the conversation-column min-width guard.
  */
 
-import { listSessionMaterials, materialCandidates, parseMaterialMention } from './attachments/materialMentionSource.ts'
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { listSessionMaterials, materialCandidates, entityCategoryCandidates, parseMaterialMention, ENTITY_CATEGORY_CHARACTER_VALUE, ENTITY_CATEGORY_PRODUCT_VALUE } from './attachments/materialMentionSource.ts'
+
+let customEntitySubmenuRenderer = null
+
+export function registerEntitySubmenuRenderer(renderer) {
+  customEntitySubmenuRenderer = renderer
+}
 
 export const COMPOSER_COMPACT_STYLE_ID = 'omnimux-composer-compact-chrome'
 export const COMPOSER_COMPACT_ATTR = 'data-omnimux-composer-density'
@@ -455,6 +463,109 @@ html[data-omnimux-composer-density='icon'] [data-composer-card] > [class*="row"]
   [class*="tools"] .sh-picker-trigger-label{
     display:none!important;
   }
+}
+
+/* ==========================================================================
+   实体引用二级悬停菜单 (Entity Mention Submenu)
+   严格遵守规范：纯净单行「缩略图 + 实体名称」，无标题、无副标题描述
+   ========================================================================== */
+
+.omx-entity-mention-submenu {
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-elevated, #1c1d21);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  box-shadow: var(--dsw-shadow-lv3, 0 12px 32px rgba(0, 0, 0, 0.4));
+  padding: 6px;
+  overflow-y: auto;
+  user-select: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.omx-entity-submenu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.omx-entity-submenu-item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+
+.omx-entity-submenu-item:hover,
+.omx-entity-submenu-item:focus-visible {
+  background: var(--dsw-alias-bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.omx-entity-submenu-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.omx-entity-submenu-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.omx-entity-submenu-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary, #9ca3af);
+  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.05));
+}
+
+.omx-entity-submenu-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary, #f3f4f6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.omx-entity-submenu-loading,
+.omx-entity-submenu-empty {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #9ca3af);
+  text-align: center;
+}
+
+/* 一级菜单中的分类条目右侧指示箭头 */
+[data-omnimux-entity-category]::after {
+  content: '›';
+  margin-left: auto;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--dsw-alias-label-tertiary, #9ca3af);
+  padding-left: 6px;
 }
 `
 
@@ -935,6 +1046,152 @@ export function sanitizeThumbnailUrl(rawUrl) {
   return ''
 }
 
+let entitySubmenuReactRoot = null
+let entitySubmenuCloseTimer = null
+let entitySubmenuOpenTimer = null
+let activeSubmenuType = null
+
+export function scheduleCloseEntitySubmenu(delayMs = 180) {
+  if (entitySubmenuCloseTimer != null) {
+    clearTimeout(entitySubmenuCloseTimer)
+  }
+  entitySubmenuCloseTimer = setTimeout(() => {
+    entitySubmenuCloseTimer = null
+    unmountEntitySubmenu()
+  }, delayMs)
+}
+
+export function cancelCloseEntitySubmenu() {
+  if (entitySubmenuCloseTimer != null) {
+    clearTimeout(entitySubmenuCloseTimer)
+    entitySubmenuCloseTimer = null
+  }
+}
+
+export function captureComposerSelection(doc = hostDocument()) {
+  const win = doc?.defaultView || hostWindow()
+  const sel = win?.getSelection?.()
+  if (sel && sel.rangeCount > 0) {
+    try {
+      const range = sel.getRangeAt(0)
+      const editor = doc?.querySelector?.(
+        '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+      )
+      if (editor && editor.contains(range.commonAncestorContainer)) {
+        return range.cloneRange()
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+export function unmountEntitySubmenu() {
+  if (entitySubmenuOpenTimer != null) {
+    clearTimeout(entitySubmenuOpenTimer)
+    entitySubmenuOpenTimer = null
+  }
+  if (entitySubmenuCloseTimer != null) {
+    clearTimeout(entitySubmenuCloseTimer)
+    entitySubmenuCloseTimer = null
+  }
+  activeSubmenuType = null
+
+  const doc = hostDocument()
+  const portalContainer = doc?.getElementById?.('omnimux-entity-submenu-root')
+
+  // 1. 自定义渲染器完全注销与清理
+  if (typeof customEntitySubmenuRenderer === 'function') {
+    try {
+      customEntitySubmenuRenderer(portalContainer, { isOpen: false, type: null })
+    } catch { /* ignore */ }
+  }
+
+  // 2. ReactRoot 完全注销
+  if (entitySubmenuReactRoot) {
+    try {
+      entitySubmenuReactRoot.unmount()
+    } catch { /* ignore */ }
+    entitySubmenuReactRoot = null
+  }
+
+  // 3. 清理 DOM 与解绑监听
+  if (portalContainer) {
+    try {
+      portalContainer.replaceChildren?.()
+      portalContainer.innerHTML = ''
+    } catch { /* ignore */ }
+    if (portalContainer.parentNode) {
+      portalContainer.parentNode.removeChild(portalContainer)
+    }
+  }
+}
+
+export function mountEntitySubmenu(options) {
+  cancelCloseEntitySubmenu()
+  const { type, anchorRect, isFlippedUp, sessionId } = options
+  activeSubmenuType = type
+
+  const doc = hostDocument()
+  if (!doc?.body) return
+
+  let portalContainer = doc.getElementById('omnimux-entity-submenu-root')
+  if (!portalContainer) {
+    portalContainer = doc.createElement('div')
+    portalContainer.id = 'omnimux-entity-submenu-root'
+    doc.body.appendChild(portalContainer)
+  }
+
+  // 持久化当前选区
+  const savedRange = options.savedRange || captureComposerSelection(doc)
+
+  const props = {
+    isOpen: true,
+    type,
+    anchorRect,
+    isFlippedUp,
+    sessionId,
+    savedRange,
+    onClose: () => {
+      unmountEntitySubmenu()
+    },
+    onMouseEnter: () => {
+      cancelCloseEntitySubmenu()
+    },
+    onMouseLeave: () => {
+      scheduleCloseEntitySubmenu(180)
+    },
+  }
+
+  if (typeof customEntitySubmenuRenderer === 'function') {
+    customEntitySubmenuRenderer(portalContainer, props)
+    return
+  }
+
+  import('./attachments/EntityMentionSubmenu.tsx')
+    .then((mod) => {
+      // 二次确认当前激活状态（防止异步竞态：若已被注销或切至其它类型则中断）
+      if (activeSubmenuType !== type) {
+        return
+      }
+      const SubmenuComp = mod.EntityMentionSubmenu
+      if (!SubmenuComp) return
+      const container = doc.getElementById('omnimux-entity-submenu-root') || portalContainer
+      if (!container.parentNode) {
+        doc.body.appendChild(container)
+      }
+      if (!entitySubmenuReactRoot) {
+        entitySubmenuReactRoot = createRoot(container)
+      }
+      entitySubmenuReactRoot.render(React.createElement(SubmenuComp, props))
+    })
+    .catch(() => {
+      // 动态加载失败时的静默兜底
+    })
+}
+
 /**
  * 输入框靠近页面顶部时，菜单从下方展开；否则从上方展开。
  * 素材行的缩略图地址写到行上，样式用它画在名称前面。
@@ -944,7 +1201,10 @@ export function sanitizeThumbnailUrl(rawUrl) {
 export function placeMentionMenu(doc = hostDocument()) {
   if (!doc?.querySelectorAll) return
   const menus = doc.querySelectorAll('[data-trigger-menu]')
-  if (!menus || menus.length === 0) return
+  if (!menus || menus.length === 0) {
+    unmountEntitySubmenu()
+    return
+  }
 
   const materials = listSessionMaterials('')
 
@@ -1004,21 +1264,92 @@ export function placeMentionMenu(doc = hostDocument()) {
     }
 
     // 尝试从卡片输入框探测当前的 mention 搜索词（例如 @xxx）
+    let query = ''
     let currentCandidates = null
     const inputEl = card.querySelector?.('textarea, [contenteditable]')
     if (inputEl) {
       const text = inputEl.value ?? inputEl.textContent ?? ''
       const match = /(?:^|\s)@([^\s@]*)$/.exec(text)
       if (match) {
-        const query = match[1] || ''
+        query = match[1] || ''
         try {
-          currentCandidates = materialCandidates('', query)
+          const catList = entityCategoryCandidates(query)
+          const matList = materialCandidates('', query)
+          currentCandidates = [...catList, ...matList]
         } catch { /* ignore */ }
       }
     }
 
     // 4. 遍历菜单行，通过稳定映射绑定缩略图，防止搜索过滤错位
     menu.querySelectorAll('[role="option"]').forEach((row) => {
+      const rawVal = row.getAttribute?.('data-value') || ''
+      const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
+
+      // 识别「角色」与「产品」一级分类入口，绑定悬停二级浮层
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE
+
+      if (isCharEntry || isProdEntry) {
+        row.removeAttribute('data-omnimux-thumb')
+        row.style?.removeProperty?.('--omnimux-thumb')
+        const entType = isCharEntry ? 'character' : 'product'
+        row.setAttribute('data-omnimux-entity-category', entType)
+
+        if (!row._omnimuxSubmenuBound) {
+          row._omnimuxSubmenuBound = true
+          const onMouseEnter = () => {
+            cancelCloseEntitySubmenu()
+            const capturedRange = captureComposerSelection(doc)
+            if (entitySubmenuOpenTimer != null) clearTimeout(entitySubmenuOpenTimer)
+            entitySubmenuOpenTimer = setTimeout(() => {
+              entitySubmenuOpenTimer = null
+              const rRect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null
+              if (!rRect) return
+              const isUp = card.hasAttribute(MENTION_UP_ATTR)
+              const win = hostWindow()
+              const curSessionId = win?.__omnimuxAttachments?.getActiveSessionId?.() || ''
+              const activeType = row.getAttribute?.('data-omnimux-entity-category')
+              if (!activeType) return
+              mountEntitySubmenu({
+                type: activeType,
+                anchorRect: rRect,
+                isFlippedUp: isUp,
+                sessionId: curSessionId,
+                savedRange: capturedRange,
+              })
+            }, 40)
+          }
+
+          const onMouseLeave = () => {
+            if (entitySubmenuOpenTimer != null) {
+              clearTimeout(entitySubmenuOpenTimer)
+              entitySubmenuOpenTimer = null
+            }
+            scheduleCloseEntitySubmenu(180)
+          }
+
+          row._omnimuxMouseEnterHandler = onMouseEnter
+          row._omnimuxMouseLeaveHandler = onMouseLeave
+          row.addEventListener('mouseenter', onMouseEnter)
+          row.addEventListener('mouseleave', onMouseLeave)
+        }
+        return
+      }
+
+      // 普通素材行清理分类属性与已绑定的二级悬停事件，彻底杜绝宿主 DOM 复用残留伪箭头与悬停弹窗
+      row.removeAttribute('data-omnimux-entity-category')
+      if (row._omnimuxSubmenuBound) {
+        if (row._omnimuxMouseEnterHandler) {
+          row.removeEventListener('mouseenter', row._omnimuxMouseEnterHandler)
+          row._omnimuxMouseEnterHandler = null
+        }
+        if (row._omnimuxMouseLeaveHandler) {
+          row.removeEventListener('mouseleave', row._omnimuxMouseLeaveHandler)
+          row._omnimuxMouseLeaveHandler = null
+        }
+        row._omnimuxSubmenuBound = false
+      }
+
       let matchedItem = null
 
       // A. 优先从行 DOM 属性提取稳定标识 (data-material-id / data-id / data-entity-id / data-value)
@@ -1034,8 +1365,6 @@ export function placeMentionMenu(doc = hostDocument()) {
           matchedItem = materialsById.get(parsed.id)
         }
       }
-
-      const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
 
       // B. 尝试从经过滤的 candidates 中根据索引精确匹配（废弃全局 RegExp.$1）
       const m = row.id ? /^dsh-slash-option-material-(\d+)$/.exec(row.id) : null
@@ -1075,11 +1404,13 @@ export function placeMentionMenu(doc = hostDocument()) {
       }
 
       // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致且无同名歧义时才允许采用，杜绝错配）
-      if (!matchedItem && !titleAmbiguous && idx >= 0 && materials[idx]) {
-        if (!itemName || materials[idx].title === itemName) {
-          const titleMatches = materialsByTitle.get(materials[idx].title)
+      const categoryOffset = entityCategoryCandidates(query).length
+      const materialIdx = idx - categoryOffset
+      if (!matchedItem && !titleAmbiguous && materialIdx >= 0 && materials[materialIdx]) {
+        if (!itemName || materials[materialIdx].title === itemName) {
+          const titleMatches = materialsByTitle.get(materials[materialIdx].title)
           if (!titleMatches || titleMatches.length === 1) {
-            matchedItem = materials[idx]
+            matchedItem = materials[materialIdx]
           }
         }
       }
@@ -1106,6 +1437,7 @@ export function uninstallComposerCompactObserver() {
   inlineDensityCards.clear()
   cancelScheduledComposerDensity()
   cancelScheduledPlaceMentionMenu()
+  unmountEntitySubmenu()
   if (composerResizeObserver) {
     try { composerResizeObserver.disconnect() } catch { /* ignore */ }
     composerResizeObserver = null
@@ -1135,6 +1467,16 @@ export function resetComposerCompactForTests() {
   uninstallComposerCompactObserver()
   cancelScheduledComposerDensity()
   cancelScheduledPlaceMentionMenu()
+  unmountEntitySubmenu()
+  cancelCloseEntitySubmenu()
+  if (entitySubmenuReactRoot) {
+    try { entitySubmenuReactRoot.unmount() } catch { /* ignore */ }
+    entitySubmenuReactRoot = null
+  }
+  const portal = hostDocument()?.getElementById?.('omnimux-entity-submenu-root')
+  if (portal && typeof portal.remove === 'function') {
+    portal.remove()
+  }
   const doc = hostDocument()
   const root = doc?.documentElement
   if (root && typeof root.removeAttribute === 'function') {
