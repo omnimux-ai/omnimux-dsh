@@ -29,36 +29,6 @@ export interface MaterialMentionValue {
   title: string;
 }
 
-export const ENTITY_CATEGORY_CHARACTER_VALUE = 'entity:category:character';
-export const ENTITY_CATEGORY_PRODUCT_VALUE = 'entity:category:product';
-
-export function isEntityCategoryRef(ref: string): boolean {
-  return ref === ENTITY_CATEGORY_CHARACTER_VALUE || ref === ENTITY_CATEGORY_PRODUCT_VALUE;
-}
-
-export function entityCategoryCandidates(query = '') {
-  const q = query.trim().toLowerCase();
-  const categories = [
-    {
-      name: '角色',
-      description: '',
-      section: SECTION,
-      value: ENTITY_CATEGORY_CHARACTER_VALUE,
-    },
-    {
-      name: '产品',
-      description: '',
-      section: SECTION,
-      value: ENTITY_CATEGORY_PRODUCT_VALUE,
-    },
-  ];
-  if (!q) return categories;
-  return categories.filter((item) =>
-    item.name.toLowerCase().includes(q) ||
-    (item.value && item.value.toLowerCase().includes(q))
-  );
-}
-
 export function materialMentionRef(attachment: Pick<ConversationAttachment, 'id'>): string {
   return `material:${attachment.id}`;
 }
@@ -125,23 +95,18 @@ export function createMaterialMentionSource() {
     showGroupTitle: false,
     candidates(session: { sessionId?: string }, req: { query?: string }) {
       const q = req?.query || '';
-      const categories = entityCategoryCandidates(q);
       const materials = materialCandidates(session?.sessionId || '', q);
-      return Promise.resolve([...categories, ...materials]);
+      return Promise.resolve(materials);
     },
     lexicon(session: { sessionId?: string }) {
       const materialTitles = listSessionMaterials(session?.sessionId || '').map((item) => item.title).filter(Boolean);
-      return ['角色', '产品', ...materialTitles];
+      return materialTitles;
     },
     subscribeLexicon(_session: unknown, listener: () => void) {
       return getGlobalAttachmentStore().subscribeRoster(listener);
     },
     onPick(pick: { candidate?: { value?: string; name?: string }; session?: { sessionId?: string } }) {
       const ref = pick?.candidate?.value || '';
-      if (isEntityCategoryRef(ref)) {
-        // 拦截分类入口误点击，主要交互由二级悬停完成
-        return undefined;
-      }
       const parsed = parseMaterialMention(ref);
       if (!parsed) return undefined;
       const attachment = findSessionMaterial(pick?.session?.sessionId || '', parsed.id);
