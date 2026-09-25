@@ -8,6 +8,14 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
     name: 'assets-category-row-layout',
     styles: ASSETS_CSS,
     html: `
+      <style>
+        :root {
+          --dsw-alias-bg-layer-1: #f7f7f8;
+          --dsw-alias-bg-base: #ffffff;
+          --dsw-alias-label-primary: #111827;
+          --dsw-alias-label-secondary: #4b5563;
+        }
+      </style>
       <div class="omnimux-assets-cloud" style="width:1280px">
         <div class="omnimux-assets-cloud-rows-scroll">
           <!-- 常规 9:16 竖版分类行 -->
@@ -57,6 +65,15 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
               <div class="omnimux-assets-card omnimux-assets-cloud-card" data-aspect="horizontal">
                 <div class="omnimux-assets-cloud-thumb"></div>
               </div>
+              <!-- 文本类卡片：没有封面也没有可播媒体，正文就是卡片唯一的内容 -->
+              <div class="omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--text" data-kind="text" data-aspect="horizontal">
+                <div class="omnimux-assets-cloud-card-mask"></div>
+                <div class="omnimux-assets-cloud-actions"></div>
+                <div class="omnimux-assets-card-body">
+                  <p class="omnimux-assets-card-title">双节棍小哥</p>
+                  <p class="omnimux-assets-cloud-desc">普通话男声，成熟稳重，适合口播与旁白</p>
+                </div>
+              </div>
               <div class="omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-skeleton omnimux-assets-cloud-row-skeleton">
                 <div class="omnimux-assets-cloud-skeleton-thumb"></div>
               </div>
@@ -76,6 +93,11 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
       const cardMask = document.querySelector('[data-category="character"] .omnimux-assets-cloud-card-mask')
       const cardMedia = document.querySelector('[data-category="character"] .omnimux-assets-card-media')
       const rightArrow = document.querySelector('.omnimux-assets-cloud-row-arrow--right')
+      const textCard = document.querySelector('[data-category="audio"] .omnimux-assets-cloud-card--text')
+      const textBody = textCard.querySelector('.omnimux-assets-card-body')
+      const textTitle = textCard.querySelector('.omnimux-assets-card-title')
+      const textDesc = textCard.querySelector('.omnimux-assets-cloud-desc')
+      const textMask = textCard.querySelector('.omnimux-assets-cloud-card-mask')
 
       return {
         rowsScrollDisplay: getComputedStyle(rowsScroll).display,
@@ -103,6 +125,34 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
         arrowRadius: getComputedStyle(rightArrow).borderRadius,
         viewAllRadius: getComputedStyle(viewAllBtn).borderRadius,
         viewAllHeight: getComputedStyle(viewAllBtn).height,
+        textCardWidth: getComputedStyle(textCard).width,
+        textCardHeight: getComputedStyle(textCard).height,
+        textCardBackground: getComputedStyle(textCard).backgroundColor,
+        textCardBackgroundImage: getComputedStyle(textCard).backgroundImage,
+        textCardThemeAttr: textCard.getAttribute('data-theme'),
+        textBodyPosition: getComputedStyle(textBody).position,
+        textBodyInset: getComputedStyle(textBody).top,
+        textBodyOpacity: getComputedStyle(textBody).opacity,
+        textBodyTransform: getComputedStyle(textBody).transform,
+        textBodyPadding: getComputedStyle(textBody).padding,
+        textBodyGap: getComputedStyle(textBody).gap,
+        textBodyBackgroundImage: getComputedStyle(textBody).backgroundImage,
+        textBodyPointerEvents: getComputedStyle(textBody).pointerEvents,
+        textTitleFontSize: getComputedStyle(textTitle).fontSize,
+        textTitleWeight: getComputedStyle(textTitle).fontWeight,
+        textTitleLineHeight: getComputedStyle(textTitle).lineHeight,
+        textTitleColor: getComputedStyle(textTitle).color,
+        textTitlePaddingRight: getComputedStyle(textTitle).paddingRight,
+        textTitleTextShadow: getComputedStyle(textTitle).textShadow,
+        textTitleClamp: getComputedStyle(textTitle).webkitLineClamp,
+        textDescFontSize: getComputedStyle(textDesc).fontSize,
+        textDescLineHeight: getComputedStyle(textDesc).lineHeight,
+        textDescColor: getComputedStyle(textDesc).color,
+        textDescClamp: getComputedStyle(textDesc).webkitLineClamp,
+        textDescWhiteSpace: getComputedStyle(textDesc).whiteSpace,
+        textMaskDisplay: getComputedStyle(textMask).display,
+        textTitleText: textTitle.textContent.trim(),
+        textDescText: textDesc.textContent.trim(),
       }
     },
   })
@@ -147,4 +197,42 @@ test('公共资产库分类单行流布局端到端几何与样式契约', () =>
   assert.equal(result.arrowRadius, '50%')
   assert.equal(result.viewAllRadius, '9999px')
   assert.equal(result.viewAllHeight, '30px')
+
+  // 8. 单行流里的文本卡：正文就是卡片唯一的内容，因此常驻可见（#2664）
+  assert.equal(result.textCardWidth, '300px')
+  assert.equal(result.textCardHeight, '169px')
+  assert.equal(result.textTitleText, '双节棍小哥')
+  assert.equal(result.textDescText, '普通话男声，成熟稳重，适合口播与旁白')
+  assert.equal(result.textBodyPosition, 'absolute')
+  assert.equal(result.textBodyInset, '0px')
+  assert.equal(result.textBodyOpacity, '1')
+  assert.equal(result.textBodyTransform, 'none')
+  assert.equal(result.textBodyPadding, '14px')
+  assert.equal(result.textBodyGap, '6px')
+  assert.equal(result.textBodyBackgroundImage, 'none')
+  // 正文盖在整卡之上，但点击穿透保留给整卡 onClick，避免重复触发预览。
+  assert.equal(result.textBodyPointerEvents, 'none')
+
+  // 9. 文本卡取单一中性底板，不取声音行的五色微彩、也不写 data-theme
+  assert.equal(result.textCardBackground, 'rgb(247, 247, 248)')
+  assert.equal(result.textCardBackgroundImage, 'none')
+  assert.equal(result.textCardThemeAttr, null)
+
+  // 10. 文本卡没有画面可暗化，蒙层整块关闭
+  assert.equal(result.textMaskDisplay, 'none')
+
+  // 11. 标题与描述沿用网格版式：既有单行流规则用 !important 锁死 700 字重与主色，
+  //     这里的覆盖必须同样带 !important 才生效，所以字重断言即覆盖生效的证明。
+  assert.equal(result.textTitleFontSize, '14px')
+  assert.equal(result.textTitleWeight, '600')
+  assert.equal(result.textTitleLineHeight, '20px')
+  assert.equal(result.textTitleColor, 'rgb(17, 24, 39)')
+  assert.equal(result.textTitlePaddingRight, '32px')
+  assert.equal(result.textTitleTextShadow, 'none')
+  assert.equal(result.textTitleClamp, '2')
+  assert.equal(result.textDescFontSize, '12px')
+  assert.equal(result.textDescLineHeight, '18px')
+  assert.equal(result.textDescColor, 'rgb(75, 85, 99)')
+  assert.equal(result.textDescClamp, '4')
+  assert.equal(result.textDescWhiteSpace, 'normal')
 })
