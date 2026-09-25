@@ -167,6 +167,10 @@ export const ASSETS_CSS = `
   flex-direction: column;
   padding: 16px 20px;
 }
+/* 公共的分类行自带 12px 上内边距；main 的上内边距叠加上去会让公共比其余三个页签多 16px（见 specs/assets-public-nav-breathing-parity.spec.md）。 */
+.omnimux-assets-main:has(> .omnimux-assets-cloud) {
+  padding-top: 0;
+}
 /* 列数由脚本按容器宽度算好、封顶 5 列后写在 data-columns 上（见 grid-columns.js），
    容器本身改成横向 flex，每一列再纵向堆卡片——封面按原始比例，高度不齐，
    不能再用齐行网格。列数等于子列个数，属性只作断言与无脚本时的文档。 */
@@ -1004,7 +1008,11 @@ export const ASSETS_CSS = `
    load, the scroll container, and the top-right control that mounts a card into
    the conversation. Colour stays neutral end to end: the selected chip is inked
    with the label colour — a white pill with black text on the dark theme, the
-   reverse on the light one — never with a brand accent. */
+   reverse on the light one — never with a brand accent. The two rows also sit
+   the same distance from the content under them: this nav carries 20px of bottom
+   padding, which together with the 10px gap of the cloud stack equals the local
+   path's 14px of bottom padding plus the 16px top padding of
+   .omnimux-assets-main. */
 
 .omnimux-assets-cloud {
   width: 100%;
@@ -1018,7 +1026,7 @@ export const ASSETS_CSS = `
   display: flex;  flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
-  padding: 12px 0 14px;
+  padding: 12px 0 20px;
 }
 /* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
 .omnimux-assets-cloud-nav.omx-stage-sticky {
