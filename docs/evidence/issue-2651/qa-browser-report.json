@@ -1,0 +1,58 @@
+{
+  "spaceId": 39,
+  "origin": "http://localhost:54805",
+  "mixedScene": {
+    "header": {
+      "left": 550,
+      "right": 1350,
+      "width": 800,
+      "height": 44,
+      "justifyContent": "flex-start",
+      "gap": "8px"
+    },
+    "firstSlot": {
+      "left": 550,
+      "right": 594,
+      "width": 44,
+      "height": 44
+    },
+    "secondSlot": {
+      "left": 602,
+      "right": 646,
+      "width": 44,
+      "height": 44
+    },
+    "actions": {
+      "left": 1318,
+      "right": 1350,
+      "width": 32,
+      "height": 32,
+      "marginLeft": "664px"
+    },
+    "gapBetweenSlots": 8,
+    "rightOffsetToHeader": 0
+  },
+  "emptyScene": {
+    "header": {
+      "left": 550,
+      "right": 1350,
+      "width": 800,
+      "height": 32,
+      "minHeight": "24px",
+      "justifyContent": "flex-end",
+      "marginBottom": "4px"
+    },
+    "actions": {
+      "left": 1318,
+      "right": 1350,
+      "width": 32,
+      "height": 32,
+      "marginLeft": "768px"
+    },
+    "rightOffsetToHeader": 0
+  },
+  "timestamp": "2026-09-25T06:44:01.483Z",
+  "mixedScreenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-slot-header-align-issue-2651/docs/evidence/issue-2651/issue-2651-mixed-slots.png",
+  "emptyScreenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-slot-header-align-issue-2651/docs/evidence/issue-2651/issue-2651-empty-slots.png",
+  "pass": true
+}
