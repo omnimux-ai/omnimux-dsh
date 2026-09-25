@@ -43,6 +43,8 @@ import { installUserMessageAttachmentsEnhancer } from './attachments/userMessage
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
 import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
+import { AssetHubPanel } from './workbench/AssetHubPanel.jsx'
+import { ASSET_HUB_TAB_ID } from './workbench/geometry.js'
 import { injectMediaViewerStyles } from './media-viewer/styles.js'
 import { getGlobalMediaViewerStore } from './media-viewer/media-viewer-store.js'
 import { createGenerationFeedback } from './media-viewer/generation-feedback.js'
@@ -329,6 +331,22 @@ export function apply(ctx) {
         }
       }, 'omnimux: composer add commands')
     })
+    if (typeof ctx.inject === 'function') {
+      ctx.inject(['betterSidebar', 'sessions'], (inner) => {
+        const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
+        if (sidebar && typeof sidebar.registerTab === 'function') {
+          const registerAssetHub = () => sidebar.registerTab({
+            id: ASSET_HUB_TAB_ID,
+            title: () => t('assetHub.tabTitle') || '素材工作台',
+            order: 6,
+            hidden: false,
+            single: true,
+            component: (props) => createElement(AssetHubPanel, { ...props, sessions: inner.sessions }),
+          })
+          inner.effect(registerAssetHub, 'omnimux: asset hub tab')
+        }
+      })
+    }
   }
   // ctx.effect(() => mountSidebarEntry(apps, t, ctx.locale, SIDEBAR_GLOBAL().register), 'omnimux: sidebar apps entry')
   // ctx.effect(() => mountAppTabs(t, ctx.locale, SIDEBAR_GLOBAL().register), 'omnimux: sidebar app tabs')

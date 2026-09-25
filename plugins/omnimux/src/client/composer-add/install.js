@@ -1,8 +1,5 @@
-import { createElement } from 'react'
-import { createRoot } from 'react-dom/client'
 import { createComposerAddController } from './controller.js'
-import { LIBRARY_STAGE_EVENT, LIBRARY_STAGE_PROMPT_EVENT } from './library-stage-model.js'
-import { LibraryBrowser } from '../session-guide/LibraryBrowser.jsx'
+import { LIBRARY_STAGE_PROMPT_EVENT } from './library-stage-model.js'
 
 function createToast(doc) {
   let toast = null
@@ -32,8 +29,6 @@ function createToast(doc) {
   }
 }
 
-
-
 /**
  * Bind the existing pickers to the official selected-session store.
  * @param {Document} doc
@@ -44,12 +39,7 @@ function createToast(doc) {
  * }} options
  */
 export function installComposerAddCapture(doc, { t, store, sessions }) {
-  const host = doc.createElement('div')
-  host.id = 'omnimux-composer-add-host'
-  doc.body.appendChild(host)
-  let root = null
   let focusTarget = null
-  let renderToken = 0
   const toast = createToast(doc)
   const controller = createComposerAddController({
     t,
@@ -61,22 +51,8 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     restoreFocus: () => {
       if (focusTarget?.isConnected && typeof focusTarget.focus === 'function') focusTarget.focus()
     },
-    renderLibrary(model) {
-      if (!root && !model) return
-      if (!root) root = createRoot(host)
-      root.render(null)
-      const token = ++renderToken
-      const stageEvent = new doc.defaultView.CustomEvent(LIBRARY_STAGE_EVENT, { detail: model, cancelable: true })
-      doc.defaultView.dispatchEvent(stageEvent)
-      doc.defaultView.setTimeout(() => {
-        if (token !== renderToken) return
-        if (!model) {
-          root?.render(null)
-          return
-        }
-        if (stageEvent.defaultPrevented || doc.querySelector('[data-omnimux-library-stage]')) return
-        root.render(createElement(LibraryBrowser, { model, t }))
-      }, 0)
+    renderLibrary() {
+      // 废除旧全屏 LibraryBrowser 覆盖层，改由右栏 AssetHubPanel 承载
     },
     onPrompt(prompt) {
       const sessionId = sessions.list.getSnapshot().current
@@ -97,8 +73,6 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     },
     dispose() {
       controller.dispose()
-      root?.unmount()
-      host.remove()
       toast.dispose()
     },
   }

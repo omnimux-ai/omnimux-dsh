@@ -21,6 +21,20 @@ import { focusRecordForTab } from './focus-state.js'
 import { resolveConversationRatio } from '../sidebar-toggle-topbar.js'
 
 export const WORKBENCH_PANEL_MIN_PX = 280
+export const ASSET_HUB_TAB_ID = 'omnimux:asset-hub'
+export const ASSET_HUB_CHAT_PX = 380
+
+/**
+ * 判定当前活跃 Tab 是否为右栏素材工作台（Asset Hub）。
+ * @param {object} [state]
+ * @returns {boolean}
+ */
+export function isAssetHubActive(state) {
+  if (state?.activeTab === ASSET_HUB_TAB_ID) return true
+  const currentTab = activeTabId(state)
+  return currentTab === ASSET_HUB_TAB_ID
+}
+
 /**
  * Visible split conversation floor. CSS and live drag clamp share this value.
  *
@@ -363,7 +377,7 @@ function resolveChatRatio(env = {}) {
  * @param {{ viewportWidth?: number, officialSidebarWidth?: number, chatRatio?: number, railBaselinePx?: number }} [env]
  * @returns {{ visibleStage: number, stage: number, budget: { chatWidth: number, minChatWidth: number, maxChatWidth: number } }}
  */
-function workbenchConversationGeometryPx(env = {}) {
+function workbenchConversationGeometryPx(env = {}, state = liveSnapshot()?.state) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
   const railVisible = officialSessionSidebarWidth(env)
   const collapsed = isOfficialSidebarCollapsed(env.doc || hostDocument())
@@ -378,7 +392,20 @@ function workbenchConversationGeometryPx(env = {}) {
     railBaselinePx: railBaseline,
     collapsed,
   })
-  return { visibleStage, stage, budget: resolveConversationPixelBudget(stage, ratio) }
+  const budget = resolveConversationPixelBudget(stage, ratio)
+  if (isAssetHubActive(state) || env.isAssetHub) {
+    const lockedChat = Math.min(visibleStage, ASSET_HUB_CHAT_PX)
+    return {
+      visibleStage,
+      stage,
+      budget: {
+        ...budget,
+        chatWidth: lockedChat,
+        minChatWidth: lockedChat,
+      },
+    }
+  }
+  return { visibleStage, stage, budget }
 }
 
 /**
@@ -398,7 +425,7 @@ export function workbenchDefaultWidthPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
   if (!(viewport > 0)) return WORKBENCH_PANEL_MIN_PX
   const max = Math.max(WORKBENCH_PANEL_MIN_PX, viewport)
-  const { visibleStage, budget } = workbenchConversationGeometryPx(env)
+  const { visibleStage, budget } = workbenchConversationGeometryPx(env, state)
   const target = Math.max(WORKBENCH_PANEL_MIN_PX, Math.round(visibleStage - budget.chatWidth))
   return Math.min(max, target)
 }
@@ -438,7 +465,7 @@ export function workbenchGuiWidthPx(state, env = {}) {
 export function workbenchSplitMaxPanelPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
   if (viewport > 0) {
-    const { visibleStage, budget } = workbenchConversationGeometryPx(env)
+    const { visibleStage, budget } = workbenchConversationGeometryPx(env, state)
     return Math.max(WORKBENCH_PANEL_MIN_PX, visibleStage - budget.minChatWidth)
   }
   const current = typeof state?.width === 'number' && Number.isFinite(state.width) ? state.width : 0

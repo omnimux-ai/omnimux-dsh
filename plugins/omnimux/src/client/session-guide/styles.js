@@ -3754,46 +3754,6 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 .omnimux-tpl-btn-primary:hover { opacity:0.92; }
 
-/* 加号整页选素材：整页铺满会话列。分类是窗口顶栏，卡片单独滚，输入框沿用吸底。 */
-.omnimux-library-stage {
-  position:fixed; z-index:40; box-sizing:border-box;
-  top:0; bottom:0;
-  left:var(--omnimux-library-stage-left, 0px);
-  width:var(--omnimux-library-stage-width, 100%);
-  display:flex; flex-direction:column; gap:12px; min-width:0;
-  padding:6px 28px 148px;
-  background:var(--dsw-alias-bg-base, #111113);
-  overflow:hidden;
-}
-.omnimux-library-stage-tabs {
-  position:relative; flex:0 0 auto; z-index:1;
-  display:flex; align-items:center; gap:20px;
-  height:52px; padding:0;
-  background:transparent;
-}
-.omnimux-library-stage-back {
-  display:inline-flex; align-items:center; gap:6px;
-  height:32px; padding:0 12px; border:0; border-radius:8px;
-  background:var(--dsw-alias-interactive-bg-subtle, rgba(255,255,255,0.06));
-  color:var(--dsw-alias-label-secondary); font:inherit; font-size:13px; font-weight:600;
-  cursor:pointer; transition:all 0.15s ease;
-  margin-right:4px;
-}
-.omnimux-library-stage-back:hover {
-  background:var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,0.12));
-  color:var(--dsw-alias-label-primary);
-}
-.omnimux-library-stage-tab {
-  height:32px; padding:0; border:0; background:transparent; cursor:pointer;
-  color:var(--dsw-alias-label-tertiary); font:inherit; font-size:15px; font-weight:650;
-}
-.omnimux-library-stage-tab.is-active { color:var(--dsw-alias-label-primary); }
-.omnimux-library-stage-close {
-  margin-left:auto; width:32px; height:32px; border:0; border-radius:8px;
-  display:inline-flex; align-items:center; justify-content:center;
-  background:transparent; color:var(--dsw-alias-label-secondary); cursor:pointer;
-}
-.omnimux-library-stage-close:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary); }
 .omnimux-library-stage-status {
   margin:0; color:var(--dsw-alias-label-tertiary); font-size:13px;
   display:flex; align-items:center; gap:12px;
@@ -3811,18 +3771,12 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-library-stage-grid.is-mixed {
   grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
 }
+.omnimux-library-stage-cell { min-width:0; }
 .omnimux-library-stage-cell.is-trending { max-width:240px; }
+
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-omnimux-skill-picker],
 [data-omnimux-starter-host][data-omnimux-dock-open] .sh-picker-trigger {
   display:inline-flex;
-}
-#omnimux-composer-add-host:has([data-omnimux-library-stage]) {
-  position:fixed; z-index:40; overflow:hidden;
-  top:0; bottom:0;
-  left:var(--omnimux-library-stage-left, 0px);
-  width:var(--omnimux-library-stage-width, 100%);
-  box-sizing:border-box;
-  background:var(--dsw-alias-bg-base, #111113);
 }
 `
 

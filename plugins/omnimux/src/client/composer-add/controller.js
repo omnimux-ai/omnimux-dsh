@@ -1,6 +1,8 @@
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
 import { promptForCard, tabForKind } from './library-stage-model.js'
+import { getGlobalAssetHubNavStore } from '../workbench/asset-hub-store.js'
+import { ASSET_HUB_TAB_ID } from '../workbench/geometry.js'
 
 /**
  * @typedef {import('../attachments/store.ts').AttachmentStore} AttachmentStore
@@ -371,8 +373,31 @@ export function createComposerAddController(options) {
   }
 
   function openKind(sessionId, kind) {
+    const targetSessionId = resolveSessionId(sessionId)
     const operation = begin(sessionId, kind)
-    if (operation) render(operation)
+    if (operation) {
+      render(operation)
+    }
+
+    if (targetSessionId) {
+      const tabMap = {
+        library: 'assets',
+        assets: 'assets',
+        product: 'products',
+        products: 'products',
+        inspiration: 'inspiration',
+      }
+      const targetTab = tabMap[kind] || 'assets'
+      const navStore = options.assetHubNavStore || getGlobalAssetHubNavStore()
+      navStore?.setActiveTab?.(targetTab)
+
+      const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
+      wb?.openWorkbench?.({
+        tabId: ASSET_HUB_TAB_ID,
+        focus: 'split',
+        sessionId: targetSessionId,
+      })
+    }
   }
 
   const stopSession = options.subscribeCurrentSession(() => {
