@@ -341,6 +341,14 @@ describe('场景 2 验收：纯文本模型卡槽不展示（none 预设），�
     assert.match(themeCss, /\.wf-config-panel__prompt-header--empty-slots\s*\{[\s\S]*?margin-bottom:\s*4px;/);
     assert.match(themeCss, /\.wf-config-panel__prompt-header--empty-slots\s*\{[\s\S]*?justify-content:\s*flex-end;/);
   });
+
+  it('TC-T02-04: CSS 规范核查：prompt-header 靠左对齐且具备 8px gap，操作区 margin-left: auto 吸附右侧 (Issue #2651)', () => {
+    // 默认 prompt-header 靠左流式排布，消除多卡槽间距被推到 50% 居中问题
+    assert.match(themeCss, /\.wf-config-panel__prompt-header\s*\{[^}]*justify-content:\s*flex-start;[^}]*\}/);
+    assert.match(themeCss, /\.wf-config-panel__prompt-header\s*\{[^}]*gap:\s*8px;[^}]*\}/);
+    // 右侧操作区 margin-left: auto 保证展开/收起按钮始终吸附在最右端
+    assert.match(themeCss, /\.wf-config-panel__prompt-header-actions\s*\{[^}]*margin-left:\s*auto;[^}]*\}/);
+  });
 });
 
 describe('场景 3 验收：连入素材后卡槽装填与操作升迁机制正常', () => {

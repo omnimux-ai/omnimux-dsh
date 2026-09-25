@@ -47,3 +47,15 @@ test('E2E: 卡槽媒体预览必须等比例缩放铺满 (object-fit: cover)，�
     '视频元素必须带有 wf-slot-well__media 类',
   );
 });
+
+test('E2E: 顶栏多卡槽共存时必须自左向右紧凑排布 (justify-content: flex-start; gap: 8px)，右侧展开按钮 margin-left: auto 吸附右端 (Issue #2651)', () => {
+  const headerMatch = componentsCss.match(/\.wf-config-panel__prompt-header\s*\{([^}]+)\}/);
+  assert.ok(headerMatch, '必须定义 .wf-config-panel__prompt-header 选择器');
+  assert.match(headerMatch[1], /justify-content:\s*flex-start;/, '顶栏必须使用 justify-content: flex-start 左对齐');
+  assert.match(headerMatch[1], /gap:\s*8px;/, '顶栏卡槽组间距必须为 8px');
+  assert.doesNotMatch(headerMatch[1], /justify-content:\s*space-between;/, '禁止使用 space-between 导致第 2 个卡槽组被推到 50% 中间位置');
+
+  const actionsMatch = componentsCss.match(/\.wf-config-panel__prompt-header-actions\s*\{([^}]+)\}/);
+  assert.ok(actionsMatch, '必须定义 .wf-config-panel__prompt-header-actions 选择器');
+  assert.match(actionsMatch[1], /margin-left:\s*auto;/, '右侧操作栏必须通过 margin-left: auto 吸附最右端');
+});

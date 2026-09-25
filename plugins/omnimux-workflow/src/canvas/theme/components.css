@@ -1381,7 +1381,8 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 .wf-config-panel__prompt-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   /* 卡槽行与 Prompt 文案：单一间距源，避免再叠 input 上 padding */
   margin-bottom: 8px;
   min-height: 44px;
@@ -7506,6 +7507,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 
 /* 非破坏性降级/超限警示徽标（黄色） */
