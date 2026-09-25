@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-21"
+updated: "2026-09-25"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -64,6 +64,7 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（rank 8 现网）。**Workbench**：`omnimux-products:library`，不得 claim |
 | `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（rank 9）。**Workbench**：`omnimux-automation:workbench`，不得 claim；`access: offline` |
 | `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
+| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，内测版 / Alpha）。**Workbench**：`omnimux-video:google-vids`，不得 claim；`access: offline` |
 | `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（rank 4.2 现网）。**Workbench**：`omnimux-publish:library`，不得 claim |
 | `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（rank 4.5 现网）。**Workbench**：`omnimux-analytics:library`，不得 claim |
 | `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（rank 3）。**Workbench**：`omnimux-accounts:library`，不得 claim；`access: cloud` |
