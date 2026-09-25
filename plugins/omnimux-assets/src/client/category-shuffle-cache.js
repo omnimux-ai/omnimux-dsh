@@ -114,6 +114,68 @@ export async function fetchCategoryRandomSample(
   return shuffleArray(normalized).slice(0, targetCount)
 }
 
+/**
+ * 多 scope 合并采样：把一个分类行的抽样范围收窄到若干个二级 scope，
+ * 再按 `keepFn` 过滤掉不能用于该行的行，最后洗牌截取。
+ *
+ * 用于「声音」行：可播放的 BGM 与音效集中在 `audio/bgm` 与 `audio/sfx`，
+ * 而 `audio` 全量里近八成是点不动的音色描述行 —— 在那 27 页里随机 1~2 页，
+ * 多半只能得到个位数的可播放行。逐 scope 调 `fetchCategoryRandomSample`
+ * 后合并去重，抽取的每一页都落在有内容的范围内。
+ *
+ * 每个 scope 的取样上限是 `targetCount × 参与采样的 scope 数`（`scopes` 中真值的个数，
+ * 至少 1），意图是让上限覆盖「单 scope 两页候选」：上限不小于候选量时，per-scope 这一层
+ * 不削候选，`keepFn` 看到的就是该 scope 采样到的完整候选池，而不是只剩一半的池子。
+ * 过滤在合并去重之后、最终 `slice(0, targetCount)` 之前生效，可用行够时结果满员。
+ *
+ * @template T
+ * @param {string[]} scopes 二级 scope 列表（如 ['audio/bgm', 'audio/sfx']）
+ * @param {(catId: string, page: number) => Promise<{ ok: boolean, body?: { items?: any[], totalPages?: number } }>} fetchPageFn
+ * @param {(raw: any) => T} [normalizeFn=(x) => x]
+ * @param {number} [targetCount=24]
+ * @param {(item: T) => boolean} [keepFn=() => true] 行级筛除，作用于合并去重后的完整候选池
+ * @returns {Promise<T[]>} 所有 scope 都取不到行（或 `scopes` 为空）时返回空数组，由调用方静默处理
+ */
+export async function fetchScopesRandomSample(
+  scopes,
+  fetchPageFn,
+  normalizeFn = (x) => x,
+  targetCount = 24,
+  keepFn = () => true,
+) {
+  if (!Array.isArray(scopes) || typeof fetchPageFn !== 'function') return []
+
+  // 1. per-scope 取样上限 = targetCount × 参与 scope 数：上限覆盖单 scope 两页候选，
+  // 保证 keepFn 面对的是完整候选池，而不是被 per-scope 阶段提前削过的池子
+  const perScope = targetCount * Math.max(1, scopes.filter(Boolean).length)
+
+  // 2. 逐 scope 采样：一个 scope 拉不动只少一份候选，另一个照常参与合并
+  const merged = []
+  for (const scope of scopes) {
+    if (!scope) continue
+    try {
+      const sampled = await fetchCategoryRandomSample(scope, fetchPageFn, normalizeFn, perScope)
+      merged.push(...sampled)
+    } catch {
+      // 静默容错，保留已取到的候选
+    }
+  }
+
+  // 3. 跨 scope 去重（依据 id）
+  const seenIds = new Set()
+  const uniqueItems = []
+  for (const item of merged) {
+    const id = item?.id || JSON.stringify(item)
+    if (!seenIds.has(id)) {
+      seenIds.add(id)
+      uniqueItems.push(item)
+    }
+  }
+
+  // 4. 过滤 → 洗牌 → 截取（顺序不可颠倒，见上方说明）
+  return shuffleArray(uniqueItems.filter((item) => keepFn(item))).slice(0, targetCount)
+}
+
 export class CategoryShuffleCache {
   /**
    * @param {number} [maxEntries=30]
