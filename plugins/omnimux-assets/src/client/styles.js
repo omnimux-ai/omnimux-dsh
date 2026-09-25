@@ -167,6 +167,10 @@ export const ASSETS_CSS = `
   flex-direction: column;
   padding: 16px 20px;
 }
+/* 公共的分类行自带 12px 上内边距；main 的上内边距叠加上去会让公共比其余三个页签多 16px（见 specs/assets-public-nav-breathing-parity.spec.md）。 */
+.omnimux-assets-main:has(> .omnimux-assets-cloud) {
+  padding-top: 0;
+}
 /* 列数由脚本按容器宽度算好、封顶 5 列后写在 data-columns 上（见 grid-columns.js），
    容器本身改成横向 flex，每一列再纵向堆卡片——封面按原始比例，高度不齐，
    不能再用齐行网格。列数等于子列个数，属性只作断言与无脚本时的文档。 */
@@ -1004,7 +1008,11 @@ export const ASSETS_CSS = `
    load, the scroll container, and the top-right control that mounts a card into
    the conversation. Colour stays neutral end to end: the selected chip is inked
    with the label colour — a white pill with black text on the dark theme, the
-   reverse on the light one — never with a brand accent. */
+   reverse on the light one — never with a brand accent. The two rows also sit
+   the same distance from the content under them: this nav carries 20px of bottom
+   padding, which together with the 10px gap of the cloud stack equals the local
+   path's 14px of bottom padding plus the 16px top padding of
+   .omnimux-assets-main. */
 
 .omnimux-assets-cloud {
   width: 100%;
@@ -1018,7 +1026,7 @@ export const ASSETS_CSS = `
   display: flex;  flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
-  padding: 12px 0 14px;
+  padding: 12px 0 20px;
 }
 /* 云端的一级/二级分类行吸附在一级工具栏正下方（骨架契约 §二·补）。 */
 .omnimux-assets-cloud-nav.omx-stage-sticky {
@@ -1603,6 +1611,66 @@ export const ASSETS_CSS = `
 
 .omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-actions {
   opacity: 1;
+}
+
+/* ── 单行流里的文本卡：正文就是卡片唯一的内容，因此它常驻可见，不做悬停浮现。
+   底板取中性的次级表面（design.md §3.1「次级卡片容器」），不取声音行的五色微彩：
+   五色微彩是「本身没有内容的媒体展示面」的豁免（exempt-ui03），文本卡是常规内容卡，
+   按 design.md §3.6 保持黑白中性，不引入有色底、不扩 data-theme。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text {
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+/* 正文铺满整张卡、顶部对齐、常驻可见；不再有底部渐变蒙层。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text .omnimux-assets-card-body {
+  position: absolute;
+  inset: 0;
+  padding: 14px;
+  background: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* 标题：与网格版式逐项一致（styles.js:1360-1372）。既有单行流规则用了
+   !important 锁死 700 字重与主色，这里必须同样用 !important 才能覆盖。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text .omnimux-assets-card-title {
+  font-size: 14px;
+  font-weight: 600 !important;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary) !important;
+  text-shadow: none;
+  padding-right: 32px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 描述：与网格版式逐项一致（styles.js:1373-1377），行数上限 4 行。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text .omnimux-assets-cloud-desc {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary) !important;
+  text-shadow: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* 文本卡没有画面可暗化：暗化蒙层只会压暗卡片唯一的内容、拉低对比度，
+   且不提供任何可供性（卡片本身整块可点）。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text .omnimux-assets-cloud-card-mask {
+  display: none;
+}
+
+/* 常驻可见 → 悬停不改变正文位置与透明度；悬停只让右上角按钮淡入。 */
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text:hover .omnimux-assets-card-body,
+.omnimux-assets-cloud-row-cards .omnimux-assets-cloud-card--text:focus-within .omnimux-assets-card-body {
+  opacity: 1;
+  transform: none;
 }
 
 .omnimux-assets-cloud-row-skeleton {

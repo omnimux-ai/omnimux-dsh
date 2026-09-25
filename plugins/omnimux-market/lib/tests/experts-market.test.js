@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test, { beforeEach, afterEach } from 'node:test';
 import { Readable } from 'node:stream';
 import { dshHome, withDefaults } from '../config-store.js';
-import { handleApi, DEFAULT_MARKET_EXPERTS, materializeEnabledMarketExperts, healAgentPresetCordis, healInstalledAgentPresets, setAgentPresetsNotify } from '../local-api.js';
+import { handleApi, DEFAULT_MARKET_EXPERTS, materializeEnabledMarketExperts, healAgentPresetCordis, healInstalledAgentPresets, setAgentPresetsNotify, reconcileMarketExperts } from '../local-api.js';
 function cleanRetiredTestExperts() {
     const home = dshHome();
     const retired = join(home, '.agent-presets', '.retired');
@@ -64,18 +64,15 @@ function mockRes() {
     };
     return res;
 }
-test('DEFAULT_MARKET_EXPERTS defines 8 experts from screenshots', () => {
-    assert.equal(DEFAULT_MARKET_EXPERTS.length, 8);
+test('DEFAULT_MARKET_EXPERTS defines 5 streamlined ecommerce experts', () => {
+    assert.equal(DEFAULT_MARKET_EXPERTS.length, 5);
     const ids = DEFAULT_MARKET_EXPERTS.map(e => e.id);
     assert.deepEqual(ids, [
         'shopee-ops-expert',
         'youtube-creator-expert',
-        'amazon-ops-expert',
-        'tiktok-shop-ops-expert',
-        'media-creator',
-        'html-generator',
         'amazon-operations-expert',
         'tiktok-ecommerce-expert',
+        'media-creator',
     ]);
     for (const exp of DEFAULT_MARKET_EXPERTS) {
         assert.ok(exp.name, `${exp.id} has name`);
@@ -84,7 +81,7 @@ test('DEFAULT_MARKET_EXPERTS defines 8 experts from screenshots', () => {
         assert.ok(exp.avatar, `${exp.id} has avatar`);
     }
 });
-test('expertMarketList returns 8 items with status', async () => {
+test('expertMarketList returns streamlined items with status', async () => {
     const cfg = withDefaults({});
     const req = mockReq('POST', '/api', {
         origin: 'http://127.0.0.1:3080',
@@ -94,17 +91,21 @@ test('expertMarketList returns 8 items with status', async () => {
     await handleApi(req, res, cfg);
     assert.equal(res._status, 200);
     assert.equal(res._json?.ok, true);
-    assert.equal(res._json?.items?.length, 8);
+    assert.ok(res._json?.items?.length >= 5);
     const items = res._json.items;
     const shopee = items.find((it) => it.id === 'shopee-ops-expert');
     assert.ok(shopee);
     assert.equal(shopee.status, 'enabled');
     const amazonOps = items.find((it) => it.id === 'amazon-operations-expert');
     assert.ok(amazonOps);
-    assert.equal(amazonOps.status, 'available');
+    assert.equal(amazonOps.status, 'enabled');
     const tiktokEcom = items.find((it) => it.id === 'tiktok-ecommerce-expert');
     assert.ok(tiktokEcom);
-    assert.equal(tiktokEcom.status, 'available');
+    assert.equal(tiktokEcom.status, 'enabled');
+    const mediaCreator = items.find((it) => it.id === 'media-creator');
+    assert.ok(mediaCreator);
+    assert.equal(mediaCreator.status, 'available');
+    assert.ok(!items.some((it) => it.id === 'html-generator'), 'html-generator must be removed');
 });
 test('amazon-operations-expert and tiktok-ecommerce-expert install with specialized presets', async () => {
     const cfg = withDefaults({});
@@ -125,9 +126,9 @@ test('amazon-operations-expert and tiktok-ecommerce-expert install with speciali
     await handleApi(reqDis, resDis, cfg);
     assert.equal(resDis._json?.status, 'disabled');
 });
-test('expertMarketInstall and expertMarketDisable toggle preset lifecycle', async () => {
+test('expertMarketInstall and expertMarketDisable toggle preset lifecycle with media-creator', async () => {
     const cfg = withDefaults({});
-    const testId = 'html-generator';
+    const testId = 'media-creator';
     // Install
     const reqInstall = mockReq('POST', '/api', {
         origin: 'http://127.0.0.1:3080',
@@ -229,9 +230,9 @@ test('materializeEnabledMarketExperts 启动物化：enabled 初值专家幂等�
     try {
         const first = materializeEnabledMarketExperts(home);
         assert.deepEqual(first.sort(), [
-            'amazon-ops-expert',
+            'amazon-operations-expert',
             'shopee-ops-expert',
-            'tiktok-shop-ops-expert',
+            'tiktok-ecommerce-expert',
             'youtube-creator-expert',
         ]);
         for (const id of first) {
@@ -333,7 +334,7 @@ test('expertMarketInstall/Disable 触发 Agent 预设列表变更广播钩子', 
         const reqInstall = mockReq('POST', '/api', {
             origin: 'http://127.0.0.1:3080',
             'sec-fetch-site': 'same-origin',
-        }, { method: 'expertMarketInstall', id: 'html-generator' });
+        }, { method: 'expertMarketInstall', id: 'media-creator' });
         const resInstall = mockRes();
         await handleApi(reqInstall, resInstall, cfg);
         assert.equal(resInstall._json?.ok, true);
@@ -341,7 +342,7 @@ test('expertMarketInstall/Disable 触发 Agent 预设列表变更广播钩子', 
         const reqDisable = mockReq('POST', '/api', {
             origin: 'http://127.0.0.1:3080',
             'sec-fetch-site': 'same-origin',
-        }, { method: 'expertMarketDisable', id: 'html-generator' });
+        }, { method: 'expertMarketDisable', id: 'media-creator' });
         const resDisable = mockRes();
         await handleApi(reqDisable, resDisable, cfg);
         assert.equal(resDisable._json?.ok, true);
@@ -349,6 +350,36 @@ test('expertMarketInstall/Disable 触发 Agent 预设列表变更广播钩子', 
     }
     finally {
         setAgentPresetsNotify(null);
+    }
+});
+test('reconcileMarketExperts aggregates official system presets and custom agents', () => {
+    const home = mkdtempSync(join(tmpdir(), 'omx-expert-reconcile-'));
+    try {
+        const officialMocks = [
+            { id: 'standard', trust: 'system', name: '代码开发' },
+            { id: 'tiktok-agent', trust: 'system', name: 'TikTok运营专家团' },
+            { id: 'my-custom-agent', trust: 'user', name: '我的私有助手', description: '专属定制助手' },
+        ];
+        const items = reconcileMarketExperts(home, officialMocks);
+        assert.ok(items.length >= 8);
+        const standard = items.find((it) => it.id === 'standard');
+        assert.ok(standard);
+        assert.equal(standard.group, 'system');
+        assert.equal(standard.status, 'enabled');
+        const custom = items.find((it) => it.id === 'my-custom-agent');
+        assert.ok(custom);
+        assert.equal(custom.group, 'custom');
+        assert.equal(custom.name, '我的私有助手');
+        assert.equal(custom.status, 'enabled');
+        // 出海专精专家必须存在
+        const tkEcom = items.find((it) => it.id === 'tiktok-ecommerce-expert');
+        assert.ok(tkEcom);
+        assert.equal(tkEcom.group, 'ecommerce');
+        // 绝对不存在 html-generator
+        assert.ok(!items.some((it) => it.id === 'html-generator'));
+    }
+    finally {
+        rmSync(home, { recursive: true, force: true });
     }
 });
 test('host apply 接入启动物化与预设列表广播（源码契约）', () => {

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { cloudPage } from './api.js'
-import { normalizeCloudAsset } from './cloud-feed-helpers.js'
-import { fetchCategoryRandomSample, globalShuffleCache } from './category-shuffle-cache.js'
+import { cloudCardKind, normalizeCloudAsset } from './cloud-feed-helpers.js'
+import { fetchCategoryRandomSample, fetchScopesRandomSample, globalShuffleCache } from './category-shuffle-cache.js'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons.jsx'
 import { CloudAssetCard } from './CloudAssetsView.jsx'
 
@@ -12,6 +12,18 @@ import { CloudAssetCard } from './CloudAssetsView.jsx'
  * 逐文件声明，不新增跨文件的共享导出。
  */
 const NO_IDS = new Set()
+
+/**
+ * 抽样范围必须取自具名二级 scope 的分类行。
+ *
+ * 声音「全部」：该行承诺的是可试听的卡点配乐与音效，而 `audio` 全量的 27 页里
+ * 近八成是点不动的音色描述行，随机 1~2 页多半整行都是空框。收窄到 `audio/bgm`
+ * 与 `audio/sfx` 两个二级 scope，行的内容才与副标题一致。音色描述行并没有丢：
+ * 「声音 → 配音」二级标签仍完整可达。行级筛除交给 `cloudCardKind`，
+ * `audio/bgm` 里那张被判为 `media` 的行因此不会混进来。
+ * 未列出的分类一律走原来的全量抽样。
+ */
+const ROW_SAMPLE_SCOPES = { audio: ['audio/bgm', 'audio/sfx'] }
 
 /**
  * Single horizontal category row in the cross-category "All" view.
@@ -61,7 +73,16 @@ export function CloudCategoryRow(props) {
     setLoading(true)
     void (async () => {
       try {
-        const sampled = await fetchCategoryRandomSample(catId, cloudPage, normalizeCloudAsset, 24)
+        const scopes = ROW_SAMPLE_SCOPES[catId]
+        const sampled = scopes
+          ? await fetchScopesRandomSample(
+            scopes,
+            cloudPage,
+            normalizeCloudAsset,
+            24,
+            (row) => cloudCardKind(row) === 'audio',
+          )
+          : await fetchCategoryRandomSample(catId, cloudPage, normalizeCloudAsset, 24)
         if (cancelled) return
         if (sampled && sampled.length > 0) {
           globalShuffleCache.set(catId, sampled)

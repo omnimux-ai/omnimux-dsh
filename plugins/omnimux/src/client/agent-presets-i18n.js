@@ -129,28 +129,22 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
       description: lang === 'en' ? 'Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.' : '帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。',
     }
   }
-  if (presetId === 'amazon-ops-expert') {
+  if (presetId === 'amazon-operations-expert') {
     return {
-      name: lang === 'en' ? 'Amazon Ops Expert' : '亚马逊运营专家',
-      description: lang === 'en' ? 'Amazon operation specialist for market, product, listing, keyword, review and risk analysis.' : '亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。',
+      name: lang === 'en' ? 'Amazon Operations Expert' : '亚马逊运营专家',
+      description: lang === 'en' ? 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion.' : '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。',
     }
   }
-  if (presetId === 'tiktok-shop-ops-expert') {
+  if (presetId === 'tiktok-ecommerce-expert') {
     return {
-      name: lang === 'en' ? 'TikTok Shop Ops Expert' : 'TikTok Shop运营专家',
-      description: lang === 'en' ? 'TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.' : '负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。',
+      name: lang === 'en' ? 'TikTok Ecommerce Expert' : 'TikTok电商专家',
+      description: lang === 'en' ? 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.' : '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。',
     }
   }
   if (presetId === 'media-creator') {
     return {
       name: lang === 'en' ? 'Media Creator' : '媒体创作者',
       description: lang === 'en' ? 'AI content generation: videos, images, digital avatars, background removal, TTS, and voice cloning using Topview AI.' : 'AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。',
-    }
-  }
-  if (presetId === 'html-generator') {
-    return {
-      name: lang === 'en' ? 'HTML Generator' : 'HTML生成器',
-      description: lang === 'en' ? 'Generate beautiful HTML web pages based on data or descriptions, supporting data visualization and report presentation.' : '根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示。',
     }
   }
   return null

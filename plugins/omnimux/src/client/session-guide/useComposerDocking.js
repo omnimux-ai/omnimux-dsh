@@ -270,34 +270,39 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       if (band && reserved > 0) band.style.minHeight = `${reserved}px`
       root.setAttribute(DOCK_OPEN_ATTR, '')
 
-      // 视口滚动条锁定：防止脱离文档流瞬间视口发生位移
+      // 视口滚动条防抽动保护：仅在主动点击交付那一帧防抖，交付后立即清空，绝不干扰后续自然滚动
       const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
-      if (savedScrollRef.current != null) {
-        const currentScroll = readPageScrollTop(scroller)
-        if (Math.abs(currentScroll - savedScrollRef.current) > 0.5) {
-          if (scroller) scroller.scrollTop = savedScrollRef.current
-          if (typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
-            window.scrollTo(window.scrollX || 0, savedScrollRef.current)
-          }
-        }
-      }
-
-      // 意图延迟交付：输入框物理上已经在底部 fixed 就位后，才执行草稿注入与聚焦
       if (pendingApplyRef.current) {
+        const targetScroll = savedScrollRef.current
         const applyFn = pendingApplyRef.current
         pendingApplyRef.current = null
-        applyFn()
+        savedScrollRef.current = null
 
-        // 注入后再次核验锁定，消除外部 setDraft/focus 触发的意外滚顶
-        if (savedScrollRef.current != null) {
-          const currentAfter = readPageScrollTop(scroller)
-          if (Math.abs(currentAfter - savedScrollRef.current) > 0.5) {
-            if (scroller) scroller.scrollTop = savedScrollRef.current
+        if (targetScroll != null) {
+          const currentScroll = readPageScrollTop(scroller)
+          if (Math.abs(currentScroll - targetScroll) > 0.5) {
+            if (scroller) scroller.scrollTop = targetScroll
             if (typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
-              window.scrollTo(window.scrollX || 0, savedScrollRef.current)
+              window.scrollTo(window.scrollX || 0, targetScroll)
             }
           }
         }
+
+        applyFn()
+
+        // 注入后再次核验锁定，消除外部 setDraft/focus 触发的意外抽动
+        if (targetScroll != null) {
+          const currentAfter = readPageScrollTop(scroller)
+          if (Math.abs(currentAfter - targetScroll) > 0.5) {
+            if (scroller) scroller.scrollTop = targetScroll
+            if (typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
+              window.scrollTo(window.scrollX || 0, targetScroll)
+            }
+          }
+        }
+      } else {
+        // 自然滚动触发的吸底，绝不篡改用户的滚动条位置！
+        savedScrollRef.current = null
       }
     } else {
       if (band) band.style.minHeight = ''
