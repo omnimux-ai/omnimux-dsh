@@ -3,7 +3,7 @@ import { STARTERS, STARTER_GROUPS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
-import { ExploreTemplatesSection } from './templates/ExploreTemplatesSection.jsx'
+import { ExploreTemplatesSection, attachCardToConversation } from './templates/ExploreTemplatesSection.jsx'
 import { LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
@@ -282,6 +282,14 @@ function BlankSessionGuide({
     const breakdown = payload.breakdown ? ` · 分镜拆解：${payload.breakdown}` : ''
     const prompt = `请基于灵感文件 #${id}（${title}${breakdown}），为我的产品对标还原其黄金节奏与分镜镜头。`
 
+    // 关键！将爆款视频封面、直链与结构化分镜作为附件加载至素材卡槽，为 Agent 注入完整上下文
+    attachCardToConversation({
+      lane: 'trending',
+      trending: payload,
+      raw: payload,
+      title,
+    })
+
     const docked = dock(payload, () => {
       applyDraftRef.current?.(prompt, {
         toastKey: null,
@@ -309,6 +317,10 @@ function BlankSessionGuide({
       ? 'Please explain the best way to use this skill.'
       : '为我解释下这个技能的最佳使用方式。'
 
+    // 关键！Skill 是专项能力角色，本身无预设主图。点击 Skill 时必须清空/移除素材卡槽，绝不残留旧图！
+    const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+    store?.clear?.(sessionId)
+
     const docked = dock(payload, () => {
       if (cleanSlug) {
         requestSkillAttach({
@@ -328,7 +340,6 @@ function BlankSessionGuide({
     if (!docked) {
       publishActiveSkill(null)
       applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
-      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
       store?.clear?.(sessionId)
     }
   }
