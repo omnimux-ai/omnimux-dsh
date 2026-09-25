@@ -32,6 +32,7 @@ import {
   registerEntitySubmenuRenderer,
   resetComposerCompactForTests,
   captureComposerSelection,
+  uninstallComposerCompactObserver,
   COMPOSER_COMPACT_CSS,
 } from '../composer-compact.js';
 
@@ -828,5 +829,209 @@ describe('OCR 审查缺陷闭环定向测试: 高危与中危防护', () => {
       assert.ok(cssFile.includes(sel), `styles.css 必须包含选择器: ${sel}`);
       assert.ok(COMPOSER_COMPACT_CSS.includes(sel), `composer-compact.js 必须包含选择器: ${sel}`);
     }
+  });
+});
+
+describe('PR #2649 第二轮审查缺陷闭环定点测试', () => {
+  it('【修复 1 精确等值判定】移除 includes()，严格全等匹配角色与产品一级分类入口', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" data-value="entity:category:character_fake" id="fake-char">
+              <span class="itemName">角色伪入口</span>
+            </div>
+            <div role="option" data-value="entity:category:product_preview" id="fake-prod">
+              <span class="itemName">产品伪入口</span>
+            </div>
+            <div role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}" id="real-char">
+              <span class="itemName">角色</span>
+            </div>
+            <div role="option" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}" id="real-prod">
+              <span class="itemName">产品</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+    const doc = dom.window.document;
+    placeMentionMenu(doc);
+
+    const fakeChar = doc.getElementById('fake-char')!;
+    const fakeProd = doc.getElementById('fake-prod')!;
+    const realChar = doc.getElementById('real-char')!;
+    const realProd = doc.getElementById('real-prod')!;
+
+    assert.equal(fakeChar.getAttribute('data-omnimux-entity-category'), null, '包含子串的伪分类不得匹配角色');
+    assert.equal(fakeProd.getAttribute('data-omnimux-entity-category'), null, '包含子串的伪分类不得匹配产品');
+    assert.equal(realChar.getAttribute('data-omnimux-entity-category'), 'character', '严格精确匹配角色分类入口');
+    assert.equal(realProd.getAttribute('data-omnimux-entity-category'), 'product', '严格精确匹配产品分类入口');
+  });
+
+  it('【修复 2 行复用缩略图清理】分类入口复用旧素材行时，彻底清理 data-omnimux-thumb 与 --omnimux-thumb', () => {
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true"></div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}" id="reused-char-row" data-omnimux-thumb="true" style="--omnimux-thumb: url('http://example.com/old-thumb.png');">
+              <span class="itemName">角色</span>
+            </div>
+            <div role="option" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}" id="reused-prod-row" data-omnimux-thumb="true" style="--omnimux-thumb: url('http://example.com/old-prod.png');">
+              <span class="itemName">产品</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+    const doc = dom.window.document;
+    placeMentionMenu(doc);
+
+    const reusedChar = doc.getElementById('reused-char-row')!;
+    const reusedProd = doc.getElementById('reused-prod-row')!;
+
+    assert.equal(reusedChar.hasAttribute('data-omnimux-thumb'), false, '复用为角色入口时必须移除 data-omnimux-thumb');
+    assert.equal(reusedChar.style.getPropertyValue('--omnimux-thumb'), '', '复用为角色入口时必须清除 --omnimux-thumb');
+    assert.equal(reusedProd.hasAttribute('data-omnimux-thumb'), false, '复用为产品入口时必须移除 data-omnimux-thumb');
+    assert.equal(reusedProd.style.getPropertyValue('--omnimux-thumb'), '', '复用为产品入口时必须清除 --omnimux-thumb');
+  });
+
+  it('【修复 3 资源泄漏修复】uninstallObserver 及无 trigger menu 分支必须显式调用 unmountEntitySubmenu', () => {
+    let unmountTriggered = 0;
+    registerEntitySubmenuRenderer((container, props) => {
+      if (props && props.isOpen === false) unmountTriggered++;
+    });
+
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div id="omnimux-entity-submenu-root">
+          <div class="omx-entity-mention-submenu"></div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+
+    try {
+      // 场景 1: placeMentionMenu 找不到 [data-trigger-menu]
+      placeMentionMenu(dom.window.document);
+      assert.ok(unmountTriggered >= 1, 'placeMentionMenu 未找到 trigger menu 时必须调用 unmountEntitySubmenu');
+
+      // 场景 2: uninstallComposerCompactObserver
+      unmountTriggered = 0;
+      uninstallComposerCompactObserver();
+      assert.ok(unmountTriggered >= 1, 'uninstallComposerCompactObserver 内部必须显式调用 unmountEntitySubmenu');
+    } finally {
+      registerEntitySubmenuRenderer(null);
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      dom.window.close();
+    }
+  });
+
+  it('【修复 4 素材行索引偏移校准】宿主 dsh-slash-option-material-N 索引与前置 categories 精准对齐', () => {
+    const mock = setupMockStore('default');
+    const store = mock.store;
+
+    // 向 default session store 添加 2 个素材
+    store.addAttachment('default', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'mat_0',
+      title: '素材0号',
+      extension: 'PNG',
+      relativePath: 'assets/mat0.png',
+      previewUrl: 'http://example.com/mat0.png',
+    });
+    store.addAttachment('default', {
+      sourcePlugin: 'omnimux-assets',
+      kind: 'asset',
+      entityId: 'mat_1',
+      title: '素材1号',
+      extension: 'JPG',
+      relativePath: 'assets/mat1.jpg',
+      previewUrl: 'http://example.com/mat1.jpg',
+    });
+
+    const dom = new JSDOM(`<!doctype html>
+      <body>
+        <div data-composer-card>
+          <div role="textbox" contenteditable="true">@</div>
+          <div data-trigger-menu data-source="material" class="mention-menu" role="menu">
+            <div role="option" id="dsh-slash-option-material-0" data-value="${ENTITY_CATEGORY_CHARACTER_VALUE}">
+              <span class="itemName">角色</span>
+            </div>
+            <div role="option" id="dsh-slash-option-material-1" data-value="${ENTITY_CATEGORY_PRODUCT_VALUE}">
+              <span class="itemName">产品</span>
+            </div>
+            <div role="option" id="dsh-slash-option-material-2">
+              <span class="itemName">素材0号</span>
+            </div>
+            <div role="option" id="dsh-slash-option-material-3">
+              <span class="itemName">素材1号</span>
+            </div>
+          </div>
+        </div>
+      </body>`);
+
+    const prevWin = globalThis.window;
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).window = dom.window;
+    (globalThis as any).document = dom.window.document;
+    (dom.window as any).__omnimuxAttachments = store;
+    (globalThis as any).__omnimuxAttachments = store;
+
+    try {
+      placeMentionMenu(dom.window.document);
+
+      const rowMat0 = dom.window.document.getElementById('dsh-slash-option-material-2')!;
+      const rowMat1 = dom.window.document.getElementById('dsh-slash-option-material-3')!;
+
+      // 验证索引对齐：material-2 正确对齐素材0号，material-3 正确对齐素材1号
+      assert.equal(rowMat0.getAttribute('data-omnimux-thumb'), 'true');
+      assert.equal(rowMat0.style.getPropertyValue('--omnimux-thumb'), 'url("http://example.com/mat0.png")');
+      assert.equal(rowMat1.getAttribute('data-omnimux-thumb'), 'true');
+      assert.equal(rowMat1.style.getPropertyValue('--omnimux-thumb'), 'url("http://example.com/mat1.jpg")');
+    } finally {
+      if (prevWin) (globalThis as any).window = prevWin;
+      else delete (globalThis as any).window;
+      if (prevDoc) (globalThis as any).document = prevDoc;
+      else delete (globalThis as any).document;
+      mock.restore();
+      dom.window.close();
+    }
+  });
+
+  it('【修复 5 角色列表性能截断与类型】raw.slice(0, 12) 截断、8 项配额告警契约与实体类型导出', () => {
+    const submenuSrc = readFileSync(join(__dirname, 'EntityMentionSubmenu.tsx'), 'utf-8');
+
+    // 1. 性能截断：保持与产品分支一致的 12 项限制
+    assert.ok(submenuSrc.includes('setItems(raw.slice(0, 12))'), '角色列表必须进行 raw.slice(0, 12) 性能截断');
+
+    // 2. 8 项配额告警契约
+    assert.ok(submenuSrc.includes("res?.reason === 'quota-exceeded'"), '必须显式校验 quota-exceeded 状态');
+    assert.ok(submenuSrc.includes('素材已达 8 项上限'), '配额超限时必须触发 素材已达 8 项上限 告警提示');
+
+    // 3. 实体类型定义导出
+    assert.ok(submenuSrc.includes('export interface ProductItem'), '必须导出 ProductItem 类型');
+    assert.ok(submenuSrc.includes('export interface CharacterItem'), '必须导出 CharacterItem 类型');
+    assert.ok(submenuSrc.includes('export type EntityItem = ProductItem | CharacterItem'), '必须导出 EntityItem 联合类型');
+  });
+
+  it('【修复 6 冗余命令收敛】insertFallbackEntityText 中 execCommand 严格收敛为单点调用', () => {
+    const chipSrc = readFileSync(join(__dirname, 'entityMentionChip.ts'), 'utf-8');
+
+    // 提取 insertFallbackEntityText 函数内容
+    const startIdx = chipSrc.indexOf('function insertFallbackEntityText(');
+    assert.ok(startIdx > 0, '必须包含 insertFallbackEntityText 函数');
+    const endIdx = chipSrc.indexOf('export function insertEntityMentionChip(', startIdx);
+    const funcBody = chipSrc.slice(startIdx, endIdx);
+
+    // 匹配 execCommand 调用频次
+    const execMatches = funcBody.match(/document\.execCommand\(/g) || [];
+    assert.equal(execMatches.length, 1, `insertFallbackEntityText 内的 execCommand 必须严格收敛为 1 次，当前实际为 ${execMatches.length} 次`);
   });
 });

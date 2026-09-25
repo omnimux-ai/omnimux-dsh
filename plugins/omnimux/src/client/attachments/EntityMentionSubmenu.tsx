@@ -14,6 +14,57 @@ export { resolveCharacterThumbUrl };
 
 export type EntityMentionType = 'character' | 'product';
 
+export interface ProductItem {
+  id: string;
+  name?: string;
+  title?: string;
+  price?: number | string;
+  sku?: string;
+  brand?: string;
+  description?: string;
+  selling_points?: string[];
+  features?: string[];
+  target_audience?: string;
+  cover?: {
+    id?: string;
+    real_path?: string;
+    [key: string]: unknown;
+  } | string;
+  previewUrl?: string;
+  updated_at?: string | number;
+  created_at?: string | number;
+  [key: string]: unknown;
+}
+
+export interface CharacterItem {
+  id: string;
+  name?: string;
+  title?: string;
+  type?: string;
+  description?: string;
+  cite?: string;
+  cover?: {
+    id?: string;
+    real_path?: string;
+    [key: string]: unknown;
+  } | string;
+  previewUrl?: string;
+  files?: Array<{
+    id?: string;
+    kind?: string;
+    type?: string;
+    mime?: string;
+    original_name?: string;
+    name?: string;
+    relative_path?: string;
+    real_path?: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
+export type EntityItem = ProductItem | CharacterItem;
+
 export interface EntityMentionSubmenuProps {
   isOpen: boolean;
   type: EntityMentionType;
@@ -43,9 +94,9 @@ const ProductFallbackIcon = () => (
 );
 
 interface EntityItemRowProps {
-  item: any;
+  item: EntityItem;
   type: EntityMentionType;
-  onSelect: (item: any) => void;
+  onSelect: (item: EntityItem) => void;
 }
 
 const EntityItemRow: React.FC<EntityItemRowProps> = ({ item, type, onSelect }) => {
@@ -104,7 +155,7 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
   onMouseLeave,
 }) => {
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<EntityItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 1. 数据获取
@@ -137,7 +188,7 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
         .then((data) => {
           if (!mounted) return;
           const raw = Array.isArray(data.assets) ? data.assets : [];
-          setItems(raw);
+          setItems(raw.slice(0, 12));
           setLoading(false);
         })
         .catch(() => {
@@ -154,7 +205,7 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
   }, [isOpen, type]);
 
   // 2. 双向联动核心逻辑
-  const handleSelectItem = useCallback((item: any) => {
+  const handleSelectItem = useCallback((item: EntityItem) => {
     const store = getGlobalAttachmentStore();
     const targetSessionId = sessionId || store.getActiveSessionId() || 'default';
 
@@ -215,6 +266,20 @@ export const EntityMentionSubmenu: React.FC<EntityMentionSubmenuProps> = ({
 
     // 2.1 添加到卡槽 Store（若为重复实体 duplicate，卡槽中已存在对应 attachment，同样视为有效并复用其 id）
     const res = store.addAttachment(targetSessionId, payload);
+    if (res?.reason === 'quota-exceeded') {
+      const msg = '素材已达 8 项上限';
+      const win = typeof window !== 'undefined' ? (window as any) : null;
+      if (typeof win?.__omnimuxToast === 'function') {
+        win.__omnimuxToast(msg);
+      } else if (typeof win?.__omnimuxNotify === 'function') {
+        win.__omnimuxNotify({ message: msg, type: 'warning' });
+      } else {
+        console.warn(`[omnimux] ${msg}`);
+      }
+      onClose();
+      return;
+    }
+
     const isAttachmentValid = Boolean(res?.attachment && (res.ok || res.reason === 'duplicate'));
     if (!isAttachmentValid || !res?.attachment) {
       console.warn('[omnimux] store.addAttachment failed, aborting entity mention chip insertion:', res);

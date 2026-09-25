@@ -306,61 +306,45 @@ function insertFallbackEntityText(editor: HTMLElement, name: string, savedRange?
     restoreSavedSelection(editor, savedRange);
 
     const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+    let targetRange: Range | null = null;
 
-    // 2. 如果当前有选区且在 editor 内，统一检索并剥除光标左侧触发的 @ 字符及其搜索词
+    // 2. 如果当前有选区且在 editor 内，统一检索并准备替换光标左侧触发的 @ 字符及其搜索词
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
       if (editor.contains(range.commonAncestorContainer)) {
         const atRange = findPrecedingAtRange(editor, range);
         if (atRange) {
+          targetRange = atRange;
           sel.removeAllRanges();
           sel.addRange(atRange);
-
-          if (typeof document.execCommand === 'function') {
-            try {
-              if (document.execCommand('insertText', false, `@${name} `)) {
-                return true;
-              }
-            } catch {
-              // fallback to range DOM replace
-            }
-          }
-
-          atRange.deleteContents();
-          const textToInsert = document.createTextNode(`@${name} `);
-          atRange.insertNode(textToInsert);
-          atRange.setStartAfter(textToInsert);
-          atRange.setEndAfter(textToInsert);
-          sel.removeAllRanges();
-          sel.addRange(atRange);
-          return true;
-        }
-
-        // 光标处未检索到前导 @，在当前光标处尝试直接插入
-        if (typeof document.execCommand === 'function') {
-          try {
-            if (document.execCommand('insertText', false, `@${name} `)) {
-              return true;
-            }
-          } catch {
-            // ignore
-          }
         }
       }
     }
 
-    // 3. 兜底尝试在当前选区/文档中执行 execCommand（仅成功返回 true 时才提前 return）
+    // 3. 统一尝试在当前选区执行一次 execCommand（单点调用，消除冗余重复）
     if (typeof document.execCommand === 'function') {
       try {
         if (document.execCommand('insertText', false, `@${name} `)) {
           return true;
         }
       } catch {
-        // ignore
+        // fallback to DOM replacement / insertion below
       }
     }
 
-    // 4. 后备插入短路修复：若 execCommand 明确返回 false 或发生异常，继续流转至下方的 DOM 节点后备插入逻辑
+    // 4. 后备 DOM 替换：若存在前导 @ 选区，通过 DOM 操作安全删除并插入文本
+    if (targetRange && sel) {
+      targetRange.deleteContents();
+      const textToInsert = document.createTextNode(`@${name} `);
+      targetRange.insertNode(textToInsert);
+      targetRange.setStartAfter(textToInsert);
+      targetRange.setEndAfter(textToInsert);
+      sel.removeAllRanges();
+      sel.addRange(targetRange);
+      return true;
+    }
+
+    // 5. 后备 DOM 插入：若无前导 @，在 savedRange 指定位置或末尾插入文本节点
     const fallbackNode = document.createTextNode(`@${name} `);
     if (savedRange && editor.contains(savedRange.commonAncestorContainer)) {
       try {

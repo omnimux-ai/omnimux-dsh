@@ -2,6 +2,16 @@
   "task": "mention-entity-submenus",
   "spec": "specs/mention-entity-submenus.spec.md",
   "verified": true,
+  "reviewRound2Fixed": {
+    "exactValueMatch": true,
+    "rowThumbCleanupOnReuse": true,
+    "unmountOnUninstallAndEmptyMenu": true,
+    "candidateIndexOffsetCalibrated": true,
+    "characterListTruncatedTo12": true,
+    "quotaExceededHandled": true,
+    "entityItemTypesExported": true,
+    "execCommandCallSinglePointConverged": true
+  },
   "metrics": {
     "categoryEntries": [
       { "name": "角色", "arrow": "›", "value": "entity:category:character" },
@@ -24,5 +34,5 @@
   "evidenceFiles": [
     "docs/evidence/mention-entity-submenus-verified.png"
   ],
-  "at": "2026-09-23T16:09:00.000Z"
+  "at": "2026-09-25T05:27:30.000Z"
 }

@@ -15,7 +15,7 @@
 
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { listSessionMaterials, materialCandidates, parseMaterialMention, ENTITY_CATEGORY_CHARACTER_VALUE, ENTITY_CATEGORY_PRODUCT_VALUE } from './attachments/materialMentionSource.ts'
+import { listSessionMaterials, materialCandidates, entityCategoryCandidates, parseMaterialMention, ENTITY_CATEGORY_CHARACTER_VALUE, ENTITY_CATEGORY_PRODUCT_VALUE } from './attachments/materialMentionSource.ts'
 
 let customEntitySubmenuRenderer = null
 
@@ -1201,7 +1201,10 @@ export function mountEntitySubmenu(options) {
 export function placeMentionMenu(doc = hostDocument()) {
   if (!doc?.querySelectorAll) return
   const menus = doc.querySelectorAll('[data-trigger-menu]')
-  if (!menus || menus.length === 0) return
+  if (!menus || menus.length === 0) {
+    unmountEntitySubmenu()
+    return
+  }
 
   const materials = listSessionMaterials('')
 
@@ -1269,7 +1272,9 @@ export function placeMentionMenu(doc = hostDocument()) {
       if (match) {
         const query = match[1] || ''
         try {
-          currentCandidates = materialCandidates('', query)
+          const catList = entityCategoryCandidates(query)
+          const matList = materialCandidates('', query)
+          currentCandidates = [...catList, ...matList]
         } catch { /* ignore */ }
       }
     }
@@ -1280,10 +1285,12 @@ export function placeMentionMenu(doc = hostDocument()) {
       const itemName = (row.querySelector?.('[class*="itemName"]')?.textContent || row.textContent || '').trim()
 
       // 识别「角色」与「产品」一级分类入口，绑定悬停二级浮层
-      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE || rawVal.includes(ENTITY_CATEGORY_CHARACTER_VALUE)
-      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE || rawVal.includes(ENTITY_CATEGORY_PRODUCT_VALUE)
+      const isCharEntry = rawVal === ENTITY_CATEGORY_CHARACTER_VALUE
+      const isProdEntry = rawVal === ENTITY_CATEGORY_PRODUCT_VALUE
 
       if (isCharEntry || isProdEntry) {
+        row.removeAttribute('data-omnimux-thumb')
+        row.style?.removeProperty?.('--omnimux-thumb')
         const entType = isCharEntry ? 'character' : 'product'
         row.setAttribute('data-omnimux-entity-category', entType)
 
@@ -1376,11 +1383,13 @@ export function placeMentionMenu(doc = hostDocument()) {
       }
 
       // D. 无过滤时的索引回退兜底（仅在行名称与全量项一致且无同名歧义时才允许采用，杜绝错配）
-      if (!matchedItem && !titleAmbiguous && idx >= 0 && materials[idx]) {
-        if (!itemName || materials[idx].title === itemName) {
-          const titleMatches = materialsByTitle.get(materials[idx].title)
+      const categoryOffset = menu.querySelectorAll?.('[data-omnimux-entity-category]')?.length || entityCategoryCandidates('').length
+      const materialIdx = idx - categoryOffset
+      if (!matchedItem && !titleAmbiguous && materialIdx >= 0 && materials[materialIdx]) {
+        if (!itemName || materials[materialIdx].title === itemName) {
+          const titleMatches = materialsByTitle.get(materials[materialIdx].title)
           if (!titleMatches || titleMatches.length === 1) {
-            matchedItem = materials[idx]
+            matchedItem = materials[materialIdx]
           }
         }
       }
@@ -1407,6 +1416,7 @@ export function uninstallComposerCompactObserver() {
   inlineDensityCards.clear()
   cancelScheduledComposerDensity()
   cancelScheduledPlaceMentionMenu()
+  unmountEntitySubmenu()
   if (composerResizeObserver) {
     try { composerResizeObserver.disconnect() } catch { /* ignore */ }
     composerResizeObserver = null
