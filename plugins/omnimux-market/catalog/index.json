@@ -142,7 +142,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC 告白"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic",
@@ -182,7 +183,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "电影级"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-showcase",
@@ -222,7 +224,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC展示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ecommerce",
@@ -262,7 +265,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "电子商务"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-static-image",
@@ -302,7 +306,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "静态图片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-carousel",
@@ -342,7 +347,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "轮播"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-course-to-short-video",
@@ -382,7 +388,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "课程转短视频"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-fit-check",
@@ -422,7 +429,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC穿搭检查"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-youth-sports-hype-reel",
@@ -461,7 +469,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "青少年体育宣传片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-script-to-video",
@@ -501,7 +510,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "脚本转视频"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-service",
@@ -540,7 +550,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "本地生活服务广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-unwrap",
@@ -579,7 +590,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 开箱"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-animated-storymode",
@@ -618,7 +630,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动画故事模式"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-walkthrough",
@@ -657,7 +670,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "UGC 演练演示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-games",
@@ -696,7 +710,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "手游与电竞广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ctv",
@@ -735,7 +750,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "联网电视大屏广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-street-interview",
@@ -774,7 +790,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "街头随机采访"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-podcast",
@@ -813,7 +830,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "播客精彩切片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-audio-generation",
@@ -852,7 +870,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "音频与音效生成"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-meme",
@@ -891,7 +910,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "网络模因与梗图广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-amazon-product-listing",
@@ -930,7 +950,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "亚马逊商详图设计"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ads-static-image-from-reference",
@@ -969,7 +990,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "参考图生成静态广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-dark-luxury-food-reveal",
@@ -1008,7 +1030,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "电影感暗调奢华美食"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-mobile-app-chaos-to-calm-confessional",
@@ -1047,7 +1070,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "从混乱到宁静App告白"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-home-services-multicity-arc",
@@ -1086,7 +1110,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "家政服务多城市电影叙事"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-curated-lifestyle-brand-video",
@@ -1125,7 +1150,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "格调生活品牌宣传片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-b2b-saas-dark-cinematic-exec-arc",
@@ -1164,7 +1190,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "B2B高管暗黑商业短片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-script-planner",
@@ -1204,7 +1231,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC 脚本全流程策划"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-motion-design-flow",
@@ -1243,7 +1271,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "动态图形运镜设计"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-animated-character-ad-plan",
@@ -1282,7 +1311,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "动画IP角色广告企划"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-anime-episodic-serial-hook",
@@ -1321,7 +1351,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "日漫连载黄金开头Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-dark-saas-ui-hero",
@@ -1360,7 +1391,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "暗色软件UI主图演示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-fashion-mood-video-skill",
@@ -1399,7 +1431,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "时尚情绪氛围短片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-meme-merch-multi-format-tiktok",
@@ -1438,7 +1471,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "梗图文创多格式短视频"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-inherited-burden-testimonial",
@@ -1477,7 +1511,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "痛点共鸣用户真实自述"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-video-recreate-skill",
@@ -1516,7 +1551,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "爆款视频智能复刻"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-animated-mascot-problem-solution",
@@ -1555,7 +1591,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "吉祥物问题解决型广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cartoon-mascot-narrator-shorts",
@@ -1594,7 +1631,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "卡通吉祥物旁白短视频"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-casino-streamer-split-screen-reaction",
@@ -1633,7 +1671,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "双屏互动实时反应广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-dual-persona-dark-luxury-ad",
@@ -1672,7 +1711,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "双重人格暗调轻奢大片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-editorial-luxury-reveal",
@@ -1711,7 +1751,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "杂志级奢品震撼登场"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-led-product-reveal",
@@ -1750,7 +1791,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "光影科技产品高光亮相"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-dtc-multi-format-ad-playbook",
@@ -1789,7 +1831,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "DTC出海多渠道投放宝典"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-avatar-broll-splice-ad",
@@ -1828,7 +1871,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "数字人与空镜拼接广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-curiosity-hook",
@@ -1867,7 +1911,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "好奇心驱动神级开场"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-voiceover-app-screen-showcase",
@@ -1906,7 +1951,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "画外音旁白App录屏展示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ad-layout-mirror-image",
@@ -1945,7 +1991,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "镜像构图广告排版"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-bridal-macro-editorial-hook",
@@ -1984,7 +2031,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "婚纱微距高级感Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-service-brand-reveal",
@@ -2023,7 +2071,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "高端服务品牌视觉大片"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-clinical-ugc-3d-tech-insert-arc",
@@ -2062,7 +2111,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "医疗科技3D透视叙事"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-comedy-character-bookend-saas-demo",
@@ -2101,7 +2151,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "喜剧角色首尾呼应演示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-editorial-apparel-static",
@@ -2140,7 +2191,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "高定时装静态画报"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-editorial-magazine-lifestyle-ad",
@@ -2179,7 +2231,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "生活方式杂志画报广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-luxury-product-reveal",
@@ -2218,7 +2271,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "奢侈品级高定登场"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-product-photoshoot",
@@ -2257,7 +2311,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "影棚级商业产品静物摄影"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-street-interview-blind-test-ad",
@@ -2296,7 +2351,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "街头盲测对比实测广告"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-mom-discovery-hook-kids-product",
@@ -2335,7 +2391,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "宝妈育儿好物发现Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-skeptic-convert",
@@ -2374,7 +2431,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "从质疑到真香心路历程"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-two-character-comedy-skit-hook",
@@ -2413,7 +2471,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "双人爆笑短剧冲突开场"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-vox-paper-cutout-explainer",
@@ -2452,7 +2511,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Vox拼贴剪纸深度解说"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-anthropomorphic-dark-comedy-telenovela",
@@ -2491,7 +2551,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Anthropomorphic Dark Comedy Telenovela"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-dual-persona-cultural-identity-arc",
@@ -2530,7 +2591,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Cinematic Dual Persona Cultural Identity Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-pharma-parody-arc",
@@ -2569,7 +2631,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Cinematic Pharma Parody Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-saas-character-arc",
@@ -2608,7 +2671,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Cinematic Saas Character Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-stat-shock-local-pride",
@@ -2647,7 +2711,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Cinematic Stat Shock Local Pride"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-thriller-book-multi-format-campaign",
@@ -2686,7 +2751,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Cinematic Thriller Book Multi Format Campaign"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-cinematic-warmtodark-safety-arc",
@@ -2725,7 +2791,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Cinematic Warmtodark Safety Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-client-process-guide-builder",
@@ -2764,7 +2831,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Client Process Guide Builder"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-color-spec-sheet",
@@ -2803,7 +2871,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Color Spec Sheet"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-dark-athletic-carousel",
@@ -2842,7 +2911,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Dark Athletic Carousel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-editorial-luxury-ig-carousel",
@@ -2881,7 +2951,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Editorial Luxury Ig Carousel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-educational-deficiency-carousel",
@@ -2920,7 +2991,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Educational Deficiency Carousel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-fashion-silent-multishot-showcase",
@@ -2959,7 +3031,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Fashion Silent Multishot Showcase"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-gulf-recruitment-cinematic-arc",
@@ -2998,7 +3071,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Gulf Recruitment Cinematic Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-guofeng-palace-drama-single-call",
@@ -3037,7 +3111,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Guofeng Palace Drama Single Call"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-hinglish-before-after-saas-hook",
@@ -3076,7 +3151,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Hinglish Before After Saas Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-home-service-lead-gen-static-meta",
@@ -3115,7 +3191,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Home Service Lead Gen Static Meta"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-illustrated-world-map-builder",
@@ -3154,7 +3231,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Illustrated World Map Builder"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-kannada-bus-poster-dark-gold",
@@ -3193,7 +3271,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Kannada Bus Poster Dark Gold"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-kit-produto-mecanismo-reveal-ptbr",
@@ -3232,7 +3311,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Kit Produto Mecanismo Reveal Ptbr"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-landing-page-dr-skill",
@@ -3271,7 +3351,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Landing Page Dr"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-latam-marketplace-mixed-ugc-skill",
@@ -3310,7 +3391,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Latam Marketplace Mixed UGC"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-listing-cinematic-silent-spec-reveal",
@@ -3349,7 +3431,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Listing Cinematic Silent Spec Reveal"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-local-service-static-batch-blitz",
@@ -3388,7 +3471,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Local Service Static Batch Blitz"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-luxury-brand-photo-reel",
@@ -3427,7 +3511,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Luxury Brand Photo Reel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-luxury-dark-carousel-5slide",
@@ -3466,7 +3551,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Luxury Dark Carousel 5slide"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-luxury-editorial-app-reveal",
@@ -3505,7 +3591,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Luxury Editorial App Reveal"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-mirror-tryon-haul-beat-cut",
@@ -3544,7 +3631,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Mirror Tryon Haul Beat Cut"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-motif-mirror-product-reel",
@@ -3583,7 +3671,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Motif Mirror Product Reel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-paperfold-diorama-journey-arc",
@@ -3622,7 +3711,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Paperfold Diorama Journey Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-pedestal-product-hero",
@@ -3661,7 +3751,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Pedestal Product Hero"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-phone-mockup-page",
@@ -3700,7 +3791,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Phone Mockup Page"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-pil-print-flyer-photo-grid",
@@ -3739,7 +3831,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Pil Print Flyer Photo Grid"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-playstore-ui-anchored-promo",
@@ -3778,7 +3871,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Playstore Ui Anchored Promo"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-pregnancy-subscription-warmblush-static-ad",
@@ -3817,7 +3911,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Pregnancy Subscription Warmblush Static Ad"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-real-estate-multiformat-static-ad",
@@ -3856,7 +3951,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Real Estate Multiformat Static Ad"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-refurb-tech-product-reel",
@@ -3895,7 +3991,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "Refurb Tech Product Reel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-regulated-claims-static-ad-matrix",
@@ -3934,7 +4031,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "Regulated Claims Static Ad Matrix"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-retail-multi-variant-carousel-sale",
@@ -3973,7 +4071,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "Retail Multi Variant Carousel Sale"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-revenue-transformation-arc",
@@ -4012,7 +4111,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "Revenue Transformation Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-spanish-ugc-community-spokesperson-hook",
@@ -4051,7 +4151,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "Spanish UGC Community Spokesperson Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-split-screen-dialogue",
@@ -4090,7 +4191,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "Split Screen Dialogue"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-two-mascot-comedy-commercial",
@@ -4129,7 +4231,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "Two Mascot Comedy Commercial"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-advisor-numbered-points-reel",
@@ -4168,7 +4271,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "UGC Advisor Numbered Points Reel"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-diaspora-direct-address-hook",
@@ -4207,7 +4311,8 @@
         "asset": "catalog/covers/skills/skill-card-4.webp",
         "alt": "UGC Diaspora Direct Address Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-female-creator-product-confession-arc",
@@ -4246,7 +4351,8 @@
         "asset": "catalog/covers/skills/skill-card-5.webp",
         "alt": "UGC Female Creator Product Confession Arc"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-homeowner-testimonial-problem-payoff",
@@ -4285,7 +4391,8 @@
         "asset": "catalog/covers/skills/skill-card-6.webp",
         "alt": "UGC Homeowner Testimonial Problem Payoff"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-personal-reveal-ad",
@@ -4324,7 +4431,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "UGC Personal Reveal Ad"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-ugc-street-interview-nightlife-hook",
@@ -4363,7 +4471,8 @@
         "asset": "catalog/covers/skills/skill-card-9.webp",
         "alt": "UGC Street Interview Nightlife Hook"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-video-adapt",
@@ -4402,7 +4511,8 @@
         "asset": "catalog/covers/skills/skill-card-10.webp",
         "alt": "多画幅跨平台自适应"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-white-bg-feature-callout-product-overview",
@@ -4441,7 +4551,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "纯白背景卖点标注展示"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-wise-elder-ugc-kids-product",
@@ -4480,7 +4591,8 @@
         "asset": "catalog/covers/skills/skill-card-3.webp",
         "alt": "Wise Elder UGC Kids Product"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-shoppable-carousel",
@@ -4520,7 +4632,8 @@
         "asset": "catalog/covers/skills/skill-card-7.webp",
         "alt": "商品轮播图"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "sk-omx-replicate-carousel",
@@ -4560,7 +4673,8 @@
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "图文复刻"
       },
-      "author": "Official"
+      "author": "Official",
+      "installType": "marketplace"
     },
     {
       "id": "exp-ad-creative-strategist",
@@ -4582,7 +4696,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ad-creative-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ad-tracking-expert",
@@ -4604,7 +4719,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ad-tracking-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-adort-design-expert",
@@ -4622,7 +4738,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/adort-design-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ai-content-creator-team",
@@ -4644,7 +4761,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ai-content-creator-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ai-humanizer",
@@ -4666,7 +4784,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ai-humanizer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ai-image-prompt-engineer",
@@ -4688,7 +4807,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ai-image-prompt-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ai-video-script",
@@ -4710,7 +4830,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ai-video-script",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-api-dev",
@@ -4732,7 +4853,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/api-dev",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-app-store-optimization-expert",
@@ -4754,7 +4876,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/app-store-optimization-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-backend-architect",
@@ -4776,7 +4899,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/backend-architect",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-baidu-seo-expert",
@@ -4798,7 +4922,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/baidu-seo-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-bilibili-content-strategist",
@@ -4820,7 +4945,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/bilibili-content-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-brand-guardian",
@@ -4842,7 +4968,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/brand-guardian",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-carousel-content-growth-expert",
@@ -4864,7 +4991,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/carousel-content-growth-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-chatcut-video-editor",
@@ -4886,7 +5014,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/chatcut-video-editor",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-china-ecommerce-operations-expert",
@@ -4908,7 +5037,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/china-ecommerce-operations-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-code",
@@ -4930,7 +5060,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/code",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-code-review-expert",
@@ -4952,7 +5083,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/code-review-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-content-creator",
@@ -4974,7 +5106,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/content-creator",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-content-distribution-team",
@@ -4996,7 +5129,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/content-distribution-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-content-monetization-team",
@@ -5018,7 +5152,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/content-monetization-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-content-writer",
@@ -5040,7 +5175,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/content-writer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-cross-border-ecommerce-expert",
@@ -5062,7 +5198,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/cross-border-ecommerce-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-design-engine",
@@ -5084,7 +5221,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/design-engine",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-design-md-architect",
@@ -5106,7 +5244,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/design-md-architect",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-design-prototype-expert",
@@ -5128,7 +5267,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/design-prototype-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-design-to-code",
@@ -5146,7 +5286,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/design-to-code",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-dev-ops-automation-engineer",
@@ -5168,7 +5309,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/dev-ops-automation-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-dockerfile-gen",
@@ -5186,7 +5328,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/dockerfile-gen",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-douyin-strategist",
@@ -5208,7 +5351,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/douyin-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-egypt-marketing",
@@ -5230,7 +5374,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/egypt-marketing",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-engineering-assurance-team",
@@ -5248,7 +5393,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/engineering-assurance-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-engineering-workflow-skills",
@@ -5270,7 +5416,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/engineering-workflow-skills",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-executing-marketing-campaigns",
@@ -5288,7 +5435,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/executing-marketing-campaigns",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-frontend",
@@ -5310,7 +5458,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/frontend",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-frontend-developer",
@@ -5332,7 +5481,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/frontend-developer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-frontend-slides",
@@ -5354,7 +5504,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/frontend-slides",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-geo-diagnosis-expert",
@@ -5376,7 +5527,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/geo-diagnosis-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-git-workflow-expert",
@@ -5398,7 +5550,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/git-workflow-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-growth-hacker",
@@ -5420,7 +5573,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/growth-hacker",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-gstack",
@@ -5438,7 +5592,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/gstack",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-hsk-devops-expert",
@@ -5460,7 +5615,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/hsk-devops-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-humanize-ppt-team",
@@ -5484,7 +5640,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/humanize-ppt-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-instagram-operations-expert",
@@ -5506,7 +5663,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/instagram-operations-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-jiayi-ads-analytics-expert",
@@ -5528,7 +5686,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/jiayi-ads-analytics-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-kdocs-ppt-creator",
@@ -5550,7 +5709,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/kdocs-ppt-creator",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-kidd-content-expert",
@@ -5572,7 +5732,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/kidd-content-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-kuaishou-strategist",
@@ -5594,7 +5755,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/kuaishou-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-linked-in-content-creator",
@@ -5616,7 +5778,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/linked-in-content-creator",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-livestream-ecommerce-coach",
@@ -5638,7 +5801,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/livestream-ecommerce-coach",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-long-manuscript-expert",
@@ -5660,7 +5824,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/long-manuscript-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-malaysia-marketing",
@@ -5682,7 +5847,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/malaysia-marketing",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-marketing-campaign-team",
@@ -5700,7 +5866,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/marketing-campaign-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-marketing-growth-team",
@@ -5722,7 +5889,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/marketing-growth-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-mcp-build-expert",
@@ -5744,7 +5912,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/mcp-build-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-mermaid-diagram-expert",
@@ -5766,7 +5935,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/mermaid-diagram-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-mobile-application-developer",
@@ -5788,7 +5958,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/mobile-application-developer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-modern-webapp",
@@ -5810,7 +5981,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/modern-webapp",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-mvp-dev-expert-team",
@@ -5832,7 +6004,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/mvp-dev-expert-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-paid-media-auditor",
@@ -5854,7 +6027,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/paid-media-auditor",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ppc-bidding-strategist",
@@ -5876,7 +6050,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ppc-bidding-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ppt-implement",
@@ -5894,7 +6069,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ppt-implement",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-product-management",
@@ -5912,7 +6088,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/product-management",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-product-strategy-team",
@@ -5930,7 +6107,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/product-strategy-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-programmatic-ad-buyer",
@@ -5952,7 +6130,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/programmatic-ad-buyer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-promo-creator-team",
@@ -5974,7 +6153,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/promo-creator-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-prompt-engineer",
@@ -5996,7 +6176,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/prompt-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-python-fullstack-engineer",
@@ -6018,7 +6199,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/python-fullstack-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-rapid-prototyping-engineer",
@@ -6040,7 +6222,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/rapid-prototyping-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-reddit-community-builder",
@@ -6062,7 +6245,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/reddit-community-builder",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-remotion-video-generator",
@@ -6084,7 +6268,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/remotion-video-generator",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-search-term-analyst",
@@ -6106,7 +6291,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/search-term-analyst",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-security-engineer",
@@ -6128,7 +6314,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/security-engineer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-senior-developer",
@@ -6150,7 +6337,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/senior-developer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-seo-content-team",
@@ -6172,7 +6360,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/seo-content-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-seo-expert",
@@ -6194,7 +6383,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/seo-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-short-video-editing-coach",
@@ -6216,7 +6406,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/short-video-editing-coach",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-smb-revenue",
@@ -6238,7 +6429,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/smb-revenue",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-social-ad-strategist",
@@ -6260,7 +6452,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/social-ad-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-social-content-team",
@@ -6282,7 +6475,8 @@
       "source": {
         "type": "bundled",
         "path": "catalog/experts/social-content-team"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-social-engagement-team",
@@ -6302,7 +6496,8 @@
       "source": {
         "type": "bundled",
         "path": "catalog/experts/social-engagement-team"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-social-media-strategist",
@@ -6324,7 +6519,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/social-media-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-software-architect",
@@ -6346,7 +6542,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/software-architect",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-software-company",
@@ -6364,7 +6561,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/software-company",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-superpowers-zh",
@@ -6386,7 +6584,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/superpowers-zh",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-tencentcloud-api",
@@ -6408,7 +6607,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/tencentcloud-api",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-tik-tok-strategist",
@@ -6430,7 +6630,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/tik-tok-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-topic-evaluator",
@@ -6452,7 +6653,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/topic-evaluator",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-trend-hunter",
@@ -6474,7 +6676,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/trend-hunter",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-twitter-operations-expert",
@@ -6496,7 +6699,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/twitter-operations-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-uae-marketing-advisor",
@@ -6518,7 +6722,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/uae-marketing-advisor",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-ui-designer",
@@ -6540,7 +6745,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/ui-designer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-user-experience-architect",
@@ -6562,7 +6768,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/user-experience-architect",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-user-experience-researcher",
@@ -6584,7 +6791,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/user-experience-researcher",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-vibeknow-design-video",
@@ -6606,7 +6814,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/vibeknow-design-video",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-vibeknow-handdraw",
@@ -6628,7 +6837,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/vibeknow-handdraw",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-vibeknow-ppt-explain",
@@ -6650,7 +6860,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/vibeknow-ppt-explain",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-video-dissection",
@@ -6674,7 +6885,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/video-dissection",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-video-gen-team",
@@ -6698,7 +6910,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/video-gen-team",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-viral-topic-master",
@@ -6716,7 +6929,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/viral-topic-master",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-visual-storytelling-expert",
@@ -6738,7 +6952,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/visual-storytelling-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-we-chat-mini-program-developer",
@@ -6760,7 +6975,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/we-chat-mini-program-developer",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-wechat-official-account-expert",
@@ -6782,7 +6998,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/wechat-official-account-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-weibo-strategist",
@@ -6804,7 +7021,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/weibo-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-xiaohongshu-operations-expert",
@@ -6826,7 +7044,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/xiaohongshu-operations-expert",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "exp-zhihu-strategist",
@@ -6848,7 +7067,8 @@
         "repo": "infometa/workbuddyskills",
         "path": "experts/zhihu-strategist",
         "ref": "main"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-gmail",
@@ -6868,7 +7088,8 @@
           "-y",
           "mcp-email"
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-infimind-ecommerce-image",
@@ -6888,7 +7109,8 @@
           "-y",
           "@infimind/image-mcp-cli@1.0.9"
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-jinshuju",
@@ -6904,7 +7126,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://jinshuju.net/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-kdocs",
@@ -6920,7 +7143,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://mcp-center.wps.cn/skill_hub/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-notion",
@@ -6936,7 +7160,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://mcp.notion.com/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-picset-commerce-images",
@@ -6952,7 +7177,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://picsetai.cn/functions/v1/agent-mcp-v1/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-qq-mail",
@@ -6968,7 +7194,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://api.mail.qq.com/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-tencent-docs",
@@ -6984,7 +7211,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://docs.qq.com/openapi/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-tencent-docs-oa",
@@ -7000,7 +7228,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://saas.docs.qq.com/api/v6/open/agent/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-tencent-qidian-cs",
@@ -7016,7 +7245,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://sse.qidian.qq.com/qidian-cs/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-tencent-survey",
@@ -7032,7 +7262,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://wj.qq.com/api/v2/mcp"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "cn-tencent-weiyun",
@@ -7048,7 +7279,8 @@
         "type": "mcp",
         "transport": "streamable-http",
         "url": "https://www.weiyun.com/api/v3/mcpserver"
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-social-content-team",
@@ -7138,7 +7370,8 @@
             "desc": "把故事板转成有边界的镜头任务与连续性检查"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-content-distribution-team",
@@ -7220,7 +7453,8 @@
             "desc": "发布排期、日历与批量发布编排"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-social-engagement-team",
@@ -7275,7 +7509,8 @@
             "desc": "守住授权意图，建议落在证据与平台规则上"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-ai-content-creator-team",
@@ -7342,7 +7577,8 @@
             "desc": "文生视频、图生视频与多模型选型"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-marketing-campaign-team",
@@ -7399,7 +7635,8 @@
             "desc": "技术 SEO 审计与关键词策略"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-content-monetization-team",
@@ -7456,7 +7693,8 @@
             "desc": "变现表现分析、结算对账与财务建模"
           }
         ]
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-amazon-skills",
@@ -7794,7 +8032,8 @@
         ],
         "rules": [],
         "agents": []
-      }
+      },
+      "installType": "marketplace"
     },
     {
       "id": "suite-tiktok-agent",
@@ -8090,7 +8329,8 @@
         ],
         "rules": [],
         "agents": []
-      }
+      },
+      "installType": "pre-installed"
     }
   ],
   "skillCategories": [

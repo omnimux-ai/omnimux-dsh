@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(omni-agent tiktok-agent marketing-agent marketing-growth-team drama-agent standard daily-work cordis)
+KEEP=(cordis omni-agent tiktok-agent instagram-agent x-agent youtube-agent viral-video-agent ad-creative-agent)
 
 if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
   echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
@@ -255,7 +255,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + tiktok-agent (TikTok运营专家团) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：cordis (创建Agent) + 7个社媒运营专属矩阵 (omni-agent, tiktok-agent, instagram-agent, x-agent, youtube-agent, viral-video-agent, ad-creative-agent)
 - id: agent-presets
   config:
     default: omni-agent
@@ -265,7 +265,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：omni-agent (社媒专家) + tiktok-agent (TikTok运营专家团) + marketing-agent + marketing-growth-team (增长专家团) + drama-agent + standard + daily-work + cordis
+# OmniMux 出厂会话预设：cordis (创建Agent) + 7个社媒运营专属矩阵 (omni-agent, tiktok-agent, instagram-agent, x-agent, youtube-agent, viral-video-agent, ad-creative-agent)
 - id: agent-presets
   config:
     default: omni-agent

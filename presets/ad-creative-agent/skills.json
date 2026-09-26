@@ -1,0 +1,68 @@
+{
+  "presetId": "ad-creative-agent",
+  "name": "出海广告创意投放操盘手",
+  "description": "出海广告创意与多语言投放专属技能集",
+  "categories": [
+    { "id": "广告格式与Hook", "name": "广告格式与Hook" },
+    { "id": "多语言出海广告", "name": "多语言出海广告" },
+    { "id": "卖点与落地页", "name": "卖点与落地页" },
+    { "id": "电商素材套图", "name": "电商素材套图" }
+  ],
+  "skills": [
+    {
+      "id": "sk-ad-format",
+      "slug": "ad-creative-strategist",
+      "skill": "ad-creative-strategist",
+      "name": "96款广告格式与Hook匹配",
+      "title": "96款广告格式与Hook匹配",
+      "category": "广告格式与Hook",
+      "description": "根据产品与受众特征，精准匹配业界 96 款广告格式与 75 款开场黄金 Hook，输出高转化创意脚本。",
+      "summary": "根据产品与受众特征，精准匹配业界 96 款广告格式与 75 款开场黄金 Hook，输出高转化创意脚本。",
+      "installed": true
+    },
+    {
+      "id": "sk-ad-kling-localizer",
+      "slug": "kling-global-ad-localizer",
+      "skill": "kling-global-ad-localizer",
+      "name": "出海多语言视频广告矩阵",
+      "title": "出海多语言视频广告矩阵",
+      "category": "多语言出海广告",
+      "description": "面向 TikTok、Meta、亚马逊出海电商，制作符合目标市场语境的多语言本土化视频广告矩阵。",
+      "summary": "面向 TikTok、Meta、亚马逊出海电商，制作符合目标市场语境的多语言本土化视频广告矩阵。",
+      "installed": true
+    },
+    {
+      "id": "sk-ad-selling-points",
+      "slug": "product-selling-points",
+      "skill": "product-selling-points",
+      "name": "商品卖点与痛点反推",
+      "title": "商品卖点与痛点反推",
+      "category": "卖点与落地页",
+      "description": "深度解析商品详情页与素材，提炼 3 大核心卖点、目标受众画像与差异化使用场景。",
+      "summary": "深度解析商品详情页与素材，提炼 3 大核心卖点、目标受众画像与差异化使用场景。",
+      "installed": true
+    },
+    {
+      "id": "sk-ad-ecommerce-copy",
+      "slug": "ecommerce-copywriter",
+      "skill": "ecommerce-copywriter",
+      "name": "电商高转化文案与落地页",
+      "title": "电商高转化文案与落地页",
+      "category": "卖点与落地页",
+      "description": "基于 AIDA 与 FAB 模型，撰写高点击广告标题、社媒 Caption 与落地页转化文案。",
+      "summary": "基于 AIDA 与 FAB 模型，撰写高点击广告标题、社媒 Caption 与落地页转化文案。",
+      "installed": true
+    },
+    {
+      "id": "sk-ad-ecommerce-image",
+      "slug": "ecommerce-image",
+      "skill": "ecommerce-image",
+      "name": "电商规范套图生成",
+      "title": "电商规范套图生成",
+      "category": "电商素材套图",
+      "description": "自动生成符合海外主流电商规范的高质感白底图、场景图、细节特写与卖点展示图。",
+      "summary": "自动生成符合海外主流电商规范的高质感白底图、场景图、细节特写与卖点展示图。",
+      "installed": true
+    }
+  ]
+}

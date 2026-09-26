@@ -1,0 +1,67 @@
+{
+  "presetId": "instagram-agent",
+  "name": "Instagram 视觉增长专家",
+  "description": "Instagram 视觉美学、图文轮播与 Reels 短片专属技能集",
+  "categories": [
+    { "id": "图文轮播", "name": "图文轮播" },
+    { "id": "视觉调性", "name": "视觉调性" },
+    { "id": "品牌美学", "name": "品牌美学" }
+  ],
+  "skills": [
+    {
+      "id": "sk-ig-carousel-growth",
+      "slug": "carousel-content-growth-expert",
+      "skill": "carousel-content-growth-expert",
+      "name": "高转化 4:5 轮播图设计与生成",
+      "title": "高转化 4:5 轮播图设计与生成",
+      "category": "图文轮播",
+      "description": "按 6 页高留存逻辑生成符合 Instagram 视觉美学的高转化 4:5 轮播图与配图文案。",
+      "summary": "按 6 页高留存逻辑生成符合 Instagram 视觉美学的高转化 4:5 轮播图与配图文案。",
+      "installed": true
+    },
+    {
+      "id": "sk-ig-editorial-carousel",
+      "slug": "editorial-luxury-ig-carousel",
+      "skill": "editorial-luxury-ig-carousel",
+      "name": "奢感高定图文轮播故事板",
+      "title": "奢感高定图文轮播故事板",
+      "category": "图文轮播",
+      "description": "针对时尚、轻奢与生活方式品牌，生成杂志级排版与高端质感的轮播故事板。",
+      "summary": "针对时尚、轻奢与生活方式品牌，生成杂志级排版与高端质感的轮播故事板。",
+      "installed": true
+    },
+    {
+      "id": "sk-ig-luxury-reel",
+      "slug": "luxury-brand-photo-reel",
+      "skill": "luxury-brand-photo-reel",
+      "name": "高端品牌视觉调性与 Reels 脚本",
+      "title": "高端品牌视觉调性与 Reels 脚本",
+      "category": "视觉调性",
+      "description": "构建高级沉浸感视觉氛围，输出契合品牌声线的 Instagram Reels 短片脚本与视听指导。",
+      "summary": "构建高级沉浸感视觉氛围，输出契合品牌声线的 Instagram Reels 短片脚本与视听指导。",
+      "installed": true
+    },
+    {
+      "id": "sk-ig-product-photoshoot",
+      "slug": "product-photoshoot",
+      "skill": "product-photoshoot",
+      "name": "商业美学静物摄影提示词",
+      "title": "商业美学静物摄影提示词",
+      "category": "品牌美学",
+      "description": "生成专业影棚级打光、材质与构图的商业静物摄影生图提示词。",
+      "summary": "生成专业影棚级打光、材质与构图的商业静物摄影生图提示词。",
+      "installed": true
+    },
+    {
+      "id": "sk-ig-brand-brief",
+      "slug": "brand-brief",
+      "skill": "brand-brief",
+      "name": "品牌视觉与声线资产卡",
+      "title": "品牌视觉与声线资产卡",
+      "category": "品牌美学",
+      "description": "沉淀品牌的受众画像、调性偏好与色调规范，确保每组 Instagram 输出高度一致。",
+      "summary": "沉淀品牌的受众画像、调性偏好与色调规范，确保每组 Instagram 输出高度一致。",
+      "installed": true
+    }
+  ]
+}
