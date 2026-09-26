@@ -46,12 +46,32 @@ export const DOCK_LEAVE_MAX = 20
  */
 export function getComposerScrollThresholds(root, scroller) {
   const card = root?.querySelector?.('[data-composer-card]') || null
-  const band = card?.parentElement || root || null
-  const cardHeight = card?.getBoundingClientRect?.().height || 0
-  const bandHeight = band?.getBoundingClientRect?.().height || 0
-  const styleMinHeight = parseFloat(band?.style?.minHeight || '0') || 0
+  if (!card) {
+    return { revealThreshold: READ_TOP_MAX, leaveThreshold: DOCK_LEAVE_MAX, measuredHeight: 0, offsetTop: 0 }
+  }
+  const band = card.parentElement || card
+  const cardHeight = card.getBoundingClientRect?.().height || 0
+  const bandHeight = band.getBoundingClientRect?.().height || 0
+  const styleMinHeight = parseFloat(band.style?.minHeight || '0') || 0
   const measuredHeight = Math.max(bandHeight, cardHeight, styleMinHeight) || 160
-  const offsetTop = Number(band?.offsetTop ?? 0)
+
+  let offsetTop = Number(band.offsetTop ?? 0)
+  const offsetParent = band.offsetParent
+  if (
+    scroller
+    && offsetParent
+    && scroller !== offsetParent
+    && typeof scroller.getBoundingClientRect === 'function'
+    && typeof band.getBoundingClientRect === 'function'
+  ) {
+    const bandRect = band.getBoundingClientRect()
+    const scrollerRect = scroller.getBoundingClientRect()
+    if (Number.isFinite(bandRect?.top) && Number.isFinite(scrollerRect?.top)) {
+      const relativeOffset = bandRect.top - scrollerRect.top + (Number(scroller.scrollTop) || 0)
+      if (Number.isFinite(relativeOffset)) offsetTop = Math.max(0, relativeOffset)
+    }
+  }
+
   const revealThreshold = Math.max(0, offsetTop + measuredHeight)
   const leaveThreshold = revealThreshold + 30
   return { revealThreshold, leaveThreshold, measuredHeight, offsetTop }
@@ -433,13 +453,18 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       frame = scheduleFrame(evaluate)
     }
 
+    const onResize = () => {
+      if (frame) return
+      frame = scheduleFrame(evaluate)
+    }
+
     const targets = [scroller, window].filter(Boolean)
     for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', onResize)
     return () => {
       if (frame) cancelFrame(frame)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', onResize)
     }
   }, [hostRef, dockedItem])
 
