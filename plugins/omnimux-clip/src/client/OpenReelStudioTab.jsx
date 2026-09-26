@@ -235,12 +235,32 @@ export function OpenReelStudioTab({ t: tProp, store, locale }) {
   }, [hasOpenProject, project])
 
   useEffect(() => {
-    const broadcastStatus = () => {
-      const isEditorReady = Boolean(hasOpenProject && project?.id)
+    let lastInsertTimestamp = 0
+    let lastInsertKey = ''
+
+    const broadcastStatus = (overrideStatus = null) => {
+      let storeState = null
+      try {
+        if (typeof useProjectStore?.getState === 'function') {
+          storeState = useProjectStore.getState()
+        }
+      } catch {}
+
+      const fallbackProject = storeState?.project !== undefined ? storeState.project : project
+      const fallbackHasOpen = storeState?.hasOpenProject !== undefined ? storeState.hasOpenProject : hasOpenProject
+
+      const currentProject = overrideStatus?.project !== undefined ? overrideStatus.project : fallbackProject
+      const currentHasOpen = overrideStatus?.hasOpenProject !== undefined ? overrideStatus.hasOpenProject : fallbackHasOpen
+
+      const isEditorReady = Boolean(
+        overrideStatus && typeof overrideStatus.isEditorReady === 'boolean'
+          ? overrideStatus.isEditorReady
+          : currentHasOpen && currentProject?.id
+      )
       const detail = {
         isEditorReady,
-        projectId: project?.id || null,
-        projectName: project?.name || null,
+        projectId: currentProject?.id || null,
+        projectName: currentProject?.name || null,
       }
       try {
         if (typeof window !== 'undefined') {
@@ -258,30 +278,44 @@ export function OpenReelStudioTab({ t: tProp, store, locale }) {
 
     const onNewProject = (event) => {
       setForceWelcome(false)
-      const createNewProject = useProjectStore.getState().createNewProject
+      const createNewProject = typeof useProjectStore?.getState === 'function'
+        ? useProjectStore.getState()?.createNewProject
+        : null
       if (typeof createNewProject === 'function') {
         const title = event?.detail?.title || t('tab.untitled')
         createNewProject(title, { width: 1280, height: 720, frameRate: 30 })
         resetOpenReelRouter({ route: 'editor', params: {} })
       }
+      broadcastStatus()
     }
 
     const onInsertClip = async (event) => {
       const detail = event?.detail || {}
       if (!detail.url && !detail.videoUrl) return
 
-      const store = useProjectStore.getState()
-      let currProject = store.project
+      const mediaUrl = detail.url || detail.videoUrl
+      const dedupeKey = `${mediaUrl}_${detail.duration || detail.durationSec || ''}_${detail.title || ''}`
+      const now = Date.now()
+      if (now - lastInsertTimestamp < 350 && lastInsertKey === dedupeKey) {
+        return
+      }
+      lastInsertTimestamp = now
+      lastInsertKey = dedupeKey
 
-      if (!store.hasOpenProject || !currProject?.id) {
-        store.createNewProject(t('tab.untitled'), { width: 1280, height: 720, frameRate: 30 })
-        resetOpenReelRouter({ route: 'editor', params: {} })
-        currProject = useProjectStore.getState().project
+      const store = typeof useProjectStore?.getState === 'function' ? useProjectStore.getState() : null
+      let currProject = store?.project || project
+      const currentHasOpen = store?.hasOpenProject !== undefined ? store.hasOpenProject : hasOpenProject
+
+      if (!currentHasOpen || !currProject?.id) {
+        if (typeof store?.createNewProject === 'function') {
+          store.createNewProject(t('tab.untitled'), { width: 1280, height: 720, frameRate: 30 })
+          resetOpenReelRouter({ route: 'editor', params: {} })
+          currProject = typeof useProjectStore?.getState === 'function' ? useProjectStore.getState()?.project : currProject
+        }
       }
 
       if (!currProject) return
 
-      const mediaUrl = detail.url || detail.videoUrl
       const durationSec = Number(detail.duration || detail.durationSec) || 10
       const mediaId = `media_gvids_${Date.now()}`
       const clipId = `clip_gvids_${Date.now()}`
@@ -344,10 +378,15 @@ export function OpenReelStudioTab({ t: tProp, store, locale }) {
         visible: true,
       }
 
+      if (!Array.isArray(v1Track.clips)) {
+        v1Track.clips = []
+      }
       v1Track.clips.push(newClip)
       updatedProject.modifiedAt = Date.now()
 
-      useProjectStore.setState({ project: updatedProject, hasOpenProject: true })
+      if (typeof useProjectStore?.setState === 'function') {
+        useProjectStore.setState({ project: updatedProject, hasOpenProject: true })
+      }
 
       try {
         useEngineStore.getState()?.seek?.(insertStartTime)

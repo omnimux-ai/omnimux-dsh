@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -364,6 +364,8 @@ function ensureStageStyles() {
  * 100% 逐字对照 Spec 第 3 节白名单与文案字典，严禁自由发挥与装饰 Emoji。
  */
 export function GoogleVidsStage(props) {
+  const activeTimersRef = useRef(new Map())
+
   useEffect(() => {
     ensureStageStyles()
   }, [])
@@ -417,6 +419,8 @@ export function GoogleVidsStage(props) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('omnimux-clip:editor-status', handleStatus)
       }
+      activeTimersRef.current.forEach((timer) => clearInterval(timer))
+      activeTimersRef.current.clear()
     }
   }, [])
 
@@ -476,6 +480,7 @@ export function GoogleVidsStage(props) {
       p += 20
       if (p >= 100) {
         clearInterval(timer)
+        activeTimersRef.current.delete(newTaskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === newTaskId
@@ -494,10 +499,15 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 400)
+    activeTimersRef.current.set(newTaskId, timer)
   }
 
   // 触发升频
   const handleUpscale = (taskId) => {
+    if (activeTimersRef.current.has(taskId)) {
+      clearInterval(activeTimersRef.current.get(taskId))
+      activeTimersRef.current.delete(taskId)
+    }
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId ? { ...t, status: 'generating', progress: 12, isUpscaling: true } : t
@@ -508,6 +518,7 @@ export function GoogleVidsStage(props) {
       p += 25
       if (p >= 100) {
         clearInterval(timer)
+        activeTimersRef.current.delete(taskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -521,6 +532,7 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 350)
+    activeTimersRef.current.set(taskId, timer)
   }
 
   // 插入到时间轴 (向右侧 Clip 追加)
@@ -551,6 +563,11 @@ export function GoogleVidsStage(props) {
 
   // 移除任务
   const handleRemoveTask = (taskId) => {
+    const timer = activeTimersRef.current.get(taskId)
+    if (timer) {
+      clearInterval(timer)
+      activeTimersRef.current.delete(taskId)
+    }
     setTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 

@@ -287,13 +287,12 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
         window.__omnimuxWorkbench.setFocus('split')
       }
     } catch {}
-    stageStore.open()
   }
   entry.addEventListener('click', handleClick)
 
   const syncActive = () => {
     const isStageActive = typeof document !== 'undefined' && document.documentElement?.dataset?.dshProductStage === 'omnimux-vids'
-    if (stageStore.getSnapshot() || isStageActive) {
+    if (isStageActive) {
       entry.dataset.active = 'true'
     } else {
       delete entry.dataset.active
