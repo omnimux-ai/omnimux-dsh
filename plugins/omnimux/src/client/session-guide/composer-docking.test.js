@@ -9,6 +9,9 @@ import {
   DOCK_BOTTOM,
   DOCK_MAX_WIDTH,
   readPageScrollTop,
+  getComposerScrollThresholds,
+  READ_TOP_MAX,
+  DOCK_LEAVE_MAX,
 } from './useComposerDocking.js'
 
 function withDom(html = '<div id="root"><div data-phase="conversation" data-omnimux-starter-host=""><div class="hero-band"><div data-composer-card="" style="height: 120px;"></div></div><div class="scrollBody" style="height: 600px; overflow-y: auto;"></div><div id="seat"></div></div></div>') {
@@ -472,4 +475,45 @@ test('useComposerDocking: 纯滚动模式（无激活 item）向下滚出视口�
     await act(async () => root.unmount())
     env.restore()
   }
+})
+
+test('getComposerScrollThresholds: 卡片缺失时返回基线，不测量宿主根节点', () => {
+  const dom = new JSDOM('<div id="root" style="height: 5000px;"><div class="no-card"></div></div>')
+  const root = dom.window.document.getElementById('root')
+  assert.deepEqual(getComposerScrollThresholds(root, null), {
+    revealThreshold: READ_TOP_MAX,
+    leaveThreshold: DOCK_LEAVE_MAX,
+    measuredHeight: 0,
+    offsetTop: 0,
+  })
+})
+
+test('getComposerScrollThresholds: 滚动容器不是定位父级时按视口矩形计算距离', () => {
+  const dom = new JSDOM(`
+    <div id="root">
+      <div id="scroller">
+        <div id="parent-container">
+          <div id="band">
+            <div data-composer-card=""></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `)
+  const root = dom.window.document.getElementById('root')
+  const scroller = dom.window.document.getElementById('scroller')
+  const band = dom.window.document.getElementById('band')
+  const card = dom.window.document.querySelector('[data-composer-card]')
+  const positionedParent = dom.window.document.getElementById('parent-container')
+  Object.defineProperty(band, 'offsetParent', { value: positionedParent })
+  scroller.scrollTop = 30
+  band.getBoundingClientRect = () => ({ top: 220, height: 120, width: 780, left: 10, bottom: 340, right: 790 })
+  card.getBoundingClientRect = () => ({ top: 220, height: 120, width: 780, left: 10, bottom: 340, right: 790 })
+  scroller.getBoundingClientRect = () => ({ top: 50, height: 600, width: 800, left: 0, bottom: 650, right: 800 })
+
+  const thresholds = getComposerScrollThresholds(root, scroller)
+  assert.equal(thresholds.offsetTop, 200)
+  assert.equal(thresholds.measuredHeight, 120)
+  assert.equal(thresholds.revealThreshold, 320)
+  assert.equal(thresholds.leaveThreshold, 350)
 })
