@@ -2,7 +2,7 @@ import { assertCapabilityEnabled, isModelEnabled, isToolEnabled } from '../gate/
 import { OmnimuxError } from '../media/errors.js'
 import { objectParams } from '../tools/schema.js'
 import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
-import { isAuthenticOfficialToken } from '../media/mount.js'
+import { isAuthenticOfficialToken, resolveSyncOfficialToken } from '../media/mount.js'
 import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
 import { enabledTextModels, CHAT_MODEL_IDS } from './catalog.js'
 import { executeOmnimuxText } from './execute.js'
@@ -29,7 +29,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
       const current = ctx.get?.('settings')?.get?.('omnimux')
       const channelIntent = resolveRequestChannelIntent(req)
 
-      const rawSystemToken = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+      const rawSystemToken = resolveSyncOfficialToken(process.env)
       const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
       const runtime = resolveRuntimeChoice(current)
 

@@ -165,4 +165,56 @@ describe('Text Channel & Local Agent Orthogonal Coexistence (Issue #2694)', () =
       else delete process.env.OMNIMUX_API_KEY
     }
   })
+
+  it('resolves official token from credentials store or fallback file when process.env is empty', async () => {
+    const origKey = process.env.OMNIMUX_API_KEY
+    try {
+      delete process.env.OMNIMUX_API_KEY
+      let agentCalled = false
+      let llmCalled = false
+
+      const agentSettings = {
+        runtimeMode: 'agent',
+        runtimeAgentId: 'codex',
+        runtimeAgentVerified: true,
+      }
+
+      const fakeCredentials = {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_API_KEY') return { value: 'sk-store-official-key-12345' }
+          return undefined
+        },
+      }
+
+      const fakeLlm = {
+        async * stream(options) {
+          llmCalled = true
+          assert.equal(options.model, 'gemini-3.8-flash')
+          assert.equal(options.provider, 'omnimux')
+          yield { type: 'text-delta', text: 'credentials fallback success' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        },
+      }
+
+      const res = await executeOmnimuxText({
+        prompt: 'test prompt without env key',
+        model: 'gemini-3.8-flash',
+        operation: 'vision_chat',
+        settings: { get: (k) => (k === 'omnimux' ? agentSettings : undefined) },
+        credentials: fakeCredentials,
+        llm: fakeLlm,
+        agentRun: async () => {
+          agentCalled = true
+          throw new Error('agent should not run')
+        },
+      })
+
+      assert.equal(agentCalled, false, 'must not be hijacked by agent')
+      assert.equal(llmCalled, true, 'must stream via official provider')
+      assert.equal(res.text, 'credentials fallback success')
+    } finally {
+      if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
+      else delete process.env.OMNIMUX_API_KEY
+    }
+  })
 })
