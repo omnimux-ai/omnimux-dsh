@@ -774,7 +774,7 @@ export function ProjectLibraryPage(props) {
           initialPath=""
           initialTitle=""
           onCancel={() => { if (!busy) setDialogOpen(false) }}
-          onSubmit={(payload) => { void handleDialogSubmit(payload) }}
+          onSubmit={handleDialogSubmit}
         />
       ) : null}
 

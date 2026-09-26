@@ -174,3 +174,71 @@ test('empty name disables submit; name-only submit omits projectRoot', async () 
     dom.window.close()
   }
 })
+
+test('existing project prompt switches submit button and carries confirmedExisting on second submit', async () => {
+  const submits = []
+  const { container, root, dom, act } = await mount({
+    initialPath: '/Users/x/Desktop/projects',
+    initialTitle: '产品运营',
+    onSubmit: async (payload) => {
+      submits.push({ ...payload })
+      if (!payload.confirmedExisting) {
+        return { ok: false, existing: true, error: 'projects.existingConfirm' }
+      }
+      return { ok: true }
+    },
+  })
+  try {
+    let primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.ok(primary)
+    assert.match(primary.textContent, /projects\.dialog\.submit/)
+
+    // 第一次提交
+    await act(async () => primary.click())
+    assert.equal(submits.length, 1)
+    assert.equal(Boolean(submits[0].confirmedExisting), false)
+
+    // 确认态生效：按钮文案自适应切换为 projects.existingConfirmSubmit
+    primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.match(primary.textContent, /projects\.existingConfirmSubmit/)
+
+    // 第二次提交
+    await act(async () => primary.click())
+    assert.equal(submits.length, 2)
+    assert.equal(submits[1].confirmedExisting, true)
+  } finally {
+    await act(async () => root.unmount())
+    dom.window.close()
+  }
+})
+
+test('error prop matching existingConfirm activates confirmedExisting state', async () => {
+  const submits = []
+  const { container, root, dom, act } = await mount({
+    initialPath: '/Users/x/Desktop/projects',
+    initialTitle: '产品运营',
+    error: 'projects.existingConfirm',
+    onSubmit: async (payload) => {
+      submits.push({ ...payload })
+      return { ok: true }
+    },
+  })
+  try {
+    const primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.ok(primary)
+    assert.match(primary.textContent, /projects\.existingConfirmSubmit/)
+
+    await act(async () => primary.click())
+    assert.equal(submits.length, 1)
+    assert.equal(submits[0].confirmedExisting, true)
+  } finally {
+    await act(async () => root.unmount())
+    dom.window.close()
+  }
+})

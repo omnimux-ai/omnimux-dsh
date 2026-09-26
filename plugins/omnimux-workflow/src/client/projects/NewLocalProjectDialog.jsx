@@ -82,6 +82,13 @@ export function NewLocalProjectDialog({
     nameRef.current?.focus()
   }, [])
 
+  useEffect(() => {
+    const confirmMessage = t('projects.existingConfirm')
+    if (error && (error === confirmMessage || (typeof confirmMessage === 'string' && confirmMessage !== '' && error.includes(confirmMessage)))) {
+      setConfirmedExisting(true)
+    }
+  }, [error, t])
+
   const trimmed = name.trim()
   const trimmedPath = path.trim()
   const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !picking
@@ -190,7 +197,9 @@ export function NewLocalProjectDialog({
             {t('projects.dialog.cancel')}
           </Button>
           <Button variant="primary" disabled={!canSubmit} loading={busy} onClick={submit}>
-            {t('projects.dialog.submit')}
+            {confirmedExisting
+              ? (t('projects.existingConfirmSubmit') || '新建创作页')
+              : (t('projects.dialog.submit') || '创建项目')}
           </Button>
         </div>
       )}
