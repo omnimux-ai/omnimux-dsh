@@ -461,7 +461,7 @@ build_one() {
   fi
 
   case "$name" in
-    omnimux|omnimux-accounts|omnimux-assets|omnimux-products|omnimux-inspiration|omnimux-clip|omnimux-analytics|omnimux-publish)
+    omnimux|omnimux-accounts|omnimux-assets|omnimux-products|omnimux-inspiration|omnimux-clip|omnimux-analytics|omnimux-publish|omnimux-video)
       echo "→ build $name (client)"
       (cd "$dir" && node scripts/build-client.mjs)
       ;;
@@ -476,9 +476,6 @@ build_one() {
     omnimux-market)
       echo "→ build $name (tsc + concat-client)"
       (cd "$dir" && npm run build --silent)
-      ;;
-    omnimux-video|omnimux-analytics)
-      echo "· $name 无构建产物（源码直读），跳过 build"
       ;;
     *)
       if [ -f "$dir/scripts/build-host.mjs" ] && [ -f "$dir/scripts/build-client.mjs" ]; then
