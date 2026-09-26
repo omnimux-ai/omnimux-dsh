@@ -955,20 +955,20 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         )
         assert.equal(executed, false)
 
-        // 3. 在 Agent 模式下即使传了 @official 渠道，服务端权威状态不是 official 也坚决阻止越权绕过
-        assert.throws(
-          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
+        // 3. 正交共存保证：在 Agent 模式下，只要请求的是官方专线且具备官方 Token，直接放行执行
+        executed = false
+        assert.doesNotThrow(() => {
+          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' })
+        })
+        assert.equal(executed, true)
 
-        // 4. 在 Key 模式下即使传了 @official 渠道，服务端权威状态不是 official 也坚决阻止越权绕过
+        // 4. 在 Key 模式下传 @official 渠道，具备官方 Token 时同样安全放行
         currentSettings = { runtimeMode: 'key', runtimeKeyVerified: false }
-        assert.throws(
-          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
+        executed = false
+        assert.doesNotThrow(() => {
+          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' })
+        })
+        assert.equal(executed, true)
 
         // 5. 切换为官方模式且存在官方 Token 时，常规官方请求（未显式指定渠道组）与显式官方渠道均正确识别为默认官方渠道并安全放行
         currentSettings = { runtimeMode: 'official' }
@@ -1011,25 +1011,25 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         assert.equal(executed, false)
 
         // 8. 官方凭据判定移至安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
-        // (a) 在未开启官方兜底时，即使系统存在官方 Token，官方专线请求也坚决拦截
+        // (a) 在未显式指定渠道且未开启官方兜底时，即使系统存在官方 Token，普通请求也坚决拦截
         currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: false }
         executed = false
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
+            model: 'seedance-2-0',
           }),
           /尚未配置图片、视频和音频/,
         )
         assert.equal(executed, false)
 
-        // (b) 开启官方兜底且系统安全上下文存在有效 Token 时，无需也不信任调用方 req.env，官方专线安全放行
+        // (b) 显式选择官方专线渠道时，正交共存直接放行；或者开启官方兜底时，普通请求安全放行
         currentSettings = { runtimeMode: 'agent', runtimeAgentId: 'local-agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: true }
         executed = false
         assert.doesNotThrow(() => {
           mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
+            model: 'seedance-2-0',
           })
         })
         assert.equal(executed, true)
@@ -1489,7 +1489,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
       assert.equal(isExternalMediaProvider('omnimux'), false)
     })
 
-    it('strictly prevents cross-model channel appropriation and unauthorized fallback bypass', () => {
+    it('strictly prevents cross-model channel appropriation and allows official line bypass in agent mode', async () => {
       const origKey = process.env.OMNIMUX_API_KEY
       try {
         process.env.OMNIMUX_API_KEY = 'sk-authoritative-server-token'
@@ -1497,9 +1497,10 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
           runtimeMode: 'agent',
           runtimeAgentVerified: false,
           runtimeKeyVerified: false,
-          allowOfficialMediaFallback: true,
+          allowOfficialMediaFallback: false,
         }
         let mountedApi = null
+        let capturedExecutionReq = null
         const fakeCtx = {
           get: (key) => (key === 'settings' ? { get: () => currentSettings } : undefined),
           tools: { register: () => {} },
@@ -1509,21 +1510,23 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         }
         mountMedia(fakeCtx, {
           kind: 'image',
-          execute: async () => ({ ok: true }),
+          execute: async (req) => {
+            capturedExecutionReq = req
+            return { ok: true }
+          },
           media: {},
           gate: { capabilities: { media: true } },
           jsonOut: {},
         })
         assert.ok(mountedApi)
 
-        // 1. 未验证就绪环境即使开启 allowOfficialMediaFallback 也坚决拦截越权放行
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
+        // 1. 正交共存保证：在 agent 运行模式下，只要目标是官方专线且具备官方 Token，直接放行执行
+        await mountedApi.execute({
+          dest: '/tmp/out.png',
+          model: 'seedance-2-0@official',
+        })
+        assert.ok(capturedExecutionReq)
+        assert.equal(capturedExecutionReq.env?.OMNIMUX_API_KEY, 'sk-authoritative-server-token')
 
         // 2. 跨模型非法冒领拦截：请求其它模型的专用渠道（如 gpt-image-2.5 冒领 seedance-2-0-task-pro）
         currentSettings = {
@@ -1671,16 +1674,16 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         })
         assert.ok(mountedApi)
 
-        // 空 agentId 必须被拦截，不可通过 allowOfficialMediaFallback 越权放行
+        // 空 agentId 必须被拦截，不可通过 allowOfficialMediaFallback 越权放行未指定渠道的普通请求
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
+            model: 'seedance-2-0',
           }),
           /尚未配置图片、视频和音频/,
         )
 
-        // runtimeAgentId 缺失时也坚决拦截
+        // runtimeAgentId 缺失时也坚决拦截未指定渠道的普通请求
         currentSettings = {
           runtimeMode: 'agent',
           runtimeAgentVerified: true,
@@ -1690,7 +1693,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
+            model: 'seedance-2-0',
           }),
           /尚未配置图片、视频和音频/,
         )
