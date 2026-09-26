@@ -49,6 +49,9 @@ export function registerDirectMediaRoutes(webServer, deps) {
       }
 
       const kind = body.kind === 'video' ? 'video' : 'image'
+      const operation = typeof body.operation === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(body.operation)
+        ? body.operation
+        : undefined
       const executor = kind === 'video' ? executeVideo : executeImage
       if (typeof executor !== 'function') {
         sendJson(res, 503, { ok: false, error: `${kind}-generator-unavailable` })
@@ -91,6 +94,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           prompt,
           dest,
           model: body.model,
+          operation,
           aspectRatio: body.aspectRatio,
           resolution: body.resolution,
           duration: body.duration,

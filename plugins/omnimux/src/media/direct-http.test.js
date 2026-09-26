@@ -90,6 +90,27 @@ describe('Direct Media Generate HTTP Route', () => {
     assert.equal(calls[0].req.aspectRatio, '16:9')
   })
 
+  it('forwards a known operation id and drops a malformed one', async () => {
+    const { route, calls } = fixture()
+    const ok = response()
+    await route.handler(post({
+      kind: 'image',
+      prompt: 'edit this',
+      model: 'gpt-image-2.5',
+      operation: 'image_edit',
+    }), ok)
+    assert.equal(calls[0].req.operation, 'image_edit')
+
+    const bad = response()
+    await route.handler(post({
+      kind: 'image',
+      prompt: 'edit this',
+      operation: 'Image Edit!',
+    }), bad)
+    assert.equal(bad.status, 200)
+    assert.equal(calls[1].req.operation, undefined)
+  })
+
   it('successfully dispatches video generation and returns result', async () => {
     const { route, calls } = fixture()
     const req = post({
