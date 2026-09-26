@@ -9,6 +9,19 @@ import { MasonryGrid } from './masonry-grid.jsx'
 import { coverRatioCache } from './ratio-cache.js'
 import { formatTimeAgo } from './format.js'
 
+const ASSET_ASPECT_RATIO_MAP = {
+  scene: '16:9',
+  background: '16:9',
+  prop: '4:3',
+  style: '4:3',
+  knowledge: '4:3',
+  custom: '4:3',
+}
+
+function resolveAssetAspectRatio(type) {
+  return ASSET_ASPECT_RATIO_MAP[type]
+}
+
 /**
  * @param {{
  *   asset: any,
@@ -166,13 +179,16 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
   )
 
   const timeText = formatTimeAgo(asset.created_at || asset.createdAt || asset.updated_at)
+  const safeType = /^[a-zA-Z0-9_-]+$/.test(asset?.type ?? '') ? asset.type : null
+  const typeClass = safeType ? `omnimux-assets-card--${safeType}` : 'omnimux-assets-card--custom'
 
   return (
     <MediaCard
-      className="omnimux-assets-focusable omnimux-assets-card"
+      className={`omnimux-assets-focusable omnimux-assets-card ${typeClass}`.trim()}
+      data-type={safeType ?? undefined}
       selected={selected}
       onClick={handleTriggerAction}
-      aspectRatio="3:4"
+      {...(resolveAssetAspectRatio(safeType) ? { aspectRatio: resolveAssetAspectRatio(safeType) } : {})}
       coverNode={coverNode}
       title={asset.name}
       subtitle={timeText || '—'}
