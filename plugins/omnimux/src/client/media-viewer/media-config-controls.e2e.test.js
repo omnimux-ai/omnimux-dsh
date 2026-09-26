@@ -81,5 +81,22 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
 
     // 比例线框外层 20px 居中盒
     assert.match(jsxContent, /className="omx-ratio-wire-box"/, '比例线框外层必须包裹 omx-ratio-wire-box');
+
+    // 图像张数标题规范与紧凑无空格书写
+    assert.match(jsxContent, /<div className="omx-param-title">张数<\/div>/, '图像参数标题必须为张数');
+    assert.doesNotMatch(jsxContent, /<div className="omx-param-title">生成张数<\/div>/, '不得使用旧词生成张数');
+    assert.match(jsxContent, /\{cnt\}张/, '张数选项文字必须紧凑无空格（{cnt}张）');
+    assert.doesNotMatch(jsxContent, /\{cnt\}\s+张/, '张数选项文字严禁带空格（{cnt} 张）');
+  });
+
+  it('Step 6: 图像参数子列弹性伸缩与药丸防折行规范', () => {
+    // 子列等分且允许压缩
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-param-subcol\s*\{[^}]*flex:\s*1;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-param-subcol\s*\{[^}]*min-width:\s*0;/);
+
+    // 药丸严格防折行
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-mode-pill\s*\{[^}]*white-space:\s*nowrap;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-mode-pill\s*\{[^}]*word-break:\s*keep-all;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-mode-pill\s*\{[^}]*min-width:\s*0;/);
   });
 });

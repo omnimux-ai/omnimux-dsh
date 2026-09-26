@@ -387,7 +387,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                 </div>
 
                 <div className="omx-param-subcol omx-subcol-sound">
-                  <div className="omx-param-title">生成张数</div>
+                  <div className="omx-param-title">张数</div>
                   <div className="omx-mode-track">
                     {['1', '2', '4'].map((cnt) => (
                       <button // exempt-ui01: 生成张数按钮
@@ -396,7 +396,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                         className={`omx-mode-pill ${imageBatch === cnt ? 'is-active' : ''}`}
                         onClick={() => setImageBatch(cnt)}
                       >
-                        {cnt} 张
+                        {cnt}张
                       </button>
                     ))}
                   </div>

@@ -1726,6 +1726,7 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-mode-pill {
   flex: 1;
+  min-width: 0;
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
@@ -1738,6 +1739,7 @@ export const MEDIA_VIEWER_CSS = `
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+  word-break: keep-all;
   transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
   cursor: pointer;
@@ -1851,6 +1853,8 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-param-subcol {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
