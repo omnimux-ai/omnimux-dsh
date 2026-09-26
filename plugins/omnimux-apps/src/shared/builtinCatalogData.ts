@@ -44,31 +44,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -113,14 +88,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -183,31 +150,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -252,14 +194,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -322,31 +256,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -391,14 +300,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -461,31 +362,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -530,14 +406,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -600,31 +468,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "Multiple angle and scene photos of clothing models. Upload your product to experience it."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -669,14 +512,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "Multiple angle and scene photos of clothing models. Upload your product to experience it."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -739,31 +574,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -808,14 +618,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -878,31 +680,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "widget": "textarea",
           "default": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -947,14 +724,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -1104,31 +873,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
             "TikTok"
           ]
         },
-        "voice": {
-          "type": "string",
-          "title": "解说音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "成片比例",
@@ -1203,14 +947,6 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "defaultValue": [
           "TikTok"
         ]
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -1599,29 +1335,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-custom-brief"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 420
-        },
-        "data": {
-          "type": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "materialType": "audio",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -1652,7 +1365,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-23T03:00:00.000Z",
       "updatedAt": "2026-09-23T03:00:00.000Z",
-      "nodeCount": 5,
+      "nodeCount": 4,
       "sourceWorkflowId": "app-builtin-product-video"
     }
   },
@@ -1929,29 +1642,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -1982,7 +1672,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.617Z",
       "updatedAt": "2026-09-25T03:53:25.617Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "12dca4ee-0535-402c-9f57-f36fd4819157"
     }
   },
@@ -2062,29 +1752,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2115,7 +1782,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.607Z",
       "updatedAt": "2026-09-25T03:53:25.608Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "f23489b3-2ea5-41bb-9c2c-91d35d71e236"
     }
   },
@@ -2195,29 +1862,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2248,7 +1892,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.618Z",
       "updatedAt": "2026-09-25T03:53:25.618Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "9376553d-a10f-444a-99b3-c876de1f6481"
     }
   },
@@ -2328,29 +1972,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2381,7 +2002,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.609Z",
       "updatedAt": "2026-09-25T03:53:25.609Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "dc1c50e1-f8cd-4120-a772-5a34730aeea4"
     }
   },
@@ -2461,29 +2082,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2514,7 +2112,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.621Z",
       "updatedAt": "2026-09-25T03:53:25.621Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "73b5fb39-bcb1-48bc-a382-6de753fcb740"
     }
   },
@@ -2594,29 +2192,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2647,7 +2222,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.619Z",
       "updatedAt": "2026-09-25T03:53:25.619Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "741d9f20-5d37-43b7-926b-935ebc9668db"
     }
   },
@@ -2727,29 +2302,6 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -2780,7 +2332,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
     "metadata": {
       "createdAt": "2026-09-25T03:53:25.613Z",
       "updatedAt": "2026-09-25T03:53:25.613Z",
-      "nodeCount": 4,
+      "nodeCount": 3,
       "sourceWorkflowId": "decc9021-4f2a-4d0c-8493-df845635716d"
     }
   }

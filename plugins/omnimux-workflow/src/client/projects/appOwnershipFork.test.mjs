@@ -89,7 +89,8 @@ describe('appOwnershipFork: 应用所有权与副本创建流程', () => {
         const snapshot = getPresetWorkflowSnapshot(id)
         assert.ok(snapshot, `预置工作流 ${id} 必须存在`)
         if (id.startsWith('app-creatify-')) {
-          assert.ok(Array.isArray(snapshot.nodes) && snapshot.nodes.length >= 4, `${id} 节点数应大于等于4`)
+          assert.ok(Array.isArray(snapshot.nodes) && snapshot.nodes.length >= 3, `${id} 节点数应大于等于3`)
+          assert.equal(snapshot.nodes.find(n => n.id === 'node-slot-voice-tts'), undefined, `${id} 预置快照中不得残留孤立声音槽节点`)
           assert.ok(Array.isArray(snapshot.edges) && snapshot.edges.length >= 2, `${id} 连线数应大于等于2`)
         } else {
           assert.ok(Array.isArray(snapshot.nodes) && snapshot.nodes.length >= 2, `${id} 节点数应大于等于2`)

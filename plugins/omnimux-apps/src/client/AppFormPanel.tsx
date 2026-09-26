@@ -9,7 +9,7 @@
  * Authority: docs/contracts/ai-app-ui-spec.md & docs/contracts/workflow-app-boundary.md
  */
 
-import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { memo, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Sparkles,
   ChevronDown,
@@ -32,6 +32,7 @@ import type {
   LibraryKind,
 } from '../shared/manifest.ts';
 import { validateFormData } from '../shared/schemaValidator.ts';
+import { filterReachableFormFields } from '../shared/reachabilityFilter.ts';
 import {
   LIBRARY_META,
   displayValueOf,
@@ -257,14 +258,14 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Run strict schema validation
-    const valResult = validateFormData(manifest.formSchema, values);
+    // Run strict schema validation against effective exposed schema
+    const valResult = validateFormData(effectiveFormSchema, values);
     if (!valResult.valid) {
       const fieldErrors: Record<string, string> = {};
       for (const err of valResult.errors) {
         // Match error to field if possible
         const match = err.match(/"([^"]+)"/);
-        if (match && match[1] && manifest.formSchema.properties[match[1]]) {
+        if (match && match[1] && effectiveFormSchema.properties[match[1]]) {
           fieldErrors[match[1]] = err;
         } else {
           fieldErrors['_global'] = err;
@@ -368,7 +369,26 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
   };
 
   // Only exposed candidates become form fields; author-fixed ones are summarised below.
-  const fieldEntries = Object.entries(manifest.formSchema.properties) as [string, FormPropertySchema][];
+  // 运行时拓扑防御：排除映射至孤立死节点的字段
+  const fieldEntries = useMemo(() => filterReachableFormFields(manifest), [manifest]);
+
+  const effectiveFormSchema = useMemo(() => {
+    const reachableKeys = new Set(fieldEntries.map(([k]) => k));
+    const allProps = manifest.formSchema?.properties || {};
+    if (reachableKeys.size === Object.keys(allProps).length) {
+      return manifest.formSchema;
+    }
+    const filteredProps: Record<string, FormPropertySchema> = {};
+    for (const [k, v] of fieldEntries) {
+      filteredProps[k] = v;
+    }
+    return {
+      ...manifest.formSchema,
+      properties: filteredProps,
+      required: (manifest.formSchema.required || []).filter((k) => reachableKeys.has(k)),
+    };
+  }, [fieldEntries, manifest.formSchema]);
+
   const fixedFields = manifest.fixedFields || [];
 
   return (

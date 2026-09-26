@@ -94,29 +94,6 @@ export const PRESET_WORKFLOW_MAP = {
             "prompt": "node-slot-custom-brief"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 420
-        },
-        "data": {
-          "type": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "materialType": "audio",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -385,29 +362,6 @@ export const PRESET_WORKFLOW_MAP = {
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -503,29 +457,6 @@ export const PRESET_WORKFLOW_MAP = {
           "upstreamBindings": {
             "image": "node-slot-product-image",
             "prompt": "node-slot-copywriting"
-          }
-        }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
           }
         }
       }
@@ -625,29 +556,6 @@ export const PRESET_WORKFLOW_MAP = {
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -743,29 +651,6 @@ export const PRESET_WORKFLOW_MAP = {
           "upstreamBindings": {
             "image": "node-slot-product-image",
             "prompt": "node-slot-copywriting"
-          }
-        }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
           }
         }
       }
@@ -865,29 +750,6 @@ export const PRESET_WORKFLOW_MAP = {
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -985,29 +847,6 @@ export const PRESET_WORKFLOW_MAP = {
             "prompt": "node-slot-copywriting"
           }
         }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
-          }
-        }
       }
     ],
     "edges": [
@@ -1103,29 +942,6 @@ export const PRESET_WORKFLOW_MAP = {
           "upstreamBindings": {
             "image": "node-slot-product-image",
             "prompt": "node-slot-copywriting"
-          }
-        }
-      },
-      {
-        "id": "node-slot-voice-tts",
-        "type": "material",
-        "position": {
-          "x": 450,
-          "y": 450
-        },
-        "data": {
-          "type": "audio",
-          "materialType": "audio",
-          "tool": "omnimux_audio_submit",
-          "label": "旁白解说与音色 (Voice TTS)",
-          "slotRole": "voice_tts",
-          "isSlot": true,
-          "nodeKind": "import",
-          "selectedTool": "import",
-          "status": "completed",
-          "params": {
-            "voice": "zh_female_energetic",
-            "speed": 1
           }
         }
       }

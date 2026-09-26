@@ -46,7 +46,10 @@ describe('omnimux-apps Routes & Preset Snapshot Hydration', () => {
 
     const injected = prepareAndInjectWorkflowSnapshot(manifest, formValues);
     assert.ok(injected, '注入快照必须成功返回');
-    assert.ok(Array.isArray(injected.nodes) && injected.nodes.length >= 4, '必须包含预设节点');
+    assert.ok(Array.isArray(injected.nodes) && injected.nodes.length >= 3, '必须包含预设节点');
+
+    const voiceNode = injected.nodes.find((n) => n.id === 'node-slot-voice-tts');
+    assert.equal(voiceNode, undefined, '未连线的孤立声音槽节点必须被彻底剔除');
 
     const textNode = injected.nodes.find((n) => n.id === 'node-slot-copywriting');
     assert.ok(textNode, '必须包含文案槽节点');

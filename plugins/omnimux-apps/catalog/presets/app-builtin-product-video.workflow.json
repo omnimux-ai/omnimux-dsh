@@ -92,29 +92,6 @@
           "prompt": "node-slot-custom-brief"
         }
       }
-    },
-    {
-      "id": "node-slot-voice-tts",
-      "type": "material",
-      "position": {
-        "x": 450,
-        "y": 420
-      },
-      "data": {
-        "type": "audio",
-        "tool": "omnimux_audio_submit",
-        "label": "旁白解说与音色 (Voice TTS)",
-        "slotRole": "voice_tts",
-        "isSlot": true,
-        "nodeKind": "import",
-        "selectedTool": "import",
-        "status": "completed",
-        "materialType": "audio",
-        "params": {
-          "voice": "zh_female_energetic",
-          "speed": 1
-        }
-      }
     }
   ],
   "edges": [
@@ -145,7 +122,7 @@
   "metadata": {
     "createdAt": "2026-09-23T03:00:00.000Z",
     "updatedAt": "2026-09-23T03:00:00.000Z",
-    "nodeCount": 5,
+    "nodeCount": 4,
     "sourceWorkflowId": "app-builtin-product-video"
   }
 }

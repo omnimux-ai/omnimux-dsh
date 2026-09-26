@@ -38,31 +38,6 @@
           "widget": "textarea",
           "default": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -107,14 +82,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "Place your laptop screenshot into this engaging UGC video where a friendly young woman sits in a cozy home working space and presents your digital product on her laptop. Horizontal laptop screenshot/ image works the best."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -177,31 +144,6 @@
           "widget": "textarea",
           "default": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -246,14 +188,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "Showcase your product being desperately chased by a group of adult with intense craving energy. This creates a powerful “everyone wants this” vibe that instantly triggers desire and FOMO. Perfect for most handheld products."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -316,31 +250,6 @@
           "widget": "textarea",
           "default": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -385,14 +294,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 20s video with casual, authentic UGC yapping style—friendly, natural, and relatable. Alternating front-facing selfie clips with product close-ups. Simply input info to try it out."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -455,31 +356,6 @@
           "widget": "textarea",
           "default": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -524,14 +400,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "Bring your porduct to life with movie-quality 3D characters facing relatable daily struggles. Easily fit your product or app into the storyline as the ultimate hero, creating an emotional connection with your audience through heartwarming animation."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -594,31 +462,6 @@
           "widget": "textarea",
           "default": "Multiple angle and scene photos of clothing models. Upload your product to experience it."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -663,14 +506,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "Multiple angle and scene photos of clothing models. Upload your product to experience it."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -733,31 +568,6 @@
           "widget": "textarea",
           "default": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -802,14 +612,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 15-second commercially styled ad with professional dynamic camera work, showcasing your product's selling points. Simply upload product images, input storyline settings, and characters to get a stunning professional-grade ad for your product."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -872,31 +674,6 @@
           "widget": "textarea",
           "default": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
         },
-        "voice": {
-          "type": "string",
-          "title": "解说人声音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "视频成片比例",
@@ -941,14 +718,6 @@
         "widget": "textarea",
         "required": true,
         "defaultValue": "A 12-second vertical fashion ad template. Suitable for handheld products.\r\n\r\nAfter a natural collision, the model falls backward as the product and discount poster fly toward the camera for two smooth slow-motion close-ups, then return to real-time for a physically realistic landing. Ideal for promoting your product during sale."
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",
@@ -1098,31 +867,6 @@
             "TikTok"
           ]
         },
-        "voice": {
-          "type": "string",
-          "title": "解说音色",
-          "description": "选择适合该视频情绪的 AI 配音解说音色",
-          "widget": "select-single",
-          "default": "zh_female_energetic",
-          "options": [
-            {
-              "label": "活力女声（电商促销爆款）",
-              "value": "zh_female_energetic"
-            },
-            {
-              "label": "沉稳男声（数码科技大片）",
-              "value": "zh_male_calm"
-            },
-            {
-              "label": "亲和闺蜜（达人开箱真实种草）",
-              "value": "zh_female_friendly"
-            },
-            {
-              "label": "磁性男声（高端商业质感）",
-              "value": "zh_male_deep"
-            }
-          ]
-        },
         "aspect_ratio": {
           "type": "string",
           "title": "成片比例",
@@ -1197,14 +941,6 @@
         "defaultValue": [
           "TikTok"
         ]
-      },
-      "voice": {
-        "nodeId": "node-slot-voice-tts",
-        "targetField": "params.voice",
-        "mappingType": "param",
-        "widget": "select-single",
-        "required": false,
-        "defaultValue": "zh_female_energetic"
       },
       "aspect_ratio": {
         "nodeId": "node-video-generation-core",

@@ -74,29 +74,6 @@
           "prompt": "node-slot-copywriting"
         }
       }
-    },
-    {
-      "id": "node-slot-voice-tts",
-      "type": "material",
-      "position": {
-        "x": 450,
-        "y": 450
-      },
-      "data": {
-        "type": "audio",
-        "materialType": "audio",
-        "tool": "omnimux_audio_submit",
-        "label": "旁白解说与音色 (Voice TTS)",
-        "slotRole": "voice_tts",
-        "isSlot": true,
-        "nodeKind": "import",
-        "selectedTool": "import",
-        "status": "completed",
-        "params": {
-          "voice": "zh_female_energetic",
-          "speed": 1
-        }
-      }
     }
   ],
   "edges": [
@@ -127,7 +104,7 @@
   "metadata": {
     "createdAt": "2026-09-25T03:53:25.621Z",
     "updatedAt": "2026-09-25T03:53:25.621Z",
-    "nodeCount": 4,
+    "nodeCount": 3,
     "sourceWorkflowId": "73b5fb39-bcb1-48bc-a382-6de753fcb740"
   }
 }

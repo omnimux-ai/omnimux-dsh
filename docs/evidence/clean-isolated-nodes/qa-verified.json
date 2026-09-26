@@ -1,0 +1,13 @@
+{
+  "taskId": "clean-isolated-nodes-builtins",
+  "verifiedAt": "2026-09-26T19:13:30+08:00",
+  "environment": "omnimux-apps & omnimux-workflow catalog test harness",
+  "findings": {
+    "workflowPresetsCleaned": 8,
+    "builtinAppsCleaned": 8,
+    "presetWorkflowsMapCleaned": 8,
+    "featuredAppsCleaned": 7,
+    "appFormPanelRuntimeDefense": "ENABLED (filterReachableFormFields)"
+  },
+  "verdict": "VERIFIED_PASS"
+}

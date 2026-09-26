@@ -101,7 +101,7 @@ describe('E2E: 独立应用真实调度与状态对账闭环', () => {
         inputs: {
           product_image: 'https://my-brand.com/hero-screenshot.png',
           copywriting: '极致丝滑的次世代 SaaS 交互演示体验',
-          voice: 'zh_male_calm',
+          aspect_ratio: '16:9',
         },
       },
     };
@@ -125,13 +125,16 @@ describe('E2E: 独立应用真实调度与状态对账闭环', () => {
       '文案必须真实注入到 prompt',
     );
 
-    const voiceNode = nodes.find((n) => n.id === 'node-slot-voice-tts');
-    assert.ok(voiceNode, '必须存在解说声音槽节点');
+    const videoNode = nodes.find((n) => n.id === 'node-video-generation-core');
+    assert.ok(videoNode, '必须存在视频生成内核节点');
     assert.equal(
-      voiceNode.data.params.voice,
-      'zh_male_calm',
-      '人声配置必须真实注入到 params.voice',
+      videoNode.data.params.aspectRatio,
+      '16:9',
+      '比例配置必须真实注入到 params.aspectRatio',
     );
+
+    const voiceNode = nodes.find((n) => n.id === 'node-slot-voice-tts');
+    assert.equal(voiceNode, undefined, '未连线的孤立声音槽节点必须被彻底剔除');
 
     // 2. 轮询 GET /omnimux-apps/api/apps/app-creatify-app-demo/executions/:executionId
     let getStatus = 0;
