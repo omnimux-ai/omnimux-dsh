@@ -44,7 +44,7 @@ async function loadModule() {
         builder.onLoad({ filter: /.*/, namespace: 'seam' }, () => ({ contents: SEAM }))
         builder.onResolve({ filter: /\/api\.js$/ }, () => ({ path: 'api', namespace: 'api' }))
         builder.onLoad({ filter: /.*/, namespace: 'api' }, () => ({
-          contents: 'exports.browseProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", parent: "/Users/x", entries: [{ name: "projects", path: "/Users/x/Desktop/projects" }] } });',
+          contents: 'exports.pickProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", paths: ["/Users/x/Desktop"] } }); exports.browseProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", parent: "/Users/x", entries: [{ name: "projects", path: "/Users/x/Desktop/projects" }] } });',
         }))
       },
     }],
@@ -113,18 +113,15 @@ test('initialPath renders removable folder card', async () => {
   }
 })
 
-test('remove returns to drop zone; in-dialog browse then choose fills card', async () => {
+test('remove returns to drop zone; pick directory fills card', async () => {
   const submits = []
-  let browseCalls = 0
+  let pickCalls = 0
   const { container, root, dom, act } = await mount({
     initialPath: '/Users/x/Desktop/projects',
     onSubmit: (payload) => { submits.push(payload) },
-    onBrowseDirectory: async (path) => {
-      browseCalls += 1
-      if (!path) {
-        return { ok: true, body: { path: '/Users/x/Desktop', parent: '/Users/x', entries: [{ name: '短剧宣传片', path: '/Users/x/Movies/短剧宣传片' }] } }
-      }
-      return { ok: true, body: { path, parent: '/Users/x/Desktop', entries: [] } }
+    onPickDirectory: async () => {
+      pickCalls += 1
+      return { ok: true, body: { path: '/Users/x/Desktop', paths: ['/Users/x/Desktop'] } }
     },
   })
   try {
@@ -133,13 +130,11 @@ test('remove returns to drop zone; in-dialog browse then choose fills card', asy
     assert.equal(container.querySelector('[data-omnimux-new-project-picked]'), null)
 
     await act(async () => container.querySelector('[data-omnimux-new-project-drop]').click())
-    assert.equal(browseCalls, 1)
-    assert.ok(container.querySelector('[data-omnimux-new-project-browse]'))
-    assert.match(container.textContent, /短剧宣传片/)
-    await act(async () => container.querySelector('[data-omnimux-new-project-choose]').click())
+    assert.equal(pickCalls, 1)
     const picked = container.querySelector('[data-omnimux-new-project-picked]')
     assert.ok(picked)
     assert.match(picked.textContent, /Desktop/)
+    assert.equal(container.querySelector('[data-omnimux-new-project-browse]'), null)
 
     const primary = [...container.querySelectorAll('button')].find((btn) => btn.textContent.includes('projects.dialog.submit'))
     assert.ok(primary)

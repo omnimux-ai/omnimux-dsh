@@ -273,14 +273,13 @@ test('E2E: 场景 6 - ForkAppProjectDialog 弹窗支持追加创作页与自选�
     }),
   )
 
-  assert.ok(html.includes('创建应用编辑副本'), '必须包含弹窗标题')
-  assert.ok(html.includes('加入当前项目'), '有当前项目时必须展示加入当前项目选项')
-  assert.ok(html.includes('新建独立项目'), '必须展示新建独立项目选项')
-  assert.ok(html.includes('新创作页名称'), '有当前项目时显式标注为新创作页名称')
-  assert.ok(html.includes('将在当前项目「我的视频主项目」中追加一张新画布'), '包含清晰的项目内追加说明')
+  assert.ok(html.includes('创建副本'), '必须包含极简弹窗标题')
+  assert.ok(html.includes('当前项目创作页'), '有当前项目时必须展示当前项目创作页选项')
+  assert.ok(html.includes('独立项目'), '必须展示独立项目选项')
+  assert.ok(html.includes('副本类型'), '有当前项目时显式展示副本类型标签')
   assert.ok(html.includes('爆款商品实拍_副本'), '有当前项目时默认预填创作页副本名')
 
-  // 2. 验证未建项独立项目场景下的显式标签与意图说明
+  // 2. 验证未建项独立项目场景下的极简标签与原生目录选择入口
   const htmlNoHost = renderToStaticMarkup(
     React.createElement(ForkAppProjectDialog, {
       manifest,
@@ -290,9 +289,9 @@ test('E2E: 场景 6 - ForkAppProjectDialog 弹窗支持追加创作页与自选�
       onSubmit() {},
     }),
   )
-  assert.ok(htmlNoHost.includes('项目显示名称'), '未建项时显式标注为项目显示名称')
-  assert.ok(htmlNoHost.includes('不会在电脑硬盘中新建或重命名物理文件夹'), '包含明确的物理文件夹不新建说明')
-  assert.ok(htmlNoHost.includes('存放工作区目录'), '明确提示这是工作区目录而非新物理文件夹')
+  assert.ok(htmlNoHost.includes('创建副本'), '未建项时包含创建副本标题')
+  assert.ok(htmlNoHost.includes('存放位置'), '未建项独立项目模式下展示存放位置标签')
+  assert.ok(htmlNoHost.includes('更改'), '已选目录下展示更改按钮')
 })
 
 test('E2E: 场景 7 - 官方预设工程与历史遗留拓扑在副本创建时自愈连线 Handle (out/in) 且模型层级与卡槽合规 (Issue #2648)', async () => {

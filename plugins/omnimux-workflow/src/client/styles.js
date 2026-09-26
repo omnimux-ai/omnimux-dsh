@@ -320,25 +320,27 @@ export const WORKFLOW_CSS = `
 .omnimux-new-project-drop {
   appearance: none;
   width: 100%;
-  min-height: 132px;
-  height: auto !important;
-  padding: 20px 16px !important;
-  border: 1px solid var(--dsw-alias-border-l2) !important;
-  border-radius: 12px !important;
+  height: 36px !important;
+  min-height: 36px;
+  padding: 0 12px !important;
+  border: 1px dashed var(--dsw-alias-border-l2) !important;
+  border-radius: 8px !important;
   background: transparent !important;
-  color: var(--dsw-alias-label-primary) !important;
+  color: var(--dsw-alias-label-secondary) !important;
   display: flex !important;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 8px;
   box-sizing: border-box;
   cursor: pointer;
-  font: inherit;
+  font-size: 13px;
+  font-family: inherit;
 }
 .omnimux-new-project-drop:hover:not(:disabled) {
   border-color: var(--dsw-alias-border-hover) !important;
   background: var(--dsw-alias-interactive-bg-hover) !important;
+  color: var(--dsw-alias-label-primary) !important;
 }
 .omnimux-new-project-drop:disabled {
   opacity: 0.4;
@@ -352,17 +354,17 @@ export const WORKFLOW_CSS = `
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 .omnimux-new-project-add-pill {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
   border: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  font-size: 13px;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -370,10 +372,10 @@ export const WORKFLOW_CSS = `
 .omnimux-new-project-picked {
   display: flex;
   align-items: center;
-  height: 40px;
+  height: 36px;
   padding: 0 6px 0 12px;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
   gap: 8px;
 }
@@ -385,11 +387,35 @@ export const WORKFLOW_CSS = `
 .omnimux-new-project-picked-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--dsw-alias-label-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.omnimux-new-project-picked-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.omnimux-new-project-change-btn {
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  padding: 0 8px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.omnimux-new-project-change-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-new-project-change-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .omnimux-new-project-browse {
   display: flex;
