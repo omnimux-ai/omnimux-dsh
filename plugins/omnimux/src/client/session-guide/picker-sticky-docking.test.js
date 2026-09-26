@@ -119,7 +119,7 @@ test('Tab 栏吸顶固定样式契约验证：.omnimux-explore-filter-bar 包含
   assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*#0d0d0f/i, '严禁硬编码死黑色值 #0d0d0f')
   assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-layer-0/i, '严禁引用不存在的 Token --dsw-alias-bg-layer-0')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-base/i, '必须基于原生 --dsw-alias-bg-base 进行底色自适应')
-  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*backdrop-filter:\s*blur/i, '必须设置 backdrop-filter 高斯模糊实现高级遮罩')
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*(?:^|;)\s*backdrop-filter:\s*blur/m, '必须设置 backdrop-filter 高斯模糊实现高级遮罩')
 })
 
 import { JSDOM } from 'jsdom'

@@ -28,7 +28,7 @@ test('E2E 契约 2: Tab 栏吸顶固定样式与背景自适应防穿透，对�
   assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*#0d0d0f/);
   assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-layer-0/);
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-base/);
-  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*backdrop-filter:\s*blur/);
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*(?:^|;)\s*backdrop-filter:\s*blur/m);
 });
 
 test('E2E 契约 3: 全屏探索专区生命周期标记与滚动置顶事件闭环', () => {
