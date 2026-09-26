@@ -232,44 +232,33 @@ export const ASSETS_CSS = `
   min-height: 0;
   display: block;
 }
-/* 本地资产库封面：角色保持 3:4，场景与背景为 16:9，其余为 4:3。 */
+/* 本地资产库 3:4 统一展台标准规范：外框绝对锁定 3:4 黄金画幅，彻底消灭瀑布流犬牙交错 */
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
+  background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-layer-1));
 }
-.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
-.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
-  aspect-ratio: 3 / 4;
-}
-.omnimux-assets-card--scene:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
-.omnimux-assets-card--scene:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb,
-.omnimux-assets-card--background:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
-.omnimux-assets-card--background:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
-  aspect-ratio: 16 / 9;
-}
-.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
-.omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+/* 角色立绘：撑满 3:4，头部靠上对齐，保障角色面部完整度 */
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center top;
   display: block;
 }
-.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
-.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
-  object-position: center top;
-}
-.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
-.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
-  background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-layer-1));
-}
-.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
-.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+/* 非角色素材（场景 16:9、道具 1:1/4:3、风格、知识等）：等比完整容纳，无任何裁剪，四周配以柔和中性底衬 */
+.omnimux-assets-card:not(.omnimux-assets-card--character):not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
+.omnimux-assets-card:not(.omnimux-assets-card--character):not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
+  display: block;
 }
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-media),
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-video) {

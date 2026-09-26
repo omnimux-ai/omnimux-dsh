@@ -3,7 +3,7 @@ import test from 'node:test'
 import { runStyleDomProbe } from '../../../../scripts/test-fixtures/style-dom-probe.mjs'
 import { ASSETS_CSS } from './styles.js'
 
-test('本地资产封面按类型使用角色 3:4、场景 16:9 和道具 4:3', () => {
+test('本地资产统一 3:4 展台模式：外框统一 3:4，角色 cover，非角色 contain', () => {
   const result = runStyleDomProbe({
     name: 'assets-vertical-cards-geometry',
     styles: ASSETS_CSS,
@@ -67,25 +67,25 @@ test('本地资产封面按类型使用角色 3:4、场景 16:9 和道具 4:3', 
         titleFontWeight: getComputedStyle(title).fontWeight,
         descFontSize: getComputedStyle(desc).fontSize,
         descText: desc.textContent.trim(),
-        sceneAspectRatio: getComputedStyle(document.querySelector('.scene-cover')).aspectRatio,
-        propAspectRatio: getComputedStyle(document.querySelector('.prop-cover')).aspectRatio,
+        sceneCoverAspectRatio: getComputedStyle(document.querySelector('.scene-cover')).aspectRatio,
+        propCoverAspectRatio: getComputedStyle(document.querySelector('.prop-cover')).aspectRatio,
         propObjectFit: getComputedStyle(document.querySelector('.prop-media')).objectFit,
       }
     },
   })
 
-  // 1. 验证卡片宽度与比例符合 3:4 黄金竖版几何（宽度 320px 时，高度约 426.67px）
+  // 1. 验证所有卡片外框均严格符合 3:4 黄金竖版几何展台
   assert.equal(result.cardWidth, 320)
   assert.equal(result.coverAspectRatio, '3 / 4')
-  assert.equal(result.sceneAspectRatio, '16 / 9')
-  assert.equal(result.propAspectRatio, '4 / 3')
-  assert.equal(result.propObjectFit, 'contain')
+  assert.equal(result.sceneCoverAspectRatio, '3 / 4')
+  assert.equal(result.propCoverAspectRatio, '3 / 4')
   assert.equal(result.thumbAspectRatio, '3 / 4')
   assert.ok(Math.abs(result.coverHeight - (result.coverWidth * 4) / 3) < 1.0, `高度期望为 4/3 宽，实际高度 ${result.coverHeight}`)
 
-  // 2. 验证图片等比居中自适应缩放（object-fit: cover; object-position: center;）且填满容器高度
+  // 2. 验证角色立绘 cover 撑满居上，非角色素材 contain 居中不裁切
   assert.equal(result.imgObjectFit, 'cover')
-  assert.ok(result.imgObjectPosition.includes('50%') || result.imgObjectPosition.includes('center'))
+  assert.equal(result.imgObjectPosition, '50% 0%')
+  assert.equal(result.propObjectFit, 'contain')
   assert.ok(Math.abs(parseFloat(result.imgHeight) - result.coverHeight) < 1.0, `图片高度期望填满封面容器高度，实际 ${result.imgHeight}`)
 
   // 3. 验证悬停浮层绝对定位充满
