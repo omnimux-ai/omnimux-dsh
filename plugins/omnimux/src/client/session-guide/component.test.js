@@ -127,7 +127,7 @@ test('session guide switches drafts without a reference panel or send intercepti
   }
 })
 
-test('homepage no longer renders popular starters and keeps explore templates', async () => {
+test('popular starters render 4 cards and marketing insight modal flows draft into input', async () => {
   const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
@@ -135,21 +135,98 @@ test('homepage no longer renders popular starters and keeps explore templates', 
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   const store = createGuideStore()
   const root = createRoot(document.querySelector('#guide'))
+  let draft = ''
+  let writes = 0
   const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
   const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = {
+  const props = (localeMap = guideZh) => ({
     sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
-    useInput: s => s({ draft: '', phase: 'plain' }), inputActions: { setDraft() {} },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => guideZh[key] || key,
-  }
+    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
+  })
+  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    await act(async () => root.render(React.createElement(SessionGuide, props)))
-    assert.equal(document.querySelectorAll('[data-popular-starter-id]').length, 0, 'homepage must not render popular starter cards')
-    assert.equal(document.querySelector('.omnimux-popular-section'), null, 'homepage must not render popular starters section')
-    assert.ok(document.querySelector('[data-omnimux-explore-section]'), 'explore templates root must remain')
-    assert.ok(document.querySelector('[data-explore-title]'), 'explore templates title must remain')
-    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, '首页不再渲染四个快捷按钮')
+    // 1. 中文环境渲染与验证
+    await render(guideZh)
+    // 验证 4 个卡片均已呈现
+    const popularCards = document.querySelectorAll('[data-popular-starter-id]')
+    assert.equal(popularCards.length, 4)
+    assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
+    assert.equal(popularCards[1].dataset.popularStarterId, 'url-to-video')
+    assert.equal(popularCards[2].dataset.popularStarterId, 'recreate-viral-ads')
+    assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
+
+    // 2. 点击批量创建广告卡片打开全功能模态框
+    await click('[data-popular-starter-id="bulk-create-ads"]')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-bulk-modal'))
+    // 输入简报并提交
+    const briefInput = document.querySelector('.omnimux-bulk-textarea')
+    await act(async () => {
+      const propKey = Object.keys(briefInput).find(k => k.startsWith('__reactProps$'))
+      if (propKey && briefInput[propKey]?.onChange) {
+        briefInput[propKey].onChange({ target: { value: '智能发光降噪耳机快速开箱测评' } })
+      }
+    })
+    await click('.omnimux-bulk-submit-btn')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-bulk-modal'), null)
+    assert.ok(draft.includes('智能发光降噪耳机快速开箱测评'))
+    assert.equal(writes, 1)
+
+    // 3. 点击营销洞察卡片打开模态框，验证结构化表单与必填/选填标识
+    await click('[data-popular-starter-id="marketing-insight"]')
+    await render(guideZh)
+    const modal = document.querySelector('.omnimux-insight-modal')
+    assert.ok(modal, 'modal should open')
+    const items = document.querySelectorAll('[data-insight-id]')
+    assert.equal(items.length, 6)
+    
+    // 验证当前选中的 TikTok 创作者场景表单渲染
+    assert.ok(document.querySelector('.omnimux-insight-form-container'))
+    const productField = document.querySelector('[data-insight-field="product"]')
+    assert.ok(productField, 'product input field should be present')
+    const reqTags = document.querySelectorAll('.omnimux-insight-required-tag')
+    assert.ok(reqTags.length >= 1, 'required tags should be rendered')
+    const optTags = document.querySelectorAll('.omnimux-insight-optional-tag')
+    assert.ok(optTags.length >= 1, 'optional tags should be rendered')
+
+    // 4. 未填必填项直接提交，触发校验提示
+    await click('.omnimux-insight-submit')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-insight-error-banner'), 'validation error banner should be visible')
+    assert.equal(writes, 1, 'no draft write should happen on validation failure')
+
+    // 5. 填写必填项并提交
+    await act(async () => {
+      const prodProps = Object.keys(productField).find(k => k.startsWith('__reactProps$'))
+      if (prodProps && productField[prodProps]?.onChange) {
+        productField[prodProps].onChange({ target: { value: '智能骨传导运动耳机' } })
+      }
+      const marketField = document.querySelector('[data-insight-field="market"]')
+      const mktProps = Object.keys(marketField).find(k => k.startsWith('__reactProps$'))
+      if (mktProps && marketField[mktProps]?.onChange) {
+        marketField[mktProps].onChange({ target: { value: '欧美市场' } })
+      }
+    })
+    await click('.omnimux-insight-submit')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
+    assert.ok(draft.includes('智能骨传导运动耳机'), 'draft should contain entered product')
+    assert.ok(draft.includes('欧美市场'), 'draft should contain entered market')
+    assert.equal(writes, 2)
+
+    // 6. 再次打开并切换到第2项（广告ROAS分析），验证场景表单字段联动切换
+    await click('[data-popular-starter-id="marketing-insight"]')
+    await render(guideZh)
+    await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
+    await render(guideZh)
+    const platformField = document.querySelector('[data-insight-field="platform"]')
+    assert.ok(platformField, 'platform input should be present for ads-roas')
+    await click('.omnimux-insight-close')
+    await render(guideZh)
   } finally {
     await act(async () => root.unmount())
     store.dispose()

@@ -82,11 +82,17 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
     // 比例线框外层 20px 居中盒
     assert.match(jsxContent, /className="omx-ratio-wire-box"/, '比例线框外层必须包裹 omx-ratio-wire-box');
 
-    // 图像张数标题规范与紧凑无空格书写
+    // 图像张数标题规范与纯数字展示
     assert.match(jsxContent, /<div className="omx-param-title">张数<\/div>/, '图像参数标题必须为张数');
     assert.doesNotMatch(jsxContent, /<div className="omx-param-title">生成张数<\/div>/, '不得使用旧词生成张数');
-    assert.match(jsxContent, /\{cnt\}张/, '张数选项文字必须紧凑无空格（{cnt}张）');
-    assert.doesNotMatch(jsxContent, /\{cnt\}\s+张/, '张数选项文字严禁带空格（{cnt} 张）');
+    assert.match(jsxContent, />\s*\{cnt\}\s*<\/button>/, '面板内张数按钮内部必须为纯数字 {cnt}');
+    assert.doesNotMatch(jsxContent, /\{cnt\}\s*张/, '面板内张数选项严禁携带“张”字后缀');
+
+    // 底栏参数胶囊回显生成方式与纯数字张数
+    assert.match(jsxContent, /<span>\{imageOpMode\}<\/span>\s*<span className="omx-dot">·<\/span>/, '底栏胶囊最前必须包含生成方式与分隔点');
+    assert.match(jsxContent, /<span>\{imageBatch\}<\/span>/, '底栏胶囊尾部必须为纯数字张数');
+    assert.doesNotMatch(jsxContent, /<span>\{imageBatch\}张<\/span>/, '底栏胶囊尾部张数严禁携带“张”字');
+    assert.match(jsxContent, /\$\{imageOpMode\}\s*·\s*\$\{imageAspect\}\s*·\s*\$\{imageRes\}\s*·\s*\$\{imageBatch\}(?!张)/, '参数摘要字符串必须包含生成方式且末尾无“张”字');
   });
 
   it('Step 6: 图像参数子列弹性伸缩与药丸防折行规范', () => {

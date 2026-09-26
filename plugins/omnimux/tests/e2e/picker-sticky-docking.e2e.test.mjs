@@ -33,10 +33,11 @@ test('E2E 契约 3: 全屏探索专区生命周期标记与滚动置顶事件闭
   // 必须监听 omnimux:explore:scroll-to-tab
   assert.match(exploreSectionSource, /window\.addEventListener\('omnimux:explore:scroll-to-tab'/);
   assert.match(exploreSectionSource, /handlePrimaryTabChange\(targetTab\)/);
-  // 必须调用 scrollIntoView({ behavior: 'smooth', block: 'start' }) 置顶
-  assert.match(exploreSectionSource, /scrollIntoView\(\{\s*behavior:\s*'smooth',\s*block:\s*'start'\s*\}\)/);
-  // 必须派发意图驱动事件唤起吸底输入框
-  assert.match(exploreSectionSource, /window\.dispatchEvent\(new CustomEvent\('omnimux:composer:dock-intent'/);
+  // 必须立即原子跳转置顶，杜绝 smooth 异步滚动竞态
+  assert.match(exploreSectionSource, /scroller\.scrollTop\s*=\s*Math\.max\(0,\s*targetOffset\)/);
+  // 必须派发意图驱动事件唤起吸底输入框且携带 force: true
+  assert.match(exploreSectionSource, /window\.dispatchEvent\(new CustomEvent\('omnimux:composer:dock-intent',/);
+  assert.match(exploreSectionSource, /force:\s*true/);
 });
 
 test('E2E 契约 4: useComposerDocking 意图驱动吸底与收起绝对静默状态机', () => {
