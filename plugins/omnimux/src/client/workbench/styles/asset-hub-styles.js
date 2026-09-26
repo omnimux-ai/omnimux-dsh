@@ -1,6 +1,7 @@
 /**
  * Asset Hub CSS Styles Runtime Injector.
  * 100% 消费官方 --dsw-alias-* Token，严格遵循 32px 控件高度基准、8px 圆角体系。
+ * 适配 6 大主库 Tab 单行弹性排布与共享 Tab 样式体系。
  */
 
 export const ASSET_HUB_STYLE_ID = 'omnimux-asset-hub-styles'
@@ -24,58 +25,107 @@ export const ASSET_HUB_CSS = `
   justify-content: space-between;
   height: 48px;
   flex: 0 0 48px;
-  padding: 0 16px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   box-sizing: border-box;
+  gap: 8px;
 }
 
 .omx-hub-header__tabs {
   display: flex;
   align-items: center;
-  gap: 16px;
   height: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
+.omx-hub-header__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* 共享一级主导航 Tabs */
+.omx-shared-primary-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  flex-wrap: nowrap;
+}
+
+.omx-shared-primary-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+  user-select: none;
+}
+
+.omx-shared-primary-tab__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.omx-shared-primary-tab:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.omx-shared-primary-tab.is-active {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-active);
+  font-weight: 600;
+}
+
+/* 兼容旧 Tab 类名 */
 .omx-hub-header__tab {
   display: inline-flex;
   align-items: center;
   height: 32px;
-  padding: 0 4px;
+  padding: 0 8px;
   border: 0;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 4px;
-  transition: color 0.15s ease;
-  position: relative;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .omx-hub-header__tab:hover {
   color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .omx-hub-header__tab.is-active {
   color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-active);
   font-weight: 600;
-}
-
-.omx-hub-header__tab.is-active::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--dsw-alias-label-primary);
-  border-radius: 2px;
 }
 
 .omx-hub-header__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .omx-hub-header__btn {
@@ -102,14 +152,14 @@ export const ASSET_HUB_CSS = `
   transform: scale(0.96);
 }
 
-/* 筛选栏 Toolbar (高度 40px，单行不折行) */
+/* 筛选栏 Toolbar (高度 48px，单行不折行) */
 .omx-hub-toolbar {
   display: flex;
   align-items: center;
   height: 48px;
   flex: 0 0 48px;
-  padding: 0 16px;
-  gap: 12px;
+  padding: 0 12px;
+  gap: 10px;
   flex-wrap: nowrap;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   box-sizing: border-box;
@@ -120,8 +170,8 @@ export const ASSET_HUB_CSS = `
   align-items: center;
   gap: 8px;
   height: 32px;
-  flex: 1 1 160px;
-  max-width: 240px;
+  flex: 1 1 140px;
+  max-width: 220px;
   padding: 0 10px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
@@ -157,18 +207,27 @@ export const ASSET_HUB_CSS = `
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .omx-hub-toolbar__filters::-webkit-scrollbar {
   display: none;
 }
 
-.omx-hub-toolbar__pill {
+/* 共享二级分类 Tabs (pill 胶囊与 underline 下划线) */
+.omx-shared-sub-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.omx-shared-sub-tab--pill {
   display: inline-flex;
   align-items: center;
   height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: 9999px;
   border: 1px solid var(--dsw-alias-border-l2);
   background: transparent;
@@ -177,6 +236,73 @@ export const ASSET_HUB_CSS = `
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.omx-shared-sub-tab--pill:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.omx-shared-sub-tab--pill.is-active {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  border-color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+.omx-shared-sub-tab--underline {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.omx-shared-sub-tab--underline:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.omx-shared-sub-tab--underline.is-active {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+}
+
+.omx-shared-sub-tab--underline.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--dsw-alias-label-primary);
+  border-radius: 2px;
+}
+
+/* 兼容旧 pill 类名 */
+.omx-hub-toolbar__pill {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .omx-hub-toolbar__pill:hover {
@@ -416,13 +542,6 @@ export const ASSET_HUB_CSS = `
   0% { opacity: 0.5; }
   50% { opacity: 1; }
   100% { opacity: 0.5; }
-}
-
-.omx-hub-canvas-view {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .omx-hub-notice-toast {

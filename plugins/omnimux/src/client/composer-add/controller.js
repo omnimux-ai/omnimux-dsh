@@ -149,6 +149,10 @@ export function createComposerAddController(options) {
       if (prompt && result?.added) options.onPrompt?.(prompt)
       return result
     }
+    if (card.lane === 'featured' || card.lane === 'skills') {
+      if (prompt) options.onPrompt?.(prompt)
+      return Promise.resolve({ added: 0, promptOnly: true })
+    }
     if (card.lane === 'assets') {
       return Promise.resolve(confirmLibrary(operation, [card.raw], { keepOpen: true })).then(finish, (error) => {
         if (visible(operation)) notify(error instanceof Error ? error.message : String(error))
@@ -417,6 +421,15 @@ export function createComposerAddController(options) {
     },
     openInspiration(sessionId) {
       return openKind(sessionId, 'inspiration').catch(() => {})
+    },
+    openFeatured(sessionId) {
+      return openKind(sessionId, 'featured').catch(() => {})
+    },
+    openTrending(sessionId) {
+      return openKind(sessionId, 'trending').catch(() => {})
+    },
+    openSkills(sessionId) {
+      return openKind(sessionId, 'skills').catch(() => {})
     },
     dispose() {
       if (disposed) return

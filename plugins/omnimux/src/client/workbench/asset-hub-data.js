@@ -1,11 +1,27 @@
 /**
  * Asset Hub Data Loader & Normalizer Adapter.
  * 负责各分类数据的加载、格式规范化、二级筛选及防抖过滤。
- * 遵循 specs/three-column-asset-hub.spec.md 与 design.md 规范。
+ * 遵循 specs/asset-hub-shared-tabs.spec.md、specs/asset-hub-shared-tabs-architecture.md 与 design.md 规范。
  */
 
 import { inferExtension } from '../attachments/store.ts'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
+import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
+import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
+
+/**
+ * 安全加载精选技能数据代理（对齐 library-stage-model.js 使用标准 ESM 静态导入，严禁动态执行）
+ */
+let cachedFeaturedSkills = null
+
+async function getFeaturedSkillsSnapshot() {
+  if (cachedFeaturedSkills) return cachedFeaturedSkills
+  if (FEATURED_SKILLS_JSON && typeof FEATURED_SKILLS_JSON === 'object') {
+    cachedFeaturedSkills = FEATURED_SKILLS_JSON
+    return cachedFeaturedSkills
+  }
+  return { skills: [] }
+}
 
 async function requestJson(path, fetchImpl, signal) {
   const fetchFn = fetchImpl || (typeof window !== 'undefined' ? window.fetch : globalThis.fetch)
@@ -38,6 +54,27 @@ function formatFileSize(bytes) {
     return `${Math.round(bytes / 1024)} KB`
   }
   return `${bytes} B`
+}
+
+export function resolveSkillCover(cover, coverIndex) {
+  if (typeof coverIndex === 'number' && Number.isFinite(coverIndex)) {
+    return `/omnimux/assets/skill-card-covers/skill-card-${coverIndex}.webp`
+  }
+  if (!cover || typeof cover !== 'string') return ''
+  const trimmed = cover.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) {
+    return trimmed
+  }
+  const match = trimmed.match(/skill-card-(\d+)\.webp/)
+  if (match) {
+    return `/omnimux/assets/skill-card-covers/skill-card-${match[1]}.webp`
+  }
+  // 外部拼接 URL 增加安全协议白名单校验（拒绝非 http/https 协议）
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    return ''
+  }
+  return `/omnimux-market/icon?url=${encodeURIComponent(trimmed)}`
 }
 
 /**
@@ -201,6 +238,108 @@ export function normalizeProductItem(row) {
   }
 }
 
+/**
+ * 转换爆款趋势数据
+ */
+export function normalizeTrendingItem(row) {
+  if (!row || typeof row !== 'object') return null
+  const id = String(row.id || '')
+  const title = String(row.title || row.name || row.description || id)
+  const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || ''
+
+  // previewVideoUrl 优化视频守卫逻辑：仅排除明确属于静态图片扩展名的候选链接，合法云端视频保持通路
+  let previewVideoUrl = ''
+  const candidate = (
+    row.previewVideoUrl ||
+    row.videoUrl ||
+    row.mediaUrl ||
+    row.url ||
+    (Array.isArray(row.media_urls) ? row.media_urls[0] : '') ||
+    ''
+  )
+  if (typeof candidate === 'string' && candidate.trim()) {
+    const trimmedCandidate = candidate.trim()
+    const cleanUrl = trimmedCandidate.split(/[?#]/)[0]
+    const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(cleanUrl)
+    if (!isImageExt) {
+      previewVideoUrl = trimmedCandidate
+    }
+  }
+
+  const durationText = typeof row.duration === 'number' && row.duration > 0 ? formatDuration(row.duration) : ''
+
+  // row.views 补齐数值有效性校验与安全兜底
+  let dimensionsOrSize = ''
+  if (typeof row.views === 'number' && Number.isFinite(row.views) && row.views > 0) {
+    dimensionsOrSize = `${row.views} 次播放`
+  } else if (typeof row.views === 'string' && row.views.trim()) {
+    dimensionsOrSize = `${row.views.trim()} 次播放`
+  } else if (row.resolution) {
+    dimensionsOrSize = String(row.resolution)
+  }
+
+  return {
+    id,
+    lane: 'trending',
+    title,
+    thumbnailUrl,
+    previewVideoUrl,
+    mediaType: 'video',
+    durationText,
+    formatText: 'MP4',
+    dimensionsOrSize,
+    raw: row,
+  }
+}
+
+/**
+ * 转换 Skill 卡片数据
+ */
+export function normalizeSkillItem(row) {
+  if (!row || typeof row !== 'object') return null
+  const id = String(row.id || '')
+  const title = String(row.titleZh || row.title || id)
+  const thumbnailUrl = resolveSkillCover(row.cover, row.coverIndex)
+
+  return {
+    id,
+    lane: 'skills',
+    title,
+    thumbnailUrl,
+    previewVideoUrl: '',
+    mediaType: 'skill',
+    durationText: '',
+    formatText: 'SKILL',
+    dimensionsOrSize: row.category ? String(row.category) : '',
+    raw: row,
+  }
+}
+
+/**
+ * 转换精选应用与创意模板数据
+ */
+export function normalizeFeaturedItem(row) {
+  if (!row || typeof row !== 'object') return null
+  const id = String(row.id || row.appId || '')
+  const title = String(row.titleZh || row.title || id)
+  const isApp = Boolean(row.isApp || row.type === 'app')
+  const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || ''
+  const previewVideoUrl = row.previewVideoUrl || ''
+
+  return {
+    id,
+    lane: 'featured',
+    title,
+    thumbnailUrl,
+    previewVideoUrl,
+    mediaType: isApp ? 'app' : (row.type || 'template'),
+    durationText: '',
+    formatText: 'TPL',
+    dimensionsOrSize: row.categorySlug || row.categoryKey || row.category || '',
+    raw: row,
+  }
+}
+
 function pickArrayCandidate(body, candidateKeys) {
   if (!body || typeof body !== 'object') return []
   for (const key of candidateKeys) {
@@ -219,10 +358,15 @@ function pickArrayCandidate(body, candidateKeys) {
 }
 
 /**
- * 加载并归一化素材卡片列表
+ * 加载并归一化素材卡片列表（六路加载引擎）
  */
 export async function loadAssetHubData(tab, options = {}) {
   const { fetchImpl, signal } = options
+
+  if (tab === 'featured') {
+    const list = Array.isArray(ALL_CREATIVE_TEMPLATES) ? ALL_CREATIVE_TEMPLATES : []
+    return list.map(normalizeFeaturedItem).filter(Boolean)
+  }
 
   if (tab === 'assets') {
     const res = await requestJson('/omnimux/assets/library', fetchImpl, signal)
@@ -249,13 +393,44 @@ export async function loadAssetHubData(tab, options = {}) {
     return list.map(normalizeProductItem).filter(Boolean)
   }
 
+  if (tab === 'trending') {
+    const res = await requestJson(
+      '/omnimux/inspiration?sort=views&page=1&page_size=48&projection=lean',
+      fetchImpl,
+      signal
+    )
+    if (res.status === 401) {
+      const err = new Error('登录后可查看云端灵感')
+      err.code = 'need-login'
+      throw err
+    }
+    if (!res.ok) throw new Error(res.body?.message || '加载失败')
+    const list = pickArrayCandidate(res.body, ['data.items', 'items', 'videos', 'inspirations'])
+    return list.map(normalizeTrendingItem).filter(Boolean)
+  }
+
+  if (tab === 'skills') {
+    const skillsData = await getFeaturedSkillsSnapshot()
+    const list = Array.isArray(skillsData?.skills) ? skillsData.skills : []
+    return list.map(normalizeSkillItem).filter(Boolean)
+  }
+
   return []
 }
 
 /**
- * 中文胶囊标签到后端英文枚举的映射字典
+ * 中文胶囊标签到后端英文枚举的映射字典（对齐 Spec 5.2 节）
  */
 export const FILTER_PILL_ENUM_MAP = Object.freeze({
+  // 精选库标签映射
+  '黄金开场': Object.freeze(['hook-intro', 'hook', 'intro']),
+  '真实种草': Object.freeze(['ugc-review', 'ugc', 'review']),
+  '视效大片': Object.freeze(['cinematic-vfx', 'cinematic', 'vfx']),
+  '模特试穿': Object.freeze(['fashion-try-on', 'fashion', 'tryon']),
+  '行业精选': Object.freeze(['industry-packs', 'industry', 'pack', 'packs']),
+  '硬核评测': Object.freeze(['durability-test', 'durability', 'test']),
+  '软件应用': Object.freeze(['apps-software', 'app', 'apps', 'software']),
+
   // 资产库标签映射
   '本地上传': Object.freeze(['upload', 'local', 'imported', 'user_upload', 'file']),
   '生成资产': Object.freeze(['generated', 'generation', 'ai_generated', 'ai', 'aigc', 'output']),
@@ -269,10 +444,28 @@ export const FILTER_PILL_ENUM_MAP = Object.freeze({
   '视觉风格': Object.freeze(['style', 'visual', 'theme', 'look']),
 
   // 商品库标签映射
-  '商品主图': Object.freeze(['main', 'primary', 'cover', 'hero', 'image']),
-  '模特展示': Object.freeze(['model', 'wear', 'tryon', 'person', 'character']),
-  '卖点细节': Object.freeze(['detail', 'feature', 'spec', 'close_up']),
-  '场景切片': Object.freeze(['scene', 'context', 'lifestyle', 'slice']),
+  '生活家电': Object.freeze(['appliances', 'appliance']),
+  '数码影音': Object.freeze(['digital-audio', 'digital', 'audio', 'electronics']),
+  '美妆护肤': Object.freeze(['beauty-care', 'beauty', 'care']),
+  '服饰箱包': Object.freeze(['fashion-apparel', 'fashion', 'apparel', 'bags']),
+  '食品饮料': Object.freeze(['food-beverage', 'food', 'beverage']),
+
+  // 爆款趋势标签映射
+  '美妆个护': Object.freeze(['beauty-personal', 'beauty_skincare', 'beauty', 'skincare']),
+  '服饰时尚': Object.freeze(['fashion-style', 'fashion', 'style']),
+  '数码家电': Object.freeze(['tech-electronics', 'tech_digital', 'tech', 'digital', 'electronics']),
+  '美食饮品': Object.freeze(['food-drinks', 'food_beverage', 'food', 'drink', 'beverage']),
+  '运动健身': Object.freeze(['fitness-sports', 'fitness_sports', 'fitness', 'sport', 'sports']),
+  '居家生活': Object.freeze(['home-lifestyle', 'home_living', 'home', 'living']),
+  '萌宠生活': Object.freeze(['pet-lifestyle', 'pets', 'pet']),
+
+  // Skills 技能标签映射
+  'UGC 种草': Object.freeze(['ugc-testimonial', 'ugc', 'testimonial']),
+  '视频广告': Object.freeze(['video-ads', 'video-ad', 'ads', 'ad']),
+  '产品展示': Object.freeze(['product-showcase', 'showcase', 'product']),
+  '故事分镜': Object.freeze(['storytelling', 'story']),
+  '配音与音频': Object.freeze(['voice-audio', 'voice', 'audio', 'sound']),
+  '静态图像': Object.freeze(['image-static', 'image', 'picture', 'poster']),
 })
 
 function matchesExactToken(text, token) {
@@ -288,15 +481,15 @@ export function filterAssetHubItems(items, filterPill, searchQuery) {
   let filtered = items
 
   // 1. 二级筛选过滤
-  if (filterPill && filterPill !== '全部') {
-    const targetEnums = FILTER_PILL_ENUM_MAP[filterPill] || []
+  if (filterPill && filterPill !== '全部' && filterPill !== 'all') {
+    const targetEnums = FILTER_PILL_ENUM_MAP[filterPill] || [filterPill.toLowerCase()]
     filtered = filtered.filter((item) => {
       const raw = item.raw || {}
-      const category = String(raw.category || raw.type || raw.tag || raw.channel || raw.kind || '').toLowerCase()
+      const category = String(raw.category || raw.type || raw.tag || raw.channel || raw.kind || raw.categorySlug || raw.categoryKey || '').toLowerCase()
       const title = item.title.toLowerCase()
       const query = filterPill.toLowerCase()
 
-      // 1. 中文字符串直接匹配
+      // 1. 字符串直接匹配
       if (category.includes(query) || title.includes(query)) return true
 
       // 2. 匹配后端英文枚举字典（整词精准匹配）
@@ -326,10 +519,29 @@ export function filterAssetHubItems(items, filterPill, searchQuery) {
 }
 
 /**
- * 将素材卡片转换为 AttachmentStore 所需的标准载荷
+ * 将素材卡片转换为 AttachmentStore 所需的标准载荷（严格遵循 PRD 5.5 节）
  */
 export function adaptCardToAttachmentPayload(card) {
-  const raw = card.raw || {}
+  const raw = card?.raw || {}
+
+  // 契约铁律：featured 与 skills 点击仅追加 Prompt，绝不生成物理附件载荷
+  if (card?.lane === 'featured' || card?.lane === 'skills') {
+    return null
+  }
+
+  if (card.lane === 'trending') {
+    return {
+      sourcePlugin: 'omnimux-inspiration',
+      kind: 'inspiration',
+      entityId: card.id,
+      title: card.title,
+      extension: 'MP4',
+      relativePath: raw.relativePath || `trending/${card.id}.mp4`,
+      previewUrl: card.thumbnailUrl,
+      metadata: { trending: raw },
+    }
+  }
+
   if (card.lane === 'products') {
     return {
       sourcePlugin: 'omnimux-products',
@@ -366,7 +578,7 @@ export function adaptCardToAttachmentPayload(card) {
     }
   }
 
-  // 资产库
+  // 资产库 assets
   return {
     sourcePlugin: 'omnimux',
     kind: 'asset',

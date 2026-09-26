@@ -29,7 +29,7 @@ test('探索模板架构契约：一级大库、专属图标与真实二级分�
   // 3. 验证真实二级细分分类字典完整性
   assert.ok(EXPLORE_SUB_CATEGORIES.featured.some((s) => s.id === 'hook-intro'), '精选下必须有黄金开场');
   assert.ok(EXPLORE_SUB_CATEGORIES.assets.some((s) => s.id === 'character'), '资产库下必须有角色 IP');
-  assert.ok(EXPLORE_SUB_CATEGORIES.trending.some((s) => s.id === 'beauty_skincare'), '爆款趋势下必须有美妆个护');
+  assert.ok(EXPLORE_SUB_CATEGORIES.trending.some((s) => s.id === 'beauty-personal'), '爆款趋势下必须有美妆个护');
   assert.ok(EXPLORE_SUB_CATEGORIES.skills.some((s) => s.id === 'ugc-testimonial'), 'Skills 下必须有 UGC 种草');
 
   // 4. 验证样式契约：一级为非胶囊圆角矩形，二级为极简下划线

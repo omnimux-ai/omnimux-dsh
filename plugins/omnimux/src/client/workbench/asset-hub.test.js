@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import { describe, it } from 'node:test'
 import {
   ASSET_HUB_TAB_ID,
@@ -17,12 +18,20 @@ import {
   normalizeAssetItem,
   normalizeInspirationItem,
   normalizeProductItem,
+  normalizeTrendingItem,
+  normalizeSkillItem,
+  normalizeFeaturedItem,
   filterAssetHubItems,
   adaptCardToAttachmentPayload,
+  resolveSkillCover,
+  FILTER_PILL_ENUM_MAP,
+  loadAssetHubData,
 } from './asset-hub-data.js'
+import { SHARED_SUB_CATEGORIES } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
 import { createAttachmentStore } from '../attachments/store.ts'
 import { createComposerAddController } from '../composer-add/controller.js'
 import { installComposerAddCapture } from '../composer-add/install.js'
+import { promptForCard } from '../composer-add/library-stage-model.js'
 import { zh } from '../locales.js'
 
 describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测试', () => {
@@ -54,14 +63,16 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(maxWidth, 800)
   })
 
-  it('T02: 一级 Tab 白名单与二级 Filter 严格锁定（首项固定「全部」）', () => {
-    assert.deepEqual(PRIMARY_TABS, ['canvas', 'assets', 'inspiration', 'products'])
+  it('T02: 一级 Tab 白名单与二级 Filter 严格锁定（首项固定「全部」，彻底拔除 canvas）', () => {
+    assert.deepEqual(PRIMARY_TABS, ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills'])
 
-    // 文案逐字校验（零自由发挥）
-    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.canvas, '画布')
+    // 文案逐字校验（零自由发挥，对齐 Spec 5.1）
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.featured, '精选')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.assets, '资产库')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.inspiration, '灵感库')
     assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.products, '商品库')
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.trending, '爆款趋势')
+    assert.equal(ASSET_HUB_I18N_SPEC.primaryTabs.skills, 'Skills')
 
     // 操作文案
     assert.equal(ASSET_HUB_I18N_SPEC.actions.fullscreen, '全屏')
@@ -73,28 +84,35 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(ASSET_HUB_I18N_SPEC.actions.retry, '重试')
 
     // 空态文案字典
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.featured, '暂无精选')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.assets, '暂无资产')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.inspiration, '暂无灵感')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.products, '暂无商品')
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.trending, '暂无爆款')
+    assert.equal(ASSET_HUB_I18N_SPEC.empty.skills, '暂无技能')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.search, '无匹配结果')
     assert.equal(ASSET_HUB_I18N_SPEC.empty.error, '加载失败')
 
-    // 二级标签白名单首项必须为「全部」
-    for (const tab of ['assets', 'inspiration', 'products']) {
+    // 二级标签白名单首项必须严格为「全部」
+    for (const tab of PRIMARY_TABS) {
       const pills = SECONDARY_FILTER_WHITELIST[tab]
       assert.ok(pills.length > 0)
       assert.equal(pills[0], '全部')
     }
 
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.assets, ['全部', '本地上传', '生成资产', '数字人', '商品图'])
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.inspiration, ['全部', '爆款视频', '分镜脚本', '创意提示词', '视觉风格'])
-    assert.deepEqual(SECONDARY_FILTER_WHITELIST.products, ['全部', '商品主图', '模特展示', '卖点细节', '场景切片'])
+    assert.equal(SECONDARY_FILTER_WHITELIST.featured[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.assets[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.inspiration[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.products[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.trending[0], '全部')
+    assert.equal(SECONDARY_FILTER_WHITELIST.skills[0], '全部')
   })
 
   it('T02: AssetHubNavStore 状态机受控管理与持久化', () => {
     const store = createAssetHubNavStore()
     const initial = store.getSnapshot()
-    assert.equal(initial.activeTab, 'assets')
+    assert.equal(initial.activeTab, 'featured')
+    assert.equal(initial.secondaryFilters.featured, '全部')
     assert.equal(initial.secondaryFilters.assets, '全部')
     assert.equal(initial.isFullscreen, false)
 
@@ -552,5 +570,196 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     // 执行 dispose，由于修复了焦点抢夺，dispose 不应触发 restoreFocus
     captureInstance.dispose()
     assert.equal(focusRestored, false, 'dispose 过程中不应抢夺用户焦点')
+  })
+
+  it('T09: 六路数据归一化、Click-to-Attach 载荷与路由适配（Issue #2636 / Spec 5.5）', () => {
+    // 1. 数据归一化测试
+    const featured = normalizeFeaturedItem({
+      id: 'tpl_demo',
+      titleZh: '微距质感',
+      type: 'template',
+    })
+    assert.equal(featured.lane, 'featured')
+    assert.equal(featured.formatText, 'TPL')
+
+    const trending = normalizeTrendingItem({
+      id: 'tr_1',
+      title: '街拍穿搭爆款',
+      duration: 12,
+      views: '120W',
+    })
+    assert.equal(trending.lane, 'trending')
+    assert.equal(trending.formatText, 'MP4')
+    assert.equal(trending.durationText, '00:12')
+    assert.equal(trending.dimensionsOrSize, '120W 次播放')
+
+    const skill = normalizeSkillItem({
+      id: 'sk_1',
+      titleZh: '黄金 Hook 提炼',
+      category: 'ugc-testimonial',
+    })
+    assert.equal(skill.lane, 'skills')
+    assert.equal(skill.formatText, 'SKILL')
+
+    // 2. Click-to-Attach 载荷转换与 Spec 5.5 对齐（featured 与 skills 仅注入 prompt，不产生物理附件；trending 正常转换）
+    const featuredPayload = adaptCardToAttachmentPayload(featured)
+    assert.equal(featuredPayload, null, 'featured 卡片严禁生成物理附件载荷')
+
+    const trendingPayload = adaptCardToAttachmentPayload(trending)
+    assert.equal(trendingPayload.sourcePlugin, 'omnimux-inspiration')
+    assert.equal(trendingPayload.kind, 'inspiration')
+    assert.equal(trendingPayload.extension, 'MP4')
+
+    const skillPayload = adaptCardToAttachmentPayload(skill)
+    assert.equal(skillPayload, null, 'skills 卡片严禁生成物理附件载荷')
+
+    // 3. 路由方法 openTrending / openSkills / openFeatured
+    const navStore = createAssetHubNavStore()
+    const workbenchCalls = []
+    const mockWorkbench = {
+      openWorkbench(opts) {
+        workbenchCalls.push(opts)
+      },
+    }
+    const controller = createComposerAddController({
+      store: createAttachmentStore(),
+      t: (key) => zh[key] || key,
+      getCurrentSessionId: () => 'sess_t09',
+      subscribeCurrentSession: () => () => {},
+      renderLibrary: () => {},
+      notify: () => {},
+      workbench: mockWorkbench,
+      assetHubNavStore: navStore,
+    })
+
+    controller.openFeatured('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'featured')
+
+    controller.openTrending('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'trending')
+
+    controller.openSkills('sess_t09')
+    assert.equal(navStore.getSnapshot().activeTab, 'skills')
+
+    controller.dispose()
+  })
+
+  it('T10: 审秋毫 14 项审查缺陷（6 High + 8 Medium）闭环防护验证', async () => {
+    // 1. controller.js pickCard 守卫分支：featured 与 skills 不得映射为附件，仅注入 prompt
+    const store = createAttachmentStore()
+    const promptInjected = []
+    let stageProps = null
+    const controller = createComposerAddController({
+      store,
+      t: (key) => zh[key] || key,
+      getCurrentSessionId: () => 'sess_t10',
+      subscribeCurrentSession: () => () => {},
+      renderLibrary: (p) => { stageProps = p },
+      notify: () => {},
+      onPrompt: (p) => promptInjected.push(p),
+    })
+    await controller.openLibrary('sess_t10')
+    assert.ok(stageProps && typeof stageProps.onPick === 'function')
+
+    // 触发 onPick (lane: 'featured')
+    const featuredCard = {
+      lane: 'featured',
+      title: '高转化脚本',
+      raw: { id: 'feat_1', title: '高转化脚本' },
+    }
+    const resFeatured = await stageProps.onPick(featuredCard)
+    assert.deepEqual(resFeatured, { added: 0, promptOnly: true })
+    assert.equal(store.getSnapshot('sess_t10').length, 0, 'featured 卡片绝不增加物理附件')
+    assert.equal(promptInjected.length, 1)
+    assert.ok(promptInjected[0].includes('高转化脚本'))
+
+    // 触发 onPick (lane: 'skills')
+    const skillCard = {
+      lane: 'skills',
+      title: '黄金Hook',
+      raw: { id: 'sk_1', title: '黄金Hook' },
+    }
+    const resSkill = await stageProps.onPick(skillCard)
+    assert.deepEqual(resSkill, { added: 0, promptOnly: true })
+    assert.equal(store.getSnapshot('sess_t10').length, 0, 'skills 卡片绝不增加物理附件')
+    assert.equal(promptInjected.length, 2)
+    assert.ok(promptInjected[1].includes('黄金Hook'))
+    controller.dispose()
+
+    // 2. shared-tabs-catalog.js 移除 beauty_skincare 冗余项
+    const trendingSubCats = SHARED_SUB_CATEGORIES.trending
+    assert.equal(trendingSubCats.some((c) => c.id === 'beauty_skincare'), false)
+    assert.equal(trendingSubCats.some((c) => c.id === 'beauty-personal'), true)
+
+    // 3. asset-hub-data.js 清理 FILTER_PILL_ENUM_MAP 废除枚举
+    assert.equal('商品主图' in FILTER_PILL_ENUM_MAP, false)
+    assert.equal('模特展示' in FILTER_PILL_ENUM_MAP, false)
+    assert.equal('卖点细节' in FILTER_PILL_ENUM_MAP, false)
+    assert.equal('场景切片' in FILTER_PILL_ENUM_MAP, false)
+    assert.ok(Array.isArray(FILTER_PILL_ENUM_MAP['生活家电']))
+    assert.ok(Array.isArray(FILTER_PILL_ENUM_MAP['数码影音']))
+    assert.ok(Array.isArray(FILTER_PILL_ENUM_MAP['美妆护肤']))
+    assert.ok(Array.isArray(FILTER_PILL_ENUM_MAP['服饰箱包']))
+    assert.ok(Array.isArray(FILTER_PILL_ENUM_MAP['食品饮料']))
+
+    // 5. asset-hub-store.js setSecondaryFilter 支持按英文 ID 自动兼容转换
+    const navStore = createAssetHubNavStore()
+    navStore.setActiveTab('products')
+    navStore.setSecondaryFilter('products', 'digital-audio')
+    assert.equal(navStore.getSnapshot().secondaryFilters.products, '数码影音')
+
+    // 10. asset-hub-data.js 兼容安全读取 featured-skills.json（彻底杜绝 new Function 动态执行）
+    const assetHubDataSrc = fs.readFileSync(new URL('./asset-hub-data.js', import.meta.url), 'utf8')
+    assert.ok(!assetHubDataSrc.includes('new Function'), '严禁使用 new Function 违规动态执行')
+    const skillsList = await loadAssetHubData('skills')
+    assert.ok(Array.isArray(skillsList))
+    assert.ok(skillsList.length > 0)
+    assert.equal(skillsList[0].lane, 'skills')
+
+    // 11. normalizeTrendingItem 视频媒体类型校验与守卫：图片 URL 排除，合法云端视频保持通路
+    const trendingImg = normalizeTrendingItem({
+      id: 'tr_img',
+      title: '纯静态图',
+      url: 'https://example.com/banner.png',
+    })
+    assert.equal(trendingImg.previewVideoUrl, '', '图片 URL 必须被视频守卫拦截')
+
+    const trendingVideo = normalizeTrendingItem({
+      id: 'tr_vid',
+      title: '正规视频',
+      url: 'https://example.com/clip.mp4',
+    })
+    assert.equal(trendingVideo.previewVideoUrl, 'https://example.com/clip.mp4')
+
+    const trendingCdnVideo = normalizeTrendingItem({
+      id: 'tr_cdn',
+      title: '合法云端CDN视频',
+      url: 'https://cdn.example.com/stream/v1?token=auth123',
+    })
+    assert.equal(trendingCdnVideo.previewVideoUrl, 'https://cdn.example.com/stream/v1?token=auth123', '合法云端 CDN 视频保持通路不被误杀')
+
+    // 12. normalizeTrendingItem row.views 数值有效性校验
+    const trendingZeroViews = normalizeTrendingItem({
+      id: 'tr_zero',
+      title: '零播放',
+      views: 0,
+    })
+    assert.equal(trendingZeroViews.dimensionsOrSize, '', 'views 为 0 时不生成 0 次播放')
+
+    const trendingValidViews = normalizeTrendingItem({
+      id: 'tr_valid',
+      title: '合法播放',
+      views: 12500,
+    })
+    assert.equal(trendingValidViews.dimensionsOrSize, '12500 次播放')
+
+    // 13. resolveSkillCover 外部拼接 URL 安全协议白名单校验与 data:image/ 协议放行
+    assert.equal(resolveSkillCover('javascript:alert(1)'), '')
+    assert.equal(resolveSkillCover('data:text/html,<script>'), '')
+    assert.equal(resolveSkillCover('file:///etc/passwd'), '')
+    assert.equal(resolveSkillCover('https://example.com/icon.png'), 'https://example.com/icon.png')
+    assert.equal(resolveSkillCover('/custom/icon.png'), '/omnimux-market/icon?url=%2Fcustom%2Ficon.png')
+    assert.equal(resolveSkillCover('data:image/png;base64,iVBORw0KGgo='), 'data:image/png;base64,iVBORw0KGgo=')
+    assert.equal(resolveSkillCover('data:image/svg+xml,<svg></svg>'), 'data:image/svg+xml,<svg></svg>')
   })
 })

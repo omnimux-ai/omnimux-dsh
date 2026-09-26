@@ -148,4 +148,34 @@ describe('Asset Hub E2E: 三栏右侧素材工作台端到端全链路', () => {
     assert.equal(r4.length, 1)
     assert.equal(r4[0].id, 'a4')
   })
+
+  it('E2E-04: 6 大主库 Tab 切换与 Click-to-Attach 载荷及 Prompt 追加端到端全链路', () => {
+    const navStore = createAssetHubNavStore()
+    const attachmentStore = createAttachmentStore()
+    const sessionId = 'session_e2e_04'
+
+    assert.deepEqual(PRIMARY_TABS, ['featured', 'assets', 'inspiration', 'products', 'trending', 'skills'])
+
+    // 1. 切换到爆款趋势
+    navStore.setActiveTab('trending')
+    assert.equal(navStore.getSnapshot().activeTab, 'trending')
+
+    // 2. 模拟点击爆款卡片执行 Click-to-Attach
+    const trendingCard = {
+      id: 'trend_101',
+      lane: 'trending',
+      title: '高转化出海口播',
+      formatText: 'MP4',
+      thumbnailUrl: 'https://files.omnimux.ai/thumb.png',
+      raw: {},
+    }
+    const payload = adaptCardToAttachmentPayload(trendingCard)
+    const result = attachmentStore.addAttachment(sessionId, payload)
+    assert.equal(result.ok, true)
+
+    const attachments = attachmentStore.getSnapshot(sessionId)
+    assert.equal(attachments.length, 1)
+    assert.equal(attachments[0].kind, 'inspiration')
+    assert.equal(attachments[0].entityId, 'trend_101')
+  })
 })

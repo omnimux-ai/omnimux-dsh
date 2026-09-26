@@ -1,30 +1,34 @@
 /**
- * 加号整页选素材：分类、提示词和四路数据。
+ * 加号整页选素材：分类、提示词和六路数据。
  * 只走公开地址，不引用其他插件的内部模块。
+ * 严格对齐 specs/asset-hub-shared-tabs.spec.md 与 specs/asset-hub-shared-tabs-architecture.md
  */
 import { mapInspirationRow } from '../components/inspiration-picker/picker-model.js'
 import { mapSourceItem } from '../session-guide/trending/trending-source.js'
+import { SHARED_PRIMARY_TABS } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
+import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
 export const LIBRARY_STAGE_EVENT = 'omnimux:library-stage'
 export const LIBRARY_STAGE_PROMPT_EVENT = 'omnimux:library-stage:prompt'
 export const LIBRARY_STAGE_DOCK_ID = 'omnimux-library-stage'
 
-export const LIBRARY_TABS = Object.freeze([
-  { id: 'featured', label: '精选' },
-  { id: 'assets', label: '资产库' },
-  { id: 'inspiration', label: '灵感库' },
-  { id: 'products', label: '产品库' },
-  { id: 'trending', label: '爆款趋势' },
-])
+export const LIBRARY_TABS = Object.freeze(
+  SHARED_PRIMARY_TABS.map((t) => ({ id: t.id, label: t.nameZh }))
+)
 
 const FEATURED_LIMIT = 8
 const PAGE_LIMIT = 48
 
-/** 加号三个素材入口各自打开的分类。 */
+/** 加号各素材入口各自打开的分类。 */
 export function tabForKind(kind) {
-  if (kind === 'product' || kind === 'products') return 'products'
-  if (kind === 'inspiration') return 'inspiration'
-  if (kind === 'library' || kind === 'assets') return 'assets'
+  const k = String(kind || '').toLowerCase()
+  if (k === 'product' || k === 'products') return 'products'
+  if (k === 'inspiration') return 'inspiration'
+  if (k === 'library' || k === 'assets' || k === 'asset') return 'assets'
+  if (k === 'trending' || k === 'hot') return 'trending'
+  if (k === 'skill' || k === 'skills') return 'skills'
+  if (k === 'featured' || k === 'template' || k === 'templates' || k === 'app') return 'featured'
   return 'featured'
 }
 
@@ -34,16 +38,23 @@ export function sourcesForTab(tab) {
   if (tab === 'inspiration') return ['inspiration']
   if (tab === 'products') return ['products']
   if (tab === 'trending') return ['trending']
-  return ['assets', 'inspiration', 'products', 'trending']
+  if (tab === 'skills') return ['skills']
+  if (tab === 'featured') return ['featured']
+  return ['featured']
 }
 
+/**
+ * 依据卡片生成对应的 Prompt 草稿
+ */
 export function promptForCard(card) {
   const name = String(card?.title || card?.name || '').trim()
   if (!name) return ''
+  if (card.lane === 'featured') return `请基于模板「${name}」，结合我的产品卖点生成对应视频脚本。`
   if (card.lane === 'assets') return `请结合资产「${name}」继续创作：`
   if (card.lane === 'products') return `请围绕产品「${name}」撰写内容：`
   if (card.lane === 'inspiration') return `请参考本地灵感「${name}」继续创作：`
   if (card.lane === 'trending') return `请对标这条爆款「${name}」复刻一条视频：`
+  if (card.lane === 'skills') return `为我运行技能「${name}」，指导下一步创作流程。`
   return ''
 }
 
@@ -136,11 +147,34 @@ async function loadTrending(fetchImpl, limit) {
   }))
 }
 
+async function loadSkills(fetchImpl, limit) {
+  const list = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : []
+  return list
+    .filter((skill) => skill?.id)
+    .slice(0, limit)
+    .map((skill) => ({
+      id: String(skill.id),
+      title: String(skill.titleZh || skill.title || skill.id),
+      raw: skill,
+    }))
+}
+
+async function loadFeatured(fetchImpl, limit) {
+  const list = Array.isArray(ALL_CREATIVE_TEMPLATES) ? ALL_CREATIVE_TEMPLATES : []
+  return list.slice(0, limit).map((tpl) => ({
+    id: String(tpl.id || tpl.appId || ''),
+    title: String(tpl.titleZh || tpl.title || tpl.id),
+    raw: tpl,
+  }))
+}
+
 const LOADERS = {
+  featured: loadFeatured,
   assets: loadAssets,
   products: loadProducts,
   inspiration: loadInspiration,
   trending: loadTrending,
+  skills: loadSkills,
 }
 
 /**
@@ -152,7 +186,9 @@ export async function loadLibraryCards(tab, deps = {}) {
   const limit = tab === 'featured' ? FEATURED_LIMIT : PAGE_LIMIT
   const settled = await Promise.all(lanes.map(async (lane) => {
     try {
-      const items = await LOADERS[lane](deps.fetchImpl, limit)
+      const loader = LOADERS[lane]
+      if (!loader) return { lane, items: [], error: null }
+      const items = await loader(deps.fetchImpl, limit)
       return { lane, items, error: null }
     } catch (caught) {
       return {

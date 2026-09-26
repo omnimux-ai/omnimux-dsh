@@ -1,0 +1,50 @@
+{
+  "task": "feat(asset-hub): 素材工作台与新会话共享 Tab 栏单一真源重构与 Canvas 拔除",
+  "verifiedAt": "2026-09-25T20:02:00.000Z",
+  "spec": "specs/asset-hub-shared-tabs.spec.md",
+  "architecture": "specs/asset-hub-shared-tabs-architecture.md",
+  "issues": [
+    "#2636"
+  ],
+  "verificationDetails": {
+    "sharedCatalog": {
+      "tabs": ["featured", "assets", "inspiration", "products", "trending", "skills"],
+      "subCategoriesFirstItem": "全部 (All)",
+      "canvasRemoved": true,
+      "vectorIconsOnly": true
+    },
+    "assetHubStore": {
+      "tabsEnumsUpdated": true,
+      "canvasPurged": true,
+      "fallbackSafe": "featured or assets"
+    },
+    "sixLanesDataEngine": {
+      "featuredLoaded": true,
+      "trendingLoaded": true,
+      "skillsLoaded": true,
+      "clickToAttachPayloadAdapted": true,
+      "promptsAppended": true,
+      "autoSendPrevented": true
+    },
+    "routingAdapted": {
+      "openFeatured": true,
+      "openTrending": true,
+      "openSkills": true
+    },
+    "uiGateRules": {
+      "controlsHeightBaseline": "32px",
+      "radiusHierarchy": "8px",
+      "tokens": "100% --dsw-alias-*",
+      "vectorSvgIconsOnly": true,
+      "noUnicodeEmoji": true
+    }
+  },
+  "testResults": {
+    "sharedTabsTests": "3/3 passed in shared-tabs.test.js",
+    "assetHubTests": "10/10 passed in asset-hub.test.js",
+    "composerAddTests": "22/22 passed in controller.test.js & library-stage-model.test.js",
+    "sessionGuideTests": "5/5 passed in templates-data.test.js & explore-templates-rearchitecture.e2e.test.js",
+    "assetHubE2ETests": "3/3 passed in asset-hub.e2e.test.js"
+  },
+  "status": "VERIFIED_PASSED"
+}
