@@ -10,6 +10,7 @@ export const DEFAULT_PROVIDER_ENDPOINTS = Object.freeze({
   fal: 'https://fal.run',
   openai: 'https://api.openai.com/v1',
   openrouter: 'https://openrouter.ai/api/v1',
+  siliconflow: 'https://api.siliconflow.cn/v1',
 })
 
 /**
@@ -232,9 +233,9 @@ export function registerByokRoutes(webServer, deps) {
           const credentials = getCredentials()
           if (credentials && typeof credentials.set === 'function') {
             try { await credentials.set(BYOK_KEY_REF, '') } catch { /* best effort */ }
-            try { await credentials.set('OMNIMUX_MEDIA_KEY_FAL', '') } catch { /* best effort */ }
-            try { await credentials.set('OMNIMUX_MEDIA_KEY_OPENAI', '') } catch { /* best effort */ }
-            try { await credentials.set('OMNIMUX_MEDIA_KEY_OPENROUTER', '') } catch { /* best effort */ }
+            for (const p of MEDIA_PROVIDERS) {
+              try { await credentials.set(`OMNIMUX_MEDIA_KEY_${p.toUpperCase()}`, '') } catch { /* best effort */ }
+            }
           }
           await writeSettings(getSettings(), {
             runtimeKeyEndpoint: '',

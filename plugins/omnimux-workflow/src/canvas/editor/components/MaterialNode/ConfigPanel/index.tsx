@@ -28,6 +28,20 @@ import {
   AudioLines,
 } from 'lucide-react';
 import { ModelCascadeMenu } from './ModelCascadeMenu';
+import {
+  resolveModelChannelGroups,
+  resolveShortModelName,
+  isByokGroup,
+  isRuntimeByokChannelSettings,
+  type RuntimeByokChannelSettings,
+} from './channelGroups';
+import {
+  buildChannelContract,
+  reconcileParamsWithContract,
+  resolveFallbackRouting,
+  type HealingNote,
+  type ChannelFallbackState,
+} from './channelContractReconciler';
 import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
@@ -103,6 +117,8 @@ export interface ConfigPanelProps {
   onGenerate: () => void;
   /** 全图/其他节点执行中（禁用执行入口） */
   execBusy: boolean;
+  /** 可选运行时配置（用于自备渠道 BYOK 与契约自适应） */
+  runtimeSettings?: RuntimeByokChannelSettings | null;
   /** 唤起 ResourcePicker；带 SlotPickRequest 时进入卡槽装填会话，或传入 mode/targetSlotIndex。 */
   onOpenResourcePicker?: (requestOrMode?: SlotPickRequest | 'add' | 'replace', targetSlotIndex?: number) => void;
 }
@@ -119,6 +135,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   onUpdateNodeData,
   onGenerate,
   execBusy,
+  runtimeSettings,
   onOpenResourcePicker,
 }) => {
   const t = useT();
@@ -134,8 +151,39 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
 
+  const [envSettings, setEnvSettings] = useState<RuntimeByokChannelSettings | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = (window as any).__OMNIMUX_RUNTIME_SETTINGS__;
+      return isRuntimeByokChannelSettings(raw) ? raw : undefined;
+    }
+    return undefined;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncEnvSettings = () => {
+      const raw = (window as any).__OMNIMUX_RUNTIME_SETTINGS__;
+      setEnvSettings(isRuntimeByokChannelSettings(raw) ? raw : undefined);
+    };
+
+    syncEnvSettings();
+    window.addEventListener('omnimux:runtime-settings-changed', syncEnvSettings);
+    return () => {
+      window.removeEventListener('omnimux:runtime-settings-changed', syncEnvSettings);
+    };
+  }, []);
+
+  const effectiveRuntimeSettings: RuntimeByokChannelSettings | undefined = useMemo(() => {
+    if (isRuntimeByokChannelSettings(runtimeSettings)) {
+      return runtimeSettings;
+    }
+    return envSettings;
+  }, [runtimeSettings, envSettings]);
+
+  const [healingNotes, setHealingNotes] = useState<HealingNote[]>([]);
+
   const routing = (params.routing && typeof params.routing === 'object')
-    ? (params.routing as { strategy?: 'auto' | 'stability_first' | 'cost_first'; allowedGroups?: string[] })
+    ? (params.routing as { strategy?: 'auto' | 'stability_first' | 'cost_first'; allowedGroups?: string[]; channelGroupId?: string; sourceType?: 'official' | 'byok' })
     : undefined;
 
   const slotState = nodeData.slotState as NodeSlotEngineState | undefined;
@@ -202,7 +250,56 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
   const currentOperationId = resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
   const effectiveSlotLayout = useMemo(() => deriveSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
-  const textSources = useMemo(() => effectiveSlotLayout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets), [fingerprint, effectiveSlotLayout]);
+
+  const fallbackState = useMemo<ChannelFallbackState>(() => {
+    const family = (activeCatalog?.[materialType] as CapabilityModelItem[] | undefined)?.find((m) => m.id === modelValue)?.family;
+    const displayName = resolveShortModelName(modelValue, family);
+    return resolveFallbackRouting(
+      modelValue,
+      displayName,
+      params.routing as Record<string, unknown> | undefined,
+      effectiveRuntimeSettings,
+    );
+  }, [modelValue, activeCatalog, materialType, params.routing, effectiveRuntimeSettings]);
+
+  const allChannelGroups = useMemo(
+    () => resolveModelChannelGroups(modelValue, effectiveRuntimeSettings),
+    [modelValue, effectiveRuntimeSettings],
+  );
+
+  const isSingleImageChannel = useMemo(() => {
+    const currentRouting = (params.routing && typeof params.routing === 'object')
+      ? (params.routing as { allowedGroups?: string[]; channelGroupId?: string })
+      : undefined;
+    const allowedGroup = currentRouting?.allowedGroups?.[0];
+    const explicitChannelGroup = currentRouting?.channelGroupId;
+    if (allowedGroup && explicitChannelGroup && allowedGroup !== explicitChannelGroup) {
+      // 瞬态路由冲突安全防御：若 allowedGroups[0] 与 channelGroupId 存在冲突，安全默认返回 false，不盲目回退到首个分组
+      return false;
+    }
+    const currentGroupId = allowedGroup || explicitChannelGroup;
+    const usableGroups = allChannelGroups.filter((group) => group.enabled !== false && group.isAvailable !== false);
+    const matchedGroup = (currentGroupId ? usableGroups.find((g) => g.id === currentGroupId) : null) || usableGroups[0];
+    if (!matchedGroup) return false;
+    const contract = buildChannelContract(modelValue, matchedGroup);
+    return matchedGroup.constraints?.inputs?.image?.max === 1 || contract.constraints.maxReferenceImages === 1;
+  }, [allChannelGroups, params.routing, modelValue]);
+
+  const availableOfficialGroups = useMemo(() => {
+    return allChannelGroups.filter((g) => !isByokGroup(g) && g.isAvailable !== false);
+  }, [allChannelGroups]);
+
+  const displayedSlotLayout = useMemo(() => {
+    if (!isSingleImageChannel || !effectiveSlotLayout?.slots || effectiveSlotLayout.slots.length <= 1) {
+      return effectiveSlotLayout;
+    }
+    return {
+      ...effectiveSlotLayout,
+      preset: 'strip' as const,
+      slots: effectiveSlotLayout.slots.slice(0, 1),
+    };
+  }, [effectiveSlotLayout, isSingleImageChannel]);
+  const textSources = useMemo(() => displayedSlotLayout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets), [fingerprint, displayedSlotLayout]);
   const feedAssets = useMemo(() => feedFromFingerprint(fingerprint), [fingerprint]);
   const storedSlotBindings = useMemo(() => {
     const raw = nodeData.slotBindings as SlotBindings | undefined;
@@ -215,15 +312,15 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     return raw;
   }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds]);
   const canvasEdges = useCanvasStore((state) => state.edges);
-  const inputDisplay = useMemo(() => effectiveInputDisplay(effectiveSlotLayout, feedAssets,
+  const inputDisplay = useMemo(() => effectiveInputDisplay(displayedSlotLayout, feedAssets,
     materialType === 'audio' && currentOperationId === 'text_to_speech' ? {} : storedSlotBindings,
     materialType === 'audio' && currentOperationId === 'text_to_speech' ? [] : (nodeData.slotConflicts ?? []) as SlotConflict[],
     canvasEdges.filter((edge) => edge.target === nodeId), (nodeData.slotStandbyEdgeIds ?? []) as string[]),
-  [storedSlotBindings, effectiveSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, materialType, currentOperationId]);
+  [storedSlotBindings, displayedSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, materialType, currentOperationId]);
   const slotBindings = inputDisplay.bindings;
   const slotConflicts = inputDisplay.conflicts;
-  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, effectiveSlotLayout, slotBindings, slotConflicts),
-    [fingerprint, effectiveSlotLayout, slotBindings, slotConflicts]);
+  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, displayedSlotLayout, slotBindings, slotConflicts),
+    [fingerprint, displayedSlotLayout, slotBindings, slotConflicts]);
 
   const consumedUpstreams = useMemo(() => consumedFingerprint.assets.map((asset) => ({
     ...asset, nodeId: asset.sourceNodeId, materialType: asset.type,
@@ -302,6 +399,19 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const updateParam = useCallback(
     (key: string, value: unknown) => {
+      // 用户主动修改对应参数时消除自愈提示条
+      if (key === 'aspectRatio' || key === 'aspect_ratio') {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'aspectRatio'));
+      } else if (key === 'duration') {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'duration'));
+      } else if (key === 'resolution') {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'resolution'));
+      } else if (key === 'sound' || key === 'generateSound') {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'sound'));
+      } else if (key === 'referenceImages' || key === 'slotBindings') {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'referenceImages'));
+      }
+
       if (key === 'operation') {
         const nextOpId = typeof value === 'string' ? value : undefined;
         if (materialType === 'video' && modelItem) {
@@ -328,11 +438,11 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       if (materialType === 'video') {
         commitVideoSelection(buildVideoParameterSelection({
           params: { ...params, ...patch }, parameterSelections, currentModelItem: modelItem, targetModelItem: modelItem,
-          catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
+          catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt, runtimeSettings: effectiveRuntimeSettings,
         }));
       } else onUpdateNodeData({ params: { ...params, ...patch } });
     },
-    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots, parameterSelections, commitVideoSelection],
+    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots, parameterSelections, commitVideoSelection, effectiveRuntimeSettings],
   );
 
   const handleSelectVoice = useCallback(
@@ -440,8 +550,40 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [materialType, isAsrTool, prompt],
   );
 
+  const patchSlotBindings = useCallback(
+    (next: SlotBindings, options?: { isUserAction?: boolean }) => {
+      // 仅在用户主动操作时才清除附注，避免渠道切换刚产生的“该渠道仅支持单张参考图”提示被自动修剪瞬间抹除
+      if (options?.isUserAction) {
+        setHealingNotes((prev) => prev.filter((n) => n.field !== 'referenceImages'));
+      }
+      useCanvasStore.getState().applyCanvasInputMutation({
+        nodePatches: [{ nodeId, data: { slotBindings: next } }],
+      });
+    },
+    [nodeId],
+  );
+
+  useEffect(() => {
+    if (!isSingleImageChannel) return;
+    const currentBindings = nodeData.slotBindings as SlotBindings | undefined;
+    if (!currentBindings || typeof currentBindings !== 'object') return;
+    const primarySlotKey = displayedSlotLayout.slots[0]?.slot ?? '0';
+    const keys = Object.keys(currentBindings);
+    const hasExtra = keys.some((k) => k !== primarySlotKey && (currentBindings[k]?.length ?? 0) > 0);
+    const primaryOccupants = currentBindings[primarySlotKey] ?? [];
+    const hasOverflownPrimary = primaryOccupants.length > 1;
+    if (hasExtra || hasOverflownPrimary) {
+      const firstAvailableOccupant = primaryOccupants[0]
+        ?? keys.filter((k) => k !== primarySlotKey).flatMap((k) => currentBindings[k] ?? [])[0];
+      const normalized: SlotBindings = {
+        [primarySlotKey]: firstAvailableOccupant ? [firstAvailableOccupant] : [],
+      };
+      patchSlotBindings(normalized);
+    }
+  }, [isSingleImageChannel, displayedSlotLayout, nodeData.slotBindings, patchSlotBindings]);
+
   const handleModelChange = useCallback(
-    (newModelId: string, channelSelection?: { strategy: string; allowedGroups?: string[] }) => {
+    (newModelId: string, channelSelection?: { strategy: string; allowedGroups?: string[]; channelGroupId?: string; sourceType?: 'official' | 'byok' }) => {
       if (!filteredModels.options.some((row) => row.id === newModelId)) return;
       let nextParams: Record<string, unknown>;
       const scopedSelections = typeof parameterSelections !== 'undefined' ? parameterSelections : undefined;
@@ -449,16 +591,25 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       let nextSelections = scopedSelections;
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
       const newModelItem = modelList.find((m) => m.id === newModelId);
+      let nextOperation: string | undefined;
       if (channelSelection && newModelId === params.model) {
         nextParams = { ...params };
+        nextOperation = readPreferredOperationId(nextParams as Record<string, unknown>)
+          || resolveSlotOperation(activeCatalog, newModelId, preferredOperationId, outputTypeForCompat, fingerprint);
       } else if (materialType === 'video' && newModelItem) {
         const nextRouting = channelSelection?.allowedGroups?.length
-          ? { strategy: channelSelection.strategy, allowedGroups: channelSelection.allowedGroups }
+          ? {
+              strategy: channelSelection.strategy,
+              allowedGroups: channelSelection.allowedGroups,
+              ...(channelSelection.channelGroupId ? { channelGroupId: channelSelection.channelGroupId } : {}),
+              ...(channelSelection.sourceType ? { sourceType: channelSelection.sourceType } : {}),
+            }
           : (channelSelection ? null : undefined);
         const transition = typeof buildVideoParameterSelection !== 'undefined'
           ? buildVideoParameterSelection({
               params, parameterSelections: scopedSelections, currentModelItem: scopedModelItem, targetModelItem: newModelItem,
               catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt, routing: nextRouting, explicitModelSelection: true,
+              runtimeSettings: effectiveRuntimeSettings,
             })
           : (buildVideoParamTransition as any)(params, newModelItem, {
               catalog: activeCatalog, upstreams: upstreamSnapshots, prompt: localPrompt,
@@ -466,6 +617,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         nextParams = transition.params;
         if (transition.parameterSelections) nextSelections = transition.parameterSelections;
         if (transition.notices) for (const message of transition.notices) toast.info(message);
+        nextOperation = readPreferredOperationId(nextParams as Record<string, unknown>)
+          || resolveSlotOperation(activeCatalog, newModelId, preferredOperationId, outputTypeForCompat, fingerprint);
       } else {
         const nextOps = buildEffectiveOpsUiState({
           catalog: activeCatalog,
@@ -474,36 +627,133 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           outputType: outputTypeForCompat,
         });
         const matchedOp = nextOps.effectiveOps.find((op) => op.id === preferredOperationId && op.ready);
-        const nextOperation = matchedOp?.id ?? nextOps.selectedOperationId;
+        nextOperation = matchedOp?.id ?? nextOps.selectedOperationId;
         nextParams = setParamsOperation({ ...params, model: newModelId }, nextOperation);
       }
       if (channelSelection) {
-        const { strategy, allowedGroups } = channelSelection;
-        if (allowedGroups?.length) nextParams.routing = { strategy, allowedGroups };
-        else delete nextParams.routing;
+        const { strategy, allowedGroups, channelGroupId, sourceType } = channelSelection;
+        if (allowedGroups?.length) {
+          const isByok = sourceType === 'byok' || isByokGroup(allowedGroups[0]) || isByokGroup(channelGroupId);
+          nextParams.routing = {
+            strategy,
+            allowedGroups,
+            ...(isByok ? { channelGroupId: channelGroupId || allowedGroups[0], sourceType: 'byok' } : {}),
+          };
+        } else {
+          delete nextParams.routing;
+        }
       }
-      onUpdateNodeData({ params: nextParams, ...(materialType === 'video' && nextSelections ? { parameterSelections: nextSelections } : {}) });
+
+      // 执行契约协调（try/catch 严格保护，确保抛错时节点状态不僵死、脏提示不残留）
+      let nextSlotBindings: SlotBindings | undefined = undefined;
+      try {
+        const routing = (nextParams.routing && typeof nextParams.routing === 'object')
+          ? (nextParams.routing as { strategy?: 'auto' | 'stability_first' | 'cost_first'; allowedGroups?: string[]; channelGroupId?: string })
+          : undefined;
+        const routingAllowed = routing?.allowedGroups?.[0];
+        const routingChannelGroup = routing?.channelGroupId;
+        const resolvedRoutingGroup = (routingAllowed && routingChannelGroup)
+          ? (routingAllowed === routingChannelGroup ? routingAllowed : undefined)
+          : (routingAllowed || routingChannelGroup);
+
+        const channelSelAllowed = channelSelection?.allowedGroups?.[0];
+        const channelSelGroup = channelSelection?.channelGroupId;
+        const resolvedChannelSelGroup = (channelSelAllowed && channelSelGroup)
+          ? (channelSelAllowed === channelSelGroup ? channelSelAllowed : undefined)
+          : (channelSelAllowed || channelSelGroup);
+
+        const isCrossConflict = Boolean(
+          resolvedChannelSelGroup !== undefined &&
+          resolvedRoutingGroup !== undefined &&
+          resolvedChannelSelGroup !== resolvedRoutingGroup
+        );
+        const targetGroupId = isCrossConflict
+          ? undefined
+          : (resolvedChannelSelGroup !== undefined ? resolvedChannelSelGroup : resolvedRoutingGroup);
+        const availableGroups = resolveModelChannelGroups(
+          newModelId,
+          effectiveRuntimeSettings,
+        );
+        const isUsableGroup = (group: { enabled?: boolean; isAvailable?: boolean } | undefined) => Boolean(group && group.enabled !== false && group.isAvailable !== false);
+        const fallbackGroup = availableGroups.find(isUsableGroup);
+        const matchedGroup = (targetGroupId
+          ? availableGroups.find((group) => group.id === targetGroupId && isUsableGroup(group))
+          : null) || fallbackGroup;
+        if (matchedGroup) {
+          // 当检测到渠道 ID 冲突并降级到默认渠道组时，同步将 nextParams.routing 归一化为安全降级后的渠道信息，杜绝将冲突脏路由写回节点数据
+          if (nextParams.routing && typeof nextParams.routing === 'object') {
+            const hasConflict = Boolean(
+              isCrossConflict ||
+              (routingAllowed && routingChannelGroup && routingAllowed !== routingChannelGroup) ||
+              (channelSelAllowed && channelSelGroup && channelSelAllowed !== channelSelGroup) ||
+              (targetGroupId && !availableGroups.some((g) => g.id === targetGroupId))
+            );
+            if (hasConflict || targetGroupId !== matchedGroup.id) {
+              const isByok = isByokGroup(matchedGroup);
+              nextParams.routing = {
+                strategy: routing?.strategy || 'auto',
+                allowedGroups: [matchedGroup.id],
+                ...(isByok ? { channelGroupId: matchedGroup.id, sourceType: 'byok' } : {}),
+              };
+            }
+          }
+          const contract = buildChannelContract(newModelId, matchedGroup);
+          const { nextParams: reconciledParams, healingNotes: newNotes } = reconcileParamsWithContract(
+            nextParams,
+            contract,
+          );
+          nextParams = reconciledParams;
+          if (typeof setHealingNotes === 'function') {
+            setHealingNotes(newNotes);
+          }
+          if (
+            matchedGroup.constraints?.inputs?.image?.max === 1 ||
+            contract.constraints.maxReferenceImages === 1
+          ) {
+            if (nodeData.slotBindings && typeof nodeData.slotBindings === 'object') {
+              const raw = nodeData.slotBindings as SlotBindings;
+              const nextSlotLayout = deriveSlotLayout(activeCatalog, newModelId, nextOperation);
+              const primarySlotKey = nextSlotLayout.slots[0]?.slot ?? '0';
+              const keys = Object.keys(raw);
+              const hasExtra = keys.some((k) => k !== primarySlotKey && (raw[k]?.length ?? 0) > 0);
+              const primaryOccupants = raw[primarySlotKey] ?? [];
+              const firstAvailableOccupant = primaryOccupants[0]
+                ?? keys.filter((k) => k !== primarySlotKey).flatMap((k) => raw[k] ?? [])[0];
+              const hasOverflownPrimary = primaryOccupants.length > 1;
+              if (hasExtra || hasOverflownPrimary) {
+                nextSlotBindings = {
+                  [primarySlotKey]: firstAvailableOccupant ? [firstAvailableOccupant] : [],
+                };
+              }
+            }
+          }
+        } else if (typeof setHealingNotes === 'function') {
+          setHealingNotes([]);
+        }
+      } catch (error) {
+        console.error('[ConfigPanel] reconcileParamsWithContract failed:', error);
+        if (typeof setHealingNotes === 'function') {
+          setHealingNotes([]);
+        }
+      }
+
+      onUpdateNodeData({
+        params: nextParams,
+        ...(nextSlotBindings ? { slotBindings: nextSlotBindings } : {}),
+        ...(materialType === 'video' && nextSelections ? { parameterSelections: nextSelections } : {}),
+      });
       void rememberGenerationModel(materialType, newModelId).catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
       });
     },
-    [filteredModels.options, activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t, parameterSelections, modelItem],
+    [filteredModels.options, activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t, parameterSelections, modelItem, effectiveRuntimeSettings, nodeData.slotBindings, effectiveSlotLayout, displayedSlotLayout],
   );
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
 
-  const patchSlotBindings = useCallback(
-    (next: SlotBindings) => {
-      useCanvasStore.getState().applyCanvasInputMutation({
-        nodePatches: [{ nodeId, data: { slotBindings: next } }],
-      });
-    },
-    [nodeId],
-  );
-
   const handleSwapSlots = useCallback(
     (firstSlot: string, lastSlot: string) => {
-      patchSlotBindings(swapNamedSlots(slotBindings, firstSlot, lastSlot));
+      patchSlotBindings(swapNamedSlots(slotBindings, firstSlot, lastSlot), { isUserAction: true });
     },
     [patchSlotBindings, slotBindings],
   );
@@ -528,6 +778,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [onOpenResourcePicker],
   );
 
+
   // 必需槽位缺口：空卡槽自解释，提交按钮 disabledReason 同步提示。
   const slotLabelOf = useCallback(
     (spec: SlotSpec) => {
@@ -537,8 +788,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => effectiveSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
-    [effectiveSlotLayout, slotBindings],
+    () => displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
+    [displayedSlotLayout, slotBindings],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
@@ -637,11 +888,13 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     || Boolean(audioPromptGate?.exceeded)
     || missingRequiredSlots.length > 0
     || cloneMissingAudio
-    || execBusy;
+    || execBusy
+    || Boolean(fallbackState?.isFallback);
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
-    (cloneMissingAudio ? '参考音频模式需先连接上游音频输入' : undefined)
+    (fallbackState?.isFallback ? (fallbackState.runBlockedReason || undefined) : undefined)
+    || (cloneMissingAudio ? '参考音频模式需先连接上游音频输入' : undefined)
     || (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
     || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || videoValidationErrors[0]
@@ -658,14 +911,106 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   // T05：禁用态点击 → 画板 Toast（4s 自动淡出），不再渲染常驻静态错误条。
   const handleDisabledGenerateClick = useCallback(() => {
+    if (fallbackState?.isFallback) {
+      toast.error(fallbackState.runBlockedReason || '请配置自备 Key 或切换可用渠道');
+      return;
+    }
     canvasNoticeService.publish({
       kind: 'submit_blocked_click',
       message: blockReason || t('notice.submitBlocked'),
     });
-  }, [blockReason, t]);
+  }, [fallbackState, blockReason, t]);
 
   return (
     <div className="wf-config-panel" data-effective-ops={opsState.count}>
+      {fallbackState?.isFallback ? (
+        <div
+          className="wf-config-panel__fallback-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 12px',
+            background: 'var(--dsw-alias-bg-layer-2)',
+            borderRadius: 8,
+            border: '1px solid var(--dsw-alias-border-l1)',
+            marginBottom: 8,
+            gap: 12,
+          }}
+          role="alert"
+          data-testid="wf-channel-fallback-banner"
+        >
+          <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+            {fallbackState?.bannerMessage}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const targetOfficialGroupId = fallbackState?.recommendedOfficialGroupId || availableOfficialGroups[0]?.id;
+              if (!targetOfficialGroupId) {
+                toast.warning('暂无可用官方渠道，请稍后重试');
+                return;
+              }
+              handleModelChange(modelValue, {
+                strategy: 'auto',
+                allowedGroups: [targetOfficialGroupId],
+                channelGroupId: targetOfficialGroupId,
+                sourceType: 'official',
+              });
+            }}
+            style={{
+              fontSize: 12,
+              padding: '4px 10px',
+              borderRadius: 6,
+              background: 'var(--dsw-alias-interactive-bg-hover)',
+              color: 'var(--dsw-alias-text-primary)',
+              border: '1px solid var(--dsw-alias-border-l2)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+            data-testid="wf-channel-fallback-action"
+          >
+            {fallbackState.actionLabel}
+          </button>
+        </div>
+      ) : null}
+
+      {healingNotes.length > 0 ? (
+        <div
+          className="wf-config-panel__healing-notes"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            marginBottom: 8,
+          }}
+          data-testid="wf-channel-healing-notes"
+        >
+          {healingNotes.map((note) => (
+            <div
+              key={`${note.field}-${note.message}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                lineHeight: 1.4,
+                padding: '6px 10px',
+                borderRadius: 6,
+                background: 'var(--dsw-alias-bg-layer-2)',
+                border: '1px solid var(--dsw-alias-border-l1)',
+                color: 'var(--dsw-alias-label-secondary)',
+              }}
+              role="status"
+              data-testid={`wf-healing-note-${note.field}`}
+            >
+              <span style={{ fontSize: 13, color: 'var(--dsw-alias-label-tertiary)', lineHeight: 1 }}>ⓘ</span>
+              <span>{note.message}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {adaptationMessage ? (
         <div className="wf-config-panel__input-hint" role="status" data-testid="wf-model-adaptation">
           {adaptationMessage}
@@ -712,7 +1057,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           ))}
           {hasSlots && (
             <SlotWells
-              layout={effectiveSlotLayout}
+              layout={displayedSlotLayout}
               bindings={inputDisplay.visibleBindings}
               conflicts={slotConflicts}
               upstreams={upstreams}
@@ -793,8 +1138,10 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               routing={routing}
               options={filteredModels.options}
               execBusy={execBusy}
-              onSelect={({ modelId, strategy, allowedGroups }) => {
-                handleModelChange(modelId, { strategy, allowedGroups });
+              runtimeSettings={effectiveRuntimeSettings}
+              fallbackState={fallbackState}
+              onSelect={({ modelId, strategy, allowedGroups, channelGroupId, sourceType }) => {
+                handleModelChange(modelId, { strategy, allowedGroups, channelGroupId, sourceType });
               }}
             />
           )}

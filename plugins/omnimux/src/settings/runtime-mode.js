@@ -3,7 +3,7 @@
 export const RUNTIME_MODES = Object.freeze(['official', 'agent', 'key'])
 
 /** Supported native media generation providers */
-export const MEDIA_PROVIDERS = Object.freeze(['fal', 'openai', 'openrouter', 'custom'])
+export const MEDIA_PROVIDERS = Object.freeze(['fal', 'openai', 'openrouter', 'siliconflow', 'custom'])
 
 export const DEFAULT_MEDIA_MODELS = Object.freeze({
   image: 'fal-ai/flux/dev',
@@ -72,8 +72,10 @@ export function resolveMediaProviderChoice(settings, capability) {
     : null
 
   const isCapEnabled = capKey ? input[capKey] === true : true
-  // Ready strictly requires passing verification
-  const ready = verified === true
+  // Ready strictly requires passing verification and valid endpoint with http(s) protocol if custom
+  const isCustom = provider === 'custom'
+  const endpointValid = /^https?:\/\//i.test(endpoint)
+  const ready = verified === true && (!isCustom || endpointValid)
 
   const modelMap = {
     image: (typeof input.runtimeMediaImageModel === 'string' && input.runtimeMediaImageModel.trim()) || DEFAULT_MEDIA_MODELS.image,
@@ -107,17 +109,122 @@ export function assertRuntimeReady(settings, capability) {
   throw new Error(`尚未配置${label}，当前运行方式不能使用这一项`)
 }
 
-function mediaReadyFor(choice, settings, capability) {
-  if (choice.mode === 'official') return true
-  if (choice.mode !== 'key' || !choice.textReady) return false
-  const input = settings && typeof settings === 'object' && !Array.isArray(settings)
-    ? /** @type {Record<string, unknown>} */ (settings)
-    : {}
-  const flag = capability === 'image' ? 'runtimeMediaImage'
+/**
+ * 校验指定 BYOK Provider 条目是否支持目标媒体模态能力。
+ *
+ * @param {Record<string, unknown>} item
+ * @param {'image' | 'video' | 'audio'} capability
+ * @returns {boolean}
+ */
+function isByokItemCapabilitySupported(item, capability) {
+  if (!item || typeof item !== 'object') return false
+  if (Array.isArray(item.capabilities) && item.capabilities.length > 0) {
+    return item.capabilities.includes(capability)
+  }
+  const capKey = capability === 'image' ? 'runtimeMediaImage'
     : capability === 'video' ? 'runtimeMediaVideo'
     : capability === 'audio' ? 'runtimeMediaAudio'
     : ''
-  return flag !== '' && input[flag] === true
+  const capShort = capability
+  if (item[capKey] === false || item[capShort] === false) {
+    return false
+  }
+  if (item[capKey] === true || item[capShort] === true) {
+    return true
+  }
+
+  // 收敛至模态专属模型判定规则：未显式配置开关时，必须声明该模态的专属模型
+  return Boolean(
+    (item.models && typeof item.models === 'object' && item.models[capability])
+    || item[`${capability}Model`]
+  )
+}
+
+/**
+ * 判断特定媒体能力在当前设置下是否具备可用执行通道。
+ * 彻底解除 runtimeMode === 'agent' 对媒体生成的一刀切连坐阻断。
+ *
+ * @param {{ mode: RuntimeMode, textReady: boolean, mediaReady: boolean }} choice
+ * @param {unknown} settings
+ * @param {'image' | 'video' | 'audio'} capability
+ * @returns {boolean}
+ */
+export function mediaReadyFor(choice, settings, capability) {
+  // 1. 官方模式下默认放行，由下层 resolveMediaAuth 检验官方登录态或 Token
+  if (choice.mode === 'official') return true
+
+  const input = settings && typeof settings === 'object' && !Array.isArray(settings)
+    ? /** @type {Record<string, unknown>} */ (settings)
+    : {}
+
+  // 2. 检查独立配置的主媒体 Provider (BYOK: fal / openai / openrouter / custom)
+  const mediaChoice = resolveMediaProviderChoice(settings, capability)
+  if (mediaChoice.ready && mediaChoice.isCapEnabled) {
+    // 纯媒体自建端点门禁：当显式配置媒体提供商为 custom 时，仅校验端点非空与 verified，不强制要求文本模型就绪
+    const isPureMediaCustom = typeof input.runtimeMediaProvider === 'string'
+      && input.runtimeMediaProvider.trim().toLowerCase() === 'custom'
+    if (isPureMediaCustom) {
+      return Boolean(mediaChoice.verified && /^https?:\/\//i.test(mediaChoice.endpoint.trim()))
+    }
+
+    // 若未显式配置 runtimeMediaProvider 且为 key 模式，属于统一 Key 模式，必须要求文本模型就绪
+    const isKeyDirect = choice.mode === 'key' && (typeof input.runtimeMediaProvider !== 'string' || !input.runtimeMediaProvider.trim())
+    if (isKeyDirect) {
+      return choice.textReady
+    }
+
+    return true
+  }
+
+  // 3. 检查多 Provider 扩展列表 (byokProviders)
+  if (Array.isArray(input.byokProviders)) {
+    for (const item of input.byokProviders) {
+      if (item && typeof item === 'object' && item.verified === true) {
+        const itemProvider = typeof item.provider === 'string' ? item.provider.toLowerCase().trim() : ''
+        if (!MEDIA_PROVIDERS.includes(itemProvider)) {
+          continue
+        }
+        const itemEndpoint = typeof item.endpoint === 'string' ? item.endpoint.trim() : ''
+        // 若为 custom provider，必须强制检查端点 endpoint 是否以 http:// 或 https:// 开头，未配置或协议非法直接跳过
+        if (itemProvider === 'custom' && !/^https?:\/\//i.test(itemEndpoint)) {
+          continue
+        }
+
+        if (isByokItemCapabilitySupported(item, capability)) {
+          return true
+        }
+      }
+    }
+  }
+
+  // 4. 若用户在 settings 中显式允许官方通道兜底，在放行前必须严格校验用户的真实验证状态
+  // 坚决禁止在 settings 载荷中信任客户端可控的 officialToken / token，放行仅严格校验 isUserVerified 与凭据闭环
+  if (input.allowOfficialMediaFallback === true) {
+    const isAgentVerified = choice.mode === 'agent' && choice.textReady === true
+    const isKeyVerified = choice.mode === 'key' && choice.textReady === true
+    const isByokVerified = Array.isArray(input.byokProviders) && input.byokProviders.some((p) => {
+      if (!p || typeof p !== 'object' || p.verified !== true) return false
+      const pProvider = typeof p.provider === 'string' ? p.provider.toLowerCase().trim() : ''
+      if (!MEDIA_PROVIDERS.includes(pProvider)) return false
+      if (pProvider === 'custom') {
+        const hasEndpoint = typeof p.endpoint === 'string' && /^https?:\/\//i.test(p.endpoint.trim())
+        if (!hasEndpoint) return false
+      }
+      return isByokItemCapabilitySupported(p, capability)
+    })
+    const isIndependentMediaVerified = Boolean(
+      typeof input.runtimeMediaProvider === 'string'
+      && input.runtimeMediaProvider.trim()
+      && mediaChoice.ready
+      && mediaChoice.isCapEnabled
+    )
+    const isUserVerified = isAgentVerified || isKeyVerified || isByokVerified || isIndependentMediaVerified
+    if (isUserVerified) {
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
@@ -128,6 +235,8 @@ function mediaReadyFor(choice, settings, capability) {
  *   textReady: boolean,
  *   mediaReady: boolean,
  *   reason?: 'unconfigured',
+ *   textReason?: 'unconfigured',
+ *   mediaReason?: 'unconfigured',
  * }}
  */
 export function resolveRuntimeChoice(settings) {
@@ -143,24 +252,46 @@ export function resolveRuntimeChoice(settings) {
   if (mode === 'agent') {
     const agentReady = typeof input.runtimeAgentId === 'string' && input.runtimeAgentId.trim().length > 0
       && input.runtimeAgentVerified === true
-    return {
+    const baseChoice = { mode, textReady: agentReady, mediaReady: false }
+    const mediaReady = mediaReadyFor(baseChoice, settings, 'image')
+      || mediaReadyFor(baseChoice, settings, 'video')
+      || mediaReadyFor(baseChoice, settings, 'audio')
+    const res = {
       mode,
       textReady: agentReady,
-      mediaReady: false,
-      ...(agentReady ? {} : { reason: 'unconfigured' }),
+      mediaReady,
     }
+    if (!agentReady) {
+      res.reason = 'unconfigured'
+      res.textReason = 'unconfigured'
+    }
+    if (!mediaReady) {
+      res.mediaReason = 'unconfigured'
+    }
+    return res
   }
 
   const endpointReady = typeof input.runtimeKeyEndpoint === 'string' && input.runtimeKeyEndpoint.trim().length > 0
     && typeof input.runtimeKeyModel === 'string' && input.runtimeKeyModel.trim().length > 0
     && input.runtimeKeyVerified === true
-  const mediaReady = endpointReady
-    && (input.runtimeMediaImage === true || input.runtimeMediaVideo === true || input.runtimeMediaAudio === true)
+  const baseChoice = { mode, textReady: endpointReady, mediaReady: false }
+  const mediaReady = mediaReadyFor(baseChoice, settings, 'image')
+    || mediaReadyFor(baseChoice, settings, 'video')
+    || mediaReadyFor(baseChoice, settings, 'audio')
 
-  return {
+  const res = {
     mode,
     textReady: endpointReady,
     mediaReady,
-    ...((endpointReady && mediaReady) ? {} : { reason: 'unconfigured' }),
   }
+  if (!endpointReady || !mediaReady) {
+    res.reason = 'unconfigured'
+  }
+  if (!endpointReady) {
+    res.textReason = 'unconfigured'
+  }
+  if (!mediaReady) {
+    res.mediaReason = 'unconfigured'
+  }
+  return res
 }

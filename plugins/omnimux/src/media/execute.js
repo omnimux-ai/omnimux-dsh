@@ -13,10 +13,147 @@ import { probeMediaAssets } from './asset-probe.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
-import { resolveRuntimeChoice, resolveMediaProviderChoice } from '../settings/runtime-mode.js'
+import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
+import { resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
 import { DEFAULT_PROVIDER_ENDPOINTS, BYOK_KEY_REF } from '../byok/http.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
+
+const CAPABILITY_TO_KEY = Object.freeze({
+  image: 'runtimeMediaImage',
+  video: 'runtimeMediaVideo',
+  audio: 'runtimeMediaAudio',
+})
+
+/**
+ * 校验指定 BYOK Provider 条目是否支持目标媒体模态能力。
+ *
+ * @param {Record<string, unknown> | null | undefined} item
+ * @param {'image' | 'video' | 'audio' | string} capability
+ * @returns {boolean}
+ */
+function isByokItemCapabilityMatch(item, capability) {
+  if (!item || typeof item !== 'object') return false
+  if (Array.isArray(item.capabilities) && item.capabilities.length > 0) {
+    return item.capabilities.includes(capability)
+  }
+  if (typeof item.capability === 'string' && item.capability.trim()) {
+    return item.capability.trim().toLowerCase() === capability
+  }
+  const capKey = CAPABILITY_TO_KEY[capability] || ''
+  const isCurrentCapTrue = Boolean(item[capability] === true || (capKey && item[capKey] === true))
+  const isCurrentCapFalse = Boolean(item[capability] === false || (capKey && item[capKey] === false))
+  const hasCapModel = Boolean(
+    (item.models && typeof item.models === 'object' && item.models[capability])
+    || item[`${capability}Model`]
+  )
+  if (isCurrentCapFalse) return false
+  if (isCurrentCapTrue) return true
+  return hasCapModel
+}
+
+/**
+ * 解析媒体生成请求的最終有效模型 ID。
+ *
+ * 优先级契约（从高到低）：
+ * 1. 消费端显式传入的 `inputModel`（剥离 `@channelGroup` 后缀后的非空模型 ID）；
+ * 2. 指定 Provider 对应的特定模型配置（优先匹配 runtimeSettings.byokProviders 中的 provider 配置，其次匹配主媒体 provider 配置）；
+ * 3. 全局自定义模型 `runtimeSettings.runtimeKeyModel`；
+ * 4. 能力级兜底默认模型 `DEFAULT_MEDIA_MODELS[capability]`。
+ *
+ * @param {unknown} inputModel - 调用方/画布节点传入的 model 参数（可能带 `@group` 后缀）
+ * @param {string} [provider] - 目标提供商标识 ('omnimux' | 'fal' | 'openai' | 'openrouter' | 'siliconflow' | 'custom')
+ * @param {'image' | 'video' | 'audio'} capability - 媒体能力类型
+ * @param {Record<string, unknown> | undefined} [runtimeSettings] - 运行时设置快照
+ * @returns {string} 解析后的有效模型 ID
+ */
+export function resolveEffectiveMediaModel(inputModel, provider, capability, runtimeSettings) {
+  const { modelId: inputModelId, group: inputGroup } = typeof inputModel === 'string'
+    ? parseModelAndGroup(inputModel)
+    : { modelId: '', group: null }
+  const inputTargetsByok = typeof inputGroup === 'string' && inputGroup.toLowerCase().startsWith('byok-')
+
+  const normProvider = typeof provider === 'string' && provider.trim()
+    ? provider.toLowerCase().trim()
+    : (inputTargetsByok && typeof inputGroup === 'string' ? inputGroup.slice(5).toLowerCase().trim() : '')
+
+  // 1. 若存在非空的 inputModelId，优先返回调用方显式传入的逻辑模型 ID（剥离 @group 路由后缀）
+  if (inputModelId) {
+    return inputModelId
+  }
+
+  // 2. 检查多 Provider 扩展列表 (byokProviders) 中是否有对应 provider 的模型配置
+  // 健壮化：过滤所有匹配记录，严格校验生成模态 capability，优先选取已验证且配置了该模态模型的记录
+  if (Array.isArray(runtimeSettings?.byokProviders) && normProvider) {
+    const matchedItems = runtimeSettings.byokProviders.filter((item) =>
+      item && typeof item === 'object' && typeof item.provider === 'string' && item.provider.toLowerCase().trim() === normProvider
+    )
+    const hasExplicitModel = (item) => {
+      const m = (item.models && typeof item.models === 'object' && item.models[capability])
+        || item[`${capability}Model`]
+      return typeof m === 'string' && m.trim().length > 0
+    }
+    const hasAnyModel = (item) => {
+      const m = (item.models && typeof item.models === 'object' && item.models[capability])
+        || item[`${capability}Model`]
+        || item.model
+      return typeof m === 'string' && m.trim().length > 0
+    }
+    const verifiedItems = matchedItems.filter((item) => item.verified === true && isByokItemCapabilityMatch(item, capability))
+    const bestMatched = verifiedItems.find(hasExplicitModel)
+      || verifiedItems.find(hasAnyModel)
+      || null
+
+    if (bestMatched) {
+      const capModel = (bestMatched.models && typeof bestMatched.models === 'object' && bestMatched.models[capability])
+        || bestMatched[`${capability}Model`]
+        || bestMatched.model
+      if (typeof capModel === 'string' && capModel.trim()) {
+        return capModel.trim()
+      }
+    }
+  }
+
+  const activeMediaProvider = typeof runtimeSettings?.runtimeMediaProvider === 'string' && runtimeSettings.runtimeMediaProvider.trim()
+    ? runtimeSettings.runtimeMediaProvider.toLowerCase().trim()
+    : 'fal'
+  const isMatchingActiveProvider = !normProvider || normProvider === activeMediaProvider
+
+  // 3. 检查主媒体 Provider 中用户显式配置的专属物理模型（如 runtimeMediaVideoModel: '...'）
+  const explicitCapKey = `runtimeMedia${capability.charAt(0).toUpperCase() + capability.slice(1)}Model`
+  const explicitMainCapModel = isMatchingActiveProvider && typeof runtimeSettings?.[explicitCapKey] === 'string'
+    ? runtimeSettings[explicitCapKey].trim()
+    : ''
+  if (explicitMainCapModel) {
+    return explicitMainCapModel
+  }
+
+  const mediaChoice = resolveMediaProviderChoice(runtimeSettings, capability)
+  const hasMediaProvider = Boolean(runtimeSettings?.runtimeMediaProvider)
+  const customModel = typeof runtimeSettings?.runtimeKeyModel === 'string'
+    ? runtimeSettings.runtimeKeyModel.trim()
+    : ''
+  const safeActiveModel = isMatchingActiveProvider && typeof mediaChoice.activeModel === 'string' && mediaChoice.activeModel.trim()
+    ? mediaChoice.activeModel.trim()
+    : ''
+
+  // 5. 兜底回退：customModel -> safeActiveModel -> DEFAULT_MEDIA_MODELS -> 'default'
+  if (hasMediaProvider) {
+    return safeActiveModel || customModel || (DEFAULT_MEDIA_MODELS && DEFAULT_MEDIA_MODELS[capability]) || 'default'
+  }
+  return customModel || safeActiveModel || (DEFAULT_MEDIA_MODELS && DEFAULT_MEDIA_MODELS[capability]) || 'default'
+}
+
+export const EXTERNAL_MEDIA_PROVIDERS = Object.freeze(['byok', 'fal', 'openai', 'openrouter', 'siliconflow', 'custom'])
+
+/**
+ * 判定指定的媒体提供商是否属于外部/BYOK 提供商（豁免官方 SubmitGuard 目录契约）
+ * @param {unknown} providerId
+ * @returns {boolean}
+ */
+export function isExternalMediaProvider(providerId) {
+  return typeof providerId === 'string' && EXTERNAL_MEDIA_PROVIDERS.includes(providerId.toLowerCase().trim())
+}
 
 const CAPABILITY_SEAM = Object.freeze({
   video: 'videoGenerate',
@@ -74,7 +211,15 @@ const CAPABILITY_SEAM = Object.freeze({
  *   runtime?: { execute: (req: object) => Promise<{ taskId?: string, outputs: Array<{ type: string, url?: string }> }> },
  * }} input
  */
+const KNOWN_CAPABILITIES = Object.freeze(['image', 'video', 'audio'])
+
 export async function executeOmnimuxMedia(capability, input) {
+  if (!KNOWN_CAPABILITIES.includes(capability)) {
+    throw new OmnimuxError('omnimux-invalid-request', `不支持的媒体能力类型: ${capability}，仅支持 image/video/audio`)
+  }
+  if (!input || typeof input !== 'object') {
+    throw new OmnimuxError('omnimux-invalid-request', 'input must be an object')
+  }
   if (!input.dest) {
     throw new OmnimuxError('omnimux-invalid-request', 'dest is required')
   }
@@ -83,28 +228,172 @@ export async function executeOmnimuxMedia(capability, input) {
 
   const runtime = resolveRuntimeChoice(input.runtimeSettings)
   const mediaChoice = resolveMediaProviderChoice(input.runtimeSettings, capability)
-  if (runtime.mode === 'agent' && !mediaChoice.ready) {
+
+  const channelIntent = resolveRequestChannelIntent(input)
+  const { isByokChannel, isOfficialChannel, byokProvider } = channelIntent
+
+  if (isByokChannel && !byokProvider) {
+    throw new OmnimuxError('omnimux-invalid-request', 'BYOK 渠道名称不合法或缺少提供商标识')
+  }
+
+  const hasExplicitUnknownChannel = Boolean(
+    channelIntent.requestedChannel
+    && !isOfficialChannel
+    && !isByokChannel,
+  )
+  if (hasExplicitUnknownChannel) {
+    throw new OmnimuxError('unknown-group', `所选渠道分组不可用（${channelIntent.requestedChannel}）`)
+  }
+
+  // 对无渠道偏好但配置了媒体 Provider 为 custom 的分支，若端点为空增加非空拦截
+  if (!isOfficialChannel && !isByokChannel && (mediaChoice.provider === 'custom' || input.runtimeSettings?.runtimeMediaProvider === 'custom') && !mediaChoice.endpoint) {
+    throw new OmnimuxError('omnimux-unconfigured', `${mediaChoice.provider || 'custom'} 媒体端点未配置，请在设置中填写`)
+  }
+
+  // 提取与当前模态匹配且已验证的 BYOK 记录，用于缺少显式渠道时的提供商解析
+  const matchedImplicitByokItem = Array.isArray(input.runtimeSettings?.byokProviders)
+    ? input.runtimeSettings.byokProviders.find((item) =>
+        item && typeof item === 'object' && item.verified === true
+        && typeof item.provider === 'string' && item.provider.trim()
+        && isByokItemCapabilityMatch(item, capability)
+      ) || null
+    : null
+  const implicitByokProvider = matchedImplicitByokItem ? matchedImplicitByokItem.provider.toLowerCase().trim() : ''
+
+  if (runtime.mode === 'agent' && !isOfficialChannel && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置媒体生成提供商或改用官方')
+  }
+
+  // 渠道分组白名单与混杂渠道 Fail-Closed 阻断：拦截未知渠道分组并杜绝官方与 BYOK 渠道混用
+  if (Array.isArray(input.allowedGroups) && input.allowedGroups.length > 0) {
+    const normalizedAllowedGroups = input.allowedGroups
+      .map((g) => (typeof g === 'string' ? g.toLowerCase().trim() : ''))
+      .filter(Boolean)
+    const hasAllowedByok = normalizedAllowedGroups.some((g) => g.startsWith('byok-'))
+    const hasAllowedOfficial = normalizedAllowedGroups.some((g) => !g.startsWith('byok-') && isOfficialChannelId(g))
+    const unknownAllowed = normalizedAllowedGroups.filter((g) => !g.startsWith('byok-') && !isOfficialChannelId(g))
+    if (unknownAllowed.length > 0) {
+      throw new OmnimuxError('unknown-group', `所选渠道分组不可用（${unknownAllowed.join(', ')}）`)
+    }
+    if (hasAllowedByok && hasAllowedOfficial) {
+      throw new OmnimuxError('unknown-group', '所选渠道包含冲突的渠道分组')
+    }
   }
 
   // Media Generation Providers (fal.ai, OpenAI, OpenRouter, or custom key).
   // When configured and verified, requests route directly to the chosen media provider.
   // Local agent CLI handles conversation text and coexists peacefully without blocking media.
-  if (mediaChoice.ready) {
-    if (!mediaChoice.isCapEnabled) {
+  const isCustomKeyReady = runtime.mode === 'key'
+    && !(typeof input.runtimeSettings?.runtimeMediaProvider === 'string' && input.runtimeSettings.runtimeMediaProvider.trim())
+    && typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string'
+    && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
+    && input.runtimeSettings?.runtimeKeyVerified === true
+  const hasReadyByokProvider = Boolean(implicitByokProvider)
+  const shouldRouteByok = isByokChannel || (!isOfficialChannel && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
+
+  if (shouldRouteByok) {
+    let configuredMainProvider = ''
+    if (typeof input.runtimeSettings?.runtimeMediaProvider === 'string' && input.runtimeSettings.runtimeMediaProvider.trim()) {
+      configuredMainProvider = input.runtimeSettings.runtimeMediaProvider.toLowerCase().trim()
+    } else if (runtime.mode === 'key' && typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string' && input.runtimeSettings.runtimeKeyEndpoint.trim()) {
+      configuredMainProvider = 'custom'
+    }
+
+    const isMainCapEnabled = Boolean(mediaChoice.isCapEnabled)
+    let fallbackProvider = ''
+    if (!isMainCapEnabled && implicitByokProvider) {
+      // 缺少显式渠道时，如果主媒体提供商当前模态未启用，但 byokProviders 中存在模态匹配且已验证的项，安全选用该 implicitByokProvider
+      fallbackProvider = implicitByokProvider
+    } else {
+      const isMainReady = isCustomKeyReady || Boolean(mediaChoice.ready)
+      if (isMainReady) {
+        fallbackProvider = configuredMainProvider || mediaChoice.provider
+      } else if (implicitByokProvider) {
+        fallbackProvider = implicitByokProvider
+      } else {
+        fallbackProvider = configuredMainProvider || mediaChoice.provider
+      }
+    }
+
+    const rawProvider = (byokProvider || fallbackProvider || '').toLowerCase().trim()
+    if (!rawProvider) {
+      throw new OmnimuxError('omnimux-invalid-request', '缺少有效的媒体生成提供商')
+    }
+    const provider = rawProvider
+
+    // 检查对应的 BYOK provider 是否已在配置中验证（当 runtimeMediaProvider 缺失时严禁静默回退到 fal）
+    const isMainVerified = Boolean(configuredMainProvider && configuredMainProvider === provider)
+      && input.runtimeSettings?.runtimeKeyVerified === true
+    const byokCandidates = Array.isArray(input.runtimeSettings?.byokProviders)
+      ? input.runtimeSettings.byokProviders.filter((item) =>
+          item && typeof item === 'object' && typeof item.provider === 'string'
+          && item.provider.toLowerCase().trim() === provider
+        )
+      : []
+    // 优先选取通过验证且具备该模态能力的记录，避免前置失效记录遮蔽后置有效记录
+    // 仅当通过验证且真实具备该模态能力时才作为 matchedByokItem，否则置为 null 以回退至主渠道 isMainVerified
+    const matchedByokItem = byokCandidates.find((item) => {
+      if (item.verified !== true) return false
+      return isByokItemCapabilityMatch(item, capability)
+    }) || null
+    const hasVerifiedByokCandidate = byokCandidates.some((item) => item && typeof item === 'object' && item.verified === true)
+    const isByokListVerified = Boolean(matchedByokItem && matchedByokItem.verified === true)
+
+    if (!isMainVerified && !isByokListVerified) {
+      if (hasVerifiedByokCandidate) {
+        throw new OmnimuxError('omnimux-unconfigured', `媒体生成提供商未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
+      }
+      throw new OmnimuxError('omnimux-unconfigured', `自备渠道 ${provider} 未配置或未通过验证，请在设置中完成配置与验证`)
+    }
+
+    let capKey = ''
+    if (capability === 'image') {
+      capKey = 'runtimeMediaImage'
+    } else if (capability === 'video') {
+      capKey = 'runtimeMediaVideo'
+    } else if (capability === 'audio') {
+      capKey = 'runtimeMediaAudio'
+    }
+    const capShort = capability
+    let isByokCapEnabled = false
+    if (matchedByokItem) {
+      // 对齐模态能力判定：直接复用 isByokItemCapabilityMatch
+      isByokCapEnabled = isByokItemCapabilityMatch(matchedByokItem, capability)
+    } else if (isMainVerified && (!isByokChannel || !hasVerifiedByokCandidate)) {
+      // 回退至主渠道 isMainVerified 路径：
+      // 1. 非显式指定 BYOK 渠道时（!isByokChannel）：模态不匹配记录绝不遮蔽主提供商
+      // 2. 虽指定了 BYOK 渠道但 byokProviders 中无对应已验证记录（!hasVerifiedByokCandidate）：主配置即为该 provider 的真源
+      const isKeyDirect = runtime.mode === 'key' && !input.runtimeSettings?.runtimeMediaProvider
+      if (isKeyDirect) {
+        const endpointValid = typeof input.runtimeSettings?.runtimeKeyEndpoint === 'string'
+          && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
+        const isVerified = input.runtimeSettings?.runtimeKeyVerified === true
+        isByokCapEnabled = Boolean(mediaChoice.isCapEnabled && endpointValid && isVerified)
+      } else {
+        isByokCapEnabled = Boolean(mediaChoice.isCapEnabled)
+      }
+    }
+
+    if (!isByokCapEnabled) {
       throw new OmnimuxError('omnimux-unconfigured', `媒体生成提供商未开启${capability === 'image' ? '图片' : capability === 'video' ? '视频' : '音频'}，请在设置中勾选`)
     }
-    const provider = (mediaChoice.provider || 'fal').toLowerCase()
-    const defaultEndpoint = DEFAULT_PROVIDER_ENDPOINTS[provider] || ''
-    const endpoint = mediaChoice.endpoint || defaultEndpoint
 
-    const hasMediaProvider = Boolean(input.runtimeSettings?.runtimeMediaProvider)
-    const customModel = typeof input.runtimeSettings?.runtimeKeyModel === 'string'
-      ? input.runtimeSettings.runtimeKeyModel.trim()
-      : ''
-    const model = hasMediaProvider
-      ? (mediaChoice.activeModel || customModel || 'default')
-      : (customModel || mediaChoice.activeModel || 'default')
+    // 模型配置层级的有效性独立判定：确保解析得到非空的有效模型，消除死代码
+    const effectiveModel = resolveEffectiveMediaModel(input.model, provider, capability, input.runtimeSettings)
+    if (!effectiveModel || !effectiveModel.trim()) {
+      throw new OmnimuxError('omnimux-unconfigured', `${provider} 媒体模型未配置，请在设置中指定`)
+    }
+
+    const defaultEndpoint = DEFAULT_PROVIDER_ENDPOINTS[provider] || ''
+    const endpoint = (matchedByokItem && typeof matchedByokItem.endpoint === 'string' && matchedByokItem.endpoint.trim())
+      || (isMainVerified ? mediaChoice.endpoint : '')
+      || defaultEndpoint
+
+    const usesCustomEndpoint = endpoint !== defaultEndpoint
+    const needsHttpEndpoint = provider === 'custom' || !DEFAULT_PROVIDER_ENDPOINTS[provider] || usesCustomEndpoint
+    if (needsHttpEndpoint && !/^https?:\/\//i.test(endpoint)) {
+      throw new OmnimuxError('omnimux-unconfigured', `${provider} 媒体端点未配置或协议不合法，请在设置中填写 http(s) 地址`)
+    }
 
     const keyRef = `OMNIMUX_MEDIA_KEY_${provider.toUpperCase()}`
     let providerKey = ''
@@ -113,11 +402,23 @@ export async function executeOmnimuxMedia(capability, input) {
         const hit = await input.credentials.resolve(keyRef)
         if (hit && typeof hit.value === 'string' && hit.value.trim()) providerKey = hit.value.trim()
       } catch { /* fall through */ }
-      if (!providerKey && (provider === 'fal' || !hasMediaProvider)) {
+      if (!providerKey && (provider === 'fal' || provider === 'custom')) {
         try {
           const hit = await input.credentials.resolve(BYOK_KEY_REF)
           if (hit && typeof hit.value === 'string' && hit.value.trim()) providerKey = hit.value.trim()
         } catch { /* fall through */ }
+      }
+    }
+    // 严格限制仅从服务端凭据库或服务侧环境安全读取，绝不信任客户端 payload 的 input.env
+    if (!providerKey) {
+      const serverEnvVal = typeof process.env[keyRef] === 'string' ? process.env[keyRef].trim() : ''
+      if (serverEnvVal) {
+        providerKey = serverEnvVal
+      } else if (provider === 'fal' || provider === 'custom') {
+        const byokEnvVal = typeof process.env[BYOK_KEY_REF] === 'string' ? process.env[BYOK_KEY_REF].trim() : ''
+        if (byokEnvVal) {
+          providerKey = byokEnvVal
+        }
       }
     }
     if (!providerKey) {
@@ -133,7 +434,7 @@ export async function executeOmnimuxMedia(capability, input) {
           baseUrl: endpoint,
           apiKeyEnv: keyRef,
           models: {
-            [capability]: model,
+            [capability]: effectiveModel,
           },
         },
         byok: {
@@ -141,18 +442,22 @@ export async function executeOmnimuxMedia(capability, input) {
           baseUrl: endpoint,
           apiKeyEnv: keyRef,
           models: {
-            [capability]: model,
+            [capability]: effectiveModel,
           },
         },
       },
     }
+    const safeEnv = { ...(input.env ?? {}) }
+    delete safeEnv.OMNIMUX_API_KEY
+    delete safeEnv.OMNIMUX_TOKEN
     input = {
       ...input,
       provider,
+      model: effectiveModel,
       env: {
-        ...(input.env ?? {}),
+        ...safeEnv,
         [keyRef]: providerKey,
-        ...(provider === 'fal' || !hasMediaProvider ? { [BYOK_KEY_REF]: providerKey } : {}),
+        ...(provider === 'fal' ? { [BYOK_KEY_REF]: providerKey } : {}),
       },
     }
   }
@@ -173,9 +478,9 @@ export async function executeOmnimuxMedia(capability, input) {
   const seam = CAPABILITY_SEAM[capability] ?? capability
   const assets = await probeMediaAssets(input, { capability, seam })
 
-  // Media providers (fal, openai, openrouter, byok) are external endpoints.
+  // Media providers (fal, openai, openrouter, siliconflow, custom, byok) are external endpoints.
   // Skip the submit guard for them; the endpoint decides what it accepts.
-  const isByok = route.providerId === 'byok' || route.providerId === 'fal' || route.providerId === 'openai' || route.providerId === 'openrouter'
+  const isByok = isExternalMediaProvider(route.providerId)
   let guardPlan = null
   if (isByok) {
     guardPlan = {

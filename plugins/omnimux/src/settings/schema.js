@@ -53,6 +53,8 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   runtimeMediaImageModel: 'fal-ai/flux/dev',
   runtimeMediaVideoModel: 'fal-ai/kling-video/v1/standard',
   runtimeMediaAudioModel: 'fal-ai/f5-tts',
+  allowOfficialMediaFallback: false,
+  byokProviders: Object.freeze([]),
 })
 
 const FIELD_META = Object.freeze({
@@ -80,6 +82,8 @@ const FIELD_META = Object.freeze({
   runtimeMediaImageModel: '图片生成模型',
   runtimeMediaVideoModel: '视频生成模型',
   runtimeMediaAudioModel: '音频生成模型',
+  allowOfficialMediaFallback: '允许官方通道兜底媒体生成',
+  byokProviders: '自备 API Key 多渠道提供商配置列表',
 })
 
 function stringNode(key) {
@@ -114,7 +118,56 @@ const RUNTIME_DICT = Object.freeze({
   runtimeMediaImageModel: stringNode('runtimeMediaImageModel'),
   runtimeMediaVideoModel: stringNode('runtimeMediaVideoModel'),
   runtimeMediaAudioModel: stringNode('runtimeMediaAudioModel'),
+  allowOfficialMediaFallback: boolNode('allowOfficialMediaFallback'),
+  byokProviders: {
+    type: 'array',
+    default: SETTINGS_DEFAULTS.byokProviders,
+    meta: { description: FIELD_META.byokProviders },
+  },
 })
+
+function sanitizeByokProvider(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return null
+  }
+  const provider = typeof item.provider === 'string' ? item.provider.toLowerCase().trim() : ''
+  if (!provider || !/^[a-z0-9_-]+$/.test(provider)) {
+    return null
+  }
+  const sanitized = {
+    provider,
+    verified: Boolean(item.verified),
+  }
+  if (typeof item.endpoint === 'string' && item.endpoint.trim()) {
+    sanitized.endpoint = item.endpoint.trim()
+  }
+  // 密钥由 credentials 独立安全持久化，严禁明文污染公开 settings 命名空间
+  if (Array.isArray(item.capabilities)) {
+    sanitized.capabilities = item.capabilities.filter((c) => typeof c === 'string' && c.trim()).map((c) => c.trim())
+  }
+  if (item.models && typeof item.models === 'object' && !Array.isArray(item.models)) {
+    sanitized.models = {}
+    for (const [k, v] of Object.entries(item.models)) {
+      if (typeof v === 'string' && v.trim()) {
+        sanitized.models[k] = v.trim()
+      }
+    }
+  }
+  for (const m of ['imageModel', 'videoModel', 'audioModel', 'model']) {
+    if (typeof item[m] === 'string' && item[m].trim()) {
+      sanitized[m] = item[m].trim()
+    }
+  }
+  for (const c of ['image', 'video', 'audio', 'runtimeMediaImage', 'runtimeMediaVideo', 'runtimeMediaAudio']) {
+    if (typeof item[c] === 'boolean') {
+      sanitized[c] = item[c]
+    }
+  }
+  if (item.constraints && typeof item.constraints === 'object' && !Array.isArray(item.constraints)) {
+    sanitized.constraints = structuredClone(item.constraints)
+  }
+  return sanitized
+}
 
 function parseSettingsSection(value) {
   const input = value && typeof value === 'object' && !Array.isArray(value)
@@ -125,7 +178,11 @@ function parseSettingsSection(value) {
   for (const key of Object.keys(SETTINGS_DEFAULTS)) {
     const raw = input[key]
     const fallback = SETTINGS_DEFAULTS[key]
-    if (Array.isArray(fallback)) {
+    if (key === 'byokProviders') {
+      out.byokProviders = Array.isArray(raw)
+        ? raw.map(sanitizeByokProvider).filter(Boolean)
+        : [...fallback]
+    } else if (Array.isArray(fallback)) {
       // A list field keeps only usable entries; a malformed stored value falls
       // back to the default instead of failing the whole namespace.
       out[key] = Array.isArray(raw)

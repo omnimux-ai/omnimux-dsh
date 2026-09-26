@@ -2,7 +2,7 @@ import type { CapabilityCatalog, CapabilityModelItem, ModelParameterSchema } fro
 import { buildEffectiveOpsUiState, buildUiUpstreamFingerprint, readPreferredOperationId, setParamsOperation, type UpstreamMediaSnapshot } from '../../../../../../shared/validation/operationUi.ts';
 import { findDeclaredParameterFailure } from '../../../../../../shared/validation/declaredParameterValidation.ts';
 import { narrowModelByLineConstraints } from '../../../../../../shared/validation/lineConstraints.ts';
-import { resolveLineConstraints } from '../channelGroups.ts';
+import { resolveLineConstraints, type RuntimeByokChannelSettings } from '../channelGroups.ts';
 import { mergeVideoParameterSchema } from './videoParamAdapter.ts';
 import { DEFAULT_PARAM_CONTROL_POLICY } from './paramControlTable.ts';
 
@@ -23,6 +23,7 @@ export interface VideoParameterSelectionArgs {
   explicitModelSelection?: boolean;
   /** Undefined preserves routing; null selects automatic routing. */
   routing?: Record<string, unknown> | null;
+  runtimeSettings?: RuntimeByokChannelSettings | null;
 }
 export interface VideoParameterSelectionResult {
   params: Record<string, unknown>;
@@ -96,7 +97,7 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   const target = narrowModelByLineConstraints(
     args.targetModelItem,
     args.targetModelItem.id,
-    resolveLineConstraints(args.targetModelItem.id, routingIntent),
+    resolveLineConstraints(args.targetModelItem.id, routingIntent, args.runtimeSettings),
   );
   const currentId = typeof args.params.model === 'string' ? args.params.model : '';
   const resolvedCurrent = args.catalog.models?.find(model => model.id === currentId || model.aliases?.includes(currentId));

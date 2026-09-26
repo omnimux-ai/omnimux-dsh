@@ -29,10 +29,15 @@ import {
   formatPriceChip,
   formatPriceLabel,
   getModelChannelGroups,
+  resolveModelChannelGroups,
   parseModelAndGroup,
   resolveShortModelName,
+  isByokGroup,
+  buildChannelSelectionPayload,
   type ChannelGroupItem,
+  type RuntimeByokChannelSettings,
 } from './channelGroups';
+import type { ChannelFallbackState } from './channelContractReconciler';
 
 export type RouteStrategy = 'auto' | 'stability_first' | 'cost_first';
 
@@ -41,6 +46,8 @@ export interface ModelCascadeSelectValue {
   strategy: RouteStrategy;
   /** Omitted when the node cannot carry channel routing (text nodes). */
   allowedGroups?: string[];
+  channelGroupId?: string;
+  sourceType?: 'official' | 'byok';
 }
 
 export interface ModelCascadeMenuProps {
@@ -48,9 +55,14 @@ export interface ModelCascadeMenuProps {
   routing?: {
     strategy?: RouteStrategy;
     allowedGroups?: string[];
+    channelGroupId?: string;
+    sourceType?: 'official' | 'byok';
+    [key: string]: unknown;
   };
   options: readonly PickerCandidate[];
   execBusy?: boolean;
+  runtimeSettings?: RuntimeByokChannelSettings | null;
+  fallbackState?: ChannelFallbackState | null;
   onSelect: (value: ModelCascadeSelectValue) => void;
 }
 
@@ -136,43 +148,56 @@ const ChannelRow: React.FC<{
   disabled?: boolean;
   onSelect: () => void;
 }> = ({ group, checked, disabled = false, onSelect }) => {
-  const priceChip = formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate);
+  const isAvailable = group.isAvailable !== false && group.enabled !== false;
+  const isRowDisabled = disabled || !isAvailable;
+  const isByok = isByokGroup(group);
+  const priceChip = !isByok ? formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate) : '';
   const chipIsMarkup = typeof group.pricing?.priceRatio === 'number'
     ? group.pricing.priceRatio > 1
     : typeof group.pricing?.discountRate === 'number' && group.pricing.discountRate > 1;
-  const billing = formatBillingLabel(group.pricing?.billingMode);
+  const billing = !isByok ? formatBillingLabel(group.pricing?.billingMode) : '';
+  const priceLabel = !isByok ? formatPriceLabel(group.pricing) : '';
 
   return (
     <div
       role="menuitemradio"
       aria-checked={checked}
-      aria-disabled={disabled}
-      tabIndex={disabled ? -1 : 0}
-      onClick={disabled ? undefined : onSelect}
+      aria-disabled={isRowDisabled}
+      tabIndex={isRowDisabled ? -1 : 0}
+      onClick={isRowDisabled ? undefined : onSelect}
       onKeyDown={(event) => {
-        if (disabled) return;
+        if (isRowDisabled) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onSelect();
         }
       }}
-      className={`wf-cascade-row wf-cascade-channel-row ${checked && !disabled ? 'is-checked' : ''} ${disabled ? 'is-disabled' : ''}`}
+      className={`wf-cascade-row wf-cascade-channel-row ${checked && !isRowDisabled ? 'is-checked' : ''} ${isRowDisabled ? 'is-disabled' : ''}`}
     >
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
-        <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-          {formatPriceLabel(group.pricing)}
-        </span>
-        {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
-        {group.badge ? <Chip>{group.badge}</Chip> : null}
-        {billing ? <Chip>{billing}</Chip> : null}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
+          {priceLabel ? (
+            <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+              {priceLabel}
+            </span>
+          ) : null}
+          {group.chipLabel ? <Chip tone="muted">{group.chipLabel}</Chip> : null}
+          {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
+          {billing ? <Chip>{billing}</Chip> : null}
+        </div>
+        {group.badge ? (
+          <div style={{ fontSize: 11, color: 'var(--dsw-alias-label-secondary)', lineHeight: 1.4 }}>
+            {group.badge}
+          </div>
+        ) : null}
         {group.description ? (
-          <div style={{ width: '100%', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', marginTop: 2, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 11, color: 'var(--dsw-alias-label-tertiary)', lineHeight: 1.4 }}>
             {group.description}
           </div>
         ) : null}
       </div>
-      <div style={{ paddingLeft: 10 }}>
+      <div style={{ paddingLeft: 10, display: 'flex', alignItems: 'center' }}>
         {checked && !disabled ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}
       </div>
     </div>
@@ -246,35 +271,102 @@ const CascadeChannelColumn: React.FC<{
   checkedIds: readonly string[];
   preview?: boolean;
   onSelect?: (groupId: string) => void;
-}> = ({ channelGroups, checkedIds, preview = false, onSelect }) => (
-  <>
-    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px 10px' }}>选择版本</div>
+  runtimeSettings?: RuntimeByokChannelSettings | null;
+  fallbackState?: ChannelFallbackState | null;
+}> = ({ channelGroups, checkedIds, preview = false, onSelect, runtimeSettings, fallbackState }) => {
+  const handleSelectGroup = (groupId: string) => {
+    onSelect?.(groupId);
+  };
+  const officialGroups = useMemo(
+    () => channelGroups.filter((g) => !isByokGroup(g)),
+    [channelGroups],
+  );
+  const byokGroups = useMemo(
+    () => channelGroups.filter((g) => isByokGroup(g)),
+    [channelGroups],
+  );
 
-    {channelGroups.length === 0 ? (
-      <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px' }}>
-        该模型尚未配置渠道分组，请求将按模型默认通道执行。
+  const hasByokEnvSupport = useMemo(() => {
+    if (byokGroups.length > 0) return true;
+    if (fallbackState?.isFallback) return true;
+    if (runtimeSettings) {
+      if (runtimeSettings.runtimeKeyVerified || runtimeSettings.runtimeMediaProvider) return true;
+      if (Array.isArray(runtimeSettings.byokProviders) && runtimeSettings.byokProviders.length > 0) return true;
+    }
+    return false;
+  }, [byokGroups, fallbackState?.isFallback, runtimeSettings]);
+
+  return (
+    <>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-label-secondary)', padding: '6px 8px 8px' }}>
+        渠道
       </div>
-    ) : (
-      <div className="wf-cascade-channel-list">
-        {channelGroups.map((group) => (
-          <ChannelRow
-            key={group.id}
-            group={group}
-            checked={checkedIds.includes(group.id)}
-            disabled={preview}
-            onSelect={() => onSelect?.(group.id)}
-          />
-        ))}
-      </div>
-    )}
-  </>
-);
+
+      {channelGroups.length === 0 ? (
+        <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px 8px' }}>
+          该模型尚未配置渠道分组，请求将按模型默认通道执行。
+        </div>
+      ) : (
+        <div className="wf-cascade-channel-sections" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {officialGroups.length > 0 ? (
+            <div className="wf-cascade-channel-section">
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-tertiary)', padding: '2px 8px 6px' }}>
+                官方专线
+              </div>
+              <div className="wf-cascade-channel-list">
+                {officialGroups.map((group) => (
+                  <ChannelRow
+                    key={group.id}
+                    group={group}
+                    checked={checkedIds.includes(group.id)}
+                    disabled={preview}
+                    onSelect={() => handleSelectGroup(group.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {hasByokEnvSupport ? (
+            <div
+              className="wf-cascade-channel-section"
+              style={officialGroups.length > 0 ? { borderTop: '1px solid var(--dsw-alias-border-l1)', paddingTop: 8 } : undefined}
+            >
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-tertiary)', padding: '2px 8px 6px' }}>
+                自备渠道
+              </div>
+              {byokGroups.length > 0 ? (
+                <div className="wf-cascade-channel-list">
+                  {byokGroups.map((group) => (
+                    <ChannelRow
+                      key={group.id}
+                      group={group}
+                      checked={checkedIds.includes(group.id)}
+                      disabled={preview}
+                      onSelect={() => handleSelectGroup(group.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-dimmed)', padding: '4px 8px 6px' }}>
+                  未配置自备渠道
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </>
+  );
+};
 
 export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   modelValue,
   routing,
   options,
   execBusy,
+  runtimeSettings,
+  fallbackState,
   onSelect,
 }) => {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -305,19 +397,40 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
   const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
   const channelModelId = hoverModelId ?? activeModelId;
-  const channelGroups = useMemo(() => isPickerCandidate(options, channelModelId) ? getModelChannelGroups(channelModelId) : [], [options, channelModelId]);
-  const activeChannelGroups = useMemo(() => isPickerCandidate(options, activeModelId) ? getModelChannelGroups(activeModelId) : [], [options, activeModelId]);
+  const channelGroups = useMemo(
+    () => isPickerCandidate(options, channelModelId) ? getModelChannelGroups(channelModelId, runtimeSettings) : [],
+    [options, channelModelId, runtimeSettings],
+  );
+  const activeChannelGroups = useMemo(
+    () => isPickerCandidate(options, activeModelId) ? getModelChannelGroups(activeModelId, runtimeSettings) : [],
+    [options, activeModelId, runtimeSettings],
+  );
   const hasMultipleChannels = channelGroups.length > 1;
   const showChannelColumn = hasMultipleChannels && (hoveringOtherBrand ? hoverModelId !== null : true);
   const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId;
 
   // 渠道单选收敛：仅选择一个分组并锁定契约
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(() => {
-    const candidate = routing?.allowedGroups?.[0];
-    if (candidate && activeChannelGroups.some((g) => g.id === candidate)) {
+    const rawAllowed = routing?.allowedGroups?.[0];
+    const rawExplicit = routing?.channelGroupId;
+    const normAllowed = typeof rawAllowed === 'string' && rawAllowed.trim() !== '' ? rawAllowed.trim() : undefined;
+    const normExplicit = typeof rawExplicit === 'string' && rawExplicit.trim() !== '' ? rawExplicit.trim() : undefined;
+    let candidate: string | undefined;
+    if (normAllowed && normExplicit && normAllowed !== normExplicit) {
+      // 检测到 normAllowed 与 normExplicit 冲突时优先取 normExplicit（BYOK 权威 ID）或回退至安全首项
+      candidate = activeChannelGroups.some((g) => g.id === normExplicit)
+        ? normExplicit
+        : activeChannelGroups.some((g) => g.id === normAllowed)
+        ? normAllowed
+        : activeChannelGroups.find((group) => group.enabled !== false && group.isAvailable !== false)?.id;
+    } else {
+      candidate = normExplicit ?? normAllowed;
+    }
+    if (candidate && activeChannelGroups.some((g) => g.id === candidate && g.enabled !== false && g.isAvailable !== false)) {
       return [candidate];
     }
-    return activeChannelGroups[0] ? [activeChannelGroups[0].id] : [];
+    const fallbackGroup = activeChannelGroups.find((group) => group.enabled !== false && group.isAvailable !== false);
+    return fallbackGroup ? [fallbackGroup.id] : [];
   });
 
   // 外部候选或选择变化后丢弃预览，选中态直接由合法持久值派生。
@@ -327,27 +440,38 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [currentModelId, options]);
 
   const persistedGroups = routing?.allowedGroups;
+  const persistedGroupId = routing?.channelGroupId;
   useEffect(() => {
-    const candidate = persistedGroups?.[0];
-    if (candidate && activeChannelGroups.some((g) => g.id === candidate)) {
-      setSelectedGroupIds([candidate]);
-    } else if (activeChannelGroups[0]) {
-      setSelectedGroupIds([activeChannelGroups[0].id]);
+    const rawAllowed = persistedGroups?.[0];
+    const rawExplicit = persistedGroupId;
+    const normAllowed = typeof rawAllowed === 'string' && rawAllowed.trim() !== '' ? rawAllowed.trim() : undefined;
+    const normExplicit = typeof rawExplicit === 'string' && rawExplicit.trim() !== '' ? rawExplicit.trim() : undefined;
+    let candidate: string | undefined;
+    if (normAllowed && normExplicit && normAllowed !== normExplicit) {
+      // 检测到 normAllowed 与 normExplicit 冲突时优先取 normExplicit（BYOK 权威 ID）或回退至安全首项
+      candidate = activeChannelGroups.some((g) => g.id === normExplicit)
+        ? normExplicit
+        : activeChannelGroups.some((g) => g.id === normAllowed)
+        ? normAllowed
+        : activeChannelGroups.find((group) => group.enabled !== false && group.isAvailable !== false)?.id;
     } else {
-      setSelectedGroupIds([]);
+      candidate = normExplicit ?? normAllowed;
     }
-  }, [activeChannelGroups, persistedGroups]);
+    if (candidate && activeChannelGroups.some((g) => g.id === candidate && g.enabled !== false && g.isAvailable !== false)) {
+      setSelectedGroupIds([candidate]);
+    } else {
+      const fallbackGroup = activeChannelGroups.find((group) => group.enabled !== false && group.isAvailable !== false);
+      setSelectedGroupIds(fallbackGroup ? [fallbackGroup.id] : []);
+    }
+  }, [activeChannelGroups, persistedGroups, persistedGroupId]);
 
   const emit = useCallback((modelId: string, groupIds: string[]) => {
     if (!isPickerCandidate(options, modelId)) return;
-    const groups = getModelChannelGroups(modelId);
-    if (groupIds.some((id) => !groups.some((group) => group.id === id))) return;
-    onSelect({
-      modelId,
-      strategy: 'auto',
-      ...(groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
-    });
-  }, [onSelect, options]);
+    const groups = resolveModelChannelGroups(modelId, runtimeSettings);
+    const payload = buildChannelSelectionPayload(modelId, groupIds, groups);
+    if (!payload) return;
+    onSelect(payload);
+  }, [onSelect, options, runtimeSettings]);
 
   /** 悬停只切换预览；写入节点只发生在点击与渠道单选。 */
   const handleBrandHover = useCallback((brandId: string) => {
@@ -366,13 +490,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const handleSelectModel = useCallback((modelId: string) => {
     if (!isPickerCandidate(options, modelId)) return;
-    const defaultGroup = getModelChannelGroups(modelId)[0]?.id;
+    const groups = resolveModelChannelGroups(modelId, runtimeSettings);
+    const defaultGroup = groups.find((group) => group.enabled !== false && group.isAvailable !== false)?.id;
     const nextGroupIds = defaultGroup ? [defaultGroup] : [];
     setSelectedGroupIds(nextGroupIds);
     setHoverBrandId(null);
     setHoverModelId(null);
     emit(modelId, nextGroupIds);
-  }, [options, emit]);
+  }, [options, runtimeSettings, emit]);
 
   /** 点击品牌只选择该分组的真实候选首项。 */
   const handleBrandClick = useCallback((brandId: string) => {
@@ -390,17 +515,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
   const [popoverSurface, setPopoverSurface] = useState<string>('var(--dsw-alias-bg-elevated)');
 
-  /**
-   * 展开期间锁定浮层高度（Issue #2250）。
-   *
-   * 浮层底边锚在触发器上、顶边由高度决定：只要悬停能改变高度，顶边就会位移，光标下的行
-   * 随之移走、悬停态翻转、内容再变——自我维持成整块浮层频闪抖动（#2195 引入的回归）。
-   * 量尺把当前候选集里所有可能出现的列（品牌列、每个品牌的型号列、每个型号的渠道列）
-   * 都离屏渲染一遍，取最大自然高度一次性锁定，于是悬停只换内容、不再动外框。
-   *
-   * 依赖只有展开状态与候选集，**绝不含 hoverBrandId / hoverModelId** —— 这是修复的支点。
-   * 用 useLayoutEffect 而非 useEffect，保证绘制前完成锁定，不出现「先按内容高度画一帧再跳变」。
-   */
   useLayoutEffect(() => {
     if (!isOpen) {
       lockedHeightRef.current = null;
@@ -416,34 +530,41 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     const locked = Math.min(POPOVER_MAX_HEIGHT, Math.max(POPOVER_MIN_HEIGHT, Math.round(tallest)));
     lockedHeightRef.current = locked;
     setLockedHeight((prev) => (prev === locked ? prev : locked));
-  }, [isOpen, brandList]);
+  }, [isOpen, brandList, runtimeSettings, fallbackState?.isFallback]);
 
-  /** 量尺内容只依赖候选集，悬停引发的重渲染在这棵子树上直接 bail out。 */
+  /** 量尺内容只依赖候选集与运行时配置，悬停引发的重渲染在这棵子树上直接 bail out。 */
   const probeColumns = useMemo(() => (
     <>
       <div className="wf-loomi-col wf-loomi-col--brand" data-cascade-probe-col="">
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-label-secondary)', padding: '6px 8px 8px' }}>品牌</div>
         {brandList.map((brand) => (
           <CascadeBrandItem key={brand.id} brand={brand} isSelected={false} interactive={false} />
         ))}
       </div>
       {brandList.map((brand) => (
         <div key={brand.id} className="wf-loomi-col wf-loomi-col--model" data-cascade-probe-col="">
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-label-secondary)', padding: '6px 8px 8px' }}>型号</div>
           {brand.rows.map((item) => (
             <CascadeModelItem key={item.id} item={item} isSelected={false} interactive={false} />
           ))}
         </div>
       ))}
       {brandList.flatMap((brand) => brand.rows).map((item) => {
-        const groups = getModelChannelGroups(item.id);
+        const groups = resolveModelChannelGroups(item.id, runtimeSettings);
         if (groups.length <= 1) return null;
         return (
           <div key={item.id} className="wf-loomi-col wf-loomi-col--channel" data-cascade-probe-col="">
-            <CascadeChannelColumn channelGroups={groups} checkedIds={NO_GROUP_IDS} />
+            <CascadeChannelColumn
+              channelGroups={groups}
+              checkedIds={NO_GROUP_IDS}
+              runtimeSettings={runtimeSettings}
+              fallbackState={fallbackState}
+            />
           </div>
         );
       })}
     </>
-  ), [brandList]);
+  ), [brandList, runtimeSettings, fallbackState]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -453,8 +574,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
       setPopoverSurface(resolvePopoverSurface(triggerRef.current));
       setPopoverPos({
         bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, Math.max(8, window.innerHeight - (lockedHeightRef.current ?? POPOVER_MAX_HEIGHT) - 12))),
-        // 锚点按最大宽度钳制：三列出现/隐藏时浮层不得横向跳动，
-        // 否则悬停展开第三列的瞬间菜单会从光标下移走。
         left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - POPOVER_MAX_WIDTH - 12))),
       });
     };
@@ -485,7 +604,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     };
   }, [isOpen]);
 
-  // 关闭时丢弃悬停态，下次打开回到「选中链三级全显」的默认视图。
   useEffect(() => {
     if (isOpen) return;
     setHoverBrandId(null);
@@ -495,6 +613,10 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const shortName = activeModelId ? resolveShortModelName(activeModelId, activeFamily) : '待重新选择';
   const selectedGroupId = selectedGroupIds[0];
   const activeGroup = activeChannelGroups.find((g) => g.id === selectedGroupId);
+  const isFallback = Boolean(fallbackState?.isFallback);
+  const triggerDisplayText = isFallback
+    ? (fallbackState?.triggerDisplayText || shortName)
+    : (activeGroup ? `${shortName} · ${activeGroup.label}` : shortName);
 
   return (
     <>
@@ -506,13 +628,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         disabled={execBusy}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title={activeGroup ? `已选版本：${activeGroup.label}` : undefined}
+        title={triggerDisplayText}
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <ModelBrandIcon modelId={activeModelId} size={15} />
-        <span className="wf-model-cascade-capsule__name">{shortName}</span>
+        <span className="wf-model-cascade-capsule__name">{isFallback ? triggerDisplayText : shortName}</span>
 
-        {activeGroup && activeChannelGroups.length > 1 ? (
+        {activeGroup && activeChannelGroups.length > 1 && !isFallback ? (
           <span className="wf-model-cascade-capsule__badge">
             <span>{activeGroup.label}</span>
           </span>
@@ -532,12 +654,12 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             style={{
               bottom: popoverPos.bottom,
               left: popoverPos.left,
-              // 锁定高度：悬停换列不再改变浮层外框，顶边因此纹丝不动。
               ...(lockedHeight === null ? null : { height: lockedHeight }),
             }}
           >
-            {/* 栏 1：品牌（宽 168px，悬停即切换二级，点击固定当前列；高度由锁定值统一决定） */}
+            {/* 栏 1：品牌 */}
             <div role="group" aria-label="选择品牌" className="wf-loomi-col wf-loomi-col--brand">
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-label-secondary)', padding: '6px 8px 8px' }}>品牌</div>
               {brandList.map((brand) => {
                 const isSelected = activeBrandId === brand.id;
                 const isHovered = shownBrandId === brand.id && hoverBrandId !== null;
@@ -554,8 +676,9 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 2：型号（宽 230px，悬停即预览三级；高度由锁定值统一决定） */}
+            {/* 栏 2：型号 */}
             <div role="group" aria-label="选择模型版本" className="wf-loomi-col wf-loomi-col--model">
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-label-secondary)', padding: '6px 8px 8px' }}>型号</div>
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
                 const isHovered = hoverModelId === item.id;
@@ -572,7 +695,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 3：渠道分组单选（宽 400px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {/* 栏 3：渠道分组单选 */}
             {showChannelColumn ? (
               <div
                 role="group"
@@ -584,6 +707,8 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                   checkedIds={isChannelPreview ? [channelGroups[0]?.id ?? ''] : selectedGroupIds}
                   preview={isChannelPreview}
                   onSelect={handleSelectGroup}
+                  runtimeSettings={runtimeSettings}
+                  fallbackState={fallbackState}
                 />
               </div>
             ) : null}
