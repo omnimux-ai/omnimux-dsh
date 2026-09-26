@@ -16,6 +16,12 @@ import { ModelPicker } from './ModelPicker.jsx';
 import { publishActiveSkill, subscribeSkillChanged } from '../composer-add/skill-event.ts';
 import { getGlobalAttachmentStore } from '../attachments/store.ts';
 import { isBlankConversation } from '../session-guide/state.js';
+import {
+  isTikTokAgentPreset,
+  TIKTOK_AGENT_PRESET_WHITELIST,
+} from './isTikTokAgentPreset.js';
+
+export { isTikTokAgentPreset, TIKTOK_AGENT_PRESET_WHITELIST };
 
 /** 技能库通道就绪前的重试节奏：插件装载顺序不保证，指数退避 200ms → 3200ms，8 次合计约 16 秒。 */
 const SKILL_LIBRARY_RETRY_BASE_MS = 200;
@@ -50,15 +56,18 @@ function QuickShortcutModelControls({ sessionId }) {
 }
 
 /** 官方底部扩展座：与外部快捷入口共用会话快照，不复制配置状态。 */
-export function ComposerQuickShortcutControls({ sessionId: sessionIdProp, session: sessionProp, useSession, useConversation }) {
+export function ComposerQuickShortcutControls(props) {
+  const { sessionId: sessionIdProp, session: sessionProp, useSession, useConversation } = props || {};
   const session = useSession ? useSession((value) => value) : null;
+  const currentSession = sessionProp || session;
   const hasTargets = useConversation ? useConversation((value) => Boolean(value?.activeTargets?.size)) : false;
-  const sessionId = resolveComposerSessionId(sessionProp || session, sessionIdProp, getGlobalAttachmentStore().getActiveSessionId());
+  const sessionId = resolveComposerSessionId(currentSession, sessionIdProp, getGlobalAttachmentStore().getActiveSessionId());
   const store = getGlobalQuickShortcutStore();
   const subscribe = useCallback((listener) => store.subscribe(sessionId, listener), [store, sessionId]);
   const snapshot = useCallback(() => store.getSnapshot(sessionId), [store, sessionId]);
   const state = useSyncExternalStore(subscribe, snapshot, snapshot);
   useEffect(() => acquireQuickShortcutStyles(), []);
+  if (!isTikTokAgentPreset(currentSession, props)) return null;
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
   if (state.activeId !== 'clone' && state.activeId !== 'selling') return null;
   return <QuickShortcutModelControls key={sessionId} sessionId={sessionId} />;
@@ -213,9 +222,11 @@ export function ComposerQuickShortcuts(props) {
     publishActiveSkill(entry.skill);
   }, [store, sessionId, writePrompt, notifyWriteFailed, dismissNotice]);
 
-  // 只在新对话（空会话）里出现：这是新会话的起手入口，不是会话中的工具条。
+  // 只在新对话（空会话）且为 TikTok Agent 角色时出现；
+  // 必须全部 4 条快捷方式命中已内置技能时才完整渲染，残缺不展示。
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
-  if (shortcuts.length === 0) return null;
+  if (!isTikTokAgentPreset(sessionProp || session, props)) return null;
+  if (shortcuts.length !== 4) return null;
 
   const isActive = (id) => state.activeId === id;
 

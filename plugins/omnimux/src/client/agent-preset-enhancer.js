@@ -87,7 +87,10 @@ export const AGENT_PRESET_NAMES = Object.freeze({
   '全能社媒操盘手': 'omni-agent',
   'Social Media Lead': 'omni-agent',
   'omni-agent': 'omni-agent',
-  'tiktok-agent': 'omni-agent',
+  'tiktok-agent': 'tiktok-agent',
+  'TikTok运营专家团': 'tiktok-agent',
+  'TikTok 运营操盘手': 'tiktok-agent',
+  'TikTok Ops Team': 'tiktok-agent',
   '营销专家': 'marketing-agent',
   '全能营销操盘手': 'marketing-agent',
   'Marketing Lead': 'marketing-agent',
@@ -364,6 +367,10 @@ export function syncSeatAvatar(doc = globalThis.document, seat = findAgentPreset
   const label = seatLabelText(seat)
   const resolved = resolveAgentPresetAvatar(label, { size: SEAT_AVATAR_SIZE_PX })
   if (!resolved) return null
+
+  if (typeof window !== 'undefined') {
+    window.__omnimuxActivePreset = resolved.id
+  }
 
   if (seat.getAttribute(PRESET_SEAT_ATTR) !== resolved.id) {
     seat.setAttribute(PRESET_SEAT_ATTR, resolved.id)
