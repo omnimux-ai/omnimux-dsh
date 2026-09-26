@@ -264,7 +264,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
   } = config;
 
   const parameterSummary = mode === 'image'
-    ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}张`
+    ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}`
     : `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s`;
   const parameterLabel = `配置模型参数：${parameterSummary}`;
 
@@ -301,11 +301,13 @@ export function MediaParamsPanel({ config, open, onToggle }) {
         <span className="omx-param-compact-label" aria-hidden="true">参数</span>
         {mode === 'image' ? (
           <>
+            <span>{imageOpMode}</span>
+            <span className="omx-dot">·</span>
             <span>{imageAspect}</span>
             <span className="omx-dot">·</span>
             <span>{imageRes}</span>
             <span className="omx-dot">·</span>
-            <span>{imageBatch}张</span>
+            <span>{imageBatch}</span>
           </>
         ) : (
           <>
@@ -396,7 +398,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                         className={`omx-mode-pill ${imageBatch === cnt ? 'is-active' : ''}`}
                         onClick={() => setImageBatch(cnt)}
                       >
-                        {cnt}张
+                        {cnt}
                       </button>
                     ))}
                   </div>
