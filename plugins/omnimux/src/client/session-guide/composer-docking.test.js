@@ -424,7 +424,7 @@ test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 D
   }
 })
 
-test('useComposerDocking: 纯滚动模式（无激活 item）向下滚出视口自动吸底，向上滚回露头自动归位', async () => {
+test('useComposerDocking: 意图驱动模式——纯向下滚动默认不吸底，显式意图触发后才吸底', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
   const scroller = host.querySelector('.scrollBody')
@@ -448,7 +448,7 @@ test('useComposerDocking: 纯滚动模式（无激活 item）向下滚出视口�
     assert.equal(hookApi.isDocked, false)
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false)
 
-    // 向下滚动离开顶部槽位（> leaveThreshold 196px）
+    // 阶段 1：纯向下滚动离开顶部槽位（> leaveThreshold 196px）但未主动触发输入框
     scroller.scrollTop = 280
     await act(async () => {
       scroller.dispatchEvent(new window.Event('scroll'))
@@ -456,11 +456,22 @@ test('useComposerDocking: 纯滚动模式（无激活 item）向下滚出视口�
     })
     await flush()
 
-    assert.equal(hookApi.placement, 'docked', '无 item 纯向下滚动离开视口必须自动切为 docked')
-    assert.equal(hookApi.isDocked, true)
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '宿主必须被打上吸底标记')
+    // 契约铁律：未显式意图触发时，纯向下滚动绝不自动吸底，底部不显示输入框
+    assert.equal(hookApi.placement, 'inline', '未触发输入框时纯向下滚动必须保持 inline')
+    assert.equal(hookApi.isDocked, false)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '宿主严禁打上吸底标记')
 
-    // 向上滚动回到原位露头范围（<= revealThreshold 166px）
+    // 阶段 2：显式意图触发（例如用户点击加号选素材或卡片选用）
+    await act(async () => {
+      hookApi.dock({ id: 'card_intent_1' })
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked', '显式意图触发后必须就位吸底')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '宿主被打上吸底标记')
+
+    // 阶段 3：向上滚动回到原位露头范围（<= revealThreshold 166px）
     scroller.scrollTop = 80
     await act(async () => {
       scroller.dispatchEvent(new window.Event('scroll'))
